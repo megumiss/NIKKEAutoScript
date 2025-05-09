@@ -46,6 +46,22 @@ class InfoHandler(ModuleBase):
             else:
                 self.device.click_minitouch(1, 420)
 
+    # 屑芙蒂的补给品，仅关闭窗口，不抽取
+    def handle_shifty_supplies(self):
+        # TODO 领取每日奖励
+
+        # 关闭
+        if self.appear(
+                ANNOUNCEMENT_CHECK,
+                offset=(30, 30),
+                interval=3,
+                threshold=0.74,
+                static=False,
+        ) and self.appear_then_click(
+            ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
+        ):
+            return True
+
         """
             出现登录奖励时，点击没有被覆盖的位置 
             Daily Login, Memories Spring, etc.

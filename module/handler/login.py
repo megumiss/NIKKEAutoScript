@@ -89,6 +89,11 @@ class LoginHandler(UI):
             if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
+            
+             # 屑芙蒂5x5补给品
+            if click_timer.reached() and self.handle_shifty_supplies():
+                click_timer.reset()
+                continue
 
             # 回到主页
             if click_timer.reached() and self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=5):
