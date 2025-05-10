@@ -16,6 +16,10 @@ RookieArena:
   Scheduler:
     Enable: false
 
+SpecialArena:
+  Scheduler:
+    Enable: false
+
 Conversation:
   Scheduler:
     Enable: false

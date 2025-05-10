@@ -180,6 +180,11 @@ class NikkeAutoScript:
 
         RookieArena(config=self.config, device=self.device).run()
 
+    def special_arena(self):
+        from module.special_arena.special_arena import SpecialArena
+
+        SpecialArena(config=self.config, device=self.device).run()
+
     def simulation_room(self):
         from module.simulation_room.simulation_room import SimulationRoom
 

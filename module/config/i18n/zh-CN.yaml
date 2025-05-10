@@ -77,6 +77,9 @@ Task:
   RookieArena:
     name: 新人竞技场
     help: ""
+  SpecialArena:
+    name: 特殊竞技场
+    help: ""
   Conversation:
     name: 咨询
     help: ""
@@ -125,9 +128,9 @@ Emulator:
     help: ""
   Serial:
     name: 模拟器 Serial
-    help: "常见的模拟器 Serial 可以查询下方列表，填 \"auto\" 自动检测模拟器，多个模拟器正在运行或使用不支持自动检测的模拟器时无法使用 \"auto\"，必须手动填写 \n 
-    模拟器默认 Serial：\n
-  - 雷电模拟器 emulator-5554 或 127.0.0.1:5555"
+    help: "常见的模拟器 Serial 可以查询下方列表，填 \"auto\" 自动检测模拟器，多个模拟器正在运行或使用不支持自动检测的模拟器时无法使用 \"auto\"，必须手动填写 \n
+      模拟器默认 Serial：\n
+      - 雷电模拟器 emulator-5554 或 127.0.0.1:5555"
   PackageName:
     name: 游戏服务器
     help: 模拟器上装有多个游戏客户端时，需要手动选择服务器
