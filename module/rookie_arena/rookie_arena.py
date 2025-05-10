@@ -118,6 +118,7 @@ class RookieArena(UI):
                     and click_timer_2.reached()
                     and self.free_opportunity_remain
             ):
+                # TODO 根据战力选择
                 self.device.click_minitouch(580, 1080)
                 logger.info(
                     "Click %s @ %s"

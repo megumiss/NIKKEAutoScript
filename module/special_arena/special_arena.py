@@ -33,6 +33,7 @@ class SpecialArena(UI):
 
     @cached_property
     def own_power(self) -> int:
+        # 获取战力
         area = _area_offset(OWN_POWER_CHECK.area, (20, -2, 70, 2))
         OWN_POWER = Digit(
             [area],
@@ -68,6 +69,7 @@ class SpecialArena(UI):
                     and click_timer_2.reached()
                     and self.free_opportunity_remain
             ):
+                # TODO 根据战力选择
                 self.device.click_minitouch(580, 1080)
                 logger.info(
                     "Click %s @ %s"
@@ -107,7 +109,7 @@ class SpecialArena(UI):
 
             if (
                     already_start
-                    and self.appear(SPECIAL_ARENA_CHECK, offset=(10, 10))
+                    and self.appear(SPECIAL_ARENA_CHECK, offset=(10, 10), static=False)
                     and confirm_timer.reached()
             ):
                 break
@@ -135,7 +137,7 @@ class SpecialArena(UI):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
-
+            
             if (
                     self.appear(SPECIAL_ARENA_CHECK, offset=(10, 10), static=False)
                     and confirm_timer.reached()
