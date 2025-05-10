@@ -52,13 +52,13 @@ class InfoHandler(ModuleBase):
 
         # 关闭
         if self.appear(
-                ANNOUNCEMENT_CHECK,
+                SHIFTY_SUPPLIES_CHECK,
                 offset=(30, 30),
                 interval=3,
                 threshold=0.74,
                 static=False,
         ) and self.appear_then_click(
-            ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
+            SHIFTY_SUPPLIES_CLOSE, offset=(30, 30), interval=3, threshold=0.74, static=False
         ):
             return True
 

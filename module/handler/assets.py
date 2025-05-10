@@ -20,5 +20,7 @@ PAID_GIFT_CONFIRM_CHECK = Button(area={'cn': (85, 562, 614, 587)}, color={'cn': 
 POPUP_CHECK = Button(area={'cn': (251, 660, 460, 678)}, color={'cn': (160, 160, 160)}, button={'cn': (251, 660, 460, 678)}, file={'cn': './assets/cn/handler/POPUP_CHECK.png'})
 REWARD = Button(area={'cn': (306, 408, 416, 449)}, color={'cn': (153, 154, 153)}, button={'cn': (306, 408, 416, 449)}, file={'cn': './assets/cn/handler/REWARD.png'})
 SERVER_CHECK = Button(area={'cn': (297, 298, 422, 321)}, color={'cn': (164, 203, 247)}, button={'cn': (297, 298, 422, 321)}, file={'cn': './assets/cn/handler/SERVER_CHECK.png'})
+SHIFTY_SUPPLIES_CHECK = Button(area={'cn': (450, 419, 550, 454)}, color={'cn': (131, 158, 197)}, button={'cn': (450, 419, 550, 454)}, file={'cn': './assets/cn/handler/SHIFTY_SUPPLIES_CHECK.png'})
+SHIFTY_SUPPLIES_CLOSE = Button(area={'cn': (645, 114, 669, 139)}, color={'cn': (173, 177, 182)}, button={'cn': (645, 114, 669, 139)}, file={'cn': './assets/cn/handler/SHIFTY_SUPPLIES_CLOSE.png'})
 SYSTEM_ERROR_CHECK = Button(area={'cn': (311, 567, 389, 585)}, color={'cn': (151, 151, 151)}, button={'cn': (311, 567, 389, 585)}, file={'cn': './assets/cn/handler/SYSTEM_ERROR_CHECK.png'})
 SYSTEM_MAINTENANCE_CHECK = Button(area={'cn': (241, 589, 458, 604)}, color={'cn': (194, 193, 194)}, button={'cn': (241, 589, 458, 604)}, file={'cn': './assets/cn/handler/SYSTEM_MAINTENANCE_CHECK.png'})
