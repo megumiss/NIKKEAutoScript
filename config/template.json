@@ -38,7 +38,7 @@
       "Command": "Reward",
       "SuccessInterval": "720-720",
       "FailureInterval": "720-720",
-      "ServerUpdate": "04:00"
+      "ServerUpdate": "04:00, 16:00"
     },
     "Reward": {
       "CollectSocialPoint": true,

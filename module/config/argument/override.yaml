@@ -18,6 +18,7 @@ Reward:
       type: lock
     SuccessInterval: 720-720
     FailureInterval: 720-720
+    ServerUpdate: 04:00, 16:00
 
 Commission:
   Scheduler:
