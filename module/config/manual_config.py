@@ -130,3 +130,8 @@ class ManualConfig:
     @property
     def SERVER(self):
         return "cn"
+
+    SIMULATION_EFFECT_PRIORITY = """
+       HighQualityPowder > HiddenPowder > QuickCharger > ChainAmmo > DrainConverter > FocusScope > HealSprayBullet
+       """
+       

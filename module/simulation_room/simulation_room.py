@@ -6,6 +6,7 @@ from module.exception import GamePageUnknownError, OperationFailed, GameStuckErr
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.simulation_room.assets import *
+from module.simulation_room.effect import EffectAnalyzer
 from module.tribe_tower.assets import BACK
 from module.ui.assets import ARK_GOTO_SIMULATION_ROOM, SIMULATION_ROOM_CHECK, GOTO_BACK
 from module.ui.page import page_ark
@@ -115,7 +116,14 @@ class SimulationRoom(UI):
         confirm_timer = Timer(2, count=2).start()
         click_timer = Timer(0.3)
         click_timer_2 = Timer(6)
-
+        
+        result = self.ocr_area(self.device.image, EFFECT_AREA.area)
+        result2 = self.ocr_models.cnocr.ocr(img_fp=self.device.image, area=EFFECT_AREA.area)
+        # x, y = self.device.get_location("R", result)
+        # self.device.click_minitouch(x+EFFECT_AREA.area[0], y+EFFECT_AREA.area[1])
+        
+        effects = EffectAnalyzer(result, config=self.config, device=self.device).build_effect_struct()
+        
         if not self.appear(MAX_EFFECT_COUNT, offset=(10, 10), static=False, threshold=0.96):
             button = self.get_effect()
             while 1:
@@ -342,10 +350,16 @@ class SimulationRoom(UI):
             #     click_timer.reset()
             #     continue
             
-            if click_timer.reached() and self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 5), static=False):
+            if click_timer.reached() and self.appear_then_click(QUICK_SIMULATION_CONFIRM, offset=(5, 5), static=False):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
+            
+            # TODO
+            # if click_timer.reached() and self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 5), static=False):
+            #     confirm_timer.reset()
+            #     click_timer.reset()
+            #     continue
             
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), interval=5, static=False):
                 break
