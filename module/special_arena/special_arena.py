@@ -1,3 +1,4 @@
+import json
 import random
 import time
 from functools import cached_property
@@ -29,7 +30,7 @@ class SpecialArenaIsUnavailable(Exception):
 class SpecialArena(UI):
     @cached_property
     def button(self):
-        return [(590, 710), (590, 840), (590, 980)]
+        return [(590, 800), (590, 950), (590, 1100)]
     
     @cached_property
     def coordinate_config(self) -> list[dict]:
@@ -93,45 +94,62 @@ class SpecialArena(UI):
         return int(OPPONENT_INFO.ocr(self.device.image))
 
     def opponents_data(self) -> List[Dict[str, Any]]:
+        """获取对手数据"""
         results = []
-        total_groups = len(self.coordinate_config)
-        
         for group_idx, group_config in enumerate(self.coordinate_config, start=1):
             group_result = {
-                "id": group_idx, # 序号
-                "data": {} # 对手信息
+                "id": group_idx,  # 对手位置序号（1=第一位，2=第二位，3=第三位）
+                "data": {
+                    "Power": self.opponent_info(group_config["Power"], "Power"),
+                    "CommanderLevel": self.opponent_info(group_config["CommanderLevel"], "CommanderLevel"),
+                    "SynchroLevel": self.opponent_info(group_config["SynchroLevel"], "SynchroLevel"),
+                    "Ranking": group_idx
+                }
             }
-            
-            for field, area in group_config.items():
-                #img_fp = crop(self.device.image, area)
-                #cv2.imwrite(f"D:\\PCR\\NIKKEAutoScript\\{area}.png", img_fp)
-                group_result["data"][field] = self.opponent_info(area, field)
-            # 计算倒序排名：总组数 - 当前索引 + 1
-            group_result["data"]["Ranking"] = total_groups - group_idx + 1
-            logger.info(f"Find opponent {group_idx}: {group_result['data']}")       
-
+            logger.info(f"Find opponent {group_idx}: {group_result['data']}")
             results.append(group_result)
-        
         return results
 
     def select_strategy(self) -> Dict:
-        """根据选择策略返回相应的对手序号
-        """
-        # 降序排序
-        sorted_data = sorted(self.opponents_data(), 
-                            key=lambda x: x["data"][self.config.OpponentSelection_SortingStrategy],
-                            reverse=True)
-        
-        # 执行选择策略
+        """根据选择策略返回相应的对手"""
+        all_opponents = self.opponents_data()
+        weights = json.loads(self.config.OpponentSelection_SortingWeight)
+
+        # 提取原始数据
+        dimensions = {
+            'Power': [opp['data']['Power'] for opp in all_opponents],
+            'CommanderLevel': [opp['data']['CommanderLevel'] for opp in all_opponents],
+            'SynchroLevel': [opp['data']['SynchroLevel'] for opp in all_opponents],
+            'Ranking': [opp['data']['Ranking'] for opp in all_opponents]
+        }
+        # 归一化处理
+        normalized = {k: self._normalize(v) for k, v in dimensions.items()}
+        normalized['Ranking'] = [1 - val for val in normalized['Ranking']]
+        # 计算综合得分
+        for i, opp in enumerate(all_opponents):
+            score = sum(
+                normalized[dim][i] * weights[dim]
+                for dim in ['Power', 'CommanderLevel', 'SynchroLevel', 'Ranking']
+            )
+            opp['score'] = score
+
+        sorted_data = sorted(all_opponents, key=lambda x: x['score'], reverse=True)
+
+        # 选择策略
         if self.config.OpponentSelection_SelectionStrategy == 'Max':
             return sorted_data[0]
         elif self.config.OpponentSelection_SelectionStrategy == 'Min':
             return sorted_data[-1]
         elif self.config.OpponentSelection_SelectionStrategy == 'Middle':
-            if len(sorted_data) < 3:
-                return sorted_data[-1]
-            middle_pool = sorted_data[1:-1]
-            return random.choice(middle_pool)
+            return sorted_data[len(sorted_data) // 2] if sorted_data else None
+
+    def _normalize(self, values: List[float]) -> List[float]:
+        """数据归一化到[0,1]区间（处理全等值情况）"""
+        min_val = min(values)
+        max_val = max(values)
+        if max_val == min_val:
+            return [0.5] * len(values)  # 所有值相同时返回中性值
+        return [(v - min_val) / (max_val - min_val) for v in values]
 
     def start_competition(self, skip_first_screenshot=True):
         logger.hr("Start a competition")
@@ -161,10 +179,10 @@ class SpecialArena(UI):
                 opponent =  self.button[opponent_id-1]
                 logger.info(f"Secect opponent {opponent_id}")       
                 
-                self.device.click_minitouch(opponent)
+                self.device.click_minitouch(opponent[0], opponent[1])
                 logger.info(
                     "Click %s @ %s"
-                    % (point2str(opponent), "START_COMPETITION")
+                    % (point2str(opponent[0], opponent[1]), "START_COMPETITION")
                 )
                 confirm_timer.reset()
                 click_timer.reset()

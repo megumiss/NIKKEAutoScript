@@ -382,17 +382,13 @@ OpponentSelection:
     help: ""
   Enable:
     name: 启用该功能
-    help: ""
-  SortingStrategy:
-    name: 排序策略
-    help: ""
-    Power: "战力"
-    Ranking: "排名"
-    CommanderLevel: "指挥官等级"
-    SynchroLevel: "同步器等级"
+    help: "开启时会根据权重和选择策略选择对手, 关闭时会固定选择最下面的对手"
+  SortingWeight:
+    name: 排序权重
+    help: "json字符串格式, 所有权重加和应为1, 如果只想启用某一个或几个可以将其他的权重数值为0\n各项意义为Power: 战力, CommanderLevel: 指挥官等级, SynchroLevel: 同步器等级, Ranking: 排名"
   SelectionStrategy:
     name: 选择策略
     help: ""
     Max: "最高"
     Middle: "中间"
-    Min: "最小"
+    Min: "最低"

@@ -851,15 +851,9 @@
         "type": "checkbox",
         "value": false
       },
-      "SortingStrategy": {
-        "type": "select",
-        "value": "Power",
-        "option": [
-          "Power",
-          "Ranking",
-          "CommanderLevel",
-          "SynchroLevel"
-        ]
+      "SortingWeight": {
+        "type": "textarea",
+        "value": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}"
       },
       "SelectionStrategy": {
         "type": "select",
@@ -917,15 +911,9 @@
         "type": "checkbox",
         "value": false
       },
-      "SortingStrategy": {
-        "type": "select",
-        "value": "Power",
-        "option": [
-          "Power",
-          "Ranking",
-          "CommanderLevel",
-          "SynchroLevel"
-        ]
+      "SortingWeight": {
+        "type": "textarea",
+        "value": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}"
       },
       "SelectionStrategy": {
         "type": "select",

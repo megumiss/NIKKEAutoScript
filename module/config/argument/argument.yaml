@@ -97,9 +97,9 @@ CollectionItems:
     option: [ 'All','Laplace','Frima','Diesel','Exia' ]
 OpponentSelection:
   Enable: false
-  SortingStrategy:
-    value: 'Power'
-    option: [ 'Power','Ranking','CommanderLevel','SynchroLevel' ]
+  SortingWeight:
+    value: '{"Power":0.3, "CommanderLevel":0.2, "SynchroLevel":0.3, "Ranking":0.2}'
+    type: textarea
   SelectionStrategy:
     value: 'Min'
     option: [ 'Max','Middle','Min' ]

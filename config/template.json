@@ -265,7 +265,7 @@
     },
     "OpponentSelection": {
       "Enable": false,
-      "SortingStrategy": "Power",
+      "SortingWeight": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
       "SelectionStrategy": "Min"
     },
     "Storage": {
@@ -283,7 +283,7 @@
     },
     "OpponentSelection": {
       "Enable": false,
-      "SortingStrategy": "Power",
+      "SortingWeight": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
       "SelectionStrategy": "Min"
     },
     "Storage": {
