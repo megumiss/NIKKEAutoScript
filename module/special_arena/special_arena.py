@@ -39,21 +39,25 @@ class SpecialArena(UI):
         return [
             {
                 "Power": (376, 736, 455, 767),
-                "Level": (72, 801, 111, 817)
+                "CommanderLevel": (72, 801, 111, 817),
+                "SynchroLevel": (392, 836, 414, 855)
             },
             {
                 "Power": (376, 886, 455, 917),
-                "Level": (72, 951, 111, 967)
+                "CommanderLevel": (72, 951, 111, 967),
+                "SynchroLevel": (392, 986, 414, 1005)
             },
             {
                 "Power": (376, 1036, 455, 1067),
-                "Level": (72, 1101, 111, 1117)
+                "CommanderLevel": (72, 1101, 111, 1117),
+                "SynchroLevel": (392, 1136, 414, 1155)
             }
         ]
     
     FIELD_LETTERS = {
         "Power": (107, 107, 107),
-        "Level": (222, 222, 222)
+        "CommanderLevel": (222, 222, 222),
+        "SynchroLevel": (255, 255, 255)
     }
     
     @property

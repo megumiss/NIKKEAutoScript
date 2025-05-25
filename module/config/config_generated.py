@@ -81,7 +81,7 @@ class GeneratedConfig:
 
     # Group `OpponentSelection`
     OpponentSelection_Enable = False
-    OpponentSelection_SortingStrategy = 'Power'  # Power, Ranking, Level
+    OpponentSelection_SortingStrategy = 'Power'  # Power, Ranking, CommanderLevel, SynchroLevel
     OpponentSelection_SelectionStrategy = 'Min'  # Max, Middle, Min
 
     # Group `Storage`

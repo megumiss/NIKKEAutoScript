@@ -388,7 +388,8 @@ OpponentSelection:
     help: ""
     Power: "战力"
     Ranking: "排名"
-    Level: "等级"
+    CommanderLevel: "指挥官等级"
+    SynchroLevel: "同步器等级"
   SelectionStrategy:
     name: 选择策略
     help: ""

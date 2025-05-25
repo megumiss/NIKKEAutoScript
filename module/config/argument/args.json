@@ -857,7 +857,8 @@
         "option": [
           "Power",
           "Ranking",
-          "Level"
+          "CommanderLevel",
+          "SynchroLevel"
         ]
       },
       "SelectionStrategy": {
@@ -922,7 +923,8 @@
         "option": [
           "Power",
           "Ranking",
-          "Level"
+          "CommanderLevel",
+          "SynchroLevel"
         ]
       },
       "SelectionStrategy": {

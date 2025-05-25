@@ -99,7 +99,7 @@ OpponentSelection:
   Enable: false
   SortingStrategy:
     value: 'Power'
-    option: [ 'Power','Ranking','Level' ]
+    option: [ 'Power','Ranking','CommanderLevel','SynchroLevel' ]
   SelectionStrategy:
     value: 'Min'
     option: [ 'Max','Middle','Min' ]
