@@ -95,3 +95,11 @@ CollectionItems:
   NIKKE:
     value: 'All'
     option: [ 'All','Laplace','Frima','Diesel','Exia' ]
+OpponentSelection:
+  Enable: false
+  SortingStrategy:
+    value: 'Power'
+    option: [ 'Power','Ranking','Level' ]
+  SelectionStrategy:
+    value: 'Min'
+    option: [ 'Max','Middle','Min' ]

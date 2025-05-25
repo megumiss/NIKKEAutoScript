@@ -157,57 +157,6 @@
       }
     }
   },
-  "DailyRecruit": {
-    "Scheduler": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false
-      },
-      "NextRun": {
-        "type": "datetime",
-        "value": "1989-12-27 00:00:00",
-        "validate": "datetime"
-      },
-      "Command": {
-        "type": "input",
-        "value": "DailyRecruit",
-        "display": "hide"
-      },
-      "SuccessInterval": {
-        "type": "input",
-        "value": "720-720",
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": "720-720",
-        "display": "hide"
-      },
-      "ServerUpdate": {
-        "type": "input",
-        "value": "04:00",
-        "display": "hide"
-      }
-    },
-    "DailyRecruit": {
-      "EventFreeRecruit": {
-        "type": "checkbox",
-        "value": true
-      },
-      "SocialPointRecruit": {
-        "type": "checkbox",
-        "value": true
-      }
-    },
-    "Storage": {
-      "Storage": {
-        "type": "storage",
-        "value": {},
-        "valuetype": "ignore",
-        "display": "disabled"
-      }
-    }
-  },
   "Destruction": {
     "Scheduler": {
       "Enable": {
@@ -406,6 +355,57 @@
         "type": "input",
         "value": "",
         "valuetype": "str"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "DailyRecruit": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "DailyRecruit",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "DailyRecruit": {
+      "EventFreeRecruit": {
+        "type": "checkbox",
+        "value": true
+      },
+      "SocialPointRecruit": {
+        "type": "checkbox",
+        "value": true
       }
     },
     "Storage": {
@@ -846,6 +846,30 @@
         "display": "hide"
       }
     },
+    "OpponentSelection": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "SortingStrategy": {
+        "type": "select",
+        "value": "Power",
+        "option": [
+          "Power",
+          "Ranking",
+          "Level"
+        ]
+      },
+      "SelectionStrategy": {
+        "type": "select",
+        "value": "Min",
+        "option": [
+          "Max",
+          "Middle",
+          "Min"
+        ]
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",
@@ -885,6 +909,30 @@
         "type": "input",
         "value": "04:00",
         "display": "hide"
+      }
+    },
+    "OpponentSelection": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "SortingStrategy": {
+        "type": "select",
+        "value": "Power",
+        "option": [
+          "Power",
+          "Ranking",
+          "Level"
+        ]
+      },
+      "SelectionStrategy": {
+        "type": "select",
+        "value": "Min",
+        "option": [
+          "Max",
+          "Middle",
+          "Min"
+        ]
       }
     },
     "Storage": {

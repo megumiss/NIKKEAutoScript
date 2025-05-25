@@ -89,16 +89,18 @@ class RookieArena(UI):
     def start_competition(self, skip_first_screenshot=True):
         logger.hr("Start a competition")
 
-        # competitor = [
-        #     index
-        #     for index, i in enumerate(self.competitor_power_list)
-        #     if i <= self.own_power
-        # ]
-        #
-        # if not len(competitor):
-        #     competitor.append(2)
-        #     logger.warning("detected no competitor's power below own power")
-        #     logger.warning("will choose the third competitor")
+        #Level Ranking Power
+        
+        competitor = [
+            index
+            for index, i in enumerate(self.competitor_power_list)
+            if i <= self.own_power
+        ]
+        
+        if not len(competitor):
+            competitor.append(2)
+            logger.warning("detected no competitor's power below own power")
+            logger.warning("will choose the third competitor")
 
         confirm_timer = Timer(1, count=5).start()
         click_timer = Timer(0.3)

@@ -48,23 +48,6 @@
       "Storage": {}
     }
   },
-  "DailyRecruit": {
-    "Scheduler": {
-      "Enable": true,
-      "NextRun": "1989-12-27 00:00:00",
-      "Command": "DailyRecruit",
-      "SuccessInterval": "720-720",
-      "FailureInterval": "720-720",
-      "ServerUpdate": "04:00"
-    },
-    "DailyRecruit": {
-      "EventFreeRecruit": true,
-      "SocialPointRecruit": true
-    },
-    "Storage": {
-      "Storage": {}
-    }
-  },
   "Destruction": {
     "Scheduler": {
       "Enable": false,
@@ -123,6 +106,23 @@
       "lip_openid": null,
       "lip_expire_time": null,
       "lip_picture_url": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "DailyRecruit": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "DailyRecruit",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "DailyRecruit": {
+      "EventFreeRecruit": true,
+      "SocialPointRecruit": true
     },
     "Storage": {
       "Storage": {}
@@ -263,6 +263,11 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
+    "OpponentSelection": {
+      "Enable": false,
+      "SortingStrategy": "Power",
+      "SelectionStrategy": "Min"
+    },
     "Storage": {
       "Storage": {}
     }
@@ -275,6 +280,11 @@
       "SuccessInterval": 0,
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
+    },
+    "OpponentSelection": {
+      "Enable": false,
+      "SortingStrategy": "Power",
+      "SelectionStrategy": "Min"
     },
     "Storage": {
       "Storage": {}

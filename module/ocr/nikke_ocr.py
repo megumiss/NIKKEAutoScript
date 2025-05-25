@@ -10,7 +10,7 @@ from module.base.utils import crop
 
 
 class NikkeOcr(CnOcr):
-    def __init__(self, rec_model_name='densenet_lite_136-gru', det_model_name='ch_PP-OCRv3_det', cand_alphabet=None,
+    def __init__(self, rec_model_name='densenet_lite_136-gru', det_model_name='ch_PP-OCRv4_det', cand_alphabet=None,
                  context='cpu',
                  root='./bin/cnocr_models/nikke',
                  model_name='/t25.ckpt', **kwargs):

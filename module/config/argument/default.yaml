@@ -6,7 +6,7 @@ Reward:
 
 DailyRecruit:
   Scheduler:
-    Enable: true
+    Enable: false
 
 Destroy:
   Scheduler:

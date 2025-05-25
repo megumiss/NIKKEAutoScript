@@ -31,6 +31,7 @@ LIPass:
 
 DailyRecruit:
   - Scheduler
+  - DailyRecruit
 
 Daily:
   - Scheduler
@@ -64,9 +65,11 @@ TribeTower:
 
 RookieArena:
   - Scheduler
+  - OpponentSelection
 
 SpecialArena:
   - Scheduler
+  - OpponentSelection
 
 Interception:
   - Scheduler

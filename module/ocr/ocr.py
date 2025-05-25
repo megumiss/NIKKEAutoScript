@@ -107,13 +107,15 @@ class Digit(Ocr):
     Method ocr() returns int, or a list of int.
     """
 
-    def __init__(self, buttons, lang='nikke', letter=(255, 255, 255), threshold=128, alphabet='0123456789IDS',
+    def __init__(self, buttons, lang='nikke', letter=(255, 255, 255), threshold=128, alphabet='0123456789IDSBO',
                  name=None):
         super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
 
     def after_process(self, result):
         result = super().after_process(result)
         result = result.replace('I', '1').replace('D', '0').replace('S', '5')
+        result = result.replace('B', '8')
+        result = result.replace('O', '0')
 
         prev = result
         result = int(result) if result else 0

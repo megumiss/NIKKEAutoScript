@@ -376,3 +376,22 @@ CollectionItems:
     Frima: '普琳玛'
     Diesel: '迪塞尔'
     Exia: '艾可希雅'
+OpponentSelection:
+  _info:
+    name: 对手选择设置
+    help: ""
+  Enable:
+    name: 启用该功能
+    help: ""
+  SortingStrategy:
+    name: 排序策略
+    help: ""
+    Power: "战力"
+    Ranking: "排名"
+    Level: "等级"
+  SelectionStrategy:
+    name: 选择策略
+    help: ""
+    Max: "最高"
+    Middle: "中间"
+    Min: "最小"
