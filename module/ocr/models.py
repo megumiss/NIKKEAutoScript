@@ -45,10 +45,6 @@ class OcrModel:
     # def nikke_counter(self):
     #     return NikkeOcr(rec_model_name='densenet_lite_136-gru', root='./bin/cnocr_models/nikke',
     #                     model_name='/t23.ckpt', name='nikke_counter', cand_alphabet='0123456789/IDS'
-    @cached_property
-    def cnocr_22_fc(self):
-        return NikkeOcr(rec_model_name='densenet_lite_136-fc', root='./bin/cnocr_models/cnocr',
-                        model_name='/cnocr-v2.2-densenet_lite_136-fc.ckpt', name='cnocr_22_fc')
 
     @cached_property
     def cnocr(self):
@@ -56,9 +52,9 @@ class OcrModel:
                         model_name='/cnocr-v2.3-densenet_lite_136-gru.ckpt', name='cnocr')
 
     @cached_property
-    def cnocr_23_num_fc(self):
+    def cnocr_num(self):
         return NikkeOcr(rec_model_name='number-densenet_lite_136-fc', root='./bin/cnocr_models/cnocr',
-                        model_name='/cnocr-v2.3-number-densenet_lite_136-fc.ckpt', name='cnocr_23_num_fc')
+                        model_name='/cnocr-v2.3-number-densenet_lite_136-fc-nikke.ckpt', name='cnocr_num')
 
     def get_location(self, text, result):
         if result:

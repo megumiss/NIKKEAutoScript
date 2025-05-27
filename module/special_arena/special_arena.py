@@ -1,18 +1,8 @@
-import json
-import random
-import time
 from functools import cached_property
-from typing import Any, Dict, List
-
-import cv2
-
 from module.base.timer import Timer
+from module.base.arena import ArenaBase
 from module.base.utils import (
     _area_offset,
-    crop,
-    extract_letters,
-    find_letter_area,
-    float2str,
     point2str,
 )
 from module.logger import logger
@@ -27,7 +17,7 @@ class SpecialArenaIsUnavailable(Exception):
     pass
 
 
-class SpecialArena(UI):
+class SpecialArena(UI, ArenaBase):
     @cached_property
     def button(self):
         return [(590, 800), (590, 950), (590, 1100)]
@@ -40,16 +30,19 @@ class SpecialArena(UI):
         return [
             {
                 "Power": (376, 736, 455, 767),
+                "Ranking": (70, 830, 112, 855),
                 "CommanderLevel": (72, 801, 111, 817),
                 "SynchroLevel": (392, 836, 414, 855)
             },
             {
                 "Power": (376, 886, 455, 917),
+                "Ranking": (70, 980, 112, 1005),
                 "CommanderLevel": (72, 951, 111, 967),
                 "SynchroLevel": (392, 986, 414, 1005)
             },
             {
                 "Power": (376, 1036, 455, 1067),
+                "Ranking": (70, 1130, 112, 1155),
                 "CommanderLevel": (72, 1101, 111, 1117),
                 "SynchroLevel": (392, 1136, 414, 1155)
             }
@@ -57,6 +50,7 @@ class SpecialArena(UI):
     
     FIELD_LETTERS = {
         "Power": (107, 107, 107),
+        "Ranking": (107, 107, 107),
         "CommanderLevel": (222, 222, 222),
         "SynchroLevel": (255, 255, 255)
     }
@@ -78,78 +72,9 @@ class SpecialArena(UI):
             name="OWN_POWER",
             letter=(247, 247, 247),
             threshold=128,
-            lang="cnocr_23_num_fc",
+            lang="cnocr_num",
         )
         return int(OWN_POWER.ocr(self.device.image))
-    
-    def opponent_info(self, area: tuple, field_name: str) -> int:        
-        letter = self.FIELD_LETTERS[field_name]
-        OPPONENT_INFO = Digit(
-            [area],
-            name="OPPONENT_INFO",
-            letter=letter,
-            threshold=128,
-            lang="cnocr_23_num_fc"
-        )
-        return int(OPPONENT_INFO.ocr(self.device.image))
-
-    def opponents_data(self) -> List[Dict[str, Any]]:
-        """获取对手数据"""
-        results = []
-        for group_idx, group_config in enumerate(self.coordinate_config, start=1):
-            group_result = {
-                "id": group_idx,  # 对手位置序号（1=第一位，2=第二位，3=第三位）
-                "data": {
-                    "Power": self.opponent_info(group_config["Power"], "Power"),
-                    "CommanderLevel": self.opponent_info(group_config["CommanderLevel"], "CommanderLevel"),
-                    "SynchroLevel": self.opponent_info(group_config["SynchroLevel"], "SynchroLevel"),
-                    "Ranking": group_idx
-                }
-            }
-            logger.info(f"Find opponent {group_idx}: {group_result['data']}")
-            results.append(group_result)
-        return results
-
-    def select_strategy(self) -> Dict:
-        """根据选择策略返回相应的对手"""
-        all_opponents = self.opponents_data()
-        weights = json.loads(self.config.OpponentSelection_SortingWeight)
-
-        # 提取原始数据
-        dimensions = {
-            'Power': [opp['data']['Power'] for opp in all_opponents],
-            'CommanderLevel': [opp['data']['CommanderLevel'] for opp in all_opponents],
-            'SynchroLevel': [opp['data']['SynchroLevel'] for opp in all_opponents],
-            'Ranking': [opp['data']['Ranking'] for opp in all_opponents]
-        }
-        # 归一化处理
-        normalized = {k: self._normalize(v) for k, v in dimensions.items()}
-        normalized['Ranking'] = [1 - val for val in normalized['Ranking']]
-        # 计算综合得分
-        for i, opp in enumerate(all_opponents):
-            score = sum(
-                normalized[dim][i] * weights[dim]
-                for dim in ['Power', 'CommanderLevel', 'SynchroLevel', 'Ranking']
-            )
-            opp['score'] = score
-
-        sorted_data = sorted(all_opponents, key=lambda x: x['score'], reverse=True)
-
-        # 选择策略
-        if self.config.OpponentSelection_SelectionStrategy == 'Max':
-            return sorted_data[0]
-        elif self.config.OpponentSelection_SelectionStrategy == 'Min':
-            return sorted_data[-1]
-        elif self.config.OpponentSelection_SelectionStrategy == 'Middle':
-            return sorted_data[len(sorted_data) // 2] if sorted_data else None
-
-    def _normalize(self, values: List[float]) -> List[float]:
-        """数据归一化到[0,1]区间（处理全等值情况）"""
-        min_val = min(values)
-        max_val = max(values)
-        if max_val == min_val:
-            return [0.5] * len(values)  # 所有值相同时返回中性值
-        return [(v - min_val) / (max_val - min_val) for v in values]
 
     def start_competition(self, skip_first_screenshot=True):
         logger.hr("Start a competition")
@@ -175,9 +100,9 @@ class SpecialArena(UI):
                 # 根据策略选择
                 opponent_id =  3
                 if self.config.OpponentSelection_Enable:
-                    opponent_id = self.select_strategy()["id"]
+                    opponent_id = self.select_strategy(True)["id"]
                 opponent =  self.button[opponent_id-1]
-                logger.info(f"Secect opponent {opponent_id}")       
+                logger.info(f"Secect opponent {opponent_id}")
                 
                 self.device.click_minitouch(opponent[0], opponent[1])
                 logger.info(

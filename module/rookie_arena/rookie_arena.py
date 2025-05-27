@@ -1,6 +1,7 @@
 import time
 from functools import cached_property
 
+from module.base.arena import ArenaBase
 from module.base.timer import Timer
 from module.base.utils import (
     _area_offset,
@@ -22,7 +23,44 @@ class RookieArenaIsUnavailable(Exception):
     pass
 
 
-class RookieArena(UI):
+class RookieArena(UI, ArenaBase):
+    @cached_property
+    def button(self):
+        return [(590, 710), (590, 840), (590, 980)]
+    
+    @cached_property
+    def coordinate_config(self) -> list[dict]:
+        """
+        返回战力、等级识别区域
+        """
+        return [
+            {
+                "Power": (395, 650, 470, 675),
+                "Ranking": (85, 765, 120, 790),
+                "CommanderLevel": (74, 733, 116, 750),
+                "SynchroLevel": (308, 779, 329, 797)
+            },
+            {
+                "Power": (395, 830, 470, 855),
+                "Ranking": (85, 945, 120, 970),
+                "CommanderLevel": (74, 911, 116, 928),
+                "SynchroLevel": (308, 957, 329, 976)
+            },
+            {
+                "Power": (395, 1010, 470, 1035),
+                "Ranking": (85, 1125, 120, 1150),
+                "CommanderLevel": (74, 1089, 116, 1106),
+                "SynchroLevel": (308, 1137, 329, 1155)
+            }
+        ]
+    
+    FIELD_LETTERS = {
+        "Power": (107, 107, 107),
+        "Ranking": (107, 107, 107),
+        "CommanderLevel": (222, 222, 222),
+        "SynchroLevel": (255, 255, 255)
+    }
+    
     @property
     def free_opportunity_remain(self) -> bool:
         result = FREE_OPPORTUNITY_CHECK.appear_on(self.device.image, 20)
@@ -78,29 +116,12 @@ class RookieArena(UI):
             name="OWN_POWER",
             letter=(247, 247, 247),
             threshold=128,
-            lang="arena",
+            lang="cnocr_num",
         )
         return int(OWN_POWER.ocr(self.device.image))
 
-    @cached_property
-    def button(self):
-        return [(590, 710), (590, 840), (590, 980)]
-
     def start_competition(self, skip_first_screenshot=True):
         logger.hr("Start a competition")
-
-        #Level Ranking Power
-        
-        competitor = [
-            index
-            for index, i in enumerate(self.competitor_power_list)
-            if i <= self.own_power
-        ]
-        
-        if not len(competitor):
-            competitor.append(2)
-            logger.warning("detected no competitor's power below own power")
-            logger.warning("will choose the third competitor")
 
         confirm_timer = Timer(1, count=5).start()
         click_timer = Timer(0.3)
@@ -119,12 +140,18 @@ class RookieArena(UI):
                     and click_timer.reached()
                     and click_timer_2.reached()
                     and self.free_opportunity_remain
-            ):
-                # TODO 根据战力选择
-                self.device.click_minitouch(580, 1080)
+            ):                
+                # 根据策略选择
+                opponent_id =  3
+                if self.config.OpponentSelection_Enable:
+                    opponent_id = self.select_strategy(False)["id"]
+                opponent =  self.button[opponent_id-1]
+                logger.info(f"Secect opponent {opponent_id}")       
+                
+                self.device.click_minitouch(opponent[0], opponent[1])
                 logger.info(
                     "Click %s @ %s"
-                    % (point2str(580, 1080), "START_COMPETITION")
+                    % (point2str(opponent[0], opponent[1]), "START_COMPETITION")
                 )
                 confirm_timer.reset()
                 click_timer.reset()
