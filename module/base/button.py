@@ -183,3 +183,28 @@ class Button(Resource):
         diff = np.subtract(self.button, self._button)[:2]
         area = area_offset(self.area, offset=diff)
         return color_similar(color1=get_color(image, area), color2=self.color, threshold=threshold)
+
+    def load_color(self, image):
+        """Load color from the specific area of the given image.
+        This method is irreversible, this would be only use in some special occasion.
+
+        Args:
+            image: Another screenshot.
+
+        Returns:
+            tuple: Color (r, g, b).
+        """
+        self.__dict__['color'] = get_color(image, self.area)
+        self.image = crop(image, self.area)
+        self.__dict__['is_gif'] = False
+        return self.color
+
+    def load_offset(self, button):
+        """
+        Load offset from another button.
+
+        Args:
+            button (Button):
+        """
+        offset = np.subtract(button.button, button._button)[:2]
+        self._button_offset = area_offset(self._button, offset=offset)

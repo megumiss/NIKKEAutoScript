@@ -359,3 +359,17 @@ def show_image(image, title='image', delay=0):
 
     cv2.imshow(title, image)
     cv2.waitKey(delay)
+
+def area_pad(area, pad=10):
+    """
+    Inner offset an area.
+
+    Args:
+        area: (upper_left_x, upper_left_y, bottom_right_x, bottom_right_y).
+        pad (int):
+
+    Returns:
+        tuple: (upper_left_x, upper_left_y, bottom_right_x, bottom_right_y).
+    """
+    upper_left_x, upper_left_y, bottom_right_x, bottom_right_y = area
+    return upper_left_x + pad, upper_left_y + pad, bottom_right_x - pad, bottom_right_y - pad

@@ -1,10 +1,12 @@
+import time
 from module.base.timer import Timer
+from module.base.utils import crop
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.reward.assets import *
 from module.ui.page import *
 from module.ui.ui import UI
-
+import cv2
 
 class NoRewards(Exception):
     pass
@@ -135,6 +137,63 @@ class Reward(UI):
 
         return True
 
+    def receive_ranking(self, skip_first_screenshot=True):
+        logger.hr("Receive ranking reward")
+        confirm_timer = Timer(6, count=5).start()
+        click_timer = Timer(0.3)
+        
+        if not self.appear(RANKING_RED_POINT_CHECK, offset=(5, 5), threshold=0.95):
+            return True
+        self.ui_ensure(page_ranking)
+        
+        scroll_count = 0
+        max_scroll = 1
+        while scroll_count <= max_scroll:
+            # 所有带红点的坐标
+            time.sleep(10)
+            red_points = TEMPLATE_RANKING_RED_POINT.match_multi(crop(self.device.image, RANKING_ARENA.area), name='RED_POINT')
+            cv2.imwrite(f"./t1.png", self.device.image)
+            if red_points:
+                for index, button in enumerate(red_points):
+                    while True:
+                        if skip_first_screenshot:
+                            skip_first_screenshot = False
+                        else:
+                            self.device.screenshot()
+                        # 进入某个排名页面
+                        if click_timer.reached() and self.device.click(button, control_check=False):
+                            confirm_timer.reset()
+                            click_timer.reset()
+                            continue
+                        # 获得奖励
+                        if click_timer.reached() and self.appear_then_click(
+                                RANKING_REWARD, offset=(5, 5), interval=5, static=False
+                        ):
+                            confirm_timer.reset()
+                            click_timer.reset()
+                            continue
+                        # 领取奖励
+                        if self.appear_then_click(RANKING_RECEIVE, offset=(5, 5), interval=5, static=False):
+                            confirm_timer.reset()
+                            click_timer.reset()
+                            continue
+                        # 返回
+                        if click_timer.reached() and self.appear_then_click(
+                                GOTO_BACK, offset=(5, 5), interval=5, static=False
+                        ):
+                            confirm_timer.reset()
+                            click_timer.reset()
+                            continue
+
+                        if confirm_timer.reached():
+                            raise NoRewards
+            
+            # 滚动到下一页
+            self.ensure_sroll_to_bottom(x1=(360, 950), x2=(360, 460))
+            scroll_count += 1
+
+        return True
+
     def ensure_back(self, skip_first_screenshot=True):
         click_timer = Timer(0.3)
         while 1:
@@ -185,11 +244,18 @@ class Reward(UI):
             self.temporary(MAIN_GOTO_FRIEND)
             # ----
             self.receive_social_point()
-        # pjjc奖励  
+        # pjjc奖励
         if self.config.Reward_CollectSpecialArenaPoint:
             self.ui_ensure(page_arena)
             try:
                 self.receive_special_arena_point()
             except NoRewards:
                 self.ensure_back()
+        # 方舟排名奖励
+        if self.config.Reward_CollectRanking:
+            self.ui_ensure(page_ark)
+            time.sleep(1)
+            cv2.imwrite(f"./t1.png", self.device.image)
+            self.receive_ranking()
+        
         self.config.task_delay(server_update=True)

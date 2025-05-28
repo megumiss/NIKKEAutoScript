@@ -146,6 +146,10 @@
       "CollectSpecialArenaPoint": {
         "type": "checkbox",
         "value": true
+      },
+      "CollectRanking": {
+        "type": "checkbox",
+        "value": true
       }
     },
     "Storage": {
