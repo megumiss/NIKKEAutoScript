@@ -151,7 +151,7 @@ class Reward(UI):
 
     def receive_ranking(self, skip_first_screenshot=True):
         logger.hr("Receive ranking reward")
-        confirm_timer = Timer(6, count=5).start()
+        confirm_timer = Timer(1, count=2).start()
         click_timer = Timer(0.3)
         
         if not self.appear(RANKING_RED_POINT_CHECK, offset=(5, 5), threshold=0.95):
@@ -171,43 +171,46 @@ class Reward(UI):
         scroll_count = 0
         max_scroll = 1
         while scroll_count <= max_scroll:
+            self.device.screenshot()
             # 所有带红点的坐标
             red_points = self.ranking_match_multi()
-            cv2.imwrite(f"./t1.png", self.device.image)
             if red_points:
                 for index, button in enumerate(red_points):
-                    while True:
+                    while 1:
                         if skip_first_screenshot:
                             skip_first_screenshot = False
                         else:
                             self.device.screenshot()
+                            
+                        # 返回
+                        if click_timer.reached() and self.appear(RANKING_NO_REWARD, offset=(5, 5)) \
+                                and confirm_timer.reached():
+                            self.appear_then_click(GOTO_BACK, offset=(5, 5), interval=2, threshold=0.95)
+                            confirm_timer.reset()
+                            click_timer.reset()
+                            break
+                        
                         # 进入某个排名页面
-                        if click_timer.reached() and self.device.click(button, control_check=False):
+                        if click_timer.reached() \
+                                and self.appear(RANKING_FRONT_CHECK, offset=(5, 5), threshold=0.95) \
+                                and self.device.click(button, control_check=False):
                             confirm_timer.reset()
                             click_timer.reset()
                             continue
                         # 获得奖励
                         if click_timer.reached() and self.appear_then_click(
-                                RANKING_REWARD, offset=(5, 5), interval=5, static=False
+                                RANKING_REWARD, offset=(5, 5), interval=2, threshold=0.95
                         ):
                             confirm_timer.reset()
                             click_timer.reset()
                             continue
                         # 领取奖励
-                        if self.appear_then_click(RANKING_RECEIVE, offset=(5, 5), interval=5, static=False):
-                            confirm_timer.reset()
-                            click_timer.reset()
-                            continue
-                        # 返回
                         if click_timer.reached() and self.appear_then_click(
-                                GOTO_BACK, offset=(5, 5), interval=5, static=False
+                                RANKING_RECEIVE, offset=(5, 5), interval=2, threshold=0.95
                         ):
                             confirm_timer.reset()
                             click_timer.reset()
                             continue
-
-                        if confirm_timer.reached():
-                            raise NoRewards
             
             # 滚动到下一页
             self.ensure_sroll_to_bottom(x1=(360, 950), x2=(360, 460))
