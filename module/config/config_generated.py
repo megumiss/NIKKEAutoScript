@@ -84,5 +84,9 @@ class GeneratedConfig:
     OpponentSelection_SortingWeight = '{"Power":0.3, "CommanderLevel":0.2, "SynchroLevel":0.3, "Ranking":0.2}'
     OpponentSelection_SelectionStrategy = 'Min'  # Max, Middle, Min
 
+    # Group `Conversation`
+    Conversation_QuickConsultation = False
+    Conversation_OnlyFavourite = False
+
     # Group `Storage`
     Storage_Storage = {}

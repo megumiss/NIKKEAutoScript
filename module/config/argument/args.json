@@ -582,6 +582,16 @@
         "display": "hide"
       }
     },
+    "Conversation": {
+      "QuickConsultation": {
+        "type": "checkbox",
+        "value": false
+      },
+      "OnlyFavourite": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

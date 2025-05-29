@@ -180,6 +180,10 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
+    "Conversation": {
+      "QuickConsultation": false,
+      "OnlyFavourite": false
+    },
     "Storage": {
       "Storage": {}
     }
