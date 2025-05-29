@@ -137,6 +137,18 @@ class Reward(UI):
 
         return True
 
+    def ranking_match_multi(self) -> list[Button]:
+        '''删除超出范围的红点，比如邮件'''
+        red_points = TEMPLATE_RANKING_RED_POINT.match_multi(self.device.image, name='RED_POINT')
+        
+        valid_red_points = []
+        for point in red_points:
+            if (point.area[1] >= RANKING_ARENA.area[1] and 
+                point.area[3] <= RANKING_ARENA.area[3]):
+                valid_red_points.append(point)
+        
+        return valid_red_points
+
     def receive_ranking(self, skip_first_screenshot=True):
         logger.hr("Receive ranking reward")
         confirm_timer = Timer(6, count=5).start()
@@ -146,12 +158,21 @@ class Reward(UI):
             return True
         self.ui_ensure(page_ranking)
         
+        # 等待加载完成
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if self.appear(RANKING_LOAD_CHECK, offset=(5, 5), threshold=0.95):
+                break
+        
         scroll_count = 0
         max_scroll = 1
         while scroll_count <= max_scroll:
             # 所有带红点的坐标
-            time.sleep(10)
-            red_points = TEMPLATE_RANKING_RED_POINT.match_multi(crop(self.device.image, RANKING_ARENA.area), name='RED_POINT')
+            red_points = self.ranking_match_multi()
             cv2.imwrite(f"./t1.png", self.device.image)
             if red_points:
                 for index, button in enumerate(red_points):
@@ -254,8 +275,6 @@ class Reward(UI):
         # 方舟排名奖励
         if self.config.Reward_CollectRanking:
             self.ui_ensure(page_ark)
-            time.sleep(1)
-            cv2.imwrite(f"./t1.png", self.device.image)
             self.receive_ranking()
         
         self.config.task_delay(server_update=True)
