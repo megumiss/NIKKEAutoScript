@@ -176,12 +176,21 @@ class Reward(UI):
             red_points = self.ranking_match_multi()
             if red_points:
                 for index, button in enumerate(red_points):
+                    # 进入某个排名页面
                     while 1:
                         if skip_first_screenshot:
                             skip_first_screenshot = False
                         else:
                             self.device.screenshot()
-                            
+                        if self.appear_then_click(button, offset=(5, 5), interval=2, threshold=0.95):
+                            break
+
+                    while 1:
+                        if skip_first_screenshot:
+                            skip_first_screenshot = False
+                        else:
+                            self.device.screenshot()
+                        
                         # 返回
                         if click_timer.reached() and self.appear(RANKING_NO_REWARD, offset=(5, 5)) \
                                 and confirm_timer.reached():
@@ -189,14 +198,6 @@ class Reward(UI):
                             confirm_timer.reset()
                             click_timer.reset()
                             break
-                        
-                        # 进入某个排名页面
-                        if click_timer.reached() \
-                                and self.appear(RANKING_FRONT_CHECK, offset=(5, 5), threshold=0.95) \
-                                and self.device.click(button, control_check=False):
-                            confirm_timer.reset()
-                            click_timer.reset()
-                            continue
                         # 获得奖励
                         if click_timer.reached() and self.appear_then_click(
                                 RANKING_REWARD, offset=(5, 5), interval=2, threshold=0.95
