@@ -42,7 +42,8 @@
     },
     "Reward": {
       "CollectSocialPoint": true,
-      "CollectSpecialArenaPoint": true
+      "CollectSpecialArenaPoint": true,
+      "CollectRanking": true
     },
     "Storage": {
       "Storage": {}

@@ -154,3 +154,9 @@ page_main.link(button=MAIN_GOTO_MAILBOX, destination=page_mailbox)
 page_recruit = Page(RECRUIT_CHECK)
 page_recruit.link(button=TEAM_GOTO_MAIN, destination=page_main)
 page_main.link(button=MAIN_GOTO_RECRUIT, destination=page_recruit)
+
+# ranking
+page_ranking = Page(RANKING_CHECK)
+page_ranking.link(button=GOTO_BACK, destination=page_ark)
+page_ranking.link(button=GOTO_MAIN, destination=page_main)
+page_ark.link(button=ARK_GOTO_RANKING, destination=page_ranking)

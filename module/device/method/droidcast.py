@@ -124,7 +124,7 @@ class DroidCast(Uiautomator2):
         self.droidcast_stop()
 
         logger.info('Pushing DroidCast apk')
-        self.adb_push(self.config.DROIDCAST_FILEPATH_LOCAL, self.config.DROIDCAST_FILEPATH_REMOTE)
+        #self.adb_push(self.config.DROIDCAST_FILEPATH_LOCAL, self.config.DROIDCAST_FILEPATH_REMOTE)
 
         logger.info('Starting DroidCast apk')
         # CLASSPATH=/data/local/tmp/DroidCast.apk app_process / com.rayworks.droidcast.Main > /dev/null

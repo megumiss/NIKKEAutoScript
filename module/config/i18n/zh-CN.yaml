@@ -202,6 +202,9 @@ Reward:
   CollectSpecialArenaPoint:
     name: 收获特殊竞技场点数
     help: ""
+  CollectRanking:
+    name: 排名奖励领取
+    help: ""
 DailyRecruit:
   _info:
     name: 每日抽卡

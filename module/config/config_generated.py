@@ -31,6 +31,7 @@ class GeneratedConfig:
     # Group `Reward`
     Reward_CollectSocialPoint = True
     Reward_CollectSpecialArenaPoint = True
+    Reward_CollectRanking = True
 
     # Group `DailyRecruit`
     DailyRecruit_EventFreeRecruit = True

@@ -33,6 +33,7 @@ Optimization:
 Reward:
   CollectSocialPoint: true
   CollectSpecialArenaPoint: true
+  CollectRanking: true
 DailyRecruit:
   EventFreeRecruit: true
   SocialPointRecruit: true
