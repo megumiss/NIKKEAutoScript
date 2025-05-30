@@ -208,3 +208,45 @@ class Button(Resource):
         """
         offset = np.subtract(button.button, button._button)[:2]
         self._button_offset = area_offset(self._button, offset=offset)
+        
+    def crop(self, area, image=None, name=None):
+        """
+        Get a new button by relative coordinates.
+
+        Args:
+            area (tuple):
+            image (np.ndarray): Screenshot. If provided, load color and image from it.
+            name (str):
+
+        Returns:
+            Button:
+        """
+        if name is None:
+            name = self.name
+        new_area = area_offset(area, offset=self.area[:2])
+        new_button = area_offset(area, offset=self.button[:2])
+        button = Button(area=new_area, color=self.color, button=new_button, file=self.file, name=name)
+        if image is not None:
+            button.load_color(image)
+        return button
+
+    def move(self, vector, image=None, name=None):
+        """
+        Move button.
+
+        Args:
+            vector (tuple):
+            image (np.ndarray): Screenshot. If provided, load color and image from it.
+            name (str):
+
+        Returns:
+            Button:
+        """
+        if name is None:
+            name = self.name
+        new_area = area_offset(self.area, offset=vector)
+        new_button = area_offset(self.button, offset=vector)
+        button = Button(area=new_area, color=self.color, button=new_button, file=self.file, name=name)
+        if image is not None:
+            button.load_color(image)
+        return button
