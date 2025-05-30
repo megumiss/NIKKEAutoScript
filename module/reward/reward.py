@@ -182,8 +182,15 @@ class Reward(UI):
                             skip_first_screenshot = False
                         else:
                             self.device.screenshot()
-                        if self.appear_then_click(button, offset=(5, 5), interval=2, threshold=0.95):
+
+                        if click_timer.reached() \
+                                and self.appear(RANKING_REWARD, offset=(5, 5), interval=2, threshold=0.95):
+                            click_timer.reset()
                             break
+                        if click_timer.reached() \
+                            and self.appear_then_click(button, offset=(5, 5), interval=2, threshold=0.95):
+                            click_timer.reset()
+                            continue
 
                     while 1:
                         if skip_first_screenshot:
