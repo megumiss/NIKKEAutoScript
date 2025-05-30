@@ -4,13 +4,13 @@ from module.base.utils import (
     find_center,
 )
 from module.conversation.assets import *
+from module.conversation.dialogue import Dialogue
 from module.event_daemon.assets import SKIP
 from module.handler.assets import CONFIRM_B, AUTO_CLICK_CHECK
 from module.logger import logger
 from module.ui.assets import CONVERSATION_CHECK, GOTO_BACK
 from module.ui.page import page_conversation
 from module.ui.ui import UI
-
 
 class ChooseNextNIKKETooLong(Exception):
     pass
@@ -34,8 +34,8 @@ class Conversation(UI):
         return result
 
     def get_next_target(self):
-        if DETAIL_CHECK.match(self.device.image, threshold=0.71) and GIFT.match_appear_on(self.device.image,
-                                                                                          threshold=10):
+        if DETAIL_CHECK.match(self.device.image, threshold=0.71) \
+                and GIFT.match_appear_on(self.device.image, threshold=10):
             if OPPORTUNITY_B.match(self.device.image, offset=5, threshold=0.96, static=False):
                 logger.warning("There are no remaining opportunities")
                 raise NoOpportunitiesRemain
@@ -131,21 +131,32 @@ class Conversation(UI):
 
     def answer(self, skip_first_screenshot=True):
         click_timer = Timer(0.5)
+        anwer_true_exist = False
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
 
-            if self.appear(DETAIL_CHECK, offset=(30, 30), static=False) and GIFT.match_appear_on(self.device.image,
-                                                                                                 threshold=10):
+            if self.appear(DETAIL_CHECK, offset=(30, 30), static=False) \
+                    and GIFT.match_appear_on(self.device.image, threshold=10):
                 break
 
             if click_timer.reached() and self.appear_then_click(SKIP, offset=5, static=False):
                 click_timer.reset()
                 continue
+            
+            # 有红心为正确答案
+            if click_timer.reached() and TEMPLATE_ANWER_TRUE.match(self.device.image):
+                anwer_true_exist = True
+                button_true = TEMPLATE_ANWER_TRUE.match_result(self.device.image, name='ANWER_TRUE')
+                if self.appear_then_click(button_true, offset=5):
+                    logger.info("Click %s @ %s" % (point2str(button_true), "ANWER_TRUE"))
+                    click_timer.reset()
+                continue
 
-            if click_timer.reached():
+            # TODO 识别正确答案
+            if not anwer_true_exist and click_timer.reached():
                 self.device.click_minitouch(*ANSWER_CHECK.location)
                 logger.info("Click %s @ %s" % (point2str(*ANSWER_CHECK.location), "ANSWER"))
                 click_timer.reset()
@@ -195,6 +206,7 @@ class Conversation(UI):
 
     def run(self):
         self.ui_ensure(page_conversation, confirm_wait=1)
+        dialoguedata = Dialogue.dialogue_data("./module/conversation/dialogue.json")
         if self.ensure_opportunity_remain():
             self._confirm_timer.reset().start()
             try:
