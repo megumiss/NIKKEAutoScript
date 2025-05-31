@@ -39,7 +39,8 @@ class Reward(UI):
                 click_timer.reset()
                 continue
             # 判断是否有奖励可领
-            if self.appear(NO_REWARDS_1, offset=(30, 30), interval=1):
+            if self.appear(NO_REWARDS_1, offset=(10, 10), interval=1) and confirm_timer.reached():
+                logger.info("Reward done after check NO_REWARDS_1")
                 break
             # 点击获得奖励
             if click_timer.reached() and self.appear_then_click(
@@ -50,9 +51,11 @@ class Reward(UI):
                 continue
             
             if self.appear(EMPTY_CHECK, threshold=1.00):
+                logger.info("Reward done after check EMPTY_CHECK")
                 break
 
             if self.appear(MAIN_CHECK, offset=(10, 10)) and confirm_timer.reached():
+                logger.info("Reward done after check MAIN_CHECK")
                 break
 
         logger.info("Defence Reward have been received")
