@@ -221,10 +221,10 @@ Conversation:
     help: ""
   QuickConsultation:
     name: 快速咨询
-    help: ""
+    help: "还没做"
   OnlyFavourite:
     name: 只咨询收藏
-    help: ""
+    help: "还没做"
   WaitToCommunicate:
     name: 等待咨询的妮姬
     help: "请收藏想要咨询的妮姬\n
