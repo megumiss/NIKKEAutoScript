@@ -1,3 +1,4 @@
+import re
 from statistics import mean
 
 import cv2
@@ -373,3 +374,8 @@ def area_pad(area, pad=10):
     """
     upper_left_x, upper_left_y, bottom_right_x, bottom_right_y = area
     return upper_left_x + pad, upper_left_y + pad, bottom_right_x - pad, bottom_right_y - pad
+
+def remove_punctuation(text: str) -> str:
+    """移除所有标点符号和空格"""
+    pattern = r'[^\w]'
+    return re.sub(pattern, '', text)

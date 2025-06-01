@@ -9,42 +9,14 @@ class OcrModel:
     @cached_property
     def nikke(self):
         """
-            t20
-            base: cnocr-v2.2-densenet_lite_136-gru.ckpt
-            training data: 2642 + 56
-            epochs: 15
-            mainly used for the rookie arena
-
-            t25
-            base: cnocr-v2.2-densenet_lite_136-gru.ckpt
-            training data: 4497 + 61
-            epochs: 15
-            mainly used for the rookie arena
+            base: cnocr-v2.3-densenet_lite_136-gru.ckpt
+            training data: https://github.com/megumiss/NIKKECnOCR/commit/983d2f3542541163dbd695dd497e2961bfd41841
+            epochs: 20
+            learning_rate: 3e-4
+            val-complete_match-epoch: 0.9731
         """
         return NikkeOcr(rec_model_name='densenet_lite_136-gru', root='./bin/cnocr_models/nikke',
-                        model_name='/t25.ckpt', name='nikke')
-
-    @cached_property
-    def arena(self):
-        """
-            t27
-            base: cnocr-v2.2-densenet_lite_136-gru.ckpt
-            training data: 4287 + 61
-            epochs: 15
-            mainly used for the rookie arena
-        """
-        return NikkeOcr(rec_model_name='densenet_lite_136-gru', root='./bin/cnocr_models/nikke',
-                        model_name='/t27.ckpt', name='arena')
-
-    # @cached_property
-    # def nikke_digit(self):
-    #     return NikkeOcr(rec_model_name='densenet_lite_136-gru', root='./bin/cnocr_models/nikke',
-    #                     model_name='/t23.ckpt', name='nikke_digit', cand_alphabet='0123456789')
-    #
-    # @cached_property
-    # def nikke_counter(self):
-    #     return NikkeOcr(rec_model_name='densenet_lite_136-gru', root='./bin/cnocr_models/nikke',
-    #                     model_name='/t23.ckpt', name='nikke_counter', cand_alphabet='0123456789/IDS'
+                        model_name='/cnocr-v2.3-densenet_lite_136-gru-nikke.ckpt', name='nikke')
 
     @cached_property
     def cnocr(self):
@@ -53,6 +25,8 @@ class OcrModel:
 
     @cached_property
     def cnocr_num(self):
+        
+        
         return NikkeOcr(rec_model_name='number-densenet_lite_136-fc', root='./bin/cnocr_models/cnocr',
                         model_name='/cnocr-v2.3-number-densenet_lite_136-fc-nikke.ckpt', name='cnocr_num')
 

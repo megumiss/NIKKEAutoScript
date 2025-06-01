@@ -1,7 +1,13 @@
+from functools import cached_property
+
+import cv2
 from module.base.timer import Timer
 from module.base.utils import (
+    crop,
     point2str,
     find_center,
+    remove_punctuation,
+    _area_offset,
 )
 from module.conversation.assets import *
 from module.conversation.dialogue import Dialogue
@@ -11,6 +17,7 @@ from module.logger import logger
 from module.ui.assets import CONVERSATION_CHECK, GOTO_BACK
 from module.ui.page import page_conversation
 from module.ui.ui import UI
+from module.ocr.ocr import Ocr
 
 class ChooseNextNIKKETooLong(Exception):
     pass
@@ -33,18 +40,54 @@ class Conversation(UI):
         logger.info(f"[Opportunity remain] {result}")
         return result
 
-    def get_next_target(self):
+    def nikke_name(self) -> str:
+        NIKKE_NAME = Ocr(
+            [COMMUNICATE_NIKKE_NAME.area],
+            name="NIKKE_NAME",
+            letter=(73, 73, 73),
+            threshold=128,
+            lang="nikke",
+        )
+        
+        return NIKKE_NAME.ocr(self.device.image)
+
+    def answer_text(self, button: Button) -> str:
+        area =_area_offset(button.area, (45, -13, 545, 13))
+        ANSWER = Ocr(
+            [area],
+            name="ANSWER",
+            letter=(255, 255, 255),
+            threshold=128,
+            lang="nikke",
+        )
+        
+        return ANSWER.ocr(self.device.image)
+    
+    def get_next_target(self, tmp_image):
+        # 是否进入到某个角色
         if DETAIL_CHECK.match(self.device.image, threshold=0.71) \
                 and GIFT.match_appear_on(self.device.image, threshold=10):
+            # 比较头像是否变化
+            if tmp_image is not None:
+                avatar = Button(COMMUNICATE_NIKKE_AVATAR.area, None, button=COMMUNICATE_NIKKE_AVATAR.area)
+                avatar._match_init = True
+                avatar.image = crop(tmp_image, COMMUNICATE_NIKKE_AVATAR.area)
+                if self.appear(avatar, offset=5, threshold=0.95):
+                    tmp_image = self.device.image
+                    self.device.sleep(0.5)
+                    self.device.screenshot()
+                    self.get_next_target(tmp_image)
+            # 没有次数
             if OPPORTUNITY_B.match(self.device.image, offset=5, threshold=0.96, static=False):
                 logger.warning("There are no remaining opportunities")
                 raise NoOpportunitiesRemain
-
+            # 咨询完成/好感最大值
             if self.appear(COMMUNICATE_DONE, offset=5, threshold=0.95) \
                     or self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95):
                 if self._confirm_timer.reached():
                     logger.warning("Perhaps all selected NIKKE already had a conversation")
                     raise ChooseNextNIKKETooLong
+                # 下一个
                 self.device.click_minitouch(690, 560)
             else:
                 self._confirm_timer.reset()
@@ -71,16 +114,18 @@ class Conversation(UI):
             except Exception:
                 pass
 
+        tmp_image = self.device.image
         self.device.sleep(2)
         self.device.screenshot()
-        self.get_next_target()
+        self.get_next_target(tmp_image)
 
     def communicate(self):
         logger.hr("Start a conversation")
-        self.get_next_target()
-        self.ensure_wait_to_answer()
+        self.get_next_target(None)
+        self.ensure_wait_to_answer(self.nikke_name())
 
-    def ensure_wait_to_answer(self, skip_first_screenshot=True):
+    def ensure_wait_to_answer(self, nikke: str, skip_first_screenshot=True):
+        logger.info(f"Communicate NIKKE {nikke}")
         confirm_timer = Timer(1.6, count=2).start()
         click_timer = Timer(0.9)
         while 1:
@@ -110,9 +155,9 @@ class Conversation(UI):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
-            # 选择答案
+            # 出现选项
             if self.appear(ANSWER_CHECK, offset=1, threshold=0.9, static=False):
-                self.answer()
+                self.answer(nikke)
             elif not COMMUNICATE.match_appear_on(self.device.image, threshold=6) \
                     and self.appear(DETAIL_CHECK, offset=(5, 5), static=False) \
                     and GIFT.match_appear_on(self.device.image, threshold=10) \
@@ -130,9 +175,9 @@ class Conversation(UI):
                 click_timer.reset()
                 continue
 
-    def answer(self, skip_first_screenshot=True):
+    def answer(self, nikke: str, skip_first_screenshot=True):
         click_timer = Timer(0.5)
-        anwer_true_exist = False
+        answer_true_exist = False
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -142,26 +187,44 @@ class Conversation(UI):
             if self.appear(DETAIL_CHECK, offset=(30, 30), static=False) \
                     and GIFT.match_appear_on(self.device.image, threshold=10):
                 break
-
+            if click_timer.reached() and self.appear_then_click(RANK_INCREASE_COMFIRM, offset=5, static=False):
+                click_timer.reset()
+                continue
             if click_timer.reached() and self.appear_then_click(SKIP, offset=5, static=False):
                 click_timer.reset()
                 continue
             
             # 有红心为正确答案
-            if click_timer.reached() and TEMPLATE_ANWER_TRUE.match(self.device.image):
-                anwer_true_exist = True
-                _, button = TEMPLATE_ANWER_TRUE.match_result(self.device.image, name='ANWER_TRUE')
+            if click_timer.reached() and TEMPLATE_ANSWER_TRUE.match(self.device.image):
+                answer_true_exist = True
+                _, button = TEMPLATE_ANSWER_TRUE.match_result(self.device.image, name='ANSWER_TRUE')
                 self.device.click(button)
-                logger.info("Click %s @ %s" % (point2str(*button.location), "ANWER_TRUE"))
+                logger.info("Click %s @ %s" % (point2str(*button.location), "ANSWER_TRUE"))
                 click_timer.reset()
                 continue
-
-            # TODO 识别正确答案
-            if not anwer_true_exist and click_timer.reached():
-                self.device.click(ANSWER_CHECK)
-                logger.info("Click %s @ %s" % (point2str(*ANSWER_CHECK.location), "ANSWER"))
-                click_timer.reset()
-                continue
+            # 识别答案
+            if click_timer.reached() and not answer_true_exist:
+                answers = TEMPLATE_ANSWER_CHECK.match_multi(self.device.image, similarity=0.9)
+                if len(answers) > 1:
+                    # 提取选项文本
+                    answer_list = [self.answer_text(answer) for answer in answers]
+                    
+                    # 获取正确答案
+                    dialogue = Dialogue("./module/conversation/dialogue.json")
+                    right_answer = dialogue.get_answer(nikke, answer_list)
+                    index = answer_list.index(right_answer)
+                    
+                    # 点击对应选项
+                    self.device.click(answers[index])
+                    logger.info("Click %s @ %s", point2str(*answers[index].location), answer_list[index])
+                    click_timer.reset()
+                    continue
+                else:
+                    # 点击单个选项/找不到正确答案
+                    self.device.click(ANSWER_CHECK)
+                    logger.info("Click %s @ %s" % (point2str(*ANSWER_CHECK.location), "ANSWER"))
+                    click_timer.reset()
+                    continue
 
         self.device.sleep(2.5)
         # return self.communicate()
@@ -207,7 +270,6 @@ class Conversation(UI):
 
     def run(self):
         self.ui_ensure(page_conversation, confirm_wait=1)
-        #dialoguedata = Dialogue("./module/conversation/dialogue.json").dialogue_data
         if self.ensure_opportunity_remain():
             self._confirm_timer.reset().start()
             try:

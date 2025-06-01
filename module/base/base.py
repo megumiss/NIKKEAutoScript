@@ -1,6 +1,8 @@
 import time
 from functools import cached_property
 
+import numpy as np
+
 from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import float2str, point2str
@@ -174,3 +176,17 @@ class ModuleBase:
         for i in range(count):
             self.device.swipe(x1, x2, handle_control_check=False)
             self.device.sleep(delay)
+
+    def ocr_area(self, image, area=None, model='cnocr'):
+        result = self.ocr_models.__getattribute__(model).ocr(image, area=area)
+        if len(result):
+            if area:
+                # 添加区域偏移
+                _result = [item.copy() for item in result]
+                offset = np.array([[area[0], area[1]]], dtype=np.float32)
+                for item in _result:
+                    item["position"] = item["position"] + offset
+                return _result
+            return result
+        else:
+            return None
