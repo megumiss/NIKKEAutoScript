@@ -63,20 +63,10 @@ class Conversation(UI):
         
         return ANSWER.ocr(self.device.image)
     
-    def get_next_target(self, tmp_image):
+    def get_next_target(self, skip_first_screenshot=True):
         # 是否进入到某个角色
         if DETAIL_CHECK.match(self.device.image, threshold=0.71) \
                 and GIFT.match_appear_on(self.device.image, threshold=10):
-            # 比较头像是否变化
-            if tmp_image is not None:
-                avatar = Button(COMMUNICATE_NIKKE_AVATAR.area, None, button=COMMUNICATE_NIKKE_AVATAR.area)
-                avatar._match_init = True
-                avatar.image = crop(tmp_image, COMMUNICATE_NIKKE_AVATAR.area)
-                if self.appear(avatar, offset=5, threshold=0.95):
-                    tmp_image = self.device.image
-                    self.device.sleep(0.5)
-                    self.device.screenshot()
-                    self.get_next_target(tmp_image)
             # 没有次数
             if OPPORTUNITY_B.match(self.device.image, offset=5, threshold=0.96, static=False):
                 logger.warning("There are no remaining opportunities")
@@ -88,7 +78,19 @@ class Conversation(UI):
                     logger.warning("Perhaps all selected NIKKE already had a conversation")
                     raise ChooseNextNIKKETooLong
                 # 下一个
+                tmp_image = self.device.image
                 self.device.click_minitouch(690, 560)
+                # 比较头像是否变化
+                while 1:
+                    if skip_first_screenshot:
+                        skip_first_screenshot = False
+                    else:
+                        self.device.screenshot()
+                    avatar = Button(COMMUNICATE_NIKKE_AVATAR.area, None, button=COMMUNICATE_NIKKE_AVATAR.area)
+                    avatar._match_init = True
+                    avatar.image = crop(tmp_image, COMMUNICATE_NIKKE_AVATAR.area)
+                    if not self.appear(avatar, offset=5, threshold=0.95):
+                        break
             else:
                 self._confirm_timer.reset()
                 self.device.stuck_record_clear()
@@ -117,11 +119,11 @@ class Conversation(UI):
         tmp_image = self.device.image
         self.device.sleep(2)
         self.device.screenshot()
-        self.get_next_target(tmp_image)
+        self.get_next_target()
 
     def communicate(self):
         logger.hr("Start a conversation")
-        self.get_next_target(None)
+        self.get_next_target()
         self.ensure_wait_to_answer(self.nikke_name())
 
     def ensure_wait_to_answer(self, nikke: str, skip_first_screenshot=True):
