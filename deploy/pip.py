@@ -1,4 +1,6 @@
 from functools import cached_property
+import os
+import sys
 
 from deploy.config import DeployConfig
 from module.exception import RequestHumanTakeover
@@ -8,14 +10,20 @@ from module.logger import logger
 class PipManager(DeployConfig):
     @cached_property
     def python(self):
-        return self.filepath("PythonExecutable")
+        exe = self.filepath("PythonExecutable")
+        if os.path.exists(exe):
+            return exe
+
+        current = sys.executable.replace("\\", "/")
+        logger.warning(f'PythonExecutable: {exe} does not exist, use current python instead: {current}')
+        return current
 
     @cached_property
     def requirements_file(self):
         if self.RequirementsFile == 'requirements.txt':
             return 'requirements.txt'
         else:
-            raise RequestHumanTakeover
+            return self.filepath("RequirementsFile")
 
     @cached_property
     def pip(self):
