@@ -23,7 +23,9 @@ class PipManager(DeployConfig):
 
     def pip_install(self):
         logger.hr('Update Dependencies', 0)
-
+        for key, value in vars(self).items():
+            logger.info(f"{key} = {value}")
+        
         logger.hr('Check Python', 1)
         self.execute(f'"{self.python}" --version')
 
@@ -31,4 +33,6 @@ class PipManager(DeployConfig):
 
         logger.hr('Update Dependencies', 1)
         arg = ' ' + ' '.join(arg) if arg else ''
+        logger.hr('Update Dependencies', 2)
+        logger.info(f'{self.pip} install -r {self.requirements_file}{arg}')
         self.execute(f'{self.pip} install -r {self.requirements_file}{arg}')
