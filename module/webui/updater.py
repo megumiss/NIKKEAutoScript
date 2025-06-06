@@ -144,7 +144,9 @@ class Updater(GitManager, PipManager):
 
     def _wait_update(self, instances: List[ProcessManager], names):
         if self.state == "cancel":
+            logger.info("【set state cancel】")
             self.state = 1
+        logger.info("【set state wait】")
         self.state = "wait"
         # self.event.set()
         _instances = instances.copy()
@@ -152,6 +154,7 @@ class Updater(GitManager, PipManager):
         while _instances:
             for nkas in _instances:
                 if not nkas.alive:
+                    logger.info("【remove nkas】")
                     _instances.remove(nkas)
                     logger.info(f"NKAS [{nkas.config_name}] stopped")
                     logger.info(f"Remains: {[nkas.config_name for nkas in _instances]}")
@@ -234,5 +237,5 @@ class Updater(GitManager, PipManager):
 updater = Updater()
 
 if __name__ == "__main__":
-    
+
     updater.update()
