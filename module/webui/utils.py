@@ -1,3 +1,4 @@
+from datetime import datetime
 import operator
 import re
 import threading
@@ -119,6 +120,9 @@ class TaskHandler:
             for task in self.pending_remove_tasks:
                 self._remove_task(task)
             self.pending_remove_tasks = []
+
+    def remove_current_task(self) -> None:
+        self.remove_task(self._task, nowait=True)
 
     def loop(self) -> None:
         """
@@ -376,3 +380,14 @@ def re_fullmatch(pattern, string):
         pattern = RE_DATETIME
     # elif:
     return re.fullmatch(pattern=pattern, string=string)
+
+def get_next_time(t: datetime.time):
+    now = datetime.datetime.today().time()
+    second = (
+        (t.hour - now.hour) * 3600
+        + (t.minute - now.minute) * 60
+        + (t.second - now.second)
+    )
+    if second < 0:
+        second += 86400
+    return second

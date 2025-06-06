@@ -1,7 +1,8 @@
+from datetime import datetime
 import subprocess
 import threading
 import time
-from typing import Tuple, List
+from typing import Generator, Tuple, List
 
 from deploy.config import ExecutionError
 from deploy.git import GitManager
@@ -11,6 +12,8 @@ from module.base.retry import retry
 from module.logger import logger
 from module.webui.process_manager import ProcessManager
 from module.webui.setting import State
+from module.webui.utils import TaskHandler
+from module.webui.utils import TaskHandler, get_next_time
 
 
 class Updater(GitManager, PipManager):
@@ -25,6 +28,15 @@ class Updater(GitManager, PipManager):
     def delay(self):
         self.read()
         return int(self.CheckUpdateInterval) * 60
+
+    @property
+    def schedule_time(self):
+        self.read()
+        t = self.AutoRestartTime
+        if t is not None:
+            return datetime.time.fromisoformat(t)
+        else:
+            return None
 
     @retry(ExecutionError, tries=3, delay=5, logger=None)
     def git_install(self):
@@ -160,17 +172,22 @@ class Updater(GitManager, PipManager):
         self.state = "run update"
         logger.info("nkas stopped, start updating")
         if self.update():
+            logger.info("【update done】")
             if State.restart_event is not None:
+                logger.info("reload start】")
                 self.state = "reload"
                 with open("./config/reloadnkas", mode="w") as f:
                     f.writelines(names)
                 from module.webui.app import clearup
 
                 self._trigger_reload(2)
+                logger.info("clearup start】")
                 clearup()
+                logger.info("clearup done】")
             else:
                 self.state = "finish"
         else:
+            logger.info("【update failed】")
             self.state = "failed"
             logger.warning("Update failed")
             # self.event.clear()
@@ -187,6 +204,28 @@ class Updater(GitManager, PipManager):
 
         timer = threading.Timer(delay, trigger)
         timer.start()
+
+    def schedule_update(self) -> Generator:
+        th: TaskHandler
+        th = yield
+        if self.schedule_time is None:
+            th.remove_current_task()
+            yield
+        th._task.delay = get_next_time(self.schedule_time)
+        yield
+        while True:
+            self.check_update()
+            if self.state != 1:
+                th._task.delay = get_next_time(self.schedule_time)
+                yield
+                continue
+            if State.restart_event is None:
+                yield
+                continue
+            if not self.run_update():
+                self.state = "failed"
+            th._task.delay = get_next_time(self.schedule_time)
+            yield
 
     def cancel(self):
         self.state = "cancel"
