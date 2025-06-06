@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import subprocess
 import threading
 import time
@@ -34,7 +34,7 @@ class Updater(GitManager, PipManager):
         self.read()
         t = self.AutoRestartTime
         if t is not None:
-            return datetime.fromisoformat(t)
+            return datetime.time.fromisoformat(t)
         else:
             return None
 
