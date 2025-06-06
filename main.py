@@ -271,24 +271,18 @@ class NikkeAutoScript:
             bool: True if wait finished, False if config changed.
         """
         future = future + timedelta(seconds=1)
-        """
-            记录开始等待任务时，配置文件的最后更改时间
-        """
         self.config.start_watching()
         while 1:
             if datetime.now() > future:
                 return True
-
-            # if self.stop_event is not None:
-            #     if self.stop_event.is_set():
-            #         logger.info("Update event detected")
-            #         logger.info(f"[{self.config_name}] exited. Reason: Update")
-            #         exit(0)
+            if self.stop_event is not None:
+                if self.stop_event.is_set():
+                    logger.info("Update event detected")
+                    logger.info(f"[{self.config_name}] exited. Reason: Update")
+                    exit(0)
 
             time.sleep(5)
-            """
-                在等待过程中持续对比配置文件的最后更改时间
-            """
+
             if self.config.should_reload():
                 return False
 
@@ -362,6 +356,13 @@ class NikkeAutoScript:
         failure_record = {}
 
         while 1:
+            # Check update event from GUI
+            if self.stop_event is not None:
+                if self.stop_event.is_set():
+                    logger.info("Update event detected")
+                    logger.info(f"Alas [{self.config_name}] exited.")
+                    break
+            
             task = self.get_next_task()
             _ = self.device
 
