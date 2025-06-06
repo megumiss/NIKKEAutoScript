@@ -148,7 +148,7 @@ class Updater(GitManager, PipManager):
             self.state = 1
         logger.info("【set state wait】")
         self.state = "wait"
-        #self.event.set()
+        self.event.set()
         _instances = instances.copy()
         start_time = time.time()
         while _instances:
@@ -163,7 +163,7 @@ class Updater(GitManager, PipManager):
             if self.state == "cancel":
                 logger.info("【while state cancel】")
                 self.state = 1
-                #self.event.clear()
+                self.event.clear()
                 ProcessManager.restart_processes(instances, None)
                 return
             logger.info("【while sleep】")

@@ -99,7 +99,7 @@ class NikkeAutoScriptGUI(Frame):
                         label_on=t("Gui.Button.Stop"),
                         label_off=t("Gui.Button.Start"),
                         onclick_on=lambda: self.nkas.stop(),
-                        onclick_off=lambda: self.nkas.start(None),
+                        onclick_off=lambda: self.nkas.start(None, updater.event),
                         get_state=lambda: self.nkas.alive,
                         color_on="off",
                         color_off="on",
