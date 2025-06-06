@@ -19,7 +19,7 @@ Deploy:
   Update:
     EnableReload: true
     CheckUpdateInterval: 5
-    AutoRestartTime: 03:50:00
+    AutoRestartTime: 03:50
 
   Webui:
     WebuiHost: 'localhost'

@@ -27,7 +27,7 @@ class ConfigModel:
 
     EnableReload: bool = True
     CheckUpdateInterval: int = 5
-    AutoRestartTime: str = "03:50:00"
+    AutoRestartTime: str = "03:50"
 
     WebuiHost: str = "localhost"
     WebuiPort: int = 12271
