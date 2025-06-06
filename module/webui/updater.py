@@ -144,59 +144,45 @@ class Updater(GitManager, PipManager):
 
     def _wait_update(self, instances: List[ProcessManager], names):
         if self.state == "cancel":
-            logger.info("【set state cancel】")
             self.state = 1
-        logger.info("【set state wait】")
         self.state = "wait"
         self.event.set()
         _instances = instances.copy()
         start_time = time.time()
         while _instances:
             for nkas in _instances:
-                logger.info(f"【alive: {nkas.alive}】") 
                 if not nkas.alive:
-                    logger.info("【remove nkas】") 
                     _instances.remove(nkas)
                     logger.info(f"NKAS [{nkas.config_name}] stopped")
                     logger.info(f"Remains: {[nkas.config_name for nkas in _instances]}")
-            logger.info("【while check state cancel】")
             if self.state == "cancel":
-                logger.info("【while state cancel】")
                 self.state = 1
                 self.event.clear()
                 ProcessManager.restart_processes(instances, self.event)
                 return
-            logger.info("【while sleep】")
             time.sleep(0.25)
-            logger.info(f"【{time.time()} - {start_time}】")
             if time.time() - start_time > 60 * 10:
                 logger.warning("Waiting nkas shutdown timeout, force kill")
                 for nkas in _instances:
                     nkas.stop()
                 break
-        logger.info("【run_update】")
         self._run_update(instances, names)
 
     def _run_update(self, instances, names):
         self.state = "run update"
         logger.info("nkas stopped, start updating")
         if self.update():
-            logger.info("【update done】")
             if State.restart_event is not None:
-                logger.info("reload start】")
                 self.state = "reload"
                 with open("./config/reloadnkas", mode="w") as f:
                     f.writelines(names)
                 from module.webui.app import clearup
 
                 self._trigger_reload(2)
-                logger.info("clearup start】")
                 clearup()
-                logger.info("clearup done】")
             else:
                 self.state = "finish"
         else:
-            logger.info("【update failed】")
             self.state = "failed"
             logger.warning("Update failed")
             self.event.clear()
