@@ -158,17 +158,21 @@ class Updater(GitManager, PipManager):
                     _instances.remove(nkas)
                     logger.info(f"NKAS [{nkas.config_name}] stopped")
                     logger.info(f"Remains: {[nkas.config_name for nkas in _instances]}")
+            logger.info("【while check state cancel】")
             if self.state == "cancel":
+                logger.info("【while state cancel】")
                 self.state = 1
                 # self.event.clear()
                 ProcessManager.restart_processes(instances, None)
                 return
+            logger.info("【while sleep】")
             time.sleep(0.25)
             if time.time() - start_time > 60 * 10:
                 logger.warning("Waiting nkas shutdown timeout, force kill")
                 for nkas in _instances:
                     nkas.stop()
                 break
+        logger.info("【run_update】")
         self._run_update(instances, names)
 
     def _run_update(self, instances, names):
