@@ -243,5 +243,5 @@ class Updater(GitManager, PipManager):
 updater = Updater()
 
 if __name__ == "__main__":
-   
+    
     updater.update()
