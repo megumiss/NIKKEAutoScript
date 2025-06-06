@@ -676,6 +676,7 @@ class NikkeAutoScriptGUI(Frame):
 
 def startup():
     # 初始化多进程数据共享
+    logger.info("【init】")
     State.init()
     if updater.delay > 0:
         task_handler.add(updater.check_update, updater.delay)
