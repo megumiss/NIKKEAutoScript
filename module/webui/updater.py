@@ -154,7 +154,7 @@ class Updater(GitManager, PipManager):
         while _instances:
             for nkas in _instances:
                 if not nkas.alive:
-                    logger.info("【remove nkas】")
+                    logger.info("【remove nkas】") 
                     _instances.remove(nkas)
                     logger.info(f"NKAS [{nkas.config_name}] stopped")
                     logger.info(f"Remains: {[nkas.config_name for nkas in _instances]}")
