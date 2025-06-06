@@ -34,7 +34,7 @@ class Updater(GitManager, PipManager):
         self.read()
         t = self.AutoRestartTime
         if t is not None:
-            return datetime.time.fromisoformat(t)
+            return datetime.fromisoformat(t)
         else:
             return None
 
