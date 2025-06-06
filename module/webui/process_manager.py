@@ -52,7 +52,17 @@ class ProcessManager:
         '''
 
         set_file_logger(name=config_name)
-        NikkeAutoScript(config_name=config_name).loop()
+        
+        from module.config.config import NikkeConfig
+        NikkeConfig.stop_event = e
+        
+        try:
+            if e is not None:
+                NikkeAutoScript.stop_event = e
+            NikkeAutoScript(config_name=config_name).loop()
+            logger.info(f"[{config_name}] exited. Reason: Finish\n")
+        except Exception as e:
+            logger.exception(e)
 
     def start(self, func, ev: threading.Event = None) -> None:
         if not self.alive:
@@ -61,7 +71,7 @@ class ProcessManager:
                 q: State.manager.Queue() 进程共享渲染队列
                 e: 进程同步标识
                 func(mod_name): 创建进程执行的方法，在Alas中，默认为执行
-                AzurLaneAutoScript(config_name='alas').loop()
+                AzurLaneAutoScript(config_name='nkas').loop()
             '''
             self._process = Process(
                 target=ProcessManager.run_process,
@@ -129,7 +139,7 @@ class ProcessManager:
     ):
         """
         After update and reload, or failed to perform an update,
-        restart all alas that running before update
+        restart all nkas that running before update
         """
 
         """
@@ -164,7 +174,7 @@ class ProcessManager:
 
         """
             instances在热更新成功后，重新启动uvicorn时
-            在Alas中，为开始更新前保存到 ./config/reloadalas 中的实例名称(配置名称)
+            在Alas中，为开始更新前保存到 ./config/reloadnkas 中的实例名称(配置名称)
         """
         try:
             with open("./config/reloadnkas", mode="r") as f:
@@ -175,14 +185,14 @@ class ProcessManager:
             pass
 
         """
-            当实例非alas实例时
+            当实例非nkas实例时
             通过实例名称(配置名称)，读取存储在./config的配置，也就是mod名称(实例种类)
-            mod_name应该为alas，Daemon，AzurLaneUncensored，Benchmark，GameManager，maa，MaaCopilot
+            mod_name应该为nkas，Daemon，AzurLaneUncensored，Benchmark，GameManager，maa，MaaCopilot
             例如: maa1.maa.json 
             config_name为maa1，mod_name为maa
             
-            当有多个alas实例时，读取为实例名称(配置名称).json
-            这样get_config_mod会因为KeyError，返回 'alas'， 然后该实例在运行时，配置为实例名称(配置名称).json
+            当有多个nkas实例时，读取为实例名称(配置名称).json
+            这样get_config_mod会因为KeyError，返回 'nkas'， 然后该实例在运行时，配置为实例名称(配置名称).json
         """
         for process in _instances:
             logger.info(f"Starting [{process.config_name}]")

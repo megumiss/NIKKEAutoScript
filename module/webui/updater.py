@@ -164,7 +164,7 @@ class Updater(GitManager, PipManager):
                 logger.info("【while state cancel】")
                 self.state = 1
                 self.event.clear()
-                ProcessManager.restart_processes(instances, None)
+                ProcessManager.restart_processes(instances, self.event)
                 return
             logger.info("【while sleep】")
             time.sleep(0.25)
@@ -243,5 +243,4 @@ class Updater(GitManager, PipManager):
 updater = Updater()
 
 if __name__ == "__main__":
-    
     updater.update()
