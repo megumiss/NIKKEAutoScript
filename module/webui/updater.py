@@ -167,6 +167,7 @@ class Updater(GitManager, PipManager):
                 return
             logger.info("【while sleep】")
             time.sleep(0.25)
+            logger.info(f"【{time.time()} - {start_time}】")
             if time.time() - start_time > 60 * 10:
                 logger.warning("Waiting nkas shutdown timeout, force kill")
                 for nkas in _instances:
