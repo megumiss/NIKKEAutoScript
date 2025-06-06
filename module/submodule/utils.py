@@ -1,5 +1,6 @@
 import os
 
+MOD_CONFIG_DICT = {}
 
 def mod_instance():
     global MOD_CONFIG_DICT
