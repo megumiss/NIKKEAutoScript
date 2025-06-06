@@ -1,3 +1,4 @@
+import argparse
 import queue
 import threading
 from datetime import datetime
@@ -702,6 +703,29 @@ def app():
         local.gui = gui
         gui.run()
 
+    parser = argparse.ArgumentParser(description="NKAS web service")
+    args, _ = parser.parse_known_args()
+
+    runs = None
+    if args.run:
+        runs = args.run
+    elif State.deploy_config.Run:
+        # TODO: refactor poor_yaml_read() to support list
+        tmp = State.deploy_config.Run.split(",")
+        runs = [l.strip(" ['\"]") for l in tmp if len(l)]
+    instances: List[str] = runs
+
     routes = webio_routes(applications=[index])
-    app = Starlette(routes=routes, debug=True, on_startup=[startup], on_shutdown=[clearup])
+    app = Starlette(
+            routes=routes, 
+            debug=True, 
+            on_startup=[
+                startup, 
+                lambda: ProcessManager.restart_processes(
+                    instances=instances, ev=updater.event
+                ),
+            ], 
+            on_shutdown=[clearup]
+    )
+    
     return app

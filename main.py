@@ -271,6 +271,9 @@ class NikkeAutoScript:
             bool: True if wait finished, False if config changed.
         """
         future = future + timedelta(seconds=1)
+        """
+            记录开始等待任务时，配置文件的最后更改时间
+        """
         self.config.start_watching()
         while 1:
             if datetime.now() > future:
@@ -282,7 +285,9 @@ class NikkeAutoScript:
                     exit(0)
 
             time.sleep(5)
-
+            """
+                在等待过程中持续对比配置文件的最后更改时间
+            """
             if self.config.should_reload():
                 return False
 
