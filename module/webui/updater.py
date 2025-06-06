@@ -153,6 +153,7 @@ class Updater(GitManager, PipManager):
         start_time = time.time()
         while _instances:
             for nkas in _instances:
+                logger.info(f"【alive: {nkas.alive}】") 
                 if not nkas.alive:
                     logger.info("【remove nkas】") 
                     _instances.remove(nkas)
