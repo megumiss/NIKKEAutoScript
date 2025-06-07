@@ -58,6 +58,16 @@ def name_to_function(name):
 
 class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
     stop_event: threading.Event = None
+    bound = {}
+    
+    def __setattr__(self, key, value):
+        if key in self.bound:
+            path = self.bound[key]
+            self.modified[path] = value
+            if self.auto_update:
+                self.update()
+        else:
+            super().__setattr__(key, value)
     
     def __init__(self, config_name, task=None):
         self.config_name = config_name

@@ -330,6 +330,10 @@
       }
     },
     "Blablalink": {
+      "Immediately": {
+        "type": "checkbox",
+        "value": false
+      },
       "UserAgent": {
         "type": "input",
         "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
@@ -344,11 +348,18 @@
       },
       "PostID": {
         "type": "input",
-        "value": ""
+        "value": "",
+        "valuetype": "str"
       },
       "CommentID": {
         "type": "input",
-        "value": ""
+        "value": "",
+        "valuetype": "str"
+      },
+      "Points": {
+        "type": "input",
+        "value": "",
+        "display": "disabled"
       }
     },
     "Storage": {

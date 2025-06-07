@@ -83,11 +83,13 @@ class GeneratedConfig:
     Conversation_OnlyFavourite = False
 
     # Group `Blablalink`
+    Blablalink_Immediately = False
     Blablalink_UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
     Blablalink_Cookie = None
     Blablalink_OpenID = None
     Blablalink_PostID = None
     Blablalink_CommentID = None
+    Blablalink_Points = None
 
     # Group `Storage`
     Storage_Storage = {}

@@ -387,6 +387,9 @@ Blablalink:
   _info:
     name: 任务设置
     help: ""
+  Immediately:
+    name: 立即执行
+    help: ""
   UserAgent:
     name: 浏览器UA
     help: ""
@@ -401,4 +404,7 @@ Blablalink:
     help: "要评论帖子的ID"
   CommentID:
     name: 评论ID
-    help: "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看"
+    help: "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看（页面ID显示有问题，不影响使用）"
+  Points:
+    name: 剩余金币数量
+    help: ""

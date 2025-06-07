@@ -101,11 +101,13 @@
       "ServerUpdate": "04:00"
     },
     "Blablalink": {
+      "Immediately": false,
       "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
       "Cookie": null,
       "OpenID": null,
       "PostID": null,
-      "CommentID": null
+      "CommentID": null,
+      "Points": null
     },
     "Storage": {
       "Storage": {}

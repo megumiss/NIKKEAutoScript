@@ -253,7 +253,7 @@ class NikkeAutoScript:
     def blablalink(self):
         from module.blablalink.blablalink import Blablalink
 
-        Blablalink(config=self.config, device=self.device).run()
+        Blablalink(config=self.config).run()
 
     def event_daemon(self):
         from module.event_daemon.event_daemon import EventDaemon
