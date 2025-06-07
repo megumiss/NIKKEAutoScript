@@ -63,3 +63,7 @@ WeeklyGift:
 MonthlyGift:
   Scheduler:
     Enable: false
+
+Blablalink:
+  Scheduler:
+    Enable: false

@@ -297,7 +297,7 @@
       }
     }
   },
-  "LIPass": {
+  "Blablalink": {
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
@@ -310,7 +310,7 @@
       },
       "Command": {
         "type": "input",
-        "value": "LIPass",
+        "value": "Blablalink",
         "display": "hide"
       },
       "SuccessInterval": {
@@ -329,36 +329,26 @@
         "display": "hide"
       }
     },
-    "Cookie": {
-      "lip_user_name": {
+    "Blablalink": {
+      "UserAgent": {
         "type": "input",
-        "value": "",
-        "valuetype": "str"
+        "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
       },
-      "lip_uid": {
-        "type": "input",
-        "value": "",
-        "valuetype": "str"
+      "Cookie": {
+        "type": "textarea",
+        "value": ""
       },
-      "lip_token": {
+      "OpenID": {
         "type": "input",
-        "value": "",
-        "valuetype": "str"
+        "value": ""
       },
-      "lip_openid": {
+      "PostID": {
         "type": "input",
-        "value": "",
-        "valuetype": "str"
+        "value": ""
       },
-      "lip_expire_time": {
+      "CommentID": {
         "type": "input",
-        "value": "",
-        "valuetype": "str"
-      },
-      "lip_picture_url": {
-        "type": "input",
-        "value": "",
-        "valuetype": "str"
+        "value": ""
       }
     },
     "Storage": {

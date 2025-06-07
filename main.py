@@ -250,10 +250,10 @@ class NikkeAutoScript:
 
         Interception(config=self.config, device=self.device).run()
 
-    def li_pass(self):
-        from module.lipass.lipass import LIPass
+    def blablalink(self):
+        from module.blablalink.blablalink import Blablalink
 
-        LIPass(config=self.config, device=self.device).run()
+        Blablalink(config=self.config, device=self.device).run()
 
     def event_daemon(self):
         from module.event_daemon.event_daemon import EventDaemon

@@ -25,9 +25,9 @@ Mailbox:
   - Scheduler
 
 # ==================== Daily ====================
-LIPass:
+Blablalink:
   - Scheduler
-  - Cookie
+  - Blablalink
 
 DailyRecruit:
   - Scheduler

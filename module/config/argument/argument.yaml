@@ -74,25 +74,6 @@ Daily:
   SendGift: false
   EnhanceEquipment: false
   CallReward: false
-Cookie:
-  lip_user_name:
-    value: ""
-    valuetype: str
-  lip_uid:
-    value: ""
-    valuetype: str
-  lip_token:
-    value: ""
-    valuetype: str
-  lip_openid:
-    value: ""
-    valuetype: str
-  lip_expire_time:
-    value: ""
-    valuetype: str
-  lip_picture_url:
-    value: ""
-    valuetype: str
 CollectionItems:
   NIKKE:
     value: 'All'
@@ -108,3 +89,11 @@ OpponentSelection:
 Conversation:
   QuickConsultation: false
   OnlyFavourite: false
+Blablalink:
+  UserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+  Cookie:
+    value: ''
+    type: textarea
+  OpenID: ''
+  PostID: ''
+  CommentID: ''

@@ -70,14 +70,6 @@ class GeneratedConfig:
     Daily_EnhanceEquipment = False
     Daily_CallReward = False
 
-    # Group `Cookie`
-    Cookie_lip_user_name = None
-    Cookie_lip_uid = None
-    Cookie_lip_token = None
-    Cookie_lip_openid = None
-    Cookie_lip_expire_time = None
-    Cookie_lip_picture_url = None
-
     # Group `CollectionItems`
     CollectionItems_NIKKE = 'All'  # All, Laplace, Frima, Diesel, Exia
 
@@ -89,6 +81,13 @@ class GeneratedConfig:
     # Group `Conversation`
     Conversation_QuickConsultation = False
     Conversation_OnlyFavourite = False
+
+    # Group `Blablalink`
+    Blablalink_UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+    Blablalink_Cookie = None
+    Blablalink_OpenID = None
+    Blablalink_PostID = None
+    Blablalink_CommentID = None
 
     # Group `Storage`
     Storage_Storage = {}
