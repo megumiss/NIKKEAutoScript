@@ -50,7 +50,7 @@ class Reward(UI):
                 click_timer.reset()
                 continue
             
-            if self.appear(EMPTY_CHECK, threshold=1.00):
+            if confirm_timer.reached() and self.appear(EMPTY_CHECK, threshold=1.00):
                 logger.info("Reward done after check EMPTY_CHECK")
                 break
 
@@ -179,6 +179,8 @@ class Reward(UI):
             red_points = self.ranking_match_multi()
             if red_points:
                 for index, button in enumerate(red_points):
+                    self.device.stuck_record_clear()
+                    self.device.click_record_clear()
                     # 进入某个排名页面
                     while 1:
                         if skip_first_screenshot:
@@ -190,19 +192,17 @@ class Reward(UI):
                                 and self.appear(RANKING_REWARD, offset=(5, 5), interval=2, threshold=0.95):
                             click_timer.reset()
                             break
-                        if click_timer.reached() \
-                            and self.appear_then_click(button, offset=(5, 5), interval=2, threshold=0.95):
+                        if click_timer.reached():
+                            self.device.click(button)
+                            self.device.sleep(1)
                             click_timer.reset()
                             continue
 
                     while 1:
-                        if skip_first_screenshot:
-                            skip_first_screenshot = False
-                        else:
-                            self.device.screenshot()
+                        self.device.screenshot()
                         
                         # 返回
-                        if click_timer.reached() and self.appear(RANKING_NO_REWARD, offset=(5, 5)) \
+                        if click_timer.reached() and self.appear(RANKING_NO_REWARD, offset=(5, 5), threshold=0.9) \
                                 and confirm_timer.reached():
                             self.appear_then_click(GOTO_BACK, offset=(5, 5), interval=2, threshold=0.95)
                             confirm_timer.reset()
@@ -210,14 +210,14 @@ class Reward(UI):
                             break
                         # 获得奖励
                         if click_timer.reached() and self.appear_then_click(
-                                RANKING_REWARD, offset=(5, 5), interval=2, threshold=0.95
+                                RANKING_REWARD, offset=(5, 5), interval=2, threshold=0.9, static=False
                         ):
                             confirm_timer.reset()
                             click_timer.reset()
                             continue
                         # 领取奖励
                         if click_timer.reached() and self.appear_then_click(
-                                RANKING_RECEIVE, offset=(5, 5), interval=2, threshold=0.95
+                                RANKING_RECEIVE, offset=(5, 5), interval=2, static=False
                         ):
                             confirm_timer.reset()
                             click_timer.reset()

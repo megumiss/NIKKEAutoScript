@@ -20,4 +20,5 @@ RECEIVE_SPECIAL_ARENA_POINT = Button(area={'cn': (296, 299, 310, 332)}, color={'
 REWARD = Button(area={'cn': (445, 1125, 541, 1150)}, color={'cn': (128, 198, 233)}, button={'cn': (445, 1125, 541, 1150)}, file={'cn': './assets/cn/reward/REWARD.png'})
 REWARD_B = Button(area={'cn': (477, 1122, 532, 1152)}, color={'cn': (91, 185, 232)}, button={'cn': (477, 1122, 532, 1152)}, file={'cn': './assets/cn/reward/REWARD_B.png'})
 SEND_AND_RECEIVE = Button(area={'cn': (508, 1075, 589, 1101)}, color={'cn': (129, 213, 251)}, button={'cn': (508, 1075, 589, 1101)}, file={'cn': './assets/cn/reward/SEND_AND_RECEIVE.png'})
+TEMPLATE_RANKING_LOAD = Template(file={'cn': './assets/cn/reward/TEMPLATE_RANKING_LOAD.png'})
 TEMPLATE_RANKING_RED_POINT = Template(file={'cn': './assets/cn/reward/TEMPLATE_RANKING_RED_POINT.png'})
