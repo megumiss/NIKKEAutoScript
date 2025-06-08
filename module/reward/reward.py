@@ -202,7 +202,7 @@ class Reward(UI):
                         self.device.screenshot()
                         
                         # 返回
-                        if click_timer.reached() and self.appear(RANKING_NO_REWARD, offset=(5, 5), threshold=0.9) \
+                        if click_timer.reached() and self.appear(RANKING_NO_REWARD, offset=(5, 5), threshold=0.95) \
                                 and confirm_timer.reached():
                             self.appear_then_click(GOTO_BACK, offset=(5, 5), interval=2, threshold=0.95)
                             confirm_timer.reset()
