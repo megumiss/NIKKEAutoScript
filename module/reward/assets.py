@@ -14,7 +14,7 @@ RANKING_LOAD_CHECK = Button(area={'cn': (557, 842, 569, 883)}, color={'cn': (88,
 RANKING_NO_REWARD = Button(area={'cn': (529, 1063, 642, 1088)}, color={'cn': (175, 172, 172)}, button={'cn': (529, 1063, 642, 1088)}, file={'cn': './assets/cn/reward/RANKING_NO_REWARD.png'})
 RANKING_RECEIVE = Button(area={'cn': (298, 813, 424, 831)}, color={'cn': (80, 79, 79)}, button={'cn': (298, 813, 424, 831)}, file={'cn': './assets/cn/reward/RANKING_RECEIVE.png'})
 RANKING_RED_POINT_CHECK = Button(area={'cn': (675, 179, 694, 198)}, color={'cn': (152, 98, 80)}, button={'cn': (675, 179, 694, 198)}, file={'cn': './assets/cn/reward/RANKING_RED_POINT_CHECK.png'})
-RANKING_REWARD = Button(area={'cn': (531, 1062, 644, 1088)}, color={'cn': (142, 160, 178)}, button={'cn': (531, 1062, 644, 1088)}, file={'cn': './assets/cn/reward/RANKING_REWARD.png'})
+RANKING_REWARD = Button(area={'cn': (586, 1024, 685, 1113)}, color={'cn': (81, 102, 130)}, button={'cn': (586, 1024, 685, 1113)}, file={'cn': './assets/cn/reward/RANKING_REWARD.png'})
 RECEIVE = Button(area={'cn': (426, 1047, 471, 1090)}, color={'cn': (67, 191, 249)}, button={'cn': (426, 1047, 471, 1090)}, file={'cn': './assets/cn/reward/RECEIVE.png'})
 RECEIVE_SPECIAL_ARENA_POINT = Button(area={'cn': (296, 299, 310, 332)}, color={'cn': (174, 206, 151)}, button={'cn': (296, 299, 310, 332)}, file={'cn': './assets/cn/reward/RECEIVE_SPECIAL_ARENA_POINT.png'})
 REWARD = Button(area={'cn': (445, 1125, 541, 1150)}, color={'cn': (128, 198, 233)}, button={'cn': (445, 1125, 541, 1150)}, file={'cn': './assets/cn/reward/REWARD.png'})
