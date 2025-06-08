@@ -11,7 +11,7 @@ NO_REWARDS_3 = Button(area={'cn': (438, 754, 603, 778)}, color={'cn': (69, 81, 9
 RANKING_ARENA = Button(area={'cn': (0, 185, 720, 1152)}, color={'cn': (177, 171, 169)}, button={'cn': (0, 185, 720, 1152)}, file={'cn': './assets/cn/reward/RANKING_ARENA.png'})
 RANKING_FRONT_CHECK = Button(area={'cn': (551, 1198, 676, 1220)}, color={'cn': (126, 198, 232)}, button={'cn': (551, 1198, 676, 1220)}, file={'cn': './assets/cn/reward/RANKING_FRONT_CHECK.png'})
 RANKING_LOAD_CHECK = Button(area={'cn': (557, 842, 569, 883)}, color={'cn': (88, 164, 224)}, button={'cn': (557, 842, 569, 883)}, file={'cn': './assets/cn/reward/RANKING_LOAD_CHECK.png'})
-RANKING_NO_REWARD = Button(area={'cn': (529, 1063, 642, 1088)}, color={'cn': (175, 172, 172)}, button={'cn': (529, 1063, 642, 1088)}, file={'cn': './assets/cn/reward/RANKING_NO_REWARD.png'})
+RANKING_NO_REWARD = Button(area={'cn': (585, 1030, 679, 1113)}, color={'cn': (159, 156, 156)}, button={'cn': (585, 1030, 679, 1113)}, file={'cn': './assets/cn/reward/RANKING_NO_REWARD.png'})
 RANKING_RECEIVE = Button(area={'cn': (298, 813, 424, 831)}, color={'cn': (80, 79, 79)}, button={'cn': (298, 813, 424, 831)}, file={'cn': './assets/cn/reward/RANKING_RECEIVE.png'})
 RANKING_RED_POINT_CHECK = Button(area={'cn': (675, 179, 694, 198)}, color={'cn': (152, 98, 80)}, button={'cn': (675, 179, 694, 198)}, file={'cn': './assets/cn/reward/RANKING_RED_POINT_CHECK.png'})
 RANKING_REWARD = Button(area={'cn': (586, 1024, 685, 1113)}, color={'cn': (81, 102, 130)}, button={'cn': (586, 1024, 685, 1113)}, file={'cn': './assets/cn/reward/RANKING_REWARD.png'})
