@@ -98,7 +98,7 @@ class NikkeAutoScript:
             exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
-            self.device.app_stop()
+            # self.device.app_stop()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
