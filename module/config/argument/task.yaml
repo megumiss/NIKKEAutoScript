@@ -75,6 +75,9 @@ SpecialArena:
 Interception:
   - Scheduler
 
+Coop:
+  - Scheduler
+
 EventDaemon:
   - Scheduler
 

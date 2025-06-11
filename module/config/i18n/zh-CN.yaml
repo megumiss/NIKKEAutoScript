@@ -125,6 +125,9 @@ Task:
   DailyRecruit:
     name: 每日抽卡
     help: ""
+  Coop:
+    name: 协同作战
+    help: ""
 Emulator:
   _info:
     name: 模拟器设置

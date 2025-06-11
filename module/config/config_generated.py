@@ -92,5 +92,8 @@ class GeneratedConfig:
     Blablalink_CommentID = None
     Blablalink_Points = None
 
+    # Group `Coop`
+    Coop_enable = False
+
     # Group `Storage`
     Storage_Storage = {}

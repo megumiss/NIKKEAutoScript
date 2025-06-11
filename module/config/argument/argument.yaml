@@ -106,3 +106,5 @@ Blablalink:
   Points:
     value: ''
     display: disabled
+Coop:
+  enable: false
