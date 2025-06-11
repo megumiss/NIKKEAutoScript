@@ -91,7 +91,7 @@ class NikkeAutoScript:
             self.device.app_stop()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
-                    self.config.Error_OnePushConfig,
+                    self.config.Notification_OnePushConfig,
                     title="NKAS crashed",
                     content=f"<{self.config_name}> GamePageUnknownError",
                 )
@@ -101,7 +101,7 @@ class NikkeAutoScript:
             self.device.app_stop()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
-                    self.config.Error_OnePushConfig,
+                    self.config.Notification_OnePushConfig,
                     title="NKAS crashed",
                     content=f"<{self.config_name}> GameServerUnderMaintenance",
                 )
@@ -110,7 +110,7 @@ class NikkeAutoScript:
             logger.critical("Request human takeover")
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
-                    self.config.Error_OnePushConfig,
+                    self.config.Notification_OnePushConfig,
                     title="NKAS crashed",
                     content=f"<{self.config_name}> RequestHumanTakeover",
                 )
