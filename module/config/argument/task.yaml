@@ -75,6 +75,11 @@ SpecialArena:
 Interception:
   - Scheduler
 
+# ==================== Tools ====================
+
+AutoTribeTower:
+  - Scheduler
+
 EventDaemon:
   - Scheduler
 

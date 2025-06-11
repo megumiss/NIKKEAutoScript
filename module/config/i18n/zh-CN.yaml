@@ -51,6 +51,9 @@ Menu:
   Event:
     name: 活动
     help: ""
+  Tools:
+    name: 工具
+    help: ""
   Gift:
     name: 免费礼包
     help: ""
@@ -124,6 +127,9 @@ Task:
     help: "需要手动选择关卡"
   DailyRecruit:
     name: 每日抽卡
+    help: ""
+  AutoTribeTower:
+    name: 自动爬常驻企业塔
     help: ""
 Emulator:
   _info:
