@@ -88,7 +88,7 @@ class NikkeAutoScript:
             return False
         except GamePageUnknownError:
             logger.info('Game server may be under maintenance or network may be broken, check server status now')
-            self.device.app_stop()
+            # self.device.app_stop()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
@@ -98,7 +98,7 @@ class NikkeAutoScript:
             exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
-            # self.device.app_stop()
+            self.device.app_stop()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
