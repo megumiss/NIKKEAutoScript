@@ -27,6 +27,7 @@ Emulator:
   AdbRestart: false
   ScreenshotInterval: 0.5
 Optimization:
+  AutoRedCircle: false
   WhenTaskQueueEmpty:
     value: goto_main
     option: [ stay_there, goto_main, close_game ]
@@ -79,25 +80,6 @@ Daily:
   SendGift: false
   EnhanceEquipment: false
   CallReward: false
-Cookie:
-  lip_user_name:
-    value: ""
-    valuetype: str
-  lip_uid:
-    value: ""
-    valuetype: str
-  lip_token:
-    value: ""
-    valuetype: str
-  lip_openid:
-    value: ""
-    valuetype: str
-  lip_expire_time:
-    value: ""
-    valuetype: str
-  lip_picture_url:
-    value: ""
-    valuetype: str
 CollectionItems:
   NIKKE:
     value: 'All'
@@ -113,3 +95,19 @@ OpponentSelection:
 Conversation:
   QuickConsultation: false
   OnlyFavourite: false
+Blablalink:
+  Immediately: false
+  UserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+  Cookie:
+    value: ''
+    type: textarea
+  OpenID: ''
+  PostID:
+    value: ''
+    valuetype: str
+  CommentID:
+    value: ''
+    valuetype: str
+  Points:
+    value: ''
+    display: disabled

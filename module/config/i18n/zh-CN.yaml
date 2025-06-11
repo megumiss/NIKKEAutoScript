@@ -95,9 +95,9 @@ Task:
   Daily:
     name: 日常
     help: ""
-  LIPass:
-    name: LIPass每日签到
-    help: "可在 https://pass.levelinfinite.com/rewards?lang=zh 兑换珠宝"
+  Blablalink:
+    name: 社区签到
+    help: "社区每日签到、评论、点赞任务 https://www.blablalink.com"
   Interception:
     name: 异常拦截战
     help: "目前只打克拉肯"
@@ -179,6 +179,9 @@ Optimization:
   _info:
     name: 优化设置
     help: ""
+  AutoRedCircle:
+    name: 战斗时自动点击红圈
+    help: "需要设置中开启：同步点击位置和准星，当前支持特拦、爬塔，超过屏幕的红圈暂时无法处理"
   WhenTaskQueueEmpty:
     name: 当任务队列清空时
     help: ""
@@ -360,28 +363,6 @@ Daily:
   CallReward:
     name: 领取每日任务奖励前，再运行一次收获
     help: ""
-Cookie:
-  _info:
-    name: Cookie
-    help: ""
-  lip_user_name:
-    name: lip_user_name
-    help: ""
-  lip_uid:
-    name: lip_uid
-    help: ""
-  lip_token:
-    name: lip_token
-    help: ""
-  lip_openid:
-    name: lip_openid
-    help: ""
-  lip_expire_time:
-    name: lip_expire_time
-    help: ""
-  lip_picture_url:
-    name: lip_picture_url
-    help: ""
 CollectionItems:
   _info:
     name: 收藏品
@@ -411,3 +392,28 @@ OpponentSelection:
     Max: "最高"
     Middle: "中间"
     Min: "最低"
+Blablalink:
+  _info:
+    name: 任务设置
+    help: ""
+  Immediately:
+    name: 立即执行
+    help: ""
+  UserAgent:
+    name: 浏览器UA
+    help: ""
+  Cookie:
+    name: Cookie
+    help: ""
+  OpenID:
+    name: OpenID
+    help: "个人OpenID，可在F12中的x-common-params查看"
+  PostID:
+    name: 帖子ID
+    help: "要评论帖子的ID"
+  CommentID:
+    name: 评论ID
+    help: "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看（页面ID显示有问题，不影响使用）"
+  Points:
+    name: 剩余金币数量
+    help: ""

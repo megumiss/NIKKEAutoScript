@@ -9,6 +9,7 @@
       "ScreenshotInterval": 0.5
     },
     "Optimization": {
+      "AutoRedCircle": false,
       "WhenTaskQueueEmpty": "goto_main"
     },
     "Notification": {
@@ -93,22 +94,23 @@
       "Storage": {}
     }
   },
-  "LIPass": {
+  "Blablalink": {
     "Scheduler": {
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
-      "Command": "LIPass",
+      "Command": "Blablalink",
       "SuccessInterval": 0,
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
-    "Cookie": {
-      "lip_user_name": null,
-      "lip_uid": null,
-      "lip_token": null,
-      "lip_openid": null,
-      "lip_expire_time": null,
-      "lip_picture_url": null
+    "Blablalink": {
+      "Immediately": false,
+      "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+      "Cookie": null,
+      "OpenID": null,
+      "PostID": null,
+      "CommentID": null,
+      "Points": null
     },
     "Storage": {
       "Storage": {}

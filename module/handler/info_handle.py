@@ -1,8 +1,9 @@
 from module.base.base import ModuleBase
-from module.base.utils import color_similar, get_color
+from module.base.utils import color_similar, get_color, point2str
 from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
 from module.exception import GameStuckError, GameServerUnderMaintenance
 from module.handler.assets import *
+from module.interception.assets import TEMPLATE_RED_CIRCLE
 from module.logger import logger
 
 
@@ -171,3 +172,32 @@ class InfoHandler(ModuleBase):
         ):
             self.device.click(LOGIN_CHECK)
             logger.info("Login success")
+
+    def handle_red_circles(self):
+        """
+        处理红圈
+        """
+        circles = TEMPLATE_RED_CIRCLE.match_multi(self.device.image, similarity=0.65, name='RED_CIRCLE')
+        for circle in circles:
+            x = circle.location[0]
+            y = circle.location[1]
+            if x < 75 or y > 1000:
+                continue
+
+            # 因为画面变动添加的偏移
+            if x < 300:
+                x_click = x + 90
+            elif x > 400:
+                x_click = x - 90
+            else:
+                x_click = x
+
+            # 坐标识别偏移
+            y_click = y + 40
+            logger.info("Click %s @ %s" % (point2str(x_click, y_click), "RED_CIRCLE"))
+            self.device.long_click_minitouch(x_click, y_click, 1)
+            # 画面回正
+            self.device.sleep(0.5)
+            return True
+
+        return False

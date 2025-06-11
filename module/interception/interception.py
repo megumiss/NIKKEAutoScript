@@ -1,6 +1,6 @@
 from module.base.timer import Timer
 from module.interception.assets import *
-from module.simulation_room.assets import END_FIGHTING, AUTO_SHOOT, AUTO_BURST
+from module.simulation_room.assets import END_FIGHTING, AUTO_SHOOT, AUTO_BURST, PAUSE
 from module.ui.page import page_interception
 from module.ui.ui import UI
 
@@ -66,7 +66,12 @@ class Interception(UI):
                 click_timer.reset()
                 confirm_timer.reset()
                 continue
-
+            
+            # 红圈
+            if self.config.Optimization_AutoRedCircle and self.appear(PAUSE, offset=(5, 5)):
+                if self.handle_red_circles():
+                    continue
+            
             if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=(5, 5), interval=2):
                 click_timer.reset()
                 confirm_timer.reset()
