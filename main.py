@@ -9,6 +9,7 @@ import inflection
 from module.config.config import NikkeConfig, TaskEnd
 from module.config.utils import deep_get, deep_set
 from module.exception import (
+    GamePageUnknownError,
     RequestHumanTakeover,
     GameNotRunningError,
     GameStuckError,
@@ -85,7 +86,16 @@ class NikkeAutoScript:
             self.config.task_call("Restart")
             self.device.sleep(10)
             return False
-
+        except GamePageUnknownError:
+            logger.info('Game server may be under maintenance or network may be broken, check server status now')
+            self.device.app_stop()
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    self.config.Error_OnePushConfig,
+                    title="NKAS crashed",
+                    content=f"<{self.config_name}> GamePageUnknownError",
+                )
+            exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
             self.device.app_stop()
@@ -96,7 +106,6 @@ class NikkeAutoScript:
                     content=f"<{self.config_name}> GameServerUnderMaintenance",
                 )
             exit(1)
-
         except RequestHumanTakeover:
             logger.critical("Request human takeover")
             if self.config.Notification_WhenDailyTaskCrashed:
@@ -106,7 +115,6 @@ class NikkeAutoScript:
                     content=f"<{self.config_name}> RequestHumanTakeover",
                 )
             exit(1)
-
         except Exception as e:
             self.save_error_log()
             logger.exception(e)
