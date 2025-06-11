@@ -313,7 +313,7 @@ Notification:
   WhenDailyTaskCompleted:
     name: 当日常完成时，发送通知
     help: ""
-  WhenDailyTaskCompleted:
+  WhenDailyTaskCrashed:
     name: 当日常出错时，发送通知
     help: ""
   OnePushConfig:
