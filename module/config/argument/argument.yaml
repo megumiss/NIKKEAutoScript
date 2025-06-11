@@ -58,6 +58,11 @@ RubbishShop:
   priority: ''
 Notification:
   WhenDailyTaskCompleted: false
+  WhenDailyTaskCrashed: false
+  OnePushConfig:
+    type: textarea
+    mode: yaml
+    value: 'provider: null'
 Event:
   Event_Name: ''
   Complete_Event: false

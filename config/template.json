@@ -12,7 +12,9 @@
       "WhenTaskQueueEmpty": "goto_main"
     },
     "Notification": {
-      "WhenDailyTaskCompleted": false
+      "WhenDailyTaskCompleted": false,
+      "WhenDailyTaskCrashed": false,
+      "OnePushConfig": "provider: null"
     },
     "Storage": {
       "Storage": {}

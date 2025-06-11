@@ -313,6 +313,12 @@ Notification:
   WhenDailyTaskCompleted:
     name: 当日常完成时，发送通知
     help: ""
+  WhenDailyTaskCompleted:
+    name: 当日常出错时，发送通知
+    help: ""
+  OnePushConfig:
+    name: 推送设置
+    help: "使用 Onepush 推送一条错误信息（win不需要填写）。配置方法见文档：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
 Event:
   _info:
     name: 活动设置

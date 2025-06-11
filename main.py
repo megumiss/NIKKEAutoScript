@@ -17,6 +17,7 @@ from module.exception import (
     GameStart,
 )
 from module.logger import logger
+from module.notify import handle_notify
 
 
 class NikkeAutoScript:
@@ -88,15 +89,33 @@ class NikkeAutoScript:
         except GameServerUnderMaintenance as e:
             logger.error(e)
             self.device.app_stop()
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    self.config.Error_OnePushConfig,
+                    title="NKAS crashed",
+                    content=f"<{self.config_name}> GameServerUnderMaintenance",
+                )
             exit(1)
 
         except RequestHumanTakeover:
             logger.critical("Request human takeover")
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    self.config.Error_OnePushConfig,
+                    title="NKAS crashed",
+                    content=f"<{self.config_name}> RequestHumanTakeover",
+                )
             exit(1)
 
         except Exception as e:
             self.save_error_log()
             logger.exception(e)
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    self.config.Error_OnePushConfig,
+                    title="NKAS crashed",
+                    content=f"<{self.config_name}> Exception occured",
+                )
             exit(1)
 
     def save_error_log(self):

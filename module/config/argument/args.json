@@ -52,6 +52,15 @@
       "WhenDailyTaskCompleted": {
         "type": "checkbox",
         "value": false
+      },
+      "WhenDailyTaskCrashed": {
+        "type": "checkbox",
+        "value": false
+      },
+      "OnePushConfig": {
+        "type": "textarea",
+        "value": "provider: null",
+        "mode": "yaml"
       }
     },
     "Storage": {

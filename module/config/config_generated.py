@@ -57,6 +57,8 @@ class GeneratedConfig:
 
     # Group `Notification`
     Notification_WhenDailyTaskCompleted = False
+    Notification_WhenDailyTaskCrashed = False
+    Notification_OnePushConfig = 'provider: null'
 
     # Group `Event`
     Event_Event_Name = None
