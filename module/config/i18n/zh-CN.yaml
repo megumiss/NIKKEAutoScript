@@ -128,9 +128,12 @@ Task:
   DailyRecruit:
     name: 每日抽卡
     help: ""
-  AutoTribeTower:
-    name: 自动爬常驻企业塔
-    help: ""
+  TowerDaemon:
+    name: 自动爬塔
+    help: "自动爬普通企业塔，失败时自动停止"
+  CombatDaemon:
+    name: 半自动战斗
+    help: "半自动推图，剧情需要手动跳过（还没做）"
 Emulator:
   _info:
     name: 模拟器设置
@@ -423,3 +426,11 @@ Blablalink:
   Points:
     name: 剩余金币数量
     help: ""
+TowerDaemon:
+  _info:
+    name: 自动爬塔
+    help: "自动爬普通企业塔，失败时自动停止"
+CombatDaemon:
+  _info:
+    name: 半自动战斗
+    help: "半自动推图，能减少部分人工操作；需要手动导航到战斗开始界面，剧情需要手动跳过"

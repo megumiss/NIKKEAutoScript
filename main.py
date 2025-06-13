@@ -282,6 +282,11 @@ class NikkeAutoScript:
 
         Blablalink(config=self.config).run()
 
+    def tower_daemon(self):
+        from module.daemon.tower_daemon import TowerDaemon
+
+        TowerDaemon(config=self.config, device=self.device).run()
+
     def event_daemon(self):
         from module.event_daemon.event_daemon import EventDaemon
 

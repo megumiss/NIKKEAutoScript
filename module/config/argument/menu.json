@@ -26,7 +26,8 @@
       "Interception"
     ],
     "Tools": [
-      "AutoTribeTower",
+      "TowerDaemon",
+      "CombatDaemon",
       "EventDaemon"
     ],
     "Gift": [
