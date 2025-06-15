@@ -1,10 +1,10 @@
 from module.base.decorator import run_once
 from module.base.timer import Timer
 from module.base.utils import crop, find_center, mask_area, point2str
-from module.common.enum.webui import ICON
 from module.daily.assets import *
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
+from module.notify import handle_notify
 from module.ui.assets import DAILY_CHECK, INVENTORY_CHECK, CONVERSATION_CHECK
 from module.ui.page import page_daily, page_inventory, page_conversation
 from module.ui.ui import UI
@@ -49,18 +49,7 @@ class Daily(UI):
                     skip_first_screenshot = True
                     continue
                 break
-
-    def toast(self):
-        pass
-        # from winotify import Notification
-        # toast = Notification(app_id="NKAS",
-        #                      title="NKAS",
-        #                      msg="任务已全部完成！",
-        #                      icon=ICON.Helm_Circle,
-        #                      duration='long')
-
-        # toast.show()
-
+    
     # enhance equipment
     def enhance_equipment(self, skip_first_screenshot=True):
         logger.hr('ENHANCE EQUIPMENT', 2)
@@ -268,5 +257,9 @@ class Daily(UI):
         self.ui_ensure(page_daily)
         self.receive()
         if self.config.Notification_WhenDailyTaskCompleted:
-            self.toast()
+            handle_notify(
+                None,
+                title="NKAS",
+                content="任务已全部完成！",
+            )
         self.config.task_delay(server_update=True)

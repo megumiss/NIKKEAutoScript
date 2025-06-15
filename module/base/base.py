@@ -162,9 +162,9 @@ class ModuleBase:
         # else:
         #     self.interval_timer[button.name] = Timer(3).reset()
 
-    def ensure_sroll(self, x1=(360, 460), x2=(360, 900), count=2, delay=1.5):
+    def ensure_sroll(self, x1=(360, 460), x2=(360, 900), speed=15, count=2, delay=1.5):
         for i in range(count):
-            self.device.swipe(x1, x2, handle_control_check=False)
+            self.device.swipe(x1, x2, speed=speed, handle_control_check=False)
             self.device.sleep(delay)
 
     def ensure_sroll_to_top(self, x1=(360, 460), x2=(360, 900), count=2, delay=1.5):

@@ -8,63 +8,71 @@ from module.ui.ui import UI
 
 
 class MissionPass(UI):
-    def receive(self, button, skip_first_screenshot=True):
-        confirm_timer = Timer(2, count=2).start()
-        _confirm_timer = Timer(1, count=2).start()
+    def receive(self, skip_first_screenshot=True):
         click_timer = Timer(0.3)
-        flag = True
-        interval = 0
+        # flag = False
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
 
+            # 任务页面
             if click_timer.reached() \
-                    and self.appear(COMPLETED_CHECK, offset=(5, 5), interval=interval, threshold=0.9, static=False) \
-                    and COMPLETED_CHECK.match_appear_on(self.device.image, 10):
-                self.device.click_minitouch(*_area_offset(COMPLETED_CHECK.location, (-80, 10)))
-                logger.info(
-                    'Click %s @ %s' % (point2str(*_area_offset(COMPLETED_CHECK.location, (-80, 10))), 'COMPLETED')
-                )
-                interval = 4
-                confirm_timer.reset()
+                    and self.appear(COMPLETED_CHECK, offset=30, threshold=0.9) \
+                    and self.appear_then_click(PASS_MISSION, offset=30, threshold=0.91, interval=1):
                 click_timer.reset()
-                self.device.sleep(1.27)
-                self.device.click_minitouch(360, 1190)
                 continue
-
+            
+            # 任务全部领取
+            if click_timer.reached() \
+                    and self.appear(COMPLETED_CHECK, offset=30, threshold=0.9) \
+                    and self.appear(PASS_REWARD, offset=30, threshold=0.9, static=False) \
+                    and not self.appear(PASS_NO_REWARD, offset=30, threshold=0.9, static=False):
+                self.device.click_minitouch(360, 1190)
+                # flag = True
+                self.device.sleep(1)
+                logger.info('Reward pass mission')
+                click_timer.reset()
+                continue
+            
+            # 升级
             if click_timer.reached() and self.appear(RANK_UP_CHECK, offset=5, interval=1, static=False):
                 self.device.click_minitouch(1, 1)
                 click_timer.reset()
-                confirm_timer.reset()
+                continue
+            
+            # 奖励页面
+            if click_timer.reached() \
+                    and self.appear(PASS_REWARD, offset=30, threshold=0.9, static=False) \
+                    and not self.appear(DOT, offset=10, threshold=0.9) \
+                    and self.appear_then_click(PASS_REWARD, offset=30, threshold=0.9, interval=1):
+                click_timer.reset()
+                continue
+            
+            # 奖励全部领取
+            if click_timer.reached() \
+                    and not self.appear(COMPLETED_CHECK, offset=30, threshold=0.9) \
+                    and self.appear(PASS_MISSION, offset=30, threshold=0.9, static=False) \
+                    and not self.appear(PASS_NO_REWARD, offset=30, threshold=0.9, static=False):
+                self.device.click_minitouch(360, 1190)
+                self.device.sleep(1)
+                logger.info('Reward pass reward')
+                click_timer.reset()
                 continue
 
+            # 奖励领取
             if click_timer.reached() and self.handle_reward(1):
-                confirm_timer.reset()
                 click_timer.reset()
                 continue
 
+            # 关闭
             if self.appear(PASS_CHECK, offset=5, static=False) \
-                    and confirm_timer.reached() \
-                    and not self.appear(COMPLETED_CHECK, offset=(5, 5), threshold=0.9, static=False):
-                flag = False
+                    and not self.appear(COMPLETED_CHECK, offset=30, threshold=0.9) \
+                    and self.appear(PASS_NO_REWARD, offset=30, threshold=0.9, static=False) \
+                    and self.appear(PASS_MISSION, offset=30, threshold=0.9, static=False):
+                logger.info('Close misson pass')
                 self.device.click_minitouch(1, 1)
-                continue
-
-            if flag and click_timer.reached() and self.appear_then_click(button, offset=5, interval=1.2):
-                click_timer.reset()
-                confirm_timer.reset()
-                continue
-
-            if not flag and self.appear(MAIN_CHECK, offset=5, interval=0.3) and _confirm_timer.reached():
-                break
-
-    def confirm_transformation(self):
-        confirm_timer = Timer(0.6, count=1).start()
-        while 1:
-            self.device.screenshot()
-            if self.appear(CHANGE, offset=5, threshold=0.9, static=False) and confirm_timer.reached():
                 break
 
     def run(self):
@@ -72,71 +80,67 @@ class MissionPass(UI):
         skip_first_screenshot = True
         click_timer = Timer(0.3)
 
-        visited_count = 0
-        mp_list = []
+        # 获取当前pass数量
+        self.config.PASS_LIMIT = 1
+        if self.appear(CHANGE, offset=5, static=False) \
+                or self.appear(EXPAND, offset=5, static=False):
+            # 第一个banner
+            self.ensure_sroll((640, 200), (500, 200), speed=35, count=1, delay=0.5)
+            self.device.screenshot()
+            banner_first = Button(PASS_BANNER.area, None, button=PASS_BANNER.area)
+            banner_first._match_init = True
+            banner_first.image = crop(self.device.image, PASS_BANNER.area)
+            while 1:
+                if skip_first_screenshot:
+                    skip_first_screenshot = False
+                else:
+                    self.device.screenshot()
 
-        if self.appear(CHANGE, offset=5, threshold=0.9, static=False):
-            self.config.PASS_LIMIT = 2
-        else:
-            self.config.PASS_LIMIT = 1
-
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
-
-            if self.config.PASS_LIMIT == 2 \
-                    and click_timer.reached() \
-                    and self.appear_then_click(CHANGE, offset=5, threshold=0.9, static=False):
-
-                area = _area_offset(CHANGE.area, (10, -40, 240, 0))
-                self.confirm_transformation()
-                mp = Button(area, None, button=area)
-                mp._match_init = True
-                mp.image = crop(self.device.image, area)
-
-                if len(mp_list) == 0 and DOT.match(mp.image, offset=5, static=False):
-                    mp_list.append(mp)
-                    continue
-
-                for i in mp_list:
-                    if not i.match(mp.image, threshold=0.8, static=False):
-                        if DOT.match(mp.image, offset=5, static=False):
-                            mp_list.append(mp)
-
-                visited_count += 1
-                if len(mp_list) == self.config.PASS_LIMIT or visited_count == self.config.PASS_LIMIT:
+                tmp_image = self.device.image
+                # 滑动到下一个pass
+                self.ensure_sroll((640, 200), (500, 200), speed=35, count=1, delay=0.5)
+                # 比较banner是否变化
+                while 1:
+                    self.device.screenshot()
+                    
+                    banner = Button(PASS_BANNER.area, None, button=PASS_BANNER.area)
+                    banner._match_init = True
+                    banner.image = crop(tmp_image, PASS_BANNER.area)
+                    if not self.appear(banner, offset=10, threshold=0.8):
+                        logger.info(f"Find mission pass {self.config.PASS_LIMIT}")
+                        self.config.PASS_LIMIT += 1
+                        break
+                    else:
+                        continue
+                # 回到第一个banner
+                if self.appear(banner_first, offset=10, threshold=0.6):
+                    self.config.PASS_LIMIT -= 1
                     break
 
-                click_timer.reset()
-
-            elif self.config.PASS_LIMIT == 1 \
-                    and click_timer.reached() \
-                    and self.appear(MAIN_GOTO_PASS, offset=5, threshold=0.9, static=False):
-
-                area = _area_offset(MAIN_GOTO_PASS.area, (10, -40, 100, 0))
-                mp = Button(area, None, button=area)
-                mp._match_init = True
-                mp.image = crop(self.device.image, area)
-
-                if DOT.match(mp.image, offset=5, static=False):
-                    mp_list.append(mp)
-                break
-
-        logger.attr('PENDING MISSION PASS', len(mp_list))
-        if len(mp_list):
-            while 1:
+        logger.attr('PENDING MISSION PASS', self.config.PASS_LIMIT)
+        passs = self.config.PASS_LIMIT
+        while 1:
+            find_dot = False
+            # 每次都检查所有的pass
+            for _ in range(passs):
                 self.device.screenshot()
-                if click_timer.reached() and self.appear(mp_list[0], offset=5):
-                    self.receive(mp_list[0])
-                    mp_list.remove(mp_list[0])
-                    logger.attr('PENDING MISSION PASS', len(mp_list))
-                    if not len(mp_list):
-                        break
-
-                if click_timer.reached() and self.appear_then_click(CHANGE, offset=5):
-                    click_timer.reset()
-                    self.confirm_transformation()
-                    continue
+                # 检查红点
+                if click_timer.reached() and self.appear_then_click(DOT, offset=5):
+                    find_dot = True
+                    self.receive()
+                    while 1:
+                        self.device.screenshot()
+                        if self.appear(MAIN_CHECK, offset=5, interval=0.3):
+                            break
+                    self.config.PASS_LIMIT -= 1
+                    logger.attr('PENDING MISSION PASS', self.config.PASS_LIMIT)
+                    break
+                passs -= 1
+                self.ensure_sroll((640, 200), (500, 200), speed=35, count=1, delay=0.5)
+            
+            # 没有红点
+            if not find_dot:
+                logger.info('ALL MISSION PASS DONE')
+                break
+        
         self.config.task_delay(server_update=True)

@@ -6,7 +6,7 @@ class ManualConfig:
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
        DailyGift > WeeklyGift > MonthlyGift > 
        Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > SimulationRoom > TribeTower > 
-       Daily > MissionPass > Liberation > Blablalink > EventDaemon
+       Daily > MissionPass > Liberation > Blablalink > TowerDaemon > CombatDaemon > EventDaemon
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS > CORE_DUST_CASE > ORNAMENT"""

@@ -13,7 +13,9 @@
       "WhenTaskQueueEmpty": "goto_main"
     },
     "Notification": {
-      "WhenDailyTaskCompleted": false
+      "WhenDailyTaskCompleted": false,
+      "WhenDailyTaskCrashed": false,
+      "OnePushConfig": "provider: null"
     },
     "Storage": {
       "Storage": {}
@@ -101,14 +103,21 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
-    "Blablalink": {
-      "Immediately": false,
+    "BlaAuth": {
       "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
       "Cookie": null,
-      "OpenID": null,
+      "OpenID": null
+    },
+    "BlaDaily": {
+      "Enable": false,
+      "Immediately": false,
       "PostID": null,
       "CommentID": null,
       "Points": null
+    },
+    "CDK": {
+      "Enable": false,
+      "Source": "https://gamewith.jp/nikke/article/show/371014"
     },
     "Storage": {
       "Storage": {}
@@ -316,6 +325,32 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Coop",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "TowerDaemon": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "TowerDaemon",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "CombatDaemon": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "CombatDaemon",
       "SuccessInterval": 0,
       "FailureInterval": 120,
       "ServerUpdate": "04:00"

@@ -9,6 +9,7 @@ import inflection
 from module.config.config import NikkeConfig, TaskEnd
 from module.config.utils import deep_get, deep_set
 from module.exception import (
+    GamePageUnknownError,
     RequestHumanTakeover,
     GameNotRunningError,
     GameStuckError,
@@ -17,6 +18,7 @@ from module.exception import (
     GameStart,
 )
 from module.logger import logger
+from module.notify import handle_notify
 
 
 class NikkeAutoScript:
@@ -84,19 +86,44 @@ class NikkeAutoScript:
             self.config.task_call("Restart")
             self.device.sleep(10)
             return False
-
+        except GamePageUnknownError:
+            logger.info('Game server may be under maintenance or network may be broken, check server status now')
+            # self.device.app_stop()
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    self.config.Notification_OnePushConfig,
+                    title="NKAS crashed",
+                    content=f"<{self.config_name}> GamePageUnknownError",
+                )
+            exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
             self.device.app_stop()
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    self.config.Notification_OnePushConfig,
+                    title="NKAS crashed",
+                    content=f"<{self.config_name}> GameServerUnderMaintenance",
+                )
             exit(1)
-
         except RequestHumanTakeover:
             logger.critical("Request human takeover")
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    self.config.Notification_OnePushConfig,
+                    title="NKAS crashed",
+                    content=f"<{self.config_name}> RequestHumanTakeover",
+                )
             exit(1)
-
         except Exception as e:
             self.save_error_log()
             logger.exception(e)
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    self.config.Notification_OnePushConfig,
+                    title="NKAS crashed",
+                    content=f"<{self.config_name}> Exception occured",
+                )
             exit(1)
 
     def save_error_log(self):
@@ -254,6 +281,11 @@ class NikkeAutoScript:
         from module.blablalink.blablalink import Blablalink
 
         Blablalink(config=self.config).run()
+
+    def tower_daemon(self):
+        from module.daemon.tower_daemon import TowerDaemon
+
+        TowerDaemon(config=self.config, device=self.device).run()
 
     def event_daemon(self):
         from module.event_daemon.event_daemon import EventDaemon

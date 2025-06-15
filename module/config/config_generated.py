@@ -58,6 +58,8 @@ class GeneratedConfig:
 
     # Group `Notification`
     Notification_WhenDailyTaskCompleted = False
+    Notification_WhenDailyTaskCrashed = False
+    Notification_OnePushConfig = 'provider: null'
 
     # Group `Event`
     Event_Event_Name = None
@@ -83,17 +85,24 @@ class GeneratedConfig:
     Conversation_QuickConsultation = False
     Conversation_OnlyFavourite = False
 
-    # Group `Blablalink`
-    Blablalink_Immediately = False
-    Blablalink_UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
-    Blablalink_Cookie = None
-    Blablalink_OpenID = None
-    Blablalink_PostID = None
-    Blablalink_CommentID = None
-    Blablalink_Points = None
+    # Group `BlaAuth`
+    BlaAuth_UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+    BlaAuth_Cookie = None
+    BlaAuth_OpenID = None
+
+    # Group `BlaDaily`
+    BlaDaily_Enable = False
+    BlaDaily_Immediately = False
+    BlaDaily_PostID = None
+    BlaDaily_CommentID = None
+    BlaDaily_Points = None
 
     # Group `Coop`
     Coop_enable = False
+
+    # Group `CDK`
+    CDK_Enable = False
+    CDK_Source = 'https://gamewith.jp/nikke/article/show/371014'
 
     # Group `Storage`
     Storage_Storage = {}

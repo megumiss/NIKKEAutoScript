@@ -59,6 +59,11 @@ RubbishShop:
   priority: ''
 Notification:
   WhenDailyTaskCompleted: false
+  WhenDailyTaskCrashed: false
+  OnePushConfig:
+    type: textarea
+    mode: yaml
+    value: 'provider: null'
 Event:
   Event_Name: ''
   Complete_Event: false
@@ -90,13 +95,17 @@ OpponentSelection:
 Conversation:
   QuickConsultation: false
   OnlyFavourite: false
-Blablalink:
-  Immediately: false
-  UserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+BlaAuth:
+  UserAgent:
+    value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
+    type: textarea
   Cookie:
     value: ''
     type: textarea
   OpenID: ''
+BlaDaily:
+  Enable: false
+  Immediately: false
   PostID:
     value: ''
     valuetype: str
@@ -108,3 +117,9 @@ Blablalink:
     display: disabled
 Coop:
   enable: false
+CDK:
+  Enable: false
+  Source:
+    value: 'https://gamewith.jp/nikke/article/show/371014'
+    type: textarea
+    display: disabled

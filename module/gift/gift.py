@@ -57,7 +57,7 @@ class GiftBase(UI):
             if click_timer.reached() \
                     and self.appear(GENERAL_GIFT_CHECK, offset=(10, 10), static=False) \
                     and not self.appear(MONTHLY, offset=(10, 10), static=False):
-                self.ensure_sroll((590, 360), (300, 360), 1, 0.4)
+                self.ensure_sroll((590, 360), (300, 360), count=1, delay=0.4)
                 confirm_timer.reset()
                 click_timer.reset()
                 continue

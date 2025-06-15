@@ -13,3 +13,4 @@ imageio==2.27.0
 inflection==0.5.1
 winotify==1.1.0
 numpy==1.23.5
+onepush==1.3.0

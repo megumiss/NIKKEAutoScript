@@ -40,7 +40,7 @@ class Control(Minitouch):
             self.config.Emulator_ControlMethod)
         method(x, y)
 
-    def swipe(self, p1, p2, name='SWIPE', label='Swipe', distance_check=True, handle_control_check=True):
+    def swipe(self, p1, p2, speed=15, name='SWIPE', label='Swipe', distance_check=True, handle_control_check=True):
         if handle_control_check:
             self.handle_control_check(name)
         p1, p2 = ensure_int(p1, p2)
@@ -56,4 +56,4 @@ class Control(Minitouch):
                 return
 
         if method == 'minitouch':
-            self.swipe_minitouch(p1, p2)
+            self.swipe_minitouch(p1, p2, speed=speed)

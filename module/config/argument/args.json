@@ -56,6 +56,15 @@
       "WhenDailyTaskCompleted": {
         "type": "checkbox",
         "value": false
+      },
+      "WhenDailyTaskCrashed": {
+        "type": "checkbox",
+        "value": false
+      },
+      "OnePushConfig": {
+        "type": "textarea",
+        "value": "provider: null",
+        "mode": "yaml"
       }
     },
     "Storage": {
@@ -333,13 +342,9 @@
         "display": "hide"
       }
     },
-    "Blablalink": {
-      "Immediately": {
-        "type": "checkbox",
-        "value": false
-      },
+    "BlaAuth": {
       "UserAgent": {
-        "type": "input",
+        "type": "textarea",
         "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
       },
       "Cookie": {
@@ -349,6 +354,16 @@
       "OpenID": {
         "type": "input",
         "value": ""
+      }
+    },
+    "BlaDaily": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Immediately": {
+        "type": "checkbox",
+        "value": false
       },
       "PostID": {
         "type": "input",
@@ -363,6 +378,17 @@
       "Points": {
         "type": "input",
         "value": "",
+        "display": "disabled"
+      }
+    },
+    "CDK": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Source": {
+        "type": "textarea",
+        "value": "https://gamewith.jp/nikke/article/show/371014",
         "display": "disabled"
       }
     },
@@ -1012,6 +1038,88 @@
       "Command": {
         "type": "input",
         "value": "Coop",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "TowerDaemon": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "TowerDaemon",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "CombatDaemon": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "CombatDaemon",
         "display": "hide"
       },
       "SuccessInterval": {

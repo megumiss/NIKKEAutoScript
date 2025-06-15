@@ -27,7 +27,9 @@ Mailbox:
 # ==================== Daily ====================
 Blablalink:
   - Scheduler
-  - Blablalink
+  - BlaAuth
+  - BlaDaily
+  - CDK
 
 DailyRecruit:
   - Scheduler
@@ -76,6 +78,14 @@ Interception:
   - Scheduler
 
 Coop:
+  - Scheduler
+
+# ==================== Tools ====================
+
+TowerDaemon:
+  - Scheduler
+
+CombatDaemon:
   - Scheduler
 
 EventDaemon:

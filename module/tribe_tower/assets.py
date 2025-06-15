@@ -19,4 +19,5 @@ OPPORTUNITY_3 = Button(area={'cn': (0, 0, 52, 19)}, color={'cn': (39, 57, 55)}, 
 PILGRIM_CHECK = Button(area={'cn': (554, 996, 608, 1087)}, color={'cn': (55, 76, 85)}, button={'cn': (554, 996, 608, 1087)}, file={'cn': './assets/cn/tribe_tower/PILGRIM_CHECK.png'})
 STAGE_INFO_CHECK = Button(area={'cn': (85, 693, 173, 737)}, color={'cn': (158, 158, 158)}, button={'cn': (85, 693, 173, 737)}, file={'cn': './assets/cn/tribe_tower/STAGE_INFO_CHECK.png'})
 TETRA_CHECK = Button(area={'cn': (397, 996, 436, 1087)}, color={'cn': (51, 74, 84)}, button={'cn': (397, 996, 436, 1087)}, file={'cn': './assets/cn/tribe_tower/TETRA_CHECK.png'})
+TRIBE_CHECK = Button(area={'cn': (494, 488, 636, 547)}, color={'cn': (186, 226, 244)}, button={'cn': (494, 488, 636, 547)}, file={'cn': './assets/cn/tribe_tower/TRIBE_CHECK.png'})
 TRIBE_TOWER_DETAILED_CHECK = Button(area={'cn': (199, 526, 240, 544)}, color={'cn': (84, 85, 84)}, button={'cn': (199, 526, 240, 544)}, file={'cn': './assets/cn/tribe_tower/TRIBE_TOWER_DETAILED_CHECK.png'})

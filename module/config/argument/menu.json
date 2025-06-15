@@ -24,7 +24,11 @@
       "RookieArena",
       "SpecialArena",
       "Interception",
-      "Coop",
+      "Coop"
+    ],
+    "Tools": [
+      "TowerDaemon",
+      "CombatDaemon",
       "EventDaemon"
     ],
     "Gift": [

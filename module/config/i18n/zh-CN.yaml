@@ -51,6 +51,9 @@ Menu:
   Event:
     name: 活动
     help: ""
+  Tools:
+    name: 工具
+    help: ""
   Gift:
     name: 免费礼包
     help: ""
@@ -96,8 +99,8 @@ Task:
     name: 日常
     help: ""
   Blablalink:
-    name: 社区签到
-    help: "社区每日签到、评论、点赞任务 https://www.blablalink.com"
+    name: 妮游社
+    help: ""
   Interception:
     name: 异常拦截战
     help: "目前只打克拉肯"
@@ -128,6 +131,12 @@ Task:
   Coop:
     name: 协同作战
     help: ""
+  TowerDaemon:
+    name: 自动爬塔
+    help: "自动爬普通企业塔，失败时自动停止"
+  CombatDaemon:
+    name: 半自动战斗
+    help: "半自动推图，剧情需要手动跳过（还没做）"
 Emulator:
   _info:
     name: 模拟器设置
@@ -319,6 +328,12 @@ Notification:
   WhenDailyTaskCompleted:
     name: 当日常完成时，发送通知
     help: ""
+  WhenDailyTaskCrashed:
+    name: 当日常出错时，发送通知
+    help: ""
+  OnePushConfig:
+    name: 推送设置
+    help: "使用 Onepush 推送一条错误信息（win不需要填写）。配置方法见文档：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
 Event:
   _info:
     name: 活动设置
@@ -389,12 +404,28 @@ OpponentSelection:
     Max: "最高"
     Middle: "中间"
     Min: "最低"
-Blablalink:
+BlaDaily:
   _info:
-    name: 任务设置
+    name: 每日任务
     help: ""
+  Enable:
+    name: 启用该功能
+    help: "社区每日签到、评论、点赞任务 https://www.blablalink.com"
   Immediately:
     name: 立即执行
+    help: ""
+  PostID:
+    name: 帖子ID
+    help: "要评论帖子的ID"
+  CommentID:
+    name: 评论ID
+    help: "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看（页面ID显示有问题，不影响使用）"
+  Points:
+    name: 剩余金币数量
+    help: ""
+BlaAuth:
+  _info:
+    name: Cookie设置
     help: ""
   UserAgent:
     name: 浏览器UA
@@ -405,12 +436,21 @@ Blablalink:
   OpenID:
     name: OpenID
     help: "个人OpenID，可在F12中的x-common-params查看"
-  PostID:
-    name: 帖子ID
-    help: "要评论帖子的ID"
-  CommentID:
-    name: 评论ID
-    help: "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看（页面ID显示有问题，不影响使用）"
-  Points:
-    name: 剩余金币数量
+CDK:
+  _info:
+    name: CDK自动兑换
     help: ""
+  Enable:
+    name: 启用该功能
+    help: "从来源网站中获取最新的10个CDK，并自动兑换 https://www.blablalink.com/cdk"
+  Source:
+    name: CDK来源
+    help: ""
+TowerDaemon:
+  _info:
+    name: 自动爬塔
+    help: "自动爬普通企业塔，失败时自动停止"
+CombatDaemon:
+  _info:
+    name: 半自动战斗
+    help: "半自动推图，能减少部分人工操作；需要手动导航到战斗开始界面，剧情需要手动跳过"
