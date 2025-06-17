@@ -1024,6 +1024,77 @@
       }
     }
   },
+  "StoryEvent": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "StoryEvent",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "StoryEvent": {
+      "Event": {
+        "type": "select",
+        "value": "",
+        "option": [
+          "event_20250612"
+        ],
+        "display": "disabled"
+      },
+      "LoginStamp": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Story": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Challenge": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Mission": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Shop": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "TowerDaemon": {
     "Scheduler": {
       "Enable": {

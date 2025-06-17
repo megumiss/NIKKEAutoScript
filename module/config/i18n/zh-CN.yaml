@@ -134,6 +134,9 @@ Task:
   CombatDaemon:
     name: 半自动战斗
     help: "半自动推图，剧情需要手动跳过（还没做）"
+  StoryEvent:
+    name: 剧情活动
+    help: "全部还没做。剧情活动签到，挑战，每日清票，每日任务，商店"
 Emulator:
   _info:
     name: 模拟器设置
@@ -451,3 +454,26 @@ CombatDaemon:
   _info:
     name: 半自动战斗
     help: "半自动推图，能减少部分人工操作；需要手动导航到战斗开始界面，剧情需要手动跳过"
+StoryEvent:
+  _info:
+    name: 活动设置
+    help: ""
+  Event:
+    name: 当前活动
+    help: ""
+    event_20250612: "Memories Teller"
+  LoginStamp:
+    name: 签到印章
+    help: ""
+  Story:
+    name: 剧情
+    help: "只打第11关"
+  Challenge:
+    name: 挑战
+    help: "需要提前设置好队伍"
+  Mission:
+    name: 每日任务
+    help: ""
+  Shop:
+    name: 商店
+    help: ""

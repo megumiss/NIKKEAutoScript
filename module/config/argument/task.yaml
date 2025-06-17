@@ -79,6 +79,7 @@ Interception:
 
 StoryEvent:
   - Scheduler
+  - StoryEvent
 
 # ==================== Tools ====================
 

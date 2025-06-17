@@ -160,3 +160,7 @@ page_ranking = Page(RANKING_CHECK)
 page_ranking.link(button=GOTO_BACK, destination=page_ark)
 page_ranking.link(button=GOTO_MAIN, destination=page_main)
 page_ark.link(button=ARK_GOTO_RANKING, destination=page_ranking)
+
+page_story_event = Page(STORY_EVENT_CHECK)
+page_story_event.link(button=GOTO_BACK, destination=page_main)
+page_main.link(button=MAIN_GOTO_STORY_EVENT, destination=page_story_event)

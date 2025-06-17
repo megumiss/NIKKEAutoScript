@@ -122,12 +122,14 @@ CDK:
     type: textarea
     display: disabled
 StoryEvent:
-  Enable: false
-  Name:
-    value: 'MemoriesTeller'
+  Event:
+    value: ''
+    option: [
+      'event_20250612'
+    ]
     display: disabled
-  IsGrand:
-    value: true
-    display: disabled
-  Challenge: false
+  LoginStamp: true
+  Story: false
+  Challenge: true
+  Mission: true
   Shop: false

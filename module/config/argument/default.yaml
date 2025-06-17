@@ -67,3 +67,7 @@ MonthlyGift:
 Blablalink:
   Scheduler:
     Enable: false
+
+StoryEvent:
+  Scheduler:
+    Enable: false

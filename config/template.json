@@ -320,6 +320,27 @@
       "Storage": {}
     }
   },
+  "StoryEvent": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "StoryEvent",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "StoryEvent": {
+      "Event": "",
+      "LoginStamp": true,
+      "Story": false,
+      "Challenge": true,
+      "Mission": true,
+      "Shop": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "TowerDaemon": {
     "Scheduler": {
       "Enable": false,

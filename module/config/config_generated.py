@@ -101,5 +101,13 @@ class GeneratedConfig:
     CDK_Enable = False
     CDK_Source = 'https://gamewith.jp/nikke/article/show/371014'
 
+    # Group `StoryEvent`
+    StoryEvent_Event = ''  # event_20250612
+    StoryEvent_LoginStamp = True
+    StoryEvent_Story = False
+    StoryEvent_Challenge = True
+    StoryEvent_Mission = True
+    StoryEvent_Shop = False
+
     # Group `Storage`
     Storage_Storage = {}
