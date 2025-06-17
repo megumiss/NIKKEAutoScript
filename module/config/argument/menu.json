@@ -23,7 +23,8 @@
       "TribeTower",
       "RookieArena",
       "SpecialArena",
-      "Interception"
+      "Interception",
+      "StoryEvent"
     ],
     "Tools": [
       "TowerDaemon",

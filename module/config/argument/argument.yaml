@@ -121,3 +121,13 @@ CDK:
     value: 'https://gamewith.jp/nikke/article/show/371014'
     type: textarea
     display: disabled
+StoryEvent:
+  Enable: false
+  Name:
+    value: 'MemoriesTeller'
+    display: disabled
+  IsGrand:
+    value: true
+    display: disabled
+  Challenge: false
+  Shop: false
