@@ -8,7 +8,7 @@ from module.ui.assets import GOTO_MAIN
 from module.ui.page import (Page, page_unknown, page_main, page_reward, page_destroy, page_friend, page_daily,
                             page_shop, page_cash_shop, page_team, page_inventory, page_pass,
                             page_conversation, page_ark, page_tribe_tower, page_simulation_room, page_arena,
-                            page_rookie_arena,
+                            page_rookie_arena, page_event, page_story_1, page_story_2,
                             page_special_arena, page_outpost, page_commission, page_interception,
                             page_special_interception,
                             page_mailbox, page_recruit)
@@ -39,6 +39,9 @@ class UI(InfoHandler):
                 page_interception,
                 page_special_interception,
                 page_recruit,
+                page_event,
+                page_story_1,
+                page_story_2
                 ]
 
     def ui_page_appear(self, page: Page):
@@ -163,8 +166,8 @@ class UI(InfoHandler):
             else:
                 confirm_timer.reset()
 
-            if self.handle_event():
-                continue
+            # if self.handle_event():
+            #     continue
 
             # Other pages
             clicked = False
@@ -235,8 +238,8 @@ class UI(InfoHandler):
         if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30), interval=3):
             raise GameStart
 
-        if self.handle_event():
-            return True
+        # if self.handle_event():
+        #     return True
 
         if self.handle_login():
             return True
