@@ -1056,6 +1056,15 @@
         "display": "hide"
       }
     },
+    "Coop": {
+      "MatchDifficulty": {
+        "type": "select",
+        "value": "Normal",
+        "option": [
+          "Normal"
+        ]
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

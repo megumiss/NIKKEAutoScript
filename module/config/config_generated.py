@@ -98,7 +98,7 @@ class GeneratedConfig:
     BlaDaily_Points = None
 
     # Group `Coop`
-    Coop_enable = False
+    Coop_MatchDifficulty = 'Normal'  # Normal
 
     # Group `CDK`
     CDK_Enable = False

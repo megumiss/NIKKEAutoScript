@@ -79,6 +79,7 @@ Interception:
 
 Coop:
   - Scheduler
+  - Coop
 
 StoryEvent:
   - Scheduler

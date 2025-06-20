@@ -116,7 +116,9 @@ BlaDaily:
     value: ''
     display: disabled
 Coop:
-  enable: false
+  MatchDifficulty:
+    value: 'Normal'
+    option: [ 'Normal' ]
 CDK:
   Enable: false
   Source:

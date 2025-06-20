@@ -329,6 +329,9 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
+    "Coop": {
+      "MatchDifficulty": "Normal"
+    },
     "Storage": {
       "Storage": {}
     }

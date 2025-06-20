@@ -480,3 +480,12 @@ StoryEvent:
   Shop:
     name: 商店
     help: ""
+Coop:
+  _info:
+    name: 协同设置
+    help: ""
+  MatchDifficulty:
+    name: 匹配难度
+    help: ""
+    Normal: "普通"
+    Challenge: "挑战"
