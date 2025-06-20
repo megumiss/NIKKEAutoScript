@@ -292,6 +292,11 @@ class NikkeAutoScript:
 
         EventDaemon(config=self.config, device=self.device).run()
 
+    def story_event(self):
+        from module.story_event.story_event import StoryEvent
+
+        StoryEvent(config=self.config, device=self.device).run()
+
     def wait_until(self, future):
         """
         Wait until a specific time.

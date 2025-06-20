@@ -80,6 +80,10 @@ Interception:
 Coop:
   - Scheduler
 
+StoryEvent:
+  - Scheduler
+  - StoryEvent
+
 # ==================== Tools ====================
 
 TowerDaemon:

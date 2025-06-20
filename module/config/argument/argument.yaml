@@ -123,3 +123,15 @@ CDK:
     value: 'https://gamewith.jp/nikke/article/show/371014'
     type: textarea
     display: disabled
+StoryEvent:
+  Event:
+    value: ''
+    option: [
+      'event_20250612'
+    ]
+    display: disabled
+  LoginStamp: true
+  Story: false
+  Challenge: true
+  Mission: true
+  Shop: false

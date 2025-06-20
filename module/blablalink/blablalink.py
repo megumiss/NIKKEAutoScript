@@ -571,11 +571,11 @@ class Blablalink(UI):
                     self.daily()
                 if self.config.CDK_Enable:
                     self.cdk()
+                self.config.task_delay(server_update=True)
             else:
                 random_minutes = random.randint(5, 30)
                 target_time = target_time + timedelta(minutes=random_minutes)
                 self.config.task_delay(target=target_time)
-            self.config.task_delay(server_update=True)
         except MissingHeader as e:
             logger.error("Please check all parameters settings")
             raise RequestHumanTakeover

@@ -24,7 +24,8 @@
       "RookieArena",
       "SpecialArena",
       "Interception",
-      "Coop"
+      "Coop",
+      "StoryEvent"
     ],
     "Tools": [
       "TowerDaemon",

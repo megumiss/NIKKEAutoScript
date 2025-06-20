@@ -160,3 +160,20 @@ page_ranking = Page(RANKING_CHECK)
 page_ranking.link(button=GOTO_BACK, destination=page_ark)
 page_ranking.link(button=GOTO_MAIN, destination=page_main)
 page_ark.link(button=ARK_GOTO_RANKING, destination=page_ranking)
+
+# event
+from module.story_event.event_20250612.assets import *
+
+page_event = Page(EVENT_CHECK)
+page_event.link(button=GOTO_BACK, destination=page_main)
+page_main.link(button=MAIN_GOTO_EVENT, destination=page_event)
+
+page_story_1 = Page(STORY_1_CHECK)
+page_story_1.link(button=GOTO_BACK, destination=page_event)
+page_story_1.link(button=GOTO_MAIN, destination=page_main)
+page_event.link(button=EVENT_GOTO_STORY_1, destination=page_story_1)
+
+page_story_2 = Page(STORY_2_CHECK)
+page_story_2.link(button=GOTO_BACK, destination=page_event)
+page_story_2.link(button=GOTO_MAIN, destination=page_main)
+page_event.link(button=EVENT_GOTO_STORY_2, destination=page_story_2)
