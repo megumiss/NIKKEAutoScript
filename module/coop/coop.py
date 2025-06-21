@@ -120,30 +120,33 @@ class Coop(UI):
             else:
                 self.device.screenshot()
 
-            # 协同开始
-            if click_timer.reached() \
-                    and self.appear_then_click(COOP_START, offset=10, interval=1):
-                click_timer.reset()
-                continue
-
             # 选择普通难度
             if click_timer.reached() \
-                    and self.appear(SECECT_DIFFICULTY, offset=10, interval=1) \
+                    and self.appear(SECECT_DIFFICULTY, offset=10) \
                     and self.appear_then_click(DIFFICULTY_NORMAL_NOT_CHECKED, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
             # 确认难度
             if click_timer.reached() \
-                    and self.appear(SECECT_DIFFICULTY, offset=10, interval=1) \
-                    and self.appear(DIFFICULTY_NORMAL, offset=10, interval=1) \
+                    and self.appear(SECECT_DIFFICULTY, offset=10) \
+                    and self.appear(DIFFICULTY_NORMAL, offset=10) \
                     and self.appear_then_click(DIFFICULTY_CONFIRM, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 协同开始
+            if click_timer.reached() \
+                    and self.appear(COOP_ROLE_CHECK, offset=10) \
+                    and not self.appear(COOP_CANCEL, offset=10) \
+                    and self.appear_then_click(COOP_START, offset=10, interval=10, threshold=0.5):
+                self.device.sleep(1)
                 click_timer.reset()
                 continue
 
             # 接受
             if click_timer.reached() \
-                    and self.appear_then_click(COOP_ACCEPT, offset=10, interval=1):
+                    and self.appear_then_click(COOP_ACCEPT, offset=30, interval=1):
                 click_timer.reset()
                 continue
 
