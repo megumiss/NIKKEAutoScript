@@ -178,6 +178,16 @@ class Coop(UI):
                 click_timer.reset()
                 break
 
+        # 进入协同作战界面
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if self.appear(COOP_CHECK, offset=10):
+                break
+
         if self.free_opportunity_remain:
             self.device.click_record_clear()
             self.device.stuck_record_clear()
