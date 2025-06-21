@@ -297,6 +297,11 @@ class NikkeAutoScript:
 
         StoryEvent(config=self.config, device=self.device).run()
 
+    def coop(self):
+        from module.coop.coop import Coop
+
+        Coop(config=self.config, device=self.device).run()
+
     def wait_until(self, future):
         """
         Wait until a specific time.

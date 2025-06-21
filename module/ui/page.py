@@ -161,7 +161,7 @@ page_ranking.link(button=GOTO_BACK, destination=page_ark)
 page_ranking.link(button=GOTO_MAIN, destination=page_main)
 page_ark.link(button=ARK_GOTO_RANKING, destination=page_ranking)
 
-# event
+# 活动引用
 from module.story_event.event_20250612.assets import *
 
 page_event = Page(EVENT_CHECK)

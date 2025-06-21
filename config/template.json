@@ -330,6 +330,7 @@
       "ServerUpdate": "04:00"
     },
     "Coop": {
+      "EventCoop": false,
       "MatchDifficulty": "Normal"
     },
     "Storage": {

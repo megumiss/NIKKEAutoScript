@@ -1057,6 +1057,10 @@
       }
     },
     "Coop": {
+      "EventCoop": {
+        "type": "checkbox",
+        "value": false
+      },
       "MatchDifficulty": {
         "type": "select",
         "value": "Normal",

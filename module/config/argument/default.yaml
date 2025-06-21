@@ -71,3 +71,7 @@ Blablalink:
 StoryEvent:
   Scheduler:
     Enable: false
+
+Coop:
+  Scheduler:
+    Enable: false

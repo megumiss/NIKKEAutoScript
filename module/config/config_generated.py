@@ -98,6 +98,7 @@ class GeneratedConfig:
     BlaDaily_Points = None
 
     # Group `Coop`
+    Coop_EventCoop = False
     Coop_MatchDifficulty = 'Normal'  # Normal
 
     # Group `CDK`

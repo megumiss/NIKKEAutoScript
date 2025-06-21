@@ -389,3 +389,11 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         for arg, value in kwargs.items():
             self.overridden[arg] = value
             super().__setattr__(arg, value)
+
+    @property
+    def EVENT_TYPE(self):
+        return self.EVENTS[0]["event_type"]
+
+    @property
+    def EVENT_COOP(self):
+        return self.Coop_EventCoop

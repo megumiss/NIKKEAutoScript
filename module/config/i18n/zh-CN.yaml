@@ -484,6 +484,9 @@ Coop:
   _info:
     name: 协同设置
     help: ""
+  EventCoop:
+    name: 活动协同
+    help: ""
   MatchDifficulty:
     name: 匹配难度
     help: ""
