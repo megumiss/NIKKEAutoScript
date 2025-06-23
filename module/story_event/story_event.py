@@ -62,6 +62,7 @@ class StoryEvent(UI):
                 continue
 
             if self.appear(LOGIN_STAMP_CHECK, offset=10):
+                click_timer.reset()
                 break
 
         # 签到
@@ -77,7 +78,7 @@ class StoryEvent(UI):
 
             # 返回
             if click_timer.reached() \
-                    and self.appear(LOGIN_STAMP_CHECK, offset=10, interval=1) \
+                    and self.appear(LOGIN_STAMP_CHECK, offset=10) \
                     and self.appear(LOGIN_STAMP_DONE, offset=10, interval=1, threshold=0.9) \
                     and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
                 click_timer.reset()
@@ -85,7 +86,7 @@ class StoryEvent(UI):
 
             # 全部领取
             if click_timer.reached() \
-                    and self.appear(LOGIN_STAMP_CHECK, offset=10, interval=1) \
+                    and self.appear(LOGIN_STAMP_CHECK, offset=10) \
                     and self.appear_then_click(LOGIN_STAMP_REWARD, offset=10, interval=1, threshold=0.9):
                 click_timer.reset()
                 continue
