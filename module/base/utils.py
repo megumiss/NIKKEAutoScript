@@ -379,3 +379,41 @@ def remove_punctuation(text: str) -> str:
     """移除所有标点符号和空格"""
     pattern = r'[^\w]'
     return re.sub(pattern, '', text)
+
+def get_button_by_location(buttons, coord='y', order='descending'):
+    """
+    根据指定的坐标参数和排序顺序返回对应的button
+    
+    参数:
+    coord -- 排序坐标: 'x' 或 'y' (默认为 'y')
+    order -- 排序顺序: 'ascending' (升序) 或 'descending' (降序) (默认为 'descending')
+    
+    返回:
+    根据排序条件选定的button，如果列表为空则返回 None
+    """
+    if not buttons:
+        return None
+    
+    # 确定坐标索引
+    coord_index = 0 if coord == 'x' else 1
+    
+    # 确定比较函数
+    if order == 'ascending':
+        compare = lambda a, b: a < b
+    else:  # descending
+        compare = lambda a, b: a > b
+    
+    # 初始化最值对象
+    result_bn = buttons[0]
+    result_value = result_bn.location[coord_index]
+    
+    # 遍历所有对象
+    for bn in buttons[1:]:
+        current_value = bn.location[coord_index]
+        
+        # 根据比较函数更新结果
+        if compare(current_value, result_value):
+            result_value = current_value
+            result_bn = bn
+    
+    return result_bn

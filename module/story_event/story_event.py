@@ -1,9 +1,14 @@
 from functools import cached_property
+from module.exception import OperationFailed
 from module.base.decorator import Config
 from module.base.timer import Timer
+from module.base.utils import get_button_by_location
 from module.logger import logger
 from module.ui.ui import UI
 from module.ui.assets import GOTO_BACK, MAIN_CHECK
+from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING
+from module.tribe_tower.assets import OPERATION_FAILED
+from module.challenge.assets import *
 from module.ui.page import *
 # 活动引用
 from module.story_event.event_20250612.assets import *
@@ -110,7 +115,7 @@ class StoryEvent(UI):
     def login_stamp(self):
         logger.info('Small event, skip loginstamp')
 
-    def challenge(self):
+    def challenge(self, skip_first_screenshot=True):
         logger.hr('START CHALLENGE')
         click_timer = Timer(0.3)
         
@@ -128,18 +133,91 @@ class StoryEvent(UI):
                 continue
 
             if self.appear(CHALLENGE_CHECK, offset=10):
+                self.device.sleep(2)
                 break
 
-        # 判断挑战关卡
+        self.device.screenshot()
+        # 判断新挑战关卡
         challenge_stages = TEMPLATE_CHALLENGE_STAGE.match_multi(self.device.image, name='CHALLENGE_STAGE')
         if challenge_stages:
             logger.info('Finf new challenge stage')
-            
+            self.device.click(challenge_stages[0])
         else:
+            # 判断已经打过的挑战关卡
             clear_stages = TEMPLATE_CLEAR_STAGE.match_multi(self.device.image, name='CLEAR_STAGE')
             if not clear_stages:
                 raise ChallengeNotFoundError
-            
+            # 取一个y坐标最大的关卡
+            stage = get_button_by_location(clear_stages, coord='y', order='descending')
+            logger.info('Finf cleared challenge stage')
+            self.device.click(stage)
+
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 已经挑战过，返回挑战列表
+            if self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
+                    and self.appear(CHALLENGE_QUICK_DISABLE, offset=10, threshold=0.9) \
+                    and self.appear(CHALLENGE_BATTLE_DONE, offset=10, threshold=0.9) \
+                    and self.appear_then_click(CHALLENGE_CANCEL, offset=10, interval=1):
+                break
+
+            # 战斗结束
+            if click_timer.reached() \
+                    and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+                click_timer.reset()
+                break
+
+            # 快速战斗
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
+                    and self.appear(CHALLENGE_BATTLE, offset=10) \
+                    and self.appear_then_click(CHALLENGE_QUICK_ENABLE, offset=10, interval=1, threshold=0.9):
+                click_timer.reset()
+                continue
+
+            # 进入战斗
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
+                    and self.appear(CHALLENGE_QUICK_DISABLE, offset=10, interval=1, threshold=0.9) \
+                    and self.appear_then_click(CHALLENGE_BATTLE, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            if click_timer.reached() \
+                        and self.appear_then_click(AUTO_SHOOT, offset=10, interval=5, threshold=0.8):
+                    click_timer.reset()
+                    continue
+
+            if click_timer.reached() \
+                    and self.appear_then_click(AUTO_BURST, offset=10, interval=5, threshold=0.8):
+                click_timer.reset()
+                continue
+
+            if self.appear(OPERATION_FAILED, offset=10):
+                raise OperationFailed
+
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 返回活动页面
+            if self.appear(EVENT_CHECK, offset=10):
+                break
+
+            # 返回
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_CHECK, offset=10) \
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+        logger.info('Event challenge done')
 
     def start_challenge(self):
         logger.info('Small event, skip loginstamp')
@@ -151,8 +229,11 @@ class StoryEvent(UI):
                 raise EventUnavailableError
             self.ui_ensure(page_event)
             _ = self.event
-            self.login_stamp()
-            
+            if self.config.StoryEvent_LoginStamp:
+                self.login_stamp()
+            if self.config.StoryEvent_Challenge:
+                self.challenge()
+        
         except EventPartError as e:
             logger.error(e)
         except EventDifficultyError as e:
@@ -169,4 +250,7 @@ class StoryEvent(UI):
             logger.error('The event is no longer available')
         except ChallengeNotFoundError as e:
             logger.error('Challenge stage not found')
+        except OperationFailed as e:
+            logger.error('Challenge stage battle failed')
+
         self.config.task_delay(server_update=True)

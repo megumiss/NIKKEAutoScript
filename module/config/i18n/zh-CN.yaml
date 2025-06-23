@@ -469,13 +469,13 @@ StoryEvent:
     name: 签到印章
     help: ""
   Story:
-    name: 剧情
-    help: "只打第11关"
+    name: 剧情关卡
+    help: "只打第11关，找不到11关则会跳过"
   Challenge:
     name: 挑战
     help: "需要提前设置好队伍"
   Mission:
-    name: 每日任务
+    name: 领取奖励
     help: ""
   Shop:
     name: 商店
