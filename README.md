@@ -4,7 +4,7 @@
 
 # NIKKEAutoScript
 
-胜利女神：NIKKE 自动日常脚本。支持除**国服**外的所有客户端（大概）。
+胜利女神：NIKKE 自动日常脚本，支持除**国服**外的所有客户端（大概）。Fork自[NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white">
@@ -68,7 +68,7 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 - [ ] 模拟室快速
 - [x] CDK自动兑换
 - [ ] 半自动推图
-- [ ] 废铁商店优化
+- [ ] 废铁商店优化，支持骨头货币
 - [x] 通知优化
 - [x] 自动打红圈（现在只支持特拦、企业塔），还需要优化
 - [x] 咨询答案选择优化
