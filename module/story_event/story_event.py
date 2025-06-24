@@ -50,7 +50,7 @@ class StoryEvent(UI):
 
     @Config.when(EVENT_TYPE=1)
     def login_stamp(self, skip_first_screenshot=True):
-        logger.hr('START LOGIN STAMP')
+        logger.hr('START EVENT LOGIN STAMP')
         click_timer = Timer(0.3)
         
         # 进入签到页面
@@ -61,7 +61,7 @@ class StoryEvent(UI):
                 self.device.screenshot()
 
             if click_timer.reached() \
-                    and self.appear(EVENT_CHECK, offset=10, interval=5) \
+                    and self.appear(EVENT_CHECK, offset=10) \
                     and self.appear_then_click(LOGIN_STAMP, offset=10, interval=5):
                 click_timer.reset()
                 continue
@@ -84,7 +84,7 @@ class StoryEvent(UI):
             # 返回
             if click_timer.reached() \
                     and self.appear(LOGIN_STAMP_CHECK, offset=10) \
-                    and self.appear(LOGIN_STAMP_DONE, offset=10, interval=1, threshold=0.9) \
+                    and self.appear(LOGIN_STAMP_DONE, offset=10, threshold=0.9) \
                     and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
                 click_timer.reset()
                 continue
@@ -98,7 +98,7 @@ class StoryEvent(UI):
 
             # 点击领取
             if click_timer.reached() \
-                    and self.appear_then_click(LOGIN_STAMP_RECEIVE, offset=10, interval=1):
+                    and self.appear_then_click(RECEIVE, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
@@ -115,8 +115,9 @@ class StoryEvent(UI):
     def login_stamp(self):
         logger.info('Small event, skip loginstamp')
 
+    @Config.when(EVENT_TYPE=1)
     def challenge(self, skip_first_screenshot=True):
-        logger.hr('START CHALLENGE')
+        logger.hr('START EVENT CHALLENGE')
         click_timer = Timer(0.3)
         
         # 进入挑战页面
@@ -127,7 +128,7 @@ class StoryEvent(UI):
                 self.device.screenshot()
 
             if click_timer.reached() \
-                    and self.appear(EVENT_CHECK, offset=10, interval=5) \
+                    and self.appear(EVENT_CHECK, offset=10) \
                     and self.appear_then_click(CHALLENGE, offset=10, interval=5):
                 click_timer.reset()
                 continue
@@ -181,7 +182,7 @@ class StoryEvent(UI):
 
             # 使用票进行战斗
             if click_timer.reached() \
-                    and self.appear(CHALLENGE_QUICK_CHECK, offset=10, interval=1) \
+                    and self.appear(CHALLENGE_QUICK_CHECK, offset=10) \
                     and self.appear_then_click(CHALLENGE_QUICK_TICKET, offset=10, interval=1):
                 click_timer.reset()
                 continue
@@ -189,7 +190,7 @@ class StoryEvent(UI):
             # 进入战斗
             if click_timer.reached() \
                     and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
-                    and self.appear(CHALLENGE_QUICK_DISABLE, offset=10, interval=1, threshold=0.9) \
+                    and self.appear(CHALLENGE_QUICK_DISABLE, offset=10, threshold=0.9) \
                     and self.appear_then_click(CHALLENGE_BATTLE, offset=10, interval=1):
                 click_timer.reset()
                 continue
@@ -226,8 +227,75 @@ class StoryEvent(UI):
 
         logger.info('Event challenge done')
 
-    def start_challenge(self):
+    @Config.when(EVENT_TYPE=2)
+    def challenge(self):
         logger.info('Small event, skip loginstamp')
+
+    @Config.when(EVENT_TYPE=1)
+    def reward(self, skip_first_screenshot=True):
+        logger.hr('START EVENT REWARD')
+        click_timer = Timer(0.3)
+        
+        # 进入任务页面
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if click_timer.reached() \
+                    and self.appear(EVENT_CHECK, offset=10) \
+                    and self.appear_then_click(REWARD, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            if self.appear(REWARD_CHECK, offset=10):
+                break
+
+        # 领取奖励
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 返回活动页面
+            if self.appear(EVENT_CHECK, offset=10):
+                break
+
+            # 关闭
+            if click_timer.reached() \
+                    and self.appear(REWARD_CHALLENGE_CHECK, threshold=10) \
+                    and self.appear(REWARD_RECEIVE_DONE, threshold=10) \
+                    and self.appear_then_click(REWARD_CLOSED, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 领取
+            if click_timer.reached() \
+                    and self.appear_then_click(REWARD_RECEIVE, threshold=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 点击领取
+            if click_timer.reached() \
+                    and self.appear_then_click(RECEIVE, offset=10, interval=1, static=False):
+                click_timer.reset()
+                continue
+
+            # 进入成就页面
+            if click_timer.reached() \
+                    and self.appear(REWARD_MISSION_CHECK, threshold=10) \
+                    and self.appear(REWARD_MISSION_CLEARED, offset=10) \
+                    and self.appear_then_click(REWARD_CHALLENGE_HIDDEN, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+        logger.info('Event reward done')
+        
+    @Config.when(EVENT_TYPE=2)
+    def reward(self, skip_first_screenshot=True):
+        logger.hr('START EVENT REWARD')
 
     def run(self):
         try:
@@ -240,7 +308,9 @@ class StoryEvent(UI):
                 self.login_stamp()
             if self.config.StoryEvent_Challenge:
                 self.challenge()
-        
+
+            self.reward()
+
         except EventPartError as e:
             logger.error(e)
         except EventDifficultyError as e:
