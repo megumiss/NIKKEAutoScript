@@ -138,7 +138,7 @@ class StoryEvent(UI):
 
         self.device.screenshot()
         # 判断新挑战关卡
-        challenge_stages = TEMPLATE_CHALLENGE_STAGE.match_multi(self.device.image, name='CHALLENGE_STAGE')
+        challenge_stages = TEMPLATE_CHALLENGE_STAGE.match_multi(self.device.image, similarity=0.7, name='CHALLENGE_STAGE')
         if challenge_stages:
             logger.info('Finf new challenge stage')
             self.device.click(challenge_stages[0])
@@ -176,6 +176,13 @@ class StoryEvent(UI):
                     and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
                     and self.appear(CHALLENGE_BATTLE, offset=10) \
                     and self.appear_then_click(CHALLENGE_QUICK_ENABLE, offset=10, interval=1, threshold=0.9):
+                click_timer.reset()
+                continue
+
+            # 使用票进行战斗
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_QUICK_CHECK, offset=10, interval=1) \
+                    and self.appear_then_click(CHALLENGE_QUICK_TICKET, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
