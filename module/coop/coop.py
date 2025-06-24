@@ -8,7 +8,8 @@ from module.ui.page import page_main, page_event
 from module.ui.ui import UI
 from module.ocr.ocr import Digit
 # 活动引用
-from module.story_event.event_20250612.assets import EVENT_CHECK, COOP_ENTER, COOP_SELECT_CHECK, TEMPLATE_COOP_ENABLE
+from module.story_event.event_20250612.assets import EVENT_CHECK, COOP_ENTER, \
+    COOP_SELECT_CHECK, TEMPLATE_COOP_ENABLE, COOP_LOCK
 
 class NoOpportunityRemain(Exception):
     pass
@@ -118,6 +119,12 @@ class Coop(UI):
                 click_timer.reset()
                 continue
 
+            # 协同未在开启时间
+            if click_timer.reached() \
+                    and self.appear(COOP_LOCK, offset=10):
+                logger.info("Coop is not enabled")
+                raise CoopIsUnavailable
+
             if self.appear(COOP_SELECT_CHECK, offset=10):
                 break
         
@@ -134,12 +141,14 @@ class Coop(UI):
             else:
                 self.device.screenshot()
 
+            # 选择协同
             if click_timer.reached() \
                     and self.appear(COOP_SELECT_CHECK, offset=10, interval=5):
                 self.device.click(coops[0])
                 click_timer.reset()
                 continue
 
+            # 协同主页
             if self.appear(COOP_CHECK, offset=10):
                 break
 

@@ -6,6 +6,7 @@ from module.base.template import Template
 
 CHALLENGE = Button(area={'cn': (146, 1101, 183, 1119)}, color={'cn': (149, 176, 219)}, button={'cn': (146, 1101, 183, 1119)}, file={'cn': './assets/story_event/event_20250612/CHALLENGE.png'})
 COOP_ENTER = Button(area={'cn': (324, 1165, 396, 1184)}, color={'cn': (143, 173, 220)}, button={'cn': (324, 1165, 396, 1184)}, file={'cn': './assets/story_event/event_20250612/COOP_ENTER.png'})
+COOP_LOCK = Button(area={'cn': (348, 615, 372, 626)}, color={'cn': (26, 26, 26)}, button={'cn': (348, 615, 372, 626)}, file={'cn': './assets/story_event/event_20250612/COOP_LOCK.png'})
 COOP_SELECT_CHECK = Button(area={'cn': (307, 623, 441, 655)}, color={'cn': (102, 102, 101)}, button={'cn': (307, 623, 441, 655)}, file={'cn': './assets/story_event/event_20250612/COOP_SELECT_CHECK.png'})
 EVENT_CHECK = Button(area={'cn': (20, 37, 91, 54)}, color={'cn': (145, 143, 140)}, button={'cn': (20, 37, 91, 54)}, file={'cn': './assets/story_event/event_20250612/EVENT_CHECK.png'})
 EVENT_GOTO_STORY_1 = Button(area={'cn': (126, 951, 231, 967)}, color={'cn': (102, 133, 186)}, button={'cn': (126, 951, 231, 967)}, file={'cn': './assets/story_event/event_20250612/EVENT_GOTO_STORY_1.png'})
