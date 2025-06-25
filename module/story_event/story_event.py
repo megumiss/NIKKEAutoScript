@@ -292,10 +292,68 @@ class StoryEvent(UI):
                 continue
 
         logger.info('Event reward done')
-        
+
     @Config.when(EVENT_TYPE=2)
     def reward(self, skip_first_screenshot=True):
         logger.hr('START EVENT REWARD')
+
+    @Config.when(EVENT_TYPE=1)
+    def story(self, skip_first_screenshot=True):
+        logger.hr('START EVENT STORY')
+        click_timer = Timer(0.3)
+
+        logger.info('Finding opened event story')
+        if self.appear(EVENT_GOTO_STORY_1, offset=10) \
+                and self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
+            logger.info('Find opened event story 1')
+
+            # 进入story1
+            while 1:
+                if skip_first_screenshot:
+                    skip_first_screenshot = False
+                else:
+                    self.device.screenshot()
+
+                if click_timer.reached() \
+                        and self.appear_then_click(EVENT_GOTO_STORY_1, offset=10, interval=1):
+                    click_timer.reset()
+                    continue
+
+                # story1页面
+                if self.appear(STORY_1_CHECK, offset=10):
+                    break
+            logger.info('Opened event story 1')
+
+            # TODO
+
+        if self.appear(EVENT_GOTO_STORY_1, offset=10) \
+                and not self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
+            logger.info('Find opened event story 2')
+            if self.config.StoryEvent_StoryPart == "story_1":
+                raise EventPartError
+
+            # 进入story2，story2更新后需要重新截图
+            while 1:
+                if skip_first_screenshot:
+                    skip_first_screenshot = False
+                else:
+                    self.device.screenshot()
+
+                if click_timer.reached() \
+                        and self.appear_then_click(EVENT_GOTO_STORY_2, offset=10, interval=1):
+                    click_timer.reset()
+                    continue
+
+                # story2页面
+                if self.appear(STORY_2_CHECK, offset=10):
+                    break
+            logger.info('Opened event story 2')
+
+            # TODO
+
+    @Config.when(EVENT_TYPE=2)
+    def story(self, skip_first_screenshot=True):
+        logger.hr('START EVENT STORY')
 
     def run(self):
         try:
@@ -308,6 +366,8 @@ class StoryEvent(UI):
                 self.login_stamp()
             if self.config.StoryEvent_Challenge:
                 self.challenge()
+            if self.config.StoryEvent_Story:
+                self.story()
 
             self.reward()
 
