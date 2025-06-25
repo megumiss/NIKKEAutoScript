@@ -468,15 +468,22 @@ StoryEvent:
   LoginStamp:
     name: 签到印章
     help: ""
-  Story:
-    name: 剧情关卡
-    help: "只打第11关，找不到11关则会跳过"
   Challenge:
     name: 挑战
     help: "需要提前设置好队伍"
-  Mission:
-    name: 领取奖励
+  Story:
+    name: 自动关卡
+    help: "快速战斗第11关，需要打完11关后开启。选择的关卡需要和当前开启的关卡一致"
+  StoryPart:
+    name: 关卡选择
     help: ""
+    Story_1: "剧情1"
+    Story_2: "剧情2"
+  StoryDifficulty:
+    name: 关卡难度
+    help: ""
+    Normal: "普通"
+    Hard: "困难"
   Shop:
     name: 商店
     help: ""

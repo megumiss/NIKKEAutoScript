@@ -311,53 +311,66 @@ class StoryEvent(UI):
         click_timer = Timer(0.3)
 
         logger.info('Finding opened event story')
-        if self.appear(EVENT_GOTO_STORY_1, offset=10) \
-                and self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
-            logger.info('Find opened event story 1')
+        story1 = False
+        story2 = False
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
 
-            # 进入story1
-            while 1:
-                if skip_first_screenshot:
-                    skip_first_screenshot = False
-                else:
-                    self.device.screenshot()
+            # 检查story2是否开启，未开启则进入1
+            if self.appear(EVENT_GOTO_STORY_1, offset=10) \
+                    and self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
+                logger.info('Find opened event story 1')
 
-                if click_timer.reached() \
-                        and self.appear_then_click(EVENT_GOTO_STORY_1, offset=10, interval=1):
-                    click_timer.reset()
-                    continue
+                # 进入story1
+                while 1:
+                    if skip_first_screenshot:
+                        skip_first_screenshot = False
+                    else:
+                        self.device.screenshot()
 
-                # story1页面
-                if self.appear(STORY_1_CHECK, offset=10):
-                    break
-            logger.info('Opened event story 1')
+                    if click_timer.reached() \
+                            and self.appear_then_click(EVENT_GOTO_STORY_1, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
 
-            # TODO
+                    # story1页面
+                    if self.appear(STORY_1_CHECK, offset=10):
+                        story1 = True
+                        break
+                logger.info('Opened event story 1')
 
-        if self.appear(EVENT_GOTO_STORY_1, offset=10) \
-                and not self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
-            logger.info('Find opened event story 2')
-            if self.config.StoryEvent_StoryPart == "story_1":
-                raise EventPartError
+            # 检查story2是否开启，开启则进入2
+            if self.appear(EVENT_GOTO_STORY_1, offset=10) \
+                    and not self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
+                logger.info('Find opened event story 2')
+                if self.config.StoryEvent_StoryPart == "Story_1":
+                    raise EventPartError
 
-            # 进入story2，story2更新后需要重新截图
-            while 1:
-                if skip_first_screenshot:
-                    skip_first_screenshot = False
-                else:
-                    self.device.screenshot()
+                # 进入story2，story2更新后需要重新截图
+                while 1:
+                    if skip_first_screenshot:
+                        skip_first_screenshot = False
+                    else:
+                        self.device.screenshot()
 
-                if click_timer.reached() \
-                        and self.appear_then_click(EVENT_GOTO_STORY_2, offset=10, interval=1):
-                    click_timer.reset()
-                    continue
+                    if click_timer.reached() \
+                            and self.appear_then_click(EVENT_GOTO_STORY_2, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
 
-                # story2页面
-                if self.appear(STORY_2_CHECK, offset=10):
-                    break
-            logger.info('Opened event story 2')
+                    # story2页面
+                    if self.appear(STORY_2_CHECK, offset=10):
+                        story2 = True
+                        break
+                logger.info('Opened event story 2')
 
-            # TODO
+            if story1 or story2:
+                break
+
+        # TODO 
 
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
@@ -382,11 +395,6 @@ class StoryEvent(UI):
         except EventPartError as e:
             logger.error(e)
         except EventDifficultyError as e:
-            logger.error(e)
-        except EventPartUnavailableError as e:
-            logger.error(e)
-        except HardEventAvailable as e:
-            self.ensure_back()
             logger.error(e)
         except NoOpportunityRemain as e:
             self.ensure_back()

@@ -349,9 +349,10 @@
     "StoryEvent": {
       "Event": "",
       "LoginStamp": true,
-      "Story": false,
       "Challenge": true,
-      "Mission": true,
+      "Story": false,
+      "StoryPart": "Story_1",
+      "StoryDifficulty": "Normal",
       "Shop": false
     },
     "Storage": {

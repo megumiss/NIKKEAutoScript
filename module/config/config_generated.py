@@ -108,9 +108,10 @@ class GeneratedConfig:
     # Group `StoryEvent`
     StoryEvent_Event = ''  # event_20250612
     StoryEvent_LoginStamp = True
-    StoryEvent_Story = False
     StoryEvent_Challenge = True
-    StoryEvent_Mission = True
+    StoryEvent_Story = False
+    StoryEvent_StoryPart = 'Story_1'  # Story_1, Story_2
+    StoryEvent_StoryDifficulty = 'Normal'  # Normal, Hard
     StoryEvent_Shop = False
 
     # Group `Storage`

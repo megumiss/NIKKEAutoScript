@@ -134,7 +134,18 @@ StoryEvent:
     ]
     display: disabled
   LoginStamp: true
-  Story: false
   Challenge: true
-  Mission: true
+  Story: false
+  StoryPart:
+    value: 'Story_1'
+    option: [
+      'Story_1',
+      'Story_2'
+    ]
+  StoryDifficulty:
+    value: 'Normal'
+    option: [
+      'Normal',
+      'Hard'
+    ]
   Shop: false

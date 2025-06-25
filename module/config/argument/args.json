@@ -1123,17 +1123,29 @@
         "type": "checkbox",
         "value": true
       },
-      "Story": {
-        "type": "checkbox",
-        "value": false
-      },
       "Challenge": {
         "type": "checkbox",
         "value": true
       },
-      "Mission": {
+      "Story": {
         "type": "checkbox",
-        "value": true
+        "value": false
+      },
+      "StoryPart": {
+        "type": "select",
+        "value": "Story_1",
+        "option": [
+          "Story_1",
+          "Story_2"
+        ]
+      },
+      "StoryDifficulty": {
+        "type": "select",
+        "value": "Normal",
+        "option": [
+          "Normal",
+          "Hard"
+        ]
       },
       "Shop": {
         "type": "checkbox",
