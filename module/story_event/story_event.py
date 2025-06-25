@@ -161,8 +161,8 @@ class StoryEvent(UI):
 
             # 已经挑战过，返回挑战列表
             if self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
-                    and self.appear(CHALLENGE_QUICK_DISABLE, offset=10, threshold=0.9) \
-                    and self.appear(CHALLENGE_BATTLE_DONE, offset=10, threshold=0.9) \
+                    and self.appear(CHALLENGE_QUICK_DISABLE, threshold=10) \
+                    and self.appear(CHALLENGE_BATTLE_DONE, threshold=10) \
                     and self.appear_then_click(CHALLENGE_CANCEL, offset=10, interval=1):
                 break
 
@@ -175,14 +175,14 @@ class StoryEvent(UI):
             # 快速战斗
             if click_timer.reached() \
                     and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
-                    and self.appear(CHALLENGE_BATTLE, offset=10) \
-                    and self.appear_then_click(CHALLENGE_QUICK_ENABLE, offset=10, interval=1, threshold=0.9):
+                    and self.appear(CHALLENGE_BATTLE, threshold=10) \
+                    and self.appear_then_click(CHALLENGE_QUICK_ENABLE, threshold=10, interval=1):
                 click_timer.reset()
                 continue
 
             # 使用票进行战斗
             if click_timer.reached() \
-                    and self.appear(CHALLENGE_QUICK_CHECK, offset=10) \
+                    and self.appear(CHALLENGE_QUICK_CHECK, threshold=10) \
                     and self.appear_then_click(CHALLENGE_QUICK_TICKET, offset=10, interval=1):
                 click_timer.reset()
                 continue
@@ -190,8 +190,8 @@ class StoryEvent(UI):
             # 进入战斗
             if click_timer.reached() \
                     and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
-                    and self.appear(CHALLENGE_QUICK_DISABLE, offset=10, threshold=0.9) \
-                    and self.appear_then_click(CHALLENGE_BATTLE, offset=10, interval=1):
+                    and self.appear(CHALLENGE_QUICK_DISABLE, threshold=10) \
+                    and self.appear_then_click(CHALLENGE_BATTLE, threshold=10, interval=1):
                 click_timer.reset()
                 continue
 
@@ -287,6 +287,14 @@ class StoryEvent(UI):
             if click_timer.reached() \
                     and self.appear(REWARD_MISSION_CHECK, threshold=10) \
                     and self.appear(REWARD_MISSION_CLEARED, offset=10) \
+                    and self.appear_then_click(REWARD_CHALLENGE_HIDDEN, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 进入成就页面
+            if click_timer.reached() \
+                    and self.appear(REWARD_MISSION_CHECK, threshold=10) \
+                    and self.appear(REWARD_RECEIVE_DONE, threshold=10) \
                     and self.appear_then_click(REWARD_CHALLENGE_HIDDEN, offset=10, interval=1):
                 click_timer.reset()
                 continue

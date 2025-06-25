@@ -255,6 +255,7 @@ class Daily(UI):
             logger.warning('No equipment in the inventory')
             self.ensure_back()
         self.ui_ensure(page_daily)
+        # 每日任务结算
         self.receive()
         if self.config.Notification_WhenDailyTaskCompleted:
             handle_notify(
