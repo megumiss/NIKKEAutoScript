@@ -190,7 +190,7 @@ class StoryEvent(UI):
 
             # 使用票进行战斗
             if click_timer.reached() \
-                    and self.appear(FIGHT_QUICK_CHECK, threshold=10) \
+                    and self.appear(FIGHT_QUICKLY_CHECK, threshold=10) \
                     and self.appear_then_click(CHALLENGE_QUICK_TICKET, offset=10, interval=1):
                 click_timer.reset()
                 continue
