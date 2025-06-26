@@ -486,7 +486,7 @@ StoryEvent:
     Hard: "困难"
   Shop:
     name: 商店
-    help: ""
+    help: "还没做"
 Coop:
   _info:
     name: 协同设置

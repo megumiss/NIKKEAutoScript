@@ -5,7 +5,8 @@ from module.base.timer import Timer
 from module.base.utils import get_button_by_location
 from module.logger import logger
 from module.ui.ui import UI
-from module.ui.assets import GOTO_BACK, MAIN_CHECK
+from module.ui.assets import GOTO_BACK, MAIN_CHECK, FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_FIGHT, \
+                            FIGHT_QUICKLY_MAX, FIGHT_CLOSE
 from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING, FIGHT_QUICKLY
 from module.tribe_tower.assets import OPERATION_FAILED
 from module.challenge.assets import *
@@ -34,6 +35,13 @@ class NoOpportunityRemain(Exception):
 
 class ChallengeNotFoundError(Exception):
     pass
+
+STORY_STAGE_11 = {
+    "story_1_normal": STORY_1_NORMAL_STAGE_11,
+    "story_1_hard": STORY_1_HARD_STAGE_11,
+    "story_2_normal": STORY_2_NORMAL_STAGE_11,
+    "story_2_hard": STORY_2_HARD_STAGE_11,
+}
 
 class EventInfo:
     def __init__(self, id, name, type):
@@ -182,7 +190,7 @@ class StoryEvent(UI):
 
             # 使用票进行战斗
             if click_timer.reached() \
-                    and self.appear(CHALLENGE_QUICK_CHECK, threshold=10) \
+                    and self.appear(FIGHT_QUICK_CHECK, threshold=10) \
                     and self.appear_then_click(CHALLENGE_QUICK_TICKET, offset=10, interval=1):
                 click_timer.reset()
                 continue
@@ -301,6 +309,7 @@ class StoryEvent(UI):
 
         logger.info('Event reward done')
 
+    # TODO
     @Config.when(EVENT_TYPE=2)
     def reward(self, skip_first_screenshot=True):
         logger.hr('START EVENT REWARD')
@@ -363,13 +372,19 @@ class StoryEvent(UI):
                         self.device.screenshot()
 
                     if click_timer.reached() \
-                            and self.appear_then_click(EVENT_GOTO_STORY_2, offset=10, interval=1):
+                            and self.appear_then_click(EVENT_GOTO_STORY_2, offset=10, interval=5):
                         click_timer.reset()
                         continue
 
                     # story2主页
                     if click_timer.reached() \
                             and self.appear_then_click(STORY_2_CHECK, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
+
+                    # story2困难解锁
+                    if click_timer.reached() \
+                            and self.appear_then_click(STORY_2_HARD_UNLOCK, offset=10, interval=1):
                         click_timer.reset()
                         continue
 
@@ -424,52 +439,82 @@ class StoryEvent(UI):
                         if self.appear(STORY_2_HARD, threshold=10):
                             click_timer.reset()
                             break
-                    
+
                     logger.info('Open event story 2 hard')
                     break
 
-        # TODO
         # 滑动到列表最下方检查倒数第二关
-        self.ensure_sroll_to_bottom()
+        self.ensure_sroll_to_bottom(count=3)
+        self.device.screenshot()
+        if self.appear(STORY_STAGE_11[open_story], offset=10):
+            while 1:
+                if skip_first_screenshot:
+                    skip_first_screenshot = False
+                else:
+                    self.device.screenshot()
+
+                # 战斗结束
+                if click_timer.reached() \
+                        and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+                    click_timer.reset()
+                    break
+
+                # 关卡检查
+                if click_timer.reached() \
+                        and self.appear_then_click(STORY_STAGE_11[open_story], offset=10, interval=1):
+                    # self.device.sleep(1)
+                    click_timer.reset()
+                    continue
+
+                # 快速战斗
+                if click_timer.reached() \
+                        and self.appear(STORY_STAGE_CHECK, offset=30) \
+                        and self.appear_then_click(FIGHT_QUICKLY, threshold=20, interval=1):
+                    click_timer.reset()
+                    continue
+
+                # 票max
+                if click_timer.reached() \
+                        and self.appear(FIGHT_QUICKLY_CHECK, offset=10) \
+                        and self.appear_then_click(FIGHT_QUICKLY_MAX, threshold=10, interval=1):
+                    click_timer.reset()
+                    continue
+
+                # 进行战斗
+                if click_timer.reached() \
+                        and self.appear(FIGHT_QUICKLY_CHECK, offset=10) \
+                        and self.appear(FIGHT_QUICKLY_MAX, threshold=10) \
+                        and self.appear_then_click(FIGHT_QUICKLY_FIGHT, threshold=10, interval=1):
+                    click_timer.reset()
+                    continue
+
+                # 没票
+                if click_timer.reached() \
+                        and self.appear(STORY_STAGE_CHECK, offset=10) \
+                        and not self.appear(FIGHT_QUICKLY, threshold=10) \
+                        and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1):
+                    break
+            else:
+                logger.info('Stage 11 not cleared')
+                raise EventPartError
+            logger.info('Stage 11 clear done')
+
+        # 回到活动主页
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
 
-            # 无票
-            if self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
-                    and self.appear(CHALLENGE_QUICK_DISABLE, threshold=10) \
-                    and self.appear(CHALLENGE_BATTLE_DONE, threshold=10) \
-                    and self.appear_then_click(CHALLENGE_CANCEL, offset=10, interval=1):
+            if self.appear(EVENT_CHECK, offset=10):
                 break
 
-            # 战斗结束
             if click_timer.reached() \
-                    and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
-                click_timer.reset()
-                break
-
-            # 关卡检查
-            if click_timer.reached() \
-                    and self.appear_then_click(STORY_2_NORMAL_STAGE_11, offset=10, interval=1):
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
-            # 快速战斗
-            if click_timer.reached() \
-                    and self.appear(STORY_2_NORMAL_STAGE_CHECK, offset=10) \
-                    and self.appear_then_click(FIGHT_QUICKLY, offset=10, interval=1):
-                click_timer.reset()
-                continue
-
-            # 票max
-            if click_timer.reached() \
-                    and self.appear(STORY_2_NORMAL_STAGE_CHECK, offset=10) \
-                    and self.appear_then_click(FIGHT_QUICKLY, offset=10, interval=1):
-                click_timer.reset()
-                continue
-
+    # TODO
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
         logger.hr('START EVENT STORY')
@@ -491,12 +536,7 @@ class StoryEvent(UI):
             self.reward()
 
         except EventPartError as e:
-            logger.error(e)
-        except EventDifficultyError as e:
-            logger.error(e)
-        except NoOpportunityRemain as e:
-            self.ensure_back()
-            logger.warning('There are no opportunities remaining')
+            logger.error('The event stage/difficulty select error')
         except EventUnavailableError as e:
             logger.error('The event is no longer available')
         except ChallengeNotFoundError as e:
