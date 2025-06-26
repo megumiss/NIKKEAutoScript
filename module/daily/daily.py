@@ -199,7 +199,7 @@ class Daily(UI):
                 continue
             # 选择礼物
             if click_timer.reached() \
-                    and self.appear_then_click(GIFT_RANK_R, offset=5, interval=1):
+                    and self.appear_then_click(GIFT_RANK_R, offset=5, interval=1, static=False):
                 click_timer.reset()
                 continue
             # 送礼
