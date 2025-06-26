@@ -311,8 +311,7 @@ class StoryEvent(UI):
         click_timer = Timer(0.3)
 
         logger.info('Finding opened event story')
-        story1 = False
-        story2 = False
+        open_story = "story_1_normal"
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -336,11 +335,18 @@ class StoryEvent(UI):
                         click_timer.reset()
                         continue
 
-                    # story1页面
-                    if self.appear(STORY_1_CHECK, offset=10):
-                        story1 = True
+                    # story1主页
+                    if click_timer.reached() \
+                            and self.appear_then_click(STORY_1_CHECK, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
+
+                    # story1列表页面
+                    if self.appear(STORY_1_NORMAL, threshold=10):
+                        click_timer.reset()
                         break
-                logger.info('Opened event story 1')
+                logger.info('Open event story 1')
+                break
 
             # 检查story2是否开启，开启则进入2
             if self.appear(EVENT_GOTO_STORY_1, offset=10) \
@@ -361,16 +367,71 @@ class StoryEvent(UI):
                         click_timer.reset()
                         continue
 
-                    # story2页面
-                    if self.appear(STORY_2_CHECK, offset=10):
-                        story2 = True
+                    # story2主页
+                    if click_timer.reached() \
+                            and self.appear_then_click(STORY_2_CHECK, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
+
+                    # story2普通难度列表页面
+                    if self.appear(STORY_2_NORMAL, threshold=10):
+                        click_timer.reset()
                         break
-                logger.info('Opened event story 2')
 
-            if story1 or story2:
-                break
+                    # story2困难难度列表页面
+                    if self.appear(STORY_2_HARD, threshold=10):
+                        click_timer.reset()
+                        break
+                logger.info('Open event story 2')
 
-        # TODO 
+                # 困难难度关闭
+                if self.appear(STORY_2_NORMAL, threshold=10) \
+                        and self.appear(STORY_2_HARD_LOCKED, offset=10):
+                    logger.info('Find difficulty normal opened')
+                    if self.config.StoryEvent_StoryDifficulty == "HARD":
+                        raise EventPartError
+                    open_story = "story_2_normal"
+                    logger.info('Open event story 2 normal')
+                    break
+
+                # 困难难度开启，当前页面是普通
+                if self.appear(STORY_2_NORMAL, threshold=10) \
+                        and not self.appear(STORY_2_HARD_LOCKED, offset=10):
+                    open_story = "story_2_hard"
+
+                # 困难难度开启，当前页面是困难
+                if self.appear(STORY_2_HARD, threshold=10):
+                    open_story = "story_2_hard"
+
+                if open_story == "story_2_hard":
+                    logger.info('Find difficulty hard opened')
+                    if self.config.StoryEvent_StoryDifficulty == "NORMAL":
+                        raise EventPartError
+
+                    while 1:
+                        if skip_first_screenshot:
+                            skip_first_screenshot = False
+                        else:
+                            self.device.screenshot()
+
+                        # story2困难难度切换
+                        if click_timer.reached() \
+                                and self.appear_then_click(STORY_2_HARD_HIDDEN, threshold=10):
+                            click_timer.reset()
+                            continue
+
+                        # story2困难难度列表页面
+                        if self.appear(STORY_2_HARD, threshold=10):
+                            click_timer.reset()
+                            break
+                    
+                    logger.info('Open event story 2 hard')
+                    break
+
+        # TODO
+        # 滑动到列表最下方检查第11关
+
+
 
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
