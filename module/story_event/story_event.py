@@ -6,7 +6,7 @@ from module.base.utils import get_button_by_location
 from module.logger import logger
 from module.ui.ui import UI
 from module.ui.assets import GOTO_BACK, MAIN_CHECK
-from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING
+from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING, FIGHT_QUICKLY
 from module.tribe_tower.assets import OPERATION_FAILED
 from module.challenge.assets import *
 from module.ui.page import *
@@ -429,9 +429,46 @@ class StoryEvent(UI):
                     break
 
         # TODO
-        # 滑动到列表最下方检查第11关
+        # 滑动到列表最下方检查倒数第二关
+        self.ensure_sroll_to_bottom()
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
 
+            # 无票
+            if self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
+                    and self.appear(CHALLENGE_QUICK_DISABLE, threshold=10) \
+                    and self.appear(CHALLENGE_BATTLE_DONE, threshold=10) \
+                    and self.appear_then_click(CHALLENGE_CANCEL, offset=10, interval=1):
+                break
 
+            # 战斗结束
+            if click_timer.reached() \
+                    and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+                click_timer.reset()
+                break
+
+            # 关卡检查
+            if click_timer.reached() \
+                    and self.appear_then_click(STORY_2_NORMAL_STAGE_11, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 快速战斗
+            if click_timer.reached() \
+                    and self.appear(STORY_2_NORMAL_STAGE_CHECK, offset=10) \
+                    and self.appear_then_click(FIGHT_QUICKLY, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 票max
+            if click_timer.reached() \
+                    and self.appear(STORY_2_NORMAL_STAGE_CHECK, offset=10) \
+                    and self.appear_then_click(FIGHT_QUICKLY, offset=10, interval=1):
+                click_timer.reset()
+                continue
 
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
