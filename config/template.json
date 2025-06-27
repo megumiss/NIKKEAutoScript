@@ -353,6 +353,7 @@
       "Story": false,
       "StoryPart": "Story_1",
       "StoryDifficulty": "Normal",
+      "Game": false,
       "Shop": false
     },
     "Storage": {

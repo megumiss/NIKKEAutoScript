@@ -456,6 +456,9 @@ Event:
     help: ""
     Normal: "普通"
     Hard: "困难"
+  Game:
+    name: 小游戏
+    help: "还没做"
   Shop:
     name: 商店
     help: "还没做"

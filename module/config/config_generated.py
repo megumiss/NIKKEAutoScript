@@ -105,6 +105,7 @@ class GeneratedConfig:
     Event_Story = False
     Event_StoryPart = 'Story_1'  # Story_1, Story_2
     Event_StoryDifficulty = 'Normal'  # Normal, Hard
+    Event_Game = False
     Event_Shop = False
 
     # Group `Storage`

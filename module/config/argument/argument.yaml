@@ -136,4 +136,5 @@ Event:
       'Normal',
       'Hard'
     ]
+  Game: false
   Shop: false
