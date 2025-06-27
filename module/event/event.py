@@ -1,5 +1,8 @@
 from functools import cached_property
-from module.exception import OperationFailed
+from module.exception import (
+    OperationFailed,
+    RequestHumanTakeover,
+)
 from module.base.decorator import Config
 from module.base.timer import Timer
 from module.base.utils import get_button_by_location
@@ -15,22 +18,10 @@ from module.ui.page import *
 from module.event.event_20250612.assets import *
 
 
-class EventPartError(Exception):
-    pass
-
-class EventDifficultyError(Exception):
-    pass
-
-class EventPartUnavailableError(Exception):
-    pass
-
-class HardEventAvailable(Exception):
+class EventSelectError(Exception):
     pass
 
 class EventUnavailableError(Exception):
-    pass
-
-class NoOpportunityRemain(Exception):
     pass
 
 class ChallengeNotFoundError(Exception):
@@ -214,7 +205,8 @@ class Event(UI):
                 continue
 
             if self.appear(OPERATION_FAILED, offset=10):
-                raise OperationFailed
+                logger.error('Challenge stage fight failed')
+                raise RequestHumanTakeover
 
         while 1:
             if skip_first_screenshot:
@@ -331,6 +323,8 @@ class Event(UI):
             if self.appear(EVENT_GOTO_STORY_1, offset=10) \
                     and self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
                 logger.info('Find opened event story 1')
+                if self.config.Event_StoryPart == "Story_2":
+                    raise EventSelectError
 
                 # 进入story1
                 while 1:
@@ -362,7 +356,7 @@ class Event(UI):
                     and not self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
                 logger.info('Find opened event story 2')
                 if self.config.Event_StoryPart == "Story_1":
-                    raise EventPartError
+                    raise EventSelectError
 
                 # 进入story2，story2更新后需要重新截图
                 while 1:
@@ -404,7 +398,7 @@ class Event(UI):
                         and self.appear(STORY_2_HARD_LOCKED, offset=10):
                     logger.info('Find difficulty normal opened')
                     if self.config.Event_StoryDifficulty == "HARD":
-                        raise EventPartError
+                        raise EventSelectError
                     open_story = "story_2_normal"
                     logger.info('Open event story 2 normal')
                     break
@@ -421,7 +415,7 @@ class Event(UI):
                 if open_story == "story_2_hard":
                     logger.info('Find difficulty hard opened')
                     if self.config.Event_StoryDifficulty == "NORMAL":
-                        raise EventPartError
+                        raise EventSelectError
 
                     while 1:
                         if skip_first_screenshot:
@@ -496,7 +490,7 @@ class Event(UI):
                     break
             else:
                 logger.info('Stage 11 not cleared')
-                raise EventPartError
+                raise EventSelectError
             logger.info('Stage 11 clear done')
 
         # 回到活动主页
@@ -526,6 +520,7 @@ class Event(UI):
                 raise EventUnavailableError
             self.ui_ensure(page_event)
             _ = self.event
+
             if self.config.Event_LoginStamp:
                 self.login_stamp()
             if self.config.Event_Challenge:
@@ -535,13 +530,11 @@ class Event(UI):
 
             self.reward()
 
-        except EventPartError as e:
-            logger.error('The event stage/difficulty select error')
-        except EventUnavailableError as e:
+        except EventSelectError:
+            logger.error('The event stage/difficulty select wrong')
+        except EventUnavailableError:
             logger.error('The event is no longer available')
-        except ChallengeNotFoundError as e:
+        except ChallengeNotFoundError:
             logger.error('Challenge stage not found')
-        except OperationFailed as e:
-            logger.error('Challenge stage battle failed')
 
         self.config.task_delay(server_update=True)
