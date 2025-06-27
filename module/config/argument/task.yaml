@@ -81,9 +81,9 @@ Coop:
   - Scheduler
   - Coop
 
-StoryEvent:
+Event:
   - Scheduler
-  - StoryEvent
+  - Event
 
 # ==================== Tools ====================
 

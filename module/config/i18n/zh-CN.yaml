@@ -137,7 +137,7 @@ Task:
   CombatDaemon:
     name: 半自动战斗
     help: "半自动推图，剧情需要手动跳过（还没做）"
-  StoryEvent:
+  Event:
     name: 剧情活动
     help: "全部还没做。剧情活动签到，挑战，每日清票，每日任务，商店"
 Emulator:
@@ -337,34 +337,6 @@ Notification:
   OnePushConfig:
     name: 推送设置
     help: "使用 Onepush 推送一条错误信息（win不需要填写）。配置方法见文档：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
-Event:
-  _info:
-    name: 活动设置
-    help: ""
-  Event:
-    name: 活动
-    help: "会自动选取最新的活动"
-    event_1: 'OVER ZONE'
-    event_2: 'Bunny X 777'
-    event_3: "Queen's Order"
-    event_4: "Blue Water Island"
-    event_5: "NYA NYA PARADISE"
-  Event_Name:
-    name: 关卡名称
-    help: "例如 '1-11'"
-  Complete_Event:
-    name: 完成未完成的关卡
-    help: ""
-  Part:
-    name: Part
-    help: ""
-    story_1: 'Story 1'
-    story_2: 'Story 2'
-  Difficulty:
-    name: 难度
-    help: ""
-    normal: '普通'
-    hard: '困难'
 Daily:
   _info:
     name: 每日任务
@@ -457,7 +429,7 @@ CombatDaemon:
   _info:
     name: 半自动战斗
     help: "半自动推图，能减少部分人工操作；需要手动导航到战斗开始界面，剧情需要手动跳过"
-StoryEvent:
+Event:
   _info:
     name: 活动设置
     help: ""

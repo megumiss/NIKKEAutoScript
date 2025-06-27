@@ -292,10 +292,10 @@ class NikkeAutoScript:
 
         EventDaemon(config=self.config, device=self.device).run()
 
-    def story_event(self):
-        from module.story_event.story_event import StoryEvent
+    def event(self):
+        from module.event.event import Event
 
-        StoryEvent(config=self.config, device=self.device).run()
+        Event(config=self.config, device=self.device).run()
 
     def coop(self):
         from module.coop.coop import Coop

@@ -337,16 +337,16 @@
       "Storage": {}
     }
   },
-  "StoryEvent": {
+  "Event": {
     "Scheduler": {
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
-      "Command": "StoryEvent",
+      "Command": "Event",
       "SuccessInterval": 0,
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
-    "StoryEvent": {
+    "Event": {
       "Event": "",
       "LoginStamp": true,
       "Challenge": true,

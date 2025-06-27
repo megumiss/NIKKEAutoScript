@@ -1078,7 +1078,7 @@
       }
     }
   },
-  "StoryEvent": {
+  "Event": {
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
@@ -1091,7 +1091,7 @@
       },
       "Command": {
         "type": "input",
-        "value": "StoryEvent",
+        "value": "Event",
         "display": "hide"
       },
       "SuccessInterval": {
@@ -1110,7 +1110,7 @@
         "display": "hide"
       }
     },
-    "StoryEvent": {
+    "Event": {
       "Event": {
         "type": "select",
         "value": "",

@@ -8,7 +8,7 @@ from module.ui.page import page_main, page_event
 from module.ui.ui import UI
 from module.ocr.ocr import Digit
 # 活动引用
-from module.story_event.event_20250612.assets import EVENT_CHECK, COOP_ENTER, \
+from module.event.event_20250612.assets import EVENT_CHECK, COOP_ENTER, \
     COOP_SELECT_CHECK, TEMPLATE_COOP_ENABLE, COOP_LOCK
 
 class NoOpportunityRemain(Exception):

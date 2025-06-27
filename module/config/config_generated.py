@@ -61,13 +61,6 @@ class GeneratedConfig:
     Notification_WhenDailyTaskCrashed = False
     Notification_OnePushConfig = 'provider: null'
 
-    # Group `Event`
-    Event_Event_Name = None
-    Event_Complete_Event = False
-    Event_Event = 'event_5'  # event_5
-    Event_Part = 'story_1'  # story_1, story_2
-    Event_Difficulty = 'normal'  # normal, hard
-
     # Group `Daily`
     Daily_SendGift = False
     Daily_EnhanceEquipment = False
@@ -105,14 +98,14 @@ class GeneratedConfig:
     CDK_Enable = False
     CDK_Source = 'https://gamewith.jp/nikke/article/show/371014'
 
-    # Group `StoryEvent`
-    StoryEvent_Event = ''  # event_20250612
-    StoryEvent_LoginStamp = True
-    StoryEvent_Challenge = True
-    StoryEvent_Story = False
-    StoryEvent_StoryPart = 'Story_1'  # Story_1, Story_2
-    StoryEvent_StoryDifficulty = 'Normal'  # Normal, Hard
-    StoryEvent_Shop = False
+    # Group `Event`
+    Event_Event = ''  # event_20250612
+    Event_LoginStamp = True
+    Event_Challenge = True
+    Event_Story = False
+    Event_StoryPart = 'Story_1'  # Story_1, Story_2
+    Event_StoryDifficulty = 'Normal'  # Normal, Hard
+    Event_Shop = False
 
     # Group `Storage`
     Storage_Storage = {}

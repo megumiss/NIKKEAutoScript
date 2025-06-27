@@ -197,9 +197,9 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         limit_next_run(["Reward"], limit=now + timedelta(hours=24, seconds=-1))
         # limit_next_run(self.args.keys(), limit=now + timedelta(hours=24, seconds=-1))
         # 选择最新的活动
-        for task in ["StoryEvent"]:
+        for task in ["Event"]:
             # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
-            self.modified[f"{task}.StoryEvent.Event"] = self.EVENTS[0].get('event_id')
+            self.modified[f"{task}.Event.Event"] = self.EVENTS[0].get('event_id')
 
     def get_next(self):
         """

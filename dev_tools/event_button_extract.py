@@ -39,13 +39,13 @@ class ImageExtractor:
             file = f'{self.name}.{genre}{ext}' if genre else f'{self.name}{ext}'
             # TODO
             # file = os.path.join(NikkeConfig.ASSETS_FOLDER, server, self.module, file).replace('\\', '/')
-            file = os.path.join(NikkeConfig.ASSETS_FOLDER, 'story_event', self.module, file).replace('\\', '/')
+            file = os.path.join(NikkeConfig.ASSETS_FOLDER, 'event', self.module, file).replace('\\', '/')
             if os.path.exists(file):
                 return file
 
         ext = '.png'
         file = f'{self.name}.{genre}{ext}' if genre else f'{self.name}{ext}'
-        file = os.path.join(NikkeConfig.ASSETS_FOLDER, 'story_event', self.module, file).replace('\\', '/')
+        file = os.path.join(NikkeConfig.ASSETS_FOLDER, 'event', self.module, file).replace('\\', '/')
         return file
 
     def extract(self, file):
@@ -140,14 +140,14 @@ class TemplateExtractor(ImageExtractor):
 class ModuleExtractor:
     def __init__(self, name):
         self.name = name
-        self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'story_event', name)
+        self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'event', name)
         # print(os.path.join(MODULE_FOLDER, self.name))
         '''
             os.path.join(MODULE_FOLDER, self.name)
             ./module\event_1
             
             self.folder
-            ./assets\story_event\event_1
+            ./assets\event\event_1
         '''
 
     @staticmethod
@@ -181,7 +181,7 @@ class ModuleExtractor:
         return exp
 
     def write(self):
-        folder = os.path.join(MODULE_FOLDER, 'story_event', self.name)
+        folder = os.path.join(MODULE_FOLDER, 'event', self.name)
         if not os.path.exists(folder):
             os.mkdir(folder)
         with open(os.path.join(folder, BUTTON_FILE), 'w', newline='') as f:
@@ -198,8 +198,8 @@ class AssetExtractor:
     def __init__(self):
         logger.info('Event Assets extract')
         event = NikkeConfig.EVENTS[0].get('event_id')
-        modules = [m for m in os.listdir(NikkeConfig.ASSETS_FOLDER + '/story_event') if
-                   os.path.isdir(os.path.join(NikkeConfig.ASSETS_FOLDER + '/story_event', m)) and m == event]
+        modules = [m for m in os.listdir(NikkeConfig.ASSETS_FOLDER + '/event') if
+                   os.path.isdir(os.path.join(NikkeConfig.ASSETS_FOLDER + '/event', m)) and m == event]
 
         process_map(worker, modules)
 

@@ -1,267 +1,165 @@
-from datetime import timedelta, datetime, timezone
 from functools import cached_property
-
+from module.exception import OperationFailed
 from module.base.decorator import Config
 from module.base.timer import Timer
-from module.base.utils import point2str, crop, _area_offset
-from module.event.assets import HARD_AVAILABLE_CHECK
+from module.base.utils import get_button_by_location
 from module.logger import logger
-from module.map.map_grids import SelectedGrids
-from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, PAUSE
-from module.ui.assets import GOTO_BACK, MAIN_CHECK
-from module.ui.page import page_main, page_event, page_story_1, MAIN_GOTO_EVENT, EVENT_GOTO_STORY_1, page_story_2, \
-    STORY_1_NORMAL_CHECK, \
-    STORY_1_HARD_CHECK, STORY_2_NORMAL_CHECK, STORY_2_HARD_CHECK, STORY_1_GOTO_STAGE_LIST, STORY_2_GOTO_STAGE_LIST, \
-    STAGE_CHECK, STORY_1_NORMAL_UNLOCKED, STORY_1_NORMAL_COMPLETED, STORY_1_NORMAL_LOCKED, STORY_2_NORMAL_UNLOCKED, \
-    STORY_2_NORMAL_LOCKED, STORY_2_NORMAL_COMPLETED, STORY_1_HARD_LOCKED, STORY_1_HARD_COMPLETED, STORY_1_HARD_UNLOCKED, \
-    STORY_2_HARD_LOCKED, STORY_2_HARD_UNLOCKED, STORY_2_HARD_COMPLETED, STORY_1_NORMAL_STAGE_AREA_A, \
-    STORY_1_NORMAL_STAGE_AREA_B, STORY_1_HARD_STAGE_AREA_B, STORY_1_HARD_STAGE_AREA_A, STORY_2_HARD_STAGE_AREA_B, \
-    STORY_2_NORMAL_STAGE_AREA_A, STORY_2_NORMAL_STAGE_AREA_B, STORY_2_HARD_STAGE_AREA_A, STAGE_DETAILED_CHECK, FIGHT, \
-    NEXT_STAGE, END_CHECK, FIGHT_QUICKLY, MAX, QUICK_FIGHT_CONFIRM, STORY_1_NORMAL_NO_OPPORTUNITY, \
-    STORY_1_HARD_NO_OPPORTUNITY, \
-    STORY_2_NORMAL_NO_OPPORTUNITY, STORY_2_HARD_NO_OPPORTUNITY, QUICK_FIGHT_CHECK
 from module.ui.ui import UI
+from module.ui.assets import GOTO_BACK, MAIN_CHECK, FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_FIGHT, \
+                            FIGHT_QUICKLY_MAX, FIGHT_CLOSE
+from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING, FIGHT_QUICKLY
+from module.tribe_tower.assets import OPERATION_FAILED
+from module.challenge.assets import *
+from module.ui.page import *
+# 活动引用
+from module.event.event_20250612.assets import *
 
 
 class EventPartError(Exception):
     pass
 
-
 class EventDifficultyError(Exception):
     pass
-
 
 class EventPartUnavailableError(Exception):
     pass
 
-
 class HardEventAvailable(Exception):
     pass
-
 
 class EventUnavailableError(Exception):
     pass
 
-
 class NoOpportunityRemain(Exception):
     pass
 
+class ChallengeNotFoundError(Exception):
+    pass
+
+STORY_STAGE_11 = {
+    "story_1_normal": STORY_1_NORMAL_STAGE_11,
+    "story_1_hard": STORY_1_HARD_STAGE_11,
+    "story_2_normal": STORY_2_NORMAL_STAGE_11,
+    "story_2_hard": STORY_2_HARD_STAGE_11,
+}
 
 class EventInfo:
-    def __init__(self, id, name, type, duration, update_date):
+    def __init__(self, id, name, type):
         self.id: str = id
         self.name: str = name
         self.type: int = type
-        self.duration: timedelta = duration
-        self.update_date: datetime = update_date
-
-
-class Stage:
-    def __init__(self, type: str, location: tuple):
-        self.type = type
-        self.location = location
-
 
 class Event(UI):
-    diff = datetime.now(timezone.utc).astimezone().utcoffset() - timedelta(hours=8)
-
     @cached_property
     def event(self) -> EventInfo:
         for k, v in self.config.EVENTS[0].items():
             self.config.__setattr__(k, v)
         return EventInfo(*self.config.EVENTS[0].values())
 
-    @cached_property
-    def event_story_2_is_available(self) -> bool:
-        when = self.event.update_date + timedelta(days=7) + self.diff
-        local_now = datetime.now()
-        super().__setattr__('event_story_2', when)
-        super().__setattr__('event_story_2_second_part', True if local_now > when + timedelta(days=7) else False)
-        if local_now > when:
-            return True
-
-    @cached_property
-    def event_story_second_part_is_available(self) -> bool:
-        when = self.event.update_date + timedelta(days=7) + self.diff
-        local_now = datetime.now()
-        super().__setattr__('event_story_second_part', when)
-        if local_now > when:
-            return True
-
-    @cached_property
-    def event_story_1_difficulty_area(self):
-        return [(460, 1200), (640, 1200)]
-
-    @cached_property
-    def event_story_2_difficulty_area(self):
-        return [(450, 1200), (590, 1200)]
-
-    @cached_property
-    def stage(self) -> int:
-        if not self.config.Event_Event_Name:
-            self.config.Event_Event_Name = '1-11'
-        logger.attr('STAGE NAME', self.config.Event_Event_Name)
-        prefix, suffix = self.config.Event_Event_Name.strip(' ').split('-')
-        return int(suffix)
-
-    def stage_list(self, area):
-        image = self.crop(area)
-
-        available_stage = [Stage(type='available', location=_area_offset(i.get('location'), (area[0], area[1]))) for i
-                           in
-                           self.unlocked.match_several(image, offset=5, threshold=0.82, static=False)]
-        completed_stage = [Stage(type='completed', location=_area_offset(i.get('location'), (area[0], area[1]))) for i
-                           in
-                           self.completed.match_several(image, offset=5, threshold=0.8, static=False)]
-        locked_stage = [Stage(type='locked', location=_area_offset(i.get('location'), (area[0], area[1]))) for i in
-                        self.locked.match_several(image, offset=5, threshold=0.8, static=False)]
-        return SelectedGrids(available_stage + completed_stage + locked_stage)
-
-    def ensure_event_button(self):
-        if self.event.type == 1:
-            if self.config.Event_Part == 'story_1':
-                unlocked = STORY_1_NORMAL_UNLOCKED
-                completed = STORY_1_NORMAL_COMPLETED
-                locked = STORY_1_NORMAL_LOCKED
-                area_a = STORY_1_NORMAL_STAGE_AREA_A
-                area_b = STORY_1_NORMAL_STAGE_AREA_B
-                no_opportunity = STORY_1_NORMAL_NO_OPPORTUNITY
-            else:
-                if self.config.Event_Difficulty == 'normal':
-                    unlocked = STORY_2_NORMAL_UNLOCKED
-                    completed = STORY_2_NORMAL_COMPLETED
-                    locked = STORY_2_NORMAL_LOCKED
-                    area_a = STORY_2_NORMAL_STAGE_AREA_A
-                    area_b = STORY_2_NORMAL_STAGE_AREA_B
-                    no_opportunity = STORY_2_NORMAL_NO_OPPORTUNITY
-                else:
-                    unlocked = STORY_2_HARD_UNLOCKED
-                    completed = STORY_2_HARD_COMPLETED
-                    locked = STORY_2_HARD_LOCKED
-                    area_a = STORY_2_HARD_STAGE_AREA_A
-                    area_b = STORY_2_HARD_STAGE_AREA_B
-                    no_opportunity = STORY_2_HARD_NO_OPPORTUNITY
-        else:
-            if self.config.Event_Difficulty == 'normal':
-                unlocked = STORY_1_NORMAL_UNLOCKED
-                completed = STORY_1_NORMAL_COMPLETED
-                locked = STORY_1_NORMAL_LOCKED
-                area_a = STORY_1_NORMAL_STAGE_AREA_A
-                area_b = STORY_1_NORMAL_STAGE_AREA_B
-                no_opportunity = STORY_1_NORMAL_NO_OPPORTUNITY
-            else:
-                unlocked = STORY_1_HARD_UNLOCKED
-                completed = STORY_1_HARD_COMPLETED
-                locked = STORY_1_HARD_LOCKED
-                area_a = STORY_1_HARD_STAGE_AREA_A
-                area_b = STORY_1_HARD_STAGE_AREA_B
-                no_opportunity = STORY_1_HARD_NO_OPPORTUNITY
-        self.unlocked = unlocked
-        self.completed = completed
-        self.locked = locked
-        self.area_a = area_a
-        self.area_b = area_b
-        self.no_opportunity = no_opportunity
-
-    @Config.when(event_type=1)
-    def redirect(self):
-        page_main.link(button=MAIN_GOTO_EVENT, destination=page_event)
-        page_event.link(button=EVENT_GOTO_STORY_1, destination=page_story_1)
-
-    @Config.when(event_type=2)
-    def redirect(self):
-        page_main.link(button=MAIN_GOTO_EVENT, destination=page_story_1)
-
-    def run(self):
-        self.ui_ensure(page_main, confirm_wait=3)
-        try:
-            if not self.appear(MAIN_GOTO_EVENT, offset=(5, 5), static=False):
-                raise EventUnavailableError
-            _ = self.event
-            self.redirect()
-            self.ensure_into_event_page()
-            self.ensure_into_stage_list()
-            self.ensure_event_button()
-            self.ensure_opportunity_remain()
-            if self.config.Event_Complete_Event:
-                self.detect_available_stage()
-            self._loop()
-        except EventPartError as e:
-            logger.error(e)
-        except EventDifficultyError as e:
-            logger.error(e)
-        except EventPartUnavailableError as e:
-            logger.error(e)
-        except HardEventAvailable as e:
-            self.ensure_back()
-            logger.error(e)
-        except NoOpportunityRemain as e:
-            self.ensure_back()
-            logger.warning('There are no opportunities remaining')
-        except EventUnavailableError as e:
-            logger.error('The event is no longer available')
-        self.config.task_delay(server_update=True)
-
-    @Config.when(event_type=1)
-    def ensure_into_event_page(self):
-        logger.attr('PART', self.config.Event_Part)
-        logger.attr('DIFFICULTY', self.config.Event_Difficulty)
-        # large event
-        if self.config.Event_Part == 'story_1':
-            if self.config.Event_Difficulty != 'normal':
-                raise EventDifficultyError('The current part is only available in normal level')
-            if self.event_story_2_is_available:
-                raise HardEventAvailable("'Story 2' is available currently")
-        if self.config.Event_Part == 'story_2':
-            if not self.event_story_2_is_available:
-                raise EventPartUnavailableError(
-                    f"'Story 2' is unavailable currently, it will be available on {self.event_story_2}")
-            if self.config.Event_Difficulty == 'normal':
-                if self.event_story_2_second_part:
-                    raise HardEventAvailable('Higher difficulty levels are available.')
-            if self.config.Event_Difficulty == 'hard':
-                if not self.event_story_2_second_part:
-                    raise EventPartUnavailableError(
-                        f"'The second part of Story 2' is unavailable currently, it will be available on {self.event_story_2 + timedelta(days=7)}")
-        if self.config.Event_Part == 'story_1':
-            self.ui_ensure(page_story_1)
-        elif self.config.Event_Part == 'story_2':
-            self.ui_ensure(page_story_2)
-
-    @Config.when(event_type=2)
-    def ensure_into_event_page(self):
-        logger.attr('PART', self.config.Event_Part)
-        logger.attr('DIFFICULTY', self.config.Event_Difficulty)
-        # small event
-        if self.config.Event_Part != 'story_1':
-            raise EventPartError('The current event only has a single part')
-        if self.config.Event_Difficulty == 'normal':
-            if self.event_story_second_part_is_available:
-                raise HardEventAvailable('Higher difficulty levels are available.')
-        if self.config.Event_Difficulty == 'hard':
-            if not self.event_story_second_part_is_available:
-                raise EventPartUnavailableError(
-                    f"'The second part of Story 1' is unavailable currently, it will be available on {self.event_story_second_part}")
-        self.ui_ensure(page_story_1)
-
-    @Config.when(event_type=1)
-    def ensure_into_stage_list(self, skip_first_screenshot=True):
-        confirm_timer = Timer(2, count=3).start()
+    @Config.when(EVENT_TYPE=1)
+    def login_stamp(self, skip_first_screenshot=True):
+        logger.hr('START EVENT LOGIN STAMP')
         click_timer = Timer(0.3)
-        click_timer_2 = Timer(2)
-
-        if self.config.Event_Part == 'story_1':
-            check = STORY_1_NORMAL_CHECK
-            button = STORY_1_GOTO_STAGE_LIST
-            level_button = None
-        else:
-            if self.config.Event_Difficulty == 'normal':
-                check = STORY_2_NORMAL_CHECK
-                level_button = self.event_story_2_difficulty_area[0]
+        
+        # 进入签到页面
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
             else:
-                check = STORY_2_HARD_CHECK
-                level_button = self.event_story_2_difficulty_area[1]
-            button = STORY_2_GOTO_STAGE_LIST
+                self.device.screenshot()
+
+            if click_timer.reached() \
+                    and self.appear(EVENT_CHECK, offset=10) \
+                    and self.appear_then_click(LOGIN_STAMP, offset=10, interval=5):
+                click_timer.reset()
+                continue
+
+            if self.appear(LOGIN_STAMP_CHECK, offset=10):
+                click_timer.reset()
+                break
+
+        # 签到
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 返回活动页面
+            if self.appear(EVENT_CHECK, offset=10):
+                break
+
+            # 返回
+            if click_timer.reached() \
+                    and self.appear(LOGIN_STAMP_CHECK, offset=10) \
+                    and self.appear(LOGIN_STAMP_DONE, offset=10, threshold=0.9) \
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 全部领取
+            if click_timer.reached() \
+                    and self.appear(LOGIN_STAMP_CHECK, offset=10) \
+                    and self.appear_then_click(LOGIN_STAMP_REWARD, offset=10, interval=1, threshold=0.9):
+                click_timer.reset()
+                continue
+
+            # 点击领取
+            if click_timer.reached() \
+                    and self.appear_then_click(RECEIVE, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 点击跳过
+            if click_timer.reached() \
+                    and self.appear_then_click(SKIP, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+        # self.ui_ensure(page_event)
+        logger.info('Login stamp done')
+
+    @Config.when(EVENT_TYPE=2)
+    def login_stamp(self):
+        logger.info('Small event, skip loginstamp')
+
+    @Config.when(EVENT_TYPE=1)
+    def challenge(self, skip_first_screenshot=True):
+        logger.hr('START EVENT CHALLENGE')
+        click_timer = Timer(0.3)
+        
+        # 进入挑战页面
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if click_timer.reached() \
+                    and self.appear(EVENT_CHECK, offset=10) \
+                    and self.appear_then_click(CHALLENGE, offset=10, interval=5):
+                click_timer.reset()
+                continue
+
+            if self.appear(CHALLENGE_CHECK, offset=10):
+                self.device.sleep(2)
+                break
+
+        self.device.screenshot()
+        # 判断新挑战关卡
+        challenge_stages = TEMPLATE_CHALLENGE_STAGE.match_multi(self.device.image, similarity=0.7, name='CHALLENGE_STAGE')
+        if challenge_stages:
+            logger.info('Finf new challenge stage')
+            self.device.click(challenge_stages[0])
+        else:
+            # 判断已经打过的挑战关卡
+            clear_stages = TEMPLATE_CLEAR_STAGE.match_multi(self.device.image, name='CLEAR_STAGE')
+            if not clear_stages:
+                raise ChallengeNotFoundError
+            # 取一个y坐标最大的关卡
+            stage = get_button_by_location(clear_stages, coord='y', order='descending')
+            logger.info('Finf cleared challenge stage')
+            self.device.click(stage)
 
         while 1:
             if skip_first_screenshot:
@@ -269,39 +167,54 @@ class Event(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(button, offset=(10, 10), interval=3,
-                                                                static=False):
-                confirm_timer.reset()
+            # 已经挑战过，返回挑战列表
+            if self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
+                    and self.appear(CHALLENGE_QUICK_DISABLE, threshold=10) \
+                    and self.appear(CHALLENGE_BATTLE_DONE, threshold=10) \
+                    and self.appear_then_click(CHALLENGE_CANCEL, offset=10, interval=1):
+                break
+
+            # 战斗结束
+            if click_timer.reached() \
+                    and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+                click_timer.reset()
+                break
+
+            # 快速战斗
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
+                    and self.appear(CHALLENGE_BATTLE, threshold=10) \
+                    and self.appear_then_click(CHALLENGE_QUICK_ENABLE, threshold=10, interval=1):
                 click_timer.reset()
                 continue
 
-            if click_timer_2.reached() and isinstance(level_button, tuple) \
-                    and not self.appear(check, offset=(10, 10), static=False) \
-                    and not self.appear(button, offset=(10, 10), static=False):
-                self.device.click_minitouch(*level_button)
-                logger.info(
-                    'Click %s @ %s' % (point2str(*level_button), 'LEVEL_BUTTON')
-                )
-                confirm_timer.reset()
-                click_timer_2.reset()
+            # 使用票进行战斗
+            if click_timer.reached() \
+                    and self.appear(FIGHT_QUICKLY_CHECK, threshold=10) \
+                    and self.appear_then_click(CHALLENGE_QUICK_TICKET, offset=10, interval=1):
+                click_timer.reset()
                 continue
 
-            if self.appear(check, offset=(10, 10)) and confirm_timer.reached():
-                break
+            # 进入战斗
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
+                    and self.appear(CHALLENGE_QUICK_DISABLE, threshold=10) \
+                    and self.appear_then_click(CHALLENGE_BATTLE, threshold=10, interval=1):
+                click_timer.reset()
+                continue
 
-    @Config.when(event_type=2)
-    def ensure_into_stage_list(self, skip_first_screenshot=True):
-        confirm_timer = Timer(2, count=3).start()
-        click_timer = Timer(0.3)
-        click_timer_2 = Timer(2)
+            if click_timer.reached() \
+                        and self.appear_then_click(AUTO_SHOOT, offset=10, interval=5, threshold=0.8):
+                    click_timer.reset()
+                    continue
 
-        if self.config.Event_Difficulty == 'normal':
-            check = STORY_1_NORMAL_CHECK
-            level_button = self.event_story_1_difficulty_area[0]
-        else:
-            check = STORY_1_HARD_CHECK
-            level_button = self.event_story_1_difficulty_area[1]
-        button = STORY_1_GOTO_STAGE_LIST
+            if click_timer.reached() \
+                    and self.appear_then_click(AUTO_BURST, offset=10, interval=5, threshold=0.8):
+                click_timer.reset()
+                continue
+
+            if self.appear(OPERATION_FAILED, offset=10):
+                raise OperationFailed
 
         while 1:
             if skip_first_screenshot:
@@ -309,226 +222,326 @@ class Event(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(button, offset=(10, 10), interval=3,
-                                                                static=False):
-                confirm_timer.reset()
+            # 返回活动页面
+            if self.appear(EVENT_CHECK, offset=10):
+                break
+
+            # 返回
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_CHECK, offset=10) \
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
-            if click_timer_2.reached() and isinstance(level_button, tuple) \
-                    and not self.appear(check, offset=(10, 10), static=False) \
-                    and not self.appear(button, offset=(10, 10), static=False):
-                self.device.click_minitouch(*level_button)
-                logger.info(
-                    'Click %s @ %s' % (point2str(*level_button), 'LEVEL_BUTTON')
-                )
-                confirm_timer.reset()
-                click_timer_2.reset()
+        logger.info('Event challenge done')
+
+    @Config.when(EVENT_TYPE=2)
+    def challenge(self):
+        logger.info('Small event, skip loginstamp')
+
+    @Config.when(EVENT_TYPE=1)
+    def reward(self, skip_first_screenshot=True):
+        logger.hr('START EVENT REWARD')
+        click_timer = Timer(0.3)
+        
+        # 进入任务页面
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if click_timer.reached() \
+                    and self.appear(EVENT_CHECK, offset=10) \
+                    and self.appear_then_click(REWARD, offset=10, interval=1):
+                click_timer.reset()
                 continue
 
-            if self.appear(check, offset=(10, 10)) and confirm_timer.reached():
+            if self.appear(REWARD_CHECK, offset=10):
                 break
 
-    def detect_available_stage(self):
-        self.ensure_sroll_to_top(x1=(360, 460), x2=(360, 950))
-        logger.hr('STAGE AREA A', 2)
-        stage_list = self.stage_list(self.area_a.area)
-        stage_list = stage_list.select(type='available')
-        logger.attr('AVAILABLE STAGE COUNT', stage_list.count)
-        if stage := stage_list.first_or_none():
-            self.loop(stage, goto_next_stage=True)
-        else:
-            logger.info('All the stages in area A have been completed')
-        self.ensure_sroll_to_bottom(x1=(360, 950), x2=(360, 460))
-        logger.hr('STAGE AREA B', 2)
-        stage_list = self.stage_list(self.area_b.area)
-        stage_list = stage_list.select(type='available')
-        logger.attr('AVAILABLE STAGE COUNT', stage_list.count)
-        if stage := stage_list.first_or_none():
-            self.loop(stage, goto_next_stage=True)
-        else:
-            logger.info('All the stages in area B have been completed')
-            self.config.modified[f"Event.Event.Complete_Event"] = False
+        # 领取奖励
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
 
-    def _loop(self):
-        logger.hr('LOOP', 2)
-        self.ensure_sroll_to_top(x1=(360, 460), x2=(360, 950))
-        logger.hr('STAGE AREA A', 2)
-        stage_a_list = self.stage_list(self.area_a.area)
-        stage_a_list = stage_a_list.select(type='completed')
-        logger.attr('COMPLETED STAGE COUNT', stage_a_list.count)
-        stage_a_list.sort('location', 1)
-        if stage_a_list.count >= self.stage:
-            self.loop(stage_a_list.__getitem__(self.stage - 1))
-        else:
-            self.ensure_sroll_to_bottom(x1=(360, 950), x2=(360, 460))
-            logger.hr('STAGE AREA B', 2)
-            stage_b_list = self.stage_list(self.area_b.area)
-            stage_b_list = stage_b_list.select(type='completed')
-            logger.attr('COMPLETED STAGE COUNT', stage_b_list.count)
-            stage_b_list.sort('location', 1)
-            self.loop(stage_b_list.__getitem__(self.stage - 1 - stage_a_list.count))
+            # 返回活动页面
+            if self.appear(EVENT_CHECK, offset=10):
+                break
 
-    def loop(self, stage: Stage, skip_first_screenshot=True, goto_next_stage=False):
-        confirm_timer = Timer(8, count=5).start()
+            # 关闭
+            if click_timer.reached() \
+                    and self.appear(REWARD_CHALLENGE_CHECK, threshold=10) \
+                    and self.appear(REWARD_RECEIVE_DONE, threshold=10) \
+                    and self.appear_then_click(REWARD_CLOSED, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 领取
+            if click_timer.reached() \
+                    and self.appear_then_click(REWARD_RECEIVE, threshold=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 点击领取
+            if click_timer.reached() \
+                    and self.appear_then_click(RECEIVE, offset=10, interval=1, static=False):
+                click_timer.reset()
+                continue
+
+            # 进入成就页面
+            if click_timer.reached() \
+                    and self.appear(REWARD_MISSION_CHECK, threshold=10) \
+                    and self.appear(REWARD_MISSION_CLEARED, offset=10) \
+                    and self.appear_then_click(REWARD_CHALLENGE_HIDDEN, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 进入成就页面
+            if click_timer.reached() \
+                    and self.appear(REWARD_MISSION_CHECK, threshold=10) \
+                    and self.appear(REWARD_RECEIVE_DONE, threshold=10) \
+                    and self.appear_then_click(REWARD_CHALLENGE_HIDDEN, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
+        logger.info('Event reward done')
+
+    # TODO
+    @Config.when(EVENT_TYPE=2)
+    def reward(self, skip_first_screenshot=True):
+        logger.hr('START EVENT REWARD')
+
+    @Config.when(EVENT_TYPE=1)
+    def story(self, skip_first_screenshot=True):
+        logger.hr('START EVENT STORY')
         click_timer = Timer(0.3)
-        click_timer_2 = Timer(3)
-        if not goto_next_stage:
-            while 1:
-                if skip_first_screenshot:
-                    skip_first_screenshot = False
-                else:
-                    self.device.screenshot()
 
-                if click_timer_2.reached() \
-                        and self.appear(STAGE_CHECK, offset=(5, 5), static=False) \
-                        and not self.appear(STAGE_DETAILED_CHECK, offset=(5, 5), static=False) \
-                        and not self.appear(QUICK_FIGHT_CHECK, offset=(5, 5), static=False):
-                    self.device.click_minitouch(*stage.location)
-                    logger.info('Click %s @ %s' % (point2str(*stage.location), 'STAGE'))
-                    confirm_timer.reset()
-                    click_timer_2.reset()
-                    continue
+        logger.info('Finding opened event story')
+        open_story = "story_1_normal"
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
 
-                if click_timer.reached() and self.appear_then_click(FIGHT_QUICKLY, offset=(5, 5), interval=5,
-                                                                    static=False):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+            # 检查story2是否开启，未开启则进入1
+            if self.appear(EVENT_GOTO_STORY_1, offset=10) \
+                    and self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
+                logger.info('Find opened event story 1')
 
-                if click_timer.reached() and self.appear_then_click(MAX, offset=(5, 5), interval=1,
-                                                                    static=False):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+                # 进入story1
+                while 1:
+                    if skip_first_screenshot:
+                        skip_first_screenshot = False
+                    else:
+                        self.device.screenshot()
 
-                if click_timer.reached() and self.appear_then_click(QUICK_FIGHT_CONFIRM, offset=(5, 5), interval=1,
-                                                                    static=False):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+                    if click_timer.reached() \
+                            and self.appear_then_click(EVENT_GOTO_STORY_1, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
 
-                if click_timer.reached() and self.handle_event(1):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+                    # story1主页
+                    if click_timer.reached() \
+                            and self.appear_then_click(STORY_1_CHECK, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
 
-                if self.appear(END_CHECK, offset=(5, 5), static=False):
-                    raise NoOpportunityRemain
+                    # story1列表页面
+                    if self.appear(STORY_1_NORMAL, threshold=10):
+                        click_timer.reset()
+                        break
+                logger.info('Open event story 1')
+                break
 
-                if self.appear(STAGE_DETAILED_CHECK, offset=(5, 5), static=False) \
-                        and not self.appear(FIGHT, threshold=25) \
-                        and confirm_timer.reached():
-                    raise NoOpportunityRemain
-        else:
-            while 1:
-                if skip_first_screenshot:
-                    skip_first_screenshot = False
-                else:
-                    self.device.screenshot()
+            # 检查story2是否开启，开启则进入2
+            if self.appear(EVENT_GOTO_STORY_1, offset=10) \
+                    and not self.appear(EVENT_GOTO_STORY_2_LOCKED, offset=10):
+                logger.info('Find opened event story 2')
+                if self.config.Event_StoryPart == "Story_1":
+                    raise EventPartError
 
-                if click_timer_2.reached() and self.appear(STAGE_CHECK, offset=(5, 5),
-                                                           static=False) and not self.appear(STAGE_DETAILED_CHECK,
-                                                                                             offset=(5, 5),
-                                                                                             static=False):
-                    self.device.click_minitouch(*stage.location)
-                    logger.info('Click %s @ %s' % (point2str(*stage.location), 'STAGE'))
-                    confirm_timer.reset()
-                    click_timer_2.reset()
-                    continue
+                # 进入story2，story2更新后需要重新截图
+                while 1:
+                    if skip_first_screenshot:
+                        skip_first_screenshot = False
+                    else:
+                        self.device.screenshot()
 
-                if click_timer.reached() and self.appear_then_click(FIGHT, interval=1, static=False):
-                    self.device.sleep(6)
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+                    if click_timer.reached() \
+                            and self.appear_then_click(EVENT_GOTO_STORY_2, offset=10, interval=5):
+                        click_timer.reset()
+                        continue
 
-                if click_timer.reached() and self.handle_event(1):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+                    # story2主页
+                    if click_timer.reached() \
+                            and self.appear_then_click(STORY_2_CHECK, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
 
-                if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=(30, 30), interval=5,
-                                                                    threshold=0.8, static=False):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+                    # story2困难解锁
+                    if click_timer.reached() \
+                            and self.appear_then_click(STORY_2_HARD_UNLOCK, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
 
-                if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=(30, 30), interval=5,
-                                                                    threshold=0.8, static=False):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+                    # story2普通难度列表页面
+                    if self.appear(STORY_2_NORMAL, threshold=10):
+                        click_timer.reset()
+                        break
 
-                if click_timer.reached() and self.appear_then_click(NEXT_STAGE, offset=(30, 30), static=False):
-                    self.device.sleep(3)
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
+                    # story2困难难度列表页面
+                    if self.appear(STORY_2_HARD, threshold=10):
+                        click_timer.reset()
+                        break
+                logger.info('Open event story 2')
 
-                if click_timer.reached() \
-                        and not self.appear(NEXT_STAGE, offset=(30, 30), static=False) \
-                        and self.appear_then_click(END_CHECK, offset=(30, 30), static=False):
-                    self.ensure_back()
+                # 困难难度关闭
+                if self.appear(STORY_2_NORMAL, threshold=10) \
+                        and self.appear(STORY_2_HARD_LOCKED, offset=10):
+                    logger.info('Find difficulty normal opened')
+                    if self.config.Event_StoryDifficulty == "HARD":
+                        raise EventPartError
+                    open_story = "story_2_normal"
+                    logger.info('Open event story 2 normal')
                     break
 
-                if click_timer.reached() and self.appear(PAUSE, offset=(30, 30)):
-                    confirm_timer.reset()
+                # 困难难度开启，当前页面是普通
+                if self.appear(STORY_2_NORMAL, threshold=10) \
+                        and not self.appear(STORY_2_HARD_LOCKED, offset=10):
+                    open_story = "story_2_hard"
+
+                # 困难难度开启，当前页面是困难
+                if self.appear(STORY_2_HARD, threshold=10):
+                    open_story = "story_2_hard"
+
+                if open_story == "story_2_hard":
+                    logger.info('Find difficulty hard opened')
+                    if self.config.Event_StoryDifficulty == "NORMAL":
+                        raise EventPartError
+
+                    while 1:
+                        if skip_first_screenshot:
+                            skip_first_screenshot = False
+                        else:
+                            self.device.screenshot()
+
+                        # story2困难难度切换
+                        if click_timer.reached() \
+                                and self.appear_then_click(STORY_2_HARD_HIDDEN, threshold=10):
+                            click_timer.reset()
+                            continue
+
+                        # story2困难难度列表页面
+                        if self.appear(STORY_2_HARD, threshold=10):
+                            click_timer.reset()
+                            break
+
+                    logger.info('Open event story 2 hard')
+                    break
+
+        # 滑动到列表最下方检查倒数第二关
+        self.ensure_sroll_to_bottom(count=3)
+        self.device.screenshot()
+        if self.appear(STORY_STAGE_11[open_story], offset=10):
+            while 1:
+                if skip_first_screenshot:
+                    skip_first_screenshot = False
+                else:
+                    self.device.screenshot()
+
+                # 战斗结束
+                if click_timer.reached() \
+                        and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
                     click_timer.reset()
-                    self.device.sleep(5)
+                    break
+
+                # 关卡检查
+                if click_timer.reached() \
+                        and self.appear_then_click(STORY_STAGE_11[open_story], offset=10, interval=1):
+                    # self.device.sleep(1)
+                    click_timer.reset()
                     continue
 
-                if self.appear(STAGE_DETAILED_CHECK, offset=(5, 5), static=False) \
-                        and not self.appear(FIGHT) \
-                        and confirm_timer.reached():
-                    raise NoOpportunityRemain
+                # 快速战斗
+                if click_timer.reached() \
+                        and self.appear(STORY_STAGE_CHECK, offset=30) \
+                        and self.appear_then_click(FIGHT_QUICKLY, threshold=20, interval=1):
+                    click_timer.reset()
+                    continue
 
-        self.ensure_opportunity_remain()
+                # 票max
+                if click_timer.reached() \
+                        and self.appear(FIGHT_QUICKLY_CHECK, offset=10) \
+                        and self.appear_then_click(FIGHT_QUICKLY_MAX, threshold=10, interval=1):
+                    click_timer.reset()
+                    continue
 
-    def ensure_back(self, skip_first_screenshot=True):
-        confirm_timer = Timer(1, count=3).start()
-        click_timer = Timer(0.3)
+                # 进行战斗
+                if click_timer.reached() \
+                        and self.appear(FIGHT_QUICKLY_CHECK, offset=10) \
+                        and self.appear(FIGHT_QUICKLY_MAX, threshold=10) \
+                        and self.appear_then_click(FIGHT_QUICKLY_FIGHT, threshold=10, interval=1):
+                    click_timer.reset()
+                    continue
+
+                # 没票
+                if click_timer.reached() \
+                        and self.appear(STORY_STAGE_CHECK, offset=10) \
+                        and not self.appear(FIGHT_QUICKLY, threshold=10) \
+                        and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1):
+                    break
+            else:
+                logger.info('Stage 11 not cleared')
+                raise EventPartError
+            logger.info('Stage 11 clear done')
+
+        # 回到活动主页
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(HARD_AVAILABLE_CHECK, offset=(5, 5), interval=1,
-                                                                static=False):
-                raise HardEventAvailable
-
-            if click_timer.reached() and self.handle_event(1):
-                confirm_timer.reset()
-                click_timer.reset()
-                continue
-
-            if click_timer.reached() and self.appear_then_click(END_CHECK, offset=(30, 30), interval=1, static=False):
-                confirm_timer.reset()
-                click_timer.reset()
-                continue
-
-            if click_timer.reached() and self.appear(STAGE_CHECK, offset=(30, 30), static=False) and not self.appear(
-                    GOTO_BACK, offset=(30, 30), static=False):
-                self.device.click_minitouch(100, 100)
-                logger.info('Click %s @ %s' % (point2str(100, 100), 'BACK'))
-                confirm_timer.reset()
-                click_timer.reset()
-                continue
-
-            if click_timer.reached() and self.handle_reward(1):
-                confirm_timer.reset()
-                click_timer.reset()
-                continue
-
-            if (self.appear(GOTO_BACK, offset=(30, 30), static=False) or self.appear(MAIN_CHECK, offset=(30, 30),
-                                                                                     static=False)) and confirm_timer.reached():
+            if self.appear(EVENT_CHECK, offset=10):
                 break
 
-    def ensure_opportunity_remain(self):
-        if self.appear(self.no_opportunity, offset=(5, 5), threshold=0.95, static=False):
-            raise NoOpportunityRemain
+            if click_timer.reached() \
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
+                click_timer.reset()
+                continue
 
-    def crop(self, area):
-        self.device.screenshot()
-        return crop(self.device.image, area)
+    # TODO
+    @Config.when(EVENT_TYPE=2)
+    def story(self, skip_first_screenshot=True):
+        logger.hr('START EVENT STORY')
+
+    def run(self):
+        try:
+            self.ui_ensure(page_main)
+            if not self.appear(MAIN_GOTO_EVENT, offset=10):
+                raise EventUnavailableError
+            self.ui_ensure(page_event)
+            _ = self.event
+            if self.config.Event_LoginStamp:
+                self.login_stamp()
+            if self.config.Event_Challenge:
+                self.challenge()
+            if self.config.Event_Story:
+                self.story()
+
+            self.reward()
+
+        except EventPartError as e:
+            logger.error('The event stage/difficulty select error')
+        except EventUnavailableError as e:
+            logger.error('The event is no longer available')
+        except ChallengeNotFoundError as e:
+            logger.error('Challenge stage not found')
+        except OperationFailed as e:
+            logger.error('Challenge stage battle failed')
+
+        self.config.task_delay(server_update=True)

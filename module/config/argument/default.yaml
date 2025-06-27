@@ -68,7 +68,7 @@ Blablalink:
   Scheduler:
     Enable: false
 
-StoryEvent:
+Event:
   Scheduler:
     Enable: false
 

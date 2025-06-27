@@ -64,18 +64,6 @@ Notification:
     type: textarea
     mode: yaml
     value: 'provider: null'
-Event:
-  Event_Name: ''
-  Complete_Event: false
-  Event:
-    value: 'event_5'
-    option: [ 'event_5' ]
-  Part:
-    value: 'story_1'
-    option: [ 'story_1','story_2' ]
-  Difficulty:
-    value: 'normal'
-    option: [ 'normal','hard' ]
 Daily:
   SendGift: false
   EnhanceEquipment: false
@@ -126,7 +114,7 @@ CDK:
     value: 'https://gamewith.jp/nikke/article/show/371014'
     type: textarea
     display: disabled
-StoryEvent:
+Event:
   Event:
     value: ''
     option: [
