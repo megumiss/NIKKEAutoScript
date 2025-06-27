@@ -397,7 +397,7 @@ class Event(UI):
                 if self.appear(STORY_2_NORMAL, threshold=10) \
                         and self.appear(STORY_2_HARD_LOCKED, offset=10):
                     logger.info('Find difficulty normal opened')
-                    if self.config.Event_StoryDifficulty == "HARD":
+                    if self.config.Event_StoryDifficulty == "Hard":
                         raise EventSelectError
                     open_story = "story_2_normal"
                     logger.info('Open event story 2 normal')
@@ -414,7 +414,7 @@ class Event(UI):
 
                 if open_story == "story_2_hard":
                     logger.info('Find difficulty hard opened')
-                    if self.config.Event_StoryDifficulty == "NORMAL":
+                    if self.config.Event_StoryDifficulty == "Normal":
                         raise EventSelectError
 
                     while 1:

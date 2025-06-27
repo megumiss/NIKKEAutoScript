@@ -63,10 +63,10 @@ class Liberation(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.handle_event(1):
-                confirm_timer.reset()
-                click_timer.reset()
-                continue
+            # if click_timer.reached() and self.handle_event(1):
+            #     confirm_timer.reset()
+            #     click_timer.reset()
+            #     continue
 
             if click_timer.reached() and self.handle_reward(1):
                 confirm_timer.reset()

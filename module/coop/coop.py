@@ -107,6 +107,7 @@ class Coop(UI):
         click_timer = Timer(0.3)
         
         # 走到协同作战
+        direct = False
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -125,12 +126,18 @@ class Coop(UI):
                 logger.info("Coop is not enabled")
                 raise CoopIsUnavailable
 
+            # 协同选择
             if self.appear(COOP_SELECT_CHECK, offset=10):
+                break
+
+            # 协同主页
+            if self.appear(COOP_CHECK, offset=10):
+                direct = True
                 break
         
         # 检查是否有开启的协同
         coops = TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
-        if not coops:
+        if not coops and not direct:
             logger.info("Not find coop in event")
             raise CoopIsUnavailable
 
@@ -186,7 +193,7 @@ class Coop(UI):
             if click_timer.reached() \
                     and self.appear(COOP_ROLE_CHECK, offset=10) \
                     and not self.appear(COOP_CANCEL, offset=10) \
-                    and self.appear_then_click(COOP_START, offset=10, interval=10, threshold=0.5):
+                    and self.appear_then_click(COOP_START, offset=10, interval=10, threshold=0.3):
                 self.device.sleep(1)
                 click_timer.reset()
                 continue

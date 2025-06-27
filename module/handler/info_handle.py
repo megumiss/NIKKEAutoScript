@@ -1,6 +1,6 @@
 from module.base.base import ModuleBase
 from module.base.utils import color_similar, get_color, point2str
-from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
+# from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
 from module.exception import GameStuckError, GameServerUnderMaintenance
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE
@@ -157,14 +157,14 @@ class InfoHandler(ModuleBase):
         ):
             raise GameServerUnderMaintenance("Server is currently under maintenance")
 
-    def handle_event(self, interval=3):
-        if self.appear_then_click(SKIP, offset=(5, 5), static=False, interval=interval):
-            return True
-        elif self.appear_then_click(
-                TOUCH_TO_CONTINUE, offset=(5, 5), static=False, interval=interval
-        ):
-            self.device.click_minitouch(360, 720)
-            return True
+    # def handle_event(self, interval=3):
+    #     if self.appear_then_click(SKIP, offset=(5, 5), static=False, interval=interval):
+    #         return True
+    #     elif self.appear_then_click(
+    #             TOUCH_TO_CONTINUE, offset=(5, 5), static=False, interval=interval
+    #     ):
+    #         self.device.click_minitouch(360, 720)
+    #         return True
 
     def handle_login(self):
         if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) or self.appear(
