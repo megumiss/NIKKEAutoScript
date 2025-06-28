@@ -84,7 +84,7 @@ class Event(UI):
             if click_timer.reached() \
                     and self.appear(LOGIN_STAMP_CHECK, offset=10) \
                     and self.appear(LOGIN_STAMP_DONE, offset=10, threshold=0.9) \
-                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
                 click_timer.reset()
                 continue
 
@@ -220,7 +220,7 @@ class Event(UI):
             # 返回
             if click_timer.reached() \
                     and self.appear(CHALLENGE_CHECK, offset=10) \
-                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
                 click_timer.reset()
                 continue
 
@@ -442,11 +442,10 @@ class Event(UI):
                 break
 
             if click_timer.reached() \
-                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
                 click_timer.reset()
                 continue
 
-    # TODO
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
         logger.hr('START EVENT STORY')
@@ -534,7 +533,6 @@ class Event(UI):
 
         # 滑动到列表最下方检查倒数第二关
         self.ensure_sroll_to_bottom(count=3)
-        self.device.screenshot()
         self.find_and_fight_stage(open_story)
 
         # 回到活动主页
@@ -548,7 +546,7 @@ class Event(UI):
                 break
 
             if click_timer.reached() \
-                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
                 click_timer.reset()
                 continue
 
@@ -556,10 +554,7 @@ class Event(UI):
         click_timer = Timer(0.3)
         if self.appear(STORY_STAGE_11[open_story], offset=10):
             while 1:
-                if skip_first_screenshot:
-                    skip_first_screenshot = False
-                else:
-                    self.device.screenshot()
+                self.device.screenshot()
 
                 # 战斗结束
                 if click_timer.reached() \
