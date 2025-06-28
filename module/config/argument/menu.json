@@ -25,7 +25,8 @@
       "SpecialArena",
       "Interception",
       "Coop",
-      "Event"
+      "Event",
+      "SoloRaid"
     ],
     "Tools": [
       "TowerDaemon",
