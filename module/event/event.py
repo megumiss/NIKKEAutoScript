@@ -114,7 +114,6 @@ class Event(UI):
     def login_stamp(self):
         logger.info('Small event, skip loginstamp')
 
-    @Config.when(EVENT_TYPE=1)
     def challenge(self, skip_first_screenshot=True):
         logger.hr('START EVENT CHALLENGE')
         click_timer = Timer(0.3)
@@ -226,10 +225,6 @@ class Event(UI):
                 continue
 
         logger.info('Event challenge done')
-
-    @Config.when(EVENT_TYPE=2)
-    def challenge(self):
-        logger.info('Small event, skip loginstamp')
 
     @Config.when(EVENT_TYPE=1)
     def reward(self, skip_first_screenshot=True):
@@ -512,6 +507,24 @@ class Event(UI):
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
         logger.hr('START EVENT STORY')
+        click_timer = Timer(0.3)
+
+
+
+        # 回到活动主页
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if self.appear(EVENT_CHECK, offset=10):
+                break
+
+            if click_timer.reached() \
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=1):
+                click_timer.reset()
+                continue
 
     def run(self):
         try:
