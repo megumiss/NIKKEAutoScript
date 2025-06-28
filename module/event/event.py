@@ -226,7 +226,6 @@ class Event(UI):
 
         logger.info('Event challenge done')
 
-    @Config.when(EVENT_TYPE=1)
     def reward(self, skip_first_screenshot=True):
         logger.hr('START EVENT REWARD')
         click_timer = Timer(0.3)
@@ -295,11 +294,6 @@ class Event(UI):
                 continue
 
         logger.info('Event reward done')
-
-    # TODO
-    @Config.when(EVENT_TYPE=2)
-    def reward(self, skip_first_screenshot=True):
-        logger.hr('START EVENT REWARD')
 
     @Config.when(EVENT_TYPE=1)
     def story(self, skip_first_screenshot=True):
