@@ -302,6 +302,11 @@ class NikkeAutoScript:
 
         Coop(config=self.config, device=self.device).run()
 
+    def solo_raid(self):
+        from module.solo_raid.solo_raid import SoloRaid
+
+        SoloRaid(config=self.config, device=self.device).run()
+
     def wait_until(self, future):
         """
         Wait until a specific time.
