@@ -9,7 +9,7 @@ from module.base.utils import get_button_by_location
 from module.logger import logger
 from module.ui.ui import UI
 from module.ui.assets import GOTO_BACK, MAIN_CHECK, FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_FIGHT, \
-                            FIGHT_QUICKLY_MAX, FIGHT_CLOSE
+                            FIGHT_QUICKLY_MAX, FIGHT_CLOSE, FIGHT_QUICKLY_DISABLE
 from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING, FIGHT_QUICKLY
 from module.tribe_tower.assets import OPERATION_FAILED
 from module.challenge.assets import *
@@ -159,7 +159,7 @@ class Event(UI):
 
             # 已经挑战过，返回挑战列表
             if self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
-                    and self.appear(CHALLENGE_QUICK_DISABLE, threshold=10) \
+                    and self.appear(FIGHT_QUICKLY_DISABLE, threshold=10) \
                     and self.appear(CHALLENGE_BATTLE_DONE, threshold=10) \
                     and self.appear_then_click(CHALLENGE_CANCEL, offset=10, interval=1):
                 break
@@ -188,7 +188,7 @@ class Event(UI):
             # 进入战斗
             if click_timer.reached() \
                     and self.appear(CHALLENGE_STAGE_CHECK, offset=10) \
-                    and self.appear(CHALLENGE_QUICK_DISABLE, threshold=10) \
+                    and self.appear(FIGHT_QUICKLY_DISABLE, threshold=10) \
                     and self.appear_then_click(CHALLENGE_BATTLE, threshold=10, interval=1):
                 click_timer.reset()
                 continue
@@ -594,7 +594,7 @@ class Event(UI):
                 # 没票
                 if click_timer.reached() \
                         and self.appear(STORY_STAGE_CHECK, offset=10) \
-                        and not self.appear(FIGHT_QUICKLY, threshold=10) \
+                        and self.appear(FIGHT_QUICKLY_DISABLE, threshold=10) \
                         and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1):
                     break
         else:

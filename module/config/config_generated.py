@@ -10,7 +10,7 @@ class GeneratedConfig:
     """
 
     # Group `Scheduler`
-    Scheduler_Enable = False
+    Scheduler_Enable = False  # True, False
     Scheduler_NextRun = datetime.datetime(1989, 12, 27, 0, 0)
     Scheduler_Command = 'NKAS'
     Scheduler_SuccessInterval = 0

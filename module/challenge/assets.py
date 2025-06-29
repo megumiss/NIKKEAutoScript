@@ -8,7 +8,6 @@ CHALLENGE_BATTLE = Button(area={'cn': (490, 1172, 618, 1203)}, color={'cn': (122
 CHALLENGE_BATTLE_DONE = Button(area={'cn': (489, 1172, 616, 1203)}, color={'cn': (96, 97, 98)}, button={'cn': (489, 1172, 616, 1203)}, file={'cn': './assets/cn/challenge/CHALLENGE_BATTLE_DONE.png'})
 CHALLENGE_CANCEL = Button(area={'cn': (692, 658, 713, 679)}, color={'cn': (118, 120, 120)}, button={'cn': (692, 658, 713, 679)}, file={'cn': './assets/cn/challenge/CHALLENGE_CANCEL.png'})
 CHALLENGE_CHECK = Button(area={'cn': (20, 37, 90, 56)}, color={'cn': (127, 128, 127)}, button={'cn': (20, 37, 90, 56)}, file={'cn': './assets/cn/challenge/CHALLENGE_CHECK.png'})
-CHALLENGE_QUICK_DISABLE = Button(area={'cn': (524, 1091, 613, 1112)}, color={'cn': (120, 120, 119)}, button={'cn': (524, 1091, 613, 1112)}, file={'cn': './assets/cn/challenge/CHALLENGE_QUICK_DISABLE.png'})
 CHALLENGE_QUICK_ENABLE = Button(area={'cn': (525, 1091, 612, 1112)}, color={'cn': (252, 168, 131)}, button={'cn': (525, 1091, 612, 1112)}, file={'cn': './assets/cn/challenge/CHALLENGE_QUICK_ENABLE.png'})
 CHALLENGE_QUICK_TICKET = Button(area={'cn': (333, 967, 359, 1003)}, color={'cn': (113, 53, 53)}, button={'cn': (333, 967, 359, 1003)}, file={'cn': './assets/cn/challenge/CHALLENGE_QUICK_TICKET.png'})
 CHALLENGE_STAGE_CHECK = Button(area={'cn': (84, 695, 233, 737)}, color={'cn': (128, 128, 128)}, button={'cn': (84, 695, 233, 737)}, file={'cn': './assets/cn/challenge/CHALLENGE_STAGE_CHECK.png'})

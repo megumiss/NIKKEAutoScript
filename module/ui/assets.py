@@ -25,6 +25,7 @@ EMPTY_CHECK = Button(area={'cn': (272, 496, 421, 534)}, color={'cn': (100, 102, 
 FIGHT_CLOSE = Button(area={'cn': (692, 658, 713, 678)}, color={'cn': (112, 111, 112)}, button={'cn': (692, 658, 713, 678)}, file={'cn': './assets/cn/ui/FIGHT_CLOSE.png'})
 FIGHT_QUICKLY_CANCEL = Button(area={'cn': (163, 975, 212, 998)}, color={'cn': (146, 149, 148)}, button={'cn': (163, 975, 212, 998)}, file={'cn': './assets/cn/ui/FIGHT_QUICKLY_CANCEL.png'})
 FIGHT_QUICKLY_CHECK = Button(area={'cn': (334, 494, 367, 535)}, color={'cn': (137, 140, 141)}, button={'cn': (334, 494, 367, 535)}, file={'cn': './assets/cn/ui/FIGHT_QUICKLY_CHECK.png'})
+FIGHT_QUICKLY_DISABLE = Button(area={'cn': (524, 1091, 613, 1112)}, color={'cn': (120, 120, 119)}, button={'cn': (524, 1091, 613, 1112)}, file={'cn': './assets/cn/ui/FIGHT_QUICKLY_DISABLE.png'})
 FIGHT_QUICKLY_FIGHT = Button(area={'cn': (510, 974, 605, 999)}, color={'cn': (97, 204, 251)}, button={'cn': (510, 974, 605, 999)}, file={'cn': './assets/cn/ui/FIGHT_QUICKLY_FIGHT.png'})
 FIGHT_QUICKLY_MAX = Button(area={'cn': (500, 888, 540, 911)}, color={'cn': (76, 76, 76)}, button={'cn': (500, 888, 540, 911)}, file={'cn': './assets/cn/ui/FIGHT_QUICKLY_MAX.png'})
 FRIEND_CHECK = Button(area={'cn': (311, 147, 414, 175)}, color={'cn': (125, 174, 231)}, button={'cn': (311, 147, 414, 175)}, file={'cn': './assets/cn/ui/FRIEND_CHECK.png'})

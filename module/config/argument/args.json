@@ -81,6 +81,10 @@
       "Enable": {
         "type": "checkbox",
         "value": true,
+        "option": [
+          true,
+          false
+        ],
         "display": "disabled"
       },
       "NextRun": {
@@ -123,6 +127,10 @@
       "Enable": {
         "type": "lock",
         "value": true,
+        "option": [
+          true,
+          false
+        ],
         "display": "disabled"
       },
       "NextRun": {
@@ -178,7 +186,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -219,7 +231,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -273,7 +289,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -314,7 +334,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -405,7 +429,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -456,7 +484,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -511,7 +543,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -552,7 +588,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -593,7 +633,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -644,7 +688,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -684,7 +732,7 @@
         "value": false
       },
       "priority": {
-        "type": "input",
+        "type": "textarea",
         "value": ""
       }
     },
@@ -701,7 +749,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -731,7 +783,7 @@
     },
     "RubbishShop": {
       "priority": {
-        "type": "input",
+        "type": "textarea",
         "value": ""
       }
     },
@@ -748,7 +800,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -820,7 +876,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -867,7 +927,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -927,7 +991,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -987,7 +1055,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -1028,7 +1100,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -1082,7 +1158,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -1210,7 +1290,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -1251,7 +1335,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -1292,7 +1380,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -1333,7 +1425,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -1374,7 +1470,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -1415,7 +1515,11 @@
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
-        "value": false
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "NextRun": {
         "type": "datetime",

@@ -196,7 +196,6 @@ def put_arg_input(kwargs: T_Output_Kwargs) -> Output:
         ],
     )
 
-
 def put_arg_select(kwargs: T_Output_Kwargs) -> Output:
     name: str = kwargs["name"]
     value: str = kwargs["value"]
@@ -205,15 +204,18 @@ def put_arg_select(kwargs: T_Output_Kwargs) -> Output:
     disabled: bool = kwargs.pop("disabled", False)
     _: str = kwargs.pop("invalid_feedback", None)
 
-    option = []
-    if options:
-        for opt, label in zip(options, options_label):
-            o = {"label": label, "value": opt}
-            if value == opt:
-                o["selected"] = True
-            else:
-                o["disabled"] = disabled
-            option.append(o)
+    if disabled:
+        option = [{
+            "label": next((opt_label for opt, opt_label in zip(options, options_label) if opt == value), value),
+            "value": value,
+            "selected": True,
+        }]
+    else:
+        option = [{
+            "label": opt_label,
+            "value": opt,
+            "select": opt == value,
+        } for opt, opt_label in zip(options, options_label)]
     kwargs["options"] = option
 
     return put_scope(
@@ -224,6 +226,35 @@ def put_arg_select(kwargs: T_Output_Kwargs) -> Output:
         ],
     )
 
+def put_arg_state(kwargs: T_Output_Kwargs) -> Output:
+    name: str = kwargs["name"]
+    value: str = kwargs["value"]
+    options: List[str] = kwargs["options"]
+    options_label: List[str] = kwargs.pop("options_label", [])
+    _: str = kwargs.pop("invalid_feedback", None)
+    bold: bool = value in kwargs.pop("option_bold", [])
+    light: bool = value in kwargs.pop("option_light", [])
+
+    option = [{
+        "label": next((opt_label for opt, opt_label in zip(options, options_label) if opt == value), value),
+        "value": value,
+        "selected": True,
+    }]
+    if bold:
+        kwargs["class"] = "form-control state state-bold"
+    elif light:
+        kwargs["class"] = "form-control state state-light"
+    else:
+        kwargs["class"] = "form-control state"
+    kwargs["options"] = option
+
+    return put_scope(
+        f"arg_container-select-{name}",
+        [
+            get_title_help(kwargs),
+            put_select(**kwargs).style("--input--"),
+        ],
+    )
 
 def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
     name: str = kwargs["name"]
@@ -301,7 +332,7 @@ def put_arg_storage(kwargs: T_Output_Kwargs) -> Optional[Output]:
 
 _widget_type_to_func: Dict[str, Callable] = {
     "input": put_arg_input,
-    "lock": put_arg_input,
+    "lock": put_arg_state,
     "datetime": put_arg_input,  # TODO
     "select": put_arg_select,
     "textarea": put_arg_textarea,

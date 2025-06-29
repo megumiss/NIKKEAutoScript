@@ -1,5 +1,8 @@
 Scheduler:
-  Enable: false
+  Enable:
+    type: checkbox
+    value: false
+    option: [ true, false ]
   NextRun: 1989-12-27 00:00:00
   Command: NKAS
   SuccessInterval:
@@ -54,9 +57,13 @@ GeneralShop:
   enable: true
 ArenaShop:
   enable: false
-  priority: ''
+  priority:
+    value: ''
+    type: textarea
 RubbishShop:
-  priority: ''
+  priority:
+    value: ''
+    type: textarea
 Notification:
   WhenDailyTaskCompleted: false
   WhenDailyTaskCrashed: false

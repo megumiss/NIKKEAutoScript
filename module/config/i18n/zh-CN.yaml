@@ -139,7 +139,7 @@ Task:
     help: "半自动推图，剧情需要手动跳过（还没做）"
   Event:
     name: 剧情活动
-    help: "全部还没做。剧情活动签到，挑战，每日清票，每日任务，商店"
+    help: ""
   SoloRaid:
     name: 单人突击
     help: ""
@@ -178,6 +178,8 @@ Scheduler:
   Enable:
     name: 启用该功能
     help: ""
+    "True": "已启用"
+    "False": "False"
   NextRun:
     name: 下一次运行时间
     help: ""
@@ -345,14 +347,14 @@ Daily:
     name: 每日任务
     help: ""
   SendGift:
-    name: 送一个最低稀有度的好感券给第一个好感未满的妮姬
-    help: ""
+    name: 送礼
+    help: "送一个最低稀有度的好感券给第一个好感未满的妮姬"
   EnhanceEquipment:
-    name: 强化背包内随机一个装备，会消耗 一个模组推进器 (蓝) 或 模组高级增强器 (紫)
-    help: ""
+    name: 强化装备
+    help: "强化背包内随机一个装备，会消耗 一个模组推进器 (蓝) 或 模组高级增强器 (紫)"
   CallReward:
-    name: 领取每日任务奖励前，再运行一次收获
-    help: ""
+    name: 重复收获
+    help: "领取每日任务奖励前，再运行一次收获"
 CollectionItems:
   _info:
     name: 收藏品
