@@ -4,6 +4,7 @@ LANG = "zh-CN"
 
 
 def t(s, *args, **kwargs):
+    # print(f'{s} {LANG}')
     return _t(s, LANG).format(*args, **kwargs)
 
 

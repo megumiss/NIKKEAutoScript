@@ -6,7 +6,7 @@ class ManualConfig:
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
        DailyGift > WeeklyGift > MonthlyGift > 
        Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > SimulationRoom > TribeTower > 
-       Daily > Event > Coop > MissionPass > Liberation > Blablalink > TowerDaemon > CombatDaemon > EventDaemon
+       Daily > Event > Event2 >Coop > MissionPass > Liberation > Blablalink > TowerDaemon > CombatDaemon > EventDaemon
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS > CORE_DUST_CASE > ORNAMENT"""
@@ -78,6 +78,18 @@ class ManualConfig:
     DROIDCAST_RAW_FILEPATH_REMOTE = "/data/local/tmp/DroidCastS.apk"
 
     EVENTS = [
+        {
+            "event_id": "event_20250703s",
+            "event_name": "OVER THE HORIZON",
+            # small evnet
+            "event_type": 2
+        },
+        {
+            "event_id": "event_20250703l",
+            "event_name": "OuteR: Automata",
+            # large evnet
+            "event_type": 1
+        },
         {
             "event_id": "event_20250612",
             "event_name": "Memories Teller",

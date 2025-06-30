@@ -297,6 +297,11 @@ class NikkeAutoScript:
 
         Event(config=self.config, device=self.device).run()
 
+    def event2(self):
+        from module.event.event import Event
+
+        Event(config=self.config, device=self.device).run()
+
     def coop(self):
         from module.coop.coop import Coop
 

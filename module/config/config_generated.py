@@ -99,7 +99,7 @@ class GeneratedConfig:
     CDK_Source = 'https://gamewith.jp/nikke/article/show/371014'
 
     # Group `Event`
-    Event_Event = ''  # event_20250612
+    Event_Event = ''  # event_20250703s, event_20250703l, event_20250612
     Event_LoginStamp = True
     Event_Challenge = True
     Event_Story = False

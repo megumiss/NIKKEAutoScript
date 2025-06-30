@@ -85,6 +85,10 @@ Event:
   - Scheduler
   - Event
 
+Event2:
+  - Scheduler
+  - Event
+
 # ==================== Tools ====================
 
 TowerDaemon:

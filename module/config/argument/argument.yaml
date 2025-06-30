@@ -125,6 +125,8 @@ Event:
   Event:
     value: ''
     option: [
+      'event_20250703s',
+      'event_20250703l',
       'event_20250612'
     ]
     display: disabled

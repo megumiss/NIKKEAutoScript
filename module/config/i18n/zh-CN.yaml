@@ -140,6 +140,9 @@ Task:
   Event:
     name: 剧情活动
     help: ""
+  Event2:
+    name: 剧情活动2
+    help: ""
 Emulator:
   _info:
     name: 模拟器设置
@@ -439,6 +442,8 @@ Event:
     name: 当前活动
     help: ""
     event_20250612: "Memories Teller"
+    event_20250703l: "OuteR: Automata"
+    event_20250703s: "OVER THE HORIZON"
   LoginStamp:
     name: 签到印章
     help: ""
