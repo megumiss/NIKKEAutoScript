@@ -38,7 +38,7 @@ class Coop(UI):
     
     @property
     def dateline(self) -> bool:
-        result = self.appear(DATELINE_CHECK, offset=10, threshold=0.5)
+        result = self.appear(DATELINE_CHECK, offset=10)
         if result:
             logger.info("[Coop has expired]")
         return result
