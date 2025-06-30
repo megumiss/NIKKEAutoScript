@@ -74,9 +74,33 @@ class SoloRaid(UI):
             else:
                 self.device.screenshot()
 
+            # 第七关扫荡
+            if click_timer.reached() \
+                    and self.appear(SOLO_RAID_CHECK, offset=10) \
+                    and self.appear(STAGE_SEVEN, offset=10) \
+                    and self.appear_then_click(CHALLENGE_QUICKLY_ENABLE, threshold=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 扫荡票max
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_QUICKLY_CHECK, offset=10) \
+                    and self.appear_then_click(CHALLENGE_QUICKLY_MAX, threshold=10, interval=1):
+                click_timer.reset()
+                continue
+
+            # 扫荡确定
+            if click_timer.reached() \
+                    and self.appear(CHALLENGE_QUICKLY_CHECK, offset=10) \
+                    and not self.appear(CHALLENGE_QUICKLY_MAX, threshold=10) \
+                    and self.appear_then_click(CHALLENGE_QUICKLY_CONFIRM, offset=10, interval=1):
+                click_timer.reset()
+                continue
+
             # 挑战
             if click_timer.reached() \
                     and self.appear(SOLO_RAID_CHECK, offset=10) \
+                    and self.appear_then_click(CHALLENGE_QUICKLY_DISABLE, threshold=10) \
                     and self.appear_then_click(CHALLENGE, offset=10, interval=1):
                 click_timer.reset()
                 continue
@@ -88,23 +112,12 @@ class SoloRaid(UI):
                 click_timer.reset()
                 continue
 
-            # 开始战斗，无法扫荡
+            # 开始战斗
             if click_timer.reached() \
                     and self.appear(FIGHT_HISTORY, offset=10) \
-                    and self.appear(QUICK_LOCKED, threshold=10) \
                     and self.appear_then_click(ENTER_FIGHT, offset=10, interval=1):
                 click_timer.reset()
                 continue
-
-            # 第七关扫荡
-            if click_timer.reached() \
-                    and self.appear(FIGHT_HISTORY, offset=10) \
-                    and self.appear(STAGE_SEVEN, offset=10) \
-                    and self.appear_then_click(FIGHT_QUICKLY, threshold=10, interval=1):
-                click_timer.reset()
-                continue
-
-            # 票max
 
             if click_timer.reached() \
                         and self.appear_then_click(AUTO_SHOOT, offset=10, interval=5, threshold=0.8):
