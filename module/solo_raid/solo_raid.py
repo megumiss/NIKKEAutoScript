@@ -20,12 +20,12 @@ class SoloRaid(UI):
         FREE_REMAIN = Digit(
             [FREE_OPPORTUNITY_CHECK.area],
             name="FREE_REMAIN",
-            letter=(247, 247, 247),
+            letter=(247, 247, 107),
             threshold=128,
             lang="cnocr_num",
         )
         return int(FREE_REMAIN.ocr(self.device.image))
-    
+
     @property
     def free_opportunity_remain(self) -> bool:
         # result = self.appear(FREE_OPPORTUNITY_CHECK, offset=10, threshold=0.8)
@@ -61,10 +61,11 @@ class SoloRaid(UI):
         if self.free_opportunity_remain:
             self.solo_raid()
         else:
-            logger.info("There are no free opportunities")
+            logger.warning("There are no free opportunities")
+            raise NoOpportunityRemain
 
     def solo_raid(self, skip_first_screenshot=True):
-        logger.hr("Start a coop")
+        logger.hr("Start a solo raid")
         click_timer = Timer(0.3)
 
         while 1:
@@ -73,47 +74,37 @@ class SoloRaid(UI):
             else:
                 self.device.screenshot()
 
-            # 选择普通难度
+            # 挑战
             if click_timer.reached() \
-                    and self.appear(SECECT_DIFFICULTY, offset=10) \
-                    and self.appear_then_click(DIFFICULTY_NORMAL_NOT_CHECKED, offset=10, interval=1):
+                    and self.appear(SOLO_RAID_CHECK, offset=10) \
+                    and self.appear_then_click(CHALLENGE, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
-            # 确认难度
+            # 挑战确认
             if click_timer.reached() \
-                    and self.appear(SECECT_DIFFICULTY, offset=10) \
-                    and self.appear(DIFFICULTY_NORMAL, offset=10) \
-                    and self.appear_then_click(DIFFICULTY_CONFIRM, offset=10, interval=1):
+                    and self.appear(CHALLENGE_CONFIRM_CHECK, offset=10) \
+                    and self.appear_then_click(CHALLENGE_CONFIRM, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
-            # 协同开始
+            # 开始战斗，无法扫荡
             if click_timer.reached() \
-                    and self.appear(COOP_ROLE_CHECK, offset=10) \
-                    and not self.appear(COOP_CANCEL, offset=10) \
-                    and self.appear_then_click(COOP_START, offset=10, interval=10, threshold=0.3):
-                self.device.sleep(1)
+                    and self.appear(FIGHT_HISTORY, offset=10) \
+                    and self.appear(QUICK_LOCKED, threshold=10) \
+                    and self.appear_then_click(ENTER_FIGHT, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
-            # 接受
+            # 第七关扫荡
             if click_timer.reached() \
-                    and self.appear_then_click(COOP_ACCEPT, offset=30, interval=1):
+                    and self.appear(FIGHT_HISTORY, offset=10) \
+                    and self.appear(STAGE_SEVEN, offset=10) \
+                    and self.appear_then_click(FIGHT_QUICKLY, threshold=10, interval=1):
                 click_timer.reset()
                 continue
 
-            # TODO 选择妮姬
-            # if click_timer.reached() \
-            #         and self.appear_then_click(COOP_START, offset=10, interval=1):
-            #     click_timer.reset()
-            #     continue
-
-            # 准备
-            if click_timer.reached() \
-                    and self.appear_then_click(COOP_PREPARE, offset=10, interval=1):
-                click_timer.reset()
-                continue
+            # 票max
 
             if click_timer.reached() \
                         and self.appear_then_click(AUTO_SHOOT, offset=10, interval=5, threshold=0.8):
@@ -131,14 +122,21 @@ class SoloRaid(UI):
                 click_timer.reset()
                 break
 
-        # 进入协同作战界面
+            # 结算弹窗
+            if click_timer.reached() \
+                    and self.appear(ENEMY_DEFEATED, offset=10) \
+                    and self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=10, interval=1):
+                click_timer.reset()
+                break
+
+        # 进入单人突击界面
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
 
-            if self.appear(COOP_CHECK, offset=10):
+            if self.appear(SOLO_RAID_CHECK, offset=10):
                 break
 
         if self.free_opportunity_remain:
