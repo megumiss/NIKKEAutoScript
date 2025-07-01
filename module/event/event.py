@@ -4,6 +4,7 @@ from module.exception import (
     OperationFailed,
     RequestHumanTakeover,
 )
+from module.coop.coop import CoopIsUnavailable
 from module.base.decorator import Config
 from module.base.timer import Timer
 from module.base.utils import get_button_by_location
@@ -14,7 +15,9 @@ from module.ui.assets import GOTO_BACK, MAIN_CHECK, FIGHT_QUICKLY_CHECK, FIGHT_Q
 from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING, FIGHT_QUICKLY
 from module.tribe_tower.assets import OPERATION_FAILED
 from module.challenge.assets import *
-
+from module.coop.assets import *
+from module.ui.page import *
+from module.coop.coop import Coop
 
 class EventSelectError(Exception):
     pass
@@ -628,7 +631,76 @@ class Event(UI):
             raise EventSelectError
         logger.info('Stage 11 clear done')
 
-    def ui_ensure_event(self):
+    @Config.when(EVENT_TYPE=1)
+    def coop(self, skip_first_screenshot=True):
+        '''进入协同作战页面'''
+        logger.hr('EVENT COOP START')
+        click_timer = Timer(0.3)
+        
+        # 走到协同作战
+        direct = False
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if click_timer.reached() \
+                    and self.appear(self.event_assets.EVENT_CHECK, offset=10, interval=5) \
+                    and self.appear_then_click(self.event_assets.COOP_ENTER, offset=10, interval=5):
+                click_timer.reset()
+                continue
+
+            # 协同未在开启时间
+            if click_timer.reached() \
+                    and self.appear(self.event_assets.COOP_LOCK, offset=10):
+                logger.warning("Coop is not enabled")
+                raise CoopIsUnavailable
+
+            # 协同选择
+            if self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10):
+                break
+
+            # 协同主页
+            if self.appear(COOP_CHECK, offset=10):
+                direct = True
+                break
+        
+        # 检查是否有开启的协同
+        coops = self.event_assets.TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
+        if not coops and not direct:
+            logger.warning("Not find coop in event")
+            raise CoopIsUnavailable
+
+        # 进入协同作战界面
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 选择协同
+            if click_timer.reached() \
+                    and self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10, interval=5):
+                self.device.click(coops[0])
+                click_timer.reset()
+                continue
+
+            # 协同主页
+            if self.appear(COOP_CHECK, offset=10):
+                break
+
+        if self.free_opportunity_remain and not self.dateline:
+            _coop = Coop(self.config, self.device)
+            _coop.start_coop()
+        else:
+            logger.info("There are no free opportunities")
+
+    @Config.when(EVENT_TYPE=2)
+    def coop(self):
+        logger.info('Small event, skip coop')
+
+    def ensure_into_event(self):
         logger.hr('OPEN EVENT STORY')
         click_timer = Timer(0.3)
         confirm_timer = Timer(5, count=3).start()
@@ -664,13 +736,15 @@ class Event(UI):
             self.ui_ensure(page_main)
             _ = self.event
 
-            self.ui_ensure_event()
+            self.ensure_into_event()
             if self.config.Event_LoginStamp:
                 self.login_stamp()
             if self.config.Event_Challenge:
                 self.challenge()
             if self.config.Event_Story:
                 self.story()
+            if self.config.Event_Coop:
+                self.coop()
 
             self.reward()
 
@@ -680,5 +754,7 @@ class Event(UI):
             logger.error('The event is no longer available')
         except ChallengeNotFoundError:
             logger.error('Challenge stage not found')
+        except CoopIsUnavailable:
+            pass
 
         self.config.task_delay(server_update=True)

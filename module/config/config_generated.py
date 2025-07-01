@@ -91,7 +91,6 @@ class GeneratedConfig:
     BlaDaily_Points = None
 
     # Group `Coop`
-    Coop_EventCoop = False
     Coop_MatchDifficulty = 'Normal'  # Normal
 
     # Group `CDK`
@@ -105,6 +104,7 @@ class GeneratedConfig:
     Event_Story = False
     Event_StoryPart = 'Story_1'  # Story_1, Story_2
     Event_StoryDifficulty = 'Normal'  # Normal, Hard
+    Event_Coop = False
     Event_Game = False
     Event_Shop = False
 

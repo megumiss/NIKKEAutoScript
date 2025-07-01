@@ -1133,10 +1133,6 @@
       }
     },
     "Coop": {
-      "EventCoop": {
-        "type": "checkbox",
-        "value": false
-      },
       "MatchDifficulty": {
         "type": "select",
         "value": "Normal",
@@ -1229,6 +1225,10 @@
           "Hard"
         ]
       },
+      "Coop": {
+        "type": "checkbox",
+        "value": false
+      },
       "Game": {
         "type": "checkbox",
         "value": false
@@ -1236,6 +1236,15 @@
       "Shop": {
         "type": "checkbox",
         "value": false
+      }
+    },
+    "Coop": {
+      "MatchDifficulty": {
+        "type": "select",
+        "value": "Normal",
+        "option": [
+          "Normal"
+        ]
       }
     },
     "Storage": {
@@ -1322,6 +1331,10 @@
           "Hard"
         ]
       },
+      "Coop": {
+        "type": "checkbox",
+        "value": false
+      },
       "Game": {
         "type": "checkbox",
         "value": false
@@ -1329,6 +1342,15 @@
       "Shop": {
         "type": "checkbox",
         "value": false
+      }
+    },
+    "Coop": {
+      "MatchDifficulty": {
+        "type": "select",
+        "value": "Normal",
+        "option": [
+          "Normal"
+        ]
       }
     },
     "Storage": {

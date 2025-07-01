@@ -111,7 +111,6 @@ BlaDaily:
     value: ''
     display: disabled
 Coop:
-  EventCoop: false
   MatchDifficulty:
     value: 'Normal'
     option: [ 'Normal' ]
@@ -145,5 +144,6 @@ Event:
       'Normal',
       'Hard'
     ]
+  Coop: false
   Game: false
   Shop: false

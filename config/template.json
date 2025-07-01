@@ -330,7 +330,6 @@
       "ServerUpdate": "04:00"
     },
     "Coop": {
-      "EventCoop": false,
       "MatchDifficulty": "Normal"
     },
     "Storage": {
@@ -353,8 +352,12 @@
       "Story": false,
       "StoryPart": "Story_1",
       "StoryDifficulty": "Normal",
+      "Coop": false,
       "Game": false,
       "Shop": false
+    },
+    "Coop": {
+      "MatchDifficulty": "Normal"
     },
     "Storage": {
       "Storage": {}
@@ -376,8 +379,12 @@
       "Story": false,
       "StoryPart": "Story_1",
       "StoryDifficulty": "Normal",
+      "Coop": false,
       "Game": false,
       "Shop": false
+    },
+    "Coop": {
+      "MatchDifficulty": "Normal"
     },
     "Storage": {
       "Storage": {}
