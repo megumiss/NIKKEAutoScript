@@ -10,11 +10,10 @@ from module.base.utils import get_button_by_location
 from module.logger import logger
 from module.ui.ui import UI
 from module.ui.assets import GOTO_BACK, MAIN_CHECK, FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_FIGHT, \
-                            FIGHT_QUICKLY_MAX, FIGHT_CLOSE, FIGHT_QUICKLY_DISABLE
+                            FIGHT_QUICKLY_MAX, FIGHT_CLOSE, FIGHT_QUICKLY_DISABLE, EVENT_SWITCH
 from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING, FIGHT_QUICKLY
 from module.tribe_tower.assets import OPERATION_FAILED
 from module.challenge.assets import *
-from module.ui.page import *
 
 
 class EventSelectError(Exception):
