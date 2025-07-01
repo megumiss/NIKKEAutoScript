@@ -629,14 +629,43 @@ class Event(UI):
             raise EventSelectError
         logger.info('Stage 11 clear done')
 
+    def ui_ensure_event(self):
+        logger.hr('OPEN EVENT STORY')
+        click_timer = Timer(0.3)
+        confirm_timer = Timer(5, count=3).start()
+
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if click_timer.reached() \
+                    and self.appear(MAIN_CHECK, offset=10) \
+                    and self.appear_then_click(EVENT_SWITCH, offset=10, interval=2):
+                click_timer.reset()
+                continue
+
+            if click_timer.reached() \
+                    and self.appear(MAIN_CHECK, offset=10) \
+                    and self.appear_then_click(self.event_assets.MAIN_GOTO_EVENT, offset=10, interval=3):
+                click_timer.reset()
+                logger.info("Open event story")
+                continue
+
+            if self.appear(self.event_assets.EVENT_CHECK, offset=10):
+                break
+
+            if confirm_timer.reached():
+                logger.error("Event not found")
+                raise EventUnavailableError
+
     def run(self):
         try:
             self.ui_ensure(page_main)
-            if not self.appear(self.event_assets.MAIN_GOTO_EVENT, offset=10):
-                raise EventUnavailableError
-            self.ui_ensure(page_event)
             _ = self.event
 
+            self.ui_ensure_event()
             if self.config.Event_LoginStamp:
                 self.login_stamp()
             if self.config.Event_Challenge:

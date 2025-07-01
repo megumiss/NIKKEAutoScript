@@ -160,10 +160,3 @@ page_ranking = Page(RANKING_CHECK)
 page_ranking.link(button=GOTO_BACK, destination=page_ark)
 page_ranking.link(button=GOTO_MAIN, destination=page_main)
 page_ark.link(button=ARK_GOTO_RANKING, destination=page_ranking)
-
-# 活动引用
-from module.event.event_20250612.assets import EVENT_CHECK, MAIN_GOTO_EVENT
-
-page_event = Page(EVENT_CHECK)
-page_event.link(button=GOTO_BACK, destination=page_main)
-page_main.link(button=MAIN_GOTO_EVENT, destination=page_event)
