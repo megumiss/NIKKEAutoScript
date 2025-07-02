@@ -620,6 +620,7 @@ class Event(UI):
 
         # 滑动到列表最下方检查倒数第二关
         self.ensure_sroll_to_bottom(count=3)
+        self.device.screenshot()
         self.find_and_fight_stage(open_story)
 
         # 回到活动主页
@@ -638,7 +639,7 @@ class Event(UI):
 
     def find_and_fight_stage(self, open_story):
         click_timer = Timer(0.3)
-        if self.appear(self.STORY_STAGE_11[open_story], offset=10):
+        if self.appear(self.STORY_STAGE_11(open_story), offset=10):
             while 1:
                 self.device.screenshot()
 
@@ -649,7 +650,7 @@ class Event(UI):
 
                 # 关卡检查
                 if click_timer.reached() and self.appear_then_click(
-                    self.STORY_STAGE_11[open_story], offset=10, interval=1
+                    self.STORY_STAGE_11(open_story), offset=10, interval=1
                 ):
                     # self.device.sleep(1)
                     click_timer.reset()
@@ -701,6 +702,7 @@ class Event(UI):
         """进入协同作战页面"""
         logger.hr('EVENT COOP START')
         click_timer = Timer(0.3)
+        confirm_timer = Timer(5, count=3).start()
 
         # 走到协同作战
         direct = False
@@ -712,11 +714,15 @@ class Event(UI):
 
             if (
                 click_timer.reached()
-                and self.appear(self.event_assets.EVENT_CHECK, offset=10, interval=5)
+                and self.appear(self.event_assets.EVENT_CHECK, offset=10)
                 and self.appear_then_click(self.event_assets.COOP_ENTER, offset=10, interval=5)
             ):
                 click_timer.reset()
                 continue
+
+            if confirm_timer.reached():
+                logger.warning('Coop is not enabled')
+                raise CoopIsUnavailable
 
             # 协同未在开启时间
             if click_timer.reached() and self.appear(self.event_assets.COOP_LOCK, offset=10):
@@ -779,13 +785,16 @@ class Event(UI):
     def ensure_into_event(self, skip_first_screenshot=True):
         logger.hr('OPEN EVENT STORY')
         click_timer = Timer(0.3)
-        confirm_timer = Timer(5, count=3).start()
+        confirm_timer = Timer(20, count=4).start()
 
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
+
+            if self.appear(self.event_assets.EVENT_CHECK, offset=10):
+                break
 
             if (
                 click_timer.reached()
@@ -803,9 +812,6 @@ class Event(UI):
                 click_timer.reset()
                 logger.info('Open event story')
                 continue
-
-            if self.appear(self.event_assets.EVENT_CHECK, offset=10):
-                break
 
             if confirm_timer.reached():
                 logger.error('Event not found')
