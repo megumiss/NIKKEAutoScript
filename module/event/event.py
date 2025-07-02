@@ -308,7 +308,7 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
-            if self.appear(REWARD_CHECK, offset=10):
+            if self.appear(self.event_assets.REWARD_CHECK, offset=10):
                 break
 
         # 领取奖励
