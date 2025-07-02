@@ -84,12 +84,10 @@ Coop:
 Event:
   - Scheduler
   - Event
-  - Coop
 
 Event2:
   - Scheduler
   - Event
-  - Coop
 
 # ==================== Tools ====================
 

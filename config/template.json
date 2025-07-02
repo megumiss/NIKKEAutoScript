@@ -356,9 +356,6 @@
       "Game": false,
       "Shop": false
     },
-    "Coop": {
-      "MatchDifficulty": "Normal"
-    },
     "Storage": {
       "Storage": {}
     }
@@ -382,9 +379,6 @@
       "Coop": false,
       "Game": false,
       "Shop": false
-    },
-    "Coop": {
-      "MatchDifficulty": "Normal"
     },
     "Storage": {
       "Storage": {}

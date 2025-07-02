@@ -1238,15 +1238,6 @@
         "value": false
       }
     },
-    "Coop": {
-      "MatchDifficulty": {
-        "type": "select",
-        "value": "Normal",
-        "option": [
-          "Normal"
-        ]
-      }
-    },
     "Storage": {
       "Storage": {
         "type": "storage",
@@ -1342,15 +1333,6 @@
       "Shop": {
         "type": "checkbox",
         "value": false
-      }
-    },
-    "Coop": {
-      "MatchDifficulty": {
-        "type": "select",
-        "value": "Normal",
-        "option": [
-          "Normal"
-        ]
       }
     },
     "Storage": {

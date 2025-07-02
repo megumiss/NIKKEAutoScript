@@ -696,6 +696,18 @@ class Event(UI):
         else:
             logger.info("There are no free opportunities")
 
+        # 回到活动主页
+        while 1:
+            self.device.screenshot()
+
+            if self.appear(self.event_assets.EVENT_CHECK, offset=10):
+                break
+
+            if click_timer.reached() \
+                    and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
+                click_timer.reset()
+                continue
+
     @Config.when(EVENT_TYPE=2)
     def coop(self):
         logger.info('Small event, skip coop')
