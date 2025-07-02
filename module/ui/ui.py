@@ -5,47 +5,69 @@ from module.handler.assets import *
 from module.handler.info_handle import InfoHandler
 from module.logger import logger
 from module.ui.assets import GOTO_MAIN
-from module.ui.page import (Page, page_unknown, page_main, page_reward, page_destroy, page_friend, page_daily,
-                            page_shop, page_cash_shop, page_team, page_inventory, page_pass,
-                            page_conversation, page_ark, page_tribe_tower, page_simulation_room, page_arena,
-                            page_rookie_arena, page_event,
-                            page_special_arena, page_outpost, page_commission, page_interception,
-                            page_special_interception,
-                            page_mailbox, page_recruit)
+from module.ui.page import (
+    Page,
+    page_unknown,
+    page_main,
+    page_reward,
+    page_destroy,
+    page_friend,
+    page_daily,
+    page_shop,
+    page_cash_shop,
+    page_team,
+    page_inventory,
+    page_pass,
+    page_conversation,
+    page_ark,
+    page_tribe_tower,
+    page_simulation_room,
+    page_arena,
+    page_rookie_arena,
+    page_event,
+    page_special_arena,
+    page_outpost,
+    page_commission,
+    page_interception,
+    page_special_interception,
+    page_mailbox,
+    page_recruit,
+)
 
 
 class UI(InfoHandler):
-    ui_pages = [page_unknown,
-                page_main,
-                page_reward,
-                page_destroy,
-                page_friend,
-                page_daily,
-                page_shop,
-                page_cash_shop,
-                page_team,
-                page_inventory,
-                page_pass,
-                page_conversation,
-                page_ark,
-                page_tribe_tower,
-                page_simulation_room,
-                page_arena,
-                page_rookie_arena,
-                page_special_arena,
-                page_outpost,
-                page_commission,
-                page_mailbox,
-                page_interception,
-                page_special_interception,
-                page_recruit,
-                page_event
-                ]
+    ui_pages = [
+        page_unknown,
+        page_main,
+        page_reward,
+        page_destroy,
+        page_friend,
+        page_daily,
+        page_shop,
+        page_cash_shop,
+        page_team,
+        page_inventory,
+        page_pass,
+        page_conversation,
+        page_ark,
+        page_tribe_tower,
+        page_simulation_room,
+        page_arena,
+        page_rookie_arena,
+        page_special_arena,
+        page_outpost,
+        page_commission,
+        page_mailbox,
+        page_interception,
+        page_special_interception,
+        page_recruit,
+        page_event,
+    ]
 
     def ui_page_appear(self, page: Page):
         """
-            Args:
-                page: Page
+        Args:
+            page: Page
         """
         return self.appear(page.check_button, offset=(30, 30))
 
@@ -88,7 +110,9 @@ class UI(InfoHandler):
             # Unknown page but able to handle
             logger.info("Unknown ui page")
             if click_timer.reached() and (
-                    self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2) or self.ui_additional()):
+                self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2)
+                or self.ui_additional()
+            ):
                 timeout.reset()
                 click_timer.reset()
                 continue
@@ -98,22 +122,31 @@ class UI(InfoHandler):
 
         # Unknown page, need manual switching
         logger.warning("Unknown ui page")
-        logger.attr("EMULATOR__SCREENSHOT_METHOD", self.config.Emulator_ScreenshotMethod)
+        logger.attr(
+            "EMULATOR__SCREENSHOT_METHOD", self.config.Emulator_ScreenshotMethod
+        )
         logger.attr("EMULATOR__CONTROL_METHOD", self.config.Emulator_ControlMethod)
-        logger.attr("SERVER", 'intl' if 'proximabeta' in self.config.Emulator_PackageName else 'tw')
+        logger.attr(
+            "SERVER",
+            "intl" if "proximabeta" in self.config.Emulator_PackageName else "tw",
+        )
         logger.warning("Starting from current page is not supported")
         logger.warning(f"Supported page: {[str(page) for page in self.ui_pages]}")
-        logger.warning('Supported page: Any page with a "HOME" button on the bottom-left')
+        logger.warning(
+            'Supported page: Any page with a "HOME" button on the bottom-left'
+        )
         logger.critical("Please switch to a supported page before starting NKAS")
         raise GamePageUnknownError
 
-    def ui_goto(self, destination, offset=(30, 30), confirm_wait=0, skip_first_screenshot=True):
+    def ui_goto(
+        self, destination, offset=(30, 30), confirm_wait=0, skip_first_screenshot=True
+    ):
         """
-           Args:
-               destination (Page):
-               offset:
-               confirm_wait:
-               skip_first_screenshot:
+        Args:
+            destination (Page):
+            offset:
+            confirm_wait:
+            skip_first_screenshot:
         """
         # Reset connection
         for page in self.ui_pages:
@@ -123,13 +156,13 @@ class UI(InfoHandler):
         visited = [destination]
         visited = set(visited)
 
-        '''
+        """
             这段代码最开始会从所有页面的链接中找出去往 destination 的页面，将其添加到 new
             例如 destination 为 page_reward，这样添加到 new 的页面为 page_main
             然后 visited 和 new 的长度不相等，继续循环
             继续执行会找出所有去往 page_main 的页面，直到可去往 page_main 的页面都在 visited 中
             总之，这样会找出去往的目标页的页面，接着找出去往这个页面的页面，遍历完所有支持页面直到所有关联页面都被添加
-        '''
+        """
         while 1:
             new = visited.copy()
 
@@ -159,7 +192,7 @@ class UI(InfoHandler):
             # Destination page
             if self.appear(destination.check_button, offset=offset):
                 if confirm_timer.reached():
-                    logger.info(f'Page arrive: {destination}')
+                    logger.info(f"Page arrive: {destination}")
                     break
             else:
                 confirm_timer.reset()
@@ -176,7 +209,7 @@ class UI(InfoHandler):
                     continue
 
                 if self.appear(page.check_button, offset=offset, interval=4):
-                    logger.info(f'Page switch: {page} -> {page.parent}')
+                    logger.info(f"Page switch: {page} -> {page.parent}")
                     button = page.links[page.parent]
                     self.device.click(button)
                     # self.ui_button_interval_reset(button)
@@ -195,7 +228,9 @@ class UI(InfoHandler):
             return False
         else:
             logger.info("Goto %s" % destination)
-            self.ui_goto(destination, confirm_wait=confirm_wait, skip_first_screenshot=True)
+            self.ui_goto(
+                destination, confirm_wait=confirm_wait, skip_first_screenshot=True
+            )
             return True
 
     def ui_additional(self):
@@ -242,11 +277,11 @@ class UI(InfoHandler):
         if self.handle_login():
             return True
 
-        '''
+        """
            CONFIRM_A 按钮为平面或立体，'确认'没有阴影
            CONFIRM_B 按钮为立体，'确认'有阴影
            CONFIRM_B 和 CONFIRM_C 相似
-        '''
+        """
 
         # 未知弹窗的确认
         if self.appear(CONFIRM_A, offset=(30, 30), interval=3, static=False):

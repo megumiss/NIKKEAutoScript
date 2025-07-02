@@ -3,15 +3,12 @@ from typing import Any, Dict, List
 from module.logger import logger
 from module.ocr.ocr import Digit
 
+
 class ArenaBase:
     def opponent_info(self, area: tuple, field_name: str) -> int:
         letter = self.FIELD_LETTERS[field_name]
         OPPONENT_INFO = Digit(
-            [area],
-            name="OPPONENT_INFO",
-            letter=letter,
-            threshold=128,
-            lang="cnocr_num"
+            [area], name="OPPONENT_INFO", letter=letter, threshold=128, lang="cnocr_num"
         )
         return int(OPPONENT_INFO.ocr(self.device.image))
 
@@ -23,10 +20,14 @@ class ArenaBase:
                 "id": group_idx,  # 对手位置序号（1=第一位，2=第二位，3=第三位）
                 "data": {
                     "Power": self.opponent_info(group_config["Power"], "Power"),
-                    "CommanderLevel": self.opponent_info(group_config["CommanderLevel"], "CommanderLevel"),
-                    "SynchroLevel": self.opponent_info(group_config["SynchroLevel"], "SynchroLevel"),
+                    "CommanderLevel": self.opponent_info(
+                        group_config["CommanderLevel"], "CommanderLevel"
+                    ),
+                    "SynchroLevel": self.opponent_info(
+                        group_config["SynchroLevel"], "SynchroLevel"
+                    ),
                     "Ranking": self.opponent_info(group_config["Ranking"], "Ranking"),
-                }
+                },
             }
             logger.info(f"Find opponent {group_idx}: {group_result['data']}")
             results.append(group_result)
@@ -39,32 +40,33 @@ class ArenaBase:
 
         # 提取原始数据
         dimensions = {
-            'Power': [opp['data']['Power'] for opp in all_opponents],
-            'CommanderLevel': [opp['data']['CommanderLevel'] for opp in all_opponents],
-            'SynchroLevel': [opp['data']['SynchroLevel'] for opp in all_opponents],
-            'Ranking': [opp['data']['Ranking'] for opp in all_opponents]
+            "Power": [opp["data"]["Power"] for opp in all_opponents],
+            "CommanderLevel": [opp["data"]["CommanderLevel"] for opp in all_opponents],
+            "SynchroLevel": [opp["data"]["SynchroLevel"] for opp in all_opponents],
+            "Ranking": [opp["data"]["Ranking"] for opp in all_opponents],
         }
         # 归一化处理
+
         normalized = {k: self._normalize(v) for k, v in dimensions.items()}
         if reversion:
             # pjjc时倒序，数值越低得分越高
-            normalized['Ranking'] = [1 - val for val in normalized['Ranking']]
+            normalized["Ranking"] = [1 - val for val in normalized["Ranking"]]
         # 计算综合得分
         for i, opp in enumerate(all_opponents):
             score = sum(
                 normalized[dim][i] * weights[dim]
-                for dim in ['Power', 'CommanderLevel', 'SynchroLevel', 'Ranking']
+                for dim in ["Power", "CommanderLevel", "SynchroLevel", "Ranking"]
             )
-            opp['score'] = score
+            opp["score"] = score
 
-        sorted_data = sorted(all_opponents, key=lambda x: x['score'], reverse=True)
+        sorted_data = sorted(all_opponents, key=lambda x: x["score"], reverse=True)
 
         # 选择策略
-        if self.config.OpponentSelection_SelectionStrategy == 'Max':
+        if self.config.OpponentSelection_SelectionStrategy == "Max":
             return sorted_data[0]
-        elif self.config.OpponentSelection_SelectionStrategy == 'Min':
+        elif self.config.OpponentSelection_SelectionStrategy == "Min":
             return sorted_data[-1]
-        elif self.config.OpponentSelection_SelectionStrategy == 'Middle':
+        elif self.config.OpponentSelection_SelectionStrategy == "Middle":
             return sorted_data[len(sorted_data) // 2] if sorted_data else None
 
     def _normalize(self, values: List[float]) -> List[float]:

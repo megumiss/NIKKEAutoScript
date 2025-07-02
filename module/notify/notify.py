@@ -14,15 +14,19 @@ onepush.core.log = logger
 
 def handle_notify_win(**kwargs) -> bool:
     from winotify import Notification
-    toast = Notification(app_id="NKAS",
-                        title=kwargs["title"],
-                        msg=kwargs["content"],
-                        icon=ICON.Helm_Circle,
-                        duration='long')
+
+    toast = Notification(
+        app_id="NKAS",
+        title=kwargs["title"],
+        msg=kwargs["content"],
+        icon=ICON.Helm_Circle,
+        duration="long",
+    )
     toast.show()
-    
+
     logger.info("Push notify success")
     return True
+
 
 def handle_notify_linux(_config: str, **kwargs) -> bool:
     try:
@@ -74,8 +78,7 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
                     return_data: dict = resp.json()
                     if return_data["status"] == "failed":
                         logger.warning("Push notify failed!")
-                        logger.warning(
-                            f"Return message:{return_data['wording']}")
+                        logger.warning(f"Return message:{return_data['wording']}")
                         return False
     except OnePushException:
         logger.exception("Push notify failed")

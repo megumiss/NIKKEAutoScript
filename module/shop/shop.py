@@ -53,8 +53,9 @@ class ShopBase(UI):
             if self.appear(check, offset=(5, 5)) and confirm_timer.reached():
                 break
 
-            if click_timer.reached() \
-                    and self.appear_then_click(button, offset=(5, 5), interval=5):
+            if click_timer.reached() and self.appear_then_click(
+                button, offset=(5, 5), interval=5
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 continue
@@ -69,28 +70,36 @@ class ShopBase(UI):
             else:
                 self.device.screenshot()
 
-            if button is not None \
-                    and confirm_timer.reached() \
-                    and click_timer.reached() \
-                    and self.appear_then_click(button, offset=5, threshold=0.9, interval=1, static=False) \
-                    and button.match_appear_on(self.device.image, 10):
+            if (
+                button is not None
+                and confirm_timer.reached()
+                and click_timer.reached()
+                and self.appear_then_click(
+                    button, offset=5, threshold=0.9, interval=1, static=False
+                )
+                and button.match_appear_on(self.device.image, 10)
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if self.appear(NO_MONEY, offset=(5, 5), static=False) \
-                    and NO_MONEY.match_appear_on(self.device.image):
+            if self.appear(
+                NO_MONEY, offset=(5, 5), static=False
+            ) and NO_MONEY.match_appear_on(self.device.image):
                 raise NotEnoughMoneyError
 
-            if click_timer.reached() \
-                    and self.appear(MAX, offset=(30, 30), interval=3, static=False) \
-                    and MAX.match_appear_on(self.device.image, threshold=10):
+            if (
+                click_timer.reached()
+                and self.appear(MAX, offset=(30, 30), interval=3, static=False)
+                and MAX.match_appear_on(self.device.image, threshold=10)
+            ):
                 self.device.click(MAX)
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() \
-                    and self.appear_then_click(BUY, offset=(30, 30), interval=3, static=False):
+            if click_timer.reached() and self.appear_then_click(
+                BUY, offset=(30, 30), interval=3, static=False
+            ):
                 click_timer.reset()
                 continue
 
@@ -102,15 +111,18 @@ class ShopBase(UI):
                     else:
                         self.device.screenshot()
                     self.handle_reward(1)
-                    if self.appear(SHOP_CHECK, offset=(5, 5)) and _confirm_timer.reached():
+                    if (
+                        self.appear(SHOP_CHECK, offset=(5, 5))
+                        and _confirm_timer.reached()
+                    ):
                         return
 
     def purchase(
-            self,
-            products: SelectedGrids,
-            check_price=False,
-            refresh=False,
-            skip_first_screenshot=True,
+        self,
+        products: SelectedGrids,
+        check_price=False,
+        refresh=False,
+        skip_first_screenshot=True,
     ):
         timeout = Timer(2.7, 3).start()
         click_timer = Timer(0.3)
@@ -134,20 +146,31 @@ class ShopBase(UI):
                 else:
                     self.device.screenshot()
 
-                if self.appear(PURCHASE_CHECK, offset=(5, 5), interval=0.6, static=False):
+                if self.appear(
+                    PURCHASE_CHECK, offset=(5, 5), interval=0.6, static=False
+                ):
                     timeout.reset()
                     self.p()
 
                 else:
-                    if self.appear(product, offset=(5, 5), threshold=0.9, interval=0.8, static=False) \
-                            and product.match_appear_on(self.device.image, 6):
+                    if self.appear(
+                        product,
+                        offset=(5, 5),
+                        threshold=0.9,
+                        interval=0.8,
+                        static=False,
+                    ) and product.match_appear_on(self.device.image, 6):
                         if check_price and product.name != ORNAMENT.name:
                             area = _area_offset(product.button, (-50, 0, 50, 250))
-                            img = self.device.image[area[1]: area[3], area[0]: area[2]]
+                            img = self.device.image[
+                                area[1] : area[3], area[0] : area[2]
+                            ]
                             super().__setattr__("_image", img)
                             if not self.credit_or_gratis:
                                 skip_first_screenshot = True
-                                self.device.image = mask_area(self.device.image, product.button)
+                                self.device.image = mask_area(
+                                    self.device.image, product.button
+                                )
                                 continue
                         if click_timer.reached():
                             self.device.click(product)
@@ -164,25 +187,42 @@ class ShopBase(UI):
                         else:
                             self.device.screenshot()
 
-                        if not self.refreshed \
-                                and click_timer.reached() \
-                                and self.appear(REFRESH, offset=(5, 5), interval=1, static=False):
+                        if (
+                            not self.refreshed
+                            and click_timer.reached()
+                            and self.appear(
+                                REFRESH, offset=(5, 5), interval=1, static=False
+                            )
+                        ):
                             x, y = REFRESH.location
                             self.device.click_minitouch(x - 80, y)
                             click_timer.reset()
 
-                        if click_timer.reached() \
-                                and self.appear(GRATIS_REFRESH, offset=5, threshold=0.96, interval=1, static=False) \
-                                and self.appear_then_click(CONFIRM_B, offset=5, interval=1, static=False):
+                        if (
+                            click_timer.reached()
+                            and self.appear(
+                                GRATIS_REFRESH,
+                                offset=5,
+                                threshold=0.96,
+                                interval=1,
+                                static=False,
+                            )
+                            and self.appear_then_click(
+                                CONFIRM_B, offset=5, interval=1, static=False
+                            )
+                        ):
                             while 1:
                                 self.device.screenshot()
 
-                                if click_timer.reached() \
-                                        and self.appear_then_click(CONFIRM_B, offset=(5, 5), interval=1, static=False):
+                                if click_timer.reached() and self.appear_then_click(
+                                    CONFIRM_B, offset=(5, 5), interval=1, static=False
+                                ):
                                     click_timer.reset()
                                     continue
 
-                                if self.appear(SHOP_CHECK, offset=5) and SHOP_CHECK.appear_on(self.device.image, 25):
+                                if self.appear(
+                                    SHOP_CHECK, offset=5
+                                ) and SHOP_CHECK.appear_on(self.device.image, 25):
                                     break
 
                             del self.__dict__["general_shop_priority"]
@@ -192,24 +232,28 @@ class ShopBase(UI):
                             timeout.reset()
                             break
 
-                        if click_timer.reached() \
-                                and self.appear_then_click(CANCEL, offset=5, threshold=0.9, interval=2, static=False):
+                        if click_timer.reached() and self.appear_then_click(
+                            CANCEL, offset=5, threshold=0.9, interval=2, static=False
+                        ):
                             click_timer.reset()
                             while 1:
                                 self.device.screenshot()
-                                if click_timer.reached() \
-                                        and self.appear_then_click(CANCEL, offset=5, static=False):
+                                if click_timer.reached() and self.appear_then_click(
+                                    CANCEL, offset=5, static=False
+                                ):
                                     click_timer.reset()
-                                if self.appear(SHOP_CHECK, offset=5) and SHOP_CHECK.appear_on(self.device.image, 25):
+                                if self.appear(
+                                    SHOP_CHECK, offset=5
+                                ) and SHOP_CHECK.appear_on(self.device.image, 25):
                                     break
                             self.refreshed = True
                             timeout.reset()
                             break
 
     def purchase1(
-            self,
-            products: SelectedGrids,
-            skip_first_screenshot=True,
+        self,
+        products: SelectedGrids,
+        skip_first_screenshot=True,
     ):
         swipe_confirm = Timer(2, count=9).start()
         click_timer = Timer(0.6)
@@ -221,8 +265,9 @@ class ShopBase(UI):
                 self.device.screenshot()
 
             for i in products:
-                if self.appear(i.button, offset=5, threshold=0.9, static=False) \
-                        and i.button.match_appear_on(self.device.image, 15):
+                if self.appear(
+                    i.button, offset=5, threshold=0.9, static=False
+                ) and i.button.match_appear_on(self.device.image, 15):
                     if click_timer.reached():
                         self.device.click(i.button)
                         img = self.device.image
@@ -230,7 +275,9 @@ class ShopBase(UI):
                         self.device.image = img
                         if i.timer.reached():
                             products = products.delete([i])
-                            logger.attr("PENDING PRODUCT LIST", [i.name for i in products])
+                            logger.attr(
+                                "PENDING PRODUCT LIST", [i.name for i in products]
+                            )
                             if not products.count:
                                 raise PurchaseTimeTooLong
                             continue
@@ -250,14 +297,17 @@ class ShopBase(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() \
-                    and self.appear_then_click(CANCEL, offset=(30, 30), interval=1, static=False):
+            if click_timer.reached() and self.appear_then_click(
+                CANCEL, offset=(30, 30), interval=1, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if self.appear(check, offset=(10, 10), static=False) \
-                    and confirm_timer.reached():
+            if (
+                self.appear(check, offset=(10, 10), static=False)
+                and confirm_timer.reached()
+            ):
                 break
 
 
@@ -289,11 +339,11 @@ class Shop(ShopBase):
     @property
     def credit_or_gratis(self) -> bool:
         if GRATIS_B.match(
-                self._image, offset=(5, 5), threshold=0.96, static=False
+            self._image, offset=(5, 5), threshold=0.96, static=False
         ) and GRATIS_B.match_appear_on(self._image, threshold=5):
             return True
         elif CREDIT.match(
-                self._image, offset=(5, 5), threshold=0.96, static=False
+            self._image, offset=(5, 5), threshold=0.96, static=False
         ) and CREDIT.match_appear_on(self._image, threshold=5):
             return True
 
@@ -306,8 +356,9 @@ class Shop(ShopBase):
         try:
             if self.config.ArenaShop_enable:
                 self.ensure_into_shop(GOTO_ARENA_SHOP, ARENA_SHOP_CHECK)
-                if self.config.ArenaShop_priority is None \
-                        or not len(self.config.ArenaShop_priority.strip(" ")):
+                if self.config.ArenaShop_priority is None or not len(
+                    self.config.ArenaShop_priority.strip(" ")
+                ):
                     raise ProductQueueIsEmpty
                 self.purchase(self.arena_shop_priority)
         except NotEnoughMoneyError:

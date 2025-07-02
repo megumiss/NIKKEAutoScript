@@ -39,29 +39,37 @@ class EventDaemon(UI):
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
 
-            if click_timer.reached() and self.appear_then_click(MAX, 5, interval=2, threshold=0.8, static=False):
+            if click_timer.reached() and self.appear_then_click(
+                MAX, 5, interval=2, threshold=0.8, static=False
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 timeout.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(FIGHT_2, 5, interval=2, static=False):
+            if click_timer.reached() and self.appear_then_click(
+                FIGHT_2, 5, interval=2, static=False
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 timeout.reset()
                 continue
 
-            if click_timer.reached() \
-                    and self.appear_then_click(BATTLE_QUICKLY, 5, interval=4, static=False) \
-                    and BATTLE_QUICKLY.match_appear_on(self.device.image):
+            if (
+                click_timer.reached()
+                and self.appear_then_click(BATTLE_QUICKLY, 5, interval=4, static=False)
+                and BATTLE_QUICKLY.match_appear_on(self.device.image)
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 timeout.reset()
                 continue
 
-            if click_timer.reached() \
-                    and self.appear_then_click(FIGHT, 5, interval=4, static=False) \
-                    and FIGHT.match_appear_on(self.device.image):
+            if (
+                click_timer.reached()
+                and self.appear_then_click(FIGHT, 5, interval=4, static=False)
+                and FIGHT.match_appear_on(self.device.image)
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 timeout.reset()
@@ -73,21 +81,29 @@ class EventDaemon(UI):
                 timeout.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(NEXT_STAGE, 5, static=False):
+            if click_timer.reached() and self.appear_then_click(
+                NEXT_STAGE, 5, static=False
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 timeout.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=5, interval=5, threshold=0.8):
+            if click_timer.reached() and self.appear_then_click(
+                AUTO_SHOOT, offset=5, interval=5, threshold=0.8
+            ):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=5, interval=5, threshold=0.8):
+            if click_timer.reached() and self.appear_then_click(
+                AUTO_BURST, offset=5, interval=5, threshold=0.8
+            ):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=5, interval=2):
+            if click_timer.reached() and self.appear_then_click(
+                END_FIGHTING, offset=5, interval=2
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 timeout.reset()

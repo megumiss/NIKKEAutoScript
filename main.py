@@ -87,7 +87,9 @@ class NikkeAutoScript:
             self.device.sleep(10)
             return False
         except GamePageUnknownError:
-            logger.info('Game server may be under maintenance or network may be broken, check server status now')
+            logger.info(
+                "Game server may be under maintenance or network may be broken, check server status now"
+            )
             # self.device.app_stop()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
@@ -154,7 +156,7 @@ class NikkeAutoScript:
                 # 从最后一个任务截取
                 if re.match("^═{15,}$", line):
                     start = index
-            lines = lines[start - 2:]
+            lines = lines[start - 2 :]
             # 替换真实路径
             lines = handle_sensitive_logs(lines)
         with open(f"{folder}/log.txt", "w", encoding="utf-8") as f:
@@ -409,7 +411,7 @@ class NikkeAutoScript:
                     logger.info("Update event detected")
                     logger.info(f"Alas [{self.config_name}] exited.")
                     break
-            
+
             task = self.get_next_task()
             _ = self.device
 

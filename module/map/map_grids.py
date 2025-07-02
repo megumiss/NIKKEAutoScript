@@ -20,7 +20,7 @@ class SelectedGrids:
 
     def __str__(self):
         # return str([str(grid) for grid in self])
-        return '[' + ', '.join([str(grid) for grid in self]) + ']'
+        return "[" + ", ".join([str(grid) for grid in self]) + "]"
 
     def __len__(self):
         return len(self.grids)

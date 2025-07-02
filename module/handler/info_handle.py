@@ -1,5 +1,6 @@
 from module.base.base import ModuleBase
 from module.base.utils import color_similar, get_color, point2str
+
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
 from module.exception import GameStuckError, GameServerUnderMaintenance
 from module.handler.assets import *
@@ -10,16 +11,16 @@ from module.logger import logger
 class InfoHandler(ModuleBase):
     def handle_paid_gift(self, interval=1):
         if self.appear(
-                PAID_GIFT_CHECK, offset=(30, 30), interval=interval, static=False
+            PAID_GIFT_CHECK, offset=(30, 30), interval=interval, static=False
         ):
             if self.appear_text_then_click("点击关闭画面", interval=interval):
                 return True
 
         elif self.appear(
-                PAID_GIFT_CONFIRM_CHECK, offset=(30, 30), interval=interval, static=False
+            PAID_GIFT_CONFIRM_CHECK, offset=(30, 30), interval=interval, static=False
         ):
             if self.appear_then_click(
-                    CONFIRM_B, offset=(30, 30), interval=interval, static=False
+                CONFIRM_B, offset=(30, 30), interval=interval, static=False
             ):
                 return True
 
@@ -40,7 +41,7 @@ class InfoHandler(ModuleBase):
                 area=(int(x - 80), int(y - 25), int(x + 80), int(y + 25)),
             )
             if not color_similar(
-                    color1=b, color2=(112.786625, 111.897375, 113.121875), threshold=10
+                color1=b, color2=(112.786625, 111.897375, 113.121875), threshold=10
             ):
                 self.device.click_minitouch(x, y)
                 return True
@@ -54,13 +55,17 @@ class InfoHandler(ModuleBase):
 
         # 关闭
         if self.appear(
-                SHIFTY_SUPPLIES_CHECK,
-                offset=(30, 30),
-                interval=3,
-                threshold=0.74,
-                static=False,
+            SHIFTY_SUPPLIES_CHECK,
+            offset=(30, 30),
+            interval=3,
+            threshold=0.74,
+            static=False,
         ) and self.appear_then_click(
-            SHIFTY_SUPPLIES_CLOSE, offset=(30, 30), interval=3, threshold=0.74, static=False
+            SHIFTY_SUPPLIES_CLOSE,
+            offset=(30, 30),
+            interval=3,
+            threshold=0.74,
+            static=False,
         ):
             return True
 
@@ -97,7 +102,7 @@ class InfoHandler(ModuleBase):
 
     def handle_reward(self, interval=5):
         if self.appear_then_click(
-                REWARD, offset=(30, 30), interval=interval, static=False
+            REWARD, offset=(30, 30), interval=interval, static=False
         ):
             return True
 
@@ -109,7 +114,7 @@ class InfoHandler(ModuleBase):
 
     def handle_server(self):
         if self.appear(
-                SERVER_CHECK, offset=(30, 30), interval=3, static=False
+            SERVER_CHECK, offset=(30, 30), interval=3, static=False
         ) and self.appear_then_click(
             CONFIRM_A, offset=(30, 30), interval=3, static=False
         ):
@@ -117,7 +122,7 @@ class InfoHandler(ModuleBase):
 
     def handle_popup(self):
         if self.appear(
-                POPUP_CHECK, offset=(30, 30), interval=3, static=False
+            POPUP_CHECK, offset=(30, 30), interval=3, static=False
         ) and self.appear_then_click(
             ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
         ):
@@ -125,23 +130,23 @@ class InfoHandler(ModuleBase):
 
     def handle_announcement(self):
         if self.appear(
-                ANNOUNCEMENT_CHECK,
-                offset=(30, 30),
-                interval=3,
-                threshold=0.74,
-                static=False,
+            ANNOUNCEMENT_CHECK,
+            offset=(30, 30),
+            interval=3,
+            threshold=0.74,
+            static=False,
         ) and self.appear_then_click(
             ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
         ):
             return True
         elif self._appear_text_then_click(
-                "不再显示", (20, 600), label="CLOSE_ANNOUNCEMENT"
+            "不再显示", (20, 600), label="CLOSE_ANNOUNCEMENT"
         ):
             return True
 
     def handle_download(self):
         if self.appear(
-                DOWNLOAD_CHECK, offset=(30, 30), interval=3, static=False
+            DOWNLOAD_CHECK, offset=(30, 30), interval=3, static=False
         ) and self.appear_then_click(
             CONFIRM_A, offset=(30, 30), interval=3, static=False
         ):
@@ -153,7 +158,7 @@ class InfoHandler(ModuleBase):
 
     def handle_system_maintenance(self):
         if self.appear(
-                SYSTEM_MAINTENANCE_CHECK, offset=(30, 30), interval=3, static=False
+            SYSTEM_MAINTENANCE_CHECK, offset=(30, 30), interval=3, static=False
         ):
             raise GameServerUnderMaintenance("Server is currently under maintenance")
 
@@ -168,7 +173,7 @@ class InfoHandler(ModuleBase):
 
     def handle_login(self):
         if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) or self.appear(
-                LOGIN_CHECK_B, offset=(30, 30), interval=5
+            LOGIN_CHECK_B, offset=(30, 30), interval=5
         ):
             self.device.click(LOGIN_CHECK)
             logger.info("Login success")
@@ -177,7 +182,9 @@ class InfoHandler(ModuleBase):
         """
         处理红圈
         """
-        circles = TEMPLATE_RED_CIRCLE.match_multi(self.device.image, similarity=0.65, name='RED_CIRCLE')
+        circles = TEMPLATE_RED_CIRCLE.match_multi(
+            self.device.image, similarity=0.65, name="RED_CIRCLE"
+        )
         for circle in circles:
             x = circle.location[0]
             y = circle.location[1]

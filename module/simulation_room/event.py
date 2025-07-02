@@ -34,7 +34,7 @@ class EventBase(UI):
 
 class EnemyEvent(EventBase):
     def run(self, skip_first_screenshot=True):
-        logger.hr('Start a hostile event', 3)
+        logger.hr("Start a hostile event", 3)
         click_timer = Timer(0.3)
 
         skip = False
@@ -46,48 +46,63 @@ class EnemyEvent(EventBase):
                 self.device.screenshot()
 
             if click_timer.reached():
-                if not self.appear(TARGET_HP_CHECK, offset=(30, 30)) \
-                        and \
-                        (self.appear(ENEMY_CHECK, offset=(30, 30), interval=5, static=False)
-                         or self.appear(BOSS_EVENT_CHECK, offset=(30, 30), interval=5, static=False)):
+                if not self.appear(TARGET_HP_CHECK, offset=(30, 30)) and (
+                    self.appear(ENEMY_CHECK, offset=(30, 30), interval=5, static=False)
+                    or self.appear(
+                        BOSS_EVENT_CHECK, offset=(30, 30), interval=5, static=False
+                    )
+                ):
                     self.device.click_minitouch(*self.button)
-                    logger.info('Click %s @ %s' % (point2str(*self.button), 'ENEMY_EVENT'))
+                    logger.info(
+                        "Click %s @ %s" % (point2str(*self.button), "ENEMY_EVENT")
+                    )
                     click_timer.reset()
                     continue
                 elif self.appear(TARGET_HP_CHECK, offset=(30, 30), interval=5):
                     self.device.click_minitouch(360, 840)
-                    logger.info('Click %s @ %s' % (point2str(360, 840), 'ENEMY_EVENT'))
+                    logger.info("Click %s @ %s" % (point2str(360, 840), "ENEMY_EVENT"))
                     click_timer.reset()
                     continue
 
-            if click_timer.reached() and self.appear_then_click(FIGHT_QUICKLY, offset=(30, 30), interval=5,
-                                                                threshold=0.85):
+            if click_timer.reached() and self.appear_then_click(
+                FIGHT_QUICKLY, offset=(30, 30), interval=5, threshold=0.85
+            ):
                 skip = True
                 click_timer.reset()
                 continue
 
-            elif not skip and click_timer.reached() and self.appear_then_click(FIGHT, offset=(30, 30),
-                                                                                        interval=5):
+            elif (
+                not skip
+                and click_timer.reached()
+                and self.appear_then_click(FIGHT, offset=(30, 30), interval=5)
+            ):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=(30, 30), interval=5, threshold=0.8):
+            if click_timer.reached() and self.appear_then_click(
+                AUTO_SHOOT, offset=(30, 30), interval=5, threshold=0.8
+            ):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=(30, 30), interval=5, threshold=0.8):
+            if click_timer.reached() and self.appear_then_click(
+                AUTO_BURST, offset=(30, 30), interval=5, threshold=0.8
+            ):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=(30, 30), interval=5):
+            if click_timer.reached() and self.appear_then_click(
+                END_FIGHTING, offset=(30, 30), interval=5
+            ):
                 click_timer.reset()
                 continue
 
             if self.appear(OPERATION_FAILED, offset=(30, 30)):
                 raise OperationFailed
 
-            if self.appear(END_SIMULATION, offset=(5, 5), static=False) \
-                    or self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(5, 5), static=False):
+            if self.appear(END_SIMULATION, offset=(5, 5), static=False) or self.appear(
+                SELECT_REWARD_EFFECT_CHECK, offset=(5, 5), static=False
+            ):
                 self.device.sleep(0.8)
                 break
 
@@ -96,12 +111,12 @@ class EnemyEvent(EventBase):
                 self.device.sleep(5)
                 continue
 
-        logger.info('The hostile event ended')
+        logger.info("The hostile event ended")
 
 
 class HealingEvent(EventBase):
     def run(self, skip_first_screenshot=True):
-        logger.hr('Start a healing event', 3)
+        logger.hr("Start a healing event", 3)
         confirm_timer = Timer(3, count=3).start()
         click_timer = Timer(0.3)
         while 1:
@@ -110,32 +125,39 @@ class HealingEvent(EventBase):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(HEALING_EVENT_CHECK, offset=(30, 30), interval=5,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                HEALING_EVENT_CHECK, offset=(30, 30), interval=5, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(HEALING_OPTION_CHECK, offset=(30, 30), interval=2,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                HEALING_OPTION_CHECK, offset=(30, 30), interval=2, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=2, static=False):
+            if click_timer.reached() and self.appear_then_click(
+                CONFIRM_B, offset=(30, 30), interval=2, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if self.appear(RESET_TIME_IN, offset=(5, 5), static=False) and confirm_timer.reached():
+            if (
+                self.appear(RESET_TIME_IN, offset=(5, 5), static=False)
+                and confirm_timer.reached()
+            ):
                 break
-        logger.info('The healing event ended')
+        logger.info("The healing event ended")
 
 
 class RandomEvent(EventBase):
 
     def run(self, skip_first_screenshot=True):
-        logger.hr('Start a random event', 3)
+        logger.hr("Start a random event", 3)
         confirm_timer = Timer(2, count=3).start()
         click_timer = Timer(0.3)
         click_timer_2 = Timer(5)
@@ -146,7 +168,9 @@ class RandomEvent(EventBase):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(RANDOM_EVENT_CHECK, offset=(30, 30), static=False):
+            if click_timer.reached() and self.appear_then_click(
+                RANDOM_EVENT_CHECK, offset=(30, 30), static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -156,20 +180,22 @@ class RandomEvent(EventBase):
                 click_timer.reset()
                 break
 
-            if click_timer.reached() and self.appear_then_click(RANDOM_OPTION_CHECK, offset=(30, 30), interval=5,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                RANDOM_OPTION_CHECK, offset=(30, 30), interval=5, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                CONFIRM_B, offset=(30, 30), interval=3, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
             if self.appear(RANDOM_EVENT_CHOOSE_EFFECT, offset=(30, 30), static=False):
-                logger.hr('Choose an effect', 3)
+                logger.hr("Choose an effect", 3)
                 skip_first_screenshot = True
                 while 1:
                     if skip_first_screenshot:
@@ -177,32 +203,39 @@ class RandomEvent(EventBase):
                     else:
                         self.device.screenshot()
 
-                    if self.appear(RANDOM_EVENT_CHOOSE_EFFECT, offset=(30, 30), static=False) \
-                            and click_timer_2.reached():
+                    if (
+                        self.appear(
+                            RANDOM_EVENT_CHOOSE_EFFECT, offset=(30, 30), static=False
+                        )
+                        and click_timer_2.reached()
+                    ):
                         button = self.get_effect()
                         confirm_timer.reset()
                         click_timer_2.reset()
                         self.device.click_minitouch(*button)
-                        logger.info(
-                            'Click %s @ %s' % (point2str(*button), 'EFFECT')
-                        )
+                        logger.info("Click %s @ %s" % (point2str(*button), "EFFECT"))
                         self.device.sleep(0.6)
 
-                    if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=2,
-                                                                        static=False):
+                    if click_timer.reached() and self.appear_then_click(
+                        CONFIRM_B, offset=(30, 30), interval=2, static=False
+                    ):
                         confirm_timer.reset()
                         click_timer.reset()
                         continue
 
-                    if self.appear(RESET_TIME_IN, offset=(30, 30), static=False) \
-                            and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False) \
-                            and confirm_timer.reached():
+                    if (
+                        self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
+                        and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                        and confirm_timer.reached()
+                    ):
                         return
 
-            if self.appear(RANDOM_EVENT_REWARD_EFFECT, offset=(30, 30), static=False) \
-                    or self.appear(MAX_EFFECT_COUNT_CHECK, offset=(30, 30), static=False) \
-                    or self.appear(REPEATED_EFFECT_CHECK, offset=(30, 30), static=False):
-                logger.hr('reward an effect', 3)
+            if (
+                self.appear(RANDOM_EVENT_REWARD_EFFECT, offset=(30, 30), static=False)
+                or self.appear(MAX_EFFECT_COUNT_CHECK, offset=(30, 30), static=False)
+                or self.appear(REPEATED_EFFECT_CHECK, offset=(30, 30), static=False)
+            ):
+                logger.hr("reward an effect", 3)
                 skip_first_screenshot = True
                 while 1:
                     if skip_first_screenshot:
@@ -210,31 +243,39 @@ class RandomEvent(EventBase):
                     else:
                         self.device.screenshot()
 
-                    if self.appear(MAX_EFFECT_COUNT_CHECK, offset=(5, 5), static=False) or self.appear(
-                            REPEATED_EFFECT_CHECK, offset=(5, 5), static=False):
+                    if self.appear(
+                        MAX_EFFECT_COUNT_CHECK, offset=(5, 5), static=False
+                    ) or self.appear(
+                        REPEATED_EFFECT_CHECK, offset=(5, 5), static=False
+                    ):
                         if click_timer_2.reached():
                             button = self.get_effect_list()[-1]
                             confirm_timer.reset()
                             click_timer_2.reset()
                             self.device.click_minitouch(*button)
                             logger.info(
-                                'Click %s @ %s' % (point2str(*button), 'EFFECT')
+                                "Click %s @ %s" % (point2str(*button), "EFFECT")
                             )
 
-                    if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=1,
-                                                                        static=False):
+                    if click_timer.reached() and self.appear_then_click(
+                        CONFIRM_B, offset=(30, 30), interval=1, static=False
+                    ):
                         confirm_timer.reset()
                         click_timer.reset()
                         continue
 
-                    if self.appear(RESET_TIME_IN, offset=(30, 30), static=False) \
-                            and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False) \
-                            and confirm_timer.reached():
+                    if (
+                        self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
+                        and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                        and confirm_timer.reached()
+                    ):
                         return
 
-            if self.appear(RESET_TIME_IN, offset=(30, 30), static=False) \
-                    and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False) \
-                    and confirm_timer.reached():
+            if (
+                self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
+                and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                and confirm_timer.reached()
+            ):
                 return
 
         if self.appear(NOT_CHOOSE, offset=(30, 30), static=False):
@@ -244,36 +285,41 @@ class RandomEvent(EventBase):
                 else:
                     self.device.screenshot()
 
-                if click_timer.reached() and self.appear_then_click(NOT_CHOOSE, offset=(30, 30), interval=5,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(
+                    NOT_CHOOSE, offset=(30, 30), interval=5, static=False
+                ):
                     self.device.sleep(0.8)
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear(NOTHING, offset=(30, 30), interval=5,
-                                                         static=False):
+                if click_timer.reached() and self.appear(
+                    NOTHING, offset=(30, 30), interval=5, static=False
+                ):
                     self.device.click_minitouch(530, 800)
-                    logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
+                    logger.info("Click %s @ %s" % (point2str(530, 800), "SKIP"))
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=5,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(
+                    CONFIRM_B, offset=(30, 30), interval=5, static=False
+                ):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if self.appear(RESET_TIME_IN, offset=(30, 30), static=False) \
-                        and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False) \
-                        and confirm_timer.reached():
+                if (
+                    self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
+                    and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                    and confirm_timer.reached()
+                ):
                     return
 
 
 class ImprovementEvent(EventBase):
     def run(self, skip_first_screenshot=True):
-        logger.hr('Start an improvement event', 3)
+        logger.hr("Start an improvement event", 3)
         confirm_timer = Timer(2, count=3).start()
         click_timer = Timer(0.3)
         click_timer_2 = Timer(5)
@@ -283,8 +329,9 @@ class ImprovementEvent(EventBase):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(IMPROVEMENT_EVENT_CHECK, offset=(30, 30), interval=5,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                IMPROVEMENT_EVENT_CHECK, offset=(30, 30), interval=5, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -294,20 +341,22 @@ class ImprovementEvent(EventBase):
                 click_timer.reset()
                 break
 
-            if click_timer.reached() and self.appear_then_click(IMPROVEMENT_OPTION_CHECK, offset=(30, 30), interval=5,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                IMPROVEMENT_OPTION_CHECK, offset=(30, 30), interval=5, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                CONFIRM_B, offset=(30, 30), interval=3, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
             if self.appear(RANDOM_EVENT_CHOOSE_EFFECT, offset=(30, 30), static=False):
-                logger.hr('Choose an effect', 3)
+                logger.hr("Choose an effect", 3)
                 skip_first_screenshot = True
                 while 1:
                     if skip_first_screenshot:
@@ -315,31 +364,38 @@ class ImprovementEvent(EventBase):
                     else:
                         self.device.screenshot()
 
-                    if self.appear(RANDOM_EVENT_CHOOSE_EFFECT, offset=(30, 30), static=False) \
-                            and click_timer_2.reached():
+                    if (
+                        self.appear(
+                            RANDOM_EVENT_CHOOSE_EFFECT, offset=(30, 30), static=False
+                        )
+                        and click_timer_2.reached()
+                    ):
                         button = self.get_effect()
                         confirm_timer.reset()
                         click_timer_2.reset()
                         self.device.click_minitouch(*button)
-                        logger.info(
-                            'Click %s @ %s' % (point2str(*button), 'EFFECT')
-                        )
+                        logger.info("Click %s @ %s" % (point2str(*button), "EFFECT"))
                         self.device.sleep(0.6)
 
-                    if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=2,
-                                                                        static=False):
+                    if click_timer.reached() and self.appear_then_click(
+                        CONFIRM_B, offset=(30, 30), interval=2, static=False
+                    ):
                         confirm_timer.reset()
                         click_timer.reset()
                         continue
 
-                    if self.appear(RESET_TIME_IN, offset=(30, 30), static=False) \
-                            and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False) \
-                            and confirm_timer.reached():
+                    if (
+                        self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
+                        and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                        and confirm_timer.reached()
+                    ):
                         return
 
-            if self.appear(RESET_TIME_IN, offset=(30, 30), static=False) \
-                    and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False) \
-                    and confirm_timer.reached():
+            if (
+                self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
+                and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                and confirm_timer.reached()
+            ):
                 return
 
         if self.appear(NOT_CHOOSE, offset=(30, 30), static=False):
@@ -349,28 +405,33 @@ class ImprovementEvent(EventBase):
                 else:
                     self.device.screenshot()
 
-                if click_timer.reached() and self.appear_then_click(NOT_CHOOSE, offset=(30, 30), interval=5,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(
+                    NOT_CHOOSE, offset=(30, 30), interval=5, static=False
+                ):
                     self.device.sleep(0.8)
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear(NOTHING, offset=(30, 30), interval=5,
-                                                         static=False):
+                if click_timer.reached() and self.appear(
+                    NOTHING, offset=(30, 30), interval=5, static=False
+                ):
                     self.device.click_minitouch(530, 800)
-                    logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
+                    logger.info("Click %s @ %s" % (point2str(530, 800), "SKIP"))
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=5,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(
+                    CONFIRM_B, offset=(30, 30), interval=5, static=False
+                ):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if self.appear(RESET_TIME_IN, offset=(30, 30), static=False) \
-                        and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False) \
-                        and confirm_timer.reached():
+                if (
+                    self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
+                    and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                    and confirm_timer.reached()
+                ):
                     return

@@ -16,7 +16,15 @@ if TYPE_CHECKING:
 class Ocr:
     SHOW_LOG = True
 
-    def __init__(self, buttons, lang='nikke', letter=(255, 255, 255), threshold=128, alphabet=None, name=None):
+    def __init__(
+        self,
+        buttons,
+        lang="nikke",
+        letter=(255, 255, 255),
+        threshold=128,
+        alphabet=None,
+        name=None,
+    ):
         """
         Args:
             buttons (Button, tuple, list[Button], list[tuple]): OCR area.
@@ -41,7 +49,9 @@ class Ocr:
     def buttons(self):
         buttons = self._buttons
         buttons = buttons if isinstance(buttons, list) else [buttons]
-        buttons = [button.area if isinstance(button, Button) else button for button in buttons]
+        buttons = [
+            button.area if isinstance(button, Button) else button for button in buttons
+        ]
         return buttons
 
     @buttons.setter
@@ -72,11 +82,11 @@ class Ocr:
 
     def ocr(self, image, direct_ocr=False):
         """
-            Args:
-                image (np.ndarray, list[np.ndarray]):
-                direct_ocr (bool): True to skip preprocess.
+        Args:
+            image (np.ndarray, list[np.ndarray]):
+            direct_ocr (bool): True to skip preprocess.
 
-            Returns:
+        Returns:
 
         """
         start_time = time.time()
@@ -89,14 +99,16 @@ class Ocr:
             image_list = [crop(image, area) for area in self.buttons]
 
         result_list = self.cnocr.ocr_for_single_lines(image_list)
-        result_list = [''.join(result.get('text', None)) for result in result_list]
+        result_list = ["".join(result.get("text", None)) for result in result_list]
         result_list = [self.after_process(result) for result in result_list]
 
         if len(self.buttons) == 1:
             result_list = result_list[0]
         if Ocr.SHOW_LOG:
-            logger.attr(name='%s %ss' % (self.name, float2str(time.time() - start_time)),
-                        text=str(result_list))
+            logger.attr(
+                name="%s %ss" % (self.name, float2str(time.time() - start_time)),
+                text=str(result_list),
+            )
 
         return result_list
 
@@ -107,15 +119,29 @@ class Digit(Ocr):
     Method ocr() returns int, or a list of int.
     """
 
-    def __init__(self, buttons, lang='nikke', letter=(255, 255, 255), threshold=128, alphabet='0123456789IDSBO',
-                 name=None):
-        super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
+    def __init__(
+        self,
+        buttons,
+        lang="nikke",
+        letter=(255, 255, 255),
+        threshold=128,
+        alphabet="0123456789IDSBO",
+        name=None,
+    ):
+        super().__init__(
+            buttons,
+            lang=lang,
+            letter=letter,
+            threshold=threshold,
+            alphabet=alphabet,
+            name=name,
+        )
 
     def after_process(self, result):
         result = super().after_process(result)
-        result = result.replace('I', '1').replace('D', '0').replace('S', '5')
-        result = result.replace('B', '8')
-        result = result.replace('O', '0')
+        result = result.replace("I", "1").replace("D", "0").replace("S", "5")
+        result = result.replace("B", "8")
+        result = result.replace("O", "0")
 
         prev = result
         result = int(result) if result else 0
@@ -126,13 +152,27 @@ class Digit(Ocr):
 
 
 class DigitCounter(Ocr):
-    def __init__(self, buttons, lang='nikke', letter=(255, 255, 255), threshold=128, alphabet='0123456789/IDS',
-                 name=None):
-        super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
+    def __init__(
+        self,
+        buttons,
+        lang="nikke",
+        letter=(255, 255, 255),
+        threshold=128,
+        alphabet="0123456789/IDS",
+        name=None,
+    ):
+        super().__init__(
+            buttons,
+            lang=lang,
+            letter=letter,
+            threshold=threshold,
+            alphabet=alphabet,
+            name=name,
+        )
 
     def after_process(self, result):
         result = super().after_process(result)
-        result = result.replace('I', '1').replace('D', '0').replace('S', '5')
+        result = result.replace("I", "1").replace("D", "0").replace("S", "5")
         return result
 
     def ocr(self, image, direct_ocr=False):
@@ -150,32 +190,32 @@ class DigitCounter(Ocr):
         result_list = super().ocr(image, direct_ocr=direct_ocr)
         result = result_list[0] if isinstance(result_list, list) else result_list
 
-        result = re.search(r'(\d+)/(\d+)', result)
+        result = re.search(r"(\d+)/(\d+)", result)
         if result:
             result = [int(s) for s in result.groups()]
             current, total = int(result[0]), int(result[1])
             current = min(current, total)
             return current, total - current, total
         else:
-            logger.warning(f'Unexpected ocr result: {result_list}')
+            logger.warning(f"Unexpected ocr result: {result_list}")
             return 0, 0, 0
 
 
 import os
 import cv2
 
-if __name__ == '__main__':
-    os.chdir(os.path.join(os.path.dirname(__file__), '../../'))
+if __name__ == "__main__":
+    os.chdir(os.path.join(os.path.dirname(__file__), "../../"))
 
     # ocr = CnOcr(rec_model_name='densenet_lite_136-gru', rec_model_fp=f'./bin/cnocr_models/nikke/1111.ckpt',
     #             rec_model_backend='pytorch')
     #
-    name = 'text290'
+    name = "text290"
     # img = cv2.imread(f'./pic/{name}.png')
 
     ocr = OCR_MODEL.nikke.ocr
     # img = cv2.imread('./pic/t2b.png')
-    img = cv2.imread('./pic/55566_c.png')
+    img = cv2.imread("./pic/55566_c.png")
     # img = cv2.imread('./pic/text393_2.png')
     print(ocr(img))
 

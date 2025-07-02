@@ -27,7 +27,7 @@ class RookieArena(UI, ArenaBase):
     @cached_property
     def button(self):
         return [(590, 730), (590, 900), (590, 1100)]
-    
+
     @cached_property
     def coordinate_config(self) -> list[dict]:
         """
@@ -38,29 +38,29 @@ class RookieArena(UI, ArenaBase):
                 "Power": (395, 650, 470, 675),
                 "Ranking": (85, 765, 120, 790),
                 "CommanderLevel": (74, 733, 116, 750),
-                "SynchroLevel": (308, 779, 329, 797)
+                "SynchroLevel": (308, 779, 329, 797),
             },
             {
                 "Power": (395, 830, 470, 855),
                 "Ranking": (85, 945, 120, 970),
                 "CommanderLevel": (74, 911, 116, 928),
-                "SynchroLevel": (308, 957, 329, 976)
+                "SynchroLevel": (308, 957, 329, 976),
             },
             {
                 "Power": (395, 1010, 470, 1035),
                 "Ranking": (85, 1125, 120, 1150),
                 "CommanderLevel": (74, 1089, 116, 1106),
-                "SynchroLevel": (308, 1137, 329, 1155)
-            }
+                "SynchroLevel": (308, 1137, 329, 1155),
+            },
         ]
-    
+
     FIELD_LETTERS = {
         "Power": (107, 107, 107),
         "Ranking": (107, 107, 107),
         "CommanderLevel": (222, 222, 222),
-        "SynchroLevel": (255, 255, 255)
+        "SynchroLevel": (255, 255, 255),
     }
-    
+
     @property
     def free_opportunity_remain(self) -> bool:
         result = FREE_OPPORTUNITY_CHECK.appear_on(self.device.image, 20)
@@ -102,7 +102,7 @@ class RookieArena(UI, ArenaBase):
         r = list(map(lambda x: int(x[0]["text"]), r))
         logger.attr(
             name="%s %ss"
-                 % ("COMPETITOR_POWER_LIST", float2str(time.time() - start_time)),
+            % ("COMPETITOR_POWER_LIST", float2str(time.time() - start_time)),
             text=str(r),
         )
 
@@ -136,18 +136,18 @@ class RookieArena(UI, ArenaBase):
                 self.device.screenshot()
 
             if (
-                    not already_start
-                    and click_timer.reached()
-                    and click_timer_2.reached()
-                    and self.free_opportunity_remain
-            ):                
+                not already_start
+                and click_timer.reached()
+                and click_timer_2.reached()
+                and self.free_opportunity_remain
+            ):
                 # 根据策略选择
-                opponent_id =  3
+                opponent_id = 3
                 if self.config.OpponentSelection_Enable:
                     opponent_id = self.select_strategy(False)["id"]
-                opponent =  self.button[opponent_id-1]
-                logger.info(f"Secect opponent {opponent_id}")       
-                
+                opponent = self.button[opponent_id - 1]
+                logger.info(f"Secect opponent {opponent_id}")
+
                 self.device.click_minitouch(opponent[0], opponent[1])
                 logger.info(
                     "Click %s @ %s"
@@ -158,24 +158,26 @@ class RookieArena(UI, ArenaBase):
                 click_timer_2.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(SKIP, offset=(5, 5), interval=1):
+            if click_timer.reached() and self.appear_then_click(
+                SKIP, offset=(5, 5), interval=1
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
             if (
-                    not already_start
-                    and click_timer.reached()
-                    and self.appear_then_click(
-                INTO_COMPETITION, offset=(30, 30), interval=5, static=False
-            )
+                not already_start
+                and click_timer.reached()
+                and self.appear_then_click(
+                    INTO_COMPETITION, offset=(30, 30), interval=5, static=False
+                )
             ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
             if click_timer.reached() and self.appear(
-                    END_COMPETITION, offset=5, interval=2
+                END_COMPETITION, offset=5, interval=2
             ):
                 logger.info("Click %s @ %s" % (point2str(100, 100), "END_COMPETITION"))
                 self.device.handle_control_check(END_COMPETITION)
@@ -186,9 +188,9 @@ class RookieArena(UI, ArenaBase):
                 continue
 
             if (
-                    already_start
-                    and self.appear(ROOKIE_ARENA_CHECK, offset=(10, 10))
-                    and confirm_timer.reached()
+                already_start
+                and self.appear(ROOKIE_ARENA_CHECK, offset=(10, 10))
+                and confirm_timer.reached()
             ):
                 break
 
@@ -210,15 +212,15 @@ class RookieArena(UI, ArenaBase):
                 raise RookieArenaIsUnavailable
 
             if click_timer.reached() and self.appear_then_click(
-                    ARENA_GOTO_ROOKIE_ARENA, offset=(30, 30), interval=5, static=False
+                ARENA_GOTO_ROOKIE_ARENA, offset=(30, 30), interval=5, static=False
             ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
             if (
-                    self.appear(ROOKIE_ARENA_CHECK, offset=(10, 10), static=False)
-                    and confirm_timer.reached()
+                self.appear(ROOKIE_ARENA_CHECK, offset=(10, 10), static=False)
+                and confirm_timer.reached()
             ):
                 break
 

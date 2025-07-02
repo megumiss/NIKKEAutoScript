@@ -8,7 +8,7 @@ from module.ui.ui import UI
 
 class Mailbox(UI):
     def check(self, skip_first_screenshot=True):
-        logger.hr('Check the mailbox')
+        logger.hr("Check the mailbox")
         confirm_timer = Timer(3, count=3).start()
         click_timer = Timer(0.3)
         while 1:
@@ -28,7 +28,10 @@ class Mailbox(UI):
                 click_timer.reset()
                 continue
 
-            if self.appear(page_mailbox.check_button, offset=(10, 10)) and confirm_timer.reached():
+            if (
+                self.appear(page_mailbox.check_button, offset=(10, 10))
+                and confirm_timer.reached()
+            ):
                 break
 
     def run(self):
@@ -37,5 +40,5 @@ class Mailbox(UI):
             self.ui_ensure(page_mailbox)
             self.check()
         else:
-            logger.info('The mailbox has no letters that need to be checked.')
+            logger.info("The mailbox has no letters that need to be checked.")
         self.config.task_delay(server_update=True)

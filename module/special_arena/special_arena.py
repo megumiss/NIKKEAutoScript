@@ -21,7 +21,7 @@ class SpecialArena(UI, ArenaBase):
     @cached_property
     def button(self):
         return [(590, 800), (590, 950), (590, 1100)]
-    
+
     @cached_property
     def coordinate_config(self) -> list[dict]:
         """
@@ -32,29 +32,29 @@ class SpecialArena(UI, ArenaBase):
                 "Power": (376, 736, 455, 767),
                 "Ranking": (70, 830, 112, 855),
                 "CommanderLevel": (72, 801, 111, 817),
-                "SynchroLevel": (392, 836, 414, 855)
+                "SynchroLevel": (392, 836, 414, 855),
             },
             {
                 "Power": (376, 886, 455, 917),
                 "Ranking": (70, 980, 112, 1005),
                 "CommanderLevel": (72, 951, 111, 967),
-                "SynchroLevel": (392, 986, 414, 1005)
+                "SynchroLevel": (392, 986, 414, 1005),
             },
             {
                 "Power": (376, 1036, 455, 1067),
                 "Ranking": (70, 1130, 112, 1155),
                 "CommanderLevel": (72, 1101, 111, 1117),
-                "SynchroLevel": (392, 1136, 414, 1155)
-            }
+                "SynchroLevel": (392, 1136, 414, 1155),
+            },
         ]
-    
+
     FIELD_LETTERS = {
         "Power": (107, 107, 107),
         "Ranking": (107, 107, 107),
         "CommanderLevel": (222, 222, 222),
-        "SynchroLevel": (255, 255, 255)
+        "SynchroLevel": (255, 255, 255),
     }
-    
+
     @property
     def free_opportunity_remain(self) -> bool:
         # 免费票
@@ -92,18 +92,18 @@ class SpecialArena(UI, ArenaBase):
                 self.device.screenshot()
 
             if (
-                    not already_start
-                    and click_timer.reached()
-                    and click_timer_2.reached()
-                    and self.free_opportunity_remain
+                not already_start
+                and click_timer.reached()
+                and click_timer_2.reached()
+                and self.free_opportunity_remain
             ):
                 # 根据策略选择
-                opponent_id =  3
+                opponent_id = 3
                 if self.config.OpponentSelection_Enable:
                     opponent_id = self.select_strategy(True)["id"]
-                opponent =  self.button[opponent_id-1]
+                opponent = self.button[opponent_id - 1]
                 logger.info(f"Secect opponent {opponent_id}")
-                
+
                 self.device.click_minitouch(opponent[0], opponent[1])
                 logger.info(
                     "Click %s @ %s"
@@ -114,24 +114,26 @@ class SpecialArena(UI, ArenaBase):
                 click_timer_2.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(SKIP, offset=(5, 5), interval=1):
+            if click_timer.reached() and self.appear_then_click(
+                SKIP, offset=(5, 5), interval=1
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
             if (
-                    not already_start
-                    and click_timer.reached()
-                    and self.appear_then_click(
-                INTO_COMPETITION, offset=(30, 30), interval=5, static=False
-            )
+                not already_start
+                and click_timer.reached()
+                and self.appear_then_click(
+                    INTO_COMPETITION, offset=(30, 30), interval=5, static=False
+                )
             ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
             if click_timer.reached() and self.appear(
-                    END_COMPETITION, offset=5, interval=2
+                END_COMPETITION, offset=5, interval=2
             ):
                 logger.info("Click %s @ %s" % (point2str(100, 100), "END_COMPETITION"))
                 self.device.handle_control_check(END_COMPETITION)
@@ -142,9 +144,9 @@ class SpecialArena(UI, ArenaBase):
                 continue
 
             if (
-                    already_start
-                    and self.appear(SPECIAL_ARENA_CHECK, offset=(10, 10), static=False)
-                    and confirm_timer.reached()
+                already_start
+                and self.appear(SPECIAL_ARENA_CHECK, offset=(10, 10), static=False)
+                and confirm_timer.reached()
             ):
                 break
 
@@ -166,18 +168,18 @@ class SpecialArena(UI, ArenaBase):
                 raise SpecialArenaIsUnavailable
 
             if click_timer.reached() and self.appear_then_click(
-                    ARENA_GOTO_SPECIAL_ARENA, offset=(30, 30), interval=5, static=False
+                ARENA_GOTO_SPECIAL_ARENA, offset=(30, 30), interval=5, static=False
             ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
-            
+
             if (
-                    self.appear(SPECIAL_ARENA_CHECK, offset=(10, 10), static=False)
-                    and confirm_timer.reached()
+                self.appear(SPECIAL_ARENA_CHECK, offset=(10, 10), static=False)
+                and confirm_timer.reached()
             ):
                 break
-        
+
         if self.free_opportunity_remain:
             self.start_competition()
         else:

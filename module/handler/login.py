@@ -13,7 +13,7 @@ class LoginHandler(UI):
             in: Any page
             out: page_main
         """
-        logger.hr('App login')
+        logger.hr("App login")
 
         confirm_timer = Timer(5, count=6).start()
         click_timer = Timer(0.3)
@@ -31,27 +31,28 @@ class LoginHandler(UI):
             # 当 MAIN_CHECK 累计出现6次，并且保持在5秒以上
             if self.appear(MAIN_CHECK, offset=(30, 30)):
                 if confirm_timer.reached():
-                    logger.info('Login to main confirm')
+                    logger.info("Login to main confirm")
                     break
             else:
                 confirm_timer.reset()
-                
-            if self.appear_text('将下载'):
-                self.appear_text_then_click('确认')
+
+            if self.appear_text("将下载"):
+                self.appear_text_then_click("确认")
                 continue
 
-            if self.appear_text('正在下载游戏执行所需'):
+            if self.appear_text("正在下载游戏执行所需"):
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
                 self.device.sleep(20)
                 continue
 
             # TOUCH TO CONTINUE
-            if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) \
-                    or self.appear(LOGIN_CHECK_B, offset=(30, 30), interval=5):
+            if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) or self.appear(
+                LOGIN_CHECK_B, offset=(30, 30), interval=5
+            ):
                 self.device.click(LOGIN_CHECK)
                 if not login_success:
-                    logger.info('Login success')
+                    logger.info("Login success")
                     login_success = True
 
             # 公告
@@ -89,24 +90,26 @@ class LoginHandler(UI):
             if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
-            
-             # 屑芙蒂5x5补给品
+
+            # 屑芙蒂5x5补给品
             if click_timer.reached() and self.handle_shifty_supplies():
                 click_timer.reset()
                 continue
 
             # 回到主页
-            if click_timer.reached() and self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=5):
+            if click_timer.reached() and self.appear_then_click(
+                GOTO_MAIN, offset=(30, 30), interval=5
+            ):
                 click_timer.reset()
                 continue
 
     def handle_app_login(self) -> bool:
         """
-            Returns:
-                bool: 是否登录成功
+        Returns:
+            bool: 是否登录成功
 
-            Raises:
-                RequestHumanTakeover: 当登录失败次数大于3次时
+        Raises:
+            RequestHumanTakeover: 当登录失败次数大于3次时
         """
         for _ in range(3):
             self.device.stuck_record_clear()
@@ -120,21 +123,23 @@ class LoginHandler(UI):
                 self.device.app_start()
                 continue
 
-        logger.critical('Login failed more than 3')
-        logger.critical('NIKKE server may be under maintenance, or you may lost network connection')
+        logger.critical("Login failed more than 3")
+        logger.critical(
+            "NIKKE server may be under maintenance, or you may lost network connection"
+        )
         raise RequestHumanTakeover
 
     def app_start(self):
-        logger.hr('App start')
+        logger.hr("App start")
         self.device.app_start()
         self.handle_app_login()
 
     def app_stop(self):
-        logger.hr('App stop')
+        logger.hr("App stop")
         self.device.app_stop()
 
     def app_restart(self):
-        logger.hr('App restart')
+        logger.hr("App restart")
         self.device.app_stop()
         self.device.app_start()
         self.handle_app_login()
