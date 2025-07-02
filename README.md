@@ -33,6 +33,7 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 其他平台/方式的脚本：
 - [DoroHelper](https://github.com/1204244136/DoroHelper)（PC端+AutoHotkey）
 - [autoxjs-scripts](https://github.com/Zebartin/autoxjs-scripts)（安卓端+autojs）
+- [MNA](https://github.com/MAA-Nikke/MNA)（安卓端+MaaFramework）
 
 其他工具：
 - [Nikke-CDK-Tool](https://github.com/Small-tailqwq/Nikke-CDK-Tool)（CDK收集/兑换）
@@ -123,12 +124,17 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 ---
 
 ### 推荐画面设置
-![推荐画面设置](https://s2.loli.net/2024/05/06/Rjcx7EwWXlbKBot.png)
+
+![推荐画面设置](https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/setting.png)
 
 ---
 
-### 预览
+### GUI预览
+
+![GUI预览](https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/gui.png)
 
 ---
 
-![](https://profile-counter.glitch.me/megumiss-NIKKEAutoScript/count.svg)
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=megumiss/NIKKEAutoScript&type=Timeline)](https://www.star-history.com/#megumiss/NIKKEAutoScript&Timeline)
