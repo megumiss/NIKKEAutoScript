@@ -1,21 +1,21 @@
 from module.base.decorator import Config
 from module.base.timer import Timer
 from module.base.utils import crop
-from module.logger import logger
-from module.simulation_room.assets import AUTO_SHOOT, AUTO_BURST, END_FIGHTING
 from module.coop.assets import *
-from module.ui.page import page_main, page_event
-from module.ui.ui import UI
-from module.ocr.ocr import Digit
 
 # 活动引用
 from module.event.event_20250612.assets import (
-    EVENT_CHECK,
     COOP_ENTER,
-    COOP_SELECT_CHECK,
-    TEMPLATE_COOP_ENABLE,
     COOP_LOCK,
+    COOP_SELECT_CHECK,
+    EVENT_CHECK,
+    TEMPLATE_COOP_ENABLE,
 )
+from module.logger import logger
+from module.ocr.ocr import Digit
+from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
+from module.ui.page import page_event, page_main
+from module.ui.ui import UI
 
 
 class NoOpportunityRemain(Exception):
@@ -31,10 +31,10 @@ class Coop(UI):
     def free_remain(self) -> int:
         FREE_REMAIN = Digit(
             [FREE_OPPORTUNITY_CHECK.area],
-            name="FREE_REMAIN",
+            name='FREE_REMAIN',
             letter=(247, 247, 247),
             threshold=128,
-            lang="cnocr_num",
+            lang='cnocr_num',
         )
         return int(FREE_REMAIN.ocr(self.device.image))
 
@@ -42,20 +42,20 @@ class Coop(UI):
     def free_opportunity_remain(self) -> bool:
         # result = self.appear(FREE_OPPORTUNITY_CHECK, offset=10, threshold=0.8)
         if self.free_remain:
-            logger.info(f"[Free opportunities remain] {self.free_remain}")
+            logger.info(f'[Free opportunities remain] {self.free_remain}')
         return self.free_remain
 
     @property
     def dateline(self) -> bool:
         result = self.appear(DATELINE_CHECK, offset=10)
         if result:
-            logger.info("[Coop has expired]")
+            logger.info('[Coop has expired]')
         return result
 
     @Config.when(EVENT_COOP=False)
     def ensure_into_coop(self, skip_first_screenshot=True):
         """普通协同，从banner进入作战"""
-        logger.hr("COOP START")
+        logger.hr('COOP START')
         coop_enter = False
         while 1:
             if skip_first_screenshot:
@@ -78,16 +78,12 @@ class Coop(UI):
 
                     tmp_image = self.device.image
                     # 滑动到下一个banner
-                    self.ensure_sroll(
-                        (260, 150), (30, 150), speed=35, count=1, delay=0.5
-                    )
+                    self.ensure_sroll((260, 150), (30, 150), speed=35, count=1, delay=0.5)
                     # 比较banner是否变化
                     while 1:
                         self.device.screenshot()
 
-                        banner = Button(
-                            EVENT_BANNER.area, None, button=EVENT_BANNER.area
-                        )
+                        banner = Button(EVENT_BANNER.area, None, button=EVENT_BANNER.area)
                         banner._match_init = True
                         banner.image = crop(tmp_image, EVENT_BANNER.area)
                         if self.appear(banner, offset=10, threshold=0.8):
@@ -97,11 +93,11 @@ class Coop(UI):
 
                     # 回到第一个banner
                     if self.appear(banner_first, offset=10, threshold=0.8):
-                        logger.info("Not find coop in banner")
+                        logger.info('Not find coop in banner')
                         raise CoopIsUnavailable
 
                     if self.appear_then_click(COOP_BANNER_CHECK, offset=10, interval=2):
-                        logger.info("Find coop in banner")
+                        logger.info('Find coop in banner')
                         coop_enter = True
                         break
 
@@ -111,12 +107,12 @@ class Coop(UI):
         if self.free_opportunity_remain and not self.dateline:
             self.start_coop()
         else:
-            logger.info("There are no free opportunities")
+            logger.info('There are no free opportunities')
 
     @Config.when(EVENT_COOP=True)
     def ensure_into_coop(self, skip_first_screenshot=True):
         """大型活动，从活动页面进入作战页面"""
-        logger.hr("EVENT COOP START")
+        logger.hr('EVENT COOP START')
         click_timer = Timer(0.3)
 
         # 走到协同作战
@@ -137,7 +133,7 @@ class Coop(UI):
 
             # 协同未在开启时间
             if click_timer.reached() and self.appear(COOP_LOCK, offset=10):
-                logger.info("Coop is not enabled")
+                logger.info('Coop is not enabled')
                 raise CoopIsUnavailable
 
             # 协同选择
@@ -150,9 +146,9 @@ class Coop(UI):
                 break
 
         # 检查是否有开启的协同
-        coops = TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name="COOP_ENABLE")
+        coops = TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
         if not coops and not direct:
-            logger.info("Not find coop in event")
+            logger.info('Not find coop in event')
             raise CoopIsUnavailable
 
         # 进入协同作战界面
@@ -163,9 +159,7 @@ class Coop(UI):
                 self.device.screenshot()
 
             # 选择协同
-            if click_timer.reached() and self.appear(
-                COOP_SELECT_CHECK, offset=10, interval=5
-            ):
+            if click_timer.reached() and self.appear(COOP_SELECT_CHECK, offset=10, interval=5):
                 self.device.click(coops[0])
                 click_timer.reset()
                 continue
@@ -177,10 +171,10 @@ class Coop(UI):
         if self.free_opportunity_remain and not self.dateline:
             self.start_coop()
         else:
-            logger.info("There are no free opportunities")
+            logger.info('There are no free opportunities')
 
     def start_coop(self, skip_first_screenshot=True):
-        logger.hr("Start a coop")
+        logger.hr('Start a coop')
         click_timer = Timer(0.3)
 
         while 1:
@@ -193,9 +187,7 @@ class Coop(UI):
             if (
                 click_timer.reached()
                 and self.appear(SECECT_DIFFICULTY, offset=10)
-                and self.appear_then_click(
-                    DIFFICULTY_NORMAL_NOT_CHECKED, offset=10, interval=1
-                )
+                and self.appear_then_click(DIFFICULTY_NORMAL_NOT_CHECKED, offset=10, interval=1)
             ):
                 click_timer.reset()
                 continue
@@ -215,18 +207,14 @@ class Coop(UI):
                 click_timer.reached()
                 and self.appear(COOP_ROLE_CHECK, offset=10)
                 and not self.appear(COOP_CANCEL, offset=10)
-                and self.appear_then_click(
-                    COOP_START, offset=10, interval=10, threshold=0.3
-                )
+                and self.appear_then_click(COOP_START, offset=10, interval=10, threshold=0.3)
             ):
                 self.device.sleep(1)
                 click_timer.reset()
                 continue
 
             # 接受
-            if click_timer.reached() and self.appear_then_click(
-                COOP_ACCEPT, offset=30, interval=1
-            ):
+            if click_timer.reached() and self.appear_then_click(COOP_ACCEPT, offset=30, interval=1):
                 click_timer.reset()
                 continue
 
@@ -237,28 +225,20 @@ class Coop(UI):
             #     continue
 
             # 准备
-            if click_timer.reached() and self.appear_then_click(
-                COOP_PREPARE, offset=10, interval=1
-            ):
+            if click_timer.reached() and self.appear_then_click(COOP_PREPARE, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(
-                AUTO_SHOOT, offset=10, interval=5, threshold=0.8
-            ):
+            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=10, interval=5, threshold=0.8):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(
-                AUTO_BURST, offset=10, interval=5, threshold=0.8
-            ):
+            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=10, interval=5, threshold=0.8):
                 click_timer.reset()
                 continue
 
             # 结束
-            if click_timer.reached() and self.appear_then_click(
-                END_FIGHTING, offset=10, interval=1
-            ):
+            if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
                 click_timer.reset()
                 break
 
@@ -277,7 +257,7 @@ class Coop(UI):
             self.device.stuck_record_clear()
             return self.start_coop()
         else:
-            logger.info("There are no free opportunities")
+            logger.info('There are no free opportunities')
             raise NoOpportunityRemain
 
     def run(self):

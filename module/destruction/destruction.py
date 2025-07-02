@@ -8,7 +8,7 @@ from module.ui.ui import UI
 
 class Destruction(UI):
     def destroy(self, skip_first_screenshot=True):
-        logger.hr("Destruction")
+        logger.hr('Destruction')
         confirm_timer = Timer(3, count=3).start()
         click_timer = Timer(0.3)
         while 1:
@@ -17,9 +17,7 @@ class Destruction(UI):
             else:
                 self.device.screenshot()
 
-            if self.appear_then_click(
-                DESTROY, offset=(30, 30), interval=3, static=False
-            ):
+            if self.appear_then_click(DESTROY, offset=(30, 30), interval=3, static=False):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -42,7 +40,7 @@ class Destruction(UI):
             if self.appear(DESTROY_CHECK, offset=(10, 10)) and confirm_timer.reached():
                 break
 
-        logger.info("Destruction has finished")
+        logger.info('Destruction has finished')
         return True
 
     def run(self):

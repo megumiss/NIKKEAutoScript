@@ -252,15 +252,15 @@ class ConfigUpdater:
             data = deep_get(self.args, keys=keys, default={})
             # 用户配置
             value = deep_get(old, keys=keys, default=data['value'])
-            '''
+            """
                 当读取模式为模板、用户配置没有值、任务的type字段为lock、display字段为hide时
                 将读取模板的值
-            '''
+            """
             if is_template or value is None or value == '' or data['type'] == 'lock' or data.get('display') == 'hide':
                 value = data['value']
-            '''
+            """
                 将值转为不同类型
-            '''
+            """
             value = parse_value(value, data=data)
             deep_set(new, keys=keys, value=value)
 

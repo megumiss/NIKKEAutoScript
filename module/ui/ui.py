@@ -7,31 +7,31 @@ from module.logger import logger
 from module.ui.assets import GOTO_MAIN
 from module.ui.page import (
     Page,
-    page_unknown,
-    page_main,
-    page_reward,
-    page_destroy,
-    page_friend,
-    page_daily,
-    page_shop,
-    page_cash_shop,
-    page_team,
-    page_inventory,
-    page_pass,
-    page_conversation,
-    page_ark,
-    page_tribe_tower,
-    page_simulation_room,
     page_arena,
-    page_rookie_arena,
-    page_event,
-    page_special_arena,
-    page_outpost,
+    page_ark,
+    page_cash_shop,
     page_commission,
+    page_conversation,
+    page_daily,
+    page_destroy,
+    page_event,
+    page_friend,
     page_interception,
-    page_special_interception,
+    page_inventory,
     page_mailbox,
+    page_main,
+    page_outpost,
+    page_pass,
     page_recruit,
+    page_reward,
+    page_rookie_arena,
+    page_shop,
+    page_simulation_room,
+    page_special_arena,
+    page_special_interception,
+    page_team,
+    page_tribe_tower,
+    page_unknown,
 )
 
 
@@ -72,12 +72,12 @@ class UI(InfoHandler):
         return self.appear(page.check_button, offset=(30, 30))
 
     def ui_get_current_page(self, skip_first_screenshot=True):
-        logger.info("UI get current page")
+        logger.info('UI get current page')
 
         @run_once
         def app_check():
             if not self.device.app_is_running():
-                raise GameNotRunningError("Game not running")
+                raise GameNotRunningError('Game not running')
 
         @run_once
         def rotation_check():
@@ -89,7 +89,7 @@ class UI(InfoHandler):
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
-                if not hasattr(self.device, "image") or self.device.image is None:
+                if not hasattr(self.device, 'image') or self.device.image is None:
                     self.device.screenshot()
             else:
                 self.device.screenshot()
@@ -103,15 +103,14 @@ class UI(InfoHandler):
                 if page.check_button is None:
                     continue
                 if self.ui_page_appear(page=page):
-                    logger.attr("UI", page.name)
+                    logger.attr('UI', page.name)
                     self.ui_current = page
                     return page
 
             # Unknown page but able to handle
-            logger.info("Unknown ui page")
+            logger.info('Unknown ui page')
             if click_timer.reached() and (
-                self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2)
-                or self.ui_additional()
+                self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2) or self.ui_additional()
             ):
                 timeout.reset()
                 click_timer.reset()
@@ -121,26 +120,20 @@ class UI(InfoHandler):
             rotation_check()
 
         # Unknown page, need manual switching
-        logger.warning("Unknown ui page")
+        logger.warning('Unknown ui page')
+        logger.attr('EMULATOR__SCREENSHOT_METHOD', self.config.Emulator_ScreenshotMethod)
+        logger.attr('EMULATOR__CONTROL_METHOD', self.config.Emulator_ControlMethod)
         logger.attr(
-            "EMULATOR__SCREENSHOT_METHOD", self.config.Emulator_ScreenshotMethod
+            'SERVER',
+            'intl' if 'proximabeta' in self.config.Emulator_PackageName else 'tw',
         )
-        logger.attr("EMULATOR__CONTROL_METHOD", self.config.Emulator_ControlMethod)
-        logger.attr(
-            "SERVER",
-            "intl" if "proximabeta" in self.config.Emulator_PackageName else "tw",
-        )
-        logger.warning("Starting from current page is not supported")
-        logger.warning(f"Supported page: {[str(page) for page in self.ui_pages]}")
-        logger.warning(
-            'Supported page: Any page with a "HOME" button on the bottom-left'
-        )
-        logger.critical("Please switch to a supported page before starting NKAS")
+        logger.warning('Starting from current page is not supported')
+        logger.warning(f'Supported page: {[str(page) for page in self.ui_pages]}')
+        logger.warning('Supported page: Any page with a "HOME" button on the bottom-left')
+        logger.critical('Please switch to a supported page before starting NKAS')
         raise GamePageUnknownError
 
-    def ui_goto(
-        self, destination, offset=(30, 30), confirm_wait=0, skip_first_screenshot=True
-    ):
+    def ui_goto(self, destination, offset=(30, 30), confirm_wait=0, skip_first_screenshot=True):
         """
         Args:
             destination (Page):
@@ -179,7 +172,7 @@ class UI(InfoHandler):
 
             visited = new
 
-        logger.hr(f"UI goto {destination}")
+        logger.hr(f'UI goto {destination}')
         confirm_timer = Timer(confirm_wait, count=int(confirm_wait // 0.5)).start()
 
         while 1:
@@ -192,7 +185,7 @@ class UI(InfoHandler):
             # Destination page
             if self.appear(destination.check_button, offset=offset):
                 if confirm_timer.reached():
-                    logger.info(f"Page arrive: {destination}")
+                    logger.info(f'Page arrive: {destination}')
                     break
             else:
                 confirm_timer.reset()
@@ -203,13 +196,12 @@ class UI(InfoHandler):
             # Other pages
             clicked = False
             for page in visited:
-
                 # 跳过 page_unknown 和 destination
                 if not page.parent or not page.check_button:
                     continue
 
                 if self.appear(page.check_button, offset=offset, interval=4):
-                    logger.info(f"Page switch: {page} -> {page.parent}")
+                    logger.info(f'Page switch: {page} -> {page.parent}')
                     button = page.links[page.parent]
                     self.device.click(button)
                     # self.ui_button_interval_reset(button)
@@ -221,16 +213,14 @@ class UI(InfoHandler):
                 continue
 
     def ui_ensure(self, destination, confirm_wait=0, skip_first_screenshot=True):
-        logger.hr("UI ensure")
+        logger.hr('UI ensure')
         self.ui_get_current_page(skip_first_screenshot=skip_first_screenshot)
         if self.ui_current == destination:
-            logger.info("Already at %s" % destination)
+            logger.info('Already at %s' % destination)
             return False
         else:
-            logger.info("Goto %s" % destination)
-            self.ui_goto(
-                destination, confirm_wait=confirm_wait, skip_first_screenshot=True
-            )
+            logger.info('Goto %s' % destination)
+            self.ui_goto(destination, confirm_wait=confirm_wait, skip_first_screenshot=True)
             return True
 
     def ui_additional(self):

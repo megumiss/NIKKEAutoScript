@@ -16,41 +16,38 @@ class OcrModel:
         val-complete_match-epoch: 0.9731
         """
         return NikkeOcr(
-            rec_model_name="densenet_lite_136-gru",
-            root="./bin/cnocr_models/nikke",
-            model_name="/cnocr-v2.3-densenet_lite_136-gru-nikke.ckpt",
-            name="nikke",
+            rec_model_name='densenet_lite_136-gru',
+            root='./bin/cnocr_models/nikke',
+            model_name='/cnocr-v2.3-densenet_lite_136-gru-nikke.ckpt',
+            name='nikke',
         )
 
     @cached_property
     def cnocr(self):
         return NikkeOcr(
-            rec_model_name="densenet_lite_136-gru",
-            root="./bin/cnocr_models/cnocr",
-            model_name="/cnocr-v2.3-densenet_lite_136-gru.ckpt",
-            name="cnocr",
+            rec_model_name='densenet_lite_136-gru',
+            root='./bin/cnocr_models/cnocr',
+            model_name='/cnocr-v2.3-densenet_lite_136-gru.ckpt',
+            name='cnocr',
         )
 
     @cached_property
     def cnocr_num(self):
-
         return NikkeOcr(
-            rec_model_name="number-densenet_lite_136-fc",
-            root="./bin/cnocr_models/cnocr",
-            model_name="/cnocr-v2.3-number-densenet_lite_136-fc-nikke.ckpt",
-            name="cnocr_num",
+            rec_model_name='number-densenet_lite_136-fc',
+            root='./bin/cnocr_models/cnocr',
+            model_name='/cnocr-v2.3-number-densenet_lite_136-fc-nikke.ckpt',
+            name='cnocr_num',
         )
 
     def get_location(self, text, result):
         if result:
             merged_dict = {}
-            for dictionary in list(map(lambda x: {x["text"]: x["position"]}, result)):
+            for dictionary in list(map(lambda x: {x['text']: x['position']}, result)):
                 merged_dict.update(dictionary)
 
             r = None
-            _, text = self.get_similarity(
-                list(map(lambda x: x["text"], result)), text, threshold=0.51
-            )
+            _, text = self.get_similarity(list(map(lambda x: x['text'], result)), text, threshold=0.51)
 
             if _:
                 r = [merged_dict[text]]
@@ -64,17 +61,17 @@ class OcrModel:
         import difflib
 
         max_ratio = 0
-        most_matched_name = ""
+        most_matched_name = ''
         for text in texts:
-            if "_" in target:
-                if target.strip("_") != text:
+            if '_' in target:
+                if target.strip('_') != text:
                     continue
             ratio = difflib.SequenceMatcher(None, text, target).quick_ratio()
             if ratio > max_ratio:
                 max_ratio = ratio
                 most_matched_name = text
         if max_ratio < threshold:
-            return 0, ""
+            return 0, ''
         return max_ratio, most_matched_name
 
 

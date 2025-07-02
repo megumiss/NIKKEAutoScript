@@ -1,6 +1,6 @@
 from module.base.timer import Timer
 from module.interception.assets import *
-from module.simulation_room.assets import END_FIGHTING, AUTO_SHOOT, AUTO_BURST, PAUSE
+from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, PAUSE
 from module.ui.page import page_interception
 from module.ui.ui import UI
 
@@ -28,10 +28,7 @@ class Interception(UI):
                 click_timer.reset()
                 confirm_timer.reset()
 
-            if (
-                ABNORMAL_INTERCEPTION_CHECK.match(self.device.image)
-                and confirm_timer.reached()
-            ):
+            if ABNORMAL_INTERCEPTION_CHECK.match(self.device.image) and confirm_timer.reached():
                 break
 
         skip_first_screenshot = True
@@ -64,30 +61,22 @@ class Interception(UI):
                 confirm_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(
-                AUTO_SHOOT, offset=(5, 5), interval=5, threshold=0.8
-            ):
+            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=(5, 5), interval=5, threshold=0.8):
                 click_timer.reset()
                 confirm_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(
-                AUTO_BURST, offset=(5, 5), interval=5, threshold=0.8
-            ):
+            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=(5, 5), interval=5, threshold=0.8):
                 click_timer.reset()
                 confirm_timer.reset()
                 continue
 
             # 红圈
-            if self.config.Optimization_AutoRedCircle and self.appear(
-                PAUSE, offset=(5, 5)
-            ):
+            if self.config.Optimization_AutoRedCircle and self.appear(PAUSE, offset=(5, 5)):
                 if self.handle_red_circles():
                     continue
 
-            if click_timer.reached() and self.appear_then_click(
-                END_FIGHTING, offset=(5, 5), interval=2
-            ):
+            if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=(5, 5), interval=2):
                 click_timer.reset()
                 confirm_timer.reset()
                 continue

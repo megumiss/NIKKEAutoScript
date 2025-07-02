@@ -8,7 +8,7 @@ from module.ui.ui import UI
 
 class Commission(UI):
     def dispatch_and_claim(self, skip_first_screenshot=True):
-        logger.hr("Dispatch and claim commission")
+        logger.hr('Dispatch and claim commission')
         confirm_timer = Timer(8, count=3).start()
         click_timer = Timer(0.3)
         while 1:
@@ -38,10 +38,7 @@ class Commission(UI):
                 click_timer.reset()
                 continue
 
-            if (
-                self.appear(COMMISSION_CHECK, offset=(10, 10))
-                and confirm_timer.reached()
-            ):
+            if self.appear(COMMISSION_CHECK, offset=(10, 10)) and confirm_timer.reached():
                 break
 
     def run(self):

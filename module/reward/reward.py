@@ -1,4 +1,3 @@
-import time
 from module.base.timer import Timer
 from module.base.utils import crop
 from module.handler.assets import CONFIRM_B
@@ -15,7 +14,7 @@ class NoRewards(Exception):
 
 class Reward(UI):
     def receive_reward(self, skip_first_screenshot=True):
-        logger.hr("Receive reward")
+        logger.hr('Receive reward')
         confirm_timer = Timer(1, count=3).start()
         # Set click interval to 0.3, because game can't respond that fast.
         click_timer = Timer(0.3)
@@ -40,33 +39,28 @@ class Reward(UI):
                 click_timer.reset()
                 continue
             # 判断是否有奖励可领
-            if (
-                self.appear(NO_REWARDS_1, offset=(10, 10), interval=1)
-                and confirm_timer.reached()
-            ):
-                logger.info("Reward done after check NO_REWARDS_1")
+            if self.appear(NO_REWARDS_1, offset=(10, 10), interval=1) and confirm_timer.reached():
+                logger.info('Reward done after check NO_REWARDS_1')
                 break
             # 点击获得奖励
-            if click_timer.reached() and self.appear_then_click(
-                RECEIVE, offset=(30, 30), interval=10
-            ):
+            if click_timer.reached() and self.appear_then_click(RECEIVE, offset=(30, 30), interval=10):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
             if confirm_timer.reached() and self.appear(EMPTY_CHECK, threshold=1.00):
-                logger.info("Reward done after check EMPTY_CHECK")
+                logger.info('Reward done after check EMPTY_CHECK')
                 break
 
             if self.appear(MAIN_CHECK, offset=(10, 10)) and confirm_timer.reached():
-                logger.info("Reward done after check MAIN_CHECK")
+                logger.info('Reward done after check MAIN_CHECK')
                 break
 
-        logger.info("Defence Reward have been received")
+        logger.info('Defence Reward have been received')
         return True
 
     def receive_social_point(self, skip_first_screenshot=True):
-        logger.hr("Receive social point")
+        logger.hr('Receive social point')
         confirm_timer = Timer(5, count=3).start()
         click_timer = Timer(0.3)
         while 1:
@@ -75,16 +69,12 @@ class Reward(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(
-                SEND_AND_RECEIVE, offset=(30, 30), interval=2
-            ):
+            if click_timer.reached() and self.appear_then_click(SEND_AND_RECEIVE, offset=(30, 30), interval=2):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(
-                CONFIRM_B, offset=(30, 30), interval=1, static=False
-            ):
+            if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=1, static=False):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -92,11 +82,11 @@ class Reward(UI):
             if confirm_timer.reached():
                 break
 
-        logger.info("Social Point have been received")
+        logger.info('Social Point have been received')
         return True
 
     def receive_special_arena_point(self, skip_first_screenshot=True):
-        logger.hr("Receive special arena point")
+        logger.hr('Receive special arena point')
         confirm_timer = Timer(6, count=5).start()
         click_timer = Timer(0.3)
         while 1:
@@ -119,9 +109,7 @@ class Reward(UI):
                 click_timer.reset()
                 continue
 
-            if self.appear_then_click(
-                REWARD_B, offset=(30, 30), interval=5, static=False
-            ):
+            if self.appear_then_click(REWARD_B, offset=(30, 30), interval=5, static=False):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -136,7 +124,7 @@ class Reward(UI):
                 return True
 
             if self.handle_reward(interval=1):
-                logger.info("Special Arena Point have been received")
+                logger.info('Special Arena Point have been received')
                 raise NoRewards
 
             if confirm_timer.reached():
@@ -146,22 +134,17 @@ class Reward(UI):
 
     def ranking_match_multi(self) -> list[Button]:
         """删除超出范围的红点，比如邮件"""
-        red_points = TEMPLATE_RANKING_RED_POINT.match_multi(
-            self.device.image, name="RED_POINT"
-        )
+        red_points = TEMPLATE_RANKING_RED_POINT.match_multi(self.device.image, name='RED_POINT')
 
         valid_red_points = []
         for point in red_points:
-            if (
-                point.area[1] >= RANKING_ARENA.area[1]
-                and point.area[3] <= RANKING_ARENA.area[3]
-            ):
+            if point.area[1] >= RANKING_ARENA.area[1] and point.area[3] <= RANKING_ARENA.area[3]:
                 valid_red_points.append(point)
 
         return valid_red_points
 
     def receive_ranking(self, skip_first_screenshot=True):
-        logger.hr("Receive ranking reward")
+        logger.hr('Receive ranking reward')
         confirm_timer = Timer(1, count=2).start()
         click_timer = Timer(0.3)
 
@@ -213,14 +196,10 @@ class Reward(UI):
                         # 返回
                         if (
                             click_timer.reached()
-                            and self.appear(
-                                RANKING_NO_REWARD, offset=(5, 5), threshold=0.9
-                            )
+                            and self.appear(RANKING_NO_REWARD, offset=(5, 5), threshold=0.9)
                             and confirm_timer.reached()
                         ):
-                            self.appear_then_click(
-                                GOTO_BACK, offset=(5, 5), interval=2, threshold=0.95
-                            )
+                            self.appear_then_click(GOTO_BACK, offset=(5, 5), interval=2, threshold=0.95)
                             confirm_timer.reset()
                             click_timer.reset()
                             break

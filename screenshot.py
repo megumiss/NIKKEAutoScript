@@ -1,15 +1,16 @@
+import os
+import sys
+from pathlib import Path
+
 import cv2
 import numpy as np
-import sys
 import requests
-import os
-from pathlib import Path
 
 
 def get_and_convert_screenshot(output_file=None, width=720, height=1280):
-    response = requests.get("http://127.0.0.1:20165/screenshot?format=png", stream=True)
+    response = requests.get('http://127.0.0.1:20165/screenshot?format=png', stream=True)
     if response.status_code != 200:
-        raise Exception(f"Failed to fetch screenshot: {response.status_code}")
+        raise Exception(f'Failed to fetch screenshot: {response.status_code}')
 
     # Read raw bytes
     data = response.raw.read()
@@ -34,12 +35,12 @@ def get_and_convert_screenshot(output_file=None, width=720, height=1280):
     cv2.add(r, m, dst=r)
 
     if output_file is None:
-        output_file = str(Path.home() / "Downloads" / "screenshot.png")
+        output_file = str(Path.home() / 'Downloads' / 'screenshot.png')
 
     image = cv2.merge([r, g, b])
     cv2.imwrite(output_file, image)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     output_path = sys.argv[1] if len(sys.argv) > 1 else None
     get_and_convert_screenshot(output_path)
