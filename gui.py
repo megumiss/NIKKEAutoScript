@@ -6,6 +6,7 @@ from module.webui.setting import State
 
 def func(ev: threading.Event):
     import argparse
+
     import uvicorn
 
     State.restart_event = ev

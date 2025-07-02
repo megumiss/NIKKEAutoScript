@@ -1,11 +1,9 @@
 from module.base.timer import Timer
-from module.base.utils import crop
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.reward.assets import *
 from module.ui.page import *
 from module.ui.ui import UI
-import cv2
 
 
 class NoRewards(Exception):

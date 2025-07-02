@@ -1,14 +1,9 @@
-from functools import cached_property
-
-import cv2
-
 from module.base.timer import Timer
 from module.base.utils import (
     _area_offset,
     crop,
     find_center,
     point2str,
-    remove_punctuation,
 )
 from module.conversation.assets import *
 from module.conversation.dialogue import Dialogue

@@ -77,7 +77,7 @@ class Blablalink(UI):
             raise RequestHumanTakeover('User-agent not set')
         self.common_headers['user-agent'] = useragent
 
-        logger.info(f'Headers build successfully')
+        logger.info('Headers build successfully')
 
     def _request_with_retry(self, method: str, url: str, max_retries: int = 3, **kwargs) -> Dict:
         """带重试机制的请求封装"""
@@ -571,7 +571,7 @@ class Blablalink(UI):
                 random_minutes = random.randint(5, 30)
                 target_time = target_time + timedelta(minutes=random_minutes)
                 self.config.task_delay(target=target_time)
-        except MissingHeader as e:
+        except MissingHeader:
             logger.error('Please check all parameters settings')
             raise RequestHumanTakeover
         except Exception as e:

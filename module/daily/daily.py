@@ -3,7 +3,6 @@ from module.base.timer import Timer
 from module.base.utils import crop, find_center, mask_area, point2str
 from module.conversation.assets import *
 from module.daily.assets import *
-from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.notify import handle_notify
 from module.ui.assets import CONVERSATION_CHECK, DAILY_CHECK, INVENTORY_CHECK

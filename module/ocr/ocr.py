@@ -1,7 +1,9 @@
+import os
 import re
 import time
 from typing import TYPE_CHECKING
 
+import cv2
 import numpy as np
 
 from module.base.button import Button
@@ -199,8 +201,6 @@ class DigitCounter(Ocr):
             return 0, 0, 0
 
 
-import os
-import cv2
 
 if __name__ == '__main__':
     os.chdir(os.path.join(os.path.dirname(__file__), '../../'))

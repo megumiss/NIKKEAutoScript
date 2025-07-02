@@ -1,10 +1,9 @@
 import json
 import random
-import re
 from difflib import SequenceMatcher
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, List
 
 from module.base.utils import (
     remove_punctuation,
@@ -30,7 +29,7 @@ class Dialogue:
                     self._raw_data = json.load(f)
             except json.JSONDecodeError:
                 self._raw_data = {}
-            except Exception as e:
+            except Exception:
                 self._raw_data = {}
 
         return self._raw_data

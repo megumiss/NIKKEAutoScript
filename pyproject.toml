@@ -37,7 +37,7 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
-ignore = ["F403", "F405"]
+ignore = ["F403", "F405", "F811"]
 
 [tool.ruff.format]
 quote-style = "single"

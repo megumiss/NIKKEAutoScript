@@ -60,7 +60,7 @@ class TowerDaemon(UI):
         self.try_to_current_stage()
 
     def try_to_current_stage(self, skip_first_screenshot=True):
-        logger.hr(f'CURRENT STAGE', 3)
+        logger.hr('CURRENT STAGE', 3)
         click_timer = Timer(0.3)
         try:
             while 1:

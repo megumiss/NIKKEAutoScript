@@ -11,7 +11,6 @@ from module.coop.coop import Coop, CoopIsUnavailable
 # 活动引用
 from module.event.event_20250612.assets import *
 from module.exception import (
-    OperationFailed,
     RequestHumanTakeover,
 )
 from module.logger import logger
@@ -777,7 +776,7 @@ class Event(UI):
     def coop(self):
         logger.info('Small event, skip coop')
 
-    def ensure_into_event(self):
+    def ensure_into_event(self, skip_first_screenshot=True):
         logger.hr('OPEN EVENT STORY')
         click_timer = Timer(0.3)
         confirm_timer = Timer(5, count=3).start()

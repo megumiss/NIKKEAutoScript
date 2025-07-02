@@ -65,7 +65,7 @@ class Liberation(UI):
             if click_timer.reached() and self.appear_then_click(
                 CONFIRM_D, offset=(30, 30), interval=1, threshold=0.8, static=False
             ):
-                self.config.modified[f'Liberation.Scheduler.Enable'] = False
+                self.config.modified['Liberation.Scheduler.Enable'] = False
                 confirm_timer.reset()
                 click_timer.reset()
                 continue

@@ -106,7 +106,7 @@ class TribeTower(UI):
         self.try_to_overcome_current_stage()
 
     def try_to_overcome_current_stage(self, skip_first_screenshot=True):
-        logger.hr(f'OVERCOME STAGE', 3)
+        logger.hr('OVERCOME STAGE', 3)
         confirm_timer = Timer(1, count=2).start()
         click_timer = Timer(0.3)
         try:

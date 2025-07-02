@@ -4,7 +4,7 @@ from functools import cached_property
 
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
-from module.base.utils import crop, exec_file
+from module.base.utils import exec_file
 from module.handler.assets import CONFIRM_A
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
