@@ -694,7 +694,7 @@ class Event(UI):
                     break
         else:
             logger.info('Stage 11 not cleared')
-            raise EventSelectError
+            return
         logger.info('Stage 11 clear done')
 
     @Config.when(EVENT_TYPE=1)
@@ -722,12 +722,12 @@ class Event(UI):
 
             if confirm_timer.reached():
                 logger.warning('Coop is not enabled')
-                raise CoopIsUnavailable
+                return
 
             # 协同未在开启时间
             if click_timer.reached() and self.appear(self.event_assets.COOP_LOCK, offset=10):
                 logger.warning('Coop is not enabled')
-                raise CoopIsUnavailable
+                return
 
             # 协同选择
             if self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10):
@@ -742,7 +742,7 @@ class Event(UI):
         coops = self.event_assets.TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
         if not coops and not direct:
             logger.warning('Not find coop in event')
-            raise CoopIsUnavailable
+            return
 
         # 进入协同作战界面
         while 1:
