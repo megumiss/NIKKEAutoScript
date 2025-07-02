@@ -96,30 +96,30 @@ else:
 
 
 def replace_atomic(src, dst):
-    '''
+    """
     Move ``src`` to ``dst``. If ``dst`` exists, it will be silently
     overwritten.
 
     Both paths must reside on the same filesystem for the operation to be
     atomic.
-    '''
+    """
     return _replace_atomic(src, dst)
 
 
 def move_atomic(src, dst):
-    '''
+    """
     Move ``src`` to ``dst``. There might a timewindow where both filesystem
     entries exist. If ``dst`` already exists, :py:exc:`FileExistsError` will be
     raised.
 
     Both paths must reside on the same filesystem for the operation to be
     atomic.
-    '''
+    """
     return _move_atomic(src, dst)
 
 
 class AtomicWriter(object):
-    '''
+    """
     A helper class for performing atomic writes. Usage::
 
         with AtomicWriter(path).open() as f:
@@ -137,7 +137,7 @@ class AtomicWriter(object):
 
     If you need further control over the exact behavior, you are encouraged to
     subclass.
-    '''
+    """
 
     def __init__(self, path, mode=DEFAULT_MODE, overwrite=False,
                  **open_kwargs):
@@ -163,9 +163,9 @@ class AtomicWriter(object):
         self._open_kwargs = open_kwargs
 
     def open(self):
-        '''
+        """
         Open the temporary file.
-        '''
+        """
         return self._open(self.get_fileobject)
 
     @contextlib.contextmanager
@@ -187,7 +187,7 @@ class AtomicWriter(object):
 
     def get_fileobject(self, suffix="", prefix=tempfile.gettempprefix(),
                        dir=None, **kwargs):
-        '''Return the temporary file to use.'''
+        """Return the temporary file to use."""
         if dir is None:
             dir = os.path.normpath(os.path.dirname(self._path))
         descriptor, name = tempfile.mkstemp(suffix=suffix, prefix=prefix,
@@ -201,25 +201,25 @@ class AtomicWriter(object):
         return io.open(**kwargs)
 
     def sync(self, f):
-        '''responsible for clearing as many file caches as possible before
-        commit'''
+        """responsible for clearing as many file caches as possible before
+        commit"""
         f.flush()
         _proper_fsync(f.fileno())
 
     def commit(self, f):
-        '''Move the temporary file to the target location.'''
+        """Move the temporary file to the target location."""
         if self._overwrite:
             replace_atomic(f.name, self._path)
         else:
             move_atomic(f.name, self._path)
 
     def rollback(self, f):
-        '''Clean up all temporary resources.'''
+        """Clean up all temporary resources."""
         os.unlink(f.name)
 
 
 def atomic_write(path, writer_cls=AtomicWriter, **cls_kwargs):
-    '''
+    """
     Simple atomic writes. This wraps :py:class:`AtomicWriter`::
 
         with atomic_write(path) as f:
@@ -232,5 +232,5 @@ def atomic_write(path, writer_cls=AtomicWriter, **cls_kwargs):
 
     Additional keyword arguments are passed to the writer class. See
     :py:class:`AtomicWriter`.
-    '''
+    """
     return writer_cls(path, **cls_kwargs).open()

@@ -3,16 +3,11 @@ from typing import Any, Dict, List
 from module.logger import logger
 from module.ocr.ocr import Digit
 
+
 class ArenaBase:
     def opponent_info(self, area: tuple, field_name: str) -> int:
         letter = self.FIELD_LETTERS[field_name]
-        OPPONENT_INFO = Digit(
-            [area],
-            name="OPPONENT_INFO",
-            letter=letter,
-            threshold=128,
-            lang="cnocr_num"
-        )
+        OPPONENT_INFO = Digit([area], name='OPPONENT_INFO', letter=letter, threshold=128, lang='cnocr_num')
         return int(OPPONENT_INFO.ocr(self.device.image))
 
     def opponents_data(self) -> List[Dict[str, Any]]:
@@ -20,15 +15,15 @@ class ArenaBase:
         results = []
         for group_idx, group_config in enumerate(self.coordinate_config, start=1):
             group_result = {
-                "id": group_idx,  # 对手位置序号（1=第一位，2=第二位，3=第三位）
-                "data": {
-                    "Power": self.opponent_info(group_config["Power"], "Power"),
-                    "CommanderLevel": self.opponent_info(group_config["CommanderLevel"], "CommanderLevel"),
-                    "SynchroLevel": self.opponent_info(group_config["SynchroLevel"], "SynchroLevel"),
-                    "Ranking": self.opponent_info(group_config["Ranking"], "Ranking"),
-                }
+                'id': group_idx,  # 对手位置序号（1=第一位，2=第二位，3=第三位）
+                'data': {
+                    'Power': self.opponent_info(group_config['Power'], 'Power'),
+                    'CommanderLevel': self.opponent_info(group_config['CommanderLevel'], 'CommanderLevel'),
+                    'SynchroLevel': self.opponent_info(group_config['SynchroLevel'], 'SynchroLevel'),
+                    'Ranking': self.opponent_info(group_config['Ranking'], 'Ranking'),
+                },
             }
-            logger.info(f"Find opponent {group_idx}: {group_result['data']}")
+            logger.info(f'Find opponent {group_idx}: {group_result["data"]}')
             results.append(group_result)
         return results
 
@@ -42,9 +37,10 @@ class ArenaBase:
             'Power': [opp['data']['Power'] for opp in all_opponents],
             'CommanderLevel': [opp['data']['CommanderLevel'] for opp in all_opponents],
             'SynchroLevel': [opp['data']['SynchroLevel'] for opp in all_opponents],
-            'Ranking': [opp['data']['Ranking'] for opp in all_opponents]
+            'Ranking': [opp['data']['Ranking'] for opp in all_opponents],
         }
         # 归一化处理
+
         normalized = {k: self._normalize(v) for k, v in dimensions.items()}
         if reversion:
             # pjjc时倒序，数值越低得分越高
@@ -52,8 +48,7 @@ class ArenaBase:
         # 计算综合得分
         for i, opp in enumerate(all_opponents):
             score = sum(
-                normalized[dim][i] * weights[dim]
-                for dim in ['Power', 'CommanderLevel', 'SynchroLevel', 'Ranking']
+                normalized[dim][i] * weights[dim] for dim in ['Power', 'CommanderLevel', 'SynchroLevel', 'Ranking']
             )
             opp['score'] = score
 

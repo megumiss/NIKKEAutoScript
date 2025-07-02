@@ -1,13 +1,12 @@
 from module.base.timer import Timer
-from module.event_daemon.assets import FIGHT_2, SKIP, BATTLE_QUICKLY
+from module.event_daemon.assets import BATTLE_QUICKLY, FIGHT_2, SKIP
 from module.shop.assets import MAX
-from module.simulation_room.assets import END_FIGHTING, FIGHT, AUTO_SHOOT, AUTO_BURST
+from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, FIGHT
 from module.tribe_tower.assets import NEXT_STAGE
 from module.ui.ui import UI
 
 
 class EventDaemon(UI):
-
     def run(self):
         # self.ui_goto_main()
         timeout = Timer(600, count=3).start()
@@ -51,17 +50,21 @@ class EventDaemon(UI):
                 timeout.reset()
                 continue
 
-            if click_timer.reached() \
-                    and self.appear_then_click(BATTLE_QUICKLY, 5, interval=4, static=False) \
-                    and BATTLE_QUICKLY.match_appear_on(self.device.image):
+            if (
+                click_timer.reached()
+                and self.appear_then_click(BATTLE_QUICKLY, 5, interval=4, static=False)
+                and BATTLE_QUICKLY.match_appear_on(self.device.image)
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 timeout.reset()
                 continue
 
-            if click_timer.reached() \
-                    and self.appear_then_click(FIGHT, 5, interval=4, static=False) \
-                    and FIGHT.match_appear_on(self.device.image):
+            if (
+                click_timer.reached()
+                and self.appear_then_click(FIGHT, 5, interval=4, static=False)
+                and FIGHT.match_appear_on(self.device.image)
+            ):
                 click_timer.reset()
                 confirm_timer.reset()
                 timeout.reset()

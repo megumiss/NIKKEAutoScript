@@ -10,7 +10,7 @@ class Page:
         self.check_button = check_button
         self.links = {}
         (filename, line_number, function_name, text) = traceback.extract_stack()[-2]
-        self.name = text[:text.find('=')].strip()
+        self.name = text[: text.find('=')].strip()
 
     def __eq__(self, other):
         return self.name == other.name

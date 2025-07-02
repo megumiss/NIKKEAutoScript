@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from module.base.button import Button
-from module.base.utils import extract_letters, crop, float2str
+from module.base.utils import crop, extract_letters, float2str
 from module.logger import logger
 from module.ocr.models import OCR_MODEL
 
@@ -16,7 +16,15 @@ if TYPE_CHECKING:
 class Ocr:
     SHOW_LOG = True
 
-    def __init__(self, buttons, lang='nikke', letter=(255, 255, 255), threshold=128, alphabet=None, name=None):
+    def __init__(
+        self,
+        buttons,
+        lang='nikke',
+        letter=(255, 255, 255),
+        threshold=128,
+        alphabet=None,
+        name=None,
+    ):
         """
         Args:
             buttons (Button, tuple, list[Button], list[tuple]): OCR area.
@@ -34,7 +42,7 @@ class Ocr:
         self.lang = lang
 
     @property
-    def cnocr(self) -> "NikkeOcr":
+    def cnocr(self) -> 'NikkeOcr':
         return OCR_MODEL.__getattribute__(self.lang)
 
     @property
@@ -72,11 +80,11 @@ class Ocr:
 
     def ocr(self, image, direct_ocr=False):
         """
-            Args:
-                image (np.ndarray, list[np.ndarray]):
-                direct_ocr (bool): True to skip preprocess.
+        Args:
+            image (np.ndarray, list[np.ndarray]):
+            direct_ocr (bool): True to skip preprocess.
 
-            Returns:
+        Returns:
 
         """
         start_time = time.time()
@@ -95,8 +103,10 @@ class Ocr:
         if len(self.buttons) == 1:
             result_list = result_list[0]
         if Ocr.SHOW_LOG:
-            logger.attr(name='%s %ss' % (self.name, float2str(time.time() - start_time)),
-                        text=str(result_list))
+            logger.attr(
+                name='%s %ss' % (self.name, float2str(time.time() - start_time)),
+                text=str(result_list),
+            )
 
         return result_list
 
@@ -107,9 +117,23 @@ class Digit(Ocr):
     Method ocr() returns int, or a list of int.
     """
 
-    def __init__(self, buttons, lang='nikke', letter=(255, 255, 255), threshold=128, alphabet='0123456789IDSBO',
-                 name=None):
-        super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
+    def __init__(
+        self,
+        buttons,
+        lang='nikke',
+        letter=(255, 255, 255),
+        threshold=128,
+        alphabet='0123456789IDSBO',
+        name=None,
+    ):
+        super().__init__(
+            buttons,
+            lang=lang,
+            letter=letter,
+            threshold=threshold,
+            alphabet=alphabet,
+            name=name,
+        )
 
     def after_process(self, result):
         result = super().after_process(result)
@@ -126,9 +150,23 @@ class Digit(Ocr):
 
 
 class DigitCounter(Ocr):
-    def __init__(self, buttons, lang='nikke', letter=(255, 255, 255), threshold=128, alphabet='0123456789/IDS',
-                 name=None):
-        super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
+    def __init__(
+        self,
+        buttons,
+        lang='nikke',
+        letter=(255, 255, 255),
+        threshold=128,
+        alphabet='0123456789/IDS',
+        name=None,
+    ):
+        super().__init__(
+            buttons,
+            lang=lang,
+            letter=letter,
+            threshold=threshold,
+            alphabet=alphabet,
+            name=name,
+        )
 
     def after_process(self, result):
         result = super().after_process(result)

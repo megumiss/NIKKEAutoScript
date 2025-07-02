@@ -1,7 +1,8 @@
 from module.base.base import ModuleBase
 from module.base.utils import color_similar, get_color, point2str
+
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
-from module.exception import GameStuckError, GameServerUnderMaintenance
+from module.exception import GameServerUnderMaintenance, GameStuckError
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE
 from module.logger import logger
@@ -9,18 +10,12 @@ from module.logger import logger
 
 class InfoHandler(ModuleBase):
     def handle_paid_gift(self, interval=1):
-        if self.appear(
-                PAID_GIFT_CHECK, offset=(30, 30), interval=interval, static=False
-        ):
-            if self.appear_text_then_click("点击关闭画面", interval=interval):
+        if self.appear(PAID_GIFT_CHECK, offset=(30, 30), interval=interval, static=False):
+            if self.appear_text_then_click('点击关闭画面', interval=interval):
                 return True
 
-        elif self.appear(
-                PAID_GIFT_CONFIRM_CHECK, offset=(30, 30), interval=interval, static=False
-        ):
-            if self.appear_then_click(
-                    CONFIRM_B, offset=(30, 30), interval=interval, static=False
-            ):
+        elif self.appear(PAID_GIFT_CONFIRM_CHECK, offset=(30, 30), interval=interval, static=False):
+            if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=interval, static=False):
                 return True
 
         return False
@@ -31,17 +26,15 @@ class InfoHandler(ModuleBase):
             self.device.sleep(1)
             return True
         # Daily Login, Memories Spring, Monthly Card, etc.
-        if self.appear_text_then_click("_领取奖励", interval=5):
+        if self.appear_text_then_click('_领取奖励', interval=5):
             return True
-        elif a := self.appear_text("_全部领取", interval=5):
+        elif a := self.appear_text('_全部领取', interval=5):
             x, y = a[0], a[1]
             b = get_color(
                 image=self.device.image,
                 area=(int(x - 80), int(y - 25), int(x + 80), int(y + 25)),
             )
-            if not color_similar(
-                    color1=b, color2=(112.786625, 111.897375, 113.121875), threshold=10
-            ):
+            if not color_similar(color1=b, color2=(112.786625, 111.897375, 113.121875), threshold=10):
                 self.device.click_minitouch(x, y)
                 return True
             else:
@@ -54,13 +47,17 @@ class InfoHandler(ModuleBase):
 
         # 关闭
         if self.appear(
-                SHIFTY_SUPPLIES_CHECK,
-                offset=(30, 30),
-                interval=3,
-                threshold=0.74,
-                static=False,
+            SHIFTY_SUPPLIES_CHECK,
+            offset=(30, 30),
+            interval=3,
+            threshold=0.74,
+            static=False,
         ) and self.appear_then_click(
-            SHIFTY_SUPPLIES_CLOSE, offset=(30, 30), interval=3, threshold=0.74, static=False
+            SHIFTY_SUPPLIES_CLOSE,
+            offset=(30, 30),
+            interval=3,
+            threshold=0.74,
+            static=False,
         ):
             return True
 
@@ -96,66 +93,52 @@ class InfoHandler(ModuleBase):
         return False
 
     def handle_reward(self, interval=5):
-        if self.appear_then_click(
-                REWARD, offset=(30, 30), interval=interval, static=False
-        ):
+        if self.appear_then_click(REWARD, offset=(30, 30), interval=interval, static=False):
             return True
 
     def handle_level_up(self, interval=3):
         if self.appear(LEVEL_UP_CHECK, offset=(30, 30), interval=interval):
             self.device.click_minitouch(360, 920)
-            logger.info("Click (360, 920) @ LEVEL_UP")
+            logger.info('Click (360, 920) @ LEVEL_UP')
             return True
 
     def handle_server(self):
-        if self.appear(
-                SERVER_CHECK, offset=(30, 30), interval=3, static=False
-        ) and self.appear_then_click(
+        if self.appear(SERVER_CHECK, offset=(30, 30), interval=3, static=False) and self.appear_then_click(
             CONFIRM_A, offset=(30, 30), interval=3, static=False
         ):
             return True
 
     def handle_popup(self):
-        if self.appear(
-                POPUP_CHECK, offset=(30, 30), interval=3, static=False
-        ) and self.appear_then_click(
+        if self.appear(POPUP_CHECK, offset=(30, 30), interval=3, static=False) and self.appear_then_click(
             ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
         ):
             return True
 
     def handle_announcement(self):
         if self.appear(
-                ANNOUNCEMENT_CHECK,
-                offset=(30, 30),
-                interval=3,
-                threshold=0.74,
-                static=False,
-        ) and self.appear_then_click(
-            ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
-        ):
+            ANNOUNCEMENT_CHECK,
+            offset=(30, 30),
+            interval=3,
+            threshold=0.74,
+            static=False,
+        ) and self.appear_then_click(ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False):
             return True
-        elif self._appear_text_then_click(
-                "不再显示", (20, 600), label="CLOSE_ANNOUNCEMENT"
-        ):
+        elif self._appear_text_then_click('不再显示', (20, 600), label='CLOSE_ANNOUNCEMENT'):
             return True
 
     def handle_download(self):
-        if self.appear(
-                DOWNLOAD_CHECK, offset=(30, 30), interval=3, static=False
-        ) and self.appear_then_click(
+        if self.appear(DOWNLOAD_CHECK, offset=(30, 30), interval=3, static=False) and self.appear_then_click(
             CONFIRM_A, offset=(30, 30), interval=3, static=False
         ):
             return True
 
     def handle_system_error(self):
         if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), interval=3, static=False):
-            raise GameStuckError("detected system error")
+            raise GameStuckError('detected system error')
 
     def handle_system_maintenance(self):
-        if self.appear(
-                SYSTEM_MAINTENANCE_CHECK, offset=(30, 30), interval=3, static=False
-        ):
-            raise GameServerUnderMaintenance("Server is currently under maintenance")
+        if self.appear(SYSTEM_MAINTENANCE_CHECK, offset=(30, 30), interval=3, static=False):
+            raise GameServerUnderMaintenance('Server is currently under maintenance')
 
     # def handle_event(self, interval=3):
     #     if self.appear_then_click(SKIP, offset=(5, 5), static=False, interval=interval):
@@ -168,10 +151,10 @@ class InfoHandler(ModuleBase):
 
     def handle_login(self):
         if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) or self.appear(
-                LOGIN_CHECK_B, offset=(30, 30), interval=5
+            LOGIN_CHECK_B, offset=(30, 30), interval=5
         ):
             self.device.click(LOGIN_CHECK)
-            logger.info("Login success")
+            logger.info('Login success')
 
     def handle_red_circles(self):
         """
@@ -194,7 +177,7 @@ class InfoHandler(ModuleBase):
 
             # 坐标识别偏移
             y_click = y + 40
-            logger.info("Click %s @ %s" % (point2str(x_click, y_click), "RED_CIRCLE"))
+            logger.info('Click %s @ %s' % (point2str(x_click, y_click), 'RED_CIRCLE'))
             self.device.long_click_minitouch(x_click, y_click, 1)
             # 画面回正
             self.device.sleep(0.5)

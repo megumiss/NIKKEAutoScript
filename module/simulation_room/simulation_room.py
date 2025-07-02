@@ -1,13 +1,13 @@
 from functools import cached_property
 
 from module.base.timer import Timer
-from module.base.utils import point2str, _area_offset, crop
-from module.exception import GamePageUnknownError, OperationFailed, GameStuckError
+from module.base.utils import _area_offset, crop, point2str
+from module.exception import GamePageUnknownError, GameStuckError, OperationFailed
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.simulation_room.assets import *
 from module.tribe_tower.assets import BACK
-from module.ui.assets import ARK_GOTO_SIMULATION_ROOM, SIMULATION_ROOM_CHECK, GOTO_BACK
+from module.ui.assets import ARK_GOTO_SIMULATION_ROOM, GOTO_BACK, SIMULATION_ROOM_CHECK
 from module.ui.page import page_ark
 from module.ui.ui import UI
 
@@ -72,33 +72,47 @@ class SimulationRoom(UI):
 
         if NORMAL_CHECK._button_offset:
             from module.simulation_room.event import EnemyEvent
+
             EnemyEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
             NORMAL_CHECK._button_offset = None
             return
 
         if self.appear(HEALING_EVENT_CHECK, offset=(30, 30), static=False):
             from module.simulation_room.event import HealingEvent
+
             HealingEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
             return
 
         if self.appear(IMPROVEMENT_EVENT_CHECK, offset=(30, 30), static=False):
             from module.simulation_room.event import ImprovementEvent
-            ImprovementEvent(button=IMPROVEMENT_EVENT_CHECK.location, config=self.config, device=self.device).run()
+
+            ImprovementEvent(
+                button=IMPROVEMENT_EVENT_CHECK.location,
+                config=self.config,
+                device=self.device,
+            ).run()
             return
 
         if self.appear(RANDOM_EVENT_CHECK, offset=(30, 30), static=False):
             from module.simulation_room.event import RandomEvent
-            RandomEvent(button=RANDOM_EVENT_CHECK.location, config=self.config, device=self.device).run()
+
+            RandomEvent(
+                button=RANDOM_EVENT_CHECK.location,
+                config=self.config,
+                device=self.device,
+            ).run()
             return
 
         if self.appear(BOSS_EVENT_CHECK, offset=(30, 30), static=False):
             from module.simulation_room.event import EnemyEvent
+
             logger.hr('Start the boss event', 2)
             EnemyEvent(button=BOSS_EVENT_CHECK.location, config=self.config, device=self.device).run()
             return
 
         if HARD_CHECK._button_offset:
             from module.simulation_room.event import EnemyEvent
+
             EnemyEvent(button=HARD_CHECK.location, config=self.config, device=self.device).run()
             HARD_CHECK._button_offset = None
             return
@@ -128,19 +142,20 @@ class SimulationRoom(UI):
                     confirm_timer.reset()
                     click_timer_2.reset()
                     self.device.click_minitouch(*button)
-                    logger.info(
-                        'Click %s @ %s' % (point2str(*button), 'EFFECT')
-                    )
+                    logger.info('Click %s @ %s' % (point2str(*button), 'EFFECT'))
                     self.device.sleep(0.6)
 
-                if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=6,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(
+                    CONFIRM_B, offset=(30, 30), interval=6, static=False
+                ):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30),
-                                   static=False) and confirm_timer.reached():
+                if (
+                    not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False)
+                    and confirm_timer.reached()
+                ):
                     break
         else:
             logger.warning('The own effect count has already reached its limit')
@@ -150,22 +165,24 @@ class SimulationRoom(UI):
                 else:
                     self.device.screenshot()
 
-                if click_timer.reached() and self.appear_then_click(NOT_CHOOSE, offset=(30, 30), interval=5,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(
+                    NOT_CHOOSE, offset=(30, 30), interval=5, static=False
+                ):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5,
-                                                         static=False):
+                if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
                     self.device.click_minitouch(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30),
-                                   static=False) and confirm_timer.reached():
+                if (
+                    not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False)
+                    and confirm_timer.reached()
+                ):
                     return
 
         if self.appear(REPEATED_EFFECT_CHECK, offset=(5, 5), static=False):
@@ -176,28 +193,30 @@ class SimulationRoom(UI):
                 else:
                     self.device.screenshot()
 
-                if click_timer.reached() and self.appear_then_click(CANCEL, offset=(30, 30), interval=5,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(CANCEL, offset=(30, 30), interval=5, static=False):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear_then_click(NOT_CHOOSE, offset=(30, 30), interval=5,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(
+                    NOT_CHOOSE, offset=(30, 30), interval=5, static=False
+                ):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5,
-                                                         static=False):
+                if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
                     self.device.click_minitouch(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if not self.appear(REPEATED_EFFECT_CHECK, offset=(30, 30), static=False) and not self.appear(
-                        SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False) and confirm_timer.reached():
+                if (
+                    not self.appear(REPEATED_EFFECT_CHECK, offset=(30, 30), static=False)
+                    and not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False)
+                    and confirm_timer.reached()
+                ):
                     return
         elif self.appear(MAX_EFFECT_COUNT_CHECK, offset=(5, 5), static=False):
             logger.warning('The own effect count has already reached its limit')
@@ -212,22 +231,25 @@ class SimulationRoom(UI):
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear_then_click(NOT_CHOOSE, offset=(30, 30), interval=5,
-                                                                    static=False):
+                if click_timer.reached() and self.appear_then_click(
+                    NOT_CHOOSE, offset=(30, 30), interval=5, static=False
+                ):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5,
-                                                         static=False):
+                if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
                     self.device.click_minitouch(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if not self.appear(MAX_EFFECT_COUNT_CHECK, offset=(30, 30), static=False) and not self.appear(
-                        SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False) and confirm_timer.reached():
+                if (
+                    not self.appear(MAX_EFFECT_COUNT_CHECK, offset=(30, 30), static=False)
+                    and not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False)
+                    and confirm_timer.reached()
+                ):
                     return
 
     def _run(self):
@@ -250,7 +272,7 @@ class SimulationRoom(UI):
             self._run()
         except GamePageUnknownError:
             logger.error('The simulation has already been started')
-            logger.critical("Please end the current simulation and restart it")
+            logger.critical('Please end the current simulation and restart it')
             self.handle_failed()
         except OperationFailed:
             logger.warning('failed to overcome the current battle, will skip simulation task')
@@ -320,14 +342,21 @@ class SimulationRoom(UI):
             if click_timer.reached() and self.appear(START_SIMULATION_CONFIRM, offset=(30, 30), interval=2):
                 self.device.click_minitouch(*self.difficulty_area.get(self.difficulty))
                 logger.info(
-                    'Click %s @ %s' % (point2str(*self.difficulty_area.get(self.difficulty)), self.difficulty.upper())
+                    'Click %s @ %s'
+                    % (
+                        point2str(*self.difficulty_area.get(self.difficulty)),
+                        self.difficulty.upper(),
+                    )
                 )
                 self.device.sleep(0.3)
                 self.device.click_minitouch(*self.region_area.get(self.onset_area))
                 self.current_region = self.region.get(self.onset_area)
                 logger.info(
-                    'Click %s @ %s' % (
-                        point2str(*self.region_area.get(self.onset_area)), f'ONSET_AREA_{self.onset_area}')
+                    'Click %s @ %s'
+                    % (
+                        point2str(*self.region_area.get(self.onset_area)),
+                        f'ONSET_AREA_{self.onset_area}',
+                    )
                 )
                 confirm_timer.reset()
                 click_timer.reset()
@@ -341,15 +370,15 @@ class SimulationRoom(UI):
             #     confirm_timer.reset()
             #     click_timer.reset()
             #     continue
-            
+
             if click_timer.reached() and self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 5), static=False):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
-            
+
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), interval=5, static=False):
                 break
-            
+
             if self.appear(SIMULATION_CHECK, offset=(30, 30), threshold=0.86) and confirm_timer.reached():
                 logger.hr(f'Area {self.region_label.get(self.current_region)}', 2)
                 break
@@ -383,8 +412,9 @@ class SimulationRoom(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(END_SIMULATION, offset=(30, 30), interval=3,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                END_SIMULATION, offset=(30, 30), interval=3, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -401,8 +431,7 @@ class SimulationRoom(UI):
                     click_timer.reset()
                     continue
 
-            if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5,
-                                                     static=False):
+            if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
                 self.device.click_minitouch(530, 800)
                 logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                 click_timer.reset()

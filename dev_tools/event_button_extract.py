@@ -142,13 +142,13 @@ class ModuleExtractor:
         self.name = name
         self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'event', name)
         # print(os.path.join(MODULE_FOLDER, self.name))
-        '''
+        """
             os.path.join(MODULE_FOLDER, self.name)
             ./module\event_1
             
             self.folder
             ./assets\event\event_1
-        '''
+        """
 
     @staticmethod
     def split(file):
