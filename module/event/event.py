@@ -289,6 +289,7 @@ class Event(UI):
 
         logger.info('Event challenge done')
 
+    @Config.when(EVENT_TYPE=1)
     def reward(self, skip_first_screenshot=True):
         logger.hr('START EVENT REWARD')
         click_timer = Timer(0.3)
@@ -362,6 +363,65 @@ class Event(UI):
                 and self.appear(self.event_assets.REWARD_MISSION_CHECK, threshold=10)
                 and self.appear(self.event_assets.REWARD_RECEIVE_DONE, threshold=10)
                 and self.appear_then_click(self.event_assets.REWARD_CHALLENGE_HIDDEN, offset=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+
+        logger.info('Event reward done')
+
+    @Config.when(EVENT_TYPE=2)
+    def reward(self, skip_first_screenshot=True):
+        logger.hr('START EVENT REWARD')
+        click_timer = Timer(0.3)
+
+        # 进入任务页面
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if (
+                click_timer.reached()
+                and self.appear(self.event_assets.EVENT_CHECK, offset=10)
+                and self.appear_then_click(self.event_assets.REWARD, offset=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+
+            if self.appear(self.event_assets.REWARD_CHECK, offset=10):
+                break
+
+        # 领取奖励
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 返回活动页面
+            if self.appear(self.event_assets.EVENT_CHECK, offset=10):
+                break
+
+            # 关闭
+            if (
+                click_timer.reached()
+                and self.appear(self.event_assets.REWARD_RECEIVE_DONE, threshold=10)
+                and self.appear_then_click(self.event_assets.REWARD_CLOSED, offset=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+
+            # 领取
+            if click_timer.reached() and self.appear_then_click(
+                self.event_assets.REWARD_RECEIVE, threshold=10, interval=1
+            ):
+                click_timer.reset()
+                continue
+
+            # 点击领取
+            if click_timer.reached() and self.appear_then_click(
+                self.event_assets.RECEIVE, offset=10, interval=1, static=False
             ):
                 click_timer.reset()
                 continue
@@ -540,7 +600,7 @@ class Event(UI):
             else:
                 self.device.screenshot()
 
-            # 进入关卡列表，困难更新后需要重新截图
+            # 进入关卡列表
             while 1:
                 if skip_first_screenshot:
                     skip_first_screenshot = False
@@ -554,7 +614,7 @@ class Event(UI):
                     click_timer.reset()
                     continue
 
-                # story困难解锁
+                # story困难解锁，困难更新后需要重新截图
                 if click_timer.reached() and self.appear_then_click(
                     self.event_assets.STORY_1_HARD_UNLOCK, offset=10, interval=1
                 ):
@@ -566,7 +626,7 @@ class Event(UI):
                     click_timer.reset()
                     break
 
-                # story困难难度列表页面
+                # story困难难度列表页面，困难更新后需要重新截图
                 if self.appear(self.event_assets.STORY_1_HARD, threshold=10):
                     click_timer.reset()
                     break

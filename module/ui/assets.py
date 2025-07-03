@@ -22,7 +22,7 @@ DAILY_GOTO_MAIN = Button(area={'cn': (646, 75, 674, 105)}, color={'cn': (76, 156
 DESTROY_CHECK = Button(area={'cn': (331, 464, 389, 531)}, color={'cn': (122, 126, 128)}, button={'cn': (331, 464, 389, 531)}, file={'cn': './assets/cn/ui/DESTROY_CHECK.png'})
 DESTROY_GOTO_REWARD = Button(area={'cn': (603, 310, 642, 351)}, color={'cn': (122, 122, 113)}, button={'cn': (603, 310, 642, 351)}, file={'cn': './assets/cn/ui/DESTROY_GOTO_REWARD.png'})
 EMPTY_CHECK = Button(area={'cn': (272, 496, 421, 534)}, color={'cn': (100, 102, 104)}, button={'cn': (272, 496, 421, 534)}, file={'cn': './assets/cn/ui/EMPTY_CHECK.png'})
-EVENT_SWITCH = Button(area={'cn': (374, 1049, 399, 1071)}, color={'cn': (110, 113, 111)}, button={'cn': (374, 1049, 399, 1071)}, file={'cn': './assets/cn/ui/EVENT_SWITCH.png'})
+EVENT_SWITCH = Button(area={'cn': (674, 1120, 702, 1144)}, color={'cn': (124, 125, 127)}, button={'cn': (674, 1120, 702, 1144)}, file={'cn': './assets/cn/ui/EVENT_SWITCH.png'})
 FIGHT_CLOSE = Button(area={'cn': (692, 658, 713, 678)}, color={'cn': (112, 111, 112)}, button={'cn': (692, 658, 713, 678)}, file={'cn': './assets/cn/ui/FIGHT_CLOSE.png'})
 FIGHT_QUICKLY_CANCEL = Button(area={'cn': (163, 975, 212, 998)}, color={'cn': (146, 149, 148)}, button={'cn': (163, 975, 212, 998)}, file={'cn': './assets/cn/ui/FIGHT_QUICKLY_CANCEL.png'})
 FIGHT_QUICKLY_CHECK = Button(area={'cn': (334, 494, 367, 535)}, color={'cn': (137, 140, 141)}, button={'cn': (334, 494, 367, 535)}, file={'cn': './assets/cn/ui/FIGHT_QUICKLY_CHECK.png'})
