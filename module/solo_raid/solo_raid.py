@@ -3,7 +3,7 @@ from module.logger import logger
 from module.ocr.ocr import Digit
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
 from module.solo_raid.assets import *
-from module.ui.assets import MAIN_CHECK
+from module.ui.assets import FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_MAX, MAIN_CHECK
 from module.ui.ui import UI
 
 
@@ -38,7 +38,7 @@ class SoloRaid(UI):
         """进入单人突击"""
         logger.hr('SOLO RAID START')
         click_timer = Timer(0.3)
-        confirm_timer = Timer(3, count=3).start()
+        confirm_timer = Timer(15, count=10).start()
 
         while 1:
             if skip_first_screenshot:
@@ -49,7 +49,7 @@ class SoloRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(MAIN_CHECK, offset=10)
-                and self.appear_then_click(SOLO_RAID, offset=10, interval=2)
+                and self.appear_then_click(SOLO_RAID, offset=10, interval=3)
             ):
                 logger.info('Enter solo raid')
                 continue
@@ -60,7 +60,7 @@ class SoloRaid(UI):
             if confirm_timer.reached():
                 logger.error('Solo raid not found')
                 raise SoloRaidIsUnavailable
-
+        self.solo_raid()
         if self.free_opportunity_remain:
             self.solo_raid()
         else:
@@ -81,7 +81,7 @@ class SoloRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(SOLO_RAID_CHECK, offset=10)
-                and self.appear(STAGE_SEVEN, offset=10)
+                and self.appear(STAGE_SEVEN, offset=(30, 30))
                 and self.appear_then_click(CHALLENGE_QUICKLY_ENABLE, threshold=10, interval=1)
             ):
                 click_timer.reset()
@@ -90,8 +90,8 @@ class SoloRaid(UI):
             # 扫荡票max
             if (
                 click_timer.reached()
-                and self.appear(CHALLENGE_QUICKLY_CHECK, offset=10)
-                and self.appear_then_click(CHALLENGE_QUICKLY_MAX, threshold=10, interval=1)
+                and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
+                and self.appear_then_click(FIGHT_QUICKLY_MAX, threshold=10, interval=1)
             ):
                 click_timer.reset()
                 continue
@@ -99,8 +99,8 @@ class SoloRaid(UI):
             # 扫荡确定
             if (
                 click_timer.reached()
-                and self.appear(CHALLENGE_QUICKLY_CHECK, offset=10)
-                and not self.appear(CHALLENGE_QUICKLY_MAX, threshold=10)
+                and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
+                and not self.appear(FIGHT_QUICKLY_MAX, threshold=10)
                 and self.appear_then_click(CHALLENGE_QUICKLY_CONFIRM, offset=10, interval=1)
             ):
                 click_timer.reset()
@@ -110,7 +110,7 @@ class SoloRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(SOLO_RAID_CHECK, offset=10)
-                and self.appear_then_click(CHALLENGE_QUICKLY_DISABLE, threshold=10)
+                and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
                 and self.appear_then_click(CHALLENGE, offset=10, interval=1)
             ):
                 click_timer.reset()
@@ -134,18 +134,18 @@ class SoloRaid(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=10, interval=5, threshold=0.8):
+            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=10, interval=5):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=10, interval=5, threshold=0.8):
+            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=10, interval=5):
                 click_timer.reset()
                 continue
 
             # 结束
             if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
                 click_timer.reset()
-                break
+                continue
 
             # 结算弹窗
             if (
@@ -169,7 +169,7 @@ class SoloRaid(UI):
         if self.free_opportunity_remain:
             self.device.click_record_clear()
             self.device.stuck_record_clear()
-            return self.start_coop()
+            return self.solo_raid()
         else:
             logger.info('There are no free opportunities')
             raise NoOpportunityRemain
