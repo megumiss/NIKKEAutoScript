@@ -199,10 +199,10 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         # 选择最新的活动
         for task in ["Event"]:
             # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
-            self.modified[f"{task}.Event.Event"] = self.EVENTS[2].get('event_id')
+            self.modified[f"{task}.Event.Event"] = self.EVENTS[0].get('event_id')
         for task in ["Event2"]:
             # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
-            self.modified[f"{task}.Event.Event"] = self.EVENTS[2].get('event_id')
+            self.modified[f"{task}.Event.Event"] = self.EVENTS[1].get('event_id')
 
     def get_next(self):
         """

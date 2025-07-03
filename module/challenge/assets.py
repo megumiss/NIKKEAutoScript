@@ -10,6 +10,6 @@ CHALLENGE_CANCEL = Button(area={'cn': (692, 658, 713, 679)}, color={'cn': (118, 
 CHALLENGE_CHECK = Button(area={'cn': (20, 37, 90, 56)}, color={'cn': (127, 128, 127)}, button={'cn': (20, 37, 90, 56)}, file={'cn': './assets/cn/challenge/CHALLENGE_CHECK.png'})
 CHALLENGE_QUICK_ENABLE = Button(area={'cn': (525, 1091, 612, 1112)}, color={'cn': (252, 168, 131)}, button={'cn': (525, 1091, 612, 1112)}, file={'cn': './assets/cn/challenge/CHALLENGE_QUICK_ENABLE.png'})
 CHALLENGE_QUICK_TICKET = Button(area={'cn': (333, 967, 359, 1003)}, color={'cn': (113, 53, 53)}, button={'cn': (333, 967, 359, 1003)}, file={'cn': './assets/cn/challenge/CHALLENGE_QUICK_TICKET.png'})
-CHALLENGE_STAGE_CHECK = Button(area={'cn': (84, 695, 233, 737)}, color={'cn': (128, 128, 128)}, button={'cn': (84, 695, 233, 737)}, file={'cn': './assets/cn/challenge/CHALLENGE_STAGE_CHECK.png'})
+CHALLENGE_STAGE_CHECK = Button(area={'cn': (112, 860, 205, 883)}, color={'cn': (189, 189, 189)}, button={'cn': (112, 860, 205, 883)}, file={'cn': './assets/cn/challenge/CHALLENGE_STAGE_CHECK.png'})
 TEMPLATE_CHALLENGE_STAGE = Template(file={'cn': './assets/cn/challenge/TEMPLATE_CHALLENGE_STAGE.png'})
 TEMPLATE_CLEAR_STAGE = Template(file={'cn': './assets/cn/challenge/TEMPLATE_CLEAR_STAGE.png'})
