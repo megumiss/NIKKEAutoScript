@@ -1,9 +1,11 @@
 import importlib
 from functools import cached_property
 
+import cv2
+
 from module.base.decorator import Config
 from module.base.timer import Timer
-from module.base.utils import get_button_by_location
+from module.base.utils import crop, get_button_by_location
 from module.challenge.assets import *
 from module.coop.assets import *
 from module.coop.coop import Coop, CoopIsUnavailable
@@ -134,8 +136,8 @@ class Event(UI):
             if (
                 click_timer.reached()
                 and self.appear(self.event_assets.LOGIN_STAMP_CHECK, offset=10)
-                and self.appear(self.event_assets.LOGIN_STAMP_DONE, offset=10, threshold=0.9)
-                and self.appear_then_click(GOTO_BACK, offset=10, interval=2)
+                and self.appear(self.event_assets.LOGIN_STAMP_DONE, threshold=10)
+                and self.appear_then_click(GOTO_BACK, offset=(30, 30), interval=2)
             ):
                 click_timer.reset()
                 continue
@@ -144,13 +146,15 @@ class Event(UI):
             if (
                 click_timer.reached()
                 and self.appear(self.event_assets.LOGIN_STAMP_CHECK, offset=10)
-                and self.appear_then_click(self.event_assets.LOGIN_STAMP_REWARD, offset=10, interval=1, threshold=0.9)
+                and self.appear_then_click(self.event_assets.LOGIN_STAMP_REWARD, threshold=10, interval=1)
             ):
                 click_timer.reset()
                 continue
 
             # 点击领取
-            if click_timer.reached() and self.appear_then_click(self.event_assets.RECEIVE, offset=10, interval=1):
+            if click_timer.reached() and self.appear_then_click(
+                self.event_assets.RECEIVE, offset=10, interval=1, static=False
+            ):
                 click_timer.reset()
                 continue
 
@@ -845,7 +849,7 @@ class Event(UI):
     def ensure_into_event(self, skip_first_screenshot=True):
         logger.hr('OPEN EVENT STORY')
         click_timer = Timer(0.3)
-        confirm_timer = Timer(20, count=4).start()
+        confirm_timer = Timer(30, count=20).start()
 
         while 1:
             if skip_first_screenshot:
@@ -859,15 +863,16 @@ class Event(UI):
             if (
                 click_timer.reached()
                 and self.appear(MAIN_CHECK, offset=10)
-                and self.appear_then_click(EVENT_SWITCH, offset=10, interval=2)
+                and self.appear_then_click(EVENT_SWITCH, offset=10, interval=3)
             ):
                 click_timer.reset()
+                confirm_timer.reset()
                 continue
 
             if (
                 click_timer.reached()
                 and self.appear(MAIN_CHECK, offset=10)
-                and self.appear_then_click(self.event_assets.MAIN_GOTO_EVENT, offset=10, interval=3)
+                and self.appear_then_click(self.event_assets.MAIN_GOTO_EVENT, offset=10, interval=5)
             ):
                 click_timer.reset()
                 logger.info('Open event story')
