@@ -140,6 +140,9 @@ Task:
   Event:
     name: 剧情活动
     help: ""
+  Event2:
+    name: 剧情活动2
+    help: ""
   SoloRaid:
     name: 单人突击
     help: ""
@@ -149,7 +152,8 @@ Emulator:
     help: ""
   Serial:
     name: 模拟器 Serial
-    help: "常见的模拟器 Serial 可以查询下方列表，填 \"auto\" 自动检测模拟器，多个模拟器正在运行或使用不支持自动检测的模拟器时无法使用 \"auto\"，必须手动填写 \n
+    help:
+      "常见的模拟器 Serial 可以查询下方列表，填 \"auto\" 自动检测模拟器，多个模拟器正在运行或使用不支持自动检测的模拟器时无法使用 \"auto\"，必须手动填写 \n
       模拟器默认 Serial：\n
       - 雷电模拟器 emulator-5554 或 127.0.0.1:5555"
   PackageName:
@@ -251,9 +255,9 @@ Conversation:
   WaitToCommunicate:
     name: 等待咨询的妮姬
     help: "请收藏想要咨询的妮姬\n
-           例如: '红莲 爱丽丝'，用一个空格分开\n
-           像 '梅里：海湾女神', '尼恩：蓝色海洋' 请填 '海湾女神', '蓝色海洋'
-          "
+      例如: '红莲 爱丽丝'，用一个空格分开\n
+      像 '梅里：海湾女神', '尼恩：蓝色海洋' 请填 '海湾女神', '蓝色海洋'
+      "
 Area:
   _info:
     name: 地区设置
@@ -261,23 +265,23 @@ Area:
   Difficulty:
     name: 难度
     help: ""
-    Level_1: 'Level-1'
-    Level_2: 'Level-2'
-    Level_3: 'Level-3'
-    Level_4: 'Level-4'
-    Level_5: 'Level-5'
+    Level_1: "Level-1"
+    Level_2: "Level-2"
+    Level_3: "Level-3"
+    Level_4: "Level-4"
+    Level_5: "Level-5"
   OnsetArea:
     name: 起始地区
     help: ""
-    A: 'A'
-    B: 'B'
-    C: 'C'
+    A: "A"
+    B: "B"
+    C: "C"
   EndingArea:
     name: 结束地区
     help: ""
-    A: 'A'
-    B: 'B'
-    C: 'C'
+    A: "A"
+    B: "B"
+    C: "C"
 Overcome:
   _info:
     name: 关卡设置
@@ -301,34 +305,36 @@ ArenaShop:
     help: ""
   priority:
     name: 优先购买
-    help: " 不填写则不购买 \n例如: 'ELECTRIC_CODE > MANUAL_SELECTION_BOX'，用一个大于号分开，可以选择的：\n
-                ELECTRIC_CODE: 电击代码\n
-                FIRE_CODE: 燃烧代码\n
-                IRON_CODE: 铁甲代码\n
-                WATER_CODE: 水冷代码\n
-                WIND_CODE: 风压代码\n
-                MANUAL_SELECTION_BOX: 代码自选箱\n
-                ORNAMENT: 简介装饰品\n
-                WEAPON: 公司武器熔炉\n
-             "
+    help:
+      " 不填写则不购买 \n例如: 'ELECTRIC_CODE > MANUAL_SELECTION_BOX'，用一个大于号分开，可以选择的：\n
+      ELECTRIC_CODE: 电击代码\n
+      FIRE_CODE: 燃烧代码\n
+      IRON_CODE: 铁甲代码\n
+      WATER_CODE: 水冷代码\n
+      WIND_CODE: 风压代码\n
+      MANUAL_SELECTION_BOX: 代码自选箱\n
+      ORNAMENT: 简介装饰品\n
+      WEAPON: 公司武器熔炉\n
+      "
 RubbishShop:
   _info:
     name: 废铁商店
     help: ""
   priority:
     name: 优先购买
-    help: " 不填写默认购买珠宝和芯尘盒 \n例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\n
-             GEM: 珠宝\n
-             CORE_DUST_CASE: 芯尘盒\n
-             CREDIT_CASE: 信用点盒\n
-             BATTLE_DATA_SET_CASE: 战斗数据辑盒\n
-             GENERAL_TICKET: 指挥官通用券\n
-             ELYSION_TICKET: 极乐净土VIP券\n
-             MISSILIS_TICKET: 米西利斯VIP卡\n
-             TETRA_TICKET: 泰特拉VIP护理券\n
-             PILGRIM_TICKET: 朝圣者补给套组交换券\n
-             ABNORMAL_TICKET: 反常年券\n
-          "
+    help:
+      " 不填写默认购买珠宝和芯尘盒 \n例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\n
+      GEM: 珠宝\n
+      CORE_DUST_CASE: 芯尘盒\n
+      CREDIT_CASE: 信用点盒\n
+      BATTLE_DATA_SET_CASE: 战斗数据辑盒\n
+      GENERAL_TICKET: 指挥官通用券\n
+      ELYSION_TICKET: 极乐净土VIP券\n
+      MISSILIS_TICKET: 米西利斯VIP卡\n
+      TETRA_TICKET: 泰特拉VIP护理券\n
+      PILGRIM_TICKET: 朝圣者补给套组交换券\n
+      ABNORMAL_TICKET: 反常年券\n
+      "
 Notification:
   _info:
     name: 通知设置
@@ -361,12 +367,12 @@ CollectionItems:
     help: ""
   NIKKE:
     name: NIKKE
-    help: '没做完'
-    All: '随机'
-    Laplace: '拉普拉斯'
-    Frima: '普琳玛'
-    Diesel: '迪塞尔'
-    Exia: '艾可希雅'
+    help: "没做完"
+    All: "随机"
+    Laplace: "拉普拉斯"
+    Frima: "普琳玛"
+    Diesel: "迪塞尔"
+    Exia: "艾可希雅"
 OpponentSelection:
   _info:
     name: 对手选择设置
@@ -376,7 +382,8 @@ OpponentSelection:
     help: "开启时会根据权重和选择策略选择对手, 关闭时会固定选择最下面的对手"
   SortingWeight:
     name: 排序权重
-    help: "json字符串格式, 所有权重加和应为1, 如果只想启用某一个或几个可以将其他的权重数值为0\n
+    help:
+      "json字符串格式, 所有权重加和应为1, 如果只想启用某一个或几个可以将其他的权重数值为0\n
       各项意义为Power: 战力, CommanderLevel: 指挥官等级, SynchroLevel: 同步器等级, Ranking: 排名"
   SelectionStrategy:
     name: 选择策略
@@ -442,6 +449,8 @@ Event:
     name: 当前活动
     help: ""
     event_20250612: "Memories Teller"
+    event_20250703l: "OuteR: Automata"
+    event_20250703s: "OVER THE HORIZON"
   LoginStamp:
     name: 签到印章
     help: ""
@@ -451,6 +460,9 @@ Event:
   Story:
     name: 自动关卡
     help: "倒数第二关快速战斗，需要打完当前开启关卡倒数第二关后开启。选择的关卡必须和当前开启的关卡一致"
+  Coop:
+    name: 协同作战
+    help: "大型活动内置协同作战普通难度摆烂"
   StoryPart:
     name: 关卡选择
     help: ""
@@ -469,10 +481,7 @@ Event:
     help: "还没做"
 Coop:
   _info:
-    name: 协同设置
-    help: ""
-  EventCoop:
-    name: 活动协同
+    name: 协同作战
     help: ""
   MatchDifficulty:
     name: 匹配难度

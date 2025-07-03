@@ -83,13 +83,13 @@ class NikkeAutoScriptGUI(Frame):
 
         task = 'nkas'
 
-        '''
+        """
             ProcessManager.start(func, ev)
             ev: 进程同步标识
             func: 通过创建的线程的执行的方法，在Alas中，默认为执行
             AzurLaneAutoScript(config_name='alas').loop()
 
-        '''
+        """
         with use_scope('menu-container'):
             put_scope("scheduler"),
             with use_scope('scheduler'):
@@ -129,13 +129,13 @@ class NikkeAutoScriptGUI(Frame):
         put_scrollable([put_scope("log", [put_html("")])], height=None, keep_bottom=True).style(
             '--log-scrollable--')
 
-        '''
+        """
             task_handler: 子任务处理器
             通过task_handler.add添加的func
             会被带有yield的生成器循环执行，直到该任务被移除
 
             log.put_log(ProcessManager): 向web渲染通过logger输出的日志
-        '''
+        """
         self.task_handler.add(log.put_log(self.nkas), delay=0.25, pending_delete=True)
 
         """
@@ -178,10 +178,10 @@ class NikkeAutoScriptGUI(Frame):
                   [put_scrollable([put_scope("groups")], height=None, keep_bottom=False).style(
                       '--groups-scrollable--'), put_scope("navigator")])
         run_js(
-            '''
+            """
             $("div[style*='--groups-scrollable--']").addClass('groups-scrollable');
             $('.groups-scrollable > .webio-scrollable').addClass('_groups-scrollable');
-            '''
+            """
         )
         task_help: str = t(f"Task.{task}.help")
         if task_help:
@@ -336,9 +336,9 @@ class NikkeAutoScriptGUI(Frame):
                 )], height=220, keep_bottom=False).style(
                     '--commit-history-scrollable--')
                 run_js(
-                    '''
+                    """
                         $("div[style*='--commit-history-scrollable--']").children("div").css({"max-height": "61vh"});
-                    '''
+                    """
                 )
 
         def u(state):
@@ -348,9 +348,9 @@ class NikkeAutoScriptGUI(Frame):
             clear("updater_state")
             clear("updater_btn")
             if state == 0:
-                '''
+                """
                     状态：已是最新版本，按钮：检查更新
-                '''
+                """
                 put_loading("border", "secondary", scope="updater_loading").style(
                     "--loading-border-fill--"
                 )
@@ -363,9 +363,9 @@ class NikkeAutoScriptGUI(Frame):
                 )
                 update_table()
             elif state == 1:
-                '''
+                """
                     状态：非最新版本，按钮：开始更新
-                '''
+                """
                 put_loading("grow", "success", "updater_loading").style(
                     "--loading-grow--"
                 )
@@ -378,17 +378,17 @@ class NikkeAutoScriptGUI(Frame):
                 )
                 update_table()
             elif state == "checking":
-                '''
+                """
                     状态：检查更新中，按钮：无
-                '''
+                """
                 put_loading("border", "primary", "updater_loading").style(
                     "--loading-border--"
                 )
                 put_text(t("Gui.Update.UpdateChecking"), scope="updater_state")
             elif state == "failed":
-                '''
+                """
                     状态：更新失败，按钮：尝试重新更新
-                '''
+                """
                 put_loading("grow", "danger", "updater_loading").style(
                     "--loading-grow--"
                 )
@@ -400,9 +400,9 @@ class NikkeAutoScriptGUI(Frame):
                     scope="updater_btn",
                 )
             elif state == "start":
-                '''
+                """
                     状态：开始更新，按钮：取消更新
-                '''
+                """
                 put_loading("border", "primary", "updater_loading").style(
                     "--loading-border--"
                 )
@@ -414,9 +414,9 @@ class NikkeAutoScriptGUI(Frame):
                     scope="updater_btn",
                 )
             elif state == "wait":
-                '''
+                """
                     状态：等待任务结束，按钮：取消更新
-                '''
+                """
                 put_loading("border", "primary", "updater_loading").style(
                     "--loading-border--"
                 )
@@ -428,9 +428,9 @@ class NikkeAutoScriptGUI(Frame):
                     scope="updater_btn",
                 )
             elif state == "run update":
-                '''
+                """
                     状态：更新中，按钮：取消更新(禁用)
-                '''
+                """
                 put_loading("border", "primary", "updater_loading").style(
                     "--loading-border--"
                 )
@@ -443,27 +443,27 @@ class NikkeAutoScriptGUI(Frame):
                     disabled=True,
                 )
             elif state == "reload":
-                '''
+                """
                     状态：更新成功，即将热重启，按钮：无
-                '''
+                """
                 put_loading("grow", "success", "updater_loading").style(
                     "--loading-grow--"
                 )
                 put_text(t("Gui.Update.UpdateSuccess"), scope="updater_state")
                 update_table()
             elif state == "finish":
-                '''
+                """
                     状态：更新成功，需要手动重启，按钮：无
-                '''
+                """
                 put_loading("grow", "success", "updater_loading").style(
                     "--loading-grow--"
                 )
                 put_text(t("Gui.Update.UpdateFinish"), scope="updater_state")
                 update_table()
             elif state == "cancel":
-                '''
+                """
                     状态：取消更新，重启调度器，按钮：取消更新(禁用)
-                '''
+                """
                 put_loading("border", "danger", "updater_loading").style(
                     "--loading-border--"
                 )
@@ -476,9 +476,9 @@ class NikkeAutoScriptGUI(Frame):
                     disabled=True,
                 )
             else:
-                '''
+                """
                     状态：发生错误，按钮：无
-                '''
+                """
                 put_text(
                     "Something went wrong, please contact develops",
                     scope="updater_state",
@@ -665,11 +665,11 @@ class NikkeAutoScriptGUI(Frame):
             name="update_state",
         )
 
-        '''
+        """
             task_handler: 子任务处理器
             task_handler.start
             通过子线程在后台运行TaskHandler.loop()方法，循环运行添加的任务，直到调用stop
-        '''
+        """
         self.task_handler.add(update_switch.g(), 1)
         self.task_handler.start()
 

@@ -3,6 +3,7 @@ from scipy import optimize
 
 from module.base.utils import area_pad
 
+
 class Points:
     def __init__(self, points):
         if points is None or len(points) == 0:
@@ -68,7 +69,8 @@ class Points:
             points = p1[distance > threshold]
 
         return np.array(groups)
-    
+
+
 class Lines:
     MID_Y = 360
 

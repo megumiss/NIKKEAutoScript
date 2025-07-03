@@ -142,13 +142,13 @@ class ModuleExtractor:
         self.name = name
         self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'event', name)
         # print(os.path.join(MODULE_FOLDER, self.name))
-        '''
+        """
             os.path.join(MODULE_FOLDER, self.name)
             ./module\event_1
             
             self.folder
             ./assets\event\event_1
-        '''
+        """
 
     @staticmethod
     def split(file):
@@ -197,7 +197,7 @@ def worker(module):
 class AssetExtractor:
     def __init__(self):
         logger.info('Event Assets extract')
-        event = NikkeConfig.EVENTS[0].get('event_id')
+        event = NikkeConfig.EVENTS[1].get('event_id')
         modules = [m for m in os.listdir(NikkeConfig.ASSETS_FOLDER + '/event') if
                    os.path.isdir(os.path.join(NikkeConfig.ASSETS_FOLDER + '/event', m)) and m == event]
 

@@ -72,6 +72,10 @@ Event:
   Scheduler:
     Enable: false
 
+Event2:
+  Scheduler:
+    Enable: false
+
 Coop:
   Scheduler:
     Enable: false

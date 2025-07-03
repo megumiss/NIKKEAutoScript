@@ -303,9 +303,9 @@ def get_server_next_update(daily_trigger):
     if isinstance(daily_trigger, str):
         daily_trigger = daily_trigger.replace(' ', '').split(',')
 
-    '''
+    """
         用户时区差异
-    '''
+    """
     diff = server_time_offset()
     local_now = datetime.now()
     trigger = []
@@ -314,9 +314,9 @@ def get_server_next_update(daily_trigger):
         # 延迟时间
         h, m = [int(x) for x in t.split(':')]
         future = local_now.replace(hour=h, minute=m, second=0, microsecond=0) + diff
-        '''
+        """
             距离下次运行时间
-        '''
+        """
         s = (future - local_now).total_seconds() % 86400
         future = local_now + timedelta(seconds=s)
         trigger.append(future)

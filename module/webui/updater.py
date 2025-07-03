@@ -88,9 +88,9 @@ class Updater(GitManager, PipManager):
         self.state = "checking"
         source = "origin"
         for _ in range(3):
-            '''
+            """
                 从上游仓库拉取最新的数据，但不进行合并
-            '''
+            """
             if self.execute(f'"{self.git}" fetch {source} {self.Branch}', allow_failure=True):
                 break
         else:
@@ -106,13 +106,13 @@ class Updater(GitManager, PipManager):
             )
             return False
 
-        '''
+        """
              当本地和上游仓库不一样时，会返回上游仓库最新的commit，如果一样，则返回None 
              git.exe log ..origin/master --pretty=format:"h---%an---%ad---%s" --date=iso -1
              
              返回上游仓库最新的commit
              git.exe log origin/master --pretty=format:"h---%an---%ad---%s" --date=iso -1
-        '''
+        """
         sha1, _, _, message = self.get_commit(f"..{source}/{self.Branch}")
 
         if sha1:

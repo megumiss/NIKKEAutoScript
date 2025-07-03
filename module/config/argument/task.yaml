@@ -85,8 +85,13 @@ Event:
   - Scheduler
   - Event
 
+Event2:
+  - Scheduler
+  - Event
+
 SoloRaid:
   - Scheduler
+  - SoloRaid
 
 # ==================== Tools ====================
 

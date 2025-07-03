@@ -42,9 +42,9 @@ class Filter:
             list: A list of objects and preset strings, such as [object, object, object, 'reset']
         """
         out = []
-        '''
+        """
             self.filter: 需要满足的字符串元组
-        '''
+        """
         for raw, filter in zip(self.filter_raw, self.filter):
             if self.is_preset(raw):
                 raw = raw.lower()
@@ -52,9 +52,9 @@ class Filter:
                     out.append(raw)
             else:
                 for index, obj in enumerate(objs):
-                    '''
+                    """
                         排序objs，obj在self.attr中的属性满足filter的会添加到out中
-                    '''
+                    """
                     if self.apply_filter_to_obj(obj=obj, filter=filter) and obj not in out:
                         out.append(obj)
 

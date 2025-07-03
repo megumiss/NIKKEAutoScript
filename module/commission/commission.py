@@ -22,16 +22,18 @@ class Commission(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() \
-                    and (self.appear_then_click(DISPATCH, offset=(30, 30), interval=2) or self.appear_then_click(
-                DISPATCH_CONFIRM, offset=(30, 30), interval=2)):
+            if click_timer.reached() and (
+                self.appear_then_click(DISPATCH, offset=(30, 30), interval=2)
+                or self.appear_then_click(DISPATCH_CONFIRM, offset=(30, 30), interval=2)
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() \
-                    and (self.appear_then_click(CLAIM, offset=(30, 30), interval=2) or self.appear_then_click(
-                DISPATCH_CONFIRM, offset=(30, 30), interval=2)):
+            if click_timer.reached() and (
+                self.appear_then_click(CLAIM, offset=(30, 30), interval=2)
+                or self.appear_then_click(DISPATCH_CONFIRM, offset=(30, 30), interval=2)
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue

@@ -9,21 +9,21 @@ import inflection
 from module.config.config import NikkeConfig, TaskEnd
 from module.config.utils import deep_get, deep_set
 from module.exception import (
-    GamePageUnknownError,
-    RequestHumanTakeover,
     GameNotRunningError,
-    GameStuckError,
-    GameTooManyClickError,
+    GamePageUnknownError,
     GameServerUnderMaintenance,
     GameStart,
+    GameStuckError,
+    GameTooManyClickError,
+    RequestHumanTakeover,
 )
 from module.logger import logger
 from module.notify import handle_notify
 
 
 class NikkeAutoScript:
-    def __init__(self, config_name="nkas"):
-        logger.hr("Start", level=0)
+    def __init__(self, config_name='nkas'):
+        logger.hr('Start', level=0)
         self.config_name = config_name
 
     @cached_property
@@ -32,7 +32,7 @@ class NikkeAutoScript:
             config = NikkeConfig(config_name=self.config_name)
             return config
         except RequestHumanTakeover:
-            logger.critical("Request human takeover")
+            logger.critical('Request human takeover')
             exit(1)
         except Exception as e:
             logger.exception(e)
@@ -46,7 +46,7 @@ class NikkeAutoScript:
             device = Device(config=self.config)
             return device
         except RequestHumanTakeover:
-            logger.critical("Request human takeover")
+            logger.critical('Request human takeover')
             exit(1)
         except Exception as e:
             logger.exception(e)
@@ -67,7 +67,7 @@ class NikkeAutoScript:
 
         except GameNotRunningError as e:
             logger.warning(e)
-            self.config.task_call("Restart")
+            self.config.task_call('Restart')
             return True
 
         except (GameStuckError, GameTooManyClickError) as e:
@@ -79,11 +79,9 @@ class NikkeAutoScript:
                 在 Alas 中会将在raise前最后的截图和log写入./log/error 
             """
             self.save_error_log()
-            logger.warning(
-                f"Game stuck, {self.device.package} will be restarted in 10 seconds"
-            )
-            logger.warning("If you are playing by hand, please stop NKAS")
-            self.config.task_call("Restart")
+            logger.warning(f'Game stuck, {self.device.package} will be restarted in 10 seconds')
+            logger.warning('If you are playing by hand, please stop NKAS')
+            self.config.task_call('Restart')
             self.device.sleep(10)
             return False
         except GamePageUnknownError:
@@ -92,8 +90,8 @@ class NikkeAutoScript:
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
-                    title="NKAS crashed",
-                    content=f"<{self.config_name}> GamePageUnknownError",
+                    title='NKAS crashed',
+                    content=f'<{self.config_name}> GamePageUnknownError',
                 )
             exit(1)
         except GameServerUnderMaintenance as e:
@@ -102,17 +100,17 @@ class NikkeAutoScript:
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
-                    title="NKAS crashed",
-                    content=f"<{self.config_name}> GameServerUnderMaintenance",
+                    title='NKAS crashed',
+                    content=f'<{self.config_name}> GameServerUnderMaintenance',
                 )
             exit(1)
         except RequestHumanTakeover:
-            logger.critical("Request human takeover")
+            logger.critical('Request human takeover')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
-                    title="NKAS crashed",
-                    content=f"<{self.config_name}> RequestHumanTakeover",
+                    title='NKAS crashed',
+                    content=f'<{self.config_name}> RequestHumanTakeover',
                 )
             exit(1)
         except Exception as e:
@@ -121,8 +119,8 @@ class NikkeAutoScript:
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
-                    title="NKAS crashed",
-                    content=f"<{self.config_name}> Exception occured",
+                    title='NKAS crashed',
+                    content=f'<{self.config_name}> Exception occured',
                 )
             exit(1)
 
@@ -135,29 +133,29 @@ class NikkeAutoScript:
         from module.base.utils import save_image
         from module.handler.sensitive_info import handle_sensitive_logs
 
-        if not os.path.exists("./log/error"):
-            os.mkdir("./log/error")
-        folder = f"./log/error/{int(time.time() * 1000)}"
-        logger.warning(f"Saving error: {folder}")
+        if not os.path.exists('./log/error'):
+            os.mkdir('./log/error')
+        folder = f'./log/error/{int(time.time() * 1000)}'
+        logger.warning(f'Saving error: {folder}')
         os.mkdir(folder)
         for data in self.device.screenshot_deque:
-            image_time = datetime.strftime(data["time"], "%Y-%m-%d_%H-%M-%S-%f")
+            image_time = datetime.strftime(data['time'], '%Y-%m-%d_%H-%M-%S-%f')
             # 遮挡个人消息
             # image = handle_sensitive_image(data['image'])
-            image = data["image"]
-            save_image(image, f"{folder}/{image_time}.png")
-        with open(logger.log_file, "r", encoding="utf-8") as f:
+            image = data['image']
+            save_image(image, f'{folder}/{image_time}.png')
+        with open(logger.log_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
             start = 0
             for index, line in enumerate(lines):
-                line = line.strip(" \r\t\n")
+                line = line.strip(' \r\t\n')
                 # 从最后一个任务截取
-                if re.match("^═{15,}$", line):
+                if re.match('^═{15,}$', line):
                     start = index
-            lines = lines[start - 2:]
+            lines = lines[start - 2 :]
             # 替换真实路径
             lines = handle_sensitive_logs(lines)
-        with open(f"{folder}/log.txt", "w", encoding="utf-8") as f:
+        with open(f'{folder}/log.txt', 'w', encoding='utf-8') as f:
             f.writelines(lines)
 
     def restart(self):
@@ -175,10 +173,10 @@ class NikkeAutoScript:
         from module.ui.ui import UI
 
         if self.device.app_is_running():
-            logger.info("App is already running, goto main page")
+            logger.info('App is already running, goto main page')
             UI(self.config, device=self.device).ui_goto_main()
         else:
-            logger.info("App is not running, start app and goto main page")
+            logger.info('App is not running, start app and goto main page')
             LoginHandler(self.config, device=self.device).app_start()
             UI(self.config, device=self.device).ui_goto_main()
 
@@ -297,6 +295,11 @@ class NikkeAutoScript:
 
         Event(config=self.config, device=self.device).run()
 
+    def event2(self):
+        from module.event.event import Event
+
+        Event(config=self.config, device=self.device).run()
+
     def coop(self):
         from module.coop.coop import Coop
 
@@ -327,8 +330,8 @@ class NikkeAutoScript:
                 return True
             if self.stop_event is not None:
                 if self.stop_event.is_set():
-                    logger.info("Update event detected")
-                    logger.info(f"[{self.config_name}] exited. Reason: Update")
+                    logger.info('Update event detected')
+                    logger.info(f'[{self.config_name}] exited. Reason: Update')
                     exit(0)
 
             time.sleep(5)
@@ -359,11 +362,11 @@ class NikkeAutoScript:
             self.config.bind(task)
             from module.base.resource import release_resources
 
-            if self.config.task.command != "NKAS":
+            if self.config.task.command != 'NKAS':
                 release_resources(next_task=task.command)
 
             if task.next_run > datetime.now():
-                logger.info(f"Wait until {task.next_run} for task `{task.command}`")
+                logger.info(f'Wait until {task.next_run} for task `{task.command}`')
                 method = self.config.Optimization_WhenTaskQueueEmpty
 
                 """
@@ -376,26 +379,26 @@ class NikkeAutoScript:
                         bool: True if wait finished, False if config changed.
                 """
 
-                if method == "close_game":
-                    logger.info("Close game during wait")
+                if method == 'close_game':
+                    logger.info('Close game during wait')
                     self.device.app_stop()
                     release_resources()
                     if not self.wait_until(task.next_run):
-                        del self.__dict__["config"]
+                        del self.__dict__['config']
                         continue
-                    self.run("start")
-                elif method == "goto_main":
-                    logger.info("Goto main page during wait")
-                    self.run("goto_main")
+                    self.run('start')
+                elif method == 'goto_main':
+                    logger.info('Goto main page during wait')
+                    self.run('goto_main')
                     release_resources()
                     if not self.wait_until(task.next_run):
-                        del self.__dict__["config"]
+                        del self.__dict__['config']
                         continue
-                elif method == "stay_there":
-                    logger.info("Stay there during wait")
+                elif method == 'stay_there':
+                    logger.info('Stay there during wait')
                     release_resources()
                     if not self.wait_until(task.next_run):
-                        del self.__dict__["config"]
+                        del self.__dict__['config']
                         continue
             break
 
@@ -403,7 +406,7 @@ class NikkeAutoScript:
 
     def loop(self):
         logger.set_file_logger(self.config_name)
-        logger.info(f"Start scheduler loop: {self.config_name}")
+        logger.info(f'Start scheduler loop: {self.config_name}')
         is_first = True
         failure_record = {}
 
@@ -411,21 +414,21 @@ class NikkeAutoScript:
             # Check update event from GUI
             if self.stop_event is not None:
                 if self.stop_event.is_set():
-                    logger.info("Update event detected")
-                    logger.info(f"Alas [{self.config_name}] exited.")
+                    logger.info('Update event detected')
+                    logger.info(f'Alas [{self.config_name}] exited.')
                     break
-            
+
             task = self.get_next_task()
             _ = self.device
 
-            if is_first and task == "Restart":
-                logger.info("Skip task `Restart` at scheduler start")
+            if is_first and task == 'Restart':
+                logger.info('Skip task `Restart` at scheduler start')
                 self.config.task_delay(server_update=True)
-                del self.__dict__["config"]
+                del self.__dict__['config']
                 continue
 
             # Run
-            logger.info(f"Scheduler: Start task `{task}`")
+            logger.info(f'Scheduler: Start task `{task}`')
             self.device.stuck_record_clear()
             self.device.click_record_clear()
             logger.hr(task, level=0)
@@ -439,7 +442,7 @@ class NikkeAutoScript:
             """
 
             success = self.run(inflection.underscore(task))
-            logger.info(f"Scheduler: End task `{task}`")
+            logger.info(f'Scheduler: End task `{task}`')
             is_first = False
 
             """
@@ -449,27 +452,26 @@ class NikkeAutoScript:
             failed = 0 if success else failed + 1
             deep_set(failure_record, keys=task, value=failed)
             if failed >= 3:
-                logger.critical(f"Task `{task}` failed 3 or more times.")
+                logger.critical(f'Task `{task}` failed 3 or more times.')
                 logger.critical(
-                    "Possible reason #1: You haven't used it correctly. "
-                    "Please read the help text of the options."
+                    "Possible reason #1: You haven't used it correctly. Please read the help text of the options."
                 )
                 logger.critical(
-                    "Possible reason #2: There is a problem with this task. "
-                    "Please contact developer or try to fix it yourself."
+                    'Possible reason #2: There is a problem with this task. '
+                    'Please contact developer or try to fix it yourself.'
                 )
-                logger.critical("Request human takeover")
+                logger.critical('Request human takeover')
                 exit(1)
 
             if success:
-                del self.__dict__["config"]
+                del self.__dict__['config']
                 continue
             # 出现错误时
             else:
-                del self.__dict__["config"]
+                del self.__dict__['config']
                 continue
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     nkas = NikkeAutoScript()
     nkas.loop()

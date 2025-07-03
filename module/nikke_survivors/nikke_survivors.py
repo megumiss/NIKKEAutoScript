@@ -3,19 +3,18 @@ import time
 
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
-from module.daily.assets import SW, LU_CHECK, SELECT
+from module.daily.assets import LU_CHECK, SELECT, SW
 from module.logger import logger
 from module.ui.ui import UI
 
 
 class NikkeSurvivors(UI):
-
     def run(self):
         click_timer = Timer(0.2)
         confirm_timer = Timer(5, count=5).start()
         start_time = time.time()
 
-        self.device.click_minitouch(1,1)
+        self.device.click_minitouch(1, 1)
         if hasattr(self.device, '_minitouch_pid'):
             self.device.adb_shell('kill %s' % self.device._minitouch_pid)
             del_cached_property(self.device, 'minitouch_builder')
@@ -24,8 +23,10 @@ class NikkeSurvivors(UI):
             self.device.screenshot()
 
             if confirm_timer.reached():
-                total_time = datetime.datetime.strftime(datetime.datetime.utcfromtimestamp((time.time() - start_time)),
-                                                        "%H:%M:%S")
+                total_time = datetime.datetime.strftime(
+                    datetime.datetime.utcfromtimestamp((time.time() - start_time)),
+                    '%H:%M:%S',
+                )
                 logger.info('挂机时间: %s' % total_time)
                 confirm_timer.reset()
 

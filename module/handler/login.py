@@ -1,5 +1,5 @@
 from module.base.timer import Timer
-from module.exception import RequestHumanTakeover, GameTooManyClickError, GameStuckError
+from module.exception import GameStuckError, GameTooManyClickError, RequestHumanTakeover
 from module.handler.assets import *
 from module.logger import logger
 from module.ui.assets import *
@@ -35,7 +35,7 @@ class LoginHandler(UI):
                     break
             else:
                 confirm_timer.reset()
-                
+
             if self.appear_text('将下载'):
                 self.appear_text_then_click('确认')
                 continue
@@ -47,8 +47,9 @@ class LoginHandler(UI):
                 continue
 
             # TOUCH TO CONTINUE
-            if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) \
-                    or self.appear(LOGIN_CHECK_B, offset=(30, 30), interval=5):
+            if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) or self.appear(
+                LOGIN_CHECK_B, offset=(30, 30), interval=5
+            ):
                 self.device.click(LOGIN_CHECK)
                 if not login_success:
                     logger.info('Login success')
@@ -89,8 +90,8 @@ class LoginHandler(UI):
             if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
-            
-             # 屑芙蒂5x5补给品
+
+            # 屑芙蒂5x5补给品
             if click_timer.reached() and self.handle_shifty_supplies():
                 click_timer.reset()
                 continue
@@ -102,11 +103,11 @@ class LoginHandler(UI):
 
     def handle_app_login(self) -> bool:
         """
-            Returns:
-                bool: 是否登录成功
+        Returns:
+            bool: 是否登录成功
 
-            Raises:
-                RequestHumanTakeover: 当登录失败次数大于3次时
+        Raises:
+            RequestHumanTakeover: 当登录失败次数大于3次时
         """
         for _ in range(3):
             self.device.stuck_record_clear()

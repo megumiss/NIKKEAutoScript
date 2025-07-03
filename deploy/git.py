@@ -19,9 +19,9 @@ class GitManager(DeployConfig):
             logger.info(f'File not found: {file}')
 
     def git_repository_init(self, repo, source='origin', branch='master', proxy=''):
-        '''
+        """
             初始化Git
-        '''
+        """
         logger.hr('Git Init', 1)
         if not self.execute(f'"{self.git}" init', allow_failure=True):
             self.remove('./.git/config')
@@ -29,9 +29,9 @@ class GitManager(DeployConfig):
             self.remove('./.git/HEAD')
             self.execute(f'"{self.git}" init')
 
-        '''
+        """
             设置代理
-        '''
+        """
         logger.hr('Set Git Proxy', 1)
         if proxy:
             self.execute(f'"{self.git}" config --local http.proxy {proxy}')
@@ -40,16 +40,16 @@ class GitManager(DeployConfig):
             self.execute(f'"{self.git}" config --local --unset http.proxy', allow_failure=True)
             self.execute(f'"{self.git}" config --local --unset https.proxy', allow_failure=True)
 
-        '''
+        """
             链接上游仓库
-        '''
+        """
         logger.hr('Set Git Repository', 1)
         if not self.execute(f'"{self.git}" remote set-url {source} {repo}', allow_failure=True):
             self.execute(f'"{self.git}" remote add {source} {repo}')
 
-        '''
+        """
             拉取最新上游仓库最新commit
-        '''
+        """
         logger.hr('Fetch Repository Branch', 1)
         self.execute(f'"{self.git}" fetch {source} {branch}')
 
@@ -59,9 +59,9 @@ class GitManager(DeployConfig):
             logger.info(f'Lock file {lock_file} exists, removing')
             os.remove(lock_file)
 
-        '''
+        """
             合并到本地
-        '''
+        """
         self.execute(f'"{self.git}" reset --hard {source}/{branch}')
         self.execute(f'"{self.git}" pull --ff-only {source} {branch}')
 

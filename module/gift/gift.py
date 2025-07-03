@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import cached_property
 
 from module.base.timer import Timer
@@ -6,7 +6,7 @@ from module.base.utils import point2str
 from module.gift.assets import *
 from module.handler.assets import ANNOUNCEMENT
 from module.logger import logger
-from module.ui.assets import MAIN_GOTO_CASH_SHOP, MAIN_CHECK, GOTO_BACK, CASH_SHOP_CHECK
+from module.ui.assets import CASH_SHOP_CHECK, GOTO_BACK, MAIN_CHECK, MAIN_GOTO_CASH_SHOP
 from module.ui.page import page_main
 from module.ui.ui import UI
 
@@ -43,8 +43,9 @@ class GiftBase(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(GOTO_GENERAL_GIFT, offset=(30, 30), interval=6,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                GOTO_GENERAL_GIFT, offset=(30, 30), interval=6, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -54,9 +55,11 @@ class GiftBase(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() \
-                    and self.appear(GENERAL_GIFT_CHECK, offset=(10, 10), static=False) \
-                    and not self.appear(MONTHLY, offset=(10, 10), static=False):
+            if (
+                click_timer.reached()
+                and self.appear(GENERAL_GIFT_CHECK, offset=(10, 10), static=False)
+                and not self.appear(MONTHLY, offset=(10, 10), static=False)
+            ):
                 self.ensure_sroll((590, 360), (300, 360), count=1, delay=0.4)
                 confirm_timer.reset()
                 click_timer.reset()
@@ -100,13 +103,13 @@ class GiftBase(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() \
-                    and self.appear(GIFT, offset=5, static=False, interval=2) \
-                    and GIFT.match_appear_on(self.device.image, threshold=25):
+            if (
+                click_timer.reached()
+                and self.appear(GIFT, offset=5, static=False, interval=2)
+                and GIFT.match_appear_on(self.device.image, threshold=25)
+            ):
                 self.device.click_minitouch(*GIFT.location)
-                logger.info(
-                    'Click %s @ %s' % (point2str(*GIFT.location), 'GIFT')
-                )
+                logger.info('Click %s @ %s' % (point2str(*GIFT.location), 'GIFT'))
                 click_timer.reset()
                 confirm_timer.reset()
                 continue
@@ -133,8 +136,9 @@ class GiftBase(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(ANNOUNCEMENT, offset=(30, 30), interval=3,
-                                                                static=False):
+            if click_timer.reached() and self.appear_then_click(
+                ANNOUNCEMENT, offset=(30, 30), interval=3, static=False
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -150,7 +154,6 @@ class DailyGift(GiftBase):
 
 
 class WeeklyGift(GiftBase):
-
     @cached_property
     def next_tuesday(self) -> datetime:
         local_now = datetime.now()
@@ -164,14 +167,23 @@ class WeeklyGift(GiftBase):
 
 
 class MonthlyGift(GiftBase):
-
     @cached_property
     def next_month(self) -> datetime:
         local_now = datetime.now()
         next_month = local_now.month % 12 + 1
         next_year = local_now.year + 1 if next_month == 1 else local_now.year
-        return local_now.replace(year=next_year, month=next_month, day=1, hour=4, minute=0, second=0,
-                                 microsecond=0) + self.diff
+        return (
+            local_now.replace(
+                year=next_year,
+                month=next_month,
+                day=1,
+                hour=4,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+            + self.diff
+        )
 
     def run(self):
         self._run(MONTHLY, MONTHLY_CHECK)

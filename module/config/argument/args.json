@@ -1133,10 +1133,6 @@
       }
     },
     "Coop": {
-      "EventCoop": {
-        "type": "checkbox",
-        "value": false
-      },
       "MatchDifficulty": {
         "type": "select",
         "value": "Normal",
@@ -1195,6 +1191,8 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250703s",
+          "event_20250703l",
           "event_20250612"
         ],
         "display": "disabled"
@@ -1226,6 +1224,107 @@
           "Normal",
           "Hard"
         ]
+      },
+      "Coop": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Game": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Shop": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Event2": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "Event2",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "Event": {
+      "Event": {
+        "type": "select",
+        "value": "",
+        "option": [
+          "event_20250703s",
+          "event_20250703l",
+          "event_20250612"
+        ],
+        "display": "disabled"
+      },
+      "LoginStamp": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Challenge": {
+        "type": "checkbox",
+        "value": true
+      },
+      "Story": {
+        "type": "checkbox",
+        "value": false
+      },
+      "StoryPart": {
+        "type": "select",
+        "value": "Story_1",
+        "option": [
+          "Story_1",
+          "Story_2"
+        ]
+      },
+      "StoryDifficulty": {
+        "type": "select",
+        "value": "Normal",
+        "option": [
+          "Normal",
+          "Hard"
+        ]
+      },
+      "Coop": {
+        "type": "checkbox",
+        "value": false
       },
       "Game": {
         "type": "checkbox",
