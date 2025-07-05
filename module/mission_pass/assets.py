@@ -5,7 +5,7 @@ from module.base.template import Template
 # Don't modify it manually.
 
 CHANGE = Button(area={'cn': (449, 202, 481, 232)}, color={'cn': (80, 81, 77)}, button={'cn': (449, 202, 481, 232)}, file={'cn': './assets/cn/mission_pass/CHANGE.png'})
-COMPLETED_CHECK = Button(area={'cn': (659, 389, 673, 412)}, color={'cn': (239, 222, 220)}, button={'cn': (659, 389, 673, 412)}, file={'cn': './assets/cn/mission_pass/COMPLETED_CHECK.png'})
+COMPLETED_CHECK = Button(area={'cn': (668, 366, 682, 380)}, color={'cn': (243, 148, 128)}, button={'cn': (668, 366, 682, 380)}, file={'cn': './assets/cn/mission_pass/COMPLETED_CHECK.png'})
 DOT = Button(area={'cn': (697, 169, 708, 183)}, color={'cn': (250, 126, 96)}, button={'cn': (697, 169, 708, 183)}, file={'cn': './assets/cn/mission_pass/DOT.png'})
 EXPAND = Button(area={'cn': (451, 206, 480, 229)}, color={'cn': (90, 93, 90)}, button={'cn': (451, 206, 480, 229)}, file={'cn': './assets/cn/mission_pass/EXPAND.png'})
 PASS_BANNER = Button(area={'cn': (579, 188, 709, 247)}, color={'cn': (133, 145, 159)}, button={'cn': (579, 188, 709, 247)}, file={'cn': './assets/cn/mission_pass/PASS_BANNER.png'})

@@ -20,7 +20,7 @@ class MissionPass(UI):
             # 任务页面
             if (
                 click_timer.reached()
-                and self.appear(COMPLETED_CHECK, offset=30, threshold=0.9)
+                and self.appear(COMPLETED_CHECK, offset=(-10, -50, 10, 50), threshold=0.9)
                 and self.appear_then_click(PASS_MISSION, offset=30, threshold=0.91, interval=1)
             ):
                 click_timer.reset()
@@ -29,7 +29,7 @@ class MissionPass(UI):
             # 任务全部领取
             if (
                 click_timer.reached()
-                and self.appear(COMPLETED_CHECK, offset=30, threshold=0.9)
+                and self.appear(COMPLETED_CHECK, offset=(-10, -50, 10, 50), threshold=0.9)
                 and self.appear(PASS_REWARD, offset=30, threshold=0.9, static=False)
                 and not self.appear(PASS_NO_REWARD, threshold=10)
             ):
@@ -50,7 +50,7 @@ class MissionPass(UI):
             if (
                 click_timer.reached()
                 and self.appear(PASS_REWARD, offset=30, threshold=0.9, static=False)
-                and not self.appear(COMPLETED_CHECK, offset=30, threshold=0.9)
+                and not self.appear(COMPLETED_CHECK, offset=(-10, -50, 10, 50), threshold=0.9)
                 and self.appear_then_click(PASS_REWARD, offset=30, threshold=0.9, interval=1)
             ):
                 click_timer.reset()
@@ -59,7 +59,7 @@ class MissionPass(UI):
             # 奖励全部领取
             if (
                 click_timer.reached()
-                and not self.appear(COMPLETED_CHECK, offset=30, threshold=0.9)
+                and not self.appear(COMPLETED_CHECK, offset=(-10, -50, 10, 50), threshold=0.9)
                 and self.appear(PASS_MISSION, offset=30, threshold=0.9, static=False)
                 and not self.appear(PASS_NO_REWARD, threshold=10)
             ):
