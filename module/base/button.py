@@ -6,7 +6,7 @@ import imageio
 import numpy as np
 
 from module.base.resource import Resource
-from module.base.utils import crop, load_image, area_offset, color_similar, get_color, mask_area, find_center
+from module.base.utils import *
 
 
 class Button(Resource):
@@ -108,6 +108,17 @@ class Button(Resource):
                 self.image = load_image(self.file, self.area)
             self._match_init = True
 
+    def ensure_luma_template(self):
+        if not self._match_luma_init:
+            if self.is_gif:
+                self.image_luma = []
+                for image in self.image:
+                    luma = rgb2luma(image)
+                    self.image_luma.append(luma)
+            else:
+                self.image_luma = rgb2luma(self.image)
+            self._match_luma_init = True
+
     def match(self, image, offset=30, threshold=0.85, static=True) -> bool:
         self.ensure_template()
         if static:
@@ -144,6 +155,46 @@ class Button(Resource):
         #             return True
         #     return False
         # else:
+
+    def match_luma(self, image, offset=30, similarity=0.85):
+        """
+        Detects button by template matching under Y channel (Luminance)
+
+        Args:
+            image: Screenshot.
+            offset (int, tuple): Detection area offset.
+            similarity (float): 0-1. Similarity.
+
+        Returns:
+            bool.
+        """
+        self.ensure_template()
+        self.ensure_luma_template()
+
+        if isinstance(offset, tuple):
+            if len(offset) == 2:
+                offset = np.array((-offset[0], -offset[1], offset[0], offset[1]))
+            else:
+                offset = np.array(offset)
+        else:
+            offset = np.array((-3, -offset, 3, offset))
+        image = crop(image, offset + self.area)
+
+        if self.is_gif:
+            image_luma = rgb2luma(image)
+            for template in self.image_luma:
+                res = cv2.matchTemplate(template, image_luma, cv2.TM_CCOEFF_NORMED)
+                _, sim, _, point = cv2.minMaxLoc(res)
+                self._button_offset = area_offset(self._button, offset[:2] + np.array(point))
+                if sim > similarity:
+                    return True
+        else:
+            image_luma = rgb2luma(image)
+            res = cv2.matchTemplate(self.image_luma, image_luma, cv2.TM_CCOEFF_NORMED)
+            _, sim, _, point = cv2.minMaxLoc(res)
+            self._button_offset = area_offset(self._button, offset[:2] + np.array(point))
+            print(f'luma similarity: {sim}')
+            return sim > similarity
 
     def match_several(self, image, offset=30, threshold=0.85, static=True) -> list[dict]:
         # areas = set()

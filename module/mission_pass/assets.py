@@ -15,3 +15,4 @@ PASS_NO_REWARD = Button(area={'cn': (317, 1180, 398, 1201)}, color={'cn': (154, 
 PASS_REWARD = Button(area={'cn': (158, 405, 235, 427)}, color={'cn': (201, 201, 204)}, button={'cn': (158, 405, 235, 427)}, file={'cn': './assets/cn/mission_pass/PASS_REWARD.png'})
 RANK_UP_CHECK = Button(area={'cn': (289, 587, 430, 617)}, color={'cn': (89, 92, 89)}, button={'cn': (289, 587, 430, 617)}, file={'cn': './assets/cn/mission_pass/RANK_UP_CHECK.png'})
 RECEIVE = Button(area={'cn': (318, 1182, 377, 1200)}, color={'cn': (155, 152, 152)}, button={'cn': (318, 1182, 377, 1200)}, file={'cn': './assets/cn/mission_pass/RECEIVE.png'})
+REWARD = Button(area={'cn': (318, 1173, 401, 1192)}, color={'cn': (152, 220, 249)}, button={'cn': (318, 1173, 401, 1192)}, file={'cn': './assets/cn/mission_pass/REWARD.png'})

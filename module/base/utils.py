@@ -417,3 +417,17 @@ def get_button_by_location(buttons, coord='y', order='descending'):
             result_bn = bn
     
     return result_bn
+
+def rgb2luma(image):
+    """
+    Convert RGB to the Y channel (Luminance) in YUV color space.
+
+    Args:
+        image (np.ndarray): Shape (height, width, channel)
+
+    Returns:
+        np.ndarray: Shape (height, width)
+    """
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
+    luma, _, _ = cv2.split(image)
+    return luma
