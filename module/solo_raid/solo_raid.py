@@ -4,6 +4,7 @@ from module.ocr.ocr import Digit
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
 from module.solo_raid.assets import *
 from module.ui.assets import FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_MAX, MAIN_CHECK
+from module.ui.page import page_main
 from module.ui.ui import UI
 
 
@@ -54,13 +55,23 @@ class SoloRaid(UI):
                 logger.info('Enter solo raid')
                 continue
 
-            if self.appear(SOLO_RAID_CHECK, offset=10):
+            # 选择第七关
+            if (
+                click_timer.reached()
+                and self.appear(SOLO_RAID_CHECK, offset=(10, 10))
+                and self.appear(STAGE_CHALLENGE, offset=(30, 30))
+                and self.appear_then_click(STAGE_SEVEN_SWITCH, offset=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+
+            if self.appear(SOLO_RAID_CHECK, offset=(10, 10)) and not self.appear(STAGE_CHALLENGE, offset=(30, 30)):
                 break
 
             if confirm_timer.reached():
                 logger.error('Solo raid not found')
                 raise SoloRaidIsUnavailable
-        self.solo_raid()
+
         if self.free_opportunity_remain:
             self.solo_raid()
         else:
@@ -156,6 +167,17 @@ class SoloRaid(UI):
                 click_timer.reset()
                 break
 
+            # 扫荡结束
+            if (
+                click_timer.reached()
+                and self.appear(SOLO_RAID_CHECK, offset=10)
+                and self.appear(STAGE_SEVEN, offset=(30, 30))
+                and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
+                and not self.appear(CHALLENGE, threshold=10)
+            ):
+                click_timer.reset()
+                break
+
         # 进入单人突击界面
         while 1:
             if skip_first_screenshot:
@@ -176,6 +198,7 @@ class SoloRaid(UI):
 
     def run(self):
         try:
+            self.ui_ensure(page_main)
             self.ensure_into_soloraid()
         except SoloRaidIsUnavailable:
             pass

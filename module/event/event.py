@@ -327,8 +327,8 @@ class Event(UI):
             # 关闭
             if (
                 click_timer.reached()
-                and self.appear(self.event_assets.REWARD_CHALLENGE_CHECK, threshold=10)
-                and self.appear(self.event_assets.REWARD_RECEIVE_DONE, threshold=10)
+                and self.appear(self.event_assets.REWARD_CHALLENGE_CHECK, threshold=5)
+                and self.appear(self.event_assets.REWARD_RECEIVE_DONE, threshold=5)
                 and self.appear_then_click(self.event_assets.REWARD_CLOSED, offset=10, interval=1)
             ):
                 click_timer.reset()
@@ -351,9 +351,11 @@ class Event(UI):
             # 进入成就页面
             if (
                 click_timer.reached()
-                and self.appear(self.event_assets.REWARD_MISSION_CHECK, threshold=10)
+                and self.appear(self.event_assets.REWARD_MISSION_CHECK, threshold=5)
                 and self.appear(self.event_assets.REWARD_MISSION_CLEARED, offset=10)
-                and self.appear_then_click(self.event_assets.REWARD_CHALLENGE_HIDDEN, offset=10, interval=1)
+                and self.appear_then_click(
+                    self.event_assets.REWARD_CHALLENGE_HIDDEN, offset=10, threshold=0.95, interval=1
+                )
             ):
                 click_timer.reset()
                 continue
@@ -361,9 +363,11 @@ class Event(UI):
             # 进入成就页面
             if (
                 click_timer.reached()
-                and self.appear(self.event_assets.REWARD_MISSION_CHECK, threshold=10)
-                and self.appear(self.event_assets.REWARD_RECEIVE_DONE, threshold=10)
-                and self.appear_then_click(self.event_assets.REWARD_CHALLENGE_HIDDEN, offset=10, interval=1)
+                and self.appear(self.event_assets.REWARD_MISSION_CHECK, threshold=5)
+                and self.appear(self.event_assets.REWARD_RECEIVE_DONE, threshold=5)
+                and self.appear_then_click(
+                    self.event_assets.REWARD_CHALLENGE_HIDDEN, offset=10, threshold=0.95, interval=1
+                )
             ):
                 click_timer.reset()
                 continue
@@ -730,7 +734,7 @@ class Event(UI):
                 if (
                     click_timer.reached()
                     and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
-                    and self.appear_then_click(FIGHT_QUICKLY_MAX, threshold=10, interval=1)
+                    and self.appear_then_click(FIGHT_QUICKLY_MAX, offset=30, threshold=0.98, interval=1)
                 ):
                     click_timer.reset()
                     continue
@@ -739,8 +743,8 @@ class Event(UI):
                 if (
                     click_timer.reached()
                     and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
-                    and self.appear(FIGHT_QUICKLY_MAX, threshold=10)
-                    and self.appear_then_click(FIGHT_QUICKLY_FIGHT, threshold=10, interval=1)
+                    and not self.appear(FIGHT_QUICKLY_MAX, offset=30, threshold=0.98)
+                    and self.appear_then_click(FIGHT_QUICKLY_FIGHT, threshold=20, interval=1)
                 ):
                     click_timer.reset()
                     continue

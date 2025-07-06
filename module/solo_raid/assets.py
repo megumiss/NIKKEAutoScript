@@ -17,4 +17,6 @@ FIGHT_HISTORY = Button(area={'cn': (599, 786, 661, 801)}, color={'cn': (175, 174
 FREE_OPPORTUNITY_CHECK = Button(area={'cn': (398, 1134, 416, 1154)}, color={'cn': (125, 115, 73)}, button={'cn': (398, 1134, 416, 1154)}, file={'cn': './assets/cn/solo_raid/FREE_OPPORTUNITY_CHECK.png'})
 SOLO_RAID = Button(area={'cn': (42, 586, 84, 608)}, color={'cn': (156, 99, 37)}, button={'cn': (42, 586, 84, 608)}, file={'cn': './assets/cn/solo_raid/SOLO_RAID.png'})
 SOLO_RAID_CHECK = Button(area={'cn': (230, 555, 337, 573)}, color={'cn': (139, 106, 34)}, button={'cn': (230, 555, 337, 573)}, file={'cn': './assets/cn/solo_raid/SOLO_RAID_CHECK.png'})
+STAGE_CHALLENGE = Button(area={'cn': (348, 491, 370, 517)}, color={'cn': (211, 148, 11)}, button={'cn': (348, 491, 370, 517)}, file={'cn': './assets/cn/solo_raid/STAGE_CHALLENGE.png'})
 STAGE_SEVEN = Button(area={'cn': (339, 492, 380, 519)}, color={'cn': (177, 120, 9)}, button={'cn': (339, 492, 380, 519)}, file={'cn': './assets/cn/solo_raid/STAGE_SEVEN.png'})
+STAGE_SEVEN_SWITCH = Button(area={'cn': (553, 131, 580, 148)}, color={'cn': (159, 127, 13)}, button={'cn': (553, 131, 580, 148)}, file={'cn': './assets/cn/solo_raid/STAGE_SEVEN_SWITCH.png'})

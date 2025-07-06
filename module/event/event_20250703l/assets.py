@@ -31,7 +31,7 @@ SKIP = Button(area={'cn': (616, 22, 671, 41)}, color={'cn': (133, 134, 133)}, bu
 STORY_1_CHECK = Button(area={'cn': (315, 952, 403, 982)}, color={'cn': (87, 81, 72)}, button={'cn': (315, 952, 403, 982)}, file={'cn': './assets/event/event_20250703l/STORY_1_CHECK.png'})
 STORY_1_HARD_STAGE_11 = Button(area={'cn': (415, 707, 520, 734)}, color={'cn': (167, 111, 67)}, button={'cn': (415, 707, 520, 734)}, file={'cn': './assets/event/event_20250703l/STORY_1_HARD_STAGE_11.png'})
 STORY_1_NORMAL = Button(area={'cn': (368, 211, 629, 250)}, color={'cn': (143, 139, 118)}, button={'cn': (368, 211, 629, 250)}, file={'cn': './assets/event/event_20250703l/STORY_1_NORMAL.png'})
-STORY_1_NORMAL_STAGE_11 = Button(area={'cn': (415, 707, 520, 734)}, color={'cn': (167, 111, 67)}, button={'cn': (415, 707, 520, 734)}, file={'cn': './assets/event/event_20250703l/STORY_1_NORMAL_STAGE_11.png'})
+STORY_1_NORMAL_STAGE_11 = Button(area={'cn': (436, 942, 527, 958)}, color={'cn': (72, 61, 52)}, button={'cn': (436, 942, 527, 958)}, file={'cn': './assets/event/event_20250703l/STORY_1_NORMAL_STAGE_11.png'})
 STORY_2_CHECK = Button(area={'cn': (408, 913, 549, 963)}, color={'cn': (201, 158, 119)}, button={'cn': (408, 913, 549, 963)}, file={'cn': './assets/event/event_20250703l/STORY_2_CHECK.png'})
 STORY_2_HARD = Button(area={'cn': (556, 1186, 623, 1208)}, color={'cn': (192, 170, 122)}, button={'cn': (556, 1186, 623, 1208)}, file={'cn': './assets/event/event_20250703l/STORY_2_HARD.png'})
 STORY_2_HARD_HIDDEN = Button(area={'cn': (556, 1187, 623, 1206)}, color={'cn': (27, 28, 28)}, button={'cn': (556, 1187, 623, 1206)}, file={'cn': './assets/event/event_20250703l/STORY_2_HARD_HIDDEN.png'})
