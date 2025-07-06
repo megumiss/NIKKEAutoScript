@@ -5,14 +5,12 @@ from module.base.template import Template
 # Don't modify it manually.
 
 CHANGE = Button(area={'cn': (449, 202, 481, 232)}, color={'cn': (80, 81, 77)}, button={'cn': (449, 202, 481, 232)}, file={'cn': './assets/cn/mission_pass/CHANGE.png'})
-COMPLETED_CHECK = Button(area={'cn': (668, 366, 682, 380)}, color={'cn': (243, 148, 128)}, button={'cn': (668, 366, 682, 380)}, file={'cn': './assets/cn/mission_pass/COMPLETED_CHECK.png'})
 DOT = Button(area={'cn': (697, 169, 708, 183)}, color={'cn': (250, 126, 96)}, button={'cn': (697, 169, 708, 183)}, file={'cn': './assets/cn/mission_pass/DOT.png'})
 EXPAND = Button(area={'cn': (451, 206, 480, 229)}, color={'cn': (90, 93, 90)}, button={'cn': (451, 206, 480, 229)}, file={'cn': './assets/cn/mission_pass/EXPAND.png'})
+MISSION_RED_POINT = Button(area={'cn': (668, 366, 682, 380)}, color={'cn': (243, 148, 128)}, button={'cn': (668, 366, 682, 380)}, file={'cn': './assets/cn/mission_pass/MISSION_RED_POINT.png'})
 PASS_BANNER = Button(area={'cn': (579, 188, 709, 247)}, color={'cn': (133, 145, 159)}, button={'cn': (579, 188, 709, 247)}, file={'cn': './assets/cn/mission_pass/PASS_BANNER.png'})
 PASS_CHECK = Button(area={'cn': (137, 330, 181, 364)}, color={'cn': (108, 115, 120)}, button={'cn': (137, 330, 181, 364)}, file={'cn': './assets/cn/mission_pass/PASS_CHECK.png'})
-PASS_MISSION = Button(area={'cn': (489, 405, 563, 427)}, color={'cn': (207, 206, 209)}, button={'cn': (489, 405, 563, 427)}, file={'cn': './assets/cn/mission_pass/PASS_MISSION.png'})
-PASS_NO_REWARD = Button(area={'cn': (317, 1180, 398, 1201)}, color={'cn': (154, 151, 152)}, button={'cn': (317, 1180, 398, 1201)}, file={'cn': './assets/cn/mission_pass/PASS_NO_REWARD.png'})
-PASS_REWARD = Button(area={'cn': (158, 405, 235, 427)}, color={'cn': (201, 201, 204)}, button={'cn': (158, 405, 235, 427)}, file={'cn': './assets/cn/mission_pass/PASS_REWARD.png'})
+PASS_MISSION = Button(area={'cn': (507, 382, 543, 402)}, color={'cn': (168, 168, 168)}, button={'cn': (507, 382, 543, 402)}, file={'cn': './assets/cn/mission_pass/PASS_MISSION.png'})
+PASS_REWARD = Button(area={'cn': (176, 382, 216, 402)}, color={'cn': (161, 161, 162)}, button={'cn': (176, 382, 216, 402)}, file={'cn': './assets/cn/mission_pass/PASS_REWARD.png'})
 RANK_UP_CHECK = Button(area={'cn': (289, 587, 430, 617)}, color={'cn': (89, 92, 89)}, button={'cn': (289, 587, 430, 617)}, file={'cn': './assets/cn/mission_pass/RANK_UP_CHECK.png'})
-RECEIVE = Button(area={'cn': (318, 1182, 377, 1200)}, color={'cn': (155, 152, 152)}, button={'cn': (318, 1182, 377, 1200)}, file={'cn': './assets/cn/mission_pass/RECEIVE.png'})
-REWARD = Button(area={'cn': (318, 1173, 401, 1192)}, color={'cn': (152, 220, 249)}, button={'cn': (318, 1173, 401, 1192)}, file={'cn': './assets/cn/mission_pass/REWARD.png'})
+REWARD_RED_POINT = Button(area={'cn': (341, 367, 353, 379)}, color={'cn': (250, 125, 100)}, button={'cn': (341, 367, 353, 379)}, file={'cn': './assets/cn/mission_pass/REWARD_RED_POINT.png'})
