@@ -83,6 +83,9 @@ Task:
   SpecialArena:
     name: 特殊竞技场
     help: ""
+  ChampionArena:
+    name: 冠军竞技场
+    help: ""
   Conversation:
     name: 咨询
     help: ""

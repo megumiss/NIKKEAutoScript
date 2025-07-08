@@ -74,6 +74,9 @@ SpecialArena:
   - Scheduler
   - OpponentSelection
 
+ChampionArena:
+  - Scheduler
+
 Interception:
   - Scheduler
 

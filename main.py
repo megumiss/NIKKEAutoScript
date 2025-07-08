@@ -215,6 +215,11 @@ class NikkeAutoScript:
 
         SpecialArena(config=self.config, device=self.device).run()
 
+    def champion_arena(self):
+        from module.champion_arena.champion_arena import ChampionArena
+
+        ChampionArena(config=self.config, device=self.device).run()
+
     def simulation_room(self):
         from module.simulation_room.simulation_room import SimulationRoom
 

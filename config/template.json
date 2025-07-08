@@ -307,6 +307,19 @@
       "Storage": {}
     }
   },
+  "ChampionArena": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "ChampionArena",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "Interception": {
     "Scheduler": {
       "Enable": false,
