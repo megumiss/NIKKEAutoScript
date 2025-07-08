@@ -147,3 +147,8 @@ Event:
   Coop: false
   Game: false
   Shop: false
+CheerStrategy:
+  Enable: false
+  Strategy:
+    value: 'Most'
+    option: [ 'Most','Few','Random' ]

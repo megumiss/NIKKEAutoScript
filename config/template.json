@@ -316,6 +316,10 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
+    "CheerStrategy": {
+      "Enable": false,
+      "Strategy": "Most"
+    },
     "Storage": {
       "Storage": {}
     }

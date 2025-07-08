@@ -24,6 +24,10 @@ SpecialArena:
   Scheduler:
     Enable: false
 
+ChampionArena:
+  Scheduler:
+    Enable: false
+
 Conversation:
   Scheduler:
     Enable: false

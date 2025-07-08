@@ -491,3 +491,16 @@ Coop:
     help: ""
     Normal: "普通"
     Challenge: "挑战"
+CheerStrategy:
+  _info:
+    name: 应援策略
+    help: ""
+  Enable:
+    name: 启用策略
+    help: "根据策略和当前的应援人数比例选择应援哪一方"
+  Strategy:
+    name: 选择策略
+    help: ""
+    Most: "多数"
+    Few: "少数"
+    Random: "随机"

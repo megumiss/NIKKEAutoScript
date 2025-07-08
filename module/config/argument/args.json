@@ -1087,6 +1087,21 @@
         "display": "hide"
       }
     },
+    "CheerStrategy": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Strategy": {
+        "type": "select",
+        "value": "Most",
+        "option": [
+          "Most",
+          "Few",
+          "Random"
+        ]
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

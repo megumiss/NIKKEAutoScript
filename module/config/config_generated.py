@@ -108,5 +108,9 @@ class GeneratedConfig:
     Event_Game = False
     Event_Shop = False
 
+    # Group `CheerStrategy`
+    CheerStrategy_Enable = False
+    CheerStrategy_Strategy = 'Most'  # Most, Few, Random
+
     # Group `Storage`
     Storage_Storage = {}

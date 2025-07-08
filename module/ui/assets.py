@@ -5,6 +5,7 @@ from module.base.template import Template
 # Don't modify it manually.
 
 ARENA_CHECK = Button(area={'cn': (69, 656, 160, 696)}, color={'cn': (104, 109, 124)}, button={'cn': (69, 656, 160, 696)}, file={'cn': './assets/cn/ui/ARENA_CHECK.png'})
+ARENA_GOTO_CHAMPION_ARENA = Button(area={'cn': (192, 957, 280, 973)}, color={'cn': (82, 116, 177)}, button={'cn': (192, 957, 280, 973)}, file={'cn': './assets/cn/ui/ARENA_GOTO_CHAMPION_ARENA.png'})
 ARENA_GOTO_ROOKIE_ARENA = Button(area={'cn': (69, 655, 160, 691)}, color={'cn': (111, 116, 130)}, button={'cn': (69, 655, 160, 691)}, file={'cn': './assets/cn/ui/ARENA_GOTO_ROOKIE_ARENA.png'})
 ARENA_GOTO_SPECIAL_ARENA = Button(area={'cn': (399, 659, 500, 689)}, color={'cn': (112, 117, 130)}, button={'cn': (399, 659, 500, 689)}, file={'cn': './assets/cn/ui/ARENA_GOTO_SPECIAL_ARENA.png'})
 ARK_CHECK = Button(area={'cn': (59, 588, 71, 646)}, color={'cn': (106, 106, 105)}, button={'cn': (59, 588, 71, 646)}, file={'cn': './assets/cn/ui/ARK_CHECK.png'})
@@ -14,6 +15,7 @@ ARK_GOTO_RANKING = Button(area={'cn': (640, 191, 676, 234)}, color={'cn': (158, 
 ARK_GOTO_SIMULATION_ROOM = Button(area={'cn': (98, 646, 190, 684)}, color={'cn': (93, 97, 96)}, button={'cn': (98, 646, 190, 684)}, file={'cn': './assets/cn/ui/ARK_GOTO_SIMULATION_ROOM.png'})
 ARK_GOTO_TRIBE_TOWER = Button(area={'cn': (485, 338, 502, 438)}, color={'cn': (79, 80, 78)}, button={'cn': (485, 338, 502, 438)}, file={'cn': './assets/cn/ui/ARK_GOTO_TRIBE_TOWER.png'})
 CASH_SHOP_CHECK = Button(area={'cn': (19, 37, 56, 57)}, color={'cn': (138, 139, 145)}, button={'cn': (19, 37, 56, 57)}, file={'cn': './assets/cn/ui/CASH_SHOP_CHECK.png'})
+CHAMPION_ARENA_CHECK = Button(area={'cn': (75, 309, 405, 374)}, color={'cn': (198, 178, 234)}, button={'cn': (75, 309, 405, 374)}, file={'cn': './assets/cn/ui/CHAMPION_ARENA_CHECK.png'})
 COMMISSION_CHECK = Button(area={'cn': (93, 183, 259, 213)}, color={'cn': (134, 134, 134)}, button={'cn': (93, 183, 259, 213)}, file={'cn': './assets/cn/ui/COMMISSION_CHECK.png'})
 COMMISSION_GOTO_OUTPOST = Button(area={'cn': (634, 152, 679, 197)}, color={'cn': (232, 228, 231)}, button={'cn': (634, 152, 679, 197)}, file={'cn': './assets/cn/ui/COMMISSION_GOTO_OUTPOST.png'})
 CONVERSATION_CHECK = Button(area={'cn': (262, 171, 452, 187)}, color={'cn': (138, 138, 136)}, button={'cn': (262, 171, 452, 187)}, file={'cn': './assets/cn/ui/CONVERSATION_CHECK.png'})
