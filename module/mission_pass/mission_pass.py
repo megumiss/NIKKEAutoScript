@@ -81,6 +81,12 @@ class MissionPass(UI):
                 and not self.appear(REWARD_RED_POINT, offset=(-10, -50, 10, 50))
             ):
                 self.device.click_minitouch(1, 1)
+                self.device.sleep(0.5)
+                click_timer.reset()
+                continue
+
+            # 回到主页面
+            if self.appear(MAIN_CHECK, offset=10):
                 logger.info('Close misson pass')
                 break
 
@@ -132,19 +138,25 @@ class MissionPass(UI):
             # 每次都检查所有的pass
             for _ in range(passs):
                 self.device.screenshot()
-                # 检查红点
-                if click_timer.reached() and self.appear_then_click(DOT, offset=5):
+                if self.appear(DOT, offset=5):
                     find_dot = True
-                    self.receive()
                     while 1:
-                        self.device.screenshot()
-                        if self.appear(MAIN_CHECK, offset=5, interval=0.3):
+                        # 进入某个pass
+                        if click_timer.reached() and self.appear_then_click(DOT, offset=5):
+                            click_timer.reset()
+                            continue
+                        # pass弹窗
+                        if self.appear(PASS_CHECK, offset=30):
+                            logger.info('Open misson pass')
                             break
+
+                    # 领取pass
+                    self.receive()
                     self.config.PASS_LIMIT -= 1
                     logger.attr('PENDING MISSION PASS', self.config.PASS_LIMIT)
                     break
-                passs -= 1
-                self.ensure_sroll((640, 200), (500, 200), speed=40, count=1, delay=0.5)
+                else:
+                    self.ensure_sroll((640, 200), (500, 200), speed=40, count=1, delay=0.5)
 
             # 没有红点
             if not find_dot:
