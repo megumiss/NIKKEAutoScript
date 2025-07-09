@@ -205,22 +205,30 @@ class Daily(UI):
             ):
                 click_timer.reset()
                 continue
-            # 结束
+
+            # 关闭
             if (
                 send_done
                 and self.appear(GIFT_SEND_DONE, threshold=10)
                 and self.appear_then_click(GIFT_SEND_CLOSE, offset=5, interval=1)
             ):
                 click_timer.reset()
+                continue
+
+            # nikke页面
+            if send_done and self.appear(GIFT, offset=10):
                 break
+
             # 进入
             if click_timer.reached() and self.appear_then_click(GIFT, offset=5, interval=1):
                 click_timer.reset()
                 continue
+
             # 选择礼物
             if click_timer.reached() and self.appear_then_click(GIFT_RANK_R, offset=5, interval=1, static=False):
                 click_timer.reset()
                 continue
+
             # 送礼
             if (
                 click_timer.reached()
@@ -228,7 +236,6 @@ class Daily(UI):
                 and self.appear_then_click(GIFT_SEND, threshold=10, interval=1)
             ):
                 send_done = True
-                self.device.sleep(1)
                 click_timer.reset()
                 continue
 
