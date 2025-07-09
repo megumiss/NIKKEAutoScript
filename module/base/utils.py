@@ -256,6 +256,7 @@ def color_similar(color1, color2, threshold=10):
     # print(color1, color2)
     diff = np.array(color1).astype(int) - np.array(color2).astype(int)
     diff = np.max(np.maximum(diff, 0)) - np.min(np.minimum(diff, 0))
+    # print(diff)
     return diff <= threshold
 
 

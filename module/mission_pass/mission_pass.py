@@ -136,13 +136,19 @@ class MissionPass(UI):
         while 1:
             find_dot = False
             # 每次都检查所有的pass
+            self.ensure_sroll((640, 200), (500, 200), speed=40, count=1, delay=0.5)
             for _ in range(passs):
                 self.device.screenshot()
                 if self.appear(DOT, offset=5):
                     find_dot = True
                     while 1:
+                        self.device.screenshot()
                         # 进入某个pass
-                        if click_timer.reached() and self.appear_then_click(DOT, offset=5):
+                        if (
+                            click_timer.reached()
+                            and self.appear(MAIN_CHECK, offset=30)
+                            and self.appear_then_click(DOT, offset=5, interval=3)
+                        ):
                             click_timer.reset()
                             continue
                         # pass弹窗
