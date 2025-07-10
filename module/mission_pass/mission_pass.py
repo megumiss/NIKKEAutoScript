@@ -162,7 +162,19 @@ class MissionPass(UI):
                     logger.attr('PENDING MISSION PASS', self.config.PASS_LIMIT)
                     break
                 else:
+                    tmp_image = self.device.image
                     self.ensure_sroll((640, 200), (500, 200), speed=40, count=1, delay=0.5)
+                    # 比较banner是否变化
+                    while 1:
+                        self.device.screenshot()
+
+                        banner = Button(PASS_BANNER.area, None, button=PASS_BANNER.area)
+                        banner._match_init = True
+                        banner.image = crop(tmp_image, PASS_BANNER.area)
+                        if not self.appear(banner, offset=10, threshold=0.8):
+                            break
+                        else:
+                            continue
 
             # 没有红点
             if not find_dot:
