@@ -398,5 +398,9 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         return self.event_type
 
     @property
+    def EVENT_MINI_GAME(self):
+        return self.mini_game
+
+    @property
     def EVENT_COOP(self):
         return self.Coop_EventCoop

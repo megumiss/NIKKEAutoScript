@@ -69,18 +69,6 @@ class Event(UI):
             logger.error(f'Event assets not found for: {event_id}')
             raise EventUnavailableError
 
-    @property
-    def EVENT_TYPE(self):
-        return self.type
-
-    @property
-    def EVENT_ID(self):
-        return self.id
-    
-    @property
-    def EVENT_MINI_GAME(self):
-        return self.mini_game
-
     def STORY_STAGE_11(self, story):
         stages = {
             'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_11,
@@ -174,6 +162,7 @@ class Event(UI):
 
     @Config.when(EVENT_TYPE=2)
     def login_stamp(self):
+        logger.hr('START EVENT LOGIN STAMP')
         logger.info('Small event, skip loginstamp')
 
     def challenge(self, skip_first_screenshot=True):
@@ -853,6 +842,7 @@ class Event(UI):
 
     @Config.when(EVENT_TYPE=2)
     def coop(self):
+        logger.hr('EVENT COOP START')
         logger.info('Small event, skip coop')
 
     def shop(self, skip_first_screenshot=True):
@@ -1046,6 +1036,7 @@ class Event(UI):
 
     @Config.when(EVENT_MINI_GAME=False)
     def game(self):
+        logger.hr('START EVENT GAME')
         logger.info('Game not support in this event')
 
     def ensure_into_event(self, skip_first_screenshot=True):

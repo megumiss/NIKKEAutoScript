@@ -25,7 +25,7 @@ def game(self, skip_first_screenshot=True):
         if self.appear(self.event_assets.MINI_GAME_CLICK, offset=10):
             break
 
-    start_game()
+    start_game(self)
 
     # 领取奖励
     while 1:
