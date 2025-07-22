@@ -31,7 +31,7 @@ from module.ui.assets import (
 from module.ui.page import *
 from module.ui.ui import UI
 
-from .game import game
+from .minigame.game import game
 
 
 class EventSelectError(Exception):
@@ -72,6 +72,14 @@ class Event(UI):
     @property
     def EVENT_TYPE(self):
         return self.type
+
+    @property
+    def EVENT_ID(self):
+        return self.id
+    
+    @property
+    def EVENT_MINI_GAME(self):
+        return self.mini_game
 
     def STORY_STAGE_11(self, story):
         stages = {
@@ -1005,13 +1013,11 @@ class Event(UI):
 
         return filtered_items
 
+    @Config.when(EVENT_MINI_GAME=True)
     def game(self, skip_first_screenshot=True):
         logger.hr('START EVENT GAME')
-        if not self.config.mini_game:
-            logger.info('Game not support in this event')
-            return
-
         click_timer = Timer(0.3)
+
         # 进入小游戏页面
         while 1:
             if skip_first_screenshot:
@@ -1037,6 +1043,10 @@ class Event(UI):
                 break
 
         return game(self, skip_first_screenshot)
+
+    @Config.when(EVENT_MINI_GAME=False)
+    def game(self):
+        logger.info('Game not support in this event')
 
     def ensure_into_event(self, skip_first_screenshot=True):
         logger.hr('OPEN EVENT STORY')
