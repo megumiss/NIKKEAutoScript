@@ -28,6 +28,7 @@ exclude = [
     "site-packages",
     "venv",
     "**/**/assets.py",
+    "**/**/assets_game.py",
     "module/base",
     "module/config",
     "module/webui",

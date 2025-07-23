@@ -17,12 +17,12 @@ def game(self, skip_first_screenshot=True):
             self.device.screenshot()
 
         # 点击开始
-        if click_timer.reached() and self.appear_then_click(self.event_assets.MINI_GAME_START, offset=10, interval=2):
+        if click_timer.reached() and self.appear_then_click(self.minigame_assets.MINI_GAME_START, offset=10, interval=2):
             logger.info('Start event mini game')
             click_timer.reset()
             continue
 
-        if self.appear(self.event_assets.MINI_GAME_CLICK, offset=10):
+        if self.appear(self.minigame_assets.MINI_GAME_CLICK, offset=10):
             break
 
     start_game(self)
@@ -33,15 +33,15 @@ def game(self, skip_first_screenshot=True):
 
         if (
             click_timer.reached()
-            and self.appear(self.event_assets.MINI_GAME_START, offset=10)
-            and self.appear(self.event_assets.MINI_GAME_REWARD_DONE, offset=10)
+            and self.appear(self.minigame_assets.MINI_GAME_START, offset=10)
+            and self.appear(self.minigame_assets.MINI_GAME_REWARD_DONE, offset=10)
         ):
             break
 
         if (
             click_timer.reached()
-            and self.appear(self.event_assets.MINI_GAME_START, offset=10)
-            and self.appear_then_click(self.event_assets.MINI_GAME_REWARD, offset=10, interval=1)
+            and self.appear(self.minigame_assets.MINI_GAME_START, offset=10)
+            and self.appear_then_click(self.minigame_assets.MINI_GAME_REWARD, offset=10, interval=1)
         ):
             click_timer.reset()
             continue
@@ -66,7 +66,7 @@ def game(self, skip_first_screenshot=True):
             continue
 
         if click_timer.reached() and self.appear_then_click(
-            self.event_assets.MINI_GAME_BACK_CONFIRM, offset=10, interval=2
+            self.minigame_assets.MINI_GAME_BACK_CONFIRM, offset=10, interval=2
         ):
             click_timer.reset()
             continue

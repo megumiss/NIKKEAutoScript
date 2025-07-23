@@ -57,16 +57,17 @@ class EventInfo:
 class Event(UI):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.event_assets = self.load_event_assets()
+        self.event_assets = self.load_event_assets('assets')
+        self.minigame_assets = self.load_event_assets('assets_game')
 
-    def load_event_assets(self):
-        """动态加载当前活动的资源模块"""
+    def load_event_assets(self, module_name):
+        """动态加载资源模块"""
         event_id = self.event.id
         try:
-            module_name = f'module.event.{event_id}.assets'
+            module_name = f'module.event.{event_id}.{module_name}'
             return importlib.import_module(module_name)
         except ImportError:
-            logger.error(f'Event assets not found for: {event_id}')
+            logger.warning(f'Assets module not found: {module_name}')
             raise EventUnavailableError
 
     def STORY_STAGE_11(self, story):
@@ -1018,18 +1019,18 @@ class Event(UI):
             if (
                 click_timer.reached()
                 and self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30))
-                and self.appear_then_click(self.event_assets.MINI_GAME, offset=10, interval=5)
+                and self.appear_then_click(self.minigame_assets.MINI_GAME, offset=10, interval=5)
             ):
                 click_timer.reset()
                 continue
 
             if click_timer.reached() and self.appear_then_click(
-                self.event_assets.MINI_GAME_TOUCH, offset=10, interval=2
+                self.minigame_assets.MINI_GAME_TOUCH, offset=10, interval=2
             ):
                 click_timer.reset()
                 continue
 
-            if self.appear(self.event_assets.MINI_GAME_CHECK, offset=10):
+            if self.appear(self.minigame_assets.MINI_GAME_CHECK, offset=10):
                 break
 
         return game(self, skip_first_screenshot)
