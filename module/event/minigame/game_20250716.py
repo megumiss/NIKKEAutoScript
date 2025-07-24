@@ -1,14 +1,33 @@
+from module.base.decorator import Config
 from module.base.timer import Timer
 from module.event.event_20250716.assets_game import *
 from module.logger import logger
 from module.ui.page import *
 
 
-def start_game(self):
+@Config.when(EVENT_ID='event_20250716')
+def start_game(self, skip_first_screenshot=True):
     logger.info('Open event mini game')
     confirm_timer = Timer(3, count=3)
     click_timer = Timer(0.3)
 
+    # 游戏开始
+    while 1:
+        if skip_first_screenshot:
+            skip_first_screenshot = False
+        else:
+            self.device.screenshot()
+
+        # 点击开始
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_START, offset=10, interval=2):
+            logger.info('Start event mini game')
+            click_timer.reset()
+            continue
+
+        if self.appear(MINI_GAME_CLICK, offset=10):
+            break
+
+    # 游戏逻辑处理
     while 1:
         self.device.screenshot()
 

@@ -1033,7 +1033,7 @@ class Event(UI):
             if self.appear(self.minigame_assets.MINI_GAME_CHECK, offset=10):
                 break
 
-        return game(self, skip_first_screenshot)
+        return game(self)
 
     @Config.when(EVENT_MINI_GAME=False)
     def game(self):
