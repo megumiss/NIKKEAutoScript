@@ -97,6 +97,7 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 ---
 
 ### 常见问题
+#### Q0：如果有使用或者遇到其他问题可以加入qq划水群 823265807 反馈
 
 #### Q1：运行NikkeAutoScript.exe提示'Failed to load resource'
 **A1**：可能是运行`updater.bat`时，没有完全更新成功，可以尝试重新解压后再次运行`updater.bat`
@@ -129,7 +130,6 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 #### Q10：运行调度器时出现'FileNotFoundError: C:\Users\......\ch_PP-OCRv4_det_infer.onnx does not exists.'
 **A10**：将`bin\deploy\ch_PP-OCRv4_det_infer.onnx`复制到报错的路径
 
-#### Q99: 如果有使用问题或者遇到其他问题可以加入qq划水群 823265807 反馈
 ---
 
 ### 推荐画面设置
