@@ -17,7 +17,9 @@ def game(self, skip_first_screenshot=True):
             self.device.screenshot()
 
         # 点击开始
-        if click_timer.reached() and self.appear_then_click(self.minigame_assets.MINI_GAME_START, offset=10, interval=2):
+        if click_timer.reached() and self.appear_then_click(
+            self.minigame_assets.MINI_GAME_START, offset=10, interval=2
+        ):
             logger.info('Start event mini game')
             click_timer.reset()
             continue

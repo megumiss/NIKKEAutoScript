@@ -1,5 +1,5 @@
 from module.base.timer import Timer
-from module.event.event_20250716.assets import *
+from module.event.event_20250716.assets_game import *
 from module.logger import logger
 from module.ui.page import *
 

@@ -120,3 +120,18 @@
 |--------|------|----------|------|
 | **STORY_2_NORMAL_STAGE_11** | 故事2普通11关 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_2_NORMAL_STAGE_11.png" width="200"> |
 | **STORY_2_HARD_STAGE_11** | 故事2困难11关 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_2_HARD_STAGE_11.png" width="200"> |
+
+
+# 小游戏
+### 公共
+| 图片 | 描述 | 使用状态 | 预览 |
+|--------|------|----------|------|
+| **MINI_GAME** | 从活动前往小游戏按钮 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME.png" width="200"> |
+| **MINI_GAME_TOUCH** | 小游戏开屏点击按钮 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_TOUCH.png" width="200"> |
+| **MINI_GAME_CHECK** | 小游戏页面检查 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_CHECK.png" width="200"> |
+| **MINI_GAME_REWARD** | 小游戏每日奖励领取 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_REWARD.png" width="200"> |
+| **MINI_GAME_REWARD_DONE** | 小游戏每日奖励领取完成 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_REWARD_DONE.png" width="200"> |
+| **MINI_GAME_MISSION** | 小游戏任务按钮 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_MISSION.png" width="200"> |
+| **MINI_GAME_MISSION_CLOSE** | 小游戏任务关闭 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_MISSION_CLOSE.png" width="200"> |
+| **MINI_GAME_MISSION_DONE** | 小游戏任务奖励完成 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_MISSION_DONE.png" width="200"> |
+| **MINI_GAME_MISSION_REWARD** | 小游戏任务奖励领取 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_MISSION_REWARD.png" width="200"> |
