@@ -74,7 +74,7 @@ def mission(self, skip_first_screenshot=True):
 
 
 def back_to_event(self, skip_first_screenshot=True):
-    logger.info('Mini game done, Back to event')
+    logger.info('Mini game done, back to event')
     click_timer = Timer(0.3)
 
     while 1:
@@ -101,10 +101,10 @@ def game(self):
     logger.info('Open event mini game')
 
     # 每日
-    start_game(self)
+    #start_game(self)
     # 领取每日奖励
-    reward()
+    reward(self)
     # 领取任务奖励
-    mission()
+    mission(self)
     # 回到活动主页
-    back_to_event()
+    back_to_event(self)
