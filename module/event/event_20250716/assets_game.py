@@ -10,6 +10,7 @@ MINI_GAME_BACK_CONFIRM = Button(area={'cn': (507, 789, 555, 812)}, color={'cn': 
 MINI_GAME_CHECK = Button(area={'cn': (260, 1070, 297, 1123)}, color={'cn': (241, 163, 124)}, button={'cn': (260, 1070, 297, 1123)}, file={'cn': './assets/minigame/event_20250716/MINI_GAME_CHECK.png'})
 MINI_GAME_CLOSE = Button(area={'cn': (606, 373, 641, 409)}, color={'cn': (149, 150, 139)}, button={'cn': (606, 373, 641, 409)}, file={'cn': './assets/minigame/event_20250716/MINI_GAME_CLOSE.png'})
 MINI_GAME_EXEC_CHECK = Button(area={'cn': (605, 39, 642, 73)}, color={'cn': (146, 136, 126)}, button={'cn': (605, 39, 642, 73)}, file={'cn': './assets/minigame/event_20250716/MINI_GAME_EXEC_CHECK.png'})
+MINI_GAME_MISSION = Button(area={'cn': (267, 390, 296, 420)}, color={'cn': (151, 116, 49)}, button={'cn': (267, 390, 296, 420)}, file={'cn': './assets/minigame/event_20250716/MINI_GAME_MISSION.png'})
 MINI_GAME_MISSION_CHECK = Button(area={'cn': (330, 138, 388, 167)}, color={'cn': (158, 158, 148)}, button={'cn': (330, 138, 388, 167)}, file={'cn': './assets/minigame/event_20250716/MINI_GAME_MISSION_CHECK.png'})
 MINI_GAME_MISSION_CLOSE = Button(area={'cn': (609, 134, 646, 170)}, color={'cn': (147, 147, 137)}, button={'cn': (609, 134, 646, 170)}, file={'cn': './assets/minigame/event_20250716/MINI_GAME_MISSION_CLOSE.png'})
 MINI_GAME_MISSION_DONE = Button(area={'cn': (301, 1122, 418, 1141)}, color={'cn': (143, 143, 143)}, button={'cn': (301, 1122, 418, 1141)}, file={'cn': './assets/minigame/event_20250716/MINI_GAME_MISSION_DONE.png'})

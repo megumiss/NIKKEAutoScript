@@ -65,7 +65,7 @@ def start_game(self, skip_first_screenshot=True):
             continue
 
         # 回到小游戏主页
-        if self.appear(MINI_GAME_START, offset=10):
+        if self.appear(MINI_GAME_CHECK, offset=10):
             if not confirm_timer.started():
                 confirm_timer.start()
 

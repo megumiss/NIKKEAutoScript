@@ -15,14 +15,14 @@ def reward(self, skip_first_screenshot=True):
         else:
             self.device.screenshot()
 
-        if self.appear(self.minigame_assets.MINI_GAME_START, offset=10) and self.appear(
+        if self.appear(self.minigame_assets.MINI_GAME_CHECK, offset=10) and self.appear(
             self.minigame_assets.MINI_GAME_REWARD_DONE, offset=10
         ):
             break
 
         if (
             click_timer.reached()
-            and self.appear(self.minigame_assets.MINI_GAME_START, offset=10)
+            and self.appear(self.minigame_assets.MINI_GAME_CHECK, offset=10)
             and self.appear_then_click(self.minigame_assets.MINI_GAME_REWARD, offset=10, interval=1)
         ):
             self.device.sleep(0.5)
