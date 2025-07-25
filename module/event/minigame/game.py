@@ -1,4 +1,5 @@
-from module.base.decorator import Config
+import importlib
+
 from module.base.timer import Timer
 from module.logger import logger
 from module.ui.page import *
@@ -95,10 +96,12 @@ def back_to_event(self, skip_first_screenshot=True):
             click_timer.reset()
             continue
 
-@Config.when(EVENT_ID='event_20250716')
 def start_game(self):
-    from .game_20250716 import start_game
-    return start_game(self)
+    event_id = self.event.id
+    module_name = f".game_{event_id.split("event_", 1)[1]}"
+    game_module = importlib.import_module(module_name, package=__package__)
+
+    return game_module.start_game(self)
 
 def game(self):
     logger.info('Open event mini game')
