@@ -1,11 +1,9 @@
-from module.base.decorator import Config
 from module.base.timer import Timer
 from module.event.event_20250716.assets_game import *
 from module.logger import logger
 from module.ui.page import *
 
 
-@Config.when(EVENT_ID='event_20250716')
 def start_game(self, skip_first_screenshot=True):
     logger.info('Open event mini game')
     confirm_timer = Timer(3, count=3)

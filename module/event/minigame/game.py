@@ -1,8 +1,7 @@
+from module.base.decorator import Config
 from module.base.timer import Timer
 from module.logger import logger
 from module.ui.page import *
-
-from .game_20250716 import start_game
 
 
 def reward(self, skip_first_screenshot=True):
@@ -96,12 +95,16 @@ def back_to_event(self, skip_first_screenshot=True):
             click_timer.reset()
             continue
 
+@Config.when(EVENT_ID='event_20250716')
+def start_game(self):
+    from .game_20250716 import start_game
+    return start_game(self)
 
 def game(self):
     logger.info('Open event mini game')
 
     # 每日
-    #start_game(self)
+    start_game(self)
     # 领取每日奖励
     reward(self)
     # 领取任务奖励
