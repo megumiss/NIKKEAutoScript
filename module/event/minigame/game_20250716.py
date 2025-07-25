@@ -22,7 +22,7 @@ def start_game(self, skip_first_screenshot=True):
             click_timer.reset()
             continue
 
-        if self.appear(MINI_GAME_CLICK, offset=10):
+        if self.appear(MINI_GAME_EXEC_CHECK, offset=10):
             break
 
     # 游戏逻辑处理
@@ -54,7 +54,7 @@ def start_game(self, skip_first_screenshot=True):
             continue
 
         # 循环点击
-        if self.appear(MINI_GAME_CLICK, offset=10):
+        if self.appear(MINI_GAME_EXEC_CHECK, offset=10):
             self.device.click_minitouch(360, 1000)
             self.device.sleep(0.5)
             continue
