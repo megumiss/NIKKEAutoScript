@@ -11,10 +11,18 @@ def read(path):
 
 def get(key, data, split=True):
     if split:
-        if '.' in key:
-            keyList = key.split('.')
+        if key.startswith('Emulator.PackageName.com'):
+            parts = key.split('.', 2)
+            
+            if len(parts) < 3:
+                keyList = parts
+            else:
+                keyList = [parts[0], parts[1], parts[2]]
         else:
-            keyList = key.split('_')
+            if '.' in key:
+                keyList = key.split('.')
+            else:
+                keyList = key.split('_')
     else:
         keyList = [key]
 

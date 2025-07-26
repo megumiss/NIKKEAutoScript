@@ -180,8 +180,8 @@ Emulator:
   PackageName:
     name: 游戏服务器
     help: 模拟器上装有多个游戏客户端时，需要手动选择服务器
-    "com.proximabeta.nikke": 国际服
-    "com.gamamobi.nikke": 港澳台
+    com.proximabeta.nikke: 国际服
+    com.gamamobi.nikke: 港澳台
   ScreenshotMethod:
     name: 模拟器截图方案
     help: ""
