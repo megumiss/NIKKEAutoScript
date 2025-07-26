@@ -6,6 +6,7 @@ pyyaml==6.0
 torch==1.12.1
 cnocr==2.3.1
 uiautomator2==2.16.22
+uiautomator2cache==0.3.0.1
 opencv-python==4.6.0.66
 adbutils==1.2.2
 rich==13.3.3

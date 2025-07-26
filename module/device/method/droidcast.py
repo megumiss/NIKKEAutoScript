@@ -1,15 +1,18 @@
+import time
 import typing as t
-from functools import cached_property, wraps
+from functools import wraps
 
 import cv2
 import numpy as np
 import requests
-from adbutils import AdbError
+from adbutils.errors import AdbError
 
+from functools import cached_property
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
-from module.device.method.uiautomator_2 import Uiautomator2, ProcessInfo
-from module.device.method.utils import RETRY_TRIES, retry_sleep, handle_adb_error, PackageNotInstalled, ImageTruncated
+from module.device.method.uiautomator_2 import ProcessInfo, Uiautomator2
+from module.device.method.utils import (
+    ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error, handle_unknown_host_service, retry_sleep)
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 
@@ -29,7 +32,7 @@ def retry(func):
         for _ in range(RETRY_TRIES):
             try:
                 if callable(init):
-                    retry_sleep(_)
+                    time.sleep(retry_sleep(_))
                     init()
                 return func(self, *args, **kwargs)
             # Can't handle
@@ -46,13 +49,18 @@ def retry(func):
                 if handle_adb_error(e):
                     def init():
                         self.adb_reconnect()
+                elif handle_unknown_host_service(e):
+                    def init():
+                        self.adb_start_server()
+                        self.adb_reconnect()
                 else:
                     break
             # Package not installed
             except PackageNotInstalled as e:
                 logger.error(e)
 
-
+                def init():
+                    self.detect_package()
             # DroidCast not running
             # requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
             # ReadTimeout: HTTPConnectionPool(host='127.0.0.1', port=20482): Read timed out. (read timeout=3)
@@ -87,7 +95,14 @@ def retry(func):
 
 
 class DroidCast(Uiautomator2):
+    """
+    DroidCast, another screenshot method, https://github.com/rayworks/DroidCast
+    DroidCast_raw, a modified version of DroidCast sending raw bitmap and png, https://github.com/Torther/DroidCastS
+    """
+
     _droidcast_port: int = 0
+    droidcast_width: int = 0
+    droidcast_height: int = 0
 
     @cached_property
     def droidcast_session(self):
@@ -96,38 +111,54 @@ class DroidCast(Uiautomator2):
         self._droidcast_port = self.adb_forward('tcp:53516')
         return session
 
-    def droidcast_url(self, url='/screenshot?format=png'):
-        """
-        Check APIs from source code:
-        https://github.com/rayworks/DroidCast/blob/master/app/src/main/java/com/rayworks/droidcast/Main.java
+    """
+    Check APIs from source code:
+    https://github.com/Torther/DroidCast_raw/blob/DroidCast_raw/app/src/main/java/ink/mol/droidcast_raw/KtMain.kt
+    Available APIs:
+    - /screenshot
+        To get a RGB565 bitmap
+    - /preview
+        To get PNG screenshots.
+    """
 
-        Available APIs:
-        - /screenshot
-            To get JPG screenshots.
-        - /screenshot?format=png
-            To get PNG screenshots.
-        - /screenshot?format=webp
-            To get WEBP screenshots.
-        - /src
-            Websocket to get JPG screenshots.
+    def droidcast_url(self, url='/preview'):
+        if self.is_mumu_over_version_356:
+            w, h = self.droidcast_width, self.droidcast_height
+            if self.orientation == 0:
+                return f'http://127.0.0.1:{self._droidcast_port}{url}?width={w}&height={h}'
+            elif self.orientation == 1:
+                return f'http://127.0.0.1:{self._droidcast_port}{url}?width={h}&height={w}'
+            else:
+                # logger.warning('DroidCast receives invalid device orientation')
+                pass
 
-        Note that /screenshot?format=jpg is unavailable.
-        """
         return f'http://127.0.0.1:{self._droidcast_port}{url}'
 
-
     def droidcast_raw_url(self, url='/screenshot'):
-        return f'http://127.0.0.1:{self._droidcast_port}{url}?width={720}&height={1280}'
+        if self.is_mumu_over_version_356:
+            w, h = self.droidcast_width, self.droidcast_height
+            if self.orientation == 0:
+                return f'http://127.0.0.1:{self._droidcast_port}{url}?width={w}&height={h}'
+            elif self.orientation == 1:
+                return f'http://127.0.0.1:{self._droidcast_port}{url}?width={h}&height={w}'
+            else:
+                # logger.warning('DroidCast receives invalid device orientation')
+                pass
+
+        return f'http://127.0.0.1:{self._droidcast_port}{url}'
 
     def droidcast_init(self):
-        logger.hr('Droidcast init')
+        logger.hr('DroidCast init')
         self.droidcast_stop()
+        self._droidcast_update_resolution()
 
         logger.info('Pushing DroidCast apk')
         self.adb_push(self.config.DROIDCAST_FILEPATH_LOCAL, self.config.DROIDCAST_FILEPATH_REMOTE)
 
         logger.info('Starting DroidCast apk')
-        # CLASSPATH=/data/local/tmp/DroidCast.apk app_process / com.rayworks.droidcast.Main > /dev/null
+        # DroidCast_raw-release-1.0.apk
+        # CLASSPATH=/data/local/tmp/DroidCast_raw.apk app_process / ink.mol.droidcast_raw.Main > /dev/null
+        # adb shell CLASSPATH=/data/local/tmp/DroidCast_raw.apk app_process / ink.mol.droidcast_raw.Main
         resp = self.u2_shell_background([
             'CLASSPATH=/data/local/tmp/DroidCast_raw.apk',
             'app_process',
@@ -137,42 +168,87 @@ class DroidCast(Uiautomator2):
             '/dev/null'
         ])
         logger.info(resp)
-
         del_cached_property(self, 'droidcast_session')
         _ = self.droidcast_session
-        logger.attr('DroidCast', self.droidcast_url())
-        self.droidcast_wait_startup()
 
-    def droidcast_stop(self):
-        """
-        Stop all DroidCast processes.
-        """
-        logger.info('Stopping DroidCast')
-        for proc in self._iter_droidcast_proc():
-            logger.info(f'Kill pid={proc.pid}')
-            self.adb_shell(['kill', '-s', 9, proc.pid])
+        if self.config.DROIDCAST_VERSION == 'DroidCast':
+            logger.attr('DroidCast', self.droidcast_url())
+            self.droidcast_wait_startup()
+        elif self.config.DROIDCAST_VERSION == 'DroidCast_raw':
+            logger.attr('DroidCast_raw', self.droidcast_raw_url())
+            self.droidcast_wait_startup()
+        else:
+            logger.error(f'Unknown DROIDCAST_VERSION: {self.config.DROIDCAST_VERSION}')
 
-    def _iter_droidcast_proc(self) -> t.Iterable[ProcessInfo]:
-        """
-        List all DroidCast processes.
-        """
-        processes = self.proc_list_uiautomator2()
-        for proc in processes:
-            if 'com.rayworks.droidcast.Main' in proc.cmdline:
-                yield proc
-            if 'com.torther.droidcasts.Main' in proc.cmdline:
-                yield proc
+    def _droidcast_update_resolution(self):
+        if self.is_mumu_over_version_356:
+            logger.info('Update droidcast resolution')
+            w, h = self.resolution_uiautomator2(cal_rotation=False)
+            self.get_orientation()
+            # 720, 1280
+            # mumu12 > 3.5.6 is always a vertical device
+            self.droidcast_width, self.droidcast_height = w, h
+            logger.info(f'Droicast resolution: {(w, h)}')
+
+    @retry
+    def screenshot_droidcast(self):
+        self.config.DROIDCAST_VERSION = 'DroidCast'
+        if self.is_mumu_over_version_356:
+            if not self.droidcast_width or not self.droidcast_height:
+                self._droidcast_update_resolution()
+
+        resp = self.droidcast_session.get(self.droidcast_url(), timeout=3)
+
+        if resp.status_code == 404:
+            raise DroidCastVersionIncompatible('DroidCast server does not have /preview')
+        image = resp.content
+        image = np.frombuffer(image, np.uint8)
+        if image is None:
+            raise ImageTruncated('Empty image after reading from buffer')
+        if image.shape == (1843200,):
+            raise DroidCastVersionIncompatible('Requesting screenshots from `DroidCast` but server is `DroidCast_raw`')
+        if image.size < 500:
+            logger.warning(f'Unexpected screenshot: {resp.content}')
+
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        if image is None:
+            raise ImageTruncated('Empty image after cv2.imdecode')
+
+        cv2.cvtColor(image, cv2.COLOR_BGR2RGB, dst=image)
+        if image is None:
+            raise ImageTruncated('Empty image after cv2.cvtColor')
+
+        if self.is_mumu_over_version_356:
+            if self.orientation == 1:
+                image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+
+        return image
 
     @retry
     def screenshot_droidcast_raw(self):
         self.config.DROIDCAST_VERSION = 'DroidCast_raw'
         shape = (1280, 720)
+        if self.is_mumu_over_version_356:
+            if not self.droidcast_width or not self.droidcast_height:
+                self._droidcast_update_resolution()
+            if self.droidcast_height and self.droidcast_width:
+                shape = (self.droidcast_height, self.droidcast_width)
+
+        rotate = self.is_mumu_over_version_356 and self.orientation == 1
+
         image = self.droidcast_session.get(self.droidcast_raw_url(), timeout=3).content
         # DroidCast_raw returns a RGB565 bitmap
 
         try:
             arr = np.frombuffer(image, dtype=np.uint16)
-            arr = arr.reshape(shape)
+            if rotate:
+                arr = arr.reshape(shape)
+                # arr = cv2.rotate(arr, cv2.ROTATE_90_CLOCKWISE)
+                # A little bit faster?
+                arr = cv2.transpose(arr)
+                cv2.flip(arr, 1, dst=arr)
+            else:
+                arr = arr.reshape(shape)
         except ValueError as e:
             if len(image) < 500:
                 logger.warning(f'Unexpected screenshot: {image}')
@@ -222,27 +298,10 @@ class DroidCast(Uiautomator2):
 
         return image
 
-    @retry
-    def screenshot_droidcast(self):
-        self.config.DROIDCAST_VERSION = 'DroidCast'
-        image = self.droidcast_session.get(self.droidcast_url(), timeout=3).content
-        image = np.frombuffer(image, np.uint8)
-        if image is None:
-            raise ImageTruncated('Empty image after reading from buffer')
-        if image.shape == (1843200,):
-            raise DroidCastVersionIncompatible('Requesting screenshots from `DroidCast` but server is `DroidCast_raw`')
-
-        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-        if image is None:
-            raise ImageTruncated('Empty image after cv2.imdecode')
-
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        if image is None:
-            raise ImageTruncated('Empty image after cv2.cvtColor')
-
-        return image
-
     def droidcast_wait_startup(self):
+        """
+        Wait until DroidCast startup completed.
+        """
         timeout = Timer(10).start()
         while 1:
             self.sleep(0.25)
@@ -255,9 +314,39 @@ class DroidCast(Uiautomator2):
                 if resp.status_code == 404:
                     logger.attr('DroidCast', 'online')
                     return True
-
             except requests.exceptions.ConnectionError:
                 logger.attr('DroidCast', 'offline')
 
         logger.warning('Wait DroidCast startup timeout, assume started')
         return False
+
+    def droidcast_uninstall(self):
+        """
+        Stop DroidCast processes and remove DroidCast APK.
+        DroidCast hasn't been installed but a JAVA class call, uninstall is a file delete.
+        """
+        self.droidcast_stop()
+        logger.info('Removing DroidCast')
+        self.adb_shell(["rm", self.config.DROIDCAST_FILEPATH_REMOTE])
+
+    def _iter_droidcast_proc(self) -> t.Iterable[ProcessInfo]:
+        """
+        List all DroidCast processes.
+        """
+        processes = self.proc_list_uiautomator2()
+        for proc in processes:
+            if 'com.rayworks.droidcast.Main' in proc.cmdline:
+                yield proc
+            if 'com.torther.droidcasts.Main' in proc.cmdline:
+                yield proc
+            if 'ink.mol.droidcast_raw.Main' in proc.cmdline:
+                yield proc
+
+    def droidcast_stop(self):
+        """
+        Stop DroidCast processes.
+        """
+        logger.info('Stopping DroidCast')
+        for proc in self._iter_droidcast_proc():
+            logger.info(f'Kill pid={proc.pid}')
+            self.adb_shell(['kill', '-s', 9, proc.pid])

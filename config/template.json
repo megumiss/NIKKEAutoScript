@@ -2,7 +2,7 @@
   "NKAS": {
     "Emulator": {
       "Serial": "auto",
-      "PackageName": "com_proximabeta_nikke",
+      "PackageName": "com.proximabeta.nikke",
       "ScreenshotMethod": "DroidCast",
       "ControlMethod": "minitouch",
       "AdbRestart": false,

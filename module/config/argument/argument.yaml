@@ -19,8 +19,8 @@ Emulator:
     value: auto
     valuetype: str
   PackageName:
-    value: com_proximabeta_nikke
-    option: [ com_proximabeta_nikke, com_gamamobi_nikke, ]
+    value: com.proximabeta.nikke
+    option: [ com.proximabeta.nikke, com.gamamobi.nikke, ]
   ScreenshotMethod:
     value: DroidCast
     option: [ DroidCast, ]

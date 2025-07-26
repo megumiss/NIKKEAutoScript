@@ -8,10 +8,10 @@
       },
       "PackageName": {
         "type": "select",
-        "value": "com_proximabeta_nikke",
+        "value": "com.proximabeta.nikke",
         "option": [
-          "com_proximabeta_nikke",
-          "com_gamamobi_nikke"
+          "com.proximabeta.nikke",
+          "com.gamamobi.nikke"
         ]
       },
       "ScreenshotMethod": {
