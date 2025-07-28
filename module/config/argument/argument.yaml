@@ -88,7 +88,7 @@ OpponentSelection:
     value: 'Min'
     option: [ 'Max','Middle','Min' ]
 Conversation:
-  QuickConsultation: false
+  #QuickConsultation: false
   OnlyFavourite: false
 BlaAuth:
   UserAgent:

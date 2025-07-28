@@ -75,7 +75,6 @@ class GeneratedConfig:
     OpponentSelection_SelectionStrategy = 'Min'  # Max, Middle, Min
 
     # Group `Conversation`
-    Conversation_QuickConsultation = False
     Conversation_OnlyFavourite = False
 
     # Group `BlaAuth`

@@ -28,6 +28,10 @@ class ConversationQueueIsEmpty(Exception):
     pass
 
 
+class ConversationFavouriteDone(Exception):
+    pass
+
+
 class Conversation(UI):
     _confirm_timer = Timer(4, count=30)
 
@@ -69,6 +73,12 @@ class Conversation(UI):
             if OPPORTUNITY_B.match(self.device.image, offset=5, threshold=0.96, static=False):
                 logger.warning('There are no remaining opportunities')
                 raise NoOpportunitiesRemain
+
+            # 只咨询收藏
+            if self.config.Conversation_OnlyFavourite and not self.appear(FAVOURITE_CHECK, offset=10, static=False):
+                logger.info('All nikke Favourited done')
+                raise ConversationFavouriteDone
+
             # 咨询完成/好感最大值
             if self.appear(COMMUNICATE_DONE, offset=5, threshold=0.95) or self.appear(
                 RANK_MAX_CHECK, offset=5, threshold=0.95
@@ -291,6 +301,8 @@ class Conversation(UI):
                 logger.error(e)
             except ConversationQueueIsEmpty as e:
                 logger.error(e)
+            except ConversationFavouriteDone:
+                pass
         else:
             logger.info('There are no opportunities remaining')
         self.config.task_delay(server_update=True)

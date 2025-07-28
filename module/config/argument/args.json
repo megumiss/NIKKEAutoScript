@@ -571,10 +571,6 @@
       }
     },
     "Conversation": {
-      "QuickConsultation": {
-        "type": "checkbox",
-        "value": false
-      },
       "OnlyFavourite": {
         "type": "checkbox",
         "value": false
