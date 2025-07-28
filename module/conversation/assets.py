@@ -12,6 +12,7 @@ COMMUNICATE_NIKKE_AVATAR = Button(area={'cn': (554, 648, 679, 773)}, color={'cn'
 COMMUNICATE_NIKKE_NAME = Button(area={'cn': (47, 771, 520, 825)}, color={'cn': (196, 198, 199)}, button={'cn': (47, 771, 520, 825)}, file={'cn': './assets/cn/conversation/COMMUNICATE_NIKKE_NAME.png'})
 COMMUNICATE_QUICKLY = Button(area={'cn': (472, 952, 580, 988)}, color={'cn': (254, 143, 101)}, button={'cn': (472, 952, 580, 988)}, file={'cn': './assets/cn/conversation/COMMUNICATE_QUICKLY.png'})
 DETAIL_CHECK = Button(area={'cn': (514, 1173, 621, 1197)}, color={'cn': (254, 141, 129)}, button={'cn': (514, 1173, 621, 1197)}, file={'cn': './assets/cn/conversation/DETAIL_CHECK.png'})
+FAVOURITE = Button(area={'cn': (52, 663, 95, 705)}, color={'cn': (252, 91, 76)}, button={'cn': (52, 663, 95, 705)}, file={'cn': './assets/cn/conversation/FAVOURITE.png'})
 FAVOURITE_CHECK = Button(area={'cn': (134, 371, 159, 400)}, color={'cn': (254, 83, 69)}, button={'cn': (134, 371, 159, 400)}, file={'cn': './assets/cn/conversation/FAVOURITE_CHECK.png'})
 GIFT = Button(area={'cn': (160, 1018, 225, 1059)}, color={'cn': (254, 177, 79)}, button={'cn': (160, 1018, 225, 1059)}, file={'cn': './assets/cn/conversation/GIFT.png'})
 OPPORTUNITY = Button(area={'cn': (83, 295, 183, 325)}, color={'cn': (70, 192, 249)}, button={'cn': (83, 295, 183, 325)}, file={'cn': './assets/cn/conversation/OPPORTUNITY.png'})

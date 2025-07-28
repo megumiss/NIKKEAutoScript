@@ -75,7 +75,9 @@ class Conversation(UI):
                 raise NoOpportunitiesRemain
 
             # 只咨询收藏
-            if self.config.Conversation_OnlyFavourite and not self.appear(FAVOURITE_CHECK, offset=10, static=False):
+            if self.config.Conversation_OnlyFavourite and not self.appear(
+                FAVOURITE, offset=10, threshold=0.9, static=False
+            ):
                 logger.info('All favorite nikke consultations done')
                 raise ConversationFavouriteDone
 

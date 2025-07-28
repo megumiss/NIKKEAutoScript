@@ -272,7 +272,7 @@ Conversation:
     help: "还没做"
   OnlyFavourite:
     name: 只咨询收藏
-    help: "还没做"
+    help: ""
   WaitToCommunicate:
     name: 等待咨询的妮姬
     help: "请收藏想要咨询的妮姬\n
