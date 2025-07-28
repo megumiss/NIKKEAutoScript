@@ -76,7 +76,7 @@ class Conversation(UI):
 
             # 只咨询收藏
             if self.config.Conversation_OnlyFavourite and not self.appear(FAVOURITE_CHECK, offset=10, static=False):
-                logger.info('All nikke Favourited done')
+                logger.info('All favorite nikke consultations done')
                 raise ConversationFavouriteDone
 
             # 咨询完成/好感最大值
