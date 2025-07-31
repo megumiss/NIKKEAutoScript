@@ -2,43 +2,13 @@ from functools import cached_property
 
 import numpy as np
 
-from module.ocr.nikke_ocr import NikkeOcr
-
 
 class OcrModel:
     @cached_property
-    def nikke(self):
-        """
-        base: cnocr-v2.3-densenet_lite_136-gru.ckpt
-        training data: https://github.com/megumiss/NIKKECnOCR/commit/983d2f3542541163dbd695dd497e2961bfd41841
-        epochs: 20
-        learning_rate: 3e-4
-        val-complete_match-epoch: 0.9731
-        """
-        return NikkeOcr(
-            rec_model_name='densenet_lite_136-gru',
-            root='./bin/cnocr_models/nikke',
-            model_name='/cnocr-v2.3-densenet_lite_136-gru-nikke.ckpt',
-            name='nikke',
-        )
+    def paddleocr(self):
+        from module.ocr.nikke_ocr import NIKKEOcr
 
-    @cached_property
-    def cnocr(self):
-        return NikkeOcr(
-            rec_model_name='densenet_lite_136-gru',
-            root='./bin/cnocr_models/cnocr',
-            model_name='/cnocr-v2.3-densenet_lite_136-gru.ckpt',
-            name='cnocr',
-        )
-
-    @cached_property
-    def cnocr_num(self):
-        return NikkeOcr(
-            rec_model_name='number-densenet_lite_136-fc',
-            root='./bin/cnocr_models/cnocr',
-            model_name='/cnocr-v2.3-number-densenet_lite_136-fc-nikke.ckpt',
-            name='cnocr_num',
-        )
+        return NIKKEOcr(model_name='densenet-lite-gru', model_dir='./bin/cnocr_models/azur_lane', name='nikke')
 
     def get_location(self, text, result):
         if result:
