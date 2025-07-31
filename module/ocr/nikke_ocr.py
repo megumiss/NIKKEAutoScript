@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 from PIL import Image
-
+from paddleocr import PaddleOCR
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 
