@@ -10,6 +10,7 @@ from module.config.config import NikkeConfig
 from module.device.device import Device
 from module.logger import logger
 from module.ocr.models import OCR_MODEL
+from module.ocr.ocr import Ocr
 
 
 class ModuleBase:
@@ -95,7 +96,7 @@ class ModuleBase:
 
         return appear
 
-    def appear_text(self, text, interval=0, area=None, model='ch', model_type='mobile') -> bool or tuple:
+    def appear_text(self, text, interval=0, lang='ch', model_type='mobile') -> bool or tuple:
         if interval:
             if text in self.interval_timer:
                 if self.interval_timer[text].limit != interval:
@@ -105,7 +106,8 @@ class ModuleBase:
             if not self.interval_timer[text].reached():
                 return False
 
-        res = self.ocr_models.get_model_by(lang=model, model_type=model_type).ocr(self.device.image, area=area)
+        ocr_instance = Ocr(buttons=[], lang=lang, model_type=model_type)
+        res = ocr_instance.ocr(self.device.image, direct_ocr=True)
         location = self.device.get_location(text, res)
         if location:
             if interval:
@@ -114,9 +116,9 @@ class ModuleBase:
         else:
             return False
 
-    def appear_text_then_click(self, text, interval=0, area=None, model_type='mobile') -> bool:
+    def appear_text_then_click(self, text, interval=0, model_type='mobile') -> bool:
         start_time = time.time()
-        location = self.appear_text(text, interval, area, model_type=model_type)
+        location = self.appear_text(text, interval, model_type=model_type)
         if location:
             self.device.click_minitouch(location[0], location[1])
             logger.info(
@@ -127,9 +129,9 @@ class ModuleBase:
         else:
             return False
 
-    def _appear_text_then_click(self, text, location, label, interval=0, area=None, model_type='mobile') -> bool:
+    def _appear_text_then_click(self, text, location, label, interval=0, model_type='mobile') -> bool:
         start_time = time.time()
-        _ = self.appear_text(text, interval, area, model_type=model_type)
+        _ = self.appear_text(text, interval, model_type=model_type)
         if _:
             self.device.click_minitouch(location[0], location[1])
             logger.info(
@@ -139,17 +141,6 @@ class ModuleBase:
             return True
         else:
             return False
-
-    def ocr(self, image, label='', model='cnocr'):
-        start_time = time.time()
-        result = self.ocr_models.__getattribute__(model).ocr(image)
-        if len(result):
-            text = result[0].get('text')
-            logger.attr(name='%s %ss' % (label, float2str(time.time() - start_time)),
-                        text=str(text))
-            return text
-        else:
-            return None
 
     def interval_reset(self, button):
         if isinstance(button, (list, tuple)):
@@ -176,17 +167,3 @@ class ModuleBase:
         for i in range(count):
             self.device.swipe(x1, x2, handle_control_check=False)
             self.device.sleep(delay)
-
-    def ocr_area(self, image, area=None, model='cnocr'):
-        result = self.ocr_models.__getattribute__(model).ocr(image, area=area)
-        if len(result):
-            if area:
-                # 添加区域偏移
-                _result = [item.copy() for item in result]
-                offset = np.array([[area[0], area[1]]], dtype=np.float32)
-                for item in _result:
-                    item["position"] = item["position"] + offset
-                return _result
-            return result
-        else:
-            return None

@@ -14,7 +14,7 @@ class ArenaBase:
             model_type=model_type,
             lang='num'
         )
-        return int(OPPONENT_INFO.ocr(self.device.image))
+        return int(OPPONENT_INFO.ocr(self.device.image)['text'])
 
     def opponents_data(self) -> List[Dict[str, Any]]:
         """获取对手数据"""

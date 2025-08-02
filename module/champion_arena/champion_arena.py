@@ -30,7 +30,7 @@ class ChampionArena(UI, ArenaBase):
             model_type=model_type,
             lang='num',
         )
-        return int(CHEER_LEFT_COUNT.ocr(self.device.image))
+        return int(CHEER_LEFT_COUNT.ocr(self.device.image)['text'])
 
     @property
     def cheer_select(self) -> int:

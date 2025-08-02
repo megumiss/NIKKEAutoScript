@@ -45,38 +45,74 @@ class OcrModel:
             raise ValueError(f'Unsupported lang: {lang}')
 
     def get_location(self, text, result):
-        if result:
-            merged_dict = {}
-            for dictionary in list(map(lambda x: {x['text']: x['position']}, result)):
-                merged_dict.update(dictionary)
+        """获取目标文本在OCR结果中的中心坐标
 
-            r = None
-            _, text = self.get_similarity(list(map(lambda x: x['text'], result)), text, threshold=0.51)
+        Args:
+            text: 要查找的目标文本
+            result: _process_ocr_result返回的结果字典
 
-            if _:
-                r = [merged_dict[text]]
+        Returns:
+            tuple: (x, y) 中心坐标，未找到返回None
+        """
+        if not result or not result[0]['details']:
+            return None
 
-            if r:
-                upper_left, bottom_right = r[0][0], r[0][2]
-                x, y = (np.array(upper_left) + np.array(bottom_right)) / 2
+        # 创建 {文本: bbox} 的映射字典
+        text_bbox_map = {}
+        for item in result['details']:
+            # 使用bbox作为位置信息
+            text_bbox_map[item['text']] = item['bbox']
+
+        # 获取所有文本用于相似度匹配
+        all_texts = [item['text'] for item in result['details']]
+
+        # 查找最相似的文本
+        ratio, matched_text = self.get_similarity(all_texts, text, threshold=0.51)
+
+        if ratio > 0 and matched_text in text_bbox_map:
+            bbox = text_bbox_map[matched_text]
+
+            # 计算中心点 (假设bbox格式为[[x1,y1], [x2,y2], [x3,y3], [x4,y4]])
+            if bbox and len(bbox) == 4:
+                # 使用左上和右下点计算中心
+                upper_left = bbox[0]
+                bottom_right = bbox[2]
+                x = (upper_left[0] + bottom_right[0]) / 2
+                y = (upper_left[1] + bottom_right[1]) / 2
                 return x, y
+        return None
 
     def get_similarity(self, texts, target, threshold=0.49):
+        """计算文本相似度
+
+        Args:
+            texts: 候选文本列表
+            target: 目标文本
+            threshold: 相似度阈值
+
+        Returns:
+            tuple: (相似度, 最匹配的文本)
+        """
         import difflib
 
+        # 处理目标文本中的下划线
+        clean_target = target.strip('_')
+
         max_ratio = 0
-        most_matched_name = ''
+        most_matched = ''
+
         for text in texts:
-            if '_' in target:
-                if target.strip('_') != text:
-                    continue
-            ratio = difflib.SequenceMatcher(None, text, target).quick_ratio()
+            # 下划线特殊处理
+            if '_' in target and clean_target == text:
+                return 1.0, text  # 完全匹配
+
+            ratio = difflib.SequenceMatcher(None, text, target).ratio()
             if ratio > max_ratio:
                 max_ratio = ratio
-                most_matched_name = text
-        if max_ratio < threshold:
-            return 0, ''
-        return max_ratio, most_matched_name
+                most_matched = text
+
+        # 返回超过阈值的结果
+        return (max_ratio, most_matched) if max_ratio >= threshold else (0, '')
 
 
 OCR_MODEL = OcrModel()

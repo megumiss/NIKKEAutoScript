@@ -107,7 +107,7 @@ class RookieArena(UI, ArenaBase):
             model_type=model_type,
             lang='num',
         )
-        return int(OWN_POWER.ocr(self.device.image))
+        return int(OWN_POWER.ocr(self.device.image)['text'])
 
     def start_competition(self, skip_first_screenshot=True):
         logger.hr('Start a competition')

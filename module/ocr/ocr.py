@@ -1,7 +1,7 @@
 import re
 import time
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List
 
 from module.base.button import Button
 from module.base.utils import crop, float2str
@@ -56,7 +56,7 @@ class Ocr:
         """
         return result
 
-    def ocr(self, image, direct_ocr=False):
+    def ocr(self, image, direct_ocr=False, threshold: float = 0.51):
         """
         Args:
             image (np.ndarray, list[np.ndarray]):
@@ -73,28 +73,92 @@ class Ocr:
             image_list = [crop(image, area) for area in self.buttons]
 
         result = self.paddleocr.predict(image_list)
-        if not result:
-            logger.warning("Skipping, ocr doesn't captured anything")
-            return None
+        # 处理识别结果
+        processed_result = self._process_ocr_result(result, threshold)
 
-        # for res in result:
-        #     text_blocks = res['rec_texts']
-        #     bboxes = [arr.tolist() for arr in res['dt_polys']]
-        #     confidences = res['rec_scores']
-
-        # merged_list = list(map(lambda x, y, z: [x, y, z], confidences, bboxes, text_blocks))
-        # filtered_list = list(filter(lambda x: x[0] >= 0.8, merged_list))
-
-        # text_blocks = [item[2] for item in filtered_list]
-        # bboxes = [item[1] for item in filtered_list]
-        # confidences = [item[0] for item in filtered_list]
-
-        if len(self.buttons) == 1:
-            result = result[0]['rec_texts'][0]
         if self.SHOW_LOG:
-            logger.attr(name='%s %ss' % (self.name, float2str(time.time() - start_time)), text=str(result))
+            logger.attr(
+                name='%s %ss' % (self.name, float2str(time.time() - start_time)), text=str(processed_result['text'])
+            )
 
-        return result
+        return processed_result
+
+    def _process_ocr_result(self, result: dict, threshold: float) -> dict:
+        """
+        处理OCR识别结果
+
+        Args:
+            result: OCR原始结果
+            threshold: 置信度阈值
+
+        Returns:
+            dict: 处理后的结果
+        """
+        text_content = []
+        details = []
+
+        # 检查是否为空结果
+        if not result or 'rec_texts' not in result:
+            return {
+                'text': '',
+                'details': [],
+                'stats': {
+                    'total_lines': 0,
+                    'total_chars': 0,
+                    'avg_confidence': 0,
+                    'confidence_threshold': threshold,
+                },
+            }
+
+        total_confidence = 0
+        valid_lines = 0
+
+        # 提取关键OCR数据
+        rec_texts = result.get('rec_texts', [])
+        rec_scores = result.get('rec_scores', [])
+        rec_polys = result.get('rec_polys', [])
+
+        # 处理每一行识别结果
+        for i in range(len(rec_texts)):
+            text = rec_texts[i].strip()
+
+            # 获取置信度（如果可用）
+            confidence = rec_scores[i] if i < len(rec_scores) else 1.0
+
+            # 获取边界框（如果可用）
+            bbox = rec_polys[i].tolist() if i < len(rec_polys) else []
+
+            # 过滤低置信度和空文本
+            if confidence >= threshold and text:
+                text_content.append(text)
+                details.append(
+                    {
+                        'line_number': i + 1,
+                        'text': text,
+                        'confidence': confidence,
+                        'bbox': bbox,
+                        'char_count': len(text),
+                    }
+                )
+
+                total_confidence += confidence
+                valid_lines += 1
+
+        # 计算统计信息
+        combined_text = '\n'.join(text_content)
+        avg_confidence = total_confidence / valid_lines if valid_lines > 0 else 0
+
+        # 计算总字符数（排除换行符和空格）
+        total_chars = len(combined_text.replace('\n', '').replace(' ', ''))
+
+        stats = {
+            'total_lines': valid_lines,
+            'total_chars': total_chars,
+            'avg_confidence': avg_confidence,
+            'confidence_threshold': threshold,
+        }
+
+        return {'text': combined_text, 'details': details, 'stats': stats}
 
 
 class Digit(Ocr):

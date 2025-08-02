@@ -5,7 +5,7 @@ from module.base.timer import Timer
 from module.device.app_control import AppControl
 from module.device.control import Control
 from module.device.screenshot import Screenshot
-from module.exception import GameTooManyClickError, GameStuckError, GameNotRunningError
+from module.exception import GameNotRunningError, GameStuckError, GameTooManyClickError
 from module.logger import logger
 from module.ocr.models import OCR_MODEL
 

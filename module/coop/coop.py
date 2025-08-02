@@ -26,7 +26,7 @@ class Coop(UI):
             model_type=model_type,
             lang='num',
         )
-        return int(FREE_REMAIN.ocr(self.device.image))
+        return int(FREE_REMAIN.ocr(self.device.image)['text'])
 
     @property
     def free_opportunity_remain(self) -> bool:

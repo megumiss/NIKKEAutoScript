@@ -47,7 +47,7 @@ class RubbishShop(ShopBase):
             model_type=model_type,
             lang='num',
         )
-        return int(BROKEN_CORE.ocr(self.device.image))
+        return int(BROKEN_CORE.ocr(self.device.image)['text'])
 
     @cached_property
     def currency(self) -> int:

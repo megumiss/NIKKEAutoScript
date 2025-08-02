@@ -50,7 +50,7 @@ class Conversation(UI):
             lang='ch',
         )
 
-        return NIKKE_NAME.ocr(self.device.image)
+        return NIKKE_NAME.ocr(self.device.image)['text']
 
     def answer_text(self, button: Button) -> str:
         area = _area_offset(button.area, (45, -13, 545, 13))
@@ -62,7 +62,7 @@ class Conversation(UI):
             lang='ch',
         )
 
-        return ANSWER.ocr(self.device.image)
+        return ANSWER.ocr(self.device.image)['text']
 
     def get_next_target(self, skip_first_screenshot=True):
         # 是否进入到某个角色
@@ -292,6 +292,8 @@ class Conversation(UI):
             return True
 
     def run(self):
+        # while 1:
+        #     self.appear_text_then_click('大厅', interval=3)
         self.ui_ensure(page_conversation, confirm_wait=1)
         if self.ensure_opportunity_remain():
             self._confirm_timer.reset().start()
