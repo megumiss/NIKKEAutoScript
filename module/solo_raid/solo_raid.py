@@ -19,12 +19,12 @@ class SoloRaidIsUnavailable(Exception):
 class SoloRaid(UI):
     @property
     def free_remain(self) -> int:
+        model_type = self.config.Optimization_OcrModelType
         FREE_REMAIN = Digit(
             [FREE_OPPORTUNITY_CHECK.area],
             name='FREE_REMAIN',
-            letter=(247, 247, 107),
-            threshold=128,
-            lang='cnocr_num',
+            model_type=model_type,
+            lang='num',
         )
         return int(FREE_REMAIN.ocr(self.device.image))
 
@@ -48,10 +48,7 @@ class SoloRaid(UI):
                 self.device.screenshot()
 
             # 结算
-            if (
-                click_timer.reached()
-                and self.appear_then_click(RAID_RESULT, offset=10, interval=3)
-            ):
+            if click_timer.reached() and self.appear_then_click(RAID_RESULT, offset=10, interval=3):
                 logger.info('Solo raid has end')
                 raise SoloRaidIsUnavailable
 

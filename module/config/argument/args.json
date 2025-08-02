@@ -42,6 +42,14 @@
         "type": "checkbox",
         "value": false
       },
+      "OcrModelType": {
+        "type": "select",
+        "value": "mobile",
+        "option": [
+          "mobile",
+          "server"
+        ]
+      },
       "WhenTaskQueueEmpty": {
         "type": "select",
         "value": "goto_main",

@@ -10,6 +10,7 @@
     },
     "Optimization": {
       "AutoRedCircle": false,
+      "OcrModelType": "mobile",
       "WhenTaskQueueEmpty": "goto_main"
     },
     "Notification": {

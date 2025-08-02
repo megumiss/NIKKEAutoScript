@@ -1,10 +1,12 @@
+import re
 import time
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from module.base.button import Button
-from module.base.utils import *
+from module.base.utils import crop, float2str
 from module.logger import logger
+from module.ocr.models import OCR_MODEL
 
 if TYPE_CHECKING:
     from module.ocr.nikke_ocr import NIKKEOcr
@@ -16,26 +18,22 @@ class Ocr:
     SHOW_LOG = True
     SHOW_REVISE_WARNING = False
 
-    def __init__(self, buttons, lang='ch', letter=(255, 255, 255), threshold=128, alphabet=None, name=None):
+    def __init__(self, buttons, lang='ch', model_type='mobile', name=None):
         """
         Args:
             buttons (Button, tuple, list[Button], list[tuple]): OCR area.
             lang (str): 'ch' , 'en' or 'num'.
-            letter (tuple(int)): Letter RGB.
-            threshold (int):
-            alphabet: Alphabet white list.
+            model_type (str): 'mobile' or 'server'
             name (str):
         """
         self.name = str(buttons) if isinstance(buttons, Button) else name
         self._buttons = buttons
-        self.letter = letter
-        self.threshold = threshold
-        self.alphabet = alphabet
+        self.model_type = model_type
         self.lang = lang
 
     @property
     def paddleocr(self) -> 'NIKKEOcr':
-        return OCR_MODEL.__getattribute__(self.lang)
+        return OCR_MODEL.get_model_by(lang=self.lang, model_type=self.model_type)
 
     @property
     def buttons(self):
@@ -48,22 +46,10 @@ class Ocr:
     def buttons(self, value):
         self._buttons = value
 
-    def pre_process(self, image):
-        """
-        Args:
-            image (np.ndarray): Shape (height, width, channel)
-
-        Returns:
-            np.ndarray: Shape (width, height)
-        """
-        image = extract_letters(image, letter=self.letter, threshold=self.threshold)
-
-        return image.astype(np.uint8)
-
     def after_process(self, result):
         """
         Args:
-            result (str): '第二行'
+            result (str): OCR result string
 
         Returns:
             str:
@@ -74,31 +60,41 @@ class Ocr:
         """
         Args:
             image (np.ndarray, list[np.ndarray]):
-            direct_ocr (bool): True to skip preprocess.
+            direct_ocr (bool): True to skip cropping.
 
         Returns:
-
+            list[str] or str
         """
         start_time = time.time()
 
         if direct_ocr:
-            image_list = [self.pre_process(i) for i in image]
+            image_list = image if isinstance(image, list) else [image]
         else:
-            image_list = [self.pre_process(crop(image, area)) for area in self.buttons]
+            image_list = [crop(image, area) for area in self.buttons]
 
-        # This will show the images feed to OCR model
-        # self.cnocr.debug(image_list)
+        result = self.paddleocr.predict(image_list)
+        if not result:
+            logger.warning("Skipping, ocr doesn't captured anything")
+            return None
 
-        result_list = self.paddleocr.atomic_ocr_for_single_lines(image_list, self.alphabet)
-        result_list = [''.join(result) for result in result_list]
-        result_list = [self.after_process(result) for result in result_list]
+        # for res in result:
+        #     text_blocks = res['rec_texts']
+        #     bboxes = [arr.tolist() for arr in res['dt_polys']]
+        #     confidences = res['rec_scores']
+
+        # merged_list = list(map(lambda x, y, z: [x, y, z], confidences, bboxes, text_blocks))
+        # filtered_list = list(filter(lambda x: x[0] >= 0.8, merged_list))
+
+        # text_blocks = [item[2] for item in filtered_list]
+        # bboxes = [item[1] for item in filtered_list]
+        # confidences = [item[0] for item in filtered_list]
 
         if len(self.buttons) == 1:
-            result_list = result_list[0]
+            result = result[0]['rec_texts'][0]
         if self.SHOW_LOG:
-            logger.attr(name='%s %ss' % (self.name, float2str(time.time() - start_time)), text=str(result_list))
+            logger.attr(name='%s %ss' % (self.name, float2str(time.time() - start_time)), text=str(result))
 
-        return result_list
+        return result
 
 
 class Digit(Ocr):
@@ -107,15 +103,12 @@ class Digit(Ocr):
     Method ocr() returns int, or a list of int.
     """
 
-    def __init__(
-        self, buttons, lang='num', letter=(255, 255, 255), threshold=128, alphabet='0123456789IDSB', name=None
-    ):
-        super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
+    def __init__(self, buttons, lang='num', model_type='mobile', name=None):
+        super().__init__(buttons, lang=lang, model_type=model_type, name=name)
 
     def after_process(self, result):
         result = super().after_process(result)
-        result = result.replace('I', '1').replace('D', '0').replace('S', '5')
-        result = result.replace('B', '8')
+        result = result.replace('I', '1').replace('D', '0').replace('S', '5').replace('B', '8')
 
         prev = result
         result = int(result) if result else 0
@@ -127,25 +120,18 @@ class Digit(Ocr):
 
 
 class DigitCounter(Ocr):
-    def __init__(
-        self, buttons, lang='num', letter=(255, 255, 255), threshold=128, alphabet='0123456789/IDSB', name=None
-    ):
-        super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
+    def __init__(self, buttons, lang='num', model_type='mobile', name=None):
+        super().__init__(buttons, lang=lang, model_type=model_type, name=name)
 
     def after_process(self, result):
         result = super().after_process(result)
-        result = result.replace('I', '1').replace('D', '0').replace('S', '5')
-        result = result.replace('B', '8')
+        result = result.replace('I', '1').replace('D', '0').replace('S', '5').replace('B', '8')
         return result
 
     def ocr(self, image, direct_ocr=False):
         """
         DigitCounter only support doing OCR on one button.
         Do OCR on a counter, such as `14/15`, and returns 14, 1, 15
-
-        Args:
-            image:
-            direct_ocr:
 
         Returns:
             int, int, int: current, remain, total.
@@ -155,8 +141,7 @@ class DigitCounter(Ocr):
 
         result = re.search(r'(\d+)/(\d+)', result)
         if result:
-            result = [int(s) for s in result.groups()]
-            current, total = int(result[0]), int(result[1])
+            current, total = map(int, result.groups())
             current = min(current, total)
             return current, total - current, total
         else:
@@ -165,15 +150,12 @@ class DigitCounter(Ocr):
 
 
 class Duration(Ocr):
-    def __init__(
-        self, buttons, lang='en', letter=(255, 255, 255), threshold=128, alphabet='0123456789:IDSB', name=None
-    ):
-        super().__init__(buttons, lang=lang, letter=letter, threshold=threshold, alphabet=alphabet, name=name)
+    def __init__(self, buttons, lang='en', model_type='mobile', name=None):
+        super().__init__(buttons, lang=lang, model_type=model_type, name=name)
 
     def after_process(self, result):
         result = super().after_process(result)
-        result = result.replace('I', '1').replace('D', '0').replace('S', '5')
-        result = result.replace('B', '8')
+        result = result.replace('I', '1').replace('D', '0').replace('S', '5').replace('B', '8')
         return result
 
     def ocr(self, image, direct_ocr=False):

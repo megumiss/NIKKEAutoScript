@@ -13,11 +13,8 @@ def maybe_download(model_storage_directory: Path, url: str) -> str:
     """
     if not model_storage_directory.exists():
         model_storage_directory.mkdir(parents=True)
-    tar_file_name_list = ['.pdiparams', '.pdiparams.info', '.pdmodel']
-    if (
-        not (model_storage_directory / 'inference.pdiparams').exists()
-        or not (model_storage_directory / 'inference.pdmodel').exists()
-    ):
+    tar_file_name_list = ['.pdiparams', '.json', '.yml']
+    if not (model_storage_directory / 'inference.pdiparams').exists():
         assert url.endswith('.tar'), 'Only supports tar compressed package'
         tmp_path = model_storage_directory / url.split('/')[-1]
         print('download {} to {}'.format(url, tmp_path))

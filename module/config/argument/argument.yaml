@@ -31,6 +31,9 @@ Emulator:
   ScreenshotInterval: 0.5
 Optimization:
   AutoRedCircle: false
+  OcrModelType:
+    value: mobile
+    option: [ mobile, server ]
   WhenTaskQueueEmpty:
     value: goto_main
     option: [ stay_there, goto_main, close_game ]

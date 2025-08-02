@@ -25,32 +25,30 @@ class NIKKEOcr(PaddleOCR):
 
     def __init__(
         self,
+        lang: str = 'ch',
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+        text_det_thresh=0.3,
+        text_det_unclip_ratio=2.0,
         rec_model_dir: str = None,
         det_model_dir: str = None,
         interval: float = 0,
-        server_model: bool = False,
-        return_word_box: bool = False,
+        model_type: str = 'mobile',
     ):
         """
         初始化OCR
-        :param rec_model_dir:  文本识别模型目录
-        :param det_model_dir:  文本检测模型目录
-        :param interval:  OCR调用间隔时间
-        :param server_model:  是否使用Server模型 Server模型更大
-        :param return_word_box:  是否返回单字框
-        :return:
         """
         logger.debug('初始化OCR')
-        # 由于PaddleOCR的import速度较慢，所以在这里导入
-        from paddleocr import PaddleOCR
 
-        if rec_model_dir is None:  # 如果没有传入模型目录，则下载模型
+        # 如果没有传入模型路径，根据model_type下载/设置路径
+        if rec_model_dir is None:
             rec_model_dir = (
                 maybe_download(
-                    ModelsPath / 'OCRv5_server_rec_infer',
-                    models['OCRv5_server_rec_infer'],
+                    ModelsPath / 'PP-OCRv5_server_rec_infer',
+                    models['PP-OCRv5_server_rec_infer'],
                 )
-                if server_model  # 如果使用服务器模型
+                if model_type == 'server'  # 如果使用服务器模型
                 else maybe_download(
                     ModelsPath / 'PP-OCRv5_mobile_rec_infer',
                     models['PP-OCRv5_mobile_rec_infer'],
@@ -62,34 +60,38 @@ class NIKKEOcr(PaddleOCR):
                     ModelsPath / 'PP-OCRv5_server_det_infer',
                     models['PP-OCRv5_server_det_infer'],
                 )
-                if server_model  # 如果使用服务器模型
+                if model_type == 'server'  # 如果使用服务器模型
                 else maybe_download(
                     ModelsPath / 'PP-OCRv5_mobile_det_infer',
                     models['PP-OCRv5_mobile_det_infer'],
                 )
             )
 
+        # 检查模型文件是否存在
         self._assert_and_prepare_model_files(rec_model_dir, det_model_dir)
         self.interval = interval
 
-        device = 'CPU'
-        logger.debug(f'使用{device}进行OCR识别')
-        self.paddleOCR = PaddleOCR(
-            use_angle_cls=False,
-            lang='ch',
-            use_gpu=False,
-            show_log=False,
-            rec_model_dir=rec_model_dir,
-            det_model_dir=det_model_dir,
-            return_word_box=return_word_box,
+        # 调用父类 PaddleOCR 的 __init__ 完成模型加载
+        super().__init__(
+            ocr_version='PP-OCRv5',
+            device='CPU',  # CPU模式
+            lang=lang,
+            use_doc_orientation_classify=use_doc_orientation_classify,
+            use_doc_unwarping=use_doc_unwarping,
+            use_textline_orientation=use_textline_orientation,
+            text_det_thresh=text_det_thresh,
+            text_det_unclip_ratio=text_det_unclip_ratio,
+            text_detection_model_name='PP-OCRv5_server_det' if model_type == 'server' else 'PP-OCRv5_mobile_det',
+            text_detection_model_dir=det_model_dir,
+            text_recognition_model_name='PP-OCRv5_server_rec' if model_type == 'server' else 'PP-OCRv5_mobile_rec',
+            text_recognition_model_dir=rec_model_dir,
         )
-        self.return_word_box = return_word_box
+
         logger.debug('初始化OCR完成')
 
     def check_interval(self):
         """
         检查OCR调用间隔
-        :return:
         """
         if time.time() - self.last_time < self.interval:
             time.sleep(self.interval - (time.time() - self.last_time))
@@ -98,36 +100,27 @@ class NIKKEOcr(PaddleOCR):
     def ocr(self, img_fp):
         if self.interval:
             self.check_interval()
-
-        return super().predict(img_fp)
+        return self.predict(img_fp)
 
     def __call__(self, img: np.ndarray):
         return self.ocr(img)
 
     def _assert_and_prepare_model_files(self, rec_model_dir, det_model_dir):
-        # 需要检查的模型文件列表
         required_files = ['inference.json', 'inference.pdiparams', 'inference.yml']
         file_prepared = True
         missing_files = []
 
-        # 检查识别模型目录(rec_model_dir)
         for f in required_files:
-            file_path = os.path.join(rec_model_dir, f)
-            if not os.path.exists(file_path):
+            if not os.path.exists(os.path.join(rec_model_dir, f)):
                 file_prepared = False
-                missing_files.append(file_path)
-
-        # 检查检测模型目录(det_model_dir)
-        for f in required_files:
-            file_path = os.path.join(det_model_dir, f)
-            if not os.path.exists(file_path):
+                missing_files.append(os.path.join(rec_model_dir, f))
+            if not os.path.exists(os.path.join(det_model_dir, f)):
                 file_prepared = False
-                missing_files.append(file_path)
+                missing_files.append(os.path.join(det_model_dir, f))
 
         if file_prepared:
             return
 
-        # 输出详细的错误信息
         logger.warning('OCR model files missing in directories:')
         logger.warning(f'Recognition model dir: {rec_model_dir}')
         logger.warning(f'Detection model dir: {det_model_dir}')

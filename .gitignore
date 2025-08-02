@@ -13,3 +13,4 @@ config/deploy.yaml
 config/nkas.json
 **.lock
 **/app
+bin/paddleocr/

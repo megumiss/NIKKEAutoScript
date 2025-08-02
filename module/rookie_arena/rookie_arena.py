@@ -100,12 +100,12 @@ class RookieArena(UI, ArenaBase):
     @cached_property
     def own_power(self) -> int:
         area = _area_offset(OWN_POWER_CHECK.area, (20, -2, 70, 2))
+        model_type = self.config.Optimization_OcrModelType
         OWN_POWER = Digit(
             [area],
             name='OWN_POWER',
-            letter=(247, 247, 247),
-            threshold=128,
-            lang='cnocr_num',
+            model_type=model_type,
+            lang='num',
         )
         return int(OWN_POWER.ocr(self.device.image))
 

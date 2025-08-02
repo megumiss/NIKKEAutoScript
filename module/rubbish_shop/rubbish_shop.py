@@ -40,12 +40,12 @@ class RubbishShop(ShopBase):
 
     @cached_property
     def broken_core(self) -> int:
+        model_type = self.config.Optimization_OcrModelType
         BROKEN_CORE = Digit(
             [BROKEN_CORE_NUM.area],
             name='BROKEN_CORE',
-            letter=(150, 150, 150),
-            threshold=128,
-            lang='cnocr_num',
+            model_type=model_type,
+            lang='num',
         )
         return int(BROKEN_CORE.ocr(self.device.image))
 

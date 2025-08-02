@@ -95,7 +95,7 @@ class ModuleBase:
 
         return appear
 
-    def appear_text(self, text, interval=0, area=None, model='cnocr') -> bool or tuple:
+    def appear_text(self, text, interval=0, area=None, model='ch', model_type='mobile') -> bool or tuple:
         if interval:
             if text in self.interval_timer:
                 if self.interval_timer[text].limit != interval:
@@ -105,7 +105,7 @@ class ModuleBase:
             if not self.interval_timer[text].reached():
                 return False
 
-        res = self.ocr_models.__getattribute__(model).ocr(self.device.image, area=area)
+        res = self.ocr_models.get_model_by(lang=model, model_type=model_type).ocr(self.device.image, area=area)
         location = self.device.get_location(text, res)
         if location:
             if interval:
@@ -114,9 +114,9 @@ class ModuleBase:
         else:
             return False
 
-    def appear_text_then_click(self, text, interval=0, area=None) -> bool:
+    def appear_text_then_click(self, text, interval=0, area=None, model_type='mobile') -> bool:
         start_time = time.time()
-        location = self.appear_text(text, interval, area)
+        location = self.appear_text(text, interval, area, model_type=model_type)
         if location:
             self.device.click_minitouch(location[0], location[1])
             logger.info(
@@ -127,9 +127,9 @@ class ModuleBase:
         else:
             return False
 
-    def _appear_text_then_click(self, text, location, label, interval=0, area=None) -> bool:
+    def _appear_text_then_click(self, text, location, label, interval=0, area=None, model_type='mobile') -> bool:
         start_time = time.time()
-        _ = self.appear_text(text, interval, area)
+        _ = self.appear_text(text, interval, area, model_type=model_type)
         if _:
             self.device.click_minitouch(location[0], location[1])
             logger.info(

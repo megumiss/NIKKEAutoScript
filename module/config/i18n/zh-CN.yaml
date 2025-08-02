@@ -227,6 +227,11 @@ Optimization:
   AutoRedCircle:
     name: 战斗时自动点击红圈
     help: "需要设置中开启：同步点击位置和准星，当前支持特拦、爬塔，超过屏幕的红圈暂时无法处理"
+  OcrModelType:
+    name: OCR模型选择
+    help: "默认使用移动端模型，速度快，识别率稍低；服务端模型体积较大，速度很慢，识别率稍高"
+    mobile: 移动端
+    server: 服务端
   WhenTaskQueueEmpty:
     name: 当任务队列清空时
     help: ""

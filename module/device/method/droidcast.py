@@ -153,7 +153,7 @@ class DroidCast(Uiautomator2):
         self._droidcast_update_resolution()
 
         logger.info('Pushing DroidCast apk')
-        self.adb_push(self.config.DROIDCAST_FILEPATH_LOCAL, self.config.DROIDCAST_FILEPATH_REMOTE)
+        #self.adb_push(self.config.DROIDCAST_FILEPATH_LOCAL, self.config.DROIDCAST_FILEPATH_REMOTE)
 
         logger.info('Starting DroidCast apk')
         # DroidCast_raw-release-1.0.apk
@@ -183,7 +183,7 @@ class DroidCast(Uiautomator2):
     def _droidcast_update_resolution(self):
         if self.is_mumu_over_version_356:
             logger.info('Update droidcast resolution')
-            w, h = self.resolution_uiautomator2(cal_rotation=False)
+            w, h = self.resolution_uiautomator2()
             self.get_orientation()
             # 720, 1280
             # mumu12 > 3.5.6 is always a vertical device

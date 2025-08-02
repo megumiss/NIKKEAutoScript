@@ -4,39 +4,45 @@ import numpy as np
 
 
 class OcrModel:
-    @cached_property
-    def paddle(self):
-        from module.ocr.nikke_ocr import NIKKEOcr
+    def __init__(self):
+        self._paddle_cache = {}
+        self._paddle_num_cache = {}
 
-        return NIKKEOcr(
-            lang='ch',
-            ocr_version='PP-OCRv5',
-            text_detection_model_name='PP-OCRv5_mobile_det',
-            text_detection_model_dir='./bin/paddleocr/PP-OCRv5_mobile_det_infer',
-            text_recognition_model_name='PP-OCRv5_mobile_rec',
-            text_recognition_model_dir='./bin/paddleocr/PP-OCRv5_mobile_rec_infer',
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=False,
-        )
+    def paddle(self, model_type):
+        if model_type not in self._paddle_cache:
+            from module.ocr.nikke_ocr import NIKKEOcr
 
-    @cached_property
-    def paddle_num(self):
-        from module.ocr.nikke_ocr import NIKKEOcr
+            self._paddle_cache[model_type] = NIKKEOcr(
+                lang='ch',
+                model_type=model_type,
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+            )
+        return self._paddle_cache[model_type]
 
-        return NIKKEOcr(
-            lang='en',
-            ocr_version='PP-OCRv5',
-            text_detection_model_name='PP-OCRv5_mobile_det',
-            text_detection_model_dir='./bin/paddleocr/PP-OCRv5_mobile_det_infer',
-            text_recognition_model_name='PP-OCRv5_mobile_rec',
-            text_recognition_model_dir='./bin/paddleocr/PP-OCRv5_mobile_rec_infer',
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=False,
-            text_det_thresh=0.1,
-            text_det_unclip_ratio=5,
-        )
+    def paddle_num(self, model_type):
+        if model_type not in self._paddle_num_cache:
+            from module.ocr.nikke_ocr import NIKKEOcr
+
+            self._paddle_num_cache[model_type] = NIKKEOcr(
+                lang='en',
+                model_type=model_type,
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+                text_det_thresh=0.1,
+                text_det_unclip_ratio=5.0,
+            )
+        return self._paddle_num_cache[model_type]
+
+    def get_model_by(self, lang='ch', model_type='mobile'):
+        if lang == 'ch':
+            return self.paddle(model_type=model_type)
+        elif lang in ('en', 'num'):
+            return self.paddle_num(model_type=model_type)
+        else:
+            raise ValueError(f'Unsupported lang: {lang}')
 
     def get_location(self, text, result):
         if result:

@@ -23,12 +23,12 @@ class ChampionArena(UI, ArenaBase):
     @cached_property
     def cheer_count(self) -> int:
         """获取左侧应援数值"""
+        model_type = self.config.Optimization_OcrModelType
         CHEER_LEFT_COUNT = Digit(
             [CHEER_COUNT.area],
             name='CHEER_LEFT_COUNT',
-            letter=(214, 105, 82),
-            threshold=128,
-            lang='cnocr_num',
+            model_type=model_type,
+            lang='num',
         )
         return int(CHEER_LEFT_COUNT.ocr(self.device.image))
 

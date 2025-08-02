@@ -6,8 +6,14 @@ from module.ocr.ocr import Digit
 
 class ArenaBase:
     def opponent_info(self, area: tuple, field_name: str) -> int:
-        letter = self.FIELD_LETTERS[field_name]
-        OPPONENT_INFO = Digit([area], name='OPPONENT_INFO', letter=letter, threshold=128, lang='cnocr_num')
+        # letter = self.FIELD_LETTERS[field_name]
+        model_type=self.config.Optimization_OcrModelType
+        OPPONENT_INFO = Digit(
+            [area], 
+            name='OPPONENT_INFO',
+            model_type=model_type,
+            lang='num'
+        )
         return int(OPPONENT_INFO.ocr(self.device.image))
 
     def opponents_data(self) -> List[Dict[str, Any]]:
