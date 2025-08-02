@@ -86,7 +86,7 @@ class NIKKEOcr(PaddleOCR):
             text_recognition_model_dir=rec_model_dir,
         )
 
-        logger.info('PaddleOCR has been prepared')
+        logger.info('PaddleOCR prepared')
 
     def check_interval(self):
         """
@@ -118,7 +118,7 @@ class NIKKEOcr(PaddleOCR):
                 missing_files.append(os.path.join(det_model_dir, f))
 
         if file_prepared:
-            logger.info('PaddleOCR model files has been downloaded')
+            logger.info('PaddleOCR model files download complete')
             return
 
         logger.warning('OCR model files missing in directories:')
