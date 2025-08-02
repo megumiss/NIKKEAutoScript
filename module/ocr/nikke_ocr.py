@@ -1,10 +1,8 @@
 import os
 import time
 
-import cv2
 import numpy as np
 from paddleocr import PaddleOCR
-from PIL import Image
 
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -39,7 +37,7 @@ class NIKKEOcr(PaddleOCR):
         """
         初始化OCR
         """
-        logger.debug('初始化OCR')
+        logger.hr('PaddleOCR Prepare')
 
         # 如果没有传入模型路径，根据model_type下载/设置路径
         if rec_model_dir is None:
@@ -72,6 +70,7 @@ class NIKKEOcr(PaddleOCR):
         self.interval = interval
 
         # 调用父类 PaddleOCR 的 __init__ 完成模型加载
+        logger.info('PaddleOCR Initializing')
         super().__init__(
             ocr_version='PP-OCRv5',
             device='CPU',  # CPU模式
@@ -87,7 +86,7 @@ class NIKKEOcr(PaddleOCR):
             text_recognition_model_dir=rec_model_dir,
         )
 
-        logger.debug('初始化OCR完成')
+        logger.info('PaddleOCR has been prepared')
 
     def check_interval(self):
         """
@@ -119,6 +118,7 @@ class NIKKEOcr(PaddleOCR):
                 missing_files.append(os.path.join(det_model_dir, f))
 
         if file_prepared:
+            logger.info('PaddleOCR model files has been downloaded')
             return
 
         logger.warning('OCR model files missing in directories:')

@@ -292,8 +292,6 @@ class Conversation(UI):
             return True
 
     def run(self):
-        # while 1:
-        #     self.appear_text_then_click('大厅', interval=3)
         self.ui_ensure(page_conversation, confirm_wait=1)
         if self.ensure_opportunity_remain():
             self._confirm_timer.reset().start()

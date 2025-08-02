@@ -83,57 +83,63 @@ class Ocr:
 
         return processed_result
 
-    def _process_ocr_result(self, result: dict, threshold: float) -> dict:
+    def _process_ocr_result(self, result: List[dict], threshold: float) -> Dict:
         """
-        处理OCR识别结果
+        处理 Paddlex OCR dict 格式的识别结果，仅使用 rec_texts/rec_scores/rec_boxes。
 
         Args:
-            result: OCR原始结果
+            result: OCR 原始结果，每项为 dict，需包含 'rec_texts', 'rec_scores', 'rec_boxes'
             threshold: 置信度阈值
 
         Returns:
-            dict: 处理后的结果
+            Dict: {
+                'text': str,               # 合并后的文本（按行 \n 分隔）
+                'details': List[dict],     # 每行的详细信息
+                'stats': {
+                    'total_lines': int,    # 有效行数
+                    'total_chars': int,    # 总字符数（不含空格和换行）
+                    'avg_confidence': float,# 平均置信度
+                    'confidence_threshold': float,
+                }
+            }
         """
-        text_content = []
+        text_lines = []
         details = []
+        total_conf = 0.0
+        valid_lines = 0
 
-        # 检查是否为空结果
-        if not result or 'rec_texts' not in result:
+        if not result:
             return {
                 'text': '',
                 'details': [],
                 'stats': {
                     'total_lines': 0,
                     'total_chars': 0,
-                    'avg_confidence': 0,
+                    'avg_confidence': 0.0,
                     'confidence_threshold': threshold,
                 },
             }
 
-        total_confidence = 0
-        valid_lines = 0
+        for page in result:
+            rec_texts = page.get('rec_texts', [])
+            rec_scores = page.get('rec_scores', [])
+            rec_boxes = page.get('rec_boxes', [])
 
-        # 提取关键OCR数据
-        rec_texts = result.get('rec_texts', [])
-        rec_scores = result.get('rec_scores', [])
-        rec_polys = result.get('rec_polys', [])
+            # 按文本顺序处理
+            for idx, (txt, score) in enumerate(zip(rec_texts, rec_scores)):
+                text = txt.strip()
+                confidence = float(score)
+                if confidence < threshold or not text:
+                    continue
 
-        # 处理每一行识别结果
-        for i in range(len(rec_texts)):
-            text = rec_texts[i].strip()
+                bbox = rec_boxes[idx] if idx < len(rec_boxes) else []
 
-            # 获取置信度（如果可用）
-            confidence = rec_scores[i] if i < len(rec_scores) else 1.0
-
-            # 获取边界框（如果可用）
-            bbox = rec_polys[i].tolist() if i < len(rec_polys) else []
-
-            # 过滤低置信度和空文本
-            if confidence >= threshold and text:
-                text_content.append(text)
+                valid_lines += 1
+                total_conf += confidence
+                text_lines.append(text)
                 details.append(
                     {
-                        'line_number': i + 1,
+                        'line_number': valid_lines,
                         'text': text,
                         'confidence': confidence,
                         'bbox': bbox,
@@ -141,24 +147,20 @@ class Ocr:
                     }
                 )
 
-                total_confidence += confidence
-                valid_lines += 1
-
-        # 计算统计信息
-        combined_text = '\n'.join(text_content)
-        avg_confidence = total_confidence / valid_lines if valid_lines > 0 else 0
-
-        # 计算总字符数（排除换行符和空格）
+        combined_text = '\n'.join(text_lines)
+        avg_conf = (total_conf / valid_lines) if valid_lines > 0 else 0.0
         total_chars = len(combined_text.replace('\n', '').replace(' ', ''))
 
-        stats = {
-            'total_lines': valid_lines,
-            'total_chars': total_chars,
-            'avg_confidence': avg_confidence,
-            'confidence_threshold': threshold,
+        return {
+            'text': combined_text,
+            'details': details,
+            'stats': {
+                'total_lines': valid_lines,
+                'total_chars': total_chars,
+                'avg_confidence': avg_conf,
+                'confidence_threshold': threshold,
+            },
         }
-
-        return {'text': combined_text, 'details': details, 'stats': stats}
 
 
 class Digit(Ocr):

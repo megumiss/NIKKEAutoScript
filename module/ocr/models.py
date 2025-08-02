@@ -1,5 +1,3 @@
-from functools import cached_property
-
 import numpy as np
 
 
@@ -45,42 +43,51 @@ class OcrModel:
             raise ValueError(f'Unsupported lang: {lang}')
 
     def get_location(self, text, result):
-        """获取目标文本在OCR结果中的中心坐标
+        """
+        获取目标文本在 OCR 结果中的中心坐标
 
         Args:
             text: 要查找的目标文本
-            result: _process_ocr_result返回的结果字典
+            result: _process_ocr_result 返回的结果字典
 
         Returns:
-            tuple: (x, y) 中心坐标，未找到返回None
+            tuple: (x, y) 中心坐标，未找到返回 None
         """
-        if not result or not result[0]['details']:
+        if not result or not result.get('details'):
             return None
 
-        # 创建 {文本: bbox} 的映射字典
-        text_bbox_map = {}
-        for item in result['details']:
-            # 使用bbox作为位置信息
-            text_bbox_map[item['text']] = item['bbox']
+        # 构建文本到 bbox 的映射
+        text_bbox_map = {item['text']: item['bbox'] for item in result['details']}
+        all_texts = list(text_bbox_map.keys())
 
-        # 获取所有文本用于相似度匹配
-        all_texts = [item['text'] for item in result['details']]
+        # 找到最相似的文本
+        ratio, matched_text = self.get_similarity(all_texts, text)
+        if not (ratio > 0 and matched_text in text_bbox_map):
+            return None
 
-        # 查找最相似的文本
-        ratio, matched_text = self.get_similarity(all_texts, text, threshold=0.51)
+        raw_bbox = text_bbox_map[matched_text]
+        if raw_bbox is None:
+            return None
 
-        if ratio > 0 and matched_text in text_bbox_map:
-            bbox = text_bbox_map[matched_text]
+        # 转成 numpy array 方便判断维度
+        bbox = np.array(raw_bbox)
 
-            # 计算中心点 (假设bbox格式为[[x1,y1], [x2,y2], [x3,y3], [x4,y4]])
-            if bbox and len(bbox) == 4:
-                # 使用左上和右下点计算中心
-                upper_left = bbox[0]
-                bottom_right = bbox[2]
-                x = (upper_left[0] + bottom_right[0]) / 2
-                y = (upper_left[1] + bottom_right[1]) / 2
-                return x, y
-        return None
+        # bbox 可能两种形态：
+        # 1) 4×2 的点阵：[[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
+        # 2) 1×4 的平铺：[x1, y1, x2, y2]
+        if bbox.ndim == 2 and bbox.shape == (4, 2):
+            ul = bbox[0]  # 左上
+            br = bbox[2]  # 右下
+        elif bbox.ndim == 1 and bbox.size == 4:
+            ul = bbox[:2]  # [x1, y1]
+            br = bbox[2:4]  # [x2, y2]
+        else:
+            return None
+
+        # 计算中心点
+        x = (int(ul[0]) + int(br[0])) / 2
+        y = (int(ul[1]) + int(br[1])) / 2
+        return x, y
 
     def get_similarity(self, texts, target, threshold=0.49):
         """计算文本相似度

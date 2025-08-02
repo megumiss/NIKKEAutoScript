@@ -2,6 +2,7 @@ import tarfile
 from pathlib import Path
 
 from module.base.download import download_with_progressbar
+from module.logger import logger
 
 
 def maybe_download(model_storage_directory: Path, url: str) -> str:
@@ -17,7 +18,8 @@ def maybe_download(model_storage_directory: Path, url: str) -> str:
     if not (model_storage_directory / 'inference.pdiparams').exists():
         assert url.endswith('.tar'), 'Only supports tar compressed package'
         tmp_path = model_storage_directory / url.split('/')[-1]
-        print('download {} to {}'.format(url, tmp_path))
+        logger.info('PaddleOCR downloading {} to {}'.format(url, tmp_path))
+        
         download_with_progressbar(url, tmp_path)
         with tarfile.open(tmp_path, 'r') as tarObj:
             for member in tarObj.getmembers():
