@@ -93,6 +93,21 @@ class Event(UI):
 
         return EventInfo(*event_config.values())
 
+    def back_to_event(self):
+        logger.info('Back to event')
+        click_timer = Timer(0.3)
+
+        # 回到活动主页
+        while 1:
+            self.device.screenshot()
+
+            if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
+                break
+
+            if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
+                click_timer.reset()
+                continue
+
     @Config.when(EVENT_TYPE=1)
     def login_stamp(self, skip_first_screenshot=True):
         logger.hr('START EVENT LOGIN STAMP')
@@ -449,7 +464,9 @@ class Event(UI):
             ):
                 logger.info('Find opened event story 1')
                 if self.config.Event_StoryPart == 'Story_2':
-                    raise EventSelectError
+                    logger.error('The event stage/difficulty select wrong')
+                    self.back_to_event()
+                    return
 
                 # 进入story1
                 while 1:
@@ -484,7 +501,9 @@ class Event(UI):
             ):
                 logger.info('Find opened event story 2')
                 if self.config.Event_StoryPart == 'Story_1':
-                    raise EventSelectError
+                    logger.error('The event stage/difficulty select wrong')
+                    self.back_to_event()
+                    return
 
                 # 进入story2，story2更新后需要重新截图
                 while 1:
@@ -533,7 +552,9 @@ class Event(UI):
                 ):
                     logger.info('Find difficulty normal opened')
                     if self.config.Event_StoryDifficulty == 'Hard':
-                        raise EventSelectError
+                        logger.error('The event stage/difficulty select wrong')
+                        self.back_to_event()
+                        return
                     open_story = 'story_2_normal'
                     logger.info('Open event story 2 normal')
                     break
@@ -551,7 +572,9 @@ class Event(UI):
                 if open_story == 'story_2_hard':
                     logger.info('Find difficulty hard opened')
                     if self.config.Event_StoryDifficulty == 'Normal':
-                        raise EventSelectError
+                        logger.error('The event stage/difficulty select wrong')
+                        self.back_to_event()
+                        return
 
                     while 1:
                         if skip_first_screenshot:
@@ -642,7 +665,9 @@ class Event(UI):
             ):
                 logger.info('Find difficulty normal opened')
                 if self.config.Event_StoryDifficulty == 'Hard':
-                    raise EventSelectError
+                    logger.error('The event stage/difficulty select wrong')
+                    self.back_to_event()
+                    return
                 open_story = 'story_1_normal'
                 logger.info('Open event story normal')
                 break
@@ -660,7 +685,9 @@ class Event(UI):
             if open_story == 'story_1_hard':
                 logger.info('Find difficulty hard opened')
                 if self.config.Event_StoryDifficulty == 'Normal':
-                    raise EventSelectError
+                    logger.error('The event stage/difficulty select wrong')
+                    self.back_to_event()
+                    return
 
                 while 1:
                     if skip_first_screenshot:
@@ -1067,7 +1094,7 @@ class Event(UI):
             if (
                 click_timer.reached()
                 and self.appear(MAIN_CHECK, offset=10)
-                and self.appear_then_click(self.event_assets.MAIN_GOTO_EVENT, offset=10, interval=5)
+                and self.appear_then_click(self.event_assets.MAIN_GOTO_EVENT, offset=(50, 50), interval=5)
             ):
                 click_timer.reset()
                 logger.info('Open event story')

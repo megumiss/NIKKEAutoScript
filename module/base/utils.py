@@ -489,3 +489,18 @@ def sort_buttons_by_location(buttons):
         result.extend(group)
     
     return result
+
+def random_line_segments(p1, p2, n, random_range=(0, 0, 0, 0)):
+    """Cut a line into multiple segments.
+
+    Args:
+        p1: (x, y).
+        p2: (x, y).
+        n: Number of slice.
+        random_range: Add a random_range to points.
+
+    Returns:
+        list[tuple]: [(x0, y0), (x1, y1), (x2, y2)]
+    """
+    return [tuple((((n - index) * p1 + index * p2) / n).astype(int) + random_rectangle_point(random_range))
+            for index in range(0, n + 1)]
