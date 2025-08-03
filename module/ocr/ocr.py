@@ -21,7 +21,7 @@ from module.ocr.models import OCR_MODEL
 class Ocr:
     SHOW_REVISE_WARNING = False
 
-    def __init__(self, buttons, lang='ch', model_type='mobile', name=None):
+    def __init__(self, buttons, lang='ch', model_type='mobile', interval=0, name=None):
         """
         Args:
             buttons (Button, tuple, list[Button], list[tuple]): OCR area.
@@ -33,10 +33,11 @@ class Ocr:
         self._buttons = buttons
         self.model_type = model_type
         self.lang = lang
+        self.interval = interval
 
     @property
     def paddleocr(self) -> 'NIKKEOcr':
-        return OCR_MODEL.get_model_by(lang=self.lang, model_type=self.model_type)
+        return OCR_MODEL.get_model_by(lang=self.lang, model_type=self.model_type, interval=self.interval)
 
     @property
     def buttons(self):

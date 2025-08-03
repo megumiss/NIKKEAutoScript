@@ -6,7 +6,7 @@ class OcrModel:
         self._paddle_cache = {}
         self._paddle_num_cache = {}
 
-    def paddle(self, model_type):
+    def paddle(self, model_type, interval):
         if model_type not in self._paddle_cache:
             from module.ocr.nikke_ocr import NIKKEOcr
 
@@ -16,10 +16,11 @@ class OcrModel:
                 use_doc_orientation_classify=False,
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
+                interval=interval,
             )
         return self._paddle_cache[model_type]
 
-    def paddle_num(self, model_type):
+    def paddle_num(self, model_type, interval):
         if model_type not in self._paddle_num_cache:
             from module.ocr.nikke_ocr import NIKKEOcr
 
@@ -31,14 +32,15 @@ class OcrModel:
                 use_textline_orientation=False,
                 text_det_thresh=0.1,
                 text_det_unclip_ratio=6.0,
+                interval=interval,
             )
         return self._paddle_num_cache[model_type]
 
-    def get_model_by(self, lang='ch', model_type='mobile'):
+    def get_model_by(self, lang='ch', model_type='mobile', interval=0):
         if lang == 'ch':
-            return self.paddle(model_type=model_type)
+            return self.paddle(model_type=model_type, interval=interval)
         elif lang in ('en', 'num'):
-            return self.paddle_num(model_type=model_type)
+            return self.paddle_num(model_type=model_type, interval=interval)
         else:
             raise ValueError(f'Unsupported lang: {lang}')
 

@@ -96,7 +96,7 @@ class ModuleBase:
 
         return appear
 
-    def appear_text(self, text, interval=0, lang='ch', model_type='mobile') -> bool or tuple:
+    def appear_text(self, text, interval=0, lang='ch') -> bool or tuple:
         if interval:
             if text in self.interval_timer:
                 if self.interval_timer[text].limit != interval:
@@ -106,7 +106,7 @@ class ModuleBase:
             if not self.interval_timer[text].reached():
                 return False
 
-        ocr_instance = Ocr(buttons=[], lang=lang, model_type=model_type)
+        ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
         res = ocr_instance.ocr(self.device.image, direct_ocr=True, show_log=False)
         location = self.device.get_location(text, res)
         if location:
@@ -116,9 +116,9 @@ class ModuleBase:
         else:
             return False
 
-    def appear_text_then_click(self, text, interval=0, model_type='mobile') -> bool:
+    def appear_text_then_click(self, text, interval=0) -> bool:
         start_time = time.time()
-        location = self.appear_text(text, interval, model_type=model_type)
+        location = self.appear_text(text, interval)
         if location:
             self.device.click_minitouch(location[0], location[1])
             logger.info(

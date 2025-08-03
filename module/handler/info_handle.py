@@ -26,9 +26,9 @@ class InfoHandler(ModuleBase):
             self.device.sleep(1)
             return True
         # Daily Login, Memories Spring, Monthly Card, etc.
-        if self.appear_text_then_click('_领取奖励', interval=5):
+        if self.appear_text_then_click('_领取奖励', interval=3):
             return True
-        elif a := self.appear_text('_全部领取', interval=5):
+        elif a := self.appear_text('_全部领取', interval=3):
             x, y = a[0], a[1]
             b = get_color(
                 image=self.device.image,

@@ -19,8 +19,6 @@ models = {
 
 
 class NIKKEOcr(PaddleOCR):
-    last_time = time.time()
-
     def __init__(
         self,
         lang: str = 'ch',
@@ -69,6 +67,7 @@ class NIKKEOcr(PaddleOCR):
         # 检查模型文件是否存在
         self._assert_and_prepare_model_files(rec_model_dir, det_model_dir)
         self.interval = interval
+        self.last_time = 0
 
         # 调用父类 PaddleOCR 的 __init__ 完成模型加载
         logger.info('PaddleOCR Initializing')
@@ -90,21 +89,16 @@ class NIKKEOcr(PaddleOCR):
 
         logger.info('PaddleOCR prepared')
 
+    def predict(self, img_fp):
+        self.check_interval()
+        return super().predict(img_fp)
+
     def check_interval(self):
-        """
-        检查OCR调用间隔
-        """
-        if time.time() - self.last_time < self.interval:
-            time.sleep(self.interval - (time.time() - self.last_time))
+        delta = time.time() - self.last_time
+        if delta < self.interval:
+            logger.info(f'OCR interval {delta:.2f}s < {self.interval}s, sleeping {self.interval - delta:.2f}s')
+            time.sleep(self.interval - delta)
         self.last_time = time.time()
-
-    def ocr(self, img_fp):
-        if self.interval:
-            self.check_interval()
-        return self.predict(img_fp)
-
-    def __call__(self, img: np.ndarray):
-        return self.ocr(img)
 
     def _assert_and_prepare_model_files(self, rec_model_dir, det_model_dir):
         required_files = ['inference.json', 'inference.pdiparams', 'inference.yml']
