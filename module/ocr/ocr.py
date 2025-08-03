@@ -3,6 +3,9 @@ import time
 from datetime import timedelta
 from typing import TYPE_CHECKING, Dict, List
 
+import cv2
+import numpy as np  # 新增
+
 from module.base.button import Button
 from module.base.utils import crop, float2str
 from module.logger import logger
@@ -11,11 +14,11 @@ from module.ocr.models import OCR_MODEL
 if TYPE_CHECKING:
     from module.ocr.nikke_ocr import NIKKEOcr
 
+
 from module.ocr.models import OCR_MODEL
 
 
 class Ocr:
-    SHOW_LOG = True
     SHOW_REVISE_WARNING = False
 
     def __init__(self, buttons, lang='ch', model_type='mobile', name=None):
@@ -46,6 +49,26 @@ class Ocr:
     def buttons(self, value):
         self._buttons = value
 
+    def pre_process(self, image):
+        """
+        Args:
+            image (np.ndarray): Shape (height, width, channel)
+
+        Returns:
+            np.ndarray: Shape (width, height)
+        """
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+
+        # 固定阈值二值化
+        _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+
+        # 转回3通道
+        binary_colored = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+        return binary_colored.astype(np.uint8)
+
     def after_process(self, result):
         """
         Args:
@@ -56,7 +79,7 @@ class Ocr:
         """
         return result
 
-    def ocr(self, image, direct_ocr=False, threshold: float = 0.51):
+    def ocr(self, image, direct_ocr=False, threshold: float = 0.51, show_log=True):
         """
         Args:
             image (np.ndarray, list[np.ndarray]):
@@ -67,18 +90,26 @@ class Ocr:
         """
         start_time = time.time()
 
+        # Otsu二值化处理
+        images_to_ocr = []
         if direct_ocr:
-            image_list = image if isinstance(image, list) else [image]
+            images_to_ocr = [image]
         else:
-            image_list = [crop(image, area) for area in self.buttons]
+            images_to_ocr = [crop(image, area) for area in self.buttons]
 
-        result = self.paddleocr.predict(image_list)
+        # for img in cropped_images:
+        #     processed_img = self.pre_process(img)
+        #     images_to_ocr.append(processed_img)
+
+        result = self.paddleocr.predict(images_to_ocr)
         # 处理识别结果
         processed_result = self._process_ocr_result(result, threshold)
+        processed_result['text'] = self.after_process(processed_result['text'])
 
-        if self.SHOW_LOG:
+        if show_log:
             logger.attr(
-                name='%s %ss' % (self.name, float2str(time.time() - start_time)), text=str(processed_result['text'])
+                name='%s %ss' % (self.name, float2str(time.time() - start_time)),
+                text=str(processed_result['text'].replace('\n', ' ')),
             )
 
         return processed_result
@@ -93,7 +124,7 @@ class Ocr:
 
         Returns:
             Dict: {
-                'text': str,               # 合并后的文本（按行 \n 分隔）
+                'text': str,               # 合并后的文本
                 'details': List[dict],     # 每行的详细信息
                 'stats': {
                     'total_lines': int,    # 有效行数
@@ -147,7 +178,7 @@ class Ocr:
                     }
                 )
 
-        combined_text = '\n'.join(text_lines)
+        combined_text = ''.join(text_lines)
         avg_conf = (total_conf / valid_lines) if valid_lines > 0 else 0.0
         total_chars = len(combined_text.replace('\n', '').replace(' ', ''))
 
@@ -166,7 +197,7 @@ class Ocr:
 class Digit(Ocr):
     """
     Do OCR on a digit, such as `45`.
-    Method ocr() returns int, or a list of int.
+    Method ocr() returns digit string, or a list of digit strings.
     """
 
     def __init__(self, buttons, lang='num', model_type='mobile', name=None):
@@ -174,12 +205,29 @@ class Digit(Ocr):
 
     def after_process(self, result):
         result = super().after_process(result)
-        result = result.replace('I', '1').replace('D', '0').replace('S', '5').replace('B', '8')
 
+        # 替换常见识别错误
+        replacements = {
+            'I': '1',
+            'D': '0',
+            'S': '5',
+            'B': '8',
+            'G': '6',
+            'O': '0',
+            'Q': '0',
+            '|': '1',
+        }
+        for k, v in replacements.items():
+            result = result.replace(k, v)
+
+        # 提取数字部分
         prev = result
-        result = int(result) if result else 0
+        match = re.search(r'\d+', result)
+        result = match.group(0) if match else '0'
+
+        # 修正警告提示
         if self.SHOW_REVISE_WARNING:
-            if str(result) != prev:
+            if result != prev:
                 logger.warning(f'OCR {self.name}: Result "{prev}" is revised to "{result}"')
 
         return result

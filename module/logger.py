@@ -135,6 +135,7 @@ web_formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d │ %(message)s',
 
 stdout_console = console = Console()
 console_hdlr = RichHandler(
+    console=stdout_console,
     show_path=False,
     show_time=False,
     rich_tracebacks=True,

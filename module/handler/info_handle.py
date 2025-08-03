@@ -123,10 +123,6 @@ class InfoHandler(ModuleBase):
             static=False,
         ) and self.appear_then_click(ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False):
             return True
-        elif self._appear_text_then_click(
-            '不再显示', (20, 600), label='CLOSE_ANNOUNCEMENT', model_type=self.config.Optimization_OcrModelType
-        ):
-            return True
 
     def handle_download(self):
         if self.appear(DOWNLOAD_CHECK, offset=(30, 30), interval=3, static=False) and self.appear_then_click(

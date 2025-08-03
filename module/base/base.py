@@ -107,7 +107,7 @@ class ModuleBase:
                 return False
 
         ocr_instance = Ocr(buttons=[], lang=lang, model_type=model_type)
-        res = ocr_instance.ocr(self.device.image, direct_ocr=True)
+        res = ocr_instance.ocr(self.device.image, direct_ocr=True, show_log=False)
         location = self.device.get_location(text, res)
         if location:
             if interval:

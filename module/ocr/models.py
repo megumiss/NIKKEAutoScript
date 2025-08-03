@@ -30,7 +30,7 @@ class OcrModel:
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
                 text_det_thresh=0.1,
-                text_det_unclip_ratio=5.0,
+                text_det_unclip_ratio=6.0,
             )
         return self._paddle_num_cache[model_type]
 

@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import time
 from datetime import datetime, timedelta
 from functools import cached_property
@@ -19,6 +20,9 @@ from module.exception import (
 )
 from module.logger import logger
 from module.notify import handle_notify
+
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 
 
 class NikkeAutoScript:
