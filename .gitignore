@@ -1,7 +1,4 @@
-**/android-platform-tools/
-**/python-3.9.13-embed-amd64/
 **/.idea
-**/win-unpacked
 **/toolkit
 **/.vscode
 **/__pycache__
@@ -12,5 +9,6 @@
 config/deploy.yaml
 config/nkas.json
 **.lock
+!yarn.lock
 **/app
 bin/paddleocr/

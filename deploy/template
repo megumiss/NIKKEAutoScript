@@ -11,7 +11,7 @@ Deploy:
     RequirementsFile: 'requirements.txt'
 
   Adb:
-    AdbExecutable: './toolkit/android-platform-tools/adb.exe'
+    AdbExecutable: './toolkit/Lib/site-packages/adbutils/binaries/adb.exe'
     ReplaceAdb: true
     AutoConnect: true
     InstallUiautomator2: true

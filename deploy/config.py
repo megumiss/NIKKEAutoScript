@@ -20,7 +20,7 @@ class ConfigModel:
     PythonExecutable: str = "./toolkit/python.exe"
     RequirementsFile: str = "requirements.txt"
 
-    AdbExecutable: str = "./toolkit/android-platform-tools/adb.exe"
+    AdbExecutable: str = "./toolkit/Lib/site-packages/adbutils/binaries/adb.exe"
     ReplaceAdb: bool = True
     AutoConnect: bool = True
     InstallUiautomator2: bool = True
