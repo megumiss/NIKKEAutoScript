@@ -6,7 +6,7 @@ echo NIKKEAutoScript Build Script
 echo ==================================================
 
 REM 步骤0：如果存在旧目录则删除
-echo Step 0/5: Removing existing directory...
+echo Step 0/6: Removing existing directory...
 if exist NIKKEAutoScript (
     echo Found existing NIKKEAutoScript directory, deleting...
     rd /s /q NIKKEAutoScript
@@ -19,7 +19,7 @@ if exist NIKKEAutoScript (
 )
 
 REM 步骤1：克隆仓库并删除.git文件夹
-echo Step 1/5: Cloning repository...
+echo Step 1/6: Cloning repository...
 git clone --depth 1 -b build https://github.com/megumiss/NIKKEAutoScript.git
 if not exist NIKKEAutoScript (
     echo Error: Git clone failed
@@ -35,7 +35,7 @@ if exist NIKKEAutoScript\.git (
 )
 
 REM 步骤2：构建webapp并处理输出
-echo Step 2/5: Building webapp...
+echo Step 2/6: Building webapp...
 cd NIKKEAutoScript\webapp
 
 echo Installing Node.js dependencies...
@@ -76,7 +76,7 @@ if exist app (
 )
 
 REM 步骤3：清理webapp目录
-echo Step 3/5: Cleaning webapp artifacts...
+echo Step 3/6: Cleaning webapp artifacts...
 cd webapp
 if exist node_modules (
     rd /s /q node_modules
@@ -94,7 +94,7 @@ if exist output (
 cd ..
 
 REM 步骤4：复制toolkit目录
-echo Step 4/5: Copying toolkit...
+echo Step 4/6: Copying toolkit...
 if exist "..\toolkit" (
     xcopy /e /y /q "..\toolkit" "toolkit\"
     echo Toolkit copied successfully
@@ -106,10 +106,8 @@ if exist "..\toolkit" (
 )
 
 REM 步骤5：安装Python依赖
-echo Step 5/5: Installing Python dependencies...
+echo Step 5/6: Installing Python dependencies...
 if exist "toolkit\python.exe" (
-    echo Upgrading pip...
-    toolkit\python.exe -m pip install --upgrade pip
     echo Installing requirements.txt...
     toolkit\python.exe -m pip install -r requirements.txt
     echo Python dependencies installed
@@ -118,6 +116,21 @@ if exist "toolkit\python.exe" (
     pause
     exit /b 1
 )
+
+REM 步骤6：复制配置文件模板
+echo Step 6/6: Creating deploy.yaml from template...
+cd config
+if exist deploy-template.yaml (
+    if not exist deploy.yaml (
+        copy deploy-template.yaml deploy.yaml >nul
+        echo Created deploy.yaml from template
+    ) else (
+        echo deploy.yaml already exists - skipping copy
+    )
+) else (
+    echo Warning: deploy-template.yaml not found in config directory
+)
+cd ..
 
 echo ==================================================
 echo Build completed successfully!
