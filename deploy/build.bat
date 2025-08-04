@@ -20,7 +20,7 @@ if exist NIKKEAutoScript (
 
 REM 步骤1：克隆仓库并删除.git文件夹
 echo Step 1/6: Cloning repository...
-git clone --depth 1 -b build https://github.com/megumiss/NIKKEAutoScript.git
+git clone --depth 1 https://github.com/megumiss/NIKKEAutoScript.git
 if not exist NIKKEAutoScript (
     echo Error: Git clone failed
     pause
