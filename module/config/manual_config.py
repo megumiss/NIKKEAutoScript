@@ -79,6 +79,13 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20250807",
+            "event_name": "Tactical Upgrade",
+            # small evnet
+            "event_type": 2,
+            "mini_game": False
+        },
+        {
             "event_id": "event_20250716",
             "event_name": "BOOM! THE GHOST!",
             # large evnet
