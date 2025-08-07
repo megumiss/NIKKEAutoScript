@@ -175,7 +175,7 @@ class Event(UI):
         # self.ui_ensure(page_event)
         logger.info('Login stamp done')
 
-    @Config.when(EVENT_TYPE=2)
+    @Config.when(EVENT_TYPE=(2, 3))
     def login_stamp(self):
         logger.hr('START EVENT LOGIN STAMP')
         logger.info('Small event, skip loginstamp')
@@ -388,7 +388,7 @@ class Event(UI):
 
         logger.info('Event reward done')
 
-    @Config.when(EVENT_TYPE=2)
+    @Config.when(EVENT_TYPE=(2, 3))
     def reward(self, skip_first_screenshot=True):
         logger.hr('START EVENT REWARD')
         click_timer = Timer(0.3)
@@ -871,7 +871,7 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
-    @Config.when(EVENT_TYPE=2)
+    @Config.when(EVENT_TYPE=(2, 3))
     def coop(self):
         logger.hr('EVENT COOP START')
         logger.info('Small event, skip coop')

@@ -80,36 +80,36 @@ class ManualConfig:
     EVENTS = [
         {
             "event_id": "event_20250807",
-            "event_name": "Tactical Upgrade",
-            # small evnet
-            "event_type": 2,
+            "event_name": "ABSOLUTE",
+            # 有story2的小型活动
+            "event_type": 3,
             "mini_game": False
         },
         {
             "event_id": "event_20250716",
             "event_name": "BOOM! THE GHOST!",
-            # large evnet
+            # 大型活动
             "event_type": 1,
             "mini_game": True
         },
         {
             "event_id": "event_20250703l",
             "event_name": "OuteR: Automata",
-            # large evnet
+            # 大型活动
             "event_type": 1,
             "mini_game": False
         },
         {
             "event_id": "event_20250703s",
             "event_name": "OVER THE HORIZON",
-            # small evnet
+            # 小型活动
             "event_type": 2,
             "mini_game": False
         },
         {
             "event_id": "event_20250612",
             "event_name": "Memories Teller",
-            # large evnet
+            # 大型活动
             "event_type": 1,
             "mini_game": False
         },

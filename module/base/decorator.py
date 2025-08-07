@@ -74,8 +74,14 @@ class Config:
                         flag为 配置 与 当前遍历的 方法 的装饰器参数组 是否相同
                     """
 
-                    flag = [value is None or self.config.__getattribute__(key) == value for key, value in
-                            record['options'].items()]
+                    flag = [
+                        value is None or
+                        (
+                            isinstance(value, (list, tuple, set)) and self.config.__getattribute__(key) in value
+                        ) or
+                        self.config.__getattribute__(key) == value
+                        for key, value in record['options'].items()
+                    ]
 
                     """
                         当前方法的装饰器参数与配置不完全相同时，跳过
