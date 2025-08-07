@@ -4,10 +4,13 @@ Deploy:
     Branch: 'master'
     GitExecutable: './toolkit/Git/mingw64/bin/git.exe'
     GitProxy: null
+    SSLVerify: true
     AutoUpdate: true
 
   Python:
     PythonExecutable: './toolkit/python.exe'
+    PypiMirror: null
+    InstallDependencies: true
     RequirementsFile: 'requirements.txt'
 
   Adb:

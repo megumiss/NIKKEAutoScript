@@ -1,1 +1,1 @@
-start .\toolkit\python.exe .\module\webui\updater.py
+start .\toolkit\python.exe .\deploy\installer.py

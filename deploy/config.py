@@ -16,8 +16,12 @@ class ConfigModel:
     Branch: str = "master"
     GitExecutable: str = "./toolkit/Git/mingw64/bin/git.exe"
     GitProxy: Optional[str] = None
+    SSLVerify: bool = False
+    AutoUpdate: bool = True
 
     PythonExecutable: str = "./toolkit/python.exe"
+    PypiMirror: Optional[str] = None
+    InstallDependencies: bool = True
     RequirementsFile: str = "requirements.txt"
 
     AdbExecutable: str = "./toolkit/Lib/site-packages/adbutils/binaries/adb.exe"

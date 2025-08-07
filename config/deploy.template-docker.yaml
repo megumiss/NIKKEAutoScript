@@ -4,6 +4,7 @@ Deploy:
     Branch: master
     GitExecutable: /usr/bin/git
     GitProxy: null
+    SSLVerify: true
     AutoUpdate: true
 
   Python:

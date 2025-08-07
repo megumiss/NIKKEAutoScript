@@ -109,7 +109,7 @@ REM 步骤5：安装Python依赖
 echo Step 5/6: Installing Python dependencies...
 if exist "toolkit\python.exe" (
     echo Installing requirements.txt...
-    toolkit\python.exe -m pip install -r requirements.txt
+    toolkit\python.exe -m pip install -r deploy\requirements.txt
     echo Python dependencies installed
 ) else (
     echo Error: Python.exe not found in toolkit

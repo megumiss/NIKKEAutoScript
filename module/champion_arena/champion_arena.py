@@ -67,6 +67,15 @@ class ChampionArena(UI, ArenaBase):
                 click_timer.reset()
                 continue
 
+            # 应援结果
+            if (
+                click_timer.reached()
+                and self.appear(CHEER_RESULT, offset=10, static=False)
+                and self.appear_then_click(CHEER_RESULT_NEXT, offset=10, interval=1, static=False)
+            ):
+                click_timer.reset()
+                continue
+
             # 检查应援按钮
             if self.appear(PROMOTION_CHECK, offset=30) or self.appear(CHAMPION_CHECK, offset=30):
                 if self.appear(CHEER_ENABLE, offset=10):
@@ -88,15 +97,6 @@ class ChampionArena(UI, ArenaBase):
                 click_timer.reached()
                 and (self.appear(PROMOTION_CHECK, offset=30) or self.appear(CHAMPION_CHECK, offset=30))
                 and self.appear_then_click(CHEER_ENABLE, offset=10, interval=2)
-            ):
-                click_timer.reset()
-                continue
-
-            # 应援结果
-            if (
-                click_timer.reached()
-                and self.appear(CHEER_RESULT, offset=10, static=False)
-                and self.appear_then_click(CHEER_RESULT_NEXT, offset=10, interval=1, static=False)
             ):
                 click_timer.reset()
                 continue
