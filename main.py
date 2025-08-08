@@ -288,7 +288,7 @@ class NikkeAutoScript:
         from module.blablalink.blablalink import Blablalink
 
         Blablalink(config=self.config).run('daily')
-        
+
     def bla_cdk(self):
         from module.blablalink.blablalink import Blablalink
 
@@ -328,6 +328,11 @@ class NikkeAutoScript:
         from module.solo_raid.solo_raid import SoloRaid
 
         SoloRaid(config=self.config, device=self.device).run()
+
+    def union_raid(self):
+        from module.union_raid.union_raid import UnionRaid
+
+        UnionRaid(config=self.config, device=self.device).run()
 
     def wait_until(self, future):
         """

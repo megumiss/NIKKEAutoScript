@@ -8,10 +8,6 @@ DailyRecruit:
   Scheduler:
     Enable: false
 
-Destroy:
-  Scheduler:
-    Enable: false
-
 Commission:
   Scheduler:
     Enable: false
@@ -93,5 +89,9 @@ Coop:
     Enable: false
 
 SoloRaid:
+  Scheduler:
+    Enable: false
+
+UnionRaid:
   Scheduler:
     Enable: false

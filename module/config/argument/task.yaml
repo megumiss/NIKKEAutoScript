@@ -86,7 +86,9 @@ Coop:
 
 SoloRaid:
   - Scheduler
-  - SoloRaid
+
+UnionRaid:
+  - Scheduler
 
 # ==================== StoryEvent ====================
 

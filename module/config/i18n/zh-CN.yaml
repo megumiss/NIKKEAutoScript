@@ -167,6 +167,9 @@ Task:
   SoloRaid:
     name: 单人突击
     help: ""
+  UnionRaid:
+    name: 联盟突袭
+    help: ""
 Emulator:
   _info:
     name: 模拟器设置

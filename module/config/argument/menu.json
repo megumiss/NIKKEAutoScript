@@ -29,7 +29,8 @@
     ],
     "LimitedTimeEvent": [
       "Coop",
-      "SoloRaid"
+      "SoloRaid",
+      "UnionRaid"
     ],
     "StoryEvent": [
       "Event",
