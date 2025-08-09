@@ -16,5 +16,5 @@ DIFFICULTY_CONFIRM = Button(area={'cn': (334, 854, 385, 877)}, color={'cn': (120
 DIFFICULTY_NORMAL = Button(area={'cn': (180, 611, 248, 643)}, color={'cn': (155, 223, 255)}, button={'cn': (180, 611, 248, 643)}, file={'cn': './assets/cn/coop/DIFFICULTY_NORMAL.png'})
 DIFFICULTY_NORMAL_NOT_CHECKED = Button(area={'cn': (181, 611, 247, 643)}, color={'cn': (192, 193, 192)}, button={'cn': (181, 611, 247, 643)}, file={'cn': './assets/cn/coop/DIFFICULTY_NORMAL_NOT_CHECKED.png'})
 EVENT_BANNER = Button(area={'cn': (29, 121, 267, 187)}, color={'cn': (116, 74, 67)}, button={'cn': (29, 121, 267, 187)}, file={'cn': './assets/cn/coop/EVENT_BANNER.png'})
-FREE_OPPORTUNITY_CHECK = Button(area={'cn': (454, 977, 614, 1034)}, color={'cn': (255, 162, 66)}, button={'cn': (454, 977, 614, 1034)}, file={'cn': './assets/cn/coop/FREE_OPPORTUNITY_CHECK.png'})
+FREE_OPPORTUNITY_CHECK = Button(area={'cn': (442, 1006, 625, 1036)}, color={'cn': (255, 150, 44)}, button={'cn': (442, 1006, 625, 1036)}, file={'cn': './assets/cn/coop/FREE_OPPORTUNITY_CHECK.png'})
 SECECT_DIFFICULTY = Button(area={'cn': (282, 513, 408, 533)}, color={'cn': (170, 170, 170)}, button={'cn': (282, 513, 408, 533)}, file={'cn': './assets/cn/coop/SECECT_DIFFICULTY.png'})

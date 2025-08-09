@@ -24,7 +24,7 @@ class Coop(UI):
             [FREE_OPPORTUNITY_CHECK.area],
             name='FREE_REMAIN',
             model_type=model_type,
-            lang='num',
+            lang='ch',
         )
         return int(FREE_REMAIN.ocr(self.device.image)['text'])
 
