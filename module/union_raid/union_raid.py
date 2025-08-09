@@ -1,7 +1,7 @@
 from module.base.timer import Timer
 from module.logger import logger
 from module.ocr.ocr import Digit
-from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
+from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, PAUSE
 from module.ui.assets import MAIN_CHECK
 from module.ui.page import page_main
 from module.ui.ui import UI
@@ -24,7 +24,7 @@ class UnionRaid(UI):
             [FREE_OPPORTUNITY_CHECK.area],
             name='FREE_REMAIN',
             model_type=model_type,
-            lang='num',
+            lang='ch',
         )
         return int(FREE_REMAIN.ocr(self.device.image)['text'])
 
@@ -86,7 +86,7 @@ class UnionRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(ENEMY_DEFEATED, offset=10)
-                and self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=(200,10), interval=2)
+                and self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=(200, 10), interval=2)
             ):
                 click_timer.reset()
                 continue
@@ -101,7 +101,6 @@ class UnionRaid(UI):
                     break
             else:
                 confirm_timer.clear()
-                break
 
         if self.free_opportunity_remain:
             self.union_raid()
@@ -123,7 +122,7 @@ class UnionRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(UNION_RAID_CHECK, offset=10)
-                and self.appear_then_click(UNION_RAID_SELECT, offset=10, interval=1)
+                and self.appear_then_click(UNION_RAID_SELECT, offset=(50, 10), interval=2)
             ):
                 click_timer.reset()
                 continue
@@ -154,12 +153,12 @@ class UnionRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear_then_click(ENTER_FIGHT, offset=10, interval=1)
+                and self.appear_then_click(ENTER_FIGHT, offset=10, interval=2)
             ):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=10, interval=5):
+            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=10, threshold=0.9, interval=5):
                 click_timer.reset()
                 continue
 
@@ -167,20 +166,25 @@ class UnionRaid(UI):
                 click_timer.reset()
                 continue
 
+            # 红圈
+            if self.config.Optimization_AutoRedCircle and self.appear(PAUSE, offset=(5, 5)):
+                if self.handle_red_circles():
+                    continue
+
             # 战斗结束
             if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
                 logger.info('Complete a union raid')
                 break
 
+        confirm_timer = Timer(3, count=3)
         while 1:
-            confirm_timer = Timer(3, count=3)
             self.device.screenshot()
 
             # 结算弹窗
             if (
                 click_timer.reached()
                 and self.appear(ENEMY_DEFEATED, offset=10)
-                and self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=(200,10), interval=2)
+                and self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=(200, 10), interval=2)
             ):
                 click_timer.reset()
                 continue
