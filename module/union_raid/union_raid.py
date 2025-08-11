@@ -21,7 +21,7 @@ class UnionRaidIsUnavailable(Exception):
 class UnionRaid(UI):
     @cached_property
     def teams(self):
-        return [RAID_TEAM_1_SELECTED, RAID_TEAM_2, RAID_TEAM_3, RAID_TEAM_4, RAID_TEAM_5]
+        return [RAID_TEAM_1, RAID_TEAM_2, RAID_TEAM_3, RAID_TEAM_4, RAID_TEAM_5]
 
     @property
     def free_remain(self) -> int:
@@ -153,6 +153,7 @@ class UnionRaid(UI):
                 and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
                 and self.appear_then_click(self.teams[teamindex], threshold=10, interval=1)
             ):
+                self.device.sleep(0.5)
                 click_timer.reset()
                 continue
 
@@ -160,7 +161,8 @@ class UnionRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear(RAID_TEAM_LOCKED, offset=10)
+                and not self.appear_then_click(self.teams[teamindex], threshold=10)
+                and self.appear(ENTER_FIGHT_DISABLE, threshold=10)
             ):
                 teamindex += 1
                 click_timer.reset()
@@ -170,7 +172,7 @@ class UnionRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear_then_click(ENTER_FIGHT, offset=10, interval=2)
+                and self.appear_then_click(ENTER_FIGHT, threshold=10, interval=2)
             ):
                 click_timer.reset()
                 continue
