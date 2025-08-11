@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from module.base.timer import Timer
 from module.logger import logger
 from module.ocr.ocr import Digit
@@ -17,6 +19,10 @@ class UnionRaidIsUnavailable(Exception):
 
 
 class UnionRaid(UI):
+    @cached_property
+    def teams(self):
+        return [RAID_TEAM_1_SELECTED, RAID_TEAM_2, RAID_TEAM_3, RAID_TEAM_4, RAID_TEAM_5]
+
     @property
     def free_remain(self) -> int:
         model_type = self.config.Optimization_OcrModelType
@@ -121,11 +127,16 @@ class UnionRaid(UI):
         logger.hr('Start a union raid')
         click_timer = Timer(0.3)
 
+        teamindex = 0
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
+
+            if teamindex == 5:
+                logger.warning('There are no team to fight')
+                raise NoOpportunityRemain
 
             # 点击莱彻
             if (
@@ -136,47 +147,22 @@ class UnionRaid(UI):
                 click_timer.reset()
                 continue
 
-            # 切换队伍2
+            # 切换队伍
             if (
                 click_timer.reached()
                 and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear(RAID_TEAM_1_SELECTED, threshold=10)
-                and self.appear(RAID_TEAM_LOCKED, offset=10, threshold=0.7)
-                and self.appear_then_click(RAID_TEAM_2, offset=10, interval=1)
+                and self.appear_then_click(self.teams[teamindex], threshold=10, interval=1)
             ):
                 click_timer.reset()
                 continue
 
-            # 切换队伍3
+            # 禁止提示
             if (
                 click_timer.reached()
                 and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear(RAID_TEAM_2_SELECTED, threshold=10)
-                and self.appear(RAID_TEAM_LOCKED, offset=10, threshold=0.7)
-                and self.appear_then_click(RAID_TEAM_3, offset=10, interval=1)
+                and self.appear(RAID_TEAM_LOCKED, offset=10)
             ):
-                click_timer.reset()
-                continue
-
-            # 切换队伍4
-            if (
-                click_timer.reached()
-                and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear(RAID_TEAM_3_SELECTED, threshold=10)
-                and self.appear(RAID_TEAM_LOCKED, offset=10, threshold=0.7)
-                and self.appear_then_click(RAID_TEAM_4, offset=10, interval=1)
-            ):
-                click_timer.reset()
-                continue
-
-            # 切换队伍5
-            if (
-                click_timer.reached()
-                and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear(RAID_TEAM_4_SELECTED, threshold=10)
-                and self.appear(RAID_TEAM_LOCKED, offset=10, threshold=0.7)
-                and self.appear_then_click(RAID_TEAM_5, offset=10, interval=1)
-            ):
+                teamindex += 1
                 click_timer.reset()
                 continue
 
@@ -193,7 +179,7 @@ class UnionRaid(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=10, interval=5):
+            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=10, threshold=0.9, interval=5):
                 click_timer.reset()
                 continue
 
