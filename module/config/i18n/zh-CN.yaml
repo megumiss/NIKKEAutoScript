@@ -101,6 +101,9 @@ Task:
   SimulationRoom:
     name: 模拟室
     help: ""
+  Overclock:
+    name: 模拟室超频
+    help: ""
   TribeTower:
     name: 企业塔
     help: ""

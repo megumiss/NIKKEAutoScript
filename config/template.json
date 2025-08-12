@@ -228,6 +228,19 @@
       "Storage": {}
     }
   },
+  "Overclock": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Overclock",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "TribeTower": {
     "Scheduler": {
       "Enable": false,

@@ -59,6 +59,9 @@ SimulationRoom:
   - Scheduler
   - Area
 
+Overclock:
+  - Scheduler
+
 TribeTower:
   - Scheduler
   - Overcome

@@ -229,6 +229,11 @@ class NikkeAutoScript:
 
         SimulationRoom(config=self.config, device=self.device).run()
 
+    def overclock(self):
+        from module.simulation_room.overclock import Overclock
+
+        Overclock(config=self.config, device=self.device).run()
+
     def tribe_tower(self):
         from module.tribe_tower.tribe_tower import TribeTower
 
