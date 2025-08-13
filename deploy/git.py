@@ -1,7 +1,10 @@
 import os
+import shutil
+import subprocess
+import urllib.request
 from functools import cached_property
 
-from deploy.config import DeployConfig
+from deploy.config import DeployConfig, ExecutionError
 from module.logger import logger
 
 
@@ -20,9 +23,9 @@ class GitManager(DeployConfig):
 
     def git_repository_init(self, repo, source='origin', branch='master', proxy=''):
         """
-            初始化Git
+        初始化Git
         """
-        logger.hr('Git Init', 1)
+        logger.hr('Git Repository Init', 1)
         if not self.execute(f'"{self.git}" init', allow_failure=True):
             self.remove('./.git/config')
             self.remove('./.git/index')
@@ -68,8 +71,13 @@ class GitManager(DeployConfig):
         logger.hr('Show Version', 1)
         self.execute(f'"{self.git}" --no-pager log --no-merges -1')
 
-    def git_install(self):
-        logger.hr('Update', 0)
+    def git_init(self):
+        logger.hr('Init Repository', 0)
+
+        # Check if git executable exists, if not, download and install
+        if not os.path.exists(self.git):
+            logger.info(f'Git executable not found: {self.git}')
+            self.git_install()
 
         self.git_repository_init(
             repo=self.Repository,
@@ -77,3 +85,73 @@ class GitManager(DeployConfig):
             branch=self.Branch,
             proxy=self.GitProxy,
         )
+
+    def download_file(self, urls, target_path):
+        """从多个镜像地址下载，直到成功"""
+        for url in urls:
+            logger.info(f'Trying to download: {url}')
+            try:
+                with urllib.request.urlopen(url, timeout=60) as resp, open(target_path, 'wb') as f:
+                    shutil.copyfileobj(resp, f)
+                logger.info(f'Download successful: {url}')
+                return True
+            except Exception as e:
+                logger.error(f'Download failed: {url} - {e}')
+        return False
+
+    def extract_with_7za(self, sfx_file, output_dir):
+        """调用 7za.exe 解压 SFX 文件"""
+        seven_zip = os.path.abspath('toolkit/7z/7za.exe')
+        if not os.path.exists(seven_zip):
+            logger.error(f'Cannot find {seven_zip}, please ensure 7za.exe is placed in toolkit directory')
+            raise FileNotFoundError(f'7za.exe not found at {seven_zip}')
+
+        sfx_file = os.path.abspath(sfx_file)
+        output_dir = os.path.abspath(output_dir)
+
+        cmd = f'"{seven_zip}" x "{sfx_file}" -o"{output_dir}" -y'
+        logger.info(f'Executing extraction command: {cmd}')
+        try:
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.error(f'Extraction failed: {result.stderr}')
+                raise ExecutionError(f'Extraction failed: {result.stderr}')
+        except Exception as e:
+            logger.error(f'Extraction error: {e}')
+            raise ExecutionError(f'Extraction error: {e}')
+
+    def git_install(self):
+        logger.hr('Install Git', 0)
+
+        target_dir = os.path.abspath('./toolkit/Git')
+        if os.path.exists(target_dir):
+            logger.info(f'Git already exists: {target_dir}')
+            return
+
+        # 多镜像地址
+        urls = [
+            'https://mirrors.tuna.tsinghua.edu.cn/github-release/git-for-windows/git/LatestRelease/PortableGit-2.50.1-64-bit.7z.exe',
+            'https://github.com/git-for-windows/git/releases/download/v2.45.1.windows.1/PortableGit-2.45.1-64-bit.7z.exe',
+        ]
+
+        # 下载路径改为 toolkit/Git 下
+        os.makedirs('toolkit/Git', exist_ok=True)
+        exe_path = os.path.abspath(os.path.join('toolkit/Git', 'PortableGit.exe'))
+
+        try:
+            if not self.download_file(urls, exe_path):
+                logger.error('All mirrors failed to download, please check your network connection.')
+                raise ExecutionError('Failed to download Git')
+
+            logger.info('Starting extraction of PortableGit...')
+            self.extract_with_7za(exe_path, target_dir)
+
+            logger.info(f'Git installed successfully to {target_dir}')
+        finally:
+            # 删除临时文件
+            if os.path.exists(exe_path):
+                try:
+                    os.remove(exe_path)
+                    logger.info(f'Removed temporary file: {exe_path}')
+                except Exception as e:
+                    logger.error(f'Failed to remove temporary file {exe_path}: {e}')

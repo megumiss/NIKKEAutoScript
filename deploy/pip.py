@@ -1,11 +1,11 @@
-from dataclasses import dataclass
-from functools import cached_property
 import os
 import re
 import typing as t
+from dataclasses import dataclass
+from functools import cached_property
 from urllib.parse import urlparse
 
-from deploy.config import DeployConfig
+from deploy.config import DeployConfig, ExecutionError
 from module.logger import logger
 
 
@@ -39,22 +39,22 @@ class DataDependency:
     def __hash__(self):
         return hash(str(self))
 
+
 class PipManager(DeployConfig):
     @cached_property
     def python(self):
-        return self.filepath("PythonExecutable")
+        return self.filepath('PythonExecutable')
 
     @cached_property
     def requirements_file(self):
         if self.RequirementsFile == 'requirements.txt':
             return 'requirements.txt'
         else:
-            return self.filepath("RequirementsFile")
+            return self.filepath('RequirementsFile')
 
     @cached_property
     def python_site_packages(self):
-        return os.path.abspath(os.path.join(self.python, '../Lib/site-packages')) \
-            .replace(r"\\", "/").replace("\\", "/")
+        return os.path.abspath(os.path.join(self.python, '../Lib/site-packages')).replace(r'\\', '/').replace('\\', '/')
 
     @cached_property
     def set_installed_dependency(self) -> t.Set[DataDependency]:
@@ -68,13 +68,17 @@ class PipManager(DeployConfig):
                     data.append(dep)
         except FileNotFoundError:
             logger.info(f'Directory not found: {self.python_site_packages}')
+        except PermissionError:
+            logger.error(f'Permission denied accessing: {self.python_site_packages}')
+        except Exception as e:
+            logger.error(f'Error reading site-packages: {e}')
         return set(data)
 
     @cached_property
     def set_required_dependency(self) -> t.Set[DataDependency]:
         data = []
         regex = re.compile(r'^([^#\s]+)==([^#\s]+)')
-        file = self.filepath("RequirementsFile")
+        file = self.filepath('RequirementsFile')
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 for line in f.readlines():
@@ -84,6 +88,8 @@ class PipManager(DeployConfig):
                         data.append(dep)
         except FileNotFoundError:
             logger.info(f'File not found: {file}')
+        except Exception as e:
+            logger.error(f'Error reading requirements file: {e}')
         return set(data)
 
     @cached_property
@@ -131,4 +137,11 @@ class PipManager(DeployConfig):
 
         logger.hr('Update Dependencies', 1)
         arg = ' ' + ' '.join(arg) if arg else ''
-        self.execute(f'{self.pip} install -r {self.requirements_file}{arg}')
+        try:
+            self.execute(f'{self.pip} install -r {self.requirements_file}{arg}')
+        except ExecutionError:
+            logger.error('Failed to install dependencies')
+            raise
+        except Exception as e:
+            logger.error(f'Unexpected error during pip install: {e}')
+            raise ExecutionError(f'Pip install failed: {e}')
