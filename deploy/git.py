@@ -123,22 +123,24 @@ class GitManager(DeployConfig):
     def git_install(self):
         logger.hr('Install Git', 0)
 
-        target_dir = os.path.abspath('./toolkit/Git')
-        if os.path.exists(target_dir):
-            logger.info(f'Git already exists: {target_dir}')
+        # 如果 git 可执行文件已存在，直接跳过
+        if os.path.exists(self.git):
+            logger.info(f'Git executable already exists: {self.git}')
             return
+
+        target_dir = os.path.abspath('./toolkit/Git')
+        os.makedirs(target_dir, exist_ok=True)
 
         # 多镜像地址
         urls = [
             'https://mirrors.tuna.tsinghua.edu.cn/github-release/git-for-windows/git/LatestRelease/PortableGit-2.50.1-64-bit.7z.exe',
-            'https://github.com/git-for-windows/git/releases/download/v2.45.1.windows.1/PortableGit-2.45.1-64-bit.7z.exe',
+            'https://github.com/git-for-windows/git/releases/download/v2.50.1.windows.1/PortableGit-2.50.1-arm64.7z.exe',
         ]
 
-        # 下载路径改为 toolkit/Git 下
-        os.makedirs('toolkit/Git', exist_ok=True)
-        exe_path = os.path.abspath(os.path.join('toolkit/Git', 'PortableGit.exe'))
+        exe_path = os.path.abspath(os.path.join(target_dir, 'PortableGit.exe'))
 
         try:
+            # 下载
             if not self.download_file(urls, exe_path):
                 logger.error('All mirrors failed to download, please check your network connection.')
                 raise ExecutionError('Failed to download Git')
