@@ -75,6 +75,34 @@ if exist app (
     exit /b 1
 )
 
+REM 步骤2.5：删除不需要的语言文件和无用文件
+echo Step 2.5: Cleaning unnecessary files...
+
+REM 删除除 zh-CN、en、ja 之外的 locales 目录
+if exist app\locales (
+    echo Cleaning locales folder...
+    pushd app\locales
+    for /d %%i in (*) do (
+        if /I not "%%i"=="zh-CN.pak" if /I not "%%i"=="zh-TW.pak" if /I not "%%i"=="ja.pak" if /I not "%%i"=="en-US.pak" if /I not "%%i"=="en-GB.pak"(
+            echo Deleting locale %%i
+            rd /s /q "%%i"
+        )
+    )
+    popd
+) else (
+    echo locales folder not found - skipping
+)
+
+REM 删除指定 DLL 和 License 文件
+echo Deleting unnecessary DLL and license files...
+del /f /q "app\vulkan-1.dll" 2>nul
+del /f /q "app\vk_swiftshader_icd.json" 2>nul
+del /f /q "app\vk_swiftshader.dll" 2>nul
+del /f /q "app\LICENSES.chromium.html" 2>nul
+del /f /q "app\LICENSE.electron.txt" 2>nul
+
+echo Clean up completed.
+
 REM 步骤3：清理webapp目录
 echo Step 3/6: Cleaning webapp artifacts...
 cd webapp
