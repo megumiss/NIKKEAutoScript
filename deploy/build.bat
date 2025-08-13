@@ -5,7 +5,9 @@ echo ==================================================
 echo NIKKEAutoScript Build Script
 echo ==================================================
 
-REM 步骤0：如果存在旧目录则删除
+REM =============================
+REM Step 0：删除旧目录
+REM =============================
 echo Step 0/6: Removing existing directory...
 if exist NIKKEAutoScript (
     echo Found existing NIKKEAutoScript directory, deleting...
@@ -13,18 +15,20 @@ if exist NIKKEAutoScript (
     if exist NIKKEAutoScript (
         echo Error: Failed to delete NIKKEAutoScript directory
         pause
-        exit /b 1
+        goto :end
     )
     echo Old directory removed successfully
 )
 
-REM 步骤1：克隆仓库并删除.git文件夹
+REM =============================
+REM Step 1：克隆仓库
+REM =============================
 echo Step 1/6: Cloning repository...
 git clone --depth 1 https://github.com/megumiss/NIKKEAutoScript.git
 if not exist NIKKEAutoScript (
     echo Error: Git clone failed
     pause
-    exit /b 1
+    goto :end
 )
 
 if exist NIKKEAutoScript\.git (
@@ -34,7 +38,9 @@ if exist NIKKEAutoScript\.git (
     echo Warning: .git folder not found
 )
 
-REM 步骤2：构建webapp并处理输出
+REM =============================
+REM Step 2：构建 webapp 并移动输出
+REM =============================
 echo Step 2/6: Building webapp...
 cd NIKKEAutoScript\webapp
 
@@ -44,7 +50,7 @@ if errorlevel 1 (
     echo Error: Failed to install Node.js dependencies
     echo Please check Node.js and Yarn installation
     pause
-    exit /b 1
+    goto :end
 )
 
 echo Building webapp with Yarn...
@@ -55,13 +61,13 @@ if errorlevel 1 (
     echo   1. Missing Node.js dependencies
     echo   2. Build script errors in package.json
     pause
-    exit /b 1
+    goto :end
 )
 
 if not exist output\app\win-unpacked (
     echo Error: Build output not found at webapp\output\app\win-unpacked
     pause
-    exit /b 1
+    goto :end
 )
 
 echo Moving build output to root directory...
@@ -72,10 +78,41 @@ if exist app (
 ) else (
     echo Error: Failed to move build output
     pause
-    exit /b 1
+    goto :end
 )
 
-REM 步骤3：清理webapp目录
+REM =============================
+REM Step 2.5：删除不必要的语言文件和 DLL/License
+REM =============================
+echo Step 2.5: Cleaning unnecessary files...
+
+REM 删除除 zh-CN、en、ja 之外的 locales
+if exist app\locales (
+    pushd app\locales
+    for %%f in (*.pak) do (
+        if /I not "%%f"=="zh-CN.pak" if /I not "%%f"=="zh-TW.pak" if /I not "%%f"=="ja.pak" if /I not "%%f"=="en-US.pak" if /I not "%%f"=="en-GB.pak" (
+            echo Deleting locale %%f
+            del /f /q "%%f"
+        )
+    )
+    popd
+) else (
+    echo locales folder not found - skipping
+)
+
+REM 删除指定 DLL 和 License 文件
+echo Deleting unnecessary DLL and license files...
+del /f /q "app\vulkan-1.dll" 2>nul
+del /f /q "app\vk_swiftshader_icd.json" 2>nul
+del /f /q "app\vk_swiftshader.dll" 2>nul
+del /f /q "app\LICENSES.chromium.html" 2>nul
+del /f /q "app\LICENSE.electron.txt" 2>nul
+
+echo Clean up completed.
+
+REM =============================
+REM Step 3：清理 webapp artifacts
+REM =============================
 echo Step 3/6: Cleaning webapp artifacts...
 cd webapp
 if exist node_modules (
@@ -93,19 +130,22 @@ if exist output (
 )
 cd ..
 
-REM 步骤4：复制toolkit目录
+REM =============================
+REM Step 4：复制 toolkit 目录
+REM =============================
 echo Step 4/6: Copying toolkit...
 if exist "..\toolkit" (
     xcopy /e /y /q "..\toolkit" "toolkit\"
     echo Toolkit copied successfully
 ) else (
     echo Error: Toolkit folder not found in parent directory
-    echo Please ensure toolkit is in same directory as build.bat
     pause
-    exit /b 1
+    goto :end
 )
 
-REM 步骤5：安装Python依赖
+REM =============================
+REM Step 5：安装 Python 依赖
+REM =============================
 echo Step 5/6: Installing Python dependencies...
 if exist "toolkit\python.exe" (
     echo Installing requirements.txt...
@@ -114,10 +154,12 @@ if exist "toolkit\python.exe" (
 ) else (
     echo Error: Python.exe not found in toolkit
     pause
-    exit /b 1
+    goto :end
 )
 
-REM 步骤6：复制配置文件模板
+REM =============================
+REM Step 6：复制配置文件模板
+REM =============================
 echo Step 6/6: Creating deploy.yaml from template...
 cd config
 if exist deploy-template.yaml (
@@ -136,4 +178,8 @@ echo ==================================================
 echo Build completed successfully!
 echo ==================================================
 timeout /t 5 >nul
+
+:end
+echo Script finished. Press any key to exit...
+pause
 endlocal

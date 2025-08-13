@@ -39,8 +39,8 @@ class Updater(GitManager, PipManager):
             return None
 
     @retry(ExecutionError, tries=3, delay=5, logger=None)
-    def git_install(self):
-        return super().git_install()
+    def git_update(self):
+        return super().git_update()
 
     @retry(ExecutionError, tries=3, delay=5, logger=None)
     def pip_install(self):
@@ -78,7 +78,7 @@ class Updater(GitManager, PipManager):
     def update(self):
         logger.hr("Run update")
         try:
-            self.git_install()
+            self.git_update()
             self.pip_install()
         except ExecutionError:
             return False

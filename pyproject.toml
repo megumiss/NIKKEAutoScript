@@ -32,8 +32,6 @@ exclude = [
     "module/base",
     "module/config",
     "module/webui",
-    "deploy",
-    "dev_tools"
 ]
 
 [tool.ruff.lint]
