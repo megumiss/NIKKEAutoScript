@@ -12,7 +12,22 @@ from module.ui.page import page_ark
 from module.ui.ui import UI
 
 
+class OperationAlreadyDone(Exception):
+    pass
+
+
 class Overclock(UI):
+    @property
+    def overclock_level(self) -> int:
+        model_type = self.config.Optimization_OcrModelType
+        OVERCLOCK_LEVEL = Digit(
+            [OVERCLOCK_LEVEL_CHECK.area],
+            name='OVERCLOCK_LEVEL',
+            model_type=model_type,
+            lang='ch',
+        )
+        return int(OVERCLOCK_LEVEL.ocr(self.device.image)['text'])
+
     def get_next_event(self):
         for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.95, static=False)[:3]:
             area = _area_offset(i.get('area'), (-45, -100, -14, -90))
@@ -229,8 +244,8 @@ class Overclock(UI):
                 self.device.click_minitouch(50, 200)
                 continue
 
-    def ensure_into_simulation(self, skip_first_screenshot=True):
-        logger.info('Open simulation room')
+    def ensure_into_overclock(self, skip_first_screenshot=True):
+        logger.info('Open simulation room overclock')
         click_timer = Timer(0.3)
 
         while 1:
@@ -247,31 +262,19 @@ class Overclock(UI):
                 click_timer.reset()
                 continue
 
-            if self.appear(SIMULATION_CHECK, offset=(30, 30)) or self.appear(RESET_TIME_IN, offset=(30, 30)):
-                raise GamePageUnknownError
-
-        click_timer.reset()
-        while 1:
-            self.device.screenshot()
-
-            if click_timer.reached() and self.appear_then_click(START_SIMULATION, offset=(30, 30), interval=5):
+            #  超频
+            if click_timer.reached() and self.appear_then_click(OVERCLOCK, offset=10, interval=3):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear(START_SIMULATION_CONFIRM, offset=(30, 30), interval=2):
-                click_timer.reset()
-                continue
-
-            if click_timer.reached() and self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 5), static=False):
-                click_timer.reset()
-                continue
-
-            if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), interval=5, static=False):
+            if self.appear(OVERCLOCK_CHECK, offset=10):
                 break
 
-            if self.appear(SIMULATION_CHECK, offset=(30, 30), threshold=0.86):
-                logger.hr(f'Area {self.region_label.get(self.current_region)}', 2)
-                break
+        # 检查超频等级，等级大于等于25时跳过
+        logger.info('Check overclock status')
+        if self.overclock_level >= 25:
+            logger.info('Overclock already done')
+            raise OperationAlreadyDone
 
     def ensure_into_next_region(self, skip_first_screenshot=True):
         self.current_region += 1
@@ -346,7 +349,7 @@ class Overclock(UI):
         try:
             if not self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
                 self.ui_ensure(page_ark)
-            self.ensure_into_simulation()
+            self.ensure_into_overclock()
             self._run()
         except GamePageUnknownError:
             logger.error('The simulation has already been started')
@@ -355,4 +358,7 @@ class Overclock(UI):
         except OperationFailed:
             logger.warning('failed to overcome the current battle, will skip simulation task')
             self.handle_failed()
+        except OperationAlreadyDone:
+            pass
+
         self.config.task_delay(server_update=True)
