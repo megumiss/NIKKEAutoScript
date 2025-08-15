@@ -10,11 +10,12 @@ from module.logger import logger
 
 class InfoHandler(ModuleBase):
     def handle_paid_gift(self, interval=1):
-        if self.appear(PAID_GIFT_CHECK, offset=(30, 30), interval=interval, static=False):
+        """礼包弹窗"""
+        if self.appear(PAID_GIFT_CHECK, offset=(30, 30), static=False):
             if self.appear_text_then_click('点击关闭画面', interval=interval):
                 return True
 
-        elif self.appear(PAID_GIFT_CONFIRM_CHECK, offset=(30, 30), interval=interval, static=False):
+        elif self.appear(PAID_GIFT_CONFIRM_CHECK, offset=(30, 30), static=False):
             if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=interval, static=False):
                 return True
 
@@ -26,9 +27,9 @@ class InfoHandler(ModuleBase):
             self.device.sleep(1)
             return True
         # Daily Login, Memories Spring, Monthly Card, etc.
-        if self.appear_text_then_click('_领取奖励', interval=3):
+        if self.appear_text_then_click('领取奖励', interval=3):
             return True
-        elif a := self.appear_text('_全部领取', interval=3):
+        elif a := self.appear_text('全部领取'):
             x, y = a[0], a[1]
             b = get_color(
                 image=self.device.image,
@@ -46,49 +47,10 @@ class InfoHandler(ModuleBase):
         # TODO 领取每日奖励
 
         # 关闭
-        if self.appear(
-            SHIFTY_SUPPLIES_CHECK,
-            offset=(30, 30),
-            interval=3,
-            threshold=0.74,
-            static=False,
-        ) and self.appear_then_click(
-            SHIFTY_SUPPLIES_CLOSE,
-            offset=(30, 30),
-            interval=3,
-            threshold=0.74,
-            static=False,
+        if self.appear(SHIFTY_SUPPLIES_CHECK, offset=(30, 30), threshold=0.74, static=False) and self.appear_then_click(
+            SHIFTY_SUPPLIES_CLOSE, offset=(30, 30), interval=3, threshold=0.74, static=False
         ):
             return True
-
-        """
-            出现登录奖励时，点击没有被覆盖的位置 
-            Daily Login, Memories Spring, etc.
-        """
-        # 420:550, 230:700
-        # if self._appear_text_then_click('根据累积登入天数', (20, 600), 'CLOSE_DAILY_LOGIN_A', interval=1,
-        #                                 area=(230, 420, 700, 550)):
-        #     self.device.sleep(3)
-        #     return True
-        #
-        # if self._appear_text_then_click('根据累积登入天数', (20, 600), 'CLOSE_DAILY_LOGIN_B', interval=1,
-        #                                 area=(165, 255, 560, 290)):
-        #     self.device.sleep(3)
-        #     return True
-        #
-        # if self._appear_text_then_click('根据累积登入天数', (20, 600), 'CLOSE_DAILY_LOGIN_C', interval=1,
-        #                                 area=(165, 300, 570, 340)):
-        #     self.device.sleep(3)
-        #     return True
-        #
-        # if self._appear_text_then_click('根据累积登入天数', (20, 600), 'CLOSE_DAILY_LOGIN_D', interval=1,
-        #                                 area=(430, 380, 740, 420)):
-        #     self.device.sleep(3)
-        #     return True
-        #
-        # if self.appear_then_click(CLOSE_DAILY_LOGIN_C, offset=(30, 30), interval=5, static=False):
-        #     self.device.sleep(2)
-        #     return True
 
         return False
 
@@ -96,8 +58,8 @@ class InfoHandler(ModuleBase):
         if self.appear_then_click(REWARD, offset=(30, 30), interval=interval, static=False):
             return True
 
-    def handle_level_up(self, interval=3):
-        if self.appear(LEVEL_UP_CHECK, offset=(30, 30), interval=interval):
+    def handle_level_up(self):
+        if self.appear(LEVEL_UP_CHECK, offset=(30, 30)):
             self.device.click_minitouch(360, 920)
             logger.info('Click (360, 920) @ LEVEL_UP')
             return True
@@ -116,11 +78,7 @@ class InfoHandler(ModuleBase):
 
     def handle_announcement(self):
         if self.appear(
-            ANNOUNCEMENT_CHECK,
-            offset=(30, 30),
-            interval=3,
-            threshold=0.74,
-            static=False,
+            ANNOUNCEMENT_CHECK, offset=(30, 30), interval=3, threshold=0.74, static=False
         ) and self.appear_then_click(ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False):
             return True
 

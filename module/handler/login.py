@@ -36,20 +36,17 @@ class LoginHandler(UI):
             else:
                 confirm_timer.reset()
 
-            if self.appear_text('将下载', interval=3):
-                self.appear_text_then_click('确认', interval=3)
+            if self.appear_text('将下载') and self.appear_text_then_click('确认', interval=3):
                 continue
 
-            if self.appear_text('正在下载游戏执行所需', interval=3):
+            if self.appear_text('正在下载游戏执行所需'):
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
                 self.device.sleep(20)
                 continue
 
             # TOUCH TO CONTINUE
-            if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) or self.appear(
-                LOGIN_CHECK_B, offset=(30, 30), interval=5
-            ):
+            if self.appear(LOGIN_CHECK, offset=(30, 30)) or self.appear(LOGIN_CHECK_B, offset=(30, 30)):
                 self.device.click(LOGIN_CHECK)
                 if not login_success:
                     logger.info('Login success')
