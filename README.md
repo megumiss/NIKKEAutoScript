@@ -102,6 +102,17 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 
 ---
 
+### 支持我
+
+如果喜欢本项目，可以送作者一杯蜜雪冰城🍦
+
+您的支持就是作者开发和维护项目的动力🚀
+
+<img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="微信" width="200"/>
+<img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="支付宝" width="200"/>
+
+---
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=megumiss/NIKKEAutoScript&type=Timeline)](https://www.star-history.com/#megumiss/NIKKEAutoScript&Timeline)
