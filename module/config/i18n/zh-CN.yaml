@@ -576,3 +576,15 @@ Interception:
   DropScreenshotPath:
     name: 掉落截图路径
     help: "会在路径下创建日期文件夹保存对应的掉落截图，不填写则不保存；例如：D:\\PCR\\NIKKE，Docker用户需要填写以/app/NIKKEAutoScript开始的文件夹"
+Overclock:
+  _info:
+    name: 超频设置
+    help: ""
+  DisableFirst:
+    name: 清理选项
+    help: "选择BIOS选项时先清理所有已选中的选项"
+  ModifierList:
+    name: 超频选项
+    help: "默认为所有的通用选项：\n敌方武器升级III、敌方护甲升级III、敌方生命值升级III、禁用循环室、好战型战术、尖峰时刻III、禁止无关人员进入，\n
+      总计25倍率，每行填写一个，如果练度不够可以根据实际情况减少\n
+      如果超频主页显示的最高记录值和下方填入的总倍率值相等或更高，则会跳过超频"

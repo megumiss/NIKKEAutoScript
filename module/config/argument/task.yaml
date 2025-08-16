@@ -61,6 +61,7 @@ SimulationRoom:
 
 Overclock:
   - Scheduler
+  - Overclock
 
 TribeTower:
   - Scheduler

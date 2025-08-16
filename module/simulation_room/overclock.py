@@ -1,7 +1,5 @@
 from functools import cached_property
 
-import cv2
-
 from module.base.timer import Timer
 from module.base.utils import _area_offset, crop, point2str
 from module.exception import GamePageUnknownError, GameStuckError, OperationFailed
@@ -20,8 +18,19 @@ class OperationAlreadyDone(Exception):
 
 
 class Overclock(UI):
+    BIOS_SETTING_RATIO_MAP = {
+        'ENEMY_WEAPON_UP_3': 3,
+        'ENEMY_ARMOR_UP_3': 3,
+        'ENEMY_VITALS_UP_3': 3,
+        'NO_RECYCLING': 2,
+        'AGGRESSIVE_TACTICS': 5,
+        'RUSH_HOUR_3': 3,
+        'RELEVANT_PERSONNEL_ONLY': 5,
+    }
+
     @property
     def overclock_level(self) -> int:
+        """超频主页的最高记录值"""
         model_type = self.config.Optimization_OcrModelType
         OVERCLOCK_LEVEL = Digit(
             [OVERCLOCK_LEVEL_CHECK.area],
@@ -34,6 +43,7 @@ class Overclock(UI):
 
     @property
     def bios_setting_level(self) -> int:
+        """BIOS选择弹窗左上角的值"""
         model_type = self.config.Optimization_OcrModelType
         BIOS_SETTING_LEVEL = Digit(
             [OVERCLOCK_BIOS_SETTING_LEVEL_CHECK.area],
@@ -43,6 +53,34 @@ class Overclock(UI):
         )
 
         return int(BIOS_SETTING_LEVEL.ocr(self.device.image)['text'])
+
+    @cached_property
+    def get_total_bios_level(self) -> int:
+        """
+        直接计算配置列表中所有选项的倍率值总和
+        """
+        total = 0
+        options = [line.strip() for line in self.config.Overclock_ModifierList.split('\n') if line.strip()]
+        for option in options:
+            if option in self.BIOS_SETTING_RATIO_MAP:
+                total += self.BIOS_SETTING_RATIO_MAP[option]
+            else:
+                logger.warning(f"Unknown BIOS setting option: '{option}', using default level 1")
+                total += 1
+        return total + 1
+
+    def get_bios_setting_button(self, option: str):
+        """
+        根据选项名称获取对应的按钮
+        示例：
+          "NO_RECYCLING" → OVERCLOCK_BIOS_SETTING_NO_RECYCLING
+        """
+        button_name = f'OVERCLOCK_BIOS_SETTING_{option}'
+        try:
+            return globals()[button_name]
+        except KeyError:
+            logger.error(f"Button asset '{button_name}' not found for option '{option}'")
+            raise
 
     def get_next_event(self):
         for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.95, static=False)[:3]:
@@ -289,40 +327,7 @@ class Overclock(UI):
 
         # 检查超频等级，等级大于等于25时跳过
         logger.info('Check overclock status')
-        if self.overclock_level >= 25:
-            logger.info('Overclock already done')
-            raise OperationAlreadyDone
-
-    def ensure_into_overclock(self, skip_first_screenshot=True):
-        logger.info('Open simulation room overclock')
-        click_timer = Timer(0.3)
-
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
-
-            if click_timer.reached() and self.appear_then_click(ARK_GOTO_SIMULATION_ROOM, offset=(30, 30), interval=5):
-                click_timer.reset()
-                continue
-
-            #  超频
-            if (
-                click_timer.reached()
-                and self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30))
-                and self.appear_then_click(OVERCLOCK, offset=10, interval=3)
-            ):
-                click_timer.reset()
-                continue
-
-            # 超频页面
-            if self.appear(OVERCLOCK_CHECK, offset=10):
-                break
-
-        # 检查超频等级，等级大于等于25时跳过
-        logger.info('Check overclock status')
-        if self.overclock_level >= 25:
+        if self.overclock_level >= self.get_total_bios_level:
             logger.info('Overclock already done')
             raise OperationAlreadyDone
 
@@ -345,16 +350,24 @@ class Overclock(UI):
             if self.appear(OVERCLOCK_BIOS_SETTING_CHECK, offset=10):
                 break
 
-        # 检查bios等级，等级小于25时选择buff
-        logger.info('Check overclock bios setting level')
-        if not self.bios_setting_level >= 25:
-            self.choose_bios_setting()
+        logger.info(f'Target BIOS setting level: {self.get_total_bios_level}')
+        # 检查当前等级是否已达到目标
+        if self.bios_setting_level >= self.get_total_bios_level:
+            logger.info(
+                f'Current BIOS level {self.bios_setting_level} already >= target {self.get_total_bios_level}, skip'
+            )
+            return
 
-        logger.info('Start overclock simulation')
+        # 先取消所有的选项
+        self.disable_bios_setting()
+        # 根据列表选择选项
+        self.choose_bios_setting(self.get_total_bios_level)
 
-    def choose_bios_setting(self, skip_first_screenshot=True):
+    def choose_bios_setting(self, target_level, skip_first_screenshot=True):
+        """选择BIOS设置"""
         logger.info('Choose overclock bios setting')
         click_timer = Timer(0.3)
+        options = [line.strip() for line in self.config.Overclock_ModifierList.split('\n') if line.strip()]
 
         while 1:
             if skip_first_screenshot:
@@ -362,50 +375,13 @@ class Overclock(UI):
             else:
                 self.device.screenshot()
 
-            # 选择选项
-            if click_timer.reached() and self.appear_then_click(
-                OVERCLOCK_BIOS_SETTING_ENEMY_WEAPON_UP_3, offset=450, threshold=0.95, interval=2
-            ):
-                click_timer.reset()
+            # 检查是否达到目标等级
+            current_level = self.bios_setting_level
+            if current_level >= target_level:
+                logger.info(f'BIOS setting level reached {current_level} >= {target_level}')
+                break
 
-                self.device.sleep(0.3)
-                continue
-            if click_timer.reached() and self.appear_then_click(
-                OVERCLOCK_BIOS_SETTING_ENEMY_ARMOR_UP_3, offset=450, threshold=0.95, interval=2
-            ):
-                click_timer.reset()
-                self.device.sleep(0.3)
-                continue
-            if click_timer.reached() and self.appear_then_click(
-                OVERCLOCK_BIOS_SETTING_ENEMY_VITALS_UP_3, offset=450, threshold=0.95, interval=2
-            ):
-                click_timer.reset()
-                self.device.sleep(0.3)
-                continue
-            if click_timer.reached() and self.appear_then_click(
-                OVERCLOCK_BIOS_SETTING_NO_RECYCLING, offset=450, threshold=0.95, interval=2
-            ):
-                click_timer.reset()
-                self.device.sleep(0.3)
-                continue
-            if click_timer.reached() and self.appear_then_click(
-                OVERCLOCK_BIOS_SETTING_AGGRESSIVE_TACTICS, offset=450, threshold=0.95, interval=2
-            ):
-                click_timer.reset()
-                self.device.sleep(0.3)
-                continue
-            if click_timer.reached() and self.appear_then_click(
-                OVERCLOCK_BIOS_SETTING_RUSH_HOUR_3, offset=450, threshold=0.95, interval=2
-            ):
-                click_timer.reset()
-                self.device.sleep(0.3)
-                continue
-            if click_timer.reached() and self.appear_then_click(
-                OVERCLOCK_BIOS_SETTING_RELEVANT_PERSONNEL_ONLY, offset=450, threshold=0.95, interval=2
-            ):
-                click_timer.reset()
-                self.device.sleep(0.3)
-                continue
+            logger.debug(f'Current BIOS level: {current_level}/{target_level}')
 
             # 展开选项
             if click_timer.reached() and self.appear_then_click(OVERCLOCK_BIOS_SETTING_EXPAND, offset=10, interval=2):
@@ -413,13 +389,66 @@ class Overclock(UI):
                 self.device.sleep(1)
                 continue
 
-            # 选够25
-            if self.bios_setting_level >= 25:
+            # 尝试点击配置列表中的选项
+            found = False
+            for option in options:
+                button = self.get_bios_setting_button(option)
+                if self.appear(button, offset=450, threshold=0.95):
+                    self.device.click(button)
+                    self.device.sleep(0.3)
+                    click_timer.reset()
+                    found = True
+                    # 每次只处理一个选项，避免重复点击
+                    break
+
+            if found:
+                continue
+
+            # 未找到选项，进行滑动
+            self.device.sleep(0.5)
+            self.ensure_sroll((620, 1000), (620, 630), speed=5, hold=1, count=1, delay=0.5)
+
+    def disable_bios_setting(self, skip_first_screenshot=True):
+        logger.info('Disable overclock bios setting')
+        click_timer = Timer(0.3)
+
+        srolled = False
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 检查是否为1
+            current_level = self.bios_setting_level
+            if current_level == 0:
+                logger.info(f'BIOS setting level reached {current_level} == 0')
                 break
+
+            # 展开选项
+            if click_timer.reached() and self.appear_then_click(OVERCLOCK_BIOS_SETTING_EXPAND, offset=10, interval=2):
+                click_timer.reset()
+                self.device.sleep(1)
+                continue
+
+            # 取消选中的选项
+            if click_timer.reached() and self.appear_then_click(
+                OVERCLOCK_BIOS_SETTING_DISABLE, static=False, interval=0.5
+            ):
+                click_timer.reset()
+                self.device.sleep(0.3)
+                continue
 
             # 滑动
             self.device.sleep(0.5)
-            self.ensure_sroll((620, 1000), (620, 630), speed=5, hold=1, count=1, delay=1)
+            self.ensure_sroll((620, 1000), (620, 630), speed=5, hold=1, count=1, delay=0.5)
+            srolled = True
+
+        # 滑动回顶部
+        if srolled:
+            logger.info('Scrolling back to top')
+            self.device.sleep(0.5)
+            self.ensure_sroll((620, 600), (620, 1000), speed=30, count=3, delay=0.5)
 
     def ensure_into_next_region(self, skip_first_screenshot=True):
         self.current_region += 1
