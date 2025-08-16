@@ -292,9 +292,9 @@ Conversation:
   OnlyFavourite:
     name: 只咨询收藏
     help: ""
-  IgnoreBondMax:
-    name: 忽略好感等级
-    help: "即使好感满级仍然咨询，建议同时开启只咨询收藏，可以用来补咨询日志"
+  OnlyLogsNotMax:
+    name: 只咨询日志未满
+    help: "只咨询咨询日志数量不够20的妮姬，建议同时开启只咨询收藏，可以用来补咨询日志"
   WaitToCommunicate:
     name: 等待咨询的妮姬
     help: "请收藏想要咨询的妮姬\n

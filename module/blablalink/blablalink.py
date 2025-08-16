@@ -1,8 +1,10 @@
+import json
 import random
 import re
 import time
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
+from pathlib import Path
 from typing import Dict, Tuple
 
 import requests
@@ -19,6 +21,7 @@ class MissingHeader(Exception):
 
 class Blablalink(UI):
     diff = datetime.now(timezone.utc).astimezone().utcoffset() - timedelta(hours=8)
+
     @cached_property
     def next_month(self) -> datetime:
         local_now = datetime.now()
@@ -60,6 +63,7 @@ class Blablalink(UI):
         super().__init__(config)
         self.session = requests.Session()
         self.common_headers = self.base_headers.copy()
+        self._cdk_temp_path = Path('./tmp/cdk_history.json')  # 临时文件路径
         self._prepare_config()
 
     def _prepare_config(self):
@@ -483,20 +487,27 @@ class Blablalink(UI):
 
     def cdk(self):
         """CDK兑换功能"""
-        # 1. 从官方接口获取未兑换的CDK列表
+        logger.info('Starting CDK redemption task')
+
+        # 1. 获取兑换历史记录并追加到临时文件
+        redeemed_cdks = self.get_cdk_redemption_history()
+        self._append_cdks_to_temp(redeemed_cdks)
+
+        # 2. 从官方接口获取未兑换的CDK列表
         official_cdks = self.get_official_cdks()
         unredeemed_cdks = official_cdks.copy()
 
-        # 2. 如果开启额外来源，添加来源网站中的CDK
+        # 3. 如果开启额外来源，添加来源网站中的CDK
         if self.config.CDK_Extra:
             sources = self.config.CDK_Source
             if sources:
-                redeemed_cdks = self.get_cdk_redemption_history()
+                # 从临时文件加载所有已记录CDK
+                temp_cdks = self._load_cdks_from_temp()
 
-                # 提取外部CDK并过滤已兑换的
+                # 提取外部CDK并过滤已记录的
                 extra_cdks = self.extract_external_cdks(sources)
                 for cdk in extra_cdks:
-                    if cdk not in redeemed_cdks and cdk not in unredeemed_cdks:
+                    if cdk not in temp_cdks and cdk not in unredeemed_cdks:
                         unredeemed_cdks.append(cdk)
             else:
                 logger.warning('CDK_Extra enabled but no sources configured')
@@ -509,14 +520,55 @@ class Blablalink(UI):
 
         logger.info(f'Found {len(unredeemed_cdks)} unredeemed CDK candidates')
 
-        # 3. 尝试兑换未使用的CDK
+        # 4. 尝试兑换未使用的CDK
         success_count = 0
         for cdk in unredeemed_cdks:
             if self.redeem_cdk(cdk):
                 success_count += 1
+                # 如果兑换成功，将CDK追加到临时文件
+                # self._append_cdks_to_temp([cdk])
             time.sleep(random.uniform(1.0, 3.0))
 
         logger.info(f'CDK redemption completed: {success_count}/{len(unredeemed_cdks)} successful')
+
+    def _append_cdks_to_temp(self, cdks: list):
+        """将CDK列表追加到临时文件"""
+        try:
+            # 确保父目录存在
+            self._cdk_temp_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # 加载现有CDK
+            existing_cdks = self._load_cdks_from_temp()
+
+            # 过滤新CDK，只添加不在现有列表中的
+            new_cdks = [cdk for cdk in cdks if cdk not in existing_cdks]
+
+            if not new_cdks:
+                return
+
+            # 合并并保存
+            all_cdks = existing_cdks + new_cdks
+            with open(self._cdk_temp_path, 'w', encoding='utf-8') as f:
+                json.dump(all_cdks, f, ensure_ascii=False, indent=2)
+
+            logger.info(f'Appended {len(new_cdks)} new CDKs to temp file')
+        except Exception as e:
+            logger.error(f'Failed to append CDKs to temp file: {e}')
+
+    def _load_cdks_from_temp(self) -> list:
+        """从临时文件加载CDK列表"""
+        # 如果文件不存在则创建空文件
+        try:
+            if not self._cdk_temp_path.exists():
+                self._cdk_temp_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(self._cdk_temp_path, 'w', encoding='utf-8') as f:
+                    json.dump([], f)
+                return []
+            with open(self._cdk_temp_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f'Failed to load CDKs from temp file: {e}')
+            return []
 
     def get_official_cdks(self) -> list:
         """从官方接口获取未兑换的CDK列表"""

@@ -536,7 +536,7 @@
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00",
+        "value": "04:00, 20:00",
         "display": "hide"
       }
     },
@@ -590,7 +590,7 @@
         "type": "checkbox",
         "value": false
       },
-      "IgnoreBondMax": {
+      "OnlyLogsNotMax": {
         "type": "checkbox",
         "value": false
       }

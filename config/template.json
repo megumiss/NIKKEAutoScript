@@ -151,7 +151,7 @@
       "Command": "Liberation",
       "SuccessInterval": 0,
       "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "ServerUpdate": "04:00, 20:00"
     },
     "Storage": {
       "Storage": {}
@@ -168,7 +168,7 @@
     },
     "Conversation": {
       "OnlyFavourite": false,
-      "IgnoreBondMax": false
+      "OnlyLogsNotMax": false
     },
     "Storage": {
       "Storage": {}

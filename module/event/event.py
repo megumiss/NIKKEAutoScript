@@ -254,7 +254,7 @@ class Event(UI):
             # 使用票进行战斗
             if (
                 click_timer.reached()
-                and self.appear(FIGHT_QUICKLY_CHECK, threshold=10)
+                and self.appear(FIGHT_QUICKLY_CHECK, offset=30)
                 and self.appear_then_click(CHALLENGE_QUICK_TICKET, offset=10, interval=1)
             ):
                 click_timer.reset()
@@ -496,9 +496,10 @@ class Event(UI):
                 break
 
             # 检查story2是否开启，开启则进入2
-            if self.appear(self.event_assets.EVENT_GOTO_STORY_1, offset=10) and not self.appear(
-                self.event_assets.EVENT_GOTO_STORY_2_LOCKED, offset=10
-            ):
+            if (
+                self.appear(self.event_assets.EVENT_GOTO_STORY_1, offset=10)
+                and not self.appear(self.event_assets.EVENT_GOTO_STORY_2_LOCKED, offset=10)
+            ) or self.appear(self.event_assets.EVENT_GOTO_STORY_2, offset=10):
                 logger.info('Find opened event story 2')
                 if self.config.Event_StoryPart == 'Story_1':
                     logger.error('The event stage/difficulty select wrong')
