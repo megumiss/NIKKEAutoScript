@@ -83,7 +83,7 @@ class Overclock(UI):
             raise
 
     def get_next_event(self):
-        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.95, static=False)[:3]:
+        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.9, static=False)[:3]:
             area = _area_offset(i.get('area'), (-45, -100, -14, -90))
             img = crop(self.device.image, area)
             if NORMAL_CHECK.match(img, threshold=0.75, static=False):
@@ -372,14 +372,17 @@ class Overclock(UI):
         """选择BIOS设置"""
         logger.info('Choose overclock bios setting')
         click_timer = Timer(0.3)
-        options = [line.strip() for line in self.config.Overclock_ModifierList.split('\n') if line.strip()]
+        # 创建一个剩余选项列表，初始包含所有选项
+        remaining_options = [line.strip() for line in self.config.Overclock_ModifierList.split('\n') if line.strip()]
+
+        # 如果没有选项，直接返回
+        if not remaining_options:
+            logger.warning('No BIOS settings to choose from')
+            return
 
         self.device.sleep(1)
         while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
+            self.device.screenshot()
 
             # 检查是否达到目标等级
             current_level = self.bios_setting_level
@@ -398,14 +401,15 @@ class Overclock(UI):
 
             # 尝试点击配置列表中的选项
             found = False
-            for option in options:
+            for i, option in enumerate(remaining_options[:]):  # 使用切片创建副本，避免在迭代时修改列表
                 button = self.get_bios_setting_button(option)
                 if self.appear(button, offset=450, threshold=0.95):
                     self.device.click(button)
                     self.device.sleep(0.3)
                     click_timer.reset()
                     found = True
-                    # 每次只处理一个选项，避免重复点击
+                    # 从剩余选项中移除已选择的选项
+                    remaining_options.remove(option)
                     break
 
             if found:
@@ -427,9 +431,8 @@ class Overclock(UI):
                 self.device.screenshot()
 
             # 检查是否为1
-            current_level = self.bios_setting_level
-            if current_level == 0 or current_level == 1:
-                logger.info(f'BIOS setting level reached {current_level} == 0 or 1')
+            if self.appear(OVERCLOCK_BIOS_SETTING_RATIO_1, offset=10, threshold=0.95):
+                logger.info('BIOS setting level reached 1')
                 break
 
             # 展开选项
