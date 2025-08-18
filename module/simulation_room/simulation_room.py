@@ -62,7 +62,9 @@ class SimulationRoom(UI):
         return self.config.Area_EndingArea.upper()
 
     def get_next_event(self):
-        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.95, static=False)[:3]:
+        self.device.screenshot()
+
+        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=(30, 300), threshold=0.95)[:3]:
             area = _area_offset(i.get('area'), (-45, -100, -14, -90))
             img = crop(self.device.image, area)
             if NORMAL_CHECK.match(img, threshold=0.75, static=False):
@@ -103,7 +105,7 @@ class SimulationRoom(UI):
             ).run()
             return
 
-        if self.appear(BOSS_EVENT_CHECK, offset=(30, 30), static=False):
+        if self.appear(BOSS_EVENT_CHECK, offset=(30, 30)):
             from module.simulation_room.event import EnemyEvent
 
             logger.hr('Start the boss event', 2)
@@ -117,11 +119,14 @@ class SimulationRoom(UI):
             HARD_CHECK._button_offset = None
             return
 
+        if not self.device.click_minitouch(150, 270):
+            self.device.sleep(2)
+
     def get_effect(self):
         for x in range(3):
             for i in [EPIC_CHECK, SSR_CHECK, SR_CHECK, R_CHECK]:
                 if self.appear(i, offset=(10, 10), static=False):
-                    return i.location
+                    return i.location[0], i.location[1] + 20
             self.device.screenshot()
 
     def choose_effect(self, skip_first_screenshot=True):
@@ -328,6 +333,7 @@ class SimulationRoom(UI):
         confirm_timer.reset()
         click_timer.reset()
 
+        selected = False
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -339,7 +345,7 @@ class SimulationRoom(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear(START_SIMULATION_CONFIRM, offset=(30, 30), interval=2):
+            if click_timer.reached() and not selected and self.appear(DIFFICULTY_AREA_CHECK, offset=(30, 30)):
                 self.device.click_minitouch(*self.difficulty_area.get(self.difficulty))
                 logger.info(
                     'Click %s @ %s'
@@ -360,23 +366,30 @@ class SimulationRoom(UI):
                 )
                 confirm_timer.reset()
                 click_timer.reset()
+                selected = True
                 continue
 
-            # if click_timer.reached() 
-            # and self.appear_then_click(QUICK_SIMULATION_CONFIRM, offset=(5, 5), static=False):
-            #     confirm_timer.reset()
-            #     click_timer.reset()
-            #     continue
-            # elif click_timer.reached() 
-            # and self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 5), static=False):
-            #     confirm_timer.reset()
-            #     click_timer.reset()
-            #     continue
-
-            if click_timer.reached() and self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 5), static=False):
+            if (
+                click_timer.reached()
+                and self.appear(QUICK_SIMULATION_CHECK, offset=10)
+                and self.appear_then_click(QUICK_SIMULATION_CONFIRM, offset=10, interval=1)
+            ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
+
+            if self.config.SimulationRoom_QuickSimulation:
+                if click_timer.reached() and self.appear_then_click(QUICK_SIMULATION, offset=(5, 5), static=False):
+                    confirm_timer.reset()
+                    click_timer.reset()
+                    continue
+            else:
+                if click_timer.reached() and self.appear_then_click(
+                    START_SIMULATION_CONFIRM, offset=(5, 5), static=False
+                ):
+                    confirm_timer.reset()
+                    click_timer.reset()
+                    continue
 
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), interval=5, static=False):
                 break

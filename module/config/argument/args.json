@@ -752,6 +752,12 @@
         "display": "hide"
       }
     },
+    "SimulationRoom": {
+      "QuickSimulation": {
+        "type": "checkbox",
+        "value": true
+      }
+    },
     "Area": {
       "Difficulty": {
         "type": "select",

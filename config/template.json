@@ -219,6 +219,9 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
+    "SimulationRoom": {
+      "QuickSimulation": true
+    },
     "Area": {
       "Difficulty": "Level_1",
       "OnsetArea": "A",

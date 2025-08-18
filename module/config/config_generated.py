@@ -40,6 +40,9 @@ class GeneratedConfig:
     DailyRecruit_EventFreeRecruit = True
     DailyRecruit_SocialPointRecruit = True
 
+    # Group `SimulationRoom`
+    SimulationRoom_QuickSimulation = True
+
     # Group `Area`
     Area_Difficulty = 'Level_1'  # Level_1, Level_2, Level_3, Level_4, Level_5
     Area_OnsetArea = 'A'  # A, B, C
