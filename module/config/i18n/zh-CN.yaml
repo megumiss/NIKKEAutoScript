@@ -298,6 +298,13 @@ Conversation:
       例如: '红莲 爱丽丝'，用一个空格分开\n
       像 '梅里：海湾女神', '尼恩：蓝色海洋' 请填 '海湾女神', '蓝色海洋'
       "
+SimulationRoom:
+  _info:
+    name: 模拟室设置
+    help: ""
+  QuickSimulation:
+    name: 快速模拟
+    help: ""
 Area:
   _info:
     name: 地区设置

@@ -47,6 +47,8 @@ Reward:
 DailyRecruit:
   EventFreeRecruit: true
   SocialPointRecruit: true
+SimulationRoom:
+  QuickSimulation: true
 Area:
   Difficulty:
     value: 'Level_1'

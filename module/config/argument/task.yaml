@@ -57,6 +57,7 @@ RubbishShop:
 
 SimulationRoom:
   - Scheduler
+  - SimulationRoom
   - Area
 
 TribeTower:

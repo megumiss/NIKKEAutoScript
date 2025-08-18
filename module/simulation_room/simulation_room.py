@@ -362,21 +362,20 @@ class SimulationRoom(UI):
                 click_timer.reset()
                 continue
 
-            # if click_timer.reached() 
-            # and self.appear_then_click(QUICK_SIMULATION_CONFIRM, offset=(5, 5), static=False):
-            #     confirm_timer.reset()
-            #     click_timer.reset()
-            #     continue
-            # elif click_timer.reached() 
-            # and self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 5), static=False):
-            #     confirm_timer.reset()
-            #     click_timer.reset()
-            #     continue
-
-            if click_timer.reached() and self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 5), static=False):
-                confirm_timer.reset()
-                click_timer.reset()
-                continue
+            if self.config.SimulationRoom_QuickSimulation:
+                if click_timer.reached() and self.appear_then_click(
+                    QUICK_SIMULATION_CONFIRM, offset=(5, 5), static=False
+                ):
+                    confirm_timer.reset()
+                    click_timer.reset()
+                    continue
+            else:
+                if click_timer.reached() and self.appear_then_click(
+                    START_SIMULATION_CONFIRM, offset=(5, 5), static=False
+                ):
+                    confirm_timer.reset()
+                    click_timer.reset()
+                    continue
 
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), interval=5, static=False):
                 break
