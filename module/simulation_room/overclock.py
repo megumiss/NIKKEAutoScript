@@ -350,7 +350,7 @@ class Overclock(UI):
             if self.appear(OVERCLOCK_BIOS_SETTING_CHECK, offset=10):
                 break
 
-        logger.info(f'Target BIOS setting level: {self.get_total_bios_level}')
+        # logger.info(f'Target BIOS setting level: {self.get_total_bios_level}')
         # 检查当前等级是否已达到目标
         # if self.bios_setting_level >= self.get_total_bios_level:
         #     logger.info(
@@ -479,8 +479,8 @@ class Overclock(UI):
 
     def end_simulation(self, skip_first_screenshot=True):
         logger.info('already arrived the end area')
-        confirm_timer = Timer(1, count=2).start()
         click_timer = Timer(0.3)
+
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -488,9 +488,8 @@ class Overclock(UI):
                 self.device.screenshot()
 
             if click_timer.reached() and self.appear_then_click(
-                END_SIMULATION, offset=(30, 30), interval=3, static=False
+                OVERCLOCK_END_SIMULATION, offset=(30, 30), interval=3
             ):
-                confirm_timer.reset()
                 click_timer.reset()
                 continue
 
@@ -512,7 +511,7 @@ class Overclock(UI):
                 click_timer.reset()
                 continue
 
-            if self.appear(SIMULATION_ROOM_CHECK, offset=(5, 5)):
+            if self.appear(OVERCLOCK_CHECK, offset=(5, 5)):
                 break
 
     def _run(self):
