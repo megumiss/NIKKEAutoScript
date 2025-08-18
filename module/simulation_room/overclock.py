@@ -19,11 +19,19 @@ class OperationAlreadyDone(Exception):
 
 class Overclock(UI):
     BIOS_SETTING_RATIO_MAP = {
+        'ENEMY_WEAPON_UP_1': 1,
+        'ENEMY_WEAPON_UP_2': 2,
         'ENEMY_WEAPON_UP_3': 3,
+        'ENEMY_ARMOR_UP_1': 1,
+        'ENEMY_ARMOR_UP_2': 2,
         'ENEMY_ARMOR_UP_3': 3,
+        'ENEMY_VITALS_UP_1': 1,
+        'ENEMY_VITALS_UP_2': 2,
         'ENEMY_VITALS_UP_3': 3,
         'NO_RECYCLING': 2,
         'AGGRESSIVE_TACTICS': 5,
+        'RUSH_HOUR_1': 1,
+        'RUSH_HOUR_2': 2,
         'RUSH_HOUR_3': 3,
         'RELEVANT_PERSONNEL_ONLY': 5,
     }
@@ -353,7 +361,10 @@ class Overclock(UI):
         # 先取消所有的选项
         self.disable_bios_setting()
         # 根据列表选择选项
-        self.select_bios_setting()
+        if self.config.Overclock_AlwaysReselect or self.appear(
+            OVERCLOCK_BIOS_SETTING_RATIO_1, offset=10, threshold=0.95
+        ):
+            self.select_bios_setting()
 
         click_timer.reset()
         while 1:
