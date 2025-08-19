@@ -59,7 +59,8 @@ class GeneratedConfig:
     ArenaShop_priority = None
 
     # Group `RubbishShop`
-    RubbishShop_priority = None
+    RubbishShop_priority = 'GEM > CORE_DUST_CASE'
+    RubbishShop_bonePriority = None
 
     # Group `Notification`
     Notification_WhenDailyTaskCompleted = False

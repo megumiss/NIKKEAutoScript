@@ -704,6 +704,10 @@
     "RubbishShop": {
       "priority": {
         "type": "textarea",
+        "value": "GEM > CORE_DUST_CASE"
+      },
+      "bonePriority": {
+        "type": "textarea",
         "value": ""
       }
     },

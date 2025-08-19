@@ -204,7 +204,8 @@
       "ServerUpdate": "04:00"
     },
     "RubbishShop": {
-      "priority": null
+      "priority": "GEM > CORE_DUST_CASE",
+      "bonePriority": null
     },
     "Storage": {
       "Storage": {}

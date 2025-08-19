@@ -70,6 +70,9 @@ ArenaShop:
     type: textarea
 RubbishShop:
   priority:
+    value: 'GEM > CORE_DUST_CASE'
+    type: textarea
+  bonePriority:
     value: ''
     type: textarea
 Notification:

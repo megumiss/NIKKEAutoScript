@@ -368,9 +368,9 @@ RubbishShop:
     name: 废铁商店
     help: ""
   priority:
-    name: 优先购买
+    name: 核心购买优先级
     help:
-      " 不填写默认购买珠宝和芯尘盒 \n例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\n
+      " 不填写默认购买珠宝和芯尘盒，例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\n
       GEM: 珠宝\n
       CORE_DUST_CASE: 芯尘盒\n
       CREDIT_CASE: 信用点盒\n
@@ -381,6 +381,14 @@ RubbishShop:
       TETRA_TICKET: 泰特拉VIP护理券\n
       PILGRIM_TICKET: 朝圣者补给套组交换券\n
       ABNORMAL_TICKET: 反常年券\n
+      "
+  bonePriority:
+    name: 骨头购买优先级
+    help:
+      " 骨头货币购买优先级，例如: 'CORE_DUST_CASE > ORNAMENT'，用一个大于号分开，可以选择的：\n
+      CORE_DUST_CASE: 芯尘盒\n
+      ORNAMENT: 简介装饰品\n
+      BONE: 骨头货币\n
       "
 Notification:
   _info:

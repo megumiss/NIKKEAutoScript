@@ -34,10 +34,10 @@ class RubbishShop(ShopBase):
     @cached_property
     def rubbish_shop_bone_priority(self) -> SelectedGrids:
         """获取骨头货币的优先级列表"""
-        if self.config.RubbishShop_bone_priority is None or not len(self.config.RubbishShop_bone_priority.strip(' ')):
+        if self.config.RubbishShop_bonePriority is None or not len(self.config.RubbishShop_bonePriority.strip(' ')):
             priority = self.config.RUBBISH_SHOP_BONE_PRIORITY
         else:
-            priority = self.config.RubbishShop_bone_priority
+            priority = self.config.RubbishShop_bonePriority
         priority = re.sub(r'\s+', '', priority).split('>')
         return SelectedGrids(
             [Product(i, self.config.RUBBISH_SHOP_BONE_PRODUCT.get(i), self.assets.get(i)) for i in priority]
