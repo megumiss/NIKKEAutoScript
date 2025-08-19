@@ -141,7 +141,7 @@ class Overclock(UI):
             EnemyEvent(button=HARD_CHECK.location, config=self.config, device=self.device).run()
             HARD_CHECK._button_offset = None
             return
-        
+
         if SPECIAL_CHECK._button_offset:
             from module.simulation_room.event import EnemyEvent
 
@@ -153,7 +153,7 @@ class Overclock(UI):
         for x in range(3):
             for i in [EPIC_CHECK, SSR_CHECK, SR_CHECK, R_CHECK]:
                 if self.appear(i, offset=(10, 10), static=False):
-                    return i.location[0], i.location[1] + 20
+                    return i.location[0] + 20, i.location[1] + 50
             self.device.screenshot()
 
     def choose_effect(self, skip_first_screenshot=True):
@@ -336,6 +336,10 @@ class Overclock(UI):
             if self.appear(OVERCLOCK_CHECK, offset=10):
                 break
 
+            # 进入超频关卡
+            if self.appear(OVERCLOCK_SIMULATION_CHECK, offset=10):
+                break
+
         # 检查超频等级，等级大于等于25时跳过
         logger.info('Check overclock status')
         # if self.overclock_level >= self.get_total_bios_level:
@@ -360,6 +364,10 @@ class Overclock(UI):
             # bios setting检查
             if self.appear(OVERCLOCK_BIOS_SETTING_CHECK, offset=10):
                 break
+
+            # 进入超频关卡
+            if self.appear(OVERCLOCK_SIMULATION_CHECK, offset=10):
+                return
 
         # logger.info(f'Target BIOS setting level: {self.get_total_bios_level}')
         # 检查当前等级是否已达到目标
@@ -499,7 +507,7 @@ class Overclock(UI):
                 self.device.screenshot()
 
             if click_timer.reached() and self.appear_then_click(
-                OVERCLOCK_END_SIMULATION, offset=(30, 30), interval=3
+                END_SIMULATION, offset=(30, 30), interval=3, static=False
             ):
                 click_timer.reset()
                 continue

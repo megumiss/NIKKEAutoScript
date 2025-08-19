@@ -126,7 +126,7 @@ class SimulationRoom(UI):
         for x in range(3):
             for i in [EPIC_CHECK, SSR_CHECK, SR_CHECK, R_CHECK]:
                 if self.appear(i, offset=(10, 10), static=False):
-                    return i.location[0], i.location[1] + 20
+                    return i.location[0] + 20, i.location[1] + 50
             self.device.screenshot()
 
     def choose_effect(self, skip_first_screenshot=True):
