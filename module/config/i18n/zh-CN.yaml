@@ -598,7 +598,7 @@ Overclock:
     help: "总是根据下方的列表重新选择，关闭时只有赛季开始时选择"
   ModifierList:
     name: 超频选项
-    help: "仅支持所有的通用选项：\n
+    help: " 仅支持所有的通用选项：\n
       ENEMY_WEAPON_UP_1/2/3: 敌方武器升级I/II/III\n
       ENEMY_ARMOR_UP_1/2/2: 敌方护甲升级I/II/III\n
       ENEMY_VITALS_UP_1/2/3: 敌方生命值升级I/II/III\n
