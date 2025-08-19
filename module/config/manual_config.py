@@ -11,10 +11,12 @@ class ManualConfig:
 
     GENERAL_SHOP_PRIORITY = """GRATIS > CORE_DUST_CASE > ORNAMENT"""
 
-    RUBBISH_SHOP_PRIORITY = """
+    RUBBISH_SHOP_CORE_PRIORITY = """
        GEM
        > CORE_DUST_CASE
        """
+
+    RUBBISH_SHOP_BONE_PRIORITY = """"""
 
     ARENA_SHOP_PRIORITY = """"""
 
