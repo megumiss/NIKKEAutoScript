@@ -79,6 +79,11 @@ class EnemyEvent(EventBase):
                 click_timer.reset()
                 continue
 
+            # 红圈
+            if self.config.Optimization_AutoRedCircle and self.appear(PAUSE, offset=(5, 5)):
+                if self.handle_red_circles():
+                    continue
+
             if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=(30, 30), interval=5):
                 click_timer.reset()
                 continue
