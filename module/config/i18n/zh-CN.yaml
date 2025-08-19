@@ -590,6 +590,9 @@ Overclock:
   DisableFirst:
     name: 清理选项
     help: "选择BIOS选项时先清理所有已选中的选项"
+  SkipRatioCheck:
+    name: 忽略最高记录
+    help: "建议关闭，开启后不会检查超频主页的最高记录值，会每天都打一次超频"
   AlwaysReselect:
     name: 重选选项
     help: "总是根据下方的列表重新选择，关闭时只有赛季开始时选择"

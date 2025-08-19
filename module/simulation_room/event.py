@@ -211,7 +211,10 @@ class RandomEvent(EventBase):
                             self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
                             or self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), static=False)
                         )
-                        and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                        and (
+                            self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                            or self.appear(OVERCLOCK_SIMULATION_CHECK, offset=(30, 30), static=False)
+                        )
                         and confirm_timer.reached()
                     ):
                         return
@@ -251,7 +254,10 @@ class RandomEvent(EventBase):
                             self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
                             or self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), static=False)
                         )
-                        and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                        and (
+                            self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                            or self.appear(OVERCLOCK_SIMULATION_CHECK, offset=(30, 30), static=False)
+                        )
                         and confirm_timer.reached()
                     ):
                         return
@@ -261,7 +267,10 @@ class RandomEvent(EventBase):
                     self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
                     or self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), static=False)
                 )
-                and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                and (
+                    self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                    or self.appear(OVERCLOCK_SIMULATION_CHECK, offset=(30, 30), static=False)
+                )
                 and confirm_timer.reached()
             ):
                 return
@@ -300,7 +309,10 @@ class RandomEvent(EventBase):
                         self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
                         or self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), static=False)
                     )
-                    and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                    and (
+                        self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                        or self.appear(OVERCLOCK_SIMULATION_CHECK, offset=(30, 30), static=False)
+                    )
                     and confirm_timer.reached()
                 ):
                     return
@@ -374,7 +386,10 @@ class ImprovementEvent(EventBase):
                             self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
                             or self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), static=False)
                         )
-                        and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                        and (
+                            self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                            or self.appear(OVERCLOCK_SIMULATION_CHECK, offset=(30, 30), static=False)
+                        )
                         and confirm_timer.reached()
                     ):
                         return
@@ -384,7 +399,10 @@ class ImprovementEvent(EventBase):
                     self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
                     or self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), static=False)
                 )
-                and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                and (
+                    self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                    or self.appear(OVERCLOCK_SIMULATION_CHECK, offset=(30, 30), static=False)
+                )
                 and confirm_timer.reached()
             ):
                 return
@@ -423,7 +441,10 @@ class ImprovementEvent(EventBase):
                         self.appear(RESET_TIME_IN, offset=(30, 30), static=False)
                         or self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), static=False)
                     )
-                    and self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                    and (
+                        self.appear(SIMULATION_CHECK, offset=(30, 30), static=False)
+                        or self.appear(OVERCLOCK_SIMULATION_CHECK, offset=(30, 30), static=False)
+                    )
                     and confirm_timer.reached()
                 ):
                     return

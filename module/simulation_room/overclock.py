@@ -342,9 +342,9 @@ class Overclock(UI):
 
         # 检查超频等级，等级大于等于25时跳过
         logger.info('Check overclock status')
-        # if self.overclock_level >= self.get_total_bios_level:
-        #     logger.info('Overclock already done')
-        #     raise OperationAlreadyDone
+        if not self.config.Overclock_SkipRatioCheck and self.overclock_level >= self.get_total_bios_level:
+            logger.info('Overclock already done')
+            raise OperationAlreadyDone
 
     def bios_setting(self, skip_first_screenshot=True):
         logger.info('Check bios setting')

@@ -835,6 +835,10 @@
       }
     },
     "Overclock": {
+      "SkipRatioCheck": {
+        "type": "checkbox",
+        "value": false
+      },
       "AlwaysReselect": {
         "type": "checkbox",
         "value": false

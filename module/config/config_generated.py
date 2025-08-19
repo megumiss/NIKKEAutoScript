@@ -122,6 +122,7 @@ class GeneratedConfig:
     Interception_DropScreenshotPath = None
 
     # Group `Overclock`
+    Overclock_SkipRatioCheck = False
     Overclock_AlwaysReselect = False
     Overclock_ModifierList = 'ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY'
 
