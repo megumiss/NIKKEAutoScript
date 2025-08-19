@@ -9,6 +9,11 @@
       "AdbRestart": false,
       "ScreenshotInterval": 0.5
     },
+    "EmulatorInfo": {
+      "Emulator": "auto",
+      "name": null,
+      "path": null
+    },
     "Optimization": {
       "AutoRedCircle": false,
       "OcrModelType": "mobile",

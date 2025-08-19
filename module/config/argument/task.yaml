@@ -2,6 +2,7 @@
 
 NKAS:
   - Emulator
+  - EmulatorInfo
   - Optimization
   - Notification
 

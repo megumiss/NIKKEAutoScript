@@ -32,6 +32,31 @@ Emulator:
     option: [ minitouch, ]
   AdbRestart: false
   ScreenshotInterval: 0.5
+EmulatorInfo:
+  Emulator:
+    value: auto
+    option: [
+      auto,
+      NoxPlayer,
+      NoxPlayer64,
+      BlueStacks4,
+      BlueStacks5,
+      BlueStacks4HyperV,
+      BlueStacks5HyperV,
+      LDPlayer3,
+      LDPlayer4,
+      LDPlayer9,
+      MuMuPlayer,
+      MuMuPlayerX,
+      MuMuPlayer12,
+      MEmuPlayer,
+    ]
+  name:
+    value: null
+    type: textarea
+  path:
+    value: null
+    type: textarea
 Optimization:
   AutoRedCircle: false
   OcrModelType:
