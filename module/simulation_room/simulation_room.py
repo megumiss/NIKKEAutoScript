@@ -198,6 +198,13 @@ class SimulationRoom(UI):
                 else:
                     self.device.screenshot()
 
+                if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
+                    self.device.click_minitouch(530, 800)
+                    logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
+                    confirm_timer.reset()
+                    click_timer.reset()
+                    continue
+
                 if click_timer.reached() and self.appear_then_click(CANCEL, offset=(30, 30), interval=5, static=False):
                     confirm_timer.reset()
                     click_timer.reset()
@@ -206,13 +213,6 @@ class SimulationRoom(UI):
                 if click_timer.reached() and self.appear_then_click(
                     NOT_CHOOSE, offset=(30, 30), interval=5, static=False
                 ):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
-
-                if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
-                    self.device.click_minitouch(530, 800)
-                    logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
