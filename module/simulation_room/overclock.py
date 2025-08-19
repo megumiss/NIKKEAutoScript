@@ -91,6 +91,8 @@ class Overclock(UI):
             raise
 
     def get_next_event(self):
+        self.device.screenshot()
+
         for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.85, static=False)[:3]:
             area = _area_offset(i.get('area'), (-45, -100, -14, -90))
             img = crop(self.device.image, area)
@@ -98,6 +100,8 @@ class Overclock(UI):
                 NORMAL_CHECK._button_offset = area
             elif HARD_CHECK.match(img, threshold=0.75, static=False):
                 HARD_CHECK._button_offset = area
+            elif SPECIAL_CHECK.match(img, threshold=0.75, static=False):
+                SPECIAL_CHECK._button_offset = area
 
         if NORMAL_CHECK._button_offset:
             from module.simulation_room.event import EnemyEvent
@@ -137,12 +141,19 @@ class Overclock(UI):
             EnemyEvent(button=HARD_CHECK.location, config=self.config, device=self.device).run()
             HARD_CHECK._button_offset = None
             return
+        
+        if SPECIAL_CHECK._button_offset:
+            from module.simulation_room.event import EnemyEvent
+
+            EnemyEvent(button=SPECIAL_CHECK.location, config=self.config, device=self.device).run()
+            SPECIAL_CHECK._button_offset = None
+            return
 
     def get_effect(self):
         for x in range(3):
             for i in [EPIC_CHECK, SSR_CHECK, SR_CHECK, R_CHECK]:
                 if self.appear(i, offset=(10, 10), static=False):
-                    return i.location
+                    return i.location[0], i.location[1] + 20
             self.device.screenshot()
 
     def choose_effect(self, skip_first_screenshot=True):

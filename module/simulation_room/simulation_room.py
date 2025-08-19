@@ -64,7 +64,7 @@ class SimulationRoom(UI):
     def get_next_event(self):
         self.device.screenshot()
 
-        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=(30, 300), threshold=0.95)[:3]:
+        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.95, static=False)[:3]:
             area = _area_offset(i.get('area'), (-45, -100, -14, -90))
             img = crop(self.device.image, area)
             if NORMAL_CHECK.match(img, threshold=0.75, static=False):
