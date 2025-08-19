@@ -21,6 +21,7 @@
     ],
     "Ark": [
       "SimulationRoom",
+      "Overclock",
       "TribeTower",
       "Interception",
       "RookieArena",

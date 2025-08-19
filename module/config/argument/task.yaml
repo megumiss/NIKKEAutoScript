@@ -60,6 +60,10 @@ SimulationRoom:
   - SimulationRoom
   - Area
 
+Overclock:
+  - Scheduler
+  - Overclock
+
 TribeTower:
   - Scheduler
   - Overcome
