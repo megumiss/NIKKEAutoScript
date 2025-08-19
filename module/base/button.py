@@ -134,7 +134,7 @@ class Button(Resource):
 
         res = cv2.matchTemplate(self.image, image, cv2.TM_CCOEFF_NORMED)
         _, similarity, _, upper_left = cv2.minMaxLoc(res)
-        print(self.name, similarity)
+        # print(self.name, similarity)
 
         if similarity > threshold:
             if static:
