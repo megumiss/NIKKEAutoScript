@@ -50,7 +50,9 @@ class ManualConfig:
     RUBBISH_SHOP_BONE_PRIORITY = """"""
 
     RUBBISH_SHOP_BONE_PRODUCT = {
-
+        "GOOD_TEAMWORK_BOX": 1,
+        "MAINTENANCE_KIT_BOX_2": 1,
+        "CURATED_MANUFACTURER_ARMS": 1
     }
 
     ARENA_SHOP_PRODUCT = {

@@ -91,12 +91,8 @@ class ShopBase(UI):
                 raise NotEnoughMoneyError
 
             # 检查是否达到最大购买数量
-            if (
-                click_timer.reached()
-                and self.appear(MAX, offset=(30, 30), interval=3, static=False)
-                and MAX.match_appear_on(self.device.image, threshold=10)
-            ):
-                self.device.click(MAX)
+            if click_timer.reached() and self.appear_then_click(MAX, threshold=5, interval=1):
+                self.device.sleep(0.3)
                 click_timer.reset()
                 continue
 
@@ -239,8 +235,7 @@ class ShopBase(UI):
         # 遍历商品列表，每个商品单独处理
         for product in list(products):
             # 每次购买某个物品前先滚动到顶部
-            self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=3, delay=0.5)
-            swipe_confirm = Timer(2, count=9).start()  # 每个商品独立的滑动超时
+            self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=4, delay=0.5)
             logger.info(f'[Purchase Start] {product.name}')
 
             while 1:
@@ -257,14 +252,13 @@ class ShopBase(UI):
                         self.device.image = img
                         logger.info(f'[Purchased] {product.name}')
 
-                # 判断是否超时（说明已经扫描过整个页面）
-                if swipe_confirm.reached():
-                    logger.info(f'[Purchase Done or Timeout] {product.name}')
-                    break  # 结束当前商品的扫描，进入下一个商品
+                # 结束当前商品的扫描，进入下一个商品
+                if self.appear(END_LIST_CHECK, threshold=5):
+                    logger.info(f'[Purchase done or not found] {product.name}')
+                    break
 
                 # 滑动屏幕继续查找
-                self.device.swipe((505, 1000), (505, 965), handle_control_check=False)
-                self.device.sleep(1)
+                self.ensure_sroll((505, 1000), (505, 700), speed=5, hold=0.5, count=1, delay=0.5)
 
             # 单个商品完成后，从待购买列表中移除
             # products = products.delete([product])

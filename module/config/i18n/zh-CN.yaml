@@ -386,10 +386,10 @@ RubbishShop:
   bonePriority:
     name: 骨头购买优先级
     help:
-      " 骨头货币购买优先级，例如: 'CORE_DUST_CASE > ORNAMENT'，用一个大于号分开，可以选择的：\n
-      CORE_DUST_CASE: 芯尘盒\n
-      ORNAMENT: 简介装饰品\n
-      BONE: 骨头货币\n
+      " 骨头货币购买优先级，例如: 'CURATED_MANUFACTURER_ARMS > MAINTENANCE_KIT_BOX_2'，用一个大于号分开，可以选择的：\n
+      GOOD_TEAMWORK_BOX: 优秀团队合作宝箱\n
+      MAINTENANCE_KIT_BOX_2: 保养工具箱II\n
+      CURATED_MANUFACTURER_ARMS: 企业精选武装\n
       "
 Notification:
   _info:
