@@ -34,8 +34,6 @@ class Device(Screenshot, Control, AppControl):
     stuck_long_wait_list = ['LOGIN_CHECK', 'PAUSE']
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
         for trial in range(4):
             try:
                 super().__init__(*args, **kwargs)

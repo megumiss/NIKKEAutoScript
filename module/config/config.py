@@ -393,6 +393,29 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             self.overridden[arg] = value
             super().__setattr__(arg, value)
 
+    def set_record(self, **kwargs):
+        """
+        Args:
+            **kwargs: For example, `Emotion1_Value=150`
+                will set `Emotion1_Value=150` and `Emotion1_Record=now()`
+        """
+        with self.multi_set():
+            for arg, value in kwargs.items():
+                record = arg.replace("Value", "Record")
+                self.__setattr__(arg, value)
+                self.__setattr__(record, datetime.now().replace(microsecond=0))
+
+    def multi_set(self):
+        """
+        Set multiple arguments but save once.
+
+        Examples:
+            with self.config.multi_set():
+                self.config.foo1 = 1
+                self.config.foo2 = 2
+        """
+        return MultiSetWrapper(main=self)
+
     @property
     def EVENT_TYPE(self):
         return self.event_type
@@ -408,3 +431,24 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
     @property
     def EVENT_COOP(self):
         return self.Coop_EventCoop
+
+class MultiSetWrapper:
+    def __init__(self, main):
+        """
+        Args:
+            main (AzurLaneConfig):
+        """
+        self.main = main
+        self.in_wrapper = False
+
+    def __enter__(self):
+        if self.main.auto_update:
+            self.main.auto_update = False
+        else:
+            self.in_wrapper = True
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not self.in_wrapper:
+            self.main.update()
+            self.main.auto_update = True
