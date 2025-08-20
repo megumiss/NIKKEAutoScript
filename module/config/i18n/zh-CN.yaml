@@ -48,6 +48,9 @@ Menu:
   Daily:
     name: 日常
     help: ""
+  Outpost:
+    name: 前哨基地
+    help: ""
   Ark:
     name: 方舟
     help: ""
@@ -82,6 +85,12 @@ Task:
     help: ""
   Commission:
     name: 派遣
+    help: ""
+  Synchro:
+    name: 同步器
+    help: ""
+  Recycling:
+    name: 循环室
     help: ""
   Mailbox:
     name: 邮箱
@@ -429,6 +438,13 @@ CollectionItems:
     Frima: "普琳玛"
     Diesel: "迪塞尔"
     Exia: "艾可希雅"
+Synchro:
+  _info:
+    name: 同步器升级
+    help: ""
+  UseBox:
+    name: 自动使用箱子
+    help: ""
 OpponentSelection:
   _info:
     name: 对手选择设置

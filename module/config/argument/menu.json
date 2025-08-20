@@ -7,17 +7,21 @@
     "Reward": [
       "Reward",
       "Destruction",
-      "Commission",
       "Mailbox"
     ],
     "Daily": [
       "DailyRecruit",
       "Daily",
       "MissionPass",
-      "Liberation",
       "Conversation",
       "Shop",
       "RubbishShop"
+    ],
+    "Outpost": [
+      "Commission",
+      "Liberation",
+      "Synchro",
+      "Recycling"
     ],
     "Ark": [
       "SimulationRoom",

@@ -17,10 +17,6 @@ Reward:
 Destruction:
   - Scheduler
 
-Commission:
-  - Scheduler
-  - CollectionItems
-
 Mailbox:
   - Scheduler
 
@@ -37,9 +33,6 @@ Daily:
 MissionPass:
   - Scheduler
 
-Liberation:
-  - Scheduler
-
 Conversation:
   - Scheduler
   - Conversation
@@ -52,6 +45,22 @@ Shop:
 RubbishShop:
   - Scheduler
   - RubbishShop
+
+# ==================== Outpost ====================
+
+Commission:
+  - Scheduler
+  - CollectionItems
+
+Liberation:
+  - Scheduler
+
+Synchro:
+  - Scheduler
+  - Synchro
+
+Recycling:
+  - Scheduler
 
 # ==================== Ark ====================
 
