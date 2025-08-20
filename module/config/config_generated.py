@@ -64,7 +64,8 @@ class GeneratedConfig:
     ArenaShop_priority = None
 
     # Group `RubbishShop`
-    RubbishShop_priority = None
+    RubbishShop_priority = 'GEM > CORE_DUST_CASE'
+    RubbishShop_bonePriority = None
 
     # Group `Notification`
     Notification_WhenDailyTaskCompleted = False
@@ -125,6 +126,11 @@ class GeneratedConfig:
 
     # Group `Interception`
     Interception_DropScreenshotPath = None
+
+    # Group `Overclock`
+    Overclock_SkipRatioCheck = False
+    Overclock_AlwaysReselect = False
+    Overclock_ModifierList = 'ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY'
 
     # Group `Storage`
     Storage_Storage = {}

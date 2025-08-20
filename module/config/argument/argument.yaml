@@ -95,6 +95,9 @@ ArenaShop:
     type: textarea
 RubbishShop:
   priority:
+    value: 'GEM > CORE_DUST_CASE'
+    type: textarea
+  bonePriority:
     value: ''
     type: textarea
 Notification:
@@ -195,4 +198,11 @@ CheerStrategy:
 Interception:
   DropScreenshotPath:
     value: ''
+    type: textarea
+Overclock:
+  # DisableFirst: false
+  SkipRatioCheck: false
+  AlwaysReselect: false
+  ModifierList:
+    value: "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
     type: textarea

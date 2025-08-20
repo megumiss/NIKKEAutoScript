@@ -10,6 +10,7 @@ CANCEL = Button(area={'zh-cn': (208, 789, 255, 813)}, color={'zh-cn': (158, 157,
 CORE_DUST_CASE = Button(area={'zh-cn': (198, 648, 239, 671)}, color={'zh-cn': (179, 179, 180)}, button={'zh-cn': (198, 648, 239, 671)}, file={'zh-cn': './assets/zh-cn/shop/CORE_DUST_CASE.png'})
 CREDIT = Button(area={'zh-cn': (561, 867, 596, 897)}, color={'zh-cn': (78, 77, 71)}, button={'zh-cn': (561, 867, 596, 897)}, file={'zh-cn': './assets/zh-cn/shop/CREDIT.png'})
 ELECTRIC_CODE = Button(area={'zh-cn': (201, 706, 239, 765)}, color={'zh-cn': (168, 78, 96)}, button={'zh-cn': (201, 706, 239, 765)}, file={'zh-cn': './assets/zh-cn/shop/ELECTRIC_CODE.png'})
+END_LIST_CHECK = Button(area={'zh-cn': (127, 1094, 311, 1176)}, color={'zh-cn': (238, 243, 246)}, button={'zh-cn': (127, 1094, 311, 1176)}, file={'zh-cn': './assets/zh-cn/shop/END_LIST_CHECK.png'})
 FIRE_CODE = Button(area={'zh-cn': (202, 707, 240, 768)}, color={'zh-cn': (161, 78, 53)}, button={'zh-cn': (202, 707, 240, 768)}, file={'zh-cn': './assets/zh-cn/shop/FIRE_CODE.png'})
 GENERAL_SHOP_CHECK = Button(area={'zh-cn': (126, 474, 190, 506)}, color={'zh-cn': (140, 140, 142)}, button={'zh-cn': (126, 474, 190, 506)}, file={'zh-cn': './assets/zh-cn/shop/GENERAL_SHOP_CHECK.png'})
 GOTO_ARENA_SHOP = Button(area={'zh-cn': (31, 791, 64, 817)}, color={'zh-cn': (124, 124, 124)}, button={'zh-cn': (31, 791, 64, 817)}, file={'zh-cn': './assets/zh-cn/shop/GOTO_ARENA_SHOP.png'})
