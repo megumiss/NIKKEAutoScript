@@ -104,6 +104,28 @@ class Config:
 
         return decorate
 
+def has_cached_property(obj, name):
+    """
+    Check if a property is cached.
+
+    Args:
+        obj:
+        name (str):
+    """
+    return name in obj.__dict__
+
+
+def set_cached_property(obj, name, value):
+    """
+    Set a cached property.
+
+    Args:
+        obj:
+        name (str):
+        value:
+    """
+    obj.__dict__[name] = value
+
 
 def del_cached_property(obj, name):
     """

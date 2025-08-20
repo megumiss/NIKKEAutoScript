@@ -1,9 +1,10 @@
+from functools import cached_property
 import sys
 import typing as t
 
 from pydantic import BaseModel
 
-from module.base.decorator import cached_property, del_cached_property
+from module.base.decorator import del_cached_property
 from module.device.connection import Connection
 from module.device.method.utils import get_serial_pair
 from module.device.platform.emulator_base import EmulatorInstanceBase, EmulatorManagerBase, remove_duplicated_path
