@@ -79,31 +79,27 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         self.pending_task = []
         self.waiting_task = []
         self.task: Function
-        self.is_template_config = config_name.startswith("template")
+        self.is_template_config = config_name == "template"
 
         if self.is_template_config:
             logger.info("Using template config, which is read only")
             self.auto_update = False
             self.task = name_to_function("template")
-        self.init_task(task)
-
-    def init_task(self, task=None):
-        if self.is_template_config:
-            return
-
-        self.load()
-        if task is None:
-            # Bind `Alas` by default which includes emulator settings.
-            task = name_to_function("NKAS")
         else:
-            # Bind a specific task for debug purpose.
-            task = name_to_function(task)
+            self.load()
 
-        logger.info(f'task: {task.__str__()}')
+            if task is None:
+                # Bind `Alas` by default which includes emulator settings.
+                task = name_to_function("NKAS")
+            else:
+                # Bind a specific task for debug purpose.
+                task = name_to_function(task)
 
-        self.bind(task)
-        self.task = task
-        self.save()
+            logger.info(f'task: {task.__str__()}')
+
+            self.bind(task)
+            self.task = task
+            self.save()
 
         # logger.attr("Server", self.SERVER)
         logger.attr("Server", 'intl' if 'proximabeta' in self.Emulator_PackageName else 'tw')
@@ -111,88 +107,64 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
     def load(self):
         self.data = self.read_file(self.config_name)
         self.config_override()
-
         for path, value in self.modified.items():
             deep_set(self.data, keys=path, value=value)
 
-    def bind(self, func, func_list=None):
+    def bind(self, func, func_set=None):
         """
         Args:
             func (str, Function): Function to run
-            func_list (list[str]): List of tasks to be bound
+            func_set (set): Set of tasks to be bound
         """
         if func_set is None:
             func_set = {"General", "NKAS"}
 
         if isinstance(func, Function):
             func = func.command
-        # func_list: ["General", "Alas", <task_general>, <task>, *func_list]
-        if func_list is None:
-            func_list = []
-        if func not in func_list:
-            func_list.insert(0, func)
-        if func.startswith("Opsi"):
-            if "OpsiGeneral" not in func_list:
-                func_list.insert(0, "OpsiGeneral")
-        if (
-            func.startswith("Event")
-            or func.startswith("Raid")
-            or func.startswith("Coalition")
-            or func in ["MaritimeEscort", "GemsFarming"]
-        ):
-            if "EventGeneral" not in func_list:
-                func_list.insert(0, "EventGeneral")
-            if "TaskBalancer" not in func_list:
-                func_list.insert(0, "TaskBalancer")
-        if "NKAS" not in func_list:
-            func_list.insert(0, "NKAS")
-        if "General" not in func_list:
-            func_list.insert(0, "General")
-        logger.info(f"Bind task {func_list}")
+
+        func_set.add(func)
+
+        logger.info(f"Bind task {func_set}")
 
         # Bind arguments
         visited = set()
         self.bound.clear()
-        for func in func_list:
+        for func in func_set:
             func_data = self.data.get(func, {})
             for group, group_data in func_data.items():
                 for arg, value in group_data.items():
                     path = f"{group}.{arg}"
                     if path in visited:
                         continue
+                    """
+                        将 func_set 任务组 / 选项组 的 属性覆盖到 GeneratedConfig 的类变量
+                    """
                     arg = path_to_arg(path)
                     super().__setattr__(arg, value)
                     self.bound[arg] = f"{func}.{path}"
                     visited.add(path)
-
         # Override arguments
         for arg, value in self.overridden.items():
             super().__setattr__(arg, value)
-
     def save(self, mod_name='nkas'):
         if not self.modified:
             return False
-
         for path, value in self.modified.items():
             deep_set(self.data, keys=path, value=value)
-
         logger.info(
             f"Save config {filepath_config(self.config_name, mod_name)}, {dict_to_kv(self.modified)}"
         )
         # Don't use self.modified = {}, that will create a new object.
         self.modified.clear()
         self.write_file(self.config_name, data=self.data)
-
     def update(self):
         self.load()
         self.config_override()
         self.bind(self.task)
         self.save()
-
     def config_override(self):
         now = datetime.now().replace(microsecond=0)
         limited = set()
-
         def limit_next_run(tasks, limit):
             for task in tasks:
                 if task in limited:
@@ -203,7 +175,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                 )
                 if isinstance(next_run, datetime) and next_run > limit:
                     deep_set(self.data, keys=f"{task}.Scheduler.NextRun", value=now)
-
         for task in ["Reward"]:
             if not self.is_task_enabled(task):
                 self.modified[f"{task}.Scheduler.Enable"] = True
@@ -224,14 +195,12 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         for task in ["Event2"]:
             # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
             self.modified[f"{task}.Event.Event"] = self.EVENTS[1].get('event_id')
-
     def get_next(self):
         """
         Returns:
             Function: Command to run
         """
         self.get_next_task()
-
         if self.pending_task:
             NikkeConfig.is_hoarding_task = False
             logger.info(f"Pending tasks: {[f.command for f in self.pending_task]}")
@@ -240,7 +209,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             return task
         else:
             NikkeConfig.is_hoarding_task = True
-
         if self.waiting_task:
             logger.info("No task pending")
             task = copy.deepcopy(self.waiting_task[0])
@@ -254,13 +222,11 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             logger.critical("No task waiting or pending")
             logger.critical("Please enable at least one task")
             raise RequestHumanTakeover
-
     def get_next_task(self):
         pending = []
         waiting = []
         error = []
         now = datetime.now()
-
         # func 为json中的任务属性
         """
         {
@@ -293,7 +259,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             """
             if not isinstance(func.next_run, datetime):
                 error.append(func)
-
             elif func.next_run < now:
                 """
                     当前时间 > 该任务的下次运行时间
@@ -301,7 +266,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                 pending.append(func)
             else:
                 waiting.append(func)
-
         """
             任务优先级
         """
@@ -320,30 +284,23 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             waiting = sorted(waiting, key=operator.attrgetter("next_run"))
         if error:
             pending = error + pending
-
         self.pending_task = pending
         self.waiting_task = waiting
-
     def is_task_enabled(self, task):
         return bool(self.cross_get(keys=[task, 'Scheduler', 'Enable'], default=False))
-
     def cross_get(self, keys, default=None):
         """
         Get configs from other tasks.
-
         Args:
             keys (str, list[str]): Such as `{task}.Scheduler.Enable`
             default:
-
         Returns:
             Any:
         """
         return deep_get(self.data, keys=keys, default=default)
-
     def task_delay(self, success=None, server_update=None, target=None, minute=None, task=None):
         def ensure_delta(delay):
             return timedelta(seconds=int(ensure_time(delay, precision=3) * 60))
-
         run = []
         if success is not None:
             interval = (
@@ -365,7 +322,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             run.append(target)
         if minute is not None:
             run.append(datetime.now() + ensure_delta(minute))
-
         if len(run):
             run = min(run).replace(microsecond=0)
             kv = dict_to_kv(
@@ -388,7 +344,7 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             )
 
     def task_call(self, task, force_call=True):
-        if deep_get(self.data, keys=f"{task}.Scheduler.NextRun", default=None) is None:
+        if not deep_get(self.data, keys=f"{task}.Scheduler.NextRun", default=None):
             raise ScriptError(f"Task to call: `{task}` does not exist in user config")
 
         if force_call or self.is_task_enabled(task):

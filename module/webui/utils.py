@@ -569,6 +569,9 @@ def get_config_mod(config_name):
     if config_name.startswith('template-'):
         return config_name.replace('template-', '')
 
+    return 'nkas'
+
+
 if __name__ == "__main__":
 
     def gen(x):
