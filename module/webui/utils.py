@@ -554,6 +554,12 @@ def get_available_func():
         'GameManager',
     )
 
+def load_config(config_name):
+    from module.config.config import NikkeConfig
+
+    mod_name = get_config_mod(config_name)
+    if mod_name == 'nkas':
+        return NikkeConfig(config_name, '')
 
 def get_config_mod(config_name):
     """

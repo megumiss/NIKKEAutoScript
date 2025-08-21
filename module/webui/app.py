@@ -76,6 +76,7 @@ from module.webui.utils import (
     raise_exception,
     re_fullmatch,
     to_pin_value,
+    load_config,
 )
 from module.webui.widgets import (
     BinarySwitchButton,
@@ -739,11 +740,11 @@ class NKASGUI(Frame):
             color="menu",
         ).style(f"--menu-Update--")
 
-        put_button(
-            label=t("Gui.MenuDevelop.Remote"),
-            onclick=self.dev_remote,
-            color="menu",
-        ).style(f"--menu-Remote--")
+        # put_button(
+        #     label=t("Gui.MenuDevelop.Remote"),
+        #     onclick=self.dev_remote,
+        #     color="menu",
+        # ).style(f"--menu-Remote--")
 
         put_button(
             label=t("Gui.MenuDevelop.Utils"),
@@ -1129,7 +1130,7 @@ class NKASGUI(Frame):
             put_buttons(
                 [
                     {"label": "Dark", "value": "default", "color": "dark"},
-                    {"label": "Light", "value": "light", "color": "light"},
+                    # {"label": "Light", "value": "light", "color": "light"},
                 ],
                 onclick=lambda t: set_theme(t),
             ).style("text-align: center")
@@ -1438,8 +1439,8 @@ def clearup():
     """
     logger.info("Start clearup")
     RemoteAccess.kill_ssh_process()
-    close_discord_rpc()
-    stop_ocr_server_process()
+    # close_discord_rpc()
+    # stop_ocr_server_process()
     for nkas in ProcessManager._processes.values():
         nkas.stop()
     State.clearup()
@@ -1452,11 +1453,11 @@ def app():
     parser.add_argument(
         "-k", "--key", type=str, help="Password of nkas. No password by default"
     )
-    parser.add_argument(
-        "--cdn",
-        action="store_true",
-        help="Use jsdelivr cdn for pywebio static files (css, js). Self host cdn by default.",
-    )
+    # parser.add_argument(
+    #     "--cdn",
+    #     action="store_true",
+    #     help="Use jsdelivr cdn for pywebio static files (css, js). Self host cdn by default.",
+    # )
     parser.add_argument(
         "--run",
         nargs="+",
@@ -1469,7 +1470,7 @@ def app():
     NKASGUI.set_theme(theme=State.deploy_config.Theme)
     lang.LANG = State.deploy_config.Language
     key = args.key or State.deploy_config.Password
-    cdn = args.cdn if args.cdn else State.deploy_config.CDN
+    # cdn = args.cdn if args.cdn else State.deploy_config.CDN
     runs = None
     if args.run:
         runs = args.run
@@ -1483,7 +1484,7 @@ def app():
     logger.attr("Theme", State.deploy_config.Theme)
     logger.attr("Language", lang.LANG)
     logger.attr("Password", True if key else False)
-    logger.attr("CDN", cdn)
+    # logger.attr("CDN", cdn)
     logger.attr("IS_ON_PHONE_CLOUD", IS_ON_PHONE_CLOUD)
 
     from deploy.atomic import atomic_failure_cleanup
@@ -1509,7 +1510,7 @@ def app():
 
     app = asgi_app(
         applications=[index, manage],
-        cdn=cdn,
+        # cdn=cdn,
         static_dir=None,
         debug=True,
         on_startup=[
