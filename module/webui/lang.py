@@ -2,7 +2,6 @@ from typing import Dict
 
 from module.config.deep import deep_iter
 from module.config.utils import LANGUAGES, filepath_i18n, read_file
-from module.submodule.utils import list_mod_dir
 from module.webui.setting import State
 
 LANG = "zh-CN"
@@ -58,13 +57,13 @@ def reload():
         if lang not in dic_lang:
             dic_lang[lang] = {}
 
-        for mod_name, dir_name in list_mod_dir():
-            for path, v in deep_iter(read_file(filepath_i18n(lang, mod_name)), depth=3):
-                dic_lang[lang][".".join(path)] = v
+        # for mod_name, dir_name in list_mod_dir():
+        #     for path, v in deep_iter(read_file(filepath_i18n(lang, mod_name)), depth=3):
+        #         dic_lang[lang][".".join(path)] = v
 
         for path, v in deep_iter(read_file(filepath_i18n(lang)), depth=3):
             dic_lang[lang][".".join(path)] = v
 
-    for key in dic_lang["ja-JP"].keys():
-        if dic_lang["ja-JP"][key] == key:
-            dic_lang["ja-JP"][key] = dic_lang["en-US"][key]
+    # for key in dic_lang["ja-JP"].keys():
+    #     if dic_lang["ja-JP"][key] == key:
+    #         dic_lang["ja-JP"][key] = dic_lang["en-US"][key]

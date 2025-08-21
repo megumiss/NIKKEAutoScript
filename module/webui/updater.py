@@ -210,10 +210,10 @@ class Updater(DeployConfig, GitManager, PipManager):
         self.state = "start"
         instances = ProcessManager.running_instances()
         names = []
-        for alas in instances:
-            names.append(alas.config_name + "\n")
+        for nkas in instances:
+            names.append(nkas.config_name + "\n")
 
-        logger.info("Waiting all running alas finish.")
+        logger.info("Waiting all running nkas finish.")
         self._wait_update(instances, names)
 
     def _wait_update(self, instances: List[ProcessManager], names):
@@ -224,11 +224,11 @@ class Updater(DeployConfig, GitManager, PipManager):
         _instances = instances.copy()
         start_time = time.time()
         while _instances:
-            for alas in _instances:
-                if not alas.alive:
-                    _instances.remove(alas)
-                    logger.info(f"Alas [{alas.config_name}] stopped")
-                    logger.info(f"Remains: {[alas.config_name for alas in _instances]}")
+            for nkas in _instances:
+                if not nkas.alive:
+                    _instances.remove(nkas)
+                    logger.info(f"NKAS [{nkas.config_name}] stopped")
+                    logger.info(f"Remains: {[nkas.config_name for nkas in _instances]}")
             if self.state == "cancel":
                 self.state = 1
                 self.event.clear()
@@ -236,20 +236,20 @@ class Updater(DeployConfig, GitManager, PipManager):
                 return
             time.sleep(0.25)
             if time.time() - start_time > 60 * 10:
-                logger.warning("Waiting alas shutdown timeout, force kill")
-                for alas in _instances:
-                    alas.stop()
+                logger.warning("Waiting nkas shutdown timeout, force kill")
+                for nkas in _instances:
+                    nkas.stop()
                 break
         self._run_update(instances, names)
 
     def _run_update(self, instances, names):
         self.state = "run update"
-        logger.info("All alas stopped, start updating")
+        logger.info("All nkas stopped, start updating")
 
         if self.update():
             if State.restart_event is not None:
                 self.state = "reload"
-                with open("./config/reloadalas", mode="w") as f:
+                with open("./config/reloadnkas", mode="w") as f:
                     f.writelines(names)
                 from module.webui.app import clearup
 

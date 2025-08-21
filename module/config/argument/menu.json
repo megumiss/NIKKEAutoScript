@@ -1,16 +1,26 @@
 {
-  "Task": {
-    "NKAS": [
+  "NKAS": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
       "NKAS",
       "Restart"
-    ],
-    "Reward": [
+    ]
+  },
+  "Reward": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
       "Reward",
       "Destruction",
       "Commission",
       "Mailbox"
-    ],
-    "Daily": [
+    ]
+  },
+  "Daily": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
       "DailyRecruit",
       "Daily",
       "MissionPass",
@@ -18,8 +28,12 @@
       "Conversation",
       "Shop",
       "RubbishShop"
-    ],
-    "Ark": [
+    ]
+  },
+  "Ark": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
       "SimulationRoom",
       "Overclock",
       "TribeTower",
@@ -27,31 +41,51 @@
       "RookieArena",
       "SpecialArena",
       "ChampionArena"
-    ],
-    "LimitedTimeEvent": [
+    ]
+  },
+  "LimitedTimeEvent": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
       "Coop",
       "SoloRaid",
       "UnionRaid"
-    ],
-    "StoryEvent": [
+    ]
+  },
+  "StoryEvent": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
       "Event",
       "Event2"
-    ],
-    "Blablalink": [
+    ]
+  },
+  "Blablalink": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
       "BlaAuth",
       "BlaDaily",
       "BlaCDK",
       "BlaExchange"
-    ],
-    "Tools": [
-      "TowerDaemon",
-      "CombatDaemon",
-      "EventDaemon"
-    ],
-    "Gift": [
+    ]
+  },
+  "Gift": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
       "DailyGift",
       "WeeklyGift",
       "MonthlyGift"
+    ]
+  },
+  "Tool": {
+    "menu": "collapse",
+    "page": "tool",
+    "tasks": [
+      "TowerDaemon",
+      "CombatDaemon",
+      "EventDaemon"
     ]
   }
 }

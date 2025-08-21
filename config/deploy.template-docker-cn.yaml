@@ -1,6 +1,6 @@
 Deploy:
   Git:
-    Repository: https://github.com/megumiss/NIKKEAutoScript
+    Repository: https://gitee.com/megumiss/NIKKEAutoScript
     Branch: master
     GitExecutable: /usr/bin/git
     GitProxy: null
@@ -9,7 +9,7 @@ Deploy:
 
   Python:
     PythonExecutable: /usr/local/bin/python
-    PypiMirror: null
+    PypiMirror: https://mirrors.aliyun.com/pypi/simple
     InstallDependencies: true
     RequirementsFile: ./deploy/docker/requirements.txt
 

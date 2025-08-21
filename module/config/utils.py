@@ -1,6 +1,8 @@
 import json
 import os
 from datetime import datetime, timedelta, timezone
+import random
+import string
 
 import yaml
 from filelock import FileLock
@@ -252,6 +254,41 @@ def write_file(file, data):
         else:
             print(f'Unsupported config file extension: {ext}')
 
+def nkas_template():
+    """
+        Returns:
+            list[str]: Name of all Alas instances, except `template`.
+        """
+    out = []
+    for file in os.listdir('./config'):
+        name, extension = os.path.splitext(file)
+        if name == 'template' and extension == '.json':
+            out.append(f'{name}-alas')
+
+    # out.extend(list_mod_template())
+
+    return out
+
+
+def nkas_instance():
+    """
+    Returns:
+        list[str]: Name of all Alas instances, except `template`.
+    """
+    out = []
+    for file in os.listdir('./config'):
+        name, extension = os.path.splitext(file)
+        config_name, mod_name = os.path.splitext(name)
+        mod_name = mod_name[1:]
+        if name != 'template' and extension == '.json' and mod_name == '':
+            out.append(name)
+
+    # out.extend(list_mod_instance())
+
+    if not len(out):
+        out = ['alas']
+
+    return out
 
 def data_to_type(data, **kwargs):
     """
@@ -350,3 +387,13 @@ def nearest_future(future, interval=120):
             next_run = finish
 
     return next_run
+
+def random_id(length=32):
+    """
+    Args:
+        length (int):
+
+    Returns:
+        str: Random azurstat id.
+    """
+    return ''.join(random.sample(string.ascii_lowercase + string.digits, length))

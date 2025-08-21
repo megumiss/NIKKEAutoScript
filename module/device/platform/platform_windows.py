@@ -192,7 +192,7 @@ class PlatformWindows(PlatformBase, EmulatorManager):
             msg = str(e)
             # OSError: [WinError 740] 请求的操作需要提升。
             if 'WinError 740' in msg:
-                logger.error('To start/stop MumuAppPlayer, ALAS needs to be run as administrator')
+                logger.error('To start/stop MumuAppPlayer, NKAS needs to be run as administrator')
         except EmulatorUnknown as e:
             logger.error(e)
         except Exception as e:

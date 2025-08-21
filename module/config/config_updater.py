@@ -10,7 +10,7 @@ from deploy.utils import DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
 from module.base.timer import timer
 from module.config.deep import deep_default, deep_get, deep_iter, deep_pop, deep_set
 from module.config.env import IS_ON_PHONE_CLOUD
-from module.config.server import VALID_CHANNEL_PACKAGE, VALID_PACKAGE, to_server
+from module.config.server import VALID_CHANNEL_PACKAGE, VALID_PACKAGE
 from module.config.utils import *
 
 
@@ -250,36 +250,6 @@ class ConfigGenerator:
             deep_load(path)
             if 'option' in data:
                 deep_load(path, words=data['option'], default=False)
-        # Event names
-        # Names come from SameLanguageServer > en > cn > jp > tw
-        events = {}
-        for event in self.event:
-            if lang in LANG_TO_SERVER:
-                name = event.__getattribute__(LANG_TO_SERVER[lang])
-                if name:
-                    deep_default(events, keys=event.directory, value=name)
-        for server in ['en', 'cn', 'jp', 'tw']:
-            for event in self.event:
-                name = event.__getattribute__(server)
-                if name:
-                    deep_default(events, keys=event.directory, value=name)
-        for event in sorted(self.event):
-            name = events.get(event.directory, event.directory)
-            deep_set(new, keys=f'Campaign.Event.{event.directory}', value=name)
-        # Package names
-        for package, server in VALID_PACKAGE.items():
-            path = ['Emulator', 'PackageName', package]
-            if deep_get(new, keys=path) == package:
-                deep_set(new, keys=path, value=server.upper())
-
-        for package, server_and_channel in VALID_CHANNEL_PACKAGE.items():
-            server, channel = server_and_channel
-            name = deep_get(new, keys=['Emulator', 'PackageName', to_package(server)])
-            if lang == SERVER_TO_LANG[server]:
-                value = f'{name} {channel}渠道服 {package}'
-            else:
-                value = f'{name} {package}'
-            deep_set(new, keys=['Emulator', 'PackageName', package], value=value)
 
         # GUI i18n
         for path, _ in deep_iter(self.gui, depth=2):
@@ -365,7 +335,6 @@ class ConfigGenerator:
     def generate(self):
         _ = self.args
         _ = self.menu
-        _ = self.event
         self.insert_package()
         write_file(filepath_args(), self.args)
         write_file(filepath_args('menu'), self.menu)
@@ -376,6 +345,7 @@ class ConfigGenerator:
 
 
 class ConfigUpdater:
+    redirection = []
 
     @cached_property
     def args(self):

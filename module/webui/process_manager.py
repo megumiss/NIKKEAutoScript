@@ -16,9 +16,6 @@ from module.webui.fake_pil_module import *
 import_fake_pil_module()
 
 from module.logger import logger, set_file_logger, set_func_logger
-from module.submodule.submodule import load_mod
-from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
-    get_func_mod, list_mod_instance
 from module.webui.setting import State
 
 
@@ -150,12 +147,12 @@ class ProcessManager:
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
 
-        from module.config.config import AzurLaneConfig
+        from module.config.config import NikkeConfig
 
         # Remove fake PIL module, because subprocess will use it
         remove_fake_pil_module()
 
-        AzurLaneConfig.stop_event = e
+        NikkeConfig.stop_event = e
         try:
             # Run alas
             if func == "alas":
@@ -201,7 +198,7 @@ class ProcessManager:
         logger.hr("Restart alas")
 
         # Load MOD_CONFIG_DICT
-        list_mod_instance()
+        # list_mod_instance()
 
         if instances is None:
             instances = []

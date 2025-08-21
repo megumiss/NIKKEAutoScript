@@ -40,23 +40,20 @@ from pywebio.pin import pin, pin_on_change
 from pywebio.session import download, go_app, info, local, register_thread, run_js, set_env
 
 import module.webui.lang as lang
-from module.config.config import AzurLaneConfig, Function
+from module.config.config import NikkeConfig, Function
 from module.config.deep import deep_get, deep_iter, deep_set
 from module.config.env import IS_ON_PHONE_CLOUD
 from module.config.utils import (
-    alas_instance,
-    alas_template,
+    nkas_instance,
+    nkas_template,
     dict_to_kv,
     filepath_args,
     filepath_config,
     read_file,
 )
 from module.logger import logger
-from module.ocr.rpc import start_ocr_server_process, stop_ocr_server_process
-from module.submodule.submodule import load_config
 from module.submodule.utils import get_config_mod
 from module.webui.base import Frame
-from module.webui.discord_presence import close_discord_rpc, init_discord_rpc
 from module.webui.fastapi import asgi_app
 from module.webui.lang import _t, t
 from module.webui.patch import patch_executor, patch_mimetype
@@ -71,7 +68,7 @@ from module.webui.utils import (
     TaskHandler,
     add_css,
     filepath_css,
-    get_alas_config_listen_path,
+    get_nkas_config_listen_path,
     get_localstorage,
     get_window_visibility_state,
     login,
@@ -95,24 +92,24 @@ patch_mimetype()
 task_handler = TaskHandler()
 
 
-class AlasGUI(Frame):
+class NKASGUI(Frame):
     ALAS_MENU: Dict[str, Dict[str, List[str]]]
     ALAS_ARGS: Dict[str, Dict[str, Dict[str, Dict[str, str]]]]
     theme = "default"
 
     def initial(self) -> None:
-        self.ALAS_MENU = read_file(filepath_args("menu", self.alas_mod))
-        self.ALAS_ARGS = read_file(filepath_args("args", self.alas_mod))
-        self._init_alas_config_watcher()
+        self.ALAS_MENU = read_file(filepath_args("menu", self.nkas_mod))
+        self.ALAS_ARGS = read_file(filepath_args("args", self.nkas_mod))
+        self._init_nkas_config_watcher()
 
     def __init__(self) -> None:
         super().__init__()
         # modified keys, return values of pin_wait_change()
         self.modified_config_queue = queue.Queue()
-        # alas config name
-        self.alas_name = ""
-        self.alas_mod = "alas"
-        self.alas_config = AzurLaneConfig("template")
+        # nkas config name
+        self.nkas_name = ""
+        self.nkas_mod = "nkas"
+        self.nkas_config = NikkeConfig("template")
         self.initial()
         # rendered state cache
         self.rendered_cache = []
@@ -129,16 +126,16 @@ class AlasGUI(Frame):
             onclick=[self.ui_develop],
         )
         put_scope("aside_instance",[
-            put_scope(f"alas-instance-{i}",[])
-            for i, _ in enumerate(alas_instance())
+            put_scope(f"nkas-instance-{i}",[])
+            for i, _ in enumerate(nkas_instance())
         ])
         self.set_aside_status()
         put_icon_buttons(
             Icon.SETTING,
             buttons=[
                 {
-                    "label": t("Gui.AddAlas.Manage"),
-                    "value": "AddAlas",
+                    "label": t("Gui.AddNKAS.Manage"),
+                    "value": "AddNKAS",
                     "color": "aside",
                 }
             ],
@@ -153,7 +150,7 @@ class AlasGUI(Frame):
     def set_aside_status(self) -> None:
         flag = True       
         def update(name, seq):
-            with use_scope(f"alas-instance-{seq}", clear=True):
+            with use_scope(f"nkas-instance-{seq}", clear=True):
                 icon_html = Icon.RUN
                 rendered_state = ProcessManager.get_manager(inst).state
                 if rendered_state == 1 and self.af_flag:
@@ -161,7 +158,7 @@ class AlasGUI(Frame):
                 put_icon_buttons(
                     icon_html,
                     buttons=[{"label": name, "value": name, "color": "aside"}],
-                    onclick=self.ui_alas,
+                    onclick=self.ui_nkas,
                 )
             return rendered_state
         
@@ -169,7 +166,7 @@ class AlasGUI(Frame):
             # Reload when add/delete new instance | first start app.py | go to HomePage (HomePage load call force reload)
             flag = False
             self.inst_cache.clear()
-            self.inst_cache = alas_instance()
+            self.inst_cache = nkas_instance()
         if flag:
             for index, inst in enumerate(self.inst_cache):
                 # Check for state change
@@ -223,26 +220,26 @@ class AlasGUI(Frame):
         webconfig(theme=theme)
 
     @use_scope("menu", clear=True)
-    def alas_set_menu(self) -> None:
+    def nkas_set_menu(self) -> None:
         """
         Set menu
         """
         put_buttons(
             [
                 {
-                    "label": t("Gui.MenuAlas.Overview"),
+                    "label": t("Gui.MenuNKAS.Overview"),
                     "value": "Overview",
                     "color": "menu",
                 }
             ],
-            onclick=[self.alas_overview],
+            onclick=[self.nkas_overview],
         ).style(f"--menu-Overview--")
 
         for menu, task_data in self.ALAS_MENU.items():
             if task_data.get("page") == "tool":
-                _onclick = self.alas_daemon_overview
+                _onclick = self.nkas_daemon_overview
             else:
-                _onclick = self.alas_set_group
+                _onclick = self.nkas_set_group
 
             if task_data.get("menu") == "collapse":
                 task_btn_list = [
@@ -280,10 +277,10 @@ class AlasGUI(Frame):
                         onclick=_onclick,
                     ).style(f"--menu-{task}--").style(f"padding-left: 0.75rem")
 
-        self.alas_overview()
+        self.nkas_overview()
 
     @use_scope("content", clear=True)
-    def alas_set_group(self, task: str) -> None:
+    def nkas_set_group(self, task: str) -> None:
         """
         Set arg groups from dict
         """
@@ -300,7 +297,7 @@ class AlasGUI(Frame):
                 content=[put_text(task_help).style("font-size: 1rem")],
             )
 
-        config = self.alas_config.read_file(self.alas_name)
+        config = self.nkas_config.read_file(self.nkas_name)
         for group, arg_dict in deep_iter(self.ALAS_ARGS[task], depth=1):
             if self.set_group(group, arg_dict, config, task):
                 self.set_navigator(group)
@@ -387,9 +384,9 @@ class AlasGUI(Frame):
         )
 
     @use_scope("content", clear=True)
-    def alas_overview(self) -> None:
+    def nkas_overview(self) -> None:
         self.init_menu(name="Overview")
-        self.set_title(t(f"Gui.MenuAlas.Overview"))
+        self.set_title(t(f"Gui.MenuNKAS.Overview"))
 
         put_scope("overview", [put_scope("schedulers"), put_scope("logs")])
 
@@ -431,9 +428,9 @@ class AlasGUI(Frame):
         switch_scheduler = BinarySwitchButton(
             label_on=t("Gui.Button.Stop"),
             label_off=t("Gui.Button.Start"),
-            onclick_on=lambda: self.alas.stop(),
-            onclick_off=lambda: self.alas.start(None, updater.event),
-            get_state=lambda: self.alas.alive,
+            onclick_on=lambda: self.nkas.stop(),
+            onclick_off=lambda: self.nkas.start(None, updater.event),
+            get_state=lambda: self.nkas.alive,
             color_on="off",
             color_off="on",
             scope="scheduler_btn",
@@ -473,26 +470,26 @@ class AlasGUI(Frame):
 
         self.task_handler.add(switch_scheduler.g(), 1, True)
         self.task_handler.add(switch_log_scroll.g(), 1, True)
-        self.task_handler.add(self.alas_update_overview_task, 10, True)
-        self.task_handler.add(log.put_log(self.alas), 0.25, True)
+        self.task_handler.add(self.nkas_update_overview_task, 10, True)
+        self.task_handler.add(log.put_log(self.nkas), 0.25, True)
 
-    def _init_alas_config_watcher(self) -> None:
+    def _init_nkas_config_watcher(self) -> None:
         def put_queue(path, value):
             self.modified_config_queue.put({"name": path, "value": value})
 
-        for path in get_alas_config_listen_path(self.ALAS_ARGS):
+        for path in get_nkas_config_listen_path(self.ALAS_ARGS):
             pin_on_change(
                 name="_".join(path), onchange=partial(put_queue, ".".join(path))
             )
         logger.info("Init config watcher done.")
 
-    def _alas_thread_update_config(self) -> None:
+    def _nkas_thread_update_config(self) -> None:
         modified = {}
         while self.alive:
             try:
                 d = self.modified_config_queue.get(timeout=10)
-                config_name = self.alas_name
-                config_updater = self.alas_config
+                config_name = self.nkas_name
+                config_updater = self.nkas_config
             except queue.Empty:
                 continue
             modified[d["name"]] = d["value"]
@@ -509,7 +506,7 @@ class AlasGUI(Frame):
             self,
             modified: Dict[str, str],
             config_name: str,
-            config_updater: AzurLaneConfig = State.config_updater,
+            config_updater: NikkeConfig = State.config_updater,
     ) -> None:
         try:
             valid = []
@@ -560,23 +557,23 @@ class AlasGUI(Frame):
         except Exception as e:
             logger.exception(e)
 
-    def alas_update_overview_task(self) -> None:
+    def nkas_update_overview_task(self) -> None:
         if not self.visible:
             return
-        self.alas_config.load()
-        self.alas_config.get_next_task()
+        self.nkas_config.load()
+        self.nkas_config.get_next_task()
 
-        if len(self.alas_config.pending_task) >= 1:
-            if self.alas.alive:
-                running = self.alas_config.pending_task[:1]
-                pending = self.alas_config.pending_task[1:]
+        if len(self.nkas_config.pending_task) >= 1:
+            if self.nkas.alive:
+                running = self.nkas_config.pending_task[:1]
+                pending = self.nkas_config.pending_task[1:]
             else:
                 running = []
-                pending = self.alas_config.pending_task[:]
+                pending = self.nkas_config.pending_task[:]
         else:
             running = []
             pending = []
-        waiting = self.alas_config.waiting_task
+        waiting = self.nkas_config.waiting_task
 
         def put_task(func: Function):
             with use_scope(f"overview-task_{func.command}"):
@@ -589,7 +586,7 @@ class AlasGUI(Frame):
                 )
                 put_button(
                     label=t("Gui.Button.Setting"),
-                    onclick=lambda: self.alas_set_group(func.command),
+                    onclick=lambda: self.nkas_set_group(func.command),
                     color="off",
                 )
 
@@ -616,7 +613,7 @@ class AlasGUI(Frame):
                 put_text(t("Gui.Overview.NoTask")).style("--overview-notask-text--")
 
     @use_scope("content", clear=True)
-    def alas_daemon_overview(self, task: str) -> None:
+    def nkas_daemon_overview(self, task: str) -> None:
         self.init_menu(name=task)
         self.set_title(t(f"Task.{task}.name"))
 
@@ -663,9 +660,9 @@ class AlasGUI(Frame):
         switch_scheduler = BinarySwitchButton(
             label_on=t("Gui.Button.Stop"),
             label_off=t("Gui.Button.Start"),
-            onclick_on=lambda: self.alas.stop(),
-            onclick_off=lambda: self.alas.start(task),
-            get_state=lambda: self.alas.alive,
+            onclick_on=lambda: self.nkas.stop(),
+            onclick_off=lambda: self.nkas.start(task),
+            get_state=lambda: self.nkas.alive,
             color_on="off",
             color_off="on",
             scope="scheduler_btn",
@@ -693,7 +690,7 @@ class AlasGUI(Frame):
             scope="log_scroll_btn",
         )
 
-        config = self.alas_config.read_file(self.alas_name)
+        config = self.nkas_config.read_file(self.nkas_name)
         for group, arg_dict in deep_iter(self.ALAS_ARGS[task], depth=1):
             if group[0] == "Storage":
                 continue
@@ -718,7 +715,7 @@ class AlasGUI(Frame):
 
         self.task_handler.add(switch_scheduler.g(), 1, True)
         self.task_handler.add(switch_log_scroll.g(), 1, True)
-        self.task_handler.add(log.put_log(self.alas), 0.25, True)
+        self.task_handler.add(log.put_log(self.nkas), 0.25, True)
 
     @use_scope("menu", clear=True)
     def dev_set_menu(self) -> None:
@@ -937,7 +934,7 @@ class AlasGUI(Frame):
 
         def _force_restart():
             if State.restart_event is not None:
-                toast("Alas will restart in 3 seconds", duration=0, color="error")
+                toast("NKAS will restart in 3 seconds", duration=0, color="error")
                 clearup()
                 State.restart_event.set()
             else:
@@ -1015,46 +1012,46 @@ class AlasGUI(Frame):
         self.init_aside(name="Home")
         self.set_title(t("Gui.Aside.Home"))
         self.dev_set_menu()
-        self.alas_name = ""
-        if hasattr(self, "alas"):
-            del self.alas
+        self.nkas_name = ""
+        if hasattr(self, "nkas"):
+            del self.nkas
         self.state_switch.switch()
 
-    def ui_alas(self, config_name: str) -> None:
-        if config_name == self.alas_name:
+    def ui_nkas(self, config_name: str) -> None:
+        if config_name == self.nkas_name:
             self.expand_menu()
             return
         self.init_aside(name=config_name)
         clear("content")
-        self.alas_name = config_name
-        self.alas_mod = get_config_mod(config_name)
-        self.alas = ProcessManager.get_manager(config_name)
-        self.alas_config = load_config(config_name)
+        self.nkas_name = config_name
+        self.nkas_mod = get_config_mod(config_name)
+        self.nkas = ProcessManager.get_manager(config_name)
+        # self.nkas_config = load_config(config_name)
         self.state_switch.switch()
         self.initial()
-        self.alas_set_menu()
+        self.nkas_set_menu()
 
-    def ui_add_alas(self) -> None:
-        with popup(t("Gui.AddAlas.PopupTitle")) as s:
+    def ui_add_nkas(self) -> None:
+        with popup(t("Gui.AddNKAS.PopupTitle")) as s:
 
             def get_unused_name():
-                all_name = alas_instance()
+                all_name = nkas_instance()
                 for i in range(2, 100):
-                    if f"alas{i}" not in all_name:
-                        return f"alas{i}"
+                    if f"nkas{i}" not in all_name:
+                        return f"nkas{i}"
                 else:
                     return ""
 
             def add():
-                name = pin["AddAlas_name"]
-                origin = pin["AddAlas_copyfrom"]
+                name = pin["AddNKAS_name"]
+                origin = pin["AddNKAS_copyfrom"]
 
-                if name in alas_instance():
-                    err = "Gui.AddAlas.FileExist"
+                if name in nkas_instance():
+                    err = "Gui.AddNKAS.FileExist"
                 elif set(name) & set(".\\/:*?\"'<>|"):
-                    err = "Gui.AddAlas.InvalidChar"
+                    err = "Gui.AddNKAS.InvalidChar"
                 elif name.lower().startswith("template"):
-                    err = "Gui.AddAlas.InvalidPrefixTemplate"
+                    err = "Gui.AddNKAS.InvalidPrefixTemplate"
                 else:
                     err = ""
                 if err:
@@ -1066,27 +1063,27 @@ class AlasGUI(Frame):
                 r = load_config(origin).read_file(origin)
                 State.config_updater.write_file(name, r, get_config_mod(origin))
                 self.set_aside()
-                self.active_button("aside", self.alas_name)
+                self.active_button("aside", self.nkas_name)
                 close_popup()
 
             def put(name=None, origin=None):
                 put_input(
-                    name="AddAlas_name",
-                    label=t("Gui.AddAlas.NewName"),
+                    name="AddNKAS_name",
+                    label=t("Gui.AddNKAS.NewName"),
                     value=name or get_unused_name(),
                     scope=s,
                 )
                 put_select(
-                    name="AddAlas_copyfrom",
-                    label=t("Gui.AddAlas.CopyFrom"),
-                    options=alas_template() + alas_instance(),
-                    value=origin or "template-alas",
+                    name="AddNKAS_copyfrom",
+                    label=t("Gui.AddNKAS.CopyFrom"),
+                    options=nkas_template() + nkas_instance(),
+                    value=origin or "template-nkas",
                     scope=s,
                 )
                 put_buttons(
                     buttons=[
-                        {"label": t("Gui.AddAlas.Confirm"), "value": "confirm"},
-                        {"label": t("Gui.AddAlas.Manage"), "value": "manage"},
+                        {"label": t("Gui.AddNKAS.Confirm"), "value": "confirm"},
+                        {"label": t("Gui.AddNKAS.Manage"), "value": "manage"},
                     ],
                     onclick=[
                         add,
@@ -1104,9 +1101,9 @@ class AlasGUI(Frame):
         self.init_aside(name="Home")
         self.dev_set_menu()
         self.init_menu(name="HomePage")
-        self.alas_name = ""
-        if hasattr(self, "alas"):
-            del self.alas
+        self.nkas_name = ""
+        if hasattr(self, "nkas"):
+            del self.nkas
         self.set_status(0)
 
         def set_language(l):
@@ -1140,9 +1137,9 @@ class AlasGUI(Frame):
             # show something
             put_markdown(
                 """
-            Alas is a free open source software, if you paid for Alas from any channel, please refund.
-            Alas 是一款免费开源软件，如果你在任何渠道付费购买了Alas，请退款。
-            Project repository 项目地址：`https://github.com/LmeSzinc/AzurLaneAutoScript`
+            NKAS is a free open source software, if you paid for NKAS from any channel, please refund.
+            NKAS 是一款免费开源软件，如果你在任何渠道付费购买了NKAS，请退款。
+            Project repository 项目地址：`https://github.com/megumiss/NIKKEAutoScript`
             """
             ).style("text-align: center")
 
@@ -1162,17 +1159,17 @@ class AlasGUI(Frame):
 
     def run(self) -> None:
         # setup gui
-        set_env(title="Alas", output_animation=False)
-        add_css(filepath_css("alas"))
+        set_env(title="NKAS", output_animation=False)
+        add_css(filepath_css("nkas"))
         if self.is_mobile:
-            add_css(filepath_css("alas-mobile"))
+            add_css(filepath_css("nkas-mobile"))
         else:
-            add_css(filepath_css("alas-pc"))
+            add_css(filepath_css("nkas-pc"))
 
         if self.theme == "dark":
-            add_css(filepath_css("dark-alas"))
+            add_css(filepath_css("dark-nkas"))
         else:
-            add_css(filepath_css("light-alas"))
+            add_css(filepath_css("light-nkas"))
 
         # Auto refresh when lost connection
         # [For develop] Disable by run `reload=0` in console
@@ -1197,10 +1194,10 @@ class AlasGUI(Frame):
         self.show()
 
         # init config watcher
-        self._init_alas_config_watcher()
+        self._init_nkas_config_watcher()
 
         # save config
-        _thread_save_config = threading.Thread(target=self._alas_thread_update_config)
+        _thread_save_config = threading.Thread(target=self._nkas_thread_update_config)
         register_thread(_thread_save_config)
         _thread_save_config.start()
 
@@ -1208,7 +1205,7 @@ class AlasGUI(Frame):
             status={
                 True: [
                     lambda: self.__setattr__("visible", True),
-                    lambda: self.alas_update_overview_task()
+                    lambda: self.nkas_update_overview_task()
                     if self.page == "Overview"
                     else 0,
                     lambda: self.task_handler._task.__setattr__("delay", 15),
@@ -1224,7 +1221,7 @@ class AlasGUI(Frame):
 
         self.state_switch = Switch(
             status=self.set_status,
-            get_state=lambda: getattr(getattr(self, "alas", -1), "state", 0),
+            get_state=lambda: getattr(getattr(self, "nkas", -1), "state", 0),
             name="state",
         )
 
@@ -1254,7 +1251,7 @@ class AlasGUI(Frame):
 
         # Return to previous page
         if aside not in ["Home", None]:
-            self.ui_alas(aside)
+            self.ui_nkas(aside)
 
 
 def app_manage():
@@ -1275,10 +1272,10 @@ def app_manage():
         file_name: str = resp["filename"]
 
         if IS_ON_PHONE_CLOUD:
-            config_name = mod_name = "alas"
+            config_name = mod_name = "nkas"
         elif len(file_name.split(".")) == 2:
             config_name, _ = file_name.split(".")
-            mod_name = "alas"
+            mod_name = "nkas"
         else:
             config_name, mod_name, _ = file_name.rsplit(".", maxsplit=2)
 
@@ -1290,7 +1287,7 @@ def app_manage():
 
     def _export(config_name: str):
         mod_name = get_config_mod(config_name)
-        if mod_name == "alas":
+        if mod_name == "nkas":
             filename = f"{config_name}.json"
         else:
             filename = f"{config_name}.{mod_name}.json"
@@ -1299,15 +1296,15 @@ def app_manage():
 
     def _new():
         def get_unused_name():
-            all_name = alas_instance()
+            all_name = nkas_instance()
             for i in range(2, 100):
-                if f"alas{i}" not in all_name:
-                    return f"alas{i}"
+                if f"nkas{i}" not in all_name:
+                    return f"nkas{i}"
             else:
                 return ""
 
         def validate(s: str):
-            if s in alas_instance():
+            if s in nkas_instance():
                 return t("Gui.AppManage.NameExist")
             if set(s) & set(".\\/:*?\"'<>|"):
                 return t("Gui.AppManage.InvalidChar")
@@ -1327,8 +1324,8 @@ def app_manage():
                 select(
                     label=t("Gui.AppManage.CopyFrom"),
                     name="copy_from",
-                    options=alas_template() + alas_instance(),
-                    value="template-alas",
+                    options=nkas_template() + nkas_instance(),
+                    value="template-nkas",
                 ),
             ],
             cancelable=True,
@@ -1370,7 +1367,7 @@ def app_manage():
                         small=True,
                     ),
                 )
-                for name in alas_instance()
+                for name in nkas_instance()
             ],
             header=[
                 t("Gui.AppManage.Name"),
@@ -1380,7 +1377,7 @@ def app_manage():
             scope="config_table",
         )
 
-    set_env(title="Alas", output_animation=False)
+    set_env(title="NKAS", output_animation=False)
     run_js("$('head').append('<style>.footer{display:none}</style>')")
 
     put_html(f"<h2>{t('Gui.AppManage.PageTitle')}</h2>")
@@ -1412,7 +1409,7 @@ def debug():
     >>>
     """
     startup()
-    AlasGUI().run()
+    NKASGUI().run()
 
 
 def startup():
@@ -1423,10 +1420,7 @@ def startup():
         task_handler.add(updater.check_update, updater.delay)
     task_handler.add(updater.schedule_update(), 86400)
     task_handler.start()
-    if State.deploy_config.DiscordRichPresence:
-        init_discord_rpc()
-    if State.deploy_config.StartOcrServer:
-        start_ocr_server_process(State.deploy_config.OcrServerPort)
+
     if (
         State.deploy_config.EnableRemoteAccess
         and State.deploy_config.Password is not None
@@ -1443,17 +1437,17 @@ def clearup():
     RemoteAccess.kill_ssh_process()
     close_discord_rpc()
     stop_ocr_server_process()
-    for alas in ProcessManager._processes.values():
-        alas.stop()
+    for nkas in ProcessManager._processes.values():
+        nkas.stop()
     State.clearup()
     task_handler.stop()
-    logger.info("Alas closed.")
+    logger.info("NKAS closed.")
 
 
 def app():
-    parser = argparse.ArgumentParser(description="Alas web service")
+    parser = argparse.ArgumentParser(description="NKAS web service")
     parser.add_argument(
-        "-k", "--key", type=str, help="Password of alas. No password by default"
+        "-k", "--key", type=str, help="Password of nkas. No password by default"
     )
     parser.add_argument(
         "--cdn",
@@ -1464,12 +1458,12 @@ def app():
         "--run",
         nargs="+",
         type=str,
-        help="Run alas by config names on startup",
+        help="Run nkas by config names on startup",
     )
     args, _ = parser.parse_known_args()
 
     # Apply config
-    AlasGUI.set_theme(theme=State.deploy_config.Theme)
+    NKASGUI.set_theme(theme=State.deploy_config.Theme)
     lang.LANG = State.deploy_config.Language
     key = args.key or State.deploy_config.Password
     cdn = args.cdn if args.cdn else State.deploy_config.CDN
@@ -1498,7 +1492,7 @@ def app():
             time.sleep(1.5)
             run_js("location.reload();")
             return
-        gui = AlasGUI()
+        gui = NKASGUI()
         local.gui = gui
         gui.run()
 

@@ -19,7 +19,7 @@ class GeneratedConfig:
 
     # Group `Emulator`
     Emulator_Serial = 'auto'
-    Emulator_PackageName = 'com.proximabeta.nikke'  # com.proximabeta.nikke, com.gamamobi.nikke
+    Emulator_PackageName = 'com.proximabeta.nikke'  # com.proximabeta.nikke, com.gamamobi.nikke, com.proximabeta.nikke, com.gamamobi.nikke
     Emulator_Language = 'zh-cn'  # zh-cn
     Emulator_ScreenshotMethod = 'DroidCast'  # DroidCast
     Emulator_ControlMethod = 'minitouch'  # minitouch

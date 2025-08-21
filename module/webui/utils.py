@@ -383,7 +383,7 @@ class Icon:
     Storage html of icon.
     """
 
-    ALAS = _read(filepath_icon("alas"))
+    NKAS = _read(filepath_icon("nkas"))
     SETTING = _read(filepath_icon("setting"))
     RUN = _read(filepath_icon("run"))
     DEVELOP = _read(filepath_icon("develop"))
@@ -538,7 +538,7 @@ def raise_exception(x=3):
         raise Exception("quq")
 
 
-def get_alas_config_listen_path(args):
+def get_nkas_config_listen_path(args):
     for path, d in deep_iter(args, depth=3):
         if d.get("display") in ["readonly", "hide"]:
             continue

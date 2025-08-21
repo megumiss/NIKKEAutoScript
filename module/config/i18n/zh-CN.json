@@ -1,49 +1,4 @@
 {
-  "Gui": {
-    "Menu": {
-      "Scheduler": "调度器",
-      "Update": "更新"
-    },
-    "Button": {
-      "Start": "开始",
-      "Stop": "停止",
-      "CheckUpdate": "检查更新",
-      "ClickToUpdate": "进行更新",
-      "RetryUpdate": "重试更新",
-      "CancelUpdate": "取消更新"
-    },
-    "Overview": {
-      "Running": "运行中",
-      "Pending": "队列中",
-      "Waiting": "等待中"
-    },
-    "Toast": {
-      "ConfigSaved": "设置已保存",
-      "ClickToUpdate": "有更新可用，点击这里进行更新"
-    },
-    "Text": {
-      "clear": "清除",
-      "InvalidFeedBack": "格式错误。 示例：{0}"
-    },
-    "Update": {
-      "Local": "本地",
-      "Upstream": "上游仓库",
-      "Author": "作者",
-      "Time": "提交时间",
-      "Message": "提交信息",
-      "DetailedHistory": "详细提交历史",
-      "UpToDate": "已是最新版本",
-      "HaveUpdate": "有新版本可用",
-      "UpdateStart": "开始更新",
-      "UpdateChecking": "检查更新中",
-      "UpdateFailed": "更新失败，可在./log/*_gui.txt中找到错误日志",
-      "UpdateWait": "等待 NKAS 完成当前任务",
-      "UpdateRun": "更新中",
-      "UpdateSuccess": "更新成功，正在重启",
-      "UpdateFinish": "更新成功，请手动重启",
-      "UpdateCancel": "取消更新，重启 NKAS 中"
-    }
-  },
   "Menu": {
     "NKAS": {
       "name": "NKAS",
@@ -73,12 +28,12 @@
       "name": "妮游社",
       "help": ""
     },
-    "Tools": {
-      "name": "工具",
-      "help": ""
-    },
     "Gift": {
       "name": "免费礼包",
+      "help": ""
+    },
+    "Tool": {
+      "name": "工具",
       "help": ""
     }
   },
@@ -107,20 +62,32 @@
       "name": "邮箱",
       "help": ""
     },
-    "RookieArena": {
-      "name": "新人竞技场",
+    "DailyRecruit": {
+      "name": "每日抽卡",
       "help": ""
     },
-    "SpecialArena": {
-      "name": "特殊竞技场",
+    "Daily": {
+      "name": "日常",
       "help": ""
     },
-    "ChampionArena": {
-      "name": "冠军竞技场",
+    "MissionPass": {
+      "name": "季票",
+      "help": ""
+    },
+    "Liberation": {
+      "name": "解放",
       "help": ""
     },
     "Conversation": {
       "name": "咨询",
+      "help": ""
+    },
+    "Shop": {
+      "name": "商店",
+      "help": ""
+    },
+    "RubbishShop": {
+      "name": "废铁商店",
       "help": ""
     },
     "SimulationRoom": {
@@ -135,12 +102,40 @@
       "name": "企业塔",
       "help": ""
     },
-    "Shop": {
-      "name": "商店",
+    "Interception": {
+      "name": "异常拦截战",
+      "help": "目前只打克拉肯"
+    },
+    "RookieArena": {
+      "name": "新人竞技场",
       "help": ""
     },
-    "Daily": {
-      "name": "日常",
+    "SpecialArena": {
+      "name": "特殊竞技场",
+      "help": ""
+    },
+    "ChampionArena": {
+      "name": "冠军竞技场",
+      "help": ""
+    },
+    "Coop": {
+      "name": "协同作战",
+      "help": ""
+    },
+    "SoloRaid": {
+      "name": "单人突击",
+      "help": ""
+    },
+    "UnionRaid": {
+      "name": "联盟突袭",
+      "help": ""
+    },
+    "Event": {
+      "name": "剧情活动",
+      "help": ""
+    },
+    "Event2": {
+      "name": "剧情活动2",
       "help": ""
     },
     "BlaAuth": {
@@ -159,22 +154,6 @@
       "name": "妮游社兑换",
       "help": ""
     },
-    "Interception": {
-      "name": "异常拦截战",
-      "help": "目前只打克拉肯"
-    },
-    "RubbishShop": {
-      "name": "废铁商店",
-      "help": ""
-    },
-    "MissionPass": {
-      "name": "季票",
-      "help": ""
-    },
-    "Liberation": {
-      "name": "解放",
-      "help": ""
-    },
     "DailyGift": {
       "name": "每日礼包",
       "help": ""
@@ -187,18 +166,6 @@
       "name": "每月礼包",
       "help": ""
     },
-    "EventDaemon": {
-      "name": "半自动活动",
-      "help": "需要手动选择关卡"
-    },
-    "DailyRecruit": {
-      "name": "每日抽卡",
-      "help": ""
-    },
-    "Coop": {
-      "name": "协同作战",
-      "help": ""
-    },
     "TowerDaemon": {
       "name": "自动爬塔",
       "help": "自动爬普通企业塔，失败时自动停止"
@@ -207,20 +174,40 @@
       "name": "半自动战斗",
       "help": "半自动推图，剧情需要手动跳过（还没做）"
     },
-    "Event": {
-      "name": "剧情活动",
+    "EventDaemon": {
+      "name": "半自动活动",
+      "help": "需要手动选择关卡"
+    }
+  },
+  "Scheduler": {
+    "_info": {
+      "name": "任务设置",
       "help": ""
     },
-    "Event2": {
-      "name": "剧情活动2",
+    "Enable": {
+      "name": "启用该功能",
+      "help": "",
+      "True": "已启用",
+      "False": "False"
+    },
+    "NextRun": {
+      "name": "下一次运行时间",
       "help": ""
     },
-    "SoloRaid": {
-      "name": "单人突击",
+    "Command": {
+      "name": "内部任务名称",
       "help": ""
     },
-    "UnionRaid": {
-      "name": "联盟突袭",
+    "SuccessInterval": {
+      "name": "运行成功后，推迟下一次运行 X 分钟",
+      "help": ""
+    },
+    "FailureInterval": {
+      "name": "运行失败后，推迟下一次运行 X 分钟",
+      "help": ""
+    },
+    "ServerUpdate": {
+      "name": "服务器刷新时间",
       "help": ""
     }
   },
@@ -242,9 +229,7 @@
     "Language": {
       "name": "游戏语言",
       "help": "当前只支持简体中文",
-      "zh-cn": "简体中文",
-      "zh-tw": "繁体中文",
-      "en": "English"
+      "zh-cn": "简体中文"
     },
     "ScreenshotMethod": {
       "name": "模拟器截图方案",
@@ -297,38 +282,6 @@
       "help": ""
     }
   },
-  "Scheduler": {
-    "_info": {
-      "name": "任务设置",
-      "help": ""
-    },
-    "Enable": {
-      "name": "启用该功能",
-      "help": "",
-      "True": "已启用",
-      "False": "False"
-    },
-    "NextRun": {
-      "name": "下一次运行时间",
-      "help": ""
-    },
-    "Command": {
-      "name": "内部任务名称",
-      "help": ""
-    },
-    "SuccessInterval": {
-      "name": "运行成功后，推迟下一次运行 X 分钟",
-      "help": ""
-    },
-    "FailureInterval": {
-      "name": "运行失败后，推迟下一次运行 X 分钟",
-      "help": ""
-    },
-    "ServerUpdate": {
-      "name": "服务器刷新时间",
-      "help": ""
-    }
-  },
   "Optimization": {
     "_info": {
       "name": "优化设置",
@@ -347,19 +300,9 @@
     "WhenTaskQueueEmpty": {
       "name": "当任务队列清空时",
       "help": "",
-      "goto_main": "前往主界面",
       "stay_there": "停在原处",
+      "goto_main": "前往主界面",
       "close_game": "关闭游戏"
-    }
-  },
-  "Storage": {
-    "_info": {
-      "name": "任务状态",
-      "help": "存放任务内部状态，任务异常时可以手动清除"
-    },
-    "Storage": {
-      "name": "Storage.Storage.name",
-      "help": "Storage.Storage.help"
     }
   },
   "Reward": {
@@ -392,28 +335,6 @@
     "SocialPointRecruit": {
       "name": "友情点单抽",
       "help": ""
-    }
-  },
-  "Conversation": {
-    "_info": {
-      "name": "咨询",
-      "help": "准确率无法保证100%"
-    },
-    "QuickConsultation": {
-      "name": "快速咨询",
-      "help": "还没做"
-    },
-    "OnlyFavourite": {
-      "name": "只咨询收藏",
-      "help": ""
-    },
-    "OnlyLogsNotMax": {
-      "name": "只咨询日志未满",
-      "help": "只咨询咨询日志数量不够20的妮姬，建议同时开启只咨询收藏，可以用来补咨询日志"
-    },
-    "WaitToCommunicate": {
-      "name": "等待咨询的妮姬",
-      "help": " 请收藏想要咨询的妮姬，例如: '红莲 爱丽丝'，用一个空格分开\n 像 '梅里：海湾女神', '尼恩：蓝色海洋' 请填 '海湾女神', '蓝色海洋' "
     }
   },
   "SimulationRoom": {
@@ -575,26 +496,18 @@
       "Min": "最低"
     }
   },
-  "BlaDaily": {
+  "Conversation": {
     "_info": {
-      "name": "每日任务",
-      "help": "社区每日签到、评论、点赞任务 https://www.blablalink.com"
+      "name": "咨询",
+      "help": "准确率无法保证100%"
     },
-    "Immediately": {
-      "name": "立即执行",
+    "OnlyFavourite": {
+      "name": "只咨询收藏",
       "help": ""
     },
-    "PostID": {
-      "name": "帖子ID",
-      "help": "要评论帖子的ID"
-    },
-    "CommentID": {
-      "name": "评论ID",
-      "help": "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看（页面ID显示有问题，不影响使用）"
-    },
-    "Points": {
-      "name": "剩余金币数量",
-      "help": ""
+    "OnlyLogsNotMax": {
+      "name": "只咨询日志未满",
+      "help": "只咨询咨询日志数量不够20的妮姬，建议同时开启只咨询收藏，可以用来补咨询日志"
     }
   },
   "BlaAuth": {
@@ -613,6 +526,35 @@
     "XCommonParams": {
       "name": "XCommonParams",
       "help": "请求header中的x-common-params参数，需要包含openid"
+    }
+  },
+  "BlaDaily": {
+    "_info": {
+      "name": "每日任务",
+      "help": "社区每日签到、评论、点赞任务 https://www.blablalink.com"
+    },
+    "PostID": {
+      "name": "帖子ID",
+      "help": "要评论帖子的ID"
+    },
+    "CommentID": {
+      "name": "评论ID",
+      "help": "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看（页面ID显示有问题，不影响使用）"
+    },
+    "Points": {
+      "name": "剩余金币数量",
+      "help": ""
+    }
+  },
+  "Coop": {
+    "_info": {
+      "name": "协同作战",
+      "help": ""
+    },
+    "MatchDifficulty": {
+      "name": "匹配难度",
+      "help": "",
+      "Normal": "普通"
     }
   },
   "CDK": {
@@ -639,18 +581,6 @@
       "help": " 不填写则不购买，例如: 'Gem_×320 > Welcome_Gift_Core_Dust_×30'，用一个大于号分开，默认只换钻石：\n Gem_×320: 珠寶 ×320\n Welcome_Gift_Core_Dust_×30: 指揮官見面禮：芯塵 ×30\n Gem_×30: 珠寶 ×30\n Skill_Manual_I_×5: 技能手冊 I ×5\n Ultra_Boost_Module_×5: 模組高級推進器 ×5\n Code_Manual_Selection_Box_×5: 代碼手冊選擇寶箱 ×5\n Gem_×60: 珠寶 ×60\n Mid-Quality_Mold_×3: 中品質鑄模 ×3\n Credit_Case_(1H)_x9: 信用點盒(1H) x9\n Core_Dust_Case_(1H)_×3: 芯塵盒 (1H) ×3\n Gem_×120: 珠寶 ×120\n Mid-Quality_Mold_×8: 中品質鑄模 ×8\n Battle_Data_Set_Case_(1H)_×6: 戰鬥數據輯盒 (1H) ×6\n Core_Dust_Case_(1H)_×6: 芯塵盒 (1H) ×6\n Skill_Manual_I_×30: 技能手冊 I ×30\n Ultra_Boost_Module_×30: 模組高級推進器 ×30\n Code_Manual_Selection_Box_×30: 代碼手冊選擇寶箱 ×30\n "
     }
   },
-  "TowerDaemon": {
-    "_info": {
-      "name": "自动爬塔",
-      "help": "自动爬普通企业塔，失败时自动停止"
-    }
-  },
-  "CombatDaemon": {
-    "_info": {
-      "name": "半自动战斗",
-      "help": "半自动推图，能减少部分人工操作；需要手动导航到战斗开始界面，剧情需要手动跳过"
-    }
-  },
   "Event": {
     "_info": {
       "name": "活动设置",
@@ -661,9 +591,9 @@
       "help": "",
       "event_20250807": "ABSOLUTE",
       "event_20250716": "BOOM! THE GHOST!",
-      "event_20250612": "Memories Teller",
+      "event_20250703s": "OVER THE HORIZON",
       "event_20250703l": "OuteR: Automata",
-      "event_20250703s": "OVER THE HORIZON"
+      "event_20250612": "Memories Teller"
     },
     "LoginStamp": {
       "name": "签到印章",
@@ -677,10 +607,6 @@
       "name": "自动关卡",
       "help": "倒数第二关快速战斗，需要打完当前开启关卡倒数第二关后开启。选择的关卡必须和当前开启的关卡一致"
     },
-    "Coop": {
-      "name": "协同作战",
-      "help": "大型活动内置协同作战普通难度摆烂"
-    },
     "StoryPart": {
       "name": "关卡选择",
       "help": "",
@@ -693,25 +619,17 @@
       "Normal": "普通",
       "Hard": "困难"
     },
-    "Game": {
-      "name": "小游戏",
-      "help": "视情况适配小游戏，如果没有适配会自动跳过"
+    "Coop": {
+      "name": "协同作战",
+      "help": "大型活动内置协同作战普通难度摆烂"
     },
     "Shop": {
       "name": "商店",
       "help": "依次购买除称号外的所有活动货币商品"
-    }
-  },
-  "Coop": {
-    "_info": {
-      "name": "协同作战",
-      "help": ""
     },
-    "MatchDifficulty": {
-      "name": "匹配难度",
-      "help": "",
-      "Normal": "普通",
-      "Challenge": "挑战"
+    "Game": {
+      "name": "小游戏",
+      "help": "视情况适配小游戏，如果没有适配会自动跳过"
     }
   },
   "CheerStrategy": {
@@ -746,10 +664,6 @@
       "name": "超频设置",
       "help": ""
     },
-    "DisableFirst": {
-      "name": "清理选项",
-      "help": "选择BIOS选项时先清理所有已选中的选项"
-    },
     "SkipRatioCheck": {
       "name": "忽略最高记录",
       "help": "建议关闭，开启后不会检查超频主页的最高记录值，会每天都打一次超频"
@@ -761,6 +675,132 @@
     "ModifierList": {
       "name": "超频选项",
       "help": " 仅支持所有的通用选项：\n ENEMY_WEAPON_UP_1/2/3: 敌方武器升级I/II/III\n ENEMY_ARMOR_UP_1/2/2: 敌方护甲升级I/II/III\n ENEMY_VITALS_UP_1/2/3: 敌方生命值升级I/II/III\n NO_RECYCLING: 禁用循环室\n AGGRESSIVE_TACTICS: 好战型战术\n RUSH_HOUR_1/2/3: 尖峰时刻I/II/III\n RELEVANT_PERSONNEL_ONLY: 禁止无关人员进入\n 默认选项为敌方武器升级III、敌方护甲升级III、敌方生命值升级III、禁用循环室、好战型战术、尖峰时刻III、禁止无关人员进入，\n 总计25倍率，每行填写一个，如果练度不够可以根据实际情况减少\n 如果超频主页显示的最高记录值和下方填入的总倍率值相等或更高，则会跳过超频"
+    }
+  },
+  "Storage": {
+    "_info": {
+      "name": "任务状态",
+      "help": "存放任务内部状态，任务异常时可以手动清除"
+    },
+    "Storage": {
+      "name": "Storage.Storage.name",
+      "help": "Storage.Storage.help"
+    }
+  },
+    "Gui": {
+    "Aside": {
+      "Install": "安装",
+      "Home": "主页",
+      "Develop": "开发",
+      "Performance": "性能",
+      "Setting": "设置",
+      "AddNKAS": "新增"
+    },
+    "Button": {
+      "Start": "启动",
+      "Stop": "停止",
+      "ScrollON": "自动滚动 开",
+      "ScrollOFF": "自动滚动 关",
+      "ClearLog": "清空日志",
+      "Setting": "设置",
+      "CheckUpdate": "检查更新",
+      "ClickToUpdate": "进行更新",
+      "RetryUpdate": "重试更新",
+      "CancelUpdate": "取消更新"
+    },
+    "Toast": {
+      "DisableTranslateMode": "点击这里关闭翻译模式",
+      "ConfigSaved": "设置已保存",
+      "NKASIsRunning": "调度器已在运行中",
+      "ClickToUpdate": "有更新可用，点击这里进行更新"
+    },
+    "Status": {
+      "Running": "运行中",
+      "Inactive": "闲置",
+      "Warning": "发生错误",
+      "Updating": "等待更新"
+    },
+    "MenuNKAS": {
+      "Overview": "总览",
+      "Log": "运行日志"
+    },
+    "MenuDevelop": {
+      "HomePage": "主页",
+      "Translate": "翻译",
+      "Update": "更新器",
+      "Remote": "远程控制",
+      "Utils": "工具"
+    },
+    "Overview": {
+      "Scheduler": "调度器",
+      "Log": "日志",
+      "Running": "运行中",
+      "Pending": "队列中",
+      "Waiting": "等待中",
+      "NoTask": "无任务"
+    },
+    "AddNKAS": {
+      "PopupTitle": "添加新配置",
+      "NewName": "新的配置文件名",
+      "CopyFrom": "从现有的配置中复制",
+      "Confirm": "添加",
+      "FileExist": "存在同名的配置文件，请重新输入一个",
+      "InvalidChar": "配置文件名不能包含下列任何字符：.\\/:*?\"<>|",
+      "InvalidPrefixTemplate": "配置文件名不能以 template 开头",
+      "Manage": "管理"
+    },
+    "AppManage": {
+      "PageTitle": "管理配置文件",
+      "TitleNew": "添加新配置",
+      "NewName": "新的配置文件名",
+      "CopyFrom": "从现有的配置中复制",
+      "NameExist": "存在同名的配置文件，请重新输入一个",
+      "InvalidChar": "配置文件名不能包含下列任何字符：.\\/:*?\"<>|",
+      "InvalidPrefixTemplate": "配置文件名不能以 template 开头",
+      "Back": "返回",
+      "New": "添加",
+      "Import": "导入",
+      "Export": "导出",
+      "Delete": "删除",
+      "OverrideWarning": "将会覆盖现有的配置文件",
+      "ImportSuccess": "导入成功",
+      "NewSuccess": "添加成功",
+      "Name": "配置名称",
+      "Mod": "插件",
+      "Actions": "操作"
+    },
+    "Update": {
+      "UpToDate": "已是最新版本",
+      "HaveUpdate": "有新版本可用",
+      "UpdateStart": "开始更新",
+      "UpdateWait": "等待所有 NKAS 完成当前任务",
+      "UpdateRun": "更新中",
+      "UpdateSuccess": "更新成功，正在重启",
+      "UpdateFailed": "更新失败，可在./log/*_gui.txt中找到错误日志",
+      "UpdateChecking": "检查更新中",
+      "UpdateCancel": "取消更新，重启 NKAS 中",
+      "UpdateFinish": "更新成功，请手动重启",
+      "Local": "本地",
+      "Upstream": "上游仓库",
+      "Author": "作者",
+      "Time": "提交时间",
+      "Message": "提交信息",
+      "DisabledWarn": "更新模块未启用，你需要手动重启 NKAS 进行更新",
+      "DetailedHistory": "详细提交历史"
+    },
+    "Remote": {
+      "Running": "运行中",
+      "NotRunning": "未运行，与服务器的连接断开或服务器离线",
+      "NotEnable": "未启用，在 deploy.yaml 中设置 webui 密码并启用远程控制",
+      "EntryPoint": "远程访问 url 地址:",
+      "ConfigureHint": "配置教程：",
+      "SSHNotInstall": "系统中没有 ssh 工具，请参考教程下载或安装 ssh"
+    },
+    "Text": {
+      "InvalidFeedBack": "格式错误。 示例：{0}",
+      "Clear": "清除",
+      "EnterPassword": "输入密码",
+      "ChooseFile": "选择文件"
     }
   }
 }

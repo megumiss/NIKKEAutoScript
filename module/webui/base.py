@@ -63,7 +63,7 @@ class Frame(Base):
         put_scope(
             "header",
             [
-                put_html(Icon.ALAS).style("--header-icon--"),
+                put_html(Icon.NKAS).style("--header-icon--"),
                 put_text("Alas").style("--header-text--"),
                 put_scope("header_status"),
                 put_scope("header_title"),

@@ -436,7 +436,7 @@ class MultiSetWrapper:
     def __init__(self, main):
         """
         Args:
-            main (AzurLaneConfig):
+            main (NikkeConfig):
         """
         self.main = main
         self.in_wrapper = False
