@@ -56,7 +56,7 @@ from module.submodule.utils import get_config_mod
 from module.webui.base import Frame
 from module.webui.fastapi import asgi_app
 from module.webui.lang import _t, t
-from module.webui.patch import patch_executor, patch_mimetype
+from module.webui.patch import patch_executor
 from module.webui.pin import put_input, put_select
 from module.webui.process_manager import ProcessManager
 from module.webui.remote_access import RemoteAccess
@@ -88,18 +88,18 @@ from module.webui.widgets import (
 )
 
 patch_executor()
-patch_mimetype()
+
 task_handler = TaskHandler()
 
 
 class NKASGUI(Frame):
-    ALAS_MENU: Dict[str, Dict[str, List[str]]]
-    ALAS_ARGS: Dict[str, Dict[str, Dict[str, Dict[str, str]]]]
+    NKAS_MENU: Dict[str, Dict[str, List[str]]]
+    NKAS_ARGS: Dict[str, Dict[str, Dict[str, Dict[str, str]]]]
     theme = "default"
 
     def initial(self) -> None:
-        self.ALAS_MENU = read_file(filepath_args("menu", self.nkas_mod))
-        self.ALAS_ARGS = read_file(filepath_args("args", self.nkas_mod))
+        self.NKAS_MENU = read_file(filepath_args("menu", self.nkas_mod))
+        self.NKAS_ARGS = read_file(filepath_args("args", self.nkas_mod))
         self._init_nkas_config_watcher()
 
     def __init__(self) -> None:
@@ -235,7 +235,7 @@ class NKASGUI(Frame):
             onclick=[self.nkas_overview],
         ).style(f"--menu-Overview--")
 
-        for menu, task_data in self.ALAS_MENU.items():
+        for menu, task_data in self.NKAS_MENU.items():
             if task_data.get("page") == "tool":
                 _onclick = self.nkas_daemon_overview
             else:
@@ -298,7 +298,7 @@ class NKASGUI(Frame):
             )
 
         config = self.nkas_config.read_file(self.nkas_name)
-        for group, arg_dict in deep_iter(self.ALAS_ARGS[task], depth=1):
+        for group, arg_dict in deep_iter(self.NKAS_ARGS[task], depth=1):
             if self.set_group(group, arg_dict, config, task):
                 self.set_navigator(group)
 
@@ -477,7 +477,7 @@ class NKASGUI(Frame):
         def put_queue(path, value):
             self.modified_config_queue.put({"name": path, "value": value})
 
-        for path in get_nkas_config_listen_path(self.ALAS_ARGS):
+        for path in get_nkas_config_listen_path(self.NKAS_ARGS):
             pin_on_change(
                 name="_".join(path), onchange=partial(put_queue, ".".join(path))
             )
@@ -518,11 +518,11 @@ class NKASGUI(Frame):
                     if (v - n).days >= 31:
                         deep_set(config, p, '')
             for k, v in modified.copy().items():
-                valuetype = deep_get(self.ALAS_ARGS, k + ".valuetype")
+                valuetype = deep_get(self.NKAS_ARGS, k + ".valuetype")
                 v = parse_pin_value(v, valuetype)
-                validate = deep_get(self.ALAS_ARGS, k + ".validate")
+                validate = deep_get(self.NKAS_ARGS, k + ".validate")
                 if not len(str(v)):
-                    default = deep_get(self.ALAS_ARGS, k + ".value")
+                    default = deep_get(self.NKAS_ARGS, k + ".value")
                     modified[k] = default
                     deep_set(config, k, default)
                     valid.append(k)
@@ -691,7 +691,7 @@ class NKASGUI(Frame):
         )
 
         config = self.nkas_config.read_file(self.nkas_name)
-        for group, arg_dict in deep_iter(self.ALAS_ARGS[task], depth=1):
+        for group, arg_dict in deep_iter(self.NKAS_ARGS[task], depth=1):
             if group[0] == "Storage":
                 continue
             self.set_group(group, arg_dict, config, task)
@@ -1026,7 +1026,7 @@ class NKASGUI(Frame):
         self.nkas_name = config_name
         self.nkas_mod = get_config_mod(config_name)
         self.nkas = ProcessManager.get_manager(config_name)
-        # self.nkas_config = load_config(config_name)
+        self.nkas_config = load_config(config_name)
         self.state_switch.switch()
         self.initial()
         self.nkas_set_menu()
@@ -1420,7 +1420,10 @@ def startup():
         task_handler.add(updater.check_update, updater.delay)
     task_handler.add(updater.schedule_update(), 86400)
     task_handler.start()
-
+    # if State.deploy_config.DiscordRichPresence:
+    #     init_discord_rpc()
+    # if State.deploy_config.StartOcrServer:
+    #     start_ocr_server_process(State.deploy_config.OcrServerPort)
     if (
         State.deploy_config.EnableRemoteAccess
         and State.deploy_config.Password is not None

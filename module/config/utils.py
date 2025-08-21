@@ -263,7 +263,7 @@ def nkas_template():
     for file in os.listdir('./config'):
         name, extension = os.path.splitext(file)
         if name == 'template' and extension == '.json':
-            out.append(f'{name}-alas')
+            out.append(f'{name}-nkas')
 
     # out.extend(list_mod_template())
 
@@ -286,7 +286,7 @@ def nkas_instance():
     # out.extend(list_mod_instance())
 
     if not len(out):
-        out = ['alas']
+        out = ['nkas']
 
     return out
 

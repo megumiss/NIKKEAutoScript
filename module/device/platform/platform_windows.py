@@ -345,6 +345,6 @@ class PlatformWindows(PlatformBase, EmulatorManager):
         return False
     
 if __name__ == '__main__':
-    self = PlatformWindows('alas')
+    self = PlatformWindows('nkas')
     d = self.emulator_instance
     print(d)

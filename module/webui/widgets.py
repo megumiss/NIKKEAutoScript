@@ -23,7 +23,7 @@ from module.webui.utils import (
 )
 
 if TYPE_CHECKING:
-    from module.webui.app import AlasGUI
+    from module.webui.app import NKASGUI
 
 
 class ScrollableCode:
@@ -472,8 +472,8 @@ def put_arg_storage(kwargs: T_Output_Kwargs) -> Optional[Output]:
     )
 
     def clear_callback():
-        alasgui: "AlasGUI" = local.gui
-        alasgui.modified_config_queue.put(
+        nkasgui: "NKASGUI" = local.gui
+        nkasgui.modified_config_queue.put(
             {"name": ".".join(name.split("_")), "value": {}}
         )
         # https://github.com/pywebio/PyWebIO/issues/459
