@@ -27,3 +27,5 @@ Deploy:
   Webui:
     WebuiHost: 0.0.0.0
     WebuiPort: 12271
+    Language: zh-CN
+    Theme: default

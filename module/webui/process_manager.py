@@ -17,12 +17,13 @@ import_fake_pil_module()
 
 from module.logger import logger, set_file_logger, set_func_logger
 from module.webui.setting import State
+from module.webui.utils import get_available_func, get_config_mod
 
 
 class ProcessManager:
     _processes: Dict[str, "ProcessManager"] = {}
 
-    def __init__(self, config_name: str = "alas") -> None:
+    def __init__(self, config_name: str = "nkas") -> None:
         self.config_name = config_name
         self._renderable_queue: queue.Queue[ConsoleRenderable] = State.manager.Queue()
         self.renderables: List[ConsoleRenderable] = []
@@ -121,7 +122,7 @@ class ProcessManager:
     @classmethod
     def get_manager(cls, config_name: str) -> "ProcessManager":
         """
-        Create a new alas if not exists.
+        Create a new nkas if not exists.
         """
         if config_name not in cls._processes:
             cls._processes[config_name] = ProcessManager(config_name)
@@ -154,25 +155,25 @@ class ProcessManager:
 
         NikkeConfig.stop_event = e
         try:
-            # Run alas
-            if func == "alas":
-                from alas import AzurLaneAutoScript
+            # Run nkas
+            if func == "nkas":
+                from main import NikkeAutoScript
 
                 if e is not None:
-                    AzurLaneAutoScript.stop_event = e
-                AzurLaneAutoScript(config_name=config_name).loop()
+                    NikkeAutoScript.stop_event = e
+                NikkeAutoScript(config_name=config_name).loop()
             elif func in get_available_func():
-                from alas import AzurLaneAutoScript
+                from nkas import NikkeAutoScript
 
-                AzurLaneAutoScript(config_name=config_name).run(inflection.underscore(func), skip_first_screenshot=True)
-            elif func in get_available_mod():
-                mod = load_mod(func)
+                NikkeAutoScript(config_name=config_name).run(inflection.underscore(func), skip_first_screenshot=True)
+            # elif func in get_available_mod():
+            #     mod = load_mod(func)
 
-                if e is not None:
-                    mod.set_stop_event(e)
-                mod.loop(config_name)
-            elif func in get_available_mod_func():
-                getattr(load_mod(get_func_mod(func)), inflection.underscore(func))(config_name)
+            #     if e is not None:
+            #         mod.set_stop_event(e)
+            #     mod.loop(config_name)
+            # elif func in get_available_mod_func():
+            #     getattr(load_mod(get_func_mod(func)), inflection.underscore(func))(config_name)
             else:
                 logger.critical(f"No function matched: {func}")
             logger.info(f"[{config_name}] exited. Reason: Finish\n")
@@ -193,9 +194,9 @@ class ProcessManager:
     ):
         """
         After update and reload, or failed to perform an update,
-        restart all alas that running before update
+        restart all nkas that running before update
         """
-        logger.hr("Restart alas")
+        logger.hr("Restart nkas")
 
         # Load MOD_CONFIG_DICT
         # list_mod_instance()
@@ -212,7 +213,7 @@ class ProcessManager:
                 _instances.add(instance)
 
         try:
-            with open("./config/reloadalas", mode="r") as f:
+            with open("./config/reloadnkas", mode="r") as f:
                 for line in f.readlines():
                     line = line.strip()
                     _instances.add(ProcessManager.get_manager(line))
@@ -224,7 +225,7 @@ class ProcessManager:
             process.start(func=get_config_mod(process.config_name), ev=ev)
 
         try:
-            os.remove("./config/reloadalas")
+            os.remove("./config/reloadnkas")
         except:
             pass
-        logger.info("Start alas complete")
+        logger.info("Start nkas complete")

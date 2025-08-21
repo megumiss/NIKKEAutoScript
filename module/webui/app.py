@@ -1128,8 +1128,8 @@ class NKASGUI(Frame):
             put_text("Change theme / 更改主题").style("text-align: center")
             put_buttons(
                 [
-                    {"label": "Light", "value": "default", "color": "light"},
-                    {"label": "Dark", "value": "dark", "color": "dark"},
+                    {"label": "Dark", "value": "default", "color": "dark"},
+                    {"label": "Light", "value": "light", "color": "light"},
                 ],
                 onclick=lambda t: set_theme(t),
             ).style("text-align: center")

@@ -687,14 +687,14 @@
       "help": "Storage.Storage.help"
     }
   },
-    "Gui": {
+  "Gui": {
     "Aside": {
       "Install": "安装",
       "Home": "主页",
       "Develop": "开发",
       "Performance": "性能",
       "Setting": "设置",
-      "AddNKAS": "新增"
+      "AddNKAS": "Gui.Aside.AddNKAS"
     },
     "Button": {
       "Start": "启动",
@@ -711,7 +711,7 @@
     "Toast": {
       "DisableTranslateMode": "点击这里关闭翻译模式",
       "ConfigSaved": "设置已保存",
-      "NKASIsRunning": "调度器已在运行中",
+      "NKASIsRunning": "Gui.Toast.NKASIsRunning",
       "ClickToUpdate": "有更新可用，点击这里进行更新"
     },
     "Status": {
@@ -721,8 +721,8 @@
       "Updating": "等待更新"
     },
     "MenuNKAS": {
-      "Overview": "总览",
-      "Log": "运行日志"
+      "Overview": "Gui.MenuNKAS.Overview",
+      "Log": "Gui.MenuNKAS.Log"
     },
     "MenuDevelop": {
       "HomePage": "主页",
@@ -740,14 +740,14 @@
       "NoTask": "无任务"
     },
     "AddNKAS": {
-      "PopupTitle": "添加新配置",
-      "NewName": "新的配置文件名",
-      "CopyFrom": "从现有的配置中复制",
-      "Confirm": "添加",
-      "FileExist": "存在同名的配置文件，请重新输入一个",
-      "InvalidChar": "配置文件名不能包含下列任何字符：.\\/:*?\"<>|",
-      "InvalidPrefixTemplate": "配置文件名不能以 template 开头",
-      "Manage": "管理"
+      "PopupTitle": "Gui.AddNKAS.PopupTitle",
+      "NewName": "Gui.AddNKAS.NewName",
+      "CopyFrom": "Gui.AddNKAS.CopyFrom",
+      "Confirm": "Gui.AddNKAS.Confirm",
+      "FileExist": "Gui.AddNKAS.FileExist",
+      "InvalidChar": "Gui.AddNKAS.InvalidChar",
+      "InvalidPrefixTemplate": "Gui.AddNKAS.InvalidPrefixTemplate",
+      "Manage": "Gui.AddNKAS.Manage"
     },
     "AppManage": {
       "PageTitle": "管理配置文件",

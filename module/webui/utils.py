@@ -544,6 +544,24 @@ def get_nkas_config_listen_path(args):
             continue
         yield path
 
+def get_available_func():
+    return (
+        'Daemon',
+        'OpsiDaemon',
+        'EventStory',
+        'AzurLaneUncensored',
+        'Benchmark',
+        'GameManager',
+    )
+
+
+def get_config_mod(config_name):
+    """
+    Args:
+        config_name (str):
+    """
+    if config_name.startswith('template-'):
+        return config_name.replace('template-', '')
 
 if __name__ == "__main__":
 
