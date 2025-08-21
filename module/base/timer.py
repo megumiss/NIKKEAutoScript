@@ -1,5 +1,18 @@
+from functools import wraps
 import time
 
+
+def timer(function):
+    @wraps(function)
+    def function_timer(*args, **kwargs):
+        t0 = time.time()
+
+        result = function(*args, **kwargs)
+        t1 = time.time()
+        print('%s: %s s' % (function.__name__, str(round(t1 - t0, 10))))
+        return result
+
+    return function_timer
 
 class Timer:
     def __init__(self, limit, count=0):

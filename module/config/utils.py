@@ -102,6 +102,13 @@ def filepath_config(filename, mod_name='nkas'):
         return os.path.join('./config/', f'{filename}.{mod_name}.json')
 
 
+def filepath_i18n(lang, mod_name='nkas'):
+    if mod_name == 'nkas':
+        return os.path.join('./module/config/i18n', f'{lang}.json')
+    else:
+        return os.path.join('./module/config/i18n', f'{lang}.{mod_name}.json')
+
+
 def filepath_args(filename='args', mod_name='nkas'):
     if mod_name == 'nkas':
         return f'./module/config/argument/{filename}.json'

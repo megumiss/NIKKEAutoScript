@@ -1,147 +1,157 @@
 # ==================== NKAS ====================
 
 NKAS:
-  - Emulator
-  - EmulatorInfo
-  - Optimization
-  - Notification
-
-Restart:
-  - Scheduler
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    NKAS:
+      - Emulator
+      - EmulatorInfo
+      - Optimization
+      - Notification
+    Restart:
+      - Scheduler
 
 # ==================== Reward ====================
 
 Reward:
-  - Scheduler
-  - Reward
-
-Destruction:
-  - Scheduler
-
-Commission:
-  - Scheduler
-  - CollectionItems
-
-Mailbox:
-  - Scheduler
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    Reward:
+      - Scheduler
+      - Reward
+    Destruction:
+      - Scheduler
+    Commission:
+      - Scheduler
+      - CollectionItems
+    Mailbox:
+      - Scheduler
 
 # ==================== Daily ====================
 
-DailyRecruit:
-  - Scheduler
-  - DailyRecruit
-
 Daily:
-  - Scheduler
-  - Daily
-
-MissionPass:
-  - Scheduler
-
-Liberation:
-  - Scheduler
-
-Conversation:
-  - Scheduler
-  - Conversation
-
-Shop:
-  - Scheduler
-  - GeneralShop
-  - ArenaShop
-
-RubbishShop:
-  - Scheduler
-  - RubbishShop
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    DailyRecruit:
+      - Scheduler
+      - DailyRecruit
+    Daily:
+      - Scheduler
+      - Daily
+    MissionPass:
+      - Scheduler
+    Liberation:
+      - Scheduler
+    Conversation:
+      - Scheduler
+      - Conversation
+    Shop:
+      - Scheduler
+      - GeneralShop
+      - ArenaShop
+    RubbishShop:
+      - Scheduler
+      - RubbishShop
 
 # ==================== Ark ====================
 
-SimulationRoom:
-  - Scheduler
-  - SimulationRoom
-  - Area
-
-Overclock:
-  - Scheduler
-  - Overclock
-
-TribeTower:
-  - Scheduler
-  - Overcome
-
-Interception:
-  - Scheduler
-  - Interception
-
-RookieArena:
-  - Scheduler
-  - OpponentSelection
-
-SpecialArena:
-  - Scheduler
-  - OpponentSelection
-
-ChampionArena:
-  - Scheduler
-  - CheerStrategy
+Ark:
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    SimulationRoom:
+      - Scheduler
+      - SimulationRoom
+      - Area
+    Overclock:
+      - Scheduler
+      - Overclock
+    TribeTower:
+      - Scheduler
+      - Overcome
+    Interception:
+      - Scheduler
+      - Interception
+    RookieArena:
+      - Scheduler
+      - OpponentSelection
+    SpecialArena:
+      - Scheduler
+      - OpponentSelection
+    ChampionArena:
+      - Scheduler
+      - CheerStrategy
 
 # ==================== LimitedTimeEvent ====================
 
-Coop:
-  - Scheduler
-  - Coop
-
-SoloRaid:
-  - Scheduler
-
-UnionRaid:
-  - Scheduler
+LimitedTimeEvent:
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    Coop:
+      - Scheduler
+      - Coop
+    SoloRaid:
+      - Scheduler
+    UnionRaid:
+      - Scheduler
 
 # ==================== StoryEvent ====================
 
-Event:
-  - Scheduler
-  - Event
-
-Event2:
-  - Scheduler
-  - Event
+StoryEvent:
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    Event:
+      - Scheduler
+      - Event
+    Event2:
+      - Scheduler
+      - Event
 
 # ==================== Blablalink ====================
 
-BlaAuth:
-  - BlaAuth
-
-BlaDaily:
-  - Scheduler
-  - BlaDaily
-
-BlaCDK:
-  - Scheduler
-  - CDK
-
-BlaExchange:
-  - Scheduler
-  - BlaExchange
-
-# ==================== Tools ====================
-
-TowerDaemon:
-  - Scheduler
-
-CombatDaemon:
-  - Scheduler
-
-EventDaemon:
-  - Scheduler
+Blablalink:
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    BlaAuth:
+      - BlaAuth
+    BlaDaily:
+      - Scheduler
+      - BlaDaily
+    BlaCDK:
+      - Scheduler
+      - BlaCDK
+    BlaExchange:
+      - Scheduler
+      - BlaExchange
 
 # ==================== Gift ====================
 
-DailyGift:
-  - Scheduler
+Gift:
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    DailyGift:
+      - Scheduler
+    WeeklyGift:
+      - Scheduler
+    MonthlyGift:
+      - Scheduler
 
-WeeklyGift:
-  - Scheduler
+# ==================== Tool ====================
 
-MonthlyGift:
-  - Scheduler
+Tool:
+  menu: 'collapse'
+  page: 'tool'
+  tasks:
+    TowerDaemon:
+      - TowerDaemon
+    CombatDaemon:
+      - CombatDaemon
+    EventDaemon:
+      - EventDaemon

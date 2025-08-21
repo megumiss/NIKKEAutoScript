@@ -1,9 +1,7 @@
 import multiprocessing
 import threading
 from multiprocessing.managers import SyncManager
-from typing import Callable, TypeVar, Generic, TYPE_CHECKING
-
-from module.logger import logger
+from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 if TYPE_CHECKING:
     from module.config.config_updater import ConfigUpdater
@@ -64,19 +62,13 @@ class State:
 
     @classmethod
     def init(cls):
-        logger.info('create SyncManager')
         cls.manager = multiprocessing.Manager()
         cls._init = True
 
-    @cached_class_property
-    def config_updater(self) -> "ConfigUpdater":
-        """
-        Returns:
-            ConfigUpdater：
-        """
-        from module.config.config_updater import ConfigUpdater
-
-        return ConfigUpdater()
+    @classmethod
+    def clearup(cls):
+        cls.manager.shutdown()
+        cls._clearup = True
 
     @cached_class_property
     def deploy_config(self) -> "DeployConfig":
@@ -88,7 +80,12 @@ class State:
 
         return DeployConfig()
 
-    @classmethod
-    def clearup(cls):
-        cls.manager.shutdown()
-        cls._clearup = True
+    @cached_class_property
+    def config_updater(self) -> "ConfigUpdater":
+        """
+        Returns:
+            ConfigUpdater：
+        """
+        from module.config.config_updater import ConfigUpdater
+
+        return ConfigUpdater()
