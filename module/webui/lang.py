@@ -16,7 +16,7 @@ def set_language(s: str, refresh=False):
             LANG = LANGUAGES[i]
             break
     else:
-        LANG = "en-US"
+        LANG = "zh-CN"
 
     State.deploy_config.Language = LANG
 
