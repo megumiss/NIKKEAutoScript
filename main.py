@@ -423,15 +423,15 @@ class NikkeAutoScript:
                     logger.info(f'Alas [{self.config_name}] exited.')
                     break
             # Check game server maintenance
-            self.checker.wait_until_available()
-            if self.checker.is_recovered():
-                # There is an accidental bug hard to reproduce
-                # Sometimes, config won't be updated due to blocking
-                # even though it has been changed
-                # So update it once recovered
-                del_cached_property(self, 'config')
-                logger.info('Server or network is recovered. Restart game client')
-                self.config.task_call('Restart')
+            # self.checker.wait_until_available()
+            # if self.checker.is_recovered():
+            #     # There is an accidental bug hard to reproduce
+            #     # Sometimes, config won't be updated due to blocking
+            #     # even though it has been changed
+            #     # So update it once recovered
+            #     del_cached_property(self, 'config')
+            #     logger.info('Server or network is recovered. Restart game client')
+            #     self.config.task_call('Restart')
             # Get task
             task = self.get_next_task()
             # Init device and change server
