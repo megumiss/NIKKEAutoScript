@@ -527,16 +527,25 @@
     }
   },
   "TowerDaemon": {
+    "TowerDaemon": {
+      "Enable": true
+    },
     "Storage": {
       "Storage": {}
     }
   },
   "CombatDaemon": {
+    "CombatDaemon": {
+      "Enable": false
+    },
     "Storage": {
       "Storage": {}
     }
   },
   "EventDaemon": {
+    "EventDaemon": {
+      "Enable": false
+    },
     "Storage": {
       "Storage": {}
     }

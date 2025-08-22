@@ -1842,6 +1842,13 @@
     }
   },
   "TowerDaemon": {
+    "TowerDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": true,
+        "display": "disabled"
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",
@@ -1852,6 +1859,13 @@
     }
   },
   "CombatDaemon": {
+    "CombatDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "display": "disabled"
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",
@@ -1862,6 +1876,13 @@
     }
   },
   "EventDaemon": {
+    "EventDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "display": "disabled"
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

@@ -1450,9 +1450,9 @@ def clearup():
 
 def app():
     parser = argparse.ArgumentParser(description="NKAS web service")
-    parser.add_argument(
-        "-k", "--key", type=str, help="Password of nkas. No password by default"
-    )
+    # parser.add_argument(
+    #     "-k", "--key", type=str, help="Password of nkas. No password by default"
+    # )
     # parser.add_argument(
     #     "--cdn",
     #     action="store_true",
@@ -1469,7 +1469,7 @@ def app():
     # Apply config
     NKASGUI.set_theme(theme=State.deploy_config.Theme)
     lang.LANG = State.deploy_config.Language
-    key = args.key or State.deploy_config.Password
+    # key = args.key or State.deploy_config.Password
     # cdn = args.cdn if args.cdn else State.deploy_config.CDN
     runs = None
     if args.run:
@@ -1483,7 +1483,7 @@ def app():
     logger.hr("Webui configs")
     logger.attr("Theme", State.deploy_config.Theme)
     logger.attr("Language", lang.LANG)
-    logger.attr("Password", True if key else False)
+    # logger.attr("Password", True if key else False)
     # logger.attr("CDN", cdn)
     logger.attr("IS_ON_PHONE_CLOUD", IS_ON_PHONE_CLOUD)
 
@@ -1491,21 +1491,21 @@ def app():
     atomic_failure_cleanup('./config')
 
     def index():
-        if key is not None and not login(key):
-            logger.warning(f"{info.user_ip} login failed.")
-            time.sleep(1.5)
-            run_js("location.reload();")
-            return
+        # if key is not None and not login(key):
+        #     logger.warning(f"{info.user_ip} login failed.")
+        #     time.sleep(1.5)
+        #     run_js("location.reload();")
+        #     return
         gui = NKASGUI()
         local.gui = gui
         gui.run()
 
     def manage():
-        if key is not None and not login(key):
-            logger.warning(f"{info.user_ip} login failed.")
-            time.sleep(1.5)
-            run_js("location.reload();")
-            return
+        # if key is not None and not login(key):
+        #     logger.warning(f"{info.user_ip} login failed.")
+        #     time.sleep(1.5)
+        #     run_js("location.reload();")
+        #     return
         app_manage()
 
     app = asgi_app(
