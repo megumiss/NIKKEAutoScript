@@ -150,6 +150,10 @@ def load_image(file, area=None):
     Returns:
         np.ndarray:
     """
+    # import PIL
+    # print("PIL module path:", PIL.__file__)
+    # print("PIL.Image path:", PIL.Image.__file__)
+    # print("PIL.Image attributes:", [attr for attr in dir(PIL.Image) if not attr.startswith('_')])
     image = Image.open(file)
     if area is not None:
         image = image.crop(area)

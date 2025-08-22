@@ -146,6 +146,7 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         # Override arguments
         for arg, value in self.overridden.items():
             super().__setattr__(arg, value)
+
     def save(self, mod_name='nkas'):
         if not self.modified:
             return False
@@ -195,6 +196,7 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         for task in ["Event2"]:
             # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
             self.modified[f"{task}.Event.Event"] = self.EVENTS[1].get('event_id')
+
     def get_next(self):
         """
         Returns:
@@ -222,6 +224,7 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             logger.critical("No task waiting or pending")
             logger.critical("Please enable at least one task")
             raise RequestHumanTakeover
+
     def get_next_task(self):
         pending = []
         waiting = []
@@ -298,6 +301,7 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             Any:
         """
         return deep_get(self.data, keys=keys, default=default)
+
     def task_delay(self, success=None, server_update=None, target=None, minute=None, task=None):
         def ensure_delta(delay):
             return timedelta(seconds=int(ensure_time(delay, precision=3) * 60))
@@ -359,6 +363,40 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         else:
             logger.info(f"Task call: {task} (skipped because disabled by user)")
             return False
+
+    @staticmethod
+    def task_stop(message=""):
+        """
+        Stop current task.
+
+        Raises:
+            TaskEnd:
+        """
+        if message:
+            raise TaskEnd(message)
+        else:
+            raise TaskEnd
+
+    def task_switched(self):
+        """
+        Check if needs to switch task.
+
+        Raises:
+            bool: If task switched
+        """
+        # Update event
+        if self.stop_event is not None:
+            if self.stop_event.is_set():
+                return True
+        prev = self.task
+        self.load()
+        new = self.get_next()
+        if prev == new:
+            logger.info(f"Continue task `{new}`")
+            return False
+        else:
+            logger.info(f"Switch task `{prev}` to `{new}`")
+            return True
 
     def override(self, **kwargs):
         """

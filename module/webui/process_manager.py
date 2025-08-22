@@ -14,10 +14,10 @@ from rich.console import Console, ConsoleRenderable
 from module.webui.fake_pil_module import *
 
 import_fake_pil_module()
-
+from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
+    get_func_mod, list_mod_instance, load_mod
 from module.logger import logger, set_file_logger, set_func_logger
 from module.webui.setting import State
-from module.webui.utils import get_available_func, get_config_mod
 
 
 class ProcessManager:
@@ -166,14 +166,14 @@ class ProcessManager:
                 from main import NikkeAutoScript
 
                 NikkeAutoScript(config_name=config_name).run(inflection.underscore(func), skip_first_screenshot=True)
-            # elif func in get_available_mod():
-            #     mod = load_mod(func)
+            elif func in get_available_mod():
+                mod = load_mod(func)
 
-            #     if e is not None:
-            #         mod.set_stop_event(e)
-            #     mod.loop(config_name)
-            # elif func in get_available_mod_func():
-            #     getattr(load_mod(get_func_mod(func)), inflection.underscore(func))(config_name)
+                if e is not None:
+                    mod.set_stop_event(e)
+                mod.loop(config_name)
+            elif func in get_available_mod_func():
+                getattr(load_mod(get_func_mod(func)), inflection.underscore(func))(config_name)
             else:
                 logger.critical(f"No function matched: {func}")
             logger.info(f"[{config_name}] exited. Reason: Finish\n")
@@ -199,7 +199,7 @@ class ProcessManager:
         logger.hr("Restart nkas")
 
         # Load MOD_CONFIG_DICT
-        # list_mod_instance()
+        list_mod_instance()
 
         if instances is None:
             instances = []

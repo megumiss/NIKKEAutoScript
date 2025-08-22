@@ -52,6 +52,7 @@ from module.config.utils import (
     read_file,
 )
 from module.logger import logger
+from module.submodule.utils import load_config
 from module.submodule.utils import get_config_mod
 from module.webui.base import Frame
 from module.webui.fastapi import asgi_app
@@ -76,7 +77,6 @@ from module.webui.utils import (
     raise_exception,
     re_fullmatch,
     to_pin_value,
-    load_config,
 )
 from module.webui.widgets import (
     BinarySwitchButton,
@@ -89,7 +89,6 @@ from module.webui.widgets import (
 )
 
 patch_executor()
-patch_mimetype()
 task_handler = TaskHandler()
 
 

@@ -544,31 +544,6 @@ def get_nkas_config_listen_path(args):
             continue
         yield path
 
-def get_available_func():
-    return (
-        'TowerDaemon',
-        'CombatDaemon',
-        'EventDaemon',
-    )
-
-def load_config(config_name):
-    from module.config.config import NikkeConfig
-
-    mod_name = get_config_mod(config_name)
-    if mod_name == 'nkas':
-        return NikkeConfig(config_name, '')
-
-def get_config_mod(config_name):
-    """
-    Args:
-        config_name (str):
-    """
-    if config_name.startswith('template-'):
-        return config_name.replace('template-', '')
-
-    return 'nkas'
-
-
 if __name__ == "__main__":
 
     def gen(x):
