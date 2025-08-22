@@ -546,12 +546,9 @@ def get_nkas_config_listen_path(args):
 
 def get_available_func():
     return (
-        'Daemon',
-        'OpsiDaemon',
-        'EventStory',
-        'AzurLaneUncensored',
-        'Benchmark',
-        'GameManager',
+        'TowerDaemon',
+        'CombatDaemon',
+        'EventDaemon',
     )
 
 def load_config(config_name):
