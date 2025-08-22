@@ -163,7 +163,7 @@ class ProcessManager:
                     NikkeAutoScript.stop_event = e
                 NikkeAutoScript(config_name=config_name).loop()
             elif func in get_available_func():
-                from nkas import NikkeAutoScript
+                from main import NikkeAutoScript
 
                 NikkeAutoScript(config_name=config_name).run(inflection.underscore(func), skip_first_screenshot=True)
             # elif func in get_available_mod():
