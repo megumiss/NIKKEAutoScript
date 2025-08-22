@@ -1,11 +1,13 @@
 import os
 import re
 import sys
+import threading
 import time
 from datetime import datetime, timedelta
 from functools import cached_property
 
 import inflection
+
 from module.base.decorator import del_cached_property
 from module.config.config import NikkeConfig, TaskEnd
 from module.config.utils import deep_get, deep_set
@@ -26,6 +28,8 @@ sys.stderr.reconfigure(encoding='utf-8')
 
 
 class NikkeAutoScript:
+    stop_event: threading.Event = None
+
     def __init__(self, config_name='nkas'):
         logger.hr('Start', level=0)
         self.config_name = config_name
@@ -51,6 +55,7 @@ class NikkeAutoScript:
     def device(self):
         try:
             from module.device.device import Device
+
             device = Device(config=self.config)
             return device
         except RequestHumanTakeover:
@@ -157,15 +162,18 @@ class NikkeAutoScript:
 
     def restart(self):
         from module.handler.login import LoginHandler
+
         LoginHandler(self.config, device=self.device).app_restart()
 
     def start(self):
         from module.handler.login import LoginHandler
+
         LoginHandler(self.config, device=self.device).app_start()
 
     def goto_main(self):
         from module.handler.login import LoginHandler
         from module.ui.ui import UI
+
         if self.device.app_is_running():
             logger.info('App is already running, goto main page')
             UI(self.config, device=self.device).ui_goto_main()
@@ -366,6 +374,7 @@ class NikkeAutoScript:
             self.config.bind(task)
 
             from module.base.resource import release_resources
+
             if self.config.task.command != 'NKAS':
                 release_resources(next_task=task.command)
 
@@ -458,17 +467,20 @@ class NikkeAutoScript:
             failed = 0 if success else failed + 1
             deep_set(self.failure_record, keys=task, value=failed)
             if failed >= 3:
-                logger.critical(f"Task `{task}` failed 3 or more times.")
-                logger.critical("Possible reason #1: You haven't used it correctly. "
-                                "Please read the help text of the options.")
-                logger.critical("Possible reason #2: There is a problem with this task. "
-                                "Please contact developers or try to fix it yourself.")
+                logger.critical(f'Task `{task}` failed 3 or more times.')
+                logger.critical(
+                    "Possible reason #1: You haven't used it correctly. Please read the help text of the options."
+                )
+                logger.critical(
+                    'Possible reason #2: There is a problem with this task. '
+                    'Please contact developers or try to fix it yourself.'
+                )
                 logger.critical('Request human takeover')
                 if self.config.Notification_WhenDailyTaskCrashed:
                     handle_notify(
                         self.config.Notification_OnePushConfig,
-                        title=f"NKAS <{self.config_name}> crashed",
-                        content=f"<{self.config_name}> RequestHumanTakeover\nTask `{task}` failed 3 or more times.",
+                        title=f'NKAS <{self.config_name}> crashed',
+                        content=f'<{self.config_name}> RequestHumanTakeover\nTask `{task}` failed 3 or more times.',
                     )
                 exit(1)
 
