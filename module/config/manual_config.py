@@ -121,3 +121,5 @@ class ManualConfig:
     ]
 
     Error_ScreenshotLength = 1
+
+    DEVICE_OVER_HTTP = False
