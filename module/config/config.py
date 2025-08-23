@@ -193,9 +193,13 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         for task in ["Event"]:
             # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
             self.modified[f"{task}.Event.Event"] = self.EVENTS[0].get('event_id')
+            self.modified[f"{task}.Event.StoryPart"] = self.EVENTS[0].get('story_part')
+            self.modified[f"{task}.Event.StoryDifficulty"] = self.EVENTS[0].get('story_difficulty')
         for task in ["Event2"]:
             # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
             self.modified[f"{task}.Event.Event"] = self.EVENTS[1].get('event_id')
+            self.modified[f"{task}.Event.StoryPart"] = self.EVENTS[1].get('story_part')
+            self.modified[f"{task}.Event.StoryDifficulty"] = self.EVENTS[1].get('story_difficulty')
 
     def get_next(self):
         """

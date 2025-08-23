@@ -181,12 +181,14 @@ Event:
       'Story_1',
       'Story_2'
     ]
+    display: disabled
   StoryDifficulty:
     value: 'Normal'
     option: [
       'Normal',
       'Hard'
     ]
+    display: disabled
   Coop: false
   Shop: false
   Game: false

@@ -1393,7 +1393,8 @@
         "option": [
           "Story_1",
           "Story_2"
-        ]
+        ],
+        "display": "disabled"
       },
       "StoryDifficulty": {
         "type": "select",
@@ -1401,7 +1402,8 @@
         "option": [
           "Normal",
           "Hard"
-        ]
+        ],
+        "display": "disabled"
       },
       "Coop": {
         "type": "checkbox",
@@ -1492,7 +1494,8 @@
         "option": [
           "Story_1",
           "Story_2"
-        ]
+        ],
+        "display": "disabled"
       },
       "StoryDifficulty": {
         "type": "select",
@@ -1500,7 +1503,8 @@
         "option": [
           "Normal",
           "Hard"
-        ]
+        ],
+        "display": "disabled"
       },
       "Coop": {
         "type": "checkbox",
