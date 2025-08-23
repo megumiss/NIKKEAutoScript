@@ -1,5 +1,3 @@
-
-
 <div align="center">
 
 <img alt="LOGO" src="./webapp/src/assets/img/Helm.png" width="256" height="256" />
