@@ -1,20 +1,100 @@
 import datetime
 import operator
 import re
+import sys
 import threading
 import time
+import traceback
+from queue import Queue
 from typing import Callable, Generator, List
 
-from pywebio.session import register_thread, run_js, eval_js
+import pywebio
+from pywebio.input import PASSWORD, input
+from pywebio.output import PopupSize, popup, put_html, toast
+from pywebio.session import eval_js, info as session_info, register_thread, run_js
+from rich.console import Console
 from rich.terminal_theme import TerminalTheme
 
-from module.config.utils import deep_iter
+from module.config.deep import deep_iter
 from module.logger import logger
+from module.webui.setting import State
+
+RE_DATETIME = (
+    r"\d{4}\-(0\d|1[0-2])\-([0-2]\d|[3][0-1]) "
+    r"([0-1]\d|[2][0-3]):([0-5]\d):([0-5]\d)"
+)
+
+
+TRACEBACK_CODE_FORMAT = """\
+<code class="rich-traceback">
+    <pre class="rich-traceback-code">{code}</pre>
+</code>
+"""
+
+LOG_CODE_FORMAT = "{code}"
+
+DARK_TERMINAL_THEME = TerminalTheme(
+    (30, 30, 30),  # Background
+    (204, 204, 204),  # Foreground
+    [
+        (0, 0, 0),  # Black
+        (205, 49, 49),  # Red
+        (13, 188, 121),  # Green
+        (229, 229, 16),  # Yellow
+        (36, 114, 200),  # Blue
+        (188, 63, 188),  # Purple / Magenta
+        (17, 168, 205),  # Cyan
+        (229, 229, 229),  # White
+    ],
+    [  # Bright
+        (102, 102, 102),  # Black
+        (241, 76, 76),  # Red
+        (35, 209, 139),  # Green
+        (245, 245, 67),  # Yellow
+        (59, 142, 234),  # Blue
+        (214, 112, 214),  # Purple / Magenta
+        (41, 184, 219),  # Cyan
+        (229, 229, 229),  # White
+    ],
+)
+
+LIGHT_TERMINAL_THEME = TerminalTheme(
+    (255, 255, 255),  # Background
+    (97, 97, 97),  # Foreground
+    [
+        (0, 0, 0),  # Black
+        (205, 49, 49),  # Red
+        (0, 188, 0),  # Green
+        (148, 152, 0),  # Yellow
+        (4, 81, 165),  # Blue
+        (188, 5, 188),  # Purple / Magenta
+        (5, 152, 188),  # Cyan
+        (85, 85, 85),  # White
+    ],
+    [  # Bright
+        (102, 102, 102),  # Black
+        (205, 49, 49),  # Red
+        (20, 206, 20),  # Green
+        (181, 186, 0),  # Yellow
+        (4, 81, 165),  # Blue
+        (188, 5, 188),  # Purple / Magenta
+        (5, 152, 188),  # Cyan
+        (165, 165, 165),  # White
+    ],
+)
+
+
+class QueueHandler:
+    def __init__(self, q: Queue) -> None:
+        self.queue = q
+
+    def write(self, s: str):
+        self.queue.put(s)
 
 
 class Task:
     def __init__(
-            self, g: Generator, delay: float, next_run: float = None, name: str = None
+        self, g: Generator, delay: float, next_run: float = None, name: str = None
     ) -> None:
         self.g = g
         g.send(None)
@@ -47,22 +127,6 @@ class TaskHandler:
         self._alive = False
         self._lock = threading.Lock()
 
-    def _get_thread(self) -> threading.Thread:
-        logger.info('get thread in TaskHandler')
-        thread = threading.Thread(target=self.loop, daemon=True)
-        return thread
-
-    def start(self) -> None:
-        """
-        Start task handler.
-        """
-        logger.info("Start task handler")
-        if self._thread is not None and self._thread.is_alive():
-            logger.warning("Task handler already running!")
-            return
-        self._thread = self._get_thread()
-        self._thread.start()
-
     def add(self, func, delay: float, pending_delete: bool = False) -> None:
         """
         Add a task running background.
@@ -79,15 +143,9 @@ class TaskHandler:
         """
         Add a task running background.
         """
-
         if task in self.tasks:
             logger.warning(f"Task {task} already in tasks list.")
             return
-
-        # if task.name in list(map(lambda x: x.name, self.tasks)):
-        #     logger.warning(f"Task {task} already in tasks list.")
-        #     return
-
         logger.info(f"Add task {task}")
         with self._lock:
             self.tasks.append(task)
@@ -97,6 +155,11 @@ class TaskHandler:
     def _remove_task(self, task: Task) -> None:
         if task in self.tasks:
             self.tasks.remove(task)
+            logger.info(f"Task {task} removed.")
+        else:
+            logger.warning(
+                f"Failed to remove task {task}. Current tasks list: {self.tasks}"
+            )
 
     def remove_task(self, task: Task, nowait: bool = False) -> None:
         """
@@ -123,6 +186,13 @@ class TaskHandler:
 
     def remove_current_task(self) -> None:
         self.remove_task(self._task, nowait=True)
+
+    def get_task(self, name) -> Task:
+        with self._lock:
+            for task in self.tasks:
+                if task.name == name:
+                    return task
+            return None
 
     def loop(self) -> None:
         """
@@ -156,6 +226,22 @@ class TaskHandler:
                     time.sleep(0.05)
             else:
                 time.sleep(0.5)
+        logger.info("End of task handler loop")
+
+    def _get_thread(self) -> threading.Thread:
+        thread = threading.Thread(target=self.loop, daemon=True)
+        return thread
+
+    def start(self) -> None:
+        """
+        Start task handler.
+        """
+        logger.info("Start task handler")
+        if self._thread is not None and self._thread.is_alive():
+            logger.warning("Task handler already running!")
+            return
+        self._thread = self._get_thread()
+        self._thread.start()
 
     def stop(self) -> None:
         self.remove_pending_task()
@@ -170,68 +256,8 @@ class TaskHandler:
 class WebIOTaskHandler(TaskHandler):
     def _get_thread(self) -> threading.Thread:
         thread = super()._get_thread()
-        logger.info('register thread in WebIOTaskHandler')
         register_thread(thread)
         return thread
-
-
-def add_css(filepath):
-    with open(filepath, "r") as f:
-        css = f.read().replace("\n", "")
-        run_js(f"""$('head').append('<style>{css}</style>')""")
-
-
-def set_localstorage(key, value):
-    return run_js("localStorage.setItem(key, value)", key=key, value=value)
-
-
-def get_localstorage(key):
-    return eval_js("localStorage.getItem(key)", key=key)
-
-
-def get_generator(func: Callable):
-    def _g():
-        yield
-        while True:
-            yield func()
-
-    g = _g()
-    g.__name__ = func.__name__
-    return g
-
-
-LOG_CODE_FORMAT = """\
-    <span style="font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">{code}</span>
-"""
-
-# LOG_CODE_FORMAT = """\
-#    {code}
-# """
-
-DARK_TERMINAL_THEME = TerminalTheme(
-    (30, 30, 30),  # Background
-    (204, 204, 204),  # Foreground
-    [
-        (0, 0, 0),  # Black
-        (205, 49, 49),  # Red
-        (13, 188, 121),  # Green
-        (229, 229, 16),  # Yellow
-        (36, 114, 200),  # Blue
-        (188, 63, 188),  # Purple / Magenta
-        (17, 168, 205),  # Cyan
-        (229, 229, 229),  # White
-    ],
-    [  # Bright
-        (102, 102, 102),  # Black
-        (241, 76, 76),  # Red
-        (35, 209, 139),  # Green
-        (245, 245, 67),  # Yellow
-        (59, 142, 234),  # Blue
-        (214, 112, 214),  # Purple / Magenta
-        (41, 184, 219),  # Cyan
-        (229, 229, 229),  # White
-    ],
-)
 
 
 class Switch:
@@ -285,7 +311,6 @@ class Switch:
         Predefined generator when `get_state` is an callable
         Customize it if you have multiple criteria on state
         """
-
         _status = self.get_state()
         yield _status
         while True:
@@ -298,11 +323,7 @@ class Switch:
 
     def switch(self):
         with self._lock:
-            """
-                获得按钮状态
-            """
             r = next(self._generator)
-
         if callable(self.status):
             self.status(r)
         elif r in self.status:
@@ -327,11 +348,46 @@ class Switch:
         return g
 
 
-def get_nkas_config_listen_path(args):
-    for path, d in deep_iter(args, depth=3):
-        if d.get("display") in ["readonly", "hide"]:
-            continue
-        yield path
+def get_generator(func: Callable):
+    def _g():
+        yield
+        while True:
+            yield func()
+
+    g = _g()
+    g.__name__ = func.__name__
+    return g
+
+
+def filepath_css(filename):
+    return f"./assets/gui/css/{filename}.css"
+
+
+def filepath_icon(filename):
+    return f"./assets/gui/icon/{filename}.svg"
+
+
+def add_css(filepath):
+    with open(filepath, "r") as f:
+        css = f.read().replace("\n", "")
+        run_js(f"""$('head').append('<style>{css}</style>')""")
+
+
+def _read(path):
+    with open(path, "r") as f:
+        return f.read()
+
+
+class Icon:
+    """
+    Storage html of icon.
+    """
+
+    NKAS = _read(filepath_icon("nkas"))
+    SETTING = _read(filepath_icon("setting"))
+    RUN = _read(filepath_icon("run"))
+    DEVELOP = _read(filepath_icon("develop"))
+    ADD = _read(filepath_icon("add"))
 
 
 str2type = {
@@ -369,17 +425,54 @@ def parse_pin_value(val, valuetype: str = None):
             return v
 
 
-RE_DATETIME = (
-    r"\d{4}\-(0\d|1[0-2])\-([0-2]\d|[3][0-1]) "
-    r"([0-1]\d|[2][0-3]):([0-5]\d):([0-5]\d)"
-)
+def to_pin_value(val):
+    """
+    Convert bool to checkbox
+    """
+    if val is True:
+        return [True]
+    elif val is False:
+        return []
+    else:
+        return val
+
+
+def login(password):
+    if get_localstorage("password") == str(password):
+        return True
+    pwd = input(label="Please login below.", type=PASSWORD, placeholder="PASSWORD")
+    if str(pwd) == str(password):
+        set_localstorage("password", str(pwd))
+        return True
+    else:
+        toast("Wrong password!", color="error")
+        return False
+
+
+def get_window_visibility_state():
+    ret = eval_js("document.visibilityState")
+    return False if ret == "hidden" else True
+
+
+# https://pywebio.readthedocs.io/zh_CN/latest/cookbook.html#cookie-and-localstorage-manipulation
+def set_localstorage(key, value):
+    return run_js("localStorage.setItem(key, value)", key=key, value=value)
+
+
+def get_localstorage(key):
+    return eval_js("localStorage.getItem(key)", key=key)
 
 
 def re_fullmatch(pattern, string):
     if pattern == "datetime":
-        pattern = RE_DATETIME
+        try:
+            datetime.datetime.fromisoformat(string)
+            return True
+        except ValueError:
+            return False
     # elif:
     return re.fullmatch(pattern=pattern, string=string)
+
 
 def get_next_time(t: datetime.time):
     now = datetime.datetime.today().time()
@@ -391,3 +484,85 @@ def get_next_time(t: datetime.time):
     if second < 0:
         second += 86400
     return second
+
+
+def on_task_exception(self):
+    logger.exception("An internal error occurred in the application")
+    toast_msg = (
+        "应用发生内部错误"
+        if "zh" in session_info.user_language
+        else "An internal error occurred in the application"
+    )
+
+    e_type, e_value, e_tb = sys.exc_info()
+    lines = traceback.format_exception(e_type, e_value, e_tb)
+    traceback_msg = "".join(lines)
+
+    traceback_console = Console(
+        color_system="truecolor", tab_size=2, record=True, width=90
+    )
+    with traceback_console.capture():  # prevent logging to stdout again
+        traceback_console.print_exception(
+            word_wrap=True, extra_lines=1, show_locals=True
+        )
+
+    if State.theme == "dark":
+        theme = DARK_TERMINAL_THEME
+    else:
+        theme = LIGHT_TERMINAL_THEME
+
+    html = traceback_console.export_html(
+        theme=theme, code_format=TRACEBACK_CODE_FORMAT, inline_styles=True
+    )
+    try:
+        popup(title=toast_msg, content=put_html(html), size=PopupSize.LARGE)
+        run_js(
+            "console.error(traceback_msg)",
+            traceback_msg="Internal Server Error\n" + traceback_msg,
+        )
+    except Exception:
+        pass
+
+
+# Monkey patch
+pywebio.session.base.Session.on_task_exception = on_task_exception
+
+
+def raise_exception(x=3):
+    """
+    For testing purpose
+    """
+    if x > 0:
+        raise_exception(x - 1)
+    else:
+        raise Exception("quq")
+
+
+def get_nkas_config_listen_path(args):
+    for path, d in deep_iter(args, depth=3):
+        if d.get("display") in ["readonly", "hide"]:
+            continue
+        yield path
+
+if __name__ == "__main__":
+
+    def gen(x):
+        n = 0
+        while True:
+            n += x
+            print(n)
+            yield n
+
+    th = TaskHandler()
+    th.start()
+
+    t1 = Task(gen(1), delay=1)
+    t2 = Task(gen(-2), delay=3)
+
+    th.add_task(t1)
+    th.add_task(t2)
+
+    time.sleep(5)
+    th.remove_task(t2, nowait=True)
+    time.sleep(5)
+    th.stop()

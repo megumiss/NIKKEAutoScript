@@ -29,7 +29,7 @@ else
     touch "${XDG_RUNTIME_DIR}/${CONTAINER}.lock"
 fi
 
-# ALAS update
+# NKAS update
 pprint "Updating this repo"
 prun "cd ${SOURCE}/.."
 prun "git fetch origin master"

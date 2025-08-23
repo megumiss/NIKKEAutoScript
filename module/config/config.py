@@ -143,7 +143,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                     super().__setattr__(arg, value)
                     self.bound[arg] = f"{func}.{path}"
                     visited.add(path)
-
         # Override arguments
         for arg, value in self.overridden.items():
             super().__setattr__(arg, value)
@@ -151,27 +150,22 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
     def save(self, mod_name='nkas'):
         if not self.modified:
             return False
-
         for path, value in self.modified.items():
             deep_set(self.data, keys=path, value=value)
-
         logger.info(
             f"Save config {filepath_config(self.config_name, mod_name)}, {dict_to_kv(self.modified)}"
         )
         # Don't use self.modified = {}, that will create a new object.
         self.modified.clear()
         self.write_file(self.config_name, data=self.data)
-
     def update(self):
         self.load()
         self.config_override()
         self.bind(self.task)
         self.save()
-
     def config_override(self):
         now = datetime.now().replace(microsecond=0)
         limited = set()
-
         def limit_next_run(tasks, limit):
             for task in tasks:
                 if task in limited:
@@ -182,7 +176,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                 )
                 if isinstance(next_run, datetime) and next_run > limit:
                     deep_set(self.data, keys=f"{task}.Scheduler.NextRun", value=now)
-
         for task in ["Reward"]:
             if not self.is_task_enabled(task):
                 self.modified[f"{task}.Scheduler.Enable"] = True
@@ -210,7 +203,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             Function: Command to run
         """
         self.get_next_task()
-
         if self.pending_task:
             NikkeConfig.is_hoarding_task = False
             logger.info(f"Pending tasks: {[f.command for f in self.pending_task]}")
@@ -219,7 +211,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             return task
         else:
             NikkeConfig.is_hoarding_task = True
-
         if self.waiting_task:
             logger.info("No task pending")
             task = copy.deepcopy(self.waiting_task[0])
@@ -239,7 +230,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         waiting = []
         error = []
         now = datetime.now()
-
         # func 为json中的任务属性
         """
         {
@@ -272,7 +262,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             """
             if not isinstance(func.next_run, datetime):
                 error.append(func)
-
             elif func.next_run < now:
                 """
                     当前时间 > 该任务的下次运行时间
@@ -280,7 +269,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                 pending.append(func)
             else:
                 waiting.append(func)
-
         """
             任务优先级
         """
@@ -299,21 +287,16 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             waiting = sorted(waiting, key=operator.attrgetter("next_run"))
         if error:
             pending = error + pending
-
         self.pending_task = pending
         self.waiting_task = waiting
-
     def is_task_enabled(self, task):
         return bool(self.cross_get(keys=[task, 'Scheduler', 'Enable'], default=False))
-
     def cross_get(self, keys, default=None):
         """
         Get configs from other tasks.
-
         Args:
             keys (str, list[str]): Such as `{task}.Scheduler.Enable`
             default:
-
         Returns:
             Any:
         """
@@ -322,7 +305,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
     def task_delay(self, success=None, server_update=None, target=None, minute=None, task=None):
         def ensure_delta(delay):
             return timedelta(seconds=int(ensure_time(delay, precision=3) * 60))
-
         run = []
         if success is not None:
             interval = (
@@ -344,7 +326,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             run.append(target)
         if minute is not None:
             run.append(datetime.now() + ensure_delta(minute))
-
         if len(run):
             run = min(run).replace(microsecond=0)
             kv = dict_to_kv(
@@ -383,6 +364,40 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             logger.info(f"Task call: {task} (skipped because disabled by user)")
             return False
 
+    @staticmethod
+    def task_stop(message=""):
+        """
+        Stop current task.
+
+        Raises:
+            TaskEnd:
+        """
+        if message:
+            raise TaskEnd(message)
+        else:
+            raise TaskEnd
+
+    def task_switched(self):
+        """
+        Check if needs to switch task.
+
+        Raises:
+            bool: If task switched
+        """
+        # Update event
+        if self.stop_event is not None:
+            if self.stop_event.is_set():
+                return True
+        prev = self.task
+        self.load()
+        new = self.get_next()
+        if prev == new:
+            logger.info(f"Continue task `{new}`")
+            return False
+        else:
+            logger.info(f"Switch task `{prev}` to `{new}`")
+            return True
+
     def override(self, **kwargs):
         """
         Override anything you want.
@@ -392,6 +407,29 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         for arg, value in kwargs.items():
             self.overridden[arg] = value
             super().__setattr__(arg, value)
+
+    def set_record(self, **kwargs):
+        """
+        Args:
+            **kwargs: For example, `Emotion1_Value=150`
+                will set `Emotion1_Value=150` and `Emotion1_Record=now()`
+        """
+        with self.multi_set():
+            for arg, value in kwargs.items():
+                record = arg.replace("Value", "Record")
+                self.__setattr__(arg, value)
+                self.__setattr__(record, datetime.now().replace(microsecond=0))
+
+    def multi_set(self):
+        """
+        Set multiple arguments but save once.
+
+        Examples:
+            with self.config.multi_set():
+                self.config.foo1 = 1
+                self.config.foo2 = 2
+        """
+        return MultiSetWrapper(main=self)
 
     @property
     def EVENT_TYPE(self):
@@ -408,3 +446,24 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
     @property
     def EVENT_COOP(self):
         return self.Coop_EventCoop
+
+class MultiSetWrapper:
+    def __init__(self, main):
+        """
+        Args:
+            main (NikkeConfig):
+        """
+        self.main = main
+        self.in_wrapper = False
+
+    def __enter__(self):
+        if self.main.auto_update:
+            self.main.auto_update = False
+        else:
+            self.in_wrapper = True
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not self.in_wrapper:
+            self.main.update()
+            self.main.auto_update = True

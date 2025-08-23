@@ -113,7 +113,7 @@ class TemplateExtractor(ImageExtractor):
     #     Args:
     #         module(str):
     #         file(str): xxx.png
-    #         config(AzurLaneConfig):
+    #         config(NikkeConfig):
     #     """
     #     self.module = module
     #     self.file = file

@@ -6,8 +6,8 @@ from onepush.exceptions import OnePushException
 from onepush.providers.custom import Custom
 from requests import Response
 
-from module.common.enum.webui import ICON
 from module.logger import logger
+from module.webui.icon import ICON
 
 onepush.core.log = logger
 
@@ -19,7 +19,7 @@ def handle_notify_win(**kwargs) -> bool:
         app_id='NKAS',
         title=kwargs['title'],
         msg=kwargs['content'],
-        icon=ICON.Helm_Circle,
+        icon=ICON.Icon,
         duration='long',
     )
     toast.show()

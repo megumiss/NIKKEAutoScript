@@ -19,15 +19,13 @@ def put_input(name, type='text', *, label='', value=None, placeholder=None, read
 
 
 def put_textarea(name, *, label='', rows=6, code=None, maxlength=None, minlength=None, value=None, placeholder=None,
-                 readonly=None, help_text=None, scope=None, position=OutputPosition.BOTTOM,
-                 **other_html_attrs) -> Output:
+                 readonly=None, help_text=None, scope=None, position=OutputPosition.BOTTOM, **other_html_attrs) -> Output:
     """Output a textarea widget. Refer to: `pywebio.input.textarea()`"""
     from pywebio.input import textarea
     check_dom_name_value(name, 'pin `name`')
     single_input_return = textarea(
         name=name, label=label, rows=rows, code=code, maxlength=maxlength,
-        minlength=minlength, value=value, placeholder=placeholder, readonly=readonly, help_text=help_text,
-        **other_html_attrs)
+        minlength=minlength, value=value, placeholder=placeholder, readonly=readonly, help_text=help_text, **other_html_attrs)
     return _pin_output(single_input_return, scope, position)
 
 

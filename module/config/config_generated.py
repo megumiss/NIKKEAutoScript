@@ -19,12 +19,17 @@ class GeneratedConfig:
 
     # Group `Emulator`
     Emulator_Serial = 'auto'
-    Emulator_PackageName = 'com.proximabeta.nikke'  # com.proximabeta.nikke, com.gamamobi.nikke
+    Emulator_PackageName = 'com.proximabeta.nikke'  # com.proximabeta.nikke, com.gamamobi.nikke, com.proximabeta.nikke, com.gamamobi.nikke
     Emulator_Language = 'zh-cn'  # zh-cn
     Emulator_ScreenshotMethod = 'DroidCast'  # DroidCast
     Emulator_ControlMethod = 'minitouch'  # minitouch
     Emulator_AdbRestart = False
     Emulator_ScreenshotInterval = 0.5
+
+    # Group `EmulatorInfo`
+    EmulatorInfo_Emulator = 'auto'  # auto, NoxPlayer, NoxPlayer64, BlueStacks4, BlueStacks5, BlueStacks4HyperV, BlueStacks5HyperV, LDPlayer3, LDPlayer4, LDPlayer9, MuMuPlayer, MuMuPlayerX, MuMuPlayer12, MEmuPlayer
+    EmulatorInfo_name = None
+    EmulatorInfo_path = None
 
     # Group `Optimization`
     Optimization_AutoRedCircle = False
@@ -39,6 +44,9 @@ class GeneratedConfig:
     # Group `DailyRecruit`
     DailyRecruit_EventFreeRecruit = True
     DailyRecruit_SocialPointRecruit = True
+
+    # Group `SimulationRoom`
+    SimulationRoom_QuickSimulation = True
 
     # Group `Area`
     Area_Difficulty = 'Level_1'  # Level_1, Level_2, Level_3, Level_4, Level_5
@@ -56,7 +64,8 @@ class GeneratedConfig:
     ArenaShop_priority = None
 
     # Group `RubbishShop`
-    RubbishShop_priority = None
+    RubbishShop_priority = 'GEM > CORE_DUST_CASE'
+    RubbishShop_bonePriority = None
 
     # Group `Notification`
     Notification_WhenDailyTaskCompleted = False
@@ -78,7 +87,7 @@ class GeneratedConfig:
 
     # Group `Conversation`
     Conversation_OnlyFavourite = False
-    Conversation_IgnoreBondMax = False
+    Conversation_OnlyLogsNotMax = False
 
     # Group `BlaAuth`
     BlaAuth_UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
@@ -117,6 +126,20 @@ class GeneratedConfig:
 
     # Group `Interception`
     Interception_DropScreenshotPath = None
+
+    # Group `Overclock`
+    Overclock_SkipRatioCheck = False
+    Overclock_AlwaysReselect = False
+    Overclock_ModifierList = 'ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY'
+
+    # Group `TowerDaemon`
+    TowerDaemon_Enable = True
+
+    # Group `CombatDaemon`
+    CombatDaemon_Enable = False
+
+    # Group `EventDaemon`
+    EventDaemon_Enable = False
 
     # Group `Storage`
     Storage_Storage = {}

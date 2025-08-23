@@ -120,6 +120,40 @@ class GitManager(DeployConfig):
             logger.error(f'Extraction error: {e}')
             raise ExecutionError(f'Extraction error: {e}')
 
+    def get_latest_portablegit_urls(self):
+        """
+        从清华源获取最新 PortableGit 版本号，并拼接清华源和 GitHub 的下载链接
+        返回 [清华源URL, GitHubURL]，失败时返回 []
+        """
+        import re
+        import urllib.request
+
+        tsinghua_url = 'https://mirrors.tuna.tsinghua.edu.cn/github-release/git-for-windows/git/LatestRelease/'
+        logger.info(f'Fetching latest release info from {tsinghua_url}')
+        try:
+            with urllib.request.urlopen(tsinghua_url, timeout=30) as resp:
+                html = resp.read().decode('utf-8', errors='ignore')
+
+            # 匹配 PortableGit-<version>-64-bit.7z.exe
+            match = re.search(r'PortableGit-(\d+(?:\.\d+)+)-64-bit\.7z\.exe', html)
+            if not match:
+                logger.warning('Failed to detect latest PortableGit version from Tsinghua mirror')
+                return []
+
+            version = match.group(1)  # e.g. 2.51.0 / 2.51 / 2.51.0.1
+            logger.info(f'Detected latest PortableGit version: {version}')
+
+            # 清华源链接
+            tuna_url = f'{tsinghua_url}PortableGit-{version}-64-bit.7z.exe'
+
+            # GitHub 官方链接
+            github_url = f'https://github.com/git-for-windows/git/releases/download/v{version}.windows.1/PortableGit-{version}-64-bit.7z.exe'
+
+            return [tuna_url, github_url]
+        except Exception as e:
+            logger.error(f'Error while fetching Tsinghua mirror info: {e}')
+            return []
+
     def git_install(self):
         logger.hr('Install Git', 0)
 
@@ -131,11 +165,16 @@ class GitManager(DeployConfig):
         target_dir = os.path.abspath('./toolkit/Git')
         os.makedirs(target_dir, exist_ok=True)
 
-        # 多镜像地址
+        # 默认 URL 列表（回退用）
         urls = [
-            'https://mirrors.tuna.tsinghua.edu.cn/github-release/git-for-windows/git/LatestRelease/PortableGit-2.50.1-64-bit.7z.exe',
-            'https://github.com/git-for-windows/git/releases/download/v2.50.1.windows.1/PortableGit-2.50.1-arm64.7z.exe',
+            'https://github.com/git-for-windows/git/releases/download/v2.50.1.windows.1/PortableGit-2.50.1-64-bit.7z.exe',
         ]
+
+        # 尝试获取最新 PortableGit 的清华源和 GitHub 链接
+        latest_urls = self.get_latest_portablegit_urls()
+        if latest_urls:
+            # 插到前两位
+            urls = latest_urls + urls
 
         exe_path = os.path.abspath(os.path.join(target_dir, 'PortableGit.exe'))
 

@@ -65,7 +65,9 @@ class GiftBase(UI):
                 continue
 
             # 打开礼礼包页面
-            if click_timer.reached() and self.appear_then_click(GOTO_GENERAL_GIFT, offset=(30, 30), interval=2):
+            if click_timer.reached() and self.appear_then_click(
+                GOTO_GENERAL_GIFT, offset=(120, 10), threshold=0.95, interval=2
+            ):
                 click_timer.reset()
                 continue
 

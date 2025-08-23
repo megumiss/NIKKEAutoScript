@@ -32,6 +32,31 @@ Emulator:
     option: [ minitouch, ]
   AdbRestart: false
   ScreenshotInterval: 0.5
+EmulatorInfo:
+  Emulator:
+    value: auto
+    option: [
+      auto,
+      NoxPlayer,
+      NoxPlayer64,
+      BlueStacks4,
+      BlueStacks5,
+      BlueStacks4HyperV,
+      BlueStacks5HyperV,
+      LDPlayer3,
+      LDPlayer4,
+      LDPlayer9,
+      MuMuPlayer,
+      MuMuPlayerX,
+      MuMuPlayer12,
+      MEmuPlayer,
+    ]
+  name:
+    value: null
+    type: textarea
+  path:
+    value: null
+    type: textarea
 Optimization:
   AutoRedCircle: false
   OcrModelType:
@@ -47,6 +72,8 @@ Reward:
 DailyRecruit:
   EventFreeRecruit: true
   SocialPointRecruit: true
+SimulationRoom:
+  QuickSimulation: true
 Area:
   Difficulty:
     value: 'Level_1'
@@ -68,6 +95,9 @@ ArenaShop:
     type: textarea
 RubbishShop:
   priority:
+    value: 'GEM > CORE_DUST_CASE'
+    type: textarea
+  bonePriority:
     value: ''
     type: textarea
 Notification:
@@ -96,7 +126,7 @@ OpponentSelection:
 Conversation:
   #QuickConsultation: false
   OnlyFavourite: false
-  IgnoreBondMax: false
+  OnlyLogsNotMax: false
 BlaAuth:
   UserAgent:
     value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
@@ -169,3 +199,22 @@ Interception:
   DropScreenshotPath:
     value: ''
     type: textarea
+Overclock:
+  # DisableFirst: false
+  SkipRatioCheck: false
+  AlwaysReselect: false
+  ModifierList:
+    value: "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
+    type: textarea
+TowerDaemon:
+  Enable:
+    value: true
+    display: disabled
+CombatDaemon:
+  Enable:
+    value: false
+    display: disabled
+EventDaemon:
+  Enable:
+    value: false
+    display: disabled

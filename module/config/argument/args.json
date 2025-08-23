@@ -11,6 +11,8 @@
         "value": "com.proximabeta.nikke",
         "option": [
           "com.proximabeta.nikke",
+          "com.gamamobi.nikke",
+          "com.proximabeta.nikke",
           "com.gamamobi.nikke"
         ]
       },
@@ -42,6 +44,36 @@
       "ScreenshotInterval": {
         "type": "input",
         "value": 0.5
+      }
+    },
+    "EmulatorInfo": {
+      "Emulator": {
+        "type": "select",
+        "value": "auto",
+        "option": [
+          "auto",
+          "NoxPlayer",
+          "NoxPlayer64",
+          "BlueStacks4",
+          "BlueStacks5",
+          "BlueStacks4HyperV",
+          "BlueStacks5HyperV",
+          "LDPlayer3",
+          "LDPlayer4",
+          "LDPlayer9",
+          "MuMuPlayer",
+          "MuMuPlayerX",
+          "MuMuPlayer12",
+          "MEmuPlayer"
+        ]
+      },
+      "name": {
+        "type": "textarea",
+        "value": null
+      },
+      "path": {
+        "type": "textarea",
+        "value": null
       }
     },
     "Optimization": {
@@ -145,8 +177,7 @@
         "option": [
           true,
           false
-        ],
-        "display": "disabled"
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -536,7 +567,7 @@
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00",
+        "value": "04:00, 20:00",
         "display": "hide"
       }
     },
@@ -590,7 +621,7 @@
         "type": "checkbox",
         "value": false
       },
-      "IgnoreBondMax": {
+      "OnlyLogsNotMax": {
         "type": "checkbox",
         "value": false
       }
@@ -704,6 +735,10 @@
     "RubbishShop": {
       "priority": {
         "type": "textarea",
+        "value": "GEM > CORE_DUST_CASE"
+      },
+      "bonePriority": {
+        "type": "textarea",
         "value": ""
       }
     },
@@ -752,6 +787,12 @@
         "display": "hide"
       }
     },
+    "SimulationRoom": {
+      "QuickSimulation": {
+        "type": "checkbox",
+        "value": true
+      }
+    },
     "Area": {
       "Difficulty": {
         "type": "select",
@@ -781,6 +822,65 @@
           "B",
           "C"
         ]
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Overclock": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "Overclock",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "Overclock": {
+      "SkipRatioCheck": {
+        "type": "checkbox",
+        "value": false
+      },
+      "AlwaysReselect": {
+        "type": "checkbox",
+        "value": false
+      },
+      "ModifierList": {
+        "type": "textarea",
+        "value": "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
       }
     },
     "Storage": {
@@ -1114,7 +1214,7 @@
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00",
+        "value": "04:00, 16:00",
         "display": "hide"
       }
     },
@@ -1546,17 +1646,6 @@
         "display": "hide"
       }
     },
-    "CDK": {
-      "Extra": {
-        "type": "checkbox",
-        "value": false
-      },
-      "Source": {
-        "type": "textarea",
-        "value": "https://gamewith.jp/nikke/article/show/371014",
-        "display": "disabled"
-      }
-    },
     "Storage": {
       "Storage": {
         "type": "storage",
@@ -1606,141 +1695,6 @@
       "Priority": {
         "type": "textarea",
         "value": "Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30"
-      }
-    },
-    "Storage": {
-      "Storage": {
-        "type": "storage",
-        "value": {},
-        "valuetype": "ignore",
-        "display": "disabled"
-      }
-    }
-  },
-  "TowerDaemon": {
-    "Scheduler": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "option": [
-          true,
-          false
-        ]
-      },
-      "NextRun": {
-        "type": "datetime",
-        "value": "1989-12-27 00:00:00",
-        "validate": "datetime"
-      },
-      "Command": {
-        "type": "input",
-        "value": "TowerDaemon",
-        "display": "hide"
-      },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
-      },
-      "ServerUpdate": {
-        "type": "input",
-        "value": "04:00",
-        "display": "hide"
-      }
-    },
-    "Storage": {
-      "Storage": {
-        "type": "storage",
-        "value": {},
-        "valuetype": "ignore",
-        "display": "disabled"
-      }
-    }
-  },
-  "CombatDaemon": {
-    "Scheduler": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "option": [
-          true,
-          false
-        ]
-      },
-      "NextRun": {
-        "type": "datetime",
-        "value": "1989-12-27 00:00:00",
-        "validate": "datetime"
-      },
-      "Command": {
-        "type": "input",
-        "value": "CombatDaemon",
-        "display": "hide"
-      },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
-      },
-      "ServerUpdate": {
-        "type": "input",
-        "value": "04:00",
-        "display": "hide"
-      }
-    },
-    "Storage": {
-      "Storage": {
-        "type": "storage",
-        "value": {},
-        "valuetype": "ignore",
-        "display": "disabled"
-      }
-    }
-  },
-  "EventDaemon": {
-    "Scheduler": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "option": [
-          true,
-          false
-        ]
-      },
-      "NextRun": {
-        "type": "datetime",
-        "value": "1989-12-27 00:00:00",
-        "validate": "datetime"
-      },
-      "Command": {
-        "type": "input",
-        "value": "EventDaemon",
-        "display": "hide"
-      },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
-      },
-      "ServerUpdate": {
-        "type": "input",
-        "value": "04:00",
-        "display": "hide"
       }
     },
     "Storage": {
@@ -1876,6 +1830,57 @@
         "type": "input",
         "value": "04:00",
         "display": "hide"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "TowerDaemon": {
+    "TowerDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": true,
+        "display": "disabled"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "CombatDaemon": {
+    "CombatDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "display": "disabled"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "EventDaemon": {
+    "EventDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "display": "disabled"
       }
     },
     "Storage": {

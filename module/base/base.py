@@ -20,7 +20,7 @@ class ModuleBase:
     def __init__(self, config, device=None, task=None):
         """
               Args:
-                  config (AzurLaneConfig, str):
+                  config (NikkeConfig, str):
                       Name of the user config under ./config
                   device (Device):
                       To reuse a device.

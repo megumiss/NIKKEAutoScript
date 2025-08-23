@@ -1,6 +1,6 @@
 <div align="center">
 
-<img alt="LOGO" src="./webapp/src/assets/img/Helm.png" width="256" height="256" />
+<img alt="LOGO" src="./webapp/buildResources/icon.png" width="256" height="256" />
 
 # NIKKEAutoScript
 
@@ -52,33 +52,28 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 ---
 
 ### 更新计划
-- [ ] 模拟室快速
 - [ ] 半自动推图
-- [ ] 废铁商店优化，支持骨头货币
-- [ ] 超频
-- [ ] 自动打开模拟器
 - [ ] 修复uiautomator自动安装
 - [x] 通知优化
 - [x] 支持自动更新、定时更新
 - [x] 支持docker部署
 
 ### 支持功能
+- [x] 模拟器自动启动
 - [x] 每日收获、歼灭、派遣
 - [x] 友情点、特殊竞技场点数领取
 - [x] 每日、周、月免费钻领取
 - [x] 普通商店、竞技场商店、废铁商店
 - [x] 每日企业塔，自动普通企业塔
 - [x] 异常拦截（只支持克拉肯），支持自动打红圈、掉落截图
-- [x] 自动模拟室
+- [x] 模拟室，超频
 - [x] 每日咨询、送礼
-- [x] 普通竞技场、特殊竞技场自动战斗
+- [x] 普通竞技场、特殊竞技场自动战斗，冠军竞技场竞猜
 - [x] 大型活动扫荡、挑战、签到、奖励、商店购买、小游戏（个别）
 - [x] 小型活动扫荡、挑战、奖励、商店购买
 - [x] 协同作战、个突、联盟突袭
-- [x] 冠军竞技场
 - [x] 活动免费、友情点每日抽卡
-- [x] 邮箱领取
-- [x] 排名奖励领取
+- [x] 邮箱领取，排名奖励领取
 - [x] 每日、每周任务奖励
 - [x] 每日pass领取
 - [x] blablalink社区每日任务，CDK自动兑换
@@ -99,6 +94,20 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 ### GUI预览
 
 ![GUI预览](https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/gui.png)
+
+---
+
+### 支持我
+
+如果喜欢本项目，可以送作者一杯蜜雪冰城🍦  
+
+您的支持就是作者开发和维护项目的动力🚀  
+
+<p>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="微信" width="200"/>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="支付宝" width="200"/>
+</p>
+
 
 ---
 

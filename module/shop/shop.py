@@ -41,6 +41,7 @@ class Product:
 
 class ShopBase(UI):
     def ensure_into_shop(self, button, check, skip_first_screenshot=True):
+        # 确保进入指定商店页面
         logger.hr(f'{check.name.split("_")[:1][0]} SHOP', 2)
         confirm_timer = Timer(2, 3).start()
         click_timer = Timer(0.3)
@@ -50,15 +51,20 @@ class ShopBase(UI):
             else:
                 self.device.screenshot()
 
+            # 检查是否已进入目标页面
             if self.appear(check, offset=(5, 5)) and confirm_timer.reached():
                 break
 
+            # 点击进入商店按钮
             if click_timer.reached() and self.appear_then_click(button, offset=(5, 5), interval=5):
                 click_timer.reset()
                 confirm_timer.reset()
                 continue
 
-    def p(self, button=None, skip_first_screenshot=True):
+    def handle_purchase(self, button=None, skip_first_screenshot=True):
+        """
+        处理购买逻辑。
+        """
         confirm_timer = Timer(2, 3).start()
         _confirm_timer = Timer(1, 2).start()
         click_timer = Timer(0.3)
@@ -68,6 +74,7 @@ class ShopBase(UI):
             else:
                 self.device.screenshot()
 
+            # 点击购买按钮并确认
             if (
                 button is not None
                 and confirm_timer.reached()
@@ -79,22 +86,22 @@ class ShopBase(UI):
                 click_timer.reset()
                 continue
 
+            # 检查是否余额不足
             if self.appear(NO_MONEY, offset=(5, 5), static=False) and NO_MONEY.match_appear_on(self.device.image):
                 raise NotEnoughMoneyError
 
-            if (
-                click_timer.reached()
-                and self.appear(MAX, offset=(30, 30), interval=3, static=False)
-                and MAX.match_appear_on(self.device.image, threshold=10)
-            ):
-                self.device.click(MAX)
+            # 检查是否达到最大购买数量
+            if click_timer.reached() and self.appear_then_click(MAX, threshold=5, interval=1):
+                self.device.sleep(0.3)
                 click_timer.reset()
                 continue
 
+            # 点击确认购买按钮
             if click_timer.reached() and self.appear_then_click(BUY, offset=(30, 30), interval=3, static=False):
                 click_timer.reset()
                 continue
 
+            # 处理奖励领取
             if click_timer.reached() and self.handle_reward(1):
                 skip_first_screenshot = True
                 while 1:
@@ -106,13 +113,10 @@ class ShopBase(UI):
                     if self.appear(SHOP_CHECK, offset=(5, 5)) and _confirm_timer.reached():
                         return
 
-    def purchase(
-        self,
-        products: SelectedGrids,
-        check_price=False,
-        refresh=False,
-        skip_first_screenshot=True,
-    ):
+    def process_purchase(self, products: SelectedGrids, check_price=False, refresh=False, skip_first_screenshot=True):
+        """
+        处理商品购买流程。
+        """
         timeout = Timer(2.7, 3).start()
         click_timer = Timer(0.3)
         product: Button = products.first_or_none().button
@@ -120,6 +124,7 @@ class ShopBase(UI):
 
         while 1:
             try:
+                # 超时处理，移除当前商品并尝试刷新
                 if timeout.reached():
                     timeout.reset()
                     products = products.delete([products.first_or_none()])
@@ -135,19 +140,18 @@ class ShopBase(UI):
                 else:
                     self.device.screenshot()
 
+                # 检查是否在购买确认页面
                 if self.appear(PURCHASE_CHECK, offset=(5, 5), interval=0.6, static=False):
                     timeout.reset()
-                    self.p()
+                    self.handle_purchase()
 
                 else:
+                    # 检查商品是否可见并点击
                     if self.appear(
-                        product,
-                        offset=(5, 5),
-                        threshold=0.9,
-                        interval=0.8,
-                        static=False,
+                        product, offset=(5, 5), threshold=0.9, interval=0.8, static=False
                     ) and product.match_appear_on(self.device.image, 6):
                         if check_price and product.name != ORNAMENT.name:
+                            # 检查商品价格
                             area = _area_offset(product.button, (-50, 0, 50, 250))
                             img = self.device.image[area[1] : area[3], area[0] : area[2]]
                             super().__setattr__('_image', img)
@@ -160,8 +164,8 @@ class ShopBase(UI):
                             click_timer.reset()
                             timeout.reset()
                             continue
-
             except Refresh:
+                # 刷新商店逻辑
                 if not self.refreshed:
                     click_timer = Timer(0.6)
                     while 1:
@@ -170,6 +174,7 @@ class ShopBase(UI):
                         else:
                             self.device.screenshot()
 
+                        # 点击刷新按钮
                         if (
                             not self.refreshed
                             and click_timer.reached()
@@ -179,15 +184,10 @@ class ShopBase(UI):
                             self.device.click_minitouch(x - 80, y)
                             click_timer.reset()
 
+                        # 确认刷新
                         if (
                             click_timer.reached()
-                            and self.appear(
-                                GRATIS_REFRESH,
-                                offset=5,
-                                threshold=0.96,
-                                interval=1,
-                                static=False,
-                            )
+                            and self.appear(GRATIS_REFRESH, offset=5, threshold=0.96, interval=1, static=False)
                             and self.appear_then_click(CONFIRM_B, offset=5, interval=1, static=False)
                         ):
                             while 1:
@@ -202,6 +202,7 @@ class ShopBase(UI):
                                 if self.appear(SHOP_CHECK, offset=5) and SHOP_CHECK.appear_on(self.device.image, 25):
                                     break
 
+                            # 更新商品列表
                             del self.__dict__['general_shop_priority']
                             products = self.general_shop_priority
                             product: Button = products.first_or_none().button
@@ -209,6 +210,7 @@ class ShopBase(UI):
                             timeout.reset()
                             break
 
+                        # 取消刷新
                         if click_timer.reached() and self.appear_then_click(
                             CANCEL, offset=5, threshold=0.9, interval=2, static=False
                         ):
@@ -223,43 +225,50 @@ class ShopBase(UI):
                             timeout.reset()
                             break
 
-    def purchase1(
-        self,
-        products: SelectedGrids,
-        skip_first_screenshot=True,
-    ):
-        swipe_confirm = Timer(2, count=9).start()
+    def swipe_and_purchase(self, products: SelectedGrids):
+        """
+        滑动屏幕查找并购买商品，逐个处理每个商品。
+        """
         click_timer = Timer(0.6)
         logger.attr('PENDING PRODUCT LIST', [i.name for i in products])
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
+
+        # 遍历商品列表，每个商品单独处理
+        for product in list(products):
+            # 每次购买某个物品前先滚动到顶部
+            self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=4, delay=0.5)
+            logger.info(f'[Purchase Start] {product.name}')
+
+            while 1:
                 self.device.screenshot()
 
-            for i in products:
-                if self.appear(i.button, offset=5, threshold=0.9, static=False) and i.button.match_appear_on(
-                    self.device.image, 15
-                ):
+                # 检查当前商品是否可见
+                if self.appear(
+                    product.button, offset=5, threshold=0.9, static=False
+                ) and product.button.match_appear_on(self.device.image, 15):
                     if click_timer.reached():
-                        self.device.click(i.button)
+                        self.device.click(product.button)
                         img = self.device.image
-                        self.p(i.button)
+                        self.handle_purchase(product.button)
                         self.device.image = img
-                        if i.timer.reached():
-                            products = products.delete([i])
-                            logger.attr('PENDING PRODUCT LIST', [i.name for i in products])
-                            if not products.count:
-                                raise PurchaseTimeTooLong
-                            continue
+                        logger.info(f'[Purchased] {product.name}')
 
-            if swipe_confirm.reached():
-                raise PurchaseTimeTooLong
+                # 结束当前商品的扫描，进入下一个商品
+                if self.appear(END_LIST_CHECK, threshold=5):
+                    logger.info(f'[Purchase done or not found] {product.name}')
+                    break
 
-            self.device.swipe((505, 1000), (505, 965), handle_control_check=False)
-            self.device.sleep(1)
+                # 滑动屏幕继续查找
+                self.ensure_sroll((505, 1000), (505, 700), speed=5, hold=0.5, count=1, delay=0.5)
+
+            # 单个商品完成后，从待购买列表中移除
+            # products = products.delete([product])
+            # logger.attr('PENDING PRODUCT LIST', [i.name for i in products])
+
+        # 全部完成
+        logger.info('[All Products Processed]')
 
     def ensure_back(self, check: Button, skip_first_screenshot=True):
+        # 确保返回到指定页面
         confirm_timer = Timer(1, count=1).start()
         click_timer = Timer(0.3)
         while 1:
@@ -268,11 +277,13 @@ class ShopBase(UI):
             else:
                 self.device.screenshot()
 
+            # 点击取消按钮返回
             if click_timer.reached() and self.appear_then_click(CANCEL, offset=(30, 30), interval=1, static=False):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
+            # 检查是否已返回目标页面
             if self.appear(check, offset=(10, 10), static=False) and confirm_timer.reached():
                 break
 
@@ -310,13 +321,13 @@ class Shop(ShopBase):
         if self.config.GeneralShop_enable:
             super().__setattr__('refreshed', False)
             self.ensure_into_shop(GOTO_GENERAL_SHOP, GENERAL_SHOP_CHECK)
-            self.purchase(self.general_shop_priority, True, True)
+            self.process_purchase(self.general_shop_priority, True, True)
         try:
             if self.config.ArenaShop_enable:
                 self.ensure_into_shop(GOTO_ARENA_SHOP, ARENA_SHOP_CHECK)
                 if self.config.ArenaShop_priority is None or not len(self.config.ArenaShop_priority.strip(' ')):
                     raise ProductQueueIsEmpty
-                self.purchase(self.arena_shop_priority)
+                self.process_purchase(self.arena_shop_priority)
         except NotEnoughMoneyError:
             logger.error('The rest of money is not enough to buy this product')
             self.ensure_back(ARENA_SHOP_CHECK)

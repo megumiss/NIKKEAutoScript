@@ -1,20 +1,76 @@
+import copy
 import json
-from typing import Generator, Union, List, Callable, Dict, Any, Optional, TYPE_CHECKING
+import random
+import string
+from typing import Any, Callable, Dict, Generator, List, Optional, TYPE_CHECKING, Union
 
-from pywebio import SessionException
+from pywebio.exceptions import SessionException
 from pywebio.io_ctrl import Output
-from pywebio.output import put_html, clear, put_button, put_scope, put_column, put_text
-from pywebio.session import run_js, local
+from pywebio.output import *
+from pywebio.session import eval_js, local, run_js
 from rich.console import ConsoleRenderable
 
 from module.logger import HTMLConsole, Highlighter, WEB_THEME
 from module.webui.lang import t
 from module.webui.pin import put_checkbox, put_input, put_select, put_textarea
 from module.webui.process_manager import ProcessManager
-from module.webui.utils import DARK_TERMINAL_THEME, LOG_CODE_FORMAT, Switch
+from module.webui.setting import State
+from module.webui.utils import (
+    DARK_TERMINAL_THEME,
+    LIGHT_TERMINAL_THEME,
+    LOG_CODE_FORMAT,
+    Switch,
+)
 
 if TYPE_CHECKING:
-    from module.webui.app import NikkeAutoScriptGUI
+    from module.webui.app import NKASGUI
+
+
+class ScrollableCode:
+    """
+    https://github.com/pywebio/PyWebIO/discussions/21
+    Deprecated
+    """
+
+    def __init__(self, keep_bottom: bool = True) -> None:
+        self.keep_bottom = keep_bottom
+
+        self.id = "".join(random.choice(string.ascii_letters) for _ in range(10))
+        self.html = (
+                """<pre id="%s" class="container-log"><code style="white-space:break-spaces;"></code></pre>"""
+                % self.id
+        )
+
+    def output(self):
+        # .style("display: grid; overflow-y: auto;")
+        return put_html(self.html)
+
+    def append(self, text: str) -> None:
+        if text:
+            run_js(
+                """$("#{dom_id}>code").append(text);
+            """.format(
+                    dom_id=self.id
+                ),
+                text=str(text),
+            )
+            if self.keep_bottom:
+                self.scroll()
+
+    def scroll(self) -> None:
+        run_js(
+            r"""$("\#{dom_id}").animate({{scrollTop: $("\#{dom_id}").prop("scrollHeight")}}, 0);
+        """.format(
+                dom_id=self.id
+            )
+        )
+
+    def reset(self) -> None:
+        run_js(r"""$("\#{dom_id}>code").empty();""".format(dom_id=self.id))
+
+    def set_scroll(self, b: bool) -> None:
+        # use for lambda callback function
+        self.keep_bottom = b
 
 
 class RichLog:
@@ -32,8 +88,15 @@ class RichLog:
             highlighter=Highlighter(),
             theme=WEB_THEME,
         )
+        # self.callback_id = output_register_callback(
+        #     self._callback_set_width, serial_mode=True)
+        # self._callback_thread = None
+        # self._width = 80
         self.keep_bottom = True
-        self.terminal_theme = DARK_TERMINAL_THEME
+        if State.theme == "dark":
+            self.terminal_theme = DARK_TERMINAL_THEME
+        else:
+            self.terminal_theme = LIGHT_TERMINAL_THEME
 
     def render(self, renderable: ConsoleRenderable) -> str:
         with self.console.capture():
@@ -45,21 +108,83 @@ class RichLog:
             code_format=LOG_CODE_FORMAT,
             inline_styles=True,
         )
+        # print(html)
         return html
 
     def extend(self, text):
-        run_js(
-            """$("#pywebio-scope-{scope}>div").append(text);
-        """.format(
-                scope=self.scope
-            ),
-            text=str(text),
-        )
-        # if self.keep_bottom:
-        #     self.scroll()
+        if text:
+            run_js(
+                """$("#pywebio-scope-{scope}>div").append(text);
+            """.format(
+                    scope=self.scope
+                ),
+                text=str(text),
+            )
+            if self.keep_bottom:
+                self.scroll()
 
     def reset(self):
         run_js(f"""$("#pywebio-scope-{self.scope}>div").empty();""")
+
+    def scroll(self) -> None:
+        run_js(
+            """$("#pywebio-scope-{scope}").scrollTop($("#pywebio-scope-{scope}").prop("scrollHeight"));
+        """.format(
+                scope=self.scope
+            )
+        )
+
+    def set_scroll(self, b: bool) -> None:
+        # use for lambda callback function
+        self.keep_bottom = b
+
+    def get_width(self):
+        js = """
+        let canvas = document.createElement('canvas');
+        canvas.style.position = "absolute";
+        let ctx = canvas.getContext('2d');
+        document.body.appendChild(canvas);
+        ctx.font = `16px Menlo, consolas, DejaVu Sans Mono, Courier New, monospace`;
+        document.body.removeChild(canvas);
+        let text = ctx.measureText('0');
+        ctx.fillText('0', 50, 50);
+
+        ($('#pywebio-scope-{scope}').width()-16)/\
+        $('#pywebio-scope-{scope}').css('font-size').slice(0, -2)/text.width*16;\
+        """.format(
+            scope=self.scope
+        )
+        width = eval_js(js)
+        return 80 if width is None else 128 if width > 128 else int(width)
+
+    # def _register_resize_callback(self):
+    #     js = """
+    #     WebIO.pushData(
+    #         ($('#pywebio-scope-log').width()-16)/$('#pywebio-scope-log').css('font-size').slice(0, -2)/0.55,
+    #         {callback_id}
+    #     )""".format(callback_id=self.callback_id)
+
+    # def _callback_set_width(self, width):
+    #     self._width = width
+    #     if self._callback_thread is None:
+    #         self._callback_thread = Thread(target=self._callback_width_checker)
+    #         self._callback_thread.start()
+
+    # def _callback_width_checker(self):
+    #     last_modify = time.time()
+    #     _width = self._width
+    #     while True:
+    #         if time.time() - last_modify > 1:
+    #             break
+    #         if self._width == _width:
+    #             time.sleep(0.1)
+    #             continue
+    #         else:
+    #             _width = self._width
+    #             last_modify = time.time()
+
+    #     self._callback_thread = None
+    #     self.console.width = int(_width)
 
     def put_log(self, pm: ProcessManager) -> Generator:
         yield
@@ -82,15 +207,6 @@ class RichLog:
                         last_idx = idx
         except SessionException:
             pass
-
-
-def put_icon_buttons(
-        icon_html: str,
-        onclick: Union[List[Callable[[], None]], Callable[[], None]],
-        id: str = None,
-) -> None:
-    put_html(f'<div class="icon_button">{icon_html}</div>').style(
-        f"z-index: 1; text-align: center; width: 24px; height: 24px; --aside-{id}--;").onclick(onclick)
 
 
 class BinarySwitchButton(Switch):
@@ -142,18 +258,30 @@ class BinarySwitchButton(Switch):
             },
         }
         super().__init__(status=status, get_state=get_state, name=scope)
-        self._update_button()
 
     def update_button(self, label, onclick, color):
         clear(self.scope)
         put_button(label=label, onclick=onclick, color=color, scope=self.scope)
 
-    def _update_button(self):
-        d = self.status[self.get_state()]
-        func = d["func"]
-        args = d.get("args", tuple())
-        kwargs = d.get("kwargs", dict())
-        func(*args, **kwargs)
+
+# aside buttons
+
+
+def put_icon_buttons(
+        icon_html: str,
+        buttons: List[Dict[str, str]],
+        onclick: Union[List[Callable[[], None]], Callable[[], None]],
+) -> Output:
+    value = buttons[0]["value"]
+    return put_column(
+        [
+            output(put_html(icon_html)).style(
+                "z-index: 1; margin-left: 8px;text-align: center"
+            ),
+            put_buttons(buttons, onclick).style(f"z-index: 2; --aside-{value}--;"),
+        ],
+        size="0",
+    )
 
 
 def put_none() -> Output:
@@ -196,6 +324,36 @@ def put_arg_input(kwargs: T_Output_Kwargs) -> Output:
         ],
     )
 
+
+def product_stored_row(kwargs: T_Output_Kwargs, key, value):
+    kwargs = copy.copy(kwargs)
+    kwargs["name"] += f'_{key}'
+    kwargs["value"] = value
+    return put_input(**kwargs).style("--input--")
+
+
+def put_arg_stored(kwargs: T_Output_Kwargs) -> Output:
+    name: str = kwargs["name"]
+    kwargs["disabled"] = True
+
+    values = kwargs.pop("value", {})
+    time_ = values.pop("time", "")
+
+    rows = [product_stored_row(kwargs, key, value) for key, value in values.items() if value]
+    if time_:
+        rows += [product_stored_row(kwargs, "time", time_)]
+    return put_scope(
+        f"arg_container-stored-{name}",
+        [
+            get_title_help(kwargs),
+            put_scope(
+                f"arg_stored-stored-value-{name}",
+                rows,
+            )
+        ]
+    )
+
+
 def put_arg_select(kwargs: T_Output_Kwargs) -> Output:
     name: str = kwargs["name"]
     value: str = kwargs["value"]
@@ -226,6 +384,7 @@ def put_arg_select(kwargs: T_Output_Kwargs) -> Output:
         ],
     )
 
+
 def put_arg_state(kwargs: T_Output_Kwargs) -> Output:
     name: str = kwargs["name"]
     value: str = kwargs["value"]
@@ -255,6 +414,7 @@ def put_arg_state(kwargs: T_Output_Kwargs) -> Output:
             put_select(**kwargs).style("--input--"),
         ],
     )
+
 
 def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
     name: str = kwargs["name"]
@@ -312,8 +472,8 @@ def put_arg_storage(kwargs: T_Output_Kwargs) -> Optional[Output]:
     )
 
     def clear_callback():
-        nikke_gui: NikkeAutoScriptGUI = local.gui
-        nikke_gui.modified_config_queue.put(
+        nkasgui: "NKASGUI" = local.gui
+        nkasgui.modified_config_queue.put(
             {"name": ".".join(name.split("_")), "value": {}}
         )
         # https://github.com/pywebio/PyWebIO/issues/459
@@ -338,8 +498,35 @@ _widget_type_to_func: Dict[str, Callable] = {
     "textarea": put_arg_textarea,
     "checkbox": put_arg_checkbox,
     "storage": put_arg_storage,
+    "state": put_arg_state,
+    "stored": put_arg_stored,
 }
 
 
 def put_output(output_kwargs: T_Output_Kwargs) -> Optional[Output]:
     return _widget_type_to_func[output_kwargs["widget_type"]](output_kwargs)
+
+
+def get_loading_style(shape: str, fill: bool) -> str:
+    if fill:
+        return f"--loading-{shape}-fill--"
+    else:
+        return f"--loading-{shape}--"
+
+
+def put_loading_text(
+        text: str,
+        shape: str = "border",
+        color: str = "dark",
+        fill: bool = False,
+        size: str = "auto 2px 1fr",
+):
+    loading_style = get_loading_style(shape=shape, fill=fill)
+    return put_row(
+        [
+            put_loading(shape=shape, color=color).style(loading_style),
+            None,
+            put_text(text),
+        ],
+        size=size,
+    )
