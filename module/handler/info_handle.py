@@ -1,11 +1,13 @@
 from module.base.base import ModuleBase
-from module.base.utils import color_similar, get_color, point2str
+from module.base.timer import Timer
+from module.base.utils import point2str
 
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
 from module.exception import GameServerUnderMaintenance, GameStuckError
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE
 from module.logger import logger
+from module.ui.assets import GOTO_BACK
 
 
 class InfoHandler(ModuleBase):
@@ -22,25 +24,44 @@ class InfoHandler(ModuleBase):
         return False
 
     def handle_login_reward(self):
-        if CLOSE_DAILY_LOGIN.appear_on(self.device.image):
-            self.device.click_minitouch(1, 420)
-            self.device.sleep(1)
-            return True
         # Daily Login, Memories Spring, Monthly Card, etc.
-        if self.appear_text_then_click('领取奖励', interval=3):
+        reward = self.appear_text('全部领取')
+        if reward:
+            x, y = reward[0], reward[1]
+            logger.info('Click %s @ 全部领取' % point2str(x, y))
+            self.device.click_minitouch(x, y)
+
+            confirm_timer = Timer(2, count=3)
+            while 1:
+                self.device.screenshot()
+
+                # 无奖励可领
+                if self.appear(NO_REWARD, offset=30):
+                    logger.info('Reward done')
+                    confirm_timer.clear()
+                    break
+                else:
+                    if not confirm_timer.started():
+                        confirm_timer.start()
+                    # 超过2秒没有出现无奖励可领，返回点击Reward
+                    if confirm_timer.reached():
+                        return True
+
+            # 返回到主页
+            while 1:
+                self.device.screenshot()
+
+                if not self.appear(GOTO_BACK, offset=30):
+                    logger.info('Page arrive: main')
+                    break
+
+                if self.appear_then_click(GOTO_BACK, offset=30, interval=1):
+                    logger.info('Back to main page')
+                    continue
+
             return True
-        elif a := self.appear_text('全部领取'):
-            x, y = a[0], a[1]
-            b = get_color(
-                image=self.device.image,
-                area=(int(x - 80), int(y - 25), int(x + 80), int(y + 25)),
-            )
-            if not color_similar(color1=b, color2=(112.786625, 111.897375, 113.121875), threshold=10):
-                self.device.click_minitouch(x, y)
-                return True
-            else:
-                self.device.click_minitouch(1, 420)
-                self.device.sleep(1)
+        else:
+            return False
 
     # 屑芙蒂的补给品，仅关闭窗口，不抽取
     def handle_shifty_supplies(self):
