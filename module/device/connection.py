@@ -120,7 +120,7 @@ class Connection(ConnectionAttr):
     def __init__(self, config):
         """
         Args:
-            config (AzurLaneConfig, str): Name of the user config under ./config
+            config (NikkeConfig, str): Name of the user config under ./config
         """
         super().__init__(config)
         if not self.is_over_http:

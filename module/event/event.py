@@ -47,11 +47,13 @@ class ChallengeNotFoundError(Exception):
 
 
 class EventInfo:
-    def __init__(self, id, name, type, mini_game):
+    def __init__(self, id, name, type, mini_game, story_part, story_difficulty):
         self.id: str = id
         self.name: str = name
         self.type: int = type
         self.mini_game: bool = mini_game
+        self.story_part: str = story_part
+        self.story_difficulty: str = story_difficulty
 
 
 class Event(UI):
@@ -877,10 +879,31 @@ class Event(UI):
         logger.hr('EVENT COOP START')
         logger.info('Small event, skip coop')
 
+    @cached_property
+    def shop_delay_list(self) -> list[str]:
+        """
+        商店延迟购买列表
+        """
+        return [line.strip() for line in self.config.Event_ShopDelayList.split('\n') if line.strip()]
+
+    def get_shop_item_button(self, item: str):
+        """
+        根据选项名称获取对应的按钮
+        示例：
+          "TITLE" → SHOP_ITEM_TITLE
+        """
+        button_name = f'SHOP_ITEM_{item}'
+        try:
+            return globals()[button_name]
+        except KeyError:
+            logger.error(f"Button asset '{button_name}' not found for option '{item}'")
+            raise
+
     def shop(self, skip_first_screenshot=True):
         logger.hr('START EVENT SHOP')
         click_timer = Timer(0.3)
         restart_flag = False
+        delay_list = self.shop_delay_list
 
         # 进入商店页面
         while 1:
@@ -904,11 +927,14 @@ class Event(UI):
                 logger.info('Open event shop')
                 break
 
+        # 跳过第一个物品
+        skip_item_first = False
         while 1:
             # 滑动到商店最上方
             if restart_flag:
                 logger.info('Scroll to shop top')
-                self.ensure_sroll((360, 600), (360, 900), count=2, delay=3)
+                self.ensure_sroll((360, 600), (360, 900), count=3, delay=2)
+                restart_flag = False
 
             self.device.screenshot()
             # 当前页所有商品
@@ -923,16 +949,10 @@ class Event(UI):
             logger.info(f'Find slod out items: {len(sold_outs)}')
             # 过滤掉所有SOLD_OUT的商品
             items = self.filter_sold_out_items(items, sold_outs)
-
-            # 过滤掉称号，一般是第一个
-            title_detected = False
-            if items and self.appear(SHOP_ITEM_TITLE, offset=10, static=False):
-                if not restart_flag:
-                    items = items[1:]
-                else:
-                    # 重启商店时不过滤
-                    restart_flag = False
-                title_detected = True
+            # 如果第一个物品为要推迟购买的物品，在购买列表中删除
+            if skip_item_first and items:
+                items = items[1:]
+                skip_item_first = False
 
             logger.info(f'Find vaild items: {len(items)}')
             if items:
@@ -963,15 +983,31 @@ class Event(UI):
                             logger.info('Item purchase completed, goto next')
                             break
 
+                    # 商品在延迟购买列表中，跳过，返回商店主页
+                    for i, item in enumerate(delay_list[:]):
+                        if self.appear(SHOP_ITEM_CHECK, offset=10) and self.appear(
+                            self.get_shop_item_button(item), offset=10
+                        ):
+                            logger.info(f'Skip item purchase: {item}')
+                            skip_item_first = True
+                            # 取消购买弹窗
+                            if click_timer.reached() and self.appear_then_click(SHOP_CANCEL, offset=30, interval=1):
+                                click_timer.reset()
+                                continue
+
                     # 商品是红球并且称号没买，重新进入商店
                     if (
-                        title_detected
+                        delay_list
                         and self.appear(SHOP_ITEM_CHECK, offset=10)
                         and self.appear(SHOP_ITEM_RED_CIRCLE, offset=10)
                     ):
-                        logger.info('Title not purchased, restart shop')
+                        logger.info('Delaylist not empty, restart shop to purchase')
+                        delay_list.clear()
                         restart_flag = True
-                        continue
+                        # 取消购买弹窗
+                        if click_timer.reached() and self.appear_then_click(SHOP_CANCEL, offset=30, interval=1):
+                            click_timer.reset()
+                            continue
 
                     # 取消
                     if (
@@ -1007,6 +1043,8 @@ class Event(UI):
             else:
                 # 当前页全部购买完成，滚动到下一页
                 logger.info('Scroll to next page')
+                self.device.stuck_record_clear()
+                self.device.click_record_clear()
                 self.ensure_sroll((360, 1100), (360, 480), speed=5, hold=1, count=1, delay=3)
 
     def filter_sold_out_items(self, items, sold_outs):

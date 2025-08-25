@@ -4,8 +4,15 @@ from module.base.button import Button
 from module.base.timer import Timer
 from module.device.app_control import AppControl
 from module.device.control import Control
+from module.device.env import IS_WINDOWS
 from module.device.screenshot import Screenshot
-from module.exception import GameNotRunningError, GameStuckError, GameTooManyClickError
+from module.exception import (
+    EmulatorNotRunningError,
+    GameNotRunningError,
+    GameStuckError,
+    GameTooManyClickError,
+    RequestHumanTakeover,
+)
 from module.logger import logger
 from module.ocr.models import OCR_MODEL
 
@@ -27,7 +34,28 @@ class Device(Screenshot, Control, AppControl):
     stuck_long_wait_list = ['LOGIN_CHECK', 'PAUSE']
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        for trial in range(4):
+            try:
+                super().__init__(*args, **kwargs)
+                break
+            except EmulatorNotRunningError:
+                if trial >= 3:
+                    logger.critical('Failed to start emulator after 3 trial')
+                    raise RequestHumanTakeover
+                # Try to start emulator
+                if self.emulator_instance is not None:
+                    self.emulator_start()
+                else:
+                    logger.critical(
+                        f'No emulator with serial "{self.config.Emulator_Serial}" found, '
+                        f'please set a correct serial'
+                    )
+                    raise RequestHumanTakeover
+
+        # Auto-fill emulator info
+        if IS_WINDOWS and self.config.EmulatorInfo_Emulator == 'auto':
+            _ = self.emulator_instance
+
         # TODO
         # self.screenshot_interval_set()
 

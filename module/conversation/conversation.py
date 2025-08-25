@@ -10,7 +10,7 @@ from module.conversation.dialogue import Dialogue
 from module.event_daemon.assets import SKIP
 from module.handler.assets import AUTO_CLICK_CHECK, CONFIRM_B
 from module.logger import logger
-from module.ocr.ocr import Ocr
+from module.ocr.ocr import Digit, Ocr
 from module.ui.assets import CONVERSATION_CHECK, GOTO_BACK
 from module.ui.page import page_conversation
 from module.ui.ui import UI
@@ -37,10 +37,17 @@ class Conversation(UI):
 
     @property
     def opportunity_remain(self):
-        result = OPPORTUNITY.appear_on(self.device.image, threshold=25)
-        logger.info(f'[Opportunity remain] {result}')
-        return result
+        model_type = self.config.Optimization_OcrModelType
+        OPPORTUNITY_REMAIN = Digit(
+            [OPPORTUNITY.area],
+            name='OPPORTUNITY_REMAIN',
+            model_type=model_type,
+            lang='ch',
+        )
 
+        return int(OPPORTUNITY_REMAIN.ocr(self.device.image)['text'])
+
+    @property
     def nikke_name(self) -> str:
         model_type = self.config.Optimization_OcrModelType
         NIKKE_NAME = Ocr(
@@ -51,6 +58,18 @@ class Conversation(UI):
         )
 
         return NIKKE_NAME.ocr(self.device.image)['text']
+
+    @property
+    def logs_quantity(self) -> int:
+        model_type = self.config.Optimization_OcrModelType
+        LOGS_QUANTITY = Digit(
+            [COMMUNICATE_LOGS_QUANTITY.area],
+            name='LOGS_QUANTITY',
+            model_type=model_type,
+            lang='ch',
+        )
+
+        return int(LOGS_QUANTITY.ocr(self.device.image)['text'])
 
     def answer_text(self, button: Button) -> str:
         area = _area_offset(button.area, (45, -13, 545, 13))
@@ -81,9 +100,17 @@ class Conversation(UI):
                 logger.info('All favorite nikke consultations done')
                 raise ConversationFavouriteDone
 
-            # 咨询完成/好感最大值
-            if self.appear(COMMUNICATE_DONE, offset=5, threshold=0.95) or (
-                self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95) and not self.config.Conversation_IgnoreBondMax
+            # 跳过咨询：咨询已完成 / 好感度满且未开启OnlyLogsNotMax)/ 开启OnlyLogsNotMax且日志已满，默认忽略好感
+            if (
+                self.appear(COMMUNICATE_DONE, offset=5, threshold=0.95)  # 1. 咨询已完成
+                or (
+                    self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95)  # 2. 好感度满
+                    and not self.config.Conversation_OnlyLogsNotMax  # 且未开启OnlyLogsNotMax
+                )
+                or (
+                    self.config.Conversation_OnlyLogsNotMax  # 3. 开启OnlyLogsNotMax
+                    and self.logs_quantity >= 20  # 且日志已满
+                )
             ):
                 if self._confirm_timer.reached():
                     logger.warning('Perhaps all selected NIKKE already had a conversation')
@@ -137,7 +164,7 @@ class Conversation(UI):
     def communicate(self):
         logger.hr('Start a conversation')
         self.get_next_target()
-        self.ensure_wait_to_answer(self.nikke_name())
+        self.ensure_wait_to_answer(self.nikke_name)
 
     def ensure_wait_to_answer(self, nikke: str, skip_first_screenshot=True):
         logger.info(f'Communicate NIKKE {nikke}')
@@ -292,7 +319,7 @@ class Conversation(UI):
             return True
 
     def run(self):
-        self.ui_ensure(page_conversation, confirm_wait=1)
+        self.ui_ensure(page_conversation, confirm_wait=2)
         if self.ensure_opportunity_remain():
             self._confirm_timer.reset().start()
             try:

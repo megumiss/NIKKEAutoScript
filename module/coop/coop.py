@@ -2,7 +2,7 @@ from module.base.timer import Timer
 from module.base.utils import crop
 from module.coop.assets import *
 from module.logger import logger
-from module.ocr.ocr import Digit
+from module.ocr.ocr import Digit, Ocr
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
 from module.ui.page import page_main
 from module.ui.ui import UI
@@ -36,16 +36,32 @@ class Coop(UI):
         return self.free_remain
 
     @property
+    def coop_date(self) -> str:
+        model_type = self.config.Optimization_OcrModelType
+        DATELINE = Ocr(
+            [DATELINE_CHECK.area],
+            name='DATELINE',
+            model_type=model_type,
+            lang='ch',
+        )
+
+        return DATELINE.ocr(self.device.image)['text']
+
+    @property
     def dateline(self) -> bool:
-        result = self.appear(DATELINE_CHECK, offset=10, threshold=0.9)
-        if result:
+        date = self.coop_date
+        if date == '时间到' or '小时' not in date:
             logger.info('[Coop has expired]')
-        return result
+            return True
+        else:
+            return False
 
     def ensure_into_coop(self, skip_first_screenshot=True):
         """普通协同，从banner进入作战"""
         logger.hr('COOP START')
         coop_enter = False
+
+        self.ensure_sroll((260, 150), (30, 150), speed=35, count=1, delay=0.5)
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False

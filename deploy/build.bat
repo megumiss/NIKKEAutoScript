@@ -54,9 +54,9 @@ if errorlevel 1 (
 )
 
 echo Building webapp with Yarn...
-call yarn build
+call yarn run compile
 if errorlevel 1 (
-    echo Error: Yarn build failed
+    echo Error: Yarn run compile failed
     echo Possible causes:
     echo   1. Missing Node.js dependencies
     echo   2. Build script errors in package.json
@@ -64,14 +64,14 @@ if errorlevel 1 (
     goto :end
 )
 
-if not exist output\app\win-unpacked (
-    echo Error: Build output not found at webapp\output\app\win-unpacked
+if not exist dist\win-unpacked (
+    echo Error: Build output not found at webapp\dist\win-unpacked
     pause
     goto :end
 )
 
 echo Moving build output to root directory...
-move /y "output\app\win-unpacked" "..\app" >nul
+move /y "dist\win-unpacked" "..\app" >nul
 cd ..
 if exist app (
     echo Build output moved to root directory
@@ -128,6 +128,13 @@ if exist output (
 ) else (
     echo output directory not found - skipping
 )
+
+if exist dist (
+    rd /s /q dist
+    echo dist directory removed
+) else (
+    echo dist directory not found - skipping
+)
 cd ..
 
 REM =============================
@@ -162,15 +169,15 @@ REM Step 6：复制配置文件模板
 REM =============================
 echo Step 6/6: Creating deploy.yaml from template...
 cd config
-if exist deploy-template.yaml (
+if exist deploy.template.yaml (
     if not exist deploy.yaml (
-        copy deploy-template.yaml deploy.yaml >nul
+        copy deploy.template.yaml deploy.yaml >nul
         echo Created deploy.yaml from template
     ) else (
         echo deploy.yaml already exists - skipping copy
     )
 ) else (
-    echo Warning: deploy-template.yaml not found in config directory
+    echo Warning: deploy.template.yaml not found in config directory
 )
 cd ..
 

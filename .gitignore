@@ -12,3 +12,4 @@ config/nkas.json
 !yarn.lock
 **/app
 bin/paddleocr/
+/tmp

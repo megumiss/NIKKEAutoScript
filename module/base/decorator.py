@@ -8,7 +8,7 @@ class Config:
     def when(cls, **kwargs):
         """
              Args:
-                 **kwargs: Any option in AzurLaneConfig.
+                 **kwargs: Any option in NikkeConfig.
 
              Examples:
                  @Config.when(USE_ONE_CLICK_RETIREMENT=True)
@@ -103,6 +103,28 @@ class Config:
             return wrapper
 
         return decorate
+
+def has_cached_property(obj, name):
+    """
+    Check if a property is cached.
+
+    Args:
+        obj:
+        name (str):
+    """
+    return name in obj.__dict__
+
+
+def set_cached_property(obj, name, value):
+    """
+    Set a cached property.
+
+    Args:
+        obj:
+        name (str):
+        value:
+    """
+    obj.__dict__[name] = value
 
 
 def del_cached_property(obj, name):

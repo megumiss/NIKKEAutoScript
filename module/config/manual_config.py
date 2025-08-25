@@ -5,22 +5,19 @@ class ManualConfig:
     SCHEDULER_PRIORITY = """
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
        DailyGift > WeeklyGift > MonthlyGift > 
-       Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > TribeTower > 
+       Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
        Daily > Event > Event2 > SoloRaid > UnionRaid >Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > TowerDaemon > CombatDaemon > EventDaemon
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS > CORE_DUST_CASE > ORNAMENT"""
 
-    RUBBISH_SHOP_PRIORITY = """
-       GEM
-       > CORE_DUST_CASE
-       """
-
     ARENA_SHOP_PRIORITY = """"""
 
     GENERAL_SHOP_PRODUCT = {"GRATIS": 1, "CORE_DUST_CASE": 1, "ORNAMENT": 1}
 
-    RUBBISH_SHOP_PRODUCT = {
+    RUBBISH_SHOP_CORE_PRIORITY = """GEM > CORE_DUST_CASE"""
+
+    RUBBISH_SHOP_CORE_PRODUCT = {
         "GEM": 1,
         "CORE_DUST_CASE": 2,
         "CREDIT_CASE": 3,
@@ -48,6 +45,14 @@ class ManualConfig:
         "TETRA_TICKET": 600,
         "PILGRIM_TICKET": 600,
         "ABNORMAL_TICKET": 600,
+    }
+
+    RUBBISH_SHOP_BONE_PRIORITY = """"""
+
+    RUBBISH_SHOP_BONE_PRODUCT = {
+        "GOOD_TEAMWORK_BOX": 1,
+        "MAINTENANCE_KIT_BOX_2": 1,
+        "CURATED_MANUFACTURER_ARMS": 1
     }
 
     ARENA_SHOP_PRODUCT = {
@@ -83,36 +88,48 @@ class ManualConfig:
             "event_name": "ABSOLUTE",
             # story1为小型活动的大型活动
             "event_type": 3,
-            "mini_game": False
+            "mini_game": False,
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20250716",
             "event_name": "BOOM! THE GHOST!",
             # 大型活动
             "event_type": 1,
-            "mini_game": True
+            "mini_game": True,
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20250703l",
             "event_name": "OuteR: Automata",
             # 大型活动
             "event_type": 1,
-            "mini_game": False
+            "mini_game": False,
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20250703s",
             "event_name": "OVER THE HORIZON",
             # 小型活动
             "event_type": 2,
-            "mini_game": False
+            "mini_game": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20250612",
             "event_name": "Memories Teller",
             # 大型活动
             "event_type": 1,
-            "mini_game": False
+            "mini_game": False,
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
         },
     ]
 
     Error_ScreenshotLength = 1
+
+    DEVICE_OVER_HTTP = False

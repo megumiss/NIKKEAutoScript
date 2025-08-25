@@ -27,7 +27,7 @@ class ConnectionAttr:
     def __init__(self, config):
         """
         Args:
-            config (AzurLaneConfig, str): Name of the user config under ./config
+            config (NikkeConfig, str): Name of the user config under ./config
         """
         logger.hr('Device', level=1)
         if isinstance(config, str):
