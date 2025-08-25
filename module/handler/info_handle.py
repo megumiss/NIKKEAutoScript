@@ -1,3 +1,5 @@
+import time
+
 from module.base.base import ModuleBase
 from module.base.timer import Timer
 from module.base.utils import point2str
@@ -13,7 +15,9 @@ from module.ui.assets import GOTO_BACK, MAIN_CHECK
 class InfoHandler(ModuleBase):
     def handle_paid_gift(self, interval=1):
         """礼包弹窗"""
-        if self.appear(PAID_GIFT_CHECK, offset=(30, 30)) and self.appear_then_click(CLICK_TO_CLOSE, interval=interval):
+        if self.appear(PAID_GIFT_CHECK, offset=(30, 30)) and self.appear_then_click(
+            CLICK_TO_CLOSE, offset=30, interval=interval
+        ):
             return True
 
         if self.appear(PAID_GIFT_CONFIRM_CHECK, offset=(30, 30)) and self.appear_then_click(
@@ -24,9 +28,21 @@ class InfoHandler(ModuleBase):
         return False
 
     def handle_login_reward(self):
+        # 添加限速机制 - 检查是否在冷却时间内
+        current_time = time.time()
+        # 5秒冷却时间
+        if hasattr(self, '_last_login_reward_check') and current_time - self._last_login_reward_check < 5:
+            return False
+
+        # 更新最后检查时间
+        self._last_login_reward_check = current_time
+
         # Daily Login, Memories Spring, Monthly Card, etc.
         reward = self.appear_text('全部领取')
         if reward:
+            # 重置限速机制，因为有奖励可领取
+            self._last_login_reward_check = 0
+
             x, y = reward[0], reward[1]
             logger.info('Click %s @ 全部领取' % point2str(x, y))
             self.device.click_minitouch(x, y)
@@ -38,6 +54,10 @@ class InfoHandler(ModuleBase):
 
                 # 领取完奖励，返回主界面
                 if reward_done:
+                    if self.appear(MAIN_CHECK, offset=30):
+                        logger.info('Page arrive: main')
+                        return True
+
                     if self.appear(GOTO_BACK, offset=30):
                         if self.appear_then_click(GOTO_BACK, offset=30, interval=1):
                             logger.info('Back to main page')
@@ -48,10 +68,6 @@ class InfoHandler(ModuleBase):
                         self.device.sleep(1)
                         logger.info('Click %s @ CLOSE' % point2str(1, 420))
                         continue
-
-                    if self.appear(MAIN_CHECK, offset=30):
-                        logger.info('Page arrive: main')
-                        return True
 
                 # 无奖励可领
                 if self.appear(NO_REWARD, offset=30):
