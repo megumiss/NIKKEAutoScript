@@ -1,6 +1,7 @@
 import argparse
 import json
 import queue
+import re
 import threading
 import time
 from datetime import datetime
@@ -78,6 +79,7 @@ from module.webui.utils import (
     re_fullmatch,
     to_pin_value,
 )
+from module.log_res.log_res import LogRes
 from module.webui.widgets import (
     BinarySwitchButton,
     RichLog,
@@ -91,11 +93,33 @@ from module.webui.widgets import (
 patch_executor()
 task_handler = TaskHandler()
 
+def timedelta_to_text(delta=None):
+    time_delta_name_suffix_dict = {
+        'Y': 'YearsAgo',
+        'M': 'MonthsAgo',
+        'D': 'DaysAgo',
+        'h': 'HoursAgo',
+        'm': 'MinutesAgo',
+        's': 'SecondsAgo',
+    }
+    time_delta_name_prefix = 'Gui.Overview.'
+    time_delta_name_suffix = 'NoData'
+    time_delta_display = ''
+    if isinstance(delta, dict):
+        for _key in delta:
+            if delta[_key]:
+                time_delta_name_suffix = time_delta_name_suffix_dict[_key]
+                time_delta_display = delta[_key]
+                break
+    time_delta_display = str(time_delta_display)
+    time_delta_name = time_delta_name_prefix + time_delta_name_suffix
+    return time_delta_display + t(time_delta_name)
 
 class NKASGUI(Frame):
     NKAS_MENU: Dict[str, Dict[str, List[str]]]
     NKAS_ARGS: Dict[str, Dict[str, Dict[str, Dict[str, str]]]]
     theme = "default"
+    _log = RichLog
 
     def initial(self) -> None:
         self.NKAS_MENU = read_file(filepath_args("menu", self.nkas_mod))
@@ -437,7 +461,7 @@ class NKASGUI(Frame):
         )
 
         log = RichLog("log")
-        self._log.dashboard_arg_group = LogRes(self.alas_config).groups
+        self._log.dashboard_arg_group = LogRes(self.nkas_config).groups
 
         with use_scope("logs"):
             put_scope(
@@ -471,11 +495,26 @@ class NKASGUI(Frame):
             color_off="off",
             scope="log_scroll_btn",
         )
-
+        switch_dashboard = BinarySwitchButton(
+            label_on=t("Gui.Button.DashboardON"),
+            label_off=t("Gui.Button.DashboardOFF"),
+            onclick_on=lambda: self.set_dashboard_display(False),
+            onclick_off=lambda: self.set_dashboard_display(True),
+            get_state=lambda: log.display_dashboard,
+            color_on="off",
+            color_off="on",
+            scope="dashboard_btn",
+        )
         self.task_handler.add(switch_scheduler.g(), 1, True)
         self.task_handler.add(switch_log_scroll.g(), 1, True)
+        self.task_handler.add(switch_dashboard.g(), 1, True)
         self.task_handler.add(self.nkas_update_overview_task, 10, True)
+        self.task_handler.add(self.nkas_update_dashboard, 10, True)
         self.task_handler.add(log.put_log(self.nkas), 0.25, True)
+
+    def set_dashboard_display(self, b):
+        self._log.set_dashboard_display(b)
+        self.nkas_update_dashboard(True)
 
     def _init_nkas_config_watcher(self) -> None:
         def put_queue(path, value):
@@ -615,6 +654,105 @@ class NKASGUI(Frame):
                     put_task(task)
             else:
                 put_text(t("Gui.Overview.NoTask")).style("--overview-notask-text--")
+
+    def _update_dashboard(self, num=None, groups_to_display=None):
+        x = 0
+        _num = 10000 if num is None else num
+        _arg_group = self._log.dashboard_arg_group if groups_to_display is None else groups_to_display
+        time_now = datetime.now().replace(microsecond=0)
+        for group_name in _arg_group:
+            group = deep_get(d=self.nkas_config.data, keys=f'Dashboard.{group_name}')
+            if group is None:
+                continue
+
+            value = str(group['Value'])
+            if 'Limit' in group.keys():
+                value_limit = f' / {group["Limit"]}'
+                value_total = ''
+            elif 'Total' in group.keys():
+                value_total = f' ({group["Total"]})'
+                value_limit = ''
+            elif group_name == 'Pt':
+                value_limit = ' / ' + re.sub(r'[,.\'"，。]', '',
+                                             str(deep_get(self.nkas_config.data, 'EventGeneral.EventGeneral.PtLimit')))
+                if value_limit == ' / 0':
+                    value_limit = ''
+            else:
+                value_limit = ''
+                value_total = ''
+            # value = value + value_limit + value_total
+
+            value_time = group['Record']
+            if value_time is None or value_time == datetime(2020, 1, 1, 0, 0, 0):
+                value_time = datetime(2023, 1, 1, 0, 0, 0)
+
+            # Handle time delta
+            if value_time == datetime(2023, 1, 1, 0, 0, 0):
+                value = 'None'
+                delta = timedelta_to_text()
+            else:
+                delta = timedelta_to_text(time_delta(value_time - time_now))
+            if group_name not in self._log.last_display_time.keys():
+                self._log.last_display_time[group_name] = ''
+            if self._log.last_display_time[group_name] == delta and not self._log.first_display:
+                continue
+            self._log.last_display_time[group_name] = delta
+
+            # if self._log.first_display:
+            # Handle width
+            # value_width = len(value) * 0.7 + 0.6 if value != 'None' else 4.5
+            # value_width = str(value_width/1.12) + 'rem' if self.is_mobile else str(value_width) + 'rem'
+            value_limit = '' if value == 'None' else value_limit
+            # limit_width = len(value_limit) * 0.7
+            # limit_width = str(limit_width) + 'rem'
+            value_total = '' if value == 'None' else value_total
+            limit_style = '--dashboard-limit--' if value_limit else '--dashboard-total--'
+            value_limit = value_limit if value_limit else value_total
+            # Handle dot color
+            _color = f"""background-color:{deep_get(d=group, keys='Color').replace('^', '#')}"""
+            color = f'<div class="status-point" style={_color}>'
+            with use_scope(group_name, clear=True):
+                put_row(
+                    [
+                        put_html(color),
+                        put_scope(
+                            f"{group_name}_group",
+                            [
+                                put_column(
+                                    [
+                                        put_row(
+                                            [
+                                                put_text(value
+                                                         ).style(f'--dashboard-value--'),
+                                                put_text(value_limit
+                                                         ).style(limit_style),
+                                            ],
+                                        ).style('grid-template-columns:min-content auto;align-items: baseline;'),
+                                        put_text(
+                                            t(f'Gui.Overview.{group_name}') + " - " + delta
+                                        ).style('---dashboard-help--')
+                                    ],
+                                    size="auto auto",
+                                ),
+                            ],
+                        ),
+                    ],
+                    size="20px 1fr"
+                ).style("height: 1fr"),
+            x += 1
+            if x >= _num:
+                break
+        if self._log.first_display:
+            self._log.first_display = False
+
+    def nkas_update_dashboard(self, _clear=False):
+        if not self.visible:
+            return
+        with use_scope("dashboard", clear=_clear):
+            if not self._log.display_dashboard:
+                self._update_dashboard(num=4, groups_to_display=['Oil', 'Coin', 'Gem', 'Pt'])
+            elif self._log.display_dashboard:
+                self._update_dashboard()
 
     @use_scope("content", clear=True)
     def nkas_daemon_overview(self, task: str) -> None:
