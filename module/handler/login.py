@@ -79,9 +79,9 @@ class LoginHandler(UI):
                 continue
 
             # 礼包弹窗
-            # if click_timer.reached() and self.handle_paid_gift():
-            #     click_timer.reset()
-            #     continue
+            if click_timer.reached() and self.handle_paid_gift():
+                click_timer.reset()
+                continue
 
             # 屑芙蒂5x5补给品
             if click_timer.reached() and self.handle_shifty_supplies():
