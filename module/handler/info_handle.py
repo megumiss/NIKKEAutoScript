@@ -100,6 +100,7 @@ class InfoHandler(ModuleBase):
     def handle_level_up(self):
         if self.appear(LEVEL_UP_CHECK, offset=(30, 30)):
             self.device.click_minitouch(360, 920)
+            self.device.sleep(1)
             logger.info('Click (360, 920) @ LEVEL_UP')
             return True
 
