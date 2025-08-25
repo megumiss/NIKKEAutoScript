@@ -437,6 +437,7 @@ class NKASGUI(Frame):
         )
 
         log = RichLog("log")
+        self._log.dashboard_arg_group = LogRes(self.alas_config).groups
 
         with use_scope("logs"):
             put_scope(
@@ -449,8 +450,11 @@ class NKASGUI(Frame):
                         "log-bar-btns",
                         [
                             put_scope("log_scroll_btn"),
+                            put_scope("dashboard_btn"),
                         ],
                     ),
+                    put_html('<hr class="hr-group">'),
+                    put_scope("dashboard"),
                 ],
             )
             put_scope("log", [put_html("")])
