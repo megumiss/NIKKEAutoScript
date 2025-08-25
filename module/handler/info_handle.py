@@ -7,15 +7,13 @@ from module.exception import GameServerUnderMaintenance, GameStuckError
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE
 from module.logger import logger
-from module.ui.assets import GOTO_BACK
+from module.ui.assets import GOTO_BACK, MAIN_CHECK
 
 
 class InfoHandler(ModuleBase):
     def handle_paid_gift(self, interval=1):
         """礼包弹窗"""
-        if self.appear(PAID_GIFT_CHECK, offset=(30, 30)) and self.appear_then_click(
-            CLICK_TO_CLOSE, interval=interval
-        ):
+        if self.appear(PAID_GIFT_CHECK, offset=(30, 30)) and self.appear_then_click(CLICK_TO_CLOSE, interval=interval):
             return True
 
         if self.appear(PAID_GIFT_CONFIRM_CHECK, offset=(30, 30)) and self.appear_then_click(
@@ -33,35 +31,40 @@ class InfoHandler(ModuleBase):
             logger.info('Click %s @ 全部领取' % point2str(x, y))
             self.device.click_minitouch(x, y)
 
+            reward_done = False
             confirm_timer = Timer(2, count=3)
             while 1:
                 self.device.screenshot()
 
+                # 领取完奖励，返回主界面
+                if reward_done:
+                    if self.appear(GOTO_BACK, offset=30):
+                        if self.appear_then_click(GOTO_BACK, offset=30, interval=1):
+                            logger.info('Back to main page')
+                            continue
+                    else:
+                        # 点击空白页
+                        self.device.click_minitouch(1, 420)
+                        self.device.sleep(1)
+                        logger.info('Click %s @ CLOSE' % point2str(1, 420))
+                        continue
+
+                    if self.appear(MAIN_CHECK, offset=30):
+                        logger.info('Page arrive: main')
+                        return True
+
                 # 无奖励可领
                 if self.appear(NO_REWARD, offset=30):
                     logger.info('Reward done')
+                    reward_done = True
                     confirm_timer.clear()
-                    break
+                    continue
                 else:
                     if not confirm_timer.started():
                         confirm_timer.start()
                     # 超过2秒没有出现无奖励可领，返回点击Reward
                     if confirm_timer.reached():
                         return True
-
-            # 返回到主页
-            while 1:
-                self.device.screenshot()
-
-                if not self.appear(GOTO_BACK, offset=30):
-                    logger.info('Page arrive: main')
-                    break
-
-                if self.appear_then_click(GOTO_BACK, offset=30, interval=1):
-                    logger.info('Back to main page')
-                    continue
-
-            return True
         else:
             return False
 
