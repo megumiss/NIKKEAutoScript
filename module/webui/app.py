@@ -461,6 +461,7 @@ class NKASGUI(Frame):
         )
 
         log = RichLog("log")
+        self._log = log
         self._log.dashboard_arg_group = LogRes(self.nkas_config).groups
 
         with use_scope("logs"):
