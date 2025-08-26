@@ -9,7 +9,7 @@ class ManualConfig:
        Daily > Event > Event2 > SoloRaid > UnionRaid >Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > TowerDaemon > CombatDaemon > EventDaemon
        """
 
-    GENERAL_SHOP_PRIORITY = """GRATIS > CORE_DUST_CASE > ORNAMENT"""
+    GENERAL_SHOP_PRIORITY = """GRATIS"""
 
     ARENA_SHOP_PRIORITY = """"""
 

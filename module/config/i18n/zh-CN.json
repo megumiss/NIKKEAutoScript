@@ -218,7 +218,7 @@
     },
     "Serial": {
       "name": "模拟器 Serial",
-      "help": " 常见的模拟器 Serial 可以查询下方列表，填 \"auto\" 自动检测模拟器，多个模拟器正在运行或使用不支持自动检测的模拟器时无法使用 \"auto\"，必须手动填写 \n 模拟器默认 Serial：\n - MuMu5.0/MuMu12 127.0.0.1:16384\n - 雷电模拟器 emulator-5554 或 127.0.0.1:5555\n - 蓝叠模拟器 127.0.0.1:5555"
+      "help": "常见的模拟器 Serial 可以查询下方列表，填 \"auto\" 自动检测模拟器，多个模拟器正在运行或使用不支持自动检测的模拟器时无法使用 \"auto\"，必须手动填写 \n模拟器默认 Serial：\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- 雷电模拟器 emulator-5554 或 127.0.0.1:5555\n- 蓝叠模拟器 127.0.0.1:5555"
     },
     "PackageName": {
       "name": "游戏客户端",
@@ -394,6 +394,10 @@
     "enable": {
       "name": "启用该功能",
       "help": ""
+    },
+    "priority": {
+      "name": "优先购买",
+      "help": "不填写默认只购买免费物品，填写格式例如: 'GRATIS > CORE_DUST_CASE > ORNAMENT'，用一个大于号分开，可以选择的：\nGRATIS: 免费物品\nCORE_DUST_CASE: 芯尘盒\nORNAMENT: 简介装饰品"
     }
   },
   "ArenaShop": {
@@ -407,7 +411,7 @@
     },
     "priority": {
       "name": "优先购买",
-      "help": " 不填写则不购买，例如: 'ELECTRIC_CODE > MANUAL_SELECTION_BOX'，用一个大于号分开，可以选择的：\n ELECTRIC_CODE: 电击代码\n FIRE_CODE: 燃烧代码\n IRON_CODE: 铁甲代码\n WATER_CODE: 水冷代码\n WIND_CODE: 风压代码\n MANUAL_SELECTION_BOX: 代码自选箱\n ORNAMENT: 简介装饰品\n WEAPON: 公司武器熔炉\n "
+      "help": "不填写则不购买，填写格式例如: 'ELECTRIC_CODE > MANUAL_SELECTION_BOX'，用一个大于号分开，可以选择的：\nELECTRIC_CODE: 电击代码\nFIRE_CODE: 燃烧代码\nIRON_CODE: 铁甲代码\nWATER_CODE: 水冷代码\nWIND_CODE: 风压代码\nMANUAL_SELECTION_BOX: 代码自选箱\nORNAMENT: 简介装饰品\nWEAPON: 公司武器熔炉\n"
     }
   },
   "RubbishShop": {
@@ -417,11 +421,11 @@
     },
     "priority": {
       "name": "核心购买优先级",
-      "help": " 不填写默认购买珠宝和芯尘盒，例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\n GEM: 珠宝\n CORE_DUST_CASE: 芯尘盒\n CREDIT_CASE: 信用点盒\n BATTLE_DATA_SET_CASE: 战斗数据辑盒\n GENERAL_TICKET: 指挥官通用券\n ELYSION_TICKET: 极乐净土VIP券\n MISSILIS_TICKET: 米西利斯VIP卡\n TETRA_TICKET: 泰特拉VIP护理券\n PILGRIM_TICKET: 朝圣者补给套组交换券\n ABNORMAL_TICKET: 反常年券\n "
+      "help": "不填写默认购买珠宝和芯尘盒，填写格式例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\nGEM: 珠宝\nCORE_DUST_CASE: 芯尘盒\nCREDIT_CASE: 信用点盒\nBATTLE_DATA_SET_CASE: 战斗数据辑盒\nGENERAL_TICKET: 指挥官通用券\nELYSION_TICKET: 极乐净土VIP券\nMISSILIS_TICKET: 米西利斯VIP卡\nTETRA_TICKET: 泰特拉VIP护理券\nPILGRIM_TICKET: 朝圣者补给套组交换券\nABNORMAL_TICKET: 反常年券\n"
     },
     "bonePriority": {
       "name": "骨头购买优先级",
-      "help": " 骨头货币购买优先级，例如: 'CURATED_MANUFACTURER_ARMS > MAINTENANCE_KIT_BOX_2'，用一个大于号分开，可以选择的：\n GOOD_TEAMWORK_BOX: 优秀团队合作宝箱\n MAINTENANCE_KIT_BOX_2: 保养工具箱II\n CURATED_MANUFACTURER_ARMS: 企业精选武装\n "
+      "help": "骨头货币购买优先级，填写格式例如: 'CURATED_MANUFACTURER_ARMS > MAINTENANCE_KIT_BOX_2'，用一个大于号分开，可以选择的：\nGOOD_TEAMWORK_BOX: 优秀团队合作宝箱\nMAINTENANCE_KIT_BOX_2: 保养工具箱II\nCURATED_MANUFACTURER_ARMS: 企业精选武装\n"
     }
   },
   "Notification": {
@@ -486,7 +490,7 @@
     },
     "SortingWeight": {
       "name": "排序权重",
-      "help": " json字符串格式, 所有权重加和应为1, 如果只想启用某一个或几个可以将其他的权重数值为0\n 各项意义为Power: 战力, CommanderLevel: 指挥官等级, SynchroLevel: 同步器等级, Ranking: 排名"
+      "help": "json字符串格式, 所有权重加和应为1, 如果只想启用某一个或几个可以将其他的权重数值为0\n各项意义为Power: 战力, CommanderLevel: 指挥官等级, SynchroLevel: 同步器等级, Ranking: 排名"
     },
     "SelectionStrategy": {
       "name": "选择策略",
@@ -578,7 +582,7 @@
     },
     "Priority": {
       "name": "优先兑换",
-      "help": " 不填写则不购买，例如: 'Gem_×320 > Welcome_Gift_Core_Dust_×30'，用一个大于号分开，默认只换钻石：\n Gem_×320: 珠寶 ×320\n Welcome_Gift_Core_Dust_×30: 指揮官見面禮：芯塵 ×30\n Gem_×30: 珠寶 ×30\n Skill_Manual_I_×5: 技能手冊 I ×5\n Ultra_Boost_Module_×5: 模組高級推進器 ×5\n Code_Manual_Selection_Box_×5: 代碼手冊選擇寶箱 ×5\n Gem_×60: 珠寶 ×60\n Mid-Quality_Mold_×3: 中品質鑄模 ×3\n Credit_Case_(1H)_x9: 信用點盒(1H) x9\n Core_Dust_Case_(1H)_×3: 芯塵盒 (1H) ×3\n Gem_×120: 珠寶 ×120\n Mid-Quality_Mold_×8: 中品質鑄模 ×8\n Battle_Data_Set_Case_(1H)_×6: 戰鬥數據輯盒 (1H) ×6\n Core_Dust_Case_(1H)_×6: 芯塵盒 (1H) ×6\n Skill_Manual_I_×30: 技能手冊 I ×30\n Ultra_Boost_Module_×30: 模組高級推進器 ×30\n Code_Manual_Selection_Box_×30: 代碼手冊選擇寶箱 ×30\n "
+      "help": "不填写则不购买，填写格式例如: 'Gem_×320 > Welcome_Gift_Core_Dust_×30'，用一个大于号分开，默认只换钻石：\nGem_×320: 珠寶 ×320\nWelcome_Gift_Core_Dust_×30: 指揮官見面禮：芯塵 ×30\nGem_×30: 珠寶 ×30\nSkill_Manual_I_×5: 技能手冊 I ×5\nUltra_Boost_Module_×5: 模組高級推進器 ×5\nCode_Manual_Selection_Box_×5: 代碼手冊選擇寶箱 ×5\nGem_×60: 珠寶 ×60\nMid-Quality_Mold_×3: 中品質鑄模 ×3\nCredit_Case_(1H)_x9: 信用點盒(1H) x9\nCore_Dust_Case_(1H)_×3: 芯塵盒 (1H) ×3\nGem_×120: 珠寶 ×120\nMid-Quality_Mold_×8: 中品質鑄模 ×8\nBattle_Data_Set_Case_(1H)_×6: 戰鬥數據輯盒 (1H) ×6\nCore_Dust_Case_(1H)_×6: 芯塵盒 (1H) ×6\nSkill_Manual_I_×30: 技能手冊 I ×30\nUltra_Boost_Module_×30: 模組高級推進器 ×30\nCode_Manual_Selection_Box_×30: 代碼手冊選擇寶箱 ×30\n"
     }
   },
   "Event": {
@@ -678,7 +682,7 @@
     },
     "ModifierList": {
       "name": "超频选项",
-      "help": " 仅支持所有的通用选项：\n ENEMY_WEAPON_UP_1/2/3: 敌方武器升级I/II/III\n ENEMY_ARMOR_UP_1/2/2: 敌方护甲升级I/II/III\n ENEMY_VITALS_UP_1/2/3: 敌方生命值升级I/II/III\n NO_RECYCLING: 禁用循环室\n AGGRESSIVE_TACTICS: 好战型战术\n RUSH_HOUR_1/2/3: 尖峰时刻I/II/III\n RELEVANT_PERSONNEL_ONLY: 禁止无关人员进入\n 默认选项为敌方武器升级III、敌方护甲升级III、敌方生命值升级III、禁用循环室、好战型战术、尖峰时刻III、禁止无关人员进入，\n 总计25倍率，每行填写一个，如果练度不够可以根据实际情况减少\n 如果超频主页显示的最高记录值和下方填入的总倍率值相等或更高，则会跳过超频"
+      "help": "仅支持所有的通用选项：\nENEMY_WEAPON_UP_1/2/3: 敌方武器升级I/II/III\nENEMY_ARMOR_UP_1/2/2: 敌方护甲升级I/II/III\nENEMY_VITALS_UP_1/2/3: 敌方生命值升级I/II/III\nNO_RECYCLING: 禁用循环室\nAGGRESSIVE_TACTICS: 好战型战术\nRUSH_HOUR_1/2/3: 尖峰时刻I/II/III\nRELEVANT_PERSONNEL_ONLY: 禁止无关人员进入\n默认选项为敌方武器升级III、敌方护甲升级III、敌方生命值升级III、禁用循环室、好战型战术、尖峰时刻III、禁止无关人员进入，\n总计25倍率，每行填写一个，如果练度不够可以根据实际情况减少\n如果超频主页显示的最高记录值和下方填入的总倍率值相等或更高，则会跳过超频"
     }
   },
   "TowerDaemon": {

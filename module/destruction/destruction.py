@@ -22,7 +22,7 @@ class Destruction(UI):
                 click_timer.reset()
                 continue
 
-            if self.handle_level_up(interval=1):
+            if self.handle_level_up():
                 confirm_timer.reset()
                 click_timer.reset()
                 continue

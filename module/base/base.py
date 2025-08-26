@@ -106,8 +106,21 @@ class ModuleBase:
             if not self.interval_timer[text].reached():
                 return False
 
-        ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
-        res = ocr_instance.ocr(self.device.image, direct_ocr=True, show_log=False)
+        # OCR 缓存
+        if not hasattr(self, "_ocr_cache"):
+            self._ocr_cache = {
+                "last_hash": None,
+                "last_result": None
+            }
+
+        current_hash = hash(self.device.image.tobytes())
+        if current_hash != self._ocr_cache["last_hash"]:
+            # 重新 OCR
+            ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
+            self._ocr_cache["last_result"] = ocr_instance.ocr(self.device.image, direct_ocr=True, show_log=False)
+            self._ocr_cache["last_hash"] = current_hash
+        res = self._ocr_cache["last_result"]
+
         location = self.device.get_location(text, res)
         if location:
             if interval:
@@ -123,7 +136,7 @@ class ModuleBase:
             self.device.click_minitouch(location[0], location[1])
             logger.info(
                 'Click %s @ %s %ss' % (
-                    point2str(location[0], location[1]), f"'{text.strip('_')}'", float2str(time.time() - start_time))
+                    point2str(location[0], location[1]), f"'{text}'", float2str(time.time() - start_time))
             )
             return True
         else:

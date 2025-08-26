@@ -295,7 +295,12 @@ class Shop(ShopBase):
 
     @cached_property
     def general_shop_priority(self) -> SelectedGrids:
-        priority = re.sub(r'\s+', '', self.config.GENERAL_SHOP_PRIORITY).split('>')
+        if self.config.GeneralShop_priority is None or not len(self.config.GeneralShop_priority.strip(' ')):
+            priority = self.config.GENERAL_SHOP_PRIORITY
+        else:
+            priority = self.config.GeneralShop_priority
+
+        priority = re.sub(r'\s+', '', priority).split('>')
         return SelectedGrids(
             [Product(i, self.config.GENERAL_SHOP_PRODUCT.get(i), self.assets.get(i)) for i in priority]
         )

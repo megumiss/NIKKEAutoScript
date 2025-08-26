@@ -36,58 +36,50 @@ class LoginHandler(UI):
             else:
                 confirm_timer.reset()
 
-            if self.appear_text('将下载', interval=3):
-                self.appear_text_then_click('确认', interval=3)
-                continue
-
-            if self.appear_text('正在下载游戏执行所需', interval=3):
-                self.device.stuck_record_clear()
-                self.device.click_record_clear()
-                self.device.sleep(20)
-                continue
-
             # TOUCH TO CONTINUE
-            if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) or self.appear(
-                LOGIN_CHECK_B, offset=(30, 30), interval=5
-            ):
+            if self.appear(LOGIN_CHECK, offset=(30, 30)) or self.appear(LOGIN_CHECK_B, offset=(30, 30)):
                 self.device.click(LOGIN_CHECK)
                 if not login_success:
                     logger.info('Login success')
                     login_success = True
 
-            # 公告
+            # 关闭公告
             if click_timer.reached() and self.handle_announcement():
                 click_timer.reset()
                 continue
 
-            # ———— REWARD ————
+            # REWARD
             if click_timer.reached() and self.handle_reward(interval=2):
                 click_timer.reset()
                 continue
 
+            # 服务器确认
             if click_timer.reached() and self.handle_server():
                 click_timer.reset()
                 continue
 
+            # 下载更新
             if click_timer.reached() and self.handle_download():
                 click_timer.reset()
                 continue
 
+            # 下载中
+            if click_timer.reached() and self.handle_downloading():
+                click_timer.reset()
+                continue
+
+            # 系统错误
             if click_timer.reached() and self.handle_system_error():
                 click_timer.reset()
                 continue
 
+            # 维护中
             if click_timer.reached() and self.handle_system_maintenance():
                 click_timer.reset()
                 continue
 
-            # 礼包
+            # 礼包弹窗
             if click_timer.reached() and self.handle_paid_gift():
-                click_timer.reset()
-                continue
-
-            # Daily Login, Memories Spring, Monthly Card, etc.
-            if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
 
@@ -96,8 +88,8 @@ class LoginHandler(UI):
                 click_timer.reset()
                 continue
 
-            # 回到主页
-            if click_timer.reached() and self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=5):
+            # 登录奖励
+            if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
 

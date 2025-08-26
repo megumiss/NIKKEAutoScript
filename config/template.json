@@ -189,7 +189,8 @@
       "ServerUpdate": "04:00"
     },
     "GeneralShop": {
-      "enable": true
+      "enable": true,
+      "priority": "GRATIS > CORE_DUST_CASE > ORNAMENT"
     },
     "ArenaShop": {
       "enable": false,

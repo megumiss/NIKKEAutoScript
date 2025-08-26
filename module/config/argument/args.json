@@ -675,6 +675,10 @@
       "enable": {
         "type": "checkbox",
         "value": true
+      },
+      "priority": {
+        "type": "textarea",
+        "value": "GRATIS > CORE_DUST_CASE > ORNAMENT"
       }
     },
     "ArenaShop": {

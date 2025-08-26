@@ -272,16 +272,13 @@ class UI(InfoHandler):
         """
 
         # 未知弹窗的确认
-        if self.appear(CONFIRM_A, offset=(30, 30), interval=3, static=False):
-            self.device.click(CONFIRM_A)
+        if self.appear_then_click(CONFIRM_A, offset=(30, 30), interval=3, static=False):
             return True
 
-        if self.appear(CONFIRM_B, offset=(30, 30), interval=3, static=False):
-            self.device.click(CONFIRM_B)
+        if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3, static=False):
             return True
 
-        if self.appear(CONFIRM_C, offset=(30, 30), interval=3, static=False):
-            self.device.click(CONFIRM_C)
+        if self.appear_then_click(CONFIRM_C, offset=(30, 30), interval=3, static=False):
             return True
 
     def ui_goto_main(self):

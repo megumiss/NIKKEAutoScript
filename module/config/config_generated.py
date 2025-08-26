@@ -58,6 +58,7 @@ class GeneratedConfig:
 
     # Group `GeneralShop`
     GeneralShop_enable = True
+    GeneralShop_priority = 'GRATIS > CORE_DUST_CASE > ORNAMENT'
 
     # Group `ArenaShop`
     ArenaShop_enable = False

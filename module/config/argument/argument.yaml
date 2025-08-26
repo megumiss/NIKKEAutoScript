@@ -88,6 +88,9 @@ Overcome:
   OnlyToCompleteDailyMission: false
 GeneralShop:
   enable: true
+  priority:
+    value: 'GRATIS > CORE_DUST_CASE > ORNAMENT'
+    type: textarea
 ArenaShop:
   enable: false
   priority:

@@ -22,7 +22,7 @@ class Reward(UI):
             else:
                 self.device.screenshot()
 
-            if self.handle_level_up(interval=1):
+            if self.handle_level_up():
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
