@@ -9,7 +9,7 @@ BATTLE = Button(area={'zh-cn': (466, 1150, 601, 1189)}, color={'zh-cn': (244, 10
 BATTLE_QUICKLY = Button(area={'zh-cn': (505, 1077, 603, 1106)}, color={'zh-cn': (254, 154, 113)}, button={'zh-cn': (505, 1077, 603, 1106)}, file={'zh-cn': './assets/zh-cn/interception/BATTLE_QUICKLY.png'})
 HARVESTER = Button(area={'zh-cn': (319, 946, 400, 983)}, color={'zh-cn': (160, 163, 162)}, button={'zh-cn': (319, 946, 400, 983)}, file={'zh-cn': './assets/zh-cn/interception/HARVESTER.png'})
 INDIVILIA = Button(area={'zh-cn': (337, 941, 383, 983)}, color={'zh-cn': (166, 168, 168)}, button={'zh-cn': (337, 941, 383, 983)}, file={'zh-cn': './assets/zh-cn/interception/INDIVILIA.png'})
-KRAKEN = Button(area={'zh-cn': (314, 299, 696, 1252)}, color={'zh-cn': (5, 3, 3)}, button={'zh-cn': (314, 299, 696, 1252)}, file={'zh-cn': './assets/zh-cn/interception/KRAKEN.png'})
+KRAKEN = Button(area={'zh-cn': (340, 941, 381, 982)}, color={'zh-cn': (158, 161, 160)}, button={'zh-cn': (340, 941, 381, 982)}, file={'zh-cn': './assets/zh-cn/interception/KRAKEN.png'})
 MIRRORCONTAINER = Button(area={'zh-cn': (321, 945, 398, 983)}, color={'zh-cn': (176, 179, 179)}, button={'zh-cn': (321, 945, 398, 983)}, file={'zh-cn': './assets/zh-cn/interception/MIRRORCONTAINER.png'})
 SWITCH = Button(area={'zh-cn': (569, 946, 596, 977)}, color={'zh-cn': (15, 75, 164)}, button={'zh-cn': (569, 946, 596, 977)}, file={'zh-cn': './assets/zh-cn/interception/SWITCH.png'})
 TEAM_1 = Button(area={'zh-cn': (306, 855, 372, 877)}, color={'zh-cn': (78, 79, 81)}, button={'zh-cn': (306, 855, 372, 877)}, file={'zh-cn': './assets/zh-cn/interception/TEAM_1.png'})
