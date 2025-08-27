@@ -667,9 +667,9 @@
       "help": "",
       "Kraken": "克拉肯（石头）",
       "Indivilia": "茵迪维利亚（躯体）",
-      "Harvester": "过激派（腿）",
+      "Harvester": "死神（腿）",
       "MirrorContainer": "镜像容器（手）",
-      "Ultra": "死神（头）"
+      "Ultra": "过激派（头）"
     },
     "DropScreenshotPath": {
       "name": "掉落截图路径",
@@ -700,7 +700,7 @@
       "5": "5"
     },
     "Harvester": {
-      "name": "过激派",
+      "name": "死神",
       "help": "",
       "1": "1",
       "2": "2",
@@ -718,7 +718,7 @@
       "5": "5"
     },
     "Ultra": {
-      "name": "死神",
+      "name": "过激派",
       "help": "",
       "1": "1",
       "2": "2",

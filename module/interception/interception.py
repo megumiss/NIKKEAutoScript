@@ -1,10 +1,13 @@
 import os
 from datetime import datetime
+from functools import cached_property
 
 from module.base.timer import Timer
+from module.base.utils import point2str
 from module.interception.assets import *
 from module.logger import logger
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, PAUSE
+from module.ui.assets import INTERCEPTION_CHECK
 from module.ui.page import page_interception
 from module.ui.ui import UI
 
@@ -14,8 +17,25 @@ class NoOpportunity(Exception):
 
 
 class Interception(UI):
+    @cached_property
+    def teams(self):
+        return [TEAM_1, TEAM_2, TEAM_3, TEAM_4, TEAM_5]
+
+    def get_boss_button(self, boss: str):
+        """
+        根据选项名称获取对应的按钮
+        示例：
+          "Kraken" → KRAKEN
+        """
+        button_name = boss.upper()
+        try:
+            return globals()[button_name]
+        except KeyError:
+            logger.error(f"Button asset '{button_name}' not found for option '{boss}'")
+            raise
+
     def _run(self, skip_first_screenshot=True):
-        click_timer = Timer(0.7)
+        click_timer = Timer(0.3)
 
         while 1:
             if skip_first_screenshot:
@@ -23,20 +43,42 @@ class Interception(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and KRAKEN_CHECK.match(self.device.image):
-                self.device.click_minitouch(360, 1030)
-                click_timer.reset()
-            elif click_timer.reached() and self.appear_then_click(KRAKEN, offset=5):
-                click_timer.reset()
-
             if ABNORMAL_INTERCEPTION_CHECK.match(self.device.image):
                 break
+
+            if click_timer.reached() and self.appear(
+                self.get_boss_button(self.config.Interception_Boss), offset=10, interval=1
+            ):
+                logger.info('Click %s @ CHALLANGE' % point2str(360, 1030))
+                self.device.click_minitouch(360, 1030)
+                # self.device.sleep(1)
+                click_timer.reset()
+                continue
+            elif self.appear(INTERCEPTION_CHECK, offset=10) and not self.appear(
+                self.get_boss_button(self.config.Interception_Boss), offset=10
+            ):
+                logger.info('Click %s @ SWITCH' % point2str(580, 960))
+                self.device.click_minitouch(580, 960)
+                self.device.sleep(0.5)
+                click_timer.reset()
+                continue
 
         self.device.click_record_clear()
         self.device.stuck_record_clear()
 
+        # 使用的队伍
+        teamindex = getattr(self.config, f'InterceptionTeam_{self.config.Interception_Boss}') - 1
         while 1:
             self.device.screenshot()
+
+            # 切换队伍
+            if (
+                click_timer.reached()
+                and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10)
+                and self.appear_then_click(self.teams[teamindex], threshold=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
 
             if (
                 click_timer.reached()
@@ -76,6 +118,7 @@ class Interception(UI):
             if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=5, interval=2) and not BATTLE.match_appear_on(
                 self.device.image, 10
             ):
+                logger.info('There are no free opportunities')
                 raise NoOpportunity
 
     def save_drop_image(self, image, base_path):
