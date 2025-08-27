@@ -104,7 +104,7 @@
     },
     "Interception": {
       "name": "异常拦截战",
-      "help": "目前只打克拉肯"
+      "help": ""
     },
     "RookieArena": {
       "name": "新人竞技场",
@@ -662,9 +662,69 @@
       "name": "异常拦截",
       "help": ""
     },
+    "Boss": {
+      "name": "BOSS",
+      "help": "",
+      "Kraken": "克拉肯（石头）",
+      "Indivilia": "茵迪维利亚（躯体）",
+      "Harvester": "过激派（腿）",
+      "MirrorContainer": "镜像容器（手）",
+      "Ultra": "死神（头）"
+    },
     "DropScreenshotPath": {
       "name": "掉落截图路径",
       "help": "会在路径下创建日期文件夹保存对应的掉落截图，不填写则不保存；例如：D:\\PCR\\NIKKE，Docker用户需要填写以/app/NIKKEAutoScript开始的文件夹"
+    }
+  },
+  "InterceptionTeam": {
+    "_info": {
+      "name": "异常拦截队伍",
+      "help": "根据选择的BOSS自动选择对应的队伍"
+    },
+    "Kraken": {
+      "name": "克拉肯",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Indivilia": {
+      "name": "茵迪维利亚",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Harvester": {
+      "name": "过激派",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "MirrorContainer": {
+      "name": "镜像容器",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Ultra": {
+      "name": "死神",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
     }
   },
   "Overclock": {

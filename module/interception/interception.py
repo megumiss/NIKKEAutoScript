@@ -15,8 +15,8 @@ class NoOpportunity(Exception):
 
 class Interception(UI):
     def _run(self, skip_first_screenshot=True):
-        confirm_timer = Timer(1.2, count=2).start()
         click_timer = Timer(0.7)
+
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -26,26 +26,18 @@ class Interception(UI):
             if click_timer.reached() and KRAKEN_CHECK.match(self.device.image):
                 self.device.click_minitouch(360, 1030)
                 click_timer.reset()
-                confirm_timer.reset()
-
             elif click_timer.reached() and self.appear_then_click(KRAKEN, offset=5):
                 click_timer.reset()
-                confirm_timer.reset()
 
-            if ABNORMAL_INTERCEPTION_CHECK.match(self.device.image) and confirm_timer.reached():
+            if ABNORMAL_INTERCEPTION_CHECK.match(self.device.image):
                 break
 
         skip_first_screenshot = True
-        confirm_timer.reset()
-        click_timer.reset()
         self.device.click_record_clear()
         self.device.stuck_record_clear()
 
         while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
+            self.device.screenshot()
 
             if (
                 click_timer.reached()
@@ -53,26 +45,21 @@ class Interception(UI):
                 and self.appear_then_click(BATTLE_QUICKLY, offset=5)
             ):
                 click_timer.reset()
-                confirm_timer.reset()
                 continue
-
             elif (
                 click_timer.reached()
                 and BATTLE.match_appear_on(self.device.image, 10)
                 and self.appear_then_click(BATTLE, offset=5)
             ):
                 click_timer.reset()
-                confirm_timer.reset()
                 continue
 
             if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=(5, 5), threshold=0.9, interval=5):
                 click_timer.reset()
-                confirm_timer.reset()
                 continue
 
             if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=(5, 5), threshold=0.9, interval=5):
                 click_timer.reset()
-                confirm_timer.reset()
                 continue
 
             # 红圈
@@ -85,13 +72,10 @@ class Interception(UI):
                 if saved_path:
                     logger.info(f'Save drop image to: {saved_path}')
                 click_timer.reset()
-                confirm_timer.reset()
                 continue
 
-            if (
-                self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=5, interval=2)
-                and not BATTLE.match_appear_on(self.device.image, 10)
-                and confirm_timer.reached()
+            if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=5, interval=2) and not BATTLE.match_appear_on(
+                self.device.image, 10
             ):
                 raise NoOpportunity
 
@@ -110,7 +94,7 @@ class Interception(UI):
 
         # 按日期生成子文件夹
         today_str = datetime.now().strftime('%Y-%m-%d')
-        date_dir = os.path.join(base_path, today_str)
+        date_dir = os.path.join(base_path, self.config.config_name, today_str)
 
         # 创建目录
         os.makedirs(date_dir, exist_ok=True)

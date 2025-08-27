@@ -204,9 +204,28 @@ CheerStrategy:
     value: 'Most'
     option: [ 'Most','Few','Random' ]
 Interception:
+  Boss:
+    value: 'Kraken'
+    option: [ 'Kraken', 'Indivilia', 'Harvester', 'MirrorContainer', 'Ultra' ]
   DropScreenshotPath:
     value: ''
     type: textarea
+InterceptionTeam:
+  Kraken:
+    value: 1
+    option: [ 1, 2, 3, 4, 5 ]
+  Indivilia:
+    value: 2
+    option: [ 1, 2, 3, 4, 5 ]
+  Harvester:
+    value: 3
+    option: [ 1, 2, 3, 4, 5 ]
+  MirrorContainer:
+    value: 4
+    option: [ 1, 2, 3, 4, 5 ]
+  Ultra:
+    value: 5
+    option: [ 1, 2, 3, 4, 5 ]
 Overclock:
   # DisableFirst: false
   SkipRatioCheck: false

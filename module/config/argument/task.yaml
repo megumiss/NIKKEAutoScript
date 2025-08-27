@@ -75,6 +75,7 @@ Ark:
     Interception:
       - Scheduler
       - Interception
+      - InterceptionTeam
     RookieArena:
       - Scheduler
       - OpponentSelection

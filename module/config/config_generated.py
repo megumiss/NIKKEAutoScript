@@ -127,7 +127,15 @@ class GeneratedConfig:
     CheerStrategy_Strategy = 'Most'  # Most, Few, Random
 
     # Group `Interception`
+    Interception_Boss = 'Kraken'  # Kraken, Indivilia, Harvester, MirrorContainer, Ultra
     Interception_DropScreenshotPath = None
+
+    # Group `InterceptionTeam`
+    InterceptionTeam_Kraken = 1  # 1, 2, 3, 4, 5
+    InterceptionTeam_Indivilia = 2  # 1, 2, 3, 4, 5
+    InterceptionTeam_Harvester = 3  # 1, 2, 3, 4, 5
+    InterceptionTeam_MirrorContainer = 4  # 1, 2, 3, 4, 5
+    InterceptionTeam_Ultra = 5  # 1, 2, 3, 4, 5
 
     # Group `Overclock`
     Overclock_SkipRatioCheck = False

@@ -282,7 +282,15 @@
       "ServerUpdate": "04:00"
     },
     "Interception": {
+      "Boss": "Kraken",
       "DropScreenshotPath": null
+    },
+    "InterceptionTeam": {
+      "Kraken": 1,
+      "Indivilia": 2,
+      "Harvester": 3,
+      "MirrorContainer": 4,
+      "Ultra": 5
     },
     "Storage": {
       "Storage": {}

@@ -984,9 +984,77 @@
       }
     },
     "Interception": {
+      "Boss": {
+        "type": "select",
+        "value": "Kraken",
+        "option": [
+          "Kraken",
+          "Indivilia",
+          "Harvester",
+          "MirrorContainer",
+          "Ultra"
+        ]
+      },
       "DropScreenshotPath": {
         "type": "textarea",
         "value": ""
+      }
+    },
+    "InterceptionTeam": {
+      "Kraken": {
+        "type": "select",
+        "value": 1,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Indivilia": {
+        "type": "select",
+        "value": 2,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Harvester": {
+        "type": "select",
+        "value": 3,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "MirrorContainer": {
+        "type": "select",
+        "value": 4,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Ultra": {
+        "type": "select",
+        "value": 5,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
       }
     },
     "Storage": {
