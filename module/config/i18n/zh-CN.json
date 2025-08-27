@@ -678,7 +678,7 @@
   },
   "InterceptionTeam": {
     "_info": {
-      "name": "异常拦截队伍",
+      "name": "队伍设置",
       "help": "根据选择的BOSS自动选择对应的队伍"
     },
     "Kraken": {

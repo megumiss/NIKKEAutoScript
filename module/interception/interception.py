@@ -32,7 +32,6 @@ class Interception(UI):
             if ABNORMAL_INTERCEPTION_CHECK.match(self.device.image):
                 break
 
-        skip_first_screenshot = True
         self.device.click_record_clear()
         self.device.stuck_record_clear()
 
