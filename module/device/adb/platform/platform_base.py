@@ -5,9 +5,9 @@ import typing as t
 from pydantic import BaseModel
 
 from module.base.decorator import del_cached_property
-from module.device.connection import Connection
-from module.device.method.utils import get_serial_pair
-from module.device.platform.emulator_base import EmulatorInstanceBase, EmulatorManagerBase, remove_duplicated_path
+from module.device.adb.connection import Connection
+from module.device.adb.method.utils import get_serial_pair
+from module.device.adb.platform.emulator_base import EmulatorInstanceBase, EmulatorManagerBase, remove_duplicated_path
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
 

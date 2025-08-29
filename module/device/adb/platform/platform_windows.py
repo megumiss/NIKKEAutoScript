@@ -7,9 +7,9 @@ import psutil
 from deploy.Windows.utils import DataProcessInfo
 from module.base.decorator import run_once
 from module.base.timer import Timer
-from module.device.connection import AdbDeviceWithStatus
-from module.device.platform.platform_base import PlatformBase
-from module.device.platform.emulator_windows import Emulator, EmulatorInstance, EmulatorManager
+from module.device.adb.connection import AdbDeviceWithStatus
+from module.device.adb.platform.platform_base import PlatformBase
+from module.device.adb.platform.emulator_windows import Emulator, EmulatorInstance, EmulatorManager
 from module.logger import logger
 
 

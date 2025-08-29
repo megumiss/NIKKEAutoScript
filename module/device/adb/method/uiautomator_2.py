@@ -11,8 +11,8 @@ from lxml import etree
 
 from module.base.utils import *
 from module.config.server import DICT_PACKAGE_TO_ACTIVITY
-from module.device.connection import Connection
-from module.device.method.utils import (ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error,
+from module.device.adb.connection import Connection
+from module.device.adb.method.utils import (ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error,
                                         handle_unknown_host_service, possible_reasons, retry_sleep)
 from module.exception import RequestHumanTakeover
 from module.logger import logger

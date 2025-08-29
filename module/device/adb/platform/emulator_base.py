@@ -3,7 +3,7 @@ import re
 import typing as t
 from dataclasses import dataclass
 
-from module.device.platform.utils import cached_property, iter_folder
+from module.device.adb.platform.utils import cached_property, iter_folder
 
 
 def abspath(path):

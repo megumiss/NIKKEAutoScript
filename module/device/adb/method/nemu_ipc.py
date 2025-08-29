@@ -12,11 +12,11 @@ from module.base.decorator import del_cached_property, has_cached_property
 from module.base.timer import Timer
 from module.base.utils import ensure_time
 from module.config.deep import deep_get
-from module.device.env import IS_WINDOWS
-from module.device.method.minitouch import insert_swipe, random_rectangle_point
-from module.device.method.pool import JobTimeout, WORKER_POOL
-from module.device.method.utils import RETRY_TRIES, retry_sleep
-from module.device.platform import Platform
+from module.device.adb.env import IS_WINDOWS
+from module.device.adb.method.minitouch import insert_swipe, random_rectangle_point
+from module.device.adb.method.pool import JobTimeout, WORKER_POOL
+from module.device.adb.method.utils import RETRY_TRIES, retry_sleep
+from module.device.adb.platform import Platform
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 

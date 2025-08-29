@@ -10,8 +10,8 @@ from adbutils.errors import AdbError
 from functools import cached_property
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
-from module.device.method.uiautomator_2 import ProcessInfo, Uiautomator2
-from module.device.method.utils import (
+from module.device.adb.method.uiautomator_2 import ProcessInfo, Uiautomator2
+from module.device.adb.method.utils import (
     ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error, handle_unknown_host_service, retry_sleep)
 from module.exception import RequestHumanTakeover
 from module.logger import logger

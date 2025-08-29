@@ -4,7 +4,7 @@ import numpy as np
 
 from module.base.button import Button
 from module.base.utils import ensure_int, point2str
-from module.device.method.minitouch import Minitouch
+from module.device.adb.method.minitouch import Minitouch
 from module.logger import logger
 
 

@@ -11,8 +11,8 @@ from adbutils import AdbError
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
 from module.base.utils import *
-from module.device.connection import Connection
-from module.device.method.utils import RETRY_TRIES, retry_sleep, handle_adb_error
+from module.device.adb.connection import Connection
+from module.device.adb.method.utils import RETRY_TRIES, retry_sleep, handle_adb_error
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 

@@ -17,10 +17,10 @@ from module.base.utils import ensure_time
 from module.config.deep import deep_get
 from module.config.language import set_language
 from module.config.server import VALID_CHANNEL_PACKAGE, VALID_PACKAGE, set_server
-from module.device.connection_attr import ConnectionAttr
-from module.device.env import IS_LINUX, IS_MACINTOSH, IS_WINDOWS
-from module.device.method.pool import WORKER_POOL
-from module.device.method.utils import (
+from module.device.adb.connection_attr import ConnectionAttr
+from module.device.adb.env import IS_LINUX, IS_MACINTOSH, IS_WINDOWS
+from module.device.adb.method.pool import WORKER_POOL
+from module.device.adb.method.utils import (
     RETRY_TRIES,
     PackageNotInstalled,
     get_serial_pair,

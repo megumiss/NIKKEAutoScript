@@ -1,4 +1,4 @@
-from module.device.method.uiautomator_2 import Uiautomator2
+from module.device.adb.method.uiautomator_2 import Uiautomator2
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 

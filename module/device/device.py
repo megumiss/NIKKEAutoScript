@@ -2,10 +2,10 @@ from collections import deque
 
 from module.base.button import Button
 from module.base.timer import Timer
-from module.device.app_control import AppControl
-from module.device.control import Control
-from module.device.env import IS_WINDOWS
-from module.device.screenshot import Screenshot
+from module.device.adb.app_control import AppControl
+from module.device.adb.control import Control
+from module.device.adb.env import IS_WINDOWS
+from module.device.adb.screenshot import Screenshot
 from module.exception import (
     EmulatorNotRunningError,
     GameNotRunningError,

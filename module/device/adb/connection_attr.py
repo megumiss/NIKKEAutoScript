@@ -9,7 +9,7 @@ from functools import cached_property
 from module.config.config import NikkeConfig
 from module.config.env import IS_ON_PHONE_CLOUD
 from module.config.deep import deep_iter
-from module.device.method.utils import get_serial_pair
+from module.device.adb.method.utils import get_serial_pair
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 

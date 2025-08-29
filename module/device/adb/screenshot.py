@@ -4,8 +4,8 @@ from functools import cached_property
 
 from module.base.timer import Timer
 from module.base.utils import image_size
-from module.device.method.droidcast import DroidCast
-from module.device.method.nemu_ipc import NemuIpc
+from module.device.adb.method.droidcast import DroidCast
+from module.device.adb.method.nemu_ipc import NemuIpc
 
 
 class ScreenshotSizeError(Exception):
