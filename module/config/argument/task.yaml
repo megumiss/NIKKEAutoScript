@@ -5,6 +5,7 @@ NKAS:
   page: 'setting'
   tasks:
     NKAS:
+      - Client
       - Emulator
       - EmulatorInfo
       - Optimization

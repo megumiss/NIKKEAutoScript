@@ -211,6 +211,18 @@
       "help": ""
     }
   },
+  "Client": {
+    "_info": {
+      "name": "客户端设置",
+      "help": ""
+    },
+    "Platform": {
+      "name": "客户端平台",
+      "help": "",
+      "adb": "ADB (模拟器)",
+      "win": "Windows (PC端)"
+    }
+  },
   "Emulator": {
     "_info": {
       "name": "模拟器设置",

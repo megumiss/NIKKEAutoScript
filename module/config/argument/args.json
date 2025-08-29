@@ -1,5 +1,15 @@
 {
   "NKAS": {
+    "Client": {
+      "Platform": {
+        "type": "select",
+        "value": "adb",
+        "option": [
+          "adb",
+          "win"
+        ]
+      }
+    },
     "Emulator": {
       "Serial": {
         "type": "input",

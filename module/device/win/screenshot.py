@@ -71,7 +71,7 @@ class Screenshot:
     @staticmethod
     def take_screenshot(title, crop=(0, 0, 1, 1)):
         window = Screenshot.get_window(title)
-        set_window_resolution(window._hWnd, 720, 1280)
+        # set_window_resolution(window._hWnd, 720, 1280)
         # win32gui.SetWindowPos(window._hWnd, win32con.HWND_TOP, 100, 100, 1360, 765, 0)
         if window:
             left, top, width, height = Screenshot.get_window_region(window)

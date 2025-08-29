@@ -7,7 +7,6 @@ from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import float2str, point2str
 from module.config.config import NikkeConfig
-from module.device.device import Device
 from module.logger import logger
 from module.ocr.models import OCR_MODEL
 from module.ocr.ocr import Ocr
@@ -15,7 +14,6 @@ from module.ocr.ocr import Ocr
 
 class ModuleBase:
     config: NikkeConfig
-    device: Device
 
     def __init__(self, config, device=None, task=None):
         """
@@ -38,13 +36,18 @@ class ModuleBase:
             logger.warning('NKAS ModuleBase received an unknown config, assume it is NikkeConfig')
             self.config = config
 
-        if isinstance(device, Device):
+        if config.CLIENT_PLATFORM == 'adb':
+            from module.device.adb.device import Device as DeviceClass
+        if config.CLIENT_PLATFORM == 'win':
+            from module.device.win.device import Device as DeviceClass
+
+        if isinstance(device, DeviceClass):
             self.device = device
         elif device is None:
-            self.device = Device(config=self.config)
+            self.device = DeviceClass(config=self.config)
         elif isinstance(device, str):
             self.config.override(Emulator_Serial=device)
-            self.device = Device(config=self.config)
+            self.device = DeviceClass(config=self.config)
         else:
             logger.warning('NKAS ModuleBase received an unknown device, assume it is Device')
             self.device = device

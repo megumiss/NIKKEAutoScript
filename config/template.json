@@ -1,5 +1,8 @@
 {
   "NKAS": {
+    "Client": {
+      "Platform": "adb"
+    },
     "Emulator": {
       "Serial": "auto",
       "PackageName": "com.proximabeta.nikke",

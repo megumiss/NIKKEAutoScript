@@ -450,6 +450,10 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
     @property
     def EVENT_COOP(self):
         return self.Coop_EventCoop
+    
+    @property
+    def CLIENT_PLATFORM(self):
+        return self.Client_Platform
 
 class MultiSetWrapper:
     def __init__(self, main):

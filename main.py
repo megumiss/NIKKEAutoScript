@@ -54,9 +54,15 @@ class NikkeAutoScript:
     @cached_property
     def device(self):
         try:
-            from module.device.device import Device
+            if self.config.Client_Platform == 'win':
+                from module.device.win.device import Device
 
-            device = Device(config=self.config)
+                device = Device(config=self.config)
+            if self.config.Client_Platform == 'adb':
+                from module.device.adb.device import Device
+
+                device = Device(config=self.config)
+
             return device
         except RequestHumanTakeover:
             logger.critical('Request human takeover')
