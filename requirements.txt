@@ -138,3 +138,4 @@ protobuf==6.31.1
 pyautogui==0.9.54
 pygetwindow==0.0.9
 desktopmagic==14.3.11
+pywin32

@@ -2,9 +2,10 @@ from collections import deque
 
 from module.base.button import Button
 from module.base.timer import Timer
-from module.device.win.screenshot import Screenshot
+from module.device.win.app_control import AppControl
+from module.device.win.control import Control
+from module.device.win.automation import Automation
 from module.exception import (
-    EmulatorNotRunningError,
     GameNotRunningError,
     GameStuckError,
     GameTooManyClickError,
@@ -14,7 +15,7 @@ from module.logger import logger
 from module.ocr.models import OCR_MODEL
 
 
-class Device(Screenshot):
+class Device(Automation, Control, AppControl):
     get_location = OCR_MODEL.get_location
 
     # 尝试检测的 Button 集合
@@ -35,29 +36,23 @@ class Device(Screenshot):
             try:
                 super().__init__(*args, **kwargs)
                 break
-            except EmulatorNotRunningError:
+            except GameNotRunningError:
                 if trial >= 3:
-                    logger.critical('Failed to start emulator after 3 trial')
+                    logger.critical('Failed to start game after 3 trial')
                     raise RequestHumanTakeover
-                # Try to start emulator
-                if self.emulator_instance is not None:
-                    self.emulator_start()
+                # Try to start game
+                if not self.switch_to_game():
+                    self.app_start()
                 else:
-                    logger.critical(
-                        f'No emulator with serial "{self.config.Emulator_Serial}" found, '
-                        f'please set a correct serial'
-                    )
+                    logger.critical(f'No process "{self.config.WinClient_ProcessName}" found, please start game first')
                     raise RequestHumanTakeover
-
-        # TODO
-        # self.screenshot_interval_set()
 
     def screenshot(self):
         """
-            截图
+        截图
 
-            Returns:
-                np.ndarray:
+        Returns:
+            np.ndarray:
         """
         self.stuck_record_check()
         super().screenshot()
@@ -65,10 +60,10 @@ class Device(Screenshot):
 
     def handle_control_check(self, button: Button):
         """
-            当点击(匹配到)Button时，清空尝试匹配过的按钮，重置操作计时器，并记录此Button，再检查点击过的Buttons
+        当点击(匹配到)Button时，清空尝试匹配过的按钮，重置操作计时器，并记录此Button，再检查点击过的Buttons
 
-            Args:
-                button: Button
+        Args:
+            button: Button
         """
         self.stuck_record_clear()
         self.click_record_add(button)
@@ -76,10 +71,10 @@ class Device(Screenshot):
 
     def click_record_check(self):
         """
-            检查点击过的Buttons
+        检查点击过的Buttons
 
-            Raises:
-                GameTooManyClickError:
+        Raises:
+            GameTooManyClickError:
         """
         count = {}
         for key in self.click_record:
@@ -111,29 +106,29 @@ class Device(Screenshot):
 
     def click_record_add(self, button: Button):
         """
-            记录点击过的button
+        记录点击过的button
 
-            Args:
-                button: Button
-                str(button): 值默认为asset名称
+        Args:
+            button: Button
+            str(button): 值默认为asset名称
         """
         self.click_record.append(str(button))
 
     def click_record_clear(self):
         """
-            清空点击过的button
+        清空点击过的button
         """
         self.click_record.clear()
 
     def stuck_record_check(self):
         """
-            当操作计时器: stuck_timer，stuck_timer_long 到达限制时间时 raise exception
+        当操作计时器: stuck_timer，stuck_timer_long 到达限制时间时 raise exception
 
-            如果 detect_record 含有在 stuck_long_wait_list 中的 Button，在 stuck_timer_long 到达上限前不会 raise exception
-            detect_record 值为 str(Button)，在 Button 类中，默认重写为该 asset 的名称
+        如果 detect_record 含有在 stuck_long_wait_list 中的 Button，在 stuck_timer_long 到达上限前不会 raise exception
+        detect_record 值为 str(Button)，在 Button 类中，默认重写为该 asset 的名称
 
-            Raises:
-                GameStuckError:
+        Raises:
+            GameStuckError:
         """
         reached = self.stuck_timer.reached()
         reached_long = self.stuck_timer_long.reached()
@@ -150,6 +145,7 @@ class Device(Screenshot):
         self.stuck_record_clear()
 
         from module.ui.ui import UI
+
         ui = UI(self.config, device=self)
         if ui.ui_additional():
             return False
@@ -161,7 +157,7 @@ class Device(Screenshot):
 
     def stuck_record_clear(self):
         """
-            清空尝试匹配过的按钮，重置操作计时器
+        清空尝试匹配过的按钮，重置操作计时器
         """
         self.detect_record = set()
         self.stuck_timer.reset()
@@ -169,8 +165,8 @@ class Device(Screenshot):
 
     def disable_stuck_detection(self):
         """
-            Alas: Disable stuck detection and its handler. Usually uses in semi auto and debugging.
-            禁用检查点击，操作计时器，这样在卡住时不会有任何响应
+        Alas: Disable stuck detection and its handler. Usually uses in semi auto and debugging.
+        禁用检查点击，操作计时器，这样在卡住时不会有任何响应
         """
         logger.info('Disable stuck detection')
 
@@ -182,16 +178,16 @@ class Device(Screenshot):
 
     def stuck_record_add(self, button: Button):
         """
-            记录尝试匹配(未匹配)的button，click_record_add 为点击过(匹配到)的button
+        记录尝试匹配(未匹配)的button，click_record_add 为点击过(匹配到)的button
 
-            Args:
-                button: Button
+        Args:
+            button: Button
         """
         self.detect_record.add(str(button))
 
     def app_start(self):
         """
-            启动NIKKE
+        启动NIKKE
         """
         super().app_start()
         self.stuck_record_clear()
@@ -199,7 +195,7 @@ class Device(Screenshot):
 
     def app_stop(self):
         """
-            停止NIKKE
+        停止NIKKE
         """
         super().app_stop()
         self.stuck_record_clear()
