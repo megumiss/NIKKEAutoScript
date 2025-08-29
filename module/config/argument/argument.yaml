@@ -61,6 +61,19 @@ EmulatorInfo:
   path:
     value: null
     type: textarea
+WinClient:
+  TitleName:
+    value: 'NIKKE'
+  ProcessName:
+    value: 'nikke.exe'
+  LauncherPath:
+    value: ''
+    type: textarea
+  Path:
+    value: ''
+    type: textarea
+  Screens:
+    value: false
 Optimization:
   AutoRedCircle: false
   OcrModelType:

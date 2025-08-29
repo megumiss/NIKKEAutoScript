@@ -1,10 +1,8 @@
 import pyautogui
-import win32gui
 import win32con
+import win32gui
 from desktopmagic.screengrab_win32 import getDisplayRects
-from module.config import cfg
 
-TITLE_BAR_HEIGHT = 45
 
 def set_window_resolution(hwnd, client_width, client_height):
     """
@@ -76,7 +74,7 @@ class Screenshot:
         if window:
             left, top, width, height = Screenshot.get_window_region(window)
             
-            all_screens = cfg.all_screens
+            all_screens = self.config.WinClient_Screens
             if all_screens:
                 offset_x, offset_y = Screenshot.get_main_screen_location()
             else:

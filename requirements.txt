@@ -135,3 +135,6 @@ yarl==1.20.1
 networkx==3.2.1
 opt-einsum==3.3.0
 protobuf==6.31.1
+pyautogui==0.9.54
+pygetwindow==0.0.9
+desktopmagic==14.3.11

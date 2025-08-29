@@ -34,6 +34,13 @@ class GeneratedConfig:
     EmulatorInfo_name = None
     EmulatorInfo_path = None
 
+    # Group `WinClient`
+    WinClient_TitleName = 'NIKKE'
+    WinClient_ProcessName = 'nikke.exe'
+    WinClient_LauncherPath = None
+    WinClient_Path = None
+    WinClient_Screens = False
+
     # Group `Optimization`
     Optimization_AutoRedCircle = False
     Optimization_OcrModelType = 'mobile'  # mobile, server

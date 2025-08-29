@@ -86,6 +86,28 @@
         "value": null
       }
     },
+    "WinClient": {
+      "TitleName": {
+        "type": "input",
+        "value": "NIKKE"
+      },
+      "ProcessName": {
+        "type": "input",
+        "value": "nikke.exe"
+      },
+      "LauncherPath": {
+        "type": "textarea",
+        "value": ""
+      },
+      "Path": {
+        "type": "textarea",
+        "value": ""
+      },
+      "Screens": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
     "Optimization": {
       "AutoRedCircle": {
         "type": "checkbox",

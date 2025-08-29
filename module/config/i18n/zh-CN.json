@@ -294,6 +294,32 @@
       "help": ""
     }
   },
+  "WinClient": {
+    "_info": {
+      "name": "PC端设置",
+      "help": ""
+    },
+    "TitleName": {
+      "name": "窗口标题",
+      "help": "游戏窗口的标题栏名称，默认是 'NIKKE'"
+    },
+    "ProcessName": {
+      "name": "进程名称",
+      "help": "游戏进程的名称，默认是 'nikke.exe'"
+    },
+    "LauncherPath": {
+      "name": "启动器路径",
+      "help": "游戏安装路径，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe；暂不支持自动启动游戏，请手动打开游戏后再运行脚本"
+    },
+    "Path": {
+      "name": "游戏路径",
+      "help": "游戏安装路径，例如：E:\\NIKKE\\NIKKE\\game\\nikke.exe；暂不支持自动启动游戏，请手动打开游戏后再运行脚本"
+    },
+    "Screens": {
+      "name": "多屏幕",
+      "help": "如果使用多屏幕，请开启此选项"
+    }
+  },
   "Optimization": {
     "_info": {
       "name": "优化设置",

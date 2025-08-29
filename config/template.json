@@ -17,6 +17,13 @@
       "name": null,
       "path": null
     },
+    "WinClient": {
+      "TitleName": "NIKKE",
+      "ProcessName": "nikke.exe",
+      "LauncherPath": null,
+      "Path": null,
+      "Screens": false
+    },
     "Optimization": {
       "AutoRedCircle": false,
       "OcrModelType": "mobile",
