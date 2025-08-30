@@ -1,9 +1,18 @@
+import sys
 import threading
 from multiprocessing import Event, Process
+
+import pyuac
 
 from module.logger import logger
 from module.webui.setting import State
 
+# if not pyuac.isUserAdmin():
+#     try:
+#         pyuac.runAsAdmin(False)
+#         sys.exit(0)
+#     except Exception:
+#         sys.exit(1)
 
 def func(ev: threading.Event):
     import argparse

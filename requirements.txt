@@ -139,3 +139,4 @@ pyautogui==0.9.54
 pygetwindow==0.0.9
 desktopmagic==14.3.11
 pywin32
+pyuac==0.0.3

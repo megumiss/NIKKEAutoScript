@@ -5,6 +5,8 @@ import time
 from typing import Literal, Optional, Tuple
 
 import psutil
+import pyautogui
+import win32con
 import win32gui
 
 from module.base.utils import ensure_time
@@ -21,6 +23,13 @@ from module.logger import logger
 
 
 class WinClient:
+    # def __init__(self, config):
+    #     super().__init__(config)
+
+    #     self.game_resolution = None
+    #     self.game_auto_hdr = None
+    #     self.screen_resolution = pyautogui.size()
+
     def start_game(self) -> bool:
         """启动游戏"""
         if not os.path.exists(self.game_path):
@@ -216,54 +225,120 @@ class WinClient:
             logger.error(f'启动脚本时发生错误：{str(e)}')
             return False
 
-    def change_resolution(self, width: int, height: int):
+    def change_resolution(self, client_width, client_height):
+        """
+        设置窗口客户区大小为指定分辨率
+
+        参数:
+            client_width: 客户区宽度(像素)
+            client_height: 客户区高度(像素)
+        """
+        try:
+            # 查找窗口句柄
+            hwnd = win32gui.FindWindow(self.window_class, self.window_name)
+            if hwnd == 0:
+                logger.error('游戏窗口未找到')
+                raise Exception('游戏窗口未找到')
+
+            # 获取窗口矩形和客户区矩形
+            rect = win32gui.GetClientRect(hwnd)
+            window_rect = win32gui.GetWindowRect(hwnd)
+
+            logger.debug(f'原始窗口矩形: {window_rect}, 客户区矩形: {rect}')
+
+            # 计算边框宽度和高度
+            border_width = (window_rect[2] - window_rect[0] - rect[2]) // 2
+            border_height = (window_rect[3] - window_rect[1] - rect[3]) // 2
+
+            logger.debug(f'计算得到的边框宽度: {border_width}, 边框高度: {border_height}')
+
+            # 计算需要的窗口大小（包括边框）
+            window_width = client_width + 2 * border_width
+            window_height = client_height + 2 * border_height
+
+            logger.debug(f'需要设置的窗口大小: {window_width}x{window_height}')
+
+            # 设置窗口大小
+            result = win32gui.SetWindowPos(
+                hwnd, 0, 0, 0, window_width, window_height, win32con.SWP_NOMOVE | win32con.SWP_NOZORDER
+            )
+
+            if result == 0:
+                logger.error('设置窗口大小失败')
+                raise Exception('设置窗口大小失败')
+
+            # 验证设置是否成功
+            new_rect = win32gui.GetClientRect(hwnd)
+            logger.debug(f'设置后的客户区大小: {new_rect[2]}x{new_rect[3]}')
+
+            if new_rect[2] != client_width or new_rect[3] != client_height:
+                logger.warning(
+                    f'设置分辨率不完全匹配: 期望 {client_width}x{client_height}, 实际 {new_rect[2]}x{new_rect[3]}'
+                )
+            else:
+                logger.info(f'成功设置窗口客户区分辨率为: {client_width}x{client_height}')
+
+        except Exception as e:
+            logger.error(f'设置窗口分辨率时发生错误: {e}')
+            logger.error(f'目标分辨率: {client_width}x{client_height}')
+            raise Exception(f'无法设置窗口分辨率: {e}')
+
+    def change_reg_resolution(self, width: int, height: int):
         """通过注册表修改游戏分辨率"""
         try:
             self.game_resolution = get_game_resolution()
             if self.game_resolution:
                 screen_width, screen_height = self.screen_resolution
                 is_fullscreen = False if screen_width > width or screen_height > height else True
-                if self.game_resolution[0] == width and self.game_resolution[1] == height and self.game_resolution[2] == is_fullscreen:
+                if (
+                    self.game_resolution[0] == width
+                    and self.game_resolution[1] == height
+                    and self.game_resolution[2] == is_fullscreen
+                ):
                     self.game_resolution = None
                     return
                 set_game_resolution(width, height, is_fullscreen)
-                self.log_debug(f"修改游戏分辨率: {self.game_resolution[0]}x{self.game_resolution[1]} ({'全屏' if self.game_resolution[2] else '窗口'}) --> {width}x{height} ({'全屏' if is_fullscreen else '窗口'})")
+                logger.debug(
+                    f'修改游戏分辨率: {self.game_resolution[0]}x{self.game_resolution[1]} ({"全屏" if self.game_resolution[2] else "窗口"}) --> {width}x{height} ({"全屏" if is_fullscreen else "窗口"})'
+                )
         except FileNotFoundError:
-            self.log_debug("指定的注册表项未找到")
+            logger.debug('指定的注册表项未找到')
         except Exception as e:
-            self.log_error(f"读取注册表值时发生错误: {e}")
+            logger.error(f'读取注册表值时发生错误: {e}')
 
     def restore_resolution(self):
         """通过注册表恢复游戏分辨率"""
         try:
             if self.game_resolution:
                 set_game_resolution(self.game_resolution[0], self.game_resolution[1], self.game_resolution[2])
-                self.log_debug(f"恢复游戏分辨率: {self.game_resolution[0]}x{self.game_resolution[1]} ({'全屏' if self.game_resolution[2] else '窗口'})")
+                logger.debug(
+                    f'恢复游戏分辨率: {self.game_resolution[0]}x{self.game_resolution[1]} ({"全屏" if self.game_resolution[2] else "窗口"})'
+                )
         except Exception as e:
-            self.log_error(f"写入注册表值时发生错误: {e}")
+            logger.error(f'写入注册表值时发生错误: {e}')
 
-    def change_auto_hdr(self, status: Literal["enable", "disable", "unset"] = "unset"):
+    def change_auto_hdr(self, status: Literal['enable', 'disable', 'unset'] = 'unset'):
         """通过注册表修改游戏自动 HDR 设置"""
-        status_map = {"enable": "启用", "disable": "禁用", "unset": "未设置"}
+        status_map = {'enable': '启用', 'disable': '禁用', 'unset': '未设置'}
         try:
             self.game_auto_hdr = get_game_auto_hdr(self.game_path)
             if self.game_auto_hdr == status:
                 self.game_auto_hdr = None
                 return
             set_game_auto_hdr(self.game_path, status)
-            self.log_debug(f"修改游戏自动 HDR: {status_map.get(self.game_auto_hdr)} --> {status_map.get(status)}")
+            logger.debug(f'修改游戏自动 HDR: {status_map.get(self.game_auto_hdr)} --> {status_map.get(status)}')
         except Exception as e:
-            self.log_debug(f"修改游戏自动 HDR 设置时发生错误：{e}")
+            logger.debug(f'修改游戏自动 HDR 设置时发生错误：{e}')
 
     def restore_auto_hdr(self):
         """通过注册表恢复游戏自动 HDR 设置"""
-        status_map = {"enable": "启用", "disable": "禁用", "unset": "未设置"}
+        status_map = {'enable': '启用', 'disable': '禁用', 'unset': '未设置'}
         try:
             if self.game_auto_hdr:
                 set_game_auto_hdr(self.game_path, self.game_auto_hdr)
-            self.log_debug(f"恢复游戏自动 HDR: {status_map.get(self.game_auto_hdr)}")
+            logger.debug(f'恢复游戏自动 HDR: {status_map.get(self.game_auto_hdr)}')
         except Exception as e:
-            self.log_debug(f"恢复游戏自动 HDR 设置时发生错误：{e}")
+            logger.debug(f'恢复游戏自动 HDR 设置时发生错误：{e}')
 
     def check_resolution(self, target_width: int, target_height: int) -> None:
         """
@@ -276,19 +351,16 @@ class WinClient:
             target_width (int): 目标分辨率的宽度。
             target_height (int): 目标分辨率的高度。
         """
-        resolution = self.get_resolution()
-        if not resolution:
-            raise Exception("游戏分辨率获取失败")
-        window_width, window_height = resolution
-
+        self.screen_resolution = pyautogui.size()
         screen_width, screen_height = self.screen_resolution
-        if window_width != target_width or window_height != target_height:
-            self.log_error(f"游戏分辨率: {window_width}x{window_height}，请在游戏设置内切换为 {target_width}x{target_height} 窗口或全屏运行")
-            if screen_width < target_width or screen_height < target_height:
-                self.log_error(f"桌面分辨率: {screen_width}x{screen_height}，你可能需要更大的显示器或使用 HDMI/VGA 显卡欺骗器")
-            raise Exception("游戏分辨率过低")
+        if screen_width < target_width or screen_height < target_height:
+            logger.error(f'桌面分辨率: {screen_width}x{screen_height}，目标分辨率: {target_width}x{target_height}')
+            logger.error(
+                f'显示器横向分辨率必须大于 {target_width}，竖向分辨率必须大于 {target_height}；请尝试竖屏使用，或者更换更大的显示器/使用 HDMI/VGA 显卡欺骗器'
+            )
+            raise Exception('桌面分辨率过低')
         else:
-            self.log_debug(f"游戏分辨率: {window_width}x{window_height}")
+            logger.debug(f'桌面分辨率: {screen_width}x{screen_height}')
 
     def check_resolution_ratio(self, target_width: int, target_height: int) -> None:
         """
@@ -303,23 +375,13 @@ class WinClient:
         """
         resolution = self.get_resolution()
         if not resolution:
-            raise Exception("游戏分辨率获取失败")
+            raise Exception('游戏分辨率获取失败')
         window_width, window_height = resolution
 
-        screen_width, screen_height = self.screen_resolution
-
-        if window_width < target_width or window_height < target_height:
-            self.log_error(f"游戏分辨率: {window_width}x{window_height} 请在游戏设置内切换为 {target_width}x{target_height} 窗口或全屏运行")
-            if screen_width < 1920 or screen_height < 1080:
-                self.log_error(f"桌面分辨率: {screen_width}x{screen_height} 你可能需要更大的显示器或使用 HDMI/VGA 显卡欺骗器")
-            raise Exception("游戏分辨率过低")
-        elif abs(window_width / window_height - (target_width / target_height)) > 0.01:
-            self.log_error(f"游戏分辨率: {window_width}x{window_height} 请在游戏设置内切换为 {target_width}:{target_height} 比例")
-            raise Exception("游戏分辨率比例不正确")
+        if window_width != target_width or window_height != target_height:
+            logger.error(
+                f'游戏分辨率: {window_width}x{window_height} ≠ {target_width}x{target_height}，分辨率错误，请重试'
+            )
+            raise Exception('游戏分辨率错误')
         else:
-            if window_width != target_width or window_height != target_height:
-                self.log_warning(f"游戏分辨率: {window_width}x{window_height} ≠ {target_width}x{target_height} 可能出现未预期的错误")
-                time.sleep(2)
-            else:
-                self.log_debug(f"游戏分辨率: {window_width}x{window_height}")
-            self.log_debug(f"桌面分辨率: {screen_width}x{screen_height}")
+            logger.debug(f'游戏分辨率: {window_width}x{window_height}')
