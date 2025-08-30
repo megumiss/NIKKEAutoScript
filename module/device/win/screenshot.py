@@ -1,3 +1,4 @@
+import numpy as np
 import pyautogui
 import win32con
 import win32gui
@@ -58,9 +59,9 @@ class Screenshot:
             ), allScreens=screens)
 
             real_width, _ = Screenshot.get_window_real_resolution(window)
-            if real_width > 1920:
-                screenshot_scale_factor = 1920 / real_width
-                screenshot = screenshot.resize((int(1920 * crop[2]), int(1080 * crop[3])))
+            if real_width > 720:
+                screenshot_scale_factor = 720 / real_width
+                screenshot = screenshot.resize((int(720 * crop[2]), int(1280 * crop[3])))
             else:
                 screenshot_scale_factor = 1
 
@@ -71,6 +72,6 @@ class Screenshot:
                 int(height * crop[3] * screenshot_scale_factor)
             )
 
-            return screenshot, screenshot_pos, screenshot_scale_factor
+            return np.array(screenshot), screenshot_pos, screenshot_scale_factor
 
         return False

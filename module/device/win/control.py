@@ -11,5 +11,3 @@ class Control():
     def handle_control_check(self, button):
         # Will be overridden in Device
         pass
-
-

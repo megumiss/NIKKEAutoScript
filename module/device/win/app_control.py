@@ -50,7 +50,7 @@ class AppControl(WinClient):
         logger.attr('Language', self.language)
 
     def app_is_running(self) -> bool:
-        if not self.win_client.switch_to_game():
+        if not self.switch_to_game():
             return False
 
         return True
@@ -79,7 +79,7 @@ class AppControl(WinClient):
         for retry in range(MAX_RETRY):
             try:
                 if not self.switch_to_game():
-                    # self.win_client.change_auto_hdr("disable")
+                    # self.change_auto_hdr("disable")
 
                     # TODO 自动启动游戏
                     # if not self.start_game():
@@ -129,7 +129,7 @@ class AppControl(WinClient):
         logger.info(f'Game stop: {self.config.WinClient_Path}')
 
         try:
-            if self.win_client.stop_game():
+            if self.stop_game():
                 logger.info('Game stop success')
             else:
                 logger.warning('Game path config error')

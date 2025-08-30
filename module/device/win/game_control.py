@@ -267,7 +267,7 @@ class WinClient:
             new_rect = win32gui.GetClientRect(hwnd)
             logger.debug(f'设置后的客户区大小: {new_rect[2]}x{new_rect[3]}')
 
-            if new_rect[2] != client_width or new_rect[3] != client_height:
+            if new_rect[2] != client_width and new_rect[3] != client_height:
                 logger.warning(
                     f'设置分辨率不完全匹配: 期望 {client_width}x{client_height}, 实际 {new_rect[2]}x{new_rect[3]}'
                 )
@@ -374,7 +374,7 @@ class WinClient:
             raise Exception('游戏分辨率获取失败')
         window_width, window_height = resolution
 
-        if window_width != target_width or window_height != target_height:
+        if window_width != target_width and window_height != target_height:
             logger.error(
                 f'游戏分辨率: {window_width}x{window_height} ≠ {target_width}x{target_height}，分辨率错误，请重试'
             )
