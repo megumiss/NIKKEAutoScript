@@ -3,7 +3,6 @@ from collections import deque
 from module.base.button import Button
 from module.base.timer import Timer
 from module.device.win.app_control import AppControl
-from module.device.win.control import Control
 from module.device.win.automation import Automation
 from module.exception import (
     GameNotRunningError,
@@ -15,7 +14,7 @@ from module.logger import logger
 from module.ocr.models import OCR_MODEL
 
 
-class Device(AppControl, Automation, Control):
+class Device(AppControl, Automation):
     get_location = OCR_MODEL.get_location
 
     # 尝试检测的 Button 集合

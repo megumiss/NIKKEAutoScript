@@ -1,16 +1,14 @@
 import os
 import time
-from functools import cached_property
 
 import psutil
 
 from module.config.config import NikkeConfig
-from module.config.deep import deep_iter
+from module.config.language import set_language
+from module.config.server import set_server
 from module.device.win.game_control import WinClient
 from module.exception import RequestHumanTakeover
 from module.logger import logger
-from module.config.language import set_language
-from module.config.server import VALID_CHANNEL_PACKAGE, VALID_PACKAGE, set_server
 
 
 class AppControl(WinClient):

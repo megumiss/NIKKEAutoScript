@@ -1,11 +1,8 @@
-import math
 import time
 from collections import deque
 from datetime import datetime
 from functools import cached_property
-from typing import Optional
 
-import cv2
 import numpy as np
 
 from module.base.button import Button
@@ -13,7 +10,6 @@ from module.base.timer import Timer
 from module.base.utils import ensure_int, image_size, point2str
 from module.config.config import NikkeConfig
 from module.logger import logger
-from module.ocr import ocr
 
 from .input import Input
 from .screenshot import Screenshot
@@ -79,7 +75,6 @@ class Automation:
                 if result:
                     self.image, self.screenshot_pos, self.screenshot_scale_factor = result
                     self.window_offset = self.screenshot_pos[0], self.screenshot_pos[1]
-                    # cv2.imwrite('debug_screenshot1.png', np.array(self.image))
                     self.image = self._handle_orientated_image(self.image)
                     self.screenshot_deque.append({'time': datetime.now(), 'image': self.image})
                     # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
@@ -110,7 +105,7 @@ class Automation:
 
         raise ScreenshotSizeError("The emulator's display size must be 720*1280")
 
-    def click(self, button: Button, click_offset=0, action="click"):
+    def click(self, button: Button, click_offset=0, action='click'):
         """Method to click a button.
 
         Args:
@@ -133,6 +128,21 @@ class Automation:
         x += self.window_offset[0]
         y += self.window_offset[1]
         # x, y = self.calculate_click_position(coordinates, offset)
+        # 动作到方法的映射
+        action_map = {
+            'click': self.mouse_click,
+            'down': self.mouse_down,
+            'move': self.mouse_move,
+        }
+
+        if action in action_map:
+            action_map[action](x, y)
+        else:
+            raise ValueError(f'未知的动作类型: {action}')
+
+    def click_minitouch(self, x, y, action='click'):
+        x += self.window_offset[0]
+        y += self.window_offset[1]
         # 动作到方法的映射
         action_map = {
             'click': self.mouse_click,

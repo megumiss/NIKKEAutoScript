@@ -12,12 +12,8 @@ import win32gui
 from module.base.utils import ensure_time
 from module.device.win.registry.game_auto_hdr import get_game_auto_hdr, set_game_auto_hdr
 from module.device.win.registry.setting import (
-    get_auto_battle_open_setting,
     get_game_resolution,
-    get_is_save_battle_speed_setting,
-    set_auto_battle_open_setting,
     set_game_resolution,
-    set_is_save_battle_speed_setting,
 )
 from module.logger import logger
 

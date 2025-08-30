@@ -1,8 +1,8 @@
 import numpy as np
 import pyautogui
-import win32con
 import win32gui
 from desktopmagic.screengrab_win32 import getDisplayRects
+
 
 class Screenshot:
     @staticmethod
