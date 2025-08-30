@@ -182,8 +182,8 @@ class Automation:
         logger.info('%s %s -> %s' % (label, point2str(*p1), point2str(*p2)))
 
         p1 = p1[0] + self.window_offset[0], p1[1] + self.window_offset[1]
-        p2 = p2[0] + self.window_offset[0], p2[1] + self.window_offset[1]
         if method == 'scroll':
+            p2 = p2[0] + self.window_offset[0], p2[1] + self.window_offset[1]
             start_x, start_y = p1
             end_x, end_y = p2
 
@@ -197,7 +197,8 @@ class Automation:
             self.mouse_move((start_x + end_x) // 2, (start_y + end_y) // 2)
             self.mouse_scroll(scroll_count, direction=direction)
         elif method == 'swipe':
-            self.mouse_swipe(p1, p2, speed=speed, hold=hold)
+            p2 = p2[0] + self.window_offset[0], p2[1] * 1.5 + self.window_offset[1]
+            self.mouse_swipe(p1, p2, speed=speed * 2, hold=hold)
         else:
             raise ValueError(f'未知的动作类型: {method}')
 

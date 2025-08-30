@@ -1,10 +1,9 @@
 import math
 import random
 import time
-
+import pytweening
 import numpy as np
 import pyautogui
-
 from module.base.utils import ensure_int, point2str
 from module.logger import logger
 
@@ -92,59 +91,84 @@ class Input:
         except Exception as e:
             logger.error(f'按下鼠标左键出错：{e}')
 
-    def mouse_swipe(self, p1, p2, speed=15, hold=0, min_distance=5):
-        """竖向滑动操作，使用优化后的插值方法，加入惯性效果"""
-        points = insert_swipe(p0=p1, p3=p2, speed=speed, min_distance=min_distance)
+    def mouse_swipe(self, p1, p2, speed=1.0, hold=0):
+        """
+        speed: 像素/毫秒，例如 1.0 表示 1 毫秒滑动 1 像素
+        """
+        distance = np.linalg.norm(np.array(p2) - np.array(p1))
+        total_time = distance / speed / 1000.0 * 30
+        if total_time > 0.3:
+            total_time = 0.3
 
-        if len(points) < 2:
-            logger.error("生成的滑动路径点少于2个，无法进行滑动操作！")
-            return  # 或者抛出异常
-
-        # Starting the drag from the first point
-        pyautogui.moveTo(points[0][0], points[0][1])
+        pyautogui.moveTo(p1[0], p1[1])
+        time.sleep(0.2)
         pyautogui.mouseDown()
 
-        # Moving through the points with easing
-        for i, point in enumerate(points[1:-1]):
-            # 计算逐步减速的时间，根据路径的顺序减慢速度
-            # Ease-out: t^2
-            t = (i + 1) / len(points)  # 计算当前点的时间进度
-            duration = speed * (1 - (t * t)) / 1000  # 减速效果
-            pyautogui.moveTo(point[0], point[1], duration=duration)  # duration is in seconds
-            time.sleep(0.01)
+        # 一次性滑动到终点，pyautogui 会插值
+        pyautogui.moveTo(p2[0], p2[1], duration=total_time, tween=pytweening.linear)
 
-        # Final move to last point
-        pyautogui.moveTo(points[-1][0], points[-1][1], duration=speed / 1000)
-
-        # Optionally hold the mouse
         if hold:
             time.sleep(hold)
 
-        # Release the mouse
         pyautogui.mouseUp()
 
-def insert_swipe(p0, p3, speed=15, min_distance=5):
+
+def insert_swipe(p0, p3, speed=15, min_distance=10):
     """
-    插入通过线性插值优化的滑动路径点，并模拟惯性效果
+    Insert way point from start to end.
+    First generate a cubic bézier curve
+
+    Args:
+        p0: Start point.
+        p3: End point.
+        speed: Average move speed, pixels per 10ms.
+        min_distance:
+
+    Returns:
+        list[list[int]]: List of points.
+
+    Examples:
+        > insert_swipe((400, 400), (600, 600), speed=20)
+        [[400, 400], [406, 406], [416, 415], [429, 428], [444, 442], [462, 459], [481, 478], [504, 500], [527, 522],
+        [545, 540], [560, 557], [573, 570], [584, 582], [592, 590], [597, 596], [600, 600]]
     """
     p0 = np.array(p0)
     p3 = np.array(p3)
 
-    # 计算起始和目标点之间的距离
+    # Random control points in Bézier curve
     distance = np.linalg.norm(p3 - p0)
+    p1 = 2 / 3 * p0 + 1 / 3 * p3 + random_theta() * random_rho(distance * 0.1)
+    p2 = 1 / 3 * p0 + 2 / 3 * p3 + random_theta() * random_rho(distance * 0.1)
+
+    # Random `t` on Bézier curve, sparse in the middle, dense at start and end
     segments = max(int(distance / speed) + 1, 5)
+    lower = random_normal_distribution(-85, -60)
+    upper = random_normal_distribution(80, 90)
+    theta = np.arange(lower + 0.0, upper + 0.0001, (upper - lower) / segments)
+    ts = np.sin(theta / 180 * np.pi)
+    ts = np.sign(ts) * abs(ts) ** 0.9
+    ts = (ts - min(ts)) / (max(ts) - min(ts))
 
-    # 使用线性插值计算路径点
+    # Generate cubic Bézier curve
     points = []
-    for t in np.linspace(0, 1, segments):
-        point = p0 * (1 - t) + p3 * t
+    prev = (-100, -100)
+    for t in ts:
+        point = p0 * (1 - t) ** 3 + 3 * p1 * t * (1 - t) ** 2 + 3 * p2 * t**2 * (1 - t) + p3 * t**3
         point = point.astype(int).tolist()
-        if len(points) > 0 and np.linalg.norm(np.subtract(point, points[-1])) > min_distance:
-            points.append(point)
+        if np.linalg.norm(np.subtract(point, prev)) < min_distance:
+            continue
 
-    # 确保至少有两个路径点
-    if len(points) < 2:
-        points = [p0.tolist(), p3.tolist()]
+        points.append(point)
+        prev = point
+
+    # Delete nearing points
+    if len(points[1:]):
+        distance = np.linalg.norm(np.subtract(points[1:], points[0]), axis=1)
+        mask = np.append(True, distance > min_distance)
+        points = np.array(points)[mask].tolist()
+    else:
+        points = [p0, p3]
+    print(points)
 
     return points
 
