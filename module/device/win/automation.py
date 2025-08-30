@@ -50,10 +50,12 @@ class Automation:
         """
         self.input_handler = Input()
         self.mouse_click = self.input_handler.mouse_click
+        self.press_mouse_click = self.input_handler.press_mouse_click
         self.mouse_down = self.input_handler.mouse_down
         self.mouse_up = self.input_handler.mouse_up
         self.mouse_move = self.input_handler.mouse_move
         self.mouse_scroll = self.input_handler.mouse_scroll
+        self.mouse_swipe = self.input_handler.mouse_swipe
         self.press_key = self.input_handler.press_key
         self.secretly_press_key = self.input_handler.secretly_press_key
         self.press_mouse = self.input_handler.press_mouse
@@ -133,10 +135,28 @@ class Automation:
             'click': self.mouse_click,
             'down': self.mouse_down,
             'move': self.mouse_move,
+            'hold': self.press_mouse,
         }
 
         if action in action_map:
             action_map[action](x, y)
+        else:
+            raise ValueError(f'未知的动作类型: {action}')
+
+    def long_click_minitouch(self, x, y, duration=1.0, action='hold'):
+        duration = int(duration * 1000)
+
+        x = x * 2 * 0.9
+        y = y / 2 * 1.12
+
+        x += self.window_offset[0]
+        y += self.window_offset[1]
+        # 动作到方法的映射
+        action_map = {
+            'hold': self.press_mouse_click,
+        }
+        if action in action_map:
+            action_map[action](x, y, duration)
         else:
             raise ValueError(f'未知的动作类型: {action}')
 
@@ -156,24 +176,30 @@ class Automation:
             raise ValueError(f'未知的动作类型: {action}')
 
     def swipe(
-        self, p1, p2, speed=15, hold=0, name='SWIPE', label='Swipe', distance_check=True, handle_control_check=True
+        self, p1, p2, speed=15, hold=0, method='swipe', label='Swipe', distance_check=True, handle_control_check=True
     ):
-        if handle_control_check:
-            self.handle_control_check(name)
         p1, p2 = ensure_int(p1, p2)
-        method = self.config.Emulator_ControlMethod
-        if method == 'minitouch':
-            logger.info('%s %s -> %s' % (label, point2str(*p1), point2str(*p2)))
+        logger.info('%s %s -> %s' % (label, point2str(*p1), point2str(*p2)))
 
-        if distance_check:
-            if np.linalg.norm(np.subtract(p1, p2)) < 10:
-                # Should swipe a certain distance, otherwise AL will treat it as click.
-                # uiautomator2 should >= 6px, minitouch should >= 5px
-                logger.info('Swipe distance < 10px, dropped')
-                return
+        p1 = p1[0] + self.window_offset[0], p1[1] + self.window_offset[1]
+        p2 = p2[0] + self.window_offset[0], p2[1] + self.window_offset[1]
+        if method == 'scroll':
+            start_x, start_y = p1
+            end_x, end_y = p2
 
-        if method == 'minitouch':
-            self.swipe_minitouch(p1, p2, speed=speed, hold=hold)
+            # 计算垂直方向上的像素距离
+            pixel_distance = end_y - start_y
+            # 计算需要滚动的次数
+            scroll_count = round(abs(pixel_distance) / 65) - 1
+            # 自动判断滚动方向
+            direction = -1 if pixel_distance < 0 else 1
+
+            self.mouse_move((start_x + end_x) // 2, (start_y + end_y) // 2)
+            self.mouse_scroll(scroll_count, direction=direction)
+        elif method == 'swipe':
+            self.mouse_swipe(p1, p2, speed=speed, hold=hold)
+        else:
+            raise ValueError(f'未知的动作类型: {method}')
 
     def calculate_click_position(self, coordinates, offset=(0, 0)):
         """
@@ -190,3 +216,6 @@ class Automation:
         x = (left + right) // 2 + offset[0]
         y = (top + bottom) // 2 + offset[1]
         return x, y
+
+    def get_orientation(self):
+        pass

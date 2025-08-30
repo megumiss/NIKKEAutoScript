@@ -1049,7 +1049,7 @@ class Event(UI):
                 logger.info('Scroll to next page')
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
-                self.ensure_sroll((360, 1100), (360, 480), speed=5, hold=1, count=1, delay=3)
+                self.ensure_sroll((360, 1100), (360, 480), speed=5, hold=1, count=1, delay=3, method='scroll')
 
     def filter_sold_out_items(self, items, sold_outs):
         """

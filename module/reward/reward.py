@@ -219,7 +219,7 @@ class Reward(UI):
 
             # 滚动到下一页
             self.device.sleep(1)
-            self.ensure_sroll((360, 1100), (360, 180), speed=5, hold=1, count=1, delay=1)
+            self.ensure_sroll((360, 1100), (360, 180), speed=5, hold=1, count=1, delay=1, method='scroll')
             scroll_count += 1
 
         return True

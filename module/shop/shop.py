@@ -258,7 +258,7 @@ class ShopBase(UI):
                     break
 
                 # 滑动屏幕继续查找
-                self.ensure_sroll((505, 1000), (505, 700), speed=5, hold=0.5, count=1, delay=0.5)
+                self.ensure_sroll((505, 1000), (505, 700), speed=5, hold=0.5, count=1, delay=0.5, method='scroll')
 
             # 单个商品完成后，从待购买列表中移除
             # products = products.delete([product])
