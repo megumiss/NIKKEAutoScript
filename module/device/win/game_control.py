@@ -23,12 +23,8 @@ from module.logger import logger
 
 
 class WinClient:
-    # def __init__(self, config):
-    #     super().__init__(config)
-
-    #     self.game_resolution = None
-    #     self.game_auto_hdr = None
-    #     self.screen_resolution = pyautogui.size()
+    def __init__(self, config):
+        super().__init__(config)
 
     def start_game(self) -> bool:
         """启动游戏"""

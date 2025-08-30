@@ -15,7 +15,7 @@ from module.logger import logger
 from module.ocr.models import OCR_MODEL
 
 
-class Device(Automation, Control, AppControl):
+class Device(AppControl, Automation, Control):
     get_location = OCR_MODEL.get_location
 
     # 尝试检测的 Button 集合

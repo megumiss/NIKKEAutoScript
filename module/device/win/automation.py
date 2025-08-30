@@ -10,7 +10,7 @@ import numpy as np
 
 from module.base.timer import Timer
 from module.base.utils import image_size
-from module.device.win.singleton import SingletonMeta
+from module.config.config import NikkeConfig
 from module.logger import logger
 from module.ocr import ocr
 
@@ -22,7 +22,9 @@ class ScreenshotSizeError(Exception):
     pass
 
 
-class Automation(metaclass=SingletonMeta):
+class Automation:
+    config: NikkeConfig
+
     """
     自动化管理类，用于管理与游戏窗口相关的自动化操作。
     """
@@ -32,10 +34,14 @@ class Automation(metaclass=SingletonMeta):
         :param window_title: 游戏窗口的标题。
         :param logger: 用于记录日志的Logger对象，可选参数。
         """
-        super().__init__(config)
+        if isinstance(config, str):
+            self.config = NikkeConfig(config, task=None)
+        else:
+            self.config = config
+        super().__init__()
 
-        self.window_title = self.window_name
-        self.screenshot = None
+        self.window_title = self.config.WinClient_TitleName
+        # self.screenshot = None
         self._init_input()
         self.img_cache = {}
         self._screenshot_interval = Timer(float(self.config.Emulator_ScreenshotInterval))
@@ -63,23 +69,24 @@ class Automation(metaclass=SingletonMeta):
         # 两次截图间隔时间
         self._screenshot_interval.wait()
         self._screenshot_interval.reset()
-        
+
         start_time = time.time()
         while True:
             try:
-                result = Screenshot.take_screenshot(self.window_title, crop=crop)
+                result = Screenshot.take_screenshot(self.window_title, self.config.WinClient_Screens, crop=crop)
                 if result:
-                    self.screenshot, self.screenshot_pos, self.screenshot_scale_factor = result
-                    self.screenshot = self._handle_orientated_image(self.screenshot)
+                    self.image, self.screenshot_pos, self.screenshot_scale_factor = result
+                    cv2.imwrite('debug_screenshot.png', np.array(self.image))
+                    self.image = self._handle_orientated_image(self.image)
                     self.screenshot_deque.append({'time': datetime.now(), 'image': self.image})
-                    
+
                     return result
                 else:
                     logger.error('截图失败：没有找到游戏窗口')
             except Exception as e:
                 logger.error(f'截图失败：{e}')
             time.sleep(1)
-            if time.time() - start_time > 60:
+            if time.time() - start_time > 30:
                 raise RuntimeError('截图超时')
 
     @cached_property

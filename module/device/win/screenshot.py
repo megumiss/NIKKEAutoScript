@@ -40,15 +40,12 @@ class Screenshot:
         return -min_x, -min_y
     
     @staticmethod
-    def take_screenshot(title, crop=(0, 0, 1, 1)):
+    def take_screenshot(title, screens=False, crop=(0, 0, 1, 1)):
         window = Screenshot.get_window(title)
-        # set_window_resolution(window._hWnd, 720, 1280)
-        # win32gui.SetWindowPos(window._hWnd, win32con.HWND_TOP, 100, 100, 1360, 765, 0)
         if window:
             left, top, width, height = Screenshot.get_window_region(window)
             
-            all_screens = self.config.WinClient_Screens
-            if all_screens:
+            if screens:
                 offset_x, offset_y = Screenshot.get_main_screen_location()
             else:
                 offset_x, offset_y = 0,0
@@ -58,7 +55,7 @@ class Screenshot:
                 int(top + height * crop[1] + offset_y),
                 int(width * crop[2]),
                 int(height * crop[3])
-            ), allScreens=all_screens)
+            ), allScreens=screens)
 
             real_width, _ = Screenshot.get_window_real_resolution(window)
             if real_width > 1920:
