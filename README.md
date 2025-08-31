@@ -4,9 +4,9 @@
 
 # NIKKEAutoScript
 
-胜利女神：NIKKE 自动日常脚本，支持除**国服**外所有设置为**简体中文**的客户端（大概）。Fork自[NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+胜利女神：NIKKE 自动日常脚本，支持除**国服**外所有设置为**简体中文**的PC/模拟器客户端（大概）。Fork自[NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
-GODDESS OF VICTORY: NIKKE automatic script, supports all clients **set to Chinese(zh_CN)** except the **CN** client (presumably). Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+GODDESS OF VICTORY: NIKKE automatic script, supports all clients **set to Chinese(zh_CN)** except the **CN** PC/Emulator client (presumably). Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 **如果觉得有帮助，请帮我点个 ⭐ Star 支持一下！**  
 *If you find it helpful, please give it a ⭐ Star to support!*
@@ -54,11 +54,14 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 ### 更新计划
 - [ ] 半自动推图
 - [ ] 修复uiautomator自动安装
+- [ ] PC客户端自动启动
+- [ ] PC客户端适配优化，bug修复
 - [x] 通知优化
 - [x] 支持自动更新、定时更新
 - [x] 支持docker部署
 
 ### 支持功能
+- [x] PC/模拟器支持
 - [x] 模拟器自动启动
 - [x] 每日收获、歼灭、派遣
 - [x] 友情点、特殊竞技场点数领取
