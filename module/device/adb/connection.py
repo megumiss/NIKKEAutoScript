@@ -63,9 +63,11 @@ def retry(func):
             # AdbError
             except AdbError as e:
                 if handle_adb_error(e):
+
                     def init():
                         self.adb_reconnect()
                 elif handle_unknown_host_service(e):
+
                     def init():
                         self.adb_start_server()
                         self.adb_reconnect()
@@ -187,8 +189,7 @@ class Connection(ConnectionAttr):
     @Config.when(DEVICE_OVER_HTTP=True)
     def adb_command(self, cmd, timeout=10):
         logger.critical(
-            f'Trying to execute {cmd}, '
-            f'but adb_command() is not available when connecting over http: {self.serial}, '
+            f'Trying to execute {cmd}, but adb_command() is not available when connecting over http: {self.serial}, '
         )
         raise RequestHumanTakeover
 
@@ -441,7 +442,7 @@ class Connection(ConnectionAttr):
             if self.is_bluestacks_air or self.is_mumu_pro:
                 logger.info(f'Connecting to local emulator, using host 127.0.0.1')
                 port = random_port(self.config.FORWARD_PORT_RANGE)
-                return '127.0.0.1', port, "10.0.2.2", port
+                return '127.0.0.1', port, '10.0.2.2', port
             # Get host IP
             try:
                 host = socket.gethostbyname(socket.gethostname())
@@ -456,7 +457,7 @@ class Connection(ConnectionAttr):
             port = random_port(self.config.FORWARD_PORT_RANGE)
             # For AVD instance
             if self.is_avd:
-                return host, port, "10.0.2.2", port
+                return host, port, '10.0.2.2', port
             return host, port, host, port
         # For local network devices, listen on the host under the same network as target device
         if self.is_network_device:
@@ -482,8 +483,10 @@ class Connection(ConnectionAttr):
         """
         del_cached_property(self, '_nc_server_host_port')
         host_port = self._nc_server_host_port
-        logger.info(f'Reverse server listening on {host_port[0]}:{host_port[1]}, '
-                    f'client can send data to {host_port[2]}:{host_port[3]}')
+        logger.info(
+            f'Reverse server listening on {host_port[0]}:{host_port[1]}, '
+            f'client can send data to {host_port[2]}:{host_port[3]}'
+        )
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind(host_port[:2])
         server.settimeout(5)
@@ -548,7 +551,7 @@ class Connection(ConnectionAttr):
         server.settimeout(timeout)
         # Client send data, waiting for server accept
         # <command> | nc 127.0.0.1 {port}
-        cmd += ["|", *self.nc_command, *self._nc_server_host_port[2:]]
+        cmd += ['|', *self.nc_command, *self._nc_server_host_port[2:]]
         stream = self.adb_shell(cmd, stream=True, recvall=False)
         try:
             # Server accept connection
@@ -641,7 +644,7 @@ class Connection(ConnectionAttr):
         """
         try:
             with self.adb_client._connect() as c:
-                list_cmd = f"host-serial:{self.serial}:killforward:{local}"
+                list_cmd = f'host-serial:{self.serial}:killforward:{local}'
                 c.send_command(list_cmd)
                 c.check_okay()
         except AdbError as e:
@@ -663,9 +666,9 @@ class Connection(ConnectionAttr):
         """
         try:
             with self.adb_client._connect() as c:
-                c.send_command(f"host:transport:{self.serial}")
+                c.send_command(f'host:transport:{self.serial}')
                 c.check_okay()
-                list_cmd = f"reverse:killforward:{local}"
+                list_cmd = f'reverse:killforward:{local}'
                 c.send_command(list_cmd)
                 c.check_okay()
         except AdbError as e:
@@ -789,8 +792,9 @@ class Connection(ConnectionAttr):
                 # Brute force connect nearby ports to handle serial switches
                 if self.is_mumu12_family:
                     before = self.serial
-                    serial_list = [self.serial.replace(str(self.port), str(self.port + offset))
-                                   for offset in [1, -1, 2, -2]]
+                    serial_list = [
+                        self.serial.replace(str(self.port), str(self.port + offset)) for offset in [1, -1, 2, -2]
+                    ]
                     self.adb_brute_force_connect(serial_list)
                     self.detect_device()
                     if self.serial != before:
@@ -810,6 +814,7 @@ class Connection(ConnectionAttr):
         Args:
             serial_list (list[str]):
         """
+
         def connect(s):
             try:
                 msg = self.adb_client.connect(s)
@@ -874,7 +879,7 @@ class Connection(ConnectionAttr):
 
     def adb_restart(self):
         """
-            Reboot adb client
+        Reboot adb client
         """
         logger.info('Restart adb')
         # Kill current client
@@ -887,7 +892,7 @@ class Connection(ConnectionAttr):
     @Config.when(DEVICE_OVER_HTTP=False)
     def adb_reconnect(self):
         """
-           Reboot adb client if no device found, otherwise try reconnecting device.
+        Reboot adb client if no device found, otherwise try reconnecting device.
         """
         if self.config.Emulator_AdbRestart and len(self.list_device()) == 0:
             # Restart Adb
@@ -925,10 +930,10 @@ class Connection(ConnectionAttr):
         self.uninstall_minicap()
 
     def uninstall_minicap(self):
-        """ minicap can't work or will send compressed images on some emulators. """
+        """minicap can't work or will send compressed images on some emulators."""
         logger.info('Removing minicap')
-        self.adb_shell(["rm", "/data/local/tmp/minicap"])
-        self.adb_shell(["rm", "/data/local/tmp/minicap.so"])
+        self.adb_shell(['rm', '/data/local/tmp/minicap'])
+        self.adb_shell(['rm', '/data/local/tmp/minicap.so'])
 
     @Config.when(DEVICE_OVER_HTTP=False)
     def restart_atx(self):
@@ -1007,11 +1012,11 @@ class Connection(ConnectionAttr):
         devices = []
         try:
             with self.adb_client._connect() as c:
-                c.send_command("host:devices")
+                c.send_command('host:devices')
                 c.check_okay()
                 output = c.read_string_block()
                 for line in output.splitlines():
-                    parts = line.strip().split("\t")
+                    parts = line.strip().split('\t')
                     if len(parts) != 2:
                         continue
                     device = AdbDeviceWithStatus(self.adb_client, parts[0], parts[1])
@@ -1021,8 +1026,10 @@ class Connection(ConnectionAttr):
             # ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
             logger.error(e)
             if '强迫关闭' in str(e):
-                logger.critical('无法连接至ADB服务，请关闭UU加速器、原神私服、以及一些劣质代理软件。'
-                                '它们会劫持电脑上所有的网络连接，包括Alas与模拟器之间的本地连接。')
+                logger.critical(
+                    '无法连接至ADB服务，请关闭UU加速器、原神私服、以及一些劣质代理软件。'
+                    '它们会劫持电脑上所有的网络连接，包括Alas与模拟器之间的本地连接。'
+                )
         return SelectedGrids(devices)
 
     def detect_device(self):
@@ -1038,12 +1045,15 @@ class Connection(ConnectionAttr):
         def brute_force_connect():
             logger.info('Brute force connect')
             from deploy.Windows.emulator import EmulatorManager
+
             manager = EmulatorManager()
             manager.brute_force_connect()
 
         for _ in range(2):
-            logger.info('Here are the available devices, '
-                        'copy to Alas.Emulator.Serial to use it or set Alas.Emulator.Serial="auto"')
+            logger.info(
+                'Here are the available devices, '
+                'copy to Alas.Emulator.Serial to use it or set Alas.Emulator.Serial="auto"'
+            )
             devices = self.list_device()
 
             # Show available devices
@@ -1074,16 +1084,20 @@ class Connection(ConnectionAttr):
         # Auto device detection
         if self.config.Emulator_Serial == 'auto':
             if available.count == 0:
-                logger.critical('No available device found, auto device detection cannot work, '
-                                'please set an exact serial in Alas.Emulator.Serial instead of using "auto"')
+                logger.critical(
+                    'No available device found, auto device detection cannot work, '
+                    'please set an exact serial in Alas.Emulator.Serial instead of using "auto"'
+                )
                 raise RequestHumanTakeover
             elif available.count == 1:
                 logger.info(f'Auto device detection found only one device, using it')
                 self.config.Emulator_Serial = self.serial = available[0].serial
                 del_cached_property(self, 'adb')
-            elif available.count == 2 \
-                    and available.select(serial='127.0.0.1:7555') \
-                    and available.select(may_mumu12_family=True):
+            elif (
+                available.count == 2
+                and available.select(serial='127.0.0.1:7555')
+                and available.select(may_mumu12_family=True)
+            ):
                 logger.info(f'Auto device detection found MuMu12 device, using it')
                 # For MuMu12 serials like 127.0.0.1:7555 and 127.0.0.1:16384
                 # ignore 7555 use 16384
@@ -1091,8 +1105,10 @@ class Connection(ConnectionAttr):
                 self.config.Emulator_Serial = self.serial = remain.serial
                 del_cached_property(self, 'adb')
             else:
-                logger.critical('Multiple devices found, auto device detection cannot decide which to choose, '
-                                'please copy one of the available devices listed above to Alas.Emulator.Serial')
+                logger.critical(
+                    'Multiple devices found, auto device detection cannot decide which to choose, '
+                    'please copy one of the available devices listed above to Alas.Emulator.Serial'
+                )
                 raise RequestHumanTakeover
 
         # Handle LDPlayer
@@ -1107,21 +1123,23 @@ class Connection(ConnectionAttr):
                 # Paired devices found, check status to get the correct one
                 if port_device.status == 'device' and emu_device.status == 'offline':
                     self.serial = port_serial
-                    logger.info(f'LDPlayer device pair found: {port_device}, {emu_device}. '
-                                f'Using serial: {self.serial}')
+                    logger.info(f'LDPlayer device pair found: {port_device}, {emu_device}. Using serial: {self.serial}')
                 elif port_device.status == 'offline' and emu_device.status == 'device':
                     self.serial = emu_serial
-                    logger.info(f'LDPlayer device pair found: {port_device}, {emu_device}. '
-                                f'Using serial: {self.serial}')
+                    logger.info(f'LDPlayer device pair found: {port_device}, {emu_device}. Using serial: {self.serial}')
             elif not devices.select(serial=self.serial):
                 # Current serial not found
                 if port_device and not emu_device:
-                    logger.info(f'Current serial {self.serial} not found but paired device {port_serial} found. '
-                                f'Using serial: {port_serial}')
+                    logger.info(
+                        f'Current serial {self.serial} not found but paired device {port_serial} found. '
+                        f'Using serial: {port_serial}'
+                    )
                     self.serial = port_serial
                 if not port_device and emu_device:
-                    logger.info(f'Current serial {self.serial} not found but paired device {emu_serial} found. '
-                                f'Using serial: {emu_serial}')
+                    logger.info(
+                        f'Current serial {self.serial} not found but paired device {emu_serial} found. '
+                        f'Using serial: {emu_serial}'
+                    )
                     self.serial = emu_serial
 
         # Redirect MuMu12 from 127.0.0.1:7555 to 127.0.0.1:16xxx
@@ -1217,8 +1235,9 @@ class Connection(ConnectionAttr):
         packages = self.list_known_packages()
 
         # Show packages
-        logger.info(f'Here are the available packages in device "{self.serial}", '
-                    f'copy to Alas.Emulator.PackageName to use it')
+        logger.info(
+            f'Here are the available packages in device "{self.serial}", copy to Alas.Emulator.PackageName to use it'
+        )
         if len(packages):
             for package in packages:
                 logger.info(package)
@@ -1227,8 +1246,9 @@ class Connection(ConnectionAttr):
 
         # Auto package detection
         if len(packages) == 0:
-            logger.critical(f'No AzurLane package found, '
-                            f'please confirm AzurLane has been installed on device "{self.serial}"')
+            logger.critical(
+                f'No AzurLane package found, please confirm AzurLane has been installed on device "{self.serial}"'
+            )
             raise RequestHumanTakeover
         if len(packages) == 1:
             logger.info('Auto package detection found only one package, using it')
@@ -1242,5 +1262,6 @@ class Connection(ConnectionAttr):
         else:
             logger.critical(
                 f'Multiple AzurLane packages found, auto package detection cannot decide which to choose, '
-                'please copy one of the available devices listed above to Alas.Emulator.PackageName')
+                'please copy one of the available devices listed above to Alas.Emulator.PackageName'
+            )
             raise RequestHumanTakeover

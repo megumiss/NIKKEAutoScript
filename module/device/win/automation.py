@@ -1,14 +1,18 @@
 import time
 from collections import deque
 from datetime import datetime
-from functools import cached_property
-
-import numpy as np
+from functools import cached_property, wraps
 
 from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import ensure_int, image_size, point2str
 from module.config.config import NikkeConfig
+from module.device.win.utils import (
+    RETRY_TRIES,
+    PackageNotInstalled,
+    retry_sleep,
+)
+from module.exception import RequestHumanTakeover
 from module.logger import logger
 
 from .input import Input
@@ -18,6 +22,60 @@ from .screenshot import Screenshot
 class ScreenshotSizeError(Exception):
     pass
 
+RETRY_TRIES = 5
+RETRY_DELAY = 3
+
+def retry(func):
+    @wraps(func)
+    def retry_wrapper(self, *args, **kwargs):
+        """
+        Args:
+            self (Adb):
+        """
+        init = None
+        for _ in range(RETRY_TRIES):
+            try:
+                if callable(init):
+                    time.sleep(retry_sleep(_))
+                    init()
+                return func(self, *args, **kwargs)
+            # Can't handle
+            except RequestHumanTakeover:
+                break
+            # When adb server was killed
+            # except ConnectionResetError as e:
+            #     logger.error(e)
+
+            #     def init():
+            #         self.adb_reconnect()
+            # # AdbError
+            # except AdbError as e:
+            #     if handle_adb_error(e):
+            #         def init():
+            #             self.adb_reconnect()
+            #     elif handle_unknown_host_service(e):
+            #         def init():
+            #             self.adb_start_server()
+            #             self.adb_reconnect()
+            #     else:
+            #         break
+            # Package not installed
+            except PackageNotInstalled as e:
+                logger.error(e)
+
+                def init():
+                    self.detect_package()
+            # Unknown, probably a trucked image
+            except Exception as e:
+                logger.exception(e)
+
+                def init():
+                    pass
+
+        logger.critical(f'Retry {func.__name__}() failed')
+        raise RequestHumanTakeover
+
+    return retry_wrapper
 
 class Automation:
     config: NikkeConfig
@@ -218,5 +276,28 @@ class Automation:
         y = (top + bottom) // 2 + offset[1]
         return x, y
 
+    _orientation_description = {
+        0: 'Normal',
+        1: 'HOME key on the right',
+        2: 'HOME key on the top',
+        3: 'HOME key on the left',
+    }
+    orientation = 0
+
+    @retry
     def get_orientation(self):
-        pass
+        """
+        Rotation of the window
+
+        Returns:
+            int:
+                0: 'Normal'
+                1: 'HOME key on the right'
+                2: 'HOME key on the top'
+                3: 'HOME key on the left'
+        """
+
+        o = 0
+        self.orientation = o
+        logger.attr('Device Orientation', f'{o} ({self._orientation_description.get(o, "Unknown")})')
+        return o

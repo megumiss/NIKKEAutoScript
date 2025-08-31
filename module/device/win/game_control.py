@@ -47,7 +47,8 @@ class WinClient:
         """终止游戏"""
         try:
             # os.system(f'taskkill /f /im {self.process_name}')
-            self.terminate_named_process(self.process_name)
+            # TODO
+            # self.terminate_named_process(self.process_name)
             logger.info(f'游戏终止：{self.process_name}')
             return True
         except Exception as e:

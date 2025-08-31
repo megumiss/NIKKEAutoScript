@@ -82,7 +82,6 @@ class UI(InfoHandler):
             self.device.get_orientation()
 
         timeout = Timer(30, count=20).start()
-        click_timer = Timer(0.3)
 
         while 1:
             if skip_first_screenshot:
@@ -107,11 +106,12 @@ class UI(InfoHandler):
 
             # Unknown page but able to handle
             logger.info('Unknown ui page')
-            if click_timer.reached() and (
-                self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2) or self.ui_additional()
-            ):
+            # 加载画面
+            if self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2):
                 timeout.reset()
-                click_timer.reset()
+                continue
+            if self.ui_additional():
+                timeout.reset()
                 continue
 
             app_check()
@@ -222,6 +222,12 @@ class UI(InfoHandler):
             return True
 
     def ui_additional(self):
+        """
+        Handle all annoying popups during UI switching.
+
+        Args:
+            get_ship:
+        """
         # TODO SKIP, 战斗, 公告, etc.
 
         # 指挥官等级升级
@@ -244,10 +250,12 @@ class UI(InfoHandler):
             return True
 
         if self.handle_server():
-            raise GameStart
+            # raise GameStart
+            return True
 
         if self.handle_download():
-            raise GameStart
+            # raise GameStart
+            return True
 
         # 系统错误
         if self.handle_system_error():
@@ -257,7 +265,8 @@ class UI(InfoHandler):
             return True
 
         if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30), interval=3):
-            raise GameStart
+            # raise GameStart
+            return True
 
         # if self.handle_event():
         #     return True

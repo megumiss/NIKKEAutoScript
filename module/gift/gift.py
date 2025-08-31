@@ -39,7 +39,7 @@ class GiftBase(UI):
                 self.device.screenshot()
 
             # 每月礼包
-            if self.appear(GENERAL_GIFT_CHECK, offset=(10, 10)) and self.appear(MONTHLY, offset=(100, 10)):
+            if self.appear(GENERAL_GIFT_CHECK, offset=(10, 10)) and self.appear(MONTHLY, threshold=0.7, offset=(100, 10)):
                 break
 
             # 打开商店
