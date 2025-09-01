@@ -38,6 +38,8 @@ from pywebio.output import (
 )
 from pywebio.pin import pin, pin_on_change
 from pywebio.session import download, go_app, info, local, register_thread, run_js, set_env
+from starlette.routing import Route
+from starlette.responses import JSONResponse
 
 import module.webui.lang as lang
 from module.config.config import NikkeConfig, Function
@@ -1520,5 +1522,116 @@ def app():
         ],
         on_shutdown=[clearup],
     )
+
+    async def api_start(request):
+        """
+        API endpoint to start a process instance or all instances.
+        """
+        config_name = request.path_params['config_name']
+
+        if config_name == "all":
+            results = []
+            for name, _ in nkas_instance().items():
+                manager = ProcessManager.get_manager(name)
+                if manager.alive:
+                    results.append(
+                        {'instance': name, 'status': 'skipped', 'message': f'Instance "{name}" is already running.'}
+                    )
+                    continue
+                func = get_config_mod(name)
+                manager.start(func=func, ev=updater.event)
+                logger.info(f"API: Started instance '{name}'.")
+                results.append({'instance': name, 'status': 'success', 'message': f'Instance "{name}" started.'})
+            return JSONResponse({'status': 'success', 'results': results})
+
+        if config_name not in nkas_instance():
+            return JSONResponse(
+                {'status': 'error', 'message': f'Instance "{config_name}" not found.'},
+                status_code=404
+            )
+
+        manager = ProcessManager.get_manager(config_name)
+        if manager.alive:
+            return JSONResponse(
+                {'status': 'error', 'message': f'Instance "{config_name}" is already running.'},
+                status_code=409
+            )
+
+        func = get_config_mod(config_name)
+        manager.start(func=func, ev=updater.event)
+        logger.info(f"API: Started instance '{config_name}'.")
+        return JSONResponse({'status': 'success', 'message': f'Instance "{config_name}" started.'})
+
+    async def api_stop(request):
+        """
+        API endpoint to stop a process instance or all instances.
+        """
+        config_name = request.path_params['config_name']
+
+        if config_name == "all":
+            results = []
+            for name, _ in nkas_instance().items():
+                manager = ProcessManager.get_manager(name)
+                if not manager.alive:
+                    results.append(
+                        {'instance': name, 'status': 'skipped', 'message': f'Instance "{name}" is not running.'}
+                    )
+                    continue
+                manager.stop()
+                logger.info(f"API: Stopped instance '{name}'.")
+                results.append({'instance': name, 'status': 'success', 'message': f'Instance "{name}" stopped.'})
+            return JSONResponse({'status': 'success', 'results': results})
+
+        if config_name not in nkas_instance():
+            return JSONResponse(
+                {'status': 'error', 'message': f'Instance "{config_name}" not found.'},
+                status_code=404
+            )
+
+        manager = ProcessManager.get_manager(config_name)
+        if not manager.alive:
+            return JSONResponse(
+                {'status': 'error', 'message': f'Instance "{config_name}" is not running.'},
+                status_code=409
+            )
+
+        manager.stop()
+        logger.info(f"API: Stopped instance '{config_name}'.")
+        return JSONResponse({'status': 'success', 'message': f'Instance "{config_name}" stopped.'})
+
+    async def api_system_restart(request):
+        """
+        API endpoint to force a restart of the entire NKAS application.
+        This mimics the logic of the `_force_restart` button in the UI.
+        """
+        if State.restart_event is None:
+            logger.warning("API: Received restart request, but reload is not enabled.")
+            return JSONResponse(
+                {'status': 'error', 'message': 'Restart functionality is not enabled in the current server configuration.'},
+                status_code=503  # Service Unavailable
+            )
+
+        def perform_restart():
+            """Function to be run in a separate thread."""
+            # Give the server a moment to send the HTTP response before shutting down
+            time.sleep(1)
+            clearup()
+            State.restart_event.set()
+
+        # Run the shutdown sequence in a separate thread to avoid blocking the response
+        threading.Thread(target=perform_restart).start()
+
+        logger.info("API: Restart command accepted. Application will restart shortly.")
+        return JSONResponse({
+            'status': 'success',
+            'message': 'Restart command received. The application will restart in a moment.'
+        })
+
+    # Add the API routes to the Starlette application
+    app.router.routes.extend([
+        Route('/api/{config_name:str}/start', endpoint=api_start, methods=['POST']),
+        Route('/api/{config_name:str}/stop', endpoint=api_stop, methods=['POST']),
+        Route('/api/restart', endpoint=api_system_restart, methods=['POST']),
+    ])
 
     return app

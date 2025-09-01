@@ -1,7 +1,8 @@
+import axios from "axios";
 import {app, Menu, Tray, BrowserWindow, ipcMain, globalShortcut} from 'electron';
 import {URL} from 'url';
 import {PyShell} from '/@/pyshell';
-import {webuiArgs, webuiPath, dpiScaling} from '/@/config';
+import {webuiArgs, webuiPath, dpiScaling, webuiUrl} from '/@/config';
 
 const path = require('path');
 
@@ -88,7 +89,10 @@ const createWindow = async () => {
     });
   });
   mainWindow.on('blur', function () {
-    globalShortcut.unregisterAll()
+    // 只注销局部快捷键
+    globalShortcut.unregister('Ctrl+Shift+I');
+    globalShortcut.unregister('Ctrl+R');
+    globalShortcut.unregister('Ctrl+Shift+R');
   });
 
   // Minimize, maximize, close window.
@@ -196,7 +200,39 @@ app.on('window-all-closed', () => {
 
 
 app.whenReady()
-  .then(createWindow)
+  .then(() => {
+    createWindow();
+
+    // Start
+    globalShortcut.register("Alt+S", async () => {
+      try {
+        const res = await axios.post(`${webuiUrl}/api/all/start`);
+        console.log("Start:", res.data);
+      } catch (err) {
+        console.error("Start failed:", (err instanceof Error ? err.message : String(err)));
+      }
+    });
+
+    // Stop
+    globalShortcut.register("Alt+X", async () => {
+      try {
+        const res = await axios.post(`${webuiUrl}/api/all/stop`);
+        console.log("Stop:", res.data);
+      } catch (err) {
+        console.error("Stop failed:", (err instanceof Error ? err.message : String(err)));
+      }
+    });
+
+    // Restart
+    globalShortcut.register("Alt+R", async () => {
+      try {
+        const res = await axios.post(`${webuiUrl}/api/restart`);
+        console.log("Restart:", res.data);
+      } catch (err) {
+        console.error("Restart failed:", (err instanceof Error ? err.message : String(err)));
+      }
+    });
+  })
   .catch((e) => console.error('Failed create window:', e));
 
 
@@ -208,3 +244,7 @@ if (import.meta.env.PROD) {
     .catch((e) => console.error('Failed check updates:', e));
 }
 
+// === 应用退出时注销所有全局快捷键 ===
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+});
