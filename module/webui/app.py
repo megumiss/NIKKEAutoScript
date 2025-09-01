@@ -1531,7 +1531,7 @@ def app():
 
         if config_name == "all":
             results = []
-            for name, _ in nkas_instance().items():
+            for name in nkas_instance():
                 manager = ProcessManager.get_manager(name)
                 if manager.alive:
                     results.append(
@@ -1570,7 +1570,7 @@ def app():
 
         if config_name == "all":
             results = []
-            for name, _ in nkas_instance().items():
+            for name in nkas_instance():
                 manager = ProcessManager.get_manager(name)
                 if not manager.alive:
                     results.append(
@@ -1614,7 +1614,6 @@ def app():
         def perform_restart():
             """Function to be run in a separate thread."""
             # Give the server a moment to send the HTTP response before shutting down
-            time.sleep(1)
             clearup()
             State.restart_event.set()
 
