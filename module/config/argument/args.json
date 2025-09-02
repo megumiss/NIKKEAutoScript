@@ -10,6 +10,54 @@
         ]
       }
     },
+    "Optimization": {
+      "AutoRedCircle": {
+        "type": "checkbox",
+        "value": false
+      },
+      "OcrModelType": {
+        "type": "select",
+        "value": "mobile",
+        "option": [
+          "mobile",
+          "server"
+        ]
+      },
+      "WhenTaskQueueEmpty": {
+        "type": "select",
+        "value": "goto_main",
+        "option": [
+          "stay_there",
+          "goto_main",
+          "close_game"
+        ]
+      }
+    },
+    "Notification": {
+      "WhenDailyTaskCompleted": {
+        "type": "checkbox",
+        "value": false
+      },
+      "WhenDailyTaskCrashed": {
+        "type": "checkbox",
+        "value": false
+      },
+      "OnePushConfig": {
+        "type": "textarea",
+        "value": "provider: null",
+        "mode": "yaml"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Emulator": {
     "Emulator": {
       "Serial": {
         "type": "input",
@@ -86,23 +134,51 @@
         "value": null
       }
     },
-    "WinClient": {
-      "TitleName": {
-        "type": "input",
-        "value": "NIKKE"
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "PCClient": {
+    "PCClientInfo": {
+      "Client": {
+        "type": "select",
+        "value": "intl",
+        "option": [
+          "intl",
+          "hwt"
+        ]
       },
-      "ProcessName": {
+      "LauncherTitleName": {
         "type": "input",
-        "value": "nikke.exe"
+        "value": ""
+      },
+      "LauncherProcessName": {
+        "type": "input",
+        "value": ""
       },
       "LauncherPath": {
         "type": "textarea",
         "value": ""
       },
-      "Path": {
-        "type": "textarea",
+      "GameTitleName": {
+        "type": "input",
         "value": ""
       },
+      "GameProcessName": {
+        "type": "input",
+        "value": ""
+      },
+      "GamePath": {
+        "type": "textarea",
+        "value": ""
+      }
+    },
+    "PCClient": {
       "Screens": {
         "type": "checkbox",
         "value": false
@@ -110,44 +186,6 @@
       "ResolutionCompat": {
         "type": "checkbox",
         "value": false
-      }
-    },
-    "Optimization": {
-      "AutoRedCircle": {
-        "type": "checkbox",
-        "value": false
-      },
-      "OcrModelType": {
-        "type": "select",
-        "value": "mobile",
-        "option": [
-          "mobile",
-          "server"
-        ]
-      },
-      "WhenTaskQueueEmpty": {
-        "type": "select",
-        "value": "goto_main",
-        "option": [
-          "stay_there",
-          "goto_main",
-          "close_game"
-        ]
-      }
-    },
-    "Notification": {
-      "WhenDailyTaskCompleted": {
-        "type": "checkbox",
-        "value": false
-      },
-      "WhenDailyTaskCrashed": {
-        "type": "checkbox",
-        "value": false
-      },
-      "OnePushConfig": {
-        "type": "textarea",
-        "value": "provider: null",
-        "mode": "yaml"
       }
     },
     "Storage": {

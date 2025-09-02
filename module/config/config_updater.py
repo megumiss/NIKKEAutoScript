@@ -329,7 +329,7 @@ class ConfigGenerator:
         option += list(VALID_PACKAGE.keys())
         option += list(VALID_CHANNEL_PACKAGE.keys())
         deep_set(self.argument, keys='Emulator.PackageName.option', value=option)
-        deep_set(self.args, keys='NKAS.Emulator.PackageName.option', value=option)
+        deep_set(self.args, keys='Emulator.Emulator.PackageName.option', value=option)
 
     @timer
     def generate(self):
@@ -441,9 +441,9 @@ class ConfigUpdater:
                 deep_set(data, keys=key, value=value)
 
         if IS_ON_PHONE_CLOUD:
-            deep_set(data, 'NAKS.Emulator.Serial', '127.0.0.1:5555')
-            deep_set(data, 'NAKS.Emulator.ScreenshotMethod', 'DroidCast')
-            deep_set(data, 'NAKS.Emulator.ControlMethod', 'minitouch')
+            deep_set(data, 'Emulator.Emulator.Serial', '127.0.0.1:5555')
+            deep_set(data, 'Emulator.Emulator.ScreenshotMethod', 'DroidCast')
+            deep_set(data, 'Emulator.Emulator.ControlMethod', 'minitouch')
             # 没加这个选项
             # for arg in deep_get(self.args, keys='NAKS.DropRecord', default={}).keys():
             #     remove_drop_save(arg)
