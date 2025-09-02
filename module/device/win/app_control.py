@@ -1,8 +1,11 @@
 import os
 import time
 
+import cv2
+import numpy as np
 import psutil
-
+import pyautogui
+import psutil
 from module.config.config import NikkeConfig
 from module.config.language import set_language
 from module.config.server import set_server
@@ -25,6 +28,14 @@ class AppControl(WinClient):
         else:
             self.config = config
         super().__init__(config)
+
+        title='NIKKE', class='TWINCONTROL', path='E:\NIKKE\Launcher\nikke_launcher.exe'
+        # E:\NIKKE\Launcher\nikke_launcher.exe
+        # self.launcher_path = os.path.normpath(self.config.WinClient_Path)
+        self.launcher_path = "E:/NIKKE/Launcher/nikke_launcher.exe"
+        self.launcher_process_name = self.config.WinClient_ProcessName
+        self.launcher_window_name = self.config.WinClient_TitleName
+        self.launcher_window_class = 'TWINCONTROL'
 
         self.game_path = os.path.normpath(self.config.WinClient_Path)
         self.process_name = self.config.WinClient_ProcessName
@@ -79,10 +90,21 @@ class AppControl(WinClient):
                 if not self.switch_to_game():
                     # self.change_auto_hdr("disable")
 
-                    # TODO 自动启动游戏
-                    # if not self.start_game():
-                    #     raise Exception('Start game failed')
-                    # time.sleep(5)
+                    # 打开启动器
+                    if not self.start_launcher():
+                        raise Exception('Start launcher failed')
+                    time.sleep(5)
+                    screenshot = pyautogui.screenshot()
+                    cv2.imwrite('uac.png', np.array(screenshot))
+
+                    exe = "nikke_launcher.exe"
+                    windows = find_main_window_by_exe(exe)
+                    for hwnd, title, clsname, path in windows:
+                        print(f"hwnd={hwnd}, title='{title}', class='{clsname}', path='{path}'")
+
+                    # 打开游戏
+                    if not self.start_game():
+                        raise Exception('Start game failed')
 
                     if not wait_until(lambda: self.switch_to_game(), 60):
                         # self.restore_auto_hdr()

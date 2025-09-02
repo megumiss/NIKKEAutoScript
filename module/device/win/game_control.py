@@ -1,8 +1,8 @@
 import ctypes
-from ctypes import wintypes
 import os
 import subprocess
 import time
+from ctypes import wintypes
 from typing import Literal, Optional, Tuple
 
 import psutil
@@ -34,7 +34,7 @@ class WinClient:
             logger.info(f'游戏启动：{self.game_path}')
             return True
         else:
-            logger.error('启动游戏时发生错误')
+            logger.error('启动游戏时发生错误，重试中')
             try:
                 # 为什么有的用户环境变量内没有cmd呢？
                 subprocess.Popen(self.game_path)
@@ -42,6 +42,27 @@ class WinClient:
                 return True
             except Exception as e:
                 logger.error(f'启动游戏时发生错误：{e}')
+            return False
+
+    def start_launcher(self) -> bool:
+        """打开游戏启动器"""
+        if not os.path.exists(self.launcher_path):
+            logger.error(f'启动器路径不存在：{self.launcher_path}')
+            return False
+
+        launcher_folder = self.launcher_path.rpartition('\\')[0]
+        if not os.system(f'cmd /C start "" /D "{launcher_folder}" "{self.launcher_path}"'):
+            logger.info(f'打开启动器：{self.launcher_path}')
+            return True
+        else:
+            logger.error('打开启动器时发生错误，重试中')
+            try:
+                # 为什么有的用户环境变量内没有cmd呢？
+                subprocess.Popen(self.launcher_path)
+                logger.info(f'打开启动器：{self.launcher_path}')
+                return True
+            except Exception as e:
+                logger.error(f'打开启动器时发生错误：{e}')
             return False
 
     def stop_game(self) -> bool:
@@ -110,7 +131,7 @@ class WinClient:
         try:
             hwnd = win32gui.FindWindow(self.window_class, self.window_name)
             if hwnd == 0:
-                logger.debug('游戏窗口未找到')
+                logger.warning('游戏窗口未找到')
                 return False
             self.set_foreground_window_with_retry(hwnd)
             logger.info('游戏窗口已切换到前台')
@@ -124,12 +145,12 @@ class WinClient:
         try:
             hwnd = win32gui.FindWindow(self.window_class, self.window_name)
             if hwnd == 0:
-                logger.debug('游戏窗口未找到')
+                logger.warning('游戏窗口未找到')
                 return None
             _, _, window_width, window_height = win32gui.GetClientRect(hwnd)
             return window_width, window_height
         except IndexError:
-            logger.debug('游戏窗口未找到')
+            logger.warning('游戏窗口未找到')
             return None
 
     def shutdown(
