@@ -463,7 +463,7 @@
     },
     "priority": {
       "name": "核心购买优先级",
-      "help": "不填写默认购买珠宝和芯尘盒，填写格式例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\nGEM: 珠宝\nCORE_DUST_CASE: 芯尘盒\nCREDIT_CASE: 信用点盒\nBATTLE_DATA_SET_CASE: 战斗数据辑盒\nGENERAL_TICKET: 指挥官通用券\nELYSION_TICKET: 极乐净土VIP券\nMISSILIS_TICKET: 米西利斯VIP卡\nTETRA_TICKET: 泰特拉VIP护理券\nPILGRIM_TICKET: 朝圣者补给套组交换券\nABNORMAL_TICKET: 反常年券\n"
+      "help": "不填写默认购买珠宝和芯尘盒，填写格式例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\nGEM: 珠宝\nCORE_DUST_CASE: 芯尘盒\nCREDIT_CASE: 信用点盒\nCREDIT: 信用点\nBATTLE_DATA_SET_CASE: 战斗数据辑盒\nGENERAL_TICKET: 指挥官通用券\nELYSION_TICKET: 极乐净土VIP券\nMISSILIS_TICKET: 米西利斯VIP卡\nTETRA_TICKET: 泰特拉VIP护理券\nPILGRIM_TICKET: 朝圣者补给套组交换券\nABNORMAL_TICKET: 反常年券\n"
     },
     "bonePriority": {
       "name": "骨头购买优先级",

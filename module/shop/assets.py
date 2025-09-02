@@ -6,6 +6,7 @@ from module.base.template import Template
 
 ARENA_SHOP_CHECK = Button(area={'zh-cn': (127, 476, 223, 504)}, color={'zh-cn': (137, 138, 139)}, button={'zh-cn': (127, 476, 223, 504)}, file={'zh-cn': './assets/zh-cn/shop/ARENA_SHOP_CHECK.png'})
 BUY = Button(area={'zh-cn': (470, 1073, 505, 1095)}, color={'zh-cn': (129, 199, 232)}, button={'zh-cn': (470, 1073, 505, 1095)}, file={'zh-cn': './assets/zh-cn/shop/BUY.png'})
+BUY_ALL = Button(area={'zh-cn': (575, 474, 646, 491)}, color={'zh-cn': (164, 166, 167)}, button={'zh-cn': (575, 474, 646, 491)}, file={'zh-cn': './assets/zh-cn/shop/BUY_ALL.png'})
 CANCEL = Button(area={'zh-cn': (208, 789, 255, 813)}, color={'zh-cn': (158, 157, 158)}, button={'zh-cn': (208, 789, 255, 813)}, file={'zh-cn': './assets/zh-cn/shop/CANCEL.png'})
 CORE_DUST_CASE = Button(area={'zh-cn': (198, 648, 239, 671)}, color={'zh-cn': (179, 179, 180)}, button={'zh-cn': (198, 648, 239, 671)}, file={'zh-cn': './assets/zh-cn/shop/CORE_DUST_CASE.png'})
 CREDIT = Button(area={'zh-cn': (561, 867, 596, 897)}, color={'zh-cn': (78, 77, 71)}, button={'zh-cn': (561, 867, 596, 897)}, file={'zh-cn': './assets/zh-cn/shop/CREDIT.png'})
