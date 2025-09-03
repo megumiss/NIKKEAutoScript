@@ -85,6 +85,15 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20250904",
+            "event_name": "COINS IN RUSH",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20250807",
             "event_name": "ABSOLUTE",
             # story1为小型活动的大型活动
