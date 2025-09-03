@@ -48,7 +48,7 @@ class SoloRaid(UI):
                 self.device.screenshot()
 
             # 结算
-            if click_timer.reached() and self.appear_then_click(RAID_RESULT, offset=10, interval=3):
+            if click_timer.reached() and self.appear_then_click(RAID_RESULT, offset=10, interval=3, static=False):
                 logger.info('Solo raid has end')
                 raise SoloRaidIsUnavailable
 

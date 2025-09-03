@@ -133,6 +133,7 @@ class ChampionArena(UI, ArenaBase):
 
     def ensure_into_champion_arena(self, skip_first_screenshot=True):
         logger.hr('CHAMPION ARENA START')
+        confirm_timer = Timer(3, count=3)
         click_timer = Timer(0.3)
 
         # 进入竞技场
@@ -155,9 +156,22 @@ class ChampionArena(UI, ArenaBase):
                 click_timer.reset()
                 continue
 
-            if self.appear(CHAMPION_ARENA_CHECK, offset=30):
+            # 应援结果
+            if (
+                click_timer.reached()
+                and self.appear(CHEER_RESULT, offset=10, static=False)
+                and self.appear_then_click(CHEER_RESULT_NEXT, offset=10, interval=1, static=False)
+            ):
                 click_timer.reset()
-                break
+                continue
+
+            if self.appear(CHAMPION_ARENA_CHECK, offset=30):
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    break
+            else:
+                confirm_timer.clear()
 
     def run(self):
         self.ui_ensure(page_arena)
