@@ -42,6 +42,14 @@
       "name": "NKAS设置",
       "help": ""
     },
+    "Emulator": {
+      "name": "模拟器",
+      "help": ""
+    },
+    "PCClient": {
+      "name": "PC客户端",
+      "help": ""
+    },
     "Restart": {
       "name": "重启设置",
       "help": ""
@@ -294,26 +302,10 @@
       "help": ""
     }
   },
-  "WinClient": {
+  "PCClient": {
     "_info": {
-      "name": "PC端设置",
+      "name": "使用设置",
       "help": ""
-    },
-    "TitleName": {
-      "name": "窗口标题",
-      "help": "游戏窗口的标题栏名称，默认是 'NIKKE'"
-    },
-    "ProcessName": {
-      "name": "进程名称",
-      "help": "游戏进程的名称，默认是 'nikke.exe'"
-    },
-    "LauncherPath": {
-      "name": "启动器路径",
-      "help": "游戏安装路径，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe；暂不支持自动启动游戏，请手动打开游戏后再运行脚本"
-    },
-    "Path": {
-      "name": "游戏路径",
-      "help": "游戏安装路径，例如：E:\\NIKKE\\NIKKE\\game\\nikke.exe；暂不支持自动启动游戏，请手动打开游戏后再运行脚本"
     },
     "Screens": {
       "name": "多屏幕",
@@ -322,6 +314,42 @@
     "ResolutionCompat": {
       "name": "分辨率设置兼容模式",
       "help": "如果脚本无法正常严格设置游戏分辨率为720*1280，请开启此选项"
+    }
+  },
+  "PCClientInfo": {
+    "_info": {
+      "name": "PC端设置",
+      "help": ""
+    },
+    "Client": {
+      "name": "游戏客户端",
+      "help": "启动器、游戏的标题、进程一般不用填写",
+      "intl": "国际",
+      "hwt": "港澳台"
+    },
+    "LauncherTitleName": {
+      "name": "启动器标题",
+      "help": "启动器窗口的标题栏名称，填写后会覆盖默认设置"
+    },
+    "LauncherProcessName": {
+      "name": "启动器进程",
+      "help": "启动进程的名称，填写后会覆盖默认设置"
+    },
+    "LauncherPath": {
+      "name": "启动器路径",
+      "help": "游戏安装路径，必填，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
+    },
+    "GameTitleName": {
+      "name": "游戏标题",
+      "help": "游戏窗口的标题栏名称，填写后会覆盖默认设置"
+    },
+    "GameProcessName": {
+      "name": "游戏进程",
+      "help": "游戏进程的名称，填写后会覆盖默认设置"
+    },
+    "GamePath": {
+      "name": "游戏路径",
+      "help": "游戏安装路径，必填，例如：E:\\NIKKE\\NIKKE\\game\\nikke.exe"
     }
   },
   "Optimization": {

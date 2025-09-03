@@ -6,11 +6,14 @@ NKAS:
   tasks:
     NKAS:
       - Client
-      - Emulator
-      - EmulatorInfo
-      - WinClient
       - Optimization
       - Notification
+    Emulator:
+      - Emulator
+      - EmulatorInfo
+    PCClient:
+      - PCClientInfo
+      - PCClient
     Restart:
       - Scheduler
 

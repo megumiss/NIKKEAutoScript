@@ -17,6 +17,23 @@ from module.logger import logger
 class AppControl(WinClient):
     config: NikkeConfig
 
+    GAME_TITLE = {
+        'intl': 'NIKKE',
+        'hwt': 'NIKKE',
+    }
+    GAME_PROCESS = {
+        'intl': 'nikke.exe',
+        'hwt': 'nikke_hmt.exe',
+    }
+    LAUNCHER_TITLE = {
+        'intl': 'NIKKE',
+        'hwt': 'NIKKE',
+    }
+    LAUNCHER_PROCESS = {
+        'intl': 'nikke_launcher.exe',
+        'hwt': 'nikke_launcher.exe',
+    }
+
     def __init__(self, config):
         """
         Args:
@@ -29,18 +46,25 @@ class AppControl(WinClient):
             self.config = config
         super().__init__(config)
 
-        title='NIKKE', class='TWINCONTROL', path='E:\NIKKE\Launcher\nikke_launcher.exe'
-        # E:\NIKKE\Launcher\nikke_launcher.exe
-        # self.launcher_path = os.path.normpath(self.config.WinClient_Path)
-        self.launcher_path = "E:/NIKKE/Launcher/nikke_launcher.exe"
-        self.launcher_process_name = self.config.WinClient_ProcessName
-        self.launcher_window_name = self.config.WinClient_TitleName
+        # 启动器信息
+        self.launcher_path = os.path.normpath(self.config.PCClientInfo_LauncherPath)
+        self.launcher_process_name = (
+            self.config.PCClientInfo_LauncherProcessName or self.LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
+        )
+        self.launcher_window_name = (
+            self.config.PCClientInfo_LauncherTitleName or self.LAUNCHER_TITLE[self.config.PCClientInfo_Client]
+        )
         self.launcher_window_class = 'TWINCONTROL'
 
-        self.game_path = os.path.normpath(self.config.WinClient_Path)
-        self.process_name = self.config.WinClient_ProcessName
-        self.window_name = self.config.WinClient_TitleName
-        self.window_class = 'UnityWndClass'
+        # 游戏信息
+        self.game_path = os.path.normpath(self.config.PCClientInfo_GamePath)
+        self.game_process_name = (
+            self.config.PCClientInfo_GameProcessName or self.GAME_PROCESS[self.config.PCClientInfo_Client]
+        )
+        self.game_window_name = (
+            self.config.PCClientInfo_GameTitleName or self.GAME_TITLE[self.config.PCClientInfo_Client]
+        )
+        self.game_window_class = 'UnityWndClass'
         # self.script_path = (
         #     os.path.normpath(script_path)
         #     if script_path and isinstance(script_path, (str, bytes, os.PathLike))
@@ -97,10 +121,6 @@ class AppControl(WinClient):
                     screenshot = pyautogui.screenshot()
                     cv2.imwrite('uac.png', np.array(screenshot))
 
-                    exe = "nikke_launcher.exe"
-                    windows = find_main_window_by_exe(exe)
-                    for hwnd, title, clsname, path in windows:
-                        print(f"hwnd={hwnd}, title='{title}', class='{clsname}', path='{path}'")
 
                     # 打开游戏
                     if not self.start_game():
@@ -122,7 +142,7 @@ class AppControl(WinClient):
                     time.sleep(1)
                     self.check_resolution_ratio(720, 1280)
                     time.sleep(1)
-                
+
                 # TODO 自动更新游戏路径
                 #     if cfg.auto_set_game_path_enable:
                 #         program_path = get_process_path(cfg.game_process_name)

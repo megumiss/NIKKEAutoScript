@@ -23,47 +23,34 @@ class WinClient:
     def __init__(self, config):
         super().__init__(config)
 
-    def start_game(self) -> bool:
-        """启动游戏"""
-        if not os.path.exists(self.game_path):
-            logger.error(f'游戏路径不存在：{self.game_path}')
+    def _start_program(self, path: str, program_name: str) -> bool:
+        """启动程序"""
+        if not os.path.exists(path):
+            logger.error(f'{program_name}路径不存在：{path}')
             return False
 
-        game_folder = self.game_path.rpartition('\\')[0]
-        if not os.system(f'cmd /C start "" /D "{game_folder}" "{self.game_path}"'):
-            logger.info(f'游戏启动：{self.game_path}')
+        folder = path.rpartition('\\')[0]
+        
+        if not os.system(f'cmd /C start "" /D "{folder}" "{path}"'):
+            logger.info(f'{program_name}启动：{path}')
             return True
         else:
-            logger.error('启动游戏时发生错误，重试中')
+            logger.error(f'启动{program_name}时发生错误，重试中')
             try:
-                # 为什么有的用户环境变量内没有cmd呢？
-                subprocess.Popen(self.game_path)
-                logger.info(f'游戏启动：{self.game_path}')
+                subprocess.Popen(path)
+                logger.info(f'{program_name}启动：{path}')
                 return True
             except Exception as e:
-                logger.error(f'启动游戏时发生错误：{e}')
+                logger.error(f'启动{program_name}时发生错误：{e}')
             return False
+
+    def start_game(self) -> bool:
+        """启动游戏"""
+        return self._start_program(self.game_path, "游戏")
 
     def start_launcher(self) -> bool:
         """打开游戏启动器"""
-        if not os.path.exists(self.launcher_path):
-            logger.error(f'启动器路径不存在：{self.launcher_path}')
-            return False
-
-        launcher_folder = self.launcher_path.rpartition('\\')[0]
-        if not os.system(f'cmd /C start "" /D "{launcher_folder}" "{self.launcher_path}"'):
-            logger.info(f'打开启动器：{self.launcher_path}')
-            return True
-        else:
-            logger.error('打开启动器时发生错误，重试中')
-            try:
-                # 为什么有的用户环境变量内没有cmd呢？
-                subprocess.Popen(self.launcher_path)
-                logger.info(f'打开启动器：{self.launcher_path}')
-                return True
-            except Exception as e:
-                logger.error(f'打开启动器时发生错误：{e}')
-            return False
+        return self._start_program(self.launcher_path, "启动器")
 
     def stop_game(self) -> bool:
         """终止游戏"""
