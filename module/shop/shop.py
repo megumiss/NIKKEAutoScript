@@ -250,15 +250,17 @@ class ShopBase(UI):
                 self.device.screenshot()
 
                 # 检查当前商品是否可见
-                if self.appear(
-                    product.button, offset=5, threshold=0.9, static=False
-                ) and product.button.match_appear_on(self.device.image, 15):
-                    if click_timer.reached():
-                        self.device.click(product.button)
-                        img = self.device.image
-                        self.handle_purchase(product.button, skip_first_screenshot=False)
-                        self.device.image = img
-                        logger.info(f'[Purchased] {product.name}')
+                if (
+                    click_timer.reached()
+                    and self.appear(BUY_ALL, offset=10)
+                    and self.appear(product.button, offset=5, threshold=0.8, static=False)
+                ):
+                    self.device.click(product.button)
+                    img = self.device.image
+                    self.handle_purchase(product.button, skip_first_screenshot=False)
+                    self.device.image = img
+                    logger.info(f'[Purchased] {product.name}')
+                    continue
 
                 # 结束当前商品的扫描，进入下一个商品
                 if self.appear(END_LIST_CHECK, threshold=5):

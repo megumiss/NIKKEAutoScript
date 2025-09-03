@@ -21,6 +21,7 @@ class ManualConfig:
         "GEM": 1,
         "CORE_DUST_CASE": 2,
         "CREDIT_CASE": 3,
+        "CREDIT": 1,
         "BATTLE_DATA_SET_CASE": 2,
         "GENERAL_TICKET": 1,
         "ELYSION_TICKET": 1,

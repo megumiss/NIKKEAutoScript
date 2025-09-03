@@ -277,6 +277,12 @@ class Conversation(UI):
                     if click_timer.reached() and self.appear_then_click(ANSWER_CHECK, offset=100, interval=3):
                         click_timer.reset()
                         continue
+                    # 点击对话
+                    if self.appear(AUTO_CLICK_CHECK, offset=(30, 30), interval=0.3):
+                        self.device.click_minitouch(100, 100)
+                        logger.info('Click %s @ %s' % (point2str(100, 100), 'WAIT_TO_ANSWER'))
+                        click_timer.reset()
+                        continue
 
         self.device.sleep(2.5)
         # return self.communicate()
