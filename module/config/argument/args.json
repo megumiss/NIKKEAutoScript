@@ -185,11 +185,19 @@
       },
       "LauncherResolutionCompat": {
         "type": "checkbox",
-        "value": true
+        "value": false
       },
       "GameResolutionCompat": {
         "type": "checkbox",
         "value": false
+      },
+      "Account": {
+        "type": "input",
+        "value": ""
+      },
+      "Password": {
+        "type": "input",
+        "value": ""
       }
     },
     "Storage": {

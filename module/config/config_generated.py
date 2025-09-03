@@ -36,8 +36,10 @@ class GeneratedConfig:
 
     # Group `PCClient`
     PCClient_Screens = False
-    PCClient_LauncherResolutionCompat = True
+    PCClient_LauncherResolutionCompat = False
     PCClient_GameResolutionCompat = False
+    PCClient_Account = None
+    PCClient_Password = None
 
     # Group `PCClientInfo`
     PCClientInfo_Client = 'intl'  # intl, hwt

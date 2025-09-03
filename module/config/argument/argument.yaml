@@ -68,6 +68,10 @@ PCClient:
     value: false
   GameResolutionCompat:
     value: false
+  Account:
+    value: ''
+  Password:
+    value: ''
 PCClientInfo:
   Client:
     value: intl

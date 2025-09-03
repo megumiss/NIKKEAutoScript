@@ -318,6 +318,14 @@
     "GameResolutionCompat": {
       "name": "游戏分辨率设置兼容模式",
       "help": "如果脚本无法正常严格设置游戏窗口分辨率为720*1280，请开启此选项"
+    },
+    "Account": {
+      "name": "账户",
+      "help": "请将内容直接粘贴到此处"
+    },
+    "Password": {
+      "name": "密码",
+      "help": "请将内容直接粘贴到此处"
     }
   },
   "PCClientInfo": {
