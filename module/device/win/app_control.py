@@ -9,6 +9,7 @@ import pyautogui
 from module.config.config import NikkeConfig
 from module.config.language import set_language
 from module.config.server import set_server
+from module.device.win.automation import Automation
 from module.device.win.game_control import WinClient
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -34,7 +35,7 @@ LAUNCHER_PROCESS = {
 }
 
 
-class AppControl(WinClient):
+class AppControl(WinClient, Automation):
     config: NikkeConfig
 
     def __init__(self, config):
@@ -64,10 +65,15 @@ class AppControl(WinClient):
         self.game_process_name = (
             self.config.PCClientInfo_GameProcessName or GAME_PROCESS[self.config.PCClientInfo_Client]
         )
-        self.game_window_name = (
-            self.config.PCClientInfo_GameTitleName or GAME_TITLE[self.config.PCClientInfo_Client]
-        )
+        self.game_window_name = self.config.PCClientInfo_GameTitleName or GAME_TITLE[self.config.PCClientInfo_Client]
         self.game_window_class = 'UnityWndClass'
+
+        # 回填
+        self.config.PCClientInfo_LauncherProcessName = self.launcher_process_name
+        self.config.PCClientInfo_LauncherTitleName = self.launcher_window_name
+        self.config.PCClientInfo_GameProcessName = self.game_process_name
+        self.config.PCClientInfo_GameTitleName = self.game_window_name
+
         # self.script_path = (
         #     os.path.normpath(script_path)
         #     if script_path and isinstance(script_path, (str, bytes, os.PathLike))
@@ -99,12 +105,6 @@ class AppControl(WinClient):
                 return process.exe()
         return None
 
-    def app_login():
-        screenshot = pyautogui.screenshot()
-        cv2.imwrite('uac.png', np.array(screenshot))
-        
-        pass
-
     def app_start(self):
         logger.info(f'Game start: {self.config.PCClientInfo_GamePath}')
         MAX_RETRY = 3
@@ -120,16 +120,12 @@ class AppControl(WinClient):
 
         for retry in range(MAX_RETRY):
             try:
+                # 检查屏幕分辨率
+                self.check_screen_resolution(720, 1280)
                 # 检查是否已进入游戏
                 if self.switch_to_program(PROGRAM_GAME):
                     logger.info('游戏已在运行，检查分辨率')
-                    self.check_screen_resolution(720, 1280)
-                    time.sleep(0.5)
-                    if self.config.PCClient_GameResolutionCompat:
-                        self.change_resolution_compat(PROGRAM_GAME, 720, 1280)
-                    else:
-                        self.change_resolution(PROGRAM_GAME, 720, 1280)
-                    time.sleep(0.5)
+                    self.ensure_resolution(PROGRAM_GAME, 720, 1280)
                     self.check_resolution(PROGRAM_GAME, 720, 1280)
                     break
 
@@ -142,15 +138,13 @@ class AppControl(WinClient):
                     logger.error('切换到启动器超时')
                     raise RequestHumanTakeover
                 # 设置启动器分辨率
-                if self.config.PCClient_LauncherResolutionCompat:
-                    self.change_resolution_compat(PROGRAM_LAUNCHER, 900, 600)
-                else:
-                    self.change_resolution(PROGRAM_LAUNCHER, 900, 600)
-                time.sleep(1)
+                self.ensure_resolution(PROGRAM_LAUNCHER, 900, 600)
                 self.check_resolution(PROGRAM_LAUNCHER, 900, 600)
                 time.sleep(0.5)
 
-                # 点击登录按钮
+                # 登录
+                super().screenshot(self.launcher_window_name)
+                cv2.imwrite('launcher.png', np.array(self.image))
                 self.app_login()
                 time.sleep(5)
 
@@ -176,14 +170,6 @@ class AppControl(WinClient):
                     raise
 
         logger.info('Game started')
-
-        # TODO 自动更新游戏路径
-        #     if cfg.auto_set_game_path_enable:
-        #         program_path = get_process_path(cfg.game_process_name)
-        #         if program_path is not None and program_path != cfg.game_path:
-        #             cfg.set_value("game_path", program_path)
-        #             logger.info(f"游戏路径更新成功：{program_path}")
-        #     time.sleep(1)
 
         # if not wait_until(lambda: screen.get_current_screen(), 360):
         #     raise TimeoutError("获取当前界面超时")

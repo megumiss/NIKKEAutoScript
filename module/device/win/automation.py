@@ -98,7 +98,6 @@ class Automation:
             self.config = config
         super().__init__()
 
-        self.window_title = self.config.PCClientInfo_GameTitleName
         self.window_offset = (0, 0)
         # self.screenshot = None
         self._init_input()
@@ -121,7 +120,7 @@ class Automation:
         self.secretly_press_key = self.input_handler.secretly_press_key
         self.press_mouse = self.input_handler.press_mouse
 
-    def screenshot(self, crop=(0, 0, 1, 1)):
+    def screenshot(self, window_title: str, crop=(0, 0, 1, 1)):
         """
         捕获游戏窗口的截图。
         :param crop: 截图的裁剪区域，格式为(x1, y1, x2, y2)，默认为全屏。
@@ -134,7 +133,7 @@ class Automation:
         start_time = time.time()
         while True:
             try:
-                result = Screenshot.take_screenshot(self.window_title, self.config.PCClient_Screens, crop=crop)
+                result = Screenshot.take_screenshot(window_title, self.config.PCClient_Screens, crop=crop)
                 if result:
                     self.image, self.screenshot_pos, self.screenshot_scale_factor = result
                     self.window_offset = self.screenshot_pos[0], self.screenshot_pos[1]
@@ -163,7 +162,7 @@ class Automation:
             np.ndarray:
         """
         width, height = image_size(self.image)
-        if width == 720 or height == 1280:
+        if width == 900 or height == 600:
             return image
 
         raise ScreenshotSizeError("The emulator's display size must be 720*1280")

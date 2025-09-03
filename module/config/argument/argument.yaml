@@ -65,7 +65,7 @@ PCClient:
   Screens:
     value: false
   LauncherResolutionCompat:
-    value: true
+    value: false
   GameResolutionCompat:
     value: false
 PCClientInfo:

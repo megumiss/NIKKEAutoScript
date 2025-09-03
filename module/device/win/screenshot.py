@@ -67,9 +67,9 @@ class Screenshot:
             )
 
             real_width, _ = Screenshot.get_window_real_resolution(window)
-            if real_width > 720:
-                screenshot_scale_factor = 720 / real_width
-                screenshot = screenshot.resize((int(720 * crop[2]), int(1280 * crop[3])))
+            if real_width > 900:
+                screenshot_scale_factor = 900 / real_width
+                screenshot = screenshot.resize((int(720 * crop[2]), int(600 * crop[3])))
             else:
                 screenshot_scale_factor = 1
 

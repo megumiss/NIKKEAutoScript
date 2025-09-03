@@ -5,6 +5,8 @@ import time
 from ctypes import wintypes
 from typing import Literal, Optional, Tuple
 
+import cv2
+import numpy as np
 import psutil
 import pyautogui
 import win32con
@@ -16,6 +18,7 @@ from module.device.win.registry.setting import (
     get_game_resolution,
     set_game_resolution,
 )
+from module.device.win.screenshot import Screenshot
 from module.logger import logger
 
 
@@ -361,6 +364,28 @@ class WinClient:
             logger.error(f'目标分辨率: {client_width}x{client_height}')
             raise Exception(f'无法设置{program}分辨率: {e}')
 
+    def ensure_resolution(self, program: str, client_width, client_height, retries=5, interval=1.0):
+        """确保窗口分辨率被成功设置"""
+        compat = getattr(self.config, f'PCClient_{program.title()}ResolutionCompat')
+        for i in range(retries):
+            if compat:
+                self.change_resolution_compat(program, client_width, client_height)
+            else:
+                self.change_resolution(program, client_width, client_height)
+            time.sleep(interval)
+            hwnd = win32gui.FindWindow(
+                getattr(self, f'{program}_window_class'), getattr(self, f'{program}_window_name')
+            )
+            if hwnd:
+                rect = win32gui.GetClientRect(hwnd)
+                if rect[2] == client_width and rect[3] == client_height:
+                    logger.info(f'{program} 分辨率成功设置为 {client_width}x{client_height}')
+                    return True
+                else:
+                    logger.warning(f'{program} 分辨率未成功设置，重试中...')
+        logger.error(f'{program} 分辨率无法设置为 {client_width}x{client_height}')
+        return False
+
     def change_reg_resolution(self, width: int, height: int):
         """通过注册表修改游戏分辨率"""
         try:
@@ -461,3 +486,10 @@ class WinClient:
             raise Exception(f'{program}分辨率错误')
         else:
             logger.debug(f'{program}分辨率: {window_width}x{window_height}')
+
+    def app_login(self):
+        self.take_screenshot(self.config.launcher_window_name)
+        screenshot = pyautogui.screenshot()
+        cv2.imwrite('launcher.png', np.array(screenshot))
+
+        pass
