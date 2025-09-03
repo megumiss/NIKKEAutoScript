@@ -183,7 +183,11 @@
         "type": "checkbox",
         "value": false
       },
-      "ResolutionCompat": {
+      "LauncherResolutionCompat": {
+        "type": "checkbox",
+        "value": true
+      },
+      "GameResolutionCompat": {
         "type": "checkbox",
         "value": false
       }

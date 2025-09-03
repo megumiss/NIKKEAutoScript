@@ -311,9 +311,13 @@
       "name": "多屏幕",
       "help": "如果使用多屏幕，请开启此选项"
     },
-    "ResolutionCompat": {
-      "name": "分辨率设置兼容模式",
-      "help": "如果脚本无法正常严格设置游戏分辨率为720*1280，请开启此选项"
+    "LauncherResolutionCompat": {
+      "name": "启动器分辨率兼容模式",
+      "help": "如果脚本无法正常严格设置游戏分辨率为900*600，请开启此选项"
+    },
+    "GameResolutionCompat": {
+      "name": "游戏分辨率设置兼容模式",
+      "help": "如果脚本无法正常严格设置游戏窗口分辨率为720*1280，请开启此选项"
     }
   },
   "PCClientInfo": {

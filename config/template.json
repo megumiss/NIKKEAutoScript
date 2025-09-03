@@ -48,7 +48,8 @@
     },
     "PCClient": {
       "Screens": false,
-      "ResolutionCompat": false
+      "LauncherResolutionCompat": true,
+      "GameResolutionCompat": false
     },
     "Storage": {
       "Storage": {}

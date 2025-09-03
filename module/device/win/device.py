@@ -40,10 +40,12 @@ class Device(AppControl, Automation):
                     logger.critical('Failed to start game after 3 trial')
                     raise RequestHumanTakeover
                 # Try to start game
-                if not self.switch_to_game():
+                if not self.switch_to_program('game'):
                     self.app_start()
                 else:
-                    logger.critical(f'No process "{self.config.WinClient_ProcessName}" found, please start game first')
+                    logger.critical(
+                        f'No process "{self.config.PCClientInfo_GameProcessName}" found, please start game first'
+                    )
                     raise RequestHumanTakeover
 
     def screenshot(self):

@@ -98,7 +98,7 @@ class Automation:
             self.config = config
         super().__init__()
 
-        self.window_title = self.config.WinClient_TitleName
+        self.window_title = self.config.PCClientInfo_GameTitleName
         self.window_offset = (0, 0)
         # self.screenshot = None
         self._init_input()
@@ -134,7 +134,7 @@ class Automation:
         start_time = time.time()
         while True:
             try:
-                result = Screenshot.take_screenshot(self.window_title, self.config.WinClient_Screens, crop=crop)
+                result = Screenshot.take_screenshot(self.window_title, self.config.PCClient_Screens, crop=crop)
                 if result:
                     self.image, self.screenshot_pos, self.screenshot_scale_factor = result
                     self.window_offset = self.screenshot_pos[0], self.screenshot_pos[1]

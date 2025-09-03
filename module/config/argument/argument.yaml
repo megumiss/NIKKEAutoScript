@@ -64,7 +64,9 @@ EmulatorInfo:
 PCClient:
   Screens:
     value: false
-  ResolutionCompat:
+  LauncherResolutionCompat:
+    value: true
+  GameResolutionCompat:
     value: false
 PCClientInfo:
   Client:
