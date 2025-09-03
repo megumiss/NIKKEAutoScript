@@ -6,6 +6,8 @@ import numpy as np
 import psutil
 import pyautogui
 
+from module.base.timer import Timer
+from module.base.utils import float2str, point2str
 from module.config.config import NikkeConfig
 from module.config.language import set_language
 from module.config.server import set_server
@@ -13,6 +15,7 @@ from module.device.win.automation import Automation
 from module.device.win.game_control import WinClient
 from module.exception import RequestHumanTakeover
 from module.logger import logger
+from module.ocr.ocr import Ocr
 
 PROGRAM_GAME = 'game'
 PROGRAM_LAUNCHER = 'launcher'
@@ -140,11 +143,9 @@ class AppControl(WinClient, Automation):
                 # 设置启动器分辨率
                 self.ensure_resolution(PROGRAM_LAUNCHER, 900, 600)
                 self.check_resolution(PROGRAM_LAUNCHER, 900, 600)
-                time.sleep(0.5)
+                time.sleep(5)
 
                 # 登录
-                super().screenshot(self.launcher_window_name)
-                cv2.imwrite('launcher.png', np.array(self.image))
                 self.app_login()
                 time.sleep(5)
 
@@ -154,10 +155,7 @@ class AppControl(WinClient, Automation):
                     raise RequestHumanTakeover
 
                 # 设置游戏分辨率
-                if self.config.PCClient_ResolutionCompat:
-                    self.change_resolution_compat(PROGRAM_GAME, 720, 1280)
-                else:
-                    self.change_resolution(PROGRAM_GAME, 720, 1280)
+                self.ensure_resolution(PROGRAM_GAME, 720, 1280)
                 self.check_resolution(PROGRAM_GAME, 720, 1280)
 
                 break
@@ -185,3 +183,27 @@ class AppControl(WinClient, Automation):
                 raise RequestHumanTakeover
         except Exception:
             raise RequestHumanTakeover
+
+    def app_login(self):
+        super().screenshot(self.launcher_window_name)
+        cv2.imwrite('launcher.png', np.array(self.image))
+
+        print(self.nikke_name)
+        # 界面刷新，再次设置启动器分辨率
+        self.ensure_resolution(PROGRAM_LAUNCHER, 900, 600)
+        self.check_resolution(PROGRAM_LAUNCHER, 900, 600)
+
+        pass
+
+    @property
+    def nikke_name(self) -> str:
+        model_type = self.config.Optimization_OcrModelType
+        NIKKE_NAME = Ocr(
+            [(0, 0, 900, 600)],
+            name='NIKKE_NAME',
+            model_type=model_type,
+            lang='ch',
+        )
+
+        return NIKKE_NAME.ocr(self.image)['text']
+

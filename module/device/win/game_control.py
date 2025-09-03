@@ -486,10 +486,3 @@ class WinClient:
             raise Exception(f'{program}分辨率错误')
         else:
             logger.debug(f'{program}分辨率: {window_width}x{window_height}')
-
-    def app_login(self):
-        self.take_screenshot(self.config.launcher_window_name)
-        screenshot = pyautogui.screenshot()
-        cv2.imwrite('launcher.png', np.array(screenshot))
-
-        pass
