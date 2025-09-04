@@ -4,21 +4,16 @@ import time
 import cv2
 import numpy as np
 import psutil
-import pyautogui
 
-from module.base.timer import Timer
-from module.base.utils import float2str, point2str
+from module.config.account import load_account
 from module.config.config import NikkeConfig
 from module.config.language import set_language
 from module.config.server import set_server
-from module.device.win.automation import Automation
+from module.device.win.automation import Automation, Window
 from module.device.win.game_control import WinClient
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 from module.ocr.ocr import Ocr
-
-PROGRAM_GAME = 'game'
-PROGRAM_LAUNCHER = 'launcher'
 
 GAME_TITLE = {
     'intl': 'NIKKE',
@@ -54,28 +49,42 @@ class AppControl(WinClient, Automation):
         super().__init__(config)
 
         # 启动器信息
-        self.launcher_path = os.path.normpath(self.config.PCClientInfo_LauncherPath)
-        self.launcher_process_name = (
+        launcher_path = os.path.normpath(self.config.PCClientInfo_LauncherPath)
+        launcher_process_name = (
             self.config.PCClientInfo_LauncherProcessName or LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
         )
-        self.launcher_window_name = (
+        launcher_window_title = (
             self.config.PCClientInfo_LauncherTitleName or LAUNCHER_TITLE[self.config.PCClientInfo_Client]
         )
-        self.launcher_window_class = 'TWINCONTROL'
+        launcher_window_class = 'TWINCONTROL'
 
         # 游戏信息
-        self.game_path = os.path.normpath(self.config.PCClientInfo_GamePath)
-        self.game_process_name = (
-            self.config.PCClientInfo_GameProcessName or GAME_PROCESS[self.config.PCClientInfo_Client]
-        )
-        self.game_window_name = self.config.PCClientInfo_GameTitleName or GAME_TITLE[self.config.PCClientInfo_Client]
-        self.game_window_class = 'UnityWndClass'
+        # game_path = os.path.normpath(self.config.PCClientInfo_GamePath)
+        game_process_name = self.config.PCClientInfo_GameProcessName or GAME_PROCESS[self.config.PCClientInfo_Client]
+        game_window_title = self.config.PCClientInfo_GameTitleName or GAME_TITLE[self.config.PCClientInfo_Client]
+        game_window_class = 'UnityWndClass'
 
-        # 回填
-        self.config.PCClientInfo_LauncherProcessName = self.launcher_process_name
-        self.config.PCClientInfo_LauncherTitleName = self.launcher_window_name
-        self.config.PCClientInfo_GameProcessName = self.game_process_name
-        self.config.PCClientInfo_GameTitleName = self.game_window_name
+        # 创建 Window 对象
+        self.launcher = Window(
+            name='Game',
+            title=launcher_window_title,
+            class_name=launcher_window_class,
+            process_name=launcher_process_name,
+            path=launcher_path,
+        )
+        self.game = Window(
+            name='Launcher',
+            title=game_window_title,
+            class_name=game_window_class,
+            process_name=game_process_name,
+            path='',
+        )
+
+        # 回填配置
+        self.config.PCClientInfo_LauncherProcessName = launcher_process_name
+        self.config.PCClientInfo_LauncherTitleName = launcher_window_title
+        self.config.PCClientInfo_GameProcessName = game_process_name
+        self.config.PCClientInfo_GameTitleName = game_window_title
 
         # self.script_path = (
         #     os.path.normpath(script_path)
@@ -83,8 +92,9 @@ class AppControl(WinClient, Automation):
         #     else None
         # )
 
+        # 启动流程
         self.app_start()
-        logger.attr('WinClient', self.process_name)
+        logger.attr('WinClient', self.game.process_name)
 
         # Package
         self.package = self.config.Emulator_PackageName
@@ -95,10 +105,7 @@ class AppControl(WinClient, Automation):
         logger.attr('Language', self.language)
 
     def app_is_running(self) -> bool:
-        if not self.switch_to_program(PROGRAM_GAME):
-            return False
-
-        return True
+        return self.game.switch_to_foreground()
 
     def get_process_path(name):
         # 通过进程名获取运行路径
@@ -109,7 +116,7 @@ class AppControl(WinClient, Automation):
         return None
 
     def app_start(self):
-        logger.info(f'Game start: {self.config.PCClientInfo_GamePath}')
+        logger.info(f'Game start: {self.game.path}')
         MAX_RETRY = 3
 
         def wait_until(condition, timeout, period=1):
@@ -126,23 +133,23 @@ class AppControl(WinClient, Automation):
                 # 检查屏幕分辨率
                 self.check_screen_resolution(720, 1280)
                 # 检查是否已进入游戏
-                if self.switch_to_program(PROGRAM_GAME):
+                if self.game.switch_to_foreground():
                     logger.info('游戏已在运行，检查分辨率')
-                    self.ensure_resolution(PROGRAM_GAME, 720, 1280)
-                    self.check_resolution(PROGRAM_GAME, 720, 1280)
+                    self.ensure_resolution(self.game, 720, 1280)
+                    self.check_resolution(self.game, 720, 1280)
                     break
 
                 # 启动启动器
-                if not self.start_program(PROGRAM_LAUNCHER):
+                if not self.launcher.start():
                     logger.error('启动器启动失败')
                     raise RequestHumanTakeover
                 # 切换到启动器前台
-                if not wait_until(lambda: self.switch_to_program(PROGRAM_LAUNCHER), 30):
+                if not wait_until(lambda: self.launcher.switch_to_foreground(), 30):
                     logger.error('切换到启动器超时')
                     raise RequestHumanTakeover
                 # 设置启动器分辨率
-                self.ensure_resolution(PROGRAM_LAUNCHER, 900, 600)
-                self.check_resolution(PROGRAM_LAUNCHER, 900, 600)
+                # self.ensure_resolution(PROGRAM_LAUNCHER, 900, 600)
+                # self.check_resolution(PROGRAM_LAUNCHER, 900, 600)
                 time.sleep(5)
 
                 # 登录
@@ -150,19 +157,19 @@ class AppControl(WinClient, Automation):
                 time.sleep(5)
 
                 # 切换到游戏前台
-                if not wait_until(lambda: self.switch_to_program(PROGRAM_GAME), 60):
+                if not wait_until(lambda: self.game.switch_to_foreground(), 60):
                     logger.error('切换到游戏超时')
                     raise RequestHumanTakeover
 
                 # 设置游戏分辨率
-                self.ensure_resolution(PROGRAM_GAME, 720, 1280)
-                self.check_resolution(PROGRAM_GAME, 720, 1280)
+                self.ensure_resolution(self.game, 720, 1280)
+                self.check_resolution(self.game, 720, 1280)
 
                 break
             except Exception as e:
                 logger.error(f'尝试启动流程时发生错误：{e}')
-                self.stop_program(PROGRAM_GAME)
-                self.stop_program(PROGRAM_LAUNCHER)
+                self.game.stop()
+                self.launcher.stop()
                 time.sleep(5)
                 if retry == MAX_RETRY - 1:
                     raise
@@ -173,10 +180,10 @@ class AppControl(WinClient, Automation):
         #     raise TimeoutError("获取当前界面超时")
 
     def app_stop(self):
-        logger.info(f'Game stop: {self.config.PCClientInfo_GamePath}')
+        logger.info(f'Game stop: {self.game.path}')
 
         try:
-            if self.stop_game():
+            if self.game.stop():
                 logger.info('Game stop success')
             else:
                 logger.warning('Game path config error')
@@ -185,25 +192,25 @@ class AppControl(WinClient, Automation):
             raise RequestHumanTakeover
 
     def app_login(self):
-        super().screenshot(self.launcher_window_name)
-        cv2.imwrite('launcher.png', np.array(self.image))
+        # 启动器截图
+        self.get_resolution(self.launcher)
+        super().screenshot(self.launcher)
+        cv2.imwrite('launcher.png', np.array(self.launcher.image))
 
+        print(load_account(self.config.config_name))
         print(self.nikke_name)
-        # 界面刷新，再次设置启动器分辨率
-        self.ensure_resolution(PROGRAM_LAUNCHER, 900, 600)
-        self.check_resolution(PROGRAM_LAUNCHER, 900, 600)
 
-        pass
+        # 界面刷新，再次设置启动器分辨率
+        # self.ensure_resolution(self.launcher, 900, 600)
+        # self.check_resolution(self.launcher, 900, 600)
 
     @property
     def nikke_name(self) -> str:
         model_type = self.config.Optimization_OcrModelType
         NIKKE_NAME = Ocr(
-            [(0, 0, 900, 600)],
+            [(0, 0, self.launcher.resolution[0], self.launcher.resolution[0])],
             name='NIKKE_NAME',
             model_type=model_type,
             lang='ch',
         )
-
-        return NIKKE_NAME.ocr(self.image)['text']
-
+        return NIKKE_NAME.ocr(self.launcher.image)['text']

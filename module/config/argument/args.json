@@ -172,18 +172,10 @@
       "GameProcessName": {
         "type": "input",
         "value": ""
-      },
-      "GamePath": {
-        "type": "textarea",
-        "value": ""
       }
     },
     "PCClient": {
       "Screens": {
-        "type": "checkbox",
-        "value": false
-      },
-      "LauncherResolutionCompat": {
         "type": "checkbox",
         "value": false
       },

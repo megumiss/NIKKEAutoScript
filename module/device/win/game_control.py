@@ -5,8 +5,6 @@ import time
 from ctypes import wintypes
 from typing import Literal, Optional, Tuple
 
-import cv2
-import numpy as np
 import psutil
 import pyautogui
 import win32con
@@ -14,49 +12,46 @@ import win32gui
 
 from module.base.utils import ensure_time
 from module.device.win.registry.game_auto_hdr import get_game_auto_hdr, set_game_auto_hdr
-from module.device.win.registry.setting import (
-    get_game_resolution,
-    set_game_resolution,
-)
-from module.device.win.screenshot import Screenshot
+from module.device.win.registry.setting import get_game_resolution, set_game_resolution
 from module.logger import logger
+
+from .automation import Window
 
 
 class WinClient:
     def __init__(self, config):
         super().__init__(config)
 
-    def start_program(self, program: str) -> bool:
+    def start_program(self, window: Window) -> bool:
         """启动程序"""
-        path = getattr(self, f'{program}_path')
+        path = window.path
         if not os.path.exists(path):
-            logger.error(f'{program}路径不存在：{path}')
+            logger.error(f'路径不存在：{path}')
             return False
 
         folder = path.rpartition('\\')[0]
         if not os.system(f'cmd /C start "" /D "{folder}" "{path}"'):
-            logger.info(f'{program}启动：{path}')
+            logger.info(f'启动：{path}')
             return True
         else:
-            logger.error(f'启动{program}时发生错误，重试中')
+            logger.error(f'启动时发生错误，重试中')
             try:
                 subprocess.Popen(path)
-                logger.info(f'{program}启动：{path}')
+                logger.info(f'启动：{path}')
                 return True
             except Exception as e:
-                logger.error(f'启动{program}时发生错误：{e}')
+                logger.error(f'启动时发生错误：{e}')
             return False
 
-    def stop_program(self, program: str) -> bool:
+    def stop_program(self, window: Window) -> bool:
         """终止程序"""
-        process = getattr(self, f'{program}_process_name')
+        process = window.process_name
         try:
-            # os.system(f'taskkill /f /im {self.process_name}')
             self.terminate_named_process(process)
-            logger.info(f'{program}终止：{process}')
+            logger.info(f'终止：{process}')
             return True
         except Exception as e:
-            logger.error(f'终止{program}时发生错误：{e}')
+            logger.error(f'终止时发生错误：{e}')
             return False
 
     @staticmethod
@@ -87,12 +82,12 @@ class WinClient:
                 process_username = process.username().split('\\')[-1]  # 从进程所有者中提取用户名
                 if system_username == process_username:
                     proc_to_terminate = psutil.Process(process.info['pid'])
-                    proc_to_terminate.terminate()  # 尝试终止进程
-                    proc_to_terminate.wait(termination_timeout)  # 等待进程终止
+                    proc_to_terminate.terminate()
+                    proc_to_terminate.wait(termination_timeout)
 
     @staticmethod
     def set_foreground_window_with_retry(hwnd):
-        """尝试将窗口设置为前台，失败时先最小化再恢复。"""
+        """尝试将窗口设置为前台，失败时先最小化再恢复"""
 
         def toggle_window_state(hwnd, minimize=False):
             """最小化或恢复窗口。"""
@@ -108,39 +103,37 @@ class WinClient:
             if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
                 raise Exception('Failed to set window foreground')
 
-    def switch_to_program(self, program: str) -> bool:
+    def switch_to_program(self, window: Window) -> bool:
         """将程序窗口切换到前台"""
-        window_class = getattr(self, f'{program}_window_class')
-        window_name = getattr(self, f'{program}_window_name')
         try:
-            hwnd = win32gui.FindWindow(window_class, window_name)
+            hwnd = win32gui.FindWindow(window.class_name, window.title)
             if hwnd == 0:
-                logger.warning(f'{program}窗口未找到')
+                logger.warning(f'窗口未找到：{window.title}')
                 return False
             self.set_foreground_window_with_retry(hwnd)
-            logger.info(f'{program}窗口已切换到前台')
+            logger.info(f'窗口已切换到前台：{window.title}')
             return True
         except Exception as e:
-            logger.error(f'激活{program}窗口时发生错误：{e}')
+            logger.error(f'激活窗口时发生错误：{e}')
             return False
 
-    def get_resolution(self, program: str) -> Optional[Tuple[int, int]]:
+    def get_resolution(self, window: Window) -> Optional[Tuple[int, int]]:
         """检查程序窗口的分辨率"""
-        window_class = getattr(self, f'{program}_window_class')
-        window_name = getattr(self, f'{program}_window_name')
         try:
-            hwnd = win32gui.FindWindow(window_class, window_name)
+            hwnd = win32gui.FindWindow(window.class_name, window.title)
             if hwnd == 0:
-                logger.warning(f'{program}窗口未找到')
+                logger.warning(f'窗口未找到：{window.title}')
                 return None
             _, _, window_width, window_height = win32gui.GetClientRect(hwnd)
+            window.resolution = (window_width, window_height)
             return window_width, window_height
         except IndexError:
-            logger.warning(f'{program}窗口未找到')
+            logger.warning(f'窗口未找到：{window.title}')
             return None
 
     def shutdown(
         self,
+        window: Window,
         action: Literal['Exit', 'Loop', 'Shutdown', 'Sleep', 'Hibernate', 'Restart', 'Logoff', 'RunScript'],
         delay: int = 60,
     ) -> bool:
@@ -154,7 +147,7 @@ class WinClient:
         返回:
             操作成功执行返回True，否则返回False。
         """
-        self.stop_game()
+        self.stop_program(window)
         if action not in ['Shutdown', 'Sleep', 'Hibernate', 'Restart', 'Logoff', 'RunScript']:
             return True
 
@@ -226,7 +219,7 @@ class WinClient:
             logger.error(f'启动脚本时发生错误：{str(e)}')
             return False
 
-    def change_resolution(self, program: str, client_width, client_height):
+    def change_resolution(self, window: Window, client_width, client_height):
         """
         设置窗口客户区大小为指定分辨率
 
@@ -234,16 +227,13 @@ class WinClient:
             client_width: 客户区宽度(像素)
             client_height: 客户区高度(像素)
         """
-        window_class = getattr(self, f'{program}_window_class')
-        window_name = getattr(self, f'{program}_window_name')
         try:
             # 查找窗口句柄
-            hwnd = win32gui.FindWindow(window_class, window_name)
+            hwnd = win32gui.FindWindow(window.class_name, window.title)
             if hwnd == 0:
-                logger.error(f'{program}窗口未找到')
-                raise Exception(f'{program}窗口未找到')
+                logger.error(f'窗口未找到：{window.title}')
+                raise Exception(f'窗口未找到：{window.title}')
 
-            # 获取窗口矩形和客户区矩形
             rect = win32gui.GetClientRect(hwnd)
             window_rect = win32gui.GetWindowRect(hwnd)
 
@@ -279,14 +269,13 @@ class WinClient:
                     f'设置分辨率不完全匹配: 期望 {client_width}x{client_height}, 实际 {new_rect[2]}x{new_rect[3]}'
                 )
             else:
-                logger.info(f'成功设置{program}客户区分辨率为: {client_width}x{client_height}')
+                logger.info(f'成功设置客户区分辨率为: {client_width}x{client_height}')
 
         except Exception as e:
-            logger.error(f'设置{program}分辨率时发生错误: {e}')
-            logger.error(f'目标分辨率: {client_width}x{client_height}')
-            raise Exception(f'无法设置{program}分辨率: {e}')
+            logger.error(f'设置分辨率时发生错误: {e}')
+            raise Exception(f'无法设置分辨率: {e}')
 
-    def change_resolution_compat(self, program: str, client_width, client_height):
+    def change_resolution_compat(self, window: Window, client_width, client_height):
         """
         设置窗口客户区大小为指定分辨率（兼容 DPI 缩放）
 
@@ -294,14 +283,12 @@ class WinClient:
             client_width: 客户区宽度(像素)
             client_height: 客户区高度(像素)
         """
-        window_class = getattr(self, f'{program}_window_class')
-        window_name = getattr(self, f'{program}_window_name')
         try:
             # 查找窗口句柄
-            hwnd = win32gui.FindWindow(window_class, window_name)
+            hwnd = win32gui.FindWindow(window.class_name, window.title)
             if hwnd == 0:
-                logger.error(f'{program}窗口未找到')
-                raise Exception(f'{program}窗口未找到')
+                logger.error(f'窗口未找到：{window.title}')
+                raise Exception(f'窗口未找到：{window.title}')
 
             # 获取窗口的 DPI（Win10+ 支持）
             try:
@@ -310,7 +297,7 @@ class WinClient:
             except Exception:
                 # 如果不支持，就用系统 DPI（一般是 96）
                 dpi = 96
-            logger.debug(f'{program}窗口 DPI: {dpi}')
+            logger.debug(f'窗口 DPI: {dpi}')
 
             # 准备调用 AdjustWindowRectExForDpi
             AdjustWindowRectExForDpi = ctypes.windll.user32.AdjustWindowRectExForDpi
@@ -337,7 +324,7 @@ class WinClient:
 
             window_width = rect.right - rect.left
             window_height = rect.bottom - rect.top
-            logger.debug(f'需要设置的{program}窗口矩形: {window_width}x{window_height}')
+            logger.debug(f'需要设置的{window.name}窗口矩形: {window_width}x{window_height}')
 
             # 设置窗口大小
             result = win32gui.SetWindowPos(
@@ -357,33 +344,30 @@ class WinClient:
                     f'设置分辨率不完全匹配: 期望 {client_width}x{client_height}, 实际 {new_rect[2]}x{new_rect[3]}'
                 )
             else:
-                logger.info(f'成功设置{program}客户区分辨率为: {client_width}x{client_height}')
+                logger.info(f'成功设置客户区分辨率为: {client_width}x{client_height}')
 
         except Exception as e:
-            logger.error(f'设置{program}分辨率时发生错误: {e}')
-            logger.error(f'目标分辨率: {client_width}x{client_height}')
-            raise Exception(f'无法设置{program}分辨率: {e}')
+            logger.error(f'设置分辨率时发生错误: {e}')
+            raise Exception(f'无法设置分辨率: {e}')
 
-    def ensure_resolution(self, program: str, client_width, client_height, retries=5, interval=1.0):
+    def ensure_resolution(self, window: Window, client_width, client_height, retries=5, interval=1.0):
         """确保窗口分辨率被成功设置"""
-        compat = getattr(self.config, f'PCClient_{program.title()}ResolutionCompat')
+        compat = getattr(self.config, f'PCClient_{window.title}ResolutionCompat', False)
         for i in range(retries):
             if compat:
-                self.change_resolution_compat(program, client_width, client_height)
+                self.change_resolution_compat(window, client_width, client_height)
             else:
-                self.change_resolution(program, client_width, client_height)
+                self.change_resolution(window, client_width, client_height)
             time.sleep(interval)
-            hwnd = win32gui.FindWindow(
-                getattr(self, f'{program}_window_class'), getattr(self, f'{program}_window_name')
-            )
+            hwnd = win32gui.FindWindow(window.class_name, window.title)
             if hwnd:
                 rect = win32gui.GetClientRect(hwnd)
                 if rect[2] == client_width and rect[3] == client_height:
-                    logger.info(f'{program} 分辨率成功设置为 {client_width}x{client_height}')
+                    logger.info(f'{window.title} 分辨率成功设置为 {client_width}x{client_height}')
                     return True
                 else:
-                    logger.warning(f'{program} 分辨率未成功设置，重试中...')
-        logger.error(f'{program} 分辨率无法设置为 {client_width}x{client_height}')
+                    logger.warning(f'{window.title} 分辨率未成功设置，重试中...')
+        logger.error(f'{window.title} 分辨率无法设置为 {client_width}x{client_height}')
         return False
 
     def change_reg_resolution(self, width: int, height: int):
@@ -464,7 +448,7 @@ class WinClient:
         else:
             logger.debug(f'桌面分辨率: {screen_width}x{screen_height}')
 
-    def check_resolution(self, program: str, target_width: int, target_height: int) -> None:
+    def check_resolution(self, window: Window, target_width: int, target_height: int) -> None:
         """
         检查游戏窗口的分辨率是否符合目标设置。
 
@@ -474,15 +458,15 @@ class WinClient:
             target_width (int): 目标分辨率的宽度。
             target_height (int): 目标分辨率的高度。
         """
-        resolution = self.get_resolution(program)
+        resolution = self.get_resolution(window)
         if not resolution:
-            raise Exception(f'{program}分辨率获取失败')
+            raise Exception(f'{window.title} 分辨率获取失败')
         window_width, window_height = resolution
 
         if window_width != target_width or window_height != target_height:
             logger.error(
-                f'{program}分辨率: {window_width}x{window_height} ≠ {target_width}x{target_height}，分辨率错误，请重试'
+                f'{window.title} 分辨率: {window_width}x{window_height} ≠ {target_width}x{target_height}，分辨率错误'
             )
-            raise Exception(f'{program}分辨率错误')
+            raise Exception(f'{window.title} 分辨率错误')
         else:
-            logger.debug(f'{program}分辨率: {window_width}x{window_height}')
+            logger.debug(f'{window.title} 分辨率: {window_width}x{window_height}')

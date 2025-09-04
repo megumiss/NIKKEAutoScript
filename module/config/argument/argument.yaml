@@ -64,8 +64,6 @@ EmulatorInfo:
 PCClient:
   Screens:
     value: false
-  LauncherResolutionCompat:
-    value: false
   GameResolutionCompat:
     value: false
   Account:
@@ -87,9 +85,6 @@ PCClientInfo:
     value: ''
   GameProcessName:
     value: ''
-  GamePath:
-    value: ''
-    type: textarea
 Optimization:
   AutoRedCircle: false
   OcrModelType:

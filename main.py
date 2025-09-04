@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from functools import cached_property
 
 import inflection
-import pyuac
 
 from module.base.decorator import del_cached_property
 from module.config.config import NikkeConfig, TaskEnd
@@ -16,7 +15,6 @@ from module.exception import (
     GameNotRunningError,
     GamePageUnknownError,
     GameServerUnderMaintenance,
-    GameStart,
     GameStuckError,
     GameTooManyClickError,
     RequestHumanTakeover,
@@ -56,8 +54,6 @@ class NikkeAutoScript:
     def device(self):
         try:
             if self.config.Client_Platform == 'win':
-                if not pyuac.isUserAdmin():
-                    pyuac.runAsAdmin(False)
                 from module.device.win.device import Device
 
                 device = Device(config=self.config)

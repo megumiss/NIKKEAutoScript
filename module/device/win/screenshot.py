@@ -46,7 +46,7 @@ class Screenshot:
         return -min_x, -min_y
 
     @staticmethod
-    def take_screenshot(title, screens=False, crop=(0, 0, 1, 1)):
+    def take_screenshot(title, resolution, screens=False, crop=(0, 0, 1, 1)):
         window = Screenshot.get_window(title)
         if window:
             left, top, width, height = Screenshot.get_window_region(window)
@@ -67,9 +67,9 @@ class Screenshot:
             )
 
             real_width, _ = Screenshot.get_window_real_resolution(window)
-            if real_width > 900:
-                screenshot_scale_factor = 900 / real_width
-                screenshot = screenshot.resize((int(720 * crop[2]), int(600 * crop[3])))
+            if real_width > resolution[0]:
+                screenshot_scale_factor = resolution[0] / real_width
+                screenshot = screenshot.resize((int(resolution[0] * crop[2]), int(resolution[1] * crop[3])))
             else:
                 screenshot_scale_factor = 1
 

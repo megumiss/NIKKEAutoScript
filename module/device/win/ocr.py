@@ -4,6 +4,7 @@ from datetime import time
 from module.base.timer import Timer
 from module.base.utils import float2str, point2str
 from module.logger import logger
+from module.ocr.ocr import Ocr
 
 
 class LauncherOcr:

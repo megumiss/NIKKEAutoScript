@@ -1,12 +1,21 @@
+import ctypes
+import os
 import time
 from collections import deque
+from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property, wraps
+
+import psutil
+import win32con
+import win32gui
+from numpy import ndarray
 
 from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import ensure_int, image_size, point2str
 from module.config.config import NikkeConfig
+from module.device.win.screenshot import Screenshot
 from module.device.win.utils import (
     RETRY_TRIES,
     PackageNotInstalled,
@@ -16,7 +25,6 @@ from module.exception import RequestHumanTakeover
 from module.logger import logger
 
 from .input import Input
-from .screenshot import Screenshot
 
 
 class ScreenshotSizeError(Exception):
@@ -80,26 +88,84 @@ def retry(func):
     return retry_wrapper
 
 
+@dataclass
+class Window:
+    """统一的窗口对象"""
+
+    name: str
+    title: str
+    class_name: str
+    process_name: str
+    path: str
+    hwnd: int = field(default=0)
+    resolution: tuple = field(default=None)
+    offset: tuple = field(default=(0, 0))
+    image: ndarray = field(default=None)
+    screenshot_scale_factor: float = field(default=1.0)
+
+    def find_hwnd(self) -> int:
+        """查找窗口句柄"""
+        self.hwnd = win32gui.FindWindow(self.class_name, self.title)
+        return self.hwnd
+
+    def switch_to_foreground(self) -> bool:
+        """切换到前台"""
+        hwnd = self.find_hwnd()
+        if hwnd == 0:
+            logger.warning(f'窗口未找到：{self.title}')
+            return False
+        ctypes.windll.user32.ShowWindow(hwnd, win32con.SW_RESTORE)
+        if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
+            logger.error(f'切换前台失败：{self.title}')
+            return False
+        logger.info(f'切换前台：{self.title}')
+        return True
+
+    def start(self) -> bool:
+        """启动程序"""
+        if not os.path.exists(self.path):
+            logger.error(f'路径不存在：{self.path}')
+            return False
+        folder = self.path.rpartition('\\')[0]
+        os.system(f'cmd /C start "" /D "{folder}" "{self.path}"')
+        logger.info(f'启动：{self.path}')
+        return True
+
+    def stop(self) -> bool:
+        """终止程序"""
+        try:
+            for proc in psutil.process_iter(attrs=['pid', 'name']):
+                if self.process_name in proc.info['name']:
+                    psutil.Process(proc.info['pid']).terminate()
+                    logger.info(f'进程终止：{self.process_name}')
+                    return True
+        except Exception as e:
+            logger.error(f'终止失败：{e}')
+        return False
+
+    def get_resolution(self) -> tuple:
+        """获取窗口客户区分辨率"""
+        hwnd = self.find_hwnd()
+        if hwnd == 0:
+            logger.warning(f'窗口未找到：{self.title}')
+            return None
+        _, _, w, h = win32gui.GetClientRect(hwnd)
+        self.resolution = (w, h)
+        return self.resolution
+
+
 class Automation:
+    """自动化管理类，用于管理与游戏窗口相关的自动化操作"""
+
     config: NikkeConfig
 
-    """
-    自动化管理类，用于管理与游戏窗口相关的自动化操作。
-    """
-
     def __init__(self, config):
-        """
-        :param window_title: 游戏窗口的标题。
-        :param logger: 用于记录日志的Logger对象，可选参数。
-        """
         if isinstance(config, str):
             self.config = NikkeConfig(config, task=None)
         else:
             self.config = config
         super().__init__()
 
-        self.window_offset = (0, 0)
-        # self.screenshot = None
         self._init_input()
         self.img_cache = {}
         self._screenshot_interval = Timer(float(self.config.Emulator_ScreenshotInterval))
@@ -120,11 +186,11 @@ class Automation:
         self.secretly_press_key = self.input_handler.secretly_press_key
         self.press_mouse = self.input_handler.press_mouse
 
-    def screenshot(self, window_title: str, crop=(0, 0, 1, 1)):
+    def screenshot(self, window: Window, crop=(0, 0, 1, 1)):
         """
-        捕获游戏窗口的截图。
-        :param crop: 截图的裁剪区域，格式为(x1, y1, x2, y2)，默认为全屏。
-        :return: 成功时返回截图及其位置和缩放因子，失败时抛出异常。
+        捕获窗口截图
+        :param window: Window 对象
+        :param crop: 裁剪区域
         """
         # 两次截图间隔时间
         self._screenshot_interval.wait()
@@ -133,16 +199,19 @@ class Automation:
         start_time = time.time()
         while True:
             try:
-                result = Screenshot.take_screenshot(window_title, self.config.PCClient_Screens, crop=crop)
+                result = Screenshot.take_screenshot(
+                    window.title, window.resolution, self.config.PCClient_Screens, crop=crop
+                )
                 if result:
-                    self.image, self.screenshot_pos, self.screenshot_scale_factor = result
-                    self.window_offset = self.screenshot_pos[0], self.screenshot_pos[1]
-                    self.image = self._handle_orientated_image(self.image)
-                    self.screenshot_deque.append({'time': datetime.now(), 'image': self.image})
+                    image, pos, scale = result
+                    window.image = self._handle_orientated_image(image, window.resolution)
+                    window.offset = (pos[0], pos[1])
+                    window.screenshot_scale_factor = scale
+                    self.screenshot_deque.append({'time': datetime.now(), 'image': window.image})
                     # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
                     return result
                 else:
-                    logger.error('截图失败：没有找到游戏窗口')
+                    logger.error(f'截图失败：没有找到窗口 {window.title}')
             except Exception as e:
                 logger.error(f'截图失败：{e}')
             time.sleep(1)
@@ -153,7 +222,7 @@ class Automation:
     def screenshot_deque(self):
         return deque(maxlen=int(self.config.Error_ScreenshotLength))
 
-    def _handle_orientated_image(self, image):
+    def _handle_orientated_image(self, image, resolution):
         """
         Args:
             image (np.ndarray):
@@ -161,19 +230,14 @@ class Automation:
         Returns:
             np.ndarray:
         """
-        width, height = image_size(self.image)
-        if width == 900 or height == 600:
+        width, height = image_size(image)
+        if width == resolution[0] or height == resolution[1]:
             return image
 
         raise ScreenshotSizeError("The emulator's display size must be 720*1280")
 
-    def click(self, button: Button, click_offset=0, action='click'):
-        """Method to click a button.
-
-        Args:
-            button (button.Button): AzurLane Button instance.
-            control_check (bool):
-        """
+    def click(self, window: Window, button: Button, click_offset=0, action='click'):
+        """点击窗口中的按钮"""
         x, y = button.location
         # 如果 click_offset 是单个数字，代表 x 和 y 都偏移同样的量
         if isinstance(click_offset, (int, float)):
@@ -187,8 +251,8 @@ class Automation:
         x, y = ensure_int(x, y)
         logger.info('Click %s @ %s' % (point2str(x, y), button))
 
-        x += self.window_offset[0]
-        y += self.window_offset[1]
+        x += window.offset[0]
+        y += window.offset[1]
         # x, y = self.calculate_click_position(coordinates, offset)
         # 动作到方法的映射
         action_map = {
