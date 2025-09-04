@@ -1155,6 +1155,21 @@ class NKASGUI(Frame):
             NKAS is a free open source software, if you paid for NKAS from any channel, please refund.
             NKAS 是一款免费开源软件，如果你在任何渠道付费购买了NKAS，请退款。
             Project repository 项目地址：`https://github.com/megumiss/NIKKEAutoScript`
+
+            详细安装指南请参阅： `https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南`
+            PC端使用请注意事项： `https://github.com/megumiss/NIKKEAutoScript/issues/57`
+
+            💡 **寻求帮助**  
+            如果在使用过程中遇到问题，您可以通过以下方式获取帮助：
+            在 `GitHub Issues` 中提交问题
+            加入划水 QQ 群：`823265807`
+
+            如果喜欢本项目，可以送作者一杯蜜雪冰城🍦  
+            您的支持就是作者开发和维护项目的动力🚀  
+            <p>
+                <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="微信" width="200"/>
+                <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="支付宝" width="200"/>
+            </p>
             """
             ).style("text-align: center")
 
