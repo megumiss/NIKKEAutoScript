@@ -267,14 +267,14 @@ class Automation:
         else:
             raise ValueError(f'未知的动作类型: {action}')
 
-    def long_click_minitouch(self, x, y, duration=1.0, action='hold'):
+    def long_click_minitouch(self, window: Window, x, y, duration=1.0, action='hold'):
         duration = int(duration * 1000)
 
         x = x * 2 * 0.9
         y = y / 2 * 1.12
 
-        x += self.window_offset[0]
-        y += self.window_offset[1]
+        x += window.offset[0]
+        y += window.offset[1]
         # 动作到方法的映射
         action_map = {
             'hold': self.press_mouse_click,
@@ -284,9 +284,9 @@ class Automation:
         else:
             raise ValueError(f'未知的动作类型: {action}')
 
-    def click_minitouch(self, x, y, action='click'):
-        x += self.window_offset[0]
-        y += self.window_offset[1]
+    def click_minitouch(self, window: Window, x, y, action='click'):
+        x += window.offset[0]
+        y += window.offset[1]
         # 动作到方法的映射
         action_map = {
             'click': self.mouse_click,
@@ -300,14 +300,14 @@ class Automation:
             raise ValueError(f'未知的动作类型: {action}')
 
     def swipe(
-        self, p1, p2, speed=15, hold=0, method='swipe', label='Swipe', distance_check=True, handle_control_check=True
+        self, window: Window, p1, p2, speed=15, hold=0, method='swipe', label='Swipe', distance_check=True, handle_control_check=True
     ):
         p1, p2 = ensure_int(p1, p2)
         logger.info('%s %s -> %s' % (label, point2str(*p1), point2str(*p2)))
 
-        p1 = p1[0] + self.window_offset[0], p1[1] + self.window_offset[1]
+        p1 = p1[0] + window.offset[0], p1[1] + self.window.offset[1]
         if method == 'scroll':
-            p2 = p2[0] + self.window_offset[0], p2[1] + self.window_offset[1]
+            p2 = p2[0] + self.window.offset[0], p2[1] + self.window.offset[1]
             start_x, start_y = p1
             end_x, end_y = p2
 
@@ -325,7 +325,7 @@ class Automation:
             self.mouse_scroll(scroll_count, direction=direction)
         elif method == 'swipe':
             # 原始目标点
-            raw_p2 = (p2[0] + self.window_offset[0], p2[1] + self.window_offset[1])
+            raw_p2 = (p2[0] + self.window.offset[0], p2[1] + self.window.offset[1])
             dx, dy = raw_p2[0] - p1[0], raw_p2[1] - p1[1]
 
             # 判断主要滑动方向

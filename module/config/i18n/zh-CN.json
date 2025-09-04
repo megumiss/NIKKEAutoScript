@@ -337,23 +337,23 @@
     },
     "LauncherTitleName": {
       "name": "启动器标题",
-      "help": "启动器窗口的标题栏名称"
+      "help": "启动器窗口的标题栏名称，一般无需填写"
     },
     "LauncherProcessName": {
       "name": "启动器进程",
-      "help": "启动进程的名称"
+      "help": "启动进程的名称，一般无需填写"
     },
     "LauncherPath": {
       "name": "启动器路径",
-      "help": "游戏安装路径，必填，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
+      "help": "游戏启动器路径，必填，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
     },
     "GameTitleName": {
       "name": "游戏标题",
-      "help": "游戏窗口的标题栏名称"
+      "help": "游戏窗口的标题栏名称，一般无需填写"
     },
     "GameProcessName": {
       "name": "游戏进程",
-      "help": "游戏进程的名称"
+      "help": "游戏进程的名称，一般无需填写"
     }
   },
   "Optimization": {

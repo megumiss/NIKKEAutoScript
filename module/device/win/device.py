@@ -11,12 +11,9 @@ from module.exception import (
     RequestHumanTakeover,
 )
 from module.logger import logger
-from module.ocr.models import OCR_MODEL
 
 
 class Device(AppControl, Automation):
-    get_location = OCR_MODEL.get_location
-
     # 尝试检测的 Button 集合
     detect_record = set()
     # 点击过的 Button 队列

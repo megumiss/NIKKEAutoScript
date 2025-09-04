@@ -5,15 +5,14 @@ import cv2
 import numpy as np
 import psutil
 
-from module.config.account import load_account
 from module.config.config import NikkeConfig
 from module.config.language import set_language
 from module.config.server import set_server
-from module.device.win.automation import Automation, Window
+from module.device.win.automation import Window
 from module.device.win.game_control import WinClient
+from module.device.win.login import Login
 from module.exception import RequestHumanTakeover
 from module.logger import logger
-from module.ocr.ocr import Ocr
 
 GAME_TITLE = {
     'intl': 'NIKKE',
@@ -33,7 +32,7 @@ LAUNCHER_PROCESS = {
 }
 
 
-class AppControl(WinClient, Automation):
+class AppControl(WinClient, Login):
     config: NikkeConfig
 
     def __init__(self, config):
@@ -85,6 +84,8 @@ class AppControl(WinClient, Automation):
         self.config.PCClientInfo_LauncherTitleName = launcher_window_title
         self.config.PCClientInfo_GameProcessName = game_process_name
         self.config.PCClientInfo_GameTitleName = game_window_title
+
+        self.interval_timer = {}
 
         # self.script_path = (
         #     os.path.normpath(script_path)
@@ -150,7 +151,7 @@ class AppControl(WinClient, Automation):
                 # 设置启动器分辨率
                 # self.ensure_resolution(PROGRAM_LAUNCHER, 900, 600)
                 # self.check_resolution(PROGRAM_LAUNCHER, 900, 600)
-                time.sleep(5)
+                # time.sleep(5)
 
                 # 登录
                 self.app_login()
@@ -188,29 +189,18 @@ class AppControl(WinClient, Automation):
             else:
                 logger.warning('Game path config error')
                 raise RequestHumanTakeover
-        except Exception:
+        except Exception as e:
+            logger.exception(e)
             raise RequestHumanTakeover
 
     def app_login(self):
-        # 启动器截图
-        self.get_resolution(self.launcher)
-        super().screenshot(self.launcher)
-        cv2.imwrite('launcher.png', np.array(self.launcher.image))
-
-        print(load_account(self.config.config_name))
-        print(self.nikke_name)
+        """检查窗口状态并登录"""
+        try:
+            self.login()
+        except Exception as e:
+            logger.exception(e)
+            raise RequestHumanTakeover
 
         # 界面刷新，再次设置启动器分辨率
         # self.ensure_resolution(self.launcher, 900, 600)
         # self.check_resolution(self.launcher, 900, 600)
-
-    @property
-    def nikke_name(self) -> str:
-        model_type = self.config.Optimization_OcrModelType
-        NIKKE_NAME = Ocr(
-            [(0, 0, self.launcher.resolution[0], self.launcher.resolution[0])],
-            name='NIKKE_NAME',
-            model_type=model_type,
-            lang='ch',
-        )
-        return NIKKE_NAME.ocr(self.launcher.image)['text']
