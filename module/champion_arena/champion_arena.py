@@ -49,6 +49,7 @@ class ChampionArena(UI, ArenaBase):
         """应援"""
         logger.info('Open promotion or champion')
         click_timer = Timer(0.3)
+        confirm_timer = Timer(3, count=3)
 
         # 打开晋级赛或者冠军争霸赛
         while 1:
@@ -78,12 +79,17 @@ class ChampionArena(UI, ArenaBase):
 
             # 检查应援按钮
             if self.appear(PROMOTION_CHECK, offset=30) or self.appear(CHAMPION_CHECK, offset=30):
-                if self.appear(CHEER_ENABLE, offset=10):
-                    click_timer.reset()
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
                     break
-                else:
-                    logger.info('Cheer already done')
-                    raise ChampionArenaIsUnavailable
+            else:
+                confirm_timer.clear()
+
+        # 检查应援按钮状态
+        if not self.appear(CHEER_ENABLE, offset=10):
+            logger.info('Cheer already done')
+            raise ChampionArenaIsUnavailable
 
         logger.info('Cheer a nikke')
         cheer_done = False
@@ -133,7 +139,6 @@ class ChampionArena(UI, ArenaBase):
 
     def ensure_into_champion_arena(self, skip_first_screenshot=True):
         logger.hr('CHAMPION ARENA START')
-        confirm_timer = Timer(3, count=3)
         click_timer = Timer(0.3)
 
         # 进入竞技场
@@ -156,22 +161,9 @@ class ChampionArena(UI, ArenaBase):
                 click_timer.reset()
                 continue
 
-            # 应援结果
-            if (
-                click_timer.reached()
-                and self.appear(CHEER_RESULT, offset=10, static=False)
-                and self.appear_then_click(CHEER_RESULT_NEXT, offset=10, interval=1, static=False)
-            ):
-                click_timer.reset()
-                continue
-
             if self.appear(CHAMPION_ARENA_CHECK, offset=30):
-                if not confirm_timer.started():
-                    confirm_timer.start()
-                if confirm_timer.reached():
-                    break
-            else:
-                confirm_timer.clear()
+                click_timer.reset()
+                break
 
     def run(self):
         self.ui_ensure(page_arena)
