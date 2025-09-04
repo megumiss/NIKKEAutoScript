@@ -305,9 +305,9 @@ class Automation:
         p1, p2 = ensure_int(p1, p2)
         logger.info('%s %s -> %s' % (label, point2str(*p1), point2str(*p2)))
 
-        p1 = p1[0] + window.offset[0], p1[1] + self.window.offset[1]
+        p1 = p1[0] + window.offset[0], p1[1] + window.offset[1]
         if method == 'scroll':
-            p2 = p2[0] + self.window.offset[0], p2[1] + self.window.offset[1]
+            p2 = p2[0] + window.offset[0], p2[1] + window.offset[1]
             start_x, start_y = p1
             end_x, end_y = p2
 
@@ -325,7 +325,7 @@ class Automation:
             self.mouse_scroll(scroll_count, direction=direction)
         elif method == 'swipe':
             # 原始目标点
-            raw_p2 = (p2[0] + self.window.offset[0], p2[1] + self.window.offset[1])
+            raw_p2 = (p2[0] + window.offset[0], p2[1] + window.offset[1])
             dx, dy = raw_p2[0] - p1[0], raw_p2[1] - p1[1]
 
             # 判断主要滑动方向
