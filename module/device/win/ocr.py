@@ -14,7 +14,19 @@ from module.ocr.ocr import Ocr
 class LauncherOcr:
     get_location = OCR_MODEL.get_location
 
-    def appear_text(self, text, interval=0, lang='ch') -> bool or tuple:
+    def appear_text(self, text, threshold=0.7, interval=0, lang='ch') -> bool or tuple:
+        """
+        检测指定文本是否出现在画面上
+
+        Args:
+            text: 要检测的目标文本
+            threshold: 匹配相似度阈值 (0~1)
+            interval: 检测间隔限制（秒），0 表示不限制
+            lang: OCR 语言
+
+        Returns:
+            bool 或 tuple: 匹配成功返回 (x, y)，否则返回 False
+        """
         if interval:
             if text in self.interval_timer:
                 if self.interval_timer[text].limit != interval:
@@ -37,8 +49,7 @@ class LauncherOcr:
             self._ocr_cache['last_hash'] = current_hash
         res = self._ocr_cache['last_result']
 
-        print(res)
-        location = self.get_location(text, res)
+        location = self.get_location(text, res, threshold=threshold)
         if location:
             if interval:
                 self.interval_timer[text].reset()
@@ -46,9 +57,20 @@ class LauncherOcr:
         else:
             return False
 
-    def appear_text_then_click(self, text, interval=0) -> bool:
+    def appear_text_then_click(self, text, threshold=0.7, interval=0) -> bool:
+        """
+        检测文本并点击其中心位置
+
+        Args:
+            text: 要检测并点击的目标文本
+            threshold: 匹配相似度阈值 (0~1)
+            interval: 检测间隔限制（秒），0 表示不限制
+
+        Returns:
+            bool: 点击成功返回 True，否则返回 False
+        """
         start_time = time.time()
-        location = self.appear_text(text, interval)
+        location = self.appear_text(text, threshold=threshold, interval=interval)
         if location:
             logger.info(
                 'Click %s @ %s %ss'

@@ -1,8 +1,8 @@
+import ctypes
 import time
 
-import cv2
-import numpy as np
-import ctypes
+import win32gui
+
 from module.base.timer import Timer
 from module.config.account import load_account
 from module.device.win.automation import Automation
@@ -16,7 +16,6 @@ user32 = ctypes.windll.user32
 class Login(LauncherOcr, Automation):
     def login(self):
         logger.info('开始登录')
-        account, password = load_account(self.config.config_name)
 
         confirm_timer = Timer(30, count=10)
         need_login = False
@@ -25,10 +24,10 @@ class Login(LauncherOcr, Automation):
             self.get_resolution(self.launcher)
             super().screenshot(self.launcher)
 
-            if self.appear_text('电子邮件账号'):
+            if self.appear_text('电子邮件账号', threshold=0.9):
                 need_login = True
                 break
-            if self.appear_text('启动') or self.appear_text('更新'):
+            if self.appear_text('启动', threshold=0.9) or self.appear_text('更新', threshold=0.9):
                 break
             # 30秒超时退出
             if not confirm_timer.started():
@@ -38,6 +37,10 @@ class Login(LauncherOcr, Automation):
                 raise RequestHumanTakeover
 
         if need_login:
+            account, password = load_account(self.config.config_name)
+            if not account or not password:
+                logger.error('登录失效，请配置账号密码')
+                raise RequestHumanTakeover
             # 判断输入框是否存在邮箱
             text = self.ocr_text()
             email_loc, email_area = self.check_extra_fields(text, '电子邮件账号', '密码')
@@ -48,8 +51,8 @@ class Login(LauncherOcr, Automation):
                 logger.info('删除已存在的账户信息')
                 time.sleep(0.3)
                 # 退格键
-                for _ in range(30):
-                    self.press_key(key='backspace', wait_time=0.05)
+                # for _ in range(30):
+                self.press_key(key='backspace', wait_time=2)
                 time.sleep(0.3)
 
             # 输入邮箱
@@ -58,42 +61,48 @@ class Login(LauncherOcr, Automation):
                 self.click_minitouch(self.launcher, email_area[2] + 20, (email_area[1] + email_area[3]) / 2)
                 self.auto_type(account)
                 logger.info('输入账号完成')
-            elif self.appear_text_then_click('电子邮件账号', interval=1):
+            elif self.appear_text_then_click('电子邮件账号', threshold=0.9, interval=1):
                 time.sleep(0.3)
                 self.auto_type(account)
                 logger.info('输入账号完成')
 
             # 输入密码
-            if self.appear_text_then_click('密码', interval=1):
+            if self.appear_text_then_click('密码', threshold=0.9, interval=1):
                 time.sleep(0.3)
                 self.auto_type(password)
                 logger.info('输入密码完成')
 
             # 点击保持登录
-            if self.appear_text_then_click('保持登录', interval=1):
+            if self.appear_text_then_click('保持登录', threshold=0.9, interval=1):
                 time.sleep(0.3)
                 logger.info('点击保持登录')
 
             # 点击登录
-            if self.appear_text_then_click('登录', interval=1):
+            if self.appear_text_then_click('登录', threshold=0.9, interval=1):
                 logger.info('点击登录')
 
         while 1:
             time.sleep(3)
-            self.get_resolution(self.launcher)
-            super().screenshot(self.launcher)
 
-            if self.appear_text('暂未设置密码'):
+            try:
+                self.get_resolution(self.launcher)
+                super().screenshot(self.launcher)
+            except Exception:
+                logger.info('登录成功')
+                break
+
+            if self.appear_text('暂未设置密码', threshold=0.9):
                 logger.error('账号配置错误')
                 raise RequestHumanTakeover
-            if self.appear_text('密码错误'):
+            if self.appear_text('密码错误', threshold=0.9):
                 logger.error('密码配置错误')
                 raise RequestHumanTakeover
 
-            if self.appear_text('当前版本') and self.appear_text_then_click('启动'):
+            if self.appear_text('游戏设置', threshold=0.9) and self.appear_text_then_click('启动', threshold=0.9):
                 logger.info('点击启动')
                 continue
-            if self.appear_text('当前版本') and self.appear_text_then_click('更新'):
+
+            if self.appear_text('游戏设置', threshold=0.9) and self.appear_text_then_click('更新', threshold=0.9):
                 logger.info('点击更新')
                 continue
 
@@ -119,8 +128,6 @@ class Login(LauncherOcr, Automation):
         if lang_id in (0x0804, 0x0404):  # 简体中文 / 繁体中文
             print('当前是中文输入法，切换到英文...')
             # 模拟 Shift
-            user32.keybd_event(0x10, 0, 0, 0)  # Shift 按下
-            time.sleep(0.1)
-            user32.keybd_event(0x10, 0, 2, 0)  # Shift 抬起
+            self.press_key('shift')
         else:
             print('当前已是英文，不切换')

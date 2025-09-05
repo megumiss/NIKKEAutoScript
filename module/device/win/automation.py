@@ -214,8 +214,9 @@ class Automation:
                     logger.error(f'截图失败：没有找到窗口 {window.title}')
             except Exception as e:
                 logger.error(f'截图失败：{e}')
+                raise RuntimeError(f'截图失败：{e}')
             time.sleep(1)
-            if time.time() - start_time > 30:
+            if time.time() - start_time > 10:
                 raise RuntimeError('截图超时')
 
     @cached_property
