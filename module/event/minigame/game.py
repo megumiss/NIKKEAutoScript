@@ -6,7 +6,7 @@ from module.logger import logger
 from module.ui.page import *
 
 
-def reward(self, skip_first_screenshot=True):
+def reward(self, skip_first_screenshot=True) -> bool:
     logger.info('Receive daily reward')
     confirm_timer = Timer(2, count=3)
     click_timer = Timer(0.3)
@@ -17,12 +17,10 @@ def reward(self, skip_first_screenshot=True):
         else:
             self.device.screenshot()
 
-        if self.appear(self.minigame_assets.MINI_GAME_CHECK, offset=10) and self.appear(
-            self.minigame_assets.MINI_GAME_REWARD_DONE, offset=10
-        ):
+        # 只检查回到主页面
+        if self.appear(self.minigame_assets.MINI_GAME_CHECK, offset=10):
             if not confirm_timer.started():
                 confirm_timer.start()
-
             if confirm_timer.reached():
                 break
         else:
@@ -42,7 +40,12 @@ def reward(self, skip_first_screenshot=True):
             click_timer.reset()
             continue
 
-    logger.info('Receive daily reward done')
+    if self.appear(self.minigame_assets.MINI_GAME_REWARD_DONE, offset=10):
+        logger.info('Receive daily reward done')
+        return True
+    else:
+        logger.info('Daily reward not done')
+        return False
 
 
 def mission(self, skip_first_screenshot=True):
@@ -137,10 +140,15 @@ def start_game(self):
 def game(self):
     logger.info('Open event mini game')
 
-    # 每日
-    start_game(self)
-    # 领取每日奖励
-    reward(self)
+    # 直到每日领取
+    while 1:
+        self.device.stuck_record_clear()
+        # 每日
+        start_game(self)
+        # 领取每日奖励
+        if reward(self):
+            break
+
     # 领取任务奖励
     mission(self)
     # 回到活动主页

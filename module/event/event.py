@@ -240,8 +240,15 @@ class Event(UI):
                 break
 
             # 战斗结束
-            if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
-                click_timer.reset()
+            if click_timer.reached() and self.appear(END_FIGHTING, offset=10):
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(END_FIGHTING, offset=10):
+                        click_timer.reset()
+                        break
+                    if self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+                        click_timer.reset()
+                        continue
                 break
 
             # 快速战斗
@@ -740,8 +747,15 @@ class Event(UI):
                 self.device.screenshot()
 
                 # 战斗结束
-                if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
-                    click_timer.reset()
+                if click_timer.reached() and self.appear(END_FIGHTING, offset=10):
+                    while 1:
+                        self.device.screenshot()
+                        if not self.appear(END_FIGHTING, offset=10):
+                            click_timer.reset()
+                            break
+                        if self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+                            click_timer.reset()
+                            continue
                     break
 
                 # 关卡检查
