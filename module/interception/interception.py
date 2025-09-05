@@ -113,7 +113,16 @@ class Interception(UI):
                 if self.handle_red_circles():
                     continue
 
-            if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=(5, 5), interval=2):
+            if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(END_FIGHTING, offset=30):
+                        click_timer.reset()
+                        break
+                    if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
+                        click_timer.reset()
+                        continue
+
                 end_fighting = True
                 saved_path = self.save_drop_image(self.device.image, self.config.Interception_DropScreenshotPath)
                 if saved_path:

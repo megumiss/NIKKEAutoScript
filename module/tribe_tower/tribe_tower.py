@@ -158,8 +158,16 @@ class TribeTower(UI):
                 if (
                     click_timer.reached()
                     and not self.appear(NEXT_STAGE, offset=(30, 30))
-                    and self.appear_then_click(END_CHECK, offset=(30, 30))
+                    and self.appear(END_CHECK, offset=30)
                 ):
+                    while 1:
+                        self.device.screenshot()
+                        if not self.appear(END_CHECK, offset=30):
+                            click_timer.reset()
+                            break
+                        if self.appear_then_click(END_CHECK, offset=30, interval=1):
+                            click_timer.reset()
+                            continue
                     confirm_timer.reset()
                     click_timer.reset()
                     continue

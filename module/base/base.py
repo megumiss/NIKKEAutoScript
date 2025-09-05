@@ -99,7 +99,7 @@ class ModuleBase:
 
         return appear
 
-    def appear_text(self, text, interval=0, lang='ch') -> bool or tuple:
+    def appear_text(self, text, threshold=0.7, interval=0, lang='ch') -> bool or tuple:
         if interval:
             if text in self.interval_timer:
                 if self.interval_timer[text].limit != interval:
@@ -124,7 +124,7 @@ class ModuleBase:
             self._ocr_cache["last_hash"] = current_hash
         res = self._ocr_cache["last_result"]
 
-        location = self.device.get_location(text, res)
+        location = self.device.get_location(text, res, threshold=threshold)
         if location:
             if interval:
                 self.interval_timer[text].reset()
@@ -132,14 +132,28 @@ class ModuleBase:
         else:
             return False
 
-    def appear_text_then_click(self, text, interval=0) -> bool:
+    def appear_text_then_click(self, text, threshold=0.7, interval=0) -> bool:
+        """
+        检测指定文本是否出现在画面上，并点击其中心坐标
+
+        Args:
+            text: 要检测并点击的目标文本
+            threshold: 匹配相似度阈值 (0~1)
+            interval: 检测间隔限制（秒），0 表示不限制
+
+        Returns:
+            bool: 点击成功返回 True，否则返回 False
+        """
         start_time = time.time()
-        location = self.appear_text(text, interval)
+        location = self.appear_text(text, threshold=threshold, interval=interval)
         if location:
             self.device.click_minitouch(location[0], location[1])
             logger.info(
-                'Click %s @ %s %ss' % (
-                    point2str(location[0], location[1]), f"'{text}'", float2str(time.time() - start_time))
+                "Click %s @ %s %ss" % (
+                    point2str(location[0], location[1]),
+                    f"'{text}'",
+                    float2str(time.time() - start_time)
+                )
             )
             return True
         else:
