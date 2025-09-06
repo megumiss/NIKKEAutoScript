@@ -16,19 +16,19 @@ from module.logger import logger
 
 GAME_TITLE = {
     'intl': 'NIKKE',
-    'hwt': '勝利女神：妮姬',
+    'hmt': '勝利女神：妮姬',
 }
 GAME_PROCESS = {
     'intl': 'nikke.exe',
-    'hwt': 'nikke_hmt.exe',
+    'hmt': 'nikke.exe',
 }
 LAUNCHER_TITLE = {
     'intl': 'NIKKE',
-    'hwt': 'NIKKE',
+    'hmt': 'NIKKE',
 }
 LAUNCHER_PROCESS = {
     'intl': 'nikke_launcher.exe',
-    'hwt': 'nikke_launcher_hmt.exe',
+    'hmt': 'nikke_launcher_hmt.exe',
 }
 
 

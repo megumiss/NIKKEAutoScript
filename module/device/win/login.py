@@ -19,29 +19,28 @@ class Login(LauncherOcr, Automation):
 
         confirm_timer = Timer(30, count=10)
         need_login = False
-        while 1:
+        while True:
             time.sleep(3)
-            
+
             try:
                 self.get_resolution()
                 super().screenshot()
             except Exception:
-                if self.check_program():
+                if self.check_program() and self.switch_to_program():
                     logger.info('启动器打开成功')
                     break
-                continue
-
-            if self.appear_text('电子邮件账号', threshold=0.9):
-                need_login = True
-                break
-            if self.appear_text('启动', threshold=0.9) or self.appear_text('更新', threshold=0.9):
-                break
-            # 30秒超时退出
-            if not confirm_timer.started():
-                confirm_timer.start()
-            if confirm_timer.reached():
-                logger.error('打开启动器超时，未知错误')
-                raise RequestHumanTakeover
+            else:
+                if self.appear_text('电子邮件账号', threshold=0.9):
+                    need_login = True
+                    break
+                if self.appear_text('启动', threshold=0.9) or self.appear_text('更新', threshold=0.9):
+                    break
+            finally:
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    logger.error('打开启动器超时，未知错误')
+                    raise RequestHumanTakeover
 
         if need_login:
             account, password = load_account(self.config.config_name)
@@ -50,22 +49,24 @@ class Login(LauncherOcr, Automation):
                 raise RequestHumanTakeover
             # 判断输入框是否存在邮箱
             text = self.ocr_text()
+            # 忘记密码的坐标，取x轴
+            pass_loc = self.get_location('忘记密码', text)
             email_loc, email_area = self.check_extra_fields(text, '电子邮件账号', '密码')
             if email_loc:
                 # 输入框尾部
-                self.click_minitouch( email_area[2] + 20, (email_area[1] + email_area[3]) / 2)
+                self.click_minitouch(pass_loc[0], (email_area[1] + email_area[3]) / 2)
 
                 logger.info('删除已存在的账户信息')
                 time.sleep(0.3)
                 # 退格键
-                # for _ in range(30):
-                self.press_key(key='backspace', wait_time=2)
+                for _ in range(30):
+                    self.press_key(key='backspace', wait_time=0.05)
                 time.sleep(0.3)
 
             # 输入邮箱
             if email_loc:
                 time.sleep(0.3)
-                self.click_minitouch(email_area[2] + 20, (email_area[1] + email_area[3]) / 2)
+                self.click_minitouch(pass_loc[0], (email_area[1] + email_area[3]) / 2)
                 self.auto_type(account)
                 logger.info('输入账号完成')
             elif self.appear_text_then_click('电子邮件账号', threshold=0.9, interval=1):
@@ -88,7 +89,9 @@ class Login(LauncherOcr, Automation):
             if self.appear_text_then_click('登录', threshold=0.9, interval=1):
                 logger.info('点击登录')
 
-        while 1:
+        confirm_timer = Timer(60, count=20)
+        in_game = False
+        while True:
             time.sleep(3)
 
             try:
@@ -96,25 +99,37 @@ class Login(LauncherOcr, Automation):
                 super().screenshot()
             except Exception:
                 self.current_window = self.game
-                if self.check_program():
+                if self.check_program() and self.switch_to_program():
+                    in_game = True
                     logger.info('游戏登录成功')
                     break
-                self.current_window = self.launcher
-                continue
+            else:
+                if self.appear_text('账号格式错误', threshold=0.9):
+                    logger.error('账号格式错误')
+                    raise RequestHumanTakeover
+                if self.appear_text('暂未设置密码', threshold=0.9):
+                    logger.error('账号配置错误')
+                    raise RequestHumanTakeover
+                if self.appear_text('密码错误', threshold=0.9):
+                    logger.error('密码配置错误')
+                    raise RequestHumanTakeover
 
-            if self.appear_text('暂未设置密码', threshold=0.9):
-                logger.error('账号配置错误')
-                raise RequestHumanTakeover
-            if self.appear_text('密码错误', threshold=0.9):
-                logger.error('密码配置错误')
-                raise RequestHumanTakeover
+                if self.appear_text('游戏设置', threshold=0.9):
+                    if self.appear_text_then_click('启动', threshold=0.9):
+                        logger.info('点击启动')
+                        continue
+                    if self.appear_text_then_click('更新', threshold=0.9):
+                        logger.info('点击更新')
+                        continue
+            finally:
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    logger.error('游戏登录超时，未知错误')
+                    raise RequestHumanTakeover
 
-            if self.appear_text('游戏设置', threshold=0.9) and self.appear_text_then_click('启动', threshold=0.9):
-                logger.info('点击启动')
-                continue
-            if self.appear_text('游戏设置', threshold=0.9) and self.appear_text_then_click('更新', threshold=0.9):
-                logger.info('点击更新')
-                continue
+                if not in_game:
+                    self.current_window = self.launcher
 
     def auto_type(self, text):
         # 切换为英文

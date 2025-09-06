@@ -73,7 +73,7 @@ PCClient:
 PCClientInfo:
   Client:
     value: intl
-    option: [ intl, hwt ]
+    option: [ intl, hmt ]
   LauncherTitleName:
     value: ''
   LauncherProcessName:

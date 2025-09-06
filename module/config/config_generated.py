@@ -41,7 +41,7 @@ class GeneratedConfig:
     PCClient_Password = None
 
     # Group `PCClientInfo`
-    PCClientInfo_Client = 'intl'  # intl, hwt
+    PCClientInfo_Client = 'intl'  # intl, hmt
     PCClientInfo_LauncherTitleName = None
     PCClientInfo_LauncherProcessName = None
     PCClientInfo_LauncherPath = None
