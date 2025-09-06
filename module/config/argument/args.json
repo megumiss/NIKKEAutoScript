@@ -1749,6 +1749,10 @@
       }
     },
     "BlaDaily": {
+      "Immediately": {
+        "type": "checkbox",
+        "value": false
+      },
       "PostID": {
         "type": "input",
         "value": "",

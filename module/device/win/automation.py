@@ -95,7 +95,7 @@ class Window:
     name: str
     title: str
     class_name: str
-    process_name: str
+    process: str
     path: str
     hwnd: int = field(default=0)
     resolution: tuple = field(default=None)
@@ -135,9 +135,9 @@ class Window:
         """终止程序"""
         try:
             for proc in psutil.process_iter(attrs=['pid', 'name']):
-                if self.process_name in proc.info['name']:
+                if self.process in proc.info['name']:
                     psutil.Process(proc.info['pid']).terminate()
-                    logger.info(f'进程终止：{self.process_name}')
+                    logger.info(f'进程终止：{self.process}')
                     return True
         except Exception as e:
             logger.error(f'终止失败：{e}')
@@ -186,7 +186,7 @@ class Automation:
         self.secretly_press_key = self.input_handler.secretly_press_key
         self.press_mouse = self.input_handler.press_mouse
 
-    def screenshot(self, window: Window, crop=(0, 0, 1, 1)):
+    def screenshot(self, crop=(0, 0, 1, 1)):
         """
         捕获窗口截图
         :param window: Window 对象
@@ -196,28 +196,23 @@ class Automation:
         self._screenshot_interval.wait()
         self._screenshot_interval.reset()
 
-        start_time = time.time()
-        while True:
-            try:
-                result = Screenshot.take_screenshot(
-                    window.title, window.resolution, self.config.PCClient_Screens, crop=crop
-                )
-                if result:
-                    image, pos, scale = result
-                    window.image = self._handle_orientated_image(image, window.resolution)
-                    window.offset = (pos[0], pos[1])
-                    window.screenshot_scale_factor = scale
-                    self.screenshot_deque.append({'time': datetime.now(), 'image': window.image})
-                    # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
-                    return result
-                else:
-                    logger.error(f'截图失败：没有找到窗口 {window.title}')
-            except Exception as e:
-                logger.error(f'截图失败：{e}')
-                raise RuntimeError(f'截图失败：{e}')
-            time.sleep(1)
-            if time.time() - start_time > 10:
-                raise RuntimeError('截图超时')
+        try:
+            result = Screenshot.take_screenshot(
+                self.current_window.title, self.current_window.resolution, self.config.PCClient_Screens, crop=crop
+            )
+            if result:
+                image, pos, scale = result
+                self.current_window.image = self._handle_orientated_image(image, self.current_window.resolution)
+                self.current_window.offset = (pos[0], pos[1])
+                self.current_window.screenshot_scale_factor = scale
+                self.screenshot_deque.append({'time': datetime.now(), 'image': self.current_window.image})
+                # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
+                return result
+            else:
+                raise RuntimeError(f'没有找到窗口 {self.current_window.title}')
+        except Exception as e:
+            logger.warning(f'截图失败：{e}')
+            raise RuntimeError(f'截图失败：{e}')
 
     @cached_property
     def screenshot_deque(self):
@@ -237,7 +232,7 @@ class Automation:
 
         raise ScreenshotSizeError("The emulator's display size must be 720*1280")
 
-    def click(self, window: Window, button: Button, click_offset=0, action='click'):
+    def click(self, button: Button, click_offset=0, action='click'):
         """点击窗口中的按钮"""
         x, y = button.location
         # 如果 click_offset 是单个数字，代表 x 和 y 都偏移同样的量
@@ -252,8 +247,8 @@ class Automation:
         x, y = ensure_int(x, y)
         logger.info('Click %s @ %s' % (point2str(x, y), button))
 
-        x += window.offset[0]
-        y += window.offset[1]
+        x += self.current_window.offset[0]
+        y += self.current_window.offset[1]
         # x, y = self.calculate_click_position(coordinates, offset)
         # 动作到方法的映射
         action_map = {
@@ -268,14 +263,14 @@ class Automation:
         else:
             raise ValueError(f'未知的动作类型: {action}')
 
-    def long_click_minitouch(self, window: Window, x, y, duration=1.0, action='hold'):
+    def long_click_minitouch(self, x, y, duration=1.0, action='hold'):
         duration = int(duration * 1000)
 
         x = x * 2 * 0.9
         y = y / 2 * 1.12
 
-        x += window.offset[0]
-        y += window.offset[1]
+        x += self.current_window.offset[0]
+        y += self.current_window.offset[1]
         # 动作到方法的映射
         action_map = {
             'hold': self.press_mouse_click,
@@ -285,9 +280,9 @@ class Automation:
         else:
             raise ValueError(f'未知的动作类型: {action}')
 
-    def click_minitouch(self, window: Window, x, y, action='click'):
-        x += window.offset[0]
-        y += window.offset[1]
+    def click_minitouch(self, x, y, action='click'):
+        x += self.current_window.offset[0]
+        y += self.current_window.offset[1]
         # 动作到方法的映射
         action_map = {
             'click': self.mouse_click,
@@ -301,14 +296,14 @@ class Automation:
             raise ValueError(f'未知的动作类型: {action}')
 
     def swipe(
-        self, window: Window, p1, p2, speed=15, hold=0, method='swipe', label='Swipe', distance_check=True, handle_control_check=True
+        self, p1, p2, speed=15, hold=0, method='swipe', label='Swipe', distance_check=True, handle_control_check=True
     ):
         p1, p2 = ensure_int(p1, p2)
         logger.info('%s %s -> %s' % (label, point2str(*p1), point2str(*p2)))
 
-        p1 = p1[0] + window.offset[0], p1[1] + window.offset[1]
+        p1 = p1[0] + self.current_window.offset[0], p1[1] + self.current_window.offset[1]
         if method == 'scroll':
-            p2 = p2[0] + window.offset[0], p2[1] + window.offset[1]
+            p2 = p2[0] + self.current_window.offset[0], p2[1] + self.current_window.offset[1]
             start_x, start_y = p1
             end_x, end_y = p2
 
@@ -326,7 +321,7 @@ class Automation:
             self.mouse_scroll(scroll_count, direction=direction)
         elif method == 'swipe':
             # 原始目标点
-            raw_p2 = (p2[0] + window.offset[0], p2[1] + window.offset[1])
+            raw_p2 = (p2[0] + self.current_window.offset[0], p2[1] + self.current_window.offset[1])
             dx, dy = raw_p2[0] - p1[0], raw_p2[1] - p1[1]
 
             # 判断主要滑动方向

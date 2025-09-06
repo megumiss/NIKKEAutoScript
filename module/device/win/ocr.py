@@ -40,7 +40,7 @@ class LauncherOcr:
         if not hasattr(self, '_ocr_cache'):
             self._ocr_cache = {'last_hash': None, 'last_result': None}
 
-        cv2.imwrite('launcher.png', np.array(self.launcher.image))
+        # cv2.imwrite('launcher.png', np.array(self.launcher.image))
         current_hash = hash(self.launcher.image.tobytes())
         if current_hash != self._ocr_cache['last_hash']:
             # 重新 OCR
@@ -76,7 +76,7 @@ class LauncherOcr:
                 'Click %s @ %s %ss'
                 % (point2str(location[0], location[1]), f"'{text}'", float2str(time.time() - start_time))
             )
-            self.click_minitouch(self.launcher, location[0], location[1])
+            self.click_minitouch(location[0], location[1])
             return True
         else:
             return False

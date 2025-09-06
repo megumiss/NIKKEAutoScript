@@ -49,7 +49,7 @@ class AppControl(WinClient, Login):
 
         # 启动器信息
         launcher_path = os.path.normpath(self.config.PCClientInfo_LauncherPath)
-        launcher_process_name = (
+        launcher_process = (
             self.config.PCClientInfo_LauncherProcessName or LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
         )
         launcher_window_title = (
@@ -59,7 +59,7 @@ class AppControl(WinClient, Login):
 
         # 游戏信息
         # game_path = os.path.normpath(self.config.PCClientInfo_GamePath)
-        game_process_name = self.config.PCClientInfo_GameProcessName or GAME_PROCESS[self.config.PCClientInfo_Client]
+        game_process = self.config.PCClientInfo_GameProcessName or GAME_PROCESS[self.config.PCClientInfo_Client]
         game_window_title = self.config.PCClientInfo_GameTitleName or GAME_TITLE[self.config.PCClientInfo_Client]
         game_window_class = 'UnityWndClass'
 
@@ -68,21 +68,21 @@ class AppControl(WinClient, Login):
             name='Game',
             title=launcher_window_title,
             class_name=launcher_window_class,
-            process_name=launcher_process_name,
+            process=launcher_process,
             path=launcher_path,
         )
         self.game = Window(
             name='Launcher',
             title=game_window_title,
             class_name=game_window_class,
-            process_name=game_process_name,
+            process=game_process,
             path='',
         )
 
         # 回填配置
-        self.config.PCClientInfo_LauncherProcessName = launcher_process_name
+        self.config.PCClientInfo_LauncherProcessName = launcher_process
         self.config.PCClientInfo_LauncherTitleName = launcher_window_title
-        self.config.PCClientInfo_GameProcessName = game_process_name
+        self.config.PCClientInfo_GameProcessName = game_process
         self.config.PCClientInfo_GameTitleName = game_window_title
 
         self.interval_timer = {}
@@ -95,7 +95,7 @@ class AppControl(WinClient, Login):
 
         # 启动流程
         self.app_start()
-        logger.attr('WinClient', self.game.process_name)
+        logger.attr('WinClient', self.game.process)
 
         # Package
         self.package = self.config.Emulator_PackageName
@@ -129,6 +129,7 @@ class AppControl(WinClient, Login):
                 time.sleep(period)
             return False
 
+        self.current_window = self.game
         for retry in range(MAX_RETRY):
             try:
                 # 检查屏幕分辨率
@@ -136,16 +137,17 @@ class AppControl(WinClient, Login):
                 # 检查是否已进入游戏
                 if self.game.switch_to_foreground():
                     logger.info('游戏已在运行，检查分辨率')
-                    self.ensure_resolution(self.game, 720, 1280)
-                    self.check_resolution(self.game, 720, 1280)
+                    self.ensure_resolution(720, 1280)
+                    self.check_resolution(720, 1280)
                     break
 
                 # 启动启动器
+                self.current_window = self.launcher
                 if not self.launcher.start():
                     logger.error('启动器启动失败')
                     raise RequestHumanTakeover
                 # 切换到启动器前台
-                if not wait_until(lambda: self.launcher.switch_to_foreground(), 30):
+                if not wait_until(lambda: self.current_window.switch_to_foreground(), 30):
                     logger.error('切换到启动器超时')
                     raise RequestHumanTakeover
                 # 设置启动器分辨率
@@ -158,13 +160,12 @@ class AppControl(WinClient, Login):
                 time.sleep(5)
 
                 # 切换到游戏前台
-                if not wait_until(lambda: self.game.switch_to_foreground(), 60):
+                if not wait_until(lambda: self.current_window.switch_to_foreground(), 60):
                     logger.error('切换到游戏超时')
                     raise RequestHumanTakeover
-
                 # 设置游戏分辨率
-                self.ensure_resolution(self.game, 720, 1280)
-                self.check_resolution(self.game, 720, 1280)
+                self.ensure_resolution(720, 1280)
+                self.check_resolution(720, 1280)
 
                 break
             except Exception as e:
@@ -202,5 +203,5 @@ class AppControl(WinClient, Login):
             raise RequestHumanTakeover
 
         # 界面刷新，再次设置启动器分辨率
-        # self.ensure_resolution(self.launcher, 900, 600)
-        # self.check_resolution(self.launcher, 900, 600)
+        # self.ensure_resolution(900, 600)
+        # self.check_resolution(900, 600)

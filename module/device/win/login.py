@@ -21,8 +21,15 @@ class Login(LauncherOcr, Automation):
         need_login = False
         while 1:
             time.sleep(3)
-            self.get_resolution(self.launcher)
-            super().screenshot(self.launcher)
+            
+            try:
+                self.get_resolution()
+                super().screenshot()
+            except Exception:
+                if self.check_program():
+                    logger.info('启动器打开成功')
+                    break
+                continue
 
             if self.appear_text('电子邮件账号', threshold=0.9):
                 need_login = True
@@ -46,7 +53,7 @@ class Login(LauncherOcr, Automation):
             email_loc, email_area = self.check_extra_fields(text, '电子邮件账号', '密码')
             if email_loc:
                 # 输入框尾部
-                self.click_minitouch(self.launcher, email_area[2] + 20, (email_area[1] + email_area[3]) / 2)
+                self.click_minitouch( email_area[2] + 20, (email_area[1] + email_area[3]) / 2)
 
                 logger.info('删除已存在的账户信息')
                 time.sleep(0.3)
@@ -58,7 +65,7 @@ class Login(LauncherOcr, Automation):
             # 输入邮箱
             if email_loc:
                 time.sleep(0.3)
-                self.click_minitouch(self.launcher, email_area[2] + 20, (email_area[1] + email_area[3]) / 2)
+                self.click_minitouch(email_area[2] + 20, (email_area[1] + email_area[3]) / 2)
                 self.auto_type(account)
                 logger.info('输入账号完成')
             elif self.appear_text_then_click('电子邮件账号', threshold=0.9, interval=1):
@@ -85,11 +92,15 @@ class Login(LauncherOcr, Automation):
             time.sleep(3)
 
             try:
-                self.get_resolution(self.launcher)
-                super().screenshot(self.launcher)
+                self.get_resolution()
+                super().screenshot()
             except Exception:
-                logger.info('登录成功')
-                break
+                self.current_window = self.game
+                if self.check_program():
+                    logger.info('游戏登录成功')
+                    break
+                self.current_window = self.launcher
+                continue
 
             if self.appear_text('暂未设置密码', threshold=0.9):
                 logger.error('账号配置错误')
@@ -101,7 +112,6 @@ class Login(LauncherOcr, Automation):
             if self.appear_text('游戏设置', threshold=0.9) and self.appear_text_then_click('启动', threshold=0.9):
                 logger.info('点击启动')
                 continue
-
             if self.appear_text('游戏设置', threshold=0.9) and self.appear_text_then_click('更新', threshold=0.9):
                 logger.info('点击更新')
                 continue

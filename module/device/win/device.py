@@ -54,6 +54,7 @@ class Device(AppControl, Automation):
         """
         self.stuck_record_check()
         super().screenshot()
+        self.image = self.current_window.image
         return self.image
 
     def handle_control_check(self, button: Button):
