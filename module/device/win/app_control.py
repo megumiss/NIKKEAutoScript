@@ -168,9 +168,10 @@ class AppControl(WinClient, Login):
                 # 直接退出
                 raise
             except Exception as e:
-                logger.error(f'启动时发生错误：{e}，尝试重试 {retry + 1}/{MAX_RETRY}')
+                logger.error(f'启动错误：{e}，尝试重试 {retry + 1}/{MAX_RETRY}')
                 self.current_window = self.game
                 self.stop_program()
+                # 启动器打开失败
                 if not self.launcher_running:
                     self.current_window = self.launcher
                     self.stop_program()
@@ -183,11 +184,15 @@ class AppControl(WinClient, Login):
         # if not wait_until(lambda: screen.get_current_screen(), 360):
         #     raise TimeoutError("获取当前界面超时")
 
-    def app_stop(self):
+    def app_stop(self, program='Game'):
         logger.info(f'Game stop: {self.game.path}')
 
         try:
-            self.current_window = self.game
+            # 关闭游戏或者启动器
+            if program == 'Launcher':
+                self.current_window = self.launcher
+            else:
+                self.current_window = self.game
             if self.stop_program():
                 logger.info('Game stop success')
             else:

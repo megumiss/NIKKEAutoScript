@@ -393,7 +393,11 @@ class NikkeAutoScript:
                 method = self.config.Optimization_WhenTaskQueueEmpty
                 if method == 'close_game':
                     logger.info('Close game during wait')
+                    # 关闭游戏
                     self.device.app_stop()
+                    self.device.sleep(1)
+                    # 关闭启动器
+                    self.device.app_stop('Launcher')
                     release_resources()
                     # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):

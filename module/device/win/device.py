@@ -193,10 +193,10 @@ class Device(AppControl, Automation):
         self.stuck_record_clear()
         self.click_record_clear()
 
-    def app_stop(self):
+    def app_stop(self, program):
         """
         停止NIKKE
         """
-        super().app_stop()
+        super().app_stop(program)
         self.stuck_record_clear()
         self.click_record_clear()
