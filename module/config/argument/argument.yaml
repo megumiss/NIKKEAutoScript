@@ -169,6 +169,7 @@ BlaAuth:
     value: ''
     type: textarea
 BlaDaily:
+  Immediately: false
   PostID:
     value: ''
     valuetype: str

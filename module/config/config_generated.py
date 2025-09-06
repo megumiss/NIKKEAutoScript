@@ -113,6 +113,7 @@ class GeneratedConfig:
     BlaAuth_XCommonParams = None
 
     # Group `BlaDaily`
+    BlaDaily_Immediately = False
     BlaDaily_PostID = None
     BlaDaily_CommentID = None
     BlaDaily_Points = None

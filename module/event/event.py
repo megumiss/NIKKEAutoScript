@@ -743,6 +743,7 @@ class Event(UI):
     def find_and_fight_stage(self, open_story):
         click_timer = Timer(0.3)
         if self.appear(self.STORY_STAGE_11(open_story), offset=10, static=False):
+            max_clicks = 0
             while 1:
                 self.device.screenshot()
 
@@ -778,9 +779,11 @@ class Event(UI):
                 # 票max
                 if (
                     click_timer.reached()
+                    and max_clicks < 3
                     and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
                     and self.appear_then_click(FIGHT_QUICKLY_MAX, offset=30, threshold=0.99, interval=1)
                 ):
+                    max_clicks += 1
                     self.device.sleep(0.3)
                     click_timer.reset()
                     continue
@@ -989,17 +992,23 @@ class Event(UI):
                         break
 
                 quit = False
+                confirm_timer = Timer(1, count=3)
                 while 1:
                     self.device.screenshot()
 
                     # 退出
                     if self.appear(EVENT_SHOP_CHECK, offset=(30, 30)):
-                        if quit:
-                            logger.info('Money not enough, quiting')
-                            return
-                        else:
-                            logger.info('Item purchase completed, goto next')
-                            break
+                        if not confirm_timer.started():
+                            confirm_timer.start()
+                        if confirm_timer.reached():
+                            if quit:
+                                logger.info('Money not enough, quiting')
+                                return
+                            else:
+                                logger.info('Item purchase completed, goto next')
+                                break
+                    else:
+                        confirm_timer.clear()
 
                     # 商品在延迟购买列表中，跳过，返回商店主页
                     for i, item in enumerate(delay_list[:]):
