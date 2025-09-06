@@ -143,3 +143,6 @@ class ManualConfig:
     Error_ScreenshotLength = 1
 
     DEVICE_OVER_HTTP = False
+
+    SKIP_START_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange']
+    SKIP_START_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange"]

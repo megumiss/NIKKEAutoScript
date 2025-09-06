@@ -41,16 +41,18 @@ class ModuleBase:
         if config.CLIENT_PLATFORM == 'win':
             from module.device.win.device import Device as DeviceClass
 
-        if isinstance(device, DeviceClass):
-            self.device = device
-        elif device is None:
-            self.device = DeviceClass(config=self.config)
-        elif isinstance(device, str):
-            self.config.override(Emulator_Serial=device)
-            self.device = DeviceClass(config=self.config)
-        else:
-            logger.warning('NKAS ModuleBase received an unknown device, assume it is Device')
-            self.device = device
+        # 妮游社任务不需要device
+        if task != 'bla':
+            if isinstance(device, DeviceClass):
+                self.device = device
+            elif device is None:
+                self.device = DeviceClass(config=self.config)
+            elif isinstance(device, str):
+                self.config.override(Emulator_Serial=device)
+                self.device = DeviceClass(config=self.config)
+            else:
+                logger.warning('NKAS ModuleBase received an unknown device, assume it is Device')
+                self.device = device
 
         self.interval_timer = {}
 

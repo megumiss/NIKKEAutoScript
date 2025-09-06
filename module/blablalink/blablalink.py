@@ -60,7 +60,7 @@ class Blablalink(UI):
     }
 
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__(config, task='bla')
         self.session = requests.Session()
         self.common_headers = self.base_headers.copy()
         self._cdk_temp_path = Path('./tmp/cdk_history.json')  # 临时文件路径
