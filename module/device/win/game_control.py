@@ -45,7 +45,7 @@ class WinClient:
 
     def stop_program(self) -> bool:
         """终止程序"""
-        process = self.current_window.process_name
+        process = self.current_window.process
         try:
             self.terminate_named_process(process)
             logger.info(f'程序终止成功：{process}')
@@ -56,7 +56,7 @@ class WinClient:
 
     def check_program(self) -> bool:
         """检查程序是否启动"""
-        process = self.current_window.process_name
+        process = self.current_window.process
         try:
             if self.is_process_running(process):
                 logger.info(f'程序启动成功：{process}')
@@ -76,12 +76,12 @@ class WinClient:
         time.sleep(ensure_time(second))
 
     @staticmethod
-    def terminate_named_process(target_process_name, termination_timeout=10):
+    def terminate_named_process(target_process, termination_timeout=10):
         """
         根据进程名终止属于当前用户的进程。
 
         参数:
-        - target_process_name (str): 要终止的进程名。
+        - target_process (str): 要终止的进程名。
         - termination_timeout (int, optional): 终止进程前等待的超时时间（秒）。
 
         返回值:
@@ -91,7 +91,7 @@ class WinClient:
         # 遍历所有运行中的进程
         for process in psutil.process_iter(attrs=['pid', 'name']):
             # 检查当前进程名是否匹配并属于当前用户
-            if target_process_name in process.info['name']:
+            if target_process in process.info['name']:
                 process_username = process.username().split('\\')[-1]  # 从进程所有者中提取用户名
                 if system_username == process_username:
                     proc_to_terminate = psutil.Process(process.info['pid'])
@@ -99,12 +99,12 @@ class WinClient:
                     proc_to_terminate.wait(termination_timeout)
 
     @staticmethod
-    def is_process_running(target_process_name: str) -> bool:
+    def is_process_running(target_process: str) -> bool:
         """
         检查指定进程名是否正在运行（仅限当前用户）。
 
         参数:
-        - target_process_name (str): 要检查的进程名。
+        - target_process (str): 要检查的进程名。
 
         返回值:
         - bool: 如果进程存在并属于当前用户则返回 True，否则返回 False。
@@ -119,7 +119,7 @@ class WinClient:
 
         for process in psutil.process_iter(attrs=['pid', 'name', 'username']):
             try:
-                if target_process_name.lower() in (process.info['name'] or '').lower():
+                if target_process.lower() in (process.info['name'] or '').lower():
                     process_username = process.info['username'].split('\\')[-1]
                     if system_username == process_username:
                         return True
@@ -396,9 +396,9 @@ class WinClient:
         compat = getattr(self.config, f'PCClient_{self.current_window.title}ResolutionCompat', False)
         for i in range(retries):
             if compat:
-                self.change_resolution_compat(self.current_window, client_width, client_height)
+                self.change_resolution_compat(client_width, client_height)
             else:
-                self.change_resolution(self.current_window, client_width, client_height)
+                self.change_resolution(client_width, client_height)
             time.sleep(interval)
             hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
             if hwnd:
@@ -499,7 +499,7 @@ class WinClient:
             target_width (int): 目标分辨率的宽度。
             target_height (int): 目标分辨率的高度。
         """
-        resolution = self.get_resolution(self.current_window)
+        resolution = self.get_resolution()
         if not resolution:
             raise Exception(f'{self.current_window.title} 分辨率获取失败')
         window_width, window_height = resolution

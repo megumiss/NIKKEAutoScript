@@ -95,7 +95,7 @@ class Window:
     name: str
     title: str
     class_name: str
-    process_name: str
+    process: str
     path: str
     hwnd: int = field(default=0)
     resolution: tuple = field(default=None)
@@ -135,9 +135,9 @@ class Window:
         """终止程序"""
         try:
             for proc in psutil.process_iter(attrs=['pid', 'name']):
-                if self.process_name in proc.info['name']:
+                if self.process in proc.info['name']:
                     psutil.Process(proc.info['pid']).terminate()
-                    logger.info(f'进程终止：{self.process_name}')
+                    logger.info(f'进程终止：{self.process}')
                     return True
         except Exception as e:
             logger.error(f'终止失败：{e}')
@@ -198,7 +198,7 @@ class Automation:
 
         try:
             result = Screenshot.take_screenshot(
-                self.current_self.current_window.title, self.current_window.resolution, self.config.PCClient_Screens, crop=crop
+                self.current_window.title, self.current_window.resolution, self.config.PCClient_Screens, crop=crop
             )
             if result:
                 image, pos, scale = result
@@ -209,9 +209,9 @@ class Automation:
                 # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
                 return result
             else:
-                raise RuntimeError(f'截图失败：没有找到窗口 {self.current_window.title}')
+                raise RuntimeError(f'没有找到窗口 {self.current_window.title}')
         except Exception as e:
-            logger.error(f'截图失败：{e}')
+            logger.warning(f'截图失败：{e}')
             raise RuntimeError(f'截图失败：{e}')
 
     @cached_property

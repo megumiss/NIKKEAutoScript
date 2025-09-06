@@ -76,7 +76,7 @@ class LauncherOcr:
                 'Click %s @ %s %ss'
                 % (point2str(location[0], location[1]), f"'{text}'", float2str(time.time() - start_time))
             )
-            self.click_minitouch(self.launcher, location[0], location[1])
+            self.click_minitouch(location[0], location[1])
             return True
         else:
             return False

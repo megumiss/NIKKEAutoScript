@@ -53,7 +53,7 @@ class Device(AppControl, Automation):
             np.ndarray:
         """
         self.stuck_record_check()
-        super().screenshot(self.game)
+        super().screenshot()
         self.image = self.current_window.image
         return self.image
 
