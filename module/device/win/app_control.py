@@ -129,6 +129,7 @@ class AppControl(WinClient, Login):
                 time.sleep(period)
             return False
 
+        self.current_window = self.game
         for retry in range(MAX_RETRY):
             try:
                 # 检查屏幕分辨率
@@ -136,16 +137,17 @@ class AppControl(WinClient, Login):
                 # 检查是否已进入游戏
                 if self.game.switch_to_foreground():
                     logger.info('游戏已在运行，检查分辨率')
-                    self.ensure_resolution(self.game, 720, 1280)
-                    self.check_resolution(self.game, 720, 1280)
+                    self.ensure_resolution(720, 1280)
+                    self.check_resolution(720, 1280)
                     break
 
                 # 启动启动器
+                self.current_window = self.launcher
                 if not self.launcher.start():
                     logger.error('启动器启动失败')
                     raise RequestHumanTakeover
                 # 切换到启动器前台
-                if not wait_until(lambda: self.launcher.switch_to_foreground(), 30):
+                if not wait_until(lambda: self.current_window.switch_to_foreground(), 30):
                     logger.error('切换到启动器超时')
                     raise RequestHumanTakeover
                 # 设置启动器分辨率
@@ -158,13 +160,12 @@ class AppControl(WinClient, Login):
                 time.sleep(5)
 
                 # 切换到游戏前台
-                if not wait_until(lambda: self.game.switch_to_foreground(), 60):
+                if not wait_until(lambda: self.current_window.switch_to_foreground(), 60):
                     logger.error('切换到游戏超时')
                     raise RequestHumanTakeover
-
                 # 设置游戏分辨率
-                self.ensure_resolution(self.game, 720, 1280)
-                self.check_resolution(self.game, 720, 1280)
+                self.ensure_resolution(720, 1280)
+                self.check_resolution(720, 1280)
 
                 break
             except Exception as e:

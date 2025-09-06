@@ -89,6 +89,7 @@ class Login(LauncherOcr, Automation):
                 super().screenshot(self.launcher)
             except Exception:
                 if self.check_program(self.game):
+                    self.current_window = self.game
                     logger.info('登录成功')
                     break
                 continue
