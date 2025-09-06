@@ -27,6 +27,7 @@ class Login(LauncherOcr, Automation):
                 super().screenshot()
             except Exception:
                 if self.check_program() and self.switch_to_program():
+                    self.launcher_running = True
                     logger.info('启动器打开成功')
                     break
             else:
@@ -151,8 +152,6 @@ class Login(LauncherOcr, Automation):
         lang_id = self.get_keyboard_lang()
 
         if lang_id in (0x0804, 0x0404):  # 简体中文 / 繁体中文
-            print('当前是中文输入法，切换到英文...')
+            logger.info('输入法切换到英文')
             # 模拟 Shift
             self.press_key('shift')
-        else:
-            print('当前已是英文，不切换')

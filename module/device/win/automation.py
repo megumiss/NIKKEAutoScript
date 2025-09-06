@@ -1,15 +1,7 @@
-import ctypes
-import os
 import time
 from collections import deque
-from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property, wraps
-
-import psutil
-import win32con
-import win32gui
-from numpy import ndarray
 
 from module.base.button import Button
 from module.base.timer import Timer
@@ -86,72 +78,6 @@ def retry(func):
         raise RequestHumanTakeover
 
     return retry_wrapper
-
-
-@dataclass
-class Window:
-    """统一的窗口对象"""
-
-    name: str
-    title: str
-    class_name: str
-    process: str
-    path: str
-    hwnd: int = field(default=0)
-    resolution: tuple = field(default=None)
-    offset: tuple = field(default=(0, 0))
-    image: ndarray = field(default=None)
-    screenshot_scale_factor: float = field(default=1.0)
-
-    def find_hwnd(self) -> int:
-        """查找窗口句柄"""
-        self.hwnd = win32gui.FindWindow(self.class_name, self.title)
-        return self.hwnd
-
-    def switch_to_foreground(self) -> bool:
-        """切换到前台"""
-        hwnd = self.find_hwnd()
-        if hwnd == 0:
-            logger.warning(f'窗口未找到：{self.title}')
-            return False
-        ctypes.windll.user32.ShowWindow(hwnd, win32con.SW_RESTORE)
-        if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
-            logger.error(f'切换前台失败：{self.title}')
-            return False
-        logger.info(f'切换前台：{self.title}')
-        return True
-
-    def start(self) -> bool:
-        """启动程序"""
-        if not os.path.exists(self.path):
-            logger.error(f'路径不存在：{self.path}')
-            return False
-        folder = self.path.rpartition('\\')[0]
-        os.system(f'cmd /C start "" /D "{folder}" "{self.path}"')
-        logger.info(f'启动：{self.path}')
-        return True
-
-    def stop(self) -> bool:
-        """终止程序"""
-        try:
-            for proc in psutil.process_iter(attrs=['pid', 'name']):
-                if self.process in proc.info['name']:
-                    psutil.Process(proc.info['pid']).terminate()
-                    logger.info(f'进程终止：{self.process}')
-                    return True
-        except Exception as e:
-            logger.error(f'终止失败：{e}')
-        return False
-
-    def get_resolution(self) -> tuple:
-        """获取窗口客户区分辨率"""
-        hwnd = self.find_hwnd()
-        if hwnd == 0:
-            logger.warning(f'窗口未找到：{self.title}')
-            return None
-        _, _, w, h = win32gui.GetClientRect(hwnd)
-        self.resolution = (w, h)
-        return self.resolution
 
 
 class Automation:

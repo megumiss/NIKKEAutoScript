@@ -3,19 +3,35 @@ import os
 import subprocess
 import time
 from ctypes import wintypes
+from dataclasses import dataclass, field
 from typing import Literal, Optional, Tuple
 
 import psutil
 import pyautogui
 import win32con
 import win32gui
+from numpy import ndarray
 
 from module.base.utils import ensure_time
 from module.device.win.registry.game_auto_hdr import get_game_auto_hdr, set_game_auto_hdr
 from module.device.win.registry.setting import get_game_resolution, set_game_resolution
 from module.logger import logger
 
-from .automation import Window
+
+@dataclass
+class Window:
+    """统一的窗口对象"""
+
+    name: str
+    title: str
+    class_name: str
+    process: str
+    path: str
+    hwnd: int = field(default=0)
+    resolution: tuple = field(default=None)
+    offset: tuple = field(default=(0, 0))
+    image: ndarray = field(default=None)
+    screenshot_scale_factor: float = field(default=1.0)
 
 
 class WinClient:
@@ -66,14 +82,6 @@ class WinClient:
         except Exception as e:
             logger.error(f'检查程序发生错误：{e}')
             return False
-
-    @staticmethod
-    def sleep(second):
-        """
-        Args:
-            second(int, float, tuple):
-        """
-        time.sleep(ensure_time(second))
 
     @staticmethod
     def terminate_named_process(target_process, termination_timeout=10):
@@ -511,3 +519,11 @@ class WinClient:
             raise Exception(f'{self.current_window.title} 分辨率错误')
         else:
             logger.debug(f'{self.current_window.title} 分辨率: {window_width}x{window_height}')
+
+    @staticmethod
+    def sleep(second):
+        """
+        Args:
+            second(int, float, tuple):
+        """
+        time.sleep(ensure_time(second))

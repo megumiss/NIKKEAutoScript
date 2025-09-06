@@ -106,7 +106,7 @@ class AppControl(WinClient, Login):
         logger.attr('Language', self.language)
 
     def app_is_running(self) -> bool:
-        return self.game.switch_to_foreground()
+        return self.switch_to_program()
 
     def get_process_path(name):
         # 通过进程名获取运行路径
@@ -129,13 +129,14 @@ class AppControl(WinClient, Login):
                 time.sleep(period)
             return False
 
+        self.launcher_running = False
         self.current_window = self.game
         for retry in range(MAX_RETRY):
             try:
                 # 检查屏幕分辨率
                 self.check_screen_resolution(720, 1280)
                 # 检查是否已进入游戏
-                if self.game.switch_to_foreground():
+                if self.switch_to_program():
                     logger.info('游戏已在运行，检查分辨率')
                     self.ensure_resolution(720, 1280)
                     self.check_resolution(720, 1280)
@@ -143,11 +144,11 @@ class AppControl(WinClient, Login):
 
                 # 启动启动器
                 self.current_window = self.launcher
-                if not self.launcher.start():
+                if not self.switch_to_program() and self.start_program():
                     logger.error('启动器启动失败')
                     raise RequestHumanTakeover
                 # 切换到启动器前台
-                if not wait_until(lambda: self.current_window.switch_to_foreground(), 30):
+                if not wait_until(lambda: self.switch_to_program(), 30):
                     logger.error('切换到启动器超时')
                     raise RequestHumanTakeover
                 # 设置启动器分辨率
@@ -157,10 +158,8 @@ class AppControl(WinClient, Login):
 
                 # 登录
                 self.app_login()
-                time.sleep(5)
-
                 # 切换到游戏前台
-                if not wait_until(lambda: self.current_window.switch_to_foreground(), 60):
+                if not wait_until(lambda: self.switch_to_program(), 60):
                     logger.error('切换到游戏超时')
                     raise RequestHumanTakeover
                 # 设置游戏分辨率
@@ -169,9 +168,12 @@ class AppControl(WinClient, Login):
 
                 break
             except Exception as e:
-                logger.error(f'尝试启动流程时发生错误：{e}')
-                self.game.stop()
-                self.launcher.stop()
+                logger.error(f'启动时发生错误：{e}')
+                self.current_window == self.game
+                self.stop_program()
+                if not self.launcher_running:
+                    self.current_window == self.launcher
+                    self.stop_program()
                 time.sleep(5)
                 if retry == MAX_RETRY - 1:
                     raise
@@ -185,7 +187,8 @@ class AppControl(WinClient, Login):
         logger.info(f'Game stop: {self.game.path}')
 
         try:
-            if self.game.stop():
+            self.current_window = self.game
+            if self.stop_program():
                 logger.info('Game stop success')
             else:
                 logger.warning('Game path config error')

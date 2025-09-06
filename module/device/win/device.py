@@ -37,7 +37,8 @@ class Device(AppControl, Automation):
                     logger.critical('Failed to start game after 3 trial')
                     raise RequestHumanTakeover
                 # Try to start game
-                if not self.switch_to_program('game'):
+                self.current_window = self.game
+                if not self.switch_to_program():
                     self.app_start()
                 else:
                     logger.critical(
