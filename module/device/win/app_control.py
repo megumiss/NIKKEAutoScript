@@ -8,7 +8,7 @@ from module.config.language import set_language
 from module.config.server import set_server
 from module.device.win.game_control import WinClient, Window
 from module.device.win.login import Login
-from module.exception import RequestHumanTakeover
+from module.exception import AccountError, RequestHumanTakeover
 from module.logger import logger
 
 GAME_TITLE = {
@@ -154,7 +154,7 @@ class AppControl(WinClient, Login):
                 # time.sleep(5)
 
                 # 登录
-                self.app_login()
+                self.login()
                 # 切换到游戏前台
                 if not wait_until(lambda: self.switch_to_program(), 60):
                     logger.error('切换到游戏超时')
@@ -164,12 +164,15 @@ class AppControl(WinClient, Login):
                 self.check_resolution(720, 1280)
 
                 break
+            except AccountError:
+                # 直接退出
+                raise
             except Exception as e:
-                logger.error(f'启动时发生错误：{e}')
-                self.current_window == self.game
+                logger.error(f'启动时发生错误：{e}，尝试重试 {retry + 1}/{MAX_RETRY}')
+                self.current_window = self.game
                 self.stop_program()
                 if not self.launcher_running:
-                    self.current_window == self.launcher
+                    self.current_window = self.launcher
                     self.stop_program()
                 time.sleep(5)
                 if retry == MAX_RETRY - 1:
@@ -193,15 +196,3 @@ class AppControl(WinClient, Login):
         except Exception as e:
             logger.exception(e)
             raise RequestHumanTakeover
-
-    def app_login(self):
-        """检查窗口状态并登录"""
-        try:
-            self.login()
-        except Exception as e:
-            logger.exception(e)
-            raise RequestHumanTakeover
-
-        # 界面刷新，再次设置启动器分辨率
-        # self.ensure_resolution(900, 600)
-        # self.check_resolution(900, 600)

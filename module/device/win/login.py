@@ -5,7 +5,7 @@ from module.base.timer import Timer
 from module.config.account import load_account
 from module.device.win.automation import Automation
 from module.device.win.ocr import LauncherOcr
-from module.exception import RequestHumanTakeover
+from module.exception import AccountError, RequestHumanTakeover
 from module.logger import logger
 
 user32 = ctypes.windll.user32
@@ -45,7 +45,7 @@ class Login(LauncherOcr, Automation):
             account, password = load_account(self.config.config_name)
             if not account or not password:
                 logger.error('登录失效，请配置账号密码')
-                raise RequestHumanTakeover
+                raise AccountError
             # 判断输入框是否存在邮箱
             text = self.ocr_text()
             # 忘记密码的坐标，取x轴
@@ -105,13 +105,13 @@ class Login(LauncherOcr, Automation):
             else:
                 if self.appear_text('账号格式错误', threshold=0.9):
                     logger.error('账号格式错误')
-                    raise RequestHumanTakeover
+                    raise AccountError
                 if self.appear_text('暂未设置密码', threshold=0.9):
                     logger.error('账号配置错误')
-                    raise RequestHumanTakeover
+                    raise AccountError
                 if self.appear_text('密码错误', threshold=0.9):
                     logger.error('密码配置错误')
-                    raise RequestHumanTakeover
+                    raise AccountError
 
                 if self.appear_text('游戏设置', threshold=0.9):
                     if self.appear_text_then_click('启动', threshold=0.9):
