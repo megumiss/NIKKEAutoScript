@@ -1,8 +1,6 @@
 import ctypes
 import time
 
-import win32gui
-
 from module.base.timer import Timer
 from module.config.account import load_account
 from module.device.win.automation import Automation

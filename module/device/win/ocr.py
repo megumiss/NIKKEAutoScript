@@ -1,9 +1,6 @@
 import time
 from typing import Optional, Tuple
 
-import cv2
-import numpy as np
-
 from module.base.timer import Timer
 from module.base.utils import float2str, point2str
 from module.logger import logger

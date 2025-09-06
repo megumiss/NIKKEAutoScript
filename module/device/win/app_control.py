@@ -1,15 +1,12 @@
 import os
 import time
 
-import cv2
-import numpy as np
 import psutil
 
 from module.config.config import NikkeConfig
 from module.config.language import set_language
 from module.config.server import set_server
-from module.device.win.automation import Window
-from module.device.win.game_control import WinClient
+from module.device.win.game_control import WinClient, Window
 from module.device.win.login import Login
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -144,7 +141,7 @@ class AppControl(WinClient, Login):
 
                 # 启动启动器
                 self.current_window = self.launcher
-                if not self.switch_to_program() and self.start_program():
+                if not self.switch_to_program() and not self.start_program():
                     logger.error('启动器启动失败')
                     raise RequestHumanTakeover
                 # 切换到启动器前台
