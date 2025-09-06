@@ -15,6 +15,7 @@ from module.exception import (
     GameNotRunningError,
     GamePageUnknownError,
     GameServerUnderMaintenance,
+    GameStart,
     GameStuckError,
     GameTooManyClickError,
     RequestHumanTakeover,
@@ -77,6 +78,9 @@ class NikkeAutoScript:
             self.__getattribute__(command)()
             return True
         except TaskEnd:
+            return True
+        except GameStart:
+            self.start()
             return True
         except GameNotRunningError as e:
             logger.warning(e)
