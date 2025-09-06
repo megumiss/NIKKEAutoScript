@@ -31,16 +31,16 @@ class WinClient:
 
         folder = path.rpartition('\\')[0]
         if not os.system(f'cmd /C start "" /D "{folder}" "{path}"'):
-            logger.info(f'启动：{path}')
+            logger.info(f'启动程序：{path}')
             return True
         else:
-            logger.error(f'启动时发生错误，重试中')
+            logger.error(f'程序启动时发生错误：{path}')
             try:
                 subprocess.Popen(path)
-                logger.info(f'启动：{path}')
+                logger.info(f'程序启动：{path}')
                 return True
             except Exception as e:
-                logger.error(f'启动时发生错误：{e}')
+                logger.error(f'程序启动时发生错误：{e}')
             return False
 
     def stop_program(self, window: Window) -> bool:
@@ -48,10 +48,23 @@ class WinClient:
         process = window.process_name
         try:
             self.terminate_named_process(process)
-            logger.info(f'终止：{process}')
+            logger.info(f'程序终止成功：{process}')
             return True
         except Exception as e:
             logger.error(f'终止时发生错误：{e}')
+            return False
+
+    def check_program(self, window: Window) -> bool:
+        """检查程序是否启动"""
+        process = window.process_name
+        try:
+            if self.is_process_running(process):
+                logger.info(f'程序启动成功：{process}')
+                return True
+            else:
+                False
+        except Exception as e:
+            logger.error(f'检查程序发生错误：{e}')
             return False
 
     @staticmethod
@@ -84,6 +97,35 @@ class WinClient:
                     proc_to_terminate = psutil.Process(process.info['pid'])
                     proc_to_terminate.terminate()
                     proc_to_terminate.wait(termination_timeout)
+
+    @staticmethod
+    def is_process_running(target_process_name: str) -> bool:
+        """
+        检查指定进程名是否正在运行（仅限当前用户）。
+
+        参数:
+        - target_process_name (str): 要检查的进程名。
+
+        返回值:
+        - bool: 如果进程存在并属于当前用户则返回 True，否则返回 False。
+        """
+        try:
+            system_username = os.getlogin()  # 当前系统用户名
+        except Exception:
+            # 有时 os.getlogin() 在服务或计划任务中会失败，用这种方式兜底
+            import getpass
+
+            system_username = getpass.getuser()
+
+        for process in psutil.process_iter(attrs=['pid', 'name', 'username']):
+            try:
+                if target_process_name.lower() in (process.info['name'] or '').lower():
+                    process_username = process.info['username'].split('\\')[-1]
+                    if system_username == process_username:
+                        return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return False
 
     @staticmethod
     def set_foreground_window_with_retry(hwnd):

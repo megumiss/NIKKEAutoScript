@@ -88,8 +88,10 @@ class Login(LauncherOcr, Automation):
                 self.get_resolution(self.launcher)
                 super().screenshot(self.launcher)
             except Exception:
-                logger.info('登录成功')
-                break
+                if self.check_program(self.game):
+                    logger.info('登录成功')
+                    break
+                continue
 
             if self.appear_text('暂未设置密码', threshold=0.9):
                 logger.error('账号配置错误')
@@ -101,7 +103,6 @@ class Login(LauncherOcr, Automation):
             if self.appear_text('游戏设置', threshold=0.9) and self.appear_text_then_click('启动', threshold=0.9):
                 logger.info('点击启动')
                 continue
-
             if self.appear_text('游戏设置', threshold=0.9) and self.appear_text_then_click('更新', threshold=0.9):
                 logger.info('点击更新')
                 continue

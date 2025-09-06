@@ -40,7 +40,7 @@ class LauncherOcr:
         if not hasattr(self, '_ocr_cache'):
             self._ocr_cache = {'last_hash': None, 'last_result': None}
 
-        cv2.imwrite('launcher.png', np.array(self.launcher.image))
+        # cv2.imwrite('launcher.png', np.array(self.launcher.image))
         current_hash = hash(self.launcher.image.tobytes())
         if current_hash != self._ocr_cache['last_hash']:
             # 重新 OCR

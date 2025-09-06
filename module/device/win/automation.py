@@ -196,28 +196,23 @@ class Automation:
         self._screenshot_interval.wait()
         self._screenshot_interval.reset()
 
-        start_time = time.time()
-        while True:
-            try:
-                result = Screenshot.take_screenshot(
-                    window.title, window.resolution, self.config.PCClient_Screens, crop=crop
-                )
-                if result:
-                    image, pos, scale = result
-                    window.image = self._handle_orientated_image(image, window.resolution)
-                    window.offset = (pos[0], pos[1])
-                    window.screenshot_scale_factor = scale
-                    self.screenshot_deque.append({'time': datetime.now(), 'image': window.image})
-                    # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
-                    return result
-                else:
-                    logger.error(f'截图失败：没有找到窗口 {window.title}')
-            except Exception as e:
-                logger.error(f'截图失败：{e}')
-                raise RuntimeError(f'截图失败：{e}')
-            time.sleep(1)
-            if time.time() - start_time > 10:
-                raise RuntimeError('截图超时')
+        try:
+            result = Screenshot.take_screenshot(
+                window.title, window.resolution, self.config.PCClient_Screens, crop=crop
+            )
+            if result:
+                image, pos, scale = result
+                window.image = self._handle_orientated_image(image, window.resolution)
+                window.offset = (pos[0], pos[1])
+                window.screenshot_scale_factor = scale
+                self.screenshot_deque.append({'time': datetime.now(), 'image': window.image})
+                # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
+                return result
+            else:
+                raise RuntimeError(f'截图失败：没有找到窗口 {window.title}')
+        except Exception as e:
+            logger.error(f'截图失败：{e}')
+            raise RuntimeError(f'截图失败：{e}')
 
     @cached_property
     def screenshot_deque(self):
