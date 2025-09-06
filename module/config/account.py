@@ -29,7 +29,7 @@ def _get_account_file(config_name: str) -> str:
     根据 config_name 生成对应的存储文件路径
     """
     safe_name = ''.join(c for c in config_name if c.isalnum() or c in ('_', '-'))
-    return os.path.join(data_dir, f'account_{safe_name}.acc')
+    return os.path.join(data_dir, f'{safe_name}.acc')
 
 
 def _encrypt_field(key: bytes, value: str) -> str:
