@@ -1,3 +1,5 @@
+import cv2
+
 from module.base.timer import Timer
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
@@ -263,6 +265,8 @@ class Reward(UI):
                 break
 
     def run(self):
+        # self.device.image = cv2.imread('t1.png')
+        # self.appear_text('全部领取')
         self.ui_ensure(page_reward)
         self.receive_reward()
         # 友情点
