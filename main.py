@@ -12,6 +12,7 @@ from module.base.decorator import del_cached_property
 from module.config.config import NikkeConfig, TaskEnd
 from module.config.utils import deep_get, deep_set
 from module.exception import (
+    AccountError,
     GameNotRunningError,
     GamePageUnknownError,
     GameServerUnderMaintenance,
@@ -66,6 +67,9 @@ class NikkeAutoScript:
             return device
         except RequestHumanTakeover:
             logger.critical('Request human takeover')
+            exit(1)
+        except AccountError:
+            logger.critical('Account or password setting error')
             exit(1)
         except Exception as e:
             logger.exception(e)

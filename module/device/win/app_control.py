@@ -45,6 +45,9 @@ class AppControl(WinClient, Login):
         super().__init__(config)
 
         # 启动器信息
+        if not self.config.PCClientInfo_LauncherPath:
+            logger.error('必须填写启动器路径')
+            raise RequestHumanTakeover
         launcher_path = os.path.normpath(self.config.PCClientInfo_LauncherPath)
         launcher_process = (
             self.config.PCClientInfo_LauncherProcessName or LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
@@ -166,7 +169,7 @@ class AppControl(WinClient, Login):
                 break
             except AccountError:
                 # 直接退出
-                raise
+                raise AccountError
             except Exception as e:
                 logger.error(f'启动错误：{e}，尝试重试 {retry + 1}/{MAX_RETRY}')
                 self.current_window = self.game
