@@ -195,10 +195,10 @@ class Device(AppControl, Automation):
         self.stuck_record_clear()
         self.click_record_clear()
 
-    def app_stop(self, program):
+    def app_stop(self, program='Game'):
         """
         停止NIKKE
         """
-        super().app_stop(program)
+        super().app_stop(program=program)
         self.stuck_record_clear()
         self.click_record_clear()
