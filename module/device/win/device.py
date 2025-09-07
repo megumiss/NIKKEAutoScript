@@ -41,10 +41,12 @@ class Device(AppControl, Automation):
                 if not self.switch_to_program():
                     self.app_start()
                 else:
-                    logger.critical(
-                        f'No process "{self.config.PCClientInfo_GameProcessName}" found, please start game first'
-                    )
-                    raise RequestHumanTakeover
+                    # TODO 安装检查
+                    break
+                    # logger.critical(
+                    #     f'No process "{self.config.PCClientInfo_GameProcessName}" found, please start game first'
+                    # )
+                    # raise RequestHumanTakeover
 
     def screenshot(self):
         """

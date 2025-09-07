@@ -42,6 +42,8 @@ class GeneratedConfig:
 
     # Group `PCClientInfo`
     PCClientInfo_Client = 'intl'  # intl, hmt
+    PCClientInfo_Language = 'zh-cn'  # zh-cn
+    PCClientInfo_ScreenshotInterval = 0.3
     PCClientInfo_LauncherTitleName = None
     PCClientInfo_LauncherProcessName = None
     PCClientInfo_LauncherPath = None

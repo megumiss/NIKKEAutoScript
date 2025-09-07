@@ -94,7 +94,7 @@ class Automation:
 
         self._init_input()
         self.img_cache = {}
-        self._screenshot_interval = Timer(float(self.config.Emulator_ScreenshotInterval))
+        self._screenshot_interval = Timer(float(self.config.PCClientInfo_ScreenshotInterval))
 
     def _init_input(self):
         """
@@ -135,7 +135,7 @@ class Automation:
                 # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
                 return result
             else:
-                raise RuntimeError(f'没有找到窗口 {self.current_window.title}')
+                raise RuntimeError(f'没有找到窗口 {self.current_window.name}:{self.current_window.title}')
         except Exception as e:
             logger.warning(f'截图失败：{e}')
             raise RuntimeError(f'截图失败：{e}')

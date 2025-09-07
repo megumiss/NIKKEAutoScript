@@ -39,6 +39,8 @@
   "PCClient": {
     "PCClientInfo": {
       "Client": "intl",
+      "Language": "zh-cn",
+      "ScreenshotInterval": 0.3,
       "LauncherTitleName": null,
       "LauncherProcessName": null,
       "LauncherPath": null,

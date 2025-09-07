@@ -153,6 +153,17 @@
           "hmt"
         ]
       },
+      "Language": {
+        "type": "select",
+        "value": "zh-cn",
+        "option": [
+          "zh-cn"
+        ]
+      },
+      "ScreenshotInterval": {
+        "type": "input",
+        "value": 0.3
+      },
       "LauncherTitleName": {
         "type": "input",
         "value": ""

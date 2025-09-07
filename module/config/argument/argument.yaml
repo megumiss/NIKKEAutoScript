@@ -74,6 +74,10 @@ PCClientInfo:
   Client:
     value: intl
     option: [ intl, hmt ]
+  Language:
+    value: zh-cn
+    option: [ zh-cn ]
+  ScreenshotInterval: 0.3
   LauncherTitleName:
     value: ''
   LauncherProcessName:

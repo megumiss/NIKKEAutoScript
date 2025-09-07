@@ -251,11 +251,9 @@ class UI(InfoHandler):
 
         if self.handle_server():
             raise GameStart
-            # return True
 
         if self.handle_download():
             raise GameStart
-            # return True
 
         # 系统错误
         if self.handle_system_error():
@@ -264,9 +262,11 @@ class UI(InfoHandler):
         if self.handle_system_maintenance():
             return True
 
-        if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30), interval=3):
+        if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30)):
             raise GameStart
-            # return True
+
+        if self.appear(LOGO_PAGE_CHECK, offset=(30, 30)):
+            raise GameStart
 
         # if self.handle_event():
         #     return True

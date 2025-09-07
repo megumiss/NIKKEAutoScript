@@ -62,14 +62,14 @@ class AppControl(WinClient, Login):
 
         # 创建 Window 对象
         self.launcher = Window(
-            name='Game',
+            name='Launcher',
             title=launcher_window_title,
             class_name=launcher_window_class,
             process=launcher_process,
             path=launcher_path,
         )
         self.game = Window(
-            name='Launcher',
+            name='Game',
             title=game_window_title,
             class_name=game_window_class,
             process=game_process,
@@ -92,13 +92,13 @@ class AppControl(WinClient, Login):
 
         # 启动流程
         self.app_start()
-        logger.attr('WinClient', self.game.process)
+        logger.attr('Process', self.current_window.process)
 
         # Package
-        self.package = self.config.Emulator_PackageName
+        self.package = self.config.PCClientInfo_Client
         set_server(self.package)
-        logger.attr('PackageName', self.package)
-        self.language = self.config.Emulator_Language
+        logger.attr('Client', self.package)
+        self.language = self.config.PCClientInfo_Language
         set_language(self.language)
         logger.attr('Language', self.language)
 
@@ -114,7 +114,7 @@ class AppControl(WinClient, Login):
         return None
 
     def app_start(self):
-        logger.info(f'Game start: {self.game.path}')
+        logger.info('Game starting')
         MAX_RETRY = 3
 
         def wait_until(condition, timeout, period=1):
@@ -126,12 +126,12 @@ class AppControl(WinClient, Login):
                 time.sleep(period)
             return False
 
+        # 检查屏幕分辨率
+        self.check_screen_resolution(720, 1280)
         self.launcher_running = False
         self.current_window = self.game
         for retry in range(MAX_RETRY):
             try:
-                # 检查屏幕分辨率
-                self.check_screen_resolution(720, 1280)
                 # 检查是否已进入游戏
                 if self.switch_to_program():
                     logger.info('游戏已在运行，检查分辨率')
@@ -185,18 +185,18 @@ class AppControl(WinClient, Login):
         #     raise TimeoutError("获取当前界面超时")
 
     def app_stop(self, program='Game'):
-        logger.info(f'Game stop: {self.game.path}')
-
         try:
             # 关闭游戏或者启动器
             if program == 'Launcher':
                 self.current_window = self.launcher
             else:
                 self.current_window = self.game
+
+            logger.info(f'{program} stop: {self.current_window.path}')
             if self.stop_program():
-                logger.info('Game stop success')
+                logger.info(f'{program} stop success')
             else:
-                logger.warning('Game path config error')
+                logger.warning(f'{program} path config error')
                 raise RequestHumanTakeover
         except Exception as e:
             logger.exception(e)
