@@ -321,7 +321,7 @@ class WinClient:
             new_rect = win32gui.GetClientRect(hwnd)
             logger.debug(f'设置后的客户区大小: {new_rect[2]}x{new_rect[3]}')
 
-            if new_rect[2] != client_width and new_rect[3] != client_height:
+            if new_rect[2] != client_width or new_rect[3] != client_height:
                 logger.warning(
                     f'设置分辨率不完全匹配: 期望 {client_width}x{client_height}, 实际 {new_rect[2]}x{new_rect[3]}'
                 )

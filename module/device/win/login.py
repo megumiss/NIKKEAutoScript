@@ -25,7 +25,6 @@ class Login(LauncherOcr, Automation):
                 super().screenshot()
             except Exception:
                 if self.check_program() and self.switch_to_program():
-                    self.launcher_running = True
                     logger.info('启动器打开成功')
                     break
             else:
@@ -100,6 +99,7 @@ class Login(LauncherOcr, Automation):
                 self.current_window = self.game
                 if self.check_program() and self.switch_to_program():
                     in_game = True
+                    self.launcher_running = True
                     logger.info('游戏登录成功')
                     break
             else:
