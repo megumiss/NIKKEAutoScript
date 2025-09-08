@@ -162,6 +162,10 @@
       "name": "妮游社兑换",
       "help": ""
     },
+    "StepUpGift": {
+      "name": "SETPUP礼包",
+      "help": ""
+    },
     "DailyGift": {
       "name": "每日礼包",
       "help": ""

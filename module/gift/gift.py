@@ -21,8 +21,12 @@ class GiftBase(UI):
     def _run(self, button, check):
         if not self.appear(CASH_SHOP_CHECK, offset=(10, 10)):
             self.ui_ensure(page_main)
-        try:
             self.ensure_into_shop()
+        try:
+            if button == STEPUP:
+                self.ensure_into_shop_limited_time()
+            else:
+                self.ensure_into_shop_general()
             self.receive_available_gift(button, check)
         except NetworkError:
             logger.error('Cannot access the cash shop under the current network')
@@ -30,6 +34,57 @@ class GiftBase(UI):
             self.ensure_back()
 
     def ensure_into_shop(self, skip_first_screenshot=True):
+        logger.info('Open cash shop')
+        click_timer = Timer(0.3)
+        confirm_timer = Timer(3, count=3)
+
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 付费
+            if self.appear(CASH_SHOP_CHECK, offset=10):
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    logger.info('Open cash shop done')
+                    break
+            else:
+                confirm_timer.clear()
+
+            # 打开商店
+            if click_timer.reached() and self.appear_then_click(MAIN_GOTO_CASH_SHOP, offset=30, interval=3):
+                click_timer.reset()
+                continue
+
+            # 消费限制
+            if (
+                click_timer.reached()
+                and self.appear(CONSUMPTION_RESTRICTIONS, offset=10)
+                and self.appear_then_click(AGE_20, threshold=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+            if (
+                click_timer.reached()
+                and self.appear(CONSUMPTION_RESTRICTIONS, offset=10)
+                and self.appear_then_click(CONFIRM, threshold=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+
+            # 操控妮姬的感觉
+            if click_timer.reached() and self.handle_popup():
+                click_timer.reset()
+                continue
+
+            if self.appear(FAILED_CHECK, offset=(30, 30)):
+                raise NetworkError
+
+    def ensure_into_shop_general(self, skip_first_screenshot=True):
+        logger.info('Open cash shop general')
         click_timer = Timer(0.3)
 
         while 1:
@@ -39,40 +94,16 @@ class GiftBase(UI):
                 self.device.screenshot()
 
             # 每月礼包
-            if self.appear(GENERAL_GIFT_CHECK, offset=(10, 10)) and self.appear(MONTHLY, threshold=0.7, offset=(100, 10)):
+            if self.appear(GENERAL_GIFT_CHECK, offset=(10, 10)) and self.appear(
+                MONTHLY, threshold=0.7, offset=(100, 10)
+            ):
+                logger.info('Open cash shop general done')
                 break
-
-            # 打开商店
-            if click_timer.reached() and self.appear_then_click(MAIN_GOTO_CASH_SHOP, offset=(30, 30), interval=2):
-                click_timer.reset()
-                continue
-
-            # 消费限制
-            if (
-                click_timer.reached()
-                and self.appear(CONSUMPTION_RESTRICTIONS, offset=10)
-                and self.appear_then_click(AGE_20, threshold=10, interval=2)
-            ):
-                click_timer.reset()
-                continue
-
-            if (
-                click_timer.reached()
-                and self.appear(CONSUMPTION_RESTRICTIONS, offset=10)
-                and self.appear_then_click(CONFIRM, threshold=10, interval=2)
-            ):
-                click_timer.reset()
-                continue
 
             # 打开礼礼包页面
             if click_timer.reached() and self.appear_then_click(
-                GOTO_GENERAL_GIFT, offset=(120, 10), threshold=0.95, interval=2
+                GOTO_GENERAL_GIFT, offset=(120, 10), threshold=0.95, interval=1
             ):
-                click_timer.reset()
-                continue
-
-            # 操控妮姬的感觉
-            if click_timer.reached() and self.handle_popup():
                 click_timer.reset()
                 continue
 
@@ -85,9 +116,36 @@ class GiftBase(UI):
             if self.appear(FAILED_CHECK, offset=(30, 30)):
                 raise NetworkError
 
+    def ensure_into_shop_limited_time(self, skip_first_screenshot=True):
+        logger.info('Open cash shop limited')
+        click_timer = Timer(0.3)
+
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 限时礼包检查
+            if self.appear(LIMITED_GIFT_CHECK, offset=10):
+                logger.info('Open cash shop limited done')
+                break
+
+            # 打开礼包页面
+            if click_timer.reached() and self.appear_then_click(
+                GOTO_STEPUP_GIFT, offset=(120, 10), threshold=0.95, interval=1
+            ):
+                click_timer.reset()
+                continue
+
+            if self.appear(FAILED_CHECK, offset=(30, 30)):
+                raise NetworkError
+
     def receive_available_gift(self, button, check, skip_first_screenshot=True):
+        logger.info(f'Receive gift {button.name}')
         confirm_timer = Timer(3, count=2).start()
         click_timer = Timer(0.3)
+
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -128,6 +186,11 @@ class GiftBase(UI):
                 confirm_timer.reset()
                 continue
 
+            if click_timer.reached() and self.appear_then_click(GIFT_B, offset=10, threshold=0.99, interval=1):
+                click_timer.reset()
+                confirm_timer.reset()
+                continue
+
             if click_timer.reached() and self.handle_popup():
                 confirm_timer.reset()
                 click_timer.reset()
@@ -139,6 +202,7 @@ class GiftBase(UI):
                 continue
 
             if self.appear(GOTO_BACK, offset=5, static=False) and confirm_timer.reached():
+                logger.info(f'Receive gift {button.name} done')
                 break
 
     def ensure_back(self, skip_first_screenshot=True):
@@ -202,3 +266,16 @@ class MonthlyGift(GiftBase):
     def run(self):
         self._run(MONTHLY, MONTHLY_CHECK)
         self.config.task_delay(target=self.next_month)
+
+
+class StepUpGift(GiftBase):
+    @cached_property
+    def next_tuesday(self) -> datetime:
+        local_now = datetime.now()
+        remain = (1 - local_now.weekday()) % 7
+        remain = remain + 7 if remain == 0 else remain
+        return local_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=remain) + self.diff
+
+    def run(self):
+        self._run(STEPUP, STEPUP_CHECK)
+        self.config.task_delay(target=self.next_tuesday)

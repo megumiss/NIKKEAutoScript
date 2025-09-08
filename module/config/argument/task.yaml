@@ -142,6 +142,8 @@ Gift:
   menu: 'collapse'
   page: 'setting'
   tasks:
+    StepUpGift:
+      - Scheduler
     DailyGift:
       - Scheduler
     WeeklyGift:

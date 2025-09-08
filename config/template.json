@@ -528,6 +528,19 @@
       "Storage": {}
     }
   },
+  "StepUpGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "StepUpGift",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "DailyGift": {
     "Scheduler": {
       "Enable": false,
