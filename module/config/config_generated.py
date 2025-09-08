@@ -34,13 +34,21 @@ class GeneratedConfig:
     EmulatorInfo_name = None
     EmulatorInfo_path = None
 
-    # Group `WinClient`
-    WinClient_TitleName = 'NIKKE'
-    WinClient_ProcessName = 'nikke.exe'
-    WinClient_LauncherPath = None
-    WinClient_Path = None
-    WinClient_Screens = False
-    WinClient_ResolutionCompat = False
+    # Group `PCClient`
+    PCClient_Screens = False
+    PCClient_GameResolutionCompat = False
+    PCClient_Account = None
+    PCClient_Password = None
+
+    # Group `PCClientInfo`
+    PCClientInfo_Client = 'intl'  # intl, hmt
+    PCClientInfo_Language = 'zh-cn'  # zh-cn
+    PCClientInfo_ScreenshotInterval = 0.3
+    PCClientInfo_LauncherTitleName = None
+    PCClientInfo_LauncherProcessName = None
+    PCClientInfo_LauncherPath = None
+    PCClientInfo_GameTitleName = None
+    PCClientInfo_GameProcessName = None
 
     # Group `Optimization`
     Optimization_AutoRedCircle = False

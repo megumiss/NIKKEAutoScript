@@ -46,6 +46,7 @@ class TribeTower(UI):
 
     def _run(self):
         while len(self.available_company):
+            self.device.stuck_record_clear()
             try:
                 self.ensure_into_tribe_tower()
             except NoOpportunityRemain:

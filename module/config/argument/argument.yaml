@@ -61,21 +61,34 @@ EmulatorInfo:
   path:
     value: null
     type: textarea
-WinClient:
-  TitleName:
-    value: 'NIKKE'
-  ProcessName:
-    value: 'nikke.exe'
+PCClient:
+  Screens:
+    value: false
+  GameResolutionCompat:
+    value: false
+  Account:
+    value: ''
+  Password:
+    value: ''
+PCClientInfo:
+  Client:
+    value: intl
+    option: [ intl, hmt ]
+  Language:
+    value: zh-cn
+    option: [ zh-cn ]
+  ScreenshotInterval: 0.3
+  LauncherTitleName:
+    value: ''
+  LauncherProcessName:
+    value: ''
   LauncherPath:
     value: ''
     type: textarea
-  Path:
+  GameTitleName:
     value: ''
-    type: textarea
-  Screens:
-    value: false
-  ResolutionCompat:
-    value: false
+  GameProcessName:
+    value: ''
 Optimization:
   AutoRedCircle: false
   OcrModelType:

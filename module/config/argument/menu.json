@@ -4,6 +4,8 @@
     "page": "setting",
     "tasks": [
       "NKAS",
+      "Emulator",
+      "PCClient",
       "Restart"
     ]
   },

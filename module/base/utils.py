@@ -257,7 +257,7 @@ def _area_offset(area, offset):
     return tuple(np.array([i + x for i, x in zip(area, offset)]))
 
 
-def color_similar(color1, color2, threshold=10):
+def color_similar(color1, color2):
     """Consider two colors are similar, if tolerance lesser or equal threshold.
     Tolerance = Max(Positive(difference_rgb)) + Max(- Negative(difference_rgb))
     The same as the tolerance in Photoshop.
@@ -270,11 +270,10 @@ def color_similar(color1, color2, threshold=10):
     Returns:
         bool: True if two colors are similar.
     """
-    # print(color1, color2)
     diff = np.array(color1).astype(int) - np.array(color2).astype(int)
     diff = np.max(np.maximum(diff, 0)) - np.min(np.minimum(diff, 0))
-    # print(diff)
-    return diff <= threshold
+
+    return diff
 
 
 def save_image(image, file):

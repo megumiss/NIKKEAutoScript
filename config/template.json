@@ -3,6 +3,21 @@
     "Client": {
       "Platform": "adb"
     },
+    "Optimization": {
+      "AutoRedCircle": false,
+      "OcrModelType": "mobile",
+      "WhenTaskQueueEmpty": "goto_main"
+    },
+    "Notification": {
+      "WhenDailyTaskCompleted": false,
+      "WhenDailyTaskCrashed": false,
+      "OnePushConfig": "provider: null"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Emulator": {
     "Emulator": {
       "Serial": "auto",
       "PackageName": "com.proximabeta.nikke",
@@ -17,23 +32,26 @@
       "name": null,
       "path": null
     },
-    "WinClient": {
-      "TitleName": "NIKKE",
-      "ProcessName": "nikke.exe",
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "PCClient": {
+    "PCClientInfo": {
+      "Client": "intl",
+      "Language": "zh-cn",
+      "ScreenshotInterval": 0.3,
+      "LauncherTitleName": null,
+      "LauncherProcessName": null,
       "LauncherPath": null,
-      "Path": null,
+      "GameTitleName": null,
+      "GameProcessName": null
+    },
+    "PCClient": {
       "Screens": false,
-      "ResolutionCompat": false
-    },
-    "Optimization": {
-      "AutoRedCircle": false,
-      "OcrModelType": "mobile",
-      "WhenTaskQueueEmpty": "goto_main"
-    },
-    "Notification": {
-      "WhenDailyTaskCompleted": false,
-      "WhenDailyTaskCrashed": false,
-      "OnePushConfig": "provider: null"
+      "GameResolutionCompat": false,
+      "Account": null,
+      "Password": null
     },
     "Storage": {
       "Storage": {}

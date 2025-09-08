@@ -17,6 +17,7 @@ LEVEL_UP_CHECK = Button(area={'zh-cn': (312, 601, 408, 618)}, color={'zh-cn': (0
 LOGIN_CHECK = Button(area={'zh-cn': (225, 1047, 496, 1068)}, color={'zh-cn': (58, 58, 57)}, button={'zh-cn': (225, 1047, 496, 1068)}, file={'zh-cn': './assets/zh-cn/handler/LOGIN_CHECK.png'})
 LOGIN_CHECK_B = Button(area={'zh-cn': (219, 1042, 501, 1076)}, color={'zh-cn': (59, 59, 57)}, button={'zh-cn': (219, 1042, 501, 1076)}, file={'zh-cn': './assets/zh-cn/handler/LOGIN_CHECK_B.png'})
 LOGIN_PAGE_CHECK = Button(area={'zh-cn': (229, 1247, 495, 1259)}, color={'zh-cn': (64, 64, 63)}, button={'zh-cn': (229, 1247, 495, 1259)}, file={'zh-cn': './assets/zh-cn/handler/LOGIN_PAGE_CHECK.png'})
+LOGO_PAGE_CHECK = Button(area={'zh-cn': (347, 536, 393, 574)}, color={'zh-cn': (120, 120, 119)}, button={'zh-cn': (347, 536, 393, 574)}, file={'zh-cn': './assets/zh-cn/handler/LOGO_PAGE_CHECK.png'})
 NO_REWARD = Button(area={'zh-cn': (267, 630, 432, 652)}, color={'zh-cn': (161, 162, 161)}, button={'zh-cn': (267, 630, 432, 652)}, file={'zh-cn': './assets/zh-cn/handler/NO_REWARD.png'})
 PAID_GIFT_CHECK = Button(area={'zh-cn': (169, 619, 527, 640)}, color={'zh-cn': (35, 136, 134)}, button={'zh-cn': (169, 619, 527, 640)}, file={'zh-cn': './assets/zh-cn/handler/PAID_GIFT_CHECK.png'})
 PAID_GIFT_CONFIRM_CHECK = Button(area={'zh-cn': (85, 562, 614, 587)}, color={'zh-cn': (190, 190, 190)}, button={'zh-cn': (85, 562, 614, 587)}, file={'zh-cn': './assets/zh-cn/handler/PAID_GIFT_CONFIRM_CHECK.png'})

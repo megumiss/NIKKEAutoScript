@@ -5,6 +5,7 @@ import cv2
 import imageio
 import numpy as np
 
+from module.logger import logger
 from module.base.resource import Resource
 from module.base.utils import *
 
@@ -134,7 +135,6 @@ class Button(Resource):
 
         res = cv2.matchTemplate(self.image, image, cv2.TM_CCOEFF_NORMED)
         _, similarity, _, upper_left = cv2.minMaxLoc(res)
-        # print(self.name, similarity)
 
         if similarity > threshold:
             if static:
@@ -144,6 +144,7 @@ class Button(Resource):
                 bottom_right = (upper_left[0] + w, upper_left[1] + h)
                 self._button_offset = (upper_left[0], upper_left[1], bottom_right[0], bottom_right[1])
 
+        logger.debug(f'Button: {self.name}, similarity: {similarity}, threshold: {threshold}, hit: {similarity > threshold}')
         return similarity > threshold
 
         # if self.is_gif:
@@ -216,11 +217,14 @@ class Button(Resource):
         Returns:
             bool: True if button appears on screenshot.
         """
-        return color_similar(
-            color1=get_color(image, self.area),
-            color2=self.color,
-            threshold=threshold
+        color1 = get_color(image, self.area)
+        similar = color_similar(
+            color1=color1,
+            color2=self.color
         )
+
+        logger.debug(f'Button: {self.name}, color1: {color1}, color2: {self.color}, similarity: {similar}, threshold: {threshold}, hit: {similar <= threshold}')
+        return similar <= threshold
 
     def match_appear_on(self, image, threshold=30) -> bool:
         """
@@ -233,7 +237,15 @@ class Button(Resource):
         """
         diff = np.subtract(self.button, self._button)[:2]
         area = area_offset(self.area, offset=diff)
-        return color_similar(color1=get_color(image, area), color2=self.color, threshold=threshold)
+
+        color1 = get_color(image, area)
+        similar = color_similar(
+            color1=color1,
+            color2=self.color
+        )
+
+        logger.debug(f'Button: {self.name}, color1: {color1}, color2: {self.color}, similarity: {diff}, threshold: {threshold}, hit: {diff <= threshold}')
+        return similar <= threshold
 
     def load_color(self, image):
         """Load color from the specific area of the given image.

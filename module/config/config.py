@@ -117,7 +117,8 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             func_set (set): Set of tasks to be bound
         """
         if func_set is None:
-            func_set = {"General", "NKAS"}
+            # 参数全局访问
+            func_set = {"General", "NKAS", "Emulator", "PCClient"}
 
         if isinstance(func, Function):
             func = func.command

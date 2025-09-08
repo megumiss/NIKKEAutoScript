@@ -196,6 +196,7 @@ def set_file_logger(name=pyw_name):
         highlighter=NullHighlighter(),
     )
     hdlr.setFormatter(file_formatter)
+    hdlr.setLevel(logging.DEBUG)   # ✅ 文件日志级别 DEBUG
 
     logger.handlers = [h for h in logger.handlers if not isinstance(h, (logging.FileHandler, RichFileHandler))]
     logger.addHandler(hdlr)
@@ -225,6 +226,8 @@ def set_func_logger(func):
         highlighter=Highlighter(),
     )
     hdlr.setFormatter(web_formatter)
+    hdlr.setLevel(logging.INFO)    # ✅ func 日志级别 INFO
+
     logger.handlers = [h for h in logger.handlers if not isinstance(h, RichRenderableHandler)]
     logger.addHandler(hdlr)
 

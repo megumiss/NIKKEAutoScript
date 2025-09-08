@@ -1,76 +1,98 @@
 import ctypes
-from ctypes import wintypes
 import os
 import subprocess
 import time
+from ctypes import wintypes
+from dataclasses import dataclass, field
 from typing import Literal, Optional, Tuple
 
 import psutil
 import pyautogui
 import win32con
 import win32gui
+from numpy import ndarray
 
 from module.base.utils import ensure_time
 from module.device.win.registry.game_auto_hdr import get_game_auto_hdr, set_game_auto_hdr
-from module.device.win.registry.setting import (
-    get_game_resolution,
-    set_game_resolution,
-)
+from module.device.win.registry.setting import get_game_resolution, set_game_resolution
 from module.logger import logger
+
+
+@dataclass
+class Window:
+    """统一的窗口对象"""
+
+    name: str
+    title: str
+    class_name: str
+    process: str
+    path: str
+    hwnd: int = field(default=0)
+    resolution: tuple = field(default=None)
+    offset: tuple = field(default=(0, 0))
+    image: ndarray = field(default=None)
+    screenshot_scale_factor: float = field(default=1.0)
 
 
 class WinClient:
     def __init__(self, config):
         super().__init__(config)
 
-    def start_game(self) -> bool:
-        """启动游戏"""
-        if not os.path.exists(self.game_path):
-            logger.error(f'游戏路径不存在：{self.game_path}')
+    def start_program(self) -> bool:
+        """启动程序"""
+        logger.info(f'启动程序：[{self.current_window.name}]:{self.current_window.path}')
+        path = self.current_window.path
+        if not os.path.exists(path):
+            logger.error('路径不存在')
             return False
 
-        game_folder = self.game_path.rpartition('\\')[0]
-        if not os.system(f'cmd /C start "" /D "{game_folder}" "{self.game_path}"'):
-            logger.info(f'游戏启动：{self.game_path}')
+        folder = path.rpartition('\\')[0]
+        if not os.system(f'cmd /C start "" /D "{folder}" "{path}"'):
+            logger.info('程序启动成功')
             return True
         else:
-            logger.error('启动游戏时发生错误')
+            logger.error('程序启动时发生错误')
             try:
-                # 为什么有的用户环境变量内没有cmd呢？
-                subprocess.Popen(self.game_path)
-                logger.info(f'游戏启动：{self.game_path}')
+                subprocess.Popen(path)
+                logger.info('程序启动成功')
                 return True
             except Exception as e:
-                logger.error(f'启动游戏时发生错误：{e}')
+                logger.error(f'程序启动时发生错误：{e}')
             return False
 
-    def stop_game(self) -> bool:
-        """终止游戏"""
+    def stop_program(self) -> bool:
+        """终止程序"""
+        logger.info(f'终止程序：[{self.current_window.name}]:{self.current_window.process}')
+        process = self.current_window.process
         try:
-            # os.system(f'taskkill /f /im {self.process_name}')
-            # TODO
-            # self.terminate_named_process(self.process_name)
-            logger.info(f'游戏终止：{self.process_name}')
+            self.terminate_named_process(process)
+            logger.info('程序终止成功')
             return True
         except Exception as e:
-            logger.error(f'终止游戏时发生错误：{e}')
+            logger.error(f'终止时发生错误：{e}')
+            return False
+
+    def check_program(self) -> bool:
+        """检查程序是否启动"""
+        logger.info(f'检查程序：[{self.current_window.name}]:{self.current_window.process}')
+        process = self.current_window.process
+        try:
+            if self.is_process_running(process):
+                logger.info('程序启动成功')
+                return True
+            else:
+                False
+        except Exception as e:
+            logger.error(f'检查程序发生错误：{e}')
             return False
 
     @staticmethod
-    def sleep(second):
-        """
-        Args:
-            second(int, float, tuple):
-        """
-        time.sleep(ensure_time(second))
-
-    @staticmethod
-    def terminate_named_process(target_process_name, termination_timeout=10):
+    def terminate_named_process(target_process, termination_timeout=10):
         """
         根据进程名终止属于当前用户的进程。
 
         参数:
-        - target_process_name (str): 要终止的进程名。
+        - target_process (str): 要终止的进程名。
         - termination_timeout (int, optional): 终止进程前等待的超时时间（秒）。
 
         返回值:
@@ -80,16 +102,45 @@ class WinClient:
         # 遍历所有运行中的进程
         for process in psutil.process_iter(attrs=['pid', 'name']):
             # 检查当前进程名是否匹配并属于当前用户
-            if target_process_name in process.info['name']:
+            if target_process in process.info['name']:
                 process_username = process.username().split('\\')[-1]  # 从进程所有者中提取用户名
                 if system_username == process_username:
                     proc_to_terminate = psutil.Process(process.info['pid'])
-                    proc_to_terminate.terminate()  # 尝试终止进程
-                    proc_to_terminate.wait(termination_timeout)  # 等待进程终止
+                    proc_to_terminate.terminate()
+                    proc_to_terminate.wait(termination_timeout)
+
+    @staticmethod
+    def is_process_running(target_process: str) -> bool:
+        """
+        检查指定进程名是否正在运行（仅限当前用户）。
+
+        参数:
+        - target_process (str): 要检查的进程名。
+
+        返回值:
+        - bool: 如果进程存在并属于当前用户则返回 True，否则返回 False。
+        """
+        try:
+            system_username = os.getlogin()  # 当前系统用户名
+        except Exception:
+            # 有时 os.getlogin() 在服务或计划任务中会失败，用这种方式兜底
+            import getpass
+
+            system_username = getpass.getuser()
+
+        for process in psutil.process_iter(attrs=['pid', 'name', 'username']):
+            try:
+                if target_process.lower() in (process.info['name'] or '').lower():
+                    process_username = process.info['username'].split('\\')[-1]
+                    if system_username == process_username:
+                        return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return False
 
     @staticmethod
     def set_foreground_window_with_retry(hwnd):
-        """尝试将窗口设置为前台，失败时先最小化再恢复。"""
+        """尝试将窗口设置为前台，失败时先最小化再恢复"""
 
         def toggle_window_state(hwnd, minimize=False):
             """最小化或恢复窗口。"""
@@ -105,31 +156,34 @@ class WinClient:
             if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
                 raise Exception('Failed to set window foreground')
 
-    def switch_to_game(self) -> bool:
-        """将游戏窗口切换到前台"""
+    def switch_to_program(self) -> bool:
+        """将程序窗口切换到前台"""
+        logger.info(f'将窗口切换到前台：[{self.current_window.name}]:{self.current_window.title}')
         try:
-            hwnd = win32gui.FindWindow(self.window_class, self.window_name)
+            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
             if hwnd == 0:
-                logger.debug('游戏窗口未找到')
+                logger.warning('窗口未找到')
                 return False
             self.set_foreground_window_with_retry(hwnd)
-            logger.info('游戏窗口已切换到前台')
+            logger.info('窗口已切换到前台')
             return True
         except Exception as e:
-            logger.error(f'激活游戏窗口时发生错误：{e}')
+            logger.error(f'激活窗口时发生错误：{e}')
             return False
 
     def get_resolution(self) -> Optional[Tuple[int, int]]:
-        """检查游戏窗口的分辨率"""
+        """获取程序窗口的分辨率"""
+        logger.info(f'获取窗口分辨率：[{self.current_window.name}]:{self.current_window.title}')
         try:
-            hwnd = win32gui.FindWindow(self.window_class, self.window_name)
+            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
             if hwnd == 0:
-                logger.debug('游戏窗口未找到')
+                logger.warning('窗口未找到')
                 return None
             _, _, window_width, window_height = win32gui.GetClientRect(hwnd)
+            self.current_window.resolution = (window_width, window_height)
             return window_width, window_height
         except IndexError:
-            logger.debug('游戏窗口未找到')
+            logger.warning('窗口未找到')
             return None
 
     def shutdown(
@@ -147,7 +201,7 @@ class WinClient:
         返回:
             操作成功执行返回True，否则返回False。
         """
-        self.stop_game()
+        self.stop_program(self.current_window)
         if action not in ['Shutdown', 'Sleep', 'Hibernate', 'Restart', 'Logoff', 'RunScript']:
             return True
 
@@ -227,14 +281,16 @@ class WinClient:
             client_width: 客户区宽度(像素)
             client_height: 客户区高度(像素)
         """
+        logger.info(
+            f'设置窗口分辨率：[{self.current_window.name}]:{self.current_window.title} {client_width}x{client_height}'
+        )
         try:
             # 查找窗口句柄
-            hwnd = win32gui.FindWindow(self.window_class, self.window_name)
+            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
             if hwnd == 0:
-                logger.error('游戏窗口未找到')
-                raise Exception('游戏窗口未找到')
+                logger.error('窗口未找到')
+                raise Exception('窗口未找到')
 
-            # 获取窗口矩形和客户区矩形
             rect = win32gui.GetClientRect(hwnd)
             window_rect = win32gui.GetWindowRect(hwnd)
 
@@ -265,17 +321,16 @@ class WinClient:
             new_rect = win32gui.GetClientRect(hwnd)
             logger.debug(f'设置后的客户区大小: {new_rect[2]}x{new_rect[3]}')
 
-            if new_rect[2] != client_width and new_rect[3] != client_height:
+            if new_rect[2] != client_width or new_rect[3] != client_height:
                 logger.warning(
                     f'设置分辨率不完全匹配: 期望 {client_width}x{client_height}, 实际 {new_rect[2]}x{new_rect[3]}'
                 )
             else:
-                logger.info(f'成功设置窗口客户区分辨率为: {client_width}x{client_height}')
+                logger.info(f'成功设置客户区分辨率为: {client_width}x{client_height}')
 
         except Exception as e:
-            logger.error(f'设置窗口分辨率时发生错误: {e}')
-            logger.error(f'目标分辨率: {client_width}x{client_height}')
-            raise Exception(f'无法设置窗口分辨率: {e}')
+            logger.error(f'设置分辨率时发生错误: {e}')
+            raise Exception(f'无法设置分辨率: {e}')
 
     def change_resolution_compat(self, client_width, client_height):
         """
@@ -285,12 +340,15 @@ class WinClient:
             client_width: 客户区宽度(像素)
             client_height: 客户区高度(像素)
         """
+        logger.info(
+            f'设置窗口分辨率[兼容模式]：[{self.current_window.name}]:{self.current_window.title} {client_width}x{client_height}'
+        )
         try:
             # 查找窗口句柄
-            hwnd = win32gui.FindWindow(self.window_class, self.window_name)
+            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
             if hwnd == 0:
-                logger.error('游戏窗口未找到')
-                raise Exception('游戏窗口未找到')
+                logger.error('窗口未找到')
+                raise Exception('窗口未找到')
 
             # 获取窗口的 DPI（Win10+ 支持）
             try:
@@ -346,12 +404,32 @@ class WinClient:
                     f'设置分辨率不完全匹配: 期望 {client_width}x{client_height}, 实际 {new_rect[2]}x{new_rect[3]}'
                 )
             else:
-                logger.info(f'成功设置窗口客户区分辨率为: {client_width}x{client_height}')
+                logger.info(f'成功设置客户区分辨率为: {client_width}x{client_height}')
 
         except Exception as e:
-            logger.error(f'设置窗口分辨率时发生错误: {e}')
-            logger.error(f'目标分辨率: {client_width}x{client_height}')
-            raise Exception(f'无法设置窗口分辨率: {e}')
+            logger.error(f'设置分辨率时发生错误: {e}')
+            raise Exception(f'无法设置分辨率: {e}')
+
+    def ensure_resolution(self, client_width, client_height, retries=5, interval=1.0):
+        """确保窗口分辨率被成功设置"""
+        logger.info(f'持续设置窗口分辨率：[{self.current_window.name}]:{self.current_window.title}')
+        compat = getattr(self.config, f'PCClient_{self.current_window.name}ResolutionCompat', False)
+        for i in range(retries):
+            if compat:
+                self.change_resolution_compat(client_width, client_height)
+            else:
+                self.change_resolution(client_width, client_height)
+            time.sleep(interval)
+            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
+            if hwnd:
+                rect = win32gui.GetClientRect(hwnd)
+                if rect[2] == client_width and rect[3] == client_height:
+                    logger.info(f'分辨率成功设置为 {client_width}x{client_height}')
+                    return True
+                else:
+                    logger.warning('分辨率未成功设置，重试中...')
+        logger.error(f'分辨率无法设置为 {client_width}x{client_height}')
+        return False
 
     def change_reg_resolution(self, width: int, height: int):
         """通过注册表修改游戏分辨率"""
@@ -410,48 +488,55 @@ class WinClient:
         except Exception as e:
             logger.debug(f'恢复游戏自动 HDR 设置时发生错误：{e}')
 
-    def check_resolution(self, target_width: int, target_height: int) -> None:
+    def check_screen_resolution(self, target_width: int, target_height: int) -> None:
         """
-        检查游戏窗口的分辨率是否匹配目标分辨率。
+        检查桌面分辨率是否符合要求。
 
-        如果游戏窗口的分辨率与目标分辨率不匹配，则记录错误并抛出异常。
-        如果桌面分辨率小于目标分辨率，也会记录错误建议。
+        如果桌面分辨率小于目标分辨率，则记录错误并抛出异常。
 
         参数:
             target_width (int): 目标分辨率的宽度。
             target_height (int): 目标分辨率的高度。
         """
+        logger.info('检查桌面分辨率')
         self.screen_resolution = pyautogui.size()
         screen_width, screen_height = self.screen_resolution
         if screen_width < target_width or screen_height < target_height:
             logger.error(f'桌面分辨率: {screen_width}x{screen_height}，目标分辨率: {target_width}x{target_height}')
             logger.error(
-                f'显示器横向分辨率必须大于 {target_width}，竖向分辨率必须大于 {target_height}；请尝试竖屏使用，或者更换更大的显示器/使用 HDMI/VGA 显卡欺骗器'
+                f'显示器横向分辨率必须大于 {target_width}，竖向分辨率必须大于 {target_height}；请尝试竖屏使用，或者更换更大的显示器/使用uu远程超级屏/使用 HDMI/VGA 显卡欺骗器'
             )
             raise Exception('桌面分辨率过低')
         else:
             logger.debug(f'桌面分辨率: {screen_width}x{screen_height}')
 
-    def check_resolution_ratio(self, target_width: int, target_height: int) -> None:
+    def check_resolution(self, target_width: int, target_height: int) -> None:
         """
-        检查游戏窗口的分辨率和比例是否符合目标设置。
+        检查游戏窗口的分辨率是否符合目标设置。
 
-        如果游戏窗口的分辨率小于目标分辨率或比例不正确，则记录错误并抛出异常。
-        如果桌面分辨率不符合最小推荐值，也会记录错误建议。
+        如果游戏窗口的分辨率小于目标分辨率，则记录错误并抛出异常。
 
         参数:
             target_width (int): 目标分辨率的宽度。
             target_height (int): 目标分辨率的高度。
         """
+        logger.info(f'检查窗口分辨率：[{self.current_window.name}]:{self.current_window.title}')
+
         resolution = self.get_resolution()
         if not resolution:
-            raise Exception('游戏分辨率获取失败')
+            raise Exception('窗口分辨率获取失败')
         window_width, window_height = resolution
 
         if window_width != target_width or window_height != target_height:
-            logger.error(
-                f'游戏分辨率: {window_width}x{window_height} ≠ {target_width}x{target_height}，分辨率错误，请重试'
-            )
-            raise Exception('游戏分辨率错误')
+            logger.error(f'窗口分辨率: {window_width}x{window_height} ≠ {target_width}x{target_height}，分辨率错误')
+            raise Exception('窗口分辨率错误')
         else:
-            logger.debug(f'游戏分辨率: {window_width}x{window_height}')
+            logger.info(f'窗口分辨率: {window_width}x{window_height}')
+
+    @staticmethod
+    def sleep(second):
+        """
+        Args:
+            second(int, float, tuple):
+        """
+        time.sleep(ensure_time(second))

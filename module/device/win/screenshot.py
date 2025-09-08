@@ -38,6 +38,20 @@ class Screenshot:
             return window
         return False
 
+    # @staticmethod
+    # def get_window(title, class_name):
+    #     hwnd_list = []
+
+    #     def enum_handler(hwnd, lparam):
+    #         if win32gui.IsWindowVisible(hwnd) and title in win32gui.GetWindowText(hwnd):
+    #             if class_name is None or class_name == win32gui.GetClassName(hwnd):
+    #                 hwnd_list.append(hwnd)
+
+    #     win32gui.EnumWindows(enum_handler, None)
+    #     if hwnd_list:
+    #         return hwnd_list[0]
+    #     return None
+
     @staticmethod
     def get_main_screen_location():
         rects = getDisplayRects()
@@ -46,7 +60,7 @@ class Screenshot:
         return -min_x, -min_y
 
     @staticmethod
-    def take_screenshot(title, screens=False, crop=(0, 0, 1, 1)):
+    def take_screenshot(title, resolution, screens=False, crop=(0, 0, 1, 1)):
         window = Screenshot.get_window(title)
         if window:
             left, top, width, height = Screenshot.get_window_region(window)
@@ -67,9 +81,9 @@ class Screenshot:
             )
 
             real_width, _ = Screenshot.get_window_real_resolution(window)
-            if real_width > 720:
-                screenshot_scale_factor = 720 / real_width
-                screenshot = screenshot.resize((int(720 * crop[2]), int(1280 * crop[3])))
+            if real_width > resolution[0]:
+                screenshot_scale_factor = resolution[0] / real_width
+                screenshot = screenshot.resize((int(resolution[0] * crop[2]), int(resolution[1] * crop[3])))
             else:
                 screenshot_scale_factor = 1
 

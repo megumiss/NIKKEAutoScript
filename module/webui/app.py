@@ -41,6 +41,7 @@ from pywebio.session import download, go_app, info, local, register_thread, run_
 from starlette.routing import Route
 from starlette.responses import JSONResponse
 
+from module.config.account import save_account
 import module.webui.lang as lang
 from module.config.config import NikkeConfig, Function
 from module.config.deep import deep_get, deep_iter, deep_set
@@ -531,14 +532,26 @@ class NKASGUI(Frame):
                     pin["_".join(k.split("."))] = default
 
                 elif not validate or re_fullmatch(validate, v):
-                    deep_set(config, k, v)
-                    modified[k] = v
-                    valid.append(k)
-                    for set_key, set_value in config_updater.save_callback(k, v):
-                        modified[set_key] = set_value
-                        deep_set(config, set_key, set_value)
-                        valid.append(set_key)
-                        pin["_".join(set_key.split("."))] = to_pin_value(set_value)
+                    # 当保存 account 或 password 时，加密存储并回显为******
+                    if k in ("PCClient.PCClient.Account", "PCClient.PCClient.Password"):
+                        if k == "PCClient.PCClient.Account":
+                            save_account(config_name, account=v)
+                        if k == "PCClient.PCClient.Password":
+                            save_account(config_name, password=v)
+
+                        deep_set(config, k, "******")
+                        modified[k] = "******"
+                        valid.append(k)
+                        pin["_".join(k.split("."))] = "******"
+                    else:
+                        deep_set(config, k, v)
+                        modified[k] = v
+                        valid.append(k)
+                        for set_key, set_value in config_updater.save_callback(k, v):
+                            modified[set_key] = set_value
+                            deep_set(config, set_key, set_value)
+                            valid.append(set_key)
+                            pin["_".join(set_key.split("."))] = to_pin_value(set_value)
                 else:
                     modified.pop(k)
                     invalid.append(k)

@@ -42,6 +42,14 @@
       "name": "NKAS设置",
       "help": ""
     },
+    "Emulator": {
+      "name": "模拟器",
+      "help": ""
+    },
+    "PCClient": {
+      "name": "PC客户端",
+      "help": ""
+    },
     "Restart": {
       "name": "重启设置",
       "help": ""
@@ -294,34 +302,67 @@
       "help": ""
     }
   },
-  "WinClient": {
+  "PCClient": {
+    "_info": {
+      "name": "使用设置",
+      "help": ""
+    },
+    "Screens": {
+      "name": "多屏幕",
+      "help": "如果使用多屏幕，请开启此选项。多屏幕请优先将符合分辨率要求的屏幕设为主显示器，该选项未经详细测试可能无法使用"
+    },
+    "GameResolutionCompat": {
+      "name": "游戏分辨率设置兼容模式",
+      "help": "如果脚本提示游戏分辨率不正确、日志输出的游戏窗口分辨率不为720*1280，请开启此选项"
+    },
+    "Account": {
+      "name": "账号",
+      "help": "请将邮箱直接粘贴到此处，登录失效时会自动填充账号。此功能存在一定风险，请谨慎使用"
+    },
+    "Password": {
+      "name": "密码",
+      "help": "请将密码直接粘贴到此处，登录失效时会自动填充密码。此功能存在一定风险，请谨慎使用"
+    }
+  },
+  "PCClientInfo": {
     "_info": {
       "name": "PC端设置",
       "help": ""
     },
-    "TitleName": {
-      "name": "窗口标题",
-      "help": "游戏窗口的标题栏名称，默认是 'NIKKE'"
+    "Client": {
+      "name": "游戏客户端",
+      "help": "启动器、游戏的标题、进程会根据选择的客户端自动填写，切换前需要先清空下面的启动器和游戏配置",
+      "intl": "国际",
+      "hmt": "港澳台"
     },
-    "ProcessName": {
-      "name": "进程名称",
-      "help": "游戏进程的名称，默认是 'nikke.exe'"
+    "Language": {
+      "name": "游戏语言",
+      "help": "当前只支持简体中文",
+      "zh-cn": "简体中文"
+    },
+    "ScreenshotInterval": {
+      "name": "截图间隔",
+      "help": ""
+    },
+    "LauncherTitleName": {
+      "name": "启动器标题",
+      "help": "启动器窗口的标题栏名称，一般无需填写"
+    },
+    "LauncherProcessName": {
+      "name": "启动器进程",
+      "help": "启动进程的名称，一般无需填写"
     },
     "LauncherPath": {
       "name": "启动器路径",
-      "help": "游戏安装路径，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe；暂不支持自动启动游戏，请手动打开游戏后再运行脚本"
+      "help": "游戏启动器路径，必填，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
     },
-    "Path": {
-      "name": "游戏路径",
-      "help": "游戏安装路径，例如：E:\\NIKKE\\NIKKE\\game\\nikke.exe；暂不支持自动启动游戏，请手动打开游戏后再运行脚本"
+    "GameTitleName": {
+      "name": "游戏标题",
+      "help": "游戏窗口的标题栏名称，一般无需填写"
     },
-    "Screens": {
-      "name": "多屏幕",
-      "help": "如果使用多屏幕，请开启此选项"
-    },
-    "ResolutionCompat": {
-      "name": "分辨率设置兼容模式",
-      "help": "如果脚本无法正常严格设置游戏分辨率为720*1280，请开启此选项"
+    "GameProcessName": {
+      "name": "游戏进程",
+      "help": "游戏进程的名称，一般无需填写"
     }
   },
   "Optimization": {

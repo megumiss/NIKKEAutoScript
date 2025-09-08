@@ -11,12 +11,9 @@ from module.exception import (
     RequestHumanTakeover,
 )
 from module.logger import logger
-from module.ocr.models import OCR_MODEL
 
 
 class Device(AppControl, Automation):
-    get_location = OCR_MODEL.get_location
-
     # 尝试检测的 Button 集合
     detect_record = set()
     # 点击过的 Button 队列
@@ -40,11 +37,16 @@ class Device(AppControl, Automation):
                     logger.critical('Failed to start game after 3 trial')
                     raise RequestHumanTakeover
                 # Try to start game
-                if not self.switch_to_game():
+                self.current_window = self.game
+                if not self.switch_to_program():
                     self.app_start()
                 else:
-                    logger.critical(f'No process "{self.config.WinClient_ProcessName}" found, please start game first')
-                    raise RequestHumanTakeover
+                    # TODO 安装检查
+                    break
+                    # logger.critical(
+                    #     f'No process "{self.config.PCClientInfo_GameProcessName}" found, please start game first'
+                    # )
+                    # raise RequestHumanTakeover
 
     def screenshot(self):
         """
@@ -55,6 +57,7 @@ class Device(AppControl, Automation):
         """
         self.stuck_record_check()
         super().screenshot()
+        self.image = self.current_window.image
         return self.image
 
     def handle_control_check(self, button: Button):
@@ -192,10 +195,10 @@ class Device(AppControl, Automation):
         self.stuck_record_clear()
         self.click_record_clear()
 
-    def app_stop(self):
+    def app_stop(self, program='Game'):
         """
         停止NIKKE
         """
-        super().app_stop()
+        super().app_stop(program=program)
         self.stuck_record_clear()
         self.click_record_clear()

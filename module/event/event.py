@@ -499,7 +499,9 @@ class Event(UI):
                         continue
 
                     # story1列表页面
-                    if self.appear(self.event_assets.STORY_1_NORMAL, threshold=10):
+                    if not self.appear(self.event_assets.EVENT_GOTO_STORY_1, offset=10) and self.appear(
+                        self.event_assets.STORY_1_NORMAL, threshold=10
+                    ):
                         click_timer.reset()
                         break
                 logger.info('Open event story 1')
@@ -545,12 +547,16 @@ class Event(UI):
                         continue
 
                     # story2普通难度列表页面
-                    if self.appear(self.event_assets.STORY_2_NORMAL, threshold=10):
+                    if not self.appear(self.event_assets.EVENT_GOTO_STORY_2, offset=10) and self.appear(
+                        self.event_assets.STORY_2_NORMAL, threshold=10
+                    ):
                         click_timer.reset()
                         break
 
                     # story2困难难度列表页面
-                    if self.appear(self.event_assets.STORY_2_HARD, threshold=10):
+                    if not self.appear(self.event_assets.EVENT_GOTO_STORY_2, offset=10) and self.appear(
+                        self.event_assets.STORY_2_HARD, threshold=10
+                    ):
                         click_timer.reset()
                         break
                 self.device.sleep(2)
@@ -661,12 +667,16 @@ class Event(UI):
                     continue
 
                 # story普通难度列表页面
-                if self.appear(self.event_assets.STORY_1_NORMAL, threshold=10):
+                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=10) and self.appear(
+                    self.event_assets.STORY_1_NORMAL, threshold=10
+                ):
                     click_timer.reset()
                     break
 
                 # story困难难度列表页面，困难更新后需要重新截图
-                if self.appear(self.event_assets.STORY_1_HARD, threshold=10):
+                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=10) and self.appear(
+                    self.event_assets.STORY_1_HARD, threshold=10
+                ):
                     click_timer.reset()
                     break
 

@@ -92,6 +92,8 @@ class LoginHandler(UI):
             if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
+            
+            
 
     def handle_app_login(self) -> bool:
         """
