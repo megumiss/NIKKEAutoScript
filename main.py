@@ -78,7 +78,7 @@ class NikkeAutoScript:
     def run(self, command, skip_first_screenshot=False):
         try:
             # 妮游社任务不需要device
-            if command not in self.config.SKIP_START_TASKS_UNDER and not skip_first_screenshot:
+            if command not in self.config.INDEPENDENT_TASKS_UNDER and not skip_first_screenshot:
                 self.device.screenshot()
             self.__getattribute__(command)()
             return True
@@ -397,7 +397,7 @@ class NikkeAutoScript:
                 self.is_first_task = False
                 method = self.config.Optimization_WhenTaskQueueEmpty
                 # 妮游社任务不需要device
-                if method == 'close_game' and task.command not in self.config.SKIP_START_TASKS:
+                if method == 'close_game' and task.command not in self.config.INDEPENDENT_TASKS:
                     logger.info('Close game during wait')
                     # device 为空
                     if 'device' not in self.__dict__:
@@ -418,7 +418,7 @@ class NikkeAutoScript:
                         self.config.task_call('Restart')
                         del_cached_property(self, 'config')
                         continue
-                elif method == 'goto_main' and task.command not in self.config.SKIP_START_TASKS:
+                elif method == 'goto_main' and task.command not in self.config.INDEPENDENT_TASKS:
                     logger.info('Goto main page during wait')
                     # device 为空
                     if 'device' not in self.__dict__:
@@ -472,7 +472,7 @@ class NikkeAutoScript:
             # Get task
             task = self.get_next_task()
             # 妮游社任务不需要device
-            if task not in self.config.SKIP_START_TASKS:
+            if task not in self.config.INDEPENDENT_TASKS:
                 # Init device and change server
                 _ = self.device
                 self.device.config = self.config

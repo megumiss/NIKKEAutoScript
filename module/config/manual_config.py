@@ -144,5 +144,6 @@ class ManualConfig:
 
     DEVICE_OVER_HTTP = False
 
-    SKIP_START_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange']
-    SKIP_START_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange"]
+    # 独立任务，不依赖游戏运行
+    INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange']
+    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange"]
