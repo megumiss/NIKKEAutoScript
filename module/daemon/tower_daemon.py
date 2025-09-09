@@ -57,6 +57,9 @@ class TowerDaemon(UI):
 
             if self.appear(STAGE_INFO_CHECK, offset=10, static=False):
                 break
+
+        self.device.stuck_record_clear()
+        self.device.click_record_clear()
         self.try_to_current_stage()
 
     def try_to_current_stage(self, skip_first_screenshot=True):
@@ -98,8 +101,16 @@ class TowerDaemon(UI):
                 if (
                     click_timer.reached()
                     and not self.appear(NEXT_STAGE, offset=10)
-                    and self.appear_then_click(END_CHECK, offset=10)
+                    and self.appear(END_CHECK, offset=30)
                 ):
+                    while 1:
+                        self.device.screenshot()
+                        if not self.appear(END_CHECK, offset=30):
+                            click_timer.reset()
+                            break
+                        if self.appear_then_click(END_CHECK, offset=30, interval=1):
+                            click_timer.reset()
+                            continue
                     click_timer.reset()
                     continue
 

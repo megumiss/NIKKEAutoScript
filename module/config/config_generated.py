@@ -17,14 +17,38 @@ class GeneratedConfig:
     Scheduler_FailureInterval = 120
     Scheduler_ServerUpdate = '04:00'
 
+    # Group `Client`
+    Client_Platform = 'adb'  # adb, win
+
     # Group `Emulator`
     Emulator_Serial = 'auto'
-    Emulator_PackageName = 'com.proximabeta.nikke'  # com.proximabeta.nikke, com.gamamobi.nikke
+    Emulator_PackageName = 'com.proximabeta.nikke'  # com.proximabeta.nikke, com.gamamobi.nikke, com.proximabeta.nikke, com.gamamobi.nikke
     Emulator_Language = 'zh-cn'  # zh-cn
     Emulator_ScreenshotMethod = 'DroidCast'  # DroidCast
     Emulator_ControlMethod = 'minitouch'  # minitouch
     Emulator_AdbRestart = False
     Emulator_ScreenshotInterval = 0.5
+
+    # Group `EmulatorInfo`
+    EmulatorInfo_Emulator = 'auto'  # auto, NoxPlayer, NoxPlayer64, BlueStacks4, BlueStacks5, BlueStacks4HyperV, BlueStacks5HyperV, LDPlayer3, LDPlayer4, LDPlayer9, MuMuPlayer, MuMuPlayerX, MuMuPlayer12, MEmuPlayer
+    EmulatorInfo_name = None
+    EmulatorInfo_path = None
+
+    # Group `PCClient`
+    PCClient_Screens = False
+    PCClient_GameResolutionCompat = False
+    PCClient_Account = None
+    PCClient_Password = None
+
+    # Group `PCClientInfo`
+    PCClientInfo_Client = 'intl'  # intl, hmt
+    PCClientInfo_Language = 'zh-cn'  # zh-cn
+    PCClientInfo_ScreenshotInterval = 0.3
+    PCClientInfo_LauncherTitleName = None
+    PCClientInfo_LauncherProcessName = None
+    PCClientInfo_LauncherPath = None
+    PCClientInfo_GameTitleName = None
+    PCClientInfo_GameProcessName = None
 
     # Group `Optimization`
     Optimization_AutoRedCircle = False
@@ -53,6 +77,7 @@ class GeneratedConfig:
 
     # Group `GeneralShop`
     GeneralShop_enable = True
+    GeneralShop_priority = 'GRATIS > CORE_DUST_CASE > ORNAMENT'
 
     # Group `ArenaShop`
     ArenaShop_enable = False
@@ -90,6 +115,7 @@ class GeneratedConfig:
     BlaAuth_XCommonParams = None
 
     # Group `BlaDaily`
+    BlaDaily_Immediately = False
     BlaDaily_PostID = None
     BlaDaily_CommentID = None
     BlaDaily_Points = None
@@ -105,7 +131,7 @@ class GeneratedConfig:
     BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
 
     # Group `Event`
-    Event_Event = ''  # event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
+    Event_Event = ''  # event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
     Event_LoginStamp = True
     Event_Challenge = True
     Event_Story = False
@@ -113,6 +139,7 @@ class GeneratedConfig:
     Event_StoryDifficulty = 'Normal'  # Normal, Hard
     Event_Coop = False
     Event_Shop = False
+    Event_ShopDelayList = 'TITLE'
     Event_Game = False
 
     # Group `CheerStrategy`
@@ -120,7 +147,15 @@ class GeneratedConfig:
     CheerStrategy_Strategy = 'Most'  # Most, Few, Random
 
     # Group `Interception`
+    Interception_Boss = 'Kraken'  # Kraken, Indivilia, Harvester, MirrorContainer, Ultra
     Interception_DropScreenshotPath = None
+
+    # Group `InterceptionTeam`
+    InterceptionTeam_Kraken = 1  # 1, 2, 3, 4, 5
+    InterceptionTeam_Indivilia = 2  # 1, 2, 3, 4, 5
+    InterceptionTeam_Harvester = 3  # 1, 2, 3, 4, 5
+    InterceptionTeam_MirrorContainer = 4  # 1, 2, 3, 4, 5
+    InterceptionTeam_Ultra = 5  # 1, 2, 3, 4, 5
 
     # Group `Overclock`
     Overclock_SkipRatioCheck = False
@@ -129,6 +164,14 @@ class GeneratedConfig:
 
     # Group `Synchro`
     Synchro_UseBox = False
+    # Group `TowerDaemon`
+    TowerDaemon_Enable = True
+
+    # Group `CombatDaemon`
+    CombatDaemon_Enable = False
+
+    # Group `EventDaemon`
+    EventDaemon_Enable = False
 
     # Group `Storage`
     Storage_Storage = {}

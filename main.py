@@ -1,15 +1,18 @@
 import os
 import re
 import sys
+import threading
 import time
 from datetime import datetime, timedelta
 from functools import cached_property
 
 import inflection
 
+from module.base.decorator import del_cached_property
 from module.config.config import NikkeConfig, TaskEnd
 from module.config.utils import deep_get, deep_set
 from module.exception import (
+    AccountError,
     GameNotRunningError,
     GamePageUnknownError,
     GameServerUnderMaintenance,
@@ -26,9 +29,16 @@ sys.stderr.reconfigure(encoding='utf-8')
 
 
 class NikkeAutoScript:
+    stop_event: threading.Event = None
+
     def __init__(self, config_name='nkas'):
         logger.hr('Start', level=0)
         self.config_name = config_name
+        # Skip first restart
+        self.is_first_task = True
+        # Failure count of tasks
+        # Key: str, task name, value: int, failure count
+        self.failure_record = {}
 
     @cached_property
     def config(self):
@@ -45,43 +55,43 @@ class NikkeAutoScript:
     @cached_property
     def device(self):
         try:
-            from module.device.device import Device
+            if self.config.Client_Platform == 'win':
+                from module.device.win.device import Device
 
-            device = Device(config=self.config)
+                device = Device(config=self.config)
+            if self.config.Client_Platform == 'adb':
+                from module.device.adb.device import Device
+
+                device = Device(config=self.config)
+
             return device
         except RequestHumanTakeover:
             logger.critical('Request human takeover')
+            exit(1)
+        except AccountError:
+            logger.critical('Account or password setting error')
             exit(1)
         except Exception as e:
             logger.exception(e)
             exit(1)
 
-    def run(self, command):
+    def run(self, command, skip_first_screenshot=False):
         try:
-            self.device.screenshot()
+            if not skip_first_screenshot:
+                self.device.screenshot()
             self.__getattribute__(command)()
             return True
-
         except TaskEnd:
             return True
-
         except GameStart:
             self.start()
             return True
-
         except GameNotRunningError as e:
             logger.warning(e)
             self.config.task_call('Restart')
-            return True
-
+            return False
         except (GameStuckError, GameTooManyClickError) as e:
-            """
-            当一直没有进行操作时或点击同一目标过多时，尝试重启游戏
-            """
             logger.error(e)
-            """
-                在 Alas 中会将在raise前最后的截图和log写入./log/error 
-            """
             self.save_error_log()
             logger.warning(f'Game stuck, {self.device.package} will be restarted in 10 seconds')
             logger.warning('If you are playing by hand, please stop NKAS')
@@ -91,10 +101,12 @@ class NikkeAutoScript:
         except GamePageUnknownError:
             logger.info('Game server may be under maintenance or network may be broken, check server status now')
             # self.device.app_stop()
+            logger.critical('Game page unknown')
+            self.save_error_log()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
-                    title='NKAS crashed',
+                    title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GamePageUnknownError',
                 )
             exit(1)
@@ -104,7 +116,7 @@ class NikkeAutoScript:
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
-                    title='NKAS crashed',
+                    title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GameServerUnderMaintenance',
                 )
             exit(1)
@@ -113,17 +125,17 @@ class NikkeAutoScript:
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
-                    title='NKAS crashed',
+                    title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> RequestHumanTakeover',
                 )
             exit(1)
         except Exception as e:
-            self.save_error_log()
             logger.exception(e)
+            self.save_error_log()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
-                    title='NKAS crashed',
+                    title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> Exception occured',
                 )
             exit(1)
@@ -133,7 +145,6 @@ class NikkeAutoScript:
         Save last 60 screenshots in ./log/error/<timestamp>
         Save logs to ./log/error/<timestamp>/log.txt
         """
-
         from module.base.utils import save_image
         from module.handler.sensitive_info import handle_sensitive_logs
 
@@ -274,6 +285,11 @@ class NikkeAutoScript:
 
         Liberation(config=self.config, device=self.device).run()
 
+    def step_up_gift(self):
+        from module.gift.gift import StepUpGift
+
+        StepUpGift(config=self.config, device=self.device).run()
+
     def daily_gift(self):
         from module.gift.gift import DailyGift
 
@@ -360,9 +376,6 @@ class NikkeAutoScript:
             bool: True if wait finished, False if config changed.
         """
         future = future + timedelta(seconds=1)
-        """
-            记录开始等待任务时，配置文件的最后更改时间
-        """
         self.config.start_watching()
         while 1:
             if datetime.now() > future:
@@ -374,9 +387,7 @@ class NikkeAutoScript:
                     exit(0)
 
             time.sleep(5)
-            """
-                在等待过程中持续对比配置文件的最后更改时间
-            """
+
             if self.config.should_reload():
                 return False
 
@@ -388,17 +399,8 @@ class NikkeAutoScript:
         while 1:
             task = self.config.get_next()
             self.config.task = task
-            """
-                在 Alas 中每个任务都有共有属性 Scheduler
-                调度器在运行任务时，是根据任务的 Scheduler.Command 调用对应方法
-                在那之前，Alas 会调用 config.bind(task)
-                将该任务的 Scheduler 属性覆盖到类变量
-                在使用到共有属性时，只会使用该任务的设置
-                例如在设置任务的下次运行时间时，会使用到 Scheduler.SuccessInterval
-                interval = (self.Scheduler_SuccessInterval if success else self.Scheduler_FailureInterval)
-                run.append(datetime.now() + ensure_delta(interval))
-            """
             self.config.bind(task)
+
             from module.base.resource import release_resources
 
             if self.config.task.command != 'NKAS':
@@ -406,38 +408,47 @@ class NikkeAutoScript:
 
             if task.next_run > datetime.now():
                 logger.info(f'Wait until {task.next_run} for task `{task.command}`')
+                self.is_first_task = False
                 method = self.config.Optimization_WhenTaskQueueEmpty
-
-                """
-                    在等待任务的过程中可能会被人为修改运行时间
-                    if not self.wait_until(task.next_run):
-                        del self.__dict__['config']
-                        continue
-
-                    Returns:
-                        bool: True if wait finished, False if config changed.
-                """
-
                 if method == 'close_game':
                     logger.info('Close game during wait')
+                    # 关闭游戏
                     self.device.app_stop()
+                    self.device.sleep(1)
+                    # 关闭启动器
+                    self.device.app_stop('Launcher')
                     release_resources()
+                    if self.config.Client_Platform == 'win':
+                        del_cached_property(self, 'device')
+                    # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
-                        del self.__dict__['config']
+                        del_cached_property(self, 'config')
                         continue
-                    self.run('start')
+                    if task.command != 'Restart':
+                        self.config.task_call('Restart')
+                        del_cached_property(self, 'config')
+                        continue
                 elif method == 'goto_main':
                     logger.info('Goto main page during wait')
                     self.run('goto_main')
                     release_resources()
+                    # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
-                        del self.__dict__['config']
+                        del_cached_property(self, 'config')
                         continue
                 elif method == 'stay_there':
                     logger.info('Stay there during wait')
                     release_resources()
+                    # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
-                        del self.__dict__['config']
+                        del_cached_property(self, 'config')
+                        continue
+                else:
+                    logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
+                    release_resources()
+                    # self.device.release_during_wait()
+                    if not self.wait_until(task.next_run):
+                        del_cached_property(self, 'config')
                         continue
             break
 
@@ -446,8 +457,6 @@ class NikkeAutoScript:
     def loop(self):
         logger.set_file_logger(self.config_name)
         logger.info(f'Start scheduler loop: {self.config_name}')
-        is_first = True
-        failure_record = {}
 
         while 1:
             # Check update event from GUI
@@ -456,14 +465,26 @@ class NikkeAutoScript:
                     logger.info('Update event detected')
                     logger.info(f'Alas [{self.config_name}] exited.')
                     break
-
+            # Check game server maintenance
+            # self.checker.wait_until_available()
+            # if self.checker.is_recovered():
+            #     # There is an accidental bug hard to reproduce
+            #     # Sometimes, config won't be updated due to blocking
+            #     # even though it has been changed
+            #     # So update it once recovered
+            #     del_cached_property(self, 'config')
+            #     logger.info('Server or network is recovered. Restart game client')
+            #     self.config.task_call('Restart')
+            # Get task
             task = self.get_next_task()
+            # Init device and change server
             _ = self.device
-
-            if is_first and task == 'Restart':
+            self.device.config = self.config
+            # Skip first restart
+            if self.is_first_task and task == 'Restart':
                 logger.info('Skip task `Restart` at scheduler start')
                 self.config.task_delay(server_update=True)
-                del self.__dict__['config']
+                del_cached_property(self, 'config')
                 continue
 
             # Run
@@ -471,25 +492,14 @@ class NikkeAutoScript:
             self.device.stuck_record_clear()
             self.device.click_record_clear()
             logger.hr(task, level=0)
-            """
-
-                https://inflection.readthedocs.io/en/latest/
-
-                inflection.underscore('Restart') => 'restart'
-                inflection.underscore('DeviceType') => 'device_type'
-
-            """
-
             success = self.run(inflection.underscore(task))
             logger.info(f'Scheduler: End task `{task}`')
-            is_first = False
+            self.is_first_task = False
 
-            """
-                记录某个任务出错的次数
-            """
-            failed = deep_get(failure_record, keys=task, default=0)
+            # Check failures
+            failed = deep_get(self.failure_record, keys=task, default=0)
             failed = 0 if success else failed + 1
-            deep_set(failure_record, keys=task, value=failed)
+            deep_set(self.failure_record, keys=task, value=failed)
             if failed >= 3:
                 logger.critical(f'Task `{task}` failed 3 or more times.')
                 logger.critical(
@@ -497,18 +507,28 @@ class NikkeAutoScript:
                 )
                 logger.critical(
                     'Possible reason #2: There is a problem with this task. '
-                    'Please contact developer or try to fix it yourself.'
+                    'Please contact developers or try to fix it yourself.'
                 )
                 logger.critical('Request human takeover')
+                if self.config.Notification_WhenDailyTaskCrashed:
+                    handle_notify(
+                        self.config.Notification_OnePushConfig,
+                        title=f'NKAS <{self.config_name}> crashed',
+                        content=f'<{self.config_name}> RequestHumanTakeover\nTask `{task}` failed 3 or more times.',
+                    )
                 exit(1)
 
             if success:
-                del self.__dict__['config']
+                del_cached_property(self, 'config')
                 continue
-            # 出现错误时
+            # elif self.config.Error_HandleError:
             else:
-                del self.__dict__['config']
+                # self.config.task_delay(success=False)
+                del_cached_property(self, 'config')
+                # self.checker.check_now()
                 continue
+            # else:
+            #     break
 
 
 if __name__ == '__main__':

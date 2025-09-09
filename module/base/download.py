@@ -1,8 +1,9 @@
-from module.logger import logger
+from pathlib import Path
 
 import requests
 from tqdm import tqdm
-from pathlib import Path
+
+from module.logger import logger
 
 RootPath = Path(__file__).parent.parent
 

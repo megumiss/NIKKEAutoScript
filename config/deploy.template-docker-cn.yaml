@@ -1,0 +1,31 @@
+Deploy:
+  Git:
+    Repository: https://gitee.com/megumiss/NIKKEAutoScript
+    Branch: master
+    GitExecutable: /usr/bin/git
+    GitProxy: null
+    SSLVerify: true
+    AutoUpdate: true
+
+  Python:
+    PythonExecutable: /usr/local/bin/python
+    PypiMirror: https://mirrors.aliyun.com/pypi/simple
+    InstallDependencies: true
+    RequirementsFile: ./deploy/docker/requirements.txt
+
+  Adb:
+    AdbExecutable: /usr/bin/adb
+    ReplaceAdb: true
+    AutoConnect: true
+    InstallUiautomator2: true
+
+  Update:
+    EnableReload: true
+    CheckUpdateInterval: 5
+    AutoRestartTime: 03:50
+
+  Webui:
+    WebuiHost: 0.0.0.0
+    WebuiPort: 12271
+    Language: zh-CN
+    Theme: dark

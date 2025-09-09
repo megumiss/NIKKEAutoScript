@@ -14,6 +14,10 @@ Scheduler:
   ServerUpdate:
     value: 04:00
     display: hide
+Client:
+  Platform:
+    value: adb
+    option: [ adb, win ]
 Emulator:
   Serial:
     value: auto
@@ -32,6 +36,59 @@ Emulator:
     option: [ minitouch, ]
   AdbRestart: false
   ScreenshotInterval: 0.5
+EmulatorInfo:
+  Emulator:
+    value: auto
+    option: [
+      auto,
+      NoxPlayer,
+      NoxPlayer64,
+      BlueStacks4,
+      BlueStacks5,
+      BlueStacks4HyperV,
+      BlueStacks5HyperV,
+      LDPlayer3,
+      LDPlayer4,
+      LDPlayer9,
+      MuMuPlayer,
+      MuMuPlayerX,
+      MuMuPlayer12,
+      MEmuPlayer,
+    ]
+  name:
+    value: null
+    type: textarea
+  path:
+    value: null
+    type: textarea
+PCClient:
+  Screens:
+    value: false
+  GameResolutionCompat:
+    value: false
+  Account:
+    value: ''
+  Password:
+    value: ''
+PCClientInfo:
+  Client:
+    value: intl
+    option: [ intl, hmt ]
+  Language:
+    value: zh-cn
+    option: [ zh-cn ]
+  ScreenshotInterval: 0.3
+  LauncherTitleName:
+    value: ''
+  LauncherProcessName:
+    value: ''
+  LauncherPath:
+    value: ''
+    type: textarea
+  GameTitleName:
+    value: ''
+  GameProcessName:
+    value: ''
 Optimization:
   AutoRedCircle: false
   OcrModelType:
@@ -63,6 +120,9 @@ Overcome:
   OnlyToCompleteDailyMission: false
 GeneralShop:
   enable: true
+  priority:
+    value: 'GRATIS > CORE_DUST_CASE > ORNAMENT'
+    type: textarea
 ArenaShop:
   enable: false
   priority:
@@ -113,6 +173,7 @@ BlaAuth:
     value: ''
     type: textarea
 BlaDaily:
+  Immediately: false
   PostID:
     value: ''
     valuetype: str
@@ -140,6 +201,7 @@ Event:
   Event:
     value: ''
     option: [
+      'event_20250904',
       'event_20250807',
       'event_20250716',
       'event_20250703s',
@@ -156,14 +218,19 @@ Event:
       'Story_1',
       'Story_2'
     ]
+    display: disabled
   StoryDifficulty:
     value: 'Normal'
     option: [
       'Normal',
       'Hard'
     ]
+    display: disabled
   Coop: false
   Shop: false
+  ShopDelayList:
+    value: 'TITLE'
+    type: textarea
   Game: false
 CheerStrategy:
   Enable: false
@@ -171,9 +238,28 @@ CheerStrategy:
     value: 'Most'
     option: [ 'Most','Few','Random' ]
 Interception:
+  Boss:
+    value: 'Kraken'
+    option: [ 'Kraken', 'Indivilia', 'Harvester', 'MirrorContainer', 'Ultra' ]
   DropScreenshotPath:
     value: ''
     type: textarea
+InterceptionTeam:
+  Kraken:
+    value: 1
+    option: [ 1, 2, 3, 4, 5 ]
+  Indivilia:
+    value: 2
+    option: [ 1, 2, 3, 4, 5 ]
+  Harvester:
+    value: 3
+    option: [ 1, 2, 3, 4, 5 ]
+  MirrorContainer:
+    value: 4
+    option: [ 1, 2, 3, 4, 5 ]
+  Ultra:
+    value: 5
+    option: [ 1, 2, 3, 4, 5 ]
 Overclock:
   # DisableFirst: false
   SkipRatioCheck: false
@@ -183,3 +269,15 @@ Overclock:
     type: textarea
 Synchro:
   UseBox: false
+TowerDaemon:
+  Enable:
+    value: true
+    display: disabled
+CombatDaemon:
+  Enable:
+    value: false
+    display: disabled
+EventDaemon:
+  Enable:
+    value: false
+    display: disabled

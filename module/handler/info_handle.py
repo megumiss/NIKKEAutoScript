@@ -1,94 +1,95 @@
+import time
+
 from module.base.base import ModuleBase
-from module.base.utils import color_similar, get_color, point2str
+from module.base.timer import Timer
+from module.base.utils import point2str
 
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
 from module.exception import GameServerUnderMaintenance, GameStuckError
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE
 from module.logger import logger
+from module.ui.assets import GOTO_BACK, MAIN_CHECK
 
 
 class InfoHandler(ModuleBase):
     def handle_paid_gift(self, interval=1):
-        if self.appear(PAID_GIFT_CHECK, offset=(30, 30), interval=interval, static=False):
-            if self.appear_text_then_click('点击关闭画面', interval=interval):
-                return True
+        """礼包弹窗"""
+        if self.appear(PAID_GIFT_CHECK, offset=(30, 30)) and self.appear_then_click(
+            CLICK_TO_CLOSE, offset=30, interval=interval
+        ):
+            return True
 
-        elif self.appear(PAID_GIFT_CONFIRM_CHECK, offset=(30, 30), interval=interval, static=False):
-            if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=interval, static=False):
-                return True
+        if self.appear(PAID_GIFT_CONFIRM_CHECK, offset=(30, 30)) and self.appear_then_click(
+            CONFIRM_B, offset=(30, 30), interval=interval
+        ):
+            return True
 
         return False
 
     def handle_login_reward(self):
-        if CLOSE_DAILY_LOGIN.appear_on(self.device.image):
-            self.device.click_minitouch(1, 420)
-            self.device.sleep(1)
-            return True
+        # 添加限速机制 - 检查是否在冷却时间内
+        current_time = time.time()
+        # 5秒冷却时间
+        if hasattr(self, '_last_login_reward_check') and current_time - self._last_login_reward_check < 5:
+            return False
+
+        # 更新最后检查时间
+        self._last_login_reward_check = current_time
+
         # Daily Login, Memories Spring, Monthly Card, etc.
-        if self.appear_text_then_click('_领取奖励', interval=3):
-            return True
-        elif a := self.appear_text('_全部领取', interval=3):
-            x, y = a[0], a[1]
-            b = get_color(
-                image=self.device.image,
-                area=(int(x - 80), int(y - 25), int(x + 80), int(y + 25)),
-            )
-            if not color_similar(color1=b, color2=(112.786625, 111.897375, 113.121875), threshold=10):
-                self.device.click_minitouch(x, y)
-                return True
-            else:
-                self.device.click_minitouch(1, 420)
-                self.device.sleep(1)
+        reward = self.appear_text('全部领取')
+        if reward:
+            # 重置限速机制，因为有奖励可领取
+            self._last_login_reward_check = 0
+
+            x, y = reward[0], reward[1]
+            logger.info('Click %s @ 全部领取' % point2str(x, y))
+            self.device.click_minitouch(x, y)
+
+            reward_done = False
+            confirm_timer = Timer(2, count=3)
+            while 1:
+                self.device.screenshot()
+
+                # 领取完奖励，返回主界面
+                if reward_done:
+                    if self.appear(MAIN_CHECK, offset=30):
+                        logger.info('Page arrive: main')
+                        return True
+
+                    if self.appear(GOTO_BACK, offset=30):
+                        if self.appear_then_click(GOTO_BACK, offset=30, interval=1):
+                            logger.info('Back to main page')
+                            continue
+                    else:
+                        # 点击空白页
+                        self.device.click_minitouch(1, 420)
+                        self.device.sleep(1)
+                        logger.info('Click %s @ CLOSE' % point2str(1, 420))
+                        continue
+
+                # 无奖励可领
+                if self.appear(NO_REWARD, offset=30):
+                    logger.info('Reward done')
+                    reward_done = True
+                    confirm_timer.clear()
+                    continue
+                else:
+                    if not confirm_timer.started():
+                        confirm_timer.start()
+                    # 超过2秒没有出现无奖励可领，返回点击Reward
+                    if confirm_timer.reached():
+                        return True
+        else:
+            return False
 
     # 屑芙蒂的补给品，仅关闭窗口，不抽取
     def handle_shifty_supplies(self):
-        # TODO 领取每日奖励
-
-        # 关闭
-        if self.appear(
-            SHIFTY_SUPPLIES_CHECK,
-            offset=(30, 30),
-            interval=3,
-            threshold=0.74,
-            static=False,
-        ) and self.appear_then_click(
-            SHIFTY_SUPPLIES_CLOSE,
-            offset=(30, 30),
-            interval=3,
-            threshold=0.74,
-            static=False,
+        if self.appear(SHIFTY_SUPPLIES_CHECK, offset=(30, 30)) and self.appear_then_click(
+            SHIFTY_SUPPLIES_CLOSE, offset=(30, 30), interval=3
         ):
             return True
-
-        """
-            出现登录奖励时，点击没有被覆盖的位置 
-            Daily Login, Memories Spring, etc.
-        """
-        # 420:550, 230:700
-        # if self._appear_text_then_click('根据累积登入天数', (20, 600), 'CLOSE_DAILY_LOGIN_A', interval=1,
-        #                                 area=(230, 420, 700, 550)):
-        #     self.device.sleep(3)
-        #     return True
-        #
-        # if self._appear_text_then_click('根据累积登入天数', (20, 600), 'CLOSE_DAILY_LOGIN_B', interval=1,
-        #                                 area=(165, 255, 560, 290)):
-        #     self.device.sleep(3)
-        #     return True
-        #
-        # if self._appear_text_then_click('根据累积登入天数', (20, 600), 'CLOSE_DAILY_LOGIN_C', interval=1,
-        #                                 area=(165, 300, 570, 340)):
-        #     self.device.sleep(3)
-        #     return True
-        #
-        # if self._appear_text_then_click('根据累积登入天数', (20, 600), 'CLOSE_DAILY_LOGIN_D', interval=1,
-        #                                 area=(430, 380, 740, 420)):
-        #     self.device.sleep(3)
-        #     return True
-        #
-        # if self.appear_then_click(CLOSE_DAILY_LOGIN_C, offset=(30, 30), interval=5, static=False):
-        #     self.device.sleep(2)
-        #     return True
 
         return False
 
@@ -96,46 +97,50 @@ class InfoHandler(ModuleBase):
         if self.appear_then_click(REWARD, offset=(30, 30), interval=interval, static=False):
             return True
 
-    def handle_level_up(self, interval=3):
-        if self.appear(LEVEL_UP_CHECK, offset=(30, 30), interval=interval):
+    def handle_level_up(self):
+        if self.appear(LEVEL_UP_CHECK, offset=(30, 30)):
             self.device.click_minitouch(360, 920)
+            self.device.sleep(1)
             logger.info('Click (360, 920) @ LEVEL_UP')
             return True
 
     def handle_server(self):
-        if self.appear(SERVER_CHECK, offset=(30, 30), interval=3, static=False) and self.appear_then_click(
+        if self.appear(SERVER_CHECK, offset=(30, 30), static=False) and self.appear_then_click(
             CONFIRM_A, offset=(30, 30), interval=3, static=False
         ):
             return True
 
     def handle_popup(self):
-        if self.appear(POPUP_CHECK, offset=(30, 30), interval=3, static=False) and self.appear_then_click(
+        if self.appear(POPUP_CHECK, offset=(30, 30), static=False) and self.appear_then_click(
             ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
         ):
             return True
 
     def handle_announcement(self):
-        if self.appear(
-            ANNOUNCEMENT_CHECK,
-            offset=(30, 30),
-            interval=3,
-            threshold=0.74,
-            static=False,
-        ) and self.appear_then_click(ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False):
+        if self.appear(ANNOUNCEMENT_CHECK, offset=(30, 30), threshold=0.74, static=False) and self.appear_then_click(
+            ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
+        ):
             return True
 
     def handle_download(self):
-        if self.appear(DOWNLOAD_CHECK, offset=(30, 30), interval=3, static=False) and self.appear_then_click(
+        if self.appear(DOWNLOAD_CHECK, offset=(30, 30), static=False) and self.appear_then_click(
             CONFIRM_A, offset=(30, 30), interval=3, static=False
         ):
             return True
 
+    def handle_downloading(self):
+        if self.appear(DOWNLOADING_CHECK, offset=30):
+            self.device.stuck_record_clear()
+            self.device.click_record_clear()
+            self.device.sleep(10)
+            return True
+
     def handle_system_error(self):
-        if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), interval=3, static=False):
+        if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), static=False):
             raise GameStuckError('detected system error')
 
     def handle_system_maintenance(self):
-        if self.appear(SYSTEM_MAINTENANCE_CHECK, offset=(30, 30), interval=3, static=False):
+        if self.appear(SYSTEM_MAINTENANCE_CHECK, offset=(30, 30), static=False):
             raise GameServerUnderMaintenance('Server is currently under maintenance')
 
     # def handle_event(self, interval=3):
@@ -148,9 +153,7 @@ class InfoHandler(ModuleBase):
     #         return True
 
     def handle_login(self):
-        if self.appear(LOGIN_CHECK, offset=(30, 30), interval=5) or self.appear(
-            LOGIN_CHECK_B, offset=(30, 30), interval=5
-        ):
+        if self.appear(LOGIN_CHECK, offset=(30, 30)) or self.appear(LOGIN_CHECK_B, offset=(30, 30)):
             self.device.click(LOGIN_CHECK)
             logger.info('Login success')
 

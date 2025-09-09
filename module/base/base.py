@@ -7,7 +7,6 @@ from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import float2str, point2str
 from module.config.config import NikkeConfig
-from module.device.device import Device
 from module.logger import logger
 from module.ocr.models import OCR_MODEL
 from module.ocr.ocr import Ocr
@@ -15,12 +14,11 @@ from module.ocr.ocr import Ocr
 
 class ModuleBase:
     config: NikkeConfig
-    device: Device
 
     def __init__(self, config, device=None, task=None):
         """
               Args:
-                  config (AzurLaneConfig, str):
+                  config (NikkeConfig, str):
                       Name of the user config under ./config
                   device (Device):
                       To reuse a device.
@@ -38,13 +36,18 @@ class ModuleBase:
             logger.warning('NKAS ModuleBase received an unknown config, assume it is NikkeConfig')
             self.config = config
 
-        if isinstance(device, Device):
+        if config.CLIENT_PLATFORM == 'adb':
+            from module.device.adb.device import Device as DeviceClass
+        if config.CLIENT_PLATFORM == 'win':
+            from module.device.win.device import Device as DeviceClass
+
+        if isinstance(device, DeviceClass):
             self.device = device
         elif device is None:
-            self.device = Device(config=self.config)
+            self.device = DeviceClass(config=self.config)
         elif isinstance(device, str):
             self.config.override(Emulator_Serial=device)
-            self.device = Device(config=self.config)
+            self.device = DeviceClass(config=self.config)
         else:
             logger.warning('NKAS ModuleBase received an unknown device, assume it is Device')
             self.device = device
@@ -96,7 +99,7 @@ class ModuleBase:
 
         return appear
 
-    def appear_text(self, text, interval=0, lang='ch') -> bool or tuple:
+    def appear_text(self, text, threshold=0.7, interval=0, lang='ch') -> bool or tuple:
         if interval:
             if text in self.interval_timer:
                 if self.interval_timer[text].limit != interval:
@@ -106,9 +109,22 @@ class ModuleBase:
             if not self.interval_timer[text].reached():
                 return False
 
-        ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
-        res = ocr_instance.ocr(self.device.image, direct_ocr=True, show_log=False)
-        location = self.device.get_location(text, res)
+        # OCR 缓存
+        if not hasattr(self, "_ocr_cache"):
+            self._ocr_cache = {
+                "last_hash": None,
+                "last_result": None
+            }
+
+        current_hash = hash(self.device.image.tobytes())
+        if current_hash != self._ocr_cache["last_hash"]:
+            # 重新 OCR
+            ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
+            self._ocr_cache["last_result"] = ocr_instance.ocr(self.device.image, direct_ocr=True, show_log=False)
+            self._ocr_cache["last_hash"] = current_hash
+        res = self._ocr_cache["last_result"]
+
+        location = self.device.get_location(text, res, threshold=threshold)
         if location:
             if interval:
                 self.interval_timer[text].reset()
@@ -116,14 +132,28 @@ class ModuleBase:
         else:
             return False
 
-    def appear_text_then_click(self, text, interval=0) -> bool:
+    def appear_text_then_click(self, text, threshold=0.7, interval=0) -> bool:
+        """
+        检测指定文本是否出现在画面上，并点击其中心坐标
+
+        Args:
+            text: 要检测并点击的目标文本
+            threshold: 匹配相似度阈值 (0~1)
+            interval: 检测间隔限制（秒），0 表示不限制
+
+        Returns:
+            bool: 点击成功返回 True，否则返回 False
+        """
         start_time = time.time()
-        location = self.appear_text(text, interval)
+        location = self.appear_text(text, threshold=threshold, interval=interval)
         if location:
             self.device.click_minitouch(location[0], location[1])
             logger.info(
-                'Click %s @ %s %ss' % (
-                    point2str(location[0], location[1]), f"'{text.strip('_')}'", float2str(time.time() - start_time))
+                "Click %s @ %s %ss" % (
+                    point2str(location[0], location[1]),
+                    f"'{text}'",
+                    float2str(time.time() - start_time)
+                )
             )
             return True
         else:
@@ -153,17 +183,17 @@ class ModuleBase:
         # else:
         #     self.interval_timer[button.name] = Timer(3).reset()
 
-    def ensure_sroll(self, x1=(360, 460), x2=(360, 900), speed=15, count=2, delay=1.5, hold=0):
+    def ensure_sroll(self, x1=(360, 460), x2=(360, 900), speed=15, count=2, delay=1.5, hold=0, method='swipe'):
         for i in range(count):
-            self.device.swipe(x1, x2, speed=speed, hold=hold, handle_control_check=False)
+            self.device.swipe(x1, x2, speed=speed, hold=hold, method=method, handle_control_check=False)
             self.device.sleep(delay)
 
-    def ensure_sroll_to_top(self, x1=(360, 460), x2=(360, 900), count=2, delay=1.5):
+    def ensure_sroll_to_top(self, x1=(360, 460), x2=(360, 900), speed=30, count=2, delay=1.5):
         for i in range(count):
-            self.device.swipe(x1, x2, handle_control_check=False)
+            self.device.swipe(x1, x2, speed=speed, handle_control_check=False)
             self.device.sleep(delay)
 
-    def ensure_sroll_to_bottom(self, x1=(360, 900), x2=(360, 460), count=2, delay=1.5):
+    def ensure_sroll_to_bottom(self, x1=(360, 900), x2=(360, 460), speed=30, count=2, delay=1.5):
         for i in range(count):
-            self.device.swipe(x1, x2, handle_control_check=False)
+            self.device.swipe(x1, x2, speed=speed, handle_control_check=False)
             self.device.sleep(delay)

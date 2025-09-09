@@ -1,9 +1,18 @@
+import re
+import typing as t
 from copy import deepcopy
 from datetime import datetime
 from functools import cached_property
 
 from module.config.utils import read_file, filepath_config, deep_get, parse_value, filepath_args, deep_set, deep_iter, \
     write_file, filepath_argument, data_to_type, path_to_arg, filepath_code, deep_default
+from deploy.utils import DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
+from module.base.timer import timer
+from module.config.deep import deep_default, deep_get, deep_iter, deep_pop, deep_set
+from module.config.env import IS_ON_PHONE_CLOUD
+from module.config.server import VALID_CHANNEL_PACKAGE, VALID_PACKAGE
+from module.config.utils import *
+
 
 CONFIG_IMPORT = '''
 import datetime
@@ -61,6 +70,15 @@ class ConfigGenerator:
         return data
 
     @cached_property
+    def task(self):
+        """
+        <task_group>:
+            <task>:
+                <group>:
+        """
+        return read_file(filepath_argument('task'))
+
+    @cached_property
     def default(self):
         """
         <task>:
@@ -68,14 +86,6 @@ class ConfigGenerator:
                 <argument>: value
         """
         return read_file(filepath_argument('default'))
-
-    @cached_property
-    def task(self):
-        """
-        <task>:
-            - <group>
-        """
-        return read_file(filepath_argument('task'))
 
     @cached_property
     def override(self):
@@ -87,6 +97,15 @@ class ConfigGenerator:
         return read_file(filepath_argument('override'))
 
     @cached_property
+    def gui(self):
+        """
+        <i18n_group>:
+            <i18n_key>: value, value is None
+        """
+        return read_file(filepath_argument('gui'))
+
+    @cached_property
+    @timer
     def args(self):
         """
         Merge definitions into standardised json.
@@ -98,9 +117,11 @@ class ConfigGenerator:
 
         """
         # Construct args
-
         data = {}
-        for task, groups in self.task.items():
+        for path, groups in deep_iter(self.task, depth=3):
+            if 'tasks' not in path:
+                continue
+            task = path[2]
             # Add storage to all task
             groups.append('Storage')
             for group in groups:
@@ -137,14 +158,16 @@ class ConfigGenerator:
             if not check_override(p, v):
                 continue
             deep_set(data, keys=p + ['value'], value=v)
-
         # Override non-modifiable arguments
         for p, v in deep_iter(self.override, depth=3):
             if not check_override(p, v):
                 continue
             if isinstance(v, dict):
-                if deep_get(v, keys='type') in ['lock']:
-                    deep_default(v, keys='display', value="disabled")
+                typ = v.get('type')
+                if typ == 'state':
+                    pass
+                elif typ == 'lock':
+                    pass
                 elif deep_get(v, keys='value') is not None:
                     deep_default(v, keys='display', value='hide')
                 for arg_k, arg_v in v.items():
@@ -153,42 +176,17 @@ class ConfigGenerator:
                 deep_set(data, keys=p + ['value'], value=v)
                 deep_set(data, keys=p + ['display'], value='hide')
         # Set command
-        for task in self.task.keys():
+        for path, groups in deep_iter(self.task, depth=3):
+            if 'tasks' not in path:
+                continue
+            task = path[2]
             if deep_get(data, keys=f'{task}.Scheduler.Command'):
                 deep_set(data, keys=f'{task}.Scheduler.Command.value', value=task)
                 deep_set(data, keys=f'{task}.Scheduler.Command.display', value='hide')
 
         return data
 
-    @cached_property
-    def menu(self):
-        """
-        Generate menu definitions
-
-        task.yaml --> menu.json
-
-        """
-        data = {}
-
-        # Task menu
-        group = ''
-        tasks = []
-        with open(filepath_argument('task'), 'r', encoding='utf-8') as f:
-            for line in f.readlines():
-                line = line.strip('\n')
-                if '=====' in line:
-                    if tasks:
-                        deep_set(data, keys=f'Task.{group}', value=tasks)
-                    group = line.strip('#=- ')
-                    tasks = []
-                if group:
-                    if line.endswith(':'):
-                        tasks.append(line.strip('\n=-#: '))
-        if tasks:
-            deep_set(data, keys=f'Task.{group}', value=tasks)
-
-        return data
-
+    @timer
     def generate_code(self):
         """
         Generate python code.
@@ -198,7 +196,6 @@ class ConfigGenerator:
         """
         visited_group = set()
         visited_path = set()
-
         lines = CONFIG_IMPORT
         for path, data in deep_iter(self.argument, depth=2):
             group, arg = path
@@ -218,13 +215,256 @@ class ConfigGenerator:
             for text in lines:
                 f.write(text + '\n')
 
+    @timer
+    def generate_i18n(self, lang):
+        """
+        Load old translations and generate new translation file.
+
+                     args.json ---+-----> i18n/<lang>.json
+        (old) i18n/<lang>.json ---+
+
+        """
+        new = {}
+        old = read_file(filepath_i18n(lang))
+
+        def deep_load(keys, default=True, words=('name', 'help')):
+            for word in words:
+                k = keys + [str(word)]
+                d = ".".join(k) if default else str(word)
+                v = deep_get(old, keys=k, default=d)
+                deep_set(new, keys=k, value=v)
+
+        # Menu
+        for path, data in deep_iter(self.task, depth=3):
+            if 'tasks' not in path:
+                continue
+            task_group, _, task = path
+            deep_load(['Menu', task_group])
+            deep_load(['Task', task])
+        # Arguments
+        visited_group = set()
+        for path, data in deep_iter(self.argument, depth=2):
+            if path[0] not in visited_group:
+                deep_load([path[0], '_info'])
+                visited_group.add(path[0])
+            deep_load(path)
+            if 'option' in data:
+                deep_load(path, words=data['option'], default=False)
+
+        # GUI i18n
+        for path, _ in deep_iter(self.gui, depth=2):
+            group, key = path
+            deep_load(keys=['Gui', group], words=(key,))
+        # zh-TW
+        dic_repl = {
+            '設置': '設定',
+            '支持': '支援',
+            '啓': '啟',
+            '异': '異',
+            '服務器': '伺服器',
+            '文件': '檔案',
+        }
+        if lang == 'zh-TW':
+            for path, value in deep_iter(new, depth=3):
+                for before, after in dic_repl.items():
+                    value = value.replace(before, after)
+                deep_set(new, keys=path, value=value)
+
+        write_file(filepath_i18n(lang), new)
+
+    @cached_property
+    def menu(self):
+        """
+        Generate menu definitions
+
+        task.yaml --> menu.json
+
+        """
+        data = {}
+        for task_group in self.task.keys():
+            value = deep_get(self.task, keys=[task_group, 'menu'])
+            if value not in ['collapse', 'list']:
+                value = 'collapse'
+            deep_set(data, keys=[task_group, 'menu'], value=value)
+            value = deep_get(self.task, keys=[task_group, 'page'])
+            if value not in ['setting', 'tool']:
+                value = 'setting'
+            deep_set(data, keys=[task_group, 'page'], value=value)
+            tasks = deep_get(self.task, keys=[task_group, 'tasks'], default={})
+            tasks = list(tasks.keys())
+            deep_set(data, keys=[task_group, 'tasks'], value=tasks)
+
+        return data
+
+    @staticmethod
+    def generate_deploy_template():
+        template = poor_yaml_read(DEPLOY_TEMPLATE)
+        cn = {
+            'Repository': 'https://gitee.com/megumiss/NIKKEAutoScript',
+            'PypiMirror': 'https://mirrors.aliyun.com/pypi/simple',
+            'Language': 'zh-CN',
+        }
+
+        docker = {
+            'GitExecutable': '/usr/bin/git',
+            'PythonExecutable': '/usr/local/bin/python',
+            'RequirementsFile': './deploy/docker/requirements.txt',
+            'AdbExecutable': '/usr/bin/adb',
+        }
+
+        def update(suffix, *args):
+            file = f'./config/deploy.{suffix}.yaml'
+            new = deepcopy(template)
+            for dic in args:
+                new.update(dic)
+            poor_yaml_write(data=new, file=file)
+
+        update('template')
+        update('template-cn', cn)
+        update('template-docker', docker)
+        update('template-docker-cn', docker, cn)
+
+    def insert_package(self):
+        option = deep_get(self.argument, keys='Emulator.PackageName.option')
+        option += list(VALID_PACKAGE.keys())
+        option += list(VALID_CHANNEL_PACKAGE.keys())
+        deep_set(self.argument, keys='Emulator.PackageName.option', value=option)
+        deep_set(self.args, keys='Emulator.Emulator.PackageName.option', value=option)
+
+    @timer
     def generate(self):
+        _ = self.args
+        _ = self.menu
+        self.insert_package()
         write_file(filepath_args(), self.args)
         write_file(filepath_args('menu'), self.menu)
         self.generate_code()
+        for lang in LANGUAGES:
+            self.generate_i18n(lang)
+        self.generate_deploy_template()
 
 
 class ConfigUpdater:
+    redirection = []
+
+    @cached_property
+    def args(self):
+        return read_file(filepath_args())
+
+    def config_update(self, old, is_template=False):
+        """
+        Args:
+            old (dict):
+            is_template (bool):
+
+        Returns:
+            dict:
+        """
+        new = {}
+
+        for keys, data in deep_iter(self.args, depth=3):
+            value = deep_get(old, keys=keys, default=data['value'])
+            typ = data['type']
+            display = data.get('display')
+            if is_template or value is None or value == '' \
+                    or typ in ['lock', 'state'] or (display == 'hide' and typ != 'stored'):
+                value = data['value']
+            value = parse_value(value, data=data)
+            deep_set(new, keys=keys, value=value)
+
+        # Update to latest event
+
+        if not is_template:
+            new = self.config_redirect(old, new)
+        new = self._override(new)
+
+        return new
+
+    def config_redirect(self, old, new):
+        """
+        Convert old settings to the new.
+
+        Args:
+            old (dict):
+            new (dict):
+
+        Returns:
+            dict:
+        """
+        for row in self.redirection:
+            if len(row) == 2:
+                source, target = row
+                update_func = None
+            elif len(row) == 3:
+                source, target, update_func = row
+            else:
+                continue
+
+            if isinstance(source, tuple):
+                value = []
+                error = False
+                for attribute in source:
+                    tmp = deep_get(old, keys=attribute)
+                    if tmp is None:
+                        error = True
+                        continue
+                    value.append(tmp)
+                if error:
+                    continue
+            else:
+                value = deep_get(old, keys=source)
+                if value is None:
+                    continue
+
+            if update_func is not None:
+                value = update_func(value)
+
+            if isinstance(target, tuple):
+                for k, v in zip(target, value):
+                    # Allow update same key
+                    if (deep_get(old, keys=k) is None) or (source == target):
+                        deep_set(new, keys=k, value=v)
+            elif (deep_get(old, keys=target) is None) or (source == target):
+                deep_set(new, keys=target, value=value)
+
+        return new
+
+    def _override(self, data):
+        # 没加这个选项
+        def remove_drop_save(key):
+            value = deep_get(data, keys=key, default='do_not')
+            if value == 'save_and_upload':
+                value = 'upload'
+                deep_set(data, keys=key, value=value)
+            elif value == 'save':
+                value = 'do_not'
+                deep_set(data, keys=key, value=value)
+
+        if IS_ON_PHONE_CLOUD:
+            deep_set(data, 'Emulator.Emulator.Serial', '127.0.0.1:5555')
+            deep_set(data, 'Emulator.Emulator.ScreenshotMethod', 'DroidCast')
+            deep_set(data, 'Emulator.Emulator.ControlMethod', 'minitouch')
+            # 没加这个选项
+            # for arg in deep_get(self.args, keys='NAKS.DropRecord', default={}).keys():
+            #     remove_drop_save(arg)
+
+        return data
+
+    def save_callback(self, key: str, value: t.Any) -> t.Iterable[t.Tuple[str, t.Any]]:
+        """
+        Args:
+            key: Key path in config json, such as "Main.Emotion.Fleet1Value"
+            value: Value set by user, such as "98"
+
+        Yields:
+            str: Key path to set config json, such as "Main.Emotion.Fleet1Record"
+            any: Value to set, such as "2020-01-01 00:00:00"
+        """
+        if "Emotion" in key and "Value" in key:
+            key = key.split(".")
+            key[-1] = key[-1].replace("Value", "Record")
+            yield ".".join(key), datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     def read_file(self, config_name, is_template=False):
         """
         Read and update config file.
@@ -237,41 +477,11 @@ class ConfigUpdater:
             dict:
         """
         old = read_file(filepath_config(config_name))
-        # 从模板更新
         new = self.config_update(old, is_template=is_template)
         # The updated config did not write into file, although it doesn't matters.
         # Commented for performance issue
         # self.write_file(config_name, new)
         return new
-
-    def config_update(self, old, is_template):
-        new = {}
-
-        def deep_load(keys):
-            # 配置模板
-            data = deep_get(self.args, keys=keys, default={})
-            # 用户配置
-            value = deep_get(old, keys=keys, default=data['value'])
-            """
-                当读取模式为模板、用户配置没有值、任务的type字段为lock、display字段为hide时
-                将读取模板的值
-            """
-            if is_template or value is None or value == '' or data['type'] == 'lock' or data.get('display') == 'hide':
-                value = data['value']
-            """
-                将值转为不同类型
-            """
-            value = parse_value(value, data=data)
-            deep_set(new, keys=keys, value=value)
-
-        for path, _ in deep_iter(self.args, depth=3):
-            deep_load(path)
-
-        return new
-
-    @cached_property
-    def args(self):
-        return read_file(filepath_args())
 
     @staticmethod
     def write_file(config_name, data, mod_name='nkas'):
@@ -285,6 +495,7 @@ class ConfigUpdater:
         """
         write_file(filepath_config(config_name, mod_name), data)
 
+    @timer
     def update_file(self, config_name, is_template=False):
         """
         Read, update and write config file.
@@ -302,65 +513,21 @@ class ConfigUpdater:
 
 
 if __name__ == '__main__':
+    """
+    Process the whole config generation.
+
+                 task.yaml -+----------------> menu.json
+             argument.yaml -+-> args.json ---> config_generated.py
+             override.yaml -+       |
+                  gui.yaml --------\|
+                                   ||
+    (old) i18n/<lang>.json --------\\========> i18n/<lang>.json
+    (old)    template.json ---------\========> template.json
+    """
+    # Ensure running in Alas root folder
     import os
 
     os.chdir(os.path.join(os.path.dirname(__file__), '../../'))
-
-    """
-        task.yaml 定义了最基本的结构
-         
-            在task.yaml中定义的 ====== ~ ====== 为一个任务组，'~' 是该 任务组/选项组 的名字，是生成menu.json时的标识
-            task.yaml中每个字段都为一个任务，其值为一个数组，定义了该任务的选项组(属性)，其值为argument.yaml中的一级字段
-        
-        argument.yaml 定义了每个任务的属性的详细结构
-        
-            在argument.yaml中每个字段的第一级都为一个选项组
-            只要某个字段的第一级(键)的在task.yaml某个字段的值(数组)中，在生成时这个任务就会拥有这个字段的值(选项组)
-            
-            argument.yaml定义的任务属性一共有四种
-            当某个二级字段拥有 value 字段时 或者 值为 字符串/数字/时间，该字段为input选项
-            当某个二级字段拥有 value && option 字段时，该字段为select选项
-            当某个二级字段的键 带有 'Filter' 时，该字段为textarea选项
-            当某个二级字段的值为 ture / false 时，该字段为checkbox选项
-            
-            argument.yaml中每个二级字段都有可选的字段，【display】【valuetype】【validate】
-            如果定义了display字段，那么该属性的结构应为:
-            
-            Reward:
-                CollectOil: 
-                    value: true
-                    display: hide
-            
-            并且该属性不会渲染到web中
-        
-        default.yaml 定义了每个任务属性的默认值
-        
-        override.yaml 和 default.yaml 相似，定义了每个任务属性值
-        
-            override.yaml可以为每个任务的Enable属性添加type和display字段
-                如果人为定义了type字段，那么type的字段的值只能为lock
-                如果不定义，在生成时，会生成type字段，其值为该属性原来的任务属性【input】【select】【checkbox】【textarea】
-                
-                如果定义了display字段，那么display的字段的值只能为 disabled 或者 hide
-                
-                如果定义了Enable属性的value字段，在默认生成display字段，其值为 hide
-            
-        ConfigGenerator().generate()
-        生成config_generated.py，args.json，menu.json
-        
-            config_generated.py 的内容为 argument.yaml 每个任务属性的默认值
-            每个属性为生成类GeneratedConfig的类变量，以'_'衔接
-            
-            args.json 为每个任务的属性信息，由 task.yaml，argument.yaml，default.yaml，override.yaml，组合而成
-            
-            menu.json 为 任务组/选项组，由 task.yaml 生成
-            
-            template.json 为 args.json的简化，每个任务属性只保留了值
-        
-        ConfigUpdater().update_file('template', is_template=True)
-        会将args.json的值覆盖到template.json
-
-    """
 
     ConfigGenerator().generate()
     ConfigUpdater().update_file('template', is_template=True)

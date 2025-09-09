@@ -1,0 +1,31 @@
+Deploy:
+  Git:
+    Repository: https://github.com/megumiss/NIKKEAutoScript
+    Branch: master
+    GitExecutable: ./toolkit/Git/mingw64/bin/git.exe
+    GitProxy: null
+    SSLVerify: true
+    AutoUpdate: true
+
+  Python:
+    PythonExecutable: ./toolkit/python.exe
+    PypiMirror: null
+    InstallDependencies: true
+    RequirementsFile: requirements.txt
+
+  Adb:
+    AdbExecutable: ./toolkit/Lib/site-packages/adbutils/binaries/adb.exe
+    ReplaceAdb: true
+    AutoConnect: true
+    InstallUiautomator2: true
+
+  Update:
+    EnableReload: true
+    CheckUpdateInterval: 5
+    AutoRestartTime: 03:50
+
+  Webui:
+    WebuiHost: 0.0.0.0
+    WebuiPort: 12271
+    Language: zh-CN
+    Theme: dark

@@ -9,6 +9,8 @@ Deploy:
 
   Python:
     PythonExecutable: /usr/local/bin/python
+    PypiMirror: null
+    InstallDependencies: true
     RequirementsFile: ./deploy/docker/requirements.txt
 
   Adb:
@@ -25,3 +27,5 @@ Deploy:
   Webui:
     WebuiHost: 0.0.0.0
     WebuiPort: 12271
+    Language: zh-CN
+    Theme: dark

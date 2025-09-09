@@ -1,47 +1,13 @@
 {
   "NKAS": {
-    "Emulator": {
-      "Serial": {
-        "type": "input",
-        "value": "auto",
-        "valuetype": "str"
-      },
-      "PackageName": {
+    "Client": {
+      "Platform": {
         "type": "select",
-        "value": "com.proximabeta.nikke",
+        "value": "adb",
         "option": [
-          "com.proximabeta.nikke",
-          "com.gamamobi.nikke"
+          "adb",
+          "win"
         ]
-      },
-      "Language": {
-        "type": "select",
-        "value": "zh-cn",
-        "option": [
-          "zh-cn"
-        ]
-      },
-      "ScreenshotMethod": {
-        "type": "select",
-        "value": "DroidCast",
-        "option": [
-          "DroidCast"
-        ]
-      },
-      "ControlMethod": {
-        "type": "select",
-        "value": "minitouch",
-        "option": [
-          "minitouch"
-        ]
-      },
-      "AdbRestart": {
-        "type": "checkbox",
-        "value": false
-      },
-      "ScreenshotInterval": {
-        "type": "input",
-        "value": 0.5
       }
     },
     "Optimization": {
@@ -80,6 +46,161 @@
         "type": "textarea",
         "value": "provider: null",
         "mode": "yaml"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Emulator": {
+    "Emulator": {
+      "Serial": {
+        "type": "input",
+        "value": "auto",
+        "valuetype": "str"
+      },
+      "PackageName": {
+        "type": "select",
+        "value": "com.proximabeta.nikke",
+        "option": [
+          "com.proximabeta.nikke",
+          "com.gamamobi.nikke",
+          "com.proximabeta.nikke",
+          "com.gamamobi.nikke"
+        ]
+      },
+      "Language": {
+        "type": "select",
+        "value": "zh-cn",
+        "option": [
+          "zh-cn"
+        ]
+      },
+      "ScreenshotMethod": {
+        "type": "select",
+        "value": "DroidCast",
+        "option": [
+          "DroidCast"
+        ]
+      },
+      "ControlMethod": {
+        "type": "select",
+        "value": "minitouch",
+        "option": [
+          "minitouch"
+        ]
+      },
+      "AdbRestart": {
+        "type": "checkbox",
+        "value": false
+      },
+      "ScreenshotInterval": {
+        "type": "input",
+        "value": 0.5
+      }
+    },
+    "EmulatorInfo": {
+      "Emulator": {
+        "type": "select",
+        "value": "auto",
+        "option": [
+          "auto",
+          "NoxPlayer",
+          "NoxPlayer64",
+          "BlueStacks4",
+          "BlueStacks5",
+          "BlueStacks4HyperV",
+          "BlueStacks5HyperV",
+          "LDPlayer3",
+          "LDPlayer4",
+          "LDPlayer9",
+          "MuMuPlayer",
+          "MuMuPlayerX",
+          "MuMuPlayer12",
+          "MEmuPlayer"
+        ]
+      },
+      "name": {
+        "type": "textarea",
+        "value": null
+      },
+      "path": {
+        "type": "textarea",
+        "value": null
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "PCClient": {
+    "PCClientInfo": {
+      "Client": {
+        "type": "select",
+        "value": "intl",
+        "option": [
+          "intl",
+          "hmt"
+        ]
+      },
+      "Language": {
+        "type": "select",
+        "value": "zh-cn",
+        "option": [
+          "zh-cn"
+        ]
+      },
+      "ScreenshotInterval": {
+        "type": "input",
+        "value": 0.3
+      },
+      "LauncherTitleName": {
+        "type": "input",
+        "value": ""
+      },
+      "LauncherProcessName": {
+        "type": "input",
+        "value": ""
+      },
+      "LauncherPath": {
+        "type": "textarea",
+        "value": ""
+      },
+      "GameTitleName": {
+        "type": "input",
+        "value": ""
+      },
+      "GameProcessName": {
+        "type": "input",
+        "value": ""
+      }
+    },
+    "PCClient": {
+      "Screens": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameResolutionCompat": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Account": {
+        "type": "input",
+        "value": ""
+      },
+      "Password": {
+        "type": "input",
+        "value": ""
       }
     },
     "Storage": {
@@ -145,8 +266,7 @@
         "option": [
           true,
           false
-        ],
-        "display": "disabled"
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -541,6 +661,10 @@
       "enable": {
         "type": "checkbox",
         "value": true
+      },
+      "priority": {
+        "type": "textarea",
+        "value": "GRATIS > CORE_DUST_CASE > ORNAMENT"
       }
     },
     "ArenaShop": {
@@ -1045,9 +1169,77 @@
       }
     },
     "Interception": {
+      "Boss": {
+        "type": "select",
+        "value": "Kraken",
+        "option": [
+          "Kraken",
+          "Indivilia",
+          "Harvester",
+          "MirrorContainer",
+          "Ultra"
+        ]
+      },
       "DropScreenshotPath": {
         "type": "textarea",
         "value": ""
+      }
+    },
+    "InterceptionTeam": {
+      "Kraken": {
+        "type": "select",
+        "value": 1,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Indivilia": {
+        "type": "select",
+        "value": 2,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Harvester": {
+        "type": "select",
+        "value": 3,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "MirrorContainer": {
+        "type": "select",
+        "value": 4,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Ultra": {
+        "type": "select",
+        "value": 5,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
       }
     },
     "Storage": {
@@ -1279,7 +1471,7 @@
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00",
+        "value": "04:00, 16:00",
         "display": "hide"
       }
     },
@@ -1432,6 +1624,7 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250904",
           "event_20250807",
           "event_20250716",
           "event_20250703s",
@@ -1458,7 +1651,8 @@
         "option": [
           "Story_1",
           "Story_2"
-        ]
+        ],
+        "display": "disabled"
       },
       "StoryDifficulty": {
         "type": "select",
@@ -1466,7 +1660,8 @@
         "option": [
           "Normal",
           "Hard"
-        ]
+        ],
+        "display": "disabled"
       },
       "Coop": {
         "type": "checkbox",
@@ -1475,6 +1670,10 @@
       "Shop": {
         "type": "checkbox",
         "value": false
+      },
+      "ShopDelayList": {
+        "type": "textarea",
+        "value": "TITLE"
       },
       "Game": {
         "type": "checkbox",
@@ -1531,6 +1730,7 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250904",
           "event_20250807",
           "event_20250716",
           "event_20250703s",
@@ -1557,7 +1757,8 @@
         "option": [
           "Story_1",
           "Story_2"
-        ]
+        ],
+        "display": "disabled"
       },
       "StoryDifficulty": {
         "type": "select",
@@ -1565,7 +1766,8 @@
         "option": [
           "Normal",
           "Hard"
-        ]
+        ],
+        "display": "disabled"
       },
       "Coop": {
         "type": "checkbox",
@@ -1574,6 +1776,10 @@
       "Shop": {
         "type": "checkbox",
         "value": false
+      },
+      "ShopDelayList": {
+        "type": "textarea",
+        "value": "TITLE"
       },
       "Game": {
         "type": "checkbox",
@@ -1650,6 +1856,10 @@
       }
     },
     "BlaDaily": {
+      "Immediately": {
+        "type": "checkbox",
+        "value": false
+      },
       "PostID": {
         "type": "input",
         "value": "",
@@ -1709,17 +1919,6 @@
         "type": "input",
         "value": "04:00, 16:00",
         "display": "hide"
-      }
-    },
-    "CDK": {
-      "Extra": {
-        "type": "checkbox",
-        "value": false
-      },
-      "Source": {
-        "type": "textarea",
-        "value": "https://gamewith.jp/nikke/article/show/371014",
-        "display": "disabled"
       }
     },
     "Storage": {
@@ -1782,7 +1981,7 @@
       }
     }
   },
-  "TowerDaemon": {
+  "StepUpGift": {
     "Scheduler": {
       "Enable": {
         "type": "checkbox",
@@ -1799,97 +1998,7 @@
       },
       "Command": {
         "type": "input",
-        "value": "TowerDaemon",
-        "display": "hide"
-      },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
-      },
-      "ServerUpdate": {
-        "type": "input",
-        "value": "04:00",
-        "display": "hide"
-      }
-    },
-    "Storage": {
-      "Storage": {
-        "type": "storage",
-        "value": {},
-        "valuetype": "ignore",
-        "display": "disabled"
-      }
-    }
-  },
-  "CombatDaemon": {
-    "Scheduler": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "option": [
-          true,
-          false
-        ]
-      },
-      "NextRun": {
-        "type": "datetime",
-        "value": "1989-12-27 00:00:00",
-        "validate": "datetime"
-      },
-      "Command": {
-        "type": "input",
-        "value": "CombatDaemon",
-        "display": "hide"
-      },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
-      },
-      "ServerUpdate": {
-        "type": "input",
-        "value": "04:00",
-        "display": "hide"
-      }
-    },
-    "Storage": {
-      "Storage": {
-        "type": "storage",
-        "value": {},
-        "valuetype": "ignore",
-        "display": "disabled"
-      }
-    }
-  },
-  "EventDaemon": {
-    "Scheduler": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "option": [
-          true,
-          false
-        ]
-      },
-      "NextRun": {
-        "type": "datetime",
-        "value": "1989-12-27 00:00:00",
-        "validate": "datetime"
-      },
-      "Command": {
-        "type": "input",
-        "value": "EventDaemon",
+        "value": "StepUpGift",
         "display": "hide"
       },
       "SuccessInterval": {
@@ -2041,6 +2150,57 @@
         "type": "input",
         "value": "04:00",
         "display": "hide"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "TowerDaemon": {
+    "TowerDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": true,
+        "display": "disabled"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "CombatDaemon": {
+    "CombatDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "display": "disabled"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "EventDaemon": {
+    "EventDaemon": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "display": "disabled"
       }
     },
     "Storage": {

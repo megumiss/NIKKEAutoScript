@@ -25,7 +25,6 @@
 | **TEMPLATE_SHOP_MONEY** | 商品货币 | ✅ | <img src="..\..\assets\event\event_20250716\TEMPLATE_SHOP_MONEY.png" width="200"> |
 | **SHOP_ITEM_LOAD_CHECK** | 商店第一页最后一个商品的货币截图 | ✅ | <img src="..\..\assets\event\event_20250716\SHOP_ITEM_LOAD_CHECK.png" width="200"> |
 | **MINI_GAME** | 从活动前往小游戏按钮 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME.png" width="200"> |
-| **MINI_GAME_TOUCH** | 小游戏开屏点击按钮 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_TOUCH.png" width="200"> |
 | **MINI_GAME_CHECK** | 小游戏页面检查 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_CHECK.png" width="200"> |
 | **MINI_GAME_REWARD** | 小游戏每日奖励领取 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_REWARD.png" width="200"> |
 | **MINI_GAME_REWARD_DONE** | 小游戏每日奖励领取完成 | ✅ | <img src="..\..\assets\event\event_20250716\MINI_GAME_REWARD_DONE.png" width="200"> |

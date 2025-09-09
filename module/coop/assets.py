@@ -11,7 +11,7 @@ COOP_CHECK = Button(area={'zh-cn': (458, 182, 608, 205)}, color={'zh-cn': (75, 7
 COOP_PREPARE = Button(area={'zh-cn': (334, 1195, 386, 1220)}, color={'zh-cn': (148, 199, 249)}, button={'zh-cn': (334, 1195, 386, 1220)}, file={'zh-cn': './assets/zh-cn/coop/COOP_PREPARE.png'})
 COOP_ROLE_CHECK = Button(area={'zh-cn': (476, 640, 588, 662)}, color={'zh-cn': (105, 105, 104)}, button={'zh-cn': (476, 640, 588, 662)}, file={'zh-cn': './assets/zh-cn/coop/COOP_ROLE_CHECK.png'})
 COOP_START = Button(area={'zh-cn': (477, 979, 587, 1005)}, color={'zh-cn': (250, 149, 136)}, button={'zh-cn': (477, 979, 587, 1005)}, file={'zh-cn': './assets/zh-cn/coop/COOP_START.png'})
-DATELINE_CHECK = Button(area={'zh-cn': (427, 287, 557, 302)}, color={'zh-cn': (79, 79, 78)}, button={'zh-cn': (427, 287, 557, 302)}, file={'zh-cn': './assets/zh-cn/coop/DATELINE_CHECK.png'})
+DATELINE_CHECK = Button(area={'zh-cn': (501, 278, 669, 311)}, color={'zh-cn': (72, 57, 30)}, button={'zh-cn': (501, 278, 669, 311)}, file={'zh-cn': './assets/zh-cn/coop/DATELINE_CHECK.png'})
 DIFFICULTY_CONFIRM = Button(area={'zh-cn': (334, 854, 385, 877)}, color={'zh-cn': (120, 207, 247)}, button={'zh-cn': (334, 854, 385, 877)}, file={'zh-cn': './assets/zh-cn/coop/DIFFICULTY_CONFIRM.png'})
 DIFFICULTY_NORMAL = Button(area={'zh-cn': (180, 611, 248, 643)}, color={'zh-cn': (155, 223, 255)}, button={'zh-cn': (180, 611, 248, 643)}, file={'zh-cn': './assets/zh-cn/coop/DIFFICULTY_NORMAL.png'})
 DIFFICULTY_NORMAL_NOT_CHECKED = Button(area={'zh-cn': (181, 611, 247, 643)}, color={'zh-cn': (192, 193, 192)}, button={'zh-cn': (181, 611, 247, 643)}, file={'zh-cn': './assets/zh-cn/coop/DIFFICULTY_NORMAL_NOT_CHECKED.png'})

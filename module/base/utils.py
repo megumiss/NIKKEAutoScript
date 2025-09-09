@@ -25,6 +25,19 @@ def random_normal_distribution_int(a, b, n=3):
     else:
         return b
 
+def random_rectangle_point(area, n=3):
+    """Choose a random point in an area.
+
+    Args:
+        area: (upper_left_x, upper_left_y, bottom_right_x, bottom_right_y).
+        n (int): The amount of numbers in simulation. Default to 3.
+
+    Returns:
+        tuple(int): (x, y)
+    """
+    x = random_normal_distribution_int(area[0], area[2], n=n)
+    y = random_normal_distribution_int(area[1], area[3], n=n)
+    return x, y
 
 def ensure_time(second, n=3, precision=3):
     """Ensure to be time.
@@ -137,6 +150,10 @@ def load_image(file, area=None):
     Returns:
         np.ndarray:
     """
+    # import PIL
+    # print("PIL module path:", PIL.__file__)
+    # print("PIL.Image path:", PIL.Image.__file__)
+    # print("PIL.Image attributes:", [attr for attr in dir(PIL.Image) if not attr.startswith('_')])
     image = Image.open(file)
     if area is not None:
         image = image.crop(area)
@@ -240,7 +257,7 @@ def _area_offset(area, offset):
     return tuple(np.array([i + x for i, x in zip(area, offset)]))
 
 
-def color_similar(color1, color2, threshold=10):
+def color_similar(color1, color2):
     """Consider two colors are similar, if tolerance lesser or equal threshold.
     Tolerance = Max(Positive(difference_rgb)) + Max(- Negative(difference_rgb))
     The same as the tolerance in Photoshop.
@@ -253,11 +270,10 @@ def color_similar(color1, color2, threshold=10):
     Returns:
         bool: True if two colors are similar.
     """
-    # print(color1, color2)
     diff = np.array(color1).astype(int) - np.array(color2).astype(int)
     diff = np.max(np.maximum(diff, 0)) - np.min(np.minimum(diff, 0))
-    # print(diff)
-    return diff <= threshold
+
+    return diff
 
 
 def save_image(image, file):
@@ -502,5 +518,7 @@ def random_line_segments(p1, p2, n, random_range=(0, 0, 0, 0)):
     Returns:
         list[tuple]: [(x0, y0), (x1, y1), (x2, y2)]
     """
-    return [tuple((((n - index) * p1 + index * p2) / n).astype(int) + random_rectangle_point(random_range))
-            for index in range(0, n + 1)]
+    return [
+        tuple((((n - index) * p1 + index * p2) / n).astype(int) + random_rectangle_point(random_range))
+        for index in range(0, n + 1)
+    ]

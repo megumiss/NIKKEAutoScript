@@ -13,3 +13,4 @@ config/nkas.json
 **/app
 bin/paddleocr/
 /tmp
+**.acc

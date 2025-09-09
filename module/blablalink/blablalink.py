@@ -868,23 +868,33 @@ class Blablalink(UI):
             return False
 
     def run(self, task):
+        """
+        默认情况下，任务在 4:00–8:00 时间段执行时会自动推迟到 8 点以后；
+        开启 immediate 选项后，任务将立即执行，不再延迟。
+        """
         try:
             local_now = datetime.now()
             target_time = local_now.replace(hour=8, minute=0, second=0, microsecond=0)
-            if local_now > target_time:
-                if task == 'daily':
-                    self.daily()
-                    self.config.task_delay(server_update=True)
-                if task == 'cdk':
-                    self.cdk()
-                    self.config.task_delay(server_update=True)
-                if task == 'exchange':
-                    self.exchange()
-                    self.config.task_delay(target=self.next_month)
-            else:
+
+            # 情况1：4–8点之间，推迟到 8 点 + 随机分钟（除非 immediate）
+            if 4 <= local_now.hour < 8 and not self.config.BlaDaily_Immediately:
                 random_minutes = random.randint(5, 30)
                 target_time = target_time + timedelta(minutes=random_minutes)
                 self.config.task_delay(target=target_time)
+                return
+
+            # 情况2：立即执行（00–04点，>=8点，或 immediate=True）
+            if self.config.BlaDaily_Immediately or local_now.hour < 4 or local_now >= target_time:
+                if task == 'daily':
+                    self.daily()
+                    self.config.task_delay(server_update=True)
+                elif task == 'cdk':
+                    self.cdk()
+                    self.config.task_delay(server_update=True)
+                elif task == 'exchange':
+                    self.exchange()
+                    self.config.task_delay(target=self.next_month)
+                return
         except MissingHeader:
             logger.error('Please check all parameters settings')
             raise RequestHumanTakeover

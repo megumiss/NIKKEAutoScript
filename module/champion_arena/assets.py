@@ -17,6 +17,7 @@ CHEER_SELECT_1 = Button(area={'zh-cn': (206, 638, 244, 657)}, color={'zh-cn': (1
 CHEER_SELECT_2 = Button(area={'zh-cn': (505, 639, 542, 657)}, color={'zh-cn': (130, 129, 130)}, button={'zh-cn': (505, 639, 542, 657)}, file={'zh-cn': './assets/zh-cn/champion_arena/CHEER_SELECT_2.png'})
 PROGRESS_FIGHTING = Button(area={'zh-cn': (522, 825, 555, 842)}, color={'zh-cn': (41, 60, 84)}, button={'zh-cn': (522, 825, 555, 842)}, file={'zh-cn': './assets/zh-cn/champion_arena/PROGRESS_FIGHTING.png'})
 PROGRESS_NEXT_SEASON = Button(area={'zh-cn': (475, 827, 553, 841)}, color={'zh-cn': (45, 67, 96)}, button={'zh-cn': (475, 827, 553, 841)}, file={'zh-cn': './assets/zh-cn/champion_arena/PROGRESS_NEXT_SEASON.png'})
+PROGRESS_RESULTING = Button(area={'zh-cn': (464, 826, 527, 840)}, color={'zh-cn': (52, 77, 124)}, button={'zh-cn': (464, 826, 527, 840)}, file={'zh-cn': './assets/zh-cn/champion_arena/PROGRESS_RESULTING.png'})
 PROGRESS_TEAM = Button(area={'zh-cn': (291, 1005, 417, 1021)}, color={'zh-cn': (219, 104, 104)}, button={'zh-cn': (291, 1005, 417, 1021)}, file={'zh-cn': './assets/zh-cn/champion_arena/PROGRESS_TEAM.png'})
 PROMOTION = Button(area={'zh-cn': (344, 948, 375, 963)}, color={'zh-cn': (160, 109, 216)}, button={'zh-cn': (344, 948, 375, 963)}, file={'zh-cn': './assets/zh-cn/champion_arena/PROMOTION.png'})
 PROMOTION_CHECK = Button(area={'zh-cn': (261, 108, 456, 124)}, color={'zh-cn': (133, 115, 193)}, button={'zh-cn': (261, 108, 456, 124)}, file={'zh-cn': './assets/zh-cn/champion_arena/PROMOTION_CHECK.png'})

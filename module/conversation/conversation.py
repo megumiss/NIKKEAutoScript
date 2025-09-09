@@ -72,7 +72,7 @@ class Conversation(UI):
         return int(LOGS_QUANTITY.ocr(self.device.image)['text'])
 
     def answer_text(self, button: Button) -> str:
-        area = _area_offset(button.area, (45, -13, 545, 13))
+        area = _area_offset(button.area, (-515, -15, -15, 15))
         model_type = self.config.Optimization_OcrModelType
         ANSWER = Ocr(
             [area],
@@ -247,8 +247,8 @@ class Conversation(UI):
             if click_timer.reached() and TEMPLATE_ANSWER_TRUE.match(self.device.image):
                 answer_true_exist = True
                 _, button = TEMPLATE_ANSWER_TRUE.match_result(self.device.image, name='ANSWER_TRUE')
-                self.device.click(button)
                 logger.info('Click %s @ %s' % (point2str(*button.location), 'ANSWER_TRUE'))
+                self.device.click(button)
                 click_timer.reset()
                 continue
             # 识别答案
@@ -264,20 +264,25 @@ class Conversation(UI):
                     index = answer_list.index(right_answer)
 
                     # 点击对应选项
-                    self.device.click(answers[index])
                     logger.info(
                         'Click %s @ %s',
                         point2str(*answers[index].location),
                         answer_list[index],
                     )
+                    self.device.click(answers[index])
                     click_timer.reset()
                     continue
                 else:
                     # 点击单个选项/找不到正确答案
-                    self.device.click(ANSWER_CHECK)
-                    logger.info('Click %s @ %s' % (point2str(*ANSWER_CHECK.location), 'ANSWER'))
-                    click_timer.reset()
-                    continue
+                    if click_timer.reached() and self.appear_then_click(ANSWER_CHECK, offset=100, interval=3):
+                        click_timer.reset()
+                        continue
+                    # 点击对话
+                    if self.appear(AUTO_CLICK_CHECK, offset=(30, 30), interval=0.3):
+                        self.device.click_minitouch(100, 100)
+                        logger.info('Click %s @ %s' % (point2str(100, 100), 'WAIT_TO_ANSWER'))
+                        click_timer.reset()
+                        continue
 
         self.device.sleep(2.5)
         # return self.communicate()

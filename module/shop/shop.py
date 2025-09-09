@@ -65,9 +65,11 @@ class ShopBase(UI):
         """
         处理购买逻辑。
         """
+        self.device.click_record_clear()
         confirm_timer = Timer(2, 3).start()
         _confirm_timer = Timer(1, 2).start()
         click_timer = Timer(0.3)
+        max_clicks = 0
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -91,7 +93,12 @@ class ShopBase(UI):
                 raise NotEnoughMoneyError
 
             # 检查是否达到最大购买数量
-            if click_timer.reached() and self.appear_then_click(MAX, threshold=5, interval=1):
+            if (
+                click_timer.reached()
+                and max_clicks < 3
+                and self.appear_then_click(MAX, offset=30, threshold=0.99, interval=1)
+            ):
+                max_clicks += 1
                 self.device.sleep(0.3)
                 click_timer.reset()
                 continue
@@ -111,6 +118,7 @@ class ShopBase(UI):
                         self.device.screenshot()
                     self.handle_reward(1)
                     if self.appear(SHOP_CHECK, offset=(5, 5)) and _confirm_timer.reached():
+                        max_clicks = 0
                         return
 
     def process_purchase(self, products: SelectedGrids, check_price=False, refresh=False, skip_first_screenshot=True):
@@ -242,15 +250,17 @@ class ShopBase(UI):
                 self.device.screenshot()
 
                 # 检查当前商品是否可见
-                if self.appear(
-                    product.button, offset=5, threshold=0.9, static=False
-                ) and product.button.match_appear_on(self.device.image, 15):
-                    if click_timer.reached():
-                        self.device.click(product.button)
-                        img = self.device.image
-                        self.handle_purchase(product.button)
-                        self.device.image = img
-                        logger.info(f'[Purchased] {product.name}')
+                if (
+                    click_timer.reached()
+                    and self.appear(BUY_ALL, offset=10)
+                    and self.appear(product.button, offset=5, threshold=0.8, static=False)
+                ):
+                    self.device.click(product.button)
+                    img = self.device.image
+                    self.handle_purchase(product.button, skip_first_screenshot=False)
+                    self.device.image = img
+                    logger.info(f'[Purchased] {product.name}')
+                    continue
 
                 # 结束当前商品的扫描，进入下一个商品
                 if self.appear(END_LIST_CHECK, threshold=5):
@@ -258,7 +268,7 @@ class ShopBase(UI):
                     break
 
                 # 滑动屏幕继续查找
-                self.ensure_sroll((505, 1000), (505, 700), speed=5, hold=0.5, count=1, delay=0.5)
+                self.ensure_sroll((505, 1000), (505, 700), speed=5, hold=0.5, count=1, delay=0.5, method='scroll')
 
             # 单个商品完成后，从待购买列表中移除
             # products = products.delete([product])
@@ -295,7 +305,12 @@ class Shop(ShopBase):
 
     @cached_property
     def general_shop_priority(self) -> SelectedGrids:
-        priority = re.sub(r'\s+', '', self.config.GENERAL_SHOP_PRIORITY).split('>')
+        if self.config.GeneralShop_priority is None or not len(self.config.GeneralShop_priority.strip(' ')):
+            priority = self.config.GENERAL_SHOP_PRIORITY
+        else:
+            priority = self.config.GeneralShop_priority
+
+        priority = re.sub(r'\s+', '', priority).split('>')
         return SelectedGrids(
             [Product(i, self.config.GENERAL_SHOP_PRODUCT.get(i), self.assets.get(i)) for i in priority]
         )
