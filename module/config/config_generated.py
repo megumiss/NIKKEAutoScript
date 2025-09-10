@@ -98,7 +98,8 @@ class GeneratedConfig:
     Daily_CallReward = False
 
     # Group `CollectionItems`
-    CollectionItems_NIKKE = 'All'  # All, Laplace, Frima, Diesel, Exia
+    CollectionItems_Enable = False
+    CollectionItems_NIKKE = None
 
     # Group `OpponentSelection`
     OpponentSelection_Enable = False

@@ -147,9 +147,10 @@ Daily:
   EnhanceEquipment: false
   CallReward: false
 CollectionItems:
+  Enable: false
   NIKKE:
-    value: 'All'
-    option: [ 'All','Laplace','Frima','Diesel','Exia' ]
+    value: ''
+    type: textarea
 OpponentSelection:
   Enable: false
   SortingWeight:

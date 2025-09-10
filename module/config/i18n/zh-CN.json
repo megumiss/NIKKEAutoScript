@@ -556,14 +556,13 @@
       "name": "收藏品",
       "help": ""
     },
+    "Enable": {
+      "name": "启用",
+      "help": "启用后会根据下方的设置自动切换收藏品"
+    },
     "NIKKE": {
       "name": "NIKKE",
-      "help": "没做完",
-      "All": "随机",
-      "Laplace": "拉普拉斯",
-      "Frima": "普琳玛",
-      "Diesel": "迪塞尔",
-      "Exia": "艾可希雅"
+      "help": "妮姬列表，每行一个，当最上方的妮姬收藏品数量大于160时会自动移除并选择下一个；\n如果当前选择的妮姬与列表第一个不同，会在当前收藏品数量大于160后再切换。\n妮姬名称对应：\nDiesel：迪赛尔\nExia：艾可希雅\nLaplace：拉普拉斯\nFrima：普琳玛\nViper：毒蛇\nHelm：海伦\nMiranda：米兰达\nDrake：德雷克\nMilk：米尔克\nPoli：波莉\nJulia：尤莉亚\nBay：贝伊\nTove：托比"
     }
   },
   "OpponentSelection": {

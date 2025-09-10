@@ -111,7 +111,8 @@
       "ServerUpdate": "04:00"
     },
     "CollectionItems": {
-      "NIKKE": "All"
+      "Enable": false,
+      "NIKKE": null
     },
     "Storage": {
       "Storage": {}
