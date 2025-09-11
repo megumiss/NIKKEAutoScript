@@ -1,7 +1,7 @@
 import importlib
 from functools import cached_property
 
-from module.base.button import filter_buttons_in_area
+from module.base.button import filter_buttons_in_area, merge_buttons
 from module.base.decorator import Config
 from module.base.timer import Timer
 from module.base.utils import get_button_by_location, sort_buttons_by_location
@@ -615,7 +615,7 @@ class Event(UI):
                     break
 
         # 滑动到列表最下方检查倒数第二关
-        self.ensure_sroll_to_bottom(x1=(680, 900), x2=(680, 460), count=3)
+        self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
         self.device.screenshot()
         self.find_and_fight_stage(open_story)
 
@@ -732,7 +732,7 @@ class Event(UI):
                 break
 
         # 滑动到列表最下方检查倒数第二关
-        self.ensure_sroll_to_bottom(x1=(680, 900), x2=(680, 460), count=3)
+        self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
         self.device.screenshot()
         self.find_and_fight_stage(open_story)
 
@@ -965,10 +965,12 @@ class Event(UI):
                 restart_flag = False
 
             self.device.screenshot()
-            # 当前页所有商品
+            # 当前页所有商品，阈值较低可能会重复
             items = self.event_assets.TEMPLATE_SHOP_MONEY.match_multi(
                 self.device.image, similarity=0.65, name='SHOP_ITEM'
             )
+            # 合并重复的商品
+            items = merge_buttons(items, x_threshold=30, y_threshold=30)
             # 过滤掉非商店区域的商品
             items = filter_buttons_in_area(items, y_range=(620, 1280))
             # 按照坐标排序

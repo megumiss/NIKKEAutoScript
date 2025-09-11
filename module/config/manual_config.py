@@ -90,7 +90,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": True,
-            "story_part": "Story_1",  # Story_1, Story_2
+            "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Normal"  # Normal, Hard
         },
         {
