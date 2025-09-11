@@ -1,8 +1,8 @@
-from functools import cached_property
 from module.base.timer import Timer
 from module.base.utils import point2str
 from module.commission.assets import *
 from module.logger import logger
+from module.ocr.ocr import Digit
 from module.ui.assets import COMMISSION_CHECK
 from module.ui.page import page_commission
 from module.ui.ui import UI
@@ -13,7 +13,7 @@ class NoOpportunity(Exception):
 
 
 class Commission(UI):
-    @cached_property
+    @property
     def shop_delay_list(self) -> list[str]:
         """
         妮姬列表
@@ -30,6 +30,18 @@ class Commission(UI):
         except KeyError:
             logger.error(f"Button asset '{button_name}' not found for option '{item}'")
             raise
+
+    @property
+    def favorite_item_num(self):
+        model_type = self.config.Optimization_OcrModelType
+        ITEM_NUM = Digit(
+            [ITEM_SELECTED_NUM.area],
+            name='OPPORTUNITY_REMAIN',
+            model_type=model_type,
+            lang='ch',
+        )
+
+        return int(ITEM_NUM.ocr(self.device.image)['text'])
 
     def receive(self, skip_first_screenshot=True):
         logger.hr('Receive commission', 1)
@@ -50,7 +62,7 @@ class Commission(UI):
                 continue
 
             # 全部领取
-            if click_timer.reached() and (self.appear_then_click(CLAIM, offset=10, interval=1)):
+            if click_timer.reached() and self.appear_then_click(CLAIM, offset=10, interval=1):
                 click_timer.reset()
                 continue
 
@@ -71,21 +83,24 @@ class Commission(UI):
             else:
                 self.device.screenshot()
 
-            if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(ITEM_SELECTED, offset=10):
+            if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(
+                ITEM_SELECTED, offset=10, interval=1
+            ):
                 click_timer.reset()
                 continue
 
-            if self.appear(ITEM_SELECTED_NUM_CHECK, offset=10):
+            if self.appear(ITEM_SELECTED_NUM_CHECK, offset=100):
                 self.device.sleep(0.5)
                 num = self.favorite_item_num
 
                 # 关闭收藏品窗口
                 while 1:
                     self.device.screenshot()
-                    if self.appear(COMMISSION_CHECK, offset=10):
+
+                    if not self.appear(ITEM_SELECTED_NUM_CHECK, offset=10) and self.appear(COMMISSION_CHECK, offset=10):
                         click_timer.reset()
                         break
-                    if self.appear(ITEM_SELECTED_NUM_CHECK, offset=10):
+                    if self.appear(ITEM_SELECTED_NUM_CHECK, offset=100):
                         logger.info('Click %s @ %s' % (point2str(10, 10), 'CLOSE_ITEM'))
                         self.device.click_minitouch(10, 10)
                         self.device.sleep(0.5)
@@ -96,28 +111,70 @@ class Commission(UI):
                 break
 
         if num >= 160:
-            logger.info(f'Current favorite item num: {num}, need reselect')
             # 更换收藏品
+            logger.info(f'Current favorite item num: {num}, need reselect')
+
+            # 打开收藏品列表
             while 1:
                 self.device.screenshot()
 
-                # 没次数
-                if self.appear(COMMISSION_CHECK, offset=10) and self.appear(CLAIM_DONE, offset=10):
-                    raise NoOpportunity
-
-                if self.handle_reward(interval=1):
+                if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(ITEM_SELECT, offset=10):
                     click_timer.reset()
                     continue
-
-                # 全部领取
-                if click_timer.reached() and (self.appear_then_click(CLAIM, offset=10, interval=1)):
+                if self.appear(ITEM_LIST_CHECK, offset=10) and self.appear(ITEM_LIST_SELECT_CONFIRM, threshold=10):
                     click_timer.reset()
-                    continue
-
-                # 派遣弹窗和派遣按钮
-                if self.appear(COMMISSION_CHECK, offset=10) and self.appear(DISPATCH, threshold=10):
-                    logger.info('Receive commission done')
                     break
+
+            # 循环判断超出数量的是哪个收藏品
+            current = None
+            for item in self.shop_delay_list:
+                if self.appear(self.get_item_button(item), offset=10):
+                    current = item
+                    logger.info(f'Current favorite item: {current}')
+                    break
+            if not current:
+                logger.warning('Current favorite item can not judge')
+            else:
+                # 从列表中移除当前的妮姬
+                nikke_list = self.shop_delay_list.copy()
+                if current in nikke_list:
+                    nikke_list.remove(current)
+                    logger.info(f'Remove current favorite item: {current}')
+                    self.config.CollectionItems_NIKKE = '\n'.join(nikke_list)
+
+            # 滑动到列表开始位置
+            self.ensure_sroll((620, 400), (620, 900), speed=30, count=3, delay=0.3, method='swipe')
+            # 选择新的收藏品
+            select_times = 0
+            while 1:
+                self.device.screenshot()
+
+                # 派遣主页
+                if self.appear(COMMISSION_CHECK, offset=10):
+                    break
+
+                # 派遣选择
+                if (
+                    select_times > 2
+                    and self.appear(ITEM_LIST_CHECK, offset=10)
+                    and self.appear_then_click(ITEM_LIST_SELECT_CONFIRM, threshold=10)
+                ):
+                    click_timer.reset()
+                    continue
+
+                # 选择收藏品（这里取的是删除旧收藏品之后的第一个）
+                if self.appear(ITEM_LIST_CHECK, offset=10) and self.shop_delay_list:
+                    if self.appear_then_click(
+                        self.get_item_button(self.shop_delay_list[0]), offset=10, click_offset=(150, 0)
+                    ):
+                        logger.info(f'Select new favorite item: {self.shop_delay_list[0]}')
+                        select_times += 1
+                        click_timer.reset()
+                        continue
+
+                # 未找到收藏品，进行滑动
+                self.device.sleep(0.5)
+                self.ensure_sroll((620, 1000), (620, 700), speed=5, hold=1, count=1, delay=0.5, method='scroll')
         else:
             logger.info(f'Current favorite item num: {num}, skip reselect')
 
@@ -160,7 +217,7 @@ class Commission(UI):
             # 领取
             self.receive()
             # 处理收藏品
-            if self.config.CollectionItems_Enable and not self.config.CollectionItems_NIKKE:
+            if self.config.CollectionItems_Enable and self.config.CollectionItems_NIKKE:
                 self.select_favorite()
             # 派遣
             self.dispatch()

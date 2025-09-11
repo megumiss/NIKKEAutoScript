@@ -562,7 +562,7 @@
     },
     "NIKKE": {
       "name": "NIKKE",
-      "help": "妮姬列表，每行一个，当最上方的妮姬收藏品数量大于160时会自动移除并选择下一个；\n如果当前选择的妮姬与列表第一个不同，会在当前收藏品数量大于160后再切换。\n妮姬名称对应：\nDiesel：迪赛尔\nExia：艾可希雅\nLaplace：拉普拉斯\nFrima：普琳玛\nViper：毒蛇\nHelm：海伦\nMiranda：米兰达\nDrake：德雷克\nMilk：米尔克\nPoli：波莉\nJulia：尤莉亚\nBay：贝伊\nTove：托比"
+      "help": "妮姬列表，每行一个，第一个需要和当前派遣选择的妮姬相同，当当前派遣选择的收藏品数量大于160时会自动移除列表第一个并选择下一个；\n妮姬名称对应：\nDiesel：迪赛尔\nExia：艾可希雅\nLaplace：拉普拉斯\nFrima：普琳玛\nViper：毒蛇\nHelm：海伦\nMiranda：米兰达\nDrake：德雷克\nMilk：米尔克\nPoli：波莉\nJulia：尤莉亚\nBay：贝伊\nTove：托比"
     }
   },
   "OpponentSelection": {
