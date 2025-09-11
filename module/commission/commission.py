@@ -44,7 +44,7 @@ class Commission(UI):
         return int(ITEM_NUM.ocr(self.device.image)['text'])
 
     def receive(self, skip_first_screenshot=True):
-        logger.hr('Receive commission', 1)
+        logger.hr('Receive commission', 2)
         click_timer = Timer(0.3)
 
         while 1:
@@ -72,7 +72,7 @@ class Commission(UI):
                 break
 
     def select_favorite(self, skip_first_screenshot=True):
-        logger.hr('Select favorite item', 1)
+        logger.hr('Select favorite item', 2)
         click_timer = Timer(0.3)
 
         # 获取当前收藏品数量
@@ -128,7 +128,7 @@ class Commission(UI):
             # 循环判断超出数量的是哪个收藏品
             current = None
             for item in self.shop_delay_list:
-                if self.appear(self.get_item_button(item), offset=10):
+                if self.appear(self.get_item_button(item), offset=10, static=False):
                     current = item
                     logger.info(f'Current favorite item: {current}')
                     break
@@ -179,7 +179,7 @@ class Commission(UI):
             logger.info(f'Current favorite item num: {num}, skip reselect')
 
     def dispatch(self, skip_first_screenshot=True):
-        logger.hr('Dispatch commission', 1)
+        logger.hr('Dispatch commission', 2)
         click_timer = Timer(0.3)
 
         while 1:
@@ -206,8 +206,8 @@ class Commission(UI):
                 click_timer.reset()
                 continue
 
-            if self.appear(COMMISSION_CHECK, offset=(10, 10)):
-                logger.info('Dispatch commission done', 1)
+            if self.appear(COMMISSION_CHECK, offset=(10, 10)) and self.appear(DISPATCH_DONE, threshold=10):
+                logger.info('Dispatch commission done')
                 break
 
     def run(self):

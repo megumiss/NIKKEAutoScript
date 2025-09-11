@@ -8,6 +8,7 @@ CLAIM = Button(area={'zh-cn': (487, 1060, 516, 1090)}, color={'zh-cn': (73, 197,
 CLAIM_DONE = Button(area={'zh-cn': (209, 692, 370, 716)}, color={'zh-cn': (186, 186, 186)}, button={'zh-cn': (209, 692, 370, 716)}, file={'zh-cn': './assets/zh-cn/commission/CLAIM_DONE.png'})
 DISPATCH = Button(area={'zh-cn': (291, 1067, 320, 1084)}, color={'zh-cn': (77, 198, 251)}, button={'zh-cn': (291, 1067, 320, 1084)}, file={'zh-cn': './assets/zh-cn/commission/DISPATCH.png'})
 DISPATCH_CONFIRM = Button(area={'zh-cn': (386, 1071, 414, 1089)}, color={'zh-cn': (179, 230, 255)}, button={'zh-cn': (386, 1071, 414, 1089)}, file={'zh-cn': './assets/zh-cn/commission/DISPATCH_CONFIRM.png'})
+DISPATCH_DONE = Button(area={'zh-cn': (291, 1067, 319, 1085)}, color={'zh-cn': (240, 240, 240)}, button={'zh-cn': (291, 1067, 319, 1085)}, file={'zh-cn': './assets/zh-cn/commission/DISPATCH_DONE.png'})
 FAVORITE_ITEM_BAY = Button(area={'zh-cn': (122, 655, 149, 674)}, color={'zh-cn': (172, 168, 160)}, button={'zh-cn': (122, 655, 149, 674)}, file={'zh-cn': './assets/zh-cn/commission/FAVORITE_ITEM_BAY.png'})
 FAVORITE_ITEM_DIESEL = Button(area={'zh-cn': (114, 614, 147, 634)}, color={'zh-cn': (162, 105, 75)}, button={'zh-cn': (114, 614, 147, 634)}, file={'zh-cn': './assets/zh-cn/commission/FAVORITE_ITEM_DIESEL.png'})
 FAVORITE_ITEM_DRAKE = Button(area={'zh-cn': (93, 656, 135, 678)}, color={'zh-cn': (183, 155, 168)}, button={'zh-cn': (93, 656, 135, 678)}, file={'zh-cn': './assets/zh-cn/commission/FAVORITE_ITEM_DRAKE.png'})
