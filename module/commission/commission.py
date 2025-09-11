@@ -1,4 +1,5 @@
 from module.base.timer import Timer
+from module.base.utils import point2str
 from module.commission.assets import *
 from module.logger import logger
 from module.ui.assets import COMMISSION_CHECK
@@ -49,8 +50,66 @@ class Commission(UI):
             # else:
             #     confirm_timer.clear()
 
-    def select_favorite():
+    def select_favorite(self, skip_first_screenshot=True):
         logger.hr('Select favorite item', 1)
+        click_timer = Timer(0.3)
+
+        # 获取当前收藏品数量
+        num = 0
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(ITEM_SELECTED, offset=10):
+                click_timer.reset()
+                continue
+
+            if self.appear(ITEM_SELECTED_NUM_CHECK, offset=10):
+                self.device.sleep(0.5)
+                num = self.favorite_item_num
+
+                # 关闭收藏品窗口
+                while 1:
+                    self.device.screenshot()
+                    if self.appear(COMMISSION_CHECK, offset=10):
+                        click_timer.reset()
+                        break
+                    if self.appear(ITEM_SELECTED_NUM_CHECK, offset=10):
+                        logger.info('Click %s @ %s' % (point2str(10, 10), 'CLISE_ITEM'))
+                        self.device.click_minitouch(10, 10)
+                        click_timer.reset()
+                        continue
+
+                click_timer.reset()
+                break
+
+        if num > 160:
+            logger.info(f'Current favorite item num: {num}, need reselect')
+            # 更换收藏品
+            while 1:
+                self.device.screenshot()
+
+                # 没次数
+                if self.appear(COMMISSION_CHECK, offset=10) and self.appear(CLAIM_DONE, offset=10):
+                    raise NoOpportunity
+
+                if self.handle_reward(interval=1):
+                    click_timer.reset()
+                    continue
+
+                # 全部领取
+                if click_timer.reached() and (self.appear_then_click(CLAIM, offset=10, interval=1)):
+                    click_timer.reset()
+                    continue
+
+                # 派遣弹窗和派遣按钮
+                if self.appear(COMMISSION_CHECK, offset=10) and self.appear(DISPATCH, threshold=10):
+                    logger.info('Receive commission done')
+                    break
+        else:
+            logger.info(f'Current favorite item num: {num}, skip reselect')
 
     def dispatch(self, skip_first_screenshot=True):
         logger.hr('Dispatch commission', 1)
