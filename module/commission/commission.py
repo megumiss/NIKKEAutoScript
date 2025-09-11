@@ -1,3 +1,4 @@
+from functools import cached_property
 from module.base.timer import Timer
 from module.base.utils import point2str
 from module.commission.assets import *
@@ -12,9 +13,26 @@ class NoOpportunity(Exception):
 
 
 class Commission(UI):
+    @cached_property
+    def shop_delay_list(self) -> list[str]:
+        """
+        妮姬列表
+        """
+        return [line.strip() for line in self.config.CollectionItems_NIKKE.split('\n') if line.strip()]
+
+    def get_item_button(self, item: str):
+        """
+        根据选项名称获取对应的按钮
+        """
+        button_name = f'FAVORITE_ITEM_{item.upper()}'
+        try:
+            return globals()[button_name]
+        except KeyError:
+            logger.error(f"Button asset '{button_name}' not found for option '{item}'")
+            raise
+
     def receive(self, skip_first_screenshot=True):
         logger.hr('Receive commission', 1)
-        confirm_timer = Timer(2, count=3)
         click_timer = Timer(0.3)
 
         while 1:
@@ -40,15 +58,6 @@ class Commission(UI):
             if self.appear(COMMISSION_CHECK, offset=10) and self.appear(DISPATCH, threshold=10):
                 logger.info('Receive commission done')
                 break
-
-            # if self.appear(COMMISSION_CHECK, offset=10):
-            #     if not confirm_timer.started():
-            #         confirm_timer.start()
-            #     if confirm_timer.reached():
-            #         logger.info('Receive commission done')
-            #         break
-            # else:
-            #     confirm_timer.clear()
 
     def select_favorite(self, skip_first_screenshot=True):
         logger.hr('Select favorite item', 1)
@@ -77,15 +86,16 @@ class Commission(UI):
                         click_timer.reset()
                         break
                     if self.appear(ITEM_SELECTED_NUM_CHECK, offset=10):
-                        logger.info('Click %s @ %s' % (point2str(10, 10), 'CLISE_ITEM'))
+                        logger.info('Click %s @ %s' % (point2str(10, 10), 'CLOSE_ITEM'))
                         self.device.click_minitouch(10, 10)
+                        self.device.sleep(0.5)
                         click_timer.reset()
                         continue
 
                 click_timer.reset()
                 break
 
-        if num > 160:
+        if num >= 160:
             logger.info(f'Current favorite item num: {num}, need reselect')
             # 更换收藏品
             while 1:
