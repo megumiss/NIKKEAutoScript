@@ -58,7 +58,9 @@ class Commission(UI):
                 self.device.screenshot()
 
             # 没次数
-            if self.appear(COMMISSION_CHECK, offset=10) and self.appear(CLAIM_DONE, offset=10):
+            if self.appear(COMMISSION_CHECK, offset=10) and (
+                self.appear(CLAIM_DONE, offset=10) or self.appear(DISPATCH_DONE, threshold=10)
+            ):
                 raise NoOpportunity
 
             if self.handle_reward(interval=1):
@@ -66,7 +68,7 @@ class Commission(UI):
                 continue
 
             # 全部领取
-            if click_timer.reached() and self.appear_then_click(CLAIM, offset=10, interval=1):
+            if click_timer.reached() and self.appear_then_click(CLAIM, threshold=20, interval=1):
                 click_timer.reset()
                 continue
 
@@ -117,7 +119,6 @@ class Commission(UI):
         if num >= 160:
             # 更换收藏品
             logger.info(f'Current favorite item num: {num}, need reselect')
-
             # 打开收藏品列表
             while 1:
                 self.device.screenshot()
@@ -139,12 +140,14 @@ class Commission(UI):
             if not current:
                 logger.warning('Current favorite item can not judge')
             else:
-                # 从列表中移除当前的妮姬
                 nikke_list = self.shop_delay_list.copy()
-                if current in nikke_list:
+                # 只有多个候选时才移除
+                if len(nikke_list) > 1 and current in nikke_list:
                     nikke_list.remove(current)
                     logger.info(f'Remove current favorite item: {current}')
                     self.config.CollectionItems_Priority = ' > '.join(nikke_list)
+                else:
+                    logger.info(f'Keep current favorite item: {current}')
 
             # 滑动到列表开始位置
             self.ensure_sroll((620, 400), (620, 900), speed=30, count=3, delay=0.3, method='swipe')
@@ -167,11 +170,11 @@ class Commission(UI):
                     continue
 
                 # 选择收藏品（这里取的是删除旧收藏品之后的第一个）
-                if self.appear(ITEM_LIST_CHECK, offset=10) and self.shop_delay_list:
+                if self.appear(ITEM_LIST_CHECK, offset=10) and nikke_list:
                     if self.appear_then_click(
-                        self.get_item_button(self.shop_delay_list[0]), offset=10, click_offset=(150, 0)
+                        self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0)
                     ):
-                        logger.info(f'Select new favorite item: {self.shop_delay_list[0]}')
+                        logger.info(f'Select new favorite item: {nikke_list[0]}')
                         select_times += 1
                         click_timer.reset()
                         continue
@@ -226,6 +229,6 @@ class Commission(UI):
             # 派遣
             self.dispatch()
         except NoOpportunity:
-            logger.warning('Commission allready done')
+            logger.warning('Commission running or allready done')
 
         self.config.task_delay(server_update=True)
