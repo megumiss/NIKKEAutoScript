@@ -112,7 +112,7 @@
     },
     "CollectionItems": {
       "Enable": false,
-      "NIKKE": null
+      "Priority": null
     },
     "Storage": {
       "Storage": {}

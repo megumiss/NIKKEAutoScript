@@ -99,7 +99,7 @@ class GeneratedConfig:
 
     # Group `CollectionItems`
     CollectionItems_Enable = False
-    CollectionItems_NIKKE = None
+    CollectionItems_Priority = None
 
     # Group `OpponentSelection`
     OpponentSelection_Enable = False

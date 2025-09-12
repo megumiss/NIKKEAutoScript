@@ -148,7 +148,7 @@ Daily:
   CallReward: false
 CollectionItems:
   Enable: false
-  NIKKE:
+  Priority:
     value: ''
     type: textarea
 OpponentSelection:

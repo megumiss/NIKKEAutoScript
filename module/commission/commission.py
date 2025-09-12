@@ -20,7 +20,7 @@ class Commission(UI):
         """
         妮姬列表，格式: nikke1 > nikke2 > nikke3
         """
-        priority = self.config.CollectionItems_NIKKE
+        priority = self.config.CollectionItems_Priority
         priority = re.sub(r'\s+', '', priority).split('>')
         return [i for i in priority if i]
 
@@ -144,7 +144,7 @@ class Commission(UI):
                 if current in nikke_list:
                     nikke_list.remove(current)
                     logger.info(f'Remove current favorite item: {current}')
-                    self.config.CollectionItems_NIKKE = ' > '.join(nikke_list)
+                    self.config.CollectionItems_Priority = ' > '.join(nikke_list)
 
             # 滑动到列表开始位置
             self.ensure_sroll((620, 400), (620, 900), speed=30, count=3, delay=0.3, method='swipe')
@@ -221,7 +221,7 @@ class Commission(UI):
             # 领取
             self.receive()
             # 处理收藏品
-            if self.config.CollectionItems_Enable and self.config.CollectionItems_NIKKE:
+            if self.config.CollectionItems_Enable and self.config.CollectionItems_Priority:
                 self.select_favorite()
             # 派遣
             self.dispatch()
