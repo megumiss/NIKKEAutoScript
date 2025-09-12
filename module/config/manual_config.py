@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 class ManualConfig:
     SCHEDULER_PRIORITY = """
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
-       DailyGift > WeeklyGift > MonthlyGift > 
+       StepUpGift > DailyGift > WeeklyGift > MonthlyGift > 
        Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
        Daily > Event > Event2 > SoloRaid > UnionRaid >Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > TowerDaemon > CombatDaemon > EventDaemon
        """
@@ -90,7 +90,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": True,
-            "story_part": "Story_1",  # Story_1, Story_2
+            "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Normal"  # Normal, Hard
         },
         {

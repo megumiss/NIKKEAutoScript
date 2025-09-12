@@ -76,6 +76,7 @@
     "menu": "collapse",
     "page": "setting",
     "tasks": [
+      "StepUpGift",
       "DailyGift",
       "WeeklyGift",
       "MonthlyGift"

@@ -147,9 +147,10 @@ Daily:
   EnhanceEquipment: false
   CallReward: false
 CollectionItems:
-  NIKKE:
-    value: 'All'
-    option: [ 'All','Laplace','Frima','Diesel','Exia' ]
+  Enable: false
+  Priority:
+    value: ''
+    type: textarea
 OpponentSelection:
   Enable: false
   SortingWeight:
@@ -232,6 +233,8 @@ Event:
     value: 'TITLE'
     type: textarea
   Game: false
+  GameStorySkip: false
+  GameLoop: false
 CheerStrategy:
   Enable: false
   Strategy:

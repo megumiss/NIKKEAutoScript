@@ -131,7 +131,7 @@ Blablalink:
       - BlaDaily
     BlaCDK:
       - Scheduler
-      - BlaCDK
+      - CDK
     BlaExchange:
       - Scheduler
       - BlaExchange
@@ -142,6 +142,8 @@ Gift:
   menu: 'collapse'
   page: 'setting'
   tasks:
+    StepUpGift:
+      - Scheduler
     DailyGift:
       - Scheduler
     WeeklyGift:

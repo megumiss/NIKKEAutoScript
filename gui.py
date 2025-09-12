@@ -2,8 +2,7 @@ import sys
 import threading
 from multiprocessing import Event, Process
 
-import pyuac
-
+# import pyuac
 from module.logger import logger
 from module.webui.setting import State
 

@@ -111,7 +111,8 @@
       "ServerUpdate": "04:00"
     },
     "CollectionItems": {
-      "NIKKE": "All"
+      "Enable": false,
+      "Priority": null
     },
     "Storage": {
       "Storage": {}
@@ -439,7 +440,9 @@
       "Coop": false,
       "Shop": false,
       "ShopDelayList": "TITLE",
-      "Game": false
+      "Game": false,
+      "GameStorySkip": false,
+      "GameLoop": false
     },
     "Storage": {
       "Storage": {}
@@ -464,7 +467,9 @@
       "Coop": false,
       "Shop": false,
       "ShopDelayList": "TITLE",
-      "Game": false
+      "Game": false,
+      "GameStorySkip": false,
+      "GameLoop": false
     },
     "Storage": {
       "Storage": {}
@@ -508,6 +513,10 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00, 16:00"
     },
+    "CDK": {
+      "Extra": false,
+      "Source": "https://gamewith.jp/nikke/article/show/371014"
+    },
     "Storage": {
       "Storage": {}
     }
@@ -523,6 +532,19 @@
     },
     "BlaExchange": {
       "Priority": "Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "StepUpGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "StepUpGift",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
     },
     "Storage": {
       "Storage": {}

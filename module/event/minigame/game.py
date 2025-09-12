@@ -143,10 +143,13 @@ def game(self):
     # 直到每日领取
     while 1:
         self.device.stuck_record_clear()
+        self.device.click_record_clear()
         # 每日
         start_game(self)
         # 领取每日奖励
         if reward(self):
+            if self.config.Event_GameLoop:
+                continue
             break
 
     # 领取任务奖励

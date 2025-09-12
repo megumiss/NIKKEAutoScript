@@ -190,9 +190,6 @@ class Automation:
             raise ValueError(f'未知的动作类型: {action}')
 
     def long_click_minitouch(self, x, y, duration=1.0, action='hold'):
-        x = x * 2 * 0.9
-        y = y / 2 * 1.12
-
         x += self.current_window.offset[0]
         y += self.current_window.offset[1]
         # 动作到方法的映射

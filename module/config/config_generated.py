@@ -98,7 +98,8 @@ class GeneratedConfig:
     Daily_CallReward = False
 
     # Group `CollectionItems`
-    CollectionItems_NIKKE = 'All'  # All, Laplace, Frima, Diesel, Exia
+    CollectionItems_Enable = False
+    CollectionItems_Priority = None
 
     # Group `OpponentSelection`
     OpponentSelection_Enable = False
@@ -141,6 +142,8 @@ class GeneratedConfig:
     Event_Shop = False
     Event_ShopDelayList = 'TITLE'
     Event_Game = False
+    Event_GameStorySkip = False
+    Event_GameLoop = False
 
     # Group `CheerStrategy`
     CheerStrategy_Enable = False

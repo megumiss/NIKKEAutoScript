@@ -333,3 +333,36 @@ def filter_buttons_in_area(
                 continue
         filtered.append(btn)
     return filtered
+
+def merge_buttons(
+    buttons: list[Button], x_threshold: int = 10, y_threshold: int = 10
+) -> list[Button]:
+    """
+    根据阈值合并接近的 Button
+    - 如果两个按钮区域在阈值范围内接近，只保留一个（默认保留先出现的）
+    - x_threshold: 横向阈值
+    - y_threshold: 纵向阈值
+    """
+    merged = []
+
+    for btn in buttons:
+        x1, y1, x2, y2 = btn.area
+        is_duplicate = False
+
+        for m in merged:
+            mx1, my1, mx2, my2 = m.area
+
+            # 判断是否在阈值范围内
+            if (
+                abs(x1 - mx1) <= x_threshold and
+                abs(y1 - my1) <= y_threshold and
+                abs(x2 - mx2) <= x_threshold and
+                abs(y2 - my2) <= y_threshold
+            ):
+                is_duplicate = True
+                break
+
+        if not is_duplicate:
+            merged.append(btn)
+
+    return merged
