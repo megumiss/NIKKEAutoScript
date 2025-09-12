@@ -47,19 +47,17 @@ class Commission(UI):
 
         return int(ITEM_NUM.ocr(self.device.image)['text'])
 
-    def receive(self, skip_first_screenshot=True):
+    def receive(self):
         logger.hr('Receive commission', 2)
         click_timer = Timer(0.3)
 
         while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
+            self.device.screenshot()
 
-            # 没次数
+            # 没次数/进行中
             if self.appear(COMMISSION_CHECK, offset=10) and (
-                self.appear(CLAIM_DONE, offset=10) or self.appear(DISPATCH_DONE, threshold=10)
+                self.appear(CLAIM_DONE, offset=10)
+                or (self.appear(DISPATCH_DONE, threshold=10) and not self.appear(CLAIM, threshold=20))
             ):
                 raise NoOpportunity
 
@@ -171,9 +169,7 @@ class Commission(UI):
 
                 # 选择收藏品（这里取的是删除旧收藏品之后的第一个）
                 if self.appear(ITEM_LIST_CHECK, offset=10) and nikke_list:
-                    if self.appear_then_click(
-                        self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0)
-                    ):
+                    if self.appear_then_click(self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0)):
                         logger.info(f'Select new favorite item: {nikke_list[0]}')
                         select_times += 1
                         click_timer.reset()
@@ -220,6 +216,7 @@ class Commission(UI):
     def run(self):
         logger.hr('Dispatch and claim commission')
         self.ui_ensure(page_commission)
+        self.device.sleep(1)
         try:
             # 领取
             self.receive()
