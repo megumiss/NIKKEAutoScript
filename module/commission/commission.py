@@ -1,3 +1,5 @@
+import re
+
 from module.base.timer import Timer
 from module.base.utils import point2str
 from module.commission.assets import *
@@ -16,9 +18,11 @@ class Commission(UI):
     @property
     def shop_delay_list(self) -> list[str]:
         """
-        妮姬列表
+        妮姬列表，格式: nikke1 > nikke2 > nikke3
         """
-        return [line.strip() for line in self.config.CollectionItems_NIKKE.split('\n') if line.strip()]
+        priority = self.config.CollectionItems_NIKKE
+        priority = re.sub(r'\s+', '', priority).split('>')
+        return [i for i in priority if i]
 
     def get_item_button(self, item: str):
         """
@@ -140,7 +144,7 @@ class Commission(UI):
                 if current in nikke_list:
                     nikke_list.remove(current)
                     logger.info(f'Remove current favorite item: {current}')
-                    self.config.CollectionItems_NIKKE = '\n'.join(nikke_list)
+                    self.config.CollectionItems_NIKKE = ' > '.join(nikke_list)
 
             # 滑动到列表开始位置
             self.ensure_sroll((620, 400), (620, 900), speed=30, count=3, delay=0.3, method='swipe')
