@@ -275,6 +275,11 @@ class NikkeAutoScript:
 
         Liberation(config=self.config, device=self.device).run()
 
+    def step_up_gift(self):
+        from module.gift.gift import StepUpGift
+
+        StepUpGift(config=self.config, device=self.device).run()
+
     def daily_gift(self):
         from module.gift.gift import DailyGift
 

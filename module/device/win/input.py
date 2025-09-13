@@ -25,7 +25,7 @@ class Input:
             pyautogui.mouseDown(x, y)
             time.sleep(wait_time)
             pyautogui.mouseUp()
-            logger.debug('按下鼠标左键')
+            logger.debug(f'按下鼠标左键 ({x}, {y})')
         except Exception as e:
             logger.error(f'按下鼠标左键出错：{e}')
 

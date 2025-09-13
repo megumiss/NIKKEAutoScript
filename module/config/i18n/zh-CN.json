@@ -162,6 +162,10 @@
       "name": "妮游社兑换",
       "help": ""
     },
+    "StepUpGift": {
+      "name": "SETPUP礼包",
+      "help": ""
+    },
     "DailyGift": {
       "name": "每日礼包",
       "help": ""
@@ -552,14 +556,13 @@
       "name": "收藏品",
       "help": ""
     },
-    "NIKKE": {
-      "name": "NIKKE",
-      "help": "没做完",
-      "All": "随机",
-      "Laplace": "拉普拉斯",
-      "Frima": "普琳玛",
-      "Diesel": "迪塞尔",
-      "Exia": "艾可希雅"
+    "Enable": {
+      "name": "启用",
+      "help": "启用后会根据下方的设置自动切换收藏品"
+    },
+    "Priority": {
+      "name": "优先级",
+      "help": "妮姬优先级，当前派遣选择的收藏品数量大于160时会从列表中自动移除并选择下一个，格式例如：Helm > Exia；\n妮姬名称对应：\nDiesel：迪赛尔\nExia：艾可希雅\nLaplace：拉普拉斯\nFrima：普琳玛\nViper：毒蛇\nHelm：海伦\nMiranda：米兰达\nDrake：德雷克\nMilk：米尔克\nPoli：波莉\nJulia：尤莉亚\nBay：贝伊\nTove：托比"
     }
   },
   "OpponentSelection": {
@@ -717,7 +720,7 @@
     },
     "Shop": {
       "name": "商店",
-      "help": "依次购买除称号外的所有活动货币商品"
+      "help": "依次（有时候不会）购买除称号外的所有活动货币商品"
     },
     "ShopDelayList": {
       "name": "商店延迟购买列表",
@@ -726,6 +729,14 @@
     "Game": {
       "name": "小游戏",
       "help": "视情况适配小游戏，如果没有适配会自动跳过"
+    },
+    "GameStorySkip": {
+      "name": "跳过小游戏剧情",
+      "help": ""
+    },
+    "GameLoop": {
+      "name": "小游戏循环运行",
+      "help": "停止快捷键F10"
     }
   },
   "CheerStrategy": {

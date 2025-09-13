@@ -1,6 +1,6 @@
 @echo off
 REM 切换到 exe 所在目录
-cd /d "你的脚本文件夹路径"
+cd /d "%~dp0..\.."
 
 REM 启动 exe
 start "" "nkas.exe"
