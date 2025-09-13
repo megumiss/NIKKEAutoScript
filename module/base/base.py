@@ -42,7 +42,7 @@ class ModuleBase:
             from module.device.win.device import Device as DeviceClass
 
         # 妮游社任务不需要device
-        if task != 'bla':
+        if task not in self.config.INDEPENDENT_TASKS_CONFIG_INIT:
             if isinstance(device, DeviceClass):
                 self.device = device
             elif device is None:

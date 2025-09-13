@@ -147,3 +147,4 @@ class ManualConfig:
     # 独立任务，不依赖游戏运行
     INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange']
     INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange"]
+    INDEPENDENT_TASKS_CONFIG_INIT = ['bla']
