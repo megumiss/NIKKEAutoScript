@@ -403,8 +403,8 @@ class NikkeAutoScript:
                 method = self.config.Optimization_WhenTaskQueueEmpty
                 if method == 'close_game':
                     logger.info('Close game during wait')
-                    # 妮游社任务不需要device，不需要操作游戏
-                    if task.command not in self.config.INDEPENDENT_TASKS:
+                    # 只运行妮游社任务时不会初始化device，不需要操作游戏
+                    if 'device' in self.__dict__:
                         # 关闭游戏
                         self.device.app_stop()
                         self.device.sleep(1)
@@ -424,8 +424,8 @@ class NikkeAutoScript:
                         continue
                 elif method == 'goto_main':
                     logger.info('Goto main page during wait')
-                    # 妮游社任务不需要device，不需要操作游戏
-                    if task.command not in self.config.INDEPENDENT_TASKS:
+                    # 只运行妮游社任务时不会初始化device，不需要操作游戏
+                    if 'device' in self.__dict__:
                         self.run('goto_main')
                     release_resources()
                     # self.device.release_during_wait()
