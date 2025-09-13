@@ -49,17 +49,11 @@ class Commission(UI):
 
     def receive(self):
         logger.hr('Receive commission', 2)
+        confirm_timer = Timer(3, count=5)
         click_timer = Timer(0.3)
 
         while 1:
             self.device.screenshot()
-
-            # 没次数/进行中
-            if self.appear(COMMISSION_CHECK, offset=10) and (
-                self.appear(CLAIM_DONE, offset=10)
-                or (self.appear(DISPATCH_DONE, threshold=10) and not self.appear(CLAIM, threshold=20))
-            ):
-                raise NoOpportunity
 
             if self.handle_reward(interval=1):
                 click_timer.reset()
@@ -70,10 +64,20 @@ class Commission(UI):
                 click_timer.reset()
                 continue
 
-            # 派遣弹窗和派遣按钮
-            if self.appear(COMMISSION_CHECK, offset=10) and self.appear(DISPATCH, threshold=10):
-                logger.info('Receive commission done')
-                break
+            # 等待领取完毕
+            if self.appear(COMMISSION_CHECK, offset=10) and self.appear(CLAIM_DONE, threshold=20):
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    # 需要派遣
+                    if self.appear(DISPATCH, threshold=10):
+                        logger.info('Receive commission done')
+                        break
+                    # 没次数/进行中
+                    if self.appear(DISPATCH_DONE, threshold=10):
+                        raise NoOpportunity
+            else:
+                confirm_timer.clear()
 
     def select_favorite(self, skip_first_screenshot=True):
         logger.hr('Select favorite item', 2)
@@ -216,7 +220,6 @@ class Commission(UI):
     def run(self):
         logger.hr('Dispatch and claim commission')
         self.ui_ensure(page_commission)
-        self.device.sleep(1)
         try:
             # 领取
             self.receive()
