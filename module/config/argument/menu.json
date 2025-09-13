@@ -86,9 +86,10 @@
     "menu": "collapse",
     "page": "tool",
     "tasks": [
-      "TowerDaemon",
-      "CombatDaemon",
-      "EventDaemon"
+      "AutoTower",
+      "SemiCombat",
+      "SemiEvent",
+      "BlaCDKManual"
     ]
   }
 }

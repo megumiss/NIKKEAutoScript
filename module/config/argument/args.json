@@ -2089,8 +2089,8 @@
       }
     }
   },
-  "TowerDaemon": {
-    "TowerDaemon": {
+  "AutoTower": {
+    "AutoTower": {
       "Enable": {
         "type": "checkbox",
         "value": true,
@@ -2106,8 +2106,8 @@
       }
     }
   },
-  "CombatDaemon": {
-    "CombatDaemon": {
+  "SemiCombat": {
+    "SemiCombat": {
       "Enable": {
         "type": "checkbox",
         "value": false,
@@ -2123,12 +2123,29 @@
       }
     }
   },
-  "EventDaemon": {
-    "EventDaemon": {
+  "SemiEvent": {
+    "SemiEvent": {
       "Enable": {
         "type": "checkbox",
         "value": false,
         "display": "disabled"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "BlaCDKManual": {
+    "BlaCDKManual": {
+      "CDK": {
+        "type": "input",
+        "value": "",
+        "valuetype": "str"
       }
     },
     "Storage": {

@@ -14,9 +14,10 @@ MOD_CONFIG_DICT = {}
 
 def get_available_func():
     return (
-        'TowerDaemon',
-        'CombatDaemon',
-        'EventDaemon',
+        'AutoTower',
+        'SemiCombat',
+        'SemiEvent',
+        'BlaCDKManual',
     )
 
 

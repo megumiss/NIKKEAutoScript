@@ -6,7 +6,8 @@ class ManualConfig:
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
        StepUpGift > DailyGift > WeeklyGift > MonthlyGift > 
        Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
-       Daily > Event > Event2 > SoloRaid > UnionRaid >Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > TowerDaemon > CombatDaemon > EventDaemon
+       Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > 
+       AutoTower > SemiCombat > SemiEvent > BlaCDKManual
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS"""

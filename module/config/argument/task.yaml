@@ -157,9 +157,11 @@ Tool:
   menu: 'collapse'
   page: 'tool'
   tasks:
-    TowerDaemon:
-      - TowerDaemon
-    CombatDaemon:
-      - CombatDaemon
-    EventDaemon:
-      - EventDaemon
+    AutoTower:
+      - AutoTower
+    SemiCombat:
+      - SemiCombat
+    SemiEvent:
+      - SemiEvent
+    BlaCDKManual:
+      - BlaCDKManual

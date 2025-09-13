@@ -6,7 +6,7 @@ from module.tribe_tower.assets import NEXT_STAGE
 from module.ui.ui import UI
 
 
-class EventDaemon(UI):
+class SemiEvent(UI):
     def run(self):
         # self.ui_goto_main()
         timeout = Timer(600, count=3).start()

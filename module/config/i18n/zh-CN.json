@@ -178,16 +178,20 @@
       "name": "每月礼包",
       "help": ""
     },
-    "TowerDaemon": {
+    "AutoTower": {
       "name": "自动爬塔",
       "help": ""
     },
-    "CombatDaemon": {
+    "SemiCombat": {
       "name": "半自动战斗",
       "help": ""
     },
-    "EventDaemon": {
+    "SemiEvent": {
       "name": "半自动活动",
+      "help": ""
+    },
+    "BlaCDKManual": {
+      "name": "CDK兑换",
       "help": ""
     }
   },
@@ -844,7 +848,7 @@
       "help": "仅支持所有的通用选项：\nENEMY_WEAPON_UP_1/2/3: 敌方武器升级I/II/III\nENEMY_ARMOR_UP_1/2/2: 敌方护甲升级I/II/III\nENEMY_VITALS_UP_1/2/3: 敌方生命值升级I/II/III\nNO_RECYCLING: 禁用循环室\nAGGRESSIVE_TACTICS: 好战型战术\nRUSH_HOUR_1/2/3: 尖峰时刻I/II/III\nRELEVANT_PERSONNEL_ONLY: 禁止无关人员进入\n默认选项为敌方武器升级III、敌方护甲升级III、敌方生命值升级III、禁用循环室、好战型战术、尖峰时刻III、禁止无关人员进入，\n总计25倍率，每行填写一个，如果练度不够可以根据实际情况减少\n如果超频主页显示的最高记录值和下方填入的总倍率值相等或更高，则会跳过超频"
     }
   },
-  "TowerDaemon": {
+  "AutoTower": {
     "_info": {
       "name": "自动爬塔",
       "help": "自动爬普通企业塔，失败时自动停止"
@@ -854,7 +858,7 @@
       "help": ""
     }
   },
-  "CombatDaemon": {
+  "SemiCombat": {
     "_info": {
       "name": "半自动战斗",
       "help": "半自动推图，需要在剧情地图中时开启，支持普通和困难模式（还没做）"
@@ -864,7 +868,7 @@
       "help": ""
     }
   },
-  "EventDaemon": {
+  "SemiEvent": {
     "_info": {
       "name": "半自动活动",
       "help": "需要手动选择关卡（未测试）"
@@ -872,6 +876,16 @@
     "Enable": {
       "name": "可用",
       "help": ""
+    }
+  },
+  "BlaCDKManual": {
+    "_info": {
+      "name": "CDK手动兑换",
+      "help": ""
+    },
+    "CDK": {
+      "name": "CDK",
+      "help": "将CDK粘贴到输入框，提示设置保存成功后点击启动即可兑换"
     }
   },
   "Storage": {

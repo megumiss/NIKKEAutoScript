@@ -589,25 +589,33 @@
       "Storage": {}
     }
   },
-  "TowerDaemon": {
-    "TowerDaemon": {
+  "AutoTower": {
+    "AutoTower": {
       "Enable": true
     },
     "Storage": {
       "Storage": {}
     }
   },
-  "CombatDaemon": {
-    "CombatDaemon": {
+  "SemiCombat": {
+    "SemiCombat": {
       "Enable": false
     },
     "Storage": {
       "Storage": {}
     }
   },
-  "EventDaemon": {
-    "EventDaemon": {
+  "SemiEvent": {
+    "SemiEvent": {
       "Enable": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaCDKManual": {
+    "BlaCDKManual": {
+      "CDK": null
     },
     "Storage": {
       "Storage": {}

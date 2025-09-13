@@ -316,20 +316,25 @@ class NikkeAutoScript:
 
         Blablalink(config=self.config).run('cdk')
 
+    def bla_cdk_manual(self):
+        from module.blablalink.blablalink import Blablalink
+
+        Blablalink(config=self.config).cdk_manual()
+
     def bla_exchange(self):
         from module.blablalink.blablalink import Blablalink
 
         Blablalink(config=self.config).run('exchange')
 
-    def tower_daemon(self):
-        from module.daemon.tower_daemon import TowerDaemon
+    def auto_tower(self):
+        from module.daemon.auto_tower import AutoTower
 
-        TowerDaemon(config=self.config, device=self.device).run()
+        AutoTower(config=self.config, device=self.device).run()
 
-    def event_daemon(self):
-        from module.event_daemon.event_daemon import EventDaemon
+    def semi_event(self):
+        from module.event.semi_event import SemiEvent
 
-        EventDaemon(config=self.config, device=self.device).run()
+        SemiEvent(config=self.config, device=self.device).run()
 
     def event(self):
         from module.event.event import Event

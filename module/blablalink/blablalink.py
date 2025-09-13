@@ -485,7 +485,7 @@ class Blablalink(UI):
         self.config.BlaDaily_Points = points
         logger.info(f'Current points: {points}')
 
-    def cdk(self):
+    def cdk(self, cdk: str = None):
         """CDK兑换功能"""
         logger.info('Starting CDK redemption task')
 
@@ -493,26 +493,32 @@ class Blablalink(UI):
         redeemed_cdks = self.get_cdk_redemption_history()
         self._append_cdks_to_temp(redeemed_cdks)
 
-        # 2. 从官方接口获取未兑换的CDK列表
-        official_cdks = self.get_official_cdks()
-        unredeemed_cdks = official_cdks.copy()
+        # 2. 从临时文件加载所有已记录的 CDK
+        temp_cdks = self._load_cdks_from_temp()
 
-        # 3. 如果开启额外来源，添加来源网站中的CDK
-        if self.config.CDK_Extra:
-            sources = self.config.CDK_Source
-            if sources:
-                # 从临时文件加载所有已记录CDK
-                temp_cdks = self._load_cdks_from_temp()
-
-                # 提取外部CDK并过滤已记录的
-                extra_cdks = self.extract_external_cdks(sources)
-                for cdk in extra_cdks:
-                    if cdk not in temp_cdks and cdk not in unredeemed_cdks:
-                        unredeemed_cdks.append(cdk)
+        # 3. 构建待兑换列表
+        if cdk:
+            # 单CDK模式
+            unredeemed_cdks = []
+            if cdk not in redeemed_cdks and cdk not in temp_cdks:
+                unredeemed_cdks.append(cdk)
             else:
-                logger.warning('CDK_Extra enabled but no sources configured')
+                logger.info(f'CDK {cdk} already redeemed or recorded, skipping')
         else:
-            logger.info('CDK_Extra disabled, only using official CDKs')
+            # 批量模式：官方 + 额外来源
+            unredeemed_cdks = self.get_official_cdks().copy()
+            if self.config.CDK_Extra:
+                sources = self.config.CDK_Source
+                if sources:
+                    # 提取外部CDK并过滤已记录的
+                    extra_cdks = self.extract_external_cdks(sources)
+                    for extra in extra_cdks:
+                        if extra not in temp_cdks and extra not in unredeemed_cdks:
+                            unredeemed_cdks.append(extra)
+                else:
+                    logger.warning('CDK_Extra enabled but no sources configured')
+            else:
+                logger.info('CDK_Extra disabled, only using official CDKs')
 
         if not unredeemed_cdks:
             logger.info('All CDK candidates have already been redeemed')
@@ -522,8 +528,8 @@ class Blablalink(UI):
 
         # 4. 尝试兑换未使用的CDK
         success_count = 0
-        for cdk in unredeemed_cdks:
-            if self.redeem_cdk(cdk):
+        for code in unredeemed_cdks:
+            if self.redeem_cdk(code):
                 success_count += 1
                 # 如果兑换成功，将CDK追加到临时文件
                 # self._append_cdks_to_temp([cdk])
@@ -866,6 +872,17 @@ class Blablalink(UI):
         except Exception as e:
             logger.error(f'Exception when performing exchange: {str(e)}')
             return False
+
+    def cdk_manual(self):
+        try:
+            cdk = deep_get(self.config.data, keys='BlaCDKManual.BlaCDKManual.CDK')
+            self.cdk(cdk)
+        except MissingHeader:
+            logger.error('Please check all parameters settings')
+            raise RequestHumanTakeover
+        except Exception as e:
+            logger.error(f'Blablalink exception: {str(e)}')
+            raise RequestHumanTakeover
 
     def run(self, task):
         """
