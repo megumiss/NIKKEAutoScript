@@ -872,6 +872,9 @@ class Blablalink(UI):
         默认情况下，任务在 4:00–8:00 时间段执行时会自动推迟到 8 点以后；
         开启 immediate 选项后，任务将立即执行，不再延迟。
         """
+        time.sleep(5)
+        self.config.task_delay(server_update=True)
+        return
         try:
             local_now = datetime.now()
             target_time = local_now.replace(hour=8, minute=0, second=0, microsecond=0)

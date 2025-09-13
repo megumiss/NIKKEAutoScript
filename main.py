@@ -401,17 +401,14 @@ class NikkeAutoScript:
                 logger.info(f'Wait until {task.next_run} for task `{task.command}`')
                 self.is_first_task = False
                 method = self.config.Optimization_WhenTaskQueueEmpty
-                # 妮游社任务不需要device
-                if method == 'close_game' and task.command not in self.config.INDEPENDENT_TASKS:
+                if method == 'close_game':
                     logger.info('Close game during wait')
-                    # device 为空
-                    if 'device' not in self.__dict__:
-                        logger.info('Game not running, skip close')
-                        break
-                    self.device.app_stop()
-                    self.device.sleep(1)
-                    # 关闭启动器
-                    self.device.app_stop('Launcher')
+                    # 妮游社任务不需要device，不需要操作游戏
+                    if task.command not in self.config.INDEPENDENT_TASKS:
+                        self.device.app_stop()
+                        self.device.sleep(1)
+                        # 关闭启动器
+                        self.device.app_stop('Launcher')
                     release_resources()
                     if self.config.Client_Platform == 'win':
                         del_cached_property(self, 'device')
@@ -423,13 +420,11 @@ class NikkeAutoScript:
                         self.config.task_call('Restart')
                         del_cached_property(self, 'config')
                         continue
-                elif method == 'goto_main' and task.command not in self.config.INDEPENDENT_TASKS:
+                elif method == 'goto_main':
                     logger.info('Goto main page during wait')
-                    # device 为空
-                    if 'device' not in self.__dict__:
-                        logger.info('Game not running, skip goto main')
-                        break
-                    self.run('goto_main')
+                    # 妮游社任务不需要device，不需要操作游戏
+                    if task.command not in self.config.INDEPENDENT_TASKS:
+                        self.run('goto_main')
                     release_resources()
                     # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
@@ -476,7 +471,7 @@ class NikkeAutoScript:
             #     self.config.task_call('Restart')
             # Get task
             task = self.get_next_task()
-            # 妮游社任务不需要device
+            # 妮游社任务不需要device，不需要操作游戏
             if task not in self.config.INDEPENDENT_TASKS:
                 # Init device and change server
                 _ = self.device
