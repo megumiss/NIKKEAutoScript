@@ -405,10 +405,12 @@ class NikkeAutoScript:
                     logger.info('Close game during wait')
                     # 妮游社任务不需要device，不需要操作游戏
                     if task.command not in self.config.INDEPENDENT_TASKS:
+                        # 关闭游戏
                         self.device.app_stop()
                         self.device.sleep(1)
                         # 关闭启动器
-                        self.device.app_stop('Launcher')
+                        if self.config.Client_Platform == 'win':
+                            self.device.app_stop('Launcher')
                     release_resources()
                     if self.config.Client_Platform == 'win':
                         del_cached_property(self, 'device')
