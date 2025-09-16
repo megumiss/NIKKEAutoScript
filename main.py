@@ -20,6 +20,7 @@ from module.exception import (
     GameStuckError,
     GameTooManyClickError,
     RequestHumanTakeover,
+    ScreenshotError,
 )
 from module.logger import logger
 from module.notify import handle_notify
@@ -91,7 +92,7 @@ class NikkeAutoScript:
             logger.warning(e)
             self.config.task_call('Restart')
             return False
-        except (GameStuckError, GameTooManyClickError) as e:
+        except (GameStuckError, GameTooManyClickError, ScreenshotError) as e:
             logger.error(e)
             self.save_error_log()
             logger.warning(f'Game stuck, {self.device.package} will be restarted in 10 seconds')
