@@ -69,6 +69,7 @@ class Coop(UI):
                 self.device.screenshot()
 
             if not coop_enter:
+                scroll_timer = Timer(60, count=30).start()
                 # 滑动banner查找协同作战
                 self.ensure_sroll((260, 150), (30, 150), speed=35, count=1, delay=0.5)
                 self.ensure_sroll((30, 150), (260, 150), speed=35, count=1, delay=0.5)
@@ -77,6 +78,11 @@ class Coop(UI):
                 banner_first._match_init = True
                 banner_first.image = crop(self.device.image, EVENT_BANNER.area)
                 while 1:
+                    # 超时检查
+                    if scroll_timer.reached():
+                        logger.warning('Search coop banner timeout')
+                        raise CoopIsUnavailable
+
                     if skip_first_screenshot:
                         skip_first_screenshot = False
                     else:
