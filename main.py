@@ -335,7 +335,7 @@ class NikkeAutoScript:
     def semi_combat(self):
         from module.daemon.semi_combat import SemiCombat
 
-        SemiCombat(config=self.config, device=self.device, task="SemiCombat").run()
+        SemiCombat(config=self.config, device=self.device, task='SemiCombat').run()
 
     def event(self):
         from module.event.event import Event
@@ -497,7 +497,7 @@ class NikkeAutoScript:
                 self.device.click_record_clear()
 
             logger.hr(task, level=0)
-            success = self.run(inflection.underscore(task))
+            success = self.run(inflection.underscore(task), skip_first_screenshot=(task == 'Restart'))
             logger.info(f'Scheduler: End task `{task}`')
             self.is_first_task = False
 
