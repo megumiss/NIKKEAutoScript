@@ -146,7 +146,7 @@ class Automation:
                 break
 
             time.sleep(1)
-            if time.time() - start_time > 60:
+            if time.time() - start_time > 30:
                 raise ScreenshotError('截图超时')
 
     @cached_property
@@ -165,7 +165,7 @@ class Automation:
         if width == resolution[0] or height == resolution[1]:
             return image
 
-        raise ScreenshotSizeError("The emulator's display size must be 720*1280")
+        raise ScreenshotSizeError("The game window display size must be 720*1280")
 
     def click(self, button: Button, click_offset=0, action='click'):
         """点击窗口中的按钮"""
