@@ -34,6 +34,17 @@ class NikkeAutoScript:
 
     def __init__(self, config_name='nkas'):
         logger.hr('Start', level=0)
+
+        # 路径检查
+        script_path = os.path.abspath(sys.argv[0])
+        logger.info(f'[Script Path]: {script_path}')
+        try:
+            script_path.encode('ascii')
+        except UnicodeEncodeError:
+            logger.error('脚本路径包含非英文字符，请切换到英文路径下')
+            logger.error('Script path contains non-ASCII characters. Please move the script to an English-only path.')
+            sys.exit(1)
+
         self.config_name = config_name
         # Skip first restart
         self.is_first_task = True

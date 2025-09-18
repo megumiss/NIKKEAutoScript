@@ -39,7 +39,7 @@ class SemiCombat(UI, DaemonBase):
                 continue
 
             # 下一关卡
-            if click_timer.reached() and self.appear_then_click(NEXT_STAGE, offset=(50, 30), interval=2):
+            if click_timer.reached() and self.appear_then_click(NEXT_STAGE, offset=(100, 30), interval=2):
                 click_timer.reset()
                 continue
 
