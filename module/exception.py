@@ -44,5 +44,6 @@ class OperationFailed(Exception):
 class AccountError(Exception):
     pass
 
+
 class ScreenshotError(Exception):
     pass
