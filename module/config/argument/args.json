@@ -2126,6 +2126,22 @@
       }
     }
   },
+  "Highlights": {
+    "Highlights": {
+      "AutoSwitch": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "BlaCDKManual": {
     "BlaCDKManual": {
       "CDK": {

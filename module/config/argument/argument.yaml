@@ -283,3 +283,5 @@ BlaCDKManual:
   CDK:
     value: ''
     valuetype: str
+Highlights:
+  AutoSwitch: false

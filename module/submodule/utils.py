@@ -16,6 +16,7 @@ def get_available_func():
     return (
         'AutoTower',
         'SemiCombat',
+        'Highlights',
         'BlaCDKManual',
     )
 

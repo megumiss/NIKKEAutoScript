@@ -10,7 +10,7 @@ from module.ui.ui import UI
 class SemiCombat(UI, DaemonBase):
     def run(self):
         timeout = Timer(600, count=10)
-        click_timer = Timer(0.9)
+        click_timer = Timer(0.3)
 
         while 1:
             self.device.screenshot()

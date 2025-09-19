@@ -175,5 +175,8 @@ class GeneratedConfig:
     # Group `BlaCDKManual`
     BlaCDKManual_CDK = None
 
+    # Group `Highlights`
+    Highlights_AutoSwitch = False
+
     # Group `Storage`
     Storage_Storage = {}

@@ -343,6 +343,11 @@ class NikkeAutoScript:
 
         AutoTower(config=self.config, device=self.device).run()
 
+    def highlights(self):
+        from module.daemon.highlights import Highlights
+
+        Highlights(config=self.config, device=self.device, task='Highlights').run()
+
     def semi_combat(self):
         from module.daemon.semi_combat import SemiCombat
 
