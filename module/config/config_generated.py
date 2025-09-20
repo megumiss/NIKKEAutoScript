@@ -50,6 +50,7 @@ class GeneratedConfig:
     PCClientInfo_LauncherPath = None
     PCClientInfo_GameTitleName = None
     PCClientInfo_GameProcessName = None
+    PCClientInfo_GamePath = None
 
     # Group `Optimization`
     Optimization_AutoRedCircle = False

@@ -45,7 +45,8 @@
       "LauncherProcessName": null,
       "LauncherPath": null,
       "GameTitleName": null,
-      "GameProcessName": null
+      "GameProcessName": null,
+      "GamePath": null
     },
     "PCClient": {
       "Screens": false,

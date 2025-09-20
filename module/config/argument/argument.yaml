@@ -90,6 +90,9 @@ PCClientInfo:
     value: ''
   GameProcessName:
     value: ''
+  GamePath:
+    value: ''
+    type: textarea
 Optimization:
   AutoRedCircle: false
   OcrModelType:
