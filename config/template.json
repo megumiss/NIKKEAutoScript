@@ -50,6 +50,7 @@
     "PCClient": {
       "Screens": false,
       "GameResolutionCompat": false,
+      "CloseAutoHdr": true,
       "Account": null,
       "Password": null
     },

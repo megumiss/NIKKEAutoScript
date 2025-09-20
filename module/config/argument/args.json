@@ -194,6 +194,10 @@
         "type": "checkbox",
         "value": false
       },
+      "CloseAutoHdr": {
+        "type": "checkbox",
+        "value": true
+      },
       "Account": {
         "type": "input",
         "value": ""
