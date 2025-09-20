@@ -183,6 +183,10 @@
       "GameProcessName": {
         "type": "input",
         "value": ""
+      },
+      "GamePath": {
+        "type": "textarea",
+        "value": ""
       }
     },
     "PCClient": {
@@ -193,6 +197,10 @@
       "GameResolutionCompat": {
         "type": "checkbox",
         "value": false
+      },
+      "CloseAutoHdr": {
+        "type": "checkbox",
+        "value": true
       },
       "Account": {
         "type": "input",

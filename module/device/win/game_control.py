@@ -469,24 +469,23 @@ class WinClient:
         """通过注册表修改游戏自动 HDR 设置"""
         status_map = {'enable': '启用', 'disable': '禁用', 'unset': '未设置'}
         try:
-            self.game_auto_hdr = get_game_auto_hdr(self.game_path)
-            if self.game_auto_hdr == status:
-                self.game_auto_hdr = None
+            game_auto_hdr = get_game_auto_hdr(self.current_window.path)
+            if game_auto_hdr == status:
+                logger.info(f'游戏自动 HDR 状态: {status_map.get(game_auto_hdr)}')
                 return
-            set_game_auto_hdr(self.game_path, status)
-            logger.debug(f'修改游戏自动 HDR: {status_map.get(self.game_auto_hdr)} --> {status_map.get(status)}')
+            set_game_auto_hdr(self.current_window.path, status)
+            logger.info(f'修改游戏自动 HDR: {status_map.get(game_auto_hdr)} --> {status_map.get(status)}')
         except Exception as e:
-            logger.debug(f'修改游戏自动 HDR 设置时发生错误：{e}')
+            logger.warning(f'修改游戏自动 HDR 设置时发生错误：{e}')
 
     def restore_auto_hdr(self):
         """通过注册表恢复游戏自动 HDR 设置"""
         status_map = {'enable': '启用', 'disable': '禁用', 'unset': '未设置'}
         try:
-            if self.game_auto_hdr:
-                set_game_auto_hdr(self.game_path, self.game_auto_hdr)
-            logger.debug(f'恢复游戏自动 HDR: {status_map.get(self.game_auto_hdr)}')
+            set_game_auto_hdr(self.current_window.path, 'unset')
+            logger.info(f'恢复游戏自动 HDR: {status_map.get("unset")}')
         except Exception as e:
-            logger.debug(f'恢复游戏自动 HDR 设置时发生错误：{e}')
+            logger.warning(f'恢复游戏自动 HDR 设置时发生错误：{e}')
 
     def check_screen_resolution(self, target_width: int, target_height: int) -> None:
         """

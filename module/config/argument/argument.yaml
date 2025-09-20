@@ -66,6 +66,7 @@ PCClient:
     value: false
   GameResolutionCompat:
     value: false
+  CloseAutoHdr: true
   Account:
     value: ''
   Password:
@@ -89,6 +90,9 @@ PCClientInfo:
     value: ''
   GameProcessName:
     value: ''
+  GamePath:
+    value: ''
+    type: textarea
 Optimization:
   AutoRedCircle: false
   OcrModelType:

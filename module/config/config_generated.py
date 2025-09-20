@@ -37,6 +37,7 @@ class GeneratedConfig:
     # Group `PCClient`
     PCClient_Screens = False
     PCClient_GameResolutionCompat = False
+    PCClient_CloseAutoHdr = True
     PCClient_Account = None
     PCClient_Password = None
 
@@ -49,6 +50,7 @@ class GeneratedConfig:
     PCClientInfo_LauncherPath = None
     PCClientInfo_GameTitleName = None
     PCClientInfo_GameProcessName = None
+    PCClientInfo_GamePath = None
 
     # Group `Optimization`
     Optimization_AutoRedCircle = False
