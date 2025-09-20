@@ -288,4 +288,6 @@ BlaCDKManual:
     value: ''
     valuetype: str
 Highlights:
-  AutoSwitch: false
+  AutoSwitch:
+    value: true
+    display: disabled

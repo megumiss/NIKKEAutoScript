@@ -178,7 +178,7 @@ class GeneratedConfig:
     BlaCDKManual_CDK = None
 
     # Group `Highlights`
-    Highlights_AutoSwitch = False
+    Highlights_AutoSwitch = True
 
     # Group `Storage`
     Storage_Storage = {}

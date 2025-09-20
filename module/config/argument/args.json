@@ -2138,7 +2138,8 @@
     "Highlights": {
       "AutoSwitch": {
         "type": "checkbox",
-        "value": false
+        "value": true,
+        "display": "disabled"
       }
     },
     "Storage": {

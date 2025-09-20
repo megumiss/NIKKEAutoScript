@@ -610,7 +610,7 @@
   },
   "Highlights": {
     "Highlights": {
-      "AutoSwitch": false
+      "AutoSwitch": true
     },
     "Storage": {
       "Storage": {}
