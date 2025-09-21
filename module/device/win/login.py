@@ -28,6 +28,7 @@ class Login(LauncherOcr, Automation):
                     logger.info('启动器打开成功')
                     break
             else:
+                self.switch_to_program()
                 if self.appear_text('电子邮件账号', threshold=0.9):
                     need_login = True
                     break
