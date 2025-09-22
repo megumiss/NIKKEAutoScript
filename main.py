@@ -20,6 +20,7 @@ from module.exception import (
     GameStuckError,
     GameTooManyClickError,
     RequestHumanTakeover,
+    ScreenshotError,
 )
 from module.logger import logger
 from module.notify import handle_notify
@@ -33,6 +34,17 @@ class NikkeAutoScript:
 
     def __init__(self, config_name='nkas'):
         logger.hr('Start', level=0)
+
+        # 路径检查
+        script_path = os.path.abspath(sys.argv[0])
+        logger.info(f'[Script Path]: {script_path}')
+        try:
+            script_path.encode('ascii')
+        except UnicodeEncodeError:
+            logger.error('脚本路径包含非英文字符，请切换到英文路径下')
+            logger.error('Script path contains non-ASCII characters. Please move the script to an English-only path.')
+            sys.exit(1)
+
         self.config_name = config_name
         # Skip first restart
         self.is_first_task = True
@@ -77,7 +89,8 @@ class NikkeAutoScript:
 
     def run(self, command, skip_first_screenshot=False):
         try:
-            if not skip_first_screenshot:
+            # 妮游社任务不需要device
+            if command not in self.config.INDEPENDENT_TASKS_UNDER and not skip_first_screenshot:
                 self.device.screenshot()
             self.__getattribute__(command)()
             return True
@@ -90,7 +103,7 @@ class NikkeAutoScript:
             logger.warning(e)
             self.config.task_call('Restart')
             return False
-        except (GameStuckError, GameTooManyClickError) as e:
+        except (GameStuckError, GameTooManyClickError, ScreenshotError) as e:
             logger.error(e)
             self.save_error_log()
             logger.warning(f'Game stuck, {self.device.package} will be restarted in 10 seconds')
@@ -325,20 +338,30 @@ class NikkeAutoScript:
 
         Blablalink(config=self.config).run('cdk')
 
+    def bla_cdk_manual(self):
+        from module.blablalink.blablalink import Blablalink
+
+        Blablalink(config=self.config).cdk_manual()
+
     def bla_exchange(self):
         from module.blablalink.blablalink import Blablalink
 
         Blablalink(config=self.config).run('exchange')
 
-    def tower_daemon(self):
-        from module.daemon.tower_daemon import TowerDaemon
+    def auto_tower(self):
+        from module.daemon.auto_tower import AutoTower
 
-        TowerDaemon(config=self.config, device=self.device).run()
+        AutoTower(config=self.config, device=self.device).run()
 
-    def event_daemon(self):
-        from module.event_daemon.event_daemon import EventDaemon
+    def highlights(self):
+        from module.daemon.highlights import Highlights
 
-        EventDaemon(config=self.config, device=self.device).run()
+        Highlights(config=self.config, device=self.device, task='Highlights').run()
+
+    def semi_combat(self):
+        from module.daemon.semi_combat import SemiCombat
+
+        SemiCombat(config=self.config, device=self.device, task='SemiCombat').run()
 
     def event(self):
         from module.event.event import Event
@@ -412,11 +435,14 @@ class NikkeAutoScript:
                 method = self.config.Optimization_WhenTaskQueueEmpty
                 if method == 'close_game':
                     logger.info('Close game during wait')
-                    # 关闭游戏
-                    self.device.app_stop()
-                    self.device.sleep(1)
-                    # 关闭启动器
-                    self.device.app_stop('Launcher')
+                    # 只运行妮游社任务时不会初始化device，不需要操作游戏
+                    if 'device' in self.__dict__:
+                        # 关闭游戏
+                        self.device.app_stop()
+                        self.device.sleep(1)
+                        # 关闭启动器
+                        if self.config.Client_Platform == 'win':
+                            self.device.app_stop('Launcher')
                     release_resources()
                     if self.config.Client_Platform == 'win':
                         del_cached_property(self, 'device')
@@ -430,7 +456,9 @@ class NikkeAutoScript:
                         continue
                 elif method == 'goto_main':
                     logger.info('Goto main page during wait')
-                    self.run('goto_main')
+                    # 只运行妮游社任务时不会初始化device，不需要操作游戏
+                    if 'device' in self.__dict__:
+                        self.run('goto_main')
                     release_resources()
                     # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
@@ -477,22 +505,25 @@ class NikkeAutoScript:
             #     self.config.task_call('Restart')
             # Get task
             task = self.get_next_task()
-            # Init device and change server
-            _ = self.device
-            self.device.config = self.config
-            # Skip first restart
-            if self.is_first_task and task == 'Restart':
-                logger.info('Skip task `Restart` at scheduler start')
-                self.config.task_delay(server_update=True)
-                del_cached_property(self, 'config')
-                continue
+            # 妮游社任务不需要device，不需要操作游戏
+            if task not in self.config.INDEPENDENT_TASKS:
+                # Init device and change server
+                _ = self.device
+                self.device.config = self.config
+                # Skip first restart
+                if self.is_first_task and task == 'Restart':
+                    logger.info('Skip task `Restart` at scheduler start')
+                    self.config.task_delay(server_update=True)
+                    del_cached_property(self, 'config')
+                    continue
 
-            # Run
-            logger.info(f'Scheduler: Start task `{task}`')
-            self.device.stuck_record_clear()
-            self.device.click_record_clear()
+                # Run
+                logger.info(f'Scheduler: Start task `{task}`')
+                self.device.stuck_record_clear()
+                self.device.click_record_clear()
+
             logger.hr(task, level=0)
-            success = self.run(inflection.underscore(task))
+            success = self.run(inflection.underscore(task), skip_first_screenshot=(task == 'Restart'))
             logger.info(f'Scheduler: End task `{task}`')
             self.is_first_task = False
 

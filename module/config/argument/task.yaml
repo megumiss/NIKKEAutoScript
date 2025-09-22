@@ -147,7 +147,7 @@ Blablalink:
       - BlaDaily
     BlaCDK:
       - Scheduler
-      - BlaCDK
+      - CDK
     BlaExchange:
       - Scheduler
       - BlaExchange
@@ -173,9 +173,11 @@ Tool:
   menu: 'collapse'
   page: 'tool'
   tasks:
-    TowerDaemon:
-      - TowerDaemon
-    CombatDaemon:
-      - CombatDaemon
-    EventDaemon:
-      - EventDaemon
+    AutoTower:
+      - AutoTower
+    SemiCombat:
+      - SemiCombat
+    Highlights:
+      - Highlights
+    BlaCDKManual:
+      - BlaCDKManual

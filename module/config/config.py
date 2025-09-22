@@ -104,6 +104,21 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         # logger.attr("Server", self.SERVER)
         logger.attr("Server", 'intl' if 'proximabeta' in self.Emulator_PackageName else 'tw')
 
+    def init_task(self, task=None):
+        if self.is_template_config:
+            return
+
+        self.load()
+        if task is None:
+            # Bind `Alas` by default which includes emulator settings.
+            task = name_to_function("NKAS")
+        else:
+            # Bind a specific task for debug purpose.
+            task = name_to_function(task)
+        self.bind(task)
+        self.task = task
+        self.save()
+
     def load(self):
         self.data = self.read_file(self.config_name)
         self.config_override()

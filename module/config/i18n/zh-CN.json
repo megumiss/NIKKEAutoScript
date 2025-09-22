@@ -178,16 +178,20 @@
       "name": "每月礼包",
       "help": ""
     },
-    "TowerDaemon": {
+    "AutoTower": {
       "name": "自动爬塔",
       "help": ""
     },
-    "CombatDaemon": {
-      "name": "半自动战斗",
+    "SemiCombat": {
+      "name": "半自动点击",
       "help": ""
     },
-    "EventDaemon": {
-      "name": "半自动活动",
+    "Highlights": {
+      "name": "花絮鉴赏",
+      "help": ""
+    },
+    "BlaCDKManual": {
+      "name": "CDK兑换",
       "help": ""
     }
   },
@@ -319,6 +323,10 @@
       "name": "游戏分辨率设置兼容模式",
       "help": "如果脚本提示游戏分辨率不正确、日志输出的游戏窗口分辨率不为720*1280，请开启此选项"
     },
+    "CloseAutoHdr": {
+      "name": "关闭自动HDR",
+      "help": "NKAS运行在HDR开启的设备下可能无法正常运行，如果你频繁出现卡屏请开启此选项，开启后会关闭游戏的自动HDR，全局HDR不受影响"
+    },
     "Account": {
       "name": "账号",
       "help": "请将邮箱直接粘贴到此处，登录失效时会自动填充账号。此功能存在一定风险，请谨慎使用"
@@ -350,11 +358,11 @@
     },
     "LauncherTitleName": {
       "name": "启动器标题",
-      "help": "启动器窗口的标题栏名称，一般无需填写"
+      "help": "启动器窗口的标题栏名称，一般无需手动填写"
     },
     "LauncherProcessName": {
       "name": "启动器进程",
-      "help": "启动进程的名称，一般无需填写"
+      "help": "启动进程的名称，一般无需手动填写"
     },
     "LauncherPath": {
       "name": "启动器路径",
@@ -362,11 +370,15 @@
     },
     "GameTitleName": {
       "name": "游戏标题",
-      "help": "游戏窗口的标题栏名称，一般无需填写"
+      "help": "游戏窗口的标题栏名称，一般无需手动填写"
     },
     "GameProcessName": {
       "name": "游戏进程",
-      "help": "游戏进程的名称，一般无需填写"
+      "help": "游戏进程的名称，一般无需手动填写"
+    },
+    "GamePath": {
+      "name": "游戏路径",
+      "help": "游戏路径，一般无需手动填写，会根据启动器路径自动填写，如果自动填写的路径错误请手动更改"
     }
   },
   "Optimization": {
@@ -556,14 +568,13 @@
       "name": "收藏品",
       "help": ""
     },
-    "NIKKE": {
-      "name": "NIKKE",
-      "help": "没做完",
-      "All": "随机",
-      "Laplace": "拉普拉斯",
-      "Frima": "普琳玛",
-      "Diesel": "迪塞尔",
-      "Exia": "艾可希雅"
+    "Enable": {
+      "name": "启用",
+      "help": "启用后会根据下方的设置自动切换收藏品"
+    },
+    "Priority": {
+      "name": "优先级",
+      "help": "妮姬优先级，当前派遣选择的收藏品数量大于160时会从列表中自动移除并选择下一个，格式例如：Helm > Exia；\n妮姬名称对应：\nDiesel：迪赛尔\nExia：艾可希雅\nLaplace：拉普拉斯\nFrima：普琳玛\nViper：毒蛇\nHelm：海伦\nMiranda：米兰达\nDrake：德雷克\nMilk：米尔克\nPoli：波莉\nJulia：尤莉亚\nBay：贝伊\nTove：托比"
     }
   },
   "OpponentSelection": {
@@ -721,7 +732,7 @@
     },
     "Shop": {
       "name": "商店",
-      "help": "依次购买除称号外的所有活动货币商品"
+      "help": "依次（有时候不会）购买除称号外的所有活动货币商品"
     },
     "ShopDelayList": {
       "name": "商店延迟购买列表",
@@ -730,6 +741,14 @@
     "Game": {
       "name": "小游戏",
       "help": "视情况适配小游戏，如果没有适配会自动跳过"
+    },
+    "GameStorySkip": {
+      "name": "跳过小游戏剧情",
+      "help": ""
+    },
+    "GameLoop": {
+      "name": "小游戏循环运行",
+      "help": "停止快捷键F10"
     }
   },
   "CheerStrategy": {
@@ -837,7 +856,7 @@
       "help": "仅支持所有的通用选项：\nENEMY_WEAPON_UP_1/2/3: 敌方武器升级I/II/III\nENEMY_ARMOR_UP_1/2/2: 敌方护甲升级I/II/III\nENEMY_VITALS_UP_1/2/3: 敌方生命值升级I/II/III\nNO_RECYCLING: 禁用循环室\nAGGRESSIVE_TACTICS: 好战型战术\nRUSH_HOUR_1/2/3: 尖峰时刻I/II/III\nRELEVANT_PERSONNEL_ONLY: 禁止无关人员进入\n默认选项为敌方武器升级III、敌方护甲升级III、敌方生命值升级III、禁用循环室、好战型战术、尖峰时刻III、禁止无关人员进入，\n总计25倍率，每行填写一个，如果练度不够可以根据实际情况减少\n如果超频主页显示的最高记录值和下方填入的总倍率值相等或更高，则会跳过超频"
     }
   },
-  "TowerDaemon": {
+  "AutoTower": {
     "_info": {
       "name": "自动爬塔",
       "help": "自动爬普通企业塔，失败时自动停止"
@@ -847,24 +866,38 @@
       "help": ""
     }
   },
-  "CombatDaemon": {
+  "SemiCombat": {
     "_info": {
-      "name": "半自动战斗",
-      "help": "半自动推图，需要在剧情地图中时开启，支持普通和困难模式（还没做）"
+      "name": "半自动点击",
+      "help": "半自动点击，省去一些点击操作，可以自动点击战斗、快速战斗、跳过剧情、下一关卡、区域跳转等操作。需要手动选择关卡并提前配置好队伍"
     },
-    "Enable": {
-      "name": "可用",
+    "SkipStory": {
+      "name": "跳过剧情",
       "help": ""
+    },
+    "FightQuickly": {
+      "name": "快速战斗",
+      "help": "当在需要用票的关卡时，需要关闭此项"
     }
   },
-  "EventDaemon": {
+  "BlaCDKManual": {
     "_info": {
-      "name": "半自动活动",
-      "help": "需要手动选择关卡（未测试）"
-    },
-    "Enable": {
-      "name": "可用",
+      "name": "CDK手动兑换",
       "help": ""
+    },
+    "CDK": {
+      "name": "CDK",
+      "help": "将CDK粘贴到输入框，提示设置保存成功后点击启动即可兑换"
+    }
+  },
+  "Highlights": {
+    "_info": {
+      "name": "花絮鉴赏",
+      "help": "自动查看花絮，需要在妮姬送礼/咨询按钮页面启动"
+    },
+    "AutoSwitch": {
+      "name": "自动切换",
+      "help": "当一个妮姬的花絮全部完成以后自动切换下一个，F10停止"
     }
   },
   "Storage": {

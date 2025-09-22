@@ -37,6 +37,7 @@ class GeneratedConfig:
     # Group `PCClient`
     PCClient_Screens = False
     PCClient_GameResolutionCompat = False
+    PCClient_CloseAutoHdr = True
     PCClient_Account = None
     PCClient_Password = None
 
@@ -49,6 +50,7 @@ class GeneratedConfig:
     PCClientInfo_LauncherPath = None
     PCClientInfo_GameTitleName = None
     PCClientInfo_GameProcessName = None
+    PCClientInfo_GamePath = None
 
     # Group `Optimization`
     Optimization_AutoRedCircle = False
@@ -98,7 +100,8 @@ class GeneratedConfig:
     Daily_CallReward = False
 
     # Group `CollectionItems`
-    CollectionItems_NIKKE = 'All'  # All, Laplace, Frima, Diesel, Exia
+    CollectionItems_Enable = False
+    CollectionItems_Priority = None
 
     # Group `OpponentSelection`
     OpponentSelection_Enable = False
@@ -141,6 +144,8 @@ class GeneratedConfig:
     Event_Shop = False
     Event_ShopDelayList = 'TITLE'
     Event_Game = False
+    Event_GameStorySkip = False
+    Event_GameLoop = False
 
     # Group `CheerStrategy`
     CheerStrategy_Enable = False
@@ -162,16 +167,18 @@ class GeneratedConfig:
     Overclock_AlwaysReselect = False
     Overclock_ModifierList = 'ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY'
 
-    # Group `Synchro`
-    Synchro_UseBox = False
-    # Group `TowerDaemon`
-    TowerDaemon_Enable = True
+    # Group `AutoTower`
+    AutoTower_Enable = True
 
-    # Group `CombatDaemon`
-    CombatDaemon_Enable = False
+    # Group `SemiCombat`
+    SemiCombat_SkipStory = False
+    SemiCombat_FightQuickly = False
 
-    # Group `EventDaemon`
-    EventDaemon_Enable = False
+    # Group `BlaCDKManual`
+    BlaCDKManual_CDK = None
+
+    # Group `Highlights`
+    Highlights_AutoSwitch = True
 
     # Group `Storage`
     Storage_Storage = {}

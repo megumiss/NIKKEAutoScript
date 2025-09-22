@@ -183,6 +183,10 @@
       "GameProcessName": {
         "type": "input",
         "value": ""
+      },
+      "GamePath": {
+        "type": "textarea",
+        "value": ""
       }
     },
     "PCClient": {
@@ -193,6 +197,10 @@
       "GameResolutionCompat": {
         "type": "checkbox",
         "value": false
+      },
+      "CloseAutoHdr": {
+        "type": "checkbox",
+        "value": true
       },
       "Account": {
         "type": "input",
@@ -1678,6 +1686,14 @@
       "Game": {
         "type": "checkbox",
         "value": false
+      },
+      "GameStorySkip": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameLoop": {
+        "type": "checkbox",
+        "value": false
       }
     },
     "Storage": {
@@ -1782,6 +1798,14 @@
         "value": "TITLE"
       },
       "Game": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameStorySkip": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameLoop": {
         "type": "checkbox",
         "value": false
       }
@@ -1919,6 +1943,17 @@
         "type": "input",
         "value": "04:00, 16:00",
         "display": "hide"
+      }
+    },
+    "CDK": {
+      "Extra": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Source": {
+        "type": "textarea",
+        "value": "https://gamewith.jp/nikke/article/show/371014",
+        "display": "disabled"
       }
     },
     "Storage": {
@@ -2161,8 +2196,8 @@
       }
     }
   },
-  "TowerDaemon": {
-    "TowerDaemon": {
+  "AutoTower": {
+    "AutoTower": {
       "Enable": {
         "type": "checkbox",
         "value": true,
@@ -2178,11 +2213,31 @@
       }
     }
   },
-  "CombatDaemon": {
-    "CombatDaemon": {
-      "Enable": {
+  "SemiCombat": {
+    "SemiCombat": {
+      "SkipStory": {
         "type": "checkbox",
-        "value": false,
+        "value": false
+      },
+      "FightQuickly": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Highlights": {
+    "Highlights": {
+      "AutoSwitch": {
+        "type": "checkbox",
+        "value": true,
         "display": "disabled"
       }
     },
@@ -2195,12 +2250,12 @@
       }
     }
   },
-  "EventDaemon": {
-    "EventDaemon": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "display": "disabled"
+  "BlaCDKManual": {
+    "BlaCDKManual": {
+      "CDK": {
+        "type": "input",
+        "value": "",
+        "valuetype": "str"
       }
     },
     "Storage": {

@@ -9,7 +9,7 @@ from module.ui.page import page_tribe_tower
 from module.ui.ui import UI
 
 
-class TowerDaemon(UI):
+class AutoTower(UI):
     company = []
 
     def _run(self):
@@ -58,8 +58,6 @@ class TowerDaemon(UI):
             if self.appear(STAGE_INFO_CHECK, offset=10, static=False):
                 break
 
-        self.device.stuck_record_clear()
-        self.device.click_record_clear()
         self.try_to_current_stage()
 
     def try_to_current_stage(self, skip_first_screenshot=True):
@@ -95,6 +93,8 @@ class TowerDaemon(UI):
 
                 if click_timer.reached() and self.appear_then_click(NEXT_STAGE, offset=10):
                     self.device.sleep(5)
+                    self.device.stuck_record_clear()
+                    self.device.click_record_clear()
                     click_timer.reset()
                     continue
 

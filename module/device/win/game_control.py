@@ -410,8 +410,8 @@ class WinClient:
             logger.error(f'设置分辨率时发生错误: {e}')
             raise Exception(f'无法设置分辨率: {e}')
 
-    def ensure_resolution(self, client_width, client_height, retries=5, interval=1.0):
-        """确保窗口分辨率被成功设置"""
+    def ensure_resolution(self, client_width, client_height, retries=5, interval=1.0, stable_time=5.0):
+        """确保窗口分辨率被成功设置，并保持一段时间"""
         logger.info(f'持续设置窗口分辨率：[{self.current_window.name}]:{self.current_window.title}')
         compat = getattr(self.config, f'PCClient_{self.current_window.name}ResolutionCompat', False)
         for i in range(retries):
@@ -424,11 +424,21 @@ class WinClient:
             if hwnd:
                 rect = win32gui.GetClientRect(hwnd)
                 if rect[2] == client_width and rect[3] == client_height:
-                    logger.info(f'分辨率成功设置为 {client_width}x{client_height}')
-                    return True
+                    # 需要维持 stable_time
+                    start = time.time()
+                    while time.time() - start < stable_time:
+                        time.sleep(0.5)  # 检查间隔
+                        rect = win32gui.GetClientRect(hwnd)
+                        if rect[2] != client_width or rect[3] != client_height:
+                            logger.warning('分辨率在稳定检测过程中变化，重试中...')
+                            break
+                    else:
+                        logger.info(f'分辨率成功保持为 {client_width}x{client_height} 超过 {stable_time} 秒')
+                        return True
+                    # 如果 break 了就继续外层 for 循环
                 else:
                     logger.warning('分辨率未成功设置，重试中...')
-        logger.error(f'分辨率无法设置为 {client_width}x{client_height}')
+        logger.error(f'分辨率无法稳定设置为 {client_width}x{client_height}')
         return False
 
     def change_reg_resolution(self, width: int, height: int):
@@ -469,24 +479,23 @@ class WinClient:
         """通过注册表修改游戏自动 HDR 设置"""
         status_map = {'enable': '启用', 'disable': '禁用', 'unset': '未设置'}
         try:
-            self.game_auto_hdr = get_game_auto_hdr(self.game_path)
-            if self.game_auto_hdr == status:
-                self.game_auto_hdr = None
+            game_auto_hdr = get_game_auto_hdr(self.current_window.path)
+            if game_auto_hdr == status:
+                logger.info(f'游戏自动 HDR 状态: {status_map.get(game_auto_hdr)}')
                 return
-            set_game_auto_hdr(self.game_path, status)
-            logger.debug(f'修改游戏自动 HDR: {status_map.get(self.game_auto_hdr)} --> {status_map.get(status)}')
+            set_game_auto_hdr(self.current_window.path, status)
+            logger.info(f'修改游戏自动 HDR: {status_map.get(game_auto_hdr)} --> {status_map.get(status)}')
         except Exception as e:
-            logger.debug(f'修改游戏自动 HDR 设置时发生错误：{e}')
+            logger.warning(f'修改游戏自动 HDR 设置时发生错误：{e}')
 
     def restore_auto_hdr(self):
         """通过注册表恢复游戏自动 HDR 设置"""
         status_map = {'enable': '启用', 'disable': '禁用', 'unset': '未设置'}
         try:
-            if self.game_auto_hdr:
-                set_game_auto_hdr(self.game_path, self.game_auto_hdr)
-            logger.debug(f'恢复游戏自动 HDR: {status_map.get(self.game_auto_hdr)}')
+            set_game_auto_hdr(self.current_window.path, 'unset')
+            logger.info(f'恢复游戏自动 HDR: {status_map.get("unset")}')
         except Exception as e:
-            logger.debug(f'恢复游戏自动 HDR 设置时发生错误：{e}')
+            logger.warning(f'恢复游戏自动 HDR 设置时发生错误：{e}')
 
     def check_screen_resolution(self, target_width: int, target_height: int) -> None:
         """

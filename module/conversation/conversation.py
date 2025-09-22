@@ -7,11 +7,10 @@ from module.base.utils import (
 )
 from module.conversation.assets import *
 from module.conversation.dialogue import Dialogue
-from module.event_daemon.assets import SKIP
 from module.handler.assets import AUTO_CLICK_CHECK, CONFIRM_B
 from module.logger import logger
 from module.ocr.ocr import Digit, Ocr
-from module.ui.assets import CONVERSATION_CHECK, GOTO_BACK
+from module.ui.assets import CONVERSATION_CHECK, GOTO_BACK, SKIP
 from module.ui.page import page_conversation
 from module.ui.ui import UI
 
@@ -116,14 +115,14 @@ class Conversation(UI):
                     logger.warning('Perhaps all selected NIKKE already had a conversation')
                     raise ChooseNextNIKKETooLong
                 # 下一个
+                self.device.sleep(0.5)
                 tmp_image = self.device.image
+                logger.info('Click %s @ %s' % (point2str(690, 560), 'NEXT_NIKKE'))
                 self.device.click_minitouch(690, 560)
                 # 比较头像是否变化
+                confirm_timer = Timer(3, count=3).start()
                 while 1:
-                    if skip_first_screenshot:
-                        skip_first_screenshot = False
-                    else:
-                        self.device.screenshot()
+                    self.device.screenshot()
                     avatar = Button(
                         COMMUNICATE_NIKKE_AVATAR.area,
                         None,
@@ -133,6 +132,10 @@ class Conversation(UI):
                     avatar.image = crop(tmp_image, COMMUNICATE_NIKKE_AVATAR.area)
                     if not self.appear(avatar, offset=5, threshold=0.95):
                         break
+                    if confirm_timer.reached():
+                        logger.info('Click %s @ %s' % (point2str(690, 560), 'NEXT_NIKKE'))
+                        self.device.click_minitouch(690, 560)
+                        confirm_timer.reset()
             else:
                 self._confirm_timer.reset()
                 self.device.stuck_record_clear()

@@ -66,6 +66,7 @@ PCClient:
     value: false
   GameResolutionCompat:
     value: false
+  CloseAutoHdr: true
   Account:
     value: ''
   Password:
@@ -89,6 +90,9 @@ PCClientInfo:
     value: ''
   GameProcessName:
     value: ''
+  GamePath:
+    value: ''
+    type: textarea
 Optimization:
   AutoRedCircle: false
   OcrModelType:
@@ -147,9 +151,10 @@ Daily:
   EnhanceEquipment: false
   CallReward: false
 CollectionItems:
-  NIKKE:
-    value: 'All'
-    option: [ 'All','Laplace','Frima','Diesel','Exia' ]
+  Enable: false
+  Priority:
+    value: ''
+    type: textarea
 OpponentSelection:
   Enable: false
   SortingWeight:
@@ -232,6 +237,8 @@ Event:
     value: 'TITLE'
     type: textarea
   Game: false
+  GameStorySkip: false
+  GameLoop: false
 CheerStrategy:
   Enable: false
   Strategy:
@@ -267,17 +274,20 @@ Overclock:
   ModifierList:
     value: "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
     type: textarea
-Synchro:
-  UseBox: false
-TowerDaemon:
+AutoTower:
   Enable:
     value: true
     display: disabled
-CombatDaemon:
-  Enable:
+SemiCombat:
+  SkipStory:
     value: false
-    display: disabled
-EventDaemon:
-  Enable:
+  FightQuickly:
     value: false
+BlaCDKManual:
+  CDK:
+    value: ''
+    valuetype: str
+Highlights:
+  AutoSwitch:
+    value: true
     display: disabled

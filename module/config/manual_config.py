@@ -5,10 +5,9 @@ class ManualConfig:
     SCHEDULER_PRIORITY = """
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
        StepUpGift > DailyGift > WeeklyGift > MonthlyGift > 
-       Commission > Synchro > Recycling >
-       Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena >
-       SimulationRoom > Overclock > TribeTower > Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation >
-       BlaDaily > BlaCDK > BlaExchange > TowerDaemon > CombatDaemon > EventDaemon
+       Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
+       Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > 
+       AutoTower > SemiCombat > Highlights > BlaCDKManual
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS"""
@@ -92,8 +91,8 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": True,
-            "story_part": "Story_1",  # Story_1, Story_2
-            "story_difficulty": "Normal"  # Normal, Hard
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20250807",
@@ -145,3 +144,7 @@ class ManualConfig:
     Error_ScreenshotLength = 1
 
     DEVICE_OVER_HTTP = False
+
+    # 独立任务，不依赖游戏运行
+    INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange']
+    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange"]

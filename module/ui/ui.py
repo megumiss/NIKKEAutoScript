@@ -119,15 +119,24 @@ class UI(InfoHandler):
 
         # Unknown page, need manual switching
         logger.warning('Unknown ui page')
-        logger.attr('EMULATOR__SCREENSHOT_METHOD', self.config.Emulator_ScreenshotMethod)
-        logger.attr('EMULATOR__CONTROL_METHOD', self.config.Emulator_ControlMethod)
-        logger.attr(
-            'SERVER',
-            'intl' if 'proximabeta' in self.config.Emulator_PackageName else 'tw',
-        )
+        if self.config.Client_Platform == 'adb':
+            logger.attr('CLENT_PLATFORM', self.config.Client_Platform)
+            logger.attr('EMULATOR_SCREENSHOT_METHOD', self.config.Emulator_ScreenshotMethod)
+            logger.attr('EMULATOR_CONTROL_METHOD', self.config.Emulator_ControlMethod)
+            logger.attr(
+                'SERVER',
+                'intl' if 'proximabeta' in self.config.Emulator_PackageName else 'tw',
+            )
+            logger.attr('LANGUAGE', self.config.Emulator_Language)
+            logger.warning('Supported page: Any page with a "HOME" button on the bottom-left')
+        if self.config.Client_Platform == 'win':
+            logger.attr('CLENT_PLATFORM', self.config.Client_Platform)
+            logger.attr('CLIENT', self.config.PCClientInfo_Client)
+            # logger.attr('SERVER', )
+            logger.attr('LANGUAGE', self.config.PCClientInfo_Language)
+            logger.warning('Please check Launcher/Game title and process in correct')
         logger.warning('Starting from current page is not supported')
         logger.warning(f'Supported page: {[str(page) for page in self.ui_pages]}')
-        logger.warning('Supported page: Any page with a "HOME" button on the bottom-left')
         logger.critical('Please switch to a supported page before starting NKAS')
         raise GamePageUnknownError
 

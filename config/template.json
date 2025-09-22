@@ -45,11 +45,13 @@
       "LauncherProcessName": null,
       "LauncherPath": null,
       "GameTitleName": null,
-      "GameProcessName": null
+      "GameProcessName": null,
+      "GamePath": null
     },
     "PCClient": {
       "Screens": false,
       "GameResolutionCompat": false,
+      "CloseAutoHdr": true,
       "Account": null,
       "Password": null
     },
@@ -468,7 +470,9 @@
       "Coop": false,
       "Shop": false,
       "ShopDelayList": "TITLE",
-      "Game": false
+      "Game": false,
+      "GameStorySkip": false,
+      "GameLoop": false
     },
     "Storage": {
       "Storage": {}
@@ -493,7 +497,9 @@
       "Coop": false,
       "Shop": false,
       "ShopDelayList": "TITLE",
-      "Game": false
+      "Game": false,
+      "GameStorySkip": false,
+      "GameLoop": false
     },
     "Storage": {
       "Storage": {}
@@ -536,6 +542,10 @@
       "SuccessInterval": 0,
       "FailureInterval": 120,
       "ServerUpdate": "04:00, 16:00"
+    },
+    "CDK": {
+      "Extra": false,
+      "Source": "https://gamewith.jp/nikke/article/show/371014"
     },
     "Storage": {
       "Storage": {}
@@ -609,25 +619,34 @@
       "Storage": {}
     }
   },
-  "TowerDaemon": {
-    "TowerDaemon": {
+  "AutoTower": {
+    "AutoTower": {
       "Enable": true
     },
     "Storage": {
       "Storage": {}
     }
   },
-  "CombatDaemon": {
-    "CombatDaemon": {
-      "Enable": false
+  "SemiCombat": {
+    "SemiCombat": {
+      "SkipStory": false,
+      "FightQuickly": false
     },
     "Storage": {
       "Storage": {}
     }
   },
-  "EventDaemon": {
-    "EventDaemon": {
-      "Enable": false
+  "Highlights": {
+    "Highlights": {
+      "AutoSwitch": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaCDKManual": {
+    "BlaCDKManual": {
+      "CDK": null
     },
     "Storage": {
       "Storage": {}

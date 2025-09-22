@@ -71,12 +71,14 @@ class AppControl(WinClient, Login):
             process=launcher_process,
             path=launcher_path,
         )
+        launcher_dir = os.path.dirname(launcher_path)
         self.game = Window(
             name='Game',
             title=game_window_title,
             class_name=game_window_class,
             process=game_process,
-            path='',
+            path=self.config.PCClientInfo_GamePath
+            or os.path.normpath(os.path.join(launcher_dir, '..', 'NIKKE', 'game', game_process)),
         )
 
         # 回填配置
@@ -84,6 +86,7 @@ class AppControl(WinClient, Login):
         self.config.PCClientInfo_LauncherTitleName = launcher_window_title
         self.config.PCClientInfo_GameProcessName = game_process
         self.config.PCClientInfo_GameTitleName = game_window_title
+        self.config.PCClientInfo_GamePath = self.game.path
 
         self.interval_timer = {}
 
@@ -133,6 +136,11 @@ class AppControl(WinClient, Login):
         self.check_screen_resolution(720, 1280)
         self.launcher_running = False
         self.current_window = self.game
+        # 关闭自动HDR
+        if self.config.PCClient_CloseAutoHdr:
+            self.change_auto_hdr('disable')
+        else:
+            self.change_auto_hdr('unset')
         for retry in range(MAX_RETRY):
             try:
                 # 检查是否已进入游戏

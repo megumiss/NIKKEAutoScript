@@ -15,7 +15,7 @@ from module.ocr.ocr import Ocr
 class ModuleBase:
     config: NikkeConfig
 
-    def __init__(self, config, device=None, task=None):
+    def __init__(self, config, device=None, task=None, independent=False):
         """
               Args:
                   config (NikkeConfig, str):
@@ -30,6 +30,8 @@ class ModuleBase:
               """
         if isinstance(config, NikkeConfig):
             self.config = config
+            if task is not None:
+                self.config.init_task(task)
         elif isinstance(config, str):
             self.config = NikkeConfig(config, task=task)
         else:
@@ -41,16 +43,18 @@ class ModuleBase:
         if config.CLIENT_PLATFORM == 'win':
             from module.device.win.device import Device as DeviceClass
 
-        if isinstance(device, DeviceClass):
-            self.device = device
-        elif device is None:
-            self.device = DeviceClass(config=self.config)
-        elif isinstance(device, str):
-            self.config.override(Emulator_Serial=device)
-            self.device = DeviceClass(config=self.config)
-        else:
-            logger.warning('NKAS ModuleBase received an unknown device, assume it is Device')
-            self.device = device
+        # 妮游社任务不需要device
+        if not independent:
+            if isinstance(device, DeviceClass):
+                self.device = device
+            elif device is None:
+                self.device = DeviceClass(config=self.config)
+            elif isinstance(device, str):
+                self.config.override(Emulator_Serial=device)
+                self.device = DeviceClass(config=self.config)
+            else:
+                logger.warning('NKAS ModuleBase received an unknown device, assume it is Device')
+                self.device = device
 
         self.interval_timer = {}
 

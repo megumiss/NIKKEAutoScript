@@ -13,7 +13,7 @@ from module.device.win.utils import (
     PackageNotInstalled,
     retry_sleep,
 )
-from module.exception import RequestHumanTakeover
+from module.exception import RequestHumanTakeover, ScreenshotError
 from module.logger import logger
 
 from .input import Input
@@ -112,33 +112,42 @@ class Automation:
         self.secretly_press_key = self.input_handler.secretly_press_key
         self.press_mouse = self.input_handler.press_mouse
 
-    def screenshot(self, crop=(0, 0, 1, 1)):
+    def screenshot(self, crop=(0, 0, 1, 1), retry=True):
         """
         捕获窗口截图
-        :param window: Window 对象
         :param crop: 裁剪区域
+        :param retry: 是否启用重试，默认为 True
         """
-        # 两次截图间隔时间
-        self._screenshot_interval.wait()
-        self._screenshot_interval.reset()
+        start_time = time.time()
+        while True:
+            # 两次截图间隔时间
+            self._screenshot_interval.wait()
+            self._screenshot_interval.reset()
 
-        try:
-            result = Screenshot.take_screenshot(
-                self.current_window.title, self.current_window.resolution, self.config.PCClient_Screens, crop=crop
-            )
-            if result:
-                image, pos, scale = result
-                self.current_window.image = self._handle_orientated_image(image, self.current_window.resolution)
-                self.current_window.offset = (pos[0], pos[1])
-                self.current_window.screenshot_scale_factor = scale
-                self.screenshot_deque.append({'time': datetime.now(), 'image': self.current_window.image})
-                # cv2.imwrite('debug_screenshot2.png', np.array(self.image))
-                return result
-            else:
-                raise RuntimeError(f'没有找到窗口 {self.current_window.name}:{self.current_window.title}')
-        except Exception as e:
-            logger.warning(f'截图失败：{e}')
-            raise RuntimeError(f'截图失败：{e}')
+            try:
+                result = Screenshot.take_screenshot(
+                    self.current_window.title, self.current_window.resolution, self.config.PCClient_Screens, crop=crop
+                )
+                if result:
+                    image, pos, scale = result
+                    self.current_window.image = self._handle_orientated_image(image, self.current_window.resolution)
+                    self.current_window.offset = (pos[0], pos[1])
+                    self.current_window.screenshot_scale_factor = scale
+                    self.screenshot_deque.append({'time': datetime.now(), 'image': self.current_window.image})
+                    return result
+                else:
+                    raise ScreenshotError(f'没有找到窗口 {self.current_window.name}:{self.current_window.title}')
+            except Exception as e:
+                logger.warning(f'截图失败：{e}')
+                if not retry:
+                    raise ScreenshotError(str(e))
+
+            if not retry:
+                break
+
+            time.sleep(1)
+            if time.time() - start_time > 30:
+                raise ScreenshotError('截图超时')
 
     @cached_property
     def screenshot_deque(self):
@@ -156,7 +165,7 @@ class Automation:
         if width == resolution[0] or height == resolution[1]:
             return image
 
-        raise ScreenshotSizeError("The emulator's display size must be 720*1280")
+        raise ScreenshotSizeError('The game window display size must be 720*1280')
 
     def click(self, button: Button, click_offset=0, action='click'):
         """点击窗口中的按钮"""

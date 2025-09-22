@@ -114,6 +114,10 @@ class Interception(UI):
                     continue
 
             if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
+                saved_path = self.save_drop_image(self.device.image, self.config.Interception_DropScreenshotPath)
+                if saved_path:
+                    logger.info(f'Save drop image to: {saved_path}')
+
                 while 1:
                     self.device.screenshot()
                     if not self.appear(END_FIGHTING, offset=30):
@@ -122,11 +126,7 @@ class Interception(UI):
                     if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
                         click_timer.reset()
                         continue
-
                 end_fighting = True
-                saved_path = self.save_drop_image(self.device.image, self.config.Interception_DropScreenshotPath)
-                if saved_path:
-                    logger.info(f'Save drop image to: {saved_path}')
                 click_timer.reset()
                 continue
 

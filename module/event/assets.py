@@ -5,6 +5,7 @@ from module.base.template import Template
 # Don't modify it manually.
 
 EVENT_SHOP_CHECK = Button(area={'zh-cn': (579, 369, 651, 386)}, color={'zh-cn': (159, 159, 158)}, button={'zh-cn': (579, 369, 651, 386)}, file={'zh-cn': './assets/zh-cn/event/EVENT_SHOP_CHECK.png'})
+FIELD_CHANGE = Button(area={'zh-cn': (396, 741, 420, 763)}, color={'zh-cn': (32, 170, 174)}, button={'zh-cn': (396, 741, 420, 763)}, file={'zh-cn': './assets/zh-cn/event/FIELD_CHANGE.png'})
 RECEIVE = Button(area={'zh-cn': (297, 811, 423, 832)}, color={'zh-cn': (58, 59, 61)}, button={'zh-cn': (297, 811, 423, 832)}, file={'zh-cn': './assets/zh-cn/event/RECEIVE.png'})
 RECEIVE_REWARD = Button(area={'zh-cn': (310, 204, 419, 245)}, color={'zh-cn': (145, 146, 148)}, button={'zh-cn': (310, 204, 419, 245)}, file={'zh-cn': './assets/zh-cn/event/RECEIVE_REWARD.png'})
 SHOP_BUY = Button(area={'zh-cn': (470, 1041, 515, 1064)}, color={'zh-cn': (120, 197, 231)}, button={'zh-cn': (470, 1041, 515, 1064)}, file={'zh-cn': './assets/zh-cn/event/SHOP_BUY.png'})

@@ -22,12 +22,13 @@ class Login(LauncherOcr, Automation):
 
             try:
                 self.get_resolution()
-                super().screenshot()
+                super().screenshot(retry=False)
             except Exception:
                 if self.check_program() and self.switch_to_program():
                     logger.info('启动器打开成功')
                     break
             else:
+                self.switch_to_program()
                 if self.appear_text('电子邮件账号', threshold=0.9):
                     need_login = True
                     break
@@ -94,7 +95,7 @@ class Login(LauncherOcr, Automation):
 
             try:
                 self.get_resolution()
-                super().screenshot()
+                super().screenshot(retry=False)
             except Exception:
                 pass
             else:

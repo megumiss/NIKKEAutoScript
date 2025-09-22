@@ -96,7 +96,7 @@ class ShopBase(UI):
             if (
                 click_timer.reached()
                 and max_clicks < 3
-                and self.appear_then_click(MAX, offset=30, threshold=0.99, interval=1)
+                and self.appear_then_click(MAX, offset=30, threshold=0.9, interval=1)
             ):
                 max_clicks += 1
                 self.device.sleep(0.3)
@@ -253,7 +253,7 @@ class ShopBase(UI):
                 if (
                     click_timer.reached()
                     and self.appear(BUY_ALL, offset=10)
-                    and self.appear(product.button, offset=5, threshold=0.8, static=False)
+                    and self.appear(product.button, offset=5, threshold=0.9, static=False)
                 ):
                     self.device.click(product.button)
                     img = self.device.image

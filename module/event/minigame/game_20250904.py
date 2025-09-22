@@ -1,4 +1,6 @@
 from module.base.timer import Timer
+from module.conversation.assets import ANSWER_CHECK
+from module.event.event_20250904.assets import SKIP
 from module.event.event_20250904.assets_game import *
 from module.logger import logger
 from module.ui.page import *
@@ -49,6 +51,19 @@ def start_game(self, skip_first_screenshot=True):
         ):
             self.device.click_minitouch(360, 1000)
             # self.device.sleep(0.2)
+            continue
+
+        # 跳过对话
+        if (
+            self.config.Event_GameStorySkip
+            and click_timer.reached()
+            and self.appear_then_click(SKIP, offset=10, interval=1)
+        ):
+            click_timer.reset()
+            continue
+        # 选择对话选项
+        if click_timer.reached() and self.appear_then_click(ANSWER_CHECK, offset=10, interval=1, static=False):
+            click_timer.reset()
             continue
 
         # 关闭窗口
