@@ -122,6 +122,9 @@ class NikkeAutoScript:
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GamePageUnknownError',
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
@@ -132,6 +135,9 @@ class NikkeAutoScript:
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GameServerUnderMaintenance',
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except RequestHumanTakeover:
             logger.critical('Request human takeover')
@@ -141,6 +147,9 @@ class NikkeAutoScript:
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> RequestHumanTakeover',
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except Exception as e:
             logger.exception(e)
@@ -151,6 +160,9 @@ class NikkeAutoScript:
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> Exception occured',
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
 
     def save_error_log(self):
@@ -437,6 +449,9 @@ class NikkeAutoScript:
                     if self.config.Client_Platform == 'win':
                         del_cached_property(self, 'device')
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -451,6 +466,9 @@ class NikkeAutoScript:
                         self.run('goto_main')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -458,6 +476,9 @@ class NikkeAutoScript:
                     logger.info('Stay there during wait')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -465,6 +486,9 @@ class NikkeAutoScript:
                     logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue

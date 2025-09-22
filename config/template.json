@@ -52,6 +52,7 @@
       "Screens": false,
       "GameResolutionCompat": false,
       "CloseAutoHdr": true,
+      "ScreenRotate": false,
       "Account": null,
       "Password": null
     },

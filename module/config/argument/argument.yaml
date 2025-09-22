@@ -67,6 +67,7 @@ PCClient:
   GameResolutionCompat:
     value: false
   CloseAutoHdr: true
+  ScreenRotate: false
   Account:
     value: ''
   Password:

@@ -38,6 +38,7 @@ class GeneratedConfig:
     PCClient_Screens = False
     PCClient_GameResolutionCompat = False
     PCClient_CloseAutoHdr = True
+    PCClient_ScreenRotate = False
     PCClient_Account = None
     PCClient_Password = None
 
