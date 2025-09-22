@@ -624,5 +624,13 @@
     "Storage": {
       "Storage": {}
     }
+  },
+  "ScreenRotate": {
+    "ScreenRotate": {
+      "Orientation": 0
+    },
+    "Storage": {
+      "Storage": {}
+    }
   }
 }

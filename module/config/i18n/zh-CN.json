@@ -193,6 +193,10 @@
     "BlaCDKManual": {
       "name": "CDK兑换",
       "help": ""
+    },
+    "ScreenRotate": {
+      "name": "屏幕旋转",
+      "help": ""
     }
   },
   "Scheduler": {
@@ -902,6 +906,18 @@
     "AutoSwitch": {
       "name": "自动切换",
       "help": "当一个妮姬的花絮全部完成以后自动切换下一个，F10停止"
+    }
+  },
+  "ScreenRotate": {
+    "_info": {
+      "name": "屏幕旋转",
+      "help": ""
+    },
+    "Orientation": {
+      "name": "旋转方向",
+      "help": "手动修改屏幕方向",
+      "0": "横屏",
+      "1": "竖屏"
     }
   },
   "Storage": {

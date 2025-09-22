@@ -292,3 +292,7 @@ Highlights:
   AutoSwitch:
     value: true
     display: disabled
+ScreenRotate:
+  Orientation:
+    value: 0
+    option: [ 0, 1 ]

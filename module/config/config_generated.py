@@ -181,5 +181,8 @@ class GeneratedConfig:
     # Group `Highlights`
     Highlights_AutoSwitch = True
 
+    # Group `ScreenRotate`
+    ScreenRotate_Orientation = 0  # 0, 1
+
     # Group `Storage`
     Storage_Storage = {}

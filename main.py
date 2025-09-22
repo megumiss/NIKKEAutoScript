@@ -374,6 +374,11 @@ class NikkeAutoScript:
 
         SemiCombat(config=self.config, device=self.device, task='SemiCombat').run()
 
+    def screen_rotate(self):
+        from module.daemon.screen_rotate import ScreenRotate
+
+        ScreenRotate(config=self.config).run()
+
     def event(self):
         from module.event.event import Event
 
