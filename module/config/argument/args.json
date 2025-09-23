@@ -1537,6 +1537,7 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250924",
           "event_20250904",
           "event_20250807",
           "event_20250716",
@@ -1651,6 +1652,7 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250924",
           "event_20250904",
           "event_20250807",
           "event_20250716",
