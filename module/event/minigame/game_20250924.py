@@ -31,6 +31,11 @@ def start_game(self, skip_first_screenshot=True):
             click_timer.reset()
             continue
 
+        # 商店点击开始
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_SHOP_START, offset=10, interval=2):
+            click_timer.reset()
+            continue
+
         if self.appear(MINI_GAME_EXEC_CHECK, offset=10):
             break
 
@@ -44,14 +49,39 @@ def start_game(self, skip_first_screenshot=True):
             click_timer.reset()
             continue
 
-        # 循环点击
-        if self.appear(MINI_GAME_EXEC_CHECK, offset=10) and (
-            self.appear(MINI_GAME_OBSTACLE_1, offset=(100, 10))
-            or self.appear(MINI_GAME_OBSTACLE_2, offset=(150, 10))
-            or self.appear(MINI_GAME_OBSTACLE_3, offset=(150, 10))
-        ):
-            self.device.click_minitouch(360, 1000)
-            # self.device.sleep(0.2)
+        # 关闭弹窗
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_CLOSE, offset=30, interval=1, static=False):
+            click_timer.reset()
+            continue
+
+        # 加速1
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_1X, offset=30, interval=1):
+            click_timer.reset()
+            continue
+        # 加速2
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_2X, offset=30, interval=1):
+            click_timer.reset()
+            continue
+
+        # 商店战斗开始
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_SHOP_START, offset=10, interval=1):
+            click_timer.reset()
+            continue
+
+        # buff
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BUFF_1, offset=30, interval=1):
+            click_timer.reset()
+            continue
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BUFF_SELECT, offset=30, interval=1):
+            click_timer.reset()
+            continue
+
+        # 背包
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BAG_DONE, threshold=10, interval=1):
+            click_timer.reset()
+            continue
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BAG, offset=30, interval=0.5, static=False):
+            click_timer.reset()
             continue
 
         # 跳过对话
