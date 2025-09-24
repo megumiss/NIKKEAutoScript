@@ -7,7 +7,7 @@ from module.base.template import Template
 CHALLENGE = Button(area={'zh-cn': (190, 1056, 209, 1074)}, color={'zh-cn': (99, 95, 91)}, button={'zh-cn': (190, 1056, 209, 1074)}, file={'zh-cn': './assets/event/event_20250924/CHALLENGE.png'})
 COOP_ENTER = Button(area={'zh-cn': (324, 1130, 395, 1147)}, color={'zh-cn': (124, 122, 117)}, button={'zh-cn': (324, 1130, 395, 1147)}, file={'zh-cn': './assets/event/event_20250924/COOP_ENTER.png'})
 COOP_LOCK = Button(area={'zh-cn': (312, 1028, 407, 1043)}, color={'zh-cn': (77, 72, 67)}, button={'zh-cn': (312, 1028, 407, 1043)}, file={'zh-cn': './assets/event/event_20250924/COOP_LOCK.png'})
-COOP_SELECT_CHECK = Button(area={'zh-cn': (307, 623, 441, 655)}, color={'zh-cn': (102, 102, 101)}, button={'zh-cn': (307, 623, 441, 655)}, file={'zh-cn': './assets/event/event_20250924/COOP_SELECT_CHECK.png'})
+COOP_SELECT_CHECK = Button(area={'zh-cn': (301, 641, 418, 669)}, color={'zh-cn': (61, 60, 58)}, button={'zh-cn': (301, 641, 418, 669)}, file={'zh-cn': './assets/event/event_20250924/COOP_SELECT_CHECK.png'})
 EVENT_CHECK = Button(area={'zh-cn': (14, 38, 84, 55)}, color={'zh-cn': (141, 139, 137)}, button={'zh-cn': (14, 38, 84, 55)}, file={'zh-cn': './assets/event/event_20250924/EVENT_CHECK.png'})
 EVENT_GOTO_STORY_1 = Button(area={'zh-cn': (120, 936, 153, 953)}, color={'zh-cn': (95, 93, 89)}, button={'zh-cn': (120, 936, 153, 953)}, file={'zh-cn': './assets/event/event_20250924/EVENT_GOTO_STORY_1.png'})
 EVENT_GOTO_STORY_2 = Button(area={'zh-cn': (148, 1036, 176, 1051)}, color={'zh-cn': (96, 97, 97)}, button={'zh-cn': (148, 1036, 176, 1051)}, file={'zh-cn': './assets/event/event_20250924/EVENT_GOTO_STORY_2.png'})

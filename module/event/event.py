@@ -111,6 +111,21 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
+    def back_to_event_from_coop(self):
+        logger.info('Back to event')
+        click_timer = Timer(0.3)
+
+        # 回到活动主页
+        while 1:
+            self.device.screenshot()
+
+            if not self.appear(self.event_assets.COOP_SELECT_CHECK, offset=(30, 30)):
+                break
+
+            if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
+                click_timer.reset()
+                continue
+
     @Config.when(EVENT_TYPE=1)
     def login_stamp(self, skip_first_screenshot=True):
         logger.hr('START EVENT LOGIN STAMP')
@@ -826,7 +841,7 @@ class Event(UI):
         """进入协同作战页面"""
         logger.hr('EVENT COOP START')
         click_timer = Timer(0.3)
-        confirm_timer = Timer(5, count=3).start()
+        confirm_timer = Timer(1, count=3)
 
         # 走到协同作战
         direct = False
@@ -844,28 +859,29 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
-            if confirm_timer.reached():
-                logger.warning('Coop is not enabled')
-                return
-
             # 协同未在开启时间
             if click_timer.reached() and self.appear(self.event_assets.COOP_LOCK, offset=10):
                 logger.warning('Coop is not enabled')
+                self.back_to_event_from_coop()
                 return
 
-            # 协同选择
-            if self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10):
-                break
-
-            # 协同主页
-            if self.appear(COOP_CHECK, offset=10):
-                direct = True
-                break
+            # 协同选择/协同主页
+            if self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10) or self.appear(COOP_CHECK, offset=10):
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    # 直接进入了协同主页
+                    if self.appear(COOP_CHECK, offset=10):
+                        direct = True
+                    break
+            else:
+                confirm_timer.clear()
 
         # 检查是否有开启的协同
         coops = self.event_assets.TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
         if not coops and not direct:
-            logger.warning('Not find coop in event')
+            logger.warning('Not find enabled coop in event')
+            self.back_to_event_from_coop()
             return
 
         # 进入协同作战界面
