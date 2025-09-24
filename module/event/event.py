@@ -1136,6 +1136,15 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
+            # 跳过对话
+            if (
+                self.config.Event_GameStorySkip
+                and click_timer.reached()
+                and self.appear_then_click(self.event_assets.SKIP, offset=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+
             if self.appear(self.minigame_assets.MINI_GAME_CHECK, offset=10):
                 break
 

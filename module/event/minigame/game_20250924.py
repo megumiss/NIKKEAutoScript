@@ -1,7 +1,6 @@
-from module.event.event_20250924.assets import SKIP
-
 from module.base.timer import Timer
 from module.conversation.assets import ANSWER_CHECK
+from module.event.event_20250924.assets import SKIP
 from module.event.event_20250924.assets_game import *
 from module.logger import logger
 from module.ui.page import *
@@ -33,6 +32,11 @@ def start_game(self, skip_first_screenshot=True):
 
         # 商店点击开始
         if click_timer.reached() and self.appear_then_click(MINI_GAME_SHOP_START, offset=10, interval=2):
+            click_timer.reset()
+            continue
+
+        # 关闭弹窗
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_CLOSE, offset=30, interval=1, static=False):
             click_timer.reset()
             continue
 
