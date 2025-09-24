@@ -340,7 +340,9 @@ class SimulationRoom(UI):
             else:
                 ensure_timer.clear()
 
-            if self.appear(SIMULATION_CHECK, offset=(30, 30)) or self.appear(RESET_TIME_IN, offset=(30, 30)):
+            if self.appear(SIMULATION_CHECK, offset=(30, 30), threshold=0.86) or self.appear(
+                RESET_TIME_IN, offset=(30, 30)
+            ):
                 raise GamePageUnknownError
 
         skip_first_screenshot = True
