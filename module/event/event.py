@@ -877,12 +877,39 @@ class Event(UI):
             else:
                 confirm_timer.clear()
 
-        # 检查是否有开启的协同
-        coops = self.event_assets.TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
-        if not coops and not direct:
-            logger.warning('Not find enabled coop in event')
-            self.back_to_event_from_coop()
-            return
+        if not direct:
+            # 查找所有的协同图标，去重
+            coop_icons = TEMPLATE_COOP_ICON.match_multi(self.device.image, name='COOP_ICON')
+            if coop_icons:
+                # 合并重复
+                coop_icons = merge_buttons(coop_icons, x_threshold=30, y_threshold=30)
+            else:
+                logger.warning('Not found any coop in event')
+                self.back_to_event_from_coop()
+                return
+            # 查找所有coming soon的协同，去重
+            coop_comings = TEMPLATE_COOP_COMING_SOON.match_multi(
+                self.device.image, name='COOP_COMING_SOON'
+            )
+            if coop_comings:
+                # 合并重复
+                coop_comings = merge_buttons(coop_comings, x_threshold=30, y_threshold=30)
+            # 检查数量是否一致，一致则所有协同未开启
+            if len(coop_icons) == len(coop_comings):
+                logger.warning('Not found enabled coop in event')
+                self.back_to_event_from_coop()
+                return
+            else:
+                # 不一致则通过coming soon过滤掉没开启的协同，过滤后的即为开启
+
+            
+
+            # 检查是否有开启的协同
+            coops = self.event_assets.TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
+            if not coops and not direct:
+                logger.warning('Not found enabled coop in event')
+                self.back_to_event_from_coop()
+                return
 
         # 进入协同作战界面
         while 1:
@@ -892,7 +919,7 @@ class Event(UI):
                 self.device.screenshot()
 
             # 选择协同
-            if click_timer.reached() and self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10, interval=5):
+            if click_timer.reached() and self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10):
                 self.device.click(coops[0])
                 click_timer.reset()
                 continue
@@ -908,15 +935,7 @@ class Event(UI):
             logger.info('There are no free opportunities')
 
         # 回到活动主页
-        while 1:
-            self.device.screenshot()
-
-            if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
-                break
-
-            if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
-                click_timer.reset()
-                continue
+        self.back_to_event()
 
     @Config.when(EVENT_TYPE=(2, 3))
     def coop(self):
