@@ -73,7 +73,7 @@ class Interception(UI):
         self.device.sleep(0.5)
 
         end_fighting = False
-        if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=5) and not BATTLE.match_appear_on(self.device.image, 10):
+        if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10) and not BATTLE.match_appear_on(self.device.image, 10):
             end_fighting = True
         # 使用的队伍
         teamindex = getattr(self.config, f'InterceptionTeam_{self.config.Interception_Boss}') - 1
@@ -132,7 +132,7 @@ class Interception(UI):
 
             if (
                 end_fighting
-                and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=5)
+                and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10)
                 and not BATTLE.match_appear_on(self.device.image, 10)
             ):
                 logger.info('There are no free opportunities')
