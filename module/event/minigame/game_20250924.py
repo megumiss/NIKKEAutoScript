@@ -35,6 +35,14 @@ def start_game(self, skip_first_screenshot=True):
             click_timer.reset()
             continue
 
+        # 背包
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BAG_DONE, threshold=10, interval=1):
+            click_timer.reset()
+            continue
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BAG, offset=30, interval=0.5, static=False):
+            click_timer.reset()
+            continue
+
         # 关闭弹窗
         if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_CLOSE, offset=30, interval=1, static=False):
             click_timer.reset()
@@ -73,10 +81,12 @@ def start_game(self, skip_first_screenshot=True):
             continue
 
         # buff
-        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BUFF_1, offset=30, interval=1):
+        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BUFF_1, offset=30, interval=1, static=False):
             click_timer.reset()
             continue
-        if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_BUFF_SELECT, offset=30, interval=1):
+        if click_timer.reached() and self.appear_then_click(
+            MINI_GAME_EXEC_BUFF_SELECT, offset=50, interval=1, static=False
+        ):
             click_timer.reset()
             continue
 

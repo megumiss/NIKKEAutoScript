@@ -133,6 +133,7 @@ class Commission(UI):
                     break
 
             # 循环判断超出数量的是哪个收藏品
+            nikke_list = self.shop_delay_list.copy()
             current = None
             for item in self.shop_delay_list:
                 if self.appear(self.get_item_button(item), offset=10, static=False):
@@ -142,7 +143,6 @@ class Commission(UI):
             if not current:
                 logger.warning('Current favorite item can not judge')
             else:
-                nikke_list = self.shop_delay_list.copy()
                 # 只有多个候选时才移除
                 if len(nikke_list) > 1 and current in nikke_list:
                     nikke_list.remove(current)
