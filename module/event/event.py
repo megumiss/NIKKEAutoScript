@@ -888,9 +888,7 @@ class Event(UI):
                 self.back_to_event_from_coop()
                 return
             # 查找所有coming soon的协同，去重
-            coop_comings = TEMPLATE_COOP_COMING_SOON.match_multi(
-                self.device.image, name='COOP_COMING_SOON'
-            )
+            coop_comings = TEMPLATE_COOP_COMING_SOON.match_multi(self.device.image, name='COOP_COMING_SOON')
             if coop_comings:
                 # 合并重复
                 coop_comings = merge_buttons(coop_comings, x_threshold=30, y_threshold=30)
@@ -901,15 +899,14 @@ class Event(UI):
                 return
             else:
                 # 不一致则通过coming soon过滤掉没开启的协同，过滤后的即为开启
+                enabled_coop_icons = set()
+                for cbtn in coop_comings:
+                    # 用横坐标范围去筛选 coop_icons
+                    icons = filter_buttons_in_area(coop_icons, x_range=(cbtn.area[0], cbtn.area[2]))
+                    enabled_coop_icons.update(icons)
 
-            
-
-            # 检查是否有开启的协同
-            coops = self.event_assets.TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
-            if not coops and not direct:
-                logger.warning('Not found enabled coop in event')
-                self.back_to_event_from_coop()
-                return
+                # coop_icons 里减去 matched 的，就是额外的按钮
+                enabled = [btn for btn in coop_icons if btn not in enabled_coop_icons]
 
         # 进入协同作战界面
         while 1:
@@ -920,7 +917,7 @@ class Event(UI):
 
             # 选择协同
             if click_timer.reached() and self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10):
-                self.device.click(coops[0])
+                self.device.click(enabled[0], click_offset=(0, 50))
                 click_timer.reset()
                 continue
 
@@ -928,11 +925,11 @@ class Event(UI):
             if self.appear(COOP_CHECK, offset=10):
                 break
 
-        if self.free_opportunity_remain and not self.dateline:
-            _coop = Coop(self.config, self.device)
+        _coop = Coop(self.config, self.device)
+        if _coop.free_opportunity_remain and not _coop.dateline:
             _coop.start_coop()
         else:
-            logger.info('There are no free opportunities')
+            logger.info('There are no coop free opportunities')
 
         # 回到活动主页
         self.back_to_event()
