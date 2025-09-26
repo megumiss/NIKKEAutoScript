@@ -30,6 +30,16 @@
       "RubbishShop"
     ]
   },
+  "Outpost": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
+      "Commission",
+      "Liberation",
+      "Synchro",
+      "Recycling"
+    ]
+  },
   "Ark": {
     "menu": "collapse",
     "page": "setting",

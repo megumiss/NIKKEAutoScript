@@ -249,12 +249,12 @@ class NikkeAutoScript:
 
         Commission(config=self.config, device=self.device).run()
 
-    def commission(self):
+    def synchro(self):
         from module.outpost.synchro import Synchro
 
         Synchro(config=self.config, device=self.device).run()
 
-    def commission(self):
+    def recycling(self):
         from module.outpost.recycling import Recycling
 
         Recycling(config=self.config, device=self.device).run()

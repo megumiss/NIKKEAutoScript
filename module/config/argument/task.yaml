@@ -28,9 +28,6 @@ Reward:
       - Reward
     Destruction:
       - Scheduler
-    Commission:
-      - Scheduler
-      - CollectionItems
     Mailbox:
       - Scheduler
 
@@ -48,8 +45,6 @@ Daily:
       - Daily
     MissionPass:
       - Scheduler
-    Liberation:
-      - Scheduler
     Conversation:
       - Scheduler
       - Conversation
@@ -63,19 +58,20 @@ Daily:
 
 # ==================== Outpost ====================
 
-Commission:
-  - Scheduler
-  - CollectionItems
-
-Liberation:
-  - Scheduler
-
-Synchro:
-  - Scheduler
-  - Synchro
-
-Recycling:
-  - Scheduler
+Outpost:
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    Commission:
+      - Scheduler
+      - CollectionItems
+    Liberation:
+      - Scheduler
+    Synchro:
+      - Scheduler
+      - Synchro
+    Recycling:
+      - Scheduler
 
 # ==================== Ark ====================
 

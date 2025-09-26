@@ -291,3 +291,5 @@ ScreenRotate:
   Orientation:
     value: 0
     option: [ 0, 1 ]
+Synchro:
+  UseBox: true

@@ -790,16 +790,13 @@
       }
     },
     "CollectionItems": {
-      "NIKKE": {
-        "type": "select",
-        "value": "All",
-        "option": [
-          "All",
-          "Laplace",
-          "Frima",
-          "Diesel",
-          "Exia"
-        ]
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Priority": {
+        "type": "textarea",
+        "value": ""
       }
     },
     "Storage": {
@@ -895,7 +892,7 @@
     "Synchro": {
       "UseBox": {
         "type": "checkbox",
-        "value": false
+        "value": true
       }
     },
     "Storage": {

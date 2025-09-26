@@ -230,7 +230,8 @@
       "ServerUpdate": "04:00"
     },
     "CollectionItems": {
-      "NIKKE": "All"
+      "Enable": false,
+      "Priority": null
     },
     "Storage": {
       "Storage": {}
@@ -259,7 +260,7 @@
       "ServerUpdate": "04:00"
     },
     "Synchro": {
-      "UseBox": false
+      "UseBox": true
     },
     "Storage": {
       "Storage": {}
