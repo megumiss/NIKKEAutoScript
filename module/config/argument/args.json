@@ -202,6 +202,10 @@
         "type": "checkbox",
         "value": true
       },
+      "ScreenRotate": {
+        "type": "checkbox",
+        "value": false
+      },
       "Account": {
         "type": "input",
         "value": ""
@@ -1632,6 +1636,7 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250924",
           "event_20250904",
           "event_20250807",
           "event_20250716",
@@ -1746,6 +1751,7 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250924",
           "event_20250904",
           "event_20250807",
           "event_20250716",
@@ -1883,16 +1889,6 @@
       "Immediately": {
         "type": "checkbox",
         "value": false
-      },
-      "PostID": {
-        "type": "input",
-        "value": "",
-        "valuetype": "str"
-      },
-      "CommentID": {
-        "type": "input",
-        "value": "",
-        "valuetype": "str"
       },
       "Points": {
         "type": "input",
@@ -2256,6 +2252,26 @@
         "type": "input",
         "value": "",
         "valuetype": "str"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "ScreenRotate": {
+    "ScreenRotate": {
+      "Orientation": {
+        "type": "select",
+        "value": 0,
+        "option": [
+          0,
+          1
+        ]
       }
     },
     "Storage": {

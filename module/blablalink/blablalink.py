@@ -306,7 +306,7 @@ class Blablalink(UI):
             return False
 
     def open_random_posts(self):
-        """随机打开3个帖子"""
+        """随机打开5个帖子"""
         logger.info('Starting browse posts task')
         # 获取所有帖子（不过滤点赞状态）
         post_uuids = self.get_post_list()
@@ -315,7 +315,7 @@ class Blablalink(UI):
             logger.warning('No posts available to browse')
             return
 
-        selected = random.sample(post_uuids, min(3, len(post_uuids)))
+        selected = random.sample(post_uuids, min(5, len(post_uuids)))
         logger.info(f'Randomly selected {len(selected)} posts to browse')
 
         for post_uuid in selected:
@@ -477,8 +477,8 @@ class Blablalink(UI):
         if not task_status.get('browse_completed', True):
             self.open_random_posts()
 
-        if not task_status.get('comment_completed', True):
-            self.post_comment()
+        # if not task_status.get('comment_completed', True):
+        #     self.post_comment()
 
         # 获取金币数量
         points = self.get_points()

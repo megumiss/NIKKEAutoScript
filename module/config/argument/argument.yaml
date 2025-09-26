@@ -67,6 +67,7 @@ PCClient:
   GameResolutionCompat:
     value: false
   CloseAutoHdr: true
+  ScreenRotate: false
   Account:
     value: ''
   Password:
@@ -179,12 +180,6 @@ BlaAuth:
     type: textarea
 BlaDaily:
   Immediately: false
-  PostID:
-    value: ''
-    valuetype: str
-  CommentID:
-    value: ''
-    valuetype: str
   Points:
     value: ''
     display: disabled
@@ -206,6 +201,7 @@ Event:
   Event:
     value: ''
     option: [
+      'event_20250924',
       'event_20250904',
       'event_20250807',
       'event_20250716',
@@ -291,3 +287,7 @@ Highlights:
   AutoSwitch:
     value: true
     display: disabled
+ScreenRotate:
+  Orientation:
+    value: 0
+    option: [ 0, 1 ]

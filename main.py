@@ -78,12 +78,21 @@ class NikkeAutoScript:
 
             return device
         except RequestHumanTakeover:
+            # 设置屏幕方向
+            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             logger.critical('Request human takeover')
             exit(1)
         except AccountError:
+            # 设置屏幕方向
+            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             logger.critical('Account or password setting error')
             exit(1)
         except Exception as e:
+            # 设置屏幕方向
+            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             logger.exception(e)
             exit(1)
 
@@ -122,6 +131,9 @@ class NikkeAutoScript:
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GamePageUnknownError',
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
@@ -132,6 +144,9 @@ class NikkeAutoScript:
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GameServerUnderMaintenance',
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except RequestHumanTakeover:
             logger.critical('Request human takeover')
@@ -141,6 +156,9 @@ class NikkeAutoScript:
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> RequestHumanTakeover',
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except Exception as e:
             logger.exception(e)
@@ -151,6 +169,9 @@ class NikkeAutoScript:
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> Exception occured',
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
 
     def save_error_log(self):
@@ -363,6 +384,11 @@ class NikkeAutoScript:
 
         SemiCombat(config=self.config, device=self.device, task='SemiCombat').run()
 
+    def screen_rotate(self):
+        from module.daemon.screen_rotate import ScreenRotate
+
+        ScreenRotate(config=self.config).run()
+
     def event(self):
         from module.event.event import Event
 
@@ -445,6 +471,9 @@ class NikkeAutoScript:
                             self.device.app_stop('Launcher')
                     release_resources()
                     if self.config.Client_Platform == 'win':
+                        # 设置屏幕方向
+                        if self.config.PCClient_ScreenRotate:
+                            self.device.screen_rotate()
                         del_cached_property(self, 'device')
                     # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
@@ -461,6 +490,9 @@ class NikkeAutoScript:
                         self.run('goto_main')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -468,6 +500,9 @@ class NikkeAutoScript:
                     logger.info('Stay there during wait')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -475,6 +510,9 @@ class NikkeAutoScript:
                     logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -491,7 +529,7 @@ class NikkeAutoScript:
             if self.stop_event is not None:
                 if self.stop_event.is_set():
                     logger.info('Update event detected')
-                    logger.info(f'Alas [{self.config_name}] exited.')
+                    logger.info(f'NKAS [{self.config_name}] exited.')
                     break
             # Check game server maintenance
             # self.checker.wait_until_available()
@@ -547,6 +585,9 @@ class NikkeAutoScript:
                         title=f'NKAS <{self.config_name}> crashed',
                         content=f'<{self.config_name}> RequestHumanTakeover\nTask `{task}` failed 3 or more times.',
                     )
+                # 设置屏幕方向
+                if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                    self.device.screen_rotate()
                 exit(1)
 
             if success:

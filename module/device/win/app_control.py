@@ -96,6 +96,11 @@ class AppControl(WinClient, Login):
         #     else None
         # )
 
+        # 设置屏幕方向
+        if self.config.PCClient_ScreenRotate:
+            self.screen_rotate(1)
+            time.sleep(3)
+
         # 启动流程
         self.app_start()
         logger.attr('Process', self.current_window.process)

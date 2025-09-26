@@ -32,6 +32,7 @@ from pywebio.output import (
     put_scope,
     put_table,
     put_text,
+    put_image,
     put_warning,
     toast,
     use_scope,
@@ -1166,12 +1167,15 @@ class NKASGUI(Frame):
 
             如果喜欢本项目，可以送作者一杯蜜雪冰城🍦  
             您的支持就是作者开发和维护项目的动力🚀  
-            <p>
-                <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="微信" width="200"/>
-                <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="支付宝" width="200"/>
-            </p>
             """
             ).style("text-align: center")
+            # 本地图片
+            put_html("""
+                <p style="text-align:center">
+                    <img src="/static/assets/wechat.png" alt="微信" width="200"/>
+                    <img src="/static/assets/alipay.png" alt="支付宝" width="200"/>
+                </p>
+            """)
 
         if lang.TRANSLATE_MODE:
             lang.reload()
@@ -1540,7 +1544,7 @@ def app():
     app = asgi_app(
         applications=[index, manage],
         # cdn=cdn,
-        static_dir=None,
+        static_dir='./doc',
         debug=True,
         on_startup=[
             startup,

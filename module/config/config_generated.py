@@ -38,6 +38,7 @@ class GeneratedConfig:
     PCClient_Screens = False
     PCClient_GameResolutionCompat = False
     PCClient_CloseAutoHdr = True
+    PCClient_ScreenRotate = False
     PCClient_Account = None
     PCClient_Password = None
 
@@ -119,8 +120,6 @@ class GeneratedConfig:
 
     # Group `BlaDaily`
     BlaDaily_Immediately = False
-    BlaDaily_PostID = None
-    BlaDaily_CommentID = None
     BlaDaily_Points = None
 
     # Group `Coop`
@@ -134,7 +133,7 @@ class GeneratedConfig:
     BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
 
     # Group `Event`
-    Event_Event = ''  # event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
+    Event_Event = ''  # event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
     Event_LoginStamp = True
     Event_Challenge = True
     Event_Story = False
@@ -179,6 +178,9 @@ class GeneratedConfig:
 
     # Group `Highlights`
     Highlights_AutoSwitch = True
+
+    # Group `ScreenRotate`
+    ScreenRotate_Orientation = 0  # 0, 1
 
     # Group `Storage`
     Storage_Storage = {}

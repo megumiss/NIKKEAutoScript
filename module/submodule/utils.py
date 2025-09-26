@@ -18,6 +18,7 @@ def get_available_func():
         'SemiCombat',
         'Highlights',
         'BlaCDKManual',
+        'ScreenRotate'
     )
 
 

@@ -8,6 +8,7 @@ from typing import Literal, Optional, Tuple
 
 import psutil
 import pyautogui
+import win32api
 import win32con
 import win32gui
 from numpy import ndarray
@@ -137,6 +138,25 @@ class WinClient:
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         return False
+
+    @staticmethod
+    def screen_rotate(orientation=0):
+        """
+        设置屏幕方向
+        orientation: 0=横屏, 1=竖屏(90), 2=横屏翻转, 3=竖屏(270)
+        """
+        device = win32api.EnumDisplayDevices(None, 0)
+        dm = win32api.EnumDisplaySettings(device.DeviceName, win32con.ENUM_CURRENT_SETTINGS)
+
+        # 如果当前方向和目标方向不一样
+        if dm.DisplayOrientation != orientation:
+            # 如果当前是横屏<->竖屏切换，需要交换分辨率宽高
+            if (dm.DisplayOrientation + orientation) % 2 == 1:
+                dm.PelsWidth, dm.PelsHeight = dm.PelsHeight, dm.PelsWidth
+
+            dm.DisplayOrientation = orientation
+            win32api.ChangeDisplaySettingsEx(device.DeviceName, dm)
+            logger.info(f'设置屏幕方向：{orientation}')
 
     @staticmethod
     def set_foreground_window_with_retry(hwnd):
@@ -513,9 +533,9 @@ class WinClient:
         if screen_width < target_width or screen_height < target_height:
             logger.error(f'桌面分辨率: {screen_width}x{screen_height}，目标分辨率: {target_width}x{target_height}')
             logger.error(
-                f'显示器横向分辨率必须大于 {target_width}，竖向分辨率必须大于 {target_height}；请尝试竖屏使用，或者更换更大的显示器/使用uu远程超级屏/使用 HDMI/VGA 显卡欺骗器'
+                f'显示器横向分辨率必须大于 {target_width}，竖向分辨率必须大于 {target_height}；请在设置中开启 屏幕旋转 或者竖屏使用，或者更换更大的显示器/使用uu远程超级屏/使用 HDMI/VGA 显卡欺骗器'
             )
-            raise Exception('桌面分辨率过低')
+            raise Exception('桌面分辨率过低，请在设置中开启屏幕旋转')
         else:
             logger.debug(f'桌面分辨率: {screen_width}x{screen_height}')
 

@@ -11,6 +11,8 @@ MISSION_RED_POINT = Button(area={'zh-cn': (668, 366, 682, 380)}, color={'zh-cn':
 PASS_BANNER = Button(area={'zh-cn': (579, 188, 709, 247)}, color={'zh-cn': (133, 145, 159)}, button={'zh-cn': (579, 188, 709, 247)}, file={'zh-cn': './assets/zh-cn/mission_pass/PASS_BANNER.png'})
 PASS_CHECK = Button(area={'zh-cn': (137, 330, 181, 364)}, color={'zh-cn': (108, 115, 120)}, button={'zh-cn': (137, 330, 181, 364)}, file={'zh-cn': './assets/zh-cn/mission_pass/PASS_CHECK.png'})
 PASS_MISSION = Button(area={'zh-cn': (507, 382, 543, 402)}, color={'zh-cn': (168, 168, 168)}, button={'zh-cn': (507, 382, 543, 402)}, file={'zh-cn': './assets/zh-cn/mission_pass/PASS_MISSION.png'})
+PASS_MISSION_2 = Button(area={'zh-cn': (504, 407, 543, 426)}, color={'zh-cn': (91, 91, 92)}, button={'zh-cn': (504, 407, 543, 426)}, file={'zh-cn': './assets/zh-cn/mission_pass/PASS_MISSION_2.png'})
 PASS_REWARD = Button(area={'zh-cn': (176, 382, 216, 402)}, color={'zh-cn': (161, 161, 162)}, button={'zh-cn': (176, 382, 216, 402)}, file={'zh-cn': './assets/zh-cn/mission_pass/PASS_REWARD.png'})
+PASS_REWARD_2 = Button(area={'zh-cn': (176, 406, 216, 426)}, color={'zh-cn': (94, 94, 95)}, button={'zh-cn': (176, 406, 216, 426)}, file={'zh-cn': './assets/zh-cn/mission_pass/PASS_REWARD_2.png'})
 RANK_UP_CHECK = Button(area={'zh-cn': (289, 587, 430, 617)}, color={'zh-cn': (89, 92, 89)}, button={'zh-cn': (289, 587, 430, 617)}, file={'zh-cn': './assets/zh-cn/mission_pass/RANK_UP_CHECK.png'})
 REWARD_RED_POINT = Button(area={'zh-cn': (341, 367, 353, 379)}, color={'zh-cn': (250, 125, 100)}, button={'zh-cn': (341, 367, 353, 379)}, file={'zh-cn': './assets/zh-cn/mission_pass/REWARD_RED_POINT.png'})

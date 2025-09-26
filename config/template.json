@@ -52,6 +52,7 @@
       "Screens": false,
       "GameResolutionCompat": false,
       "CloseAutoHdr": true,
+      "ScreenRotate": false,
       "Account": null,
       "Password": null
     },
@@ -526,8 +527,6 @@
     },
     "BlaDaily": {
       "Immediately": false,
-      "PostID": null,
-      "CommentID": null,
       "Points": null
     },
     "Storage": {
@@ -647,6 +646,14 @@
   "BlaCDKManual": {
     "BlaCDKManual": {
       "CDK": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "ScreenRotate": {
+    "ScreenRotate": {
+      "Orientation": 0
     },
     "Storage": {
       "Storage": {}

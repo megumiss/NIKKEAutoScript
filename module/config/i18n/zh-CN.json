@@ -193,6 +193,10 @@
     "BlaCDKManual": {
       "name": "CDK兑换",
       "help": ""
+    },
+    "ScreenRotate": {
+      "name": "屏幕旋转",
+      "help": ""
     }
   },
   "Scheduler": {
@@ -326,6 +330,10 @@
     "CloseAutoHdr": {
       "name": "关闭自动HDR",
       "help": "NKAS运行在HDR开启的设备下可能无法正常运行，如果你频繁出现卡屏请开启此选项，开启后会关闭游戏的自动HDR，全局HDR不受影响"
+    },
+    "ScreenRotate": {
+      "name": "旋转屏幕",
+      "help": "仅建议1080p屏幕用户开启，开启该选项后，点击启动时屏幕会变成竖屏以满足竖向分辨率要求"
     },
     "Account": {
       "name": "账号",
@@ -639,14 +647,6 @@
       "name": "立即执行",
       "help": "默认情况下，任务在 4:00–8:00 时间段执行时会自动推迟到 8 点以后；开启选项后，任务将立即执行，不再延迟"
     },
-    "PostID": {
-      "name": "帖子ID",
-      "help": "要评论帖子的ID"
-    },
-    "CommentID": {
-      "name": "评论ID",
-      "help": "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看（页面ID显示有问题，不影响使用）"
-    },
     "Points": {
       "name": "剩余金币数量",
       "help": ""
@@ -695,6 +695,7 @@
     "Event": {
       "name": "当前活动",
       "help": "",
+      "event_20250924": "REBORN EVIL",
       "event_20250904": "COINS IN RUSH",
       "event_20250807": "ABSOLUTE",
       "event_20250716": "BOOM! THE GHOST!",
@@ -898,6 +899,18 @@
     "AutoSwitch": {
       "name": "自动切换",
       "help": "当一个妮姬的花絮全部完成以后自动切换下一个，F10停止"
+    }
+  },
+  "ScreenRotate": {
+    "_info": {
+      "name": "屏幕旋转",
+      "help": ""
+    },
+    "Orientation": {
+      "name": "旋转方向",
+      "help": "手动修改屏幕方向",
+      "0": "横屏",
+      "1": "竖屏"
     }
   },
   "Storage": {

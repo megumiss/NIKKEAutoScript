@@ -4,7 +4,7 @@ from functools import cached_property
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
 from module.base.utils import _area_offset, exec_file, mask_area
-from module.handler.assets import CONFIRM_B
+from module.handler.assets import CONFIRM_B, REWARD
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
 from module.shop.assets import *
@@ -81,6 +81,7 @@ class ShopBase(UI):
                 button is not None
                 and confirm_timer.reached()
                 and click_timer.reached()
+                and not self.appear(REWARD, offset=30, static=False)
                 and self.appear_then_click(button, offset=5, threshold=0.9, interval=1, static=False)
                 and button.match_appear_on(self.device.image, 10)
             ):

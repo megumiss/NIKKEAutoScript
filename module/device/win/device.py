@@ -1,4 +1,5 @@
 from collections import deque
+from datetime import time
 
 from module.base.button import Button
 from module.base.timer import Timer
