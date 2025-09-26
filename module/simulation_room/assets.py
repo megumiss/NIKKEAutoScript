@@ -11,7 +11,7 @@ BIOS_UPDATE_CLOSE = Button(area={'zh-cn': (614, 490, 636, 511)}, color={'zh-cn':
 BOSS_EVENT_CHECK = Button(area={'zh-cn': (367, 733, 442, 764)}, color={'zh-cn': (48, 47, 35)}, button={'zh-cn': (367, 733, 442, 764)}, file={'zh-cn': './assets/zh-cn/simulation_room/BOSS_EVENT_CHECK.png'})
 CANCEL = Button(area={'zh-cn': (118, 1030, 148, 1057)}, color={'zh-cn': (197, 198, 202)}, button={'zh-cn': (118, 1030, 148, 1057)}, file={'zh-cn': './assets/zh-cn/simulation_room/CANCEL.png'})
 CHOOSE_INITIAL_EFFECT_CHECK = Button(area={'zh-cn': (136, 273, 573, 309)}, color={'zh-cn': (221, 222, 223)}, button={'zh-cn': (136, 273, 573, 309)}, file={'zh-cn': './assets/zh-cn/simulation_room/CHOOSE_INITIAL_EFFECT_CHECK.png'})
-DIFFICULTY_AREA_CHECK = Button(area={'zh-cn': (130, 483, 171, 501)}, color={'zh-cn': (192, 192, 191)}, button={'zh-cn': (130, 483, 171, 501)}, file={'zh-cn': './assets/zh-cn/simulation_room/DIFFICULTY_AREA_CHECK.png'})
+DIFFICULTY_AREA_CHECK = Button(area={'zh-cn': (257, 169, 308, 201)}, color={'zh-cn': (73, 74, 75)}, button={'zh-cn': (257, 169, 308, 201)}, file={'zh-cn': './assets/zh-cn/simulation_room/DIFFICULTY_AREA_CHECK.png'})
 END_FIGHTING = Button(area={'zh-cn': (261, 1119, 459, 1138)}, color={'zh-cn': (87, 87, 87)}, button={'zh-cn': (261, 1119, 459, 1138)}, file={'zh-cn': './assets/zh-cn/simulation_room/END_FIGHTING.png'})
 END_SIMULATION = Button(area={'zh-cn': (133, 897, 282, 933)}, color={'zh-cn': (187, 188, 192)}, button={'zh-cn': (133, 897, 282, 933)}, file={'zh-cn': './assets/zh-cn/simulation_room/END_SIMULATION.png'})
 END_SIMULATION_CHECK = Button(area={'zh-cn': (276, 480, 432, 524)}, color={'zh-cn': (221, 221, 221)}, button={'zh-cn': (276, 480, 432, 524)}, file={'zh-cn': './assets/zh-cn/simulation_room/END_SIMULATION_CHECK.png'})

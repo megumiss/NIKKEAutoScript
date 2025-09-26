@@ -15,4 +15,6 @@ SHOP_ITEM_CHECK = Button(area={'zh-cn': (312, 242, 407, 266)}, color={'zh-cn': (
 SHOP_ITEM_RED_CIRCLE = Button(area={'zh-cn': (360, 435, 395, 474)}, color={'zh-cn': (170, 80, 83)}, button={'zh-cn': (360, 435, 395, 474)}, file={'zh-cn': './assets/zh-cn/event/SHOP_ITEM_RED_CIRCLE.png'})
 SHOP_ITEM_TITLE = Button(area={'zh-cn': (348, 442, 374, 475)}, color={'zh-cn': (136, 130, 121)}, button={'zh-cn': (348, 442, 374, 475)}, file={'zh-cn': './assets/zh-cn/event/SHOP_ITEM_TITLE.png'})
 SHOP_MONEY_LACK = Button(area={'zh-cn': (308, 631, 390, 651)}, color={'zh-cn': (160, 160, 160)}, button={'zh-cn': (308, 631, 390, 651)}, file={'zh-cn': './assets/zh-cn/event/SHOP_MONEY_LACK.png'})
+TEMPLATE_COOP_COMING_SOON = Template(file={'zh-cn': './assets/zh-cn/event/TEMPLATE_COOP_COMING_SOON.png'})
+TEMPLATE_COOP_ICON = Template(file={'zh-cn': './assets/zh-cn/event/TEMPLATE_COOP_ICON.png'})
 TEMPLATE_SOLD_OUT = Template(file={'zh-cn': './assets/zh-cn/event/TEMPLATE_SOLD_OUT.png'})

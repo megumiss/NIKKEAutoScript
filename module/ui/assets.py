@@ -54,6 +54,7 @@ MAIN_GOTO_RECRUIT = Button(area={'zh-cn': (614, 1227, 651, 1243)}, color={'zh-cn
 MAIN_GOTO_REWARD = Button(area={'zh-cn': (127, 1040, 146, 1078)}, color={'zh-cn': (100, 100, 99)}, button={'zh-cn': (127, 1040, 146, 1078)}, file={'zh-cn': './assets/zh-cn/ui/MAIN_GOTO_REWARD.png'})
 MAIN_GOTO_SHOP = Button(area={'zh-cn': (64, 871, 102, 905)}, color={'zh-cn': (226, 233, 243)}, button={'zh-cn': (64, 871, 102, 905)}, file={'zh-cn': './assets/zh-cn/ui/MAIN_GOTO_SHOP.png'})
 MAIN_GOTO_TEAM = Button(area={'zh-cn': (87, 1225, 127, 1244)}, color={'zh-cn': (140, 138, 138)}, button={'zh-cn': (87, 1225, 127, 1244)}, file={'zh-cn': './assets/zh-cn/ui/MAIN_GOTO_TEAM.png'})
+NEW_NIKKE_CONFIRM = Button(area={'zh-cn': (334, 1141, 384, 1166)}, color={'zh-cn': (148, 148, 148)}, button={'zh-cn': (334, 1141, 384, 1166)}, file={'zh-cn': './assets/zh-cn/ui/NEW_NIKKE_CONFIRM.png'})
 OUTPOST_CHECK = Button(area={'zh-cn': (310, 1050, 410, 1111)}, color={'zh-cn': (98, 103, 107)}, button={'zh-cn': (310, 1050, 410, 1111)}, file={'zh-cn': './assets/zh-cn/ui/OUTPOST_CHECK.png'})
 OUTPOST_GOTO_COMMISSION = Button(area={'zh-cn': (381, 1177, 439, 1240)}, color={'zh-cn': (108, 112, 114)}, button={'zh-cn': (381, 1177, 439, 1240)}, file={'zh-cn': './assets/zh-cn/ui/OUTPOST_GOTO_COMMISSION.png'})
 PASS_CHECK = Button(area={'zh-cn': (373, 149, 663, 243)}, color={'zh-cn': (167, 224, 249)}, button={'zh-cn': (373, 149, 663, 243)}, file={'zh-cn': './assets/zh-cn/ui/PASS_CHECK.png'})

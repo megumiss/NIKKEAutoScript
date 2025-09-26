@@ -7,7 +7,7 @@ from module.base.timer import Timer
 from module.base.utils import get_button_by_location, sort_buttons_by_location
 from module.challenge.assets import *
 from module.coop.assets import *
-from module.coop.coop import Coop, CoopIsUnavailable
+from module.coop.coop import Coop, CoopIsUnavailable, NoOpportunityRemain
 from module.event.assets import *
 from module.exception import (
     RequestHumanTakeover,
@@ -99,15 +99,50 @@ class Event(UI):
     def back_to_event(self):
         logger.info('Back to event')
         click_timer = Timer(0.3)
+        event_timer = Timer(3, count=5)
 
         # 回到活动主页
         while 1:
             self.device.screenshot()
 
             if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
-                break
+                if not event_timer.started():
+                    event_timer.start()
+                if event_timer.reached():
+                    break
+            else:
+                event_timer.clear()
 
-            if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
+            if (
+                click_timer.reached()
+                and not self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30))
+                and self.appear_then_click(GOTO_BACK, offset=10, interval=2)
+            ):
+                click_timer.reset()
+                continue
+
+    def back_to_event_from_coop(self):
+        logger.info('Back to event from coop')
+        click_timer = Timer(0.3)
+        event_timer = Timer(3, count=5)
+
+        # 回到活动主页
+        while 1:
+            self.device.screenshot()
+
+            if not self.appear(self.event_assets.COOP_SELECT_CHECK, offset=(30, 30)):
+                if not event_timer.started():
+                    event_timer.start()
+                if event_timer.reached():
+                    break
+            else:
+                event_timer.clear()
+
+            if (
+                click_timer.reached()
+                and self.appear(self.event_assets.COOP_SELECT_CHECK, offset=(30, 30))
+                and self.appear_then_click(GOTO_BACK, offset=10, interval=2)
+            ):
                 click_timer.reset()
                 continue
 
@@ -136,6 +171,7 @@ class Event(UI):
                 break
 
         # 签到
+        event_timer = Timer(3, count=5)
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -144,7 +180,12 @@ class Event(UI):
 
             # 返回活动页面
             if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
-                break
+                if not event_timer.started():
+                    event_timer.start()
+                if event_timer.reached():
+                    break
+            else:
+                event_timer.clear()
 
             # 返回
             if (
@@ -171,7 +212,14 @@ class Event(UI):
                 continue
 
             # 点击跳过
-            if click_timer.reached() and self.appear_then_click(self.event_assets.SKIP, offset=10, interval=1):
+            if click_timer.reached() and self.appear_then_click(
+                self.event_assets.SKIP, offset=(30, 10), threshold=0.65, interval=1
+            ):
+                click_timer.reset()
+                continue
+
+            # 点击确认
+            if click_timer.reached() and self.appear_then_click(NEW_NIKKE_CONFIRM, offset=30, interval=1):
                 click_timer.reset()
                 continue
 
@@ -240,13 +288,13 @@ class Event(UI):
                 break
 
             # 战斗结束
-            if click_timer.reached() and self.appear(END_FIGHTING, offset=10):
+            if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
                 while 1:
                     self.device.screenshot()
-                    if not self.appear(END_FIGHTING, offset=10):
+                    if not self.appear(END_FIGHTING, offset=30):
                         click_timer.reset()
                         break
-                    if self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+                    if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
                         click_timer.reset()
                         continue
                 break
@@ -292,25 +340,7 @@ class Event(UI):
                 logger.error('Challenge stage fight failed')
                 raise RequestHumanTakeover
 
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
-
-            # 返回活动页面
-            if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
-                break
-
-            # 返回
-            if (
-                click_timer.reached()
-                and self.appear(CHALLENGE_CHECK, offset=10)
-                and self.appear_then_click(GOTO_BACK, offset=10, interval=2)
-            ):
-                click_timer.reset()
-                continue
-
+        self.back_to_event()
         logger.info('Event challenge done')
 
     @Config.when(EVENT_TYPE=1)
@@ -620,18 +650,7 @@ class Event(UI):
         self.find_and_fight_stage(open_story)
 
         # 回到活动主页
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
-
-            if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
-                break
-
-            if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
-                click_timer.reset()
-                continue
+        self.back_to_event()
 
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
@@ -737,34 +756,23 @@ class Event(UI):
         self.find_and_fight_stage(open_story)
 
         # 回到活动主页
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
-
-            if self.appear(self.event_assets.STORY_1_CHECK, offset=10):
-                break
-
-            if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
-                click_timer.reset()
-                continue
+        self.back_to_event()
 
     def find_and_fight_stage(self, open_story):
         click_timer = Timer(0.3)
-        if self.appear(self.STORY_STAGE_11(open_story), offset=10, static=False):
+        if self.appear(self.STORY_STAGE_11(open_story), offset=10, threshold=0.9, static=False):
             max_clicks = 0
             while 1:
                 self.device.screenshot()
 
                 # 战斗结束
-                if click_timer.reached() and self.appear(END_FIGHTING, offset=10):
+                if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
                     while 1:
                         self.device.screenshot()
-                        if not self.appear(END_FIGHTING, offset=10):
+                        if not self.appear(END_FIGHTING, offset=30):
                             click_timer.reset()
                             break
-                        if self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+                        if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
                             click_timer.reset()
                             continue
                     break
@@ -826,7 +834,7 @@ class Event(UI):
         """进入协同作战页面"""
         logger.hr('EVENT COOP START')
         click_timer = Timer(0.3)
-        confirm_timer = Timer(5, count=3).start()
+        confirm_timer = Timer(1, count=3)
 
         # 走到协同作战
         direct = False
@@ -844,29 +852,54 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
-            if confirm_timer.reached():
-                logger.warning('Coop is not enabled')
-                return
-
             # 协同未在开启时间
             if click_timer.reached() and self.appear(self.event_assets.COOP_LOCK, offset=10):
                 logger.warning('Coop is not enabled')
+                self.back_to_event_from_coop()
                 return
 
-            # 协同选择
-            if self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10):
-                break
+            # 协同选择/协同主页
+            if self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10) or self.appear(COOP_CHECK, offset=10):
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    # 直接进入了协同主页
+                    if self.appear(COOP_CHECK, offset=10):
+                        direct = True
+                    break
+            else:
+                confirm_timer.clear()
 
-            # 协同主页
-            if self.appear(COOP_CHECK, offset=10):
-                direct = True
-                break
+        if not direct:
+            # 查找所有的协同图标，去重
+            coop_icons = TEMPLATE_COOP_ICON.match_multi(self.device.image, name='COOP_ICON')
+            if coop_icons:
+                # 合并重复
+                coop_icons = merge_buttons(coop_icons, x_threshold=30, y_threshold=30)
+            else:
+                logger.warning('Not found any coop in event')
+                self.back_to_event_from_coop()
+                return
+            # 查找所有coming soon的协同，去重
+            coop_comings = TEMPLATE_COOP_COMING_SOON.match_multi(self.device.image, name='COOP_COMING_SOON')
+            if coop_comings:
+                # 合并重复
+                coop_comings = merge_buttons(coop_comings, x_threshold=30, y_threshold=30)
+            # 检查数量是否一致，一致则所有协同未开启
+            if len(coop_icons) == len(coop_comings):
+                logger.warning('Not found enabled coop in event')
+                self.back_to_event_from_coop()
+                return
+            else:
+                # 不一致则通过coming soon过滤掉没开启的协同，过滤后的即为开启
+                enabled_coop_icons = set()
+                for cbtn in coop_comings:
+                    # 用横坐标范围去筛选 coop_icons
+                    icons = filter_buttons_in_area(coop_icons, x_range=(cbtn.area[0], cbtn.area[2]))
+                    enabled_coop_icons.update(icons)
 
-        # 检查是否有开启的协同
-        coops = self.event_assets.TEMPLATE_COOP_ENABLE.match_multi(self.device.image, name='COOP_ENABLE')
-        if not coops and not direct:
-            logger.warning('Not find coop in event')
-            return
+                # coop_icons 里减去 matched 的，就是额外的按钮
+                enabled = [btn for btn in coop_icons if btn not in enabled_coop_icons]
 
         # 进入协同作战界面
         while 1:
@@ -876,8 +909,8 @@ class Event(UI):
                 self.device.screenshot()
 
             # 选择协同
-            if click_timer.reached() and self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10, interval=5):
-                self.device.click(coops[0])
+            if click_timer.reached() and self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10):
+                self.device.click(enabled[0], click_offset=(0, 50))
                 click_timer.reset()
                 continue
 
@@ -885,22 +918,19 @@ class Event(UI):
             if self.appear(COOP_CHECK, offset=10):
                 break
 
-        if self.free_opportunity_remain and not self.dateline:
-            _coop = Coop(self.config, self.device)
-            _coop.start_coop()
+        _coop = Coop(self.config, self.device)
+        if _coop.free_opportunity_remain and not _coop.dateline:
+            try:
+                _coop.start_coop()
+            except NoOpportunityRemain:
+                logger.info('There are no free opportunities')
+                pass
         else:
-            logger.info('There are no free opportunities')
+            logger.info('There are no coop free opportunities')
 
         # 回到活动主页
-        while 1:
-            self.device.screenshot()
-
-            if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
-                break
-
-            if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
-                click_timer.reset()
-                continue
+        self.back_to_event()
+        self.back_to_event_from_coop()
 
     @Config.when(EVENT_TYPE=(2, 3))
     def coop(self):
@@ -1136,6 +1166,15 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
+            # 跳过对话
+            if (
+                self.config.Event_GameStorySkip
+                and click_timer.reached()
+                and self.appear_then_click(self.event_assets.SKIP, offset=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+
             if self.appear(self.minigame_assets.MINI_GAME_CHECK, offset=10):
                 break
 
@@ -1150,6 +1189,7 @@ class Event(UI):
         logger.hr('OPEN EVENT STORY')
         click_timer = Timer(0.3)
         confirm_timer = Timer(30, count=20).start()
+        event_timer = Timer(3, count=5)
 
         while 1:
             if skip_first_screenshot:
@@ -1158,7 +1198,12 @@ class Event(UI):
                 self.device.screenshot()
 
             if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
-                break
+                if not event_timer.started():
+                    event_timer.start()
+                if event_timer.reached():
+                    break
+            else:
+                event_timer.clear()
 
             if (
                 click_timer.reached()

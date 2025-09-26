@@ -133,6 +133,7 @@ class Commission(UI):
                     break
 
             # 循环判断超出数量的是哪个收藏品
+            nikke_list = self.shop_delay_list.copy()
             current = None
             for item in self.shop_delay_list:
                 if self.appear(self.get_item_button(item), offset=10, static=False):
@@ -142,7 +143,6 @@ class Commission(UI):
             if not current:
                 logger.warning('Current favorite item can not judge')
             else:
-                nikke_list = self.shop_delay_list.copy()
                 # 只有多个候选时才移除
                 if len(nikke_list) > 1 and current in nikke_list:
                     nikke_list.remove(current)
@@ -173,7 +173,9 @@ class Commission(UI):
 
                 # 选择收藏品（这里取的是删除旧收藏品之后的第一个）
                 if self.appear(ITEM_LIST_CHECK, offset=10) and nikke_list:
-                    if self.appear_then_click(self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0)):
+                    if self.appear_then_click(
+                        self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0), static=False
+                    ):
                         logger.info(f'Select new favorite item: {nikke_list[0]}')
                         select_times += 1
                         click_timer.reset()

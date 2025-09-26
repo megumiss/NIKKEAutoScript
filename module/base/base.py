@@ -62,6 +62,20 @@ class ModuleBase:
     def ocr_models(self):
         return OCR_MODEL
 
+    def appear_any(self, buttons, **kwargs):
+        """任意一个按钮出现即返回 True"""
+        for btn in buttons:
+            if self.appear(btn, **kwargs):
+                return True
+        return False
+
+    def appear_then_click_any(self, buttons, **kwargs):
+        """任意一个按钮出现即点击并返回 True"""
+        for btn in buttons:
+            if self.appear_then_click(btn, **kwargs):
+                return True
+        return False
+
     def appear(self, button: Button, offset=0, interval=0, threshold=None, static=True) -> bool:
 
         self.device.stuck_record_add(button)
