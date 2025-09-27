@@ -4,6 +4,7 @@ from functools import cached_property
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
 from module.base.utils import _area_offset, exec_file, mask_area
+from module.event.assets import SHOP_MONEY_LACK
 from module.handler.assets import CONFIRM_B, REWARD
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
@@ -66,7 +67,6 @@ class ShopBase(UI):
         处理购买逻辑。
         """
         self.device.click_record_clear()
-        confirm_timer = Timer(2, 3).start()
         _confirm_timer = Timer(1, 2).start()
         click_timer = Timer(0.3)
         max_clicks = 0
@@ -76,21 +76,12 @@ class ShopBase(UI):
             else:
                 self.device.screenshot()
 
-            # 点击购买按钮并确认
-            if (
-                button is not None
-                and confirm_timer.reached()
-                and click_timer.reached()
-                and not self.appear(REWARD, offset=30, static=False)
-                and self.appear_then_click(button, offset=5, threshold=0.9, interval=1, static=False)
-                and button.match_appear_on(self.device.image, 10)
-            ):
-                confirm_timer.reset()
-                click_timer.reset()
-                continue
-
             # 检查是否余额不足
             if self.appear(NO_MONEY, offset=(5, 5), static=False) and NO_MONEY.match_appear_on(self.device.image):
+                raise NotEnoughMoneyError
+
+            # 资金不足
+            if self.appear(SHOP_MONEY_LACK, offset=30, static=False):
                 raise NotEnoughMoneyError
 
             # 检查是否达到最大购买数量
@@ -250,17 +241,22 @@ class ShopBase(UI):
             while 1:
                 self.device.screenshot()
 
-                # 检查当前商品是否可见
-                if (
-                    click_timer.reached()
-                    and self.appear(BUY_ALL, offset=10)
-                    and self.appear(product.button, offset=5, threshold=0.9, static=False)
-                ):
-                    self.device.click(product.button)
+                # 检查是否在购买确认页面
+                if self.appear(PURCHASE_CHECK, offset=10, static=False):
                     img = self.device.image
                     self.handle_purchase(product.button, skip_first_screenshot=False)
                     self.device.image = img
                     logger.info(f'[Purchased] {product.name}')
+                    click_timer.reset()
+                    continue
+
+                # 检查当前商品是否可见
+                if (
+                    click_timer.reached()
+                    and self.appear(BUY_ALL, offset=10)
+                    and self.appear_then_click(product.button, offset=10, threshold=0.85, interval=1, static=False)
+                ):
+                    click_timer.reset()
                     continue
 
                 # 结束当前商品的扫描，进入下一个商品
