@@ -292,4 +292,6 @@ ScreenRotate:
     value: 0
     option: [ 0, 1 ]
 Synchro:
-  UseBox: true
+  UseBox:
+    value: true
+    display: disabled

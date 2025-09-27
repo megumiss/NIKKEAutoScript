@@ -77,7 +77,7 @@ SIMULATION_ROOM_CHECK = Button(area={'zh-cn': (264, 605, 462, 627)}, color={'zh-
 SKIP = Button(area={'zh-cn': (616, 22, 671, 41)}, color={'zh-cn': (133, 134, 133)}, button={'zh-cn': (616, 22, 671, 41)}, file={'zh-cn': './assets/zh-cn/ui/SKIP.png'})
 SPECIAL_ARENA_CHECK = Button(area={'zh-cn': (204, 138, 524, 229)}, color={'zh-cn': (87, 90, 97)}, button={'zh-cn': (204, 138, 524, 229)}, file={'zh-cn': './assets/zh-cn/ui/SPECIAL_ARENA_CHECK.png'})
 SPECIAL_INTERCEPTION_CHECK = Button(area={'zh-cn': (73, 831, 260, 862)}, color={'zh-cn': (200, 199, 200)}, button={'zh-cn': (73, 831, 260, 862)}, file={'zh-cn': './assets/zh-cn/ui/SPECIAL_INTERCEPTION_CHECK.png'})
-SYNCHRO_CHECK = Button(area={'zh-cn': (29, 39, 81, 55)}, color={'zh-cn': (154, 154, 154)}, button={'zh-cn': (29, 39, 81, 55)}, file={'zh-cn': './assets/zh-cn/ui/SYNCHRO_CHECK.png'})
+SYNCHRO_CHECK = Button(area={'zh-cn': (122, 469, 202, 482)}, color={'zh-cn': (108, 108, 107)}, button={'zh-cn': (122, 469, 202, 482)}, file={'zh-cn': './assets/zh-cn/ui/SYNCHRO_CHECK.png'})
 TEAM_CHECK = Button(area={'zh-cn': (35, 305, 152, 320)}, color={'zh-cn': (200, 198, 199)}, button={'zh-cn': (35, 305, 152, 320)}, file={'zh-cn': './assets/zh-cn/ui/TEAM_CHECK.png'})
 TEAM_GOTO_CONVERSATION = Button(area={'zh-cn': (393, 136, 456, 174)}, color={'zh-cn': (72, 71, 69)}, button={'zh-cn': (393, 136, 456, 174)}, file={'zh-cn': './assets/zh-cn/ui/TEAM_GOTO_CONVERSATION.png'})
 TEAM_GOTO_LIBERATION = Button(area={'zh-cn': (114, 142, 159, 163)}, color={'zh-cn': (129, 127, 127)}, button={'zh-cn': (114, 142, 159, 163)}, file={'zh-cn': './assets/zh-cn/ui/TEAM_GOTO_LIBERATION.png'})

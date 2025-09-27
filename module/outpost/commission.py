@@ -2,9 +2,9 @@ import re
 
 from module.base.timer import Timer
 from module.base.utils import point2str
-from module.outpost.assets import *
 from module.logger import logger
 from module.ocr.ocr import Digit
+from module.outpost.assets import *
 from module.ui.assets import COMMISSION_CHECK
 from module.ui.page import page_commission
 from module.ui.ui import UI

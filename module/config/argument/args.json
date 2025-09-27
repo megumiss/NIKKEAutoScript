@@ -892,7 +892,8 @@
     "Synchro": {
       "UseBox": {
         "type": "checkbox",
-        "value": true
+        "value": true,
+        "display": "disabled"
       }
     },
     "Storage": {
