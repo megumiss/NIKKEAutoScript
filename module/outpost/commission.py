@@ -2,9 +2,9 @@ import re
 
 from module.base.timer import Timer
 from module.base.utils import point2str
-from module.commission.assets import *
 from module.logger import logger
-from module.ocr.ocr import Digit
+from module.ocr.ocr import Ocr
+from module.outpost.assets import *
 from module.ui.assets import COMMISSION_CHECK
 from module.ui.page import page_commission
 from module.ui.ui import UI
@@ -38,14 +38,20 @@ class Commission(UI):
     @property
     def favorite_item_num(self):
         model_type = self.config.Optimization_OcrModelType
-        ITEM_NUM = Digit(
-            [ITEM_SELECTED_NUM.area],
-            name='OPPORTUNITY_REMAIN',
+
+        ITEM_NUM = Ocr(
+            [(0, 250, 720, 700)],
+            name='FAVORITE_ITEM',
             model_type=model_type,
             lang='ch',
         )
 
-        return int(ITEM_NUM.ocr(self.device.image)['text'])
+        text = ITEM_NUM.ocr(self.device.image)['text']
+        match = re.search(r'持有数[:：]\s*(\d+)', text)
+        if match:
+            number = int(match.group(1))
+
+        return number or 0
 
     def receive(self):
         logger.hr('Receive commission', 2)
@@ -92,20 +98,23 @@ class Commission(UI):
                 self.device.screenshot()
 
             if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(
-                ITEM_SELECTED, offset=10, interval=1
+                ITEM_SELECTED, offset=10, threshold=0.6, interval=1
             ):
                 click_timer.reset()
                 continue
 
             if self.appear(ITEM_SELECTED_NUM_CHECK, offset=100):
                 self.device.sleep(0.5)
+                self.device.screenshot()
                 num = self.favorite_item_num
 
                 # 关闭收藏品窗口
                 while 1:
                     self.device.screenshot()
 
-                    if not self.appear(ITEM_SELECTED_NUM_CHECK, offset=10) and self.appear(COMMISSION_CHECK, offset=10):
+                    if not self.appear(ITEM_SELECTED_NUM_CHECK, offset=100) and self.appear(
+                        COMMISSION_CHECK, offset=10
+                    ):
                         click_timer.reset()
                         break
                     if self.appear(ITEM_SELECTED_NUM_CHECK, offset=100):

@@ -245,9 +245,19 @@ class NikkeAutoScript:
         Destruction(config=self.config, device=self.device).run()
 
     def commission(self):
-        from module.commission.commission import Commission
+        from module.outpost.commission import Commission
 
         Commission(config=self.config, device=self.device).run()
+
+    def synchro(self):
+        from module.outpost.synchro import Synchro
+
+        Synchro(config=self.config, device=self.device).run()
+
+    def recycling(self):
+        from module.outpost.recycling import Recycling
+
+        Recycling(config=self.config, device=self.device).run()
 
     def conversation(self):
         from module.conversation.conversation import Conversation

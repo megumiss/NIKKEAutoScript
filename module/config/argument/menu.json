@@ -15,7 +15,6 @@
     "tasks": [
       "Reward",
       "Destruction",
-      "Commission",
       "Mailbox"
     ]
   },
@@ -26,10 +25,19 @@
       "DailyRecruit",
       "Daily",
       "MissionPass",
-      "Liberation",
       "Conversation",
       "Shop",
       "RubbishShop"
+    ]
+  },
+  "Outpost": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
+      "Commission",
+      "Liberation",
+      "Synchro",
+      "Recycling"
     ]
   },
   "Ark": {

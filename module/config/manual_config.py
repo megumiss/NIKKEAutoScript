@@ -5,7 +5,8 @@ class ManualConfig:
     SCHEDULER_PRIORITY = """
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
        StepUpGift > DailyGift > WeeklyGift > MonthlyGift > 
-       Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
+       Commission > Recycling > Synchro >
+       Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
        Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > 
        AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate
        """
