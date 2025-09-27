@@ -128,6 +128,14 @@ class Recycling(UI):
                 click_timer.reset()
                 continue
 
+            if (
+                max_click > 1
+                and click_timer.reached()
+                and self.appear_then_click(RECYCLING_COMMON_UPGRADE_CONFIRM, threshold=10)
+            ):
+                click_timer.reset()
+                continue
+
             # 不能升级
             if (
                 max_click > 1
