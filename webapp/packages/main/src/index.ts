@@ -7,11 +7,11 @@ const path = require('path');
 
 // === 全局快捷键常量定义 ===
 const GLOBAL_SHORTCUTS = {
-  ROTATE: 'F8',
+  UPDATE: 'F8',
   START: 'F9',
   STOP: 'F10',
   RESTART: 'F11',
-  UPDATE: 'F12',
+  ROTATE: 'Ctrl+F12',
   DEV_TOOLS: 'Ctrl+Shift+I',
   REFRESH: 'Ctrl+R',
   HARD_REFRESH: 'Ctrl+Shift+R'
