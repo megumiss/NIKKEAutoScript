@@ -95,3 +95,11 @@ SoloRaid:
 UnionRaid:
   Scheduler:
     Enable: false
+
+Synchro:
+  Scheduler:
+    Enable: false
+
+Recycling:
+  Scheduler:
+    Enable: false

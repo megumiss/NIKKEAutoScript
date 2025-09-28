@@ -182,5 +182,8 @@ class GeneratedConfig:
     # Group `ScreenRotate`
     ScreenRotate_Orientation = 0  # 0, 1
 
+    # Group `Synchro`
+    Synchro_UseBox = True
+
     # Group `Storage`
     Storage_Storage = {}

@@ -104,23 +104,6 @@
       "Storage": {}
     }
   },
-  "Commission": {
-    "Scheduler": {
-      "Enable": false,
-      "NextRun": "1989-12-27 00:00:00",
-      "Command": "Commission",
-      "SuccessInterval": "720-720",
-      "FailureInterval": "720-720",
-      "ServerUpdate": "04:00"
-    },
-    "CollectionItems": {
-      "Enable": false,
-      "Priority": null
-    },
-    "Storage": {
-      "Storage": {}
-    }
-  },
   "Mailbox": {
     "Scheduler": {
       "Enable": false,
@@ -182,19 +165,6 @@
       "Storage": {}
     }
   },
-  "Liberation": {
-    "Scheduler": {
-      "Enable": false,
-      "NextRun": "1989-12-27 00:00:00",
-      "Command": "Liberation",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00, 20:00"
-    },
-    "Storage": {
-      "Storage": {}
-    }
-  },
   "Conversation": {
     "Scheduler": {
       "Enable": false,
@@ -245,6 +215,65 @@
     "RubbishShop": {
       "priority": "GEM > CORE_DUST_CASE",
       "bonePriority": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Commission": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Commission",
+      "SuccessInterval": "720-720",
+      "FailureInterval": "720-720",
+      "ServerUpdate": "04:00"
+    },
+    "CollectionItems": {
+      "Enable": false,
+      "Priority": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Liberation": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Liberation",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00, 20:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Synchro": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Synchro",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Synchro": {
+      "UseBox": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Recycling": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Recycling",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
     },
     "Storage": {
       "Storage": {}

@@ -12,6 +12,10 @@
       "name": "日常",
       "help": ""
     },
+    "Outpost": {
+      "name": "前哨基地",
+      "help": ""
+    },
     "Ark": {
       "name": "方舟",
       "help": ""
@@ -62,10 +66,6 @@
       "name": "歼灭",
       "help": ""
     },
-    "Commission": {
-      "name": "派遣",
-      "help": ""
-    },
     "Mailbox": {
       "name": "邮箱",
       "help": ""
@@ -82,10 +82,6 @@
       "name": "季票",
       "help": ""
     },
-    "Liberation": {
-      "name": "解放",
-      "help": ""
-    },
     "Conversation": {
       "name": "咨询",
       "help": ""
@@ -96,6 +92,22 @@
     },
     "RubbishShop": {
       "name": "废铁商店",
+      "help": ""
+    },
+    "Commission": {
+      "name": "派遣",
+      "help": ""
+    },
+    "Liberation": {
+      "name": "解放",
+      "help": ""
+    },
+    "Synchro": {
+      "name": "同步器",
+      "help": ""
+    },
+    "Recycling": {
+      "name": "循环室",
       "help": ""
     },
     "SimulationRoom": {
@@ -911,6 +923,16 @@
       "help": "手动修改屏幕方向",
       "0": "横屏",
       "1": "竖屏"
+    }
+  },
+  "Synchro": {
+    "_info": {
+      "name": "同步器",
+      "help": ""
+    },
+    "UseBox": {
+      "name": "使用道具",
+      "help": ""
     }
   },
   "Storage": {
