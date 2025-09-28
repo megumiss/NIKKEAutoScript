@@ -2,42 +2,10 @@ import { app, Menu, Tray, BrowserWindow, ipcMain, globalShortcut } from 'electro
 import { URL } from 'url';
 import { PyShell } from '/@/pyshell';
 import { webuiArgs, webuiPath, dpiScaling, webuiUrl, nkasPath } from '/@/config';
+import { GLOBAL_SHORTCUTS } from '/@/shortcuts';
 
 const fs = require('fs');
 const path = require('path');
-
-// === 从 config/shortcuts.json 加载快捷键配置 ===
-function loadShortcuts() {
-  const shortcutsPath = path.join(nkasPath, './config/shortcuts.json');
-
-  // 默认值，防止用户删掉字段导致报错
-  const defaultShortcuts = {
-    UPDATE: 'F8',
-    START: 'F9',
-    STOP: 'F10',
-    RESTART: 'F11',
-    ROTATE: 'Ctrl+F12',
-    DEV_TOOLS: 'Ctrl+Shift+I',
-    REFRESH: 'Ctrl+R',
-    HARD_REFRESH: 'Ctrl+Shift+R'
-  };
-
-  if (!fs.existsSync(shortcutsPath)) {
-    console.warn('[Shortcuts] config/shortcuts.json not found, using defaults');
-    return defaultShortcuts;
-  }
-
-  try {
-    const file = fs.readFileSync(shortcutsPath, 'utf8');
-    const userShortcuts = JSON.parse(file);
-    return { ...defaultShortcuts, ...userShortcuts }; // 用户覆盖默认配置
-  } catch (e) {
-    console.error('[Shortcuts] Failed to parse shortcuts.json, using defaults:', e);
-    return defaultShortcuts;
-  }
-}
-
-const GLOBAL_SHORTCUTS = loadShortcuts();
 
 // 检查单实例锁
 const isSingleInstance = app.requestSingleInstanceLock();
