@@ -1,21 +1,43 @@
 import { app, Menu, Tray, BrowserWindow, ipcMain, globalShortcut } from 'electron';
 import { URL } from 'url';
 import { PyShell } from '/@/pyshell';
-import { webuiArgs, webuiPath, dpiScaling, webuiUrl } from '/@/config';
+import { webuiArgs, webuiPath, dpiScaling, webuiUrl, nkasPath } from '/@/config';
 
+const fs = require('fs');
 const path = require('path');
 
-// === 全局快捷键常量定义 ===
-const GLOBAL_SHORTCUTS = {
-  UPDATE: 'F8',
-  START: 'F9',
-  STOP: 'F10',
-  RESTART: 'F11',
-  ROTATE: 'Ctrl+F12',
-  DEV_TOOLS: 'Ctrl+Shift+I',
-  REFRESH: 'Ctrl+R',
-  HARD_REFRESH: 'Ctrl+Shift+R'
-};
+// === 从 config/shortcuts.json 加载快捷键配置 ===
+function loadShortcuts() {
+  const shortcutsPath = path.join(nkasPath, './config/shortcuts.json');
+
+  // 默认值，防止用户删掉字段导致报错
+  const defaultShortcuts = {
+    UPDATE: 'F8',
+    START: 'F9',
+    STOP: 'F10',
+    RESTART: 'F11',
+    ROTATE: 'Ctrl+F12',
+    DEV_TOOLS: 'Ctrl+Shift+I',
+    REFRESH: 'Ctrl+R',
+    HARD_REFRESH: 'Ctrl+Shift+R'
+  };
+
+  if (!fs.existsSync(shortcutsPath)) {
+    console.warn('[Shortcuts] config/shortcuts.json not found, using defaults');
+    return defaultShortcuts;
+  }
+
+  try {
+    const file = fs.readFileSync(shortcutsPath, 'utf8');
+    const userShortcuts = JSON.parse(file);
+    return { ...defaultShortcuts, ...userShortcuts }; // 用户覆盖默认配置
+  } catch (e) {
+    console.error('[Shortcuts] Failed to parse shortcuts.json, using defaults:', e);
+    return defaultShortcuts;
+  }
+}
+
+const GLOBAL_SHORTCUTS = loadShortcuts();
 
 // 检查单实例锁
 const isSingleInstance = app.requestSingleInstanceLock();
@@ -248,7 +270,6 @@ function registerGlobalShortcuts() {
   ];
 
   globalShortcuts.forEach(({ key, accelerator, handler }) => {
-    // 确保不重复注册
     if (globalShortcut.isRegistered(accelerator)) {
       globalShortcut.unregister(accelerator);
     }
@@ -261,7 +282,7 @@ function registerGlobalShortcuts() {
     }
   });
 
-  // 条件生效的快捷键（始终注册但条件执行）
+  // 条件生效的快捷键
   const conditionalShortcuts = [
     { 
       accelerator: GLOBAL_SHORTCUTS.DEV_TOOLS, 
@@ -303,9 +324,8 @@ function registerGlobalShortcuts() {
 app.whenReady()
   .then(() => {
     createWindow();
-    registerGlobalShortcuts(); // 统一注册所有快捷键
+    registerGlobalShortcuts(); // 注册快捷键
     
-    // 开发环境检查更新
     if (import.meta.env.PROD) {
       import('electron-updater')
         .then(({ autoUpdater }) => autoUpdater.checkForUpdatesAndNotify())
