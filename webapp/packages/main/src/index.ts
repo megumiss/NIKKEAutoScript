@@ -7,9 +7,11 @@ const path = require('path');
 
 // === 全局快捷键常量定义 ===
 const GLOBAL_SHORTCUTS = {
+  ROTATE: 'F8',
   START: 'F9',
   STOP: 'F10',
   RESTART: 'F11',
+  UPDATE: 'F12',
   DEV_TOOLS: 'Ctrl+Shift+I',
   REFRESH: 'Ctrl+R',
   HARD_REFRESH: 'Ctrl+Shift+R'
@@ -216,13 +218,33 @@ async function handleRestart() {
   await (response as any).json();
 }
 
+async function handleUpdate() {
+  const response = await customFetch(`${webuiUrl}/api/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  await (response as any).json();
+}
+
+async function handleRotate() {
+  const response = await customFetch(`${webuiUrl}/api/rotate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  await (response as any).json();
+}
+
 // === 专用快捷键注册函数 ===
 function registerGlobalShortcuts() {
   // 始终生效的全局快捷键
   const globalShortcuts = [
     { key: 'START', accelerator: GLOBAL_SHORTCUTS.START, handler: handleStart },
     { key: 'STOP', accelerator: GLOBAL_SHORTCUTS.STOP, handler: handleStop },
-    { key: 'RESTART', accelerator: GLOBAL_SHORTCUTS.RESTART, handler: handleRestart }
+    { key: 'RESTART', accelerator: GLOBAL_SHORTCUTS.RESTART, handler: handleRestart },
+    { key: 'UPDATE', accelerator: GLOBAL_SHORTCUTS.UPDATE, handler: handleUpdate },
+    { key: 'ROTATE', accelerator: GLOBAL_SHORTCUTS.ROTATE, handler: handleRotate }
   ];
 
   globalShortcuts.forEach(({ key, accelerator, handler }) => {
