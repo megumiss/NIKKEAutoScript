@@ -1,50 +1,43 @@
 import { app, Menu, Tray, BrowserWindow, ipcMain, globalShortcut } from 'electron';
 import { URL } from 'url';
 import { PyShell } from '/@/pyshell';
-import { webuiArgs, webuiPath, dpiScaling, webuiUrl } from '/@/config';
+import { webuiArgs, webuiPath, dpiScaling, webuiUrl, nkasPath } from '/@/config';
 
-// === BEGIN ADDED CODE ===
-// Note: This feature requires the 'ffi-napi' package.
-// Please install it by running: npm install ffi-napi
-let ffi: any, user32: any;
-const isWindows = process.platform === 'win32';
+const fs = require('fs');
+const path = require('path');
 
-if (isWindows) {
+// === 从 config/shortcuts.json 加载快捷键配置 ===
+function loadShortcuts() {
+  const shortcutsPath = path.join(nkasPath, './config/shortcuts.json');
+
+  // 默认值，防止用户删掉字段导致报错
+  const defaultShortcuts = {
+    UPDATE: 'F8',
+    START: 'F9',
+    STOP: 'F10',
+    RESTART: 'F11',
+    ROTATE: 'Ctrl+F12',
+    DEV_TOOLS: 'Ctrl+Shift+I',
+    REFRESH: 'Ctrl+R',
+    HARD_REFRESH: 'Ctrl+Shift+R'
+  };
+
+  if (!fs.existsSync(shortcutsPath)) {
+    console.warn('[Shortcuts] config/shortcuts.json not found, using defaults');
+    return defaultShortcuts;
+  }
+
   try {
-    ffi = require('ffi-napi');
-    user32 = ffi.Library('user32', {
-      'EnumDisplaySettingsW': ['bool', ['string', 'uint32', 'pointer']],
-      'ChangeDisplaySettingsExW': ['long', ['string', 'pointer', 'pointer', 'uint32', 'pointer']]
-    });
+    const file = fs.readFileSync(shortcutsPath, 'utf8');
+    const userShortcuts = JSON.parse(file);
+    return { ...defaultShortcuts, ...userShortcuts }; // 用户覆盖默认配置
   } catch (e) {
-    console.error('ffi-napi failed to load. Screen rotation functionality will be unavailable.', e);
+    console.error('[Shortcuts] Failed to parse shortcuts.json, using defaults:', e);
+    return defaultShortcuts;
   }
 }
 
-// Windows API constants for screen rotation
-const ENUM_CURRENT_SETTINGS = -1;
-const DMDO_DEFAULT = 0; // Landscape
-const DMDO_90 = 1;      // Portrait (rotated 90 degrees clockwise)
-const DM_DISPLAYORIENTATION = 0x00000080;
-const CDS_UPDATEREGISTRY = 0x00000001;
-const DISP_CHANGE_SUCCESSFUL = 0;
-const DEVMODE_SIZE = 220; // sizeof(DEVMODEW)
-const DM_FIELDS_OFFSET = 40; // offsetof(DEVMODEW, dmFields)
-const DM_DISPLAY_ORIENTATION_OFFSET = 156; // offsetof(DEVMODEW, dmDisplayOrientation)
-// === END ADDED CODE ===
-
-const path = require('path');
-
-// === 全局快捷键常量定义 ===
-const GLOBAL_SHORTCUTS = {
-  START: 'F9',
-  STOP: 'F10',
-  RESTART: 'F11',
-  ROTATE_SCREEN: 'F8', // Added F8 shortcut
-  DEV_TOOLS: 'Ctrl+Shift+I',
-  REFRESH: 'Ctrl+R',
-  HARD_REFRESH: 'Ctrl+Shift+R'
-};
+const GLOBAL_SHORTCUTS = loadShortcuts();
 
 // 检查单实例锁
 const isSingleInstance = app.requestSingleInstanceLock();
@@ -247,54 +240,23 @@ async function handleRestart() {
   await (response as any).json();
 }
 
-// === BEGIN ADDED CODE ===
-/**
- * Handles screen rotation on Windows using the F8 key.
- * Toggles between landscape (0 degrees) and portrait (90 degrees).
- */
-async function handleRotateScreen() {
-  if (!isWindows || !user32) {
-    console.log('Screen rotation is only supported on Windows and requires the ffi-napi package.');
-    return;
-  }
+async function handleUpdate() {
+  const response = await customFetch(`${webuiUrl}/api/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
 
-  try {
-    const devMode = Buffer.alloc(DEVMODE_SIZE);
-    // Set the dmSize member of the DEVMODE structure
-    devMode.writeUInt16LE(DEVMODE_SIZE, 36);
-
-    // Get current display settings
-    if (!user32.EnumDisplaySettingsW(null, ENUM_CURRENT_SETTINGS, devMode)) {
-      console.error('Failed to get current display settings.');
-      return;
-    }
-
-    const currentOrientation = devMode.readUInt32LE(DM_DISPLAY_ORIENTATION_OFFSET);
-
-    // If current is landscape (DMDO_DEFAULT), switch to portrait (DMDO_90).
-    // Otherwise, switch back to landscape.
-    const newOrientation = (currentOrientation === DMDO_DEFAULT) ? DMDO_90 : DMDO_DEFAULT;
-
-    // Set the new orientation
-    devMode.writeUInt32LE(newOrientation, DM_DISPLAY_ORIENTATION_OFFSET);
-    
-    // Specify that we are changing the display orientation
-    const currentDmFields = devMode.readUInt32LE(DM_FIELDS_OFFSET);
-    devMode.writeUInt32LE(currentDmFields | DM_DISPLAYORIENTATION, DM_FIELDS_OFFSET);
-
-    // Apply the change
-    const result = user32.ChangeDisplaySettingsExW(null, devMode, null, CDS_UPDATEREGISTRY, null);
-
-    if (result !== DISP_CHANGE_SUCCESSFUL) {
-      console.error(`Failed to change display settings. Error code: ${result}`);
-    } else {
-      console.log(`Screen rotated to ${newOrientation === DMDO_DEFAULT ? 'Landscape' : 'Portrait'}`);
-    }
-  } catch (error) {
-    console.error('An error occurred during screen rotation:', error);
-  }
+  await (response as any).json();
 }
-// === END ADDED CODE ===
+
+async function handleRotate() {
+  const response = await customFetch(`${webuiUrl}/api/rotate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  await (response as any).json();
+}
 
 // === 专用快捷键注册函数 ===
 function registerGlobalShortcuts() {
@@ -303,12 +265,11 @@ function registerGlobalShortcuts() {
     { key: 'START', accelerator: GLOBAL_SHORTCUTS.START, handler: handleStart },
     { key: 'STOP', accelerator: GLOBAL_SHORTCUTS.STOP, handler: handleStop },
     { key: 'RESTART', accelerator: GLOBAL_SHORTCUTS.RESTART, handler: handleRestart },
-    // Added screen rotation shortcut
-    { key: 'ROTATE_SCREEN', accelerator: GLOBAL_SHORTCUTS.ROTATE_SCREEN, handler: handleRotateScreen }
+    { key: 'UPDATE', accelerator: GLOBAL_SHORTCUTS.UPDATE, handler: handleUpdate },
+    { key: 'ROTATE', accelerator: GLOBAL_SHORTCUTS.ROTATE, handler: handleRotate }
   ];
 
   globalShortcuts.forEach(({ key, accelerator, handler }) => {
-    // 确保不重复注册
     if (globalShortcut.isRegistered(accelerator)) {
       globalShortcut.unregister(accelerator);
     }
@@ -321,7 +282,7 @@ function registerGlobalShortcuts() {
     }
   });
 
-  // 条件生效的快捷键（始终注册但条件执行）
+  // 条件生效的快捷键
   const conditionalShortcuts = [
     { 
       accelerator: GLOBAL_SHORTCUTS.DEV_TOOLS, 
@@ -363,9 +324,8 @@ function registerGlobalShortcuts() {
 app.whenReady()
   .then(() => {
     createWindow();
-    registerGlobalShortcuts(); // 统一注册所有快捷键
+    registerGlobalShortcuts(); // 注册快捷键
     
-    // 开发环境检查更新
     if (import.meta.env.PROD) {
       import('electron-updater')
         .then(({ autoUpdater }) => autoUpdater.checkForUpdatesAndNotify())

@@ -1658,11 +1658,76 @@ def app():
             'message': 'Restart command received. The application will restart in a moment.'
         })
 
+    async def api_system_update(request):
+        """
+        API endpoint to start the application update process.
+        """
+        # States indicating the updater is busy
+        busy_states = ["checking", "start", "wait", "run update"]
+        if updater.state in busy_states:
+            logger.warning(f"API: Received update request, but updater is already busy with state: {updater.state}")
+            return JSONResponse(
+                {
+                    'status': 'error',
+                    'message': f'Update already in progress. Current state: {updater.state}'
+                },
+                status_code=409  # Conflict
+            )
+
+        logger.info("API: Update process initiated via API.")
+        # This function starts the update process in the background
+        updater.run_update()
+
+        return JSONResponse({
+            'status': 'success',
+            'message': 'Update process initiated. Check the status endpoint for progress. The application may restart upon completion.'
+        })
+
+    def screen_rotate(orientation=0):
+        """
+        Set screen orientation
+        orientation: 0=landscape, 1=portrait(90), 2=landscape flipped, 3=portrait(270)
+        """
+        import win32api, win32con
+
+        device = win32api.EnumDisplayDevices(None, 0)
+        dm = win32api.EnumDisplaySettings(device.DeviceName, win32con.ENUM_CURRENT_SETTINGS)
+
+        # Only change if orientation is different
+        if dm.DisplayOrientation != orientation:
+            # Swap width and height when switching between landscape and portrait
+            if (dm.DisplayOrientation + orientation) % 2 == 1:
+                dm.PelsWidth, dm.PelsHeight = dm.PelsHeight, dm.PelsWidth
+
+            dm.DisplayOrientation = orientation
+            win32api.ChangeDisplaySettingsEx(device.DeviceName, dm)
+            logger.info(f'Screen orientation set to {orientation}')
+
+    async def api_system_rotate(request):
+        import win32api, win32con
+        device = win32api.EnumDisplayDevices(None, 0)
+        dm = win32api.EnumDisplaySettings(device.DeviceName, win32con.ENUM_CURRENT_SETTINGS)
+
+        # Landscape → Portrait
+        if dm.DisplayOrientation == 0:  
+            screen_rotate(1)
+            return JSONResponse({'status': 'success', 'message': 'Screen rotated to portrait (left side up)'})
+
+        # Portrait → Landscape
+        elif dm.DisplayOrientation == 1:
+            screen_rotate(0)
+            return JSONResponse({'status': 'success', 'message': 'Screen rotated to landscape'})
+
+        else:
+            return JSONResponse({'status': 'error', 'message': f'Current orientation {dm.DisplayOrientation} not supported'}, status_code=400)
+
     # Add the API routes to the Starlette application
     app.router.routes.extend([
         Route('/api/{config_name:str}/start', endpoint=api_start, methods=['POST']),
         Route('/api/{config_name:str}/stop', endpoint=api_stop, methods=['POST']),
         Route('/api/restart', endpoint=api_system_restart, methods=['POST']),
+        Route('/api/update', endpoint=api_system_update, methods=['POST']),
+        Route('/api/rotate', endpoint=api_system_rotate, methods=['POST']),
     ])
 
     return app
