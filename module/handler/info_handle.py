@@ -161,6 +161,11 @@ class InfoHandler(ModuleBase):
         """
         处理红圈
         """
+        # 模型参数（根据拟合结果）
+        k = 0.5
+        x_center = 360
+        screen_width = 720
+
         circles = TEMPLATE_RED_CIRCLE.match_multi(self.device.image, similarity=0.65, name='RED_CIRCLE')
         for circle in circles:
             x = circle.location[0]
@@ -168,18 +173,21 @@ class InfoHandler(ModuleBase):
             if x < 75 or y > 1000:
                 continue
 
-            # 因为画面变动添加的偏移
-            if x < 300:
-                x_click = x + 90
-            elif x > 400:
-                x_click = x - 90
-            else:
-                x_click = x
+            # 动态偏移
+            dx = k * (x_center - x)
+            x_click = x + dx
+            # 防止超出屏幕
+            x_click = max(0, min(screen_width, x_click))
 
-            # 坐标识别偏移
+            # 红圈中心偏移
             y_click = y + 40
-            logger.info('Click %s @ %s' % (point2str(x_click, y_click), 'RED_CIRCLE'))
+
+            # 坐标取整
+            x_click = int(round(x_click))
+            y_click = int(round(y_click))
+            logger.info('Click %s @ %s (dx=%.2f)' % (point2str(x_click, y_click), 'RED_CIRCLE', dx))
             self.device.long_click_minitouch(x_click, y_click, 1)
+
             # 画面回正
             self.device.sleep(0.5)
             return True

@@ -37,36 +37,36 @@ class Interception(UI):
     def _run(self, skip_first_screenshot=True):
         click_timer = Timer(0.3)
 
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
+        # while 1:
+        #     if skip_first_screenshot:
+        #         skip_first_screenshot = False
+        #     else:
+        #         self.device.screenshot()
 
-            if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10):
-                break
+        #     if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10):
+        #         break
 
-            if click_timer.reached() and self.appear(
-                self.get_boss_button(self.config.Interception_Boss), offset=10, interval=1
-            ):
-                logger.info('Click %s @ CHALLANGE' % point2str(360, 1030))
-                self.device.click_minitouch(360, 1030)
-                # self.device.sleep(1)
-                click_timer.reset()
-                continue
+        #     if click_timer.reached() and self.appear(
+        #         self.get_boss_button(self.config.Interception_Boss), offset=10, interval=1
+        #     ):
+        #         logger.info('Click %s @ CHALLANGE' % point2str(360, 1030))
+        #         self.device.click_minitouch(360, 1030)
+        #         # self.device.sleep(1)
+        #         click_timer.reset()
+        #         continue
 
-            if (
-                self.appear(KRAKEN, offset=10)
-                or self.appear(HARVESTER, offset=10)
-                or self.appear(INDIVILIA, offset=10)
-                or self.appear(MIRRORCONTAINER, offset=10)
-                or self.appear(ULTRA, offset=10)
-            ) and not self.appear(self.get_boss_button(self.config.Interception_Boss), offset=10):
-                logger.info('Click %s @ SWITCH' % point2str(580, 960))
-                self.device.click_minitouch(580, 960)
-                self.device.sleep(0.5)
-                click_timer.reset()
-                continue
+        #     if (
+        #         self.appear(KRAKEN, offset=10)
+        #         or self.appear(HARVESTER, offset=10)
+        #         or self.appear(INDIVILIA, offset=10)
+        #         or self.appear(MIRRORCONTAINER, offset=10)
+        #         or self.appear(ULTRA, offset=10)
+        #     ) and not self.appear(self.get_boss_button(self.config.Interception_Boss), offset=10):
+        #         logger.info('Click %s @ SWITCH' % point2str(580, 960))
+        #         self.device.click_minitouch(580, 960)
+        #         self.device.sleep(0.5)
+        #         click_timer.reset()
+        #         continue
 
         self.device.click_record_clear()
         self.device.stuck_record_clear()
