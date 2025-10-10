@@ -1263,4 +1263,7 @@ class Event(UI):
         except CoopIsUnavailable:
             pass
 
+        # 开启协同时多运行一次
+        if self.config.Event_Coop:
+            self.Scheduler_ServerUpdate = '04:00, 16:00'
         self.config.task_delay(server_update=True)
