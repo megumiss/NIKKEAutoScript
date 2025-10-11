@@ -855,13 +855,13 @@ class Event(UI):
             # 最后阶段的协同未开启
             if self.appear(LAST_COOP_LOCK, offset=10):
                 logger.warning('Last Coop is not enabled')
-                return
+                return True
 
             # 协同未在开启时间
             if self.appear(self.event_assets.COOP_LOCK, offset=10):
                 logger.warning('Coop is not enabled')
                 self.back_to_event_from_coop()
-                return
+                return True
 
             # 协同选择/协同主页
             if self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10) or self.appear(COOP_CHECK, offset=10):
@@ -884,7 +884,7 @@ class Event(UI):
             else:
                 logger.warning('Not found any coop in event')
                 self.back_to_event_from_coop()
-                return
+                return True
             # 查找所有coming soon的协同，去重
             coop_comings = TEMPLATE_COOP_COMING_SOON.match_multi(self.device.image, name='COOP_COMING_SOON')
             if coop_comings:
@@ -894,7 +894,7 @@ class Event(UI):
             if len(coop_icons) == len(coop_comings):
                 logger.warning('Not found enabled coop in event')
                 self.back_to_event_from_coop()
-                return
+                return True
             else:
                 # 不一致则通过coming soon过滤掉没开启的协同，过滤后的即为开启
                 enabled_coop_icons = set()
@@ -936,6 +936,7 @@ class Event(UI):
         # 回到活动主页
         self.back_to_event()
         self.back_to_event_from_coop()
+        return False
 
     @Config.when(EVENT_TYPE=(2, 3))
     def coop(self):
@@ -1233,6 +1234,9 @@ class Event(UI):
                 raise EventUnavailableError
 
     def run(self):
+        # 是否需要重新执行
+        coop_reschedule = False
+
         try:
             self.ui_ensure(page_main)
             _ = self.event
@@ -1245,7 +1249,7 @@ class Event(UI):
             if self.config.Event_Story:
                 self.story()
             if self.config.Event_Coop:
-                self.coop()
+                coop_reschedule = self.coop()
             if self.config.Event_Game:
                 self.game()
 
@@ -1263,7 +1267,7 @@ class Event(UI):
         except CoopIsUnavailable:
             pass
 
-        # 开启协同时多运行一次
-        if self.config.Event_Coop:
-            self.Scheduler_ServerUpdate = '04:00, 16:00'
+        # 若协同未开启则调整延迟时间
+        if self.config.Event_Coop and coop_reschedule:
+            self.config.Scheduler_ServerUpdate = '04:00, 23:00'
         self.config.task_delay(server_update=True)
