@@ -24,7 +24,6 @@ class Starter(GitManager, PipManager, NKASManager):
             sys.exit(1)
 
 
-
 if __name__ == '__main__':
     try:
         Starter().start()
