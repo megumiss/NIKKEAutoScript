@@ -12,9 +12,9 @@ class Starter(GitManager, PipManager, NKASManager):
 
         atomic_failure_cleanup('./config')
         try:
-            self.nkas_kill()
             if self.AutoUpdate:
                 self.git_update()
+            self.nkas_kill()
         except ExecutionError:
             input('Press Enter to continue...')  # Keep window open
             sys.exit(1)
