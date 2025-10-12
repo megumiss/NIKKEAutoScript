@@ -95,6 +95,5 @@ class NKASManager(DeployConfig):
         self.kill_by_name('nkas.exe')
         self.kill_by_name('python.exe')
 
-# TODO 更换为install
 if __name__ == '__main__':
     NKASManager().nkas_kill()
