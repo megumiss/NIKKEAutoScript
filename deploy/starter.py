@@ -14,6 +14,7 @@ class Starter(GitManager, PipManager, NKASManager):
         try:
             if self.AutoUpdate:
                 self.git_update()
+                self.pip_install()
             self.nkas_kill()
         except ExecutionError:
             input('Press Enter to continue...')  # Keep window open
