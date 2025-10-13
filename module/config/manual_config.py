@@ -100,6 +100,15 @@ class ManualConfig:
             "story_difficulty": "Hard"  # Normal, Hard
         },
         {
+            "event_id": "event_20251016",
+            "event_name": "GO! NINJA THIEF!",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20250904",
             "event_name": "COINS IN RUSH",
             # 大型活动
