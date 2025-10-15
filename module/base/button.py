@@ -5,6 +5,7 @@ import cv2
 import imageio
 import numpy as np
 
+from module.logger import logger
 from module.base.resource import Resource
 from module.base.utils import *
 
@@ -134,7 +135,6 @@ class Button(Resource):
 
         res = cv2.matchTemplate(self.image, image, cv2.TM_CCOEFF_NORMED)
         _, similarity, _, upper_left = cv2.minMaxLoc(res)
-        # print(self.name, similarity)
 
         if similarity > threshold:
             if static:
@@ -144,6 +144,7 @@ class Button(Resource):
                 bottom_right = (upper_left[0] + w, upper_left[1] + h)
                 self._button_offset = (upper_left[0], upper_left[1], bottom_right[0], bottom_right[1])
 
+        logger.debug(f'Button: {self.name}, similarity: {similarity}, threshold: {threshold}, hit: {similarity > threshold}')
         return similarity > threshold
 
         # if self.is_gif:
@@ -155,6 +156,55 @@ class Button(Resource):
         #             return True
         #     return False
         # else:
+
+    def match_with_scale(self, image, threshold=0.85, scale_range=(0.9, 1.1), scale_step=0.02):
+        """
+        多尺度匹配：在一定范围内连续搜索最佳缩放匹配
+
+        Args:
+            image: 要匹配的图像
+            offset (int | tuple): 匹配区域偏移
+            threshold (float): 相似度阈值
+            scale_range (tuple[float, float]): 缩放范围 (min_scale, max_scale)
+            scale_step (float): 缩放步长
+
+        Returns:
+            bool: 是否匹配成功
+        """
+        self.ensure_template()
+
+        best_similarity = -1
+        best_scale = 1.0
+        best_loc = None
+
+        # 在范围内连续扫描比例
+        scale = scale_range[0]
+        while scale <= scale_range[1]:
+            resized_template = cv2.resize(self.image, (0, 0), fx=scale, fy=scale)
+            if resized_template.shape[0] > image.shape[0] or resized_template.shape[1] > image.shape[1]:
+                scale += scale_step
+                continue
+
+            res = cv2.matchTemplate(image, resized_template, cv2.TM_CCOEFF_NORMED)
+            _, similarity, _, upper_left = cv2.minMaxLoc(res)
+
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_scale = scale
+                best_loc = upper_left
+
+            scale += scale_step
+
+        if best_similarity > threshold:
+            h, w = self.area[3] - self.area[1], self.area[2] - self.area[0]
+            bottom_right = (best_loc[0] + w, best_loc[1] + h)
+            self._button_offset = (best_loc[0], best_loc[1], bottom_right[0], bottom_right[1])
+
+        logger.debug(
+            f'Button: {self.name}, best_similarity: {best_similarity:.3f}, '
+            f'best_scale: {best_scale:.3f}, threshold: {threshold}, hit: {best_similarity > threshold}'
+        )
+        return best_similarity > threshold
 
     def match_luma(self, image, offset=30, similarity=0.85):
         """
@@ -216,11 +266,14 @@ class Button(Resource):
         Returns:
             bool: True if button appears on screenshot.
         """
-        return color_similar(
-            color1=get_color(image, self.area),
-            color2=self.color,
-            threshold=threshold
+        color1 = get_color(image, self.area)
+        similar = color_similar(
+            color1=color1,
+            color2=self.color
         )
+
+        logger.debug(f'Button: {self.name}, color1: {color1}, color2: {self.color}, similarity: {similar}, threshold: {threshold}, hit: {similar <= threshold}')
+        return similar <= threshold
 
     def match_appear_on(self, image, threshold=30) -> bool:
         """
@@ -233,7 +286,15 @@ class Button(Resource):
         """
         diff = np.subtract(self.button, self._button)[:2]
         area = area_offset(self.area, offset=diff)
-        return color_similar(color1=get_color(image, area), color2=self.color, threshold=threshold)
+
+        color1 = get_color(image, area)
+        similar = color_similar(
+            color1=color1,
+            color2=self.color
+        )
+
+        logger.debug(f'Button: {self.name}, color1: {color1}, color2: {self.color}, similarity: {diff}, threshold: {threshold}, hit: {diff <= threshold}')
+        return similar <= threshold
 
     def load_color(self, image):
         """Load color from the specific area of the given image.
@@ -301,3 +362,56 @@ class Button(Resource):
         if image is not None:
             button.load_color(image)
         return button
+
+def filter_buttons_in_area(
+    buttons: list[Button], x_range: tuple[int, int] = None, y_range: tuple[int, int] = None
+) -> list[Button]:
+    """
+    筛选在指定范围内的 Button
+    - 可以只指定 x_range 或 y_range
+    - 按 Button 的 area 来判断
+    """
+    filtered = []
+    for btn in buttons:
+        x1, y1, x2, y2 = btn.area
+        if x_range:
+            if x1 < x_range[0] or x2 > x_range[1]:
+                continue
+        if y_range:
+            if y1 < y_range[0] or y2 > y_range[1]:
+                continue
+        filtered.append(btn)
+    return filtered
+
+def merge_buttons(
+    buttons: list[Button], x_threshold: int = 10, y_threshold: int = 10
+) -> list[Button]:
+    """
+    根据阈值合并接近的 Button
+    - 如果两个按钮区域在阈值范围内接近，只保留一个（默认保留先出现的）
+    - x_threshold: 横向阈值
+    - y_threshold: 纵向阈值
+    """
+    merged = []
+
+    for btn in buttons:
+        x1, y1, x2, y2 = btn.area
+        is_duplicate = False
+
+        for m in merged:
+            mx1, my1, mx2, my2 = m.area
+
+            # 判断是否在阈值范围内
+            if (
+                abs(x1 - mx1) <= x_threshold and
+                abs(y1 - my1) <= y_threshold and
+                abs(x2 - mx2) <= x_threshold and
+                abs(y2 - my2) <= y_threshold
+            ):
+                is_duplicate = True
+                break
+
+        if not is_duplicate:
+            merged.append(btn)
+
+    return merged

@@ -65,6 +65,10 @@ Scheduler:
   ServerUpdate:
     value: 04:00
     display: hide
+Client:
+  Platform:
+    value: adb
+    option: [ adb, win ]
 Emulator:
   Serial:
     value: auto
@@ -107,6 +111,42 @@ EmulatorInfo:
     type: textarea
   path:
     value: null
+    type: textarea
+PCClient:
+  Screens:
+    value: false
+  GameResolutionCompat:
+    value: false
+  CloseAutoHdr: true
+  ScreenRotate: false
+  GameWindowPosition:
+    value: center
+    option: [ center, left, right, topleft, topright ]
+  Account:
+    value: ''
+  Password:
+    value: ''
+PCClientInfo:
+  Client:
+    value: intl
+    option: [ intl, hmt ]
+  Language:
+    value: zh-cn
+    option: [ zh-cn ]
+  ScreenshotInterval: 0.3
+  LauncherTitleName:
+    value: ''
+  LauncherProcessName:
+    value: ''
+  LauncherPath:
+    value: ''
+    type: textarea
+  GameTitleName:
+    value: ''
+  GameProcessName:
+    value: ''
+  GamePath:
+    value: ''
     type: textarea
 Optimization:
   AutoRedCircle: false
@@ -157,6 +197,7 @@ RubbishShop:
 Notification:
   WhenDailyTaskCompleted: false
   WhenDailyTaskCrashed: false
+  WinOnePush: false
   OnePushConfig:
     type: textarea
     mode: yaml
@@ -166,9 +207,10 @@ Daily:
   EnhanceEquipment: false
   CallReward: false
 CollectionItems:
-  NIKKE:
-    value: 'All'
-    option: [ 'All','Laplace','Frima','Diesel','Exia' ]
+  Enable: false
+  Priority:
+    value: ''
+    type: textarea
 OpponentSelection:
   Enable: false
   SortingWeight:
@@ -192,12 +234,7 @@ BlaAuth:
     value: ''
     type: textarea
 BlaDaily:
-  PostID:
-    value: ''
-    valuetype: str
-  CommentID:
-    value: ''
-    valuetype: str
+  Immediately: false
   Points:
     value: ''
     display: disabled
@@ -219,6 +256,8 @@ Event:
   Event:
     value: ''
     option: [
+      'event_20250924',
+      'event_20250904',
       'event_20250807',
       'event_20250716',
       'event_20250703s',
@@ -249,15 +288,36 @@ Event:
     value: 'TITLE'
     type: textarea
   Game: false
+  GameStorySkip: false
+  GameLoop: false
 CheerStrategy:
   Enable: false
   Strategy:
     value: 'Most'
     option: [ 'Most','Few','Random' ]
 Interception:
+  Boss:
+    value: 'Kraken'
+    option: [ 'Kraken', 'Indivilia', 'Harvester', 'MirrorContainer', 'Ultra' ]
   DropScreenshotPath:
     value: ''
     type: textarea
+InterceptionTeam:
+  Kraken:
+    value: 1
+    option: [ 1, 2, 3, 4, 5 ]
+  Indivilia:
+    value: 2
+    option: [ 1, 2, 3, 4, 5 ]
+  Harvester:
+    value: 3
+    option: [ 1, 2, 3, 4, 5 ]
+  MirrorContainer:
+    value: 4
+    option: [ 1, 2, 3, 4, 5 ]
+  Ultra:
+    value: 5
+    option: [ 1, 2, 3, 4, 5 ]
 Overclock:
   # DisableFirst: false
   SkipRatioCheck: false
@@ -265,15 +325,30 @@ Overclock:
   ModifierList:
     value: "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
     type: textarea
-TowerDaemon:
+AutoTower:
   Enable:
     value: true
     display: disabled
-CombatDaemon:
-  Enable:
+SemiCombat:
+  SkipStory:
     value: false
+  FightQuickly:
+    value: false
+  MainStoryMark:
+    value: false
+BlaCDKManual:
+  CDK:
+    value: ''
+    valuetype: str
+Highlights:
+  AutoSwitch:
+    value: true
     display: disabled
-EventDaemon:
-  Enable:
-    value: false
+ScreenRotate:
+  Orientation:
+    value: 0
+    option: [ 0, 1 ]
+Synchro:
+  UseBox:
+    value: true
     display: disabled

@@ -19,6 +19,6 @@ RAID_TEAM_5 = Button(area={'zh-cn': (605, 864, 670, 887)}, color={'zh-cn': (83, 
 UNION = Button(area={'zh-cn': (635, 397, 684, 422)}, color={'zh-cn': (97, 99, 103)}, button={'zh-cn': (635, 397, 684, 422)}, file={'zh-cn': './assets/zh-cn/union_raid/UNION.png'})
 UNION_CHECK = Button(area={'zh-cn': (527, 1068, 620, 1089)}, color={'zh-cn': (154, 154, 155)}, button={'zh-cn': (527, 1068, 620, 1089)}, file={'zh-cn': './assets/zh-cn/union_raid/UNION_CHECK.png'})
 UNION_RAID = Button(area={'zh-cn': (298, 898, 421, 914)}, color={'zh-cn': (76, 75, 72)}, button={'zh-cn': (298, 898, 421, 914)}, file={'zh-cn': './assets/zh-cn/union_raid/UNION_RAID.png'})
-UNION_RAID_CHECK = Button(area={'zh-cn': (310, 358, 409, 374)}, color={'zh-cn': (123, 95, 65)}, button={'zh-cn': (310, 358, 409, 374)}, file={'zh-cn': './assets/zh-cn/union_raid/UNION_RAID_CHECK.png'})
+UNION_RAID_CHECK = Button(area={'zh-cn': (338, 93, 382, 107)}, color={'zh-cn': (134, 57, 20)}, button={'zh-cn': (338, 93, 382, 107)}, file={'zh-cn': './assets/zh-cn/union_raid/UNION_RAID_CHECK.png'})
 UNION_RAID_ENEMY_CHECK = Button(area={'zh-cn': (594, 736, 663, 753)}, color={'zh-cn': (185, 184, 185)}, button={'zh-cn': (594, 736, 663, 753)}, file={'zh-cn': './assets/zh-cn/union_raid/UNION_RAID_ENEMY_CHECK.png'})
 UNION_RAID_SELECT = Button(area={'zh-cn': (207, 955, 224, 967)}, color={'zh-cn': (66, 45, 32)}, button={'zh-cn': (207, 955, 224, 967)}, file={'zh-cn': './assets/zh-cn/union_raid/UNION_RAID_SELECT.png'})

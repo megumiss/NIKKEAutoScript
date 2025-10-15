@@ -22,12 +22,16 @@ from module.ui.page import (
     page_outpost,
     page_pass,
     page_recruit,
+    page_recycling,
+    page_recycling_facility,
     page_reward,
     page_rookie_arena,
     page_shop,
     page_simulation_room,
     page_special_arena,
     page_special_interception,
+    page_synchro,
+    page_synchro_facility,
     page_team,
     page_tribe_tower,
     page_unknown,
@@ -56,6 +60,10 @@ class UI(InfoHandler):
         page_special_arena,
         page_outpost,
         page_commission,
+        page_synchro,
+        page_recycling,
+        page_synchro_facility,
+        page_recycling_facility,
         page_mailbox,
         page_interception,
         page_special_interception,
@@ -82,7 +90,6 @@ class UI(InfoHandler):
             self.device.get_orientation()
 
         timeout = Timer(30, count=20).start()
-        click_timer = Timer(0.3)
 
         while 1:
             if skip_first_screenshot:
@@ -107,11 +114,12 @@ class UI(InfoHandler):
 
             # Unknown page but able to handle
             logger.info('Unknown ui page')
-            if click_timer.reached() and (
-                self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2) or self.ui_additional()
-            ):
+            # 加载画面
+            if self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2):
                 timeout.reset()
-                click_timer.reset()
+                continue
+            if self.ui_additional():
+                timeout.reset()
                 continue
 
             app_check()
@@ -119,15 +127,24 @@ class UI(InfoHandler):
 
         # Unknown page, need manual switching
         logger.warning('Unknown ui page')
-        logger.attr('EMULATOR__SCREENSHOT_METHOD', self.config.Emulator_ScreenshotMethod)
-        logger.attr('EMULATOR__CONTROL_METHOD', self.config.Emulator_ControlMethod)
-        logger.attr(
-            'SERVER',
-            'intl' if 'proximabeta' in self.config.Emulator_PackageName else 'tw',
-        )
+        if self.config.Client_Platform == 'adb':
+            logger.attr('CLENT_PLATFORM', self.config.Client_Platform)
+            logger.attr('EMULATOR_SCREENSHOT_METHOD', self.config.Emulator_ScreenshotMethod)
+            logger.attr('EMULATOR_CONTROL_METHOD', self.config.Emulator_ControlMethod)
+            logger.attr(
+                'SERVER',
+                'intl' if 'proximabeta' in self.config.Emulator_PackageName else 'tw',
+            )
+            logger.attr('LANGUAGE', self.config.Emulator_Language)
+            logger.warning('Supported page: Any page with a "HOME" button on the bottom-left')
+        if self.config.Client_Platform == 'win':
+            logger.attr('CLENT_PLATFORM', self.config.Client_Platform)
+            logger.attr('CLIENT', self.config.PCClientInfo_Client)
+            # logger.attr('SERVER', )
+            logger.attr('LANGUAGE', self.config.PCClientInfo_Language)
+            logger.warning('Please check Launcher/Game title and process in correct')
         logger.warning('Starting from current page is not supported')
         logger.warning(f'Supported page: {[str(page) for page in self.ui_pages]}')
-        logger.warning('Supported page: Any page with a "HOME" button on the bottom-left')
         logger.critical('Please switch to a supported page before starting NKAS')
         raise GamePageUnknownError
 
@@ -222,6 +239,12 @@ class UI(InfoHandler):
             return True
 
     def ui_additional(self):
+        """
+        Handle all annoying popups during UI switching.
+
+        Args:
+            get_ship:
+        """
         # TODO SKIP, 战斗, 公告, etc.
 
         # 指挥官等级升级
@@ -256,7 +279,10 @@ class UI(InfoHandler):
         if self.handle_system_maintenance():
             return True
 
-        if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30), interval=3):
+        if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30)):
+            raise GameStart
+
+        if self.appear(LOGO_PAGE_CHECK, offset=(30, 30)):
             raise GameStart
 
         # if self.handle_event():

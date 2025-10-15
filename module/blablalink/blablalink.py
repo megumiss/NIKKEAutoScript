@@ -60,10 +60,10 @@ class Blablalink(UI):
     }
 
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__(config, independent=True)
         self.session = requests.Session()
         self.common_headers = self.base_headers.copy()
-        self._cdk_temp_path = Path('./tmp/cdk_history.json')  # 临时文件路径
+        self._cdk_temp_path = Path(f'./tmp/{config.config_name}/cdk_history.json')  # 临时文件路径
         self._prepare_config()
 
     def _prepare_config(self):
@@ -306,7 +306,7 @@ class Blablalink(UI):
             return False
 
     def open_random_posts(self):
-        """随机打开3个帖子"""
+        """随机打开5个帖子"""
         logger.info('Starting browse posts task')
         # 获取所有帖子（不过滤点赞状态）
         post_uuids = self.get_post_list()
@@ -315,7 +315,7 @@ class Blablalink(UI):
             logger.warning('No posts available to browse')
             return
 
-        selected = random.sample(post_uuids, min(3, len(post_uuids)))
+        selected = random.sample(post_uuids, min(5, len(post_uuids)))
         logger.info(f'Randomly selected {len(selected)} posts to browse')
 
         for post_uuid in selected:
@@ -477,15 +477,15 @@ class Blablalink(UI):
         if not task_status.get('browse_completed', True):
             self.open_random_posts()
 
-        if not task_status.get('comment_completed', True):
-            self.post_comment()
+        # if not task_status.get('comment_completed', True):
+        #     self.post_comment()
 
         # 获取金币数量
         points = self.get_points()
         self.config.BlaDaily_Points = points
         logger.info(f'Current points: {points}')
 
-    def cdk(self):
+    def cdk(self, cdk: str = None):
         """CDK兑换功能"""
         logger.info('Starting CDK redemption task')
 
@@ -493,26 +493,32 @@ class Blablalink(UI):
         redeemed_cdks = self.get_cdk_redemption_history()
         self._append_cdks_to_temp(redeemed_cdks)
 
-        # 2. 从官方接口获取未兑换的CDK列表
-        official_cdks = self.get_official_cdks()
-        unredeemed_cdks = official_cdks.copy()
+        # 2. 从临时文件加载所有已记录的 CDK
+        temp_cdks = self._load_cdks_from_temp()
 
-        # 3. 如果开启额外来源，添加来源网站中的CDK
-        if self.config.CDK_Extra:
-            sources = self.config.CDK_Source
-            if sources:
-                # 从临时文件加载所有已记录CDK
-                temp_cdks = self._load_cdks_from_temp()
-
-                # 提取外部CDK并过滤已记录的
-                extra_cdks = self.extract_external_cdks(sources)
-                for cdk in extra_cdks:
-                    if cdk not in temp_cdks and cdk not in unredeemed_cdks:
-                        unredeemed_cdks.append(cdk)
+        # 3. 构建待兑换列表
+        if cdk:
+            # 单CDK模式
+            unredeemed_cdks = []
+            if cdk not in redeemed_cdks and cdk not in temp_cdks:
+                unredeemed_cdks.append(cdk)
             else:
-                logger.warning('CDK_Extra enabled but no sources configured')
+                logger.info(f'CDK {cdk} already redeemed or recorded, skipping')
         else:
-            logger.info('CDK_Extra disabled, only using official CDKs')
+            # 批量模式：官方 + 额外来源
+            unredeemed_cdks = self.get_official_cdks().copy()
+            if self.config.CDK_Extra:
+                sources = self.config.CDK_Source
+                if sources:
+                    # 提取外部CDK并过滤已记录的
+                    extra_cdks = self.extract_external_cdks(sources)
+                    for extra in extra_cdks:
+                        if extra not in temp_cdks and extra not in unredeemed_cdks:
+                            unredeemed_cdks.append(extra)
+                else:
+                    logger.warning('CDK_Extra enabled but no sources configured')
+            else:
+                logger.info('CDK_Extra disabled, only using official CDKs')
 
         if not unredeemed_cdks:
             logger.info('All CDK candidates have already been redeemed')
@@ -522,8 +528,8 @@ class Blablalink(UI):
 
         # 4. 尝试兑换未使用的CDK
         success_count = 0
-        for cdk in unredeemed_cdks:
-            if self.redeem_cdk(cdk):
+        for code in unredeemed_cdks:
+            if self.redeem_cdk(code):
                 success_count += 1
                 # 如果兑换成功，将CDK追加到临时文件
                 # self._append_cdks_to_temp([cdk])
@@ -654,11 +660,15 @@ class Blablalink(UI):
 
             if result.get('code') == 0 and result.get('msg') == 'ok':
                 logger.info(f'Successfully redeemed CDK: {cdk}')
+                # 将CDK追加到临时文件
+                self._append_cdks_to_temp([cdk])
                 return True
 
             # 处理不同的错误情况
             msg = result.get('msg', 'CDK Exchange err')
             logger.error(f'Failed to redeem CDK {cdk}: {msg}')
+            # 将CDK追加到临时文件
+            self._append_cdks_to_temp([cdk])
             return False
         except Exception as e:
             logger.error(f'Exception when redeeming CDK {cdk}: {str(e)}')
@@ -867,24 +877,45 @@ class Blablalink(UI):
             logger.error(f'Exception when performing exchange: {str(e)}')
             return False
 
+    def cdk_manual(self):
+        try:
+            cdk = deep_get(self.config.data, keys='BlaCDKManual.BlaCDKManual.CDK')
+            self.cdk(cdk)
+        except MissingHeader:
+            logger.error('Please check all parameters settings')
+            raise RequestHumanTakeover
+        except Exception as e:
+            logger.error(f'Blablalink exception: {str(e)}')
+            raise RequestHumanTakeover
+
     def run(self, task):
+        """
+        默认情况下，任务在 4:00–8:00 时间段执行时会自动推迟到 8 点以后；
+        开启 immediate 选项后，任务将立即执行，不再延迟。
+        """
         try:
             local_now = datetime.now()
             target_time = local_now.replace(hour=8, minute=0, second=0, microsecond=0)
-            if local_now > target_time:
-                if task == 'daily':
-                    self.daily()
-                    self.config.task_delay(server_update=True)
-                if task == 'cdk':
-                    self.cdk()
-                    self.config.task_delay(server_update=True)
-                if task == 'exchange':
-                    self.exchange()
-                    self.config.task_delay(target=self.next_month)
-            else:
+
+            # 情况1：4–8点之间，推迟到 8 点 + 随机分钟（除非 immediate）
+            if 4 <= local_now.hour < 8 and not self.config.BlaDaily_Immediately:
                 random_minutes = random.randint(5, 30)
                 target_time = target_time + timedelta(minutes=random_minutes)
                 self.config.task_delay(target=target_time)
+                return
+
+            # 情况2：立即执行（00–04点，>=8点，或 immediate=True）
+            if self.config.BlaDaily_Immediately or local_now.hour < 4 or local_now >= target_time:
+                if task == 'daily':
+                    self.daily()
+                    self.config.task_delay(server_update=True)
+                elif task == 'cdk':
+                    self.cdk()
+                    self.config.task_delay(server_update=True)
+                elif task == 'exchange':
+                    self.exchange()
+                    self.config.task_delay(target=self.next_month)
+                return
         except MissingHeader:
             logger.error('Please check all parameters settings')
             raise RequestHumanTakeover

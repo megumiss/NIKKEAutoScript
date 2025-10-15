@@ -160,3 +160,23 @@ page_ranking = Page(RANKING_CHECK)
 page_ranking.link(button=GOTO_BACK, destination=page_ark)
 page_ranking.link(button=GOTO_MAIN, destination=page_main)
 page_ark.link(button=ARK_GOTO_RANKING, destination=page_ranking)
+
+# facility
+page_synchro_facility = Page(FACILITY_SYNCHRO)
+page_synchro_facility.link(button=FACILITY_BACK, destination=page_outpost)
+page_recycling_facility = Page(FACILITY_RECYCLING)
+page_recycling_facility.link(button=FACILITY_BACK, destination=page_outpost)
+
+# synchro
+page_synchro = Page(SYNCHRO_CHECK)
+page_outpost.link(button=OUTPOST_GOTO_SYNCHRO, destination=page_synchro_facility)
+page_synchro_facility.link(button=FACILITY_ENTER, destination=page_synchro)
+page_synchro.link(button=GOTO_BACK, destination=page_synchro_facility)
+page_synchro_facility.link(button=FACILITY_BACK, destination=page_outpost)
+
+# recycling
+page_recycling = Page(RECYCLING_CHECK)
+page_outpost.link(button=OUTPOST_GOTO_RECYCLING, destination=page_recycling_facility)
+page_recycling_facility.link(button=FACILITY_ENTER, destination=page_recycling)
+page_recycling.link(button=GOTO_BACK, destination=page_recycling_facility)
+page_recycling_facility.link(button=FACILITY_BACK, destination=page_outpost)

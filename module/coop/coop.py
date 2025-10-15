@@ -50,11 +50,10 @@ class Coop(UI):
     @property
     def dateline(self) -> bool:
         date = self.coop_date
-        if date == '时间到' or '小时' not in date:
+        if date == '时间到' or ('小时' not in date and '剩余' not in date):
             logger.info('[Coop has expired]')
             return True
-        else:
-            return False
+        return False
 
     def ensure_into_coop(self, skip_first_screenshot=True):
         """普通协同，从banner进入作战"""
@@ -69,6 +68,7 @@ class Coop(UI):
                 self.device.screenshot()
 
             if not coop_enter:
+                scroll_timer = Timer(60, count=30).start()
                 # 滑动banner查找协同作战
                 self.ensure_sroll((260, 150), (30, 150), speed=35, count=1, delay=0.5)
                 self.ensure_sroll((30, 150), (260, 150), speed=35, count=1, delay=0.5)
@@ -77,6 +77,11 @@ class Coop(UI):
                 banner_first._match_init = True
                 banner_first.image = crop(self.device.image, EVENT_BANNER.area)
                 while 1:
+                    # 超时检查
+                    if scroll_timer.reached():
+                        logger.warning('Search coop banner timeout')
+                        raise CoopIsUnavailable
+
                     if skip_first_screenshot:
                         skip_first_screenshot = False
                     else:
@@ -185,7 +190,15 @@ class Coop(UI):
                 continue
 
             # 结束
-            if click_timer.reached() and self.appear_then_click(END_FIGHTING, offset=10, interval=1):
+            if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(END_FIGHTING, offset=30):
+                        click_timer.reset()
+                        break
+                    if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
+                        click_timer.reset()
+                        continue
                 click_timer.reset()
                 break
 

@@ -68,20 +68,35 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                 self.update()
         else:
             super().__setattr__(key, value)
-    
+
     def __init__(self, config_name, task=None):
+        # This will read ./config/<config_name>.json
         self.config_name = config_name
+        # Raw json data in yaml file.
         self.data = {}
+        # Modified arguments. Key: Argument path in yaml file. Value: Modified value.
+        # All variable modifications will be record here and saved in method `save()`.
         self.modified = {}
+        # Key: Argument name in GeneratedConfig. Value: Path in `data`.
         self.bound = {}
+        # If write after every variable modification.
         self.auto_update = True
+        # Force override variables
+        # Key: Argument name in GeneratedConfig. Value: Modified value.
         self.overridden = {}
+        # Scheduler queue, will be updated in `get_next_task()`, list of Function objects
+        # pending_task: Run time has been reached, but haven't been run due to task scheduling.
+        # waiting_task: Run time haven't been reached, wait needed.
         self.pending_task = []
         self.waiting_task = []
+        # Task to run and bind.
+        # Task means the name of the function to run in AzurLaneAutoScript class.
         self.task: Function
-        self.is_template_config = config_name == "template"
+        # Template config is used for dev tools
+        self.is_template_config = config_name.startswith("template")
 
         if self.is_template_config:
+            # For dev tools
             logger.info("Using template config, which is read only")
             self.auto_update = False
             self.task = name_to_function("template")
@@ -104,6 +119,21 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         # logger.attr("Server", self.SERVER)
         logger.attr("Server", 'intl' if 'proximabeta' in self.Emulator_PackageName else 'tw')
 
+    def init_task(self, task=None):
+        if self.is_template_config:
+            return
+
+        self.load()
+        if task is None:
+            # Bind `Alas` by default which includes emulator settings.
+            task = name_to_function("NKAS")
+        else:
+            # Bind a specific task for debug purpose.
+            task = name_to_function(task)
+        self.bind(task)
+        self.task = task
+        self.save()
+
     def load(self):
         self.data = self.read_file(self.config_name)
         self.config_override()
@@ -117,7 +147,8 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             func_set (set): Set of tasks to be bound
         """
         if func_set is None:
-            func_set = {"General", "NKAS"}
+            # 参数全局访问
+            func_set = {"General", "NKAS", "Emulator", "PCClient"}
 
         if isinstance(func, Function):
             func = func.command
@@ -450,6 +481,10 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
     @property
     def EVENT_COOP(self):
         return self.Coop_EventCoop
+    
+    @property
+    def CLIENT_PLATFORM(self):
+        return self.Client_Platform
 
 class MultiSetWrapper:
     def __init__(self, main):

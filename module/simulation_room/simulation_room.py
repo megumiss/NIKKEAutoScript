@@ -34,19 +34,19 @@ class SimulationRoom(UI):
     @cached_property
     def difficulty_area(self):
         return {
-            'Level_1': (140, 550),
-            'Level_2': (370, 550),
-            'Level_3': (550, 550),
-            'Level_4': (240, 640),
-            'Level_5': (490, 640),
+            'Level_1': (120, 460),
+            'Level_2': (240, 460),
+            'Level_3': (360, 460),
+            'Level_4': (480, 460),
+            'Level_5': (600, 460),
         }
 
     @cached_property
     def region_area(self):
         return {
-            'A': (140, 790),
-            'B': (370, 790),
-            'C': (550, 790),
+            'A': (160, 720),
+            'B': (360, 720),
+            'C': (560, 720),
         }
 
     @cached_property
@@ -310,8 +310,9 @@ class SimulationRoom(UI):
                 continue
 
     def ensure_into_simulation(self, skip_first_screenshot=True):
-        confirm_timer = Timer(1, count=2).start()
+        ensure_timer = Timer(2, count=5)
         click_timer = Timer(0.3)
+
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -319,18 +320,33 @@ class SimulationRoom(UI):
                 self.device.screenshot()
 
             if click_timer.reached() and self.appear_then_click(ARK_GOTO_SIMULATION_ROOM, offset=(30, 30), interval=5):
-                confirm_timer.reset()
+                click_timer.reset()
+                continue
+
+            if (
+                click_timer.reached()
+                and self.appear(BIOS_UPDATE, offset=10)
+                and self.appear_then_click(BIOS_UPDATE_CLOSE, offset=10, interval=1)
+            ):
+                self.device.sleep(0.5)
                 click_timer.reset()
                 continue
 
             if self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
-                break
+                if not ensure_timer.started():
+                    ensure_timer.start()
+                if ensure_timer.reached():
+                    break
+            else:
+                ensure_timer.clear()
 
-            if self.appear(SIMULATION_CHECK, offset=(30, 30)) or self.appear(RESET_TIME_IN, offset=(30, 30)):
+            if self.appear(SIMULATION_CHECK, offset=(30, 30), threshold=0.86) or self.appear(
+                RESET_TIME_IN, offset=(30, 30)
+            ):
                 raise GamePageUnknownError
 
         skip_first_screenshot = True
-        confirm_timer.reset()
+        confirm_timer = Timer(1, count=2).start()
         click_timer.reset()
 
         selected = False

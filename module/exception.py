@@ -39,3 +39,11 @@ class GamePageUnknownError(Exception):
 
 class OperationFailed(Exception):
     pass
+
+
+class AccountError(Exception):
+    pass
+
+
+class ScreenshotError(Exception):
+    pass

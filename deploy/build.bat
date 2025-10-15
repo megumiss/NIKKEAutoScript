@@ -156,7 +156,7 @@ REM =============================
 echo Step 5/6: Installing Python dependencies...
 if exist "toolkit\python.exe" (
     echo Installing requirements.txt...
-    toolkit\python.exe -m pip install -r deploy\requirements.txt
+    toolkit\python.exe -m pip install -r deploy\requirements.txt -i https://pypi.org/simple
     echo Python dependencies installed
 ) else (
     echo Error: Python.exe not found in toolkit

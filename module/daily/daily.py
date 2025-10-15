@@ -285,5 +285,6 @@ class Daily(UI):
                 self.config.Notification_OnePushConfig,
                 title='NKAS',
                 content='任务已全部完成！',
+                always=self.config.Notification_WinOnePush
             )
         self.config.task_delay(server_update=True)

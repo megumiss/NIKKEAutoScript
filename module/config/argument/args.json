@@ -202,6 +202,68 @@
     }
   },
   "NKAS": {
+    "Client": {
+      "Platform": {
+        "type": "select",
+        "value": "adb",
+        "option": [
+          "adb",
+          "win"
+        ]
+      }
+    },
+    "Optimization": {
+      "AutoRedCircle": {
+        "type": "checkbox",
+        "value": false
+      },
+      "OcrModelType": {
+        "type": "select",
+        "value": "mobile",
+        "option": [
+          "mobile",
+          "server"
+        ]
+      },
+      "WhenTaskQueueEmpty": {
+        "type": "select",
+        "value": "goto_main",
+        "option": [
+          "stay_there",
+          "goto_main",
+          "close_game"
+        ]
+      }
+    },
+    "Notification": {
+      "WhenDailyTaskCompleted": {
+        "type": "checkbox",
+        "value": false
+      },
+      "WhenDailyTaskCrashed": {
+        "type": "checkbox",
+        "value": false
+      },
+      "WinOnePush": {
+        "type": "checkbox",
+        "value": false
+      },
+      "OnePushConfig": {
+        "type": "textarea",
+        "value": "provider: null",
+        "mode": "yaml"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Emulator": {
     "Emulator": {
       "Serial": {
         "type": "input",
@@ -278,42 +340,96 @@
         "value": null
       }
     },
-    "Optimization": {
-      "AutoRedCircle": {
-        "type": "checkbox",
-        "value": false
-      },
-      "OcrModelType": {
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "PCClient": {
+    "PCClientInfo": {
+      "Client": {
         "type": "select",
-        "value": "mobile",
+        "value": "intl",
         "option": [
-          "mobile",
-          "server"
+          "intl",
+          "hmt"
         ]
       },
-      "WhenTaskQueueEmpty": {
+      "Language": {
         "type": "select",
-        "value": "goto_main",
+        "value": "zh-cn",
         "option": [
-          "stay_there",
-          "goto_main",
-          "close_game"
+          "zh-cn"
         ]
+      },
+      "ScreenshotInterval": {
+        "type": "input",
+        "value": 0.3
+      },
+      "LauncherTitleName": {
+        "type": "input",
+        "value": ""
+      },
+      "LauncherProcessName": {
+        "type": "input",
+        "value": ""
+      },
+      "LauncherPath": {
+        "type": "textarea",
+        "value": ""
+      },
+      "GameTitleName": {
+        "type": "input",
+        "value": ""
+      },
+      "GameProcessName": {
+        "type": "input",
+        "value": ""
+      },
+      "GamePath": {
+        "type": "textarea",
+        "value": ""
       }
     },
-    "Notification": {
-      "WhenDailyTaskCompleted": {
+    "PCClient": {
+      "Screens": {
         "type": "checkbox",
         "value": false
       },
-      "WhenDailyTaskCrashed": {
+      "GameResolutionCompat": {
         "type": "checkbox",
         "value": false
       },
-      "OnePushConfig": {
-        "type": "textarea",
-        "value": "provider: null",
-        "mode": "yaml"
+      "CloseAutoHdr": {
+        "type": "checkbox",
+        "value": true
+      },
+      "ScreenRotate": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameWindowPosition": {
+        "type": "select",
+        "value": "center",
+        "option": [
+          "center",
+          "left",
+          "right",
+          "topleft",
+          "topright"
+        ]
+      },
+      "Account": {
+        "type": "input",
+        "value": ""
+      },
+      "Password": {
+        "type": "input",
+        "value": ""
       }
     },
     "Storage": {
@@ -464,64 +580,6 @@
         "type": "input",
         "value": "04:00",
         "display": "hide"
-      }
-    },
-    "Storage": {
-      "Storage": {
-        "type": "storage",
-        "value": {},
-        "valuetype": "ignore",
-        "display": "disabled"
-      }
-    }
-  },
-  "Commission": {
-    "Scheduler": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "option": [
-          true,
-          false
-        ]
-      },
-      "NextRun": {
-        "type": "datetime",
-        "value": "1989-12-27 00:00:00",
-        "validate": "datetime"
-      },
-      "Command": {
-        "type": "input",
-        "value": "Commission",
-        "display": "hide"
-      },
-      "SuccessInterval": {
-        "type": "input",
-        "value": "720-720",
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": "720-720",
-        "display": "hide"
-      },
-      "ServerUpdate": {
-        "type": "input",
-        "value": "04:00",
-        "display": "hide"
-      }
-    },
-    "CollectionItems": {
-      "NIKKE": {
-        "type": "select",
-        "value": "All",
-        "option": [
-          "All",
-          "Laplace",
-          "Frima",
-          "Diesel",
-          "Exia"
-        ]
       }
     },
     "Storage": {
@@ -737,51 +795,6 @@
       }
     }
   },
-  "Liberation": {
-    "Scheduler": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "option": [
-          true,
-          false
-        ]
-      },
-      "NextRun": {
-        "type": "datetime",
-        "value": "1989-12-27 00:00:00",
-        "validate": "datetime"
-      },
-      "Command": {
-        "type": "input",
-        "value": "Liberation",
-        "display": "hide"
-      },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
-      },
-      "ServerUpdate": {
-        "type": "input",
-        "value": "04:00, 20:00",
-        "display": "hide"
-      }
-    },
-    "Storage": {
-      "Storage": {
-        "type": "storage",
-        "value": {},
-        "valuetype": "ignore",
-        "display": "disabled"
-      }
-    }
-  },
   "Conversation": {
     "Scheduler": {
       "Enable": {
@@ -946,6 +959,203 @@
       "bonePriority": {
         "type": "textarea",
         "value": ""
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Commission": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "Commission",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": "720-720",
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": "720-720",
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "CollectionItems": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Priority": {
+        "type": "textarea",
+        "value": ""
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Liberation": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "Liberation",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00, 20:00",
+        "display": "hide"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Synchro": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "Synchro",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "Synchro": {
+      "UseBox": {
+        "type": "checkbox",
+        "value": true,
+        "display": "disabled"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Recycling": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "Recycling",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
       }
     },
     "Storage": {
@@ -1186,9 +1396,77 @@
       }
     },
     "Interception": {
+      "Boss": {
+        "type": "select",
+        "value": "Kraken",
+        "option": [
+          "Kraken",
+          "Indivilia",
+          "Harvester",
+          "MirrorContainer",
+          "Ultra"
+        ]
+      },
       "DropScreenshotPath": {
         "type": "textarea",
         "value": ""
+      }
+    },
+    "InterceptionTeam": {
+      "Kraken": {
+        "type": "select",
+        "value": 1,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Indivilia": {
+        "type": "select",
+        "value": 2,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Harvester": {
+        "type": "select",
+        "value": 3,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "MirrorContainer": {
+        "type": "select",
+        "value": 4,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "Ultra": {
+        "type": "select",
+        "value": 5,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
       }
     },
     "Storage": {
@@ -1573,6 +1851,8 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250924",
+          "event_20250904",
           "event_20250807",
           "event_20250716",
           "event_20250703s",
@@ -1624,6 +1904,14 @@
         "value": "TITLE"
       },
       "Game": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameStorySkip": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameLoop": {
         "type": "checkbox",
         "value": false
       }
@@ -1678,6 +1966,8 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20250924",
+          "event_20250904",
           "event_20250807",
           "event_20250716",
           "event_20250703s",
@@ -1729,6 +2019,14 @@
         "value": "TITLE"
       },
       "Game": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameStorySkip": {
+        "type": "checkbox",
+        "value": false
+      },
+      "GameLoop": {
         "type": "checkbox",
         "value": false
       }
@@ -1803,15 +2101,9 @@
       }
     },
     "BlaDaily": {
-      "PostID": {
-        "type": "input",
-        "value": "",
-        "valuetype": "str"
-      },
-      "CommentID": {
-        "type": "input",
-        "value": "",
-        "valuetype": "str"
+      "Immediately": {
+        "type": "checkbox",
+        "value": false
       },
       "Points": {
         "type": "input",
@@ -1864,6 +2156,17 @@
         "display": "hide"
       }
     },
+    "CDK": {
+      "Extra": {
+        "type": "checkbox",
+        "value": false
+      },
+      "Source": {
+        "type": "textarea",
+        "value": "https://gamewith.jp/nikke/article/show/371014",
+        "display": "disabled"
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",
@@ -1913,6 +2216,51 @@
       "Priority": {
         "type": "textarea",
         "value": "Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "StepUpGift": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "StepUpGift",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
       }
     },
     "Storage": {
@@ -2059,8 +2407,8 @@
       }
     }
   },
-  "TowerDaemon": {
-    "TowerDaemon": {
+  "AutoTower": {
+    "AutoTower": {
       "Enable": {
         "type": "checkbox",
         "value": true,
@@ -2076,11 +2424,35 @@
       }
     }
   },
-  "CombatDaemon": {
-    "CombatDaemon": {
-      "Enable": {
+  "SemiCombat": {
+    "SemiCombat": {
+      "SkipStory": {
         "type": "checkbox",
-        "value": false,
+        "value": false
+      },
+      "FightQuickly": {
+        "type": "checkbox",
+        "value": false
+      },
+      "MainStoryMark": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Highlights": {
+    "Highlights": {
+      "AutoSwitch": {
+        "type": "checkbox",
+        "value": true,
         "display": "disabled"
       }
     },
@@ -2093,12 +2465,32 @@
       }
     }
   },
-  "EventDaemon": {
-    "EventDaemon": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
+  "BlaCDKManual": {
+    "BlaCDKManual": {
+      "CDK": {
+        "type": "input",
+        "value": "",
+        "valuetype": "str"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
         "display": "disabled"
+      }
+    }
+  },
+  "ScreenRotate": {
+    "ScreenRotate": {
+      "Orientation": {
+        "type": "select",
+        "value": 0,
+        "option": [
+          0,
+          1
+        ]
       }
     },
     "Storage": {

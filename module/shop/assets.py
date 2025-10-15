@@ -6,6 +6,7 @@ from module.base.template import Template
 
 ARENA_SHOP_CHECK = Button(area={'zh-cn': (127, 476, 223, 504)}, color={'zh-cn': (137, 138, 139)}, button={'zh-cn': (127, 476, 223, 504)}, file={'zh-cn': './assets/zh-cn/shop/ARENA_SHOP_CHECK.png'})
 BUY = Button(area={'zh-cn': (470, 1073, 505, 1095)}, color={'zh-cn': (129, 199, 232)}, button={'zh-cn': (470, 1073, 505, 1095)}, file={'zh-cn': './assets/zh-cn/shop/BUY.png'})
+BUY_ALL = Button(area={'zh-cn': (575, 474, 646, 491)}, color={'zh-cn': (164, 166, 167)}, button={'zh-cn': (575, 474, 646, 491)}, file={'zh-cn': './assets/zh-cn/shop/BUY_ALL.png'})
 CANCEL = Button(area={'zh-cn': (208, 789, 255, 813)}, color={'zh-cn': (158, 157, 158)}, button={'zh-cn': (208, 789, 255, 813)}, file={'zh-cn': './assets/zh-cn/shop/CANCEL.png'})
 CORE_DUST_CASE = Button(area={'zh-cn': (198, 648, 239, 671)}, color={'zh-cn': (179, 179, 180)}, button={'zh-cn': (198, 648, 239, 671)}, file={'zh-cn': './assets/zh-cn/shop/CORE_DUST_CASE.png'})
 CREDIT = Button(area={'zh-cn': (561, 867, 596, 897)}, color={'zh-cn': (78, 77, 71)}, button={'zh-cn': (561, 867, 596, 897)}, file={'zh-cn': './assets/zh-cn/shop/CREDIT.png'})
@@ -20,7 +21,7 @@ GRATIS_B = Button(area={'zh-cn': (194, 860, 247, 903)}, color={'zh-cn': (76, 88,
 GRATIS_REFRESH = Button(area={'zh-cn': (379, 671, 427, 697)}, color={'zh-cn': (69, 108, 139)}, button={'zh-cn': (379, 671, 427, 697)}, file={'zh-cn': './assets/zh-cn/shop/GRATIS_REFRESH.png'})
 IRON_CODE = Button(area={'zh-cn': (589, 707, 621, 767)}, color={'zh-cn': (167, 123, 40)}, button={'zh-cn': (589, 707, 621, 767)}, file={'zh-cn': './assets/zh-cn/shop/IRON_CODE.png'})
 MANUAL_SELECTION_BOX = Button(area={'zh-cn': (180, 1016, 258, 1064)}, color={'zh-cn': (181, 152, 117)}, button={'zh-cn': (180, 1016, 258, 1064)}, file={'zh-cn': './assets/zh-cn/shop/MANUAL_SELECTION_BOX.png'})
-MAX = Button(area={'zh-cn': (590, 776, 618, 796)}, color={'zh-cn': (124, 124, 124)}, button={'zh-cn': (590, 776, 618, 796)}, file={'zh-cn': './assets/zh-cn/shop/MAX.png'})
+MAX = Button(area={'zh-cn': (586, 778, 621, 795)}, color={'zh-cn': (106, 106, 106)}, button={'zh-cn': (586, 778, 621, 795)}, file={'zh-cn': './assets/zh-cn/shop/MAX.png'})
 NO_MONEY = Button(area={'zh-cn': (450, 877, 460, 911)}, color={'zh-cn': (177, 45, 41)}, button={'zh-cn': (450, 877, 460, 911)}, file={'zh-cn': './assets/zh-cn/shop/NO_MONEY.png'})
 ORNAMENT = Button(area={'zh-cn': (386, 874, 442, 934)}, color={'zh-cn': (135, 130, 139)}, button={'zh-cn': (386, 874, 442, 934)}, file={'zh-cn': './assets/zh-cn/shop/ORNAMENT.png'})
 PURCHASE_CHECK = Button(area={'zh-cn': (308, 211, 412, 242)}, color={'zh-cn': (115, 167, 227)}, button={'zh-cn': (308, 211, 412, 242)}, file={'zh-cn': './assets/zh-cn/shop/PURCHASE_CHECK.png'})

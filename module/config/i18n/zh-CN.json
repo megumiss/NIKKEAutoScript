@@ -12,6 +12,10 @@
       "name": "日常",
       "help": ""
     },
+    "Outpost": {
+      "name": "前哨基地",
+      "help": ""
+    },
     "Ark": {
       "name": "方舟",
       "help": ""
@@ -42,6 +46,14 @@
       "name": "NKAS设置",
       "help": ""
     },
+    "Emulator": {
+      "name": "模拟器",
+      "help": ""
+    },
+    "PCClient": {
+      "name": "PC客户端",
+      "help": ""
+    },
     "Restart": {
       "name": "重启设置",
       "help": ""
@@ -52,10 +64,6 @@
     },
     "Destruction": {
       "name": "歼灭",
-      "help": ""
-    },
-    "Commission": {
-      "name": "派遣",
       "help": ""
     },
     "Mailbox": {
@@ -74,10 +82,6 @@
       "name": "季票",
       "help": ""
     },
-    "Liberation": {
-      "name": "解放",
-      "help": ""
-    },
     "Conversation": {
       "name": "咨询",
       "help": ""
@@ -88,6 +92,22 @@
     },
     "RubbishShop": {
       "name": "废铁商店",
+      "help": ""
+    },
+    "Commission": {
+      "name": "派遣",
+      "help": ""
+    },
+    "Liberation": {
+      "name": "解放",
+      "help": ""
+    },
+    "Synchro": {
+      "name": "同步器",
+      "help": ""
+    },
+    "Recycling": {
+      "name": "循环室",
       "help": ""
     },
     "SimulationRoom": {
@@ -104,7 +124,7 @@
     },
     "Interception": {
       "name": "异常拦截战",
-      "help": "目前只打克拉肯"
+      "help": ""
     },
     "RookieArena": {
       "name": "新人竞技场",
@@ -154,6 +174,10 @@
       "name": "妮游社兑换",
       "help": ""
     },
+    "StepUpGift": {
+      "name": "SETPUP礼包",
+      "help": ""
+    },
     "DailyGift": {
       "name": "每日礼包",
       "help": ""
@@ -166,16 +190,24 @@
       "name": "每月礼包",
       "help": ""
     },
-    "TowerDaemon": {
+    "AutoTower": {
       "name": "自动爬塔",
       "help": ""
     },
-    "CombatDaemon": {
-      "name": "半自动战斗",
+    "SemiCombat": {
+      "name": "半自动点击",
       "help": ""
     },
-    "EventDaemon": {
-      "name": "半自动活动",
+    "Highlights": {
+      "name": "花絮鉴赏",
+      "help": ""
+    },
+    "BlaCDKManual": {
+      "name": "CDK兑换",
+      "help": ""
+    },
+    "ScreenRotate": {
+      "name": "屏幕旋转",
       "help": ""
     }
   },
@@ -439,6 +471,18 @@
       "help": ""
     }
   },
+  "Client": {
+    "_info": {
+      "name": "客户端设置",
+      "help": ""
+    },
+    "Platform": {
+      "name": "客户端平台",
+      "help": "",
+      "adb": "ADB (模拟器)",
+      "win": "Windows (PC端)"
+    }
+  },
   "Emulator": {
     "_info": {
       "name": "模拟器设置",
@@ -508,6 +552,90 @@
     "path": {
       "name": "模拟器安装路径",
       "help": ""
+    }
+  },
+  "PCClient": {
+    "_info": {
+      "name": "使用设置",
+      "help": ""
+    },
+    "Screens": {
+      "name": "多屏幕",
+      "help": "如果使用多屏幕，请开启此选项。多屏幕请优先将符合分辨率要求的屏幕设为主显示器，该选项未经详细测试可能无法使用"
+    },
+    "GameResolutionCompat": {
+      "name": "游戏分辨率设置兼容模式",
+      "help": "如果脚本提示游戏分辨率不正确、日志输出的游戏窗口分辨率不为720*1280，请开启此选项"
+    },
+    "CloseAutoHdr": {
+      "name": "关闭自动HDR",
+      "help": "NKAS运行在HDR开启的设备下可能无法正常运行，如果你频繁出现卡屏请开启此选项，开启后会关闭游戏的自动HDR，全局HDR不受影响"
+    },
+    "ScreenRotate": {
+      "name": "旋转屏幕",
+      "help": "仅建议1080p屏幕用户开启，开启该选项后，点击启动时屏幕会变成竖屏以满足竖向分辨率要求"
+    },
+    "GameWindowPosition": {
+      "name": "游戏窗口位置",
+      "help": "设置游戏窗口位置，防止被遮挡或者超出屏幕",
+      "center": "居中",
+      "left": "靠左居中",
+      "right": "靠右居中",
+      "topleft": "左上角",
+      "topright": "右上角"
+    },
+    "Account": {
+      "name": "账号",
+      "help": "请将邮箱直接粘贴到此处，登录失效时会自动填充账号。此功能存在一定风险，请谨慎使用"
+    },
+    "Password": {
+      "name": "密码",
+      "help": "请将密码直接粘贴到此处，登录失效时会自动填充密码。此功能存在一定风险，请谨慎使用"
+    }
+  },
+  "PCClientInfo": {
+    "_info": {
+      "name": "PC端设置",
+      "help": ""
+    },
+    "Client": {
+      "name": "游戏客户端",
+      "help": "启动器、游戏的标题、进程会根据选择的客户端自动填写，切换前需要先清空下面的启动器和游戏配置",
+      "intl": "国际",
+      "hmt": "港澳台"
+    },
+    "Language": {
+      "name": "游戏语言",
+      "help": "当前只支持简体中文",
+      "zh-cn": "简体中文"
+    },
+    "ScreenshotInterval": {
+      "name": "截图间隔",
+      "help": ""
+    },
+    "LauncherTitleName": {
+      "name": "启动器标题",
+      "help": "启动器窗口的标题栏名称，一般无需手动填写"
+    },
+    "LauncherProcessName": {
+      "name": "启动器进程",
+      "help": "启动进程的名称，一般无需手动填写"
+    },
+    "LauncherPath": {
+      "name": "启动器路径",
+      "help": "游戏启动器路径，必填，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
+    },
+    "GameTitleName": {
+      "name": "游戏标题",
+      "help": "游戏窗口的标题栏名称，一般无需手动填写"
+    },
+    "GameProcessName": {
+      "name": "游戏进程",
+      "help": "游戏进程的名称，一般无需手动填写"
+    },
+    "GamePath": {
+      "name": "游戏路径",
+      "help": "游戏路径，一般无需手动填写，会根据启动器路径自动填写，如果自动填写的路径错误请手动更改"
     }
   },
   "Optimization": {
@@ -649,7 +777,7 @@
     },
     "priority": {
       "name": "核心购买优先级",
-      "help": "不填写默认购买珠宝和芯尘盒，填写格式例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\nGEM: 珠宝\nCORE_DUST_CASE: 芯尘盒\nCREDIT_CASE: 信用点盒\nBATTLE_DATA_SET_CASE: 战斗数据辑盒\nGENERAL_TICKET: 指挥官通用券\nELYSION_TICKET: 极乐净土VIP券\nMISSILIS_TICKET: 米西利斯VIP卡\nTETRA_TICKET: 泰特拉VIP护理券\nPILGRIM_TICKET: 朝圣者补给套组交换券\nABNORMAL_TICKET: 反常年券\n"
+      "help": "不填写默认购买珠宝和芯尘盒，填写格式例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\nGEM: 珠宝\nCORE_DUST_CASE: 芯尘盒\nCREDIT_CASE: 信用点盒\nCREDIT: 信用点\nBATTLE_DATA_SET_CASE: 战斗数据辑盒\nGROWTH_SET: 成长套组\nORNAMENT: 简介装饰品\nGENERAL_TICKET: 指挥官通用券\nELYSION_TICKET: 极乐净土VIP券\nMISSILIS_TICKET: 米西利斯VIP卡\nTETRA_TICKET: 泰特拉VIP护理券\nPILGRIM_TICKET: 朝圣者补给套组交换券\nABNORMAL_TICKET: 反常年券\n"
     },
     "bonePriority": {
       "name": "骨头购买优先级",
@@ -669,9 +797,13 @@
       "name": "当日常出错时，发送通知",
       "help": ""
     },
+    "WinOnePush": {
+      "name": "Win额外推送",
+      "help": "开启后，如果是 Windows 平台会使用 OnePush 再推送一条消息"
+    },
     "OnePushConfig": {
       "name": "推送设置",
-      "help": "使用 Onepush 推送一条错误信息（win不需要填写）。配置方法见文档：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
+      "help": "使用 Onepush 推送一条错误信息。配置方法见文档：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
     }
   },
   "Daily": {
@@ -697,14 +829,13 @@
       "name": "收藏品",
       "help": ""
     },
-    "NIKKE": {
-      "name": "NIKKE",
-      "help": "没做完",
-      "All": "随机",
-      "Laplace": "拉普拉斯",
-      "Frima": "普琳玛",
-      "Diesel": "迪塞尔",
-      "Exia": "艾可希雅"
+    "Enable": {
+      "name": "启用",
+      "help": "启用后会根据下方的设置自动切换收藏品"
+    },
+    "Priority": {
+      "name": "优先级",
+      "help": "妮姬优先级，当前派遣选择的收藏品数量大于160时会从列表中自动移除并选择下一个，格式例如：Helm > Exia；\n妮姬名称对应：\nDiesel：迪赛尔\nExia：艾可希雅\nLaplace：拉普拉斯\nFrima：普琳玛\nViper：毒蛇\nHelm：海伦\nMiranda：米兰达\nDrake：德雷克\nMilk：米尔克\nPoli：波莉\nJulia：尤莉亚\nBay：贝伊\nTove：托比"
     }
   },
   "OpponentSelection": {
@@ -765,13 +896,9 @@
       "name": "每日任务",
       "help": "社区每日签到、评论、点赞任务 https://www.blablalink.com"
     },
-    "PostID": {
-      "name": "帖子ID",
-      "help": "要评论帖子的ID"
-    },
-    "CommentID": {
-      "name": "评论ID",
-      "help": "要回复的某个评论的ID，此时必须填写帖子ID，ID可在F12中查看（页面ID显示有问题，不影响使用）"
+    "Immediately": {
+      "name": "立即执行",
+      "help": "默认情况下，任务在 4:00–8:00 时间段执行时会自动推迟到 8 点以后；开启选项后，任务将立即执行，不再延迟"
     },
     "Points": {
       "name": "剩余金币数量",
@@ -821,6 +948,8 @@
     "Event": {
       "name": "当前活动",
       "help": "",
+      "event_20250924": "REBORN EVIL",
+      "event_20250904": "COINS IN RUSH",
       "event_20250807": "ABSOLUTE",
       "event_20250716": "BOOM! THE GHOST!",
       "event_20250703s": "OVER THE HORIZON",
@@ -857,7 +986,7 @@
     },
     "Shop": {
       "name": "商店",
-      "help": "依次购买除称号外的所有活动货币商品"
+      "help": "依次（有时候不会）购买除称号外的所有活动货币商品"
     },
     "ShopDelayList": {
       "name": "商店延迟购买列表",
@@ -866,6 +995,14 @@
     "Game": {
       "name": "小游戏",
       "help": "视情况适配小游戏，如果没有适配会自动跳过"
+    },
+    "GameStorySkip": {
+      "name": "跳过小游戏剧情",
+      "help": ""
+    },
+    "GameLoop": {
+      "name": "小游戏循环运行",
+      "help": "停止快捷键F10"
     }
   },
   "CheerStrategy": {
@@ -890,9 +1027,69 @@
       "name": "异常拦截",
       "help": ""
     },
+    "Boss": {
+      "name": "BOSS",
+      "help": "",
+      "Kraken": "克拉肯（石头）",
+      "Indivilia": "茵迪维利亚（躯体）",
+      "Harvester": "死神（腿）",
+      "MirrorContainer": "镜像容器（手）",
+      "Ultra": "过激派（头）"
+    },
     "DropScreenshotPath": {
       "name": "掉落截图路径",
       "help": "会在路径下创建日期文件夹保存对应的掉落截图，不填写则不保存；例如：D:\\PCR\\NIKKE，Docker用户需要填写以/app/NIKKEAutoScript开始的文件夹"
+    }
+  },
+  "InterceptionTeam": {
+    "_info": {
+      "name": "队伍设置",
+      "help": "根据选择的BOSS自动选择对应的队伍"
+    },
+    "Kraken": {
+      "name": "克拉肯",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Indivilia": {
+      "name": "茵迪维利亚",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Harvester": {
+      "name": "死神",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "MirrorContainer": {
+      "name": "镜像容器",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Ultra": {
+      "name": "过激派",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
     }
   },
   "Overclock": {
@@ -913,7 +1110,7 @@
       "help": "仅支持所有的通用选项：\nENEMY_WEAPON_UP_1/2/3: 敌方武器升级I/II/III\nENEMY_ARMOR_UP_1/2/2: 敌方护甲升级I/II/III\nENEMY_VITALS_UP_1/2/3: 敌方生命值升级I/II/III\nNO_RECYCLING: 禁用循环室\nAGGRESSIVE_TACTICS: 好战型战术\nRUSH_HOUR_1/2/3: 尖峰时刻I/II/III\nRELEVANT_PERSONNEL_ONLY: 禁止无关人员进入\n默认选项为敌方武器升级III、敌方护甲升级III、敌方生命值升级III、禁用循环室、好战型战术、尖峰时刻III、禁止无关人员进入，\n总计25倍率，每行填写一个，如果练度不够可以根据实际情况减少\n如果超频主页显示的最高记录值和下方填入的总倍率值相等或更高，则会跳过超频"
     }
   },
-  "TowerDaemon": {
+  "AutoTower": {
     "_info": {
       "name": "自动爬塔",
       "help": "自动爬普通企业塔，失败时自动停止"
@@ -923,23 +1120,63 @@
       "help": ""
     }
   },
-  "CombatDaemon": {
+  "SemiCombat": {
     "_info": {
-      "name": "半自动战斗",
-      "help": "半自动推图，需要在剧情地图中时开启，支持普通和困难模式（还没做）"
+      "name": "半自动点击",
+      "help": "半自动点击，省去一些点击操作，可以自动点击战斗、快速战斗、跳过剧情、下一关卡、区域跳转等操作。需要手动选择关卡并提前配置好队伍"
     },
-    "Enable": {
-      "name": "可用",
+    "SkipStory": {
+      "name": "跳过剧情",
       "help": ""
+    },
+    "FightQuickly": {
+      "name": "快速战斗",
+      "help": "当在需要用票的关卡时，需要关闭此项"
+    },
+    "MainStoryMark": {
+      "name": "自动跟随主线剧情",
+      "help": "开启后会自动点击主线剧情普通难度的剧情感叹号，同时关闭小地图；一定程度上可以实现自动推剧情，但是极不稳定，而且 100% 会漏怪"
     }
   },
-  "EventDaemon": {
+  "BlaCDKManual": {
     "_info": {
-      "name": "半自动活动",
-      "help": "需要手动选择关卡（未测试）"
+      "name": "CDK手动兑换",
+      "help": ""
     },
-    "Enable": {
-      "name": "可用",
+    "CDK": {
+      "name": "CDK",
+      "help": "将CDK粘贴到输入框，提示设置保存成功后点击启动即可兑换"
+    }
+  },
+  "Highlights": {
+    "_info": {
+      "name": "花絮鉴赏",
+      "help": "自动查看花絮，需要在妮姬送礼/咨询按钮页面启动"
+    },
+    "AutoSwitch": {
+      "name": "自动切换",
+      "help": "当一个妮姬的花絮全部完成以后自动切换下一个，F10停止"
+    }
+  },
+  "ScreenRotate": {
+    "_info": {
+      "name": "屏幕旋转",
+      "help": ""
+    },
+    "Orientation": {
+      "name": "旋转方向",
+      "help": "手动修改屏幕方向",
+      "0": "横屏",
+      "1": "竖屏"
+    }
+  },
+  "Synchro": {
+    "_info": {
+      "name": "同步器",
+      "help": ""
+    },
+    "UseBox": {
+      "name": "使用道具",
       "help": ""
     }
   },
@@ -1038,7 +1275,7 @@
       "Manage": "管理"
     },
     "AppManage": {
-      "PageTitle": "管理配置文件（未经测试 随缘使用）",
+      "PageTitle": "管理配置文件",
       "TitleNew": "添加新配置",
       "NewName": "新的配置文件名",
       "CopyFrom": "从现有的配置中复制",

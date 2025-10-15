@@ -44,13 +44,14 @@ class OcrModel:
         else:
             raise ValueError(f'Unsupported lang: {lang}')
 
-    def get_location(self, text, result):
+    def get_location(self, text, result, threshold=0.7):
         """
         获取目标文本在 OCR 结果中的中心坐标
 
         Args:
             text: 要查找的目标文本
             result: _process_ocr_result 返回的结果字典
+            threshold: 匹配相似度阈值 (0~1)
 
         Returns:
             tuple: (x, y) 中心坐标，未找到返回 None
@@ -64,7 +65,7 @@ class OcrModel:
 
         # 找到最相似的文本
         ratio, matched_text = self.get_similarity(all_texts, text)
-        if not (ratio > 0 and matched_text in text_bbox_map):
+        if not (ratio >= threshold and matched_text in text_bbox_map):
             return None
 
         raw_bbox = text_bbox_map[matched_text]

@@ -49,6 +49,7 @@ class ChampionArena(UI, ArenaBase):
         """应援"""
         logger.info('Open promotion or champion')
         click_timer = Timer(0.3)
+        confirm_timer = Timer(3, count=3)
 
         # 打开晋级赛或者冠军争霸赛
         while 1:
@@ -78,12 +79,17 @@ class ChampionArena(UI, ArenaBase):
 
             # 检查应援按钮
             if self.appear(PROMOTION_CHECK, offset=30) or self.appear(CHAMPION_CHECK, offset=30):
-                if self.appear(CHEER_ENABLE, offset=10):
-                    click_timer.reset()
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
                     break
-                else:
-                    logger.info('Cheer already done')
-                    raise ChampionArenaIsUnavailable
+            else:
+                confirm_timer.clear()
+
+        # 检查应援按钮状态
+        if not self.appear(CHEER_ENABLE, offset=10):
+            logger.info('Cheer already done')
+            raise ChampionArenaIsUnavailable
 
         logger.info('Cheer a nikke')
         cheer_done = False
@@ -146,6 +152,7 @@ class ChampionArena(UI, ArenaBase):
                 self.appear(PROGRESS_NEXT_SEASON, offset=(30, 30))
                 or self.appear(PROGRESS_TEAM, offset=(30, 30))
                 or self.appear(PROGRESS_FIGHTING, offset=(30, 30))
+                or self.appear(PROGRESS_RESULTING, offset=(30, 30))
             ):
                 logger.warning('Champion arena in preparation')
                 raise ChampionArenaIsUnavailable

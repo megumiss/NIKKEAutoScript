@@ -4,9 +4,10 @@
 
 # NIKKEAutoScript
 
-胜利女神：NIKKE 自动日常脚本，支持除**国服**外所有设置为**简体中文**的客户端（大概）。Fork自[NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
-GODDESS OF VICTORY: NIKKE automatic script, supports all clients **set to Chinese(zh_CN)** except the **CN** client (presumably). Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+胜利女神：NIKKE 自动日常脚本，支持所有设置为**简体中文**的 PC/模拟器客户端（**国服除外**）。Fork 自 [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+
+GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC/Emulator clients set to **Simplified Chinese (zh\_CN)**, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 **如果觉得有帮助，请帮我点个 ⭐ Star 支持一下！**  
 *If you find it helpful, please give it a ⭐ Star to support!*
@@ -31,6 +32,9 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 然后想到了自己写的最初版代码，那写的是什么shit😅😅😅  
 虽然现在写的NKAS依旧是shit😅😅😅
 
+感谢alas的脚本框架 [AzurLaneAutoScript](https://github.com/LmeSzinc/AzurLaneAutoScript)  
+感谢三月七日的PC端支持代码 [March7thAssistant](https://github.com/moesnow/March7thAssistant)  
+
 ---
 
 ### 联合
@@ -45,38 +49,16 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 
 ---
 
-### 如何使用
+### 演示地址
 
-详细安装指南请参阅 [Wiki安装教程](https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南)
+👉 [点击这里查看安装演示](https://www.bilibili.com/video/BV1rqWczJECp)  
+👉 [点击这里查看功能演示](https://www.bilibili.com/video/BV1YMbrzFE4g)  
 
 ---
 
-### 更新计划
-- [ ] 半自动推图
-- [ ] 修复uiautomator自动安装
-- [x] 通知优化
-- [x] 支持自动更新、定时更新
-- [x] 支持docker部署
+### 如何使用
 
-### 支持功能
-- [x] 模拟器自动启动
-- [x] 每日收获、歼灭、派遣
-- [x] 友情点、特殊竞技场点数领取
-- [x] 每日、周、月免费钻领取
-- [x] 普通商店、竞技场商店、废铁商店
-- [x] 每日企业塔，自动普通企业塔
-- [x] 异常拦截（只支持克拉肯），支持自动打红圈、掉落截图
-- [x] 模拟室，超频
-- [x] 每日咨询、送礼
-- [x] 普通竞技场、特殊竞技场自动战斗，冠军竞技场竞猜
-- [x] 大型活动扫荡、挑战、签到、奖励、商店购买、小游戏（个别）
-- [x] 小型活动扫荡、挑战、奖励、商店购买
-- [x] 协同作战、个突、联盟突袭
-- [x] 活动免费、友情点每日抽卡
-- [x] 邮箱领取，排名奖励领取
-- [x] 每日、每周任务奖励
-- [x] 每日pass领取
-- [x] blablalink社区每日任务，CDK自动兑换
+详细安装指南请参阅 [Wiki安装教程](https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南)
 
 ---
 
@@ -88,6 +70,41 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 > 如果在使用过程中遇到问题，您可以通过以下方式获取帮助：
 > - 在 [GitHub Issues](https://github.com/megumiss/NIKKEAutoScript/issues) 提交问题
 > - 加入划水 QQ 群：[823265807](https://qm.qq.com/q/ibQKuQI9Ko)
+
+---
+
+### 支持功能，当前所有计划中的功能已做完
+- [x] PC客户端/模拟器支持
+- [x] 模拟器自动启动，PC客户端自动启动，脚本自动启动
+- [x] 每日收获、歼灭、派遣、收藏品自选
+- [x] 同步器、循环室升级
+- [x] 友情点、特殊竞技场点数领取
+- [x] 每日、周、月免费钻领取
+- [x] 普通商店、竞技场商店、废铁商店
+- [x] 每日企业塔，自动普通企业塔
+- [x] 异常拦截，支持自动打红圈、掉落截图
+- [x] 模拟室，超频
+- [x] 每日咨询、送礼
+- [x] 普通竞技场、特殊竞技场自动战斗，冠军竞技场竞猜
+- [x] 大型活动扫荡、挑战、签到、奖励、商店购买、协同作战、小游戏（个别）
+- [x] 小型活动扫荡、挑战、奖励、商店购买
+- [x] 协同作战、个突、联盟突袭
+- [x] 活动免费、友情点每日抽卡
+- [x] 邮箱领取，排名奖励领取
+- [x] 每日、每周任务奖励
+- [x] 每日pass领取
+- [x] blablalink社区每日任务，自动购买奖励，CDK自动兑换，CDK手动兑换
+- [x] 半自动战斗/点击
+- [x] 启动/停止/重启/更新/屏幕旋转的快捷键和接口，快捷键自定义
+- [x] 支持自动更新、定时更新
+- [x] 支持docker部署
+
+### 更新计划，可能会做
+- [ ] ~~修复uiautomator自动安装~~
+- [ ] pjjc监控/提醒/反打（没明确需求？）
+- [ ] dashboard（写了一半）
+- [ ] ~~自动/手动账号切换（代码架构限制可能做不了）~~
+- [ ] 模拟室刷buff（很麻烦）
 
 ---
 

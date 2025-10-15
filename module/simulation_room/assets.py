@@ -6,10 +6,12 @@ from module.base.template import Template
 
 AUTO_BURST = Button(area={'zh-cn': (82, 36, 149, 51)}, color={'zh-cn': (51, 61, 56)}, button={'zh-cn': (82, 36, 149, 51)}, file={'zh-cn': './assets/zh-cn/simulation_room/AUTO_BURST.png'})
 AUTO_SHOOT = Button(area={'zh-cn': (20, 27, 53, 60)}, color={'zh-cn': (31, 42, 37)}, button={'zh-cn': (20, 27, 53, 60)}, file={'zh-cn': './assets/zh-cn/simulation_room/AUTO_SHOOT.png'})
+BIOS_UPDATE = Button(area={'zh-cn': (358, 494, 436, 508)}, color={'zh-cn': (230, 133, 129)}, button={'zh-cn': (358, 494, 436, 508)}, file={'zh-cn': './assets/zh-cn/simulation_room/BIOS_UPDATE.png'})
+BIOS_UPDATE_CLOSE = Button(area={'zh-cn': (614, 490, 636, 511)}, color={'zh-cn': (165, 64, 59)}, button={'zh-cn': (614, 490, 636, 511)}, file={'zh-cn': './assets/zh-cn/simulation_room/BIOS_UPDATE_CLOSE.png'})
 BOSS_EVENT_CHECK = Button(area={'zh-cn': (367, 733, 442, 764)}, color={'zh-cn': (48, 47, 35)}, button={'zh-cn': (367, 733, 442, 764)}, file={'zh-cn': './assets/zh-cn/simulation_room/BOSS_EVENT_CHECK.png'})
 CANCEL = Button(area={'zh-cn': (118, 1030, 148, 1057)}, color={'zh-cn': (197, 198, 202)}, button={'zh-cn': (118, 1030, 148, 1057)}, file={'zh-cn': './assets/zh-cn/simulation_room/CANCEL.png'})
 CHOOSE_INITIAL_EFFECT_CHECK = Button(area={'zh-cn': (136, 273, 573, 309)}, color={'zh-cn': (221, 222, 223)}, button={'zh-cn': (136, 273, 573, 309)}, file={'zh-cn': './assets/zh-cn/simulation_room/CHOOSE_INITIAL_EFFECT_CHECK.png'})
-DIFFICULTY_AREA_CHECK = Button(area={'zh-cn': (130, 483, 171, 501)}, color={'zh-cn': (192, 192, 191)}, button={'zh-cn': (130, 483, 171, 501)}, file={'zh-cn': './assets/zh-cn/simulation_room/DIFFICULTY_AREA_CHECK.png'})
+DIFFICULTY_AREA_CHECK = Button(area={'zh-cn': (257, 169, 308, 201)}, color={'zh-cn': (73, 74, 75)}, button={'zh-cn': (257, 169, 308, 201)}, file={'zh-cn': './assets/zh-cn/simulation_room/DIFFICULTY_AREA_CHECK.png'})
 END_FIGHTING = Button(area={'zh-cn': (261, 1119, 459, 1138)}, color={'zh-cn': (87, 87, 87)}, button={'zh-cn': (261, 1119, 459, 1138)}, file={'zh-cn': './assets/zh-cn/simulation_room/END_FIGHTING.png'})
 END_SIMULATION = Button(area={'zh-cn': (133, 897, 282, 933)}, color={'zh-cn': (187, 188, 192)}, button={'zh-cn': (133, 897, 282, 933)}, file={'zh-cn': './assets/zh-cn/simulation_room/END_SIMULATION.png'})
 END_SIMULATION_CHECK = Button(area={'zh-cn': (276, 480, 432, 524)}, color={'zh-cn': (221, 221, 221)}, button={'zh-cn': (276, 480, 432, 524)}, file={'zh-cn': './assets/zh-cn/simulation_room/END_SIMULATION_CHECK.png'})

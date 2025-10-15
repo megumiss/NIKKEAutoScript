@@ -63,7 +63,7 @@ class RookieArena(UI, ArenaBase):
 
     @property
     def free_opportunity_remain(self) -> bool:
-        result = FREE_OPPORTUNITY_CHECK.appear_on(self.device.image, 20)
+        result = self.appear(FREE_OPPORTUNITY_CHECK, offset=30)
         if result:
             logger.info(f'[Free opportunities remain] {result}')
         return result
@@ -171,7 +171,7 @@ class RookieArena(UI, ArenaBase):
             return self.start_competition()
 
     def ensure_into_rookie_arena(self, skip_first_screenshot=True):
-        confirm_timer = Timer(2, count=3).start()
+        confirm_timer = Timer(2, count=3)
         click_timer = Timer(0.3)
         while 1:
             if skip_first_screenshot:
@@ -189,8 +189,15 @@ class RookieArena(UI, ArenaBase):
                 click_timer.reset()
                 continue
 
-            if self.appear(ROOKIE_ARENA_CHECK, offset=(10, 10), static=False) and confirm_timer.reached():
-                break
+            if self.appear(ROOKIE_ARENA_CHECK, offset=10, static=False) and not self.appear(
+                CONNECT_TO_SYSTEM, offset=50, threshold=0.6
+            ):
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    break
+            else:
+                confirm_timer.clear()
 
         if self.free_opportunity_remain:
             self.start_competition()

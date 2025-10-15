@@ -5,7 +5,9 @@ def handle_notify(*args, **kwargs):
     # Lazy import onepush
     from module.notify.notify import handle_notify_linux, handle_notify_win
 
-    if sys.platform.startswith("win"):
-        return handle_notify_win(**kwargs)
+    if sys.platform.startswith('win'):
+        handle_notify_win(**kwargs)
+        if kwargs.get('always'):
+            handle_notify_linux(*args, **kwargs)
     else:
-        return handle_notify_linux(*args, **kwargs)
+        handle_notify_linux(*args, **kwargs)

@@ -12,6 +12,7 @@ from module.base.decorator import del_cached_property
 from module.config.config import NikkeConfig, TaskEnd
 from module.config.utils import deep_get, deep_set
 from module.exception import (
+    AccountError,
     GameNotRunningError,
     GamePageUnknownError,
     GameServerUnderMaintenance,
@@ -19,6 +20,7 @@ from module.exception import (
     GameStuckError,
     GameTooManyClickError,
     RequestHumanTakeover,
+    ScreenshotError,
 )
 from module.logger import logger
 from module.notify import handle_notify
@@ -32,6 +34,17 @@ class NikkeAutoScript:
 
     def __init__(self, config_name='nkas'):
         logger.hr('Start', level=0)
+
+        # 路径检查
+        script_path = os.path.abspath(sys.argv[0])
+        logger.info(f'[Script Path]: {script_path}')
+        try:
+            script_path.encode('ascii')
+        except UnicodeEncodeError:
+            logger.error('脚本路径包含非英文字符，请切换到英文路径下')
+            logger.error('Script path contains non-ASCII characters. Please move the script to an English-only path.')
+            sys.exit(1)
+
         self.config_name = config_name
         # Skip first restart
         self.is_first_task = True
@@ -54,30 +67,52 @@ class NikkeAutoScript:
     @cached_property
     def device(self):
         try:
-            from module.device.device import Device
+            if self.config.Client_Platform == 'win':
+                from module.device.win.device import Device
 
-            device = Device(config=self.config)
+                device = Device(config=self.config)
+            if self.config.Client_Platform == 'adb':
+                from module.device.adb.device import Device
+
+                device = Device(config=self.config)
+
             return device
         except RequestHumanTakeover:
+            # 设置屏幕方向
+            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             logger.critical('Request human takeover')
             exit(1)
+        except AccountError:
+            # 设置屏幕方向
+            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
+            logger.critical('Account or password setting error')
+            exit(1)
         except Exception as e:
+            # 设置屏幕方向
+            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             logger.exception(e)
             exit(1)
 
     def run(self, command, skip_first_screenshot=False):
         try:
-            if not skip_first_screenshot:
+            # 妮游社任务不需要device
+            if command not in self.config.INDEPENDENT_TASKS_UNDER and not skip_first_screenshot:
                 self.device.screenshot()
             self.__getattribute__(command)()
             return True
         except TaskEnd:
             return True
+        except GameStart:
+            self.start()
+            return True
         except GameNotRunningError as e:
             logger.warning(e)
             self.config.task_call('Restart')
             return False
-        except (GameStuckError, GameTooManyClickError) as e:
+        except (GameStuckError, GameTooManyClickError, ScreenshotError) as e:
             logger.error(e)
             self.save_error_log()
             logger.warning(f'Game stuck, {self.device.package} will be restarted in 10 seconds')
@@ -95,7 +130,11 @@ class NikkeAutoScript:
                     self.config.Notification_OnePushConfig,
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GamePageUnknownError',
+                    always=self.config.Notification_WinOnePush,
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
@@ -105,7 +144,11 @@ class NikkeAutoScript:
                     self.config.Notification_OnePushConfig,
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GameServerUnderMaintenance',
+                    always=self.config.Notification_WinOnePush,
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except RequestHumanTakeover:
             logger.critical('Request human takeover')
@@ -114,7 +157,11 @@ class NikkeAutoScript:
                     self.config.Notification_OnePushConfig,
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> RequestHumanTakeover',
+                    always=self.config.Notification_WinOnePush,
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
         except Exception as e:
             logger.exception(e)
@@ -124,7 +171,11 @@ class NikkeAutoScript:
                     self.config.Notification_OnePushConfig,
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> Exception occured',
+                    always=self.config.Notification_WinOnePush,
                 )
+            # 设置屏幕方向
+            if self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate()
             exit(1)
 
     def save_error_log(self):
@@ -198,9 +249,19 @@ class NikkeAutoScript:
         Destruction(config=self.config, device=self.device).run()
 
     def commission(self):
-        from module.commission.commission import Commission
+        from module.outpost.commission import Commission
 
         Commission(config=self.config, device=self.device).run()
+
+    def synchro(self):
+        from module.outpost.synchro import Synchro
+
+        Synchro(config=self.config, device=self.device).run()
+
+    def recycling(self):
+        from module.outpost.recycling import Recycling
+
+        Recycling(config=self.config, device=self.device).run()
 
     def conversation(self):
         from module.conversation.conversation import Conversation
@@ -262,6 +323,11 @@ class NikkeAutoScript:
 
         Liberation(config=self.config, device=self.device).run()
 
+    def step_up_gift(self):
+        from module.gift.gift import StepUpGift
+
+        StepUpGift(config=self.config, device=self.device).run()
+
     def daily_gift(self):
         from module.gift.gift import DailyGift
 
@@ -297,20 +363,35 @@ class NikkeAutoScript:
 
         Blablalink(config=self.config).run('cdk')
 
+    def bla_cdk_manual(self):
+        from module.blablalink.blablalink import Blablalink
+
+        Blablalink(config=self.config).cdk_manual()
+
     def bla_exchange(self):
         from module.blablalink.blablalink import Blablalink
 
         Blablalink(config=self.config).run('exchange')
 
-    def tower_daemon(self):
-        from module.daemon.tower_daemon import TowerDaemon
+    def auto_tower(self):
+        from module.daemon.auto_tower import AutoTower
 
-        TowerDaemon(config=self.config, device=self.device).run()
+        AutoTower(config=self.config, device=self.device).run()
 
-    def event_daemon(self):
-        from module.event_daemon.event_daemon import EventDaemon
+    def highlights(self):
+        from module.daemon.highlights import Highlights
 
-        EventDaemon(config=self.config, device=self.device).run()
+        Highlights(config=self.config, device=self.device, task='Highlights').run()
+
+    def semi_combat(self):
+        from module.daemon.semi_combat import SemiCombat
+
+        SemiCombat(config=self.config, device=self.device, task='SemiCombat').run()
+
+    def screen_rotate(self):
+        from module.daemon.screen_rotate import ScreenRotate
+
+        ScreenRotate(config=self.config).run()
 
     def event(self):
         from module.event.event import Event
@@ -384,8 +465,20 @@ class NikkeAutoScript:
                 method = self.config.Optimization_WhenTaskQueueEmpty
                 if method == 'close_game':
                     logger.info('Close game during wait')
-                    self.device.app_stop()
+                    # 只运行妮游社任务时不会初始化device，不需要操作游戏
+                    if 'device' in self.__dict__:
+                        # 关闭游戏
+                        self.device.app_stop()
+                        self.device.sleep(1)
+                        # 关闭启动器
+                        if self.config.Client_Platform == 'win':
+                            self.device.app_stop('Launcher')
                     release_resources()
+                    if self.config.Client_Platform == 'win':
+                        # 设置屏幕方向
+                        if self.config.PCClient_ScreenRotate:
+                            self.device.screen_rotate()
+                        del_cached_property(self, 'device')
                     # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
@@ -396,9 +489,14 @@ class NikkeAutoScript:
                         continue
                 elif method == 'goto_main':
                     logger.info('Goto main page during wait')
-                    self.run('goto_main')
+                    # 只运行妮游社任务时不会初始化device，不需要操作游戏
+                    if 'device' in self.__dict__:
+                        self.run('goto_main')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -406,6 +504,9 @@ class NikkeAutoScript:
                     logger.info('Stay there during wait')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -413,6 +514,9 @@ class NikkeAutoScript:
                     logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
                     release_resources()
                     # self.device.release_during_wait()
+                    # 设置屏幕方向
+                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                        self.device.screen_rotate()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -429,7 +533,7 @@ class NikkeAutoScript:
             if self.stop_event is not None:
                 if self.stop_event.is_set():
                     logger.info('Update event detected')
-                    logger.info(f'Alas [{self.config_name}] exited.')
+                    logger.info(f'NKAS [{self.config_name}] exited.')
                     break
             # Check game server maintenance
             # self.checker.wait_until_available()
@@ -443,22 +547,25 @@ class NikkeAutoScript:
             #     self.config.task_call('Restart')
             # Get task
             task = self.get_next_task()
-            # Init device and change server
-            _ = self.device
-            self.device.config = self.config
-            # Skip first restart
-            if self.is_first_task and task == 'Restart':
-                logger.info('Skip task `Restart` at scheduler start')
-                self.config.task_delay(server_update=True)
-                del_cached_property(self, 'config')
-                continue
+            # 妮游社任务不需要device，不需要操作游戏
+            if task not in self.config.INDEPENDENT_TASKS:
+                # Init device and change server
+                _ = self.device
+                self.device.config = self.config
+                # Skip first restart
+                if self.is_first_task and task == 'Restart':
+                    logger.info('Skip task `Restart` at scheduler start')
+                    self.config.task_delay(server_update=True)
+                    del_cached_property(self, 'config')
+                    continue
 
-            # Run
-            logger.info(f'Scheduler: Start task `{task}`')
-            self.device.stuck_record_clear()
-            self.device.click_record_clear()
+                # Run
+                logger.info(f'Scheduler: Start task `{task}`')
+                self.device.stuck_record_clear()
+                self.device.click_record_clear()
+
             logger.hr(task, level=0)
-            success = self.run(inflection.underscore(task))
+            success = self.run(inflection.underscore(task), skip_first_screenshot=(task == 'Restart'))
             logger.info(f'Scheduler: End task `{task}`')
             self.is_first_task = False
 
@@ -481,7 +588,11 @@ class NikkeAutoScript:
                         self.config.Notification_OnePushConfig,
                         title=f'NKAS <{self.config_name}> crashed',
                         content=f'<{self.config_name}> RequestHumanTakeover\nTask `{task}` failed 3 or more times.',
+                        always=self.config.Notification_WinOnePush,
                     )
+                # 设置屏幕方向
+                if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                    self.device.screen_rotate()
                 exit(1)
 
             if success:

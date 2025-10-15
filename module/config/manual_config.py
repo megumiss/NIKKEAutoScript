@@ -4,9 +4,11 @@ from datetime import datetime, timedelta
 class ManualConfig:
     SCHEDULER_PRIORITY = """
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
-       DailyGift > WeeklyGift > MonthlyGift > 
-       Commission > Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
-       Daily > Event > Event2 > SoloRaid > UnionRaid >Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > TowerDaemon > CombatDaemon > EventDaemon
+       StepUpGift > DailyGift > WeeklyGift > MonthlyGift > 
+       Commission > Recycling > Synchro >
+       Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
+       Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > 
+       AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS"""
@@ -21,7 +23,10 @@ class ManualConfig:
         "GEM": 1,
         "CORE_DUST_CASE": 2,
         "CREDIT_CASE": 3,
+        "CREDIT": 1,
         "BATTLE_DATA_SET_CASE": 2,
+        "GROWTH_SET": 4,
+        "ORNAMENT": 1,
         "GENERAL_TICKET": 1,
         "ELYSION_TICKET": 1,
         "MISSILIS_TICKET": 1,
@@ -39,6 +44,8 @@ class ManualConfig:
         "CREDIT_CASE": 2660,
         # 6x100, 5x575
         "BATTLE_DATA_SET_CASE": 3475,
+        "GROWTH_SET": 2700,
+        "ORNAMENT": 500,
         "GENERAL_TICKET": 400,
         "ELYSION_TICKET": 600,
         "MISSILIS_TICKET": 600,
@@ -83,6 +90,24 @@ class ManualConfig:
     DROIDCAST_RAW_FILEPATH_REMOTE = "/data/local/tmp/DroidCastS.apk"
 
     EVENTS = [
+        {
+            "event_id": "event_20250924",
+            "event_name": "REBORN EVIL",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": True,
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
+        },
+        {
+            "event_id": "event_20250904",
+            "event_name": "COINS IN RUSH",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": True,
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
+        },
         {
             "event_id": "event_20250807",
             "event_name": "ABSOLUTE",
@@ -133,3 +158,7 @@ class ManualConfig:
     Error_ScreenshotLength = 1
 
     DEVICE_OVER_HTTP = False
+
+    # 独立任务，不依赖游戏运行
+    INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange', 'ScreenRotate']
+    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange", 'screen_rotate']
