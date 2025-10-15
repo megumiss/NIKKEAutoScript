@@ -48,7 +48,7 @@ echo Step 1/8: Cloning repositories...
 echo Cloning main repository...
 git clone --depth 1 https://github.com/megumiss/NIKKEAutoScript.git
 if not exist NIKKEAutoScript (
-    echo Error: Git clone (main) failed
+    echo Error: Git clone main failed
     pause
     goto :end
 )
@@ -56,7 +56,7 @@ if not exist NIKKEAutoScript (
 echo Cloning build repository...
 git clone --depth 1 https://github.com/megumiss/NIKKEAutoScriptBuild.git
 if not exist NIKKEAutoScriptBuild (
-    echo Error: Git clone (build) failed
+    echo Error: Git clone build failed
     pause
     goto :end
 )
@@ -69,9 +69,9 @@ if exist NIKKEAutoScript\.git (
 )
 
 REM =============================
-REM Step 4：构建 webapp 并移动输出
+REM Step 2：构建 webapp 并移动输出
 REM =============================
-echo Step 4/8: Building webapp...
+echo Step 2/8: Building webapp...
 cd NIKKEAutoScript\webapp
 
 echo Installing Node.js dependencies...
@@ -112,9 +112,9 @@ if exist app (
 )
 
 REM =============================
-REM Step 5：删除不必要的语言文件和 DLL/License
+REM Step 3：删除不必要的语言文件和 DLL/License
 REM =============================
-echo Step 5/8: Cleaning unnecessary files...
+echo Step 3/8: Cleaning unnecessary files...
 
 REM 删除除 zh-CN、en、ja 之外的 locales
 if exist app\locales (
@@ -141,9 +141,9 @@ del /f /q "app\LICENSE.electron.txt" 2>nul
 echo Clean up completed.
 
 REM =============================
-REM Step 6：清理 webapp artifacts
+REM Step 4：清理 webapp artifacts
 REM =============================
-echo Step 6/8: Cleaning webapp artifacts...
+echo Step 4/8: Cleaning webapp artifacts...
 cd webapp
 if exist node_modules (
     rd /s /q node_modules
@@ -165,12 +165,12 @@ if exist dist (
 ) else (
     echo dist directory not found - skipping
 )
-cd ..
+cd ../..
 
 REM =============================
-REM Step 2：从构建仓库复制 toolkit
+REM Step 5：从构建仓库复制 toolkit
 REM =============================
-echo Step 2/8: Copying toolkit from NIKKEAutoScriptBuild...
+echo Step 5/8: Copying toolkit from NIKKEAutoScriptBuild...
 if exist "NIKKEAutoScriptBuild\toolkit" (
     xcopy /e /y /q "NIKKEAutoScriptBuild\toolkit" "NIKKEAutoScript\toolkit\" >nul
     echo Toolkit copied successfully.
@@ -181,20 +181,23 @@ if exist "NIKKEAutoScriptBuild\toolkit" (
 )
 
 REM =============================
-REM Step 3：复制 nkas.exe
+REM Step 6：复制 nkas.exe
 REM =============================
-echo Step 3/8: Copying nkas.exe to NIKKEAutoScript root...
-if exist "NIKKEAutoScriptBuild\deploy\build\nkas.exe" (
-    copy /y "NIKKEAutoScriptBuild\deploy\build\nkas.exe" "NIKKEAutoScript\nkas.exe" >nul
+echo Step 6/8: Copying nkas.exe to NIKKEAutoScript root...
+if exist "NIKKEAutoScript\deploy\build\nkas.exe" (
+    copy /y "NIKKEAutoScript\deploy\build\nkas.exe" "NIKKEAutoScript\nkas.exe" >nul
     echo nkas.exe copied successfully.
 ) else (
-    echo Warning: nkas.exe not found in build repository, skipping copy.
+    echo Error: nkas.exe not found in build repository
+    pause
+    goto :end
 )
 
 REM =============================
 REM Step 7：安装 Python 依赖
 REM =============================
 echo Step 7/8: Installing Python dependencies...
+cd NIKKEAutoScript
 if exist "toolkit\python.exe" (
     echo Installing requirements.txt...
     toolkit\python.exe -m pip install -r deploy\requirements.txt -i https://pypi.org/simple
@@ -223,7 +226,7 @@ if exist deploy.template.yaml (
 cd ..
 
 echo ==================================================
-echo ✅ Build completed successfully!
+echo Build completed successfully!
 echo ==================================================
 timeout /t 5 >nul
 
