@@ -51,6 +51,18 @@ class GitManager(DeployConfig):
             self.execute(f'"{self.git}" remote add {source} {repo}')
 
         """
+            检查 nkas.exe 是否在版本控制中，如果在，则停止跟踪
+        """
+        try:
+            # 如果文件在版本控制中，这条命令会成功
+            self.execute(f'"{self.git}" ls-files --error-unmatch nkas.exe')
+            logger.info('nkas.exe is tracked, removing from git tracking')
+            self.execute(f'"{self.git}" rm --cached nkas.exe')
+        except Exception:
+            # 文件不在版本控制中，忽略
+            logger.info('nkas.exe is not tracked, no action needed')
+
+        """
             拉取最新上游仓库最新commit
         """
         logger.hr('Fetch Repository Branch', 1)
