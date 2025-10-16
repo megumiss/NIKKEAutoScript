@@ -1,3 +1,4 @@
+import copy
 import os
 from functools import cached_property
 
@@ -415,3 +416,26 @@ def merge_buttons(
             merged.append(btn)
 
     return merged
+
+def shift_button(button: Button, dx: int = 0, dy: int = 0) -> Button:
+    """
+    复制并平移一个已经初始化的 Button 实例。
+    """
+    # 获取当前按钮的实际坐标
+    x1, y1, x2, y2 = button.area
+    bx1, by1, bx2, by2 = button.button
+
+    # 偏移
+    new_area = (x1 + dx, y1 + dy, x2 + dx, y2 + dy)
+    new_button = (bx1 + dx, by1 + dy, bx2 + dx, by2 + dy)
+
+    # 重新创建一个 Button 对象（带偏移）
+    shifted = Button(
+        area=new_area,
+        color=button.color,
+        button=new_button,
+        file=button.file,
+        name=f"{button.name}_SHIFTED"
+    )
+
+    return shifted

@@ -1,5 +1,8 @@
+import copy
+
 import cv2
 
+from module.base.button import shift_button
 from module.base.timer import Timer
 from module.base.utils import crop
 from module.handler.assets import REWARD
@@ -98,6 +101,8 @@ class MissionPass(UI):
         skip_first_screenshot = True
         click_timer = Timer(0.3)
         pass_scrol_y = 200
+        dot_offset = (20, 20)
+        PASS_BANNER_DYNAMIC = copy.deepcopy(PASS_BANNER)
 
         # 根据好友图标计算pass滑动位置
         while 1:
@@ -108,11 +113,12 @@ class MissionPass(UI):
 
             if self.appear(MAIN_GOTO_FRIEND, offset=10):
                 break
-
             else:
                 if self.appear(MAIN_GOTO_FRIEND, offset=10, static=False):
-                    _, friend_y = self.appear_location(MAIN_GOTO_FRIEND, offset=10, static=False)
-                    pass_scrol_y = friend_y - 100
+                    # 向下偏移60个像素
+                    pass_scrol_y = pass_scrol_y + 60
+                    dot_offset = (0, 60, 0, 60)
+                    PASS_BANNER_DYNAMIC = shift_button(PASS_BANNER, 0, 60)
                     break
 
         # 获取当前pass数量
@@ -121,9 +127,9 @@ class MissionPass(UI):
             # 第一个banner
             self.ensure_sroll((640, pass_scrol_y), (500, pass_scrol_y), speed=40, count=1, delay=0.5)
             self.device.screenshot()
-            banner_first = Button(PASS_BANNER.area, None, button=PASS_BANNER.area)
+            banner_first = Button(PASS_BANNER_DYNAMIC.area, None, button=PASS_BANNER_DYNAMIC.area)
             banner_first._match_init = True
-            banner_first.image = crop(self.device.image, PASS_BANNER.area)
+            banner_first.image = crop(self.device.image, PASS_BANNER_DYNAMIC.area)
             while 1:
                 if skip_first_screenshot:
                     skip_first_screenshot = False
@@ -137,9 +143,9 @@ class MissionPass(UI):
                 while 1:
                     self.device.screenshot()
 
-                    banner = Button(PASS_BANNER.area, None, button=PASS_BANNER.area)
+                    banner = Button(PASS_BANNER_DYNAMIC.area, None, button=PASS_BANNER_DYNAMIC.area)
                     banner._match_init = True
-                    banner.image = crop(tmp_image, PASS_BANNER.area)
+                    banner.image = crop(tmp_image, PASS_BANNER_DYNAMIC.area)
                     if not self.appear(banner, offset=10, threshold=0.8):
                         logger.info(f'Find mission pass {self.config.PASS_LIMIT}')
                         self.config.PASS_LIMIT += 1
@@ -160,7 +166,7 @@ class MissionPass(UI):
                 self.ensure_sroll((640, pass_scrol_y), (500, pass_scrol_y), speed=40, count=1, delay=0.5)
             for _ in range(passs):
                 self.device.screenshot()
-                if self.appear(DOT, offset=(20, 20)):
+                if self.appear(DOT, offset=dot_offset):
                     find_dot = True
                     while 1:
                         self.device.screenshot()
@@ -174,7 +180,7 @@ class MissionPass(UI):
                         if (
                             click_timer.reached()
                             and self.appear(MAIN_CHECK, offset=30)
-                            and self.appear_then_click(DOT, offset=(20, 20), click_offset=(-20, 10), interval=3)
+                            and self.appear_then_click(DOT, offset=dot_offset, click_offset=(-20, 10), interval=3)
                         ):
                             click_timer.reset()
                             continue
@@ -193,9 +199,9 @@ class MissionPass(UI):
                     while 1:
                         self.device.screenshot()
 
-                        banner = Button(PASS_BANNER.area, None, button=PASS_BANNER.area)
+                        banner = Button(PASS_BANNER_DYNAMIC.area, None, button=PASS_BANNER_DYNAMIC.area)
                         banner._match_init = True
-                        banner.image = crop(tmp_image, PASS_BANNER.area)
+                        banner.image = crop(tmp_image, PASS_BANNER_DYNAMIC.area)
                         if not self.appear(banner, offset=10, threshold=0.8):
                             break
                         else:
