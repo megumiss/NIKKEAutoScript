@@ -483,6 +483,11 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
+            # 点击reward领取
+            if click_timer.reached() and self.appear_then_click(RECEIVE_REWARD, offset=10, interval=1, static=False):
+                click_timer.reset()
+                continue
+
         logger.info('Event reward done')
 
     @Config.when(EVENT_TYPE=(1, 3))
