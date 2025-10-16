@@ -833,10 +833,31 @@ class Event(UI):
     def coop(self, skip_first_screenshot=True):
         """进入协同作战页面"""
         logger.hr('EVENT COOP START', 2)
+
+        # 检查协同作战是否结束
+        confirm_timer = Timer(10, count=10)
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 协同选择/协同主页
+            if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)) and not self.appear(
+                self.event_assets.COOP_ENTER, offset=10
+            ):
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    logger.warning('Coop allready closed')
+                    return False
+            else:
+                break
+
+        # 走到协同作战
         click_timer = Timer(0.3)
         confirm_timer = Timer(1, count=3)
 
-        # 走到协同作战
         direct = False
         while 1:
             if skip_first_screenshot:

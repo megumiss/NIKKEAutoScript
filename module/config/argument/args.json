@@ -2233,6 +2233,10 @@
       "FightQuickly": {
         "type": "checkbox",
         "value": false
+      },
+      "MainStoryMark": {
+        "type": "checkbox",
+        "value": false
       }
     },
     "Storage": {

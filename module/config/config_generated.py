@@ -174,6 +174,7 @@ class GeneratedConfig:
     # Group `SemiCombat`
     SemiCombat_SkipStory = False
     SemiCombat_FightQuickly = False
+    SemiCombat_MainStoryMark = False
 
     # Group `BlaCDKManual`
     BlaCDKManual_CDK = None

@@ -284,6 +284,8 @@ SemiCombat:
     value: false
   FightQuickly:
     value: false
+  MainStoryMark:
+    value: false
 BlaCDKManual:
   CDK:
     value: ''

@@ -117,6 +117,43 @@ class ModuleBase:
 
         return appear
 
+    def appear_with_scale(self, button: Button, interval=0, threshold=None, scale_range=(0.9, 1.1), scale_step=0.02) -> bool:
+        self.device.stuck_record_add(button)
+
+        if interval:
+            if button.name in self.interval_timer:
+                if self.interval_timer[button.name].limit != interval:
+                    self.interval_timer[button.name] = Timer(interval)
+            else:
+                self.interval_timer[button.name] = Timer(interval)
+
+            if not self.interval_timer[button.name].reached():
+                return False
+
+        appear = button.match_with_scale(
+            self.device.image,
+            threshold=self.config.BUTTON_MATCH_SIMILARITY if threshold is None else threshold,
+            scale_range=scale_range,
+            scale_step=scale_step
+        )
+
+        if appear and interval:
+            self.interval_timer[button.name].reset()
+
+        return appear
+
+    def appear_with_scale_then_click(self, button, click_offset=0, interval=0, threshold=None,
+                          scale_range=(0.9, 1.1), scale_step=0.02, screenshot=False) -> bool:
+
+        appear = self.appear_with_scale(button, interval=interval, threshold=threshold, scale_range=scale_range, scale_step=scale_step)
+        if appear:
+            if screenshot:
+                self.device.sleep(self.config.WAIT_BEFORE_SAVING_SCREEN_SHOT)
+                self.device.screenshot()
+            self.device.click(button, click_offset)
+
+        return appear
+
     def appear_text(self, text, threshold=0.7, interval=0, lang='ch') -> bool or tuple:
         if interval:
             if text in self.interval_timer:

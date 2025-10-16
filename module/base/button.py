@@ -157,6 +157,55 @@ class Button(Resource):
         #     return False
         # else:
 
+    def match_with_scale(self, image, threshold=0.85, scale_range=(0.9, 1.1), scale_step=0.02):
+        """
+        多尺度匹配：在一定范围内连续搜索最佳缩放匹配
+
+        Args:
+            image: 要匹配的图像
+            offset (int | tuple): 匹配区域偏移
+            threshold (float): 相似度阈值
+            scale_range (tuple[float, float]): 缩放范围 (min_scale, max_scale)
+            scale_step (float): 缩放步长
+
+        Returns:
+            bool: 是否匹配成功
+        """
+        self.ensure_template()
+
+        best_similarity = -1
+        best_scale = 1.0
+        best_loc = None
+
+        # 在范围内连续扫描比例
+        scale = scale_range[0]
+        while scale <= scale_range[1]:
+            resized_template = cv2.resize(self.image, (0, 0), fx=scale, fy=scale)
+            if resized_template.shape[0] > image.shape[0] or resized_template.shape[1] > image.shape[1]:
+                scale += scale_step
+                continue
+
+            res = cv2.matchTemplate(image, resized_template, cv2.TM_CCOEFF_NORMED)
+            _, similarity, _, upper_left = cv2.minMaxLoc(res)
+
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_scale = scale
+                best_loc = upper_left
+
+            scale += scale_step
+
+        if best_similarity > threshold:
+            h, w = self.area[3] - self.area[1], self.area[2] - self.area[0]
+            bottom_right = (best_loc[0] + w, best_loc[1] + h)
+            self._button_offset = (best_loc[0], best_loc[1], bottom_right[0], bottom_right[1])
+
+        logger.debug(
+            f'Button: {self.name}, best_similarity: {best_similarity:.3f}, '
+            f'best_scale: {best_scale:.3f}, threshold: {threshold}, hit: {best_similarity > threshold}'
+        )
+        return best_similarity > threshold
+
     def match_luma(self, image, offset=30, similarity=0.85):
         """
         Detects button by template matching under Y channel (Luminance)

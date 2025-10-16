@@ -9,4 +9,8 @@ HIGHLIGHTS_LIST_CLOSE = Button(area={'zh-cn': (650, 120, 679, 148)}, color={'zh-
 HIGHLIGHTS_LIST_RED = Button(area={'zh-cn': (645, 533, 662, 549)}, color={'zh-cn': (232, 165, 151)}, button={'zh-cn': (645, 533, 662, 549)}, file={'zh-cn': './assets/zh-cn/daemon/HIGHLIGHTS_LIST_RED.png'})
 HIGHLIGHTS_LIST_RED_CHECK = Button(area={'zh-cn': (339, 176, 355, 192)}, color={'zh-cn': (235, 163, 149)}, button={'zh-cn': (339, 176, 355, 192)}, file={'zh-cn': './assets/zh-cn/daemon/HIGHLIGHTS_LIST_RED_CHECK.png'})
 HIGHLIGHTS_RED = Button(area={'zh-cn': (689, 624, 708, 638)}, color={'zh-cn': (227, 123, 99)}, button={'zh-cn': (689, 624, 708, 638)}, file={'zh-cn': './assets/zh-cn/daemon/HIGHLIGHTS_RED.png'})
+MAIN_STORY_MAP_CLOSE = Button(area={'zh-cn': (250, 117, 276, 128)}, color={'zh-cn': (147, 157, 165)}, button={'zh-cn': (250, 117, 276, 128)}, file={'zh-cn': './assets/zh-cn/daemon/MAIN_STORY_MAP_CLOSE.png'})
+MAIN_STORY_MARK_IN = Button(area={'zh-cn': (346, 583, 374, 637)}, color={'zh-cn': (162, 164, 164)}, button={'zh-cn': (346, 583, 374, 637)}, file={'zh-cn': './assets/zh-cn/daemon/MAIN_STORY_MARK_IN.png'})
+MAIN_STORY_MARK_OUT = Button(area={'zh-cn': (512, 1041, 534, 1090)}, color={'zh-cn': (157, 158, 158)}, button={'zh-cn': (512, 1041, 534, 1090)}, file={'zh-cn': './assets/zh-cn/daemon/MAIN_STORY_MARK_OUT.png'})
+MAIN_STORY_NORMAL = Button(area={'zh-cn': (522, 1153, 577, 1163)}, color={'zh-cn': (69, 193, 249)}, button={'zh-cn': (522, 1153, 577, 1163)}, file={'zh-cn': './assets/zh-cn/daemon/MAIN_STORY_NORMAL.png'})
 PLAY_HIGHLIGHTS = Button(area={'zh-cn': (467, 690, 518, 715)}, color={'zh-cn': (158, 222, 250)}, button={'zh-cn': (467, 690, 518, 715)}, file={'zh-cn': './assets/zh-cn/daemon/PLAY_HIGHLIGHTS.png'})
