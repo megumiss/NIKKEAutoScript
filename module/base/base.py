@@ -105,6 +105,46 @@ class ModuleBase:
 
         return appear
 
+    def appear_location(self, button: Button, offset=0, threshold=None, static=True):
+        """
+        查找按钮在屏幕中的位置并返回坐标（左上角x, 左上角y, 右下角x, 右下角y）
+
+        Returns:
+            tuple[int, int, int, int] | None: 找到则返回坐标，否则返回 None
+        """
+        self.device.stuck_record_add(button)
+
+        if offset:
+            if isinstance(offset, bool):
+                offset = self.config.BUTTON_OFFSET
+
+            appear = button.match(
+                self.device.image,
+                offset=offset,
+                threshold=self.config.BUTTON_MATCH_SIMILARITY if not threshold else threshold,
+                static=static
+            )
+        else:
+            appear = button.appear_on(
+                self.device.image,
+                threshold=self.config.COLOR_SIMILAR_THRESHOLD if not threshold else threshold
+            )
+
+        if appear:
+            # match 成功后，button._button_offset 已被更新
+            if hasattr(button, "_button_offset"):
+                logger.info(f"Button '{button.name}' found at {button._button_offset}")
+                x1, y1, x2, y2 = button._button_offset
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
+                return cx, cy
+            else:
+                logger.warning(f"Button '{button.name}' matched but no offset recorded")
+                return None
+        else:
+            logger.info(f"Button '{button.name}' not found")
+            return None
+
     def appear_then_click(self, button, offset=0, click_offset=0, interval=0, threshold=None,
                           static=True, screenshot=False) -> bool:
 

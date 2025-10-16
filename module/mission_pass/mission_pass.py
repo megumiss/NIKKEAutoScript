@@ -5,7 +5,7 @@ from module.base.utils import crop
 from module.handler.assets import REWARD
 from module.logger import logger
 from module.mission_pass.assets import *
-from module.ui.assets import MAIN_CHECK
+from module.ui.assets import MAIN_CHECK, MAIN_GOTO_FRIEND
 from module.ui.page import page_main
 from module.ui.ui import UI
 
@@ -97,12 +97,29 @@ class MissionPass(UI):
         self.ui_ensure(page_main)
         skip_first_screenshot = True
         click_timer = Timer(0.3)
+        pass_scrol_y = 200
+
+        # 根据好友图标计算pass滑动位置
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if self.appear(MAIN_GOTO_FRIEND, offset=10):
+                break
+
+            else:
+                if self.appear(MAIN_GOTO_FRIEND, offset=10, static=False):
+                    _, friend_y = self.appear_location(MAIN_GOTO_FRIEND, offset=10, static=False)
+                    pass_scrol_y = friend_y - 100
+                    break
 
         # 获取当前pass数量
         self.config.PASS_LIMIT = 1
         if self.appear(CHANGE, offset=5, static=False) or self.appear(EXPAND, offset=5, static=False):
             # 第一个banner
-            self.ensure_sroll((640, 200), (500, 200), speed=40, count=1, delay=0.5)
+            self.ensure_sroll((640, pass_scrol_y), (500, pass_scrol_y), speed=40, count=1, delay=0.5)
             self.device.screenshot()
             banner_first = Button(PASS_BANNER.area, None, button=PASS_BANNER.area)
             banner_first._match_init = True
@@ -115,7 +132,7 @@ class MissionPass(UI):
 
                 tmp_image = self.device.image
                 # 滑动到下一个pass
-                self.ensure_sroll((640, 200), (500, 200), speed=40, count=1, delay=0.5)
+                self.ensure_sroll((640, pass_scrol_y), (500, pass_scrol_y), speed=40, count=1, delay=0.5)
                 # 比较banner是否变化
                 while 1:
                     self.device.screenshot()
@@ -140,7 +157,7 @@ class MissionPass(UI):
             find_dot = False
             # 每次都检查所有的pass
             if not passs == 1:
-                self.ensure_sroll((640, 200), (500, 200), speed=40, count=1, delay=0.5)
+                self.ensure_sroll((640, pass_scrol_y), (500, pass_scrol_y), speed=40, count=1, delay=0.5)
             for _ in range(passs):
                 self.device.screenshot()
                 if self.appear(DOT, offset=(20, 20)):
@@ -171,7 +188,7 @@ class MissionPass(UI):
                     if passs == 1:
                         break
                     tmp_image = self.device.image
-                    self.ensure_sroll((640, 200), (500, 200), speed=40, count=1, delay=0.5)
+                    self.ensure_sroll((640, pass_scrol_y), (500, pass_scrol_y), speed=40, count=1, delay=0.5)
                     # 比较banner是否变化
                     while 1:
                         self.device.screenshot()
