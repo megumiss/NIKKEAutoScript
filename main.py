@@ -393,6 +393,11 @@ class NikkeAutoScript:
 
         ScreenRotate(config=self.config).run()
 
+    def update_hosts(self):
+        from module.daemon.update_hosts import UpdateHosts
+
+        UpdateHosts(config=self.config).run()
+
     def event(self):
         from module.event.event import Event
 

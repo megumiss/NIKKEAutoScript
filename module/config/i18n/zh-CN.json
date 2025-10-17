@@ -209,6 +209,10 @@
     "ScreenRotate": {
       "name": "屏幕旋转",
       "help": ""
+    },
+    "UpdateHosts": {
+      "name": "Hosts修改",
+      "help": ""
     }
   },
   "Scheduler": {
@@ -951,6 +955,22 @@
     "UseBox": {
       "name": "使用道具",
       "help": ""
+    }
+  },
+  "Hosts": {
+    "_info": {
+      "name": "Hosts配置",
+      "help": ""
+    },
+    "Action": {
+      "name": "操作",
+      "help": "",
+      "Add": "添加",
+      "Delete": "删除"
+    },
+    "Hosts": {
+      "name": "Hosts",
+      "help": "将下面未被注释的内容追加到系统Hosts文件中，只支持Windows；默认启用国际服，更换服务器请取消对应服务器的注释，建议只开启自己所在服务器的Hosts，内容可根据自己实际情况修改"
     }
   },
   "Storage": {

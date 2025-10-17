@@ -179,3 +179,5 @@ Tool:
       - BlaCDKManual
     ScreenRotate:
       - ScreenRotate
+    UpdateHosts:
+      - Hosts

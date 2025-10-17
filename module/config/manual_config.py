@@ -8,7 +8,7 @@ class ManualConfig:
        Commission > Recycling > Synchro >
        Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
        Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > 
-       AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate
+       AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate > UpdateHosts
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS"""
@@ -169,5 +169,5 @@ class ManualConfig:
     DEVICE_OVER_HTTP = False
 
     # 独立任务，不依赖游戏运行
-    INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange', 'ScreenRotate']
-    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange", 'screen_rotate']
+    INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange', 'ScreenRotate', 'UpdateHosts']
+    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange", 'screen_rotate', 'update_hosts']

@@ -2301,5 +2301,29 @@
         "display": "disabled"
       }
     }
+  },
+  "UpdateHosts": {
+    "Hosts": {
+      "Action": {
+        "type": "select",
+        "value": "Add",
+        "option": [
+          "Add",
+          "Delete"
+        ]
+      },
+      "Hosts": {
+        "type": "textarea",
+        "value": "# 通用\n18.155.202.10 cloud.nikke-kr.com\n43.132.85.192 nikke-en.com\n43.132.85.192 nikke-jp.com\n43.132.85.192 nikke-kr.com\n# 国际 Global\n43.152.186.163 global-lobby.nikke-kr.com\n43.152.186.163 global-match.nikke-kr.com\n# 日本 JP\n# 43.152.186.163 jp-lobby.nikke-kr.com\n# 43.152.186.163 jp-match.nikke-kr.com\n# 韩国 KR\n# 43.152.186.163 kr-lobby.nikke-kr.com\n# 43.152.186.163 kr-match.nikke-kr.com\n# 东南亚 SEA\n# 43.152.186.163 sea-lobby.nikke-kr.com\n# 43.152.186.163 sea-match.nikke-kr.com\n# 港澳台 HK/MC/TW\n# 43.152.186.163 hmt-lobby.nikke-kr.com\n# 43.152.186.163 hmt-match.nikke-kr.com\n# 北美 NA\n# 175.97.131.54 us-match.nikke-kr.com\n# 175.97.131.54 us-lobby.nikke-kr.com"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
   }
 }
