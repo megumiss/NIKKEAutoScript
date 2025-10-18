@@ -1,5 +1,7 @@
 language = 'zh-cn'
 
+VALID_LANGUAGE = ['zh-cn']
+
 def set_language(l: str):
     global language
     language = to_language(l)

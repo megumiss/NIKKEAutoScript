@@ -6,6 +6,7 @@ from tqdm.contrib.concurrent import process_map
 
 from module.base.utils import get_bbox, get_color, image_size, load_image
 from module.config.config import NikkeConfig
+from module.config.language import VALID_LANGUAGE
 from module.logger import logger
 
 MODULE_FOLDER = './module'
@@ -30,9 +31,8 @@ class ImageExtractor:
         self.module = module
         self.name, self.ext = os.path.splitext(file)
         self.area, self.color, self.button, self.file = {}, {}, {}, {}
-        # for server in VALID_SERVER:
-        #     self.load(server)
-        self.load()
+        for language in VALID_LANGUAGE:
+            self.load(language)
 
     def get_file(self, genre='', language='zh-cn'):
         names = [f'{self.name}.{genre}{ext}' if genre else f'{self.name}{ext}' for ext in ['.png', '.gif']]
