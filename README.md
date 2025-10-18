@@ -106,6 +106,7 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 - [ ] dashboard（写了一半）
 - [ ] ~~自动/手动账号切换（代码架构限制可能做不了）~~
 - [ ] 模拟室刷buff（很麻烦）
+- [ ] English Support
 
 ---
 
@@ -115,17 +116,20 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 
 ---
 
-### 支持我
+### 💖 支持我 | Support Me
 
-如果喜欢本项目，可以送作者一杯蜜雪冰城🍦  
+如果你喜欢本项目，可以请作者喝一杯蜜雪冰城🍦  
+您的支持就是作者持续开发与维护项目的动力🚀  
 
-您的支持就是作者开发和维护项目的动力🚀  
+If you enjoy this project, consider buying the author a cup of Mixue Ice Cream 🍦  
+Your support keeps the project alive and growing 🚀  
 
 <p>
-  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="微信" width="200"/>
-  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="支付宝" width="200"/>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="WeChat Pay" width="200"/>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="Alipay" width="200"/>
 </p>
 
+**For international supporters:** [🌍 UniFans](https://app.unifans.io/c/megumiss)
 
 ---
 
