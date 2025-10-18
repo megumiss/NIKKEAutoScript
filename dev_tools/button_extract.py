@@ -25,7 +25,7 @@ class ImageExtractor:
     def __init__(self, module, file):
         """
         Args:
-            module(str): relative path under assets/zh-cn, e.g. 'event_minigame/event_20250924'
+            module(str): relative path under assets/zh-CN, e.g. 'event_minigame/event_20250924'
             file(str): filename, e.g. 'GET_MISSION.png'
         """
         self.module = module
@@ -34,7 +34,7 @@ class ImageExtractor:
         for language in VALID_LANGUAGE:
             self.load(language)
 
-    def get_file(self, genre='', language='zh-cn'):
+    def get_file(self, genre='', language='zh-CN'):
         names = [f'{self.name}.{genre}{ext}' if genre else f'{self.name}{ext}' for ext in ['.png', '.gif']]
         base_dir = os.path.join(NikkeConfig.ASSETS_FOLDER, language, self.module).replace('\\', '/')
 
@@ -87,7 +87,7 @@ class ImageExtractor:
         mean = tuple(np.rint(mean).astype(int))
         return bbox, mean
 
-    def load(self, language='zh-cn'):
+    def load(self, language='zh-CN'):
         file = self.get_file(language=language)
         if os.path.exists(file):
             area, color = self.extract(file)
@@ -109,11 +109,11 @@ class ImageExtractor:
             self.button[language] = button
             self.file[language] = file
         else:
-            logger.attr(language, f'{self.name} not found, use zh-cn language assets')
-            self.area[language] = self.area['zh-cn']
-            self.color[language] = self.color['zh-cn']
-            self.button[language] = self.button['zh-cn']
-            self.file[language] = self.file['zh-cn']
+            logger.attr(language, f'{self.name} not found, use zh-CN language assets')
+            self.area[language] = self.area['zh-CN']
+            self.color[language] = self.color['zh-CN']
+            self.button[language] = self.button['zh-CN']
+            self.file[language] = self.file['zh-CN']
 
     @property
     def expression(self):
@@ -154,10 +154,10 @@ class ModuleExtractor:
         self.name = name
         self.subfolder = subfolder
         if subfolder:
-            self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-cn', name, subfolder)
+            self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN', name, subfolder)
             self.module_path = os.path.join(name, subfolder).replace('\\', '/')
         else:
-            self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-cn', name)
+            self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN', name)
             self.module_path = name
 
     @staticmethod
@@ -200,7 +200,7 @@ class ModuleExtractor:
 
 
 def worker(module):
-    folder_path = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-cn', module)
+    folder_path = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN', module)
     subfolders = [
         f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f)) and f.startswith('event_')
     ]
@@ -236,8 +236,8 @@ class AssetExtractor:
         logger.info('Assets extract')
         modules = [
             m
-            for m in os.listdir(os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-cn'))
-            if os.path.isdir(os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-cn', m))
+            for m in os.listdir(os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN'))
+            if os.path.isdir(os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN', m))
         ]
         process_map(worker, modules)
 

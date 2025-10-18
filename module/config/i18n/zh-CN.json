@@ -277,7 +277,7 @@
     "Language": {
       "name": "游戏语言",
       "help": "当前只支持简体中文",
-      "zh-cn": "简体中文"
+      "zh-CN": "简体中文"
     },
     "ScreenshotMethod": {
       "name": "模拟器截图方案",
@@ -383,7 +383,7 @@
     "Language": {
       "name": "游戏语言",
       "help": "当前只支持简体中文",
-      "zh-cn": "简体中文"
+      "zh-CN": "简体中文"
     },
     "ScreenshotInterval": {
       "name": "截图间隔",

@@ -23,7 +23,7 @@ class GeneratedConfig:
     # Group `Emulator`
     Emulator_Serial = 'auto'
     Emulator_PackageName = 'com.proximabeta.nikke'  # com.proximabeta.nikke, com.gamamobi.nikke, com.proximabeta.nikke, com.gamamobi.nikke
-    Emulator_Language = 'zh-cn'  # zh-cn
+    Emulator_Language = 'zh-CN'  # zh-CN
     Emulator_ScreenshotMethod = 'DroidCast'  # DroidCast
     Emulator_ControlMethod = 'minitouch'  # minitouch
     Emulator_AdbRestart = False
@@ -45,7 +45,7 @@ class GeneratedConfig:
 
     # Group `PCClientInfo`
     PCClientInfo_Client = 'intl'  # intl, hmt
-    PCClientInfo_Language = 'zh-cn'  # zh-cn
+    PCClientInfo_Language = 'zh-CN'  # zh-CN
     PCClientInfo_ScreenshotInterval = 0.3
     PCClientInfo_LauncherTitleName = None
     PCClientInfo_LauncherProcessName = None

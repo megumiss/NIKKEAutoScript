@@ -277,7 +277,7 @@
     "Language": {
       "name": "Game Language",
       "help": "Currently only Simplified Chinese is supported",
-      "zh-cn": "Simplified Chinese"
+      "zh-CN": "Simplified Chinese"
     },
     "ScreenshotMethod": {
       "name": "Emulator Screenshot Method",
@@ -383,7 +383,7 @@
     "Language": {
       "name": "Game Language",
       "help": "Currently only Simplified Chinese is supported",
-      "zh-cn": "Simplified Chinese"
+      "zh-CN": "Simplified Chinese"
     },
     "ScreenshotInterval": {
       "name": "Screenshot Interval",

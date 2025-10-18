@@ -80,9 +80,9 @@
       },
       "Language": {
         "type": "select",
-        "value": "zh-cn",
+        "value": "zh-CN",
         "option": [
-          "zh-cn"
+          "zh-CN"
         ]
       },
       "ScreenshotMethod": {
@@ -159,9 +159,9 @@
       },
       "Language": {
         "type": "select",
-        "value": "zh-cn",
+        "value": "zh-CN",
         "option": [
-          "zh-cn"
+          "zh-CN"
         ]
       },
       "ScreenshotInterval": {

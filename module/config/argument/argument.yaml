@@ -26,8 +26,8 @@ Emulator:
     value: com.proximabeta.nikke
     option: [ com.proximabeta.nikke, com.gamamobi.nikke, ]
   Language:
-    value: zh-cn
-    option: [ zh-cn ]
+    value: zh-CN
+    option: [ zh-CN ]
   ScreenshotMethod:
     value: DroidCast
     option: [ DroidCast, ]
@@ -80,8 +80,8 @@ PCClientInfo:
     value: intl
     option: [ intl, hmt ]
   Language:
-    value: zh-cn
-    option: [ zh-cn ]
+    value: zh-CN
+    option: [ zh-CN ]
   ScreenshotInterval: 0.3
   LauncherTitleName:
     value: ''
