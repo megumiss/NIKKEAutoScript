@@ -1,3 +1,5 @@
+**| [English](README_en.md) | 简体中文 | [日本語](README_jp.md) |**
+
 <div align="center">
 
 <img alt="LOGO" src="./webapp/buildResources/icon.png" width="256" height="256" />
@@ -7,10 +9,7 @@
 
 胜利女神：NIKKE 自动日常脚本，支持所有设置为**简体中文**的 PC/模拟器客户端（**国服除外**）。Fork 自 [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
-GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC/Emulator clients set to **Simplified Chinese (zh\_CN)**, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
-
 **如果觉得有帮助，请帮我点个 ⭐ Star 支持一下！**  
-*If you find it helpful, please give it a ⭐ Star to support!*
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white">
@@ -121,15 +120,12 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 如果你喜欢本项目，可以请作者喝一杯蜜雪冰城🍦  
 您的支持就是作者持续开发与维护项目的动力🚀  
 
-If you enjoy this project, consider buying the author a cup of Mixue Ice Cream 🍦  
-Your support keeps the project alive and growing 🚀  
-
 <p>
   <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="WeChat Pay" width="200"/>
   <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="Alipay" width="200"/>
 </p>
 
-**For international supporters:** [🌍 UniFans](https://app.unifans.io/c/megumiss)
+**国际用户支持请使用** [🌍 UniFans](https://app.unifans.io/c/megumiss)
 
 ---
 
