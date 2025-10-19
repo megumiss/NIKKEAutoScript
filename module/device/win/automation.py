@@ -126,7 +126,10 @@ class Automation:
 
             try:
                 result = Screenshot.take_screenshot(
-                    self.current_window.title, self.current_window.resolution, self.config.PCClient_Screens, crop=crop
+                    self.current_window.title,
+                    self.current_window.resolution,
+                    self.config.PCClient_ScreenNumber,
+                    crop=crop,
                 )
                 if result:
                     image, pos, scale = result

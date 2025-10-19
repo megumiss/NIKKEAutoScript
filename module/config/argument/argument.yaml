@@ -62,8 +62,9 @@ EmulatorInfo:
     value: null
     type: textarea
 PCClient:
-  Screens:
-    value: false
+  ScreenNumber:
+    value: 0
+    option: [ 0, 1, 2, 3, 4, 5 ]
   GameResolutionCompat:
     value: false
   CloseAutoHdr: true

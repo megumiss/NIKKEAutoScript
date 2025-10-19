@@ -194,9 +194,17 @@
       }
     },
     "PCClient": {
-      "Screens": {
-        "type": "checkbox",
-        "value": false
+      "ScreenNumber": {
+        "type": "select",
+        "value": 0,
+        "option": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
       },
       "GameResolutionCompat": {
         "type": "checkbox",

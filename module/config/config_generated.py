@@ -35,7 +35,7 @@ class GeneratedConfig:
     EmulatorInfo_path = None
 
     # Group `PCClient`
-    PCClient_Screens = False
+    PCClient_ScreenNumber = 0  # 0, 1, 2, 3, 4, 5
     PCClient_GameResolutionCompat = False
     PCClient_CloseAutoHdr = True
     PCClient_ScreenRotate = False

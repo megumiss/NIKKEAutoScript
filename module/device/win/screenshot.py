@@ -44,40 +44,43 @@ class Screenshot:
 
     #     def enum_handler(hwnd, lparam):
     #         if win32gui.IsWindowVisible(hwnd) and title in win32gui.GetWindowText(hwnd):
-    #             if class_name is None or class_name == win32gui.GetClassName(hwnd):
-    #                 hwnd_list.append(hwnd)
+    ...     #     if class_name is None or class_name == win32gui.GetClassName(hwnd):
+    #             hwnd_list.append(hwnd)
 
     #     win32gui.EnumWindows(enum_handler, None)
     #     if hwnd_list:
     #         return hwnd_list[0]
     #     return None
 
-    @staticmethod
-    def get_main_screen_location():
-        rects = getDisplayRects()
-        min_x = min([rect[0] for rect in rects])
-        min_y = min([rect[1] for rect in rects])
-        return -min_x, -min_y
+    # vvvvvvvvvv MÉTODO REMOVIDO vvvvvvvvvv
+    # @staticmethod
+    # def get_main_screen_location():
+    #     rects = getDisplayRects()
+    #     min_x = min([rect[0] for rect in rects])
+    #     min_y = min([rect[1] for rect in rects])
+    #     return -min_x, -min_y
+    # ^^^^^^^^^^ MÉTODO REMOVIDO ^^^^^^^^^^
 
+    # vvvvvvvvvv MÉTODO MODIFICADO vvvvvvvvvv
     @staticmethod
     def take_screenshot(title, resolution, screens=False, crop=(0, 0, 1, 1)):
         window = Screenshot.get_window(title)
         if window:
             left, top, width, height = Screenshot.get_window_region(window)
 
-            if screens:
-                offset_x, offset_y = Screenshot.get_main_screen_location()
-            else:
-                offset_x, offset_y = 0, 0
+            # A lógica de offset_x/offset_y foi removida.
+            # As coordenadas (left, top) de 'pygetwindow' (usado por pyautogui.getWindowsWithTitle)
+            # já são coordenadas virtuais da tela, que é o que 
+            # pyautogui.screenshot(allScreens=True) espera.
 
             screenshot = pyautogui.screenshot(
                 region=(
-                    int(left + width * crop[0] + offset_x),
-                    int(top + height * crop[1] + offset_y),
+                    int(left + width * crop[0]),
+                    int(top + height * crop[1]),
                     int(width * crop[2]),
                     int(height * crop[3]),
                 ),
-                allScreens=screens,
+                allScreens=screens, # 'screens' DEVE ser True para monitores não primários
             )
 
             real_width, _ = Screenshot.get_window_real_resolution(window)

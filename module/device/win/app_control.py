@@ -98,7 +98,7 @@ class AppControl(WinClient, Login):
 
         # 设置屏幕方向
         if self.config.PCClient_ScreenRotate:
-            self.screen_rotate(1)
+            self.screen_rotate(self.config.PCClient_ScreenNumber, 1)
             time.sleep(3)
 
         # 启动流程
@@ -138,7 +138,8 @@ class AppControl(WinClient, Login):
             return False
 
         # 检查屏幕分辨率
-        self.check_screen_resolution(720, 1280)
+        if not self.config.PCClient_ScreenNumber:
+            self.check_screen_resolution(720, 1280)
         self.launcher_running = False
         self.current_window = self.game
         # 关闭自动HDR
@@ -151,7 +152,9 @@ class AppControl(WinClient, Login):
                 # 检查是否已进入游戏
                 if self.switch_to_program():
                     logger.info('游戏已在运行，检查分辨率')
-                    self.ensure_resolution(720, 1280, self.config.PCClient_GameWindowPosition)
+                    self.ensure_resolution(
+                        self.config.PCClient_ScreenNumber, 720, 1280, self.config.PCClient_GameWindowPosition
+                    )
                     self.check_resolution(720, 1280)
                     break
 
@@ -176,7 +179,9 @@ class AppControl(WinClient, Login):
                     logger.error('切换到游戏超时')
                     raise RequestHumanTakeover
                 # 设置游戏分辨率
-                self.ensure_resolution(720, 1280, self.config.PCClient_GameWindowPosition)
+                self.ensure_resolution(
+                    self.config.PCClient_ScreenNumber, 720, 1280, self.config.PCClient_GameWindowPosition
+                )
                 self.check_resolution(720, 1280)
 
                 break

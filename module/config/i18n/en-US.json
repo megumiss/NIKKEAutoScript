@@ -335,9 +335,15 @@
       "name": "PC Client Settings",
       "help": ""
     },
-    "Screens": {
-      "name": "Multiple Screens",
-      "help": "Enable this option if you use multiple monitors. Make sure the primary display meets the resolution requirement. This option is not fully tested and may not work."
+    "ScreenNumber": {
+      "name": "PCClient.ScreenNumber.name",
+      "help": "PCClient.ScreenNumber.help",
+      "0": "0",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
     },
     "GameResolutionCompat": {
       "name": "Game Resolution Compatibility Mode",

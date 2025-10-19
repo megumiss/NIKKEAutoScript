@@ -50,7 +50,7 @@
       "GamePath": null
     },
     "PCClient": {
-      "Screens": false,
+      "ScreenNumber": 0,
       "GameResolutionCompat": false,
       "CloseAutoHdr": true,
       "ScreenRotate": false,
