@@ -1,4 +1,9 @@
 import ctypes
+
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
+except Exception:
+    pass
 import os
 import subprocess
 import time
@@ -350,7 +355,7 @@ class WinClient:
 
         return x, y
 
-    def change_resolution(self, screen_n, client_width, client_height, position='center', dpi=None):
+    def change_resolution(self, screen_n, client_width, client_height, position='center', screen_dpi=None):
         """
         设置窗口客户区大小为指定分辨率，并调整位置
 
@@ -361,9 +366,10 @@ class WinClient:
             position: 窗口位置（center/left/right/topleft/topright）
             dpi: 可选，Windows设置中的DPI值（如 96=100%, 144=150%），用于修正缩放
         """
+        screen_dpi = 96
         logger.info(
             f'设置窗口分辨率：[{self.current_window.name}]:{self.current_window.title} '
-            f'{client_width}x{client_height}, 位置={position}, dpi={dpi}'
+            f'{client_width}x{client_height}, 位置={position}, dpi={screen_dpi}'
         )
         try:
             # 查找窗口句柄
@@ -383,9 +389,9 @@ class WinClient:
             logger.debug(f'计算得到的边框宽度: {border_width}, 边框高度: {border_height}')
 
             # DPI 缩放修正
-            if dpi is not None:
-                scale = dpi / 96.0
-                logger.debug(f'使用 DPI 修正，DPI={dpi}, 缩放比例={scale:.2f}')
+            if screen_n and screen_dpi is not None:
+                scale = screen_dpi / 96.0
+                logger.debug(f'使用 DPI 修正，DPI={screen_dpi}, 缩放比例={scale:.2f}')
             else:
                 # 默认不缩放（或可调用 GetDpiForMonitor 获取当前屏幕 DPI）
                 scale = 1.0
@@ -417,11 +423,12 @@ class WinClient:
             logger.error(f'设置分辨率时发生错误: {e}')
             raise Exception(f'无法设置分辨率: {e}')
 
-    def change_resolution_compat(self, screen_n, client_width, client_height, position='center'):
+    def change_resolution_compat(self, screen_n, client_width, client_height, position='center', screen_dpi=None):
         """
         设置窗口客户区大小为指定分辨率（兼容 DPI 缩放），并调整位置
 
         参数:
+            screen_n: 屏幕编号
             client_width: 客户区宽度(像素)
             client_height: 客户区高度(像素)
             position: 窗口位置（center/left/right/topleft/topright）
@@ -442,9 +449,17 @@ class WinClient:
                 GetDpiForWindow = ctypes.windll.user32.GetDpiForWindow
                 dpi = GetDpiForWindow(hwnd)
             except Exception:
-                # 如果不支持，就用系统 DPI（一般是 96）
-                dpi = 96
+                dpi = 96  # 不支持时默认 96
             logger.debug(f'窗口 DPI: {dpi}')
+
+            # DPI 缩放修正
+            screen_dpi = 96
+            if screen_n and screen_dpi is not None:
+                scale = screen_dpi / dpi
+                logger.debug(f'使用 DPI 修正，DPI={screen_dpi}, 缩放比例={scale:.2f}')
+            else:
+                # 默认不缩放（或可调用 GetDpiForMonitor 获取当前屏幕 DPI）
+                scale = 1.0
 
             # 准备调用 AdjustWindowRectExForDpi
             AdjustWindowRectExForDpi = ctypes.windll.user32.AdjustWindowRectExForDpi
@@ -457,8 +472,8 @@ class WinClient:
             ]
             AdjustWindowRectExForDpi.restype = wintypes.BOOL
 
-            # 先构造一个客户区矩形
-            rect = wintypes.RECT(0, 0, client_width, client_height)
+            # 先构造一个客户区矩形，考虑 DPI 缩放
+            rect = wintypes.RECT(0, 0, int(client_width / scale), int(client_height / scale))
 
             # 获取当前窗口的 style 和 ex_style
             style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
@@ -471,16 +486,16 @@ class WinClient:
 
             window_width = rect.right - rect.left
             window_height = rect.bottom - rect.top
-            logger.debug(f'需要设置的窗口矩形: {window_width}x{window_height}')
+            logger.debug(f'需要设置的窗口矩形（含边框）: {window_width}x{window_height}')
 
-            # 计算位置
+            # 计算窗口位置
             x, y = self.calculate_window_position(screen_n, window_width, window_height, position)
             result = win32gui.SetWindowPos(hwnd, 0, x, y, window_width, window_height, win32con.SWP_NOZORDER)
             if result == 0:
                 logger.error('设置窗口大小失败')
                 raise Exception('设置窗口大小失败')
 
-            # 验证设置是否成功
+            # 验证客户区大小
             new_rect = win32gui.GetClientRect(hwnd)
             logger.debug(f'设置后的客户区大小: {new_rect[2]}x{new_rect[3]}')
 
@@ -494,6 +509,7 @@ class WinClient:
         except Exception as e:
             logger.error(f'设置分辨率时发生错误: {e}')
             raise Exception(f'无法设置分辨率: {e}')
+
 
     def ensure_resolution(
         self, screen_n, client_width, client_height, position, retries=5, interval=1.0, stable_time=5.0
