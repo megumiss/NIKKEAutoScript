@@ -1,5 +1,7 @@
 import ctypes
 
+from module.exception import ScreenResolutionNotEnough
+
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
 except Exception:
@@ -12,11 +14,10 @@ from dataclasses import dataclass, field
 from typing import Literal, Optional, Tuple
 
 import psutil
-import pyautogui
 import win32api
 import win32con
 import win32gui
-from desktopmagic.screengrab_win32 import getDisplayRects  # <-- ADICIONE ESTA IMPORTAÇÃO
+from desktopmagic.screengrab_win32 import getDisplayRects
 from numpy import ndarray
 
 from module.base.utils import ensure_time
@@ -436,7 +437,7 @@ class WinClient:
                 dpi = GetDpiForWindow(hwnd)
             except Exception:
                 dpi = 96  # 不支持时默认 96
-            logger.debug(f'窗口 DPI: {dpi}')
+            logger.info(f'窗口 DPI: {dpi / 96 * 100}%')
 
             # 准备调用 AdjustWindowRectExForDpi
             AdjustWindowRectExForDpi = ctypes.windll.user32.AdjustWindowRectExForDpi
@@ -536,7 +537,9 @@ class WinClient:
                     return
                 set_game_resolution(width, height, is_fullscreen)
                 logger.debug(
-                    f'修改游戏分辨率: {self.game_resolution[0]}x{self.game_resolution[1]} ({"全屏" if self.game_resolution[2] else "窗口"}) --> {width}x{height} ({"全屏" if is_fullscreen else "窗口"})'
+                    f'修改游戏分辨率: {self.game_resolution[0]}x{self.game_resolution[1]} '
+                    f'({"全屏" if self.game_resolution[2] else "窗口"}) --> '
+                    f'{width}x{height} ({"全屏" if is_fullscreen else "窗口"})'
                 )
         except FileNotFoundError:
             logger.debug('指定的注册表项未找到')
@@ -549,7 +552,8 @@ class WinClient:
             if self.game_resolution:
                 set_game_resolution(self.game_resolution[0], self.game_resolution[1], self.game_resolution[2])
                 logger.debug(
-                    f'恢复游戏分辨率: {self.game_resolution[0]}x{self.game_resolution[1]} ({"全屏" if self.game_resolution[2] else "窗口"})'
+                    f'恢复游戏分辨率: {self.game_resolution[0]}x{self.game_resolution[1]} '
+                    f'({"全屏" if self.game_resolution[2] else "窗口"})'
                 )
         except Exception as e:
             logger.error(f'写入注册表值时发生错误: {e}')
@@ -576,28 +580,14 @@ class WinClient:
         except Exception as e:
             logger.warning(f'恢复游戏自动 HDR 设置时发生错误：{e}')
 
-    def get_main_screen_dpi(self):
-        """获取主屏 DPI（默认返回96即100%）"""
-        try:
-            GetDpiForWindow = ctypes.windll.user32.GetDpiForWindow
-            hwnd = ctypes.windll.user32.GetDesktopWindow()
-            return GetDpiForWindow(hwnd)
-        except Exception:
-            return 96
-
     def get_physical_resolutions(self):
-        """返回所有屏幕的物理分辨率（按主屏DPI反向修正）"""
-        main_dpi = self.get_main_screen_dpi()
-        scale = main_dpi / 96.0
-
+        """返回所有屏幕的分辨率"""
         monitors = win32api.EnumDisplayMonitors()
         resolutions = []
         for i, (hMonitor, hDC, (left, top, right, bottom)) in enumerate(monitors):
-            logical_width = right - left
-            logical_height = bottom - top
-            physical_width = int(logical_width * scale)
-            physical_height = int(logical_height * scale)
-            resolutions.append((physical_width, physical_height))
+            width = right - left
+            height = bottom - top
+            resolutions.append((width, height))
         return resolutions
 
     def check_screen_resolution(self, screen_n, target_width: int, target_height: int) -> None:
@@ -605,7 +595,7 @@ class WinClient:
         检查指定屏幕的分辨率是否符合要求。
         如果小于目标分辨率，则记录错误并抛出异常。
         """
-        logger.info(f'检查屏幕{screen_n}分辨率')
+        logger.info(f'检查屏幕 {screen_n} 分辨率')
 
         try:
             monitors = self.get_physical_resolutions()
@@ -616,20 +606,19 @@ class WinClient:
                 raise Exception(f'屏幕编号 {screen_n} 超出范围（共 {len(monitors)} 个屏幕）')
 
             screen_width, screen_height = monitors[screen_n]
-            logger.info(f'屏幕{screen_n} 分辨率: {screen_width}x{screen_height}')
+            logger.info(f'屏幕 {screen_n} 分辨率: {screen_width}x{screen_height}')
 
             if screen_width < target_width or screen_height < target_height:
                 logger.error(
-                    f'屏幕{screen_n} 分辨率: {screen_width}x{screen_height}，目标: {target_width}x{target_height}'
+                    f'屏幕 {screen_n} 分辨率: {screen_width}x{screen_height}，目标: {target_width}x{target_height}'
                 )
                 logger.error(
-                    f'屏幕{screen_n} 分辨率不足，请使用竖屏模式或更高分辨率显示器，'
-                    f'或启用 HDMI/VGA 欺骗器/UU超级屏等虚拟扩展。'
+                    f'屏幕 {screen_n} 分辨率不足，请使用竖屏模式或更高分辨率显示器，'
+                    f'或使用显卡欺骗器/UU超级屏/虚拟扩展屏幕。'
                 )
-                raise Exception(f'屏幕{screen_n} 分辨率过低')
+                raise ScreenResolutionNotEnough
             else:
-                logger.info(f'屏幕{screen_n} 分辨率符合要求')
-
+                logger.debug(f'屏幕 {screen_n} 分辨率符合要求')
         except Exception as e:
             logger.error(f'检查分辨率时发生错误: {e}')
             raise

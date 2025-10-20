@@ -20,6 +20,7 @@ from module.exception import (
     GameStuckError,
     GameTooManyClickError,
     RequestHumanTakeover,
+    ScreenResolutionNotEnough,
     ScreenshotError,
 )
 from module.logger import logger
@@ -88,6 +89,12 @@ class NikkeAutoScript:
             if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
                 self.device.screen_rotate(self.config.PCClient_ScreenNumber)
             logger.critical('Account or password setting error')
+            exit(1)
+        except ScreenResolutionNotEnough:
+            # 设置屏幕方向
+            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
+                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            logger.critical('Screen resolution not enough')
             exit(1)
         except Exception as e:
             # 设置屏幕方向
