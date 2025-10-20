@@ -336,12 +336,12 @@
       "help": ""
     },
     "Screens": {
-      "name": "PCClient.Screens.name",
-      "help": "PCClient.Screens.help"
+      "name": "Multi-Screen Mode",
+      "help": "When enabled, supports running the game window on secondary or virtual displays. You will also need to manually select the target screen for the game window."
     },
     "ScreenNumber": {
-      "name": "PCClient.ScreenNumber.name",
-      "help": "PCClient.ScreenNumber.help",
+      "name": "Game Window Target Screen",
+      "help": "Select the screen that meets the resolution requirements. The default is 0 (main screen). You must enable Multi-Screen Mode first. After selection, the game window will move to the corresponding screen. The screen order may differ from the system display settings.",
       "0": "0",
       "1": "1",
       "2": "2",

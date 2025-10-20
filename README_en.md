@@ -77,8 +77,8 @@ Detailed answers can be found here:
 
 ### Supported Features (All planned features completed)
 
-- [x] PC client and emulator support  
-- [x] Automatic startup for emulator, PC client, and script  
+- [x] PC client/emulator support, multi-monitor support on PC  
+- [x] Automatic startup of emulator, automatic startup of PC client, automatic startup of tasks  
 - [x] Daily collection, annihilation, dispatch, collectible selection  
 - [x] Synchronizer and room upgrade  
 - [x] Claim friendship points and special arena tokens  
