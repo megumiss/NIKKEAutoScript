@@ -138,8 +138,8 @@ class AppControl(WinClient, Login):
             return False
 
         # 检查屏幕分辨率
-        if not self.config.PCClient_ScreenNumber:
-            self.check_screen_resolution(720, 1280)
+        # if not self.config.PCClient_ScreenNumber:
+        self.check_screen_resolution(self.config.PCClient_ScreenNumber, 720, 1280)
         self.launcher_running = False
         self.current_window = self.game
         # 关闭自动HDR
