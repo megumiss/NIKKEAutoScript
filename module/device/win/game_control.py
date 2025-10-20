@@ -613,7 +613,7 @@ class WinClient:
                     f'屏幕 {screen_n} 分辨率: {screen_width}x{screen_height}，目标: {target_width}x{target_height}'
                 )
                 logger.error(
-                    f'屏幕 {screen_n} 分辨率不足，请使用竖屏模式或更高分辨率显示器，'
+                    f'屏幕 {screen_n} 分辨率不足，请开启旋转屏幕/将屏幕设置为纵向/更换高分辨率显示器，'
                     f'或使用显卡欺骗器/UU超级屏/虚拟扩展屏幕。'
                 )
                 raise ScreenResolutionNotEnough

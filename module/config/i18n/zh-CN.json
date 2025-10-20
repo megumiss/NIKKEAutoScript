@@ -335,6 +335,10 @@
       "name": "使用设置",
       "help": ""
     },
+    "Screens": {
+      "name": "PCClient.Screens.name",
+      "help": "PCClient.Screens.help"
+    },
     "ScreenNumber": {
       "name": "游戏窗口所在屏幕",
       "help": "选择符合分辨率要求的屏幕，默认为0，即主屏幕；选择后，游戏窗口会移动到对应的屏幕中，并且不会屏幕顺序可能和系统设置中的顺序不同",

@@ -335,6 +335,10 @@
       "name": "PC Client Settings",
       "help": ""
     },
+    "Screens": {
+      "name": "PCClient.Screens.name",
+      "help": "PCClient.Screens.help"
+    },
     "ScreenNumber": {
       "name": "PCClient.ScreenNumber.name",
       "help": "PCClient.ScreenNumber.help",

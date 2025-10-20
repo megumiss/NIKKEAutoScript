@@ -194,6 +194,10 @@
       }
     },
     "PCClient": {
+      "Screens": {
+        "type": "checkbox",
+        "value": false
+      },
       "ScreenNumber": {
         "type": "select",
         "value": 0,
