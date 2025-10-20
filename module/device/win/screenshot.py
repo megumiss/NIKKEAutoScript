@@ -44,15 +44,24 @@ class Screenshot:
         if window:
             left, top, width, height = Screenshot.get_window_region(window)
 
-            screenshot = pyautogui.screenshot(
-                region=(
-                    int(left + width * crop[0]),
-                    int(top + height * crop[1]),
-                    int(width * crop[2]),
-                    int(height * crop[3]),
-                ),
-                allScreens=screens,
+            # 获取所有屏幕的最小x/y（可能是负数）
+            if screens:
+                from win32api import EnumDisplayMonitors, GetMonitorInfo
+
+                monitors = [GetMonitorInfo(m[0])['Monitor'] for m in EnumDisplayMonitors()]
+                min_x = min(m[0] for m in monitors)
+                min_y = min(m[1] for m in monitors)
+            else:
+                min_x = min_y = 0
+
+            # 将坐标平移，使得 pyautogui.screenshot 的 region 永远为正
+            region = (
+                int(left - min_x + width * crop[0]),
+                int(top - min_y + height * crop[1]),
+                int(width * crop[2]),
+                int(height * crop[3]),
             )
+            screenshot = pyautogui.screenshot(region=region, allScreens=screens)
 
             real_width, _ = Screenshot.get_window_real_resolution(window)
             if real_width > resolution[0]:
