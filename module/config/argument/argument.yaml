@@ -66,7 +66,7 @@ PCClient:
     value: 0
     option: [ 0, 1, 2, 3, 4, 5 ]
   GameResolutionCompat:
-    value: false
+    value: true
   CloseAutoHdr: true
   ScreenRotate: false
   GameWindowPosition:

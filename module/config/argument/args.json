@@ -208,7 +208,7 @@
       },
       "GameResolutionCompat": {
         "type": "checkbox",
-        "value": false
+        "value": true
       },
       "CloseAutoHdr": {
         "type": "checkbox",

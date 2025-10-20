@@ -36,7 +36,7 @@ class GeneratedConfig:
 
     # Group `PCClient`
     PCClient_ScreenNumber = 0  # 0, 1, 2, 3, 4, 5
-    PCClient_GameResolutionCompat = False
+    PCClient_GameResolutionCompat = True
     PCClient_CloseAutoHdr = True
     PCClient_ScreenRotate = False
     PCClient_GameWindowPosition = 'center'  # center, left, right, topleft, topright
