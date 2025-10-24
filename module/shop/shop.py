@@ -235,7 +235,7 @@ class ShopBase(UI):
         # 遍历商品列表，每个商品单独处理
         for product in list(products):
             # 每次购买某个物品前先滚动到顶部
-            self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=6, delay=0.5)
+            self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=3, delay=0.5)
             logger.info(f'[Purchase Start] {product.name}')
 
             while 1:

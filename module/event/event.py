@@ -1023,7 +1023,7 @@ class Event(UI):
             # 滑动到商店最上方
             if restart_flag:
                 logger.info('Scroll to shop top')
-                self.ensure_sroll((360, 600), (360, 900), speed=30, count=5, delay=2)
+                self.ensure_sroll_to_top((360, 600), (360, 900), speed=30, count=3, delay=2)
                 restart_flag = False
 
             self.device.screenshot()

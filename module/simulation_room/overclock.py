@@ -494,7 +494,7 @@ class Overclock(UI):
         if srolled:
             logger.info('Scrolling back to top')
             self.device.sleep(0.5)
-            self.ensure_sroll((620, 600), (620, 1000), speed=30, count=3, delay=0.5)
+            self.ensure_sroll_to_top((620, 600), (620, 1000), speed=30, count=3, delay=0.5)
 
     def end_simulation(self, skip_first_screenshot=True):
         logger.info('already arrived the end area')
