@@ -228,7 +228,7 @@ class Automation:
         else:
             raise ValueError(f'未知的动作类型: {action}')
 
-    def swipe(self, p1, p2, speed=15, hold=0, method='scroll', distance_check=True, handle_control_check=True):
+    def swipe(self, p1, p2, speed=15, method='scroll', distance_check=True, handle_control_check=True):
         p1, p2 = ensure_int(p1, p2)
         logger.info('%s %s -> %s' % (method, point2str(*p1), point2str(*p2)))
 
@@ -265,7 +265,7 @@ class Automation:
                 # 垂直滑动 -> 额外延伸 Y 轴
                 p2 = (raw_p2[0], raw_p2[1])
 
-            self.mouse_swipe(p1, p2, speed=speed, hold=hold)
+            self.mouse_swipe(p1, p2, speed=speed)
         else:
             raise ValueError(f'未知的动作类型: {method}')
 

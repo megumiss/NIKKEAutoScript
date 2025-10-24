@@ -453,7 +453,7 @@ class Overclock(UI):
 
             # 未找到选项，进行滑动
             self.device.sleep(0.5)
-            self.ensure_sroll((620, 1000), (620, 700), speed=5, hold=1, count=1, delay=0.5, method='scroll')
+            self.ensure_sroll((620, 1000), (620, 700), speed=5, count=1, delay=0.5, method='scroll')
 
     def disable_bios_setting(self, skip_first_screenshot=True):
         logger.info('Disable overclock bios setting')
@@ -486,8 +486,8 @@ class Overclock(UI):
                 continue
 
             # 滑动
-            self.device.sleep(0.5)
-            self.ensure_sroll((620, 1000), (620, 700), speed=5, hold=1, count=1, delay=0.5, method='scroll')
+            self.device.sleep(0.2)
+            self.ensure_sroll((620, 1000), (620, 700), speed=5, count=1, delay=0.5, method='scroll')
             srolled = True
 
         # 滑动回顶部

@@ -93,15 +93,15 @@ class Input:
     def __init__(self):
         self.mouse = Controller()
 
-    def mouse_swipe(self, p1, p2, speed=1.0, hold=0):
+    def mouse_swipe(self, p1, p2, speed=1.0):
         """
         使用 pynput 实现自然流畅滑动
         speed: 数值越大越快
         """
         distance = np.linalg.norm(np.array(p2) - np.array(p1))
 
-        segments = max(3, int(distance / 150))
-        total_time = max(0.03, min(distance / (100 * speed), 0.15))
+        segments = max(10, int(distance / 50))
+        total_time = max(0.05, min(distance / (100 * speed), 0.15))
         step_delay = total_time / segments
 
         self.mouse.position = (p1[0], p1[1])
@@ -114,9 +114,6 @@ class Input:
             y = p1[1] + (p2[1] - p1[1]) * t
             self.mouse.position = (x, y)
             time.sleep(step_delay)
-
-        if hold:
-            time.sleep(hold)
 
         self.mouse.release(Button.left)
 

@@ -278,17 +278,25 @@ class ModuleBase:
         # else:
         #     self.interval_timer[button.name] = Timer(3).reset()
 
-    def ensure_sroll(self, x1=(360, 460), x2=(360, 900), speed=15, count=2, delay=1.5, hold=0, method='scroll'):
+    def ensure_sroll(self, x1=(360, 460), x2=(360, 900), speed=15, count=2, delay=1.5, method='scroll'):
+        """
+        对于adb:
+        method: scroll, 平滑滑动
+        method: swipe, 快速滑动
+        对于PC:
+        method: scroll, 使用鼠标滚轮滚动
+        method: swipe, 使用鼠标左键快速滑动
+        """
         for i in range(count):
-            self.device.swipe(x1, x2, speed=speed, hold=hold, method=method, handle_control_check=False)
+            self.device.swipe(x1, x2, speed=speed, method=method, handle_control_check=False)
             self.device.sleep(delay)
 
     def ensure_sroll_to_top(self, x1=(360, 460), x2=(360, 900), speed=30, count=2, delay=1.5):
         for i in range(count):
-            self.device.swipe(x1, x2, speed=speed, handle_control_check=False)
+            self.device.swipe(x1, x2, method='swipe', speed=speed, handle_control_check=False)
             self.device.sleep(delay)
 
     def ensure_sroll_to_bottom(self, x1=(360, 900), x2=(360, 460), speed=30, count=2, delay=1.5):
         for i in range(count):
-            self.device.swipe(x1, x2, speed=speed, handle_control_check=False)
+            self.device.swipe(x1, x2, method='swipe', speed=speed, handle_control_check=False)
             self.device.sleep(delay)
