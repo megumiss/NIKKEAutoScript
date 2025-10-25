@@ -239,16 +239,22 @@ class Automation:
             start_x, start_y = p1
             end_x, end_y = p2
 
-            # 计算垂直或水平方向的像素距离
-            pixel_distance = end_y - start_y if abs(end_y - start_y) > abs(end_x - start_x) else end_x - start_x
+            # 判断是水平滚动还是垂直滚动
+            horizontal = abs(end_x - start_x) > abs(end_y - start_y)
+            # 计算像素距离
+            pixel_distance = end_x - start_x if horizontal else end_y - start_y
             if not pixel_distance:
                 pixel_distance = end_x - start_x
 
-            # 计算需要滚动的次数
+            # 计算滚动次数
             scroll_count = round(abs(pixel_distance) / 65) - 1
             # 自动判断滚动方向
-            direction = -1 if pixel_distance < 0 else 1
+            if horizontal:
+                direction = 1 if pixel_distance < 0 else -1
+            else:
+                direction = -1 if pixel_distance < 0 else 1
 
+            # 执行滚动
             self.mouse_move((start_x + end_x) // 2, (start_y + end_y) // 2)
             self.mouse_scroll(scroll_count, direction=direction)
         elif method == 'swipe':

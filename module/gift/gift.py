@@ -109,7 +109,7 @@ class GiftBase(UI):
 
             # 检查每月礼包
             if click_timer.reached() and self.appear(GENERAL_GIFT_CHECK, offset=(10, 10)):
-                self.ensure_sroll((590, 360), (300, 360), count=1, delay=1)
+                self.ensure_sroll((590, 360), (300, 360), method='swipe', count=1, delay=1)
                 click_timer.reset()
                 continue
 
