@@ -678,7 +678,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": ""
+      "help": "获取方式请查看文档：https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN"
     },
     "XCommonParams": {
       "name": "XCommonParams",

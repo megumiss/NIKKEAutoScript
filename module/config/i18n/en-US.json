@@ -678,7 +678,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": ""
+      "help": "Please refer to the documentation for the acquisition method: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide"
     },
     "XCommonParams": {
       "name": "XCommonParams",

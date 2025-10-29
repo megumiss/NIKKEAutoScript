@@ -9,7 +9,8 @@ from typing import Dict, Tuple
 
 import requests
 
-from module.config.delay import next_month, next_tuesday
+from module.blablalink.langs import BlaLangs
+from module.config.delay import next_month
 from module.config.utils import deep_get
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -25,7 +26,7 @@ class Blablalink(UI):
     base_headers = {
         'accept': 'application/json, text/plain, */*',
         'accept-encoding': 'gzip, deflate, br, zstd',
-        'accept-language': 'zh-CN,zh;q=0.9',
+        'accept-language': 'en',
         'content-type': 'application/json',
         'origin': 'https://www.blablalink.com',
         'priority': 'u=1, i',
@@ -37,7 +38,6 @@ class Blablalink(UI):
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-site',
         'x-channel-type': '2',
-        'x-language': 'zh-TW',
     }
 
     def __init__(self, config):
@@ -75,7 +75,20 @@ class Blablalink(UI):
         #     'data_statistics_lang': 'zh-TW',
         # }
         # self.common_headers['x-common-params'] = json.dumps(common_params, ensure_ascii=False)
-        self.common_headers['x-common-params'] = self.config.BlaAuth_XCommonParams
+        self.common_headers['x-common-params'] = xCommonParams
+        # 获取并设置语言
+        try:
+            x_common_params = json.loads(str(xCommonParams))
+        except json.JSONDecodeError as e:
+            logger.error('Invalid JSON in XCommonParams: %s', e)
+            raise ValueError(f'XCommonParams is not valid JSON: {e}')
+        if 'language' not in x_common_params:
+            logger.error("Missing field 'language' in XCommonParams")
+            raise KeyError("Missing field 'language' in XCommonParams")
+
+        lang = x_common_params['language']
+        self.common_headers['x-language'] = lang
+        BlaLangs.use(lang)
 
         # 获取user-agent
         useragent = deep_get(self.config.data, keys='BlaAuth.BlaAuth.UserAgent')
@@ -90,26 +103,6 @@ class Blablalink(UI):
     def exchange_priority(self) -> list:
         priority = re.sub(r'\s+', '', self.config.BlaExchange_Priority).split('>')
         return priority
-
-    EXCHANGES = {
-        'Gem_×320': '珠寶 ×320',
-        'Welcome_Gift_Core_Dust_×30': '指揮官見面禮：芯塵 ×30',
-        'Gem_×30': '珠寶 ×30',
-        'Skill_Manual_I_×5': '技能手冊 I ×5',
-        'Ultra_Boost_Module_×5': '模組高級推進器 ×5',
-        'Code_Manual_Selection_Box_×5': '代碼手冊選擇寶箱 ×5',
-        'Gem_×60': '珠寶 ×60',
-        'Mid-Quality_Mold_×3': '中品質鑄模 ×3',
-        'Credit_Case_(1H)_x9': '信用點盒(1H) x9',
-        'Core_Dust_Case_(1H)_×3': '芯塵盒 (1H) ×3',
-        'Gem_×120': '珠寶 ×120',
-        'Mid-Quality_Mold_×8': '中品質鑄模 ×8',
-        'Battle_Data_Set_Case_(1H)_×6': '戰鬥數據輯盒 (1H) ×6',
-        'Core_Dust_Case_(1H)_×6': '芯塵盒 (1H) ×6',
-        'Skill_Manual_I_×30': '技能手冊 I ×30',
-        'Ultra_Boost_Module_×30': '模組高級推進器 ×30',
-        'Code_Manual_Selection_Box_×30': '代碼手冊選擇寶箱 ×30',
-    }
 
     def _request_with_retry(self, method: str, url: str, max_retries: int = 3, **kwargs) -> Dict:
         """带重试机制的请求封装"""
@@ -411,22 +404,22 @@ class Blablalink(UI):
                 reward = next(iter(task.get('reward_infos', [])), None)
                 is_completed = reward.get('is_completed', False) if reward else False
 
-                if '每日簽到' in task_name:
+                if BlaLangs.get('Daily_Sign_in') in task_name:
                     status['signin_completed'] = is_completed
                     status['signin_task_id'] = task.get('task_id', '')
                     logger.info(f'Signin task: {"completed" if is_completed else "pending"}')
 
-                elif '按讚' in task_name:
+                elif BlaLangs.get('Like_Posts') in task_name:
                     status['like_completed'] = is_completed
                     logger.info(f'Like task: {"completed" if is_completed else "pending"}')
 
-                elif '瀏覽' in task_name:
+                elif BlaLangs.get('Browse_Posts') in task_name:
                     status['browse_completed'] = is_completed
                     logger.info(f'Browse task: {"completed" if is_completed else "pending"}')
 
-                elif '評論' in task_name:
-                    status['comment_completed'] = is_completed
-                    logger.info(f'Comment task: {"completed" if is_completed else "pending"}')
+                # elif BlaLangs.get() in task_name:
+                #     status['comment_completed'] = is_completed
+                #     logger.info(f'Comment task: {"completed" if is_completed else "pending"}')
 
         except Exception as e:
             logger.error(f'Failed to parse task status: {str(e)}')
@@ -714,7 +707,7 @@ class Blablalink(UI):
             # 查找匹配的商品
             target_commodity = None
             for commodity in all_commodities:
-                if self.EXCHANGES[priority] in commodity['commodity_name']:
+                if BlaLangs.get(priority) in commodity['commodity_name']:
                     target_commodity = commodity
                     break
 
@@ -765,7 +758,7 @@ class Blablalink(UI):
 
             if result.get('code') == 0 and result.get('data', {}).get('has_saved_role_info'):
                 role_info = result['data']['role_info']
-                logger.info(f'Got role info: {role_info["role_name"]}')
+                logger.info(f'Got role info: {role_info["role_name"][:1]}*****')
                 return role_info
             else:
                 logger.error(f'Failed to get role info: {result.get("msg", "Unknown error")}')

@@ -678,7 +678,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": ""
+      "help": "入手方法についてはドキュメントをご覧ください: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN"
     },
     "XCommonParams": {
       "name": "XCommonParams",
