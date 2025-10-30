@@ -91,6 +91,15 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20251030",
+            "event_name": "GODDESS FALL",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20250924",
             "event_name": "REBORN EVIL",
             # 大型活动
