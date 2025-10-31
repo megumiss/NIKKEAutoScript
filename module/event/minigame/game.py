@@ -146,22 +146,23 @@ def start_game(self):
 def game(self):
     logger.info('Open event mini game')
 
-    while 1:
-        self.device.stuck_record_clear()
-        self.device.click_record_clear()
+    if self.event.mini_game_play:
+        while 1:
+            self.device.stuck_record_clear()
+            self.device.click_record_clear()
 
-        # 循环运行
-        if self.config.Event_GameLoop:
-            start_game(self)
-            reward(self)
-            # 继续下一局
-            continue
-        else:
-            # 直到每日领取才退出
-            if reward(self):
-                break
-            start_game(self)
-            continue
+            # 循环运行
+            if self.config.Event_GameLoop:
+                start_game(self)
+                reward(self)
+                # 继续下一局
+                continue
+            else:
+                # 直到每日领取才退出
+                if reward(self):
+                    break
+                start_game(self)
+                continue
 
     # 领取任务奖励
     mission(self)
