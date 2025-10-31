@@ -119,6 +119,9 @@ class SimulationRoom(UI):
             HARD_CHECK._button_offset = None
             return
 
+        if self.appear(END_SIMULATION, offset=(30, 30), static=False):
+            return
+
         if not self.device.click_minitouch(150, 270):
             self.device.sleep(2)
 
@@ -405,7 +408,11 @@ class SimulationRoom(UI):
                 continue
 
             if self.config.SimulationRoom_QuickSimulation:
-                if click_timer.reached() and self.appear_then_click(QUICK_SIMULATION, offset=(5, 5), static=False):
+                if (
+                    click_timer.reached()
+                    and not self.appear(END_SIMULATION, offset=(30, 30), static=False)
+                    and self.appear_then_click(QUICK_SIMULATION, offset=(5, 5), static=False)
+                ):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
@@ -417,9 +424,7 @@ class SimulationRoom(UI):
                     click_timer.reset()
                     continue
 
-            if click_timer.reached() and self.appear_then_click(
-                END_SIMULATION, offset=(30, 30), interval=3, static=False
-            ):
+            if self.appear(END_SIMULATION, offset=(30, 30), static=False):
                 break
 
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), interval=5, static=False):
