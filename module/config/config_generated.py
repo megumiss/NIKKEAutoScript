@@ -68,9 +68,11 @@ class GeneratedConfig:
     # Group `DailyRecruit`
     DailyRecruit_EventFreeRecruit = True
     DailyRecruit_SocialPointRecruit = True
+    DailyRecruit_ScreenshotPath = None
 
     # Group `SimulationRoom`
     SimulationRoom_QuickSimulation = True
+    SimulationRoom_Immediately = False
 
     # Group `Area`
     Area_Difficulty = 'Level_1'  # Level_1, Level_2, Level_3, Level_4, Level_5
@@ -155,6 +157,7 @@ class GeneratedConfig:
 
     # Group `Interception`
     Interception_Boss = 'Kraken'  # Kraken, Indivilia, Harvester, MirrorContainer, Ultra
+    Interception_AchieveLevel = 1  # 1, 2, 3, 4, 5, 6, 7, 8, 9
     Interception_DropScreenshotPath = None
 
     # Group `InterceptionTeam`

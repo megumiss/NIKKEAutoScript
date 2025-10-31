@@ -131,7 +131,8 @@
     },
     "DailyRecruit": {
       "EventFreeRecruit": true,
-      "SocialPointRecruit": true
+      "SocialPointRecruit": true,
+      "ScreenshotPath": null
     },
     "Storage": {
       "Storage": {}
@@ -318,7 +319,8 @@
       "ServerUpdate": "04:00"
     },
     "SimulationRoom": {
-      "QuickSimulation": true
+      "QuickSimulation": true,
+      "Immediately": false
     },
     "Area": {
       "Difficulty": "Level_1",
@@ -374,6 +376,7 @@
     },
     "Interception": {
       "Boss": "Kraken",
+      "AchieveLevel": 1,
       "DropScreenshotPath": null
     },
     "InterceptionTeam": {

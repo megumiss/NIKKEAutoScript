@@ -6,6 +6,7 @@ from module.base.timer import Timer
 from module.base.utils import point2str
 from module.interception.assets import *
 from module.logger import logger
+from module.ocr.ocr import Digit
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, PAUSE
 from module.ui.assets import INTERCEPTION_CHECK
 from module.ui.page import page_interception
@@ -17,6 +18,22 @@ class NoOpportunity(Exception):
 
 
 class Interception(UI):
+    @property
+    def battle_quickly_level(self):
+        model_type = self.config.Optimization_OcrModelType
+        LEVEL = Digit(
+            [BATTLE_QUICKLY_LEVEL.area],
+            name='BATTLE_QUICKLY_LEVEL',
+            model_type=model_type,
+            lang='ch',
+        )
+
+        level = int(LEVEL.ocr(self.device.image)['text'])
+        if level == 1:
+            level = 7
+            logger.info('Replace quickly level 1 -> 7')
+        return level
+
     @cached_property
     def teams(self):
         return [TEAM_1, TEAM_2, TEAM_3, TEAM_4, TEAM_5]
@@ -43,7 +60,7 @@ class Interception(UI):
             else:
                 self.device.screenshot()
 
-            if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10):
+            if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30)):
                 break
 
             if click_timer.reached() and self.appear(
@@ -73,7 +90,9 @@ class Interception(UI):
         self.device.sleep(0.5)
 
         end_fighting = False
-        if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10) and not BATTLE.match_appear_on(self.device.image, 10):
+        if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30)) and not BATTLE.match_appear_on(
+            self.device.image, 10
+        ):
             end_fighting = True
         # 使用的队伍
         teamindex = getattr(self.config, f'InterceptionTeam_{self.config.Interception_Boss}') - 1
@@ -83,22 +102,32 @@ class Interception(UI):
             # 切换队伍
             if (
                 click_timer.reached()
-                and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10)
+                and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30))
                 and self.appear_then_click(self.teams[teamindex], threshold=10, interval=1)
             ):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(BATTLE_QUICKLY, threshold=10):
+            # 达到目标等级才快速战斗
+            if (
+                self.appear(BATTLE_QUICKLY, threshold=5)
+                and (
+                    self.config.Interception_AchieveLevel == 1
+                    or self.battle_quickly_level >= self.config.Interception_AchieveLevel
+                )
+                and click_timer.reached()
+                and self.appear_then_click(BATTLE_QUICKLY, threshold=10)
+            ):
                 end_fighting = False
                 self.device.sleep(1)
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(BATTLE, threshold=10, interval=1):
-                end_fighting = False
-                click_timer.reset()
-                continue
+            if click_timer.reached():
+                if self.appear_then_click(BATTLE, threshold=10, interval=1):
+                    end_fighting = False
+                    click_timer.reset()
+                    continue
 
             if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=(5, 5), threshold=0.9, interval=5):
                 click_timer.reset()
@@ -132,8 +161,8 @@ class Interception(UI):
 
             if (
                 end_fighting
-                and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=10)
-                and not BATTLE.match_appear_on(self.device.image, 10)
+                and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30))
+                and not self.appear(BATTLE, threshold=10)
             ):
                 logger.info('There are no free opportunities')
                 raise NoOpportunity

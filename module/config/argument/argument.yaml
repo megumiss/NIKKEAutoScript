@@ -112,8 +112,12 @@ Reward:
 DailyRecruit:
   EventFreeRecruit: true
   SocialPointRecruit: true
+  ScreenshotPath:
+    value: ''
+    type: textarea
 SimulationRoom:
   QuickSimulation: true
+  Immediately: false
 Area:
   Difficulty:
     value: 'Level_1'
@@ -250,6 +254,9 @@ Interception:
   Boss:
     value: 'Kraken'
     option: [ 'Kraken', 'Indivilia', 'Harvester', 'MirrorContainer', 'Ultra' ]
+  AchieveLevel:
+    value: 1
+    option: [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
   DropScreenshotPath:
     value: ''
     type: textarea

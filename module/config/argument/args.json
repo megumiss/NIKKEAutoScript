@@ -488,6 +488,10 @@
       "SocialPointRecruit": {
         "type": "checkbox",
         "value": true
+      },
+      "ScreenshotPath": {
+        "type": "textarea",
+        "value": ""
       }
     },
     "Storage": {
@@ -1105,6 +1109,10 @@
       "QuickSimulation": {
         "type": "checkbox",
         "value": true
+      },
+      "Immediately": {
+        "type": "checkbox",
+        "value": false
       }
     },
     "Area": {
@@ -1303,6 +1311,21 @@
           "Harvester",
           "MirrorContainer",
           "Ultra"
+        ]
+      },
+      "AchieveLevel": {
+        "type": "select",
+        "value": 1,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
         ]
       },
       "DropScreenshotPath": {

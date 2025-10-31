@@ -1,4 +1,6 @@
+import os
 import time
+from datetime import datetime
 
 from module.base.timer import Timer
 from module.base.utils import point2str
@@ -18,6 +20,35 @@ class NotEnoughSocialPoint(Exception):
 
 
 class DailyRecruit(UI):
+    def save_drop_image(self, image, base_path):
+        """
+        保存抽卡截图到指定文件夹，并以日期+时间为文件名
+        兼容 Linux/Windows
+        Args:
+            image: OpenCV 格式图片 (numpy.ndarray)
+            base_path: 基础保存路径
+        Returns:
+            save_path: 保存的完整文件路径
+        """
+        if not base_path:
+            return None
+
+        # 拼接保存目录：base_path/config_name
+        save_dir = os.path.join(base_path, self.config.config_name)
+        os.makedirs(save_dir, exist_ok=True)
+
+        # 生成日期+时间文件名，例如 2025-10-30_23-59-41.png
+        datetime_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        filename = f'{datetime_str}.png'
+        save_path = os.path.join(save_dir, filename)
+
+        # 保存图片
+        from module.base.utils import save_image
+
+        save_image(image, save_path)
+
+        return save_path
+
     def event_free_recruit(self, skip_first_screenshot=True):
         logger.hr('Event free recruit')
         confirm_timer = Timer(5, count=3).start()
@@ -71,9 +102,18 @@ class DailyRecruit(UI):
                 click_timer.reset()
                 continue
             # 确认
-            if click_timer.reached() and self.appear_then_click(
-                RECRUIT_CONFIRM, offset=(30, 30), interval=3, static=False
-            ):
+            if self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
+                if saved_path:
+                    logger.info(f'Save recruit image to: {saved_path}')
+
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                        break
+                    if self.appear_then_click(RECRUIT_CONFIRM, offset=(30, 30), interval=2, static=False):
+                        continue
+
                 confirm_timer.reset()
                 click_timer.reset()
                 recruit_end = True
@@ -140,9 +180,18 @@ class DailyRecruit(UI):
                 click_timer.reset()
                 continue
             # 确认
-            if click_timer.reached() and self.appear_then_click(
-                RECRUIT_CONFIRM, offset=(30, 30), interval=3, static=False
-            ):
+            if self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
+                if saved_path:
+                    logger.info(f'Save recruit image to: {saved_path}')
+
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                        break
+                    if self.appear_then_click(RECRUIT_CONFIRM, offset=(30, 30), interval=2, static=False):
+                        continue
+
                 confirm_timer.reset()
                 click_timer.reset()
                 recruit_end = True

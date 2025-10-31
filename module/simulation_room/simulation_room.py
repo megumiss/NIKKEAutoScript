@@ -34,19 +34,19 @@ class SimulationRoom(UI):
     @cached_property
     def difficulty_area(self):
         return {
-            'Level_1': (120, 460),
-            'Level_2': (240, 460),
-            'Level_3': (360, 460),
-            'Level_4': (480, 460),
-            'Level_5': (600, 460),
+            'Level_1': (120, 395),
+            'Level_2': (240, 395),
+            'Level_3': (360, 395),
+            'Level_4': (480, 395),
+            'Level_5': (600, 395),
         }
 
     @cached_property
     def region_area(self):
         return {
-            'A': (160, 720),
-            'B': (360, 720),
-            'C': (560, 720),
+            'A': (160, 655),
+            'B': (360, 655),
+            'C': (560, 655),
         }
 
     @cached_property
@@ -263,7 +263,7 @@ class SimulationRoom(UI):
             self.get_next_event()
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(5, 5), interval=5, static=False):
                 self.choose_effect()
-            if self.appear(END_SIMULATION, offset=(5, 5), interval=5, static=False):
+            if self.appear(END_SIMULATION, offset=(30, 30), interval=5, static=False):
                 if self.current_region != self.region.get(self.ending_area):
                     self.ensure_into_next_region()
                 else:
@@ -387,6 +387,15 @@ class SimulationRoom(UI):
                 continue
 
             if (
+                self.config.SimulationRoom_Immediately
+                and click_timer.reached()
+                and self.appear_then_click(QUICK_SIMULATION_IMMEDIATELY, offset=10, interval=1)
+            ):
+                confirm_timer.reset()
+                click_timer.reset()
+                continue
+
+            if (
                 click_timer.reached()
                 and self.appear(QUICK_SIMULATION_CHECK, offset=10)
                 and self.appear_then_click(QUICK_SIMULATION_CONFIRM, offset=10, interval=1)
@@ -407,6 +416,11 @@ class SimulationRoom(UI):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
+
+            if click_timer.reached() and self.appear_then_click(
+                END_SIMULATION, offset=(30, 30), interval=3, static=False
+            ):
+                break
 
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), interval=5, static=False):
                 break
@@ -431,7 +445,7 @@ class SimulationRoom(UI):
                 click_timer.reset()
                 continue
 
-            if not self.appear(END_SIMULATION, offset=(5, 5)) and confirm_timer.reached():
+            if not self.appear(END_SIMULATION, offset=(100, 30)) and confirm_timer.reached():
                 break
 
     def end_simulation(self, skip_first_screenshot=True):
