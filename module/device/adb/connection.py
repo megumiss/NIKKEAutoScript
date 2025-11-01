@@ -12,6 +12,7 @@ from adbutils import AdbClient, AdbDevice, AdbTimeout, ForwardItem, ReverseItem
 from adbutils.errors import AdbError
 
 from module.base.decorator import Config, del_cached_property, run_once
+from module.base.langs import Langs
 from module.base.timer import Timer
 from module.base.utils import ensure_time
 from module.config.deep import deep_get
@@ -139,9 +140,10 @@ class Connection(ConnectionAttr):
         else:
             set_server(self.package)
         logger.attr('PackageName', self.package)
-        self.language = self.config.Emulator_Language
+        self.language = self.config.Client_Language
         set_language(self.language)
         logger.attr('Language', self.language)
+        Langs.use(self.language)
 
         self.check_mumu_app_keep_alive()
 

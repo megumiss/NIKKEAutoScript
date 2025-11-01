@@ -34,19 +34,19 @@ class SimulationRoom(UI):
     @cached_property
     def difficulty_area(self):
         return {
-            'Level_1': (120, 460),
-            'Level_2': (240, 460),
-            'Level_3': (360, 460),
-            'Level_4': (480, 460),
-            'Level_5': (600, 460),
+            'Level_1': (120, 395),
+            'Level_2': (240, 395),
+            'Level_3': (360, 395),
+            'Level_4': (480, 395),
+            'Level_5': (600, 395),
         }
 
     @cached_property
     def region_area(self):
         return {
-            'A': (160, 720),
-            'B': (360, 720),
-            'C': (560, 720),
+            'A': (160, 655),
+            'B': (360, 655),
+            'C': (560, 655),
         }
 
     @cached_property
@@ -119,6 +119,9 @@ class SimulationRoom(UI):
             HARD_CHECK._button_offset = None
             return
 
+        if self.appear(END_SIMULATION, offset=(30, 30), static=False):
+            return
+
         if not self.device.click_minitouch(150, 270):
             self.device.sleep(2)
 
@@ -131,7 +134,7 @@ class SimulationRoom(UI):
 
     def choose_effect(self, skip_first_screenshot=True):
         logger.hr('Choose an effect', 3)
-        confirm_timer = Timer(2, count=2).start()
+        confirm_timer = Timer(2, count=5)
         click_timer = Timer(0.3)
         click_timer_2 = Timer(6)
 
@@ -144,7 +147,6 @@ class SimulationRoom(UI):
                     self.device.screenshot()
 
                 if click_timer_2.reached():
-                    confirm_timer.reset()
                     click_timer_2.reset()
                     self.device.click_minitouch(*button)
                     logger.info('Click %s @ %s' % (point2str(*button), 'EFFECT'))
@@ -153,15 +155,16 @@ class SimulationRoom(UI):
                 if click_timer.reached() and self.appear_then_click(
                     CONFIRM_B, offset=(30, 30), interval=6, static=False
                 ):
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if (
-                    not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False)
-                    and confirm_timer.reached()
-                ):
-                    break
+                if not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False):
+                    if not confirm_timer.started():
+                        confirm_timer.start()
+                    if confirm_timer.reached():
+                        break
+                else:
+                    confirm_timer.clear()
         else:
             logger.warning('The own effect count has already reached its limit')
             while 1:
@@ -173,23 +176,24 @@ class SimulationRoom(UI):
                 if click_timer.reached() and self.appear_then_click(
                     NOT_CHOOSE, offset=(30, 30), interval=5, static=False
                 ):
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
                 if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
                     self.device.click_minitouch(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if (
-                    not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False)
-                    and confirm_timer.reached()
-                ):
-                    return
+                if not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False):
+                    if not confirm_timer.started():
+                        confirm_timer.start()
+                    if confirm_timer.reached():
+                        return
+                else:
+                    confirm_timer.clear()
 
+        confirm_timer.clear()
         if self.appear(REPEATED_EFFECT_CHECK, offset=(5, 5), static=False):
             logger.warning('The selected effect has been in the own effect list')
             while 1:
@@ -201,28 +205,28 @@ class SimulationRoom(UI):
                 if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
                     self.device.click_minitouch(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
                 if click_timer.reached() and self.appear_then_click(CANCEL, offset=(30, 30), interval=5, static=False):
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
                 if click_timer.reached() and self.appear_then_click(
                     NOT_CHOOSE, offset=(30, 30), interval=5, static=False
                 ):
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if (
-                    not self.appear(REPEATED_EFFECT_CHECK, offset=(30, 30), static=False)
-                    and not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False)
-                    and confirm_timer.reached()
+                if not self.appear(REPEATED_EFFECT_CHECK, offset=(30, 30), static=False) and not self.appear(
+                    SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False
                 ):
-                    return
+                    if not confirm_timer.started():
+                        confirm_timer.start()
+                    if confirm_timer.reached():
+                        return
+                else:
+                    confirm_timer.clear()
         elif self.appear(MAX_EFFECT_COUNT_CHECK, offset=(5, 5), static=False):
             logger.warning('The own effect count has already reached its limit')
             while 1:
@@ -232,37 +236,37 @@ class SimulationRoom(UI):
                     self.device.screenshot()
 
                 if click_timer.reached() and self.appear_then_click(CANCEL, offset=(30, 30), interval=5, static=False):
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
                 if click_timer.reached() and self.appear_then_click(
                     NOT_CHOOSE, offset=(30, 30), interval=5, static=False
                 ):
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
                 if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
                     self.device.click_minitouch(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
-                    confirm_timer.reset()
                     click_timer.reset()
                     continue
 
-                if (
-                    not self.appear(MAX_EFFECT_COUNT_CHECK, offset=(30, 30), static=False)
-                    and not self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False)
-                    and confirm_timer.reached()
+                if not self.appear(MAX_EFFECT_COUNT_CHECK, offset=(30, 30), static=False) and not self.appear(
+                    SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), static=False
                 ):
-                    return
+                    if not confirm_timer.started():
+                        confirm_timer.start()
+                    if confirm_timer.reached():
+                        return
+                else:
+                    confirm_timer.clear()
 
     def _run(self):
         while 1:
             self.get_next_event()
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(5, 5), interval=5, static=False):
                 self.choose_effect()
-            if self.appear(END_SIMULATION, offset=(5, 5), interval=5, static=False):
+            if self.appear(END_SIMULATION, offset=(30, 30), interval=5, static=False):
                 if self.current_region != self.region.get(self.ending_area):
                     self.ensure_into_next_region()
                 else:
@@ -386,6 +390,15 @@ class SimulationRoom(UI):
                 continue
 
             if (
+                self.config.SimulationRoom_Immediately
+                and click_timer.reached()
+                and self.appear_then_click(QUICK_SIMULATION_IMMEDIATELY, offset=10, interval=1)
+            ):
+                confirm_timer.reset()
+                click_timer.reset()
+                continue
+
+            if (
                 click_timer.reached()
                 and self.appear(QUICK_SIMULATION_CHECK, offset=10)
                 and self.appear_then_click(QUICK_SIMULATION_CONFIRM, offset=10, interval=1)
@@ -395,7 +408,11 @@ class SimulationRoom(UI):
                 continue
 
             if self.config.SimulationRoom_QuickSimulation:
-                if click_timer.reached() and self.appear_then_click(QUICK_SIMULATION, offset=(5, 5), static=False):
+                if (
+                    click_timer.reached()
+                    and not self.appear(END_SIMULATION, offset=(30, 30), static=False)
+                    and self.appear_then_click(QUICK_SIMULATION, offset=(5, 5), static=False)
+                ):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
@@ -406,6 +423,9 @@ class SimulationRoom(UI):
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
+
+            if self.appear(END_SIMULATION, offset=(30, 30), static=False):
+                break
 
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(30, 30), interval=5, static=False):
                 break
@@ -430,7 +450,7 @@ class SimulationRoom(UI):
                 click_timer.reset()
                 continue
 
-            if not self.appear(END_SIMULATION, offset=(5, 5)) and confirm_timer.reached():
+            if not self.appear(END_SIMULATION, offset=(100, 30)) and confirm_timer.reached():
                 break
 
     def end_simulation(self, skip_first_screenshot=True):

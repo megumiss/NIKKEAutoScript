@@ -68,20 +68,35 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                 self.update()
         else:
             super().__setattr__(key, value)
-    
+
     def __init__(self, config_name, task=None):
+        # This will read ./config/<config_name>.json
         self.config_name = config_name
+        # Raw json data in yaml file.
         self.data = {}
+        # Modified arguments. Key: Argument path in yaml file. Value: Modified value.
+        # All variable modifications will be record here and saved in method `save()`.
         self.modified = {}
+        # Key: Argument name in GeneratedConfig. Value: Path in `data`.
         self.bound = {}
+        # If write after every variable modification.
         self.auto_update = True
+        # Force override variables
+        # Key: Argument name in GeneratedConfig. Value: Modified value.
         self.overridden = {}
+        # Scheduler queue, will be updated in `get_next_task()`, list of Function objects
+        # pending_task: Run time has been reached, but haven't been run due to task scheduling.
+        # waiting_task: Run time haven't been reached, wait needed.
         self.pending_task = []
         self.waiting_task = []
+        # Task to run and bind.
+        # Task means the name of the function to run in AzurLaneAutoScript class.
         self.task: Function
-        self.is_template_config = config_name == "template"
+        # Template config is used for dev tools
+        self.is_template_config = config_name.startswith("template")
 
         if self.is_template_config:
+            # For dev tools
             logger.info("Using template config, which is read only")
             self.auto_update = False
             self.task = name_to_function("template")

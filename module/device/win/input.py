@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 import pyautogui
-import pytweening
+from pynput.mouse import Button, Controller
 
 from module.logger import logger
 
@@ -90,26 +90,32 @@ class Input:
         except Exception as e:
             logger.error(f'按下鼠标左键出错：{e}')
 
-    def mouse_swipe(self, p1, p2, speed=1.0, hold=0):
+    def __init__(self):
+        self.mouse = Controller()
+
+    def mouse_swipe(self, p1, p2, speed=1.0):
         """
-        speed: 像素/毫秒，例如 1.0 表示 1 毫秒滑动 1 像素
+        使用 pynput 实现自然流畅滑动
+        speed: 数值越大越快
         """
         distance = np.linalg.norm(np.array(p2) - np.array(p1))
-        total_time = distance / speed / 1000.0 * 30
-        if total_time > 0.3:
-            total_time = 0.3
 
-        pyautogui.moveTo(p1[0], p1[1])
-        time.sleep(0.2)
-        pyautogui.mouseDown()
+        segments = max(10, int(distance / 50))
+        total_time = max(0.05, min(distance / (100 * speed), 0.15))
+        step_delay = total_time / segments
 
-        # 一次性滑动到终点，pyautogui 会插值
-        pyautogui.moveTo(p2[0], p2[1], duration=total_time, tween=pytweening.linear)
+        self.mouse.position = (p1[0], p1[1])
+        time.sleep(0.01)
+        self.mouse.press(Button.left)
 
-        if hold:
-            time.sleep(hold)
+        for i in range(1, segments + 1):
+            t = i / segments
+            x = p1[0] + (p2[0] - p1[0]) * t
+            y = p1[1] + (p2[1] - p1[1]) * t
+            self.mouse.position = (x, y)
+            time.sleep(step_delay)
 
-        pyautogui.mouseUp()
+        self.mouse.release(Button.left)
 
 
 def insert_swipe(p0, p3, speed=15, min_distance=10):

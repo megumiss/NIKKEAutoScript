@@ -48,11 +48,12 @@ class ChallengeNotFoundError(Exception):
 
 
 class EventInfo:
-    def __init__(self, id, name, type, mini_game, story_part, story_difficulty):
+    def __init__(self, id, name, type, mini_game, mini_game_play, story_part, story_difficulty):
         self.id: str = id
         self.name: str = name
         self.type: int = type
         self.mini_game: bool = mini_game
+        self.mini_game_play: bool = mini_game_play
         self.story_part: str = story_part
         self.story_difficulty: str = story_difficulty
 
@@ -148,7 +149,7 @@ class Event(UI):
 
     @Config.when(EVENT_TYPE=1)
     def login_stamp(self, skip_first_screenshot=True):
-        logger.hr('START EVENT LOGIN STAMP')
+        logger.hr('START EVENT LOGIN STAMP', 2)
         click_timer = Timer(0.3)
 
         # 进入签到页面
@@ -228,11 +229,11 @@ class Event(UI):
 
     @Config.when(EVENT_TYPE=(2, 3))
     def login_stamp(self):
-        logger.hr('START EVENT LOGIN STAMP')
+        logger.hr('START EVENT LOGIN STAMP', 2)
         logger.info('Small event, skip loginstamp')
 
     def challenge(self, skip_first_screenshot=True):
-        logger.hr('START EVENT CHALLENGE')
+        logger.hr('START EVENT CHALLENGE', 2)
         click_timer = Timer(0.3)
 
         # 进入挑战页面
@@ -345,7 +346,7 @@ class Event(UI):
 
     @Config.when(EVENT_TYPE=1)
     def reward(self, skip_first_screenshot=True):
-        logger.hr('START EVENT REWARD')
+        logger.hr('START EVENT REWARD', 2)
         click_timer = Timer(0.3)
 
         # 进入任务页面
@@ -430,7 +431,7 @@ class Event(UI):
 
     @Config.when(EVENT_TYPE=(2, 3))
     def reward(self, skip_first_screenshot=True):
-        logger.hr('START EVENT REWARD')
+        logger.hr('START EVENT REWARD', 2)
         click_timer = Timer(0.3)
 
         # 进入任务页面
@@ -483,11 +484,16 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
+            # 点击reward领取
+            if click_timer.reached() and self.appear_then_click(RECEIVE_REWARD, offset=10, interval=1, static=False):
+                click_timer.reset()
+                continue
+
         logger.info('Event reward done')
 
     @Config.when(EVENT_TYPE=(1, 3))
     def story(self, skip_first_screenshot=True):
-        logger.hr('START EVENT STORY')
+        logger.hr('START EVENT STORY', 2)
         click_timer = Timer(0.3)
 
         logger.info('Finding opened event story')
@@ -654,7 +660,7 @@ class Event(UI):
 
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
-        logger.hr('START EVENT STORY')
+        logger.hr('START EVENT STORY', 2)
         click_timer = Timer(0.3)
 
         open_story = 'story_1_normal'
@@ -832,11 +838,32 @@ class Event(UI):
     @Config.when(EVENT_TYPE=1)
     def coop(self, skip_first_screenshot=True):
         """进入协同作战页面"""
-        logger.hr('EVENT COOP START')
+        logger.hr('EVENT COOP START', 2)
+
+        # 检查协同作战是否结束
+        confirm_timer = Timer(10, count=10)
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 协同选择/协同主页
+            if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)) and not self.appear(
+                self.event_assets.COOP_ENTER, offset=10
+            ):
+                if not confirm_timer.started():
+                    confirm_timer.start()
+                if confirm_timer.reached():
+                    logger.warning('Coop allready closed')
+                    return False
+            else:
+                break
+
+        # 走到协同作战
         click_timer = Timer(0.3)
         confirm_timer = Timer(1, count=3)
 
-        # 走到协同作战
         direct = False
         while 1:
             if skip_first_screenshot:
@@ -852,11 +879,16 @@ class Event(UI):
                 click_timer.reset()
                 continue
 
+            # 最后阶段的协同未开启
+            if self.appear(LAST_COOP_LOCK, offset=10):
+                logger.warning('Last Coop is not enabled')
+                return True
+
             # 协同未在开启时间
-            if click_timer.reached() and self.appear(self.event_assets.COOP_LOCK, offset=10):
+            if self.appear(self.event_assets.COOP_LOCK, offset=10):
                 logger.warning('Coop is not enabled')
                 self.back_to_event_from_coop()
-                return
+                return True
 
             # 协同选择/协同主页
             if self.appear(self.event_assets.COOP_SELECT_CHECK, offset=10) or self.appear(COOP_CHECK, offset=10):
@@ -879,7 +911,7 @@ class Event(UI):
             else:
                 logger.warning('Not found any coop in event')
                 self.back_to_event_from_coop()
-                return
+                return True
             # 查找所有coming soon的协同，去重
             coop_comings = TEMPLATE_COOP_COMING_SOON.match_multi(self.device.image, name='COOP_COMING_SOON')
             if coop_comings:
@@ -889,7 +921,7 @@ class Event(UI):
             if len(coop_icons) == len(coop_comings):
                 logger.warning('Not found enabled coop in event')
                 self.back_to_event_from_coop()
-                return
+                return True
             else:
                 # 不一致则通过coming soon过滤掉没开启的协同，过滤后的即为开启
                 enabled_coop_icons = set()
@@ -931,10 +963,11 @@ class Event(UI):
         # 回到活动主页
         self.back_to_event()
         self.back_to_event_from_coop()
+        return False
 
     @Config.when(EVENT_TYPE=(2, 3))
     def coop(self):
-        logger.hr('EVENT COOP START')
+        logger.hr('EVENT COOP START', 2)
         logger.info('Small event, skip coop')
 
     @cached_property
@@ -958,7 +991,7 @@ class Event(UI):
             raise
 
     def shop(self, skip_first_screenshot=True):
-        logger.hr('START EVENT SHOP')
+        logger.hr('START EVENT SHOP', 2)
         click_timer = Timer(0.3)
         restart_flag = False
         delay_list = self.shop_delay_list
@@ -991,7 +1024,7 @@ class Event(UI):
             # 滑动到商店最上方
             if restart_flag:
                 logger.info('Scroll to shop top')
-                self.ensure_sroll((360, 600), (360, 900), speed=30, count=5, delay=2)
+                self.ensure_sroll_to_top((360, 600), (360, 900), speed=30, count=3, delay=2)
                 restart_flag = False
 
             self.device.screenshot()
@@ -1114,7 +1147,7 @@ class Event(UI):
                 logger.info('Scroll to next page')
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
-                self.ensure_sroll((360, 1100), (360, 480), speed=5, hold=1, count=1, delay=3, method='scroll')
+                self.ensure_sroll((360, 1100), (360, 480), speed=5, count=1, delay=3, method='scroll')
 
     def filter_sold_out_items(self, items, sold_outs):
         """
@@ -1142,7 +1175,7 @@ class Event(UI):
 
     @Config.when(EVENT_MINI_GAME=True)
     def game(self, skip_first_screenshot=True):
-        logger.hr('START EVENT GAME')
+        logger.hr('START EVENT GAME', 2)
         click_timer = Timer(0.3)
 
         # 进入小游戏页面
@@ -1182,11 +1215,11 @@ class Event(UI):
 
     @Config.when(EVENT_MINI_GAME=False)
     def game(self):
-        logger.hr('START EVENT GAME')
+        logger.hr('START EVENT GAME', 2)
         logger.info('Game not support in this event')
 
     def ensure_into_event(self, skip_first_screenshot=True):
-        logger.hr('OPEN EVENT STORY')
+        logger.hr('OPEN EVENT STORY', 2)
         click_timer = Timer(0.3)
         confirm_timer = Timer(30, count=20).start()
         event_timer = Timer(3, count=5)
@@ -1228,6 +1261,9 @@ class Event(UI):
                 raise EventUnavailableError
 
     def run(self):
+        # 是否需要重新执行
+        coop_reschedule = False
+
         try:
             self.ui_ensure(page_main)
             _ = self.event
@@ -1240,7 +1276,7 @@ class Event(UI):
             if self.config.Event_Story:
                 self.story()
             if self.config.Event_Coop:
-                self.coop()
+                coop_reschedule = self.coop()
             if self.config.Event_Game:
                 self.game()
 
@@ -1258,4 +1294,7 @@ class Event(UI):
         except CoopIsUnavailable:
             pass
 
+        # 若协同未开启则调整延迟时间
+        if self.config.Event_Coop and coop_reschedule:
+            self.config.Scheduler_ServerUpdate = '04:00, 16:00'
         self.config.task_delay(server_update=True)

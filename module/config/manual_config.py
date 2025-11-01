@@ -5,10 +5,10 @@ class ManualConfig:
     SCHEDULER_PRIORITY = """
        Restart > Reward > DailyRecruit > Destruction > Mailbox > 
        StepUpGift > DailyGift > WeeklyGift > MonthlyGift > 
-       Commission > Recycling > Synchro >
+       Commission > EpisodeViewing > Recycling > Synchro > OutpostStory >
        Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
        Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > 
-       AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate
+       AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate > UpdateHosts
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS"""
@@ -25,6 +25,8 @@ class ManualConfig:
         "CREDIT_CASE": 3,
         "CREDIT": 1,
         "BATTLE_DATA_SET_CASE": 2,
+        "GROWTH_SET": 4,
+        "ORNAMENT": 1,
         "GENERAL_TICKET": 1,
         "ELYSION_TICKET": 1,
         "MISSILIS_TICKET": 1,
@@ -42,6 +44,8 @@ class ManualConfig:
         "CREDIT_CASE": 2660,
         # 6x100, 5x575
         "BATTLE_DATA_SET_CASE": 3475,
+        "GROWTH_SET": 2700,
+        "ORNAMENT": 500,
         "GENERAL_TICKET": 400,
         "ELYSION_TICKET": 600,
         "MISSILIS_TICKET": 600,
@@ -87,13 +91,34 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20251030",
+            "event_name": "GODDESS FALL",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": True,
+            "mini_game_play": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20250924",
             "event_name": "REBORN EVIL",
             # 大型活动
             "event_type": 1,
             "mini_game": True,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
-            "story_difficulty": "Normal"  # Normal, Hard
+            "story_difficulty": "Hard"  # Normal, Hard
+        },
+        {
+            "event_id": "event_20251016",
+            "event_name": "GO! NINJA THIEF!",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "mini_game_play": True,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20250904",
@@ -101,6 +126,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": True,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -110,6 +136,7 @@ class ManualConfig:
             # story1为小型活动的大型活动
             "event_type": 3,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -119,6 +146,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": True,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -128,6 +156,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -137,6 +166,7 @@ class ManualConfig:
             # 小型活动
             "event_type": 2,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_1",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -146,6 +176,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -156,5 +187,5 @@ class ManualConfig:
     DEVICE_OVER_HTTP = False
 
     # 独立任务，不依赖游戏运行
-    INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange', 'ScreenRotate']
-    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange", 'screen_rotate']
+    INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange', 'ScreenRotate', 'UpdateHosts']
+    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange", 'screen_rotate', 'update_hosts']

@@ -14,6 +14,7 @@ from module.ui.page import (
     page_conversation,
     page_daily,
     page_destroy,
+    page_episode_viewing,
     page_friend,
     page_interception,
     page_inventory,
@@ -52,6 +53,7 @@ class UI(InfoHandler):
         page_inventory,
         page_pass,
         page_conversation,
+        page_episode_viewing,
         page_ark,
         page_tribe_tower,
         page_simulation_room,
@@ -135,13 +137,13 @@ class UI(InfoHandler):
                 'SERVER',
                 'intl' if 'proximabeta' in self.config.Emulator_PackageName else 'tw',
             )
-            logger.attr('LANGUAGE', self.config.Emulator_Language)
+            logger.attr('LANGUAGE', self.config.Client_Language)
             logger.warning('Supported page: Any page with a "HOME" button on the bottom-left')
         if self.config.Client_Platform == 'win':
             logger.attr('CLENT_PLATFORM', self.config.Client_Platform)
             logger.attr('CLIENT', self.config.PCClientInfo_Client)
             # logger.attr('SERVER', )
-            logger.attr('LANGUAGE', self.config.PCClientInfo_Language)
+            logger.attr('LANGUAGE', self.config.Client_Language)
             logger.warning('Please check Launcher/Game title and process in correct')
         logger.warning('Starting from current page is not supported')
         logger.warning(f'Supported page: {[str(page) for page in self.ui_pages]}')

@@ -85,6 +85,11 @@ page_conversation.link(button=GOTO_BACK, destination=page_team)
 page_conversation.link(button=GOTO_MAIN, destination=page_main)
 page_team.link(button=TEAM_GOTO_CONVERSATION, destination=page_conversation)
 
+# episode viewing
+page_episode_viewing = Page(EPISODE_VIEWING_CHECK)
+page_conversation.link(button=CONVERSATION_GOTO_EPISODE_VIEWING, destination=page_episode_viewing)
+page_episode_viewing.link(button=EPISODE_VIEWING_GOTO_CONVERSATION, destination=page_conversation)
+
 # ark
 page_ark = Page(ARK_CHECK)
 page_ark.link(button=GOTO_BACK, destination=page_main)

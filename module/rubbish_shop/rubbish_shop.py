@@ -1,10 +1,10 @@
 import re
-from datetime import datetime, timedelta, timezone
 from functools import cached_property
 
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
 from module.base.utils import exec_file
+from module.config.delay import next_tuesday
 from module.handler.assets import CONFIRM_A
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
@@ -42,15 +42,6 @@ class RubbishShop(ShopBase):
         return SelectedGrids(
             [Product(i, self.config.RUBBISH_SHOP_BONE_PRODUCT.get(i), self.assets.get(i)) for i in priority]
         )
-
-    @cached_property
-    def next_tuesday(self) -> datetime:
-        """计算下一个周二的时间（北京时间早上4点）"""
-        local_now = datetime.now()
-        remain = (1 - local_now.weekday()) % 7
-        remain = remain + 7 if remain == 0 else remain
-        diff = datetime.now(timezone.utc).astimezone().utcoffset() - timedelta(hours=8)
-        return local_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=remain) + diff
 
     @cached_property
     def broken_core(self) -> int:
@@ -161,4 +152,4 @@ class RubbishShop(ShopBase):
             finally:
                 del_cached_property(self, priority_attr)
 
-        self.config.task_delay(target=self.next_tuesday)
+        self.config.task_delay(target=next_tuesday())

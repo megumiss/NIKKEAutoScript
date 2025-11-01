@@ -55,7 +55,7 @@ class SoloRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(MAIN_CHECK, offset=10)
-                and self.appear_then_click(SOLO_RAID, offset=10, interval=3)
+                and self.appear_then_click(SOLO_RAID, offset=10, interval=3, static=False)
             ):
                 logger.info('Enter solo raid')
                 continue

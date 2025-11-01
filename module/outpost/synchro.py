@@ -1,7 +1,5 @@
-from datetime import datetime, timedelta, timezone
-from functools import cached_property
-
 from module.base.timer import Timer
+from module.config.delay import next_tuesday
 from module.logger import logger
 from module.outpost.assets import *
 from module.ui.page import page_synchro
@@ -13,15 +11,6 @@ class NoEnoughItems(Exception):
 
 
 class Synchro(UI):
-    diff = datetime.now(timezone.utc).astimezone().utcoffset() - timedelta(hours=8)
-
-    @cached_property
-    def next_tuesday(self) -> datetime:
-        local_now = datetime.now()
-        remain = (1 - local_now.weekday()) % 7
-        remain = remain + 7 if remain == 0 else remain
-        return local_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=remain) + self.diff
-
     def upgrade(self):
         logger.info('Open synchro upgrade window')
         click_timer = Timer(0.3)
@@ -94,4 +83,4 @@ class Synchro(UI):
         except NoEnoughItems:
             logger.info('No enough items left, upgrade done')
 
-        self.config.task_delay(target=self.next_tuesday)
+        self.config.task_delay(target=next_tuesday())

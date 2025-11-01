@@ -14,7 +14,7 @@ set "_adbBin=%_root%\toolkit\Lib\site-packages\adbutils\binaries"
 set "PATH=%_root%\toolkit\alias;%_root%\toolkit\command;%_pyBin%;%_pyBin%\Scripts;%_GitBin%;%_adbBin%;%PATH%"
 
 title NKAS Starter
-python -m deploy.nkas
+python -m deploy.starter
 if %errorlevel% neq 0 (
     pause >nul
 ) else (

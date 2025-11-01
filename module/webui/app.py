@@ -1136,8 +1136,8 @@ class NKASGUI(Frame):
                 [
                     {"label": "简体中文", "value": "zh-CN"},
                     # {"label": "繁體中文", "value": "zh-TW"},
-                    # {"label": "English", "value": "en-US"},
-                    # {"label": "日本語", "value": "ja-JP"},
+                    {"label": "English", "value": "en-US"},
+                    {"label": "日本語", "value": "ja-JP"},
                 ],
                 onclick=lambda l: set_language(l),
             ).style("text-align: center")
@@ -1153,28 +1153,46 @@ class NKASGUI(Frame):
             # show something
             put_markdown(
                 """
-            NKAS is a free open source software, if you paid for NKAS from any channel, please refund.
-            NKAS 是一款免费开源软件，如果你在任何渠道付费购买了NKAS，请退款。
-            Project repository 项目地址：`https://github.com/megumiss/NIKKEAutoScript`
+                NKAS is a free open source software, if you paid for NKAS from any channel, please refund.  
+                NKAS 是一款免费开源软件，如果你在任何渠道付费购买了NKAS，请退款。
 
-            详细安装指南请参阅： `https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南`
-            PC端使用请注意事项： `https://github.com/megumiss/NIKKEAutoScript/issues/57`
+                Project repository: https://github.com/megumiss/NIKKEAutoScript  
+                项目地址：https://github.com/megumiss/NIKKEAutoScript
+                Detailed guide: https://github.com/megumiss/NIKKEAutoScript/wiki  
+                详细指南请参阅：https://github.com/megumiss/NIKKEAutoScript/wiki
 
-            💡 **寻求帮助**  
-            如果在使用过程中遇到问题，您可以通过以下方式获取帮助：
-            在 `GitHub Issues` 中提交问题
-            加入划水 QQ 群：`823265807`
+                💡 Need help  
+                💡 寻求帮助  
+                If you encounter any issues while using, you can get help through the following ways:  
+                如果在使用过程中遇到问题，您可以通过以下方式获取帮助：  
 
-            如果喜欢本项目，可以送作者一杯蜜雪冰城🍦  
-            您的支持就是作者开发和维护项目的动力🚀  
+                Submit an issue on GitHub Issues  
+                在 GitHub Issues 中提交问题  
+                Join the QQ group: 823265807  
+                加入划水 QQ 群：823265807  
+
+                If you like this project, you can buy the author a cup of Mixue Ice Cream 🍦  
+                如果喜欢本项目，可以送作者一杯蜜雪冰城🍦  
+                Your support is the motivation for the author to develop and maintain the project 🚀  
+                您的支持就是作者开发和维护项目的动力🚀  
             """
             ).style("text-align: center")
             # 本地图片
             put_html("""
-                <p style="text-align:center">
-                    <img src="/static/assets/wechat.png" alt="微信" width="200"/>
-                    <img src="/static/assets/alipay.png" alt="支付宝" width="200"/>
-                </p>
+            <div style="text-align:center">
+                <div style="display:inline-block; margin: 5px;">
+                    <img src="/static/assets/wechat.png" alt="WeChat" width="200"/><br/>
+                    <small>WeChat Pay (微信)</small>
+                </div>
+                <div style="display:inline-block; margin: 5px;">
+                    <img src="/static/assets/alipay.png" alt="Alipay" width="200"/><br/>
+                    <small>Alipay (支付宝)</small>
+                </div>
+                <div style="display:inline-block; margin: 5px;">
+                    <img src="/static/assets/alipayremit.png" alt="Alipay Remit" width="200"/><br/>
+                    <small>Alipay Remit (For international)</small>
+                </div>
+            </div>
             """)
 
         if lang.TRANSLATE_MODE:

@@ -1,31 +1,101 @@
 Deploy:
   Git:
+    # URL of NikkeAutoScript repository
+    # [CN user] Use 'https://gitee.com/megumiss/NIKKEAutoScript' for faster and more stable download
+    # [Other] Use 'https://github.com/megumiss/NIKKEAutoScript'
     Repository: https://github.com/megumiss/NIKKEAutoScript
+    # Branch of NKAS
+    # [Developer] Use 'dev', 'app', etc, to try new features
+    # [Other] Use 'master', the stable branch
     Branch: master
+    # Filepath of git executable `git.exe`
+    # [Easy installer] Use './toolkit/Git/mingw64/bin/git.exe'
+    # [Other] Use you own git
     GitExecutable: /usr/bin/git
+    # Set git proxy
+    # [CN user] Use your local http proxy (http://127.0.0.1:{port}) or socks5 proxy (socks5://127.0.0.1:{port})
+    # [Other] Use null
     GitProxy: null
+    # Set SSL Verify
+    # [In most cases] Use true
+    # [Other] Use false to when connected to an untrusted network
     SSLVerify: true
+    # Update NKAS at startup
+    # [In most cases] Use true
     AutoUpdate: true
 
   Python:
+    # Filepath of python executable `python.exe`
+    # [Easy installer] Use './toolkit/python.exe'
+    # [Other] Use you own python, and its version should be 3.7.6 64bit
     PythonExecutable: /usr/local/bin/python
+    # URL of pypi mirror
+    # [CN user] Use 'https://mirrors.aliyun.com/pypi/simple' for faster and more stable download
+    # [Other] Use null
     PypiMirror: null
+    # Install dependencies at startup
+    # [In most cases] Use true
     InstallDependencies: true
+    # Path to requirements.txt
+    # [In most cases] Use 'requirements.txt'
+    # [In Docker] Use './deploy/docker/requirements.txt'
     RequirementsFile: ./deploy/docker/requirements.txt
 
   Adb:
+    # Filepath of ADB executable `adb.exe`
+    # [Easy installer] Use './toolkit/Lib/site-packages/adbutils/binaries/adb.exe'
+    # [Other] Use you own latest ADB, but not the ADB in your emulator
     AdbExecutable: /usr/bin/adb
+    # Whether to replace ADB
+    # Chinese emulators (NoxPlayer, LDPlayer, MemuPlayer, MuMuPlayer) use their own ADB, instead of the latest.
+    # Different ADB servers will terminate each other at startup, resulting in disconnection.
+    # For compatibility, we have to replace them all.
+    # This will do:
+    #   1. Terminate current ADB server
+    #   2. Rename ADB from all emulators to *.bak and replace them by the AdbExecutable set above
+    #   3. Brute-force connect to all available emulator instances
+    # [In most cases] Use true
+    # [In few cases] Use false, if you have other programs using ADB.
     ReplaceAdb: true
+    # Brute-force connect to all available emulator instances
+    # [In most cases] Use true
     AutoConnect: true
+    # Re-install uiautomator2
+    # [In most cases] Use true
     InstallUiautomator2: true
 
   Update:
+    # Use auto update and builtin updater feature
+    # This may cause problem https://github.com/LmeSzinc/AzurLaneAutoScript/issues/876
     EnableReload: true
+    # Check update every X minute
+    # [Disable] 0
+    # [Default] 5
     CheckUpdateInterval: 5
+    # Scheduled restart time
+    # If there are updates, NKAS will automatically restart and update at this time every day
+    # and run all nkas instances that running before restarted
+    # [Disable] null
+    # [Default] 03:50
     AutoRestartTime: 03:50
 
   Webui:
+    # --host. Host to listen
+    # [Use IPv6] '::'
+    # [In most cases] Default to '0.0.0.0'
     WebuiHost: 0.0.0.0
+    # --port. Port to listen
+    # You will be able to access webui via `http://{host}:{port}`
+    # [In most cases] Default to 12271
     WebuiPort: 12271
+    # Language to use on web ui
+    # 'zh-CN' for Chinese simplified
     Language: zh-CN
+    # Theme of web ui
+    # 'dark' for dark theme
     Theme: dark
+    # --run. Auto-run specified config when startup
+    # 'null' default no specified config
+    # '["nkas"]' specified "nkas" config
+    # '["nkas","nkas2"]' specified "nkas" "nkas2" configs
+    Run: null

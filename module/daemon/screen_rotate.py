@@ -9,17 +9,20 @@ from module.ui.ui import UI
 class ScreenRotate(UI):
     def __init__(self, config):
         super().__init__(config, independent=True)
-    
+
     def run(self):
-        self.screen_rotate(deep_get(self.config.data, keys='ScreenRotate.ScreenRotate.Orientation'))
+        self.screen_rotate(
+            deep_get(self.config.data, keys='PCClient.PCClient.ScreenNumber'),
+            deep_get(self.config.data, keys='ScreenRotate.ScreenRotate.Orientation'),
+        )
 
     @staticmethod
-    def screen_rotate(orientation=0):
+    def screen_rotate(screen_n=0, orientation=0):
         """
         设置屏幕方向
         orientation: 0=横屏, 1=竖屏(90), 2=横屏翻转, 3=竖屏(270)
         """
-        device = win32api.EnumDisplayDevices(None, 0)
+        device = win32api.EnumDisplayDevices(None, screen_n)
         dm = win32api.EnumDisplaySettings(device.DeviceName, win32con.ENUM_CURRENT_SETTINGS)
 
         # 如果当前方向和目标方向不一样

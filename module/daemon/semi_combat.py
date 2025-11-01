@@ -1,4 +1,5 @@
 from module.base.timer import Timer
+from module.daemon.assets import MAIN_STORY_MAP_CLOSE, MAIN_STORY_MARK_IN, MAIN_STORY_MARK_OUT, MAIN_STORY_NORMAL
 from module.daemon.daemon_base import DaemonBase
 from module.event.assets import FIELD_CHANGE
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, FIGHT, PAUSE
@@ -15,6 +16,15 @@ class SemiCombat(UI, DaemonBase):
         while 1:
             self.device.screenshot()
 
+            # 关闭地图
+            if (
+                self.config.SemiCombat_MainStoryMark
+                and click_timer.reached()
+                and self.appear_then_click(MAIN_STORY_MAP_CLOSE, offset=30, interval=1)
+            ):
+                click_timer.reset()
+                continue
+
             # 快速战斗
             if (
                 self.config.SemiCombat_FightQuickly
@@ -26,6 +36,30 @@ class SemiCombat(UI, DaemonBase):
 
             # 进入战斗
             if click_timer.reached() and self.appear_then_click(FIGHT, threshold=20, interval=2):
+                click_timer.reset()
+                continue
+
+            # 主线剧情图标，界面外
+            if (
+                self.config.SemiCombat_MainStoryMark
+                and click_timer.reached()
+                and self.appear(MAIN_STORY_NORMAL, offset=30)
+                and self.appear_then_click(MAIN_STORY_MARK_OUT, offset=30, threshold=0.85, interval=5, static=False)
+            ):
+                click_timer.reset()
+                continue
+
+            # 主线剧情图标，界面内
+            if (
+                self.config.SemiCombat_MainStoryMark
+                and click_timer.reached()
+                and not self.appear(FIGHT_QUICKLY_ENABLE, threshold=20)
+                and not self.appear(FIGHT, threshold=20)
+                and self.appear(MAIN_STORY_NORMAL, offset=30)
+                and self.appear_with_scale_then_click(
+                    MAIN_STORY_MARK_IN, click_offset=(0, 130), scale_range=(0.7, 1.2), interval=5
+                )
+            ):
                 click_timer.reset()
                 continue
 

@@ -3,6 +3,7 @@ import time
 
 import psutil
 
+from module.base.langs import Langs
 from module.config.config import NikkeConfig
 from module.config.language import set_language
 from module.config.server import set_server
@@ -46,21 +47,36 @@ class AppControl(WinClient, Login):
 
         # 启动器信息
         if not self.config.PCClientInfo_LauncherPath:
-            logger.error('必须填写启动器路径')
+            logger.error('Launcher path must be specified')
             raise RequestHumanTakeover
         launcher_path = os.path.normpath(self.config.PCClientInfo_LauncherPath)
-        launcher_process = (
-            self.config.PCClientInfo_LauncherProcessName or LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
-        )
-        launcher_window_title = (
-            self.config.PCClientInfo_LauncherTitleName or LAUNCHER_TITLE[self.config.PCClientInfo_Client]
-        )
-        launcher_window_class = 'TWINCONTROL'
 
-        # 游戏信息
-        # game_path = os.path.normpath(self.config.PCClientInfo_GamePath)
-        game_process = self.config.PCClientInfo_GameProcessName or GAME_PROCESS[self.config.PCClientInfo_Client]
-        game_window_title = self.config.PCClientInfo_GameTitleName or GAME_TITLE[self.config.PCClientInfo_Client]
+        if self.config.PCClientInfo_AutoFillName:
+            # 使用固定的 GAME_ / LAUNCHER_ 信息
+            launcher_process = LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
+            launcher_window_title = LAUNCHER_TITLE[self.config.PCClientInfo_Client]
+            game_process = GAME_PROCESS[self.config.PCClientInfo_Client]
+            game_window_title = GAME_TITLE[self.config.PCClientInfo_Client]
+        else:
+            # 使用配置中自定义值
+            launcher_process = (
+                self.config.PCClientInfo_LauncherProcessName
+                or LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
+            )
+            launcher_window_title = (
+                self.config.PCClientInfo_LauncherTitleName
+                or LAUNCHER_TITLE[self.config.PCClientInfo_Client]
+            )
+            game_process = (
+                self.config.PCClientInfo_GameProcessName
+                or GAME_PROCESS[self.config.PCClientInfo_Client]
+            )
+            game_window_title = (
+                self.config.PCClientInfo_GameTitleName
+                or GAME_TITLE[self.config.PCClientInfo_Client]
+            )
+
+        launcher_window_class = 'TWINCONTROL'
         game_window_class = 'UnityWndClass'
 
         # 创建 Window 对象
@@ -98,8 +114,11 @@ class AppControl(WinClient, Login):
 
         # 设置屏幕方向
         if self.config.PCClient_ScreenRotate:
-            self.screen_rotate(1)
+            self.screen_rotate(self.config.PCClient_ScreenNumber, 1)
             time.sleep(3)
+
+        self.language = self.config.Client_Language
+        Langs.use(self.language)
 
         # 启动流程
         self.app_start()
@@ -109,7 +128,6 @@ class AppControl(WinClient, Login):
         self.package = self.config.PCClientInfo_Client
         set_server(self.package)
         logger.attr('Client', self.package)
-        self.language = self.config.PCClientInfo_Language
         set_language(self.language)
         logger.attr('Language', self.language)
 
@@ -138,7 +156,8 @@ class AppControl(WinClient, Login):
             return False
 
         # 检查屏幕分辨率
-        self.check_screen_resolution(720, 1280)
+        # if not self.config.PCClient_ScreenNumber:
+        self.check_screen_resolution(self.config.PCClient_ScreenNumber, 720, 1280)
         self.launcher_running = False
         self.current_window = self.game
         # 关闭自动HDR
@@ -150,19 +169,21 @@ class AppControl(WinClient, Login):
             try:
                 # 检查是否已进入游戏
                 if self.switch_to_program():
-                    logger.info('游戏已在运行，检查分辨率')
-                    self.ensure_resolution(720, 1280, self.config.PCClient_GameWindowPosition)
+                    logger.info('Game is already running, verifying resolution')
+                    self.ensure_resolution(
+                        self.config.PCClient_ScreenNumber, 720, 1280, self.config.PCClient_GameWindowPosition
+                    )
                     self.check_resolution(720, 1280)
                     break
 
                 # 启动启动器
                 self.current_window = self.launcher
                 if not self.switch_to_program() and not self.start_program():
-                    logger.error('启动器启动失败')
+                    logger.error('Launcher failed to start')
                     raise RequestHumanTakeover
                 # 切换到启动器前台
                 if not wait_until(lambda: self.switch_to_program(), 30):
-                    logger.error('切换到启动器超时')
+                    logger.error('Timeout while switching to launcher')
                     raise RequestHumanTakeover
                 # 设置启动器分辨率
                 # self.ensure_resolution(PROGRAM_LAUNCHER, 900, 600)
@@ -173,10 +194,12 @@ class AppControl(WinClient, Login):
                 self.login()
                 # 切换到游戏前台
                 if not wait_until(lambda: self.switch_to_program(), 60):
-                    logger.error('切换到游戏超时')
+                    logger.error('Timeout while switching to game')
                     raise RequestHumanTakeover
                 # 设置游戏分辨率
-                self.ensure_resolution(720, 1280, self.config.PCClient_GameWindowPosition)
+                self.ensure_resolution(
+                    self.config.PCClient_ScreenNumber, 720, 1280, self.config.PCClient_GameWindowPosition
+                )
                 self.check_resolution(720, 1280)
 
                 break
@@ -184,7 +207,7 @@ class AppControl(WinClient, Login):
                 # 直接退出
                 raise AccountError
             except Exception as e:
-                logger.error(f'启动错误：{e}，尝试重试 {retry + 1}/{MAX_RETRY}')
+                logger.error(f'Startup error: {e}, retrying {retry + 1}/{MAX_RETRY}')
                 self.current_window = self.game
                 self.stop_program()
                 # 启动器打开失败

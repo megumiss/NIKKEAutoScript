@@ -1,8 +1,6 @@
-from datetime import datetime, timedelta, timezone
-from functools import cached_property
-
 from module.base.timer import Timer
 from module.base.utils import point2str
+from module.config.delay import next_month, next_tuesday
 from module.gift.assets import *
 from module.handler.assets import ANNOUNCEMENT
 from module.logger import logger
@@ -15,9 +13,11 @@ class NetworkError(Exception):
     pass
 
 
-class GiftBase(UI):
-    diff = datetime.now(timezone.utc).astimezone().utcoffset() - timedelta(hours=8)
+class GiftNotFound(Exception):
+    pass
 
+
+class GiftBase(UI):
     def _run(self, button, check):
         if not self.appear(CASH_SHOP_CHECK, offset=(10, 10)):
             self.ui_ensure(page_main)
@@ -32,6 +32,8 @@ class GiftBase(UI):
             logger.error('Cannot access the cash shop under the current network')
             logger.error("If you haven't logged into Google Play, please log in and try again.")
             self.ensure_back()
+        except GiftNotFound:
+            pass
 
     def ensure_into_shop(self, skip_first_screenshot=True):
         logger.info('Open cash shop')
@@ -109,7 +111,7 @@ class GiftBase(UI):
 
             # 检查每月礼包
             if click_timer.reached() and self.appear(GENERAL_GIFT_CHECK, offset=(10, 10)):
-                self.ensure_sroll((590, 360), (300, 360), count=1, delay=1)
+                self.ensure_sroll((590, 360), (300, 360), method='swipe', count=1, delay=1)
                 click_timer.reset()
                 continue
 
@@ -118,6 +120,7 @@ class GiftBase(UI):
 
     def ensure_into_shop_limited_time(self, skip_first_screenshot=True):
         logger.info('Open cash shop limited')
+        confirm_timer = Timer(2, count=3)
         click_timer = Timer(0.3)
 
         while 1:
@@ -126,10 +129,20 @@ class GiftBase(UI):
             else:
                 self.device.screenshot()
 
-            # 限时礼包检查
+            # STEPUP礼包检查
             if self.appear(LIMITED_GIFT_CHECK, offset=10):
-                logger.info('Open cash shop limited done')
-                break
+                if self.appear(STEPUP, offset=(600, 10)):
+                    logger.info('Open cash shop limited done')
+                    break
+                # 没有找到STEPUP按钮
+                if not self.appear(STEPUP, offset=(600, 10)):
+                    if not confirm_timer.started():
+                        confirm_timer.start()
+                    if confirm_timer.reached():
+                        logger.warning('StepUp gift allready closed')
+                        raise GiftNotFound
+                else:
+                    confirm_timer.clear()
 
             # 打开礼包页面
             if click_timer.reached() and self.appear_then_click(
@@ -157,7 +170,7 @@ class GiftBase(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(button, offset=(250, 10), threshold=0.8, interval=2):
+            if click_timer.reached() and self.appear_then_click(button, offset=(600, 10), threshold=0.8, interval=2):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -232,50 +245,18 @@ class DailyGift(GiftBase):
 
 
 class WeeklyGift(GiftBase):
-    @cached_property
-    def next_tuesday(self) -> datetime:
-        local_now = datetime.now()
-        remain = (1 - local_now.weekday()) % 7
-        remain = remain + 7 if remain == 0 else remain
-        return local_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=remain) + self.diff
-
     def run(self):
         self._run(WEEKLY, WEEKLY_CHECK)
-        self.config.task_delay(target=self.next_tuesday)
+        self.config.task_delay(target=next_tuesday())
 
 
 class MonthlyGift(GiftBase):
-    @cached_property
-    def next_month(self) -> datetime:
-        local_now = datetime.now()
-        next_month = local_now.month % 12 + 1
-        next_year = local_now.year + 1 if next_month == 1 else local_now.year
-        return (
-            local_now.replace(
-                year=next_year,
-                month=next_month,
-                day=1,
-                hour=4,
-                minute=0,
-                second=0,
-                microsecond=0,
-            )
-            + self.diff
-        )
-
     def run(self):
         self._run(MONTHLY, MONTHLY_CHECK)
-        self.config.task_delay(target=self.next_month)
+        self.config.task_delay(target=next_month())
 
 
 class StepUpGift(GiftBase):
-    @cached_property
-    def next_tuesday(self) -> datetime:
-        local_now = datetime.now()
-        remain = (1 - local_now.weekday()) % 7
-        remain = remain + 7 if remain == 0 else remain
-        return local_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=remain) + self.diff
-
     def run(self):
         self._run(STEPUP, STEPUP_CHECK)
-        self.config.task_delay(target=self.next_tuesday)
+        self.config.task_delay(target=next_tuesday())

@@ -9,7 +9,7 @@ from filelock import FileLock
 
 from module.config.atomicwrites import atomic_write
 
-LANGUAGES = ['zh-CN']
+LANGUAGES = ['zh-CN', 'en-US', 'ja-JP']
 
 DEFAULT_TIME = datetime(1989, 12, 27, 0, 0)
 

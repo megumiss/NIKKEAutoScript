@@ -1,6 +1,7 @@
 import time
 
 from module.base.base import ModuleBase
+from module.base.langs import Langs
 from module.base.timer import Timer
 from module.base.utils import point2str
 
@@ -38,13 +39,13 @@ class InfoHandler(ModuleBase):
         self._last_login_reward_check = current_time
 
         # Daily Login, Memories Spring, Monthly Card, etc.
-        reward = self.appear_text('全部领取')
+        reward = self.appear_text(Langs.CLAIM_ALL)
         if reward:
             # 重置限速机制，因为有奖励可领取
             self._last_login_reward_check = 0
 
             x, y = reward[0], reward[1]
-            logger.info('Click %s @ 全部领取' % point2str(x, y))
+            logger.info(f"Click {point2str(x, y)} @ {Langs.CLAIM_ALL}")
             self.device.click_minitouch(x, y)
 
             reward_done = False
@@ -106,7 +107,7 @@ class InfoHandler(ModuleBase):
 
     def handle_server(self):
         if self.appear(SERVER_CHECK, offset=(30, 30), static=False) and self.appear_then_click(
-            CONFIRM_A, offset=(30, 30), interval=3, static=False
+            CONFIRM_A, offset=(30, 30), threshold=0.7, interval=3, static=False
         ):
             return True
 

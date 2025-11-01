@@ -1,8 +1,6 @@
-from datetime import datetime, timedelta, timezone
-from functools import cached_property
-
 from module.base.button import merge_buttons
 from module.base.timer import Timer
+from module.config.delay import next_tuesday
 from module.logger import logger
 from module.outpost.assets import *
 from module.ui.assets import CLICK_TO_NEXT, SELECT_MAX
@@ -15,15 +13,6 @@ class NoEnoughItems(Exception):
 
 
 class Recycling(UI):
-    diff = datetime.now(timezone.utc).astimezone().utcoffset() - timedelta(hours=8)
-
-    @cached_property
-    def next_tuesday(self) -> datetime:
-        local_now = datetime.now()
-        remain = (1 - local_now.weekday()) % 7
-        remain = remain + 7 if remain == 0 else remain
-        return local_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=remain) + self.diff
-
     def upgrade(self):
         logger.hr('Recycling special upgrade', 2)
         click_timer = Timer(0.3)
@@ -33,7 +22,7 @@ class Recycling(UI):
         levels = merge_buttons(levels, x_threshold=30, y_threshold=30)
 
         for level in levels:
-            if level.location[1] > 500 and level.location[1] < 550:
+            if level.location[1] > 350 and level.location[1] < 650:
                 logger.info('Skip common upgrade')
                 continue
             logger.hr('Recycling special upgrade', 3)
@@ -174,4 +163,4 @@ class Recycling(UI):
         except NoEnoughItems:
             logger.info('No enough items left, upgrade done')
 
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(target=next_tuesday())

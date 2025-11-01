@@ -27,7 +27,8 @@
       "MissionPass",
       "Conversation",
       "Shop",
-      "RubbishShop"
+      "RubbishShop",
+      "EpisodeViewing"
     ]
   },
   "Outpost": {
@@ -37,7 +38,8 @@
       "Commission",
       "Liberation",
       "Synchro",
-      "Recycling"
+      "Recycling",
+      "OutpostStory"
     ]
   },
   "Ark": {
@@ -98,7 +100,8 @@
       "SemiCombat",
       "Highlights",
       "BlaCDKManual",
-      "ScreenRotate"
+      "ScreenRotate",
+      "UpdateHosts"
     ]
   }
 }

@@ -1,3 +1,4 @@
+from module.base.langs import Langs
 from module.base.timer import Timer
 from module.base.utils import crop
 from module.coop.assets import *
@@ -50,7 +51,9 @@ class Coop(UI):
     @property
     def dateline(self) -> bool:
         date = self.coop_date
-        if date == '时间到' or ('小时' not in date and '剩余' not in date):
+        if date == Langs.COOP_TIMELINE_TIMEOUT or (
+            Langs.COOP_TIMELINE_HOUR not in date and Langs.COOP_TIMELINE_LEFT not in date
+        ):
             logger.info('[Coop has expired]')
             return True
         return False
@@ -60,7 +63,7 @@ class Coop(UI):
         logger.hr('COOP START')
         coop_enter = False
 
-        self.ensure_sroll((260, 150), (30, 150), speed=35, count=1, delay=0.5)
+        self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=35, count=1, delay=0.5)
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -70,8 +73,8 @@ class Coop(UI):
             if not coop_enter:
                 scroll_timer = Timer(60, count=30).start()
                 # 滑动banner查找协同作战
-                self.ensure_sroll((260, 150), (30, 150), speed=35, count=1, delay=0.5)
-                self.ensure_sroll((30, 150), (260, 150), speed=35, count=1, delay=0.5)
+                self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=35, count=1, delay=0.5)
+                self.ensure_sroll((30, 150), (260, 150), method='swipe', speed=35, count=1, delay=0.5)
                 self.device.screenshot()
                 banner_first = Button(EVENT_BANNER.area, None, button=EVENT_BANNER.area)
                 banner_first._match_init = True
@@ -89,7 +92,7 @@ class Coop(UI):
 
                     tmp_image = self.device.image
                     # 滑动到下一个banner
-                    self.ensure_sroll((260, 150), (30, 150), speed=35, count=1, delay=0.5)
+                    self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=35, count=1, delay=0.5)
                     # 比较banner是否变化
                     while 1:
                         self.device.screenshot()

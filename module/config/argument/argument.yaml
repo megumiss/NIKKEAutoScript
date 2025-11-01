@@ -18,6 +18,9 @@ Client:
   Platform:
     value: adb
     option: [ adb, win ]
+  Language:
+    value: zh-CN
+    option: [ zh-CN, en-US ]
 Emulator:
   Serial:
     value: auto
@@ -25,9 +28,6 @@ Emulator:
   PackageName:
     value: com.proximabeta.nikke
     option: [ com.proximabeta.nikke, com.gamamobi.nikke, ]
-  Language:
-    value: zh-cn
-    option: [ zh-cn ]
   ScreenshotMethod:
     value: DroidCast
     option: [ DroidCast, ]
@@ -62,10 +62,12 @@ EmulatorInfo:
     value: null
     type: textarea
 PCClient:
-  Screens:
-    value: false
+  Screens: false
+  ScreenNumber:
+    value: 0
+    option: [ 0, 1, 2, 3, 4, 5 ]
   GameResolutionCompat:
-    value: false
+    value: true
   CloseAutoHdr: true
   ScreenRotate: false
   GameWindowPosition:
@@ -79,24 +81,22 @@ PCClientInfo:
   Client:
     value: intl
     option: [ intl, hmt ]
-  Language:
-    value: zh-cn
-    option: [ zh-cn ]
-  ScreenshotInterval: 0.3
+  AutoFillName: true
+  LauncherPath:
+    value: ''
+    type: textarea
   LauncherTitleName:
     value: ''
   LauncherProcessName:
     value: ''
-  LauncherPath:
+  GamePath:
     value: ''
     type: textarea
   GameTitleName:
     value: ''
   GameProcessName:
     value: ''
-  GamePath:
-    value: ''
-    type: textarea
+  ScreenshotInterval: 0.3
 Optimization:
   AutoRedCircle: false
   OcrModelType:
@@ -112,8 +112,13 @@ Reward:
 DailyRecruit:
   EventFreeRecruit: true
   SocialPointRecruit: true
+  Ordinary150GemRecruit: false
+  ScreenshotPath:
+    value: ''
+    type: textarea
 SimulationRoom:
   QuickSimulation: true
+  Immediately: false
 Area:
   Difficulty:
     value: 'Level_1'
@@ -205,6 +210,8 @@ Event:
   Event:
     value: ''
     option: [
+      'event_20251030',
+      'event_20251016',
       'event_20250924',
       'event_20250904',
       'event_20250807',
@@ -248,6 +255,9 @@ Interception:
   Boss:
     value: 'Kraken'
     option: [ 'Kraken', 'Indivilia', 'Harvester', 'MirrorContainer', 'Ultra' ]
+  AchieveLevel:
+    value: 1
+    option: [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
   DropScreenshotPath:
     value: ''
     type: textarea
@@ -283,10 +293,12 @@ SemiCombat:
     value: false
   FightQuickly:
     value: false
+  MainStoryMark:
+    value: false
 BlaCDKManual:
   CDK:
     value: ''
-    valuetype: str
+    type: textarea
 Highlights:
   AutoSwitch:
     value: true
@@ -299,3 +311,10 @@ Synchro:
   UseBox:
     value: true
     display: disabled
+Hosts:
+  Action:
+    value: 'Add'
+    option: [ 'Add','Delete' ]
+  Hosts:
+    value: "# 通用\n18.155.202.10 cloud.nikke-kr.com\n43.132.85.192 nikke-en.com\n43.132.85.192 nikke-jp.com\n43.132.85.192 nikke-kr.com\n# 国际 Global\n43.152.186.163 global-lobby.nikke-kr.com\n43.152.186.163 global-match.nikke-kr.com\n# 日本 JP\n# 43.152.186.163 jp-lobby.nikke-kr.com\n# 43.152.186.163 jp-match.nikke-kr.com\n# 韩国 KR\n# 43.152.186.163 kr-lobby.nikke-kr.com\n# 43.152.186.163 kr-match.nikke-kr.com\n# 东南亚 SEA\n# 43.152.186.163 sea-lobby.nikke-kr.com\n# 43.152.186.163 sea-match.nikke-kr.com\n# 港澳台 HK/MC/TW\n# 43.152.186.163 hmt-lobby.nikke-kr.com\n# 43.152.186.163 hmt-match.nikke-kr.com\n# 北美 NA\n# 175.97.131.54 us-match.nikke-kr.com\n# 175.97.131.54 us-lobby.nikke-kr.com"
+    type: textarea

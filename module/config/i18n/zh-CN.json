@@ -94,6 +94,10 @@
       "name": "废铁商店",
       "help": ""
     },
+    "EpisodeViewing": {
+      "name": "花絮鉴赏会",
+      "help": ""
+    },
     "Commission": {
       "name": "派遣",
       "help": ""
@@ -108,6 +112,10 @@
     },
     "Recycling": {
       "name": "循环室",
+      "help": ""
+    },
+    "OutpostStory": {
+      "name": "基地剧情",
       "help": ""
     },
     "SimulationRoom": {
@@ -209,6 +217,10 @@
     "ScreenRotate": {
       "name": "屏幕旋转",
       "help": ""
+    },
+    "UpdateHosts": {
+      "name": "Hosts修改",
+      "help": ""
     }
   },
   "Scheduler": {
@@ -253,6 +265,12 @@
       "help": "",
       "adb": "ADB (模拟器)",
       "win": "Windows (PC端)"
+    },
+    "Language": {
+      "name": "游戏语言",
+      "help": "",
+      "zh-CN": "简体中文",
+      "en-US": "English"
     }
   },
   "Emulator": {
@@ -269,11 +287,6 @@
       "help": "模拟器上装有多个游戏客户端时，需要手动选择客户端",
       "com.proximabeta.nikke": "国际",
       "com.gamamobi.nikke": "港澳台"
-    },
-    "Language": {
-      "name": "游戏语言",
-      "help": "当前只支持简体中文",
-      "zh-cn": "简体中文"
     },
     "ScreenshotMethod": {
       "name": "模拟器截图方案",
@@ -332,8 +345,18 @@
       "help": ""
     },
     "Screens": {
-      "name": "多屏幕",
-      "help": "如果使用多屏幕，请开启此选项。多屏幕请优先将符合分辨率要求的屏幕设为主显示器，该选项未经详细测试可能无法使用"
+      "name": "多屏幕模式",
+      "help": "开启后支持游戏窗口在副屏/虚拟屏幕上运行，还需要手动选择游戏窗口目标屏幕"
+    },
+    "ScreenNumber": {
+      "name": "游戏窗口目标屏幕",
+      "help": "选择符合分辨率要求的屏幕，默认为0，即主屏幕；需要先开启多屏幕模式，选择后，游戏窗口会移动到对应的屏幕中，屏幕顺序可能和系统设置中的顺序不同",
+      "0": "0",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
     },
     "GameResolutionCompat": {
       "name": "游戏分辨率设置兼容模式",
@@ -341,11 +364,11 @@
     },
     "CloseAutoHdr": {
       "name": "关闭自动HDR",
-      "help": "NKAS运行在HDR开启的设备下可能无法正常运行，如果你频繁出现卡屏请开启此选项，开启后会关闭游戏的自动HDR，全局HDR不受影响"
+      "help": "NKAS运行在HDR开启的设备下可能无法正常运行，如果你开启了系统HDR请开启此选项，开启后会关闭游戏的自动HDR，全局HDR不受影响"
     },
     "ScreenRotate": {
       "name": "旋转屏幕",
-      "help": "仅建议1080p屏幕用户开启，开启该选项后，点击启动时屏幕会变成竖屏以满足竖向分辨率要求"
+      "help": "仅建议1080p屏幕用户开启，开启该选项后，点击启动时屏幕会变成竖屏以满足竖向分辨率要求；任务结束后会自动旋转为横屏，或者使用快捷键Ctrl+F12手动旋转为横屏"
     },
     "GameWindowPosition": {
       "name": "游戏窗口位置",
@@ -372,18 +395,17 @@
     },
     "Client": {
       "name": "游戏客户端",
-      "help": "启动器、游戏的标题、进程会根据选择的客户端自动填写，切换前需要先清空下面的启动器和游戏配置",
+      "help": "启动器、游戏的标题、进程会根据选择的客户端自动填写，切换该选项前需要先清空下方的启动器和游戏的进程、标题相关配置",
       "intl": "国际",
       "hmt": "港澳台"
     },
-    "Language": {
-      "name": "游戏语言",
-      "help": "当前只支持简体中文",
-      "zh-cn": "简体中文"
+    "AutoFillName": {
+      "name": "自动填充字段",
+      "help": "自动填充启动器、游戏的标题、进程信息"
     },
-    "ScreenshotInterval": {
-      "name": "截图间隔",
-      "help": ""
+    "LauncherPath": {
+      "name": "启动器路径",
+      "help": "游戏启动器路径，必填，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
     },
     "LauncherTitleName": {
       "name": "启动器标题",
@@ -393,9 +415,9 @@
       "name": "启动器进程",
       "help": "启动进程的名称，一般无需手动填写"
     },
-    "LauncherPath": {
-      "name": "启动器路径",
-      "help": "游戏启动器路径，必填，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
+    "GamePath": {
+      "name": "游戏路径",
+      "help": "游戏路径，一般无需手动填写，会根据启动器路径自动填写，如果自动填写的路径错误请手动更改"
     },
     "GameTitleName": {
       "name": "游戏标题",
@@ -405,9 +427,9 @@
       "name": "游戏进程",
       "help": "游戏进程的名称，一般无需手动填写"
     },
-    "GamePath": {
-      "name": "游戏路径",
-      "help": "游戏路径，一般无需手动填写，会根据启动器路径自动填写，如果自动填写的路径错误请手动更改"
+    "ScreenshotInterval": {
+      "name": "截图间隔",
+      "help": ""
     }
   },
   "Optimization": {
@@ -417,7 +439,7 @@
     },
     "AutoRedCircle": {
       "name": "战斗时自动点击红圈",
-      "help": "需要设置中开启：同步点击位置和准星，当前支持异拦、爬塔、模拟室、个人突击、联盟突袭、协同作战，准确度较低随缘处理，超过屏幕的红圈暂时无法处理"
+      "help": "需要设置中开启：同步点击位置和准星，当前支持异拦、爬塔、模拟室、个人突击、联盟突袭、协同作战等，准确度较低随缘处理，超过屏幕的红圈暂时无法处理"
     },
     "OcrModelType": {
       "name": "OCR模型选择",
@@ -463,6 +485,14 @@
     "SocialPointRecruit": {
       "name": "友情点单抽",
       "help": ""
+    },
+    "Ordinary150GemRecruit": {
+      "name": "普通150钻单抽",
+      "help": "普通招募中每天一次的150钻抽卡"
+    },
+    "ScreenshotPath": {
+      "name": "抽卡截图路径",
+      "help": "会在路径下保存抽卡截图，不填写则不保存；例如：D:\\PCR\\NIKKE，Docker用户需要填写以/app/NIKKEAutoScript开始的文件夹"
     }
   },
   "SimulationRoom": {
@@ -472,6 +502,10 @@
     },
     "QuickSimulation": {
       "name": "快速模拟",
+      "help": ""
+    },
+    "Immediately": {
+      "name": "立即完成",
       "help": ""
     }
   },
@@ -549,7 +583,7 @@
     },
     "priority": {
       "name": "核心购买优先级",
-      "help": "不填写默认购买珠宝和芯尘盒，填写格式例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\nGEM: 珠宝\nCORE_DUST_CASE: 芯尘盒\nCREDIT_CASE: 信用点盒\nCREDIT: 信用点\nBATTLE_DATA_SET_CASE: 战斗数据辑盒\nGENERAL_TICKET: 指挥官通用券\nELYSION_TICKET: 极乐净土VIP券\nMISSILIS_TICKET: 米西利斯VIP卡\nTETRA_TICKET: 泰特拉VIP护理券\nPILGRIM_TICKET: 朝圣者补给套组交换券\nABNORMAL_TICKET: 反常年券\n"
+      "help": "不填写默认购买珠宝和芯尘盒，填写格式例如: 'GEM > CORE_DUST_CASE'，用一个大于号分开，可以选择的：\nGEM: 珠宝\nCORE_DUST_CASE: 芯尘盒\nCREDIT_CASE: 信用点盒\nCREDIT: 信用点\nBATTLE_DATA_SET_CASE: 战斗数据辑盒\nGROWTH_SET: 成长套组\nORNAMENT: 简介装饰品\nGENERAL_TICKET: 指挥官通用券\nELYSION_TICKET: 极乐净土VIP券\nMISSILIS_TICKET: 米西利斯VIP卡\nTETRA_TICKET: 泰特拉VIP护理券\nPILGRIM_TICKET: 朝圣者补给套组交换券\nABNORMAL_TICKET: 反常年券\n"
     },
     "bonePriority": {
       "name": "骨头购买优先级",
@@ -634,7 +668,7 @@
   "Conversation": {
     "_info": {
       "name": "咨询",
-      "help": "准确率无法保证100%"
+      "help": "自动选择正确的对话选项，准确率接近100%"
     },
     "OnlyFavourite": {
       "name": "只咨询收藏",
@@ -656,7 +690,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": ""
+      "help": "获取方式请查看文档：https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN"
     },
     "XCommonParams": {
       "name": "XCommonParams",
@@ -720,6 +754,8 @@
     "Event": {
       "name": "当前活动",
       "help": "",
+      "event_20251030": "GODDESS FALL",
+      "event_20251016": "GO! NINJA THIEF!",
       "event_20250924": "REBORN EVIL",
       "event_20250904": "COINS IN RUSH",
       "event_20250807": "ABSOLUTE",
@@ -738,7 +774,7 @@
     },
     "Story": {
       "name": "关卡扫荡",
-      "help": "倒数第二关快速战斗，需要打完当前开启关卡倒数第二关后开启。选择的关卡必须和当前开启的关卡一致"
+      "help": "倒数第二关快速战斗，需要打完当前开启关卡倒数第二关后才能正常使用，自动推图请使用工具中的半自动点击；必须保证自身关卡进度能够跟随正常的活动关卡进度"
     },
     "StoryPart": {
       "name": "关卡选择",
@@ -807,6 +843,19 @@
       "Harvester": "死神（腿）",
       "MirrorContainer": "镜像容器（手）",
       "Ultra": "过激派（头）"
+    },
+    "AchieveLevel": {
+      "name": "达成阶段",
+      "help": "当已通过的阶段达到下方选择的阶段时才会快速战斗；识别可能不准确，请根据自身情况修改",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9"
     },
     "DropScreenshotPath": {
       "name": "掉落截图路径",
@@ -904,6 +953,10 @@
     "FightQuickly": {
       "name": "快速战斗",
       "help": "当在需要用票的关卡时，需要关闭此项"
+    },
+    "MainStoryMark": {
+      "name": "自动跟随主线剧情",
+      "help": "开启后会自动点击主线剧情普通难度的剧情感叹号，同时关闭小地图；一定程度上可以实现自动推剧情，但是极不稳定，而且 100% 会漏怪"
     }
   },
   "BlaCDKManual": {
@@ -913,7 +966,7 @@
     },
     "CDK": {
       "name": "CDK",
-      "help": "将CDK粘贴到输入框，提示设置保存成功后点击启动即可兑换"
+      "help": "将CDK粘贴到输入框，每行一个，提示设置保存成功后点击启动即可兑换"
     }
   },
   "Highlights": {
@@ -933,7 +986,7 @@
     },
     "Orientation": {
       "name": "旋转方向",
-      "help": "手动修改屏幕方向",
+      "help": "手动修改屏幕方向；建议直接使用快捷键 Ctrl+F12",
       "0": "横屏",
       "1": "竖屏"
     }
@@ -946,6 +999,22 @@
     "UseBox": {
       "name": "使用道具",
       "help": ""
+    }
+  },
+  "Hosts": {
+    "_info": {
+      "name": "Hosts配置",
+      "help": ""
+    },
+    "Action": {
+      "name": "操作",
+      "help": "",
+      "Add": "添加",
+      "Delete": "删除"
+    },
+    "Hosts": {
+      "name": "Hosts",
+      "help": "将下面未被注释的内容追加到系统Hosts文件中，只支持Windows；默认启用国际服，更换服务器请取消对应服务器的注释，建议只开启自己所在服务器的Hosts，内容可根据自己实际情况修改"
     }
   },
   "Storage": {
@@ -1021,7 +1090,7 @@
       "Manage": "管理"
     },
     "AppManage": {
-      "PageTitle": "管理配置文件（未经测试 随缘使用）",
+      "PageTitle": "管理配置文件",
       "TitleNew": "添加新配置",
       "NewName": "新的配置文件名",
       "CopyFrom": "从现有的配置中复制",

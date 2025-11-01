@@ -126,7 +126,10 @@ class Automation:
 
             try:
                 result = Screenshot.take_screenshot(
-                    self.current_window.title, self.current_window.resolution, self.config.PCClient_Screens, crop=crop
+                    self.current_window.title,
+                    self.current_window.resolution,
+                    self.config.PCClient_Screens,
+                    crop=crop,
                 )
                 if result:
                     image, pos, scale = result
@@ -225,31 +228,37 @@ class Automation:
         else:
             raise ValueError(f'未知的动作类型: {action}')
 
-    def swipe(
-        self, p1, p2, speed=15, hold=0, method='swipe', label='Swipe', distance_check=True, handle_control_check=True
-    ):
+    def swipe(self, p1, p2, speed=15, method='scroll', distance_check=True, handle_control_check=True):
         p1, p2 = ensure_int(p1, p2)
-        logger.info('%s %s -> %s' % (label, point2str(*p1), point2str(*p2)))
+        logger.info('%s %s -> %s' % (method, point2str(*p1), point2str(*p2)))
 
         p1 = p1[0] + self.current_window.offset[0], p1[1] + self.current_window.offset[1]
         if method == 'scroll':
+            # 使用滚轮滚动
             p2 = p2[0] + self.current_window.offset[0], p2[1] + self.current_window.offset[1]
             start_x, start_y = p1
             end_x, end_y = p2
 
-            # 计算垂直或水平方向的像素距离
-            pixel_distance = end_y - start_y if abs(end_y - start_y) > abs(end_x - start_x) else end_x - start_x
+            # 判断是水平滚动还是垂直滚动
+            horizontal = abs(end_x - start_x) > abs(end_y - start_y)
+            # 计算像素距离
+            pixel_distance = end_x - start_x if horizontal else end_y - start_y
             if not pixel_distance:
                 pixel_distance = end_x - start_x
 
-            # 计算需要滚动的次数
+            # 计算滚动次数
             scroll_count = round(abs(pixel_distance) / 65) - 1
             # 自动判断滚动方向
-            direction = -1 if pixel_distance < 0 else 1
+            if horizontal:
+                direction = 1 if pixel_distance < 0 else -1
+            else:
+                direction = -1 if pixel_distance < 0 else 1
 
+            # 执行滚动
             self.mouse_move((start_x + end_x) // 2, (start_y + end_y) // 2)
             self.mouse_scroll(scroll_count, direction=direction)
         elif method == 'swipe':
+            # 使用鼠标滑动
             # 原始目标点
             raw_p2 = (p2[0] + self.current_window.offset[0], p2[1] + self.current_window.offset[1])
             dx, dy = raw_p2[0] - p1[0], raw_p2[1] - p1[1]
@@ -257,12 +266,12 @@ class Automation:
             # 判断主要滑动方向
             if abs(dx) > abs(dy):
                 # 水平滑动 -> 额外延伸 X 轴
-                p2 = (raw_p2[0] + dx * 0.5, raw_p2[1])
+                p2 = (raw_p2[0], raw_p2[1])
             else:
                 # 垂直滑动 -> 额外延伸 Y 轴
-                p2 = (raw_p2[0], raw_p2[1] + dy)
+                p2 = (raw_p2[0], raw_p2[1])
 
-            self.mouse_swipe(p1, p2, speed=speed * 2, hold=hold)
+            self.mouse_swipe(p1, p2, speed=speed)
         else:
             raise ValueError(f'未知的动作类型: {method}')
 

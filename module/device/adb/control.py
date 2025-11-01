@@ -48,14 +48,14 @@ class Control(Minitouch):
             self.config.Emulator_ControlMethod)
         method(x, y)
 
-    def swipe(self, p1, p2, speed=15, hold=0, method='swipe', name='SWIPE', label='Swipe',
+    def swipe(self, p1, p2, speed=15, method='swipe', name='SWIPE',
             distance_check=True, handle_control_check=True):
         if handle_control_check:
             self.handle_control_check(name)
         p1, p2 = ensure_int(p1, p2)
-        method = self.config.Emulator_ControlMethod
-        if method == 'minitouch':
-            logger.info('%s %s -> %s' % (label, point2str(*p1), point2str(*p2)))
+        # method = self.config.Emulator_ControlMethod
+        # if method == 'minitouch':
+        logger.info('%s %s -> %s' % (method, point2str(*p1), point2str(*p2)))
 
         if distance_check:
             if np.linalg.norm(np.subtract(p1, p2)) < 10:
@@ -64,5 +64,5 @@ class Control(Minitouch):
                 logger.info('Swipe distance < 10px, dropped')
                 return
 
-        if method == 'minitouch':
-            self.swipe_minitouch(p1, p2, speed=speed, hold=hold)
+        # if method == 'minitouch':
+        self.swipe_minitouch(p1, p2, speed=speed, method=method)

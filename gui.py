@@ -38,7 +38,7 @@ def func(ev: threading.Event):
         help='Port to listen. Default to WebuiPort in deploy setting',
     )
     # parser.add_argument(
-    #     "-k", "--key", type=str, help="Password of alas. No password by default"
+    #     "-k", "--key", type=str, help="Password of nkas. No password by default"
     # )
     # parser.add_argument(
     #     "--cdn",
@@ -58,12 +58,12 @@ def func(ev: threading.Event):
         "--run",
         nargs="+",
         type=str,
-        help="Run alas by config names on startup",
+        help="Run nkas by config names on startup",
     )
     args, _ = parser.parse_known_args()
 
     host = args.host or State.deploy_config.WebuiHost or "0.0.0.0"
-    port = args.port or int(State.deploy_config.WebuiPort) or 22267
+    port = args.port or int(State.deploy_config.WebuiPort) or 12271
     # ssl_key = args.ssl_key or State.deploy_config.WebuiSSLKey
     # ssl_cert = args.ssl_cert or State.deploy_config.WebuiSSLCert
     # ssl = ssl_key is not None and ssl_cert is not None
