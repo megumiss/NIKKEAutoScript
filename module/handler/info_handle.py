@@ -216,8 +216,6 @@ class InfoHandler(ModuleBase):
             # 若当前模板检测到红圈则立即处理，否则尝试下一个模板
             if not circles:
                 continue
-            for circle in circles:
-                logger.debug(f'Circle {template_type} position: {circle.location}')
 
             for circle in circles:
                 logger.info(f'Circle {template_type} position: {circle.location}')
