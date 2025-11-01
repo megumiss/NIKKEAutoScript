@@ -8,7 +8,7 @@ from module.base.utils import point2str
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
 from module.exception import GameServerUnderMaintenance, GameStuckError
 from module.handler.assets import *
-from module.interception.assets import TEMPLATE_RED_CIRCLE
+from module.interception.assets import TEMPLATE_RED_CIRCLE_LEFT, TEMPLATE_RED_CIRCLE_RIGHT, TEMPLATE_RED_CIRCLE_TOP
 from module.logger import logger
 from module.ui.assets import GOTO_BACK, MAIN_CHECK
 
@@ -45,7 +45,7 @@ class InfoHandler(ModuleBase):
             self._last_login_reward_check = 0
 
             x, y = reward[0], reward[1]
-            logger.info(f"Click {point2str(x, y)} @ {Langs.CLAIM_ALL}")
+            logger.info(f'Click {point2str(x, y)} @ {Langs.CLAIM_ALL}')
             self.device.click_minitouch(x, y)
 
             reward_done = False
@@ -158,39 +158,84 @@ class InfoHandler(ModuleBase):
             self.device.click(LOGIN_CHECK)
             logger.info('Login success')
 
+    def calculate_click_position(self, x, y, template_type, k=0.4, x_center=360, screen_width=720, screen_height=1280):
+        """
+        计算点击位置，支持不同类型模板的额外偏移
+        Args:
+            x, y: 原始识别坐标
+            template_type: 模板类型，可为 'TOP', 'RIGHT', 'LEFT'
+            k: 动态偏移系数
+            x_center: 屏幕中心 x
+            screen_width: 屏幕宽度
+            screen_height: 屏幕高度
+        Returns:
+            (x_click, y_click, dx): 点击坐标和动态偏移值
+        """
+        # 动态偏移
+        dx = k * (x_center - x)
+        x_click = x + dx
+        y_click = y
+
+        # 根据模板类型增加额外偏移
+        if template_type == 'TOP':
+            y_click += 50
+        elif template_type == 'RIGHT':
+            x_click -= 50
+        elif template_type == 'LEFT':
+            x_click += 50
+
+        # 防止超出屏幕边界
+        x_click = max(0, min(screen_width, x_click))
+        y_click = max(0, min(screen_height, y_click))
+        if x_click <= 0 or x_click >= screen_width:
+            if template_type == 'RIGHT':
+                x_click += 30
+            elif template_type == 'LEFT':
+                x_click -= 30
+
+        # 坐标取整
+        return int(round(x_click)), int(round(y_click)), dx
+
     def handle_red_circles(self):
         """
-        处理红圈
+        处理红圈（优先检测 TOP，若未检测到再检测 RIGHT / LEFT）
         """
-        # 模型参数（根据拟合结果）
-        k = 0.5
-        x_center = 360
-        screen_width = 720
+        # 模型参数
+        k = 0.4
 
-        circles = TEMPLATE_RED_CIRCLE.match_multi(self.device.image, similarity=0.65, name='RED_CIRCLE')
-        for circle in circles:
-            x = circle.location[0]
-            y = circle.location[1]
-            if x < 75 or y > 1000:
+        # 按优先顺序定义模板
+        templates = [
+            ('TOP', TEMPLATE_RED_CIRCLE_TOP, 0.65),
+            ('RIGHT', TEMPLATE_RED_CIRCLE_RIGHT, 0.75),
+            ('LEFT', TEMPLATE_RED_CIRCLE_LEFT, 0.65),
+        ]
+
+        for template_type, template, similarity in templates:
+            circles = template.match_multi(self.device.image, similarity=similarity, name=f'RED_CIRCLE_{template_type}')
+
+            # 若当前模板检测到红圈则立即处理，否则尝试下一个模板
+            if not circles:
                 continue
+            for circle in circles:
+                logger.debug(f'Circle {template_type} position: {circle.location}')
 
-            # 动态偏移
-            dx = k * (x_center - x)
-            x_click = x + dx
-            # 防止超出屏幕
-            x_click = max(0, min(screen_width, x_click))
+            for circle in circles:
+                logger.info(f'Circle {template_type} position: {circle.location}')
+                x = circle.location[0]
+                y = circle.location[1]
+                if y < 75 or y > 850:
+                    continue
 
-            # 红圈中心偏移
-            y_click = y + 40
+                x_click, y_click, dx = self.calculate_click_position(x, y, template_type=template_type, k=k)
+                logger.info(
+                    'Click %s @ %s (dx=%.2f)' % (point2str(x_click, y_click), f'RED_CIRCLE_{template_type}', dx)
+                )
+                self.device.long_click_minitouch(x_click, y_click, 1)
 
-            # 坐标取整
-            x_click = int(round(x_click))
-            y_click = int(round(y_click))
-            logger.info('Click %s @ %s (dx=%.2f)' % (point2str(x_click, y_click), 'RED_CIRCLE', dx))
-            self.device.long_click_minitouch(x_click, y_click, 1)
+                # 画面回正
+                self.device.sleep(0.5)
+                return True
 
-            # 画面回正
-            self.device.sleep(0.5)
-            return True
+            continue
 
         return False
