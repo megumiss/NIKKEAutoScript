@@ -49,8 +49,12 @@ class OutpostStory(UI):
                 logger.info('Open story list')
                 continue
 
-            # 任意对话框
-            if self.appear_then_click(STORY_DIALOG_BOX, offset=100, click_offset=(30, -15), interval=1):
+            # 进入剧情
+            if (
+                not skip
+                and not self.appear(STORY_START_CONFIRM, offset=10)
+                and self.appear_then_click(STORY_START, offset=10, interval=3)
+            ):
                 continue
 
             # 进入剧情确认
@@ -59,8 +63,8 @@ class OutpostStory(UI):
             ):
                 continue
 
-            # 进入剧情
-            if not skip  and self.appear_then_click(STORY_START, offset=10, interval=1):
+            # 任意对话框
+            if not skip and self.appear_then_click(STORY_DIALOG_BOX, offset=100, click_offset=(30, -15), interval=3):
                 continue
 
             # SKIP
@@ -76,6 +80,7 @@ class OutpostStory(UI):
                         logger.info('Story view done')
                         self.device.click_record_clear()
                         self.device.stuck_record_clear()
+                        skip = False
                         return self.story_view()
                     if self.appear_then_click(STORY_CLOSE, offset=10, interval=1):
                         continue

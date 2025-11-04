@@ -91,11 +91,22 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20251030",
+            "event_name": "GODDESS FALL",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": True,
+            "mini_game_play": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20250924",
             "event_name": "REBORN EVIL",
             # 大型活动
             "event_type": 1,
             "mini_game": True,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -105,6 +116,7 @@ class ManualConfig:
             # 小型活动
             "event_type": 2,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_1",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -114,6 +126,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": True,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -123,6 +136,7 @@ class ManualConfig:
             # story1为小型活动的大型活动
             "event_type": 3,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -132,6 +146,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": True,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -141,6 +156,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -150,6 +166,7 @@ class ManualConfig:
             # 小型活动
             "event_type": 2,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_1",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
@@ -159,6 +176,7 @@ class ManualConfig:
             # 大型活动
             "event_type": 1,
             "mini_game": False,
+            "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },

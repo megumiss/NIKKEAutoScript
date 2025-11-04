@@ -485,6 +485,18 @@
     "SocialPointRecruit": {
       "name": "友情点单抽",
       "help": ""
+    },
+    "Ordinary150GemRecruit": {
+      "name": "普通150钻单抽",
+      "help": "普通招募中每天一次的150钻抽卡"
+    },
+    "SSRNotifyPush": {
+      "name": "SSR出货提醒",
+      "help": ""
+    },
+    "ScreenshotPath": {
+      "name": "抽卡截图路径",
+      "help": "会在路径下保存抽卡截图，不填写则不保存；例如：D:\\PCR\\NIKKE，Docker用户需要填写以/app/NIKKEAutoScript开始的文件夹"
     }
   },
   "SimulationRoom": {
@@ -494,6 +506,10 @@
     },
     "QuickSimulation": {
       "name": "快速模拟",
+      "help": ""
+    },
+    "Immediately": {
+      "name": "立即完成",
       "help": ""
     }
   },
@@ -678,7 +694,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": ""
+      "help": "获取方式请查看文档：https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN"
     },
     "XCommonParams": {
       "name": "XCommonParams",
@@ -742,6 +758,7 @@
     "Event": {
       "name": "当前活动",
       "help": "",
+      "event_20251030": "GODDESS FALL",
       "event_20251016": "GO! NINJA THIEF!",
       "event_20250924": "REBORN EVIL",
       "event_20250904": "COINS IN RUSH",
@@ -830,6 +847,23 @@
       "Harvester": "死神（腿）",
       "MirrorContainer": "镜像容器（手）",
       "Ultra": "过激派（头）"
+    },
+    "AchieveLevel": {
+      "name": "达成阶段",
+      "help": "当已通过的阶段达到下方选择的阶段时才会快速战斗；识别可能不准确，请根据自身情况修改",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9"
+    },
+    "QuickBattleOnly": {
+      "name": "只快速战斗",
+      "help": "只进行快速战斗，快速战斗不可用时会自动跳过，适合每周一手动打拦截的用户"
     },
     "DropScreenshotPath": {
       "name": "掉落截图路径",

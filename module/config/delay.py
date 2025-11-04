@@ -33,6 +33,41 @@ def next_tuesday() -> datetime:
     # 2. 移除时区信息，使其变为 naive 并返回
     return local_time_aware.replace(tzinfo=None)
 
+def next_tuesday_or_friday() -> datetime:
+    """
+    返回北京时间下个周二或周五 04:00 时，本地时区的 naive datetime（不带时区）。
+    根据当前时间判断选择离当前时间更近的目标日期。
+    """
+    utc_now = datetime.now(timezone.utc)
+    beijing_now = utc_now.astimezone(BEIJING_TZ)
+
+    # 计算下一个周二（weekday 1）和下一个周五（weekday 4）
+    days_ahead_tuesday = (1 - beijing_now.weekday() + 7) % 7
+    days_ahead_friday = (4 - beijing_now.weekday() + 7) % 7
+
+    # 计算目标日期的 04:00（北京时间）
+    target_tuesday = beijing_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=days_ahead_tuesday)
+    target_friday = beijing_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=days_ahead_friday)
+
+    # 如果计算出的时间点在当前时间之前或等于当前时间
+    # 则需要推到下下周
+    if target_tuesday <= beijing_now:
+        target_tuesday += timedelta(days=7)
+    if target_friday <= beijing_now:
+        target_friday += timedelta(days=7)
+
+    # 选择离当前时间更近的那个目标日期
+    if target_tuesday < target_friday:
+        target_time = target_tuesday
+    else:
+        target_time = target_friday
+
+    # 1. 将北京时间点(aware)转换为本地时区(aware)
+    local_time_aware = target_time.astimezone(None)
+    
+    # 2. 移除时区信息，使其变为 naive 并返回
+    return local_time_aware.replace(tzinfo=None)
+
 def next_month() -> datetime:
     """
     返回下个月 1 日 04:00（北京时间）时，本地时区的 naive datetime（不带时区）。

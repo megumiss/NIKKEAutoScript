@@ -131,7 +131,10 @@
     },
     "DailyRecruit": {
       "EventFreeRecruit": true,
-      "SocialPointRecruit": true
+      "SocialPointRecruit": true,
+      "Ordinary150GemRecruit": false,
+      "SSRNotifyPush": false,
+      "ScreenshotPath": null
     },
     "Storage": {
       "Storage": {}
@@ -318,7 +321,8 @@
       "ServerUpdate": "04:00"
     },
     "SimulationRoom": {
-      "QuickSimulation": true
+      "QuickSimulation": true,
+      "Immediately": false
     },
     "Area": {
       "Difficulty": "Level_1",
@@ -374,6 +378,8 @@
     },
     "Interception": {
       "Boss": "Kraken",
+      "AchieveLevel": 1,
+      "QuickBattleOnly": false,
       "DropScreenshotPath": null
     },
     "InterceptionTeam": {

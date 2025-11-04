@@ -485,6 +485,18 @@
     "SocialPointRecruit": {
       "name": "Social Point Single Pull",
       "help": ""
+    },
+    "Ordinary150GemRecruit": {
+      "name": "Ordinary 150Gems Recruit",
+      "help": "Daily 150-gem gacha in ordinary recruit"
+    },
+    "SSRNotifyPush": {
+      "name": "SSR Drop Notification",
+      "help": ""
+    },
+    "ScreenshotPath": {
+      "name": "Recruit Screenshot Path",
+      "help": "Gacha screenshots will be saved in the specified path. Leave blank to disable saving. For example: D:\\PCR\\NIKKE. Docker users must specify a folder starting with /app/NIKKEAutoScript."
     }
   },
   "SimulationRoom": {
@@ -494,6 +506,10 @@
     },
     "QuickSimulation": {
       "name": "Quick Simulation",
+      "help": ""
+    },
+    "Immediately": {
+      "name": "Complete immediately",
       "help": ""
     }
   },
@@ -678,7 +694,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": ""
+      "help": "Please refer to the documentation for the acquisition method: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide"
     },
     "XCommonParams": {
       "name": "XCommonParams",
@@ -742,6 +758,7 @@
     "Event": {
       "name": "Current Events",
       "help": "",
+      "event_20251030": "GODDESS FALL",
       "event_20251016": "GO! NINJA THIEF!",
       "event_20250924": "REBORN EVIL",
       "event_20250904": "COINS IN RUSH",
@@ -830,6 +847,23 @@
       "Harvester": "Harvester (Legs)",
       "MirrorContainer": "Mirror Container (Arms)",
       "Ultra": "Ultra (Head)"
+    },
+    "AchieveLevel": {
+      "name": "Achieve Level",
+      "help": "Quick battle will only start when the cleared stage reaches the selected stage below. Recognition may be inaccurate, please adjust according to your situation.",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9"
+    },
+    "QuickBattleOnly": {
+      "name": "Quick Battle Only",
+      "help": "Only performs quick battles. When quick battle is unavailable, it will automatically skip. Suitable for users who manually play Interception on Mondays."
     },
     "DropScreenshotPath": {
       "name": "Drop Screenshot Path",

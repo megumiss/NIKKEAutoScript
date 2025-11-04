@@ -4,7 +4,7 @@ from functools import cached_property
 from module.base.decorator import del_cached_property
 from module.base.timer import Timer
 from module.base.utils import exec_file
-from module.config.delay import next_tuesday
+from module.config.delay import next_tuesday_or_friday
 from module.handler.assets import CONFIRM_A
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
@@ -152,4 +152,4 @@ class RubbishShop(ShopBase):
             finally:
                 del_cached_property(self, priority_attr)
 
-        self.config.task_delay(target=next_tuesday())
+        self.config.task_delay(target=next_tuesday_or_friday())

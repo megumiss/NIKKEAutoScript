@@ -100,7 +100,7 @@ class Input:
         """
         distance = np.linalg.norm(np.array(p2) - np.array(p1))
 
-        segments = max(10, int(distance / 50))
+        segments = int(distance / 20)
         total_time = max(0.05, min(distance / (100 * speed), 0.15))
         step_delay = total_time / segments
 
