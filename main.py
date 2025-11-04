@@ -270,6 +270,11 @@ class NikkeAutoScript:
 
         Recycling(config=self.config, device=self.device).run()
 
+    def outpost_story(self):
+        from module.outpost.outpost_story import OutpostStory
+
+        OutpostStory(config=self.config, device=self.device).run()
+
     def conversation(self):
         from module.conversation.conversation import Conversation
 

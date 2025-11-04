@@ -68,9 +68,13 @@ class GeneratedConfig:
     # Group `DailyRecruit`
     DailyRecruit_EventFreeRecruit = True
     DailyRecruit_SocialPointRecruit = True
+    DailyRecruit_Ordinary150GemRecruit = False
+    DailyRecruit_SSRNotifyPush = False
+    DailyRecruit_ScreenshotPath = None
 
     # Group `SimulationRoom`
     SimulationRoom_QuickSimulation = True
+    SimulationRoom_Immediately = False
 
     # Group `Area`
     Area_Difficulty = 'Level_1'  # Level_1, Level_2, Level_3, Level_4, Level_5
@@ -136,7 +140,7 @@ class GeneratedConfig:
     BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
 
     # Group `Event`
-    Event_Event = ''  # event_20251016, event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
+    Event_Event = ''  # event_20251030, event_20251016, event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
     Event_LoginStamp = True
     Event_Challenge = True
     Event_Story = False
@@ -155,6 +159,8 @@ class GeneratedConfig:
 
     # Group `Interception`
     Interception_Boss = 'Kraken'  # Kraken, Indivilia, Harvester, MirrorContainer, Ultra
+    Interception_AchieveLevel = 1  # 1, 2, 3, 4, 5, 6, 7, 8, 9
+    Interception_QuickBattleOnly = False
     Interception_DropScreenshotPath = None
 
     # Group `InterceptionTeam`

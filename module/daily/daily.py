@@ -283,7 +283,7 @@ class Daily(UI):
         if self.config.Notification_WhenDailyTaskCompleted:
             handle_notify(
                 self.config.Notification_OnePushConfig,
-                title='NKAS',
+                title=f'NKAS <{self.config.config_name}>',
                 content='任务已全部完成！',
                 always=self.config.Notification_WinOnePush
             )

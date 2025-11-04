@@ -63,7 +63,7 @@ class Coop(UI):
         logger.hr('COOP START')
         coop_enter = False
 
-        self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=35, count=1, delay=0.5)
+        self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=30, count=1, delay=0.5)
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -73,8 +73,8 @@ class Coop(UI):
             if not coop_enter:
                 scroll_timer = Timer(60, count=30).start()
                 # 滑动banner查找协同作战
-                self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=35, count=1, delay=0.5)
-                self.ensure_sroll((30, 150), (260, 150), method='swipe', speed=35, count=1, delay=0.5)
+                self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=30, count=1, delay=0.5)
+                self.ensure_sroll((30, 150), (260, 150), method='swipe', speed=30, count=1, delay=0.5)
                 self.device.screenshot()
                 banner_first = Button(EVENT_BANNER.area, None, button=EVENT_BANNER.area)
                 banner_first._match_init = True
@@ -92,7 +92,7 @@ class Coop(UI):
 
                     tmp_image = self.device.image
                     # 滑动到下一个banner
-                    self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=35, count=1, delay=0.5)
+                    self.ensure_sroll((260, 150), (30, 150), method='swipe', speed=30, count=1, delay=0.5)
                     # 比较banner是否变化
                     while 1:
                         self.device.screenshot()

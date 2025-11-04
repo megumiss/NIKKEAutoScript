@@ -131,7 +131,10 @@
     },
     "DailyRecruit": {
       "EventFreeRecruit": true,
-      "SocialPointRecruit": true
+      "SocialPointRecruit": true,
+      "Ordinary150GemRecruit": false,
+      "SSRNotifyPush": false,
+      "ScreenshotPath": null
     },
     "Storage": {
       "Storage": {}
@@ -295,6 +298,19 @@
       "Storage": {}
     }
   },
+  "OutpostStory": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "OutpostStory",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "SimulationRoom": {
     "Scheduler": {
       "Enable": false,
@@ -305,7 +321,8 @@
       "ServerUpdate": "04:00"
     },
     "SimulationRoom": {
-      "QuickSimulation": true
+      "QuickSimulation": true,
+      "Immediately": false
     },
     "Area": {
       "Difficulty": "Level_1",
@@ -361,6 +378,8 @@
     },
     "Interception": {
       "Boss": "Kraken",
+      "AchieveLevel": 1,
+      "QuickBattleOnly": false,
       "DropScreenshotPath": null
     },
     "InterceptionTeam": {

@@ -74,6 +74,8 @@ Outpost:
       - Synchro
     Recycling:
       - Scheduler
+    OutpostStory:
+      - Scheduler
 
 # ==================== Ark ====================
 

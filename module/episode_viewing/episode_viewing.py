@@ -1,7 +1,5 @@
-from datetime import datetime, timedelta, timezone
-from functools import cached_property
-
 from module.base.timer import Timer
+from module.config.delay import next_tuesday
 from module.daemon.assets import *
 from module.episode_viewing.assets import *
 from module.logger import logger
@@ -11,15 +9,6 @@ from module.ui.ui import UI
 
 
 class EpisodeViewing(UI):
-    @cached_property
-    def next_tuesday(self) -> datetime:
-        """计算下一个周二的时间（北京时间早上4点）"""
-        local_now = datetime.now()
-        remain = (1 - local_now.weekday()) % 7
-        remain = remain + 7 if remain == 0 else remain
-        diff = datetime.now(timezone.utc).astimezone().utcoffset() - timedelta(hours=8)
-        return local_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=remain) + diff
-
     def view(self):
         # 鉴赏是否完成
         if self.appear(INCOMPLETE, offset=10):
@@ -82,4 +71,4 @@ class EpisodeViewing(UI):
         except Exception as e:
             logger.error(e)
 
-        self.config.task_delay(target=self.next_tuesday)
+        self.config.task_delay(target=next_tuesday())

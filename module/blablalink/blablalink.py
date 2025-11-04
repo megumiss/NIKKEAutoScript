@@ -9,6 +9,8 @@ from typing import Dict, Tuple
 
 import requests
 
+from module.blablalink.langs import BlaLangs
+from module.config.delay import next_month
 from module.config.utils import deep_get
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -20,31 +22,11 @@ class MissingHeader(Exception):
 
 
 class Blablalink(UI):
-    diff = datetime.now(timezone.utc).astimezone().utcoffset() - timedelta(hours=8)
-
-    @cached_property
-    def next_month(self) -> datetime:
-        local_now = datetime.now()
-        next_month = local_now.month % 12 + 1
-        next_year = local_now.year + 1 if next_month == 1 else local_now.year
-        return (
-            local_now.replace(
-                year=next_year,
-                month=next_month,
-                day=1,
-                hour=4,
-                minute=0,
-                second=0,
-                microsecond=0,
-            )
-            + self.diff
-        )
-
     # 基本头部信息
     base_headers = {
         'accept': 'application/json, text/plain, */*',
         'accept-encoding': 'gzip, deflate, br, zstd',
-        'accept-language': 'zh-CN,zh;q=0.9',
+        'accept-language': 'en',
         'content-type': 'application/json',
         'origin': 'https://www.blablalink.com',
         'priority': 'u=1, i',
@@ -56,7 +38,6 @@ class Blablalink(UI):
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-site',
         'x-channel-type': '2',
-        'x-language': 'zh-TW',
     }
 
     def __init__(self, config):
@@ -94,7 +75,20 @@ class Blablalink(UI):
         #     'data_statistics_lang': 'zh-TW',
         # }
         # self.common_headers['x-common-params'] = json.dumps(common_params, ensure_ascii=False)
-        self.common_headers['x-common-params'] = self.config.BlaAuth_XCommonParams
+        self.common_headers['x-common-params'] = xCommonParams
+        # 获取并设置语言
+        try:
+            x_common_params = json.loads(str(xCommonParams))
+        except json.JSONDecodeError as e:
+            logger.error('Invalid JSON in XCommonParams: %s', e)
+            raise ValueError(f'XCommonParams is not valid JSON: {e}')
+        if 'language' not in x_common_params:
+            logger.error("Missing field 'language' in XCommonParams")
+            raise KeyError("Missing field 'language' in XCommonParams")
+
+        lang = x_common_params['language']
+        self.common_headers['x-language'] = lang
+        BlaLangs.use(lang)
 
         # 获取user-agent
         useragent = deep_get(self.config.data, keys='BlaAuth.BlaAuth.UserAgent')
@@ -109,26 +103,6 @@ class Blablalink(UI):
     def exchange_priority(self) -> list:
         priority = re.sub(r'\s+', '', self.config.BlaExchange_Priority).split('>')
         return priority
-
-    EXCHANGES = {
-        'Gem_×320': '珠寶 ×320',
-        'Welcome_Gift_Core_Dust_×30': '指揮官見面禮：芯塵 ×30',
-        'Gem_×30': '珠寶 ×30',
-        'Skill_Manual_I_×5': '技能手冊 I ×5',
-        'Ultra_Boost_Module_×5': '模組高級推進器 ×5',
-        'Code_Manual_Selection_Box_×5': '代碼手冊選擇寶箱 ×5',
-        'Gem_×60': '珠寶 ×60',
-        'Mid-Quality_Mold_×3': '中品質鑄模 ×3',
-        'Credit_Case_(1H)_x9': '信用點盒(1H) x9',
-        'Core_Dust_Case_(1H)_×3': '芯塵盒 (1H) ×3',
-        'Gem_×120': '珠寶 ×120',
-        'Mid-Quality_Mold_×8': '中品質鑄模 ×8',
-        'Battle_Data_Set_Case_(1H)_×6': '戰鬥數據輯盒 (1H) ×6',
-        'Core_Dust_Case_(1H)_×6': '芯塵盒 (1H) ×6',
-        'Skill_Manual_I_×30': '技能手冊 I ×30',
-        'Ultra_Boost_Module_×30': '模組高級推進器 ×30',
-        'Code_Manual_Selection_Box_×30': '代碼手冊選擇寶箱 ×30',
-    }
 
     def _request_with_retry(self, method: str, url: str, max_retries: int = 3, **kwargs) -> Dict:
         """带重试机制的请求封装"""
@@ -430,22 +404,22 @@ class Blablalink(UI):
                 reward = next(iter(task.get('reward_infos', [])), None)
                 is_completed = reward.get('is_completed', False) if reward else False
 
-                if '每日簽到' in task_name:
+                if BlaLangs.get('Daily_Sign_in') in task_name:
                     status['signin_completed'] = is_completed
                     status['signin_task_id'] = task.get('task_id', '')
                     logger.info(f'Signin task: {"completed" if is_completed else "pending"}')
 
-                elif '按讚' in task_name:
+                elif BlaLangs.get('Like_Posts') in task_name:
                     status['like_completed'] = is_completed
                     logger.info(f'Like task: {"completed" if is_completed else "pending"}')
 
-                elif '瀏覽' in task_name:
+                elif BlaLangs.get('Browse_Posts') in task_name:
                     status['browse_completed'] = is_completed
                     logger.info(f'Browse task: {"completed" if is_completed else "pending"}')
 
-                elif '評論' in task_name:
-                    status['comment_completed'] = is_completed
-                    logger.info(f'Comment task: {"completed" if is_completed else "pending"}')
+                # elif BlaLangs.get() in task_name:
+                #     status['comment_completed'] = is_completed
+                #     logger.info(f'Comment task: {"completed" if is_completed else "pending"}')
 
         except Exception as e:
             logger.error(f'Failed to parse task status: {str(e)}')
@@ -733,7 +707,7 @@ class Blablalink(UI):
             # 查找匹配的商品
             target_commodity = None
             for commodity in all_commodities:
-                if self.EXCHANGES[priority] in commodity['commodity_name']:
+                if BlaLangs.get(priority) in commodity['commodity_name']:
                     target_commodity = commodity
                     break
 
@@ -784,7 +758,7 @@ class Blablalink(UI):
 
             if result.get('code') == 0 and result.get('data', {}).get('has_saved_role_info'):
                 role_info = result['data']['role_info']
-                logger.info(f'Got role info: {role_info["role_name"]}')
+                logger.info(f'Got role info: {role_info["role_name"][:1]}*****')
                 return role_info
             else:
                 logger.error(f'Failed to get role info: {result.get("msg", "Unknown error")}')
@@ -892,22 +866,35 @@ class Blablalink(UI):
 
     def run(self, task):
         """
-        默认情况下，任务在 4:00–8:00 时间段执行时会自动推迟到 8 点以后；
+        默认情况下，任务在北京时间 4:00–8:00 执行时会推迟到 8 点以后；
         开启 immediate 选项后，任务将立即执行，不再延迟。
         """
         try:
-            local_now = datetime.now()
-            target_time = local_now.replace(hour=8, minute=0, second=0, microsecond=0)
+            beijing_tz = timezone(timedelta(hours=8))
+            utc_now = datetime.now(timezone.utc)
+            beijing_now = utc_now.astimezone(beijing_tz)
 
-            # 情况1：4–8点之间，推迟到 8 点 + 随机分钟（除非 immediate）
-            if 4 <= local_now.hour < 8 and not self.config.BlaDaily_Immediately:
+            target_time = beijing_now.replace(hour=8, minute=0, second=0, microsecond=0)
+
+            # 情况1：北京时间 4–8点之间，推迟到 8 点 + 随机分钟
+            BEIJING_TZ = timezone(timedelta(hours=8))  # 北京时区
+            utc_now = datetime.now(timezone.utc)
+            beijing_now = utc_now.astimezone(BEIJING_TZ)
+            if 4 <= beijing_now.hour < 8 and not self.config.BlaDaily_Immediately:
+                # 计算北京时间 8 点
+                target_beijing = beijing_now.replace(hour=8, minute=0, second=0, microsecond=0)
+                # 增加随机分钟（例如 5～30 分钟）
                 random_minutes = random.randint(5, 30)
-                target_time = target_time + timedelta(minutes=random_minutes)
-                self.config.task_delay(target=target_time)
+                target_beijing += timedelta(minutes=random_minutes)
+                # 将目标时间从北京时间(aware)转换为本地时区(aware)
+                local_target_aware = target_beijing.astimezone(None)
+                # 移除时区信息，变为 naive datetime（本地时间）
+                local_target = local_target_aware.replace(tzinfo=None)
+                self.config.task_delay(target=local_target)
                 return
 
             # 情况2：立即执行（00–04点，>=8点，或 immediate=True）
-            if self.config.BlaDaily_Immediately or local_now.hour < 4 or local_now >= target_time:
+            if self.config.BlaDaily_Immediately or beijing_now.hour < 4 or beijing_now >= target_time:
                 if task == 'daily':
                     self.daily()
                     self.config.task_delay(server_update=True)
@@ -916,7 +903,7 @@ class Blablalink(UI):
                     self.config.task_delay(server_update=True)
                 elif task == 'exchange':
                     self.exchange()
-                    self.config.task_delay(target=self.next_month)
+                    self.config.task_delay(target=next_month())
                 return
         except MissingHeader:
             logger.error('Please check all parameters settings')

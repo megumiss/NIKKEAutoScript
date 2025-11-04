@@ -112,8 +112,14 @@ Reward:
 DailyRecruit:
   EventFreeRecruit: true
   SocialPointRecruit: true
+  Ordinary150GemRecruit: false
+  SSRNotifyPush: false
+  ScreenshotPath:
+    value: ''
+    type: textarea
 SimulationRoom:
   QuickSimulation: true
+  Immediately: false
 Area:
   Difficulty:
     value: 'Level_1'
@@ -205,6 +211,7 @@ Event:
   Event:
     value: ''
     option: [
+      'event_20251030',
       'event_20251016',
       'event_20250924',
       'event_20250904',
@@ -249,6 +256,10 @@ Interception:
   Boss:
     value: 'Kraken'
     option: [ 'Kraken', 'Indivilia', 'Harvester', 'MirrorContainer', 'Ultra' ]
+  AchieveLevel:
+    value: 1
+    option: [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+  QuickBattleOnly: false
   DropScreenshotPath:
     value: ''
     type: textarea

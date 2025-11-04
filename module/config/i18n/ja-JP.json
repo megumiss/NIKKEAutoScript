@@ -114,6 +114,10 @@
       "name": "リサイクルルーム",
       "help": ""
     },
+    "OutpostStory": {
+      "name": "基地プロット",
+      "help": ""
+    },
     "SimulationRoom": {
       "name": "シミュレーションルーム",
       "help": ""
@@ -481,6 +485,18 @@
     "SocialPointRecruit": {
       "name": "友情ポイント単発募集",
       "help": ""
+    },
+    "Ordinary150GemRecruit": {
+      "name": "Ordinary 150Gems Recruit",
+      "help": "通常募集での毎日1回の150ジュエルガチャ"
+    },
+    "SSRNotifyPush": {
+      "name": "SSR排出通知",
+      "help": ""
+    },
+    "ScreenshotPath": {
+      "name": "ガチャスクリーンショットのパス",
+      "help": "ガチャのスクリーンショットは指定したパスに保存されます。未入力の場合は保存されません。例：D:\\PCR\\NIKKE。Dockerユーザーは /app/NIKKEAutoScript で始まるフォルダを指定する必要があります。"
     }
   },
   "SimulationRoom": {
@@ -490,6 +506,10 @@
     },
     "QuickSimulation": {
       "name": "クイックシミュレーション",
+      "help": ""
+    },
+    "Immediately": {
+      "name": "すぐに完了",
       "help": ""
     }
   },
@@ -674,7 +694,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": ""
+      "help": "入手方法についてはドキュメントをご覧ください: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN"
     },
     "XCommonParams": {
       "name": "XCommonParams",
@@ -738,6 +758,7 @@
     "Event": {
       "name": "現在のイベント",
       "help": "",
+      "event_20251030": "GODDESS FALL",
       "event_20251016": "GO! NINJA THIEF!",
       "event_20250924": "REBORN EVIL",
       "event_20250904": "COINS IN RUSH",
@@ -826,6 +847,23 @@
       "Harvester": "ハーベスター（脚）",
       "MirrorContainer": "ミラーコンテナ（手）",
       "Ultra": "過激派（頭）"
+    },
+    "AchieveLevel": {
+      "name": "レベル達成",
+      "help": "クリア済みのステージが下で選択したステージに達した場合のみ、クイックバトルを行います。認識が正確でない可能性がありますので、ご自身の状況に合わせて調整してください。",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9"
+    },
+    "QuickBattleOnly": {
+      "name": "クイックバトルのみ",
+      "help": "クイックバトルのみを実行します。クイックバトルが利用できない場合は自動的にスキップします。毎週月曜日に手動で迎撃戦を行うユーザーに適しています。"
     },
     "DropScreenshotPath": {
       "name": "ドロップスクリーンショットパス",
