@@ -32,6 +32,10 @@ class Interception(UI):
         if level == 1:
             level = 7
             logger.info('Replace quickly level 1 -> 7')
+        if level == 0:
+            level = 9
+            logger.info('Replace quickly level 0 -> 9')
+
         return level
 
     @cached_property
@@ -91,7 +95,7 @@ class Interception(UI):
 
         end_fighting = False
         if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30)) and not BATTLE.match_appear_on(
-            self.device.image, 10
+            self.device.image, 25
         ):
             end_fighting = True
         # 使用的队伍
@@ -126,13 +130,13 @@ class Interception(UI):
             #  开启了只快速战斗
             if (
                 self.config.Interception_QuickBattleOnly
-                and self.appear(BATTLE, threshold=10)
+                and self.appear(BATTLE, threshold=25)
                 and not self.appear(BATTLE_QUICKLY, threshold=5)
             ):
                 logger.warning(f'Quick battle only: {self.config.Interception_QuickBattleOnly}, skip battle')
                 return
 
-            if click_timer.reached() and self.appear_then_click(BATTLE, threshold=10, interval=1):
+            if click_timer.reached() and self.appear_then_click(BATTLE, threshold=25, interval=1):
                 end_fighting = False
                 click_timer.reset()
                 continue
@@ -170,7 +174,7 @@ class Interception(UI):
             if (
                 end_fighting
                 and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30))
-                and not self.appear(BATTLE, threshold=10)
+                and not self.appear(BATTLE, threshold=25)
             ):
                 logger.info('There are no free opportunities')
                 raise NoOpportunity
