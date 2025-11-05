@@ -3,7 +3,7 @@ import re
 
 # 删除src src\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))
 
-TARGET_CHARACTER_NAME = "米尔克：花漾兔女郎"
+TARGET_CHARACTER_NAME = "德尔塔：怪盗忍者"
 INPUT_HTML_FILE = "module\conversation\dialogue_raw.html"
 OUTPUT_JSON_FILE = "module\conversation\dialogue.json"
 

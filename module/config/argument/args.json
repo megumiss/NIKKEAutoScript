@@ -210,6 +210,14 @@
           "adb",
           "win"
         ]
+      },
+      "Language": {
+        "type": "select",
+        "value": "zh-CN",
+        "option": [
+          "zh-CN",
+          "en-US"
+        ]
       }
     },
     "Optimization": {
@@ -278,13 +286,6 @@
           "com.gamamobi.nikke",
           "com.proximabeta.nikke",
           "com.gamamobi.nikke"
-        ]
-      },
-      "Language": {
-        "type": "select",
-        "value": "zh-cn",
-        "option": [
-          "zh-cn"
         ]
       },
       "ScreenshotMethod": {
@@ -359,16 +360,13 @@
           "hmt"
         ]
       },
-      "Language": {
-        "type": "select",
-        "value": "zh-cn",
-        "option": [
-          "zh-cn"
-        ]
+      "AutoFillName": {
+        "type": "checkbox",
+        "value": true
       },
-      "ScreenshotInterval": {
-        "type": "input",
-        "value": 0.3
+      "LauncherPath": {
+        "type": "textarea",
+        "value": ""
       },
       "LauncherTitleName": {
         "type": "input",
@@ -378,7 +376,7 @@
         "type": "input",
         "value": ""
       },
-      "LauncherPath": {
+      "GamePath": {
         "type": "textarea",
         "value": ""
       },
@@ -390,9 +388,9 @@
         "type": "input",
         "value": ""
       },
-      "GamePath": {
-        "type": "textarea",
-        "value": ""
+      "ScreenshotInterval": {
+        "type": "input",
+        "value": 0.3
       }
     },
     "PCClient": {
@@ -400,9 +398,21 @@
         "type": "checkbox",
         "value": false
       },
+      "ScreenNumber": {
+        "type": "select",
+        "value": 0,
+        "option": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
       "GameResolutionCompat": {
         "type": "checkbox",
-        "value": false
+        "value": true
       },
       "CloseAutoHdr": {
         "type": "checkbox",
@@ -680,6 +690,18 @@
       "SocialPointRecruit": {
         "type": "checkbox",
         "value": true
+      },
+      "Ordinary150GemRecruit": {
+        "type": "checkbox",
+        "value": false
+      },
+      "SSRNotifyPush": {
+        "type": "checkbox",
+        "value": false
+      },
+      "ScreenshotPath": {
+        "type": "textarea",
+        "value": ""
       }
     },
     "Storage": {
@@ -970,6 +992,51 @@
       }
     }
   },
+  "EpisodeViewing": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "EpisodeViewing",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "Commission": {
     "Scheduler": {
       "Enable": {
@@ -1167,6 +1234,51 @@
       }
     }
   },
+  "OutpostStory": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "OutpostStory",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "SimulationRoom": {
     "Scheduler": {
       "Enable": {
@@ -1207,6 +1319,10 @@
       "QuickSimulation": {
         "type": "checkbox",
         "value": true
+      },
+      "Immediately": {
+        "type": "checkbox",
+        "value": false
       }
     },
     "Area": {
@@ -1406,6 +1522,25 @@
           "MirrorContainer",
           "Ultra"
         ]
+      },
+      "AchieveLevel": {
+        "type": "select",
+        "value": 1,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      "QuickBattleOnly": {
+        "type": "checkbox",
+        "value": false
       },
       "DropScreenshotPath": {
         "type": "textarea",
@@ -1851,6 +1986,8 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20251030",
+          "event_20251016",
           "event_20250924",
           "event_20250904",
           "event_20250807",
@@ -1966,6 +2103,8 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20251030",
+          "event_20251016",
           "event_20250924",
           "event_20250904",
           "event_20250807",
@@ -2468,9 +2607,8 @@
   "BlaCDKManual": {
     "BlaCDKManual": {
       "CDK": {
-        "type": "input",
-        "value": "",
-        "valuetype": "str"
+        "type": "textarea",
+        "value": ""
       }
     },
     "Storage": {
@@ -2491,6 +2629,30 @@
           0,
           1
         ]
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "UpdateHosts": {
+    "Hosts": {
+      "Action": {
+        "type": "select",
+        "value": "Add",
+        "option": [
+          "Add",
+          "Delete"
+        ]
+      },
+      "Hosts": {
+        "type": "textarea",
+        "value": "# 通用\n18.155.202.10 cloud.nikke-kr.com\n43.132.85.192 nikke-en.com\n43.132.85.192 nikke-jp.com\n43.132.85.192 nikke-kr.com\n# 国际 Global\n43.152.186.163 global-lobby.nikke-kr.com\n43.152.186.163 global-match.nikke-kr.com\n# 日本 JP\n# 43.152.186.163 jp-lobby.nikke-kr.com\n# 43.152.186.163 jp-match.nikke-kr.com\n# 韩国 KR\n# 43.152.186.163 kr-lobby.nikke-kr.com\n# 43.152.186.163 kr-match.nikke-kr.com\n# 东南亚 SEA\n# 43.152.186.163 sea-lobby.nikke-kr.com\n# 43.152.186.163 sea-match.nikke-kr.com\n# 港澳台 HK/MC/TW\n# 43.152.186.163 hmt-lobby.nikke-kr.com\n# 43.152.186.163 hmt-match.nikke-kr.com\n# 北美 NA\n# 175.97.131.54 us-match.nikke-kr.com\n# 175.97.131.54 us-lobby.nikke-kr.com"
       }
     },
     "Storage": {

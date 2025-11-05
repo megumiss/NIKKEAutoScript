@@ -192,7 +192,7 @@ class Commission(UI):
 
                 # 未找到收藏品，进行滑动
                 self.device.sleep(0.5)
-                self.ensure_sroll((620, 1000), (620, 700), speed=5, hold=1, count=1, delay=0.5, method='scroll')
+                self.ensure_sroll((620, 1000), (620, 700), speed=5, count=1, delay=0.5, method='scroll')
         else:
             logger.info(f'Current favorite item num: {num}, skip reselect')
 

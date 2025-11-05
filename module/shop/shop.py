@@ -235,7 +235,7 @@ class ShopBase(UI):
         # 遍历商品列表，每个商品单独处理
         for product in list(products):
             # 每次购买某个物品前先滚动到顶部
-            self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=6, delay=0.5)
+            self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=3, delay=1)
             logger.info(f'[Purchase Start] {product.name}')
 
             while 1:
@@ -265,7 +265,7 @@ class ShopBase(UI):
                     break
 
                 # 滑动屏幕继续查找
-                self.ensure_sroll((505, 1000), (505, 700), speed=5, hold=0.5, count=1, delay=0.5, method='scroll')
+                self.ensure_sroll((505, 1000), (505, 700), speed=5, count=1, delay=0.5, method='scroll')
 
             # 单个商品完成后，从待购买列表中移除
             # products = products.delete([product])

@@ -55,7 +55,7 @@ class UnionRaid(UI):
             if (
                 click_timer.reached()
                 and self.appear(MAIN_CHECK, offset=10)
-                and self.appear_then_click(UNION, offset=10, interval=3)
+                and self.appear_then_click(UNION, offset=70, interval=3)
             ):
                 click_timer.reset()
                 continue

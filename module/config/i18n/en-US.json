@@ -1,0 +1,1154 @@
+{
+  "Menu": {
+    "NKAS": {
+      "name": "NKAS",
+      "help": ""
+    },
+    "Reward": {
+      "name": "Reward",
+      "help": ""
+    },
+    "Daily": {
+      "name": "Daily",
+      "help": ""
+    },
+    "Outpost": {
+      "name": "Outpost",
+      "help": ""
+    },
+    "Ark": {
+      "name": "Ark",
+      "help": ""
+    },
+    "LimitedTimeEvent": {
+      "name": "Limited Time Event",
+      "help": ""
+    },
+    "StoryEvent": {
+      "name": "Story Event",
+      "help": ""
+    },
+    "Blablalink": {
+      "name": "BlaBlaLink",
+      "help": ""
+    },
+    "Gift": {
+      "name": "Free Gift",
+      "help": ""
+    },
+    "Tool": {
+      "name": "Tools",
+      "help": ""
+    }
+  },
+  "Task": {
+    "NKAS": {
+      "name": "NKAS Settings",
+      "help": ""
+    },
+    "Emulator": {
+      "name": "Emulator",
+      "help": ""
+    },
+    "PCClient": {
+      "name": "PC Client",
+      "help": ""
+    },
+    "Restart": {
+      "name": "Restart Settings",
+      "help": ""
+    },
+    "Reward": {
+      "name": "Reward",
+      "help": ""
+    },
+    "Destruction": {
+      "name": "Destruction",
+      "help": ""
+    },
+    "Mailbox": {
+      "name": "Mailbox",
+      "help": ""
+    },
+    "DailyRecruit": {
+      "name": "Daily Recruit",
+      "help": ""
+    },
+    "Daily": {
+      "name": "Daily",
+      "help": ""
+    },
+    "MissionPass": {
+      "name": "Mission Pass",
+      "help": ""
+    },
+    "Conversation": {
+      "name": "Conversation",
+      "help": ""
+    },
+    "Shop": {
+      "name": "Shop",
+      "help": ""
+    },
+    "RubbishShop": {
+      "name": "Rubbish Shop",
+      "help": ""
+    },
+    "EpisodeViewing": {
+      "name": "Episode Viewing",
+      "help": ""
+    },
+    "Commission": {
+      "name": "Commission",
+      "help": ""
+    },
+    "Liberation": {
+      "name": "Liberation",
+      "help": ""
+    },
+    "Synchro": {
+      "name": "Synchro",
+      "help": ""
+    },
+    "Recycling": {
+      "name": "Recycling",
+      "help": ""
+    },
+    "OutpostStory": {
+      "name": "Outpost Story",
+      "help": ""
+    },
+    "SimulationRoom": {
+      "name": "Simulation Room",
+      "help": ""
+    },
+    "Overclock": {
+      "name": "Simulation Room Overclock",
+      "help": ""
+    },
+    "TribeTower": {
+      "name": "Tribe Tower",
+      "help": ""
+    },
+    "Interception": {
+      "name": "Interception",
+      "help": ""
+    },
+    "RookieArena": {
+      "name": "Rookie Arena",
+      "help": ""
+    },
+    "SpecialArena": {
+      "name": "Special Arena",
+      "help": ""
+    },
+    "ChampionArena": {
+      "name": "Champion Arena",
+      "help": ""
+    },
+    "Coop": {
+      "name": "Coop",
+      "help": ""
+    },
+    "SoloRaid": {
+      "name": "Solo Raid",
+      "help": ""
+    },
+    "UnionRaid": {
+      "name": "Union Raid",
+      "help": ""
+    },
+    "Event": {
+      "name": "Story Event",
+      "help": ""
+    },
+    "Event2": {
+      "name": "Story Event 2",
+      "help": ""
+    },
+    "BlaAuth": {
+      "name": "Cookie",
+      "help": ""
+    },
+    "BlaDaily": {
+      "name": "BlaDaily",
+      "help": ""
+    },
+    "BlaCDK": {
+      "name": "Bla CDK",
+      "help": ""
+    },
+    "BlaExchange": {
+      "name": "Bla Exchange",
+      "help": ""
+    },
+    "StepUpGift": {
+      "name": "STEPUP Gift",
+      "help": ""
+    },
+    "DailyGift": {
+      "name": "Daily Gift",
+      "help": ""
+    },
+    "WeeklyGift": {
+      "name": "Weekly Gift",
+      "help": ""
+    },
+    "MonthlyGift": {
+      "name": "Monthly Gift",
+      "help": ""
+    },
+    "AutoTower": {
+      "name": "Auto Tower",
+      "help": ""
+    },
+    "SemiCombat": {
+      "name": "Semi-Auto Click",
+      "help": ""
+    },
+    "Highlights": {
+      "name": "Highlights",
+      "help": ""
+    },
+    "BlaCDKManual": {
+      "name": "CDK Exchange",
+      "help": ""
+    },
+    "ScreenRotate": {
+      "name": "Screen Rotate",
+      "help": ""
+    },
+    "UpdateHosts": {
+      "name": "Hosts Update",
+      "help": ""
+    }
+  },
+  "Scheduler": {
+    "_info": {
+      "name": "Task Settings",
+      "help": ""
+    },
+    "Enable": {
+      "name": "Enable this feature",
+      "help": "",
+      "True": "Enabled",
+      "False": "False"
+    },
+    "NextRun": {
+      "name": "Next Run Time",
+      "help": ""
+    },
+    "Command": {
+      "name": "Internal Task Name",
+      "help": ""
+    },
+    "SuccessInterval": {
+      "name": "Delay next run by X minutes after success",
+      "help": ""
+    },
+    "FailureInterval": {
+      "name": "Delay next run by X minutes after failure",
+      "help": ""
+    },
+    "ServerUpdate": {
+      "name": "Server Refresh Time",
+      "help": ""
+    }
+  },
+  "Client": {
+    "_info": {
+      "name": "Client Settings",
+      "help": ""
+    },
+    "Platform": {
+      "name": "Client Platform",
+      "help": "",
+      "adb": "ADB (Emulator)",
+      "win": "Windows (PC)"
+    },
+    "Language": {
+      "name": "Game Language",
+      "help": "",
+      "zh-CN": "简体中文",
+      "en-US": "English"
+    }
+  },
+  "Emulator": {
+    "_info": {
+      "name": "Emulator Settings",
+      "help": ""
+    },
+    "Serial": {
+      "name": "Emulator Serial",
+      "help": "Common emulator serials are listed below. Set to \"auto\" to auto-detect. If multiple emulators are running or an emulator doesn't support auto-detection, you must set it manually.\nDefault emulator serials:\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- LDPlayer emulator-5554 or 127.0.0.1:5555\n- BlueStacks 127.0.0.1:5555"
+    },
+    "PackageName": {
+      "name": "Game Client",
+      "help": "If multiple game clients are installed on the emulator, select the correct one manually",
+      "com.proximabeta.nikke": "International",
+      "com.gamamobi.nikke": "Hong Kong/Taiwan"
+    },
+    "ScreenshotMethod": {
+      "name": "Emulator Screenshot Method",
+      "help": "",
+      "DroidCast": "DroidCast"
+    },
+    "ControlMethod": {
+      "name": "Emulator Control Method",
+      "help": "",
+      "minitouch": "minitouch"
+    },
+    "AdbRestart": {
+      "name": "Attempt to restart adb when no device is detected",
+      "help": ""
+    },
+    "ScreenshotInterval": {
+      "name": "Emulator Screenshot Interval",
+      "help": ""
+    }
+  },
+  "EmulatorInfo": {
+    "_info": {
+      "name": "Emulator Settings",
+      "help": "Values below are auto-filled based on Serial. Do not modify unless you know what you're doing."
+    },
+    "Emulator": {
+      "name": "Emulator Type",
+      "help": "",
+      "auto": "Auto-detect",
+      "NoxPlayer": "NoxPlayer",
+      "NoxPlayer64": "NoxPlayer64",
+      "BlueStacks4": "BlueStacks4",
+      "BlueStacks5": "BlueStacks5",
+      "BlueStacks4HyperV": "BlueStacks4 Hyper-V",
+      "BlueStacks5HyperV": "BlueStacks5 Hyper-V",
+      "LDPlayer3": "LDPlayer3",
+      "LDPlayer4": "LDPlayer4",
+      "LDPlayer9": "LDPlayer9",
+      "MuMuPlayer": "MuMuPlayer",
+      "MuMuPlayerX": "MuMuPlayerX",
+      "MuMuPlayer12": "MuMuPlayer12",
+      "MEmuPlayer": "MEmuPlayer"
+    },
+    "name": {
+      "name": "Emulator Instance Name",
+      "help": ""
+    },
+    "path": {
+      "name": "Emulator Install Path",
+      "help": ""
+    }
+  },
+  "PCClient": {
+    "_info": {
+      "name": "PC Client Settings",
+      "help": ""
+    },
+    "Screens": {
+      "name": "Multi-Screen Mode",
+      "help": "When enabled, supports running the game window on secondary or virtual displays. You will also need to manually select the target screen for the game window."
+    },
+    "ScreenNumber": {
+      "name": "Game Window Target Screen",
+      "help": "Select the screen that meets the resolution requirements. The default is 0 (main screen). You must enable Multi-Screen Mode first. After selection, the game window will move to the corresponding screen. The screen order may differ from the system display settings.",
+      "0": "0",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "GameResolutionCompat": {
+      "name": "Game Resolution Compatibility Mode",
+      "help": "Enable if script reports incorrect game resolution or logs show window resolution not equal to 720x1280"
+    },
+    "CloseAutoHdr": {
+      "name": "Disable Auto HDR",
+      "help": "NKAS may not work properly on systems with HDR enabled. If system HDR is on, enable this option to disable the game's auto-HDR (system-wide HDR remains unaffected)"
+    },
+    "ScreenRotate": {
+      "name": "Rotate Screen",
+      "help": "Recommended for 1080p users only. When enabled, the screen will switch to portrait on start to meet vertical resolution requirements; it will revert to landscape after tasks finish or by pressing Ctrl+F12"
+    },
+    "GameWindowPosition": {
+      "name": "Game Window Position",
+      "help": "Set the game window position to prevent it from being obscured or off-screen",
+      "center": "Center",
+      "left": "Left Center",
+      "right": "Right Center",
+      "topleft": "Top Left",
+      "topright": "Top Right"
+    },
+    "Account": {
+      "name": "Account",
+      "help": "Paste your email here. It will be auto-filled if login expires. This feature has security risks; use with caution."
+    },
+    "Password": {
+      "name": "Password",
+      "help": "Paste your password here. It will be auto-filled if login expires. This feature has security risks; use with caution."
+    }
+  },
+  "PCClientInfo": {
+    "_info": {
+      "name": "PC Client Settings",
+      "help": ""
+    },
+    "Client": {
+      "name": "Game Client",
+      "help": "Launcher and game title/process will be auto-filled based on selected client. Clear related launcher/game title/process settings before switching.",
+      "intl": "International",
+      "hmt": "Hong Kong/Taiwan"
+    },
+    "AutoFillName": {
+      "name": "Auto Fill Fields",
+      "help": "Automatically fills in the launcher and game title and process information"
+    },
+    "LauncherPath": {
+      "name": "Launcher Path",
+      "help": "Game launcher path. Required. Example: E:\\NIKKE\\Launcher\\nikke_launcher.exe"
+    },
+    "LauncherTitleName": {
+      "name": "Launcher Title",
+      "help": "Launcher window title; usually no manual input required"
+    },
+    "LauncherProcessName": {
+      "name": "Launcher Process",
+      "help": "Launcher process name; usually no manual input required"
+    },
+    "GamePath": {
+      "name": "Game Path",
+      "help": "Game path; usually auto-filled based on launcher path. Manually change if auto-filled path is incorrect"
+    },
+    "GameTitleName": {
+      "name": "Game Title",
+      "help": "Game window title; usually no manual input required"
+    },
+    "GameProcessName": {
+      "name": "Game Process",
+      "help": "Game process name; usually no manual input required"
+    },
+    "ScreenshotInterval": {
+      "name": "Screenshot Interval",
+      "help": ""
+    }
+  },
+  "Optimization": {
+    "_info": {
+      "name": "Optimization Settings",
+      "help": ""
+    },
+    "AutoRedCircle": {
+      "name": "Auto-click red circles during battle",
+      "help": "Requires enabling sync-click position and crosshair. Currently supports Interception, Tower, Simulation Room, Solo Raid, Union Raid, Coop, etc. Accuracy is low; circles outside the screen cannot be handled"
+    },
+    "OcrModelType": {
+      "name": "OCR Model Selection",
+      "help": "Mobile model (default): fast, slightly lower accuracy; Server model: larger, slower, slightly more accurate",
+      "mobile": "Mobile",
+      "server": "Server"
+    },
+    "WhenTaskQueueEmpty": {
+      "name": "When task queue is empty",
+      "help": "",
+      "stay_there": "Stay in place",
+      "goto_main": "Go to main screen",
+      "close_game": "Close game"
+    }
+  },
+  "Reward": {
+    "_info": {
+      "name": "Collect",
+      "help": ""
+    },
+    "CollectSocialPoint": {
+      "name": "Collect Social Points",
+      "help": ""
+    },
+    "CollectSpecialArenaPoint": {
+      "name": "Collect Special Arena Points",
+      "help": ""
+    },
+    "CollectRanking": {
+      "name": "Collect Ranking Rewards",
+      "help": ""
+    }
+  },
+  "DailyRecruit": {
+    "_info": {
+      "name": "Daily Recruitment",
+      "help": ""
+    },
+    "EventFreeRecruit": {
+      "name": "Event Free Single Pull",
+      "help": ""
+    },
+    "SocialPointRecruit": {
+      "name": "Social Point Single Pull",
+      "help": ""
+    },
+    "Ordinary150GemRecruit": {
+      "name": "Ordinary 150Gems Recruit",
+      "help": "Daily 150-gem gacha in ordinary recruit"
+    },
+    "SSRNotifyPush": {
+      "name": "SSR Drop Notification",
+      "help": ""
+    },
+    "ScreenshotPath": {
+      "name": "Recruit Screenshot Path",
+      "help": "Gacha screenshots will be saved in the specified path. Leave blank to disable saving. For example: D:\\PCR\\NIKKE. Docker users must specify a folder starting with /app/NIKKEAutoScript."
+    }
+  },
+  "SimulationRoom": {
+    "_info": {
+      "name": "Simulation Room Settings",
+      "help": ""
+    },
+    "QuickSimulation": {
+      "name": "Quick Simulation",
+      "help": ""
+    },
+    "Immediately": {
+      "name": "Complete immediately",
+      "help": ""
+    }
+  },
+  "Area": {
+    "_info": {
+      "name": "Area Settings",
+      "help": ""
+    },
+    "Difficulty": {
+      "name": "Difficulty",
+      "help": "",
+      "Level_1": "Level-1",
+      "Level_2": "Level-2",
+      "Level_3": "Level-3",
+      "Level_4": "Level-4",
+      "Level_5": "Level-5"
+    },
+    "OnsetArea": {
+      "name": "Start Area",
+      "help": "",
+      "A": "A",
+      "B": "B",
+      "C": "C"
+    },
+    "EndingArea": {
+      "name": "End Area",
+      "help": "",
+      "A": "A",
+      "B": "B",
+      "C": "C"
+    }
+  },
+  "Overcome": {
+    "_info": {
+      "name": "Stage Settings",
+      "help": ""
+    },
+    "OnlyToCompleteDailyMission": {
+      "name": "Only complete daily missions, exit after entry",
+      "help": ""
+    }
+  },
+  "GeneralShop": {
+    "_info": {
+      "name": "General Shop",
+      "help": ""
+    },
+    "enable": {
+      "name": "Enable this feature",
+      "help": ""
+    },
+    "priority": {
+      "name": "Purchase Priority",
+      "help": "If empty, only free items will be bought. Format example: 'GRATIS > CORE_DUST_CASE > ORNAMENT'. Options:\nGRATIS: Free items\nCORE_DUST_CASE: Core Dust Case\nORNAMENT: Profile Ornament"
+    }
+  },
+  "ArenaShop": {
+    "_info": {
+      "name": "Arena Shop",
+      "help": ""
+    },
+    "enable": {
+      "name": "Enable this feature",
+      "help": ""
+    },
+    "priority": {
+      "name": "Purchase Priority",
+      "help": "If empty, nothing will be purchased. Format example: 'ELECTRIC_CODE > MANUAL_SELECTION_BOX'. Options include ELECTRIC_CODE, FIRE_CODE, IRON_CODE, WATER_CODE, WIND_CODE, MANUAL_SELECTION_BOX, ORNAMENT, WEAPON"
+    }
+  },
+  "RubbishShop": {
+    "_info": {
+      "name": "Rubbish Shop",
+      "help": ""
+    },
+    "priority": {
+      "name": "Core Purchase Priority",
+      "help": "Default buys gems and core dust cases. Format example: 'GEM > CORE_DUST_CASE'. Options: GEM, CORE_DUST_CASE, CREDIT_CASE, CREDIT, BATTLE_DATA_SET_CASE, GROWTH_SET, ORNAMENT, GENERAL_TICKET, ELYSION_TICKET, MISSILIS_TICKET, TETRA_TICKET, PILGRIM_TICKET, ABNORMAL_TICKET"
+    },
+    "bonePriority": {
+      "name": "Bone Purchase Priority",
+      "help": "Bone currency purchase priority. Example: 'CURATED_MANUFACTURER_ARMS > MAINTENANCE_KIT_BOX_2'. Options: GOOD_TEAMWORK_BOX, MAINTENANCE_KIT_BOX_2, CURATED_MANUFACTURER_ARMS"
+    }
+  },
+  "Notification": {
+    "_info": {
+      "name": "Notification Settings",
+      "help": ""
+    },
+    "WhenDailyTaskCompleted": {
+      "name": "Send notification when daily tasks complete",
+      "help": ""
+    },
+    "WhenDailyTaskCrashed": {
+      "name": "Send notification when daily tasks crash",
+      "help": ""
+    },
+    "WinOnePush": {
+      "name": "Win extra push",
+      "help": "When enabled on Windows, send an extra OnePush notification"
+    },
+    "OnePushConfig": {
+      "name": "Push Settings",
+      "help": "Use Onepush to send an error message. Configuration: https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
+    }
+  },
+  "Daily": {
+    "_info": {
+      "name": "Daily Tasks",
+      "help": ""
+    },
+    "SendGift": {
+      "name": "Send Gift",
+      "help": "Give the first NIKKE with incomplete affinity a lowest-rarity affection coupon"
+    },
+    "EnhanceEquipment": {
+      "name": "Enhance Equipment",
+      "help": "Enhance a random equipment in inventory, consuming one Module Booster (blue) or Module Advanced Enhancer (purple)"
+    },
+    "CallReward": {
+      "name": "Repeat Collect",
+      "help": "Run collect once more before claiming daily mission rewards"
+    }
+  },
+  "CollectionItems": {
+    "_info": {
+      "name": "Collectibles",
+      "help": ""
+    },
+    "Enable": {
+      "name": "Enable",
+      "help": "When enabled, collectibles will be auto-switched according to settings below"
+    },
+    "Priority": {
+      "name": "Priority",
+      "help": "NIKKE priority. If selected collectibles exceed 160, the current will be removed and next chosen. Format example: Helm > Exia.\nNIKKE name mappings:\nDiesel: Diesel\nExia: Exia\nLaplace: Laplace\nFrima: Frima\nViper: Viper\nHelm: Helm\nMiranda: Miranda\nDrake: Drake\nMilk: Milk\nPoli: Poli\nJulia: Julia\nBay: Bay\nTove: Tove"
+    }
+  },
+  "OpponentSelection": {
+    "_info": {
+      "name": "Opponent Selection Settings",
+      "help": ""
+    },
+    "Enable": {
+      "name": "Enable this feature",
+      "help": "When enabled, choose opponents by weight and strategy; when disabled, choose the bottom opponent"
+    },
+    "SortingWeight": {
+      "name": "Sorting Weight",
+      "help": "JSON string format. Weights must sum to 1. Set others to 0 to disable. Keys: Power, CommanderLevel, SynchroLevel, Ranking"
+    },
+    "SelectionStrategy": {
+      "name": "Selection Strategy",
+      "help": "",
+      "Max": "Max",
+      "Middle": "Middle",
+      "Min": "Min"
+    }
+  },
+  "Conversation": {
+    "_info": {
+      "name": "Conversation",
+      "help": "Automatically choose the correct dialog options with near-100% accuracy"
+    },
+    "OnlyFavourite": {
+      "name": "Only converse with favorites",
+      "help": ""
+    },
+    "OnlyLogsNotMax": {
+      "name": "Only converse when logs are not full",
+      "help": "Only converse with NIKKE whose conversation logs are under 20. Recommend enabling 'Only converse with favorites' as well"
+    }
+  },
+  "BlaAuth": {
+    "_info": {
+      "name": "Cookie Settings",
+      "help": ""
+    },
+    "UserAgent": {
+      "name": "Browser User-Agent",
+      "help": ""
+    },
+    "Cookie": {
+      "name": "Cookie",
+      "help": "Please refer to the documentation for the acquisition method: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide"
+    },
+    "XCommonParams": {
+      "name": "XCommonParams",
+      "help": "x-common-params header must include openid"
+    }
+  },
+  "BlaDaily": {
+    "_info": {
+      "name": "Daily Tasks",
+      "help": "Community daily sign-in, comment, and like tasks https://www.blablalink.com"
+    },
+    "Immediately": {
+      "name": "Execute Immediately",
+      "help": "By default, tasks scheduled between 4:00–8:00 are postponed to after 8:00. Enable to execute immediately"
+    },
+    "Points": {
+      "name": "Remaining Coins",
+      "help": ""
+    }
+  },
+  "Coop": {
+    "_info": {
+      "name": "Coop",
+      "help": ""
+    },
+    "MatchDifficulty": {
+      "name": "Match Difficulty",
+      "help": "",
+      "Normal": "Normal"
+    }
+  },
+  "CDK": {
+    "_info": {
+      "name": "CDK Auto Redemption",
+      "help": "By default, redeem CDKs recommended on BlaBlaLink"
+    },
+    "Extra": {
+      "name": "Extra CDK Sources",
+      "help": "Fetch the latest 5 CDKs from third-party sites and redeem automatically"
+    },
+    "Source": {
+      "name": "CDK Extra Sources",
+      "help": ""
+    }
+  },
+  "BlaExchange": {
+    "_info": {
+      "name": "Coin Exchange",
+      "help": ""
+    },
+    "Priority": {
+      "name": "Exchange Priority",
+      "help": "If empty, nothing will be purchased. Format example: 'Gem_×320 > Welcome_Gift_Core_Dust_×30'. Default is to exchange for Gems. Example options include Gem_×320, Welcome_Gift_Core_Dust_×30, Gem_×30, Skill_Manual_I_×5, Ultra_Boost_Module_×5, Code_Manual_Selection_Box_×5, Gem_×60, Mid-Quality_Mold_×3, Credit_Case_(1H)_x9, Core_Dust_Case_(1H)_×3, Gem_×120, Mid-Quality_Mold_×8, Battle_Data_Set_Case_(1H)_×6, Core_Dust_Case_(1H)_×6, Skill_Manual_I_×30, Ultra_Boost_Module_×30, Code_Manual_Selection_Box_×30"
+    }
+  },
+  "Event": {
+    "_info": {
+      "name": "Event Settings",
+      "help": ""
+    },
+    "Event": {
+      "name": "Current Events",
+      "help": "",
+      "event_20251030": "GODDESS FALL",
+      "event_20251016": "GO! NINJA THIEF!",
+      "event_20250924": "REBORN EVIL",
+      "event_20250904": "COINS IN RUSH",
+      "event_20250807": "ABSOLUTE",
+      "event_20250716": "BOOM! THE GHOST!",
+      "event_20250703s": "OVER THE HORIZON",
+      "event_20250703l": "OuteR: Automata",
+      "event_20250612": "Memories Teller"
+    },
+    "LoginStamp": {
+      "name": "Login Stamp",
+      "help": ""
+    },
+    "Challenge": {
+      "name": "Challenge",
+      "help": "Requires teams to be set up in advance"
+    },
+    "Story": {
+      "name": "Stage Sweep",
+      "help": "Fast fight on the penultimate stage. Must have cleared penultimate stage of current open stage. Use SemiCombat for auto routing. Ensure your stage progress follows the event"
+    },
+    "StoryPart": {
+      "name": "Stage Selection",
+      "help": "",
+      "Story_1": "Story 1",
+      "Story_2": "Story 2"
+    },
+    "StoryDifficulty": {
+      "name": "Stage Difficulty",
+      "help": "",
+      "Normal": "Normal",
+      "Hard": "Hard"
+    },
+    "Coop": {
+      "name": "Coop",
+      "help": "Built-in Coop in large events defaults to easy play for Normal difficulty"
+    },
+    "Shop": {
+      "name": "Shop",
+      "help": "Attempt to buy all event currency items except titles in order (may not always work)"
+    },
+    "ShopDelayList": {
+      "name": "Shop Delay Purchase List",
+      "help": "Items in this list will be purchased only after obtaining red orbs. One per line. Currently only supports delaying TITLE purchases"
+    },
+    "Game": {
+      "name": "Mini Game",
+      "help": "Adapt mini-games when possible; otherwise skip"
+    },
+    "GameStorySkip": {
+      "name": "Skip Mini-Game Story",
+      "help": ""
+    },
+    "GameLoop": {
+      "name": "Mini-Game Loop",
+      "help": "Stop hotkey: F10"
+    }
+  },
+  "CheerStrategy": {
+    "_info": {
+      "name": "Cheer Strategy",
+      "help": ""
+    },
+    "Enable": {
+      "name": "Enable Strategy",
+      "help": "Choose which side to cheer based on strategy and current support ratios"
+    },
+    "Strategy": {
+      "name": "Choose Strategy",
+      "help": "",
+      "Most": "Majority",
+      "Few": "Minority",
+      "Random": "Random"
+    }
+  },
+  "Interception": {
+    "_info": {
+      "name": "Interception",
+      "help": ""
+    },
+    "Boss": {
+      "name": "BOSS",
+      "help": "",
+      "Kraken": "Kraken (Stone)",
+      "Indivilia": "Indivilia (Body)",
+      "Harvester": "Harvester (Legs)",
+      "MirrorContainer": "Mirror Container (Arms)",
+      "Ultra": "Ultra (Head)"
+    },
+    "AchieveLevel": {
+      "name": "Achieve Level",
+      "help": "Quick battle will only start when the cleared stage reaches the selected stage below. Recognition may be inaccurate, please adjust according to your situation.",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9"
+    },
+    "QuickBattleOnly": {
+      "name": "Quick Battle Only",
+      "help": "Only performs quick battles. When quick battle is unavailable, it will automatically skip. Suitable for users who manually play Interception on Mondays."
+    },
+    "DropScreenshotPath": {
+      "name": "Drop Screenshot Path",
+      "help": "Creates dated folders under the path to save drop screenshots. Empty to disable. Example: D:\\\\PCR\\\\NIKKE. Docker users should use a path starting with /app/NIKKEAutoScript"
+    }
+  },
+  "InterceptionTeam": {
+    "_info": {
+      "name": "Team Settings",
+      "help": "Automatically select team based on chosen BOSS"
+    },
+    "Kraken": {
+      "name": "Kraken",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Indivilia": {
+      "name": "Indivilia",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Harvester": {
+      "name": "Harvester",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "MirrorContainer": {
+      "name": "Mirror Container",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    },
+    "Ultra": {
+      "name": "Ultra",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    }
+  },
+  "Overclock": {
+    "_info": {
+      "name": "Overclock Settings",
+      "help": ""
+    },
+    "SkipRatioCheck": {
+      "name": "Ignore Top Record",
+      "help": "Recommended to keep off. When on, overclock top record won't be checked and it will run daily"
+    },
+    "AlwaysReselect": {
+      "name": "Always Reselect Options",
+      "help": "Always reselect based on list below. If off, selection occurs only at season start"
+    },
+    "ModifierList": {
+      "name": "Overclock Options",
+      "help": "Supports common overclock options only:\nENEMY_WEAPON_UP_1/2/3: Enemy Weapon Up I/II/III\nENEMY_ARMOR_UP_1/2/3: Enemy Armor Up I/II/III\nENEMY_VITALS_UP_1/2/3: Enemy Vitals Up I/II/III\nNO_RECYCLING: Disable Recycling\nAGGRESSIVE_TACTICS: Aggressive Tactics\nRUSH_HOUR_1/2/3: Rush Hour I/II/III\nRELEVANT_PERSONNEL_ONLY: Relevant Personnel Only\nDefault selection is Enemy Weapon Up III, Enemy Armor Up III, Enemy Vitals Up III, Disable Recycling, Aggressive Tactics, Rush Hour III, Relevant Personnel Only (total 25x). Fill one per line. Reduce options if your collection strength is insufficient.\nIf the top record shown on the overclock page is equal to or higher than the total multiplier entered below, overclock will be skipped"
+    }
+  },
+  "AutoTower": {
+    "_info": {
+      "name": "Auto Tower",
+      "help": "Automatically climb normal tribe tower; stop on failure"
+    },
+    "Enable": {
+      "name": "Enabled",
+      "help": ""
+    }
+  },
+  "SemiCombat": {
+    "_info": {
+      "name": "Semi-Auto Click",
+      "help": "Semi-automatic clicks to skip some interactions. Can auto-click battle, quick fight, skip story, next stage, area transfer. Requires manual stage selection and team setup in advance"
+    },
+    "SkipStory": {
+      "name": "Skip Story",
+      "help": ""
+    },
+    "FightQuickly": {
+      "name": "Quick Battle",
+      "help": "Disable when using tickets in stages"
+    },
+    "MainStoryMark": {
+      "name": "Auto Follow Main Story",
+      "help": "When enabled, auto-click main story normal difficulty exclamation marks and hide minimap. May auto-progress main story but is unstable and will miss enemies 100%"
+    }
+  },
+  "BlaCDKManual": {
+    "_info": {
+      "name": "CDK Manual Redemption",
+      "help": ""
+    },
+    "CDK": {
+      "name": "CDK",
+      "help": "Paste the CDKs into the input box, one per line. After the prompt says the settings have been saved successfully, click Start to redeem."
+    }
+  },
+  "Highlights": {
+    "_info": {
+      "name": "Highlights",
+      "help": "Auto-view highlights. Start on NIKKE's gift/conversation page"
+    },
+    "AutoSwitch": {
+      "name": "Auto Switch",
+      "help": "When a NIKKE's highlights are complete, auto-switch to next. Stop with F10"
+    }
+  },
+  "ScreenRotate": {
+    "_info": {
+      "name": "Screen Rotation",
+      "help": ""
+    },
+    "Orientation": {
+      "name": "Orientation",
+      "help": "Manually change screen orientation; recommend Ctrl+F12",
+      "0": "Landscape",
+      "1": "Portrait"
+    }
+  },
+  "Synchro": {
+    "_info": {
+      "name": "Synchro",
+      "help": ""
+    },
+    "UseBox": {
+      "name": "Use Box",
+      "help": ""
+    }
+  },
+  "Hosts": {
+    "_info": {
+      "name": "Hosts Configuration",
+      "help": ""
+    },
+    "Action": {
+      "name": "Action",
+      "help": "",
+      "Add": "Add",
+      "Delete": "Delete"
+    },
+    "Hosts": {
+      "name": "Hosts",
+      "help": "Append uncommented entries below to system Hosts file (Windows only). International servers enabled by default. Uncomment desired servers. It's recommended to only enable hosts for your server and adjust as needed."
+    }
+  },
+  "Storage": {
+    "_info": {
+      "name": "Task Status",
+      "help": "Stores internal task states. Can be cleared manually if tasks behave abnormally"
+    },
+    "Storage": {
+      "name": "Storage.Storage.name",
+      "help": "Storage.Storage.help"
+    }
+  },
+  "Gui": {
+    "Aside": {
+      "Install": "Install",
+      "Home": "Home",
+      "Develop": "Develop",
+      "Performance": "Performance",
+      "Setting": "Settings",
+      "AddNKAS": "Add New"
+    },
+    "Button": {
+      "Start": "Start",
+      "Stop": "Stop",
+      "ScrollON": "Auto Scroll On",
+      "ScrollOFF": "Auto Scroll Off",
+      "ClearLog": "Clear Logs",
+      "Setting": "Settings",
+      "CheckUpdate": "Check for Updates",
+      "ClickToUpdate": "Update Now",
+      "RetryUpdate": "Retry Update",
+      "CancelUpdate": "Cancel Update"
+    },
+    "Toast": {
+      "DisableTranslateMode": "Click here to disable translation mode",
+      "ConfigSaved": "Settings Saved",
+      "NKASIsRunning": "Scheduler is already running",
+      "ClickToUpdate": "Update available — click here to update"
+    },
+    "Status": {
+      "Running": "Running",
+      "Inactive": "Inactive",
+      "Warning": "Error Occurred",
+      "Updating": "Waiting for Update"
+    },
+    "MenuNKAS": {
+      "Overview": "Overview",
+      "Log": "Run Log"
+    },
+    "MenuDevelop": {
+      "HomePage": "Home Page",
+      "Translate": "Translate",
+      "Update": "Updater",
+      "Remote": "Remote Control",
+      "Utils": "Utilities"
+    },
+    "Overview": {
+      "Scheduler": "Scheduler",
+      "Log": "Log",
+      "Running": "Running",
+      "Pending": "Pending",
+      "Waiting": "Waiting",
+      "NoTask": "No Task"
+    },
+    "AddNKAS": {
+      "PopupTitle": "Add New Config",
+      "NewName": "New Config Filename",
+      "CopyFrom": "Copy from existing config",
+      "Confirm": "Add",
+      "FileExist": "A config with the same name exists. Please enter a different name",
+      "InvalidChar": "Config name cannot contain any of the following characters: .\\\\/:*?\"<>|",
+      "InvalidPrefixTemplate": "Config name cannot start with 'template'",
+      "Manage": "Manage"
+    },
+    "AppManage": {
+      "PageTitle": "Manage Configs",
+      "TitleNew": "Add New Config",
+      "NewName": "New Config Filename",
+      "CopyFrom": "Copy from existing config",
+      "NameExist": "A config with the same name exists. Please enter a different name",
+      "InvalidChar": "Config name cannot contain any of the following characters: .\\\\/:*?\"<>|",
+      "InvalidPrefixTemplate": "Config name cannot start with 'template'",
+      "Back": "Back",
+      "New": "Add",
+      "Import": "Import",
+      "Export": "Export",
+      "Delete": "Delete",
+      "OverrideWarning": "This will overwrite the existing config file",
+      "ImportSuccess": "Import Successful",
+      "NewSuccess": "Added Successfully",
+      "Name": "Config Name",
+      "Mod": "Mod",
+      "Actions": "Actions"
+    },
+    "Update": {
+      "UpToDate": "Up to Date",
+      "HaveUpdate": "Update Available",
+      "UpdateStart": "Start Update",
+      "UpdateWait": "Wait for all NKAS to finish current tasks",
+      "UpdateRun": "Updating",
+      "UpdateSuccess": "Update successful — restarting",
+      "UpdateFailed": "Update failed. See ./log/*_gui.txt for error logs",
+      "UpdateChecking": "Checking for updates",
+      "UpdateCancel": "Update canceled — restarting NKAS",
+      "UpdateFinish": "Update completed. Please restart manually",
+      "Local": "Local",
+      "Upstream": "Upstream",
+      "Author": "Author",
+      "Time": "Commit Time",
+      "Message": "Commit Message",
+      "DisabledWarn": "Update module is disabled; you need to manually restart NKAS to update",
+      "DetailedHistory": "Detailed Commit History"
+    },
+    "Remote": {
+      "Running": "Running",
+      "NotRunning": "Not running — disconnected from server or server offline",
+      "NotEnable": "Not enabled. Set webui password in deploy.yaml and enable remote control",
+      "EntryPoint": "Remote access URL:",
+      "ConfigureHint": "Configuration Guide:",
+      "SSHNotInstall": "SSH not installed on system. Refer to guide to install or download SSH"
+    },
+    "Text": {
+      "InvalidFeedBack": "Invalid format. Example: {0}",
+      "Clear": "Clear",
+      "EnterPassword": "Enter Password",
+      "ChooseFile": "Choose File"
+    }
+  }
+}

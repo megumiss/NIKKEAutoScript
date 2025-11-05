@@ -55,6 +55,8 @@ Daily:
     RubbishShop:
       - Scheduler
       - RubbishShop
+    EpisodeViewing:
+      - Scheduler
 
 # ==================== Outpost ====================
 
@@ -71,6 +73,8 @@ Outpost:
       - Scheduler
       - Synchro
     Recycling:
+      - Scheduler
+    OutpostStory:
       - Scheduler
 
 # ==================== Ark ====================
@@ -179,3 +183,5 @@ Tool:
       - BlaCDKManual
     ScreenRotate:
       - ScreenRotate
+    UpdateHosts:
+      - Hosts

@@ -136,9 +136,9 @@ class Reward(UI):
         logger.hr('Receive ranking reward')
         click_timer = Timer(0.3)
 
-        if not self.appear(RANKING_RED_POINT_CHECK, offset=(5, 5), threshold=0.95):
+        if not self.appear(RANKING_RED_POINT_CHECK, offset=70, threshold=0.85):
             return True
-        self.ui_ensure(page_ranking)
+        # self.ui_ensure(page_ranking)
 
         confirm_timer = Timer(3, count=3)
         while 1:
@@ -146,6 +146,9 @@ class Reward(UI):
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
+
+            if self.appear_then_click(RANKING_RED_POINT_CHECK, offset=70, threshold=0.85, interval=1):
+                continue
 
             # 等待排名页面加载完成
             if self.appear(RANKING_CHECK, offset=10):

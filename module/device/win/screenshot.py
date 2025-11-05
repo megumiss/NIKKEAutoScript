@@ -38,47 +38,30 @@ class Screenshot:
             return window
         return False
 
-    # @staticmethod
-    # def get_window(title, class_name):
-    #     hwnd_list = []
-
-    #     def enum_handler(hwnd, lparam):
-    #         if win32gui.IsWindowVisible(hwnd) and title in win32gui.GetWindowText(hwnd):
-    #             if class_name is None or class_name == win32gui.GetClassName(hwnd):
-    #                 hwnd_list.append(hwnd)
-
-    #     win32gui.EnumWindows(enum_handler, None)
-    #     if hwnd_list:
-    #         return hwnd_list[0]
-    #     return None
-
-    @staticmethod
-    def get_main_screen_location():
-        rects = getDisplayRects()
-        min_x = min([rect[0] for rect in rects])
-        min_y = min([rect[1] for rect in rects])
-        return -min_x, -min_y
-
     @staticmethod
     def take_screenshot(title, resolution, screens=False, crop=(0, 0, 1, 1)):
         window = Screenshot.get_window(title)
         if window:
             left, top, width, height = Screenshot.get_window_region(window)
 
+            # 获取所有屏幕的最小x/y（可能是负数）
             if screens:
-                offset_x, offset_y = Screenshot.get_main_screen_location()
-            else:
-                offset_x, offset_y = 0, 0
+                from win32api import EnumDisplayMonitors, GetMonitorInfo
 
-            screenshot = pyautogui.screenshot(
-                region=(
-                    int(left + width * crop[0] + offset_x),
-                    int(top + height * crop[1] + offset_y),
-                    int(width * crop[2]),
-                    int(height * crop[3]),
-                ),
-                allScreens=screens,
+                monitors = [GetMonitorInfo(m[0])['Monitor'] for m in EnumDisplayMonitors()]
+                min_x = min(m[0] for m in monitors)
+                min_y = min(m[1] for m in monitors)
+            else:
+                min_x = min_y = 0
+
+            # 将坐标平移，使得 pyautogui.screenshot 的 region 永远为正
+            region = (
+                int(left - min_x + width * crop[0]),
+                int(top - min_y + height * crop[1]),
+                int(width * crop[2]),
+                int(height * crop[3]),
             )
+            screenshot = pyautogui.screenshot(region=region, allScreens=screens)
 
             real_width, _ = Screenshot.get_window_real_resolution(window)
             if real_width > resolution[0]:

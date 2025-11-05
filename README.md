@@ -1,3 +1,5 @@
+**| [English](README_en.md) | 简体中文 | [日本語](README_jp.md) |**
+
 <div align="center">
 
 <img alt="LOGO" src="./webapp/buildResources/icon.png" width="256" height="256" />
@@ -5,9 +7,8 @@
 # NIKKEAutoScript
 
 
-胜利女神：NIKKE 自动日常脚本，支持所有设置为**简体中文**的 PC/模拟器客户端（**国服除外**）。Fork 自 [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
-
-GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC/Emulator clients set to **Simplified Chinese (zh\_CN)**, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+胜利女神：NIKKE 自动日常脚本，支持所有 PC/模拟器客户端（**国服除外**）。Fork 自 [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)  
+GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC/Emulator clients, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 **如果觉得有帮助，请帮我点个 ⭐ Star 支持一下！**  
 *If you find it helpful, please give it a ⭐ Star to support!*
@@ -70,12 +71,17 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 > 如果在使用过程中遇到问题，您可以通过以下方式获取帮助：
 > - 在 [GitHub Issues](https://github.com/megumiss/NIKKEAutoScript/issues) 提交问题
 > - 加入划水 QQ 群：[823265807](https://qm.qq.com/q/ibQKuQI9Ko)
+> - 加入tg群组：[Telegram](https://t.me/+D-Pguv_oapwyMjhl)
 
 ---
 
-### 支持功能，当前所有计划中的功能已做完
-- [x] PC客户端/模拟器支持
-- [x] 模拟器自动启动，PC客户端自动启动，脚本自动启动
+### 支持语言
+- [ ] English **(In Progress)**
+- [x] 简体中文
+
+### 支持功能
+- [x] PC客户端/模拟器支持，PC端多屏幕支持
+- [x] 模拟器自动启动，PC客户端自动启动，任务自动启动
 - [x] 每日收获、歼灭、派遣、收藏品自选
 - [x] 同步器、循环室升级
 - [x] 友情点、特殊竞技场点数领取
@@ -98,8 +104,9 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 - [x] 启动/停止/重启/更新/屏幕旋转的快捷键和接口，快捷键自定义
 - [x] 支持自动更新、定时更新
 - [x] 支持docker部署
+- [x] Hosts修改
 
-### 更新计划，可能会做
+### 更新计划
 - [ ] ~~修复uiautomator自动安装~~
 - [ ] pjjc监控/提醒/反打（没明确需求？）
 - [ ] dashboard（写了一半）
@@ -114,17 +121,23 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 
 ---
 
-### 支持我
+### 💖 支持我 | Support Me
 
-如果喜欢本项目，可以送作者一杯蜜雪冰城🍦  
-
-您的支持就是作者开发和维护项目的动力🚀  
+如果你喜欢本项目，可以请作者喝一杯蜜雪冰城🍦  
+您的支持就是作者持续开发与维护项目的动力🚀  
 
 <p>
-  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="微信" width="200"/>
-  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="支付宝" width="200"/>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="WeChat Pay" width="200"/>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="Alipay" width="200"/>
 </p>
 
+**For international supporters:**
+
+<p>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipayremit.png" alt="Alipay Remit" width="200"/>
+</p>
+
+Support: Hanpass PandaRemit WireBarley GmoneyTrans Debunk PayForex koala transfer Sendly GME
 
 ---
 

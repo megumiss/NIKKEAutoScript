@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import typing as t
 from dataclasses import dataclass
 from functools import cached_property
@@ -108,6 +109,16 @@ class PipManager(DeployConfig):
         return f'"{self.python}" -m pip'
 
     def pip_install(self):
+        logger.hr('Check nkas.exe', 0)
+        nkas_path = './nkas.exe'
+        nkas_source = './deploy/build/nkas.exe'
+        if not os.path.exists(nkas_path):
+            if os.path.exists(nkas_source):
+                logger.info(f'{nkas_path} not found, copying from {nkas_source}')
+                shutil.copy(nkas_source, nkas_path)
+            else:
+                logger.warning(f'{nkas_source} does not exist, cannot copy nkas.exe')
+        
         logger.hr('Update Dependencies', 0)
 
         if not self.InstallDependencies:

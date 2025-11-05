@@ -48,11 +48,12 @@ class ChallengeNotFoundError(Exception):
 
 
 class EventInfo:
-    def __init__(self, id, name, type, mini_game, story_part, story_difficulty):
+    def __init__(self, id, name, type, mini_game, mini_game_play, story_part, story_difficulty):
         self.id: str = id
         self.name: str = name
         self.type: int = type
         self.mini_game: bool = mini_game
+        self.mini_game_play: bool = mini_game_play
         self.story_part: str = story_part
         self.story_difficulty: str = story_difficulty
 
@@ -480,6 +481,11 @@ class Event(UI):
 
             # 点击领取
             if click_timer.reached() and self.appear_then_click(RECEIVE, offset=10, interval=1, static=False):
+                click_timer.reset()
+                continue
+
+            # 点击reward领取
+            if click_timer.reached() and self.appear_then_click(RECEIVE_REWARD, offset=10, interval=1, static=False):
                 click_timer.reset()
                 continue
 
@@ -1018,7 +1024,7 @@ class Event(UI):
             # 滑动到商店最上方
             if restart_flag:
                 logger.info('Scroll to shop top')
-                self.ensure_sroll((360, 600), (360, 900), speed=30, count=5, delay=2)
+                self.ensure_sroll_to_top((360, 600), (360, 900), speed=30, count=3, delay=2)
                 restart_flag = False
 
             self.device.screenshot()
@@ -1141,7 +1147,7 @@ class Event(UI):
                 logger.info('Scroll to next page')
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
-                self.ensure_sroll((360, 1100), (360, 480), speed=5, hold=1, count=1, delay=3, method='scroll')
+                self.ensure_sroll((360, 1100), (360, 480), speed=5, count=1, delay=3, method='scroll')
 
     def filter_sold_out_items(self, items, sold_outs):
         """

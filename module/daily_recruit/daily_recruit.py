@@ -1,9 +1,12 @@
+import os
 import time
+from datetime import datetime
 
 from module.base.timer import Timer
 from module.base.utils import point2str
 from module.daily_recruit.assets import *
 from module.logger import logger
+from module.notify import handle_notify
 from module.reward.assets import *
 from module.ui.page import *
 from module.ui.ui import UI
@@ -17,9 +20,50 @@ class NotEnoughSocialPoint(Exception):
     pass
 
 
+class NotEnoughOrdinaryTimes(Exception):
+    pass
+
+
 class DailyRecruit(UI):
+    def save_drop_image(self, image, base_path):
+        """
+        保存抽卡截图到指定文件夹，并以日期+时间为文件名
+        兼容 Linux/Windows
+        Args:
+            image: OpenCV 格式图片 (numpy.ndarray)
+            base_path: 基础保存路径
+        Returns:
+            save_path: 保存的完整文件路径
+        """
+        if not base_path:
+            return None
+
+        # 拼接保存目录：base_path/config_name
+        save_dir = os.path.join(base_path, self.config.config_name)
+        os.makedirs(save_dir, exist_ok=True)
+
+        # 生成日期+时间文件名，例如 2025-10-30_23-59-41.png
+        datetime_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        filename = f'{datetime_str}.png'
+        save_path = os.path.join(save_dir, filename)
+
+        # 保存图片
+        from module.base.utils import save_image
+
+        save_image(image, save_path)
+
+        return save_path
+
+    def notify_push(self, type):
+        handle_notify(
+            self.config.Notification_OnePushConfig,
+            title=f'NKAS <{self.config.config_name}> Recruit',
+            content=f'{type} SSR got!',
+            always=self.config.Notification_WinOnePush,
+        )
+
     def event_free_recruit(self, skip_first_screenshot=True):
-        logger.hr('Event free recruit')
+        logger.hr('Event free recruit', 2)
         confirm_timer = Timer(5, count=3).start()
         click_timer = Timer(0.5)
 
@@ -71,9 +115,22 @@ class DailyRecruit(UI):
                 click_timer.reset()
                 continue
             # 确认
-            if click_timer.reached() and self.appear_then_click(
-                RECRUIT_CONFIRM, offset=(30, 30), interval=3, static=False
-            ):
+            if self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                # 截图保存
+                saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
+                if saved_path:
+                    logger.info(f'Save recruit image to: {saved_path}')
+                # 推送通知
+                if self.config.DailyRecruit_SSRNotifyPush and self.appear(RECRUIT_NIKKE_SSR, threshold=10):
+                    self.notify_push('EventFree')
+
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                        break
+                    if self.appear_then_click(RECRUIT_CONFIRM, offset=(30, 30), interval=2, static=False):
+                        continue
+
                 confirm_timer.reset()
                 click_timer.reset()
                 recruit_end = True
@@ -89,8 +146,89 @@ class DailyRecruit(UI):
         logger.info('Event free recruit has done')
         return True
 
+    def ordinary_150gem_recruit(self, skip_first_screenshot=True):
+        logger.hr('Ordinary 150gems recruit', 2)
+        click_timer = Timer(0.5)
+
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 普通招募页面，没有次数结束抽卡
+            if self.appear(ORDINARY_RECRUIT_CHECK, offset=(30,10)):
+                if self.appear(ORDINARY_RECRUIT_ONCE_DONE, offset=(30, 30)):
+                    logger.info('Ordinary 150gems recruit has done')
+                    raise NotEnoughOrdinaryTimes
+                else:
+                    break
+
+            # 抽卡
+            if not self.appear(ORDINARY_RECRUIT_CHECK, offset=(30,10)):
+                # 向右点击
+                logger.info('Click %s @ %s' % (point2str(690, 670), 'TO_RIGHT_RECRUIT'))
+                self.device.click_minitouch(690, 670)
+                click_timer.reset()
+                time.sleep(1)
+                continue
+
+        recruit_end = False
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 抽卡
+            if (
+                not recruit_end
+                and click_timer.reached()
+                and self.appear_then_click(ORDINARY_RECRUIT_ONCE, offset=(50, 10), click_offset=(0,30), interval=3)
+            ):
+                click_timer.reset()
+                continue
+            # 抽卡确认
+            if (
+                not recruit_end
+                and click_timer.reached()
+                and self.appear_then_click(ORDINARY_RECRUIT_ONCE_CONFIRM, offset=10, interval=1)
+            ):
+                click_timer.reset()
+                continue
+            # 跳过
+            if click_timer.reached() and self.appear_then_click(RECRUIT_SKIP, offset=30, interval=1):
+                click_timer.reset()
+                continue
+            # 确认
+            if self.appear(RECRUIT_CONFIRM, offset=30, static=False):
+                # 截图保存
+                saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
+                if saved_path:
+                    logger.info(f'Save recruit image to: {saved_path}')
+                # 推送通知
+                if self.config.DailyRecruit_SSRNotifyPush and self.appear(RECRUIT_NIKKE_SSR, threshold=10):
+                    self.notify_push('150Gem')
+
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(RECRUIT_CONFIRM, offset=30, static=False):
+                        break
+                    if self.appear_then_click(RECRUIT_CONFIRM, offset=30, interval=2, static=False):
+                        continue
+
+                click_timer.reset()
+                recruit_end = True
+                continue
+            # 结束
+            if recruit_end:
+                break
+
+        logger.info('Ordinary 150gems recruit has done')
+        return True
+
     def social_point_recruit(self, skip_first_screenshot=True):
-        logger.hr('Social point recruit')
+        logger.hr('Social point recruit', 2)
         confirm_timer = Timer(5, count=3).start()
         click_timer = Timer(0.5)
 
@@ -140,9 +278,22 @@ class DailyRecruit(UI):
                 click_timer.reset()
                 continue
             # 确认
-            if click_timer.reached() and self.appear_then_click(
-                RECRUIT_CONFIRM, offset=(30, 30), interval=3, static=False
-            ):
+            if self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                # 截图保存
+                saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
+                if saved_path:
+                    logger.info(f'Save recruit image to: {saved_path}')
+                # 推送通知
+                if self.config.DailyRecruit_SSRNotifyPush and self.appear(RECRUIT_NIKKE_SSR, threshold=10):
+                    self.notify_push('SocialPoint')
+
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                        break
+                    if self.appear_then_click(RECRUIT_CONFIRM, offset=(30, 30), interval=2, static=False):
+                        continue
+
                 confirm_timer.reset()
                 click_timer.reset()
                 recruit_end = True
@@ -165,6 +316,12 @@ class DailyRecruit(UI):
             try:
                 self.event_free_recruit()
             except EndEventFree:
+                pass
+        # 150钻单抽
+        if self.config.DailyRecruit_Ordinary150GemRecruit:
+            try:
+                self.ordinary_150gem_recruit()
+            except NotEnoughOrdinaryTimes:
                 pass
         # 友情点单抽
         if self.config.DailyRecruit_SocialPointRecruit:

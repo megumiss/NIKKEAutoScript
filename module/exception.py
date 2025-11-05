@@ -47,3 +47,7 @@ class AccountError(Exception):
 
 class ScreenshotError(Exception):
     pass
+
+
+class ScreenResolutionNotEnough(Exception):
+    pass
