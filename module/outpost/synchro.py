@@ -22,7 +22,7 @@ class Synchro(UI):
             if (
                 self.config.Synchro_UseBox
                 and click_timer.reached()
-                and self.appear(SYNCHRO_UPGRADE_CHECK, offset=30)
+                and self.appear(SYNCHRO_UPGRADE_CHECK, offset=(30, 30))
                 and self.appear_then_click(SYNCHRO_UPGRADE_BOX, offset=30, interval=1)
             ):
                 click_timer.reset()
@@ -39,15 +39,15 @@ class Synchro(UI):
             if (
                 auto_click < 2
                 and click_timer.reached()
-                and self.appear(SYNCHRO_UPGRADE_CHECK, offset=30)
-                and self.appear_then_click(SYNCHRO_UPGRADE_AUTO, offset=30, interval=1)
+                and self.appear(SYNCHRO_UPGRADE_CHECK, offset=(30, 30))
+                and self.appear_then_click(SYNCHRO_UPGRADE_AUTO, offset=(50, 30), interval=1)
             ):
                 auto_click += 1
                 click_timer.reset()
                 continue
 
             # 没材料
-            if self.appear(SYNCHRO_UPGRADE_CHECK, offset=30):
+            if self.appear(SYNCHRO_UPGRADE_CHECK, offset=(30, 30)):
                 if not self.config.Synchro_UseBox:
                     # 不使用Box时，只要确认按钮不出现就退出
                     if auto_click > 1 and not self.appear(SYNCHRO_UPGRADE_CONFIRM, threshold=10):
@@ -64,7 +64,7 @@ class Synchro(UI):
             # 开始增强
             if (
                 click_timer.reached()
-                and self.appear(SYNCHRO_UPGRADE_CHECK, offset=30)
+                and self.appear(SYNCHRO_UPGRADE_CHECK, offset=(30, 30))
                 and self.appear_then_click(SYNCHRO_UPGRADE_CONFIRM, offset=30, interval=1)
             ):
                 click_timer.reset()
