@@ -672,7 +672,7 @@
   "Conversation": {
     "_info": {
       "name": "Conversation",
-      "help": "Automatically choose the correct dialog options with near-100% accuracy"
+      "help": "Automatically choose the correct dialog options with near-100% accuracy(Only zh-CN)"
     },
     "OnlyFavourite": {
       "name": "Only converse with favorites",
