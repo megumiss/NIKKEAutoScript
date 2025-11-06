@@ -1,5 +1,6 @@
 import re
 
+from module.base.langs import Langs
 from module.base.timer import Timer
 from module.base.utils import point2str
 from module.logger import logger
@@ -47,7 +48,7 @@ class Commission(UI):
         )
 
         text = ITEM_NUM.ocr(self.device.image)['text']
-        match = re.search(r'持有数[:：]\s*(\d+)', text)
+        match = re.search(rf'{Langs.FAVORITE_ITEM_NUM}[:：]\s*(\d+)', text)
         if match:
             number = int(match.group(1))
 

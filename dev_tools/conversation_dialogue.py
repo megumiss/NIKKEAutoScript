@@ -3,9 +3,9 @@ import re
 
 # 删除src src\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))
 
-TARGET_CHARACTER_NAME = "德尔塔：怪盗忍者"
+TARGET_CHARACTER_NAME = "娜由塔"
 INPUT_HTML_FILE = "module\conversation\dialogue_raw.html"
-OUTPUT_JSON_FILE = "module\conversation\dialogue.json"
+OUTPUT_JSON_FILE = "module\conversation\dialogue.zh-CN.json"
 
 def extract_dialogues(html_content):
     # 正则模式匹配角色名称和对话块
