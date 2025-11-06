@@ -18,6 +18,8 @@ class LangMeta(type):
         "COOP_TIMELINE_TIMEOUT": {"en-US": "Times Up", "zh-CN": "时间到", "ja-JP": ""},
         # 其他
         "CLAIM_ALL": {"en-US": "Claim All", "zh-CN": "全部领取", "ja-JP": ""},
+        # 咨询对话文件名
+        "DIALOGUE_JSON": {"en-US": "dialogue.en-US.json", "zh-CN": "dialogue.zh-CN.json", "ja-JP": ""},
     }
     _current_lang = "zh-CN"
 
