@@ -130,7 +130,7 @@ class GiftBase(UI):
                 self.device.screenshot()
 
             # STEPUP礼包检查
-            if self.appear(LIMITED_GIFT_CHECK, offset=10):
+            if self.appear(LIMITED_GIFT_CHECK, offset=(100, 30)):
                 if self.appear(STEPUP, offset=(600, 10)):
                     logger.info('Open cash shop limited done')
                     break
