@@ -1,3 +1,4 @@
+from module.base.langs import Langs
 from module.base.timer import Timer
 from module.base.utils import (
     _area_offset,
@@ -262,7 +263,7 @@ class Conversation(UI):
                     answer_list = [self.answer_text(answer) for answer in answers]
 
                     # 获取正确答案
-                    dialogue = Dialogue('./module/conversation/dialogue.json')
+                    dialogue = Dialogue(f'./module/conversation/{Langs.DIALOGUE_JSON}')
                     right_answer = dialogue.get_answer(nikke, answer_list)
                     index = answer_list.index(right_answer)
 

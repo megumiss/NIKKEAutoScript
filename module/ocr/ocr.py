@@ -206,8 +206,9 @@ class Digit(Ocr):
 
     def after_process(self, result):
         result = super().after_process(result)
+        prev = result
 
-        # 替换常见识别错误
+        # OCR 容易混淆的字符映射
         replacements = {
             'I': '1',
             'D': '0',
@@ -218,20 +219,32 @@ class Digit(Ocr):
             'Q': '0',
             '|': '1',
         }
-        for k, v in replacements.items():
-            result = result.replace(k, v)
 
-        # 提取数字部分
-        prev = result
-        match = re.search(r'\d+', result)
-        result = match.group(0) if match else '0'
+        # 只取 '/' 前的部分
+        before_slash = result.split('/', 1)[0]
 
-        # 修正警告提示
-        if self.SHOW_REVISE_WARNING:
-            if result != prev:
-                logger.warning(f'OCR {self.name}: Result "{prev}" is revised to "{result}"')
+        # 先找纯数字
+        m = re.search(r'\d+', before_slash)
+        if m:
+            final = m.group(0)
+        else:
+            # 检查是否全由 数字+易混字符 组成
+            ambiguous_set = r'0-9IDSBGOQ\|'  # 定义数字样式字符
+            # 全字匹配
+            if re.fullmatch(rf'[{ambiguous_set}]+', before_slash):
+                candidate = before_slash
+                for k, v in replacements.items():
+                    candidate = candidate.replace(k, v)
+                m2 = re.search(r'\d+', candidate)
+                final = m2.group(0) if m2 else '0'
+            else:
+                # 包含普通字母 => 不做替换，返回 0
+                final = '0'
 
-        return result
+        if self.SHOW_REVISE_WARNING and final != prev:
+            logger.warning(f'OCR {self.name}: Result "{prev}" is revised to "{final}"')
+
+        return final
 
 
 class DigitCounter(Ocr):
