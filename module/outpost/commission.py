@@ -135,10 +135,12 @@ class Commission(UI):
             while 1:
                 self.device.screenshot()
 
-                if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(ITEM_SELECT, offset=10):
+                if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(ITEM_SELECT, offset=(40, 10)):
                     click_timer.reset()
                     continue
-                if self.appear(ITEM_LIST_CHECK, offset=10) and self.appear(ITEM_LIST_SELECT_CONFIRM, threshold=10):
+                if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear(
+                    ITEM_LIST_SELECT_CONFIRM, threshold=10
+                ):
                     click_timer.reset()
                     break
 
@@ -175,14 +177,14 @@ class Commission(UI):
                 # 派遣选择
                 if (
                     select_times > 2
-                    and self.appear(ITEM_LIST_CHECK, offset=10)
+                    and self.appear(ITEM_LIST_CHECK, offset=(70, 10))
                     and self.appear_then_click(ITEM_LIST_SELECT_CONFIRM, threshold=10)
                 ):
                     click_timer.reset()
                     continue
 
                 # 选择收藏品（这里取的是删除旧收藏品之后的第一个）
-                if self.appear(ITEM_LIST_CHECK, offset=10) and nikke_list:
+                if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and nikke_list:
                     if self.appear_then_click(
                         self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0), static=False
                     ):
@@ -219,7 +221,7 @@ class Commission(UI):
             # 派遣确认
             if (
                 click_timer.reached()
-                and self.appear(ITEM_LIST_CHECK, offset=10)  # 复用
+                and self.appear(ITEM_LIST_CHECK, offset=(70, 10))  # 复用
                 and self.appear_then_click(DISPATCH_CONFIRM, offset=10, interval=1)
             ):
                 click_timer.reset()
