@@ -1,4 +1,5 @@
 import os
+import re
 import time
 
 import psutil
@@ -51,6 +52,19 @@ class AppControl(WinClient, Login):
             raise RequestHumanTakeover
         launcher_path = os.path.normpath(self.config.PCClientInfo_LauncherPath)
 
+        #  英文路径
+        if not re.match(r'^[A-Za-z0-9_:/\\.\- ()]+$', launcher_path):
+            logger.error(
+                f'Please install the game in an English path and enter the correct path, '
+                f'current path: [{launcher_path}]'
+            )
+            raise RequestHumanTakeover
+
+        # 启动器存在
+        if not os.path.isfile(launcher_path):
+            logger.error(f'Launcher file does not exist or is not a valid file: [{launcher_path}]')
+            raise RequestHumanTakeover
+
         if self.config.PCClientInfo_AutoFillName:
             # 使用固定的 GAME_ / LAUNCHER_ 信息
             launcher_process = LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
@@ -60,21 +74,13 @@ class AppControl(WinClient, Login):
         else:
             # 使用配置中自定义值
             launcher_process = (
-                self.config.PCClientInfo_LauncherProcessName
-                or LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
+                self.config.PCClientInfo_LauncherProcessName or LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
             )
             launcher_window_title = (
-                self.config.PCClientInfo_LauncherTitleName
-                or LAUNCHER_TITLE[self.config.PCClientInfo_Client]
+                self.config.PCClientInfo_LauncherTitleName or LAUNCHER_TITLE[self.config.PCClientInfo_Client]
             )
-            game_process = (
-                self.config.PCClientInfo_GameProcessName
-                or GAME_PROCESS[self.config.PCClientInfo_Client]
-            )
-            game_window_title = (
-                self.config.PCClientInfo_GameTitleName
-                or GAME_TITLE[self.config.PCClientInfo_Client]
-            )
+            game_process = self.config.PCClientInfo_GameProcessName or GAME_PROCESS[self.config.PCClientInfo_Client]
+            game_window_title = self.config.PCClientInfo_GameTitleName or GAME_TITLE[self.config.PCClientInfo_Client]
 
         launcher_window_class = 'TWINCONTROL'
         game_window_class = 'UnityWndClass'

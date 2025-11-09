@@ -226,6 +226,8 @@ class Coop(UI):
     def run(self):
         try:
             self.ui_ensure(page_main)
+            # 等待右下角loading消失
+            self.ui_wait_loading()
             self.ensure_into_coop()
         except CoopIsUnavailable:
             pass
