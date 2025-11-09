@@ -94,11 +94,15 @@ class MissionPass(UI):
             # 回到主页面
             if self.appear(MAIN_CHECK, offset=10):
                 logger.info('Close misson pass')
-                self.device.sleep(1)
+                # 等待右下角loading消失
+                self.ui_wait_loading()
                 break
 
     def run(self):
         self.ui_ensure(page_main)
+        # 等待右下角loading消失
+        self.ui_wait_loading()
+
         skip_first_screenshot = True
         click_timer = Timer(0.3)
         pass_scrol_y = 200
@@ -124,7 +128,9 @@ class MissionPass(UI):
 
         # 获取当前pass数量
         self.config.PASS_LIMIT = 1
-        if self.appear(CHANGE, offset=5, static=False) or self.appear(EXPAND, offset=5, static=False):
+        if self.appear(CHANGE, offset=70):
+            self.config.PASS_LIMIT = 2
+        elif self.appear(EXPAND, offset=70):
             # 第一个banner
             self.ensure_sroll((650, pass_scrol_y), (500, pass_scrol_y), method='swipe', speed=40, count=1, delay=0.5)
             self.device.screenshot()
@@ -159,6 +165,8 @@ class MissionPass(UI):
                 if self.appear(banner_first, offset=10, threshold=0.6):
                     self.config.PASS_LIMIT -= 1
                     break
+            if self.config.PASS_LIMIT < 3:
+                self.config.PASS_LIMIT = 4
 
         logger.attr('PENDING MISSION PASS', self.config.PASS_LIMIT)
         passs = self.config.PASS_LIMIT

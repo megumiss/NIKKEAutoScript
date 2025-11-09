@@ -49,7 +49,7 @@ class WinClient:
 
     def start_program(self) -> bool:
         """启动程序"""
-        logger.info(f'Starting program: [{self.current_window.name}]:{self.current_window.path}')
+        logger.info(f'Starting program: [{self.current_window.name}]:[{self.current_window.path}]')
         path = self.current_window.path
         if not os.path.exists(path):
             logger.error('Path does not exist')
@@ -218,19 +218,19 @@ class WinClient:
                     exe_path = process.exe()
 
                     # 每个候选窗口的信息
-                    logger.debug(f'Checking window HWND={hwnd}, PID={pid}, Path={exe_path}')
+                    logger.debug(f'Checking window HWND=[{hwnd}], PID=[{pid}], Path=[{exe_path}]')
                     if hasattr(self.current_window, 'path') and self.current_window.path:
                         expected_path = self.current_window.path
                         if exe_path.lower() == expected_path.lower():
                             matched_hwnd = hwnd
-                            logger.info(f'Path matched: {exe_path}')
+                            logger.info(f'Path matched: [{exe_path}]')
                             break
                         else:
-                            logger.debug(f'Path mismatch:\nExpected: {expected_path}\nActual:   {exe_path}')
+                            logger.debug(f'Path mismatch:\nExpected: [{expected_path}]\nActual:   [{exe_path}]')
                 except Exception as e:
                     logger.warning(f'Failed to check process path for window: {e}')
             if not matched_hwnd:
-                logger.error(f'No window matched expected process path={self.current_window.path}')
+                logger.error(f'No window matched expected process path=[{self.current_window.path}]')
                 return False
 
             # 切换到目标窗口
