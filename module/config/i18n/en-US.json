@@ -28,6 +28,10 @@
       "name": "Story Event",
       "help": ""
     },
+    "Surface": {
+      "name": "Surface Exploration(BETA)",
+      "help": ""
+    },
     "Blablalink": {
       "name": "BlaBlaLink",
       "help": ""
@@ -164,6 +168,10 @@
     },
     "Event2": {
       "name": "Story Event 2",
+      "help": ""
+    },
+    "SurfaceDaily": {
+      "name": "Daily",
       "help": ""
     },
     "BlaAuth": {

@@ -440,6 +440,11 @@ class NikkeAutoScript:
 
         UnionRaid(config=self.config, device=self.device).run()
 
+    def surface_daily(self):
+        from module.surface.daily import SurfaceDaily
+
+        SurfaceDaily(config=self.config, device=self.device).run()
+
     def wait_until(self, future):
         """
         Wait until a specific time.

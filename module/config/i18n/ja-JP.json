@@ -28,6 +28,10 @@
       "name": "ストーリーイベント",
       "help": ""
     },
+    "Surface": {
+      "name": "地面(BETA)",
+      "help": ""
+    },
     "Blablalink": {
       "name": "ブラブラリンク",
       "help": ""
@@ -164,6 +168,10 @@
     },
     "Event2": {
       "name": "ストーリーイベント2",
+      "help": ""
+    },
+    "SurfaceDaily": {
+      "name": "每日",
       "help": ""
     },
     "BlaAuth": {

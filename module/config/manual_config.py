@@ -3,11 +3,14 @@ from datetime import datetime, timedelta
 
 class ManualConfig:
     SCHEDULER_PRIORITY = """
-       Restart > Reward > DailyRecruit > Destruction > Mailbox > 
-       StepUpGift > DailyGift > WeeklyGift > MonthlyGift > 
+       Restart > Reward > DailyRecruit > Destruction > Mailbox >
+       StepUpGift > DailyGift > WeeklyGift > MonthlyGift >
        Commission > EpisodeViewing > Recycling > Synchro > OutpostStory >
-       Shop > RubbishShop > Conversation > Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower > 
-       Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation > BlaDaily > BlaCDK > BlaExchange > 
+       Shop > RubbishShop > Conversation >
+       Interception > RookieArena > SpecialArena > ChampionArena > SimulationRoom > Overclock > TribeTower >
+       Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation >
+       SurfaceDaily >
+       BlaDaily > BlaCDK > BlaExchange >
        AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate > UpdateHosts
        """
 

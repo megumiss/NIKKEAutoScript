@@ -28,6 +28,10 @@
       "name": "剧情活动",
       "help": ""
     },
+    "Surface": {
+      "name": "地面(BETA)",
+      "help": ""
+    },
     "Blablalink": {
       "name": "妮游社",
       "help": ""
@@ -165,6 +169,10 @@
     "Event2": {
       "name": "剧情活动2",
       "help": ""
+    },
+    "SurfaceDaily": {
+      "name": "每日",
+      "help": "需要开启区域1的所有任务地点，并有3个队伍是空闲状态"
     },
     "BlaAuth": {
       "name": "Cookie",
