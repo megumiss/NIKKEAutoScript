@@ -33,6 +33,7 @@ from module.ui.page import (
     page_special_arena,
     page_special_interception,
     page_surface,
+    page_surface_back,
     page_synchro,
     page_synchro_facility,
     page_team,
@@ -74,6 +75,7 @@ class UI(InfoHandler):
         page_recruit,
         page_campaign_select,
         page_surface,
+        page_surface_back,
     ]
 
     def ui_page_appear(self, page: Page):

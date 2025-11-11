@@ -1,5 +1,6 @@
 import traceback
 
+from module.handler.assets import CONFIRM_B
 from module.ui.assets import *
 
 
@@ -193,5 +194,10 @@ page_main.link(button=MAIN_GOTO_CAMPAIGN_SELECT, destination=page_campaign_selec
 
 # surface
 page_surface = Page(SURFACE_CHECK)
-page_surface.link(button=SURFACE_BACK, destination=page_main)
+# surface back
+page_surface_back = Page(SURFACE_BACK_CHECK)
+page_surface.link(button=GOTO_BACK, destination=page_surface_back)
 page_campaign_select.link(button=CAMPAIGN_SELECT_GOTO_SURFACE, destination=page_surface)
+
+page_surface_back.link(button=CONFIRM_B, destination=page_main)
+page_surface_back.link(button=SURFACE_BACK_CANCEL, destination=page_surface)
