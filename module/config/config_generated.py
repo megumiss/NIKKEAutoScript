@@ -62,7 +62,7 @@ class GeneratedConfig:
 
     # Group `Reward`
     Reward_CollectSocialPoint = True
-    Reward_CollectSpecialArenaPoint = True
+    Reward_CollectSpecialArenaPoint = False
     Reward_CollectRanking = True
 
     # Group `DailyRecruit`

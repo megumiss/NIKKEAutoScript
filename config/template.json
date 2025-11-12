@@ -87,7 +87,7 @@
     },
     "Reward": {
       "CollectSocialPoint": true,
-      "CollectSpecialArenaPoint": true,
+      "CollectSpecialArenaPoint": false,
       "CollectRanking": true
     },
     "Storage": {

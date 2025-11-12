@@ -338,7 +338,7 @@
       },
       "CollectSpecialArenaPoint": {
         "type": "checkbox",
-        "value": true
+        "value": false
       },
       "CollectRanking": {
         "type": "checkbox",

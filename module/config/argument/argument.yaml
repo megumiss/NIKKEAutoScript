@@ -107,7 +107,7 @@ Optimization:
     option: [ stay_there, goto_main, close_game ]
 Reward:
   CollectSocialPoint: true
-  CollectSpecialArenaPoint: true
+  CollectSpecialArenaPoint: false
   CollectRanking: true
 DailyRecruit:
   EventFreeRecruit: true
