@@ -1,5 +1,7 @@
 import math
 
+import cv2
+
 from module.base.timer import Timer
 from module.logger import logger
 from module.surface.assets import *
@@ -46,19 +48,19 @@ class SurfaceDaily(UI):
         logger.hr('Start a mission', 2)
 
         # 打开任务面板
-        self.open_mission_board()
-        # 当前序号的任务已结束，进入下一个
-        if not self.appear(globals()[f'MISSION_{index}_CONFIG'], offset=10):
-            return self.mission(index=index + 1)
+        # self.open_mission_board()
+        # # 当前序号的任务已结束，进入下一个
+        # if not self.appear(globals()[f'MISSION_{index}_CONFIG'], offset=10):
+        #     return self.mission(index=index + 1)
 
-        # 修改任务区域
-        self.change_mission_sector(index=index)
-        # 开始任务，点击箭头
-        self.start_mission(index=index)
+        # # 修改任务区域
+        # self.change_mission_sector(index=index)
+        # # 开始任务，点击箭头
+        # self.start_mission(index=index)
         # 放置队伍
         self.squad_play()
         # 领取奖励
-        self.reward(index=index + 1)
+        self.reward(index=index)
 
         return self.mission(index=index + 1)
 
@@ -168,27 +170,36 @@ class SurfaceDaily(UI):
             for squad in [1, 2, 3]:
                 # 冷却检查
                 if squad_cooldowns[squad] and not squad_cooldowns[squad].reached():
-                    remain = squad_cooldowns[squad].remain()
-                    logger.info(f'Squad {squad} cooling down ({remain:.1f}s left)')
+                    # remain = squad_cooldowns[squad].remain()
+                    # logger.info(f'Squad {squad} cooling down ({remain:.1f}s left)')
                     continue
 
                 target_points = right
                 # 地面中没有队伍数字
                 if (
-                    not self.appear(globals()[f'SQUAD_{squad}_IN_SURFACE'], offset=(150, 100), threshold=0.95)
+                    not self.appear(
+                        globals()[f'SQUAD_{squad}_IN_SURFACE'], offset=(150, 100), threshold=0.98, static=False
+                    )
                     and not squad_status[f'SQUAD_{squad}']
                 ):
+                    logger.info(f'Squad {squad} playing')
                     # 选择队伍
                     squad_selected = False
                     while 1:
                         self.device.screenshot()
+
+                        if squad_selected and self.appear(SQUAD_EXPAND, offset=10):
+                            logger.info(f'Squad {squad} selected')
+                            break
 
                         # 打开队伍侧边栏
                         if self.appear_then_click(SQUAD_EXPAND, offset=10, interval=1):
                             continue
 
                         # 点击队伍
-                        if self.appear_then_click(globals()[f'SQUAD_{squad}'], offset=10, interval=1):
+                        if self.appear_then_click(
+                            globals()[f'SQUAD_{squad}'], offset=10, click_offset=(20, 20), interval=1
+                        ):
                             squad_checker = Timer(1, count=3)
                             # 检查队伍是否选中
                             while 1:
@@ -206,17 +217,14 @@ class SurfaceDaily(UI):
                         # 折叠队伍
                         if squad_selected and self.appear_then_click(SQUAD_FOLD, offset=10, interval=1):
                             continue
-                        if squad_selected and self.appear(SQUAD_EXPAND, offset=10):
-                            logger.info(f'Squad {squad} selected')
-                            break
 
                     # 点击目标点，根据队伍序号指定目标点
                     # 先点击REGHT第一个点查看是否是小怪，是则换LEFT
-                    self.device.click_minitouch(target_points[squad - 1])
+                    self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
                     self.device.sleep(0.5)
                     if self.appear(ENEMY_CLOSE, offset=10):
                         target_points = left
-                        self.device.click_minitouch(target_points[squad - 1])
+                        self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
 
                     # 设置15秒冷却计时器
                     squad_cooldowns[squad] = Timer(15)
@@ -239,27 +247,22 @@ class SurfaceDaily(UI):
             else:
                 self.device.screenshot()
 
-            # 防御任务小图标
-            if self.appear(SURFACE_MISSION_CENTER_DEFENSE, offset=10, static=False):
-                center_x, center_y = self.appear_location(SURFACE_MISSION_CENTER_DEFENSE, offset=10, static=False)
-                if center_y < 800 and center_y > 300:
-                    logger.info(f'Found mission center point {center_x},{center_y}')
-                    mission_center_point = (center_x, center_y)
+            # 获取任务感叹号数量，数量为1时直接返回坐标，数量为3时计算坐标
+            if self.appear(SURFACE_MISSION_MARK, offset=10, static=False):
+                marks = TEMPLATE_MISSION_MARK.match_multi(self.device.image, name='MISSION_MARK')
+                if len(marks) == 1:
+                    # 防御或者箱子的感叹号
+                    mission_center_point = (marks[0].location[0], marks[0].location[1] + 65)
+                    logger.info(f'Found mission center point {mission_center_point[0]},{mission_center_point[1]}')
                     break
-            # 任务中心黑色空地
-            if self.appear(SURFACE_MISSION_CENTER_GROUND, offset=10, static=False):
-                center_x, center_y = self.appear_location(SURFACE_MISSION_CENTER_GROUND, offset=10, static=False)
-                if center_y < 800 and center_y > 300:
-                    logger.info(f'Found mission center ground point {center_x},{center_y}')
-                    mission_center_point = (center_x, center_y)
+                elif len(marks) == 3:
+                    # 三个叹号即三个小怪，根据叹号坐标获取中心点
+                    center = self.calc_hex_center_from_marks(marks)
+                    mission_center_point = (center[0], center[1] + 65)
+                    logger.info(f'Found mission center point {mission_center_point[0]},{mission_center_point[1]}')
                     break
-            # 任务中心箱子
-            if self.appear(SURFACE_MISSION_CENTER_BOX, offset=10, static=False):
-                center_x, center_y = self.appear_location(SURFACE_MISSION_CENTER_BOX, offset=10, static=False)
-                if center_y < 800 and center_y > 300:
-                    logger.info(f'Found mission center box point {center_x},{center_y}')
-                    mission_center_point = (center_x, center_y)
-                    break
+                else:
+                    raise IsMissionCheckFailed
 
             if not mission_center_checker.started():
                 mission_center_checker.start()
@@ -267,10 +270,10 @@ class SurfaceDaily(UI):
                 raise IsMissionCheckFailed
 
         # 计算队伍目标点，LEFT和RIGHT
-        def hex_neighbors(x0, y0, a=125):
+        def hex_neighbors(x0, y0, a=60):
             d = math.sqrt(3) * a  # 中心间距
-            # 按 “左上 → 左 → 左下 → 右下 → 右 → 右上” 顺序
-            angles_deg = [120, 180, 240, 300, 0, 60]
+            # 从左上开始顺时针顺序
+            angles_deg = [240, 300, 0, 60, 120, 180]
             centers = []
             for angle in angles_deg:
                 rad = math.radians(angle)
@@ -283,7 +286,7 @@ class SurfaceDaily(UI):
                 elif x > 720:
                     x = 710
 
-                centers.append((round(x, 4), round(y, 4)))
+                centers.append((int(round(x, 4)), int(round(y, 4))))
             return centers
 
         # 所有目标点
@@ -391,6 +394,60 @@ class SurfaceDaily(UI):
             if not self.appear(SURFACE_MISSION_CHECK, offset=10):
                 logger.info('Closed mission board')
                 break
+
+    def calc_hex_center_from_marks(self, marks):
+        """
+        根据 marks 中三个点的 .location 坐标，计算中心点坐标（取整）
+        :param marks: 对象列表，每个对象有属性 .location = (x, y)
+        :return: (cx, cy)
+        """
+        if len(marks) != 3:
+            raise ValueError('必须提供三个 marks 对象')
+
+        # 提取坐标
+        points = [m.location for m in marks]
+
+        # 计算重心
+        cx = sum(p[0] for p in points) / 3
+        cy = sum(p[1] for p in points) / 3
+
+        # 取整
+        return (int(round(cx)), int(round(cy)))
+
+    def classify_triangle(self, marks, tol_deg=20):
+        """
+        根据三个 marks 的坐标判断属于哪一组三角形（left 或 right）
+
+        :param marks: 对象列表，每个对象有 .location = (x, y)
+        :param tol_deg: 容差角度，默认 20°
+        :return: "left" 或 "right" 或 "unknown"
+        """
+        if len(marks) != 3:
+            raise ValueError('需要正好三个 marks')
+
+        # 提取坐标
+        points = [m.location for m in marks]
+
+        # 计算质心（近似中心）
+        x0 = sum(p[0] for p in points) / 3
+        y0 = sum(p[1] for p in points) / 3
+
+        # 任取一个点计算角度
+        x, y = points[0]
+        ang = math.degrees(math.atan2(y - y0, x - x0))
+        if ang < 0:
+            ang += 360
+
+        # 角度模120
+        mod = ang % 120
+
+        # 判断靠近哪一组
+        if abs(mod - 0) < tol_deg or abs(mod - 120) < tol_deg:
+            return 'LEFT'
+        elif abs(mod - 60) < tol_deg:
+            return 'RIGHT'
+        else:
+            return 'unknown'
 
     def run(self):
         self.ui_ensure(page_surface)
