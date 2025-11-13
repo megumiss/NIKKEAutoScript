@@ -1,3 +1,5 @@
+import math
+
 from module.base.timer import Timer
 from module.logger import logger
 from module.surface.assets import *
@@ -13,12 +15,16 @@ class IsSquadValid(Exception):
     pass
 
 
+class IsMissionCheckFailed(Exception):
+    pass
+
+
 class SurfaceDaily(UI):
     # 队伍图标
     SQUAD_LISTS = {'SQUAD_1': SQUAD_1_IN_HOSPITAL, 'SQUAD_2': SQUAD_2_IN_HOSPITAL, 'SQUAD_3': SQUAD_3_IN_HOSPITAL}
-    # 队伍目标点，固定点，三队，间隔一个格子，REGHT和LEFT分别以上右和上左为1开始编号
-    SQUAD_TARGET_POINT_REGHT = [(425, 605), (430, 775), (220, 685)]
-    SQUAD_TARGET_POINT_LEFT = [(295, 605), (485, 685), (295, 775)]
+    # 队伍目标点，固定点，三队，间隔一个格子，REGHT和LEFT分别以上右和上左开始编号，以左上为1开始编号
+    # SQUAD_TARGET_POINT_REGHT = [(425, 605), (430, 775), (220, 685)]  # 246
+    # SQUAD_TARGET_POINT_LEFT = [(295, 605), (485, 685), (295, 775)]  # 135
     # 队伍放置状态
     SQUAD_LISTS_STATUS = {'SQUAD_1': False, 'SQUAD_2': False, 'SQUAD_3': False}
 
@@ -32,7 +38,9 @@ class SurfaceDaily(UI):
             self.close_mission_board()
             logger.warning('The mission has no remaining opportunities')
         except IsSquadValid:
-            logger.warning('Squad 1/2/3 not valid')
+            logger.error('Squad 1/2/3 not valid')
+        except IsMissionCheckFailed:
+            logger.error('Mission check error in surface')
 
     def mission(self, index=1):
         logger.hr('Start a mission', 2)
@@ -48,12 +56,46 @@ class SurfaceDaily(UI):
         # 开始任务，点击箭头
         self.start_mission(index=index)
         # 放置队伍
-        done = self.squad_play()
-        # 任务结束
-        if done:
-            self.mission(index=index + 1)
+        self.squad_play()
+        # 领取奖励
+        self.reward(index=index + 1)
 
         return self.mission(index=index + 1)
+
+    def reward(self, skip_first_screenshot=True, index=1):
+        logger.info('Reward receive')
+
+        self.open_mission_board()
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 任务完成按钮
+            if self.appear(SURFACE_MISSION_CHECK, offset=10) and self.appear_then_click(
+                globals()[f'MISSION_{index}_REWARD'], offset=10, interval=1
+            ):
+                continue
+
+            # 任务票确定
+            if self.appear(SURFACE_MISSION_REWARD_CHECK, offset=10) and self.appear_then_click(
+                MISSION_REWARD_TECKET_1, offset=10, interval=1
+            ):
+                continue
+
+            if self.handle_reward(interval=2):
+                continue
+
+            # 领取完成
+            if self.appear(SURFACE_MISSION_CHECK, offset=10) and not self.appear(
+                globals()[f'MISSION_{index}_DONE'], offset=10
+            ):
+                logger.info(f'Mission reward {index} done')
+                self.device.sleep(3)
+                break
+
+        self.close_mission_board()
 
     def start_mission(self, skip_first_screenshot=True, index=1):
         logger.info('Mission start')
@@ -89,6 +131,11 @@ class SurfaceDaily(UI):
         logger.info('Play squad')
         played_all = False
         squad_status = self.SQUAD_LISTS_STATUS.copy()
+        # 每个队伍的放置冷却计时器
+        squad_cooldowns = {1: None, 2: None, 3: None}
+
+        # 找到中心点并计算队伍目标点
+        left, right = self.get_squad_target_points()
 
         while 1:
             if skip_first_screenshot:
@@ -98,22 +145,34 @@ class SurfaceDaily(UI):
 
             # 任务完成
             if self.appear(MISSION_DONE, offset=10):
-                return True
+                return
 
-            # 防御小图标
+            # 检查是否所有队伍都已就位
+            if not played_all and all(squad_status.values()):
+                played_all = True
+                logger.info('All squads deployed')
+
+            # 防御开始
             if played_all and self.appear_then_click(DEFENSE_CONFIRM, offset=10, interval=1, static=False):
                 continue
 
-            # 防御开始
-            if self.appear_then_click(DEFENSE_START, offset=10, interval=1, static=False):
+            # 防御小图标
+            if played_all and self.appear_then_click(DEFENSE_START, offset=10, interval=1, static=False):
                 continue
 
             # 箱子
             if played_all and self.appear_then_click(SURFACE_BOX, offset=10, interval=1, static=False):
                 continue
 
+            # 遍历三个队伍
             for squad in [1, 2, 3]:
-                target_points = self.SQUAD_TARGET_POINT_REGHT
+                # 冷却检查
+                if squad_cooldowns[squad] and not squad_cooldowns[squad].reached():
+                    remain = squad_cooldowns[squad].remain()
+                    logger.info(f'Squad {squad} cooling down ({remain:.1f}s left)')
+                    continue
+
+                target_points = right
                 # 地面中没有队伍数字
                 if (
                     not self.appear(globals()[f'SQUAD_{squad}_IN_SURFACE'], offset=(150, 100), threshold=0.95)
@@ -156,14 +215,73 @@ class SurfaceDaily(UI):
                     self.device.click_minitouch(target_points[squad - 1])
                     self.device.sleep(0.5)
                     if self.appear(ENEMY_CLOSE, offset=10):
-                        target_points = self.SQUAD_TARGET_POINT_LEFT
+                        target_points = left
                         self.device.click_minitouch(target_points[squad - 1])
-                        # 假定队伍就位了
-                        squad_status[f'SQUAD_{squad}'] = True
+
+                    # 设置15秒冷却计时器
+                    squad_cooldowns[squad] = Timer(15)
+                    squad_cooldowns[squad].start()
+                    logger.info(f'Squad {squad} placed — cooling down for 15s')
                 else:
                     # 队伍就位了
                     squad_status[f'SQUAD_{squad}'] = True
-                    logger.info(f'Squad {squad} allready on target')
+                    logger.info(f'Squad {squad} already on target')
+
+    def get_squad_target_points(self, skip_first_screenshot=True):
+        """根据任务目标中心点获取队伍目标点，必然存在2种情况之一: 一个叹号在中心点（防御）/存在任务区域中心点空地"""
+        logger.info('Finding mission center point')
+
+        mission_center_point = (350, 580)
+        mission_center_checker = Timer(5, count=5)
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            # 防御任务小图标
+            if self.appear(DEFENSE_START, offset=10, static=False):
+                center_x, center_y = self.appear_location(DEFENSE_START, offset=10, static=False)
+                if center_y < 800 and center_y > 300:
+                    logger.info(f'Found mission center point {center_x},{center_y}')
+                    mission_center_point = (center_x, center_y + 50)
+                    break
+            # 任务中心黑色空地
+            if self.appear(SURFACE_MISSION_CENTER, offset=10, static=False):
+                center_x, center_y = self.appear_location(SURFACE_MISSION_CENTER, offset=10, static=False)
+                if center_y < 800 and center_y > 300:
+                    logger.info(f'Found mission center point {center_x},{center_y}')
+                    mission_center_point = (center_x, center_y)
+                    break
+
+            if not mission_center_checker.started():
+                mission_center_checker.start()
+            if mission_center_checker.reached():
+                raise IsMissionCheckFailed
+
+        # 计算队伍目标点，LEFT和RIGHT
+        def hex_neighbors(x0, y0, a=125):
+            d = math.sqrt(3) * a  # 中心间距
+            # 按 “左上 → 左 → 左下 → 右下 → 右 → 右上” 顺序
+            angles_deg = [120, 180, 240, 300, 0, 60]
+            centers = []
+            for angle in angles_deg:
+                rad = math.radians(angle)
+                x = x0 + d * math.cos(rad)
+                y = y0 + d * math.sin(rad)
+
+                # 边界限制
+                if x < 0:
+                    x = 10
+                elif x > 720:
+                    x = 710
+
+                centers.append((round(x, 4), round(y, 4)))
+            return centers
+
+        # 所有目标点
+        points = hex_neighbors(mission_center_point[0], mission_center_point[1])
+        return [points[0], points[2], points[4]], [points[1], points[3], points[5]]
 
     def change_mission_sector(self, skip_first_screenshot=True, index=1):
         logger.info('Change mission sector')
@@ -270,4 +388,4 @@ class SurfaceDaily(UI):
     def run(self):
         self.ui_ensure(page_surface)
         self._run()
-        # self.config.task_delay(server_update=True)
+        self.config.task_delay(server_update=True)
