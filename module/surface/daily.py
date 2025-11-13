@@ -144,7 +144,7 @@ class SurfaceDaily(UI):
                 self.device.screenshot()
 
             # 任务完成
-            if self.appear(MISSION_DONE, offset=10):
+            if self.appear(MISSION_DONE_1, offset=10) or self.appear(MISSION_DONE_2, offset=100):
                 return
 
             # 检查是否所有队伍都已就位
@@ -228,7 +228,7 @@ class SurfaceDaily(UI):
                     logger.info(f'Squad {squad} already on target')
 
     def get_squad_target_points(self, skip_first_screenshot=True):
-        """根据任务目标中心点获取队伍目标点，必然存在2种情况之一: 一个叹号在中心点（防御）/存在任务区域中心点空地"""
+        """根据任务目标中心点获取队伍目标点"""
         logger.info('Finding mission center point')
 
         mission_center_point = (350, 580)
@@ -240,17 +240,24 @@ class SurfaceDaily(UI):
                 self.device.screenshot()
 
             # 防御任务小图标
-            if self.appear(DEFENSE_START, offset=10, static=False):
-                center_x, center_y = self.appear_location(DEFENSE_START, offset=10, static=False)
+            if self.appear(SURFACE_MISSION_CENTER_DEFENSE, offset=10, static=False):
+                center_x, center_y = self.appear_location(SURFACE_MISSION_CENTER_DEFENSE, offset=10, static=False)
                 if center_y < 800 and center_y > 300:
                     logger.info(f'Found mission center point {center_x},{center_y}')
-                    mission_center_point = (center_x, center_y + 50)
+                    mission_center_point = (center_x, center_y)
                     break
             # 任务中心黑色空地
-            if self.appear(SURFACE_MISSION_CENTER, offset=10, static=False):
-                center_x, center_y = self.appear_location(SURFACE_MISSION_CENTER, offset=10, static=False)
+            if self.appear(SURFACE_MISSION_CENTER_GROUND, offset=10, static=False):
+                center_x, center_y = self.appear_location(SURFACE_MISSION_CENTER_GROUND, offset=10, static=False)
                 if center_y < 800 and center_y > 300:
-                    logger.info(f'Found mission center point {center_x},{center_y}')
+                    logger.info(f'Found mission center ground point {center_x},{center_y}')
+                    mission_center_point = (center_x, center_y)
+                    break
+            # 任务中心箱子
+            if self.appear(SURFACE_MISSION_CENTER_BOX, offset=10, static=False):
+                center_x, center_y = self.appear_location(SURFACE_MISSION_CENTER_BOX, offset=10, static=False)
+                if center_y < 800 and center_y > 300:
+                    logger.info(f'Found mission center box point {center_x},{center_y}')
                     mission_center_point = (center_x, center_y)
                     break
 
