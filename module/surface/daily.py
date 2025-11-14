@@ -66,6 +66,7 @@ class SurfaceDaily(UI):
 
     def reward(self, skip_first_screenshot=True, index=1):
         logger.info('Reward receive')
+        board_checker = Timer(1, count=3)
 
         self.open_mission_board()
         while 1:
@@ -90,12 +91,17 @@ class SurfaceDaily(UI):
                 continue
 
             # 领取完成
-            if self.appear(SURFACE_MISSION_CHECK, offset=10) and not self.appear(
-                globals()[f'MISSION_{index}_DONE'], offset=10
+            if self.appear(SURFACE_MISSION_CHECK, offset=10) and (
+                self.appear(globals()[f'MISSION_{index}_DONE'], offset=10)
+                or self.appear(globals()[f'MISSION_{index}_ACCEPT'], offset=10)
             ):
-                logger.info(f'Mission reward {index} done')
-                self.device.sleep(3)
-                break
+                if not board_checker.started():
+                    board_checker.start()
+                if board_checker.reached():
+                    logger.info(f'Mission reward {index} done')
+                    break
+            else:
+                board_checker.clear()
 
         self.close_mission_board()
 
@@ -133,12 +139,40 @@ class SurfaceDaily(UI):
         logger.info('Play squad')
         played_all = False
         squad_status = self.SQUAD_LISTS_STATUS.copy()
+
         # 每个队伍的放置冷却计时器
         squad_cooldowns = {1: None, 2: None, 3: None}
 
-        # 找到中心点并计算队伍目标点
+        # 获取左右两组目标点
         left, right = self.get_squad_target_points()
 
+        # -----------------------------------------
+        # NEW: 目标判定常量
+        # -----------------------------------------
+        SQUAD_POS_TOL = 30
+        SQUAD_POS_OFFSET = (-25, -30)
+        def is_squad_at_target(squad_point, target_points):
+            """
+            判断偏移后的队伍坐标是否落在 target_points 中任意一个目标点的容差范围内
+            返回: (is_match, index)
+            """
+
+            ox = squad_point[0] + SQUAD_POS_OFFSET[0]
+            oy = squad_point[1] + SQUAD_POS_OFFSET[1]
+
+            for idx, (tx, ty) in enumerate(target_points):
+                # 新的容差范围判断（矩形）
+                if (
+                    tx - SQUAD_POS_TOL <= ox <= tx + SQUAD_POS_TOL and
+                    ty - SQUAD_POS_TOL <= oy <= ty + SQUAD_POS_TOL
+                ):
+                    return True, idx
+
+            return False, None
+
+        # -----------------------------------------
+        # 开始主循环
+        # -----------------------------------------
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -146,10 +180,10 @@ class SurfaceDaily(UI):
                 self.device.screenshot()
 
             # 任务完成
-            if self.appear(MISSION_DONE_1, offset=10) or self.appear(MISSION_DONE_2, offset=100):
+            if played_all and (self.appear(MISSION_DONE_1, offset=10) or self.appear(MISSION_DONE_2, offset=100)):
                 return
 
-            # 检查是否所有队伍都已就位
+            # 是否所有队伍已就位
             if not played_all and all(squad_status.values()):
                 played_all = True
                 logger.info('All squads deployed')
@@ -168,72 +202,89 @@ class SurfaceDaily(UI):
 
             # 遍历三个队伍
             for squad in [1, 2, 3]:
+
                 # 冷却检查
                 if squad_cooldowns[squad] and not squad_cooldowns[squad].reached():
-                    # remain = squad_cooldowns[squad].remain()
-                    # logger.info(f'Squad {squad} cooling down ({remain:.1f}s left)')
                     continue
 
+                # NEW: 获取队伍所在位置
+                squad_location = self.appear_location(
+                    globals()[f'SQUAD_{squad}_IN_SURFACE'],
+                    offset=(150, 100),
+                    threshold=0.98,
+                    static=False
+                )
+
+                if squad_location:
+                    # 队伍已在画面中，检查坐标是否接近目标点
+                    # 使用当前 target_points 分组
+                    target_points_group = right  # 默认使用 right
+                    target_match, idx = is_squad_at_target(squad_location, target_points_group)
+
+                    # 若不匹配则尝试 left
+                    if not target_match:
+                        target_points_group = left
+                        target_match, idx = is_squad_at_target(squad_location, target_points_group)
+
+                    if target_match:
+                        # 坐标匹配成功
+                        squad_status[f'SQUAD_{squad}'] = True
+                        logger.info(f'Squad {squad} already at target point #{idx + 1}')
+                        continue
+                    else:
+                        # 在画面中但不在目标点范围内，仍视为未放置，需要继续放置逻辑
+                        logger.info(f'Squad {squad} visible but not at target — needs placing')
+
+                # 队伍未放置，需要执行放置逻辑
+                logger.info(f'Squad {squad} playing')
+
+                # 选择队伍 UI 流程（和你原来的一样）
+                squad_selected = False
+                while 1:
+                    self.device.screenshot()
+
+                    if squad_selected and self.appear(SQUAD_EXPAND, offset=10):
+                        logger.info(f'Squad {squad} selected')
+                        break
+
+                    # 打开队伍侧边栏
+                    if self.appear_then_click(SQUAD_EXPAND, offset=10, interval=1):
+                        continue
+
+                    # 点击队伍
+                    if self.appear_then_click(
+                        globals()[f'SQUAD_{squad}'], offset=10, click_offset=(20, 20), interval=1
+                    ):
+                        squad_checker = Timer(1, count=3)
+                        while 1:
+                            self.device.screenshot()
+                            if self.appear(SQUAD_CLOSE, offset=10):
+                                if not squad_checker.started():
+                                    squad_checker.start()
+                                if squad_checker.reached():
+                                    squad_selected = True
+                                    break
+                            else:
+                                squad_checker.clear()
+
+                    # 折叠队伍
+                    if squad_selected and self.appear_then_click(SQUAD_FOLD, offset=10, interval=1):
+                        continue
+
+                # 判断应使用 left 或 right
                 target_points = right
-                # 地面中没有队伍数字
-                if (
-                    not self.appear(
-                        globals()[f'SQUAD_{squad}_IN_SURFACE'], offset=(150, 100), threshold=0.98, static=False
-                    )
-                    and not squad_status[f'SQUAD_{squad}']
-                ):
-                    logger.info(f'Squad {squad} playing')
-                    # 选择队伍
-                    squad_selected = False
-                    while 1:
-                        self.device.screenshot()
-
-                        if squad_selected and self.appear(SQUAD_EXPAND, offset=10):
-                            logger.info(f'Squad {squad} selected')
-                            break
-
-                        # 打开队伍侧边栏
-                        if self.appear_then_click(SQUAD_EXPAND, offset=10, interval=1):
-                            continue
-
-                        # 点击队伍
-                        if self.appear_then_click(
-                            globals()[f'SQUAD_{squad}'], offset=10, click_offset=(20, 20), interval=1
-                        ):
-                            squad_checker = Timer(1, count=3)
-                            # 检查队伍是否选中
-                            while 1:
-                                self.device.screenshot()
-
-                                if self.appear(SQUAD_CLOSE, offset=10):
-                                    if not squad_checker.started():
-                                        squad_checker.start()
-                                    if squad_checker.reached():
-                                        squad_selected = True
-                                        break
-                                else:
-                                    squad_checker.clear()
-
-                        # 折叠队伍
-                        if squad_selected and self.appear_then_click(SQUAD_FOLD, offset=10, interval=1):
-                            continue
-
-                    # 点击目标点，根据队伍序号指定目标点
-                    # 先点击REGHT第一个点查看是否是小怪，是则换LEFT
+                self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
+                self.device.sleep(0.5)
+                # 点击到的是小怪会有小怪弹窗
+                if self.appear(ENEMY_CLOSE, offset=10):
+                    target_points = left
                     self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
-                    self.device.sleep(0.5)
-                    if self.appear(ENEMY_CLOSE, offset=10):
-                        target_points = left
-                        self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
 
-                    # 设置15秒冷却计时器
-                    squad_cooldowns[squad] = Timer(15)
-                    squad_cooldowns[squad].start()
-                    logger.info(f'Squad {squad} placed — cooling down for 15s')
-                else:
-                    # 队伍就位了
-                    squad_status[f'SQUAD_{squad}'] = True
-                    logger.info(f'Squad {squad} already on target')
+                # 冷却 15 秒
+                squad_cooldowns[squad] = Timer(15)
+                squad_cooldowns[squad].start()
+                logger.info(f'Squad {squad} placed — cooling down for 15s')
+
 
     def get_squad_target_points(self, skip_first_screenshot=True):
         """根据任务目标中心点获取队伍目标点"""
@@ -287,6 +338,7 @@ class SurfaceDaily(UI):
                     x = 710
 
                 centers.append((int(round(x, 4)), int(round(y, 4))))
+
             return centers
 
         # 所有目标点
