@@ -3,6 +3,7 @@ import math
 import cv2
 
 from module.base.timer import Timer
+from module.base.utils import point2str
 from module.logger import logger
 from module.surface.assets import *
 from module.ui.page import page_surface
@@ -48,15 +49,15 @@ class SurfaceDaily(UI):
         logger.hr('Start a mission', 2)
 
         # 打开任务面板
-        # self.open_mission_board()
-        # # 当前序号的任务已结束，进入下一个
-        # if not self.appear(globals()[f'MISSION_{index}_CONFIG'], offset=10):
-        #     return self.mission(index=index + 1)
+        self.open_mission_board()
+        # 当前序号的任务已结束，进入下一个
+        if not self.appear(globals()[f'MISSION_{index}_CONFIG'], offset=10):
+            return self.mission(index=index + 1)
 
         # # 修改任务区域
-        # self.change_mission_sector(index=index)
-        # # 开始任务，点击箭头
-        # self.start_mission(index=index)
+        self.change_mission_sector(index=index)
+        # 开始任务，点击箭头
+        self.start_mission(index=index)
         # 放置队伍
         self.squad_play()
         # 领取奖励
@@ -88,6 +89,9 @@ class SurfaceDaily(UI):
                 continue
 
             if self.handle_reward(interval=2):
+                continue
+
+            if self.appear_then_click(MISSION_REWARD_CONFIRM, offset=10, interval=1):
                 continue
 
             # 领取完成
@@ -145,34 +149,27 @@ class SurfaceDaily(UI):
 
         # 获取左右两组目标点
         left, right = self.get_squad_target_points()
+        logger.info(f'Found squad target point: {left}, {right}')
 
-        # -----------------------------------------
-        # NEW: 目标判定常量
-        # -----------------------------------------
-        SQUAD_POS_TOL = 30
-        SQUAD_POS_OFFSET = (-25, -30)
+        # 队伍判断范围
+        SQUAD_POS_TOL = 75
+        # 队伍坐标偏移
+        SQUAD_POS_OFFSET = (-70, 60)
+
         def is_squad_at_target(squad_point, target_points):
             """
             判断偏移后的队伍坐标是否落在 target_points 中任意一个目标点的容差范围内
             返回: (is_match, index)
             """
-
             ox = squad_point[0] + SQUAD_POS_OFFSET[0]
             oy = squad_point[1] + SQUAD_POS_OFFSET[1]
-
             for idx, (tx, ty) in enumerate(target_points):
-                # 新的容差范围判断（矩形）
-                if (
-                    tx - SQUAD_POS_TOL <= ox <= tx + SQUAD_POS_TOL and
-                    ty - SQUAD_POS_TOL <= oy <= ty + SQUAD_POS_TOL
-                ):
+                # 容差范围判断（矩形）
+                if tx - SQUAD_POS_TOL <= ox <= tx + SQUAD_POS_TOL and ty - SQUAD_POS_TOL <= oy <= ty + SQUAD_POS_TOL:
                     return True, idx
 
             return False, None
 
-        # -----------------------------------------
-        # 开始主循环
-        # -----------------------------------------
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -180,7 +177,7 @@ class SurfaceDaily(UI):
                 self.device.screenshot()
 
             # 任务完成
-            if played_all and (self.appear(MISSION_DONE_1, offset=10) or self.appear(MISSION_DONE_2, offset=100)):
+            if self.appear(MISSION_DONE_1, offset=10) or self.appear(MISSION_DONE_2, offset=100):
                 return
 
             # 是否所有队伍已就位
@@ -202,17 +199,16 @@ class SurfaceDaily(UI):
 
             # 遍历三个队伍
             for squad in [1, 2, 3]:
-
+                # 所有队伍放置完成
+                if played_all:
+                    continue
                 # 冷却检查
                 if squad_cooldowns[squad] and not squad_cooldowns[squad].reached():
                     continue
 
-                # NEW: 获取队伍所在位置
+                # 获取队伍所在位置
                 squad_location = self.appear_location(
-                    globals()[f'SQUAD_{squad}_IN_SURFACE'],
-                    offset=(150, 100),
-                    threshold=0.98,
-                    static=False
+                    globals()[f'SQUAD_{squad}_IN_SURFACE'], offset=(150, 100), threshold=0.98, static=False
                 )
 
                 if squad_location:
@@ -238,7 +234,7 @@ class SurfaceDaily(UI):
                 # 队伍未放置，需要执行放置逻辑
                 logger.info(f'Squad {squad} playing')
 
-                # 选择队伍 UI 流程（和你原来的一样）
+                # 选择队伍
                 squad_selected = False
                 while 1:
                     self.device.screenshot()
@@ -274,17 +270,24 @@ class SurfaceDaily(UI):
                 # 判断应使用 left 或 right
                 target_points = right
                 self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
+                logger.info(
+                    'Click %s @ %s'
+                    % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'RIGHT POINT {squad}')
+                )
                 self.device.sleep(0.5)
                 # 点击到的是小怪会有小怪弹窗
                 if self.appear(ENEMY_CLOSE, offset=10):
                     target_points = left
                     self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
+                    logger.info(
+                        'Click %s @ %s'
+                        % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'LEFT POINT {squad}')
+                    )
 
                 # 冷却 15 秒
                 squad_cooldowns[squad] = Timer(15)
                 squad_cooldowns[squad].start()
                 logger.info(f'Squad {squad} placed — cooling down for 15s')
-
 
     def get_squad_target_points(self, skip_first_screenshot=True):
         """根据任务目标中心点获取队伍目标点"""
@@ -304,13 +307,13 @@ class SurfaceDaily(UI):
                 if len(marks) == 1:
                     # 防御或者箱子的感叹号
                     mission_center_point = (marks[0].location[0], marks[0].location[1] + 65)
-                    logger.info(f'Found mission center point {mission_center_point[0]},{mission_center_point[1]}')
+                    logger.info(f'Found mission center point: ({mission_center_point[0]}, {mission_center_point[1]})')
                     break
                 elif len(marks) == 3:
                     # 三个叹号即三个小怪，根据叹号坐标获取中心点
                     center = self.calc_hex_center_from_marks(marks)
                     mission_center_point = (center[0], center[1] + 65)
-                    logger.info(f'Found mission center point {mission_center_point[0]},{mission_center_point[1]}')
+                    logger.info(f'Found mission center point: ({mission_center_point[0]}, {mission_center_point[1]})')
                     break
                 else:
                     raise IsMissionCheckFailed
@@ -338,12 +341,19 @@ class SurfaceDaily(UI):
                     x = 710
 
                 centers.append((int(round(x, 4)), int(round(y, 4))))
-
             return centers
 
         # 所有目标点
         points = hex_neighbors(mission_center_point[0], mission_center_point[1])
-        return [points[0], points[2], points[4]], [points[1], points[3], points[5]]
+        return [
+            (points[0][0] - 15, points[0][1]),
+            (points[2][0] + 30, points[2][1]),
+            (points[4][0] - 15, points[4][1]),
+        ], [
+            (points[1][0] + 15, points[1][1]),
+            (points[3][0] + 15, points[3][1]),
+            (points[5][0] - 30, points[5][1]),
+        ]
 
     def change_mission_sector(self, skip_first_screenshot=True, index=1):
         logger.info('Change mission sector')
