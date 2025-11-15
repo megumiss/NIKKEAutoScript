@@ -1033,6 +1033,16 @@
       "help": "Append uncommented entries below to system Hosts file (Windows only). International servers enabled by default. Uncomment desired servers. It's recommended to only enable hosts for your server and adjust as needed."
     }
   },
+  "SurfaceDaily": {
+    "_info": {
+      "name": "Setting",
+      "help": "You need to unlock all mission locations in Area 1, and squads 1, 2, and 3 must be idle. For first-time use, it is recommended to move squads 1, 2, and 3 back to the base."
+    },
+    "Heal": {
+      "name": "Auto Heal",
+      "help": "Not done yet"
+    }
+  },
   "Storage": {
     "_info": {
       "name": "Task Status",

@@ -76,6 +76,19 @@ class SurfaceDaily(UI):
             else:
                 self.device.screenshot()
 
+            # 领取完成
+            if self.appear(SURFACE_MISSION_CHECK, offset=10) and (
+                self.appear(globals()[f'MISSION_{index}_DONE'], offset=10)
+                or self.appear(globals()[f'MISSION_{index}_ACCEPT'], offset=10)
+            ):
+                if not board_checker.started():
+                    board_checker.start()
+                if board_checker.reached():
+                    logger.info(f'Mission reward {index} done')
+                    break
+            else:
+                board_checker.clear()
+
             # 任务完成按钮
             if self.appear(SURFACE_MISSION_CHECK, offset=10) and self.appear_then_click(
                 globals()[f'MISSION_{index}_REWARD'], offset=10, interval=1
@@ -93,19 +106,6 @@ class SurfaceDaily(UI):
 
             if self.appear_then_click(MISSION_REWARD_CONFIRM, offset=10, interval=1):
                 continue
-
-            # 领取完成
-            if self.appear(SURFACE_MISSION_CHECK, offset=10) and (
-                self.appear(globals()[f'MISSION_{index}_DONE'], offset=10)
-                or self.appear(globals()[f'MISSION_{index}_ACCEPT'], offset=10)
-            ):
-                if not board_checker.started():
-                    board_checker.start()
-                if board_checker.reached():
-                    logger.info(f'Mission reward {index} done')
-                    break
-            else:
-                board_checker.clear()
 
         self.close_mission_board()
 
@@ -284,10 +284,10 @@ class SurfaceDaily(UI):
                         % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'LEFT POINT {squad}')
                     )
 
-                # 冷却 15 秒
-                squad_cooldowns[squad] = Timer(15)
+                # 冷却 30 秒
+                squad_cooldowns[squad] = Timer(30)
                 squad_cooldowns[squad].start()
-                logger.info(f'Squad {squad} placed — cooling down for 15s')
+                logger.info(f'Squad {squad} placed — cooling down for 30s')
 
     def get_squad_target_points(self, skip_first_screenshot=True):
         """根据任务目标中心点获取队伍目标点"""
@@ -451,6 +451,10 @@ class SurfaceDaily(UI):
             if self.appear(SURFACE_MISSION_CHECK, offset=10) and self.appear_then_click(
                 SURFACE_MISSION_CLOSE, offset=(30, 30), interval=1
             ):
+                continue
+
+            # 关闭下方的队伍选择框
+            if self.appear_then_click(SQUAD_CLOSE, offset=(30, 30), interval=1):
                 continue
 
             if not self.appear(SURFACE_MISSION_CHECK, offset=10):

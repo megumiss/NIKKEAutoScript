@@ -551,6 +551,9 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
+    "SurfaceDaily": {
+      "Heal": true
+    },
     "Storage": {
       "Storage": {}
     }

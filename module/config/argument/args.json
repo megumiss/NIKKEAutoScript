@@ -2013,6 +2013,13 @@
         "display": "hide"
       }
     },
+    "SurfaceDaily": {
+      "Heal": {
+        "type": "checkbox",
+        "value": true,
+        "display": "disabled"
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

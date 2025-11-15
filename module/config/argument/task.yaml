@@ -142,6 +142,7 @@ Surface:
   tasks:
     SurfaceDaily:
       - Scheduler
+      - SurfaceDaily
 
 # ==================== Blablalink ====================
 
