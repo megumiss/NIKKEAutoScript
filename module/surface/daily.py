@@ -1,7 +1,5 @@
 import math
 
-import cv2
-
 from module.base.timer import Timer
 from module.base.utils import point2str
 from module.logger import logger
@@ -34,7 +32,7 @@ class SurfaceDaily(UI):
     def _run(self):
         try:
             # 检查队伍
-            self.check_squad()
+            # self.check_squad()
             # 开始任务
             self.mission()
         except NoOpportunityRemain:
@@ -147,25 +145,34 @@ class SurfaceDaily(UI):
         # 每个队伍的放置冷却计时器
         squad_cooldowns = {1: None, 2: None, 3: None}
 
-        # 获取左右两组目标点
-        left, right = self.get_squad_target_points()
-        logger.info(f'Found squad target point: {left}, {right}')
+        # 获取左右两组目标点，默认选择右
+        left, right, marks = self.get_squad_target_points()
+        logger.info(f'Found squad target point, [LEFT]: {left}, [RIGHT]: {right}')
+        target_points = right
+        # 有三个感叹号，判断是LEFT还是RIGHT，队伍目标点取相反
+        if marks and len(marks) == 3 and self.classify_triangle(marks) == 'RIGHT':
+            logger.info('Change squad target point to LEFT')
+            target_points = left
 
-        # 队伍判断范围
+        # 队伍数字图标的判断范围
         SQUAD_POS_TOL = 75
-        # 队伍坐标偏移
+        # 队伍数字图标的坐标偏移
         SQUAD_POS_OFFSET = (-70, 60)
+        # 队伍小箭头的判断范围
+        SQUAD_ARROW_POS_TOL = 50
+        # 队伍小箭头的坐标偏移
+        SQUAD_ARROW_POS_OFFSET = (-110, 0)
 
-        def is_squad_at_target(squad_point, target_points):
+        def is_squad_at_target(squad_point, target_points, pos_offset, pos_tol):
             """
             判断偏移后的队伍坐标是否落在 target_points 中任意一个目标点的容差范围内
             返回: (is_match, index)
             """
-            ox = squad_point[0] + SQUAD_POS_OFFSET[0]
-            oy = squad_point[1] + SQUAD_POS_OFFSET[1]
+            ox = squad_point[0] + pos_offset[0]
+            oy = squad_point[1] + pos_offset[1]
             for idx, (tx, ty) in enumerate(target_points):
                 # 容差范围判断（矩形）
-                if tx - SQUAD_POS_TOL <= ox <= tx + SQUAD_POS_TOL and ty - SQUAD_POS_TOL <= oy <= ty + SQUAD_POS_TOL:
+                if tx - pos_tol <= ox <= tx + pos_tol and ty - pos_tol <= oy <= ty + pos_tol:
                     return True, idx
 
             return False, None
@@ -210,18 +217,11 @@ class SurfaceDaily(UI):
                 squad_location = self.appear_location(
                     globals()[f'SQUAD_{squad}_IN_SURFACE'], offset=(150, 100), threshold=0.98, static=False
                 )
-
                 if squad_location:
                     # 队伍已在画面中，检查坐标是否接近目标点
-                    # 使用当前 target_points 分组
-                    target_points_group = right  # 默认使用 right
-                    target_match, idx = is_squad_at_target(squad_location, target_points_group)
-
-                    # 若不匹配则尝试 left
-                    if not target_match:
-                        target_points_group = left
-                        target_match, idx = is_squad_at_target(squad_location, target_points_group)
-
+                    target_match, idx = is_squad_at_target(
+                        squad_location, target_points, SQUAD_POS_OFFSET, SQUAD_POS_TOL
+                    )
                     if target_match:
                         # 坐标匹配成功
                         squad_status[f'SQUAD_{squad}'] = True
@@ -239,6 +239,17 @@ class SurfaceDaily(UI):
                 while 1:
                     self.device.screenshot()
 
+                    # 放置实在太耗时，任务可能已经完成
+                    if self.appear(MISSION_DONE_1, offset=10) or self.appear(MISSION_DONE_2, offset=100):
+                        while 1:
+                            self.device.screenshot()
+                            # 折叠队伍
+                            if self.appear_then_click(SQUAD_FOLD, offset=10, interval=1):
+                                continue
+                            if self.appear(SQUAD_EXPAND, offset=10):
+                                break
+                        return
+
                     if squad_selected and self.appear(SQUAD_EXPAND, offset=10):
                         logger.info(f'Squad {squad} selected')
                         break
@@ -251,38 +262,46 @@ class SurfaceDaily(UI):
                     if self.appear_then_click(
                         globals()[f'SQUAD_{squad}'], offset=10, click_offset=(20, 20), interval=1
                     ):
-                        squad_checker = Timer(1, count=3)
                         while 1:
                             self.device.screenshot()
-                            if self.appear(SQUAD_CLOSE, offset=10):
-                                if not squad_checker.started():
-                                    squad_checker.start()
-                                if squad_checker.reached():
-                                    squad_selected = True
-                                    break
-                            else:
-                                squad_checker.clear()
-
+                            # 下方出现队伍弹窗，并且出现队伍上方的箭头
+                            if self.appear(SQUAD_CLOSE, offset=10) and self.appear(
+                                SQUAD_POINTING_ARROW, offset=10, static=False
+                            ):
+                                squad_selected = True
+                                break
                     # 折叠队伍
                     if squad_selected and self.appear_then_click(SQUAD_FOLD, offset=10, interval=1):
                         continue
 
-                # 判断应使用 left 或 right
-                target_points = right
+                # 箭头坐标
+                arrow_location = self.appear_location(SQUAD_POINTING_ARROW, offset=10, static=False)
+                # 判断箭头坐标是否在目标点附近
+                if arrow_location:
+                    target_match, idx = is_squad_at_target(
+                        arrow_location, target_points, SQUAD_ARROW_POS_OFFSET, SQUAD_ARROW_POS_TOL
+                    )
+                    if target_match:
+                        squad_status[f'SQUAD_{squad}'] = True
+                        logger.info(f'Squad {squad} already at target point #{idx + 1}')
+                        continue
+                    else:
+                        logger.info(f'Squad {squad} visible but not at target — needs placing')
+
                 self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
                 logger.info(
                     'Click %s @ %s'
                     % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'RIGHT POINT {squad}')
                 )
-                self.device.sleep(0.5)
+                # self.device.sleep(0.5)
                 # 点击到的是小怪会有小怪弹窗
-                if self.appear(ENEMY_CLOSE, offset=10):
-                    target_points = left
-                    self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
-                    logger.info(
-                        'Click %s @ %s'
-                        % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'LEFT POINT {squad}')
-                    )
+                # if self.appear(ENEMY_CLOSE, offset=10):
+                #     target_points = left
+                #     self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
+                #     logger.info(
+                #         'Click %s @ %s'
+                #         % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'LEFT POINT {squad}')
+                #     )
 
                 # 冷却 30 秒
                 squad_cooldowns[squad] = Timer(30)
@@ -292,6 +311,7 @@ class SurfaceDaily(UI):
     def get_squad_target_points(self, skip_first_screenshot=True):
         """根据任务目标中心点获取队伍目标点"""
         logger.info('Finding mission center point')
+        marks = None
 
         mission_center_point = (350, 580)
         mission_center_checker = Timer(5, count=5)
@@ -345,15 +365,19 @@ class SurfaceDaily(UI):
 
         # 所有目标点
         points = hex_neighbors(mission_center_point[0], mission_center_point[1])
-        return [
-            (points[0][0] - 15, points[0][1]),
-            (points[2][0] + 30, points[2][1]),
-            (points[4][0] - 15, points[4][1]),
-        ], [
-            (points[1][0] + 15, points[1][1]),
-            (points[3][0] + 15, points[3][1]),
-            (points[5][0] - 30, points[5][1]),
-        ]
+        return (
+            [
+                (points[0][0] - 15, points[0][1]),
+                (points[2][0] + 30, points[2][1]),
+                (points[4][0] - 15, points[4][1]),
+            ],
+            [
+                (points[1][0] + 15, points[1][1]),
+                (points[3][0] + 15, points[3][1]),
+                (points[5][0] - 30, points[5][1]),
+            ],
+            marks,
+        )
 
     def change_mission_sector(self, skip_first_screenshot=True, index=1):
         logger.info('Change mission sector')
@@ -518,4 +542,5 @@ class SurfaceDaily(UI):
     def run(self):
         self.ui_ensure(page_surface)
         self._run()
+        self.close_mission_board()
         self.config.task_delay(server_update=True)
