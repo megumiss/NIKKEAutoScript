@@ -2014,6 +2014,10 @@
       }
     },
     "SurfaceDaily": {
+      "AutoPlace": {
+        "type": "checkbox",
+        "value": true
+      },
       "Heal": {
         "type": "checkbox",
         "value": true,
