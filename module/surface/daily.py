@@ -174,6 +174,31 @@ class SurfaceDaily(UI):
                 # 容差范围判断（矩形）
                 if tx - pos_tol <= ox <= tx + pos_tol and ty - pos_tol <= oy <= ty + pos_tol:
                     return True, idx
+            return False, None
+
+        # 数字图标，箭头检测
+        def detect_squad_position(squad):
+            """
+            检查队伍数字图标 和 队伍箭头 是否在目标点附近
+            返回: (matched: bool, index: int | None)
+            """
+            # 1) 数字图标位置
+            squad_loc = self.appear_location(
+                globals()[f'SQUAD_{squad}_IN_SURFACE'], offset=(150, 100), threshold=0.98, static=False
+            )
+            if squad_loc:
+                match, idx = is_squad_at_target(squad_loc, target_points, SQUAD_POS_OFFSET, SQUAD_POS_TOL)
+                if match:
+                    logger.info(f'[Check] Squad {squad} number icon at target #{idx + 1}')
+                    return True, idx
+
+            # 2) 箭头位置
+            arrow_loc = self.appear_location(SQUAD_POINTING_ARROW, offset=10, static=False)
+            if arrow_loc:
+                match, idx = is_squad_at_target(arrow_loc, target_points, SQUAD_ARROW_POS_OFFSET, SQUAD_ARROW_POS_TOL)
+                if match:
+                    logger.info(f'[Check] Squad {squad} arrow icon at target #{idx + 1}')
+                    return True, idx
 
             return False, None
 
@@ -214,30 +239,34 @@ class SurfaceDaily(UI):
                     continue
 
                 # 获取队伍所在位置
-                squad_location = self.appear_location(
-                    globals()[f'SQUAD_{squad}_IN_SURFACE'], offset=(150, 100), threshold=0.98, static=False
-                )
-                if squad_location:
-                    # 队伍已在画面中，检查坐标是否接近目标点
-                    target_match, idx = is_squad_at_target(
-                        squad_location, target_points, SQUAD_POS_OFFSET, SQUAD_POS_TOL
-                    )
-                    if target_match:
-                        # 坐标匹配成功
-                        squad_status[f'SQUAD_{squad}'] = True
-                        logger.info(f'Squad {squad} already at target point #{idx + 1}')
-                        continue
-                    else:
-                        # 在画面中但不在目标点范围内，仍视为未放置，需要继续放置逻辑
-                        logger.info(f'Squad {squad} visible but not at target — needs placing')
+                matched, idx = detect_squad_position(squad)
+                if matched:
+                    squad_status[f'SQUAD_{squad}'] = True
+                    logger.info(f'Squad {squad} already at target point #{idx + 1}')
+                    continue
 
                 # 队伍未放置，需要执行放置逻辑
                 logger.info(f'Squad {squad} playing')
+
+                # 先取消队伍选择
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(SQUAD_CLOSE, offset=10):
+                        break
+                    if self.appear_then_click(SQUAD_CLOSE, offset=10, interval=1):
+                        continue
 
                 # 选择队伍
                 squad_selected = False
                 while 1:
                     self.device.screenshot()
+
+                    # 再次检测队伍是否就位
+                    matched, idx = detect_squad_position(squad)
+                    if matched:
+                        squad_status[f'SQUAD_{squad}'] = True
+                        logger.info(f'Squad {squad} reached target during selection — skip placement')
+                        break
 
                     # 放置实在太耗时，任务可能已经完成
                     if self.appear(MISSION_DONE_1, offset=10) or self.appear(MISSION_DONE_2, offset=100):
@@ -258,40 +287,28 @@ class SurfaceDaily(UI):
                     if self.appear_then_click(SQUAD_EXPAND, offset=10, interval=1):
                         continue
 
-                    # 点击队伍
-                    if self.appear_then_click(
-                        globals()[f'SQUAD_{squad}'], offset=10, click_offset=(20, 20), interval=1
-                    ):
-                        while 1:
-                            self.device.screenshot()
-                            # 下方出现队伍弹窗，并且出现队伍上方的箭头
-                            if self.appear(SQUAD_CLOSE, offset=10) and self.appear(
-                                SQUAD_POINTING_ARROW, offset=10, static=False
-                            ):
-                                squad_selected = True
-                                break
                     # 折叠队伍
                     if squad_selected and self.appear_then_click(SQUAD_FOLD, offset=10, interval=1):
                         continue
 
-                # 箭头坐标
-                arrow_location = self.appear_location(SQUAD_POINTING_ARROW, offset=10, static=False)
-                # 判断箭头坐标是否在目标点附近
-                if arrow_location:
-                    target_match, idx = is_squad_at_target(
-                        arrow_location, target_points, SQUAD_ARROW_POS_OFFSET, SQUAD_ARROW_POS_TOL
-                    )
-                    if target_match:
-                        squad_status[f'SQUAD_{squad}'] = True
-                        logger.info(f'Squad {squad} already at target point #{idx + 1}')
+                    # 下方出现队伍弹窗，并且出现队伍上方的箭头
+                    if self.appear(SQUAD_CLOSE, offset=10) or self.appear(
+                        SQUAD_POINTING_ARROW, offset=10, static=False
+                    ):
+                        squad_selected = True
                         continue
-                    else:
-                        logger.info(f'Squad {squad} visible but not at target — needs placing')
 
+                    # 点击队伍
+                    if self.appear_then_click(
+                        globals()[f'SQUAD_{squad}'], offset=10, click_offset=(20, 20), interval=1
+                    ):
+                        continue
+
+                # 点击目标点
                 self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
                 logger.info(
                     'Click %s @ %s'
-                    % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'RIGHT POINT {squad}')
+                    % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'SQUAD POINT {squad}')
                 )
                 # self.device.sleep(0.5)
                 # 点击到的是小怪会有小怪弹窗
