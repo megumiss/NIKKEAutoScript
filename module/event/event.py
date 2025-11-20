@@ -78,9 +78,13 @@ class Event(UI):
     def STORY_STAGE_11(self, story):
         stages = {
             'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_11,
+            'story_1_normal_clear': self.event_assets.STORY_1_NORMAL_STAGE_11_CLEAR,
             'story_1_hard': self.event_assets.STORY_1_HARD_STAGE_11,
+            'story_1_hard_clear': self.event_assets.STORY_1_HARD_STAGE_11_CLEAR,
             'story_2_normal': self.event_assets.STORY_2_NORMAL_STAGE_11,
+            'story_2_normal_clear': self.event_assets.STORY_2_NORMAL_STAGE_11_CLEAR,
             'story_2_hard': self.event_assets.STORY_2_HARD_STAGE_11,
+            'story_2_hard_clear': self.event_assets.STORY_2_HARD_STAGE_11_CLEAR,
         }
         return stages[story]
 
@@ -766,7 +770,9 @@ class Event(UI):
 
     def find_and_fight_stage(self, open_story):
         click_timer = Timer(0.3)
-        if self.appear(self.STORY_STAGE_11(open_story), offset=10, threshold=0.9, static=False):
+        if self.appear(self.STORY_STAGE_11(open_story), offset=30, threshold=0.9) and self.appear(
+            self.STORY_STAGE_11(f'{open_story}_clear'), offset=30, threshold=0.9
+        ):
             max_clicks = 0
             while 1:
                 self.device.screenshot()
@@ -784,8 +790,10 @@ class Event(UI):
                     break
 
                 # 关卡检查
-                if click_timer.reached() and self.appear_then_click(
-                    self.STORY_STAGE_11(open_story), offset=10, threshold=0.9, interval=1, static=False
+                if (
+                    click_timer.reached()
+                    and self.appear(self.STORY_STAGE_11(open_story), offset=30, threshold=0.9)
+                    and self.appear_then_click(self.STORY_STAGE_11(f'{open_story}_clear'), offset=30, threshold=0.9)
                 ):
                     self.device.sleep(0.5)
                     click_timer.reset()

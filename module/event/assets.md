@@ -95,7 +95,8 @@
 | **STORY_1_CHECK** | 活动关卡入口 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_CHECK.png" width="200"> |
 | **STORY_1_NORMAL** | 普通难度开启 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_NORMAL.png" width="200"> |
 | **STORY_1_HARD_LOCKED** | 困难难度锁定 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_HARD_LOCKED.png" width="200"> |
-| **STORY_1_NORMAL_STAGE_11** | 普通11关，需要打完11以后再截图 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_NORMAL_STAGE_11.png" width="200"> |
+| **STORY_1_NORMAL_STAGE_11** | 普通11关序号，需要打完11以后再截图 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_NORMAL_STAGE_11.png" width="200"> |
+| **STORY_1_NORMAL_STAGE_11_CLEAR** | 普通11关clear，需要打完11以后再截图 | ✅ | <img src="..\..\assets\event\event_20251120\STORY_1_NORMAL_STAGE_11_CLEAR.png" width="200"> |
 | **REWARD** | 从活动前往奖励按钮 | ✅ | <img src="..\..\assets\event\event_20250703s\REWARD.png" width="200"> |
 | **REWARD_CHECK** | 奖励页面检查 | ✅ | <img src="..\..\assets\event\event_20250703s\REWARD_CHECK.png" width="200"> |
 | **REWARD_RECEIVE** | 奖励领取按钮 | ✅ | <img src="..\..\assets\event\event_20250703s\REWARD_RECEIVE.png" width="200"> |
@@ -112,13 +113,16 @@
 | **STORY_1_HARD** | 困难难度开启 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_HARD.png" width="200"> |
 | **STORY_1_HARD_UNLOCK** | 困难难度解锁弹窗，应该不需要去判断 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_HARD_UNLOCK.png" width="200"> |
 | **STORY_1_HARD_HIDDEN** | 困难难度开启未选中，用于切换页面 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_HARD_HIDDEN.png" width="200"> |
-| **STORY_1_HARD_STAGE_11** | 困难难度11关 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_HARD_STAGE_11.png" width="200"> |
+| **STORY_1_HARD_STAGE_11** | 困难难度11关序号 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_HARD_STAGE_11.png" width="200"> |
+| **STORY_1_HARD_STAGE_11_CLEAR** | 困难难度11关clear | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_HARD_STAGE_11_CLEAR.png" width="200"> |
 
 ## 占位无作用
 | 图片 | 描述 | 使用状态 | 预览 |
 |--------|------|----------|------|
-| **STORY_2_NORMAL_STAGE_11** | 故事2普通11关 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_2_NORMAL_STAGE_11.png" width="200"> |
-| **STORY_2_HARD_STAGE_11** | 故事2困难11关 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_2_HARD_STAGE_11.png" width="200"> |
+| **STORY_2_NORMAL_STAGE_11** | 故事2普通11关序号 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_2_NORMAL_STAGE_11.png" width="200"> |
+| **STORY_2_NORMAL_STAGE_11_CLEAR** | 故事2普通11关clear | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_2_NORMAL_STAGE_11_CLEAR.png" width="200"> |
+| **STORY_2_HARD_STAGE_11** | 故事2困难11关序号 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_2_HARD_STAGE_11.png" width="200"> |
+| **STORY_2_HARD_STAGE_11_CLEAR** | 故事2困难11关clear | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_2_HARD_STAGE_11_CLEAR.png" width="200"> |
 
 
 # 小游戏
