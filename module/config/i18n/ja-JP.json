@@ -758,24 +758,64 @@
       "help": "記入しない場合、購入しません。記入形式：'Gem_×320 > Welcome_Gift_Core_Dust_×30'（大なり記号で区切る）。デフォルトではダイヤのみを交換します：\nGem_×320: ジュエル ×320\nWelcome_Gift_Core_Dust_×30: コマンダーウェルカムギフト：コアダスト ×30\nGem_×30: ジュエル ×30\nSkill_Manual_I_×5: スキルマニュアル I ×5\nUltra_Boost_Module_×5: モジュールアドバンスブースター ×5\nCode_Manual_Selection_Box_×5: コードマニュアルセレクトボックス ×5\nGem_×60: ジュエル ×60\nMid-Quality_Mold_×3: 中品質モールド ×3\nCredit_Case_(1H)_x9: クレジットケース(1H) x9\nCore_Dust_Case_(1H)_×3: コアダストケース (1H) ×3\nGem_×120: ジュエル ×120\nMid-Quality_Mold_×8: 中品質モールド ×8\nBattle_Data_Set_Case_(1H)_×6: バトルデータセットケース (1H) ×6\nCore_Dust_Case_(1H)_×6: コアダストケース (1H) ×6\nSkill_Manual_I_×30: スキルマニュアル I ×30\nUltra_Boost_Module_×30: モジュールアドバンスブースター ×30\nCode_Manual_Selection_Box_×30: コードマニュアルセレクトボックス ×30\n"
     }
   },
+  "EventInfo": {
+    "_info": {
+      "name": "EventInfo._info.name",
+      "help": "EventInfo._info.help"
+    },
+    "Event": {
+      "name": "EventInfo.Event.name",
+      "help": "EventInfo.Event.help",
+      "event_20251120": "event_20251120",
+      "event_20251030": "event_20251030",
+      "event_20251016": "event_20251016",
+      "event_20250924": "event_20250924",
+      "event_20250904": "event_20250904",
+      "event_20250807": "event_20250807",
+      "event_20250716": "event_20250716",
+      "event_20250703s": "event_20250703s",
+      "event_20250703l": "event_20250703l",
+      "event_20250612": "event_20250612"
+    },
+    "StoryPart": {
+      "name": "EventInfo.StoryPart.name",
+      "help": "EventInfo.StoryPart.help",
+      "Story_1": "Story_1",
+      "Story_2": "Story_2"
+    },
+    "StoryDifficulty": {
+      "name": "EventInfo.StoryDifficulty.name",
+      "help": "EventInfo.StoryDifficulty.help",
+      "Normal": "Normal",
+      "Hard": "Hard"
+    }
+  },
+  "StoryStage": {
+    "_info": {
+      "name": "StoryStage._info.name",
+      "help": "StoryStage._info.help"
+    },
+    "AutoPush": {
+      "name": "StoryStage.AutoPush.name",
+      "help": "StoryStage.AutoPush.help"
+    },
+    "AutoFormation": {
+      "name": "StoryStage.AutoFormation.name",
+      "help": "StoryStage.AutoFormation.help"
+    },
+    "AutoTicketPurchase": {
+      "name": "StoryStage.AutoTicketPurchase.name",
+      "help": "StoryStage.AutoTicketPurchase.help"
+    },
+    "Sweep": {
+      "name": "StoryStage.Sweep.name",
+      "help": "StoryStage.Sweep.help"
+    }
+  },
   "Event": {
     "_info": {
       "name": "イベント設定",
       "help": ""
-    },
-    "Event": {
-      "name": "現在のイベント",
-      "help": "",
-      "event_20251120": "BLANK Ticket",
-      "event_20251030": "GODDESS FALL",
-      "event_20251016": "GO! NINJA THIEF!",
-      "event_20250924": "REBORN EVIL",
-      "event_20250904": "COINS IN RUSH",
-      "event_20250807": "ABSOLUTE",
-      "event_20250716": "BOOM! THE GHOST!",
-      "event_20250703s": "OVER THE HORIZON",
-      "event_20250703l": "OuteR: Automata",
-      "event_20250612": "Memories Teller"
     },
     "LoginStamp": {
       "name": "ログインスタンプ",
@@ -784,22 +824,6 @@
     "Challenge": {
       "name": "チャレンジ",
       "help": "事前にチームを設定する必要があります"
-    },
-    "Story": {
-      "name": "ステージ掃討",
-      "help": "最後から2番目のステージでのクイックバトル。現在開いているステージの最後から2番目のステージをクリアした後でなければ正常に使用できません。自動プッシュ機能はツールのセミオートクリックを使用してください。自身のステージ進行度が通常のイベントステージ進行度についていけることを保証する必要があります"
-    },
-    "StoryPart": {
-      "name": "ステージ選択",
-      "help": "",
-      "Story_1": "ストーリー1",
-      "Story_2": "ストーリー2"
-    },
-    "StoryDifficulty": {
-      "name": "ステージ難易度",
-      "help": "",
-      "Normal": "普通",
-      "Hard": "困難"
     },
     "Coop": {
       "name": "共同作戦",

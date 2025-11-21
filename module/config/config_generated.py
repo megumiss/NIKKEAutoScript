@@ -139,13 +139,20 @@ class GeneratedConfig:
     # Group `BlaExchange`
     BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
 
+    # Group `EventInfo`
+    EventInfo_Event = ''  # event_20251120, event_20251030, event_20251016, event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
+    EventInfo_StoryPart = 'Story_1'  # Story_1, Story_2
+    EventInfo_StoryDifficulty = 'Normal'  # Normal, Hard
+
+    # Group `StoryStage`
+    StoryStage_AutoPush = False
+    StoryStage_AutoFormation = False
+    StoryStage_AutoTicketPurchase = False
+    StoryStage_Sweep = True
+
     # Group `Event`
-    Event_Event = ''  # event_20251120, event_20251030, event_20251016, event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
     Event_LoginStamp = True
     Event_Challenge = True
-    Event_Story = False
-    Event_StoryPart = 'Story_1'  # Story_1, Story_2
-    Event_StoryDifficulty = 'Normal'  # Normal, Hard
     Event_Coop = False
     Event_Shop = False
     Event_ShopDelayList = 'TITLE'

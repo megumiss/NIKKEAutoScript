@@ -758,9 +758,9 @@
       "help": "不填写则不购买，填写格式例如: 'Gem_×320 > Welcome_Gift_Core_Dust_×30'，用一个大于号分开，默认只换钻石：\nGem_×320: 珠寶 ×320\nWelcome_Gift_Core_Dust_×30: 指揮官見面禮：芯塵 ×30\nGem_×30: 珠寶 ×30\nSkill_Manual_I_×5: 技能手冊 I ×5\nUltra_Boost_Module_×5: 模組高級推進器 ×5\nCode_Manual_Selection_Box_×5: 代碼手冊選擇寶箱 ×5\nGem_×60: 珠寶 ×60\nMid-Quality_Mold_×3: 中品質鑄模 ×3\nCredit_Case_(1H)_x9: 信用點盒(1H) x9\nCore_Dust_Case_(1H)_×3: 芯塵盒 (1H) ×3\nGem_×120: 珠寶 ×120\nMid-Quality_Mold_×8: 中品質鑄模 ×8\nBattle_Data_Set_Case_(1H)_×6: 戰鬥數據輯盒 (1H) ×6\nCore_Dust_Case_(1H)_×6: 芯塵盒 (1H) ×6\nSkill_Manual_I_×30: 技能手冊 I ×30\nUltra_Boost_Module_×30: 模組高級推進器 ×30\nCode_Manual_Selection_Box_×30: 代碼手冊選擇寶箱 ×30\n"
     }
   },
-  "Event": {
+  "EventInfo": {
     "_info": {
-      "name": "活动设置",
+      "name": "活动信息",
       "help": ""
     },
     "Event": {
@@ -777,6 +777,46 @@
       "event_20250703l": "OuteR: Automata",
       "event_20250612": "Memories Teller"
     },
+    "StoryPart": {
+      "name": "活动章节",
+      "help": "",
+      "Story_1": "Story I",
+      "Story_2": "Story II"
+    },
+    "StoryDifficulty": {
+      "name": "章节难度",
+      "help": "",
+      "Normal": "Normal",
+      "Hard": "Hard"
+    }
+  },
+  "StoryStage": {
+    "_info": {
+      "name": "活动关卡",
+      "help": ""
+    },
+    "AutoPush": {
+      "name": "自动推图",
+      "help": ""
+    },
+    "AutoFormation": {
+      "name": "自动组队",
+      "help": ""
+    },
+    "AutoTicketPurchase": {
+      "name": "自动买票",
+      "help": ""
+    },
+    "Sweep": {
+      "name": "关卡扫荡",
+      "help": "倒数第二关快速战斗，需要打完当前开启关卡倒数第二关后才能正常使用，自动推图请使用工具中的半自动点击；必须保证自身关卡进度能够跟随正常的活动关卡进度"
+    }
+  },
+  "Event": {
+    "_info": {
+      "name": "活动设置",
+      "help": ""
+    },
     "LoginStamp": {
       "name": "签到印章",
       "help": ""
@@ -784,22 +824,6 @@
     "Challenge": {
       "name": "挑战",
       "help": "需要提前设置好队伍"
-    },
-    "Story": {
-      "name": "关卡扫荡",
-      "help": "倒数第二关快速战斗，需要打完当前开启关卡倒数第二关后才能正常使用，自动推图请使用工具中的半自动点击；必须保证自身关卡进度能够跟随正常的活动关卡进度"
-    },
-    "StoryPart": {
-      "name": "关卡选择",
-      "help": "",
-      "Story_1": "剧情1",
-      "Story_2": "剧情2"
-    },
-    "StoryDifficulty": {
-      "name": "关卡难度",
-      "help": "",
-      "Normal": "普通",
-      "Hard": "困难"
     },
     "Coop": {
       "name": "协同作战",

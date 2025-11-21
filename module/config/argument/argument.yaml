@@ -207,7 +207,7 @@ BlaExchange:
   Priority:
     value: 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
     type: textarea
-Event:
+EventInfo:
   Event:
     value: ''
     option: [
@@ -223,9 +223,6 @@ Event:
       'event_20250612'
     ]
     display: disabled
-  LoginStamp: true
-  Challenge: true
-  Story: false
   StoryPart:
     value: 'Story_1'
     option: [
@@ -240,6 +237,14 @@ Event:
       'Hard'
     ]
     display: disabled
+StoryStage:
+  AutoPush: false
+  AutoFormation: false
+  AutoTicketPurchase: false
+  Sweep: true
+Event:
+  LoginStamp: true
+  Challenge: true
   Coop: false
   Shop: false
   ShopDelayList:
