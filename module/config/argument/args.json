@@ -1447,6 +1447,19 @@
         "display": "hide"
       }
     },
+    "RookieArena": {
+      "Times": {
+        "type": "select",
+        "value": 5,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
     "OpponentSelection": {
       "Enable": {
         "type": "checkbox",
@@ -1509,6 +1522,16 @@
         "type": "input",
         "value": "04:00",
         "display": "hide"
+      }
+    },
+    "SpecialArena": {
+      "Times": {
+        "type": "select",
+        "value": 2,
+        "option": [
+          1,
+          2
+        ]
       }
     },
     "OpponentSelection": {

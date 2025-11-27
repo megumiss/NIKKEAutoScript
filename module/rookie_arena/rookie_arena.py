@@ -24,6 +24,8 @@ class RookieArenaIsUnavailable(Exception):
 
 
 class RookieArena(UI, ArenaBase):
+    
+    
     @cached_property
     def button(self):
         return [(590, 730), (590, 900), (590, 1100)]
@@ -198,6 +200,12 @@ class RookieArena(UI, ArenaBase):
                     break
             else:
                 confirm_timer.clear()
+                
+        # 战斗次数检查
+        if not  self.config.RookieArena_Times and self.config.RookieArena_Times!=5:
+            
+            logger.info('There are no free opportunities')
+            return
 
         if self.free_opportunity_remain:
             self.start_competition()

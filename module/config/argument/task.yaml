@@ -99,9 +99,11 @@ Ark:
       - InterceptionTeam
     RookieArena:
       - Scheduler
+      - RookieArena
       - OpponentSelection
     SpecialArena:
       - Scheduler
+      - SpecialArena
       - OpponentSelection
     ChampionArena:
       - Scheduler
