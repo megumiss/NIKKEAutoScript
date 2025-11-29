@@ -1,101 +1,135 @@
 import json
 import re
+import time
+from pathlib import Path
 
-# 删除src src\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))
+import requests
 
-TARGET_CHARACTER_NAME = "索林：霜之旅票"
-INPUT_HTML_FILE = "module\conversation\dialogue_raw.html"
-OUTPUT_JSON_FILE = "module\conversation\dialogue.zh-CN.json"
+session = requests.Session()
+dot_pat = re.compile(r"[·.]{2,4}")
 
-def extract_dialogues(html_content):
-    # 正则模式匹配角色名称和对话块
-    character_pattern = r'([^:\n]+):?[^\n]*\n(.*?)(?=\n{2,}|\Z)'
-    # 匹配对话组
-    group_pattern = r'<div[^>]*class="conversation-group-list"[^>]*>(.*?)</div>\s*</div>'
-    # 匹配问题
-    question_pattern = r'<span[^>]*class="title-text"[^>]*>(.*?)</span>'
-    # 匹配错误答案 (dialogue-100)
-    false_answer_pattern = r'<div[^>]*class="dialogue-100"[^>]*>.*?<span[^>]*>(.*?)</span>'
-    # 匹配正确答案 (dialogue-120)
-    true_answer_pattern = r'<div[^>]*class="dialogue-120"[^>]*>.*?<span[^>]*>(.*?)</span>'
-    
-    dialogues_data = {}
-    
-    # 按角色分割内容
-    character_blocks = re.findall(character_pattern, html_content, re.DOTALL)
-    
-    for character, block in character_blocks:
-        character = character.strip()
-        # 提取对话组
-        groups = re.findall(group_pattern, block, re.DOTALL)
-        
-        character_dialogues = []
-        for group in groups:
-            # 提取问题
-            question_match = re.search(question_pattern, group, re.DOTALL)
-            if not question_match:
+
+def reformat_text(s: str) -> str:
+    return dot_pat.sub("…", s.replace("{AccountData.NickName}", "")).strip("'")
+
+
+def get_from_gamekee_wiki(skip_names: set[str]) -> dict[str, list[dict]]:
+    # gamekee首页误写
+    ret = dict()
+    game_header = {"game-alias": "nikke"}
+    entry_url = "https://nikke.gamekee.com/v1/wiki/entry"
+    entry_json = session.get(entry_url, headers=game_header).json()
+    characters = None
+    entry_id = None
+    for d in entry_json["data"]["entry_list"]:
+        if d.get("name", None) == "妮姬图鉴":
+            for l in d["child"]:
+                if l.get("name", None) == "角色图鉴":
+                    characters = l["child"]
+                    entry_id = l["id"]
+                    break
+            break
+    if characters == None:
+        print("获取gamekee角色图鉴失败")
+        return ret
+    entry_filter = session.get(
+        "https://nikke.gamekee.com/v1/entryFilter/getEntryFilter",
+        headers=game_header,
+        params={"entry_id": entry_id},
+    ).json()
+    invalid_pair = set()
+    for f in entry_filter["data"]["entry_filter"]:
+        if f["name"] == "企业":
+            for c in f["children"]:
+                if c["name"] == "反常":
+                    invalid_pair.add((f["id"], c["id"]))
+        elif f["name"] == "稀有度":
+            for c in f["children"]:
+                if c["name"] == "R":
+                    invalid_pair.add((f["id"], c["id"]))
+
+    def is_valid(nikke_entry):
+        for attr in entry_filter["data"]["entry_filter_attr"].get(
+            str(nikke_entry["id"]), []
+        ):
+            if len(attr["value"]) != 1:
+                print(nikke_entry)
+                print(
+                    entry_filter["data"]["entry_filter_attr"].get(
+                        str(nikke_entry["id"])
+                    )
+                )
+                raise Exception("gamekee wiki parsing failed")
+            if attr["value"][0] == "":
                 continue
-            question = question_match.group(1).strip()
-            
-            # 提取错误答案
-            false_match = re.search(false_answer_pattern, group, re.DOTALL)
-            false_answer = false_match.group(1).strip() if false_match else ""
-            
-            # 提取正确答案
-            true_match = re.search(true_answer_pattern, group, re.DOTALL)
-            true_answer = true_match.group(1).strip() if true_match else ""
-            
-            character_dialogues.append({
-                "question": question,
-                "answer": {
-                    "false": false_answer,
-                    "true": true_answer
-                }
-            })
-        
-        if character_dialogues:
-            dialogues_data[character] = character_dialogues
-    
-    return dialogues_data
+            if (attr["input_id"], int(attr["value"][0])) in invalid_pair:
+                return False
+        return True
 
-def update_json(dialogues_data, target_characters, filename):
-    # 尝试读取现有JSON数据
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            existing_data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        existing_data = {}
-    
-    # 创建更新后的数据
-    updated_data = {}
-    
-    # 先添加目标角色（按输入顺序）
-    for character in target_characters:
-        if character in dialogues_data:
-            updated_data[character] = dialogues_data[character]
-    
-    # 添加现有数据中的其他角色
-    for character, dialogues in existing_data.items():
-        if character not in updated_data:
-            updated_data[character] = dialogues
-    
-    # 写入文件
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(updated_data, f, ensure_ascii=False, indent=2)
+    def get_single(base_data):
+        index = next(
+            i for i, d in enumerate(base_data) if d[0]["value"].startswith("问题")
+        )
+        # 从index开始，每3个为一组进行解析
+        while base_data[index][0]["value"].startswith("问题"):
+            group = dict(question="", answer=dict(false="", true=""))
+            group["question"] = reformat_text(base_data[index][1]["value"])
+            for j in (index + 1, index + 2):
+                if base_data[j][0]["value"].startswith("100"):
+                    group["answer"]["false"] = reformat_text(base_data[j][1]["value"])
+                elif base_data[j][0]["value"].startswith("120"):
+                    group["answer"]["true"] = reformat_text(base_data[j][1]["value"])
+                else:
+                    raise Exception("gamekee wiki parsing error")
+            index += 3
+            if not (
+                len(group["question"])
+                or len(group["answer"]["false"])
+                or len(group["answer"]["true"])
+            ):
+                continue
+            yield group
 
-# 使用示例
+    for nikke in characters:
+        if nikke["name"] in skip_names:
+            continue
+        # 编辑中词条
+        if nikke["content_id"] == 0:
+            continue
+        if not is_valid(nikke):
+            ret[nikke["name"]] = []
+            continue
+        data_json = session.get(
+            f"https://nikke.gamekee.com/v1/content/detail/{nikke['content_id']}",
+            headers=game_header,
+        ).json()
+        content_json = json.loads(data_json["data"]["content_json"])
+        base_data = content_json.get("baseData", [])
+        name = next((x for x in base_data if x[0]["value"] == "角色名称"), None)
+        name = name[1]["value"] if name else nikke["name"]
+        ret[name] = list(get_single(base_data))
+        time.sleep(0.5)
+    print("Gamekee Wiki:")
+    keys = list(ret.keys())
+    for i in range(0, len(keys), 5):
+        print(", ".join(keys[i : i + 5]))
+    return ret
+
+
 if __name__ == "__main__":
-    # 读取HTML文件内容
-    with open(INPUT_HTML_FILE, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    # 指定要处理的角色（按优先级顺序）
-    target_characters = [TARGET_CHARACTER_NAME]
-    
-    # 提取对话数据
-    dialogues_data = extract_dialogues(html_content)
-    
-    # 更新JSON文件
-    update_json(dialogues_data, target_characters, OUTPUT_JSON_FILE)
-    
-    print(f"成功处理 {len(dialogues_data)} 个角色数据")
+    zh_cn_data: dict = dict()
+    dialogue_json_path = (
+        Path(__file__).parent.parent / "module" / "conversation" / "dialogue.zh-CN.json"
+    )
+    if not dialogue_json_path.exists():
+        zh_cn_data = dict()
+    else:
+        zh_cn_data = json.loads(dialogue_json_path.read_text(encoding="utf-8"))
+
+    zh_cn_data_extra = get_from_gamekee_wiki(set(zh_cn_data.keys()))
+    # 添加到开头部分
+    sorted_tuple = tuple(zh_cn_data_extra.items()) + tuple(zh_cn_data.items())
+    zh_cn_data = dict(sorted_tuple)
+
+    with dialogue_json_path.open("w", encoding="utf-8") as f:
+        json.dump(zh_cn_data, f, ensure_ascii=False, indent=2)
