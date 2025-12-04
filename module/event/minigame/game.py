@@ -113,6 +113,12 @@ def back_to_event(self, skip_first_screenshot=True):
         else:
             self.device.screenshot()
 
+        if click_timer.reached() and self.appear_then_click(
+            self.minigame_assets.MINI_GAME_BACK_CONFIRM, offset=10, interval=2
+        ):
+            click_timer.reset()
+            continue
+
         if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
             break
 
@@ -123,12 +129,6 @@ def back_to_event(self, skip_first_screenshot=True):
             continue
 
         if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
-            click_timer.reset()
-            continue
-
-        if click_timer.reached() and self.appear_then_click(
-            self.minigame_assets.MINI_GAME_BACK_CONFIRM, offset=10, interval=2
-        ):
             click_timer.reset()
             continue
 
