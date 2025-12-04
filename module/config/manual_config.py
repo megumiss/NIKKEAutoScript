@@ -94,13 +94,23 @@ class ManualConfig:
 
     EVENTS = [
         {
-            "event_id": "event_20251120",
-            "event_name": "BLANK Ticket",
+            "event_id": "event_20251204",
+            "event_name": "TERMINUS TICKET",
             # 大型活动
-            "event_type": 2,
+            "event_type": 1,
             "mini_game": False,
             "mini_game_play": False,
             "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
+            "event_id": "event_20251120",
+            "event_name": "BLANK Ticket",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "mini_game_play": False,
+            "story_part": "Story_1",  # Story_1
             "story_difficulty": "Hard"  # Normal, Hard
         },
         {

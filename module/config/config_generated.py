@@ -140,7 +140,7 @@ class GeneratedConfig:
     BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
 
     # Group `Event`
-    Event_Event = ''  # event_20251120, event_20251030, event_20251016, event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
+    Event_Event = ''  # event_20251204, event_20251120, event_20251030, event_20251016, event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
     Event_LoginStamp = True
     Event_Challenge = True
     Event_Story = False
