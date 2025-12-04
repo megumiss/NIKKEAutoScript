@@ -98,8 +98,8 @@ class ManualConfig:
             "event_name": "TERMINUS Ticket",
             # 大型活动
             "event_type": 1,
-            "mini_game": False,
-            "mini_game_play": False,
+            "mini_game": True,
+            "mini_game_play": True,
             "story_part": "Story_1",  # Story_1, Story_2
             "story_difficulty": "Normal"  # Normal, Hard
         },
