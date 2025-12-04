@@ -1,0 +1,90 @@
+name: Update NIKKE Dialogue Data
+
+on:
+  schedule:
+    # 每天北京时间早上3点运行 (UTC 19点)
+    - cron: '0 19 * * *'
+  workflow_dispatch: # 允许手动触发
+
+# 允许 Action 修改代码和创建 PR
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dialogue:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 lxml
+      
+      - name: Run dialogue update script
+        run: |
+          python dev_tools/conversation_dialogue.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # 读取更新日志内容，以便放入 PR 描述中
+      - name: Read update info
+        id: read_info
+        run: |
+          if [ -f .github/updated_nikke.txt ]; then
+            echo "UPDATED_INFO<<EOF" >> $GITHUB_ENV
+            cat .github/updated_nikke.txt >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "UPDATED_INFO=常规数据更新" >> $GITHUB_ENV
+          fi
+
+      # 使用 create-pull-request 动作自动处理分支、提交和 PR
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        id: cpr
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            ZH: 更新 NIKKE 咨询对话
+            ${{ env.UPDATED_INFO }}
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          signoff: false
+          # PR 的分支名称
+          branch: auto/update-nikke-dialogue
+          # 只有当这些文件发生变化时才提交
+          add-paths: |
+            module/conversation/dialogue.zh-CN.json
+          # 目标分支
+          base: master
+          # 关键配置 2: 确保合并后删除分支
+          delete-branch: true
+          title: "ZH: 更新 NIKKE 咨询对话"
+          body: |
+            **更新详情:**
+            ${{ env.UPDATED_INFO }}
+          labels: |
+            automated pr
+            data update
+
+      # 关键修改 3: 使用 GitHub CLI 自动合并 PR
+      - name: Auto merge Pull Request
+        # 只有当确实创建了新 PR 时才运行
+        if: steps.cpr.outputs.pull-request-operation != 'none'
+        run: |
+          # --merge: 使用普通合并 (也可以改为 --squash)
+          # --auto: 如果有状态检查未通过则等待，通过后自动合并；如果没有检查则立即合并
+          gh pr merge "auto/update-nikke-dialogue" --squash --auto
+        env:
+          # 必须提供 Token 才能操作 PR
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
