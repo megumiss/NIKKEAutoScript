@@ -95,7 +95,7 @@ class ManualConfig:
     EVENTS = [
         {
             "event_id": "event_20251204",
-            "event_name": "TERMINUS TICKET",
+            "event_name": "TERMINUS Ticket",
             # 大型活动
             "event_type": 1,
             "mini_game": False,
