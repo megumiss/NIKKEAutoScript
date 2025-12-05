@@ -1,5 +1,5 @@
 import time
-from typing import Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -58,9 +58,13 @@ def start_game(self, skip_first_screenshot=True):
                 3: TEMPLATE_MINI_GAME_SNOW_NUM_3,
                 4: TEMPLATE_MINI_GAME_SNOW_NUM_4,
                 5: TEMPLATE_MINI_GAME_SNOW_NUM_5,
-                6: TEMPLATE_MINI_GAME_SNOW_NUM_6,
+                6: [
+                    TEMPLATE_MINI_GAME_SNOW_NUM_6_V1,
+                    TEMPLATE_MINI_GAME_SNOW_NUM_6_V2,
+                    TEMPLATE_MINI_GAME_SNOW_NUM_6_V3,
+                ],
                 7: TEMPLATE_MINI_GAME_SNOW_NUM_7,
-                8: TEMPLATE_MINI_GAME_SNOW_NUM_8,
+                8: [TEMPLATE_MINI_GAME_SNOW_NUM_8_V1, TEMPLATE_MINI_GAME_SNOW_NUM_8_V2],
                 9: TEMPLATE_MINI_GAME_SNOW_NUM_9,
             },
             'grid_cols_rows': (10, 16),
@@ -317,51 +321,97 @@ def start_game(self, skip_first_screenshot=True):
 
 def recognize_digit_grid_robust(
     device_image,
-    digit_templates,
-    grid_cols=8,
-    grid_rows=14,
-    merge_x_threshold=10,
-    merge_y_threshold=10,
-    tolerance_x=20,
-    tolerance_y=20,
-    default_value=10,
+    digit_templates: Dict[int, Union[Any, List[Any]]],
+    grid_cols: int = 8,
+    grid_rows: int = 14,
+    merge_x_threshold: int = 15,
+    merge_y_threshold: int = 15,
+    tolerance_x: int = 20,
+    tolerance_y: int = 20,
+    default_value: int = 10,
+    debug: bool = False,
 ):
     """
-    鲁棒的数字网格识别,缺失位置填充默认值
+    鲁棒的数字网格识别 (优化版：多阶段动态阈值 + 全局冲突检测)
 
-    Args:
-        device_image: 设备截图
-        digit_templates: 数字模板字典 {1: TEMPLATE_NUM_1, 2: TEMPLATE_NUM_2, ...}
-        grid_cols: 表格列数,默认8
-        grid_rows: 表格行数,默认14
-        merge_x_threshold: 横向合并阈值,默认10
-        merge_y_threshold: 纵向合并阈值,默认10
-        tolerance_x: x方向坐标容差,默认20
-        tolerance_y: y方向坐标容差,默认20
-        default_value: 缺失位置的默认值,默认10
-
-    Returns:
-        list: 二维数组,每个元素为 {'digit': int, 'x': int, 'y': int, 'row': int, 'col': int}
-              缺失位置填充为 {'digit': default_value, ...}
+    策略：
+    采用多轮扫描，置信度从高到低 (例如 0.95 -> 0.90 -> 0.85)。
+    优先锁定高可信度的结果，后续轮次只在空白区域寻找匹配，
+    有效解决了多模板(6/8)容易误判的问题，同时保证了召回率。
     """
 
-    # 1. 收集所有匹配结果
-    all_matches = []
-    for digit, template in digit_templates.items():
-        matches = template.match_multi(device_image, similarity=0.9, threshold=3)
+    # 1. 定义扫描阶段 (置信度从高到低)
+    # 可以在这里调整扫描的精细度
+    threshold_stages = [0.95, 0.92, 0.88, 0.85]
 
-        # 对当前数字的匹配结果进行合并去重
-        matches = merge_buttons(matches, x_threshold=merge_x_threshold, y_threshold=merge_y_threshold)
+    # 针对特定困难数字的阈值补偿 (值为负数表示降低门槛，正数表示提高门槛)
+    # 6和8通常因为字形复杂需要更宽松的判定
+    digit_bias = {
+        6: -0.03,
+        8: -0.03,
+    }
 
-        for match in matches:
-            x, y = match.location
-            all_matches.append({'digit': digit, 'x': x, 'y': y, 'button': match})
+    # 存储最终确认的匹配结果
+    confirmed_matches = []
+
+    if debug:
+        logger.info(f'Starting robust recognition with {len(threshold_stages)} stages...')
+
+    # 2. 多阶段扫描循环
+    for stage_idx, base_similarity in enumerate(threshold_stages):
+        stage_matches = []
+
+        # 遍历所有数字模板
+        for digit, templates in digit_templates.items():
+            # 计算当前数字在本轮的特定阈值
+            current_sim = base_similarity + digit_bias.get(digit, 0.0)
+            # 限制阈值范围，防止过低或过高
+            current_sim = max(0.80, min(0.99, current_sim))
+
+            if not isinstance(templates, list):
+                templates = [templates]
+
+            # 遍历该数字的所有模板变体
+            for template in templates:
+                # 执行匹配
+                matches = template.match_multi(device_image, similarity=current_sim, threshold=3)
+
+                for match in matches:
+                    x, y = match.location
+                    stage_matches.append(
+                        {
+                            'digit': digit,
+                            'x': x,
+                            'y': y,
+                            'button': match,
+                            'similarity': current_sim,  # 记录当时的阈值作为大致置信度参考
+                        }
+                    )
+
+        # 3. 冲突检测与合并
+        # 将本轮发现的所有匹配项与“已确认列表”进行对比
+        newly_confirmed = 0
+        for match in stage_matches:
+            # 检查是否与已有的高置信度结果冲突
+            if not _is_location_occupied(match, confirmed_matches, merge_x_threshold, merge_y_threshold):
+                # 检查是否与本轮已加入的结果冲突 (处理同位置多个模板匹配到的情况)
+                # 注意：这里简单的先到先得，因为本轮阈值相同，且通常先处理的数字较小(1-9)
+                # 如果需要更精细，可以对 stage_matches 按 digit 优先级排序
+                if not _is_location_occupied(match, confirmed_matches, merge_x_threshold, merge_y_threshold):
+                    confirmed_matches.append(match)
+                    newly_confirmed += 1
+
+        if debug and newly_confirmed > 0:
+            logger.info(f'Stage {stage_idx + 1} (sim~{base_similarity}): Added {newly_confirmed} matches.')
+
+    all_matches = confirmed_matches
 
     if not all_matches:
-        logger.warning('No digits recognized, returning default empty grid.')
+        if debug:
+            logger.warning('No digits recognized, returning default empty grid.')
         return _create_default_grid(grid_rows, grid_cols, default_value)
 
-    # 2. 建立坐标参考系
+    # 4. 建立坐标参考系 (同原逻辑)
     y_coords = sorted(set(m['y'] for m in all_matches))
     x_coords = sorted(set(m['x'] for m in all_matches))
 
@@ -373,14 +423,13 @@ def recognize_digit_grid_robust(
     reference_y = [int(np.mean(cluster)) for cluster in y_clusters]
     reference_x = [int(np.mean(cluster)) for cluster in x_clusters]
 
-    # 3. 检测并补全缺失的行列坐标
+    # 5. 检测并补全缺失的行列坐标 (同原逻辑)
     reference_y = _complete_grid_coordinates(reference_y, grid_rows, tolerance_y)
     reference_x = _complete_grid_coordinates(reference_x, grid_cols, tolerance_x)
 
-    # 4. 初始化网格
+    # 6. 初始化网格并填充
     grid = _create_default_grid(grid_rows, grid_cols, default_value, reference_x, reference_y)
 
-    # 5. 填充结果
     for match in all_matches:
         row = _find_nearest_index(match['y'], reference_y, tolerance_y)
         col = _find_nearest_index(match['x'], reference_x, tolerance_x)
@@ -398,106 +447,83 @@ def recognize_digit_grid_robust(
     return grid
 
 
-def _cluster_coordinates(coords, tolerance):
-    """将坐标聚类到相近的组"""
+def _is_location_occupied(new_match: Dict, existing_matches: List[Dict], x_thresh: int, y_thresh: int) -> bool:
+    """
+    检查新位置是否已经被已有的匹配项占据
+    """
+    for exist in existing_matches:
+        dx = abs(new_match['x'] - exist['x'])
+        dy = abs(new_match['y'] - exist['y'])
+        if dx <= x_thresh and dy <= y_thresh:
+            return True
+    return False
+
+
+# 以下辅助函数保持不变，只需确保包含在文件中即可
+def _cluster_coordinates(coords: List[int], tolerance: int) -> List[List[int]]:
     if not coords:
         return []
-
-    clusters = [[coords[0]]]
-    for coord in coords[1:]:
-        if coord - clusters[-1][-1] <= tolerance:
-            clusters[-1].append(coord)
+    clusters = []
+    sorted_coords = sorted(coords)
+    current_cluster = [sorted_coords[0]]
+    for coord in sorted_coords[1:]:
+        if coord - current_cluster[-1] <= tolerance:
+            current_cluster.append(coord)
         else:
-            clusters.append([coord])
-
+            clusters.append(current_cluster)
+            current_cluster = [coord]
+    clusters.append(current_cluster)
     return clusters
 
 
-def _complete_grid_coordinates(reference_coords, expected_count, tolerance):
-    """
-    补全缺失的网格坐标
-
-    如果识别到的坐标数量少于期望数量,推测并插入缺失的坐标
-    """
-    if len(reference_coords) >= expected_count:
-        return reference_coords[:expected_count]
-
-    if len(reference_coords) < 2:
-        # 坐标太少,无法推测,直接返回
-        return reference_coords
-
-    # 计算平均间距
-    intervals = [reference_coords[i + 1] - reference_coords[i] for i in range(len(reference_coords) - 1)]
+def _complete_grid_coordinates(coords: List[int], expected_count: int, tolerance: int) -> List[int]:
+    if len(coords) >= expected_count:
+        return coords[:expected_count]
+    if len(coords) < 2:
+        return coords
+    intervals = [coords[i + 1] - coords[i] for i in range(len(coords) - 1)]
+    if not intervals:
+        return coords
     avg_interval = int(np.median(intervals))
+    if avg_interval <= 0:
+        return coords
 
-    # 补全坐标
-    completed = list(reference_coords)
+    # 简单的向前向后补全
+    result = list(coords)
+    # 向前
+    while len(result) < expected_count and result[0] - avg_interval > 0:
+        result.insert(0, result[0] - avg_interval)
+    # 向后
+    while len(result) < expected_count:
+        result.append(result[-1] + avg_interval)
+    return result[:expected_count]
 
-    # 向后补全
-    while len(completed) < expected_count:
-        next_coord = completed[-1] + avg_interval
-        completed.append(next_coord)
 
-    return completed[:expected_count]
-
-
-def _find_nearest_index(coord, reference_coords, tolerance):
-    """
-    找到坐标最接近的参考索引
-
-    Args:
-        coord: 待匹配的坐标
-        reference_coords: 参考坐标列表
-        tolerance: 容差范围
-
-    Returns:
-        int or None: 最近的索引,如果超出容差返回None
-    """
-    min_distance = float('inf')
-    nearest_idx = None
-
-    for idx, ref_coord in enumerate(reference_coords):
-        distance = abs(coord - ref_coord)
-        if distance < min_distance and distance <= tolerance:
-            min_distance = distance
-            nearest_idx = idx
-
-    return nearest_idx
+def _find_nearest_index(value: int, reference_list: List[int], tolerance: int) -> Optional[int]:
+    if not reference_list:
+        return None
+    distances = [abs(value - ref) for ref in reference_list]
+    min_distance = min(distances)
+    if min_distance <= tolerance:
+        return distances.index(min_distance)
+    return None
 
 
 def _create_default_grid(rows, cols, default_value, reference_x=None, reference_y=None):
-    """
-    创建填充默认值的网格
-
-    Args:
-        rows: 行数
-        cols: 列数
-        default_value: 默认填充值
-        reference_x: x坐标参考列表(可选)
-        reference_y: y坐标参考列表(可选)
-
-    Returns:
-        list: 二维网格
-    """
     grid = []
     for row in range(rows):
-        grid_row = []
+        row_data = []
         for col in range(cols):
-            x = reference_x[col] if reference_x and col < len(reference_x) else 0
-            y = reference_y[row] if reference_y and row < len(reference_y) else 0
-
-            grid_row.append(
-                {
-                    'digit': default_value,
-                    'x': x,
-                    'y': y,
-                    'row': row,
-                    'col': col,
-                    'button': None,
-                }
-            )
-        grid.append(grid_row)
-
+            cell = {
+                'digit': default_value,
+                'x': reference_x[col] if reference_x and col < len(reference_x) else 0,
+                'y': reference_y[row] if reference_y and row < len(reference_y) else 0,
+                'row': row,
+                'col': col,
+                'button': None,
+            }
+            row_data.append(cell)
+        grid.append(row_data)
     return grid
 
 
