@@ -488,7 +488,6 @@ def _complete_grid_coordinates(coords: List[int], expected_count: int, tolerance
     if avg_interval <= 0:
         return coords
 
-
     # 简单的向前向后补全
     result = list(coords)
     # 向前
