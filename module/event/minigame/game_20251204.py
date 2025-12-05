@@ -17,6 +17,57 @@ def start_game(self, skip_first_screenshot=True):
     click_timer = Timer(0.3)
     confirm_timer = Timer(2, count=3)
 
+    game_map = 'FOREST'
+
+    # 地图配置字典
+    MAP_CONFIGS = {
+        'FOREST': {
+            'digit_templates': {
+                1: TEMPLATE_MINI_GAME_FOREST_NUM_1,
+                2: TEMPLATE_MINI_GAME_FOREST_NUM_2,
+                3: TEMPLATE_MINI_GAME_FOREST_NUM_3,
+                4: TEMPLATE_MINI_GAME_FOREST_NUM_4,
+                5: TEMPLATE_MINI_GAME_FOREST_NUM_5,
+                6: TEMPLATE_MINI_GAME_FOREST_NUM_6,
+                7: TEMPLATE_MINI_GAME_FOREST_NUM_7,
+                8: TEMPLATE_MINI_GAME_FOREST_NUM_8,
+                9: TEMPLATE_MINI_GAME_FOREST_NUM_9,
+            },
+            'grid_cols_rows': (8, 14),
+            'target_color': (205, 207, 179),
+        },
+        'DESERT': {
+            'digit_templates': {
+                1: TEMPLATE_MINI_GAME_DESERT_NUM_1,
+                2: TEMPLATE_MINI_GAME_DESERT_NUM_2,
+                3: TEMPLATE_MINI_GAME_DESERT_NUM_3,
+                4: TEMPLATE_MINI_GAME_DESERT_NUM_4,
+                5: TEMPLATE_MINI_GAME_DESERT_NUM_5,
+                6: TEMPLATE_MINI_GAME_DESERT_NUM_6,
+                7: TEMPLATE_MINI_GAME_DESERT_NUM_7,
+                8: TEMPLATE_MINI_GAME_DESERT_NUM_8,
+                9: TEMPLATE_MINI_GAME_DESERT_NUM_9,
+            },
+            'grid_cols_rows': (9, 15),
+            'target_color': (239, 221, 183),
+        },
+        'SNOW': {
+            'digit_templates': {
+                1: TEMPLATE_MINI_GAME_SNOW_NUM_1,
+                2: TEMPLATE_MINI_GAME_SNOW_NUM_2,
+                3: TEMPLATE_MINI_GAME_SNOW_NUM_3,
+                4: TEMPLATE_MINI_GAME_SNOW_NUM_4,
+                5: TEMPLATE_MINI_GAME_SNOW_NUM_5,
+                6: TEMPLATE_MINI_GAME_SNOW_NUM_6,
+                7: TEMPLATE_MINI_GAME_SNOW_NUM_7,
+                8: TEMPLATE_MINI_GAME_SNOW_NUM_8,
+                9: TEMPLATE_MINI_GAME_SNOW_NUM_9,
+            },
+            'grid_cols_rows': (10, 16),
+            'target_color': (211, 213, 219),
+        },
+    }
+
     # 游戏开始
     while 1:
         if skip_first_screenshot:
@@ -24,44 +75,64 @@ def start_game(self, skip_first_screenshot=True):
         else:
             self.device.screenshot()
 
+        if self.appear(MINI_GAME_EXEC_CHECK, offset=10):
+            self.device.sleep(3)
+            break
+
         # 点击开始
         if click_timer.reached() and self.appear_then_click(MINI_GAME_START, offset=10, interval=2):
             logger.info('Start event mini game')
             click_timer.reset()
             continue
 
+        if self.appear(MINI_GAME_START_CONFIRM, offset=10):
+            # 切换人物
+            if not self.appear(MINI_GAME_NIKKE_SOLINE, offset=10):
+                while 1:
+                    self.device.screenshot()
+
+                    if self.appear(MINI_GAME_NIKKE_SOLINE, offset=10):
+                        break
+                    if self.appear(MINI_GAME_EXEC_CHECK, offset=10):
+                        self.device.sleep(3)
+                        break
+                    if self.appear_then_click(MINI_GAME_CHANGE_NIKKE, offset=10, interval=1):
+                        logger.info('Change nikke before start mini game')
+                        continue
+
+            # 判断地图
+            if self.appear(MINI_GAME_MAP_FOREST, offset=10, threshold=0.9):
+                game_map = 'FOREST'
+            elif self.appear(MINI_GAME_MAP_DESERT, offset=10, threshold=0.9):
+                game_map = 'DESERT'
+            elif self.appear(MINI_GAME_MAP_SNOW, offset=10, threshold=0.9):
+                game_map = 'SNOW'
+            logger.info(f'Selected mini game map: {game_map}')
+
         # 点击开始
-        if click_timer.reached() and self.appear_then_click(MINI_GAME_START_CONFIRM, offset=10, interval=2):
+        if (
+            click_timer.reached()
+            and self.appear(MINI_GAME_NIKKE_SOLINE, offset=10)
+            and self.appear_then_click(MINI_GAME_START_CONFIRM, offset=10, interval=2)
+        ):
             logger.info('Start event mini game confirm')
             click_timer.reset()
             continue
 
-        if self.appear(MINI_GAME_EXEC_CHECK, offset=10):
-            self.device.sleep(3)
-            break
-
     self.device.screenshot()
-    # TODO 更换角色 表格大小
-    # 识别数字输出表格
-    digit_templates = {
-        1: TEMPLATE_MINI_GAME_SOLINE_NUM_1,
-        2: TEMPLATE_MINI_GAME_SOLINE_NUM_2,
-        3: TEMPLATE_MINI_GAME_SOLINE_NUM_3,
-        4: TEMPLATE_MINI_GAME_SOLINE_NUM_4,
-        5: TEMPLATE_MINI_GAME_SOLINE_NUM_5,
-        6: TEMPLATE_MINI_GAME_SOLINE_NUM_6,
-        7: TEMPLATE_MINI_GAME_SOLINE_NUM_7,
-        8: TEMPLATE_MINI_GAME_SOLINE_NUM_8,
-        9: TEMPLATE_MINI_GAME_SOLINE_NUM_9,
-    }
-    # 列数，行数
-    grid_cols_rows = (8, 14)
-    # 消除完成目标颜色
-    target_color = (205, 207, 179)
+
+    # 根据地图类型获取配置
+    map_config = MAP_CONFIGS.get(game_map, MAP_CONFIGS['FOREST'])
+    digit_templates = map_config['digit_templates']
+    grid_cols_rows = map_config['grid_cols_rows']
+    target_color = map_config['target_color']
+
     # 颜色容差
     color_tolerance = 15
 
-    logger.info('Recognizing digit grid...')
+    logger.info(f'Recognizing digit grid for {game_map} map...')
+    logger.info(f'Grid size: {grid_cols_rows[0]}x{grid_cols_rows[1]}, Target color: {target_color}')
+
     # 识别网格
     grid = recognize_digit_grid_robust(
         self.device.image,
@@ -277,7 +348,7 @@ def recognize_digit_grid_robust(
     # 1. 收集所有匹配结果
     all_matches = []
     for digit, template in digit_templates.items():
-        matches = template.match_multi(device_image, similarity=0.85, threshold=3)
+        matches = template.match_multi(device_image, similarity=0.9, threshold=3)
 
         # 对当前数字的匹配结果进行合并去重
         matches = merge_buttons(matches, x_threshold=merge_x_threshold, y_threshold=merge_y_threshold)
