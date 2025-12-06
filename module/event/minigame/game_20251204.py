@@ -1,10 +1,11 @@
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 
-from module.base.button import merge_buttons
 from module.base.timer import Timer
 from module.conversation.assets import ANSWER_CHECK
 from module.event.event_20251204.assets_game import *
@@ -157,7 +158,7 @@ def start_game(self, skip_first_screenshot=True):
 
     # 计算步骤
     logger.info('Solving puzzle using Beam Search...')
-    solver = TenSumBeamSolver(grid, beam_width=100)
+    solver = TenSumBeamSolverMultiThread(complex_grid=grid, beam_width=500, num_threads=8)
     steps = solver.solve()
 
     logger.info(f'Solution found: {len(steps)} steps total.')
@@ -527,15 +528,16 @@ def _create_default_grid(rows, cols, default_value, reference_x=None, reference_
     return grid
 
 
-class TenSumBeamSolver:
-    def __init__(self, complex_grid, beam_width=100):
+class TenSumBeamSolverMultiThread:
+    def __init__(self, complex_grid, beam_width=100, num_threads=4):
         """
         Args:
             complex_grid: recognize_digit_grid_robust 返回的二维数组
-            beam_width: 搜索宽度。设得越大越能保证找到最优解，但会增加内存和时间消耗。
-                        (在加入 Optimistic Pruning 后，最优性由剪枝保证，Beam Width 影响搜索效率)
+            beam_width: 搜索宽度
+            num_threads: 线程数量，建议设置为 CPU 核心数
         """
         self.beam_width = beam_width
+        self.num_threads = num_threads
         self.rows = len(complex_grid)
         self.cols = len(complex_grid[0]) if self.rows > 0 else 0
 
@@ -557,157 +559,178 @@ class TenSumBeamSolver:
 
         # 记录全局信息，用于 Optimistic Pruning
         self.total_initial_digits = np.sum(raw_matrix > 0)
-        self.best_global_score = 0  # 追踪目前找到的最佳总分
+        self.best_global_score = 0
+
+        # 线程安全的锁
+        self.score_lock = Lock()
 
     def _get_valid_moves_fast(self, grid: np.ndarray):
         """
         利用二维前缀和 (Integral Image) 加速寻找所有和为 10 的矩形
-        时间复杂度：O(R^2 * C^2)，但内部计算为 O(1)
         """
         moves = []
         rows, cols = self.rows, self.cols
 
-        # 1. 计算前缀和矩阵 (Integral Image)
-        # Pad 一行一列 0，方便处理边界 (坐标 r1, c1)
+        # 计算前缀和矩阵
         p_sum = np.pad(grid, ((1, 0), (1, 0)), 'constant').cumsum(axis=0).cumsum(axis=1)
         p_count = np.pad((grid > 0).astype(np.int32), ((1, 0), (1, 0)), 'constant').cumsum(axis=0).cumsum(axis=1)
 
-        # 2. 遍历所有矩形
+        # 遍历所有矩形
         for r1 in range(rows):
             for c1 in range(cols):
                 for r2 in range(r1, rows):
                     for c2 in range(c1, cols):
-                        # 前缀和坐标 (p_sum 的索引比 grid 对应坐标大 1)
                         pr2, pc2 = r2 + 1, c2 + 1
-                        pr1, pc1 = r1, c1  # 对应 grid r1-1, c1-1 的位置
+                        pr1, pc1 = r1, c1
 
-                        # O(1) 计算当前矩形区域的数值和
                         current_sum = p_sum[pr2, pc2] - p_sum[pr1, pc2] - p_sum[pr2, pc1] + p_sum[pr1, pc1]
 
-                        # 剪枝：如果和超过 10，则当前 r2, c2 往后不可能满足条件
                         if current_sum > 10:
                             break
 
-                        # 找到满足条件的矩形
                         if current_sum == 10:
-                            # O(1) 计算非零数字的个数
                             count = p_count[pr2, pc2] - p_count[pr1, pc2] - p_count[pr2, pc1] + p_count[pr1, pc1]
 
-                            # 至少要消除一个非零数字
                             if count > 0:
                                 moves.append((r1, c1, r2, c2, count))
 
         return moves
 
+    def _expand_state(self, state_data):
+        """
+        扩展单个状态（线程安全）
+        Args:
+            state_data: (f_score, g_score, grid, history)
+        Returns:
+            list of new states or None if terminated
+        """
+        _, score, grid, history = state_data
+
+        # Optimistic 剪枝
+        remaining_digits = np.sum(grid > 0)
+        potential_max_score = score + remaining_digits
+
+        # 读取全局最优分数（线程安全）
+        with self.score_lock:
+            current_best = self.best_global_score
+
+        if potential_max_score <= current_best:
+            return None
+
+        moves = self._get_valid_moves_fast(grid)
+
+        if not moves:
+            # 路径结束，尝试更新全局最优分数
+            with self.score_lock:
+                if score > self.best_global_score:
+                    self.best_global_score = score
+                    return [('TERMINAL', score, grid, history)]
+            return None
+
+        # 扩展状态
+        new_states = []
+        for r1, c1, r2, c2, count in moves:
+            new_score = score + count
+
+            new_grid = grid.copy()
+            new_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
+
+            new_remaining_digits = remaining_digits - count
+            new_f_score = new_score + new_remaining_digits
+
+            new_history = history + [(r1, c1, r2, c2, count)]
+
+            new_states.append((new_f_score, new_score, new_grid, new_history))
+
+        return new_states
+
     def solve(self):
-        """执行 A* 启发式 Beam Search (保证最优性)"""
+        """执行多线程 A* 启发式 Beam Search"""
 
-        # 初始状态的 A* f_score = 当前得分 (0) + 剩余数字总数 (self.total_initial_digits)
         initial_f_score = self.total_initial_digits
-
-        # 状态元组: (f_score, g_score[当前得分], grid[Numpy对象], history[步骤列表])
         current_states = [(initial_f_score, 0, self.initial_grid, [])]
         best_final_state = None
 
         start_time = time.time()
 
-        # --- A. 搜索阶段 ---
-        while True:
-            next_states = []
-            expanded_any = False
+        # 使用线程池
+        with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
+            while True:
+                next_states = []
+                terminal_states = []
+                expanded_any = False
 
-            # 遍历当前 Beam 中的状态，解包时跳过 f_score（但它指导了排序）
-            for _, score, grid, history in current_states:
-                # --- 1. Optimistic 剪枝 (确保最优性的核心) ---
-                remaining_digits = np.sum(grid > 0)
-                # 当前路径的理论最高分数 (g_score + h_score)
-                potential_max_score = score + remaining_digits
+                # 提交所有状态到线程池进行并行扩展
+                future_to_state = {executor.submit(self._expand_state, state): state for state in current_states}
 
-                # 如果即使完美消除剩余所有数字，也无法超过当前找到的最佳分数，则剪枝
-                if potential_max_score <= self.best_global_score:
-                    continue
+                # 收集结果
+                for future in as_completed(future_to_state):
+                    result = future.result()
 
-                moves = self._get_valid_moves_fast(grid)
+                    if result is None:
+                        continue
 
-                if not moves:
-                    # 路径结束，更新全局最优分数
-                    if score > self.best_global_score:
-                        self.best_global_score = score
-                        # best_final_state 只需要保存 g_score, grid, history
-                        best_final_state = (score, grid, history)
-                    continue
+                    expanded_any = True
 
-                expanded_any = True
+                    # 检查是否有终止状态
+                    for state in result:
+                        if state[0] == 'TERMINAL':
+                            terminal_states.append(state)
+                        else:
+                            next_states.append(state)
 
-                # 扩展状态
-                for r1, c1, r2, c2, count in moves:
-                    new_score = score + count
+                # 处理终止状态
+                if terminal_states:
+                    best_terminal = max(terminal_states, key=lambda x: x[1])
+                    if best_final_state is None or best_terminal[1] > best_final_state[0]:
+                        best_final_state = (best_terminal[1], best_terminal[2], best_terminal[3])
 
-                    new_grid = grid.copy()
-                    new_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
-
-                    # 计算下一状态的 f_score (g + h)
-                    new_remaining_digits = remaining_digits - count
-                    new_f_score = new_score + new_remaining_digits
-
-                    new_history = history + [(r1, c1, r2, c2, count)]
-
-                    next_states.append((new_f_score, new_score, new_grid, new_history))
-
-            if not expanded_any:
-                break
-
-            # --- 2. 排序与去重 (A* 启发式) ---
-            # 排序策略：f_score 降序（潜力分数越高越好），score 降序（当前得分越高越好）
-            next_states.sort(key=lambda x: (x[0], x[1]), reverse=True)
-
-            unique_states = []
-            seen_grids = set()
-
-            for state in next_states:
-                grid_bytes = state[2].tobytes()  # grid.tobytes() 作为高效哈希键
-                if grid_bytes not in seen_grids:
-                    seen_grids.add(grid_bytes)
-                    unique_states.append(state)
-
-                if len(unique_states) >= self.beam_width:
+                if not expanded_any:
                     break
 
-            current_states = unique_states
+                # 排序与去重
+                next_states.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
+                unique_states = []
+                seen_grids = set()
+
+                for state in next_states:
+                    grid_bytes = state[2].tobytes()
+                    if grid_bytes not in seen_grids:
+                        seen_grids.add(grid_bytes)
+                        unique_states.append(state)
+
+                    if len(unique_states) >= self.beam_width:
+                        break
+
+                current_states = unique_states
 
         # 确保返回最终找到的最佳结果
         if best_final_state is None and current_states:
-            # 如果循环结束但没找到一个完整路径 (极少发生)，取当前最高分的中间状态
-            # 需要先根据 g_score 重新排序
             current_states.sort(key=lambda x: x[1], reverse=True)
             best_final_state = (current_states[0][1], current_states[0][2], current_states[0][3])
 
         final_score, _, raw_steps = best_final_state
 
         logger.info(
-            f'Calculation finished: {time.time() - start_time:.3f}s, Total eliminated: {final_score}, Best score found: {self.best_global_score}'
+            f'Calculation finished: {time.time() - start_time:.3f}s, '
+            f'Total eliminated: {final_score}, Best score found: {self.best_global_score}'
         )
 
-        # --- B. 结果回放与格式化 ---
         return self._format_output(raw_steps)
 
     def _format_output(self, raw_steps: list):
         """格式化输出，包含具体的数字回放"""
         formatted_steps = []
-
-        # 使用初始网格的副本进行回放
         replay_grid = self.initial_grid.copy()
 
         for r1, c1, r2, c2, count in raw_steps:
-            # 获取屏幕坐标
             start_x, start_y = self.coord_map.get((r1, c1), (0, 0))
             end_x, end_y = self.coord_map.get((r2, c2), (0, 0))
 
-            # 提取本步骤消除的具体数字值
             roi = replay_grid[r1 : r2 + 1, c1 : c2 + 1]
             eliminated_values = roi[roi > 0].tolist()
 
-            # 在回放网格中执行消除
             replay_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
 
             formatted_steps.append(
