@@ -1,5 +1,6 @@
+import multiprocessing
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -158,7 +159,7 @@ def start_game(self, skip_first_screenshot=True):
 
     # 计算步骤
     logger.info('Solving puzzle using Beam Search...')
-    solver = TenSumBeamSolverMultiThread(complex_grid=grid, beam_width=500, num_threads=8)
+    solver = TenSumBeamSolverMultiThread(complex_grid=grid, beam_width=500, use_multiprocessing=True)
     steps = solver.solve()
 
     logger.info(f'Solution found: {len(steps)} steps total.')
@@ -528,20 +529,82 @@ def _create_default_grid(rows, cols, default_value, reference_x=None, reference_
     return grid
 
 
+def _expand_state_worker(state_data, rows, cols, best_score):
+    """
+    全局函数：扩展单个状态（用于多进程）
+    Args:
+        state_data: (f_score, g_score, grid, history)
+        rows, cols: 网格尺寸
+        best_score: 当前全局最优分数
+    Returns:
+        list of new states or None
+    """
+    _, score, grid, history = state_data
+
+    # Optimistic 剪枝
+    remaining_digits = np.sum(grid > 0)
+    potential_max_score = score + remaining_digits
+
+    if potential_max_score <= best_score:
+        return None
+
+    moves = _get_valid_moves_fast_worker(grid, rows, cols)
+
+    if not moves:
+        return [('TERMINAL', score, grid, history)]
+
+    # 扩展状态
+    new_states = []
+    for r1, c1, r2, c2, count in moves:
+        new_score = score + count
+        new_grid = grid.copy()
+        new_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
+        new_remaining_digits = remaining_digits - count
+        new_f_score = new_score + new_remaining_digits
+        new_history = history + [(r1, c1, r2, c2, count)]
+        new_states.append((new_f_score, new_score, new_grid, new_history))
+
+    return new_states
+
+
+def _get_valid_moves_fast_worker(grid, rows, cols):
+    """全局函数：快速查找有效移动（用于多进程）"""
+    moves = []
+    p_sum = np.pad(grid, ((1, 0), (1, 0)), 'constant').cumsum(axis=0).cumsum(axis=1)
+    p_count = np.pad((grid > 0).astype(np.int32), ((1, 0), (1, 0)), 'constant').cumsum(axis=0).cumsum(axis=1)
+
+    for r1 in range(rows):
+        for c1 in range(cols):
+            for r2 in range(r1, rows):
+                for c2 in range(c1, cols):
+                    pr2, pc2 = r2 + 1, c2 + 1
+                    pr1, pc1 = r1, c1
+                    current_sum = p_sum[pr2, pc2] - p_sum[pr1, pc2] - p_sum[pr2, pc1] + p_sum[pr1, pc1]
+                    if current_sum > 10:
+                        break
+                    if current_sum == 10:
+                        count = p_count[pr2, pc2] - p_count[pr1, pc2] - p_count[pr2, pc1] + p_count[pr1, pc1]
+                        if count > 0:
+                            moves.append((r1, c1, r2, c2, count))
+    return moves
+
+
 class TenSumBeamSolverMultiThread:
-    def __init__(self, complex_grid, beam_width=100, num_threads=4):
+    def __init__(self, complex_grid, beam_width=100, use_multiprocessing=True):
         """
         Args:
             complex_grid: recognize_digit_grid_robust 返回的二维数组
             beam_width: 搜索宽度
-            num_threads: 线程数量，建议设置为 CPU 核心数
+            use_multiprocessing: True=多进程(推荐), False=多线程
         """
         self.beam_width = beam_width
-        self.num_threads = num_threads
+        # 自动获取 CPU 核心数
+        self.num_workers = multiprocessing.cpu_count()
+        self.use_multiprocessing = use_multiprocessing
         self.rows = len(complex_grid)
         self.cols = len(complex_grid[0]) if self.rows > 0 else 0
 
-        # --- 1. 数据预处理 ---
+        # 数据预处理
         self.coord_map = {}
         raw_matrix = np.zeros((self.rows, self.cols), dtype=np.int32)
 
@@ -549,68 +612,34 @@ class TenSumBeamSolverMultiThread:
             for c in range(self.cols):
                 cell = complex_grid[r][c]
                 val = cell['digit']
-
                 self.coord_map[(r, c)] = (cell['x'], cell['y'])
-
                 if val != 10:
                     raw_matrix[r, c] = val
 
         self.initial_grid = raw_matrix
-
-        # 记录全局信息，用于 Optimistic Pruning
         self.total_initial_digits = np.sum(raw_matrix > 0)
         self.best_global_score = 0
 
-        # 线程安全的锁
-        self.score_lock = Lock()
+        # 线程安全的锁（仅用于多线程模式）
+        self.score_lock = Lock() if not use_multiprocessing else None
+
+        mode = 'multiprocessing' if use_multiprocessing else 'multithreading'
+        logger.info(
+            f'TenSumBeamSolver initialized: beam_width={self.beam_width}, '
+            f'num_workers={self.num_workers} (CPU cores: {multiprocessing.cpu_count()}), mode={mode}'
+        )
 
     def _get_valid_moves_fast(self, grid: np.ndarray):
-        """
-        利用二维前缀和 (Integral Image) 加速寻找所有和为 10 的矩形
-        """
-        moves = []
-        rows, cols = self.rows, self.cols
+        """实例方法：快速查找有效移动"""
+        return _get_valid_moves_fast_worker(grid, self.rows, self.cols)
 
-        # 计算前缀和矩阵
-        p_sum = np.pad(grid, ((1, 0), (1, 0)), 'constant').cumsum(axis=0).cumsum(axis=1)
-        p_count = np.pad((grid > 0).astype(np.int32), ((1, 0), (1, 0)), 'constant').cumsum(axis=0).cumsum(axis=1)
-
-        # 遍历所有矩形
-        for r1 in range(rows):
-            for c1 in range(cols):
-                for r2 in range(r1, rows):
-                    for c2 in range(c1, cols):
-                        pr2, pc2 = r2 + 1, c2 + 1
-                        pr1, pc1 = r1, c1
-
-                        current_sum = p_sum[pr2, pc2] - p_sum[pr1, pc2] - p_sum[pr2, pc1] + p_sum[pr1, pc1]
-
-                        if current_sum > 10:
-                            break
-
-                        if current_sum == 10:
-                            count = p_count[pr2, pc2] - p_count[pr1, pc2] - p_count[pr2, pc1] + p_count[pr1, pc1]
-
-                            if count > 0:
-                                moves.append((r1, c1, r2, c2, count))
-
-        return moves
-
-    def _expand_state(self, state_data):
-        """
-        扩展单个状态（线程安全）
-        Args:
-            state_data: (f_score, g_score, grid, history)
-        Returns:
-            list of new states or None if terminated
-        """
+    def _expand_state_thread(self, state_data):
+        """线程模式的状态扩展（带锁）"""
         _, score, grid, history = state_data
 
-        # Optimistic 剪枝
         remaining_digits = np.sum(grid > 0)
         potential_max_score = score + remaining_digits
 
-        # 读取全局最优分数（线程安全）
         with self.score_lock:
             current_best = self.best_global_score
 
@@ -620,77 +649,89 @@ class TenSumBeamSolverMultiThread:
         moves = self._get_valid_moves_fast(grid)
 
         if not moves:
-            # 路径结束，尝试更新全局最优分数
             with self.score_lock:
                 if score > self.best_global_score:
                     self.best_global_score = score
                     return [('TERMINAL', score, grid, history)]
             return None
 
-        # 扩展状态
         new_states = []
         for r1, c1, r2, c2, count in moves:
             new_score = score + count
-
             new_grid = grid.copy()
             new_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
-
             new_remaining_digits = remaining_digits - count
             new_f_score = new_score + new_remaining_digits
-
             new_history = history + [(r1, c1, r2, c2, count)]
-
             new_states.append((new_f_score, new_score, new_grid, new_history))
 
         return new_states
 
     def solve(self):
-        """执行多线程 A* 启发式 Beam Search"""
-
+        """执行优化的 Beam Search（支持多进程/多线程）"""
         initial_f_score = self.total_initial_digits
         current_states = [(initial_f_score, 0, self.initial_grid, [])]
         best_final_state = None
 
         start_time = time.time()
 
-        # 使用线程池
-        with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
+        # 根据模式选择执行器
+        ExecutorClass = ProcessPoolExecutor if self.use_multiprocessing else ThreadPoolExecutor
+
+        iteration = 0
+        with ExecutorClass(max_workers=self.num_workers) as executor:
             while True:
+                iteration += 1
                 next_states = []
                 terminal_states = []
-                expanded_any = False
 
-                # 提交所有状态到线程池进行并行扩展
-                future_to_state = {executor.submit(self._expand_state, state): state for state in current_states}
-
-                # 收集结果
-                for future in as_completed(future_to_state):
-                    result = future.result()
-
-                    if result is None:
-                        continue
-
-                    expanded_any = True
-
-                    # 检查是否有终止状态
-                    for state in result:
-                        if state[0] == 'TERMINAL':
-                            terminal_states.append(state)
+                # 小批次优化：当状态数很少时，不使用并行
+                if len(current_states) < self.num_workers:
+                    for state in current_states:
+                        if self.use_multiprocessing:
+                            result = _expand_state_worker(state, self.rows, self.cols, self.best_global_score)
                         else:
-                            next_states.append(state)
+                            result = self._expand_state_thread(state)
+
+                        if result:
+                            for s in result:
+                                if s[0] == 'TERMINAL':
+                                    terminal_states.append(s)
+                                else:
+                                    next_states.append(s)
+                else:
+                    # 并行处理
+                    if self.use_multiprocessing:
+                        # 多进程：使用全局函数
+                        futures = [
+                            executor.submit(_expand_state_worker, state, self.rows, self.cols, self.best_global_score)
+                            for state in current_states
+                        ]
+                    else:
+                        # 多线程：使用实例方法
+                        futures = [executor.submit(self._expand_state_thread, state) for state in current_states]
+
+                    for future in futures:
+                        result = future.result()
+                        if result:
+                            for s in result:
+                                if s[0] == 'TERMINAL':
+                                    terminal_states.append(s)
+                                else:
+                                    next_states.append(s)
 
                 # 处理终止状态
                 if terminal_states:
                     best_terminal = max(terminal_states, key=lambda x: x[1])
                     if best_final_state is None or best_terminal[1] > best_final_state[0]:
                         best_final_state = (best_terminal[1], best_terminal[2], best_terminal[3])
+                        self.best_global_score = best_terminal[1]
 
-                if not expanded_any:
+                if not next_states:
                     break
 
                 # 排序与去重
                 next_states.sort(key=lambda x: (x[0], x[1]), reverse=True)
-
                 unique_states = []
                 seen_grids = set()
 
@@ -699,13 +740,14 @@ class TenSumBeamSolverMultiThread:
                     if grid_bytes not in seen_grids:
                         seen_grids.add(grid_bytes)
                         unique_states.append(state)
-
                     if len(unique_states) >= self.beam_width:
                         break
 
                 current_states = unique_states
 
-        # 确保返回最终找到的最佳结果
+                if iteration % 10 == 0:
+                    logger.debug(f'Iteration {iteration}: {len(current_states)} states in beam')
+
         if best_final_state is None and current_states:
             current_states.sort(key=lambda x: x[1], reverse=True)
             best_final_state = (current_states[0][1], current_states[0][2], current_states[0][3])
@@ -714,23 +756,22 @@ class TenSumBeamSolverMultiThread:
 
         logger.info(
             f'Calculation finished: {time.time() - start_time:.3f}s, '
-            f'Total eliminated: {final_score}, Best score found: {self.best_global_score}'
+            f'Total eliminated: {final_score}, Best score: {self.best_global_score}, '
+            f'Iterations: {iteration}'
         )
 
         return self._format_output(raw_steps)
 
     def _format_output(self, raw_steps: list):
-        """格式化输出，包含具体的数字回放"""
+        """格式化输出"""
         formatted_steps = []
         replay_grid = self.initial_grid.copy()
 
         for r1, c1, r2, c2, count in raw_steps:
             start_x, start_y = self.coord_map.get((r1, c1), (0, 0))
             end_x, end_y = self.coord_map.get((r2, c2), (0, 0))
-
             roi = replay_grid[r1 : r2 + 1, c1 : c2 + 1]
             eliminated_values = roi[roi > 0].tolist()
-
             replay_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
 
             formatted_steps.append(
