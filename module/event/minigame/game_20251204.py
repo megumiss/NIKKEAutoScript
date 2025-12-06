@@ -926,3 +926,4 @@ class TenSumBeamSolverMultiThread:
             )
 
         return formatted_steps
+
