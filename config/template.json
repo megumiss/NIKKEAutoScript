@@ -514,8 +514,9 @@
       "Shop": false,
       "ShopDelayList": "TITLE",
       "Game": false,
-      "GameStorySkip": false,
-      "GameLoop": false
+      "GameTenBeam": 200,
+      "GameLoop": false,
+      "GameStorySkip": false
     },
     "Storage": {
       "Storage": {}
@@ -541,8 +542,9 @@
       "Shop": false,
       "ShopDelayList": "TITLE",
       "Game": false,
-      "GameStorySkip": false,
-      "GameLoop": false
+      "GameTenBeam": 200,
+      "GameLoop": false,
+      "GameStorySkip": false
     },
     "Storage": {
       "Storage": {}

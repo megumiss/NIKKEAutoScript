@@ -793,6 +793,7 @@
     "Event": {
       "name": "現在のイベント",
       "help": "",
+      "event_20251204": "TERMINUS Ticket",
       "event_20251120": "BLANK Ticket",
       "event_20251030": "GODDESS FALL",
       "event_20251016": "GO! NINJA THIEF!",
@@ -844,13 +845,17 @@
       "name": "ミニゲーム",
       "help": "状況に応じてミニゲームに対応します。対応していない場合は自動的にスキップされます"
     },
-    "GameStorySkip": {
-      "name": "ミニゲームのストーリーをスキップ",
-      "help": ""
+    "GameTenBeam": {
+      "name": "ミニゲーム探索強度",
+      "help": "ソルバーの探索範囲です。値を上げるほどわずかに良い解が見つかりますが、計算時間が長くなります。"
     },
     "GameLoop": {
       "name": "ミニゲームのループ実行",
       "help": "停止ショートカットキーF10"
+    },
+    "GameStorySkip": {
+      "name": "ミニゲームのストーリーをスキップ",
+      "help": ""
     }
   },
   "CheerStrategy": {

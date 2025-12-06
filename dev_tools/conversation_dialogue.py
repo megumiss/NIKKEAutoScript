@@ -9,7 +9,6 @@ import argparse
 import json
 import re
 import time
-from collections import OrderedDict
 from pathlib import Path
 
 import requests
@@ -35,14 +34,19 @@ GAME_HEADERS = {**HEADERS, 'game-alias': 'nikke'}
 # 创建 session
 session = requests.Session()
 
+# 涉及到的正则模式
+CONTENT_ID_PATTERN = re.compile(r'/nikke/tj/(\d+)\.html')
+QUESTION_PATTERN = re.compile(r'^问题\d+')
+DOTS_PATTERN = re.compile(r'[\.·]{3,}')
+
 
 def load_existing_dialogue():
     """加载现有的对话数据"""
     if DIALOGUE_JSON_PATH.exists():
-        with open(DIALOGUE_JSON_PATH, 'r', encoding='utf-8') as f:
-            data = json.load(f, object_pairs_hook=OrderedDict)
+        with DIALOGUE_JSON_PATH.open('r', encoding='utf-8') as f:
+            data = json.load(f)
             return data
-    return OrderedDict()
+    return dict()
 
 
 def save_dialogue(dialogue_data):
@@ -51,8 +55,8 @@ def save_dialogue(dialogue_data):
     DIALOGUE_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     # 保存 JSON（带缩进，方便阅读）
-    # 注意：dialogue_data 已经是 OrderedDict，会保持插入顺序
-    with open(DIALOGUE_JSON_PATH, 'w', encoding='utf-8') as f:
+    # python 3.10中，dict保证有序
+    with DIALOGUE_JSON_PATH.open('w', encoding='utf-8') as f:
         json.dump(dialogue_data, f, ensure_ascii=False, indent=2)
 
     print(f'✓ 数据已保存到 {DIALOGUE_JSON_PATH}')
@@ -97,7 +101,7 @@ def get_nikke_list(limit=None):
 
             # 从 href 中提取 content_id
             # 格式: /nikke/tj/684090.html
-            match = re.search(r'/nikke/tj/(\d+)\.html', href)
+            match = CONTENT_ID_PATTERN.search(href)
             if match:
                 content_id = match.group(1)
                 nikke_list.append({'name': title, 'content_id': content_id})
@@ -112,6 +116,13 @@ def get_nikke_list(limit=None):
 
         traceback.print_exc()
         return []
+
+
+def parse_label_value(group: list):
+    """解析 label 和 value，防止缺失导致的异常"""
+    label = group[0].get("value", "").strip() if len(group) > 0 else ""
+    value = group[1].get("value", "").strip() if len(group) > 1 else ""
+    return label, value
 
 
 def get_nikke_dialogue(content_id, nikke_name):
@@ -140,63 +151,54 @@ def get_nikke_dialogue(content_id, nikke_name):
 
         # 解析 content_json
         content_json = json.loads(data['data']['content_json'])
+        base_data = content_json.get('baseData', [])
 
-        if 'baseData' not in content_json:
+        if not base_data:
             print(f'  警告: {nikke_name} 没有 baseData')
             return nikke_name, None, 'error'
 
-        # 提取对话数据
-        dialogues = []
-        current_question = None
-        answer_true = None
-        answer_false = None
+        base_data = [x for x in base_data if x and len(x) >= 2]
 
-        for item in content_json['baseData']:
-            if not item or len(item) < 2:
+        # 检查名称是否相同
+        index = next(
+            i for i, d in enumerate(base_data) if d[0].get('value', '') == '角色名称'
+        )
+        label, value = parse_label_value(base_data[index])
+        if label == '角色名称' and value != nikke_name:
+            print(f'  警告: 角色名称不匹配，使用 {value} 覆盖 {nikke_name}')
+            nikke_name = value
+
+        # 从index开始，每3个为一组进行解析，提取对话数据
+        dialogues = []
+        index = next(
+            i
+            for i, d in enumerate(base_data[index:])
+            if d[0].get('value', '').startswith('问题')
+        )
+        while 1:
+            label, value = parse_label_value(base_data[index])
+            if not QUESTION_PATTERN.match(label):
+                break
+
+            question = clean_text(value)
+            for j in (index + 1, index + 2):
+                label, value = parse_label_value(base_data[j])
+                if label == '100好感度':
+                    answer_false = clean_text(value)
+                elif label == '120好感度':
+                    answer_true = clean_text(value)
+            index += 3
+
+            if not (question or answer_false or answer_true):
                 continue
 
-            label = item[0].get('value', '').strip()
-            value = item[1].get('value', '').strip()
-
-            # 检查名称是否相同
-            if label == '角色名称' and value != nikke_name:
-                print(f'  警告: 角色名称不匹配，使用 {value} 覆盖 {nikke_name}')
-                nikke_name = value
-
-            # 检查是否是问题（以"问题"加数字开头）
-            elif re.match(r'^问题\d+', label):
-                # 如果有之前的问题，先保存
-                if current_question and answer_true and answer_false:
-                    dialogues.append(
-                        {
-                            'question': current_question,
-                            'answer': {'false': answer_false, 'true': answer_true},
-                        }
-                    )
-
-                # 开始新问题
-                current_question = clean_text(value)
-                answer_true = None
-                answer_false = None
-
-            # 检查是否是答案 - false 在前，true 在后
-            elif label == '100好感度':
-                answer_false = clean_text(value)
-
-            elif label == '120好感度':
-                answer_true = clean_text(value)
-
-        # 保存最后一个问题
-        if current_question and answer_true and answer_false:
-            dialogues.append(
-                {
-                    'question': current_question,
-                    'answer': {
-                        'false': answer_false,  # false 在前
-                        'true': answer_true,  # true 在后
-                    },
+            dialogues.append({
+                'question': question,
+                'answer': {
+                    'false': answer_false,
+                    'true': answer_true
                 }
-            )
+            })
 
         # 验证数据完整性
         dialogue_count = len(dialogues)
@@ -244,13 +246,7 @@ def clean_text(text):
         count = len(dots) // 3
         return '…' * count
 
-    def repl_middot(match):
-        dots = match.group(0)
-        count = len(dots) // 3
-        return '…' * count
-
-    text = re.sub(r'\.{3,}', repl_dot, text)
-    text = re.sub(r'·{3,}', repl_middot, text)
+    text = DOTS_PATTERN.sub(repl_dot, text)
 
     # 删除 AccountDataNickName
     text = text.replace('{AccountData.NickName}', '').replace("'", '')
@@ -327,7 +323,8 @@ def main():
     added_names = []  # 新增的角色名称
     updated_names = []  # 更新的角色名称
 
-    for i, nikke in enumerate(nikke_list, 1):
+    # 倒序，按实装日期从老到新处理
+    for i, nikke in enumerate(reversed(nikke_list), 1):
         nikke_name = nikke['name']
         content_id = nikke['content_id']
 
@@ -374,11 +371,11 @@ def main():
 
         # 更新数据 - 新角色追加到最前面
         if is_new:
-            # 新角色：创建新的 OrderedDict，将新角色放在最前面
-            new_dict = OrderedDict()
-            new_dict[nikke_name] = new_dialogues
-            new_dict.update(existing_dialogue)
-            existing_dialogue = new_dict
+            # python 3.10中，dict保证有序
+            existing_dialogue = {
+                nikke_name: new_dialogues,
+                **existing_dialogue
+            }
             added_names.append(nikke_name)
         else:
             # 已存在角色：直接更新
@@ -395,7 +392,7 @@ def main():
         # 保存更新的角色名称到文件，供 GitHub Actions 使用
         update_info_path = BASE_DIR / '.github' / 'updated_nikke.txt'
         update_info_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(update_info_path, 'w', encoding='utf-8') as f:
+        with update_info_path.open('w', encoding='utf-8') as f:
             if added_names:
                 f.write(f'新增：{", ".join(added_names)}\n')
             if updated_names:

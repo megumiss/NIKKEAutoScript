@@ -1807,6 +1807,7 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20251204",
           "event_20251120",
           "event_20251030",
           "event_20251016",
@@ -1866,11 +1867,15 @@
         "type": "checkbox",
         "value": false
       },
-      "GameStorySkip": {
+      "GameTenBeam": {
+        "type": "input",
+        "value": 200
+      },
+      "GameLoop": {
         "type": "checkbox",
         "value": false
       },
-      "GameLoop": {
+      "GameStorySkip": {
         "type": "checkbox",
         "value": false
       }
@@ -1925,6 +1930,7 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20251204",
           "event_20251120",
           "event_20251030",
           "event_20251016",
@@ -1984,11 +1990,15 @@
         "type": "checkbox",
         "value": false
       },
-      "GameStorySkip": {
+      "GameTenBeam": {
+        "type": "input",
+        "value": 200
+      },
+      "GameLoop": {
         "type": "checkbox",
         "value": false
       },
-      "GameLoop": {
+      "GameStorySkip": {
         "type": "checkbox",
         "value": false
       }
