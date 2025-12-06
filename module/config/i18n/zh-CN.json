@@ -818,13 +818,17 @@
       "name": "小游戏",
       "help": "视情况适配小游戏，如果没有适配会自动跳过"
     },
-    "GameStorySkip": {
-      "name": "跳过小游戏剧情",
-      "help": ""
+    "GameTenBeam": {
+      "name": "小游戏搜索强度",
+      "help": "求解器的搜索范围，越高找到的解越优（略优），但计算时间越长"
     },
     "GameLoop": {
       "name": "小游戏循环运行",
       "help": "停止快捷键F10"
+    },
+    "GameStorySkip": {
+      "name": "跳过小游戏剧情",
+      "help": ""
     }
   },
   "CheerStrategy": {

@@ -247,8 +247,10 @@ Event:
     value: 'TITLE'
     type: textarea
   Game: false
-  GameStorySkip: false
+  GameTenBeam:
+    value: 200
   GameLoop: false
+  GameStorySkip: false
 CheerStrategy:
   Enable: false
   Strategy:

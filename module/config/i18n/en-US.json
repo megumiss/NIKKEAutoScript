@@ -818,13 +818,17 @@
       "name": "Mini Game",
       "help": "Adapt mini-games when possible; otherwise skip"
     },
-    "GameStorySkip": {
-      "name": "Skip Mini-Game Story",
-      "help": ""
+    "GameTenBeam": {
+      "name": "Mini-Game Search Strength",
+      "help": "The solver's search range. Higher values yield slightly better solutions but require more computation time."
     },
     "GameLoop": {
       "name": "Mini-Game Loop",
       "help": "Stop hotkey: F10"
+    },
+    "GameStorySkip": {
+      "name": "Skip Mini-Game Story",
+      "help": ""
     }
   },
   "CheerStrategy": {

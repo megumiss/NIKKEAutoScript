@@ -159,7 +159,9 @@ def start_game(self, skip_first_screenshot=True):
 
     # 计算步骤
     logger.info('Solving puzzle using Beam Search...')
-    solver = TenSumBeamSolverMultiThread(complex_grid=grid, beam_width=500, use_multiprocessing=True)
+    solver = TenSumBeamSolverMultiThread(
+        complex_grid=grid, beam_width=self.config.Event_GameTenBeam, use_multiprocessing=True
+    )
     steps = solver.solve()
 
     logger.info(f'Solution found: {len(steps)} steps total.')
@@ -553,9 +555,20 @@ def _expand_state_worker(state_data, rows, cols, best_score):
     if not moves:
         return [('TERMINAL', score, grid, history)]
 
+    # 对移动进行智能排序（避免贪心陷阱）
+    scored_moves = []
+    for r1, c1, r2, c2, count in moves:
+        # 计算移动优先级
+        priority = _calculate_move_priority_worker(grid, r1, c1, r2, c2, count, rows, cols)
+        scored_moves.append((priority, r1, c1, r2, c2, count))
+
+    # 按优先级排序，取前N个最佳移动（避免搜索空间爆炸）
+    scored_moves.sort(reverse=True)
+    top_moves = scored_moves[: min(20, len(scored_moves))]  # 只保留最优的20个移动
+
     # 扩展状态
     new_states = []
-    for r1, c1, r2, c2, count in moves:
+    for priority, r1, c1, r2, c2, count in top_moves:
         new_score = score + count
         new_grid = grid.copy()
         new_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
@@ -565,6 +578,45 @@ def _expand_state_worker(state_data, rows, cols, best_score):
         new_states.append((new_f_score, new_score, new_grid, new_history))
 
     return new_states
+
+
+def _calculate_move_priority_worker(grid, r1, c1, r2, c2, count, rows, cols):
+    """全局函数：计算移动优先级（用于多进程）"""
+    score = count * 100
+
+    center_r = rows / 2
+    center_c = cols / 2
+    avg_r = (r1 + r2) / 2
+    avg_c = (c1 + c2) / 2
+    distance_from_center = abs(avg_r - center_r) + abs(avg_c - center_c)
+    score += distance_from_center * 2
+
+    width = c2 - c1 + 1
+    height = r2 - r1 + 1
+    aspect_ratio = max(width, height) / min(width, height)
+    score -= aspect_ratio * 5
+
+    roi = grid[r1 : r2 + 1, c1 : c2 + 1]
+    total_cells = (r2 - r1 + 1) * (c2 - c1 + 1)
+    density = count / total_cells
+    score += density * 50
+
+    test_grid = grid.copy()
+    test_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
+    has_neighbors = False
+    for dr in [-1, 0, 1]:
+        for dc in [-1, 0, 1]:
+            for rr in range(r1, r2 + 2):
+                for cc in range(c1, c2 + 2):
+                    nr, nc = rr + dr, cc + dc
+                    if 0 <= nr < rows and 0 <= nc < cols:
+                        if test_grid[nr, nc] > 0:
+                            has_neighbors = True
+                            break
+    if not has_neighbors and np.sum(test_grid > 0) > 0:
+        score -= 100
+
+    return score
 
 
 def _get_valid_moves_fast_worker(grid, rows, cols):
@@ -590,11 +642,11 @@ def _get_valid_moves_fast_worker(grid, rows, cols):
 
 
 class TenSumBeamSolverMultiThread:
-    def __init__(self, complex_grid, beam_width=100, use_multiprocessing=True):
+    def __init__(self, complex_grid, beam_width=200, use_multiprocessing=True):
         """
         Args:
             complex_grid: recognize_digit_grid_robust 返回的二维数组
-            beam_width: 搜索宽度
+            beam_width: 搜索宽度（建议至少200以避免局部最优）
             use_multiprocessing: True=多进程(推荐), False=多线程
         """
         self.beam_width = beam_width
@@ -630,8 +682,55 @@ class TenSumBeamSolverMultiThread:
         )
 
     def _get_valid_moves_fast(self, grid: np.ndarray):
-        """实例方法：快速查找有效移动"""
+        """实例方法：快速查找有效移动（增强版）"""
         return _get_valid_moves_fast_worker(grid, self.rows, self.cols)
+
+    def _calculate_move_priority(self, grid, r1, c1, r2, c2, count):
+        """
+        计算移动的优先级（用于打破贪心陷阱）
+        返回值越大越优先
+        """
+        # 1. 基础分数：消除的数字数量
+        score = count * 100
+
+        # 2. 位置惩罚：优先消除边缘（避免制造孤岛）
+        center_r = self.rows / 2
+        center_c = self.cols / 2
+        avg_r = (r1 + r2) / 2
+        avg_c = (c1 + c2) / 2
+        distance_from_center = abs(avg_r - center_r) + abs(avg_c - center_c)
+        score += distance_from_center * 2  # 边缘加分
+
+        # 3. 形状奖励：方形 > 长条形（减少碎片化）
+        width = c2 - c1 + 1
+        height = r2 - r1 + 1
+        aspect_ratio = max(width, height) / min(width, height)
+        score -= aspect_ratio * 5  # 越方正越好
+
+        # 4. 密度奖励：优先选择数字密集的区域
+        roi = grid[r1 : r2 + 1, c1 : c2 + 1]
+        total_cells = (r2 - r1 + 1) * (c2 - c1 + 1)
+        density = count / total_cells
+        score += density * 50
+
+        # 5. 连通性检查：消除后不应制造孤立区域
+        test_grid = grid.copy()
+        test_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
+        # 简单检查：周围是否还有数字
+        has_neighbors = False
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                for rr in range(r1, r2 + 2):
+                    for cc in range(c1, c2 + 2):
+                        nr, nc = rr + dr, cc + dc
+                        if 0 <= nr < self.rows and 0 <= nc < self.cols:
+                            if test_grid[nr, nc] > 0:
+                                has_neighbors = True
+                                break
+        if not has_neighbors and np.sum(test_grid > 0) > 0:
+            score -= 100  # 严重惩罚制造孤岛的移动
+
+        return score
 
     def _expand_state_thread(self, state_data):
         """线程模式的状态扩展（带锁）"""
@@ -655,8 +754,17 @@ class TenSumBeamSolverMultiThread:
                     return [('TERMINAL', score, grid, history)]
             return None
 
-        new_states = []
+        # 对移动进行智能排序
+        scored_moves = []
         for r1, c1, r2, c2, count in moves:
+            priority = self._calculate_move_priority(grid, r1, c1, r2, c2, count)
+            scored_moves.append((priority, r1, c1, r2, c2, count))
+
+        scored_moves.sort(reverse=True)
+        top_moves = scored_moves[: min(20, len(scored_moves))]
+
+        new_states = []
+        for priority, r1, c1, r2, c2, count in top_moves:
             new_score = score + count
             new_grid = grid.copy()
             new_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
@@ -675,6 +783,12 @@ class TenSumBeamSolverMultiThread:
 
         start_time = time.time()
 
+        # 性能统计
+        parallel_time = 0
+        serial_time = 0
+        parallel_iterations = 0
+        serial_iterations = 0
+
         # 根据模式选择执行器
         ExecutorClass = ProcessPoolExecutor if self.use_multiprocessing else ThreadPoolExecutor
 
@@ -682,11 +796,13 @@ class TenSumBeamSolverMultiThread:
         with ExecutorClass(max_workers=self.num_workers) as executor:
             while True:
                 iteration += 1
+                iter_start = time.time()
                 next_states = []
                 terminal_states = []
 
                 # 小批次优化：当状态数很少时，不使用并行
                 if len(current_states) < self.num_workers:
+                    serial_iterations += 1
                     for state in current_states:
                         if self.use_multiprocessing:
                             result = _expand_state_worker(state, self.rows, self.cols, self.best_global_score)
@@ -699,7 +815,9 @@ class TenSumBeamSolverMultiThread:
                                     terminal_states.append(s)
                                 else:
                                     next_states.append(s)
+                    serial_time += time.time() - iter_start
                 else:
+                    parallel_iterations += 1
                     # 并行处理
                     if self.use_multiprocessing:
                         # 多进程：使用全局函数
@@ -719,6 +837,7 @@ class TenSumBeamSolverMultiThread:
                                     terminal_states.append(s)
                                 else:
                                     next_states.append(s)
+                    parallel_time += time.time() - iter_start
 
                 # 处理终止状态
                 if terminal_states:
@@ -731,6 +850,7 @@ class TenSumBeamSolverMultiThread:
                     break
 
                 # 排序与去重
+                sort_start = time.time()
                 next_states.sort(key=lambda x: (x[0], x[1]), reverse=True)
                 unique_states = []
                 seen_grids = set()
@@ -753,12 +873,33 @@ class TenSumBeamSolverMultiThread:
             best_final_state = (current_states[0][1], current_states[0][2], current_states[0][3])
 
         final_score, _, raw_steps = best_final_state
+        total_time = time.time() - start_time
+
+        # 详细性能报告
+        parallel_ratio = (parallel_time / total_time * 100) if total_time > 0 else 0
+        serial_ratio = (serial_time / total_time * 100) if total_time > 0 else 0
 
         logger.info(
-            f'Calculation finished: {time.time() - start_time:.3f}s, '
+            f'Calculation finished: {total_time:.3f}s, '
             f'Total eliminated: {final_score}, Best score: {self.best_global_score}, '
             f'Iterations: {iteration}'
         )
+        logger.info(
+            f'Performance breakdown: '
+            f'Parallel={parallel_iterations} iters ({parallel_time:.3f}s, {parallel_ratio:.1f}%), '
+            f'Serial={serial_iterations} iters ({serial_time:.3f}s, {serial_ratio:.1f}%)'
+        )
+
+        if parallel_iterations > 0:
+            theoretical_speedup = self.num_workers
+            actual_speedup = (
+                total_time / (total_time - parallel_time + parallel_time / self.num_workers) if parallel_time > 0 else 1
+            )
+            efficiency = (actual_speedup / theoretical_speedup * 100) if theoretical_speedup > 0 else 0
+            logger.info(
+                f'Parallel efficiency: {efficiency:.1f}% '
+                f'(theoretical {theoretical_speedup}x, actual ~{actual_speedup:.2f}x on parallel portion)'
+            )
 
         return self._format_output(raw_steps)
 

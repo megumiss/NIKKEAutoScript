@@ -1844,11 +1844,15 @@
         "type": "checkbox",
         "value": false
       },
-      "GameStorySkip": {
+      "GameTenBeam": {
+        "type": "input",
+        "value": 200
+      },
+      "GameLoop": {
         "type": "checkbox",
         "value": false
       },
-      "GameLoop": {
+      "GameStorySkip": {
         "type": "checkbox",
         "value": false
       }
@@ -1963,11 +1967,15 @@
         "type": "checkbox",
         "value": false
       },
-      "GameStorySkip": {
+      "GameTenBeam": {
+        "type": "input",
+        "value": 200
+      },
+      "GameLoop": {
         "type": "checkbox",
         "value": false
       },
-      "GameLoop": {
+      "GameStorySkip": {
         "type": "checkbox",
         "value": false
       }
