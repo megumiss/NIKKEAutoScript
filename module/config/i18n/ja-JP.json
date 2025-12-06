@@ -658,12 +658,12 @@
   },
   "RookieArena": {
     "_info": {
-      "name": "RookieArena._info.name",
-      "help": "RookieArena._info.help"
+      "name": "",
+      "help": "戦闘設定"
     },
     "Times": {
-      "name": "RookieArena.Times.name",
-      "help": "RookieArena.Times.help",
+      "name": "戦闘回数",
+      "help": "",
       "1": "1",
       "2": "2",
       "3": "3",
@@ -673,12 +673,12 @@
   },
   "SpecialArena": {
     "_info": {
-      "name": "SpecialArena._info.name",
-      "help": "SpecialArena._info.help"
+      "name": "戦闘設定",
+      "help": ""
     },
     "Times": {
-      "name": "SpecialArena.Times.name",
-      "help": "SpecialArena.Times.help",
+      "name": "戦闘回数",
+      "help": "",
       "1": "1",
       "2": "2"
     }
