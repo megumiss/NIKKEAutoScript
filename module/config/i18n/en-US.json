@@ -849,6 +849,10 @@
       "name": "Mini-Game Search Strength",
       "help": "The solver's search range. Higher values yield slightly better solutions but require more computation time."
     },
+    "GameTargetScore": {
+      "name": "Mini-game Target Score",
+      "help": "Only effective when mini-game looping is enabled. The loop will stop once the target score is reached."
+    },
     "GameLoop": {
       "name": "Mini-Game Loop",
       "help": "Stop hotkey: F10"

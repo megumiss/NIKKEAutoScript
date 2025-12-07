@@ -162,137 +162,161 @@ def start_game(self, skip_first_screenshot=True):
     solver = TenSumBeamSolverMultiThread(
         complex_grid=grid, beam_width=self.config.Event_GameTenBeam, use_multiprocessing=True
     )
-    steps = solver.solve()
+    steps, source = solver.solve()
 
-    logger.info(f'Solution found: {len(steps)} steps total.')
+    if self.config.Event_GameLoop and source * 1000 < self.config.Event_GameTargetScore:
+        # 重新开始
+        while 1:
+            self.device.screenshot()
 
-    def check_point_color(
-        screenshot, point: Tuple[int, int], target_color: Tuple[int, int, int], tolerance: int = 10
-    ) -> bool:
-        """
-        检查指定点的颜色是否匹配目标颜色
+            if self.appear(MINI_GAME_BACK, offset=10):
+                logger.warning(f'Restart mini game due to low score: {source * 1000}')
+                break
+            # 强制退出
+            if self.appear_then_click(MINI_GAME_FORCE_QUIT, offset=10, interval=2):
+                continue
+            # esc
+            if self.appear_then_click(MINI_GAME_EXEC_CHECK, offset=10, interval=2):
+                continue
+    else:
+        logger.info(f'Solution found: {len(steps)} steps total.')
 
-        Args:
-            screenshot: 截图对象 (PIL Image 或 numpy array)
-            point: 要检查的点坐标 (x, y)
-            target_color: 目标RGB颜色 (r, g, b)
-            tolerance: 颜色容差值
+        def check_point_color(
+            screenshot, point: Tuple[int, int], target_color: Tuple[int, int, int], tolerance: int = 10
+        ) -> bool:
+            """
+            检查指定点的颜色是否匹配目标颜色
 
-        Returns:
-            bool: 颜色是否匹配
-        """
-        try:
-            x, y = point
+            Args:
+                screenshot: 截图对象 (PIL Image 或 numpy array)
+                point: 要检查的点坐标 (x, y)
+                target_color: 目标RGB颜色 (r, g, b)
+                tolerance: 颜色容差值
 
-            # 判断截图类型并获取像素颜色
-            if hasattr(screenshot, 'getpixel'):
-                # PIL Image
-                pixel_color = screenshot.getpixel(point)
-            else:
-                # numpy array - 注意numpy数组是 [y, x] 顺序,且可能是BGR或RGB
-                import numpy as np
+            Returns:
+                bool: 颜色是否匹配
+            """
+            try:
+                x, y = point
 
-                if isinstance(screenshot, np.ndarray):
-                    # 检查数组维度和范围
-                    if y >= screenshot.shape[0] or x >= screenshot.shape[1]:
-                        logger.error(f'点 ({x}, {y}) 超出图像范围 {screenshot.shape}')
+                # 判断截图类型并获取像素颜色
+                if hasattr(screenshot, 'getpixel'):
+                    # PIL Image
+                    pixel_color = screenshot.getpixel(point)
+                else:
+                    # numpy array - 注意numpy数组是 [y, x] 顺序,且可能是BGR或RGB
+                    import numpy as np
+
+                    if isinstance(screenshot, np.ndarray):
+                        # 检查数组维度和范围
+                        if y >= screenshot.shape[0] or x >= screenshot.shape[1]:
+                            logger.error(f'点 ({x}, {y}) 超出图像范围 {screenshot.shape}')
+                            return False
+
+                        pixel_color = screenshot[y, x]
+
+                        # 如果是BGR格式(OpenCV),转换为RGB
+                        # if len(pixel_color) >= 3:
+                        #     # 假设是BGR,转为RGB (如果你的截图已经是RGB,可以去掉这行)
+                        #     pixel_color = (pixel_color[2], pixel_color[1], pixel_color[0])
+                    else:
+                        logger.error(f'不支持的截图类型: {type(screenshot)}')
                         return False
 
-                    pixel_color = screenshot[y, x]
+                # 计算颜色差异
+                color_diff = sum(abs(int(pixel_color[i]) - target_color[i]) for i in range(3))
 
-                    # 如果是BGR格式(OpenCV),转换为RGB
-                    # if len(pixel_color) >= 3:
-                    #     # 假设是BGR,转为RGB (如果你的截图已经是RGB,可以去掉这行)
-                    #     pixel_color = (pixel_color[2], pixel_color[1], pixel_color[0])
-                else:
-                    logger.error(f'不支持的截图类型: {type(screenshot)}')
-                    return False
+                return color_diff <= tolerance * 3  # 3个通道的总容差
+            except Exception as e:
+                logger.error(f'检查点 {point} 颜色时出错: {e}')
+                return False
 
-            # 计算颜色差异
-            color_diff = sum(abs(int(pixel_color[i]) - target_color[i]) for i in range(3))
+        def verify_swipe_result(
+            screenshot,
+            start_pt: Tuple[int, int],
+            end_pt: Tuple[int, int],
+            target_color: Tuple[int, int, int],
+            tolerance: int = 10,
+        ) -> bool:
+            """
+            验证滑动后两个点是否都变成了目标颜色
 
-            return color_diff <= tolerance * 3  # 3个通道的总容差
-        except Exception as e:
-            logger.error(f'检查点 {point} 颜色时出错: {e}')
-            return False
+            Args:
+                screenshot: 截图对象
+                start_pt: 起始点坐标
+                end_pt: 结束点坐标
+                target_color: 目标RGB颜色
+                tolerance: 颜色容差值
 
-    def verify_swipe_result(
-        screenshot,
-        start_pt: Tuple[int, int],
-        end_pt: Tuple[int, int],
-        target_color: Tuple[int, int, int],
-        tolerance: int = 10,
-    ) -> bool:
-        """
-        验证滑动后两个点是否都变成了目标颜色
+            Returns:
+                bool: 两个点是否都匹配目标颜色
+            """
+            start_match = check_point_color(screenshot, start_pt, target_color, tolerance)
+            end_match = check_point_color(screenshot, end_pt, target_color, tolerance)
 
-        Args:
-            screenshot: 截图对象
-            start_pt: 起始点坐标
-            end_pt: 结束点坐标
-            target_color: 目标RGB颜色
-            tolerance: 颜色容差值
+            logger.debug(f'起点 {start_pt} 颜色匹配: {start_match}')
+            logger.debug(f'终点 {end_pt} 颜色匹配: {end_match}')
 
-        Returns:
-            bool: 两个点是否都匹配目标颜色
-        """
-        start_match = check_point_color(screenshot, start_pt, target_color, tolerance)
-        end_match = check_point_color(screenshot, end_pt, target_color, tolerance)
+            return start_match and end_match
 
-        logger.debug(f'起点 {start_pt} 颜色匹配: {start_match}')
-        logger.debug(f'终点 {end_pt} 颜色匹配: {end_match}')
+        # 游戏操作执行
+        for i, step in enumerate(steps):
+            # 提取详细信息
+            vals = step['eliminated_values']
+            val_str = '+'.join(str(v) for v in vals)
+            start_pt = step['start_point']
+            end_pt = step['end_point']
 
-        return start_match and end_match
-
-    # 游戏操作执行
-    for i, step in enumerate(steps):
-        # 提取详细信息
-        vals = step['eliminated_values']
-        val_str = '+'.join(str(v) for v in vals)
-        start_pt = step['start_point']
-        end_pt = step['end_point']
-
-        # 输出友好的日志
-        logger.info(
-            f'Step {i + 1:02d}/{len(steps)}: Swipe {start_pt} -> {end_pt} | '
-            f'Eliminate: {val_str} = 10 (Count: {step["eliminated_count"]})'
-        )
-
-        # 设置重试参数
-        swipe_success = False
-
-        while not swipe_success:
-            # 执行滑动
-            self.ensure_sroll(
-                (start_pt[0] - 20, start_pt[1] - 20),
-                (end_pt[0] + 20, end_pt[1] + 20),
-                method='swipe',
-                speed=20,
-                count=1,
-                delay=0.3,
+            # 输出友好的日志
+            logger.info(
+                f'Step {i + 1:02d}/{len(steps)}: Swipe {start_pt} -> {end_pt} | '
+                f'Eliminate: {val_str} = 10 (Count: {step["eliminated_count"]})'
             )
 
-            # 重新截图
-            screenshot = self.device.screenshot()
-            # 验证滑动结果
-            swipe_success = verify_swipe_result(screenshot, start_pt, end_pt, target_color, color_tolerance)
+            # 设置重试参数
+            swipe_success = False
 
-            if swipe_success:
-                logger.info(f'✓ Step {i + 1} 滑动验证成功')
+            while not swipe_success:
+                # 执行滑动
+                self.ensure_sroll(
+                    (start_pt[0] - 20, start_pt[1] - 20),
+                    (end_pt[0] + 20, end_pt[1] + 20),
+                    method='swipe',
+                    speed=20,
+                    count=1,
+                    delay=0.3,
+                )
 
-            # 结束返回
-            if self.appear(MINI_GAME_BACK, offset=10):
-                break
+                # 重新截图
+                screenshot = self.device.screenshot()
+                # 验证滑动结果
+                swipe_success = verify_swipe_result(screenshot, start_pt, end_pt, target_color, color_tolerance)
+
+                if swipe_success:
+                    logger.info(f'✓ Step {i + 1} 滑动验证成功')
+
+                # 结束返回
+                if self.appear(MINI_GAME_BACK, offset=10):
+                    break
 
     # 游戏结束逻辑处理
     while 1:
         self.device.screenshot()
 
         # 结束返回
-        if click_timer.reached() and self.appear_then_click(MINI_GAME_BACK, offset=10, interval=2):
-            logger.info('Event mini game done')
-            click_timer.reset()
-            continue
+        if self.appear(MINI_GAME_BACK, offset=10):
+            if (
+                self.config.Event_GameLoop
+                and self.config.Event_GameTargetScore != 0
+                and source * 1000 >= self.config.Event_GameTargetScore
+            ):
+                raise Exception('Mini game ended, target score reached')
+            else:
+                logger.info('Mini game ended, go to back')
+                if self.appear_then_click(MINI_GAME_BACK, offset=10, interval=2):
+                    logger.info('Event mini game done')
+                    click_timer.reset()
+                    continue
 
         # 关闭结算弹窗
         if click_timer.reached() and self.appear_then_click(MINI_GAME_EXEC_CLOSE, offset=30, interval=1, static=False):
@@ -995,7 +1019,7 @@ class TenSumBeamSolverMultiThread:
                 f'(theoretical {theoretical_speedup}x, actual ~{actual_speedup:.2f}x on parallel portion)'
             )
 
-        return self._format_output(raw_steps)
+        return self._format_output(raw_steps), final_score
 
     def _format_output(self, raw_steps: list):
         """格式化输出"""

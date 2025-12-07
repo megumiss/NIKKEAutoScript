@@ -257,6 +257,8 @@ Event:
   Game: false
   GameTenBeam:
     value: 200
+  GameTargetScore:
+    value: 0
   GameLoop: false
   GameStorySkip: false
 CheerStrategy:

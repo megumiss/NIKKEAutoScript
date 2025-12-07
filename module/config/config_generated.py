@@ -157,6 +157,7 @@ class GeneratedConfig:
     Event_ShopDelayList = 'TITLE'
     Event_Game = False
     Event_GameTenBeam = 200
+    Event_GameTargetScore = 0
     Event_GameLoop = False
     Event_GameStorySkip = False
 
