@@ -111,6 +111,12 @@ class GeneratedConfig:
     CollectionItems_Enable = False
     CollectionItems_Priority = None
 
+    # Group `RookieArena`
+    RookieArena_Times = 5  # 1, 2, 3, 4, 5
+
+    # Group `SpecialArena`
+    SpecialArena_Times = 2  # 1, 2
+
     # Group `OpponentSelection`
     OpponentSelection_Enable = False
     OpponentSelection_SortingWeight = '{"Power":0.3, "CommanderLevel":0.2, "SynchroLevel":0.3, "Ranking":0.2}'

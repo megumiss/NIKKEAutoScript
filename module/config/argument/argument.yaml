@@ -166,6 +166,14 @@ CollectionItems:
   Priority:
     value: ''
     type: textarea
+RookieArena:
+  Times:
+    value: 5
+    option: [ 1, 2, 3, 4, 5 ]
+SpecialArena:
+  Times:
+    value: 2
+    option: [ 1, 2 ]
 OpponentSelection:
   Enable: false
   SortingWeight:

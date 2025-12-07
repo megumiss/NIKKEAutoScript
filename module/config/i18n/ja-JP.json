@@ -656,6 +656,33 @@
       "help": "ニケの優先度。現在の派遣で選択されているコレクションアイテムの数が160を超えると、リストから自動的に削除され、次のニケが選択されます。形式：Helm > Exia\nニケ名対応：\nDiesel：ディーゼル\nExia：エクシア\nLaplace：ラプラス\nFrima：フリーマ\nViper：バイパー\nHelm：ヘルム\nMiranda：ミランダ\nDrake：ドレイク\nMilk：ミルク\nPoli：ポリー\nJulia：ジュリア\nBay：ベイ\nTove：トーブ"
     }
   },
+  "RookieArena": {
+    "_info": {
+      "name": "",
+      "help": "戦闘設定"
+    },
+    "Times": {
+      "name": "戦闘回数",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    }
+  },
+  "SpecialArena": {
+    "_info": {
+      "name": "戦闘設定",
+      "help": ""
+    },
+    "Times": {
+      "name": "戦闘回数",
+      "help": "",
+      "1": "1",
+      "2": "2"
+    }
+  },
   "OpponentSelection": {
     "_info": {
       "name": "対戦相手選択設定",

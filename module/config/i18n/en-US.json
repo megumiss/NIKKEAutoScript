@@ -656,6 +656,33 @@
       "help": "NIKKE priority. If selected collectibles exceed 160, the current will be removed and next chosen. Format example: Helm > Exia.\nNIKKE name mappings:\nDiesel: Diesel\nExia: Exia\nLaplace: Laplace\nFrima: Frima\nViper: Viper\nHelm: Helm\nMiranda: Miranda\nDrake: Drake\nMilk: Milk\nPoli: Poli\nJulia: Julia\nBay: Bay\nTove: Tove"
     }
   },
+  "RookieArena": {
+    "_info": {
+      "name": "Battle Settings",
+      "help": ""
+    },
+    "Times": {
+      "name": "Battle Times",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    }
+  },
+  "SpecialArena": {
+    "_info": {
+      "name": "Battle Settings",
+      "help": ""
+    },
+    "Times": {
+      "name": "Battle Times",
+      "help": "",
+      "1": "1",
+      "2": "2"
+    }
+  },
   "OpponentSelection": {
     "_info": {
       "name": "Opponent Selection Settings",
