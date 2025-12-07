@@ -264,8 +264,8 @@ def start_game(self, skip_first_screenshot=True):
         while not swipe_success:
             # 执行滑动
             self.ensure_sroll(
-                (start_pt[0] - 15, start_pt[1] - 15),
-                (end_pt[0] + 15, end_pt[1] + 15),
+                (start_pt[0] - 20, start_pt[1] - 20),
+                (end_pt[0] + 20, end_pt[1] + 20),
                 method='swipe',
                 speed=20,
                 count=1,
@@ -532,48 +532,42 @@ def _create_default_grid(rows, cols, default_value, reference_x=None, reference_
 
 
 def _expand_state_worker(state_data, rows, cols, best_score):
-    """
-    全局函数：扩展单个状态（用于多进程）
-    Args:
-        state_data: (f_score, g_score, grid, history)
-        rows, cols: 网格尺寸
-        best_score: 当前全局最优分数
-    Returns:
-        list of new states or None
-    """
     _, score, grid, history = state_data
 
-    # Optimistic 剪枝
     remaining_digits = np.sum(grid > 0)
-    potential_max_score = score + remaining_digits
-
-    if potential_max_score <= best_score:
-        return None
+    # 基础收益检查：如果把剩下的全消了也赢不了 best_score，才退出
+    # 注意：如果您的目标只是"尽可能多消"，而不是"超过某个分"，可以注释掉下面这行
+    # if score + remaining_digits <= best_score: return None
 
     moves = _get_valid_moves_fast_worker(grid, rows, cols)
-
     if not moves:
         return [('TERMINAL', score, grid, history)]
 
-    # 对移动进行智能排序（避免贪心陷阱）
+    # 1. 计算所有移动的优先级
     scored_moves = []
     for r1, c1, r2, c2, count in moves:
-        # 计算移动优先级
         priority = _calculate_move_priority_worker(grid, r1, c1, r2, c2, count, rows, cols)
         scored_moves.append((priority, r1, c1, r2, c2, count))
 
-    # 按优先级排序，取前N个最佳移动（避免搜索空间爆炸）
-    scored_moves.sort(reverse=True)
-    top_moves = scored_moves[: min(20, len(scored_moves))]  # 只保留最优的20个移动
+    # 2. 排序并取 Top K (稍微放宽到 25 以防漏掉好解)
+    scored_moves.sort(key=lambda x: x[0], reverse=True)
+    top_moves = scored_moves[:25]
 
-    # 扩展状态
     new_states = []
-    for priority, r1, c1, r2, c2, count in top_moves:
+    for _, r1, c1, r2, c2, count in top_moves:
         new_score = score + count
         new_grid = grid.copy()
         new_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
+
+        # 计算惩罚，但不再用于"枪毙"状态，只用于降低排名
+        penalty = _analyze_grid_state(new_grid, rows, cols)
+
         new_remaining_digits = remaining_digits - count
-        new_f_score = new_score + new_remaining_digits
+
+        # f_score = 当前分 + 未来潜力 - 状态风险
+        # 即使 penalty 很高，只要它是目前唯一的路径，我们也得走
+        new_f_score = new_score + new_remaining_digits - (penalty / 50.0)
+
         new_history = history + [(r1, c1, r2, c2, count)]
         new_states.append((new_f_score, new_score, new_grid, new_history))
 
@@ -581,40 +575,81 @@ def _expand_state_worker(state_data, rows, cols, best_score):
 
 
 def _calculate_move_priority_worker(grid, r1, c1, r2, c2, count, rows, cols):
-    """全局函数：计算移动优先级（用于多进程）"""
-    score = count * 100
+    """
+    计算移动优先级（优化版）
+    """
+    # 1. 基础分：不再单纯乘以100，降低单纯消除数量的权重
+    # 我们希望算法去寻找那些"解构性"的移动，而不仅仅是"得分"的移动
+    score = count * 20
 
-    center_r = rows / 2
-    center_c = cols / 2
-    avg_r = (r1 + r2) / 2
-    avg_c = (c1 + c2) / 2
-    distance_from_center = abs(avg_r - center_r) + abs(avg_c - center_c)
-    score += distance_from_center * 2
-
+    # 2. 形状奖励：更强力地鼓励方块消除，严厉惩罚长条消除
+    # 长条消除最容易切断连通性
     width = c2 - c1 + 1
     height = r2 - r1 + 1
-    aspect_ratio = max(width, height) / min(width, height)
-    score -= aspect_ratio * 5
+    min_side = min(width, height)
+    max_side = max(width, height)
 
+    aspect_ratio = max_side / min_side
+    if aspect_ratio == 1:
+        score += 80  # 完美正方形
+    elif aspect_ratio < 1.5:
+        score += 40  # 接近正方形
+    else:
+        score -= aspect_ratio * 30  # 长条形惩罚
+
+    # 3. 边缘优先策略（剥洋葱法）
+    # 优先消除边缘的数字，把中间的留给后面，这样不容易产生孤岛
+    center_r = rows / 2.0
+    center_c = cols / 2.0
+    avg_r = (r1 + r2) / 2.0
+    avg_c = (c1 + c2) / 2.0
+
+    # 归一化距离
+    dist_r = abs(avg_r - center_r) / (rows / 2.0)
+    dist_c = abs(avg_c - center_c) / (cols / 2.0)
+
+    # 越靠边，分数越高
+    score += (dist_r + dist_c) * 40
+
+    # 4. 模拟移动后的连通性检测（这是计算瓶颈，但也是智能核心）
+    # 为了性能，我们不做全图BFS，只做局部快速检查
+
+    # 构造一个临时的掩码，表示消除后的空洞
+    # 检查这个空洞周边的数字是否被"切断"了
+    # 这里是一个简化的启发式逻辑，替代昂贵的全图BFS
+
+    # 获取消除区域周边的数字数量
+    perimeter_contacts = 0
+    masked_grid = grid.copy()
+    masked_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
+
+    # 检查消除区域的四条边之外是否有数字
+    # 如果四边都有数字，说明我们在网格中间挖了一个洞，这很危险
+    sides_contact = 0
+    if r1 > 0 and np.any(grid[r1 - 1, c1 : c2 + 1] > 0):
+        sides_contact += 1
+    if r2 < rows - 1 and np.any(grid[r2 + 1, c1 : c2 + 1] > 0):
+        sides_contact += 1
+    if c1 > 0 and np.any(grid[r1 : r2 + 1, c1 - 1] > 0):
+        sides_contact += 1
+    if c2 < cols - 1 and np.any(grid[r1 : r2 + 1, c2 + 1] > 0):
+        sides_contact += 1
+
+    if sides_contact >= 3:
+        score -= 150  # 严厉惩罚在中间挖洞的行为
+    elif sides_contact == 2:
+        score -= 50
+
+    # 5. 数字稀缺性奖励
+    # 如果消除了场上很多的数字（比如1），给予惩罚（保留火种）
+    # 如果消除了场上很少的数字（比如9），给予奖励（清理难点）
+    # (这一步可以在外部做，也可以简单实现)
+    # 假设 vals 是消除的数字列表
     roi = grid[r1 : r2 + 1, c1 : c2 + 1]
-    total_cells = (r2 - r1 + 1) * (c2 - c1 + 1)
-    density = count / total_cells
-    score += density * 50
-
-    test_grid = grid.copy()
-    test_grid[r1 : r2 + 1, c1 : c2 + 1] = 0
-    has_neighbors = False
-    for dr in [-1, 0, 1]:
-        for dc in [-1, 0, 1]:
-            for rr in range(r1, r2 + 2):
-                for cc in range(c1, c2 + 2):
-                    nr, nc = rr + dr, cc + dc
-                    if 0 <= nr < rows and 0 <= nc < cols:
-                        if test_grid[nr, nc] > 0:
-                            has_neighbors = True
-                            break
-    if not has_neighbors and np.sum(test_grid > 0) > 0:
-        score -= 100
+    vals = roi[roi > 0]
+    # 这里简单判定：如果包含大数字(7,8,9)，提权
+    high_val_count = np.sum(vals >= 7)
+    score += high_val_count * 15
 
     return score
 
@@ -639,6 +674,65 @@ def _get_valid_moves_fast_worker(grid, rows, cols):
                         if count > 0:
                             moves.append((r1, c1, r2, c2, count))
     return moves
+
+
+def _analyze_grid_state(grid, rows, cols):
+    """
+    分析网格状态（温和版），避免因OCR小误差导致全盘放弃
+    """
+    penalty = 0
+
+    # --- 1. 孤岛/连通性分析 (BFS) ---
+    visited = np.zeros((rows, cols), dtype=bool)
+    visited[grid == 0] = True
+
+    for r in range(rows):
+        for c in range(cols):
+            if not visited[r, c] and grid[r, c] > 0:
+                stack = [(r, c)]
+                visited[r, c] = True
+                island_sum = 0
+                island_count = 0  # 统计孤岛大小
+
+                while stack:
+                    curr_r, curr_c = stack.pop()
+                    val = grid[curr_r, curr_c]
+                    island_sum += val
+                    island_count += 1
+
+                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nr, nc = curr_r + dr, curr_c + dc
+                        if 0 <= nr < rows and 0 <= nc < cols:
+                            if not visited[nr, nc] and grid[nr, nc] > 0:
+                                visited[nr, nc] = True
+                                stack.append((nr, nc))
+
+                # --- 关键修改点 ---
+                remainder = island_sum % 10
+                if remainder != 0:
+                    if island_count < 5:
+                        # 小孤岛确实没救了，重罚
+                        penalty += 1000
+                    else:
+                        # 大孤岛可能是OCR识别错了一个数字，或者是局面复杂
+                        # 不要直接判死刑，给一个轻微的"不完美惩罚"
+                        # 这样算法会倾向于去消除那些能让余数归零的数字，而不是直接放弃
+                        penalty += 50
+
+                # 只有单个数字且不是10，绝对死局
+                if island_count == 1 and remainder != 0:
+                    penalty += 5000
+
+    # --- 2. 数字供需平衡分析 ---
+    counts = np.bincount(grid[grid > 0].flatten(), minlength=11)
+    for i in range(1, 5):
+        diff = abs(counts[i] - counts[10 - i])
+        penalty += diff * 10  # 稍微降低权重
+
+    if counts[5] % 2 != 0:
+        penalty += 10
+
+    return penalty
 
 
 class TenSumBeamSolverMultiThread:
