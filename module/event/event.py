@@ -1270,6 +1270,12 @@ class Event(UI):
                 logger.error('Event not found')
                 raise EventUnavailableError
 
+    def push_story(self):
+        logger.info('Auto push story')
+
+        
+        # 优先跑扫荡，扫荡完成后再推图
+
     def run(self):
         # image = cv2.imread('1.png')
         # cv2.cvtColor(image, cv2.COLOR_BGR2RGB, dst=image)

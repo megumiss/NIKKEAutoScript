@@ -793,6 +793,7 @@
     "Event": {
       "name": "EventInfo.Event.name",
       "help": "EventInfo.Event.help",
+      "event_20251204": "event_20251204",
       "event_20251120": "event_20251120",
       "event_20251030": "event_20251030",
       "event_20251016": "event_20251016",
