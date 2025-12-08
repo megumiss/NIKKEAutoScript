@@ -511,7 +511,7 @@
     "StoryStage": {
       "AutoPush": false,
       "AutoFormation": false,
-      "AutoTicketPurchase": false,
+      "HardTicket": false,
       "Sweep": true
     },
     "Event": {
@@ -547,7 +547,7 @@
     "StoryStage": {
       "AutoPush": false,
       "AutoFormation": false,
-      "AutoTicketPurchase": false,
+      "HardTicket": false,
       "Sweep": true
     },
     "Event": {

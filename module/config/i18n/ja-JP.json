@@ -831,9 +831,9 @@
       "name": "StoryStage.AutoFormation.name",
       "help": "StoryStage.AutoFormation.help"
     },
-    "AutoTicketPurchase": {
-      "name": "StoryStage.AutoTicketPurchase.name",
-      "help": "StoryStage.AutoTicketPurchase.help"
+    "HardTicket": {
+      "name": "StoryStage.HardTicket.name",
+      "help": "StoryStage.HardTicket.help"
     },
     "Sweep": {
       "name": "StoryStage.Sweep.name",

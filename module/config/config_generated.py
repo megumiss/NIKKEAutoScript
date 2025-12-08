@@ -153,7 +153,7 @@ class GeneratedConfig:
     # Group `StoryStage`
     StoryStage_AutoPush = False
     StoryStage_AutoFormation = False
-    StoryStage_AutoTicketPurchase = False
+    StoryStage_HardTicket = False
     StoryStage_Sweep = True
 
     # Group `Event`

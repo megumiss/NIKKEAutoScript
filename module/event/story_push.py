@@ -9,6 +9,59 @@ from module.ui.assets import FIGHT_CLOSE, FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_FIG
 
 
 class EventStoryPush(EventBase):
+    """
+    普通图：
+        判断自动组队
+        自动推图 - 选择匹配的关卡 - 有票战斗 - 区域跳转 - 活动主页 - 重新推图 - 推图结束
+                                - 无票退出
+        扫荡
+    困难图：
+        买票
+        跳过困难弹窗
+        自动推图 - 选择匹配的关卡 - 有票战斗 - /区域跳转 - 活动主页 - 重新推图 - 推图结束
+                                - 无票退出
+        扫荡
+    """
+
+    def push(self):
+        # 进入关卡列表
+        # TODO
+
+        # 处理困难弹窗
+        # TODO
+
+        # 找到推图关卡
+        if self.appear('等待推图的关卡模板', offset=10, static=False):
+            # 判断有票和组队状态
+            while 1:
+                self.device.screenshot()
+
+                # 打开关卡
+                if self.appear_then_click('等待推图的关卡模板', offset=10, static=False):
+                    continue
+
+                # 组队
+                if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear('没组队', offset=30):
+                    self.team_up()
+                    continue
+
+                # 没票退出
+                if (
+                    self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
+                    and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
+                    and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
+                ):
+                    logger.warning('没票')
+                    break
+
+        else:
+            # 推图完成，开始扫荡
+            self.back_to_event()
+            return
+
+    def team_up(self):
+        logger.hr('Team up', 2)
+
     def STORY_STAGE_11(self, story):
         stages = {
             'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_11,

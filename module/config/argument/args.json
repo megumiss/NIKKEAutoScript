@@ -1849,7 +1849,7 @@
         "type": "checkbox",
         "value": false
       },
-      "AutoTicketPurchase": {
+      "HardTicket": {
         "type": "checkbox",
         "value": false
       },
@@ -1992,7 +1992,7 @@
         "type": "checkbox",
         "value": false
       },
-      "AutoTicketPurchase": {
+      "HardTicket": {
         "type": "checkbox",
         "value": false
       },

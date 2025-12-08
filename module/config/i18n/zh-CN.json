@@ -831,9 +831,9 @@
       "name": "自动组队",
       "help": ""
     },
-    "AutoTicketPurchase": {
-      "name": "自动买票",
-      "help": ""
+    "HardTicket": {
+      "name": "StoryStage.HardTicket.name",
+      "help": "StoryStage.HardTicket.help"
     },
     "Sweep": {
       "name": "关卡扫荡",
