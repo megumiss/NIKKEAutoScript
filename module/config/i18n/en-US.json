@@ -656,6 +656,33 @@
       "help": "NIKKE priority. If selected collectibles exceed 160, the current will be removed and next chosen. Format example: Helm > Exia.\nNIKKE name mappings:\nDiesel: Diesel\nExia: Exia\nLaplace: Laplace\nFrima: Frima\nViper: Viper\nHelm: Helm\nMiranda: Miranda\nDrake: Drake\nMilk: Milk\nPoli: Poli\nJulia: Julia\nBay: Bay\nTove: Tove"
     }
   },
+  "RookieArena": {
+    "_info": {
+      "name": "Battle Settings",
+      "help": ""
+    },
+    "Times": {
+      "name": "Battle Times",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5"
+    }
+  },
+  "SpecialArena": {
+    "_info": {
+      "name": "Battle Settings",
+      "help": ""
+    },
+    "Times": {
+      "name": "Battle Times",
+      "help": "",
+      "1": "1",
+      "2": "2"
+    }
+  },
   "OpponentSelection": {
     "_info": {
       "name": "Opponent Selection Settings",
@@ -841,13 +868,21 @@
       "name": "Mini Game",
       "help": "Adapt mini-games when possible; otherwise skip"
     },
-    "GameStorySkip": {
-      "name": "Skip Mini-Game Story",
-      "help": ""
+    "GameTenBeam": {
+      "name": "Mini-Game Search Strength",
+      "help": "The solver's search range. Higher values yield slightly better solutions but require more computation time."
+    },
+    "GameTargetScore": {
+      "name": "Mini-game Target Score",
+      "help": "Only effective when mini-game looping is enabled. The loop will stop once the target score is reached."
     },
     "GameLoop": {
       "name": "Mini-Game Loop",
       "help": "Stop hotkey: F10"
+    },
+    "GameStorySkip": {
+      "name": "Skip Mini-Game Story",
+      "help": ""
     }
   },
   "CheerStrategy": {

@@ -166,6 +166,14 @@ CollectionItems:
   Priority:
     value: ''
     type: textarea
+RookieArena:
+  Times:
+    value: 5
+    option: [ 1, 2, 3, 4, 5 ]
+SpecialArena:
+  Times:
+    value: 2
+    option: [ 1, 2 ]
 OpponentSelection:
   Enable: false
   SortingWeight:
@@ -211,6 +219,7 @@ EventInfo:
   Event:
     value: ''
     option: [
+      'event_20251204',
       'event_20251120',
       'event_20251030',
       'event_20251016',
@@ -251,8 +260,12 @@ Event:
     value: 'TITLE'
     type: textarea
   Game: false
-  GameStorySkip: false
+  GameTenBeam:
+    value: 200
+  GameTargetScore:
+    value: 0
   GameLoop: false
+  GameStorySkip: false
 CheerStrategy:
   Enable: false
   Strategy:

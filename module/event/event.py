@@ -1,6 +1,8 @@
 import importlib
 from functools import cached_property
 
+import cv2
+
 from module.base.button import filter_buttons_in_area, merge_buttons
 from module.base.decorator import Config
 from module.base.timer import Timer
@@ -1269,6 +1271,11 @@ class Event(UI):
                 raise EventUnavailableError
 
     def run(self):
+        # image = cv2.imread('1.png')
+        # cv2.cvtColor(image, cv2.COLOR_BGR2RGB, dst=image)
+        # self.device.image  = image
+        # self.appear_text('8')
+
         # 是否需要重新执行
         coop_reschedule = False
 

@@ -23,7 +23,24 @@ class RookieArenaIsUnavailable(Exception):
     pass
 
 
+class RookieArenaTimesReached(Exception):
+    pass
+
+
 class RookieArena(UI, ArenaBase):
+    battle_times = 5
+
+    @property
+    def free_battle_remain(self) -> bool:
+        model_type = self.config.Optimization_OcrModelType
+        BATTLE_REMAIN = Digit(
+            [TIMES.area],
+            name='BATTLE_REMAIN',
+            model_type=model_type,
+            lang='num',
+        )
+        return int(BATTLE_REMAIN.ocr(self.device.image)['text'])
+
     @cached_property
     def button(self):
         return [(590, 730), (590, 900), (590, 1100)]
@@ -163,12 +180,20 @@ class RookieArena(UI, ArenaBase):
                 continue
 
             if already_start and self.appear(ROOKIE_ARENA_CHECK, offset=(10, 10)) and confirm_timer.reached():
+                self.battle_times -= 1
                 break
 
-        if self.free_opportunity_remain:
+        if self.config.RookieArena_Times != 5:
+            need_battle = self.battle_times > 0 and self.free_opportunity_remain
+        else:
+            need_battle = self.free_opportunity_remain
+
+        if need_battle:
             self.device.click_record_clear()
             self.device.stuck_record_clear()
             return self.start_competition()
+        else:
+            logger.warning('There are no free opportunities or reach the number of battle times')
 
     def ensure_into_rookie_arena(self, skip_first_screenshot=True):
         confirm_timer = Timer(2, count=3)
@@ -204,10 +229,31 @@ class RookieArena(UI, ArenaBase):
         else:
             logger.info('There are no free opportunities')
 
+    def check_battle_times(self):
+        if self.appear(NEXT_SEASON, offset=(50, 50)):
+            raise RookieArenaIsUnavailable
+
+        # 已经使用的次数
+        used = 5 - self.free_battle_remain
+        # 期望次数 <= 已经使用次数
+        if self.config.RookieArena_Times <= used:
+            raise RookieArenaTimesReached
+
+        # 剩余需要战斗的次数
+        self.battle_times = self.config.RookieArena_Times - used
+
     def run(self):
         self.ui_ensure(page_arena)
         try:
+            # 检查战斗次数
+            if self.config.RookieArena_Times != 5:
+                self.check_battle_times()
+
             self.ensure_into_rookie_arena()
         except RookieArenaIsUnavailable:
+            logger.warning('Waiting for the next season')
+            pass
+        except RookieArenaTimesReached:
+            logger.warning('Reach the number of battle times')
             pass
         self.config.task_delay(server_update=True)

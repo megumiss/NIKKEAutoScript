@@ -402,6 +402,9 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
+    "RookieArena": {
+      "Times": 5
+    },
     "OpponentSelection": {
       "Enable": false,
       "SortingWeight": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
@@ -419,6 +422,9 @@
       "SuccessInterval": 0,
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
+    },
+    "SpecialArena": {
+      "Times": 2
     },
     "OpponentSelection": {
       "Enable": false,
@@ -515,8 +521,10 @@
       "Shop": false,
       "ShopDelayList": "TITLE",
       "Game": false,
-      "GameStorySkip": false,
-      "GameLoop": false
+      "GameTenBeam": 200,
+      "GameTargetScore": 0,
+      "GameLoop": false,
+      "GameStorySkip": false
     },
     "Storage": {
       "Storage": {}
@@ -549,8 +557,10 @@
       "Shop": false,
       "ShopDelayList": "TITLE",
       "Game": false,
-      "GameStorySkip": false,
-      "GameLoop": false
+      "GameTenBeam": 200,
+      "GameTargetScore": 0,
+      "GameLoop": false,
+      "GameStorySkip": false
     },
     "Storage": {
       "Storage": {}
