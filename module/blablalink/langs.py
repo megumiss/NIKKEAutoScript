@@ -20,9 +20,9 @@ class LangMeta(type):
         "Code_Manual_Selection_Box_×30": {"en": "Code Manual Selection Box ×30", "zh-TW": "代碼手冊選擇寶箱 ×30", "ja": ""},
         # 任务
         "Daily_Sign_in": {"en": "Sign-in", "zh-TW": "每日簽到", "ja": ""},
-        "Daily_Play_Game": {"en": "Play", "zh-TW": "按讚", "ja": ""},
+        "Daily_Play_Game": {"en": "Play", "zh-TW": "遊玩", "ja": ""},
         "Browse_Posts": {"en": "Browse", "zh-TW": "瀏覽", "ja": ""},
-        "Like_Posts": {"en": "Like", "zh-TW": "評論", "ja": ""},
+        "Like_Posts": {"en": "Like", "zh-TW": "按讚", "ja": ""},
     }
     _current_lang = "zh-TW"
 

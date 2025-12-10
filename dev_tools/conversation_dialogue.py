@@ -89,12 +89,12 @@ def get_nikke_list(limit=None):
             return []
 
         # 获取所有 a 标签
-        links = nikke_group.find_all('a', limit=limit)
+        links = nikke_group.find_all('div', limit=limit)
 
         nikke_list = []
         for link in links:
             title = link.get('title', '').strip()
-            href = link.get('href', '').strip()
+            href = link.get('to', '').strip()
 
             if not title or not href:
                 continue
