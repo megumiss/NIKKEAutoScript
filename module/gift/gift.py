@@ -131,11 +131,11 @@ class GiftBase(UI):
 
             # STEPUP礼包检查
             if self.appear(LIMITED_GIFT_CHECK, offset=(100, 30)):
-                if self.appear(STEPUP, offset=(600, 10)):
+                if self.appear(STEPUP, offset=(600, 10), threshold=0.7):
                     logger.info('Open cash shop limited done')
                     break
                 # 没有找到STEPUP按钮
-                if not self.appear(STEPUP, offset=(600, 10)):
+                if not self.appear(STEPUP, offset=(600, 10), threshold=0.7):
                     if not confirm_timer.started():
                         confirm_timer.start()
                     if confirm_timer.reached():
