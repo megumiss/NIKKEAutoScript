@@ -231,6 +231,10 @@
           "topright"
         ]
       },
+      "DisableVoice": {
+        "type": "checkbox",
+        "value": false
+      },
       "Account": {
         "type": "input",
         "value": ""

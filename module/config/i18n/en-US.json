@@ -387,6 +387,10 @@
       "topleft": "Top Left",
       "topright": "Top Right"
     },
+    "DisableVoice": {
+      "name": "Disable Voice",
+      "help": ""
+    },
     "Account": {
       "name": "Account",
       "help": "Paste your email here. It will be auto-filled if login expires. This feature has security risks; use with caution."

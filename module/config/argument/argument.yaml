@@ -73,6 +73,7 @@ PCClient:
   GameWindowPosition:
     value: center
     option: [ center, left, right, topleft, topright ]
+  DisableVoice: false
   Account:
     value: ''
   Password:

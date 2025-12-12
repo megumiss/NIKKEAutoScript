@@ -180,7 +180,8 @@ class AppControl(WinClient, Login):
                         self.config.PCClient_ScreenNumber, 720, 1280, self.config.PCClient_GameWindowPosition
                     )
                     self.check_resolution(720, 1280)
-                    self.mute_window(True)
+                    if self.config.PCClient_DisableVoice:
+                        self.mute_window(True)
                     break
 
                 # 启动启动器
@@ -208,7 +209,8 @@ class AppControl(WinClient, Login):
                     self.config.PCClient_ScreenNumber, 720, 1280, self.config.PCClient_GameWindowPosition
                 )
                 self.check_resolution(720, 1280)
-                self.mute_window(True)
+                if self.config.PCClient_DisableVoice:
+                    self.mute_window(True)
 
                 break
             except AccountError:

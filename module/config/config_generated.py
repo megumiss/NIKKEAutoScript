@@ -41,6 +41,7 @@ class GeneratedConfig:
     PCClient_CloseAutoHdr = True
     PCClient_ScreenRotate = False
     PCClient_GameWindowPosition = 'center'  # center, left, right, topleft, topright
+    PCClient_DisableVoice = False
     PCClient_Account = None
     PCClient_Password = None
 
