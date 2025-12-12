@@ -1,8 +1,9 @@
+import concurrent.futures
 import os
 
 import imageio
 import numpy as np
-from tqdm.contrib.concurrent import process_map
+from tqdm import tqdm
 
 from module.base.utils import get_bbox, get_color, image_size, load_image
 from module.config.config import NikkeConfig
@@ -159,6 +160,7 @@ class ModuleExtractor:
         else:
             self.folder = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN', name)
             self.module_path = name
+        self.expressions = []
 
     @staticmethod
     def split(file):
@@ -170,21 +172,20 @@ class ModuleExtractor:
         _, sub, _ = self.split(file)
         return sub == ''
 
-    @property
-    def expression(self):
-        exp = []
+    def list_files(self):
+        files = []
+        if not os.path.exists(self.folder):
+            return files
         for file in os.listdir(self.folder):
             if file[0].isdigit():
                 continue
             if file.startswith('TEMPLATE_'):
-                exp.append(TemplateExtractor(module=self.module_path, file=file).expression)
+                files.append(file)
                 continue
             if self.is_base_image(file):
-                exp.append(ImageExtractor(module=self.module_path, file=file).expression)
+                files.append(file)
                 continue
-
-        logger.info('Module: %s(%s)' % (self.folder, len(exp)))
-        return IMPORT_EXP + exp
+        return sorted(files)
 
     def write(self):
         folder = os.path.join(MODULE_FOLDER, self.name)
@@ -194,23 +195,20 @@ class ModuleExtractor:
             filename = 'assets_game.py' if self.name == 'event_minigame' else 'assets.py'
 
         os.makedirs(folder, exist_ok=True)
-        with open(os.path.join(folder, filename), 'w', newline='') as f:
-            for text in self.expression:
+        with open(os.path.join(folder, filename), 'w', newline='', encoding='utf-8') as f:
+            for text in IMPORT_EXP:
                 f.write(text + '\n')
+            self.expressions.sort()
+            for text in self.expressions:
+                f.write(text + '\n')
+        logger.info('Module: %s(%s)' % (self.folder, len(self.expressions)))
 
 
-def worker(module):
-    folder_path = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN', module)
-    subfolders = [
-        f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f)) and f.startswith('event_')
-    ]
-    if subfolders:
-        for sub in subfolders:
-            me = ModuleExtractor(name=module, subfolder=sub)
-            me.write()
+def process_file(module_path, file):
+    if file.startswith('TEMPLATE_'):
+        return TemplateExtractor(module=module_path, file=file).expression
     else:
-        me = ModuleExtractor(name=module)
-        me.write()
+        return ImageExtractor(module=module_path, file=file).expression
 
 
 class AssetExtractor:
@@ -234,12 +232,37 @@ class AssetExtractor:
 
     def __init__(self):
         logger.info('Assets extract')
-        modules = [
-            m
-            for m in os.listdir(os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN'))
-            if os.path.isdir(os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN', m))
-        ]
-        process_map(worker, modules)
+        
+        module_extractors = {}
+        tasks = []
+        
+        base_path = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN')
+        modules = [m for m in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, m))]
+        
+        for m in modules:
+            m_path = os.path.join(base_path, m)
+            subfolders = [f for f in os.listdir(m_path) if os.path.isdir(os.path.join(m_path, f)) and f.startswith('event_')]
+            
+            if subfolders:
+                for sub in subfolders:
+                    me = ModuleExtractor(name=m, subfolder=sub)
+                    module_extractors[(m, sub)] = me
+            else:
+                me = ModuleExtractor(name=m)
+                module_extractors[(m, None)] = me
+
+        for key, me in module_extractors.items():
+            for f in me.list_files():
+                tasks.append((key, me.module_path, f))
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            futures = {executor.submit(process_file, t[1], t[2]): t[0] for t in tasks}
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(tasks)):
+                key = futures[future]
+                module_extractors[key].expressions.append(future.result())
+
+        for me in module_extractors.values():
+            me.write()
 
 
 if __name__ == '__main__':
