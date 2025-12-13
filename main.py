@@ -79,27 +79,19 @@ class NikkeAutoScript:
 
             return device
         except RequestHumanTakeover:
-            # 设置屏幕方向
-            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
-                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            self._post_action()
             logger.critical('Request human takeover')
             exit(1)
         except AccountError:
-            # 设置屏幕方向
-            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
-                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            self._post_action()
             logger.critical('Account or password setting error')
             exit(1)
         except ScreenResolutionNotEnough:
-            # 设置屏幕方向
-            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
-                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            self._post_action()
             logger.critical('Screen resolution not enough')
             exit(1)
         except Exception as e:
-            # 设置屏幕方向
-            if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
-                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            self._post_action()
             logger.exception(e)
             exit(1)
 
@@ -139,9 +131,7 @@ class NikkeAutoScript:
                     content=f'<{self.config_name}> GamePageUnknownError',
                     always=self.config.Notification_WinOnePush,
                 )
-            # 设置屏幕方向
-            if self.config.PCClient_ScreenRotate:
-                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            self._post_action()
             exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
@@ -153,9 +143,7 @@ class NikkeAutoScript:
                     content=f'<{self.config_name}> GameServerUnderMaintenance',
                     always=self.config.Notification_WinOnePush,
                 )
-            # 设置屏幕方向
-            if self.config.PCClient_ScreenRotate:
-                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            self._post_action()
             exit(1)
         except RequestHumanTakeover:
             logger.critical('Request human takeover')
@@ -166,9 +154,7 @@ class NikkeAutoScript:
                     content=f'<{self.config_name}> RequestHumanTakeover',
                     always=self.config.Notification_WinOnePush,
                 )
-            # 设置屏幕方向
-            if self.config.PCClient_ScreenRotate:
-                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            self._post_action()
             exit(1)
         except Exception as e:
             logger.exception(e)
@@ -180,10 +166,22 @@ class NikkeAutoScript:
                     content=f'<{self.config_name}> Exception occured',
                     always=self.config.Notification_WinOnePush,
                 )
-            # 设置屏幕方向
-            if self.config.PCClient_ScreenRotate:
-                self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+            self._post_action()
             exit(1)
+
+    def _post_action(self):
+        """
+        Perform post-task actions, such as restoring screen orientation and sound.
+        """
+        if 'device' not in self.__dict__ or self.config.Client_Platform != 'win':
+            return
+
+        # 还原屏幕方向
+        if self.config.PCClient_ScreenRotate:
+            self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+        # 恢复声音
+        if self.config.PCClient_DisableVoice:
+            self.device.mute_window(False)
 
     def save_error_log(self):
         """
@@ -502,9 +500,7 @@ class NikkeAutoScript:
                             self.device.app_stop('Launcher')
                     release_resources()
                     if self.config.Client_Platform == 'win':
-                        # 设置屏幕方向
-                        if self.config.PCClient_ScreenRotate:
-                            self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+                        self._post_action()
                         del_cached_property(self, 'device')
                     # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
@@ -521,9 +517,7 @@ class NikkeAutoScript:
                         self.run('goto_main')
                     release_resources()
                     # self.device.release_during_wait()
-                    # 设置屏幕方向
-                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
-                        self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+                    self._post_action()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -531,9 +525,7 @@ class NikkeAutoScript:
                     logger.info('Stay there during wait')
                     release_resources()
                     # self.device.release_during_wait()
-                    # 设置屏幕方向
-                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
-                        self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+                    self._post_action()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -541,9 +533,7 @@ class NikkeAutoScript:
                     logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
                     release_resources()
                     # self.device.release_during_wait()
-                    # 设置屏幕方向
-                    if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
-                        self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+                    self._post_action()
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
@@ -617,9 +607,7 @@ class NikkeAutoScript:
                         content=f'<{self.config_name}> RequestHumanTakeover\nTask `{task}` failed 3 or more times.',
                         always=self.config.Notification_WinOnePush,
                     )
-                # 设置屏幕方向
-                if self.config.Client_Platform == 'win' and self.config.PCClient_ScreenRotate:
-                    self.device.screen_rotate(self.config.PCClient_ScreenNumber)
+                self._post_action()
                 exit(1)
 
             if success:

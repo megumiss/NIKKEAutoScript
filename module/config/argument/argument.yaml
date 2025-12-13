@@ -66,13 +66,14 @@ PCClient:
   ScreenNumber:
     value: 0
     option: [ 0, 1, 2, 3, 4, 5 ]
-  GameResolutionCompat:
-    value: true
-  CloseAutoHdr: true
-  ScreenRotate: false
   GameWindowPosition:
     value: center
     option: [ center, left, right, topleft, topright ]
+  GameResolutionCompat:
+    value: true
+  ScreenRotate: false
+  CloseAutoHdr: true
+  DisableVoice: false
   Account:
     value: ''
   Password:

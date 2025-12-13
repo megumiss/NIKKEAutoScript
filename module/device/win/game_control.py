@@ -241,6 +241,38 @@ class WinClient:
             logger.error(f'Error activating window: {e}')
             return False
 
+    def mute_window(self, mute: bool = True):
+        """
+        静音/取消静音当前窗口对应的进程
+        """
+        action = 'Muting' if mute else 'Unmuting'
+        logger.info(f'{action} process: [{self.current_window.name}]:{self.current_window.process}')
+        try:
+            from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume
+        except ImportError:
+            logger.warning('pycaw library is not installed. Unable to control audio.')
+            return
+
+        try:
+            sessions = AudioUtilities.GetAllSessions()
+            target_process = self.current_window.process.lower()
+            target_path = os.path.normpath(self.current_window.path).lower() if self.current_window.path else None
+
+            for session in sessions:
+                if session.Process and session.Process.name().lower() == target_process:
+                    if target_path:
+                        try:
+                            if os.path.normpath(session.Process.exe()).lower() != target_path:
+                                continue
+                        except Exception:
+                            continue
+
+                    volume = session._ctl.QueryInterface(ISimpleAudioVolume)
+                    volume.SetMute(1 if mute else 0, None)
+                    logger.info(f'Process {self.current_window.process} {"muted" if mute else "unmuted"}')
+        except Exception as e:
+            logger.error(f'Error controlling audio: {e}')
+
     def get_resolution(self) -> Optional[Tuple[int, int]]:
         """获取程序窗口的分辨率"""
         logger.info(f'Getting window resolution: [{self.current_window.name}]:{self.current_window.title}')

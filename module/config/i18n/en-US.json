@@ -366,18 +366,6 @@
       "4": "4",
       "5": "5"
     },
-    "GameResolutionCompat": {
-      "name": "Game Resolution Compatibility Mode",
-      "help": "Enable if script reports incorrect game resolution or logs show window resolution not equal to 720x1280"
-    },
-    "CloseAutoHdr": {
-      "name": "Disable Auto HDR",
-      "help": "NKAS may not work properly on systems with HDR enabled. If system HDR is on, enable this option to disable the game's auto-HDR (system-wide HDR remains unaffected)"
-    },
-    "ScreenRotate": {
-      "name": "Rotate Screen",
-      "help": "Recommended for 1080p users only. When enabled, the screen will switch to portrait on start to meet vertical resolution requirements; it will revert to landscape after tasks finish or by pressing Ctrl+F12"
-    },
     "GameWindowPosition": {
       "name": "Game Window Position",
       "help": "Set the game window position to prevent it from being obscured or off-screen",
@@ -386,6 +374,22 @@
       "right": "Right Center",
       "topleft": "Top Left",
       "topright": "Top Right"
+    },
+    "GameResolutionCompat": {
+      "name": "Game Resolution Compatibility Mode",
+      "help": "Enable if script reports incorrect game resolution or logs show window resolution not equal to 720x1280"
+    },
+    "ScreenRotate": {
+      "name": "Rotate Screen",
+      "help": "Recommended for 1080p users only. When enabled, the screen will switch to portrait on start to meet vertical resolution requirements; it will revert to landscape after tasks finish or by pressing Ctrl+F12"
+    },
+    "CloseAutoHdr": {
+      "name": "Disable Auto HDR",
+      "help": "NKAS may not work properly on systems with HDR enabled. If system HDR is on, enable this option to disable the game's auto-HDR (system-wide HDR remains unaffected)"
+    },
+    "DisableVoice": {
+      "name": "Disable Voice",
+      "help": "Automatically mute the game process while the script is running and restore it after completion. If it does not restore automatically, you will need to re-enable it manually in the system volume mixer on the taskbar."
     },
     "Account": {
       "name": "Account",
