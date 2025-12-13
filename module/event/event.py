@@ -7,8 +7,7 @@ from module.event.game import EventGame
 from module.event.login import EventLogin
 from module.event.reward import EventReward
 from module.event.shop import EventShop
-from module.event.story_push import EventStoryPush
-from module.event.story_sweep import EventStorySweep
+from module.event.story import EventStory
 from module.logger import logger
 from module.ui.assets import EVENT_SWITCH, MAIN_CHECK
 from module.ui.page import page_main
@@ -18,8 +17,7 @@ class Event(
     EventLogin,
     EventChallenge,
     EventReward,
-    EventStorySweep,
-    EventStoryPush,
+    EventStory,
     EventCoop,
     EventShop,
     EventGame,
@@ -84,8 +82,7 @@ class Event(
                 self.login_stamp()
             if self.config.Event_Challenge:
                 self.challenge()
-            if self.config.StoryStage_Sweep:
-                self.story_sweep()
+            self.story()
             if self.config.Event_Coop:
                 coop_reschedule = self.coop()
             if self.config.Event_Game:
