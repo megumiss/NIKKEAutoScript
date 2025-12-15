@@ -88,16 +88,13 @@ def get_nikke_list(limit=None):
             print('警告: 未找到 nikke-item-group 元素')
             return []
 
-        # 优先查找 a 标签
-        links = nikke_group.find_all('a', limit=limit)
-        # 如果没找到 a 标签，尝试查找 div 标签
-        if not links:
-            links = nikke_group.find_all('div', limit=limit)
+        # 查找所有带有 report-id 属性的元素，自动适配 a/div/其他标签
+        items = nikke_group.find_all(attrs={'report-id': True}, limit=limit)
 
         nikke_list = []
-        for link in links:
-            title = link.get('title', '').strip()
-            content_id = link.get('report-id', '').strip()
+        for item in items:
+            title = item.get('title', '').strip()
+            content_id = item.get('report-id', '').strip()
 
             if not title or not content_id:
                 continue
