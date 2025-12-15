@@ -11,6 +11,7 @@ from module.event.story import EventStory
 from module.logger import logger
 from module.ui.assets import EVENT_SWITCH, MAIN_CHECK
 from module.ui.page import page_main
+from module.ui.assets import FIGHT_QUICKLY_ENABLE, SKIP
 
 
 class Event(
@@ -27,6 +28,7 @@ class Event(
         click_timer = Timer(0.3)
         confirm_timer = Timer(30, count=20).start()
         event_timer = Timer(3, count=5)
+        skip_click_timer = Timer(5)
 
         while 1:
             if skip_first_screenshot:
@@ -34,6 +36,7 @@ class Event(
             else:
                 self.device.screenshot()
 
+            # 检查活动主页
             if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
                 if not event_timer.started():
                     event_timer.start()
@@ -42,6 +45,7 @@ class Event(
             else:
                 event_timer.clear()
 
+            # 切换活动
             if (
                 click_timer.reached()
                 and self.appear(MAIN_CHECK, offset=10)
@@ -51,6 +55,7 @@ class Event(
                 confirm_timer.reset()
                 continue
 
+            # 在主页点击故事图标
             if (
                 click_timer.reached()
                 and self.appear(MAIN_CHECK, offset=10)
@@ -59,6 +64,21 @@ class Event(
                 click_timer.reset()
                 logger.info('Open event story')
                 continue
+
+            # 跳过剧情
+            if click_timer.reached() and self.appear_then_click(SKIP, offset=10, interval=2):
+                click_timer.reset()
+                confirm_timer.reset()
+                continue
+
+            # 跳过加载和第一次进入时的continue
+            if (
+                skip_click_timer.reached()
+                and not self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30))
+                and not self.appear(MAIN_CHECK, offset=10)
+            ):
+                self.device.click_minitouch(10, 10)
+                skip_click_timer.reset()
 
             if confirm_timer.reached():
                 logger.error('Event not found')
@@ -82,7 +102,10 @@ class Event(
                 self.login_stamp()
             if self.config.Event_Challenge:
                 self.challenge()
-            self.story()
+            if self.config.StoryStage_AutoPush:
+                self.story()
+            if self.config.StoryStage_Sweep:
+                self.story()
             if self.config.Event_Coop:
                 coop_reschedule = self.coop()
             if self.config.Event_Game:

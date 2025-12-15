@@ -1,5 +1,9 @@
+from functools import cached_property
+
+from module.base.button import filter_buttons_in_area, merge_buttons
 from module.base.decorator import Config
 from module.base.timer import Timer
+from module.base.utils import sort_buttons_by_location
 from module.event.assets import *
 from module.event.base import EventBase
 from module.event.challenge import CHALLENGE_QUICKLY_DISABLE
@@ -21,6 +25,13 @@ class EventStory(EventBase):
             'story_2_hard_clear': self.event_assets.STORY_2_HARD_STAGE_11_CLEAR,
         }
         return stages[story]
+
+    @cached_property
+    def team_nikke_locations(self):
+        """
+        nikke队伍坐标列表倒序
+        """
+        return [(590, 730), (590, 900), (590, 1100), (590, 1100), (590, 1100)]
 
     @Config.when(EVENT_TYPE=(1, 3))
     def story(self, skip_first_screenshot=True):
@@ -182,10 +193,47 @@ class EventStory(EventBase):
                     logger.info('Open event story 2 hard')
                     break
 
-        # 滑动到列表最下方检查倒数第二关
-        self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
+        # 关卡处理
         self.device.screenshot()
-        self.find_and_fight_stage(open_story)
+        # 推图
+        if self.config.StoryStage_AutoPush:
+            logger.info('推图')
+            # 找到推图关卡，点击
+            if not self.appear(self.STORY_STAGE_11(open_story), offset=30, threshold=0.9) and self.appear(
+                '等待推图的关卡模板', offset=10, static=False
+            ):
+                # 判断有票和组队状态
+                while 1:
+                    self.device.screenshot()
+
+                    # 打开关卡
+                    if self.appear_then_click('等待推图的关卡模板', offset=10, static=False):
+                        continue
+
+                    # 组队
+                    if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear(
+                        STAGE_TEAM_NOT_SELECT, offset=30
+                    ):
+                        self.team_up()
+                        continue
+
+                    # 没票退出
+                    if (
+                        self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
+                        and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
+                        and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
+                    ):
+                        logger.warning('没票')
+                        break
+            else:
+                # 应该扫荡
+                logger.info('扫荡')
+
+        # 扫荡，滑动到列表最下方检查倒数第二关
+        if self.config.StoryStage_Sweep:
+            logger.info('扫荡')
+            # self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
+            self.find_and_sweep_stage(open_story)
 
         # 回到活动主页
         self.back_to_event()
@@ -291,12 +339,12 @@ class EventStory(EventBase):
         # 滑动到列表最下方检查倒数第二关
         self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
         self.device.screenshot()
-        self.find_and_fight_stage(open_story)
+        self.find_and_sweep_stage(open_story)
 
         # 回到活动主页
         self.back_to_event()
 
-    def find_and_fight_stage(self, open_story):
+    def find_and_sweep_stage(self, open_story):
         click_timer = Timer(0.3)
         if self.appear(self.STORY_STAGE_11(open_story), offset=30, threshold=0.9) and self.appear(
             self.STORY_STAGE_11(f'{open_story}_clear'), offset=30, threshold=0.9
@@ -370,3 +418,79 @@ class EventStory(EventBase):
             logger.info('Stage 11 not cleared')
             return
         logger.info('Stage 11 clear done')
+
+    def team_up(self):
+        logger.hr('Team up before story push', 2)
+
+        # 点击自动编队
+        while 1:
+            self.device.screenshot()
+
+            # 第五个位置有妮姬
+            if not self.appear(TEAM_NIKKE_NOT_SELECT_5, offset=10, interval=1):
+                logger.info('Team up auto selected')
+                break
+            # 自动编队
+            if self.appear_then_click(TEAM_NIKKE_AUTO, offset=10, interval=1):
+                continue
+
+        # 替换加成nikke
+        if self.appear(BOUNS_100_CHECK, offset=10):
+            logger.info('Team up 100% bouns nikke selected')
+        else:
+            # 滑动到第二行
+            self.ensure_sroll((360, 900), (360, 600), speed=30, count=1, delay=0.5)
+
+            # 找到所有的加成nikke
+            self.device.screenshot()
+            nikkes = TEMPLATE_BOUNS_PER.match_multi(self.device.image, similarity=0.75, name='BOUNS_PER')
+            # 合并重复的nikkke
+            nikkes = merge_buttons(nikkes, x_threshold=30, y_threshold=30)
+            # 过滤掉非列表区域的nikke
+            nikkes = filter_buttons_in_area(nikkes, y_range=(620, 1280))
+            # 按照坐标排序
+            nikkes = sort_buttons_by_location(nikkes)
+            logger.info(f'Find bouns nikkes: {len(nikkes)}')
+            # 如果有8个，去掉第一个
+            if len(nikkes) == 8:
+                nikkes = nikkes[1:]
+                logger.info('Delete first bouns nikke')
+
+            # 队伍某个位置已经放置了加成nikke的检查button
+            check_buttons = [
+                TEAM_NIKKE_BOUNS_CHECK_5,
+                TEAM_NIKKE_BOUNS_CHECK_4,
+                TEAM_NIKKE_BOUNS_CHECK_3,
+                TEAM_NIKKE_BOUNS_CHECK_2,
+                TEAM_NIKKE_BOUNS_CHECK_1,
+            ]
+            for nikke in nikkes:
+                self.device.screenshot()
+
+                # 100%加成
+                if self.appear(BOUNS_100_CHECK, offset=10):
+                    logger.info('Team up 100% bouns nikke selected')
+                    break
+
+                # 如果某个位置没有放置加成nikke，先取消这个nikke，再放置一个加成nikke
+                for index, button in enumerate(check_buttons):
+                    if not self.appear(button, offset=(10, 10)):
+                        # 取消该位置选择的nikke
+                        while 1:
+                            self.device.screenshot()
+
+                            if self.appear(TEAM_NIKKE_NOT_SELECT, offset=(250, 10)):
+                                break
+                            # 要取消的nikke序号
+                            self.device.click_minitouch(self.team_nikke_locations[4 - index])
+                            self.device.sleep(0.3)
+
+                        self.device.click(nikke)
+                        self.device.sleep(0.3)
+                        break
+        
+        # 储存队伍
+        while 1:
+            self.device.screenshot()
+            
+            
