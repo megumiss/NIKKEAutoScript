@@ -8,8 +8,10 @@ on:
         required: true
         default: 'v0.0.0-manual'
   push:
+    branches:
+      - '**'  # 监听所有分支
     tags:
-      - 'v*' # 匹配 v 开头的 tag，如 v1.0.0
+      - 'v*'
 
 permissions:
   contents: write # 允许创建 Release
