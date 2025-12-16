@@ -161,7 +161,6 @@ jobs:
       with:
         tag_name: ${{ env.TAG_NAME }}
         name: NKAS ${{ env.TAG_NAME }}
-        draft: true  # <--- 添加这一行，设为草稿
         prerelease: true # <--- 或者设为预发布
         files: |
           ${{ env.ASSET_STD }}
