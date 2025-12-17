@@ -1,4 +1,3 @@
-cnocr==2.3.1
 cryptography==45.0.7
 desktopmagic==14.3.11
 einops==0.8.1
@@ -7,7 +6,6 @@ gputil==1.4.0
 imageio==2.27.0
 imagesize==1.4.1
 inflection==0.5.1
-ipykernel==6.30.1
 langchain-community==0.2.0
 langchain-openai==0.1.7
 onepush==1.3.0
@@ -15,18 +13,15 @@ opencv-contrib-python==4.10.0.84
 openpyxl==3.1.5
 paddleocr==3.1.0
 paddlepaddle==3.1.0
-pip-tools==7.5.2
 premailer==3.10.0
 pyautogui==0.9.54
 pycaw==20251023
 pynput==1.8.1
 pypdfium2==4.30.0
-pyuac==0.0.3
 pywebio==1.7.1
 rich==13.3.3
 scikit-learn==1.6.1
 starlette==0.26.1
-tinycss2==1.4.0
 tokenizers==0.21.4
 uiautomator2==2.16.26
 uiautomator2cache==0.3.0.1
