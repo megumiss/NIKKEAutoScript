@@ -15,9 +15,7 @@ opencv-contrib-python==4.10.0.84
 openpyxl==3.1.5
 paddleocr==3.1.0
 paddlepaddle==3.1.0
-pip-chill==1.0.3
 pip-tools==7.5.2
-pipreqs==0.5.0
 premailer==3.10.0
 pyautogui==0.9.54
 pycaw==20251023
