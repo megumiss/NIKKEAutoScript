@@ -4,17 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name (e.g. v1.0.0). Used if manually triggered.'
+        description: 'Tag name (e.g. v1.0.0)'
         required: true
-        default: 'v0.0.0-manual'
+        default: 'v0.0.0-test'
+      release_note:
+        description: 'Custom release note (Optional)'
+        required: false
   push:
-    branches:
-      - '**'  # 监听所有分支
     tags:
       - 'v*'
 
 permissions:
-  contents: write # 允许创建 Release
+  contents: write
 
 jobs:
   build-release:
@@ -22,77 +23,28 @@ jobs:
     
     steps:
     # ==========================
-    # 基础构建阶段 (同之前逻辑)
+    # 1. 检出代码
     # ==========================
+    
+    # 1.1 检出主仓库 (NIKKEAutoScript)
+    # 自动检出触发 Tag 或 Master 分支
     - name: Checkout Main Repository
       uses: actions/checkout@v4
       with:
-        path: NIKKEAutoScript
-        fetch-depth: 0 # 保留完整历史，因为你要保留 .git
+        fetch-depth: 0 # 保留历史以便操作 .git
 
-    - name: Checkout Build Repository
+    # 1.2 检出资源仓库 (NIKKEAutoScriptBuild)
+    # 显式指定分支为 main
+    - name: Checkout Build Resources
       uses: actions/checkout@v4
       with:
         repository: megumiss/NIKKEAutoScriptBuild
-        path: NIKKEAutoScriptBuild
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '16'
-        cache: 'yarn'
-        cache-dependency-path: NIKKEAutoScript/webapp/yarn.lock
-
-    - name: Build Webapp
-      working-directory: NIKKEAutoScript/webapp
-      run: |
-        yarn install --frozen-lockfile
-        yarn run compile
-        if (Test-Path "dist\win-unpacked") {
-            Move-Item -Path "dist\win-unpacked" -Destination "..\app" -Force
-        } else {
-            exit 1
-        }
-
-    - name: Clean Unnecessary Files
-      working-directory: NIKKEAutoScript
-      run: |
-        $keep = @("zh-CN.pak", "zh-TW.pak", "ja.pak", "en-US.pak", "en-GB.pak")
-        if (Test-Path "app\locales") {
-            Get-ChildItem "app\locales\*.pak" | Where-Object { $_.Name -notin $keep } | Remove-Item -Force
-        }
-        $filesToDelete = @("app\vulkan-1.dll", "app\vk_swiftshader_icd.json", "app\vk_swiftshader.dll", "app\LICENSES.chromium.html", "app\LICENSE.electron.txt")
-        foreach ($file in $filesToDelete) { if (Test-Path $file) { Remove-Item $file -Force } }
-
-    - name: Remove Webapp Artifacts
-      working-directory: NIKKEAutoScript/webapp
-      run: |
-        Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
-        Remove-Item output -Recurse -Force -ErrorAction SilentlyContinue
-        Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
-
-    - name: Copy Toolkit
-      run: Copy-Item -Path "NIKKEAutoScriptBuild\toolkit" -Destination "NIKKEAutoScript\toolkit" -Recurse -Force
-
-    - name: Copy nkas.exe
-      run: Copy-Item -Path "NIKKEAutoScript\deploy\build\nkas.exe" -Destination "NIKKEAutoScript\nkas.exe" -Force
-
-    - name: Install Python Dependencies
-      working-directory: NIKKEAutoScript
-      run: |
-        & "toolkit\python.exe" -m pip install -r deploy\requirements.txt -i https://pypi.org/simple
-
-    - name: Setup Default Config
-      working-directory: NIKKEAutoScript/config
-      run: if (Test-Path "deploy.template.yaml") { Copy-Item "deploy.template.yaml" -Destination "deploy.yaml" -Force }
-
-    # 注意：这里去掉了删除 .git 的步骤
+        ref: main
+        path: build_resources
 
     # ==========================
-    # 发布打包阶段 (新增逻辑)
+    # 2. 确定 Tag
     # ==========================
-    
-    # 1. 确定 Tag 名称
     - name: Set Tag Name
       id: tag_info
       run: |
@@ -104,64 +56,121 @@ jobs:
         echo "TAG_NAME=$tagName" >> $env:GITHUB_ENV
         Write-Host "Current Tag: $tagName"
 
-    # 2. 打包第一个版本 (Standard)
+    # ==========================
+    # 3. 构建 Webapp
+    # ==========================
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '16'
+        cache: 'yarn'
+        cache-dependency-path: webapp/yarn.lock
+
+    - name: Build Webapp
+      working-directory: webapp
+      run: |
+        yarn install --frozen-lockfile
+        yarn run compile
+        if (Test-Path "dist\win-unpacked") {
+            # 将编译产物移动到项目根目录下的 app 文件夹
+            Move-Item -Path "dist\win-unpacked" -Destination "..\app" -Force
+        } else {
+            exit 1
+        }
+
+    # ==========================
+    # 4. 清理与组装基础环境
+    # ==========================
+    - name: Clean Unnecessary Files
+      run: |
+        $keep = @("zh-CN.pak", "zh-TW.pak", "ja.pak", "en-US.pak", "en-GB.pak")
+        if (Test-Path "app\locales") {
+            Get-ChildItem "app\locales\*.pak" | Where-Object { $_.Name -notin $keep } | Remove-Item -Force
+        }
+        $filesToDelete = @("app\vulkan-1.dll", "app\vk_swiftshader_icd.json", "app\vk_swiftshader.dll", "app\LICENSES.chromium.html", "app\LICENSE.electron.txt")
+        foreach ($file in $filesToDelete) { if (Test-Path $file) { Remove-Item $file -Force } }
+
+    - name: Remove Webapp Artifacts
+      working-directory: webapp
+      run: |
+        Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item output -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+
+    # 从资源仓库复制 toolkit 到主项目根目录
+    - name: Copy Toolkit
+      run: Copy-Item -Path "build_resources\toolkit" -Destination "toolkit" -Recurse -Force
+
+    # 从主项目 deploy/build 复制 nkas.exe 到根目录
+    - name: Copy nkas.exe
+      run: Copy-Item -Path "deploy\build\nkas.exe" -Destination "nkas.exe" -Force
+
+    - name: Install Python Dependencies
+      run: |
+        & "toolkit\python.exe" -m pip install -r deploy\requirements.txt -i https://pypi.org/simple
+
+    - name: Setup Default Config
+      working-directory: config
+      run: if (Test-Path "deploy.template.yaml") { Copy-Item "deploy.template.yaml" -Destination "deploy.yaml" -Force }
+
+    # ==========================
+    # 5. 打包阶段 1: Standard
+    # ==========================
+
+    - name: Remove .git (Pre-Standard)
+      run: Remove-Item ".git" -Recurse -Force -ErrorAction SilentlyContinue
+
     - name: Pack Standard Version (7z)
       run: |
         $fileName = "NKAS_${{ env.TAG_NAME }}.7z"
-        # 7z MX=9 表示最大压缩
-        7z a -t7z -mx=9 $fileName NIKKEAutoScript
+        # 打包当前目录，排除 build_resources(资源库)
+        7z a -t7z -mx=5 $fileName . -xr!build_resources
         echo "ASSET_STD=$fileName" >> $env:GITHUB_ENV
 
-    # 3. 执行 Updater 并切换 Config
-    - name: Run Updater and Switch Config
-      working-directory: NIKKEAutoScript
+    # ==========================
+    # 6. 执行 Updater 逻辑
+    # ==========================
+    
+    - name: Run Installer Script
+      env: 
+        PYTHONUTF8: 1
+        PYTHONIOENCODING: utf-8
       run: |
-        # 执行 updater.bat
-        # 注意：updater.bat 必须是自动化的，不能含有 'pause' 等待用户输入，否则 Action 会卡死
-        if (Test-Path "updater.bat") {
-            Write-Host "Running updater.bat..."
-            cmd /c "updater.bat"
-        } else {
-            Write-Warning "updater.bat not found in root, skipping execution."
-        }
+        Write-Host "Running deploy/installer.py..."
+        & "toolkit\python.exe" deploy\installer.py
 
-        # 切换到 CN 模板
+    - name: Switch Config to CN
+      run: |
         if (Test-Path "config\deploy.template-cn.yaml") {
             Copy-Item "config\deploy.template-cn.yaml" -Destination "config\deploy.yaml" -Force
             Write-Host "Switched deploy.yaml to CN template."
-        } else {
-            Write-Warning "deploy.template-cn.yaml not found!"
         }
 
-    # 4. 打包第二个版本 (Full CN)
+    # ==========================
+    # 7. 打包阶段 2: Full CN
+    # ==========================
+
+    - name: Remove .git (Pre-CN)
+      run: Remove-Item ".git" -Recurse -Force -ErrorAction SilentlyContinue
+
     - name: Pack Full CN Version (7z)
       run: |
         $fileName = "NKAS_${{ env.TAG_NAME }}_full-cn.7z"
-        # 此时 NIKKEAutoScript 文件夹内已经是执行过 updater 和替换过 config 的内容了
-        7z a -t7z -mx=9 $fileName NIKKEAutoScript
+        # 排除 资源库 以及 刚才打好的标准版包
+        7z a -t7z -mx=5 $fileName . -xr!build_resources -x!${{ env.ASSET_STD }}
         echo "ASSET_CN=$fileName" >> $env:GITHUB_ENV
 
-    # 5. 创建 Release 并上传
-    # - name: Create Release and Upload
-    #   uses: softprops/action-gh-release@v1
-    #   if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
-    #   with:
-    #     tag_name: ${{ env.TAG_NAME }}
-    #     name: NKAS ${{ env.TAG_NAME }}
-    #     files: |
-    #       ${{ env.ASSET_STD }}
-    #       ${{ env.ASSET_CN }}
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+    # ==========================
+    # 8. 发布
+    # ==========================
     - name: Create Release and Upload
       uses: softprops/action-gh-release@v1
-      # 即使是测试分支也可以触发
-      if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
       with:
         tag_name: ${{ env.TAG_NAME }}
         name: NKAS ${{ env.TAG_NAME }}
-        prerelease: true # <--- 或者设为预发布
+        draft: true
+        generate_release_notes: true
+        body: ${{ inputs.release_note }}
         files: |
           ${{ env.ASSET_STD }}
           ${{ env.ASSET_CN }}
