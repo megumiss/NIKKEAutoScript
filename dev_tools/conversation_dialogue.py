@@ -88,24 +88,19 @@ def get_nikke_list(limit=None):
             print('警告: 未找到 nikke-item-group 元素')
             return []
 
-        # 获取所有 a 标签
-        links = nikke_group.find_all('div', limit=limit)
+        # 查找所有带有 report-id 属性的元素，自动适配 a/div/其他标签
+        items = nikke_group.find_all(attrs={'report-id': True}, limit=limit)
 
         nikke_list = []
-        for link in links:
-            title = link.get('title', '').strip()
-            href = link.get('to', '').strip()
+        for item in items:
+            title = item.get('title', '').strip()
+            content_id = item.get('report-id', '').strip()
 
-            if not title or not href:
+            if not title or not content_id:
                 continue
 
-            # 从 href 中提取 content_id
-            # 格式: /nikke/tj/684090.html
-            match = CONTENT_ID_PATTERN.search(href)
-            if match:
-                content_id = match.group(1)
-                nikke_list.append({'name': title, 'content_id': content_id})
-                print(f'  找到角色: {title} (ID: {content_id})')
+            nikke_list.append({'name': title, 'content_id': content_id})
+            print(f'  找到角色: {title} (ID: {content_id})')
 
         print(f'✓ 共找到 {len(nikke_list)} 个角色')
         return nikke_list
@@ -120,8 +115,8 @@ def get_nikke_list(limit=None):
 
 def parse_label_value(group: list):
     """解析 label 和 value，防止缺失导致的异常"""
-    label = group[0].get("value", "").strip() if len(group) > 0 else ""
-    value = group[1].get("value", "").strip() if len(group) > 1 else ""
+    label = group[0].get('value', '').strip() if len(group) > 0 else ''
+    value = group[1].get('value', '').strip() if len(group) > 1 else ''
     return label, value
 
 
@@ -160,9 +155,7 @@ def get_nikke_dialogue(content_id, nikke_name):
         base_data = [x for x in base_data if x and len(x) >= 2]
 
         # 检查名称是否相同
-        index = next(
-            i for i, d in enumerate(base_data) if d[0].get('value', '') == '角色名称'
-        )
+        index = next(i for i, d in enumerate(base_data) if d[0].get('value', '') == '角色名称')
         label, value = parse_label_value(base_data[index])
         if label == '角色名称' and value != nikke_name:
             print(f'  警告: 角色名称不匹配，使用 {value} 覆盖 {nikke_name}')
@@ -170,11 +163,7 @@ def get_nikke_dialogue(content_id, nikke_name):
 
         # 从index开始，每3个为一组进行解析，提取对话数据
         dialogues = []
-        index = next(
-            i
-            for i, d in enumerate(base_data[index:])
-            if d[0].get('value', '').startswith('问题')
-        )
+        index = next(i for i, d in enumerate(base_data[index:]) if d[0].get('value', '').startswith('问题'))
         while 1:
             label, value = parse_label_value(base_data[index])
             if not QUESTION_PATTERN.match(label):
@@ -192,13 +181,7 @@ def get_nikke_dialogue(content_id, nikke_name):
             if not (question or answer_false or answer_true):
                 continue
 
-            dialogues.append({
-                'question': question,
-                'answer': {
-                    'false': answer_false,
-                    'true': answer_true
-                }
-            })
+            dialogues.append({'question': question, 'answer': {'false': answer_false, 'true': answer_true}})
 
         # 验证数据完整性
         dialogue_count = len(dialogues)
@@ -372,10 +355,7 @@ def main():
         # 更新数据 - 新角色追加到最前面
         if is_new:
             # python 3.10中，dict保证有序
-            existing_dialogue = {
-                nikke_name: new_dialogues,
-                **existing_dialogue
-            }
+            existing_dialogue = {nikke_name: new_dialogues, **existing_dialogue}
             added_names.append(nikke_name)
         else:
             # 已存在角色：直接更新
