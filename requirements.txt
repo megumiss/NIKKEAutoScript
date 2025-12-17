@@ -5,116 +5,469 @@
 #    pip-compile requirements.in
 #
 adbutils==1.2.3
+    # via uiautomator2
+aiohappyeyeballs==2.6.1
+    # via aiohttp
+aiohttp==3.12.15
     # via
-    #   -r requirements.in
-    #   uiautomator2
+    #   fsspec
+    #   langchain
+    #   langchain-community
+aiosignal==1.4.0
+    # via aiohttp
 annotated-types==0.7.0
     # via pydantic
+antlr4-python3-runtime==4.9.3
+    # via omegaconf
 anyio==4.9.0
-    # via starlette
+    # via
+    #   httpx
+    #   openai
+    #   starlette
 apkutils2==1.0.0
     # via adbutils
+asttokens==3.0.1
+    # via stack-data
+async-timeout==4.0.3
+    # via
+    #   aiohttp
+    #   langchain
+attrs==25.3.0
+    # via aiohttp
+backcall==0.2.0
+    # via ipython
 beautifulsoup4==4.13.4
-    # via -r requirements.in
+    # via paddlex
+build==1.3.0
+    # via pip-tools
 cached-property==1.5.2
     # via uiautomator2
+cachetools==6.1.0
+    # via premailer
 certifi==2025.7.14
-    # via requests
+    # via
+    #   httpcore
+    #   httpx
+    #   requests
+    #   sentry-sdk
 cffi==2.0.0
     # via cryptography
+chardet==5.2.0
+    # via paddlex
 charset-normalizer==3.4.2
     # via requests
 cigam==0.0.3
     # via apkutils2
 click==8.1.8
-    # via uvicorn
+    # via
+    #   cnocr
+    #   cnstd
+    #   pip-tools
+    #   uvicorn
+    #   wandb
+cnocr==2.3.1
+    # via -r requirements.in
+cnstd==1.2.6.1
+    # via cnocr
 colorama==0.4.6
     # via
+    #   build
     #   click
+    #   colorlog
+    #   ipython
     #   logzero
     #   tqdm
-comtypes==1.4.13
+coloredlogs==15.0.1
+    # via onnxruntime
+colorlog==6.9.0
+    # via
+    #   paddlex
+    #   rapidocr
+comm==0.2.3
+    # via ipykernel
+comtypes==1.4.14
     # via pycaw
+contourpy==1.3.0
+    # via matplotlib
 cryptography==45.0.7
     # via -r requirements.in
+cssselect==1.3.0
+    # via premailer
+cssutils==2.11.1
+    # via premailer
+cycler==0.12.1
+    # via matplotlib
+dataclasses-json==0.6.7
+    # via
+    #   langchain
+    #   langchain-community
+debugpy==1.8.19
+    # via ipykernel
 decorator==4.0.0
-    # via retry
+    # via
+    #   ipython
+    #   paddlepaddle
+    #   pyuac
+    #   retry
 deprecated==1.2.18
     # via uiautomator2
 deprecation==2.1.0
     # via adbutils
 desktopmagic==14.3.11
     # via -r requirements.in
-exceptiongroup==1.3.0
-    # via anyio
-filelock==3.18.0
+distro==1.9.0
+    # via openai
+einops==0.8.1
     # via
     #   -r requirements.in
+    #   paddlex
+et-xmlfile==2.0.0
+    # via openpyxl
+eval-type-backport==0.3.1
+    # via wandb
+exceptiongroup==1.3.0
+    # via anyio
+executing==2.2.1
+    # via stack-data
+filelock==3.18.0
+    # via
+    #   huggingface-hub
+    #   paddlex
+    #   torch
     #   uiautomator2
+flatbuffers==25.9.23
+    # via onnxruntime
+fonttools==4.60.2
+    # via matplotlib
+frozenlist==1.7.0
+    # via
+    #   aiohttp
+    #   aiosignal
+fsspec[http]==2025.7.0
+    # via
+    #   huggingface-hub
+    #   pytorch-lightning
+    #   torch
+ftfy==6.3.1
+    # via
+    #   -r requirements.in
+    #   paddlex
+gitdb==4.0.12
+    # via gitpython
+gitpython==3.1.45
+    # via wandb
+gputil==1.4.0
+    # via
+    #   -r requirements.in
+    #   paddlex
+greenlet==3.2.3
+    # via sqlalchemy
 h11==0.16.0
-    # via uvicorn
+    # via
+    #   httpcore
+    #   uvicorn
+httpcore==1.0.9
+    # via httpx
+httpx==0.28.1
+    # via
+    #   openai
+    #   paddlepaddle
+huggingface-hub==0.34.3
+    # via
+    #   cnstd
+    #   paddlex
+    #   tokenizers
+humanfriendly==10.0
+    # via coloredlogs
 idna==3.10
     # via
     #   anyio
+    #   httpx
     #   requests
+    #   yarl
 imageio==2.27.0
     # via -r requirements.in
+imagesize==1.4.1
+    # via
+    #   -r requirements.in
+    #   paddlex
+importlib-metadata==8.7.0
+    # via
+    #   build
+    #   jupyter-client
+importlib-resources==6.5.2
+    # via matplotlib
 inflection==0.5.1
     # via -r requirements.in
+ipykernel==6.30.1
+    # via -r requirements.in
+ipython==8.12.3
+    # via ipykernel
+jedi==0.19.2
+    # via ipython
+jinja2==3.1.6
+    # via
+    #   paddlex
+    #   torch
+jiter==0.10.0
+    # via openai
+joblib==1.5.1
+    # via scikit-learn
+jsonpatch==1.33
+    # via langchain-core
+jsonpointer==3.0.0
+    # via jsonpatch
+jupyter-client==8.6.3
+    # via ipykernel
+jupyter-core==5.8.1
+    # via
+    #   ipykernel
+    #   jupyter-client
+kiwisolver==1.4.7
+    # via matplotlib
+langchain==0.2.0
+    # via
+    #   langchain-community
+    #   paddlex
+langchain-community==0.2.0
+    # via
+    #   -r requirements.in
+    #   paddlex
+langchain-core==0.2.0
+    # via
+    #   langchain
+    #   langchain-community
+    #   langchain-openai
+    #   langchain-text-splitters
+    #   paddlex
+langchain-openai==0.1.7
+    # via
+    #   -r requirements.in
+    #   paddlex
+langchain-text-splitters==0.2.0
+    # via langchain
+langsmith==0.1.17
+    # via
+    #   langchain
+    #   langchain-community
+    #   langchain-core
+lightning-utilities==0.15.2
+    # via
+    #   pytorch-lightning
+    #   torchmetrics
 logzero==1.7.0
     # via uiautomator2
 lxml==6.0.0
     # via
-    #   -r requirements.in
+    #   paddlex
+    #   premailer
     #   uiautomator2
 markdown-it-py==2.2.0
     # via rich
+markupsafe==3.0.2
+    # via jinja2
+marshmallow==3.26.1
+    # via dataclasses-json
+matplotlib==3.9.4
+    # via
+    #   cnstd
+    #   seaborn
+    #   ultralytics
+matplotlib-inline==0.2.1
+    # via
+    #   ipykernel
+    #   ipython
 mdurl==0.1.2
     # via markdown-it-py
+ml-dtypes==0.5.4
+    # via onnx
+more-itertools==10.7.0
+    # via cssutils
 mouseinfo==0.1.3
     # via pyautogui
+mpmath==1.3.0
+    # via sympy
+multidict==6.6.3
+    # via
+    #   aiohttp
+    #   yarl
+mypy-extensions==1.1.0
+    # via typing-inspect
+nest-asyncio==1.6.0
+    # via ipykernel
+networkx==3.2.1
+    # via
+    #   paddlepaddle
+    #   torch
 numpy==1.24.4
     # via
-    #   -r requirements.in
+    #   cnocr
+    #   cnstd
+    #   contourpy
     #   imageio
+    #   langchain
+    #   langchain-community
+    #   matplotlib
+    #   ml-dtypes
+    #   onnx
+    #   onnxruntime
     #   opencv-contrib-python
     #   opencv-python
+    #   opt-einsum
+    #   paddlepaddle
+    #   paddlex
+    #   pandas
+    #   rapidocr
+    #   rapidocr-onnxruntime
+    #   scikit-learn
     #   scipy
+    #   seaborn
+    #   shapely
+    #   torchmetrics
+    #   torchvision
+    #   ultralytics
+    #   ultralytics-thop
+omegaconf==2.3.0
+    # via rapidocr
 onepush==1.3.0
     # via -r requirements.in
+onnx==1.19.1
+    # via
+    #   cnocr
+    #   cnstd
+onnxruntime==1.19.2
+    # via rapidocr-onnxruntime
+openai==1.98.0
+    # via
+    #   langchain-openai
+    #   paddlex
 opencv-contrib-python==4.10.0.84
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   paddlex
 opencv-python==4.6.0.66
-    # via -r requirements.in
+    # via
+    #   cnstd
+    #   rapidocr
+    #   rapidocr-onnxruntime
+    #   ultralytics
+openpyxl==3.1.5
+    # via
+    #   -r requirements.in
+    #   paddlex
+opt-einsum==3.3.0
+    # via paddlepaddle
+orjson==3.11.1
+    # via langsmith
 packaging==23.2
     # via
+    #   build
     #   deprecation
+    #   huggingface-hub
+    #   ipykernel
+    #   langchain-core
+    #   lightning-utilities
+    #   marshmallow
+    #   matplotlib
+    #   onnxruntime
+    #   paddlex
+    #   pytorch-lightning
+    #   torchmetrics
     #   uiautomator2
+    #   wandb
+paddleocr==3.1.0
+    # via -r requirements.in
+paddlepaddle==3.1.0
+    # via -r requirements.in
+paddlex[ie,multimodal,ocr,trans]==3.1.3
+    # via paddleocr
+pandas==2.3.1
+    # via
+    #   cnstd
+    #   paddlex
+    #   seaborn
+parso==0.8.5
+    # via jedi
+pickleshare==0.7.5
+    # via ipython
 pillow==11.3.0
     # via
-    #   -r requirements.in
     #   adbutils
+    #   cnocr
+    #   cnstd
     #   imageio
+    #   matplotlib
+    #   paddlepaddle
+    #   paddlex
     #   pyscreeze
+    #   rapidocr
+    #   rapidocr-onnxruntime
+    #   torchvision
     #   uiautomator2
-progress==1.6.1
-    # via uiautomator2
-psutil==5.9.3
+    #   ultralytics
+pip-tools==7.5.2
+    # via -r requirements.in
+platformdirs==4.4.0
+    # via
+    #   jupyter-core
+    #   wandb
+polars==1.36.1
+    # via ultralytics
+polars-runtime-32==1.36.1
+    # via polars
+premailer==3.10.0
     # via
     #   -r requirements.in
+    #   paddlex
+prettytable==3.16.0
+    # via paddlex
+progress==1.6.1
+    # via uiautomator2
+prompt-toolkit==3.0.52
+    # via ipython
+propcache==0.3.2
+    # via
+    #   aiohttp
+    #   yarl
+protobuf==6.31.1
+    # via
+    #   onnx
+    #   onnxruntime
+    #   paddlepaddle
+    #   wandb
+psutil==5.9.3
+    # via
+    #   ipykernel
     #   pycaw
+    #   ultralytics
+pure-eval==0.2.3
+    # via stack-data
 py==1.11.0
     # via retry
+py-cpuinfo==9.0.0
+    # via paddlex
 pyautogui==0.9.54
     # via -r requirements.in
 pycaw==20251023
     # via -r requirements.in
+pyclipper==1.3.0.post6
+    # via
+    #   cnstd
+    #   paddlex
+    #   rapidocr
+    #   rapidocr-onnxruntime
 pycparser==2.23
     # via cffi
 pycryptodome==3.23.0
     # via onepush
 pydantic==2.11.7
-    # via -r requirements.in
+    # via
+    #   langchain
+    #   langchain-core
+    #   langsmith
+    #   openai
+    #   paddlex
+    #   wandb
 pydantic-core==2.33.2
     # via pydantic
 pyelftools==0.32
@@ -122,62 +475,241 @@ pyelftools==0.32
 pygetwindow==0.0.9
     # via pyautogui
 pygments==2.19.2
-    # via rich
+    # via
+    #   ipython
+    #   rich
 pymsgbox==1.0.9
     # via pyautogui
 pynput==1.8.1
     # via -r requirements.in
+pyparsing==3.2.3
+    # via matplotlib
+pypdfium2==4.30.0
+    # via
+    #   -r requirements.in
+    #   paddlex
 pyperclip==1.9.0
     # via mouseinfo
+pyproject-hooks==1.2.0
+    # via
+    #   build
+    #   pip-tools
+pyreadline3==3.5.4
+    # via humanfriendly
 pyrect==0.2.0
     # via pygetwindow
 pyscreeze==1.0.1
     # via pyautogui
+python-dateutil==2.9.0.post0
+    # via
+    #   jupyter-client
+    #   matplotlib
+    #   pandas
+pytorch-lightning==2.6.0
+    # via
+    #   cnocr
+    #   cnstd
 pytweening==1.2.0
     # via pyautogui
+pytz==2025.2
+    # via pandas
+pyuac==0.0.3
+    # via -r requirements.in
 pywebio==1.7.1
     # via -r requirements.in
 pywin32==311
-    # via -r requirements.in
+    # via jupyter-core
+pyyaml==6.0.2
+    # via
+    #   cnstd
+    #   huggingface-hub
+    #   langchain
+    #   langchain-community
+    #   langchain-core
+    #   omegaconf
+    #   paddleocr
+    #   paddlex
+    #   pytorch-lightning
+    #   rapidocr
+    #   rapidocr-onnxruntime
+    #   ultralytics
+    #   wandb
+pyzmq==27.1.0
+    # via
+    #   ipykernel
+    #   jupyter-client
+rapidocr==3.4.3
+    # via cnstd
+rapidocr-onnxruntime==1.3.25
+    # via cnocr
+regex==2025.7.31
+    # via
+    #   paddlex
+    #   tiktoken
 requests==2.32.4
     # via
-    #   -r requirements.in
     #   adbutils
+    #   huggingface-hub
+    #   langchain
+    #   langchain-community
+    #   langsmith
     #   onepush
+    #   paddlex
+    #   premailer
+    #   rapidocr
+    #   tiktoken
     #   uiautomator2
+    #   ultralytics
+    #   wandb
 retry==0.9.2
     # via
     #   adbutils
     #   uiautomator2
 rich==13.3.3
     # via -r requirements.in
+ruamel-yaml==0.18.14
+    # via paddlex
+ruamel-yaml-clib==0.2.12
+    # via ruamel-yaml
+scikit-learn==1.6.1
+    # via
+    #   -r requirements.in
+    #   paddlex
 scipy==1.13.1
-    # via -r requirements.in
+    # via
+    #   cnstd
+    #   scikit-learn
+    #   ultralytics
+seaborn==0.13.2
+    # via cnstd
+sentry-sdk==2.48.0
+    # via wandb
+shapely==2.0.7
+    # via
+    #   cnstd
+    #   paddlex
+    #   rapidocr
+    #   rapidocr-onnxruntime
 six==1.17.0
     # via
     #   pynput
+    #   python-dateutil
+    #   rapidocr
+    #   rapidocr-onnxruntime
     #   uiautomator2
+smmap==5.0.2
+    # via gitdb
 sniffio==1.3.1
-    # via anyio
+    # via
+    #   anyio
+    #   openai
 soupsieve==2.7
     # via beautifulsoup4
+sqlalchemy==2.0.42
+    # via
+    #   langchain
+    #   langchain-community
+stack-data==0.6.3
+    # via ipython
 starlette==0.26.1
     # via -r requirements.in
-tornado==6.5.1
-    # via pywebio
-tqdm==4.67.1
+sympy==1.14.0
+    # via
+    #   onnxruntime
+    #   torch
+tee==0.0.3
+    # via pyuac
+tenacity==8.1.0
+    # via
+    #   langchain
+    #   langchain-community
+    #   langchain-core
+threadpoolctl==3.6.0
+    # via scikit-learn
+tiktoken==0.9.0
+    # via
+    #   langchain-openai
+    #   paddlex
+tinycss2==1.4.0
     # via -r requirements.in
+tokenizers==0.21.4
+    # via
+    #   -r requirements.in
+    #   paddlex
+tomli==2.3.0
+    # via
+    #   build
+    #   pip-tools
+torch==2.8.0
+    # via
+    #   cnocr
+    #   cnstd
+    #   pytorch-lightning
+    #   torchmetrics
+    #   torchvision
+    #   ultralytics
+    #   ultralytics-thop
+torchmetrics==1.8.2
+    # via
+    #   cnocr
+    #   pytorch-lightning
+torchvision==0.23.0
+    # via
+    #   cnocr
+    #   cnstd
+    #   ultralytics
+tornado==6.5.1
+    # via
+    #   ipykernel
+    #   jupyter-client
+    #   pywebio
+tqdm==4.67.1
+    # via
+    #   cnocr
+    #   cnstd
+    #   huggingface-hub
+    #   openai
+    #   pytorch-lightning
+    #   rapidocr
+    #   rapidocr-onnxruntime
+traitlets==5.14.3
+    # via
+    #   ipykernel
+    #   ipython
+    #   jupyter-client
+    #   jupyter-core
+    #   matplotlib-inline
 typing-extensions==4.14.1
     # via
+    #   aiosignal
     #   anyio
     #   beautifulsoup4
     #   exceptiongroup
+    #   gitpython
+    #   huggingface-hub
+    #   ipython
+    #   lightning-utilities
+    #   multidict
+    #   onnx
+    #   openai
+    #   paddleocr
+    #   paddlepaddle
+    #   paddlex
     #   pydantic
     #   pydantic-core
+    #   pytorch-lightning
+    #   sqlalchemy
     #   starlette
+    #   torch
+    #   typing-inspect
     #   typing-inspection
+    #   wandb
+typing-inspect==0.9.0
+    # via dataclasses-json
 typing-inspection==0.4.1
     # via pydantic
+tzdata==2025.2
+    # via pandas
 ua-parser==1.0.1
     # via user-agents
 ua-parser-builtins==0.18.0.post1
@@ -186,14 +718,35 @@ uiautomator2==2.16.26
     # via -r requirements.in
 uiautomator2cache==0.3.0.1
     # via -r requirements.in
+ujson==5.10.0
+    # via paddlex
+ultralytics==8.3.239
+    # via cnstd
+ultralytics-thop==2.0.18
+    # via ultralytics
+unidecode==1.4.0
+    # via cnstd
 urllib3==2.5.0
-    # via requests
+    # via
+    #   requests
+    #   sentry-sdk
 user-agents==2.2.0
     # via pywebio
 uvicorn==0.21.1
     # via -r requirements.in
+wandb==0.23.1
+    # via cnocr
+wcwidth==0.2.13
+    # via
+    #   ftfy
+    #   prettytable
+    #   prompt-toolkit
+webencodings==0.5.1
+    # via tinycss2
 websockets==10.4
     # via -r requirements.in
+wheel==0.45.1
+    # via pip-tools
 whichcraft==0.6.1
     # via
     #   adbutils
@@ -204,3 +757,13 @@ wrapt==1.17.2
     # via deprecated
 xmltodict==0.14.2
     # via apkutils2
+yarl==1.20.1
+    # via aiohttp
+zipp==3.23.0
+    # via
+    #   importlib-metadata
+    #   importlib-resources
+
+# The following packages are considered to be unsafe in a requirements file:
+# pip
+# setuptools
