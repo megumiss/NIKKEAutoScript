@@ -16,12 +16,12 @@ class DataDependency:
     version: str
 
     def __post_init__(self):
-        # uvicorn[standard] -> uvicorn
+        # 去除 extra 依赖标识，例如: uvicorn[standard] -> uvicorn
         self.name = re.sub(r'\[.*\]', '', self.name)
-        # opencv_python -> opencv-python
-        self.name = self.name.replace('_', '-').strip()
-        # PyYaml -> pyyaml
-        self.name = self.name.lower()
+
+        # 将所有的 ., _, - 统一替换为 -，并转为小写。
+        self.name = re.sub(r'[-_.]+', '-', self.name).lower().strip()
+
         self.version = self.version.strip()
         self.version = re.sub(r'\.0$', '', self.version)
 
@@ -60,11 +60,17 @@ class PipManager(DeployConfig):
     @cached_property
     def set_installed_dependency(self) -> t.Set[DataDependency]:
         data = []
-        regex = re.compile(r'(.*)-(.*).dist-info')
+        # ^(.*?): 非贪婪匹配包名
+        # -: 分隔符
+        # (\d.*?): 版本号 (强制要求数字开头，防止包名里的连字符干扰)
+        # \.dist-info$: 严格匹配后缀
+        regex = re.compile(r'^(.*?)-(\d.*?)\.dist-info$')
+
         try:
             for name in os.listdir(self.python_site_packages):
                 res = regex.search(name)
                 if res:
+                    # 获取到的原始名字传入 DataDependency 后会被自动规范化
                     dep = DataDependency(name=res.group(1), version=res.group(2))
                     data.append(dep)
         except FileNotFoundError:
@@ -78,8 +84,9 @@ class PipManager(DeployConfig):
     @cached_property
     def set_required_dependency(self) -> t.Set[DataDependency]:
         data = []
+        # requirements.txt 解析正则
         regex = re.compile(r'^([^#\s]+)==([^#\s]+)')
-        file = self.filepath('RequirementsFile')
+        file = self.requirements_file  # 使用 property 获取路径
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 for line in f.readlines():
@@ -99,8 +106,11 @@ class PipManager(DeployConfig):
         A poor dependency comparison, but much much faster than `pip install` and `pip list`
         """
         data = []
+        # 由于 DataDependency 实现了规范化，这里可以直接使用集合运算或比较
+        installed_set = self.set_installed_dependency
+
         for dep in self.set_required_dependency:
-            if dep not in self.set_installed_dependency:
+            if dep not in installed_set:
                 data.append(dep)
         return set(data)
 
@@ -118,18 +128,20 @@ class PipManager(DeployConfig):
                 shutil.copy(nkas_source, nkas_path)
             else:
                 logger.warning(f'{nkas_source} does not exist, cannot copy nkas.exe')
-        
+
         logger.hr('Update Dependencies', 0)
 
         if not self.InstallDependencies:
             logger.info('InstallDependencies is disabled, skip')
             return
 
-        if not len(self.set_dependency_to_install):
+        # 这里的检查逻辑现在更加准确了
+        deps_to_install = self.set_dependency_to_install
+        if not len(deps_to_install):
             logger.info('All dependencies installed')
             return
         else:
-            logger.info(f'Dependencies to install: {self.set_dependency_to_install}')
+            logger.info(f'Dependencies to install: {deps_to_install}')
 
         logger.hr('Check Python', 1)
         self.execute(f'"{self.python}" --version')
