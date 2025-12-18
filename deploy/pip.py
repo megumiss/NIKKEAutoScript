@@ -16,13 +16,20 @@ class DataDependency:
     version: str
 
     def __post_init__(self):
-        # 去除 extra 依赖标识，例如: uvicorn[standard] -> uvicorn
+        # 1. 去除 extras (如 uvicorn[standard])
         self.name = re.sub(r'\[.*\]', '', self.name)
 
-        # 将所有的 ., _, - 统一替换为 -，并转为小写。
+        # 2. 深度规范化包名 (PEP 503)
+        # 将所有 ., _, - 替换为单个 -，并转小写
+        # 例子: "ruamel.yaml" -> "ruamel-yaml", "Ruamel_Yaml" -> "ruamel-yaml"
         self.name = re.sub(r'[-_.]+', '-', self.name).lower().strip()
 
+        # 3. 版本号规范化
         self.version = self.version.strip()
+        # 去除可能存在的 v 前缀 (例如 v0.18.14 -> 0.18.14)
+        if self.version.lower().startswith('v'):
+            self.version = self.version[1:]
+        # 去除末尾的 .0
         self.version = re.sub(r'\.0$', '', self.version)
 
     @cached_property
@@ -55,41 +62,55 @@ class PipManager(DeployConfig):
 
     @cached_property
     def python_site_packages(self):
+        # 确保路径分隔符统一
         return os.path.abspath(os.path.join(self.python, '../Lib/site-packages')).replace(r'\\', '/').replace('\\', '/')
 
     @cached_property
     def set_installed_dependency(self) -> t.Set[DataDependency]:
         data = []
-        # ^(.*?): 非贪婪匹配包名
-        # -: 分隔符
-        # (\d.*?): 版本号 (强制要求数字开头，防止包名里的连字符干扰)
-        # \.dist-info$: 严格匹配后缀
-        regex = re.compile(r'^(.*?)-(\d.*?)\.dist-info$')
+        # --- [修改点] 增强型正则 ---
+        # 1. ^(.*?)- : 非贪婪匹配包名，直到遇到最后一个分隔符
+        # 2. ((?:\d|v).*) : 版本号部分，允许以数字 (\d) 或字母 v 开头
+        # 3. \.(?:dist|egg)-info$ : 支持 .dist-info 和 .egg-info 两种后缀
+        regex = re.compile(r'^(.*?)-((?:\d|v).*?)\.(?:dist|egg)-info$', re.IGNORECASE)
 
         try:
-            for name in os.listdir(self.python_site_packages):
+            # 获取目录列表
+            file_list = os.listdir(self.python_site_packages)
+            for name in file_list:
                 res = regex.search(name)
                 if res:
-                    # 获取到的原始名字传入 DataDependency 后会被自动规范化
-                    dep = DataDependency(name=res.group(1), version=res.group(2))
+                    raw_name = res.group(1)
+                    raw_version = res.group(2)
+
+                    dep = DataDependency(name=raw_name, version=raw_version)
                     data.append(dep)
+
+                    # [调试用] 如果发现是 ruamel 系列，打印出来看看脚本到底识别成了什么
+                    # if 'ruamel' in raw_name.lower():
+                    #     logger.info(f"DEBUG: Found {name} -> Identified as {dep}")
+
         except FileNotFoundError:
             logger.info(f'Directory not found: {self.python_site_packages}')
         except PermissionError:
             logger.error(f'Permission denied accessing: {self.python_site_packages}')
         except Exception as e:
             logger.error(f'Error reading site-packages: {e}')
+
         return set(data)
 
     @cached_property
     def set_required_dependency(self) -> t.Set[DataDependency]:
         data = []
-        # requirements.txt 解析正则
+        # requirements.txt 正则
         regex = re.compile(r'^([^#\s]+)==([^#\s]+)')
-        file = self.requirements_file  # 使用 property 获取路径
+        file = self.requirements_file
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 for line in f.readlines():
+                    line = line.strip()
+                    if not line:
+                        continue
                     res = regex.search(line)
                     if res:
                         dep = DataDependency(name=res.group(1), version=res.group(2))
@@ -103,13 +124,13 @@ class PipManager(DeployConfig):
     @cached_property
     def set_dependency_to_install(self) -> t.Set[DataDependency]:
         """
-        A poor dependency comparison, but much much faster than `pip install` and `pip list`
+        Compare required vs installed using normalized DataDependency objects
         """
         data = []
-        # 由于 DataDependency 实现了规范化，这里可以直接使用集合运算或比较
         installed_set = self.set_installed_dependency
 
         for dep in self.set_required_dependency:
+            # DataDependency 的 __eq__ 和 __hash__ 已经处理了规范化后的比较
             if dep not in installed_set:
                 data.append(dep)
         return set(data)
@@ -135,7 +156,6 @@ class PipManager(DeployConfig):
             logger.info('InstallDependencies is disabled, skip')
             return
 
-        # 这里的检查逻辑现在更加准确了
         deps_to_install = self.set_dependency_to_install
         if not len(deps_to_install):
             logger.info('All dependencies installed')
