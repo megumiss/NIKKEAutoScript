@@ -123,7 +123,7 @@ jobs:
     - name: Pack Standard Version (7z)
       run: |
         $fileName = "NKAS_${{ env.TAG_NAME }}.7z"
-        7z a -t7z -mx=5 $fileName . "-xr!build_resources"
+        7z a -t7z -m0=lzma2 -mx=5 $fileName . "-xr!build_resources"
         echo "ASSET_STD=$fileName" >> $env:GITHUB_ENV
 
     # ==========================
@@ -155,7 +155,7 @@ jobs:
     - name: Pack Full CN Version (7z)
       run: |
         $fileName = "NKAS_${{ env.TAG_NAME }}_full-cn.7z"
-        7z a -t7z -mx=5 $fileName . "-xr!build_resources" "-x!${{ env.ASSET_STD }}"
+        7z a -t7z -m0=lzma2 -mx=5 $fileName . "-xr!build_resources" "-x!${{ env.ASSET_STD }}"
         echo "ASSET_CN=$fileName" >> $env:GITHUB_ENV
 
     # ==========================
