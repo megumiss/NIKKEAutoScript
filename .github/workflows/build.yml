@@ -115,7 +115,10 @@ jobs:
     - name: Copy Toolkit
       run: Copy-Item -Path "build_resources\toolkit" -Destination "toolkit" -Recurse -Force
 
-    # 从主项目 deploy/build 复制 nkas.exe 到根目录
+    # 删除 build_resources 文件夹
+    - name: Remove Build Resources Source
+      run: Remove-Item "build_resources" -Recurse -Force -ErrorAction SilentlyContinue
+
     - name: Copy nkas.exe
       run: Copy-Item -Path "deploy\build\nkas.exe" -Destination "nkas.exe" -Force
 
@@ -144,7 +147,7 @@ jobs:
         # -l:5: 压缩等级 5 (标准)
         # -fmt:7z: 格式 7z
         # -ex:排除路径
-        & $bz c -l:9 -fmt:7z -ex:"build_resources" $fileName .
+        & $bz c -l:9 -fmt:7z $fileName .
         
         echo "ASSET_STD=$fileName" >> $env:GITHUB_ENV
 
@@ -181,7 +184,7 @@ jobs:
         
         Write-Host "Packing Full CN Version using Bandizip..."
         # 排除资源库以及上一步生成的 Standard 包
-        & $bz c -l:9 -fmt:7z -ex:"build_resources" -ex:"${{ env.ASSET_STD }}" $fileName .
+        & $bz c -l:9 -fmt:7z -ex:"${{ env.ASSET_STD }}" $fileName .
         
         echo "ASSET_CN=$fileName" >> $env:GITHUB_ENV
 
