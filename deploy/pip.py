@@ -68,7 +68,6 @@ class PipManager(DeployConfig):
     @cached_property
     def set_installed_dependency(self) -> t.Set[DataDependency]:
         data = []
-        # --- [修改点] 增强型正则 ---
         # 1. ^(.*?)- : 非贪婪匹配包名，直到遇到最后一个分隔符
         # 2. ((?:\d|v).*) : 版本号部分，允许以数字 (\d) 或字母 v 开头
         # 3. \.(?:dist|egg)-info$ : 支持 .dist-info 和 .egg-info 两种后缀
@@ -85,10 +84,6 @@ class PipManager(DeployConfig):
 
                     dep = DataDependency(name=raw_name, version=raw_version)
                     data.append(dep)
-
-                    # [调试用] 如果发现是 ruamel 系列，打印出来看看脚本到底识别成了什么
-                    # if 'ruamel' in raw_name.lower():
-                    #     logger.info(f"DEBUG: Found {name} -> Identified as {dep}")
 
         except FileNotFoundError:
             logger.info(f'Directory not found: {self.python_site_packages}')
@@ -130,7 +125,6 @@ class PipManager(DeployConfig):
         installed_set = self.set_installed_dependency
 
         for dep in self.set_required_dependency:
-            # DataDependency 的 __eq__ 和 __hash__ 已经处理了规范化后的比较
             if dep not in installed_set:
                 data.append(dep)
         return set(data)
