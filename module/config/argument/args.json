@@ -208,18 +208,6 @@
           5
         ]
       },
-      "GameResolutionCompat": {
-        "type": "checkbox",
-        "value": true
-      },
-      "CloseAutoHdr": {
-        "type": "checkbox",
-        "value": true
-      },
-      "ScreenRotate": {
-        "type": "checkbox",
-        "value": false
-      },
       "GameWindowPosition": {
         "type": "select",
         "value": "center",
@@ -230,6 +218,22 @@
           "topleft",
           "topright"
         ]
+      },
+      "GameResolutionCompat": {
+        "type": "checkbox",
+        "value": true
+      },
+      "ScreenRotate": {
+        "type": "checkbox",
+        "value": false
+      },
+      "CloseAutoHdr": {
+        "type": "checkbox",
+        "value": true
+      },
+      "DisableVoice": {
+        "type": "checkbox",
+        "value": false
       },
       "Account": {
         "type": "input",
