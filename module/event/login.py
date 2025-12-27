@@ -1,8 +1,9 @@
 from module.base.decorator import Config
 from module.base.timer import Timer
+from module.event.assets import RECEIVE
 from module.event.base import EventBase
 from module.logger import logger
-from module.ui.assets import GOTO_BACK, NEW_NIKKE_CONFIRM, RECEIVE
+from module.ui.assets import GOTO_BACK, NEW_NIKKE_CONFIRM
 
 
 class EventLogin(EventBase):

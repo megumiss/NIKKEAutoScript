@@ -85,6 +85,7 @@ class Event(
                 raise EventUnavailableError
 
     def run(self):
+        self.team_up()
         # image = cv2.imread('1.png')
         # cv2.cvtColor(image, cv2.COLOR_BGR2RGB, dst=image)
         # self.device.image  = image

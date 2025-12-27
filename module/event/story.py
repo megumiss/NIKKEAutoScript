@@ -31,7 +31,7 @@ class EventStory(EventBase):
         """
         nikke队伍坐标列表倒序
         """
-        return [(590, 730), (590, 900), (590, 1100), (590, 1100), (590, 1100)]
+        return [(610, 360), (485, 360), (360, 360), (235, 360), (115, 360)]
 
     @Config.when(EVENT_TYPE=(1, 3))
     def story(self, skip_first_screenshot=True):
@@ -447,7 +447,7 @@ class EventStory(EventBase):
             # 合并重复的nikkke
             nikkes = merge_buttons(nikkes, x_threshold=30, y_threshold=30)
             # 过滤掉非列表区域的nikke
-            nikkes = filter_buttons_in_area(nikkes, y_range=(620, 1280))
+            nikkes = filter_buttons_in_area(nikkes, y_range=(620, 1150))
             # 按照坐标排序
             nikkes = sort_buttons_by_location(nikkes)
             logger.info(f'Find bouns nikkes: {len(nikkes)}')
@@ -479,18 +479,20 @@ class EventStory(EventBase):
                         while 1:
                             self.device.screenshot()
 
-                            if self.appear(TEAM_NIKKE_NOT_SELECT, offset=(250, 10)):
+                            if self.appear(TEAM_NIKKE_NOT_SELECT, offset=(500, 10), threshold=0.6):
                                 break
                             # 要取消的nikke序号
-                            self.device.click_minitouch(self.team_nikke_locations[4 - index])
+
+                            self.device.click_minitouch(
+                                self.team_nikke_locations[index][0], self.team_nikke_locations[index][1]
+                            )
                             self.device.sleep(0.3)
 
+                        # 放置一个加成nikke
                         self.device.click(nikke)
                         self.device.sleep(0.3)
                         break
-        
+
         # 储存队伍
         while 1:
             self.device.screenshot()
-            
-            
