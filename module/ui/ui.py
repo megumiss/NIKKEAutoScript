@@ -9,6 +9,7 @@ from module.ui.page import (
     Page,
     page_arena,
     page_ark,
+    page_breaking_news,
     page_campaign_select,
     page_cash_shop,
     page_commission,
@@ -76,6 +77,7 @@ class UI(InfoHandler):
         page_campaign_select,
         page_surface,
         page_surface_back,
+        page_breaking_news,
     ]
 
     def ui_page_appear(self, page: Page):

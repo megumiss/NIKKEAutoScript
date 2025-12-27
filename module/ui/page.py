@@ -201,3 +201,8 @@ page_campaign_select.link(button=CAMPAIGN_SELECT_GOTO_SURFACE, destination=page_
 
 page_surface_back.link(button=CONFIRM_B, destination=page_main)
 page_surface_back.link(button=SURFACE_BACK_CANCEL, destination=page_surface)
+
+# breaking news
+page_breaking_news = Page(BREAKING_NEWS_CHECK)
+page_breaking_news.link(button=GOTO_BACK, destination=page_main)
+page_main.link(button=MAIN_CHECK, destination=page_breaking_news)
