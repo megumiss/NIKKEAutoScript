@@ -137,7 +137,7 @@ jobs:
     - name: Remove .git (Pre-Standard)
       run: Remove-Item ".git" -Recurse -Force -ErrorAction SilentlyContinue
 
-    - name: Pack Standard Version
+    - name: Pack Standard Version (Bandizip)
       run: |
         $fileName = "NKAS_${{ env.TAG_NAME }}.7z"
         $bz = "C:\Program Files\Bandizip\bz.exe"
@@ -174,10 +174,17 @@ jobs:
     # 8. 打包阶段 2: Full CN
     # ==========================
 
-    - name: Remove .git (Pre-CN)
-      run: Remove-Item ".git" -Recurse -Force -ErrorAction SilentlyContinue
+    # 执行轻量化
+    - name: Minimize .git (Pre-CN)
+      run: |
+        if (Test-Path ".git") { Remove-Item ".git" -Recurse -Force -ErrorAction SilentlyContinue }
+        
+        git init
+        git remote add origin https://github.com/megumiss/NIKKEAutoScript.git
+        git fetch origin master --depth=1
+        git reset --soft FETCH_HEAD
 
-    - name: Pack Full CN Version
+    - name: Pack Full CN Version (Bandizip)
       run: |
         $fileName = "NKAS_${{ env.TAG_NAME }}_full-cn.7z"
         $bz = "C:\Program Files\Bandizip\bz.exe"

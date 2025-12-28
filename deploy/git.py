@@ -66,7 +66,7 @@ class GitManager(DeployConfig):
             拉取最新上游仓库最新commit
         """
         logger.hr('Fetch Repository Branch', 1)
-        self.execute(f'"{self.git}" fetch {source} {branch}')
+        self.execute(f'"{self.git}" fetch --depth=20 {source} {branch}')
 
         # Remove git lock
         lock_file = './.git/index.lock'
@@ -79,6 +79,13 @@ class GitManager(DeployConfig):
         """
         self.execute(f'"{self.git}" reset --hard {source}/{branch}')
         self.execute(f'"{self.git}" pull --ff-only {source} {branch}')
+
+        """
+            清理悬空对象和压缩体积
+        """
+        logger.hr('Cleaning up git garbage', 1)
+        self.execute(f'"{self.git}" reflog expire --expire=now --all', allow_failure=True)
+        self.execute(f'"{self.git}" gc --prune=now', allow_failure=True)
 
         logger.hr('Show Version', 1)
         self.execute(f'"{self.git}" --no-pager log --no-merges -1')
