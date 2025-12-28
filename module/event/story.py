@@ -211,8 +211,8 @@ class EventStory(EventBase):
                         continue
 
                     # 组队
-                    if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear(
-                        STAGE_TEAM_NOT_SELECT, offset=30
+                    if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear_then_click(
+                        STAGE_TEAM_NOT_SELECT, offset=30, interval=1
                     ):
                         self.team_up()
                         continue
@@ -225,9 +225,18 @@ class EventStory(EventBase):
                     ):
                         logger.warning('没票')
                         break
+
+                    # 跳过剧情
+
+                    # 点击区域跳转
+
+                    # 重新打开关卡
+
+                    # 检查是否推完
+
             else:
                 # 应该扫荡
-                logger.info('扫荡')
+                logger.info('没找到要推图的关卡，开始扫荡')
 
         # 扫荡，滑动到列表最下方检查倒数第二关
         if self.config.StoryStage_Sweep:
@@ -496,3 +505,10 @@ class EventStory(EventBase):
         # 储存队伍
         while 1:
             self.device.screenshot()
+
+            # 回到关卡弹出界面
+            if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30):
+                break
+            # 保存队伍
+            if self.appear_then_click(SAVE_TEAM, offset=30, interval=1):
+                continue
