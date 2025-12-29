@@ -6,7 +6,6 @@ from module.base.utils import sort_buttons_by_location
 from module.event.assets import *
 from module.event.base import EventBase
 from module.logger import logger
-from module.ui.assets import RECEIVE
 
 
 class EventShop(EventBase):

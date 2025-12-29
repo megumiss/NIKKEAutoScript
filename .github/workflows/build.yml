@@ -1,0 +1,213 @@
+name: Build and Release NKAS
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name (e.g. v1.0.0)'
+        required: true
+        default: 'v0.0.0-test'
+      release_note:
+        description: 'Custom release note (Optional)'
+        required: false
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    
+    steps:
+    # ==========================
+    # 1. 检出代码
+    # ==========================
+    
+    # 1.1 检出主仓库 (NIKKEAutoScript)
+    # 自动检出触发 Tag 或 Master 分支
+    - name: Checkout Main Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # 保留历史以便操作 .git
+
+    # 1.2 检出资源仓库 (NIKKEAutoScriptBuild)
+    # 显式指定分支为 main
+    - name: Checkout Build Resources
+      uses: actions/checkout@v4
+      with:
+        repository: megumiss/NIKKEAutoScriptBuild
+        ref: main
+        path: build_resources
+
+    # ==========================
+    # 2. 确定 Tag
+    # ==========================
+    - name: Set Tag Name
+      id: tag_info
+      run: |
+        if ("${{ github.ref_type }}" -eq "tag") {
+          $tagName = "${{ github.ref_name }}"
+        } else {
+          $tagName = "${{ inputs.tag_name }}"
+        }
+        echo "TAG_NAME=$tagName" >> $env:GITHUB_ENV
+        Write-Host "Current Tag: $tagName"
+
+    # ==========================
+    # 3. 环境准备
+    # ==========================
+    
+    - name: Install Bandizip
+      run: |
+        Write-Host "Installing Bandizip via Chocolatey..."
+        choco install bandizip --no-progress -y
+        if (-not (Test-Path "C:\Program Files\Bandizip\bz.exe")) {
+            Write-Error "Bandizip executable not found!"
+            exit 1
+        }
+        Write-Host "Bandizip installed successfully."
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '16'
+        cache: 'yarn'
+        cache-dependency-path: webapp/yarn.lock
+
+    # ==========================
+    # 4. 构建 Webapp
+    # ==========================
+    - name: Build Webapp
+      working-directory: webapp
+      run: |
+        yarn install --frozen-lockfile
+        yarn run compile
+        if (Test-Path "dist\win-unpacked") {
+            # 将编译产物移动到项目根目录下的 app 文件夹
+            Move-Item -Path "dist\win-unpacked" -Destination "..\app" -Force
+        } else {
+            exit 1
+        }
+
+    # ==========================
+    # 5. 清理与组装基础环境
+    # ==========================
+    - name: Clean Unnecessary Files
+      run: |
+        $keep = @("zh-CN.pak", "zh-TW.pak", "ja.pak", "en-US.pak", "en-GB.pak")
+        if (Test-Path "app\locales") {
+            Get-ChildItem "app\locales\*.pak" | Where-Object { $_.Name -notin $keep } | Remove-Item -Force
+        }
+        $filesToDelete = @("app\vulkan-1.dll", "app\vk_swiftshader_icd.json", "app\vk_swiftshader.dll", "app\LICENSES.chromium.html", "app\LICENSE.electron.txt")
+        foreach ($file in $filesToDelete) { if (Test-Path $file) { Remove-Item $file -Force } }
+
+    - name: Remove Webapp Artifacts
+      working-directory: webapp
+      run: |
+        Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item output -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+
+    # 从资源仓库复制 toolkit 到主项目根目录
+    - name: Copy Toolkit
+      run: Copy-Item -Path "build_resources\toolkit" -Destination "toolkit" -Recurse -Force
+
+    # 删除 build_resources 文件夹
+    - name: Remove Build Resources Source
+      run: Remove-Item "build_resources" -Recurse -Force -ErrorAction SilentlyContinue
+
+    - name: Copy nkas.exe
+      run: Copy-Item -Path "deploy\build\nkas.exe" -Destination "nkas.exe" -Force
+
+    - name: Install Python Dependencies
+      run: |
+        & "toolkit\python.exe" -m pip install -r deploy\requirements.txt -i https://pypi.org/simple
+
+    - name: Setup Default Config
+      working-directory: config
+      run: if (Test-Path "deploy.template.yaml") { Copy-Item "deploy.template.yaml" -Destination "deploy.yaml" -Force }
+
+    # ==========================
+    # 6. 打包阶段 1: Standard
+    # ==========================
+
+    - name: Remove .git (Pre-Standard)
+      run: Remove-Item ".git" -Recurse -Force -ErrorAction SilentlyContinue
+
+    - name: Pack Standard Version (Bandizip)
+      run: |
+        $fileName = "NKAS_${{ env.TAG_NAME }}.7z"
+        $bz = "C:\Program Files\Bandizip\bz.exe"
+        
+        Write-Host "Packing Standard Version using Bandizip..."
+        # bz c: 压缩命令
+        # -l:5: 压缩等级 5 (标准)
+        # -fmt:7z: 格式 7z
+        # -ex:排除路径
+        & $bz c -l:9 -fmt:7z $fileName .
+        
+        echo "ASSET_STD=$fileName" >> $env:GITHUB_ENV
+
+    # ==========================
+    # 7. 执行 Updater 逻辑
+    # ==========================
+    
+    - name: Run Installer Script
+      env: 
+        PYTHONUTF8: 1
+        PYTHONIOENCODING: utf-8
+      run: |
+        Write-Host "Running deploy/installer.py..."
+        & "toolkit\python.exe" deploy\installer.py
+
+    - name: Switch Config to CN
+      run: |
+        if (Test-Path "config\deploy.template-cn.yaml") {
+            Copy-Item "config\deploy.template-cn.yaml" -Destination "config\deploy.yaml" -Force
+            Write-Host "Switched deploy.yaml to CN template."
+        }
+
+    # ==========================
+    # 8. 打包阶段 2: Full CN
+    # ==========================
+
+    # 执行轻量化
+    - name: Minimize .git (Pre-CN)
+      run: |
+        if (Test-Path ".git") { Remove-Item ".git" -Recurse -Force -ErrorAction SilentlyContinue }
+        
+        git init
+        git remote add origin https://github.com/megumiss/NIKKEAutoScript.git
+        git fetch origin master --depth=1
+        git reset --soft FETCH_HEAD
+
+    - name: Pack Full CN Version (Bandizip)
+      run: |
+        $fileName = "NKAS_${{ env.TAG_NAME }}_full-cn.7z"
+        $bz = "C:\Program Files\Bandizip\bz.exe"
+        
+        Write-Host "Packing Full CN Version using Bandizip..."
+        # 排除资源库以及上一步生成的 Standard 包
+        & $bz c -l:9 -fmt:7z -ex:"${{ env.ASSET_STD }}" $fileName .
+        
+        echo "ASSET_CN=$fileName" >> $env:GITHUB_ENV
+
+    # ==========================
+    # 9. 发布
+    # ==========================
+    - name: Create Release and Upload
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ env.TAG_NAME }}
+        name: NKAS ${{ env.TAG_NAME }}
+        draft: true
+        generate_release_notes: true
+        body: ${{ inputs.release_note }}
+        files: |
+          ${{ env.ASSET_STD }}
+          ${{ env.ASSET_CN }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

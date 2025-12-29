@@ -52,10 +52,11 @@
     "PCClient": {
       "Screens": false,
       "ScreenNumber": 0,
-      "GameResolutionCompat": true,
-      "CloseAutoHdr": true,
-      "ScreenRotate": false,
       "GameWindowPosition": "center",
+      "GameResolutionCompat": true,
+      "ScreenRotate": false,
+      "CloseAutoHdr": true,
+      "DisableVoice": false,
       "Account": null,
       "Password": null
     },

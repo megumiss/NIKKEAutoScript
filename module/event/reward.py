@@ -1,8 +1,8 @@
 from module.base.decorator import Config
 from module.base.timer import Timer
+from module.event.assets import RECEIVE, RECEIVE_REWARD
 from module.event.base import EventBase
 from module.logger import logger
-from module.ui.assets import RECEIVE, RECEIVE_REWARD
 
 
 class EventReward(EventBase):
