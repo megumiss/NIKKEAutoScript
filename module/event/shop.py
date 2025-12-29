@@ -29,11 +29,21 @@ class EventShop(EventBase):
             logger.error(f"Button asset '{button_name}' not found for option '{item}'")
             raise
 
-    def shop(self, skip_first_screenshot=True):
-        logger.hr('START EVENT SHOP', 2)
+    def shop(self, target_button=None, skip_first_screenshot=True):
+        """
+        Args:
+            target_button (Button): TEMPLATE_SHOP_MONEY or TEMPLATE_SHOP_GEM.
+                                    Defaults to self.event_assets.TEMPLATE_SHOP_MONEY if None.
+        """
+        if target_button is None:
+            target_button = self.event_assets.TEMPLATE_SHOP_MONEY
+
+        logger.hr(f'START EVENT SHOP: {target_button.name}', 2)
         click_timer = Timer(0.3)
         restart_flag = False
         delay_list = self.shop_delay_list
+        # 钻石
+        is_gem_mode = 'TEMPLATE_SHOP_GEM' == target_button.name
 
         # 进入商店页面
         while 1:
@@ -56,6 +66,7 @@ class EventShop(EventBase):
             ):
                 logger.info('Open event shop')
                 break
+        self.ui_wait_loading()
 
         # 跳过第一个物品
         skip_item_first = False
@@ -68,16 +79,14 @@ class EventShop(EventBase):
 
             self.device.screenshot()
             # 当前页所有商品，阈值较低可能会重复
-            items = self.event_assets.TEMPLATE_SHOP_MONEY.match_multi(
-                self.device.image, similarity=0.65, name='SHOP_ITEM'
-            )
+            items = target_button.match_multi(self.device.image, similarity=0.65, name='SHOP_ITEM')
             # 合并重复的商品
             items = merge_buttons(items, x_threshold=30, y_threshold=30)
             # 过滤掉非商店区域的商品
             items = filter_buttons_in_area(items, y_range=(620, 1280))
             # 按照坐标排序
             items = sort_buttons_by_location(items)
-            logger.info(f'Find items: {len(items)}')
+            logger.info(f'Find items ({target_button.name}): {len(items)}')
 
             # SOLD_OUT的商品
             sold_outs = TEMPLATE_SOLD_OUT.match_multi(self.device.image, similarity=0.7, name='SOLD_OUT')
@@ -101,7 +110,7 @@ class EventShop(EventBase):
                         continue
 
                     # 商品弹窗
-                    if self.appear(SHOP_ITEM_CHECK, offset=10):
+                    if self.appear(SHOP_ITEM_CHECK, offset=100):
                         click_timer.reset()
                         break
 
@@ -116,7 +125,7 @@ class EventShop(EventBase):
                             confirm_timer.start()
                         if confirm_timer.reached():
                             if quit:
-                                logger.info('Money not enough, quiting')
+                                logger.info('Money/Gem not enough, quiting')
                                 return
                             else:
                                 logger.info('Item purchase completed, goto next')
@@ -124,22 +133,36 @@ class EventShop(EventBase):
                     else:
                         confirm_timer.clear()
 
+                    # 使用钻石购买时跳过胶卷
+                    if (
+                        is_gem_mode
+                        and self.appear(SHOP_ITEM_CHECK, offset=100)
+                        and self.appear(SHOP_ITEM_MEMORY_FILM, offset=30)
+                    ):
+                        logger.info('Skip FILM purchase in Gem mode')
+                        skip_item_first = True
+                        # 取消购买弹窗
+                        if click_timer.reached() and self.appear_then_click(SHOP_CANCEL, offset=30, interval=1):
+                            click_timer.reset()
+                            continue
+
                     # 商品在延迟购买列表中，跳过，返回商店主页
-                    for i, item in enumerate(delay_list[:]):
-                        if self.appear(SHOP_ITEM_CHECK, offset=10) and self.appear(
-                            self.get_shop_item_button(item), offset=10
-                        ):
-                            logger.info(f'Skip item purchase: {item}')
-                            skip_item_first = True
-                            # 取消购买弹窗
-                            if click_timer.reached() and self.appear_then_click(SHOP_CANCEL, offset=30, interval=1):
-                                click_timer.reset()
-                                continue
+                    if not is_gem_mode:
+                        for i, item in enumerate(delay_list[:]):
+                            if self.appear(SHOP_ITEM_CHECK, offset=100) and self.appear(
+                                self.get_shop_item_button(item), offset=10
+                            ):
+                                logger.info(f'Skip item purchase: {item}')
+                                skip_item_first = True
+                                # 取消购买弹窗
+                                if click_timer.reached() and self.appear_then_click(SHOP_CANCEL, offset=30, interval=1):
+                                    click_timer.reset()
+                                    continue
 
                     # 商品是红球并且称号没买，重新进入商店
                     if (
                         delay_list
-                        and self.appear(SHOP_ITEM_CHECK, offset=10)
+                        and self.appear(SHOP_ITEM_CHECK, offset=100)
                         and self.appear(SHOP_ITEM_RED_CIRCLE, offset=10)
                     ):
                         logger.info('Delaylist not empty, restart shop to purchase')
@@ -172,7 +195,7 @@ class EventShop(EventBase):
                         continue
 
                     # 购买
-                    if click_timer.reached() and self.appear_then_click(SHOP_BUY, offset=30, interval=1):
+                    if click_timer.reached() and self.appear_then_click(SHOP_BUY, offset=100, interval=1):
                         click_timer.reset()
                         continue
 
@@ -182,7 +205,13 @@ class EventShop(EventBase):
                         click_timer.reset()
                         continue
             else:
-                # 当前页全部购买完成，滚动到下一页
+                # 当前页全部购买完成
+                # 钻石模式只检查第一页
+                if is_gem_mode:
+                    logger.info('Gem shop check finished (No scroll)')
+                    break
+
+                # 滚动到下一页
                 logger.info('Scroll to next page')
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()

@@ -1,5 +1,6 @@
 from module.base.timer import Timer
 from module.coop.coop import CoopIsUnavailable
+from module.event.assets import TEMPLATE_SHOP_GEM
 from module.event.base import ChallengeNotFoundError, EventSelectError, EventUnavailableError
 from module.event.challenge import EventChallenge
 from module.event.coop import EventCoop
@@ -9,9 +10,8 @@ from module.event.reward import EventReward
 from module.event.shop import EventShop
 from module.event.story import EventStory
 from module.logger import logger
-from module.ui.assets import EVENT_SWITCH, MAIN_CHECK
+from module.ui.assets import EVENT_SWITCH, MAIN_CHECK, SKIP
 from module.ui.page import page_main
-from module.ui.assets import FIGHT_QUICKLY_ENABLE, SKIP
 
 
 class Event(
@@ -85,6 +85,7 @@ class Event(
                 raise EventUnavailableError
 
     def run(self):
+        self.shop(TEMPLATE_SHOP_GEM)
         self.team_up()
         # image = cv2.imread('1.png')
         # cv2.cvtColor(image, cv2.COLOR_BGR2RGB, dst=image)
