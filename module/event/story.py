@@ -227,13 +227,31 @@ class EventStory(EventBase):
                         break
 
                     # 跳过剧情
+                    if self.appear_then_click('SKIP', offset=30, interval=1):
+                        continue
+
+                    # 下一关卡
+                    if self.appear_then_click('NEXT_STAGE', offset=30, interval=1):
+                        continue
 
                     # 点击区域跳转
+                    if self.appear_then_click('区域跳转', offset=30, interval=1):
+                        continue
 
-                    # 重新打开关卡
+
+
+
+
+
+                    
+
+                    if '回到活动主页了':
+                        self.story()
 
                     # 检查是否推完
-
+                    if self.appear("有战斗结束，但是没有下一关卡或者下一关卡不可用", offset=30):
+                        # 检查战斗结束消失后退出
+                        break
             else:
                 # 应该扫荡
                 logger.info('没找到要推图的关卡，开始扫荡')
