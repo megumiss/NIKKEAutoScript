@@ -47,6 +47,15 @@ class EventStory(EventBase):
         }
         return stages[story]
 
+    def STORY_STAGE_PENDING(self, story):
+        stages = {
+            'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_PENDING,
+            'story_1_hard': self.event_assets.STORY_1_HARD_STAGE_PENDING,
+            'story_2_normal': self.event_assets.STORY_2_NORMAL_STAGE_PENDING,
+            'story_2_hard': self.event_assets.STORY_2_HARD_STAGE_PENDING,
+        }
+        return stages[story]
+
     @cached_property
     def team_nikke_locations(self):
         """
@@ -219,64 +228,7 @@ class EventStory(EventBase):
         # 推图
         if self.config.StoryStage_AutoPush:
             logger.info(f'Start checking push stage for {open_story}')
-            # 如果最后一关没有clear
-            if (
-                not self.appear(self.STORY_STAGE_12(open_story), offset=30, threshold=0.9)
-                and not self.appear(self.STORY_STAGE_12(f'{open_story}_clear'), offset=30, threshold=0.9)
-                and self.appear(self.event_assets.STORY_STAGE_PENDING, offset=30, static=False)
-            ):
-                logger.info('Pending stage found, start pushing loop')
-                # 判断有票和组队状态
-                while 1:
-                    self.device.screenshot()
-
-                    # 打开关卡
-                    if self.appear_then_click(self.event_assets.STORY_STAGE_PENDING, offset=30, static=False):
-                        logger.info('Click pending stage to enter')
-                        continue
-
-                    # 组队
-                    if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear_then_click(
-                        STAGE_TEAM_NOT_SELECT, offset=30, interval=1
-                    ):
-                        logger.info('Team up clicked')
-                        self.team_up()
-                        continue
-
-                    # 没票退出
-                    if (
-                        self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
-                        and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
-                        and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
-                    ):
-                        logger.warning('没票')
-                        # 没票直接退出
-                        self.back_to_event()
-                        return
-
-                    # 跳过剧情
-                    if self.appear_then_click(SKIP, offset=30, interval=1):
-                        continue
-
-                    # 下一关卡
-                    if self.appear_then_click(NEXT_STAGE, offset=(100, 30), interval=1):
-                        continue
-
-                    # 点击区域跳转
-                    if self.appear_then_click(FIELD_CHANGE, offset=30, interval=1):
-                        continue
-
-                    # 回到活动主页
-                    if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
-                        logger.info('Returned to event page, restart story loop')
-                        return self.story()
-
-                    # 战斗结束，但是没有找到下一关卡
-                    if self.appear(END_FIGHTING, offset=30):
-                        logger.info('Fighting ended, no next stage found, exit push loop')
-                        break
-            else:
-                logger.info('No pending stage found or Stage 12 cleared, check sweep')
+            self.find_and_sweep_stage(open_story)
 
         # 扫荡，滑动到列表最下方检查倒数第二关
         if self.config.StoryStage_Sweep:
@@ -392,6 +344,66 @@ class EventStory(EventBase):
 
         # 回到活动主页
         self.back_to_event()
+
+    def find_and_push_stage(self, open_story):
+        # 如果最后一关没有clear
+        if (
+            not self.appear(self.STORY_STAGE_12(open_story), offset=30, threshold=0.9)
+            and not self.appear(self.STORY_STAGE_12(f'{open_story}_clear'), offset=30, threshold=0.9)
+            and self.appear(self.STORY_STAGE_PENDING(open_story), offset=30, static=False)
+        ):
+            logger.info('Pending stage found, start pushing loop')
+            # 判断有票和组队状态
+            while 1:
+                self.device.screenshot()
+
+                # 打开关卡
+                if self.appear_then_click(self.STORY_STAGE_PENDING(open_story), offset=30, static=False):
+                    logger.info('Click pending stage to enter')
+                    continue
+
+                # 组队
+                if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear_then_click(
+                    STAGE_TEAM_NOT_SELECT, offset=30, interval=1
+                ):
+                    logger.info('Team up clicked')
+                    self.team_up()
+                    continue
+
+                # 没票退出
+                if (
+                    self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
+                    and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
+                    and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
+                ):
+                    logger.warning('没票')
+                    # 没票直接退出
+                    self.back_to_event()
+                    return
+
+                # 跳过剧情
+                if self.appear_then_click(SKIP, offset=30, interval=1):
+                    continue
+
+                # 下一关卡
+                if self.appear_then_click(NEXT_STAGE, offset=(100, 30), interval=1):
+                    continue
+
+                # 点击区域跳转
+                if self.appear_then_click(FIELD_CHANGE, offset=30, interval=1):
+                    continue
+
+                # 回到活动主页
+                if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
+                    logger.info('Returned to event page, restart story loop')
+                    return self.story()
+
+                # 战斗结束，但是没有找到下一关卡
+                if self.appear(END_FIGHTING, offset=30):
+                    logger.info('Fighting ended, no next stage found, exit push loop')
+                    break
+        else:
+            logger.info('No pending stage found or Stage 12 cleared, check sweep')
 
     def find_and_sweep_stage(self, open_story):
         click_timer = Timer(0.3)
