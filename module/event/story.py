@@ -9,7 +9,15 @@ from module.event.base import EventBase
 from module.event.challenge import CHALLENGE_QUICKLY_DISABLE
 from module.logger import logger
 from module.simulation_room.assets import END_FIGHTING, FIGHT_QUICKLY
-from module.ui.assets import FIGHT_CLOSE, FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_FIGHT, FIGHT_QUICKLY_MAX, FIGHT_QUICKLY_MIN
+from module.tribe_tower.assets import NEXT_STAGE
+from module.ui.assets import (
+    FIGHT_CLOSE,
+    FIGHT_QUICKLY_CHECK,
+    FIGHT_QUICKLY_FIGHT,
+    FIGHT_QUICKLY_MAX,
+    FIGHT_QUICKLY_MIN,
+    SKIP,
+)
 
 
 class EventStory(EventBase):
@@ -23,6 +31,19 @@ class EventStory(EventBase):
             'story_2_normal_clear': self.event_assets.STORY_2_NORMAL_STAGE_11_CLEAR,
             'story_2_hard': self.event_assets.STORY_2_HARD_STAGE_11,
             'story_2_hard_clear': self.event_assets.STORY_2_HARD_STAGE_11_CLEAR,
+        }
+        return stages[story]
+
+    def STORY_STAGE_12(self, story):
+        stages = {
+            'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_12,
+            'story_1_normal_clear': self.event_assets.STORY_1_NORMAL_STAGE_12_CLEAR,
+            'story_1_hard': self.event_assets.STORY_1_HARD_STAGE_12,
+            'story_1_hard_clear': self.event_assets.STORY_1_HARD_STAGE_12_CLEAR,
+            'story_2_normal': self.event_assets.STORY_2_NORMAL_STAGE_12,
+            'story_2_normal_clear': self.event_assets.STORY_2_NORMAL_STAGE_12_CLEAR,
+            'story_2_hard': self.event_assets.STORY_2_HARD_STAGE_12,
+            'story_2_hard_clear': self.event_assets.STORY_2_HARD_STAGE_12_CLEAR,
         }
         return stages[story]
 
@@ -197,23 +218,28 @@ class EventStory(EventBase):
         self.device.screenshot()
         # 推图
         if self.config.StoryStage_AutoPush:
-            logger.info('推图')
-            # 找到推图关卡，点击
-            if not self.appear(self.STORY_STAGE_11(open_story), offset=30, threshold=0.9) and self.appear(
-                '等待推图的关卡模板', offset=10, static=False
+            logger.info(f'Start checking push stage for {open_story}')
+            # 如果最后一关没有clear
+            if (
+                not self.appear(self.STORY_STAGE_12(open_story), offset=30, threshold=0.9)
+                and not self.appear(self.STORY_STAGE_12(f'{open_story}_clear'), offset=30, threshold=0.9)
+                and self.appear(self.event_assets.STORY_STAGE_PENDING, offset=30, static=False)
             ):
+                logger.info('Pending stage found, start pushing loop')
                 # 判断有票和组队状态
                 while 1:
                     self.device.screenshot()
 
                     # 打开关卡
-                    if self.appear_then_click('等待推图的关卡模板', offset=10, static=False):
+                    if self.appear_then_click(self.event_assets.STORY_STAGE_PENDING, offset=30, static=False):
+                        logger.info('Click pending stage to enter')
                         continue
 
                     # 组队
                     if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear_then_click(
                         STAGE_TEAM_NOT_SELECT, offset=30, interval=1
                     ):
+                        logger.info('Team up clicked')
                         self.team_up()
                         continue
 
@@ -224,34 +250,37 @@ class EventStory(EventBase):
                         and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
                     ):
                         logger.warning('没票')
-                        break
+                        # 没票直接退出
+                        self.back_to_event()
+                        return
 
                     # 跳过剧情
-                    if self.appear_then_click('SKIP', offset=30, interval=1):
+                    if self.appear_then_click(SKIP, offset=30, interval=1):
                         continue
 
                     # 下一关卡
-                    if self.appear_then_click('NEXT_STAGE', offset=30, interval=1):
+                    if self.appear_then_click(NEXT_STAGE, offset=(100, 30), interval=1):
                         continue
 
                     # 点击区域跳转
-                    if self.appear_then_click('区域跳转', offset=30, interval=1):
+                    if self.appear_then_click(FIELD_CHANGE, offset=30, interval=1):
                         continue
 
-                    if '回到活动主页了':
-                        self.story()
+                    # 回到活动主页
+                    if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)):
+                        logger.info('Returned to event page, restart story loop')
+                        return self.story()
 
-                    # 检查是否推完
-                    if self.appear('有战斗结束，但是没有下一关卡或者下一关卡不可用', offset=30):
-                        # 检查战斗结束消失后退出
+                    # 战斗结束，但是没有找到下一关卡
+                    if self.appear(END_FIGHTING, offset=30):
+                        logger.info('Fighting ended, no next stage found, exit push loop')
                         break
             else:
-                # 应该扫荡
-                logger.info('没找到要推图的关卡，开始扫荡')
+                logger.info('No pending stage found or Stage 12 cleared, check sweep')
 
         # 扫荡，滑动到列表最下方检查倒数第二关
         if self.config.StoryStage_Sweep:
-            logger.info('扫荡')
+            logger.info(f'Start sweeping: {open_story}')
             # self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
             self.find_and_sweep_stage(open_story)
 
@@ -357,7 +386,7 @@ class EventStory(EventBase):
                 break
 
         # 滑动到列表最下方检查倒数第二关
-        self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
+        # self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
         self.device.screenshot()
         self.find_and_sweep_stage(open_story)
 

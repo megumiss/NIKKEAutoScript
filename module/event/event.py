@@ -104,9 +104,11 @@ class Event(
                 self.login_stamp()
             if self.config.Event_Challenge:
                 self.challenge()
-            if self.config.StoryStage_AutoPush:
-                self.story()
-            if self.config.StoryStage_Sweep:
+            # 提前买票
+            if self.config.StoryStage_HardTicket and self.story_part == 'Story_2' and self.story_difficulty == 'Hard':
+                self.shop(TEMPLATE_SHOP_GEM)
+                self.back_to_event()
+            if self.config.StoryStage_AutoPush or self.config.StoryStage_Sweep:
                 self.story()
             if self.config.Event_Coop:
                 coop_reschedule = self.coop()
