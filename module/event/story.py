@@ -230,7 +230,7 @@ class EventStory(EventBase):
             logger.info(f'Start checking push stage for {open_story}')
             self.find_and_sweep_stage(open_story)
 
-        # 扫荡，滑动到列表最下方检查倒数第二关
+        # 扫荡，检查倒数第二关
         if self.config.StoryStage_Sweep:
             logger.info(f'Start sweeping: {open_story}')
             # self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
@@ -337,10 +337,17 @@ class EventStory(EventBase):
                 logger.info('Open event story hard')
                 break
 
-        # 滑动到列表最下方检查倒数第二关
-        # self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
         self.device.screenshot()
-        self.find_and_sweep_stage(open_story)
+        # 推图
+        if self.config.StoryStage_AutoPush:
+            logger.info(f'Start checking push stage for {open_story}')
+            self.find_and_sweep_stage(open_story)
+
+        # 扫荡，检查倒数第二关
+        if self.config.StoryStage_Sweep:
+            logger.info(f'Start sweeping: {open_story}')
+            # self.ensure_sroll_to_bottom(x1=(680, 800), x2=(680, 460), count=3)
+            self.find_and_sweep_stage(open_story)
 
         # 回到活动主页
         self.back_to_event()
@@ -387,6 +394,8 @@ class EventStory(EventBase):
 
                 # 下一关卡
                 if self.appear_then_click(NEXT_STAGE, offset=(100, 30), interval=1):
+                    self.device.stuck_record_clear()
+                    self.device.click_record_clear()
                     continue
 
                 # 点击区域跳转
@@ -399,9 +408,9 @@ class EventStory(EventBase):
                     return self.story()
 
                 # 战斗结束，但是没有找到下一关卡
-                if self.appear(END_FIGHTING, offset=30):
-                    logger.info('Fighting ended, no next stage found, exit push loop')
-                    break
+                if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
+                    logger.info('Fighting ended')
+                    continue
         else:
             logger.info('No pending stage found or Stage 12 cleared, check sweep')
 

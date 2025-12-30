@@ -85,8 +85,6 @@ class Event(
                 raise EventUnavailableError
 
     def run(self):
-        self.shop(TEMPLATE_SHOP_GEM)
-        self.team_up()
         # image = cv2.imread('1.png')
         # cv2.cvtColor(image, cv2.COLOR_BGR2RGB, dst=image)
         # self.device.image  = image
@@ -105,7 +103,7 @@ class Event(
             if self.config.Event_Challenge:
                 self.challenge()
             # 提前买票
-            if self.config.StoryStage_HardTicket and self.story_part == 'Story_2' and self.story_difficulty == 'Hard':
+            if self.config.StoryStage_HardTicket and self.story_difficulty == 'Hard':
                 self.shop(TEMPLATE_SHOP_GEM)
                 self.back_to_event()
             if self.config.StoryStage_AutoPush or self.config.StoryStage_Sweep:
