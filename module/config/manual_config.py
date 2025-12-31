@@ -94,6 +94,16 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20251230",
+            "event_name": "ARK GUARDIAN",
+            # 大型活动
+            "event_type": 3,
+            "mini_game": False,
+            "mini_game_play": True,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20251204",
             "event_name": "TERMINUS Ticket",
             # 大型活动

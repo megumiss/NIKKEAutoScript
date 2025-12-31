@@ -71,6 +71,11 @@ class Commission(UI):
                 click_timer.reset()
                 continue
 
+            # 领取完成弹出的提示
+            if self.appear(CLAIM_DONE_NOTICE, offset=30):
+                logger.info('Receive commission done')
+                break
+
             # 等待领取完毕
             if self.appear(COMMISSION_CHECK, offset=10) and self.appear(CLAIM_DONE, threshold=20):
                 if not confirm_timer.started():

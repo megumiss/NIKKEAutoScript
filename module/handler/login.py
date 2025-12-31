@@ -88,12 +88,15 @@ class LoginHandler(UI):
                 click_timer.reset()
                 continue
 
+            # 露菲每日扭蛋
+            if click_timer.reached() and self.handle_rupee_eggs():
+                click_timer.reset()
+                continue
+
             # 登录奖励
             if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
-            
-            
 
     def handle_app_login(self) -> bool:
         """

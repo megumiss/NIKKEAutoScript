@@ -94,6 +94,18 @@ class InfoHandler(ModuleBase):
 
         return False
 
+    # 露菲扭蛋，抽三次
+    def handle_rupee_eggs(self):
+        if self.appear(RUPEE_EGG_CHECK, offset=30):
+            if self.appear(RUPEE_EGG_DONE, offset=30) and self.appear_then_click(
+                RUPEE_EGG_CLOSE, offset=30, interval=1
+            ):
+                return True
+            if self.appear_then_click(RUPEE_EGG_PUSH, offset=30, interval=3):
+                return True
+
+        return False
+
     def handle_reward(self, interval=5):
         if self.appear_then_click(REWARD, offset=(30, 30), interval=interval, static=False):
             return True
