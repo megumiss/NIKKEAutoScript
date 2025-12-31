@@ -103,7 +103,7 @@ class Event(
             if self.config.Event_Challenge:
                 self.challenge()
             # 提前买票
-            if self.config.StoryStage_HardTicket and self.story_difficulty == 'Hard':
+            if self.config.StoryStage_HardTicket and self.config.EventInfo_StoryDifficulty == 'Hard':
                 self.shop(TEMPLATE_SHOP_GEM)
                 self.back_to_event()
             if self.config.StoryStage_AutoPush or self.config.StoryStage_Sweep:

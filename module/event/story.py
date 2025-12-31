@@ -8,7 +8,7 @@ from module.event.assets import *
 from module.event.base import EventBase
 from module.event.challenge import CHALLENGE_QUICKLY_DISABLE
 from module.logger import logger
-from module.simulation_room.assets import END_FIGHTING, FIGHT_QUICKLY
+from module.simulation_room.assets import END_FIGHTING, FIGHT, FIGHT_QUICKLY
 from module.tribe_tower.assets import NEXT_STAGE
 from module.ui.assets import (
     FIGHT_CLOSE,
@@ -82,7 +82,7 @@ class EventStory(EventBase):
                 self.event_assets.EVENT_GOTO_STORY_2_LOCKED, offset=10
             ):
                 logger.info('Find opened event story 1')
-                if self.config.Event_StoryPart == 'Story_2':
+                if self.config.EventInfo_StoryPart == 'Story_2':
                     logger.error('The event stage/difficulty select wrong')
                     self.back_to_event()
                     return
@@ -122,7 +122,7 @@ class EventStory(EventBase):
                 and not self.appear(self.event_assets.EVENT_GOTO_STORY_2_LOCKED, offset=10)
             ) or self.appear(self.event_assets.EVENT_GOTO_STORY_2, offset=10):
                 logger.info('Find opened event story 2')
-                if self.config.Event_StoryPart == 'Story_1':
+                if self.config.EventInfo_StoryPart == 'Story_1':
                     logger.error('The event stage/difficulty select wrong')
                     self.back_to_event()
                     return
@@ -177,7 +177,7 @@ class EventStory(EventBase):
                     self.event_assets.STORY_2_HARD_LOCKED, offset=10
                 ):
                     logger.info('Find difficulty normal opened')
-                    if self.config.Event_StoryDifficulty == 'Hard':
+                    if self.config.EventInfo_StoryDifficulty == 'Hard':
                         logger.error('The event stage/difficulty select wrong')
                         self.back_to_event()
                         return
@@ -197,7 +197,7 @@ class EventStory(EventBase):
 
                 if open_story == 'story_2_hard':
                     logger.info('Find difficulty hard opened')
-                    if self.config.Event_StoryDifficulty == 'Normal':
+                    if self.config.EventInfo_StoryDifficulty == 'Normal':
                         logger.error('The event stage/difficulty select wrong')
                         self.back_to_event()
                         return
@@ -224,11 +224,12 @@ class EventStory(EventBase):
                     break
 
         # 关卡处理
+        self.device.sleep(2)
         self.device.screenshot()
         # 推图
         if self.config.StoryStage_AutoPush:
             logger.info(f'Start checking push stage for {open_story}')
-            self.find_and_sweep_stage(open_story)
+            self.find_and_push_stage(open_story)
 
         # 扫荡，检查倒数第二关
         if self.config.StoryStage_Sweep:
@@ -291,7 +292,7 @@ class EventStory(EventBase):
                 self.event_assets.STORY_1_HARD_LOCKED, offset=10
             ):
                 logger.info('Find difficulty normal opened')
-                if self.config.Event_StoryDifficulty == 'Hard':
+                if self.config.EventInfo_StoryDifficulty == 'Hard':
                     logger.error('The event stage/difficulty select wrong')
                     self.back_to_event()
                     return
@@ -311,7 +312,7 @@ class EventStory(EventBase):
 
             if open_story == 'story_1_hard':
                 logger.info('Find difficulty hard opened')
-                if self.config.Event_StoryDifficulty == 'Normal':
+                if self.config.EventInfo_StoryDifficulty == 'Normal':
                     logger.error('The event stage/difficulty select wrong')
                     self.back_to_event()
                     return
@@ -341,7 +342,7 @@ class EventStory(EventBase):
         # 推图
         if self.config.StoryStage_AutoPush:
             logger.info(f'Start checking push stage for {open_story}')
-            self.find_and_sweep_stage(open_story)
+            self.find_and_push_stage(open_story)
 
         # 扫荡，检查倒数第二关
         if self.config.StoryStage_Sweep:
@@ -357,7 +358,9 @@ class EventStory(EventBase):
         if (
             not self.appear(self.STORY_STAGE_12(open_story), offset=30, threshold=0.9)
             and not self.appear(self.STORY_STAGE_12(f'{open_story}_clear'), offset=30, threshold=0.9)
-            and self.appear_with_flip(self.STORY_STAGE_PENDING(open_story), offset=30, static=False)
+            and self.appear_with_flip(
+                self.STORY_STAGE_PENDING(open_story), offset=30, threshold=0.9, color_threshold=10, static=False
+            )
         ):
             logger.info('Pending stage found, start pushing loop')
             # 判断有票和组队状态
@@ -365,7 +368,14 @@ class EventStory(EventBase):
                 self.device.screenshot()
 
                 # 打开关卡
-                if self.appear_with_flip_then_click(self.STORY_STAGE_PENDING(open_story), offset=30, static=False):
+                if self.appear_with_flip_then_click(
+                    self.STORY_STAGE_PENDING(open_story),
+                    offset=30,
+                    threshold=0.9,
+                    color_threshold=10,
+                    interval=1,
+                    static=False,
+                ):
                     logger.info('Click pending stage to enter')
                     continue
 
@@ -380,13 +390,21 @@ class EventStory(EventBase):
                 # 没票退出
                 if (
                     self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
-                    and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
+                    and not self.appear(FIGHT, threshold=20)
                     and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
                 ):
                     logger.warning('没票')
                     # 没票直接退出
                     self.back_to_event()
                     return
+
+                # 进入战斗
+                if (
+                    self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
+                    and not self.appear(FIGHT_QUICKLY, threshold=10)
+                    and self.appear_then_click(FIGHT, threshold=20, interval=2)
+                ):
+                    continue
 
                 # 跳过剧情
                 if self.appear_then_click(SKIP, offset=30, interval=1):
