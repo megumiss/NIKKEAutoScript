@@ -791,58 +791,58 @@
   },
   "EventInfo": {
     "_info": {
-      "name": "EventInfo._info.name",
-      "help": "EventInfo._info.help"
+      "name": "Event Info",
+      "help": ""
     },
     "Event": {
-      "name": "EventInfo.Event.name",
-      "help": "EventInfo.Event.help",
-      "event_20251230": "event_20251230",
-      "event_20251204": "event_20251204",
-      "event_20251120": "event_20251120",
-      "event_20251030": "event_20251030",
-      "event_20251016": "event_20251016",
-      "event_20250924": "event_20250924",
-      "event_20250904": "event_20250904",
-      "event_20250807": "event_20250807",
-      "event_20250716": "event_20250716",
-      "event_20250703s": "event_20250703s",
-      "event_20250703l": "event_20250703l",
-      "event_20250612": "event_20250612"
+      "name": "Current Event",
+      "help": "",
+      "event_20251230": "ARK GUARDIAN",
+      "event_20251204": "TERMINUS Ticket",
+      "event_20251120": "BLANK Ticket",
+      "event_20251030": "GODDESS FALL",
+      "event_20251016": "GO! NINJA THIEF!",
+      "event_20250924": "REBORN EVIL",
+      "event_20250904": "COINS IN RUSH",
+      "event_20250807": "ABSOLUTE",
+      "event_20250716": "BOOM! THE GHOST!",
+      "event_20250703s": "OVER THE HORIZON",
+      "event_20250703l": "OuteR: Automata",
+      "event_20250612": "Memories Teller"
     },
     "StoryPart": {
-      "name": "EventInfo.StoryPart.name",
-      "help": "EventInfo.StoryPart.help",
-      "Story_1": "Story_1",
-      "Story_2": "Story_2"
+      "name": "Story Part",
+      "help": "",
+      "Story_1": "Story I",
+      "Story_2": "Story II"
     },
     "StoryDifficulty": {
-      "name": "EventInfo.StoryDifficulty.name",
-      "help": "EventInfo.StoryDifficulty.help",
+      "name": "Difficulty",
+      "help": "",
       "Normal": "Normal",
       "Hard": "Hard"
     }
   },
   "StoryStage": {
     "_info": {
-      "name": "StoryStage._info.name",
-      "help": "StoryStage._info.help"
+      "name": "Event Stages",
+      "help": ""
     },
     "AutoPush": {
-      "name": "StoryStage.AutoPush.name",
-      "help": "StoryStage.AutoPush.help"
+      "name": "Auto Push (BETA)",
+      "help": "Automatically clears event stages and skips cutscenes. Tries to support all stages; the script will stop if a stage is unsupported."
     },
     "AutoFormation": {
-      "name": "StoryStage.AutoFormation.name",
-      "help": "StoryStage.AutoFormation.help"
+      "name": "Auto Formation",
+      "help": "Please ensure you have enough Nikkes for a 100% bonus and sufficient combat power."
     },
     "HardTicket": {
-      "name": "StoryStage.HardTicket.name",
-      "help": "StoryStage.HardTicket.help"
+      "name": "Buy Hard Mode Tickets",
+      "help": "When Hard Mode is open, automatically purchase all attempts/tickets before starting the run."
     },
     "Sweep": {
-      "name": "StoryStage.Sweep.name",
-      "help": "StoryStage.Sweep.help"
+      "name": "Stage Sweep",
+      "help": "Performs Quick Battle on the second-to-last stage. Requires having cleared that stage manually first. Ensure your stage progress matches the current event unlock schedule."
     }
   },
   "Event": {
