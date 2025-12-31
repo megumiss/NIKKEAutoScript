@@ -357,7 +357,7 @@ class EventStory(EventBase):
         if (
             not self.appear(self.STORY_STAGE_12(open_story), offset=30, threshold=0.9)
             and not self.appear(self.STORY_STAGE_12(f'{open_story}_clear'), offset=30, threshold=0.9)
-            and self.appear(self.STORY_STAGE_PENDING(open_story), offset=30, static=False)
+            and self.appear_with_flip(self.STORY_STAGE_PENDING(open_story), offset=30, static=False)
         ):
             logger.info('Pending stage found, start pushing loop')
             # 判断有票和组队状态
@@ -365,7 +365,7 @@ class EventStory(EventBase):
                 self.device.screenshot()
 
                 # 打开关卡
-                if self.appear_then_click(self.STORY_STAGE_PENDING(open_story), offset=30, static=False):
+                if self.appear_with_flip_then_click(self.STORY_STAGE_PENDING(open_story), offset=30, static=False):
                     logger.info('Click pending stage to enter')
                     continue
 

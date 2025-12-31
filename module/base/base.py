@@ -1,6 +1,7 @@
 import time
 from functools import cached_property
 
+import cv2
 import numpy as np
 
 from module.base.button import Button
@@ -149,6 +150,69 @@ class ModuleBase:
                           static=True, screenshot=False) -> bool:
 
         appear = self.appear(button, offset=offset, interval=interval, threshold=threshold, static=static)
+        if appear:
+            if screenshot:
+                self.device.sleep(self.config.WAIT_BEFORE_SAVING_SCREEN_SHOT)
+                self.device.screenshot()
+            self.device.click(button, click_offset)
+
+        return appear
+
+    def appear_with_flip(self, button: Button, offset=0, interval=0, threshold=None, static=True) -> bool:
+        self.device.stuck_record_add(button)
+
+        if interval:
+            if button.name in self.interval_timer:
+                if self.interval_timer[button.name].limit != interval:
+                    self.interval_timer[button.name] = Timer(interval)
+            else:
+                self.interval_timer[button.name] = Timer(interval)
+            if not self.interval_timer[button.name].reached():
+                return False
+
+        button.ensure_template()
+        original_image = button.image.copy()
+        # 获取按钮在模板中的坐标区域
+        x1, y1, x2, y2 = button.area
+        # 提取原始 ROI (Region of Interest)
+        original_roi = original_image[y1:y2, x1:x2]
+        # 定义翻转模式
+        flip_modes = [None, 1, 0, -1]
+        
+        is_matched = False
+        try:
+            for mode in flip_modes:
+                if mode is not None:
+                    # 1. 创建一个新的全黑底图（也就是原图的纯黑副本，或者直接用 zeros 创建）
+                    button.image = original_image.copy() 
+                    # 2. 翻转 ROI 区域
+                    flipped_roi = cv2.flip(original_roi, mode)
+                    # 3. 将翻转后的 ROI 贴回 原坐标位置
+                    button.image[y1:y2, x1:x2] = flipped_roi
+                else:
+                    # 原图模式
+                    button.image = original_image
+
+                limit = self.config.BUTTON_MATCH_SIMILARITY if not threshold else threshold
+                search_offset = 30 # 或 self.config.BUTTON_OFFSET
+                
+                # 调用 match
+                if button.match(self.device.image, offset=search_offset, threshold=limit, static=static):
+                    is_matched = True
+                    break
+        finally:
+            # 恢复原图
+            button.image = original_image
+
+        if is_matched and interval:
+            self.interval_timer[button.name].reset()
+
+        return is_matched
+
+    def appear_with_flip_then_click(self, button, offset=0, click_offset=0, interval=0, threshold=None,
+                          static=True, screenshot=False) -> bool:
+
+        appear = self.appear_with_flip(button, offset=offset, interval=interval, threshold=threshold, static=static)
         if appear:
             if screenshot:
                 self.device.sleep(self.config.WAIT_BEFORE_SAVING_SCREEN_SHOT)
