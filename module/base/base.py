@@ -175,9 +175,7 @@ class ModuleBase:
         search_image = self.device.image.copy()
 
         flip_modes = [None, 1, 0, -1]
-        
         is_matched = False
-        
         try:
             for mode in flip_modes:
                 if mode is not None:
@@ -187,24 +185,18 @@ class ModuleBase:
 
                 limit = self.config.BUTTON_MATCH_SIMILARITY if not threshold else threshold
                 search_offset = 30 
-                
+
                 while True:
                     # 1. 形状匹配
                     if button.match(search_image, offset=search_offset, threshold=limit, static=static):
-                        
                         # 2. 颜色校验
                         if color_threshold is not None:
                             # 获取匹配到的区域坐标
                             found_area = button._button_offset
-                            
                             # 从原图提取颜色
                             actual_color = get_color(self.device.image, found_area)
-                            
-                            # 【修正点】
-                            # color_similar 只负责计算差值，不接受 threshold 参数
                             diff = color_similar(color1=actual_color, color2=button.color)
-                            
-                            # 我们自己手动判断差值是否在允许范围内
+                            # 判断差值是否在允许范围内
                             if diff <= color_threshold:
                                 logger.debug(f"[Flip] {button.name} matched in mode {mode}. "
                                              f"Pos: {found_area}, ColorDiff: {diff} <= {color_threshold}")
@@ -215,7 +207,7 @@ class ModuleBase:
                                              f"Pos: {found_area}. "
                                              f"Diff: {diff} > {color_threshold} (Target: {button.color}, Actual: {actual_color}). "
                                              f"Masking and retrying...")
-                                
+
                                 # 掩盖并重试
                                 mx1, my1, mx2, my2 = found_area
                                 cv2.rectangle(search_image, (mx1, my1), (mx2, my2), (0, 0, 0), -1)

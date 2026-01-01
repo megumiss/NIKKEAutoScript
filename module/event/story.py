@@ -338,6 +338,7 @@ class EventStory(EventBase):
                 logger.info('Open event story hard')
                 break
 
+        self.device.sleep(2)
         self.device.screenshot()
         # 推图
         if self.config.StoryStage_AutoPush:
@@ -383,7 +384,7 @@ class EventStory(EventBase):
                 if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear_then_click(
                     STAGE_TEAM_NOT_SELECT, offset=30, interval=1
                 ):
-                    logger.info('Team up clicked')
+                    logger.info('Team up before story push')
                     self.team_up()
                     continue
 
@@ -393,7 +394,7 @@ class EventStory(EventBase):
                     and not self.appear(FIGHT, threshold=20)
                     and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
                 ):
-                    logger.warning('没票')
+                    logger.warning('Story push done, no ticket')
                     # 没票直接退出
                     self.back_to_event()
                     return
@@ -427,13 +428,14 @@ class EventStory(EventBase):
 
                 # 战斗结束，但是没有找到下一关卡
                 if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
-                    logger.info('Fighting ended')
+                    logger.info('Story push done, fighting ended')
                     continue
 
+                # 关卡推完回到了关卡列表
                 if self.appear(self.STORY_STAGE_12(open_story), offset=30, threshold=0.9) and self.appear(
                     self.STORY_STAGE_12(f'{open_story}_clear'), offset=30, threshold=0.9
                 ):
-                    logger.warning('推完了')
+                    logger.warning('Story push done, stage 12 cleared')
                     self.back_to_event()
                     return
         else:
