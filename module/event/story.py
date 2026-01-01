@@ -429,6 +429,13 @@ class EventStory(EventBase):
                 if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
                     logger.info('Fighting ended')
                     continue
+
+                if self.appear(self.STORY_STAGE_12(open_story), offset=30, threshold=0.9) and self.appear(
+                    self.STORY_STAGE_12(f'{open_story}_clear'), offset=30, threshold=0.9
+                ):
+                    logger.warning('推完了')
+                    self.back_to_event()
+                    return
         else:
             logger.info('No pending stage found or Stage 12 cleared, check sweep')
 
