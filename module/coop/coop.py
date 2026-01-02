@@ -7,6 +7,7 @@ from module.coop.assets import *
 from module.logger import logger
 from module.ocr.ocr import Digit, Ocr
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
+from module.ui.assets import BREAKING_NEWS_CHECK
 from module.ui.page import page_breaking_news, page_main
 from module.ui.ui import UI
 
@@ -136,10 +137,7 @@ class Coop(UI):
         logger.hr('COOP START')
 
         while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
+            self.device.screenshot()
 
             if self.appear(COOP_CHECK, offset=10):
                 break
@@ -260,8 +258,8 @@ class Coop(UI):
         try:
             self.ui_ensure(page_main)
             # 等待右下角loading消失
-            # self.ui_wait_loading()
             self.ui_ensure(page_breaking_news)
+            self.ui_wait_loading()
 
             self.ensure_into_coop_from_event()
         except CoopIsUnavailable:
