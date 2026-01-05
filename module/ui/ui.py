@@ -9,8 +9,10 @@ from module.ui.page import (
     Page,
     page_arena,
     page_ark,
+    page_breaking_news,
     page_campaign_select,
     page_cash_shop,
+    page_champion_arena,
     page_commission,
     page_conversation,
     page_daily,
@@ -63,6 +65,7 @@ class UI(InfoHandler):
         page_arena,
         page_rookie_arena,
         page_special_arena,
+        page_champion_arena,
         page_outpost,
         page_commission,
         page_synchro,
@@ -76,6 +79,7 @@ class UI(InfoHandler):
         page_campaign_select,
         page_surface,
         page_surface_back,
+        page_breaking_news,
     ]
 
     def ui_page_appear(self, page: Page):
