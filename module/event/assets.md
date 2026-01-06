@@ -65,6 +65,7 @@
 | **REWARD_RECEIVE_DONE** | 奖励领取完成 | ✅ | <img src="..\..\assets\event\event_20250612\REWARD_RECEIVE_DONE.png" width="200"> |
 | **REWARD_CLOSED** | 关闭奖励页面 | ✅ | <img src="..\..\assets\event\event_20250612\REWARD_CLOSED.png" width="200"> |
 
+
 ## Story2更新后需要截图
 | 图片 | 描述 | 使用状态 | 预览 |
 |--------|------|----------|------|
