@@ -1,3 +1,6 @@
+import base64
+import os
+
 import onepush.core
 import yaml
 from onepush import get_notifier
@@ -29,6 +32,32 @@ def handle_notify_win(**kwargs) -> bool:
 
 
 def handle_notify_linux(_config: str, **kwargs) -> bool:
+    # 引入 SMTP 图片处理所需的库
+    import mimetypes
+    from email.message import EmailMessage
+
+    # 定义 SMTP 自定义解析器 (支持图片附件)
+    def _smtp_image_parser(subject='', title='', content='', From=None, user=None, To=None, image_path=None, **kwargs):
+        msg = EmailMessage()
+        msg["Subject"] = subject or title
+        msg["From"] = From or user
+        msg["To"] = To or user
+        msg.set_content(content)
+
+        if image_path and os.path.exists(image_path):
+            ctype, encoding = mimetypes.guess_type(image_path)
+            if ctype is None or encoding is not None:
+                ctype = 'application/octet-stream'
+            maintype, subtype = ctype.split('/', 1)
+            try:
+                with open(image_path, 'rb') as f:
+                    file_data = f.read()
+                    filename = os.path.basename(image_path)
+                    msg.add_attachment(file_data, maintype=maintype, subtype=subtype, filename=filename)
+            except Exception as e:
+                logger.error(f'Failed to attach image for SMTP: {e}')
+        return msg
+
     try:
         config = {}
         for item in yaml.safe_load_all(_config):
@@ -42,7 +71,28 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
             logger.info('No provider specified, skip sending')
             return False
         notifier: Provider = get_notifier(provider_name)
+
         required: list[str] = notifier.params['required']
+
+        image_path = kwargs.get('image_path')
+        if image_path and os.path.exists(image_path):
+            # 保留原有的 gocqhttp 图片处理逻辑
+            if provider_name.lower() == 'gocqhttp':
+                try:
+                    with open(image_path, 'rb') as f:
+                        b64 = base64.b64encode(f.read()).decode('utf-8')
+                    cq = f'[CQ:image,file=base64://{b64}]'
+                    if 'content' in kwargs:
+                        kwargs['content'] += f'\n{cq}'
+                    elif 'content' in config:
+                        config['content'] += f'\n{cq}'
+                    else:
+                        kwargs['content'] = cq
+                except Exception as e:
+                    logger.error(f'Failed to process image for gocqhttp: {e}')
+            if provider_name.lower() == 'smtp':
+                notifier.set_message_parser(_smtp_image_parser)
+
         config.update(kwargs)
 
         # pre check

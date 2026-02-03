@@ -123,13 +123,14 @@ class NikkeAutoScript:
             logger.info('Game server may be under maintenance or network may be broken, check server status now')
             # self.device.app_stop()
             logger.critical('Game page unknown')
-            self.save_error_log()
+            image_path = self.save_error_log()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> GamePageUnknownError',
                     always=self.config.Notification_WinOnePush,
+                    image_path=image_path,
                 )
             self._post_action()
             exit(1)
@@ -158,13 +159,14 @@ class NikkeAutoScript:
             exit(1)
         except Exception as e:
             logger.exception(e)
-            self.save_error_log()
+            image_path = self.save_error_log()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     self.config.Notification_OnePushConfig,
                     title=f'NKAS <{self.config_name}> crashed',
                     content=f'<{self.config_name}> Exception occured',
                     always=self.config.Notification_WinOnePush,
+                    image_path=image_path,
                 )
             self._post_action()
             exit(1)
@@ -196,12 +198,15 @@ class NikkeAutoScript:
         folder = f'./log/error/{int(time.time() * 1000)}'
         logger.warning(f'Saving error: {folder}')
         os.mkdir(folder)
+        last_image_path = None
         for data in self.device.screenshot_deque:
             image_time = datetime.strftime(data['time'], '%Y-%m-%d_%H-%M-%S-%f')
             # 遮挡个人消息
             # image = handle_sensitive_image(data['image'])
             image = data['image']
-            save_image(image, f'{folder}/{image_time}.png')
+            filepath = f'{folder}/{image_time}.png'
+            save_image(image, filepath)
+            last_image_path = filepath
         with open(logger.log_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
             start = 0
@@ -215,6 +220,7 @@ class NikkeAutoScript:
             lines = handle_sensitive_logs(lines)
         with open(f'{folder}/log.txt', 'w', encoding='utf-8') as f:
             f.writelines(lines)
+        return last_image_path
 
     def restart(self):
         from module.handler.login import LoginHandler
