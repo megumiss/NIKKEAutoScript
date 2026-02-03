@@ -33,8 +33,10 @@ if (import.meta.env.MODE === 'development') {
 let nkas = new PyShell(webuiPath, webuiArgs);
 let stderrLog = '';
 let isReady = false;
+let isManualExit = false;
 
 nkas.end(function (err: any) {
+  if (isManualExit) return;
   if (err) {
     dialog.showErrorBox(
       'NKAS Backend Error',
@@ -85,9 +87,10 @@ const createWindow = async () => {
   ipcMain.on('window-max', () => 
     mainWindow?.isMaximized() ? mainWindow?.restore() : mainWindow?.maximize()
   );
-  ipcMain.on('window-close', () => 
-    nkas.kill(() => mainWindow?.close())
-  );
+  ipcMain.on('window-close', () => {
+    isManualExit = true;
+    nkas.kill(() => mainWindow?.close());
+  });
 
   // 托盘菜单
   const tray = new Tray(path.join(__dirname, 'icon.png'));
@@ -96,7 +99,10 @@ const createWindow = async () => {
     { label: 'Hide', click: () => mainWindow?.hide() },
     { 
       label: 'Exit', 
-      click: () => nkas.kill(() => mainWindow?.close()) 
+      click: () => {
+        isManualExit = true;
+        nkas.kill(() => mainWindow?.close());
+      }
     }
   ]);
   tray.setToolTip('NKAS');
@@ -171,6 +177,11 @@ app.on('second-instance', () => {
     if (!mainWindow.isVisible()) mainWindow.show();
     mainWindow.focus();
   }
+});
+
+// 系统关机或应用退出前标记为手动退出，防止报错
+app.on('before-quit', () => {
+  isManualExit = true;
 });
 
 // 窗口关闭处理
@@ -355,5 +366,6 @@ app.whenReady()
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   console.log('[GlobalShortcut] All shortcuts unregistered');
+  isManualExit = true;
   nkas.kill(() => {});
 });
