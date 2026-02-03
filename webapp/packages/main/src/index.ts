@@ -1,4 +1,4 @@
-import { app, Menu, Tray, BrowserWindow, ipcMain, globalShortcut } from 'electron';
+import { app, Menu, Tray, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron';
 import { URL } from 'url';
 import { PyShell } from '/@/pyshell';
 import { webuiArgs, webuiPath, dpiScaling, webuiUrl, nkasPath } from '/@/config';
@@ -31,8 +31,23 @@ if (import.meta.env.MODE === 'development') {
 
 // 启动 Python 服务
 let nkas = new PyShell(webuiPath, webuiArgs);
-nkas.end(function (err: string) {
-  // if (err) throw err;
+let stderrLog = '';
+let isReady = false;
+
+nkas.end(function (err: any) {
+  if (err) {
+    dialog.showErrorBox(
+      'NKAS Backend Error',
+      `Python process exited unexpectedly.\n\nError:\n${err}\n\nLast logs:\n${stderrLog.slice(-500)}`
+    );
+    app.quit();
+  } else if (!isReady) {
+    dialog.showErrorBox(
+      'NKAS Backend Error', 
+      `Python process exited without error before startup.\n\nLast logs:\n${stderrLog.slice(-500)}`
+    );
+    app.quit();
+  }
 });
 
 let mainWindow: BrowserWindow | null = null;
@@ -96,22 +111,56 @@ if (!dpiScaling) {
   app.commandLine.appendSwitch('force-device-scale-factor', '1');
 }
 
-/**
- * 加载应用 URL
- */
+// 加载应用 URL
 function loadURL() {
   const pageUrl = import.meta.env.MODE === 'development' && import.meta.env.VITE_DEV_SERVER_URL !== undefined
     ? import.meta.env.VITE_DEV_SERVER_URL
     : new URL('../renderer/dist/index.html', 'file://' + __dirname).toString();
   
-  mainWindow?.loadURL(pageUrl);
+  mainWindow?.loadURL(pageUrl).catch((e) => {
+    console.error('Failed to load URL, retrying...', e);
+    setTimeout(loadURL, 1000);
+  });
+}
+
+function checkServerReady(retries = 20) {
+  const { hostname, port } = new URL(webuiUrl);
+  const req = require('http').request({
+    hostname,
+    port,
+    path: '/',
+    method: 'HEAD',
+    timeout: 1000
+  }, (res: any) => {
+    if (res.statusCode >= 200 && res.statusCode < 400) {
+      loadURL();
+    } else {
+      if (retries > 0) setTimeout(() => checkServerReady(retries - 1), 500);
+      else loadURL(); // Try loading anyway if retries exhausted
+    }
+  });
+
+  req.on('error', () => {
+    if (retries > 0) setTimeout(() => checkServerReady(retries - 1), 500);
+    else loadURL(); // Try loading anyway
+  });
+
+  req.end();
 }
 
 // Python 服务启动检测
 nkas.on('stderr', function (message: string) {
+  stderrLog += message + '\n';
   if (message.includes('Application startup complete') || message.includes('bind on address')) {
+    isReady = true;
     nkas.removeAllListeners('stderr');
-    loadURL();
+    checkServerReady();
+  } else if (message.includes('Address already in use') || message.includes('port is already allocated')) {
+    dialog.showErrorBox(
+      'Port Conflict',
+      'The port is already in use. Please change the WebuiPort in config/deploy.yaml or close the application using that port.'
+    );
+    app.quit();
   }
 });
 
