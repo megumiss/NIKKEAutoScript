@@ -5,6 +5,7 @@ from module.base.timer import Timer
 from module.base.utils import sort_buttons_by_location
 from module.event.assets import *
 from module.event.base import EventBase
+from module.exception import GameStuckError
 from module.logger import logger
 
 
@@ -70,6 +71,7 @@ class EventShop(EventBase):
 
         # 跳过第一个物品
         skip_item_first = False
+        swipe_count = 0
         while 1:
             # 滑动到商店最上方
             if restart_flag:
@@ -216,6 +218,10 @@ class EventShop(EventBase):
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
                 self.ensure_sroll((360, 1100), (360, 480), speed=5, count=1, delay=3, method='scroll')
+                swipe_count += 1
+                if swipe_count > 15:
+                    logger.warning('Too many swipes, may game stuck here')
+                    raise GameStuckError
 
     def filter_sold_out_items(self, items, sold_outs):
         """
