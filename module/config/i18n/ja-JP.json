@@ -657,7 +657,7 @@
     },
     "Priority": {
       "name": "優先度",
-      "help": "ニケの優先度。現在の派遣で選択されているコレクションアイテムの数が160を超えると、リストから自動的に削除され、次のニケが選択されます。形式：Helm > Exia\nニケ名対応：\nDiesel：ディーゼル\nExia：エクシア\nLaplace：ラプラス\nFrima：フリーマ\nViper：バイパー\nHelm：ヘルム\nMiranda：ミランダ\nDrake：ドレイク\nMilk：ミルク\nPoli：ポリー\nJulia：ジュリア\nBay：ベイ\nTove：トーブ"
+      "help": "ニケの優先度。現在の派遣で選択されているコレクションアイテムの数が160を超えると、リストから自動的に削除され、次のニケが選択されます。形式：Helm > Exia\nニケ名対応：\nDiesel：ディーゼル\nExia：エクシア\nLaplace：ラプラス\nFrima：フリーマ\nViper：バイパー\nHelm：ヘルム\nMiranda：ミランダ\nDrake：ドレイク\nMilk：ミルク\nPoli：ポリー\nJulia：ジュリア\nBay：ベイ\nTove：トーブ\nPrivaty：プリバティ\nMoran：モラン\nZwei：ツバイ\nCenti：センチ"
     }
   },
   "RookieArena": {
