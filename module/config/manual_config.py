@@ -94,9 +94,19 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20260212",
+            "event_name": "Lycoris Recoil",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": False,
+            "mini_game_play": True,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20260129",
             "event_name": "Fatal Maid",
-            # 大型活动
+            # 小型活动
             "event_type": 2,
             "mini_game": False,
             "mini_game_play": True,
