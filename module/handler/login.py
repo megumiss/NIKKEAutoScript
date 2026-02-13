@@ -97,6 +97,11 @@ class LoginHandler(UI):
             if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
+            
+            # 活动剧情
+            if click_timer.reached() and self.handle_event_popup():
+                click_timer.reset()
+                continue
 
     def handle_app_login(self) -> bool:
         """

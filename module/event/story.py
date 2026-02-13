@@ -47,14 +47,28 @@ class EventStory(EventBase):
         }
         return stages[story]
 
-    def STORY_STAGE_PENDING(self, story):
-        stages = {
-            'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_PENDING,
-            'story_1_hard': self.event_assets.STORY_1_HARD_STAGE_PENDING,
-            'story_2_normal': self.event_assets.STORY_2_NORMAL_STAGE_PENDING,
-            'story_2_hard': self.event_assets.STORY_2_HARD_STAGE_PENDING,
-        }
-        return stages[story]
+    def get_story_stage_pending_buttons(self, story: str) -> list:
+        """
+        Dynamically loads pending stage buttons from event assets.
+        Searches for attributes starting with a prefix, like:
+        - STORY_1_NORMAL_STAGE_PENDING
+        - STORY_1_NORMAL_STAGE_PENDING_2
+        """
+        prefix = f'{story.upper()}_STAGE_PENDING'
+        buttons = []
+
+        for attr_name in dir(self.event_assets):
+            if attr_name.startswith(prefix):
+                suffix = attr_name[len(prefix):]
+                if suffix == '' or (suffix.startswith('_') and suffix[1:].isdigit()):
+                    buttons.append(getattr(self.event_assets, attr_name))
+
+        if not buttons:
+            logger.warning(f"No pending stage buttons found for story '{story}' using prefix '{prefix}'")
+        else:
+            logger.info(f"Found {len(buttons)} pending stage buttons for story '{story}'")
+
+        return buttons
 
     @cached_property
     def team_nikke_locations(self):
@@ -102,14 +116,14 @@ class EventStory(EventBase):
 
                     # story1主页
                     if click_timer.reached() and self.appear_then_click(
-                        self.event_assets.STORY_1_CHECK, offset=10, interval=3
+                        self.event_assets.STORY_1_CHECK, offset=(10,10), interval=3
                     ):
                         click_timer.reset()
                         continue
 
                     # story1列表页面
                     if not self.appear(self.event_assets.EVENT_GOTO_STORY_1, offset=10) and self.appear(
-                        self.event_assets.STORY_1_NORMAL, threshold=10
+                        self.event_assets.STORY_1_NORMAL, threshold=20
                     ):
                         click_timer.reset()
                         break
@@ -261,7 +275,7 @@ class EventStory(EventBase):
 
                 # story主页
                 if click_timer.reached() and self.appear_then_click(
-                    self.event_assets.STORY_1_CHECK, offset=10, interval=3
+                    self.event_assets.STORY_1_CHECK, offset=(10,10), interval=3
                 ):
                     click_timer.reset()
                     continue
@@ -274,14 +288,14 @@ class EventStory(EventBase):
                     continue
 
                 # story普通难度列表页面
-                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=10) and self.appear(
-                    self.event_assets.STORY_1_NORMAL, threshold=10
+                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10,10)) and self.appear(
+                    self.event_assets.STORY_1_NORMAL, threshold=20
                 ):
                     click_timer.reset()
                     break
 
                 # story困难难度列表页面，困难更新后需要重新截图
-                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=10) and self.appear(
+                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10,10)) and self.appear(
                     self.event_assets.STORY_1_HARD, threshold=10
                 ):
                     click_timer.reset()
@@ -290,7 +304,7 @@ class EventStory(EventBase):
             self.device.sleep(1)
             self.device.screenshot()
             # 困难难度关闭
-            if self.appear(self.event_assets.STORY_1_NORMAL, threshold=10) and self.appear(
+            if self.appear(self.event_assets.STORY_1_NORMAL, threshold=20) and self.appear(
                 self.event_assets.STORY_1_HARD_LOCKED, offset=10
             ):
                 logger.info('Find difficulty normal opened')
@@ -303,7 +317,7 @@ class EventStory(EventBase):
                 break
 
             # 困难难度开启，当前页面是普通
-            if self.appear(self.event_assets.STORY_1_NORMAL, threshold=10) and not self.appear(
+            if self.appear(self.event_assets.STORY_1_NORMAL, threshold=20) and not self.appear(
                 self.event_assets.STORY_1_HARD_LOCKED, offset=10
             ):
                 open_story = 'story_1_hard'
@@ -357,13 +371,18 @@ class EventStory(EventBase):
         self.back_to_event()
 
     def find_and_push_stage(self, open_story):
+        pending_buttons = self.get_story_stage_pending_buttons(open_story)
+        has_pending_stage = False
+        if pending_buttons:
+            for button in pending_buttons:
+                if self.appear_with_flip(button, offset=30, threshold=0.9, color_threshold=10, static=False):
+                    has_pending_stage = True
+                    break
         # 如果最后一关没有clear
         if (
             not self.appear(self.STORY_STAGE_12(open_story), offset=30, threshold=0.9)
             and not self.appear(self.STORY_STAGE_12(f'{open_story}_clear'), offset=30, threshold=0.9)
-            and self.appear_with_flip(
-                self.STORY_STAGE_PENDING(open_story), offset=30, threshold=0.9, color_threshold=10, static=False
-            )
+            and has_pending_stage
         ):
             logger.info('Pending stage found, start pushing loop')
             # 判断有票和组队状态
@@ -371,15 +390,20 @@ class EventStory(EventBase):
                 self.device.screenshot()
 
                 # 打开关卡
-                if self.appear_with_flip_then_click(
-                    self.STORY_STAGE_PENDING(open_story),
-                    offset=30,
-                    threshold=0.9,
-                    color_threshold=10,
-                    interval=1,
-                    static=False,
-                ):
-                    logger.info('Click pending stage to enter')
+                was_clicked = False
+                for button in pending_buttons:
+                    if self.appear_with_flip_then_click(
+                        button,
+                        offset=30,
+                        threshold=0.9,
+                        color_threshold=10,
+                        interval=1,
+                        static=False,
+                    ):
+                        logger.info(f'Click pending stage {button.name} to enter')
+                        was_clicked = True
+                        break
+                if was_clicked:
                     continue
 
                 # 组队

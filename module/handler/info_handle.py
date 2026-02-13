@@ -135,6 +135,12 @@ class InfoHandler(ModuleBase):
         ):
             return True
 
+    def handle_event_popup(self):
+        if self.appear(EVENT_POPUP_CHECK, offset=(30, 30), static=False) and self.appear_then_click(
+            EVENT_POPUP_CLOSE, offset=(30, 30), interval=3, static=False
+        ):
+            return True
+
     def handle_download(self):
         if self.appear(DOWNLOAD_CHECK, offset=(30, 30), static=False) and self.appear_then_click(
             CONFIRM_A, offset=(30, 30), interval=3, static=False
