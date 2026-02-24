@@ -3,9 +3,9 @@ from module.logger import logger
 from module.ocr.ocr import Digit
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
 from module.solo_raid.assets import *
+from module.solo_raid.challenge import SoloRaidChallenge
 from module.ui.assets import FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_MAX, FIGHT_QUICKLY_MIN, MAIN_CHECK
 from module.ui.page import page_main
-from module.ui.ui import UI
 
 
 class NoOpportunityRemain(Exception):
@@ -16,7 +16,7 @@ class SoloRaidIsUnavailable(Exception):
     pass
 
 
-class SoloRaid(UI):
+class SoloRaid(SoloRaidChallenge):
     @property
     def free_remain(self) -> int:
         model_type = self.config.Optimization_OcrModelType
@@ -80,11 +80,12 @@ class SoloRaid(UI):
         if self.free_opportunity_remain:
             self.solo_raid()
         else:
-            logger.warning('There are no free opportunities')
-            raise NoOpportunityRemain
+            logger.warning('There are no free opportunities for normal mode')
+            # 同样，这里不抛出异常，为了让后续还能检查挑战模式
 
     def solo_raid(self, skip_first_screenshot=True):
-        logger.hr('Start a solo raid')
+        """普通模式战斗/扫荡"""
+        logger.hr('Start a solo raid (Normal)')
         click_timer = Timer(0.3)
 
         while 1:
@@ -205,14 +206,14 @@ class SoloRaid(UI):
             self.device.click_record_clear()
             self.device.stuck_record_clear()
             return self.solo_raid()
-        else:
-            logger.info('There are no free opportunities')
-            raise NoOpportunityRemain
 
     def run(self):
         try:
             self.ui_ensure(page_main)
+            # 普通
             self.ensure_into_soloraid()
+            # 挑战
+            self.ensure_into_challenge()
         except SoloRaidIsUnavailable:
             pass
         except NoOpportunityRemain:

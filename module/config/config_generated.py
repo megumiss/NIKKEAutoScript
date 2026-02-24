@@ -219,5 +219,8 @@ class GeneratedConfig:
     SurfaceDaily_AutoPlace = True
     SurfaceDaily_Heal = True
 
+    # Group `SoloRaid`
+    SoloRaid_Challenge = False
+
     # Group `Storage`
     Storage_Storage = {}

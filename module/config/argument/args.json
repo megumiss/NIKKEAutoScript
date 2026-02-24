@@ -1716,6 +1716,12 @@
         "display": "hide"
       }
     },
+    "SoloRaid": {
+      "Challenge": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

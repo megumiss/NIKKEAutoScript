@@ -1116,6 +1116,16 @@
       "help": "Not done yet"
     }
   },
+  "SoloRaid": {
+    "_info": {
+      "name": "SoloRaid._info.name",
+      "help": "SoloRaid._info.help"
+    },
+    "Challenge": {
+      "name": "SoloRaid.Challenge.name",
+      "help": "SoloRaid.Challenge.help"
+    }
+  },
   "Storage": {
     "_info": {
       "name": "Task Status",
