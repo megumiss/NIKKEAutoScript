@@ -17,24 +17,6 @@ class SoloRaidIsUnavailable(Exception):
 
 
 class SoloRaid(SoloRaidChallenge):
-    @property
-    def free_remain(self) -> int:
-        model_type = self.config.Optimization_OcrModelType
-        FREE_REMAIN = Digit(
-            [FREE_OPPORTUNITY_CHECK.area],
-            name='FREE_REMAIN',
-            model_type=model_type,
-            lang='ch',
-        )
-        return int(FREE_REMAIN.ocr(self.device.image)['text'])
-
-    @property
-    def free_opportunity_remain(self) -> bool:
-        # result = self.appear(FREE_OPPORTUNITY_CHECK, offset=10, threshold=0.8)
-        if self.free_remain:
-            logger.info(f'[Free opportunities remain] {self.free_remain}')
-        return self.free_remain
-
     def ensure_into_soloraid(self, skip_first_screenshot=True):
         """进入单人突击"""
         logger.hr('SOLO RAID START')
@@ -81,7 +63,6 @@ class SoloRaid(SoloRaidChallenge):
             self.solo_raid()
         else:
             logger.warning('There are no free opportunities for normal mode')
-            # 同样，这里不抛出异常，为了让后续还能检查挑战模式
 
     def solo_raid(self, skip_first_screenshot=True):
         """普通模式战斗/扫荡"""
@@ -206,6 +187,8 @@ class SoloRaid(SoloRaidChallenge):
             self.device.click_record_clear()
             self.device.stuck_record_clear()
             return self.solo_raid()
+        else:
+            logger.warning('There are no free opportunities for normal mode')
 
     def run(self):
         try:
@@ -213,7 +196,9 @@ class SoloRaid(SoloRaidChallenge):
             # 普通
             self.ensure_into_soloraid()
             # 挑战
-            self.ensure_into_challenge()
+            if self.config.SoloRaid_Challenge:
+                self.ui_ensure(page_main)
+                self.ensure_into_challenge()
         except SoloRaidIsUnavailable:
             pass
         except NoOpportunityRemain:
