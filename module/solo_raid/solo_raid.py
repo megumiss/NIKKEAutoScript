@@ -1,6 +1,5 @@
 from module.base.timer import Timer
 from module.logger import logger
-from module.ocr.ocr import Digit
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
 from module.solo_raid.assets import *
 from module.solo_raid.challenge import SoloRaidChallenge
