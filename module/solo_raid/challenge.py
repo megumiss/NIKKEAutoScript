@@ -1,3 +1,6 @@
+from functools import cached_property
+
+from module.base.timer import Timer
 from module.logger import logger
 from module.ocr.ocr import Digit
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
@@ -7,6 +10,10 @@ from module.ui.ui import UI
 
 
 class SoloRaidChallenge(UI):
+    @cached_property
+    def teams(self):
+        return [RAID_TEAM_1, RAID_TEAM_2, RAID_TEAM_3, RAID_TEAM_4, RAID_TEAM_5]
+
     @property
     def free_remain(self) -> int:
         model_type = self.config.Optimization_OcrModelType
@@ -76,6 +83,7 @@ class SoloRaidChallenge(UI):
     def challenge_raid(self, skip_first_screenshot=True):
         """挑战模式战斗执行"""
         logger.hr('Start a challenge raid')
+        team_change_timer = Timer(1).start()
 
         while 1:
             if skip_first_screenshot:
@@ -93,9 +101,31 @@ class SoloRaidChallenge(UI):
             ):
                 continue
 
-            # 开始战斗
-            if self.appear(FIGHT_HISTORY, offset=10) and self.appear_then_click(ENTER_FIGHT, offset=10, interval=1):
-                continue
+            # 选择队伍
+            if self.appear(FIGHT_HISTORY, offset=10):
+                if self.appear_then_click(ENTER_FIGHT, offset=10, interval=1):
+                    team_change_timer.reset()
+                    continue
+
+                if team_change_timer.reached():
+                    current_team = -1
+                    for i, team in enumerate(self.teams):
+                        if not self.appear(team, threshold=0.9):
+                            current_team = i
+                            break
+
+                    if current_team != -1:
+                        if current_team < 4:
+                            logger.info(f'Team {current_team + 1} is not valid, switch to Team {current_team + 2}')
+                            self.device.click(self.teams[current_team + 1])
+                            self.device.sleep(0.5)
+                            team_change_timer.reset()
+                            continue
+                        else:
+                            logger.warning('No valid team found')
+                            break
+            else:
+                team_change_timer.reset()
 
             # 自动射击和爆裂
             if self.appear_then_click(AUTO_SHOOT, offset=10, threshold=0.9, interval=5):
@@ -115,27 +145,25 @@ class SoloRaidChallenge(UI):
                 continue
 
             # 回到队伍选择界面
-            if self.appear(FIGHT_HISTORY, offset=10) and not self.appear(ENTER_FIGHT, offset=10):
-                logger.info('Challenge raid end one')
+            if self.appear(FIGHT_HISTORY, offset=10) and self.appear(RAID_TEAM_2, threshold=10):
+                logger.info('Challenge raid end team one')
+                continue
+
+            # 结算弹窗
+            if self.appear(ENEMY_DEFEATED, offset=10) and self.appear(ENEMY_DEFEATED_CONFIRM, offset=30):
+                logger.info('Challenge raid end team all')
+
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(SOLO_RAID_CHECK, offset=30):
+                        break
+                    if self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=30, interval=1):
+                        continue
                 break
-
-        # 选择下一个队伍
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
-
-            if self.appear(FIGHT_HISTORY, offset=10):
-                break
-
-        # 选择下一个队伍
 
         # 如果次数仍大于0且伤害依旧为0，继续挑战
         if self.free_opportunity_remain:
             if not self.challenge_damage_is_zero:
                 logger.info('Challenge damage is recorded. Challenge mode complete.')
-                return
-            self.device.click_record_clear()
-            self.device.stuck_record_clear()
-            return self.challenge_raid()
+            else:
+                logger.warning('Challenge mode complete. But damage is not recorded.')
