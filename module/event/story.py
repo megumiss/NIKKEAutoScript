@@ -397,7 +397,7 @@ class EventStory(EventBase):
                         offset=30,
                         threshold=0.9,
                         color_threshold=20,
-                        interval=1,
+                        interval=5,
                         static=False,
                     ):
                         logger.info(f'Click pending stage {button.name} to enter')
@@ -437,7 +437,7 @@ class EventStory(EventBase):
                 if (
                     self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
                     and not self.appear(FIGHT_QUICKLY, threshold=10)
-                    and self.appear_then_click(FIGHT, threshold=20, interval=2)
+                    and self.appear_then_click(FIGHT, threshold=20, interval=5)
                 ):
                     continue
 
