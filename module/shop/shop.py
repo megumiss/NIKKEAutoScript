@@ -5,6 +5,7 @@ from module.base.decorator import del_cached_property
 from module.base.timer import Timer
 from module.base.utils import _area_offset, exec_file, mask_area
 from module.event.assets import SHOP_MONEY_LACK
+from module.exception import GameStuckError
 from module.handler.assets import CONFIRM_B, REWARD
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
@@ -237,6 +238,7 @@ class ShopBase(UI):
             # 每次购买某个物品前先滚动到顶部
             self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=3, delay=1)
             logger.info(f'[Purchase Start] {product.name}')
+            swipe_count = 0
 
             while 1:
                 self.device.screenshot()
@@ -266,6 +268,10 @@ class ShopBase(UI):
 
                 # 滑动屏幕继续查找
                 self.ensure_sroll((505, 1000), (505, 700), speed=5, count=1, delay=0.5, method='scroll')
+                swipe_count += 1
+                if swipe_count > 10:
+                    logger.warning('Too many swipes, may game stuck here')
+                    raise GameStuckError
 
             # 单个商品完成后，从待购买列表中移除
             # products = products.delete([product])
