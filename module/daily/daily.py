@@ -282,9 +282,9 @@ class Daily(UI):
         self.receive()
         if self.config.Notification_WhenDailyTaskCompleted:
             handle_notify(
-                self.config.Notification_OnePushConfig,
-                title=f'NKAS <{self.config.config_name}>',
-                content='任务已全部完成！',
+                config=self.config,
+                title_key='DailyTaskCompleted.title',
+                content_key='DailyTaskCompleted.content',
                 always=self.config.Notification_WinOnePush,
             )
         self.config.task_delay(server_update=True)

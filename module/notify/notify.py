@@ -21,11 +21,15 @@ onepush.core.log = logger
 def handle_notify_win(**kwargs) -> bool:
     from winotify import Notification
 
+    icon = kwargs.get('image_path')
+    if not icon or not os.path.exists(icon):
+        icon = ICON.Icon
+
     toast = Notification(
         app_id='NKAS',
-        title=kwargs['title'],
-        msg=kwargs['content'],
-        icon=ICON.Icon,
+        title=kwargs.get('title', 'NKAS'),
+        msg=kwargs.get('content', ''),
+        icon=icon,
         duration='long',
     )
     toast.show()

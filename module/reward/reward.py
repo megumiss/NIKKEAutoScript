@@ -3,6 +3,7 @@ import cv2
 from module.base.timer import Timer
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
+from module.notify import handle_notify
 from module.reward.assets import *
 from module.ui.page import *
 from module.ui.ui import UI
@@ -216,6 +217,12 @@ class Reward(UI):
                 break
 
     def run(self, internal_call=False):
+        handle_notify(
+                config=self.config,
+                title_key='DailyTaskCompleted.title',
+                content_key='DailyTaskCompleted.content',
+                always=self.config.Notification_WinOnePush,
+            )
         # self.device.image = cv2.imread('t1.png')
         # self.appear_text('全部领取')
         self.ui_ensure(page_reward)

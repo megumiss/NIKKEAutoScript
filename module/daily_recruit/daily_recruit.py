@@ -56,11 +56,12 @@ class DailyRecruit(UI):
 
     def notify_push(self, type, image=None):
         handle_notify(
-            self.config.Notification_OnePushConfig,
-            title=f'NKAS <{self.config.config_name}> Recruit',
-            content=f'{type} SSR got!',
+            config=self.config,
+            title_key='Recruit.title',
+            content_key='Recruit.content',
             always=self.config.Notification_WinOnePush,
             image_path=image,
+            recruit_type_key=type,
         )
 
     def event_free_recruit(self, skip_first_screenshot=True):

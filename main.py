@@ -126,9 +126,9 @@ class NikkeAutoScript:
             image_path = self.save_error_log()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
-                    self.config.Notification_OnePushConfig,
-                    title=f'NKAS <{self.config_name}> crashed',
-                    content=f'<{self.config_name}> GamePageUnknownError',
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='GamePageUnknownError',
                     always=self.config.Notification_WinOnePush,
                     image_path=image_path,
                 )
@@ -139,9 +139,9 @@ class NikkeAutoScript:
             self.device.app_stop()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
-                    self.config.Notification_OnePushConfig,
-                    title=f'NKAS <{self.config_name}> crashed',
-                    content=f'<{self.config_name}> GameServerUnderMaintenance',
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='GameServerUnderMaintenance',
                     always=self.config.Notification_WinOnePush,
                 )
             self._post_action()
@@ -150,9 +150,9 @@ class NikkeAutoScript:
             logger.critical('Request human takeover')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
-                    self.config.Notification_OnePushConfig,
-                    title=f'NKAS <{self.config_name}> crashed',
-                    content=f'<{self.config_name}> RequestHumanTakeover',
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='RequestHumanTakeover',
                     always=self.config.Notification_WinOnePush,
                 )
             self._post_action()
@@ -162,9 +162,9 @@ class NikkeAutoScript:
             image_path = self.save_error_log()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
-                    self.config.Notification_OnePushConfig,
-                    title=f'NKAS <{self.config_name}> crashed',
-                    content=f'<{self.config_name}> Exception occured',
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='ExceptionOccurred',
                     always=self.config.Notification_WinOnePush,
                     image_path=image_path,
                 )
@@ -175,9 +175,11 @@ class NikkeAutoScript:
         """
         Perform post-task actions, such as restoring screen orientation and sound.
         """
+        # 发送通知
+        
+        
         if 'device' not in self.__dict__ or self.config.Client_Platform != 'win':
             return
-
         # 还原屏幕方向
         if self.config.PCClient_ScreenRotate:
             self.device.screen_rotate(self.config.PCClient_ScreenNumber)
@@ -505,8 +507,8 @@ class NikkeAutoScript:
                         if self.config.Client_Platform == 'win':
                             self.device.app_stop('Launcher')
                     release_resources()
+                    self._post_action()
                     if self.config.Client_Platform == 'win':
-                        self._post_action()
                         del_cached_property(self, 'device')
                     # self.device.release_during_wait()
                     if not self.wait_until(task.next_run):
@@ -608,10 +610,11 @@ class NikkeAutoScript:
                 logger.critical('Request human takeover')
                 if self.config.Notification_WhenDailyTaskCrashed:
                     handle_notify(
-                        self.config.Notification_OnePushConfig,
-                        title=f'NKAS <{self.config_name}> crashed',
-                        content=f'<{self.config_name}> RequestHumanTakeover\nTask `{task}` failed 3 or more times.',
+                        config=self.config,
+                        title_key='crashed',
+                        content_key=['RequestHumanTakeover', 'TaskFailedThreeTimes'],
                         always=self.config.Notification_WinOnePush,
+                        task=task,
                     )
                 self._post_action()
                 exit(1)
