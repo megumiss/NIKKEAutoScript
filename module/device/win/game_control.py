@@ -177,20 +177,36 @@ class WinClient:
     @staticmethod
     def set_foreground_window_with_retry(hwnd):
         """尝试将窗口设置为前台，失败时先最小化再恢复"""
+        hwnd_hex = hex(hwnd) if isinstance(hwnd, int) else hwnd
+        logger.debug(f'Attempting to set window {hwnd_hex} to foreground.')
 
         def toggle_window_state(hwnd, minimize=False):
             """最小化或恢复窗口。"""
             SW_MINIMIZE = 6
             SW_RESTORE = 9
             state = SW_MINIMIZE if minimize else SW_RESTORE
+            action = 'minimize' if minimize else 'restore'
+            logger.debug(f'Executing window action: {action} (hwnd: {hwnd_hex})')
             ctypes.windll.user32.ShowWindow(hwnd, state)
 
         toggle_window_state(hwnd, minimize=False)
         if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
+            logger.warning(
+                f'Initial attempt to set window {hwnd_hex} to foreground [FAILED]. Initiating minimize-restore retry strategy...'
+            )
             toggle_window_state(hwnd, minimize=True)
             toggle_window_state(hwnd, minimize=False)
             if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
-                raise Exception('Failed to set window foreground')
+                # 获取 Windows 底层错误码
+                error_code = ctypes.GetLastError()
+                logger.error(
+                    f'Retry [FAILED]: Could not set window {hwnd_hex} to foreground. Windows Error Code: {error_code}'
+                )
+                raise Exception(f'Failed to set window foreground for hwnd: {hwnd_hex}, Error Code: {error_code}')
+            else:
+                logger.info(f'Retry [SUCCESS]: Window {hwnd_hex} is now in the foreground.')
+        else:
+            logger.info(f'Initial attempt [SUCCESS]: Window {hwnd_hex} is now in the foreground.')
 
     def switch_to_program(self) -> bool:
         """将程序窗口切换到前台，并精确匹配进程路径"""
