@@ -625,7 +625,7 @@
     },
     "OnePushConfig": {
       "name": "プッシュ設定",
-      "help": "Onepushを使用してエラーメッセージをプッシュします。設定方法についてはドキュメントを参照してください：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
+      "help": "Onepushを使用してエラーメッセージをプッシュします。設定方法についてはドキュメントを参照してください：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D\n設定ファイルのproviderの値をgocqhttpからonebot11に変更すればonebotに対応できます。\n現在、画像送信（エラースクリーンショットやガチャスクリーンショットなど）に対応しているのはsmtpとonebot11のみです。"
     }
   },
   "Daily": {

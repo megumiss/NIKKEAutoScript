@@ -217,12 +217,6 @@ class Reward(UI):
                 break
 
     def run(self, internal_call=False):
-        handle_notify(
-                config=self.config,
-                title_key='DailyTaskCompleted.title',
-                content_key='DailyTaskCompleted.content',
-                always=self.config.Notification_WinOnePush,
-            )
         # self.device.image = cv2.imread('t1.png')
         # self.appear_text('全部领取')
         self.ui_ensure(page_reward)
@@ -247,6 +241,9 @@ class Reward(UI):
         if self.config.Reward_CollectRanking:
             self.ui_ensure(page_ark)
             self.receive_ranking()
+
+        # 拉起通知任务
+        self.config.task_call('Notify', False)
 
         if not internal_call:
             self.config.task_delay(server_update=True)

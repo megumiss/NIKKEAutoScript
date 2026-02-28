@@ -9,6 +9,8 @@ from onepush.providers.custom import Custom
 from requests import Response
 
 from module.logger import logger
+from module.notify import handle_notify
+from module.ui.ui import UI
 from module.webui.icon import ICON
 
 from .onebot11 import OneBot11
@@ -92,3 +94,13 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
 
     logger.info('Push notify success')
     return True
+
+
+class Notify(UI):
+    def run(self):
+        handle_notify(
+            config=self.config,
+            title_key='DailyTaskCompleted.title',
+            content_key='DailyTaskCompleted.content',
+            always=self.config.Notification_WinOnePush,
+        )

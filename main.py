@@ -451,6 +451,11 @@ class NikkeAutoScript:
 
         SurfaceDaily(config=self.config, device=self.device).run()
 
+    def notify(self):
+        from module.notify.notify import Notify
+
+        Notify(config=self.config, device=self.device).run()
+
     def wait_until(self, future):
         """
         Wait until a specific time.

@@ -11,6 +11,7 @@ class ManualConfig:
        Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation >
        SurfaceDaily >
        BlaDaily > BlaCDK > BlaExchange >
+       Notify >
        AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate > UpdateHosts
        """
 
