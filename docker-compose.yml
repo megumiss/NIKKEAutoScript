@@ -6,7 +6,7 @@ services:
             - '.:/app/NIKKEAutoScript:rw'
             - '/etc/localtime:/etc/localtime:ro'
         container_name: 'nkas'
-        image: 'nkas'
+        image: 'megumiss/nkas:latest'
         build:
             context: ./deploy/docker/
             dockerfile: ./Dockerfile

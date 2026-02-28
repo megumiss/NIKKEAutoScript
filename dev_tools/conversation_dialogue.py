@@ -89,18 +89,32 @@ def get_nikke_list(limit=None):
             return []
 
         # 查找所有带有 report-id 属性的元素，自动适配 a/div/其他标签
-        items = nikke_group.find_all(attrs={'report-id': True}, limit=limit)
-
+        items = nikke_group.find_all(attrs={'href': True}, limit=limit)
         nikke_list = []
+        # 匹配以 .html 结尾前面的数字，或者包含在 nikke 路径下的数字
+        pattern = re.compile(r'(?:nikke|tj).*?(\d+)(?:\.html)?')
         for item in items:
             title = item.get('title', '').strip()
-            content_id = item.get('report-id', '').strip()
+            raw_href = item.get('href', '').strip()
 
-            if not title or not content_id:
+            if not title or not raw_href:
                 continue
 
-            nikke_list.append({'name': title, 'content_id': content_id})
-            print(f'  找到角色: {title} (ID: {content_id})')
+            # 使用正则提取数字 ID
+            match = pattern.search(raw_href)
+            if match:
+                real_id = match.group(1)
+            else:
+                # 如果正则没匹配到，尝试用 split 分割
+                try:
+                    real_id = raw_href.split('/')[-1].replace('.html', '')
+                    if not real_id.isdigit():  # 如果提取出来的不是纯数字，则跳过
+                        print(f'   [跳过] 无法提取有效ID: {raw_href}')
+                        continue
+                except:
+                    continue
+            nikke_list.append({'name': title, 'content_id': real_id})
+            print(f'   找到角色: {title} (ID: {real_id})')
 
         print(f'✓ 共找到 {len(nikke_list)} 个角色')
         return nikke_list

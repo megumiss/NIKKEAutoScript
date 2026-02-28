@@ -5,7 +5,7 @@ from module.coop.assets import (
     COOP_CHECK,
 )
 from module.coop.coop import Coop, NoOpportunityRemain
-from module.event.assets import TEMPLATE_COOP_COMING_SOON, TEMPLATE_COOP_ICON
+from module.event.assets import LAST_COOP_LOCK, TEMPLATE_COOP_COMING_SOON, TEMPLATE_COOP_ICON
 from module.event.base import EventBase
 from module.logger import logger
 from module.ui.assets import GOTO_BACK
@@ -82,7 +82,7 @@ class EventCoop(EventBase):
                 continue
 
             # 最后阶段的协同未开启
-            if self.appear(self.event_assets.LAST_COOP_LOCK, offset=10):
+            if self.appear(LAST_COOP_LOCK, offset=10):
                 logger.warning('Last Coop is not enabled')
                 return True
 

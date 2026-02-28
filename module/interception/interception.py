@@ -100,6 +100,7 @@ class Interception(UI):
             end_fighting = True
         # 使用的队伍
         teamindex = getattr(self.config, f'InterceptionTeam_{self.config.Interception_Boss}') - 1
+        load_check_timer = Timer(1, count=3)
         while 1:
             self.device.screenshot()
 
@@ -171,13 +172,15 @@ class Interception(UI):
                 click_timer.reset()
                 continue
 
-            if (
-                end_fighting
-                and self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30))
-                and not self.appear(BATTLE, threshold=25)
-            ):
-                logger.info('There are no free opportunities')
-                raise NoOpportunity
+            if end_fighting:
+                if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30)):
+                    if not load_check_timer.started():
+                        load_check_timer.start()
+                    if load_check_timer.reached() and not self.appear(BATTLE, threshold=25):
+                        logger.info('There are no free opportunities')
+                        raise NoOpportunity
+                else:
+                    load_check_timer.clear()
 
     def save_drop_image(self, image, base_path):
         """

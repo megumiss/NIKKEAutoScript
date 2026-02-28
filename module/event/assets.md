@@ -45,7 +45,6 @@
 | 图片 | 描述 | 使用状态 | 预览 |
 |--------|------|----------|------|
 | **COOP_ENTER** | 从活动前往协同按钮 | ✅ | <img src="..\..\assets\event\event_20250612\COOP_ENTER.png" width="200"> |
-| **TEMPLATE_COOP_ENABLE** | 协同开启的匹配模板，需要一个协同开启后再截图 | ✅ | <img src="..\..\assets\event\event_20250612\TEMPLATE_COOP_ENABLE.png" width="30"> |
 
 ### 挑战
 | 图片 | 描述 | 使用状态 | 预览 |
