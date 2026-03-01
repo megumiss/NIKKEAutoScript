@@ -242,8 +242,5 @@ class Reward(UI):
             self.ui_ensure(page_ark)
             self.receive_ranking()
 
-        # 拉起通知任务
-        self.config.task_call('Notify', False)
-
         if not internal_call:
             self.config.task_delay(server_update=True)

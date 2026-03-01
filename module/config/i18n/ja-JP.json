@@ -58,6 +58,10 @@
       "name": "PCクライアント",
       "help": ""
     },
+    "Notify": {
+      "name": "Task.Notify.name",
+      "help": "Task.Notify.help"
+    },
     "Restart": {
       "name": "再起動設定",
       "help": ""

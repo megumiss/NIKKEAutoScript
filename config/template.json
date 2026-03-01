@@ -64,6 +64,19 @@
       "Storage": {}
     }
   },
+  "Notify": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Notify",
+      "SuccessInterval": 0,
+      "FailureInterval": 0,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "Restart": {
     "Scheduler": {
       "Enable": true,
