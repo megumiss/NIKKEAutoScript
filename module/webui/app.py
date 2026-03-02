@@ -1786,7 +1786,7 @@ def app():
                 #     deep_set(config, set_key, set_value)
 
             State.config_updater.write_file(config_name, config)
-            logger.info(f"API: Updated config '{config_name}' key '{key}' to '{value[:50]}...'.")
+            logger.info(f"API: Updated config '{config_name}' key '{key}' to '{str(value)[:5]}...'.")
 
             return JSONResponse({'status': 'success', 'message': f'Config "{config_name}" updated.'})
         except Exception as e:
