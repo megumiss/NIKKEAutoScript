@@ -733,11 +733,11 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "获取方式请查看文档：https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN"
+      "help": "获取方式及自动更新方法请查看文档：https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN#7-%E5%A6%AE%E6%B8%B8%E7%A4%BE%E9%85%8D%E7%BD%AE"
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "请求header中的x-common-params参数，需要包含openid"
+      "help": "请求header中的x-common-params参数，需要包含openid，需要手动填写"
     }
   },
   "BlaDaily": {

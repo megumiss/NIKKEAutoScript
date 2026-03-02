@@ -733,11 +733,11 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "入手方法についてはドキュメントをご覧ください: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN"
+      "help": "入手方法および自動更新の手順については、こちらのドキュメントをご参照ください: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN#7-%E5%A6%AE%E6%B8%B8%E7%A4%BE%E9%85%8D%E7%BD%AE"
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "リクエストヘッダーのx-common-paramsパラメーター。openidを含める必要があります"
+      "help": "リクエストヘッダー内の x-common-params パラメータには openid を含める必要があり、手動で入力する必要があります。"
     }
   },
   "BlaDaily": {

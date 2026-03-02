@@ -733,11 +733,11 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "Please refer to the documentation for the acquisition method: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide"
+      "help": "For acquisition methods and auto-update procedures, please refer to the documentation:: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide#7-nikke-community-site-configuration"
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "x-common-params header must include openid"
+      "help": "The x-common-params parameter in the request header must include the openid, which needs to be filled in manually."
     }
   },
   "BlaDaily": {
