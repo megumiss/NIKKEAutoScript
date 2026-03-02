@@ -175,9 +175,6 @@ class NikkeAutoScript:
         """
         Perform post-task actions, such as restoring screen orientation and sound.
         """
-        # 发送通知
-        
-        
         if 'device' not in self.__dict__ or self.config.Client_Platform != 'win':
             return
         # 还原屏幕方向

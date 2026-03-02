@@ -33,7 +33,7 @@ I18N_NOTIFY = {
         'title': {
             'zh-CN': '[NKAS通知] 实例 {config_name} 任务完成',
             'en-US': '[NKAS Notification] Instance {config_name} tasks completed',
-            'ja-JP': '[NKAS通知] インスタンス {config_name}',
+            'ja-JP': '[NKAS通知] インスタンス {config_name} タスク完了',
         },
         'content': {
             'zh-CN': '任务已全部完成！',

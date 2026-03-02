@@ -34,6 +34,8 @@ class OneBot11(Provider):
         # 根据 message_type 校验必须的 ID 参数
         if not endpoint:
             logger.error("Notifier onebot11 require param 'endpoint'")
+            mock_resp.status_code = 400
+            return mock_resp
         if message_type == 'private' and not user_id:
             logger.error("Notifier onebot11 require param 'user_id' when message_type is 'private'")
             mock_resp.status_code = 400
