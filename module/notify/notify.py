@@ -98,9 +98,13 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
 
 class Notify(UI):
     def run(self):
-        handle_notify(
-            config=self.config,
-            title_key='DailyTaskCompleted.title',
-            content_key='DailyTaskCompleted.content',
-            always=self.config.Notification_WinOnePush,
-        )
+        if self.config.Notification_WhenDailyTaskCompleted:
+            handle_notify(
+                config=self.config,
+                title_key='DailyTaskCompleted.title',
+                content_key='DailyTaskCompleted.content',
+                always=self.config.Notification_WinOnePush,
+            )
+        else:
+            logger.info('Notify config disabled, skip sending')
+        self.config.task_delay(server_update=True)

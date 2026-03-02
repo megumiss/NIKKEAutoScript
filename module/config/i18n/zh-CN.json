@@ -58,6 +58,10 @@
       "name": "PC客户端",
       "help": ""
     },
+    "Notify": {
+      "name": "任务通知",
+      "help": "只有当NKAS设置中开启日常完成时发送通知才有效"
+    },
     "Restart": {
       "name": "重启设置",
       "help": ""

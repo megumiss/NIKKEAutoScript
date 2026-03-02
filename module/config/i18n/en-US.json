@@ -58,6 +58,10 @@
       "name": "PC Client",
       "help": ""
     },
+    "Notify": {
+      "name": "Task.Notify.name",
+      "help": "Task.Notify.help"
+    },
     "Restart": {
       "name": "Restart Settings",
       "help": ""

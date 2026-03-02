@@ -4,6 +4,10 @@ Reward:
   Scheduler:
     Enable: true
 
+Notify:
+  Scheduler:
+    Enable: true
+
 DailyRecruit:
   Scheduler:
     Enable: false

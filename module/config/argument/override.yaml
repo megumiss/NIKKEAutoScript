@@ -9,6 +9,15 @@ Restart:
     FailureInterval: 0
     ServerUpdate: 04:00
 
+Notify:
+  Scheduler:
+    Enable:
+      value: true
+      display: disabled
+    SuccessInterval: 0
+    FailureInterval: 0
+    ServerUpdate: 04:00
+
 # ==================== Reward ====================
 
 Reward:
