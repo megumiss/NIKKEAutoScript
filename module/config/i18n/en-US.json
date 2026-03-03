@@ -59,8 +59,8 @@
       "help": ""
     },
     "Notify": {
-      "name": "Task.Notify.name",
-      "help": "Task.Notify.help"
+      "name": "Notify Task",
+      "help": "Sends a notification when the daily tasks are completed. This is only effective when \"Send notification upon daily completion\" is enabled in the NKAS settings."
     },
     "Restart": {
       "name": "Restart Settings",

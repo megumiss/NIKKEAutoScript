@@ -59,8 +59,8 @@
       "help": ""
     },
     "Notify": {
-      "name": "Task.Notify.name",
-      "help": "Task.Notify.help"
+      "name": "通知タスク",
+      "help": "当日の任務が完了した際に通知を送信します。この機能は、NKASの設定で「日常完了時に通知を送信」が有効になっている場合のみ機能します。"
     },
     "Restart": {
       "name": "再起動設定",
