@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const logMsg = document.getElementById('logMsg');
+    const userInfoDiv = document.getElementById('userInfo'); // 新增：获取用户信息 DOM
 
     // --- 常量配置 ---
     const TARGET_DOMAIN = "https://www.blablalink.com";
@@ -66,19 +67,37 @@ document.addEventListener('DOMContentLoaded', () => {
     async function checkLoginStatus(isStartup = false) {
         isLoggedIn = false;
         syncBtn.disabled = true;
+        userInfoDiv.style.display = 'none'; // 检查前隐藏用户名
         updateStatusUI('checking', '正在检查登录状态...');
         showLog('');
 
         try {
-            const consentCookie = await chrome.cookies.get({
-                url: TARGET_DOMAIN,
-                name: "OptanonConsent"
-            });
+            let missingCookies = [];
+            let userName = ''; // 新增：用于暂存用户名
 
-            if (consentCookie && consentCookie.value && consentCookie.value.length > 20) {
+            for (const name of COOKIES_TO_FETCH) {
+                const cookie = await chrome.cookies.get({
+                    url: TARGET_DOMAIN,
+                    name: name
+                });
+                if (!cookie || !cookie.value) {
+                    missingCookies.push(name);
+                } else if (name === 'game_user_name') {
+                    // 新增：提取用户名。由于中文可能被 URL 编码，这里使用 decodeURIComponent 解码
+                    userName = decodeURIComponent(cookie.value);
+                }
+            }
+
+            if (missingCookies.length === 0) {
                 isLoggedIn = true;
                 updateStatusUI('success', '已登录');
                 syncBtn.disabled = false;
+
+                // 新增：显示用户名
+                if (userName) {
+                    userInfoDiv.textContent = `当前登录账户：${userName}`;
+                    userInfoDiv.style.display = 'block';
+                }
 
                 // 如果是启动时，且勾选了自动同步，则直接发起同步
                 if (isStartup && autoSyncCb.checked) {
@@ -87,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
                 updateStatusUI('error', '未登录或已失效');
+                showLog(`缺失 Cookie: ${missingCookies.join(', ')}`, true);
             }
         } catch (error) {
             updateStatusUI('error', '检查异常');

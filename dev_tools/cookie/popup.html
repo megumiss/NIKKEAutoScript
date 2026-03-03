@@ -85,6 +85,16 @@
             font-weight: bold;
         }
 
+        /* 新增：用户信息样式 */
+        .user-info {
+            font-size: 13px;
+            color: #007bff;
+            margin-bottom: 12px;
+            font-weight: bold;
+            display: none;
+            /* 默认隐藏，登录成功后显示 */
+        }
+
         .btn-group {
             display: flex;
             gap: 10px;
@@ -161,6 +171,8 @@
         <div class="status-dot" id="statusDot"></div>
         <span class="status-text" id="statusText">等待检查...</span>
     </div>
+
+    <div class="user-info" id="userInfo"></div>
 
     <div class="btn-group">
         <button id="checkBtn">检查登录状态</button>
