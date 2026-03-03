@@ -737,7 +737,7 @@
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "请求header中的x-common-params参数，需要包含openid，需要手动填写"
+      "help": "请求header中的x-common-params参数，需要包含openid。必须手动填写，一般情况下不需要更新"
     }
   },
   "BlaDaily": {

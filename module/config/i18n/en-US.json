@@ -737,7 +737,7 @@
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "The x-common-params parameter in the request header must include the openid, which needs to be filled in manually."
+      "help": "The x-common-params parameter in the request header must include the openid. It must be filled in manually; under normal circumstances, no updates are required."
     }
   },
   "BlaDaily": {

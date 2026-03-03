@@ -737,7 +737,7 @@
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "リクエストヘッダー内の x-common-params パラメータには openid を含める必要があり、手動で入力する必要があります。"
+      "help": "リクエストヘッダー内の x-common-params パラメータには、openid を含める必要があります。手動で入力する必要がありますが、通常、更新する必要はありません。"
     }
   },
   "BlaDaily": {
