@@ -221,6 +221,7 @@ EventInfo:
     value: ''
     option: [
       'event_20260212',
+      'event_20260303',
       'event_20260129',
       'event_20260115',
       'event_20251230',

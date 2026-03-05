@@ -105,6 +105,16 @@ class ManualConfig:
             "story_difficulty": "Hard"  # Normal, Hard
         },
         {
+            "event_id": "event_20260303",
+            "event_name": "ENTER HEAVEN",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "mini_game_play": True,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20260129",
             "event_name": "Fatal Maid",
             # 小型活动
