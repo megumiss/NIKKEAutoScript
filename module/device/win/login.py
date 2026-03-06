@@ -33,7 +33,9 @@ class Login(LauncherOcr, Automation):
                 if self.appear_text(Langs.LANUCHER_EMAIL, threshold=0.9):
                     need_login = True
                     break
-                if self.appear_text(Langs.LANUCHER_LAUNCH, threshold=0.9) or self.appear_text(Langs.LANUCHER_UPDATE, threshold=0.9):
+                if self.appear_text(Langs.LANUCHER_LAUNCH, threshold=0.9) or self.appear_text(
+                    Langs.LANUCHER_UPDATE, threshold=0.9
+                ):
                     break
             finally:
                 if not confirm_timer.started():
@@ -41,6 +43,14 @@ class Login(LauncherOcr, Automation):
                 if confirm_timer.reached():
                     logger.error('Launcher open timeout, unknown error')
                     raise RequestHumanTakeover
+
+        # 关闭公告弹窗
+        self.appear_text_then_click(Langs.LANUCHER_ANNOUNCEMENT_POP, threshold=0.9, interval=1)
+        time.sleep(0.3)
+        text = self.ocr_text()
+        _loc = self.get_location('X', text, threshold=0.9)
+        self.click_minitouch(_loc[0], _loc[1])
+        time.sleep(0.3)
 
         if need_login:
             account, password = load_account(self.config.config_name)
