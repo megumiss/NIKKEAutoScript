@@ -2,6 +2,7 @@ import ipaddress
 import json
 import logging
 import re
+import shlex
 import socket
 import subprocess
 import time
@@ -693,6 +694,42 @@ class Connection(ConnectionAttr):
         """
         cmd = ['push', local, remote]
         return self.adb_command(cmd)
+
+    @staticmethod
+    def adb_shell_text_escape(text) -> str:
+        """
+        Escape text for `adb shell input text`.
+
+        Android's `input text` uses `%s` for spaces, while the remote shell still
+        needs quoting for characters like `&` and `'`.
+        """
+        escaped = str(text).replace('%', r'\%').replace(' ', '%s')
+        return shlex.quote(escaped)
+
+    def adb_shell_input_text(self, text, timeout=10):
+        escaped = self.adb_shell_text_escape(text)
+        logger.info('ADB shell input text')
+        return self.adb_shell(f'input text {escaped}', timeout=timeout)
+
+    def adb_shell_input_keyevent(self, *keycodes, longpress=False, timeout=10):
+        if not keycodes:
+            return ''
+
+        cmd = ['input', 'keyevent']
+        if longpress:
+            cmd.append('--longpress')
+        cmd.extend(map(str, keycodes))
+        logger.info(f'ADB shell input keyevent: {list(map(str, keycodes))}')
+        return self.adb_shell(cmd, timeout=timeout)
+
+    def adb_shell_clear_text(self, max_length=64, timeout=10):
+        """
+        Clear the focused input box by moving the cursor to the end first and
+        then sending a batch of delete key events.
+        """
+        max_length = max(1, int(max_length))
+        self.adb_shell_input_keyevent('KEYCODE_MOVE_END', timeout=timeout)
+        return self.adb_shell_input_keyevent(*(['KEYCODE_DEL'] * max_length), timeout=timeout)
 
     def _wait_device_appear(self, serial, first_devices=None):
         """
