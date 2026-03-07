@@ -24,6 +24,16 @@ I18N_NOTIFY = {
         'en-US': 'Exception Occurred',
         'ja-JP': '例外が発生しました',
     },
+    'AccountError': {
+        'zh-CN': '登录失败',
+        'en-US': 'Login failed',
+        'ja-JP': 'ログインに失敗しました',
+    },
+    'ScreenResolutionNotEnough': {
+        'zh-CN': '屏幕分辨率不足',
+        'en-US': 'Screen resolution not enough',
+        'ja-JP': '画面解像度が不足しています',
+    },
     'TaskFailedThreeTimes': {
         'zh-CN': '任务 `{task}` 失败3次或以上。',
         'en-US': 'Task `{task}` failed 3 or more times.',

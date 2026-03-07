@@ -81,18 +81,46 @@ class NikkeAutoScript:
         except RequestHumanTakeover:
             self._post_action()
             logger.critical('Request human takeover')
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='RequestHumanTakeover',
+                    always=self.config.Notification_WinOnePush,
+                )
             exit(1)
         except AccountError:
             self._post_action()
-            logger.critical('Account or password setting error')
+            logger.critical('Game outline, please relogin or input account')
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='AccountError',
+                    always=self.config.Notification_WinOnePush,
+                )
             exit(1)
         except ScreenResolutionNotEnough:
             self._post_action()
             logger.critical('Screen resolution not enough')
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='ScreenResolutionNotEnough',
+                    always=self.config.Notification_WinOnePush,
+                )
             exit(1)
         except Exception as e:
             self._post_action()
             logger.exception(e)
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='ExceptionOccurred',
+                    always=self.config.Notification_WinOnePush,
+                )
             exit(1)
 
     def run(self, command, skip_first_screenshot=False):
@@ -100,12 +128,12 @@ class NikkeAutoScript:
             # 妮游社任务不需要device
             if command not in self.config.INDEPENDENT_TASKS_UNDER and not skip_first_screenshot:
                 self.device.screenshot()
-            self.__getattribute__(command)()
+            try:
+                self.__getattribute__(command)()
+            except GameStart:
+                self.start()
             return True
         except TaskEnd:
-            return True
-        except GameStart:
-            self.start()
             return True
         except GameNotRunningError as e:
             logger.warning(e)
@@ -153,6 +181,17 @@ class NikkeAutoScript:
                     config=self.config,
                     title_key='crashed',
                     content_key='RequestHumanTakeover',
+                    always=self.config.Notification_WinOnePush,
+                )
+            self._post_action()
+            exit(1)
+        except AccountError:
+            logger.critical('Game outline, please relogin or input account')
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='AccountError',
                     always=self.config.Notification_WinOnePush,
                 )
             self._post_action()

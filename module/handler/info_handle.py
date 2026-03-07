@@ -7,7 +7,7 @@ from module.base.utils import point2str
 from module.config.account import load_account
 
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
-from module.exception import GameServerUnderMaintenance, GameStuckError
+from module.exception import AccountError, GameServerUnderMaintenance, GameStuckError
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE_LEFT, TEMPLATE_RED_CIRCLE_RIGHT, TEMPLATE_RED_CIRCLE_TOP
 from module.logger import logger
@@ -258,39 +258,56 @@ class InfoHandler(ModuleBase):
         return False
 
     def handle_login_lipass(self):
-        account, password = load_account(self.config.config_name)
-        if not account or not password:
-            return False
+        if self.appear(LIPASS_CHECK, offset=(30, 30)):
+            logger.info('Login with LiPass')
+            account, password = load_account(self.config.config_name)
+            if not account or not password:
+                raise AccountError
 
-        # 3. Password Input
-        if self.appear(LIPASS_PASSWORD_CHECK, offset=(30, 30), static=False):
-            logger.info('Input LiPass Password')
-            self.device.click(LIPASS_PASSWORD)
-            self.device.sleep(0.5)
-            self.device.adb_shell_input_text(password)
-            self.device.sleep(1)
-            self.device.click_minitouch(360, 300)
-            self.device.sleep(1)
-            self.device.click(LIPASS_LOGIN)
-            self.device.sleep(5)
-            return True
+            # 输入账号
+            if not self.appear(LIPASS_NEXT, offset=(30, 30), threshold=20) and self.appear_then_click(
+                LIPASS_ACCOUNT_INPUT, offset=(30, 30), interval=1
+            ):
+                logger.info('Input LiPass account')
+                self.device.sleep(0.3)
+                self.device.adb_shell_input_text(account)
 
-        # 2. Account Input
-        if self.appear(LIPASS_ACCOUNT_CHECK, offset=(30, 30), static=False):
-            logger.info('Input LiPass Account')
-            self.device.click(LIPASS_ACCOUNT)
-            self.device.sleep(0.5)
-            self.device.adb_shell_input_text(account)
-            self.device.sleep(1)
-            self.device.click_minitouch(360, 300)
-            self.device.sleep(1)
-            self.device.click(LIPASS_NEXT)
-            self.device.sleep(3)
-            return True
+                while 1:
+                    self.device.screenshot()
 
-        # 1. Start LiPass Login
-        if self.appear(LOGIN_LIPASS_CHECK, offset=(30, 30), static=False):
-            if self.appear_then_click(LOGIN_LIPASS, offset=(30, 30), interval=3, static=False):
-                logger.info('Click LiPass Login')
-                self.device.sleep(3)
-                return True
+                    if not self.appear(LIPASS_ACCOUNT_INPUT, offset=(30, 30)) and self.appear_then_click(
+                        LIPASS_CHECK, offset=(30, 30), interval=1
+                    ):
+                        logger.info('Input LiPass account done')
+                        break
+
+            # 下一步
+            if self.appear(LIPASS_CHECK, offset=(30, 30)) and self.appear(LIPASS_NEXT, threshold=20):
+                while 1:
+                    self.device.screenshot()
+                    if self.appear_then_click(LIPASS_NEXT, threshold=20, interval=1):
+                        continue
+                    if self.appear(LIPASS_PASSWORD_CHECK, offset=(30, 30)):
+                        break
+
+            # 输入密码
+            if self.appear_then_click(LIPASS_PASSWORD_INPUT, offset=(30, 30), interval=1):
+                logger.info('Input LiPass password')
+                self.device.sleep(0.3)
+                self.device.adb_shell_input_text(password)
+
+                while 1:
+                    self.device.screenshot()
+                    if self.appear(LIPASS_CHECK, offset=(30, 30)):
+                        break
+                    if self.appear(LIPASS_PASSWORD_CHECK, offset=(30, 30)) and self.appear_then_click(
+                        LIPASS_NEXT, threshold=20, interval=3
+                    ):
+                        continue
+                    if not self.appear(LIPASS_PASSWORD_INPUT, offset=(30, 30)) and self.appear_then_click(
+                        LIPASS_PASSWORD_CHECK, offset=(30, 30), interval=1
+                    ):
+                        logger.info('Input LiPass password done')
+                        continue
+
+        return False

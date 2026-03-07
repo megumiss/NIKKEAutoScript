@@ -45,7 +45,6 @@ class Login(LauncherOcr, Automation):
         if need_login:
             account, password = load_account(self.config.config_name)
             if not account or not password:
-                logger.error('Login failed: Please configure account and password')
                 raise AccountError
             # 判断输入框是否存在邮箱
             text = self.ocr_text()
