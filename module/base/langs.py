@@ -24,6 +24,8 @@ class LangMeta(type):
         "DIALOGUE_JSON": {"en-US": "dialogue.en-US.json", "zh-CN": "dialogue.zh-CN.json", "ja-JP": ""},
         # 弹窗公告检查
         "LANUCHER_ANNOUNCEMENT_POP": {"en-US": "Do not show again until update", "zh-CN": "公告更新前不再提示", "ja-JP": ""},
+        # 弹窗公告标题
+        "LANUCHER_ANNOUNCEMENT_POP_TITLE": {"en-US": "Update On", "zh-CN": "更新公告", "ja-JP": ""},
     }
     _current_lang = "zh-CN"
 

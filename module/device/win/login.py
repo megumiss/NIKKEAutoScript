@@ -45,12 +45,23 @@ class Login(LauncherOcr, Automation):
                     raise RequestHumanTakeover
 
         # 关闭公告弹窗
-        self.appear_text_then_click(Langs.LANUCHER_ANNOUNCEMENT_POP, threshold=0.9, interval=1)
-        time.sleep(0.3)
-        text = self.ocr_text()
-        _loc = self.get_location('X', text, threshold=0.9)
-        self.click_minitouch(_loc[0], _loc[1])
-        time.sleep(0.3)
+        if self.appear_text(Langs.LANUCHER_ANNOUNCEMENT_POP, threshold=0.9):
+            # 不再提醒
+            self.appear_text_then_click(Langs.LANUCHER_ANNOUNCEMENT_POP, threshold=0.9, interval=1)
+            time.sleep(0.3)
+            # 查找关闭图标
+            text = self.ocr_text()
+            _loc = None
+            for i, item in enumerate(text['details']):
+                if item['text'] == 'X':
+                    if i > 0:
+                        prev = text['details'][i - 1]['text']
+                        if Langs.LANUCHER_ANNOUNCEMENT_POP_TITLE in prev:
+                            _loc = self.get_location('X', {'details': [item]}, threshold=0.9)
+                            break
+            if _loc:
+                self.click_minitouch(_loc[0], _loc[1])
+                time.sleep(0.3)
 
         if need_login:
             account, password = load_account(self.config.config_name)
