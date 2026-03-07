@@ -42,8 +42,6 @@ class GeneratedConfig:
     PCClient_ScreenRotate = False
     PCClient_CloseAutoHdr = True
     PCClient_DisableVoice = False
-    PCClient_Account = None
-    PCClient_Password = None
 
     # Group `PCClientInfo`
     PCClientInfo_Client = 'intl'  # intl, hmt
@@ -218,6 +216,10 @@ class GeneratedConfig:
     # Group `SurfaceDaily`
     SurfaceDaily_AutoPlace = True
     SurfaceDaily_Heal = True
+
+    # Group `Account`
+    Account_Account = None
+    Account_Password = None
 
     # Group `Storage`
     Storage_Storage = {}

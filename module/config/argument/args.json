@@ -60,6 +60,16 @@
         "mode": "yaml"
       }
     },
+    "Account": {
+      "Account": {
+        "type": "input",
+        "value": ""
+      },
+      "Password": {
+        "type": "input",
+        "value": ""
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",
@@ -234,14 +244,6 @@
       "DisableVoice": {
         "type": "checkbox",
         "value": false
-      },
-      "Account": {
-        "type": "input",
-        "value": ""
-      },
-      "Password": {
-        "type": "input",
-        "value": ""
       }
     },
     "Storage": {

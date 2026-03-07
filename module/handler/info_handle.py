@@ -309,5 +309,6 @@ class InfoHandler(ModuleBase):
                     ):
                         logger.info('Input LiPass password done')
                         continue
+            return True
 
         return False

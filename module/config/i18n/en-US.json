@@ -394,14 +394,6 @@
     "DisableVoice": {
       "name": "Disable Voice",
       "help": "Automatically mute the game process while the script is running and restore it after completion. If it does not restore automatically, you will need to re-enable it manually in the system volume mixer on the taskbar."
-    },
-    "Account": {
-      "name": "Account",
-      "help": "Paste your email here. It will be auto-filled if login expires. This feature has security risks; use with caution."
-    },
-    "Password": {
-      "name": "Password",
-      "help": "Paste your password here. It will be auto-filled if login expires. This feature has security risks; use with caution."
     }
   },
   "PCClientInfo": {
@@ -1119,6 +1111,20 @@
     "Heal": {
       "name": "Auto Heal",
       "help": "Not done yet"
+    }
+  },
+  "Account": {
+    "_info": {
+      "name": "Account Setting",
+      "help": "Only LiPass accounts are supported for automatic login."
+    },
+    "Account": {
+      "name": "Account",
+      "help": "Paste your email here. It will be auto-filled if login expires. This feature has security risks; use with caution."
+    },
+    "Password": {
+      "name": "Password",
+      "help": "Paste your password here. It will be auto-filled if login expires. This feature has security risks; use with caution."
     }
   },
   "Storage": {

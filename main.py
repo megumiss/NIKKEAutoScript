@@ -91,7 +91,7 @@ class NikkeAutoScript:
             exit(1)
         except AccountError:
             self._post_action()
-            logger.critical('Game outline, please relogin or input account')
+            logger.critical('Game offline, please relogin or input account')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     config=self.config,
@@ -186,7 +186,7 @@ class NikkeAutoScript:
             self._post_action()
             exit(1)
         except AccountError:
-            logger.critical('Game outline, please relogin or input account')
+            logger.critical('Game offline, please relogin or input account')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     config=self.config,

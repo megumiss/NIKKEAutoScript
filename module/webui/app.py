@@ -534,10 +534,10 @@ class NKASGUI(Frame):
 
                 elif not validate or re_fullmatch(validate, v):
                     # 当保存 account 或 password 时，加密存储并回显为******
-                    if k in ("PCClient.PCClient.Account", "PCClient.PCClient.Password"):
-                        if k == "PCClient.PCClient.Account":
+                    if k in ("NKAS.Account.Account", "NKAS.Account.Password"):
+                        if k == "NKAS.Account.Account":
                             save_account(config_name, account=v)
-                        if k == "PCClient.PCClient.Password":
+                        if k == "NKAS.Account.Password":
                             save_account(config_name, password=v)
 
                         deep_set(config, k, "******")
@@ -1774,10 +1774,10 @@ def app():
         try:
             config = State.config_updater.read_file(config_name)
 
-            if key in ("PCClient.PCClient.Account", "PCClient.PCClient.Password"):
-                if key == "PCClient.PCClient.Account":
+            if key in ("NKAS.Account.Account", "NKAS.Account.Password"):
+                if key == "NKAS.Account.Account":
                     save_account(config_name, account=value)
-                if key == "PCClient.PCClient.Password":
+                if key == "NKAS.Account.Password":
                     save_account(config_name, password=value)
                 deep_set(config, key, "******")
             else:

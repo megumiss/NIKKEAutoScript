@@ -8,6 +8,7 @@ NKAS:
       - Client
       - Optimization
       - Notification
+      - Account
     Emulator:
       - Emulator
       - EmulatorInfo

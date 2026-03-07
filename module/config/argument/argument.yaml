@@ -74,10 +74,6 @@ PCClient:
   ScreenRotate: false
   CloseAutoHdr: true
   DisableVoice: false
-  Account:
-    value: ''
-  Password:
-    value: ''
 PCClientInfo:
   Client:
     value: intl
@@ -351,3 +347,8 @@ SurfaceDaily:
   Heal:
     value: true
     display: disabled
+Account:
+  Account:
+    value: ''
+  Password:
+    value: ''

@@ -15,6 +15,10 @@
       "WinOnePush": false,
       "OnePushConfig": "provider: null"
     },
+    "Account": {
+      "Account": null,
+      "Password": null
+    },
     "Storage": {
       "Storage": {}
     }
@@ -56,9 +60,7 @@
       "GameResolutionCompat": true,
       "ScreenRotate": false,
       "CloseAutoHdr": true,
-      "DisableVoice": false,
-      "Account": null,
-      "Password": null
+      "DisableVoice": false
     },
     "Storage": {
       "Storage": {}
