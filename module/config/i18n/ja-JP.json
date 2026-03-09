@@ -460,7 +460,12 @@
       "help": "",
       "stay_there": "その場に留まる",
       "goto_main": "メインインターフェースに移動",
-      "close_game": "ゲームを閉じる"
+      "close_game": "ゲームを閉じる",
+      "run_script": "スクリプトを実行"
+    },
+    "ScriptPath": {
+      "name": "スクリプトパス",
+      "help": "Windows のみ対応。Windows 上で実行し、かつ Client.Platform=win の場合のみ有効"
     }
   },
   "Reward": {

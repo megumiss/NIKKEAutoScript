@@ -37,8 +37,13 @@
         "option": [
           "stay_there",
           "goto_main",
-          "close_game"
+          "close_game",
+          "run_script"
         ]
+      },
+      "ScriptPath": {
+        "type": "textarea",
+        "value": ""
       }
     },
     "Notification": {

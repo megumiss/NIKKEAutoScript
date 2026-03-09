@@ -460,7 +460,12 @@
       "help": "",
       "stay_there": "停在原处",
       "goto_main": "前往主界面",
-      "close_game": "关闭游戏"
+      "close_game": "关闭游戏",
+      "run_script": "运行脚本"
+    },
+    "ScriptPath": {
+      "name": "脚本路径",
+      "help": "只支持 Windows 平台，并且仅在 Windows 运行且 Client.Platform=win 时生效"
     }
   },
   "Reward": {

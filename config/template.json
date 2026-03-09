@@ -7,7 +7,8 @@
     "Optimization": {
       "AutoRedCircle": false,
       "OcrModelType": "mobile",
-      "WhenTaskQueueEmpty": "goto_main"
+      "WhenTaskQueueEmpty": "goto_main",
+      "ScriptPath": null
     },
     "Notification": {
       "WhenDailyTaskCompleted": false,

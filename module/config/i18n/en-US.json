@@ -460,7 +460,12 @@
       "help": "",
       "stay_there": "Stay in place",
       "goto_main": "Go to main screen",
-      "close_game": "Close game"
+      "close_game": "Close game",
+      "run_script": "Run script"
+    },
+    "ScriptPath": {
+      "name": "Script Path",
+      "help": "Only supported on Windows, and only takes effect when running on Windows with Client.Platform=win"
     }
   },
   "Reward": {

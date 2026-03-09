@@ -57,7 +57,8 @@ class GeneratedConfig:
     # Group `Optimization`
     Optimization_AutoRedCircle = False
     Optimization_OcrModelType = 'mobile'  # mobile, server
-    Optimization_WhenTaskQueueEmpty = 'goto_main'  # stay_there, goto_main, close_game
+    Optimization_WhenTaskQueueEmpty = 'goto_main'  # stay_there, goto_main, close_game, run_script
+    Optimization_ScriptPath = None
 
     # Group `Reward`
     Reward_CollectSocialPoint = True
