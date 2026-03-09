@@ -51,6 +51,18 @@ I18N_NOTIFY = {
             'ja-JP': 'すべてのタスクが完了しました！',
         },
     },
+    'SpecialArenaRankChanged': {
+        'title': {
+            'zh-CN': '[NKAS通知] 实例 {config_name} 特殊竞技场段位变化',
+            'en-US': '[NKAS Notification] Instance {config_name} Special Arena rank changed',
+            'ja-JP': '[NKAS通知] インスタンス {config_name} 特殊アリーナランク変動',
+        },
+        'content': {
+            'zh-CN': '特殊竞技场段位变化：{old_rank} -> {new_rank}',
+            'en-US': 'Special Arena rank changed: {old_rank} -> {new_rank}',
+            'ja-JP': '特殊アリーナランク変動: {old_rank} -> {new_rank}',
+        },
+    },
     'Recruit': {
         'title': {
             'zh-CN': '[NKAS通知] 实例 {config_name} 招募',

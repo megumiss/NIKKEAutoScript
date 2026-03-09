@@ -171,6 +171,13 @@ SpecialArena:
   Times:
     value: 2
     option: [ 1, 2 ]
+SpecialArenaWatch:
+  CheckInterval:
+    value: 10
+  CurrentRank:
+    value: ''
+    valuetype: str
+    display: disabled
 OpponentSelection:
   Enable: false
   SortingWeight:

@@ -451,6 +451,23 @@
       "Storage": {}
     }
   },
+  "SpecialArenaWatch": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SpecialArenaWatch",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "SpecialArenaWatch": {
+      "CheckInterval": 10,
+      "CurrentRank": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "ChampionArena": {
     "Scheduler": {
       "Enable": false,

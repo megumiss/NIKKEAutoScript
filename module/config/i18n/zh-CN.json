@@ -150,6 +150,10 @@
       "name": "特殊竞技场",
       "help": ""
     },
+    "SpecialArenaWatch": {
+      "name": "特殊竞技场监控",
+      "help": ""
+    },
     "ChampionArena": {
       "name": "冠军竞技场",
       "help": ""
@@ -681,6 +685,20 @@
       "help": "",
       "1": "1",
       "2": "2"
+    }
+  },
+  "SpecialArenaWatch": {
+    "_info": {
+      "name": "监控设置",
+      "help": ""
+    },
+    "CheckInterval": {
+      "name": "检查间隔",
+      "help": "每隔多少分钟检查一次当前段位，如果段位发生变化会发送一条通知"
+    },
+    "CurrentRank": {
+      "name": "当前段位",
+      "help": "自动识别并保存，不可手动修改"
     }
   },
   "OpponentSelection": {

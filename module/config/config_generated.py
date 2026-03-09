@@ -116,6 +116,10 @@ class GeneratedConfig:
     # Group `SpecialArena`
     SpecialArena_Times = 2  # 1, 2
 
+    # Group `SpecialArenaWatch`
+    SpecialArenaWatch_CheckInterval = 10
+    SpecialArenaWatch_CurrentRank = None
+
     # Group `OpponentSelection`
     OpponentSelection_Enable = False
     OpponentSelection_SortingWeight = '{"Power":0.3, "CommanderLevel":0.2, "SynchroLevel":0.3, "Ranking":0.2}'

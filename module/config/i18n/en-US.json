@@ -150,6 +150,10 @@
       "name": "Special Arena",
       "help": ""
     },
+    "SpecialArenaWatch": {
+      "name": "Special Arena Watch",
+      "help": ""
+    },
     "ChampionArena": {
       "name": "Champion Arena",
       "help": ""
@@ -681,6 +685,20 @@
       "help": "",
       "1": "1",
       "2": "2"
+    }
+  },
+  "SpecialArenaWatch": {
+    "_info": {
+      "name": "Watch Settings",
+      "help": ""
+    },
+    "CheckInterval": {
+      "name": "Check Interval",
+      "help": "Check current rank once every X minutes, and send a notification when rank changes"
+    },
+    "CurrentRank": {
+      "name": "Current Rank",
+      "help": "Auto detected and stored. Read-only."
     }
   },
   "OpponentSelection": {

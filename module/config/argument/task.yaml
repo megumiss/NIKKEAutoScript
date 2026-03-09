@@ -108,6 +108,9 @@ Ark:
       - Scheduler
       - SpecialArena
       - OpponentSelection
+    SpecialArenaWatch:
+      - Scheduler
+      - SpecialArenaWatch
     ChampionArena:
       - Scheduler
       - CheerStrategy

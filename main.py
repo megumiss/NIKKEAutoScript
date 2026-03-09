@@ -337,6 +337,11 @@ class NikkeAutoScript:
 
         SpecialArena(config=self.config, device=self.device).run()
 
+    def special_arena_watch(self):
+        from module.special_arena.special_arena_watch import SpecialArenaWatch
+
+        SpecialArenaWatch(config=self.config, device=self.device).run()
+
     def champion_arena(self):
         from module.champion_arena.champion_arena import ChampionArena
 

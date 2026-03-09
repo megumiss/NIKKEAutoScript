@@ -150,6 +150,10 @@
       "name": "特殊アリーナ",
       "help": ""
     },
+    "SpecialArenaWatch": {
+      "name": "特殊アリーナ監視",
+      "help": ""
+    },
     "ChampionArena": {
       "name": "チャンピオンアリーナ",
       "help": ""
@@ -681,6 +685,20 @@
       "help": "",
       "1": "1",
       "2": "2"
+    }
+  },
+  "SpecialArenaWatch": {
+    "_info": {
+      "name": "監視設定",
+      "help": ""
+    },
+    "CheckInterval": {
+      "name": "確認間隔",
+      "help": "現在ランクを何分ごとに確認するか。ランク変化時に通知を送信"
+    },
+    "CurrentRank": {
+      "name": "現在ランク",
+      "help": "自動識別して保存されます。手動変更不可。"
     }
   },
   "OpponentSelection": {
