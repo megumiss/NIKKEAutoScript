@@ -1,15 +1,9 @@
-import re
-
 from module.logger import logger
 from module.notify import handle_notify
 from module.ocr.ocr import Ocr
 from module.special_arena.assets import CURRENT_RANK
-from module.special_arena.special_arena import SpecialArena
+from module.special_arena.special_arena import SpecialArena, SpecialArenaIsUnavailable
 from module.ui.page import page_arena
-
-
-class SpecialArenaIsUnavailable(Exception):
-    pass
 
 
 class SpecialArenaWatch(SpecialArena):
@@ -33,7 +27,7 @@ class SpecialArenaWatch(SpecialArena):
         self.ui_ensure(page_arena)
 
         try:
-            self.ensure_into_special_arena()
+            self.ensure_into_special_arena(start_competition=False)
             current_rank = self.get_current_rank()
             previous_rank = (self.config.SpecialArenaWatch_CurrentRank or '').strip()
 
