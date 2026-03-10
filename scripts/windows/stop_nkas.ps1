@@ -1,24 +1,31 @@
-# Stop NKAS process that launched this script.
-$nkasPid = $env:NKAS_PID
-if ($nkasPid) {
-    try {
-        Stop-Process -Id $nkasPid -Force
-        exit 0
-    } catch {
-        # Fallback below
-    }
+# Stop NKAS process.
+# Strategy:
+# 1. Use NKAS_PID environment variable if available.
+# 2. Search for nkas.exe or python processes running from the NKAS installation directory.
+
+$ErrorActionPreference = "SilentlyContinue"
+
+# Get NKAS root directory (assuming scripts/windows/stop_nkas.ps1)
+$scriptPath = $MyInvocation.MyCommand.Definition
+$nkasRoot = (Get-Item $scriptPath).Directory.Parent.Parent.FullName
+# Escape special characters for regex
+$nkasRootPattern = [regex]::Escape($nkasRoot)
+
+# 1. Try NKAS_PID environment variable
+if ($env:NKAS_PID) {
+    Stop-Process -Id $env:NKAS_PID -Force
 }
 
-# Fallback: walk up the parent chain and try to find a python process running gui.py/main.py
-$current = (Get-CimInstance Win32_Process -Filter "ProcessId=$PID")
-while ($null -ne $current) {
-    $ppid = $current.ParentProcessId
-    if (-not $ppid -or $ppid -le 0) { break }
-    $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$ppid"
-    if ($null -eq $parent) { break }
-    if ($parent.Name -match "python" -and $parent.CommandLine -match "gui\\.py|main\\.py") {
-        Stop-Process -Id $parent.ProcessId -Force
-        exit 0
+# 2. Find and kill nkas.exe or python running nkas from the installation folder
+$processes = Get-CimInstance Win32_Process -Filter "Name = 'nkas.exe' OR Name like 'python%'"
+
+foreach ($p in $processes) {
+    # Check if nkas.exe is running from the root folder
+    if ($p.Name -eq "nkas.exe" -and $p.ExecutablePath -match "^$nkasRootPattern") {
+        Stop-Process -Id $p.ProcessId -Force
     }
-    $current = $parent
+    # Check if python is running gui.py or main.py from the root folder
+    elseif ($p.Name -match "^python" -and $p.CommandLine -match "gui\.py|main\.py" -and $p.CommandLine -match $nkasRootPattern) {
+        Stop-Process -Id $p.ProcessId -Force
+    }
 }
