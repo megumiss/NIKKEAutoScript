@@ -1658,7 +1658,6 @@
       "CurrentRank": {
         "type": "input",
         "value": "",
-        "valuetype": "str",
         "display": "disabled"
       }
     },

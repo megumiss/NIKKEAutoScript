@@ -176,7 +176,6 @@ SpecialArenaWatch:
     value: 10
   CurrentRank:
     value: ''
-    valuetype: str
     display: disabled
 OpponentSelection:
   Enable: false
