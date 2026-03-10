@@ -1,10 +1,9 @@
 import re
 
-from module.base.utils import _area_offset
 from module.logger import logger
 from module.notify import handle_notify
-from module.ocr.ocr import Digit, Ocr
-from module.special_arena.assets import  OWN_POWER_CHECK
+from module.ocr.ocr import Ocr
+from module.special_arena.assets import CURRENT_RANK
 from module.special_arena.special_arena import SpecialArena
 from module.ui.page import page_arena
 
@@ -14,52 +13,20 @@ class SpecialArenaIsUnavailable(Exception):
 
 
 class SpecialArenaWatch(SpecialArena):
-    @property
-    def rank_area(self):
-        # Current rank is displayed to the left of own power row.
-        return _area_offset(OWN_POWER_CHECK.area, (-365, -6, -130, 28))
-
-    @staticmethod
-    def _normalize_rank_text(text):
-        text = re.sub(r'\s+', '', text or '')
-        if not text:
-            return ''
-
-        patterns = [
-            r'(?:段位|排名|RANK|Rank|TIER|Tier|No\.?|NO\.?|#)[:：]?\s*([A-Za-z0-9一-龥._#-]+)',
-            r'#\s*([0-9]+)',
-        ]
-        for pattern in patterns:
-            matched = re.search(pattern, text, flags=re.IGNORECASE)
-            if matched:
-                return matched.group(1)
-
-        return text[:24]
-
     def get_current_rank(self):
         model_type = self.config.Optimization_OcrModelType
         ocr_lang = 'ch' if self.config.Client_Language == 'zh-CN' else 'en'
 
         rank_text = Ocr(
-            [self.rank_area],
+            [CURRENT_RANK],
             lang=ocr_lang,
             model_type=model_type,
-            name='SPECIAL_ARENA_CURRENT_RANK',
+            name='CURRENT_RANK',
         ).ocr(self.device.image)['text']
-        rank_text = self._normalize_rank_text(rank_text)
+
         if rank_text:
-            logger.attr(name='SPECIAL_ARENA_CURRENT_RANK', text=rank_text)
+            logger.attr(name='CURRENT_RANK', text=rank_text)
             return rank_text
-
-        rank_number = Digit(
-            [self.rank_area],
-            model_type=model_type,
-            name='SPECIAL_ARENA_CURRENT_RANK_NUM',
-        ).ocr(self.device.image)['text']
-        if rank_number and rank_number != '0':
-            logger.attr(name='SPECIAL_ARENA_CURRENT_RANK', text=rank_number)
-            return rank_number
-
         return ''
 
     def run(self):
