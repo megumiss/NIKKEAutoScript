@@ -28,7 +28,7 @@ def run_script(script_path):
     script_dir = os.path.dirname(script_path)
     original_cwd = os.getcwd()
     creation_flags = getattr(subprocess, 'CREATE_NEW_CONSOLE', 0)
-    popen_kwargs = {}
+    popen_kwargs = {'env': {**os.environ, 'NKAS_PID': str(os.getpid())}}
     if is_windows:
         popen_kwargs['creationflags'] = creation_flags
 
@@ -46,7 +46,7 @@ def run_script(script_path):
                 if not pwsh:
                     logger.warning('PowerShell (pwsh) not found for .ps1 on this platform')
                     return False
-                subprocess.Popen([pwsh, '-File', script_path])
+                subprocess.Popen([pwsh, '-File', script_path], **popen_kwargs)
                 logger.info(f'PowerShell script started: {script_path}')
         elif file_ext == '.bat':
             if not is_windows:
@@ -59,7 +59,7 @@ def run_script(script_path):
             if not bash:
                 logger.warning('bash not found for .sh script')
                 return False
-            subprocess.Popen([bash, script_path])
+            subprocess.Popen([bash, script_path], **popen_kwargs)
             logger.info(f'Shell script started: {script_path}')
         else:
             if not is_windows:
