@@ -25,15 +25,12 @@ def run_script(script_path):
         logger.warning(f'Unsupported script type: {file_ext}')
         return False
 
-    script_dir = os.path.dirname(script_path)
-    original_cwd = os.getcwd()
     creation_flags = getattr(subprocess, 'CREATE_NEW_CONSOLE', 0)
     popen_kwargs = {'env': {**os.environ, 'NKAS_PID': str(os.getpid())}}
     if is_windows:
         popen_kwargs['creationflags'] = creation_flags
 
     try:
-        os.chdir(script_dir)
         if file_ext == '.ps1':
             if is_windows:
                 subprocess.Popen(
@@ -71,5 +68,3 @@ def run_script(script_path):
     except Exception as e:
         logger.error(f'Failed to start script: {e}')
         return False
-    finally:
-        os.chdir(original_cwd)
