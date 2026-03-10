@@ -465,7 +465,7 @@
     },
     "ScriptPath": {
       "name": "Script Path",
-      "help": "Only supported on Windows, and only takes effect when running on Windows with Client.Platform=win"
+      "help": "Relative path of the script file. Windows supports .bat/.ps1/.exe; Linux supports .sh. Relative paths are based on the script's root directory. Preset scripts are located in scripts\\windows.For example, if you want to lock the screen after execution, you can enter: scripts\\windows\\lock.bat."
     }
   },
   "Reward": {

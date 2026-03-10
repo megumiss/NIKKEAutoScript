@@ -580,17 +580,12 @@ class NikkeAutoScript:
                         continue
                 elif method == 'run_script':
                     logger.info('Run script during wait')
-                    if self.config.Client_Platform == 'win' and sys.platform.startswith('win'):
-                        from module.device.win.script_runner import run_script
-
-                        run_script(self.config.Optimization_ScriptPath)
-                    else:
-                        logger.warning(
-                            '`run_script` only works when running on Windows and Client.Platform is `win`'
-                        )
                     release_resources()
                     # self.device.release_during_wait()
                     self._post_action()
+                    from module.device.win.script_runner import run_script
+
+                    run_script(self.config.Optimization_ScriptPath)
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue

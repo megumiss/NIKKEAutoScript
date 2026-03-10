@@ -465,7 +465,7 @@
     },
     "ScriptPath": {
       "name": "スクリプトパス",
-      "help": "Windows のみ対応。Windows 上で実行し、かつ Client.Platform=win の場合のみ有効"
+      "help": "スクリプトファイルの相対パス。Windowsは .bat / .ps1 / .exe、Linuxは .sh をサポートしています。相対パスはスクリプトのルートディレクトリを基準とします。プリセットスクリプトは scripts\\windows に配置されています。例えば、実行完了後に画面をロックしたい場合は、次のように入力します： scripts\\windows\\lock.bat"
     }
   },
   "Reward": {
