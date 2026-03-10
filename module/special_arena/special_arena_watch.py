@@ -29,7 +29,7 @@ class SpecialArenaWatch(SpecialArena):
         try:
             self.ensure_into_special_arena(start_competition=False)
             current_rank = self.get_current_rank()
-            previous_rank = (self.config.SpecialArenaWatch_CurrentRank or '').strip()
+            previous_rank = (self.config.SpecialArenaWatch_CurrentRank or '')
 
             if not current_rank:
                 logger.warning('Current rank not detected, skip rank change check')
