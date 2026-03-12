@@ -118,6 +118,13 @@ pre.rich-traceback-code {
     border: 0;
 }
 
+#pywebio-scope-content {
+    --warehouse-card-bg: #2f3136;
+    --warehouse-card-border: #21262d;
+    --warehouse-item-name: #e6e6e6;
+    --warehouse-item-count: #b0b3b8;
+}
+
 #pywebio-scope-aside {
     background-color: #202225;
     border-right: 1px solid #21262d;

@@ -40,6 +40,10 @@
       "name": "免费礼包",
       "help": ""
     },
+    "DataChart": {
+      "name": "数据图表",
+      "help": ""
+    },
     "Tool": {
       "name": "工具",
       "help": ""
@@ -213,6 +217,10 @@
     "MonthlyGift": {
       "name": "每月礼包",
       "help": ""
+    },
+    "WarehouseStats": {
+      "name": "仓库统计",
+      "help": "统计物品栏并保存为CSV"
     },
     "AutoTower": {
       "name": "自动爬塔",
@@ -1136,6 +1144,34 @@
       "help": "还没做"
     }
   },
+  "WarehouseStats": {
+    "_info": {
+      "name": "仓库统计设置",
+      "help": "仓库统计的隐藏配置项"
+    },
+    "ItemMapPath": {
+      "name": "物品映射配置",
+      "help": "物品模板、ID、名称与图标的对应关系配置文件路径"
+    },
+    "CsvPath": {
+      "name": "统计CSV路径",
+      "help": "统计结果输出的CSV路径"
+    },
+    "ScrollTimes": {
+      "name": "滚动次数",
+      "help": "扫描物品栏时的滚动次数"
+    }
+  },
+  "WarehouseItems": {
+    "_info": {
+      "name": "物品列表",
+      "help": "展示最近一次仓库统计的结果"
+    },
+    "Items": {
+      "name": "物品列表",
+      "help": ""
+    }
+  },
   "Account": {
     "_info": {
       "name": "账号设置",
@@ -1273,7 +1309,10 @@
       "InvalidFeedBack": "格式错误。 示例：{0}",
       "Clear": "清除",
       "EnterPassword": "输入密码",
-      "ChooseFile": "选择文件"
+      "ChooseFile": "选择文件",
+      "WarehouseOwned": "已拥有",
+      "WarehouseNoData": "暂无数据",
+      "WarehouseNoMap": "暂无数据模板"
     }
   }
 }

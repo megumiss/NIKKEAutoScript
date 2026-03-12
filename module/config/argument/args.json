@@ -2598,6 +2598,75 @@
       }
     }
   },
+  "WarehouseStats": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "WarehouseStats",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "WarehouseStats": {
+      "ItemMapPath": {
+        "type": "textarea",
+        "value": "./config/warehouse_items.yaml",
+        "display": "hide"
+      },
+      "CsvPath": {
+        "type": "textarea",
+        "value": "./data/warehouse_stats/items.csv",
+        "display": "hide"
+      },
+      "ScrollTimes": {
+        "type": "input",
+        "value": 5,
+        "display": "hide"
+      }
+    },
+    "WarehouseItems": {
+      "Items": {
+        "type": "item_table",
+        "value": {},
+        "display": "readonly"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "AutoTower": {
     "AutoTower": {
       "Enable": {

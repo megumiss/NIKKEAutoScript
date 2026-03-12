@@ -114,3 +114,6 @@ Text:
   Clear:
   EnterPassword:
   ChooseFile:
+  WarehouseOwned:
+  WarehouseNoData:
+  WarehouseNoMap:

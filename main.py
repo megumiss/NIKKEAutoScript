@@ -53,6 +53,10 @@ class NikkeAutoScript:
         # Key: str, task name, value: int, failure count
         self.failure_record = {}
 
+        # Initialize global warehouse stats files (mapping + sample csv)
+        from module.warehouse_stats.data import init_warehouse_stats_files
+        init_warehouse_stats_files()
+
     @cached_property
     def config(self):
         try:
@@ -496,6 +500,11 @@ class NikkeAutoScript:
         from module.notify.notify import Notify
 
         Notify(config=self.config, device=self.device).run()
+
+    def warehouse_stats(self):
+        from module.warehouse_stats.warehouse_stats import WarehouseStats
+
+        WarehouseStats(config=self.config, device=self.device).run()
 
     def wait_until(self, future):
         """

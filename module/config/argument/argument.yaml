@@ -356,6 +356,23 @@ SurfaceDaily:
   Heal:
     value: true
     display: disabled
+WarehouseStats:
+  ItemMapPath:
+    value: './config/warehouse_items.yaml'
+    type: textarea
+    display: hide
+  CsvPath:
+    value: './data/warehouse_stats/items.csv'
+    type: textarea
+    display: hide
+  ScrollTimes:
+    value: 5
+    display: hide
+WarehouseItems:
+  Items:
+    type: item_table
+    value: {}
+    display: readonly
 Account:
   Account:
     value: ''

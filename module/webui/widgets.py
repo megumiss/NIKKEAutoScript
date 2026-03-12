@@ -490,6 +490,103 @@ def put_arg_storage(kwargs: T_Output_Kwargs) -> Optional[Output]:
     )
 
 
+def _to_static_path(path: str) -> str:
+    if not path:
+        return ""
+    if path.startswith("./assets/"):
+        return "/static/" + path[len("./assets/") :]
+    return path
+
+
+def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
+    """
+    Render inventory item list table (read-only).
+    """
+    import html
+
+    from module.config.deep import deep_get
+    from module.warehouse_stats.data import (
+        DEFAULT_CSV_PATH,
+        DEFAULT_ITEM_MAP_PATH,
+        load_item_groups,
+        load_latest_counts,
+    )
+
+    name: str = kwargs["name"]
+
+    nkasgui = local.gui
+    config = nkasgui.nkas_config.read_file(nkasgui.nkas_name)
+
+    item_map_path = deep_get(
+        config,
+        keys=["WarehouseStats", "WarehouseStats", "ItemMapPath"],
+        default=DEFAULT_ITEM_MAP_PATH,
+    )
+    csv_path = deep_get(
+        config,
+        keys=["WarehouseStats", "WarehouseStats", "CsvPath"],
+        default=DEFAULT_CSV_PATH,
+    )
+
+    groups = load_item_groups(item_map_path)
+    counts = load_latest_counts(csv_path)
+
+    def finalize(outputs: List[Output]) -> Output:
+        scope = put_scope(f"arg_container-item-table-{name}", outputs)
+        scope.style("display: grid; grid-auto-flow: row; grid-template-columns: 1fr;")
+        return scope
+
+    content: List[Output] = []
+    if not groups:
+        content.append(put_text(t("Gui.Text.WarehouseNoMap")))
+        return finalize(content)
+
+    for group in groups:
+        cards = []
+        for item in group.get("items", []):
+            item_id = item.get("id", "")
+            icon_path = _to_static_path(item.get("icon", ""))
+            count = counts.get(item_id, {}).get("count", "")
+            count_text = count if str(count).strip() != "" else "-"
+
+            name_text = html.escape(str(item.get("name", item_id)))
+            owned_label = html.escape(t("Gui.Text.WarehouseOwned"))
+            count_text = html.escape(str(count_text))
+
+            if icon_path:
+                icon_html = (
+                    f'<img src="{html.escape(icon_path)}" '
+                    f'class="warehouse-item-icon-img" />'
+                )
+            else:
+                icon_html = '<div class="warehouse-item-icon-placeholder">-</div>'
+
+            cards.append(
+                f'<div class="warehouse-item-card">'
+                f'<div class="warehouse-item-icon">{icon_html}</div>'
+                f'<div class="warehouse-item-info">'
+                f'<div class="warehouse-item-name">{name_text}</div>'
+                f'<div class="warehouse-item-count">{owned_label}: {count_text}</div>'
+                f'</div>'
+                f'</div>'
+            )
+
+        if cards:
+            group_title = html.escape(str(group.get("name", "")))
+            grid_html = (
+                f'<div class="warehouse-group">'
+                f'<div class="warehouse-group-title">{group_title}</div>'
+                f'<div class="warehouse-items-grid">{"".join(cards)}</div>'
+                f'</div>'
+            )
+            content.append(put_html(grid_html))
+
+    if not counts:
+        content.append(put_text(t("Gui.Text.WarehouseNoData")))
+
+    return finalize(content)
+
+
 _widget_type_to_func: Dict[str, Callable] = {
     "input": put_arg_input,
     "lock": put_arg_state,
@@ -500,6 +597,7 @@ _widget_type_to_func: Dict[str, Callable] = {
     "storage": put_arg_storage,
     "state": put_arg_state,
     "stored": put_arg_stored,
+    "item_table": put_arg_item_table,
 }
 
 

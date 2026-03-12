@@ -40,6 +40,10 @@
       "name": "無料ギフト",
       "help": ""
     },
+    "DataChart": {
+      "name": "データチャート",
+      "help": ""
+    },
     "Tool": {
       "name": "ツール",
       "help": ""
@@ -213,6 +217,10 @@
     "MonthlyGift": {
       "name": "マンスリーギフト",
       "help": ""
+    },
+    "WarehouseStats": {
+      "name": "倉庫統計",
+      "help": "所持品をスキャンしてCSVに保存"
     },
     "AutoTower": {
       "name": "自動タワー",
@@ -1136,6 +1144,34 @@
       "help": "まだ作っていません。"
     }
   },
+  "WarehouseStats": {
+    "_info": {
+      "name": "倉庫統計設定",
+      "help": "倉庫統計の非表示設定"
+    },
+    "ItemMapPath": {
+      "name": "アイテム対応表",
+      "help": "テンプレート/ID/名称/アイコンの対応表ファイル"
+    },
+    "CsvPath": {
+      "name": "CSV出力先",
+      "help": "統計結果CSVの保存先"
+    },
+    "ScrollTimes": {
+      "name": "スクロール回数",
+      "help": "スキャン時のスクロール回数"
+    }
+  },
+  "WarehouseItems": {
+    "_info": {
+      "name": "アイテム一覧",
+      "help": "直近の倉庫統計結果"
+    },
+    "Items": {
+      "name": "アイテム一覧",
+      "help": ""
+    }
+  },
   "Account": {
     "_info": {
       "name": "アカウント設定",
@@ -1273,7 +1309,10 @@
       "InvalidFeedBack": "フォーマットエラー。 例：{0}",
       "Clear": "クリア",
       "EnterPassword": "パスワードを入力",
-      "ChooseFile": "ファイルを選択"
+      "ChooseFile": "ファイルを選択",
+      "WarehouseOwned": "??",
+      "WarehouseNoData": "???????????",
+      "WarehouseNoMap": "???????????????"
     }
   }
 }

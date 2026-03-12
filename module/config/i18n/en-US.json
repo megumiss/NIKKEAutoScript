@@ -40,6 +40,10 @@
       "name": "Free Gift",
       "help": ""
     },
+    "DataChart": {
+      "name": "Data Charts",
+      "help": ""
+    },
     "Tool": {
       "name": "Tools",
       "help": ""
@@ -213,6 +217,10 @@
     "MonthlyGift": {
       "name": "Monthly Gift",
       "help": ""
+    },
+    "WarehouseStats": {
+      "name": "Warehouse Stats",
+      "help": "Scan inventory and save results to CSV"
     },
     "AutoTower": {
       "name": "Auto Tower",
@@ -1136,6 +1144,34 @@
       "help": "Not done yet"
     }
   },
+  "WarehouseStats": {
+    "_info": {
+      "name": "Warehouse Stats",
+      "help": "Hidden settings for warehouse stats"
+    },
+    "ItemMapPath": {
+      "name": "Item Map Path",
+      "help": "Mapping config file (template/id/name/icon)"
+    },
+    "CsvPath": {
+      "name": "CSV Path",
+      "help": "CSV output path for inventory stats"
+    },
+    "ScrollTimes": {
+      "name": "Scroll Times",
+      "help": "Scroll count while scanning inventory"
+    }
+  },
+  "WarehouseItems": {
+    "_info": {
+      "name": "Item List",
+      "help": "Latest warehouse stats"
+    },
+    "Items": {
+      "name": "Item List",
+      "help": ""
+    }
+  },
   "Account": {
     "_info": {
       "name": "Account Setting",
@@ -1273,7 +1309,10 @@
       "InvalidFeedBack": "Invalid format. Example: {0}",
       "Clear": "Clear",
       "EnterPassword": "Enter Password",
-      "ChooseFile": "Choose File"
+      "ChooseFile": "Choose File",
+      "WarehouseOwned": "Owned",
+      "WarehouseNoData": "No stats data yet",
+      "WarehouseNoMap": "Item map not found"
     }
   }
 }

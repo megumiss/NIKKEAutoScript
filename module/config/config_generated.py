@@ -57,7 +57,7 @@ class GeneratedConfig:
     # Group `Optimization`
     Optimization_AutoRedCircle = False
     Optimization_OcrModelType = 'mobile'  # mobile, server
-    Optimization_WhenTaskQueueEmpty = 'goto_main'  # stay_there, goto_main, close_game, run_script (uses Optimization.ScriptPath)
+    Optimization_WhenTaskQueueEmpty = 'goto_main'  # stay_there, goto_main, close_game, run_script
     Optimization_ScriptPath = None
 
     # Group `Reward`
@@ -221,6 +221,14 @@ class GeneratedConfig:
     # Group `SurfaceDaily`
     SurfaceDaily_AutoPlace = True
     SurfaceDaily_Heal = True
+
+    # Group `WarehouseStats`
+    WarehouseStats_ItemMapPath = './config/warehouse_items.yaml'
+    WarehouseStats_CsvPath = './data/warehouse_stats/items.csv'
+    WarehouseStats_ScrollTimes = 5
+
+    # Group `WarehouseItems`
+    WarehouseItems_Items = {}
 
     # Group `Account`
     Account_Account = None
