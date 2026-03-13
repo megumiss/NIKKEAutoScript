@@ -18,39 +18,6 @@ CSV_COLUMNS = [
     "group_name",
 ]
 
-DEFAULT_ITEM_MAP = {
-    "version": 1,
-    "groups": [
-        {
-            "id": "sample",
-            "name": "示例分组",
-            "items": [
-                {
-                    "id": "sample_a",
-                    "name": "示例物品A",
-                    "template": "./assets/zh-CN/outpost/FAVORITE_ITEM_BAY.png",
-                    "icon": "/static/zh-CN/outpost/FAVORITE_ITEM_BAY.png",
-                    "scan": False,
-                },
-                {
-                    "id": "sample_b",
-                    "name": "示例物品B",
-                    "template": "./assets/zh-CN/outpost/FAVORITE_ITEM_CENTI.png",
-                    "icon": "/static/zh-CN/outpost/FAVORITE_ITEM_CENTI.png",
-                    "scan": False,
-                },
-                {
-                    "id": "sample_c",
-                    "name": "示例物品C",
-                    "template": "./assets/zh-CN/outpost/FAVORITE_ITEM_ZWEI.png",
-                    "icon": "/static/zh-CN/outpost/FAVORITE_ITEM_ZWEI.png",
-                    "scan": False,
-                },
-            ],
-        }
-    ],
-}
-
 
 def _ensure_parent_dir(path: str) -> None:
     folder = os.path.dirname(path)
@@ -72,9 +39,10 @@ def ensure_sample_csv(csv_path: str = None, item_map_path: str = None) -> str:
     groups = load_item_groups(item_map_path)
     items = flatten_groups(groups)
     if not items:
-        items = flatten_groups(DEFAULT_ITEM_MAP.get("groups", []))
-        if not items:
-            return csv_path
+        logger.warning(
+            f"WarehouseStats: No items found in {item_map_path}, skip sample CSV init."
+        )
+        return csv_path
 
     items_with_counts = []
     for idx, item in enumerate(items, start=1):
@@ -102,7 +70,12 @@ def load_item_groups(path: str = None) -> List[dict]:
     Each group contains normalized items with group fields.
     """
     path = ensure_item_map_file(path or DEFAULT_ITEM_MAP_PATH)
+    if not path or not os.path.exists(path):
+        raise FileNotFoundError(f"WarehouseStats: item map file not found: {path}")
     data = read_file(path)
+    if not isinstance(data, dict):
+        logger.warning(f"WarehouseStats: Invalid item map format in {path}")
+        return []
     groups = data.get("groups", [])
     if not groups:
         logger.warning(f"WarehouseStats: No item groups found in {path}")

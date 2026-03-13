@@ -5,19 +5,19 @@ groups:
     items:
       - id: sample_a
         name: 示例物品A
-        template: ./assets/zh-CN/outpost/FAVORITE_ITEM_BAY.png
-        icon: /static/zh-CN/outpost/FAVORITE_ITEM_BAY.png
+        template: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_BAY_TEMPLATE.png
+        icon: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_BAY_ICON.png
         scan: false
       - id: sample_b
         name: 示例物品B
-        template: ./assets/zh-CN/outpost/FAVORITE_ITEM_CENTI.png
-        icon: /static/zh-CN/outpost/FAVORITE_ITEM_CENTI.png
+        template: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_CENTI_TEMPLATE.png
+        icon: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_CENTI_ICON.png
         scan: false
   - id: other
     name: 示例分组
     items:
       - id: sample_c
         name: 示例物品C
-        template: ./assets/zh-CN/outpost/FAVORITE_ITEM_ZWEI.png
-        icon: /static/zh-CN/outpost/FAVORITE_ITEM_ZWEI.png
+        template: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_ZWEI_TEMPLATE.png
+        icon: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_ZWEI_ICON.png
         scan: false

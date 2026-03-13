@@ -7,8 +7,6 @@ from module.ocr.ocr import Digit
 from module.ui.page import page_inventory
 from module.ui.ui import UI
 from module.warehouse_stats.data import (
-    DEFAULT_CSV_PATH,
-    DEFAULT_ITEM_MAP_PATH,
     flatten_groups,
     load_item_groups,
     write_inventory_csv,
@@ -36,33 +34,34 @@ class WarehouseStats(UI):
 
     def run(self):
         logger.hr("Warehouse Stats", 2)
-        self.ui_ensure(page_inventory)
+        try:
+            self.ui_ensure(page_inventory)
 
-        item_map_path = getattr(
-            self.config, "WarehouseStats_ItemMapPath", DEFAULT_ITEM_MAP_PATH
-        )
-        csv_path = getattr(self.config, "WarehouseStats_CsvPath", DEFAULT_CSV_PATH)
-        scroll_times = int(getattr(self.config, "WarehouseStats_ScrollTimes", 5))
+            item_map_path = self.config.WarehouseStats_ItemMapPath
+            csv_path = self.config.WarehouseStats_CsvPath
+            scroll_times = int(self.config.WarehouseStats_ScrollTimes)
 
-        groups = load_item_groups(item_map_path)
-        items = flatten_groups(groups)
-        if not items:
-            logger.warning("WarehouseStats: No items configured, skip scan.")
+            groups = load_item_groups(item_map_path)
+            items = flatten_groups(groups)
+            if not items:
+                logger.warning("WarehouseStats: No items configured, skip scan.")
+                return
+
+            results = self.scan_inventory(items, scroll_times=scroll_times)
+            items_to_write = []
+            for item in items:
+                item_id = item.get("id")
+                if item_id in results:
+                    item = item.copy()
+                    item["count"] = results[item_id]
+                    items_to_write.append(item)
+
+            rows = write_inventory_csv(csv_path, items_to_write)
+            logger.info(f"WarehouseStats: Saved {rows} rows to {csv_path}")
+        except Exception:
+            logger.exception("WarehouseStats: Scan failed.")
+        finally:
             self.config.task_delay(server_update=True)
-            return
-
-        results = self.scan_inventory(items, scroll_times=scroll_times)
-        items_to_write = []
-        for item in items:
-            item_id = item.get("id")
-            if item_id in results:
-                item = item.copy()
-                item["count"] = results[item_id]
-                items_to_write.append(item)
-
-        rows = write_inventory_csv(csv_path, items_to_write)
-        logger.info(f"WarehouseStats: Saved {rows} rows to {csv_path}")
-        self.config.task_delay(server_update=True)
 
     def scan_inventory(self, items: List[dict], scroll_times: int = 5) -> Dict[str, int]:
         templates = self._load_templates(items)
