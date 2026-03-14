@@ -33,7 +33,7 @@ class WarehouseStats(UI):
     SCROLL_END = (360, 520)
 
     def run(self):
-        logger.hr("Warehouse Stats", 2)
+        logger.hr('Warehouse Stats', 2)
         try:
             self.ui_ensure(page_inventory)
 
@@ -44,22 +44,22 @@ class WarehouseStats(UI):
             groups = load_item_groups(item_map_path)
             items = flatten_groups(groups)
             if not items:
-                logger.warning("WarehouseStats: No items configured, skip scan.")
+                logger.warning('WarehouseStats: No items configured, skip scan.')
                 return
 
             results = self.scan_inventory(items, scroll_times=scroll_times)
             items_to_write = []
             for item in items:
-                item_id = item.get("id")
+                item_id = item.get('id')
                 if item_id in results:
                     item = item.copy()
-                    item["count"] = results[item_id]
+                    item['count'] = results[item_id]
                     items_to_write.append(item)
 
             rows = write_inventory_csv(csv_path, items_to_write)
-            logger.info(f"WarehouseStats: Saved {rows} rows to {csv_path}")
+            logger.info(f'WarehouseStats: Saved {rows} rows to {csv_path}')
         except Exception:
-            logger.exception("WarehouseStats: Scan failed.")
+            logger.exception('WarehouseStats: Scan failed.')
         finally:
             self.config.task_delay(server_update=True)
 
@@ -71,17 +71,17 @@ class WarehouseStats(UI):
             self.device.screenshot()
 
             for item in items:
-                item_id = item.get("id")
+                item_id = item.get('id')
                 if not item_id or item_id in results:
                     continue
-                if not item.get("scan", True):
+                if not item.get('scan', True):
                     continue
 
                 template = templates.get(item_id)
                 if template is None:
                     continue
 
-                similarity = float(item.get("similarity", 0.88))
+                similarity = float(item.get('similarity', 0.88))
                 sim, button = template.match_result(self.device.image, name=item_id)
                 if sim < similarity:
                     continue
@@ -98,12 +98,12 @@ class WarehouseStats(UI):
     def _load_templates(self, items: List[dict]) -> Dict[str, Template]:
         templates: Dict[str, Template] = {}
         for item in items:
-            item_id = item.get("id")
-            path = item.get("template")
+            item_id = item.get('id')
+            path = item.get('template')
             if not item_id or not path:
                 continue
             if not os.path.exists(path):
-                logger.warning(f"WarehouseStats: template not found: {path}")
+                logger.warning(f'WarehouseStats: template not found: {path}')
                 continue
             templates[item_id] = Template(file=path)
         return templates
@@ -125,5 +125,5 @@ class WarehouseStats(UI):
         """
         Scroll inventory list.
         """
-        self.device.swipe(self.SCROLL_START, self.SCROLL_END, method="scroll")
+        self.device.swipe(self.SCROLL_START, self.SCROLL_END, method='scroll')
         self.device.sleep(0.3)
