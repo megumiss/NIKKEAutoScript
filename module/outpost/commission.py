@@ -104,12 +104,12 @@ class Commission(UI):
                 self.device.screenshot()
 
             if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(
-                ITEM_SELECTED, offset=10, threshold=0.6, interval=1
+                ITEM_SELECTED, threshold=20, interval=1
             ):
                 click_timer.reset()
                 continue
 
-            if self.appear(ITEM_SELECTED_NUM_CHECK, offset=100):
+            if self.appear(ITEM_SELECTED_NUM_CHECK, offset=200):
                 self.device.sleep(0.5)
                 self.device.screenshot()
                 num = self.favorite_item_num
@@ -118,12 +118,12 @@ class Commission(UI):
                 while 1:
                     self.device.screenshot()
 
-                    if not self.appear(ITEM_SELECTED_NUM_CHECK, offset=100) and self.appear(
+                    if not self.appear(ITEM_SELECTED_NUM_CHECK, offset=200) and self.appear(
                         COMMISSION_CHECK, offset=10
                     ):
                         click_timer.reset()
                         break
-                    if self.appear(ITEM_SELECTED_NUM_CHECK, offset=100):
+                    if self.appear(ITEM_SELECTED_NUM_CHECK, offset=200):
                         logger.info('Click %s @ %s' % (point2str(10, 10), 'CLOSE_ITEM'))
                         self.device.click_minitouch(10, 10)
                         self.device.sleep(0.5)
@@ -133,35 +133,101 @@ class Commission(UI):
                 click_timer.reset()
                 break
 
-        if num >= 160:
-            # 更换收藏品
-            logger.info(f'Current favorite item num: {num}, need reselect')
-            # 打开收藏品列表
+        nikke_list = self.shop_delay_list.copy()
+        if not nikke_list:
+            logger.info('Favorite item priority list empty, skip reselect')
+            return
+
+        need_reselect = num >= 160
+        remove_current = num >= 160
+        list_opened = False
+        if not need_reselect:
+            # 获取当前收藏品并与首位优先级比较
             while 1:
                 self.device.screenshot()
 
-                if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(ITEM_SELECT, offset=(40, 10)):
+                if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(ITEM_SELECT, offset=(100, 10)):
                     click_timer.reset()
                     continue
                 if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear(
                     ITEM_LIST_SELECT_CONFIRM, threshold=10
                 ):
+                    list_opened = True
                     click_timer.reset()
                     break
 
+            current = None
+            for item in nikke_list:
+                if self.appear(self.get_item_button(item), offset=10, static=False) and self.appear(
+                    ITEM_SELECTED_IN_FAVORITE_LIST, offset=10, static=False
+                ):
+                    item_loc = self.appear_location(self.get_item_button(item), offset=10, static=False)
+                    selected_loc = self.appear_location(ITEM_SELECTED_IN_FAVORITE_LIST, offset=10, static=False)
+                    if abs(item_loc[1] - selected_loc[1]) < 50:
+                        current = item
+                        logger.info(f'Current favorite item: {current}')
+                        break
+
+            if current == nikke_list[0]:
+                logger.info(
+                    f'Current favorite item num: {num}, current item matches priority first ({current}), skip reselect'
+                )
+                # 退出选择列表
+                while 1:
+                    self.device.screenshot()
+                    if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear_then_click(
+                        ITEM_LIST_SELECT_CONFIRM, threshold=10
+                    ):
+                        click_timer.reset()
+                        continue
+                    if self.appear(COMMISSION_CHECK, offset=10):
+                        break
+                return
+            if current:
+                logger.info(
+                    f'Current favorite item num: {num}, current item {current} != priority first {nikke_list[0]}, need reselect'
+                )
+                need_reselect = True
+            else:
+                logger.warning('Current favorite item can not judge, force reselect')
+                need_reselect = True
+
+        if need_reselect:
+            # 更换收藏品
+            logger.info(f'Current favorite item num: {num}, need reselect')
+            # 打开收藏品列表
+            if not list_opened:
+                while 1:
+                    self.device.screenshot()
+
+                    if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(
+                        ITEM_SELECT, offset=(100, 10)
+                    ):
+                        click_timer.reset()
+                        continue
+                    if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear(
+                        ITEM_LIST_SELECT_CONFIRM, threshold=10
+                    ):
+                        click_timer.reset()
+                        break
+
             # 循环判断超出数量的是哪个收藏品
-            nikke_list = self.shop_delay_list.copy()
             current = None
             for item in self.shop_delay_list:
-                if self.appear(self.get_item_button(item), offset=10, static=False):
-                    current = item
-                    logger.info(f'Current favorite item: {current}')
-                    break
+                if self.appear(self.get_item_button(item), offset=10, static=False) and self.appear(
+                    ITEM_SELECTED_IN_FAVORITE_LIST, offset=10, static=False
+                ):
+                    item_loc = self.appear_location(self.get_item_button(item), offset=10, static=False)
+                    selected_loc = self.appear_location(ITEM_SELECTED_IN_FAVORITE_LIST, offset=10, static=False)
+                    if abs(item_loc[1] - selected_loc[1]) < 50:
+                        current = item
+                        logger.info(f'Current favorite item: {current}')
+                        break
             if not current:
                 logger.warning('Current favorite item can not judge')
             else:
                 # 只有多个候选时才移除
-                if len(nikke_list) > 1 and current in nikke_list:
+                if remove_current and len(nikke_list) > 1 and current in nikke_list:
                     nikke_list.remove(current)
                     logger.info(f'Remove current favorite item: {current}')
                     self.config.CollectionItems_Priority = ' > '.join(nikke_list)
@@ -171,7 +237,6 @@ class Commission(UI):
             # 滑动到列表开始位置
             self.ensure_sroll((620, 400), (620, 900), speed=30, count=3, delay=0.3, method='swipe')
             # 选择新的收藏品
-            select_times = 0
             while 1:
                 self.device.screenshot()
 
@@ -179,30 +244,25 @@ class Commission(UI):
                 if self.appear(COMMISSION_CHECK, offset=10):
                     break
 
-                # 派遣选择
-                if (
-                    select_times > 2
-                    and self.appear(ITEM_LIST_CHECK, offset=(70, 10))
-                    and self.appear_then_click(ITEM_LIST_SELECT_CONFIRM, threshold=10)
-                ):
-                    click_timer.reset()
-                    continue
-
                 # 选择收藏品（这里取的是删除旧收藏品之后的第一个）
                 if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and nikke_list:
                     if self.appear_then_click(
-                        self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0), static=False
+                        self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0), interval=1, static=False
                     ):
                         logger.info(f'Select new favorite item: {nikke_list[0]}')
-                        select_times += 1
                         click_timer.reset()
+                    else:
+                        # 未找到收藏品，进行滑动
+                        self.device.sleep(0.5)
+                        self.ensure_sroll((620, 1000), (620, 700), speed=5, count=1, delay=0.5, method='scroll')
                         continue
 
-                # 未找到收藏品，进行滑动
-                self.device.sleep(0.5)
-                self.ensure_sroll((620, 1000), (620, 700), speed=5, count=1, delay=0.5, method='scroll')
-        else:
-            logger.info(f'Current favorite item num: {num}, skip reselect')
+                # 派遣选择
+                if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear_then_click(
+                    ITEM_LIST_SELECT_CONFIRM, threshold=10
+                ):
+                    click_timer.reset()
+                    continue
 
     def dispatch(self, skip_first_screenshot=True):
         logger.hr('Dispatch commission', 2)
