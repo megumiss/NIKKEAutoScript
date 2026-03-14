@@ -510,6 +510,8 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
         DEFAULT_ITEM_MAP_PATH,
         load_item_groups,
         load_latest_counts,
+        resolve_item_asset_path,
+        resolve_item_prefix,
     )
 
     name: str = kwargs["name"]
@@ -545,7 +547,8 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
         cards = []
         for item in group.get("items", []):
             item_id = item.get("id", "")
-            icon_path = _to_static_path(item.get("icon", ""))
+            prefix = resolve_item_prefix(item)
+            icon_path = _to_static_path(resolve_item_asset_path(prefix, "ICON"))
             count = counts.get(item_id, {}).get("count", "")
             count_text = count if str(count).strip() != "" else "-"
 

@@ -4,20 +4,14 @@ groups:
     name: 示例分组
     items:
       - id: sample_a
-        name: 示例物品A
-        template: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_BAY_TEMPLATE.png
-        icon: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_BAY_ICON.png
-        scan: false
+        name: FAVORITE_ITEM_BAY
+        scan: true
       - id: sample_b
-        name: 示例物品B
-        template: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_CENTI_TEMPLATE.png
-        icon: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_CENTI_ICON.png
-        scan: false
+        name: FAVORITE_ITEM_CENTI
+        scan: true
   - id: other
     name: 示例分组
     items:
       - id: sample_c
-        name: 示例物品C
-        template: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_ZWEI_TEMPLATE.png
-        icon: ./assets/zh-CN/warehouse_stats/FAVORITE_ITEM_ZWEI_ICON.png
-        scan: false
+        name: FAVORITE_ITEM_ZWEI
+        scan: true

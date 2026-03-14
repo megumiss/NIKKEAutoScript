@@ -1310,9 +1310,9 @@
       "Clear": "クリア",
       "EnterPassword": "パスワードを入力",
       "ChooseFile": "ファイルを選択",
-      "WarehouseOwned": "??",
-      "WarehouseNoData": "???????????",
-      "WarehouseNoMap": "???????????????"
+      "WarehouseOwned": "所持",
+      "WarehouseNoData": "統計データがありません",
+      "WarehouseNoMap": "アイテムマップが見つかりません"
     }
   }
 }

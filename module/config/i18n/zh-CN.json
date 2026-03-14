@@ -1310,9 +1310,9 @@
       "Clear": "清除",
       "EnterPassword": "输入密码",
       "ChooseFile": "选择文件",
-      "WarehouseOwned": "已拥有",
-      "WarehouseNoData": "暂无数据",
-      "WarehouseNoMap": "暂无数据模板"
+      "WarehouseOwned": "拥有",
+      "WarehouseNoData": "暂无统计数据",
+      "WarehouseNoMap": "未找到物品映射配置"
     }
   }
 }

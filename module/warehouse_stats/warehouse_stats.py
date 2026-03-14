@@ -1,14 +1,20 @@
 import os
+import re
 from typing import Dict, List
 
-from module.base.template import Template
+from module.base.button import Button
+from module.base.langs import Langs
 from module.logger import logger
-from module.ocr.ocr import Digit
+from module.ocr.ocr import Digit, Ocr
+from module.ui.assets import INVENTORY_CHECK
 from module.ui.page import page_inventory
 from module.ui.ui import UI
+from module.warehouse_stats.assets import *
 from module.warehouse_stats.data import (
     flatten_groups,
     load_item_groups,
+    resolve_item_asset,
+    resolve_item_prefix,
     write_inventory_csv,
 )
 
@@ -25,18 +31,28 @@ class WarehouseStats(UI):
     5) Write results to CSV
     """
 
-    # TODO: Adjust count area to actual inventory UI.
-    ITEM_COUNT_AREA = (271, 557, 449, 588)
+    def inventory_item_num(self, area):
+        model_type = self.config.Optimization_OcrModelType
+        ITEM_NUM = Ocr(
+            [area],
+            name='INVENTORY_ITEM',
+            model_type=model_type,
+            lang='ch',
+        )
 
-    # TODO: Adjust scroll positions to actual inventory list area.
-    SCROLL_START = (360, 920)
-    SCROLL_END = (360, 520)
+        text = ITEM_NUM.ocr(self.device.image)['text']
+        match = re.search(rf'{Langs.FAVORITE_ITEM_NUM}[:：]\s*(\d+)', text)
+        if match:
+            return int(match.group(1))
+
+        return 0
 
     def run(self):
         logger.hr('Warehouse Stats', 2)
         try:
             self.ui_ensure(page_inventory)
 
+            # 读取配置与物品映射
             item_map_path = self.config.WarehouseStats_ItemMapPath
             csv_path = self.config.WarehouseStats_CsvPath
             scroll_times = int(self.config.WarehouseStats_ScrollTimes)
@@ -47,6 +63,7 @@ class WarehouseStats(UI):
                 logger.warning('WarehouseStats: No items configured, skip scan.')
                 return
 
+            # 扫描背包并写入 CSV
             results = self.scan_inventory(items, scroll_times=scroll_times)
             items_to_write = []
             for item in items:
@@ -67,45 +84,88 @@ class WarehouseStats(UI):
         templates = self._load_templates(items)
         results: Dict[str, int] = {}
 
-        for page in range(max(scroll_times, 0) + 1):
+        # 仅保留需要扫描且模板可用的物品，减少无意义识别
+        pending: Dict[str, Button] = {}
+        for item in items:
+            item_id = item.get('id')
+            if not item_id or not item.get('scan', True):
+                continue
+            button = templates.get(item_id)
+            if button is None:
+                continue
+            pending[item_id] = button
+
+        while 1:
+            # 每轮先截图，再在当前页面进行匹配
             self.device.screenshot()
+            # 识别结束
+            if not pending:
+                break
 
-            for item in items:
-                item_id = item.get('id')
-                if not item_id or item_id in results:
+            remaining: Dict[str, Button] = {}
+            for item_id, button in pending.items():
+                # 已经识别过，跳过
+                if results.get(item_id):
                     continue
-                if not item.get('scan', True):
+                # 没有识别到物品，跳过
+                if not self.appear(button, offset=10, static=False):
+                    remaining[item_id] = button
                     continue
+                else:
+                    # 识别到物品，打开详情
+                    logger.info(f'WarehouseStats: Found item: {item_id}')
+                    while 1:
+                        self.device.screenshot()
+                        if self.appear(INVENTORY_ITEM_CLOSE, offset=10, static=False):
+                            break
+                        if self.appear_then_click(button, offset=10, interval=1, static=False):
+                            continue
+                    # 识别范围
+                    owner_loc = self.appear_location(INVENTORY_ITEM_CLOSE, offset=10, static=False)
+                    # 识别
+                    results[item_id] = self.inventory_item_num(
+                        (720 - owner_loc[0], owner_loc[1] + 200, owner_loc[0], owner_loc[1] + 270)
+                    )
+                    # 关闭详情
+                    while 1:
+                        self.device.screenshot()
+                        if self.appear_then_click(INVENTORY_ITEM_CLOSE, offset=10, interval=1, static=False):
+                            continue
+                        if self.appear(INVENTORY_CHECK, offset=10):
+                            break
 
-                template = templates.get(item_id)
-                if template is None:
-                    continue
+            # 没有要识别的物品了
+            pending = remaining
+            if not pending:
+                break
 
-                similarity = float(item.get('similarity', 0.88))
-                sim, button = template.match_result(self.device.image, name=item_id)
-                if sim < similarity:
-                    continue
+            # 判断是否已到最下方
+            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10):
+                logger.info('WarehouseStats: Reached bottom of inventory list.')
+                break
 
-                self.device.click(button)
-                self.device.sleep(0.2)
-                results[item_id] = self._read_selected_count()
-
-            if page < scroll_times:
-                self._scroll_items_list()
+            # 滑动
+            self.ensure_sroll((450, 950), (450, 250), speed=5, count=1, delay=0.3, method='scroll')
 
         return results
 
-    def _load_templates(self, items: List[dict]) -> Dict[str, Template]:
-        templates: Dict[str, Template] = {}
+    def _load_templates(self, items: List[dict]) -> Dict[str, Button]:
+        templates: Dict[str, Button] = {}
         for item in items:
             item_id = item.get('id')
-            path = item.get('template')
-            if not item_id or not path:
+            if not item_id:
+                continue
+            # name 为模板前缀，直接从 assets 取 {name}_TEMPLATE
+            prefix = resolve_item_prefix(item)
+            asset = resolve_item_asset(prefix, 'TEMPLATE')
+            path = getattr(asset, 'file', '') if asset else ''
+            if not path:
+                logger.warning(f'WarehouseStats: template asset not found: {prefix}_TEMPLATE')
                 continue
             if not os.path.exists(path):
-                logger.warning(f'WarehouseStats: template not found: {path}')
+                logger.warning(f'WarehouseStats: template file not found: {path}')
                 continue
-            templates[item_id] = Template(file=path)
+            templates[item_id] = asset
         return templates
 
     def _read_selected_count(self) -> int:
@@ -120,10 +180,3 @@ class WarehouseStats(UI):
             return int(result)
         except Exception:
             return 0
-
-    def _scroll_items_list(self):
-        """
-        Scroll inventory list.
-        """
-        self.device.swipe(self.SCROLL_START, self.SCROLL_END, method='scroll')
-        self.device.sleep(0.3)

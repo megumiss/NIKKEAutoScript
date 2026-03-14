@@ -89,9 +89,8 @@ def load_item_groups(path: str = None) -> List[dict]:
             items.append(
                 {
                     'id': item_id,
-                    'name': str(item.get('name', item_id)),
-                    'template': item.get('template'),
-                    'icon': item.get('icon'),
+                    # Name is the template prefix, e.g. FAVORITE_ITEM_ZWEI
+                    'name': str(item.get('name', item_id)).strip(),
                     'scan': item.get('scan', True),
                     'group_id': group_id,
                     'group_name': group_name,
@@ -108,6 +107,29 @@ def flatten_groups(groups: List[dict]) -> List[dict]:
         for item in group.get('items', []):
             items.append(item)
     return items
+
+
+def resolve_item_prefix(item: dict) -> str:
+    if not item:
+        return ''
+    return str(item.get('name', '')).strip()
+
+
+def resolve_item_asset(prefix: str, suffix: str):
+    if not prefix:
+        return None
+    try:
+        from module.warehouse_stats import assets
+    except Exception:
+        return None
+    return getattr(assets, f'{prefix}_{suffix}', None)
+
+
+def resolve_item_asset_path(prefix: str, suffix: str) -> str:
+    asset = resolve_item_asset(prefix, suffix)
+    if asset is None:
+        return ''
+    return getattr(asset, 'file', '') or ''
 
 
 def load_latest_counts(csv_path: str) -> Dict[str, dict]:
