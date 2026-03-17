@@ -2,6 +2,8 @@ import os
 import re
 from typing import Dict, List
 
+import cv2
+
 from module.base.button import Button
 from module.base.langs import Langs
 from module.logger import logger
@@ -35,12 +37,15 @@ class WarehouseStats(UI):
         model_type = self.config.Optimization_OcrModelType
         ITEM_NUM = Ocr(
             [area],
+            text_color=((248, 252, 254)),
+            text_color_tolerance=(80, 10, 40),
             name='INVENTORY_ITEM',
             model_type=model_type,
             lang='ch',
         )
 
         text = ITEM_NUM.ocr(self.device.image)['text']
+        # text = ITEM_NUM.ocr(cv2.imread('D:\\PCR\\1773557710499_d.png'))['text']
         match = re.search(rf'{Langs.FAVORITE_ITEM_NUM}[:：]\s*(\d+)', text)
         if match:
             return int(match.group(1))
@@ -51,11 +56,11 @@ class WarehouseStats(UI):
         logger.hr('Warehouse Stats', 2)
         try:
             self.ui_ensure(page_inventory)
+            # items = TEMPLATE_ITEM_NUM_PREFIX.match_multi(self.device.image, threshold=0.95, name='ITEM_NUM_PREFIX')
 
             # 读取配置与物品映射
             item_map_path = self.config.WarehouseStats_ItemMapPath
             csv_path = self.config.WarehouseStats_CsvPath
-            scroll_times = int(self.config.WarehouseStats_ScrollTimes)
 
             groups = load_item_groups(item_map_path)
             items = flatten_groups(groups)
@@ -64,7 +69,7 @@ class WarehouseStats(UI):
                 return
 
             # 扫描背包并写入 CSV
-            results = self.scan_inventory(items, scroll_times=scroll_times)
+            results = self.scan_inventory(items)
             items_to_write = []
             for item in items:
                 item_id = item.get('id')
@@ -80,7 +85,7 @@ class WarehouseStats(UI):
         finally:
             self.config.task_delay(server_update=True)
 
-    def scan_inventory(self, items: List[dict], scroll_times: int = 5) -> Dict[str, int]:
+    def scan_inventory(self, items: List[dict]) -> Dict[str, int]:
         templates = self._load_templates(items)
         results: Dict[str, int] = {}
 
