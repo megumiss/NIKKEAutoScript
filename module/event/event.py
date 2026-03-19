@@ -69,7 +69,7 @@ class Event(
                 continue
 
             # 跳过剧情
-            if click_timer.reached() and self.appear_then_click(SKIP, offset=10, interval=2):
+            if click_timer.reached() and self.appear_then_click(SKIP, offset=(150, 10), interval=2):
                 click_timer.reset()
                 confirm_timer.reset()
                 continue

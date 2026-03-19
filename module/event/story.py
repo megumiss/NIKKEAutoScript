@@ -442,7 +442,7 @@ class EventStory(EventBase):
                     continue
 
                 # 跳过剧情
-                if self.appear_then_click(SKIP, offset=30, interval=1):
+                if self.appear_then_click(SKIP, offset=(150, 10), interval=1):
                     continue
 
                 # 下一关卡

@@ -243,7 +243,7 @@ class Conversation(UI):
             ):
                 click_timer.reset()
                 continue
-            if click_timer.reached() and self.appear_then_click(SKIP, offset=5, static=False):
+            if click_timer.reached() and self.appear_then_click(SKIP, offset=(150, 10), static=False):
                 click_timer.reset()
                 continue
 
