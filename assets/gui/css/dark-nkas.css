@@ -123,6 +123,14 @@ pre.rich-traceback-code {
     --warehouse-card-border: #21262d;
     --warehouse-item-name: #e6e6e6;
     --warehouse-item-count: #b0b3b8;
+    --interception-chart-bg: #2f3136;
+    --interception-chart-border: #21262d;
+    --interception-chart-title: #e6e6e6;
+    --interception-chart-grid: #3f434a;
+    --interception-chart-axis: #7d8590;
+    --interception-chart-line: #66b8ea;
+    --interception-chart-fill: rgba(102, 184, 234, 0.14);
+    --interception-chart-text: #adb5bd;
 }
 
 #pywebio-scope-aside {

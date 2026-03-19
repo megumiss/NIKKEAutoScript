@@ -2667,6 +2667,30 @@
       }
     }
   },
+  "InterceptionTaskStats": {
+    "InterceptionDropStats": {
+      "CsvPath": {
+        "type": "textarea",
+        "value": "./data/interception_stats/stones.csv",
+        "display": "hide"
+      }
+    },
+    "InterceptionTaskCharts": {
+      "Charts": {
+        "type": "interception_stone_charts",
+        "value": {},
+        "display": "readonly"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "AutoTower": {
     "AutoTower": {
       "Enable": {

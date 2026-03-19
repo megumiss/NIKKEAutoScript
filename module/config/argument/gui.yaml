@@ -117,3 +117,11 @@ Text:
   WarehouseOwned:
   WarehouseNoData:
   WarehouseNoMap:
+  InterceptionNoData:
+  InterceptionChartDaily:
+  InterceptionChartWeekly:
+  InterceptionChartMonthly:
+  InterceptionChartSum:
+  InterceptionChartMax:
+  InterceptionChartAvg:
+  InterceptionStoneUnit:

@@ -222,6 +222,10 @@
       "name": "仓库统计",
       "help": "统计物品栏并保存为CSV"
     },
+    "InterceptionTaskStats": {
+      "name": "任务",
+      "help": "异常拦截掉落石头统计（日/周/月）"
+    },
     "AutoTower": {
       "name": "自动爬塔",
       "help": ""
@@ -1172,6 +1176,26 @@
       "help": ""
     }
   },
+  "InterceptionDropStats": {
+    "_info": {
+      "name": "异常拦截掉落统计设置",
+      "help": "异常拦截掉落石头统计的隐藏配置项"
+    },
+    "CsvPath": {
+      "name": "统计CSV路径",
+      "help": "异常拦截石头掉落统计结果输出的CSV路径"
+    }
+  },
+  "InterceptionTaskCharts": {
+    "_info": {
+      "name": "异常拦截石头统计",
+      "help": "以每日、每周、每月三个折线图展示异常拦截掉落石头数量"
+    },
+    "Charts": {
+      "name": "折线图",
+      "help": ""
+    }
+  },
   "Account": {
     "_info": {
       "name": "账号设置",
@@ -1312,7 +1336,15 @@
       "ChooseFile": "选择文件",
       "WarehouseOwned": "拥有",
       "WarehouseNoData": "暂无统计数据",
-      "WarehouseNoMap": "未找到物品映射配置"
+      "WarehouseNoMap": "未找到物品映射配置",
+      "InterceptionNoData": "暂无异常拦截掉落石头统计数据",
+      "InterceptionChartDaily": "每日石头掉落（最近30天）",
+      "InterceptionChartWeekly": "每周石头掉落（最近12周）",
+      "InterceptionChartMonthly": "每月石头掉落（最近12个月）",
+      "InterceptionChartSum": "总计",
+      "InterceptionChartMax": "最大",
+      "InterceptionChartAvg": "平均",
+      "InterceptionStoneUnit": "石头"
     }
   }
 }

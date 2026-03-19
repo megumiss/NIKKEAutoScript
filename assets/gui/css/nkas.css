@@ -569,6 +569,72 @@ pre.rich-traceback-code {
     color: var(--warehouse-item-count, #777777);
 }
 
+.interception-chart-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.interception-chart-card {
+    border: 1px solid var(--interception-chart-border, #e6e6e6);
+    background: var(--interception-chart-bg, #ffffff);
+    border-radius: 0.6rem;
+    padding: 0.6rem 0.75rem 0.5rem;
+}
+
+.interception-chart-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--interception-chart-title, #333333);
+    margin-bottom: 0.35rem;
+}
+
+.interception-chart-svg {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 860 / 220;
+    display: block;
+}
+
+.interception-chart-grid line.interception-chart-grid {
+    stroke: var(--interception-chart-grid, #ececec);
+    stroke-width: 1;
+}
+
+.interception-chart-axis {
+    stroke: var(--interception-chart-axis, #b5b5b5);
+    stroke-width: 1;
+}
+
+.interception-chart-line {
+    fill: none;
+    stroke: var(--interception-chart-line, #4e4c97);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.interception-chart-area {
+    fill: var(--interception-chart-fill, rgba(78, 76, 151, 0.12));
+}
+
+.interception-chart-point {
+    fill: var(--interception-chart-line, #4e4c97);
+}
+
+.interception-chart-axis-text {
+    font-size: 10px;
+    fill: var(--interception-chart-text, #777777);
+}
+
+.interception-chart-meta {
+    margin-top: 0.2rem;
+    display: flex;
+    gap: 0.8rem;
+    font-size: 0.78rem;
+    color: var(--interception-chart-text, #777777);
+}
+
 *[style*="--arg-help--"] {
     font-size: .8rem;
     margin: .2rem .25rem .1rem !important;
