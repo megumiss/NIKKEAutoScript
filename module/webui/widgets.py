@@ -1,4 +1,4 @@
-import copy
+﻿import copy
 import json
 import random
 import string
@@ -590,6 +590,169 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
     return finalize(content)
 
 
+def _build_svg_line_chart(
+    title: str,
+    labels: List[str],
+    values: List[int],
+    unit_text: str,
+    sum_text: str,
+    max_text: str,
+    avg_text: str,
+) -> str:
+    import html
+
+    if not labels or not values:
+        labels = ['-']
+        values = [0]
+
+    width = 860
+    height = 220
+    left = 52
+    right = 18
+    top = 18
+    bottom = 36
+    plot_w = width - left - right
+    plot_h = height - top - bottom
+
+    max_val = max(max(values), 1)
+    count = len(values)
+    x_step = plot_w / max(count - 1, 1)
+
+    points = []
+    for i, value in enumerate(values):
+        x = left + i * x_step
+        y = top + plot_h * (1 - (value / max_val))
+        points.append((x, y, value))
+
+    point_str = ' '.join(f'{x:.2f},{y:.2f}' for x, y, _ in points)
+    if len(points) == 1:
+        px, py, _ = points[0]
+        point_str = f'{left:.2f},{py:.2f} {left + plot_w:.2f},{py:.2f}'
+
+    area_points = point_str + f' {left + plot_w:.2f},{top + plot_h:.2f} {left:.2f},{top + plot_h:.2f}'
+
+    y_ticks = []
+    for i in range(5):
+        ratio = i / 4
+        value = int(round(max_val * (1 - ratio)))
+        y = top + plot_h * ratio
+        y_ticks.append((value, y))
+
+    tick_count = min(6, len(labels))
+    x_tick_idx = {
+        int(round(i * (len(labels) - 1) / max(tick_count - 1, 1)))
+        for i in range(tick_count)
+    }
+
+    circles = []
+    x_labels = []
+    for i, (x, y, value) in enumerate(points):
+        circles.append(
+            (
+                f'<circle cx="{x:.2f}" cy="{y:.2f}" r="2.6" class="interception-chart-point">'
+                f'<title>{html.escape(labels[i])}: {value} {html.escape(unit_text)}</title>'
+                f'</circle>'
+            )
+        )
+        if i in x_tick_idx:
+            label = html.escape(labels[i])
+            x_labels.append(
+                f'<text x="{x:.2f}" y="{height - 12}" class="interception-chart-axis-text" text-anchor="middle">{label}</text>'
+            )
+
+    y_grid = []
+    for value, y in y_ticks:
+        y_grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left + plot_w}" y2="{y:.2f}" class="interception-chart-grid" />')
+        y_grid.append(
+            f'<text x="{left - 8}" y="{y + 4:.2f}" class="interception-chart-axis-text" text-anchor="end">{value}</text>'
+        )
+
+    total = sum(values)
+    peak = max(values)
+    average = total / len(values) if values else 0
+
+    return (
+        f'<div class="interception-chart-card">'
+        f'<div class="interception-chart-title">{html.escape(title)}</div>'
+        f'<svg class="interception-chart-svg" viewBox="0 0 {width} {height}" preserveAspectRatio="xMidYMid meet">'
+        f'{"".join(y_grid)}'
+        f'<line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" class="interception-chart-axis" />'
+        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_h}" class="interception-chart-axis" />'
+        f'<polygon points="{area_points}" class="interception-chart-area" />'
+        f'<polyline points="{point_str}" class="interception-chart-line" />'
+        f'{"".join(circles)}'
+        f'{"".join(x_labels)}'
+        f'</svg>'
+        f'<div class="interception-chart-meta">'
+        f'<span>{html.escape(sum_text)}: {total}</span>'
+        f'<span>{html.escape(max_text)}: {peak}</span>'
+        f'<span>{html.escape(avg_text)}: {average:.1f}</span>'
+        f'</div>'
+        f'</div>'
+    )
+
+
+def put_arg_interception_stone_charts(kwargs: T_Output_Kwargs) -> Output:
+    from module.config.deep import deep_get
+    from module.interception.data import (
+        DEFAULT_STONE_CSV_PATH,
+        build_daily_series,
+        build_monthly_series,
+        build_weekly_series,
+        load_interception_stone_rows,
+    )
+
+    name: str = kwargs["name"]
+
+    nkasgui = local.gui
+    config = nkasgui.nkas_config.read_file(nkasgui.nkas_name)
+
+    csv_path = deep_get(
+        config,
+        keys=["InterceptionTaskStats", "InterceptionDropStats", "CsvPath"],
+        default=DEFAULT_STONE_CSV_PATH,
+    )
+
+    rows = load_interception_stone_rows(csv_path, config_name=nkasgui.nkas_name)
+    outputs: List[Output] = []
+    unit_text = t("Gui.Text.InterceptionStoneUnit")
+    no_data_text = t("Gui.Text.InterceptionNoData")
+    daily_title = t("Gui.Text.InterceptionChartDaily")
+    weekly_title = t("Gui.Text.InterceptionChartWeekly")
+    monthly_title = t("Gui.Text.InterceptionChartMonthly")
+    sum_text = t("Gui.Text.InterceptionChartSum")
+    max_text = t("Gui.Text.InterceptionChartMax")
+    avg_text = t("Gui.Text.InterceptionChartAvg")
+
+    if not rows:
+        outputs.append(put_text(no_data_text))
+        scope = put_scope(f"arg_container-interception-chart-{name}", outputs)
+        scope.style("display: grid; grid-template-columns: 1fr; gap: 0.75rem;")
+        return scope
+
+    day_labels, day_values = build_daily_series(rows, days=30)
+    week_labels, week_values = build_weekly_series(rows, weeks=12)
+    month_labels, month_values = build_monthly_series(rows, months=12)
+
+    chart_html = (
+        '<div class="interception-chart-grid">'
+        + _build_svg_line_chart(
+            daily_title, day_labels, day_values, unit_text, sum_text, max_text, avg_text
+        )
+        + _build_svg_line_chart(
+            weekly_title, week_labels, week_values, unit_text, sum_text, max_text, avg_text
+        )
+        + _build_svg_line_chart(
+            monthly_title, month_labels, month_values, unit_text, sum_text, max_text, avg_text
+        )
+        + '</div>'
+    )
+    outputs.append(put_html(chart_html))
+    scope = put_scope(f"arg_container-interception-chart-{name}", outputs)
+    scope.style("display: grid; grid-template-columns: 1fr; gap: 0.75rem;")
+    return scope
+
+
 _widget_type_to_func: Dict[str, Callable] = {
     "input": put_arg_input,
     "lock": put_arg_state,
@@ -601,6 +764,7 @@ _widget_type_to_func: Dict[str, Callable] = {
     "state": put_arg_state,
     "stored": put_arg_stored,
     "item_table": put_arg_item_table,
+    "interception_stone_charts": put_arg_interception_stone_charts,
 }
 
 
@@ -631,3 +795,4 @@ def put_loading_text(
         ],
         size=size,
     )
+

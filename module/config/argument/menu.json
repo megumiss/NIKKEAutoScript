@@ -105,7 +105,8 @@
     "menu": "collapse",
     "page": "setting",
     "tasks": [
-      "WarehouseStats"
+      "WarehouseStats",
+      "InterceptionTaskStats"
     ]
   },
   "Tool": {

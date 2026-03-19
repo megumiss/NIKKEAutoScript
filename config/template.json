@@ -750,6 +750,17 @@
       "Storage": {}
     }
   },
+  "InterceptionTaskStats": {
+    "InterceptionDropStats": {
+      "CsvPath": "./data/interception_stats/stones.csv"
+    },
+    "InterceptionTaskCharts": {
+      "Charts": {}
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "AutoTower": {
     "AutoTower": {
       "Enable": true

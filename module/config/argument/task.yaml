@@ -199,6 +199,9 @@ DataChart:
       - Scheduler
       - WarehouseStats
       - WarehouseItems
+    InterceptionTaskStats:
+      - InterceptionDropStats
+      - InterceptionTaskCharts
 
 # ==================== Tool ====================
 

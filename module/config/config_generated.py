@@ -230,6 +230,12 @@ class GeneratedConfig:
     # Group `WarehouseItems`
     WarehouseItems_Items = {}
 
+    # Group `InterceptionDropStats`
+    InterceptionDropStats_CsvPath = './data/interception_stats/stones.csv'
+
+    # Group `InterceptionTaskCharts`
+    InterceptionTaskCharts_Charts = {}
+
     # Group `Account`
     Account_Account = None
     Account_Password = None

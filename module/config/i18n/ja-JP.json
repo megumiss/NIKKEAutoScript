@@ -222,6 +222,10 @@
       "name": "倉庫統計",
       "help": "所持品をスキャンしてCSVに保存"
     },
+    "InterceptionTaskStats": {
+      "name": "タスク",
+      "help": "異常迎撃の石ドロップ統計（日/週/月）"
+    },
     "AutoTower": {
       "name": "自動タワー",
       "help": ""
@@ -1172,6 +1176,26 @@
       "help": ""
     }
   },
+  "InterceptionDropStats": {
+    "_info": {
+      "name": "Interception Drop Stats",
+      "help": "Hidden settings for interception drop statistics"
+    },
+    "CsvPath": {
+      "name": "Stats CSV Path",
+      "help": "CSV path for interception stone drops"
+    }
+  },
+  "InterceptionTaskCharts": {
+    "_info": {
+      "name": "Interception Stone Charts",
+      "help": "Daily, weekly, and monthly charts generated from interception drop records"
+    },
+    "Charts": {
+      "name": "Charts",
+      "help": ""
+    }
+  },
   "Account": {
     "_info": {
       "name": "アカウント設定",
@@ -1312,7 +1336,15 @@
       "ChooseFile": "ファイルを選択",
       "WarehouseOwned": "所持",
       "WarehouseNoData": "統計データがありません",
-      "WarehouseNoMap": "アイテムマップが見つかりません"
+      "WarehouseNoMap": "アイテムマップが見つかりません",
+      "InterceptionNoData": "異常迎撃の石ドロップ統計データがありません",
+      "InterceptionChartDaily": "日次の石ドロップ（直近30日）",
+      "InterceptionChartWeekly": "週次の石ドロップ（直近12週）",
+      "InterceptionChartMonthly": "月次の石ドロップ（直近12か月）",
+      "InterceptionChartSum": "合計",
+      "InterceptionChartMax": "最大",
+      "InterceptionChartAvg": "平均",
+      "InterceptionStoneUnit": "石"
     }
   }
 }
