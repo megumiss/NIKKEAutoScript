@@ -4,6 +4,7 @@ from module.base.button import filter_buttons_in_area, merge_buttons
 from module.base.decorator import Config
 from module.base.timer import Timer
 from module.base.utils import sort_buttons_by_location
+from module.conversation.assets import ANSWER_CHECK
 from module.event.assets import *
 from module.event.base import EventBase
 from module.event.challenge import CHALLENGE_QUICKLY_DISABLE
@@ -59,7 +60,7 @@ class EventStory(EventBase):
 
         for attr_name in dir(self.event_assets):
             if attr_name.startswith(prefix):
-                suffix = attr_name[len(prefix):]
+                suffix = attr_name[len(prefix) :]
                 if suffix == '' or (suffix.startswith('_') and suffix[1:].isdigit()):
                     buttons.append(getattr(self.event_assets, attr_name))
 
@@ -116,7 +117,7 @@ class EventStory(EventBase):
 
                     # story1主页
                     if click_timer.reached() and self.appear_then_click(
-                        self.event_assets.STORY_1_CHECK, offset=(10,10), interval=3
+                        self.event_assets.STORY_1_CHECK, offset=(10, 10), interval=3
                     ):
                         click_timer.reset()
                         continue
@@ -275,7 +276,7 @@ class EventStory(EventBase):
 
                 # story主页
                 if click_timer.reached() and self.appear_then_click(
-                    self.event_assets.STORY_1_CHECK, offset=(10,10), interval=3
+                    self.event_assets.STORY_1_CHECK, offset=(10, 10), interval=3
                 ):
                     click_timer.reset()
                     continue
@@ -288,14 +289,14 @@ class EventStory(EventBase):
                     continue
 
                 # story普通难度列表页面
-                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10,10)) and self.appear(
+                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10, 10)) and self.appear(
                     self.event_assets.STORY_1_NORMAL, threshold=20
                 ):
                     click_timer.reset()
                     break
 
                 # story困难难度列表页面，困难更新后需要重新截图
-                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10,10)) and self.appear(
+                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10, 10)) and self.appear(
                     self.event_assets.STORY_1_HARD, threshold=10
                 ):
                     click_timer.reset()
@@ -443,6 +444,9 @@ class EventStory(EventBase):
 
                 # 跳过剧情
                 if self.appear_then_click(SKIP, offset=(150, 10), interval=1):
+                    continue
+                # 剧情选项
+                if self.appear_then_click(ANSWER_CHECK, offset=100, interval=3):
                     continue
 
                 # 下一关卡

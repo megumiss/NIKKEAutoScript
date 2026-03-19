@@ -98,8 +98,8 @@ class ManualConfig:
         {
             "event_id": "event_20260319",
             "event_name": "2x2 Love",
-            # 小型活动
-            "event_type": 2,
+            # 大型活动
+            "event_type": 3,
             "mini_game": False,
             "mini_game_play": True,
             "story_part": "Story_1",  # Story_1, Story_2
