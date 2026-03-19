@@ -57,7 +57,7 @@ class GeneratedConfig:
     # Group `Optimization`
     Optimization_AutoRedCircle = False
     Optimization_OcrModelType = 'mobile'  # mobile, server
-    Optimization_WhenTaskQueueEmpty = 'goto_main'  # stay_there, goto_main, close_game, run_script (uses Optimization.ScriptPath)
+    Optimization_WhenTaskQueueEmpty = 'goto_main'  # stay_there, goto_main, close_game, run_script
     Optimization_ScriptPath = None
 
     # Group `Reward`
@@ -150,7 +150,7 @@ class GeneratedConfig:
     BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
 
     # Group `EventInfo`
-    EventInfo_Event = ''  # event_20260212, event_20260303, event_20260129, event_20260115, event_20251230, event_20251204, event_20251120, event_20251030, event_20251016, event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
+    EventInfo_Event = ''  # event_20260319, event_20260303, event_20260212, event_20260129, event_20260115, event_20251230, event_20251204, event_20251120, event_20251030, event_20251016, event_20250924, event_20250904, event_20250807, event_20250716, event_20250703s, event_20250703l, event_20250612
     EventInfo_StoryPart = 'Story_1'  # Story_1, Story_2
     EventInfo_StoryDifficulty = 'Normal'  # Normal, Hard
 
