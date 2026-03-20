@@ -54,6 +54,12 @@ class WarehouseStats(UI):
     # 相邻两行格子左上角 Y 间距（含空隙）
     GRID_STEP_Y = 115
 
+    # Grid valid viewport bounds (full cell must be inside this area)
+    GRID_VIEW_X1 = GRID_START_X
+    GRID_VIEW_Y1 = GRID_START_Y
+    GRID_VIEW_X2 = GRID_START_X + (GRID_COLS - 1) * GRID_STEP_X + GRID_CELL_WIDTH
+    GRID_VIEW_Y2 = GRID_START_Y + (GRID_ROWS - 1) * GRID_STEP_Y + GRID_CELL_HEIGHT
+
     # 数量前缀模板匹配阈值（越大越严格）
     GRID_PREFIX_SIMILARITY = 0.78
     # 物品模板匹配阈值（越大越严格）
@@ -162,19 +168,26 @@ class WarehouseStats(UI):
         while page_index < max_pages and pending:
             self.device.screenshot()
             image = self.device.image.copy()
+            drop_anchor_row = False
 
             # 翻页后，先找锚点位置，再重算当前页第一行起点
             if anchor_button is not None:
                 if self.appear(anchor_button, offset=10, threshold=self.GRID_ANCHOR_THRESHOLD, static=False):
                     x1, y1, _, _ = anchor_button.button
                     grid_origin = (x1, y1)
+                    drop_anchor_row = True
                     logger.info(f'WarehouseStats: Grid anchor aligned at ({x1}, {y1})')
                 else:
                     logger.warning('WarehouseStats: Grid anchor not found, fallback to fixed grid origin.')
                     grid_origin = (self.GRID_START_X, self.GRID_START_Y)
 
             # 将当前页按固定变量切为 5x7 格
-            cells = self._split_inventory_cells(image=image, origin=grid_origin, page_index=page_index)
+            cells = self._split_inventory_cells(
+                image=image,
+                origin=grid_origin,
+                page_index=page_index,
+                drop_anchor_row=drop_anchor_row,
+            )
             for cell in cells:
                 if not pending:
                     break
@@ -212,6 +225,13 @@ class WarehouseStats(UI):
                 break
 
             # 取“最后一行第一个格子”作为锚点，供下一页定位使用
+            if not cells:
+                logger.warning('WarehouseStats: No valid grid cells on current page, skip anchor update once.')
+                anchor_button = None
+                self.ensure_sroll((450, 950), (450, 400), speed=5, count=1, delay=1, method='scroll')
+                page_index += 1
+                continue
+
             anchor_cell = self._get_anchor_cell(cells)
             anchor_button = self._build_anchor_button(image=image, area=anchor_cell['area'])
 
@@ -273,7 +293,13 @@ class WarehouseStats(UI):
 
             self.ensure_sroll((450, 950), (450, 250), speed=5, count=1, delay=0.3, method='scroll')
 
-    def _split_inventory_cells(self, image, origin: Tuple[int, int], page_index: int = 0) -> List[dict]:
+    def _split_inventory_cells(
+        self,
+        image,
+        origin: Tuple[int, int],
+        page_index: int = 0,
+        drop_anchor_row: bool = False,
+    ) -> List[dict]:
         """
         将当前页按固定网格分割为多个待识别格子：
         1) cell: 仅格子裁剪图（用于匹配物品模板）
@@ -291,6 +317,11 @@ class WarehouseStats(UI):
                 y2 = y1 + self.GRID_CELL_HEIGHT
 
                 area = (x1, y1, x2, y2)
+                if drop_anchor_row and row == 0:
+                    continue
+                if not self._is_cell_fully_visible(area):
+                    continue
+
                 cell_image = crop(image, area)
 
                 # 构造“只保留当前格子，其余位置涂黑”的整图
@@ -322,13 +353,23 @@ class WarehouseStats(UI):
 
         return cells
 
+    def _is_cell_fully_visible(self, area: Tuple[int, int, int, int]) -> bool:
+        x1, y1, x2, y2 = area
+        return (
+            x1 >= self.GRID_VIEW_X1 and y1 >= self.GRID_VIEW_Y1 and x2 <= self.GRID_VIEW_X2 and y2 <= self.GRID_VIEW_Y2
+        )
+
     def _get_anchor_cell(self, cells: List[dict]) -> dict:
         # 锚点固定选用：最后一行第一个格子
-        target_row = self.GRID_ROWS - 1
-        for cell in cells:
-            if cell['row'] == target_row and cell['col'] == 0:
-                return cell
-        return cells[-self.GRID_COLS]
+        if not cells:
+            raise ValueError('WarehouseStats: cannot build anchor from empty cell list.')
+
+        target_row = max(cell['row'] for cell in cells)
+        row_cells = [cell for cell in cells if cell['row'] == target_row]
+        first_col_cell = [cell for cell in row_cells if cell['col'] == 0]
+        if first_col_cell:
+            return first_col_cell[0]
+        return sorted(row_cells, key=lambda cell: cell['col'])[0]
 
     def _build_anchor_button(self, image, area: Tuple[int, int, int, int]) -> Button:
         # 用当前页锚点格子的实际图像动态构造 Button，供下一页 appear() 定位
