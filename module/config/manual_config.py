@@ -12,7 +12,7 @@ class ManualConfig:
        SurfaceDaily >
        BlaDaily > BlaCDK > BlaExchange >
        SpecialArenaWatch >
-       Notify >
+       Notify > WarehouseStats >
        AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate > UpdateHosts
        """
 

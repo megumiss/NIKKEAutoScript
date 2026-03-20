@@ -72,6 +72,10 @@ MonthlyGift:
   Scheduler:
     Enable: false
 
+WarehouseStats:
+  Scheduler:
+    Enable: false
+
 BlaDaily:
   Scheduler:
     Enable: false

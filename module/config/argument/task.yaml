@@ -189,6 +189,20 @@ Gift:
     MonthlyGift:
       - Scheduler
 
+# ==================== DataChart ====================
+
+DataChart:
+  menu: 'collapse'
+  page: 'setting'
+  tasks:
+    WarehouseStats:
+      - Scheduler
+      - WarehouseStats
+      - WarehouseItems
+    InterceptionTaskStats:
+      - InterceptionDropStats
+      - InterceptionTaskCharts
+
 # ==================== Tool ====================
 
 Tool:

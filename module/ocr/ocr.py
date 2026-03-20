@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 
 from module.ocr.models import OCR_MODEL
 
-
+ColorRGB = Tuple[int, int, int]
 TextColorInput = Union[
-    Tuple[int, int, int],
+    ColorRGB,
     List[int],
     Dict[str, Sequence[int]],
 ]
@@ -28,6 +28,8 @@ TextColorInput = Union[
 class Ocr:
     SHOW_REVISE_WARNING = False
     HSV_TOLERANCE = (10, 80, 80)
+    DEBUG_SAVE_DIR = None
+    OCR_SCALE = 3.0
 
     def __init__(
         self,
@@ -37,6 +39,7 @@ class Ocr:
         interval=0,
         name=None,
         text_color: Optional[TextColorInput] = None,
+        text_color_tolerance: Optional[Tuple[int, int, int]] = None,
     ):
         """
         Args:
@@ -45,6 +48,7 @@ class Ocr:
             model_type (str): 'mobile' or 'server'
             name (str):
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
+            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，仅在 text_color 为 RGB 时生效。
         """
         self.name = str(buttons) if isinstance(buttons, Button) else name
         self._buttons = buttons
@@ -52,6 +56,7 @@ class Ocr:
         self.lang = lang
         self.interval = interval
         self.text_color = text_color
+        self.text_color_tolerance = text_color_tolerance
 
     @property
     def paddleocr(self) -> 'NIKKEOcr':
@@ -90,49 +95,72 @@ class Ocr:
             ranges.append(((lower_h, 179), (lower_s, upper_s), (lower_v, upper_v)))
         return ranges
 
-    def _build_text_mask(self, image: np.ndarray, text_color: TextColorInput) -> Optional[np.ndarray]:
+    def _build_text_mask(
+        self,
+        image: np.ndarray,
+        text_color: TextColorInput,
+        tolerance: Optional[Tuple[int, int, int]] = None,
+    ) -> Optional[np.ndarray]:
         if text_color is None:
             return None
 
         hsv_img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        tol = tolerance or self.HSV_TOLERANCE
 
         if isinstance(text_color, dict):
             lower = text_color.get('lower') or text_color.get('hsv_lower')
             upper = text_color.get('upper') or text_color.get('hsv_upper')
             hsv = text_color.get('hsv')
-            tol = text_color.get('tolerance', self.HSV_TOLERANCE)
+            tol = text_color.get('tolerance', tol)
             if lower is not None and upper is not None:
                 lower = np.array(lower, dtype=np.uint8)
                 upper = np.array(upper, dtype=np.uint8)
-                return cv2.inRange(hsv_img, lower, upper)
-            if hsv is None:
-                return None
-            hsv_color = np.array(hsv, dtype=np.uint8)
-            ranges = self._hsv_ranges_from_color(hsv_color, tol)
+                mask = cv2.inRange(hsv_img, lower, upper)
+            else:
+                if hsv is None:
+                    return None
+                hsv_color = np.array(hsv, dtype=np.uint8)
+                ranges = self._hsv_ranges_from_color(hsv_color, tol)
+                mask = None
+                for h_range, s_range, v_range in ranges:
+                    lower = np.array([h_range[0], s_range[0], v_range[0]], dtype=np.uint8)
+                    upper = np.array([h_range[1], s_range[1], v_range[1]], dtype=np.uint8)
+                    part = cv2.inRange(hsv_img, lower, upper)
+                    mask = part if mask is None else cv2.bitwise_or(mask, part)
         else:
             rgb = np.array(text_color, dtype=np.uint8).reshape((1, 1, 3))
             hsv_color = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)[0][0]
-            ranges = self._hsv_ranges_from_color(hsv_color, self.HSV_TOLERANCE)
+            ranges = self._hsv_ranges_from_color(hsv_color, tol)
+            mask = None
+            for h_range, s_range, v_range in ranges:
+                lower = np.array([h_range[0], s_range[0], v_range[0]], dtype=np.uint8)
+                upper = np.array([h_range[1], s_range[1], v_range[1]], dtype=np.uint8)
+                part = cv2.inRange(hsv_img, lower, upper)
+                mask = part if mask is None else cv2.bitwise_or(mask, part)
 
-        mask = None
-        for h_range, s_range, v_range in ranges:
-            lower = np.array([h_range[0], s_range[0], v_range[0]], dtype=np.uint8)
-            upper = np.array([h_range[1], s_range[1], v_range[1]], dtype=np.uint8)
-            part = cv2.inRange(hsv_img, lower, upper)
-            mask = part if mask is None else cv2.bitwise_or(mask, part)
         return mask
 
-    def pre_process(self, image, text_color: Optional[TextColorInput] = None):
+    def pre_process(
+        self,
+        image,
+        text_color: Optional[TextColorInput] = None,
+        text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+    ):
         """
         Args:
             image (np.ndarray): Shape (height, width, channel)
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
+            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，RGB 模式下生效。
 
         Returns:
             np.ndarray: Shape (width, height)
         """
         if text_color is not None and len(image.shape) == 3:
-            mask = self._build_text_mask(image, text_color)
+            mask = self._build_text_mask(
+                image,
+                text_color,
+                tolerance=text_color_tolerance,
+            )
             if mask is not None and np.any(mask):
                 image = cv2.bitwise_and(image, image, mask=mask)
 
@@ -143,10 +171,21 @@ class Ocr:
 
         # Otsu二值化
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # 反色：白底黑字
+        binary = cv2.bitwise_not(binary)
+        # 放大
+        binary = self._scale_for_ocr(binary)
+        # cv2.imwrite('D:\\PCR\\20260314174634.png', binary)
 
         # 转回3通道
         binary_colored = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
         return binary_colored.astype(np.uint8)
+
+    def _scale_for_ocr(self, image: np.ndarray) -> np.ndarray:
+        scale = self.OCR_SCALE
+        if scale == 1 or scale is None:
+            return image
+        return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
 
     def after_process(self, result):
         """
@@ -165,18 +204,21 @@ class Ocr:
         threshold: float = 0.51,
         show_log=True,
         text_color: Optional[TextColorInput] = None,
+        text_color_tolerance: Optional[Tuple[int, int, int]] = None,
     ):
         """
         Args:
             image (np.ndarray, list[np.ndarray]):
             direct_ocr (bool): True to skip cropping.
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
+            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，RGB 模式下生效。
 
         Returns:
             list[str] or str
         """
         start_time = time.time()
         text_color = self.text_color if text_color is None else text_color
+        text_color_tolerance = self.text_color_tolerance if text_color_tolerance is None else text_color_tolerance
 
         # Otsu二值化处理
         images_to_ocr = []
@@ -185,8 +227,17 @@ class Ocr:
         else:
             images_to_ocr = [crop(image, area) for area in self.buttons]
 
+        # images_to_ocr = [self._scale_for_ocr(img) for img in images_to_ocr]
+
         if text_color is not None:
-            images_to_ocr = [self.pre_process(img, text_color=text_color) for img in images_to_ocr]
+            images_to_ocr = [
+                self.pre_process(
+                    img,
+                    text_color=text_color,
+                    text_color_tolerance=text_color_tolerance,
+                )
+                for img in images_to_ocr
+            ]
 
         result = self.paddleocr.predict(images_to_ocr)
         # 处理识别结果
@@ -288,9 +339,22 @@ class Digit(Ocr):
     """
 
     def __init__(
-        self, buttons, lang='num', model_type='mobile', name=None, text_color: Optional[TextColorInput] = None
+        self,
+        buttons,
+        lang='num',
+        model_type='mobile',
+        name=None,
+        text_color: Optional[TextColorInput] = None,
+        text_color_tolerance: Optional[Tuple[int, int, int]] = None,
     ):
-        super().__init__(buttons, lang=lang, model_type=model_type, name=name, text_color=text_color)
+        super().__init__(
+            buttons,
+            lang=lang,
+            model_type=model_type,
+            name=name,
+            text_color=text_color,
+            text_color_tolerance=text_color_tolerance,
+        )
 
     def after_process(self, result):
         result = super().after_process(result)
@@ -337,16 +401,35 @@ class Digit(Ocr):
 
 class DigitCounter(Ocr):
     def __init__(
-        self, buttons, lang='num', model_type='mobile', name=None, text_color: Optional[TextColorInput] = None
+        self,
+        buttons,
+        lang='num',
+        model_type='mobile',
+        name=None,
+        text_color: Optional[TextColorInput] = None,
+        text_color_tolerance: Optional[Tuple[int, int, int]] = None,
     ):
-        super().__init__(buttons, lang=lang, model_type=model_type, name=name, text_color=text_color)
+        super().__init__(
+            buttons,
+            lang=lang,
+            model_type=model_type,
+            name=name,
+            text_color=text_color,
+            text_color_tolerance=text_color_tolerance,
+        )
 
     def after_process(self, result):
         result = super().after_process(result)
         result = result.replace('I', '1').replace('D', '0').replace('S', '5').replace('B', '8')
         return result
 
-    def ocr(self, image, direct_ocr=False, text_color: Optional[TextColorInput] = None):
+    def ocr(
+        self,
+        image,
+        direct_ocr=False,
+        text_color: Optional[TextColorInput] = None,
+        text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+    ):
         """
         DigitCounter only support doing OCR on one button.
         Do OCR on a counter, such as `14/15`, and returns 14, 1, 15
@@ -354,7 +437,12 @@ class DigitCounter(Ocr):
         Returns:
             int, int, int: current, remain, total.
         """
-        result_list = super().ocr(image, direct_ocr=direct_ocr, text_color=text_color)
+        result_list = super().ocr(
+            image,
+            direct_ocr=direct_ocr,
+            text_color=text_color,
+            text_color_tolerance=text_color_tolerance,
+        )
         result = result_list[0] if isinstance(result_list, list) else result_list
 
         result = re.search(r'(\d+)/(\d+)', result)
@@ -368,15 +456,36 @@ class DigitCounter(Ocr):
 
 
 class Duration(Ocr):
-    def __init__(self, buttons, lang='en', model_type='mobile', name=None, text_color: Optional[TextColorInput] = None):
-        super().__init__(buttons, lang=lang, model_type=model_type, name=name, text_color=text_color)
+    def __init__(
+        self,
+        buttons,
+        lang='en',
+        model_type='mobile',
+        name=None,
+        text_color: Optional[TextColorInput] = None,
+        text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+    ):
+        super().__init__(
+            buttons,
+            lang=lang,
+            model_type=model_type,
+            name=name,
+            text_color=text_color,
+            text_color_tolerance=text_color_tolerance,
+        )
 
     def after_process(self, result):
         result = super().after_process(result)
         result = result.replace('I', '1').replace('D', '0').replace('S', '5').replace('B', '8')
         return result
 
-    def ocr(self, image, direct_ocr=False, text_color: Optional[TextColorInput] = None):
+    def ocr(
+        self,
+        image,
+        direct_ocr=False,
+        text_color: Optional[TextColorInput] = None,
+        text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+    ):
         """
         Do OCR on a duration, such as `01:30:00`.
 
@@ -387,7 +496,12 @@ class Duration(Ocr):
         Returns:
             list, datetime.timedelta: timedelta object, or a list of it.
         """
-        result_list = super().ocr(image, direct_ocr=direct_ocr, text_color=text_color)
+        result_list = super().ocr(
+            image,
+            direct_ocr=direct_ocr,
+            text_color=text_color,
+            text_color_tolerance=text_color_tolerance,
+        )
         if not isinstance(result_list, list):
             result_list = [result_list]
         result_list = [self.parse_time(result) for result in result_list]

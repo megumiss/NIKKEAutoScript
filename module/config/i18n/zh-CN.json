@@ -40,6 +40,10 @@
       "name": "免费礼包",
       "help": ""
     },
+    "DataChart": {
+      "name": "数据图表",
+      "help": ""
+    },
     "Tool": {
       "name": "工具",
       "help": ""
@@ -213,6 +217,14 @@
     "MonthlyGift": {
       "name": "每月礼包",
       "help": ""
+    },
+    "WarehouseStats": {
+      "name": "仓库统计",
+      "help": "统计物品栏并保存为CSV"
+    },
+    "InterceptionTaskStats": {
+      "name": "任务",
+      "help": "异常拦截掉落石头统计（日/周/月）"
     },
     "AutoTower": {
       "name": "自动爬塔",
@@ -1137,6 +1149,54 @@
       "help": "还没做"
     }
   },
+  "WarehouseStats": {
+    "_info": {
+      "name": "仓库统计设置",
+      "help": "仓库统计的隐藏配置项"
+    },
+    "ItemMapPath": {
+      "name": "物品映射配置",
+      "help": "物品模板、ID、名称与图标的对应关系配置文件路径"
+    },
+    "CsvPath": {
+      "name": "统计CSV路径",
+      "help": "统计结果输出的CSV路径"
+    },
+    "ScrollTimes": {
+      "name": "滚动次数",
+      "help": "扫描物品栏时的滚动次数"
+    }
+  },
+  "WarehouseItems": {
+    "_info": {
+      "name": "物品列表",
+      "help": "展示最近一次仓库统计的结果"
+    },
+    "Items": {
+      "name": "物品列表",
+      "help": ""
+    }
+  },
+  "InterceptionDropStats": {
+    "_info": {
+      "name": "异常拦截掉落统计设置",
+      "help": "异常拦截掉落石头统计的隐藏配置项"
+    },
+    "CsvPath": {
+      "name": "统计CSV路径",
+      "help": "异常拦截石头掉落统计结果输出的CSV路径"
+    }
+  },
+  "InterceptionTaskCharts": {
+    "_info": {
+      "name": "异常拦截石头统计",
+      "help": "以每日、每周、每月三个折线图展示异常拦截掉落石头数量"
+    },
+    "Charts": {
+      "name": "折线图",
+      "help": ""
+    }
+  },
   "Account": {
     "_info": {
       "name": "账号设置",
@@ -1274,7 +1334,18 @@
       "InvalidFeedBack": "格式错误。 示例：{0}",
       "Clear": "清除",
       "EnterPassword": "输入密码",
-      "ChooseFile": "选择文件"
+      "ChooseFile": "选择文件",
+      "WarehouseOwned": "拥有",
+      "WarehouseNoData": "暂无统计数据",
+      "WarehouseNoMap": "未找到物品映射配置",
+      "InterceptionNoData": "暂无异常拦截掉落石头统计数据",
+      "InterceptionChartDaily": "每日石头掉落（最近30天）",
+      "InterceptionChartWeekly": "每周石头掉落（最近12周）",
+      "InterceptionChartMonthly": "每月石头掉落（最近12个月）",
+      "InterceptionChartSum": "总计",
+      "InterceptionChartMax": "最大",
+      "InterceptionChartAvg": "平均",
+      "InterceptionStoneUnit": "石头"
     }
   }
 }

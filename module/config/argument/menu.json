@@ -101,6 +101,14 @@
       "MonthlyGift"
     ]
   },
+  "DataChart": {
+    "menu": "collapse",
+    "page": "setting",
+    "tasks": [
+      "WarehouseStats",
+      "InterceptionTaskStats"
+    ]
+  },
   "Tool": {
     "menu": "collapse",
     "page": "tool",

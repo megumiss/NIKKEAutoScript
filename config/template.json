@@ -729,6 +729,38 @@
       "Storage": {}
     }
   },
+  "WarehouseStats": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "WarehouseStats",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "WarehouseStats": {
+      "ItemMapPath": "./config/warehouse_items.yaml",
+      "CsvPath": "./data/warehouse_stats/items.csv",
+      "ScrollTimes": 5
+    },
+    "WarehouseItems": {
+      "Items": {}
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "InterceptionTaskStats": {
+    "InterceptionDropStats": {
+      "CsvPath": "./data/interception_stats/stones.csv"
+    },
+    "InterceptionTaskCharts": {
+      "Charts": {}
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "AutoTower": {
     "AutoTower": {
       "Enable": true

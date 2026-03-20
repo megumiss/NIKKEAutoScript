@@ -119,6 +119,21 @@ pre.rich-traceback-code {
     border: 0;
 }
 
+#pywebio-scope-content {
+    --warehouse-card-bg: #ffffff;
+    --warehouse-card-border: #e6e6e6;
+    --warehouse-item-name: #333333;
+    --warehouse-item-count: #777777;
+    --interception-chart-bg: #ffffff;
+    --interception-chart-border: #e6e6e6;
+    --interception-chart-title: #333333;
+    --interception-chart-grid: #ececec;
+    --interception-chart-axis: #b5b5b5;
+    --interception-chart-line: #4e4c97;
+    --interception-chart-fill: rgba(78, 76, 151, 0.12);
+    --interception-chart-text: #777777;
+}
+
 #pywebio-scope-aside {
     background-color: white;
     border-right: 1px solid lightgrey;

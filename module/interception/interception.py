@@ -5,6 +5,7 @@ from functools import cached_property
 from module.base.timer import Timer
 from module.base.utils import point2str
 from module.interception.assets import *
+from module.interception.data import append_interception_stone_record
 from module.logger import logger
 from module.ocr.ocr import Digit
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, PAUSE
@@ -159,6 +160,8 @@ class Interception(UI):
                 saved_path = self.save_drop_image(self.device.image, self.config.Interception_DropScreenshotPath)
                 if saved_path:
                     logger.info(f'Save drop image to: {saved_path}')
+                stone_count = self.recognize_drop_stone_count(self.device.image)
+                self.write_drop_stone_record(stone_count=stone_count, screenshot_path=saved_path or '')
 
                 while 1:
                     self.device.screenshot()
@@ -215,6 +218,29 @@ class Interception(UI):
 
         save_image(image, save_path)
         return save_path
+
+    def recognize_drop_stone_count(self, image) -> int:
+        """
+        Placeholder:
+        TODO: Replace with actual image OCR/recognition pipeline for interception stone drops.
+        """
+        _ = image
+        return 0
+
+    def write_drop_stone_record(self, stone_count: int, screenshot_path: str = '') -> None:
+        csv_path = self.config.InterceptionDropStats_CsvPath
+        ok = append_interception_stone_record(
+            csv_path=csv_path,
+            config_name=self.config.config_name,
+            boss=self.config.Interception_Boss,
+            stone_count=stone_count,
+            screenshot_path=screenshot_path,
+        )
+        if ok:
+            logger.info(
+                f'InterceptionStats: record saved, boss={self.config.Interception_Boss}, '
+                f'stone_count={stone_count}, csv={csv_path}'
+            )
 
     def run(self):
         self.ui_ensure(page_interception)
