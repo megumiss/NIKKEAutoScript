@@ -18,6 +18,19 @@ CSV_COLUMNS = [
     'group_name',
 ]
 
+SCAN_METHOD_DIRECT = 'direct'
+SCAN_METHOD_OPEN_DETAIL = 'detail'
+
+
+def normalize_scan_method(value) -> str:
+    raw = str(value or '').strip().lower()
+    if raw in ('', 'direct', 'grid', '直接识别'):
+        return SCAN_METHOD_DIRECT
+    if raw in ('detail', 'legacy', 'detail', '打开详情识别'):
+        return SCAN_METHOD_OPEN_DETAIL
+    logger.warning(f'WarehouseStats: Unknown scan_method "{value}", fallback to "{SCAN_METHOD_DIRECT}".')
+    return SCAN_METHOD_DIRECT
+
 
 def _ensure_parent_dir(path: str) -> None:
     folder = os.path.dirname(path)
@@ -92,6 +105,7 @@ def load_item_groups(path: str = None) -> List[dict]:
                     # Name is the template prefix, e.g. FAVORITE_ITEM_ZWEI
                     'name': str(item.get('name', item_id)).strip(),
                     'scan': item.get('scan', True),
+                    'scan_method': normalize_scan_method(item.get('scan_method', SCAN_METHOD_DIRECT)),
                     'group_id': group_id,
                     'group_name': group_name,
                 }

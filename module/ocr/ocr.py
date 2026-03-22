@@ -34,12 +34,11 @@ class Ocr:
     DEBUG_SAVE_DIR = "./data/ocr"
     # OCR 前放大倍率：增大可提升小字可读性，但过大可能导致笔画变粗。
     OCR_SCALE = 2
-    # 颜色掩码柔化强度：用于补回抗锯齿边缘，值越大越容易连线也更容易糊。
-    MASK_SOFTEN_SIGMA = 0.7
-    # 掩码扩张阈值 (0~255)：值越小掩码越“厚”，值越大越“细”。
-    MASK_EXPAND_THRESHOLD = 20
-    # 放大后灰度图的轻微模糊强度：用于提高白芯连续性，过大可能糊成块。
-    UPSCALE_BLUR_SIGMA = 0.6
+    # 文本预处理参数：
+    # MASK_SOFTEN_SIGMA 颜色掩码柔化强度：用于补回抗锯齿边缘，值越大越容易连线也更容易糊。
+    # MASK_EXPAND_THRESHOLD 掩码扩张阈值 (0~255)：值越小掩码越“厚”，值越大越“细”。
+    # UPSCALE_BLUR_SIGMA 放大后灰度图的轻微模糊强度：用于提高白芯连续性，过大可能糊成块。
+    TEXT_COLOR_PREPROCESS = (0.7, 20, 0.6)
 
     def __init__(
         self,
@@ -50,6 +49,7 @@ class Ocr:
         name=None,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
     ):
         """
         Args:
@@ -59,6 +59,8 @@ class Ocr:
             name (str):
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
             text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，仅在 text_color 为 RGB 时生效。
+            text_color_preprocess (tuple | None): 文本预处理参数
+                (mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma)。
         """
         self.name = str(buttons) if isinstance(buttons, Button) else name
         self._buttons = buttons
@@ -67,6 +69,7 @@ class Ocr:
         self.interval = interval
         self.text_color = text_color
         self.text_color_tolerance = text_color_tolerance
+        self.text_color_preprocess = text_color_preprocess
 
     @property
     def paddleocr(self) -> 'NIKKEOcr':
@@ -150,17 +153,32 @@ class Ocr:
 
         return mask
 
+    def _resolve_text_color_preprocess(
+        self,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
+    ) -> Tuple[float, int, float]:
+        values = self.text_color_preprocess if text_color_preprocess is None else text_color_preprocess
+        if not isinstance(values, (tuple, list)) or len(values) != 3:
+            values = self.TEXT_COLOR_PREPROCESS
+        mask_soften_sigma = float(values[0])
+        mask_expand_threshold = int(values[1])
+        upscale_blur_sigma = float(values[2])
+        return mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma
+
     def pre_process(
         self,
         image,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
     ):
         """
         Args:
             image (np.ndarray): Shape (height, width, channel)
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
             text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，RGB 模式下生效。
+            text_color_preprocess (tuple | None): 文本预处理参数
+                (mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma)。
 
         Returns:
             np.ndarray: Shape (width, height)
@@ -170,6 +188,10 @@ class Ocr:
         else:
             gray = image
 
+        mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma = self._resolve_text_color_preprocess(
+            text_color_preprocess=text_color_preprocess
+        )
+
         if text_color is not None and len(image.shape) == 3:
             mask = self._build_text_mask(
                 image,
@@ -178,18 +200,19 @@ class Ocr:
             )
             if mask is not None and np.any(mask):
                 # Mildly soften mask edges to recover anti-aliased strokes.
-                softened = cv2.GaussianBlur(mask, (0, 0), sigmaX=self.MASK_SOFTEN_SIGMA, sigmaY=self.MASK_SOFTEN_SIGMA)
+                softened = cv2.GaussianBlur(mask, (0, 0), sigmaX=mask_soften_sigma, sigmaY=mask_soften_sigma)
                 _, expanded_mask = cv2.threshold(
                     softened,
-                    self.MASK_EXPAND_THRESHOLD,
+                    mask_expand_threshold,
                     255,
                     cv2.THRESH_BINARY,
                 )
                 gray = cv2.bitwise_and(gray, gray, mask=expanded_mask)
 
-        # 先放大，再轻微模糊，让白色主干更连续
+        # 先放大；仅在 text_color 开启时再做轻微模糊。
         gray = self._scale_for_ocr(gray)
-        gray = cv2.GaussianBlur(gray, (0, 0), sigmaX=self.UPSCALE_BLUR_SIGMA, sigmaY=self.UPSCALE_BLUR_SIGMA)
+        if text_color is not None and upscale_blur_sigma > 0:
+            gray = cv2.GaussianBlur(gray, (0, 0), sigmaX=upscale_blur_sigma, sigmaY=upscale_blur_sigma)
 
         # Otsu二值化 -> 反色得到白底黑字
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -228,6 +251,7 @@ class Ocr:
         show_log=True,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
     ):
         """
         Args:
@@ -235,6 +259,8 @@ class Ocr:
             direct_ocr (bool): True to skip cropping.
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
             text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，RGB 模式下生效。
+            text_color_preprocess (tuple | None): 文本预处理参数
+                (mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma)。
 
         Returns:
             list[str] or str
@@ -242,6 +268,7 @@ class Ocr:
         start_time = time.time()
         text_color = self.text_color if text_color is None else text_color
         text_color_tolerance = self.text_color_tolerance if text_color_tolerance is None else text_color_tolerance
+        text_color_preprocess = self.text_color_preprocess if text_color_preprocess is None else text_color_preprocess
 
         # Otsu二值化处理
         images_to_ocr = []
@@ -255,6 +282,7 @@ class Ocr:
                 img,
                 text_color=text_color,
                 text_color_tolerance=text_color_tolerance,
+                text_color_preprocess=text_color_preprocess,
             )
             for img in images_to_ocr
         ]
@@ -366,6 +394,7 @@ class Digit(Ocr):
         name=None,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
     ):
         super().__init__(
             buttons,
@@ -374,6 +403,7 @@ class Digit(Ocr):
             name=name,
             text_color=text_color,
             text_color_tolerance=text_color_tolerance,
+            text_color_preprocess=text_color_preprocess,
         )
 
     def after_process(self, result):
@@ -428,6 +458,7 @@ class DigitCounter(Ocr):
         name=None,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
     ):
         super().__init__(
             buttons,
@@ -436,6 +467,7 @@ class DigitCounter(Ocr):
             name=name,
             text_color=text_color,
             text_color_tolerance=text_color_tolerance,
+            text_color_preprocess=text_color_preprocess,
         )
 
     def after_process(self, result):
@@ -449,6 +481,7 @@ class DigitCounter(Ocr):
         direct_ocr=False,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
     ):
         """
         DigitCounter only support doing OCR on one button.
@@ -462,6 +495,7 @@ class DigitCounter(Ocr):
             direct_ocr=direct_ocr,
             text_color=text_color,
             text_color_tolerance=text_color_tolerance,
+            text_color_preprocess=text_color_preprocess,
         )
         result = result_list[0] if isinstance(result_list, list) else result_list
 
@@ -484,6 +518,7 @@ class Duration(Ocr):
         name=None,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
     ):
         super().__init__(
             buttons,
@@ -492,6 +527,7 @@ class Duration(Ocr):
             name=name,
             text_color=text_color,
             text_color_tolerance=text_color_tolerance,
+            text_color_preprocess=text_color_preprocess,
         )
 
     def after_process(self, result):
@@ -505,6 +541,7 @@ class Duration(Ocr):
         direct_ocr=False,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
+        text_color_preprocess: Optional[Tuple[float, int, float]] = None,
     ):
         """
         Do OCR on a duration, such as `01:30:00`.
@@ -521,6 +558,7 @@ class Duration(Ocr):
             direct_ocr=direct_ocr,
             text_color=text_color,
             text_color_tolerance=text_color_tolerance,
+            text_color_preprocess=text_color_preprocess,
         )
         if not isinstance(result_list, list):
             result_list = [result_list]

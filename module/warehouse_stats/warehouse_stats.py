@@ -16,6 +16,8 @@ from module.ui.page import page_inventory
 from module.ui.ui import UI
 from module.warehouse_stats.assets import *
 from module.warehouse_stats.data import (
+    SCAN_METHOD_DIRECT,
+    SCAN_METHOD_OPEN_DETAIL,
     flatten_groups,
     load_item_groups,
     resolve_item_asset,
@@ -79,6 +81,7 @@ class WarehouseStats(UI):
             [area],
             text_color=(248, 252, 254),
             text_color_tolerance=(80, 10, 40),
+            text_color_preprocess=(0.7, 20, 0.6),
             name='INVENTORY_ITEM',
             model_type=model_type,
             lang='ch',
@@ -128,8 +131,11 @@ class WarehouseStats(UI):
         templates = self._load_templates(items)
         results: Dict[str, int] = {}
 
-        # pending: 仍需识别的物品模板映射（item_id -> Button模板）
-        pending: Dict[str, Button] = {}
+        # 按识别方式分流：
+        # direct: 分割格子内直接识别数量
+        # detail: 点击进入详情页识别数量
+        pending_direct: Dict[str, Button] = {}
+        pending_detail: Dict[str, Button] = {}
         for item in items:
             item_id = item.get('id')
             if not item_id or not item.get('scan', True):
@@ -137,20 +143,171 @@ class WarehouseStats(UI):
             button = templates.get(item_id)
             if button is None:
                 continue
-            pending[item_id] = button
+            scan_method = item.get('scan_method', SCAN_METHOD_DIRECT)
+            if scan_method == SCAN_METHOD_OPEN_DETAIL:
+                pending_detail[item_id] = button
+            else:
+                pending_direct[item_id] = button
 
-        if not pending:
+        if not pending_direct and not pending_detail:
             return results
 
-        # 新识别方式（优先级高于旧逻辑）
-        self._scan_inventory_grid(pending=pending, results=results)
-
-        # 兜底：新方式没识别完时，走旧逻辑
-        if pending:
-            logger.info(f'WarehouseStats: Grid scan incomplete, fallback to legacy method. pending={len(pending)}')
-            self._scan_inventory_legacy(pending=pending, results=results)
+        # 按页执行：
+        # 截图 -> 分割 -> 判断识别方式 -> 本页先 direct -> 再 detail -> 再翻页
+        self._scan_inventory_by_page(
+            pending_direct=pending_direct,
+            pending_detail=pending_detail,
+            results=results,
+        )
 
         return results
+
+    def _scan_inventory_by_page(
+        self,
+        pending_direct: Dict[str, Button],
+        pending_detail: Dict[str, Button],
+        results: Dict[str, int],
+    ) -> None:
+        if not hasattr(self, '_debug_run_id'):
+            self._debug_run_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        max_pages = max(20, int(getattr(self.config, 'WarehouseStats_ScrollTimes', 5)) * 20)
+        page_index = 0
+        grid_origin = (self.GRID_START_X, self.GRID_START_Y)
+        anchor_button: Optional[Button] = None
+
+        while page_index < max_pages and (pending_direct or pending_detail):
+            self.device.screenshot()
+            image = self.device.image.copy()
+            drop_anchor_row = False
+
+            # 翻页后，先找锚点位置，再重算当前页第一行起点
+            if anchor_button is not None:
+                if self.appear(anchor_button, offset=10, threshold=self.GRID_ANCHOR_THRESHOLD, static=False):
+                    x1, y1, _, _ = anchor_button.button
+                    grid_origin = (x1, y1)
+                    drop_anchor_row = True
+                    logger.info(f'WarehouseStats: Grid anchor aligned at ({x1}, {y1})')
+                else:
+                    logger.warning('WarehouseStats: Grid anchor not found, fallback to fixed grid origin.')
+                    grid_origin = (self.GRID_START_X, self.GRID_START_Y)
+
+            cells = self._split_inventory_cells(
+                image=image,
+                origin=grid_origin,
+                page_index=page_index,
+                drop_anchor_row=drop_anchor_row,
+            )
+
+            pending_all: Dict[str, Button] = {}
+            pending_all.update(pending_direct)
+            pending_all.update(pending_detail)
+
+            detail_targets: List[Tuple[str, Tuple[int, int, int, int]]] = []
+            detail_seen = set()
+
+            # 第一步：本页先 direct 识别；detail 只登记目标，不发生点击。
+            for cell in cells:
+                if not pending_all:
+                    break
+
+                item_id = self._match_pending_item_in_cell(cell_image=cell['cell'], pending=pending_all)
+                if not item_id:
+                    continue
+
+                if item_id in pending_direct:
+                    prefix_xy = self._match_num_prefix_xy(masked_cell_image=cell['masked'])
+                    if prefix_xy is None:
+                        continue
+
+                    num_area = self._build_num_area(prefix_xy=prefix_xy, cell_area=cell['area'], image=image)
+                    if num_area is None:
+                        continue
+
+                    count = self._ocr_num_area(image=image, area=num_area)
+                    if count is None:
+                        continue
+
+                    results[item_id] = count
+                    pending_direct.pop(item_id, None)
+                    pending_all.pop(item_id, None)
+                    logger.info(f'WarehouseStats: [Direct] Found item={item_id}, count={count}, area={num_area}')
+                    continue
+
+                if item_id in pending_detail and item_id not in detail_seen:
+                    detail_seen.add(item_id)
+                    detail_targets.append((item_id, cell['area']))
+
+            # 第二步：本页再按顺序点击 detail 物品并识别详情。
+            for item_id, area in detail_targets:
+                if item_id not in pending_detail:
+                    continue
+
+                cell_button = Button(area=area, color=(0, 0, 0), button=area, name=f'INVENTORY_CELL_{item_id}')
+                if not self._open_item_detail(cell_button):
+                    # 点击格子失败时，回退到模板按钮点击
+                    if not self._open_item_detail(pending_detail[item_id]):
+                        continue
+
+                owner_loc = self.appear_location(INVENTORY_ITEM_CLOSE, offset=10, static=False)
+                if owner_loc is None:
+                    self._close_item_detail()
+                    continue
+
+                results[item_id] = self.inventory_item_num(
+                    (720 - owner_loc[0], owner_loc[1] + 200, owner_loc[0], owner_loc[1] + 270)
+                )
+                pending_detail.pop(item_id, None)
+                logger.info(f'WarehouseStats: [Detail] Found item={item_id}, count={results[item_id]}')
+                self._close_item_detail()
+
+            if not pending_direct and not pending_detail:
+                break
+
+            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10) or self.appear(INVENTORY_BOTTOM_CHECK_2, offset=10):
+                logger.info('WarehouseStats: Reached bottom of inventory list.')
+                break
+
+            if not cells:
+                logger.warning('WarehouseStats: No valid grid cells on current page, skip anchor update once.')
+                anchor_button = None
+                self.ensure_sroll((450, 950), (450, 400), speed=5, count=1, delay=1, method='scroll')
+                page_index += 1
+                continue
+
+            anchor_cell = self._get_anchor_cell(cells)
+            anchor_button = self._build_anchor_button(image=image, area=anchor_cell['area'])
+
+            # 本页完成后再向下滚动一页
+            self.ensure_sroll((450, 950), (450, 400), speed=5, count=1, delay=1, method='scroll')
+            page_index += 1
+
+        if pending_direct:
+            logger.info(f'WarehouseStats: Direct scan incomplete. pending={len(pending_direct)}')
+        if pending_detail:
+            logger.info(f'WarehouseStats: Open-detail scan incomplete. pending={len(pending_detail)}')
+
+    def _open_item_detail(self, button: Button, max_retry: int = 6) -> bool:
+        for _ in range(max_retry):
+            self.device.screenshot()
+            if self.appear(INVENTORY_ITEM_CLOSE, offset=10, static=False):
+                return True
+            template_file = getattr(button, 'file', None)
+            if template_file:
+                self.appear_then_click(button, offset=10, interval=1, static=False)
+            else:
+                # Dynamic cell button has no template file; click directly by area center.
+                self.device.click(button)
+        return False
+
+    def _close_item_detail(self, max_retry: int = 6) -> bool:
+        for _ in range(max_retry):
+            self.device.screenshot()
+            if self.appear_then_click(INVENTORY_ITEM_CLOSE, offset=10, interval=1, static=False):
+                continue
+            if self.appear(INVENTORY_CHECK, offset=10):
+                return True
+        return False
 
     def _scan_inventory_grid(self, pending: Dict[str, Button], results: Dict[str, int]) -> None:
         # 当前扫描任务的调试目录标识，避免多次运行互相覆盖

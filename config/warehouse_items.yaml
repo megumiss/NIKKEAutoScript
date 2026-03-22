@@ -6,12 +6,15 @@ groups:
       - id: sample_a
         name: FAVORITE_ITEM_BAY
         scan: true
+        scan_method: direct
       - id: sample_b
         name: FAVORITE_ITEM_CENTI
         scan: true
+        scan_method: direct
   - id: other
     name: 示例分组
     items:
       - id: sample_c
         name: FAVORITE_ITEM_ZWEI
         scan: true
+        scan_method: detail
