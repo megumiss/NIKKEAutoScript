@@ -126,6 +126,7 @@ LimitedTimeEvent:
       - Coop
     SoloRaid:
       - Scheduler
+      - SoloRaid
     UnionRaid:
       - Scheduler
 

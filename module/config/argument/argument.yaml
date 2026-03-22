@@ -384,6 +384,9 @@ InterceptionTaskCharts:
     type: interception_stone_charts
     value: {}
     display: readonly
+SoloRaid:
+  Challenge:
+    value: false
 Account:
   Account:
     value: ''

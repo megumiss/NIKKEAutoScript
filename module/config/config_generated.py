@@ -236,6 +236,9 @@ class GeneratedConfig:
     # Group `InterceptionTaskCharts`
     InterceptionTaskCharts_Charts = {}
 
+    # Group `SoloRaid`
+    SoloRaid_Challenge = False
+
     # Group `Account`
     Account_Account = None
     Account_Password = None

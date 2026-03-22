@@ -511,6 +511,9 @@
       "FailureInterval": 120,
       "ServerUpdate": "04:00"
     },
+    "SoloRaid": {
+      "Challenge": false
+    },
     "Storage": {
       "Storage": {}
     }
