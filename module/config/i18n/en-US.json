@@ -58,6 +58,10 @@
       "name": "PC Client",
       "help": ""
     },
+    "Notify": {
+      "name": "Notify Task",
+      "help": "Sends a notification when the daily tasks are completed. This is only effective when \"Send notification upon daily completion\" is enabled in the NKAS settings."
+    },
     "Restart": {
       "name": "Restart Settings",
       "help": ""
@@ -144,6 +148,10 @@
     },
     "SpecialArena": {
       "name": "Special Arena",
+      "help": ""
+    },
+    "SpecialArenaWatch": {
+      "name": "Special Arena Watch",
       "help": ""
     },
     "ChampionArena": {
@@ -390,14 +398,6 @@
     "DisableVoice": {
       "name": "Disable Voice",
       "help": "Automatically mute the game process while the script is running and restore it after completion. If it does not restore automatically, you will need to re-enable it manually in the system volume mixer on the taskbar."
-    },
-    "Account": {
-      "name": "Account",
-      "help": "Paste your email here. It will be auto-filled if login expires. This feature has security risks; use with caution."
-    },
-    "Password": {
-      "name": "Password",
-      "help": "Paste your password here. It will be auto-filled if login expires. This feature has security risks; use with caution."
     }
   },
   "PCClientInfo": {
@@ -464,7 +464,12 @@
       "help": "",
       "stay_there": "Stay in place",
       "goto_main": "Go to main screen",
-      "close_game": "Close game"
+      "close_game": "Close game",
+      "run_script": "Run script"
+    },
+    "ScriptPath": {
+      "name": "Script Path",
+      "help": "Relative path of the script file. Windows supports .bat/.ps1/.exe; Linux supports .sh. Relative paths are based on the script's root directory. Preset scripts are located in scripts\\windows.For example, if you want to lock the screen after execution, you can enter: scripts\\windows\\lock.bat."
     }
   },
   "Reward": {
@@ -625,7 +630,7 @@
     },
     "OnePushConfig": {
       "name": "Push Settings",
-      "help": "Use Onepush to send an error message. Configuration: https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
+      "help": "Use Onepush to send an error message. Configuration: https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D\nChange the provider value in config from gocqhttp to onebot11 to enable onebot support. \nCurrently only smtp and onebot11 support image sending, such as error screenshots and gacha screenshots."
     }
   },
   "Daily": {
@@ -687,6 +692,20 @@
       "2": "2"
     }
   },
+  "SpecialArenaWatch": {
+    "_info": {
+      "name": "Watch Settings",
+      "help": ""
+    },
+    "CheckInterval": {
+      "name": "Check Interval",
+      "help": "Check current rank once every X minutes, and send a notification when rank changes"
+    },
+    "CurrentRank": {
+      "name": "Current Rank",
+      "help": "Auto detected and stored. Read-only."
+    }
+  },
   "OpponentSelection": {
     "_info": {
       "name": "Opponent Selection Settings",
@@ -733,11 +752,11 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "Please refer to the documentation for the acquisition method: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide"
+      "help": "For acquisition methods and auto-update procedures, please refer to the documentation:: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide#7-nikke-community-site-configuration"
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "x-common-params header must include openid"
+      "help": "The x-common-params parameter in the request header must include the openid. It must be filled in manually; under normal circumstances, no updates are required."
     }
   },
   "BlaDaily": {
@@ -797,6 +816,8 @@
     "Event": {
       "name": "Current Event",
       "help": "",
+      "event_20260319": "2x2 Love",
+      "event_20260303": "ENTER HEAVEN",
       "event_20260212": "Lycoris Recoil",
       "event_20260129": "Fatal Maid",
       "event_20260115": "SIN EDITOR",
@@ -1124,6 +1145,20 @@
     "Challenge": {
       "name": "SoloRaid.Challenge.name",
       "help": "SoloRaid.Challenge.help"
+    }
+  },
+  "Account": {
+    "_info": {
+      "name": "Account Setting",
+      "help": "Only LiPass accounts are supported for automatic login."
+    },
+    "Account": {
+      "name": "Account",
+      "help": "Paste your email here. It will be auto-filled if login expires. This feature has security risks; use with caution."
+    },
+    "Password": {
+      "name": "Password",
+      "help": "Paste your password here. It will be auto-filled if login expires. This feature has security risks; use with caution."
     }
   },
   "Storage": {

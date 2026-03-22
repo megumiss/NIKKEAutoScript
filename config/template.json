@@ -7,13 +7,18 @@
     "Optimization": {
       "AutoRedCircle": false,
       "OcrModelType": "mobile",
-      "WhenTaskQueueEmpty": "goto_main"
+      "WhenTaskQueueEmpty": "goto_main",
+      "ScriptPath": null
     },
     "Notification": {
       "WhenDailyTaskCompleted": false,
       "WhenDailyTaskCrashed": false,
       "WinOnePush": false,
       "OnePushConfig": "provider: null"
+    },
+    "Account": {
+      "Account": null,
+      "Password": null
     },
     "Storage": {
       "Storage": {}
@@ -56,9 +61,20 @@
       "GameResolutionCompat": true,
       "ScreenRotate": false,
       "CloseAutoHdr": true,
-      "DisableVoice": false,
-      "Account": null,
-      "Password": null
+      "DisableVoice": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Notify": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Notify",
+      "SuccessInterval": 0,
+      "FailureInterval": 0,
+      "ServerUpdate": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -431,6 +447,23 @@
       "Enable": false,
       "SortingWeight": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
       "SelectionStrategy": "Min"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SpecialArenaWatch": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SpecialArenaWatch",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "SpecialArenaWatch": {
+      "CheckInterval": 10,
+      "CurrentRank": null
     },
     "Storage": {
       "Storage": {}

@@ -1,3 +1,5 @@
+import os
+
 import onepush.core
 import yaml
 from onepush import get_notifier
@@ -7,19 +9,29 @@ from onepush.providers.custom import Custom
 from requests import Response
 
 from module.logger import logger
+from module.notify import handle_notify
+from module.ui.ui import UI
 from module.webui.icon import ICON
 
+from .onebot11 import OneBot11
+from .smtp import smtp_image_parser
+
+onepush.core._all_providers['onebot11'] = OneBot11
 onepush.core.log = logger
 
 
 def handle_notify_win(**kwargs) -> bool:
     from winotify import Notification
 
+    icon = kwargs.get('image_path')
+    if not icon or not os.path.exists(icon):
+        icon = ICON.Icon
+
     toast = Notification(
         app_id='NKAS',
-        title=kwargs['title'],
-        msg=kwargs['content'],
-        icon=ICON.Icon,
+        title=kwargs.get('title', 'NKAS'),
+        msg=kwargs.get('content', ''),
+        icon=icon,
         duration='long',
     )
     toast.show()
@@ -42,7 +54,14 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
             logger.info('No provider specified, skip sending')
             return False
         notifier: Provider = get_notifier(provider_name)
+
         required: list[str] = notifier.params['required']
+        image_path = kwargs.get('image_path')
+        if image_path and os.path.exists(image_path):
+            if provider_name.lower() == 'smtp':
+                # 调用从 smtp.py 导入的解析器
+                notifier.set_message_parser(smtp_image_parser)
+
         config.update(kwargs)
 
         # pre check
@@ -60,24 +79,12 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
             if 'content' in kwargs:
                 config['data']['content'] = kwargs['content']
 
-        if provider_name.lower() == 'gocqhttp':
-            access_token = config.get('access_token')
-            if access_token:
-                config['token'] = access_token
-
         resp = notifier.notify(**config)
         if isinstance(resp, Response):
             if resp.status_code != 200:
                 logger.warning('Push notify failed!')
                 logger.warning(f'HTTP Code:{resp.status_code}')
                 return False
-            else:
-                if provider_name.lower() == 'gocqhttp':
-                    return_data: dict = resp.json()
-                    if return_data['status'] == 'failed':
-                        logger.warning('Push notify failed!')
-                        logger.warning(f'Return message:{return_data["wording"]}')
-                        return False
     except OnePushException:
         logger.exception('Push notify failed')
         return False
@@ -87,3 +94,17 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
 
     logger.info('Push notify success')
     return True
+
+
+class Notify(UI):
+    def run(self):
+        if self.config.Notification_WhenDailyTaskCompleted:
+            handle_notify(
+                config=self.config,
+                title_key='DailyTaskCompleted.title',
+                content_key='DailyTaskCompleted.content',
+                always=self.config.Notification_WinOnePush,
+            )
+        else:
+            logger.info('Notify config disabled, skip sending')
+        self.config.task_delay(server_update=True)

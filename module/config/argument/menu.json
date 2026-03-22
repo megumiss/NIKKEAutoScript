@@ -6,6 +6,7 @@
       "NKAS",
       "Emulator",
       "PCClient",
+      "Notify",
       "Restart"
     ]
   },
@@ -52,6 +53,7 @@
       "Interception",
       "RookieArena",
       "SpecialArena",
+      "SpecialArenaWatch",
       "ChampionArena"
     ]
   },

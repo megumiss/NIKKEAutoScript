@@ -54,12 +54,14 @@ class DailyRecruit(UI):
 
         return save_path
 
-    def notify_push(self, type):
+    def notify_push(self, type, image=None):
         handle_notify(
-            self.config.Notification_OnePushConfig,
-            title=f'NKAS <{self.config.config_name}> Recruit',
-            content=f'{type} SSR got!',
+            config=self.config,
+            title_key='Recruit.title',
+            content_key='Recruit.content',
             always=self.config.Notification_WinOnePush,
+            image_path=image,
+            recruit_type_key=type,
         )
 
     def event_free_recruit(self, skip_first_screenshot=True):
@@ -116,13 +118,14 @@ class DailyRecruit(UI):
                 continue
             # 确认
             if self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
-                # 截图保存
-                saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
-                if saved_path:
-                    logger.info(f'Save recruit image to: {saved_path}')
-                # 推送通知
-                if self.config.DailyRecruit_SSRNotifyPush and self.appear(RECRUIT_NIKKE_SSR, threshold=20):
-                    self.notify_push('EventFree')
+                if self.appear(RECRUIT_NIKKE_SSR, threshold=20):
+                    # 截图保存
+                    saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
+                    if saved_path:
+                        logger.info(f'Save recruit image to: {saved_path}')
+                    # 推送通知
+                    if self.config.DailyRecruit_SSRNotifyPush:
+                        self.notify_push('EventFree', image=saved_path)
 
                 while 1:
                     self.device.screenshot()
@@ -157,7 +160,7 @@ class DailyRecruit(UI):
                 self.device.screenshot()
 
             # 普通招募页面，没有次数结束抽卡
-            if self.appear(ORDINARY_RECRUIT_CHECK, offset=(30,10)):
+            if self.appear(ORDINARY_RECRUIT_CHECK, offset=(30, 10)):
                 if self.appear(ORDINARY_RECRUIT_ONCE_DONE, offset=(30, 30)):
                     logger.info('Ordinary 150gems recruit has done')
                     raise NotEnoughOrdinaryTimes
@@ -165,7 +168,7 @@ class DailyRecruit(UI):
                     break
 
             # 抽卡
-            if not self.appear(ORDINARY_RECRUIT_CHECK, offset=(30,10)):
+            if not self.appear(ORDINARY_RECRUIT_CHECK, offset=(30, 10)):
                 # 向右点击
                 logger.info('Click %s @ %s' % (point2str(690, 670), 'TO_RIGHT_RECRUIT'))
                 self.device.click_minitouch(690, 670)
@@ -184,7 +187,7 @@ class DailyRecruit(UI):
             if (
                 not recruit_end
                 and click_timer.reached()
-                and self.appear_then_click(ORDINARY_RECRUIT_ONCE, offset=(50, 10), click_offset=(0,30), interval=3)
+                and self.appear_then_click(ORDINARY_RECRUIT_ONCE, offset=(50, 10), click_offset=(0, 30), interval=3)
             ):
                 click_timer.reset()
                 continue
@@ -202,13 +205,14 @@ class DailyRecruit(UI):
                 continue
             # 确认
             if self.appear(RECRUIT_CONFIRM, offset=30, static=False):
-                # 截图保存
-                saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
-                if saved_path:
-                    logger.info(f'Save recruit image to: {saved_path}')
-                # 推送通知
-                if self.config.DailyRecruit_SSRNotifyPush and self.appear(RECRUIT_NIKKE_SSR, threshold=20):
-                    self.notify_push('150Gem')
+                if self.appear(RECRUIT_NIKKE_SSR, threshold=20):
+                    # 截图保存
+                    saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
+                    if saved_path:
+                        logger.info(f'Save recruit image to: {saved_path}')
+                    # 推送通知
+                    if self.config.DailyRecruit_SSRNotifyPush:
+                        self.notify_push('150Gem', image=saved_path)
 
                 while 1:
                     self.device.screenshot()
@@ -279,13 +283,14 @@ class DailyRecruit(UI):
                 continue
             # 确认
             if self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
-                # 截图保存
-                saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
-                if saved_path:
-                    logger.info(f'Save recruit image to: {saved_path}')
-                # 推送通知
-                if self.config.DailyRecruit_SSRNotifyPush and self.appear(RECRUIT_NIKKE_SSR, threshold=20):
-                    self.notify_push('SocialPoint')
+                if self.appear(RECRUIT_NIKKE_SSR, threshold=20):
+                    # 截图保存
+                    saved_path = self.save_drop_image(self.device.image, self.config.DailyRecruit_ScreenshotPath)
+                    if saved_path:
+                        logger.info(f'Save recruit image to: {saved_path}')
+                    # 推送通知
+                    if self.config.DailyRecruit_SSRNotifyPush:
+                        self.notify_push('SocialPoint', image=saved_path)
 
                 while 1:
                     self.device.screenshot()

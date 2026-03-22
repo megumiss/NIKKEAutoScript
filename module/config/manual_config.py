@@ -11,6 +11,8 @@ class ManualConfig:
        Daily > Event > Event2 > SoloRaid > UnionRaid > Coop > MissionPass > Liberation >
        SurfaceDaily >
        BlaDaily > BlaCDK > BlaExchange >
+       SpecialArenaWatch >
+       Notify >
        AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate > UpdateHosts
        """
 
@@ -94,6 +96,26 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20260319",
+            "event_name": "2x2 Love",
+            # 大型活动
+            "event_type": 3,
+            "mini_game": False,
+            "mini_game_play": True,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
+            "event_id": "event_20260303",
+            "event_name": "ENTER HEAVEN",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "mini_game_play": True,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
+        },
+        {
             "event_id": "event_20260212",
             "event_name": "Lycoris Recoil",
             # 大型活动
@@ -101,7 +123,7 @@ class ManualConfig:
             "mini_game": False,
             "mini_game_play": True,
             "story_part": "Story_2",  # Story_1, Story_2
-            "story_difficulty": "Normal"  # Normal, Hard
+            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20260129",

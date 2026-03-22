@@ -168,7 +168,7 @@ class SpecialArena(UI, ArenaBase):
         else:
             logger.warning('There are no free opportunities or reach the number of battle times')
 
-    def ensure_into_special_arena(self, skip_first_screenshot=True):
+    def ensure_into_special_arena(self, skip_first_screenshot=True, start_competition=True):
         confirm_timer = Timer(2, count=3)
         click_timer = Timer(0.3)
         while 1:
@@ -197,10 +197,13 @@ class SpecialArena(UI, ArenaBase):
             else:
                 confirm_timer.clear()
 
-        if self.free_opportunity_remain:
-            self.start_competition()
+        if start_competition:
+            if self.free_opportunity_remain:
+                self.start_competition()
+            else:
+                logger.info('There are no free opportunities')
         else:
-            logger.info('There are no free opportunities')
+            logger.info('Skip starting competition')
 
     def check_battle_times(self):
         if self.appear(NEXT_SEASON, offset=(50, 50)):

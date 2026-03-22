@@ -8,12 +8,15 @@ NKAS:
       - Client
       - Optimization
       - Notification
+      - Account
     Emulator:
       - Emulator
       - EmulatorInfo
     PCClient:
       - PCClientInfo
       - PCClient
+    Notify:
+      - Scheduler
     Restart:
       - Scheduler
 
@@ -105,6 +108,9 @@ Ark:
       - Scheduler
       - SpecialArena
       - OpponentSelection
+    SpecialArenaWatch:
+      - Scheduler
+      - SpecialArenaWatch
     ChampionArena:
       - Scheduler
       - CheerStrategy

@@ -89,7 +89,7 @@ class Highlights(UI, DaemonBase):
             self.device.screenshot()
 
             # SKIP
-            if click_timer.reached() and self.appear_then_click(SKIP, offset=10, interval=1):
+            if click_timer.reached() and self.appear_then_click(SKIP, offset=(150, 10), interval=1):
                 skip = True
                 click_timer.reset()
                 continue

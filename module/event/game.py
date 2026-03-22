@@ -36,7 +36,7 @@ class EventGame(EventBase):
             if (
                 self.config.Event_GameStorySkip
                 and click_timer.reached()
-                and self.appear_then_click(self.event_assets.SKIP, offset=10, interval=1)
+                and self.appear_then_click(self.event_assets.SKIP, offset=(150, 10), interval=1)
             ):
                 click_timer.reset()
                 continue

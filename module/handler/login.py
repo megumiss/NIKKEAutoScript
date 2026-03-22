@@ -78,6 +78,11 @@ class LoginHandler(UI):
                 click_timer.reset()
                 continue
 
+            # 重新登录
+            if click_timer.reached() and self.handle_login_lipass():
+                click_timer.reset()
+                continue
+
             # 礼包弹窗
             if click_timer.reached() and self.handle_paid_gift():
                 click_timer.reset()

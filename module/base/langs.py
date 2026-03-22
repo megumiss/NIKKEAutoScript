@@ -22,6 +22,10 @@ class LangMeta(type):
         "CLAIM_ALL": {"en-US": "Claim All", "zh-CN": "全部领取", "ja-JP": ""},
         # 咨询对话文件名
         "DIALOGUE_JSON": {"en-US": "dialogue.en-US.json", "zh-CN": "dialogue.zh-CN.json", "ja-JP": ""},
+        # 弹窗公告检查
+        "LANUCHER_ANNOUNCEMENT_POP": {"en-US": "Do not show again until update", "zh-CN": "公告更新前不再提示", "ja-JP": ""},
+        # 弹窗公告标题
+        "LANUCHER_ANNOUNCEMENT_POP_TITLE": {"en-US": "Update On", "zh-CN": "更新公告", "ja-JP": ""},
     }
     _current_lang = "zh-CN"
 

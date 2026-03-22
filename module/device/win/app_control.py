@@ -52,18 +52,7 @@ class AppControl(WinClient, Login):
             raise RequestHumanTakeover
         launcher_path = os.path.normpath(self.config.PCClientInfo_LauncherPath)
 
-        #  英文路径
-        if not re.match(r'^[A-Za-z0-9_:/\\.\- ()]+$', launcher_path):
-            logger.error(
-                f'Please install the game in an English path and enter the correct path, '
-                f'current path: [{launcher_path}]'
-            )
-            raise RequestHumanTakeover
-
-        # 启动器存在
-        if not os.path.isfile(launcher_path):
-            logger.error(f'Launcher file does not exist or is not a valid file: [{launcher_path}]')
-            raise RequestHumanTakeover
+        self.check_path_format(launcher_path, 'Launcher')
 
         if self.config.PCClientInfo_AutoFillName:
             # 使用固定的 GAME_ / LAUNCHER_ 信息
@@ -94,13 +83,18 @@ class AppControl(WinClient, Login):
             path=launcher_path,
         )
         launcher_dir = os.path.dirname(launcher_path)
+        game_path = os.path.normpath(
+            self.config.PCClientInfo_GamePath or os.path.join(launcher_dir, '..', 'NIKKE', 'game', game_process)
+        )
+
+        self.check_path_format(game_path, 'Game')
+
         self.game = Window(
             name='Game',
             title=game_window_title,
             class_name=game_window_class,
             process=game_process,
-            path=self.config.PCClientInfo_GamePath
-            or os.path.normpath(os.path.join(launcher_dir, '..', 'NIKKE', 'game', game_process)),
+            path=game_path,
         )
 
         # 回填配置
@@ -136,6 +130,24 @@ class AppControl(WinClient, Login):
         logger.attr('Client', self.package)
         set_language(self.language)
         logger.attr('Language', self.language)
+
+    def check_path_format(self, path, name):
+        #  英文路径
+        if not re.match(r'^[A-Za-z0-9_:/\\.\- ()]+$', path):
+            logger.error(
+                f'Please install the game in an English path and enter the correct path, current path: [{path}]'
+            )
+            raise RequestHumanTakeover
+
+        # .exe 结尾
+        if not path.endswith('.exe'):
+            logger.error(f'{name} path must end with .exe: [{path}]')
+            raise RequestHumanTakeover
+
+        # 存在
+        if not os.path.isfile(path):
+            logger.error(f'{name} file does not exist or is not a valid file: [{path}]')
+            raise RequestHumanTakeover
 
     def app_is_running(self) -> bool:
         return self.switch_to_program()

@@ -37,8 +37,13 @@
         "option": [
           "stay_there",
           "goto_main",
-          "close_game"
+          "close_game",
+          "run_script"
         ]
+      },
+      "ScriptPath": {
+        "type": "textarea",
+        "value": ""
       }
     },
     "Notification": {
@@ -58,6 +63,16 @@
         "type": "textarea",
         "value": "provider: null",
         "mode": "yaml"
+      }
+    },
+    "Account": {
+      "Account": {
+        "type": "input",
+        "value": ""
+      },
+      "Password": {
+        "type": "input",
+        "value": ""
       }
     },
     "Storage": {
@@ -234,14 +249,52 @@
       "DisableVoice": {
         "type": "checkbox",
         "value": false
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "Notify": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": true,
+        "option": [
+          true,
+          false
+        ],
+        "display": "disabled"
       },
-      "Account": {
-        "type": "input",
-        "value": ""
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
       },
-      "Password": {
+      "Command": {
         "type": "input",
-        "value": ""
+        "value": "Notify",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
       }
     },
     "Storage": {
@@ -1566,6 +1619,62 @@
       }
     }
   },
+  "SpecialArenaWatch": {
+    "Scheduler": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "NextRun": {
+        "type": "datetime",
+        "value": "1989-12-27 00:00:00",
+        "validate": "datetime"
+      },
+      "Command": {
+        "type": "input",
+        "value": "SpecialArenaWatch",
+        "display": "hide"
+      },
+      "SuccessInterval": {
+        "type": "input",
+        "value": 0,
+        "display": "hide"
+      },
+      "FailureInterval": {
+        "type": "input",
+        "value": 120,
+        "display": "hide"
+      },
+      "ServerUpdate": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide"
+      }
+    },
+    "SpecialArenaWatch": {
+      "CheckInterval": {
+        "type": "input",
+        "value": 10
+      },
+      "CurrentRank": {
+        "type": "input",
+        "value": "",
+        "display": "disabled"
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "ChampionArena": {
     "Scheduler": {
       "Enable": {
@@ -1817,6 +1926,8 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20260319",
+          "event_20260303",
           "event_20260212",
           "event_20260129",
           "event_20260115",
@@ -1964,6 +2075,8 @@
         "type": "select",
         "value": "",
         "option": [
+          "event_20260319",
+          "event_20260303",
           "event_20260212",
           "event_20260129",
           "event_20260115",

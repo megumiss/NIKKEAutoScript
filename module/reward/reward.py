@@ -3,6 +3,7 @@ import cv2
 from module.base.timer import Timer
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
+from module.notify import handle_notify
 from module.reward.assets import *
 from module.ui.page import *
 from module.ui.ui import UI

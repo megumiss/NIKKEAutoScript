@@ -58,6 +58,10 @@
       "name": "PCクライアント",
       "help": ""
     },
+    "Notify": {
+      "name": "通知タスク",
+      "help": "当日の任務が完了した際に通知を送信します。この機能は、NKASの設定で「日常完了時に通知を送信」が有効になっている場合のみ機能します。"
+    },
     "Restart": {
       "name": "再起動設定",
       "help": ""
@@ -144,6 +148,10 @@
     },
     "SpecialArena": {
       "name": "特殊アリーナ",
+      "help": ""
+    },
+    "SpecialArenaWatch": {
+      "name": "特殊アリーナ監視",
       "help": ""
     },
     "ChampionArena": {
@@ -390,14 +398,6 @@
     "DisableVoice": {
       "name": "音声を無効にする",
       "help": "スクリプト実行中はゲームプロセスの音声を自動的に無効化し、実行終了後に自動で復元します。自動で復元されない場合は、タスクバーの音量ミキサーで手動で有効にしてください。"
-    },
-    "Account": {
-      "name": "アカウント",
-      "help": "メールアドレスをここに直接貼り付けてください。ログインが無効になると、アカウントが自動的に入力されます。この機能には一定のリスクがありますので、慎重に使用してください"
-    },
-    "Password": {
-      "name": "パスワード",
-      "help": "パスワードをここに直接貼り付けてください。ログインが無効になると、パスワードが自動的に入力されます。この機能には一定のリスクがありますので、慎重に使用してください"
     }
   },
   "PCClientInfo": {
@@ -464,7 +464,12 @@
       "help": "",
       "stay_there": "その場に留まる",
       "goto_main": "メインインターフェースに移動",
-      "close_game": "ゲームを閉じる"
+      "close_game": "ゲームを閉じる",
+      "run_script": "スクリプトを実行"
+    },
+    "ScriptPath": {
+      "name": "スクリプトパス",
+      "help": "スクリプトファイルの相対パス。Windowsは .bat / .ps1 / .exe、Linuxは .sh をサポートしています。相対パスはスクリプトのルートディレクトリを基準とします。プリセットスクリプトは scripts\\windows に配置されています。例えば、実行完了後に画面をロックしたい場合は、次のように入力します： scripts\\windows\\lock.bat"
     }
   },
   "Reward": {
@@ -625,7 +630,7 @@
     },
     "OnePushConfig": {
       "name": "プッシュ設定",
-      "help": "Onepushを使用してエラーメッセージをプッシュします。設定方法についてはドキュメントを参照してください：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D"
+      "help": "Onepushを使用してエラーメッセージをプッシュします。設定方法についてはドキュメントを参照してください：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D\n設定ファイルのproviderの値をgocqhttpからonebot11に変更すればonebotに対応できます。\n現在、画像送信（エラースクリーンショットやガチャスクリーンショットなど）に対応しているのはsmtpとonebot11のみです。"
     }
   },
   "Daily": {
@@ -687,6 +692,20 @@
       "2": "2"
     }
   },
+  "SpecialArenaWatch": {
+    "_info": {
+      "name": "監視設定",
+      "help": ""
+    },
+    "CheckInterval": {
+      "name": "確認間隔",
+      "help": "現在ランクを何分ごとに確認するか。ランク変化時に通知を送信"
+    },
+    "CurrentRank": {
+      "name": "現在ランク",
+      "help": "自動識別して保存されます。手動変更不可。"
+    }
+  },
   "OpponentSelection": {
     "_info": {
       "name": "対戦相手選択設定",
@@ -733,11 +752,11 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "入手方法についてはドキュメントをご覧ください: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN"
+      "help": "入手方法および自動更新の手順については、こちらのドキュメントをご参照ください: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN#7-%E5%A6%AE%E6%B8%B8%E7%A4%BE%E9%85%8D%E7%BD%AE"
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "リクエストヘッダーのx-common-paramsパラメーター。openidを含める必要があります"
+      "help": "リクエストヘッダー内の x-common-params パラメータには、openid を含める必要があります。手動で入力する必要がありますが、通常、更新する必要はありません。"
     }
   },
   "BlaDaily": {
@@ -797,6 +816,8 @@
     "Event": {
       "name": "開催中のイベント",
       "help": "",
+      "event_20260319": "2x2 Love",
+      "event_20260303": "ENTER HEAVEN",
       "event_20260212": "Lycoris Recoil",
       "event_20260129": "Fatal Maid",
       "event_20260115": "SIN EDITOR",
@@ -1124,6 +1145,20 @@
     "Challenge": {
       "name": "SoloRaid.Challenge.name",
       "help": "SoloRaid.Challenge.help"
+    }
+  },
+  "Account": {
+    "_info": {
+      "name": "アカウント設定",
+      "help": "自動ログインは LiPass アカウントのみサポートされます。"
+    },
+    "Account": {
+      "name": "アカウント",
+      "help": "メールアドレスをここに直接貼り付けてください。ログインが無効になると、アカウントが自動的に入力されます。この機能には一定のリスクがありますので、慎重に使用してください"
+    },
+    "Password": {
+      "name": "パスワード",
+      "help": "パスワードをここに直接貼り付けてください。ログインが無効になると、パスワードが自動的に入力されます。この機能には一定のリスクがありますので、慎重に使用してください"
     }
   },
   "Storage": {

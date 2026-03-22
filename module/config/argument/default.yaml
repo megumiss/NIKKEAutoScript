@@ -4,6 +4,10 @@ Reward:
   Scheduler:
     Enable: true
 
+Notify:
+  Scheduler:
+    Enable: true
+
 DailyRecruit:
   Scheduler:
     Enable: false
@@ -17,6 +21,10 @@ RookieArena:
     Enable: false
 
 SpecialArena:
+  Scheduler:
+    Enable: false
+
+SpecialArenaWatch:
   Scheduler:
     Enable: false
 

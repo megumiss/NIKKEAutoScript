@@ -74,10 +74,6 @@ PCClient:
   ScreenRotate: false
   CloseAutoHdr: true
   DisableVoice: false
-  Account:
-    value: ''
-  Password:
-    value: ''
 PCClientInfo:
   Client:
     value: intl
@@ -105,7 +101,10 @@ Optimization:
     option: [ mobile, server ]
   WhenTaskQueueEmpty:
     value: goto_main
-    option: [ stay_there, goto_main, close_game ]
+    option: [ stay_there, goto_main, close_game, run_script ]
+  ScriptPath:
+    value: ''
+    type: textarea
 Reward:
   CollectSocialPoint: true
   CollectSpecialArenaPoint: false
@@ -175,6 +174,12 @@ SpecialArena:
   Times:
     value: 2
     option: [ 1, 2 ]
+SpecialArenaWatch:
+  CheckInterval:
+    value: 10
+  CurrentRank:
+    value: ''
+    display: disabled
 OpponentSelection:
   Enable: false
   SortingWeight:
@@ -220,6 +225,8 @@ EventInfo:
   Event:
     value: ''
     option: [
+      'event_20260319',
+      'event_20260303',
       'event_20260212',
       'event_20260129',
       'event_20260115',
@@ -353,3 +360,8 @@ SurfaceDaily:
 SoloRaid:
   Challenge:
     value: false
+Account:
+  Account:
+    value: ''
+  Password:
+    value: ''

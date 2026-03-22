@@ -534,10 +534,10 @@ class NKASGUI(Frame):
 
                 elif not validate or re_fullmatch(validate, v):
                     # 当保存 account 或 password 时，加密存储并回显为******
-                    if k in ("PCClient.PCClient.Account", "PCClient.PCClient.Password"):
-                        if k == "PCClient.PCClient.Account":
+                    if k in ("NKAS.Account.Account", "NKAS.Account.Password"):
+                        if k == "NKAS.Account.Account":
                             save_account(config_name, account=v)
-                        if k == "PCClient.PCClient.Password":
+                        if k == "NKAS.Account.Password":
                             save_account(config_name, password=v)
 
                         deep_set(config, k, "******")
@@ -1753,10 +1753,51 @@ def app():
         else:
             return JSONResponse({'status': 'error', 'message': f'Current orientation {dm.DisplayOrientation} not supported'}, status_code=400)
 
+    async def api_config_update(request):
+        config_name = request.path_params['config_name']
+        try:
+            data = await request.json()
+        except Exception:
+            return JSONResponse({'status': 'error', 'message': 'Invalid JSON body'}, status_code=400)
+
+        key = data.get('key')
+        value = data.get('value')
+        if not key:
+            return JSONResponse({'status': 'error', 'message': 'Missing "key" in request body'}, status_code=400)
+
+        if config_name not in nkas_instance():
+            return JSONResponse(
+                {'status': 'error', 'message': f'Instance "{config_name}" not found.'},
+                status_code=404
+            )
+
+        try:
+            config = State.config_updater.read_file(config_name)
+
+            if key in ("NKAS.Account.Account", "NKAS.Account.Password"):
+                if key == "NKAS.Account.Account":
+                    save_account(config_name, account=value)
+                if key == "NKAS.Account.Password":
+                    save_account(config_name, password=value)
+                deep_set(config, key, "******")
+            else:
+                deep_set(config, key, value)
+                # for set_key, set_value in State.config_updater.save_callback(key, value):
+                #     deep_set(config, set_key, set_value)
+
+            State.config_updater.write_file(config_name, config)
+            logger.info(f"API: Updated config '{config_name}' key '{key}' to '{str(value)[:5]}...'.")
+
+            return JSONResponse({'status': 'success', 'message': f'Config "{config_name}" updated.'})
+        except Exception as e:
+            logger.exception(e)
+            return JSONResponse({'status': 'error', 'message': str(e)}, status_code=500)
+
     # Add the API routes to the Starlette application
     app.router.routes.extend([
         Route('/api/{config_name:str}/start', endpoint=api_start, methods=['POST']),
         Route('/api/{config_name:str}/stop', endpoint=api_stop, methods=['POST']),
+        Route('/api/{config_name:str}/config', endpoint=api_config_update, methods=['POST']),
         Route('/api/restart', endpoint=api_system_restart, methods=['POST']),
         Route('/api/update', endpoint=api_system_update, methods=['POST']),
         Route('/api/rotate', endpoint=api_system_rotate, methods=['POST']),

@@ -1,0 +1,29 @@
+{
+    "manifest_version": 3,
+    "name": "BlablaLink Cookie 同步器",
+    "version": "1.0",
+    "description": "一键获取 BlablaLink Cookie 并同步到 NKAS。",
+    "permissions": [
+        "cookies",
+        "storage"
+    ],
+    "host_permissions": [
+        "*://*.blablalink.com/*",
+        "http://*/*",
+        "https://*/*"
+    ],
+    "icons": {
+        "16": "icon16.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "同步 Cookie",
+        "default_icon": {
+            "16": "icon16.png",
+            "48": "icon48.png",
+            "128": "icon128.png"
+        }
+    }
+}

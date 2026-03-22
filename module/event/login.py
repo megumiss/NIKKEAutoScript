@@ -74,7 +74,7 @@ class EventLogin(EventBase):
 
             # 点击跳过
             if click_timer.reached() and self.appear_then_click(
-                self.event_assets.SKIP, offset=(30, 10), threshold=0.65, interval=1
+                self.event_assets.SKIP, offset=(150, 10), threshold=0.65, interval=1
             ):
                 click_timer.reset()
                 continue

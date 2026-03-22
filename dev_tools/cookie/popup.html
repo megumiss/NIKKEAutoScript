@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Cookie 同步</title>
+    <style>
+        body {
+            width: 320px;
+            padding: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        /* 新增复选框相关样式 */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            margin: 0 8px 0 0;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            display: inline;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #6c757d;
+            margin-right: 8px;
+        }
+
+        .status-dot.success {
+            background-color: #28a745;
+        }
+
+        .status-dot.error {
+            background-color: #dc3545;
+        }
+
+        .status-dot.checking {
+            background-color: #ffc107;
+        }
+
+        .status-text {
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* 新增：用户信息样式 */
+        .user-info {
+            font-size: 13px;
+            color: #007bff;
+            margin-bottom: 12px;
+            font-weight: bold;
+            display: none;
+            /* 默认隐藏，登录成功后显示 */
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background-color: #adb5bd !important;
+            cursor: not-allowed;
+        }
+
+        #checkBtn {
+            background-color: #6c757d;
+        }
+
+        #syncBtn {
+            background-color: #007bff;
+        }
+
+        #logMsg {
+            margin-top: 10px;
+            font-size: 12px;
+            min-height: 16px;
+            word-break: break-all;
+            color: #666;
+        }
+
+        .footer {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 12px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-group">
+        <label for="apiUrl">NKAS 接口地址：</label>
+        <input type="text" id="apiUrl" placeholder="http://127.0.0.1:12271/api/nkas/config">
+    </div>
+
+    <div class="form-group checkbox-group">
+        <input type="checkbox" id="autoSync">
+        <label for="autoSync">打开插件时自动同步</label>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-text" id="statusText">等待检查...</span>
+    </div>
+
+    <div class="user-info" id="userInfo"></div>
+
+    <div class="btn-group">
+        <button id="checkBtn">检查登录状态</button>
+        <button id="syncBtn" disabled>同步 Cookie</button>
+    </div>
+
+    <div id="logMsg"></div>
+
+    <div class="footer">
+        <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN#7-%E5%A6%AE%E6%B8%B8%E7%A4%BE%E9%85%8D%E7%BD%AE"
+            target="_blank" id="githubLink">
+            查看使用教程
+        </a>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>

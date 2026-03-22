@@ -4,7 +4,6 @@ from module.base.utils import crop, find_center, mask_area, point2str
 from module.conversation.assets import *
 from module.daily.assets import *
 from module.logger import logger
-from module.notify import handle_notify
 from module.ui.assets import CONVERSATION_CHECK, DAILY_CHECK, INVENTORY_CHECK
 from module.ui.page import page_conversation, page_daily, page_inventory
 from module.ui.ui import UI
@@ -280,11 +279,4 @@ class Daily(UI):
         self.ui_ensure(page_daily)
         # 每日任务结算
         self.receive()
-        if self.config.Notification_WhenDailyTaskCompleted:
-            handle_notify(
-                self.config.Notification_OnePushConfig,
-                title=f'NKAS <{self.config.config_name}>',
-                content='任务已全部完成！',
-                always=self.config.Notification_WinOnePush,
-            )
         self.config.task_delay(server_update=True)
