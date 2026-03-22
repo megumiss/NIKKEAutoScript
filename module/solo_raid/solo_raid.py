@@ -1,6 +1,6 @@
 from module.base.timer import Timer
 from module.logger import logger
-from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
+from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, PAUSE
 from module.solo_raid.assets import *
 from module.solo_raid.challenge import SoloRaidChallenge
 from module.ui.assets import FIGHT_QUICKLY_CHECK, FIGHT_QUICKLY_MAX, FIGHT_QUICKLY_MIN, MAIN_CHECK
@@ -131,13 +131,17 @@ class SoloRaid(SoloRaidChallenge):
                 click_timer.reset()
                 continue
 
+            # 自动射击和爆裂
             if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=10, threshold=0.9, interval=5):
                 click_timer.reset()
                 continue
-
             if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=10, threshold=0.9, interval=5):
                 click_timer.reset()
                 continue
+            # 红圈
+            if self.config.Optimization_AutoRedCircle and self.appear(PAUSE, offset=(5, 5)):
+                if self.handle_red_circles():
+                    continue
 
             # 结束
             if click_timer.reached() and self.appear(END_FIGHTING, offset=30):

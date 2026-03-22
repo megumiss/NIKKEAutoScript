@@ -3,7 +3,7 @@ from functools import cached_property
 from module.base.timer import Timer
 from module.logger import logger
 from module.ocr.ocr import Digit
-from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
+from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, PAUSE
 from module.solo_raid.assets import *
 from module.ui.assets import MAIN_CHECK
 from module.ui.ui import UI
@@ -75,8 +75,9 @@ class SoloRaidChallenge(UI):
 
         # 检查挑战次数
         if self.free_opportunity_remain:
+            self.device.click_record_clear()
+            self.device.stuck_record_clear()
             self.challenge_raid()
-
         else:
             logger.warning('There are no free opportunities for challenge mode')
 
@@ -103,14 +104,16 @@ class SoloRaidChallenge(UI):
 
             # 选择队伍
             if self.appear(FIGHT_HISTORY, offset=10):
-                if self.appear_then_click(ENTER_FIGHT, offset=10, interval=1):
+                if self.appear(ENTER_FIGHT, offset=10) and self.appear_then_click(
+                    ENTER_FIGHT, threshold=10, interval=1
+                ):
                     team_change_timer.reset()
                     continue
 
                 if team_change_timer.reached():
                     current_team = -1
                     for i, team in enumerate(self.teams):
-                        if not self.appear(team, threshold=0.9):
+                        if not self.appear(team, threshold=10):
                             current_team = i
                             break
 
@@ -130,9 +133,12 @@ class SoloRaidChallenge(UI):
             # 自动射击和爆裂
             if self.appear_then_click(AUTO_SHOOT, offset=10, threshold=0.9, interval=5):
                 continue
-
             if self.appear_then_click(AUTO_BURST, offset=10, threshold=0.9, interval=5):
                 continue
+            # 红圈
+            if self.config.Optimization_AutoRedCircle and self.appear(PAUSE, offset=(5, 5)):
+                if self.handle_red_circles():
+                    continue
 
             # 结束
             if self.appear(END_FIGHTING, offset=30):
@@ -150,14 +156,14 @@ class SoloRaidChallenge(UI):
                 continue
 
             # 结算弹窗
-            if self.appear(ENEMY_DEFEATED, offset=10) and self.appear(ENEMY_DEFEATED_CONFIRM, offset=30):
+            if self.appear(ENEMY_DEFEATED, offset=150) and self.appear(ENEMY_DEFEATED_CONFIRM, offset=150):
                 logger.info('Challenge raid end team all')
 
                 while 1:
                     self.device.screenshot()
-                    if not self.appear(SOLO_RAID_CHECK, offset=30):
+                    if self.appear(SOLO_RAID_CHECK, offset=30):
                         break
-                    if self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=30, interval=1):
+                    if self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=150, interval=1):
                         continue
                 break
 
