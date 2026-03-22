@@ -57,8 +57,8 @@ class WarehouseStats(UI):
     # Grid valid viewport bounds (full cell must be inside this area)
     GRID_VIEW_X1 = GRID_START_X
     GRID_VIEW_Y1 = GRID_START_Y
-    GRID_VIEW_X2 = GRID_START_X + (GRID_COLS - 1) * GRID_STEP_X + GRID_CELL_WIDTH
-    GRID_VIEW_Y2 = GRID_START_Y + (GRID_ROWS - 1) * GRID_STEP_Y + GRID_CELL_HEIGHT
+    GRID_VIEW_X2 = GRID_START_X + (GRID_COLS - 1) * GRID_STEP_X + GRID_CELL_WIDTH + 10
+    GRID_VIEW_Y2 = GRID_START_Y + (GRID_ROWS - 1) * GRID_STEP_Y + GRID_CELL_HEIGHT + 10
 
     # 数量前缀模板匹配阈值（越大越严格）
     GRID_PREFIX_SIMILARITY = 0.78
@@ -220,7 +220,7 @@ class WarehouseStats(UI):
             if not pending:
                 break
 
-            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10):
+            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10) or self.appear(INVENTORY_BOTTOM_CHECK_2, offset=10):
                 logger.info('WarehouseStats: Reached bottom of inventory list.')
                 break
 
@@ -287,7 +287,7 @@ class WarehouseStats(UI):
             if not pending:
                 break
 
-            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10):
+            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10) or self.appear(INVENTORY_BOTTOM_CHECK_2, offset=10):
                 logger.info('WarehouseStats: Reached bottom of inventory list.')
                 break
 
@@ -401,17 +401,16 @@ class WarehouseStats(UI):
         return None
 
     def _match_num_prefix_xy(self, masked_cell_image) -> Optional[Tuple[int, int]]:
+        self_image = self.device.image
+        self.device.image = masked_cell_image
         # 在“当前格子整图掩码图”中匹配数量前缀模板，返回匹配左上角 (x, y)
-        buttons = TEMPLATE_ITEM_NUM_PREFIX.match_multi(
-            masked_cell_image,
-            similarity=self.GRID_PREFIX_SIMILARITY,
-            name='ITEM_NUM_PREFIX',
-        )
-        if not buttons:
-            return None
-        button = sorted(buttons, key=lambda b: (b.area[1], b.area[0]))[0]
-        x1, y1, _, _ = button.button
-        return int(x1), int(y1)
+        if self.appear(ITEM_NUM_PREFIX, offset=10, threshold=0.6, static=False):
+            x, y = self.appear_location(ITEM_NUM_PREFIX, offset=10, threshold=0.6, static=False)
+            self.device.image = self_image
+            return x, y
+
+        self.device.image = self_image
+        return None
 
     def _build_num_area(
         self,
@@ -421,9 +420,9 @@ class WarehouseStats(UI):
     ) -> Optional[Tuple[int, int, int, int]]:
         # 规则：(x-10, y-10, 格子右下角x, 格子右下角y)
         x, y = prefix_xy
-        _, _, cell_x2, cell_y2 = cell_area
-        x1, y1 = x - 10, y - 10
-        x2, y2 = cell_x2, cell_y2
+        _, _, cell_x2, _ = cell_area
+        x1, y1 = x - 10, y - 17
+        x2, y2 = cell_x2, y + 8
 
         # 边界保护，防止越界
         h, w = image.shape[:2]
@@ -437,24 +436,24 @@ class WarehouseStats(UI):
 
     def _ocr_num_area(self, image, area: Tuple[int, int, int, int]) -> Optional[int]:
         # 数字 OCR：识别失败返回 None
-        num_raw = crop(image, area)
-        ocr = Digit(
+        self_image = self.device.image
+        self.device.image = image
+        model_type = self.config.Optimization_OcrModelType
+        item_num = Ocr(
             [area],
-            model_type=self.config.Optimization_OcrModelType,
-            name='INVENTORY_GRID_ITEM_NUM',
             text_color=(248, 252, 254),
             text_color_tolerance=(80, 10, 40),
+            name='INVENTORY_ITEM',
+            model_type=model_type,
+            lang='ch',
         )
-        num_preprocessed = ocr.pre_process(
-            num_raw,
-            text_color=(248, 252, 254),
-            text_color_tolerance=(80, 10, 40),
-        )
-        ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-        self._save_debug_image(f'{ts}_num_raw_{area[0]}_{area[1]}_{area[2]}_{area[3]}.png', num_raw)
-        self._save_debug_image(f'{ts}_num_preprocessed_{area[0]}_{area[1]}_{area[2]}_{area[3]}.png', num_preprocessed)
+        text = item_num.ocr(self.device.image)['text']
+        self.device.image = self_image
 
-        text = ocr.ocr(image, show_log=False).get('text', '').strip()
+        # ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        # self._save_debug_image(f'{ts}_num_raw_{area[0]}_{area[1]}_{area[2]}_{area[3]}.png', num_raw)
+        # self._save_debug_image(f'{ts}_num_preprocessed_{area[0]}_{area[1]}_{area[2]}_{area[3]}.png', text)
+
         if text == '':
             return None
         try:

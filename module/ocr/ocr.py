@@ -1,3 +1,4 @@
+import os
 import re
 import time
 from datetime import timedelta
@@ -27,9 +28,18 @@ TextColorInput = Union[
 
 class Ocr:
     SHOW_REVISE_WARNING = False
+    # HSV 容差 (H, S, V)：值越大，颜色筛选越宽松。
     HSV_TOLERANCE = (10, 80, 80)
-    DEBUG_SAVE_DIR = None
-    OCR_SCALE = 3.0
+    # 预处理调试图保存目录；设为 None 则不落盘。
+    DEBUG_SAVE_DIR = "./data/ocr"
+    # OCR 前放大倍率：增大可提升小字可读性，但过大可能导致笔画变粗。
+    OCR_SCALE = 2
+    # 颜色掩码柔化强度：用于补回抗锯齿边缘，值越大越容易连线也更容易糊。
+    MASK_SOFTEN_SIGMA = 0.7
+    # 掩码扩张阈值 (0~255)：值越小掩码越“厚”，值越大越“细”。
+    MASK_EXPAND_THRESHOLD = 20
+    # 放大后灰度图的轻微模糊强度：用于提高白芯连续性，过大可能糊成块。
+    UPSCALE_BLUR_SIGMA = 0.6
 
     def __init__(
         self,
@@ -155,6 +165,11 @@ class Ocr:
         Returns:
             np.ndarray: Shape (width, height)
         """
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+
         if text_color is not None and len(image.shape) == 3:
             mask = self._build_text_mask(
                 image,
@@ -162,20 +177,28 @@ class Ocr:
                 tolerance=text_color_tolerance,
             )
             if mask is not None and np.any(mask):
-                image = cv2.bitwise_and(image, image, mask=mask)
+                # Mildly soften mask edges to recover anti-aliased strokes.
+                softened = cv2.GaussianBlur(mask, (0, 0), sigmaX=self.MASK_SOFTEN_SIGMA, sigmaY=self.MASK_SOFTEN_SIGMA)
+                _, expanded_mask = cv2.threshold(
+                    softened,
+                    self.MASK_EXPAND_THRESHOLD,
+                    255,
+                    cv2.THRESH_BINARY,
+                )
+                gray = cv2.bitwise_and(gray, gray, mask=expanded_mask)
 
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = image
+        # 先放大，再轻微模糊，让白色主干更连续
+        gray = self._scale_for_ocr(gray)
+        gray = cv2.GaussianBlur(gray, (0, 0), sigmaX=self.UPSCALE_BLUR_SIGMA, sigmaY=self.UPSCALE_BLUR_SIGMA)
 
-        # Otsu二值化
+        # Otsu二值化 -> 反色得到白底黑字
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        # 反色：白底黑字
         binary = cv2.bitwise_not(binary)
-        # 放大
-        binary = self._scale_for_ocr(binary)
-        # cv2.imwrite('D:\\PCR\\20260314174634.png', binary)
+
+        if self.DEBUG_SAVE_DIR:
+            os.makedirs(self.DEBUG_SAVE_DIR, exist_ok=True)
+            filename = f"ocr_pre_{int(time.time() * 1000)}.png"
+            cv2.imwrite(os.path.join(self.DEBUG_SAVE_DIR, filename), binary)
 
         # 转回3通道
         binary_colored = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
@@ -227,17 +250,14 @@ class Ocr:
         else:
             images_to_ocr = [crop(image, area) for area in self.buttons]
 
-        # images_to_ocr = [self._scale_for_ocr(img) for img in images_to_ocr]
-
-        if text_color is not None:
-            images_to_ocr = [
-                self.pre_process(
-                    img,
-                    text_color=text_color,
-                    text_color_tolerance=text_color_tolerance,
-                )
-                for img in images_to_ocr
-            ]
+        images_to_ocr = [
+            self.pre_process(
+                img,
+                text_color=text_color,
+                text_color_tolerance=text_color_tolerance,
+            )
+            for img in images_to_ocr
+        ]
 
         result = self.paddleocr.predict(images_to_ocr)
         # 处理识别结果
