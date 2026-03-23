@@ -3,14 +3,34 @@ groups:
   - id: sample
     name: 示例分组
     items:
-      - id: sample_a
-        name: FAVORITE_ITEM_BAY
-        display_name: 贝伊好感券
+      - id: gem
+        name: GEM
+        display_name: 钻石
+        scan: true
+        scan_method: detail
+      - id: free_gem
+        name: FREE_GEM
+        display_name: 免费钻石
+        scan: false
+        scan_method: detail
+      - id: paid_gem
+        name: PAID_GEM
+        display_name: 付费钻石
+        scan: false
+        scan_method: detail
+      - id: ballta_data
+        name: BALLTE_DATA
+        display_name: 战斗数据集
         scan: true
         scan_method: direct
-      - id: sample_b
-        name: FAVORITE_ITEM_CENTI
-        display_name: 森迪好感券
+      - id: money
+        name: MONEY
+        display_name: 信用点
+        scan: true
+        scan_method: direct
+      - id: bone
+        name: BONE
+        display_name: 骨头
         scan: true
         scan_method: direct
   - id: other

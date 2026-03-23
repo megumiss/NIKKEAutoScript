@@ -498,6 +498,17 @@ def _to_static_path(path: str) -> str:
     return path
 
 
+def _format_display_count(value) -> str:
+    text = str(value).strip()
+    if text == "":
+        return "-"
+    try:
+        number = int(text.replace(",", ""))
+        return f"{number:,}"
+    except Exception:
+        return text
+
+
 def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
     """
     Render inventory item list table (read-only).
@@ -553,7 +564,7 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
             icon_path = _to_static_path(resolve_item_asset_path(prefix, "ICON"))
             latest_row = counts.get(item_id, {})
             count = latest_row.get("count", "")
-            count_text = count if str(count).strip() != "" else "-"
+            count_text = _format_display_count(count)
 
             display_name = (
                 str(item.get("display_name", "")).strip()

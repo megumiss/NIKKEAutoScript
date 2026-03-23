@@ -28,8 +28,6 @@ TextColorInput = Union[
 
 class Ocr:
     SHOW_REVISE_WARNING = False
-    # HSV 容差 (H, S, V)：值越大，颜色筛选越宽松。
-    HSV_TOLERANCE = (10, 80, 80)
     # 预处理调试图保存目录；设为 None 则不落盘。
     DEBUG_SAVE_DIR = "./data/ocr"
     # OCR 前放大倍率：增大可提升小字可读性，但过大可能导致笔画变粗。
@@ -58,7 +56,8 @@ class Ocr:
             model_type (str): 'mobile' or 'server'
             name (str):
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
-            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，仅在 text_color 为 RGB 时生效。
+            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)。
+                不传则不启用 HSV 颜色筛选。
             text_color_preprocess (tuple | None): 文本预处理参数
                 (mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma)。
         """
@@ -118,19 +117,17 @@ class Ocr:
             return None
 
         hsv_img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        tol = tolerance or self.HSV_TOLERANCE
-
         if isinstance(text_color, dict):
             lower = text_color.get('lower') or text_color.get('hsv_lower')
             upper = text_color.get('upper') or text_color.get('hsv_upper')
             hsv = text_color.get('hsv')
-            tol = text_color.get('tolerance', tol)
+            tol = text_color.get('tolerance', tolerance)
             if lower is not None and upper is not None:
                 lower = np.array(lower, dtype=np.uint8)
                 upper = np.array(upper, dtype=np.uint8)
                 mask = cv2.inRange(hsv_img, lower, upper)
             else:
-                if hsv is None:
+                if hsv is None or tol is None:
                     return None
                 hsv_color = np.array(hsv, dtype=np.uint8)
                 ranges = self._hsv_ranges_from_color(hsv_color, tol)
@@ -141,9 +138,11 @@ class Ocr:
                     part = cv2.inRange(hsv_img, lower, upper)
                     mask = part if mask is None else cv2.bitwise_or(mask, part)
         else:
+            if tolerance is None:
+                return None
             rgb = np.array(text_color, dtype=np.uint8).reshape((1, 1, 3))
             hsv_color = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)[0][0]
-            ranges = self._hsv_ranges_from_color(hsv_color, tol)
+            ranges = self._hsv_ranges_from_color(hsv_color, tolerance)
             mask = None
             for h_range, s_range, v_range in ranges:
                 lower = np.array([h_range[0], s_range[0], v_range[0]], dtype=np.uint8)
@@ -176,7 +175,8 @@ class Ocr:
         Args:
             image (np.ndarray): Shape (height, width, channel)
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
-            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，RGB 模式下生效。
+            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)。
+                不传则不启用 HSV 颜色筛选。
             text_color_preprocess (tuple | None): 文本预处理参数
                 (mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma)。
 
@@ -192,6 +192,7 @@ class Ocr:
             text_color_preprocess=text_color_preprocess
         )
 
+        mask_applied = False
         if text_color is not None and len(image.shape) == 3:
             mask = self._build_text_mask(
                 image,
@@ -208,10 +209,11 @@ class Ocr:
                     cv2.THRESH_BINARY,
                 )
                 gray = cv2.bitwise_and(gray, gray, mask=expanded_mask)
+                mask_applied = True
 
-        # 先放大；仅在 text_color 开启时再做轻微模糊。
+        # 先放大；仅在实际命中颜色掩码时再做轻微模糊。
         gray = self._scale_for_ocr(gray)
-        if text_color is not None and upscale_blur_sigma > 0:
+        if mask_applied and upscale_blur_sigma > 0:
             gray = cv2.GaussianBlur(gray, (0, 0), sigmaX=upscale_blur_sigma, sigmaY=upscale_blur_sigma)
 
         # Otsu二值化 -> 反色得到白底黑字
@@ -258,7 +260,8 @@ class Ocr:
             image (np.ndarray, list[np.ndarray]):
             direct_ocr (bool): True to skip cropping.
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
-            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)，RGB 模式下生效。
+            text_color_tolerance (tuple | None): HSV 容差 (H, S, V)。
+                不传则不启用 HSV 颜色筛选。
             text_color_preprocess (tuple | None): 文本预处理参数
                 (mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma)。
 

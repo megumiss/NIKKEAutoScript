@@ -74,80 +74,128 @@ class WarehouseStats(UI):
     # 是否保存调试图
     DEBUG_SAVE_IMAGE = True
 
-    def inventory_item_num_direct(self, image, area: Tuple[int, int, int, int]) -> Optional[int]:
+    def inventory_item_num_direct(
+        self, image, area: Tuple[int, int, int, int], item_name: Optional[str] = None
+    ) -> Optional[int]:
         # 直读识别：格子局部数字 OCR
         self_image = self.device.image
-        self.device.image = image
-        model_type = self.config.Optimization_OcrModelType
-        item_num = Ocr(
-            [area],
-            text_color=(248, 252, 254),
-            text_color_tolerance=(80, 10, 40),
-            text_color_preprocess=(0.7, 20, 0.6),
-            name='INVENTORY_ITEM',
-            model_type=model_type,
-            lang='ch',
-        )
-        text = item_num.ocr(self.device.image).get('text', '')
-        self.device.image = self_image
-        return self._parse_direct_count_text(text)
+        try:
+            self.device.image = image
+            model_type = self.config.Optimization_OcrModelType
+            item_num = Ocr(
+                [area],
+                text_color=(248, 252, 254),
+                text_color_tolerance=(80, 10, 40),
+                text_color_preprocess=(0.7, 20, 0.6),
+                name=str(item_name or 'INVENTORY_ITEM'),
+                model_type=model_type,
+                lang='ch',
+            )
+            text = item_num.ocr(self.device.image).get('text', '')
+            has_suffix_m = self._match_num_suffix_m(image=image, area=area)
+            return self._parse_direct_count_text(text=text, has_suffix_m=has_suffix_m)
+        finally:
+            self.device.image = self_image
 
-    def _parse_direct_count_text(self, text: str) -> Optional[int]:
-        # 支持：x1 / x444 / x124K（K 代表 *1000）
+    def _parse_direct_count_text(self, text: str, has_suffix_m: bool = False) -> Optional[int]:
+        # Supports x1 / x444 / x124K / x1.2M
         if not text:
             return None
-        normalized = (
-            str(text)
-            .replace('\n', '')
-            .replace(' ', '')
-            .replace(',', '')
-            .replace('，', '')
-            .strip()
-        )
+        normalized = self._normalize_ocr_text_common(text).replace(' ', '').replace(',', '').strip()
 
-        match = re.search(r'[xX]\s*([0-9]+(?:\.[0-9]+)?)\s*([kK]?)', normalized)
+        match = re.search(r'[xX]\s*([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', normalized)
         if match is None:
-            match = re.search(r'([0-9]+(?:\.[0-9]+)?)\s*([kK]?)', normalized)
+            match = re.search(r'([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', normalized)
         if match is None:
             return None
 
-        value = float(match.group(1))
-        if match.group(2).upper() == 'K':
-            value *= 1000
-        return int(round(value))
+        unit = match.group(2)
+        if has_suffix_m:
+            unit = 'M'
+        return self._parse_scaled_number(match.group(1), unit)
 
-    def _ocr_num_area(self, image, area: Tuple[int, int, int, int]) -> Optional[int]:
+    def _match_num_suffix_m(self, image, area: Tuple[int, int, int, int]) -> bool:
+        area_image = crop(image, area)
+        previous_image = self.device.image
+        self.device.image = area_image
+        try:
+            return self.appear(ITEM_NUM_SUFFIX_M, offset=10, threshold=0.6, static=False)
+        finally:
+            self.device.image = previous_image
+
+    def _normalize_ocr_text_common(self, text: str) -> str:
+        normalized = str(text or '').replace('\n', '')
+        normalized = (
+            normalized.replace('\uff08', '(')
+            .replace('\uff09', ')')
+            .replace('\uff1a', ':')
+            .replace('\uff1b', ':')
+            .replace('\uff0c', ',')
+            .replace('\u3002', '.')
+            .replace('\u3001', ',')
+            .replace('\u00d7', 'x')
+            .replace('\uff58', 'x')
+            .replace('\uff38', 'X')
+            .replace('\uff10', '0')
+            .replace('\uff11', '1')
+            .replace('\uff12', '2')
+            .replace('\uff13', '3')
+            .replace('\uff14', '4')
+            .replace('\uff15', '5')
+            .replace('\uff16', '6')
+            .replace('\uff17', '7')
+            .replace('\uff18', '8')
+            .replace('\uff19', '9')
+        )
+
+        trans_table = str.maketrans(
+            {
+                'o': '0',
+                'O': '0',
+                'Q': '0',
+                'D': '0',
+                'I': '1',
+                'l': '1',
+                '|': '1',
+                '!': '1',
+                'i': '1',
+                'Z': '2',
+                'z': '2',
+                'S': '5',
+                's': '5',
+                'B': '8',
+                'k': 'K',
+                'm': 'M',
+            }
+        )
+        return normalized.translate(trans_table)
+
+    def _ocr_num_area(self, image, area: Tuple[int, int, int, int], item_name: Optional[str] = None) -> Optional[int]:
         # Backward compatibility wrapper
-        return self.inventory_item_num_direct(image=image, area=area)
+        return self.inventory_item_num_direct(image=image, area=area, item_name=item_name)
 
-    def inventory_item_num_detail(self, item_id: str, area) -> Dict[str, int]:
-        # 详情识别：识别物品详情面板中的“持有数”
+    def inventory_item_num_detail(self, item_id: str, area, item_name: Optional[str] = None) -> Dict[str, int]:
+        # Detail OCR: read the count text from item detail panel.
         model_type = self.config.Optimization_OcrModelType
         item_num = Ocr(
             [area],
-            text_color=(248, 252, 254),
+            text_color=(151, 151, 151),
             # text_color_tolerance=(80, 10, 40),
             # text_color_preprocess=(0.7, 20, 0.6),
-            name='INVENTORY_ITEM',
+            name=str(item_name or item_id),
             model_type=model_type,
             lang='ch',
         )
 
         text = item_num.ocr(self.device.image).get('text', '')
+        text = self._normalize_ocr_text_common(text)
         text = self._process_detail_text_by_item(item_id=item_id, text=text)
         return self._parse_detail_counts_by_item(item_id=item_id, text=text)
 
     def _process_detail_text_by_item(self, item_id: str, text: str) -> str:
-        # switch 分支：按物品类型做文本预清洗（可继续扩展）
-        normalized = (
-            str(text)
-            .replace('（', '(')
-            .replace('）', ')')
-            .replace('：', ':')
-            .replace('；', ':')
-            .replace('，', ',')
-        )
-        if self._is_gem_family_item(item_id):
+        # Item-specific text preprocessing hook.
+        normalized = self._normalize_ocr_text_common(text)
+        if item_id.endswith('gem'):
             return normalized
         if item_id.endswith('_MOLD') or item_id == 'MOLD':
             return normalized
@@ -155,21 +203,23 @@ class WarehouseStats(UI):
 
     def _parse_detail_counts_by_item(self, item_id: str, text: str) -> Dict[str, int]:
         # 1) GEM 家族：总数 + 免费 + 付费
-        if self._is_gem_family_item(item_id):
-            total = self._extract_default_detail_value(text)
+        if item_id.endswith('gem'):
             free = self._extract_named_value(text, '免费')
             paid = self._extract_named_value(text, '付费')
             # 页面字段名 OCR 丢失时，回退到按出现顺序取数字：
-            # [总数, 免费, 付费]
+            # 目标文本通常为“持有数（免费：xxx，付费：yyy）”
             numbers = self._extract_all_numbers(text)
-            if total is None and len(numbers) >= 1:
-                total = numbers[0]
-            if free is None and len(numbers) >= 2:
-                free = numbers[1]
-            if paid is None and len(numbers) >= 3:
-                paid = numbers[2]
+            if free is None and len(numbers) >= 1:
+                free = numbers[0]
+            if paid is None and len(numbers) >= 2:
+                paid = numbers[1]
 
-            total_id, free_id, paid_id = self._build_gem_family_item_ids(item_id)
+            # GEM 总数由免费 + 付费组成
+            total: Optional[int] = None
+            if free is not None and paid is not None:
+                total = free + paid
+
+            total_id, free_id, paid_id = ('gem', 'free_gem', 'paid_gem')
             result: Dict[str, int] = {}
             if total is not None:
                 result[total_id] = total
@@ -194,46 +244,43 @@ class WarehouseStats(UI):
             return {}
         return {item_id: value}
 
-    def _is_gem_family_item(self, item_id: str) -> bool:
-        return item_id.endswith('_GEM') or item_id.endswith('_FREE_GEM') or item_id.endswith('_PAID_GEM') or item_id in (
-            'GEM',
-            'FREE_GEM',
-            'PAID_GEM',
-        )
-
-    def _build_gem_family_item_ids(self, item_id: str) -> Tuple[str, str, str]:
-        if item_id.endswith('_FREE_GEM'):
-            prefix = item_id[: -len('_FREE_GEM')]
-        elif item_id.endswith('_PAID_GEM'):
-            prefix = item_id[: -len('_PAID_GEM')]
-        elif item_id.endswith('_GEM'):
-            prefix = item_id[: -len('_GEM')]
-        else:
-            prefix = ''
-
-        if prefix:
-            return f'{prefix}_GEM', f'{prefix}_FREE_GEM', f'{prefix}_PAID_GEM'
-        return 'GEM', 'FREE_GEM', 'PAID_GEM'
-
     def _extract_named_value(self, text: str, label: str) -> Optional[int]:
-        match = re.search(rf'{label}[^0-9]*([0-9]+)', text)
+        match = re.search(rf'{label}[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', text)
         if match:
-            return int(match.group(1))
+            return self._parse_scaled_number(match.group(1), match.group(2))
         return None
 
     def _extract_all_numbers(self, text: str) -> List[int]:
-        return [int(v) for v in re.findall(r'([0-9]+)', text)]
+        values: List[int] = []
+        for value_text, unit_text in re.findall(r'([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', text):
+            value = self._parse_scaled_number(value_text, unit_text)
+            if value is not None:
+                values.append(value)
+        return values
+
+    def _parse_scaled_number(self, value_text: str, unit_text: str = '') -> Optional[int]:
+        try:
+            value = float(value_text)
+        except (TypeError, ValueError):
+            return None
+
+        unit = str(unit_text or '').upper()
+        if unit == 'K':
+            value *= 1000
+        elif unit == 'M':
+            value *= 1000000
+        return int(round(value))
 
     def _extract_default_detail_value(self, text: str) -> Optional[int]:
-        pattern = f'{Langs.FAVORITE_ITEM_NUM}[:\\uFF1A;；]\\s*([0-9]+)'
+        pattern = f'{Langs.FAVORITE_ITEM_NUM}[:\\uFF1A;；]\\s*([0-9]+(?:\\.[0-9]+)?)\\s*([kKmM]?)'
         match = re.search(pattern, text)
         if match:
-            return int(match.group(1))
+            return self._parse_scaled_number(match.group(1), match.group(2))
 
         # fallback: “拥有数”关键字丢失时，取第一个数字
-        fallback = re.search(r'([0-9]+)', text)
+        fallback = re.search(r'([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', text)
         if fallback:
-            return int(fallback.group(1))
+            return self._parse_scaled_number(fallback.group(1), fallback.group(2))
         return None
 
     def run(self):
@@ -370,7 +417,11 @@ class WarehouseStats(UI):
                     if num_area is None:
                         continue
 
-                    count = self.inventory_item_num_direct(image=image, area=num_area)
+                    count = self.inventory_item_num_direct(
+                        image=image,
+                        area=num_area,
+                        item_name=item_name_map.get(item_id, item_id),
+                    )
                     if count is None:
                         continue
 
@@ -399,6 +450,8 @@ class WarehouseStats(UI):
                     if not self._open_item_detail(pending_detail[item_id]):
                         continue
 
+                self.device.sleep(1)
+                self.device.screenshot()
                 owner_loc = self.appear_location(INVENTORY_ITEM_CLOSE, offset=10, static=False)
                 if owner_loc is None:
                     self._close_item_detail()
@@ -406,7 +459,8 @@ class WarehouseStats(UI):
 
                 detail_counts = self.inventory_item_num_detail(
                     item_id=item_id,
-                    area=(720 - owner_loc[0], owner_loc[1] + 200, owner_loc[0], owner_loc[1] + 270),
+                    area=(720 - owner_loc[0], owner_loc[1] + 240, owner_loc[0], owner_loc[1] + 270),
+                    item_name=item_name_map.get(item_id, item_id),
                 )
                 if not detail_counts:
                     self._close_item_detail()
@@ -531,7 +585,7 @@ class WarehouseStats(UI):
                     continue
 
                 # OCR 识别数量
-                count = self.inventory_item_num_direct(image=image, area=num_area)
+                count = self.inventory_item_num_direct(image=image, area=num_area, item_name=item_id)
                 if count is None:
                     continue
 
@@ -595,7 +649,8 @@ class WarehouseStats(UI):
                 # 详情页数量区域 OCR
                 detail_counts = self.inventory_item_num_detail(
                     item_id=item_id,
-                    area=(720 - owner_loc[0], owner_loc[1] + 200, owner_loc[0], owner_loc[1] + 270),
+                    area=(720 - owner_loc[0], owner_loc[1] + 240, owner_loc[0], owner_loc[1] + 270),
+                    item_name=item_id,
                 )
                 if not detail_counts:
                     remaining[item_id] = button
@@ -775,8 +830,7 @@ class WarehouseStats(UI):
             logger.info(f'WarehouseStats: Page {page_index + 1} recognized 0 items.')
             return
         summary = ', '.join(
-            f'{item_name_map.get(item_id, item_id)}({item_id})={count}'
-            for item_id, count in page_counts.items()
+            f'{item_name_map.get(item_id, item_id)}({item_id})={count}' for item_id, count in page_counts.items()
         )
         logger.info(f'WarehouseStats: Page {page_index + 1} results: {summary}')
 
