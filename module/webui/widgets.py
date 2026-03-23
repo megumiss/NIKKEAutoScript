@@ -549,10 +549,16 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
             item_id = item.get("id", "")
             prefix = resolve_item_prefix(item)
             icon_path = _to_static_path(resolve_item_asset_path(prefix, "ICON"))
-            count = counts.get(item_id, {}).get("count", "")
+            latest_row = counts.get(item_id, {})
+            count = latest_row.get("count", "")
             count_text = count if str(count).strip() != "" else "-"
 
-            name_text = html.escape(str(item.get("name", item_id)))
+            display_name = (
+                str(item.get("display_name", "")).strip()
+                or str(latest_row.get("item_name", "")).strip()
+                or str(item.get("name", item_id))
+            )
+            name_text = html.escape(display_name)
             owned_label = html.escape(t("Gui.Text.WarehouseOwned"))
             count_text = html.escape(str(count_text))
 

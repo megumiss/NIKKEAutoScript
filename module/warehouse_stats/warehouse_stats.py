@@ -74,8 +74,10 @@ class WarehouseStats(UI):
     # 是否保存调试图
     DEBUG_SAVE_IMAGE = True
 
-    def inventory_item_num(self, area):
-        # 旧逻辑：识别物品详情面板中的“持有数”
+    def inventory_item_num_direct(self, image, area: Tuple[int, int, int, int]) -> Optional[int]:
+        # 直读识别：格子局部数字 OCR
+        self_image = self.device.image
+        self.device.image = image
         model_type = self.config.Optimization_OcrModelType
         item_num = Ocr(
             [area],
@@ -86,14 +88,153 @@ class WarehouseStats(UI):
             model_type=model_type,
             lang='ch',
         )
+        text = item_num.ocr(self.device.image).get('text', '')
+        self.device.image = self_image
+        return self._parse_direct_count_text(text)
 
-        text = item_num.ocr(self.device.image)['text']
-        # 同时兼容英文冒号 : 与全角冒号 ：
-        pattern = f'{Langs.FAVORITE_ITEM_NUM}[:\\uFF1A]\\s*(\\d+)'
+    def _parse_direct_count_text(self, text: str) -> Optional[int]:
+        # 支持：x1 / x444 / x124K（K 代表 *1000）
+        if not text:
+            return None
+        normalized = (
+            str(text)
+            .replace('\n', '')
+            .replace(' ', '')
+            .replace(',', '')
+            .replace('，', '')
+            .strip()
+        )
+
+        match = re.search(r'[xX]\s*([0-9]+(?:\.[0-9]+)?)\s*([kK]?)', normalized)
+        if match is None:
+            match = re.search(r'([0-9]+(?:\.[0-9]+)?)\s*([kK]?)', normalized)
+        if match is None:
+            return None
+
+        value = float(match.group(1))
+        if match.group(2).upper() == 'K':
+            value *= 1000
+        return int(round(value))
+
+    def _ocr_num_area(self, image, area: Tuple[int, int, int, int]) -> Optional[int]:
+        # Backward compatibility wrapper
+        return self.inventory_item_num_direct(image=image, area=area)
+
+    def inventory_item_num_detail(self, item_id: str, area) -> Dict[str, int]:
+        # 详情识别：识别物品详情面板中的“持有数”
+        model_type = self.config.Optimization_OcrModelType
+        item_num = Ocr(
+            [area],
+            text_color=(248, 252, 254),
+            # text_color_tolerance=(80, 10, 40),
+            # text_color_preprocess=(0.7, 20, 0.6),
+            name='INVENTORY_ITEM',
+            model_type=model_type,
+            lang='ch',
+        )
+
+        text = item_num.ocr(self.device.image).get('text', '')
+        text = self._process_detail_text_by_item(item_id=item_id, text=text)
+        return self._parse_detail_counts_by_item(item_id=item_id, text=text)
+
+    def _process_detail_text_by_item(self, item_id: str, text: str) -> str:
+        # switch 分支：按物品类型做文本预清洗（可继续扩展）
+        normalized = (
+            str(text)
+            .replace('（', '(')
+            .replace('）', ')')
+            .replace('：', ':')
+            .replace('；', ':')
+            .replace('，', ',')
+        )
+        if self._is_gem_family_item(item_id):
+            return normalized
+        if item_id.endswith('_MOLD') or item_id == 'MOLD':
+            return normalized
+        return normalized
+
+    def _parse_detail_counts_by_item(self, item_id: str, text: str) -> Dict[str, int]:
+        # 1) GEM 家族：总数 + 免费 + 付费
+        if self._is_gem_family_item(item_id):
+            total = self._extract_default_detail_value(text)
+            free = self._extract_named_value(text, '免费')
+            paid = self._extract_named_value(text, '付费')
+            # 页面字段名 OCR 丢失时，回退到按出现顺序取数字：
+            # [总数, 免费, 付费]
+            numbers = self._extract_all_numbers(text)
+            if total is None and len(numbers) >= 1:
+                total = numbers[0]
+            if free is None and len(numbers) >= 2:
+                free = numbers[1]
+            if paid is None and len(numbers) >= 3:
+                paid = numbers[2]
+
+            total_id, free_id, paid_id = self._build_gem_family_item_ids(item_id)
+            result: Dict[str, int] = {}
+            if total is not None:
+                result[total_id] = total
+            if free is not None:
+                result[free_id] = free
+            if paid is not None:
+                result[paid_id] = paid
+            return result
+
+        # 2) MOLD：只取 "/" 前面的当前数量
+        if item_id.endswith('_MOLD') or item_id == 'MOLD':
+            match = re.search(r'[:]\s*([0-9]+)\s*/\s*[0-9]+', text)
+            if match is None:
+                match = re.search(r'([0-9]+)\s*/\s*[0-9]+', text)
+            if match:
+                return {item_id: int(match.group(1))}
+            return {}
+
+        # 3) 默认详情：取“拥有数: 数量”
+        value = self._extract_default_detail_value(text)
+        if value is None:
+            return {}
+        return {item_id: value}
+
+    def _is_gem_family_item(self, item_id: str) -> bool:
+        return item_id.endswith('_GEM') or item_id.endswith('_FREE_GEM') or item_id.endswith('_PAID_GEM') or item_id in (
+            'GEM',
+            'FREE_GEM',
+            'PAID_GEM',
+        )
+
+    def _build_gem_family_item_ids(self, item_id: str) -> Tuple[str, str, str]:
+        if item_id.endswith('_FREE_GEM'):
+            prefix = item_id[: -len('_FREE_GEM')]
+        elif item_id.endswith('_PAID_GEM'):
+            prefix = item_id[: -len('_PAID_GEM')]
+        elif item_id.endswith('_GEM'):
+            prefix = item_id[: -len('_GEM')]
+        else:
+            prefix = ''
+
+        if prefix:
+            return f'{prefix}_GEM', f'{prefix}_FREE_GEM', f'{prefix}_PAID_GEM'
+        return 'GEM', 'FREE_GEM', 'PAID_GEM'
+
+    def _extract_named_value(self, text: str, label: str) -> Optional[int]:
+        match = re.search(rf'{label}[^0-9]*([0-9]+)', text)
+        if match:
+            return int(match.group(1))
+        return None
+
+    def _extract_all_numbers(self, text: str) -> List[int]:
+        return [int(v) for v in re.findall(r'([0-9]+)', text)]
+
+    def _extract_default_detail_value(self, text: str) -> Optional[int]:
+        pattern = f'{Langs.FAVORITE_ITEM_NUM}[:\\uFF1A;；]\\s*([0-9]+)'
         match = re.search(pattern, text)
         if match:
             return int(match.group(1))
-        return 0
+
+        # fallback: “拥有数”关键字丢失时，取第一个数字
+        fallback = re.search(r'([0-9]+)', text)
+        if fallback:
+            return int(fallback.group(1))
+        return None
 
     def run(self):
         logger.hr('Warehouse Stats', 2)
@@ -130,6 +271,7 @@ class WarehouseStats(UI):
     def scan_inventory(self, items: List[dict]) -> Dict[str, int]:
         templates = self._load_templates(items)
         results: Dict[str, int] = {}
+        item_name_map: Dict[str, str] = {}
 
         # 按识别方式分流：
         # direct: 分割格子内直接识别数量
@@ -140,6 +282,7 @@ class WarehouseStats(UI):
             item_id = item.get('id')
             if not item_id or not item.get('scan', True):
                 continue
+            item_name_map[item_id] = str(item.get('display_name') or item.get('name') or item_id)
             button = templates.get(item_id)
             if button is None:
                 continue
@@ -158,6 +301,7 @@ class WarehouseStats(UI):
             pending_direct=pending_direct,
             pending_detail=pending_detail,
             results=results,
+            item_name_map=item_name_map,
         )
 
         return results
@@ -167,6 +311,7 @@ class WarehouseStats(UI):
         pending_direct: Dict[str, Button],
         pending_detail: Dict[str, Button],
         results: Dict[str, int],
+        item_name_map: Dict[str, str],
     ) -> None:
         if not hasattr(self, '_debug_run_id'):
             self._debug_run_id = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -205,6 +350,7 @@ class WarehouseStats(UI):
 
             detail_targets: List[Tuple[str, Tuple[int, int, int, int]]] = []
             detail_seen = set()
+            page_results: Dict[str, int] = {}
 
             # 第一步：本页先 direct 识别；detail 只登记目标，不发生点击。
             for cell in cells:
@@ -224,14 +370,18 @@ class WarehouseStats(UI):
                     if num_area is None:
                         continue
 
-                    count = self._ocr_num_area(image=image, area=num_area)
+                    count = self.inventory_item_num_direct(image=image, area=num_area)
                     if count is None:
                         continue
 
                     results[item_id] = count
+                    page_results[item_id] = count
                     pending_direct.pop(item_id, None)
                     pending_all.pop(item_id, None)
-                    logger.info(f'WarehouseStats: [Direct] Found item={item_id}, count={count}, area={num_area}')
+                    item_name = item_name_map.get(item_id, item_id)
+                    logger.info(
+                        f'WarehouseStats: [Direct] Found item={item_id}({item_name}), count={count}, area={num_area}'
+                    )
                     continue
 
                 if item_id in pending_detail and item_id not in detail_seen:
@@ -254,12 +404,28 @@ class WarehouseStats(UI):
                     self._close_item_detail()
                     continue
 
-                results[item_id] = self.inventory_item_num(
-                    (720 - owner_loc[0], owner_loc[1] + 200, owner_loc[0], owner_loc[1] + 270)
+                detail_counts = self.inventory_item_num_detail(
+                    item_id=item_id,
+                    area=(720 - owner_loc[0], owner_loc[1] + 200, owner_loc[0], owner_loc[1] + 270),
                 )
-                pending_detail.pop(item_id, None)
-                logger.info(f'WarehouseStats: [Detail] Found item={item_id}, count={results[item_id]}')
+                if not detail_counts:
+                    self._close_item_detail()
+                    continue
+
+                for detail_item_id, detail_count in detail_counts.items():
+                    results[detail_item_id] = detail_count
+                    page_results[detail_item_id] = detail_count
+                    pending_detail.pop(detail_item_id, None)
+                    pending_direct.pop(detail_item_id, None)
+
+                detail_log = ', '.join(
+                    f'{detail_item_id}({item_name_map.get(detail_item_id, detail_item_id)})={detail_count}'
+                    for detail_item_id, detail_count in detail_counts.items()
+                )
+                logger.info(f'WarehouseStats: [Detail] Found item={item_id}, counts={detail_log}')
                 self._close_item_detail()
+
+            self._log_page_item_counts(page_index=page_index, page_counts=page_results, item_name_map=item_name_map)
 
             if not pending_direct and not pending_detail:
                 break
@@ -365,7 +531,7 @@ class WarehouseStats(UI):
                     continue
 
                 # OCR 识别数量
-                count = self._ocr_num_area(image=image, area=num_area)
+                count = self.inventory_item_num_direct(image=image, area=num_area)
                 if count is None:
                     continue
 
@@ -427,9 +593,17 @@ class WarehouseStats(UI):
                     continue
 
                 # 详情页数量区域 OCR
-                results[item_id] = self.inventory_item_num(
-                    (720 - owner_loc[0], owner_loc[1] + 200, owner_loc[0], owner_loc[1] + 270)
+                detail_counts = self.inventory_item_num_detail(
+                    item_id=item_id,
+                    area=(720 - owner_loc[0], owner_loc[1] + 200, owner_loc[0], owner_loc[1] + 270),
                 )
+                if not detail_counts:
+                    remaining[item_id] = button
+                    continue
+
+                for detail_item_id, detail_count in detail_counts.items():
+                    results[detail_item_id] = detail_count
+                    remaining.pop(detail_item_id, None)
 
                 # 关闭详情回到列表
                 while 1:
@@ -591,32 +765,20 @@ class WarehouseStats(UI):
             return None
         return int(x1), int(y1), int(x2), int(y2)
 
-    def _ocr_num_area(self, image, area: Tuple[int, int, int, int]) -> Optional[int]:
-        # 数字 OCR：识别失败返回 None
-        self_image = self.device.image
-        self.device.image = image
-        model_type = self.config.Optimization_OcrModelType
-        item_num = Ocr(
-            [area],
-            text_color=(248, 252, 254),
-            text_color_tolerance=(80, 10, 40),
-            name='INVENTORY_ITEM',
-            model_type=model_type,
-            lang='ch',
+    def _log_page_item_counts(
+        self,
+        page_index: int,
+        page_counts: Dict[str, int],
+        item_name_map: Dict[str, str],
+    ) -> None:
+        if not page_counts:
+            logger.info(f'WarehouseStats: Page {page_index + 1} recognized 0 items.')
+            return
+        summary = ', '.join(
+            f'{item_name_map.get(item_id, item_id)}({item_id})={count}'
+            for item_id, count in page_counts.items()
         )
-        text = item_num.ocr(self.device.image)['text']
-        self.device.image = self_image
-
-        # ts = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-        # self._save_debug_image(f'{ts}_num_raw_{area[0]}_{area[1]}_{area[2]}_{area[3]}.png', num_raw)
-        # self._save_debug_image(f'{ts}_num_preprocessed_{area[0]}_{area[1]}_{area[2]}_{area[3]}.png', text)
-
-        if text == '':
-            return None
-        try:
-            return int(text)
-        except Exception:
-            return None
+        logger.info(f'WarehouseStats: Page {page_index + 1} results: {summary}')
 
     def _save_debug_image(self, filename: str, image) -> None:
         if not self.DEBUG_SAVE_IMAGE:

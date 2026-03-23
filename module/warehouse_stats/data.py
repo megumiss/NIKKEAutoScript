@@ -99,11 +99,16 @@ def load_item_groups(path: str = None) -> List[dict]:
             item_id = str(item.get('id', '')).strip()
             if not item_id:
                 continue
+            display_name = str(
+                item.get('display_name', item.get('item_name', item.get('label', item.get('title', ''))))
+            ).strip()
             items.append(
                 {
                     'id': item_id,
                     # Name is the template prefix, e.g. FAVORITE_ITEM_ZWEI
                     'name': str(item.get('name', item_id)).strip(),
+                    # Optional UI display name for stats page / csv
+                    'display_name': display_name,
                     'scan': item.get('scan', True),
                     'scan_method': normalize_scan_method(item.get('scan_method', SCAN_METHOD_DIRECT)),
                     'group_id': group_id,

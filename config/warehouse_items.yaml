@@ -5,10 +5,12 @@ groups:
     items:
       - id: sample_a
         name: FAVORITE_ITEM_BAY
+        display_name: 贝伊好感券
         scan: true
         scan_method: direct
       - id: sample_b
         name: FAVORITE_ITEM_CENTI
+        display_name: 森迪好感券
         scan: true
         scan_method: direct
   - id: other
@@ -16,5 +18,6 @@ groups:
     items:
       - id: sample_c
         name: FAVORITE_ITEM_ZWEI
+        display_name: 茨瓦伊好感券
         scan: true
         scan_method: detail
