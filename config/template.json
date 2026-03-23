@@ -743,7 +743,7 @@
     },
     "WarehouseStats": {
       "ItemMapPath": "./config/warehouse_items.yaml",
-      "CsvPath": "./data/warehouse_stats/items.csv",
+      "CsvPath": "./data/{config_name}/items.csv",
       "ScrollTimes": 5
     },
     "WarehouseItems": {
@@ -755,7 +755,7 @@
   },
   "InterceptionTaskStats": {
     "InterceptionDropStats": {
-      "CsvPath": "./data/interception_stats/stones.csv"
+      "CsvPath": "./data/{config_name}/stones.csv"
     },
     "InterceptionTaskCharts": {
       "Charts": {}

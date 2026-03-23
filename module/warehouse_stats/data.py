@@ -7,7 +7,7 @@ from module.config.utils import read_file
 from module.logger import logger
 
 DEFAULT_ITEM_MAP_PATH = './config/warehouse_items.yaml'
-DEFAULT_CSV_PATH = './data/warehouse_stats/items.csv'
+DEFAULT_CSV_PATH = './data/{config_name}/items.csv'
 
 CSV_COLUMNS = [
     'timestamp',
@@ -38,13 +38,20 @@ def _ensure_parent_dir(path: str) -> None:
         os.makedirs(folder, exist_ok=True)
 
 
+def resolve_csv_path(path: str, config_name: str = 'nkas') -> str:
+    text = str(path or '').strip()
+    if not text:
+        return ''
+    return text.replace('{config_name}', str(config_name or 'nkas'))
+
+
 def ensure_item_map_file(path: str = None) -> str:
     path = path or DEFAULT_ITEM_MAP_PATH
     return path
 
 
-def ensure_sample_csv(csv_path: str = None, item_map_path: str = None) -> str:
-    csv_path = csv_path or DEFAULT_CSV_PATH
+def ensure_sample_csv(csv_path: str = None, item_map_path: str = None, config_name: str = 'nkas') -> str:
+    csv_path = resolve_csv_path(csv_path or DEFAULT_CSV_PATH, config_name=config_name)
     if os.path.exists(csv_path):
         return csv_path
 
@@ -65,12 +72,12 @@ def ensure_sample_csv(csv_path: str = None, item_map_path: str = None) -> str:
     return csv_path
 
 
-def init_warehouse_stats_files(item_map_path: str = None, csv_path: str = None) -> None:
+def init_warehouse_stats_files(item_map_path: str = None, csv_path: str = None, config_name: str = 'nkas') -> None:
     """
     Initialize sample CSV on startup (does not modify item map).
     """
     item_map_path = ensure_item_map_file(item_map_path or DEFAULT_ITEM_MAP_PATH)
-    ensure_sample_csv(csv_path or DEFAULT_CSV_PATH, item_map_path=item_map_path)
+    ensure_sample_csv(csv_path or DEFAULT_CSV_PATH, item_map_path=item_map_path, config_name=config_name)
 
 
 def load_item_groups(path: str = None) -> List[dict]:
@@ -176,13 +183,12 @@ def write_inventory_csv(csv_path: str, items: List[dict], recorded_at: datetime 
 
     recorded_at = recorded_at or datetime.now().replace(microsecond=0)
     _ensure_parent_dir(csv_path)
-    file_exists = os.path.exists(csv_path)
 
     rows = 0
-    with open(csv_path, 'a', newline='', encoding='utf-8') as f:
+    # Keep only the latest snapshot for warehouse stats.
+    with open(csv_path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
-        if not file_exists:
-            writer.writeheader()
+        writer.writeheader()
         for item in items:
             writer.writerow(
                 {

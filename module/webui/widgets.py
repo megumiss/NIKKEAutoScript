@@ -521,6 +521,7 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
         DEFAULT_ITEM_MAP_PATH,
         load_item_groups,
         load_latest_counts,
+        resolve_csv_path,
         resolve_item_asset_path,
         resolve_item_prefix,
     )
@@ -540,6 +541,7 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
         keys=["WarehouseStats", "WarehouseStats", "CsvPath"],
         default=DEFAULT_CSV_PATH,
     )
+    csv_path = resolve_csv_path(csv_path, config_name=nkasgui.nkas_name)
 
     groups = load_item_groups(item_map_path)
     counts = load_latest_counts(csv_path)

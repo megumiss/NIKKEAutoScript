@@ -55,7 +55,7 @@ class NikkeAutoScript:
 
         # Initialize global warehouse stats files (mapping + sample csv)
         from module.warehouse_stats.data import init_warehouse_stats_files
-        init_warehouse_stats_files()
+        init_warehouse_stats_files(config_name=self.config_name)
 
     @cached_property
     def config(self):

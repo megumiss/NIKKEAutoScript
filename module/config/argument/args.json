@@ -2650,7 +2650,7 @@
       },
       "CsvPath": {
         "type": "textarea",
-        "value": "./data/warehouse_stats/items.csv",
+        "value": "./data/{config_name}/items.csv",
         "display": "hide"
       },
       "ScrollTimes": {
@@ -2679,7 +2679,7 @@
     "InterceptionDropStats": {
       "CsvPath": {
         "type": "textarea",
-        "value": "./data/interception_stats/stones.csv",
+        "value": "./data/{config_name}/stones.csv",
         "display": "hide"
       }
     },

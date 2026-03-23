@@ -69,6 +69,11 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         else:
             super().__setattr__(key, value)
 
+    def _resolve_config_placeholders(self, value):
+        if isinstance(value, str) and '{config_name}' in value:
+            return value.replace('{config_name}', str(self.config_name or 'nkas'))
+        return value
+
     def __init__(self, config_name, task=None):
         # This will read ./config/<config_name>.json
         self.config_name = config_name
@@ -171,6 +176,7 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                         将 func_set 任务组 / 选项组 的 属性覆盖到 GeneratedConfig 的类变量
                     """
                     arg = path_to_arg(path)
+                    value = self._resolve_config_placeholders(value)
                     super().__setattr__(arg, value)
                     self.bound[arg] = f"{func}.{path}"
                     visited.add(path)

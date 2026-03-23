@@ -224,14 +224,14 @@ class GeneratedConfig:
 
     # Group `WarehouseStats`
     WarehouseStats_ItemMapPath = './config/warehouse_items.yaml'
-    WarehouseStats_CsvPath = './data/warehouse_stats/items.csv'
+    WarehouseStats_CsvPath = './data/{config_name}/items.csv'
     WarehouseStats_ScrollTimes = 5
 
     # Group `WarehouseItems`
     WarehouseItems_Items = {}
 
     # Group `InterceptionDropStats`
-    InterceptionDropStats_CsvPath = './data/interception_stats/stones.csv'
+    InterceptionDropStats_CsvPath = './data/{config_name}/stones.csv'
 
     # Group `InterceptionTaskCharts`
     InterceptionTaskCharts_Charts = {}

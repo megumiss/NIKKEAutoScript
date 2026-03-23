@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 
 from module.logger import logger
 
-DEFAULT_STONE_CSV_PATH = './data/interception_stats/stones.csv'
+DEFAULT_STONE_CSV_PATH = './data/{config_name}/stones.csv'
 
 CSV_COLUMNS = [
     'timestamp',
@@ -20,6 +20,13 @@ def _ensure_parent_dir(path: str) -> None:
     folder = os.path.dirname(path)
     if folder:
         os.makedirs(folder, exist_ok=True)
+
+
+def resolve_stone_csv_path(path: str, config_name: str = 'nkas') -> str:
+    text = str(path or '').strip()
+    if not text:
+        return ''
+    return text.replace('{config_name}', str(config_name or 'nkas'))
 
 
 def _to_int(value, default: int = 0) -> int:
@@ -52,6 +59,7 @@ def append_interception_stone_record(
     screenshot_path: str = '',
     recorded_at: datetime = None,
 ) -> bool:
+    csv_path = resolve_stone_csv_path(csv_path, config_name=config_name)
     if not csv_path:
         logger.warning('InterceptionStats: csv_path is empty, skip write.')
         return False
@@ -77,6 +85,7 @@ def append_interception_stone_record(
 
 
 def load_interception_stone_rows(csv_path: str, config_name: str = '') -> List[dict]:
+    csv_path = resolve_stone_csv_path(csv_path, config_name=config_name or 'nkas')
     if not csv_path or not os.path.exists(csv_path):
         return []
 

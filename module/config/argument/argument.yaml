@@ -363,7 +363,7 @@ WarehouseStats:
     type: textarea
     display: hide
   CsvPath:
-    value: './data/warehouse_stats/items.csv'
+    value: './data/{config_name}/items.csv'
     type: textarea
     display: hide
   ScrollTimes:
@@ -376,7 +376,7 @@ WarehouseItems:
     display: readonly
 InterceptionDropStats:
   CsvPath:
-    value: './data/interception_stats/stones.csv'
+    value: './data/{config_name}/stones.csv'
     type: textarea
     display: hide
 InterceptionTaskCharts:
