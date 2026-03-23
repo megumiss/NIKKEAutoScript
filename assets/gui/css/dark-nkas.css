@@ -120,17 +120,64 @@ pre.rich-traceback-code {
 
 #pywebio-scope-content {
     --warehouse-card-bg: #2f3136;
+    --warehouse-card-bg-top: #343840;
     --warehouse-card-border: #21262d;
     --warehouse-item-name: #e6e6e6;
     --warehouse-item-count: #b0b3b8;
+    --warehouse-group-bg-top: #373b43;
+    --warehouse-group-bg: #2f3136;
+    --warehouse-group-border: #21262d;
+    --warehouse-placeholder-text: #95a0ad;
+    --warehouse-placeholder-bg: rgba(255, 255, 255, 0.08);
+    --warehouse-tone-1-line: #62c0ff;
+    --warehouse-tone-1-total-bg: rgba(98, 192, 255, 0.2);
+    --warehouse-tone-1-total-border: rgba(98, 192, 255, 0.43);
+    --warehouse-tone-1-total-text: #e6f6ff;
+    --warehouse-tone-1-chip-bg: rgba(98, 192, 255, 0.2);
+    --warehouse-tone-1-chip-border: rgba(98, 192, 255, 0.43);
+    --warehouse-tone-1-chip-text: #e6f6ff;
+    --warehouse-tone-2-line: #58dbc8;
+    --warehouse-tone-2-total-bg: rgba(88, 219, 200, 0.2);
+    --warehouse-tone-2-total-border: rgba(88, 219, 200, 0.43);
+    --warehouse-tone-2-total-text: #e1fff9;
+    --warehouse-tone-2-chip-bg: rgba(88, 219, 200, 0.2);
+    --warehouse-tone-2-chip-border: rgba(88, 219, 200, 0.43);
+    --warehouse-tone-2-chip-text: #e1fff9;
+    --warehouse-tone-3-line: #ffc178;
+    --warehouse-tone-3-total-bg: rgba(255, 193, 120, 0.2);
+    --warehouse-tone-3-total-border: rgba(255, 193, 120, 0.43);
+    --warehouse-tone-3-total-text: #fff3e2;
+    --warehouse-tone-3-chip-bg: rgba(255, 193, 120, 0.2);
+    --warehouse-tone-3-chip-border: rgba(255, 193, 120, 0.43);
+    --warehouse-tone-3-chip-text: #fff3e2;
     --interception-chart-bg: #2f3136;
+    --interception-chart-bg-top: #343840;
     --interception-chart-border: #21262d;
     --interception-chart-title: #e6e6e6;
+    --interception-chart-subtitle: #9aa3af;
     --interception-chart-grid: #3f434a;
     --interception-chart-axis: #7d8590;
     --interception-chart-line: #66b8ea;
     --interception-chart-fill: rgba(102, 184, 234, 0.14);
     --interception-chart-text: #adb5bd;
+    --interception-chart-chip-bg: rgba(102, 184, 234, 0.2);
+    --interception-chart-chip-border: rgba(102, 184, 234, 0.45);
+    --interception-chart-chip-text: #d9f3ff;
+    --interception-tone-daily-line: #63c2ff;
+    --interception-tone-daily-fill: rgba(99, 194, 255, 0.15);
+    --interception-tone-daily-chip-bg: rgba(99, 194, 255, 0.2);
+    --interception-tone-daily-chip-border: rgba(99, 194, 255, 0.44);
+    --interception-tone-daily-chip-text: #e4f6ff;
+    --interception-tone-weekly-line: #58dbc8;
+    --interception-tone-weekly-fill: rgba(88, 219, 200, 0.15);
+    --interception-tone-weekly-chip-bg: rgba(88, 219, 200, 0.2);
+    --interception-tone-weekly-chip-border: rgba(88, 219, 200, 0.44);
+    --interception-tone-weekly-chip-text: #dffff8;
+    --interception-tone-monthly-line: #ffc178;
+    --interception-tone-monthly-fill: rgba(255, 193, 120, 0.17);
+    --interception-tone-monthly-chip-bg: rgba(255, 193, 120, 0.2);
+    --interception-tone-monthly-chip-border: rgba(255, 193, 120, 0.44);
+    --interception-tone-monthly-chip-text: #fff4e3;
 }
 
 #pywebio-scope-aside {

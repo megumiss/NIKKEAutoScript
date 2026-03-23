@@ -543,7 +543,9 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
         content.append(put_text(t("Gui.Text.WarehouseNoMap")))
         return finalize(content)
 
-    for group in groups:
+    tone_classes = ['warehouse-tone-1', 'warehouse-tone-2', 'warehouse-tone-3']
+    for group_index, group in enumerate(groups):
+        tone_class = tone_classes[group_index % len(tone_classes)]
         cards = []
         for item in group.get("items", []):
             item_id = item.get("id", "")
@@ -575,7 +577,10 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
                 f'<div class="warehouse-item-icon">{icon_html}</div>'
                 f'<div class="warehouse-item-info">'
                 f'<div class="warehouse-item-name">{name_text}</div>'
-                f'<div class="warehouse-item-count">{owned_label}: {count_text}</div>'
+                f'<div class="warehouse-item-count">'
+                f'<span class="warehouse-owned-label">{owned_label}</span>'
+                f'<span class="warehouse-owned-value">{count_text}</span>'
+                f'</div>'
                 f'</div>'
                 f'</div>'
             )
@@ -583,8 +588,11 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
         if cards:
             group_title = html.escape(str(group.get("name", "")))
             grid_html = (
-                f'<div class="warehouse-group">'
+                f'<div class="warehouse-group {tone_class}">'
+                f'<div class="warehouse-group-head">'
                 f'<div class="warehouse-group-title">{group_title}</div>'
+                f'<div class="warehouse-group-total">{len(cards)}</div>'
+                f'</div>'
                 f'<div class="warehouse-items-grid">{"".join(cards)}</div>'
                 f'</div>'
             )
@@ -604,6 +612,7 @@ def _build_svg_line_chart(
     sum_text: str,
     max_text: str,
     avg_text: str,
+    tone_class: str = '',
 ) -> str:
     import html
 
@@ -676,10 +685,22 @@ def _build_svg_line_chart(
     total = sum(values)
     peak = max(values)
     average = total / len(values) if values else 0
+    range_text = labels[0] if len(labels) == 1 else f'{labels[0]} - {labels[-1]}'
+    latest_marker = ''
+    if points:
+        latest_x, latest_y, latest_value = points[-1]
+        latest_marker = (
+            f'<circle cx="{latest_x:.2f}" cy="{latest_y:.2f}" r="4.4" class="interception-chart-point-latest">'
+            f'<title>{html.escape(labels[-1])}: {latest_value} {html.escape(unit_text)}</title>'
+            f'</circle>'
+        )
 
     return (
-        f'<div class="interception-chart-card">'
+        f'<div class="interception-chart-card {html.escape(tone_class)}">'
+        f'<div class="interception-chart-head">'
         f'<div class="interception-chart-title">{html.escape(title)}</div>'
+        f'<div class="interception-chart-range">{html.escape(range_text)}</div>'
+        f'</div>'
         f'<svg class="interception-chart-svg" viewBox="0 0 {width} {height}" preserveAspectRatio="xMidYMid meet">'
         f'{"".join(y_grid)}'
         f'<line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" class="interception-chart-axis" />'
@@ -687,12 +708,13 @@ def _build_svg_line_chart(
         f'<polygon points="{area_points}" class="interception-chart-area" />'
         f'<polyline points="{point_str}" class="interception-chart-line" />'
         f'{"".join(circles)}'
+        f'{latest_marker}'
         f'{"".join(x_labels)}'
         f'</svg>'
         f'<div class="interception-chart-meta">'
-        f'<span>{html.escape(sum_text)}: {total}</span>'
-        f'<span>{html.escape(max_text)}: {peak}</span>'
-        f'<span>{html.escape(avg_text)}: {average:.1f}</span>'
+        f'<span class="interception-chart-chip">{html.escape(sum_text)}: {total}</span>'
+        f'<span class="interception-chart-chip">{html.escape(max_text)}: {peak}</span>'
+        f'<span class="interception-chart-chip">{html.escape(avg_text)}: {average:.1f}</span>'
         f'</div>'
         f'</div>'
     )
@@ -743,13 +765,34 @@ def put_arg_interception_stone_charts(kwargs: T_Output_Kwargs) -> Output:
     chart_html = (
         '<div class="interception-chart-grid">'
         + _build_svg_line_chart(
-            daily_title, day_labels, day_values, unit_text, sum_text, max_text, avg_text
+            daily_title,
+            day_labels,
+            day_values,
+            unit_text,
+            sum_text,
+            max_text,
+            avg_text,
+            tone_class='interception-tone-daily',
         )
         + _build_svg_line_chart(
-            weekly_title, week_labels, week_values, unit_text, sum_text, max_text, avg_text
+            weekly_title,
+            week_labels,
+            week_values,
+            unit_text,
+            sum_text,
+            max_text,
+            avg_text,
+            tone_class='interception-tone-weekly',
         )
         + _build_svg_line_chart(
-            monthly_title, month_labels, month_values, unit_text, sum_text, max_text, avg_text
+            monthly_title,
+            month_labels,
+            month_values,
+            unit_text,
+            sum_text,
+            max_text,
+            avg_text,
+            tone_class='interception-tone-monthly',
         )
         + '</div>'
     )

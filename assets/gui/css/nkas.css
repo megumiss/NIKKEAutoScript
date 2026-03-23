@@ -491,34 +491,75 @@ pre.rich-traceback-code {
 
 .warehouse-group {
     margin: 0.75rem 0 1rem;
+    border: 1px solid var(--warehouse-group-border, #dfe5ec);
+    border-top: 2px solid var(--warehouse-tone-line, #5da9f8);
+    background: linear-gradient(
+        180deg,
+        var(--warehouse-group-bg-top, #fafcff) 0%,
+        var(--warehouse-group-bg, #ffffff) 100%
+    );
+    border-radius: 0.85rem;
+    padding: 0.62rem 0.7rem 0.72rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.warehouse-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.45rem;
 }
 
 .warehouse-group-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
-    margin: 0.4rem 0 0.6rem;
+    margin: 0.1rem 0 0.58rem;
+}
+
+.warehouse-group-total {
+    min-width: 1.65rem;
+    text-align: center;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--warehouse-group-total-text, #2f3a45);
+    background: var(--warehouse-group-total-bg, rgba(93, 169, 248, 0.18));
+    border: 1px solid var(--warehouse-group-total-border, rgba(93, 169, 248, 0.38));
+    border-radius: 999px;
+    padding: 0.02rem 0.35rem;
+    line-height: 1.35;
 }
 
 .warehouse-items-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 0.65rem;
 }
 
 .warehouse-item-card {
     display: flex;
     gap: 0.6rem;
     align-items: center;
-    padding: 0.55rem 0.65rem;
+    padding: 0.58rem 0.68rem;
     border-radius: 0.6rem;
     border: 1px solid var(--warehouse-card-border, #e6e6e6);
-    background: var(--warehouse-card-bg, #ffffff);
+    background: linear-gradient(
+        180deg,
+        var(--warehouse-card-bg-top, #ffffff) 0%,
+        var(--warehouse-card-bg, #ffffff) 100%
+    );
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.warehouse-item-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--warehouse-tone-line, #5da9f8);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.09);
 }
 
 .warehouse-item-icon {
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -528,8 +569,8 @@ pre.rich-traceback-code {
 }
 
 .warehouse-item-icon-img {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     object-fit: contain;
     display: block;
     background: transparent !important;
@@ -538,14 +579,14 @@ pre.rich-traceback-code {
 }
 
 .warehouse-item-icon-placeholder {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #999;
-    background: rgba(0, 0, 0, 0.06);
+    color: var(--warehouse-placeholder-text, #8f9aa6);
+    background: var(--warehouse-placeholder-bg, rgba(0, 0, 0, 0.06));
 }
 
 .warehouse-item-info {
@@ -565,8 +606,68 @@ pre.rich-traceback-code {
 }
 
 .warehouse-item-count {
-    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.warehouse-owned-label {
+    font-size: 0.76rem;
     color: var(--warehouse-item-count, #777777);
+}
+
+.warehouse-owned-value {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--warehouse-owned-value-text, #174f81);
+    background: var(--warehouse-owned-value-bg, rgba(93, 169, 248, 0.18));
+    border: 1px solid var(--warehouse-owned-value-border, rgba(93, 169, 248, 0.4));
+    border-radius: 999px;
+    padding: 0.02rem 0.46rem;
+    line-height: 1.35;
+}
+
+.warehouse-group.warehouse-tone-1 {
+    --warehouse-tone-line: var(--warehouse-tone-1-line, #4aa7f7);
+    --warehouse-group-total-bg: var(--warehouse-tone-1-total-bg, rgba(74, 167, 247, 0.2));
+    --warehouse-group-total-border: var(--warehouse-tone-1-total-border, rgba(74, 167, 247, 0.42));
+    --warehouse-group-total-text: var(--warehouse-tone-1-total-text, #154a73);
+    --warehouse-owned-value-bg: var(--warehouse-tone-1-chip-bg, rgba(74, 167, 247, 0.2));
+    --warehouse-owned-value-border: var(--warehouse-tone-1-chip-border, rgba(74, 167, 247, 0.42));
+    --warehouse-owned-value-text: var(--warehouse-tone-1-chip-text, #154a73);
+}
+
+.warehouse-group.warehouse-tone-2 {
+    --warehouse-tone-line: var(--warehouse-tone-2-line, #34bfae);
+    --warehouse-group-total-bg: var(--warehouse-tone-2-total-bg, rgba(52, 191, 174, 0.2));
+    --warehouse-group-total-border: var(--warehouse-tone-2-total-border, rgba(52, 191, 174, 0.42));
+    --warehouse-group-total-text: var(--warehouse-tone-2-total-text, #0f554d);
+    --warehouse-owned-value-bg: var(--warehouse-tone-2-chip-bg, rgba(52, 191, 174, 0.2));
+    --warehouse-owned-value-border: var(--warehouse-tone-2-chip-border, rgba(52, 191, 174, 0.42));
+    --warehouse-owned-value-text: var(--warehouse-tone-2-chip-text, #0f554d);
+}
+
+.warehouse-group.warehouse-tone-3 {
+    --warehouse-tone-line: var(--warehouse-tone-3-line, #e6a156);
+    --warehouse-group-total-bg: var(--warehouse-tone-3-total-bg, rgba(230, 161, 86, 0.2));
+    --warehouse-group-total-border: var(--warehouse-tone-3-total-border, rgba(230, 161, 86, 0.42));
+    --warehouse-group-total-text: var(--warehouse-tone-3-total-text, #744213);
+    --warehouse-owned-value-bg: var(--warehouse-tone-3-chip-bg, rgba(230, 161, 86, 0.2));
+    --warehouse-owned-value-border: var(--warehouse-tone-3-chip-border, rgba(230, 161, 86, 0.42));
+    --warehouse-owned-value-text: var(--warehouse-tone-3-chip-text, #744213);
+}
+
+@media (max-width: 900px) {
+    .warehouse-group-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .warehouse-item-card {
+        padding: 0.54rem 0.6rem;
+    }
 }
 
 .interception-chart-grid {
@@ -577,16 +678,35 @@ pre.rich-traceback-code {
 
 .interception-chart-card {
     border: 1px solid var(--interception-chart-border, #e6e6e6);
-    background: var(--interception-chart-bg, #ffffff);
-    border-radius: 0.6rem;
-    padding: 0.6rem 0.75rem 0.5rem;
+    border-top: 2px solid var(--interception-chart-line, #4e4c97);
+    background: linear-gradient(
+        180deg,
+        var(--interception-chart-bg-top, #ffffff) 0%,
+        var(--interception-chart-bg, #ffffff) 100%
+    );
+    border-radius: 0.8rem;
+    padding: 0.7rem 0.85rem 0.65rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.interception-chart-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
 }
 
 .interception-chart-title {
-    font-size: 0.95rem;
+    font-size: 0.98rem;
     font-weight: 600;
     color: var(--interception-chart-title, #333333);
-    margin-bottom: 0.35rem;
+}
+
+.interception-chart-range {
+    font-size: 0.76rem;
+    color: var(--interception-chart-subtitle, #8a8f99);
+    white-space: nowrap;
 }
 
 .interception-chart-svg {
@@ -599,6 +719,7 @@ pre.rich-traceback-code {
 .interception-chart-grid line.interception-chart-grid {
     stroke: var(--interception-chart-grid, #ececec);
     stroke-width: 1;
+    stroke-dasharray: 4 4;
 }
 
 .interception-chart-axis {
@@ -609,17 +730,25 @@ pre.rich-traceback-code {
 .interception-chart-line {
     fill: none;
     stroke: var(--interception-chart-line, #4e4c97);
-    stroke-width: 2;
+    stroke-width: 2.15;
     stroke-linejoin: round;
     stroke-linecap: round;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.16));
 }
 
 .interception-chart-area {
-    fill: var(--interception-chart-fill, rgba(78, 76, 151, 0.12));
+    fill: var(--interception-chart-fill, rgba(78, 76, 151, 0.1));
 }
 
 .interception-chart-point {
     fill: var(--interception-chart-line, #4e4c97);
+    opacity: 0.95;
+}
+
+.interception-chart-point-latest {
+    fill: var(--interception-chart-line, #4e4c97);
+    stroke: var(--interception-chart-bg, #ffffff);
+    stroke-width: 1.8;
 }
 
 .interception-chart-axis-text {
@@ -628,11 +757,66 @@ pre.rich-traceback-code {
 }
 
 .interception-chart-meta {
-    margin-top: 0.2rem;
+    margin-top: 0.35rem;
     display: flex;
-    gap: 0.8rem;
+    gap: 0.45rem;
+    flex-wrap: wrap;
     font-size: 0.78rem;
     color: var(--interception-chart-text, #777777);
+}
+
+.interception-chart-chip {
+    font-size: 0.75rem;
+    color: var(--interception-chart-chip-text, #d6eaff);
+    background: var(--interception-chart-chip-bg, rgba(78, 76, 151, 0.22));
+    border: 1px solid var(--interception-chart-chip-border, rgba(78, 76, 151, 0.4));
+    border-radius: 999px;
+    padding: 0.12rem 0.5rem;
+    line-height: 1.35;
+}
+
+.interception-chart-card.interception-tone-daily {
+    --interception-chart-line: var(--interception-tone-daily-line, #59b8ff);
+    --interception-chart-fill: var(--interception-tone-daily-fill, rgba(89, 184, 255, 0.14));
+    --interception-chart-chip-bg: var(--interception-tone-daily-chip-bg, rgba(89, 184, 255, 0.2));
+    --interception-chart-chip-border: var(--interception-tone-daily-chip-border, rgba(89, 184, 255, 0.45));
+    --interception-chart-chip-text: var(--interception-tone-daily-chip-text, #dff4ff);
+}
+
+.interception-chart-card.interception-tone-weekly {
+    --interception-chart-line: var(--interception-tone-weekly-line, #4fd1c5);
+    --interception-chart-fill: var(--interception-tone-weekly-fill, rgba(79, 209, 197, 0.14));
+    --interception-chart-chip-bg: var(--interception-tone-weekly-chip-bg, rgba(79, 209, 197, 0.2));
+    --interception-chart-chip-border: var(--interception-tone-weekly-chip-border, rgba(79, 209, 197, 0.46));
+    --interception-chart-chip-text: var(--interception-tone-weekly-chip-text, #dffcf8);
+}
+
+.interception-chart-card.interception-tone-monthly {
+    --interception-chart-line: var(--interception-tone-monthly-line, #f6b26b);
+    --interception-chart-fill: var(--interception-tone-monthly-fill, rgba(246, 178, 107, 0.16));
+    --interception-chart-chip-bg: var(--interception-tone-monthly-chip-bg, rgba(246, 178, 107, 0.2));
+    --interception-chart-chip-border: var(--interception-tone-monthly-chip-border, rgba(246, 178, 107, 0.46));
+    --interception-chart-chip-text: var(--interception-tone-monthly-chip-text, #fff0df);
+}
+
+@media (max-width: 900px) {
+    .interception-chart-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.12rem;
+    }
+
+    .interception-chart-range {
+        white-space: normal;
+    }
+
+    .interception-chart-axis-text {
+        font-size: 9px;
+    }
+
+    .interception-chart-chip {
+        font-size: 0.72rem;
+    }
 }
 
 *[style*="--arg-help--"] {
