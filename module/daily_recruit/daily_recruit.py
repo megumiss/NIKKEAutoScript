@@ -64,6 +64,25 @@ class DailyRecruit(UI):
             recruit_type_key=type,
         )
 
+    def get_notify_image_path(self, image, saved_path, recruit_type):
+        """
+        Fallback image path for notification:
+        - use saved_path when screenshot path is configured
+        - otherwise save to a temp path for notify only
+        """
+        if saved_path:
+            return saved_path
+
+        temp_dir = os.path.join('./tmp', self.config.config_name, 'notify')
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_path = os.path.join(temp_dir, f'recruit_notify_{recruit_type}.png')
+
+        from module.base.utils import save_image
+
+        save_image(image, temp_path)
+        logger.info(f'Recruit screenshot path is empty, use temporary notify image: {temp_path}')
+        return temp_path
+
     def event_free_recruit(self, skip_first_screenshot=True):
         logger.hr('Event free recruit', 2)
         confirm_timer = Timer(5, count=3).start()
@@ -76,12 +95,12 @@ class DailyRecruit(UI):
                 self.device.screenshot()
 
             # 跳到普通招募页面时结束抽卡
-            if self.appear(ORDINARY_RECRUIT_CHECK, offset=(5, 5), interval=1, static=False):
+            if self.appear(ORDINARY_RECRUIT_CHECK, offset=(5, 5), threshold=0.85, static=False):
                 logger.info('Event free recruit has done')
                 raise EndEventFree
 
             # 免费抽卡
-            if not self.appear(FREE_RECRUIT_CHECK, offset=(5, 5), interval=1, static=False):
+            if not self.appear(FREE_RECRUIT_CHECK, offset=(5, 5), static=False):
                 # 向右点击
                 logger.info('Click %s @ %s' % (point2str(690, 670), 'TO_RIGHT_RECRUIT'))
                 self.device.click_minitouch(690, 670)
@@ -102,7 +121,7 @@ class DailyRecruit(UI):
             if (
                 not recruit_end
                 and click_timer.reached()
-                and self.appear(FREE_RECRUIT_CHECK, offset=(10, 10), interval=1, static=False)
+                and self.appear(FREE_RECRUIT_CHECK, offset=(10, 10), static=False)
             ):
                 logger.info('Click %s @ %s' % (point2str(130, 1050), 'FREE_RECRUIT'))
                 self.device.click_minitouch(130, 1050)
@@ -125,7 +144,8 @@ class DailyRecruit(UI):
                         logger.info(f'Save recruit image to: {saved_path}')
                     # 推送通知
                     if self.config.DailyRecruit_SSRNotifyPush:
-                        self.notify_push('EventFree', image=saved_path)
+                        notify_image = self.get_notify_image_path(self.device.image, saved_path, 'EventFree')
+                        self.notify_push('EventFree', image=notify_image)
 
                 while 1:
                     self.device.screenshot()
@@ -160,7 +180,7 @@ class DailyRecruit(UI):
                 self.device.screenshot()
 
             # 普通招募页面，没有次数结束抽卡
-            if self.appear(ORDINARY_RECRUIT_CHECK, offset=(30, 10)):
+            if self.appear(ORDINARY_RECRUIT_CHECK, offset=(30, 10), threshold=0.85):
                 if self.appear(ORDINARY_RECRUIT_ONCE_DONE, offset=(30, 30)):
                     logger.info('Ordinary 150gems recruit has done')
                     raise NotEnoughOrdinaryTimes
@@ -168,7 +188,7 @@ class DailyRecruit(UI):
                     break
 
             # 抽卡
-            if not self.appear(ORDINARY_RECRUIT_CHECK, offset=(30, 10)):
+            if not self.appear(ORDINARY_RECRUIT_CHECK, offset=(30, 10), threshold=0.85):
                 # 向右点击
                 logger.info('Click %s @ %s' % (point2str(690, 670), 'TO_RIGHT_RECRUIT'))
                 self.device.click_minitouch(690, 670)
@@ -212,7 +232,8 @@ class DailyRecruit(UI):
                         logger.info(f'Save recruit image to: {saved_path}')
                     # 推送通知
                     if self.config.DailyRecruit_SSRNotifyPush:
-                        self.notify_push('150Gem', image=saved_path)
+                        notify_image = self.get_notify_image_path(self.device.image, saved_path, '150Gem')
+                        self.notify_push('150Gem', image=notify_image)
 
                 while 1:
                     self.device.screenshot()
@@ -243,7 +264,7 @@ class DailyRecruit(UI):
                 self.device.screenshot()
 
             # 友情点抽卡
-            if not self.appear(SOCIAL_RECRUIT_CHECK, offset=(5, 5), interval=1, static=False):
+            if not self.appear(SOCIAL_RECRUIT_CHECK, offset=(5, 5), static=False):
                 # 向左点击
                 logger.info('Click %s @ %s' % (point2str(30, 670), 'TO_LEFT_RECRUIT'))
                 self.device.click_minitouch(30, 670)
@@ -290,7 +311,8 @@ class DailyRecruit(UI):
                         logger.info(f'Save recruit image to: {saved_path}')
                     # 推送通知
                     if self.config.DailyRecruit_SSRNotifyPush:
-                        self.notify_push('SocialPoint', image=saved_path)
+                        notify_image = self.get_notify_image_path(self.device.image, saved_path, 'SocialPoint')
+                        self.notify_push('SocialPoint', image=notify_image)
 
                 while 1:
                     self.device.screenshot()
