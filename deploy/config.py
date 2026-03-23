@@ -37,7 +37,7 @@ class ConfigModel:
     WebuiPort: int = 12271
 
     Language: str = "zh-CN"
-    Theme: str = "default"
+    Theme: str = "dark"
     Password: Optional[str] = None
     CDN: Union[str, bool] = False
     Run: Optional[str] = None

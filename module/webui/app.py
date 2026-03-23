@@ -39,6 +39,7 @@ from pywebio.output import (
 )
 from pywebio.pin import pin, pin_on_change
 from pywebio.session import download, go_app, info, local, register_thread, run_js, set_env
+from pywebio.platform.page import check_theme
 from starlette.routing import Route
 from starlette.responses import JSONResponse
 
@@ -99,7 +100,7 @@ task_handler = TaskHandler()
 class NKASGUI(Frame):
     NKAS_MENU: Dict[str, Dict[str, List[str]]]
     NKAS_ARGS: Dict[str, Dict[str, Dict[str, Dict[str, str]]]]
-    theme = "default"
+    theme = "dark"
 
     def initial(self) -> None:
         self.NKAS_MENU = read_file(filepath_args("menu", self.nkas_mod))
@@ -217,11 +218,25 @@ class NKASGUI(Frame):
             put_loading_text(t("Gui.Status.Updating"), shape="grow", color="success")
 
     @classmethod
-    def set_theme(cls, theme="default") -> None:
+    def set_theme(cls, theme="dark") -> None:
+        # `default` is treated as dark for backward compatibility.
+        theme = (theme or "dark").strip().lower()
+        if theme == "default":
+            theme = "dark"
+
+        # PyWebIO does not provide a builtin `light` theme.
+        pywebio_theme = "default" if theme == "light" else theme
+        try:
+            check_theme(pywebio_theme)
+        except RuntimeError:
+            logger.warning(f"Unsupported theme `{theme}`, fallback to `dark`")
+            theme = "dark"
+            pywebio_theme = "dark"
+
         cls.theme = theme
         State.deploy_config.Theme = theme
         State.theme = theme
-        webconfig(theme=theme)
+        webconfig(theme=pywebio_theme)
 
     @use_scope("menu", clear=True)
     def nkas_set_menu(self) -> None:
@@ -1145,7 +1160,7 @@ class NKASGUI(Frame):
             put_buttons(
                 [
                     {"label": "Dark", "value": "dark", "color": "dark"},
-                    # {"label": "Light", "value": "light", "color": "light"},
+                    {"label": "Light", "value": "light", "color": "light"},
                 ],
                 onclick=lambda t: set_theme(t),
             ).style("text-align: center")

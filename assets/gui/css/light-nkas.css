@@ -1,27 +1,40 @@
 .btn-menu:hover,
 .btn-menu-active {
-    border-color: #4e4c97;
-    color: #4e4c97;
+    border-color: #799edd;
+    color: #799edd;
 }
 
 .btn-aside:hover,
 .btn-aside-active {
-    border-color: #4e4c97;
-    color: #4e4c97;
+    border-color: #799edd;
+    color: #799edd;
 }
 
 .btn-off {
-    background-color: white;
-    border: 1px solid lightgrey;
+    background-color: #f2f5f9;
+    border: 1px solid #d2d9e2;
+    color: #4b5b6b;
 }
 
 .btn-on {
-    background-color: #4e4c97;
-    border: 1px solid lightgrey;
+    background-color: #799edd;
+    border: 1px solid #799edd;
     color: white;
 }
 
-.btn-on:hover {
+.btn-off:hover,
+.btn-off:focus,
+.btn-off:not(:disabled):not(.disabled):active {
+    background-color: #f2f5f9;
+    border-color: #d2d9e2;
+    color: #4b5b6b;
+}
+
+.btn-on:hover,
+.btn-on:focus,
+.btn-on:not(:disabled):not(.disabled):active {
+    background-color: #799edd;
+    border-color: #799edd;
     color: white;
 }
 
@@ -30,7 +43,7 @@
 }
 
 .btn-navigator:hover {
-    color: #4e4c97;
+    color: #799edd;
 }
 
 .hr-group {
@@ -47,17 +60,18 @@
 
 .form-control,
 .bootstrap-select > select {
-    border-bottom: .125rem solid #4e4c97;
+    border-bottom: .125rem solid #799edd;
 }
 
 .form-control:focus {
     background-color: white;
-    border-color: #4e4c97;
-    box-shadow: 0 0.06rem 0 #4e4c97;
+    border-color: #799edd;
+    box-shadow: 0 0.06rem 0 #799edd;
 }
 
-input[type="checkbox"] {
-    accent-color: #7a77bb;
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: #799edd;
 }
 
 select {
@@ -72,7 +86,7 @@ select {
 
 .state-bold > select {
     font-weight: bold;
-    color: #7a77bb;
+    color: #799edd;
 }
 
 .state-light > select {
