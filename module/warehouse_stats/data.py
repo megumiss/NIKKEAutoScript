@@ -118,6 +118,9 @@ def load_item_groups(path: str = None) -> List[dict]:
                     'display_name': display_name,
                     'scan': item.get('scan', True),
                     'scan_method': normalize_scan_method(item.get('scan_method', SCAN_METHOD_DIRECT)),
+                    # Optional scan route key, e.g. page_1 / page_2 / gear / materials
+                    # Used only by scanner flow; does not affect stats page grouping.
+                    'scan_page': str(item.get('scan_page', 'default')).strip() or 'default',
                     'group_id': group_id,
                     'group_name': group_name,
                 }

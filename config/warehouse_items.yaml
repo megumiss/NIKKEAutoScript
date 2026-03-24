@@ -8,51 +8,61 @@ groups:
     display_name: 珠宝
     scan: true
     scan_method: detail
+    scan_page: default
   - id: credit
     name: CREDIT
     display_name: 信用点
     scan: true
     scan_method: direct
+    scan_page: default
   - id: social_point
     name: SOCIAL_POINT
     display_name: 社交点数
     scan: true
     scan_method: direct
+    scan_page: default
   - id: body_label
     name: BODY_LABEL
     display_name: 躯体标签
     scan: true
     scan_method: direct
+    scan_page: default
   - id: recruit_voucher
     name: RECRUIT_VOUCHER
     display_name: 招募券
     scan: true
     scan_method: direct
+    scan_page: default
   - id: advanced_recruit_voucher
     name: ADVANCED_RECRUIT_VOUCHER
     display_name: 高级招募券
     scan: true
     scan_method: direct
+    scan_page: default
   - id: mileage_ticket
     name: MILEAGE_TICKET
     display_name: 里程票
     scan: true
     scan_method: direct
+    scan_page: default
   - id: gold_mileage_ticket
     name: GOLD_MILEAGE_TICKET
     display_name: 黄金里程票
     scan: true
     scan_method: direct
+    scan_page: default
   - id: arena_exchange_voucher
     name: ARENA_EXCHANGE_VOUCHER
     display_name: 竞技场兑换券
     scan: true
     scan_method: direct
+    scan_page: default
   - id: union_chip
     name: UNION_CHIP
     display_name: 联盟芯片
     scan: true
     scan_method: direct
+    scan_page: default
 - id: mold
   name: 铸模
   items:
@@ -61,61 +71,73 @@ groups:
     display_name: 中品质铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: high_quality_mold
     name: HIGH_QUALITY_MOLD
     display_name: 高品质铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: perfect_mold
     name: PERFECT_MOLD
     display_name: 完美铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: new_commander_special_mold
     name: NEW_COMMANDER_SPECIAL_MOLD
     display_name: 新指挥官专用铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: elysion_mold
     name: ELYSION_MOLD
     display_name: 极乐净土铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: elysion_perfect_mold
     name: ELYSION_PERFECT_MOLD
     display_name: 极乐净土完美铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: missilis_mold
     name: MISSILIS_MOLD
     display_name: 米西利斯铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: missilis_perfect_mold
     name: MISSILIS_PERFECT_MOLD
     display_name: 米西利斯完美铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: tetra_mold
     name: TETRA_MOLD
     display_name: 泰特拉铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: tetra_perfect_mold
     name: TETRA_PERFECT_MOLD
     display_name: 泰特拉完美铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: pilgrim_mold
     name: PILGRIM_MOLD
     display_name: 朝圣者铸模
     scan: true
     scan_method: direct
+    scan_page: default
   - id: pilgrim_over_spec_perfect_mold
     name: PILGRIM_OVER_SPEC_PERFECT_MOLD
     display_name: 朝圣者超规格完美铸模
     scan: true
     scan_method: direct
+    scan_page: default
 - id: manual_console
   name: 手册与控制台
   items:
@@ -124,96 +146,115 @@ groups:
     display_name: 技能手册 I
     scan: true
     scan_method: direct
+    scan_page: default
   - id: skill_manual_ii
     name: SKILL_MANUAL_II
     display_name: 技能手册 II
     scan: true
     scan_method: direct
+    scan_page: default
   - id: skill_manual_iii
     name: SKILL_MANUAL_III
     display_name: 技能手册 III
     scan: true
     scan_method: direct
+    scan_page: default
   - id: burst_manual_i
     name: BURST_MANUAL_I
     display_name: 爆裂技能手册 I
     scan: true
     scan_method: direct
+    scan_page: default
   - id: burst_manual_ii
     name: BURST_MANUAL_II
     display_name: 爆裂技能手册 II
     scan: true
     scan_method: direct
+    scan_page: default
   - id: burst_manual_iii
     name: BURST_MANUAL_III
     display_name: 爆裂技能手册 III
     scan: true
     scan_method: direct
+    scan_page: default
   - id: a_n_m_i_code_manual
     name: A_N_M_I_CODE_MANUAL
     display_name: A.N.M.I.代码手册
     scan: true
     scan_method: direct
+    scan_page: default
   - id: d_m_t_r_code_manual
     name: D_M_T_R_CODE_MANUAL
     display_name: D.M.T.R.代码手册
     scan: true
     scan_method: direct
+    scan_page: default
   - id: h_s_t_a_code_manual
     name: H_S_T_A_CODE_MANUAL
     display_name: H.S.T.A.代码手册
     scan: true
     scan_method: direct
+    scan_page: default
   - id: p_s_i_d_code_manual
     name: P_S_I_D_CODE_MANUAL
     display_name: P.S.I.D.代码手册
     scan: true
     scan_method: direct
+    scan_page: default
   - id: z_e_u_s_code_manual
     name: Z_E_U_S_CODE_MANUAL
     display_name: Z.E.U.S.代码手册
     scan: true
     scan_method: direct
+    scan_page: default
   - id: attackers_common_console
     name: ATTACKERS_COMMON_CONSOLE
     display_name: 攻击型通用控制台
     scan: true
     scan_method: direct
+    scan_page: default
   - id: defenders_common_console
     name: DEFENDERS_COMMON_CONSOLE
     display_name: 防御型通用控制台
     scan: true
     scan_method: direct
+    scan_page: default
   - id: supporter_common_console
     name: SUPPORTER_COMMON_CONSOLE
     display_name: 支援型通用控制台
     scan: true
     scan_method: direct
+    scan_page: default
   - id: abnormal_common_console
     name: ABNORMAL_COMMON_CONSOLE
     display_name: 异常代码通用控制台
     scan: true
     scan_method: direct
+    scan_page: default
   - id: elysion_common_console
     name: ELYSION_COMMON_CONSOLE
     display_name: 极乐净土通用控制台
     scan: true
     scan_method: direct
+    scan_page: default
   - id: missilis_common_console
     name: MISSILIS_COMMON_CONSOLE
     display_name: 米西利斯通用控制台
     scan: true
     scan_method: direct
+    scan_page: default
   - id: tetra_common_console
     name: TETRA_COMMON_CONSOLE
     display_name: 泰特拉通用控制台
     scan: true
     scan_method: direct
+    scan_page: default
   - id: pilgrim_common_console
     name: PILGRIM_COMMON_CONSOLE
     display_name: 朝圣者通用控制台
     scan: true
     scan_method: direct
+    scan_page: default
 - id: upgrade_material
   name: 养成材料
   items:
@@ -222,56 +263,67 @@ groups:
     display_name: 战斗数据集
     scan: true
     scan_method: direct
+    scan_page: default
   - id: core_dust
     name: CORE_DUST
     display_name: 核心尘埃
     scan: true
     scan_method: direct
+    scan_page: default
   - id: broken_core
     name: BROKEN_CORE
     display_name: 破碎核心
     scan: true
     scan_method: direct
+    scan_page: default
   - id: re_energizer
     name: RE_ENERGIZER
     display_name: RE 充能器
     scan: true
     scan_method: direct
+    scan_page: default
   - id: custom_module
     name: CUSTOM_MODULE
     display_name: 定制模组
     scan: true
     scan_method: direct
+    scan_page: default
   - id: custom_module_shard
     name: CUSTOM_MODULE_SHARD
     display_name: 定制模组碎片
     scan: true
     scan_method: direct
+    scan_page: default
   - id: custom_lock
     name: CUSTOM_LOCK
     display_name: 定制锁
     scan: true
     scan_method: direct
+    scan_page: default
   - id: synchro_expansion
     name: SYNCHRO_EXPANSION
     display_name: 同步器扩展
     scan: true
     scan_method: direct
+    scan_page: default
   - id: curated_manufacture_arms
     name: CURATED_MANUFACTURE_ARMS
     display_name: 甄选制造军备
     scan: true
     scan_method: direct
+    scan_page: default
   - id: skill_uninstaller
     name: SKILL_UNINSTALLER
     display_name: 技能卸载器
     scan: true
     scan_method: direct
+    scan_page: default
   - id: high_quality_access_records
     name: HIGH_QUALITY_ACCESS_RECORDS
     display_name: 高品质访问记录
     scan: true
     scan_method: direct
+    scan_page: default
 - id: box_pack
   name: 箱子与其他
   items:
@@ -280,48 +332,58 @@ groups:
     display_name: 初级维护套件
     scan: true
     scan_method: direct
+    scan_page: default
   - id: intermediate_maintenance_kit
     name: INTERMEDIATE_MAINTENANCE_KIT
     display_name: 中级维护套件
     scan: true
     scan_method: direct
+    scan_page: default
   - id: elite_maintenance_kit
     name: ELITE_MAINTENANCE_KIT
     display_name: 高级维护套件
     scan: true
     scan_method: direct
+    scan_page: default
   - id: maintenance_kit_box
     name: MAINTENANCE_KIT_BOX
     display_name: 维护套件箱 I
     scan: true
     scan_method: direct
+    scan_page: default
   - id: maintenance_kit_box_ii
     name: MAINTENANCE_KIT_BOX_II
     display_name: 维护套件箱 II
     scan: true
     scan_method: direct
+    scan_page: default
   - id: collection_item_box
     name: COLLECTION_ITEM_BOX
     display_name: 收藏品道具箱
     scan: true
     scan_method: direct
+    scan_page: default
   - id: collection_item_mileage_box
     name: COLLECTION_ITEM_MILEAGE_BOX
     display_name: 收藏品里程箱
     scan: true
     scan_method: direct
+    scan_page: default
   - id: collection_item_selection_box
     name: COLLECTION_ITEM_SELECTION_BOX
     display_name: 收藏品自选箱
     scan: true
     scan_method: direct
+    scan_page: default
   - id: profile_custom_pack
     name: PROFILE_CUSTOM_PACK
     display_name: 资料卡自定义包
     scan: true
     scan_method: direct
+    scan_page: default
   - id: t9_equipment_manufacturer_selection_box
     name: T9_EQUIPMENT_MANUFACTURER_SELECTION_BOX
     display_name: T9企业装备自选箱
     scan: true
     scan_method: direct
+    scan_page: default

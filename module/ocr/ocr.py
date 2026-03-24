@@ -219,6 +219,7 @@ class Ocr:
         # Otsu二值化 -> 反色得到白底黑字
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         binary = cv2.bitwise_not(binary)
+        # binary = self._clear_border_connected_black(binary)
 
         if self.DEBUG_SAVE_DIR:
             os.makedirs(self.DEBUG_SAVE_DIR, exist_ok=True)
@@ -234,6 +235,40 @@ class Ocr:
         if scale == 1 or scale is None:
             return image
         return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+
+    def _clear_border_connected_black(self, binary: np.ndarray) -> np.ndarray:
+        """
+        Remove black connected-components that touch image borders.
+        Input/Output is a binary grayscale image: black=0, white=255.
+        """
+        if binary.ndim != 2 or binary.size == 0:
+            return binary
+
+        black_mask = (binary == 0).astype(np.uint8)
+        if not np.any(black_mask):
+            return binary
+
+        num_labels, labels = cv2.connectedComponents(black_mask, connectivity=8)
+        if num_labels <= 1:
+            return binary
+
+        border_labels = np.unique(
+            np.concatenate(
+                [
+                    labels[0, :],
+                    labels[-1, :],
+                    labels[:, 0],
+                    labels[:, -1],
+                ]
+            )
+        )
+        border_labels = border_labels[border_labels != 0]
+        if border_labels.size == 0:
+            return binary
+
+        cleaned = binary.copy()
+        cleaned[np.isin(labels, border_labels)] = 255
+        return cleaned
 
     def after_process(self, result):
         """

@@ -92,7 +92,15 @@ class WarehouseStats(UI):
             )
             text = item_num.ocr(self.device.image).get('text', '')
             has_suffix_m = self._match_num_suffix_m(image=image, area=area)
-            return self._parse_direct_count_text(text=text, has_suffix_m=has_suffix_m)
+            value = self._parse_direct_count_text(text=text, has_suffix_m=has_suffix_m)
+            if value is not None:
+                return value
+            return self._parse_direct_count_by_digit_templates(
+                image=image,
+                area=area,
+                has_suffix_m=has_suffix_m,
+                item_name=item_name,
+            )
         finally:
             self.device.image = self_image
 
@@ -112,6 +120,70 @@ class WarehouseStats(UI):
         if has_suffix_m:
             unit = 'M'
         return self._parse_scaled_number(match.group(1), unit)
+
+    def _parse_direct_count_by_digit_templates(
+        self,
+        image,
+        area: Tuple[int, int, int, int],
+        has_suffix_m: bool = False,
+        item_name: Optional[str] = None,
+    ) -> Optional[int]:
+        """
+        Fallback for direct OCR:
+        Match TEMPLATE_ITEM_NUM_0~9 in number area, sort by x, and concatenate digits.
+        """
+        area_image = crop(image, area)
+        templates = [
+            TEMPLATE_ITEM_NUM_0,
+            TEMPLATE_ITEM_NUM_1,
+            TEMPLATE_ITEM_NUM_2,
+            TEMPLATE_ITEM_NUM_3,
+            TEMPLATE_ITEM_NUM_4,
+            TEMPLATE_ITEM_NUM_5,
+            TEMPLATE_ITEM_NUM_6,
+            TEMPLATE_ITEM_NUM_7,
+            TEMPLATE_ITEM_NUM_8,
+            TEMPLATE_ITEM_NUM_9,
+        ]
+
+        matches: List[Tuple[int, int, int, int]] = []
+        for digit, template in enumerate(templates):
+            try:
+                points = template.match_multi(
+                    area_image,
+                    similarity=0.80,
+                    threshold=3,
+                    name=f'{item_name or "INVENTORY_ITEM"}_NUM_{digit}',
+                )
+            except Exception:
+                continue
+            for button in points:
+                x1, y1, _, _ = button.area
+                matches.append((x1, y1, digit, len(matches)))
+
+        if not matches:
+            return None
+
+        matches.sort(key=lambda x: (x[0], x[1], x[3]))
+        digits: List[str] = []
+        last_x: Optional[int] = None
+        for x1, _, digit, _ in matches:
+            if last_x is not None and abs(x1 - last_x) <= 3:
+                continue
+            digits.append(str(digit))
+            last_x = x1
+
+        if not digits:
+            return None
+
+        value = int(''.join(digits))
+        if has_suffix_m:
+            value *= 1000000
+        logger.info(
+            f'WarehouseStats: [DirectTemplateFallback] item={item_name or "INVENTORY_ITEM"}, '
+            f'digits={"".join(digits)}, value={value}'
+        )
+        return value
 
     def _match_num_suffix_m(self, image, area: Tuple[int, int, int, int]) -> bool:
         area_image = crop(image, area)
@@ -319,11 +391,11 @@ class WarehouseStats(UI):
         results: Dict[str, int] = {}
         item_name_map: Dict[str, str] = {}
 
-        # 按识别方式分流：
-        # direct: 分割格子内直接识别数量
-        # detail: 点击进入详情页识别数量
-        pending_direct: Dict[str, Button] = {}
-        pending_detail: Dict[str, Button] = {}
+        # Scan routing:
+        # Keep UI group display unchanged, but allow scanner to process items by scan_page.
+        pages: List[str] = []
+        page_pending_direct: Dict[str, Dict[str, Button]] = {}
+        page_pending_detail: Dict[str, Dict[str, Button]] = {}
         for item in items:
             item_id = item.get('id')
             if not item_id or not item.get('scan', True):
@@ -332,25 +404,92 @@ class WarehouseStats(UI):
             button = templates.get(item_id)
             if button is None:
                 continue
+
+            page_key = str(item.get('scan_page', 'default')).strip() or 'default'
+            if page_key not in page_pending_direct:
+                page_pending_direct[page_key] = {}
+                page_pending_detail[page_key] = {}
+                pages.append(page_key)
+
             scan_method = item.get('scan_method', SCAN_METHOD_DIRECT)
             if scan_method == SCAN_METHOD_OPEN_DETAIL:
-                pending_detail[item_id] = button
+                page_pending_detail[page_key][item_id] = button
             else:
-                pending_direct[item_id] = button
+                page_pending_direct[page_key][item_id] = button
 
-        if not pending_direct and not pending_detail:
+        if not pages:
             return results
 
-        # 按页执行：
-        # 截图 -> 分割 -> 判断识别方式 -> 本页先 direct -> 再 detail -> 再翻页
-        self._scan_inventory_by_page(
-            pending_direct=pending_direct,
-            pending_detail=pending_detail,
-            results=results,
-            item_name_map=item_name_map,
-        )
+        # Process each scan page independently.
+        for page_key in pages:
+            pending_direct = page_pending_direct.get(page_key, {})
+            pending_detail = page_pending_detail.get(page_key, {})
+            if not pending_direct and not pending_detail:
+                continue
+
+            if not self._switch_inventory_scan_page(page_key):
+                logger.warning(f'WarehouseStats: Skip scan_page="{page_key}" due to switch failure.')
+                continue
+
+            logger.info(
+                f'WarehouseStats: scanning page="{page_key}", '
+                f'direct={len(pending_direct)}, detail={len(pending_detail)}'
+            )
+            # screenshot -> split -> direct first -> detail then -> scroll
+            self._scan_inventory_by_page(
+                pending_direct=pending_direct,
+                pending_detail=pending_detail,
+                results=results,
+                item_name_map=item_name_map,
+            )
 
         return results
+
+    def _switch_inventory_scan_page(self, page_key: str) -> bool:
+        """
+        Switch inventory page before scanning.
+        - default/main: no-op
+        - other page key: try matching a button constant by convention.
+          Candidates: INVENTORY_PAGE_{KEY}, INVENTORY_{KEY}, {KEY}
+        """
+        key = str(page_key or '').strip()
+        if key == '' or key.lower() in ('default', 'main'):
+            return True
+
+        custom_switch = getattr(self, f'_switch_inventory_scan_page_{key.lower()}', None)
+        if callable(custom_switch):
+            try:
+                return bool(custom_switch())
+            except Exception:
+                logger.exception(f'WarehouseStats: custom switch failed for scan_page="{key}".')
+                return False
+
+        upper = key.upper()
+        candidate_names = (
+            f'INVENTORY_PAGE_{upper}',
+            f'INVENTORY_{upper}',
+            upper,
+        )
+
+        button = None
+        for name in candidate_names:
+            obj = globals().get(name)
+            if isinstance(obj, Button):
+                button = obj
+                break
+
+        if button is None:
+            logger.warning(
+                f'WarehouseStats: scan_page="{key}" has no switch button '
+                f'(tried: {", ".join(candidate_names)}).'
+            )
+            return False
+
+        for _ in range(3):
+            self.device.screenshot()
+            self.appear_then_click(button, offset=10, interval=1, static=False)
+        self.device.sleep((0.6, 0.9))
+        return True
 
     def _scan_inventory_by_page(
         self,
