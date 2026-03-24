@@ -32,10 +32,9 @@ class WarehouseStats(UI):
 
     流程：
     1) 打开仓库页
-    2) 优先使用“固定网格 + 数量前缀模板 + OCR”识别
-    3) 若仍有未识别物品，回退到“点击详情页 OCR”旧逻辑
-    4) 滚动翻页重复扫描
-    5) 写入 CSV
+    2) 按物品配置选择“固定网格直读”或“点击详情 OCR”识别
+    3) 滚动翻页重复扫描
+    4) 写入 CSV
     """
 
     # ===== 720x1280 下的固定分割参数（5列 x 7行）=====
@@ -445,25 +444,13 @@ class WarehouseStats(UI):
                     continue
 
                 cell_button = Button(area=area, color=(0, 0, 0), button=area, name=f'INVENTORY_CELL_{item_id}')
-                if not self._open_item_detail(cell_button):
-                    # 点击格子失败时，回退到模板按钮点击
-                    if not self._open_item_detail(pending_detail[item_id]):
-                        continue
-
-                self.device.sleep(1)
-                self.device.screenshot()
-                owner_loc = self.appear_location(INVENTORY_ITEM_CLOSE, offset=10, static=False)
-                if owner_loc is None:
-                    self._close_item_detail()
-                    continue
-
-                detail_counts = self.inventory_item_num_detail(
+                detail_counts = self._detail_step_scan_counts(
                     item_id=item_id,
-                    area=(720 - owner_loc[0], owner_loc[1] + 240, owner_loc[0], owner_loc[1] + 270),
                     item_name=item_name_map.get(item_id, item_id),
+                    primary_button=cell_button,
+                    fallback_button=pending_detail[item_id],
                 )
                 if not detail_counts:
-                    self._close_item_detail()
                     continue
 
                 for detail_item_id, detail_count in detail_counts.items():
@@ -477,7 +464,6 @@ class WarehouseStats(UI):
                     for detail_item_id, detail_count in detail_counts.items()
                 )
                 logger.info(f'WarehouseStats: [Detail] Found item={item_id}, counts={detail_log}')
-                self._close_item_detail()
 
             self._log_page_item_counts(page_index=page_index, page_counts=page_results, item_name_map=item_name_map)
 
@@ -507,11 +493,12 @@ class WarehouseStats(UI):
         if pending_detail:
             logger.info(f'WarehouseStats: Open-detail scan incomplete. pending={len(pending_detail)}')
 
-    def _open_item_detail(self, button: Button, max_retry: int = 6) -> bool:
+    def _detail_step_enter_detail(self, button: Button, max_retry: int = 6) -> bool:
         for _ in range(max_retry):
             self.device.screenshot()
             if self.appear(INVENTORY_ITEM_CLOSE, offset=10, static=False):
                 return True
+
             template_file = getattr(button, 'file', None)
             if template_file:
                 self.appear_then_click(button, offset=10, interval=1, static=False)
@@ -520,7 +507,14 @@ class WarehouseStats(UI):
                 self.device.click(button)
         return False
 
-    def _close_item_detail(self, max_retry: int = 6) -> bool:
+    def _detail_step_get_num_area(self) -> Optional[Tuple[int, int, int, int]]:
+        self.device.screenshot()
+        owner_loc = self.appear_location(INVENTORY_ITEM_CLOSE, offset=10, static=False)
+        if owner_loc is None:
+            return None
+        return 720 - owner_loc[0], owner_loc[1] + 240, owner_loc[0], owner_loc[1] + 270
+
+    def _detail_step_leave_detail(self, max_retry: int = 6) -> bool:
         for _ in range(max_retry):
             self.device.screenshot()
             if self.appear_then_click(INVENTORY_ITEM_CLOSE, offset=10, interval=1, static=False):
@@ -529,155 +523,22 @@ class WarehouseStats(UI):
                 return True
         return False
 
-    def _scan_inventory_grid(self, pending: Dict[str, Button], results: Dict[str, int]) -> None:
-        # 当前扫描任务的调试目录标识，避免多次运行互相覆盖
-        if not hasattr(self, '_debug_run_id'):
-            self._debug_run_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+    def _detail_step_scan_counts(
+        self, item_id: str, item_name: Optional[str], primary_button: Button, fallback_button: Optional[Button] = None
+    ) -> Dict[str, int]:
+        entered = self._detail_step_enter_detail(primary_button)
+        if not entered and fallback_button is not None:
+            entered = self._detail_step_enter_detail(fallback_button)
+        if not entered:
+            return {}
 
-        # 最大扫描页数保护，避免异常情况下无限循环
-        max_pages = max(20, int(getattr(self.config, 'WarehouseStats_ScrollTimes', 5)) * 20)
-        page_index = 0
-        # 首次打开仓库时使用固定网格原点
-        grid_origin = (self.GRID_START_X, self.GRID_START_Y)
-        # 锚点按钮：用于翻页后对齐第一行位置
-        anchor_button: Optional[Button] = None
-
-        while page_index < max_pages and pending:
-            self.device.screenshot()
-            image = self.device.image.copy()
-            drop_anchor_row = False
-
-            # 翻页后，先找锚点位置，再重算当前页第一行起点
-            if anchor_button is not None:
-                if self.appear(anchor_button, offset=10, threshold=self.GRID_ANCHOR_THRESHOLD, static=False):
-                    x1, y1, _, _ = anchor_button.button
-                    grid_origin = (x1, y1)
-                    drop_anchor_row = True
-                    logger.info(f'WarehouseStats: Grid anchor aligned at ({x1}, {y1})')
-                else:
-                    logger.warning('WarehouseStats: Grid anchor not found, fallback to fixed grid origin.')
-                    grid_origin = (self.GRID_START_X, self.GRID_START_Y)
-
-            # 将当前页按固定变量切为 5x7 格
-            cells = self._split_inventory_cells(
-                image=image,
-                origin=grid_origin,
-                page_index=page_index,
-                drop_anchor_row=drop_anchor_row,
-            )
-            for cell in cells:
-                if not pending:
-                    break
-
-                # 先在该格子内判断是哪一个物品（模板匹配）
-                item_id = self._match_pending_item_in_cell(cell_image=cell['cell'], pending=pending)
-                if not item_id:
-                    continue
-
-                # 用 TEMPLATE_ITEM_NUM_PREFIX 在“该格子涂黑图”中找数量前缀坐标
-                prefix_xy = self._match_num_prefix_xy(masked_cell_image=cell['masked'])
-                if prefix_xy is None:
-                    continue
-
-                # 按规则 (x-10, y-10, 格子右下x, 格子右下y) 生成 OCR 范围
-                num_area = self._build_num_area(prefix_xy=prefix_xy, cell_area=cell['area'], image=image)
-                if num_area is None:
-                    continue
-
-                # OCR 识别数量
-                count = self.inventory_item_num_direct(image=image, area=num_area, item_name=item_id)
-                if count is None:
-                    continue
-
-                # 成功识别后从 pending 中移除，避免重复处理
-                results[item_id] = count
-                pending.pop(item_id, None)
-                logger.info(f'WarehouseStats: [Grid] Found item={item_id}, count={count}, area={num_area}')
-
-            if not pending:
-                break
-
-            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10) or self.appear(INVENTORY_BOTTOM_CHECK_2, offset=10):
-                logger.info('WarehouseStats: Reached bottom of inventory list.')
-                break
-
-            # 取“最后一行第一个格子”作为锚点，供下一页定位使用
-            if not cells:
-                logger.warning('WarehouseStats: No valid grid cells on current page, skip anchor update once.')
-                anchor_button = None
-                self.ensure_sroll((450, 950), (450, 400), speed=5, count=1, delay=1, method='scroll')
-                page_index += 1
-                continue
-
-            anchor_cell = self._get_anchor_cell(cells)
-            anchor_button = self._build_anchor_button(image=image, area=anchor_cell['area'])
-
-            # 向下滚动一页
-            self.ensure_sroll((450, 950), (450, 400), speed=5, count=1, delay=1, method='scroll')
-            page_index += 1
-
-    def _scan_inventory_legacy(self, pending: Dict[str, Button], results: Dict[str, int]) -> None:
-        # 旧逻辑：逐个模板查找 -> 点击进入详情 -> OCR 持有数
-        while 1:
-            self.device.screenshot()
-            if not pending:
-                break
-
-            remaining: Dict[str, Button] = {}
-            for item_id, button in pending.items():
-                if item_id in results:
-                    continue
-
-                if not self.appear(button, offset=10, static=False):
-                    remaining[item_id] = button
-                    continue
-
-                # 找到目标物品，进入详情页
-                logger.info(f'WarehouseStats: Found item: {item_id}')
-                while 1:
-                    self.device.screenshot()
-                    if self.appear(INVENTORY_ITEM_CLOSE, offset=10, static=False):
-                        break
-                    if self.appear_then_click(button, offset=10, interval=1, static=False):
-                        continue
-
-                owner_loc = self.appear_location(INVENTORY_ITEM_CLOSE, offset=10, static=False)
-                if owner_loc is None:
-                    remaining[item_id] = button
-                    continue
-
-                # 详情页数量区域 OCR
-                detail_counts = self.inventory_item_num_detail(
-                    item_id=item_id,
-                    area=(720 - owner_loc[0], owner_loc[1] + 240, owner_loc[0], owner_loc[1] + 270),
-                    item_name=item_id,
-                )
-                if not detail_counts:
-                    remaining[item_id] = button
-                    continue
-
-                for detail_item_id, detail_count in detail_counts.items():
-                    results[detail_item_id] = detail_count
-                    remaining.pop(detail_item_id, None)
-
-                # 关闭详情回到列表
-                while 1:
-                    self.device.screenshot()
-                    if self.appear_then_click(INVENTORY_ITEM_CLOSE, offset=10, interval=1, static=False):
-                        continue
-                    if self.appear(INVENTORY_CHECK, offset=10):
-                        break
-
-            pending.clear()
-            pending.update(remaining)
-            if not pending:
-                break
-
-            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10) or self.appear(INVENTORY_BOTTOM_CHECK_2, offset=10):
-                logger.info('WarehouseStats: Reached bottom of inventory list.')
-                break
-
-            self.ensure_sroll((450, 950), (450, 250), speed=5, count=1, delay=0.3, method='scroll')
+        try:
+            area = self._detail_step_get_num_area()
+            if area is None:
+                return {}
+            return self.inventory_item_num_detail(item_id=item_id, area=area, item_name=item_name)
+        finally:
+            self._detail_step_leave_detail()
 
     def _split_inventory_cells(
         self,
