@@ -84,7 +84,7 @@ class WarehouseStats(UI):
             item_num = Ocr(
                 [area],
                 text_color=(248, 252, 254),
-                text_color_tolerance=(80, 10, 40),
+                text_color_tolerance=(90, 10, 40),
                 text_color_preprocess=(0.7, 20, 0.6),
                 name=str(item_name or 'INVENTORY_ITEM'),
                 model_type=model_type,
