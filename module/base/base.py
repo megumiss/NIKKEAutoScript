@@ -134,7 +134,7 @@ class ModuleBase:
         if appear:
             # match 成功后，button._button_offset 已被更新
             if hasattr(button, "_button_offset"):
-                logger.info(f"Button '{button.name}' found at {button._button_offset}")
+                logger.debug(f"Button '{button.name}' found at {button._button_offset}")
                 x1, y1, x2, y2 = button._button_offset
                 cx = (x1 + x2) // 2
                 cy = (y1 + y2) // 2

@@ -77,8 +77,8 @@ page_main.link(button=MAIN_GOTO_INVENTORY, destination=page_inventory)
 
 # inventory_consumable
 page_inventory_consumable = Page(INVENTORY_CONSUMABLE_CHECK)
-page_inventory.link(button=INVENTORY_GOTO_CONSUMABLE, destination=page_inventory_consumable)
 page_inventory_consumable.link(button=TEAM_GOTO_MAIN, destination=page_main)
+page_inventory.link(button=INVENTORY_GOTO_CONSUMABLE, destination=page_inventory_consumable)
 
 # inventory_materials
 page_inventory_materials = Page(INVENTORY_MATERIALS_CHECK)
@@ -95,7 +95,7 @@ page_inventory_collectibles = Page(INVENTORY_COLLECTIBLES_CHECK)
 page_inventory_collectibles.link(button=TEAM_GOTO_MAIN, destination=page_main)
 page_inventory.link(button=INVENTORY_GOTO_COLLECTIBLES, destination=page_inventory_collectibles)
 
-# inventory tab switching (direct links between sub-pages)
+# inventory tab switching
 page_inventory_consumable.link(button=INVENTORY_GOTO_MATERIALS, destination=page_inventory_materials)
 page_inventory_consumable.link(button=INVENTORY_GOTO_EQUIPMENT, destination=page_inventory_equipment)
 page_inventory_consumable.link(button=INVENTORY_GOTO_COLLECTIBLES, destination=page_inventory_collectibles)

@@ -194,7 +194,7 @@ class WarehouseStats(UI):
             value *= 1000000
         elif has_suffix_k:
             value *= 1000
-        logger.info(
+        logger.debug(
             f'WarehouseStats: [DirectTemplateFallback] item={item_name or "INVENTORY_ITEM"}, '
             f'digits={"".join(digits)}, value={value}'
         )
@@ -401,7 +401,9 @@ class WarehouseStats(UI):
                 return
 
             # 扫描并回填 count
+            logger.info(f'WarehouseStats: Loaded {len(items)} items from {item_map_path}')
             results = self.scan_inventory(items)
+            logger.info(f'WarehouseStats: Scan finished, recognized {len(results)} items.')
             items_to_write = []
             for item in items:
                 item_id = item.get('id')
@@ -410,8 +412,14 @@ class WarehouseStats(UI):
                     item['count'] = results[item_id]
                     items_to_write.append(item)
 
+            if not items_to_write:
+                logger.warning(
+                    f'WarehouseStats: Scan result is empty (recognized=0), keep existing csv unchanged: {csv_path}'
+                )
+                return
+
             rows = write_inventory_csv(csv_path, items_to_write)
-            logger.info(f'WarehouseStats: Saved {rows} rows to {csv_path}')
+            logger.info(f'WarehouseStats: Saved {rows} rows to csv: {csv_path}')
         except Exception:
             logger.exception('WarehouseStats: Scan failed.')
         finally:
@@ -452,18 +460,16 @@ class WarehouseStats(UI):
             return results
 
         # Process each scan page independently.
-        for page_key in pages:
+        total_pages = len(pages)
+        for page_no, page_key in enumerate(pages, start=1):
             pending_direct = page_pending_direct.get(page_key, {})
             pending_detail = page_pending_detail.get(page_key, {})
             if not pending_direct and not pending_detail:
                 continue
 
-            if not self._switch_inventory_scan_page(page_key):
-                logger.warning(f'WarehouseStats: Skip scan_page="{page_key}" due to switch failure.')
-                continue
-
+            self._switch_inventory_scan_page(page_key)
             logger.info(
-                f'WarehouseStats: scanning page="{page_key}", '
+                f'WarehouseStats: Scanning page {page_no}/{total_pages} "{page_key}", '
                 f'direct={len(pending_direct)}, detail={len(pending_detail)}'
             )
             # screenshot -> split -> direct first -> detail then -> scroll
@@ -476,22 +482,14 @@ class WarehouseStats(UI):
 
         return results
 
-    def _switch_inventory_scan_page(self, page_key: str) -> bool:
+    def _switch_inventory_scan_page(self, page_key: str):
         """
         Switch scan page by ui_ensure(page_xxxx), where xxxx == page_key.
         """
         # 切换页面
         page_key = str(page_key or '').strip().lower() or 'inventory'
-        page_attr = page_key if page_key.startswith('page_') else f'page_{page_key}'
-        self.ui_ensure(getattr(ui_page, page_attr))
-
-        # 等待加载
-        while 1:
-            self.device.screenshot()
-            if not self.appear(INVENTORY_LOADING_CHECK, offset=10):
-                return True
-
-        return False
+        page_attr = page_key if page_key.startswith('page_inventory_') else f'page_inventory_{page_key}'
+        self.ui_ensure(getattr(ui_page, page_attr), 2)
 
     def _scan_inventory_by_page(
         self,
@@ -519,9 +517,9 @@ class WarehouseStats(UI):
                     x1, y1, _, _ = anchor_button.button
                     grid_origin = (x1, y1)
                     drop_anchor_row = True
-                    logger.info(f'WarehouseStats: Grid anchor aligned at ({x1}, {y1})')
+                    logger.debug(f'WarehouseStats: Grid anchor aligned at ({x1}, {y1})')
                 else:
-                    logger.warning('WarehouseStats: Grid anchor not found, fallback to fixed grid origin.')
+                    logger.debug('WarehouseStats: Grid anchor not found, fallback to fixed grid origin.')
                     grid_origin = (self.GRID_START_X, self.GRID_START_Y)
 
             cells = self._split_inventory_cells(
@@ -570,7 +568,7 @@ class WarehouseStats(UI):
                     pending_direct.pop(item_id, None)
                     pending_all.pop(item_id, None)
                     item_name = item_name_map.get(item_id, item_id)
-                    logger.info(
+                    logger.debug(
                         f'WarehouseStats: [Direct] Found item={item_id}({item_name}), count={count}, area={num_area}'
                     )
                     continue
@@ -604,7 +602,7 @@ class WarehouseStats(UI):
                     f'{detail_item_id}({item_name_map.get(detail_item_id, detail_item_id)})={detail_count}'
                     for detail_item_id, detail_count in detail_counts.items()
                 )
-                logger.info(f'WarehouseStats: [Detail] Found item={item_id}, counts={detail_log}')
+                logger.debug(f'WarehouseStats: [Detail] Found item={item_id}, counts={detail_log}')
 
             self._log_page_item_counts(page_index=page_index, page_counts=page_results, item_name_map=item_name_map)
 
@@ -630,18 +628,9 @@ class WarehouseStats(UI):
             page_index += 1
 
         if pending_direct:
-            logger.info(f'WarehouseStats: Direct scan incomplete. pending={len(pending_direct)}')
+            logger.warning(f'WarehouseStats: Direct scan incomplete. pending={len(pending_direct)}')
         if pending_detail:
-            logger.info(f'WarehouseStats: Open-detail scan incomplete. pending={len(pending_detail)}')
-
-    def _detail_step_enter_detail(self, button: Button) -> bool:
-        while 1:
-            self.device.screenshot()
-            if self.appear(INVENTORY_ITEM_CLOSE, offset=10, static=False):
-                return True
-            if self.appear_then_click(button, offset=10, interval=1, static=False):
-                continue
-        return False
+            logger.warning(f'WarehouseStats: Open-detail scan incomplete. pending={len(pending_detail)}')
 
     def _detail_step_get_num_area(self) -> Optional[Tuple[int, int, int, int]]:
         self.device.screenshot()
@@ -649,6 +638,23 @@ class WarehouseStats(UI):
         if owner_loc is None:
             return None
         return 720 - owner_loc[0], owner_loc[1] + 240, owner_loc[0], owner_loc[1] + 270
+
+    def _detail_step_enter_detail(self, button: Button) -> bool:
+        while 1:
+            self.device.screenshot()
+            if self.appear(INVENTORY_ITEM_CLOSE, offset=10, static=False):
+                return True
+
+            if getattr(button, 'file', None):
+                if self.appear_then_click(button, offset=10, interval=0.5, static=False):
+                    continue
+            else:
+                self.device.click(button)
+                self.device.sleep(0.3)
+                continue
+
+        logger.warning(f'WarehouseStats: failed to enter detail for button={button}')
+        return False
 
     def _detail_step_leave_detail(self) -> bool:
         while 1:
@@ -820,11 +826,9 @@ class WarehouseStats(UI):
         item_name_map: Dict[str, str],
     ) -> None:
         if not page_counts:
-            logger.info(f'WarehouseStats: Page {page_index + 1} recognized 0 items.')
+            logger.debug(f'WarehouseStats: Page {page_index + 1} recognized 0 items.')
             return
-        summary = ', '.join(
-            f'{item_name_map.get(item_id, item_id)}({item_id})={count}' for item_id, count in page_counts.items()
-        )
+        summary = ', '.join(f'{item_name_map.get(item_id, item_id)}={count}' for item_id, count in page_counts.items())
         logger.info(f'WarehouseStats: Page {page_index + 1} results: {summary}')
 
     def _save_debug_image(self, filename: str, image) -> None:
