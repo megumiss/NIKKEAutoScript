@@ -75,6 +75,43 @@ page_inventory = Page(INVENTORY_CHECK)
 page_inventory.link(button=TEAM_GOTO_MAIN, destination=page_main)
 page_main.link(button=MAIN_GOTO_INVENTORY, destination=page_inventory)
 
+# inventory_consumable
+page_inventory_consumable = Page(INVENTORY_CONSUMABLE_CHECK)
+page_inventory.link(button=INVENTORY_GOTO_CONSUMABLE, destination=page_inventory_consumable)
+page_inventory_consumable.link(button=TEAM_GOTO_MAIN, destination=page_main)
+
+# inventory_materials
+page_inventory_materials = Page(INVENTORY_MATERIALS_CHECK)
+page_inventory_materials.link(button=TEAM_GOTO_MAIN, destination=page_main)
+page_inventory.link(button=INVENTORY_GOTO_MATERIALS, destination=page_inventory_materials)
+
+# inventory_equipment
+page_inventory_equipment = Page(INVENTORY_EQUIPMENT_CHECK)
+page_inventory_equipment.link(button=TEAM_GOTO_MAIN, destination=page_main)
+page_inventory.link(button=INVENTORY_GOTO_EQUIPMENT, destination=page_inventory_equipment)
+
+# inventory_collectibles
+page_inventory_collectibles = Page(INVENTORY_COLLECTIBLES_CHECK)
+page_inventory_collectibles.link(button=TEAM_GOTO_MAIN, destination=page_main)
+page_inventory.link(button=INVENTORY_GOTO_COLLECTIBLES, destination=page_inventory_collectibles)
+
+# inventory tab switching (direct links between sub-pages)
+page_inventory_consumable.link(button=INVENTORY_GOTO_MATERIALS, destination=page_inventory_materials)
+page_inventory_consumable.link(button=INVENTORY_GOTO_EQUIPMENT, destination=page_inventory_equipment)
+page_inventory_consumable.link(button=INVENTORY_GOTO_COLLECTIBLES, destination=page_inventory_collectibles)
+
+page_inventory_materials.link(button=INVENTORY_GOTO_CONSUMABLE, destination=page_inventory_consumable)
+page_inventory_materials.link(button=INVENTORY_GOTO_EQUIPMENT, destination=page_inventory_equipment)
+page_inventory_materials.link(button=INVENTORY_GOTO_COLLECTIBLES, destination=page_inventory_collectibles)
+
+page_inventory_equipment.link(button=INVENTORY_GOTO_CONSUMABLE, destination=page_inventory_consumable)
+page_inventory_equipment.link(button=INVENTORY_GOTO_MATERIALS, destination=page_inventory_materials)
+page_inventory_equipment.link(button=INVENTORY_GOTO_COLLECTIBLES, destination=page_inventory_collectibles)
+
+page_inventory_collectibles.link(button=INVENTORY_GOTO_CONSUMABLE, destination=page_inventory_consumable)
+page_inventory_collectibles.link(button=INVENTORY_GOTO_MATERIALS, destination=page_inventory_materials)
+page_inventory_collectibles.link(button=INVENTORY_GOTO_EQUIPMENT, destination=page_inventory_equipment)
+
 # pass
 page_pass = Page(PASS_CHECK)
 page_pass.link(button=PASS_GOTO_MAIN, destination=page_main)

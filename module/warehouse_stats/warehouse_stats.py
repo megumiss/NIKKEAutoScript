@@ -11,8 +11,8 @@ from module.base.langs import Langs
 from module.base.utils import crop
 from module.logger import logger
 from module.ocr.ocr import Digit, Ocr
+from module.ui import page as ui_page
 from module.ui.assets import INVENTORY_CHECK
-from module.ui.page import page_inventory
 from module.ui.ui import UI
 from module.warehouse_stats.assets import *
 from module.warehouse_stats.data import (
@@ -159,10 +159,7 @@ class WarehouseStats(UI):
         for digit, template in enumerate(templates):
             try:
                 points = template.match_multi(
-                    area_image,
-                    similarity=0.80,
-                    threshold=3,
-                    name=f'{item_name or "INVENTORY_ITEM"}_NUM_{digit}',
+                    area_image, similarity=0.80, threshold=3, name=f'{item_name or "INVENTORY_ITEM"}_NUM_{digit}'
                 )
             except Exception:
                 continue
@@ -392,7 +389,7 @@ class WarehouseStats(UI):
         logger.hr('Warehouse Stats', 2)
         try:
             # 确保在仓库页
-            # self.ui_ensure(page_inventory)
+            # self.ui_ensure(ui_page.page_inventory)
             item_map_path = self.config.WarehouseStats_ItemMapPath
             csv_path = self.config.WarehouseStats_CsvPath
 
@@ -439,7 +436,7 @@ class WarehouseStats(UI):
             if button is None:
                 continue
 
-            page_key = str(item.get('scan_page', 'default')).strip() or 'default'
+            page_key = str(item.get('scan_page', 'inventory')).strip() or 'inventory'
             if page_key not in page_pending_direct:
                 page_pending_direct[page_key] = {}
                 page_pending_detail[page_key] = {}
@@ -481,49 +478,20 @@ class WarehouseStats(UI):
 
     def _switch_inventory_scan_page(self, page_key: str) -> bool:
         """
-        Switch inventory page before scanning.
-        - default/main: no-op
-        - other page key: try matching a button constant by convention.
-          Candidates: INVENTORY_PAGE_{KEY}, INVENTORY_{KEY}, {KEY}
+        Switch scan page by ui_ensure(page_xxxx), where xxxx == page_key.
         """
-        key = str(page_key or '').strip()
-        if key == '' or key.lower() in ('default', 'main'):
-            return True
+        # 切换页面
+        page_key = str(page_key or '').strip().lower() or 'inventory'
+        page_attr = page_key if page_key.startswith('page_') else f'page_{page_key}'
+        self.ui_ensure(getattr(ui_page, page_attr))
 
-        custom_switch = getattr(self, f'_switch_inventory_scan_page_{key.lower()}', None)
-        if callable(custom_switch):
-            try:
-                return bool(custom_switch())
-            except Exception:
-                logger.exception(f'WarehouseStats: custom switch failed for scan_page="{key}".')
-                return False
-
-        upper = key.upper()
-        candidate_names = (
-            f'INVENTORY_PAGE_{upper}',
-            f'INVENTORY_{upper}',
-            upper,
-        )
-
-        button = None
-        for name in candidate_names:
-            obj = globals().get(name)
-            if isinstance(obj, Button):
-                button = obj
-                break
-
-        if button is None:
-            logger.warning(
-                f'WarehouseStats: scan_page="{key}" has no switch button '
-                f'(tried: {", ".join(candidate_names)}).'
-            )
-            return False
-
-        for _ in range(3):
+        # 等待加载
+        while 1:
             self.device.screenshot()
-            self.appear_then_click(button, offset=10, interval=1, static=False)
-        self.device.sleep((0.6, 0.9))
-        return True
+            if not self.appear(INVENTORY_LOADING_CHECK, offset=10):
+                return True
+
+        return False
 
     def _scan_inventory_by_page(
         self,
@@ -666,18 +634,13 @@ class WarehouseStats(UI):
         if pending_detail:
             logger.info(f'WarehouseStats: Open-detail scan incomplete. pending={len(pending_detail)}')
 
-    def _detail_step_enter_detail(self, button: Button, max_retry: int = 6) -> bool:
-        for _ in range(max_retry):
+    def _detail_step_enter_detail(self, button: Button) -> bool:
+        while 1:
             self.device.screenshot()
             if self.appear(INVENTORY_ITEM_CLOSE, offset=10, static=False):
                 return True
-
-            template_file = getattr(button, 'file', None)
-            if template_file:
-                self.appear_then_click(button, offset=10, interval=1, static=False)
-            else:
-                # Dynamic cell button has no template file; click directly by area center.
-                self.device.click(button)
+            if self.appear_then_click(button, offset=10, interval=1, static=False):
+                continue
         return False
 
     def _detail_step_get_num_area(self) -> Optional[Tuple[int, int, int, int]]:
@@ -687,8 +650,8 @@ class WarehouseStats(UI):
             return None
         return 720 - owner_loc[0], owner_loc[1] + 240, owner_loc[0], owner_loc[1] + 270
 
-    def _detail_step_leave_detail(self, max_retry: int = 6) -> bool:
-        for _ in range(max_retry):
+    def _detail_step_leave_detail(self) -> bool:
+        while 1:
             self.device.screenshot()
             if self.appear_then_click(INVENTORY_ITEM_CLOSE, offset=10, interval=1, static=False):
                 continue
@@ -714,11 +677,7 @@ class WarehouseStats(UI):
             self._detail_step_leave_detail()
 
     def _split_inventory_cells(
-        self,
-        image,
-        origin: Tuple[int, int],
-        page_index: int = 0,
-        drop_anchor_row: bool = False,
+        self, image, origin: Tuple[int, int], page_index: int = 0, drop_anchor_row: bool = False
     ) -> List[dict]:
         """
         将当前页按固定网格分割为多个待识别格子：
