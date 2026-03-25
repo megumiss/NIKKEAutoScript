@@ -91,20 +91,26 @@ class WarehouseStats(UI):
                 lang='ch',
             )
             text = item_num.ocr(self.device.image).get('text', '')
-            has_suffix_m = self._match_num_suffix_m(image=image, area=area)
-            value = self._parse_direct_count_text(text=text, has_suffix_m=has_suffix_m)
+            has_suffix_k, has_suffix_m = self._match_num_suffix_flags(image=image, area=area)
+            value = self._parse_direct_count_text(text=text, has_suffix_k=has_suffix_k, has_suffix_m=has_suffix_m)
             if value is not None:
                 return value
             return self._parse_direct_count_by_digit_templates(
                 image=image,
                 area=area,
+                has_suffix_k=has_suffix_k,
                 has_suffix_m=has_suffix_m,
                 item_name=item_name,
             )
         finally:
             self.device.image = self_image
 
-    def _parse_direct_count_text(self, text: str, has_suffix_m: bool = False) -> Optional[int]:
+    def _parse_direct_count_text(
+        self,
+        text: str,
+        has_suffix_k: bool = False,
+        has_suffix_m: bool = False,
+    ) -> Optional[int]:
         # Supports x1 / x444 / x124K / x1.2M
         if not text:
             return None
@@ -119,13 +125,16 @@ class WarehouseStats(UI):
         unit = match.group(2)
         if has_suffix_m:
             unit = 'M'
+        elif has_suffix_k:
+            unit = 'K'
         return self._parse_scaled_number(match.group(1), unit)
 
     def _parse_direct_count_by_digit_templates(
         self,
         image,
         area: Tuple[int, int, int, int],
-        has_suffix_m: bool = False,
+        has_suffix_k: Optional[bool] = None,
+        has_suffix_m: Optional[bool] = None,
         item_name: Optional[str] = None,
     ) -> Optional[int]:
         """
@@ -176,23 +185,48 @@ class WarehouseStats(UI):
         if not digits:
             return None
 
+        if has_suffix_k is None or has_suffix_m is None:
+            detected_k, detected_m = self._match_num_suffix_flags(image=image, area=area)
+            if has_suffix_k is None:
+                has_suffix_k = detected_k
+            if has_suffix_m is None:
+                has_suffix_m = detected_m
+
         value = int(''.join(digits))
         if has_suffix_m:
             value *= 1000000
+        elif has_suffix_k:
+            value *= 1000
         logger.info(
             f'WarehouseStats: [DirectTemplateFallback] item={item_name or "INVENTORY_ITEM"}, '
             f'digits={"".join(digits)}, value={value}'
         )
         return value
 
-    def _match_num_suffix_m(self, image, area: Tuple[int, int, int, int]) -> bool:
+    def _match_num_suffix_flags(self, image, area: Tuple[int, int, int, int]) -> Tuple[bool, bool]:
+        has_suffix_k = self._match_num_suffix_k(image=image, area=area)
+        has_suffix_m = self._match_num_suffix_m(image=image, area=area)
+        if has_suffix_k and has_suffix_m:
+            logger.debug('WarehouseStats: both K and M suffix matched, prefer M multiplier.')
+        return has_suffix_k, has_suffix_m
+
+    def _match_num_suffix(self, image, area: Tuple[int, int, int, int], button: Optional[Button]) -> bool:
+        if button is None:
+            return False
+
         area_image = crop(image, area)
         previous_image = self.device.image
         self.device.image = area_image
         try:
-            return self.appear(ITEM_NUM_SUFFIX_M, offset=10, threshold=0.6, static=False)
+            return self.appear(button, offset=10, threshold=0.6, static=False)
         finally:
             self.device.image = previous_image
+
+    def _match_num_suffix_k(self, image, area: Tuple[int, int, int, int]) -> bool:
+        return self._match_num_suffix(image=image, area=area, button=ITEM_NUM_SUFFIX_K)
+
+    def _match_num_suffix_m(self, image, area: Tuple[int, int, int, int]) -> bool:
+        return self._match_num_suffix(image=image, area=area, button=ITEM_NUM_SUFFIX_M)
 
     def _normalize_ocr_text_common(self, text: str) -> str:
         normalized = str(text or '').replace('\n', '')
