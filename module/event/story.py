@@ -442,11 +442,14 @@ class EventStory(EventBase):
                 ):
                     continue
 
+                # 剧情选项
+                if self.appear_then_click(ANSWER_CHECK, offset=100, interval=3):
+                    continue
                 # 跳过剧情
                 if self.appear_then_click(SKIP, offset=(150, 10), interval=1):
                     continue
-                # 剧情选项
-                if self.appear_then_click(ANSWER_CHECK, offset=100, interval=3):
+                # 剧情推完提示
+                if self.appear_then_click(STAGE_COMPLETE_CONFIRM, offset=10, interval=1):
                     continue
 
                 # 下一关卡

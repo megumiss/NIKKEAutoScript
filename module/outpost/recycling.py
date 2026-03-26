@@ -15,7 +15,6 @@ class NoEnoughItems(Exception):
 class Recycling(UI):
     def upgrade(self):
         logger.hr('Recycling special upgrade', 2)
-        click_timer = Timer(0.3)
 
         # 获取所有level并去重
         levels = TEMPLATE_RECYCLING_LEVEL.match_multi(self.device.image, threshold=0.65, name='RECYCLING_LEVEL')
@@ -31,7 +30,7 @@ class Recycling(UI):
             while 1:
                 self.device.screenshot()
 
-                if click_timer.reached() and self.appear(RECYCLING_COMMON_UPGRADE, offset=30):
+                if self.appear(RECYCLING_COMMON_UPGRADE, offset=30):
                     self.device.click(level, click_offset=(0, 100))
                     self.device.sleep(0.5)
                     continue
@@ -41,48 +40,30 @@ class Recycling(UI):
                     break
 
             # 升级
-            auto_click = 0
+            max_click = 0
             while 1:
                 self.device.screenshot()
 
                 # 点击进行下一步
-                if click_timer.reached() and self.appear_then_click(CLICK_TO_NEXT, offset=30, interval=1, static=False):
-                    click_timer.reset()
+                if self.appear_then_click(CLICK_TO_NEXT, offset=30, interval=1, static=False):
                     continue
 
-                # 自动选择
-                if (
-                    auto_click < 5
-                    and click_timer.reached()
-                    and self.appear(RECYCLING_UPGRADE_CHECK, offset=30, static=False)
-                    and self.appear_then_click(SYNCHRO_UPGRADE_AUTO, offset=30, static=False)
-                ):
-                    auto_click += 1
-                    click_timer.reset()
+                # 点击MAX
+                if max_click < 2 and self.appear_then_click(SELECT_MAX, offset=30, interval=1, static=False):
+                    max_click += 1
                     continue
 
-                # 升级
-                if (
-                    auto_click > 4
-                    and click_timer.reached()
-                    and self.appear(RECYCLING_UPGRADE_CHECK, offset=30, static=False)
-                    and self.appear_then_click(RECYCLING_UPGRADE_CONFIRM, offset=30, interval=1)
-                ):
-                    auto_click = 0
-                    self.device.sleep(2)
-                    self.device.click_record_clear()
-                    click_timer.reset()
+                if max_click > 1 and self.appear_then_click(RECYCLING_COMMON_UPGRADE_CONFIRM, threshold=10):
                     continue
 
-                # 材料不够,关闭窗口
+                # 不能升级
                 if (
-                    auto_click > 4
-                    and self.appear(RECYCLING_UPGRADE_CHECK, offset=30, static=False)
-                    and not self.appear(RECYCLING_UPGRADE_CONFIRM, threshold=10)
+                    max_click > 1
+                    and self.appear(RECYCLING_UPGRADE_CHECK, offset=50)
+                    and not self.appear(RECYCLING_COMMON_UPGRADE_CONFIRM, threshold=10)
                     and self.appear_then_click(RECYCLING_UPGRADE_CLOSE, offset=30, interval=1, static=False)
                 ):
                     self.device.click_record_clear()
-                    click_timer.reset()
                     continue
 
                 if self.appear(RECYCLING_COMMON_UPGRADE, offset=30):

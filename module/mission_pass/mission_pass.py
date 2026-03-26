@@ -3,6 +3,7 @@ import copy
 import cv2
 
 from module.base.button import shift_button
+from module.base.langs import Langs
 from module.base.timer import Timer
 from module.base.utils import crop
 from module.handler.assets import REWARD
@@ -51,8 +52,9 @@ class MissionPass(UI):
                 and self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
                 and self.appear_any(PASS_MISSION_BUTTONS, offset=30)
             ):
-                self.device.click_minitouch(360, 1190)
-                self.device.sleep(1)
+                # self.device.click_minitouch(360, 1190)
+                if self.appear_text_then_click(Langs.CLAIM_ALL, threshold=0.7, interval=1):
+                    self.device.sleep(1)
                 logger.info('Reward pass mission')
                 click_timer.reset()
                 continue
@@ -69,8 +71,9 @@ class MissionPass(UI):
                 and self.appear(REWARD_RED_POINT, offset=(-25, -50, 10, 50))
                 and self.appear_any(PASS_REWARD_BUTTONS, offset=30)
             ):
-                self.device.click_minitouch(360, 1190)
-                self.device.sleep(1)
+                # self.device.click_minitouch(360, 1190)
+                if self.appear_text_then_click(Langs.CLAIM_ALL, threshold=0.7, interval=1):
+                    self.device.sleep(1)
                 logger.info('Reward pass reward')
                 click_timer.reset()
                 continue
