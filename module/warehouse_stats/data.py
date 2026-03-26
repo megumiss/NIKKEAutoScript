@@ -1,6 +1,8 @@
 import csv
 import os
+from copy import deepcopy
 from datetime import datetime
+from functools import lru_cache
 from typing import Dict, List
 
 from module.config.utils import read_file
@@ -78,16 +80,19 @@ def init_warehouse_stats_files(item_map_path: str = None, csv_path: str = None, 
     """
     item_map_path = ensure_item_map_file(item_map_path or DEFAULT_ITEM_MAP_PATH)
     ensure_sample_csv(csv_path or DEFAULT_CSV_PATH, item_map_path=item_map_path, config_name=config_name)
+    # Preload warehouse assets during startup to avoid first-time UI hitch
+    # when opening the WarehouseStats item table.
+    try:
+        from module.warehouse_stats import assets as _warehouse_assets
+
+        _ = _warehouse_assets
+    except Exception:
+        logger.exception('WarehouseStats: preload assets failed.')
 
 
-def load_item_groups(path: str = None) -> List[dict]:
-    """
-    Load item mapping config and normalize into group list.
-    Each group contains normalized items with group fields.
-    """
-    path = ensure_item_map_file(path or DEFAULT_ITEM_MAP_PATH)
-    if not path or not os.path.exists(path):
-        raise FileNotFoundError(f'WarehouseStats: item map file not found: {path}')
+@lru_cache(maxsize=16)
+def _load_item_groups_cached(path: str, mtime: float) -> List[dict]:
+    _ = mtime
     data = read_file(path)
     if not isinstance(data, dict):
         logger.warning(f'WarehouseStats: Invalid item map format in {path}')
@@ -130,6 +135,19 @@ def load_item_groups(path: str = None) -> List[dict]:
     return normalized
 
 
+def load_item_groups(path: str = None) -> List[dict]:
+    """
+    Load item mapping config and normalize into group list.
+    Each group contains normalized items with group fields.
+    """
+    path = ensure_item_map_file(path or DEFAULT_ITEM_MAP_PATH)
+    if not path or not os.path.exists(path):
+        raise FileNotFoundError(f'WarehouseStats: item map file not found: {path}')
+    mtime = os.path.getmtime(path)
+    # Return a detached copy to prevent accidental in-place mutation on cached data.
+    return deepcopy(_load_item_groups_cached(path, mtime))
+
+
 def flatten_groups(groups: List[dict]) -> List[dict]:
     items: List[dict] = []
     for group in groups:
@@ -168,6 +186,13 @@ def load_latest_counts(csv_path: str) -> Dict[str, dict]:
     if not csv_path or not os.path.exists(csv_path):
         return {}
 
+    mtime = os.path.getmtime(csv_path)
+    return deepcopy(_load_latest_counts_cached(csv_path, mtime))
+
+
+@lru_cache(maxsize=16)
+def _load_latest_counts_cached(csv_path: str, mtime: float) -> Dict[str, dict]:
+    _ = mtime
     counts: Dict[str, dict] = {}
     with open(csv_path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)

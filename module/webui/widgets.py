@@ -580,6 +580,7 @@ def put_arg_item_table(kwargs: T_Output_Kwargs) -> Output:
             if icon_path:
                 icon_html = (
                     f'<img src="{html.escape(icon_path)}" '
+                    f'loading="lazy" decoding="async" '
                     f'class="warehouse-item-icon-img" />'
                 )
             else:
