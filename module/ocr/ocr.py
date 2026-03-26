@@ -29,7 +29,7 @@ TextColorInput = Union[
 class Ocr:
     SHOW_REVISE_WARNING = False
     # 预处理调试图保存目录；设为 None 则不落盘。
-    DEBUG_SAVE_DIR = "./data/ocr"
+    DEBUG_SAVE_DIR = None
     # OCR 前放大倍率：增大可提升小字可读性，但过大可能导致笔画变粗。
     OCR_SCALE = 2
     # 文本预处理参数：

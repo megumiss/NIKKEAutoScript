@@ -1,3 +1,26 @@
+# Warehouse 物品配置说明
+# 顶层字段：
+# - version: 配置版本号，当前固定为 1
+# - groups: 分组列表
+#
+# group 字段：
+# - id: 分组唯一标识（用于 CSV 的 group_id）
+# - name: 分组显示名（用于 CSV 的 group_name）
+# - items: 该分组下的物品列表
+#
+# item 字段：
+# - id: 物品唯一标识（用于 CSV 的 item_id）
+# - name: 资源前缀（用于匹配 *_TEMPLATE / *_ICON 资产）
+# - display_name: 日志/界面展示名称（不参与模板匹配）
+# - scan: 是否参与扫描（false 表示跳过该物品）
+# - scan_method: 识别方式
+#     - direct: 在仓库格子内直接识别数量
+#     - detail: 点击物品详情后识别数量
+# - scan_page: 扫描页签
+#     - consumable: 消耗品
+#     - materials: 材料
+#     - equipment: 装备
+#     - collectibles: 收藏品
 version: 1
 groups:
 - id: currency_ticket
@@ -65,25 +88,25 @@ groups:
     scan_page: materials
   - id: mileage_ticket
     name: MILEAGE_TICKET
-    display_name: 里程票
+    display_name: 白银积分卷
     scan: true
     scan_method: direct
     scan_page: materials
   - id: gold_mileage_ticket
     name: GOLD_MILEAGE_TICKET
-    display_name: 黄金里程票
+    display_name: 黄金积分卷
     scan: true
     scan_method: direct
     scan_page: materials
   - id: arena_exchange_voucher
     name: ARENA_EXCHANGE_VOUCHER
-    display_name: 竞技场兑换券
+    display_name: 竞技场奖品兑换券
     scan: true
     scan_method: direct
     scan_page: materials
   - id: union_chip
     name: UNION_CHIP
-    display_name: 联盟芯片
+    display_name: 联盟晶片
     scan: true
     scan_method: direct
     scan_page: materials
@@ -152,7 +175,7 @@ groups:
     scan_page: consumable
   - id: pilgrim_over_spec_mold
     name: PILGRIM_OVER_SPEC_MOLD
-    display_name: 朝圣者铸模
+    display_name: 朝圣者超规格铸模
     scan: true
     scan_method: detail
     scan_page: consumable
@@ -170,112 +193,112 @@ groups:
     display_name: 技能手册 I
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: skill_manual_ii
     name: SKILL_MANUAL_II
     display_name: 技能手册 II
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: skill_manual_iii
     name: SKILL_MANUAL_III
     display_name: 技能手册 III
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: burst_manual_i
     name: BURST_MANUAL_I
-    display_name: 爆裂技能手册 I
+    display_name: 爆裂手册 I
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: burst_manual_ii
     name: BURST_MANUAL_II
-    display_name: 爆裂技能手册 II
+    display_name: 爆裂手册 II
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: burst_manual_iii
     name: BURST_MANUAL_III
-    display_name: 爆裂技能手册 III
+    display_name: 爆裂手册 III
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: a_n_m_i_code_manual
     name: A_N_M_I_CODE_MANUAL
     display_name: A.N.M.I.代码手册
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: d_m_t_r_code_manual
     name: D_M_T_R_CODE_MANUAL
     display_name: D.M.T.R.代码手册
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: h_s_t_a_code_manual
     name: H_S_T_A_CODE_MANUAL
     display_name: H.S.T.A.代码手册
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: p_s_i_d_code_manual
     name: P_S_I_D_CODE_MANUAL
     display_name: P.S.I.D.代码手册
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: z_e_u_s_code_manual
     name: Z_E_U_S_CODE_MANUAL
     display_name: Z.E.U.S.代码手册
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: attackers_common_console
     name: ATTACKERS_COMMON_CONSOLE
-    display_name: 攻击型通用控制台
+    display_name: 火力型通用主机
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: defenders_common_console
     name: DEFENDERS_COMMON_CONSOLE
-    display_name: 防御型通用控制台
+    display_name: 防御型通用主机
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: supporter_common_console
     name: SUPPORTER_COMMON_CONSOLE
-    display_name: 支援型通用控制台
+    display_name: 辅助型通用主机
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: abnormal_common_console
     name: ABNORMAL_COMMON_CONSOLE
-    display_name: 异常代码通用控制台
+    display_name: 反常通用主机
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: elysion_common_console
     name: ELYSION_COMMON_CONSOLE
-    display_name: 极乐净土通用控制台
+    display_name: 极乐净土通用主机
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: missilis_common_console
     name: MISSILIS_COMMON_CONSOLE
-    display_name: 米西利斯通用控制台
+    display_name: 米西利斯通用主机
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: tetra_common_console
     name: TETRA_COMMON_CONSOLE
-    display_name: 泰特拉通用控制台
+    display_name: 泰特拉通用主机
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: pilgrim_common_console
     name: PILGRIM_COMMON_CONSOLE
-    display_name: 朝圣者通用控制台
+    display_name: 朝圣者通用主机
     scan: true
     scan_method: direct
     scan_page: consumable
@@ -284,112 +307,112 @@ groups:
   items:
   - id: battle_data_set
     name: BATTLE_DATA_SET
-    display_name: 战斗数据集
+    display_name: 战斗数据辑
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: core_dust
     name: CORE_DUST
-    display_name: 核心尘埃
+    display_name: 芯尘
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: broken_core
     name: BROKEN_CORE
     display_name: 破碎核心
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: re_energizer
     name: RE_ENERGIZER
-    display_name: RE 充能器
+    display_name: 循环能量
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: custom_module
     name: CUSTOM_MODULE
-    display_name: 定制模组
+    display_name: 订制模组
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: custom_module_shard
     name: CUSTOM_MODULE_SHARD
-    display_name: 定制模组碎片
+    display_name: 订制模组零件
     scan: true
-    scan_method: direct
+    scan_method: detail
     scan_page: consumable
   - id: custom_lock
     name: CUSTOM_LOCK
-    display_name: 定制锁
+    display_name: 自订密钥
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: synchro_expansion
     name: SYNCHRO_EXPANSION
-    display_name: 同步器扩展
+    display_name: 同步扩充
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: curated_manufacture_arms
     name: CURATED_MANUFACTURE_ARMS
-    display_name: 甄选制造军备
+    display_name: 企业精选武装
     scan: true
-    scan_method: direct
+    scan_method: detail
     scan_page: consumable
   - id: skill_uninstaller
     name: SKILL_UNINSTALLER
-    display_name: 技能卸载器
+    display_name: 技能移除程序
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
   - id: high_quality_access_records
     name: HIGH_QUALITY_ACCESS_RECORDS
-    display_name: 高品质访问记录
+    display_name: 高品质凭证
     scan: true
-    scan_method: direct
+    scan_method: detail
     scan_page: consumable
 - id: box_pack
   name: 箱子与其他
   items:
   - id: beginner_maintenance_kit
     name: BEGINNER_MAINTENANCE_KIT
-    display_name: 初级维护套件
+    display_name: 初学者保养工具组
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: intermediate_maintenance_kit
     name: INTERMEDIATE_MAINTENANCE_KIT
-    display_name: 中级维护套件
+    display_name: 中级保养工具组
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: elite_maintenance_kit
     name: ELITE_MAINTENANCE_KIT
-    display_name: 高级维护套件
+    display_name: 高级保养工具组
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: maintenance_kit_box
     name: MAINTENANCE_KIT_BOX
-    display_name: 维护套件箱 I
+    display_name: 保养工具箱
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: maintenance_kit_box_ii
     name: MAINTENANCE_KIT_BOX_II
-    display_name: 维护套件箱 II
+    display_name: 保养工具箱II
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: collection_item_box
     name: COLLECTION_ITEM_BOX
-    display_name: 收藏品道具箱
+    display_name: 收藏品箱
     scan: true
     scan_method: direct
     scan_page: consumable
   - id: collection_item_mileage_box
     name: COLLECTION_ITEM_MILEAGE_BOX
-    display_name: 收藏品里程箱
+    display_name: 收藏品积分箱
     scan: true
     scan_method: direct
     scan_page: consumable
@@ -401,13 +424,19 @@ groups:
     scan_page: consumable
   - id: profile_custom_pack
     name: PROFILE_CUSTOM_PACK
-    display_name: 资料卡自定义包
+    display_name: 简介个性化礼包
     scan: true
-    scan_method: direct
+    scan_method: detail
     scan_page: consumable
   - id: t9_equipment_manufacturer_selection_box
     name: T9_EQUIPMENT_MANUFACTURER_SELECTION_BOX
-    display_name: T9企业装备自选箱
+    display_name: T9企业装备自选宝箱
     scan: true
     scan_method: direct
+    scan_page: consumable
+  - id: t9_equipment_selection_box
+    name: T9_EQUIPMENT_SELECTION_BOX
+    display_name: 公司武器
+    scan: true
+    scan_method: detail
     scan_page: consumable

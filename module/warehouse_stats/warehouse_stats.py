@@ -1,6 +1,5 @@
 import os
 import re
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import cv2
@@ -68,16 +67,12 @@ class WarehouseStats(UI):
     # 翻页后锚点匹配阈值
     GRID_ANCHOR_THRESHOLD = 0.82
 
-    # 调试图输出目录（会自动创建）
-    DEBUG_IMAGE_DIR = './data/warehouse_stats/debug'
-    # 是否保存调试图
-    DEBUG_SAVE_IMAGE = True
-
     ITEM_ID_GEM = 'gem'
     ITEM_ID_FREE_GEM = 'free_gem'
     ITEM_ID_ADVANCED_RECRUIT_VOUCHER = 'advanced_recruit_voucher'
     ITEM_ID_FREE_GEM_COLOR_VOUCHER = 'free_gem_color_voucher'
     ITEM_ID_ALL_GEM_COLOR_VOUCHER = 'all_gem_color_voucher'
+    SCAN_PAGE_ORDER = ['consumable', 'materials', 'equipment', 'collectibles']
 
     def inventory_item_num_direct(
         self, image, area: Tuple[int, int, int, int], item_name: Optional[str] = None
@@ -148,6 +143,13 @@ class WarehouseStats(UI):
         Match TEMPLATE_ITEM_NUM_0~9 in number area, sort by x, and concatenate digits.
         """
         area_image = crop(image, area)
+        if area_image is None or area_image.size == 0:
+            return None
+        if len(area_image.shape) == 3:
+            area_gray = cv2.cvtColor(area_image, cv2.COLOR_BGR2GRAY)
+        else:
+            area_gray = area_image
+
         templates = [
             TEMPLATE_ITEM_NUM_0,
             TEMPLATE_ITEM_NUM_1,
@@ -161,29 +163,140 @@ class WarehouseStats(UI):
             TEMPLATE_ITEM_NUM_9,
         ]
 
-        matches: List[Tuple[int, int, int, int]] = []
+        # digit_templates: (digit, template_gray, width, height, density)
+        digit_templates: List[Tuple[int, np.ndarray, int, int, float]] = []
         for digit, template in enumerate(templates):
             try:
-                points = template.match_multi(
-                    area_image, similarity=0.80, threshold=3, name=f'{item_name or "INVENTORY_ITEM"}_NUM_{digit}'
-                )
-            except Exception:
-                continue
-            for button in points:
-                x1, y1, _, _ = button.area
-                matches.append((x1, y1, digit, len(matches)))
+                # 数字模板是 Template；部分历史资源对象可能是 Button，统一兼容两者
+                if hasattr(template, 'ensure_template'):
+                    template.ensure_template()
+                template_image = getattr(template, 'image', None)
+                if isinstance(template_image, list):
+                    if not template_image:
+                        continue
+                    template_image = template_image[0]
+                if template_image is None:
+                    continue
+                if len(template_image.shape) == 3:
+                    template_gray = cv2.cvtColor(template_image, cv2.COLOR_BGR2GRAY)
+                else:
+                    template_gray = template_image
 
-        if not matches:
+                height, width = template_gray.shape[:2]
+                if area_gray.shape[0] < height or area_gray.shape[1] < width:
+                    continue
+
+                _, template_bin = cv2.threshold(template_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                density = float(np.mean(template_bin > 0))
+                digit_templates.append((digit, template_gray, width, height, density))
+            except Exception as e:
+                logger.debug(
+                    f'WarehouseStats: [DirectTemplateFallback] template load failed, '
+                    f'item={item_name or "INVENTORY_ITEM"}, digit={digit}, error={e}'
+                )
+                continue
+
+        if not digit_templates:
             return None
 
-        matches.sort(key=lambda x: (x[0], x[1], x[3]))
-        digits: List[str] = []
-        last_x: Optional[int] = None
-        for x1, _, digit, _ in matches:
-            if last_x is not None and abs(x1 - last_x) <= 3:
+        def _combine_similarity_map(search_gray: np.ndarray, template_gray: np.ndarray) -> np.ndarray:
+            corr_map = cv2.matchTemplate(search_gray, template_gray, cv2.TM_CCOEFF_NORMED)
+            diff_map = cv2.matchTemplate(search_gray, template_gray, cv2.TM_SQDIFF_NORMED)
+            return (0.7 * corr_map) + (0.3 * (1.0 - diff_map))
+
+        # 候选：(x, y, digit, score, width, height)
+        selected: List[Tuple[int, int, int, float, int, int]] = []
+        used_threshold = 0.0
+        for similarity_threshold in (0.82, 0.78, 0.74, 0.70):
+            candidates: List[Tuple[int, int, int, float, int, int]] = []
+            for digit, template_gray, width, height, _ in digit_templates:
+                try:
+                    score_map = _combine_similarity_map(area_gray, template_gray)
+                    ys, xs = np.where(score_map >= similarity_threshold)
+                    for y, x in zip(ys.tolist(), xs.tolist()):
+                        score = float(score_map[y, x])
+                        candidates.append((x, y, digit, score, width, height))
+                except Exception as e:
+                    logger.debug(
+                        f'WarehouseStats: [DirectTemplateFallback] template match failed, '
+                        f'item={item_name or "INVENTORY_ITEM"}, digit={digit}, error={e}'
+                    )
+                    continue
+
+            if not candidates:
                 continue
-            digits.append(str(digit))
-            last_x = x1
+
+            # 先按分数降序，再做位置去重：同一位置保留最高分候选
+            candidates.sort(key=lambda item: item[3], reverse=True)
+            selected = []
+            for candidate in candidates:
+                x, y, _, _, width, height = candidate
+                duplicated = False
+                for sx, sy, _, _, sw, sh in selected:
+                    x_threshold = max(3, min(width, sw) // 2)
+                    y_threshold = max(3, min(height, sh) // 2)
+                    if abs(x - sx) <= x_threshold and abs(y - sy) <= y_threshold:
+                        duplicated = True
+                        break
+                if duplicated:
+                    continue
+
+                selected.append(candidate)
+
+            if selected:
+                used_threshold = similarity_threshold
+                break
+
+        if not selected:
+            logger.debug(f'WarehouseStats: [DirectTemplateFallback] item={item_name or "INVENTORY_ITEM"}, no candidates')
+            return None
+
+        density_by_digit = {digit: density for digit, _, _, _, density in digit_templates}
+
+        # 二次重评分：在已选位置上直接比较 0~9 的模板相似度，降低 0/1/8 混淆
+        refined: List[Tuple[int, int, int, float, int, int]] = []
+        for x, y, picked_digit, _, width, height in selected:
+            patch = area_gray[y : y + height, x : x + width]
+            if patch.shape[:2] != (height, width):
+                continue
+
+            score_candidates: List[Tuple[int, float]] = []
+            for digit, template_gray, tw, th, _ in digit_templates:
+                if tw != width or th != height:
+                    continue
+                corr = float(cv2.matchTemplate(patch, template_gray, cv2.TM_CCOEFF_NORMED)[0, 0])
+                diff = float(cv2.matchTemplate(patch, template_gray, cv2.TM_SQDIFF_NORMED)[0, 0])
+                score = (0.7 * corr) + (0.3 * (1.0 - diff))
+                score_candidates.append((digit, score))
+
+            if not score_candidates:
+                refined.append((x, y, picked_digit, 0.0, width, height))
+                continue
+
+            score_candidates.sort(key=lambda item: item[1], reverse=True)
+            best_digit, best_score = score_candidates[0]
+            if len(score_candidates) >= 2:
+                second_digit, second_score = score_candidates[1]
+                ambiguous = {best_digit, second_digit} in ({0, 1}, {0, 8})
+                close_score = (best_score - second_score) <= 0.03
+                if ambiguous and close_score:
+                    _, patch_bin = cv2.threshold(patch, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                    patch_density = float(np.mean(patch_bin > 0))
+                    d1 = abs(patch_density - density_by_digit.get(best_digit, patch_density))
+                    d2 = abs(patch_density - density_by_digit.get(second_digit, patch_density))
+                    if d2 < d1:
+                        best_digit, best_score = second_digit, second_score
+
+            refined.append((x, y, best_digit, best_score, width, height))
+
+        if not refined:
+            return None
+
+        # 按从左到右拼接数字
+        refined.sort(key=lambda item: (item[0], item[1]))
+        if len(refined) > 6:
+            refined = refined[:6]
+        digits: List[str] = [str(item[2]) for item in refined]
 
         if not digits:
             return None
@@ -200,9 +313,11 @@ class WarehouseStats(UI):
             value *= 1000000
         elif has_suffix_k:
             value *= 1000
+
+        match_trace = ', '.join(f'{digit}@{score:.3f}' for _, _, digit, score, _, _ in refined)
         logger.debug(
             f'WarehouseStats: [DirectTemplateFallback] item={item_name or "INVENTORY_ITEM"}, '
-            f'digits={"".join(digits)}, value={value}'
+            f'digits={"".join(digits)}, value={value}, threshold={used_threshold:.2f}, matches=[{match_trace}]'
         )
         return value
 
@@ -450,8 +565,8 @@ class WarehouseStats(UI):
         free_gem = self._to_int(results.get(self.ITEM_ID_FREE_GEM, 0), 0)
         all_gem = self._to_int(results.get(self.ITEM_ID_GEM, 0), 0)
 
-        free_gem_color_voucher = free_gem // 3000 + advanced
-        all_gem_color_voucher = all_gem // 3000 + advanced
+        free_gem_color_voucher = free_gem // 300 + advanced
+        all_gem_color_voucher = all_gem // 300 + advanced
 
         results[self.ITEM_ID_FREE_GEM_COLOR_VOUCHER] = free_gem_color_voucher
         results[self.ITEM_ID_ALL_GEM_COLOR_VOUCHER] = all_gem_color_voucher
@@ -459,9 +574,9 @@ class WarehouseStats(UI):
         logger.debug(
             'WarehouseStats: Derived vouchers '
             f'{self.ITEM_ID_FREE_GEM_COLOR_VOUCHER}={free_gem_color_voucher} '
-            f'({self.ITEM_ID_FREE_GEM}={free_gem}//3000 + {self.ITEM_ID_ADVANCED_RECRUIT_VOUCHER}={advanced}), '
+            f'({self.ITEM_ID_FREE_GEM}={free_gem}//300 + {self.ITEM_ID_ADVANCED_RECRUIT_VOUCHER}={advanced}), '
             f'{self.ITEM_ID_ALL_GEM_COLOR_VOUCHER}={all_gem_color_voucher} '
-            f'({self.ITEM_ID_GEM}={all_gem}//3000 + {self.ITEM_ID_ADVANCED_RECRUIT_VOUCHER}={advanced})'
+            f'({self.ITEM_ID_GEM}={all_gem}//300 + {self.ITEM_ID_ADVANCED_RECRUIT_VOUCHER}={advanced})'
         )
 
     def scan_inventory(self, items: List[dict]) -> Dict[str, int]:
@@ -497,6 +612,23 @@ class WarehouseStats(UI):
 
         if not pages:
             return results
+
+        # 固定识别顺序：consumable -> materials -> equipment -> collectibles
+        order_map = {name: idx for idx, name in enumerate(self.SCAN_PAGE_ORDER)}
+
+        def _normalize_page_key(page_key: str) -> str:
+            text = str(page_key or '').strip().lower()
+            if text.startswith('page_inventory_'):
+                return text[len('page_inventory_') :]
+            return text
+
+        pages = [
+            page_key
+            for _, page_key in sorted(
+                enumerate(pages),
+                key=lambda pair: (order_map.get(_normalize_page_key(pair[1]), 999), pair[0]),
+            )
+        ]
 
         # Process each scan page independently.
         total_pages = len(pages)
@@ -537,9 +669,6 @@ class WarehouseStats(UI):
         results: Dict[str, int],
         item_name_map: Dict[str, str],
     ) -> None:
-        if not hasattr(self, '_debug_run_id'):
-            self._debug_run_id = datetime.now().strftime('%Y%m%d_%H%M%S')
-
         max_pages = max(20, int(getattr(self.config, 'WarehouseStats_ScrollTimes', 5)) * 20)
         page_index = 0
         grid_origin = (self.GRID_START_X, self.GRID_START_Y)
@@ -765,16 +894,6 @@ class WarehouseStats(UI):
                     }
                 )
 
-                # 调试图：保存分割后的格子图与涂黑后的整图
-                self._save_debug_image(
-                    f'page_{page_index:03d}_r{row}_c{col}_cell.png',
-                    cell_image,
-                )
-                self._save_debug_image(
-                    f'page_{page_index:03d}_r{row}_c{col}_masked.png',
-                    masked,
-                )
-
         return cells
 
     def _is_cell_fully_visible(self, area: Tuple[int, int, int, int]) -> bool:
@@ -869,25 +988,6 @@ class WarehouseStats(UI):
             return
         summary = ', '.join(f'{item_name_map.get(item_id, item_id)}={count}' for item_id, count in page_counts.items())
         logger.info(f'WarehouseStats: Page {page_index + 1} results: {summary}')
-
-    def _save_debug_image(self, filename: str, image) -> None:
-        if not self.DEBUG_SAVE_IMAGE:
-            return
-        try:
-            run_id = getattr(self, '_debug_run_id', 'manual')
-            output_dir = os.path.join(self.DEBUG_IMAGE_DIR, run_id)
-            os.makedirs(output_dir, exist_ok=True)
-            path = os.path.join(output_dir, filename)
-            if image is None:
-                return
-            # 项目内图片通常是 RGB，保存前转为 BGR，便于 OpenCV 正常显示颜色
-            if len(image.shape) == 3 and image.shape[2] == 3:
-                image_to_save = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            else:
-                image_to_save = image
-            cv2.imwrite(path, image_to_save)
-        except Exception:
-            logger.exception(f'WarehouseStats: save debug image failed: {filename}')
 
     def _load_templates(self, items: List[dict]) -> Dict[str, Button]:
         # 读取配置物品对应的模板按钮
