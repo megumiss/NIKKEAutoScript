@@ -169,7 +169,17 @@ def resolve_item_asset(prefix: str, suffix: str):
         from module.warehouse_stats import assets
     except Exception:
         return None
-    return getattr(assets, f'{prefix}_{suffix}', None)
+
+    resolved_prefix = prefix
+    if suffix == 'ICON':
+        # Keep gem-family icons visually consistent.
+        if prefix in ('GEM', 'FREE_GEM', 'PAID_GEM'):
+            resolved_prefix = 'GEM'
+        # Derived voucher entries reuse ADVANCED_RECRUIT_VOUCHER icon in UI.
+        elif prefix in ('FREE_GEM_COLOR_VOUCHER', 'ALL_GEM_COLOR_VOUCHER'):
+            resolved_prefix = 'ADVANCED_RECRUIT_VOUCHER'
+
+    return getattr(assets, f'{resolved_prefix}_{suffix}', None)
 
 
 def resolve_item_asset_path(prefix: str, suffix: str) -> str:

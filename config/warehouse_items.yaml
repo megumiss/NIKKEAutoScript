@@ -9,6 +9,42 @@ groups:
     scan: true
     scan_method: detail
     scan_page: materials
+  - id: free_gem
+    name: FREE_GEM
+    display_name: 免费珠宝
+    scan: false
+    scan_method: detail
+    scan_page: materials
+  - id: paid_gem
+    name: PAID_GEM
+    display_name: 付费珠宝
+    scan: false
+    scan_method: detail
+    scan_page: materials
+  - id: advanced_recruit_voucher
+    name: ADVANCED_RECRUIT_VOUCHER
+    display_name: 高级招募券
+    scan: true
+    scan_method: direct
+    scan_page: materials
+  - id: free_gem_color_voucher
+    name: FREE_GEM_COLOR_VOUCHER
+    display_name: 免费钻+彩票
+    scan: false
+    scan_method: direct
+    scan_page: materials
+  - id: all_gem_color_voucher
+    name: ALL_GEM_COLOR_VOUCHER
+    display_name: 全部钻+彩票
+    scan: false
+    scan_method: direct
+    scan_page: materials
+  - id: recruit_voucher
+    name: RECRUIT_VOUCHER
+    display_name: 招募券
+    scan: true
+    scan_method: direct
+    scan_page: materials
   - id: credit
     name: CREDIT
     display_name: 信用点
@@ -24,18 +60,6 @@ groups:
   - id: body_label
     name: BODY_LABEL
     display_name: 躯体标签
-    scan: true
-    scan_method: direct
-    scan_page: materials
-  - id: recruit_voucher
-    name: RECRUIT_VOUCHER
-    display_name: 招募券
-    scan: true
-    scan_method: direct
-    scan_page: materials
-  - id: advanced_recruit_voucher
-    name: ADVANCED_RECRUIT_VOUCHER
-    display_name: 高级招募券
     scan: true
     scan_method: direct
     scan_page: materials

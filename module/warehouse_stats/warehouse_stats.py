@@ -73,6 +73,12 @@ class WarehouseStats(UI):
     # 是否保存调试图
     DEBUG_SAVE_IMAGE = True
 
+    ITEM_ID_GEM = 'gem'
+    ITEM_ID_FREE_GEM = 'free_gem'
+    ITEM_ID_ADVANCED_RECRUIT_VOUCHER = 'advanced_recruit_voucher'
+    ITEM_ID_FREE_GEM_COLOR_VOUCHER = 'free_gem_color_voucher'
+    ITEM_ID_ALL_GEM_COLOR_VOUCHER = 'all_gem_color_voucher'
+
     def inventory_item_num_direct(
         self, image, area: Tuple[int, int, int, int], item_name: Optional[str] = None
     ) -> Optional[int]:
@@ -403,6 +409,7 @@ class WarehouseStats(UI):
             # 扫描并回填 count
             logger.info(f'WarehouseStats: Loaded {len(items)} items from {item_map_path}')
             results = self.scan_inventory(items)
+            self._apply_derived_color_voucher_counts(results)
             logger.info(f'WarehouseStats: Scan finished, recognized {len(results)} items.')
             items_to_write = []
             for item in items:
@@ -424,6 +431,38 @@ class WarehouseStats(UI):
             logger.exception('WarehouseStats: Scan failed.')
         finally:
             self.config.task_delay(server_update=True)
+
+    @staticmethod
+    def _to_int(value, default: int = 0) -> int:
+        try:
+            return int(value)
+        except Exception:
+            try:
+                return int(float(str(value).replace(',', '').strip()))
+            except Exception:
+                return default
+
+    def _apply_derived_color_voucher_counts(self, results: Dict[str, int]) -> None:
+        if results is None:
+            return
+
+        advanced = self._to_int(results.get(self.ITEM_ID_ADVANCED_RECRUIT_VOUCHER, 0), 0)
+        free_gem = self._to_int(results.get(self.ITEM_ID_FREE_GEM, 0), 0)
+        all_gem = self._to_int(results.get(self.ITEM_ID_GEM, 0), 0)
+
+        free_gem_color_voucher = free_gem // 3000 + advanced
+        all_gem_color_voucher = all_gem // 3000 + advanced
+
+        results[self.ITEM_ID_FREE_GEM_COLOR_VOUCHER] = free_gem_color_voucher
+        results[self.ITEM_ID_ALL_GEM_COLOR_VOUCHER] = all_gem_color_voucher
+
+        logger.debug(
+            'WarehouseStats: Derived vouchers '
+            f'{self.ITEM_ID_FREE_GEM_COLOR_VOUCHER}={free_gem_color_voucher} '
+            f'({self.ITEM_ID_FREE_GEM}={free_gem}//3000 + {self.ITEM_ID_ADVANCED_RECRUIT_VOUCHER}={advanced}), '
+            f'{self.ITEM_ID_ALL_GEM_COLOR_VOUCHER}={all_gem_color_voucher} '
+            f'({self.ITEM_ID_GEM}={all_gem}//3000 + {self.ITEM_ID_ADVANCED_RECRUIT_VOUCHER}={advanced})'
+        )
 
     def scan_inventory(self, items: List[dict]) -> Dict[str, int]:
         templates = self._load_templates(items)
@@ -854,6 +893,8 @@ class WarehouseStats(UI):
         # 读取配置物品对应的模板按钮
         templates: Dict[str, Button] = {}
         for item in items:
+            if not item.get('scan', True):
+                continue
             item_id = item.get('id')
             if not item_id:
                 continue
