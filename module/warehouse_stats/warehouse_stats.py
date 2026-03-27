@@ -8,6 +8,7 @@ import numpy as np
 from module.base.button import Button
 from module.base.langs import Langs
 from module.base.utils import crop
+from module.exception import WarehouseStatsScanError
 from module.logger import logger
 from module.ocr.ocr import Digit, Ocr
 from module.ui import page as ui_page
@@ -544,10 +545,10 @@ class WarehouseStats(UI):
 
             rows = write_inventory_csv(csv_path, items_to_write)
             logger.info(f'WarehouseStats: Saved {rows} rows to csv: {csv_path}')
-        except Exception:
-            logger.exception('WarehouseStats: Scan failed.')
-        finally:
-            self.config.task_delay(server_update=True)
+        except WarehouseStatsScanError:
+            logger.error('WarehouseStats Scan failed.')
+
+        self.config.task_delay(server_update=True)
 
     @staticmethod
     def _to_int(value, default: int = 0) -> int:

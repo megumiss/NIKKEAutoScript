@@ -29,6 +29,10 @@ class GameNotRunningError(Exception):
     pass
 
 
+class WarehouseStatsScanError(Exception):
+    pass
+
+
 class GameStart(Exception):
     pass
 
