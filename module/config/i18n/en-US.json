@@ -219,12 +219,12 @@
       "help": ""
     },
     "WarehouseStats": {
-      "name": "Warehouse Stats",
-      "help": "Scan inventory and save results to CSV"
+      "name": "Item Stats",
+      "help": ""
     },
     "InterceptionTaskStats": {
-      "name": "Task",
-      "help": "Interception stone drop statistics (daily/weekly/monthly)"
+      "name": "Interception",
+      "help": ""
     },
     "AutoTower": {
       "name": "Auto Tower",
@@ -1170,7 +1170,7 @@
   "WarehouseItems": {
     "_info": {
       "name": "Item List",
-      "help": "Latest warehouse stats"
+      "help": "Show the latest item statistics result. The result may be inaccurate."
     },
     "Items": {
       "name": "Item List",

@@ -219,12 +219,12 @@
       "help": ""
     },
     "WarehouseStats": {
-      "name": "倉庫統計",
-      "help": "所持品をスキャンしてCSVに保存"
+      "name": "アイテム統計",
+      "help": ""
     },
     "InterceptionTaskStats": {
-      "name": "タスク",
-      "help": "異常迎撃の石ドロップ統計（日/週/月）"
+      "name": "異常迎撃",
+      "help": ""
     },
     "AutoTower": {
       "name": "自動タワー",
@@ -1170,7 +1170,7 @@
   "WarehouseItems": {
     "_info": {
       "name": "アイテム一覧",
-      "help": "直近の倉庫統計結果"
+      "help": "直近のアイテム統計結果を表示します。統計結果に誤りが含まれる可能性があります。"
     },
     "Items": {
       "name": "アイテム一覧",

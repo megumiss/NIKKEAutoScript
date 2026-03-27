@@ -219,12 +219,12 @@
       "help": ""
     },
     "WarehouseStats": {
-      "name": "仓库统计",
-      "help": "统计物品栏并保存为CSV"
+      "name": "物品统计",
+      "help": ""
     },
     "InterceptionTaskStats": {
-      "name": "任务",
-      "help": "异常拦截掉落石头统计（日/周/月）"
+      "name": "异常拦截",
+      "help": ""
     },
     "AutoTower": {
       "name": "自动爬塔",
@@ -1170,7 +1170,7 @@
   "WarehouseItems": {
     "_info": {
       "name": "物品列表",
-      "help": "展示最近一次仓库统计的结果"
+      "help": "展示最近一次物品统计的结果，统计结果可能会有错误"
     },
     "Items": {
       "name": "物品列表",
