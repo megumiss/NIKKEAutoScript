@@ -15,9 +15,6 @@ from module.ocr.models import OCR_MODEL
 if TYPE_CHECKING:
     from module.ocr.nikke_ocr import NIKKEOcr
 
-
-from module.ocr.models import OCR_MODEL
-
 ColorRGB = Tuple[int, int, int]
 TextColorInput = Union[
     ColorRGB,
@@ -375,6 +372,8 @@ class Ocr:
                 },
             }
 
+        scale = float(self.OCR_SCALE or 1)
+
         for page in result:
             rec_texts = page.get('rec_texts', [])
             rec_scores = page.get('rec_scores', [])
@@ -388,6 +387,8 @@ class Ocr:
                     continue
 
                 bbox = rec_boxes[idx] if idx < len(rec_boxes) else []
+                if scale != 1 and bbox:
+                    bbox = (np.array(bbox, dtype=np.float32) / scale).round().astype(int).tolist()
 
                 valid_lines += 1
                 total_conf += confidence
