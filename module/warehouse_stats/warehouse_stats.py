@@ -94,7 +94,12 @@ class WarehouseStats(UI):
             )
             text = item_num.ocr(self.device.image).get('text', '')
             has_suffix_k, has_suffix_m = self._match_num_suffix_flags(image=image, area=area)
-            value = self._parse_direct_count_text(text=text, has_suffix_k=has_suffix_k, has_suffix_m=has_suffix_m)
+            value = self._parse_direct_count_text(
+                text=text,
+                has_suffix_k=has_suffix_k,
+                has_suffix_m=has_suffix_m,
+                expect_prefix=True,
+            )
             if value is not None:
                 return value
             return self._parse_direct_count_by_digit_templates(
@@ -112,6 +117,7 @@ class WarehouseStats(UI):
         text: str,
         has_suffix_k: bool = False,
         has_suffix_m: bool = False,
+        expect_prefix: bool = False,
     ) -> Optional[int]:
         # Supports x1 / x444 / x124K / x1.2M
         if not text:
@@ -119,6 +125,13 @@ class WarehouseStats(UI):
         normalized = self._normalize_ocr_text_common(text).replace(' ', '').replace(',', '').strip()
 
         match = re.search(r'[xX]\s*([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', normalized)
+        if match is None and expect_prefix:
+            # 兼容 OCR 将数量前缀 x 误识别成 4（例如 x124 -> 4124）
+            match = re.search(r'^4([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)$', normalized)
+            if match is not None:
+                logger.debug(
+                    f'WarehouseStats: [DirectOCR] corrected prefix 4->x, raw_text="{text}", normalized="{normalized}"'
+                )
         if match is None:
             match = re.search(r'([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', normalized)
         if match is None:
