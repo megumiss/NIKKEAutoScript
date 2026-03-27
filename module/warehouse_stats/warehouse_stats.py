@@ -248,7 +248,9 @@ class WarehouseStats(UI):
                 break
 
         if not selected:
-            logger.debug(f'WarehouseStats: [DirectTemplateFallback] item={item_name or "INVENTORY_ITEM"}, no candidates')
+            logger.debug(
+                f'WarehouseStats: [DirectTemplateFallback] item={item_name or "INVENTORY_ITEM"}, no candidates'
+            )
             return None
 
         density_by_digit = {digit: density for digit, _, _, _, density in digit_templates}
@@ -777,7 +779,7 @@ class WarehouseStats(UI):
             if not pending_direct and not pending_detail:
                 break
 
-            if self.appear(INVENTORY_BOTTOM_CHECK, offset=10) or self.appear(INVENTORY_BOTTOM_CHECK_2, offset=10):
+            if self.appear(INVENTORY_BOTTOM_CHECK, threshold=10) or self.appear(INVENTORY_BOTTOM_CHECK_2, threshold=10):
                 logger.info('WarehouseStats: Reached bottom of inventory list.')
                 break
 
