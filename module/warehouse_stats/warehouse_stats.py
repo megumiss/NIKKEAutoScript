@@ -62,11 +62,11 @@ class WarehouseStats(UI):
     GRID_VIEW_Y2 = GRID_START_Y + (GRID_ROWS - 1) * GRID_STEP_Y + GRID_CELL_HEIGHT + 10
 
     # 数量前缀模板匹配阈值（越大越严格）
-    GRID_PREFIX_SIMILARITY = 0.78
+    GRID_PREFIX_SIMILARITY = 0.75
     # 物品模板匹配阈值（越大越严格）
-    GRID_ITEM_SIMILARITY = 0.86
+    GRID_ITEM_SIMILARITY = 0.75
     # 翻页后锚点匹配阈值
-    GRID_ANCHOR_THRESHOLD = 0.82
+    GRID_ANCHOR_THRESHOLD = 0.75
 
     ITEM_ID_GEM = 'gem'
     ITEM_ID_FREE_GEM = 'free_gem'
@@ -721,18 +721,28 @@ class WarehouseStats(UI):
 
                 if item_id in pending_direct:
                     prefix_xy = self._match_num_prefix_xy(masked_cell_image=cell['masked'])
-                    if prefix_xy is None:
-                        continue
-
-                    num_area = self._build_num_area(prefix_xy=prefix_xy, cell_area=cell['area'], image=image)
-                    if num_area is None:
-                        continue
-
-                    count = self.inventory_item_num_direct(
-                        image=image,
-                        area=num_area,
-                        item_name=item_name_map.get(item_id, item_id),
-                    )
+                    item_name = item_name_map.get(item_id, item_id)
+                    if prefix_xy is not None:
+                        num_area = self._build_num_area(prefix_xy=prefix_xy, cell_area=cell['area'], image=image)
+                        if num_area is None:
+                            continue
+                        count = self.inventory_item_num_direct(
+                            image=image,
+                            area=num_area,
+                            item_name=item_name,
+                        )
+                    else:
+                        # 前缀未命中时，直接在当前格子区域尝试纯数字模板识别（避免直接漏掉）
+                        num_area = cell['area']
+                        logger.debug(
+                            f'WarehouseStats: [Direct] prefix not found, use digit-template fallback '
+                            f'item={item_id}({item_name}), area={num_area}'
+                        )
+                        count = self._parse_direct_count_by_digit_templates(
+                            image=image,
+                            area=num_area,
+                            item_name=item_name,
+                        )
                     if count is None:
                         continue
 
@@ -740,7 +750,6 @@ class WarehouseStats(UI):
                     page_results[item_id] = count
                     pending_direct.pop(item_id, None)
                     pending_all.pop(item_id, None)
-                    item_name = item_name_map.get(item_id, item_id)
                     logger.debug(
                         f'WarehouseStats: [Direct] Found item={item_id}({item_name}), count={count}, area={num_area}'
                     )
@@ -931,21 +940,39 @@ class WarehouseStats(UI):
         # 在单个格子内，从 pending 里选相似度最高的物品模板
         best_item_id = None
         best_similarity = 0.0
+        threshold = float(self.GRID_ITEM_SIMILARITY)
 
         for item_id, button in pending.items():
             try:
                 button.ensure_template()
                 sim_map = cv2.matchTemplate(button.image, cell_image, cv2.TM_CCOEFF_NORMED)
                 _, similarity, _, _ = cv2.minMaxLoc(sim_map)
-            except Exception:
+                similarity = float(similarity)
+            except Exception as e:
+                logger.debug(f'WarehouseStats: [ItemMatch] item={item_id}, error={e}')
                 continue
+
+            hit = similarity >= threshold
+            logger.debug(
+                f'WarehouseStats: [ItemMatch] item={item_id}, '
+                f'similarity={similarity:.4f}, threshold={threshold:.4f}, hit={hit}'
+            )
 
             if similarity > best_similarity:
                 best_similarity = similarity
                 best_item_id = item_id
 
-        if best_item_id and best_similarity >= self.GRID_ITEM_SIMILARITY:
+        if best_item_id and best_similarity >= threshold:
+            logger.debug(
+                f'WarehouseStats: [ItemMatch] selected={best_item_id}, '
+                f'similarity={best_similarity:.4f}, threshold={threshold:.4f}'
+            )
             return best_item_id
+
+        logger.debug(
+            f'WarehouseStats: [ItemMatch] no hit, best={best_item_id}, '
+            f'best_similarity={best_similarity:.4f}, threshold={threshold:.4f}'
+        )
         return None
 
     def _match_num_prefix_xy(self, masked_cell_image) -> Optional[Tuple[int, int]]:
