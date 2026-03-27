@@ -312,19 +312,24 @@ class Ocr:
         else:
             images_to_ocr = [crop(image, area) for area in self.buttons]
 
-        images_to_ocr = [
-            self.pre_process(
-                img,
-                text_color=text_color,
-                text_color_tolerance=text_color_tolerance,
-                text_color_preprocess=text_color_preprocess,
-            )
-            for img in images_to_ocr
-        ]
+        # Keep master behavior: only run heavy preprocess when text_color is explicitly provided.
+        # This avoids over-binarizing generic text scenes (for example favorite_item_num).
+        bbox_scale = 1.0
+        if text_color is not None:
+            images_to_ocr = [
+                self.pre_process(
+                    img,
+                    text_color=text_color,
+                    text_color_tolerance=text_color_tolerance,
+                    text_color_preprocess=text_color_preprocess,
+                )
+                for img in images_to_ocr
+            ]
+            bbox_scale = float(self.OCR_SCALE or 1)
 
         result = self.paddleocr.predict(images_to_ocr)
         # 处理识别结果
-        processed_result = self._process_ocr_result(result, threshold)
+        processed_result = self._process_ocr_result(result, threshold, bbox_scale=bbox_scale)
         processed_result['text'] = self.after_process(processed_result['text'])
 
         if show_log:
@@ -335,7 +340,7 @@ class Ocr:
 
         return processed_result
 
-    def _process_ocr_result(self, result: List[dict], threshold: float) -> Dict:
+    def _process_ocr_result(self, result: List[dict], threshold: float, bbox_scale: float = 1.0) -> Dict:
         """
         处理 Paddlex OCR dict 格式的识别结果，仅使用 rec_texts/rec_scores/rec_boxes。
 
@@ -372,7 +377,7 @@ class Ocr:
                 },
             }
 
-        scale = float(self.OCR_SCALE or 1)
+        scale = float(bbox_scale or 1)
 
         for page in result:
             rec_texts = page.get('rec_texts', [])

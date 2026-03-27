@@ -48,11 +48,12 @@ class Commission(UI):
         )
 
         text = ITEM_NUM.ocr(self.device.image)['text']
+        number = 0
         match = re.search(rf'{Langs.FAVORITE_ITEM_NUM}[:：]\s*(\d+)', text)
         if match:
             number = int(match.group(1))
 
-        return number or 0
+        return number
 
     def receive(self):
         logger.hr('Receive commission', 2)
