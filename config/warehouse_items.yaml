@@ -21,11 +21,6 @@
 #     - materials: 材料
 #     - equipment: 装备
 #     - collectibles: 收藏品
-#
-# 当前缺失：
-# HIGH_QUALITY_MOLD_TEMPLATE图片
-# NEW_COMMANDER_SPECIAL_MOLD_TEMPLATE图片
-# T9_EQUIPMENT_SELECTION_BOX_ICON图片
 version: 1
 groups:
 - id: currency_ticket
@@ -133,12 +128,6 @@ groups:
   - id: perfect_mold
     name: PERFECT_MOLD
     display_name: 完美铸模
-    scan: true
-    scan_method: detail
-    scan_page: consumable
-  - id: new_commander_special_mold
-    name: NEW_COMMANDER_SPECIAL_MOLD
-    display_name: 新指挥官专用铸模
     scan: true
     scan_method: detail
     scan_page: consumable
@@ -453,7 +442,7 @@ groups:
     scan_page: consumable
   - id: rusted_bone
     name: RUSTED_BONE
-    display_name: 骨头
+    display_name: 废铁骨架
     scan: true
     scan_method: direct
-    scan_page: consumable
+    scan_page: materials
