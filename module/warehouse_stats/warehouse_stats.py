@@ -662,7 +662,9 @@ class WarehouseStats(UI):
         # 切换页面
         page_key = str(page_key or '').strip().lower() or 'inventory'
         page_attr = page_key if page_key.startswith('page_inventory_') else f'page_inventory_{page_key}'
-        self.ui_ensure(getattr(ui_page, page_attr), 2)
+        self.ui_ensure(getattr(ui_page, page_attr))
+
+        self.device.sleep(1)
 
     def _scan_inventory_by_page(
         self,
