@@ -21,6 +21,11 @@
 #     - materials: 材料
 #     - equipment: 装备
 #     - collectibles: 收藏品
+#
+# 当前缺失：
+# HIGH_QUALITY_MOLD_TEMPLATE图片
+# NEW_COMMANDER_SPECIAL_MOLD_TEMPLATE图片
+# T9_EQUIPMENT_SELECTION_BOX_ICON图片
 version: 1
 groups:
 - id: currency_ticket
@@ -410,6 +415,12 @@ groups:
     scan: true
     scan_method: direct
     scan_page: consumable
+  - id: collection_item_box_ii
+    name: COLLECTION_ITEM_BOX_II
+    display_name: 收藏品箱II
+    scan: true
+    scan_method: direct
+    scan_page: consumable
   - id: collection_item_mileage_box
     name: COLLECTION_ITEM_MILEAGE_BOX
     display_name: 收藏品积分箱
@@ -439,4 +450,10 @@ groups:
     display_name: 公司武器
     scan: true
     scan_method: detail
+    scan_page: consumable
+  - id: rusted_bone
+    name: RUSTED_BONE
+    display_name: 骨头
+    scan: true
+    scan_method: direct
     scan_page: consumable
