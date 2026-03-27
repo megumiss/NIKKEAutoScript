@@ -62,7 +62,7 @@ class WarehouseStats(UI):
     GRID_VIEW_Y2 = GRID_START_Y + (GRID_ROWS - 1) * GRID_STEP_Y + GRID_CELL_HEIGHT + 10
 
     # 数量前缀模板匹配阈值（越大越严格）
-    GRID_PREFIX_SIMILARITY = 0.75
+    GRID_PREFIX_SIMILARITY = 0.8
     # 物品模板匹配阈值（越大越严格）
     GRID_ITEM_SIMILARITY = 0.75
     # 翻页后锚点匹配阈值
