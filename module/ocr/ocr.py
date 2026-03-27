@@ -387,7 +387,7 @@ class Ocr:
                     continue
 
                 bbox = rec_boxes[idx] if idx < len(rec_boxes) else []
-                if scale != 1 and bbox:
+                if scale != 1 and bbox is not None and np.size(bbox) > 0:
                     bbox = (np.array(bbox, dtype=np.float32) / scale).round().astype(int).tolist()
 
                 valid_lines += 1
