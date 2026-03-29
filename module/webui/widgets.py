@@ -10,7 +10,7 @@ from pywebio.output import *
 from pywebio.session import eval_js, local, run_js
 from rich.console import ConsoleRenderable
 
-from module.logger import HTMLConsole, Highlighter, WEB_THEME
+from module.logger import HTMLConsole, Highlighter, WEB_THEME, logger
 from module.webui.lang import t
 from module.webui.pin import put_checkbox, put_input, put_select, put_textarea
 from module.webui.process_manager import ProcessManager
@@ -422,6 +422,207 @@ def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
     kwargs.setdefault(
         "code", {"lineWrapping": True, "lineNumbers": False, "mode": mode}
     )
+
+    # For PC client executable path fields, provide a native file picker button.
+    path_picker_accept_map = {
+        "PCClient_PCClientInfo_LauncherPath": ".exe",
+        "PCClient_PCClientInfo_GamePath": ".exe",
+    }
+    accept = path_picker_accept_map.get(name)
+    if accept is not None:
+        def _pick_file():
+            from pywebio.pin import pin
+            import os
+
+            def _normalize_windows_path(path: str) -> str:
+                raw = str(path or '').strip()
+                if raw == '':
+                    return ''
+                normalized = os.path.normpath(raw)
+                # Keep UI/config consistent on Windows.
+                return normalized.replace('/', '\\')
+
+            selected = ''
+            root = None
+            try:
+                import tkinter as tk
+                from tkinter import filedialog
+
+                root = tk.Tk()
+                root.withdraw()
+                try:
+                    root.attributes('-topmost', True)
+                    root.update()
+                except Exception:
+                    pass
+
+                selected = filedialog.askopenfilename(
+                    title=t("Gui.Text.ChooseFile"),
+                    filetypes=[
+                        ('Executable Files', '*.exe'),
+                        ('All Files', '*.*'),
+                    ],
+                )
+            except Exception as e:
+                logger.warning(f'Native file picker unavailable for {name}: {e}')
+                toast('File picker unavailable, please input path manually.', color='error')
+                return
+            finally:
+                if root is not None:
+                    try:
+                        root.destroy()
+                    except Exception:
+                        pass
+
+            selected = _normalize_windows_path(selected)
+            if not selected:
+                return
+
+            pin[name] = selected
+            nkasgui: "NKASGUI" = local.gui
+            nkasgui.modified_config_queue.put(
+                {"name": ".".join(name.split("_")), "value": selected}
+            )
+            logger.info(f'Path picker selected: {name}={selected}')
+
+            # Keep the same autofill behavior as startup flow:
+            # selecting LauncherPath auto-populates GamePath.
+            if name == "PCClient_PCClientInfo_LauncherPath":
+                config = nkasgui.nkas_config.read_file(nkasgui.nkas_name)
+
+                def _safe_pin_value(pin_name, fallback=''):
+                    try:
+                        val = pin[pin_name]
+                    except Exception:
+                        val = fallback
+                    return val
+
+                client = str(
+                    _safe_pin_value(
+                        "PCClient_PCClientInfo_Client",
+                        config.get("PCClient", {}).get("PCClientInfo", {}).get("Client", "intl"),
+                    )
+                    or "intl"
+                ).strip()
+                auto_fill_raw = _safe_pin_value(
+                    "PCClient_PCClientInfo_AutoFillName",
+                    config.get("PCClient", {}).get("PCClientInfo", {}).get("AutoFillName", True),
+                )
+                if isinstance(auto_fill_raw, list):
+                    auto_fill_name = bool(auto_fill_raw)
+                else:
+                    auto_fill_name = bool(auto_fill_raw)
+
+                game_process_pin = str(
+                    _safe_pin_value(
+                        "PCClient_PCClientInfo_GameProcessName",
+                        config.get("PCClient", {}).get("PCClientInfo", {}).get("GameProcessName", ""),
+                    )
+                    or ""
+                ).strip()
+
+                default_game_process_map = {
+                    "intl": "nikke.exe",
+                    "hmt": "nikke.exe",
+                }
+                default_game_process = default_game_process_map.get(client, "nikke.exe")
+                game_process = default_game_process if auto_fill_name else (game_process_pin or default_game_process)
+
+                game_pin_name = "PCClient_PCClientInfo_GamePath"
+                current_game_path = _normalize_windows_path(
+                    _safe_pin_value(
+                        game_pin_name,
+                        config.get("PCClient", {}).get("PCClientInfo", {}).get("GamePath", ""),
+                    )
+                    or ""
+                )
+
+                # Only auto-fill when GamePath is currently empty.
+                if current_game_path:
+                    logger.info(
+                        f'Skip launcher autofill because {game_pin_name} is not empty: {current_game_path}'
+                    )
+                    return
+
+                launcher_dir = os.path.dirname(os.path.normpath(selected))
+                game_path = _normalize_windows_path(
+                    os.path.join(launcher_dir, "..", "NIKKE", "game", game_process)
+                )
+                pin[game_pin_name] = game_path
+                nkasgui.modified_config_queue.put(
+                    {"name": ".".join(game_pin_name.split("_")), "value": game_path}
+                )
+                logger.info(f'Auto-filled from launcher path: {game_pin_name}={game_path}')
+
+        button_scope = f"arg_path_picker_btn_{name}"
+        row = put_row(
+            [
+                put_textarea(**kwargs),
+                put_scope(
+                    button_scope,
+                    [
+                        put_button(
+                            label=t("Gui.Text.ChooseFile"),
+                            onclick=_pick_file,
+                            color="primary",
+                            small=True,
+                        ),
+                    ],
+                ).style(
+                    "display: flex; align-items: center; justify-content: flex-start; "
+                    "height: 100%; min-height: 2.2rem;"
+                ),
+            ],
+            size="1fr auto",
+        ).style("align-items: stretch; column-gap: .45rem;")
+
+        scope = put_scope(
+            f"arg_contianer-textarea-{name}",
+            [
+                get_title_help(kwargs),
+                row,
+            ],
+        )
+
+        run_js(
+            """
+(() => {
+    const scopeName = button_scope_name;
+    const applyStyle = (attempt) => {
+        const scope = document.getElementById(`pywebio-scope-${scopeName}`);
+        if (!scope) {
+            if (attempt < 20) setTimeout(() => applyStyle(attempt + 1), 50);
+            return;
+        }
+        const btn = scope.querySelector('button');
+        if (!btn) {
+            if (attempt < 20) setTimeout(() => applyStyle(attempt + 1), 50);
+            return;
+        }
+        scope.style.display = 'flex';
+        scope.style.alignItems = 'center';
+        scope.style.justifyContent = 'flex-start';
+        scope.style.height = '100%';
+        btn.classList.remove('btn-block');
+        btn.style.width = 'auto';
+        btn.style.minHeight = '1.75rem';
+        btn.style.padding = '.2rem .58rem';
+        btn.style.lineHeight = '1.1';
+        btn.style.fontSize = '.84rem';
+        btn.style.whiteSpace = 'nowrap';
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.justifyContent = 'center';
+        btn.style.marginTop = '0';
+        btn.style.marginLeft = '.25rem';
+    };
+    applyStyle(0);
+})();
+            """,
+            button_scope_name=button_scope,
+        )
+
+        return scope
 
     return put_scope(
         f"arg_contianer-textarea-{name}",
