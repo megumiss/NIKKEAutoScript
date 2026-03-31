@@ -1260,7 +1260,9 @@
       "DisableTranslateMode": "ここをクリックして翻訳モードをオフにする",
       "ConfigSaved": "設定が保存されました",
       "NKASIsRunning": "スケジューラはすでに実行中です",
-      "ClickToUpdate": "更新が利用可能です。ここをクリックして更新を実行してください"
+      "ClickToUpdate": "更新が利用可能です。ここをクリックして更新を実行してください",
+      "AutoUpdated": "自動更新完了: {sha}（{count}件）。クリックで詳細を表示",
+      "AutoUpdatedWithContent": "自動更新完了: {sha}（{count}件）:\n{content}"
     },
     "Status": {
       "Running": "実行中",

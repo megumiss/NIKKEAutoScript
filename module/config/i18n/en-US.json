@@ -1260,7 +1260,9 @@
       "DisableTranslateMode": "Click here to disable translation mode",
       "ConfigSaved": "Settings Saved",
       "NKASIsRunning": "Scheduler is already running",
-      "ClickToUpdate": "Update available — click here to update"
+      "ClickToUpdate": "Update available — click here to update",
+      "AutoUpdated": "Auto-updated to {sha} ({count} commits). Click for details",
+      "AutoUpdatedWithContent": "Auto-updated to {sha} ({count} commits):\n{content}"
     },
     "Status": {
       "Running": "Running",

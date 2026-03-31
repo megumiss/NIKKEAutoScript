@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import queue
 import threading
 import time
@@ -1310,6 +1311,65 @@ class NKASGUI(Frame):
             self.ui_develop()
             self.dev_update()
 
+        def show_auto_update_toast_once():
+            notice_paths = [
+                './log/auto_update_notice.json',
+            ]
+            notice_path = next((p for p in notice_paths if os.path.exists(p)), '')
+            if not notice_path:
+                return
+
+            try:
+                with open(notice_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception as e:
+                logger.warning(f'Failed to read auto update notice: {e}')
+                data = {}
+            finally:
+                try:
+                    os.remove(notice_path)
+                except FileNotFoundError:
+                    pass
+                except Exception as e:
+                    logger.warning(f'Failed to remove auto update notice: {e}')
+
+            to_sha = str(data.get('to_sha', '')).strip() or '-'
+            messages = data.get('messages') if isinstance(data.get('messages'), list) else []
+            try:
+                commit_count = int(data.get('commit_count', 0))
+            except Exception:
+                commit_count = 0
+            if commit_count <= 0:
+                commit_count = len(messages)
+
+            message_preview = []
+            for msg in messages[:5]:
+                text_msg = str(msg).strip()
+                if not text_msg:
+                    continue
+                if len(text_msg) > 54:
+                    text_msg = text_msg[:51] + '...'
+                message_preview.append(text_msg)
+
+            if message_preview:
+                content = '\n'.join(f'• {line}' for line in message_preview)
+                text = t(
+                    'Gui.Toast.AutoUpdatedWithContent',
+                    sha=to_sha,
+                    count=commit_count,
+                    content=content,
+                )
+            else:
+                text = t('Gui.Toast.AutoUpdated', sha=to_sha, count=commit_count)
+
+            toast(
+                text,
+                duration=10,
+                position='right',
+                color='#2f7fd8',
+                onclick=goto_update,
+            )
+
         update_switch = Switch(
             status={
                 1: lambda: toast(
@@ -1329,6 +1389,7 @@ class NKASGUI(Frame):
         self.task_handler.add(visibility_state_switch.g(), 15)
         self.task_handler.add(update_switch.g(), 1)
         self.task_handler.start()
+        show_auto_update_toast_once()
 
         # Return to previous page
         if aside not in ["Home", None]:

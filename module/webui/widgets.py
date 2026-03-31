@@ -10,7 +10,7 @@ from pywebio.output import *
 from pywebio.session import eval_js, local, run_js
 from rich.console import ConsoleRenderable
 
-from module.logger import HTMLConsole, Highlighter, WEB_THEME
+from module.logger import HTMLConsole, Highlighter, WEB_THEME, logger
 from module.webui.lang import t
 from module.webui.pin import put_checkbox, put_input, put_select, put_textarea
 from module.webui.process_manager import ProcessManager
@@ -423,6 +423,207 @@ def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
         "code", {"lineWrapping": True, "lineNumbers": False, "mode": mode}
     )
 
+    # For PC client executable path fields, provide a native file picker button.
+    path_picker_accept_map = {
+        "PCClient_PCClientInfo_LauncherPath": ".exe",
+        "PCClient_PCClientInfo_GamePath": ".exe",
+    }
+    accept = path_picker_accept_map.get(name)
+    if accept is not None:
+        def _pick_file():
+            from pywebio.pin import pin
+            import os
+
+            def _normalize_windows_path(path: str) -> str:
+                raw = str(path or '').strip()
+                if raw == '':
+                    return ''
+                normalized = os.path.normpath(raw)
+                # Keep UI/config consistent on Windows.
+                return normalized.replace('/', '\\')
+
+            selected = ''
+            root = None
+            try:
+                import tkinter as tk
+                from tkinter import filedialog
+
+                root = tk.Tk()
+                root.withdraw()
+                try:
+                    root.attributes('-topmost', True)
+                    root.update()
+                except Exception:
+                    pass
+
+                selected = filedialog.askopenfilename(
+                    title=t("Gui.Text.ChooseFile"),
+                    filetypes=[
+                        ('Executable Files', '*.exe'),
+                        ('All Files', '*.*'),
+                    ],
+                )
+            except Exception as e:
+                logger.warning(f'Native file picker unavailable for {name}: {e}')
+                toast('File picker unavailable, please input path manually.', color='error')
+                return
+            finally:
+                if root is not None:
+                    try:
+                        root.destroy()
+                    except Exception:
+                        pass
+
+            selected = _normalize_windows_path(selected)
+            if not selected:
+                return
+
+            pin[name] = selected
+            nkasgui: "NKASGUI" = local.gui
+            nkasgui.modified_config_queue.put(
+                {"name": ".".join(name.split("_")), "value": selected}
+            )
+            logger.info(f'Path picker selected: {name}={selected}')
+
+            # Keep the same autofill behavior as startup flow:
+            # selecting LauncherPath auto-populates GamePath.
+            if name == "PCClient_PCClientInfo_LauncherPath":
+                config = nkasgui.nkas_config.read_file(nkasgui.nkas_name)
+
+                def _safe_pin_value(pin_name, fallback=''):
+                    try:
+                        val = pin[pin_name]
+                    except Exception:
+                        val = fallback
+                    return val
+
+                client = str(
+                    _safe_pin_value(
+                        "PCClient_PCClientInfo_Client",
+                        config.get("PCClient", {}).get("PCClientInfo", {}).get("Client", "intl"),
+                    )
+                    or "intl"
+                ).strip()
+                auto_fill_raw = _safe_pin_value(
+                    "PCClient_PCClientInfo_AutoFillName",
+                    config.get("PCClient", {}).get("PCClientInfo", {}).get("AutoFillName", True),
+                )
+                if isinstance(auto_fill_raw, list):
+                    auto_fill_name = bool(auto_fill_raw)
+                else:
+                    auto_fill_name = bool(auto_fill_raw)
+
+                game_process_pin = str(
+                    _safe_pin_value(
+                        "PCClient_PCClientInfo_GameProcessName",
+                        config.get("PCClient", {}).get("PCClientInfo", {}).get("GameProcessName", ""),
+                    )
+                    or ""
+                ).strip()
+
+                default_game_process_map = {
+                    "intl": "nikke.exe",
+                    "hmt": "nikke.exe",
+                }
+                default_game_process = default_game_process_map.get(client, "nikke.exe")
+                game_process = default_game_process if auto_fill_name else (game_process_pin or default_game_process)
+
+                game_pin_name = "PCClient_PCClientInfo_GamePath"
+                current_game_path = _normalize_windows_path(
+                    _safe_pin_value(
+                        game_pin_name,
+                        config.get("PCClient", {}).get("PCClientInfo", {}).get("GamePath", ""),
+                    )
+                    or ""
+                )
+
+                # Only auto-fill when GamePath is currently empty.
+                if current_game_path:
+                    logger.info(
+                        f'Skip launcher autofill because {game_pin_name} is not empty: {current_game_path}'
+                    )
+                    return
+
+                launcher_dir = os.path.dirname(os.path.normpath(selected))
+                game_path = _normalize_windows_path(
+                    os.path.join(launcher_dir, "..", "NIKKE", "game", game_process)
+                )
+                pin[game_pin_name] = game_path
+                nkasgui.modified_config_queue.put(
+                    {"name": ".".join(game_pin_name.split("_")), "value": game_path}
+                )
+                logger.info(f'Auto-filled from launcher path: {game_pin_name}={game_path}')
+
+        button_scope = f"arg_path_picker_btn_{name}"
+        row = put_row(
+            [
+                put_textarea(**kwargs),
+                put_scope(
+                    button_scope,
+                    [
+                        put_button(
+                            label=t("Gui.Text.ChooseFile"),
+                            onclick=_pick_file,
+                            color="primary",
+                            small=True,
+                        ),
+                    ],
+                ).style(
+                    "display: flex; align-items: center; justify-content: flex-start; "
+                    "height: 100%; min-height: 2.2rem;"
+                ),
+            ],
+            size="1fr auto",
+        ).style("align-items: stretch; column-gap: .45rem;")
+
+        scope = put_scope(
+            f"arg_contianer-textarea-{name}",
+            [
+                get_title_help(kwargs),
+                row,
+            ],
+        )
+
+        run_js(
+            """
+(() => {
+    const scopeName = button_scope_name;
+    const applyStyle = (attempt) => {
+        const scope = document.getElementById(`pywebio-scope-${scopeName}`);
+        if (!scope) {
+            if (attempt < 20) setTimeout(() => applyStyle(attempt + 1), 50);
+            return;
+        }
+        const btn = scope.querySelector('button');
+        if (!btn) {
+            if (attempt < 20) setTimeout(() => applyStyle(attempt + 1), 50);
+            return;
+        }
+        scope.style.display = 'flex';
+        scope.style.alignItems = 'center';
+        scope.style.justifyContent = 'flex-start';
+        scope.style.height = '100%';
+        btn.classList.remove('btn-block');
+        btn.style.width = 'auto';
+        btn.style.minHeight = '1.75rem';
+        btn.style.padding = '.2rem .58rem';
+        btn.style.lineHeight = '1.1';
+        btn.style.fontSize = '.84rem';
+        btn.style.whiteSpace = 'nowrap';
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.justifyContent = 'center';
+        btn.style.marginTop = '0';
+        btn.style.marginLeft = '.25rem';
+    };
+    applyStyle(0);
+})();
+            """,
+            button_scope_name=button_scope,
+        )
+
+        return scope
+
     return put_scope(
         f"arg_contianer-textarea-{name}",
         [
@@ -727,15 +928,15 @@ def put_arg_interception_stone_import(kwargs: T_Output_Kwargs) -> Output:
     ).style("display: grid; width: 100%; gap: .14rem; margin-bottom: .22rem;")
 
 
-def _build_svg_line_chart(
+def _build_echarts_line_chart_card(
     title: str,
     labels: List[str],
     values: List[int],
-    unit_text: str,
     sum_text: str,
     max_text: str,
     avg_text: str,
     tone_class: str = '',
+    dom_id: str = '',
 ) -> str:
     import html
 
@@ -743,80 +944,10 @@ def _build_svg_line_chart(
         labels = ['-']
         values = [0]
 
-    width = 860
-    height = 220
-    left = 52
-    right = 18
-    top = 18
-    bottom = 36
-    plot_w = width - left - right
-    plot_h = height - top - bottom
-
-    max_val = max(max(values), 1)
-    count = len(values)
-    x_step = plot_w / max(count - 1, 1)
-
-    points = []
-    for i, value in enumerate(values):
-        x = left + i * x_step
-        y = top + plot_h * (1 - (value / max_val))
-        points.append((x, y, value))
-
-    point_str = ' '.join(f'{x:.2f},{y:.2f}' for x, y, _ in points)
-    if len(points) == 1:
-        px, py, _ = points[0]
-        point_str = f'{left:.2f},{py:.2f} {left + plot_w:.2f},{py:.2f}'
-
-    area_points = point_str + f' {left + plot_w:.2f},{top + plot_h:.2f} {left:.2f},{top + plot_h:.2f}'
-
-    y_ticks = []
-    for i in range(5):
-        ratio = i / 4
-        value = int(round(max_val * (1 - ratio)))
-        y = top + plot_h * ratio
-        y_ticks.append((value, y))
-
-    tick_count = min(6, len(labels))
-    x_tick_idx = {
-        int(round(i * (len(labels) - 1) / max(tick_count - 1, 1)))
-        for i in range(tick_count)
-    }
-
-    circles = []
-    x_labels = []
-    for i, (x, y, value) in enumerate(points):
-        circles.append(
-            (
-                f'<circle cx="{x:.2f}" cy="{y:.2f}" r="2.6" class="interception-chart-point">'
-                f'<title>{html.escape(labels[i])}: {value} {html.escape(unit_text)}</title>'
-                f'</circle>'
-            )
-        )
-        if i in x_tick_idx:
-            label = html.escape(labels[i])
-            x_labels.append(
-                f'<text x="{x:.2f}" y="{height - 12}" class="interception-chart-axis-text" text-anchor="middle">{label}</text>'
-            )
-
-    y_grid = []
-    for value, y in y_ticks:
-        y_grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{left + plot_w}" y2="{y:.2f}" class="interception-chart-grid" />')
-        y_grid.append(
-            f'<text x="{left - 8}" y="{y + 4:.2f}" class="interception-chart-axis-text" text-anchor="end">{value}</text>'
-        )
-
     total = sum(values)
     peak = max(values)
     average = total / len(values) if values else 0
     range_text = labels[0] if len(labels) == 1 else f'{labels[0]} - {labels[-1]}'
-    latest_marker = ''
-    if points:
-        latest_x, latest_y, latest_value = points[-1]
-        latest_marker = (
-            f'<circle cx="{latest_x:.2f}" cy="{latest_y:.2f}" r="4.4" class="interception-chart-point-latest">'
-            f'<title>{html.escape(labels[-1])}: {latest_value} {html.escape(unit_text)}</title>'
-            f'</circle>'
-        )
 
     return (
         f'<div class="interception-chart-card {html.escape(tone_class)}">'
@@ -824,16 +955,7 @@ def _build_svg_line_chart(
         f'<div class="interception-chart-title">{html.escape(title)}</div>'
         f'<div class="interception-chart-range">{html.escape(range_text)}</div>'
         f'</div>'
-        f'<svg class="interception-chart-svg" viewBox="0 0 {width} {height}" preserveAspectRatio="xMidYMid meet">'
-        f'{"".join(y_grid)}'
-        f'<line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" class="interception-chart-axis" />'
-        f'<line x1="{left}" y1="{top}" x2="{left}" y2="{top + plot_h}" class="interception-chart-axis" />'
-        f'<polygon points="{area_points}" class="interception-chart-area" />'
-        f'<polyline points="{point_str}" class="interception-chart-line" />'
-        f'{"".join(circles)}'
-        f'{latest_marker}'
-        f'{"".join(x_labels)}'
-        f'</svg>'
+        f'<div id="{html.escape(dom_id)}" class="interception-chart-echarts" style="width:100%; height:220px;"></div>'
         f'<div class="interception-chart-meta">'
         f'<span class="interception-chart-chip">{html.escape(sum_text)}: {total}</span>'
         f'<span class="interception-chart-chip">{html.escape(max_text)}: {peak}</span>'
@@ -979,43 +1101,362 @@ def put_arg_interception_stone_charts(kwargs: T_Output_Kwargs) -> Output:
     week_labels, week_values = build_weekly_series(rows, weeks=12)
     month_labels, month_values = build_monthly_series(rows, months=12)
 
+    chart_specs = [
+        {
+            'dom_id': f'{scope_name}-daily',
+            'title': daily_title,
+            'labels': day_labels,
+            'values': day_values,
+            'color': '#3498db',
+            'area_color': 'rgba(52, 152, 219, 0.22)',
+            'tone_class': 'interception-tone-daily',
+        },
+        {
+            'dom_id': f'{scope_name}-weekly',
+            'title': weekly_title,
+            'labels': week_labels,
+            'values': week_values,
+            'color': '#1abc9c',
+            'area_color': 'rgba(26, 188, 156, 0.22)',
+            'tone_class': 'interception-tone-weekly',
+        },
+        {
+            'dom_id': f'{scope_name}-monthly',
+            'title': monthly_title,
+            'labels': month_labels,
+            'values': month_values,
+            'color': '#f39c12',
+            'area_color': 'rgba(243, 156, 18, 0.22)',
+            'tone_class': 'interception-tone-monthly',
+        },
+    ]
+
     chart_html = (
         '<div class="interception-chart-grid">'
-        + _build_svg_line_chart(
-            daily_title,
-            day_labels,
-            day_values,
-            unit_text,
-            sum_text,
-            max_text,
-            avg_text,
-            tone_class='interception-tone-daily',
-        )
-        + _build_svg_line_chart(
-            weekly_title,
-            week_labels,
-            week_values,
-            unit_text,
-            sum_text,
-            max_text,
-            avg_text,
-            tone_class='interception-tone-weekly',
-        )
-        + _build_svg_line_chart(
-            monthly_title,
-            month_labels,
-            month_values,
-            unit_text,
-            sum_text,
-            max_text,
-            avg_text,
-            tone_class='interception-tone-monthly',
+        + ''.join(
+            _build_echarts_line_chart_card(
+                spec['title'],
+                spec['labels'],
+                spec['values'],
+                sum_text,
+                max_text,
+                avg_text,
+                tone_class=spec['tone_class'],
+                dom_id=spec['dom_id'],
+            )
+            for spec in chart_specs
         )
         + '</div>'
     )
     outputs.append(put_html(chart_html))
     scope = put_scope(scope_name, outputs)
     scope.style("display: grid; grid-template-columns: 1fr; gap: 0.75rem;")
+    run_js(
+        """
+(() => {
+    const scopeName = scope_name;
+    const charts = chart_specs;
+    const unitText = unit_text;
+    const isDark = is_dark;
+
+    const pickEChartsModule = (mod) => {
+        if (mod && typeof mod.init === 'function') {
+            return mod;
+        }
+        if (mod && mod.default && typeof mod.default.init === 'function') {
+            return mod.default;
+        }
+        return null;
+    };
+
+    const resolveEChartsGlobal = () => {
+        const candidates = [
+            window.echarts,
+            globalThis.echarts,
+            window.exports,
+            globalThis.exports,
+            (window.module && window.module.exports) ? window.module.exports : null,
+            (globalThis.module && globalThis.module.exports) ? globalThis.module.exports : null,
+        ];
+        for (const item of candidates) {
+            const echarts = pickEChartsModule(item);
+            if (echarts) {
+                window.echarts = echarts;
+                return echarts;
+            }
+        }
+        return null;
+    };
+
+    const resolveEChartsFromRequireSync = () => {
+        try {
+            const req = (typeof window.require === 'function') ? window.require : null;
+            if (!req) {
+                return null;
+            }
+            const mod = req('echarts');
+            const echarts = pickEChartsModule(mod);
+            if (echarts) {
+                window.echarts = echarts;
+                return echarts;
+            }
+        } catch (err) {
+            return null;
+        }
+        return null;
+    };
+
+    const resolveEChartsFromAmd = () => {
+        return new Promise((resolve, reject) => {
+            const req = (typeof window.require === 'function') ? window.require : null;
+            if (!req) {
+                reject(new Error('require() is unavailable'));
+                return;
+            }
+
+            let settled = false;
+            const doneResolve = (echarts) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                window.echarts = echarts;
+                resolve(echarts);
+            };
+            const doneReject = (err) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                reject(err);
+            };
+
+            try {
+                req(
+                    ['echarts'],
+                    (mod) => {
+                        const echarts = pickEChartsModule(mod);
+                        if (echarts) {
+                            doneResolve(echarts);
+                            return;
+                        }
+                        doneReject(new Error('AMD echarts has no init()'));
+                    },
+                    (err) => {
+                        doneReject(err || new Error('AMD require echarts failed'));
+                    },
+                );
+            } catch (err) {
+                doneReject(err);
+                return;
+            }
+
+            setTimeout(() => {
+                doneReject(new Error('AMD require echarts timeout'));
+            }, 1200);
+        });
+    };
+
+    const loadECharts = () => {
+        const existing = resolveEChartsGlobal();
+        if (existing) {
+            return Promise.resolve(existing);
+        }
+        if (window.__nkasEchartsPromise) {
+            return window.__nkasEchartsPromise;
+        }
+
+        const cdnUrls = [
+            '/static/gui/js/echarts.min.js',
+        ];
+        window.__nkasEchartsPromise = new Promise((resolve, reject) => {
+            let index = 0;
+            const failures = [];
+            const tryLoad = () => {
+                if (index >= cdnUrls.length) {
+                    reject(new Error(`Failed to load ECharts (${failures.join(' | ') || 'unknown'})`));
+                    return;
+                }
+                const src = cdnUrls[index++];
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                const amdDefine =
+                    (typeof window.define === 'function' && window.define.amd)
+                        ? window.define
+                        : null;
+                if (amdDefine) {
+                    try {
+                        window.define = undefined;
+                    } catch (err) {
+                        // Ignore and continue with default branch.
+                    }
+                }
+                const restoreAmdDefine = () => {
+                    if (amdDefine) {
+                        try {
+                            window.define = amdDefine;
+                        } catch (err) {
+                            // Ignore restoration errors.
+                        }
+                    }
+                };
+                script.onload = () => {
+                    restoreAmdDefine();
+                    const echarts = resolveEChartsGlobal();
+                    if (echarts && typeof echarts.init === 'function') {
+                        resolve(echarts);
+                        return;
+                    }
+
+                    const reqSyncEcharts = resolveEChartsFromRequireSync();
+                    if (reqSyncEcharts && typeof reqSyncEcharts.init === 'function') {
+                        resolve(reqSyncEcharts);
+                        return;
+                    }
+
+                    resolveEChartsFromAmd().then((amdEcharts) => {
+                        resolve(amdEcharts);
+                    }).catch((amdErr) => {
+                        const reason = (amdErr && amdErr.message) ? amdErr.message : String(amdErr);
+                        failures.push(`loaded: ${src}, but unresolved (${reason})`);
+                        script.remove();
+                        tryLoad();
+                    });
+                };
+                script.onerror = () => {
+                    restoreAmdDefine();
+                    failures.push(`error: ${src}`);
+                    script.remove();
+                    tryLoad();
+                };
+                document.head.appendChild(script);
+            };
+            tryLoad();
+        }).catch((err) => {
+            window.__nkasEchartsPromise = null;
+            throw err;
+        });
+        return window.__nkasEchartsPromise;
+    };
+
+    const applyCharts = (attempt) => {
+        const scope = document.getElementById(`pywebio-scope-${scopeName}`);
+        if (!scope) {
+            if (attempt < 30) {
+                setTimeout(() => applyCharts(attempt + 1), 50);
+            }
+            return;
+        }
+
+        loadECharts().then((echarts) => {
+            const chartMap = window.__nkasInterceptionCharts || {};
+            charts.forEach((spec) => {
+                const el = document.getElementById(spec.dom_id);
+                if (!el) {
+                    return;
+                }
+
+                if (chartMap[spec.dom_id]) {
+                    chartMap[spec.dom_id].dispose();
+                }
+
+                const chart = echarts.init(el);
+                chart.setOption({
+                    animation: true,
+                    animationDuration: 300,
+                    grid: {
+                        left: 46,
+                        right: 16,
+                        top: 18,
+                        bottom: 32,
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        valueFormatter: (value) => `${value} ${unitText}`,
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: spec.labels,
+                        axisTick: {
+                            show: false,
+                        },
+                        axisLabel: {
+                            hideOverlap: true,
+                        },
+                    },
+                    yAxis: {
+                        type: 'value',
+                        min: 0,
+                        minInterval: 1,
+                        splitNumber: 5,
+                        splitLine: {
+                            show: true,
+                            lineStyle: {
+                                color: isDark ? 'rgba(143, 151, 165, 0.14)' : 'rgba(0, 0, 0, 0.10)',
+                                width: 1,
+                            },
+                        },
+                    },
+                    series: [
+                        {
+                            type: 'line',
+                            data: spec.values,
+                            smooth: false,
+                            symbol: 'circle',
+                            symbolSize: 8,
+                            lineStyle: {
+                                width: 2,
+                                color: spec.color,
+                            },
+                            itemStyle: {
+                                color: spec.color,
+                            },
+                            areaStyle: {
+                                color: spec.area_color,
+                            },
+                        },
+                    ],
+                });
+
+                chartMap[spec.dom_id] = chart;
+            });
+            window.__nkasInterceptionCharts = chartMap;
+
+            if (!window.__nkasInterceptionChartResizeBound) {
+                window.__nkasInterceptionChartResizeBound = true;
+                window.addEventListener('resize', () => {
+                    const allCharts = window.__nkasInterceptionCharts || {};
+                    Object.keys(allCharts).forEach((key) => {
+                        const chart = allCharts[key];
+                        if (chart && typeof chart.resize === 'function') {
+                            chart.resize();
+                        }
+                    });
+                });
+            }
+        }).catch((err) => {
+            const reason = (err && err.message) ? err.message : String(err);
+            console.error('Interception ECharts failed:', err);
+            charts.forEach((spec) => {
+                const el = document.getElementById(spec.dom_id);
+                if (!el) {
+                    return;
+                }
+                el.innerHTML = `<div style="padding: 1rem; color: #b94a48;">ECharts load failed: ${reason}</div>`;
+            });
+        });
+    };
+
+    applyCharts(0);
+})();
+        """,
+        scope_name=scope_name,
+        chart_specs=chart_specs,
+        unit_text=unit_text,
+        is_dark=(State.theme == 'dark'),
+    )
     return scope
 
 

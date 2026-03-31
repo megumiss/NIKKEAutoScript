@@ -91,6 +91,11 @@ footer {
     margin-top: 3.3125rem;
 }
 
+.toastify {
+    white-space: pre-line;
+    line-height: 1.35;
+}
+
 .pywebio {
     padding-top: 0;
     padding-bottom: 0;

@@ -1260,7 +1260,9 @@
       "DisableTranslateMode": "点击这里关闭翻译模式",
       "ConfigSaved": "设置已保存",
       "NKASIsRunning": "调度器已在运行中",
-      "ClickToUpdate": "有更新可用，点击这里进行更新"
+      "ClickToUpdate": "有更新可用，点击这里进行更新",
+      "AutoUpdated": "已自动更新到 {sha}（{count} 条提交），点击查看详情",
+      "AutoUpdatedWithContent": "已自动更新到 {sha}（{count} 条提交）：\n{content}"
     },
     "Status": {
       "Running": "运行中",
