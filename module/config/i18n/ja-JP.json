@@ -828,6 +828,7 @@
     "Event": {
       "name": "開催中のイベント",
       "help": "",
+      "event_20260409": "Good World",
       "event_20260319": "2x2 Love",
       "event_20260303": "ENTER HEAVEN",
       "event_20260212": "Lycoris Recoil",
@@ -844,7 +845,7 @@
       "event_20250716": "BOOM! THE GHOST!",
       "event_20250703s": "OVER THE HORIZON",
       "event_20250703l": "OuteR: Automata",
-      "event_20250612": "Memories Teller"
+      "event_20250612": "event_20250612"
     },
     "StoryPart": {
       "name": "ストーリーパート",
@@ -1260,9 +1261,7 @@
       "DisableTranslateMode": "ここをクリックして翻訳モードをオフにする",
       "ConfigSaved": "設定が保存されました",
       "NKASIsRunning": "スケジューラはすでに実行中です",
-      "ClickToUpdate": "更新が利用可能です。ここをクリックして更新を実行してください",
-      "AutoUpdated": "自動更新完了: {sha}（{count}件）。クリックで詳細を表示",
-      "AutoUpdatedWithContent": "自動更新完了: {sha}（{count}件）:\n{content}"
+      "ClickToUpdate": "更新が利用可能です。ここをクリックして更新を実行してください"
     },
     "Status": {
       "Running": "実行中",
@@ -1361,17 +1360,7 @@
       "InterceptionChartSum": "合計",
       "InterceptionChartMax": "最大",
       "InterceptionChartAvg": "平均",
-      "InterceptionStoneUnit": "石",
-      "InterceptionOwnedTotal": "石総数",
-      "InterceptionImportButton": "履歴スクリーンショットをインポート",
-      "InterceptionImportDialogTitle": "異常迎撃履歴スクリーンショットのインポート",
-      "InterceptionImportPathLabel": "スクリーンショットパス",
-      "InterceptionImportPathPlaceholder": "異常迎撃の設定パスを既定値として使用（編集可）",
-      "InterceptionImportDefaultPath": "既定パス",
-      "InterceptionImportPathEmpty": "未設定",
-      "InterceptionImportDone": "インポート完了: 追加 {imported}、スキップ {skipped}、失敗 {failed}",
-      "InterceptionImportFailed": "インポート失敗。パスと画像を確認してください。",
-      "InterceptionImportLoading": "履歴スクリーンショットをインポート中です。しばらくお待ちください..."
+      "InterceptionStoneUnit": "石"
     }
   }
 }

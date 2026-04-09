@@ -541,8 +541,8 @@
       "ServerUpdate": "04:00"
     },
     "EventInfo": {
-      "Event": "",
-      "StoryPart": "Story_1",
+      "Event": "event_20260319",
+      "StoryPart": "Story_2",
       "StoryDifficulty": "Normal"
     },
     "StoryStage": {
@@ -577,9 +577,9 @@
       "ServerUpdate": "04:00"
     },
     "EventInfo": {
-      "Event": "",
+      "Event": "event_20260303",
       "StoryPart": "Story_1",
-      "StoryDifficulty": "Normal"
+      "StoryDifficulty": "Hard"
     },
     "StoryStage": {
       "AutoPush": false,

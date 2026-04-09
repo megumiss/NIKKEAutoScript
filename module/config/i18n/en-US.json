@@ -828,6 +828,7 @@
     "Event": {
       "name": "Current Event",
       "help": "",
+      "event_20260409": "Good World",
       "event_20260319": "2x2 Love",
       "event_20260303": "ENTER HEAVEN",
       "event_20260212": "Lycoris Recoil",
@@ -844,7 +845,7 @@
       "event_20250716": "BOOM! THE GHOST!",
       "event_20250703s": "OVER THE HORIZON",
       "event_20250703l": "OuteR: Automata",
-      "event_20250612": "Memories Teller"
+      "event_20250612": "event_20250612"
     },
     "StoryPart": {
       "name": "Story Part",
@@ -1260,9 +1261,7 @@
       "DisableTranslateMode": "Click here to disable translation mode",
       "ConfigSaved": "Settings Saved",
       "NKASIsRunning": "Scheduler is already running",
-      "ClickToUpdate": "Update available — click here to update",
-      "AutoUpdated": "Auto-updated to {sha} ({count} commits). Click for details",
-      "AutoUpdatedWithContent": "Auto-updated to {sha} ({count} commits):\n{content}"
+      "ClickToUpdate": "Update available — click here to update"
     },
     "Status": {
       "Running": "Running",
@@ -1361,17 +1360,7 @@
       "InterceptionChartSum": "SUM",
       "InterceptionChartMax": "MAX",
       "InterceptionChartAvg": "AVG",
-      "InterceptionStoneUnit": "stones",
-      "InterceptionOwnedTotal": "Stones Total",
-      "InterceptionImportButton": "Import History Screenshots",
-      "InterceptionImportDialogTitle": "Import Interception History Screenshots",
-      "InterceptionImportPathLabel": "Screenshot Path",
-      "InterceptionImportPathPlaceholder": "Defaults to Interception screenshot path, editable",
-      "InterceptionImportDefaultPath": "Default Path",
-      "InterceptionImportPathEmpty": "Not set",
-      "InterceptionImportDone": "Import complete: added {imported}, skipped {skipped}, failed {failed}",
-      "InterceptionImportFailed": "Import failed. Please check path and screenshots.",
-      "InterceptionImportLoading": "Importing history screenshots, please wait..."
+      "InterceptionStoneUnit": "stones"
     }
   }
 }
