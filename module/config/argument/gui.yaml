@@ -26,6 +26,8 @@ Toast:
   ConfigSaved:
   NKASIsRunning:
   ClickToUpdate:
+  AutoUpdated:
+  AutoUpdatedWithContent:
 
 Status:
   Running:
@@ -125,3 +127,13 @@ Text:
   InterceptionChartMax:
   InterceptionChartAvg:
   InterceptionStoneUnit:
+  InterceptionOwnedTotal:
+  InterceptionImportButton:
+  InterceptionImportDialogTitle:
+  InterceptionImportPathLabel:
+  InterceptionImportPathPlaceholder:
+  InterceptionImportDefaultPath:
+  InterceptionImportPathEmpty:
+  InterceptionImportDone:
+  InterceptionImportFailed:
+  InterceptionImportLoading:

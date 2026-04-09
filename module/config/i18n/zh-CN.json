@@ -1261,7 +1261,9 @@
       "DisableTranslateMode": "点击这里关闭翻译模式",
       "ConfigSaved": "设置已保存",
       "NKASIsRunning": "调度器已在运行中",
-      "ClickToUpdate": "有更新可用，点击这里进行更新"
+      "ClickToUpdate": "有更新可用，点击这里进行更新",
+      "AutoUpdated": "已自动更新到 {sha}（{count} 条提交），点击查看详情",
+      "AutoUpdatedWithContent": "已自动更新到 {sha}（{count} 条提交）：\n{content}"
     },
     "Status": {
       "Running": "运行中",
@@ -1360,7 +1362,17 @@
       "InterceptionChartSum": "总计",
       "InterceptionChartMax": "最大",
       "InterceptionChartAvg": "平均",
-      "InterceptionStoneUnit": "石头"
+      "InterceptionStoneUnit": "石头",
+      "InterceptionOwnedTotal": "石头总数",
+      "InterceptionImportButton": "导入历史截图",
+      "InterceptionImportDialogTitle": "导入异常拦截历史截图",
+      "InterceptionImportPathLabel": "截图路径",
+      "InterceptionImportPathPlaceholder": "默认读取异常拦截截图路径，可手动修改",
+      "InterceptionImportDefaultPath": "默认路径",
+      "InterceptionImportPathEmpty": "未设置",
+      "InterceptionImportDone": "历史截图导入完成：新增 {imported}，跳过 {skipped}，失败 {failed}",
+      "InterceptionImportFailed": "导入失败，请检查路径和截图内容",
+      "InterceptionImportLoading": "正在导入历史截图，请稍候..."
     }
   }
 }

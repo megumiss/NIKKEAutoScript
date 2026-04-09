@@ -1261,7 +1261,9 @@
       "DisableTranslateMode": "Click here to disable translation mode",
       "ConfigSaved": "Settings Saved",
       "NKASIsRunning": "Scheduler is already running",
-      "ClickToUpdate": "Update available — click here to update"
+      "ClickToUpdate": "Update available — click here to update",
+      "AutoUpdated": "Auto-updated to {sha} ({count} commits). Click for details",
+      "AutoUpdatedWithContent": "Auto-updated to {sha} ({count} commits):\n{content}"
     },
     "Status": {
       "Running": "Running",
@@ -1360,7 +1362,17 @@
       "InterceptionChartSum": "SUM",
       "InterceptionChartMax": "MAX",
       "InterceptionChartAvg": "AVG",
-      "InterceptionStoneUnit": "stones"
+      "InterceptionStoneUnit": "stones",
+      "InterceptionOwnedTotal": "Stones Total",
+      "InterceptionImportButton": "Import History Screenshots",
+      "InterceptionImportDialogTitle": "Import Interception History Screenshots",
+      "InterceptionImportPathLabel": "Screenshot Path",
+      "InterceptionImportPathPlaceholder": "Defaults to Interception screenshot path, editable",
+      "InterceptionImportDefaultPath": "Default Path",
+      "InterceptionImportPathEmpty": "Not set",
+      "InterceptionImportDone": "Import complete: added {imported}, skipped {skipped}, failed {failed}",
+      "InterceptionImportFailed": "Import failed. Please check path and screenshots.",
+      "InterceptionImportLoading": "Importing history screenshots, please wait..."
     }
   }
 }

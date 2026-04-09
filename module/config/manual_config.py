@@ -265,6 +265,16 @@ class ManualConfig:
             "story_part": "Story_1",  # Story_1, Story_2
             "story_difficulty": "Hard"  # Normal, Hard
         },
+        {
+            "event_id": "event_20250612",
+            "event_name": "Memories Teller",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": False,
+            "mini_game_play": True,
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
+        },
     ]
 
     Error_ScreenshotLength = 1
