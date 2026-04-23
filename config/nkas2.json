@@ -1,0 +1,819 @@
+{
+  "NKAS": {
+    "Client": {
+      "Platform": "win",
+      "Language": "zh-CN"
+    },
+    "Optimization": {
+      "AutoRedCircle": true,
+      "OcrModelType": "mobile",
+      "WhenTaskQueueEmpty": "goto_main",
+      "ScriptPath": null
+    },
+    "Notification": {
+      "WhenDailyTaskCompleted": true,
+      "WhenDailyTaskCrashed": true,
+      "WinOnePush": true,
+      "OnePushConfig": "provider: onebot11\nendpoint: http://82.158.225.142:53016\ntoken: c2f+2[Uu4nQ^_WkB\nmessage_type: private\nuser_id: 1074176954"
+    },
+    "Account": {
+      "Account": null,
+      "Password": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Emulator": {
+    "Emulator": {
+      "Serial": "192.168.31.219:5555",
+      "PackageName": "com.proximabeta.nikke",
+      "ScreenshotMethod": "DroidCast",
+      "ControlMethod": "minitouch",
+      "AdbRestart": false,
+      "ScreenshotInterval": 0.5
+    },
+    "EmulatorInfo": {
+      "Emulator": "auto",
+      "name": null,
+      "path": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "PCClient": {
+    "PCClientInfo": {
+      "Client": "intl",
+      "AutoFillName": true,
+      "LauncherPath": "D:\\NIKKE2\\Launcher\\nikke_launcher2.exe",
+      "LauncherTitleName": "NIKKE",
+      "LauncherProcessName": "nikke_launcher.exe",
+      "GamePath": "D:\\NIKKE2\\NIKKE\\game\\nikke.exe",
+      "GameTitleName": "NIKKE",
+      "GameProcessName": "nikke.exe",
+      "ScreenshotInterval": 0.3
+    },
+    "PCClient": {
+      "Screens": true,
+      "ScreenNumber": 0,
+      "GameWindowPosition": "center",
+      "GameResolutionCompat": true,
+      "ScreenRotate": false,
+      "CloseAutoHdr": true,
+      "DisableVoice": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Notify": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "2026-04-24 04:00:00",
+      "Command": "Notify",
+      "SuccessInterval": 0,
+      "FailureInterval": 0,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Restart": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "2026-04-24 04:00:00",
+      "Command": "Restart",
+      "SuccessInterval": 0,
+      "FailureInterval": 0,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Reward": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "2026-04-24 04:00:00",
+      "Command": "Reward",
+      "SuccessInterval": "720-720",
+      "FailureInterval": "720-720",
+      "ServerUpdate": "04:00, 20:00"
+    },
+    "Reward": {
+      "CollectSocialPoint": false,
+      "CollectSpecialArenaPoint": false,
+      "CollectRanking": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Destruction": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Destruction",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Mailbox": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Mailbox",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "DailyRecruit": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2026-03-24 04:00:00",
+      "Command": "DailyRecruit",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "DailyRecruit": {
+      "EventFreeRecruit": true,
+      "SocialPointRecruit": true,
+      "Ordinary150GemRecruit": true,
+      "SSRNotifyPush": true,
+      "ScreenshotPath": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Daily": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-21 04:00:00",
+      "Command": "Daily",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Daily": {
+      "SendGift": true,
+      "EnhanceEquipment": false,
+      "CallReward": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "MissionPass": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2026-03-27 04:00:00",
+      "Command": "MissionPass",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00, 20:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Conversation": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-06 04:00:00",
+      "Command": "Conversation",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Conversation": {
+      "OnlyFavourite": true,
+      "OnlyLogsNotMax": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Shop": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2026-04-03 04:00:00",
+      "Command": "Shop",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "GeneralShop": {
+      "enable": true,
+      "priority": "CORE_DUST_CASE"
+    },
+    "ArenaShop": {
+      "enable": true,
+      "priority": "WATER_CODE"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "RubbishShop": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-07 04:00:00",
+      "Command": "RubbishShop",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "RubbishShop": {
+      "priority": "GEM > CORE_DUST_CASE > CREDIT_CASE > CREDIT > BATTLE_DATA_SET_CASE > GROWTH_SET",
+      "bonePriority": "CURATED_MANUFACTURER_ARMS"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "EpisodeViewing": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "EpisodeViewing",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Commission": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-12-31 04:00:00",
+      "Command": "Commission",
+      "SuccessInterval": "720-720",
+      "FailureInterval": "720-720",
+      "ServerUpdate": "04:00"
+    },
+    "CollectionItems": {
+      "Enable": true,
+      "Priority": "Tove"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Liberation": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Liberation",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00, 20:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Synchro": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Synchro",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Synchro": {
+      "UseBox": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Recycling": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2026-03-31 04:00:00",
+      "Command": "Recycling",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "OutpostStory": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "OutpostStory",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SimulationRoom": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SimulationRoom",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "SimulationRoom": {
+      "QuickSimulation": true,
+      "Immediately": true
+    },
+    "Area": {
+      "Difficulty": "Level_5",
+      "OnsetArea": "C",
+      "EndingArea": "C"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Overclock": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Overclock",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Overclock": {
+      "SkipRatioCheck": true,
+      "AlwaysReselect": true,
+      "ModifierList": "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "TribeTower": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-09 04:00:00",
+      "Command": "TribeTower",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Overcome": {
+      "OnlyToCompleteDailyMission": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Interception": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-05 04:00:00",
+      "Command": "Interception",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Interception": {
+      "Boss": "Kraken",
+      "AchieveLevel": 1,
+      "QuickBattleOnly": false,
+      "DropScreenshotPath": "D:\\PCR\\NIKKEAutoScript\\drop"
+    },
+    "InterceptionTeam": {
+      "Kraken": 1,
+      "Indivilia": 2,
+      "Harvester": 3,
+      "MirrorContainer": 4,
+      "Ultra": 5
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "RookieArena": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-05 04:00:00",
+      "Command": "RookieArena",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "RookieArena": {
+      "Times": 5
+    },
+    "OpponentSelection": {
+      "Enable": true,
+      "SortingWeight": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
+      "SelectionStrategy": "Min"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SpecialArena": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-05 04:00:00",
+      "Command": "SpecialArena",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "SpecialArena": {
+      "Times": 2
+    },
+    "OpponentSelection": {
+      "Enable": true,
+      "SortingWeight": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
+      "SelectionStrategy": "Min"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SpecialArenaWatch": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SpecialArenaWatch",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "SpecialArenaWatch": {
+      "CheckInterval": 10,
+      "CurrentRank": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "ChampionArena": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "ChampionArena",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "CheerStrategy": {
+      "Enable": true,
+      "Strategy": "Most"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Coop": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-03 04:00:00",
+      "Command": "Coop",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00, 16:00"
+    },
+    "Coop": {
+      "MatchDifficulty": "Normal"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SoloRaid": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2026-03-23 04:00:00",
+      "Command": "SoloRaid",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "SoloRaid": {
+      "Challenge": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "UnionRaid": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "UnionRaid",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Event": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "2026-04-24 04:00:00",
+      "Command": "Event",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "EventInfo": {
+      "Event": "event_20260423",
+      "StoryPart": "Story_1",
+      "StoryDifficulty": "Normal"
+    },
+    "StoryStage": {
+      "AutoPush": true,
+      "AutoFormation": true,
+      "HardTicket": true,
+      "Sweep": true
+    },
+    "Event": {
+      "LoginStamp": true,
+      "Challenge": true,
+      "Coop": true,
+      "Shop": true,
+      "ShopDelayList": "TITLE",
+      "Game": true,
+      "GameTenBeam": 200,
+      "GameTargetScore": 0,
+      "GameLoop": false,
+      "GameStorySkip": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Event2": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2026-03-08 04:00:00",
+      "Command": "Event2",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "EventInfo": {
+      "Event": "event_20260409",
+      "StoryPart": "Story_1",
+      "StoryDifficulty": "Hard"
+    },
+    "StoryStage": {
+      "AutoPush": true,
+      "AutoFormation": true,
+      "HardTicket": true,
+      "Sweep": true
+    },
+    "Event": {
+      "LoginStamp": true,
+      "Challenge": true,
+      "Coop": true,
+      "Shop": true,
+      "ShopDelayList": "TITLE",
+      "Game": true,
+      "GameTenBeam": 200,
+      "GameTargetScore": 0,
+      "GameLoop": false,
+      "GameStorySkip": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SurfaceDaily": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SurfaceDaily",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "SurfaceDaily": {
+      "AutoPlace": true,
+      "Heal": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaAuth": {
+    "BlaAuth": {
+      "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+      "Cookie": null,
+      "XCommonParams": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaDaily": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "BlaDaily",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "BlaDaily": {
+      "Immediately": false,
+      "Points": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaCDK": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "BlaCDK",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00, 16:00"
+    },
+    "CDK": {
+      "Extra": false,
+      "Source": "https://gamewith.jp/nikke/article/show/371014"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaExchange": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "BlaExchange",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "BlaExchange": {
+      "Priority": "Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "StepUpGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-11 04:00:00",
+      "Command": "StepUpGift",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "DailyGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-09 04:00:00",
+      "Command": "DailyGift",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "WeeklyGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-11-11 04:00:00",
+      "Command": "WeeklyGift",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "MonthlyGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2025-12-01 04:00:00",
+      "Command": "MonthlyGift",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "WarehouseStats": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "2026-03-28 04:00:00",
+      "Command": "WarehouseStats",
+      "SuccessInterval": 0,
+      "FailureInterval": 120,
+      "ServerUpdate": "04:00"
+    },
+    "WarehouseStats": {
+      "ItemMapPath": "./config/warehouse_items.yaml",
+      "CsvPath": "./data/{config_name}/items.csv",
+      "ScrollTimes": 5
+    },
+    "WarehouseItems": {
+      "Items": {}
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "InterceptionTaskStats": {
+    "InterceptionDropStats": {
+      "CsvPath": "./data/{config_name}/stones.csv"
+    },
+    "InterceptionTaskCharts": {
+      "ImportHistory": {},
+      "Charts": {}
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "AutoTower": {
+    "AutoTower": {
+      "Enable": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SemiCombat": {
+    "SemiCombat": {
+      "SkipStory": false,
+      "FightQuickly": false,
+      "MainStoryMark": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Highlights": {
+    "Highlights": {
+      "AutoSwitch": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaCDKManual": {
+    "BlaCDKManual": {
+      "CDK": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "ScreenRotate": {
+    "ScreenRotate": {
+      "Orientation": 1
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "UpdateHosts": {
+    "Hosts": {
+      "Action": "Add",
+      "Hosts": "# 通用\n18.155.202.10 cloud.nikke-kr.com\n43.132.85.192 nikke-en.com\n43.132.85.192 nikke-jp.com\n43.132.85.192 nikke-kr.com\n# 国际 Global\n43.152.186.163 global-lobby.nikke-kr.com\n43.152.186.163 global-match.nikke-kr.com\n# 日本 JP\n# 43.152.186.163 jp-lobby.nikke-kr.com\n# 43.152.186.163 jp-match.nikke-kr.com\n# 韩国 KR\n# 43.152.186.163 kr-lobby.nikke-kr.com\n# 43.152.186.163 kr-match.nikke-kr.com\n# 东南亚 SEA\n# 43.152.186.163 sea-lobby.nikke-kr.com\n# 43.152.186.163 sea-match.nikke-kr.com\n# 港澳台 HK/MC/TW\n# 43.152.186.163 hmt-lobby.nikke-kr.com\n# 43.152.186.163 hmt-match.nikke-kr.com\n# 北美 NA\n# 175.97.131.54 us-match.nikke-kr.com\n# 175.97.131.54 us-lobby.nikke-kr.com"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  }
+}
