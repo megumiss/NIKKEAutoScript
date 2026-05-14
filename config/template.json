@@ -55,6 +55,7 @@
       "GamePath": null,
       "GameTitleName": null,
       "GameProcessName": null,
+      "ScreenshotMethod": "pyautogui",
       "ScreenshotInterval": 0.3
     },
     "PCClient": {
