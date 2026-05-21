@@ -1,4 +1,4 @@
-import { app, Menu, Tray, BrowserWindow, ipcMain, globalShortcut } from 'electron';
+import { app, Menu, Tray, BrowserWindow, ipcMain, globalShortcut, dialog, type OpenDialogOptions } from 'electron';
 import { URL } from 'url';
 import { PyShell } from '/@/pyshell';
 import { webuiArgs, webuiPath, dpiScaling, webuiUrl, nkasPath } from '/@/config';
@@ -36,6 +36,48 @@ nkas.end(function (err: string) {
 });
 
 let mainWindow: BrowserWindow | null = null;
+
+function normalizeDialogAccept(accept: unknown) {
+  if (!Array.isArray(accept)) return [];
+  return accept
+    .filter((item) => typeof item === 'string')
+    .map((item) => String(item).trim())
+    .filter((item) => item.length > 0)
+    .map((item) => item.startsWith('.') ? item.slice(1) : item)
+    .filter((item) => item.length > 0);
+}
+
+ipcMain.handle('dialog:pick-path', async (_event, rawOptions: any) => {
+  try {
+    const options = rawOptions && typeof rawOptions === 'object' ? rawOptions : {};
+    const mode = options.mode === 'directory' ? 'directory' : 'file';
+    const title = typeof options.title === 'string' ? options.title : '';
+    const defaultPath = typeof options.defaultPath === 'string' ? options.defaultPath : undefined;
+
+    const dialogOptions: OpenDialogOptions = {
+      title: title || undefined,
+      defaultPath,
+      properties: mode === 'directory' ? ['openDirectory'] : ['openFile'],
+    };
+
+    if (mode === 'file') {
+      const extensions = normalizeDialogAccept(options.accept);
+      if (extensions.length > 0) {
+        dialogOptions.filters = [{ name: 'Allowed Files', extensions }];
+      }
+    }
+
+    const result = await dialog.showOpenDialog(mainWindow ?? undefined, dialogOptions);
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      return { ok: true, canceled: true, path: '', error: '' };
+    }
+
+    return { ok: true, canceled: false, path: result.filePaths[0], error: '' };
+  } catch (error: any) {
+    const message = (error && error.message) ? String(error.message) : String(error);
+    return { ok: false, canceled: false, path: '', error: message };
+  }
+});
 
 /**
  * 创建主窗口

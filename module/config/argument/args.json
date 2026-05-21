@@ -185,7 +185,15 @@
       },
       "LauncherPath": {
         "type": "textarea",
-        "value": ""
+        "value": "",
+        "path_picker": {
+          "enabled": true,
+          "mode": "file",
+          "accept": [
+            ".exe"
+          ],
+          "after_select": "autofill_game_path_from_launcher"
+        }
       },
       "LauncherTitleName": {
         "type": "input",
@@ -197,7 +205,14 @@
       },
       "GamePath": {
         "type": "textarea",
-        "value": ""
+        "value": "",
+        "path_picker": {
+          "enabled": true,
+          "mode": "file",
+          "accept": [
+            ".exe"
+          ]
+        }
       },
       "GameTitleName": {
         "type": "input",

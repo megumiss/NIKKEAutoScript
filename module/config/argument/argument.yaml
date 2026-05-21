@@ -82,6 +82,11 @@ PCClientInfo:
   LauncherPath:
     value: ''
     type: textarea
+    path_picker:
+      enabled: true
+      mode: file
+      accept: [ .exe ]
+      after_select: autofill_game_path_from_launcher
   LauncherTitleName:
     value: ''
   LauncherProcessName:
@@ -89,6 +94,10 @@ PCClientInfo:
   GamePath:
     value: ''
     type: textarea
+    path_picker:
+      enabled: true
+      mode: file
+      accept: [ .exe ]
   GameTitleName:
     value: ''
   GameProcessName:

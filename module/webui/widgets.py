@@ -416,268 +416,67 @@ def put_arg_state(kwargs: T_Output_Kwargs) -> Output:
     )
 
 
-def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
-    name: str = kwargs["name"]
-    mode: str = kwargs.pop("mode", None)
-    kwargs.setdefault(
-        "code", {"lineWrapping": True, "lineNumbers": False, "mode": mode}
-    )
+def _normalize_windows_path(path: str) -> str:
+    import os
 
-    # For PC client executable path fields, provide a native file picker button.
-    path_picker_accept_map = {
-        "PCClient_PCClientInfo_LauncherPath": ".exe",
-        "PCClient_PCClientInfo_GamePath": ".exe",
+    raw = str(path or '').strip()
+    if raw == '':
+        return ''
+    normalized = os.path.normpath(raw)
+    return normalized.replace('/', '\\')
+
+
+def _resolve_path_picker(name: str, raw_picker: Any) -> Optional[Dict[str, Any]]:
+    legacy_picker_map = {
+        'PCClient_PCClientInfo_LauncherPath': {
+            'mode': 'file',
+            'accept': ['.exe'],
+            'after_select': 'autofill_game_path_from_launcher',
+        },
+        'PCClient_PCClientInfo_GamePath': {
+            'mode': 'file',
+            'accept': ['.exe'],
+        },
     }
-    accept = path_picker_accept_map.get(name)
-    if accept is not None:
-        def _pick_file():
-            from pywebio.pin import pin
-            import os
-            import ctypes
-            from ctypes import wintypes
 
-            def _normalize_windows_path(path: str) -> str:
-                raw = str(path or '').strip()
-                if raw == '':
-                    return ''
-                normalized = os.path.normpath(raw)
-                # Keep UI/config consistent on Windows.
-                return normalized.replace('/', '\\')
+    picker = None
+    if isinstance(raw_picker, dict):
+        picker = copy.deepcopy(raw_picker)
+    elif raw_picker is True:
+        picker = {}
+    elif raw_picker is None:
+        picker = copy.deepcopy(legacy_picker_map.get(name))
 
-            def _dialog_options(ext: str):
-                suffix = str(ext or '').strip()
-                if suffix and not suffix.startswith('.'):
-                    suffix = f'.{suffix}'
-                if not suffix:
-                    suffix = '.exe'
-                pattern = f'*{suffix}'
-                if suffix.lower() == '.exe':
-                    label = 'Executable Files'
-                else:
-                    label = f'{suffix[1:].upper()} Files'
-                return label, pattern, suffix[1:]
+    if picker is None:
+        return None
+    if picker.get('enabled', True) is False:
+        return None
 
-            def _pick_file_windows_native(title: str, ext: str) -> str:
-                if os.name != 'nt':
-                    return ''
+    mode = 'directory' if picker.get('mode') == 'directory' else 'file'
+    accept = picker.get('accept', [])
+    if isinstance(accept, str):
+        accept = [accept]
+    if not isinstance(accept, list):
+        accept = []
+    accept = [str(ext).strip() for ext in accept if str(ext).strip()]
 
-                class OPENFILENAMEW(ctypes.Structure):
-                    _fields_ = [
-                        ('lStructSize', wintypes.DWORD),
-                        ('hwndOwner', wintypes.HWND),
-                        ('hInstance', wintypes.HINSTANCE),
-                        ('lpstrFilter', wintypes.LPCWSTR),
-                        ('lpstrCustomFilter', wintypes.LPWSTR),
-                        ('nMaxCustFilter', wintypes.DWORD),
-                        ('nFilterIndex', wintypes.DWORD),
-                        ('lpstrFile', wintypes.LPWSTR),
-                        ('nMaxFile', wintypes.DWORD),
-                        ('lpstrFileTitle', wintypes.LPWSTR),
-                        ('nMaxFileTitle', wintypes.DWORD),
-                        ('lpstrInitialDir', wintypes.LPCWSTR),
-                        ('lpstrTitle', wintypes.LPCWSTR),
-                        ('Flags', wintypes.DWORD),
-                        ('nFileOffset', wintypes.WORD),
-                        ('nFileExtension', wintypes.WORD),
-                        ('lpstrDefExt', wintypes.LPCWSTR),
-                        ('lCustData', wintypes.LPARAM),
-                        ('lpfnHook', ctypes.c_void_p),
-                        ('lpTemplateName', wintypes.LPCWSTR),
-                        ('pvReserved', ctypes.c_void_p),
-                        ('dwReserved', wintypes.DWORD),
-                        ('FlagsEx', wintypes.DWORD),
-                    ]
+    return {
+        'mode': mode,
+        'accept': accept,
+        'title': str(picker.get('title') or '').strip(),
+        'title_key': str(
+            picker.get('title_i18n_key')
+            or picker.get('title_key')
+            or ''
+        ).strip(),
+        'button_label': str(picker.get('button_label') or '').strip(),
+        'after_select': picker.get('after_select'),
+    }
 
-                label, pattern, def_ext = _dialog_options(ext)
-                # OPENFILENAME filter must be null-separated and double-null terminated.
-                lpstr_filter = f'{label} ({pattern})\0{pattern}\0All Files (*.*)\0*.*\0\0'
-                file_buffer = ctypes.create_unicode_buffer(32768)
 
-                ofn = OPENFILENAMEW()
-                ofn.lStructSize = ctypes.sizeof(OPENFILENAMEW)
-                ofn.lpstrFilter = lpstr_filter
-                ofn.lpstrFile = file_buffer
-                ofn.nMaxFile = len(file_buffer)
-                ofn.lpstrTitle = title
-                ofn.lpstrDefExt = def_ext
-                ofn.Flags = (
-                    0x00000004  # OFN_HIDEREADONLY
-                    | 0x00000008  # OFN_NOCHANGEDIR
-                    | 0x00000800  # OFN_PATHMUSTEXIST
-                    | 0x00001000  # OFN_FILEMUSTEXIST
-                    | 0x00080000  # OFN_EXPLORER
-                )
-
-                if ctypes.windll.comdlg32.GetOpenFileNameW(ctypes.byref(ofn)):
-                    return file_buffer.value
-
-                err = ctypes.windll.comdlg32.CommDlgExtendedError()
-                if err != 0:
-                    raise OSError(f'GetOpenFileNameW failed with code {err}')
-                return ''
-
-            def _pick_file_tk(title: str, ext: str) -> str:
-                label, pattern, _ = _dialog_options(ext)
-                root = None
-                try:
-                    import tkinter as tk
-                    from tkinter import filedialog
-
-                    root = tk.Tk()
-                    root.withdraw()
-                    try:
-                        root.attributes('-topmost', True)
-                        root.update()
-                    except Exception:
-                        pass
-
-                    return filedialog.askopenfilename(
-                        title=title,
-                        filetypes=[
-                            (label, pattern),
-                            ('All Files', '*.*'),
-                        ],
-                    )
-                finally:
-                    if root is not None:
-                        try:
-                            root.destroy()
-                        except Exception:
-                            pass
-
-            selected = ''
-            picker_errors = []
-            dialog_title = t("Gui.Text.ChooseFile")
-            try:
-                selected = _pick_file_windows_native(dialog_title, accept)
-            except Exception as e:
-                picker_errors.append(f'win32={e}')
-
-            if not selected:
-                try:
-                    selected = _pick_file_tk(dialog_title, accept)
-                except Exception as e:
-                    picker_errors.append(f'tk={e}')
-
-            if not selected and picker_errors:
-                logger.warning(
-                    f'Native file picker unavailable for {name}: {"; ".join(picker_errors)}'
-                )
-                toast('File picker unavailable, please input path manually.', color='error')
-                return
-
-            selected = _normalize_windows_path(selected)
-            if not selected:
-                return
-
-            pin[name] = selected
-            nkasgui: "NKASGUI" = local.gui
-            nkasgui.modified_config_queue.put(
-                {"name": ".".join(name.split("_")), "value": selected}
-            )
-            logger.info(f'Path picker selected: {name}={selected}')
-
-            # Keep the same autofill behavior as startup flow:
-            # selecting LauncherPath auto-populates GamePath.
-            if name == "PCClient_PCClientInfo_LauncherPath":
-                config = nkasgui.nkas_config.read_file(nkasgui.nkas_name)
-
-                def _safe_pin_value(pin_name, fallback=''):
-                    try:
-                        val = pin[pin_name]
-                    except Exception:
-                        val = fallback
-                    return val
-
-                client = str(
-                    _safe_pin_value(
-                        "PCClient_PCClientInfo_Client",
-                        config.get("PCClient", {}).get("PCClientInfo", {}).get("Client", "intl"),
-                    )
-                    or "intl"
-                ).strip()
-                auto_fill_raw = _safe_pin_value(
-                    "PCClient_PCClientInfo_AutoFillName",
-                    config.get("PCClient", {}).get("PCClientInfo", {}).get("AutoFillName", True),
-                )
-                if isinstance(auto_fill_raw, list):
-                    auto_fill_name = bool(auto_fill_raw)
-                else:
-                    auto_fill_name = bool(auto_fill_raw)
-
-                game_process_pin = str(
-                    _safe_pin_value(
-                        "PCClient_PCClientInfo_GameProcessName",
-                        config.get("PCClient", {}).get("PCClientInfo", {}).get("GameProcessName", ""),
-                    )
-                    or ""
-                ).strip()
-
-                default_game_process_map = {
-                    "intl": "nikke.exe",
-                    "hmt": "nikke.exe",
-                }
-                default_game_process = default_game_process_map.get(client, "nikke.exe")
-                game_process = default_game_process if auto_fill_name else (game_process_pin or default_game_process)
-
-                game_pin_name = "PCClient_PCClientInfo_GamePath"
-                current_game_path = _normalize_windows_path(
-                    _safe_pin_value(
-                        game_pin_name,
-                        config.get("PCClient", {}).get("PCClientInfo", {}).get("GamePath", ""),
-                    )
-                    or ""
-                )
-
-                # Only auto-fill when GamePath is currently empty.
-                if current_game_path:
-                    logger.info(
-                        f'Skip launcher autofill because {game_pin_name} is not empty: {current_game_path}'
-                    )
-                    return
-
-                launcher_dir = os.path.dirname(os.path.normpath(selected))
-                game_path = _normalize_windows_path(
-                    os.path.join(launcher_dir, "..", "NIKKE", "game", game_process)
-                )
-                pin[game_pin_name] = game_path
-                nkasgui.modified_config_queue.put(
-                    {"name": ".".join(game_pin_name.split("_")), "value": game_path}
-                )
-                logger.info(f'Auto-filled from launcher path: {game_pin_name}={game_path}')
-
-        button_scope = f"arg_path_picker_btn_{name}"
-        row = put_row(
-            [
-                put_textarea(**kwargs),
-                put_scope(
-                    button_scope,
-                    [
-                        put_button(
-                            label=t("Gui.Text.ChooseFile"),
-                            onclick=_pick_file,
-                            color="primary",
-                            small=True,
-                        ),
-                    ],
-                ).style(
-                    "display: flex; align-items: center; justify-content: flex-start; "
-                    "height: 100%; min-height: 2.2rem;"
-                ),
-            ],
-            size="1fr auto",
-        ).style("align-items: stretch; column-gap: .45rem;")
-
-        scope = put_scope(
-            f"arg_contianer-textarea-{name}",
-            [
-                get_title_help(kwargs),
-                row,
-            ],
-        )
-
-        run_js(
-            """
+def _apply_path_picker_button_style(button_scope: str, disabled: bool, disabled_title: str) -> None:
+    run_js(
+        """
 (() => {
     const scopeName = button_scope_name;
     const applyStyle = (attempt) => {
@@ -707,17 +506,272 @@ def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
         btn.style.justifyContent = 'center';
         btn.style.marginTop = '0';
         btn.style.marginLeft = '.25rem';
+        if (is_disabled) {
+            btn.title = disabled_hint;
+            btn.style.opacity = '0.65';
+            btn.style.cursor = 'not-allowed';
+        }
     };
     applyStyle(0);
 })();
-            """,
-            button_scope_name=button_scope,
-        )
+        """,
+        button_scope_name=button_scope,
+        is_disabled=disabled,
+        disabled_hint=disabled_title,
+    )
 
+
+def _pick_path_via_electron(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return eval_js(
+        """
+        (async (pickerOptions) => {
+            const requestId = `pick-path-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+            return await new Promise((resolve) => {
+                let settled = false;
+                const finish = (value) => {
+                    if (settled) return;
+                    settled = true;
+                    window.removeEventListener('message', onMessage);
+                    clearTimeout(timeoutId);
+                    resolve(value);
+                };
+                const onMessage = (event) => {
+                    const data = event && event.data ? event.data : null;
+                    if (!data || data.source !== 'nkas-electron') return;
+                    if (data.type !== 'dialog:pick-path:response') return;
+                    if (data.requestId !== requestId) return;
+                    finish(data.payload || {
+                        ok: false,
+                        canceled: false,
+                        path: '',
+                        error: 'Empty response payload',
+                    });
+                };
+                const timeoutId = setTimeout(() => {
+                    finish({
+                        ok: false,
+                        canceled: false,
+                        path: '',
+                        error: 'File picker response timed out',
+                    });
+                }, 15000);
+
+                window.addEventListener('message', onMessage);
+                try {
+                    if (!window.parent || window.parent === window) {
+                        throw new Error('No parent window available');
+                    }
+                    window.parent.postMessage({
+                        source: 'nkas-webui',
+                        type: 'dialog:pick-path:request',
+                        requestId,
+                        payload: pickerOptions || {},
+                    }, '*');
+                } catch (error) {
+                    const reason = (error && error.message) ? String(error.message) : String(error);
+                    finish({
+                        ok: false,
+                        canceled: false,
+                        path: '',
+                        error: reason,
+                    });
+                }
+            });
+        })(pickerOptions)
+        """,
+        pickerOptions=payload,
+    )
+
+
+def _queue_modified_config(name: str, value: str) -> None:
+    from pywebio.pin import pin
+
+    pin[name] = value
+    nkasgui: 'NKASGUI' = local.gui
+    nkasgui.modified_config_queue.put(
+        {'name': '.'.join(name.split('_')), 'value': value}
+    )
+
+
+def _autofill_game_path_from_launcher(launcher_path: str) -> None:
+    from pywebio.pin import pin
+    import os
+
+    nkasgui: 'NKASGUI' = local.gui
+    config = nkasgui.nkas_config.read_file(nkasgui.nkas_name)
+
+    def _safe_pin_value(pin_name, fallback=''):
+        try:
+            val = pin[pin_name]
+        except Exception:
+            val = fallback
+        return val
+
+    client = str(
+        _safe_pin_value(
+            'PCClient_PCClientInfo_Client',
+            config.get('PCClient', {}).get('PCClientInfo', {}).get('Client', 'intl'),
+        )
+        or 'intl'
+    ).strip()
+    auto_fill_raw = _safe_pin_value(
+        'PCClient_PCClientInfo_AutoFillName',
+        config.get('PCClient', {}).get('PCClientInfo', {}).get('AutoFillName', True),
+    )
+    auto_fill_name = bool(auto_fill_raw)
+
+    game_process_pin = str(
+        _safe_pin_value(
+            'PCClient_PCClientInfo_GameProcessName',
+            config.get('PCClient', {}).get('PCClientInfo', {}).get('GameProcessName', ''),
+        )
+        or ''
+    ).strip()
+
+    default_game_process_map = {
+        'intl': 'nikke.exe',
+        'hmt': 'nikke.exe',
+    }
+    default_game_process = default_game_process_map.get(client, 'nikke.exe')
+    game_process = default_game_process if auto_fill_name else (game_process_pin or default_game_process)
+
+    game_pin_name = 'PCClient_PCClientInfo_GamePath'
+    current_game_path = _normalize_windows_path(
+        _safe_pin_value(
+            game_pin_name,
+            config.get('PCClient', {}).get('PCClientInfo', {}).get('GamePath', ''),
+        )
+        or ''
+    )
+
+    if current_game_path:
+        logger.info(
+            f'Skip launcher autofill because {game_pin_name} is not empty: {current_game_path}'
+        )
+        return
+
+    launcher_dir = os.path.dirname(os.path.normpath(launcher_path))
+    game_path = _normalize_windows_path(
+        os.path.join(launcher_dir, '..', 'NIKKE', 'game', game_process)
+    )
+    _queue_modified_config(game_pin_name, game_path)
+    logger.info(f'Auto-filled from launcher path: {game_pin_name}={game_path}')
+
+
+def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
+    name: str = kwargs['name']
+    mode: str = kwargs.pop('mode', None)
+    path_picker_raw = kwargs.pop('path_picker', None)
+    kwargs.setdefault(
+        'code', {'lineWrapping': True, 'lineNumbers': False, 'mode': mode}
+    )
+    picker = _resolve_path_picker(name, path_picker_raw)
+    if picker is not None:
+        picker_title = picker['title']
+        picker_title_key = picker['title_key']
+        if not picker_title and picker_title_key:
+            try:
+                picker_title = t(picker_title_key)
+            except Exception:
+                picker_title = ''
+        if not picker_title:
+            picker_title = t('Gui.Text.ChooseFile')
+        button_label = picker['button_label'] or t('Gui.Text.ChooseFile')
+        button_disabled = not State.electron
+        disabled_hint = 'File picker is available only in Electron client.'
+        after_select_handlers = {
+            'autofill_game_path_from_launcher': _autofill_game_path_from_launcher,
+        }
+
+        def _pick_path():
+            from pywebio.pin import pin
+
+            if not State.electron:
+                toast(disabled_hint, color='warning')
+                return
+
+            try:
+                current_raw = pin[name]
+            except Exception:
+                current_raw = kwargs.get('value', '')
+            current_value = _normalize_windows_path(str(current_raw or '').strip())
+            payload = {
+                'mode': picker['mode'],
+                'title': picker_title,
+                'defaultPath': current_value or None,
+                'accept': picker['accept'],
+            }
+            result = {}
+            try:
+                result = _pick_path_via_electron(payload)
+            except Exception as e:
+                logger.warning(f'Electron picker invoke failed for {name}: {e}')
+                toast('File picker failed, please input path manually.', color='error')
+                return
+
+            if not isinstance(result, dict):
+                logger.warning(f'Unexpected picker response for {name}: {result}')
+                toast('File picker failed, please input path manually.', color='error')
+                return
+            if result.get('canceled'):
+                return
+            if not result.get('ok'):
+                reason = str(result.get('error') or 'unknown error')
+                logger.warning(f'File picker failed for {name}: {reason}')
+                toast('File picker failed, please input path manually.', color='error')
+                return
+
+            selected = _normalize_windows_path(result.get('path'))
+            if not selected:
+                return
+
+            _queue_modified_config(name, selected)
+            logger.info(f'Path picker selected: {name}={selected}')
+
+            after_select = picker.get('after_select')
+            if isinstance(after_select, str):
+                handler = after_select_handlers.get(after_select)
+                if handler is not None:
+                    try:
+                        handler(selected)
+                    except Exception as e:
+                        logger.warning(f'After-select hook failed for {name}: {e}')
+
+        button_scope = f'arg_path_picker_btn_{name}'
+        row = put_row(
+            [
+                put_textarea(**kwargs),
+                put_scope(
+                    button_scope,
+                    [
+                        put_button(
+                            label=button_label,
+                            onclick=_pick_path,
+                            color='primary',
+                            small=True,
+                            disabled=button_disabled,
+                        ),
+                    ],
+                ).style(
+                    'display: flex; align-items: center; justify-content: flex-start; '
+                    'height: 100%; min-height: 2.2rem;'
+                ),
+            ],
+            size='1fr auto',
+        ).style('align-items: stretch; column-gap: .45rem;')
+
+        scope = put_scope(
+            f'arg_contianer-textarea-{name}',
+            [
+                get_title_help(kwargs),
+                row,
+            ],
+        )
+        _apply_path_picker_button_style(button_scope, button_disabled, disabled_hint)
         return scope
 
     return put_scope(
-        f"arg_contianer-textarea-{name}",
+        f'arg_contianer-textarea-{name}',
         [
             get_title_help(kwargs),
             put_textarea(**kwargs),

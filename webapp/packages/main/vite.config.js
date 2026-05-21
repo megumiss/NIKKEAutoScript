@@ -1,6 +1,6 @@
-import {node} from '../../electron-vendors.config.json';
-import {join} from 'path';
-import {builtinModules} from 'module';
+const {join} = require('path');
+const {builtinModules} = require('module');
+const {node} = require('../../electron-vendors.config.json');
 
 const PACKAGE_ROOT = __dirname;
 
@@ -9,7 +9,7 @@ const PACKAGE_ROOT = __dirname;
  * @type {import('vite').UserConfig}
  * @see https://vitejs.dev/config/
  */
-const config = {
+module.exports = {
   mode: process.env.MODE,
   root: PACKAGE_ROOT,
   envDir: process.cwd(),
@@ -49,5 +49,3 @@ const config = {
     brotliSize: false,
   },
 };
-
-export default config;
