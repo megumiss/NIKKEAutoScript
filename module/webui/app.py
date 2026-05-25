@@ -1704,7 +1704,7 @@ class NKASGUI(Frame):
             error = str(data.get('error', '')).strip() or 'Unknown error'
             toast(
                 t('Gui.Toast.AutoUpdateFailed', error=error),
-                duration=10,
+                duration=0,
                 position='right',
                 color='error',
             )
