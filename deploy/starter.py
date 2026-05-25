@@ -12,6 +12,7 @@ from deploy.pip import PipManager
 
 class Starter(GitManager, PipManager, NKASManager):
     AUTO_UPDATE_NOTICE_PATH = './log/auto_update_notice.json'
+    AUTO_UPDATE_FAILED_NOTICE_PATH = './log/auto_update_failed_notice.json'
 
     def _execute_output(self, command: str) -> str:
         return subprocess.run(
@@ -51,6 +52,7 @@ class Starter(GitManager, PipManager, NKASManager):
         if not before_sha or not after_sha or before_sha == after_sha:
             return
 
+        self._remove_notice_file(self.AUTO_UPDATE_FAILED_NOTICE_PATH)
         rev_range = f'{before_sha}..{after_sha}'
         payload = {
             'updated_at': datetime.now().isoformat(timespec='seconds'),
@@ -63,6 +65,26 @@ class Starter(GitManager, PipManager, NKASManager):
         with open(self.AUTO_UPDATE_NOTICE_PATH, 'w', encoding='utf-8') as f:
             json.dump(payload, f, ensure_ascii=False)
 
+    @staticmethod
+    def _remove_notice_file(path: str):
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            pass
+
+    def _save_auto_update_failed_notice(self, error: str):
+        error = str(error).strip() or 'Unknown error'
+        self._remove_notice_file(self.AUTO_UPDATE_NOTICE_PATH)
+        payload = {
+            'updated_at': datetime.now().isoformat(timespec='seconds'),
+            'error': error,
+        }
+        os.makedirs(os.path.dirname(self.AUTO_UPDATE_FAILED_NOTICE_PATH), exist_ok=True)
+        with open(self.AUTO_UPDATE_FAILED_NOTICE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False)
+
     def start(self):
         from deploy.atomic import atomic_failure_cleanup
 
@@ -70,10 +92,16 @@ class Starter(GitManager, PipManager, NKASManager):
         try:
             if self.AutoUpdate:
                 before_sha, _ = self._get_head_commit()
-                self.git_update()
-                self.pip_install()
-                after_sha, _ = self._get_head_commit()
-                self._save_auto_update_notice(before_sha, after_sha)
+                try:
+                    self.git_update()
+                except ExecutionError as e:
+                    error = str(e).strip() or 'Git update failed'
+                    print(f'Auto update failed, skip update and continue startup: {error}')
+                    self._save_auto_update_failed_notice(error)
+                else:
+                    self.pip_install()
+                    after_sha, _ = self._get_head_commit()
+                    self._save_auto_update_notice(before_sha, after_sha)
             self.nkas_kill()
         except ExecutionError:
             input('Press Enter to continue...')  # Keep window open

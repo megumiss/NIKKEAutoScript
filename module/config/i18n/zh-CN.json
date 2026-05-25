@@ -1282,7 +1282,8 @@
       "NKASIsRunning": "调度器已在运行中",
       "ClickToUpdate": "有更新可用，点击这里进行更新",
       "AutoUpdated": "已自动更新到 {sha}（{count} 条提交），点击查看详情",
-      "AutoUpdatedWithContent": "已自动更新到 {sha}（{count} 条提交）：\n{content}"
+      "AutoUpdatedWithContent": "已自动更新到 {sha}（{count} 条提交）：\n{content}",
+      "AutoUpdateFailed": "自动更新失败：\n{error}"
     },
     "Status": {
       "Running": "运行中",

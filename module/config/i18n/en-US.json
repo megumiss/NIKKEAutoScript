@@ -1282,7 +1282,8 @@
       "NKASIsRunning": "Scheduler is already running",
       "ClickToUpdate": "Update available — click here to update",
       "AutoUpdated": "Auto-updated to {sha} ({count} commits). Click for details",
-      "AutoUpdatedWithContent": "Auto-updated to {sha} ({count} commits):\n{content}"
+      "AutoUpdatedWithContent": "Auto-updated to {sha} ({count} commits):\n{content}",
+      "AutoUpdateFailed": "Auto update failed: \n{error}"
     },
     "Status": {
       "Running": "Running",

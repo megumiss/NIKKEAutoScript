@@ -1679,6 +1679,36 @@ class NKASGUI(Frame):
                 onclick=goto_update,
             )
 
+        def show_auto_update_failed_toast_once():
+            notice_paths = [
+                './log/auto_update_failed_notice.json',
+            ]
+            notice_path = next((p for p in notice_paths if os.path.exists(p)), '')
+            if not notice_path:
+                return
+
+            try:
+                with open(notice_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except Exception as e:
+                logger.warning(f'Failed to read auto update failed notice: {e}')
+                data = {}
+            finally:
+                try:
+                    os.remove(notice_path)
+                except FileNotFoundError:
+                    pass
+                except Exception as e:
+                    logger.warning(f'Failed to remove auto update failed notice: {e}')
+
+            error = str(data.get('error', '')).strip() or 'Unknown error'
+            toast(
+                t('Gui.Toast.AutoUpdateFailed', error=error),
+                duration=10,
+                position='right',
+                color='error',
+            )
+
         def show_startup_notice_popup_once():
             notice_path = './config/startup_notice.yaml'
             if not os.path.exists(notice_path):
@@ -1866,6 +1896,7 @@ class NKASGUI(Frame):
         self.task_handler.add(update_switch.g(), 1)
         self.task_handler.start()
         show_auto_update_toast_once()
+        show_auto_update_failed_toast_once()
         show_startup_notice_popup_once()
 
         # Return to previous page

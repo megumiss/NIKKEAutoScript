@@ -8,7 +8,12 @@ from module.logger import logger
 from typing import Optional, Union
 
 class ExecutionError(Exception):
-    pass
+    def __init__(self, message='', command=None, error_code=None):
+        if not message and command is not None and error_code is not None:
+            message = f'{command} failed with exit code {error_code}'
+        super().__init__(message)
+        self.command = command
+        self.error_code = error_code
 
 
 class ConfigModel:
@@ -138,7 +143,7 @@ class DeployConfig(ConfigModel):
             else:
                 logger.info(f"[ failure ], error_code: {error_code}")
                 self.show_error(command)
-                raise ExecutionError
+                raise ExecutionError(command=command, error_code=error_code)
         else:
             logger.info(f"[ success ]")
             return True

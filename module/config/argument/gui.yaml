@@ -28,6 +28,7 @@ Toast:
   ClickToUpdate:
   AutoUpdated:
   AutoUpdatedWithContent:
+  AutoUpdateFailed:
 
 Status:
   Running:
