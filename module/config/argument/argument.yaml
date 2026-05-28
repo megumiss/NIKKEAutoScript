@@ -240,6 +240,7 @@ EventInfo:
   Event:
     value: ''
     option: [
+      'event_20260528',
       'event_20260514',
       'event_20260423',
       'event_20260409',
