@@ -96,6 +96,17 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20260528",
+            "event_name": "Bitter Spice",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "mini_game_play": True,
+            "extend": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20260514",
             "event_name": "B-SIDE IDOL",
             # 小型活动
