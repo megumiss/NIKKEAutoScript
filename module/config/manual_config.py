@@ -102,7 +102,7 @@ class ManualConfig:
             "event_type": 1,
             "mini_game": False,
             "mini_game_play": True,
-            "extend": True,
+            "extend": False,
             "story_part": "Story_1",  # Story_1, Story_2
             "story_difficulty": "Normal",  # Normal, Hard
             "pending_click_offset": (0, 0),
