@@ -96,6 +96,18 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20260702",
+            "event_name": "WAVE TO YOU",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": True,
+            "mini_game_play": True,
+            "extend": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal",  # Normal, Hard
+            "pending_click_offset": (0, 0),
+        },
+        {
             "event_id": "event_20260611",
             "event_name": "ARK RANGER",
             # 大型活动
