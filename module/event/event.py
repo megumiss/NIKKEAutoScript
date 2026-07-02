@@ -110,6 +110,10 @@ class Event(
                 self.back_to_event()
             if self.config.StoryStage_AutoPush or self.config.StoryStage_Sweep:
                 self.story()
+                # 重复执行一次
+                self.back_to_event()
+                self.device.sleep(3)
+                self.story()
             if self.config.Event_Coop:
                 coop_reschedule = self.coop()
             if self.config.Event_Game:
