@@ -22,7 +22,7 @@ class ChallengeNotFoundError(Exception):
 
 class EventInfo:
     def __init__(self, id, name, type, mini_game, mini_game_play, extend, story_part, story_difficulty,
-                 pending_click_offset=(0, 0)):
+                 pending_click_offset=(0, 0), pending_finder=None):
         self.id: str = id
         self.name: str = name
         self.type: int = type
@@ -32,6 +32,7 @@ class EventInfo:
         self.story_part: str = story_part
         self.story_difficulty: str = story_difficulty
         self.pending_click_offset = pending_click_offset
+        self.pending_finder = pending_finder
 
 
 class EventBase(UI):
@@ -73,6 +74,7 @@ class EventBase(UI):
             story_part=event_config.get('story_part'),
             story_difficulty=event_config.get('story_difficulty'),
             pending_click_offset=event_config.get('pending_click_offset', (0, 0)),
+            pending_finder=event_config.get('pending_finder'),
         )
 
     def back_to_event(self):

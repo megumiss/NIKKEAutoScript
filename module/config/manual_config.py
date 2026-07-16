@@ -104,8 +104,16 @@ class ManualConfig:
             "mini_game_play": True,
             "extend": False,
             "story_part": "Story_2",  # Story_1, Story_2
-            "story_difficulty": "Normal",  # Normal, Hard
+            "story_difficulty": "Hard",  # Normal, Hard
             "pending_click_offset": (0, 0),
+            "pending_finder": {
+                "mode": "grid",
+                "area": (100, 300, 620, 1050),
+                "rows": 6,
+                "columns": 2,
+                "vertical_direction": "bottom_to_top",
+                "horizontal_direction": "right_to_left",
+            },
         },
         {
             "event_id": "event_20260611",
@@ -358,5 +366,5 @@ class ManualConfig:
     DEVICE_OVER_HTTP = False
 
     # 独立任务，不依赖游戏运行
-    INDEPENDENT_TASKS = ['BlaDaily', 'BlaCDK', 'BlaExchange', 'ScreenRotate', 'UpdateHosts']
-    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange", 'screen_rotate', 'update_hosts']
+    INDEPENDENT_TASKS = ["BlaDaily", "BlaCDK", "BlaExchange", "ScreenRotate", "UpdateHosts"]
+    INDEPENDENT_TASKS_UNDER = ["bla_daily", "bla_cdk", "bla_exchange", "screen_rotate", "update_hosts"]

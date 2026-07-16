@@ -1,9 +1,9 @@
 from functools import cached_property
 
-from module.base.button import filter_buttons_in_area, merge_buttons
+from module.base.button import Button, filter_buttons_in_area, merge_buttons
 from module.base.decorator import Config
 from module.base.timer import Timer
-from module.base.utils import sort_buttons_by_location
+from module.base.utils import crop, sort_buttons_by_location
 from module.conversation.assets import ANSWER_CHECK
 from module.event.assets import *
 from module.event.base import EventBase
@@ -14,6 +14,7 @@ from module.tribe_tower.assets import NEXT_STAGE
 from module.ui.assets import (
     FIGHT_CLOSE,
     FIGHT_QUICKLY_CHECK,
+    FIGHT_QUICKLY_DISABLE,
     FIGHT_QUICKLY_FIGHT,
     FIGHT_QUICKLY_MAX,
     FIGHT_QUICKLY_MIN,
@@ -70,6 +71,95 @@ class EventStory(EventBase):
             logger.info(f"Found {len(buttons)} pending stage buttons for story '{story}'")
 
         return buttons
+
+    def find_pending_stage_by_grid(self, open_story):
+        finder = self.event.pending_finder
+        x1, y1, x2, y2 = finder['area']
+        rows = finder['rows']
+        columns = finder['columns']
+        # 上下方向决定行顺序，左右方向决定每行内的点顺序。
+        row_indices = range(rows) if finder['vertical_direction'] == 'top_to_bottom' else range(rows - 1, -1, -1)
+        column_indices = (
+            range(columns) if finder['horizontal_direction'] == 'left_to_right' else range(columns - 1, -1, -1)
+        )
+        cell_width = (x2 - x1) / columns
+        cell_height = (y2 - y1) / rows
+        # 配置区域均分后，按指定方向生成待点击的中心点。
+        points = [
+            (int(x1 + (column + 0.5) * cell_width), int(y1 + (row + 0.5) * cell_height))
+            for row in row_indices
+            for column in column_indices
+        ]
+        shift_x = 0
+        shift_y = 0
+        height, width = self.device.image.shape[:2]
+
+        logger.info(
+            f'Grid pending finder: {len(points)} points, order={finder["vertical_direction"]}/'
+            f'{finder["horizontal_direction"]}'
+        )
+        for index, (base_x, base_y) in enumerate(points, start=1):
+            point = base_x + shift_x, base_y + shift_y
+            if not 0 <= point[0] < width or not 0 <= point[1] < height:
+                logger.warning(f'Grid pending point {index} out of screen after shift: {point}')
+                return 'aborted'
+
+            # 保存点击前中心点附近 30x30 图块，供恢复列表后计算地图偏移。
+            anchor_area = point[0] - 15, point[1] - 15, point[0] + 15, point[1] + 15
+            anchor = Button(area=anchor_area, color=(0, 0, 0), button=anchor_area, name=f'PENDING_GRID_ANCHOR_{index}')
+            anchor.load_color(self.device.image)
+            anchor._match_init = True
+            logger.info(f'Click grid pending point {index}/{len(points)}: {point}')
+            self.device.click(anchor)
+
+            # 点击后只接受“正常关卡且快速战斗不可用”为 pending。
+            result = 'timeout'
+            for _ in range(10):
+                self.device.screenshot()
+                if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30):
+                    if not self.appear(FIGHT_QUICKLY, threshold=20):
+                        logger.info(f'Grid pending stage found at {point}')
+                        return 'found'
+                    result = 'normal_stage'
+                    break
+                if self.appear(STORY_STAGE_NOT_UNLOCKED, offset=30):
+                    result = 'not_unlocked'
+                    break
+                if self.appear(STORY_STAGE_REPEAT_FORBIDDEN, offset=30):
+                    result = 'repeat_forbidden'
+                    break
+
+            if result == 'normal_stage':
+                # 点到可快速战斗的普通关卡时，关闭弹窗后继续扫描。
+                while 1:
+                    self.device.screenshot()
+                    if self.appear_then_click(FIGHT_CLOSE, offset=30, interval=1):
+                        continue
+                    if not self.appear(FIGHT_CLOSE, offset=30):
+                        break
+            elif result in ('not_unlocked', 'repeat_forbidden'):
+                logger.info(f'Grid pending point {index}: {result}, wait for dialog to close')
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(STORY_STAGE_NOT_UNLOCKED, offset=30) and not self.appear(
+                        STORY_STAGE_REPEAT_FORBIDDEN, offset=30
+                    ):
+                        logger.info(f'Grid pending point {index}: {result}, dialog closed')
+                        break
+
+            # 在原点击点周围搜索锚点图块，并将所得位移应用到后续中心点。
+            # search_area = point[0] - 120, point[1] - 120, point[0] + 120, point[1] + 120
+            # if not anchor.match(crop(self.device.image, search_area), threshold=0.9, static=False):
+            #     logger.warning(f'Grid pending point {index}: unable to match 30x30 anchor after dialog')
+            #     return 'aborted'
+            # matched_x = search_area[0] + anchor.location[0]
+            # matched_y = search_area[1] + anchor.location[1]
+            # shift_x += matched_x - point[0]
+            # shift_y += matched_y - point[1]
+            # logger.info(f'Grid pending point {index}: screen shift=({shift_x}, {shift_y})')
+
+        logger.info('Grid pending finder exhausted all points')
+        return 'exhausted'
 
     @cached_property
     def team_nikke_locations(self):
@@ -372,9 +462,10 @@ class EventStory(EventBase):
         self.back_to_event()
 
     def find_and_push_stage(self, open_story):
-        pending_buttons = self.get_story_stage_pending_buttons(open_story)
-        has_pending_stage = False
-        if pending_buttons:
+        grid_mode = self.event.pending_finder is not None and self.event.pending_finder['mode'] == 'grid'
+        pending_buttons = [] if grid_mode else self.get_story_stage_pending_buttons(open_story)
+        has_pending_stage = grid_mode
+        if not grid_mode and pending_buttons:
             for button in pending_buttons:
                 if self.appear_with_flip(button, offset=30, threshold=0.9, color_threshold=20, static=False):
                     has_pending_stage = True
@@ -385,28 +476,40 @@ class EventStory(EventBase):
             and not self.appear(self.STORY_STAGE_12(f'{open_story}_clear'), offset=80, threshold=0.9)
             and has_pending_stage
         ):
-            logger.info('Pending stage found, start pushing loop')
+            if grid_mode:
+                logger.info('Grid pending finder enabled, start pushing loop')
+            else:
+                logger.info('Pending stage found, start pushing loop')
             # 判断有票和组队状态
+            found = False
             while 1:
                 self.device.screenshot()
 
                 # 打开关卡
-                was_clicked = False
-                for button in pending_buttons:
-                    if self.appear_with_flip_then_click(
-                        button,
-                        offset=30,
-                        click_offset=self.event.pending_click_offset,
-                        threshold=0.9,
-                        color_threshold=20,
-                        interval=5,
-                        static=False,
-                    ):
-                        logger.info(f'Click pending stage {button.name} to enter')
-                        was_clicked = True
-                        break
-                if was_clicked:
-                    continue
+                if grid_mode:
+                    if not found and not self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30):
+                        result = self.find_pending_stage_by_grid(open_story)
+                        if result == 'found':
+                            logger.info(f'Grid pending finder {result}')
+                            found = True
+                            continue
+                else:
+                    was_clicked = False
+                    for button in pending_buttons:
+                        if self.appear_with_flip_then_click(
+                            button,
+                            offset=30,
+                            click_offset=self.event.pending_click_offset,
+                            threshold=0.9,
+                            color_threshold=20,
+                            interval=5,
+                            static=False,
+                        ):
+                            logger.info(f'Click pending stage {button.name} to enter')
+                            was_clicked = True
+                            break
+                    if was_clicked:
+                        continue
 
                 # 组队
                 if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear(
