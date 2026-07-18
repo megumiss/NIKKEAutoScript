@@ -1,3 +1,38 @@
+/* ============================================================
+   NKAS GUI main stylesheet (A+ refined modern, light-blue theme)
+   - Structure + components; colors driven by CSS variables
+   - Light defaults live in :root; dark-nkas.css only overrides variables
+   - light-nkas.css / dark-nkas.css assign the theme variables
+   ============================================================ */
+
+:root {
+    --nkas-bg: #f5f8fb;
+    --nkas-card-bg: #ffffff;
+    --nkas-header-bg: #ffffff;
+    --nkas-aside-bg: #ffffff;
+    --nkas-menu-bg: #ffffff;
+    --nkas-border: #e2e8f0;
+    --nkas-text: #1c2330;
+    --nkas-text-secondary: #6b7280;
+    --nkas-accent: #66b8ea;
+    --nkas-accent-2: #3d8fd1;
+    --nkas-accent-soft: rgba(102, 184, 234, 0.12);
+    --nkas-accent-text: #ffffff;
+    --nkas-radius: 10px;
+    --nkas-radius-sm: 8px;
+    --nkas-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.04);
+    --nkas-shadow-hover: 0 8px 20px rgba(61, 143, 209, 0.14), 0 2px 6px rgba(16, 24, 40, 0.05);
+    --nkas-log-bg: #ffffff;
+    --nkas-log-text: #374151;
+    --nkas-btn-off-bg: #f1f5f9;
+    --nkas-btn-off-border: #e2e8f0;
+    --nkas-btn-off-text: #475569;
+    --nkas-title-from: #1c2330;
+    --nkas-icon-fill: #2c2c2c;
+    --nkas-glow-1: rgba(102, 184, 234, 0.10);
+    --nkas-glow-2: rgba(61, 143, 209, 0.07);
+}
+
 details {
     border: unset !important;
     padding-bottom: unset !important;
@@ -20,6 +55,8 @@ summary {
 body {
     margin-top: 0;
     margin-bottom: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
 footer {
@@ -30,59 +67,116 @@ footer {
     box-shadow: unset;
 }
 
+/* ---------- Menu buttons (JS relies on .btn-menu-active) ---------- */
 .btn-menu {
     font-weight: 400;
     background-color: transparent;
-    padding: .0625rem .75rem;
-    border-radius: 0;
+    padding: .3rem .75rem;
+    margin-bottom: .1rem;
+    border-radius: var(--nkas-radius-sm);
     border: 0 solid;
-    transition: border .05s ease-in-out, padding .05s ease-in-out;
+    transition: background .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
     white-space: pre-wrap;
     text-align: left;
 }
 
-.btn-menu:hover,
-.btn-menu-active {
-    font-weight: bold;
-    border-left: .125rem solid;
-    padding-right: .625rem;
-    border-left: 3px solid;
+.btn-menu:hover {
+    font-weight: 500;
+    color: var(--nkas-accent);
+    background: var(--nkas-accent-soft);
+    transform: translateX(2px);
 }
 
+.btn-menu-active {
+    font-weight: 600;
+    color: var(--nkas-accent);
+    background: var(--nkas-accent-soft);
+    box-shadow: inset 2px 0 0 var(--nkas-accent);
+}
+
+/* ---------- Aside icon buttons (JS relies on .btn-aside-active) ---------- */
 .btn-aside {
     width: 4rem;
     font-weight: 400;
     font-size: .8rem;
     background-color: transparent;
     padding: 32px 0 0 7px;
-    border-radius: 0;
+    border-radius: var(--nkas-radius-sm);
     border: 0 solid;
-    transition: border .1s ease-in-out, padding .1s ease-in-out
+    transition: background .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
 
-.btn-aside:hover,
+.btn-aside:hover {
+    color: var(--nkas-accent);
+    transform: translateX(2px);
+}
+
 .btn-aside-active {
-    border-left: 4px solid;
-    padding-left: 3px;
-    font-weight: bold;
+    font-weight: 600;
+    color: var(--nkas-accent);
+    background: var(--nkas-accent-soft);
+    box-shadow: inset 3px 0 0 var(--nkas-accent);
 }
 
+/* ---------- Toggle buttons ---------- */
 .btn-off,
 .btn-on {
-    border-radius: 0;
+    border-radius: 999px;
     margin: 0;
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s ease,
+        background .15s ease, color .15s ease, border-color .15s ease;
 }
 
+.btn-off {
+    background-color: var(--nkas-btn-off-bg);
+    border: 1px solid var(--nkas-btn-off-border);
+    color: var(--nkas-btn-off-text);
+}
+
+.btn-on {
+    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
+    border: 1px solid transparent;
+    color: var(--nkas-accent-text);
+    box-shadow: 0 2px 6px rgba(102, 184, 234, 0.4);
+}
+
+.btn-off:hover,
+.btn-off:focus,
+.btn-off:not(:disabled):not(.disabled):active {
+    background-color: var(--nkas-btn-off-bg);
+    border-color: var(--nkas-accent);
+    color: var(--nkas-accent);
+}
+
+.btn-on:hover,
+.btn-on:focus,
+.btn-on:not(:disabled):not(.disabled):active {
+    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
+    border-color: transparent;
+    color: var(--nkas-accent-text);
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 4px 12px rgba(102, 184, 234, 0.5);
+}
+
+.btn-on:active,
+.btn-off:active {
+    transform: scale(0.96);
+}
+
+/* ---------- Navigator buttons ---------- */
 .btn-navigator {
-    border-radius: 0;
+    background-color: var(--nkas-card-bg);
+    border-radius: var(--nkas-radius-sm);
     margin: 0 !important;
     width: 100%;
     text-align: left;
-    transition: color 0s ease-in-out;
+    transition: color .15s ease, background .15s ease;
 }
 
 .btn-navigator:hover {
-    font-weight: bold;
+    font-weight: 600;
+    color: var(--nkas-accent);
+    background: var(--nkas-accent-soft);
 }
 
 .toastify-center,
@@ -120,6 +214,7 @@ footer {
 .hr-group {
     margin-top: .25rem !important;
     margin-bottom: .25rem !important;
+    background-color: var(--nkas-border) !important;
 }
 
 .hr-task-group-box {
@@ -130,43 +225,138 @@ footer {
 
 .hr-task-group-line {
     border-top: 0.125rem solid;
+    border-top-color: var(--nkas-border);
     flex-grow: 1;
 }
 
 .hr-task-group-text {
     margin: 0 0.5rem;
     font-size: 0.875rem;
+    color: var(--nkas-text-secondary);
 }
 
+/* ---------- Checkbox: toggle switch ---------- */
 input[type="checkbox"] {
-    width: 1.25rem;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 2.2rem;
     height: 1.25rem;
+    border-radius: 999px;
+    background: var(--nkas-btn-off-bg);
+    border: 1px solid var(--nkas-btn-off-border);
+    position: relative;
+    cursor: pointer;
+    margin: 0;
+    vertical-align: middle;
+    flex-shrink: 0;
+    transition: background .2s ease, border-color .2s ease;
+}
+
+input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 2px;
+    width: .95rem;
+    height: .95rem;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background: var(--nkas-btn-off-text);
+    transition: left .2s ease, background .2s ease;
+}
+
+input[type="checkbox"]:hover {
+    border-color: var(--nkas-accent);
+}
+
+input[type="checkbox"]:checked {
+    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
+    border-color: transparent;
+}
+
+input[type="checkbox"]:checked::after {
+    left: calc(100% - .95rem - 2px);
+    background: #ffffff;
+}
+
+/* ---------- Radio: custom dot ---------- */
+input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 50%;
+    border: 2px solid var(--nkas-btn-off-border);
+    background: var(--nkas-card-bg);
+    position: relative;
+    cursor: pointer;
+    margin: 0;
+    vertical-align: middle;
+    flex-shrink: 0;
+    transition: border-color .15s ease;
+}
+
+input[type="radio"]:hover {
+    border-color: var(--nkas-accent);
+}
+
+input[type="radio"]:checked {
+    border-color: var(--nkas-accent);
+}
+
+input[type="radio"]:checked::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
 }
 
 label {
     display: inline;
 }
 
+/* ---------- Inputs and selects ---------- */
 .form-control {
-    background-color: unset;
-    border-radius: initial !important;
-    border-width: 0;
-    padding: 0 .5rem 0;
+    background-color: var(--nkas-card-bg);
+    color: var(--nkas-text);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius-sm) !important;
+    padding: .4rem .7rem;
     margin-top: .125rem;
     height: auto !important;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.form-control::placeholder {
+    color: var(--nkas-text-secondary);
+    opacity: .7;
+}
+
+.form-control:hover {
+    border-color: var(--nkas-accent);
 }
 
 .form-control[readonly] {
     pointer-events: none;
-    border-bottom-color: transparent;
+    background-color: var(--nkas-btn-off-bg);
+    border-color: var(--nkas-border);
+    color: var(--nkas-text-secondary);
 }
 
 .form-control:focus {
-    border-color: unset;
+    background-color: var(--nkas-card-bg);
+    border-color: var(--nkas-accent);
+    box-shadow: 0 0 0 3px var(--nkas-accent-soft);
 }
 
 .form-control.is-invalid:focus {
-    box-shadow: 0 0.06rem 0 #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
 }
 
 select {
@@ -174,18 +364,25 @@ select {
     -webkit-appearance: none;
     -moz-appearance: none;
     background-attachment: scroll;
-    background-position: right, center;
+    background-position: right .65rem center;
     background-repeat: no-repeat;
-    background-size: 1rem;
+    background-size: .8rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394a3b8%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
 }
 
 select.form-control {
-    padding-right: 1rem;
+    padding-right: 2rem;
+    cursor: pointer;
 }
 
 select.form-control.is-invalid {
     padding-right: 3rem !important;
     background-position: right 1.5rem center;
+}
+
+select option {
+    background-color: var(--nkas-card-bg);
+    color: var(--nkas-text);
 }
 
 button.btn.dropdown-toggle {
@@ -198,17 +395,49 @@ button.btn.dropdown-toggle {
     left: unset !important;
     width: 100% !important;
     height: unset !important;
-    padding: 0 1rem 0 0.5rem !important;
+    padding: .3rem 2rem .3rem .6rem !important;
     opacity: 1 !important;
     z-index: auto !important;
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius-sm);
 }
 
 .invalid-feedback {
     margin-top: 0;
 }
 
+.state > select {
+    border-color: transparent;
+    background-image: none;
+    pointer-events: none;
+}
+
+.state-bold > select {
+    font-weight: bold;
+    color: var(--nkas-accent);
+}
+
+.state-light > select {
+    color: var(--nkas-text-secondary);
+}
+
+[id^="pywebio-scope-arg_stored-stored-value-"] > div > input {
+    border-color: transparent;
+    background-color: transparent !important;
+}
+
+textarea {
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius-sm);
+}
+
 .CodeMirror {
     height: auto !important;
+}
+
+.CodeMirror-wrap {
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius-sm);
 }
 
 .CodeMirror-line {
@@ -217,6 +446,10 @@ button.btn.dropdown-toggle {
 
 .form-group {
     margin-bottom: 0 !important;
+}
+
+.modal-body {
+    background-color: var(--nkas-card-bg);
 }
 
 .alas-icon,
@@ -230,10 +463,19 @@ button.btn.dropdown-toggle {
     height: 2rem;
 }
 
+.aside-icon > path {
+    fill: var(--nkas-icon-fill);
+}
+
+$/* ---------- Log ---------- */
 .container-log {
-    border-radius: 0 !important;
+    background-color: var(--nkas-log-bg) !important;
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius) !important;
+    box-shadow: inset 3px 0 0 var(--nkas-accent);
     margin: .375rem !important;
     padding: 1rem !important;
+    color: var(--nkas-log-text);
 }
 
 code.rich-traceback {
@@ -246,8 +488,11 @@ pre.rich-traceback-code {
     font-family: Menlo, consolas, DejaVu Sans Mono, Courier New, monospace;
     font-size: 0.85rem;
     line-height: 1.2;
+    background-color: var(--nkas-log-bg);
+    color: var(--nkas-log-text);
 }
 
+/* ---------- Page frame ---------- */
 #pywebio-scope-ROOT {
     height: 100vh;
     display: grid;
@@ -262,6 +507,8 @@ pre.rich-traceback-code {
     padding-top: 1rem;
     overflow-y: auto;
     flex-shrink: 0;
+    background-color: var(--nkas-aside-bg);
+    border-right: 1px solid var(--nkas-border);
 }
 
 #pywebio-scope-menu {
@@ -272,12 +519,18 @@ pre.rich-traceback-code {
     overflow-y: auto;
     width: 12rem;
     flex-shrink: 0;
+    background-color: var(--nkas-menu-bg);
+    border-right: 1px solid var(--nkas-border);
 }
 
 #pywebio-scope-content {
     overflow: auto;
     padding: .625rem;
     flex-grow: 1;
+    background:
+        radial-gradient(1200px 500px at 85% -10%, var(--nkas-glow-1), transparent 60%),
+        radial-gradient(900px 420px at -10% 110%, var(--nkas-glow-2), transparent 55%),
+        var(--nkas-bg);
 }
 
 #pywebio-scope-header {
@@ -285,6 +538,9 @@ pre.rich-traceback-code {
     display: grid;
     grid-auto-flow: column;
     grid-template-columns: 4.4rem 4rem auto 1fr !important;
+    background-color: var(--nkas-header-bg);
+    border-bottom: 1px solid var(--nkas-border);
+    box-shadow: var(--nkas-shadow);
 }
 
 *[style*="--header-icon--"] {
@@ -296,6 +552,11 @@ pre.rich-traceback-code {
     font-size: 1.5rem;
     font-weight: bold;
     margin: auto !important;
+    background: linear-gradient(120deg, var(--nkas-title-from) 40%, var(--nkas-accent) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
 }
 
 #pywebio-scope-header_title {
@@ -348,10 +609,22 @@ pre.rich-traceback-code {
     font-weight: 400;
 }
 
+/* ---------- Settings cards ---------- */
 [id^="pywebio-scope-group_"] {
     margin-top: .5rem;
     margin-bottom: .5rem;
     padding: 1rem;
+    background-color: var(--nkas-card-bg);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+    transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+[id^="pywebio-scope-group_"]:hover {
+    box-shadow: var(--nkas-shadow-hover);
+    border-color: var(--nkas-accent);
+    transform: translateY(-2px);
 }
 
 [id^="pywebio-scope-group_"] > p {
@@ -363,6 +636,7 @@ pre.rich-traceback-code {
 [id^="pywebio-scope-group_"] > p + p {
     font-size: .80rem;
     margin: .2rem .25rem .1rem .25rem !important;
+    color: var(--nkas-text-secondary);
 }
 
 #pywebio-scope-groups {
@@ -377,6 +651,10 @@ pre.rich-traceback-code {
     margin: .5rem 1rem .5rem;
     height: min-content;
     max-width: 15rem;
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+    overflow: hidden;
 }
 
 #pywebio-scope-overview {
@@ -385,6 +663,7 @@ pre.rich-traceback-code {
     display: grid;
 }
 
+/* ---------- Overview cards ---------- */
 #pywebio-scope-running,
 #pywebio-scope-pending,
 #pywebio-scope-waiting,
@@ -395,6 +674,18 @@ pre.rich-traceback-code {
     font-weight: 500;
     margin: 0.3125rem;
     padding: 0.625rem;
+    background-color: var(--nkas-card-bg);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+    transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+#pywebio-scope-running:hover,
+#pywebio-scope-pending:hover,
+#pywebio-scope-waiting:hover {
+    box-shadow: var(--nkas-shadow-hover);
+    border-color: var(--nkas-accent);
 }
 
 #pywebio-scope-scheduler-bar,
@@ -454,6 +745,13 @@ pre.rich-traceback-code {
     grid-auto-flow: column;
     grid-template-columns: 1fr auto;
     margin: .125rem .625rem .125rem .375rem;
+    border-radius: 6px;
+    padding: .1rem .4rem;
+    transition: background .15s ease;
+}
+
+[id^="pywebio-scope-overview-task_"]:hover {
+    background: var(--nkas-accent-soft);
 }
 
 #pywebio-scope-daemon-overview {
@@ -466,6 +764,12 @@ pre.rich-traceback-code {
     margin-top: 0;
     margin-bottom: 0;
     padding: 0.3125rem;
+    border: 0;
+    box-shadow: none;
+}
+
+#pywebio-scope-daemon-overview [id^="pywebio-scope-group_"]:hover {
+    transform: none;
 }
 
 #pywebio-scope-schedulers {
@@ -478,13 +782,24 @@ pre.rich-traceback-code {
 
 [id^="pywebio-scope-arg_container-"] {
     display: grid;
-    margin: .125rem 0;
+    margin: .05rem 0;
+    padding: .4rem .5rem;
+    border-radius: var(--nkas-radius-sm);
+    align-items: center;
+    transition: background .15s ease;
+}
+
+[id^="pywebio-scope-arg_container-"]:hover {
+    background: var(--nkas-accent-soft);
 }
 
 [id^="pywebio-scope-arg_container-checkbox-"],
 [id^="pywebio-scope-arg_container-storage-"] {
     display: grid;
-    margin: .375rem 0;
+    margin: .05rem 0;
+    padding: .4rem .5rem;
+    border-radius: var(--nkas-radius-sm);
+    align-items: center;
 }
 
 *[style*="--arg-title--"] {
@@ -533,9 +848,14 @@ pre.rich-traceback-code {
         var(--warehouse-group-bg-top, #fafcff) 0%,
         var(--warehouse-group-bg, #ffffff) 100%
     );
-    border-radius: 0.85rem;
+    border-radius: var(--nkas-radius);
     padding: 0.62rem 0.7rem 0.72rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--nkas-shadow);
+    transition: box-shadow .2s ease;
+}
+
+.warehouse-group:hover {
+    box-shadow: var(--nkas-shadow-hover);
 }
 
 .warehouse-group-head {
@@ -575,7 +895,7 @@ pre.rich-traceback-code {
     gap: 0.6rem;
     align-items: center;
     padding: 0.58rem 0.68rem;
-    border-radius: 0.6rem;
+    border-radius: var(--nkas-radius-sm);
     border: 1px solid var(--warehouse-card-border, #e6e6e6);
     background: linear-gradient(
         180deg,
@@ -589,7 +909,7 @@ pre.rich-traceback-code {
 .warehouse-item-card:hover {
     transform: translateY(-1px);
     border-color: var(--warehouse-tone-line, #5da9f8);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.09);
+    box-shadow: var(--nkas-shadow-hover);
 }
 
 .warehouse-item-icon {
@@ -720,9 +1040,14 @@ pre.rich-traceback-code {
         var(--interception-chart-bg-top, #ffffff) 0%,
         var(--interception-chart-bg, #ffffff) 100%
     );
-    border-radius: 0.8rem;
+    border-radius: var(--nkas-radius);
     padding: 0.7rem 0.85rem 0.65rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--nkas-shadow);
+    transition: box-shadow .2s ease;
+}
+
+.interception-chart-card:hover {
+    box-shadow: var(--nkas-shadow-hover);
 }
 
 .interception-chart-head {
@@ -874,12 +1199,13 @@ pre.rich-traceback-code {
     font-size: .8rem;
     margin: .2rem .25rem .1rem !important;
     overflow-wrap: break-word;
+    color: var(--nkas-text-secondary);
 }
 
 *[style*="--overview-notask-text--"] {
     text-align: center;
     font-size: 0.875rem;
-    color: darkgrey;
+    color: var(--nkas-text-secondary);
 }
 
 *[style*="--input--"] {
@@ -903,4 +1229,568 @@ pre.rich-traceback-code {
     width: 1.5rem;
     height: 1.5rem;
     border: .2em solid currentColor;
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--nkas-border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--nkas-accent);
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ---------- Respect prefers-reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01s !important;
+        transition: none !important;
+    }
+}
+
+/* ---------- Global base (also used by the manage page) ---------- */
+body {
+    background-color: var(--nkas-bg);
+    color: var(--nkas-text);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--nkas-text);
+}
+
+a {
+    color: var(--nkas-accent-2);
+}
+
+a:hover {
+    color: var(--nkas-accent);
+}
+
+hr {
+    border-top-color: var(--nkas-border);
+}
+
+.text-muted {
+    color: var(--nkas-text-secondary) !important;
+}
+
+/* ---------- Bootstrap buttons (semantic colors) ---------- */
+.btn:not(.btn-menu):not(.btn-aside):not(.btn-on):not(.btn-off):not(.btn-navigator) {
+    border-radius: var(--nkas-radius-sm);
+    transition: filter .15s ease, box-shadow .15s ease, transform .15s ease,
+        background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.btn-primary,
+.btn-primary:focus,
+.btn-primary:not(:disabled):not(.disabled):active {
+    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
+    border-color: transparent;
+    color: var(--nkas-accent-text);
+    box-shadow: 0 2px 6px rgba(102, 184, 234, 0.35);
+}
+
+.btn-primary:hover,
+.btn-primary:not(:disabled):not(.disabled):active:hover {
+    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
+    border-color: transparent;
+    color: var(--nkas-accent-text);
+    filter: brightness(1.07);
+    box-shadow: 0 4px 12px rgba(102, 184, 234, 0.45);
+}
+
+.btn-secondary,
+.btn-secondary:focus,
+.btn-secondary:not(:disabled):not(.disabled):active {
+    background-color: var(--nkas-btn-off-bg);
+    border-color: var(--nkas-btn-off-border);
+    color: var(--nkas-btn-off-text);
+}
+
+.btn-secondary:hover,
+.btn-secondary:not(:disabled):not(.disabled):active:hover {
+    background-color: var(--nkas-btn-off-bg);
+    border-color: var(--nkas-accent);
+    color: var(--nkas-accent);
+}
+
+.btn-info,
+.btn-info:focus,
+.btn-info:not(:disabled):not(.disabled):active {
+    background-color: var(--nkas-accent-2);
+    border-color: transparent;
+    color: #ffffff;
+}
+
+.btn-info:hover,
+.btn-info:not(:disabled):not(.disabled):active:hover {
+    background-color: var(--nkas-accent-2);
+    border-color: transparent;
+    color: #ffffff;
+    filter: brightness(1.07);
+}
+
+.btn-success,
+.btn-success:focus,
+.btn-success:not(:disabled):not(.disabled):active {
+    background-color: #1fae7a;
+    border-color: transparent;
+    color: #ffffff;
+}
+
+.btn-success:hover,
+.btn-success:not(:disabled):not(.disabled):active:hover {
+    background-color: #1fae7a;
+    border-color: transparent;
+    color: #ffffff;
+    filter: brightness(1.07);
+}
+
+.btn-danger,
+.btn-danger:focus,
+.btn-danger:not(:disabled):not(.disabled):active {
+    background-color: #e0505c;
+    border-color: transparent;
+    color: #ffffff;
+}
+
+.btn-danger:hover,
+.btn-danger:not(:disabled):not(.disabled):active:hover {
+    background-color: #e0505c;
+    border-color: transparent;
+    color: #ffffff;
+    filter: brightness(1.07);
+}
+
+.btn-warning,
+.btn-warning:focus,
+.btn-warning:not(:disabled):not(.disabled):active {
+    background-color: #d99413;
+    border-color: transparent;
+    color: #ffffff;
+}
+
+.btn-warning:hover,
+.btn-warning:not(:disabled):not(.disabled):active:hover {
+    background-color: #d99413;
+    border-color: transparent;
+    color: #ffffff;
+    filter: brightness(1.07);
+}
+
+/* ---------- Modal popups ---------- */
+.modal-content {
+    background-color: var(--nkas-card-bg);
+    color: var(--nkas-text);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow-hover);
+}
+
+.modal-header {
+    border-bottom-color: var(--nkas-border);
+}
+
+.modal-footer {
+    border-top-color: var(--nkas-border);
+}
+
+.modal-title {
+    color: var(--nkas-text);
+}
+
+.modal .close {
+    color: var(--nkas-text);
+    text-shadow: none;
+    opacity: .6;
+}
+
+.modal .close:hover {
+    color: var(--nkas-accent);
+    opacity: 1;
+}
+
+/* ---------- Tables ---------- */
+.table {
+    color: var(--nkas-text);
+    background-color: var(--nkas-card-bg);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+}
+
+.table th,
+.table td {
+    border-top-color: var(--nkas-border);
+}
+
+.table thead th {
+    border-bottom-color: var(--nkas-border);
+    color: var(--nkas-text-secondary);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--nkas-accent-soft);
+}
+
+/* ---------- Alerts ---------- */
+.alert {
+    border-radius: var(--nkas-radius);
+}
+
+.alert-warning {
+    background-color: rgba(217, 148, 19, 0.12);
+    border: 1px solid rgba(217, 148, 19, 0.35);
+    color: var(--nkas-text);
+}
+
+.alert-info {
+    background-color: var(--nkas-accent-soft);
+    border: 1px solid var(--nkas-accent);
+    color: var(--nkas-text);
+}
+
+.alert-success {
+    background-color: rgba(31, 174, 122, 0.12);
+    border: 1px solid rgba(31, 174, 122, 0.35);
+    color: var(--nkas-text);
+}
+
+.alert-danger {
+    background-color: rgba(224, 80, 92, 0.12);
+    border: 1px solid rgba(224, 80, 92, 0.35);
+    color: var(--nkas-text);
+}
+
+/* ---------- Toast ---------- */
+.toastify {
+    border-radius: var(--nkas-radius-sm);
+    box-shadow: var(--nkas-shadow-hover);
+    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
+}
+
+/* ---------- Manage page (?app=manage) ---------- */
+#pywebio-scope-manage_page {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding: 2.5rem 1rem;
+}
+
+.manage-head {
+    margin-bottom: 1.5rem;
+}
+
+.manage-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(120deg, var(--nkas-title-from) 40%, var(--nkas-accent) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+#pywebio-scope-manage_actions {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1rem;
+}
+
+#pywebio-scope-config_table {
+    background: var(--nkas-card-bg);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+    padding: .25rem 1rem;
+}
+
+#pywebio-scope-config_table .table {
+    background-color: transparent;
+    box-shadow: none;
+    margin-bottom: .5rem;
+}
+
+#pywebio-scope-config_table .table tbody tr {
+    transition: background .15s ease;
+}
+
+#pywebio-scope-config_table .table tbody tr:hover {
+    background: var(--nkas-accent-soft);
+}
+
+/* ---------- Startup notice popup ---------- */
+.startup-notice-modal .modal-dialog {
+    max-width: 600px;
+}
+
+.startup-notice-modal .modal-content {
+    background: var(--nkas-card-bg);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow-hover);
+    overflow: hidden;
+}
+
+.startup-notice-modal .modal-header {
+    padding: 18px 24px 16px;
+    border-bottom: 1px solid var(--nkas-border);
+}
+
+.startup-notice-modal .modal-title {
+    color: var(--nkas-text);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.startup-notice-modal .modal-body {
+    padding: 22px 24px 24px;
+}
+
+.startup-notice-body {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.startup-notice-icon {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--nkas-accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.startup-notice-icon svg {
+    width: 22px;
+    height: 22px;
+    fill: var(--nkas-accent-2);
+}
+
+.startup-notice-message {
+    color: var(--nkas-text);
+    font-size: 15px;
+    line-height: 1.7;
+    padding-top: 8px;
+}
+
+#pywebio-scope-startup_notice_footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid var(--nkas-border);
+}
+
+.startup-notice-option {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--nkas-text-secondary);
+    font-size: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* ---------- Import dialog ---------- */
+.import-dialog-desc {
+    color: var(--nkas-text-secondary);
+    font-size: .85rem;
+    margin-bottom: .6rem;
+}
+
+#pywebio-scope-import_dialog_actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
+/* ---------- Updater page ---------- */
+#pywebio-scope-updater_page {
+    max-width: 54rem;
+    margin: 0 auto;
+    padding: .5rem;
+}
+
+#pywebio-scope-updater_status {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    background: var(--nkas-card-bg);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    transition: box-shadow .2s ease;
+}
+
+#pywebio-scope-updater_status:hover {
+    box-shadow: var(--nkas-shadow-hover);
+}
+
+#pywebio-scope-updater_state {
+    flex-grow: 1;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--nkas-text);
+}
+
+#pywebio-scope-updater_state > p {
+    margin: 0;
+}
+
+#pywebio-scope-updater_loading {
+    display: flex;
+    align-items: center;
+}
+
+#pywebio-scope-updater_btn {
+    flex-shrink: 0;
+}
+
+.updater-version-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.updater-version-card {
+    background: var(--nkas-card-bg);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+    padding: 1rem 1.25rem;
+    transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.updater-version-card:hover {
+    box-shadow: var(--nkas-shadow-hover);
+    border-color: var(--nkas-accent);
+    transform: translateY(-2px);
+}
+
+.updater-version-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .5rem;
+}
+
+.updater-version-label {
+    font-size: .75rem;
+    font-weight: 600;
+    padding: .1rem .6rem;
+    border-radius: 999px;
+    background: var(--nkas-accent-soft);
+    color: var(--nkas-accent-2);
+    border: 1px solid var(--nkas-accent);
+}
+
+.updater-version-sha {
+    font-family: Menlo, Consolas, "Courier New", monospace;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--nkas-accent-2);
+    background: var(--nkas-accent-soft);
+    border-radius: 6px;
+    padding: .1rem .45rem;
+}
+
+.updater-version-msg {
+    color: var(--nkas-text);
+    font-size: .9rem;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: .4rem;
+    word-break: break-all;
+}
+
+.updater-version-meta {
+    color: var(--nkas-text-secondary);
+    font-size: .78rem;
+}
+
+.updater-history {
+    background: var(--nkas-card-bg);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+    padding: 1rem 1.25rem;
+}
+
+.updater-history-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--nkas-text);
+    margin-bottom: .6rem;
+}
+
+.commit-row {
+    display: flex;
+    align-items: baseline;
+    gap: .75rem;
+    padding: .45rem .5rem;
+    border-radius: 6px;
+    transition: background .15s ease;
+}
+
+.commit-row:hover {
+    background: var(--nkas-accent-soft);
+}
+
+.commit-row + .commit-row {
+    border-top: 1px dashed var(--nkas-border);
+}
+
+.commit-sha {
+    flex: 0 0 4.5rem;
+    font-family: Menlo, Consolas, "Courier New", monospace;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--nkas-accent-2);
+}
+
+.commit-msg {
+    flex-grow: 1;
+    font-size: .85rem;
+    color: var(--nkas-text);
+    word-break: break-all;
+}
+
+.commit-meta {
+    flex-shrink: 0;
+    font-size: .75rem;
+    color: var(--nkas-text-secondary);
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .updater-version-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .commit-row {
+        flex-wrap: wrap;
+        gap: .25rem .75rem;
+    }
+
+    .commit-meta {
+        width: 100%;
+    }
 }

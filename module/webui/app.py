@@ -1105,46 +1105,67 @@ class NKASGUI(Frame):
         if State.restart_event is None:
             put_warning(t("Gui.Update.DisabledWarn"))
 
-        put_row(
-            content=[put_scope("updater_loading"), None, put_scope("updater_state")],
-            size="auto .25rem 1fr",
+        put_scope(
+            'updater_page',
+            [
+                put_scope(
+                    'updater_status',
+                    [
+                        put_scope('updater_loading'),
+                        put_scope('updater_state'),
+                        put_scope('updater_btn'),
+                    ],
+                ),
+                put_scope('updater_info'),
+                put_scope('updater_detail'),
+            ],
         )
 
-        put_scope("updater_btn")
-        put_scope("updater_info")
-
         def update_table():
-            with use_scope("updater_info", clear=True):
-                local_commit = updater.get_commit(short_sha1=True)
-                upstream_commit = updater.get_commit(
-                    f"origin/{updater.Branch}", short_sha1=True
+            local_commit = updater.get_commit(short_sha1=True)
+            upstream_commit = updater.get_commit(
+                f"origin/{updater.Branch}", short_sha1=True
+            )
+
+            def _version_card(label, commit):
+                sha, author, time_, message = (html.escape(str(x)) for x in commit)
+                return (
+                    '<div class="updater-version-card">'
+                    '<div class="updater-version-head">'
+                    f'<span class="updater-version-label">{html.escape(str(label))}</span>'
+                    f'<span class="updater-version-sha">{sha}</span>'
+                    '</div>'
+                    f'<div class="updater-version-msg">{message}</div>'
+                    f'<div class="updater-version-meta">{author} · {time_}</div>'
+                    '</div>'
                 )
-                put_table(
-                    [
-                        [t("Gui.Update.Local"), *local_commit],
-                        [t("Gui.Update.Upstream"), *upstream_commit],
-                    ],
-                    header=[
-                        "",
-                        "SHA1",
-                        t("Gui.Update.Author"),
-                        t("Gui.Update.Time"),
-                        t("Gui.Update.Message"),
-                    ],
+
+            with use_scope("updater_info", clear=True):
+                put_html(
+                    '<div class="updater-version-grid">'
+                    + _version_card(t("Gui.Update.Local"), local_commit)
+                    + _version_card(t("Gui.Update.Upstream"), upstream_commit)
+                    + '</div>'
                 )
             with use_scope("updater_detail", clear=True):
-                put_text(t("Gui.Update.DetailedHistory"))
                 history = updater.get_commit(
                     f"origin/{updater.Branch}", n=20, short_sha1=True
                 )
-                put_table(
-                    [commit for commit in history],
-                    header=[
-                        "SHA1",
-                        t("Gui.Update.Author"),
-                        t("Gui.Update.Time"),
-                        t("Gui.Update.Message"),
-                    ],
+                rows = ''.join(
+                    '<div class="commit-row">'
+                    f'<span class="commit-sha">{html.escape(str(commit[0]))}</span>'
+                    f'<span class="commit-msg">{html.escape(str(commit[3]))}</span>'
+                    '<span class="commit-meta">'
+                    f'{html.escape(str(commit[1]))} · {html.escape(str(commit[2]))}'
+                    '</span>'
+                    '</div>'
+                    for commit in history
+                )
+                put_html(
+                    '<div class="updater-history">'
+                    f'<div class="updater-history-title">{t("Gui.Update.DetailedHistory")}</div>'
+                    f'{rows}'
+                    '</div>'
                 )
 
         def u(state):
@@ -1675,7 +1696,6 @@ class NKASGUI(Frame):
                 text,
                 duration=10,
                 position='right',
-                color='#2f7fd8',
                 onclick=goto_update,
             )
 
@@ -1746,69 +1766,12 @@ class NKASGUI(Frame):
                 return
 
             notice_content = html.escape(content).replace('\n', '<br>')
-            if self.theme == 'dark':
-                notice_bg = '#2f3136'
-                notice_text = '#e6e6e6'
-                notice_muted = '#b8c0cc'
-                notice_border = '#454c56'
-                notice_shadow = '0 18px 48px rgba(0, 0, 0, .42)'
-            else:
-                notice_bg = '#ffffff'
-                notice_text = '#26313d'
-                notice_muted = '#5e6b78'
-                notice_border = '#dbe2ea'
-                notice_shadow = '0 18px 48px rgba(22, 34, 51, .18)'
-
-            notice_style = f"""
-            <style>
-                .startup-notice-modal .modal-dialog {{
-                    max-width: 600px;
-                }}
-                .startup-notice-modal .modal-content {{
-                    background: {notice_bg};
-                    border: 1px solid {notice_border};
-                    border-radius: 8px;
-                    box-shadow: {notice_shadow};
-                    overflow: hidden;
-                }}
-                .startup-notice-modal .modal-header {{
-                    padding: 18px 24px 16px;
-                    border-bottom: 1px solid {notice_border};
-                }}
-                .startup-notice-modal .modal-title {{
-                    color: {notice_text};
-                    font-size: 20px;
-                    font-weight: 700;
-                    line-height: 1.3;
-                }}
-                .startup-notice-modal .modal-body {{
-                    padding: 22px 24px 24px;
-                }}
-                .startup-notice-message {{
-                    color: {notice_text};
-                    font-size: 15px;
-                    line-height: 1.7;
-                }}
-                .startup-notice-option {{
-                    display: inline-flex;
-                    align-items: center;
-                    height: 28px;
-                    color: {notice_muted};
-                    font-size: 14px;
-                    line-height: 16px;
-                    margin: 0;
-                    cursor: pointer;
-                }}
-                .startup-notice-option input[type="checkbox"] {{
-                    width: 16px;
-                    height: 16px;
-                    margin: 0 8px 0 0;
-                    flex: 0 0 16px;
-                    position: static;
-                    vertical-align: top;
-                }}
-            </style>
-            """
+            notice_icon = (
+                '<div class="startup-notice-icon">'
+                '<svg viewBox="0 0 24 24">'
+                '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4.6a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6zM10.8 10.5h2.4v7h-2.4z"/>'
+                '</svg></div>'
+            )
             checkbox_id = 'startup-notice-disable-once'
             checkbox_html = (
                 f'<label class="startup-notice-option" for="{checkbox_id}">'
@@ -1817,7 +1780,7 @@ class NKASGUI(Frame):
                 '</label>'
             )
             button_style = (
-                'min-width: 88px; padding: 6px 16px; border-radius: 5px; '
+                'min-width: 88px; padding: 6px 16px; border-radius: var(--nkas-radius-sm); '
                 'font-weight: 600; box-shadow: none;'
             )
 
@@ -1853,15 +1816,18 @@ class NKASGUI(Frame):
             popup(
                 title=title,
                 content=[
-                    put_html(f'{notice_style}<div class="startup-notice-message">{notice_content}</div>'),
-                    put_row(
-                        content=[
+                    put_html(
+                        f'<div class="startup-notice-body">{notice_icon}'
+                        f'<div class="startup-notice-message">{notice_content}</div></div>'
+                    ),
+                    put_scope(
+                        'startup_notice_footer',
+                        [
                             put_html(checkbox_html),
                             put_button('我知道了', onclick=_close_startup_notice, color='primary')
                             .style(button_style),
                         ],
-                        size='1fr auto',
-                    ).style('align-items: center; margin-top: 20px;'),
+                    ),
                 ],
                 size=PopupSize.NORMAL,
                 implicit_close=False,
@@ -2029,25 +1995,43 @@ def app_manage():
 
     set_env(title="NKAS", output_animation=False)
     run_js("$('head').append('<style>.footer{display:none}</style>')")
+    add_css(filepath_css("nkas"))
+    manage_theme = str(getattr(State.deploy_config, 'Theme', 'dark') or 'dark').strip().lower()
+    if manage_theme == 'light':
+        add_css(filepath_css("light-nkas"))
+    else:
+        add_css(filepath_css("dark-nkas"))
 
-    put_html(f"<h2>{t('Gui.AppManage.PageTitle')}</h2>")
-    put_scope("config_table")
-    put_buttons(
-        buttons=[
-            {
-                "label": t("Gui.AppManage.New"),
-                "value": "new",
-                "disabled": IS_ON_PHONE_CLOUD,
-            },
-            {"label": t("Gui.AppManage.Import"), "value": "import"},
-            {"label": t("Gui.AppManage.Back"), "value": "back"},
-        ],
-        onclick=[
-            (lambda: None) if IS_ON_PHONE_CLOUD else _new,
-            _import,
-            partial(go_app, "index", new_window=False),
+    put_scope(
+        'manage_page',
+        [
+            put_html(
+                f'<div class="manage-head">'
+                f'<div class="manage-title">{t("Gui.AppManage.PageTitle")}</div>'
+                f'</div>'
+            ),
+            put_scope('manage_actions'),
+            put_scope('config_table'),
         ],
     )
+    with use_scope('manage_actions'):
+        put_buttons(
+            buttons=[
+                {
+                    "label": t("Gui.AppManage.New"),
+                    "value": "new",
+                    "disabled": IS_ON_PHONE_CLOUD,
+                    "color": "primary",
+                },
+                {"label": t("Gui.AppManage.Import"), "value": "import", "color": "secondary"},
+                {"label": t("Gui.AppManage.Back"), "value": "back", "color": "secondary"},
+            ],
+            onclick=[
+                (lambda: None) if IS_ON_PHONE_CLOUD else _new,
+                _import,
+                partial(go_app, "index", new_window=False),
+            ],
+        )
     _show_table()
 
 

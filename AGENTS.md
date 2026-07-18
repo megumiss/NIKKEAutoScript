@@ -47,6 +47,9 @@ Python 使用 4 空格缩进，单行不超过 120 字符，字符串优先单�
 - 删除代码要可验证：删除调试或废弃逻辑后，至少执行语法检查与一次最小路径回归。
 
 ## 高频代码用法说明
+- GUI 样式体系：`assets/gui/css/nkas.css` 用 `:root` CSS 变量（`--nkas-*`）驱动全部组件；`light-nkas.css` / `dark-nkas.css` 只负责给变量赋值，不要在主题文件里写组件规则。
+- CSS 文件必须保持纯 ASCII：`add_css()`（`module/webui/utils.py`）用本地编码读取文件，中文注释会在 Windows（GBK）下报 `UnicodeDecodeError`；且 CSS 内容会拼进 JS 单引号字符串注入，**不能出现单引号**（SVG data URI 里的引号用 `%27`）。
+- 新页面/新 pywebio application 需要在入口手动 `add_css(filepath_css("nkas"))` 及对应主题文件（参考 `app_manage()`），否则页面无样式。
 - 页面切换：优先 `self.ui_ensure(page_xxx)` 进入目标页面，不要直接假设当前页面状态。
 - 循环骨架：多数任务采用 `while 1` + `self.device.screenshot()` + 条件分支；每个分支完成后 `continue`，保持状态机清晰。
 - 点击防抖：优先使用 `appear_then_click(..., interval=1)` 或 `Timer` 控制点击频率，避免短时间重复点击导致误操作。

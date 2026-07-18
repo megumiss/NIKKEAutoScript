@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="a" data-mode="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NKAS GUI 样式预览</title>
+<style>
+/* ============================================================
+   主题变量定义：A 极简现代 / B 深色游戏 / C 柔和卡片
+   ============================================================ */
+
+/* ---------- 版本 A+：精致现代（极简基础上增加层次与动效） ---------- */
+html[data-theme="a"][data-mode="light"] {
+    --bg: #f5f8fb;
+    --bg-card: #ffffff;
+    --bg-header: #ffffff;
+    --bg-aside: #ffffff;
+    --bg-menu: #ffffff;
+    --border: #e2e8f0;
+    --text: #1c2330;
+    --text-secondary: #6b7280;
+    --accent: #66b8ea;
+    --accent-2: #3d8fd1;
+    --accent-soft: rgba(102, 184, 234, 0.12);
+    --accent-text: #ffffff;
+    --success: #16a34a;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.04);
+    --shadow-hover: 0 8px 20px rgba(61, 143, 209, 0.14), 0 2px 6px rgba(16, 24, 40, 0.05);
+    --log-bg: #ffffff;
+    --log-text: #374151;
+    --btn-off-bg: #f1f5f9;
+    --btn-off-border: #e2e8f0;
+    --btn-off-text: #475569;
+    --switcher-bg: #ffffff;
+}
+html[data-theme="a"][data-mode="dark"] {
+    --bg: #0f1318;
+    --bg-card: #161a21;
+    --bg-header: #161a21;
+    --bg-aside: #161a21;
+    --bg-menu: #161a21;
+    --border: #262d38;
+    --text: #e6e8ec;
+    --text-secondary: #8b919c;
+    --accent: #66b8ea;
+    --accent-2: #4a9eda;
+    --accent-soft: rgba(102, 184, 234, 0.15);
+    --accent-text: #0b2231;
+    --success: #34d399;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.25);
+    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --log-bg: #12161c;
+    --log-text: #b8bdc7;
+    --btn-off-bg: #1e242e;
+    --btn-off-border: #2c3440;
+    --btn-off-text: #a7adb8;
+    --switcher-bg: #161a21;
+}
+
+/* ---------- 版本 B：深色游戏 ---------- */
+html[data-theme="b"][data-mode="dark"] {
+    --bg: #0d1420;
+    --bg-card: #131c2c;
+    --bg-header: #101827;
+    --bg-aside: #101827;
+    --bg-menu: #101827;
+    --border: #22304a;
+    --text: #dde6f2;
+    --text-secondary: #7d8ba1;
+    --accent: #22d3ee;
+    --accent-soft: rgba(34, 211, 238, 0.12);
+    --accent-text: #06222a;
+    --radius: 6px;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    --shadow-hover: 0 0 0 1px rgba(34, 211, 238, 0.45), 0 4px 14px rgba(34, 211, 238, 0.12);
+    --log-bg: #0a101b;
+    --log-text: #9fd8e8;
+    --btn-off-bg: #18253a;
+    --btn-off-border: #22304a;
+    --btn-off-text: #8ea2bd;
+    --switcher-bg: #101827;
+}
+html[data-theme="b"][data-mode="light"] {
+    --bg: #f2f6fa;
+    --bg-card: #ffffff;
+    --bg-header: #ffffff;
+    --bg-aside: #ffffff;
+    --bg-menu: #ffffff;
+    --border: #dbe5ef;
+    --text: #16283c;
+    --text-secondary: #5f7288;
+    --accent: #0aa2c0;
+    --accent-soft: rgba(10, 162, 192, 0.10);
+    --accent-text: #ffffff;
+    --radius: 6px;
+    --shadow: 0 1px 2px rgba(18, 42, 66, 0.06);
+    --shadow-hover: 0 0 0 1px rgba(10, 162, 192, 0.4), 0 4px 12px rgba(10, 162, 192, 0.12);
+    --log-bg: #ffffff;
+    --log-text: #3d5468;
+    --btn-off-bg: #eef3f8;
+    --btn-off-border: #dbe5ef;
+    --btn-off-text: #4c637a;
+    --switcher-bg: #ffffff;
+}
+
+/* ---------- 版本 C：柔和卡片 ---------- */
+html[data-theme="c"][data-mode="light"] {
+    --bg: #faf9f7;
+    --bg-card: #ffffff;
+    --bg-header: #ffffff;
+    --bg-aside: #ffffff;
+    --bg-menu: #ffffff;
+    --border: #ece8e2;
+    --text: #2e2a26;
+    --text-secondary: #8a8378;
+    --accent: #7c8cf8;
+    --accent-soft: rgba(124, 140, 248, 0.12);
+    --accent-text: #ffffff;
+    --radius: 12px;
+    --shadow: 0 2px 10px rgba(90, 80, 60, 0.06);
+    --shadow-hover: 0 8px 24px rgba(90, 80, 60, 0.10);
+    --log-bg: #ffffff;
+    --log-text: #5c564c;
+    --btn-off-bg: #f4f1ec;
+    --btn-off-border: #ece8e2;
+    --btn-off-text: #6e675c;
+    --switcher-bg: #ffffff;
+}
+html[data-theme="c"][data-mode="dark"] {
+    --bg: #1a1817;
+    --bg-card: #242120;
+    --bg-header: #242120;
+    --bg-aside: #242120;
+    --bg-menu: #242120;
+    --border: #38332f;
+    --text: #ece7e0;
+    --text-secondary: #9d958a;
+    --accent: #9aa5ff;
+    --accent-soft: rgba(154, 165, 255, 0.14);
+    --accent-text: #1a1817;
+    --radius: 12px;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --log-bg: #201d1c;
+    --log-text: #b5aca0;
+    --btn-off-bg: #2c2826;
+    --btn-off-border: #38332f;
+    --btn-off-text: #a89f93;
+    --switcher-bg: #242120;
+}
+
+/* ============================================================
+   基础结构（主题无关）
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: background .2s ease, color .2s ease;
+}
+
+/* ---------- 预览切换栏 ---------- */
+.switcher {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    padding: .6rem 1rem;
+    background: var(--switcher-bg);
+    border-bottom: 1px solid var(--border);
+}
+.switcher .label {
+    font-size: .85rem;
+    color: var(--text-secondary);
+    margin-right: .25rem;
+}
+.switcher button {
+    font: inherit;
+    font-size: .85rem;
+    padding: .35rem .9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s ease;
+}
+.switcher button:hover { border-color: var(--accent); color: var(--accent); }
+.switcher button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+}
+.switcher .sep { width: 1px; height: 1.2rem; background: var(--border); margin: 0 .35rem; }
+
+/* ---------- GUI 骨架 ---------- */
+.gui {
+    height: calc(100vh - 49px);
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+.gui-header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .55rem 1rem;
+    background: var(--bg-header);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    z-index: 100;
+}
+.gui-header .logo {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .8rem;
+}
+.gui-header .title { font-size: 1.1rem; font-weight: 700; }
+.gui-header .status {
+    font-size: .78rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .1rem .6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+.status-dot {
+    width: .5rem; height: .5rem;
+    border-radius: 50%;
+    background: #22c55e;
+}
+.gui-body { display: flex; min-height: 0; }
+
+.gui-aside {
+    width: 4.2rem;
+    flex-shrink: 0;
+    background: var(--bg-aside);
+    border-right: 1px solid var(--border);
+    padding: .75rem .3rem;
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+}
+.btn-aside {
+    font: inherit;
+    font-size: .72rem;
+    padding: .55rem .15rem;
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s ease;
+}
+.btn-aside .ico { display: block; font-size: 1.05rem; margin-bottom: .15rem; }
+.btn-aside:hover { color: var(--accent); }
+.btn-aside-active, .btn-aside-active:hover {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-left-color: var(--accent);
+    font-weight: 600;
+}
+
+.gui-menu {
+    width: 11.5rem;
+    flex-shrink: 0;
+    background: var(--bg-menu);
+    border-right: 1px solid var(--border);
+    padding: .9rem .6rem;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    overflow-y: auto;
+}
+.btn-menu {
+    font: inherit;
+    font-size: .88rem;
+    text-align: left;
+    padding: .42rem .7rem;
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s ease;
+}
+.btn-menu:hover { color: var(--accent); background: var(--accent-soft); }
+.btn-menu-active, .btn-menu-active:hover {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+}
+
+.gui-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: .9rem;
+}
+
+/* ---------- 卡片与组件 ---------- */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: .9rem 1rem;
+    margin-bottom: .8rem;
+    transition: box-shadow .15s ease;
+}
+.card:hover { box-shadow: var(--shadow-hover); }
+.card > h3 {
+    margin: 0 0 .6rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+.card .hint { font-size: .78rem; color: var(--text-secondary); margin: -.3rem 0 .6rem; }
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .8rem;
+    margin-bottom: .8rem;
+}
+.task-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .4rem .2rem;
+    border-bottom: 1px dashed var(--border);
+    font-size: .88rem;
+}
+.task-row:last-child { border-bottom: none; }
+.task-time { font-size: .76rem; color: var(--text-secondary); }
+
+/* 开关按钮 */
+.btn-on, .btn-off {
+    font: inherit;
+    font-size: .8rem;
+    padding: .28rem .85rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+.btn-on {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: var(--accent-text);
+}
+.btn-off {
+    background: var(--btn-off-bg);
+    border: 1px solid var(--btn-off-border);
+    color: var(--btn-off-text);
+}
+.btn-on:hover { filter: brightness(1.08); }
+.btn-off:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 表单 */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 12rem;
+    align-items: center;
+    gap: .75rem;
+    padding: .35rem 0;
+}
+.form-row .arg-title { font-size: .88rem; font-weight: 500; }
+.form-row .arg-help { font-size: .74rem; color: var(--text-secondary); font-weight: 400; }
+.form-control {
+    font: inherit;
+    font-size: .85rem;
+    width: 100%;
+    padding: .42rem .65rem;
+    color: var(--text);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.form-control::placeholder {
+    color: var(--text-secondary);
+    opacity: .7;
+}
+.form-control:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.form-control:disabled,
+.form-control[readonly] {
+    background: var(--btn-off-bg);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+}
+/* 下拉框：自定义箭头 + 悬浮/聚焦态 */
+select.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 2rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right .65rem center;
+    background-size: .8rem;
+}
+select.form-control:hover {
+    border-color: var(--accent);
+}
+select.form-control:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+select.form-control option {
+    background: var(--bg-card);
+    color: var(--text);
+}
+textarea.form-control {
+    min-height: 4.5rem;
+    resize: vertical;
+    line-height: 1.5;
+}
+.check-row { display: flex; align-items: center; gap: .45rem; font-size: .85rem; padding: .3rem 0; }
+input[type="checkbox"] { width: 1rem; height: 1rem; accent-color: var(--accent); }
+
+/* 日志 */
+.container-log {
+    background: var(--log-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .8rem .9rem;
+    font-family: SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+    font-size: .78rem;
+    line-height: 1.55;
+    color: var(--log-text);
+    white-space: pre;
+    overflow-x: auto;
+}
+.log-info { color: var(--accent); }
+.log-warn { color: #d99413; }
+.log-err  { color: #e0505c; }
+
+/* ============================================================
+   版本 A+ 增强：层次感与动效（仅作用于主题 A）
+   ============================================================ */
+
+/* 背景氛围：极浅的渐变光晕，不干扰阅读 */
+html[data-theme="a"][data-mode="light"] body {
+    background:
+        radial-gradient(1200px 500px at 85% -10%, rgba(102, 184, 234, 0.10), transparent 60%),
+        radial-gradient(900px 420px at -10% 110%, rgba(61, 143, 209, 0.07), transparent 55%),
+        var(--bg);
+}
+html[data-theme="a"][data-mode="dark"] body {
+    background:
+        radial-gradient(1200px 500px at 85% -10%, rgba(102, 184, 234, 0.12), transparent 60%),
+        radial-gradient(900px 420px at -10% 110%, rgba(74, 158, 218, 0.08), transparent 55%),
+        var(--bg);
+}
+
+/* Logo：渐变底 + 投影 */
+html[data-theme="a"] .gui-header .logo {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(102, 184, 234, 0.4);
+}
+/* 标题：渐变文字 */
+html[data-theme="a"] .gui-header .title {
+    background: linear-gradient(120deg, var(--text) 40%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* 状态徽标：呼吸灯 */
+html[data-theme="a"] .gui-header .status {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    color: var(--success);
+    border-color: transparent;
+    background: var(--accent-soft);
+    background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+html[data-theme="a"] .status-dot {
+    width: .5rem; height: .5rem;
+    border-radius: 50%;
+    background: var(--success);
+    animation: a-pulse 2s ease-in-out infinite;
+}
+@keyframes a-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 45%, transparent); }
+    50%      { box-shadow: 0 0 0 5px transparent; }
+}
+
+/* 侧边导航：悬浮微移 + active 左侧渐变条 */
+html[data-theme="a"] .btn-aside {
+    position: relative;
+    border-left: none;
+    transition: transform .18s ease, color .18s ease, background .18s ease;
+}
+html[data-theme="a"] .btn-aside::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 50%;
+    width: 3px; height: 0;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    transform: translateY(-50%);
+    transition: height .18s ease;
+}
+html[data-theme="a"] .btn-aside:hover { transform: translateX(2px); }
+html[data-theme="a"] .btn-aside-active::before { height: 55%; }
+html[data-theme="a"] .btn-aside-active {
+    background: linear-gradient(90deg, var(--accent-soft), transparent 85%);
+}
+
+/* 菜单：悬浮滑入 + active 渐变描边 pill */
+html[data-theme="a"] .btn-menu {
+    position: relative;
+    transition: transform .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+html[data-theme="a"] .btn-menu:hover { transform: translateX(3px); }
+html[data-theme="a"] .btn-menu-active {
+    background: linear-gradient(90deg, var(--accent-soft), transparent 90%);
+    box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* 卡片：悬浮上浮 + 边框提亮 + 标题渐变指示条 */
+html[data-theme="a"] .card {
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+html[data-theme="a"] .card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+html[data-theme="a"] .card > h3 {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+html[data-theme="a"] .card > h3::before {
+    content: "";
+    width: 4px; height: 1em;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+}
+
+/* 开关按钮：渐变主按钮 + 点击回弹 */
+html[data-theme="a"] .btn-on {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border: none;
+    box-shadow: 0 2px 6px rgba(102, 184, 234, 0.4);
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+html[data-theme="a"] .btn-on:hover {
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 4px 12px rgba(102, 184, 234, 0.5);
+    filter: none;
+}
+html[data-theme="a"] .btn-on:active { transform: scale(0.96); }
+html[data-theme="a"] .btn-off { transition: all .15s ease; }
+html[data-theme="a"] .btn-off:active { transform: scale(0.96); }
+
+/* 表单：聚焦光晕更柔和 */
+html[data-theme="a"] .form-control { transition: border-color .18s ease, box-shadow .18s ease; }
+html[data-theme="a"] .form-control:hover {
+    border-color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+html[data-theme="a"] .form-control:focus { box-shadow: 0 0 0 4px var(--accent-soft); }
+
+/* 日志：左侧渐变线 + 等宽行 hover 提亮 */
+html[data-theme="a"] .container-log {
+    border-left: 3px solid;
+    border-image: linear-gradient(180deg, var(--accent), var(--accent-2)) 1;
+}
+
+/* 任务行 hover 微亮 */
+html[data-theme="a"] .task-row { transition: background .15s ease; border-radius: 6px; padding-left: .5rem; padding-right: .5rem; }
+html[data-theme="a"] .task-row:hover { background: var(--accent-soft); }
+
+/* 切换主题/模式时整体柔和过渡 */
+html[data-theme="a"] .card,
+html[data-theme="a"] .gui-header,
+html[data-theme="a"] .gui-aside,
+html[data-theme="a"] .gui-menu {
+    transition-property: transform, box-shadow, border-color, background;
+    transition-duration: .2s;
+}
+
+/* 尊重系统减弱动效设置 */
+@media (prefers-reduced-motion: reduce) {
+    html[data-theme="a"] * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* 标签 chip */
+.chip {
+    display: inline-block;
+    font-size: .72rem;
+    padding: .1rem .55rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+    <span class="label">样式版本：</span>
+    <button data-set-theme="a" class="active">A+ · 精致现代</button>
+    <button data-set-theme="b">B · 深色游戏</button>
+    <button data-set-theme="c">C · 柔和卡片</button>
+    <span class="sep"></span>
+    <span class="label">模式：</span>
+    <button data-set-mode="light" class="active">浅色</button>
+    <button data-set-mode="dark">深色</button>
+</div>
+
+<div class="gui">
+    <!-- 顶栏 -->
+    <div class="gui-header">
+        <div class="logo">N</div>
+        <div class="title">NKAS</div>
+        <div class="status"><span class="status-dot"></span>运行中</div>
+    </div>
+
+    <div class="gui-body">
+        <!-- 侧边图标栏 -->
+        <div class="gui-aside">
+            <button class="btn-aside btn-aside-active"><span class="ico">▤</span>总览</button>
+            <button class="btn-aside"><span class="ico">⚙</span>设置</button>
+            <button class="btn-aside"><span class="ico">⛨</span>守护</button>
+            <button class="btn-aside"><span class="ico">⇪</span>更新</button>
+        </div>
+
+        <!-- 菜单 -->
+        <div class="gui-menu">
+            <button class="btn-menu btn-menu-active">总览</button>
+            <button class="btn-menu">每日任务</button>
+            <button class="btn-menu">奖励领取</button>
+            <button class="btn-menu">拦截战</button>
+            <button class="btn-menu">模拟室</button>
+            <button class="btn-menu">竞技场</button>
+            <button class="btn-menu">商店</button>
+        </div>
+
+        <!-- 内容区 -->
+        <div class="gui-content">
+
+            <div class="overview-grid">
+                <div class="card">
+                    <h3>运行中</h3>
+                    <div class="task-row"><span>每日任务</span><span class="task-time">12:30</span></div>
+                    <div class="task-row"><span>拦截战</span><span class="task-time">排队</span></div>
+                </div>
+                <div class="card">
+                    <h3>等待队列</h3>
+                    <div class="task-row"><span>模拟室</span><span class="task-time">13:00</span></div>
+                    <div class="task-row"><span>竞技场</span><span class="task-time">14:00</span></div>
+                </div>
+                <div class="card">
+                    <h3>调度器</h3>
+                    <div class="task-row"><span>下次运行</span><span class="chip">04:00</span></div>
+                    <div class="task-row"><span>状态</span><span class="task-time">空闲</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>每日任务设置</h3>
+                <p class="hint">任务开关与参数配置示例</p>
+                <div class="task-row"><span>收获</span><button class="btn-on">开启</button></div>
+                <div class="task-row"><span>咨询</span><button class="btn-on">开启</button></div>
+                <div class="task-row"><span>商店购买</span><button class="btn-off">关闭</button></div>
+                <div class="form-row">
+                    <div class="arg-title">执行时间<div class="arg-help">每日任务的执行时间（24 小时制）</div></div>
+                    <input class="form-control" value="04:00">
+                </div>
+                <div class="form-row">
+                    <div class="arg-title">服务器<div class="arg-help">选择游戏服务器</div></div>
+                    <select class="form-control"><option>国际服</option><option>台服</option></select>
+                </div>
+                <div class="form-row">
+                    <div class="arg-title">通知 Webhook<div class="arg-help">留空则不发送通知</div></div>
+                    <input class="form-control" placeholder="https://example.com/webhook">
+                </div>
+                <div class="form-row">
+                    <div class="arg-title">设备序列号<div class="arg-help">只读，自动检测</div></div>
+                    <input class="form-control" value="127.0.0.1:5555" readonly>
+                </div>
+                <div class="check-row"><input type="checkbox" checked> 完成后发送通知</div>
+                <div class="check-row"><input type="checkbox"> 任务失败时自动重试</div>
+            </div>
+
+            <div class="card">
+                <h3>运行日志</h3>
+                <div class="container-log"><span class="log-info">[INFO]</span> 2026-07-18 12:30:01 | 任务开始: 每日任务
+<span class="log-info">[INFO]</span> 2026-07-18 12:30:03 | 进入页面: page_main
+<span class="log-warn">[WARN]</span> 2026-07-18 12:30:15 | 未检测到按钮 REWARD_RECEIVE，重试 1/3
+<span class="log-err">[ERROR]</span> 2026-07-18 12:31:02 | 截图超时，已自动恢复
+<span class="log-info">[INFO]</span> 2026-07-18 12:31:10 | 任务完成: 每日任务 (耗时 69s)</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function bind(attr, apply) {
+    document.querySelectorAll('[' + attr + ']').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            apply(btn.getAttribute(attr));
+            document.querySelectorAll('[' + attr + ']').forEach(function (b) {
+                b.classList.toggle('active', b === btn);
+            });
+        });
+    });
+}
+bind('data-set-theme', function (v) { document.documentElement.setAttribute('data-theme', v); });
+bind('data-set-mode', function (v) { document.documentElement.setAttribute('data-mode', v); });
+</script>
+</body>
+</html>
