@@ -14,7 +14,6 @@ from module.tribe_tower.assets import NEXT_STAGE
 from module.ui.assets import (
     FIGHT_CLOSE,
     FIGHT_QUICKLY_CHECK,
-    FIGHT_QUICKLY_DISABLE,
     FIGHT_QUICKLY_FIGHT,
     FIGHT_QUICKLY_MAX,
     FIGHT_QUICKLY_MIN,
@@ -23,6 +22,15 @@ from module.ui.assets import (
 
 
 class EventStory(EventBase):
+    def STORY_PART_CHECK(self, story):
+        stages = {
+            'story_1_normal': self.event_assets.STORY_1_NORMAL,
+            'story_1_hard': self.event_assets.STORY_1_HARD,
+            'story_2_normal': self.event_assets.STORY_2_NORMAL,
+            'story_2_hard': self.event_assets.STORY_2_HARD,
+        }
+        return stages[story]
+
     def STORY_STAGE_11(self, story):
         stages = {
             'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_11,
@@ -99,6 +107,12 @@ class EventStory(EventBase):
             f'{finder["horizontal_direction"]}'
         )
         for index, (base_x, base_y) in enumerate(points, start=1):
+            if not (
+                self.appear(self.STORY_PART_CHECK(open_story), threshold=10)
+                and self.appear(self.STORY_PART_CHECK(open_story), offset=30)
+            ):
+                logger.warning('Not in story list page, retry')
+                return 'retry'
             point = base_x + shift_x, base_y + shift_y
             if not 0 <= point[0] < width or not 0 <= point[1] < height:
                 logger.warning(f'Grid pending point {index} out of screen after shift: {point}')
@@ -480,18 +494,24 @@ class EventStory(EventBase):
                 logger.info('Grid pending finder enabled, start pushing loop')
             else:
                 logger.info('Pending stage found, start pushing loop')
+            grid_retry_timer = Timer(5)
             # 判断有票和组队状态
-            found = False
             while 1:
                 self.device.screenshot()
 
                 # 打开关卡
                 if grid_mode:
-                    if not found and not self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30):
+                    if (
+                        grid_retry_timer.reached()
+                        and self.appear(self.STORY_PART_CHECK(open_story), threshold=10)
+                        and self.appear(self.STORY_PART_CHECK(open_story), offset=30)
+                    ):
                         result = self.find_pending_stage_by_grid(open_story)
                         if result == 'found':
                             logger.info(f'Grid pending finder {result}')
-                            found = True
+                            continue
+                        if result == 'retry':
+                            grid_retry_timer.reset()
                             continue
                 else:
                     was_clicked = False
