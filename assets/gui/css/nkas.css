@@ -49,7 +49,47 @@ details[open] > div {
 
 summary {
     background-color: transparent !important;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--nkas-text);
+    list-style: none;
+    position: relative;
+    padding: .3rem .5rem .3rem 1.35rem;
+    border-radius: var(--nkas-radius-sm);
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s ease, color .15s ease;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+summary::marker {
+    content: "";
+}
+
+summary:hover {
+    background: var(--nkas-accent-soft);
+    color: var(--nkas-accent);
+}
+
+summary::before {
+    content: "";
+    position: absolute;
+    left: .35rem;
+    top: 50%;
+    width: .7rem;
+    height: .7rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394a3b8%27 stroke-width=%273%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m9 6 6 6-6 6%27/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    transform: translateY(-50%);
+    transition: transform .18s ease;
+}
+
+details[open] > summary::before {
+    transform: translateY(-50%) rotate(90deg);
 }
 
 body {
@@ -121,6 +161,11 @@ footer {
 /* ---------- Toggle buttons ---------- */
 .btn-off,
 .btn-on {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.25;
+    padding: .35rem .95rem;
     border-radius: 999px;
     margin: 0;
     transition: transform .15s ease, box-shadow .15s ease, filter .15s ease,
@@ -363,15 +408,17 @@ select {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
+    background-color: var(--nkas-card-bg);
+    color: var(--nkas-text);
     background-attachment: scroll;
     background-position: right .65rem center;
     background-repeat: no-repeat;
-    background-size: .8rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394a3b8%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
+    background-size: .85rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2366b8ea%27 stroke-width=%273%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
 }
 
 select.form-control {
-    padding-right: 2rem;
+    padding-right: 2.1rem;
     cursor: pointer;
 }
 
@@ -383,6 +430,12 @@ select.form-control.is-invalid {
 select option {
     background-color: var(--nkas-card-bg);
     color: var(--nkas-text);
+    padding: .45rem .6rem;
+}
+
+select option:checked {
+    background-color: var(--nkas-accent);
+    color: #ffffff;
 }
 
 button.btn.dropdown-toggle {
@@ -789,7 +842,7 @@ pre.rich-traceback-code {
     transition: background .15s ease;
 }
 
-[id^="pywebio-scope-arg_container-"]:hover {
+[id^="pywebio-scope-arg_container-"]:not([id^="pywebio-scope-arg_container-interception-chart-"]):not([id^="pywebio-scope-arg_container-item-table-"]):hover {
     background: var(--nkas-accent-soft);
 }
 
@@ -1513,17 +1566,31 @@ hr {
     padding: .25rem 1rem;
 }
 
-#pywebio-scope-config_table .table {
+#pywebio-scope-config_table table {
     background-color: transparent;
     box-shadow: none;
     margin-bottom: .5rem;
+    width: 100%;
 }
 
-#pywebio-scope-config_table .table tbody tr {
+#pywebio-scope-config_table table td,
+#pywebio-scope-config_table table th {
+    vertical-align: middle;
+    padding: .5rem .75rem;
+}
+
+#pywebio-scope-config_table table th:last-child,
+#pywebio-scope-config_table table td:last-child {
+    width: 1%;
+    white-space: nowrap;
+    text-align: center;
+}
+
+#pywebio-scope-config_table table tbody tr {
     transition: background .15s ease;
 }
 
-#pywebio-scope-config_table .table tbody tr:hover {
+#pywebio-scope-config_table table tbody tr:hover {
     background: var(--nkas-accent-soft);
 }
 
@@ -1793,4 +1860,156 @@ hr {
     .commit-meta {
         width: 100%;
     }
+}
+
+/* ---------- CodeMirror (path textareas, e.g. game path) ---------- */
+.CodeMirror {
+    background-color: var(--nkas-card-bg);
+    color: var(--nkas-text);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius-sm);
+    font-size: .9rem;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.CodeMirror:hover {
+    border-color: var(--nkas-accent);
+}
+
+.CodeMirror-focused {
+    border-color: var(--nkas-accent);
+    box-shadow: 0 0 0 3px var(--nkas-accent-soft);
+}
+
+.CodeMirror-gutters {
+    background-color: var(--nkas-card-bg);
+    border-right: 1px solid var(--nkas-border);
+}
+
+.CodeMirror-linenumber {
+    color: var(--nkas-text-secondary);
+}
+
+.CodeMirror-cursor {
+    border-left: 1px solid var(--nkas-text);
+}
+
+.CodeMirror-selected,
+.CodeMirror-focused .CodeMirror-selected {
+    background: var(--nkas-accent-soft);
+}
+
+.CodeMirror pre.CodeMirror-line,
+.CodeMirror pre.CodeMirror-line-like {
+    color: var(--nkas-text);
+    padding-left: .6rem;
+}
+
+.CodeMirror .CodeMirror-activeline-background,
+.CodeMirror .CodeMirror-focused .CodeMirror-activeline-background {
+    background: var(--nkas-accent-soft);
+}
+
+/* ---------- Input cards (import form at page bottom) ---------- */
+#input-cards .card {
+    background: var(--nkas-card-bg);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius);
+    box-shadow: var(--nkas-shadow);
+    color: var(--nkas-text);
+    overflow: hidden;
+}
+
+#input-cards .card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--nkas-border);
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--nkas-text);
+    padding: .8rem 1.1rem;
+}
+
+#input-cards .card-body {
+    padding: 1rem 1.1rem;
+}
+
+#input-cards .custom-file-label {
+    background-color: var(--nkas-card-bg);
+    color: var(--nkas-text-secondary);
+    border: 1px solid var(--nkas-border);
+    border-radius: var(--nkas-radius-sm);
+    height: auto;
+    margin-top: .125rem;
+    padding: .45rem .7rem;
+    line-height: 1.4;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+#input-cards .custom-file-label::after {
+    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
+    color: var(--nkas-accent-text);
+    border-left: 0;
+    border-radius: 0 calc(var(--nkas-radius-sm) - 1px) calc(var(--nkas-radius-sm) - 1px) 0;
+    height: auto;
+    padding: .45rem .8rem;
+    line-height: 1.4;
+}
+
+#input-cards .custom-file-input:hover ~ .custom-file-label {
+    border-color: var(--nkas-accent);
+}
+
+#input-cards .custom-file-input:focus ~ .custom-file-label {
+    border-color: var(--nkas-accent);
+    box-shadow: 0 0 0 3px var(--nkas-accent-soft);
+}
+
+#input-cards .form-text.text-muted {
+    color: var(--nkas-text-secondary);
+}
+
+#input-cards .ws-form-submit-btns {
+    margin-top: .5rem;
+}
+
+#input-cards .ws-form-submit-btns .btn-warning,
+#input-cards .ws-form-submit-btns .btn-warning:not(:disabled):not(.disabled):active {
+    background-color: var(--nkas-btn-off-bg);
+    border: 1px solid var(--nkas-btn-off-border);
+    color: var(--nkas-btn-off-text);
+}
+
+#input-cards .ws-form-submit-btns .btn-warning:hover,
+#input-cards .ws-form-submit-btns .btn-warning:focus {
+    background-color: var(--nkas-btn-off-bg);
+    border-color: var(--nkas-accent);
+    color: var(--nkas-accent);
+}
+
+/* ---------- Import form as centered overlay dialog ---------- */
+#input-cards:not(:empty) {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1056;
+    width: min(560px, 92vw);
+    max-width: 560px;
+    padding: 0;
+    margin: 0;
+}
+
+#input-cards:not(:empty) .card {
+    animation: nkas-pop .18s ease-out;
+}
+
+#input-container:has(.card) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1055;
+    background: rgba(15, 23, 42, .45);
+    overflow-y: auto;
 }

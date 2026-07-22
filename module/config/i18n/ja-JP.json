@@ -1381,7 +1381,7 @@
       "FileExist": "同名の構成ファイルが存在します。新しい名前を入力してください",
       "InvalidChar": "構成ファイル名には、次の文字を含めることはできません：.\\/:*?\"<>|",
       "InvalidPrefixTemplate": "構成ファイル名は 'template' で始めることはできません",
-      "Manage": "管理"
+      "Manage": "多重起動"
     },
     "AppManage": {
       "PageTitle": "構成ファイルを管理",
@@ -1396,6 +1396,10 @@
       "Import": "インポート",
       "Export": "エクスポート",
       "Delete": "削除",
+      "DeleteConfirm": "削除を確認",
+      "DeleteCancel": "キャンセル",
+      "DeleteSuccess": "削除しました",
+      "DeleteRunning": "実行中のインスタンスは削除できません",
       "OverrideWarning": "既存の構成ファイルが上書きされます",
       "ImportSuccess": "インポート成功",
       "NewSuccess": "追加成功",
