@@ -144,9 +144,15 @@ class Interception(UI):
             self.device.screenshot()
 
             # 切换队伍
-            if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30)) and self.appear_then_click(
-                self.teams[teamindex], threshold=30, interval=1
+            if self.appear(ABNORMAL_INTERCEPTION_CHECK, offset=(10, 30)) and self.appear(
+                self.teams[teamindex], threshold=30
             ):
+                while 1:
+                    self.device.screenshot()
+                    if not self.appear(self.teams[teamindex], threshold=30):
+                        break
+                    if self.appear_then_click(self.teams[teamindex], threshold=30, interval=1):
+                        continue
                 continue
 
             # 达到目标等级才快速战斗
@@ -171,7 +177,7 @@ class Interception(UI):
                 logger.warning(f'Quick battle only: {self.config.Interception_QuickBattleOnly}, skip battle')
                 return
 
-            if  self.appear_then_click(BATTLE, threshold=25, interval=1):
+            if self.appear_then_click(BATTLE, threshold=25, interval=1):
                 end_fighting = False
                 continue
 
@@ -454,10 +460,7 @@ class Interception(UI):
             screenshot_path=screenshot_path,
         )
         if ok:
-            logger.info(
-                f'InterceptionStats: record saved, boss={boss}, '
-                f'stone_count={stone_count}, csv={csv_path}'
-            )
+            logger.info(f'InterceptionStats: record saved, boss={boss}, stone_count={stone_count}, csv={csv_path}')
 
     def run(self):
         self.ui_ensure(page_interception)
