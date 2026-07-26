@@ -156,7 +156,7 @@ class GeneratedConfig:
     BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
 
     # Group `EventInfo`
-    EventInfo_Event = ''  # event_20260702, event_20260611
+    EventInfo_Event = ''  # event_20260723, event_20260702
     EventInfo_StoryPart = 'Story_1'  # Story_1, Story_2
     EventInfo_StoryDifficulty = 'Normal'  # Normal, Hard
 

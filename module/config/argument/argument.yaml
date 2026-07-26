@@ -242,8 +242,8 @@ EventInfo:
   Event:
     value: ''
     option: [
-      'event_20260702',
-      'event_20260611'
+      'event_20260723',
+      'event_20260702'
     ]
     display: disabled
   StoryPart:

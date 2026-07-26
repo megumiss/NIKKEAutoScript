@@ -7,7 +7,7 @@ from module.coop.assets import *
 from module.logger import logger
 from module.ocr.ocr import Digit, Ocr
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
-from module.ui.assets import BREAKING_NEWS_CHECK
+from module.ui.assets import BREAKING_NEWS_CHECK, MAIN_CHECK
 from module.ui.page import page_breaking_news, page_main
 from module.ui.ui import UI
 
@@ -132,6 +132,7 @@ class Coop(UI):
         else:
             logger.info('There are no free opportunities')
 
+    @deprecated('Enter from icon instead')
     def ensure_into_coop_from_event(self, skip_first_screenshot=True):
         """普通协同，从活动列表进入作战"""
         logger.hr('COOP START')
@@ -153,6 +154,30 @@ class Coop(UI):
             # 滑动活动列表
             if self.appear(BREAKING_NEWS_CHECK, offset=10):
                 self.ensure_sroll((360, 1000), (360, 500), method='scroll', speed=30, count=1, delay=0.5)
+
+        if self.free_opportunity_remain and not self.dateline:
+            self.start_coop()
+        else:
+            logger.info('There are no free opportunities')
+
+    def ensure_into_coop_from_icon(self, skip_first_screenshot=True):
+        """进入协同作战"""
+        logger.hr('COOP START')
+        confirm_timer = Timer(15, count=10).start()
+
+        while 1:
+            if skip_first_screenshot:
+                skip_first_screenshot = False
+            else:
+                self.device.screenshot()
+
+            if self.appear(MAIN_CHECK, offset=10) and self.appear_then_click(COOP, offset=10, interval=3, static=False):
+                logger.info('Enter Coop')
+                break
+
+            if confirm_timer.reached():
+                logger.error('Coop not found')
+                raise CoopIsUnavailable
 
         if self.free_opportunity_remain and not self.dateline:
             self.start_coop()
@@ -258,10 +283,10 @@ class Coop(UI):
         try:
             self.ui_ensure(page_main)
             # 等待右下角loading消失
-            self.ui_ensure(page_breaking_news)
+            # self.ui_ensure(page_breaking_news)
             self.ui_wait_loading()
 
-            self.ensure_into_coop_from_event()
+            self.ensure_into_coop_from_icon()
         except CoopIsUnavailable:
             pass
         except NoOpportunityRemain:

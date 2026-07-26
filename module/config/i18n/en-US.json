@@ -699,7 +699,7 @@
     },
     "Priority": {
       "name": "Priority",
-      "help": "NIKKE priority. If selected collectibles exceed 160, the current will be removed and next chosen. Format example: Helm > Exia.\nNIKKE name mappings:\nDiesel: Diesel\nExia: Exia\nLaplace: Laplace\nFrima: Frima\nViper: Viper\nHelm: Helm\nMiranda: Miranda\nDrake: Drake\nMilk: Milk\nPoli: Poli\nJulia: Julia\nBay: Bay\nTove: Tove\nPrivaty：Privaty\nMoran：Moran\nZwei：Zwei\nCenti：Centi"
+      "help": "NIKKE priority. If selected collectibles exceed 160, the current will be removed and next chosen. Format example: Helm > Exia.\nNIKKE name mappings:\nDiesel: Diesel\nExia: Exia\nLaplace: Laplace\nFrima: Frima\nViper: Viper\nHelm: Helm\nMiranda: Miranda\nDrake: Drake\nMilk: Milk\nPoli: Poli\nJulia: Julia\nBay: Bay\nTove: Tove\nPrivaty：Privaty\nMoran：Moran\nZwei：Zwei\nCenti：Centi\nPhantom：Phantom\nSugar：Sugar\nRosanna：Rosanna\nFlora：Flora"
     }
   },
   "RookieArena": {
@@ -853,8 +853,8 @@
     "Event": {
       "name": "Current Event",
       "help": "",
-      "event_20260702": "WAVE TO YOU",
-      "event_20260611": "ARK RANGER"
+      "event_20260723": "PROJECT MATIS",
+      "event_20260702": "WAVE TO YOU"
     },
     "StoryPart": {
       "name": "Story Part",

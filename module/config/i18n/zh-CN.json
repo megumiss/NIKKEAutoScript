@@ -699,7 +699,7 @@
     },
     "Priority": {
       "name": "优先级",
-      "help": "妮姬优先级，当前派遣选择的收藏品数量大于160时会从列表中自动移除并选择下一个，格式例如：Helm > Exia；\n妮姬名称对应：\nDiesel：迪赛尔\nExia：艾可希雅\nLaplace：拉普拉斯\nFrima：普琳玛\nViper：毒蛇\nHelm：海伦\nMiranda：米兰达\nDrake：德雷克\nMilk：米尔克\nPoli：波莉\nJulia：尤莉亚\nBay：贝伊\nTove：托比\nPrivaty：普丽瓦蒂\nMoran：牡丹\nZwei：茨瓦伊\nCenti：桑迪"
+      "help": "妮姬优先级，当前派遣选择的收藏品数量大于160时会从列表中自动移除并选择下一个，格式例如：Helm > Exia；\n妮姬名称对应：\nDiesel：迪赛尔\nExia：艾可希雅\nLaplace：拉普拉斯\nFrima：普琳玛\nViper：毒蛇\nHelm：海伦\nMiranda：米兰达\nDrake：德雷克\nMilk：米尔克\nPoli：波莉\nJulia：尤莉亚\nBay：贝伊\nTove：托比\nPrivaty：普丽瓦蒂\nMoran：牡丹\nZwei：茨瓦伊\nCenti：桑迪\nPhantom：潘托姆\nSugar：舒格\nRosanna：罗珊娜\nFlora：芙罗拉"
     }
   },
   "RookieArena": {
@@ -853,8 +853,8 @@
     "Event": {
       "name": "当前活动",
       "help": "",
-      "event_20260702": "WAVE TO YOU",
-      "event_20260611": "ARK RANGER"
+      "event_20260723": "PROJECT MATIS",
+      "event_20260702": "WAVE TO YOU"
     },
     "StoryPart": {
       "name": "活动章节",
