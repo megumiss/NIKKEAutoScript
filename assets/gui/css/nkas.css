@@ -243,6 +243,8 @@ footer {
 
 #input-container {
     margin-bottom: 0;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
 #output-container {
@@ -439,7 +441,7 @@ select option:checked {
 }
 
 button.btn.dropdown-toggle {
-    display: none;
+    display: none !important;
 }
 
 .bootstrap-select > select {
@@ -1441,36 +1443,193 @@ hr {
     filter: brightness(1.07);
 }
 
-/* ---------- Modal popups ---------- */
+/* ---------- Unified button geometry ---------- */
+.btn:not(.btn-menu):not(.btn-aside):not(.btn-on):not(.btn-off):not(.btn-navigator) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.btn:not(.btn-menu):not(.btn-aside):not(.btn-on):not(.btn-off):not(.btn-navigator):focus {
+    box-shadow: 0 0 0 3px var(--nkas-accent-soft);
+}
+
+.btn:not(.btn-menu):not(.btn-aside):not(.btn-on):not(.btn-off):not(.btn-navigator):not(:disabled):not(.disabled):hover {
+    transform: translateY(-1px);
+}
+
+.btn:not(.btn-menu):not(.btn-aside):not(.btn-on):not(.btn-off):not(.btn-navigator):not(:disabled):not(.disabled):active {
+    transform: translateY(0);
+}
+
+.btn:disabled,
+.btn.disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.btn-sm,
+.btn-group-sm > .btn {
+    padding: .25rem .6rem;
+    font-size: .8rem;
+    line-height: 1.4;
+}
+
+/* Button groups: detached pills instead of joined bar */
+.btn-group {
+    gap: .35rem;
+}
+
+.btn-group > .btn:not(:first-child) {
+    margin-left: 0;
+}
+
+.btn-group > .btn:not(:first-child),
+.btn-group > .btn:not(:last-child) {
+    border-radius: var(--nkas-radius-sm);
+}
+
+/* Theme switch buttons on home page */
+.btn-dark,
+.btn-dark:focus,
+.btn-dark:not(:disabled):not(.disabled):active {
+    background-color: #334155;
+    border-color: transparent;
+    color: #ffffff;
+}
+
+.btn-dark:hover,
+.btn-dark:not(:disabled):not(.disabled):active:hover {
+    background-color: #334155;
+    border-color: transparent;
+    color: #ffffff;
+    filter: brightness(1.15);
+}
+
+.btn-light,
+.btn-light:focus,
+.btn-light:not(:disabled):not(.disabled):active {
+    background-color: var(--nkas-btn-off-bg);
+    border-color: var(--nkas-btn-off-border);
+    color: var(--nkas-btn-off-text);
+}
+
+.btn-light:hover,
+.btn-light:not(:disabled):not(.disabled):active:hover {
+    background-color: var(--nkas-btn-off-bg);
+    border-color: var(--nkas-accent);
+    color: var(--nkas-accent);
+}
+
+/* ---------- Modal popups (unified dialog style) ---------- */
 .modal-content {
     background-color: var(--nkas-card-bg);
     color: var(--nkas-text);
     border: 1px solid var(--nkas-border);
     border-radius: var(--nkas-radius);
-    box-shadow: var(--nkas-shadow-hover);
+    box-shadow: 0 12px 40px rgba(15, 23, 42, .28);
+    overflow: hidden;
+}
+
+.modal .modal-dialog {
+    top: 50%;
+    margin: 0 auto;
+    transform: translateY(-50%);
+}
+
+.modal.fade .modal-dialog {
+    transform: translateY(-50%);
+    transition: none;
+}
+
+.modal.show .modal-dialog {
+    animation: nkas-modal-pop .18s ease-out;
+}
+
+@keyframes nkas-modal-pop {
+    from {
+        opacity: 0;
+        transform: translateY(-48%) scale(.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+}
+
+.modal-backdrop.show {
+    opacity: .45;
 }
 
 .modal-header {
-    border-bottom-color: var(--nkas-border);
-}
-
-.modal-footer {
-    border-top-color: var(--nkas-border);
+    align-items: center;
+    padding: .9rem 1.25rem;
+    border-bottom: 1px solid var(--nkas-border);
 }
 
 .modal-title {
     color: var(--nkas-text);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.4;
 }
 
 .modal .close {
-    color: var(--nkas-text);
+    color: var(--nkas-text-secondary);
     text-shadow: none;
-    opacity: .6;
+    opacity: 1;
+    font-size: 1.4rem;
+    font-weight: 400;
+    line-height: 1;
+    padding: .25rem .5rem;
+    margin: -.25rem -.5rem -.25rem auto;
+    border-radius: var(--nkas-radius-sm);
+    transition: color .15s ease, background .15s ease;
 }
 
-.modal .close:hover {
+.modal .close:hover,
+.modal .close:focus {
     color: var(--nkas-accent);
+    background: var(--nkas-accent-soft);
     opacity: 1;
+}
+
+.modal-body {
+    padding: 1.25rem;
+    max-height: 72vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: .75rem 1.25rem;
+    border-top: 1px solid var(--nkas-border);
+}
+
+.modal-body .form-group {
+    margin-bottom: 1rem;
+}
+
+.modal-body .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Dialog action buttons row: scope ids ending with _actions */
+[id^="pywebio-scope-"][id$="_actions"] {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: .5rem;
+    margin-top: 1.25rem;
+}
+
+.import-dialog-desc {
+    color: var(--nkas-text-secondary);
+    font-size: .85rem;
+    line-height: 1.5;
+    margin-bottom: .75rem;
 }
 
 /* ---------- Tables ---------- */
@@ -1524,11 +1683,41 @@ hr {
     color: var(--nkas-text);
 }
 
-/* ---------- Toast ---------- */
+/* ---------- Toast (unified card style with type accent) ---------- */
 .toastify {
+    background: var(--nkas-card-bg) !important;
+    color: var(--nkas-text);
+    border: 1px solid var(--nkas-border);
+    border-left: 3px solid var(--nkas-accent);
     border-radius: var(--nkas-radius-sm);
     box-shadow: var(--nkas-shadow-hover);
-    background: linear-gradient(135deg, var(--nkas-accent), var(--nkas-accent-2));
+    font-size: .9rem;
+    font-weight: 500;
+    padding: .75rem 1.1rem;
+}
+
+.toastify[style*="rgb(46, 125, 50)"] {
+    border-left-color: #1fae7a;
+}
+
+.toastify[style*="rgb(229, 57, 53)"] {
+    border-left-color: #e0505c;
+}
+
+.toastify[style*="rgb(239, 108, 0)"] {
+    border-left-color: #d99413;
+}
+
+.toastify .toast-close {
+    color: var(--nkas-text-secondary);
+    opacity: 1;
+    font-weight: 400;
+    padding-left: .6rem;
+    transition: color .15s ease;
+}
+
+.toastify .toast-close:hover {
+    color: var(--nkas-accent);
 }
 
 /* ---------- Manage page (?app=manage) ---------- */
@@ -1555,7 +1744,9 @@ hr {
 #pywebio-scope-manage_actions {
     display: flex;
     gap: .5rem;
+    margin-top: 0;
     margin-bottom: 1rem;
+    justify-content: flex-start;
 }
 
 #pywebio-scope-config_table {
@@ -1594,35 +1785,7 @@ hr {
     background: var(--nkas-accent-soft);
 }
 
-/* ---------- Startup notice popup ---------- */
-.startup-notice-modal .modal-dialog {
-    max-width: 600px;
-}
-
-.startup-notice-modal .modal-content {
-    background: var(--nkas-card-bg);
-    border: 1px solid var(--nkas-border);
-    border-radius: var(--nkas-radius);
-    box-shadow: var(--nkas-shadow-hover);
-    overflow: hidden;
-}
-
-.startup-notice-modal .modal-header {
-    padding: 18px 24px 16px;
-    border-bottom: 1px solid var(--nkas-border);
-}
-
-.startup-notice-modal .modal-title {
-    color: var(--nkas-text);
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.3;
-}
-
-.startup-notice-modal .modal-body {
-    padding: 22px 24px 24px;
-}
-
+/* ---------- Startup notice popup (content layout only, chrome is unified) ---------- */
 .startup-notice-body {
     display: flex;
     gap: 14px;
@@ -1657,8 +1820,8 @@ hr {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 22px;
-    padding-top: 16px;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
     border-top: 1px solid var(--nkas-border);
 }
 
@@ -1670,20 +1833,6 @@ hr {
     font-size: 14px;
     margin: 0;
     cursor: pointer;
-}
-
-/* ---------- Import dialog ---------- */
-.import-dialog-desc {
-    color: var(--nkas-text-secondary);
-    font-size: .85rem;
-    margin-bottom: .6rem;
-}
-
-#pywebio-scope-import_dialog_actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: .5rem;
-    margin-top: 1rem;
 }
 
 /* ---------- Updater page ---------- */
@@ -1969,7 +2118,14 @@ hr {
 }
 
 #input-cards .ws-form-submit-btns {
-    margin-top: .5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
+#input-cards .ws-form-submit-btns .btn {
+    margin-left: 0;
 }
 
 #input-cards .ws-form-submit-btns .btn-warning,
@@ -1989,27 +2145,39 @@ hr {
 /* ---------- Import form as centered overlay dialog ---------- */
 #input-cards:not(:empty) {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 1056;
-    width: min(560px, 92vw);
-    max-width: 560px;
+    width: min(500px, 92vw);
+    height: fit-content;
     padding: 0;
-    margin: 0;
+    margin: auto;
 }
 
 #input-cards:not(:empty) .card {
     animation: nkas-pop .18s ease-out;
 }
 
-#input-container:has(.card) {
+#input-cards:not(:empty)::before {
+    content: "";
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 1055;
+    z-index: -1;
     background: rgba(15, 23, 42, .45);
-    overflow-y: auto;
+}
+
+@keyframes nkas-pop {
+    from {
+        opacity: 0;
+        transform: scale(.96) translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }

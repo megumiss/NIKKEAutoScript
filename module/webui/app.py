@@ -1451,16 +1451,17 @@ class NKASGUI(Frame):
                     value=origin or "template-nkas",
                     scope=s,
                 )
+                put_scope("add_nkas_actions", scope=s)
                 put_buttons(
                     buttons=[
-                        {"label": t("Gui.AddNKAS.Confirm"), "value": "confirm", "color": "primary"},
                         {"label": t("Gui.AppManage.DeleteCancel"), "value": "cancel", "color": "secondary"},
+                        {"label": t("Gui.AddNKAS.Confirm"), "value": "confirm", "color": "primary"},
                     ],
                     onclick=[
-                        add,
                         close_popup,
+                        add,
                     ],
-                    scope=s,
+                    scope="add_nkas_actions",
                 )
 
             put()
@@ -1553,7 +1554,6 @@ class NKASGUI(Frame):
                         _cancel_delete,
                     ],
                     group=True,
-                    small=True,
                 )
             return put_buttons(
                 buttons=[
@@ -1565,7 +1565,6 @@ class NKASGUI(Frame):
                     partial(_ask_delete, name),
                 ],
                 group=True,
-                small=True,
             )
 
         def _show_table():
@@ -1936,11 +1935,6 @@ class NKASGUI(Frame):
                 '<span>本次不再提示</span>'
                 '</label>'
             )
-            button_style = (
-                'min-width: 88px; padding: 6px 16px; border-radius: var(--nkas-radius-sm); '
-                'font-weight: 600; box-shadow: none;'
-            )
-
             def _close_startup_notice():
                 checked = False
                 try:
@@ -1981,8 +1975,7 @@ class NKASGUI(Frame):
                         'startup_notice_footer',
                         [
                             put_html(checkbox_html),
-                            put_button('我知道了', onclick=_close_startup_notice, color='primary')
-                            .style(button_style),
+                            put_button('我知道了', onclick=_close_startup_notice, color='primary'),
                         ],
                     ),
                 ],
@@ -2158,7 +2151,6 @@ def app_manage():
                     _cancel_delete,
                 ],
                 group=True,
-                small=True,
             )
         return put_buttons(
             buttons=[
@@ -2170,7 +2162,6 @@ def app_manage():
                 partial(_ask_delete, name),
             ],
             group=True,
-            small=True,
         )
 
     def _show_table():
