@@ -1381,7 +1381,7 @@
       "FileExist": "A config with the same name exists. Please enter a different name",
       "InvalidChar": "Config name cannot contain any of the following characters: .\\\\/:*?\"<>|",
       "InvalidPrefixTemplate": "Config name cannot start with 'template'",
-      "Manage": "Manage"
+      "Manage": "Instances"
     },
     "AppManage": {
       "PageTitle": "Manage Configs",
@@ -1396,6 +1396,10 @@
       "Import": "Import",
       "Export": "Export",
       "Delete": "Delete",
+      "DeleteConfirm": "Confirm",
+      "DeleteCancel": "Cancel",
+      "DeleteSuccess": "Deleted",
+      "DeleteRunning": "Cannot delete a running instance",
       "OverrideWarning": "This will overwrite the existing config file",
       "ImportSuccess": "Import Successful",
       "NewSuccess": "Added Successfully",

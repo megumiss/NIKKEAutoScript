@@ -1381,7 +1381,7 @@
       "FileExist": "存在同名的配置文件，请重新输入一个",
       "InvalidChar": "配置文件名不能包含下列任何字符：.\\/:*?\"<>|",
       "InvalidPrefixTemplate": "配置文件名不能以 template 开头",
-      "Manage": "管理"
+      "Manage": "多开"
     },
     "AppManage": {
       "PageTitle": "管理配置文件",
@@ -1396,6 +1396,10 @@
       "Import": "导入",
       "Export": "导出",
       "Delete": "删除",
+      "DeleteConfirm": "确认删除",
+      "DeleteCancel": "取消",
+      "DeleteSuccess": "删除成功",
+      "DeleteRunning": "该实例正在运行，无法删除",
       "OverrideWarning": "将会覆盖现有的配置文件",
       "ImportSuccess": "导入成功",
       "NewSuccess": "添加成功",

@@ -302,6 +302,8 @@ class NKASGUI(Frame):
         self.inst_cache = []
         self.load_home = False
         self.af_flag = False
+        # Serialize aside redraws: periodic task and button callbacks race
+        self._aside_lock = threading.RLock()
 
     @staticmethod
     def _is_dynamic_screen_number_arg(task: str, group_name: str, arg_name: str, widget_type: str) -> bool:
@@ -416,28 +418,31 @@ class NKASGUI(Frame):
 
     @use_scope("aside", clear=True)
     def set_aside(self) -> None:
-        # TODO: update put_icon_buttons()
-        put_icon_buttons(
-            Icon.DEVELOP,
-            buttons=[{"label": t("Gui.Aside.Home"), "value": "Home", "color": "aside"}],
-            onclick=[self.ui_develop],
-        )
-        put_scope("aside_instance",[
-            put_scope(f"nkas-instance-{i}",[])
-            for i, _ in enumerate(nkas_instance())
-        ])
-        self.set_aside_status()
-        put_icon_buttons(
-            Icon.SETTING,
-            buttons=[
-                {
-                    "label": t("Gui.AddNKAS.Manage"),
-                    "value": "AddNKAS",
-                    "color": "aside",
-                }
-            ],
-            onclick=[lambda: go_app("manage", new_window=False)],
-        )
+        with self._aside_lock:
+            # TODO: update put_icon_buttons()
+            put_icon_buttons(
+                Icon.DEVELOP,
+                buttons=[{"label": t("Gui.Aside.Home"), "value": "Home", "color": "aside"}],
+                onclick=[self.ui_develop],
+            )
+            put_scope("aside_instance",[
+                put_scope(f"nkas-instance-{i}",[])
+                for i, _ in enumerate(nkas_instance())
+            ])
+            # Scopes above were recreated empty, force a full redraw
+            self.rendered_cache.clear()
+            self.set_aside_status()
+            put_icon_buttons(
+                Icon.SETTING,
+                buttons=[
+                    {
+                        "label": t("Gui.AddNKAS.Manage"),
+                        "value": "AddNKAS",
+                        "color": "aside",
+                    }
+                ],
+                onclick=[self.ui_manage],
+            )
 
         current_date = datetime.now().date()
         if current_date.month == 4 and current_date.day == 1:
@@ -445,7 +450,11 @@ class NKASGUI(Frame):
 
     @use_scope("aside_instance")
     def set_aside_status(self) -> None:
-        flag = True       
+        with self._aside_lock:
+            self._redraw_aside_status()
+
+    def _redraw_aside_status(self) -> None:
+        flag = True
         def update(name, seq):
             with use_scope(f"nkas-instance-{seq}", clear=True):
                 icon_html = Icon.RUN
@@ -458,7 +467,7 @@ class NKASGUI(Frame):
                     onclick=self.ui_nkas,
                 )
             return rendered_state
-        
+
         if not len(self.rendered_cache) or self.load_home:
             # Reload when add/delete new instance | first start app.py | go to HomePage (HomePage load call force reload)
             flag = False
@@ -481,7 +490,7 @@ class NKASGUI(Frame):
             # Redraw lost focus, now focus on aside button
             aside_name = get_localstorage("aside")
             self.active_button("aside", aside_name)
-        
+
         return
 
     @use_scope("header_status")
@@ -1105,46 +1114,67 @@ class NKASGUI(Frame):
         if State.restart_event is None:
             put_warning(t("Gui.Update.DisabledWarn"))
 
-        put_row(
-            content=[put_scope("updater_loading"), None, put_scope("updater_state")],
-            size="auto .25rem 1fr",
+        put_scope(
+            'updater_page',
+            [
+                put_scope(
+                    'updater_status',
+                    [
+                        put_scope('updater_loading'),
+                        put_scope('updater_state'),
+                        put_scope('updater_btn'),
+                    ],
+                ),
+                put_scope('updater_info'),
+                put_scope('updater_detail'),
+            ],
         )
 
-        put_scope("updater_btn")
-        put_scope("updater_info")
-
         def update_table():
-            with use_scope("updater_info", clear=True):
-                local_commit = updater.get_commit(short_sha1=True)
-                upstream_commit = updater.get_commit(
-                    f"origin/{updater.Branch}", short_sha1=True
+            local_commit = updater.get_commit(short_sha1=True)
+            upstream_commit = updater.get_commit(
+                f"origin/{updater.Branch}", short_sha1=True
+            )
+
+            def _version_card(label, commit):
+                sha, author, time_, message = (html.escape(str(x)) for x in commit)
+                return (
+                    '<div class="updater-version-card">'
+                    '<div class="updater-version-head">'
+                    f'<span class="updater-version-label">{html.escape(str(label))}</span>'
+                    f'<span class="updater-version-sha">{sha}</span>'
+                    '</div>'
+                    f'<div class="updater-version-msg">{message}</div>'
+                    f'<div class="updater-version-meta">{author} · {time_}</div>'
+                    '</div>'
                 )
-                put_table(
-                    [
-                        [t("Gui.Update.Local"), *local_commit],
-                        [t("Gui.Update.Upstream"), *upstream_commit],
-                    ],
-                    header=[
-                        "",
-                        "SHA1",
-                        t("Gui.Update.Author"),
-                        t("Gui.Update.Time"),
-                        t("Gui.Update.Message"),
-                    ],
+
+            with use_scope("updater_info", clear=True):
+                put_html(
+                    '<div class="updater-version-grid">'
+                    + _version_card(t("Gui.Update.Local"), local_commit)
+                    + _version_card(t("Gui.Update.Upstream"), upstream_commit)
+                    + '</div>'
                 )
             with use_scope("updater_detail", clear=True):
-                put_text(t("Gui.Update.DetailedHistory"))
                 history = updater.get_commit(
                     f"origin/{updater.Branch}", n=20, short_sha1=True
                 )
-                put_table(
-                    [commit for commit in history],
-                    header=[
-                        "SHA1",
-                        t("Gui.Update.Author"),
-                        t("Gui.Update.Time"),
-                        t("Gui.Update.Message"),
-                    ],
+                rows = ''.join(
+                    '<div class="commit-row">'
+                    f'<span class="commit-sha">{html.escape(str(commit[0]))}</span>'
+                    f'<span class="commit-msg">{html.escape(str(commit[3]))}</span>'
+                    '<span class="commit-meta">'
+                    f'{html.escape(str(commit[1]))} · {html.escape(str(commit[2]))}'
+                    '</span>'
+                    '</div>'
+                    for commit in history
+                )
+                put_html(
+                    '<div class="updater-history">'
+                    f'<div class="updater-history-title">{t("Gui.Update.DetailedHistory")}</div>'
+                    f'{rows}'
+                    '</div>'
                 )
 
         def u(state):
@@ -1421,19 +1451,166 @@ class NKASGUI(Frame):
                     value=origin or "template-nkas",
                     scope=s,
                 )
+                put_scope("add_nkas_actions", scope=s)
                 put_buttons(
                     buttons=[
-                        {"label": t("Gui.AddNKAS.Confirm"), "value": "confirm"},
-                        {"label": t("Gui.AddNKAS.Manage"), "value": "manage"},
+                        {"label": t("Gui.AppManage.DeleteCancel"), "value": "cancel", "color": "secondary"},
+                        {"label": t("Gui.AddNKAS.Confirm"), "value": "confirm", "color": "primary"},
                     ],
                     onclick=[
+                        close_popup,
                         add,
-                        lambda: go_app("manage", new_window=False),
                     ],
-                    scope=s,
+                    scope="add_nkas_actions",
                 )
 
             put()
+
+    def ui_manage(self) -> None:
+        """Multi-instance config management, shown as a popup."""
+
+        def _export(config_name: str):
+            mod_name = get_config_mod(config_name)
+            if mod_name == "nkas":
+                filename = f"{config_name}.json"
+            else:
+                filename = f"{config_name}.{mod_name}.json"
+            with open(filepath_config(config_name, mod_name), "rb") as f:
+                download(filename, f.read())
+
+        def _import():
+            close_popup()
+            resp = input_group(
+                label=t("Gui.AppManage.Import"),
+                inputs=[
+                    file_upload(
+                        placeholder=t("Gui.Text.ChooseFile"),
+                        help_text=t("Gui.AppManage.OverrideWarning"),
+                        accept=".json",
+                        required=False,
+                        max_size="1M",
+                        name="config_file",
+                    )
+                ],
+                cancelable=True,
+            )
+            if resp is not None and resp.get("config_file") is not None:
+                file: bytes = resp["config_file"]["content"]
+                file_name: str = resp["config_file"]["filename"]
+
+                if IS_ON_PHONE_CLOUD:
+                    config_name = mod_name = "nkas"
+                elif len(file_name.split(".")) == 2:
+                    config_name, _ = file_name.split(".")
+                    mod_name = "nkas"
+                else:
+                    config_name, mod_name, _ = file_name.rsplit(".", maxsplit=2)
+
+                config = json.loads(file.decode(encoding="utf-8"))
+                State.config_updater.write_file(config_name, config, mod_name)
+                toast(t("Gui.AppManage.ImportSuccess"), color="success")
+            self.ui_manage()
+
+        def _add():
+            close_popup()
+            self.ui_add_nkas()
+
+        pending_delete = {"name": None}
+
+        def _ask_delete(config_name: str):
+            pending_delete["name"] = config_name
+            _show_table()
+
+        def _cancel_delete():
+            pending_delete["name"] = None
+            _show_table()
+
+        def _delete(config_name: str):
+            if ProcessManager.get_manager(config_name).alive:
+                toast(t("Gui.AppManage.DeleteRunning"), color="error")
+                pending_delete["name"] = None
+                _show_table()
+                return
+            mod_name = get_config_mod(config_name)
+            try:
+                os.remove(filepath_config(config_name, mod_name))
+            except FileNotFoundError:
+                pass
+            pending_delete["name"] = None
+            toast(t("Gui.AppManage.DeleteSuccess"), color="success")
+            self.set_aside()
+            self.active_button("aside", self.nkas_name)
+            _show_table()
+
+        def _row_actions(name: str):
+            if pending_delete["name"] == name:
+                return put_buttons(
+                    buttons=[
+                        {"label": t("Gui.AppManage.DeleteConfirm"), "value": "confirm", "color": "danger"},
+                        {"label": t("Gui.AppManage.DeleteCancel"), "value": "cancel", "color": "secondary"},
+                    ],
+                    onclick=[
+                        partial(_delete, name),
+                        _cancel_delete,
+                    ],
+                    group=True,
+                )
+            return put_buttons(
+                buttons=[
+                    {"label": t("Gui.AppManage.Export"), "value": name},
+                    {"label": t("Gui.AppManage.Delete"), "value": name, "color": "danger"},
+                ],
+                onclick=[
+                    partial(_export, name),
+                    partial(_ask_delete, name),
+                ],
+                group=True,
+            )
+
+        def _show_table():
+            clear("config_table")
+            put_table(
+                tdata=[
+                    (
+                        name,
+                        get_config_mod(name),
+                        _row_actions(name),
+                    )
+                    for name in nkas_instance()
+                ],
+                header=[
+                    t("Gui.AppManage.Name"),
+                    t("Gui.AppManage.Mod"),
+                    t("Gui.AppManage.Actions"),
+                ],
+                scope="config_table",
+            )
+
+        with popup(t("Gui.AppManage.PageTitle"), size="large") as s:
+            put_scope(
+                "manage_actions",
+                [
+                    put_buttons(
+                        buttons=[
+                            {
+                                "label": t("Gui.AppManage.New"),
+                                "value": "new",
+                                "disabled": IS_ON_PHONE_CLOUD,
+                                "color": "primary",
+                            },
+                            {"label": t("Gui.AppManage.Import"), "value": "import", "color": "secondary"},
+                        ],
+                        onclick=[
+                            (lambda: None) if IS_ON_PHONE_CLOUD else _add,
+                            _import,
+                        ],
+                    )
+                ],
+                scope=s,
+            )
+            put_scope("config_table", scope=s)
+
+        _show_table()
 
     def show(self) -> None:
         self._show()
@@ -1675,7 +1852,6 @@ class NKASGUI(Frame):
                 text,
                 duration=10,
                 position='right',
-                color='#2f7fd8',
                 onclick=goto_update,
             )
 
@@ -1746,69 +1922,12 @@ class NKASGUI(Frame):
                 return
 
             notice_content = html.escape(content).replace('\n', '<br>')
-            if self.theme == 'dark':
-                notice_bg = '#2f3136'
-                notice_text = '#e6e6e6'
-                notice_muted = '#b8c0cc'
-                notice_border = '#454c56'
-                notice_shadow = '0 18px 48px rgba(0, 0, 0, .42)'
-            else:
-                notice_bg = '#ffffff'
-                notice_text = '#26313d'
-                notice_muted = '#5e6b78'
-                notice_border = '#dbe2ea'
-                notice_shadow = '0 18px 48px rgba(22, 34, 51, .18)'
-
-            notice_style = f"""
-            <style>
-                .startup-notice-modal .modal-dialog {{
-                    max-width: 600px;
-                }}
-                .startup-notice-modal .modal-content {{
-                    background: {notice_bg};
-                    border: 1px solid {notice_border};
-                    border-radius: 8px;
-                    box-shadow: {notice_shadow};
-                    overflow: hidden;
-                }}
-                .startup-notice-modal .modal-header {{
-                    padding: 18px 24px 16px;
-                    border-bottom: 1px solid {notice_border};
-                }}
-                .startup-notice-modal .modal-title {{
-                    color: {notice_text};
-                    font-size: 20px;
-                    font-weight: 700;
-                    line-height: 1.3;
-                }}
-                .startup-notice-modal .modal-body {{
-                    padding: 22px 24px 24px;
-                }}
-                .startup-notice-message {{
-                    color: {notice_text};
-                    font-size: 15px;
-                    line-height: 1.7;
-                }}
-                .startup-notice-option {{
-                    display: inline-flex;
-                    align-items: center;
-                    height: 28px;
-                    color: {notice_muted};
-                    font-size: 14px;
-                    line-height: 16px;
-                    margin: 0;
-                    cursor: pointer;
-                }}
-                .startup-notice-option input[type="checkbox"] {{
-                    width: 16px;
-                    height: 16px;
-                    margin: 0 8px 0 0;
-                    flex: 0 0 16px;
-                    position: static;
-                    vertical-align: top;
-                }}
-            </style>
-            """
+            notice_icon = (
+                '<div class="startup-notice-icon">'
+                '<svg viewBox="0 0 24 24">'
+                '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4.6a1.3 1.3 0 1 1 0 2.6 1.3 1.3 0 0 1 0-2.6zM10.8 10.5h2.4v7h-2.4z"/>'
+                '</svg></div>'
+            )
             checkbox_id = 'startup-notice-disable-once'
             checkbox_html = (
                 f'<label class="startup-notice-option" for="{checkbox_id}">'
@@ -1816,11 +1935,6 @@ class NKASGUI(Frame):
                 '<span>本次不再提示</span>'
                 '</label>'
             )
-            button_style = (
-                'min-width: 88px; padding: 6px 16px; border-radius: 5px; '
-                'font-weight: 600; box-shadow: none;'
-            )
-
             def _close_startup_notice():
                 checked = False
                 try:
@@ -1853,15 +1967,17 @@ class NKASGUI(Frame):
             popup(
                 title=title,
                 content=[
-                    put_html(f'{notice_style}<div class="startup-notice-message">{notice_content}</div>'),
-                    put_row(
-                        content=[
+                    put_html(
+                        f'<div class="startup-notice-body">{notice_icon}'
+                        f'<div class="startup-notice-message">{notice_content}</div></div>'
+                    ),
+                    put_scope(
+                        'startup_notice_footer',
+                        [
                             put_html(checkbox_html),
-                            put_button('我知道了', onclick=_close_startup_notice, color='primary')
-                            .style(button_style),
+                            put_button('我知道了', onclick=_close_startup_notice, color='primary'),
                         ],
-                        size='1fr auto',
-                    ).style('align-items: center; margin-top: 20px;'),
+                    ),
                 ],
                 size=PopupSize.NORMAL,
                 implicit_close=False,
@@ -1906,20 +2022,26 @@ class NKASGUI(Frame):
 
 def app_manage():
     def _import():
-        resp = file_upload(
+        resp = input_group(
             label=t("Gui.AppManage.Import"),
-            placeholder=t("Gui.Text.ChooseFile"),
-            help_text=t("Gui.AppManage.OverrideWarning"),
-            accept=".json",
-            required=False,
-            max_size="1M",
+            inputs=[
+                file_upload(
+                    placeholder=t("Gui.Text.ChooseFile"),
+                    help_text=t("Gui.AppManage.OverrideWarning"),
+                    accept=".json",
+                    required=False,
+                    max_size="1M",
+                    name="config_file",
+                )
+            ],
+            cancelable=True,
         )
 
-        if resp is None:
+        if resp is None or resp.get("config_file") is None:
             return
 
-        file: bytes = resp["content"]
-        file_name: str = resp["filename"]
+        file: bytes = resp["config_file"]["content"]
+        file_name: str = resp["config_file"]["filename"]
 
         if IS_ON_PHONE_CLOUD:
             config_name = mod_name = "nkas"
@@ -1992,6 +2114,56 @@ def app_manage():
         toast(t("Gui.AppManage.NewSuccess"), color="success")
         _show_table()
 
+    pending_delete = {"name": None}
+
+    def _ask_delete(config_name: str):
+        pending_delete["name"] = config_name
+        _show_table()
+
+    def _cancel_delete():
+        pending_delete["name"] = None
+        _show_table()
+
+    def _delete(config_name: str):
+        if ProcessManager.get_manager(config_name).alive:
+            toast(t("Gui.AppManage.DeleteRunning"), color="error")
+            pending_delete["name"] = None
+            _show_table()
+            return
+        mod_name = get_config_mod(config_name)
+        try:
+            os.remove(filepath_config(config_name, mod_name))
+        except FileNotFoundError:
+            pass
+        pending_delete["name"] = None
+        toast(t("Gui.AppManage.DeleteSuccess"), color="success")
+        _show_table()
+
+    def _row_actions(name: str):
+        if pending_delete["name"] == name:
+            return put_buttons(
+                buttons=[
+                    {"label": t("Gui.AppManage.DeleteConfirm"), "value": "confirm", "color": "danger"},
+                    {"label": t("Gui.AppManage.DeleteCancel"), "value": "cancel", "color": "secondary"},
+                ],
+                onclick=[
+                    partial(_delete, name),
+                    _cancel_delete,
+                ],
+                group=True,
+            )
+        return put_buttons(
+            buttons=[
+                {"label": t("Gui.AppManage.Export"), "value": name},
+                {"label": t("Gui.AppManage.Delete"), "value": name, "color": "danger"},
+            ],
+            onclick=[
+                partial(_export, name),
+                partial(_ask_delete, name),
+            ],
+            group=True,
+        )
+
     def _show_table():
         clear("config_table")
         put_table(
@@ -1999,23 +2171,7 @@ def app_manage():
                 (
                     name,
                     get_config_mod(name),
-                    put_buttons(
-                        buttons=[
-                            {"label": t("Gui.AppManage.Export"), "value": name},
-                            # {
-                            #     "label": t("Gui.AppManage.Delete"),
-                            #     "value": name,
-                            #     "disabled": True,
-                            #     "color": "danger",
-                            # },
-                        ],
-                        onclick=[
-                            partial(_export, name),
-                            # partial(_delete, name),
-                        ],
-                        group=True,
-                        small=True,
-                    ),
+                    _row_actions(name),
                 )
                 for name in nkas_instance()
             ],
@@ -2029,25 +2185,43 @@ def app_manage():
 
     set_env(title="NKAS", output_animation=False)
     run_js("$('head').append('<style>.footer{display:none}</style>')")
+    add_css(filepath_css("nkas"))
+    manage_theme = str(getattr(State.deploy_config, 'Theme', 'dark') or 'dark').strip().lower()
+    if manage_theme == 'light':
+        add_css(filepath_css("light-nkas"))
+    else:
+        add_css(filepath_css("dark-nkas"))
 
-    put_html(f"<h2>{t('Gui.AppManage.PageTitle')}</h2>")
-    put_scope("config_table")
-    put_buttons(
-        buttons=[
-            {
-                "label": t("Gui.AppManage.New"),
-                "value": "new",
-                "disabled": IS_ON_PHONE_CLOUD,
-            },
-            {"label": t("Gui.AppManage.Import"), "value": "import"},
-            {"label": t("Gui.AppManage.Back"), "value": "back"},
-        ],
-        onclick=[
-            (lambda: None) if IS_ON_PHONE_CLOUD else _new,
-            _import,
-            partial(go_app, "index", new_window=False),
+    put_scope(
+        'manage_page',
+        [
+            put_html(
+                f'<div class="manage-head">'
+                f'<div class="manage-title">{t("Gui.AppManage.PageTitle")}</div>'
+                f'</div>'
+            ),
+            put_scope('manage_actions'),
+            put_scope('config_table'),
         ],
     )
+    with use_scope('manage_actions'):
+        put_buttons(
+            buttons=[
+                {
+                    "label": t("Gui.AppManage.New"),
+                    "value": "new",
+                    "disabled": IS_ON_PHONE_CLOUD,
+                    "color": "primary",
+                },
+                {"label": t("Gui.AppManage.Import"), "value": "import", "color": "secondary"},
+                {"label": t("Gui.AppManage.Back"), "value": "back", "color": "secondary"},
+            ],
+            onclick=[
+                (lambda: None) if IS_ON_PHONE_CLOUD else _new,
+                _import,
+                partial(go_app, "index", new_window=False),
+            ],
+        )
     _show_table()
 
 

@@ -1,4 +1,4 @@
-﻿import copy
+import copy
 import json
 import random
 import string
@@ -1045,18 +1045,23 @@ def put_arg_interception_stone_import(kwargs: T_Output_Kwargs) -> Output:
         popup(
             t("Gui.Text.InterceptionImportDialogTitle"),
             [
+                put_html(
+                    f'<div class="import-dialog-desc">'
+                    f'{t("Gui.Text.InterceptionImportPathPlaceholder")}'
+                    f'</div>'
+                ),
                 put_input(
                     label=t("Gui.Text.InterceptionImportPathLabel"),
                     name=path_pin_name,
                     value=current_default_path,
                     placeholder=t("Gui.Text.InterceptionImportPathPlaceholder"),
                 ).style("--input--"),
-                put_row(
+                put_scope(
+                    'import_dialog_actions',
                     [
+                        put_button(t("Gui.AppManage.Back"), onclick=close_popup, color='secondary'),
                         put_button(t("Gui.AppManage.Import"), onclick=_submit_import, color='primary'),
-                        put_button(t("Gui.AppManage.Back"), onclick=close_popup, color='danger'),
                     ],
-                    size='auto auto 1fr',
                 ),
             ],
         )
