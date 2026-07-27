@@ -26,13 +26,13 @@ async def instances(_: Request):
         manager = ProcessManager.get_manager(name)
         current_task = next_task = None
         try:
-            config = load_config(name)
-            config.load()
-            config.get_next_task()
-            if config.pending_task:
-                current_task = config.pending_task[0].command if manager.alive else None
-                next_task = (config.pending_task[1].command if manager.alive and len(config.pending_task) > 1
-                             else config.pending_task[0].command)
+            from module.webui.api.routes_tasks import queue_data
+            queue = queue_data(name)
+            if queue['pending']:
+                current_task = queue['running'][0]['command'] if queue['running'] else None
+                next_task = queue['pending'][0]['command']
+            elif queue['waiting']:
+                next_task = queue['waiting'][0]['command']
         except (AttributeError, OSError, KeyError) as exc:
             logger.warning(f'Unable to read queue for {name}: {exc}')
         result.append(InstanceInfo(name, manager.state, get_config_mod(name), current_task, next_task).dict())

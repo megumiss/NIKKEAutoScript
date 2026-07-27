@@ -2,29 +2,45 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 import module.webui.lang as lang
-from module.submodule.utils import load_config
+from datetime import datetime
+
+from module.config.config import Function
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.api.models import QueueInfo
 from module.webui.process_manager import ProcessManager
 from module.webui.updater import updater
+from module.webui.setting import State
 from module.webui.api.service_tasks import TaskService
 
 
 def queue_data(name):
-    config = load_config(name)
-    config.load()
-    config.get_next_task()
+    data = State.config_updater.read_file(name)
+    now = datetime.now()
+    pending, waiting, invalid = [], [], []
+    for task_data in data.values():
+        task = Function(task_data)
+        if not task.enable:
+            continue
+        if not isinstance(task.next_run, datetime):
+            invalid.append(task)
+        elif task.next_run < now:
+            pending.append(task)
+        else:
+            waiting.append(task)
+    # Preserve configuration order for due tasks (including Restart), and use
+    # chronological order for future tasks, matching NikkeConfig.get_next_task.
+    pending = invalid + pending
+    waiting.sort(key=lambda task: task.next_run)
     manager = ProcessManager.get_manager(name)
 
     def item(func):
         command = func.command
         return {'command': command, 'next_run': str(func.next_run), 'name_i18n': lang.t(f'Task.{command}.name')}
 
-    pending = list(config.pending_task)
     running = pending[:1] if manager.alive else []
     pending = pending[1:] if manager.alive else pending
     return QueueInfo([item(task) for task in running], [item(task) for task in pending],
-                     [item(task) for task in config.waiting_task]).dict()
+                     [item(task) for task in waiting]).dict()
 
 
 async def queue(request: Request):

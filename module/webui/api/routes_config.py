@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse
 import module.webui.lang as lang
 from module.config.deep import deep_get
 from module.config.utils import filepath_args, filepath_args as _filepath_args, read_file
-from module.submodule.utils import load_config
+from module.webui.setting import State
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.api.service_config import ConfigService
 
@@ -39,8 +39,10 @@ def _field(instance_name, task, group, arg, spec, value):
     }.get(widget)
     return {
         'key': f'{task}.{group}.{arg}', 'arg': arg, 'widget': widget,
-        'title': _label(f'{task}.{group}.{arg}.name', arg),
-        'help': _label(f'{task}.{group}.{arg}.help', ''), 'value': _json_value(value),
+        # Field translations are intentionally shared across tasks.  This is
+        # the same group.arg key convention used by the former PyWebIO UI.
+        'title': _label(f'{group}.{arg}.name', arg),
+        'help': _label(f'{group}.{arg}.help', ''), 'value': _json_value(value),
         'display': spec.get('display', 'show'), 'readonly': spec.get('display') in ('readonly', 'disabled'),
         'options': options, 'validate': spec.get('validate'), 'valuetype': spec.get('valuetype'),
         'unit': spec.get('unit'), 'mode': spec.get('mode'), 'path_picker': spec.get('path_picker'),
@@ -56,20 +58,23 @@ async def schema(request: Request):
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
     args = read_file(filepath_args('args', 'nkas'))
     menu = read_file(filepath_args('menu', 'nkas'))
-    config = load_config(name).read_file(name)
+    config = State.config_updater.read_file(name)
     tasks = {}
     for task, groups in args.items():
         output_groups = []
         for group, fields in groups.items():
             output_fields = []
             for arg, spec in fields.items():
-                if spec.get('display') == 'hide':
+                if spec.get('display') == 'hide' or spec.get('type') == 'storage':
                     continue
                 output_fields.append(_field(name, task, group, arg, spec, deep_get(config, f'{task}.{group}.{arg}')))
             if output_fields:
                 output_groups.append({
-                    'key': group, 'name': _label(f'{task}.{group}.name', group),
-                    'collapsed': group == 'Scheduler', 'fields': output_fields,
+                    'key': group, 'name': _label(f'{group}._info.name', group),
+                    # Configuration field groups are readable immediately on
+                    # entry.  The collapsible behaviour remains available as
+                    # an optional density control in the SPA.
+                    'collapsed': False, 'fields': output_fields,
                 })
         tasks[task] = {
             'name': _label(f'Task.{task}.name', task), 'help': _label(f'Task.{task}.help', ''),
@@ -91,7 +96,7 @@ async def config(request: Request):
         validate_instance(name)
     except InstanceNotFound as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
-    return JSONResponse(_json_value(load_config(name).read_file(name)))
+    return JSONResponse(_json_value(State.config_updater.read_file(name)))
 
 
 async def patch_config(request: Request):

@@ -6,12 +6,12 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from module.config.deep import deep_get
-from module.submodule.utils import load_config
 from module.webui.api.deps import InstanceNotFound, validate_instance
+from module.webui.setting import State
 
 
 def _config(name):
-    return load_config(name).read_file(name)
+    return State.config_updater.read_file(name)
 
 
 async def warehouse(request: Request):
