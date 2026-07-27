@@ -45,7 +45,7 @@ from pywebio.pin import pin, pin_on_change
 from pywebio.session import download, eval_js, go_app, info, local, register_thread, run_js, set_env
 from pywebio.platform.page import check_theme
 from starlette.routing import Route
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, RedirectResponse
 
 from module.config.account import save_account
 import module.webui.lang as lang
@@ -2172,6 +2172,20 @@ def app():
         ],
         on_shutdown=[clearup],
     )
+
+    async def spa_index(request):
+        """Published entry point for browsers and legacy Electron iframe shells."""
+        return RedirectResponse('/app/', status_code=302)
+
+    for index, route in enumerate(app.router.routes):
+        if isinstance(route, Route) and route.path == '/':
+            app.router.routes[index] = Route('/', spa_index, methods=['GET'])
+            break
+
+    from module.webui.api import mount_api
+    mount_api(app)
+
+    return app
 
     async def api_start(request):
         """

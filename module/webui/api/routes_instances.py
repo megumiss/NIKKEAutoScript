@@ -1,0 +1,155 @@
+import json
+import os
+import re
+from pathlib import Path
+
+from starlette.requests import Request
+from starlette.responses import FileResponse, JSONResponse
+
+from module.config.utils import filepath_config, nkas_instance, nkas_template
+from module.logger import logger
+from module.submodule.utils import get_config_mod, load_config
+from module.webui.api.deps import InstanceNotFound, validate_instance
+from module.webui.api.models import InstanceInfo
+from module.webui.process_manager import ProcessManager
+from module.webui.setting import State
+from module.webui.updater import updater
+
+
+def _response_error(message, status_code=400):
+    return JSONResponse({'status': 'error', 'message': message}, status_code=status_code)
+
+
+async def instances(_: Request):
+    result = []
+    for name in nkas_instance():
+        manager = ProcessManager.get_manager(name)
+        current_task = next_task = None
+        try:
+            config = load_config(name)
+            config.load()
+            config.get_next_task()
+            if config.pending_task:
+                current_task = config.pending_task[0].command if manager.alive else None
+                next_task = (config.pending_task[1].command if manager.alive and len(config.pending_task) > 1
+                             else config.pending_task[0].command)
+        except (AttributeError, OSError, KeyError) as exc:
+            logger.warning(f'Unable to read queue for {name}: {exc}')
+        result.append(InstanceInfo(name, manager.state, get_config_mod(name), current_task, next_task).dict())
+    return JSONResponse(result)
+
+
+async def start(request: Request):
+    name = request.path_params['name']
+    names = nkas_instance() if name == 'all' else [name]
+    if name != 'all':
+        try:
+            validate_instance(name)
+        except InstanceNotFound as exc:
+            return _response_error(str(exc), 404)
+        manager = ProcessManager.get_manager(name)
+        if manager.alive:
+            return _response_error(f'Instance "{name}" is already running.', 409)
+        manager.start(func=get_config_mod(name), ev=updater.event)
+        return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
+    results = []
+    for instance in names:
+        manager = ProcessManager.get_manager(instance)
+        if manager.alive:
+            results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
+            continue
+        manager.start(func=get_config_mod(instance), ev=updater.event)
+        results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
+    return JSONResponse({'status': 'success', 'results': results})
+
+
+async def stop(request: Request):
+    name = request.path_params['name']
+    names = nkas_instance() if name == 'all' else [name]
+    if name != 'all':
+        try:
+            validate_instance(name)
+        except InstanceNotFound as exc:
+            return _response_error(str(exc), 404)
+        manager = ProcessManager.get_manager(name)
+        if not manager.alive:
+            return _response_error(f'Instance "{name}" is not running.', 409)
+        manager.stop()
+        return JSONResponse({'status': 'success', 'message': f'Instance "{name}" stopped.'})
+    results = []
+    for instance in names:
+        manager = ProcessManager.get_manager(instance)
+        if not manager.alive:
+            results.append({'instance': instance, 'status': 'skipped', 'message': 'Not running.'})
+            continue
+        manager.stop()
+        results.append({'instance': instance, 'status': 'success', 'message': 'Stopped.'})
+    return JSONResponse({'status': 'success', 'results': results})
+
+
+async def create(request: Request):
+    try:
+        data = await request.json()
+        name = str(data['name']).strip()
+        origin = str(data.get('origin', 'template-nkas'))
+    except (ValueError, TypeError, KeyError):
+        return _response_error('Expected JSON body with name and optional origin.')
+    if not name or name in nkas_instance() or re.search(r'[.\\/:*?"\'<>|]', name) or name.lower().startswith('template'):
+        return _response_error('Invalid or already used instance name.')
+    if origin not in nkas_instance() + nkas_template():
+        return _response_error('Source instance not found.', 404)
+    State.config_updater.write_file(name, load_config(origin).read_file(origin), get_config_mod(origin))
+    return JSONResponse({'status': 'success', 'name': name}, status_code=201)
+
+
+async def delete(request: Request):
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+    except InstanceNotFound as exc:
+        return _response_error(str(exc), 404)
+    if ProcessManager.get_manager(name).alive:
+        return _response_error('Stop the instance before deleting it.', 409)
+    path = Path(filepath_config(name, get_config_mod(name)))
+    if path.exists():
+        path.unlink()
+    return JSONResponse({'status': 'success'})
+
+
+async def export(request: Request):
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+    except InstanceNotFound as exc:
+        return _response_error(str(exc), 404)
+    mod = get_config_mod(name)
+    filename = f'{name}.json' if mod == 'nkas' else f'{name}.{mod}.json'
+    return FileResponse(filepath_config(name, mod), filename=filename, media_type='application/json')
+
+
+async def import_config(request: Request):
+    try:
+        try:
+            form = await request.form()
+            upload = form['file']
+            filename = upload.filename
+            content = await upload.read()
+        except AssertionError:
+            # python-multipart is intentionally not a backend dependency.  A
+            # browser client can submit a raw JSON upload with this header.
+            filename = request.headers.get('x-nkas-filename', '')
+            content = await request.body()
+        config = json.loads(content.decode('utf-8'))
+    except (KeyError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        return _response_error(f'Invalid JSON upload: {exc}')
+    parts = filename.split('.')
+    if len(parts) == 2:
+        name, mod = parts[0], 'nkas'
+    elif len(parts) == 3:
+        name, mod = parts[0], parts[1]
+    else:
+        return _response_error('Invalid configuration filename.')
+    if not name or re.search(r'[\\/:*?"\'<>|]', name):
+        return _response_error('Invalid instance name.')
+    State.config_updater.write_file(name, config, mod)
+    return JSONResponse({'status': 'success', 'name': name})

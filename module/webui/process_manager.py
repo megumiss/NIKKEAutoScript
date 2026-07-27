@@ -29,6 +29,11 @@ class ProcessManager:
         self.renderables: List[ConsoleRenderable] = []
         self.renderables_max_length = 400
         self.renderables_reduce_length = 80
+        # WebSocket consumers receive an independent bounded queue.  Keeping
+        # these queues out of the logging thread's critical path preserves the
+        # existing RichLog behaviour even when a browser is slow or closed.
+        self._log_subscribers: List[queue.Queue] = []
+        self._log_subscribers_lock = threading.Lock()
         self._process: Process = None
         self._process_locks: Dict[str, threading.Lock] = {}
         self.thd_log_queue_handler: threading.Thread = None
@@ -90,7 +95,40 @@ class ProcessManager:
             self.renderables.append(log)
             if len(self.renderables) > self.renderables_max_length:
                 self.renderables = self.renderables[self.renderables_reduce_length :]
+            self._publish_log(log)
         logger.info("End of log queue handler loop")
+
+    def subscribe_log(self) -> queue.Queue:
+        """Return a bounded queue which receives new rendered log entries."""
+        subscriber = queue.Queue(maxsize=self.renderables_max_length)
+        with self._log_subscribers_lock:
+            self._log_subscribers.append(subscriber)
+        return subscriber
+
+    def unsubscribe_log(self, subscriber: queue.Queue) -> None:
+        with self._log_subscribers_lock:
+            try:
+                self._log_subscribers.remove(subscriber)
+            except ValueError:
+                pass
+
+    def _publish_log(self, log: ConsoleRenderable) -> None:
+        with self._log_subscribers_lock:
+            subscribers = list(self._log_subscribers)
+        for subscriber in subscribers:
+            try:
+                subscriber.put_nowait(log)
+            except queue.Full:
+                try:
+                    subscriber.get_nowait()
+                except queue.Empty:
+                    pass
+                try:
+                    subscriber.put_nowait(log)
+                except queue.Full:
+                    # A concurrent consumer may have filled it again; dropping
+                    # one incremental line is preferable to blocking logs.
+                    pass
 
     @property
     def alive(self) -> bool:

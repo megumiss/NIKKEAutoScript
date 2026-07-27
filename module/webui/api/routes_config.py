@@ -1,0 +1,110 @@
+from datetime import date, datetime
+
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
+import module.webui.lang as lang
+from module.config.deep import deep_get
+from module.config.utils import filepath_args, filepath_args as _filepath_args, read_file
+from module.submodule.utils import load_config
+from module.webui.api.deps import InstanceNotFound, validate_instance
+from module.webui.api.service_config import ConfigService
+
+
+def _label(key, fallback):
+    return lang._t(key) if key in lang.dic_lang.get(lang.LANG, {}) else fallback
+
+
+def _json_value(value):
+    """Convert config values to JSON-safe values without changing their file form."""
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {str(key): _json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_value(item) for item in value]
+    return value
+
+
+def _field(instance_name, task, group, arg, spec, value):
+    widget = spec.get('type', 'input')
+    options = [
+        {'value': _json_value(option), 'label': _label(f'{group}.{arg}.{option}', str(option))}
+        for option in spec.get('option', [])
+    ]
+    data_endpoint = {
+        'item_table': f'/api/{{name}}/warehouse',
+        'interception_stone_charts': f'/api/{{name}}/interception/stats',
+        'interception_stone_import': f'/api/{{name}}/interception/import',
+    }.get(widget)
+    return {
+        'key': f'{task}.{group}.{arg}', 'arg': arg, 'widget': widget,
+        'title': _label(f'{task}.{group}.{arg}.name', arg),
+        'help': _label(f'{task}.{group}.{arg}.help', ''), 'value': _json_value(value),
+        'display': spec.get('display', 'show'), 'readonly': spec.get('display') in ('readonly', 'disabled'),
+        'options': options, 'validate': spec.get('validate'), 'valuetype': spec.get('valuetype'),
+        'unit': spec.get('unit'), 'mode': spec.get('mode'), 'path_picker': spec.get('path_picker'),
+        'data_endpoint': data_endpoint.replace('{name}', instance_name) if data_endpoint else None,
+    }
+
+
+async def schema(request: Request):
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+    except InstanceNotFound as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
+    args = read_file(filepath_args('args', 'nkas'))
+    menu = read_file(filepath_args('menu', 'nkas'))
+    config = load_config(name).read_file(name)
+    tasks = {}
+    for task, groups in args.items():
+        output_groups = []
+        for group, fields in groups.items():
+            output_fields = []
+            for arg, spec in fields.items():
+                if spec.get('display') == 'hide':
+                    continue
+                output_fields.append(_field(name, task, group, arg, spec, deep_get(config, f'{task}.{group}.{arg}')))
+            if output_fields:
+                output_groups.append({
+                    'key': group, 'name': _label(f'{task}.{group}.name', group),
+                    'collapsed': group == 'Scheduler', 'fields': output_fields,
+                })
+        tasks[task] = {
+            'name': _label(f'Task.{task}.name', task), 'help': _label(f'Task.{task}.help', ''),
+            'groups': output_groups,
+        }
+    menus = []
+    for key, item in menu.items():
+        menus.append({
+            'key': key, 'name': _label(f'Menu.{key}.name', key), 'page': item.get('page', 'setting'),
+            'tasks': [{'key': task, 'name': tasks.get(task, {}).get('name', task),
+                       'help': tasks.get(task, {}).get('help', '')} for task in item.get('tasks', [])],
+        })
+    return JSONResponse({'menus': menus, 'tasks': tasks})
+
+
+async def config(request: Request):
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+    except InstanceNotFound as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
+    return JSONResponse(_json_value(load_config(name).read_file(name)))
+
+
+async def patch_config(request: Request):
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+        data = await request.json()
+        key = data['key']
+    except InstanceNotFound as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
+    except (KeyError, ValueError, TypeError):
+        return JSONResponse({'status': 'error', 'message': 'Expected key and value JSON fields.'}, status_code=400)
+    result = ConfigService().patch(name, key, data.get('value'))
+    payload = result.dict()
+    payload['status'] = 'success' if result.ok else 'error'
+    return JSONResponse(payload, status_code=200 if result.ok else 422 if result.invalid else 500)
