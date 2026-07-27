@@ -86,14 +86,7 @@ function logEntry(html: string) {
   if (internalNoise || (foundTimestamp && /^(DEVICE|START)$/i.test(rawMessage))) {
     return { timestamp, level, message: '', tone, kind: 'hidden', hidden: true }
   }
-  let message = banner ? banner[1].trim() : rawMessage
-  if (/^\[Script Path\]:/i.test(message)) message = `运行脚本：${message.split(/[\\/]/).pop()}`
-  else if (/^Start scheduler loop:/i.test(message)) message = `调度器已启动：${message.replace(/^Start scheduler loop:\s*/i, '')}`
-  else if (/^\[Server\]/i.test(message)) message = `服务器：${message.replace(/^\[Server\]\s*/i, '')}`
-  else if (/^Pending tasks:/i.test(message)) message = `待执行任务：${message.replace(/^Pending tasks:\s*/i, '')}`
-  else if (/^\[Task\]/i.test(message)) message = `即将执行：${message.replace(/^\[Task\]\s*/i, '')}`
-  else if (/^Game starting$/i.test(message)) message = '正在启动游戏'
-  else if (/^Checking screen/i.test(message)) message = '正在检查屏幕分辨率'
+  const message = banner ? banner[1].trim() : rawMessage
   const kind = banner ? 'section' : !foundTimestamp && /^[═─=_-]{16,}$/.test(rawMessage) ? 'separator' : !foundTimestamp && /^[A-Z][A-Z _-]{1,40}$/.test(rawMessage) ? 'section' : ''
   return { timestamp, level: level === 'WARNING' ? 'WARN' : level, message, tone, kind, hidden: false }
 }
