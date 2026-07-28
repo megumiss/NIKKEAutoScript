@@ -114,6 +114,14 @@ async def update(_: Request):
     return JSONResponse({'status': 'success', 'message': 'Update process initiated.'})
 
 
+async def check_update(_: Request):
+    """Only check for updates; applying one stays behind POST /api/update."""
+    if updater.state in ['checking', 'start', 'wait', 'run update']:
+        return _json_error(f'Update already in progress. Current state: {updater.state}', 409)
+    threading.Thread(target=updater.check_update, daemon=True).start()
+    return JSONResponse({'status': 'success', 'message': 'Update check initiated.'})
+
+
 async def rotate(_: Request):
     if not sys.platform.startswith('win'):
         return _json_error('Screen rotation is only available on Windows.', 501)

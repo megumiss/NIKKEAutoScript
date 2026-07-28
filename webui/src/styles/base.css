@@ -110,3 +110,4 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .app-select-option-label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .app-select-check { color:var(--accent); font-size:12px; }
 .app-select-empty { padding:8px 10px; color:var(--text-3); font-size:13px; text-align:center; }
+.update-hint { color:var(--green); font-weight:600; }

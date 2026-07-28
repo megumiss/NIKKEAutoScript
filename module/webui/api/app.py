@@ -27,6 +27,7 @@ def mount_api(app):
         Route('/api/instances/import', routes_instances.import_config, methods=['POST']),
         Route('/api/restart', routes_system.restart, methods=['POST']),
         Route('/api/update', routes_system.update, methods=['POST']),
+        Route('/api/update/check', routes_system.check_update, methods=['POST']),
         Route('/api/rotate', routes_system.rotate, methods=['POST']),
         Route('/api/system/status', routes_system.status, methods=['GET']),
         Route('/api/system/update', routes_system.update_status, methods=['GET']),

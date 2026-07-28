@@ -51,6 +51,8 @@ const staticLabels: Record<string, Record<string, string>> = {
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
   '应用更新': { 'en-US': 'Application update', 'ja-JP': 'アプリ更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
+  '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' },
+  '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' },
   '保存后立即生效': { 'en-US': 'Changes apply immediately', 'ja-JP': '変更はすぐに適用されます' }, '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
@@ -197,6 +199,22 @@ async function confirmModal() {
     await loadInstances()
   } catch (exception: any) { error.value = exception.message } finally { m.busy = false }
 }
+const updateChecking = ref(false)
+async function checkUpdate() {
+  if (updateChecking.value) return
+  updateChecking.value = true
+  try {
+    await api.post('/api/update/check')
+    // Poll until the background check finishes so the button can switch to
+    // the update action when a new version shows up.
+    for (let round = 0; round < 30; round++) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      updateInfo.value = await api.get('/api/system/update')
+      if (updateInfo.value.state !== 'checking') break
+    }
+  } catch (exception: any) { error.value = exception.message } finally { updateChecking.value = false }
+}
+function runUpdate() { api.post('/api/update').catch(exception => error.value = exception.message) }
 async function saveRemark(instance: Instance, event: Event) {
   const input = event.target as HTMLInputElement
   try {
@@ -443,8 +461,10 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       <section v-else-if="isSettings" class="view">
         <article class="card task-hero">
           <div class="task-icon">🚀</div>
-          <div style="flex:1"><h2>{{ t('应用更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code></div></div>
-          <button class="btn primary" @click="api.post('/api/update').catch(exception => error = exception.message)">{{ t('检查更新') }}</button>
+          <div style="flex:1"><h2>{{ t('应用更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span></div></div>
+          <button v-if="Number(updateInfo.state) === 1" class="btn success" @click="runUpdate">{{ t('立即更新') }}</button>
+          <button v-else-if="updateInfo.state === 'failed'" class="btn danger" @click="runUpdate">{{ t('重试更新') }}</button>
+          <button v-else class="btn primary" :disabled="updateChecking || updateInfo.state === 'checking'" @click="checkUpdate">{{ updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新') }}</button>
           <button class="btn danger" @click="api.post('/api/restart').catch(exception => error = exception.message)">{{ t('强制重启') }}</button>
         </article>
         <article class="card group-card">
