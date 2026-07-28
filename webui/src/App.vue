@@ -147,6 +147,10 @@ async function loadWorkspace() {
 function dashboard() { router.push('/') }
 function enter(name: string) { router.push(`/i/${name}/overview`) }
 function openTask(task: any, page: string) { router.push(`/i/${selectedName.value}/${page}/${task.key}`) }
+function openQueueItem(item: any) {
+  const menu = schema.value.menus.find((item2: any) => item2.tasks.some((task: any) => task.key === item.command))
+  router.push(`/i/${selectedName.value}/${menu?.page === 'tool' ? 'tool' : 'task'}/${item.command}`)
+}
 function toggleRail(menu: any) { railCollapsed.value[menu.key] = !railCollapsed.value[menu.key] }
 async function lifecycle(action: 'start' | 'stop', name = selectedName.value) { try { await api.post(`/api/${name}/${action}`); await loadInstances() } catch (exception: any) { error.value = exception.message } }
 async function saveValue(field: Field, value: any) {
@@ -328,7 +332,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             <button v-for="task in menu.tasks" :key="task.key" class="rail-item" :class="{ active: selectedTask === task.key }" @click="openTask(task, menu.page === 'tool' ? 'tool' : 'task')">
               {{ task.name }}
               <span v-if="selectedInstance?.current_task === task.key" class="spin"></span>
-              <span v-else class="mini-dot" :class="taskEnabled(task.key) ? 'on' : 'off'"></span>
+              <span v-else-if="taskEnabled(task.key)" class="mini-dot on"></span>
             </button>
           </div>
         </template>
@@ -379,8 +383,8 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             <article class="card queue-card">
               <div class="queue-group-label">{{ t('任务队列') }}</div>
               <div class="timeline">
-                <div v-for="item in queue.running" :key="item.command" class="tl-item running">{{ item.name_i18n }}<span class="t">{{ t('进行中') }}</span></div>
-                <div v-for="item in [...queue.pending, ...queue.waiting]" :key="item.command" class="tl-item">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span></div>
+                <div v-for="item in queue.running" :key="item.command" class="tl-item running clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ t('进行中') }}</span><span class="go">›</span></div>
+                <div v-for="item in [...queue.pending, ...queue.waiting]" :key="item.command" class="tl-item clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
               </div>
             </article>
           </div>
@@ -399,7 +403,6 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
               <div class="task-icon">{{ selectedPage === 'tool' ? '🛠' : '⚙️' }}</div>
               <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}</h2><div class="sub">{{ taskSchema?.help || t('保存后立即生效') }}</div></div>
               <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : api.post(`/api/${selectedName}/tool/${selectedTask}/start`).catch(exception => error = exception.message)">{{ selectedInstance?.state === 1 ? t('停止') : `▶ ${t('启动')}` }}</button>
-              <button v-else class="btn primary" @click="api.post(`/api/${selectedName}/task/${selectedTask}/run`).catch(exception => error = exception.message)">▶ {{ t('立即运行') }}</button>
             </article>
             <div class="cfg-groups">
               <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
