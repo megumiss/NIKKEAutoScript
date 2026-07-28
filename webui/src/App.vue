@@ -24,6 +24,7 @@ const logBody = ref<HTMLElement>()
 const autoScroll = ref(true)
 const error = ref('')
 const saved = ref<Record<string, boolean>>({})
+const helpExpanded = ref<Record<string, boolean>>({})
 const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'dark', language: 'zh-CN' })
 const updateInfo = ref<any>({})
 const notices = ref<any[]>([])
@@ -58,6 +59,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
   '进行中': { 'en-US': 'Running', 'ja-JP': '実行中' },
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
+  '更多': { 'en-US': 'More', 'ja-JP': 'もっと見る' }, '收起': { 'en-US': 'Collapse', 'ja-JP': '閉じる' }, '自动': { 'en-US': 'Auto', 'ja-JP': '自動' },
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
@@ -98,8 +100,21 @@ function initials(name: string) { return name.slice(0, 1).toUpperCase() }
 function pageTitle() { return isDashboard.value ? t('全局总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
 function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import'].includes(field.widget) }
+function isLongHelp(field: Field) { return (field.help || '').length > 100 }
+function isSentinelDate(value: any) { return String(value || '').startsWith('1989-12-27') }
 function groupId(group: any) { return `group-${group.key}` }
-function jumpToGroup(group: any) { document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+const activeGroup = ref('')
+function onViewScroll(event: Event) {
+  const groups = taskSchema.value?.groups || []
+  if (!groups.length) return
+  let current = groups[0].key
+  for (const group of groups) {
+    const el = document.getElementById(groupId(group))
+    if (el && el.getBoundingClientRect().top <= 140) current = group.key
+  }
+  activeGroup.value = current
+}
+function jumpToGroup(group: any) { activeGroup.value = group.key; document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
 function t(source: string) { return systemStatus.value.language === 'zh-CN' ? source : staticLabels[source]?.[systemStatus.value.language] || source }
 function formatTime(value: string) { const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/); return m ? `${m[2]}-${m[3]} ${m[4]}` : value }
 function schedSub() {
@@ -141,6 +156,7 @@ async function loadWorkspace() {
     queue.value = await api.get(`/api/${selectedName.value}/queue`)
     schemaReady.value = true
     workspaceName = selectedName.value
+    activeGroup.value = taskSchema.value?.groups?.[0]?.key || ''
     error.value = ''
   } catch (exception: any) { error.value = exception.message }
 }
@@ -276,6 +292,7 @@ watch(() => route.fullPath, async () => {
     logs.value = []
     await loadWorkspace()
   }
+  activeGroup.value = taskSchema.value?.groups?.[0]?.key || ''
   startSockets()
 })
 watch(logs, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
@@ -396,7 +413,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           </article>
         </div>
       </section>
-      <section v-else-if="isWorkspace" class="view">
+      <section v-else-if="isWorkspace" class="view" @scroll.passive="onViewScroll">
         <div class="task-layout">
           <div>
             <article class="card task-hero">
@@ -413,7 +430,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                 </button>
                 <div class="group-body">
                   <div v-for="field in group.fields" :key="field.key" class="field" :class="{ 'field-wide': isWideField(field) }">
-                    <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
+                    <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp" :class="{ clamp: isLongHelp(field) && !helpExpanded[field.key] }">{{ field.help }}</div><span v-if="isLongHelp(field)" class="help-toggle" @click="helpExpanded[field.key] = !helpExpanded[field.key]">{{ helpExpanded[field.key] ? t('收起') : t('更多') }}</span></div>
                     <div class="field-control">
                       <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><span class="slider"></span></label>
                       <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" :disabled="field.display !== 'show'" @change="(value: any) => saveValue(field, value).catch(() => {})"/>
@@ -425,7 +442,8 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                       <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_import'" :widget="field.widget" :busy="Boolean(importBusy[field.key])" @import="importInterception(field, $event)" @error="error = $event"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>
-                      <input v-else :type="field.widget === 'datetime' ? 'datetime-local' : field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                      <input v-else :type="field.widget === 'datetime' ? 'datetime-local' : field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.widget === 'datetime' && isSentinelDate(field.value) ? '' : field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                      <span v-if="field.widget === 'datetime' && isSentinelDate(field.value)" class="input-hint">{{ t('自动') }}</span>
                       <span v-if="saved[field.key]" class="saved">✓ 已保存</span>
                     </div>
                   </div>
@@ -444,7 +462,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           </div>
           <aside class="card anchor-nav">
             <div class="side-label">{{ t('本页分组') }}</div>
-            <button v-for="group in taskSchema?.groups || []" :key="group.key" class="anchor-nav-item" @click="jumpToGroup(group)">{{ group.name }}</button>
+            <button v-for="group in taskSchema?.groups || []" :key="group.key" class="anchor-nav-item" :class="{ active: activeGroup === group.key }" @click="jumpToGroup(group)">{{ group.name }}</button>
           </aside>
         </div>
       </section>
