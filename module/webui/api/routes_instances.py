@@ -113,6 +113,10 @@ async def delete(request: Request):
     path = Path(filepath_config(name, get_config_mod(name)))
     if path.exists():
         path.unlink()
+    from module.config.account import _get_account_file
+    acc = Path(_get_account_file(name))
+    if acc.exists():
+        acc.unlink()
     return JSONResponse({'status': 'success'})
 
 
@@ -149,7 +153,7 @@ async def import_config(request: Request):
         name, mod = parts[0], parts[1]
     else:
         return _response_error('Invalid configuration filename.')
-    if not name or re.search(r'[\\/:*?"\'<>|]', name):
+    if not name or re.search(r'[\\/:*?"\'<>|]', name) or name.lower().startswith('template'):
         return _response_error('Invalid instance name.')
     State.config_updater.write_file(name, config, mod)
     return JSONResponse({'status': 'success', 'name': name})

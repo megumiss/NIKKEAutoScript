@@ -1,20 +1,51 @@
 import asyncio
 import json
 import queue
+import threading
 
-from rich.console import Console
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from module.config.utils import nkas_instance
+from module.logger import HTMLConsole, Highlighter, WEB_THEME
 from module.webui.api.routes_tasks import queue_data
 from module.webui.process_manager import ProcessManager
+from module.webui.setting import State
+from module.webui.utils import DARK_TERMINAL_THEME, LIGHT_TERMINAL_THEME, LOG_CODE_FORMAT
 
 
-def _render(log):
-    console = Console(record=True, width=120)
-    with console.capture():
-        console.print(log)
-    return console.export_html(inline_styles=True, clear=True)
+class LogRenderer:
+    """Render ConsoleRenderable entries to HTML fragments.
+
+    Mirrors RichLog.render (module/webui/widgets.py) without any pywebio
+    dependency, so WebSocket handlers can reuse the exact same log styling.
+    One instance per connection keeps capture/export pairings thread-safe.
+    """
+
+    def __init__(self):
+        self._console = HTMLConsole(
+            force_terminal=False,
+            force_interactive=False,
+            width=120,
+            color_system='truecolor',
+            markup=False,
+            record=True,
+            safe_box=False,
+            highlighter=Highlighter(),
+            theme=WEB_THEME,
+        )
+        self._lock = threading.Lock()
+
+    def render(self, renderable) -> str:
+        terminal_theme = DARK_TERMINAL_THEME if State.theme == 'dark' else LIGHT_TERMINAL_THEME
+        with self._lock:
+            with self._console.capture():
+                self._console.print(renderable)
+            return self._console.export_html(
+                theme=terminal_theme,
+                clear=True,
+                code_format=LOG_CODE_FORMAT,
+                inline_styles=True,
+            )
 
 
 class LogBroker:
@@ -47,13 +78,28 @@ async def log_socket(websocket: WebSocket):
         await websocket.close(code=4404)
         return
     await websocket.accept()
-    for entry in LogBroker.replay(name):
-        await websocket.send_json({'type': 'log', 'html': _render(entry)})
+    renderer = LogRenderer()
+    # Subscribe before replaying so lines arriving during the replay are
+    # queued; entries already covered by the replay snapshot are skipped by
+    # identity, so no line is lost or duplicated.
     subscriber = LogBroker.subscribe(name)
     try:
+        replay = LogBroker.replay(name)
+        replayed_ids = {id(entry) for entry in replay}
+        for entry in replay:
+            await websocket.send_json({'type': 'log', 'html': renderer.render(entry)})
         while True:
-            entry = await asyncio.get_running_loop().run_in_executor(None, subscriber.get)
-            await websocket.send_json({'type': 'log', 'html': _render(entry)})
+            try:
+                entry = subscriber.get_nowait()
+            except queue.Empty:
+                try:
+                    entry = await asyncio.get_running_loop().run_in_executor(
+                        None, subscriber.get, True, 0.5)
+                except queue.Empty:
+                    continue
+            if id(entry) in replayed_ids:
+                continue
+            await websocket.send_json({'type': 'log', 'html': renderer.render(entry)})
     except (WebSocketDisconnect, RuntimeError):
         pass
     finally:

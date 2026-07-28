@@ -5,14 +5,19 @@ from starlette.responses import JSONResponse
 
 import module.webui.lang as lang
 from module.config.deep import deep_get
-from module.config.utils import filepath_args, filepath_args as _filepath_args, read_file
+from module.config.utils import filepath_args, read_file
 from module.webui.setting import State
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.api.service_config import ConfigService
 
 
 def _label(key, fallback):
-    return lang._t(key) if key in lang.dic_lang.get(lang.LANG, {}) else fallback
+    # Some i18n leaves are placeholders whose value equals the key itself
+    # (e.g. Storage.Storage.name); treat those as missing.
+    text = lang.dic_lang.get(lang.LANG, {}).get(key)
+    if not text or text == key:
+        return fallback
+    return text
 
 
 def _json_value(value):
@@ -65,16 +70,16 @@ async def schema(request: Request):
         for group, fields in groups.items():
             output_fields = []
             for arg, spec in fields.items():
-                if spec.get('display') == 'hide' or spec.get('type') == 'storage':
+                if spec.get('display') == 'hide':
                     continue
                 output_fields.append(_field(name, task, group, arg, spec, deep_get(config, f'{task}.{group}.{arg}')))
             if output_fields:
                 output_groups.append({
                     'key': group, 'name': _label(f'{group}._info.name', group),
-                    # Configuration field groups are readable immediately on
-                    # entry.  The collapsible behaviour remains available as
-                    # an optional density control in the SPA.
-                    'collapsed': False, 'fields': output_fields,
+                    # The Scheduler group holds cadence internals; keep it
+                    # collapsed by default (preview v4 conclusion), other
+                    # groups stay expanded for immediate readability.
+                    'collapsed': group == 'Scheduler', 'fields': output_fields,
                 })
         tasks[task] = {
             'name': _label(f'Task.{task}.name', task), 'help': _label(f'Task.{task}.help', ''),
@@ -84,6 +89,7 @@ async def schema(request: Request):
     for key, item in menu.items():
         menus.append({
             'key': key, 'name': _label(f'Menu.{key}.name', key), 'page': item.get('page', 'setting'),
+            'icon': item.get('icon', '•'),
             'tasks': [{'key': task, 'name': tasks.get(task, {}).get('name', task),
                        'help': tasks.get(task, {}).get('help', '')} for task in item.get('tasks', [])],
         })

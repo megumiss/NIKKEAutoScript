@@ -16,11 +16,6 @@ def _json_error(message, status=400):
 
 
 async def status(_: Request):
-    try:
-        from module.webui.app import _build_screen_number_options
-        del _build_screen_number_options
-    except ImportError:
-        pass
     return JSONResponse({
         'api_version': 2, 'spa_version': '1', 'capabilities': {'spa': True, 'websocket': True},
         'version': _git_version(), 'updater_state': updater.state,
