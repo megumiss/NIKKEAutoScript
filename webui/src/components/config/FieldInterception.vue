@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 
 const props = defineProps<{ widget: 'interception_stone_import' | 'interception_stone_charts'; data?: any; busy?: boolean }>()
@@ -8,11 +8,15 @@ const importPath = ref('')
 const chartRoot = ref<HTMLElement>()
 let charts: echarts.ECharts[] = []
 
+function cssVar(name: string, fallback: string) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback }
+
 function drawCharts() {
   charts.forEach(chart => chart.dispose())
   charts = []
   if (props.widget !== 'interception_stone_charts' || !chartRoot.value) return
   const series = props.data?.series || {}
+  const text3 = cssVar('--text-3', '#97a0af')
+  const border = cssVar('--border', '#262f3d')
   const entries = [['daily', '近 30 天', '#66b8ea'], ['weekly', '近 12 周', '#55d9a2'], ['monthly', '近 12 月', '#ffc178']]
   entries.forEach(([key, title, color], index) => {
     const element = chartRoot.value?.children[index] as HTMLElement | undefined
@@ -20,14 +24,26 @@ function drawCharts() {
     const data = series[key] || { labels: [], values: [] }
     const chart = echarts.init(element)
     chart.setOption({
-      animation: false, title: { text: title, textStyle: { color: '#97a0af', fontSize: 12, fontWeight: 500 } },
-      grid: { left: 32, right: 8, top: 34, bottom: 26 }, xAxis: { type: 'category', data: data.labels || [], axisLabel: { color: '#646d7b', fontSize: 10 } },
-      yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: '#262f3d' } }, axisLabel: { color: '#646d7b', fontSize: 10 } },
-      tooltip: { trigger: 'axis' }, series: [{ type: 'line', smooth: true, data: data.values || [], symbol: 'circle', symbolSize: 5, lineStyle: { color }, itemStyle: { color }, areaStyle: { color, opacity: .14 } }],
+      animationDuration: 600, title: { text: title, textStyle: { color: text3, fontSize: 12, fontWeight: 500 } },
+      grid: { left: 36, right: 14, top: 34, bottom: 26 },
+      xAxis: { type: 'category', boundaryGap: false, data: data.labels || [], axisLabel: { color: text3, fontSize: 10 }, axisLine: { lineStyle: { color: border } } },
+      yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: border } }, axisLabel: { color: text3, fontSize: 10 } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: text3 } } },
+      series: [{
+        type: 'line', smooth: true, data: data.values || [], symbol: 'circle', symbolSize: 5, showSymbol: false,
+        lineStyle: { color, width: 2 }, itemStyle: { color }, emphasis: { focus: 'series', scale: 1.6 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: `${color}55` }, { offset: 1, color: `${color}00` },
+          ]),
+        },
+      }],
     })
     charts.push(chart)
   })
 }
+
+function onResize() { charts.forEach(chart => chart.resize()) }
 
 function submit() {
   if (!importPath.value.trim()) return emit('error', '请输入截图目录。')
@@ -35,7 +51,8 @@ function submit() {
 }
 
 watch(() => props.data, () => nextTick(drawCharts), { deep: true, immediate: true })
-onBeforeUnmount(() => charts.forEach(chart => chart.dispose()))
+onMounted(() => window.addEventListener('resize', onResize))
+onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.forEach(chart => chart.dispose()) })
 </script>
 
 <template>

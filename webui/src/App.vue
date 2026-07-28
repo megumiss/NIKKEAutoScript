@@ -23,8 +23,13 @@ const logs = ref<string[]>([])
 const logBody = ref<HTMLElement>()
 const autoScroll = ref(true)
 const error = ref('')
-const saved = ref<Record<string, boolean>>({})
-const helpExpanded = ref<Record<string, boolean>>({})
+const toasts = ref<{ id: number; text: string }[]>([])
+let toastSeq = 0
+function notify(text: string) {
+  const id = ++toastSeq
+  toasts.value.push({ id, text })
+  setTimeout(() => { toasts.value = toasts.value.filter(toast => toast.id !== id) }, 1600)
+}
 const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'dark', language: 'zh-CN' })
 const updateInfo = ref<any>({})
 const notices = ref<any[]>([])
@@ -54,12 +59,12 @@ const staticLabels: Record<string, Record<string, string>> = {
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' },
   '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' },
-  '保存后立即生效': { 'en-US': 'Changes apply immediately', 'ja-JP': '変更はすぐに適用されます' }, '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
+  '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
   '进行中': { 'en-US': 'Running', 'ja-JP': '実行中' },
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
-  '更多': { 'en-US': 'More', 'ja-JP': 'もっと見る' }, '收起': { 'en-US': 'Collapse', 'ja-JP': '閉じる' }, '自动': { 'en-US': 'Auto', 'ja-JP': '自動' },
+  '已保存': { 'en-US': 'Saved', 'ja-JP': '保存しました' },
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
@@ -99,9 +104,24 @@ function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
 function pageTitle() { return isDashboard.value ? t('全局总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
-function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import'].includes(field.widget) }
-function isLongHelp(field: Field) { return (field.help || '').length > 100 }
-function isSentinelDate(value: any) { return String(value || '').startsWith('1989-12-27') }
+function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea'].includes(field.widget) }
+function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` }
+function resizeTextarea(event: Event) { fitTextarea(event.target as HTMLTextAreaElement) }
+const vAutosize = { mounted: (el: HTMLTextAreaElement) => fitTextarea(el), updated: (el: HTMLTextAreaElement) => fitTextarea(el) }
+function escapeHtml(source: string) { return source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+function highlightYaml(source: string) {
+  return source.split('\n').map(line => {
+    const escaped = escapeHtml(line)
+    if (/^\s*#/.test(line)) return `<span class="tok-com">${escaped}</span>`
+    const match = escaped.match(/^(\s*[\w.-]+)(\s*:)(.*)$/)
+    if (!match) return escaped || ' '
+    const value = match[3]
+      .replace(/('[^']*'|"[^"]*")/g, '<span class="tok-str">$1</span>')
+      .replace(/\b(\d[\d.]*)\b/g, '<span class="tok-num">$1</span>')
+      .replace(/\b(true|false|null|~)\b/g, '<span class="tok-kw">$1</span>')
+    return `<span class="tok-key">${match[1]}</span>${match[2]}${value}`
+  }).join('\n')
+}
 function groupId(group: any) { return `group-${group.key}` }
 const activeGroup = ref('')
 function onViewScroll(event: Event) {
@@ -174,8 +194,7 @@ async function saveValue(field: Field, value: any) {
     const result = await api.patch(`/api/${selectedName.value}/config`, { key: field.key, value })
     if (!result.ok) throw new Error(result.message)
     field.value = result.applied[field.key]
-    saved.value[field.key] = true
-    setTimeout(() => delete saved.value[field.key], 1200)
+    notify(t('已保存'))
   } catch (exception: any) {
     error.value = exception.message
     throw exception
@@ -367,6 +386,9 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           <button class="btn sm" @click="dismissNotice(notice)">{{ t('知道了') }}</button>
         </article>
       </div>
+      <div class="toast-stack">
+        <div v-for="toast in toasts" :key="toast.id" class="toast">✓ {{ toast.text }}</div>
+      </div>
       <section v-if="isDashboard" class="view">
         <div class="stat-row">
           <article class="card stat-card hoverable"><div class="stat-icon blue">🖥️</div><div><div class="stat-num">{{ instances.length }}</div><div class="stat-lbl">{{ t('实例总数') }}</div></div></article>
@@ -413,24 +435,23 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           </article>
         </div>
       </section>
-      <section v-else-if="isWorkspace" class="view" @scroll.passive="onViewScroll">
+      <section v-else-if="isWorkspace" class="view" :class="{ 'tool-view': selectedPage === 'tool' }" @scroll.passive="onViewScroll">
         <div class="task-layout">
           <div>
             <article class="card task-hero">
               <div class="task-icon">{{ selectedPage === 'tool' ? '🛠' : '⚙️' }}</div>
-              <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}</h2><div class="sub">{{ taskSchema?.help || t('保存后立即生效') }}</div></div>
+              <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
               <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : api.post(`/api/${selectedName}/tool/${selectedTask}/start`).catch(exception => error = exception.message)">{{ selectedInstance?.state === 1 ? t('停止') : `▶ ${t('启动')}` }}</button>
             </article>
             <div class="cfg-groups">
               <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
                 <button class="group-head" @click="collapsed[group.key] = !collapsed[group.key]">
                   <h4>{{ group.name }}</h4>
-                  <span v-if="group.key === 'Scheduler'" class="group-summary">{{ group.fields.find((field: Field) => field.key.endsWith('.Enable'))?.value ? t('已启用') : t('未启用') }}</span>
                   <span class="group-summary">{{ collapsed[group.key] ? '▸' : '▾' }}</span>
                 </button>
                 <div class="group-body">
                   <div v-for="field in group.fields" :key="field.key" class="field" :class="{ 'field-wide': isWideField(field) }">
-                    <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp" :class="{ clamp: isLongHelp(field) && !helpExpanded[field.key] }">{{ field.help }}</div><span v-if="isLongHelp(field)" class="help-toggle" @click="helpExpanded[field.key] = !helpExpanded[field.key]">{{ helpExpanded[field.key] ? t('收起') : t('更多') }}</span></div>
+                    <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
                     <div class="field-control">
                       <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><span class="slider"></span></label>
                       <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" :disabled="field.display !== 'show'" @change="(value: any) => saveValue(field, value).catch(() => {})"/>
@@ -438,13 +459,14 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                         <input type="text" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
                         <FieldPathPicker :value="field.value" :picker="field.path_picker" :disabled="field.display !== 'show'" @picked="pickedPath(field, $event)" @error="error = $event"/>
                       </template>
-                      <textarea v-else-if="field.widget === 'textarea'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)"></textarea>
+                      <div v-else-if="field.widget === 'textarea'" class="code-wrap">
+                        <pre v-if="field.mode === 'yaml'" class="code-highlight" v-html="highlightYaml(String(field.value ?? ''))"></pre>
+                        <textarea v-autosize :class="{ 'code-input': field.mode === 'yaml' }" :value="field.value" :readonly="field.display !== 'show'" spellcheck="false" @input="resizeTextarea" @change="save(field, $event)"></textarea>
+                      </div>
                       <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_import'" :widget="field.widget" :busy="Boolean(importBusy[field.key])" @import="importInterception(field, $event)" @error="error = $event"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>
-                      <input v-else :type="field.widget === 'datetime' ? 'datetime-local' : field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.widget === 'datetime' && isSentinelDate(field.value) ? '' : field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
-                      <span v-if="field.widget === 'datetime' && isSentinelDate(field.value)" class="input-hint">{{ t('自动') }}</span>
-                      <span v-if="saved[field.key]" class="saved">✓ 已保存</span>
+                      <input v-else :type="field.widget === 'datetime' ? 'datetime-local' : field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
                     </div>
                   </div>
                 </div>
@@ -497,7 +519,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           <button class="btn danger" @click="api.post('/api/restart').catch(exception => error = exception.message)">{{ t('强制重启') }}</button>
         </article>
         <article class="card group-card">
-          <div class="group-head"><h4>{{ t('更新记录') }}</h4><span class="group-summary">{{ (updateInfo.history || []).length }}</span></div>
+          <div class="group-head"><h4>{{ t('更新记录') }}</h4></div>
           <div class="group-body history-body">
             <div v-for="commit in updateInfo.history || []" :key="commit[0]" class="history-row"><span class="msg">{{ commit[3] }}</span><small><code>{{ commit[0] }}</code>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
           </div>
