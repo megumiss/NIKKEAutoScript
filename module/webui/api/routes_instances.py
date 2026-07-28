@@ -20,8 +20,30 @@ def _response_error(message, status_code=400):
     return JSONResponse({'status': 'error', 'message': message}, status_code=status_code)
 
 
+# Lives outside ./config because nkas_instance() treats every *.json there
+# as an instance.
+REMARKS_FILE = './data/instance_remarks.json'
+
+
+def _load_remarks():
+    try:
+        with open(REMARKS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (FileNotFoundError, OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(key): str(value) for key, value in data.items()}
+
+
+def _save_remarks(remarks):
+    with open(REMARKS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(remarks, f, ensure_ascii=False, indent=2)
+
+
 async def instances(_: Request):
     result = []
+    remarks = _load_remarks()
     for name in nkas_instance():
         manager = ProcessManager.get_manager(name)
         current_task = next_task = None
@@ -35,8 +57,27 @@ async def instances(_: Request):
                 next_task = queue['waiting'][0]['command']
         except (AttributeError, OSError, KeyError) as exc:
             logger.warning(f'Unable to read queue for {name}: {exc}')
-        result.append(InstanceInfo(name, manager.state, get_config_mod(name), current_task, next_task).dict())
+        result.append(InstanceInfo(name, manager.state, get_config_mod(name), current_task, next_task, remarks.get(name, '')).dict())
     return JSONResponse(result)
+
+
+async def remark(request: Request):
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+        data = await request.json()
+        text = str(data.get('remark', '')).strip()[:100]
+    except InstanceNotFound as exc:
+        return _response_error(str(exc), 404)
+    except (ValueError, TypeError):
+        return _response_error('Expected JSON body with remark.')
+    remarks = _load_remarks()
+    if text:
+        remarks[name] = text
+    else:
+        remarks.pop(name, None)
+    _save_remarks(remarks)
+    return JSONResponse({'status': 'success', 'remark': text})
 
 
 async def start(request: Request):
@@ -117,6 +158,9 @@ async def delete(request: Request):
     acc = Path(_get_account_file(name))
     if acc.exists():
         acc.unlink()
+    remarks = _load_remarks()
+    if remarks.pop(name, None) is not None:
+        _save_remarks(remarks)
     return JSONResponse({'status': 'success'})
 
 

@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 import { useRoute, useRouter } from 'vue-router'
 import { api } from './api/client'
 import { JsonSocket } from './api/ws'
+import AppSelect from './components/AppSelect.vue'
 import FieldItemTable from './components/config/FieldItemTable.vue'
 import FieldPathPicker from './components/config/FieldPathPicker.vue'
 
@@ -11,7 +12,7 @@ import FieldPathPicker from './components/config/FieldPathPicker.vue'
 // budget defined by the UI plan.
 const FieldInterception = defineAsyncComponent(() => import('./components/config/FieldInterception.vue'))
 
-type Instance = { name: string; state: number; mod: string; current_task?: string; next_task?: string }
+type Instance = { name: string; state: number; mod: string; current_task?: string; next_task?: string; remark?: string }
 type Field = { key: string; widget: string; title: string; help: string; value: any; display: string; options: any[]; data_endpoint?: string; path_picker?: any; special_data?: any }
 const route = useRoute()
 const router = useRouter()
@@ -25,12 +26,11 @@ const error = ref('')
 const saved = ref<Record<string, boolean>>({})
 const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'dark', language: 'zh-CN' })
 const updateInfo = ref<any>({})
-const remoteInfo = ref<any>({})
 const notices = ref<any[]>([])
 const taskFilter = ref('')
-const fieldFilter = ref('')
 const collapsed = ref<Record<string, boolean>>({})
 const railCollapsed = ref<Record<string, boolean>>({})
+const sidebarCollapsed = ref(false)
 const schemaReady = ref(false)
 const importBusy = ref<Record<string, boolean>>({})
 const backendDown = ref(false)
@@ -38,7 +38,7 @@ const legacyElectron = window.parent !== window
 const staticLabels: Record<string, Record<string, string>> = {
   '全局总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
-  '实例管理': { 'en-US': 'Manage instances', 'ja-JP': 'インスタンス管理' }, '设置 / 更新': { 'en-US': 'Settings / Update', 'ja-JP': '設定 / 更新' },
+  '多开': { 'en-US': 'Multi-instance', 'ja-JP': 'マルチインスタンス' },
   '关于': { 'en-US': 'About', 'ja-JP': '情報' }, '主题': { 'en-US': 'Theme', 'ja-JP': 'テーマ' }, '调度总览': { 'en-US': 'Scheduler overview', 'ja-JP': 'スケジューラー概要' },
   '筛选任务…': { 'en-US': 'Filter tasks…', 'ja-JP': 'タスクを絞り込む…' }, '调度器': { 'en-US': 'Scheduler', 'ja-JP': 'スケジューラー' },
   '任务队列': { 'en-US': 'Task queue', 'ja-JP': 'タスクキュー' }, '实时日志': { 'en-US': 'Live log', 'ja-JP': 'リアルタイムログ' },
@@ -48,15 +48,14 @@ const staticLabels: Record<string, Record<string, string>> = {
   '运行中': { 'en-US': 'Running', 'ja-JP': '実行中' }, '空闲': { 'en-US': 'Idle', 'ja-JP': '待機中' }, '调度运行中': { 'en-US': 'Scheduler running', 'ja-JP': 'スケジューラー実行中' }, '已停止或异常': { 'en-US': 'Stopped or failed', 'ja-JP': '停止または異常' }, '正在导入…': { 'en-US': 'Importing…', 'ja-JP': 'インポート中…' },
   '无': { 'en-US': 'None', 'ja-JP': 'なし' }, '进入 →': { 'en-US': 'Open →', 'ja-JP': '開く →' }, '＋ 新建实例': { 'en-US': '＋ New instance', 'ja-JP': '＋ 新しいインスタンス' },
   '导入配置': { 'en-US': 'Import configuration', 'ja-JP': '設定をインポート' }, '名称': { 'en-US': 'Name', 'ja-JP': '名前' }, '状态': { 'en-US': 'Status', 'ja-JP': '状態' }, '操作': { 'en-US': 'Actions', 'ja-JP': '操作' },
-  '进入': { 'en-US': 'Open', 'ja-JP': '開く' }, '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' },
+  '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
   '应用更新': { 'en-US': 'Application update', 'ja-JP': 'アプリ更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
-  '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '界面': { 'en-US': 'Interface', 'ja-JP': '画面' },
-  '切换主题': { 'en-US': 'Toggle theme', 'ja-JP': 'テーマを切替' }, '远程访问': { 'en-US': 'Remote access', 'ja-JP': 'リモートアクセス' }, '未启用远程访问': { 'en-US': 'Remote access is disabled', 'ja-JP': 'リモートアクセスは無効です' },
+  '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '保存后立即生效': { 'en-US': 'Changes apply immediately', 'ja-JP': '変更はすぐに適用されます' }, '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
-  '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' }, 'WebSocket 推送': { 'en-US': 'WebSocket stream', 'ja-JP': 'WebSocket 配信' },
+  '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
-  '搜索本任务配置…': { 'en-US': 'Search settings…', 'ja-JP': '設定を検索…' }, '进行中': { 'en-US': 'Running', 'ja-JP': '実行中' },
-  '待机': { 'en-US': 'Standby', 'ja-JP': '待機' }, '没有匹配的配置项。': { 'en-US': 'No matching settings.', 'ja-JP': '一致する設定がありません。' },
+  '进行中': { 'en-US': 'Running', 'ja-JP': '実行中' },
+  '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
@@ -67,6 +66,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '未知任务': { 'en-US': 'Unknown task', 'ja-JP': '不明なタスク' },
 }
 
+const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]
 const selectedName = computed(() => String(route.params.name || ''))
 const selectedPage = computed(() => String(route.params.page || ''))
 const selectedTask = computed(() => String(route.params.task || ''))
@@ -93,9 +93,8 @@ function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.so
 function stateText(state?: number) { return state === 1 ? t('调度运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
 function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
-function pageTitle() { return isDashboard.value ? t('全局总览') : isManage.value ? t('实例管理') : isSettings.value ? t('设置 / 更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('调度总览') : taskSchema.value?.name || selectedTask.value }
+function pageTitle() { return isDashboard.value ? t('全局总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('调度总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
-function groupFields(group: any) { const q = fieldFilter.value.trim().toLowerCase(); return q ? group.fields.filter((field: Field) => `${field.title} ${field.help} ${field.key}`.toLowerCase().includes(q)) : group.fields }
 function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import'].includes(field.widget) }
 function groupId(group: any) { return `group-${group.key}` }
 function jumpToGroup(group: any) { document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
@@ -109,7 +108,6 @@ async function loadSystem() {
   try {
     systemStatus.value = await api.get('/api/system/status')
     updateInfo.value = await api.get('/api/system/update')
-    remoteInfo.value = await api.get('/api/system/remote')
     notices.value = (await api.get('/api/system/notices')).notices || []
     document.documentElement.dataset.theme = systemStatus.value.theme || 'light'
     localStorage.setItem('nkas-theme', document.documentElement.dataset.theme)
@@ -177,7 +175,7 @@ async function importInterception(field: Field, path: string) {
   try { const result = await api.post(field.data_endpoint, { path }); if (!result.ok) throw new Error(result.message || t('导入失败')); const chart = allFields().find(item => item.widget === 'interception_stone_charts'); if (chart) await refreshSpecial(chart); error.value = `已导入 ${result.imported || 0} 条，跳过 ${result.skipped || 0} 条。` } catch (exception: any) { error.value = exception.message } finally { delete importBusy.value[field.key] }
 }
 function toggleTheme() { const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; localStorage.setItem('nkas-theme', theme); api.post('/api/system/theme', { theme }).then(() => systemStatus.value.theme = theme).catch(exception => error.value = exception.message) }
-async function setLanguage(event: Event) { try { const language = (event.target as HTMLSelectElement).value; await api.post('/api/system/language', { language }); await loadSystem(); await loadWorkspace() } catch (exception: any) { error.value = exception.message } }
+async function setLanguage(language: string) { try { await api.post('/api/system/language', { language }); await loadSystem(); await loadWorkspace() } catch (exception: any) { error.value = exception.message } }
 const modal = ref<{ type: '' | 'create' | 'delete'; name: string; origin: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 function openCreateModal() { modal.value = { type: 'create', name: '', origin: instances.value[0]?.name || 'template-nkas', busy: false } }
@@ -198,6 +196,14 @@ async function confirmModal() {
     m.type = ''
     await loadInstances()
   } catch (exception: any) { error.value = exception.message } finally { m.busy = false }
+}
+async function saveRemark(instance: Instance, event: Event) {
+  const input = event.target as HTMLInputElement
+  try {
+    const result = await api.post(`/api/${instance.name}/remark`, { remark: input.value.trim() })
+    instance.remark = result.remark
+    input.value = result.remark
+  } catch (exception: any) { error.value = exception.message; input.value = instance.remark || '' }
 }
 async function importInstance(event: Event) { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; try { const response = await fetch('/api/instances/import', { method: 'POST', headers: { 'X-NKAS-Filename': file.name }, body: await file.arrayBuffer() }); const result = await response.json(); if (!response.ok) throw new Error(result.message); await loadInstances() } catch (exception: any) { error.value = exception.message } }
 async function dismissNotice(notice: any) { try { await api.post(`/api/system/notices/${notice.key}/dismiss`); notices.value = notices.value.filter(item => item.key !== notice.key) } catch (exception: any) { error.value = exception.message } }
@@ -234,7 +240,6 @@ async function healthCheck() {
 }
 onMounted(async () => { await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
-  fieldFilter.value = ''
   // Only a different instance needs a schema reload and socket swap; task
   // switches within one instance reuse everything and leave the rail alone.
   if (selectedName.value !== workspaceName) {
@@ -248,31 +253,34 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
 </script>
 
 <template>
-  <div class="app" :class="{ 'legacy-electron': legacyElectron }">
+  <div class="app" :class="{ 'legacy-electron': legacyElectron, 'side-collapsed': sidebarCollapsed }">
     <nav class="sidebar">
-      <div class="brand"><div class="brand-logo">N</div><div><div class="brand-name">NKAS</div><div class="brand-sub">NIKKE AUTO</div></div></div>
+      <div class="brand">
+        <div class="brand-logo">N</div>
+        <div class="brand-text"><div class="brand-name">NKAS</div><div class="brand-sub">NIKKE AUTO</div></div>
+        <button class="side-toggle" @click="sidebarCollapsed = !sidebarCollapsed">{{ sidebarCollapsed ? '»' : '«' }}</button>
+      </div>
       <div class="side-section">
-        <button class="side-item" :class="{ active: isDashboard }" @click="dashboard"><span class="sicon">📊</span>{{ t('全局总览') }}</button>
+        <button class="side-item" :class="{ active: isDashboard }" @click="dashboard"><span class="sicon">📊</span><span class="side-text">{{ t('全局总览') }}</span></button>
       </div>
       <div class="side-section">
         <div class="side-label">{{ t('实例') }}</div>
         <button v-for="instance in instances" :key="instance.name" class="side-item" :class="{ active: selectedName === instance.name }" @click="enter(instance.name)">
           <span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>
-          {{ instance.name }}
+          <span class="side-text">{{ instance.name }}</span>
           <span class="badge" :class="{ 'idle-badge': instance.state !== 1 }">{{ instance.state === 1 ? t('运行中') : t('空闲') }}</span>
         </button>
-        <button class="side-item" @click="router.push('/manage')"><span class="sicon">＋</span>{{ t('新建实例') }}</button>
       </div>
       <div class="side-section">
         <div class="side-label">{{ t('系统') }}</div>
-        <button class="side-item" :class="{ active: isManage }" @click="router.push('/manage')">🗂 {{ t('实例管理') }}</button>
-        <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')">⚙️ {{ t('设置 / 更新') }}</button>
-        <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')">ℹ️ {{ t('关于') }}</button>
+        <button class="side-item" :class="{ active: isManage }" @click="router.push('/manage')"><span class="sicon">🗂</span><span class="side-text">{{ t('多开') }}</span></button>
+        <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')"><span class="sicon">⚙️</span><span class="side-text">{{ t('更新') }}</span></button>
+        <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')"><span class="sicon">ℹ️</span><span class="side-text">{{ t('关于') }}</span></button>
       </div>
       <div class="side-spacer"></div>
       <div class="side-footer">
-        <button class="icon-btn" @click="toggleTheme">🌙 {{ t('主题') }}</button>
-        <select class="icon-btn" :value="systemStatus.language" @change="setLanguage"><option value="zh-CN">简体中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option></select>
+        <button class="icon-btn" @click="toggleTheme">{{ systemStatus.theme === 'dark' ? '🌙' : '☀️' }} <span class="side-text">{{ t('主题') }}</span></button>
+        <AppSelect class="lang-select" :model-value="systemStatus.language" :options="languageOptions" @change="setLanguage"/>
       </div>
     </nav>
     <aside v-if="isWorkspace" class="rail">
@@ -351,7 +359,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             </article>
           </div>
           <article class="card log-card">
-            <div class="log-head"><b>{{ t('实时日志') }}</b><span class="note">{{ t('WebSocket 推送') }}</span><label class="log-autoscroll"><input v-model="autoScroll" type="checkbox"> {{ t('自动滚动') }}</label></div>
+            <div class="log-head"><b>{{ t('实时日志') }}</b><span class="log-autoscroll"><label class="switch sm"><input v-model="autoScroll" type="checkbox"><span class="slider"></span></label>{{ t('自动滚动') }}</span></div>
             <div ref="logBody" class="log-body">
               <div v-for="(line, index) in logs" :key="index" class="log-frag" v-html="line"></div>
             </div>
@@ -367,7 +375,6 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
               <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : api.post(`/api/${selectedName}/tool/${selectedTask}/start`).catch(exception => error = exception.message)">{{ selectedInstance?.state === 1 ? t('停止') : `▶ ${t('启动')}` }}</button>
               <button v-else class="btn primary" @click="api.post(`/api/${selectedName}/task/${selectedTask}/run`).catch(exception => error = exception.message)">▶ {{ t('立即运行') }}</button>
             </article>
-            <label class="field-search">🔍 <input v-model="fieldFilter" :placeholder="t('搜索本任务配置…')"></label>
             <div class="cfg-groups">
               <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
                 <button class="group-head" @click="collapsed[group.key] = !collapsed[group.key]">
@@ -376,11 +383,11 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                   <span class="group-summary">{{ collapsed[group.key] ? '▸' : '▾' }}</span>
                 </button>
                 <div class="group-body">
-                  <div v-for="field in groupFields(group)" :key="field.key" class="field" :class="{ 'field-wide': isWideField(field) }">
+                  <div v-for="field in group.fields" :key="field.key" class="field" :class="{ 'field-wide': isWideField(field) }">
                     <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
                     <div class="field-control">
                       <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><span class="slider"></span></label>
-                      <select v-else-if="field.widget === 'select'" :value="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><option v-for="option in field.options" :key="option.value || option" :value="option.value || option">{{ option.label || option }}</option></select>
+                      <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" :disabled="field.display !== 'show'" @change="(value: any) => saveValue(field, value).catch(() => {})"/>
                       <template v-else-if="field.path_picker">
                         <input type="text" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
                         <FieldPathPicker :value="field.value" :picker="field.path_picker" :disabled="field.display !== 'show'" @picked="pickedPath(field, $event)" @error="error = $event"/>
@@ -393,7 +400,6 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                       <span v-if="saved[field.key]" class="saved">✓ 已保存</span>
                     </div>
                   </div>
-                  <div v-if="!groupFields(group).length" class="special-empty">{{ t('没有匹配的配置项。') }}</div>
                 </div>
               </article>
             </div>
@@ -401,7 +407,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
               <div class="group-body special-empty" style="padding:16px 22px">{{ t('未知任务') }}: {{ selectedTask }}</div>
             </article>
             <article v-if="selectedPage === 'tool'" class="card log-card tool-log">
-              <div class="log-head"><b>{{ t('实时日志') }}</b><span class="note">{{ t('WebSocket 推送') }}</span><label class="log-autoscroll"><input v-model="autoScroll" type="checkbox"> {{ t('自动滚动') }}</label></div>
+              <div class="log-head"><b>{{ t('实时日志') }}</b><span class="log-autoscroll"><label class="switch sm"><input v-model="autoScroll" type="checkbox"><span class="slider"></span></label>{{ t('自动滚动') }}</span></div>
               <div ref="logBody" class="log-body">
                 <div v-for="(line, index) in logs" :key="index" class="log-frag" v-html="line"></div>
               </div>
@@ -418,54 +424,70 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           <button class="btn primary" @click="openCreateModal">{{ t('＋ 新建实例') }}</button>
           <label class="btn">⤒ {{ t('导入配置') }}<input type="file" accept=".json" hidden @change="importInstance"></label>
         </div>
-        <article class="card" style="overflow:hidden">
+        <article class="card manage-table" style="overflow:hidden">
           <table>
-            <thead><tr><th>{{ t('名称') }}</th><th>Mod</th><th>{{ t('状态') }}</th><th>{{ t('操作') }}</th></tr></thead>
+            <colgroup><col style="width:22%"><col style="width:10%"><col style="width:15%"><col><col style="width:200px"></colgroup>
+            <thead><tr><th>{{ t('名称') }}</th><th>Mod</th><th>{{ t('状态') }}</th><th>{{ t('备注') }}</th><th>{{ t('操作') }}</th></tr></thead>
             <tbody>
               <tr v-for="instance in instances" :key="instance.name">
-                <td>{{ instance.name }}</td><td>{{ instance.mod }}</td><td>{{ stateText(instance.state) }}</td>
-                <td><button class="btn sm" @click="enter(instance.name)">{{ t('进入') }}</button> <a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></td>
+                <td><span class="cell-inst"><span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>{{ instance.name }}</span></td>
+                <td>{{ instance.mod }}</td>
+                <td><span class="status-pill" :class="stateClass(instance.state)">{{ stateText(instance.state) }}</span></td>
+                <td><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
+                <td><a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></td>
               </tr>
             </tbody>
           </table>
         </article>
       </section>
       <section v-else-if="isSettings" class="view">
-        <div class="cfg-groups">
-          <article class="card group-card">
-            <div class="group-head"><h4>{{ t('应用更新') }}</h4></div>
-            <div class="group-body">
-              <div class="field"><div class="field-label"><div class="fname">{{ t('当前版本') }}</div></div><div class="field-control">{{ systemStatus.version }}</div></div>
-              <div class="field"><div class="field-label"><div class="fname">{{ t('更新') }}</div></div><div class="field-control"><button class="btn primary sm" @click="api.post('/api/update').catch(exception => error = exception.message)">{{ t('检查更新') }}</button><button class="btn sm danger" @click="api.post('/api/restart').catch(exception => error = exception.message)">{{ t('强制重启') }}</button></div></div>
-              <div v-for="commit in updateInfo.history || []" :key="commit[0]" class="history-row"><code>{{ commit[0] }}</code><span>{{ commit[3] }}</span><small>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
-            </div>
-          </article>
-          <article class="card group-card">
-            <div class="group-head"><h4>{{ t('界面') }}</h4></div>
-            <div class="group-body"><button class="btn sm" @click="toggleTheme">{{ t('切换主题') }}</button></div>
-          </article>
-          <article class="card group-card">
-            <div class="group-head"><h4>{{ t('远程访问') }}</h4></div>
-            <div class="group-body">{{ remoteInfo.entry_point || t('未启用远程访问') }}</div>
-          </article>
-        </div>
+        <article class="card task-hero">
+          <div class="task-icon">🚀</div>
+          <div style="flex:1"><h2>{{ t('应用更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code></div></div>
+          <button class="btn primary" @click="api.post('/api/update').catch(exception => error = exception.message)">{{ t('检查更新') }}</button>
+          <button class="btn danger" @click="api.post('/api/restart').catch(exception => error = exception.message)">{{ t('强制重启') }}</button>
+        </article>
+        <article class="card group-card">
+          <div class="group-head"><h4>{{ t('更新记录') }}</h4><span class="group-summary">{{ (updateInfo.history || []).length }}</span></div>
+          <div class="group-body history-body">
+            <div v-for="commit in updateInfo.history || []" :key="commit[0]" class="history-row"><span class="msg">{{ commit[3] }}</span><small><code>{{ commit[0] }}</code>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
+          </div>
+        </article>
       </section>
       <section v-else class="view">
         <article class="card about-panel">
-          <h2>NKAS · NIKKE Auto Script</h2>
-          <p>NKAS is a free open-source software. If you paid for NKAS through any channel, please request a refund.</p>
-          <p>NKAS 是一款免费开源软件；如果你在任何渠道付费购买了 NKAS，请退款。</p>
+          <div class="about-hero">
+            <div class="brand-logo">N</div>
+            <div><h2>NKAS · NIKKE Auto Script</h2><div class="sub">NIKKE Auto Script · {{ systemStatus.version }}</div></div>
+          </div>
+          <p>NKAS is a free open source software, if you paid for NKAS from any channel, please refund.<br>NKAS 是一款免费开源软件，如果你在任何渠道付费购买了NKAS，请退款。</p>
           <h3>Project / 项目</h3>
-          <p>Repository: <a href="https://github.com/megumiss/NIKKEAutoScript" target="_blank">github.com/megumiss/NIKKEAutoScript</a></p>
-          <p>Guide / 详细指南：<a href="https://github.com/megumiss/NIKKEAutoScript/wiki" target="_blank">GitHub Wiki</a></p>
-          <h3>Need help / 寻求帮助</h3>
-          <p>Submit an issue on <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">GitHub Issues</a>，或加入 QQ 群：823265807。</p>
+          <p>
+            Project repository: <a href="https://github.com/megumiss/NIKKEAutoScript" target="_blank">https://github.com/megumiss/NIKKEAutoScript</a><br>
+            项目地址：<a href="https://github.com/megumiss/NIKKEAutoScript" target="_blank">https://github.com/megumiss/NIKKEAutoScript</a><br>
+            Detailed guide: <a href="https://github.com/megumiss/NIKKEAutoScript/wiki" target="_blank">https://github.com/megumiss/NIKKEAutoScript/wiki</a><br>
+            详细指南请参阅：<a href="https://github.com/megumiss/NIKKEAutoScript/wiki" target="_blank">https://github.com/megumiss/NIKKEAutoScript/wiki</a>
+          </p>
+          <h3>💡 Need help / 寻求帮助</h3>
+          <p>
+            If you encounter any issues while using, you can get help through the following ways:<br>
+            如果在使用过程中遇到问题，您可以通过以下方式获取帮助：<br>
+            Submit an issue on <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">GitHub Issues</a><br>
+            在 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">GitHub Issues</a> 中提交问题<br>
+            Join the QQ group: 823265807<br>
+            加入划水 QQ 群：823265807
+          </p>
           <h3>Support / 支持项目</h3>
-          <p>If you like this project, you can buy the author a cup of Mixue Ice Cream 🍦。</p>
-          <p>如果喜欢本项目，可以送作者一杯蜜雪冰城 🍦；你的支持是继续开发与维护的动力。</p>
+          <p>
+            If you like this project, you can buy the author a cup of Mixue Ice Cream 🍦<br>
+            如果喜欢本项目，可以送作者一杯蜜雪冰城🍦<br>
+            Your support is the motivation for the author to develop and maintain the project 🚀<br>
+            您的支持就是作者开发和维护项目的动力🚀
+          </p>
           <div class="about-donations">
-            <figure><img :src="'/static/gui/donate/wechat.png'" alt="WeChat Pay"><figcaption>WeChat Pay / 微信</figcaption></figure>
-            <figure><img :src="'/static/gui/donate/alipay.png'" alt="Alipay"><figcaption>Alipay / 支付宝</figcaption></figure>
+            <figure><img :src="'/static/gui/donate/wechat.png'" alt="WeChat Pay"><figcaption>WeChat Pay (微信)</figcaption></figure>
+            <figure><img :src="'/static/gui/donate/alipay.png'" alt="Alipay"><figcaption>Alipay (支付宝)</figcaption></figure>
+            <figure><img :src="'/static/gui/donate/alipayremit.png'" alt="Alipay Remit"><figcaption>Alipay Remit (For international)</figcaption></figure>
           </div>
         </article>
       </section>
@@ -476,7 +498,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <h3>{{ modal.type === 'create' ? t('新建实例') : t('删除') }}</h3>
         <template v-if="modal.type === 'create'">
           <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" placeholder="nkas2" @keyup.enter="confirmModal"></label>
-          <label class="modal-field">{{ t('复制来源实例') }}<select v-model="modal.origin"><option v-for="option in originOptions" :key="option" :value="option">{{ option }}</option></select></label>
+          <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
         </template>
         <p v-else class="modal-text">{{ t('删除') }} {{ modal.name }}？{{ t('此操作不可恢复。') }}</p>
         <div class="modal-actions">

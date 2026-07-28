@@ -38,6 +38,7 @@ def mount_api(app):
         Route('/api/system/theme', routes_system.set_theme, methods=['POST']),
         Route('/api/{name:str}/start', routes_instances.start, methods=['POST']),
         Route('/api/{name:str}/stop', routes_instances.stop, methods=['POST']),
+        Route('/api/{name:str}/remark', routes_instances.remark, methods=['POST']),
         Route('/api/{name:str}/export', routes_instances.export, methods=['GET']),
         Route('/api/{name:str}/schema', routes_config.schema, methods=['GET']),
         Route('/api/{name:str}/config', routes_config.config, methods=['GET']),

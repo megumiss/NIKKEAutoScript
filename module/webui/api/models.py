@@ -23,6 +23,7 @@ class InstanceInfo:
     mod: str
     current_task: Optional[str] = None
     next_task: Optional[str] = None
+    remark: str = ''
 
     def dict(self) -> Dict[str, Any]:
         return asdict(self)
