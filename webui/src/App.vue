@@ -5,7 +5,6 @@ import { api } from './api/client'
 import { JsonSocket } from './api/ws'
 import FieldItemTable from './components/config/FieldItemTable.vue'
 import FieldPathPicker from './components/config/FieldPathPicker.vue'
-import FieldStorage from './components/config/FieldStorage.vue'
 
 // ECharts is only needed by one read-only statistics field.  Loading it on
 // demand keeps normal configuration and scheduler pages within the first-load
@@ -84,6 +83,11 @@ let stateSocket: JsonSocket | undefined
 let logSocket: JsonSocket | undefined
 let queueSocket: JsonSocket | undefined
 let healthTimer: number | undefined
+// Names of the instance whose schema and per-instance sockets are currently
+// loaded.  Switching tasks within one instance must not refetch the schema
+// or rebuild the rail, so both are keyed by instance name.
+let workspaceName = ''
+let socketsName = ''
 
 function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.some((group: any) => group.fields.some((field: Field) => field.key.endsWith('.Scheduler.Enable') && field.value)) }
 function stateText(state?: number) { return state === 1 ? t('调度运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
@@ -92,7 +96,7 @@ function initials(name: string) { return name.slice(0, 1).toUpperCase() }
 function pageTitle() { return isDashboard.value ? t('全局总览') : isManage.value ? t('实例管理') : isSettings.value ? t('设置 / 更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('调度总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
 function groupFields(group: any) { const q = fieldFilter.value.trim().toLowerCase(); return q ? group.fields.filter((field: Field) => `${field.title} ${field.help} ${field.key}`.toLowerCase().includes(q)) : group.fields }
-function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import', 'storage'].includes(field.widget) }
+function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import'].includes(field.widget) }
 function groupId(group: any) { return `group-${group.key}` }
 function jumpToGroup(group: any) { document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
 function t(source: string) { return systemStatus.value.language === 'zh-CN' ? source : staticLabels[source]?.[systemStatus.value.language] || source }
@@ -121,12 +125,14 @@ async function loadWorkspace() {
     allFields().forEach(field => { if (field.key.endsWith('.ScreenNumber')) field.options = monitors })
     collapsed.value = {}
     Object.values(schema.value.tasks).forEach((task: any) => task.groups.forEach((group: any) => { if (group.collapsed) collapsed.value[group.key] = true }))
-    // Rail groups containing enabled or running tasks start expanded so the
-    // user lands on what matters; the rest start collapsed with a count badge.
-    schema.value.menus.forEach((menu: any) => { railCollapsed.value[menu.key] = !menu.tasks.some((task: any) => taskEnabled(task.key) || selectedInstance.value?.current_task === task.key) })
+    // Rail groups start collapsed; in-app navigation keeps them untouched
+    // because loadWorkspace only runs on an instance switch.
+    railCollapsed.value = {}
+    schema.value.menus.forEach((menu: any) => { railCollapsed.value[menu.key] = true })
     await Promise.all(allFields().filter(field => field.data_endpoint && field.widget !== 'interception_stone_import').map(field => refreshSpecial(field).catch(() => null)))
     queue.value = await api.get(`/api/${selectedName.value}/queue`)
     schemaReady.value = true
+    workspaceName = selectedName.value
     error.value = ''
   } catch (exception: any) { error.value = exception.message }
 }
@@ -195,11 +201,18 @@ async function confirmModal() {
 }
 async function importInstance(event: Event) { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; try { const response = await fetch('/api/instances/import', { method: 'POST', headers: { 'X-NKAS-Filename': file.name }, body: await file.arrayBuffer() }); const result = await response.json(); if (!response.ok) throw new Error(result.message); await loadInstances() } catch (exception: any) { error.value = exception.message } }
 async function dismissNotice(notice: any) { try { await api.post(`/api/system/notices/${notice.key}/dismiss`); notices.value = notices.value.filter(item => item.key !== notice.key) } catch (exception: any) { error.value = exception.message } }
-function startSockets() {
-  stateSocket?.close(); logSocket?.close(); queueSocket?.close()
+function startStateSocket() {
+  stateSocket?.close()
   stateSocket = new JsonSocket('/ws/state', event => { const instance = instances.value.find(item => item.name === event.name); if (instance) instance.state = event.state })
   stateSocket.connect()
-  if (!selectedName.value) return
+}
+function startSockets() {
+  // Log and queue sockets are per instance; keep them alive while moving
+  // between pages of the same instance so logs keep collecting and the
+  // replay is not duplicated on return.
+  if (!selectedName.value || socketsName === selectedName.value) return
+  logSocket?.close(); queueSocket?.close()
+  socketsName = selectedName.value
   logSocket = new JsonSocket(`/ws/${selectedName.value}/log`, event => logs.value = [...logs.value.slice(-399), event.html])
   queueSocket = new JsonSocket(`/ws/${selectedName.value}/queue`, event => queue.value = event)
   logSocket.connect(); queueSocket.connect()
@@ -211,14 +224,25 @@ async function healthCheck() {
     await api.get('/api/system/status')
     if (backendDown.value) {
       backendDown.value = false
-      await loadSystem(); await loadInstances(); await loadWorkspace(); startSockets()
+      workspaceName = ''
+      socketsName = ''
+      await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets()
     }
   } catch {
     backendDown.value = true
   }
 }
-onMounted(async () => { await loadSystem(); await loadInstances(); await loadWorkspace(); startSockets(); healthTimer = window.setInterval(healthCheck, 4000) })
-watch(() => route.fullPath, async () => { logs.value = []; fieldFilter.value = ''; await loadWorkspace(); startSockets() })
+onMounted(async () => { await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); healthTimer = window.setInterval(healthCheck, 4000) })
+watch(() => route.fullPath, async () => {
+  fieldFilter.value = ''
+  // Only a different instance needs a schema reload and socket swap; task
+  // switches within one instance reuse everything and leave the rail alone.
+  if (selectedName.value !== workspaceName) {
+    logs.value = []
+    await loadWorkspace()
+  }
+  startSockets()
+})
 watch(logs, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
 onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer) })
 </script>
@@ -362,7 +386,6 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                         <FieldPathPicker :value="field.value" :picker="field.path_picker" :disabled="field.display !== 'show'" @picked="pickedPath(field, $event)" @error="error = $event"/>
                       </template>
                       <textarea v-else-if="field.widget === 'textarea'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)"></textarea>
-                      <FieldStorage v-else-if="field.widget === 'storage'" :value="field.value" :disabled="field.display !== 'show'" @clear="saveValue(field, {})"/>
                       <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_import'" :widget="field.widget" :busy="Boolean(importBusy[field.key])" @import="importInterception(field, $event)" @error="error = $event"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>

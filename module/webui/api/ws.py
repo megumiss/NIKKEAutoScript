@@ -1,51 +1,89 @@
 import asyncio
+import html
 import json
 import queue
+import re
 import threading
 
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from module.config.utils import nkas_instance
-from module.logger import HTMLConsole, Highlighter, WEB_THEME
+from module.logger import HTMLConsole
 from module.webui.api.routes_tasks import queue_data
 from module.webui.process_manager import ProcessManager
-from module.webui.setting import State
-from module.webui.utils import DARK_TERMINAL_THEME, LIGHT_TERMINAL_THEME, LOG_CODE_FORMAT
+
+LOG_LINE_PATTERN = re.compile(
+    r'^(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL)\s+'
+    r'(?P<timestamp>\d{2}:\d{2}:\d{2}\.\d{3})\s*│\s?'
+    r'(?P<message>.*?)\s*$'
+)
+RULE_CHARACTERS = '─═ '
+# Traceback borders also contain ─; corners/vertical bars tell them apart
+# from logger rules, which consist of rule characters and a title only.
+BOX_CHARACTERS = '╭╮╰╯│|'
+LEVEL_CHIP_CLASS = {
+    'DEBUG': 'lv-info',
+    'INFO': 'lv-info',
+    'WARNING': 'lv-warn',
+    'ERROR': 'lv-err',
+    'CRITICAL': 'lv-err',
+}
 
 
 class LogRenderer:
-    """Render ConsoleRenderable entries to HTML fragments.
+    """Convert queued Rich renderables into SPA log fragments.
 
-    Mirrors RichLog.render (module/webui/widgets.py) without any pywebio
-    dependency, so WebSocket handlers can reuse the exact same log styling.
-    One instance per connection keeps capture/export pairings thread-safe.
+    Fragments follow the preview markup (styles live in webui base.css):
+    normal lines carry a timestamp and a level chip, horizontal rules become
+    section dividers instead of long runs of box characters, and anything
+    else (exit notices, tracebacks) is shown as a plain line.  A wide,
+    colorless console keeps one event on a single line; one renderer per
+    connection keeps capture pairings thread-safe.
     """
 
     def __init__(self):
         self._console = HTMLConsole(
             force_terminal=False,
             force_interactive=False,
-            width=120,
-            color_system='truecolor',
+            width=1000,
+            no_color=True,
             markup=False,
-            record=True,
             safe_box=False,
-            highlighter=Highlighter(),
-            theme=WEB_THEME,
         )
         self._lock = threading.Lock()
 
-    def render(self, renderable) -> str:
-        terminal_theme = DARK_TERMINAL_THEME if State.theme == 'dark' else LIGHT_TERMINAL_THEME
+    def _plain(self, renderable) -> str:
         with self._lock:
-            with self._console.capture():
+            with self._console.capture() as capture:
                 self._console.print(renderable)
-            return self._console.export_html(
-                theme=terminal_theme,
-                clear=True,
-                code_format=LOG_CODE_FORMAT,
-                inline_styles=True,
+            return capture.get()
+
+    @staticmethod
+    def _render_line(line: str) -> str:
+        match = LOG_LINE_PATTERN.match(line)
+        if match:
+            level = match.group('level')
+            return (
+                '<div class="log-line">'
+                f'<span class="ts">{match.group("timestamp")}</span>'
+                f'<span class="lv-chip {LEVEL_CHIP_CLASS[level]}">{level}</span>'
+                f'<span class="log-message">{html.escape(match.group("message"))}</span>'
+                '</div>'
             )
+        if ('─' in line or '═' in line) and not any(char in line for char in BOX_CHARACTERS):
+            title = line.strip(RULE_CHARACTERS).strip()
+            if title:
+                return f'<div class="log-line section"><span class="log-message">{html.escape(title)}</span></div>'
+            return '<div class="log-line separator"></div>'
+        return f'<div class="log-line plain"><span class="log-message">{html.escape(line)}</span></div>'
+
+    def render(self, renderable) -> str:
+        fragments = []
+        for line in self._plain(renderable).splitlines():
+            if not line.strip():
+                continue
+            fragments.append(self._render_line(line.rstrip()))
+        return ''.join(fragments)
 
 
 class LogBroker:

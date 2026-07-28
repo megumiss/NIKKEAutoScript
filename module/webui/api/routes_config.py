@@ -72,14 +72,17 @@ async def schema(request: Request):
             for arg, spec in fields.items():
                 if spec.get('display') == 'hide':
                     continue
+                # Storage is a script-managed record dump, not a user setting;
+                # it must not show up as a 任务状态 group on the task page.
+                if spec.get('type') == 'storage':
+                    continue
                 output_fields.append(_field(name, task, group, arg, spec, deep_get(config, f'{task}.{group}.{arg}')))
             if output_fields:
                 output_groups.append({
                     'key': group, 'name': _label(f'{group}._info.name', group),
-                    # The Scheduler group holds cadence internals; keep it
-                    # collapsed by default (preview v4 conclusion), other
-                    # groups stay expanded for immediate readability.
-                    'collapsed': group == 'Scheduler', 'fields': output_fields,
+                    # All groups (including Scheduler with enable/next-run) stay
+                    # expanded by default so settings are visible on entry.
+                    'collapsed': False, 'fields': output_fields,
                 })
         tasks[task] = {
             'name': _label(f'Task.{task}.name', task), 'help': _label(f'Task.{task}.help', ''),
