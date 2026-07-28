@@ -39,7 +39,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '全局总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
   '多开': { 'en-US': 'Multi-instance', 'ja-JP': 'マルチインスタンス' },
-  '关于': { 'en-US': 'About', 'ja-JP': '情報' }, '主题': { 'en-US': 'Theme', 'ja-JP': 'テーマ' }, '调度总览': { 'en-US': 'Scheduler overview', 'ja-JP': 'スケジューラー概要' },
+  '关于': { 'en-US': 'About', 'ja-JP': '情報' }, '主题': { 'en-US': 'Theme', 'ja-JP': 'テーマ' }, '任务总览': { 'en-US': 'Task overview', 'ja-JP': 'タスク概要' },
   '筛选任务…': { 'en-US': 'Filter tasks…', 'ja-JP': 'タスクを絞り込む…' }, '调度器': { 'en-US': 'Scheduler', 'ja-JP': 'スケジューラー' },
   '任务队列': { 'en-US': 'Task queue', 'ja-JP': 'タスクキュー' }, '实时日志': { 'en-US': 'Live log', 'ja-JP': 'リアルタイムログ' },
   '自动滚动': { 'en-US': 'Auto-scroll', 'ja-JP': '自動スクロール' }, '当前任务': { 'en-US': 'Current task', 'ja-JP': '現在のタスク' },
@@ -95,13 +95,21 @@ function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.so
 function stateText(state?: number) { return state === 1 ? t('调度运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
 function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
-function pageTitle() { return isDashboard.value ? t('全局总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('调度总览') : taskSchema.value?.name || selectedTask.value }
+function pageTitle() { return isDashboard.value ? t('全局总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
 function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import'].includes(field.widget) }
 function groupId(group: any) { return `group-${group.key}` }
 function jumpToGroup(group: any) { document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
 function t(source: string) { return systemStatus.value.language === 'zh-CN' ? source : staticLabels[source]?.[systemStatus.value.language] || source }
 function formatTime(value: string) { const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/); return m ? `${m[2]}-${m[3]} ${m[4]}` : value }
+function schedSub() {
+  const sep = systemStatus.value.language === 'zh-CN' ? '：' : ': '
+  const running = queue.value.running || []
+  if (running.length) return `${t('当前任务')}${sep}${running.map((item: any) => item.name_i18n).join('、')}`
+  const next = [...(queue.value.pending || []), ...(queue.value.waiting || [])][0]
+  if (next) return `${t('下一任务')}${sep}${next.name_i18n}${next.next_run ? ` · ${formatTime(next.next_run)}` : ''}`
+  return t('等待任务队列')
+}
 
 async function loadInstances() {
   try { instances.value = await api.get('/api/instances'); if (route.path === '/' && instances.value.length === 1) await router.replace(`/i/${instances.value[0].name}/overview`) } catch (exception: any) { error.value = exception.message }
@@ -307,10 +315,10 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           <span class="inst-avatar" :class="{ idle: selectedInstance?.state !== 1 }">{{ initials(selectedName) }}<span class="ring" :class="stateClass(selectedInstance?.state)"></span></span>
           <div><div class="rail-inst-name">{{ selectedName }}</div><div class="rail-inst-state">{{ stateText(selectedInstance?.state) }}</div></div>
         </div>
-        <label class="rail-search">🔍 <input v-model="taskFilter" :placeholder="t('筛选任务…')"></label>
+        <label class="rail-search">🔍 <input v-model="taskFilter" :placeholder="t('筛选任务…')"><button v-if="taskFilter" type="button" class="rail-clear" @click.prevent="taskFilter = ''">✕</button></label>
       </div>
       <div class="rail-list">
-        <button class="rail-item" :class="{ active: selectedPage === 'overview' }" @click="router.push(`/i/${selectedName}/overview`)">📈 {{ t('调度总览') }}</button>
+        <button class="rail-item" :class="{ active: selectedPage === 'overview' }" @click="router.push(`/i/${selectedName}/overview`)">📈 {{ t('任务总览') }}</button>
         <template v-if="schemaReady" v-for="menu in visibleMenus" :key="menu.key">
           <button class="rail-group" :class="{ expanded: !railCollapsed[menu.key] || taskFilter }" @click="toggleRail(menu)">
             <span class="chev">›</span><span class="sicon">{{ menu.icon || '•' }}</span>{{ menu.name }}
@@ -365,7 +373,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <div class="ov-layout">
           <div class="ov-left">
             <article class="card hero-sched">
-              <div style="flex:1"><b>{{ t('调度器') }}</b><div class="sub">{{ selectedInstance?.current_task || selectedInstance?.next_task || t('等待任务队列') }}</div></div>
+              <div style="flex:1"><b>{{ t('调度器') }}</b><div class="sub">{{ schedSub() }}</div></div>
               <button class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'success'" @click="lifecycle(selectedInstance?.state === 1 ? 'stop' : 'start')">{{ selectedInstance?.state === 1 ? t('停止') : t('启动') }}</button>
             </article>
             <article class="card queue-card">
