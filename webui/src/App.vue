@@ -318,7 +318,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           </button>
           <div v-show="!railCollapsed[menu.key] || taskFilter" class="rail-tasks">
             <button v-for="task in menu.tasks" :key="task.key" class="rail-item" :class="{ active: selectedTask === task.key }" @click="openTask(task, menu.page === 'tool' ? 'tool' : 'task')">
-              <span>{{ menu.page === 'tool' ? '🛠' : '•' }}</span>{{ task.name }}
+              {{ task.name }}
               <span v-if="selectedInstance?.current_task === task.key" class="spin"></span>
               <span v-else class="mini-dot" :class="taskEnabled(task.key) ? 'on' : 'off'"></span>
             </button>
