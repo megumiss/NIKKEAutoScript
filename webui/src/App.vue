@@ -66,6 +66,8 @@ const staticLabels: Record<string, Record<string, string>> = {
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
   '已保存': { 'en-US': 'Saved', 'ja-JP': '保存しました' },
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
+  '提示': { 'en-US': 'Notice', 'ja-JP': 'お知らせ' }, '我知道了': { 'en-US': 'Got it', 'ja-JP': '了解しました' },
+  '本次不再提示': { 'en-US': 'Do not show again', 'ja-JP': '今後表示しない' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
   '导入失败': { 'en-US': 'Import failed', 'ja-JP': 'インポート失敗' },
@@ -272,6 +274,32 @@ async function saveRemark(instance: Instance, event: Event) {
 }
 async function importInstance(event: Event) { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; try { const response = await fetch('/api/instances/import', { method: 'POST', headers: { 'X-NKAS-Filename': file.name }, body: await file.arrayBuffer() }); const result = await response.json(); if (!response.ok) throw new Error(result.message); await loadInstances() } catch (exception: any) { error.value = exception.message } }
 async function dismissNotice(notice: any) { try { await api.post(`/api/system/notices/${notice.key}/dismiss`); notices.value = notices.value.filter(item => item.key !== notice.key) } catch (exception: any) { error.value = exception.message } }
+// The startup notice is a modal like the legacy pywebio popup, not a stack
+// card: closing without the checkbox only hides it for this session, while
+// the checkbox persists the dismissed id through the dismiss endpoint.
+const noticeDontShow = ref(false)
+const startupNoticeClosed = ref(false)
+const startupNotice = computed(() => notices.value.find(item => item.key === 'startup'))
+const stackNotices = computed(() => notices.value.filter(item => item.key !== 'startup'))
+async function closeStartupNotice() {
+  const notice = startupNotice.value
+  startupNoticeClosed.value = true
+  if (notice && noticeDontShow.value) await dismissNotice(notice)
+}
+// Legacy toast parity: sha + commit count headline, then up to 5 messages
+// trimmed to 54 chars, one per line.
+function autoUpdateTitle(data: any) {
+  const sha = String(data?.to_sha || '').trim() || '-'
+  const messages = Array.isArray(data?.messages) ? data.messages : []
+  const count = Number(data?.commit_count) > 0 ? Number(data.commit_count) : messages.length
+  if (systemStatus.value.language === 'en-US') return `Auto-updated to ${sha} (${count} commits)`
+  if (systemStatus.value.language === 'ja-JP') return `自動更新完了: ${sha}（${count}件）`
+  return `已自动更新到 ${sha}（${count} 条提交）`
+}
+function autoUpdatePreview(data: any) {
+  if (!Array.isArray(data?.messages)) return []
+  return data.messages.map((msg: any) => String(msg).trim()).filter(Boolean).slice(0, 5).map((msg: string) => msg.length > 54 ? `${msg.slice(0, 51)}...` : msg)
+}
 function startStateSocket() {
   stateSocket?.close()
   stateSocket = new JsonSocket('/ws/state', event => { const instance = instances.value.find(item => item.name === event.name); if (instance) instance.state = event.state })
@@ -380,9 +408,15 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <span v-if="isWorkspace" class="status-pill" :class="stateClass(selectedInstance?.state)">{{ stateText(selectedInstance?.state) }}</span>
         <div class="topbar-right"><span v-if="error" class="sub">{{ error }}</span></div>
       </header>
-      <div v-if="notices.length" class="notice-stack">
-        <article v-for="notice in notices" :key="notice.key" class="notice-card" :class="notice.type">
-          <div><strong>{{ notice.data.title || t('系统通知') }}</strong><p>{{ notice.data.content || notice.data.error || notice.data.messages?.join(' · ') || t('有新的系统通知。') }}</p></div>
+      <div v-if="stackNotices.length" class="notice-stack">
+        <article v-for="notice in stackNotices" :key="notice.key" class="notice-card" :class="notice.type">
+          <div>
+            <strong>{{ notice.key === 'auto_update' ? autoUpdateTitle(notice.data) : (notice.data.title || t('系统通知')) }}</strong>
+            <ul v-if="autoUpdatePreview(notice.data).length" class="notice-messages">
+              <li v-for="(msg, index) in autoUpdatePreview(notice.data)" :key="index">• {{ msg }}</li>
+            </ul>
+            <p v-else>{{ notice.data.content || notice.data.error || t('有新的系统通知。') }}</p>
+          </div>
           <button class="btn sm" @click="dismissNotice(notice)">{{ t('知道了') }}</button>
         </article>
       </div>
@@ -564,6 +598,16 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       </section>
     </main>
     <div v-if="backendDown" class="backend-down"><div class="backend-down-card">{{ t('后端连接中断，正在等待恢复…') }}</div></div>
+    <div v-if="startupNotice && !startupNoticeClosed" class="modal-mask">
+      <div class="modal-card">
+        <h3>{{ startupNotice.data.title || t('提示') }}</h3>
+        <p class="modal-text notice-content">{{ startupNotice.data.content }}</p>
+        <label class="notice-option"><input v-model="noticeDontShow" type="checkbox"><span>{{ t('本次不再提示') }}</span></label>
+        <div class="modal-actions">
+          <button class="btn primary" @click="closeStartupNotice">{{ t('我知道了') }}</button>
+        </div>
+      </div>
+    </div>
     <div v-if="modal.type" class="modal-mask" @click.self="modal.type = ''">
       <div class="modal-card">
         <h3>{{ modal.type === 'create' ? t('新建实例') : t('删除') }}</h3>
