@@ -37,13 +37,16 @@ const visibleLogs = computed(() => {
   })
 })
 const error = ref('')
-const toasts = ref<{ id: number; text: string }[]>([])
+const toasts = ref<{ id: number; text: string; kind: string }[]>([])
 let toastSeq = 0
-function notify(text: string) {
+function notify(text: string, kind = 'ok', duration = 1600) {
   const id = ++toastSeq
-  toasts.value.push({ id, text })
-  setTimeout(() => { toasts.value = toasts.value.filter(toast => toast.id !== id) }, 1600)
+  toasts.value.push({ id, text, kind })
+  setTimeout(() => { toasts.value = toasts.value.filter(toast => toast.id !== id) }, duration)
 }
+// Errors are transient toasts, not a persistent topbar strip: every
+// `error.value = ...` assignment flows through this watcher.
+watch(error, value => { if (value) { notify(value, 'error', 4000); error.value = '' } })
 const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'dark', language: 'zh-CN' })
 const updateInfo = ref<any>({})
 const notices = ref<any[]>([])
@@ -457,7 +460,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       <header class="topbar">
         <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
         <span v-if="isWorkspace" class="status-pill" :class="stateClass(selectedInstance?.state)">{{ stateText(selectedInstance?.state) }}</span>
-        <div class="topbar-right"><span v-if="error" class="sub">{{ error }}</span></div>
+        <div class="topbar-right"></div>
       </header>
       <div v-if="stackNotices.length" class="notice-stack">
         <article v-for="notice in stackNotices" :key="notice.key" class="notice-card" :class="notice.type">
@@ -472,7 +475,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         </article>
       </div>
       <div class="toast-stack">
-        <div v-for="toast in toasts" :key="toast.id" class="toast">✓ {{ toast.text }}</div>
+        <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.kind">{{ toast.kind === 'error' ? '✕' : '✓' }} {{ toast.text }}</div>
       </div>
       <section v-if="isDashboard" class="view">
         <div class="stat-row">
