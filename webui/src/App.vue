@@ -268,6 +268,15 @@ async function confirmModal() {
   } catch (exception: any) { error.value = exception.message } finally { m.busy = false }
 }
 const updateChecking = ref(false)
+// The update state changes behind the page's back (startup check, scheduled
+// daily check), so refresh it whenever the update view is opened and keep
+// polling while a check runs instead of showing a stale 检查中 forever.
+let updatePollTimer = 0
+async function refreshUpdateInfo() {
+  window.clearTimeout(updatePollTimer)
+  try { updateInfo.value = await api.get('/api/system/update') } catch { return }
+  if (isSettings.value && updateInfo.value.state === 'checking') updatePollTimer = window.setTimeout(refreshUpdateInfo, 3000)
+}
 async function checkUpdate() {
   if (updateChecking.value) return
   updateChecking.value = true
@@ -395,9 +404,11 @@ watch(() => route.fullPath, async () => {
   }
   activeGroup.value = taskSchema.value?.groups?.[0]?.key || ''
   startSockets()
+  if (isSettings.value) await refreshUpdateInfo()
+  else window.clearTimeout(updatePollTimer)
 })
 watch(logs, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
-onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer) })
+onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer); window.clearTimeout(updatePollTimer) })
 </script>
 
 <template>

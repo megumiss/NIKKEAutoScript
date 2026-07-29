@@ -22,6 +22,7 @@ class Updater(DeployConfig, GitManager, PipManager):
         super().__init__(file=file)
         self.state = 0
         self.event: threading.Event = None
+        self._check_started_at = 0.0
 
     @property
     def delay(self):
@@ -66,9 +67,36 @@ class Updater(DeployConfig, GitManager, PipManager):
         else:
             return logs
 
+    def _git_fetch(self, source) -> bool:
+        # Same command as execute() but with a hard timeout: os.system can
+        # hang for many minutes on unreachable networks, leaving the updater
+        # stuck in the "checking" state.
+        command = f'"{self.git}" fetch {source} {self.Branch}'
+        command = command.replace(r"\\", "/").replace("\\", "/").replace('"', '"')
+        logger.info(command)
+        try:
+            result = subprocess.run(command, shell=True, capture_output=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            logger.warning("Git fetch timed out after 120s")
+            return False
+        if result.returncode:
+            logger.info(f"[ allowed failure ], error_code: {result.returncode}")
+            return False
+        logger.info("[ success ]")
+        return True
+
     def _check_update(self) -> bool:
         self.state = "checking"
+        # Any unexpected failure must not leave the state machine in
+        # "checking" forever; it would block every later check and update.
+        try:
+            return self._do_check_update()
+        except Exception as e:
+            logger.exception(e)
+            logger.warning("Check update failed")
+            return False
 
+    def _do_check_update(self) -> bool:
         if State.deploy_config.GitOverCdn:
             status = self.goc_client.get_status()
             if status == "uptodate":
@@ -83,9 +111,7 @@ class Updater(DeployConfig, GitManager, PipManager):
 
         source = "origin"
         for _ in range(3):
-            if self.execute(
-                f'"{self.git}" fetch {source} {self.Branch}', allow_failure=True
-            ):
+            if self._git_fetch(source):
                 break
         else:
             logger.warning("Git fetch failed")
@@ -181,8 +207,16 @@ class Updater(DeployConfig, GitManager, PipManager):
         return 1
 
     def check_update(self):
-        if self.state in (0, "failed", "finish"):
-            self.state = self._check_update()
+        if self.state == "checking":
+            # Escape hatch for a wedged check (e.g. the thread was killed
+            # mid-fetch): allow a retry after 10 minutes instead of blocking
+            # all checks until the backend restarts.
+            if time.time() - self._check_started_at < 600:
+                return
+        elif self.state not in (0, "failed", "finish"):
+            return
+        self._check_started_at = time.time()
+        self.state = self._check_update()
 
     @retry(ExecutionError, tries=3, delay=5, logger=None)
     def git_update(self):
