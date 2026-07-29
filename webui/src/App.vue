@@ -254,7 +254,7 @@ async function pickedPath(field: Field, path: string) {
 async function importInterception(field: Field, path: string) {
   if (!field.data_endpoint) return
   importBusy.value[field.key] = true
-  try { const result = await api.post(field.data_endpoint, { path }); if (!result.ok) throw new Error(result.message || t('导入失败')); const chart = allFields().find(item => item.widget === 'interception_stone_charts'); if (chart) await refreshSpecial(chart); error.value = `已导入 ${result.imported || 0} 条，跳过 ${result.skipped || 0} 条。` } catch (exception: any) { error.value = exception.message } finally { delete importBusy.value[field.key] }
+  try { const result = await api.post(field.data_endpoint, { path }); if (!result.ok) throw new Error(result.message || t('导入失败')); const chart = allFields().find(item => item.widget === 'interception_stone_charts'); if (chart) await refreshSpecial(chart); notify(`已导入 ${result.imported || 0} 条，跳过 ${result.skipped || 0} 条。`, 'ok', 3000) } catch (exception: any) { error.value = exception.message } finally { delete importBusy.value[field.key] }
 }
 function toggleTheme() { const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; localStorage.setItem('nkas-theme', theme); api.post('/api/system/theme', { theme }).then(() => systemStatus.value.theme = theme).catch(exception => error.value = exception.message) }
 async function setLanguage(language: string) { try { await api.post('/api/system/language', { language }); await loadSystem(); await loadWorkspace() } catch (exception: any) { error.value = exception.message } }
