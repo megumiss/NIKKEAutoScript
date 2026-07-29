@@ -160,3 +160,5 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .path-field { display:flex; gap:10px; align-items:center; }
 .path-field input { flex:1; width:auto !important; }
 .path-field .btn { height:38px; flex:none; }
+.field-clear { height:30px; padding:0 9px; border-radius:7px; color:var(--text-3); font-size:15px; line-height:1; }
+.field-clear:hover { border-color:var(--red); color:var(--red); }

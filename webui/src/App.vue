@@ -65,7 +65,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '关于': { 'en-US': 'About', 'ja-JP': '情報' }, '主题': { 'en-US': 'Theme', 'ja-JP': 'テーマ' }, '任务总览': { 'en-US': 'Task overview', 'ja-JP': 'タスク概要' },
   '筛选任务…': { 'en-US': 'Filter tasks…', 'ja-JP': 'タスクを絞り込む…' }, '调度器': { 'en-US': 'Scheduler', 'ja-JP': 'スケジューラー' },
   '任务队列': { 'en-US': 'Task queue', 'ja-JP': 'タスクキュー' }, '实时日志': { 'en-US': 'Live log', 'ja-JP': 'リアルタイムログ' },
-  '自动滚动': { 'en-US': 'Auto-scroll', 'ja-JP': '自動スクロール' }, '当前任务': { 'en-US': 'Current task', 'ja-JP': '現在のタスク' },
+  '自动滚动': { 'en-US': 'Auto-scroll', 'ja-JP': '自動スクロール' }, '当前任务': { 'en-US': 'Current task', 'ja-JP': '現在のタスク' }, '清空': { 'en-US': 'Clear', 'ja-JP': 'クリア' },
   '下一任务': { 'en-US': 'Next task', 'ja-JP': '次のタスク' }, '启动': { 'en-US': 'Start', 'ja-JP': '開始' }, '停止': { 'en-US': 'Stop', 'ja-JP': '停止' },
   '任务设置': { 'en-US': 'Task settings', 'ja-JP': 'タスク設定' }, '实例总数': { 'en-US': 'Instances', 'ja-JP': 'インスタンス数' },
   '运行中': { 'en-US': 'Running', 'ja-JP': '実行中' }, '空闲': { 'en-US': 'Idle', 'ja-JP': '待機中' }, '调度运行中': { 'en-US': 'Scheduler running', 'ja-JP': 'スケジューラー実行中' }, '已停止或异常': { 'en-US': 'Stopped or failed', 'ja-JP': '停止または異常' }, '正在导入…': { 'en-US': 'Importing…', 'ja-JP': 'インポート中…' },
@@ -231,6 +231,12 @@ function save(field: Field, event: Event) {
     else input.value = field.value ?? ''
   })
 }
+// The picker only renders values in its own "T" format; clearing saves an
+// empty string so the backend restores the default ("1989-12-27 00:00:00",
+// space-separated), which then renders as an empty picker — read as "auto".
+// The × therefore shows only while the picker actually displays a time.
+function hasCustomTime(field: Field) { return /^\d{4}-\d{2}-\d{2}T/.test(String(field.value ?? '')) }
+function clearField(field: Field) { saveValue(field, '').catch(() => {}) }
 async function pickedPath(field: Field, path: string) {
   try { await saveValue(field, path) } catch { return }
   if (field.path_picker?.after_select !== 'autofill_game_path_from_launcher') return
@@ -585,7 +591,11 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                       <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value" :options="field.options" :disabled="field.display !== 'show'" :placeholder="t('添加')" @change="(value: string) => saveValue(field, value).catch(() => {})"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_import'" :widget="field.widget" :busy="Boolean(importBusy[field.key])" @import="importInterception(field, $event)" @error="error = $event"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>
-                      <input v-else :type="field.widget === 'datetime' ? 'datetime-local' : field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                      <template v-else-if="field.widget === 'datetime'">
+                        <input type="datetime-local" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                        <button v-if="field.display === 'show' && hasCustomTime(field)" type="button" class="btn sm field-clear" :title="t('清空')" @click="clearField(field)">×</button>
+                      </template>
+                      <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
                     </div>
                   </div>
                 </div>
