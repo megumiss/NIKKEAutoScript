@@ -42,7 +42,7 @@ const importBusy = ref<Record<string, boolean>>({})
 const backendDown = ref(false)
 const legacyElectron = window.parent !== window
 const staticLabels: Record<string, Record<string, string>> = {
-  '全局总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
+  '总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
   '多开': { 'en-US': 'Multi-instance', 'ja-JP': 'マルチインスタンス' },
   '关于': { 'en-US': 'About', 'ja-JP': '情報' }, '主题': { 'en-US': 'Theme', 'ja-JP': 'テーマ' }, '任务总览': { 'en-US': 'Task overview', 'ja-JP': 'タスク概要' },
@@ -104,7 +104,7 @@ function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.so
 function stateText(state?: number) { return state === 1 ? t('调度运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
 function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
-function pageTitle() { return isDashboard.value ? t('全局总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
+function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
 function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea'].includes(field.widget) }
 function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` }
@@ -355,7 +355,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <button class="side-toggle" @click="sidebarCollapsed = !sidebarCollapsed">{{ sidebarCollapsed ? '»' : '«' }}</button>
       </div>
       <div class="side-section">
-        <button class="side-item" :class="{ active: isDashboard }" @click="dashboard"><span class="sicon">📊</span><span class="side-text">{{ t('全局总览') }}</span></button>
+        <button class="side-item" :class="{ active: isDashboard }" @click="dashboard"><span class="sicon">📊</span><span class="side-text">{{ t('总览') }}</span></button>
       </div>
       <div class="side-section">
         <div class="side-label">{{ t('实例') }}</div>
