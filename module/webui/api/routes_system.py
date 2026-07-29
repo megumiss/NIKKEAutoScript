@@ -169,11 +169,20 @@ def _show_path_dialog_win32(payload):
     """Native dialog through pywin32; the bundled toolkit Python has no tkinter."""
     import win32ui
 
+    # Parent the dialog to the window the user just clicked in, so it pops up
+    # in front instead of hiding behind the browser.
+    try:
+        foreground = win32ui.GetForegroundWindow()
+    except win32ui.error:
+        foreground = None
+    foreground_hwnd = foreground.GetSafeHwnd() if foreground else 0
     initialdir, initialfile = _dialog_initial_location(payload['defaultPath'])
     if payload['mode'] == 'directory':
         from win32com.shell import shell, shellcon
-        pidl, _, _ = shell.SHBrowseForFolder(
-            0, None, payload['title'], shellcon.BIF_RETURNONLYFSDIRS | shellcon.BIF_NEWDIALOGSTYLE)
+        # BIF_NEWDIALOGSTYLE/BIF_EDITBOX are missing from some pywin32 builds;
+        # their values are stable Win32 constants.
+        flags = shellcon.BIF_RETURNONLYFSDIRS | 0x0040 | 0x0010
+        pidl, _, _ = shell.SHBrowseForFolder(foreground_hwnd, None, payload['title'], flags)
         if not pidl:
             return ''
         return os.path.normpath(shell.SHGetPathFromIDList(pidl))
@@ -181,7 +190,7 @@ def _show_path_dialog_win32(payload):
     for ext in payload['accept']:
         filter_parts += [f'{ext.lstrip(".").upper()} files (*{ext})', f'*{ext}']
     filter_parts += ['All files (*.*)', '*.*']
-    dialog = win32ui.CreateFileDialog(1, None, initialfile or None, 0, '|'.join(filter_parts) + '||')
+    dialog = win32ui.CreateFileDialog(1, None, initialfile or None, 0, '|'.join(filter_parts) + '||', foreground)
     dialog.SetOFNTitle(payload['title'])
     if initialdir:
         dialog.SetOFNInitialDir(initialdir)
