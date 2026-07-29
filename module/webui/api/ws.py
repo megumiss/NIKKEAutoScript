@@ -64,7 +64,7 @@ class LogRenderer:
         if match:
             level = match.group('level')
             return (
-                '<div class="log-line">'
+                f'<div class="log-line {LEVEL_CHIP_CLASS[level]}">'
                 f'<span class="ts">{match.group("timestamp")}</span>'
                 f'<span class="lv-chip {LEVEL_CHIP_CLASS[level]}">{level}</span>'
                 f'<span class="log-message">{html.escape(match.group("message"))}</span>'
