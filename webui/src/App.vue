@@ -178,8 +178,15 @@ async function loadSystem() {
     systemStatus.value = await api.get('/api/system/status')
     updateInfo.value = await api.get('/api/system/update')
     notices.value = (await api.get('/api/system/notices')).notices || []
-    document.documentElement.dataset.theme = systemStatus.value.theme || 'light'
-    localStorage.setItem('nkas-theme', document.documentElement.dataset.theme)
+    // Only a valid backend theme may override the local choice: right after
+    // an update/reload the status payload can arrive without a usable theme,
+    // and falling back to "light" here used to clobber both the page and the
+    // stored preference.
+    const theme = systemStatus.value.theme
+    if (theme === 'dark' || theme === 'light') {
+      document.documentElement.dataset.theme = theme
+      localStorage.setItem('nkas-theme', theme)
+    }
   } catch (exception: any) { error.value = exception.message }
 }
 async function refreshSpecial(field: Field) { if (field.data_endpoint && field.widget !== 'interception_stone_import') field.special_data = await api.get(field.data_endpoint) }
