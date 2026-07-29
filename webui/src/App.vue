@@ -22,6 +22,19 @@ const queue = ref<any>({ running: [], pending: [], waiting: [] })
 const logs = ref<string[]>([])
 const logBody = ref<HTMLElement>()
 const autoScroll = ref(true)
+const logLevel = ref('info')
+const LOG_LEVEL_RANK: Record<string, number> = { info: 0, warn: 1, err: 2 }
+const logLevelOptions = computed(() => [{ value: 'info', label: t('全部') }, { value: 'warn', label: t('警告') }, { value: 'err', label: t('错误') }])
+// Level rows carry the lv-* class rendered by the backend log template;
+// section dividers and plain lines (tracebacks, exit notices) have no level
+// and stay visible at every filter setting.
+const visibleLogs = computed(() => {
+  const threshold = LOG_LEVEL_RANK[logLevel.value] ?? 0
+  return logs.value.filter(line => {
+    const match = String(line).match(/log-line lv-(info|warn|err)/)
+    return !match || LOG_LEVEL_RANK[match[1]] >= threshold
+  })
+})
 const error = ref('')
 const toasts = ref<{ id: number; text: string }[]>([])
 let toastSeq = 0
@@ -75,6 +88,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '复制来源实例': { 'en-US': 'Copy settings from', 'ja-JP': 'コピー元インスタンス' },
   '此操作不可恢复。': { 'en-US': 'This cannot be undone.', 'ja-JP': '元に戻せません。' },
   '未知任务': { 'en-US': 'Unknown task', 'ja-JP': '不明なタスク' },
+  '全部': { 'en-US': 'All', 'ja-JP': 'すべて' }, '警告': { 'en-US': 'Warning', 'ja-JP': '警告' }, '错误': { 'en-US': 'Error', 'ja-JP': 'エラー' },
 }
 
 const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]
@@ -462,9 +476,9 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             </article>
           </div>
           <article class="card log-card">
-            <div class="log-head"><b>{{ t('实时日志') }}</b><span class="log-autoscroll"><label class="switch sm"><input v-model="autoScroll" type="checkbox"><span class="slider"></span></label>{{ t('自动滚动') }}</span></div>
+            <div class="log-head"><b>{{ t('实时日志') }}</b><span class="log-autoscroll"><AppSelect class="log-level-select" v-model="logLevel" :options="logLevelOptions"/><label class="switch sm"><input v-model="autoScroll" type="checkbox"><span class="slider"></span></label>{{ t('自动滚动') }}</span></div>
             <div ref="logBody" class="log-body">
-              <div v-for="(line, index) in logs" :key="index" class="log-frag" v-html="line"></div>
+              <div v-for="(line, index) in visibleLogs" :key="index" class="log-frag" v-html="line"></div>
             </div>
           </article>
         </div>
@@ -510,9 +524,9 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
               <div class="group-body special-empty" style="padding:16px 22px">{{ t('未知任务') }}: {{ selectedTask }}</div>
             </article>
             <article v-if="selectedPage === 'tool'" class="card log-card tool-log">
-              <div class="log-head"><b>{{ t('实时日志') }}</b><span class="log-autoscroll"><label class="switch sm"><input v-model="autoScroll" type="checkbox"><span class="slider"></span></label>{{ t('自动滚动') }}</span></div>
+              <div class="log-head"><b>{{ t('实时日志') }}</b><span class="log-autoscroll"><AppSelect class="log-level-select" v-model="logLevel" :options="logLevelOptions"/><label class="switch sm"><input v-model="autoScroll" type="checkbox"><span class="slider"></span></label>{{ t('自动滚动') }}</span></div>
               <div ref="logBody" class="log-body">
-                <div v-for="(line, index) in logs" :key="index" class="log-frag" v-html="line"></div>
+                <div v-for="(line, index) in visibleLogs" :key="index" class="log-frag" v-html="line"></div>
               </div>
             </article>
           </div>
