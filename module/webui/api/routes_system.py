@@ -195,11 +195,18 @@ def _show_path_dialog_win32(payload):
     if initialdir:
         dialog.SetOFNInitialDir(initialdir)
     try:
-        dialog.DoModal()
+        result = dialog.DoModal()
     except win32ui.error:
         # Cancelled by the user.
         return ''
-    return os.path.normpath(dialog.GetPathName())
+    # Cancelling does not always raise: some pywin32 builds return IDCANCEL
+    # instead, and GetPathName() then yields the pre-filled file name.
+    if result != 1:  # win32con.IDOK
+        return ''
+    path = os.path.normpath(dialog.GetPathName())
+    if not os.path.isabs(path):
+        return ''
+    return path
 
 
 def _show_path_dialog_tk(payload):
