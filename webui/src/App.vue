@@ -48,7 +48,7 @@ function notify(text: string, kind = 'ok', duration = 1600) {
 function closeToast(id: number) { toasts.value = toasts.value.filter(toast => toast.id !== id) }
 // Errors are transient toasts, not a persistent topbar strip: every
 // `error.value = ...` assignment flows through this watcher.
-watch(error, value => { if (value) { notify(value, 'error', 4000); error.value = '' } })
+watch(error, value => { if (value) { notify(value, 'error', 10000); error.value = '' } })
 const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'dark', language: 'zh-CN' })
 const updateInfo = ref<any>({})
 const notices = ref<any[]>([])
@@ -178,6 +178,11 @@ async function loadSystem() {
     systemStatus.value = await api.get('/api/system/status')
     updateInfo.value = await api.get('/api/system/update')
     notices.value = (await api.get('/api/system/notices')).notices || []
+    // The auto-update success card is informational; hide it after 10s
+    // instead of pinning it until dismissed.  The notice file is kept, so
+    // it appears again on the next startup.  The failed card stays sticky.
+    const autoNotice = notices.value.find(item => item.key === 'auto_update')
+    if (autoNotice) window.setTimeout(() => { notices.value = notices.value.filter(item => item !== autoNotice) }, 10000)
     document.documentElement.dataset.theme = systemStatus.value.theme || 'light'
     localStorage.setItem('nkas-theme', document.documentElement.dataset.theme)
   } catch (exception: any) { error.value = exception.message }
@@ -715,7 +720,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       <div class="modal-card">
         <h3>{{ startupNotice.data.title || t('提示') }}</h3>
         <p class="modal-text notice-content">{{ startupNotice.data.content }}</p>
-        <label class="notice-option"><input v-model="noticeDontShow" type="checkbox"><span>{{ t('本次不再提示') }}</span></label>
+        <div class="notice-option"><label class="switch sm"><input v-model="noticeDontShow" type="checkbox"><span class="slider"></span></label><span>{{ t('本次不再提示') }}</span></div>
         <div class="modal-actions">
           <button class="btn primary" @click="closeStartupNotice">{{ t('我知道了') }}</button>
         </div>
