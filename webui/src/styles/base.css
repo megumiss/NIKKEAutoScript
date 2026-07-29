@@ -132,3 +132,10 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .app-select-check { color:var(--accent); font-size:12px; }
 .app-select-empty { padding:8px 10px; color:var(--text-3); font-size:13px; text-align:center; }
 .update-hint { color:var(--green); font-weight:600; }
+.field-control input[type='datetime-local'] { width:min(250px,100%); padding:0 10px; letter-spacing:.02em; }
+.field-control input[type='datetime-local']::-webkit-datetime-edit-fields-wrapper { padding:0; }
+.field-control input[type='datetime-local']::-webkit-datetime-edit-text { color:var(--text-3); padding:0 1px; }
+.field-control input[type='datetime-local']::-webkit-calendar-picker-indicator { margin-right:2px; padding:4px; border-radius:6px; cursor:pointer; opacity:.55; transition:opacity .15s,background .15s; }
+.field-control input[type='datetime-local']::-webkit-calendar-picker-indicator:hover { opacity:1; background:var(--accent-soft); }
+.field-control input[type='datetime-local']:read-only::-webkit-calendar-picker-indicator { cursor:default; opacity:.25; }
+.field-control input[type='datetime-local']:read-only::-webkit-calendar-picker-indicator:hover { background:transparent; }
