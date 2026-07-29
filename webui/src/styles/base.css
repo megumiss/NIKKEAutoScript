@@ -157,3 +157,6 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .field-control input[type='datetime-local']::-webkit-calendar-picker-indicator:hover { opacity:1; background:var(--accent-soft); }
 .field-control input[type='datetime-local']:read-only::-webkit-calendar-picker-indicator { cursor:default; opacity:.25; }
 .field-control input[type='datetime-local']:read-only::-webkit-calendar-picker-indicator:hover { background:transparent; }
+.path-field { display:flex; gap:10px; align-items:center; }
+.path-field input { flex:1; width:auto !important; }
+.path-field .btn { height:38px; flex:none; }

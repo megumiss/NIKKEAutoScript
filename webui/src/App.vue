@@ -125,7 +125,7 @@ function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
 function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
-function isWideField(field: Field) { return ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea', 'priority'].includes(field.widget) }
+function isWideField(field: Field) { return Boolean(field.path_picker) || ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea', 'priority'].includes(field.widget) }
 function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` }
 function resizeTextarea(event: Event) { fitTextarea(event.target as HTMLTextAreaElement) }
 const vAutosize = { mounted: (el: HTMLTextAreaElement) => fitTextarea(el), updated: (el: HTMLTextAreaElement) => fitTextarea(el) }
@@ -555,8 +555,10 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                       <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><span class="slider"></span></label>
                       <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" :disabled="field.display !== 'show'" @change="(value: any) => saveValue(field, value).catch(() => {})"/>
                       <template v-else-if="field.path_picker">
-                        <input type="text" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
-                        <FieldPathPicker :value="field.value" :picker="field.path_picker" :disabled="field.display !== 'show'" @picked="pickedPath(field, $event)" @error="error = $event"/>
+                        <div class="path-field">
+                          <input type="text" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                          <FieldPathPicker :value="field.value" :picker="field.path_picker" :disabled="field.display !== 'show'" @picked="pickedPath(field, $event)" @error="error = $event"/>
+                        </div>
                       </template>
                       <div v-else-if="field.widget === 'textarea'" class="code-wrap">
                         <pre v-if="field.mode === 'yaml'" class="code-highlight" v-html="highlightYaml(String(field.value ?? ''))"></pre>

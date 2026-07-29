@@ -82,5 +82,5 @@ async function pick() {
 </script>
 
 <template>
-  <button type="button" class="btn sm" :disabled="disabled || picking" @click="pick">{{ picking ? '正在选择…' : (picker?.button_label || '选择文件') }}</button>
+  <button type="button" class="btn" :disabled="disabled || picking" @click="pick">{{ picking ? '正在选择…' : (picker?.button_label || '选择文件') }}</button>
 </template>
