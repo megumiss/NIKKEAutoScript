@@ -75,7 +75,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '应用更新': { 'en-US': 'Application update', 'ja-JP': 'アプリ更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' }, '更新超时，请稍后手动刷新页面': { 'en-US': 'Update timed out, please reload later', 'ja-JP': '更新がタイムアウト、後で再読み込みしてください' },
-  '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' },
+  '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' }, '发现新版本，可在更新页更新': { 'en-US': 'New version found — see the update page', 'ja-JP': '新しいバージョンを検出、更新ページへ' },
   '重启中…': { 'en-US': 'Restarting…', 'ja-JP': '再起動中…' }, '后端正在重启，页面将自动刷新…': { 'en-US': 'Backend restarting, the page will reload…', 'ja-JP': 'バックエンド再起動中、ページを再読み込みします…' }, '重启超时，请手动刷新页面': { 'en-US': 'Restart timed out, please reload manually', 'ja-JP': '再起動がタイムアウト、手動で再読み込みしてください' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
@@ -407,9 +407,20 @@ function startSockets() {
 }
 // Backend restart self-healing: the legacy Electron shell never reloads the
 // page, so poll the status endpoint and reload everything once it recovers.
+// The status payload also carries updater_state; surface a toast when an
+// automatic check (startup or scheduled) discovers a new version while the
+// user is somewhere else in the app.
+let lastUpdaterState: any = undefined
+function watchUpdaterState(state: any) {
+  const available = state === true || state === 1
+  if (available && !(lastUpdaterState === true || lastUpdaterState === 1)) notify(t('发现新版本，可在更新页更新'), 'ok', 6000)
+  if (updateInfo.value && typeof updateInfo.value === 'object' && 'state' in updateInfo.value) updateInfo.value.state = state
+  lastUpdaterState = state
+}
 async function healthCheck() {
   try {
-    await api.get('/api/system/status')
+    const status = await api.get('/api/system/status')
+    watchUpdaterState(status.updater_state)
     if (backendDown.value) {
       backendDown.value = false
       workspaceName = ''
