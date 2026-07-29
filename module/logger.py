@@ -313,7 +313,7 @@ def set_func_logger(func):
         highlighter=Highlighter(),
     )
     hdlr.setFormatter(web_formatter)
-    hdlr.setLevel(logging.INFO)    # ✅ func 日志级别 INFO
+    hdlr.setLevel(logging.DEBUG)   # ✅ func 日志级别 DEBUG，由前端筛选显示级别
 
     logger.handlers = [h for h in logger.handlers if not isinstance(h, RichRenderableHandler)]
     logger.addHandler(hdlr)

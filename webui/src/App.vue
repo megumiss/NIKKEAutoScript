@@ -23,15 +23,15 @@ const logs = ref<string[]>([])
 const logBody = ref<HTMLElement>()
 const autoScroll = ref(true)
 const logLevel = ref('info')
-const LOG_LEVEL_RANK: Record<string, number> = { info: 0, warn: 1, err: 2 }
-const logLevelOptions = computed(() => [{ value: 'info', label: t('全部') }, { value: 'warn', label: t('警告') }, { value: 'err', label: t('错误') }])
+const LOG_LEVEL_RANK: Record<string, number> = { debug: 0, info: 1, warn: 2, err: 3 }
+const logLevelOptions = computed(() => [{ value: 'debug', label: t('调试') }, { value: 'info', label: t('信息') }, { value: 'warn', label: t('警告') }, { value: 'err', label: t('错误') }])
 // Level rows carry the lv-* class rendered by the backend log template;
 // section dividers and plain lines (tracebacks, exit notices) have no level
 // and stay visible at every filter setting.
 const visibleLogs = computed(() => {
   const threshold = LOG_LEVEL_RANK[logLevel.value] ?? 0
   return logs.value.filter(line => {
-    const match = String(line).match(/log-line lv-(info|warn|err)/)
+    const match = String(line).match(/log-line lv-(debug|info|warn|err)/)
     return !match || LOG_LEVEL_RANK[match[1]] >= threshold
   })
 })
@@ -88,7 +88,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '复制来源实例': { 'en-US': 'Copy settings from', 'ja-JP': 'コピー元インスタンス' },
   '此操作不可恢复。': { 'en-US': 'This cannot be undone.', 'ja-JP': '元に戻せません。' },
   '未知任务': { 'en-US': 'Unknown task', 'ja-JP': '不明なタスク' },
-  '全部': { 'en-US': 'All', 'ja-JP': 'すべて' }, '警告': { 'en-US': 'Warning', 'ja-JP': '警告' }, '错误': { 'en-US': 'Error', 'ja-JP': 'エラー' },
+  '调试': { 'en-US': 'Debug', 'ja-JP': 'デバッグ' }, '信息': { 'en-US': 'Info', 'ja-JP': '情報' }, '警告': { 'en-US': 'Warning', 'ja-JP': '警告' }, '错误': { 'en-US': 'Error', 'ja-JP': 'エラー' },
 }
 
 const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]

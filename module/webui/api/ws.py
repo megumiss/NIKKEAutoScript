@@ -22,7 +22,7 @@ RULE_CHARACTERS = '─═ '
 # from logger rules, which consist of rule characters and a title only.
 BOX_CHARACTERS = '╭╮╰╯│|'
 LEVEL_CHIP_CLASS = {
-    'DEBUG': 'lv-info',
+    'DEBUG': 'lv-debug',
     'INFO': 'lv-info',
     'WARNING': 'lv-warn',
     'ERROR': 'lv-err',
