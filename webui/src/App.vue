@@ -178,11 +178,6 @@ async function loadSystem() {
     systemStatus.value = await api.get('/api/system/status')
     updateInfo.value = await api.get('/api/system/update')
     notices.value = (await api.get('/api/system/notices')).notices || []
-    // The auto-update success card is informational; hide it after 10s
-    // instead of pinning it until dismissed.  The notice file is kept, so
-    // it appears again on the next startup.  The failed card stays sticky.
-    const autoNotice = notices.value.find(item => item.key === 'auto_update')
-    if (autoNotice) window.setTimeout(() => { notices.value = notices.value.filter(item => item !== autoNotice) }, 10000)
     document.documentElement.dataset.theme = systemStatus.value.theme || 'light'
     localStorage.setItem('nkas-theme', document.documentElement.dataset.theme)
   } catch (exception: any) { error.value = exception.message }
