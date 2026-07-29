@@ -51,10 +51,13 @@ async def instances(_: Request):
             from module.webui.api.routes_tasks import queue_data
             queue = queue_data(name)
             if queue['pending']:
+                # current_task stays the raw command key: the SPA rail
+                # compares it against task keys to mark the running task.
                 current_task = queue['running'][0]['command'] if queue['running'] else None
-                next_task = queue['pending'][0]['command']
+                # next_task is display-only, so the translated name is enough.
+                next_task = queue['pending'][0]['name_i18n']
             elif queue['waiting']:
-                next_task = queue['waiting'][0]['command']
+                next_task = queue['waiting'][0]['name_i18n']
         except (AttributeError, OSError, KeyError) as exc:
             logger.warning(f'Unable to read queue for {name}: {exc}')
         result.append(InstanceInfo(name, manager.state, get_config_mod(name), current_task, next_task, remarks.get(name, '')).dict())
