@@ -54,7 +54,7 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .side-footer .lang-select .app-select-btn { height:33px; border-color:var(--border); background:transparent; font-size:12.5px; }
 .side-footer .lang-select .app-select-label { text-align:center; }
 .modal-field .app-select { width:100%; margin-top:6px; }
-.log-autoscroll { display:flex; gap:7px; align-items:center; margin-left:auto; color:var(--text-3); font-size:12px; }
+.log-autoscroll { display:flex; gap:7px; align-items:center; margin-left:auto; color:var(--text-3); font-size:12px; white-space:nowrap; }
 .log-level-select { width:100px; margin-right:5px; }
 .log-level-select .app-select-btn { height:26px; padding:0 9px; border-color:var(--border); background:transparent; font-size:12px; }
 .switch.sm { width:34px; height:19px; }.switch.sm .slider::before { top:2px; left:2px; width:13px; height:13px; }.switch.sm input:checked + .slider::before { transform:translateX(15px); }
