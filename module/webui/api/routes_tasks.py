@@ -27,9 +27,16 @@ def queue_data(name):
             pending.append(task)
         else:
             waiting.append(task)
-    # Preserve configuration order for due tasks (including Restart), and use
-    # chronological order for future tasks, matching NikkeConfig.get_next_task.
-    pending = invalid + pending
+    # Order both queues the way NikkeConfig.get_next_task does, so the list
+    # the user sees is the order the scheduler will actually run: due tasks
+    # follow SCHEDULER_PRIORITY (config order is meaningless here, and it is
+    # what pushed Notify to the top), future tasks sort by run time.
+    from module.base.filter import Filter
+    from module.config.manual_config import ManualConfig
+    priority = Filter(regex=r"(.*)", attr=["command"])
+    priority.load(ManualConfig.SCHEDULER_PRIORITY)
+    pending = invalid + priority.apply(pending) if pending else invalid
+    waiting = priority.apply(waiting)
     waiting.sort(key=lambda task: task.next_run)
     manager = ProcessManager.get_manager(name)
 
