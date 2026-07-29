@@ -39,11 +39,13 @@ const visibleLogs = computed(() => {
 const error = ref('')
 const toasts = ref<{ id: number; text: string; kind: string }[]>([])
 let toastSeq = 0
+// duration <= 0 keeps the toast until it is closed manually.
 function notify(text: string, kind = 'ok', duration = 1600) {
   const id = ++toastSeq
   toasts.value.push({ id, text, kind })
-  setTimeout(() => { toasts.value = toasts.value.filter(toast => toast.id !== id) }, duration)
+  if (duration > 0) setTimeout(() => closeToast(id), duration)
 }
+function closeToast(id: number) { toasts.value = toasts.value.filter(toast => toast.id !== id) }
 // Errors are transient toasts, not a persistent topbar strip: every
 // `error.value = ...` assignment flows through this watcher.
 watch(error, value => { if (value) { notify(value, 'error', 4000); error.value = '' } })
@@ -413,7 +415,7 @@ function startSockets() {
 let lastUpdaterState: any = undefined
 function watchUpdaterState(state: any) {
   const available = state === true || state === 1
-  if (available && !(lastUpdaterState === true || lastUpdaterState === 1)) notify(t('发现新版本，可在更新页更新'), 'ok', 6000)
+  if (available && !(lastUpdaterState === true || lastUpdaterState === 1)) notify(t('发现新版本，可在更新页更新'), 'ok', 0)
   if (updateInfo.value && typeof updateInfo.value === 'object' && 'state' in updateInfo.value) updateInfo.value.state = state
   lastUpdaterState = state
 }
@@ -523,7 +525,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         </article>
       </div>
       <div class="toast-stack">
-        <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.kind">{{ toast.kind === 'error' ? '✕' : '✓' }} {{ toast.text }}</div>
+        <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.kind"><span>{{ toast.kind === 'error' ? '✕' : '✓' }} {{ toast.text }}</span><button type="button" class="toast-close" @click="closeToast(toast.id)">✕</button></div>
       </div>
       <section v-if="isDashboard" class="view">
         <div class="stat-row">
