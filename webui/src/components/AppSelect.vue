@@ -52,7 +52,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
   <div ref="root" class="app-select" :class="{ open, disabled }">
     <button type="button" class="app-select-btn" :disabled="disabled" @click="toggle">
       <span class="app-select-label">{{ currentLabel }}</span>
-      <span class="app-select-arrow">▾</span>
+      <span class="app-select-arrow">›</span>
     </button>
     <Teleport to="body">
       <div v-if="open" ref="pop" class="app-select-pop" :style="popStyle">

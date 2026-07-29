@@ -563,7 +563,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
               <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
                 <button class="group-head" @click="collapsed[group.key] = !collapsed[group.key]">
                   <h4>{{ group.name }}</h4>
-                  <span class="group-summary">{{ collapsed[group.key] ? '▸' : '▾' }}</span>
+                  <span class="group-summary">›</span>
                 </button>
                 <div class="group-body">
                   <div v-for="field in group.fields" :key="field.key" class="field" :class="{ 'field-wide': isWideField(field) }">
