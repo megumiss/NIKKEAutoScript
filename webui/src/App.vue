@@ -231,12 +231,15 @@ function save(field: Field, event: Event) {
     else input.value = field.value ?? ''
   })
 }
-// The picker only renders values in its own "T" format; clearing saves an
-// empty string so the backend restores the default ("1989-12-27 00:00:00",
-// space-separated), which then renders as an empty picker — read as "auto".
-// The × therefore shows only while the picker actually displays a time.
+// Clearing saves an empty string so the backend restores the default; the ×
+// shows whenever the picker has a displayable time to clear.
 function hasCustomTime(field: Field) { return /^\d{4}-\d{2}-\d{2}T/.test(String(field.value ?? '')) }
 function clearField(field: Field) { saveValue(field, '').catch(() => {}) }
+// datetime-local only renders the "T" separator; stored values may use a
+// space ("1989-12-27 00:00:00"), which would otherwise render as an empty
+// picker.  Normalize for display only; seconds are dropped as the control
+// does not edit them.
+function datetimeValue(value: any) { return String(value ?? '').replace(' ', 'T').slice(0, 16) }
 async function pickedPath(field: Field, path: string) {
   try { await saveValue(field, path) } catch { return }
   if (field.path_picker?.after_select !== 'autofill_game_path_from_launcher') return
@@ -593,7 +596,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                       <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>
                       <template v-else-if="field.widget === 'datetime'">
                         <div class="dt-field">
-                          <input type="datetime-local" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                          <input type="datetime-local" :value="datetimeValue(field.value)" :readonly="field.display !== 'show'" @change="save(field, $event)">
                           <button v-if="field.display === 'show' && hasCustomTime(field)" type="button" class="dt-clear" :title="t('清空')" @click="clearField(field)">✕</button>
                         </div>
                       </template>
