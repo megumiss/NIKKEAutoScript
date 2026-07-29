@@ -76,6 +76,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' },
   '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' },
+  '重启中…': { 'en-US': 'Restarting…', 'ja-JP': '再起動中…' }, '后端正在重启，页面将自动刷新…': { 'en-US': 'Backend restarting, the page will reload…', 'ja-JP': 'バックエンド再起動中、ページを再読み込みします…' }, '重启超时，请手动刷新页面': { 'en-US': 'Restart timed out, please reload manually', 'ja-JP': '再起動がタイムアウト、手動で再読み込みしてください' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
@@ -326,6 +327,21 @@ async function runUpdate() {
       return
     }
   } catch (exception: any) { error.value = exception.message } finally { updating.value = false }
+}
+const restarting = ref(false)
+async function forceRestart() {
+  if (restarting.value) return
+  restarting.value = true
+  try { await api.post('/api/restart') } catch (exception: any) { error.value = exception.message; restarting.value = false; return }
+  // The backend tears itself down right after answering; give it a moment to
+  // go down, then poll until it is back and reload for a fresh state.
+  notify(t('后端正在重启，页面将自动刷新…'), 'ok', 4000)
+  await new Promise(resolve => setTimeout(resolve, 3000))
+  for (let round = 0; round < 60; round++) {
+    try { await api.get('/api/system/status'); window.location.reload(); return } catch { await new Promise(resolve => setTimeout(resolve, 2000)) }
+  }
+  error.value = t('重启超时，请手动刷新页面')
+  restarting.value = false
 }
 async function saveRemark(instance: Instance, event: Event) {
   const input = event.target as HTMLInputElement
@@ -618,7 +634,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           <button v-if="Number(updateInfo.state) === 1" class="btn success" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('立即更新') }}</button>
           <button v-else-if="updateInfo.state === 'failed'" class="btn danger" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('重试更新') }}</button>
           <button v-else class="btn primary" :disabled="updating || updateChecking || updateInfo.state === 'checking'" @click="checkUpdate">{{ updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新') }}</button>
-          <button class="btn danger" @click="api.post('/api/restart').catch(exception => error = exception.message)">{{ t('强制重启') }}</button>
+          <button class="btn danger" :disabled="restarting" @click="forceRestart"><span v-if="restarting" class="btn-spin"></span>{{ restarting ? t('重启中…') : t('强制重启') }}</button>
         </article>
         <article class="card group-card">
           <div class="group-head"><h4>{{ t('更新记录') }}</h4></div>
