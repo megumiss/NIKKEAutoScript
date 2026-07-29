@@ -607,7 +607,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <article class="card group-card">
           <div class="group-head"><h4>{{ t('更新记录') }}</h4></div>
           <div class="group-body history-body">
-            <div v-for="commit in updateInfo.history || []" :key="commit[0]" class="history-row"><span class="msg">{{ commit[3] }}</span><small><code>{{ commit[0] }}</code>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
+            <div v-for="commit in updateInfo.history || []" :key="commit[0]" class="history-row" :class="{ current: updateInfo.local && commit[0] === updateInfo.local[0] }"><span class="msg">{{ commit[3] }}</span><small><code>{{ commit[0] }}</code><span v-if="updateInfo.local && commit[0] === updateInfo.local[0]" class="current-pill">{{ t('当前版本') }}</span>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
           </div>
         </article>
       </section>
