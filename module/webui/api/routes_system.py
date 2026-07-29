@@ -153,13 +153,48 @@ async def monitors(_: Request):
     return JSONResponse(_build_screen_number_options())
 
 
-def _show_path_dialog(payload):
-    """Open a native file dialog on the host; runs in a worker thread.
+def _dialog_initial_location(default):
+    initialdir, initialfile = '', ''
+    if default:
+        default = os.path.normpath(default)
+        if os.path.isdir(default):
+            initialdir = default
+        elif os.path.isdir(os.path.dirname(default)):
+            initialdir = os.path.dirname(default)
+            initialfile = os.path.basename(default)
+    return initialdir, initialfile
 
-    The SPA cannot return full filesystem paths from a browser dialog, and
-    the Electron bridge only exists inside the Electron shell, so both
-    clients use this server-side dialog instead (the server runs locally).
-    """
+
+def _show_path_dialog_win32(payload):
+    """Native dialog through pywin32; the bundled toolkit Python has no tkinter."""
+    import win32ui
+
+    initialdir, initialfile = _dialog_initial_location(payload['defaultPath'])
+    if payload['mode'] == 'directory':
+        from win32com.shell import shell, shellcon
+        pidl, _, _ = shell.SHBrowseForFolder(
+            0, None, payload['title'], shellcon.BIF_RETURNONLYFSDIRS | shellcon.BIF_NEWDIALOGSTYLE)
+        if not pidl:
+            return ''
+        return os.path.normpath(shell.SHGetPathFromIDList(pidl))
+    filter_parts = []
+    for ext in payload['accept']:
+        filter_parts += [f'{ext.lstrip(".").upper()} files (*{ext})', f'*{ext}']
+    filter_parts += ['All files (*.*)', '*.*']
+    dialog = win32ui.CreateFileDialog(1, None, initialfile or None, 0, '|'.join(filter_parts) + '||')
+    dialog.SetOFNTitle(payload['title'])
+    if initialdir:
+        dialog.SetOFNInitialDir(initialdir)
+    try:
+        dialog.DoModal()
+    except win32ui.error:
+        # Cancelled by the user.
+        return ''
+    return os.path.normpath(dialog.GetPathName())
+
+
+def _show_path_dialog_tk(payload):
+    """tkinter fallback for non-Windows hosts."""
     import tkinter as tk
     from tkinter import filedialog
 
@@ -168,14 +203,7 @@ def _show_path_dialog(payload):
     # Keep the dialog above the browser/Electron window it was triggered from.
     root.attributes('-topmost', True)
     try:
-        default = os.path.normpath(payload['defaultPath']) if payload['defaultPath'] else ''
-        initialdir, initialfile = '', ''
-        if default:
-            if os.path.isdir(default):
-                initialdir = default
-            elif os.path.isdir(os.path.dirname(default)):
-                initialdir = os.path.dirname(default)
-                initialfile = os.path.basename(default)
+        initialdir, initialfile = _dialog_initial_location(payload['defaultPath'])
         if payload['mode'] == 'directory':
             path = filedialog.askdirectory(parent=root, title=payload['title'], initialdir=initialdir or None)
         else:
@@ -187,6 +215,18 @@ def _show_path_dialog(payload):
     finally:
         root.destroy()
     return os.path.normpath(path) if path else ''
+
+
+def _show_path_dialog(payload):
+    """Open a native file dialog on the host; runs in a worker thread.
+
+    The SPA cannot return full filesystem paths from a browser dialog, and
+    the Electron bridge only exists inside the Electron shell, so both
+    clients use this server-side dialog instead (the server runs locally).
+    """
+    if sys.platform.startswith('win'):
+        return _show_path_dialog_win32(payload)
+    return _show_path_dialog_tk(payload)
 
 
 async def pick_path(request: Request):
