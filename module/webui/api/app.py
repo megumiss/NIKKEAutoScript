@@ -35,6 +35,7 @@ def mount_api(app):
         Route('/api/system/notices', routes_system.notices, methods=['GET']),
         Route('/api/system/notices/{key:str}/dismiss', routes_system.dismiss_notice, methods=['POST']),
         Route('/api/system/monitors', routes_system.monitors, methods=['GET']),
+        Route('/api/system/pick-path', routes_system.pick_path, methods=['POST']),
         Route('/api/system/language', routes_system.set_language, methods=['POST']),
         Route('/api/system/theme', routes_system.set_theme, methods=['POST']),
         Route('/api/{name:str}/start', routes_instances.start, methods=['POST']),

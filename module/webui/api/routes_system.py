@@ -1,3 +1,5 @@
+import asyncio
+import os
 import sys
 import threading
 from pathlib import Path
@@ -149,6 +151,65 @@ async def rotate(_: Request):
 async def monitors(_: Request):
     from module.webui.app import _build_screen_number_options
     return JSONResponse(_build_screen_number_options())
+
+
+def _show_path_dialog(payload):
+    """Open a native file dialog on the host; runs in a worker thread.
+
+    The SPA cannot return full filesystem paths from a browser dialog, and
+    the Electron bridge only exists inside the Electron shell, so both
+    clients use this server-side dialog instead (the server runs locally).
+    """
+    import tkinter as tk
+    from tkinter import filedialog
+
+    root = tk.Tk()
+    root.withdraw()
+    # Keep the dialog above the browser/Electron window it was triggered from.
+    root.attributes('-topmost', True)
+    try:
+        default = os.path.normpath(payload['defaultPath']) if payload['defaultPath'] else ''
+        initialdir, initialfile = '', ''
+        if default:
+            if os.path.isdir(default):
+                initialdir = default
+            elif os.path.isdir(os.path.dirname(default)):
+                initialdir = os.path.dirname(default)
+                initialfile = os.path.basename(default)
+        if payload['mode'] == 'directory':
+            path = filedialog.askdirectory(parent=root, title=payload['title'], initialdir=initialdir or None)
+        else:
+            filetypes = [(f'{ext.lstrip(".").upper()} files', f'*{ext}') for ext in payload['accept']]
+            filetypes.append(('All files', '*.*'))
+            path = filedialog.askopenfilename(
+                parent=root, title=payload['title'], initialdir=initialdir or None,
+                initialfile=initialfile or None, filetypes=filetypes or None)
+    finally:
+        root.destroy()
+    return os.path.normpath(path) if path else ''
+
+
+async def pick_path(request: Request):
+    try:
+        data = await request.json()
+    except ValueError:
+        data = {}
+    accept = data.get('accept')
+    payload = {
+        'mode': 'directory' if data.get('mode') == 'directory' else 'file',
+        'title': str(data.get('title') or ''),
+        'defaultPath': str(data.get('defaultPath') or ''),
+        'accept': [str(ext) for ext in accept if str(ext).strip()] if isinstance(accept, list) else [],
+    }
+    try:
+        path = await asyncio.get_running_loop().run_in_executor(None, _show_path_dialog, payload)
+    except Exception as exc:
+        # tkinter.TclError (no display), ImportError (no tkinter), etc.
+        logger.warning(f'Path picker dialog failed: {exc}')
+        return _json_error(f'File picker is not available on this host: {exc}', 503)
+    if not path:
+        return JSONResponse({'ok': True, 'canceled': True})
+    return JSONResponse({'ok': True, 'path': path})
 
 
 async def set_language(request: Request):
