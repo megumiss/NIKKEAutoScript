@@ -592,8 +592,10 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                       <FieldInterception v-else-if="field.widget === 'interception_stone_import'" :widget="field.widget" :busy="Boolean(importBusy[field.key])" @import="importInterception(field, $event)" @error="error = $event"/>
                       <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>
                       <template v-else-if="field.widget === 'datetime'">
-                        <input type="datetime-local" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
-                        <button v-if="field.display === 'show' && hasCustomTime(field)" type="button" class="btn sm field-clear" :title="t('清空')" @click="clearField(field)">×</button>
+                        <div class="dt-field">
+                          <input type="datetime-local" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                          <button v-if="field.display === 'show' && hasCustomTime(field)" type="button" class="dt-clear" :title="t('清空')" @click="clearField(field)">✕</button>
+                        </div>
                       </template>
                       <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
                     </div>
