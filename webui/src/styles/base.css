@@ -135,6 +135,7 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .app-select-empty { padding:8px 10px; color:var(--text-3); font-size:13px; text-align:center; }
 .brand-logo-img { background:none; box-shadow:none; object-fit:contain; }
 .update-hint { color:var(--green); font-weight:600; }
+.btn-spin { display:inline-block; width:11px; height:11px; margin-right:6px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; vertical-align:-1px; animation:spin 1s linear infinite; }
 .field-control input[type='datetime-local'] { width:min(250px,100%); padding:0 10px; letter-spacing:.02em; }
 .field-control input[type='datetime-local']::-webkit-datetime-edit-fields-wrapper { padding:0; }
 .field-control input[type='datetime-local']::-webkit-datetime-edit-text { color:var(--text-3); padding:0 1px; }

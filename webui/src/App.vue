@@ -70,7 +70,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
   '应用更新': { 'en-US': 'Application update', 'ja-JP': 'アプリ更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
-  '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' },
+  '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' },
   '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
@@ -277,7 +277,24 @@ async function checkUpdate() {
     }
   } catch (exception: any) { error.value = exception.message } finally { updateChecking.value = false }
 }
-function runUpdate() { api.post('/api/update').catch(exception => error.value = exception.message) }
+const updating = ref(false)
+async function runUpdate() {
+  if (updating.value) return
+  updating.value = true
+  try {
+    await api.post('/api/update')
+    // The updater first waits for running instances to stop, then pulls and
+    // reloads the backend; poll until it leaves the in-progress states.
+    // Requests failing mid-way mean the backend is reloading and the health
+    // check takes over from there.
+    for (let round = 0; round < 300; round++) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      try { updateInfo.value = await api.get('/api/system/update') } catch { continue }
+      if (!['checking', 'start', 'wait', 'run update'].includes(String(updateInfo.value.state))) break
+    }
+    if (updateInfo.value.state === 'failed') error.value = t('更新失败')
+  } catch (exception: any) { error.value = exception.message } finally { updating.value = false }
+}
 async function saveRemark(instance: Instance, event: Event) {
   const input = event.target as HTMLInputElement
   try {
@@ -561,9 +578,9 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <article class="card task-hero">
           <div class="task-icon">🚀</div>
           <div style="flex:1"><h2>{{ t('应用更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span></div></div>
-          <button v-if="Number(updateInfo.state) === 1" class="btn success" @click="runUpdate">{{ t('立即更新') }}</button>
-          <button v-else-if="updateInfo.state === 'failed'" class="btn danger" @click="runUpdate">{{ t('重试更新') }}</button>
-          <button v-else class="btn primary" :disabled="updateChecking || updateInfo.state === 'checking'" @click="checkUpdate">{{ updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新') }}</button>
+          <button v-if="Number(updateInfo.state) === 1" class="btn success" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('立即更新') }}</button>
+          <button v-else-if="updateInfo.state === 'failed'" class="btn danger" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('重试更新') }}</button>
+          <button v-else class="btn primary" :disabled="updating || updateChecking || updateInfo.state === 'checking'" @click="checkUpdate">{{ updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新') }}</button>
           <button class="btn danger" @click="api.post('/api/restart').catch(exception => error = exception.message)">{{ t('强制重启') }}</button>
         </article>
         <article class="card group-card">

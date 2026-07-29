@@ -110,7 +110,9 @@ async def restart(_: Request):
 async def update(_: Request):
     if updater.state in ['checking', 'start', 'wait', 'run update']:
         return _json_error(f'Update already in progress. Current state: {updater.state}', 409)
-    updater.run_update()
+    # run_update blocks for the whole wait-pull-install cycle; run it off the
+    # event loop so the SPA can poll the update state while it progresses.
+    threading.Thread(target=updater.run_update, daemon=True).start()
     return JSONResponse({'status': 'success', 'message': 'Update process initiated.'})
 
 
