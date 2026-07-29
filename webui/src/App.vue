@@ -74,7 +74,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
   '应用更新': { 'en-US': 'Application update', 'ja-JP': 'アプリ更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
-  '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' },
+  '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' }, '更新超时，请稍后手动刷新页面': { 'en-US': 'Update timed out, please reload later', 'ja-JP': '更新がタイムアウト、後で再読み込みしてください' },
   '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' },
   '重启中…': { 'en-US': 'Restarting…', 'ja-JP': '再起動中…' }, '后端正在重启，页面将自动刷新…': { 'en-US': 'Backend restarting, the page will reload…', 'ja-JP': 'バックエンド再起動中、ページを再読み込みします…' }, '重启超时，请手动刷新页面': { 'en-US': 'Restart timed out, please reload manually', 'ja-JP': '再起動がタイムアウト、手動で再読み込みしてください' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
@@ -296,36 +296,37 @@ const updating = ref(false)
 async function runUpdate() {
   if (updating.value) return
   updating.value = true
-  // The backend restarts itself after a successful update; a failed request
-  // mid-way is the signal that the reload (and thus the update) happened.
-  let backendBlinked = false
   try {
     await api.post('/api/update')
     // The updater first waits for running instances to stop, then pulls and
     // reloads the backend; poll until it leaves the in-progress states.
-    let succeeded = false
-    for (let round = 0; round < 300; round++) {
+    let state = ''
+    let round = 0
+    for (; round < 300; round++) {
       await new Promise(resolve => setTimeout(resolve, 2000))
-      try { updateInfo.value = await api.get('/api/system/update') } catch { backendBlinked = true; continue }
-      const state = String(updateInfo.value.state)
-      if (['checking', 'start', 'wait', 'run update'].includes(state)) continue
-      succeeded = state === 'finish' || state === 'reload' || backendBlinked
-      break
+      // A failed request just means the backend is mid-reload; keep polling.
+      try { updateInfo.value = await api.get('/api/system/update') } catch { continue }
+      state = String(updateInfo.value.state)
+      if (!['checking', 'start', 'wait', 'run update'].includes(state)) break
     }
-    if (updateInfo.value.state === 'failed') {
+    if (state === 'failed') {
       error.value = t('更新失败')
       return
     }
-    if (succeeded) {
-      // Wait for the backend to come back, then reload so the page picks up
-      // the freshly updated SPA assets instead of stale ones.
-      notify(t('更新完成，正在刷新页面…'))
-      for (let round = 0; round < 60; round++) {
-        try { await api.get('/api/system/status'); break } catch { await new Promise(resolve => setTimeout(resolve, 2000)) }
-      }
-      window.location.reload()
+    if (round >= 300) {
+      error.value = t('更新超时，请稍后手动刷新页面')
       return
     }
+    // We initiated this update, so any terminal state other than "failed"
+    // means the cycle completed.  In particular a backend reload resets the
+    // updater state to idle (0/false); if the reload fits between two polls
+    // neither "finish"/"reload" nor a failed request is ever observed, and
+    // treating only those as success would silently skip the page reload.
+    notify(t('更新完成，正在刷新页面…'))
+    for (let waitRound = 0; waitRound < 60; waitRound++) {
+      try { await api.get('/api/system/status'); break } catch { await new Promise(resolve => setTimeout(resolve, 2000)) }
+    }
+    window.location.reload()
   } catch (exception: any) { error.value = exception.message } finally { updating.value = false }
 }
 const restarting = ref(false)
@@ -633,7 +634,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           <div style="flex:1"><h2>{{ t('应用更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span></div></div>
           <button v-if="Number(updateInfo.state) === 1" class="btn success" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('立即更新') }}</button>
           <button v-else-if="updateInfo.state === 'failed'" class="btn danger" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('重试更新') }}</button>
-          <button v-else class="btn primary" :disabled="updating || updateChecking || updateInfo.state === 'checking'" @click="checkUpdate">{{ updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新') }}</button>
+          <button v-else class="btn primary" :disabled="updating || updateChecking || updateInfo.state === 'checking'" @click="checkUpdate">{{ updating ? t('更新中…') : (updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新')) }}</button>
           <button class="btn danger" :disabled="restarting" @click="forceRestart"><span v-if="restarting" class="btn-spin"></span>{{ restarting ? t('重启中…') : t('强制重启') }}</button>
         </article>
         <article class="card group-card">
