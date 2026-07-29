@@ -71,7 +71,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
   '应用更新': { 'en-US': 'Application update', 'ja-JP': 'アプリ更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
-  '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' },
+  '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' },
   '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
@@ -283,18 +283,36 @@ const updating = ref(false)
 async function runUpdate() {
   if (updating.value) return
   updating.value = true
+  // The backend restarts itself after a successful update; a failed request
+  // mid-way is the signal that the reload (and thus the update) happened.
+  let backendBlinked = false
   try {
     await api.post('/api/update')
     // The updater first waits for running instances to stop, then pulls and
     // reloads the backend; poll until it leaves the in-progress states.
-    // Requests failing mid-way mean the backend is reloading and the health
-    // check takes over from there.
+    let succeeded = false
     for (let round = 0; round < 300; round++) {
       await new Promise(resolve => setTimeout(resolve, 2000))
-      try { updateInfo.value = await api.get('/api/system/update') } catch { continue }
-      if (!['checking', 'start', 'wait', 'run update'].includes(String(updateInfo.value.state))) break
+      try { updateInfo.value = await api.get('/api/system/update') } catch { backendBlinked = true; continue }
+      const state = String(updateInfo.value.state)
+      if (['checking', 'start', 'wait', 'run update'].includes(state)) continue
+      succeeded = state === 'finish' || state === 'reload' || backendBlinked
+      break
     }
-    if (updateInfo.value.state === 'failed') error.value = t('更新失败')
+    if (updateInfo.value.state === 'failed') {
+      error.value = t('更新失败')
+      return
+    }
+    if (succeeded) {
+      // Wait for the backend to come back, then reload so the page picks up
+      // the freshly updated SPA assets instead of stale ones.
+      notify(t('更新完成，正在刷新页面…'))
+      for (let round = 0; round < 60; round++) {
+        try { await api.get('/api/system/status'); break } catch { await new Promise(resolve => setTimeout(resolve, 2000)) }
+      }
+      window.location.reload()
+      return
+    }
   } catch (exception: any) { error.value = exception.message } finally { updating.value = false }
 }
 async function saveRemark(instance: Instance, event: Event) {
