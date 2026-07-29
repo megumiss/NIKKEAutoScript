@@ -799,8 +799,13 @@
         "value": true
       },
       "priority": {
-        "type": "textarea",
-        "value": "GRATIS > CORE_DUST_CASE > ORNAMENT"
+        "type": "priority",
+        "value": "GRATIS > CORE_DUST_CASE > ORNAMENT",
+        "option": [
+          "GRATIS",
+          "CORE_DUST_CASE",
+          "ORNAMENT"
+        ]
       }
     },
     "ArenaShop": {
@@ -817,8 +822,18 @@
         "value": 3000
       },
       "priority": {
-        "type": "textarea",
-        "value": ""
+        "type": "priority",
+        "value": "",
+        "option": [
+          "ELECTRIC_CODE",
+          "FIRE_CODE",
+          "IRON_CODE",
+          "WATER_CODE",
+          "WIND_CODE",
+          "MANUAL_SELECTION_BOX",
+          "ORNAMENT",
+          "WEAPON"
+        ]
       }
     },
     "Storage": {
@@ -868,12 +883,32 @@
     },
     "RubbishShop": {
       "priority": {
-        "type": "textarea",
-        "value": "GEM > CORE_DUST_CASE"
+        "type": "priority",
+        "value": "GEM > CORE_DUST_CASE",
+        "option": [
+          "GEM",
+          "CORE_DUST_CASE",
+          "CREDIT_CASE",
+          "CREDIT",
+          "BATTLE_DATA_SET_CASE",
+          "GROWTH_SET",
+          "ORNAMENT",
+          "GENERAL_TICKET",
+          "ELYSION_TICKET",
+          "MISSILIS_TICKET",
+          "TETRA_TICKET",
+          "PILGRIM_TICKET",
+          "ABNORMAL_TICKET"
+        ]
       },
       "bonePriority": {
-        "type": "textarea",
-        "value": ""
+        "type": "priority",
+        "value": "",
+        "option": [
+          "GOOD_TEAMWORK_BOX",
+          "MAINTENANCE_KIT_BOX_2",
+          "CURATED_MANUFACTURER_ARMS"
+        ]
       }
     },
     "Storage": {
@@ -972,8 +1007,31 @@
         "value": false
       },
       "Priority": {
-        "type": "textarea",
-        "value": ""
+        "type": "priority",
+        "value": "",
+        "option": [
+          "Diesel",
+          "Exia",
+          "Laplace",
+          "Frima",
+          "Viper",
+          "Helm",
+          "Miranda",
+          "Drake",
+          "Milk",
+          "Poli",
+          "Julia",
+          "Bay",
+          "Tove",
+          "Privaty",
+          "Moran",
+          "Zwei",
+          "Centi",
+          "Phantom",
+          "Sugar",
+          "Rosanna",
+          "Flora"
+        ]
       }
     },
     "Storage": {
@@ -2504,8 +2562,27 @@
     },
     "BlaExchange": {
       "Priority": {
-        "type": "textarea",
-        "value": "Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30"
+        "type": "priority",
+        "value": "Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30",
+        "option": [
+          "Gem_×320",
+          "Welcome_Gift_Core_Dust_×30",
+          "Gem_×30",
+          "Skill_Manual_I_×5",
+          "Ultra_Boost_Module_×5",
+          "Code_Manual_Selection_Box_×5",
+          "Gem_×60",
+          "Mid-Quality_Mold_×3",
+          "Credit_Case_(1H)_x9",
+          "Core_Dust_Case_(1H)_×3",
+          "Gem_×120",
+          "Mid-Quality_Mold_×8",
+          "Battle_Data_Set_Case_(1H)_×6",
+          "Core_Dust_Case_(1H)_×6",
+          "Skill_Manual_I_×30",
+          "Ultra_Boost_Module_×30",
+          "Code_Manual_Selection_Box_×30"
+        ]
       }
     },
     "Storage": {

@@ -135,6 +135,17 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .app-select-empty { padding:8px 10px; color:var(--text-3); font-size:13px; text-align:center; }
 .brand-logo-img { background:none; box-shadow:none; object-fit:contain; }
 .update-hint { color:var(--green); font-weight:600; }
+.priority-field { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.priority-field.disabled { opacity:.55; }
+.priority-chips { display:flex; gap:8px; flex-wrap:wrap; }
+.priority-chip { display:inline-flex; gap:6px; align-items:center; padding:4px 8px 4px 4px; border:1px solid var(--border); border-radius:8px; background:var(--card-2); font-size:13px; }
+.priority-num { display:grid; min-width:19px; height:19px; padding:0 4px; place-items:center; border-radius:6px; color:var(--accent); background:var(--accent-soft); font-size:11px; font-weight:700; }
+.priority-move,.priority-remove { padding:0 3px; border:0; color:var(--text-3); background:transparent; font-size:13px; line-height:1; }
+.priority-move:hover,.priority-remove:hover { color:var(--text); }
+.priority-move:disabled { opacity:.3; cursor:default; }
+.priority-remove:hover { color:var(--red); }
+.priority-add { width:150px; }
+.priority-add .app-select-btn { height:29px; font-size:12.5px; }
 .btn-spin { display:inline-block; width:11px; height:11px; margin-right:6px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; vertical-align:-1px; animation:spin 1s linear infinite; }
 .field-control input[type='datetime-local'] { width:min(250px,100%); padding:0 10px; letter-spacing:.02em; }
 .field-control input[type='datetime-local']::-webkit-datetime-edit-fields-wrapper { padding:0; }

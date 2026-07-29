@@ -1617,6 +1617,7 @@ _widget_type_to_func: Dict[str, Callable] = {
     "datetime": put_arg_input,  # TODO
     "select": put_arg_select,
     "textarea": put_arg_textarea,
+    "priority": put_arg_textarea,
     "checkbox": put_arg_checkbox,
     "storage": put_arg_storage,
     "state": put_arg_state,

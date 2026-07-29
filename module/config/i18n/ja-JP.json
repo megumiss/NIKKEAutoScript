@@ -609,7 +609,10 @@
     },
     "priority": {
       "name": "優先購入",
-      "help": "記入しない場合、無料アイテムのみを購入します。記入形式：'GRATIS > CORE_DUST_CASE > ORNAMENT'（大なり記号で区切る）。選択可能項目：\nGRATIS: 無料アイテム\nCORE_DUST_CASE: コアダストケース\nORNAMENT: プロフィールデコレーション"
+      "help": "記入しない場合、無料アイテムのみ購入します。優先度順に購入します。",
+      "GRATIS": "GRATIS",
+      "CORE_DUST_CASE": "CORE_DUST_CASE",
+      "ORNAMENT": "ORNAMENT"
     }
   },
   "ArenaShop": {
@@ -631,7 +634,15 @@
     },
     "priority": {
       "name": "優先購入",
-      "help": "記入しない場合、購入しません。記入形式：'ELECTRIC_CODE > MANUAL_SELECTION_BOX'（大なり記号で区切る）。選択可能項目：\nELECTRIC_CODE: エレクトリックコード\nFIRE_CODE: ファイアコード\nIRON_CODE: アイアンコード\nWATER_CODE: ウォーターコード\nWIND_CODE: ウィンドコード\nMANUAL_SELECTION_BOX: コードセレクトボックス\nORNAMENT: プロフィールデコレーション\nWEAPON: 企業武器モールド\n"
+      "help": "記入しない場合、購入しません。優先度順に購入します。",
+      "ELECTRIC_CODE": "ELECTRIC_CODE",
+      "FIRE_CODE": "FIRE_CODE",
+      "IRON_CODE": "IRON_CODE",
+      "WATER_CODE": "WATER_CODE",
+      "WIND_CODE": "WIND_CODE",
+      "MANUAL_SELECTION_BOX": "MANUAL_SELECTION_BOX",
+      "ORNAMENT": "ORNAMENT",
+      "WEAPON": "WEAPON"
     }
   },
   "RubbishShop": {
@@ -641,11 +652,27 @@
     },
     "priority": {
       "name": "コア購入優先度",
-      "help": "記入しない場合、ジュエルとコアダストケースをデフォルトで購入します。記入形式：'GEM > CORE_DUST_CASE'（大なり記号で区切る）。選択可能項目：\nGEM: ジュエル\nCORE_DUST_CASE: コアダストケース\nCREDIT_CASE: クレジットケース\nCREDIT: クレジット\nBATTLE_DATA_SET_CASE: バトルデータセットケース\nGROWTH_SET: 成長セット\nORNAMENT: プロフィールデコレーション\nGENERAL_TICKET: コマンダー一般クーポン\nELYSION_TICKET: エリシオンVIPクーポン\nMISSILIS_TICKET: ミシリスVIPカード\nTETRA_TICKET: テトラVIPケアクーポン\nPILGRIM_TICKET: ピルグリム補給セット引換券\nABNORMAL_TICKET: アブノーマル年間クーポン\n"
+      "help": "記入しない場合、ジュエルとコアダストケースを購入します。優先度順に購入します。",
+      "GEM": "GEM",
+      "CORE_DUST_CASE": "CORE_DUST_CASE",
+      "CREDIT_CASE": "CREDIT_CASE",
+      "CREDIT": "CREDIT",
+      "BATTLE_DATA_SET_CASE": "BATTLE_DATA_SET_CASE",
+      "GROWTH_SET": "GROWTH_SET",
+      "ORNAMENT": "ORNAMENT",
+      "GENERAL_TICKET": "GENERAL_TICKET",
+      "ELYSION_TICKET": "ELYSION_TICKET",
+      "MISSILIS_TICKET": "MISSILIS_TICKET",
+      "TETRA_TICKET": "TETRA_TICKET",
+      "PILGRIM_TICKET": "PILGRIM_TICKET",
+      "ABNORMAL_TICKET": "ABNORMAL_TICKET"
     },
     "bonePriority": {
       "name": "ボーン購入優先度",
-      "help": "ボーン通貨での購入優先度。記入形式：'CURATED_MANUFACTURER_ARMS > MAINTENANCE_KIT_BOX_2'（大なり記号で区切る）。選択可能項目：\nGOOD_TEAMWORK_BOX: 優秀なチームワークボックス\nMAINTENANCE_KIT_BOX_2: メンテナンスキットボックスII\nCURATED_MANUFACTURER_ARMS: 企業精選装備\n"
+      "help": "ボーン通貨の購入優先度。記入しない場合、購入しません。",
+      "GOOD_TEAMWORK_BOX": "GOOD_TEAMWORK_BOX",
+      "MAINTENANCE_KIT_BOX_2": "MAINTENANCE_KIT_BOX_2",
+      "CURATED_MANUFACTURER_ARMS": "CURATED_MANUFACTURER_ARMS"
     }
   },
   "Notification": {
@@ -699,7 +726,28 @@
     },
     "Priority": {
       "name": "優先度",
-      "help": "ニケの優先度。現在の派遣で選択されているコレクションアイテムの数が160を超えると、リストから自動的に削除され、次のニケが選択されます。形式：Helm > Exia\nニケ名対応：\nDiesel：ディーゼル\nExia：エクシア\nLaplace：ラプラス\nFrima：フリーマ\nViper：バイパー\nHelm：ヘルム\nMiranda：ミランダ\nDrake：ドレイク\nMilk：ミルク\nPoli：ポリー\nJulia：ジュリア\nBay：ベイ\nTove：トーブ\nPrivaty：プリバティ\nMoran：モラン\nZwei：ツバイ\nCenti：センチ\nPhantom：ファントム\nSugar：シュガー\nRosanna：ロザンナ\nFlora：フローラ"
+      "help": "ニケの優先度。選択したコレクションアイテム数が160を超えると、リストから自動的に削除され、次のニケが選択されます。",
+      "Diesel": "Diesel",
+      "Exia": "Exia",
+      "Laplace": "Laplace",
+      "Frima": "Frima",
+      "Viper": "Viper",
+      "Helm": "Helm",
+      "Miranda": "Miranda",
+      "Drake": "Drake",
+      "Milk": "Milk",
+      "Poli": "Poli",
+      "Julia": "Julia",
+      "Bay": "Bay",
+      "Tove": "Tove",
+      "Privaty": "Privaty",
+      "Moran": "Moran",
+      "Zwei": "Zwei",
+      "Centi": "Centi",
+      "Phantom": "Phantom",
+      "Sugar": "Sugar",
+      "Rosanna": "Rosanna",
+      "Flora": "Flora"
     }
   },
   "RookieArena": {
@@ -842,7 +890,24 @@
     },
     "Priority": {
       "name": "優先交換",
-      "help": "記入しない場合、購入しません。記入形式：'Gem_×320 > Welcome_Gift_Core_Dust_×30'（大なり記号で区切る）。デフォルトではダイヤのみを交換します：\nGem_×320: ジュエル ×320\nWelcome_Gift_Core_Dust_×30: コマンダーウェルカムギフト：コアダスト ×30\nGem_×30: ジュエル ×30\nSkill_Manual_I_×5: スキルマニュアル I ×5\nUltra_Boost_Module_×5: モジュールアドバンスブースター ×5\nCode_Manual_Selection_Box_×5: コードマニュアルセレクトボックス ×5\nGem_×60: ジュエル ×60\nMid-Quality_Mold_×3: 中品質モールド ×3\nCredit_Case_(1H)_x9: クレジットケース(1H) x9\nCore_Dust_Case_(1H)_×3: コアダストケース (1H) ×3\nGem_×120: ジュエル ×120\nMid-Quality_Mold_×8: 中品質モールド ×8\nBattle_Data_Set_Case_(1H)_×6: バトルデータセットケース (1H) ×6\nCore_Dust_Case_(1H)_×6: コアダストケース (1H) ×6\nSkill_Manual_I_×30: スキルマニュアル I ×30\nUltra_Boost_Module_×30: モジュールアドバンスブースター ×30\nCode_Manual_Selection_Box_×30: コードマニュアルセレクトボックス ×30\n"
+      "help": "記入しない場合、デフォルトの優先度（ジュエルのみ）を使用します。優先度順に交換します。",
+      "Gem_×320": "Gem_×320",
+      "Welcome_Gift_Core_Dust_×30": "Welcome_Gift_Core_Dust_×30",
+      "Gem_×30": "Gem_×30",
+      "Skill_Manual_I_×5": "Skill_Manual_I_×5",
+      "Ultra_Boost_Module_×5": "Ultra_Boost_Module_×5",
+      "Code_Manual_Selection_Box_×5": "Code_Manual_Selection_Box_×5",
+      "Gem_×60": "Gem_×60",
+      "Mid-Quality_Mold_×3": "Mid-Quality_Mold_×3",
+      "Credit_Case_(1H)_x9": "Credit_Case_(1H)_x9",
+      "Core_Dust_Case_(1H)_×3": "Core_Dust_Case_(1H)_×3",
+      "Gem_×120": "Gem_×120",
+      "Mid-Quality_Mold_×8": "Mid-Quality_Mold_×8",
+      "Battle_Data_Set_Case_(1H)_×6": "Battle_Data_Set_Case_(1H)_×6",
+      "Core_Dust_Case_(1H)_×6": "Core_Dust_Case_(1H)_×6",
+      "Skill_Manual_I_×30": "Skill_Manual_I_×30",
+      "Ultra_Boost_Module_×30": "Ultra_Boost_Module_×30",
+      "Code_Manual_Selection_Box_×30": "Code_Manual_Selection_Box_×30"
     }
   },
   "EventInfo": {
@@ -1396,10 +1461,6 @@
       "Import": "インポート",
       "Export": "エクスポート",
       "Delete": "削除",
-      "DeleteConfirm": "削除を確認",
-      "DeleteCancel": "キャンセル",
-      "DeleteSuccess": "削除しました",
-      "DeleteRunning": "実行中のインスタンスは削除できません",
       "OverrideWarning": "既存の構成ファイルが上書きされます",
       "ImportSuccess": "インポート成功",
       "NewSuccess": "追加成功",
