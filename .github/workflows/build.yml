@@ -100,19 +100,41 @@ jobs:
 
     - name: Verify Desktop Version
       run: |
+        $PSNativeCommandUseErrorActionPreference = $false
         $currentToml = Get-Content "webapp\src-tauri\Cargo.toml" -Raw
         $currentVersion = [regex]::Match($currentToml, '(?m)^version = "([^"]+)"').Groups[1].Value
-        $previousTag = & git describe --tags --abbrev=0 "$env:GITHUB_SHA^" 2>$null
-        if ($LASTEXITCODE -eq 0 -and $previousTag) {
-          $previousToml = & git show "${previousTag}:webapp/src-tauri/Cargo.toml" 2>$null
-          if ($LASTEXITCODE -eq 0) {
-            $previousVersion = [regex]::Match(($previousToml -join "`n"), '(?m)^version = "([^"]+)"').Groups[1].Value
-            $desktopChanges = @(git diff --name-only "$previousTag..HEAD" -- webapp/src-tauri webapp/shell webapp/package.json webapp/yarn.lock)
-            if ($desktopChanges.Count -gt 0 -and $currentVersion -eq $previousVersion) {
-              throw "Desktop inputs changed since $previousTag but desktop version is still $currentVersion"
-            }
-          }
+        if (-not $currentVersion) {
+          throw "Unable to read the current desktop version from Cargo.toml"
         }
+
+        $describeOutput = @(& git describe --tags --abbrev=0 "$env:GITHUB_SHA^" 2>$null)
+        $describeExitCode = $LASTEXITCODE
+        if ($describeExitCode -ne 0 -or $describeOutput.Count -eq 0) {
+          Write-Host "No previous release tag was found; skipping the desktop version bump check."
+          exit 0
+        }
+        $previousTag = $describeOutput[0].Trim()
+
+        $previousToml = @(& git show "${previousTag}:webapp/src-tauri/Cargo.toml" 2>$null)
+        $showExitCode = $LASTEXITCODE
+        if ($showExitCode -ne 0) {
+          Write-Host "$previousTag predates the Tauri desktop project; skipping the desktop version bump check."
+          exit 0
+        }
+
+        $previousVersion = [regex]::Match(($previousToml -join "`n"), '(?m)^version = "([^"]+)"').Groups[1].Value
+        if (-not $previousVersion) {
+          throw "Unable to read the desktop version from $previousTag"
+        }
+        $range = "$previousTag..$($env:GITHUB_SHA)"
+        $desktopChanges = @(& git diff --name-only $range -- webapp/src-tauri webapp/shell webapp/package.json webapp/yarn.lock)
+        if ($LASTEXITCODE -ne 0) {
+          throw "Unable to compare desktop inputs with $previousTag"
+        }
+        if ($desktopChanges.Count -gt 0 -and $currentVersion -eq $previousVersion) {
+          throw "Desktop inputs changed since $previousTag but desktop version is still $currentVersion"
+        }
+        Write-Host "Desktop version check passed: $previousVersion -> $currentVersion"
 
     - name: Build Tauri Shell
       working-directory: webapp
