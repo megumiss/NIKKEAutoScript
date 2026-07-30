@@ -37,12 +37,12 @@ const visibleLogs = computed(() => {
   })
 })
 const error = ref('')
-const toasts = ref<{ id: number; text: string; kind: string }[]>([])
+const toasts = ref<{ id: number; text: string; kind: string; action?: { label: string; run: () => void } }[]>([])
 let toastSeq = 0
 // duration <= 0 keeps the toast until it is closed manually.
-function notify(text: string, kind = 'ok', duration = 1600) {
+function notify(text: string, kind = 'ok', duration = 1600, action?: { label: string; run: () => void }) {
   const id = ++toastSeq
-  toasts.value.push({ id, text, kind })
+  toasts.value.push({ id, text, kind, action })
   if (duration > 0) setTimeout(() => closeToast(id), duration)
 }
 function closeToast(id: number) { toasts.value = toasts.value.filter(toast => toast.id !== id) }
@@ -77,7 +77,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '应用更新': { 'en-US': 'Application update', 'ja-JP': 'アプリ更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' }, '更新超时，请稍后手动刷新页面': { 'en-US': 'Update timed out, please reload later', 'ja-JP': '更新がタイムアウト、後で再読み込みしてください' },
-  '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' }, '发现新版本，可在更新页更新': { 'en-US': 'New version found — see the update page', 'ja-JP': '新しいバージョンを検出、更新ページへ' },
+  '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' }, '发现新版本，可在更新页更新': { 'en-US': 'New version found — see the update page', 'ja-JP': '新しいバージョンを検出、更新ページへ' }, '前往更新': { 'en-US': 'Go to update', 'ja-JP': '更新ページへ' },
   '重启中…': { 'en-US': 'Restarting…', 'ja-JP': '再起動中…' }, '后端正在重启，页面将自动刷新…': { 'en-US': 'Backend restarting, the page will reload…', 'ja-JP': 'バックエンド再起動中、ページを再読み込みします…' }, '重启超时，请手动刷新页面': { 'en-US': 'Restart timed out, please reload manually', 'ja-JP': '再起動がタイムアウト、手動で再読み込みしてください' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
@@ -422,7 +422,7 @@ function startSockets() {
 let lastUpdaterState: any = undefined
 function watchUpdaterState(state: any) {
   const available = state === true || state === 1
-  if (available && !(lastUpdaterState === true || lastUpdaterState === 1)) notify(t('发现新版本，可在更新页更新'), 'ok', 0)
+  if (available && !(lastUpdaterState === true || lastUpdaterState === 1)) notify(t('发现新版本，可在更新页更新'), 'ok', 0, { label: t('前往更新'), run: () => router.push('/settings') })
   if (updateInfo.value && typeof updateInfo.value === 'object' && 'state' in updateInfo.value) updateInfo.value.state = state
   lastUpdaterState = state
 }
@@ -532,7 +532,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         </article>
       </div>
       <div class="toast-stack">
-        <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.kind"><span>{{ toast.kind === 'error' ? '✕' : '✓' }} {{ toast.text }}</span><button type="button" class="toast-close" @click="closeToast(toast.id)">✕</button></div>
+        <div v-for="toast in toasts" :key="toast.id" class="toast" :class="toast.kind"><span>{{ toast.kind === 'error' ? '✕' : '✓' }} {{ toast.text }}</span><button v-if="toast.action" type="button" class="toast-action" @click="toast.action.run(); closeToast(toast.id)">{{ toast.action.label }}</button><button type="button" class="toast-close" @click="closeToast(toast.id)">✕</button></div>
       </div>
       <section v-if="isDashboard" class="view">
         <div class="stat-row">
