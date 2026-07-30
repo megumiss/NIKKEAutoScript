@@ -43,7 +43,17 @@
       },
       "ScriptPath": {
         "type": "textarea",
-        "value": ""
+        "value": "",
+        "path_picker": {
+          "enabled": true,
+          "mode": "file",
+          "accept": [
+            ".bat",
+            ".ps1",
+            ".exe",
+            ".sh"
+          ]
+        }
       }
     },
     "Log": {
@@ -586,7 +596,11 @@
       },
       "ScreenshotPath": {
         "type": "textarea",
-        "value": ""
+        "value": "",
+        "path_picker": {
+          "enabled": true,
+          "mode": "directory"
+        }
       }
     },
     "Storage": {
@@ -1495,7 +1509,11 @@
       },
       "DropScreenshotPath": {
         "type": "textarea",
-        "value": ""
+        "value": "",
+        "path_picker": {
+          "enabled": true,
+          "mode": "directory"
+        }
       }
     },
     "InterceptionRotation": {

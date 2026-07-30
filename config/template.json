@@ -226,7 +226,7 @@
       "enable": false,
       "AutoFillCodeManual": false,
       "CodeManualBuyThreshold": 3000,
-      "priority": ""
+      "priority": null
     },
     "Storage": {
       "Storage": {}
@@ -243,7 +243,7 @@
     },
     "RubbishShop": {
       "priority": "GEM > CORE_DUST_CASE",
-      "bonePriority": ""
+      "bonePriority": null
     },
     "Storage": {
       "Storage": {}
@@ -273,7 +273,7 @@
     },
     "CollectionItems": {
       "Enable": false,
-      "Priority": ""
+      "Priority": null
     },
     "Storage": {
       "Storage": {}

@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import subprocess
@@ -85,37 +86,49 @@ class Starter(GitManager, PipManager, NKASManager):
         with open(self.AUTO_UPDATE_FAILED_NOTICE_PATH, 'w', encoding='utf-8') as f:
             json.dump(payload, f, ensure_ascii=False)
 
-    def start(self):
+    def prepare(self, desktop_pid=None):
         from deploy.atomic import atomic_failure_cleanup
 
         atomic_failure_cleanup('./config')
+        excluded_pids = {int(desktop_pid)} if desktop_pid else set()
+        if self.AutoUpdate:
+            before_sha, _ = self._get_head_commit()
+            try:
+                self.git_update()
+            except ExecutionError as e:
+                error = str(e).strip() or 'Git update failed'
+                print(f'Auto update failed, skip update and continue startup: {error}')
+                self._save_auto_update_failed_notice(error)
+            else:
+                self.pip_install()
+                after_sha, _ = self._get_head_commit()
+                self._save_auto_update_notice(before_sha, after_sha)
+        self.nkas_kill(excluded_pids=excluded_pids)
+
+    def start(self, desktop_pid=None, interactive=True):
         try:
-            if self.AutoUpdate:
-                before_sha, _ = self._get_head_commit()
-                try:
-                    self.git_update()
-                except ExecutionError as e:
-                    error = str(e).strip() or 'Git update failed'
-                    print(f'Auto update failed, skip update and continue startup: {error}')
-                    self._save_auto_update_failed_notice(error)
-                else:
-                    self.pip_install()
-                    after_sha, _ = self._get_head_commit()
-                    self._save_auto_update_notice(before_sha, after_sha)
-            self.nkas_kill()
-        except ExecutionError:
-            input('Press Enter to continue...')  # Keep window open
+            self.prepare(desktop_pid=desktop_pid)
+        except ExecutionError as e:
+            print(str(e).strip() or 'Startup update failed', file=sys.stderr)
+            if interactive:
+                input('Press Enter to continue...')  # Keep window open
             sys.exit(1)
         except Exception as e:
-            print(f'Unexpected error: {e}')
-            input('Press Enter to continue...')  # Keep window open
+            print(f'Unexpected error: {e}', file=sys.stderr)
+            if interactive:
+                input('Press Enter to continue...')  # Keep window open
             sys.exit(1)
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--prepare', action='store_true')
+    parser.add_argument('--desktop-pid', type=int)
+    args = parser.parse_args()
     try:
-        Starter().start()
+        Starter().start(desktop_pid=args.desktop_pid, interactive=not args.prepare)
     except Exception as e:
-        print(f'Start failed: {e}')
-        input('Press Enter to continue...')  # Keep window open
+        print(f'Start failed: {e}', file=sys.stderr)
+        if not args.prepare:
+            input('Press Enter to continue...')  # Keep window open
         sys.exit(1)

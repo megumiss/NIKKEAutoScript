@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NKAS</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      background: #0c0f11;
+      color: #e7ece9;
+    }
+
+    * {
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    body {
+      background: #0c0f11;
+    }
+
+    .startup {
+      display: grid;
+      grid-template-columns: minmax(250px, 29%) 1fr;
+      width: 100%;
+      height: 100%;
+      min-height: 560px;
+    }
+
+    .identity {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 48px 38px 36px;
+      border-right: 1px solid #2a3033;
+      background: #171b1e;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand img {
+      width: 64px;
+      height: 64px;
+      flex: 0 0 64px;
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-name {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .brand-edition {
+      margin-top: 7px;
+      color: #91a09a;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .status-block {
+      margin-top: auto;
+      padding-top: 48px;
+    }
+
+    .status-label {
+      margin-bottom: 10px;
+      color: #81908a;
+      font-size: 12px;
+    }
+
+    #status {
+      min-height: 54px;
+      margin: 0;
+      overflow-wrap: anywhere;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .progress-track {
+      position: relative;
+      width: 100%;
+      height: 4px;
+      margin-top: 24px;
+      overflow: hidden;
+      background: #30373a;
+    }
+
+    .progress-bar {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 36%;
+      background: #55c68a;
+      animation: progress 1.45s ease-in-out infinite;
+    }
+
+    .progress-track.ready .progress-bar {
+      width: 100%;
+      animation: none;
+    }
+
+    .progress-track.error .progress-bar {
+      width: 100%;
+      animation: none;
+      background: #e16464;
+    }
+
+    .version {
+      margin-top: 18px;
+      color: #68736f;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+    }
+
+    .activity {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+      background: #0c0f11;
+    }
+
+    .activity-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 74px;
+      padding: 0 34px;
+      border-bottom: 1px solid #242a2d;
+    }
+
+    .activity-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #82918b;
+      font-size: 12px;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #55c68a;
+      box-shadow: 0 0 0 3px rgba(85, 198, 138, 0.12);
+    }
+
+    #log {
+      min-height: 0;
+      margin: 0;
+      padding: 26px 34px;
+      overflow: auto;
+      color: #b7c2bd;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      scrollbar-color: #3e4944 transparent;
+    }
+
+    .log-line {
+      display: grid;
+      grid-template-columns: 74px 64px minmax(0, 1fr);
+      gap: 10px;
+      min-height: 21px;
+    }
+
+    .log-time {
+      color: #59645f;
+    }
+
+    .log-level {
+      color: #718079;
+    }
+
+    .log-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .log-line.stage .log-level,
+    .log-line.stage .log-text {
+      color: #70d7a1;
+    }
+
+    .log-line.warning .log-level,
+    .log-line.warning .log-text {
+      color: #e3b45f;
+    }
+
+    .log-line.error .log-level,
+    .log-line.error .log-text {
+      color: #ef7777;
+    }
+
+    .activity-footer {
+      min-height: 46px;
+      padding: 14px 34px;
+      border-top: 1px solid #242a2d;
+      color: #68736f;
+      font-size: 11px;
+    }
+
+    @keyframes progress {
+      0% { transform: translateX(-105%); }
+      50% { transform: translateX(90%); }
+      100% { transform: translateX(280%); }
+    }
+
+    @media (max-width: 760px) {
+      .startup {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-height: 480px;
+      }
+
+      .identity {
+        display: grid;
+        grid-template-columns: 1fr minmax(190px, 42%);
+        gap: 28px;
+        padding: 24px 26px;
+        border-right: 0;
+        border-bottom: 1px solid #2a3033;
+      }
+
+      .status-block {
+        margin: 0;
+        padding: 0;
+      }
+
+      .version {
+        display: none;
+      }
+
+      #status {
+        min-height: 42px;
+        font-size: 15px;
+      }
+
+      .activity-header,
+      #log,
+      .activity-footer {
+        padding-right: 24px;
+        padding-left: 24px;
+      }
+
+      .log-line {
+        grid-template-columns: 64px minmax(0, 1fr);
+      }
+
+      .log-level {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .progress-bar {
+        width: 65%;
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="startup">
+    <section class="identity">
+      <div class="brand">
+        <img src="icon.png" alt="NKAS">
+        <div class="brand-copy">
+          <h1 class="brand-name">NKAS</h1>
+          <div class="brand-edition">NIKKE Auto Script</div>
+        </div>
+      </div>
+
+      <div class="status-block">
+        <div class="status-label">当前状态</div>
+        <p id="status" aria-live="polite">正在初始化桌面环境</p>
+        <div id="progress" class="progress-track" aria-hidden="true">
+          <div class="progress-bar"></div>
+        </div>
+        <div class="version">NKAS Desktop</div>
+      </div>
+    </section>
+
+    <section class="activity">
+      <header class="activity-header">
+        <h2 class="activity-title">启动日志</h2>
+        <div class="live"><span class="live-dot"></span><span>LIVE</span></div>
+      </header>
+      <div id="log" role="log" aria-live="polite"></div>
+      <footer class="activity-footer">127.0.0.1 · Local desktop session</footer>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const log = document.getElementById('log');
+      const status = document.getElementById('status');
+      const progress = document.getElementById('progress');
+      const ansi = /\x1b\[[0-?]*[ -/]*[@-~]/g;
+      const labels = {
+        log: 'INFO',
+        stage: 'STAGE',
+        warning: 'WARN',
+        error: 'ERROR',
+        ready: 'READY',
+      };
+
+      function clean(message) {
+        return String(message ?? '').replace(ansi, '').replace(/\r/g, '');
+      }
+
+      function append(message, level = 'log') {
+        const text = clean(message);
+        if (!text.trim()) return;
+        const row = document.createElement('div');
+        row.className = `log-line ${level}`;
+
+        const time = document.createElement('span');
+        time.className = 'log-time';
+        time.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+        const type = document.createElement('span');
+        type.className = 'log-level';
+        type.textContent = labels[level] || labels.log;
+
+        const content = document.createElement('span');
+        content.className = 'log-text';
+        content.textContent = text;
+
+        row.append(time, type, content);
+        log.appendChild(row);
+        while (log.childElementCount > 500) log.firstElementChild.remove();
+        log.scrollTop = log.scrollHeight;
+      }
+
+      window.nkasStartup = {
+        log(message) {
+          append(message, 'log');
+        },
+        warning(message) {
+          append(message, 'warning');
+        },
+        stage(message) {
+          const text = clean(message);
+          status.textContent = text;
+          append(text, 'stage');
+        },
+        error(message) {
+          status.textContent = '启动失败';
+          progress.className = 'progress-track error';
+          append(message, 'error');
+        },
+        ready(message) {
+          const text = clean(message);
+          status.textContent = text;
+          progress.className = 'progress-track ready';
+          append(text, 'ready');
+        },
+      };
+
+      append('Desktop shell loaded.', 'log');
+    })();
+  </script>
+</body>
+</html>

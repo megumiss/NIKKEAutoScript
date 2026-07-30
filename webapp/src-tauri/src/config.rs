@@ -1,0 +1,266 @@
+use anyhow::{Context, Result};
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+fn default_webui_port() -> u16 {
+    12271
+}
+fn default_dpi_scaling() -> bool {
+    true
+}
+fn default_auto_update() -> bool {
+    true
+}
+fn default_desktop_update_manifest() -> String {
+    "https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json".into()
+}
+
+#[derive(Debug, Deserialize)]
+struct RootConfig {
+    #[serde(rename = "Deploy")]
+    deploy: DeployConfig,
+}
+
+#[derive(Debug, Deserialize)]
+struct DeployConfig {
+    #[serde(rename = "Git", default)]
+    git: GitConfig,
+    #[serde(rename = "Python")]
+    python: PythonConfig,
+    #[serde(rename = "Update", default)]
+    update: UpdateConfig,
+    #[serde(rename = "Webui", default)]
+    webui: WebuiConfig,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitConfig {
+    #[serde(rename = "AutoUpdate", default = "default_auto_update")]
+    auto_update: bool,
+}
+
+impl Default for GitConfig {
+    fn default() -> Self {
+        Self {
+            auto_update: default_auto_update(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateConfig {
+    #[serde(
+        rename = "DesktopUpdateManifest",
+        default = "default_desktop_update_manifest"
+    )]
+    desktop_update_manifest: String,
+}
+
+impl Default for UpdateConfig {
+    fn default() -> Self {
+        Self {
+            desktop_update_manifest: default_desktop_update_manifest(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct PythonConfig {
+    #[serde(rename = "PythonExecutable")]
+    executable: PathBuf,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct WebuiConfig {
+    #[serde(rename = "WebuiPort", default = "default_webui_port")]
+    port: u16,
+    #[serde(rename = "DpiScaling", default = "default_dpi_scaling")]
+    dpi_scaling: bool,
+    #[serde(rename = "HardwareAcceleration", default)]
+    hardware_acceleration: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct DesktopConfig {
+    pub root: PathBuf,
+    pub python: PathBuf,
+    pub port: u16,
+    pub auto_update: bool,
+    pub desktop_update_manifest: String,
+    pub dpi_scaling: bool,
+    pub hardware_acceleration: bool,
+    pub shortcuts: HashMap<String, String>,
+}
+
+pub fn locate_root(current_dir: &Path, executable: &Path) -> Result<PathBuf> {
+    let candidates = current_dir.ancestors().take(5).chain(
+        executable
+            .parent()
+            .into_iter()
+            .flat_map(|path| path.ancestors().take(6)),
+    );
+    for candidate in candidates {
+        if candidate.join("gui.py").is_file() && candidate.join("config/deploy.yaml").is_file() {
+            return candidate
+                .canonicalize()
+                .or_else(|_| Ok(candidate.to_path_buf()));
+        }
+    }
+    anyhow::bail!("Unable to locate the NKAS root containing gui.py and config/deploy.yaml")
+}
+
+pub fn load(root: PathBuf) -> Result<DesktopConfig> {
+    let config_path = root.join("config/deploy.yaml");
+    let content = fs::read_to_string(&config_path)
+        .with_context(|| format!("Unable to read {}", config_path.display()))?;
+    let raw: RootConfig = serde_yaml::from_str(&content)
+        .with_context(|| format!("Unable to parse {}", config_path.display()))?;
+    let python = if raw.deploy.python.executable.is_absolute() {
+        raw.deploy.python.executable
+    } else {
+        root.join(raw.deploy.python.executable)
+    };
+    Ok(DesktopConfig {
+        shortcuts: load_shortcuts(&root),
+        root,
+        python,
+        port: raw.deploy.webui.port,
+        auto_update: raw.deploy.git.auto_update,
+        desktop_update_manifest: raw.deploy.update.desktop_update_manifest,
+        dpi_scaling: raw.deploy.webui.dpi_scaling,
+        hardware_acceleration: raw.deploy.webui.hardware_acceleration,
+    })
+}
+
+fn load_shortcuts(root: &Path) -> HashMap<String, String> {
+    let mut shortcuts = HashMap::from([
+        ("UPDATE".into(), "F8".into()),
+        ("START".into(), "F9".into()),
+        ("STOP".into(), "F10".into()),
+        ("RESTART".into(), "F11".into()),
+        ("ROTATE".into(), "Ctrl+F12".into()),
+        ("DEV_TOOLS".into(), "Ctrl+Shift+I".into()),
+        ("REFRESH".into(), "Ctrl+R".into()),
+        ("HARD_REFRESH".into(), "Ctrl+Shift+R".into()),
+    ]);
+    let Ok(content) = fs::read_to_string(root.join("config/shortcuts.yaml")) else {
+        return shortcuts;
+    };
+    if let Ok(values) = serde_yaml::from_str::<HashMap<String, String>>(&content) {
+        for (key, value) in values {
+            if shortcuts.contains_key(&key) && !value.trim().is_empty() {
+                shortcuts.insert(key, value);
+            }
+        }
+    }
+    shortcuts
+}
+
+pub fn webview_arguments(config: &DesktopConfig, inherited: Option<&str>) -> Option<String> {
+    let mut args = inherited.unwrap_or_default().trim().to_string();
+    let mut append = |value: &str| {
+        if !args.split_whitespace().any(|item| item == value) {
+            if !args.is_empty() {
+                args.push(' ');
+            }
+            args.push_str(value);
+        }
+    };
+    if !config.hardware_acceleration {
+        append("--disable-gpu");
+    }
+    if !config.dpi_scaling {
+        append("--force-device-scale-factor=1");
+    }
+    (!args.is_empty()).then_some(args)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temporary_directory(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("nkas-config-{name}-{}", std::process::id()))
+    }
+
+    fn sample_config() -> DesktopConfig {
+        DesktopConfig {
+            root: PathBuf::from("C:/NKAS"),
+            python: PathBuf::from("python.exe"),
+            port: 12271,
+            auto_update: true,
+            desktop_update_manifest: default_desktop_update_manifest(),
+            dpi_scaling: true,
+            hardware_acceleration: false,
+            shortcuts: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn webview_flags_preserve_existing_arguments() {
+        let config = sample_config();
+        assert_eq!(
+            webview_arguments(&config, Some("--foo")),
+            Some("--foo --disable-gpu".into())
+        );
+    }
+
+    #[test]
+    fn enabled_gpu_does_not_add_disable_flag() {
+        let mut config = sample_config();
+        config.hardware_acceleration = true;
+        assert_eq!(webview_arguments(&config, None), None);
+    }
+
+    #[test]
+    fn disabled_dpi_adds_scale_flag_once() {
+        let mut config = sample_config();
+        config.dpi_scaling = false;
+        assert_eq!(
+            webview_arguments(&config, Some("--disable-gpu")),
+            Some("--disable-gpu --force-device-scale-factor=1".into())
+        );
+    }
+
+    #[test]
+    fn enabled_gpu_with_disabled_dpi_only_sets_scale() {
+        let mut config = sample_config();
+        config.hardware_acceleration = true;
+        config.dpi_scaling = false;
+        assert_eq!(
+            webview_arguments(&config, None),
+            Some("--force-device-scale-factor=1".into())
+        );
+    }
+
+    #[test]
+    fn default_manifest_is_used_when_update_field_is_missing() {
+        let raw: RootConfig = serde_yaml::from_str(
+            "Deploy:\n  Python:\n    PythonExecutable: ./toolkit/python.exe\n",
+        )
+        .unwrap();
+        assert_eq!(
+            raw.deploy.update.desktop_update_manifest,
+            default_desktop_update_manifest()
+        );
+    }
+
+    #[test]
+    fn project_root_can_be_located_from_release_target() {
+        let root = temporary_directory("root");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("config")).unwrap();
+        fs::create_dir_all(root.join("webapp/src-tauri/target/release")).unwrap();
+        fs::write(root.join("gui.py"), b"").unwrap();
+        fs::write(root.join("config/deploy.yaml"), b"").unwrap();
+        let executable = root.join("webapp/src-tauri/target/release/nkas.exe");
+
+        assert_eq!(
+            locate_root(&root.join("webapp"), &executable).unwrap(),
+            fs::canonicalize(&root).unwrap()
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+}

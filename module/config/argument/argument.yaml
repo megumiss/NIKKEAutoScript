@@ -117,6 +117,10 @@ Optimization:
   ScriptPath:
     value: ''
     type: textarea
+    path_picker:
+      enabled: true
+      mode: file
+      accept: [ .bat, .ps1, .exe, .sh ]
 Log:
   RetentionDays:
     value: 30
@@ -132,6 +136,9 @@ DailyRecruit:
   ScreenshotPath:
     value: ''
     type: textarea
+    path_picker:
+      enabled: true
+      mode: directory
 SimulationRoom:
   QuickSimulation: true
   Immediately: false
@@ -319,6 +326,9 @@ Interception:
   DropScreenshotPath:
     value: ''
     type: textarea
+    path_picker:
+      enabled: true
+      mode: directory
 InterceptionRotation:
   Enable: false
   Monday:

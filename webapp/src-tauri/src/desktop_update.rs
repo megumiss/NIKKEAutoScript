@@ -1,0 +1,596 @@
+use crate::config::DesktopConfig;
+use anyhow::{Context, Result};
+use semver::Version;
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
+use std::env;
+use std::ffi::OsString;
+use std::fs;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::Duration;
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+#[cfg(windows)]
+use windows::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
+#[cfg(windows)]
+use windows::Win32::System::Threading::{OpenProcess, WaitForSingleObject, PROCESS_SYNCHRONIZE};
+
+const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const TARGET: &str = "x86_64-pc-windows-msvc";
+const MAX_DOWNLOAD_SIZE: u64 = 30 * 1024 * 1024;
+
+#[derive(Debug, Deserialize)]
+struct DesktopManifest {
+    schema: u32,
+    #[serde(rename = "project_version")]
+    _project_version: String,
+    desktop_version: String,
+    target: String,
+    url: String,
+    sha256: String,
+    size: u64,
+}
+
+pub enum InternalMode {
+    Normal { cleanup_helper: Option<PathBuf> },
+    Replace(ReplaceArgs),
+}
+
+pub struct ReplaceArgs {
+    wait_pid: u32,
+    target: PathBuf,
+    root: PathBuf,
+}
+
+pub enum UpdateOutcome {
+    NoUpdate,
+    Restarting,
+    Warning(String),
+}
+
+pub fn parse_internal_mode() -> Result<InternalMode> {
+    parse_internal_mode_from(env::args_os().skip(1).collect())
+}
+
+fn parse_internal_mode_from(args: Vec<OsString>) -> Result<InternalMode> {
+    if args.first().and_then(|value| value.to_str()) == Some("--desktop-replace") {
+        let wait_pid = argument(&args, "--wait-pid")?
+            .parse::<u32>()
+            .context("Invalid --wait-pid")?;
+        let target = PathBuf::from(argument(&args, "--target")?);
+        let root = PathBuf::from(argument(&args, "--root")?);
+        return Ok(InternalMode::Replace(ReplaceArgs {
+            wait_pid,
+            target,
+            root,
+        }));
+    }
+    let cleanup_helper =
+        if args.first().and_then(|value| value.to_str()) == Some("--desktop-updated") {
+            Some(PathBuf::from(argument(&args, "--cleanup-helper")?))
+        } else {
+            None
+        };
+    Ok(InternalMode::Normal { cleanup_helper })
+}
+
+fn argument(args: &[OsString], name: &str) -> Result<String> {
+    let index = args
+        .iter()
+        .position(|value| value == name)
+        .with_context(|| format!("Missing {name}"))?;
+    args.get(index + 1)
+        .and_then(|value| value.to_str())
+        .map(str::to_string)
+        .with_context(|| format!("Missing value for {name}"))
+}
+
+pub fn check_and_launch(config: &DesktopConfig) -> UpdateOutcome {
+    if !config.auto_update || config.desktop_update_manifest.trim().is_empty() {
+        return UpdateOutcome::NoUpdate;
+    }
+    let Ok(current_exe) = env::current_exe() else {
+        return UpdateOutcome::NoUpdate;
+    };
+    if !is_root_executable(&config.root, &current_exe) {
+        return UpdateOutcome::NoUpdate;
+    }
+    let manifest = match fetch_manifest(&config.desktop_update_manifest) {
+        Ok(manifest) => manifest,
+        Err(_) => return UpdateOutcome::NoUpdate,
+    };
+    let remote = match validate_manifest(&manifest) {
+        Ok(version) => version,
+        Err(_) => return UpdateOutcome::NoUpdate,
+    };
+    let current = match Version::parse(CURRENT_VERSION) {
+        Ok(version) => version,
+        Err(error) => return UpdateOutcome::Warning(error.to_string()),
+    };
+    if !is_newer_version(&remote, &current) {
+        return UpdateOutcome::NoUpdate;
+    }
+    match stage_and_launch(config, &manifest) {
+        Ok(()) => UpdateOutcome::Restarting,
+        Err(error) => UpdateOutcome::Warning(format!(
+            "Desktop update {} failed: {error:#}",
+            manifest.desktop_version
+        )),
+    }
+}
+
+fn is_newer_version(remote: &Version, current: &Version) -> bool {
+    remote > current
+}
+
+fn fetch_manifest(url: &str) -> Result<DesktopManifest> {
+    let client = reqwest::blocking::Client::builder()
+        .user_agent(format!("NKAS/{CURRENT_VERSION}"))
+        .build()?;
+    client
+        .get(url)
+        .timeout(Duration::from_secs(15))
+        .send()?
+        .error_for_status()?
+        .json()
+        .context("Invalid desktop update manifest")
+}
+
+fn validate_manifest(manifest: &DesktopManifest) -> Result<Version> {
+    if manifest.schema != 1 {
+        anyhow::bail!("Unsupported manifest schema {}", manifest.schema);
+    }
+    if manifest.target != TARGET {
+        anyhow::bail!("Unsupported desktop target {}", manifest.target);
+    }
+    if manifest.size == 0 || manifest.size > MAX_DOWNLOAD_SIZE {
+        anyhow::bail!("Invalid desktop update size {}", manifest.size);
+    }
+    if manifest.sha256.len() != 64
+        || !manifest
+            .sha256
+            .bytes()
+            .all(|value| value.is_ascii_digit() || (b'a'..=b'f').contains(&value))
+    {
+        anyhow::bail!("Invalid desktop update SHA-256");
+    }
+    if !matches!(
+        reqwest::Url::parse(&manifest.url)?.scheme(),
+        "http" | "https"
+    ) {
+        anyhow::bail!("Desktop update URL must use HTTP or HTTPS");
+    }
+    Version::parse(&manifest.desktop_version).context("Invalid desktop version")
+}
+
+fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Result<()> {
+    let update_dir = update_dir(&config.root);
+    fs::create_dir_all(&update_dir)?;
+    let staged = update_dir.join(format!("nkas-update-{}.exe", manifest.desktop_version));
+    let part = staged.with_extension("exe.part");
+    let client = reqwest::blocking::Client::builder()
+        .user_agent(format!("NKAS/{CURRENT_VERSION}"))
+        .build()?;
+    let mut response = client
+        .get(&manifest.url)
+        .timeout(Duration::from_secs(120))
+        .send()?
+        .error_for_status()?;
+    if response
+        .content_length()
+        .is_some_and(|size| size != manifest.size)
+    {
+        anyhow::bail!("Desktop update size does not match the manifest");
+    }
+    let _ = fs::remove_file(&part);
+    let mut file = fs::File::create(&part)?;
+    write_verified_download(&mut response, &mut file, manifest.size, &manifest.sha256)?;
+    file.sync_all()?;
+    let _ = fs::remove_file(&staged);
+    fs::rename(&part, &staged)?;
+
+    let target = config.root.join("nkas.exe");
+    let mut command = Command::new(&staged);
+    command
+        .current_dir(&config.root)
+        .args([
+            "--desktop-replace",
+            "--wait-pid",
+            std::process::id().to_string().as_str(),
+            "--target",
+            target.to_string_lossy().as_ref(),
+            "--root",
+            config.root.to_string_lossy().as_ref(),
+        ])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    command
+        .spawn()
+        .context("Unable to start the desktop update helper")?;
+    Ok(())
+}
+
+fn write_verified_download<R: Read, W: Write>(
+    reader: &mut R,
+    writer: &mut W,
+    expected_size: u64,
+    expected_sha256: &str,
+) -> Result<()> {
+    if expected_size == 0 || expected_size > MAX_DOWNLOAD_SIZE {
+        anyhow::bail!("Invalid desktop update size {expected_size}");
+    }
+    let mut total = 0_u64;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let read = reader.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        total = total
+            .checked_add(read as u64)
+            .context("Desktop update size overflow")?;
+        if total > expected_size || total > MAX_DOWNLOAD_SIZE {
+            anyhow::bail!("Desktop update exceeds the manifest size");
+        }
+        writer.write_all(&buffer[..read])?;
+        hasher.update(&buffer[..read]);
+    }
+    if total != expected_size {
+        anyhow::bail!("Desktop update size does not match the manifest");
+    }
+    let digest = format!("{:x}", hasher.finalize());
+    if digest != expected_sha256 {
+        anyhow::bail!("Desktop update SHA-256 does not match the manifest");
+    }
+    Ok(())
+}
+
+pub fn run_replace(args: ReplaceArgs) -> Result<()> {
+    verify_replace_paths(&args)?;
+    wait_for_process(args.wait_pid)?;
+    let helper = env::current_exe()?;
+    let update_dir = update_dir(&args.root);
+    fs::create_dir_all(&update_dir)?;
+    let backup = update_dir.join("nkas-current.exe.old");
+    replace_and_launch(&helper, &args.target, &backup, |target| {
+        let mut command = Command::new(target);
+        command
+            .current_dir(&args.root)
+            .args([
+                "--desktop-updated",
+                "--cleanup-helper",
+                helper.to_string_lossy().as_ref(),
+            ])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        #[cfg(windows)]
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        command
+            .spawn()
+            .context("Unable to restart the updated nkas.exe")?;
+        Ok(())
+    })
+}
+
+fn replace_and_launch<F>(helper: &Path, target: &Path, backup: &Path, launch: F) -> Result<()>
+where
+    F: FnOnce(&Path) -> Result<()>,
+{
+    let _ = fs::remove_file(backup);
+    fs::rename(target, backup).context("Unable to back up the current nkas.exe")?;
+    if let Err(error) = fs::copy(helper, target) {
+        return rollback_after_failure(target, backup, error.into(), "install the new nkas.exe");
+    }
+    if let Err(error) = launch(target) {
+        return rollback_after_failure(target, backup, error, "restart the updated nkas.exe");
+    }
+    Ok(())
+}
+
+fn rollback_after_failure(
+    target: &Path,
+    backup: &Path,
+    original: anyhow::Error,
+    operation: &str,
+) -> Result<()> {
+    let _ = fs::remove_file(target);
+    match fs::rename(backup, target) {
+        Ok(()) => Err(original).with_context(|| format!("Unable to {operation}")),
+        Err(rollback) => anyhow::bail!(
+            "Unable to {operation}: {original:#}; restoring nkas-current.exe.old also failed: {rollback}"
+        ),
+    }
+}
+
+fn verify_replace_paths(args: &ReplaceArgs) -> Result<()> {
+    let expected = args.root.join("nkas.exe");
+    if normalized_path(&expected) != normalized_path(&args.target) {
+        anyhow::bail!("Desktop update target is outside the NKAS root");
+    }
+    let helper = env::current_exe()?;
+    if normalized_path(helper.parent().unwrap_or(Path::new("")))
+        != normalized_path(&update_dir(&args.root))
+    {
+        anyhow::bail!("Desktop update helper is outside tmp/desktop-update");
+    }
+    Ok(())
+}
+
+fn normalized_path(path: &Path) -> String {
+    fs::canonicalize(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+        .to_string_lossy()
+        .replace('/', "\\")
+        .to_lowercase()
+}
+
+fn is_root_executable(root: &Path, executable: &Path) -> bool {
+    normalized_path(executable) == normalized_path(&root.join("nkas.exe"))
+}
+
+fn update_dir(root: &Path) -> PathBuf {
+    root.join("tmp/desktop-update")
+}
+
+#[cfg(windows)]
+fn wait_for_process(process_id: u32) -> Result<()> {
+    let handle = unsafe { OpenProcess(PROCESS_SYNCHRONIZE, false, process_id) };
+    let Ok(handle) = handle else {
+        return Ok(());
+    };
+    let result = unsafe { WaitForSingleObject(handle, 60_000) };
+    unsafe {
+        let _ = CloseHandle(handle);
+    }
+    if result != WAIT_OBJECT_0 {
+        anyhow::bail!("Timed out waiting for the current desktop process to exit");
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn wait_for_process(_: u32) -> Result<()> {
+    Ok(())
+}
+
+pub fn cleanup_after_success(root: &Path, cleanup_helper: Option<PathBuf>) {
+    let root = root.to_path_buf();
+    let cleanup_helper = cleanup_helper.filter(|path| is_update_executable(&root, path));
+    thread::spawn(move || {
+        let directory = update_dir(&root);
+        for _ in 0..30 {
+            let mut pending = false;
+            if let Some(helper) = cleanup_helper.as_ref() {
+                if helper.exists() && fs::remove_file(helper).is_err() {
+                    pending = true;
+                }
+            }
+            if let Ok(entries) = fs::read_dir(&directory) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let name = path
+                        .file_name()
+                        .and_then(|value| value.to_str())
+                        .unwrap_or("");
+                    let stale_update = name.starts_with("nkas-update-") && name.ends_with(".exe");
+                    if (name == "nkas-current.exe.old" || name.ends_with(".part") || stale_update)
+                        && fs::remove_file(&path).is_err()
+                    {
+                        pending = true;
+                    }
+                }
+            }
+            let _ = fs::remove_dir(&directory);
+            if !pending {
+                break;
+            }
+            thread::sleep(Duration::from_millis(250));
+        }
+    });
+}
+
+fn is_update_executable(root: &Path, path: &Path) -> bool {
+    let name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
+    name.starts_with("nkas-update-")
+        && name.ends_with(".exe")
+        && path
+            .parent()
+            .is_some_and(|parent| normalized_path(parent) == normalized_path(&update_dir(root)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    fn temporary_directory(name: &str) -> PathBuf {
+        env::temp_dir().join(format!("nkas-{name}-{}", std::process::id()))
+    }
+
+    fn manifest(version: &str) -> DesktopManifest {
+        DesktopManifest {
+            schema: 1,
+            _project_version: "v1".into(),
+            desktop_version: version.into(),
+            target: TARGET.into(),
+            url: "https://example.com/nkas.exe".into(),
+            sha256: "0".repeat(64),
+            size: 1024,
+        }
+    }
+
+    #[test]
+    fn desktop_version_is_independent_from_project_version() {
+        let value = manifest(CURRENT_VERSION);
+        assert_eq!(
+            validate_manifest(&value).unwrap(),
+            Version::parse(CURRENT_VERSION).unwrap()
+        );
+        assert_eq!(value._project_version, "v1");
+    }
+
+    #[test]
+    fn only_higher_desktop_versions_update() {
+        let current = Version::parse("0.2.0").unwrap();
+        assert!(is_newer_version(
+            &Version::parse("0.2.1").unwrap(),
+            &current
+        ));
+        assert!(!is_newer_version(
+            &Version::parse("0.2.0").unwrap(),
+            &current
+        ));
+        assert!(!is_newer_version(
+            &Version::parse("0.1.9").unwrap(),
+            &current
+        ));
+    }
+
+    #[test]
+    fn oversized_update_is_rejected() {
+        let mut value = manifest("99.0.0");
+        value.size = MAX_DOWNLOAD_SIZE + 1;
+        assert!(validate_manifest(&value).is_err());
+    }
+
+    #[test]
+    fn uppercase_sha256_is_rejected() {
+        let mut value = manifest("99.0.0");
+        value.sha256 = "A".repeat(64);
+        assert!(validate_manifest(&value).is_err());
+    }
+
+    #[test]
+    fn verified_download_checks_size_and_sha256() {
+        let bytes = b"desktop executable";
+        let digest = format!("{:x}", Sha256::digest(bytes));
+        let mut output = Vec::new();
+        write_verified_download(
+            &mut Cursor::new(bytes),
+            &mut output,
+            bytes.len() as u64,
+            &digest,
+        )
+        .unwrap();
+        assert_eq!(output, bytes);
+
+        assert!(write_verified_download(
+            &mut Cursor::new(bytes),
+            &mut Vec::new(),
+            (bytes.len() - 1) as u64,
+            &digest,
+        )
+        .is_err());
+        assert!(write_verified_download(
+            &mut Cursor::new(bytes),
+            &mut Vec::new(),
+            bytes.len() as u64,
+            &"0".repeat(64),
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn update_directory_is_inside_project_tmp() {
+        assert_eq!(
+            update_dir(Path::new("C:/NKAS")),
+            PathBuf::from("C:/NKAS/tmp/desktop-update")
+        );
+    }
+
+    #[test]
+    fn desktop_update_only_runs_from_root_executable() {
+        let root = Path::new("C:/NKAS");
+        assert!(is_root_executable(root, Path::new("c:/nkas/NKAS.EXE")));
+        assert!(!is_root_executable(
+            root,
+            Path::new("C:/NKAS/webapp/src-tauri/target/release/nkas.exe")
+        ));
+    }
+
+    #[test]
+    fn internal_replace_arguments_are_parsed() {
+        let mode = parse_internal_mode_from(
+            [
+                "--desktop-replace",
+                "--wait-pid",
+                "123",
+                "--target",
+                "C:/NKAS/nkas.exe",
+                "--root",
+                "C:/NKAS",
+            ]
+            .into_iter()
+            .map(OsString::from)
+            .collect(),
+        )
+        .unwrap();
+        let InternalMode::Replace(args) = mode else {
+            panic!("expected replace mode");
+        };
+        assert_eq!(args.wait_pid, 123);
+        assert_eq!(args.target, PathBuf::from("C:/NKAS/nkas.exe"));
+        assert_eq!(args.root, PathBuf::from("C:/NKAS"));
+    }
+
+    #[test]
+    fn failed_restart_restores_previous_executable() {
+        let directory = temporary_directory("rollback");
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).unwrap();
+        let helper = directory.join("new.exe");
+        let target = directory.join("nkas.exe");
+        let backup = directory.join("nkas-current.exe.old");
+        fs::write(&helper, b"new").unwrap();
+        fs::write(&target, b"old").unwrap();
+
+        let result = replace_and_launch(&helper, &target, &backup, |_| {
+            anyhow::bail!("simulated launch failure")
+        });
+        assert!(result.is_err());
+        assert_eq!(fs::read(&target).unwrap(), b"old");
+        assert!(!backup.exists());
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn cleanup_helper_must_be_inside_update_directory() {
+        let root = Path::new("C:/NKAS");
+        assert!(is_update_executable(
+            root,
+            Path::new("C:/NKAS/tmp/desktop-update/nkas-update-0.3.0.exe")
+        ));
+        assert!(!is_update_executable(
+            root,
+            Path::new("C:/NKAS/nkas-update-0.3.0.exe")
+        ));
+    }
+
+    #[test]
+    fn manifest_schema_and_target_are_enforced() {
+        let mut value = manifest("0.3.0");
+        value.schema = 2;
+        assert!(validate_manifest(&value).is_err());
+        value.schema = 1;
+        value.target = "aarch64-pc-windows-msvc".into();
+        assert!(validate_manifest(&value).is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn waiting_for_a_missing_pid_finishes_immediately() {
+        assert!(wait_for_process(u32::MAX).is_ok());
+    }
+}

@@ -10,7 +10,8 @@ config/deploy.yaml
 config/nkas.json
 **.lock
 !yarn.lock
-**/app
+!webapp/src-tauri/Cargo.lock
+/nkas.exe
 bin/paddleocr/
 /tmp
 **.acc

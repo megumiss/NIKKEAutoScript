@@ -1,9 +1,10 @@
 {
-  "name": "nkas-webui",
+  "name": "nkas-ui",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "vite",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -18,7 +19,9 @@
     "vue-router": "4.5.0"
   },
   "devDependencies": {
+    "playwright": "1.54.2",
     "typescript": "5.7.2",
-    "vite": "4.5.5"
+    "vite": "4.5.5",
+    "vue-tsc": "2.2.0"
   }
 }

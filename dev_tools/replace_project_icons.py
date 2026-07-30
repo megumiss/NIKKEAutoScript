@@ -13,11 +13,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 ICON_TARGETS: List[Tuple[Path, Tuple[int, int], str]] = [
-    (Path('webapp/buildResources/icon.png'), (256, 256), 'main app icon (png)'),
-    (Path('webapp/buildResources/icon.ico'), (256, 256), 'main app icon (ico)'),
-    (Path('webapp/buildResources/icon.icns'), (256, 256), 'main app icon (icns)'),
+    (Path('webapp/src-tauri/icons/32x32.png'), (32, 32), 'Tauri icon 32'),
+    (Path('webapp/src-tauri/icons/128x128.png'), (128, 128), 'Tauri icon 128'),
+    (Path('webapp/src-tauri/icons/128x128@2x.png'), (256, 256), 'Tauri icon 256'),
+    (Path('webapp/src-tauri/icons/icon.ico'), (256, 256), 'Tauri Windows icon'),
     (Path('assets/gui/icon/nkas.svg'), (256, 256), 'webui logo icon (svg)'),
-    (Path('webapp/packages/main/public/icon.png'), (256, 256), 'electron tray icon source'),
     (Path('assets/gui/icon/nkas.ico'), (256, 256), 'windows notification fallback icon'),
     (Path('dev_tools/cookie/icon16.png'), (16, 16), 'cookie extension icon 16'),
     (Path('dev_tools/cookie/icon48.png'), (48, 48), 'cookie extension icon 48'),

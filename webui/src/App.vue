@@ -59,7 +59,8 @@ const sidebarCollapsed = ref(false)
 const schemaReady = ref(false)
 const importBusy = ref<Record<string, boolean>>({})
 const backendDown = ref(false)
-const legacyElectron = window.parent !== window
+function isLegacyElectronLayout() { return window.parent !== window }
+const legacyElectron = isLegacyElectronLayout()
 const staticLabels: Record<string, Record<string, string>> = {
   '总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
