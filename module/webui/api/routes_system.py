@@ -216,7 +216,7 @@ def _show_path_dialog_tk(payload):
 
     root = tk.Tk()
     root.withdraw()
-    # Keep the dialog above the browser/Electron window it was triggered from.
+    # Keep the dialog above the desktop or browser window it was triggered from.
     root.attributes('-topmost', True)
     try:
         initialdir, initialfile = _dialog_initial_location(payload['defaultPath'])
@@ -236,9 +236,8 @@ def _show_path_dialog_tk(payload):
 def _show_path_dialog(payload):
     """Open a native file dialog on the host; runs in a worker thread.
 
-    The SPA cannot return full filesystem paths from a browser dialog, and
-    the Electron bridge only exists inside the Electron shell, so both
-    clients use this server-side dialog instead (the server runs locally).
+    The SPA cannot return arbitrary full filesystem paths from a browser
+    dialog, so every desktop shell uses this local server-side dialog.
     """
     if sys.platform.startswith('win'):
         return _show_path_dialog_win32(payload)
@@ -250,22 +249,30 @@ async def pick_path(request: Request):
         data = await request.json()
     except ValueError:
         data = {}
+    if not isinstance(data, dict):
+        data = {}
     accept = data.get('accept')
     payload = {
         'mode': 'directory' if data.get('mode') == 'directory' else 'file',
-        'title': str(data.get('title') or ''),
-        'defaultPath': str(data.get('defaultPath') or ''),
-        'accept': [str(ext) for ext in accept if str(ext).strip()] if isinstance(accept, list) else [],
+        'title': data.get('title') if isinstance(data.get('title'), str) else '',
+        'defaultPath': data.get('defaultPath') if isinstance(data.get('defaultPath'), str) else '',
+        'accept': [ext.strip() for ext in accept if isinstance(ext, str) and ext.strip()]
+        if isinstance(accept, list) else [],
     }
     try:
         path = await asyncio.get_running_loop().run_in_executor(None, _show_path_dialog, payload)
     except Exception as exc:
         # tkinter.TclError (no display), ImportError (no tkinter), etc.
         logger.warning(f'Path picker dialog failed: {exc}')
-        return _json_error(f'File picker is not available on this host: {exc}', 503)
+        return JSONResponse({
+            'ok': False,
+            'canceled': False,
+            'path': '',
+            'error': f'File picker is not available on this host: {exc}',
+        }, status_code=503)
     if not path:
-        return JSONResponse({'ok': True, 'canceled': True})
-    return JSONResponse({'ok': True, 'path': path})
+        return JSONResponse({'ok': True, 'canceled': True, 'path': '', 'error': ''})
+    return JSONResponse({'ok': True, 'canceled': False, 'path': path, 'error': ''})
 
 
 async def set_language(request: Request):

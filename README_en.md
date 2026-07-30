@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img alt="LOGO" src="./webapp/buildResources/icon.png" width="256" height="256" />
+<img alt="LOGO" src="./webapp/src-tauri/icons/128x128@2x.png" width="256" height="256" />
 
 # NIKKEAutoScript
 
@@ -60,6 +60,10 @@ Other tools:
 
 Please refer to the detailed installation guide:  
 [Wiki Installation Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南)
+
+The desktop package now starts from the single root-level `nkas.exe`. It handles desktop-shell and project updates before starting the Python backend.
+
+When upgrading a full Electron package to Tauri 2, replace the root-level `nkas.exe` and then remove the old `app` directory to avoid retaining Chromium files.
 
 ---
 

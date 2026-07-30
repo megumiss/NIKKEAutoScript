@@ -1,8 +1,6 @@
 import copy
 import os
 from functools import cached_property
-from typing import Optional
-
 from deploy.utils import DEPLOY_CONFIG, poor_yaml_read, DEPLOY_TEMPLATE, poor_yaml_write
 from module.logger import logger
 from typing import Optional, Union
@@ -37,9 +35,14 @@ class ConfigModel:
     EnableReload: bool = True
     CheckUpdateInterval: int = 5
     AutoRestartTime: str = "03:50"
+    DesktopUpdateManifest: str = (
+        "https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json"
+    )
 
     WebuiHost: str = "0.0.0.0"
     WebuiPort: int = 12271
+    DpiScaling: bool = True
+    HardwareAcceleration: bool = False
 
     Language: str = "zh-CN"
     Theme: str = "dark"

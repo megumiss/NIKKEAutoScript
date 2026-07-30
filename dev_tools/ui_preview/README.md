@@ -10,7 +10,7 @@
 
 直接用浏览器打开 `preview.html`（无外部依赖，可离线）。左侧导航切换页面，右上角「方案说明」内嵌完整设计说明。
 
-重新生成截图（复用 `webapp/node_modules` 的 playwright）：
+重新生成截图（复用 `webui/node_modules` 的 playwright）：
 
 ```powershell
 node dev_tools/ui_preview/shoot.js
@@ -31,7 +31,7 @@ node dev_tools/ui_preview/shoot.js
 
 - **后端**：保留 Python，将 `module/webui` 演进为 REST + WebSocket（日志/状态推送），基于 Starlette 原生路由、不新增 Python 包。进程管理（`process_manager.py`）、配置读写与校验（`NikkeConfig`、`args.json`）全部复用。
 - **前端**：Vue 3 + Vite SPA（`webui/`，naive-ui + pinia + echarts，构建产物 `dist/` 提交入库）。表单由 `args.json` + i18n 驱动的通用渲染器生成，覆盖全部 447 个字段。
-- **客户端**：Electron 壳零改动；旧客户端 iframe 加载 `/`，发布后 302 到新 SPA。UI 永远由后端下发，客户端不参与 UI 生命周期。
+- **客户端**：新发行包使用 Tauri 2；旧 Electron 客户端继续通过 iframe 加载 `/` 并 302 到新 SPA。UI 仍由后端下发。
 - **布局/逻辑**（v4，按审查反馈调整）：
   - 入口按实例数自适应：单实例启动直接进入该实例调度总览，多实例才落全局总览；
   - 全局总览 = 运行统计 + 实例卡片墙 + 快捷启停 + 全局操作；

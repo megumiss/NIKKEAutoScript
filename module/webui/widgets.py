@@ -521,68 +521,6 @@ def _apply_path_picker_button_style(button_scope: str, disabled: bool, disabled_
     )
 
 
-def _pick_path_via_electron(payload: Dict[str, Any]) -> Dict[str, Any]:
-    return eval_js(
-        """
-        (async (pickerOptions) => {
-            const requestId = `pick-path-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-            return await new Promise((resolve) => {
-                let settled = false;
-                const finish = (value) => {
-                    if (settled) return;
-                    settled = true;
-                    window.removeEventListener('message', onMessage);
-                    clearTimeout(timeoutId);
-                    resolve(value);
-                };
-                const onMessage = (event) => {
-                    const data = event && event.data ? event.data : null;
-                    if (!data || data.source !== 'nkas-electron') return;
-                    if (data.type !== 'dialog:pick-path:response') return;
-                    if (data.requestId !== requestId) return;
-                    finish(data.payload || {
-                        ok: false,
-                        canceled: false,
-                        path: '',
-                        error: 'Empty response payload',
-                    });
-                };
-                const timeoutId = setTimeout(() => {
-                    finish({
-                        ok: false,
-                        canceled: false,
-                        path: '',
-                        error: 'File picker response timed out',
-                    });
-                }, 15000);
-
-                window.addEventListener('message', onMessage);
-                try {
-                    if (!window.parent || window.parent === window) {
-                        throw new Error('No parent window available');
-                    }
-                    window.parent.postMessage({
-                        source: 'nkas-webui',
-                        type: 'dialog:pick-path:request',
-                        requestId,
-                        payload: pickerOptions || {},
-                    }, '*');
-                } catch (error) {
-                    const reason = (error && error.message) ? String(error.message) : String(error);
-                    finish({
-                        ok: false,
-                        canceled: false,
-                        path: '',
-                        error: reason,
-                    });
-                }
-            });
-        })(pickerOptions)
-        """,
-        pickerOptions=payload,
-    )
-
-
 def _queue_modified_config(name: str, value: str) -> None:
     from pywebio.pin import pin
 
@@ -677,18 +615,14 @@ def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
         if not picker_title:
             picker_title = t('Gui.Text.ChooseFile')
         button_label = picker['button_label'] or t('Gui.Text.ChooseFile')
-        button_disabled = not State.electron
-        disabled_hint = 'File picker is available only in Electron client.'
+        button_disabled = False
+        disabled_hint = ''
         after_select_handlers = {
             'autofill_game_path_from_launcher': _autofill_game_path_from_launcher,
         }
 
         def _pick_path():
             from pywebio.pin import pin
-
-            if not State.electron:
-                toast(disabled_hint, color='warning')
-                return
 
             try:
                 current_raw = pin[name]
@@ -701,27 +635,14 @@ def put_arg_textarea(kwargs: T_Output_Kwargs) -> Output:
                 'defaultPath': current_value or None,
                 'accept': picker['accept'],
             }
-            result = {}
             try:
-                result = _pick_path_via_electron(payload)
+                from module.webui.api.routes_system import _show_path_dialog
+                selected_path = _show_path_dialog(payload)
             except Exception as e:
-                logger.warning(f'Electron picker invoke failed for {name}: {e}')
+                logger.warning(f'Path picker failed for {name}: {e}')
                 toast('File picker failed, please input path manually.', color='error')
                 return
-
-            if not isinstance(result, dict):
-                logger.warning(f'Unexpected picker response for {name}: {result}')
-                toast('File picker failed, please input path manually.', color='error')
-                return
-            if result.get('canceled'):
-                return
-            if not result.get('ok'):
-                reason = str(result.get('error') or 'unknown error')
-                logger.warning(f'File picker failed for {name}: {reason}')
-                toast('File picker failed, please input path manually.', color='error')
-                return
-
-            selected = _normalize_windows_path(result.get('path'))
+            selected = _normalize_windows_path(selected_path)
             if not selected:
                 return
 

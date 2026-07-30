@@ -1,10 +1,10 @@
 // Screenshot the static UI preview. Run from repo root:
 //   node dev_tools/ui_preview/shoot.js
-// Reuses playwright from webapp/node_modules.
+// Reuses playwright from webui/node_modules.
 const path = require('path');
 const { createRequire } = require('module');
-const webappRequire = createRequire(path.resolve(__dirname, '../../webapp/package.json'));
-const { chromium } = webappRequire('playwright');
+const webuiRequire = createRequire(path.resolve(__dirname, '../../webui/package.json'));
+const { chromium } = webuiRequire('playwright');
 
 (async () => {
   const root = path.resolve(__dirname, '../..');

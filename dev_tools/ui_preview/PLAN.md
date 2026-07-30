@@ -273,41 +273,42 @@ webui/
 
 ## 4. Electron 定位与改造
 
-**决策：`webapp/` 不承载任何实际 UI 代码，Electron 保持手动更新，UI 迁移不以新客户端发布为前提。** UI 源码在 `webui/`、产物入库由后端托管，Electron 只是加载后端页面的壳。旧 Electron + 新后端的兼容由第 5 节契约保证。
+**决策：`webapp/` 不承载实际业务 UI，新的发行包使用 Tauri 2，UI 仍由后端托管。** UI 源码在 `webui/`、构建产物入库；已发布的旧 Electron 客户端继续通过 iframe 加载同一 SPA。
 
 现有 webapp 各部分的处置：
 
 | 部分 | 处置 |
 |---|---|
-| `main/`（窗口、托盘、全局快捷键、单实例锁、`pyshell.ts`） | **不动** |
-| `preload`（现仅暴露 `window.electron.versions`） | **不动**；pickPath 直调属于可选新客户端内容，见下 |
-| `packages/renderer`（`NKAS.vue` iframe 壳 + postMessage `nkas-webui` 中继） | **不动**。它是已发布旧客户端的一部分，其中的 postMessage 中继必须永久有效——SPA 端保留该协议的回退实现（6.2），但协议代码本身不新增、不修改 |
-| 打包/发布（`electron-updater` 手动提示） | **不动**，不纳入后端 Updater |
+| Tauri `src-tauri/`（窗口、托盘、快捷键、单实例和 Python 进程） | 新发行包使用的轻量桌面壳 |
+| 旧 Electron main/preload | 不再保留源码；已发布客户端继续兼容后端页面 |
+| 旧 Electron renderer（iframe 壳） | 已发布二进制继续加载后端 SPA；SPA 仅保留 iframe 布局补偿，不再依赖壳层功能桥 |
+| 打包/发布 | CI 和本地构建生成根目录单文件 `nkas.exe`；桌面壳按独立版本自更新，项目代码仍走 Git 更新 |
 
-可选的新客户端（仅当未来决定手动发布时）只包含壳级改动，仍不引入任何业务 UI：
+Tauri 客户端只包含壳级能力，不引入业务 UI：
 
-- `main/src/config.ts`：`webuiUrl` 由 `http://127.0.0.1:12271` 改为 `http://127.0.0.1:12271/app/`。
-- `preload`：新增 `window.nkas = { pickPath(options) => ipcRenderer.invoke('dialog:pick-path', options) }`；`main` 的 `dialog:pick-path` handler 不变。
-- renderer 缩减为纯 splash/降级提示页（无业务 UI）；SPA 不随 Electron 打包，`webui/dist` 一律由后端托管，避免双份资源错配。
+- 直接加载 `http://127.0.0.1:<WebuiPort>/app/`。
+- 文件选择统一通过后端 `/api/system/pick-path` 打开主机原生对话框。
+- SPA 不随桌面壳打包，`webui/dist` 一律由后端托管，避免双份资源错配。
 
-## 5. 版本兼容策略（不更新 Electron 的场景）
+## 5. 版本兼容与更新策略
 
 先明确现状两条更新通道：
 
-- **后端**：应用内 Updater（git pull + pip），高频、免费、无需重装。**SPA 产物随这条通道分发**（dist 入库，见 6.3），与 Electron 完全解耦。
-- **Electron 客户端**：`electron-updater` 的 `checkForUpdatesAndNotify`（仅提示，用户手动下载），低频，**保持手动，本次改造不触碰**。
-- **关键事实**：Electron 的界面从来不是打包在客户端里的——现有 renderer 只是 iframe 壳（`NKAS.vue`），页面由后端 `http://127.0.0.1:12271` 实时下发。因此「UI 更新」历来跟后端走，不更新客户端也能拿到新界面；本次改造只是把这个事实固化成约束（webapp 零 UI 代码）。
+- **项目与后端**：Tauri 启动时调用 `deploy.starter --prepare` 执行 git pull + pip。**SPA 产物随这条通道分发**（dist 入库，见 6.3）。
+- **Tauri 桌面壳**：使用独立 `desktop_version` 和 Release Manifest 自更新；项目 Tag 变化但桌面版本不变时不下载 EXE。
+- **关键事实**：业务界面不打包在桌面壳里，页面始终由后端 `http://127.0.0.1:<WebuiPort>/app/` 下发，因此 UI 更新与桌面壳版本互不绑定。
 
 场景基线（已确认的决策）：
 
 - 不做按时间过渡：不发布双 UI 并存版本，发布即切换。
-- 不存在「新 Electron + 旧后端」场景：Electron 手动发布永远晚于对应后端能力上线，新客户端无需对旧后端做握手降级。
+- Tauri 仅连接 `/api/system/status` 返回 `api_version == 2` 且 `capabilities.spa == true` 的后端。
 
-需要保证的场景只有**旧 Electron + 新后端**：
+需要保证的新旧客户端场景：
 
 | 场景 | 结果 |
 |---|---|
-| 更新后（旧 Electron + 新后端） | **可完整使用新 UI**：`/` 302 → `/app/`，SPA 在旧 iframe 里运行；pickPath 走 postMessage 旧协议回退（6.2）；WS/REST 同源无跨域；顶栏避开 AppHeader 安全区（3.3）；后端重启页面自愈（3.3） |
+| 更新后（旧 Electron + 新后端） | **可完整使用新 UI**：`/` 302 → `/app/`，SPA 在旧 iframe 里运行；pickPath 直接调用同源 REST；顶栏保留 AppHeader 安全区；后端重启页面自愈 |
+| 新 Tauri + 新后端 | 直接加载 `/app/`；托盘、快捷键、文件选择和更新均不依赖 iframe 桥接 |
 
 ### 6.0 旧客户端接触点审计（逐行核对 webapp 源码后的完整清单）
 
@@ -319,7 +320,7 @@ webui/
 | 2 | 就绪探测：监听后端 **stderr**，匹配 `Application startup complete` / `bind on address`（uvicorn 默认日志行） | `main/src/index.ts:153-158` | ✅ 不改 uvicorn 启动方式即天然满足；固化为契约 4 |
 | 3 | 页面加载：iframe `src = webuiUrl`（即 `/`） | `NKAS.vue`、`main/src/index.ts:144-150` | ✅ 契约 1 覆盖；302 重定向 iframe 自动跟随，origin 不变 |
 | 4 | 全局快捷键：POST `/api/all/start`、`/api/all/stop`、`/api/restart`、`/api/update`、`/api/rotate`，handler 无条件 `.json()` 解析响应 | `main/src/index.ts:226-269` | ✅ 契约 2 覆盖；补充为契约 5：这 5 个路由**任何情况下都必须返回合法 JSON**（含 4xx/5xx），否则旧客户端抛未捕获异常 |
-| 5 | pickPath：postMessage 协议 | `NKAS.vue:45-87` ↔ `widgets.py:524-660` | ✅ 逐字段核对一致（见 6.2），旧壳校验 `event.origin === webuiOrigin`，SPA 同源天然满足 |
+| 5 | pickPath：SPA 同源 REST 请求 | `/api/system/pick-path` | ✅ 旧 Electron iframe 与 Tauri 加载的 SPA 使用同一接口，不依赖壳层中继 |
 | 6 | 窗口标题栏：`AppHeader` 透明悬浮层覆盖页面顶部 51px（drag 区 + 右上窗口控制按钮） | `App.vue`、`AppHeader.vue` | ⚠️ **新发现布局约束**：SPA 顶栏必须避开该区域，已写入 3.3「标题栏安全区」 |
 | 7 | 后端重启：`/api/restart` 后客户端不重载页面，页面需自愈 | `main/src/index.ts:153-158`（`removeAllListeners`） | ⚠️ pywebio 时代靠手动刷新快捷键；SPA 内建重连与恢复，已写入 3.3「后端重启自愈」 |
 
@@ -331,26 +332,19 @@ webui/
 4. 进程级契约：后端启动入口保持 `gui.py --port <port> --electron`；uvicorn 的 stderr 启动日志（`Application startup complete` / `bind on address`）永久保留，不得关闭、重定向或改文案——旧 Electron 靠它判定就绪（`main/src/index.ts:153`）。
 5. 快捷键 5 路由（`/api/all/start|stop`、`/api/restart|update|rotate`）任何情况下返回合法 JSON 响应体（含错误分支），旧客户端 handler 无条件 `.json()` 解析。
 
-### 6.2 pickPath 三档回退（SPA 内实现）
+### 6.2 pickPath 统一接口
 
-```
-window.nkas?.pickPath            → 新 Electron（preload 直调）
-postMessage 'nkas-webui' 协议     → 旧 Electron（其 renderer 的 NKAS.vue 中继仍然有效）
-普通文本输入框                    → 纯浏览器
-```
-
-协议字段（与 `NKAS.vue:45-87`、`widgets.py:524-660` 逐字段核对一致，SPA 照搬）：
-
-- 请求：`{source:'nkas-webui', type:'dialog:pick-path:request', requestId, payload:{mode, title, defaultPath, accept}}`
-- 响应：`{source:'nkas-electron', type:'dialog:pick-path:response', requestId, payload:{ok, canceled, path, error}}`
+- 请求：`POST /api/system/pick-path`，body 为 `{mode, title, defaultPath, accept}`。
+- 响应：`{ok, canceled, path, error}`。
+- 旧 Electron iframe、新 Tauri 和本机浏览器中的 SPA 均调用这一接口；取消和异常都由稳定响应结构结束加载状态。
 
 ### 6.3 SPA 资源分发（dist 入库）与构建纪律
 
-- `webui/dist/` 提交进 git（`.gitignore` 只忽略 `node_modules`），随 git 更新通道自然分发；**Updater、Electron 打包一律不改**。
+- `webui/dist/` 提交进 git（`.gitignore` 只忽略 `node_modules`），随项目 Git 更新通道自然分发；桌面壳不内置 SPA。
 - **构建纪律**：凡改动 `webui/src` 的提交必须同时提交重新构建的 `dist/`；CI 增加一道校验——重新 `yarn build` 并与工作区 `git diff --exit-code webui/dist`，不一致则失败，防止「忘构建」导致源码与产物错位（用户走主分支 git pull，不是按 tag 更新，错位会直接落到用户端）。
 - **体积账（按 git 机制的实际口径）**：产物全量约 2~4MB raw；git blob zlib 压缩后约 1/3~1/4。文件名带内容 hash——未变化的 chunk（vue/echarts/naive-ui vendor 占大头）两次构建完全相同，git 天然去重；单次 UI 更新的入库增量 ≈ 变化的 chunk 压缩后大小，**典型 0.1~0.5MB，最坏（vendor 升级）约 1MB**，永久累积、只增不减。构建配置据此优化：vendor 与业务代码分包（`manualChunks`），把 Vue/naive-ui/echarts 固定为独立 chunk，让日常提交的增量最小化。
 - 后端启动时若 `webui/dist` 缺失/过旧（源码检出不完整）：`/app/` 返回引导页（提示执行一次更新），不影响 `/api/*`。
-- 浏览器与 Electron 看到的都是后端托管的同一份产物，**单一事实源，版本永远一致**。
+- 浏览器、旧 Electron 和 Tauri 看到的都是后端托管的同一份产物，**单一事实源，版本永远一致**。
 - 已否决的替代方案：CI 产 zip + Updater 下载分发（新增整套发布基础设施与失败面，且与 dist 入库相比没有体积优势）；免构建 ESM 源码直挂（分发最省，但放弃 naive-ui/SFC/TS 的开发体验）。
 
 ## 6. 阶段计划与验收

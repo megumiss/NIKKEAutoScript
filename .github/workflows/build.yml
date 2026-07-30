@@ -73,43 +73,93 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
       with:
-        node-version: '16'
+        node-version: '20'
         cache: 'yarn'
-        cache-dependency-path: webapp/yarn.lock
+        cache-dependency-path: |
+          webapp/yarn.lock
+          webui/yarn.lock
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Cargo
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: webapp/src-tauri
 
     # ==========================
-    # 4. 构建 Webapp
+    # 4. 构建 SPA 和 Tauri 桌面壳
     # ==========================
-    - name: Build Webapp
+    - name: Build WebUI
+      working-directory: webui
+      run: |
+        yarn install --frozen-lockfile
+        yarn run typecheck
+        yarn run build
+        if (-not (Test-Path "dist\index.html")) { exit 1 }
+
+    - name: Verify Desktop Version
+      run: |
+        $currentToml = Get-Content "webapp\src-tauri\Cargo.toml" -Raw
+        $currentVersion = [regex]::Match($currentToml, '(?m)^version = "([^"]+)"').Groups[1].Value
+        $previousTag = & git describe --tags --abbrev=0 "$env:GITHUB_SHA^" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $previousTag) {
+          $previousToml = & git show "${previousTag}:webapp/src-tauri/Cargo.toml" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            $previousVersion = [regex]::Match(($previousToml -join "`n"), '(?m)^version = "([^"]+)"').Groups[1].Value
+            $desktopChanges = @(git diff --name-only "$previousTag..HEAD" -- webapp/src-tauri webapp/shell webapp/package.json webapp/yarn.lock)
+            if ($desktopChanges.Count -gt 0 -and $currentVersion -eq $previousVersion) {
+              throw "Desktop inputs changed since $previousTag but desktop version is still $currentVersion"
+            }
+          }
+        }
+
+    - name: Build Tauri Shell
       working-directory: webapp
       run: |
         yarn install --frozen-lockfile
+        yarn test
+        yarn run check
         yarn run compile
-        if (Test-Path "dist\win-unpacked") {
-            # 将编译产物移动到项目根目录下的 app 文件夹
-            Move-Item -Path "dist\win-unpacked" -Destination "..\app" -Force
-        } else {
-            exit 1
-        }
+        $binary = "src-tauri\target\release\nkas.exe"
+        if (-not (Test-Path $binary)) { exit 1 }
+        Copy-Item $binary "..\nkas.exe" -Force
+
+        $desktopVersion = (Get-Content package.json | ConvertFrom-Json).version
+        $assetDir = Join-Path $env:RUNNER_TEMP "nkas-desktop-assets"
+        New-Item -ItemType Directory -Path $assetDir -Force | Out-Null
+        $assetExe = Join-Path $assetDir "nkas-win-x64.exe"
+        $assetManifest = Join-Path $assetDir "nkas-desktop.json"
+        Copy-Item $binary $assetExe -Force
+        $file = Get-Item $assetExe
+        if ($file.Length -gt 30MB) { throw "Desktop executable exceeds 30 MiB: $($file.Length) bytes" }
+        $sha256 = (Get-FileHash $assetExe -Algorithm SHA256).Hash.ToLowerInvariant()
+        $manifest = [ordered]@{
+          schema = 1
+          project_version = $env:TAG_NAME
+          desktop_version = $desktopVersion
+          target = "x86_64-pc-windows-msvc"
+          url = "https://github.com/${{ github.repository }}/releases/download/$env:TAG_NAME/nkas-win-x64.exe"
+          sha256 = $sha256
+          size = $file.Length
+        } | ConvertTo-Json
+        [System.IO.File]::WriteAllText($assetManifest, $manifest, [System.Text.UTF8Encoding]::new($false))
+        "DESKTOP_EXE=$assetExe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "DESKTOP_MANIFEST=$assetManifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     # ==========================
     # 5. 清理与组装基础环境
     # ==========================
-    - name: Clean Unnecessary Files
-      run: |
-        $keep = @("zh-CN.pak", "zh-TW.pak", "ja.pak", "en-US.pak", "en-GB.pak")
-        if (Test-Path "app\locales") {
-            Get-ChildItem "app\locales\*.pak" | Where-Object { $_.Name -notin $keep } | Remove-Item -Force
-        }
-        $filesToDelete = @("app\vulkan-1.dll", "app\vk_swiftshader_icd.json", "app\vk_swiftshader.dll", "app\LICENSES.chromium.html", "app\LICENSE.electron.txt")
-        foreach ($file in $filesToDelete) { if (Test-Path $file) { Remove-Item $file -Force } }
-
     - name: Remove Webapp Artifacts
       working-directory: webapp
       run: |
         Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
-        Remove-Item output -Recurse -Force -ErrorAction SilentlyContinue
-        Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item src-tauri\target -Recurse -Force -ErrorAction SilentlyContinue
+
+    - name: Verify Root Desktop Layout
+      run: |
+        if (-not (Test-Path "nkas.exe")) { throw "Root nkas.exe is missing" }
+        if (Test-Path "app") { throw "Legacy app directory must not be packaged" }
 
     # 从资源仓库复制 toolkit 到主项目根目录
     - name: Copy Toolkit
@@ -118,9 +168,6 @@ jobs:
     # 删除 build_resources 文件夹
     - name: Remove Build Resources Source
       run: Remove-Item "build_resources" -Recurse -Force -ErrorAction SilentlyContinue
-
-    - name: Copy nkas.exe
-      run: Copy-Item -Path "deploy\build\nkas.exe" -Destination "nkas.exe" -Force
 
     - name: Install Python Dependencies
       run: |
@@ -209,5 +256,7 @@ jobs:
         files: |
           ${{ env.ASSET_STD }}
           ${{ env.ASSET_CN }}
+          ${{ env.DESKTOP_EXE }}
+          ${{ env.DESKTOP_MANIFEST }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
