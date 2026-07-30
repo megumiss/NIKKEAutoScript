@@ -179,6 +179,8 @@ if exist node_modules (
 )
 
 if exist src-tauri\target rd /s /q src-tauri\target
+if exist ..\webui\node_modules rd /s /q ..\webui\node_modules
+if exist ..\node_modules rd /s /q ..\node_modules
 cd ../..
 
 REM =============================
@@ -203,7 +205,15 @@ if not exist "NIKKEAutoScript\nkas.exe" (
     pause
     goto :end
 )
-for %%I in (nkas.exe) do if %%~zI GTR 31457280 (
+for /d /r "NIKKEAutoScript" %%D in (node_modules) do (
+    echo Error: node_modules must not be included in the release: %%D
+    goto :end
+)
+if exist "NIKKEAutoScript\webapp\src-tauri\target" (
+    echo Error: Tauri target directory must not be included in the release
+    goto :end
+)
+for %%I in ("NIKKEAutoScript\nkas.exe") do if %%~zI GTR 31457280 (
     echo Error: root nkas.exe exceeds 30 MiB
     goto :end
 )

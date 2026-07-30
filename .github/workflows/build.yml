@@ -172,11 +172,12 @@ jobs:
     # ==========================
     # 5. 清理与组装基础环境
     # ==========================
-    - name: Remove Webapp Artifacts
-      working-directory: webapp
+    - name: Remove Frontend Build Artifacts
       run: |
         Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
-        Remove-Item src-tauri\target -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item webapp\node_modules -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item webapp\src-tauri\target -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item webui\node_modules -Recurse -Force -ErrorAction SilentlyContinue
 
     - name: Verify Root Desktop Layout
       run: |
@@ -198,6 +199,16 @@ jobs:
     - name: Setup Default Config
       working-directory: config
       run: if (Test-Path "deploy.template.yaml") { Copy-Item "deploy.template.yaml" -Destination "deploy.yaml" -Force }
+
+    - name: Verify Package Layout
+      run: |
+        $nodeModules = @(Get-ChildItem -Path . -Directory -Filter node_modules -Recurse -Force -ErrorAction SilentlyContinue)
+        if ($nodeModules.Count -gt 0) {
+          $paths = ($nodeModules | ForEach-Object FullName) -join "`n"
+          throw "node_modules must not be included in release packages:`n$paths"
+        }
+        if (Test-Path "webapp\src-tauri\target") { throw "Tauri target directory must not be packaged" }
+        if (Test-Path "app") { throw "Legacy app directory must not be packaged" }
 
     # ==========================
     # 6. 打包阶段 1: Standard

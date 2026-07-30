@@ -33,6 +33,8 @@ for (const relative of [
 const legacyDesktopPath = 'app' + '\\' + 'nkas.exe'
 assert.ok(!read('deploy/build/build.bat').includes(legacyDesktopPath), 'local build still creates the legacy desktop path')
 assert.ok(!read('.github/workflows/build.yml').includes(legacyDesktopPath), 'CI still creates the legacy desktop path')
+assert.ok(read('deploy/build/build.bat').includes('..\\webui\\node_modules'), 'local build does not clean WebUI dependencies')
+assert.ok(read('.github/workflows/build.yml').includes('webui\\node_modules'), 'CI does not clean WebUI dependencies')
 assert.ok(read('.gitignore').includes('/nkas.exe'), 'root Tauri executable is not ignored')
 assert.ok(read('webapp/.gitignore').includes('src-tauri/gen'), 'generated Tauri schemas are not ignored')
 
