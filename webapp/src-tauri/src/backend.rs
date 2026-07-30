@@ -1,7 +1,9 @@
 use crate::config::DesktopConfig;
 use anyhow::{Context, Result};
 use serde::Deserialize;
+use std::io::{BufRead, BufReader, Read};
 use std::process::{Child, Command, Stdio};
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -30,6 +32,8 @@ struct HealthStatus {
 struct Capabilities {
     spa: bool,
 }
+
+pub type LogSink = Arc<dyn Fn(String) + Send + Sync>;
 
 pub struct Backend {
     child: Option<Child>,
@@ -83,30 +87,51 @@ pub fn health(port: u16) -> bool {
         .unwrap_or(false)
 }
 
-pub fn start_and_wait(config: &DesktopConfig) -> Result<Backend> {
+pub fn start_and_wait(config: &DesktopConfig, log: LogSink) -> Result<Backend> {
+    log(format!(
+        "Checking for an existing backend at {}",
+        url(config.port, "/api/system/status")
+    ));
     if health(config.port) {
+        log("Connected to an existing NKAS backend; startup update is skipped.".into());
         return Ok(Backend::external());
     }
     if !config.python.is_file() {
         anyhow::bail!("Python executable not found: {}", config.python.display());
     }
-    run_prepare(config)?;
+    log("Running project update and dependency checks...".into());
+    run_prepare(config, log.clone())?;
     if health(config.port) {
+        log("A compatible backend became available during preparation.".into());
         return Ok(Backend::external());
     }
     let port = config.port.to_string();
+    log(format!(
+        "Starting Python backend with {}",
+        config.python.display()
+    ));
     let mut command = Command::new(&config.python);
     command
         .current_dir(&config.root)
         .args(["gui.py", "--port", port.as_str(), "--electron"])
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    let child = command
+    let mut child = command
         .spawn()
         .with_context(|| format!("Unable to start {}", config.python.display()))?;
+    let process_id = child.id();
+    if let Some(stdout) = child.stdout.take() {
+        let _ = spawn_log_reader(stdout, log.clone());
+    }
+    if let Some(stderr) = child.stderr.take() {
+        let _ = spawn_log_reader(stderr, log.clone());
+    }
+    log(format!(
+        "Python backend process started (PID {process_id})."
+    ));
     let mut backend = Backend {
         child: Some(child),
         #[cfg(windows)]
@@ -118,8 +143,10 @@ pub fn start_and_wait(config: &DesktopConfig) -> Result<Backend> {
     }
 
     let started = Instant::now();
+    let mut next_notice = Duration::from_secs(2);
     while started.elapsed() < Duration::from_secs(60) {
         if health(config.port) {
+            log("Backend health check passed.".into());
             return Ok(backend);
         }
         if let Some(status) = backend
@@ -130,6 +157,13 @@ pub fn start_and_wait(config: &DesktopConfig) -> Result<Backend> {
         {
             anyhow::bail!("Python backend exited before startup completed ({status})");
         }
+        if started.elapsed() >= next_notice {
+            log(format!(
+                "Waiting for the backend to become ready... {}s",
+                started.elapsed().as_secs()
+            ));
+            next_notice += Duration::from_secs(2);
+        }
         thread::sleep(Duration::from_millis(250));
     }
     anyhow::bail!(
@@ -138,7 +172,7 @@ pub fn start_and_wait(config: &DesktopConfig) -> Result<Backend> {
     )
 }
 
-fn run_prepare(config: &DesktopConfig) -> Result<()> {
+fn run_prepare(config: &DesktopConfig, log: LogSink) -> Result<()> {
     let desktop_pid = std::process::id().to_string();
     let mut command = Command::new(&config.python);
     command
@@ -155,24 +189,75 @@ fn run_prepare(config: &DesktopConfig) -> Result<()> {
         .stderr(Stdio::piped());
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    let output = command.output().with_context(|| {
+    let mut child = command.spawn().with_context(|| {
         format!(
             "Unable to run startup update with {}",
             config.python.display()
         )
     })?;
-    if output.status.success() {
+    let stdout_reader = child
+        .stdout
+        .take()
+        .map(|stdout| spawn_log_reader(stdout, log.clone()));
+    let stderr_reader = child
+        .stderr
+        .take()
+        .map(|stderr| spawn_log_reader(stderr, log));
+    let status = child.wait().context("Unable to wait for startup update")?;
+    let stdout = join_log_reader(stdout_reader);
+    let stderr = join_log_reader(stderr_reader);
+    if status.success() {
         return Ok(());
     }
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let details = if !stderr.is_empty() { stderr } else { stdout };
+    let details = if !stderr.trim().is_empty() {
+        stderr.trim()
+    } else {
+        stdout.trim()
+    };
     anyhow::bail!(
         "Startup update failed ({}){}{}",
-        output.status,
+        status,
         if details.is_empty() { "" } else { ": " },
         details
     )
+}
+
+fn spawn_log_reader<R>(reader: R, log: LogSink) -> thread::JoinHandle<String>
+where
+    R: Read + Send + 'static,
+{
+    thread::spawn(move || {
+        let mut captured = String::new();
+        let mut reader = BufReader::new(reader);
+        let mut buffer = Vec::new();
+        loop {
+            buffer.clear();
+            match reader.read_until(b'\n', &mut buffer) {
+                Ok(0) => break,
+                Ok(_) => {
+                    let line = String::from_utf8_lossy(&buffer)
+                        .trim_end_matches(['\r', '\n'])
+                        .to_string();
+                    if !line.trim().is_empty() {
+                        log(line.clone());
+                        captured.push_str(&line);
+                        captured.push('\n');
+                    }
+                }
+                Err(error) => {
+                    log(format!("Unable to read process output: {error}"));
+                    break;
+                }
+            }
+        }
+        captured
+    })
+}
+
+fn join_log_reader(reader: Option<thread::JoinHandle<String>>) -> String {
+    reader
+        .and_then(|reader| reader.join().ok())
+        .unwrap_or_default()
 }
 
 #[cfg(windows)]
@@ -206,8 +291,24 @@ fn assign_kill_job(process_id: u32) -> Result<HANDLE> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
+    use std::sync::Mutex;
+
     #[test]
     fn backend_urls_are_loopback_only() {
         assert_eq!(url(12271, "/app/"), "http://127.0.0.1:12271/app/");
+    }
+
+    #[test]
+    fn process_output_is_streamed_with_lossy_decoding() {
+        let messages = Arc::new(Mutex::new(Vec::new()));
+        let received = messages.clone();
+        let log: LogSink = Arc::new(move |message| received.lock().unwrap().push(message));
+        let reader = spawn_log_reader(Cursor::new(b"first\ninvalid: \xff\n".to_vec()), log);
+
+        let captured = reader.join().unwrap();
+        assert!(captured.contains("first"));
+        assert!(captured.contains("invalid:"));
+        assert_eq!(messages.lock().unwrap().len(), 2);
     }
 }

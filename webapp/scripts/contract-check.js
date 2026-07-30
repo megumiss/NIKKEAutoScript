@@ -37,6 +37,8 @@ assert.ok(read('deploy/build/build.bat').includes('..\\webui\\node_modules'), 'l
 assert.ok(read('.github/workflows/build.yml').includes('webui\\node_modules'), 'CI does not clean WebUI dependencies')
 assert.ok(read('.gitignore').includes('/nkas.exe'), 'root Tauri executable is not ignored')
 assert.ok(read('webapp/.gitignore').includes('src-tauri/gen'), 'generated Tauri schemas are not ignored')
+assert.ok(read('webapp/shell/index.html').includes('window.nkasStartup'), 'startup log UI is missing')
+assert.ok(read('webapp/src-tauri/src/main.rs').includes('WebviewUrl::App("index.html".into())'), 'desktop does not open the startup UI first')
 
 const forbidden = [
   'dialog:' + 'pick-path',

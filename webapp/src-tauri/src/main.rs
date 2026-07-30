@@ -10,11 +10,11 @@ use config::DesktopConfig;
 use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::webview::NewWindowResponse;
+use tauri::webview::{NewWindowResponse, PageLoadEvent};
 use tauri::{AppHandle, Manager, RunEvent, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -23,7 +23,96 @@ use windows::core::HSTRING;
 #[cfg(windows)]
 use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
 
-struct BackendState(Mutex<Backend>);
+struct BackendState(Mutex<Option<Backend>>);
+
+#[derive(Clone, Copy)]
+enum StartupMessageKind {
+    Log,
+    Warning,
+    Stage,
+    Error,
+    Ready,
+}
+
+struct StartupMessage {
+    kind: StartupMessageKind,
+    text: String,
+}
+
+#[derive(Default)]
+struct StartupReporterState {
+    window: Option<WebviewWindow>,
+    ready: bool,
+    pending: Vec<StartupMessage>,
+}
+
+#[derive(Clone, Default)]
+struct StartupReporter(Arc<Mutex<StartupReporterState>>);
+
+impl StartupReporter {
+    fn log(&self, message: impl Into<String>) {
+        self.send(StartupMessageKind::Log, message.into());
+    }
+
+    fn warning(&self, message: impl Into<String>) {
+        self.send(StartupMessageKind::Warning, message.into());
+    }
+
+    fn stage(&self, message: impl Into<String>) {
+        self.send(StartupMessageKind::Stage, message.into());
+    }
+
+    fn error(&self, message: impl Into<String>) {
+        self.send(StartupMessageKind::Error, message.into());
+    }
+
+    fn complete(&self, message: impl Into<String>) {
+        self.send(StartupMessageKind::Ready, message.into());
+    }
+
+    fn send(&self, kind: StartupMessageKind, text: String) {
+        let message = StartupMessage { kind, text };
+        let window = {
+            let Ok(mut state) = self.0.lock() else {
+                return;
+            };
+            if !state.ready {
+                state.pending.push(message);
+                return;
+            }
+            state.window.clone()
+        };
+        if let Some(window) = window {
+            let _ = window.eval(startup_script(&message));
+        }
+    }
+
+    fn page_ready(&self, window: WebviewWindow) {
+        let pending = {
+            let Ok(mut state) = self.0.lock() else {
+                return;
+            };
+            state.window = Some(window.clone());
+            state.ready = true;
+            std::mem::take(&mut state.pending)
+        };
+        for message in pending {
+            let _ = window.eval(startup_script(&message));
+        }
+    }
+}
+
+fn startup_script(message: &StartupMessage) -> String {
+    let method = match message.kind {
+        StartupMessageKind::Log => "log",
+        StartupMessageKind::Warning => "warning",
+        StartupMessageKind::Stage => "stage",
+        StartupMessageKind::Error => "error",
+        StartupMessageKind::Ready => "ready",
+    };
+    let text = serde_json::to_string(&message.text).unwrap_or_else(|_| "\"\"".into());
+    format!("window.nkasStartup?.{method}({text});")
+}
 
 fn show_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -61,34 +150,117 @@ fn is_local_webui_url(url: &Url, port: u16) -> bool {
         && url.port_or_known_default() == Some(port)
 }
 
-fn create_window(app: &AppHandle, config: &DesktopConfig) -> Result<WebviewWindow> {
-    let page = backend::url(config.port, "/app/");
+fn is_startup_url(url: &Url) -> bool {
+    url.scheme() == "tauri" || url.host_str() == Some("tauri.localhost")
+}
+
+fn create_window(
+    app: &AppHandle,
+    config: &DesktopConfig,
+    reporter: StartupReporter,
+) -> Result<WebviewWindow> {
     let allowed_port = config.port;
-    WebviewWindowBuilder::new(
-        app,
-        "main",
-        WebviewUrl::External(page.parse().context("Invalid WebUI URL")?),
-    )
-    .title("NKAS")
-    .inner_size(1280.0, 880.0)
-    .min_inner_size(900.0, 640.0)
-    .visible(false)
-    .on_navigation(move |url| {
-        let target = url.as_str();
-        let local = is_local_webui_url(url, allowed_port);
-        if !local && matches!(url.scheme(), "http" | "https") {
-            let _ = open::that_detached(target);
+    let load_reporter = reporter.clone();
+    WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+        .title("NKAS")
+        .inner_size(1280.0, 880.0)
+        .min_inner_size(900.0, 640.0)
+        .visible(true)
+        .on_page_load(move |window, payload| {
+            if payload.event() == PageLoadEvent::Finished && is_startup_url(payload.url()) {
+                load_reporter.page_ready(window);
+            }
+        })
+        .on_navigation(move |url| {
+            let target = url.as_str();
+            let local = is_local_webui_url(url, allowed_port);
+            let startup = is_startup_url(url);
+            if !local && !startup && matches!(url.scheme(), "http" | "https") {
+                let _ = open::that_detached(target);
+            }
+            local || startup
+        })
+        .on_new_window(|url, _features| {
+            if matches!(url.scheme(), "http" | "https") {
+                let _ = open::that_detached(url.as_str());
+            }
+            NewWindowResponse::Deny
+        })
+        .build()
+        .context("Unable to create the NKAS window")
+}
+
+fn store_backend(app: &AppHandle, backend: Backend) -> Result<()> {
+    let state = app
+        .try_state::<BackendState>()
+        .context("Backend state is unavailable")?;
+    let mut current = state
+        .0
+        .lock()
+        .map_err(|_| anyhow::anyhow!("Backend state lock is poisoned"))?;
+    *current = Some(backend);
+    Ok(())
+}
+
+fn start_application(
+    app: AppHandle,
+    window: WebviewWindow,
+    config: DesktopConfig,
+    reporter: StartupReporter,
+    cleanup_helper: Option<std::path::PathBuf>,
+) {
+    if let Err(error) = start_application_inner(&app, &window, &config, &reporter, cleanup_helper) {
+        let message = format!("{error:#}");
+        reporter.error(&message);
+        show_native_message("NKAS startup failed", &message, true);
+    }
+}
+
+fn start_application_inner(
+    app: &AppHandle,
+    window: &WebviewWindow,
+    config: &DesktopConfig,
+    reporter: &StartupReporter,
+    cleanup_helper: Option<std::path::PathBuf>,
+) -> Result<()> {
+    reporter.stage("Checking desktop shell updates");
+    reporter.log(format!(
+        "NKAS desktop version {}",
+        env!("CARGO_PKG_VERSION")
+    ));
+    match desktop_update::check_and_launch(config) {
+        desktop_update::UpdateOutcome::Restarting => {
+            reporter.complete("Desktop update installed. Restarting NKAS...");
+            thread::sleep(std::time::Duration::from_millis(500));
+            app.exit(0);
+            return Ok(());
         }
-        local
-    })
-    .on_new_window(|url, _features| {
-        if matches!(url.scheme(), "http" | "https") {
-            let _ = open::that_detached(url.as_str());
+        desktop_update::UpdateOutcome::Warning(message) => {
+            reporter.warning(&message);
+            show_native_message("NKAS desktop update", &message, false);
         }
-        NewWindowResponse::Deny
-    })
-    .build()
-    .context("Unable to create the NKAS window")
+        desktop_update::UpdateOutcome::NoUpdate => {
+            reporter.log("Desktop shell is ready.");
+        }
+    }
+
+    reporter.stage("Preparing the NKAS backend");
+    let backend_reporter = reporter.clone();
+    let log: backend::LogSink = Arc::new(move |message| backend_reporter.log(message));
+    let backend = backend::start_and_wait(config, log)?;
+    store_backend(app, backend)?;
+    desktop_update::cleanup_after_success(&config.root, cleanup_helper);
+
+    reporter.stage("Opening the application");
+    reporter.complete("Startup complete. Opening NKAS...");
+    thread::sleep(std::time::Duration::from_millis(350));
+    let page: Url = backend::url(config.port, "/app/")
+        .parse()
+        .context("Invalid WebUI URL")?;
+    window.navigate(page)?;
+    window.show()?;
+    window.set_focus()?;
+    Ok(())
 }
 
 fn install_tray(app: &AppHandle) -> Result<()> {
@@ -227,24 +399,17 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             }
         })
         .setup(move |app| {
-            match desktop_update::check_and_launch(&app_config) {
-                desktop_update::UpdateOutcome::Restarting => {
-                    app.handle().exit(0);
-                    return Ok(());
-                }
-                desktop_update::UpdateOutcome::Warning(message) => {
-                    show_native_message("NKAS desktop update", &message, false);
-                }
-                desktop_update::UpdateOutcome::NoUpdate => {}
-            }
-            let backend = backend::start_and_wait(&app_config)?;
-            app.manage(BackendState(Mutex::new(backend)));
+            app.manage(BackendState(Mutex::new(None)));
             install_tray(app.handle())?;
             install_shortcuts(app.handle(), &app_config)?;
-            let window = create_window(app.handle(), &app_config)?;
+            let reporter = StartupReporter::default();
+            let window = create_window(app.handle(), &app_config, reporter.clone())?;
             window.show()?;
             window.set_focus()?;
-            desktop_update::cleanup_after_success(&app_config.root, cleanup_helper.clone());
+            let app_handle = app.handle().clone();
+            thread::spawn(move || {
+                start_application(app_handle, window, app_config, reporter, cleanup_helper)
+            });
             Ok(())
         })
         .build(tauri::generate_context!())?;
@@ -253,7 +418,9 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
         if matches!(event, RunEvent::Exit | RunEvent::ExitRequested { .. }) {
             if let Some(state) = app.try_state::<BackendState>() {
                 if let Ok(mut backend) = state.0.lock() {
-                    backend.shutdown();
+                    if let Some(mut backend) = backend.take() {
+                        backend.shutdown();
+                    }
                 }
             }
             app.global_shortcut().unregister_all().ok();
@@ -275,6 +442,26 @@ mod tests {
         assert!(is_local_webui_url(&local, 12271));
         assert!(!is_local_webui_url(&userinfo_bypass, 12271));
         assert!(!is_local_webui_url(&wrong_port, 12271));
+    }
+
+    #[test]
+    fn startup_page_allows_only_the_tauri_asset_origin() {
+        let startup = Url::parse("http://tauri.localhost/index.html").unwrap();
+        let external = Url::parse("https://example.com/index.html").unwrap();
+        assert!(is_startup_url(&startup));
+        assert!(!is_startup_url(&external));
+    }
+
+    #[test]
+    fn startup_messages_are_json_escaped() {
+        let script = startup_script(&StartupMessage {
+            kind: StartupMessageKind::Log,
+            text: "line \"one\"\nline two".into(),
+        });
+        assert_eq!(
+            script,
+            "window.nkasStartup?.log(\"line \\\"one\\\"\\nline two\");"
+        );
     }
 }
 
