@@ -96,11 +96,11 @@ class GeneratedConfig:
     ArenaShop_enable = False
     ArenaShop_AutoFillCodeManual = False
     ArenaShop_CodeManualBuyThreshold = 3000
-    ArenaShop_priority = ''  # ELECTRIC_CODE, FIRE_CODE, IRON_CODE, WATER_CODE, WIND_CODE, MANUAL_SELECTION_BOX, ORNAMENT, WEAPON
+    ArenaShop_priority = None  # ELECTRIC_CODE, FIRE_CODE, IRON_CODE, WATER_CODE, WIND_CODE, MANUAL_SELECTION_BOX, ORNAMENT, WEAPON
 
     # Group `RubbishShop`
     RubbishShop_priority = 'GEM > CORE_DUST_CASE'  # GEM, CORE_DUST_CASE, CREDIT_CASE, CREDIT, BATTLE_DATA_SET_CASE, GROWTH_SET, ORNAMENT, GENERAL_TICKET, ELYSION_TICKET, MISSILIS_TICKET, TETRA_TICKET, PILGRIM_TICKET, ABNORMAL_TICKET
-    RubbishShop_bonePriority = ''  # GOOD_TEAMWORK_BOX, MAINTENANCE_KIT_BOX_2, CURATED_MANUFACTURER_ARMS
+    RubbishShop_bonePriority = None  # GOOD_TEAMWORK_BOX, MAINTENANCE_KIT_BOX_2, CURATED_MANUFACTURER_ARMS
 
     # Group `Notification`
     Notification_WhenDailyTaskCompleted = False
@@ -115,7 +115,7 @@ class GeneratedConfig:
 
     # Group `CollectionItems`
     CollectionItems_Enable = False
-    CollectionItems_Priority = ''  # Diesel, Exia, Laplace, Frima, Viper, Helm, Miranda, Drake, Milk, Poli, Julia, Bay, Tove, Privaty, Moran, Zwei, Centi, Phantom, Sugar, Rosanna, Flora
+    CollectionItems_Priority = None  # Diesel, Exia, Laplace, Frima, Viper, Helm, Miranda, Drake, Milk, Poli, Julia, Bay, Tove, Privaty, Moran, Zwei, Centi, Phantom, Sugar, Rosanna, Flora
 
     # Group `RookieArena`
     RookieArena_Times = 5  # 1, 2, 3, 4, 5
