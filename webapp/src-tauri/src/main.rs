@@ -172,8 +172,8 @@ fn create_window(
     );
     WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("NKAS")
-        .inner_size(1280.0, 880.0)
-        .min_inner_size(900.0, 640.0)
+        .inner_size(1440.0, 900.0)
+        .min_inner_size(1000.0, 640.0)
         .visible(true)
         .initialization_script(&theme_script)
         .on_page_load(move |window, payload| {
