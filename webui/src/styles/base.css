@@ -172,5 +172,5 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .field-control .dt-field input:focus { box-shadow:none; }
 .dt-clear { padding:0 2px; border:0; color:var(--text-3); background:transparent; font-size:12px; line-height:1; cursor:pointer; }
 .dt-clear:hover { color:var(--red); }
-.deploy-warning { color:var(--red); }
+.task-hero .deploy-warning { color:var(--red); }
 .field-wide .field-control > input { width:100%; }
