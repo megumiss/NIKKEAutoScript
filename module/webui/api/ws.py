@@ -117,6 +117,7 @@ async def log_socket(websocket: WebSocket):
         return
     await websocket.accept()
     renderer = LogRenderer()
+    loop = asyncio.get_running_loop()
     # Subscribe before replaying so lines arriving during the replay are
     # queued; entries already covered by the replay snapshot are skipped by
     # identity, so no line is lost or duplicated.
@@ -124,20 +125,25 @@ async def log_socket(websocket: WebSocket):
     try:
         replay = LogBroker.replay(name)
         replayed_ids = {id(entry) for entry in replay}
-        for entry in replay:
-            await websocket.send_json({'type': 'log', 'html': renderer.render(entry)})
+        # Batch the whole replay into a single message: Rich capture is
+        # synchronous CPU work, so it runs in the executor, and sending one
+        # array payload lets the SPA append once instead of re-rendering per
+        # line.
+        if replay:
+            fragments = [await loop.run_in_executor(None, renderer.render, entry) for entry in replay]
+            await websocket.send_json({'type': 'log', 'html': fragments})
         while True:
             try:
                 entry = subscriber.get_nowait()
             except queue.Empty:
                 try:
-                    entry = await asyncio.get_running_loop().run_in_executor(
-                        None, subscriber.get, True, 0.5)
+                    entry = await loop.run_in_executor(None, subscriber.get, True, 0.5)
                 except queue.Empty:
                     continue
             if id(entry) in replayed_ids:
                 continue
-            await websocket.send_json({'type': 'log', 'html': renderer.render(entry)})
+            fragment = await loop.run_in_executor(None, renderer.render, entry)
+            await websocket.send_json({'type': 'log', 'html': fragment})
     except (WebSocketDisconnect, RuntimeError):
         pass
     finally:

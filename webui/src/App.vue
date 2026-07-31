@@ -24,21 +24,32 @@ const brandIcon = '/static/gui/icon/nkas.png'
 const instances = ref<Instance[]>([])
 const schema = ref<any>({ menus: [], tasks: {} })
 const queue = ref<any>({ running: [], pending: [], waiting: [] })
-const logs = ref<string[]>([])
+// Entries carry a stable id so the v-for patch is append/remove-only instead
+// of re-rendering every row on each incoming line, and a precomputed rank so
+// the level filter does not re-run a regex over the whole buffer per line.
+type LogEntry = { id: number; html: string; rank: number }
+const logs = ref<LogEntry[]>([])
+let logSeq = 0
+const LOG_LEVEL_PATTERN = /log-line lv-(debug|info|warn|err)/
 const logBody = ref<HTMLElement>()
 const autoScroll = ref(true)
 const logLevel = ref('info')
 const LOG_LEVEL_RANK: Record<string, number> = { debug: 0, info: 1, warn: 2, err: 3 }
 const logLevelOptions = computed(() => [{ value: 'debug', label: t('调试') }, { value: 'info', label: t('信息') }, { value: 'warn', label: t('警告') }, { value: 'err', label: t('错误') }])
+function pushLogs(payload: string | string[]) {
+  // The replay arrives as one batched array; live lines arrive one at a time.
+  for (const html of Array.isArray(payload) ? payload : [payload]) {
+    const match = html.match(LOG_LEVEL_PATTERN)
+    logs.value.push({ id: ++logSeq, html, rank: match ? LOG_LEVEL_RANK[match[1]] : -1 })
+  }
+  if (logs.value.length > 400) logs.value = logs.value.slice(-400)
+}
 // Level rows carry the lv-* class rendered by the backend log template;
 // section dividers and plain lines (tracebacks, exit notices) have no level
 // and stay visible at every filter setting.
 const visibleLogs = computed(() => {
   const threshold = LOG_LEVEL_RANK[logLevel.value] ?? 0
-  return logs.value.filter(line => {
-    const match = String(line).match(/log-line lv-(debug|info|warn|err)/)
-    return !match || LOG_LEVEL_RANK[match[1]] >= threshold
-  })
+  return logs.value.filter(line => line.rank < 0 || line.rank >= threshold)
 })
 const error = ref('')
 const toasts = ref<{ id: number; text: string; kind: string; action?: { label: string; run: () => void } }[]>([])
@@ -415,7 +426,7 @@ function startSockets() {
   if (!selectedName.value || socketsName === selectedName.value) return
   logSocket?.close(); queueSocket?.close()
   socketsName = selectedName.value
-  logSocket = new JsonSocket(`/ws/${selectedName.value}/log`, event => logs.value = [...logs.value.slice(-399), event.html])
+  logSocket = new JsonSocket(`/ws/${selectedName.value}/log`, event => pushLogs(event.html))
   queueSocket = new JsonSocket(`/ws/${selectedName.value}/queue`, event => queue.value = event)
   logSocket.connect(); queueSocket.connect()
 }
@@ -458,7 +469,7 @@ watch(() => route.fullPath, async () => {
   if (isSettings.value) await refreshUpdateInfo()
   else window.clearTimeout(updatePollTimer)
 })
-watch(logs, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
+watch(() => logs.value.length, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
 onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer); window.clearTimeout(updatePollTimer) })
 </script>
 
@@ -580,7 +591,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           <article class="card log-card">
             <div class="log-head"><b>{{ t('实时日志') }}</b><span class="log-autoscroll"><AppSelect class="log-level-select" v-model="logLevel" :options="logLevelOptions"/><label class="switch sm"><input v-model="autoScroll" type="checkbox"><span class="slider"></span></label>{{ t('自动滚动') }}</span></div>
             <div ref="logBody" class="log-body">
-              <div v-for="(line, index) in visibleLogs" :key="index" class="log-frag" v-html="line"></div>
+              <div v-for="line in visibleLogs" :key="line.id" class="log-frag" v-html="line.html"></div>
             </div>
           </article>
         </div>
@@ -637,7 +648,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             <article v-if="selectedPage === 'tool'" class="card log-card tool-log">
               <div class="log-head"><b>{{ t('实时日志') }}</b><span class="log-autoscroll"><AppSelect class="log-level-select" v-model="logLevel" :options="logLevelOptions"/><label class="switch sm"><input v-model="autoScroll" type="checkbox"><span class="slider"></span></label>{{ t('自动滚动') }}</span></div>
               <div ref="logBody" class="log-body">
-                <div v-for="(line, index) in visibleLogs" :key="index" class="log-frag" v-html="line"></div>
+                <div v-for="line in visibleLogs" :key="line.id" class="log-frag" v-html="line.html"></div>
               </div>
             </article>
           </div>
