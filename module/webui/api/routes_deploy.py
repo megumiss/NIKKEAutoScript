@@ -74,11 +74,11 @@ FIELD_I18N = {
     'Repository': {
         'zh-CN': {'desc': 'NKAS 仓库地址', 'hints': {
             'CN user': "使用 'https://git.megumiss.top/megumiss/NIKKEAutoScript'，下载更快更稳定",
-            'Gitee': "使用 'https://gitee.com/megumiss/NIKKEAutoScript'",
+            'Gitee': "使用 'https://gitee.com/megumiss/NIKKEAutoScript'，可能需要登录",
             'Other': "使用 'https://github.com/megumiss/NIKKEAutoScript'"}},
         'ja-JP': {'desc': 'NKAS リポジトリの URL', 'hints': {
             'CN user': "「https://git.megumiss.top/megumiss/NIKKEAutoScript」を使うと高速で安定",
-            'Gitee': "「https://gitee.com/megumiss/NIKKEAutoScript」",
+            'Gitee': "「https://gitee.com/megumiss/NIKKEAutoScript」（ログインが必要な場合あり）",
             'Other': "「https://github.com/megumiss/NIKKEAutoScript」を使用"}},
     },
     'Branch': {
