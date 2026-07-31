@@ -27,6 +27,9 @@ input[type='radio'] { width:16px; height:16px; margin:0; appearance:none; border
 .toast { display:flex; gap:10px; align-items:center; min-width:150px; padding:10px 12px 10px 18px; border:1px solid var(--border); border-left:3px solid var(--green); border-radius:9px; color:var(--text); background:var(--card); box-shadow:var(--shadow-hover); font-size:14px; animation:toast-in .18s ease-out; }
 .toast-close { margin-left:auto; padding:0 2px; border:0; color:var(--text-3); background:transparent; font-size:11px; line-height:1; cursor:pointer; }
 .toast-close:hover { color:var(--text); }
+.toast-action { flex:none; margin-left:auto; padding:4px 12px; border:1px solid var(--accent); border-radius:7px; color:var(--accent); background:transparent; font-size:12.5px; line-height:1.4; cursor:pointer; transition:background .15s,color .15s; }
+.toast-action:hover { color:#fff; background:var(--accent); }
+.toast-action + .toast-close { margin-left:0; }
 .toast.error { border-left-color:var(--red); }
 @keyframes toast-in { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
 .code-wrap { position:relative; width:100%; }
