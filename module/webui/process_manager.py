@@ -8,12 +8,6 @@ from typing import Dict, List, Union
 import inflection
 from rich.console import Console, ConsoleRenderable
 
-# Since this file does not run under the same process or subprocess of app.py
-# the following code needs to be repeated
-# Import fake module before import pywebio to avoid importing unnecessary module PIL
-# from module.webui.fake_pil_module import *
-
-# import_fake_pil_module()
 from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
     get_func_mod, list_mod_instance, load_mod
 from module.logger import logger, set_file_logger, set_func_logger
@@ -187,9 +181,6 @@ class ProcessManager:
         set_func_logger(func=q.put)
 
         from module.config.config import NikkeConfig
-
-        # Remove fake PIL module, because subprocess will use it
-        # remove_fake_pil_module()
 
         NikkeConfig.stop_event = e
         try:

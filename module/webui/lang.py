@@ -9,10 +9,9 @@ LANG = "zh-CN"
 TRANSLATE_MODE = False
 
 
-def set_language(s: str, refresh=False):
+def set_language(s: str):
     global LANG
     for i, lang in enumerate(LANGUAGES):
-        # pywebio.session.info.user_language return `zh-CN` or `zh-cn`, depends on browser
         if lang.lower() == s.lower():
             LANG = LANGUAGES[i]
             break
@@ -20,11 +19,6 @@ def set_language(s: str, refresh=False):
         LANG = "en-US"
 
     State.deploy_config.Language = LANG
-
-    if refresh:
-        from pywebio.session import run_js
-
-        run_js("location.reload();")
 
 
 def t(s, *args, **kwargs):
