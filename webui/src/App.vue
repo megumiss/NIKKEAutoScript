@@ -30,6 +30,15 @@ const queue = ref<any>({ running: [], pending: [], waiting: [] })
 type LogEntry = { id: number; html: string; rank: number }
 const logs = ref<LogEntry[]>([])
 let logSeq = 0
+// The raw buffer is larger than the render cap because the level filter runs
+// before rendering: with the backend at DEBUG level a debug flood would
+// otherwise push every visible line out of a 400-entry raw buffer, leaving
+// the log card nearly empty after a refresh.
+const LOG_BUFFER_LIMIT = 2000
+const LOG_RENDER_LIMIT = 400
+// Incremented on every batch so auto-scroll still triggers once the buffer
+// length saturates at LOG_BUFFER_LIMIT.
+const logTick = ref(0)
 const LOG_LEVEL_PATTERN = /log-line lv-(debug|info|warn|err)/
 const logBody = ref<HTMLElement>()
 const autoScroll = ref(true)
@@ -42,14 +51,15 @@ function pushLogs(payload: string | string[]) {
     const match = html.match(LOG_LEVEL_PATTERN)
     logs.value.push({ id: ++logSeq, html, rank: match ? LOG_LEVEL_RANK[match[1]] : -1 })
   }
-  if (logs.value.length > 400) logs.value = logs.value.slice(-400)
+  if (logs.value.length > LOG_BUFFER_LIMIT) logs.value = logs.value.slice(-LOG_BUFFER_LIMIT)
+  logTick.value++
 }
 // Level rows carry the lv-* class rendered by the backend log template;
 // section dividers and plain lines (tracebacks, exit notices) have no level
 // and stay visible at every filter setting.
 const visibleLogs = computed(() => {
   const threshold = LOG_LEVEL_RANK[logLevel.value] ?? 0
-  return logs.value.filter(line => line.rank < 0 || line.rank >= threshold)
+  return logs.value.filter(line => line.rank < 0 || line.rank >= threshold).slice(-LOG_RENDER_LIMIT)
 })
 const error = ref('')
 const toasts = ref<{ id: number; text: string; kind: string; action?: { label: string; run: () => void } }[]>([])
@@ -469,7 +479,7 @@ watch(() => route.fullPath, async () => {
   if (isSettings.value) await refreshUpdateInfo()
   else window.clearTimeout(updatePollTimer)
 })
-watch(() => logs.value.length, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
+watch(logTick, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
 onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer); window.clearTimeout(updatePollTimer) })
 </script>
 
