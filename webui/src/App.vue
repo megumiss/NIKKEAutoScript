@@ -135,6 +135,10 @@ const staticLabels: Record<string, Record<string, string>> = {
   '未知任务': { 'en-US': 'Unknown task', 'ja-JP': '不明なタスク' },
   '调试': { 'en-US': 'Debug', 'ja-JP': 'デバッグ' }, '信息': { 'en-US': 'Info', 'ja-JP': '情報' }, '警告': { 'en-US': 'Warning', 'ja-JP': '警告' }, '错误': { 'en-US': 'Error', 'ja-JP': 'エラー' },
   '添加': { 'en-US': 'Add', 'ja-JP': '追加' },
+  '部署': { 'en-US': 'Deploy', 'ja-JP': 'デプロイ' }, '还原默认': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻す' },
+  '修改部署配置可能导致更新失败或程序无法启动，大部分修改需要重启后生效，请谨慎操作。': { 'en-US': 'Changing deploy settings may break updates or prevent startup; most changes apply only after a restart. Proceed with care.', 'ja-JP': 'デプロイ設定の変更は更新失敗や起動不能を招く可能性があります。ほとんどの変更は再起動後に有効になります。慎重に操作してください。' },
+  '将全部部署配置还原为默认值？': { 'en-US': 'Reset all deploy settings to defaults?', 'ja-JP': 'すべてのデプロイ設定をデフォルトに戻しますか？' },
+  '已还原为默认值': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻しました' },
 }
 
 const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]
@@ -145,6 +149,7 @@ const taskSchema = computed(() => schema.value.tasks[selectedTask.value])
 const isDashboard = computed(() => route.path === '/')
 const isManage = computed(() => route.path === '/manage')
 const isSettings = computed(() => route.path === '/settings')
+const isDeploy = computed(() => route.path === '/deploy')
 const isAbout = computed(() => route.path === '/about')
 const isWorkspace = computed(() => Boolean(selectedName.value))
 const selectedInstance = computed(() => instances.value.find(item => item.name === selectedName.value))
@@ -164,7 +169,7 @@ function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.so
 function stateText(state?: number) { return state === 1 ? t('调度运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
 function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
-function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
+function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
 function isWideField(field: Field) { return Boolean(field.path_picker) || ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea', 'priority'].includes(field.widget) }
 function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` }
@@ -303,10 +308,29 @@ async function importInterception(field: Field, path: string) {
 }
 function toggleTheme() { const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; localStorage.setItem('nkas-theme', theme); api.post('/api/system/theme', { theme }).then(() => systemStatus.value.theme = theme).catch(exception => error.value = exception.message) }
 async function setLanguage(language: string) { try { await api.post('/api/system/language', { language }); await loadSystem(); await loadWorkspace() } catch (exception: any) { error.value = exception.message } }
-const modal = ref<{ type: '' | 'create' | 'delete'; name: string; origin: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', busy: false })
+// Deploy page: schema-driven editor over config/deploy.yaml.  The backend
+// parses groups and per-field comments from deploy/template; edits save per
+// field like task settings, and the page carries a warning plus a reset.
+const deployGroups = ref<any[]>([])
+async function loadDeploy() { try { deployGroups.value = (await api.get('/api/system/deploy')).groups } catch (exception: any) { error.value = exception.message } }
+async function saveDeployValue(field: any, value: any) {
+  try {
+    const result = await api.patch('/api/system/deploy', { key: field.key, value })
+    field.value = result.value
+    notify(t('已保存'))
+    if (field.key === 'Theme') { document.documentElement.dataset.theme = result.value; localStorage.setItem('nkas-theme', result.value); systemStatus.value.theme = result.value }
+    if (field.key === 'Language') await setLanguage(result.value)
+  } catch (exception: any) { error.value = exception.message }
+}
+function saveDeployField(field: any, event: Event) {
+  const el = event.target as HTMLInputElement
+  saveDeployValue(field, field.widget === 'checkbox' ? el.checked : field.widget === 'number' ? Number(el.value) : el.value)
+}
+const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy'; name: string; origin: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 function openCreateModal() { modal.value = { type: 'create', name: '', origin: instances.value[0]?.name || 'template-nkas', busy: false } }
 function openDeleteModal(name: string) { modal.value = { type: 'delete', name, origin: '', busy: false } }
+function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', origin: '', busy: false } }
 async function confirmModal() {
   const m = modal.value
   if (m.busy) return
@@ -319,6 +343,15 @@ async function confirmModal() {
     } else if (m.type === 'delete') {
       await api.del(`/api/${m.name}`)
       if (selectedName.value === m.name) dashboard()
+    } else if (m.type === 'resetDeploy') {
+      // Theme/language revert to template defaults too; sync the cached theme
+      // before reloading so the page restarts on the reverted palette.
+      const result = await api.post('/api/system/deploy/reset')
+      localStorage.setItem('nkas-theme', result.theme)
+      m.type = ''
+      notify(t('已还原为默认值'))
+      setTimeout(() => window.location.reload(), 600)
+      return
     }
     m.type = ''
     await loadInstances()
@@ -478,7 +511,7 @@ async function healthCheck() {
     backendDown.value = true
   }
 }
-onMounted(async () => { await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); healthTimer = window.setInterval(healthCheck, 4000) })
+onMounted(async () => { await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
   // Only a different instance needs a schema reload and socket swap; task
   // switches within one instance reuse everything and leave the rail alone.
@@ -490,6 +523,7 @@ watch(() => route.fullPath, async () => {
   startSockets()
   if (isSettings.value) await refreshUpdateInfo()
   else window.clearTimeout(updatePollTimer)
+  if (isDeploy.value) await loadDeploy()
 })
 watch(logTick, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
 onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer); window.clearTimeout(updatePollTimer) })
@@ -517,6 +551,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       <div class="side-section">
         <div class="side-label">{{ t('系统') }}</div>
         <button class="side-item" :class="{ active: isManage }" @click="router.push('/manage')"><span class="sicon">🗂</span><span class="side-text">{{ t('多开') }}</span></button>
+        <button class="side-item" :class="{ active: isDeploy }" @click="router.push('/deploy')"><span class="sicon">📦</span><span class="side-text">{{ t('部署') }}</span></button>
         <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')"><span class="sicon">⚙️</span><span class="side-text">{{ t('更新') }}</span></button>
         <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')"><span class="sicon">ℹ️</span><span class="side-text">{{ t('关于') }}</span></button>
       </div>
@@ -717,6 +752,28 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           </div>
         </article>
       </section>
+      <section v-else-if="isDeploy" class="view">
+        <article class="card task-hero">
+          <div class="task-icon">📦</div>
+          <div style="flex:1"><h2>{{ t('部署') }}</h2><div class="sub deploy-warning">⚠ {{ t('修改部署配置可能导致更新失败或程序无法启动，大部分修改需要重启后生效，请谨慎操作。') }}</div></div>
+          <button class="btn danger" @click="openResetDeployModal">{{ t('还原默认') }}</button>
+        </article>
+        <div class="cfg-groups">
+          <article v-for="group in deployGroups" :key="group.key" class="card group-card">
+            <div class="group-head"><h4>{{ group.name }}</h4></div>
+            <div class="group-body">
+              <div v-for="field in group.fields" :key="field.key" class="field">
+                <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
+                <div class="field-control">
+                  <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" @change="saveDeployField(field, $event)"><span class="slider"></span></label>
+                  <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" @change="(value: any) => saveDeployValue(field, value)"/>
+                  <input v-else :type="field.widget === 'number' ? 'number' : 'text'" :value="field.value ?? ''" @change="saveDeployField(field, $event)">
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
       <section v-else class="view">
         <article class="card about-panel">
           <div class="about-hero">
@@ -768,15 +825,16 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
     </div>
     <div v-if="modal.type" class="modal-mask" @click.self="modal.type = ''">
       <div class="modal-card">
-        <h3>{{ modal.type === 'create' ? t('新建实例') : t('删除') }}</h3>
+        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'resetDeploy' ? t('还原默认') : t('删除') }}</h3>
         <template v-if="modal.type === 'create'">
           <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" placeholder="nkas2" @keyup.enter="confirmModal"></label>
           <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
         </template>
+        <p v-else-if="modal.type === 'resetDeploy'" class="modal-text">{{ t('将全部部署配置还原为默认值？') }}{{ t('此操作不可恢复。') }}</p>
         <p v-else class="modal-text">{{ t('删除') }} {{ modal.name }}？{{ t('此操作不可恢复。') }}</p>
         <div class="modal-actions">
           <button class="btn" @click="modal.type = ''">{{ t('取消') }}</button>
-          <button class="btn" :class="modal.type === 'delete' ? 'danger' : 'primary'" :disabled="modal.busy || (modal.type === 'create' && !modal.name.trim())" @click="confirmModal">{{ t('确定') }}</button>
+          <button class="btn" :class="modal.type === 'create' ? 'primary' : 'danger'" :disabled="modal.busy || (modal.type === 'create' && !modal.name.trim())" @click="confirmModal">{{ t('确定') }}</button>
         </div>
       </div>
     </div>

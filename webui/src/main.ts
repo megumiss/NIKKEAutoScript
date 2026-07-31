@@ -11,6 +11,7 @@ const router = createRouter({
     { path: '/i/:name/:page(overview|task|tool)/:task?', component: App },
     { path: '/manage', component: App },
     { path: '/settings', component: App },
+    { path: '/deploy', component: App },
     { path: '/about', component: App },
   ],
 })
