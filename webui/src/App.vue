@@ -726,10 +726,12 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         </div>
       </section>
       <section v-else-if="isManage" class="view">
-        <div style="display:flex;gap:10px;margin-bottom:18px">
+        <article class="card task-hero">
+          <div class="task-icon">🗂</div>
+          <div style="flex:1"><h2>{{ t('多开') }}</h2><div class="sub">{{ t('实例总数') }}: {{ instances.length }}</div></div>
           <button class="btn primary" @click="openCreateModal">{{ t('＋ 新建实例') }}</button>
           <label class="btn">⤒ {{ t('导入配置') }}<input type="file" accept=".json" hidden @change="importInstance"></label>
-        </div>
+        </article>
         <article class="card manage-table" style="overflow:hidden">
           <table>
             <colgroup><col style="width:22%"><col style="width:10%"><col style="width:15%"><col><col style="width:200px"></colgroup>
