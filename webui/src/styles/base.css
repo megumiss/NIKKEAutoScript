@@ -176,3 +176,6 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .field-wide .field-control > input { width:100%; }
 .deploy-hint { display:flex; gap:6px; align-items:baseline; margin-top:3px; color:var(--text-3); font-size:12px; line-height:1.5; }
 .deploy-hint-tag { flex:none; padding:0 6px; border-radius:5px; color:var(--accent); background:var(--accent-soft); font-size:10.5px; }
+.deploy-multisel { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+.deploy-multi-opt { padding:5px 13px; border:1px solid var(--border-light); border-radius:8px; color:var(--text-2); background:var(--card-3); font-size:12.5px; cursor:pointer; }
+.deploy-multi-opt.on { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }

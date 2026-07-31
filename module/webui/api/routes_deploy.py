@@ -9,6 +9,7 @@ DeployConfig.__setattr__, which rewrites deploy.yaml from the template and
 keeps all comments intact.
 """
 
+import json
 import re
 import shutil
 
@@ -17,6 +18,7 @@ from starlette.responses import JSONResponse
 
 import module.webui.lang as lang
 from deploy.utils import DEPLOY_CONFIG, DEPLOY_TEMPLATE
+from module.config.utils import nkas_instance
 from module.logger import logger
 from module.webui.setting import State
 
@@ -28,6 +30,16 @@ WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManif
 SELECT_OPTIONS = {
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
+}
+# Language options are self-named in every UI language; theme labels follow
+# the UI language.
+OPTION_LABELS = {
+    'Language': {'zh-CN': '简体中文', 'en-US': 'English', 'ja-JP': '日本語'},
+    'Theme': {
+        'zh-CN': {'dark': '深色', 'light': '浅色'},
+        'en-US': {'dark': 'Dark', 'light': 'Light'},
+        'ja-JP': {'dark': 'ダーク', 'light': 'ライト'},
+    },
 }
 # Templates offered by the one-click reset.
 RESET_TEMPLATES = {
@@ -62,9 +74,11 @@ FIELD_I18N = {
     'Repository': {
         'zh-CN': {'desc': 'NKAS 仓库地址', 'hints': {
             'CN user': "使用 'https://git.megumiss.top/megumiss/NIKKEAutoScript'，下载更快更稳定",
+            'Gitee': "使用 'https://gitee.com/megumiss/NIKKEAutoScript'",
             'Other': "使用 'https://github.com/megumiss/NIKKEAutoScript'"}},
         'ja-JP': {'desc': 'NKAS リポジトリの URL', 'hints': {
             'CN user': "「https://git.megumiss.top/megumiss/NIKKEAutoScript」を使うと高速で安定",
+            'Gitee': "「https://gitee.com/megumiss/NIKKEAutoScript」",
             'Other': "「https://github.com/megumiss/NIKKEAutoScript」を使用"}},
     },
     'Branch': {
@@ -86,41 +100,41 @@ FIELD_I18N = {
     'GitProxy': {
         'zh-CN': {'desc': '设置 git 代理', 'hints': {
             'CN user': '使用本地 http 代理（http://127.0.0.1:{port}）或 socks5 代理（socks5://127.0.0.1:{port}）',
-            'Other': '留空（null）'}},
+            'Other': '留空'}},
         'ja-JP': {'desc': 'git プロキシを設定', 'hints': {
             'CN user': 'ローカルの http プロキシ（http://127.0.0.1:{port}）または socks5 プロキシ（socks5://127.0.0.1:{port}）を使用',
             'Other': 'null'}},
     },
     'SSLVerify': {
         'zh-CN': {'desc': 'SSL 证书校验', 'hints': {
-            'In most cases': '使用 true',
-            'Other': '连接不可信网络时使用 false'}},
+            'In most cases': '建议打开',
+            'Other': '连接不可信网络时建议关闭'}},
         'ja-JP': {'desc': 'SSL 検証', 'hints': {
             'In most cases': 'true',
             'Other': '信頼できないネットワークでは false'}},
     },
     'AutoUpdate': {
-        'zh-CN': {'desc': '启动时自动更新 NKAS', 'hints': {'In most cases': '使用 true'}},
+        'zh-CN': {'desc': '启动时自动更新 NKAS', 'hints': {'In most cases': '建议打开'}},
         'ja-JP': {'desc': '起動時に NKAS を更新', 'hints': {'In most cases': 'true'}},
     },
     'PythonExecutable': {
         'zh-CN': {'desc': 'python 可执行文件 python.exe 的路径', 'hints': {
             'Easy installer': "使用 './toolkit/python.exe'",
-            'Other': '使用你自己的 python，版本需为 3.7.6 64 位'}},
+            'Other': '使用你自己的 python，建议 3.9.x 64 位'}},
         'ja-JP': {'desc': 'python 実行ファイル python.exe のパス', 'hints': {
             'Easy installer': "「./toolkit/python.exe」を使用",
-            'Other': '自分の python を使用（3.7.6 64bit）'}},
+            'Other': '自分の python を使用（3.9.x 64bit 推奨）'}},
     },
     'PypiMirror': {
         'zh-CN': {'desc': 'pypi 镜像地址', 'hints': {
             'CN user': "使用 'https://mirrors.aliyun.com/pypi/simple'，下载更快更稳定",
-            'Other': '留空（null）'}},
+            'Other': '留空'}},
         'ja-JP': {'desc': 'pypi ミラーの URL', 'hints': {
             'CN user': "「https://mirrors.aliyun.com/pypi/simple」を使うと高速で安定",
             'Other': 'null'}},
     },
     'InstallDependencies': {
-        'zh-CN': {'desc': '启动时安装依赖', 'hints': {'In most cases': '使用 true'}},
+        'zh-CN': {'desc': '启动时安装依赖', 'hints': {'In most cases': '建议打开'}},
         'ja-JP': {'desc': '起動時に依存関係をインストール', 'hints': {'In most cases': 'true'}},
     },
     'RequirementsFile': {
@@ -149,8 +163,8 @@ FIELD_I18N = {
                           '  2. 将所有模拟器的 ADB 重命名为 *.bak，并替换为上面设置的 AdbExecutable\n'
                           '  3. 强制连接所有可用的模拟器实例',
                   'hints': {
-                      'In most cases': '使用 true',
-                      'In few cases': '如果你有其他程序正在使用 ADB，使用 false'}},
+                      'In most cases': '建议打开',
+                      'In few cases': '如果你有其他程序正在使用 ADB，建议关闭'}},
         'ja-JP': {'desc': 'ADB を置き換えるかどうか\n'
                           '中国製エミュレータ（NoxPlayer、LDPlayer、MemuPlayer、MuMuPlayer）は独自の旧 ADB を使用します。\n'
                           '異なる ADB サーバーは起動時に互いを終了させ、切断の原因になります。\n'
@@ -164,11 +178,11 @@ FIELD_I18N = {
                       'In few cases': 'ADB を使う他のプログラムがある場合は false'}},
     },
     'AutoConnect': {
-        'zh-CN': {'desc': '强制连接所有可用的模拟器实例', 'hints': {'In most cases': '使用 true'}},
+        'zh-CN': {'desc': '强制连接所有可用的模拟器实例', 'hints': {'In most cases': '建议打开'}},
         'ja-JP': {'desc': '利用可能な全エミュレータインスタンスに強制接続', 'hints': {'In most cases': 'true'}},
     },
     'InstallUiautomator2': {
-        'zh-CN': {'desc': '重新安装 uiautomator2', 'hints': {'In most cases': '使用 true'}},
+        'zh-CN': {'desc': '重新安装 uiautomator2', 'hints': {'In most cases': '建议打开'}},
         'ja-JP': {'desc': 'uiautomator2 を再インストール', 'hints': {'In most cases': 'true'}},
     },
     'EnableReload': {
@@ -181,12 +195,12 @@ FIELD_I18N = {
     },
     'AutoRestartTime': {
         'zh-CN': {'desc': '定时重启时间\n如果有更新，NKAS 会在每天该时间自动重启并更新，\n并运行重启前正在运行的所有实例',
-                  'hints': {'Disable': '留空（null）', 'Default': '03:50'}},
+                  'hints': {'Disable': '留空', 'Default': '03:50'}},
         'ja-JP': {'desc': '定時再起動時刻\n更新がある場合、NKAS は毎日この時刻に自動で再起動・更新し、\n再起動前に実行中だった全インスタンスを実行します',
                   'hints': {'Disable': 'null', 'Default': '03:50'}},
     },
     'DesktopUpdateManifest': {
-        'zh-CN': {'desc': '桌面壳更新清单。桌面版本独立于项目发布标签。'},
+        'zh-CN': {'desc': '脚本exe 的更新清单，exe 版本独立于项目发布标签。'},
         'ja-JP': {'desc': 'デスクトップシェルの更新マニフェスト。デスクトップ版はプロジェクトのリリースタグから独立しています。'},
     },
     'WebuiHost': {
@@ -204,24 +218,24 @@ FIELD_I18N = {
                   'hints': {'In most cases': 'デフォルト 12271'}},
     },
     'DpiScaling': {
-        'zh-CN': {'desc': '桌面壳跟随系统显示缩放'},
+        'zh-CN': {'desc': '脚本exe 跟随系统显示缩放'},
         'ja-JP': {'desc': 'デスクトップシェルでシステムの表示スケーリングに従う'},
     },
     'HardwareAcceleration': {
-        'zh-CN': {'desc': '启用 WebView2 GPU 加速，修改后需重启桌面壳。'},
+        'zh-CN': {'desc': '启用 WebView2 GPU 加速，修改后需重启脚本exe。'},
         'ja-JP': {'desc': 'WebView2 の GPU アクセラレーションを有効化。変更後はデスクトップシェルの再起動が必要です。'},
     },
     'Language': {
-        'zh-CN': {'desc': "Web UI 语言\n'zh-CN' 为简体中文"},
-        'ja-JP': {'desc': "Web UI の言語\n「zh-CN」は中国語（簡体字）"},
+        'zh-CN': {'desc': 'Web UI 语言'},
+        'ja-JP': {'desc': 'Web UI の言語'},
     },
     'Theme': {
-        'zh-CN': {'desc': "Web UI 主题\n'dark' 为深色主题"},
-        'ja-JP': {'desc': "Web UI のテーマ\n「dark」はダークテーマ"},
+        'zh-CN': {'desc': 'Web UI 主题'},
+        'ja-JP': {'desc': 'Web UI のテーマ'},
     },
     'Run': {
-        'zh-CN': {'desc': '--run，启动时自动运行指定实例\n留空（null）不自动运行\n\'["nkas"]\' 运行 nkas 实例\n\'["nkas","nkas2"]\' 运行 nkas 和 nkas2 实例'},
-        'ja-JP': {'desc': '--run 起動時に自動実行する設定\n「null」は自動実行なし\n\'["nkas"]\' で nkas を実行\n\'["nkas","nkas2"]\' で nkas と nkas2 を実行'},
+        'zh-CN': {'desc': '--run，启动时自动运行指定实例'},
+        'ja-JP': {'desc': '--run 起動時に自動実行する設定'},
     },
 }
 
@@ -299,6 +313,28 @@ def _widget(key, default):
     return 'text'
 
 
+def _select_options(key):
+    labels = OPTION_LABELS[key]
+    if key == 'Theme':
+        labels = labels.get(lang.LANG) or labels['en-US']
+    return [{'value': value, 'label': labels.get(value, value)} for value in SELECT_OPTIONS[key]]
+
+
+def _run_value(raw):
+    """The stored format stays a JSON-ish string ('["nkas","nkas2"]') or
+    null; the multiselect widget works on a plain list."""
+    if isinstance(raw, list):
+        return [str(item) for item in raw]
+    if isinstance(raw, str) and raw.strip():
+        try:
+            data = json.loads(raw)
+            if isinstance(data, list):
+                return [str(item) for item in data]
+        except ValueError:
+            pass
+    return []
+
+
 def _coerce(key, value, default):
     if isinstance(default, bool):
         if not isinstance(value, bool):
@@ -325,11 +361,17 @@ async def deploy_schema(_: Request):
         for field in group['fields']:
             key = field['key']
             default = config.config_template.get(key)
-            field['widget'] = _widget(key, default)
-            field['value'] = config.config.get(key)
-            field['default'] = default
-            if field['widget'] == 'select':
-                field['options'] = [{'value': v, 'label': v} for v in SELECT_OPTIONS[key]]
+            if key == 'Run':
+                field['widget'] = 'multiselect'
+                field['options'] = [{'value': name, 'label': name} for name in nkas_instance()]
+                field['value'] = _run_value(config.config.get(key))
+                field['default'] = []
+            else:
+                field['widget'] = _widget(key, default)
+                field['value'] = config.config.get(key)
+                field['default'] = default
+                if field['widget'] == 'select':
+                    field['options'] = _select_options(key)
             _localize(field)
     return JSONResponse({'groups': groups})
 
@@ -344,6 +386,17 @@ async def deploy_patch(request: Request):
     config = State.deploy_config
     if key in EXCLUDED_KEYS or key not in config.config_template:
         return _json_error(f'Unknown deploy key: {key}', 404)
+    if key == 'Run':
+        # The widget sends a list; the file keeps the '["nkas","nkas2"]'
+        # string format (null when empty).
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            return _json_error('Run must be a list of instance names.', 422)
+        try:
+            setattr(config, key, json.dumps(value, separators=(',', ':')) if value else None)
+        except OSError as exc:
+            logger.exception(exc)
+            return _json_error(str(exc), 500)
+        return JSONResponse({'status': 'success', 'value': value})
     if key in SELECT_OPTIONS and value not in SELECT_OPTIONS[key]:
         return _json_error(f'{key} must be one of {SELECT_OPTIONS[key]}.', 422)
     try:

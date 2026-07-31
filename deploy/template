@@ -2,6 +2,7 @@ Deploy:
   Git:
     # URL of NikkeAutoScript repository
     # [CN user] Use 'https://git.megumiss.top/megumiss/NIKKEAutoScript' for faster and more stable download
+    # [Gitee] Use 'https://gitee.com/megumiss/NIKKEAutoScript'
     # [Other] Use 'https://github.com/megumiss/NIKKEAutoScript'
     Repository: 'https://github.com/megumiss/NIKKEAutoScript'
     # Branch of NKAS
@@ -27,7 +28,7 @@ Deploy:
   Python:
     # Filepath of python executable `python.exe`
     # [Easy installer] Use './toolkit/python.exe'
-    # [Other] Use you own python, and its version should be 3.7.6 64bit
+    # [Other] Use you own python, and 3.9.x 64bit is recommended
     PythonExecutable: './toolkit/python.exe'
     # URL of pypi mirror
     # [CN user] Use 'https://mirrors.aliyun.com/pypi/simple' for faster and more stable download
@@ -95,15 +96,11 @@ Deploy:
     # Enable WebView2 GPU acceleration. Restart the desktop shell after changing.
     HardwareAcceleration: false
     # Language to use on web ui
-    # 'zh-CN' for Chinese simplified
     Language: zh-CN
     # Theme of web ui
     # 'dark' for dark theme
     Theme: dark
     # --run. Auto-run specified config when startup
-    # 'null' default no specified config
-    # '["nkas"]' specified "nkas" config
-    # '["nkas","nkas2"]' specified "nkas" "nkas2" configs
     Run: null
     # Startup notice id dismissed by current user
     StartupNoticeDismissedId: null

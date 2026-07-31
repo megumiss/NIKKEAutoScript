@@ -328,6 +328,13 @@ function saveDeployField(field: any, event: Event) {
   const el = event.target as HTMLInputElement
   saveDeployValue(field, field.widget === 'checkbox' ? el.checked : field.widget === 'number' ? Number(el.value) : el.value)
 }
+function toggleDeployMulti(field: any, value: string) {
+  const current = Array.isArray(field.value) ? [...field.value] : []
+  const index = current.indexOf(value)
+  if (index >= 0) current.splice(index, 1)
+  else current.push(value)
+  saveDeployValue(field, current)
+}
 const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 const deployTemplateOptions = computed(() => [{ value: 'intl', label: t('国际') }, { value: 'cn', label: t('大陆') }, { value: 'docker-intl', label: t('Docker国际') }, { value: 'docker-cn', label: t('Docker国内') }])
@@ -770,6 +777,9 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
                 <div class="field-control">
                   <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" @change="saveDeployField(field, $event)"><span class="slider"></span></label>
                   <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" @change="(value: any) => saveDeployValue(field, value)"/>
+                  <div v-else-if="field.widget === 'multiselect'" class="deploy-multisel">
+                    <label v-for="opt in field.options" :key="opt.value" class="deploy-multi-opt" :class="{ on: (field.value || []).includes(opt.value) }"><input type="checkbox" hidden :checked="(field.value || []).includes(opt.value)" @change="toggleDeployMulti(field, opt.value)">{{ opt.label }}</label>
+                  </div>
                   <input v-else :type="field.widget === 'number' ? 'number' : 'text'" :value="field.value ?? ''" @change="saveDeployField(field, $event)">
                 </div>
               </div>
