@@ -30,12 +30,13 @@ const queue = ref<any>({ running: [], pending: [], waiting: [] })
 type LogEntry = { id: number; html: string; rank: number }
 const logs = ref<LogEntry[]>([])
 let logSeq = 0
-// The raw buffer is larger than the render cap because the level filter runs
-// before rendering: with the backend at DEBUG level a debug flood would
-// otherwise push every visible line out of a 400-entry raw buffer, leaving
-// the log card nearly empty after a refresh.
-const LOG_BUFFER_LIMIT = 2000
-const LOG_RENDER_LIMIT = 400
+// Retention is per level class so the scrollback length stays fixed: with
+// the backend at DEBUG level a debug flood would otherwise push visible
+// lines out of a shared raw buffer and shrink the scrollable range.  Debug
+// lines and non-debug lines each keep the last LOG_CLASS_LIMIT entries, so
+// every filter level renders a stable number of rows.
+const LOG_CLASS_LIMIT = 400
+const LOG_BUFFER_LIMIT = LOG_CLASS_LIMIT * 2
 // Incremented on every batch so auto-scroll still triggers once the buffer
 // length saturates at LOG_BUFFER_LIMIT.
 const logTick = ref(0)
@@ -51,7 +52,18 @@ function pushLogs(payload: string | string[]) {
     const match = html.match(LOG_LEVEL_PATTERN)
     logs.value.push({ id: ++logSeq, html, rank: match ? LOG_LEVEL_RANK[match[1]] : -1 })
   }
-  if (logs.value.length > LOG_BUFFER_LIMIT) logs.value = logs.value.slice(-LOG_BUFFER_LIMIT)
+  if (logs.value.length > LOG_BUFFER_LIMIT) {
+    let debugCount = 0
+    for (const entry of logs.value) if (entry.rank === 0) debugCount++
+    // Evict the oldest entry of whichever class is over its limit.
+    while (logs.value.length > LOG_BUFFER_LIMIT) {
+      const evictDebug = debugCount > LOG_CLASS_LIMIT
+      const index = logs.value.findIndex(entry => (entry.rank === 0) === evictDebug)
+      if (index < 0) break
+      logs.value.splice(index, 1)
+      if (evictDebug) debugCount--
+    }
+  }
   logTick.value++
 }
 // Level rows carry the lv-* class rendered by the backend log template;
@@ -59,7 +71,7 @@ function pushLogs(payload: string | string[]) {
 // and stay visible at every filter setting.
 const visibleLogs = computed(() => {
   const threshold = LOG_LEVEL_RANK[logLevel.value] ?? 0
-  return logs.value.filter(line => line.rank < 0 || line.rank >= threshold).slice(-LOG_RENDER_LIMIT)
+  return logs.value.filter(line => line.rank < 0 || line.rank >= threshold).slice(-LOG_CLASS_LIMIT)
 })
 const error = ref('')
 const toasts = ref<{ id: number; text: string; kind: string; action?: { label: string; run: () => void } }[]>([])
