@@ -161,11 +161,18 @@ fn create_window(
 ) -> Result<WebviewWindow> {
     let allowed_port = config.port;
     let load_reporter = reporter.clone();
+    // Apply the configured theme before first paint so the startup screen
+    // matches the WebUI instead of always flashing the dark palette.
+    let theme_script = format!(
+        "document.documentElement.dataset.theme={};",
+        serde_json::to_string(&config.theme).unwrap_or_else(|_| "\"dark\"".into())
+    );
     WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("NKAS")
         .inner_size(1280.0, 880.0)
         .min_inner_size(900.0, 640.0)
         .visible(true)
+        .initialization_script(&theme_script)
         .on_page_load(move |window, payload| {
             if payload.event() == PageLoadEvent::Finished && is_startup_url(payload.url()) {
                 load_reporter.page_ready(window);
