@@ -136,6 +136,8 @@ const staticLabels: Record<string, Record<string, string>> = {
   '调试': { 'en-US': 'Debug', 'ja-JP': 'デバッグ' }, '信息': { 'en-US': 'Info', 'ja-JP': '情報' }, '警告': { 'en-US': 'Warning', 'ja-JP': '警告' }, '错误': { 'en-US': 'Error', 'ja-JP': 'エラー' },
   '添加': { 'en-US': 'Add', 'ja-JP': '追加' },
   '部署': { 'en-US': 'Deploy', 'ja-JP': 'デプロイ' }, '还原默认': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻す' },
+  '模板': { 'en-US': 'Template', 'ja-JP': 'テンプレート' }, '国际': { 'en-US': 'International', 'ja-JP': '国際' }, '大陆': { 'en-US': 'Mainland China', 'ja-JP': '中国本土' },
+  'Docker国际': { 'en-US': 'Docker International', 'ja-JP': 'Docker 国際' }, 'Docker国内': { 'en-US': 'Docker Mainland China', 'ja-JP': 'Docker 中国本土' },
   '修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。': { 'en-US': 'Changing deploy settings may break updates or prevent startup; changes apply only after a restart. Proceed with care.', 'ja-JP': 'デプロイ設定の変更は更新失敗や起動不能を招く可能性があります。変更は再起動後に有効になります。慎重に操作してください。' },
   '将全部部署配置还原为默认值？': { 'en-US': 'Reset all deploy settings to defaults?', 'ja-JP': 'すべてのデプロイ設定をデフォルトに戻しますか？' },
   '已还原为默认值': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻しました' },
@@ -326,11 +328,12 @@ function saveDeployField(field: any, event: Event) {
   const el = event.target as HTMLInputElement
   saveDeployValue(field, field.widget === 'checkbox' ? el.checked : field.widget === 'number' ? Number(el.value) : el.value)
 }
-const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy'; name: string; origin: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', busy: false })
+const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
-function openCreateModal() { modal.value = { type: 'create', name: '', origin: instances.value[0]?.name || 'template-nkas', busy: false } }
-function openDeleteModal(name: string) { modal.value = { type: 'delete', name, origin: '', busy: false } }
-function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', origin: '', busy: false } }
+const deployTemplateOptions = computed(() => [{ value: 'intl', label: t('国际') }, { value: 'cn', label: t('大陆') }, { value: 'docker-intl', label: t('Docker国际') }, { value: 'docker-cn', label: t('Docker国内') }])
+function openCreateModal() { modal.value = { type: 'create', name: '', origin: instances.value[0]?.name || 'template-nkas', template: 'intl', busy: false } }
+function openDeleteModal(name: string) { modal.value = { type: 'delete', name, origin: '', template: '', busy: false } }
+function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', origin: '', template: 'intl', busy: false } }
 async function confirmModal() {
   const m = modal.value
   if (m.busy) return
@@ -346,7 +349,7 @@ async function confirmModal() {
     } else if (m.type === 'resetDeploy') {
       // Theme/language revert to template defaults too; sync the cached theme
       // before reloading so the page restarts on the reverted palette.
-      const result = await api.post('/api/system/deploy/reset')
+      const result = await api.post('/api/system/deploy/reset', { template: m.template })
       localStorage.setItem('nkas-theme', result.theme)
       m.type = ''
       notify(t('已还原为默认值'))
@@ -763,7 +766,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             <div class="group-head"><h4>{{ group.name }}</h4></div>
             <div class="group-body">
               <div v-for="field in group.fields" :key="field.key" class="field" :class="{ 'field-wide': field.wide }">
-                <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
+                <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div><div v-for="hint in field.hints || []" :key="hint.tag" class="deploy-hint"><span class="deploy-hint-tag">{{ hint.tag }}</span><span>{{ hint.text }}</span></div></div>
                 <div class="field-control">
                   <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" @change="saveDeployField(field, $event)"><span class="slider"></span></label>
                   <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" @change="(value: any) => saveDeployValue(field, value)"/>
@@ -830,7 +833,10 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
           <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" placeholder="nkas2" @keyup.enter="confirmModal"></label>
           <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
         </template>
-        <p v-else-if="modal.type === 'resetDeploy'" class="modal-text">{{ t('将全部部署配置还原为默认值？') }}{{ t('此操作不可恢复。') }}</p>
+        <template v-else-if="modal.type === 'resetDeploy'">
+          <p class="modal-text">{{ t('将全部部署配置还原为默认值？') }}{{ t('此操作不可恢复。') }}</p>
+          <label class="modal-field">{{ t('模板') }}<AppSelect v-model="modal.template" :options="deployTemplateOptions"/></label>
+        </template>
         <p v-else class="modal-text">{{ t('删除') }} {{ modal.name }}？{{ t('此操作不可恢复。') }}</p>
         <div class="modal-actions">
           <button class="btn" @click="modal.type = ''">{{ t('取消') }}</button>
