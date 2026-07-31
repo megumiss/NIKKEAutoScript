@@ -19,6 +19,7 @@ ICON_TARGETS: List[Tuple[Path, Tuple[int, int], str]] = [
     (Path('assets/gui/icon/nkas.ico'), (256, 256), 'windows notification icon'),
     (Path('webapp/src-tauri/icons/icon.ico'), (256, 256), 'Tauri exe icon'),
     (Path('dev_tools/cookie/icon.png'), (128, 128), 'cookie extension icon'),
+    (Path('webapp/shell/icon.png'), (128, 128), 'Tauri startup screen logo'),
 ]
 
 
