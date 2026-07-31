@@ -162,9 +162,12 @@ fn create_window(
     let allowed_port = config.port;
     let load_reporter = reporter.clone();
     // Apply the configured theme before first paint so the startup screen
-    // matches the WebUI instead of always flashing the dark palette.
+    // matches the WebUI instead of always flashing the dark palette.  The
+    // initialization script runs at document creation where
+    // document.documentElement may not exist yet, so pass the value through
+    // a global and let each page apply it itself.
     let theme_script = format!(
-        "document.documentElement.dataset.theme={};",
+        "window.__nkasTheme={};",
         serde_json::to_string(&config.theme).unwrap_or_else(|_| "\"dark\"".into())
     );
     WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
