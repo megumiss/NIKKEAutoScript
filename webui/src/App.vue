@@ -136,7 +136,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '调试': { 'en-US': 'Debug', 'ja-JP': 'デバッグ' }, '信息': { 'en-US': 'Info', 'ja-JP': '情報' }, '警告': { 'en-US': 'Warning', 'ja-JP': '警告' }, '错误': { 'en-US': 'Error', 'ja-JP': 'エラー' },
   '添加': { 'en-US': 'Add', 'ja-JP': '追加' },
   '部署': { 'en-US': 'Deploy', 'ja-JP': 'デプロイ' }, '还原默认': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻す' },
-  '修改部署配置可能导致更新失败或程序无法启动，大部分修改需要重启后生效，请谨慎操作。': { 'en-US': 'Changing deploy settings may break updates or prevent startup; most changes apply only after a restart. Proceed with care.', 'ja-JP': 'デプロイ設定の変更は更新失敗や起動不能を招く可能性があります。ほとんどの変更は再起動後に有効になります。慎重に操作してください。' },
+  '修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。': { 'en-US': 'Changing deploy settings may break updates or prevent startup; changes apply only after a restart. Proceed with care.', 'ja-JP': 'デプロイ設定の変更は更新失敗や起動不能を招く可能性があります。変更は再起動後に有効になります。慎重に操作してください。' },
   '将全部部署配置还原为默认值？': { 'en-US': 'Reset all deploy settings to defaults?', 'ja-JP': 'すべてのデプロイ設定をデフォルトに戻しますか？' },
   '已还原为默认值': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻しました' },
 }
@@ -755,14 +755,14 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       <section v-else-if="isDeploy" class="view">
         <article class="card task-hero">
           <div class="task-icon">📦</div>
-          <div style="flex:1"><h2>{{ t('部署') }}</h2><div class="sub deploy-warning">⚠ {{ t('修改部署配置可能导致更新失败或程序无法启动，大部分修改需要重启后生效，请谨慎操作。') }}</div></div>
+          <div style="flex:1"><h2>{{ t('部署') }}</h2><div class="deploy-warning">⚠ {{ t('修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。') }}</div></div>
           <button class="btn danger" @click="openResetDeployModal">{{ t('还原默认') }}</button>
         </article>
         <div class="cfg-groups">
           <article v-for="group in deployGroups" :key="group.key" class="card group-card">
             <div class="group-head"><h4>{{ group.name }}</h4></div>
             <div class="group-body">
-              <div v-for="field in group.fields" :key="field.key" class="field">
+              <div v-for="field in group.fields" :key="field.key" class="field" :class="{ 'field-wide': field.wide }">
                 <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
                 <div class="field-control">
                   <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" @change="saveDeployField(field, $event)"><span class="slider"></span></label>

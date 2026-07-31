@@ -20,6 +20,9 @@ from module.webui.setting import State
 
 # Runtime state written by dismissing the startup notice, not a user setting.
 EXCLUDED_KEYS = {'StartupNoticeDismissedId'}
+# Path/URL values that benefit from a full-row input instead of the standard
+# narrow control.
+WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy'}
 SELECT_OPTIONS = {
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
@@ -55,7 +58,7 @@ def _parse_template():
             if match and group is not None:
                 key = match.group(1)
                 if key not in EXCLUDED_KEYS:
-                    group['fields'].append({'key': key, 'title': key, 'help': '\n'.join(comments).strip()})
+                    group['fields'].append({'key': key, 'title': key, 'help': '\n'.join(comments).strip(), 'wide': key in WIDE_KEYS})
                 comments = []
                 continue
             if line.strip():
