@@ -383,11 +383,11 @@ class Icon:
     Storage html of icon.
     """
 
-    NKAS = _read(filepath_icon("nkas"))
+    # nkas.svg 已移除，logo 统一引用静态 png（见 dev_tools/replace_project_icons.py）
+    NKAS = '<img class="alas-icon" src="/static/gui/icon/nkas.png" alt="NKAS">'
     SETTING = _read(filepath_icon("setting"))
     RUN = _read(filepath_icon("run"))
     DEVELOP = _read(filepath_icon("develop"))
-    ADD = _read(filepath_icon("add"))
 
 
 str2type = {

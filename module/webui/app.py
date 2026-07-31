@@ -1715,7 +1715,7 @@ class NKASGUI(Frame):
         # setup gui
         set_env(title="NKAS", output_animation=False)
 
-        icon_path = '/static/gui/icon/nkas.ico'
+        icon_path = '/static/gui/icon/nkas.png'
         run_js(f"""
             var links = document.querySelectorAll("link[rel~='icon']");
             links.forEach(function(l) {{

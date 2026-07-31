@@ -4,12 +4,53 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NKAS</title>
+  <script>document.documentElement.dataset.theme = window.__nkasTheme || 'dark'</script>
   <style>
     :root {
       color-scheme: dark;
+      --bg: #0c0f11;
+      --panel: #171b1e;
+      --border: #2a3033;
+      --border-soft: #242a2d;
+      --text: #e7ece9;
+      --text-2: #b7c2bd;
+      --text-3: #81908a;
+      --text-4: #68736f;
+      --faint: #59645f;
+      --level: #718079;
+      --track: #30373a;
+      --scrollbar: #3e4944;
+      --accent: #55c68a;
+      --accent-glow: rgba(85, 198, 138, 0.12);
+      --stage: #70d7a1;
+      --warn: #e3b45f;
+      --danger: #ef7777;
+      --danger-bar: #e16464;
       font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
-      background: #0c0f11;
-      color: #e7ece9;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    :root[data-theme='light'] {
+      color-scheme: light;
+      --bg: #eef1f6;
+      --panel: #ffffff;
+      --border: #dde3ec;
+      --border-soft: #e6ebf3;
+      --text: #21262e;
+      --text-2: #5f6a78;
+      --text-3: #5f6a78;
+      --text-4: #97a1af;
+      --faint: #97a1af;
+      --level: #5f6a78;
+      --track: #dde3ec;
+      --scrollbar: #c2cddc;
+      --accent: #1cab72;
+      --accent-glow: rgba(28, 171, 114, 0.15);
+      --stage: #1cab72;
+      --warn: #bd7a18;
+      --danger: #d34545;
+      --danger-bar: #d34545;
     }
 
     * {
@@ -22,16 +63,17 @@
       width: 100%;
       height: 100%;
       margin: 0;
-      overflow: hidden;
+      overflow: auto;
     }
 
     body {
-      background: #0c0f11;
+      background: var(--bg);
     }
 
     .startup {
       display: grid;
       grid-template-columns: minmax(250px, 29%) 1fr;
+      grid-template-rows: minmax(0, 1fr);
       width: 100%;
       height: 100%;
       min-height: 560px;
@@ -41,9 +83,10 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
+      min-height: 0;
       padding: 48px 38px 36px;
-      border-right: 1px solid #2a3033;
-      background: #171b1e;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
     }
 
     .brand {
@@ -71,7 +114,7 @@
 
     .brand-edition {
       margin-top: 7px;
-      color: #91a09a;
+      color: var(--text-4);
       font-size: 12px;
       text-transform: uppercase;
     }
@@ -83,7 +126,7 @@
 
     .status-label {
       margin-bottom: 10px;
-      color: #81908a;
+      color: var(--text-3);
       font-size: 12px;
     }
 
@@ -102,14 +145,14 @@
       height: 4px;
       margin-top: 24px;
       overflow: hidden;
-      background: #30373a;
+      background: var(--track);
     }
 
     .progress-bar {
       position: absolute;
       inset: 0 auto 0 0;
       width: 36%;
-      background: #55c68a;
+      background: var(--accent);
       animation: progress 1.45s ease-in-out infinite;
     }
 
@@ -121,12 +164,12 @@
     .progress-track.error .progress-bar {
       width: 100%;
       animation: none;
-      background: #e16464;
+      background: var(--danger-bar);
     }
 
     .version {
       margin-top: 18px;
-      color: #68736f;
+      color: var(--text-4);
       font-family: Consolas, monospace;
       font-size: 11px;
     }
@@ -135,7 +178,8 @@
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
       min-width: 0;
-      background: #0c0f11;
+      min-height: 0;
+      background: var(--bg);
     }
 
     .activity-header {
@@ -144,7 +188,7 @@
       justify-content: space-between;
       min-height: 74px;
       padding: 0 34px;
-      border-bottom: 1px solid #242a2d;
+      border-bottom: 1px solid var(--border-soft);
     }
 
     .activity-title {
@@ -157,7 +201,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      color: #82918b;
+      color: var(--text-3);
       font-size: 12px;
     }
 
@@ -165,8 +209,8 @@
       width: 7px;
       height: 7px;
       border-radius: 50%;
-      background: #55c68a;
-      box-shadow: 0 0 0 3px rgba(85, 198, 138, 0.12);
+      background: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
     }
 
     #log {
@@ -174,11 +218,11 @@
       margin: 0;
       padding: 26px 34px;
       overflow: auto;
-      color: #b7c2bd;
+      color: var(--text-2);
       font-family: Consolas, "Cascadia Mono", monospace;
       font-size: 12px;
       line-height: 1.7;
-      scrollbar-color: #3e4944 transparent;
+      scrollbar-color: var(--scrollbar) transparent;
     }
 
     .log-line {
@@ -189,11 +233,11 @@
     }
 
     .log-time {
-      color: #59645f;
+      color: var(--faint);
     }
 
     .log-level {
-      color: #718079;
+      color: var(--level);
     }
 
     .log-text {
@@ -204,24 +248,24 @@
 
     .log-line.stage .log-level,
     .log-line.stage .log-text {
-      color: #70d7a1;
+      color: var(--stage);
     }
 
     .log-line.warning .log-level,
     .log-line.warning .log-text {
-      color: #e3b45f;
+      color: var(--warn);
     }
 
     .log-line.error .log-level,
     .log-line.error .log-text {
-      color: #ef7777;
+      color: var(--danger);
     }
 
     .activity-footer {
       min-height: 46px;
       padding: 14px 34px;
-      border-top: 1px solid #242a2d;
-      color: #68736f;
+      border-top: 1px solid var(--border-soft);
+      color: var(--text-4);
       font-size: 11px;
     }
 
@@ -244,7 +288,7 @@
         gap: 28px;
         padding: 24px 26px;
         border-right: 0;
-        border-bottom: 1px solid #2a3033;
+        border-bottom: 1px solid var(--border);
       }
 
       .status-block {

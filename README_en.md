@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img alt="LOGO" src="./webapp/src-tauri/icons/128x128@2x.png" width="256" height="256" />
+<img alt="LOGO" src="./assets/gui/icon/nkas.png" width="256" height="256" />
 
 # NIKKEAutoScript
 

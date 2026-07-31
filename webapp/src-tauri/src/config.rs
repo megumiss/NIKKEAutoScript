@@ -10,6 +10,9 @@ fn default_webui_port() -> u16 {
 fn default_dpi_scaling() -> bool {
     true
 }
+fn default_theme() -> String {
+    "dark".into()
+}
 fn default_auto_update() -> bool {
     true
 }
@@ -80,6 +83,8 @@ struct WebuiConfig {
     dpi_scaling: bool,
     #[serde(rename = "HardwareAcceleration", default)]
     hardware_acceleration: bool,
+    #[serde(rename = "Theme", default = "default_theme")]
+    theme: String,
 }
 
 #[derive(Debug, Clone)]
@@ -91,6 +96,7 @@ pub struct DesktopConfig {
     pub desktop_update_manifest: String,
     pub dpi_scaling: bool,
     pub hardware_acceleration: bool,
+    pub theme: String,
     pub shortcuts: HashMap<String, String>,
 }
 
@@ -131,6 +137,7 @@ pub fn load(root: PathBuf) -> Result<DesktopConfig> {
         desktop_update_manifest: raw.deploy.update.desktop_update_manifest,
         dpi_scaling: raw.deploy.webui.dpi_scaling,
         hardware_acceleration: raw.deploy.webui.hardware_acceleration,
+        theme: raw.deploy.webui.theme,
     })
 }
 
@@ -194,6 +201,7 @@ mod tests {
             desktop_update_manifest: default_desktop_update_manifest(),
             dpi_scaling: true,
             hardware_acceleration: false,
+            theme: default_theme(),
             shortcuts: HashMap::new(),
         }
     }

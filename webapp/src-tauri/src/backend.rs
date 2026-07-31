@@ -1,5 +1,6 @@
 use crate::config::DesktopConfig;
 use anyhow::{Context, Result};
+use encoding_rs::GBK;
 use serde::Deserialize;
 use std::io::{BufRead, BufReader, Read};
 use std::process::{Child, Command, Stdio};
@@ -117,6 +118,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink) -> Result<Backend> {
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    configure_python_output(&mut command);
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
     let mut child = command
@@ -187,6 +189,7 @@ fn run_prepare(config: &DesktopConfig, log: LogSink) -> Result<()> {
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    configure_python_output(&mut command);
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
     let mut child = command.spawn().with_context(|| {
@@ -235,9 +238,7 @@ where
             match reader.read_until(b'\n', &mut buffer) {
                 Ok(0) => break,
                 Ok(_) => {
-                    let line = String::from_utf8_lossy(&buffer)
-                        .trim_end_matches(['\r', '\n'])
-                        .to_string();
+                    let line = decode_output_line(&buffer);
                     if !line.trim().is_empty() {
                         log(line.clone());
                         captured.push_str(&line);
@@ -252,6 +253,28 @@ where
         }
         captured
     })
+}
+
+fn configure_python_output(command: &mut Command) {
+    command
+        .env("PYTHONUTF8", "1")
+        .env("PYTHONIOENCODING", "utf-8:replace")
+        .env("PYTHONUNBUFFERED", "1");
+}
+
+fn decode_output_line(buffer: &[u8]) -> String {
+    let end = buffer
+        .iter()
+        .rposition(|value| !matches!(value, b'\r' | b'\n'))
+        .map_or(0, |index| index + 1);
+    let line = &buffer[..end];
+    match std::str::from_utf8(line) {
+        Ok(line) => line.to_string(),
+        Err(_) => {
+            let (decoded, _, _) = GBK.decode(line);
+            decoded.into_owned()
+        }
+    }
 }
 
 fn join_log_reader(reader: Option<thread::JoinHandle<String>>) -> String {
@@ -310,5 +333,11 @@ mod tests {
         assert!(captured.contains("first"));
         assert!(captured.contains("invalid:"));
         assert_eq!(messages.lock().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn gbk_process_output_is_decoded() {
+        assert_eq!(decode_output_line(&[0xc6, 0xf4, 0xb6, 0xaf, b'\n']), "启动");
+        assert_eq!(decode_output_line("正常 UTF-8\n".as_bytes()), "正常 UTF-8");
     }
 }
