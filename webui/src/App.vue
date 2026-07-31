@@ -755,7 +755,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       <section v-else-if="isDeploy" class="view">
         <article class="card task-hero">
           <div class="task-icon">📦</div>
-          <div style="flex:1"><h2>{{ t('部署') }}</h2><div class="deploy-warning">⚠ {{ t('修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。') }}</div></div>
+          <div style="flex:1"><h2>{{ t('部署') }}</h2><div class="sub deploy-warning">⚠ {{ t('修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。') }}</div></div>
           <button class="btn danger" @click="openResetDeployModal">{{ t('还原默认') }}</button>
         </article>
         <div class="cfg-groups">
