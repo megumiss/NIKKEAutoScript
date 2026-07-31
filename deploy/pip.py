@@ -1,6 +1,5 @@
 import os
 import re
-import shutil
 import typing as t
 from dataclasses import dataclass
 from functools import cached_property
