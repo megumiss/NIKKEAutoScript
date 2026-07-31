@@ -12,6 +12,7 @@ from PIL import Image
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+# nkas.png 是主图标，浏览器/Web 场景统一引用它；nkas.ico 仅用于 Windows 原生场景（通知、窗口、Tauri 打包），Tauri/cookie 图标为构建产物，均由本工具从源图重新生成。
 ICON_TARGETS: List[Tuple[Path, Tuple[int, int], str]] = [
     (Path('webapp/src-tauri/icons/32x32.png'), (32, 32), 'Tauri icon 32'),
     (Path('webapp/src-tauri/icons/128x128.png'), (128, 128), 'Tauri icon 128'),
