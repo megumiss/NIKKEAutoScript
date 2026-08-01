@@ -371,7 +371,12 @@
 </head>
 <body>
   <div class="titlebar" data-tauri-drag-region>
+    <button id="tb-hide" class="tb-btn" title="隐藏到托盘"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v7"/><path d="M6.5 8 10 11.5 13.5 8"/><path d="M4 15.5h12"/></svg></button>
     <button id="tb-min" class="tb-btn" title="最小化"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 10.5h10"/></svg></button>
+    <button id="tb-max" class="tb-btn" title="最大化">
+      <svg id="tb-max-on" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5.5" y="5.5" width="9" height="9" rx="1"/></svg>
+      <svg id="tb-max-off" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="display:none"><rect x="4" y="7.5" width="8" height="8" rx="1"/><path d="M8 7.5v-2A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5v5a1.5 1.5 0 0 1-1.5 1.5h-2"/></svg>
+    </button>
     <button id="tb-close" class="tb-btn tb-close" title="关闭"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
   </div>
   <main class="startup">
@@ -475,7 +480,15 @@
 
       // Window controls for the frameless startup window.
       const tauriWin = window.__TAURI__?.window?.getCurrentWindow?.();
+      document.getElementById('tb-hide').addEventListener('click', () => tauriWin?.hide());
       document.getElementById('tb-min').addEventListener('click', () => tauriWin?.minimize());
+      document.getElementById('tb-max').addEventListener('click', async () => {
+        if (!tauriWin) return;
+        await tauriWin.toggleMaximize();
+        const maximized = await tauriWin.isMaximized();
+        document.getElementById('tb-max-on').style.display = maximized ? 'none' : '';
+        document.getElementById('tb-max-off').style.display = maximized ? '' : 'none';
+      });
       document.getElementById('tb-close').addEventListener('click', () => tauriWin?.close());
     })();
   </script>

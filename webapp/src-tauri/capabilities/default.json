@@ -1,7 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Only the window controls used by the in-page custom titlebar are exposed to the backend-hosted SPA.",
+  "description": "Only the window controls used by the in-page custom titlebar are exposed; the backend-hosted SPA loads from a remote origin, so the capability must extend to it explicitly.",
+  "remote": { "urls": ["http://127.0.0.1:*"] },
   "windows": ["main"],
   "permissions": [
     "core:default",
