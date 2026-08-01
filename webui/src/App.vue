@@ -633,12 +633,12 @@ onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); sta
       <img class="titlebar-logo" :src="brandIcon" alt="">
       <span class="titlebar-title">NKAS</span>
       <div class="titlebar-buttons">
+        <button class="tb-btn" :title="t('隐藏到托盘')" @click="tbHide"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v7"/><path d="M6.5 8 10 11.5 13.5 8"/><path d="M4 15.5h12"/></svg></button>
         <button class="tb-btn" :title="t('最小化')" @click="tbMinimize"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 10.5h10"/></svg></button>
         <button class="tb-btn" :title="isMaximized ? t('还原') : t('最大化')" @click="tbToggleMaximize">
           <svg v-if="!isMaximized" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5.5" y="5.5" width="9" height="9" rx="1"/></svg>
           <svg v-else viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="7.5" width="8" height="8" rx="1"/><path d="M8 7.5v-2A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5v5a1.5 1.5 0 0 1-1.5 1.5h-2"/></svg>
         </button>
-        <button class="tb-btn" :title="t('隐藏到托盘')" @click="tbHide"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v7"/><path d="M6.5 8 10 11.5 13.5 8"/><path d="M4 15.5h12"/></svg></button>
         <button class="tb-btn tb-close" :title="t('关闭')" @click="tbClose"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
       </div>
     </div>
