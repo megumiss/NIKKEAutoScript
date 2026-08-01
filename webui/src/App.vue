@@ -98,6 +98,17 @@ const importBusy = ref<Record<string, boolean>>({})
 const backendDown = ref(false)
 function isLegacyElectronLayout() { return window.parent !== window }
 const legacyElectron = isLegacyElectronLayout()
+// Custom titlebar for the Tauri desktop shell, which runs without native
+// window decorations.  The same SPA also loads in plain browsers, where
+// __TAURI_INTERNALS__ is absent and the bar stays hidden.
+const isTauri = Boolean((window as any).__TAURI_INTERNALS__)
+const isMaximized = ref(false)
+function tauriWindow(): any { return (window as any).__TAURI__?.window?.getCurrentWindow?.() }
+async function tbMinimize() { await tauriWindow()?.minimize() }
+async function tbToggleMaximize() { const win = tauriWindow(); if (!win) return; await win.toggleMaximize(); isMaximized.value = await win.isMaximized() }
+async function tbHide() { await tauriWindow()?.hide() }
+async function tbClose() { await tauriWindow()?.close() }
+async function syncMaximized() { const win = tauriWindow(); if (win) isMaximized.value = await win.isMaximized() }
 const staticLabels: Record<string, Record<string, string>> = {
   '总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
@@ -129,6 +140,8 @@ const staticLabels: Record<string, Record<string, string>> = {
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
   '导入失败': { 'en-US': 'Import failed', 'ja-JP': 'インポート失敗' },
   '取消': { 'en-US': 'Cancel', 'ja-JP': 'キャンセル' }, '确定': { 'en-US': 'OK', 'ja-JP': 'OK' },
+  '最小化': { 'en-US': 'Minimize', 'ja-JP': '最小化' }, '最大化': { 'en-US': 'Maximize', 'ja-JP': '最大化' },
+  '还原': { 'en-US': 'Restore', 'ja-JP': '元に戻す' }, '隐藏到托盘': { 'en-US': 'Hide to tray', 'ja-JP': 'トレイに隠す' }, '关闭': { 'en-US': 'Close', 'ja-JP': '閉じる' },
   '复制来源实例': { 'en-US': 'Copy settings from', 'ja-JP': 'コピー元インスタンス' },
   '此操作不可恢复。': { 'en-US': 'This cannot be undone.', 'ja-JP': '元に戻せません。' },
   '未知任务': { 'en-US': 'Unknown task', 'ja-JP': '不明なタスク' },
@@ -595,7 +608,7 @@ async function healthCheck() {
     backendDown.value = true
   }
 }
-onMounted(async () => { await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
+onMounted(async () => { if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
   // Only a different instance needs a schema reload and socket swap; task
   // switches within one instance reuse everything and leave the rail alone.
@@ -611,11 +624,25 @@ watch(() => route.fullPath, async () => {
   if (isLogs.value) await refreshLogs()
 })
 watch(logTick, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
-onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer); window.clearTimeout(updatePollTimer) })
+onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer); window.clearTimeout(updatePollTimer) })
 </script>
 
 <template>
   <div class="app" :class="{ 'legacy-electron': legacyElectron, 'side-collapsed': sidebarCollapsed }">
+    <div v-if="isTauri" class="titlebar" data-tauri-drag-region>
+      <img class="titlebar-logo" :src="brandIcon" alt="">
+      <span class="titlebar-title">NKAS</span>
+      <div class="titlebar-buttons">
+        <button class="tb-btn" :title="t('最小化')" @click="tbMinimize"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 10.5h10"/></svg></button>
+        <button class="tb-btn" :title="isMaximized ? t('还原') : t('最大化')" @click="tbToggleMaximize">
+          <svg v-if="!isMaximized" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5.5" y="5.5" width="9" height="9" rx="1"/></svg>
+          <svg v-else viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="7.5" width="8" height="8" rx="1"/><path d="M8 7.5v-2A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5v5a1.5 1.5 0 0 1-1.5 1.5h-2"/></svg>
+        </button>
+        <button class="tb-btn" :title="t('隐藏到托盘')" @click="tbHide"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v7"/><path d="M6.5 8 10 11.5 13.5 8"/><path d="M4 15.5h12"/></svg></button>
+        <button class="tb-btn tb-close" :title="t('关闭')" @click="tbClose"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
+      </div>
+    </div>
+    <div class="app-body">
     <nav class="sidebar">
       <div class="brand">
         <img class="brand-logo brand-logo-img" :src="brandIcon" alt="NKAS">
@@ -932,6 +959,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         </article>
       </section>
     </main>
+    </div>
     <div v-if="backendDown" class="backend-down"><div class="backend-down-card">{{ t('后端连接中断，正在等待恢复…') }}</div></div>
     <div v-if="startupNotice && !startupNoticeClosed" class="modal-mask">
       <div class="modal-card">

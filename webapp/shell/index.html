@@ -275,6 +275,42 @@
       100% { transform: translateX(280%); }
     }
 
+    .titlebar {
+      position: fixed;
+      z-index: 10;
+      top: 0;
+      right: 0;
+      left: 0;
+      display: flex;
+      justify-content: flex-end;
+      height: 34px;
+    }
+
+    .tb-btn {
+      display: grid;
+      width: 44px;
+      place-items: center;
+      border: 0;
+      color: var(--text-3);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .tb-btn:hover {
+      color: var(--text);
+      background: var(--panel);
+    }
+
+    .tb-btn.tb-close:hover {
+      color: #fff;
+      background: #e81123;
+    }
+
+    .tb-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
     @media (max-width: 760px) {
       .startup {
         grid-template-columns: 1fr;
@@ -330,6 +366,10 @@
   </style>
 </head>
 <body>
+  <div class="titlebar" data-tauri-drag-region>
+    <button id="tb-min" class="tb-btn" title="最小化"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 10.5h10"/></svg></button>
+    <button id="tb-close" class="tb-btn tb-close" title="关闭"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
+  </div>
   <main class="startup">
     <section class="identity">
       <div class="brand">
@@ -428,6 +468,11 @@
       };
 
       append('Desktop shell loaded.', 'log');
+
+      // Window controls for the frameless startup window.
+      const tauriWin = window.__TAURI__?.window?.getCurrentWindow?.();
+      document.getElementById('tb-min').addEventListener('click', () => tauriWin?.minimize());
+      document.getElementById('tb-close').addEventListener('click', () => tauriWin?.close());
     })();
   </script>
 </body>

@@ -174,6 +174,11 @@ fn create_window(
         .title("NKAS")
         .inner_size(1440.0, 900.0)
         .min_inner_size(1000.0, 640.0)
+        // Native chrome is replaced by the in-page titlebar (webui App.vue and
+        // shell/index.html); keep the window shadow the OS drops for
+        // undecorated windows.
+        .decorations(false)
+        .shadow(true)
         .visible(true)
         .initialization_script(&theme_script)
         .on_page_load(move |window, payload| {
