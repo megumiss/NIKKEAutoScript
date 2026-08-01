@@ -619,7 +619,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
     <nav class="sidebar">
       <div class="brand">
         <img class="brand-logo brand-logo-img" :src="brandIcon" alt="NKAS">
-        <div class="brand-text"><div class="brand-name">NKAS</div><div class="brand-sub">NIKKE AUTO</div></div>
+        <div class="brand-text"><div class="brand-name">NKAS</div><div class="brand-sub">NIKKE AUTO SCRIPT</div></div>
         <button class="side-toggle" @click="sidebarCollapsed = !sidebarCollapsed">{{ sidebarCollapsed ? '»' : '«' }}</button>
       </div>
       <div class="side-section">
@@ -902,7 +902,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <article class="card about-panel">
           <div class="about-hero">
             <img class="brand-logo brand-logo-img" :src="brandIcon" alt="NKAS">
-            <div><h2>NKAS · NIKKE Auto Script</h2><div class="sub">NIKKE Auto Script · {{ systemStatus.version }}</div></div>
+            <div><h2>NKAS · NIKKEAutoScript</h2><div class="sub">NIKKEAutoScript · {{ systemStatus.version }}</div></div>
           </div>
           <p>NKAS is a free open source software, if you paid for NKAS from any channel, please refund.<br>NKAS 是一款免费开源软件，如果你在任何渠道付费购买了NKAS，请退款。</p>
           <h3>Project / 项目</h3>
