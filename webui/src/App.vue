@@ -407,7 +407,16 @@ watch(logsKeyword, () => { window.clearTimeout(logsKeywordTimer); logsKeywordTim
 const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 const deployTemplateOptions = computed(() => [{ value: 'intl', label: t('国际') }, { value: 'cn', label: t('大陆') }, { value: 'docker-intl', label: t('Docker国际') }, { value: 'docker-cn', label: t('Docker国内') }])
-function openCreateModal() { modal.value = { type: 'create', name: '', origin: instances.value[0]?.name || 'template-nkas', template: 'intl', busy: false } }
+// Pre-fill the create form with the first free nkas-style name (nkas, nkas2,
+// nkas3…) so the modal needs no placeholder hint.
+function defaultInstanceName() {
+  const names = new Set(instances.value.map(item => item.name))
+  if (!names.has('nkas')) return 'nkas'
+  let index = 2
+  while (names.has(`nkas${index}`)) index++
+  return `nkas${index}`
+}
+function openCreateModal() { modal.value = { type: 'create', name: defaultInstanceName(), origin: instances.value[0]?.name || 'template-nkas', template: 'intl', busy: false } }
 function openDeleteModal(name: string) { modal.value = { type: 'delete', name, origin: '', template: '', busy: false } }
 function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', origin: '', template: 'intl', busy: false } }
 async function confirmModal() {
@@ -938,7 +947,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       <div class="modal-card">
         <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'resetDeploy' ? t('还原默认') : t('删除') }}</h3>
         <template v-if="modal.type === 'create'">
-          <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" placeholder="nkas2" @keyup.enter="confirmModal"></label>
+          <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
           <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
         </template>
         <template v-else-if="modal.type === 'resetDeploy'">
