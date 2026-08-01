@@ -222,14 +222,12 @@ function schedSub() {
   const sep = systemStatus.value.language === 'zh-CN' ? '：' : ': '
   const running = queue.value.running || []
   if (running.length) return `${t('当前任务')}${sep}${running.map((item: any) => item.name_i18n).join('、')}`
-  const next = [...(queue.value.pending || []), ...(queue.value.waiting || [])][0]
-  if (next) return `${t('下一任务')}${sep}${next.name_i18n}${next.next_run ? ` · ${formatTime(next.next_run)}` : ''}`
-  return t('等待任务队列')
+  return t('空闲')
 }
-// Queue card groups, matching the old 运行中/队列中/等待中 split: pending
-// holds due tasks in scheduler order, waiting holds future tasks by run time.
+// Queue card groups, matching the old 队列中/等待中 split: pending holds due
+// tasks in scheduler order, waiting holds future tasks by run time.  Running
+// tasks are shown in their own card right below the scheduler instead.
 const queueGroups = computed(() => [
-  { key: 'running', label: t('运行中'), items: queue.value.running || [] },
   { key: 'pending', label: t('队列中'), items: queue.value.pending || [] },
   { key: 'waiting', label: t('等待中'), items: queue.value.waiting || [] },
 ])
@@ -739,6 +737,12 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             <article class="card hero-sched">
               <div style="flex:1"><b>{{ t('调度器') }}</b><div class="sub">{{ schedSub() }}</div></div>
               <button class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'success'" @click="lifecycle(selectedInstance?.state === 1 ? 'stop' : 'start')">{{ selectedInstance?.state === 1 ? t('停止') : t('启动') }}</button>
+            </article>
+            <article v-if="queue.running?.length" class="card running-card">
+              <div class="queue-group-label">{{ t('运行中') }}</div>
+              <div class="timeline">
+                <div v-for="item in queue.running" :key="item.command" class="tl-item running clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ t('进行中') }}</span><span class="go">›</span></div>
+              </div>
             </article>
             <article class="card queue-card">
               <div class="queue-group-label">{{ t('任务队列') }}</div>
