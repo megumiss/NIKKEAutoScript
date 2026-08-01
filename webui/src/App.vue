@@ -104,7 +104,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '多开': { 'en-US': 'Multi-instance', 'ja-JP': 'マルチインスタンス' },
   '关于': { 'en-US': 'About', 'ja-JP': '情報' }, '主题': { 'en-US': 'Theme', 'ja-JP': 'テーマ' }, '任务总览': { 'en-US': 'Task overview', 'ja-JP': 'タスク概要' },
   '筛选任务…': { 'en-US': 'Filter tasks…', 'ja-JP': 'タスクを絞り込む…' }, '调度器': { 'en-US': 'Scheduler', 'ja-JP': 'スケジューラー' },
-  '任务队列': { 'en-US': 'Task queue', 'ja-JP': 'タスクキュー' }, '实时日志': { 'en-US': 'Live log', 'ja-JP': 'リアルタイムログ' },
+  '实时日志': { 'en-US': 'Live log', 'ja-JP': 'リアルタイムログ' },
   '自动滚动': { 'en-US': 'Auto-scroll', 'ja-JP': '自動スクロール' }, '当前任务': { 'en-US': 'Current task', 'ja-JP': '現在のタスク' }, '清空': { 'en-US': 'Clear', 'ja-JP': 'クリア' },
   '下一任务': { 'en-US': 'Next task', 'ja-JP': '次のタスク' }, '启动': { 'en-US': 'Start', 'ja-JP': '開始' }, '停止': { 'en-US': 'Stop', 'ja-JP': '停止' },
   '任务设置': { 'en-US': 'Task settings', 'ja-JP': 'タスク設定' }, '实例总数': { 'en-US': 'Instances', 'ja-JP': 'インスタンス数' },
@@ -217,19 +217,6 @@ function onViewScroll(event: Event) {
 function jumpToGroup(group: any) { activeGroup.value = group.key; document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
 function t(source: string) { return systemStatus.value.language === 'zh-CN' ? source : staticLabels[source]?.[systemStatus.value.language] || source }
 function formatTime(value: string) { const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/); return m ? `${m[2]}-${m[3]} ${m[4]}` : value }
-function schedSub() {
-  const sep = systemStatus.value.language === 'zh-CN' ? '：' : ': '
-  const running = queue.value.running || []
-  if (running.length) return `${t('当前任务')}${sep}${running.map((item: any) => item.name_i18n).join('、')}`
-  return t('空闲')
-}
-// Queue card groups, matching the old 队列中/等待中 split: pending holds due
-// tasks in scheduler order, waiting holds future tasks by run time.  Running
-// tasks are shown in their own card right below the scheduler instead.
-const queueGroups = computed(() => [
-  { key: 'pending', label: t('队列中'), items: queue.value.pending || [] },
-  { key: 'waiting', label: t('等待中'), items: queue.value.waiting || [] },
-])
 
 async function loadInstances() {
   try { instances.value = await api.get('/api/instances'); if (route.path === '/' && instances.value.length === 1) await router.replace(`/i/${instances.value[0].name}/overview`) } catch (exception: any) { error.value = exception.message }
@@ -734,22 +721,22 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <div class="ov-layout">
           <div class="ov-left">
             <article class="card hero-sched">
-              <div style="flex:1"><b>{{ t('调度器') }}</b><div class="sub">{{ schedSub() }}</div></div>
+              <div style="flex:1"><b>{{ t('调度器') }}</b></div>
               <button class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'success'" @click="lifecycle(selectedInstance?.state === 1 ? 'stop' : 'start')">{{ selectedInstance?.state === 1 ? t('停止') : t('启动') }}</button>
             </article>
-            <article v-if="queue.running?.length" class="card running-card">
-              <div class="queue-group-label">{{ t('运行中') }}</div>
+            <article class="card queue-card">
               <div class="timeline">
-                <div v-for="item in queue.running" :key="item.command" class="tl-item running clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ t('进行中') }} · {{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
+                <div class="tl-label">{{ t('运行中') }}</div>
+                <div v-for="item in queue.running || []" :key="item.command" class="tl-item running clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ t('进行中') }} · {{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
+                <div v-if="!queue.running?.length" class="tl-item placeholder">{{ t('无') }}</div>
+                <div class="tl-label">{{ t('队列中') }}</div>
+                <div v-for="item in queue.pending || []" :key="item.command" class="tl-item clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
               </div>
             </article>
             <article class="card queue-card">
-              <div class="queue-group-label">{{ t('任务队列') }}</div>
+              <div class="queue-group-label">{{ t('等待中') }}</div>
               <div class="timeline">
-                <template v-for="group in queueGroups" :key="group.key">
-                  <div class="tl-label">{{ group.label }}</div>
-                  <div v-for="item in group.items" :key="item.command" class="tl-item clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
-                </template>
+                <div v-for="item in queue.waiting || []" :key="item.command" class="tl-item clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
               </div>
             </article>
           </div>
