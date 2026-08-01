@@ -54,6 +54,7 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .notice-messages { margin:0; padding:0; list-style:none; color:var(--text-2); font-size:12.5px; line-height:1.6; }
 .notice-content { white-space:pre-line; line-height:1.7; }
 .notice-option { display:flex; align-items:center; gap:8px; margin-bottom:16px; color:var(--text-2); font-size:13px; }
+.modal-actions .notice-option { margin-right:auto; margin-bottom:0; }
 .update-history { padding:24px 24px 0; }.history-list { padding:0 22px 14px; }.history-row { display:grid; grid-template-columns:78px 1fr auto; gap:14px; align-items:center; padding:11px 0; border-top:1px solid var(--border); font-size:13px; }.history-row code { color:var(--accent); }.history-row small { color:var(--text-3); font-size:11.5px; }
 @keyframes pulse { 50% { opacity:.35; } } @media (max-width:1200px) { .task-layout { grid-template-columns:1fr; }.anchor-nav { display:none; }.ov-layout { grid-template-columns:1fr; } }
 .side-footer .icon-btn { flex:none; width:100%; }

@@ -937,8 +937,8 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
       <div class="modal-card">
         <h3>{{ startupNotice.data.title || t('提示') }}</h3>
         <p class="modal-text notice-content">{{ startupNotice.data.content }}</p>
-        <div class="notice-option"><label class="switch sm"><input v-model="noticeDontShow" type="checkbox"><span class="slider"></span></label><span>{{ t('本次不再提示') }}</span></div>
         <div class="modal-actions">
+          <div class="notice-option"><label class="switch sm"><input v-model="noticeDontShow" type="checkbox"><span class="slider"></span></label><span>{{ t('本次不再提示') }}</span></div>
           <button class="btn primary" @click="closeStartupNotice">{{ t('我知道了') }}</button>
         </div>
       </div>
