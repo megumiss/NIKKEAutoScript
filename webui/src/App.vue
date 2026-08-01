@@ -141,6 +141,11 @@ const staticLabels: Record<string, Record<string, string>> = {
   '修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。': { 'en-US': 'Changing deploy settings may break updates or prevent startup; changes apply only after a restart. Proceed with care.', 'ja-JP': 'デプロイ設定の変更は更新失敗や起動不能を招く可能性があります。変更は再起動後に有効になります。慎重に操作してください。' },
   '将全部部署配置还原为默认值？': { 'en-US': 'Reset all deploy settings to defaults?', 'ja-JP': 'すべてのデプロイ設定をデフォルトに戻しますか？' },
   '已还原为默认值': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻しました' },
+  '日志': { 'en-US': 'Logs', 'ja-JP': 'ログ' }, '类型': { 'en-US': 'Type', 'ja-JP': '種類' }, '级别': { 'en-US': 'Level', 'ja-JP': 'レベル' },
+  '日期': { 'en-US': 'Date', 'ja-JP': '日付' }, '关键字': { 'en-US': 'Keyword', 'ja-JP': 'キーワード' },
+  '搜索关键字…': { 'en-US': 'Search keyword…', 'ja-JP': 'キーワード検索…' }, '全部': { 'en-US': 'All', 'ja-JP': 'すべて' },
+  '刷新': { 'en-US': 'Refresh', 'ja-JP': '再読み込み' }, '没有匹配的日志': { 'en-US': 'No matching logs', 'ja-JP': '一致するログがありません' },
+  '查看 log 目录下的日志文件，支持按类型、级别、日期和关键字筛选。': { 'en-US': 'Browse the log files in the log directory by type, level, date and keyword.', 'ja-JP': 'log ディレクトリのログファイルを種類・レベル・日付・キーワードで絞り込みます。' },
 }
 
 const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]
@@ -152,6 +157,7 @@ const isDashboard = computed(() => route.path === '/')
 const isManage = computed(() => route.path === '/manage')
 const isSettings = computed(() => route.path === '/settings')
 const isDeploy = computed(() => route.path === '/deploy')
+const isLogs = computed(() => route.path === '/logs')
 const isAbout = computed(() => route.path === '/about')
 const isWorkspace = computed(() => Boolean(selectedName.value))
 const selectedInstance = computed(() => instances.value.find(item => item.name === selectedName.value))
@@ -171,7 +177,7 @@ function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.so
 function stateText(state?: number) { return state === 1 ? t('调度运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
 function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
-function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
+function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
 function isWideField(field: Field) { return Boolean(field.path_picker) || ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea', 'priority'].includes(field.widget) }
 function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` }
@@ -335,6 +341,61 @@ function toggleDeployMulti(field: any, value: string) {
   else current.push(value)
   saveDeployValue(field, current)
 }
+// Logs page: filtered viewer over the ./log/<date>_<source>.txt files.  The
+// backend folds continuation lines (tracebacks) into the record opened by
+// the last levelled line and returns the newest matching records; the level
+// select reuses the live log's debug/info/warn/err threshold options.
+type LogFileRef = { date: string; source: string }
+const logFiles = ref<LogFileRef[]>([])
+const logsDate = ref('')
+const logsSource = ref('')
+const logsLevel = ref('info')
+const logsKeyword = ref('')
+const logsRecords = ref<any[]>([])
+const logsMatched = ref(0)
+const logsTruncated = ref(false)
+const logsLoading = ref(false)
+const logsBody = ref<HTMLElement>()
+const logsDateOptions = computed(() => [...new Set(logFiles.value.map(file => file.date))].map(date => ({ value: date, label: date })))
+const logsSourceOptions = computed(() => [{ value: '', label: t('全部') }, ...[...new Set(logFiles.value.filter(file => file.date === logsDate.value).map(file => file.source))].map(source => ({ value: source, label: source }))])
+const LOGS_RANK_CLASS = ['lv-debug', 'lv-info', 'lv-warn', 'lv-err']
+function logsRankClass(rank: number) { return LOGS_RANK_CLASS[rank] || 'lv-info' }
+function logsCountText() {
+  const shown = logsRecords.value.length
+  if (systemStatus.value.language === 'en-US') return logsTruncated.value ? `Matched ${logsMatched.value}, showing the latest ${shown}` : `${logsMatched.value} entries`
+  if (systemStatus.value.language === 'ja-JP') return logsTruncated.value ? `${logsMatched.value} 件一致、最新 ${shown} 件を表示` : `${logsMatched.value} 件`
+  return logsTruncated.value ? `共匹配 ${logsMatched.value} 条，仅显示最近 ${shown} 条` : `共 ${logsMatched.value} 条`
+}
+async function loadLogFiles() {
+  try {
+    logFiles.value = (await api.get('/api/system/logs/files')).files || []
+    if (!logsDate.value || !logFiles.value.some(file => file.date === logsDate.value)) logsDate.value = logFiles.value[0]?.date || ''
+    if (!logsSourceOptions.value.some(option => option.value === logsSource.value)) logsSource.value = ''
+  } catch (exception: any) { error.value = exception.message }
+}
+// A stale response must not overwrite a newer query: rapid keyword typing or
+// the loadLogFiles date watch can fire several queries at once.
+let logsQuerySeq = 0
+async function queryLogs() {
+  if (!isLogs.value) return
+  const seq = ++logsQuerySeq
+  if (!logsDate.value) { logsRecords.value = []; logsMatched.value = 0; logsTruncated.value = false; return }
+  logsLoading.value = true
+  try {
+    const params = new URLSearchParams({ date: logsDate.value, source: logsSource.value, level: logsLevel.value, keyword: logsKeyword.value })
+    const result = await api.get(`/api/system/logs?${params}`)
+    if (seq !== logsQuerySeq) return
+    logsRecords.value = result.records || []
+    logsMatched.value = result.matched || 0
+    logsTruncated.value = Boolean(result.truncated)
+    await nextTick()
+    if (logsBody.value) logsBody.value.scrollTop = logsBody.value.scrollHeight
+  } catch (exception: any) { error.value = exception.message } finally { if (seq === logsQuerySeq) logsLoading.value = false }
+}
+async function refreshLogs() { await loadLogFiles(); await queryLogs() }
+let logsKeywordTimer = 0
+watch([logsDate, logsSource, logsLevel], queryLogs)
+watch(logsKeyword, () => { window.clearTimeout(logsKeywordTimer); logsKeywordTimer = window.setTimeout(queryLogs, 400) })
 const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 const deployTemplateOptions = computed(() => [{ value: 'intl', label: t('国际') }, { value: 'cn', label: t('大陆') }, { value: 'docker-intl', label: t('Docker国际') }, { value: 'docker-cn', label: t('Docker国内') }])
@@ -521,7 +582,7 @@ async function healthCheck() {
     backendDown.value = true
   }
 }
-onMounted(async () => { await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); healthTimer = window.setInterval(healthCheck, 4000) })
+onMounted(async () => { await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
   // Only a different instance needs a schema reload and socket swap; task
   // switches within one instance reuse everything and leave the rail alone.
@@ -534,6 +595,7 @@ watch(() => route.fullPath, async () => {
   if (isSettings.value) await refreshUpdateInfo()
   else window.clearTimeout(updatePollTimer)
   if (isDeploy.value) await loadDeploy()
+  if (isLogs.value) await refreshLogs()
 })
 watch(logTick, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
 onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer); window.clearTimeout(updatePollTimer) })
@@ -562,6 +624,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
         <div class="side-label">{{ t('系统') }}</div>
         <button class="side-item" :class="{ active: isManage }" @click="router.push('/manage')"><span class="sicon">🗂</span><span class="side-text">{{ t('多开') }}</span></button>
         <button class="side-item" :class="{ active: isDeploy }" @click="router.push('/deploy')"><span class="sicon">📦</span><span class="side-text">{{ t('部署') }}</span></button>
+        <button class="side-item" :class="{ active: isLogs }" @click="router.push('/logs')"><span class="sicon">📄</span><span class="side-text">{{ t('日志') }}</span></button>
         <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')"><span class="sicon">⚙️</span><span class="side-text">{{ t('更新') }}</span></button>
         <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')"><span class="sicon">ℹ️</span><span class="side-text">{{ t('关于') }}</span></button>
       </div>
@@ -788,6 +851,30 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             </div>
           </article>
         </div>
+      </section>
+      <section v-else-if="isLogs" class="view logs-view">
+        <article class="card task-hero">
+          <div class="task-icon">📄</div>
+          <div style="flex:1"><h2>{{ t('日志') }}</h2><div class="sub">{{ t('查看 log 目录下的日志文件，支持按类型、级别、日期和关键字筛选。') }}</div></div>
+          <button class="btn" @click="refreshLogs">↻ {{ t('刷新') }}</button>
+        </article>
+        <article class="card log-card logs-card">
+          <div class="log-head logs-filter">
+            <label class="logs-filter-item">{{ t('日期') }}<AppSelect v-model="logsDate" :options="logsDateOptions"/></label>
+            <label class="logs-filter-item">{{ t('类型') }}<AppSelect v-model="logsSource" :options="logsSourceOptions"/></label>
+            <label class="logs-filter-item">{{ t('级别') }}<AppSelect v-model="logsLevel" :options="logLevelOptions"/></label>
+            <label class="logs-filter-item logs-keyword">{{ t('关键字') }}<input v-model="logsKeyword" :placeholder="t('搜索关键字…')"></label>
+            <span class="logs-meta">{{ logsCountText() }}<span v-if="logsLoading"> · …</span></span>
+          </div>
+          <div ref="logsBody" class="log-body">
+            <div v-if="!logsRecords.length && !logsLoading" class="logs-empty">{{ t('没有匹配的日志') }}</div>
+            <div v-for="(line, index) in logsRecords" :key="index" class="log-line" :class="logsRankClass(line.rank)">
+              <span class="ts">{{ line.time }}</span>
+              <span class="lv-chip" :class="logsRankClass(line.rank)">{{ line.level }}</span>
+              <span class="log-message"><span v-if="!logsSource" class="logs-src">[{{ line.source }}]</span>{{ line.text }}</span>
+            </div>
+          </div>
+        </article>
       </section>
       <section v-else class="view">
         <article class="card about-panel">

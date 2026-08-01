@@ -7,7 +7,7 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
-from . import routes_config, routes_deploy, routes_instances, routes_stats, routes_system, routes_tasks, ws
+from . import routes_config, routes_deploy, routes_instances, routes_logs, routes_stats, routes_system, routes_tasks, ws
 
 
 def create_spa_mount():
@@ -41,6 +41,8 @@ def mount_api(app):
         Route('/api/system/deploy', routes_deploy.deploy_schema, methods=['GET']),
         Route('/api/system/deploy', routes_deploy.deploy_patch, methods=['PATCH']),
         Route('/api/system/deploy/reset', routes_deploy.deploy_reset, methods=['POST']),
+        Route('/api/system/logs/files', routes_logs.log_files, methods=['GET']),
+        Route('/api/system/logs', routes_logs.log_query, methods=['GET']),
         Route('/api/{name:str}/start', routes_instances.start, methods=['POST']),
         Route('/api/{name:str}/stop', routes_instances.stop, methods=['POST']),
         Route('/api/{name:str}/remark', routes_instances.remark, methods=['POST']),
