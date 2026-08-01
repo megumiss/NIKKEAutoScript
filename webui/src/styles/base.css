@@ -202,7 +202,8 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .logs-src { overflow:hidden; color:var(--violet); text-overflow:ellipsis; white-space:nowrap; }
 .tl-label { display:inline-block; position:relative; margin:12px 0 4px -22px; padding-right:8px; color:var(--text-3); background:var(--card); font-size:11.5px; font-weight:600; letter-spacing:.08em; }
 .tl-label:first-child { margin-top:2px; }
-.tl-item.placeholder { color:var(--text-3); }
+.tl-item.placeholder { justify-content:center; border-style:dashed; border-color:var(--border-light); color:var(--text-3); background:transparent; box-shadow:none; font-size:13px; }
+.tl-item.placeholder::before { border-color:var(--border-light); background:var(--card); box-shadow:none; }
 .app-body { display:flex; flex:1; min-height:0; }
 .tb-btn { display:grid; width:40px; height:34px; place-items:center; border:0; border-radius:8px; color:var(--text-3); background:transparent; }
 .tb-btn:hover { color:var(--text); background:var(--card-2); }
