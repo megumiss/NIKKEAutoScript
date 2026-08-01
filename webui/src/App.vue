@@ -109,6 +109,13 @@ async function tbToggleMaximize() { const win = tauriWindow(); if (!win) return;
 async function tbHide() { await tauriWindow()?.hide() }
 async function tbClose() { await tauriWindow()?.close() }
 async function syncMaximized() { const win = tauriWindow(); if (win) isMaximized.value = await win.isMaximized() }
+// data-tauri-drag-region only fires when the exact attributed element is
+// hit, and the topbar is almost fully covered by children, so drive dragging
+// from a mousedown handler instead (the window buttons are excluded).
+function onTopbarMouseDown(event: MouseEvent) {
+  if (!isTauri || event.button !== 0 || (event.target as HTMLElement).closest('.tb-btn')) return
+  tauriWindow()?.startDragging()
+}
 const staticLabels: Record<string, Record<string, string>> = {
   '总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
@@ -687,7 +694,7 @@ onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); sta
       </div>
     </aside>
     <main class="main">
-      <header class="topbar" data-tauri-drag-region>
+      <header class="topbar" data-tauri-drag-region @mousedown="onTopbarMouseDown">
         <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
         <span v-if="isWorkspace" class="status-pill" :class="stateClass(selectedInstance?.state)">{{ stateText(selectedInstance?.state) }}</span>
         <div class="topbar-right">
