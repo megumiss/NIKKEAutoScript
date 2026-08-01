@@ -85,7 +85,8 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .modal-field input:focus,.modal-field select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
 .modal-text { margin-bottom:16px; color:var(--text-2); font-size:14px; }
 .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
-.view.tool-view { overflow:hidden; }.view.tool-view .task-layout { height:100%; align-items:stretch; }.view.tool-view .task-layout > div:first-child { display:flex; flex-direction:column; min-height:0; }.view.tool-view .anchor-nav { align-self:start; }.tool-log { flex:1; margin-top:18px; min-height:0; }
+.view.tool-view { overflow:hidden; }.view.tool-view .task-layout { height:100%; align-items:stretch; }.view.tool-view .task-layout > div:first-child { display:flex; flex-direction:column; min-height:0; }.view.tool-view .anchor-nav { align-self:start; }.tool-log { flex:1 1 0; margin-top:18px; min-height:160px; }
+.view.tool-view .cfg-groups { flex:0 1 auto; min-height:0; overflow:auto; }
 .tool-log .log-body { max-height:none; min-height:0; }
 .sidebar { transition:width .2s; }
 .side-toggle { width:22px; height:22px; margin-left:auto; border:0; border-radius:6px; color:var(--text-3); background:transparent; font-size:13px; line-height:1; }
