@@ -67,8 +67,6 @@
     }
 
     body {
-      display: flex;
-      flex-direction: column;
       background: var(--bg);
     }
 
@@ -76,8 +74,9 @@
       display: grid;
       grid-template-columns: minmax(250px, 29%) 1fr;
       grid-template-rows: minmax(0, 1fr);
-      flex: 1;
-      min-height: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 560px;
     }
 
     .identity {
@@ -277,40 +276,25 @@
     }
 
     .titlebar {
+      position: fixed;
+      z-index: 10;
+      top: 0;
+      right: 0;
+      left: 0;
       display: flex;
-      flex: none;
-      align-items: center;
-      gap: 8px;
+      justify-content: flex-end;
+      gap: 4px;
       height: 34px;
-      padding-left: 10px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      user-select: none;
-    }
-
-    .titlebar-logo {
-      width: 18px;
-      height: 18px;
-      object-fit: contain;
-    }
-
-    .titlebar-title {
-      font-size: 12.5px;
-      font-weight: 600;
-      letter-spacing: .04em;
-    }
-
-    .titlebar-buttons {
-      display: flex;
-      align-self: stretch;
-      margin-left: auto;
+      padding: 2px 6px 0;
     }
 
     .tb-btn {
       display: grid;
-      width: 44px;
+      width: 32px;
+      height: 30px;
       place-items: center;
       border: 0;
+      border-radius: 7px;
       color: var(--text-3);
       background: transparent;
       cursor: pointer;
@@ -387,12 +371,8 @@
 </head>
 <body>
   <div class="titlebar" data-tauri-drag-region>
-    <img class="titlebar-logo" src="icon.png" alt="">
-    <span class="titlebar-title">NKAS</span>
-    <div class="titlebar-buttons">
-      <button id="tb-min" class="tb-btn" title="最小化"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 10.5h10"/></svg></button>
-      <button id="tb-close" class="tb-btn tb-close" title="关闭"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
-    </div>
+    <button id="tb-min" class="tb-btn" title="最小化"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 10.5h10"/></svg></button>
+    <button id="tb-close" class="tb-btn tb-close" title="关闭"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
   </div>
   <main class="startup">
     <section class="identity">
