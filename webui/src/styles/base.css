@@ -204,6 +204,8 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .tl-label:first-child { margin-top:2px; }
 .tl-item.placeholder { justify-content:center; border-style:dashed; border-color:var(--border-light); color:var(--text-3); background:transparent; box-shadow:none; font-size:13px; }
 .tl-item.placeholder::before { border-color:var(--border-light); background:var(--card); box-shadow:none; }
+.tl-date-sep { display:flex; align-items:center; gap:10px; margin:2px 0 12px; color:var(--text-3); font-size:11px; font-weight:600; letter-spacing:.08em; }
+.tl-date-sep::before, .tl-date-sep::after { flex:1; height:1px; content:''; background:var(--border); }
 .app-body { display:flex; flex:1; min-height:0; }
 .tb-btn { display:grid; width:40px; height:34px; place-items:center; border:0; border-radius:8px; color:var(--text-3); background:transparent; }
 .tb-btn:hover { color:var(--text); background:var(--card-2); }

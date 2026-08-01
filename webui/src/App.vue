@@ -237,6 +237,8 @@ function onViewScroll(event: Event) {
 function jumpToGroup(group: any) { activeGroup.value = group.key; document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
 function t(source: string) { return systemStatus.value.language === 'zh-CN' ? source : staticLabels[source]?.[systemStatus.value.language] || source }
 function formatTime(value: string) { const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/); return m ? `${m[2]}-${m[3]} ${m[4]}` : value }
+function dayOf(value: string) { return String(value || '').slice(0, 10) }
+function formatDate(value: string) { const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[2]}-${m[3]}` : value }
 
 async function loadInstances() {
   try { instances.value = await api.get('/api/instances'); if (route.path === '/' && instances.value.length === 1) await router.replace(`/i/${instances.value[0].name}/overview`) } catch (exception: any) { error.value = exception.message }
@@ -768,7 +770,10 @@ onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); sta
             <article class="card queue-card">
               <div class="queue-group-label">{{ t('等待中') }}</div>
               <div class="timeline">
-                <div v-for="item in queue.waiting || []" :key="item.command" class="tl-item clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
+                <template v-for="(item, index) in queue.waiting || []" :key="item.command">
+                  <div v-if="index > 0 && dayOf(item.next_run) !== dayOf(queue.waiting[index - 1].next_run)" class="tl-date-sep"><span>{{ formatDate(item.next_run) }}</span></div>
+                  <div class="tl-item clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
+                </template>
               </div>
             </article>
           </div>
