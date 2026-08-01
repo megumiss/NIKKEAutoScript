@@ -199,3 +199,6 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .logs-empty { padding:28px; color:var(--text-3); text-align:center; }
 .logs-merge .log-line { grid-template-columns:86px 52px 72px minmax(0,1fr); }
 .logs-src { overflow:hidden; color:var(--violet); text-overflow:ellipsis; white-space:nowrap; }
+.tl-label { margin:12px 0 4px; color:var(--text-3); font-size:11.5px; font-weight:600; letter-spacing:.08em; }
+.tl-label:first-child { margin-top:2px; }
+.queue-empty { padding:14px 0 6px; color:var(--text-3); font-size:12.5px; }

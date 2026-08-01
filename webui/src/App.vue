@@ -119,6 +119,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '重启中…': { 'en-US': 'Restarting…', 'ja-JP': '再起動中…' }, '后端正在重启，页面将自动刷新…': { 'en-US': 'Backend restarting, the page will reload…', 'ja-JP': 'バックエンド再起動中、ページを再読み込みします…' }, '重启超时，请手动刷新页面': { 'en-US': 'Restart timed out, please reload manually', 'ja-JP': '再起動がタイムアウト、手動で再読み込みしてください' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '等待任务队列': { 'en-US': 'Waiting for task queue', 'ja-JP': 'タスクキューを待機中' },
+  '队列中': { 'en-US': 'Queued', 'ja-JP': 'キュー中' }, '等待中': { 'en-US': 'Waiting', 'ja-JP': '待機中' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
   '进行中': { 'en-US': 'Running', 'ja-JP': '実行中' },
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
@@ -225,6 +226,13 @@ function schedSub() {
   if (next) return `${t('下一任务')}${sep}${next.name_i18n}${next.next_run ? ` · ${formatTime(next.next_run)}` : ''}`
   return t('等待任务队列')
 }
+// Queue card groups, matching the old 运行中/队列中/等待中 split: pending
+// holds due tasks in scheduler order, waiting holds future tasks by run time.
+const queueGroups = computed(() => [
+  { key: 'running', label: t('运行中'), items: queue.value.running || [] },
+  { key: 'pending', label: t('队列中'), items: queue.value.pending || [] },
+  { key: 'waiting', label: t('等待中'), items: queue.value.waiting || [] },
+])
 
 async function loadInstances() {
   try { instances.value = await api.get('/api/instances'); if (route.path === '/' && instances.value.length === 1) await router.replace(`/i/${instances.value[0].name}/overview`) } catch (exception: any) { error.value = exception.message }
@@ -735,8 +743,11 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             <article class="card queue-card">
               <div class="queue-group-label">{{ t('任务队列') }}</div>
               <div class="timeline">
-                <div v-for="item in queue.running" :key="item.command" class="tl-item running clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ t('进行中') }}</span><span class="go">›</span></div>
-                <div v-for="item in [...queue.pending, ...queue.waiting]" :key="item.command" class="tl-item clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
+                <template v-for="group in queueGroups" :key="group.key">
+                  <div v-if="group.items.length" class="tl-label">{{ group.label }}</div>
+                  <div v-for="item in group.items" :key="item.command" class="tl-item clickable" :class="{ running: group.key === 'running' }" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ group.key === 'running' ? t('进行中') : group.key === 'waiting' ? formatTime(item.next_run) : '—' }}</span><span class="go">›</span></div>
+                </template>
+                <div v-if="!queueGroups.some(group => group.items.length)" class="queue-empty">{{ t('等待任务队列') }}</div>
               </div>
             </article>
           </div>
