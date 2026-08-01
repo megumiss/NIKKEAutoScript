@@ -120,7 +120,6 @@ const staticLabels: Record<string, Record<string, string>> = {
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '队列中': { 'en-US': 'Queued', 'ja-JP': 'キュー中' }, '等待中': { 'en-US': 'Waiting', 'ja-JP': '待機中' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
-  '进行中': { 'en-US': 'Running', 'ja-JP': '実行中' },
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
   '已保存': { 'en-US': 'Saved', 'ja-JP': '保存しました' },
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
@@ -727,7 +726,7 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             <article class="card queue-card">
               <div class="timeline">
                 <div class="tl-label">{{ t('运行中') }}</div>
-                <div v-for="item in queue.running || []" :key="item.command" class="tl-item running clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ t('进行中') }} · {{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
+                <div v-for="item in queue.running || []" :key="item.command" class="tl-item running clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
                 <div v-if="!queue.running?.length" class="tl-item placeholder">{{ t('无') }}</div>
                 <div class="tl-label">{{ t('队列中') }}</div>
                 <div v-for="item in queue.pending || []" :key="item.command" class="tl-item clickable" @click="openQueueItem(item)">{{ item.name_i18n }}<span class="t">{{ formatTime(item.next_run) }}</span><span class="go">›</span></div>
