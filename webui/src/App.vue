@@ -366,11 +366,19 @@ function logsCountText() {
   if (systemStatus.value.language === 'ja-JP') return logsTruncated.value ? `${logsMatched.value} 件一致、最新 ${shown} 件を表示` : `${logsMatched.value} 件`
   return logsTruncated.value ? `共匹配 ${logsMatched.value} 条，仅显示最近 ${shown} 条` : `共 ${logsMatched.value} 条`
 }
+// Default the type filter to the first instance that logged on the selected
+// date rather than the merged 全部 view; only re-pick when the current source
+// has no file for the date.  全部 stays selectable once initialized.
+let logsSourceInitialized = false
 async function loadLogFiles() {
   try {
     logFiles.value = (await api.get('/api/system/logs/files')).files || []
     if (!logsDate.value || !logFiles.value.some(file => file.date === logsDate.value)) logsDate.value = logFiles.value[0]?.date || ''
-    if (!logsSourceOptions.value.some(option => option.value === logsSource.value)) logsSource.value = ''
+    const sources = new Set(logFiles.value.filter(file => file.date === logsDate.value).map(file => file.source))
+    if (!logsSourceInitialized || (logsSource.value !== '' && !sources.has(logsSource.value))) {
+      logsSource.value = instances.value.find(item => sources.has(item.name))?.name || [...sources][0] || ''
+      logsSourceInitialized = true
+    }
   } catch (exception: any) { error.value = exception.message }
 }
 // A stale response must not overwrite a newer query: rapid keyword typing or
@@ -863,15 +871,16 @@ onBeforeUnmount(() => { stateSocket?.close(); logSocket?.close(); queueSocket?.c
             <label class="logs-filter-item">{{ t('日期') }}<AppSelect v-model="logsDate" :options="logsDateOptions"/></label>
             <label class="logs-filter-item">{{ t('类型') }}<AppSelect v-model="logsSource" :options="logsSourceOptions"/></label>
             <label class="logs-filter-item">{{ t('级别') }}<AppSelect v-model="logsLevel" :options="logLevelOptions"/></label>
-            <label class="logs-filter-item logs-keyword">{{ t('关键字') }}<input v-model="logsKeyword" :placeholder="t('搜索关键字…')"></label>
+            <label class="logs-filter-item logs-keyword">{{ t('关键字') }}<span class="logs-kw"><input v-model="logsKeyword" :placeholder="t('搜索关键字…')"><button v-if="logsKeyword" type="button" class="logs-kw-clear" @click.prevent="logsKeyword = ''">✕</button></span></label>
             <span class="logs-meta">{{ logsCountText() }}<span v-if="logsLoading"> · …</span></span>
           </div>
-          <div ref="logsBody" class="log-body">
+          <div ref="logsBody" class="log-body" :class="{ 'logs-merge': !logsSource }">
             <div v-if="!logsRecords.length && !logsLoading" class="logs-empty">{{ t('没有匹配的日志') }}</div>
             <div v-for="(line, index) in logsRecords" :key="index" class="log-line" :class="logsRankClass(line.rank)">
               <span class="ts">{{ line.time }}</span>
               <span class="lv-chip" :class="logsRankClass(line.rank)">{{ line.level }}</span>
-              <span class="log-message"><span v-if="!logsSource" class="logs-src">[{{ line.source }}]</span>{{ line.text }}</span>
+              <span v-if="!logsSource" class="logs-src">{{ line.source }}</span>
+              <span class="log-message">{{ line.text }}</span>
             </div>
           </div>
         </article>
