@@ -210,4 +210,4 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .tb-btn { display:grid; width:40px; height:34px; place-items:center; border:0; border-radius:8px; color:var(--text-3); background:transparent; }
 .tb-btn:hover { color:var(--text); background:var(--card-2); }
 .tb-btn.tb-close:hover { color:#fff; background:#e81123; }
-.tb-btn svg { width:16px; height:16px; }
+.tb-btn svg { width:20px; height:20px; }
