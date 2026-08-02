@@ -622,8 +622,8 @@ async function healthCheck() {
 onMounted(async () => { if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
   // Only a different instance needs a schema reload and socket swap; task
-  // switches within one instance reuse everything and leave the rail alone.
-  if (selectedName.value !== workspaceName) {
+  // switches and global pages retain the current instance's log scrollback.
+  if (selectedName.value && selectedName.value !== workspaceName) {
     logs.value = []
     await loadWorkspace()
   }
