@@ -96,11 +96,10 @@ def _decorate_record(record):
     traceback_marker = '\nTraceback (most recent call last):'
     if traceback_marker in text:
         text, stack = text.split(traceback_marker, 1)
-        primary, collapsed, collapsed_frames = split_traceback('Traceback (most recent call last):' + stack.rstrip())
+        primary, collapsed, _ = split_traceback('Traceback (most recent call last):' + stack.rstrip())
         record['traceback'] = primary
         if collapsed:
             record['traceback_collapsed'] = collapsed
-            record['traceback_collapsed_frames'] = collapsed_frames
 
     hr_match = HR_PATTERN.match(text)
     if hr_match:

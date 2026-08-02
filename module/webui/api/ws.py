@@ -103,12 +103,12 @@ class LogRenderer:
             if stack_index is not None:
                 message = ''.join(self._render_line(line) for line in lines[:stack_index] if line.strip())
                 stack = '\n'.join(lines[stack_index:]).strip()
-                primary, collapsed, collapsed_frames = split_traceback(stack)
+                primary, collapsed, _ = split_traceback(stack)
                 details = ''
                 if collapsed:
                     details = (
                         '<details class="log-traceback-more">'
-                        f'<summary>其余调用帧 ({collapsed_frames})</summary>'
+                        '<summary>详细信息</summary>'
                         f'<pre class="log-traceback-collapsed">{html.escape(collapsed)}</pre>'
                         '</details>'
                     )
