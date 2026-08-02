@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from './api/client'
 import { JsonSocket } from './api/ws'
 import AppSelect from './components/AppSelect.vue'
+import EventCalendar from './components/EventCalendar.vue'
 import FieldItemTable from './components/config/FieldItemTable.vue'
 import FieldPathPicker from './components/config/FieldPathPicker.vue'
 import FieldPriority from './components/config/FieldPriority.vue'
@@ -242,7 +243,7 @@ function dayOf(value: string) { return String(value || '').slice(0, 10) }
 function formatDate(value: string) { const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[2]}-${m[3]}` : value }
 
 async function loadInstances() {
-  try { instances.value = await api.get('/api/instances'); if (route.path === '/' && instances.value.length === 1) await router.replace(`/i/${instances.value[0].name}/overview`) } catch (exception: any) { error.value = exception.message }
+  try { instances.value = await api.get('/api/instances') } catch (exception: any) { error.value = exception.message }
 }
 async function loadSystem() {
   try {
@@ -283,6 +284,7 @@ async function loadWorkspace() {
   } catch (exception: any) { error.value = exception.message }
 }
 function dashboard() { router.push('/') }
+function calendarError(message: string) { error.value = message }
 function enter(name: string) { router.push(`/i/${name}/overview`) }
 function openTask(task: any, page: string) { router.push(`/i/${selectedName.value}/${page}/${task.key}`) }
 function openQueueItem(item: any) {
@@ -750,6 +752,7 @@ onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); sta
           </article>
           <button class="card add-card" @click="openCreateModal"><span class="plus">＋</span>{{ t('新建实例') }}</button>
         </div>
+        <EventCalendar :language="systemStatus.language" @error="calendarError" />
       </section>
       <section v-else-if="isWorkspace && selectedPage === 'overview'" class="view">
         <div class="ov-layout">
