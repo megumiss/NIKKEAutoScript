@@ -289,8 +289,6 @@ button.group-head:hover,
   border-radius:0 8px 8px 0;
 }
 .anchor-nav-item:hover { border-color:var(--button-border); color:var(--text); background:var(--button-bg-hover); }
-.side-toggle,
-.tb-btn,
 .rail-clear,
 .toast-close,
 .priority-move,
@@ -300,6 +298,12 @@ button.group-head:hover,
   border:1px solid var(--button-border);
   color:var(--text-3);
   background:var(--button-bg);
+}
+.side-toggle,
+.tb-btn {
+  border:0;
+  color:var(--text-3);
+  background:transparent;
 }
 .rail-clear,
 .toast-close,
@@ -314,8 +318,6 @@ button.group-head:hover,
   place-items:center;
   border-radius:6px;
 }
-.side-toggle:hover,
-.tb-btn:hover,
 .rail-clear:hover,
 .toast-close:hover,
 .priority-move:hover:not(:disabled),
@@ -323,6 +325,12 @@ button.group-head:hover,
 .dt-clear:hover,
 .logs-kw-clear:hover {
   border-color:var(--button-border-hover);
+  color:var(--accent);
+  background:var(--button-bg-hover);
+}
+.side-toggle:hover,
+.tb-btn:hover {
+  border:0;
   color:var(--accent);
   background:var(--button-bg-hover);
 }
