@@ -1,12 +1,55 @@
 """Configuration writes shared by the legacy UI and the SPA."""
 
+import json
 from typing import Any, Dict
+from urllib.parse import urlparse
+
+import yaml
 
 from module.config.account import save_account
 from module.config.deep import deep_get, deep_set
 from module.logger import logger
 from module.webui.api.models import PatchResult
 from module.webui.utils import parse_pin_value, re_fullmatch
+
+
+TEXTAREA_MODES = {'text', 'path', 'url', 'yaml', 'json', 'lines'}
+
+
+def _validate_textarea_mode(argument: Dict[str, Any], value: Any):
+    if argument.get('type') != 'textarea' or value in (None, ''):
+        return None
+
+    mode = argument.get('mode', 'text')
+    text = str(value)
+    if mode in {'text', 'path', 'lines'}:
+        return None
+    if mode == 'json':
+        try:
+            json.loads(text)
+        except json.JSONDecodeError as exc:
+            return f'Invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}'
+        return None
+    if mode == 'yaml':
+        try:
+            list(yaml.safe_load_all(text))
+        except yaml.YAMLError as exc:
+            mark = getattr(exc, 'problem_mark', None)
+            location = f' at line {mark.line + 1}, column {mark.column + 1}' if mark else ''
+            return f'Invalid YAML{location}: {getattr(exc, "problem", str(exc))}'
+        return None
+    if mode == 'url':
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            line = line.strip()
+            if not line:
+                continue
+            parsed = urlparse(line)
+            if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
+                return f'Invalid URL at line {line_number}: {line}'
+        return None
+    if mode not in TEXTAREA_MODES:
+        return f'Unsupported textarea mode: {mode}'
+    return None
 
 
 class ConfigService:
@@ -37,6 +80,10 @@ class ConfigService:
         if validate and not re_fullmatch(validate, str(value)):
             logger.warning(f'Invalid value {value!r} for key {key}, skip saving.')
             return PatchResult(False, {}, {}, True, 'The value does not match the required format.')
+        mode_error = _validate_textarea_mode(argument, value)
+        if mode_error:
+            logger.warning(f'Invalid {argument.get("mode")} value for key {key}: {mode_error}')
+            return PatchResult(False, {}, {}, True, mode_error)
 
         try:
             config = self.config_updater.read_file(config_name)

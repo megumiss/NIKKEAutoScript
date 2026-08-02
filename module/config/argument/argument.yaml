@@ -58,9 +58,11 @@ EmulatorInfo:
   name:
     value: null
     type: textarea
+    mode: text
   path:
     value: null
     type: textarea
+    mode: path
 PCClient:
   Screens: false
   ScreenNumber:
@@ -82,6 +84,7 @@ PCClientInfo:
   LauncherPath:
     value: ''
     type: textarea
+    mode: path
     path_picker:
       enabled: true
       mode: file
@@ -94,6 +97,7 @@ PCClientInfo:
   GamePath:
     value: ''
     type: textarea
+    mode: path
     path_picker:
       enabled: true
       mode: file
@@ -117,6 +121,7 @@ Optimization:
   ScriptPath:
     value: ''
     type: textarea
+    mode: path
     path_picker:
       enabled: true
       mode: file
@@ -136,6 +141,7 @@ DailyRecruit:
   ScreenshotPath:
     value: ''
     type: textarea
+    mode: path
     path_picker:
       enabled: true
       mode: directory
@@ -214,6 +220,7 @@ OpponentSelection:
   SortingWeight:
     value: '{"Power":0.3, "CommanderLevel":0.2, "SynchroLevel":0.3, "Ranking":0.2}'
     type: textarea
+    mode: json
   SelectionStrategy:
     value: 'Min'
     option: [ 'Max','Middle','Min' ]
@@ -225,12 +232,15 @@ BlaAuth:
   UserAgent:
     value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
     type: textarea
+    mode: text
   Cookie:
     value: ''
     type: textarea
+    mode: text
   XCommonParams:
     value: ''
     type: textarea
+    mode: json
 BlaDaily:
   Immediately: false
   Points:
@@ -245,6 +255,7 @@ CDK:
   Source:
     value: 'https://gamewith.jp/nikke/article/show/371014'
     type: textarea
+    mode: url
     display: disabled
 BlaExchange:
   Priority:
@@ -303,6 +314,7 @@ Event:
   ShopDelayList:
     value: 'TITLE'
     type: textarea
+    mode: lines
   Game: false
   GameTenBeam:
     value: 200
@@ -326,6 +338,7 @@ Interception:
   DropScreenshotPath:
     value: ''
     type: textarea
+    mode: path
     path_picker:
       enabled: true
       mode: directory
@@ -375,6 +388,7 @@ Overclock:
   ModifierList:
     value: "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
     type: textarea
+    mode: lines
 AutoTower:
   Enable:
     value: true
@@ -390,6 +404,7 @@ BlaCDKManual:
   CDK:
     value: ''
     type: textarea
+    mode: lines
 Highlights:
   AutoSwitch:
     value: true
@@ -409,6 +424,7 @@ Hosts:
   Hosts:
     value: "# 通用\n18.155.202.10 cloud.nikke-kr.com\n43.132.85.192 nikke-en.com\n43.132.85.192 nikke-jp.com\n43.132.85.192 nikke-kr.com\n# 国际 Global\n43.152.186.163 global-lobby.nikke-kr.com\n43.152.186.163 global-match.nikke-kr.com\n# 日本 JP\n# 43.152.186.163 jp-lobby.nikke-kr.com\n# 43.152.186.163 jp-match.nikke-kr.com\n# 韩国 KR\n# 43.152.186.163 kr-lobby.nikke-kr.com\n# 43.152.186.163 kr-match.nikke-kr.com\n# 东南亚 SEA\n# 43.152.186.163 sea-lobby.nikke-kr.com\n# 43.152.186.163 sea-match.nikke-kr.com\n# 港澳台 HK/MC/TW\n# 43.152.186.163 hmt-lobby.nikke-kr.com\n# 43.152.186.163 hmt-match.nikke-kr.com\n# 北美 NA\n# 175.97.131.54 us-match.nikke-kr.com\n# 175.97.131.54 us-lobby.nikke-kr.com"
     type: textarea
+    mode: lines
 SurfaceDaily:
   AutoPlace:
     value: true
@@ -419,10 +435,12 @@ WarehouseStats:
   ItemMapPath:
     value: './config/warehouse_items.yaml'
     type: textarea
+    mode: path
     display: hide
   CsvPath:
     value: './data/{config_name}/items.csv'
     type: textarea
+    mode: path
     display: hide
   ScrollTimes:
     value: 5
@@ -436,6 +454,7 @@ InterceptionDropStats:
   CsvPath:
     value: './data/{config_name}/stones.csv'
     type: textarea
+    mode: path
     display: hide
 InterceptionTaskCharts:
   ImportHistory:

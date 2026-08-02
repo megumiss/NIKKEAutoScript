@@ -15,7 +15,7 @@ import FieldPriority from './components/config/FieldPriority.vue'
 const FieldInterception = defineAsyncComponent(() => import('./components/config/FieldInterception.vue'))
 
 type Instance = { name: string; state: number; mod: string; current_task?: string; next_task?: string; remark?: string }
-type Field = { key: string; widget: string; title: string; help: string; value: any; display: string; options: any[]; data_endpoint?: string; path_picker?: any; special_data?: any }
+type Field = { key: string; widget: string; title: string; help: string; value: any; display: string; options: any[]; mode?: string; data_endpoint?: string; path_picker?: any; special_data?: any }
 const route = useRoute()
 const router = useRouter()
 // Canonical brand icon; Windows-native uses (notification, window, Tauri
@@ -223,6 +223,27 @@ function highlightYaml(source: string) {
       .replace(/\b(true|false|null|~)\b/g, '<span class="tok-kw">$1</span>')
     return `<span class="tok-key">${match[1]}</span>${match[2]}${value}`
   }).join('\n')
+}
+const JSON_TOKEN_PATTERN = /"(?:\\.|[^"\\])*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|\b(?:true|false|null)\b/g
+function highlightJson(source: string) {
+  let output = ''
+  let offset = 0
+  for (const match of source.matchAll(JSON_TOKEN_PATTERN)) {
+    const index = match.index ?? 0
+    const token = match[0]
+    output += escapeHtml(source.slice(offset, index))
+    let tokenClass = 'tok-num'
+    if (token.startsWith('"')) tokenClass = /^\s*:/.test(source.slice(index + token.length)) ? 'tok-key' : 'tok-str'
+    else if (/^(true|false|null)$/.test(token)) tokenClass = 'tok-kw'
+    output += `<span class="${tokenClass}">${escapeHtml(token)}</span>`
+    offset = index + token.length
+  }
+  return output + escapeHtml(source.slice(offset))
+}
+function isStructuredTextarea(field: Field) { return field.mode === 'yaml' || field.mode === 'json' }
+function highlightTextarea(field: Field) {
+  const source = String(field.value ?? '')
+  return field.mode === 'json' ? highlightJson(source) : highlightYaml(source)
 }
 function groupId(group: any) { return `group-${group.key}` }
 const activeGroup = ref('')
@@ -855,8 +876,8 @@ onBeforeUnmount(() => {
                         </div>
                       </template>
                       <div v-else-if="field.widget === 'textarea'" class="code-wrap">
-                        <pre v-if="field.mode === 'yaml'" class="code-highlight" v-html="highlightYaml(String(field.value ?? ''))"></pre>
-                        <textarea v-autosize :class="{ 'code-input': field.mode === 'yaml' }" :value="field.value" :readonly="field.display !== 'show'" spellcheck="false" @input="resizeTextarea" @change="save(field, $event)"></textarea>
+                        <pre v-if="isStructuredTextarea(field)" class="code-highlight" v-html="highlightTextarea(field)"></pre>
+                        <textarea v-autosize :class="{ 'code-input': isStructuredTextarea(field), 'textarea-mono': field.mode !== 'text' }" :value="field.value" :readonly="field.display !== 'show'" :inputmode="field.mode === 'url' ? 'url' : 'text'" spellcheck="false" @input="resizeTextarea" @change="save(field, $event)"></textarea>
                       </div>
                       <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                       <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value" :options="field.options" :disabled="field.display !== 'show'" :placeholder="t('添加')" @change="(value: string) => saveValue(field, value).catch(() => {})"/>

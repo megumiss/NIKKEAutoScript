@@ -44,6 +44,7 @@
       "ScriptPath": {
         "type": "textarea",
         "value": "",
+        "mode": "path",
         "path_picker": {
           "enabled": true,
           "mode": "file",
@@ -163,11 +164,13 @@
       },
       "name": {
         "type": "textarea",
-        "value": null
+        "value": null,
+        "mode": "text"
       },
       "path": {
         "type": "textarea",
-        "value": null
+        "value": null,
+        "mode": "path"
       }
     },
     "Storage": {
@@ -196,6 +199,7 @@
       "LauncherPath": {
         "type": "textarea",
         "value": "",
+        "mode": "path",
         "path_picker": {
           "enabled": true,
           "mode": "file",
@@ -216,6 +220,7 @@
       "GamePath": {
         "type": "textarea",
         "value": "",
+        "mode": "path",
         "path_picker": {
           "enabled": true,
           "mode": "file",
@@ -597,6 +602,7 @@
       "ScreenshotPath": {
         "type": "textarea",
         "value": "",
+        "mode": "path",
         "path_picker": {
           "enabled": true,
           "mode": "directory"
@@ -1377,7 +1383,8 @@
       },
       "ModifierList": {
         "type": "textarea",
-        "value": "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
+        "value": "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY",
+        "mode": "lines"
       }
     },
     "Storage": {
@@ -1510,6 +1517,7 @@
       "DropScreenshotPath": {
         "type": "textarea",
         "value": "",
+        "mode": "path",
         "path_picker": {
           "enabled": true,
           "mode": "directory"
@@ -1721,7 +1729,8 @@
       },
       "SortingWeight": {
         "type": "textarea",
-        "value": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}"
+        "value": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
+        "mode": "json"
       },
       "SelectionStrategy": {
         "type": "select",
@@ -1795,7 +1804,8 @@
       },
       "SortingWeight": {
         "type": "textarea",
-        "value": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}"
+        "value": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
+        "mode": "json"
       },
       "SelectionStrategy": {
         "type": "select",
@@ -2184,7 +2194,8 @@
       },
       "ShopDelayList": {
         "type": "textarea",
-        "value": "TITLE"
+        "value": "TITLE",
+        "mode": "lines"
       },
       "Game": {
         "type": "checkbox",
@@ -2318,7 +2329,8 @@
       },
       "ShopDelayList": {
         "type": "textarea",
-        "value": "TITLE"
+        "value": "TITLE",
+        "mode": "lines"
       },
       "Game": {
         "type": "checkbox",
@@ -2410,15 +2422,18 @@
     "BlaAuth": {
       "UserAgent": {
         "type": "textarea",
-        "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+        "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+        "mode": "text"
       },
       "Cookie": {
         "type": "textarea",
-        "value": ""
+        "value": "",
+        "mode": "text"
       },
       "XCommonParams": {
         "type": "textarea",
-        "value": ""
+        "value": "",
+        "mode": "json"
       }
     },
     "Storage": {
@@ -2530,6 +2545,7 @@
       "Source": {
         "type": "textarea",
         "value": "https://gamewith.jp/nikke/article/show/371014",
+        "mode": "url",
         "display": "disabled"
       }
     },
@@ -2832,11 +2848,13 @@
       "ItemMapPath": {
         "type": "textarea",
         "value": "./config/warehouse_items.yaml",
+        "mode": "path",
         "display": "hide"
       },
       "CsvPath": {
         "type": "textarea",
         "value": "./data/{config_name}/items.csv",
+        "mode": "path",
         "display": "hide"
       },
       "ScrollTimes": {
@@ -2866,6 +2884,7 @@
       "CsvPath": {
         "type": "textarea",
         "value": "./data/{config_name}/stones.csv",
+        "mode": "path",
         "display": "hide"
       }
     },
@@ -2952,7 +2971,8 @@
     "BlaCDKManual": {
       "CDK": {
         "type": "textarea",
-        "value": ""
+        "value": "",
+        "mode": "lines"
       }
     },
     "Storage": {
@@ -2996,7 +3016,8 @@
       },
       "Hosts": {
         "type": "textarea",
-        "value": "# 通用\n18.155.202.10 cloud.nikke-kr.com\n43.132.85.192 nikke-en.com\n43.132.85.192 nikke-jp.com\n43.132.85.192 nikke-kr.com\n# 国际 Global\n43.152.186.163 global-lobby.nikke-kr.com\n43.152.186.163 global-match.nikke-kr.com\n# 日本 JP\n# 43.152.186.163 jp-lobby.nikke-kr.com\n# 43.152.186.163 jp-match.nikke-kr.com\n# 韩国 KR\n# 43.152.186.163 kr-lobby.nikke-kr.com\n# 43.152.186.163 kr-match.nikke-kr.com\n# 东南亚 SEA\n# 43.152.186.163 sea-lobby.nikke-kr.com\n# 43.152.186.163 sea-match.nikke-kr.com\n# 港澳台 HK/MC/TW\n# 43.152.186.163 hmt-lobby.nikke-kr.com\n# 43.152.186.163 hmt-match.nikke-kr.com\n# 北美 NA\n# 175.97.131.54 us-match.nikke-kr.com\n# 175.97.131.54 us-lobby.nikke-kr.com"
+        "value": "# 通用\n18.155.202.10 cloud.nikke-kr.com\n43.132.85.192 nikke-en.com\n43.132.85.192 nikke-jp.com\n43.132.85.192 nikke-kr.com\n# 国际 Global\n43.152.186.163 global-lobby.nikke-kr.com\n43.152.186.163 global-match.nikke-kr.com\n# 日本 JP\n# 43.152.186.163 jp-lobby.nikke-kr.com\n# 43.152.186.163 jp-match.nikke-kr.com\n# 韩国 KR\n# 43.152.186.163 kr-lobby.nikke-kr.com\n# 43.152.186.163 kr-match.nikke-kr.com\n# 东南亚 SEA\n# 43.152.186.163 sea-lobby.nikke-kr.com\n# 43.152.186.163 sea-match.nikke-kr.com\n# 港澳台 HK/MC/TW\n# 43.152.186.163 hmt-lobby.nikke-kr.com\n# 43.152.186.163 hmt-match.nikke-kr.com\n# 北美 NA\n# 175.97.131.54 us-match.nikke-kr.com\n# 175.97.131.54 us-lobby.nikke-kr.com",
+        "mode": "lines"
       }
     },
     "Storage": {
