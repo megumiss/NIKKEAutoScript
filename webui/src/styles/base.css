@@ -289,15 +289,19 @@ button.group-head:hover,
   border-radius:0 8px 8px 0;
 }
 .anchor-nav-item:hover { border-color:var(--button-border); color:var(--text); background:var(--button-bg-hover); }
-.rail-clear,
 .toast-close,
 .priority-move,
-.priority-remove,
-.dt-clear,
-.logs-kw-clear {
+.priority-remove {
   border:1px solid var(--button-border);
   color:var(--text-3);
   background:var(--button-bg);
+}
+.rail-clear,
+.dt-clear,
+.logs-kw-clear {
+  border:0;
+  color:var(--text-3);
+  background:transparent;
 }
 .side-toggle,
 .tb-btn {
@@ -318,13 +322,17 @@ button.group-head:hover,
   place-items:center;
   border-radius:6px;
 }
-.rail-clear:hover,
 .toast-close:hover,
 .priority-move:hover:not(:disabled),
-.priority-remove:hover,
+.priority-remove:hover {
+  border-color:var(--button-border-hover);
+  color:var(--accent);
+  background:var(--button-bg-hover);
+}
+.rail-clear:hover,
 .dt-clear:hover,
 .logs-kw-clear:hover {
-  border-color:var(--button-border-hover);
+  border:0;
   color:var(--accent);
   background:var(--button-bg-hover);
 }
@@ -335,12 +343,12 @@ button.group-head:hover,
   background:var(--button-bg-hover);
 }
 .tb-btn.tb-close:hover,
-.priority-remove:hover,
-.dt-clear:hover {
+.priority-remove:hover {
   border-color:rgba(239,111,111,.5);
   color:var(--red);
   background:var(--red-soft);
 }
+.dt-clear:hover { border:0; color:var(--red); background:var(--red-soft); }
 .toast-action {
   border-color:var(--button-border-hover);
   background:var(--button-bg);

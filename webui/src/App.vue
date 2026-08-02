@@ -313,9 +313,7 @@ function save(field: Field, event: Event) {
     else input.value = field.value ?? ''
   })
 }
-// Clearing saves an empty string so the backend restores the default; the ×
-// shows whenever the picker has a displayable time to clear.
-function hasCustomTime(field: Field) { return /^\d{4}-\d{2}-\d{2}T/.test(String(field.value ?? '')) }
+// Clearing saves an empty string so the backend restores the default.
 function clearField(field: Field) { saveValue(field, '').catch(() => {}) }
 // datetime-local only renders the "T" separator; stored values may use a
 // space ("1989-12-27 00:00:00"), which would otherwise render as an empty
@@ -826,7 +824,7 @@ onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); sta
                       <template v-else-if="field.widget === 'datetime'">
                         <div class="dt-field">
                           <input type="datetime-local" :value="datetimeValue(field.value)" :readonly="field.display !== 'show'" @change="save(field, $event)">
-                          <button v-if="field.display === 'show' && hasCustomTime(field)" type="button" class="dt-clear" :title="t('清空')" @click="clearField(field)">✕</button>
+                          <button v-if="field.display === 'show'" type="button" class="dt-clear" :title="t('清空')" @click="clearField(field)">✕</button>
                         </div>
                       </template>
                       <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
