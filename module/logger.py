@@ -4,15 +4,16 @@ import logging
 import os
 import shutil
 import sys
+import traceback as traceback_module
 from typing import Callable, List, Optional
 
-from rich.console import Console, ConsoleOptions, ConsoleRenderable, NewLine
-from rich.highlighter import NullHighlighter, RegexHighlighter
+from rich.console import Console, ConsoleOptions, ConsoleRenderable, Group, NewLine
+from rich.highlighter import RegexHighlighter
 from rich.logging import RichHandler
 from rich.rule import Rule
 from rich.style import Style
+from rich.text import Text
 from rich.theme import Theme
-from rich.traceback import Traceback
 
 
 def empty_function(*args, **kwargs):
@@ -38,11 +39,6 @@ class HTMLConsole(Console):
         )
 
 
-class RichFileHandler(RichHandler):
-    # Rename
-    pass
-
-
 class RichRenderableHandler(RichHandler):
     """
     Pass renderable into a function
@@ -54,23 +50,9 @@ class RichRenderableHandler(RichHandler):
 
     def emit(self, record: logging.LogRecord) -> None:
         message = self.format(record)
-        traceback = None
+        exception_text = ''
         if self.rich_tracebacks and record.exc_info and record.exc_info != (None, None, None):
-            exc_type, exc_value, exc_traceback = record.exc_info
-            assert exc_type is not None
-            assert exc_value is not None
-            traceback = Traceback.from_exception(
-                exc_type,
-                exc_value,
-                exc_traceback,
-                width=self.tracebacks_width,
-                extra_lines=self.tracebacks_extra_lines,
-                theme=self.tracebacks_theme,
-                word_wrap=self.tracebacks_word_wrap,
-                show_locals=self.tracebacks_show_locals,
-                locals_max_length=self.locals_max_length,
-                locals_max_string=self.locals_max_string,
-            )
+            exception_text = _format_exception(record.exc_info)
             message = record.getMessage()
             if self.formatter:
                 record.message = record.getMessage()
@@ -80,7 +62,9 @@ class RichRenderableHandler(RichHandler):
                 message = formatter.formatMessage(record)
 
         message_renderable = self.render_message(record, message)
-        log_renderable = self.render(record=record, traceback=traceback, message_renderable=message_renderable)
+        log_renderable = self.render(record=record, traceback=None, message_renderable=message_renderable)
+        if exception_text:
+            log_renderable = Group(log_renderable, Text(exception_text))
 
         """
             self._func为 进程共享渲染队列 State.manager.Queue()的put(item)方法
@@ -124,12 +108,63 @@ WEB_THEME = Theme(
     }
 )
 
+
+def _compact_exception_locals(exception, max_locals=4, max_value_length=120):
+    for frame in exception.stack:
+        if not frame.locals:
+            continue
+        compact_locals = {}
+        visible_locals = [(name, value) for name, value in frame.locals.items() if not name.startswith('__')]
+        for index, (name, value) in enumerate(visible_locals):
+            if index >= max_locals:
+                compact_locals['...'] = f'{len(visible_locals) - max_locals} more local(s)'
+                break
+            value = ' '.join(value.split())
+            if len(value) > max_value_length:
+                value = value[: max_value_length - 3] + '...'
+            compact_locals[name] = value
+        frame.locals = compact_locals
+
+    if exception.__cause__ is not None:
+        _compact_exception_locals(exception.__cause__, max_locals, max_value_length)
+    if exception.__context__ is not None:
+        _compact_exception_locals(exception.__context__, max_locals, max_value_length)
+    for nested in getattr(exception, 'exceptions', None) or ():
+        _compact_exception_locals(nested, max_locals, max_value_length)
+
+
+def _format_exception(exc_info) -> str:
+    try:
+        exception = traceback_module.TracebackException(*exc_info, capture_locals=True)
+        _compact_exception_locals(exception)
+    except Exception:
+        # Exception formatting must still succeed when a local object's repr() is broken.
+        exception = traceback_module.TracebackException(*exc_info, capture_locals=False)
+    return ''.join(exception.format(chain=True)).rstrip()
+
+
+class CompactFileFormatter(logging.Formatter):
+    """Plain, unpadded file output that remains easy for the SPA to parse."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        cached_exception = record.exc_text
+        if record.exc_info:
+            record.exc_text = None
+        try:
+            return super().format(record)
+        finally:
+            record.exc_text = cached_exception
+
+    def formatException(self, exc_info) -> str:
+        return _format_exception(exc_info)
+
+
 logger = logging.getLogger('nkas')
 logger.setLevel(logging.DEBUG)
 # TODO 临时添加
 logger.propagate = False
 
-file_formatter = logging.Formatter(
+file_formatter = CompactFileFormatter(
     fmt='%(asctime)s.%(msecs)03d | %(levelname)s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S'
 )
 console_formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d │ %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -243,50 +278,27 @@ def _set_file_logger(name=pyw_name):
     name = _normalize_logger_name(name)
     cleanup_old_logs(name=name)
     log_file = f'./log/{datetime.date.today()}_{name}.txt'
-    try:
-        file = logging.FileHandler(log_file, encoding='utf-8')
-    except FileNotFoundError:
-        os.mkdir('./log')
-        file = logging.FileHandler(log_file, encoding='utf-8')
-    file.setFormatter(file_formatter)
-
-    logger.handlers = [h for h in logger.handlers if not isinstance(h, (logging.FileHandler, RichFileHandler))]
-    logger.addHandler(file)
-    logger.log_file = log_file
+    _install_file_handler(log_file)
 
 
 def set_file_logger(name=pyw_name, retention_days: Optional[int] = None):
     name = _normalize_logger_name(name)
     cleanup_old_logs(name=name, retention_days=retention_days)
     log_file = f'./log/{datetime.date.today()}_{name}.txt'
-    try:
-        file = open(log_file, mode='a', encoding='utf-8')
-    except FileNotFoundError:
-        os.mkdir('./log')
-        file = open(log_file, mode='a', encoding='utf-8')
+    _install_file_handler(log_file)
 
-    file_console = Console(
-        file=file,
-        no_color=True,
-        highlight=False,
-        width=119,
-    )
 
-    hdlr = RichFileHandler(
-        console=file_console,
-        show_path=False,
-        show_time=False,
-        show_level=False,
-        rich_tracebacks=True,
-        tracebacks_show_locals=True,
-        tracebacks_extra_lines=5,
-        highlighter=NullHighlighter(),
-    )
-    hdlr.setFormatter(file_formatter)
-    hdlr.setLevel(logging.DEBUG)   # ✅ 文件日志级别 DEBUG
+def _install_file_handler(log_file: str):
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    for handler in list(logger.handlers):
+        if isinstance(handler, logging.FileHandler):
+            logger.removeHandler(handler)
+            handler.close()
 
-    logger.handlers = [h for h in logger.handlers if not isinstance(h, (logging.FileHandler, RichFileHandler))]
-    logger.addHandler(hdlr)
+    handler = logging.FileHandler(log_file, encoding='utf-8')
+    handler.setFormatter(file_formatter)
+    handler.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
     logger.log_file = log_file
 
 
@@ -308,8 +320,8 @@ def set_func_logger(func):
         show_time=False,
         show_level=True,
         rich_tracebacks=True,
-        tracebacks_show_locals=True,
-        tracebacks_extra_lines=5,
+        tracebacks_show_locals=False,
+        tracebacks_extra_lines=1,
         highlighter=Highlighter(),
     )
     hdlr.setFormatter(web_formatter)
@@ -366,30 +378,27 @@ def rule(title='', *, characters='─', style='rule.line', end='\n'):
 
 
 def hr(title, level=3):
-    title = str(title).upper()
-    if level == 1:
-        logger.rule(title, characters='═')
-        logger.info(title)
-    if level == 2:
-        logger.rule(title, characters='─')
-        logger.info(title)
-    if level == 3:
-        logger.info(f'[bold]<<< {title} >>>[/bold]', extra={'markup': True})
-    if level == 0:
-        logger.rule(characters='═')
-        logger.rule(title, characters=' ')
-        logger.rule(characters='═')
+    title = ' '.join(str(title).split())
+    try:
+        level = int(level)
+    except (TypeError, ValueError):
+        level = 3
+    marker = {0: '===', 1: '==', 2: '--', 3: '>'}.get(level, '>')
+    if marker == '>':
+        logger.info(f'{marker} {title}')
+    else:
+        logger.info(f'{marker} {title} {marker}')
 
 
 def attr(name, text):
-    logger.info('[%s] %s' % (str(name), str(text)))
+    logger.info('[%s] %s' % (str(name).strip(), str(text)))
 
 
 def attr_align(name, text, front='', align=22):
-    name = str(name).rjust(align)
+    name = str(name)
     if front:
         name = front + name[len(front) :]
-    logger.info('%s: %s' % (name, str(text)))
+    attr(name, text)
 
 
 def show():

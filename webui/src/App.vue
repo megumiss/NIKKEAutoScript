@@ -66,9 +66,9 @@ function pushLogs(payload: string | string[]) {
   }
   logTick.value++
 }
-// Level rows carry the lv-* class rendered by the backend log template;
-// section dividers and plain lines (tracebacks, exit notices) have no level
-// and stay visible at every filter setting.
+// Level rows carry the lv-* class rendered by the backend log template.
+// Section dividers have no level and stay visible at every filter setting;
+// traceback blocks share their error summary's rank and are filtered with it.
 const visibleLogs = computed(() => {
   const threshold = LOG_LEVEL_RANK[logLevel.value] ?? 0
   return logs.value.filter(line => line.rank < 0 || line.rank >= threshold).slice(-LOG_CLASS_LIMIT)
@@ -927,11 +927,13 @@ onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); sta
           </div>
           <div ref="logsBody" class="log-body" :class="{ 'logs-merge': !logsSource }">
             <div v-if="!logsRecords.length && !logsLoading" class="logs-empty">{{ t('没有匹配的日志') }}</div>
-            <div v-for="(line, index) in logsRecords" :key="index" class="log-line" :class="logsRankClass(line.rank)">
+            <div v-for="(line, index) in logsRecords" :key="index" class="log-line" :class="[logsRankClass(line.rank), line.kind, line.section_level ? `section-${line.section_level}` : '']">
               <span class="ts">{{ line.time }}</span>
               <span class="lv-chip" :class="logsRankClass(line.rank)">{{ line.level }}</span>
               <span v-if="!logsSource" class="logs-src">{{ line.source }}</span>
-              <span class="log-message">{{ line.text }}</span>
+              <span v-if="line.kind === 'attr'" class="log-message"><span class="log-attr-key">{{ line.attr_name }}:</span><span class="log-attr-value">{{ line.attr_value }}</span></span>
+              <span v-else class="log-message">{{ line.text }}</span>
+              <pre v-if="line.traceback" class="log-traceback">{{ line.traceback }}</pre>
             </div>
           </div>
         </article>

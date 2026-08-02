@@ -73,6 +73,18 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .log-line.hidden { display:none; }
 .log-line.plain { display:block; }
 .log-line.plain .log-message { white-space:pre-wrap; }
+.log-line.section { display:block; margin:3px -6px 1px; padding:3px 6px 3px 9px; border-left:2px solid var(--border-light); border-radius:0; background:transparent; color:var(--text-3); text-align:left; }
+.log-line.section::before,.log-line.section::after { display:none; }
+.log-line.section .logs-src { display:none; }
+.log-line.section-major { margin-top:6px; }
+.log-line.section .log-message,.log-line.section-major .log-message,.log-line.section-minor .log-message { color:var(--text-3); font-size:11px; font-weight:600; letter-spacing:0; }
+.log-line.attr .log-message { display:flex; min-width:0; gap:5px; flex-wrap:wrap; }
+.log-attr-key { flex:none; color:var(--text-3); white-space:nowrap; }
+.log-attr-value { min-width:0; color:var(--text-2); overflow-wrap:anywhere; }
+.log-traceback { max-height:280px; margin:5px 0 8px; padding:10px 12px; overflow:auto; border:1px solid rgba(239,111,111,.25); border-left:3px solid var(--red); border-radius:6px; color:var(--text-2); background:var(--log-bg); font:11px/1.55 'Cascadia Code','JetBrains Mono',Consolas,monospace; white-space:pre; }
+.log-line > .log-traceback { grid-column:3/-1; }
+.logs-merge .log-line > .log-traceback { grid-column:4/-1; }
+.log-frag > .log-traceback { margin-left:154px; }
 .field.field-wide { flex-direction:column; align-items:stretch; }
 .field.field-wide .field-label { width:auto; }
 .field.field-wide .field-control { display:block; }

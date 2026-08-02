@@ -1,11 +1,11 @@
 """Log file viewer over ./log/<date>_<source>.txt.
 
 Files are written by module/logger with the fixed file_formatter
-(`YYYY-MM-DD HH:MM:SS.mmm | LEVEL | message`); multi-line output such as
-tracebacks appears as bare continuation lines and is folded into the record
-opened by the last levelled line.  Queries filter by level threshold (same
-debug/info/warn/err ranks as the live log) and a case-insensitive keyword
-matched against the whole record, then return the newest `limit` records.
+(`YYYY-MM-DD HH:MM:SS.mmm | LEVEL | message`); compact Python tracebacks are
+bare continuation lines folded into the record opened by the last levelled
+line. Queries filter by level threshold (same debug/info/warn/err ranks as
+the live log) and a case-insensitive keyword matched against the whole record,
+then return the newest `limit` records.
 File names are only taken from the directory listing matched by
 FILE_PATTERN, so query params can never escape the log directory.
 """
@@ -23,12 +23,14 @@ LINE_PATTERN = re.compile(
     r'^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(\.\d{3}) \| '
     r'(DEBUG|INFO|WARNING|ERROR|CRITICAL) \| (.*)$'
 )
+HR_PATTERN = re.compile(r'^(?P<marker>===|==|--|>)\s+(?P<title>.*?)(?:\s+(?P=marker))?$')
+ATTR_PATTERN = re.compile(r'^\[(?P<name>[^\]]+)]\s*(?P<value>.*)$')
 LEVEL_RANK = {'DEBUG': 0, 'INFO': 1, 'WARNING': 2, 'ERROR': 3, 'CRITICAL': 3}
 LEVEL_THRESHOLDS = {'debug': 0, 'info': 1, 'warn': 2, 'err': 3}
 DEFAULT_LIMIT = 500
 MAX_LIMIT = 2000
-# Tracebacks with locals can run to hundreds of lines; bound one record so a
-# single entry cannot dominate the response.
+# Tracebacks can still be long; bound one record so a single entry cannot
+# dominate the response.
 MAX_RECORD_CHARS = 4000
 
 
@@ -55,9 +57,11 @@ def _scan_file(path, source, threshold, keyword, limit):
         nonlocal matched
         if record is None:
             return
+        _decorate_record(record)
         if record['rank'] < threshold:
             return
-        if keyword and keyword not in record['text'].lower():
+        searchable = record['text'] + '\n' + record.get('traceback', '')
+        if keyword and keyword not in searchable.lower():
             return
         matched += 1
         kept.append(record)
@@ -81,6 +85,29 @@ def _scan_file(path, source, threshold, keyword, limit):
                 record['text'] += f'\n{line}'
         flush()
     return kept, matched
+
+
+def _decorate_record(record):
+    text = record['text'].rstrip()
+    traceback_marker = '\nTraceback (most recent call last):'
+    if traceback_marker in text:
+        text, stack = text.split(traceback_marker, 1)
+        record['traceback'] = 'Traceback (most recent call last):' + stack.rstrip()
+
+    hr_match = HR_PATTERN.match(text)
+    if hr_match:
+        marker = hr_match.group('marker')
+        record['kind'] = 'section'
+        record['section_level'] = 'major' if marker in ('===', '==') else 'minor'
+        record['text'] = hr_match.group('title')
+        return
+
+    attr_match = ATTR_PATTERN.match(text)
+    if attr_match:
+        record['kind'] = 'attr'
+        record['attr_name'] = attr_match.group('name')
+        record['attr_value'] = attr_match.group('value')
+    record['text'] = text
 
 
 async def log_files(_: Request):
