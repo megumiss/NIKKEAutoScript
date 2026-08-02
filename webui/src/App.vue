@@ -165,6 +165,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '日期': { 'en-US': 'Date', 'ja-JP': '日付' }, '关键字': { 'en-US': 'Keyword', 'ja-JP': 'キーワード' },
   '搜索关键字…': { 'en-US': 'Search keyword…', 'ja-JP': 'キーワード検索…' }, '全部': { 'en-US': 'All', 'ja-JP': 'すべて' },
   '刷新': { 'en-US': 'Refresh', 'ja-JP': '再読み込み' }, '没有匹配的日志': { 'en-US': 'No matching logs', 'ja-JP': '一致するログがありません' },
+  '其余调用帧': { 'en-US': 'Other stack frames', 'ja-JP': 'その他の呼び出しフレーム' },
   '查看 log 目录下的日志文件，支持按类型、级别、日期和关键字筛选。': { 'en-US': 'Browse the log files in the log directory by type, level, date and keyword.', 'ja-JP': 'log ディレクトリのログファイルを種類・レベル・日付・キーワードで絞り込みます。' },
 }
 
@@ -927,13 +928,19 @@ onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); sta
           </div>
           <div ref="logsBody" class="log-body" :class="{ 'logs-merge': !logsSource }">
             <div v-if="!logsRecords.length && !logsLoading" class="logs-empty">{{ t('没有匹配的日志') }}</div>
-            <div v-for="(line, index) in logsRecords" :key="index" class="log-line" :class="[logsRankClass(line.rank), line.kind, line.section_level ? `section-${line.section_level}` : '']">
+            <div v-for="(line, index) in logsRecords" :key="index" class="log-line" :class="[logsRankClass(line.rank), line.kind, line.section_level !== undefined ? `section-level-${line.section_level}` : '']">
               <span class="ts">{{ line.time }}</span>
               <span class="lv-chip" :class="logsRankClass(line.rank)">{{ line.level }}</span>
               <span v-if="!logsSource" class="logs-src">{{ line.source }}</span>
-              <span v-if="line.kind === 'attr'" class="log-message"><span class="log-attr-key">{{ line.attr_name }}:</span><span class="log-attr-value">{{ line.attr_value }}</span></span>
+              <span v-if="line.kind === 'attr'" class="log-message"><span class="log-attr-key">{{ line.attr_name }}:</span><span class="log-attr-value" :class="`attr-value-${line.attr_value_kind || 'text'}`">{{ line.attr_value }}</span></span>
               <span v-else class="log-message">{{ line.text }}</span>
-              <pre v-if="line.traceback" class="log-traceback">{{ line.traceback }}</pre>
+              <div v-if="line.traceback" class="log-traceback">
+                <details v-if="line.traceback_collapsed" class="log-traceback-more">
+                  <summary>{{ t('其余调用帧') }} ({{ line.traceback_collapsed_frames }})</summary>
+                  <pre class="log-traceback-collapsed">{{ line.traceback_collapsed }}</pre>
+                </details>
+                <pre class="log-traceback-primary">{{ line.traceback }}</pre>
+              </div>
             </div>
           </div>
         </article>

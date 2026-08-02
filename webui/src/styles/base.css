@@ -76,12 +76,25 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .log-line.section { display:block; margin:3px -6px 1px; padding:3px 6px 3px 9px; border-left:2px solid var(--border-light); border-radius:0; background:transparent; color:var(--text-3); text-align:left; }
 .log-line.section::before,.log-line.section::after { display:none; }
 .log-line.section .logs-src { display:none; }
-.log-line.section-major { margin-top:6px; }
-.log-line.section .log-message,.log-line.section-major .log-message,.log-line.section-minor .log-message { color:var(--text-3); font-size:11px; font-weight:600; letter-spacing:0; }
+.log-line.section .log-message { letter-spacing:0; }
+.log-line.section-level-0 { margin-top:9px; padding-top:5px; padding-bottom:5px; border-left-width:3px; border-left-color:var(--accent); background:var(--accent-soft); }
+.log-line.section-level-0 .log-message { color:var(--accent); font-size:12px; font-weight:700; }
+.log-line.section-level-1 { margin-top:6px; border-left-color:var(--violet); }
+.log-line.section-level-1 .log-message { color:var(--violet); font-size:11.5px; font-weight:700; }
+.log-line.section-level-2 { border-left-color:var(--green); }
+.log-line.section-level-2 .log-message { color:var(--green); font-size:11px; font-weight:600; }
+.log-line.section-level-3 .log-message { color:var(--text-3); font-size:11px; font-weight:500; }
 .log-line.attr .log-message { display:flex; min-width:0; gap:5px; flex-wrap:wrap; }
-.log-attr-key { flex:none; color:var(--text-3); white-space:nowrap; }
+.log-attr-key { flex:none; color:var(--violet); font-weight:600; white-space:nowrap; }
 .log-attr-value { min-width:0; color:var(--text-2); overflow-wrap:anywhere; }
-.log-traceback { max-height:280px; margin:5px 0 8px; padding:10px 12px; overflow:auto; border:1px solid rgba(239,111,111,.25); border-left:3px solid var(--red); border-radius:6px; color:var(--text-2); background:var(--log-bg); font:11px/1.55 'Cascadia Code','JetBrains Mono',Consolas,monospace; white-space:pre; }
+.log-attr-value.attr-value-positive { color:var(--green); }.log-attr-value.attr-value-negative { color:var(--red); }.log-attr-value.attr-value-number { color:var(--yellow); }.log-attr-value.attr-value-path { color:var(--accent); }.log-attr-value.attr-value-empty { color:var(--text-3); font-style:italic; }
+.log-traceback { max-height:360px; margin:5px 0 8px; padding:9px 12px; overflow:auto; border:1px solid rgba(239,111,111,.25); border-left:3px solid var(--red); border-radius:6px; color:var(--text-2); background:var(--log-bg); font:11px/1.55 'Cascadia Code','JetBrains Mono',Consolas,monospace; }
+.log-traceback pre { margin:0; color:inherit; background:transparent; font:inherit; white-space:pre; }
+.log-traceback-more { margin-bottom:7px; padding-bottom:7px; border-bottom:1px solid var(--border); }
+.log-traceback-more summary { width:max-content; padding:1px 4px; border-radius:4px; color:var(--accent); cursor:pointer; font-weight:600; list-style-position:inside; user-select:none; }
+.log-traceback-more summary:hover { background:var(--accent-soft); }
+.log-traceback-more[open] summary { margin-bottom:7px; }
+.log-traceback-collapsed { max-height:220px; overflow:auto; }
 .log-line > .log-traceback { grid-column:3/-1; }
 .logs-merge .log-line > .log-traceback { grid-column:4/-1; }
 .log-frag > .log-traceback { margin-left:154px; }

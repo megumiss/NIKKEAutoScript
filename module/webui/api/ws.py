@@ -10,6 +10,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from module.config.utils import nkas_instance
 from module.logger import HTMLConsole
 from module.webui.api.routes_tasks import queue_data
+from module.webui.api.log_utils import attr_value_kind, split_traceback
 from module.webui.process_manager import ProcessManager
 
 LOG_LINE_PATTERN = re.compile(
@@ -64,21 +65,23 @@ class LogRenderer:
             hr_match = HR_PATTERN.match(message)
             if hr_match:
                 marker = hr_match.group('marker')
-                section_class = 'section-major' if marker in ('===', '==') else 'section-minor'
+                section_level = {'===': 0, '==': 1, '--': 2, '>': 3}[marker]
                 return (
-                    f'<div class="log-line section {section_class}">'
+                    f'<div class="log-line section section-level-{section_level}">'
                     f'<span class="log-message">{html.escape(hr_match.group("title"))}</span>'
                     '</div>'
                 )
             attr_match = ATTR_PATTERN.match(message)
             if attr_match:
+                value = attr_match.group('value')
+                value_kind = attr_value_kind(value)
                 return (
                     f'<div class="log-line {LEVEL_CHIP_CLASS[level]} attr">'
                     f'<span class="ts">{match.group("timestamp")}</span>'
                     f'<span class="lv-chip {LEVEL_CHIP_CLASS[level]}">{level}</span>'
                     '<span class="log-message">'
                     f'<span class="log-attr-key">{html.escape(attr_match.group("name"))}:</span>'
-                    f'<span class="log-attr-value">{html.escape(attr_match.group("value"))}</span>'
+                    f'<span class="log-attr-value attr-value-{value_kind}">{html.escape(value)}</span>'
                     '</span></div>'
                 )
             return (
@@ -100,7 +103,22 @@ class LogRenderer:
             if stack_index is not None:
                 message = ''.join(self._render_line(line) for line in lines[:stack_index] if line.strip())
                 stack = '\n'.join(lines[stack_index:]).strip()
-                return message + f'<pre class="log-traceback">{html.escape(stack)}</pre>'
+                primary, collapsed, collapsed_frames = split_traceback(stack)
+                details = ''
+                if collapsed:
+                    details = (
+                        '<details class="log-traceback-more">'
+                        f'<summary>其余调用帧 ({collapsed_frames})</summary>'
+                        f'<pre class="log-traceback-collapsed">{html.escape(collapsed)}</pre>'
+                        '</details>'
+                    )
+                return (
+                    message
+                    + '<div class="log-traceback">'
+                    + details
+                    + f'<pre class="log-traceback-primary">{html.escape(primary)}</pre>'
+                    + '</div>'
+                )
 
         fragments = []
         for line in lines:

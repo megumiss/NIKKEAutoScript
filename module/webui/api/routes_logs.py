@@ -17,6 +17,8 @@ from collections import deque
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from module.webui.api.log_utils import attr_value_kind, split_traceback
+
 LOG_DIR = './log'
 FILE_PATTERN = re.compile(r'^(\d{4}-\d{2}-\d{2})_(.+)\.txt$')
 LINE_PATTERN = re.compile(
@@ -29,9 +31,9 @@ LEVEL_RANK = {'DEBUG': 0, 'INFO': 1, 'WARNING': 2, 'ERROR': 3, 'CRITICAL': 3}
 LEVEL_THRESHOLDS = {'debug': 0, 'info': 1, 'warn': 2, 'err': 3}
 DEFAULT_LIMIT = 500
 MAX_LIMIT = 2000
-# Tracebacks can still be long; bound one record so a single entry cannot
-# dominate the response.
-MAX_RECORD_CHARS = 4000
+# Compact locals keep normal records small; this higher bound preserves deep
+# tracebacks while still preventing one malformed record from growing forever.
+MAX_RECORD_CHARS = 64_000
 
 
 def _list_files():
@@ -60,7 +62,9 @@ def _scan_file(path, source, threshold, keyword, limit):
         _decorate_record(record)
         if record['rank'] < threshold:
             return
-        searchable = record['text'] + '\n' + record.get('traceback', '')
+        searchable = '\n'.join(
+            (record['text'], record.get('traceback', ''), record.get('traceback_collapsed', ''))
+        )
         if keyword and keyword not in searchable.lower():
             return
         matched += 1
@@ -92,13 +96,17 @@ def _decorate_record(record):
     traceback_marker = '\nTraceback (most recent call last):'
     if traceback_marker in text:
         text, stack = text.split(traceback_marker, 1)
-        record['traceback'] = 'Traceback (most recent call last):' + stack.rstrip()
+        primary, collapsed, collapsed_frames = split_traceback('Traceback (most recent call last):' + stack.rstrip())
+        record['traceback'] = primary
+        if collapsed:
+            record['traceback_collapsed'] = collapsed
+            record['traceback_collapsed_frames'] = collapsed_frames
 
     hr_match = HR_PATTERN.match(text)
     if hr_match:
         marker = hr_match.group('marker')
         record['kind'] = 'section'
-        record['section_level'] = 'major' if marker in ('===', '==') else 'minor'
+        record['section_level'] = {'===': 0, '==': 1, '--': 2, '>': 3}[marker]
         record['text'] = hr_match.group('title')
         return
 
@@ -107,6 +115,7 @@ def _decorate_record(record):
         record['kind'] = 'attr'
         record['attr_name'] = attr_match.group('name')
         record['attr_value'] = attr_match.group('value')
+        record['attr_value_kind'] = attr_value_kind(record['attr_value'])
     record['text'] = text
 
 
