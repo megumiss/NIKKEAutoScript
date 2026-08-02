@@ -313,13 +313,45 @@ function save(field: Field, event: Event) {
     else input.value = field.value ?? ''
   })
 }
-// Clearing saves an empty string so the backend restores the default.
-function clearField(field: Field) { saveValue(field, '').catch(() => {}) }
 // datetime-local only renders the "T" separator; stored values may use a
 // space ("1989-12-27 00:00:00"), which would otherwise render as an empty
 // picker.  Normalize for display only; seconds are dropped as the control
 // does not edit them.
 function datetimeValue(value: any) { return String(value ?? '').replace(' ', 'T').slice(0, 16) }
+const DATETIME_SAVE_DELAY = 1000
+const datetimeSaveTimers = new Map<string, number>()
+function cancelDatetimeSave(field: Field) {
+  const timer = datetimeSaveTimers.get(field.key)
+  if (timer !== undefined) window.clearTimeout(timer)
+  datetimeSaveTimers.delete(field.key)
+}
+function commitDatetime(field: Field, input: HTMLInputElement) {
+  cancelDatetimeSave(field)
+  // Native datetime inputs report an incomplete value as empty. Do not write
+  // the stored value back while the user is moving between date/time parts.
+  if (!input.value || input.value === datetimeValue(field.value)) return
+  saveValue(field, input.value).catch(() => { input.value = datetimeValue(field.value) })
+}
+function scheduleDatetimeSave(field: Field, event: Event) {
+  const input = event.target as HTMLInputElement
+  cancelDatetimeSave(field)
+  if (!input.value) return
+  datetimeSaveTimers.set(field.key, window.setTimeout(() => commitDatetime(field, input), DATETIME_SAVE_DELAY))
+}
+function flushDatetimeSave(field: Field, event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.value) {
+    cancelDatetimeSave(field)
+    input.value = datetimeValue(field.value)
+    return
+  }
+  commitDatetime(field, input)
+}
+// Clearing saves immediately so the backend restores the default.
+function clearField(field: Field) {
+  cancelDatetimeSave(field)
+  saveValue(field, '').catch(() => {})
+}
 async function pickedPath(field: Field, path: string) {
   try { await saveValue(field, path) } catch { return }
   if (field.path_picker?.after_select !== 'autofill_game_path_from_launcher') return
@@ -635,7 +667,16 @@ watch(() => route.fullPath, async () => {
   if (isLogs.value) await refreshLogs()
 })
 watch(logTick, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
-onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); stateSocket?.close(); logSocket?.close(); queueSocket?.close(); window.clearInterval(healthTimer); window.clearTimeout(updatePollTimer) })
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', syncMaximized)
+  stateSocket?.close()
+  logSocket?.close()
+  queueSocket?.close()
+  window.clearInterval(healthTimer)
+  window.clearTimeout(updatePollTimer)
+  datetimeSaveTimers.forEach(timer => window.clearTimeout(timer))
+  datetimeSaveTimers.clear()
+})
 </script>
 
 <template>
@@ -823,8 +864,8 @@ onBeforeUnmount(() => { window.removeEventListener('resize', syncMaximized); sta
                       <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>
                       <template v-else-if="field.widget === 'datetime'">
                         <div class="dt-field">
-                          <input type="datetime-local" :value="datetimeValue(field.value)" :readonly="field.display !== 'show'" @change="save(field, $event)">
-                          <button v-if="field.display === 'show'" type="button" class="dt-clear" :title="t('清空')" @click="clearField(field)">✕</button>
+                          <input type="datetime-local" :value="datetimeValue(field.value)" :readonly="field.display !== 'show'" @input="scheduleDatetimeSave(field, $event)" @blur="flushDatetimeSave(field, $event)">
+                          <button v-if="field.display === 'show'" type="button" class="dt-clear" :title="t('清空')" @mousedown.prevent @click="clearField(field)">✕</button>
                         </div>
                       </template>
                       <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
