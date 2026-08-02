@@ -109,34 +109,9 @@ WEB_THEME = Theme(
 )
 
 
-def _compact_exception_locals(exception, max_locals=4, max_value_length=120):
-    for frame in exception.stack:
-        if not frame.locals:
-            continue
-        compact_locals = {}
-        visible_locals = [(name, value) for name, value in frame.locals.items() if not name.startswith('__')]
-        for index, (name, value) in enumerate(visible_locals):
-            if index >= max_locals:
-                compact_locals['...'] = f'{len(visible_locals) - max_locals} more local(s)'
-                break
-            value = ' '.join(value.split())
-            if len(value) > max_value_length:
-                value = value[: max_value_length - 3] + '...'
-            compact_locals[name] = value
-        frame.locals = compact_locals
-
-    if exception.__cause__ is not None:
-        _compact_exception_locals(exception.__cause__, max_locals, max_value_length)
-    if exception.__context__ is not None:
-        _compact_exception_locals(exception.__context__, max_locals, max_value_length)
-    for nested in getattr(exception, 'exceptions', None) or ():
-        _compact_exception_locals(nested, max_locals, max_value_length)
-
-
 def _format_exception(exc_info) -> str:
     try:
         exception = traceback_module.TracebackException(*exc_info, capture_locals=True)
-        _compact_exception_locals(exception)
     except Exception:
         # Exception formatting must still succeed when a local object's repr() is broken.
         exception = traceback_module.TracebackException(*exc_info, capture_locals=False)

@@ -31,9 +31,6 @@ LEVEL_RANK = {'DEBUG': 0, 'INFO': 1, 'WARNING': 2, 'ERROR': 3, 'CRITICAL': 3}
 LEVEL_THRESHOLDS = {'debug': 0, 'info': 1, 'warn': 2, 'err': 3}
 DEFAULT_LIMIT = 500
 MAX_LIMIT = 2000
-# Compact locals keep normal records small; this higher bound preserves deep
-# tracebacks while still preventing one malformed record from growing forever.
-MAX_RECORD_CHARS = 64_000
 
 
 def _list_files():
@@ -85,7 +82,7 @@ def _scan_file(path, source, threshold, keyword, limit):
                     'source': source,
                     'text': match.group(5).rstrip(),
                 }
-            elif record is not None and len(record['text']) < MAX_RECORD_CHARS:
+            elif record is not None:
                 record['text'] += f'\n{line}'
         flush()
     return kept, matched
