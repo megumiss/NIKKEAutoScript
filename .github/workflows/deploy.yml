@@ -1,0 +1,135 @@
+name: Deploy Desktop Update to VPS
+
+# ==============================================================================
+# Desktop update distribution workflow (self-hosted VPS channel)
+#
+# Background:
+#   The desktop shell (nkas.exe) no longer relies on GitHub Release alone for
+#   self-updates. On every published release, this workflow pushes
+#   nkas-win-x64.exe plus a VPS-flavored nkas-desktop.json (whose `url` points
+#   at the VPS) to the nginx static site on the 1Panel server
+#   (dl.megumiss.top/nkas/).
+#
+# Client behavior (webapp/src-tauri/src/desktop_update.rs):
+#   The desktop shell fetches exactly the manifest configured in
+#   Deploy.Update.DesktopUpdateManifest of config/deploy.yaml
+#   (default: https://dl.megumiss.top/nkas/nkas-desktop.json).
+#   There is no built-in fallback; whatever is configured is what gets used.
+#
+# Triggers:
+#   - release published: build.yml creates a draft release; publishing it
+#     triggers this workflow automatically
+#   - workflow_dispatch: redeploy an existing tag manually from the Actions tab
+#
+# Required secrets (Settings -> Secrets and variables -> Actions):
+#   VPS_HOST         Server address (the IP dl.megumiss.top resolves to)
+#   VPS_USERNAME     SSH user (e.g. root)
+#   VPS_SSH_KEY      SSH private key paired with ~/.ssh/authorized_keys on the VPS
+#   VPS_PORT         SSH port (optional, defaults to 22)
+#   VPS_DEPLOY_PATH  Deploy directory on the VPS (optional, defaults to
+#                    /www/wwwroot/dl.megumiss.top/nkas, i.e. the `nkas` folder
+#                    inside the 1Panel static site root)
+# ==============================================================================
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to deploy (e.g. v1.0.0)'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-desktop:
+    runs-on: ubuntu-latest
+    steps:
+      # ==========================
+      # 1. Resolve the tag to deploy
+      # ==========================
+      # Release events carry the tag on the event payload; manual runs take it
+      # from the workflow input.
+      - name: Resolve Tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="${{ inputs.tag_name }}"
+          fi
+          echo "TAG_NAME=$TAG" >> "$GITHUB_ENV"
+          echo "Deploying tag: $TAG"
+
+      # ==========================
+      # 2. Checkout the release tag
+      # ==========================
+      # Only needed to read the desktop version from webapp/package.json.
+      # The desktop version is independent from the project release tag
+      # (see the version check in build.yml).
+      - name: Checkout Release Tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: ${{ env.TAG_NAME }}
+
+      # ==========================
+      # 3. Download the desktop executable from GitHub Release
+      # ==========================
+      # The binary is built once by build.yml and uploaded to the release; this
+      # workflow only re-distributes it, so the VPS channel and the GitHub
+      # channel always serve the exact same file.
+      - name: Download Desktop Executable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$TAG_NAME" \
+            --repo ${{ github.repository }} \
+            --pattern "nkas-win-x64.exe" \
+            --dir dist --clobber
+          ls -lh dist/nkas-win-x64.exe
+
+      # ==========================
+      # 4. Generate the VPS manifest (nkas-desktop.json)
+      # ==========================
+      # Identical to the manifest build.yml uploads to the release, except the
+      # `url` field: the release manifest points at github.com while this one
+      # points at dl.megumiss.top.
+      - name: Generate VPS Manifest
+        run: |
+          DESKTOP_VERSION=$(jq -r .version webapp/package.json)
+          SHA256=$(sha256sum dist/nkas-win-x64.exe | cut -d' ' -f1)
+          SIZE=$(stat -c%s dist/nkas-win-x64.exe)
+          jq -n \
+            --arg project_version "$TAG_NAME" \
+            --arg desktop_version "$DESKTOP_VERSION" \
+            --arg url "https://dl.megumiss.top/nkas/nkas-win-x64.exe" \
+            --arg sha256 "$SHA256" \
+            --argjson size "$SIZE" \
+            '{
+              schema: 1,
+              project_version: $project_version,
+              desktop_version: $desktop_version,
+              target: "x86_64-pc-windows-msvc",
+              url: $url,
+              sha256: $sha256,
+              size: $size
+            }' > dist/nkas-desktop.json
+          cat dist/nkas-desktop.json
+
+      # ==========================
+      # 5. Upload to the VPS (1Panel nginx static site)
+      # ==========================
+      # Only two files are overwritten: nkas-win-x64.exe and nkas-desktop.json.
+      # Clients verify both size and SHA-256 before replacing themselves, so an
+      # interrupted transfer can never brick an installation.
+      - name: Upload to VPS
+        uses: appleboy/scp-action@dbfeced2b0e6fb277845e6fd2d57cfc1743ecb1a  # v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "dist/nkas-win-x64.exe,dist/nkas-desktop.json"
+          target: ${{ secrets.VPS_DEPLOY_PATH || '/www/wwwroot/dl.megumiss.top/nkas' }}
+          strip_components: 1

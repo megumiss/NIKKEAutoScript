@@ -156,6 +156,8 @@ jobs:
         $file = Get-Item $assetExe
         if ($file.Length -gt 30MB) { throw "Desktop executable exceeds 30 MiB: $($file.Length) bytes" }
         $sha256 = (Get-FileHash $assetExe -Algorithm SHA256).Hash.ToLowerInvariant()
+        # Note: this manifest's url points at GitHub Release; the VPS manifest
+        # (dl.megumiss.top) is generated and pushed by deploy.yml on release publish.
         $manifest = [ordered]@{
           schema = 1
           project_version = $env:TAG_NAME

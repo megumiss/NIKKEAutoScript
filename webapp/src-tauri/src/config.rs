@@ -17,7 +17,9 @@ fn default_auto_update() -> bool {
     true
 }
 fn default_desktop_update_manifest() -> String {
-    "https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json".into()
+    // Desktop updates are fetched from the official VPS by default.
+    // Override Deploy.Update.DesktopUpdateManifest in config/deploy.yaml to use another source.
+    "https://dl.megumiss.top/nkas/nkas-desktop.json".into()
 }
 
 #[derive(Debug, Deserialize)]

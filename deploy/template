@@ -80,7 +80,9 @@ Deploy:
     # [Default] 03:50
     AutoRestartTime: 03:50
     # Desktop shell update manifest. The desktop version is independent from the project release tag.
-    DesktopUpdateManifest: https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json
+    # [Default] Use 'https://dl.megumiss.top/nkas/nkas-desktop.json', hosted on the official VPS (faster for CN users)
+    # [Other] Use 'https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json' to update from GitHub Release
+    DesktopUpdateManifest: https://dl.megumiss.top/nkas/nkas-desktop.json
 
   Webui:
     # --host. Host to listen
