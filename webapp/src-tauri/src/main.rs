@@ -28,7 +28,6 @@ struct BackendState(Mutex<Option<Backend>>);
 #[derive(Clone, Copy)]
 enum StartupMessageKind {
     Log,
-    Warning,
     Stage,
     Error,
     Ready,
@@ -52,10 +51,6 @@ struct StartupReporter(Arc<Mutex<StartupReporterState>>);
 impl StartupReporter {
     fn log(&self, message: impl Into<String>) {
         self.send(StartupMessageKind::Log, message.into());
-    }
-
-    fn warning(&self, message: impl Into<String>) {
-        self.send(StartupMessageKind::Warning, message.into());
     }
 
     fn stage(&self, message: impl Into<String>) {
@@ -105,7 +100,6 @@ impl StartupReporter {
 fn startup_script(message: &StartupMessage) -> String {
     let method = match message.kind {
         StartupMessageKind::Log => "log",
-        StartupMessageKind::Warning => "warning",
         StartupMessageKind::Stage => "stage",
         StartupMessageKind::Error => "error",
         StartupMessageKind::Ready => "ready",
@@ -238,26 +232,10 @@ fn start_application_inner(
     reporter: &StartupReporter,
     cleanup_helper: Option<std::path::PathBuf>,
 ) -> Result<()> {
-    reporter.stage("Checking desktop shell updates");
     reporter.log(format!(
         "NKAS desktop version {}",
         env!("CARGO_PKG_VERSION")
     ));
-    match desktop_update::check_and_launch(config) {
-        desktop_update::UpdateOutcome::Restarting => {
-            reporter.complete("Desktop update installed. Restarting NKAS...");
-            thread::sleep(std::time::Duration::from_millis(500));
-            app.exit(0);
-            return Ok(());
-        }
-        desktop_update::UpdateOutcome::Warning(message) => {
-            reporter.warning(&message);
-            show_native_message("NKAS desktop update", &message, false);
-        }
-        desktop_update::UpdateOutcome::NoUpdate => {
-            reporter.log("Desktop shell is ready.");
-        }
-    }
 
     reporter.stage("Preparing the NKAS backend");
     let backend_reporter = reporter.clone();
@@ -275,6 +253,11 @@ fn start_application_inner(
     window.navigate(page)?;
     window.show()?;
     window.set_focus()?;
+    // Check for desktop shell updates once in the background after startup;
+    // applying an update is done manually from the WebUI.
+    if let Some(manager) = app.try_state::<Arc<desktop_update::DesktopUpdateManager>>() {
+        manager.start_check();
+    }
     Ok(())
 }
 
@@ -406,6 +389,11 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             show_window(app)
         }))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![
+            desktop_update::desktop_update_status,
+            desktop_update::desktop_update_check,
+            desktop_update::desktop_update_apply,
+        ])
         .on_window_event(|window, event| {
             if window.label() == "main"
                 && matches!(event, tauri::WindowEvent::CloseRequested { .. })
@@ -415,6 +403,9 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
         })
         .setup(move |app| {
             app.manage(BackendState(Mutex::new(None)));
+            app.manage(Arc::new(desktop_update::DesktopUpdateManager::new(
+                app_config.clone(),
+            )));
             install_tray(app.handle())?;
             install_shortcuts(app.handle(), &app_config)?;
             let reporter = StartupReporter::default();

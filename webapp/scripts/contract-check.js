@@ -6,16 +6,19 @@ const path = require('path')
 const root = path.resolve(__dirname, '../..')
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8')
 
-const packageVersion = JSON.parse(read('webapp/package.json')).version
 const cargoVersion = read('webapp/src-tauri/Cargo.toml').match(/^version = "([^"]+)"/m)?.[1]
-const tauriVersion = JSON.parse(read('webapp/src-tauri/tauri.conf.json')).version
 
 assert.ok(read('webui/vite.config.ts').includes("target: 'chrome94'"))
 assert.ok(read('webui/src/styles/base.css').includes('.legacy-electron .topbar'))
 assert.ok(read('module/webui/app.py').includes("RedirectResponse('/app/'"))
 
-assert.equal(cargoVersion, packageVersion, 'Cargo.toml and package.json desktop versions differ')
-assert.equal(tauriVersion, packageVersion, 'tauri.conf.json and package.json desktop versions differ')
+assert.ok(cargoVersion, 'unable to read the desktop version from Cargo.toml')
+assert.ok(
+  /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(cargoVersion),
+  `Cargo.toml desktop version is not valid semver: ${cargoVersion}`,
+)
+assert.ok(!('version' in JSON.parse(read('webapp/src-tauri/tauri.conf.json'))), 'tauri.conf.json still declares a top-level version')
+assert.ok(!('version' in JSON.parse(read('webapp/package.json'))), 'package.json still declares a version')
 assert.ok(!read('deploy/pip.py').includes('nkas_source'), 'legacy root launcher copy remains')
 assert.ok(!fs.existsSync(path.join(root, 'deploy/launcher/nkas.bat')), 'legacy desktop launcher remains')
 for (const relative of [

@@ -1,7 +1,7 @@
 use crate::config::DesktopConfig;
 use anyhow::{Context, Result};
 use semver::Version;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::env;
 use std::ffi::OsString;
@@ -9,6 +9,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::Duration;
 
@@ -46,10 +47,168 @@ pub struct ReplaceArgs {
     root: PathBuf,
 }
 
-pub enum UpdateOutcome {
-    NoUpdate,
-    Restarting,
-    Warning(String),
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DesktopUpdateStatus {
+    pub current_version: String,
+    pub remote_version: Option<String>,
+    pub checked: bool,
+    pub checking: bool,
+    pub update_available: bool,
+    pub applying: bool,
+    pub error: Option<String>,
+}
+
+pub struct DesktopUpdateManager {
+    config: DesktopConfig,
+    status: Mutex<DesktopUpdateStatus>,
+}
+
+impl DesktopUpdateManager {
+    pub fn new(config: DesktopConfig) -> Self {
+        Self {
+            config,
+            status: Mutex::new(DesktopUpdateStatus {
+                current_version: CURRENT_VERSION.to_string(),
+                remote_version: None,
+                checked: false,
+                checking: false,
+                update_available: false,
+                applying: false,
+                error: None,
+            }),
+        }
+    }
+
+    pub fn status(&self) -> DesktopUpdateStatus {
+        self.lock_status().clone()
+    }
+
+    // Runs a single manifest check on a background thread; repeated calls
+    // while a check is running are ignored.
+    pub fn start_check(self: &Arc<Self>) {
+        if self.config.desktop_update_manifest.trim().is_empty() {
+            return;
+        }
+        {
+            let mut status = self.lock_status();
+            if status.checking {
+                return;
+            }
+            status.checking = true;
+        }
+        let manager = Arc::clone(self);
+        thread::spawn(move || manager.check());
+    }
+
+    fn check(&self) {
+        let result = fetch_manifest(&self.config.desktop_update_manifest)
+            .and_then(|manifest| validate_manifest(&manifest));
+        let current = Version::parse(CURRENT_VERSION);
+        let mut status = self.lock_status();
+        status.checking = false;
+        status.checked = true;
+        match (result, current) {
+            (Ok(remote), Ok(current)) => {
+                status.remote_version = Some(remote.to_string());
+                status.update_available = is_newer_version(&remote, &current);
+                status.error = None;
+            }
+            (Ok(remote), Err(error)) => {
+                status.remote_version = Some(remote.to_string());
+                status.update_available = false;
+                status.error = Some(error.to_string());
+            }
+            (Err(error), _) => {
+                status.update_available = false;
+                status.error = Some(format!("{error:#}"));
+            }
+        }
+    }
+
+    // Downloads the update and launches the replace helper. The caller is
+    // expected to exit the process after this returns Ok.
+    pub fn apply(self: &Arc<Self>) -> Result<()> {
+        let executable = env::current_exe().context("Unable to locate nkas.exe")?;
+        if !is_root_executable(&self.config.root, &executable) {
+            anyhow::bail!("Desktop updates are only supported in the installed build");
+        }
+        {
+            let mut status = self.lock_status();
+            if status.applying {
+                anyhow::bail!("A desktop update is already being applied");
+            }
+            if !status.update_available {
+                anyhow::bail!("No desktop update is available");
+            }
+            status.applying = true;
+            status.error = None;
+        }
+        // Fetch the manifest again instead of trusting the cached check.
+        let result = fetch_manifest(&self.config.desktop_update_manifest)
+            .and_then(|manifest| {
+                let remote = validate_manifest(&manifest)?;
+                let current =
+                    Version::parse(CURRENT_VERSION).context("Invalid current desktop version")?;
+                if !is_newer_version(&remote, &current) {
+                    anyhow::bail!("The desktop shell is already up to date");
+                }
+                stage_and_launch(&self.config, &manifest)
+            });
+        let mut status = self.lock_status();
+        match result {
+            Ok(()) => {
+                status.error = None;
+                Ok(())
+            }
+            Err(error) => {
+                status.applying = false;
+                status.error = Some(format!("{error:#}"));
+                Err(error)
+            }
+        }
+    }
+
+    fn lock_status(&self) -> MutexGuard<'_, DesktopUpdateStatus> {
+        self.status
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+    }
+}
+
+#[tauri::command]
+pub fn desktop_update_status(
+    manager: tauri::State<Arc<DesktopUpdateManager>>,
+) -> DesktopUpdateStatus {
+    manager.status()
+}
+
+#[tauri::command]
+pub fn desktop_update_check(
+    manager: tauri::State<Arc<DesktopUpdateManager>>,
+) -> DesktopUpdateStatus {
+    manager.start_check();
+    manager.status()
+}
+
+#[tauri::command]
+pub async fn desktop_update_apply(
+    app: tauri::AppHandle,
+    manager: tauri::State<'_, Arc<DesktopUpdateManager>>,
+) -> Result<(), String> {
+    let manager = manager.inner().clone();
+    // The download may take up to 120 seconds, so it must not run on the
+    // main thread; awaiting the blocking task keeps this command non-blocking.
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        manager.apply().map_err(|error| format!("{error:#}"))?;
+        // Give the staged helper a moment to start waiting on this process;
+        // it replaces nkas.exe and restarts it after the exit.
+        thread::sleep(Duration::from_millis(500));
+        app.exit(0);
+        Ok(())
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 pub fn parse_internal_mode() -> Result<InternalMode> {
@@ -87,40 +246,6 @@ fn argument(args: &[OsString], name: &str) -> Result<String> {
         .and_then(|value| value.to_str())
         .map(str::to_string)
         .with_context(|| format!("Missing value for {name}"))
-}
-
-pub fn check_and_launch(config: &DesktopConfig) -> UpdateOutcome {
-    if !config.auto_update || config.desktop_update_manifest.trim().is_empty() {
-        return UpdateOutcome::NoUpdate;
-    }
-    let Ok(current_exe) = env::current_exe() else {
-        return UpdateOutcome::NoUpdate;
-    };
-    if !is_root_executable(&config.root, &current_exe) {
-        return UpdateOutcome::NoUpdate;
-    }
-    let manifest = match fetch_manifest(&config.desktop_update_manifest) {
-        Ok(manifest) => manifest,
-        Err(_) => return UpdateOutcome::NoUpdate,
-    };
-    let remote = match validate_manifest(&manifest) {
-        Ok(version) => version,
-        Err(_) => return UpdateOutcome::NoUpdate,
-    };
-    let current = match Version::parse(CURRENT_VERSION) {
-        Ok(version) => version,
-        Err(error) => return UpdateOutcome::Warning(error.to_string()),
-    };
-    if !is_newer_version(&remote, &current) {
-        return UpdateOutcome::NoUpdate;
-    }
-    match stage_and_launch(config, &manifest) {
-        Ok(()) => UpdateOutcome::Restarting,
-        Err(error) => UpdateOutcome::Warning(format!(
-            "Desktop update {} failed: {error:#}",
-            manifest.desktop_version
-        )),
-    }
 }
 
 fn is_newer_version(remote: &Version, current: &Version) -> bool {
@@ -518,6 +643,64 @@ mod tests {
             root,
             Path::new("C:/NKAS/webapp/src-tauri/target/release/nkas.exe")
         ));
+    }
+
+    fn test_config(manifest: &str) -> DesktopConfig {
+        DesktopConfig {
+            root: PathBuf::from("C:/NKAS"),
+            python: PathBuf::from("python.exe"),
+            port: 12271,
+            desktop_update_manifest: manifest.into(),
+            dpi_scaling: true,
+            hardware_acceleration: false,
+            theme: "dark".into(),
+            shortcuts: Default::default(),
+        }
+    }
+
+    #[test]
+    fn update_status_starts_unchecked() {
+        let manager = DesktopUpdateManager::new(test_config("https://example.com/nkas.json"));
+        let status = manager.status();
+        assert_eq!(status.current_version, CURRENT_VERSION);
+        assert!(!status.checked);
+        assert!(!status.checking);
+        assert!(!status.update_available);
+        assert!(!status.applying);
+        assert!(status.remote_version.is_none());
+        assert!(status.error.is_none());
+    }
+
+    #[test]
+    fn update_status_serializes_with_camel_case_fields() {
+        let status = DesktopUpdateManager::new(test_config("https://example.com/nkas.json")).status();
+        let json = serde_json::to_value(&status).unwrap();
+        assert_eq!(json["currentVersion"], CURRENT_VERSION);
+        assert!(json.get("checked").is_some());
+        assert!(json.get("checking").is_some());
+        assert!(json.get("updateAvailable").is_some());
+        assert!(json.get("applying").is_some());
+        assert!(json.get("remoteVersion").is_some());
+        assert!(json.get("current_version").is_none());
+    }
+
+    #[test]
+    fn empty_manifest_skips_the_background_check() {
+        let manager = Arc::new(DesktopUpdateManager::new(test_config("  ")));
+        manager.start_check();
+        let status = manager.status();
+        assert!(!status.checked);
+        assert!(!status.checking);
+    }
+
+    #[test]
+    fn apply_only_runs_from_root_executable() {
+        let manager = Arc::new(DesktopUpdateManager::new(test_config("https://example.com/nkas.json")));
+        // The test binary is never the root nkas.exe, so the guard must
+        // reject the apply before any network access happens.
+        let error = manager.apply().unwrap_err();
+        assert!(format!("{error:#}").contains("installed build"));
+        assert!(!manager.status().applying);
     }
 
     #[test]

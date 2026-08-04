@@ -1,6 +1,5 @@
 {
   "name": "nkas-desktop",
-  "version": "1.0.1",
   "private": true,
   "scripts": {
     "dev": "node scripts/toolchain-runner.js tauri dev",

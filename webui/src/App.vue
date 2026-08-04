@@ -131,10 +131,15 @@ const staticLabels: Record<string, Record<string, string>> = {
   '无': { 'en-US': 'None', 'ja-JP': 'なし' }, '进入 →': { 'en-US': 'Open →', 'ja-JP': '開く →' }, '＋ 新建实例': { 'en-US': '＋ New instance', 'ja-JP': '＋ 新しいインスタンス' },
   '导入配置': { 'en-US': 'Import configuration', 'ja-JP': '設定をインポート' }, '名称': { 'en-US': 'Name', 'ja-JP': '名前' }, '状态': { 'en-US': 'Status', 'ja-JP': '状態' }, '操作': { 'en-US': 'Actions', 'ja-JP': '操作' },
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
-  '应用更新': { 'en-US': 'Application update', 'ja-JP': 'アプリ更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
+  '源码更新': { 'en-US': 'Source update', 'ja-JP': 'ソースコード更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' }, '更新超时，请稍后手动刷新页面': { 'en-US': 'Update timed out, please reload later', 'ja-JP': '更新がタイムアウト、後で再読み込みしてください' },
   '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' }, '发现新版本，可在更新页更新': { 'en-US': 'New version found — see the update page', 'ja-JP': '新しいバージョンを検出、更新ページへ' }, '前往更新': { 'en-US': 'Go to update', 'ja-JP': '更新ページへ' },
+  '启动器更新': { 'en-US': 'Launcher update', 'ja-JP': 'ランチャー更新' }, '此功能仅在桌面程序中可用': { 'en-US': 'Only available in the desktop app', 'ja-JP': 'デスクトップ版でのみ利用できます' },
+  '更新桌面程序（启动器）本身，自动化脚本请使用上方源码更新': { 'en-US': 'Updates the desktop program (launcher) itself; for the automation script use the source update above.', 'ja-JP': 'デスクトッププログラム（ランチャー）本体を更新します。自動化スクリプトは上のソース更新をご利用ください。' },
+  '启动器有新版本，可在更新页更新': { 'en-US': 'New launcher version available — see the update page', 'ja-JP': 'ランチャーの新しいバージョンがあります。更新ページへ' },
+  '更新启动器将中断正在运行的任务并自动重启程序，确定继续？': { 'en-US': 'Updating the launcher interrupts running tasks and restarts the program. Continue?', 'ja-JP': 'ランチャーの更新は実行中のタスクを中断し、プログラムを自動再起動します。続行しますか？' },
+  '更新完成，正在重启…': { 'en-US': 'Update finished, restarting…', 'ja-JP': '更新完了、再起動中…' },
   '重启中…': { 'en-US': 'Restarting…', 'ja-JP': '再起動中…' }, '后端正在重启，页面将自动刷新…': { 'en-US': 'Backend restarting, the page will reload…', 'ja-JP': 'バックエンド再起動中、ページを再読み込みします…' }, '重启超时，请手动刷新页面': { 'en-US': 'Restart timed out, please reload manually', 'ja-JP': '再起動がタイムアウト、手動で再読み込みしてください' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '队列中': { 'en-US': 'Queued', 'ja-JP': 'キュー中' }, '等待中': { 'en-US': 'Waiting', 'ja-JP': '待機中' },
@@ -528,6 +533,60 @@ async function refreshUpdateInfo() {
   try { updateInfo.value = await api.get('/api/system/update') } catch { return }
   if (isSettings.value && updateInfo.value.state === 'checking') updatePollTimer = window.setTimeout(refreshUpdateInfo, 3000)
 }
+// Desktop launcher (nkas.exe) self-update: the Tauri shell exposes the
+// updater through its own commands instead of the backend API, so this flow
+// mirrors the source update card but drives window.__TAURI__.core.invoke.
+// In plain browsers the bridge is absent and the card stays disabled.
+const desktopInvoke = (): any => (window as any).__TAURI__?.core?.invoke
+const isDesktopShell = Boolean(desktopInvoke())
+const desktopUpdate = ref<any>(null)
+const desktopChecking = ref(false)
+const desktopApplying = ref(false)
+let desktopUpdatePollTimer = 0
+async function refreshDesktopUpdate() {
+  window.clearTimeout(desktopUpdatePollTimer)
+  if (!isDesktopShell) return
+  try { desktopUpdate.value = await desktopInvoke()('desktop_update_status') } catch { return }
+  if (isSettings.value && desktopUpdate.value?.checking) desktopUpdatePollTimer = window.setTimeout(refreshDesktopUpdate, 3000)
+}
+async function checkDesktopUpdate() {
+  if (desktopChecking.value || !isDesktopShell) return
+  desktopChecking.value = true
+  try {
+    desktopUpdate.value = await desktopInvoke()('desktop_update_check')
+    // Poll until the background check finishes so the button can switch to
+    // the update action when a new version shows up.
+    for (let round = 0; round < 30; round++) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      desktopUpdate.value = await desktopInvoke()('desktop_update_status')
+      if (!desktopUpdate.value?.checking) break
+    }
+  } catch (exception: any) { error.value = String(exception?.message || exception) } finally { desktopChecking.value = false }
+}
+async function applyDesktopUpdate() {
+  if (desktopApplying.value || !isDesktopShell) return
+  if (!confirm(t('更新启动器将中断正在运行的任务并自动重启程序，确定继续？'))) return
+  desktopApplying.value = true
+  // A successful apply exits and relaunches the shell, so the invoke may
+  // never resolve; a rejection carries the failure reason as a string.
+  desktopInvoke()('desktop_update_apply').catch((exception: any) => { error.value = String(exception?.message || exception); desktopApplying.value = false })
+  notify(t('更新完成，正在重启…'), 'ok', 0)
+  // The shell restarts itself; poll until the backend answers again (the new
+  // process serves it) and reload for a fresh state.
+  for (let round = 0; round < 60; round++) {
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    try { await api.get('/api/system/status'); window.location.reload(); return } catch { }
+  }
+  error.value = t('重启超时，请手动刷新页面')
+  desktopApplying.value = false
+}
+// The launcher checks for its own updates once in the background at startup;
+// surface the same kind of toast as the source updater when it found one.
+async function notifyDesktopUpdate() {
+  if (!isDesktopShell) return
+  try { desktopUpdate.value = await desktopInvoke()('desktop_update_status') } catch { return }
+  if (desktopUpdate.value?.updateAvailable) notify(t('启动器有新版本，可在更新页更新'), 'ok', 0, { label: t('前往更新'), run: () => router.push('/settings') })
+}
 async function checkUpdate() {
   if (updateChecking.value) return
   updateChecking.value = true
@@ -672,7 +731,7 @@ async function healthCheck() {
     backendDown.value = true
   }
 }
-onMounted(async () => { if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
+onMounted(async () => { if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
   // Only a different instance needs a schema reload and socket swap; task
   // switches and global pages retain the current instance's log scrollback.
@@ -682,8 +741,8 @@ watch(() => route.fullPath, async () => {
   }
   activeGroup.value = taskSchema.value?.groups?.[0]?.key || ''
   startSockets()
-  if (isSettings.value) await refreshUpdateInfo()
-  else window.clearTimeout(updatePollTimer)
+  if (isSettings.value) { await refreshUpdateInfo(); await refreshDesktopUpdate() }
+  else { window.clearTimeout(updatePollTimer); window.clearTimeout(desktopUpdatePollTimer) }
   if (isDeploy.value) await loadDeploy()
   if (isLogs.value) await refreshLogs()
 })
@@ -695,6 +754,7 @@ onBeforeUnmount(() => {
   queueSocket?.close()
   window.clearInterval(healthTimer)
   window.clearTimeout(updatePollTimer)
+  window.clearTimeout(desktopUpdatePollTimer)
   datetimeSaveTimers.forEach(timer => window.clearTimeout(timer))
   datetimeSaveTimers.clear()
 })
@@ -937,7 +997,7 @@ onBeforeUnmount(() => {
       <section v-else-if="isSettings" class="view">
         <article class="card task-hero">
           <div class="task-icon">🚀</div>
-          <div style="flex:1"><h2>{{ t('应用更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span></div></div>
+          <div style="flex:1"><h2>{{ t('源码更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span></div></div>
           <button v-if="Number(updateInfo.state) === 1" class="btn success" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('立即更新') }}</button>
           <button v-else-if="updateInfo.state === 'failed'" class="btn danger" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('重试更新') }}</button>
           <button v-else class="btn primary" :disabled="updating || updateChecking || updateInfo.state === 'checking'" @click="checkUpdate">{{ updating ? t('更新中…') : (updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新')) }}</button>
@@ -948,6 +1008,15 @@ onBeforeUnmount(() => {
           <div class="group-body history-body">
             <div v-for="commit in updateInfo.history || []" :key="commit[0]" class="history-row" :class="{ current: updateInfo.local && commit[0] === updateInfo.local[0] }"><span class="msg">{{ commit[3] }}</span><small><code>{{ commit[0] }}</code><span v-if="updateInfo.local && commit[0] === updateInfo.local[0]" class="current-pill">{{ t('当前版本') }}</span>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
           </div>
+        </article>
+        <article class="card task-hero">
+          <div class="task-icon">🖥️</div>
+          <div style="flex:1"><h2>{{ t('启动器更新') }}</h2><div class="sub">{{ t('更新桌面程序（启动器）本身，自动化脚本请使用上方源码更新') }}</div>
+            <div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ desktopUpdate?.currentVersion || '—' }}</code><span v-if="desktopUpdate?.updateAvailable" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="desktopUpdate?.checked && !desktopUpdate?.error" class="sub"> · {{ t('已是最新') }}</span><span v-if="desktopUpdate?.error" class="update-hint"> · {{ desktopUpdate.error }}</span></div>
+            <div v-if="!isDesktopShell" class="sub">{{ t('此功能仅在桌面程序中可用') }}</div>
+          </div>
+          <button v-if="desktopUpdate?.updateAvailable" class="btn success" :disabled="!isDesktopShell || desktopApplying || desktopUpdate?.applying" @click="applyDesktopUpdate"><span v-if="desktopApplying || desktopUpdate?.applying" class="btn-spin"></span>{{ desktopApplying || desktopUpdate?.applying ? t('更新中…') : t('立即更新') }}</button>
+          <button v-else class="btn primary" :disabled="!isDesktopShell || desktopChecking || desktopApplying || desktopUpdate?.checking || desktopUpdate?.applying" @click="checkDesktopUpdate"><span v-if="desktopChecking || desktopApplying || desktopUpdate?.checking || desktopUpdate?.applying" class="btn-spin"></span>{{ desktopApplying || desktopUpdate?.applying ? t('更新中…') : (desktopChecking || desktopUpdate?.checking ? t('检查中…') : t('检查更新')) }}</button>
         </article>
       </section>
       <section v-else-if="isDeploy" class="view">

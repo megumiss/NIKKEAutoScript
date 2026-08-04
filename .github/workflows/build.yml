@@ -1,5 +1,11 @@
 name: Build and Release NKAS
 
+# ==============================================================================
+# 桌面 exe 发布说明：
+#   tag 推送（push）时，末尾的 deploy-desktop job 会自动把桌面 exe 发布到 VPS；
+#   workflow_dispatch 手动触发默认不发布，需要勾选 publish_exe 才会发布。
+# ==============================================================================
+
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +16,11 @@ on:
       release_note:
         description: 'Custom release note (Optional)'
         required: false
+      publish_exe:
+        description: 'Publish desktop exe to VPS'
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -147,7 +158,10 @@ jobs:
         if (-not (Test-Path $binary)) { exit 1 }
         Copy-Item $binary "..\nkas.exe" -Force
 
-        $desktopVersion = (Get-Content package.json | ConvertFrom-Json).version
+        $desktopVersion = [regex]::Match((Get-Content "src-tauri\Cargo.toml" -Raw), '(?m)^version = "([^"]+)"').Groups[1].Value
+        if (-not $desktopVersion) {
+          throw "Unable to read the desktop version from Cargo.toml"
+        }
         $assetDir = Join-Path $env:RUNNER_TEMP "nkas-desktop-assets"
         New-Item -ItemType Directory -Path $assetDir -Force | Out-Null
         $assetExe = Join-Path $assetDir "nkas-win-x64.exe"
@@ -157,7 +171,8 @@ jobs:
         if ($file.Length -gt 30MB) { throw "Desktop executable exceeds 30 MiB: $($file.Length) bytes" }
         $sha256 = (Get-FileHash $assetExe -Algorithm SHA256).Hash.ToLowerInvariant()
         # Note: this manifest's url points at GitHub Release; the VPS manifest
-        # (dl.megumiss.top) is generated and pushed by deploy.yml on release publish.
+        # (dl.megumiss.top) is generated and pushed by the deploy-desktop job
+        # at the end of this workflow.
         $manifest = [ordered]@{
           schema = 1
           project_version = $env:TAG_NAME
@@ -295,3 +310,108 @@ jobs:
           ${{ env.DESKTOP_MANIFEST }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==========================
+  # deploy-desktop: 发布桌面 exe 到 VPS
+  # tag 推送时自动发布；workflow_dispatch 默认不发布，需勾选 publish_exe
+  # 需要的 secrets（Settings -> Secrets and variables -> Actions）：
+  #   VPS_HOST / VPS_USERNAME / VPS_SSH_KEY / VPS_PORT（可选，默认 22）
+  #   VPS_DEPLOY_PATH（可选，默认 /www/wwwroot/dl.megumiss.top/nkas）
+  # ==========================
+  deploy-desktop:
+    needs: build-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    if: github.event_name == 'push' || inputs.publish_exe == true
+    steps:
+      # ==========================
+      # 1. Resolve the tag to deploy
+      # ==========================
+      - name: Resolve Tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ inputs.tag_name }}"
+          fi
+          echo "TAG_NAME=$TAG" >> "$GITHUB_ENV"
+          echo "Deploying tag: $TAG"
+
+      # ==========================
+      # 2. Checkout the release tag
+      # ==========================
+      # Only needed to read the desktop version from webapp/src-tauri/Cargo.toml.
+      # The desktop version is independent from the project release tag
+      # (see the version check in the build-release job).
+      - name: Checkout Release Tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: ${{ env.TAG_NAME }}
+
+      # ==========================
+      # 3. Download the desktop executable from GitHub Release
+      # ==========================
+      # The binary is built once by the build-release job and uploaded to the
+      # release; this job only re-distributes it, so the VPS channel and the
+      # GitHub channel always serve the exact same file. Draft releases can be
+      # downloaded with the workflow token.
+      - name: Download Desktop Executable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$TAG_NAME" \
+            --repo ${{ github.repository }} \
+            --pattern "nkas-win-x64.exe" \
+            --dir dist --clobber
+          ls -lh dist/nkas-win-x64.exe
+
+      # ==========================
+      # 4. Generate the VPS manifest (nkas-desktop.json)
+      # ==========================
+      # Identical to the manifest build-release uploads to the release, except
+      # the `url` field: the release manifest points at github.com while this
+      # one points at dl.megumiss.top.
+      - name: Generate VPS Manifest
+        run: |
+          DESKTOP_VERSION=$(grep -m1 '^version = "' webapp/src-tauri/Cargo.toml | cut -d'"' -f2)
+          if [ -z "$DESKTOP_VERSION" ]; then
+            echo "Unable to read the desktop version from Cargo.toml" >&2
+            exit 1
+          fi
+          SHA256=$(sha256sum dist/nkas-win-x64.exe | cut -d' ' -f1)
+          SIZE=$(stat -c%s dist/nkas-win-x64.exe)
+          jq -n \
+            --arg project_version "$TAG_NAME" \
+            --arg desktop_version "$DESKTOP_VERSION" \
+            --arg url "https://dl.megumiss.top/nkas/nkas-win-x64.exe" \
+            --arg sha256 "$SHA256" \
+            --argjson size "$SIZE" \
+            '{
+              schema: 1,
+              project_version: $project_version,
+              desktop_version: $desktop_version,
+              target: "x86_64-pc-windows-msvc",
+              url: $url,
+              sha256: $sha256,
+              size: $size
+            }' > dist/nkas-desktop.json
+          cat dist/nkas-desktop.json
+
+      # ==========================
+      # 5. Upload to the VPS (1Panel nginx static site)
+      # ==========================
+      # Only two files are overwritten: nkas-win-x64.exe and nkas-desktop.json.
+      # Clients verify both size and SHA-256 before replacing themselves, so an
+      # interrupted transfer can never brick an installation.
+      - name: Upload to VPS
+        uses: appleboy/scp-action@dbfeced2b0e6fb277845e6fd2d57cfc1743ecb1a  # v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "dist/nkas-win-x64.exe,dist/nkas-desktop.json"
+          target: ${{ secrets.VPS_DEPLOY_PATH || '/www/wwwroot/dl.megumiss.top/nkas' }}
+          strip_components: 1
+

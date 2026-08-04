@@ -13,9 +13,6 @@ fn default_dpi_scaling() -> bool {
 fn default_theme() -> String {
     "dark".into()
 }
-fn default_auto_update() -> bool {
-    true
-}
 fn default_desktop_update_manifest() -> String {
     // Desktop updates are fetched from the official VPS by default.
     // Override Deploy.Update.DesktopUpdateManifest in config/deploy.yaml to use another source.
@@ -30,28 +27,12 @@ struct RootConfig {
 
 #[derive(Debug, Deserialize)]
 struct DeployConfig {
-    #[serde(rename = "Git", default)]
-    git: GitConfig,
     #[serde(rename = "Python")]
     python: PythonConfig,
     #[serde(rename = "Update", default)]
     update: UpdateConfig,
     #[serde(rename = "Webui", default)]
     webui: WebuiConfig,
-}
-
-#[derive(Debug, Deserialize)]
-struct GitConfig {
-    #[serde(rename = "AutoUpdate", default = "default_auto_update")]
-    auto_update: bool,
-}
-
-impl Default for GitConfig {
-    fn default() -> Self {
-        Self {
-            auto_update: default_auto_update(),
-        }
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,7 +75,6 @@ pub struct DesktopConfig {
     pub root: PathBuf,
     pub python: PathBuf,
     pub port: u16,
-    pub auto_update: bool,
     pub desktop_update_manifest: String,
     pub dpi_scaling: bool,
     pub hardware_acceleration: bool,
@@ -135,7 +115,6 @@ pub fn load(root: PathBuf) -> Result<DesktopConfig> {
         root,
         python,
         port: raw.deploy.webui.port,
-        auto_update: raw.deploy.git.auto_update,
         desktop_update_manifest: raw.deploy.update.desktop_update_manifest,
         dpi_scaling: raw.deploy.webui.dpi_scaling,
         hardware_acceleration: raw.deploy.webui.hardware_acceleration,
@@ -199,7 +178,6 @@ mod tests {
             root: PathBuf::from("C:/NKAS"),
             python: PathBuf::from("python.exe"),
             port: 12271,
-            auto_update: true,
             desktop_update_manifest: default_desktop_update_manifest(),
             dpi_scaling: true,
             hardware_acceleration: false,
