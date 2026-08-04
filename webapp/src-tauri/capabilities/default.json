@@ -11,6 +11,9 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-is-maximized",
     "core:window:allow-hide",
-    "core:window:allow-close"
+    "core:window:allow-close",
+    "allow-desktop-update-status",
+    "allow-desktop-update-check",
+    "allow-desktop-update-apply"
   ]
 }
