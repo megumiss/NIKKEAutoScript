@@ -11,9 +11,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
-use std::time::Duration;
-#[cfg(not(windows))]
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -377,6 +375,14 @@ fn fetch_manifest(url: &str) -> Result<DesktopManifest> {
     let client = reqwest::blocking::Client::builder()
         .user_agent(format!("NKAS/{CURRENT_VERSION}"))
         .build()?;
+    // Bypass CDN edge caches: the manifest is tiny, must always be fresh, and
+    // Cloudflare keys its cache on the full query string.
+    let mut url = reqwest::Url::parse(url)?;
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    url.query_pairs_mut().append_pair("_", &stamp.to_string());
     client
         .get(url)
         .timeout(Duration::from_secs(15))
@@ -440,6 +446,9 @@ fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Resul
     );
     write_verified_download(&mut response, &mut file, manifest.size, &manifest.sha256)?;
     file.sync_all()?;
+    // Close the handle before renaming and executing the staged file; leaving
+    // it open serves no purpose and only complicates sharing on Windows.
+    drop(file);
     let _ = fs::remove_file(&staged);
     fs::rename(&part, &staged)?;
     update_log(
@@ -468,9 +477,31 @@ fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Resul
         .stderr(Stdio::null());
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    let child = command
-        .spawn()
-        .context("Unable to start the desktop update helper")?;
+    // A freshly written unsigned exe is often still being scanned by the
+    // antivirus when we spawn it, which fails transiently with
+    // ERROR_ACCESS_DENIED or ERROR_SHARING_VIOLATION; retry briefly before
+    // giving up.
+    let mut attempts = 0;
+    let child = loop {
+        attempts += 1;
+        match command.spawn() {
+            Ok(child) => break child,
+            Err(error) => {
+                let retryable = matches!(error.raw_os_error(), Some(5) | Some(32));
+                if !retryable || attempts >= 10 {
+                    return Err(error).context("Unable to start the desktop update helper");
+                }
+                update_log(
+                    &config.root,
+                    format!(
+                        "helper spawn attempt {attempts} failed (os error {}), retrying",
+                        error.raw_os_error().unwrap_or(-1)
+                    ),
+                );
+                thread::sleep(Duration::from_millis(500));
+            }
+        }
+    };
     update_log(
         &config.root,
         format!(
