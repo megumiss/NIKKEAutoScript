@@ -61,10 +61,6 @@ Other tools:
 Please refer to the detailed installation guide:  
 [Wiki Installation Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide)
 
-The desktop package now starts from the single root-level `nkas.exe`. It handles desktop-shell and project updates before starting the Python backend.
-
-When upgrading a full Electron package to Tauri 2, replace the root-level `nkas.exe` and then remove the old `app` directory to avoid retaining Chromium files.
-
 ---
 
 ### FAQ

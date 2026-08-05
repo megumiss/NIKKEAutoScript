@@ -61,10 +61,6 @@
 詳細なインストール手順は以下を参照してください：  
 [Wiki インストールガイド](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide)
 
-デスクトップ版は、プロジェクト直下の単一ファイル `nkas.exe` から起動します。デスクトップシェルとプロジェクトを更新してから Python バックエンドを起動します。
-
-Electron の完全版から Tauri 2 へ更新する場合は、ルートの `nkas.exe` を置き換えた後、Chromium ファイルを残さないよう古い `app` ディレクトリを削除できます。
-
 ---
 
 ### よくある質問

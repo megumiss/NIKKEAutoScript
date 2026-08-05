@@ -61,10 +61,6 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 
 详细安装指南请参阅 [Wiki安装教程](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN)
 
-桌面版现在由项目根目录的单文件 `nkas.exe` 启动。它会先完成桌面壳自更新和项目更新，再启动 Python 后端。
-
-从 Electron 完整包升级到 Tauri 2 完整包时，覆盖新版根目录 `nkas.exe` 后可删除旧的 `app` 目录，避免残留 Chromium 文件。
-
 ---
 
 ### 常见问题
