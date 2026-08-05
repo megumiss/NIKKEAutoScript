@@ -482,7 +482,7 @@ async function refreshLogs() { await loadLogFiles(); await queryLogs() }
 let logsKeywordTimer = 0
 watch([logsDate, logsSource, logsLevel], queryLogs)
 watch(logsKeyword, () => { window.clearTimeout(logsKeywordTimer); logsKeywordTimer = window.setTimeout(queryLogs, 400) })
-const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
+const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy' | 'confirm'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 const deployTemplateOptions = computed(() => [{ value: 'intl', label: t('国际') }, { value: 'cn', label: t('大陆') }, { value: 'docker-intl', label: t('Docker国际') }, { value: 'docker-cn', label: t('Docker国内') }])
 // Pre-fill the create form with the first free nkas-style name (nkas, nkas2,
@@ -497,6 +497,15 @@ function defaultInstanceName() {
 function openCreateModal() { modal.value = { type: 'create', name: defaultInstanceName(), origin: instances.value[0]?.name || 'template-nkas', template: 'intl', busy: false } }
 function openDeleteModal(name: string) { modal.value = { type: 'delete', name, origin: '', template: '', busy: false } }
 function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', origin: '', template: 'intl', busy: false } }
+// Generic confirmation so every risky action shares the same modal instead of
+// mixing native confirm() with custom cards.
+const modalConfirmMessage = ref('')
+let modalConfirmAction: (() => void | Promise<void>) | null = null
+function openConfirmModal(message: string, action: () => void | Promise<void>) {
+  modalConfirmMessage.value = message
+  modalConfirmAction = action
+  modal.value = { type: 'confirm', name: '', origin: '', template: '', busy: false }
+}
 async function confirmModal() {
   const m = modal.value
   if (m.busy) return
@@ -509,6 +518,12 @@ async function confirmModal() {
     } else if (m.type === 'delete') {
       await api.del(`/api/${m.name}`)
       if (selectedName.value === m.name) dashboard()
+    } else if (m.type === 'confirm') {
+      const action = modalConfirmAction
+      modalConfirmAction = null
+      m.type = ''
+      await action?.()
+      return
     } else if (m.type === 'resetDeploy') {
       // Theme/language revert to template defaults too; sync the cached theme
       // before reloading so the page restarts on the reverted palette.
@@ -565,20 +580,41 @@ async function checkDesktopUpdate() {
 }
 async function applyDesktopUpdate() {
   if (desktopApplying.value || !isDesktopShell) return
-  if (!confirm(t('更新启动器将中断正在运行的任务并自动重启程序，确定继续？'))) return
-  desktopApplying.value = true
-  // A successful apply exits and relaunches the shell, so the invoke may
-  // never resolve; a rejection carries the failure reason as a string.
-  desktopInvoke()('desktop_update_apply').catch((exception: any) => { error.value = String(exception?.message || exception); desktopApplying.value = false })
-  notify(t('更新完成，正在重启…'), 'ok', 0)
-  // The shell restarts itself; poll until the backend answers again (the new
-  // process serves it) and reload for a fresh state.
-  for (let round = 0; round < 60; round++) {
-    await new Promise(resolve => setTimeout(resolve, 3000))
-    try { await api.get('/api/system/status'); window.location.reload(); return } catch { }
-  }
-  error.value = t('重启超时，请手动刷新页面')
-  desktopApplying.value = false
+  openConfirmModal(t('更新启动器将中断正在运行的任务并自动重启程序，确定继续？'), async () => {
+    desktopApplying.value = true
+    // A successful apply exits and relaunches the shell, so the invoke may
+    // never resolve; a rejection carries the failure reason as a string.
+    let failed = false
+    desktopInvoke()('desktop_update_apply').catch((exception: any) => {
+      failed = true
+      desktopApplying.value = false
+      error.value = String(exception?.message || exception)
+    })
+    // The download runs while the old backend is still answering, so a live
+    // status endpoint does not mean the update finished.  Wait for the
+    // backend to go down first (the shell exited for replacement)…
+    let shellExited = false
+    for (let round = 0; round < 60 && !failed; round++) {
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      try { await api.get('/api/system/status') } catch { shellExited = true; break }
+    }
+    if (failed) return
+    if (!shellExited) {
+      desktopApplying.value = false
+      error.value = t('更新超时，请手动刷新页面')
+      return
+    }
+    // …then wait for the new process to serve again and reload for a fresh
+    // state.  The success toast is shown after the reload via a flag.
+    sessionStorage.setItem('nkas-desktop-updated', '1')
+    for (let round = 0; round < 60; round++) {
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      try { await api.get('/api/system/status'); window.location.reload(); return } catch { }
+    }
+    sessionStorage.removeItem('nkas-desktop-updated')
+    desktopApplying.value = false
+    error.value = t('重启超时，请手动刷新页面')
+  })
 }
 // The launcher checks for its own updates once in the background at startup;
 // surface the same kind of toast as the source updater when it found one.
@@ -602,8 +638,11 @@ async function checkUpdate() {
   } catch (exception: any) { error.value = exception.message } finally { updateChecking.value = false }
 }
 const updating = ref(false)
-async function runUpdate() {
+function runUpdate() {
   if (updating.value) return
+  openConfirmModal(t('更新源码将中断正在运行的任务并自动重启后端，确定继续？'), executeSourceUpdate)
+}
+async function executeSourceUpdate() {
   updating.value = true
   try {
     await api.post('/api/update')
@@ -639,8 +678,11 @@ async function runUpdate() {
   } catch (exception: any) { error.value = exception.message } finally { updating.value = false }
 }
 const restarting = ref(false)
-async function forceRestart() {
+function forceRestart() {
   if (restarting.value) return
+  openConfirmModal(t('强制重启将中断正在运行的任务，确定继续？'), executeForceRestart)
+}
+async function executeForceRestart() {
   restarting.value = true
   try { await api.post('/api/restart') } catch (exception: any) { error.value = exception.message; restarting.value = false; return }
   // The backend tears itself down right after answering; give it a moment to
@@ -731,7 +773,7 @@ async function healthCheck() {
     backendDown.value = true
   }
 }
-onMounted(async () => { if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
+onMounted(async () => { if (sessionStorage.getItem('nkas-desktop-updated')) { sessionStorage.removeItem('nkas-desktop-updated'); notify(t('启动器更新完成'), 'ok', 4000) } if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
   // Only a different instance needs a schema reload and socket swap; task
   // switches and global pages retain the current instance's log scrollback.
@@ -1125,7 +1167,7 @@ onBeforeUnmount(() => {
     </div>
     <div v-if="modal.type" class="modal-mask" @click.self="modal.type = ''">
       <div class="modal-card">
-        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'resetDeploy' ? t('还原默认') : t('删除') }}</h3>
+        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : t('删除') }}</h3>
         <template v-if="modal.type === 'create'">
           <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
           <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
@@ -1134,10 +1176,11 @@ onBeforeUnmount(() => {
           <p class="modal-text">{{ t('将全部部署配置还原为默认值？') }}{{ t('此操作不可恢复。') }}</p>
           <label class="modal-field">{{ t('模板') }}<AppSelect v-model="modal.template" :options="deployTemplateOptions"/></label>
         </template>
+        <p v-else-if="modal.type === 'confirm'" class="modal-text">{{ modalConfirmMessage }}</p>
         <p v-else class="modal-text">{{ t('删除') }} {{ modal.name }}？{{ t('此操作不可恢复。') }}</p>
         <div class="modal-actions">
           <button class="btn" @click="modal.type = ''">{{ t('取消') }}</button>
-          <button class="btn" :class="modal.type === 'create' ? 'primary' : 'danger'" :disabled="modal.busy || (modal.type === 'create' && !modal.name.trim())" @click="confirmModal">{{ t('确定') }}</button>
+          <button class="btn" :class="modal.type === 'create' || modal.type === 'confirm' ? 'primary' : 'danger'" :disabled="modal.busy || (modal.type === 'create' && !modal.name.trim())" @click="confirmModal">{{ t('确定') }}</button>
         </div>
       </div>
     </div>

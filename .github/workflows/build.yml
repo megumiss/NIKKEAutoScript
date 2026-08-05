@@ -371,7 +371,9 @@ jobs:
       # ==========================
       # Identical to the manifest build-release uploads to the release, except
       # the `url` field: the release manifest points at github.com while this
-      # one points at nkas.megumiss.top.
+      # one points at nkas.megumiss.top.  The VPS exe carries the desktop
+      # version in its name so each release is an immutable URL — no CDN cache
+      # purge needed and old versions stay available for rollback.
       - name: Generate VPS Manifest
         run: |
           DESKTOP_VERSION=$(grep -m1 '^version = "' webapp/src-tauri/Cargo.toml | cut -d'"' -f2)
@@ -379,12 +381,15 @@ jobs:
             echo "Unable to read the desktop version from Cargo.toml" >&2
             exit 1
           fi
-          SHA256=$(sha256sum dist/nkas-win-x64.exe | cut -d' ' -f1)
-          SIZE=$(stat -c%s dist/nkas-win-x64.exe)
+          VERSIONED_EXE="nkas-win-x64-$DESKTOP_VERSION.exe"
+          mv dist/nkas-win-x64.exe "dist/$VERSIONED_EXE"
+          echo "VERSIONED_EXE=$VERSIONED_EXE" >> "$GITHUB_ENV"
+          SHA256=$(sha256sum "dist/$VERSIONED_EXE" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "dist/$VERSIONED_EXE")
           jq -n \
             --arg project_version "$TAG_NAME" \
             --arg desktop_version "$DESKTOP_VERSION" \
-            --arg url "https://nkas.megumiss.top/releases/latest/nkas-win-x64.exe" \
+            --arg url "https://nkas.megumiss.top/releases/latest/$VERSIONED_EXE" \
             --arg sha256 "$SHA256" \
             --argjson size "$SIZE" \
             '{
@@ -401,9 +406,10 @@ jobs:
       # ==========================
       # 5. Upload to the VPS (1Panel nginx static site)
       # ==========================
-      # Only two files are overwritten: nkas-win-x64.exe and nkas-desktop.json.
-      # Clients verify both size and SHA-256 before replacing themselves, so an
-      # interrupted transfer can never brick an installation.
+      # nkas-desktop.json is overwritten in place while the versioned exe is
+      # uploaded as a new immutable file.  Clients verify both size and
+      # SHA-256 before replacing themselves, so an interrupted transfer can
+      # never brick an installation.
       - name: Upload to VPS
         uses: appleboy/scp-action@dbfeced2b0e6fb277845e6fd2d57cfc1743ecb1a  # v0.1.7
         with:
@@ -411,7 +417,7 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          source: "dist/nkas-win-x64.exe,dist/nkas-desktop.json"
+          source: "dist/${{ env.VERSIONED_EXE }},dist/nkas-desktop.json"
           target: ${{ secrets.VPS_DEPLOY_PATH || '/www/wwwroot/nkas.megumiss.top/releases/latest' }}
           strip_components: 1
 
