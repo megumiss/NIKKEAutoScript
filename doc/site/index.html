@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIKKEAutoScript - 胜利女神：NIKKE 自动日常脚本</title>
+<link rel="icon" type="image/png" href="./nkas.png">
+<link rel="canonical" href="https://nkas.megumiss.top/">
+<meta name="description" content="胜利女神：NIKKE 自动日常脚本，支持所有 PC/模拟器客户端（国服除外）。GODDESS OF VICTORY: NIKKE automatic daily script.">
+<meta property="og:title" content="NIKKEAutoScript">
+<meta property="og:description" content="胜利女神：NIKKE 自动日常脚本，支持所有 PC/模拟器客户端（国服除外）">
+<meta property="og:url" content="https://nkas.megumiss.top/">
+<meta property="og:image" content="https://nkas.megumiss.top/nkas.png">
+<script>
+/* 首屏前确定主题，避免闪烁：优先手动选择，否则按时间（19:00 - 07:00 暗色） */
+(function () {
+    var saved = null;
+    try { saved = localStorage.getItem('nkas-theme'); } catch (e) {}
+    if (saved === 'light' || saved === 'dark') {
+        document.documentElement.dataset.theme = saved;
+        return;
+    }
+    var h = new Date().getHours();
+    document.documentElement.dataset.theme = (h >= 19 || h < 7) ? 'dark' : 'light';
+})();
+</script>
+<style>
+:root {
+    --bg: #f7f8fc;
+    --bg-2: rgba(255,255,255,.72);
+    --nav-bg: rgba(255,255,255,.85);
+    --card: #ffffff;
+    --card-border: #e6e8f0;
+    --text: #1c2333;
+    --text-dim: #67708a;
+    --accent: #4f6ef7;
+    --accent-2: #12b5a5;
+    --gradient: linear-gradient(135deg, #4f6ef7 0%, #12b5a5 100%);
+    --icon-bg: #eef1fe;
+    --icon-border: #d8e0fd;
+    --code-bg: #eef1fe;
+    --logo-glow: rgba(79,110,247,.30);
+    --shot-shadow: 0 30px 80px rgba(28,35,51,.18);
+    --glow-1: rgba(79,110,247,.12);
+    --glow-2: rgba(18,181,165,.10);
+    --glow-3: rgba(79,110,247,.08);
+    --footer-border: var(--card-border);
+    --logo-shadow: drop-shadow(0 10px 22px rgba(28,35,51,.28));
+    --logo-shadow-sm: drop-shadow(0 2px 4px rgba(28,35,51,.30));
+}
+[data-theme="dark"] {
+    --bg: #0e1220;
+    --bg-2: rgba(23,28,46,.72);
+    --nav-bg: rgba(14,18,32,.78);
+    --card: #171c2e;
+    --card-border: #262e4a;
+    --text: #e6eaf5;
+    --text-dim: #98a1bd;
+    --accent: #7b93ff;
+    --accent-2: #2dd4c4;
+    --gradient: linear-gradient(135deg, #7b93ff 0%, #2dd4c4 100%);
+    --icon-bg: rgba(123,147,255,.12);
+    --icon-border: rgba(123,147,255,.28);
+    --code-bg: #0d1120;
+    --logo-glow: rgba(123,147,255,.40);
+    --shot-shadow: 0 30px 80px rgba(0,0,0,.55);
+    --glow-1: rgba(123,147,255,.14);
+    --glow-2: rgba(45,212,196,.10);
+    --glow-3: rgba(120,90,255,.10);
+    --footer-border: rgba(255,255,255,.06);
+    --logo-shadow: drop-shadow(0 0 16px rgba(235,240,255,.55));
+    --logo-shadow-sm: drop-shadow(0 0 3px rgba(235,240,255,.8));
+}
+/* 图标无衬底，用贴合轮廓的 drop-shadow 保证与背景的反差 */
+.hero .logo { filter: var(--logo-shadow); }
+nav .brand img { filter: var(--logo-shadow-sm); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+    transition: background .3s, color .3s;
+}
+
+/* ===== 背景光效 ===== */
+.bg-glow {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+        radial-gradient(600px 400px at 15% 0%, var(--glow-1), transparent 60%),
+        radial-gradient(700px 500px at 85% 20%, var(--glow-2), transparent 60%),
+        radial-gradient(500px 500px at 50% 100%, var(--glow-3), transparent 60%);
+}
+
+/* ===== 导航 ===== */
+nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 48px;
+    background: var(--nav-bg);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--card-border);
+}
+nav .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 18px; }
+nav .brand img { width: 34px; height: 34px; border-radius: 8px; }
+nav .links { display: flex; gap: 28px; align-items: center; }
+nav .links > a { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color .2s; }
+nav .links > a:hover { color: var(--text); }
+nav .gh-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    color: #fff !important; text-decoration: none;
+    background: var(--gradient);
+    transition: transform .15s, box-shadow .15s;
+}
+nav .gh-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--logo-glow); }
+
+/* 主题切换 */
+.theme-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--card-border); background: transparent;
+    color: var(--text-dim); font-size: 15px; cursor: pointer;
+    transition: all .15s; font-family: inherit;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+/* 语言切换 */
+.lang-switch { display: flex; border: 1px solid var(--card-border); border-radius: 8px; overflow: hidden; }
+.lang-switch button {
+    border: none; background: transparent; color: var(--text-dim);
+    font-size: 12.5px; font-weight: 600; padding: 6px 11px; cursor: pointer;
+    font-family: inherit; transition: all .15s;
+}
+.lang-switch button.active { background: var(--gradient); color: #fff; }
+.lang-switch button:not(.active):hover { color: var(--text); }
+
+/* ===== Hero ===== */
+.hero {
+    min-height: 92vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 120px 24px 60px;
+    position: relative;
+}
+.hero .logo {
+    width: 130px; height: 130px;
+    margin-bottom: 32px;
+    animation: float 5s ease-in-out infinite;
+}
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+.hero h1 {
+    font-size: 52px; letter-spacing: 2px; margin-bottom: 14px;
+    background: var(--gradient);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero .tagline { font-size: 20px; color: var(--text-dim); max-width: 680px; margin-bottom: 12px; }
+.hero .tagline del { opacity: .65; }
+.hero .badges { display: flex; gap: 10px; margin: 18px 0 34px; flex-wrap: wrap; justify-content: center; }
+.hero .badges img { height: 22px; }
+.hero .cta { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.btn {
+    padding: 14px 34px; border-radius: 12px; font-size: 16px; font-weight: 700;
+    text-decoration: none; transition: transform .15s, box-shadow .15s;
+}
+.btn-primary { background: var(--gradient); color: #fff; box-shadow: 0 8px 30px var(--logo-glow); }
+.btn-primary:hover { transform: translateY(-2px); }
+.btn-ghost { border: 1px solid var(--card-border); color: var(--text); background: var(--bg-2); }
+.btn-ghost:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+/* ===== 通用 section ===== */
+section { max-width: 1100px; margin: 0 auto; padding: 90px 24px; }
+.section-title { text-align: center; margin-bottom: 14px; font-size: 34px; }
+.section-title span { background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.section-sub { text-align: center; color: var(--text-dim); margin-bottom: 50px; }
+.section-sub a { color: var(--accent); }
+
+/* ===== 功能卡片 ===== */
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.feature-card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 26px;
+    transition: transform .2s, border-color .2s;
+}
+.feature-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+.feature-card .icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 16px;
+    background: var(--icon-bg); border: 1px solid var(--icon-border);
+}
+.feature-card h3 { font-size: 17px; margin-bottom: 8px; }
+.feature-card p { font-size: 14px; color: var(--text-dim); }
+
+/* ===== 截图 ===== */
+.screenshot {
+    border-radius: 18px; overflow: hidden;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shot-shadow);
+}
+.screenshot img { width: 100%; display: block; }
+
+/* ===== 风险警告 ===== */
+.risk-box {
+    border: 1px solid rgba(245,158,11,.45);
+    background: rgba(245,158,11,.08);
+    border-radius: 16px; padding: 28px 32px;
+}
+.risk-box ul { padding-left: 20px; }
+.risk-box li { color: var(--text-dim); font-size: 14.5px; margin-bottom: 10px; }
+.risk-box li:last-child { margin-bottom: 0; }
+.risk-box li::marker { color: #f59e0b; }
+
+/* ===== 下载 ===== */
+.downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 780px; margin: 0 auto; }
+.dl-card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 30px; position: relative; overflow: hidden;
+}
+.dl-card.recommend { border-color: var(--accent); }
+.dl-card .ribbon {
+    position: absolute; top: 14px; right: -34px;
+    background: var(--gradient); color: #fff; font-size: 12px; font-weight: 700;
+    padding: 4px 40px; transform: rotate(45deg);
+}
+.dl-card h3 { font-size: 18px; margin-bottom: 6px; }
+.dl-card .ver { font-size: 13px; color: var(--accent-2); margin-bottom: 14px; }
+.dl-card p { font-size: 14px; color: var(--text-dim); margin-bottom: 22px; min-height: 44px; }
+.dl-card .btn { display: block; text-align: center; padding: 12px; font-size: 15px; }
+
+/* ===== 快速上手 ===== */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; counter-reset: step; }
+.step {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 28px; position: relative;
+}
+.step::before {
+    counter-increment: step; content: counter(step);
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--gradient); color: #fff; font-weight: 800; font-size: 17px;
+    margin-bottom: 16px;
+}
+.step h3 { font-size: 16px; margin-bottom: 8px; }
+.step p { font-size: 14px; color: var(--text-dim); }
+.step code { background: var(--code-bg); padding: 2px 8px; border-radius: 6px; font-size: 13px; color: var(--accent-2); }
+.step a { color: var(--accent); }
+
+/* ===== FAQ ===== */
+.faq-item { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+.faq-q {
+    width: 100%; text-align: left; padding: 18px 22px;
+    background: none; border: none; color: var(--text);
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: inherit;
+}
+.faq-q .arrow { transition: transform .25s; color: var(--accent); }
+.faq-item.open .faq-q .arrow { transform: rotate(180deg); }
+.faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+.faq-a p { padding: 0 22px 18px; font-size: 14px; color: var(--text-dim); }
+.faq-a a { color: var(--accent); }
+.faq-a del { opacity: .65; }
+
+/* ===== 社区 ===== */
+.community { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.comm-card {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 14px;
+    padding: 24px; text-align: center; text-decoration: none; color: var(--text);
+    transition: transform .2s, border-color .2s;
+}
+.comm-card:hover { transform: translateY(-3px); border-color: var(--accent-2); }
+.comm-card .icon { font-size: 26px; margin-bottom: 10px; }
+.comm-card h3 { font-size: 15px; margin-bottom: 4px; }
+.comm-card p { font-size: 13px; color: var(--text-dim); }
+
+/* ===== 页脚 ===== */
+footer {
+    border-top: 1px solid var(--footer-border);
+    padding: 44px 24px; text-align: center; color: var(--text-dim); font-size: 13px;
+}
+footer .thanks { margin-bottom: 10px; }
+footer a { color: var(--accent); text-decoration: none; }
+
+@media (max-width: 720px) {
+    nav { padding: 12px 16px; }
+    nav .links { gap: 12px; }
+    nav .links > a { display: none; }
+    .hero h1 { font-size: 34px; }
+    .hero .tagline { font-size: 16px; }
+    section { padding: 60px 18px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<nav>
+    <div class="brand">
+        <img src="./nkas.png" alt="NKAS">
+        NIKKEAutoScript
+    </div>
+    <div class="links">
+        <a href="#features" data-i18n="nav.features">功能</a>
+        <a href="#download" data-i18n="nav.download">下载</a>
+        <a href="#quickstart" data-i18n="nav.quickstart">快速上手</a>
+        <a href="#faq" data-i18n="nav.faq">常见问题</a>
+        <button class="theme-toggle" id="themeToggle" title="主题：自动">🌓</button>
+        <div class="lang-switch">
+            <button data-lang="zh-CN" class="active">中文</button>
+            <button data-lang="en">EN</button>
+            <button data-lang="ja">日本語</button>
+        </div>
+        <a class="gh-btn" href="https://github.com/megumiss/NIKKEAutoScript" target="_blank" rel="noopener">★ GitHub</a>
+    </div>
+</nav>
+
+<header class="hero">
+    <img class="logo" src="./nkas.png" alt="NKAS Logo">
+    <h1>NIKKEAutoScript</h1>
+    <p class="tagline" data-i18n-html="hero.tagline">胜利女神：NIKKE 自动日常脚本<br>支持所有 PC / <del>模拟器</del> 客户端（国服除外），解放双手，日常全包</p>
+    <div class="badges">
+        <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white" alt="Python">
+        <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blueviolet" alt="Platform">
+        <img src="https://img.shields.io/github/license/megumiss/NIKKEAutoScript" alt="License">
+        <img src="https://img.shields.io/github/stars/megumiss/NIKKEAutoScript?style=social" alt="Stars">
+    </div>
+    <div class="cta">
+        <a class="btn btn-primary" href="#download" data-i18n="hero.cta.download">立即下载</a>
+        <a class="btn btn-ghost" href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN" target="_blank" rel="noopener" data-i18n="hero.cta.guide" data-i18n-href="hero.cta.guide.url">安装教程</a>
+        <a class="btn btn-ghost" href="https://www.bilibili.com/video/BV1YMbrzFE4g" target="_blank" rel="noopener" data-i18n="hero.cta.demo">功能演示 ▶</a>
+    </div>
+</header>
+
+<section id="features">
+    <h2 class="section-title"><span data-i18n="features.title">功能特性</span></h2>
+    <p class="section-sub" data-i18n="features.sub">从每日日常到大型活动，一站式自动化</p>
+    <div class="features">
+        <div class="feature-card">
+            <div class="icon">🖥️</div>
+            <h3 data-i18n="f1.t">全客户端支持</h3>
+            <p data-i18n="f1.p">PC 客户端 / 各类模拟器通吃，支持多屏幕、自动启动游戏与任务，并提供快捷键与接口控制。</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">📅</div>
+            <h3 data-i18n="f2.t">日常全托管</h3>
+            <p data-i18n="f2.p">收获、歼灭、派遣、咨询送礼、友情点、免费钻、商店购买、每日/每周任务与 Pass 领取，一次配置全自动。</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">⚔️</div>
+            <h3 data-i18n="f3.t">竞技场自动化</h3>
+            <p data-i18n="f3.p">普通 / 特殊竞技场自动战斗，特殊竞技场监控，冠军竞技场竞猜，排名奖励自动领取。</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">🎉</div>
+            <h3 data-i18n="f4.t">活动一条龙</h3>
+            <p data-i18n="f4.p">大小活动自动推图、扫荡、挑战、签到、商店购买、协同作战与部分小游戏，活动免费抽卡不落下。</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">🛡️</div>
+            <h3 data-i18n="f5.t">异常拦截</h3>
+            <p data-i18n="f5.p">支持自动打红圈、掉落截图，模拟室与超频、企业塔、联盟突袭、个人突袭全覆盖。</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon">🚀</div>
+            <h3 data-i18n="f6.t">省心运维</h3>
+            <p data-i18n="f6.p">自动更新 / 定时更新，支持 Docker 部署、Hosts 修改，blablalink 社区任务与 CDK 自动兑换。</p>
+        </div>
+    </div>
+</section>
+
+<section id="preview">
+    <h2 class="section-title"><span data-i18n="preview.title">界面预览</span></h2>
+    <p class="section-sub" data-i18n="preview.sub">现代化 Web UI，任务状态一目了然</p>
+    <div class="screenshot">
+        <img src="./gui.png" alt="GUI" data-i18n-alt="preview.alt">
+    </div>
+</section>
+
+<section id="risk">
+    <h2 class="section-title"><span data-i18n="risk.title">使用风险与免责声明</span></h2>
+    <p class="section-sub" data-i18n="risk.sub">下载前请务必阅读以下内容</p>
+    <div class="risk-box">
+        <ul>
+            <li data-i18n="risk.1">使用自动化脚本可能违反《胜利女神：NIKKE》的用户协议，存在账号被限制、封禁的风险，请自行评估并承担全部后果。</li>
+            <li data-i18n="risk.2">本项目仅供学习与技术交流，不提供任何形式的担保；因使用本项目造成的账号、设备或数据损失，作者概不负责。</li>
+            <li data-i18n="risk.3">本项目为非营利开源项目，与 SHIFT UP、腾讯 / Level Infinite 无任何关联，游戏相关素材的版权归其各自所有者所有。</li>
+            <li data-i18n="risk.4">下载并使用本软件即表示你已阅读、理解并同意上述条款；如不同意，请立即停止使用。</li>
+        </ul>
+    </div>
+</section>
+
+<section id="download">
+    <h2 class="section-title"><span data-i18n="download.title">下载</span></h2>
+    <p class="section-sub" data-i18n="download.sub">选择适合你的方式，1 分钟即可开跑</p>
+    <div class="downloads">
+        <div class="dl-card recommend">
+            <span class="ribbon" data-i18n="dl1.ribbon">推荐</span>
+            <h3 data-i18n="dl1.t">桌面版（Tauri 2）</h3>
+            <div class="ver" data-i18n="dl1.ver">Latest Release · Windows</div>
+            <p data-i18n-html="dl1.p">单文件 <b>nkas.exe</b> 启动，自动完成桌面壳与项目更新，适合绝大多数玩家。</p>
+            <a class="btn btn-primary" href="https://github.com/megumiss/NIKKEAutoScript/releases" target="_blank" rel="noopener" data-i18n="dl1.btn">下载完整包</a>
+        </div>
+        <div class="dl-card">
+            <h3 data-i18n="dl2.t">Docker 部署</h3>
+            <div class="ver" data-i18n="dl2.ver">Linux · NAS · 服务器</div>
+            <p data-i18n="dl2.p">使用 docker-compose 一键部署，适合长期挂机与无头服务器场景。</p>
+            <a class="btn btn-ghost" href="https://github.com/megumiss/NIKKEAutoScript#readme" target="_blank" rel="noopener" data-i18n="dl2.btn">查看部署文档</a>
+        </div>
+    </div>
+</section>
+
+<section id="quickstart">
+    <h2 class="section-title"><span data-i18n="quickstart.title">快速上手</span></h2>
+    <p class="section-sub" data-i18n="quickstart.sub">三步开始自动化日常</p>
+    <div class="steps">
+        <div class="step">
+            <h3 data-i18n="s1.t">下载并解压</h3>
+            <p data-i18n-html="s1.p">从 Release 下载完整包，解压到<b>纯英文路径</b>，避免运行期编码问题。</p>
+        </div>
+        <div class="step">
+            <h3 data-i18n="s2.t">启动 nkas.exe</h3>
+            <p data-i18n-html="s2.p">双击运行 <code>nkas.exe</code>，等待自更新完成后自动打开 Web UI。</p>
+        </div>
+        <div class="step">
+            <h3 data-i18n="s3.t">配置并运行</h3>
+            <p data-i18n-html="s3.p">在设置中选择客户端与模拟器，勾选需要的任务，点击开始即可。详见 <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN" target="_blank" rel="noopener">Wiki 安装指南</a>。</p>
+        </div>
+    </div>
+</section>
+
+<section id="faq">
+    <h2 class="section-title"><span data-i18n="faq.title">常见问题</span></h2>
+    <p class="section-sub" data-i18n-html="faq.sub">更多问题请查阅 <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions.zh-CN" target="_blank" rel="noopener">Wiki 常见问题</a></p>
+    <div class="faq-item">
+        <button class="faq-q"><span data-i18n="q1">支持国服吗？</span><span class="arrow">▾</span></button>
+        <div class="faq-a"><p data-i18n-html="a1">不支持。NKAS 支持国际服、日服、韩服等所有 PC/<del>模拟器</del> 客户端，唯独不支持国服客户端。</p></div>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q"><span data-i18n="q2">支持哪些平台？</span><span class="arrow">▾</span></button>
+        <div class="faq-a"><p data-i18n-html="a2">项目目前主要支持 <b>PC 端</b>、<del>主流安卓模拟器</del>，Windows 桌面版开箱即用；同时支持 <b>ARM 架构</b>的模拟器和开发板，配合 Docker 部署 NKAS 即可运行。</p></div>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q"><span data-i18n="q3">脚本收费吗？安全吗？</span><span class="arrow">▾</span></button>
+        <div class="faq-a"><p data-i18n="a3">完全免费并基于 GPL-3.0 开源，源码可审计。项目仅供学习交流，请遵守游戏用户协议。</p></div>
+    </div>
+    <div class="faq-item">
+        <button class="faq-q"><span data-i18n="q4">遇到问题去哪里求助？</span><span class="arrow">▾</span></button>
+        <div class="faq-a"><p data-i18n-html="a4">可以在 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank" rel="noopener">GitHub Issues</a> 提交问题，或加入 QQ 群 823265807、Telegram 群组获取帮助。</p></div>
+    </div>
+</section>
+
+<section id="community">
+    <h2 class="section-title"><span data-i18n="community.title">社区与支持</span></h2>
+    <p class="section-sub" data-i18n="community.sub">喜欢本项目请点个 ⭐ Star，或请作者喝一杯蜜雪冰城 🍦</p>
+    <div class="community">
+        <a class="comm-card" href="https://github.com/megumiss/NIKKEAutoScript" target="_blank" rel="noopener">
+            <div class="icon">⭐</div><h3>GitHub</h3><p data-i18n="c1.p">Star / Issue / PR</p>
+        </a>
+        <a class="comm-card" href="https://qm.qq.com/q/ibQKuQI9Ko" target="_blank" rel="noopener">
+            <div class="icon">💬</div><h3 data-i18n="c2.t">QQ 群</h3><p>823265807</p>
+        </a>
+        <a class="comm-card" href="https://t.me/+D-Pguv_oapwyMjhl" target="_blank" rel="noopener">
+            <div class="icon">✈️</div><h3>Telegram</h3><p data-i18n="c3.p">加入讨论组</p>
+        </a>
+        <a class="comm-card" href="https://github.com/megumiss/NIKKEAutoScript#-支持我--support-me" target="_blank" rel="noopener">
+            <div class="icon">💖</div><h3 data-i18n="c4.t">赞助</h3><p data-i18n="c4.p">微信 / 支付宝 / 国际汇款</p>
+        </a>
+    </div>
+</section>
+
+<footer>
+    <p class="thanks" data-i18n-html="footer.thanks">
+        感谢 <a href="https://github.com/LmeSzinc/AzurLaneAutoScript" target="_blank" rel="noopener">AzurLaneAutoScript</a> 的脚本框架 ·
+        <a href="https://github.com/moesnow/March7thAssistant" target="_blank" rel="noopener">March7thAssistant</a> 的 PC 端支持代码 ·
+        Fork 自 <a href="https://github.com/takagisanmie/NIKKEAutoScript" target="_blank" rel="noopener">takagisanmie/NIKKEAutoScript</a>
+    </p>
+    <p data-i18n="footer.copy">NIKKEAutoScript © megumiss · 基于 GPL-3.0 开源 · 本项目与 SHIFT UP / 腾讯无任何关联</p>
+</footer>
+
+<script>
+/* ================= 多语言 ================= */
+const I18N = {
+'zh-CN': {
+    'doc.title': 'NIKKEAutoScript - 胜利女神：NIKKE 自动日常脚本',
+    'nav.features': '功能', 'nav.download': '下载', 'nav.quickstart': '快速上手', 'nav.faq': '常见问题',
+    'hero.tagline': '胜利女神：NIKKE 自动日常脚本<br>支持所有 PC / <del>模拟器</del> 客户端（国服除外），解放双手，日常全包',
+    'hero.cta.download': '立即下载', 'hero.cta.guide': '安装教程', 'hero.cta.demo': '功能演示 ▶',
+    'hero.cta.guide.url': 'https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN',
+    'features.title': '功能特性', 'features.sub': '从每日日常到大型活动，一站式自动化',
+    'f1.t': '全客户端支持', 'f1.p': 'PC 客户端 / 各类模拟器通吃，支持多屏幕、自动启动游戏与任务，并提供快捷键与接口控制。',
+    'f2.t': '日常全托管', 'f2.p': '收获、歼灭、派遣、咨询送礼、友情点、免费钻、商店购买、每日/每周任务与 Pass 领取，一次配置全自动。',
+    'f3.t': '竞技场自动化', 'f3.p': '普通 / 特殊竞技场自动战斗，特殊竞技场监控，冠军竞技场竞猜，排名奖励自动领取。',
+    'f4.t': '活动一条龙', 'f4.p': '大小活动自动推图、扫荡、挑战、签到、商店购买、协同作战与部分小游戏，活动免费抽卡不落下。',
+    'f5.t': '异常拦截', 'f5.p': '支持自动打红圈、掉落截图，模拟室与超频、企业塔、联盟突袭、个人突袭全覆盖。',
+    'f6.t': '省心运维', 'f6.p': '自动更新 / 定时更新，支持 Docker 部署、Hosts 修改，blablalink 社区任务与 CDK 自动兑换。',
+    'preview.title': '界面预览', 'preview.sub': '现代化 Web UI，任务状态一目了然', 'preview.alt': 'GUI 预览',
+    'risk.title': '⚠️ 使用风险与免责声明', 'risk.sub': '下载前请务必阅读以下内容',
+    'risk.1': '使用自动化脚本可能违反《胜利女神：NIKKE》的用户协议，存在账号被限制、封禁的风险，请自行评估并承担全部后果。',
+    'risk.2': '本项目仅供学习与技术交流，不提供任何形式的担保；因使用本项目造成的账号、设备或数据损失，作者概不负责。',
+    'risk.3': '本项目为非营利开源项目，与 SHIFT UP、腾讯 / Level Infinite 无任何关联，游戏相关素材的版权归其各自所有者所有。',
+    'risk.4': '下载并使用本软件即表示你已阅读、理解并同意上述条款；如不同意，请立即停止使用。',
+    'download.title': '下载', 'download.sub': '选择适合你的方式，1 分钟即可开跑',
+    'dl1.ribbon': '推荐', 'dl1.t': '桌面版（Tauri 2）', 'dl1.ver': 'Latest Release · Windows',
+    'dl1.p': '单文件 <b>nkas.exe</b> 启动，自动完成桌面壳与项目更新，适合绝大多数玩家。', 'dl1.btn': '下载完整包',
+    'dl2.t': 'Docker 部署', 'dl2.ver': 'Linux · NAS · 服务器',
+    'dl2.p': '使用 docker-compose 一键部署，适合长期挂机与无头服务器场景。', 'dl2.btn': '查看部署文档',
+    'quickstart.title': '快速上手', 'quickstart.sub': '三步开始自动化日常',
+    's1.t': '下载并解压', 's1.p': '从 Release 下载完整包，解压到<b>纯英文路径</b>，避免运行期编码问题。',
+    's2.t': '启动 nkas.exe', 's2.p': '双击运行 <code>nkas.exe</code>，等待自更新完成后自动打开 Web UI。',
+    's3.t': '配置并运行', 's3.p': '在设置中选择客户端与模拟器，勾选需要的任务，点击开始即可。详见 <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN" target="_blank" rel="noopener">Wiki 安装指南</a>。',
+    'faq.title': '常见问题', 'faq.sub': '更多问题请查阅 <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions.zh-CN" target="_blank" rel="noopener">Wiki 常见问题</a>',
+    'q1': '支持国服吗？', 'a1': '不支持。NKAS 支持国际服、日服、韩服等所有 PC/<del>模拟器</del> 客户端，唯独不支持国服客户端。',
+    'q2': '支持哪些平台？', 'a2': '项目目前主要支持 <b>PC 端</b>、<del>主流安卓模拟器</del>，Windows 桌面版开箱即用；同时支持 <b>ARM 架构</b>的模拟器和开发板，配合 Docker 部署 NKAS 即可运行。',
+    'q3': '脚本收费吗？安全吗？', 'a3': '完全免费并基于 GPL-3.0 开源，源码可审计。项目仅供学习交流，请遵守游戏用户协议。',
+    'q4': '遇到问题去哪里求助？', 'a4': '可以在 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank" rel="noopener">GitHub Issues</a> 提交问题，或加入 QQ 群 823265807、Telegram 群组获取帮助。',
+    'community.title': '社区与支持', 'community.sub': '喜欢本项目请点个 ⭐ Star，或请作者喝一杯蜜雪冰城 🍦',
+    'c1.p': 'Star / Issue / PR', 'c2.t': 'QQ 群', 'c3.p': '加入讨论组', 'c4.t': '赞助', 'c4.p': '微信 / 支付宝 / 国际汇款',
+    'footer.thanks': '感谢 <a href="https://github.com/LmeSzinc/AzurLaneAutoScript" target="_blank" rel="noopener">AzurLaneAutoScript</a> 的脚本框架 · <a href="https://github.com/moesnow/March7thAssistant" target="_blank" rel="noopener">March7thAssistant</a> 的 PC 端支持代码 · Fork 自 <a href="https://github.com/takagisanmie/NIKKEAutoScript" target="_blank" rel="noopener">takagisanmie/NIKKEAutoScript</a>',
+    'footer.copy': 'NIKKEAutoScript © megumiss · 基于 GPL-3.0 开源 · 本项目与 SHIFT UP / 腾讯无任何关联'
+},
+'en': {
+    'doc.title': 'NIKKEAutoScript - GODDESS OF VICTORY: NIKKE Auto Daily Script',
+    'nav.features': 'Features', 'nav.download': 'Download', 'nav.quickstart': 'Quick Start', 'nav.faq': 'FAQ',
+    'hero.tagline': 'GODDESS OF VICTORY: NIKKE automatic daily script<br>Supports all PC / <del>Emulator</del> clients (except the CN server) — hands-free dailies, fully covered.',
+    'hero.cta.download': 'Download Now', 'hero.cta.guide': 'Installation Guide', 'hero.cta.demo': 'Feature Demo ▶',
+    'hero.cta.guide.url': 'https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide',
+    'features.title': 'Features', 'features.sub': 'From dailies to major events — all-in-one automation',
+    'f1.t': 'All Clients Supported', 'f1.p': 'Works with the PC client and popular emulators, with multi-monitor support, auto-launch of game & tasks, plus hotkeys and API control.',
+    'f2.t': 'Dailies on Autopilot', 'f2.p': 'Rewards, annihilation, dispatch, advise & gifts, friendship points, free gems, shop purchases, daily/weekly missions and Pass claims — configure once, fully automatic.',
+    'f3.t': 'Arena Automation', 'f3.p': 'Auto-battle for normal & special arena, special arena monitoring, champion arena predictions, and auto-claim of ranking rewards.',
+    'f4.t': 'Events End-to-End', 'f4.p': 'Auto story, sweep, challenge, sign-in, shop and co-op for major & minor events, plus some mini-games — never miss free event pulls.',
+    'f5.t': 'Interception & More', 'f5.p': 'Auto red-circle interception with drop screenshots, simulation room & overclock, tribe tower, solo and union raids — all covered.',
+    'f6.t': 'Hassle-free Ops', 'f6.p': 'Auto / scheduled updates, Docker deployment, hosts modification, blablalink community dailies and auto CDK redemption.',
+    'preview.title': 'Screenshots', 'preview.sub': 'A modern Web UI with every task at a glance', 'preview.alt': 'GUI Preview',
+    'risk.title': '⚠️ Risks & Disclaimer', 'risk.sub': 'Please read carefully before downloading',
+    'risk.1': 'Using automation scripts may violate the Terms of Service of GODDESS OF VICTORY: NIKKE and carries a risk of account restriction or ban. Evaluate the risk and assume all consequences yourself.',
+    'risk.2': 'This project is provided for learning and technical exchange only, without warranty of any kind. The author is not liable for any loss of accounts, devices, or data arising from its use.',
+    'risk.3': 'This is a non-profit open-source project and is not affiliated with SHIFT UP or Tencent / Level Infinite. Copyright of game-related assets belongs to their respective owners.',
+    'risk.4': 'By downloading and using this software you acknowledge that you have read, understood and agreed to the above terms. If you do not agree, stop using it immediately.',
+    'download.title': 'Download', 'download.sub': 'Pick the way that suits you — up and running in 1 minute',
+    'dl1.ribbon': 'Recommended', 'dl1.t': 'Desktop (Tauri 2)', 'dl1.ver': 'Latest Release · Windows',
+    'dl1.p': 'Single-file <b>nkas.exe</b> launcher with automatic shell and project updates. Best for most players.', 'dl1.btn': 'Download Full Package',
+    'dl2.t': 'Docker', 'dl2.ver': 'Linux · NAS · Server',
+    'dl2.p': 'One-command deployment with docker-compose, ideal for long-running headless servers.', 'dl2.btn': 'View Docs',
+    'quickstart.title': 'Quick Start', 'quickstart.sub': 'Start automating in three steps',
+    's1.t': 'Download & Extract', 's1.p': 'Download the full package from Releases and extract it to an <b>ASCII-only path</b> to avoid encoding issues.',
+    's2.t': 'Launch nkas.exe', 's2.p': 'Double-click <code>nkas.exe</code> and wait for the self-update; the Web UI opens automatically.',
+    's3.t': 'Configure & Run', 's3.p': 'Pick your client or emulator in settings, select the tasks you need and hit start. See the <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide" target="_blank" rel="noopener">Wiki guide</a> for details.',
+    'faq.title': 'FAQ', 'faq.sub': 'More answers in the <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions" target="_blank" rel="noopener">Wiki FAQ</a>',
+    'q1': 'Is the CN server supported?', 'a1': 'No. NKAS supports the global, JP and KR clients on PC and <del>emulators</del> — everything except the CN server.',
+    'q2': 'Which platforms are supported?', 'a2': 'The project now mainly supports the <b>PC client</b> and <del>popular Android emulators</del> — the Windows desktop build works out of the box. <b>ARM-based</b> emulators and ARM dev boards are also supported by deploying NKAS with Docker.',
+    'q3': 'Is it free? Is it safe?', 'a3': 'Completely free and open source under GPL-3.0 — the code is fully auditable. Provided for learning purposes only; please follow the game\'s terms of service.',
+    'q4': 'Where can I get help?', 'a4': 'Open an issue on <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank" rel="noopener">GitHub Issues</a>, or join the QQ group 823265807 / Telegram group.',
+    'community.title': 'Community & Support', 'community.sub': 'If you find it helpful, leave a ⭐ Star or buy the author an ice cream 🍦',
+    'c1.p': 'Star / Issue / PR', 'c2.t': 'QQ Group', 'c3.p': 'Join the discussion', 'c4.t': 'Donate', 'c4.p': 'WeChat / Alipay / Intl. remittance',
+    'footer.thanks': 'Thanks to <a href="https://github.com/LmeSzinc/AzurLaneAutoScript" target="_blank" rel="noopener">AzurLaneAutoScript</a> for the framework · <a href="https://github.com/moesnow/March7thAssistant" target="_blank" rel="noopener">March7thAssistant</a> for the PC support code · Forked from <a href="https://github.com/takagisanmie/NIKKEAutoScript" target="_blank" rel="noopener">takagisanmie/NIKKEAutoScript</a>',
+    'footer.copy': 'NIKKEAutoScript © megumiss · Open sourced under GPL-3.0 · Not affiliated with SHIFT UP / Tencent'
+},
+'ja': {
+    'doc.title': 'NIKKEAutoScript - 勝利の女神：NIKKE 自動デイリースクリプト',
+    'nav.features': '機能', 'nav.download': 'ダウンロード', 'nav.quickstart': 'クイックスタート', 'nav.faq': 'よくある質問',
+    'hero.tagline': '勝利の女神：NIKKE 自動デイリースクリプト<br>すべての PC / <del>エミュレーター</del> クライアントに対応（中国サーバーを除く）。デイリーをまるごと自動化。',
+    'hero.cta.download': '今すぐダウンロード', 'hero.cta.guide': 'インストールガイド', 'hero.cta.demo': '機能デモ ▶',
+    'hero.cta.guide.url': 'https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide',
+    'features.title': '機能特徴', 'features.sub': 'デイリーから大型イベントまで、ワンストップで自動化',
+    'f1.t': '全クライアント対応', 'f1.p': 'PC クライアントと主要エミュレーターに対応。マルチモニター、ゲームとタスクの自動起動、ショートカットキーと API 制御も。',
+    'f2.t': 'デイリー完全自動化', 'f2.p': '収穫、殲滅、派遣、面談・プレゼント、フレンドポイント、無料ジュエル、ショップ購入、デイリー/ウィークリー任務とパスの受け取りまで、一度設定すれば全自動。',
+    'f3.t': 'アリーナ自動化', 'f3.p': 'ノーマル/スペシャルアリーナの自動バトル、スペシャルアリーナ監視、チャンピオンアリーナ予想、ランキング報酬の自動受領。',
+    'f4.t': 'イベントまるごと自動', 'f4.p': '大・小イベントの自動攻略、周回、チャレンジ、ログイン、ショップ購入、協同作戦と一部ミニゲーム。イベント無料ガチャも逃さない。',
+    'f5.t': 'インターセプト対応', 'f5.p': '赤サークル自動攻撃、ドロップのスクリーンショット、シミュレーションルームとオーバークロック、企業タワー、ソロ/ユニオンレイドをカバー。',
+    'f6.t': '運用も安心', 'f6.p': '自動/定期アップデート、Docker デプロイ、hosts 変更、blablalink デイリーと CDK 自動交換に対応。',
+    'preview.title': 'スクリーンショット', 'preview.sub': 'モダンな Web UI でタスク状況を一目で把握', 'preview.alt': 'GUI プレビュー',
+    'risk.title': '⚠️ 使用上のリスクと免責事項', 'risk.sub': 'ダウンロード前に必ずお読みください',
+    'risk.1': '自動化スクリプトの使用は『勝利の女神：NIKKE』の利用規約に違反する可能性があり、アカウントの制限・停止のリスクがあります。すべて自己責任でご判断ください。',
+    'risk.2': '本プロジェクトは学習・技術交流を目的として提供され、いかなる保証も行いません。利用によって生じたアカウント・端末・データの損失について、作者は一切の責任を負いません。',
+    'risk.3': '本プロジェクトは非営利のオープンソースであり、SHIFT UP、テンセント / Level Infinite とは一切関係ありません。ゲーム関連素材の著作権は各権利者に帰属します。',
+    'risk.4': 'ダウンロードおよび使用をもって、上記の条項に同意したものとみなします。同意いただけない場合は直ちに使用を中止してください。',
+    'download.title': 'ダウンロード', 'download.sub': '最適な方法を選んで、1 分で起動',
+    'dl1.ribbon': 'おすすめ', 'dl1.t': 'デスクトップ版（Tauri 2）', 'dl1.ver': 'Latest Release · Windows',
+    'dl1.p': '単一ファイル <b>nkas.exe</b> で起動。シェルとプロジェクトの更新は自動。ほとんどのプレイヤーにおすすめ。', 'dl1.btn': 'フルパッケージをダウンロード',
+    'dl2.t': 'Docker デプロイ', 'dl2.ver': 'Linux · NAS · サーバー',
+    'dl2.p': 'docker-compose でワンコマンドデプロイ。長期稼働やヘッドレスサーバーに最適。', 'dl2.btn': 'ドキュメントを見る',
+    'quickstart.title': 'クイックスタート', 'quickstart.sub': '3 ステップで自動化を開始',
+    's1.t': 'ダウンロードと展開', 's1.p': 'Releases からフルパッケージをダウンロードし、文字化け防止のため<b>英数字のみのパス</b>に展開。',
+    's2.t': 'nkas.exe を起動', 's2.p': '<code>nkas.exe</code> をダブルクリックし、自己更新の完了を待つと Web UI が自動で開きます。',
+    's3.t': '設定して実行', 's3.p': '設定でクライアントやエミュレーターを選び、必要なタスクにチェックを入れて開始。詳しくは <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide" target="_blank" rel="noopener">Wiki ガイド</a>へ。',
+    'faq.title': 'よくある質問', 'faq.sub': 'その他は <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions" target="_blank" rel="noopener">Wiki の FAQ</a> をご覧ください',
+    'q1': '中国サーバーに対応していますか？', 'a1': '対応していません。NKAS はグローバル・日本・韓国などすべての PC/<del>エミュレーター</del> クライアントに対応していますが、中国サーバーのみ非対応です。',
+    'q2': '対応プラットフォームは？', 'a2': '現在プロジェクトは主に <b>PC 版</b>、<del>主要な Android エミュレーター</del>をサポートしており、Windows デスクトップ版はすぐ使えます。また、<b>ARM アーキテクチャ</b>のエミュレーターや開発ボードでも Docker で NKAS をデプロイして利用できます。',
+    'q3': '有料ですか？安全ですか？', 'a3': '完全無料で GPL-3.0 のオープンソースです。コードはすべて監査可能。学習目的の提供のため、ゲームの利用規約に従ってご利用ください。',
+    'q4': '困ったときは？', 'a4': '<a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank" rel="noopener">GitHub Issues</a> で報告するか、QQ グループ 823265807 / Telegram グループへどうぞ。',
+    'community.title': 'コミュニティと支援', 'community.sub': '役に立ったら ⭐ Star、または作者にアイスを一杯 🍦',
+    'c1.p': 'Star / Issue / PR', 'c2.t': 'QQ グループ', 'c3.p': 'ディスカッションに参加', 'c4.t': '支援', 'c4.p': 'WeChat / Alipay / 海外送金',
+    'footer.thanks': '<a href="https://github.com/LmeSzinc/AzurLaneAutoScript" target="_blank" rel="noopener">AzurLaneAutoScript</a> のフレームワーク · <a href="https://github.com/moesnow/March7thAssistant" target="_blank" rel="noopener">March7thAssistant</a> の PC 対応コードに感謝 · <a href="https://github.com/takagisanmie/NIKKEAutoScript" target="_blank" rel="noopener">takagisanmie/NIKKEAutoScript</a> から Fork',
+    'footer.copy': 'NIKKEAutoScript © megumiss · GPL-3.0 で公開 · 本プロジェクトは SHIFT UP / テンセントとは関係ありません'
+}
+};
+
+function applyLang(lang) {
+    const dict = I18N[lang] || I18N['zh-CN'];
+    document.documentElement.lang = lang;
+    document.title = dict['doc.title'];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const v = dict[el.dataset.i18n];
+        if (v !== undefined) el.textContent = v;
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const v = dict[el.dataset.i18nHtml];
+        if (v !== undefined) el.innerHTML = v;
+    });
+    document.querySelectorAll('[data-i18n-alt]').forEach(el => {
+        const v = dict[el.dataset.i18nAlt];
+        if (v !== undefined) el.alt = v;
+    });
+    document.querySelectorAll('[data-i18n-href]').forEach(el => {
+        const v = dict[el.dataset.i18nHref];
+        if (v !== undefined) el.href = v;
+    });
+    document.querySelectorAll('.lang-switch button').forEach(b => {
+        b.classList.toggle('active', b.dataset.lang === lang);
+    });
+    localStorage.setItem('nkas-lang', lang);
+    if (window.__themeReady) applyTheme();   // 刷新主题按钮提示文字
+}
+
+(function initLang() {
+    let lang = localStorage.getItem('nkas-lang');
+    if (!lang || !I18N[lang]) {
+        const nav = (navigator.language || 'zh-CN').toLowerCase();
+        lang = nav.startsWith('ja') ? 'ja' : (nav.startsWith('en') ? 'en' : 'zh-CN');
+    }
+    applyLang(lang);
+})();
+
+document.querySelectorAll('.lang-switch button').forEach(b => {
+    b.addEventListener('click', () => applyLang(b.dataset.lang));
+});
+
+/* ================= 主题：手动切换 + 按时间自动 ================= */
+const THEME_ICONS = { auto: '🌓', light: '☀️', dark: '🌙' };
+const themeToggle = document.getElementById('themeToggle');
+let themeMode = localStorage.getItem('nkas-theme-mode') || 'auto';
+
+const THEME_LABELS = {
+    'zh-CN': { auto: '自动', light: '亮色', dark: '暗色', prefix: '主题：' },
+    'en':    { auto: 'Auto', light: 'Light', dark: 'Dark', prefix: 'Theme: ' },
+    'ja':    { auto: '自動', light: 'ライト', dark: 'ダーク', prefix: 'テーマ：' }
+};
+function themeByTime() {
+    const h = new Date().getHours();
+    return (h >= 19 || h < 7) ? 'dark' : 'light';
+}
+function applyTheme() {
+    document.documentElement.dataset.theme = themeMode === 'auto' ? themeByTime() : themeMode;
+    themeToggle.textContent = THEME_ICONS[themeMode];
+    const L = THEME_LABELS[document.documentElement.lang] || THEME_LABELS['zh-CN'];
+    themeToggle.title = L.prefix + L[themeMode];
+}
+themeToggle.addEventListener('click', () => {
+    /* 始终切到当前生效主题的反色，保证每次点击都有变化；
+       若结果与按时间的主题一致，则直接回到自动模式 */
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    themeMode = next === themeByTime() ? 'auto' : next;
+    if (themeMode === 'auto') {
+        localStorage.removeItem('nkas-theme');
+        localStorage.removeItem('nkas-theme-mode');
+    } else {
+        localStorage.setItem('nkas-theme', themeMode);
+        localStorage.setItem('nkas-theme-mode', themeMode);
+    }
+    applyTheme();
+});
+applyTheme();
+window.__themeReady = true;
+/* 自动模式下每分钟按时间刷新 */
+setInterval(() => { if (themeMode === 'auto') applyTheme(); }, 60 * 1000);
+
+/* ================= FAQ 折叠 ================= */
+document.querySelectorAll('.faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const item = btn.parentElement;
+        const ans = item.querySelector('.faq-a');
+        const open = item.classList.toggle('open');
+        ans.style.maxHeight = open ? ans.scrollHeight + 'px' : '0';
+    });
+});
+</script>
+</body>
+</html>

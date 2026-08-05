@@ -59,7 +59,7 @@ Other tools:
 ### How to Use
 
 Please refer to the detailed installation guide:  
-[Wiki Installation Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南)
+[Wiki Installation Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide)
 
 The desktop package now starts from the single root-level `nkas.exe`. It handles desktop-shell and project updates before starting the Python backend.
 
@@ -70,7 +70,7 @@ When upgrading a full Electron package to Tauri 2, replace the root-level `nkas.
 ### FAQ
 
 Detailed answers can be found here:  
-[Wiki FAQ Page](https://github.com/megumiss/NIKKEAutoScript/wiki/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)
+[Wiki FAQ Page](https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions)
 
 > 💡 **Need Help?**  
 > If you encounter issues while using this project, you can:  
