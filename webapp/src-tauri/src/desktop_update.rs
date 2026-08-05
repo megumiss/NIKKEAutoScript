@@ -12,6 +12,8 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::Duration;
+#[cfg(not(windows))]
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -23,6 +25,101 @@ use windows::Win32::System::Threading::{OpenProcess, WaitForSingleObject, PROCES
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const TARGET: &str = "x86_64-pc-windows-msvc";
 const MAX_DOWNLOAD_SIZE: u64 = 30 * 1024 * 1024;
+const MAX_LOG_SIZE: u64 = 512 * 1024;
+
+// Append-only log for the whole update chain: check, apply, download, the
+// detached replace helper and the post-update cleanup all write here, so a
+// failed update can be reconstructed afterwards.  Files follow the
+// module/logger convention (log/<date>_desktop.txt, local time, levelled
+// lines) so the webui logs page picks them up as the "desktop" source.
+// Logging must never break the update itself, hence every error is swallowed.
+fn update_log(root: &Path, message: impl AsRef<str>) {
+    update_log_levelled(root, "INFO", message);
+}
+
+fn update_log_levelled(root: &Path, level: &str, message: impl AsRef<str>) {
+    let now = LocalTimestamp::now();
+    let path = root
+        .join("log")
+        .join(format!("{}_desktop.txt", now.date));
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    // Keep the file bounded; the chain within a single update matters, not
+    // ancient history.
+    if fs::metadata(&path).is_ok_and(|meta| meta.len() > MAX_LOG_SIZE) {
+        let _ = fs::remove_file(&path);
+    }
+    let line = format!("{} | {} | {}\n", now.line, level, message.as_ref());
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let _ = file.write_all(line.as_bytes());
+    }
+}
+
+// Local wall-clock time rendered the way module/logger's file_formatter does,
+// so log files stay mergeable with the Python side.
+struct LocalTimestamp {
+    date: String, // YYYY-MM-DD, used in the file name
+    line: String, // YYYY-MM-DD HH:MM:SS.mmm, used at the start of each line
+}
+
+#[cfg(windows)]
+impl LocalTimestamp {
+    fn now() -> Self {
+        use windows::Win32::System::SystemInformation::GetLocalTime;
+        let time = unsafe { GetLocalTime() };
+        let date = format!("{:04}-{:02}-{:02}", time.wYear, time.wMonth, time.wDay);
+        let line = format!(
+            "{} {:02}:{:02}:{:02}.{:03}",
+            date, time.wHour, time.wMinute, time.wSecond, time.wMilliseconds
+        );
+        Self { date, line }
+    }
+}
+
+// Fallback for non-Windows builds (the updater itself only runs on Windows):
+// UTC from the system clock without pulling in chrono/time.
+#[cfg(not(windows))]
+impl LocalTimestamp {
+    fn now() -> Self {
+        let secs = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs())
+            .unwrap_or(0);
+        let days = (secs / 86_400) as i64;
+        let secs_of_day = secs % 86_400;
+        let (year, month, day) = civil_from_days(days);
+        let millis = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.subsec_millis())
+            .unwrap_or(0);
+        let date = format!("{year:04}-{month:02}-{day:02}");
+        let line = format!(
+            "{} {:02}:{:02}:{:02}.{:03}",
+            date,
+            secs_of_day / 3600,
+            secs_of_day % 3600 / 60,
+            secs_of_day % 60,
+            millis
+        );
+        Self { date, line }
+    }
+}
+
+// Howard Hinnant's civil-from-days algorithm.
+#[cfg(not(windows))]
+fn civil_from_days(days: i64) -> (i64, u32, u32) {
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let year = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    (if month <= 2 { year + 1 } else { year }, month, day)
+}
 
 #[derive(Debug, Deserialize)]
 struct DesktopManifest {
@@ -102,6 +199,13 @@ impl DesktopUpdateManager {
     }
 
     fn check(&self) {
+        update_log(
+            &self.config.root,
+            format!(
+                "checking for desktop updates: {}",
+                self.config.desktop_update_manifest
+            ),
+        );
         let result = fetch_manifest(&self.config.desktop_update_manifest)
             .and_then(|manifest| validate_manifest(&manifest));
         let current = Version::parse(CURRENT_VERSION);
@@ -110,16 +214,27 @@ impl DesktopUpdateManager {
         status.checked = true;
         match (result, current) {
             (Ok(remote), Ok(current)) => {
+                let available = is_newer_version(&remote, &current);
+                update_log(
+                    &self.config.root,
+                    format!("check finished: current {current}, remote {remote}, update available: {available}"),
+                );
                 status.remote_version = Some(remote.to_string());
-                status.update_available = is_newer_version(&remote, &current);
+                status.update_available = available;
                 status.error = None;
             }
             (Ok(remote), Err(error)) => {
+                update_log_levelled(
+                    &self.config.root,
+                    "ERROR",
+                    format!("check finished: remote {remote}, but the current version is invalid: {error}"),
+                );
                 status.remote_version = Some(remote.to_string());
                 status.update_available = false;
                 status.error = Some(error.to_string());
             }
             (Err(error), _) => {
+                update_log_levelled(&self.config.root, "ERROR", format!("check failed: {error:#}"));
                 status.update_available = false;
                 status.error = Some(format!("{error:#}"));
             }
@@ -145,6 +260,7 @@ impl DesktopUpdateManager {
             status.error = None;
         }
         // Fetch the manifest again instead of trusting the cached check.
+        update_log(&self.config.root, "applying desktop update");
         let result = fetch_manifest(&self.config.desktop_update_manifest)
             .and_then(|manifest| {
                 let remote = validate_manifest(&manifest)?;
@@ -158,10 +274,15 @@ impl DesktopUpdateManager {
         let mut status = self.lock_status();
         match result {
             Ok(()) => {
+                update_log(
+                    &self.config.root,
+                    "update staged and replace helper launched; waiting for restart",
+                );
                 status.error = None;
                 Ok(())
             }
             Err(error) => {
+                update_log_levelled(&self.config.root, "ERROR", format!("apply failed: {error:#}"));
                 status.applying = false;
                 status.error = Some(format!("{error:#}"));
                 Err(error)
@@ -313,10 +434,21 @@ fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Resul
     }
     let _ = fs::remove_file(&part);
     let mut file = fs::File::create(&part)?;
+    update_log(
+        &config.root,
+        format!("downloading {} ({} bytes)", manifest.url, manifest.size),
+    );
     write_verified_download(&mut response, &mut file, manifest.size, &manifest.sha256)?;
     file.sync_all()?;
     let _ = fs::remove_file(&staged);
     fs::rename(&part, &staged)?;
+    update_log(
+        &config.root,
+        format!(
+            "download verified (size and SHA-256 match), staged at {}",
+            staged.display()
+        ),
+    );
 
     let target = config.root.join("nkas.exe");
     let mut command = Command::new(&staged);
@@ -336,9 +468,17 @@ fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Resul
         .stderr(Stdio::null());
     #[cfg(windows)]
     command.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    command
+    let child = command
         .spawn()
         .context("Unable to start the desktop update helper")?;
+    update_log(
+        &config.root,
+        format!(
+            "replace helper started: pid {}, waiting to replace {}",
+            child.id(),
+            target.display()
+        ),
+    );
     Ok(())
 }
 
@@ -379,8 +519,26 @@ fn write_verified_download<R: Read, W: Write>(
 }
 
 pub fn run_replace(args: ReplaceArgs) -> Result<()> {
+    update_log(
+        &args.root,
+        format!(
+            "replace helper running: wait-pid {}, target {}",
+            args.wait_pid,
+            args.target.display()
+        ),
+    );
+    let root = args.root.clone();
+    let result = run_replace_inner(args);
+    if let Err(error) = &result {
+        update_log_levelled(&root, "ERROR", format!("replace failed: {error:#}"));
+    }
+    result
+}
+
+fn run_replace_inner(args: ReplaceArgs) -> Result<()> {
     verify_replace_paths(&args)?;
     wait_for_process(args.wait_pid)?;
+    update_log(&args.root, "old process exited; replacing nkas.exe");
     let helper = env::current_exe()?;
     let update_dir = update_dir(&args.root);
     fs::create_dir_all(&update_dir)?;
@@ -403,7 +561,12 @@ pub fn run_replace(args: ReplaceArgs) -> Result<()> {
             .spawn()
             .context("Unable to restart the updated nkas.exe")?;
         Ok(())
-    })
+    })?;
+    update_log(
+        &args.root,
+        "nkas.exe replaced; restarted with --desktop-updated",
+    );
+    Ok(())
 }
 
 fn replace_and_launch<F>(helper: &Path, target: &Path, backup: &Path, launch: F) -> Result<()>
@@ -491,6 +654,7 @@ pub fn cleanup_after_success(root: &Path, cleanup_helper: Option<PathBuf>) {
     let root = root.to_path_buf();
     let cleanup_helper = cleanup_helper.filter(|path| is_update_executable(&root, path));
     thread::spawn(move || {
+        update_log(&root, "running post-update cleanup");
         let directory = update_dir(&root);
         for _ in 0..30 {
             let mut pending = false;
@@ -516,10 +680,16 @@ pub fn cleanup_after_success(root: &Path, cleanup_helper: Option<PathBuf>) {
             }
             let _ = fs::remove_dir(&directory);
             if !pending {
-                break;
+                update_log(&root, "post-update cleanup finished");
+                return;
             }
             thread::sleep(Duration::from_millis(250));
         }
+        update_log_levelled(
+            &root,
+            "WARNING",
+            "post-update cleanup gave up; leftover files remain in tmp/desktop-update",
+        );
     });
 }
 
