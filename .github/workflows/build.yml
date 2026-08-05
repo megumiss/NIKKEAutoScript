@@ -171,7 +171,7 @@ jobs:
         if ($file.Length -gt 30MB) { throw "Desktop executable exceeds 30 MiB: $($file.Length) bytes" }
         $sha256 = (Get-FileHash $assetExe -Algorithm SHA256).Hash.ToLowerInvariant()
         # Note: this manifest's url points at GitHub Release; the VPS manifest
-        # (dl.megumiss.top) is generated and pushed by the deploy-desktop job
+        # (nkas.megumiss.top) is generated and pushed by the deploy-desktop job
         # at the end of this workflow.
         $manifest = [ordered]@{
           schema = 1
@@ -316,7 +316,7 @@ jobs:
   # tag 推送时自动发布；workflow_dispatch 默认不发布，需勾选 publish_exe
   # 需要的 secrets（Settings -> Secrets and variables -> Actions）：
   #   VPS_HOST / VPS_USERNAME / VPS_SSH_KEY / VPS_PORT（可选，默认 22）
-  #   VPS_DEPLOY_PATH（可选，默认 /www/wwwroot/dl.megumiss.top/nkas）
+  #   VPS_DEPLOY_PATH（可选，默认 /www/wwwroot/nkas.megumiss.top/releases/latest）
   # ==========================
   deploy-desktop:
     needs: build-release
@@ -371,7 +371,7 @@ jobs:
       # ==========================
       # Identical to the manifest build-release uploads to the release, except
       # the `url` field: the release manifest points at github.com while this
-      # one points at dl.megumiss.top.
+      # one points at nkas.megumiss.top.
       - name: Generate VPS Manifest
         run: |
           DESKTOP_VERSION=$(grep -m1 '^version = "' webapp/src-tauri/Cargo.toml | cut -d'"' -f2)
@@ -384,7 +384,7 @@ jobs:
           jq -n \
             --arg project_version "$TAG_NAME" \
             --arg desktop_version "$DESKTOP_VERSION" \
-            --arg url "https://dl.megumiss.top/nkas/nkas-win-x64.exe" \
+            --arg url "https://nkas.megumiss.top/releases/latest/nkas-win-x64.exe" \
             --arg sha256 "$SHA256" \
             --argjson size "$SIZE" \
             '{
@@ -412,6 +412,6 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           source: "dist/nkas-win-x64.exe,dist/nkas-desktop.json"
-          target: ${{ secrets.VPS_DEPLOY_PATH || '/www/wwwroot/dl.megumiss.top/nkas' }}
+          target: ${{ secrets.VPS_DEPLOY_PATH || '/www/wwwroot/nkas.megumiss.top/releases/latest' }}
           strip_components: 1
 

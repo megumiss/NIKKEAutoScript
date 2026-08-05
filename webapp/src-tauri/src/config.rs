@@ -16,7 +16,7 @@ fn default_theme() -> String {
 fn default_desktop_update_manifest() -> String {
     // Desktop updates are fetched from the official VPS by default.
     // Override Deploy.Update.DesktopUpdateManifest in config/deploy.yaml to use another source.
-    "https://dl.megumiss.top/nkas/nkas-desktop.json".into()
+    "https://nkas.megumiss.top/releases/latest/nkas-desktop.json".into()
 }
 
 #[derive(Debug, Deserialize)]
