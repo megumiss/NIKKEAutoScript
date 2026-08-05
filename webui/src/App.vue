@@ -640,7 +640,7 @@ async function checkUpdate() {
 const updating = ref(false)
 function runUpdate() {
   if (updating.value) return
-  openConfirmModal(t('更新源码将中断正在运行的任务并自动重启后端，确定继续？'), executeSourceUpdate)
+  openConfirmModal(t('更新源码将等待当前任务执行完毕后再进行，期间请勿启动新任务，确定继续？'), executeSourceUpdate)
 }
 async function executeSourceUpdate() {
   updating.value = true
