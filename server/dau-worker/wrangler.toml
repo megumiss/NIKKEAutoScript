@@ -1,0 +1,13 @@
+name = "nkas-dau"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# 部署前用以下命令创建 KV 命名空间，把返回的 id 填到这里：
+#   npx wrangler kv namespace create STATS
+[[kv_namespaces]]
+binding = "STATS"
+id = "在这里填入你的KV命名空间ID"
+
+# 查询接口的访问口令，改成你自己的随机字符串
+[vars]
+STATS_TOKEN = "change-me-to-a-random-string"
