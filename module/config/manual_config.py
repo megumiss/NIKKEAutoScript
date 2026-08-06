@@ -104,7 +104,7 @@ class ManualConfig:
             "mini_game_play": True,
             "extend": False,
             "story_part": "Story_2",  # Story_1, Story_2
-            "story_difficulty": "Normal"  # Normal, Hard
+            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20260702",
