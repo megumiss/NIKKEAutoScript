@@ -3,6 +3,7 @@ import json
 import subprocess
 import sys
 import threading
+import time
 import uuid
 
 import requests
@@ -73,32 +74,62 @@ def _get_resolution(config_name):
     """
     仅 PC 客户端上报屏幕分辨率；开启多屏幕模式时使用目标屏幕，否则使用主屏幕
     """
-    try:
-        with open(f'./config/{config_name}.json', encoding='utf-8') as f:
-            data = json.load(f)
-    except (OSError, ValueError):
+    data = None
+    for attempt in range(3):
+        try:
+            with open(f'./config/{config_name}.json', encoding='utf-8') as f:
+                data = json.load(f)
+            break
+        except (OSError, ValueError) as e:
+            # 启动阶段 app 侧在频繁原子替换配置文件，读取可能撞上窗口期，稍候重试
+            logger.debug(f'Telemetry read config failed (attempt {attempt + 1}): {e}')
+            time.sleep(0.3)
+    if data is None:
         return None
-    if deep_get(data, 'Client.Platform', default='win') != 'win':
+    platform = deep_get(data, 'NKAS.Client.Platform', default='win')
+    if platform != 'win':
+        logger.debug(f'Telemetry skip res, platform: {platform}')
         return None
 
     screen_n = 0
     if deep_get(data, 'PCClient.Screens', default=False):
         screen_n = deep_get(data, 'PCClient.ScreenNumber', default=0)
-    try:
-        from desktopmagic.screengrab_win32 import getDisplayRects
 
-        rects = getDisplayRects()
+    # EnumDisplaySettings 返回显示器原生模式（物理分辨率），不受 DPI 缩放影响
+    return _get_physical_resolution(screen_n)
+
+
+def _get_physical_resolution(screen_n):
+    try:
+        import win32api
+    except ImportError:
+        logger.debug('Telemetry physical resolution skipped, win32api unavailable')
+        return None
+    try:
+        count = 0
+        while True:
+            try:
+                win32api.EnumDisplayDevices(None, count)
+                count += 1
+            except Exception:
+                break
+        if count == 0:
+            logger.debug('Telemetry physical resolution failed: no display found')
+            return None
+        if not isinstance(screen_n, int) or not 0 <= screen_n < count:
+            screen_n = 0
+        device = win32api.EnumDisplayDevices(None, screen_n)
+        # -1 = ENUM_CURRENT_SETTINGS，当前显示模式
+        settings = win32api.EnumDisplaySettings(device.DeviceName, -1)
+        if settings.PelsWidth <= 0 or settings.PelsHeight <= 0:
+            logger.debug(
+                f'Telemetry physical resolution failed: {settings.PelsWidth}x{settings.PelsHeight}'
+            )
+            return None
+        return f'{settings.PelsWidth}x{settings.PelsHeight}'
     except Exception as e:
-        logger.debug(f'Telemetry get display rects failed: {e}')
+        logger.debug(f'Telemetry get physical resolution failed: {e}')
         return None
-    if not rects:
-        return None
-    if not isinstance(screen_n, int) or not 0 <= screen_n < len(rects):
-        screen_n = 0
-    left, top, right, bottom = rects[screen_n]
-    if right <= left or bottom <= top:
-        return None
-    return f'{right - left}x{bottom - top}'
 
 
 def _send(payload):
@@ -127,6 +158,7 @@ def _run(config_name, today, state):
         if resolution:
             payload['res'] = resolution
 
+        logger.debug(f'Telemetry payload: {payload}')
         if _send(payload):
             state['last_report'] = today
         _save_state(state)
