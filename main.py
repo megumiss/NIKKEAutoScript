@@ -57,6 +57,10 @@ class NikkeAutoScript:
         from module.warehouse_stats.data import init_warehouse_stats_files
         init_warehouse_stats_files(config_name=self.config_name)
 
+        # 匿名使用统计上报（每日一次，config/deploy.yaml 中 EnableStatistics 可关闭）
+        from module.telemetry import report_statistics
+        report_statistics(config_name=self.config_name)
+
     @cached_property
     def config(self):
         try:

@@ -8,6 +8,7 @@
 **/node_modules
 config/deploy.yaml
 config/nkas.json
+data/telemetry.json
 **.lock
 !yarn.lock
 !webapp/src-tauri/Cargo.lock

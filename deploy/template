@@ -106,3 +106,8 @@ Deploy:
     Run: null
     # Startup notice id dismissed by current user
     StartupNoticeDismissedId: null
+
+  Statistics:
+    # Report anonymous usage statistics at startup, at most once per day. No account, config or any personal data is collected
+    # Reported data: random anonymous ID, source commit hash, OS platform name, screen resolution
+    EnableStatistics: true

@@ -51,6 +51,9 @@ class ConfigModel:
     Run: Optional[str] = None
     StartupNoticeDismissedId: Optional[str] = None
 
+    # Statistics
+    EnableStatistics: bool = True
+
     # Remote Access
     EnableRemoteAccess: bool = False
     SSHUser: Optional[str] = None
