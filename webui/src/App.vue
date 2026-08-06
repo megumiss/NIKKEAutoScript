@@ -1158,7 +1158,9 @@ onBeforeUnmount(() => {
     <div v-if="startupNotice && !startupNoticeClosed" class="modal-mask">
       <div class="modal-card">
         <h3>{{ startupNotice.data.title || t('提示') }}</h3>
-        <p class="modal-text notice-content">{{ startupNotice.data.content }}</p>
+        <!-- 公告内容来自仓库自带的 config/startup_notice.yaml（可信来源），
+             用 v-html 渲染以支持链接与强调；pre-line 让旧的纯文本公告照常换行 -->
+        <div class="modal-text notice-content" v-html="startupNotice.data.content"></div>
         <div class="modal-actions">
           <div class="notice-option"><label class="switch sm"><input v-model="noticeDontShow" type="checkbox"><span class="slider"></span></label><span>{{ t('本次不再提示') }}</span></div>
           <button class="btn primary" @click="closeStartupNotice">{{ t('我知道了') }}</button>

@@ -55,7 +55,10 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .about-panel h3 { margin:22px 0 5px; color:var(--text); font-size:15px; }.about-donations { display:flex; gap:18px; flex-wrap:wrap; margin-top:18px; }.about-donations figure { padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--card-2); text-align:center; }.about-donations img { display:block; width:160px; height:160px; object-fit:contain; }.about-donations figcaption { margin-top:5px; color:var(--text-2); font-size:12px; }
 .notice-stack { position:absolute; z-index:4; top:68px; right:24px; width:min(420px,calc(100vw - 280px)); }.notice-card { display:flex; gap:16px; align-items:flex-start; margin-bottom:10px; padding:14px 16px; border:1px solid var(--border-light); border-radius:12px; background:var(--card); box-shadow:var(--shadow-hover); }.notice-card.success { border-color:var(--green); background:var(--toast-ok-bg); box-shadow:var(--toast-shadow); }.notice-card.error { border-color:var(--red); background:var(--toast-error-bg); box-shadow:var(--toast-shadow); }.notice-card strong { display:block; margin-bottom:3px; }.notice-card p { color:var(--text-2); font-size:12.5px; line-height:1.5; }.notice-card .btn { margin-left:auto; flex:none; }
 .notice-messages { margin:0; padding:0; list-style:none; color:var(--text-2); font-size:12.5px; line-height:1.6; }
-.notice-content { white-space:pre-line; line-height:1.7; }
+.notice-content { white-space:pre-line; line-height:1.7; max-height:60vh; overflow-y:auto; }
+.notice-content a { color:var(--accent); text-decoration:none; }
+.notice-content a:hover { text-decoration:underline; }
+.notice-content b { color:var(--text); }
 .notice-option { display:flex; align-items:center; gap:8px; margin-bottom:16px; color:var(--text-2); font-size:13px; }
 .modal-actions .notice-option { margin-right:auto; margin-bottom:0; }
 .update-history { padding:24px 24px 0; }.history-list { padding:0 22px 14px; }.history-row { display:grid; grid-template-columns:78px 1fr auto; gap:14px; align-items:center; padding:11px 0; border-top:1px solid var(--border); font-size:13px; }.history-row code { color:var(--accent); }.history-row small { color:var(--text-3); font-size:11.5px; }
