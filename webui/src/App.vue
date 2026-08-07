@@ -417,7 +417,8 @@ async function saveDeployValue(field: any, value: any) {
 }
 function saveDeployField(field: any, event: Event) {
   const el = event.target as HTMLInputElement
-  saveDeployValue(field, field.widget === 'checkbox' ? el.checked : field.widget === 'number' ? Number(el.value) : el.value)
+  // 数字框清空时传 null，由后端恢复模板默认值
+  saveDeployValue(field, field.widget === 'checkbox' ? el.checked : field.widget === 'number' ? (el.value === '' ? null : Number(el.value)) : el.value)
 }
 function toggleDeployMulti(field: any, value: string) {
   const current = Array.isArray(field.value) ? [...field.value] : []

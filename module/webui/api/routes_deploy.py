@@ -196,7 +196,7 @@ FIELD_I18N = {
     },
     'AutoRestartTime': {
         'zh-CN': {'desc': '定时重启时间\n如果有更新，NKAS 会在每天该时间自动重启并更新，\n并运行重启前正在运行的所有实例',
-                  'hints': {'Disable': '留空', 'Default': '03:50'}},
+                  'hints': {'Disable': '输入 null', 'Default': '留空恢复 03:50'}},
         'ja-JP': {'desc': '定時再起動時刻\n更新がある場合、NKAS は毎日この時刻に自動で再起動・更新し、\n再起動前に実行中だった全インスタンスを実行します',
                   'hints': {'Disable': 'null', 'Default': '03:50'}},
     },
@@ -343,6 +343,9 @@ def _run_value(raw):
 
 
 def _coerce(key, value, default):
+    # 清空即恢复模板默认值（默认值为 None 的字段则存 null）
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return default
     if isinstance(default, bool):
         if not isinstance(value, bool):
             raise ValueError('Expected a boolean value.')
@@ -354,10 +357,6 @@ def _coerce(key, value, default):
             return int(value)
         except (TypeError, ValueError):
             raise ValueError('Expected an integer value.')
-    if value is None or (isinstance(value, str) and not value.strip()):
-        if default is None:
-            return None
-        raise ValueError('Value cannot be empty.')
     return str(value)
 
 
