@@ -227,7 +227,7 @@
 
     .log-line {
       display: grid;
-      grid-template-columns: 74px 64px minmax(0, 1fr);
+      grid-template-columns: 88px 64px minmax(0, 1fr);
       gap: 10px;
       min-height: 21px;
     }
@@ -358,7 +358,11 @@
       }
 
       .log-line {
-        grid-template-columns: 64px minmax(0, 1fr);
+        grid-template-columns: 76px minmax(0, 1fr);
+      }
+
+      .log-time {
+        font-size: 11px;
       }
 
       .log-level {
@@ -420,6 +424,10 @@
       const status = document.getElementById('status');
       const progress = document.getElementById('progress');
       const ansi = /\x1b\[[0-?]*[ -/]*[@-~]/g;
+      // 项目日志的控制台格式："LEVEL  YYYY-MM-DD HH:MM:SS.mmm │ 消息"（见 module/logger.py）
+      const projectLine = /^(INFO|DEBUG|WARNING|ERROR|CRITICAL)\s+(?:\d{4}-\d{2}-\d{2}\s+)?(\d{2}:\d{2}:\d{2}(?:\.\d+)?)\s*│\s?(.*)$/;
+      // logger.hr 的阶段分隔线："=== title ==="
+      const stageLine = /^={2,3}\s+.+\s+={2,3}$/;
       const labels = {
         log: 'INFO',
         stage: 'STAGE',
@@ -429,18 +437,33 @@
       };
 
       function clean(message) {
-        return String(message ?? '').replace(ansi, '').replace(/\r/g, '');
+        // rich 会把消息填充到整行宽度，去掉行尾空白
+        return String(message ?? '').replace(ansi, '').replace(/\r/g, '').replace(/[ \t]+$/g, '');
       }
 
       function append(message, level = 'log') {
-        const text = clean(message);
+        const raw = clean(message);
+        if (!raw.trim()) return;
+        let time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        let text = raw;
+        // 项目日志自带级别和时间前缀，拆到对应列渲染，避免与页面列重复
+        const match = raw.match(projectLine);
+        if (match) {
+          time = match[2];
+          text = match[3];
+          if (match[1] === 'WARNING') level = 'warning';
+          else if (match[1] === 'ERROR' || match[1] === 'CRITICAL') level = 'error';
+          else level = 'log';
+          if (level === 'log' && stageLine.test(text.trim())) level = 'stage';
+        }
+        // 折行日志的首段可能只有前缀没有内容，跳过空白行
         if (!text.trim()) return;
         const row = document.createElement('div');
         row.className = `log-line ${level}`;
 
-        const time = document.createElement('span');
-        time.className = 'log-time';
-        time.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        const timeEl = document.createElement('span');
+        timeEl.className = 'log-time';
+        timeEl.textContent = time;
 
         const type = document.createElement('span');
         type.className = 'log-level';
@@ -450,7 +473,7 @@
         content.className = 'log-text';
         content.textContent = text;
 
-        row.append(time, type, content);
+        row.append(timeEl, type, content);
         log.appendChild(row);
         while (log.childElementCount > 500) log.firstElementChild.remove();
         log.scrollTop = log.scrollHeight;

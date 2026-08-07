@@ -259,7 +259,11 @@ fn configure_python_output(command: &mut Command) {
     command
         .env("PYTHONUTF8", "1")
         .env("PYTHONIOENCODING", "utf-8:replace")
-        .env("PYTHONUNBUFFERED", "1");
+        .env("PYTHONUNBUFFERED", "1")
+        // Piped output makes rich wrap log lines at the default 80 columns,
+        // which splits long commands/paths mid-word; widen the console so each
+        // record stays on one line and the startup page does the wrapping.
+        .env("COLUMNS", "200");
 }
 
 fn decode_output_line(buffer: &[u8]) -> String {
