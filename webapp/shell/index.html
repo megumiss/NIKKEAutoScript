@@ -424,10 +424,11 @@
       const status = document.getElementById('status');
       const progress = document.getElementById('progress');
       const ansi = /\x1b\[[0-?]*[ -/]*[@-~]/g;
-      // 项目日志的控制台格式："LEVEL  YYYY-MM-DD HH:MM:SS.mmm │ 消息"（见 module/logger.py）
-      const projectLine = /^(INFO|DEBUG|WARNING|ERROR|CRITICAL)\s+(?:\d{4}-\d{2}-\d{2}\s+)?(\d{2}:\d{2}:\d{2}(?:\.\d+)?)\s*│\s?(.*)$/;
-      // logger.hr 的阶段分隔线："=== title ==="
-      const stageLine = /^={2,3}\s+.+\s+={2,3}$/;
+      // 项目日志的控制台格式："LEVEL  YYYY-MM-DD HH:MM:SS.mmm │ 消息"（见 module/logger.py）。
+      // 渲染模型与历史日志一致：级别行开启一条记录，后续普通行（折行片段、
+      // traceback 等）折叠进该记录；logger.hr 的分隔线渲染为 section。
+      const recordLine = /^(INFO|DEBUG|WARNING|ERROR|CRITICAL)\s+(?:\d{4}-\d{2}-\d{2}\s+)?(\d{2}:\d{2}:\d{2}(?:\.\d+)?)\s*│\s?(.*)$/;
+      const hrLine = /^(===|==|--|>)\s+(.+?)(?:\s+\1)?$/;
       const labels = {
         log: 'INFO',
         stage: 'STAGE',
@@ -436,28 +437,22 @@
         ready: 'READY',
       };
 
+      // 当前未闭合记录的文本节点；壳自身的消息会闭合记录。
+      // pendingRecord：rich 折行时首行可能只有空前缀，先记住级别/时间，
+      // 等首个续行到达时再建行
+      let recordContent = null;
+      let pendingRecord = null;
+
       function clean(message) {
         // rich 会把消息填充到整行宽度，去掉行尾空白
         return String(message ?? '').replace(ansi, '').replace(/\r/g, '').replace(/[ \t]+$/g, '');
       }
 
-      function append(message, level = 'log') {
-        const raw = clean(message);
-        if (!raw.trim()) return;
-        let time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
-        let text = raw;
-        // 项目日志自带级别和时间前缀，拆到对应列渲染，避免与页面列重复
-        const match = raw.match(projectLine);
-        if (match) {
-          time = match[2];
-          text = match[3];
-          if (match[1] === 'WARNING') level = 'warning';
-          else if (match[1] === 'ERROR' || match[1] === 'CRITICAL') level = 'error';
-          else level = 'log';
-          if (level === 'log' && stageLine.test(text.trim())) level = 'stage';
-        }
-        // 折行日志的首段可能只有前缀没有内容，跳过空白行
-        if (!text.trim()) return;
+      function now() {
+        return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      }
+
+      function makeRow(level, label, time, text) {
         const row = document.createElement('div');
         row.className = `log-line ${level}`;
 
@@ -467,7 +462,7 @@
 
         const type = document.createElement('span');
         type.className = 'log-level';
-        type.textContent = labels[level] || labels.log;
+        type.textContent = label;
 
         const content = document.createElement('span');
         content.className = 'log-text';
@@ -476,12 +471,65 @@
         row.append(timeEl, type, content);
         log.appendChild(row);
         while (log.childElementCount > 500) log.firstElementChild.remove();
+        if (recordContent && !log.contains(recordContent)) recordContent = null;
         log.scrollTop = log.scrollHeight;
+        return content;
+      }
+
+      // 壳自身消息的独立行（状态、阶段、错误等）
+      function append(message, level = 'log') {
+        const text = clean(message);
+        if (!text.trim()) return;
+        recordContent = null;
+        pendingRecord = null;
+        makeRow(level, labels[level] || labels.log, now(), text);
+      }
+
+      // Python 进程输出：按项目日志格式解析为记录，续行折叠进上一条记录
+      function output(message) {
+        const raw = clean(message);
+        if (!raw.trim()) return;
+        const match = raw.match(recordLine);
+        if (!match) {
+          if (recordContent) {
+            recordContent.textContent += `\n${raw}`;
+            log.scrollTop = log.scrollHeight;
+          } else if (pendingRecord) {
+            recordContent = makeRow(pendingRecord.rowClass, pendingRecord.label, pendingRecord.time, raw);
+            pendingRecord = null;
+          } else {
+            recordContent = makeRow('log', labels.log, now(), raw);
+          }
+          return;
+        }
+        const levelName = match[1];
+        let rowClass = 'log';
+        if (levelName === 'WARNING') rowClass = 'warning';
+        else if (levelName === 'ERROR' || levelName === 'CRITICAL') rowClass = 'error';
+        let label = levelName;
+        let text = match[3];
+        const hr = text.trim().match(hrLine);
+        if (hr) {
+          rowClass = 'stage';
+          label = labels.stage;
+          text = hr[2];
+        }
+        if (!text.trim()) {
+          // 折行日志的首段只有空前缀，暂存级别/时间等续行
+          recordContent = null;
+          pendingRecord = { rowClass, label, time: match[2] };
+          return;
+        }
+        pendingRecord = null;
+        recordContent = makeRow(rowClass, label, match[2], text);
       }
 
       window.nkasStartup = {
         log(message) {
           append(message, 'log');
+        },
+        output(message) {
+          output(message);
         },
         warning(message) {
           append(message, 'warning');

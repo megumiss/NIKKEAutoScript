@@ -28,6 +28,7 @@ struct BackendState(Mutex<Option<Backend>>);
 #[derive(Clone, Copy)]
 enum StartupMessageKind {
     Log,
+    Output,
     Stage,
     Error,
     Ready,
@@ -51,6 +52,12 @@ struct StartupReporter(Arc<Mutex<StartupReporterState>>);
 impl StartupReporter {
     fn log(&self, message: impl Into<String>) {
         self.send(StartupMessageKind::Log, message.into());
+    }
+
+    /// Raw stdout/stderr lines from the Python processes; the startup page
+    /// folds them into log records the same way the history log viewer does.
+    fn output(&self, message: impl Into<String>) {
+        self.send(StartupMessageKind::Output, message.into());
     }
 
     fn stage(&self, message: impl Into<String>) {
@@ -100,6 +107,7 @@ impl StartupReporter {
 fn startup_script(message: &StartupMessage) -> String {
     let method = match message.kind {
         StartupMessageKind::Log => "log",
+        StartupMessageKind::Output => "output",
         StartupMessageKind::Stage => "stage",
         StartupMessageKind::Error => "error",
         StartupMessageKind::Ready => "ready",
@@ -240,7 +248,9 @@ fn start_application_inner(
     reporter.stage("Preparing the NKAS backend");
     let backend_reporter = reporter.clone();
     let log: backend::LogSink = Arc::new(move |message| backend_reporter.log(message));
-    let backend = backend::start_and_wait(config, log)?;
+    let output_reporter = reporter.clone();
+    let output: backend::LogSink = Arc::new(move |message| output_reporter.output(message));
+    let backend = backend::start_and_wait(config, log, output)?;
     store_backend(app, backend)?;
     desktop_update::cleanup_after_success(&config.root, cleanup_helper);
 

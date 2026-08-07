@@ -88,7 +88,7 @@ pub fn health(port: u16) -> bool {
         .unwrap_or(false)
 }
 
-pub fn start_and_wait(config: &DesktopConfig, log: LogSink) -> Result<Backend> {
+pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> Result<Backend> {
     log(format!(
         "Checking for an existing backend at {}",
         url(config.port, "/api/system/status")
@@ -101,7 +101,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink) -> Result<Backend> {
         anyhow::bail!("Python executable not found: {}", config.python.display());
     }
     log("Running project update and dependency checks...".into());
-    run_prepare(config, log.clone())?;
+    run_prepare(config, output.clone())?;
     if health(config.port) {
         log("A compatible backend became available during preparation.".into());
         return Ok(Backend::external());
@@ -126,10 +126,10 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink) -> Result<Backend> {
         .with_context(|| format!("Unable to start {}", config.python.display()))?;
     let process_id = child.id();
     if let Some(stdout) = child.stdout.take() {
-        let _ = spawn_log_reader(stdout, log.clone());
+        let _ = spawn_log_reader(stdout, output.clone());
     }
     if let Some(stderr) = child.stderr.take() {
-        let _ = spawn_log_reader(stderr, log.clone());
+        let _ = spawn_log_reader(stderr, output.clone());
     }
     log(format!(
         "Python backend process started (PID {process_id})."
@@ -174,7 +174,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink) -> Result<Backend> {
     )
 }
 
-fn run_prepare(config: &DesktopConfig, log: LogSink) -> Result<()> {
+fn run_prepare(config: &DesktopConfig, output: LogSink) -> Result<()> {
     let desktop_pid = std::process::id().to_string();
     let mut command = Command::new(&config.python);
     command
@@ -201,11 +201,11 @@ fn run_prepare(config: &DesktopConfig, log: LogSink) -> Result<()> {
     let stdout_reader = child
         .stdout
         .take()
-        .map(|stdout| spawn_log_reader(stdout, log.clone()));
+        .map(|stdout| spawn_log_reader(stdout, output.clone()));
     let stderr_reader = child
         .stderr
         .take()
-        .map(|stderr| spawn_log_reader(stderr, log));
+        .map(|stderr| spawn_log_reader(stderr, output));
     let status = child.wait().context("Unable to wait for startup update")?;
     let stdout = join_log_reader(stdout_reader);
     let stderr = join_log_reader(stderr_reader);
@@ -259,11 +259,7 @@ fn configure_python_output(command: &mut Command) {
     command
         .env("PYTHONUTF8", "1")
         .env("PYTHONIOENCODING", "utf-8:replace")
-        .env("PYTHONUNBUFFERED", "1")
-        // Piped output makes rich wrap log lines at the default 80 columns,
-        // which splits long commands/paths mid-word; widen the console so each
-        // record stays on one line and the startup page does the wrapping.
-        .env("COLUMNS", "200");
+        .env("PYTHONUNBUFFERED", "1");
 }
 
 fn decode_output_line(buffer: &[u8]) -> String {
