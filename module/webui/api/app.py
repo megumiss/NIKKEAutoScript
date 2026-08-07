@@ -35,6 +35,7 @@ def mount_api(app):
         Route('/api/system/update', routes_system.update_status, methods=['GET']),
         Route('/api/system/remote', routes_system.remote_status, methods=['GET']),
         Route('/api/system/notices', routes_system.notices, methods=['GET']),
+        Route('/api/system/notices/read', routes_system.read_announcements, methods=['POST']),
         Route('/api/system/notices/{key:str}/dismiss', routes_system.dismiss_notice, methods=['POST']),
         Route('/api/system/monitors', routes_system.monitors, methods=['GET']),
         Route('/api/system/pick-path', routes_system.pick_path, methods=['POST']),

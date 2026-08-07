@@ -22,8 +22,9 @@ from module.config.utils import nkas_instance
 from module.logger import logger
 from module.webui.setting import State
 
-# Runtime state written by dismissing the startup notice, not a user setting.
-EXCLUDED_KEYS = {'StartupNoticeDismissedId'}
+# Runtime state written by the announcement center, not a user setting.
+# StartupNoticeDismissedId lingers in pre-migration user deploy.yaml files.
+EXCLUDED_KEYS = {'ReadNoticeIds', 'StartupNoticeDismissedId'}
 # Path/URL values that benefit from a full-row input instead of the standard
 # narrow control.
 WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy'}

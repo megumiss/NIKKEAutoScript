@@ -104,8 +104,8 @@ Deploy:
     Theme: dark
     # --run. Auto-run specified config when startup
     Run: null
-    # Startup notice id dismissed by current user
-    StartupNoticeDismissedId: null
+    # Notice ids marked as read by current user, comma separated
+    ReadNoticeIds: null
 
   Statistics:
     # Report anonymous usage statistics at startup, at most once per day. No account, config or any personal data is collected

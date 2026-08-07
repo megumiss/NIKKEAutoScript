@@ -148,8 +148,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
   '已保存': { 'en-US': 'Saved', 'ja-JP': '保存しました' },
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
-  '提示': { 'en-US': 'Notice', 'ja-JP': 'お知らせ' }, '我知道了': { 'en-US': 'Got it', 'ja-JP': '了解しました' },
-  '本次不再提示': { 'en-US': 'Do not show again', 'ja-JP': '今後表示しない' },
+  '公告中心': { 'en-US': 'Announcements', 'ja-JP': 'お知らせ' }, '暂无公告': { 'en-US': 'No announcements', 'ja-JP': 'お知らせはありません' }, '未读': { 'en-US': 'Unread', 'ja-JP': '未読' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
   '导入失败': { 'en-US': 'Import failed', 'ja-JP': 'インポート失敗' },
@@ -275,7 +274,15 @@ async function loadSystem() {
   try {
     systemStatus.value = await api.get('/api/system/status')
     updateInfo.value = await api.get('/api/system/update')
-    notices.value = (await api.get('/api/system/notices')).notices || []
+    const noticeData = await api.get('/api/system/notices')
+    notices.value = noticeData.notices || []
+    announcements.value = noticeData.announcements || []
+    // Unread announcements auto-open the center once per session; reconnect
+    // reloads of loadSystem must not pop it again.
+    if (!announcementAutoShown && announcements.value.some(item => !item.read)) {
+      announcementAutoShown = true
+      openAnnouncementCenter()
+    }
     // Only a valid backend theme may override the local choice: right after
     // an update/reload the status payload can arrive without a usable theme,
     // and falling back to "light" here used to clobber both the page and the
@@ -705,17 +712,28 @@ async function saveRemark(instance: Instance, event: Event) {
 }
 async function importInstance(event: Event) { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; try { const response = await fetch('/api/instances/import', { method: 'POST', headers: { 'X-NKAS-Filename': file.name }, body: await file.arrayBuffer() }); const result = await response.json(); if (!response.ok) throw new Error(result.message); await loadInstances() } catch (exception: any) { error.value = exception.message } }
 async function dismissNotice(notice: any) { try { await api.post(`/api/system/notices/${notice.key}/dismiss`); notices.value = notices.value.filter(item => item.key !== notice.key) } catch (exception: any) { error.value = exception.message } }
-// The startup notice is a modal like the legacy pywebio popup, not a stack
-// card: closing without the checkbox only hides it for this session, while
-// the checkbox persists the dismissed id through the dismiss endpoint.
-const noticeDontShow = ref(false)
-const startupNoticeClosed = ref(false)
-const startupNotice = computed(() => notices.value.find(item => item.key === 'startup'))
-const stackNotices = computed(() => notices.value.filter(item => item.key !== 'startup'))
-async function closeStartupNotice() {
-  const notice = startupNotice.value
-  startupNoticeClosed.value = true
-  if (notice && noticeDontShow.value) await dismissNotice(notice)
+// Announcement center: persistent announcements (with history) from the
+// backend, shown in a master-detail modal.  `read` comes from the server and
+// is flipped locally as soon as an entry is opened.
+type Announcement = { id: string; date: string; title: string; type: string; content: string; read: boolean }
+const announcements = ref<Announcement[]>([])
+const announcementCenterOpen = ref(false)
+const activeAnnouncementId = ref('')
+let announcementAutoShown = false
+const unreadAnnouncementCount = computed(() => announcements.value.filter(item => !item.read).length)
+const activeAnnouncement = computed(() => announcements.value.find(item => item.id === activeAnnouncementId.value))
+function openAnnouncementCenter() {
+  announcementCenterOpen.value = true
+  const target = announcements.value.find(item => !item.read) || announcements.value[0]
+  if (target) selectAnnouncement(target)
+}
+async function selectAnnouncement(announcement: Announcement) {
+  activeAnnouncementId.value = announcement.id
+  if (announcement.read) return
+  // Optimistic local read so the badge updates immediately; roll back when
+  // the mark-read call fails.
+  announcement.read = true
+  try { await api.post('/api/system/notices/read', { ids: [announcement.id] }) } catch (exception: any) { announcement.read = false; error.value = exception.message }
 }
 // Legacy toast parity: sha + commit count headline, then up to 5 messages
 // trimmed to 54 chars, one per line.
@@ -866,6 +884,10 @@ onBeforeUnmount(() => {
         <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
         <span v-if="isWorkspace" class="status-pill" :class="stateClass(selectedInstance?.state)">{{ stateText(selectedInstance?.state) }}</span>
         <div class="topbar-right">
+          <button class="tb-btn tb-bell" :title="t('公告中心')" @click="openAnnouncementCenter">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2a4.6 4.6 0 0 0-4.6 4.6v2.6c0 .5-.17 1-.47 1.42l-1.05 1.5h12.24l-1.05-1.5a2.3 2.3 0 0 1-.47-1.42V7.8A4.6 4.6 0 0 0 10 3.2Z"/><path d="M8.3 15.6a1.8 1.8 0 0 0 3.4 0"/></svg>
+            <span v-if="unreadAnnouncementCount" class="tb-badge">{{ unreadAnnouncementCount > 99 ? '99+' : unreadAnnouncementCount }}</span>
+          </button>
           <template v-if="isTauri">
             <button class="tb-btn" :title="t('隐藏到托盘')" @click="tbHide"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v7"/><path d="M6.5 8 10 11.5 13.5 8"/><path d="M4 15.5h12"/></svg></button>
             <button class="tb-btn" :title="t('最小化')" @click="tbMinimize"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 10.5h10"/></svg></button>
@@ -877,8 +899,8 @@ onBeforeUnmount(() => {
           </template>
         </div>
       </header>
-      <div v-if="stackNotices.length" class="notice-stack">
-        <article v-for="notice in stackNotices" :key="notice.key" class="notice-card" :class="notice.type">
+      <div v-if="notices.length" class="notice-stack">
+        <article v-for="notice in notices" :key="notice.key" class="notice-card" :class="notice.type">
           <div>
             <strong>{{ notice.key === 'auto_update' ? autoUpdateTitle(notice.data) : (notice.data.title || t('系统通知')) }}</strong>
             <ul v-if="autoUpdatePreview(notice.data).length" class="notice-messages">
@@ -1155,15 +1177,24 @@ onBeforeUnmount(() => {
     </main>
     </div>
     <div v-if="backendDown" class="backend-down"><div class="backend-down-card">{{ t('后端连接中断，正在等待恢复…') }}</div></div>
-    <div v-if="startupNotice && !startupNoticeClosed" class="modal-mask">
-      <div class="modal-card">
-        <h3>{{ startupNotice.data.title || t('提示') }}</h3>
-        <!-- 公告内容来自仓库自带的 config/startup_notice.yaml（可信来源），
-             用 v-html 渲染以支持链接与强调；pre-line 让旧的纯文本公告照常换行 -->
-        <div class="modal-text notice-content" v-html="startupNotice.data.content"></div>
-        <div class="modal-actions">
-          <div class="notice-option"><label class="switch sm"><input v-model="noticeDontShow" type="checkbox"><span class="slider"></span></label><span>{{ t('本次不再提示') }}</span></div>
-          <button class="btn primary" @click="closeStartupNotice">{{ t('我知道了') }}</button>
+    <div v-if="announcementCenterOpen" class="modal-mask" @click.self="announcementCenterOpen = false">
+      <div class="modal-card announcement-card">
+        <div class="announcement-head">
+          <h3>{{ t('公告中心') }}</h3>
+          <button class="tb-btn announcement-close" :title="t('关闭')" @click="announcementCenterOpen = false"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
+        </div>
+        <div class="announcement-body">
+          <div class="announcement-list">
+            <div v-if="!announcements.length" class="announcement-empty">{{ t('暂无公告') }}</div>
+            <button v-for="item in announcements" :key="item.id" class="announcement-item" :class="[{ active: item.id === activeAnnouncementId }, item.type]" @click="selectAnnouncement(item)">
+              <span class="announcement-date">{{ item.date }}</span>
+              <span class="announcement-title">{{ item.title }}</span>
+              <span v-if="!item.read" class="announcement-dot" :title="t('未读')"></span>
+            </button>
+          </div>
+          <!-- 公告正文来自仓库自带的公告文件（可信来源），用 v-html 渲染以支持
+               链接与强调；notice-content 的 pre-line 让纯文本公告照常换行 -->
+          <div class="modal-text notice-content announcement-content" v-html="activeAnnouncement?.content || ''"></div>
         </div>
       </div>
     </div>

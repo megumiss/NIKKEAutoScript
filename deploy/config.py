@@ -49,7 +49,7 @@ class ConfigModel:
     Password: Optional[str] = None
     CDN: Union[str, bool] = False
     Run: Optional[str] = None
-    StartupNoticeDismissedId: Optional[str] = None
+    ReadNoticeIds: Optional[str] = None
 
     # Statistics
     EnableStatistics: bool = True
@@ -97,7 +97,9 @@ class DeployConfig(ConfigModel):
     def show_config(self):
         logger.hr("Show deploy config", 1)
         for k, v in self.config.items():
-            if self.config_template[k] == v:
+            # User config may carry keys dropped from the template (e.g. after
+            # an update); missing keys count as changed and get logged.
+            if self.config_template.get(k) == v:
                 continue
 
         logger.info(f"Rest of the configs are the same as default")

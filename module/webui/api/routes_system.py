@@ -40,12 +40,53 @@ async def remote_status(_: Request):
     })
 
 
+ANNOUNCEMENT_TYPES = {'info', 'warning', 'important'}
+
+
+def _read_notice_ids() -> set:
+    raw = str(getattr(State.deploy_config, 'ReadNoticeIds', '') or '')
+    return {item.strip() for item in raw.split(',') if item.strip()}
+
+
+def _load_announcements():
+    """Announcements ship with the repo in config/notices.yaml. Startup
+    update hard-resets tracked files to upstream, and this is read from disk
+    on every request, so the content never goes stale."""
+    file = Path('./config/notices.yaml')
+    if not file.is_file():
+        return []
+    try:
+        from module.config.utils import read_file
+        data = read_file(str(file))
+    except (OSError, ValueError) as exc:
+        logger.warning(f'Unable to read notices: {exc}')
+        return []
+    if not isinstance(data, list):
+        logger.warning('config/notices.yaml is not a list, skipped')
+        return []
+    read = _read_notice_ids()
+    result = []
+    for row in data:
+        if not isinstance(row, dict) or not row.get('id'):
+            continue
+        notice_id = str(row['id'])
+        notice_type = str(row.get('type') or 'info')
+        result.append({
+            'id': notice_id,
+            'date': str(row.get('date') or ''),
+            'title': str(row.get('title') or ''),
+            'type': notice_type if notice_type in ANNOUNCEMENT_TYPES else 'info',
+            'content': str(row.get('content') or ''),
+            'read': notice_id in read,
+        })
+    return result
+
+
 async def notices(_: Request):
-    """Expose one-shot notices that the old pywebio home page displayed."""
+    """Transient update result cards, plus repo-shipped announcements."""
     result = []
     auto_updated = Path('./log/auto_update_notice.json')
     auto_failed = Path('./log/auto_update_failed_notice.json')
-    startup = Path('./config/startup_notice.yaml')
     if auto_updated.is_file():
         try:
             import json
@@ -60,16 +101,7 @@ async def notices(_: Request):
             result.append({'type': 'error', 'key': 'auto_update_failed', 'data': data})
         except (OSError, ValueError) as exc:
             logger.warning(f'Unable to read failed update notice: {exc}')
-    if startup.is_file():
-        try:
-            from module.config.utils import read_file
-            data = read_file(str(startup))
-            dismissed = str(getattr(State.deploy_config, 'StartupNoticeDismissedId', '') or '')
-            if isinstance(data, dict) and data.get('id') and data.get('id') != dismissed:
-                result.append({'type': 'info', 'key': 'startup', 'data': data})
-        except (OSError, ValueError) as exc:
-            logger.warning(f'Unable to read startup notice: {exc}')
-    return JSONResponse({'notices': result})
+    return JSONResponse({'notices': result, 'announcements': _load_announcements()})
 
 
 async def dismiss_notice(request: Request):
@@ -78,16 +110,25 @@ async def dismiss_notice(request: Request):
         Path('./log/auto_update_notice.json').unlink(missing_ok=True)
     elif key == 'auto_update_failed':
         Path('./log/auto_update_failed_notice.json').unlink(missing_ok=True)
-    elif key == 'startup':
-        try:
-            from module.config.utils import read_file
-            data = read_file('./config/startup_notice.yaml')
-            State.deploy_config.StartupNoticeDismissedId = str(data.get('id', ''))
-        except (OSError, AttributeError, ValueError) as exc:
-            return _json_error(str(exc), 422)
     else:
         return _json_error('Unknown notice.', 404)
     return JSONResponse({'status': 'success'})
+
+
+async def read_announcements(request: Request):
+    """Mark announcement ids as read; persisted in deploy config."""
+    try:
+        data = await request.json()
+    except ValueError:
+        data = {}
+    ids = data.get('ids')
+    if not isinstance(ids, list):
+        return _json_error('Expected an ids list in request body.')
+    known = {item['id'] for item in _load_announcements()}
+    read = _read_notice_ids()
+    read.update(str(item) for item in ids if str(item) in known)
+    State.deploy_config.ReadNoticeIds = ','.join(sorted(read))
+    return JSONResponse({'status': 'success', 'read': sorted(read)})
 
 
 def _git_version():
