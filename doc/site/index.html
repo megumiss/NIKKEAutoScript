@@ -60,9 +60,9 @@
     --code-bg: #eef1fe;
     --logo-glow: rgba(79,110,247,.30);
     --shot-shadow: 0 30px 80px rgba(28,35,51,.18);
-    --glow-1: rgba(79,110,247,.12);
-    --glow-2: rgba(18,181,165,.10);
-    --glow-3: rgba(79,110,247,.08);
+    --glow-1: rgba(79,110,247,.32);
+    --glow-2: rgba(255,150,62,.30);
+    --glow-3: rgba(236,72,153,.22);
     --footer-border: var(--card-border);
     --logo-shadow: drop-shadow(0 10px 22px rgba(28,35,51,.28));
     --logo-shadow-sm: drop-shadow(0 2px 4px rgba(28,35,51,.30));
@@ -83,9 +83,9 @@
     --code-bg: #0d1120;
     --logo-glow: rgba(123,147,255,.40);
     --shot-shadow: 0 30px 80px rgba(0,0,0,.55);
-    --glow-1: rgba(123,147,255,.14);
-    --glow-2: rgba(45,212,196,.10);
-    --glow-3: rgba(120,90,255,.10);
+    --glow-1: rgba(123,147,255,.30);
+    --glow-2: rgba(255,160,80,.22);
+    --glow-3: rgba(244,114,182,.24);
     --footer-border: rgba(255,255,255,.06);
     --logo-shadow: drop-shadow(0 0 16px rgba(235,240,255,.55));
     --logo-shadow-sm: drop-shadow(0 0 3px rgba(235,240,255,.8));
@@ -104,13 +104,35 @@ body {
     transition: background .3s, color .3s;
 }
 
-/* ===== 背景光效 ===== */
+/* ===== 背景光效：双层极光缓慢漂移 ===== */
 .bg-glow {
-    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+}
+.bg-glow::before, .bg-glow::after {
+    content: ""; position: absolute; inset: -25%;
     background:
-        radial-gradient(600px 400px at 15% 0%, var(--glow-1), transparent 60%),
-        radial-gradient(700px 500px at 85% 20%, var(--glow-2), transparent 60%),
-        radial-gradient(500px 500px at 50% 100%, var(--glow-3), transparent 60%);
+        radial-gradient(800px 550px at 15% 10%, var(--glow-1), transparent 65%),
+        radial-gradient(900px 650px at 85% 30%, var(--glow-2), transparent 65%);
+    animation: aurora-a 26s ease-in-out infinite alternate;
+}
+.bg-glow::after {
+    background:
+        radial-gradient(700px 700px at 50% 90%, var(--glow-3), transparent 65%),
+        radial-gradient(850px 600px at 70% 60%, var(--glow-1), transparent 70%);
+    animation: aurora-b 34s ease-in-out infinite alternate;
+}
+@keyframes aurora-a {
+    0%   { transform: translate(0, 0) scale(1);      opacity: .85; }
+    50%  { transform: translate(6%, 4%) scale(1.15); opacity: 1; }
+    100% { transform: translate(-5%, -3%) scale(1.05); opacity: .75; }
+}
+@keyframes aurora-b {
+    0%   { transform: translate(0, 0) scale(1.1);    opacity: .8; }
+    50%  { transform: translate(-6%, -5%) scale(1);  opacity: 1; }
+    100% { transform: translate(4%, 6%) scale(1.2);  opacity: .7; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .bg-glow::before, .bg-glow::after { animation: none; }
 }
 
 /* ===== 导航 ===== */
