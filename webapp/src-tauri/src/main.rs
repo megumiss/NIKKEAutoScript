@@ -256,7 +256,7 @@ fn start_application_inner(
 
     reporter.stage("Opening the application");
     reporter.complete("Startup complete. Opening NKAS...");
-    thread::sleep(std::time::Duration::from_millis(350));
+    thread::sleep(std::time::Duration::from_millis(150));
     let page: Url = backend::url(config.port, "/app/")
         .parse()
         .context("Invalid WebUI URL")?;

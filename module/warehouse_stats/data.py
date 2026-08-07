@@ -74,14 +74,25 @@ def ensure_sample_csv(csv_path: str = None, item_map_path: str = None, config_na
     return csv_path
 
 
-def init_warehouse_stats_files(item_map_path: str = None, csv_path: str = None, config_name: str = 'nkas') -> None:
+def init_warehouse_stats_files(
+    item_map_path: str = None, csv_path: str = None, config_name: str = 'nkas', preload_assets: bool = True
+) -> None:
     """
     Initialize sample CSV on startup (does not modify item map).
     """
     item_map_path = ensure_item_map_file(item_map_path or DEFAULT_ITEM_MAP_PATH)
     ensure_sample_csv(csv_path or DEFAULT_CSV_PATH, item_map_path=item_map_path, config_name=config_name)
-    # Preload warehouse assets during startup to avoid first-time UI hitch
-    # when opening the WarehouseStats item table.
+    if preload_assets:
+        preload_warehouse_assets()
+
+
+def preload_warehouse_assets() -> None:
+    """
+    Preload warehouse assets to avoid first-time UI hitch when opening the
+    WarehouseStats item table. Importing them pulls in module.map_detection
+    (scipy) and costs ~0.5s, so callers on a startup critical path should run
+    this in a background thread.
+    """
     try:
         from module.warehouse_stats import assets as _warehouse_assets
 

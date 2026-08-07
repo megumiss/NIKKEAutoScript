@@ -21,6 +21,46 @@ class GitManager(DeployConfig):
         except FileNotFoundError:
             logger.info(f'File not found: {file}')
 
+    def _git_output(self, args) -> str:
+        """
+        Run a git command quietly and return stdout, '' on any failure.
+        """
+        try:
+            return subprocess.run(
+                [self.git, *args],
+                capture_output=True,
+                text=True,
+                encoding='utf8',
+            ).stdout.strip()
+        except Exception:
+            return ''
+
+    def _is_up_to_date(self, source, branch) -> bool:
+        """
+        Fast path check: local HEAD already matches the remote branch tip and
+        no tracked file is modified, so fetch/reset would be no-ops.
+        Costs one ls-remote round trip instead of fetch + reset.
+        """
+        if not os.path.exists('./.git'):
+            return False
+        local = self._git_output(['rev-parse', 'HEAD'])
+        if not local:
+            return False
+        remote = self._git_output(['ls-remote', source, branch])
+        remote_sha = remote.split()[0] if remote else ''
+        if not remote_sha:
+            # Network failure: fall through to the full flow, which fails at
+            # fetch with the usual error handling.
+            return False
+        if local != remote_sha:
+            return False
+        # reset --hard only reverts tracked files, so untracked files don't
+        # block the fast path (-uno also keeps status fast).
+        if self._git_output(['status', '--porcelain', '-uno']):
+            logger.info('Local tracked changes detected, force reset to remote')
+            return False
+        return True
+
     def git_repository_init(self, repo, source='origin', branch='master', proxy=''):
         """
         初始化Git
@@ -54,6 +94,9 @@ class GitManager(DeployConfig):
             拉取最新上游仓库最新commit
         """
         logger.hr('Fetch Repository Branch', 1)
+        if self._is_up_to_date(source, branch):
+            logger.info('Local HEAD matches remote branch, skip fetch and reset')
+            return
         self.execute(f'"{self.git}" fetch --depth=20 {source} {branch}')
 
         # Remove git lock

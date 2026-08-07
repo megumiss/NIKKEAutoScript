@@ -166,7 +166,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> 
             ));
             next_notice += Duration::from_secs(2);
         }
-        thread::sleep(Duration::from_millis(250));
+        thread::sleep(Duration::from_millis(100));
     }
     anyhow::bail!(
         "Timed out waiting 60 seconds for {}",

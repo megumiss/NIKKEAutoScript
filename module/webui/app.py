@@ -1,5 +1,6 @@
 import argparse
 import sys
+import threading
 from typing import Any, Dict, List
 
 from starlette.applications import Starlette
@@ -208,8 +209,11 @@ def _build_screen_number_options(current_value: Any = None) -> List[Dict[str, An
 def startup():
     State.init()
     lang.reload()
-    from module.warehouse_stats.data import init_warehouse_stats_files
-    init_warehouse_stats_files()
+    from module.warehouse_stats.data import init_warehouse_stats_files, preload_warehouse_assets
+    init_warehouse_stats_files(preload_assets=False)
+    # Assets import pulls in module.map_detection (scipy) and costs ~0.5s;
+    # warm it up off the startup critical path so the backend reports ready sooner.
+    threading.Thread(target=preload_warehouse_assets, daemon=True).start()
     updater.event = State.manager.Event()
     if updater.delay > 0:
         task_handler.add(updater.check_update, updater.delay)
