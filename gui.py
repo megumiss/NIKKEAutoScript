@@ -40,11 +40,6 @@ def func(ev: threading.Event):
     # parser.add_argument(
     #     "-k", "--key", type=str, help="Password of nkas. No password by default"
     # )
-    # parser.add_argument(
-    #     "--cdn",
-    #     action="store_true",
-    #     help="Use jsdelivr cdn for pywebio static files (css, js). Self host cdn by default.",
-    # )
     parser.add_argument(
         "--electron", action="store_true", help="Runs by electron client."
     )

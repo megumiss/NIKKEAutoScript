@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img alt="LOGO" src="./webapp/buildResources/icon.png" width="256" height="256" />
+<img alt="LOGO" src="./assets/gui/icon/nkas.png" width="256" height="256" />
 
 # NIKKEAutoScript
 
@@ -10,6 +10,8 @@ GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC and emulator
 Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 **If you find this project helpful, please give it a ⭐ Star to support!**
+
+**🌐 Official Website: [nkas.megumiss.top](https://nkas.megumiss.top)**
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white">
@@ -59,14 +61,14 @@ Other tools:
 ### How to Use
 
 Please refer to the detailed installation guide:  
-[Wiki Installation Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南)
+[Wiki Installation Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide)
 
 ---
 
 ### FAQ
 
 Detailed answers can be found here:  
-[Wiki FAQ Page](https://github.com/megumiss/NIKKEAutoScript/wiki/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)
+[Wiki FAQ Page](https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions)
 
 > 💡 **Need Help?**  
 > If you encounter issues while using this project, you can:  

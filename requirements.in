@@ -21,7 +21,6 @@ pycaw==20251023
 pynput==1.8.1
 pyparsing==3.2.3
 pypdfium2==4.30.0
-pywebio==1.7.1
 pywin32==311
 rich==13.3.3
 scikit-learn==1.6.1

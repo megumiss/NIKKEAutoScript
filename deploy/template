@@ -2,6 +2,7 @@ Deploy:
   Git:
     # URL of NikkeAutoScript repository
     # [CN user] Use 'https://git.megumiss.top/megumiss/NIKKEAutoScript' for faster and more stable download
+    # [Gitee] Use 'https://gitee.com/megumiss/NIKKEAutoScript', may require login
     # [Other] Use 'https://github.com/megumiss/NIKKEAutoScript'
     Repository: 'https://github.com/megumiss/NIKKEAutoScript'
     # Branch of NKAS
@@ -27,7 +28,7 @@ Deploy:
   Python:
     # Filepath of python executable `python.exe`
     # [Easy installer] Use './toolkit/python.exe'
-    # [Other] Use you own python, and its version should be 3.7.6 64bit
+    # [Other] Use you own python, and 3.9.x 64bit is recommended
     PythonExecutable: './toolkit/python.exe'
     # URL of pypi mirror
     # [CN user] Use 'https://mirrors.aliyun.com/pypi/simple' for faster and more stable download
@@ -78,6 +79,10 @@ Deploy:
     # [Disable] null
     # [Default] 03:50
     AutoRestartTime: 03:50
+    # Desktop shell update manifest. The desktop version is independent from the project release tag.
+    # [Default] Use 'https://nkas.megumiss.top/releases/latest/nkas-desktop.json', hosted on the official VPS (faster for CN users)
+    # [Other] Use 'https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json' to update from GitHub Release
+    DesktopUpdateManifest: https://nkas.megumiss.top/releases/latest/nkas-desktop.json
 
   Webui:
     # --host. Host to listen
@@ -88,16 +93,21 @@ Deploy:
     # You will be able to access webui via `http://{host}:{port}`
     # [In most cases] Default to 12271
     WebuiPort: 12271
+    # Follow system display scaling in the desktop shell
+    DpiScaling: true
+    # Enable WebView2 GPU acceleration. Restart the desktop shell after changing.
+    HardwareAcceleration: false
     # Language to use on web ui
-    # 'zh-CN' for Chinese simplified
     Language: zh-CN
     # Theme of web ui
     # 'dark' for dark theme
     Theme: dark
     # --run. Auto-run specified config when startup
-    # 'null' default no specified config
-    # '["nkas"]' specified "nkas" config
-    # '["nkas","nkas2"]' specified "nkas" "nkas2" configs
     Run: null
-    # Startup notice id dismissed by current user
-    StartupNoticeDismissedId: null
+    # Notice ids marked as read by current user, comma separated
+    ReadNoticeIds: null
+
+  Statistics:
+    # Report anonymous usage statistics at startup, at most once per day. No account, config or any personal data is collected
+    # Reported data: random anonymous ID, source commit hash, OS platform name, screen resolution
+    EnableStatistics: true

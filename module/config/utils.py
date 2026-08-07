@@ -171,7 +171,13 @@ def parse_value(value, data):
 
     """
     if 'option' in data:
-        if value not in data['option']:
+        if data.get('type') == 'priority':
+            # Priority fields store a '>'-joined multi-value string, not a
+            # single option; drop unknown items but keep the rest in order
+            # instead of resetting the whole value like a select.
+            items = [item.strip() for item in str(value).split('>') if item.strip()]
+            value = ' > '.join(item for item in items if item in data['option'])
+        elif value not in data['option']:
             return data['value']
     if isinstance(value, str):
         if value == '':

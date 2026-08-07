@@ -329,8 +329,6 @@ pytweening==1.2.0
     # via pyautogui
 pytz==2025.2
     # via pandas
-pywebio==1.7.1
-    # via -r requirements.in
 pywin32==311
     # via -r requirements.in
 pyyaml==6.0.2
@@ -409,8 +407,6 @@ tokenizers==0.21.4
     # via
     #   -r requirements.in
     #   paddlex
-tornado==6.5.1
-    # via pywebio
 tqdm==4.67.1
     # via
     #   huggingface-hub
@@ -439,10 +435,6 @@ typing-inspection==0.4.1
     # via pydantic
 tzdata==2025.2
     # via pandas
-ua-parser==1.0.1
-    # via user-agents
-ua-parser-builtins==0.18.0.post1
-    # via ua-parser
 uiautomator2==2.16.26
     # via -r requirements.in
 uiautomator2cache==0.3.0.1
@@ -451,8 +443,6 @@ ujson==5.10.0
     # via paddlex
 urllib3==2.5.0
     # via requests
-user-agents==2.2.0
-    # via pywebio
 uvicorn==0.21.1
     # via -r requirements.in
 wcwidth==0.2.13

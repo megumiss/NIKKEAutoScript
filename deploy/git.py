@@ -21,6 +21,46 @@ class GitManager(DeployConfig):
         except FileNotFoundError:
             logger.info(f'File not found: {file}')
 
+    def _git_output(self, args) -> str:
+        """
+        Run a git command quietly and return stdout, '' on any failure.
+        """
+        try:
+            return subprocess.run(
+                [self.git, *args],
+                capture_output=True,
+                text=True,
+                encoding='utf8',
+            ).stdout.strip()
+        except Exception:
+            return ''
+
+    def _is_up_to_date(self, source, branch) -> bool:
+        """
+        Fast path check: local HEAD already matches the remote branch tip and
+        no tracked file is modified, so fetch/reset would be no-ops.
+        Costs one ls-remote round trip instead of fetch + reset.
+        """
+        if not os.path.exists('./.git'):
+            return False
+        local = self._git_output(['rev-parse', 'HEAD'])
+        if not local:
+            return False
+        remote = self._git_output(['ls-remote', source, branch])
+        remote_sha = remote.split()[0] if remote else ''
+        if not remote_sha:
+            # Network failure: fall through to the full flow, which fails at
+            # fetch with the usual error handling.
+            return False
+        if local != remote_sha:
+            return False
+        # reset --hard only reverts tracked files, so untracked files don't
+        # block the fast path (-uno also keeps status fast).
+        if self._git_output(['status', '--porcelain', '-uno']):
+            logger.info('Local tracked changes detected, force reset to remote')
+            return False
+        return True
+
     def git_repository_init(self, repo, source='origin', branch='master', proxy=''):
         """
         初始化Git
@@ -51,21 +91,12 @@ class GitManager(DeployConfig):
             self.execute(f'"{self.git}" remote add {source} {repo}')
 
         """
-            检查 nkas.exe 是否在版本控制中，如果在，则停止跟踪
-        """
-        try:
-            # 如果文件在版本控制中，这条命令会成功
-            self.execute(f'"{self.git}" ls-files --error-unmatch nkas.exe')
-            logger.info('nkas.exe is tracked, removing from git tracking')
-            self.execute(f'"{self.git}" rm --cached nkas.exe')
-        except Exception:
-            # 文件不在版本控制中，忽略
-            logger.info('nkas.exe is not tracked, no action needed')
-
-        """
             拉取最新上游仓库最新commit
         """
         logger.hr('Fetch Repository Branch', 1)
+        if self._is_up_to_date(source, branch):
+            logger.info('Local HEAD matches remote branch, skip fetch and reset')
+            return
         self.execute(f'"{self.git}" fetch --depth=20 {source} {branch}')
 
         # Remove git lock
@@ -77,8 +108,9 @@ class GitManager(DeployConfig):
         """
             合并到本地
         """
+        # reset --hard 已将工作区对齐到 {source}/{branch}，
+        # 之后再 pull --ff-only 只是重复一次网络往返，不再执行
         self.execute(f'"{self.git}" reset --hard {source}/{branch}')
-        self.execute(f'"{self.git}" pull --ff-only {source} {branch}')
 
         logger.hr('Show Version', 1)
         self.execute(f'"{self.git}" --no-pager log --no-merges -1')

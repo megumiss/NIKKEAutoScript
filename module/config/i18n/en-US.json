@@ -609,7 +609,10 @@
     },
     "priority": {
       "name": "Purchase Priority",
-      "help": "If empty, only free items will be bought. Format example: 'GRATIS > CORE_DUST_CASE > ORNAMENT'. Options:\nGRATIS: Free items\nCORE_DUST_CASE: Core Dust Case\nORNAMENT: Profile Ornament"
+      "help": "If empty, only free items will be bought. Items are bought in priority order.",
+      "GRATIS": "GRATIS",
+      "CORE_DUST_CASE": "CORE_DUST_CASE",
+      "ORNAMENT": "ORNAMENT"
     }
   },
   "ArenaShop": {
@@ -631,7 +634,15 @@
     },
     "priority": {
       "name": "Purchase Priority",
-      "help": "If empty, nothing will be purchased. Format example: 'ELECTRIC_CODE > MANUAL_SELECTION_BOX'. Options include ELECTRIC_CODE, FIRE_CODE, IRON_CODE, WATER_CODE, WIND_CODE, MANUAL_SELECTION_BOX, ORNAMENT, WEAPON"
+      "help": "If empty, nothing will be purchased. Items are bought in priority order.",
+      "ELECTRIC_CODE": "ELECTRIC_CODE",
+      "FIRE_CODE": "FIRE_CODE",
+      "IRON_CODE": "IRON_CODE",
+      "WATER_CODE": "WATER_CODE",
+      "WIND_CODE": "WIND_CODE",
+      "MANUAL_SELECTION_BOX": "MANUAL_SELECTION_BOX",
+      "ORNAMENT": "ORNAMENT",
+      "WEAPON": "WEAPON"
     }
   },
   "RubbishShop": {
@@ -641,11 +652,27 @@
     },
     "priority": {
       "name": "Core Purchase Priority",
-      "help": "Default buys gems and core dust cases. Format example: 'GEM > CORE_DUST_CASE'. Options: GEM, CORE_DUST_CASE, CREDIT_CASE, CREDIT, BATTLE_DATA_SET_CASE, GROWTH_SET, ORNAMENT, GENERAL_TICKET, ELYSION_TICKET, MISSILIS_TICKET, TETRA_TICKET, PILGRIM_TICKET, ABNORMAL_TICKET"
+      "help": "If empty, gems and core dust cases will be bought by default. Items are bought in priority order.",
+      "GEM": "GEM",
+      "CORE_DUST_CASE": "CORE_DUST_CASE",
+      "CREDIT_CASE": "CREDIT_CASE",
+      "CREDIT": "CREDIT",
+      "BATTLE_DATA_SET_CASE": "BATTLE_DATA_SET_CASE",
+      "GROWTH_SET": "GROWTH_SET",
+      "ORNAMENT": "ORNAMENT",
+      "GENERAL_TICKET": "GENERAL_TICKET",
+      "ELYSION_TICKET": "ELYSION_TICKET",
+      "MISSILIS_TICKET": "MISSILIS_TICKET",
+      "TETRA_TICKET": "TETRA_TICKET",
+      "PILGRIM_TICKET": "PILGRIM_TICKET",
+      "ABNORMAL_TICKET": "ABNORMAL_TICKET"
     },
     "bonePriority": {
       "name": "Bone Purchase Priority",
-      "help": "Bone currency purchase priority. Example: 'CURATED_MANUFACTURER_ARMS > MAINTENANCE_KIT_BOX_2'. Options: GOOD_TEAMWORK_BOX, MAINTENANCE_KIT_BOX_2, CURATED_MANUFACTURER_ARMS"
+      "help": "Bone currency purchase priority. If empty, nothing will be purchased.",
+      "GOOD_TEAMWORK_BOX": "GOOD_TEAMWORK_BOX",
+      "MAINTENANCE_KIT_BOX_2": "MAINTENANCE_KIT_BOX_2",
+      "CURATED_MANUFACTURER_ARMS": "CURATED_MANUFACTURER_ARMS"
     }
   },
   "Notification": {
@@ -699,7 +726,28 @@
     },
     "Priority": {
       "name": "Priority",
-      "help": "NIKKE priority. If selected collectibles exceed 160, the current will be removed and next chosen. Format example: Helm > Exia.\nNIKKE name mappings:\nDiesel: Diesel\nExia: Exia\nLaplace: Laplace\nFrima: Frima\nViper: Viper\nHelm: Helm\nMiranda: Miranda\nDrake: Drake\nMilk: Milk\nPoli: Poli\nJulia: Julia\nBay: Bay\nTove: Tove\nPrivaty：Privaty\nMoran：Moran\nZwei：Zwei\nCenti：Centi\nPhantom：Phantom\nSugar：Sugar\nRosanna：Rosanna\nFlora：Flora"
+      "help": "NIKKE priority. If the selected collectibles exceed 160, the current one is removed from the list and the next is chosen.",
+      "Diesel": "Diesel",
+      "Exia": "Exia",
+      "Laplace": "Laplace",
+      "Frima": "Frima",
+      "Viper": "Viper",
+      "Helm": "Helm",
+      "Miranda": "Miranda",
+      "Drake": "Drake",
+      "Milk": "Milk",
+      "Poli": "Poli",
+      "Julia": "Julia",
+      "Bay": "Bay",
+      "Tove": "Tove",
+      "Privaty": "Privaty",
+      "Moran": "Moran",
+      "Zwei": "Zwei",
+      "Centi": "Centi",
+      "Phantom": "Phantom",
+      "Sugar": "Sugar",
+      "Rosanna": "Rosanna",
+      "Flora": "Flora"
     }
   },
   "RookieArena": {
@@ -842,7 +890,24 @@
     },
     "Priority": {
       "name": "Exchange Priority",
-      "help": "If empty, nothing will be purchased. Format example: 'Gem_×320 > Welcome_Gift_Core_Dust_×30'. Default is to exchange for Gems. Example options include Gem_×320, Welcome_Gift_Core_Dust_×30, Gem_×30, Skill_Manual_I_×5, Ultra_Boost_Module_×5, Code_Manual_Selection_Box_×5, Gem_×60, Mid-Quality_Mold_×3, Credit_Case_(1H)_x9, Core_Dust_Case_(1H)_×3, Gem_×120, Mid-Quality_Mold_×8, Battle_Data_Set_Case_(1H)_×6, Core_Dust_Case_(1H)_×6, Skill_Manual_I_×30, Ultra_Boost_Module_×30, Code_Manual_Selection_Box_×30"
+      "help": "If empty, the default priority (gems only) is used. Items are exchanged in priority order.",
+      "Gem_×320": "Gem_×320",
+      "Welcome_Gift_Core_Dust_×30": "Welcome_Gift_Core_Dust_×30",
+      "Gem_×30": "Gem_×30",
+      "Skill_Manual_I_×5": "Skill_Manual_I_×5",
+      "Ultra_Boost_Module_×5": "Ultra_Boost_Module_×5",
+      "Code_Manual_Selection_Box_×5": "Code_Manual_Selection_Box_×5",
+      "Gem_×60": "Gem_×60",
+      "Mid-Quality_Mold_×3": "Mid-Quality_Mold_×3",
+      "Credit_Case_(1H)_x9": "Credit_Case_(1H)_x9",
+      "Core_Dust_Case_(1H)_×3": "Core_Dust_Case_(1H)_×3",
+      "Gem_×120": "Gem_×120",
+      "Mid-Quality_Mold_×8": "Mid-Quality_Mold_×8",
+      "Battle_Data_Set_Case_(1H)_×6": "Battle_Data_Set_Case_(1H)_×6",
+      "Core_Dust_Case_(1H)_×6": "Core_Dust_Case_(1H)_×6",
+      "Skill_Manual_I_×30": "Skill_Manual_I_×30",
+      "Ultra_Boost_Module_×30": "Ultra_Boost_Module_×30",
+      "Code_Manual_Selection_Box_×30": "Code_Manual_Selection_Box_×30"
     }
   },
   "EventInfo": {
@@ -1381,7 +1446,7 @@
       "FileExist": "A config with the same name exists. Please enter a different name",
       "InvalidChar": "Config name cannot contain any of the following characters: .\\\\/:*?\"<>|",
       "InvalidPrefixTemplate": "Config name cannot start with 'template'",
-      "Manage": "Manage"
+      "Manage": "Instances"
     },
     "AppManage": {
       "PageTitle": "Manage Configs",

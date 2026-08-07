@@ -1,0 +1,22 @@
+name = "nkas-dau"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# 部署前用以下命令创建 KV 命名空间，把返回的 id 填到这里：
+#   npx wrangler kv namespace create STATS
+[[kv_namespaces]]
+binding = "STATS"
+id = "在这里填入你的KV命名空间ID"
+
+# 查询接口的访问口令，改成你自己的随机字符串
+[vars]
+STATS_TOKEN = "change-me-to-a-random-string"
+
+# 通过路由挂在现有域名子路径下时（如 nkas.megumiss.top/status/*），
+# 取消注释并填写路径前缀；绑整个子域名（自定义域）时保持注释即可
+# PATH_PREFIX = "/status"
+
+# 路由绑定示例（与自定义域二选一，域名需托管在 Cloudflare 且开启代理）：
+# [[routes]]
+# pattern = "nkas.megumiss.top/status/*"
+# zone_name = "megumiss.top"
