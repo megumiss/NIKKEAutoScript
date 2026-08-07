@@ -186,6 +186,14 @@ jobs:
         "DESKTOP_EXE=$assetExe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "DESKTOP_MANIFEST=$assetManifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
+    # exe 通过 artifact 传给 deploy-desktop job（草稿 Release 的 tag 尚未创建，
+    # 无法按 tag 从 Release 下载）
+    - name: Upload Desktop Executable Artifact
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+      with:
+        name: nkas-desktop-exe
+        path: ${{ env.DESKTOP_EXE }}
+
     # ==========================
     # 5. 清理与组装基础环境
     # ==========================
@@ -353,21 +361,22 @@ jobs:
           ref: ${{ github.sha }}
 
       # ==========================
-      # 3. Download the desktop executable from GitHub Release
+      # 3. Download the desktop executable built by build-release
       # ==========================
-      # The binary is built once by the build-release job and uploaded to the
-      # release; this job only re-distributes it, so the VPS channel and the
-      # GitHub channel always serve the exact same file. Draft releases can be
-      # downloaded with the workflow token.
+      # The binary is built once by the build-release job and passed here as a
+      # workflow artifact; this job only re-distributes it, so the VPS channel
+      # and the GitHub channel always serve the exact same file.
+      # NOTE: do not use `gh release download` — the release is a draft and
+      # its tag ref is only created on publish, so lookup by tag fails with
+      # "release not found".
       - name: Download Desktop Executable
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download "$TAG_NAME" \
-            --repo ${{ github.repository }} \
-            --pattern "nkas-win-x64.exe" \
-            --dir dist --clobber
-          ls -lh dist/nkas-win-x64.exe
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: nkas-desktop-exe
+          path: dist
+
+      - name: Verify Desktop Executable
+        run: ls -lh dist/nkas-win-x64.exe
 
       # ==========================
       # 4. Generate the VPS manifest (nkas-desktop.json)
