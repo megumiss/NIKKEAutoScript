@@ -1,10 +1,31 @@
-import pickle
+import ctypes
 import os
+import pickle
+import sys
+from ctypes import wintypes
 from functools import cached_property
 
 from deploy.config import DeployConfig
 from deploy.logger import logger
 from deploy.utils import *
+
+TH32CS_SNAPPROCESS = 0x00000002
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+
+class PROCESSENTRY32W(ctypes.Structure):
+    _fields_ = [
+        ('dwSize', wintypes.DWORD),
+        ('cntUsage', wintypes.DWORD),
+        ('th32ProcessID', wintypes.DWORD),
+        ('th32DefaultHeapID', ctypes.POINTER(ctypes.c_ulong)),
+        ('th32ModuleID', wintypes.DWORD),
+        ('cntThreads', wintypes.DWORD),
+        ('th32ParentProcessID', wintypes.DWORD),
+        ('pcPriClassBase', ctypes.c_long),
+        ('dwFlags', wintypes.DWORD),
+        ('szExeFile', wintypes.WCHAR * 260),
+    ]
 
 
 class NKASManager(DeployConfig):
@@ -17,6 +38,78 @@ class NKASManager(DeployConfig):
         if not path:
             return ''
         return os.path.normcase(os.path.realpath(os.path.abspath(path)))
+
+    @staticmethod
+    def snapshot_processes():
+        """
+        Fast process enumeration via Toolhelp32 snapshot (~10ms for hundreds
+        of processes), used to avoid the multi-second WMI query at startup.
+
+        Returns:
+            list[tuple[int, str]] | None: (process_id, exe name) list,
+            None if the snapshot is unavailable.
+        """
+        if not sys.platform.startswith('win'):
+            return None
+        try:
+            kernel32 = ctypes.windll.kernel32
+            snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+            if snapshot == -1 or snapshot is None:
+                return None
+            try:
+                entry = PROCESSENTRY32W()
+                entry.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+                processes = []
+                ok = kernel32.Process32FirstW(snapshot, ctypes.byref(entry))
+                while ok:
+                    processes.append((int(entry.th32ProcessID), entry.szExeFile))
+                    ok = kernel32.Process32NextW(snapshot, ctypes.byref(entry))
+                return processes
+            finally:
+                kernel32.CloseHandle(snapshot)
+        except Exception as e:
+            logger.info(f'Process snapshot failed, fallback to WMI: {e}')
+            return None
+
+    @staticmethod
+    def process_image_path(process_id):
+        """
+        Returns:
+            str: Full executable path, '' if the process cannot be opened.
+        """
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(process_id))
+        if not handle:
+            return ''
+        try:
+            buffer = ctypes.create_unicode_buffer(1024)
+            size = wintypes.DWORD(1024)
+            if kernel32.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(size)):
+                return buffer.value
+            return ''
+        finally:
+            kernel32.CloseHandle(handle)
+
+    def iter_process_by_snapshot(self, name, allowed_paths, excluded_pids):
+        """
+        Snapshot-based variant of iter_process_by_name.
+
+        Returns:
+            list[tuple[str, str, int]] | None: (executable_path, process_name, process_id) list,
+            None if the snapshot is unavailable and caller should fallback to WMI.
+        """
+        entries = self.snapshot_processes()
+        if entries is None:
+            return None
+        name = name.lower()
+        rows = []
+        for process_id, process_name in entries:
+            if not process_name or process_name.lower() != name:
+                continue
+            executable_path = self.process_image_path(process_id)
+            if self.is_target_process(executable_path, process_id, allowed_paths, excluded_pids):
+                rows.append((self.normalize_executable_path(executable_path), process_name, process_id))
+        return rows
 
     @classmethod
     def is_target_process(cls, executable_path, process_id, allowed_paths, excluded_pids):
@@ -40,6 +133,11 @@ class NKASManager(DeployConfig):
             str, str, int: executable_path, process_name, process_id
         """
         excluded_pids = {self.self_pid, *(excluded_pids or set())}
+        rows = self.iter_process_by_snapshot(name, allowed_paths, excluded_pids)
+        if rows is not None:
+            yield from rows
+            return
+        # Fallback: WMI enumeration, slow (~3s per query) but widely compatible
         for _ in range(2):
             try:
                 from win32com.client import GetObject

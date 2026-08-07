@@ -65,8 +65,9 @@ class GitManager(DeployConfig):
         """
             合并到本地
         """
+        # reset --hard 已将工作区对齐到 {source}/{branch}，
+        # 之后再 pull --ff-only 只是重复一次网络往返，不再执行
         self.execute(f'"{self.git}" reset --hard {source}/{branch}')
-        self.execute(f'"{self.git}" pull --ff-only {source} {branch}')
 
         logger.hr('Show Version', 1)
         self.execute(f'"{self.git}" --no-pager log --no-merges -1')
