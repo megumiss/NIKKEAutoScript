@@ -135,7 +135,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' }, '更新超时，请稍后手动刷新页面': { 'en-US': 'Update timed out, please reload later', 'ja-JP': '更新がタイムアウト、後で再読み込みしてください' },
   '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' }, '发现新版本，可在更新页更新': { 'en-US': 'New version found — see the update page', 'ja-JP': '新しいバージョンを検出、更新ページへ' }, '前往更新': { 'en-US': 'Go to update', 'ja-JP': '更新ページへ' },
-  '启动器更新': { 'en-US': 'Launcher update', 'ja-JP': 'ランチャー更新' }, '此功能仅在桌面程序中可用': { 'en-US': 'Only available in the desktop app', 'ja-JP': 'デスクトップ版でのみ利用できます' },
+  '启动器更新': { 'en-US': 'Launcher update', 'ja-JP': 'ランチャー更新' }, '此功能仅在1.x版本中可用': { 'en-US': 'Only available in version 1.x', 'ja-JP': 'バージョン1.xでのみ利用できます' },
   '更新nkas程序（exe）本身': { 'en-US': 'Updates the nkas program (exe) itself', 'ja-JP': 'nkasプログラム（exe）本体を更新します' },
   '启动器有新版本，可在更新页更新': { 'en-US': 'New launcher version available — see the update page', 'ja-JP': 'ランチャーの新しいバージョンがあります。更新ページへ' },
   '更新启动器将中断正在运行的任务并自动重启程序，确定继续？': { 'en-US': 'Updating the launcher interrupts running tasks and restarts the program. Continue?', 'ja-JP': 'ランチャーの更新は実行中のタスクを中断し、プログラムを自動再起動します。続行しますか？' },
@@ -1062,8 +1062,8 @@ onBeforeUnmount(() => {
         <article class="card task-hero">
           <div class="task-icon">🖥️</div>
           <div style="flex:1"><h2>{{ t('启动器更新') }}</h2><div class="sub">{{ t('更新nkas程序（exe）本身') }}</div>
+            <div v-if="!isDesktopShell" class="sub desktop-only-hint">{{ t('此功能仅在1.x版本中可用') }}</div>
             <div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ desktopUpdate?.currentVersion || '—' }}</code><span v-if="desktopUpdate?.updateAvailable" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="desktopUpdate?.checked && !desktopUpdate?.error" class="sub"> · {{ t('已是最新') }}</span><span v-if="desktopUpdate?.error" class="update-hint"> · {{ desktopUpdate.error }}</span></div>
-            <div v-if="!isDesktopShell" class="sub">{{ t('此功能仅在桌面程序中可用') }}</div>
           </div>
           <button v-if="desktopUpdate?.updateAvailable" class="btn success" :disabled="!isDesktopShell || desktopApplying || desktopUpdate?.applying" @click="applyDesktopUpdate"><span v-if="desktopApplying || desktopUpdate?.applying" class="btn-spin"></span>{{ desktopApplying || desktopUpdate?.applying ? t('更新中…') : t('立即更新') }}</button>
           <button v-else class="btn primary" :disabled="!isDesktopShell || desktopChecking || desktopApplying || desktopUpdate?.checking || desktopUpdate?.applying" @click="checkDesktopUpdate"><span v-if="desktopChecking || desktopApplying || desktopUpdate?.checking || desktopUpdate?.applying" class="btn-spin"></span>{{ desktopApplying || desktopUpdate?.applying ? t('更新中…') : (desktopChecking || desktopUpdate?.checking ? t('检查中…') : t('检查更新')) }}</button>

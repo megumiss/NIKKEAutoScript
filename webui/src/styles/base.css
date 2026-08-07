@@ -225,6 +225,7 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .dt-clear { padding:0 2px; border:0; color:var(--text-3); background:transparent; font-size:12px; line-height:1; cursor:pointer; }
 .dt-clear:hover { color:var(--red); }
 .task-hero .deploy-warning { color:var(--red); }
+.task-hero .desktop-only-hint { color:var(--red); }
 .field-wide .field-control > input { width:100%; }
 .deploy-hint { display:flex; gap:6px; align-items:baseline; margin-top:3px; color:var(--text-3); font-size:12px; line-height:1.5; }
 .deploy-hint-tag { flex:none; padding:0 6px; border-radius:5px; color:var(--accent); background:var(--accent-soft); font-size:10.5px; }
