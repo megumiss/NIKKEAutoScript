@@ -1061,8 +1061,7 @@ onBeforeUnmount(() => {
       <section v-else-if="isSettings" class="view">
         <article class="card task-hero">
           <div class="task-icon">🖥️</div>
-          <div style="flex:1"><h2>{{ t('启动器更新') }}</h2><div class="sub">{{ t('更新nkas程序（exe）本身') }}</div>
-            <div v-if="!isDesktopShell" class="sub desktop-only-hint">{{ t('此功能仅在1.x版本中可用') }}</div>
+          <div style="flex:1"><h2>{{ t('启动器更新') }}</h2><div class="sub">{{ t('更新nkas程序（exe）本身') }}<span v-if="!isDesktopShell" class="desktop-only-hint"> · {{ t('此功能仅在1.x版本中可用') }}</span></div>
             <div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ desktopUpdate?.currentVersion || '—' }}</code><span v-if="desktopUpdate?.updateAvailable" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="desktopUpdate?.checked && !desktopUpdate?.error" class="sub"> · {{ t('已是最新') }}</span><span v-if="desktopUpdate?.error" class="update-hint"> · {{ desktopUpdate.error }}</span></div>
           </div>
           <button v-if="desktopUpdate?.updateAvailable" class="btn success" :disabled="!isDesktopShell || desktopApplying || desktopUpdate?.applying" @click="applyDesktopUpdate"><span v-if="desktopApplying || desktopUpdate?.applying" class="btn-spin"></span>{{ desktopApplying || desktopUpdate?.applying ? t('更新中…') : t('立即更新') }}</button>
