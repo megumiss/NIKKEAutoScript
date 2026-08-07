@@ -183,8 +183,9 @@ jobs:
           size = $file.Length
         } | ConvertTo-Json
         [System.IO.File]::WriteAllText($assetManifest, $manifest, [System.Text.UTF8Encoding]::new($false))
-        "DESKTOP_EXE=$assetExe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        "DESKTOP_MANIFEST=$assetManifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        # 统一转为正斜杠：action-gh-release 的 files 是 glob 匹配，反斜杠会被当作转义符导致匹配失败
+        "DESKTOP_EXE=$($assetExe -replace '\\','/')" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "DESKTOP_MANIFEST=$($assetManifest -replace '\\','/')" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     # exe 通过 artifact 传给 deploy-desktop job（草稿 Release 的 tag 尚未创建，
     # 无法按 tag 从 Release 下载）
