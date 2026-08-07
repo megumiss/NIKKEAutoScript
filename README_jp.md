@@ -11,6 +11,8 @@
 
 **このプロジェクトが役に立ったと思ったら、ぜひ ⭐Star を付けて応援してください！**
 
+**🌐 公式サイト: [nkas.megumiss.top](https://nkas.megumiss.top)**
+
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blueviolet">

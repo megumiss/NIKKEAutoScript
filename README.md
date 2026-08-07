@@ -13,6 +13,8 @@ GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC/Emulator cli
 **如果觉得有帮助，请帮我点个 ⭐ Star 支持一下！**  
 *If you find it helpful, please give it a ⭐ Star to support!*
 
+**🌐 官网 / Official Website: [nkas.megumiss.top](https://nkas.megumiss.top)**
+
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blueviolet">
