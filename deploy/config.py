@@ -19,7 +19,7 @@ class ConfigModel:
     Branch: str = "master"
     GitExecutable: str = "./toolkit/Git/mingw64/bin/git.exe"
     GitProxy: Optional[str] = None
-    SSLVerify: bool = False
+    SSLVerify: bool = True
     AutoUpdate: bool = True
 
     PythonExecutable: str = "./toolkit/python.exe"
@@ -36,7 +36,7 @@ class ConfigModel:
     CheckUpdateInterval: int = 5
     AutoRestartTime: str = "03:50"
     DesktopUpdateManifest: str = (
-        "https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json"
+        "https://nkas.megumiss.top/releases/latest/nkas-desktop.json"
     )
 
     WebuiHost: str = "0.0.0.0"
