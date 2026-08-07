@@ -339,15 +339,18 @@ jobs:
           echo "Deploying tag: $TAG"
 
       # ==========================
-      # 2. Checkout the release tag
+      # 2. Checkout the release commit
       # ==========================
       # Only needed to read the desktop version from webapp/src-tauri/Cargo.toml.
       # The desktop version is independent from the project release tag
       # (see the version check in the build-release job).
-      - name: Checkout Release Tag
+      # NOTE: checkout by commit SHA instead of the tag — a draft release does
+      # not create the tag ref until it is published, and a manually dispatched
+      # tag_name may not exist in the repo yet, so fetching the tag would fail.
+      - name: Checkout Release Commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: ${{ env.TAG_NAME }}
+          ref: ${{ github.sha }}
 
       # ==========================
       # 3. Download the desktop executable from GitHub Release
