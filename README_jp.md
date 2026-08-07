@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img alt="LOGO" src="./webapp/buildResources/icon.png" width="256" height="256" />
+<img alt="LOGO" src="./assets/gui/icon/nkas.png" width="256" height="256" />
 
 # NIKKEAutoScript
 
@@ -59,14 +59,14 @@
 ### 使用方法
 
 詳細なインストール手順は以下を参照してください：  
-[Wiki インストールガイド](https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南)
+[Wiki インストールガイド](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide)
 
 ---
 
 ### よくある質問
 
 詳しい FAQ は以下を参照してください：  
-[Wiki FAQページ](https://github.com/megumiss/NIKKEAutoScript/wiki/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)
+[Wiki FAQページ](https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions)
 
 > 💡 **ヘルプが必要な場合**  
 > 使用中に問題が発生した場合は、以下の方法でサポートを受けられます：  

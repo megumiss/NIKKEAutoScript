@@ -1,0 +1,27 @@
+{
+  "name": "nkas-ui",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "browserslist": ["Chrome 94"],
+  "dependencies": {
+    "@vitejs/plugin-vue": "4.6.2",
+    "dayjs": "1.11.13",
+    "echarts": "5.6.0",
+    "naive-ui": "2.41.0",
+    "pinia": "2.3.1",
+    "vue": "3.5.13",
+    "vue-router": "4.5.0"
+  },
+  "devDependencies": {
+    "playwright": "1.54.2",
+    "typescript": "5.7.2",
+    "vite": "4.5.5",
+    "vue-tsc": "2.2.0"
+  }
+}

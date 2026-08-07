@@ -1,8 +1,6 @@
 import copy
 import os
 from functools import cached_property
-from typing import Optional
-
 from deploy.utils import DEPLOY_CONFIG, poor_yaml_read, DEPLOY_TEMPLATE, poor_yaml_write
 from module.logger import logger
 from typing import Optional, Union
@@ -37,16 +35,24 @@ class ConfigModel:
     EnableReload: bool = True
     CheckUpdateInterval: int = 5
     AutoRestartTime: str = "03:50"
+    DesktopUpdateManifest: str = (
+        "https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json"
+    )
 
     WebuiHost: str = "0.0.0.0"
     WebuiPort: int = 12271
+    DpiScaling: bool = True
+    HardwareAcceleration: bool = False
 
     Language: str = "zh-CN"
     Theme: str = "dark"
     Password: Optional[str] = None
     CDN: Union[str, bool] = False
     Run: Optional[str] = None
-    StartupNoticeDismissedId: Optional[str] = None
+    ReadNoticeIds: Optional[str] = None
+
+    # Statistics
+    EnableStatistics: bool = True
 
     # Remote Access
     EnableRemoteAccess: bool = False
@@ -91,7 +97,9 @@ class DeployConfig(ConfigModel):
     def show_config(self):
         logger.hr("Show deploy config", 1)
         for k, v in self.config.items():
-            if self.config_template[k] == v:
+            # User config may carry keys dropped from the template (e.g. after
+            # an update); missing keys count as changed and get logged.
+            if self.config_template.get(k) == v:
                 continue
 
         logger.info(f"Rest of the configs are the same as default")

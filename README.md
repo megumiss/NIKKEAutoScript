@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img alt="LOGO" src="./webapp/buildResources/icon.png" width="256" height="256" />
+<img alt="LOGO" src="./assets/gui/icon/nkas.png" width="256" height="256" />
 
 # NIKKEAutoScript
 
@@ -59,13 +59,13 @@ Alas的所有开发者，到现在我还是觉得Alas的源码不明觉厉
 
 ### 如何使用
 
-详细安装指南请参阅 [Wiki安装教程](https://github.com/megumiss/NIKKEAutoScript/wiki/安装指南)
+详细安装指南请参阅 [Wiki安装教程](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN)
 
 ---
 
 ### 常见问题
 
-详细常见问题解答请参阅 [Wiki常见问题页面](https://github.com/megumiss/NIKKEAutoScript/wiki/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)
+详细常见问题解答请参阅 [Wiki常见问题页面](https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions.zh-CN)
 
 > 💡 **寻求帮助**  
 > 如果在使用过程中遇到问题，您可以通过以下方式获取帮助：

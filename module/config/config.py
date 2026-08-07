@@ -160,7 +160,7 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
 
         func_set.add(func)
 
-        logger.info(f"Bind task {func_set}")
+        logger.debug(f"Bind task {func_set}")
 
         # Bind arguments
         visited = set()
@@ -189,7 +189,7 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             return False
         for path, value in self.modified.items():
             deep_set(self.data, keys=path, value=value)
-        logger.info(
+        logger.debug(
             f"Save config {filepath_config(self.config_name, mod_name)}, {dict_to_kv(self.modified)}"
         )
         # Don't use self.modified = {}, that will create a new object.

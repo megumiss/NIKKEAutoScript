@@ -6,7 +6,7 @@
 - `gui.py`：Web UI 启动入口（Uvicorn）
 
 配置与运行时文件在 `config/`；模板图与多语言资源在 `assets/`（如 `assets/zh-CN/event_dated/...`）；日志与错误截图在 `log/`。  
-前端 Electron 工程独立在 `webapp/`，有自己的依赖与测试流程。
+桌面 Tauri 2 工程位于 `webapp/`；Vue SPA 位于 `webui/`，由 Python 后端托管。
 
 ## 构建、测试与开发命令
 Python 环境初始化：
@@ -24,11 +24,16 @@ python gui.py --host 127.0.0.1 --port 12271
 ```powershell
 python -m py_compile module\...\*.py
 ```
-前端开发（在 `webapp/` 目录）：
+桌面壳开发（在 `webapp/` 目录，需要 Node.js 20、stable Rust 和 Windows C++ Build Tools）：
 ```powershell
 yarn install --frozen-lockfile
-yarn run compile
 yarn test
+yarn run compile
+```
+SPA 开发（在 `webui/` 目录）：
+```powershell
+yarn install --frozen-lockfile
+yarn run build
 ```
 
 ## 代码风格与命名规范
@@ -47,6 +52,7 @@ Python 使用 4 空格缩进，单行不超过 120 字符，字符串优先单�
 - 删除代码要可验证：删除调试或废弃逻辑后，至少执行语法检查与一次最小路径回归。
 
 ## 高频代码用法说明
+- Web UI 为 `webui/` 下的 Vue SPA（构建产物 `webui/dist` 提交入库），后端是纯 Starlette 工厂 `module/webui/app.py:app`，通过 `module/webui/api/` 暴露 REST 与 WebSocket；pywebio 已移除。
 - 页面切换：优先 `self.ui_ensure(page_xxx)` 进入目标页面，不要直接假设当前页面状态。
 - 循环骨架：多数任务采用 `while 1` + `self.device.screenshot()` + 条件分支；每个分支完成后 `continue`，保持状态机清晰。
 - 点击防抖：优先使用 `appear_then_click(..., interval=1)` 或 `Timer` 控制点击频率，避免短时间重复点击导致误操作。
@@ -58,7 +64,7 @@ Python 使用 4 空格缩进，单行不超过 120 字符，字符串优先单�
 
 ## 测试规范
 仓库当前没有完整的 Python 单元测试体系；Python 改动至少执行 `py_compile`，并进行针对性运行验证。  
-前端改动需执行 `yarn test`（当前为 `webapp/tests/app.spec.js`）和 `yarn run compile`。  
+桌面壳改动需执行 `yarn test`、`yarn run check` 和 `yarn run compile`；SPA 改动需执行 `yarn run build`。
 涉及 OCR/模板资源改动时，需提供可复现的游戏内验证路径，并覆盖对应语言资源。
 
 ## 提交与合并请求规范

@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NKAS UI 重构预览 v4</title>
+<style>
+/* ============ 主题变量 ============ */
+:root, [data-theme="dark"] {
+    --bg: #0d1117;
+    --bg-glow-1: rgba(102, 184, 234, 0.07);
+    --bg-glow-2: rgba(122, 92, 231, 0.05);
+    --card: #151a22;
+    --card-2: #1a2029;
+    --card-3: #232b38;
+    --border: #262f3d;
+    --border-light: #38465a;
+    --text: #e8ebf0;
+    --text-2: #97a0af;
+    --text-3: #646d7b;
+    --accent: #66b8ea;
+    --accent-2: #4a9eda;
+    --violet: #9a8bf5;
+    --accent-soft: rgba(102, 184, 234, 0.14);
+    --grad-accent: linear-gradient(135deg, #66b8ea, #4a9eda);
+    --grad-violet: linear-gradient(135deg, #8ec5f5, #9a8bf5);
+    --green: #55d9a2;
+    --green-soft: rgba(85, 217, 162, 0.13);
+    --yellow: #ffc178;
+    --yellow-soft: rgba(255, 193, 120, 0.13);
+    --red: #ef6f6f;
+    --red-soft: rgba(239, 111, 111, 0.15);
+    --log-bg: #10141b;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
+    --shadow-hover: 0 6px 24px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3);
+}
+[data-theme="light"] {
+    --bg: #eef1f6;
+    --bg-glow-1: rgba(47, 143, 208, 0.06);
+    --bg-glow-2: rgba(122, 92, 231, 0.04);
+    --card: #ffffff;
+    --card-2: #f5f7fb;
+    --card-3: #e6ebf3;
+    --border: #dde3ec;
+    --border-light: #c2cddc;
+    --text: #21262e;
+    --text-2: #5f6a78;
+    --text-3: #97a1af;
+    --accent: #2f8fd0;
+    --accent-2: #2579b4;
+    --violet: #7a68d8;
+    --accent-soft: rgba(47, 143, 208, 0.1);
+    --green: #1cab72;
+    --green-soft: rgba(28, 171, 114, 0.1);
+    --yellow: #bd7a18;
+    --yellow-soft: rgba(189, 122, 24, 0.1);
+    --red: #d34545;
+    --red-soft: rgba(211, 69, 69, 0.1);
+    --log-bg: #f2f4f8;
+    --shadow: 0 1px 2px rgba(30,40,60,.06), 0 2px 8px rgba(30,40,60,.06);
+    --shadow-hover: 0 8px 24px rgba(30,40,60,.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    background:
+        radial-gradient(1200px 500px at 80% -10%, var(--bg-glow-1), transparent 60%),
+        radial-gradient(900px 500px at 10% 110%, var(--bg-glow-2), transparent 60%),
+        var(--bg);
+    color: var(--text); height: 100vh; overflow: hidden; font-size: 15px;
+}
+button { font-family: inherit; cursor: pointer; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.app { display: flex; height: 100vh; }
+
+/* ============ 全局侧边栏 ============ */
+.sidebar {
+    width: 216px; flex-shrink: 0; display: flex; flex-direction: column;
+    background: var(--card); border-right: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 11px; padding: 16px; }
+.brand-logo {
+    width: 36px; height: 36px; border-radius: 10px; background: var(--grad-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #0b2231; font-size: 17px;
+    box-shadow: 0 2px 10px rgba(74, 158, 218, .4);
+}
+.brand-name { font-weight: 700; font-size: 17px; letter-spacing: .02em; }
+.brand-sub { font-size: 10.5px; color: var(--text-3); letter-spacing: .12em; }
+.side-section { padding: 10px 10px 2px; }
+.side-label {
+    font-size: 11px; color: var(--text-3); letter-spacing: .12em;
+    padding: 0 8px 7px; font-weight: 600;
+}
+.side-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 10px; border: none; border-radius: 9px;
+    background: transparent; color: var(--text-2); font-size: 14.5px;
+    text-align: left; margin-bottom: 2px; transition: all .15s;
+}
+.side-item:hover { background: var(--card-2); color: var(--text); }
+.side-item.active { background: var(--accent-soft); color: var(--accent); }
+.side-item .sicon { width: 18px; text-align: center; font-size: 15px; }
+.inst-avatar {
+    width: 23px; height: 23px; border-radius: 7px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11.5px; font-weight: 700; color: #0b2231; background: var(--grad-accent);
+    position: relative;
+}
+.inst-avatar.idle { background: var(--card-3); color: var(--text-2); }
+.inst-avatar .ring {
+    position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px;
+    border-radius: 50%; border: 2px solid var(--card);
+}
+.ring.running { background: var(--green); }
+.ring.idle { background: var(--text-3); }
+.side-item .badge {
+    margin-left: auto; font-size: 11px; padding: 1px 8px; border-radius: 10px;
+    background: var(--green-soft); color: var(--green); white-space: nowrap;
+}
+.side-item .badge.idle-badge { background: transparent; color: var(--text-3); border: 1px solid var(--border); }
+.side-spacer { flex: 1; }
+.side-footer { padding: 10px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.icon-btn {
+    flex: 1; padding: 7px 4px; border: 1px solid var(--border); border-radius: 8px;
+    background: transparent; color: var(--text-2); font-size: 12.5px; transition: all .15s;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* ============ 实例任务栏（第二列，二级可折叠） ============ */
+.rail {
+    width: 236px; flex-shrink: 0; display: none; flex-direction: column;
+    background: var(--card); border-right: 1px solid var(--border);
+}
+.rail.show { display: flex; }
+.rail-head { padding: 14px 14px 10px; border-bottom: 1px solid var(--border); }
+.rail-inst { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.rail-inst .inst-avatar { width: 32px; height: 32px; font-size: 15px; border-radius: 9px; }
+.rail-inst-name { font-weight: 700; font-size: 16px; }
+.rail-inst-state { font-size: 12px; color: var(--green); display: flex; align-items: center; gap: 5px; }
+.rail-search {
+    display: flex; align-items: center; gap: 7px; padding: 7px 10px;
+    background: var(--card-2); border: 1px solid var(--border); border-radius: 8px;
+}
+.rail-search input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 13.5px; min-width: 0;
+}
+.rail-search input::placeholder { color: var(--text-3); }
+.rail-list { flex: 1; overflow-y: auto; padding: 8px; }
+.rail-item {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 7px 9px; border: none; border-radius: 8px; background: transparent;
+    color: var(--text-2); font-size: 14px; text-align: left; transition: all .12s;
+}
+.rail-item:hover { background: var(--card-2); color: var(--text); }
+.rail-item.active { background: var(--accent-soft); color: var(--accent); }
+.rail-item .mini-dot { width: 6px; height: 6px; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+.mini-dot.on { background: var(--green); }
+.mini-dot.off { background: var(--border-light); }
+.rail-item .spin {
+    margin-left: auto; width: 12px; height: 12px; flex-shrink: 0;
+    border: 2px solid var(--green-soft); border-top-color: var(--green);
+    border-radius: 50%; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.rail-group {
+    display: flex; align-items: center; gap: 7px; width: 100%;
+    padding: 10px 9px 6px; margin-top: 4px;
+    border: none; background: transparent; cursor: pointer;
+    font-size: 12.5px; color: var(--text-3); letter-spacing: .05em; font-weight: 600;
+    border-radius: 7px; transition: color .12s;
+}
+.rail-group:hover { color: var(--text-2); }
+.rail-group .chev { font-size: 9px; transition: transform .15s; width: 10px; }
+.rail-group.expanded .chev { transform: rotate(90deg); }
+.rail-group .gicon { font-size: 13px; }
+.rail-count {
+    margin-left: auto; font-size: 10.5px; font-weight: 500;
+    padding: 0 7px; border-radius: 8px; background: var(--card-3); color: var(--text-3);
+}
+.rail-group.expanded .rail-count { background: transparent; }
+.rail-tasks { padding-left: 12px; }
+
+/* ============ 主区 ============ */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.topbar {
+    height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 12px;
+    padding: 0 22px; border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 82%, transparent);
+    backdrop-filter: blur(8px);
+}
+.crumb { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.crumb .sep { color: var(--text-3); }
+.crumb .cur { font-weight: 700; font-size: 16px; }
+.crumb .pre { color: var(--text-2); }
+.status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 13px; border-radius: 12px; font-size: 12.5px; font-weight: 500;
+}
+.status-pill.running { background: var(--green-soft); color: var(--green); }
+.status-pill.idle { background: var(--card-2); color: var(--text-2); border: 1px solid var(--border); }
+.status-pill.warn { background: var(--yellow-soft); color: var(--yellow); }
+.pulse { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.topbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+.view { flex: 1; overflow-y: auto; padding: 24px; display: none; }
+.view.active { display: block; }
+
+/* ============ 通用组件 ============ */
+.card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: var(--shadow); position: relative;
+}
+.card.hoverable { transition: all .18s; }
+.card.hoverable:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); border-color: var(--border-light); }
+
+.btn {
+    padding: 8px 17px; border-radius: 9px; font-size: 14px; transition: all .15s;
+    border: 1px solid var(--border-light); background: var(--card-3); color: var(--text);
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--grad-accent); border: none; color: #0b2231; font-weight: 700; box-shadow: 0 2px 10px rgba(74,158,218,.35); }
+.btn.primary:hover { filter: brightness(1.1); color: #0b2231; }
+.btn.success { background: linear-gradient(135deg, #55d9a2, #35b984); border: none; color: #06281b; font-weight: 700; }
+.btn.success:hover { filter: brightness(1.08); }
+.btn.danger { background: var(--red-soft); border-color: transparent; color: var(--red); }
+.btn.danger:hover { background: var(--red); border-color: var(--red); color: #fff; }
+.btn.sm { padding: 5px 13px; font-size: 12.5px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.switch { position: relative; width: 46px; height: 25px; flex-shrink: 0; }
+.switch input { display: none; }
+.switch .slider {
+    position: absolute; inset: 0; border-radius: 24px;
+    background: var(--card-3); border: 1px solid var(--border-light);
+    transition: .2s; cursor: pointer;
+}
+.switch .slider::before {
+    content: ""; position: absolute; width: 17px; height: 17px; border-radius: 50%;
+    left: 3px; top: 3px; background: var(--text-2); transition: .2s;
+}
+.switch input:checked + .slider { background: var(--grad-accent); border-color: transparent; }
+.switch input:checked + .slider::before { transform: translateX(21px); background: #fff; }
+
+.section-title { font-size: 16px; font-weight: 700; margin: 28px 0 14px; display: flex; align-items: center; gap: 10px; }
+.section-title:first-child { margin-top: 0; }
+.section-title .hint { font-size: 12.5px; color: var(--text-3); font-weight: 400; }
+
+/* ============ 视图1：全局总览 ============ */
+.inst-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+.inst-card { padding: 20px; overflow: hidden; }
+.inst-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--grad-accent); opacity: 0; transition: opacity .2s;
+}
+.inst-card.is-running::before { opacity: 1; }
+.inst-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.inst-card-head .inst-avatar { width: 40px; height: 40px; font-size: 17px; border-radius: 11px; }
+.inst-card-head h3 { font-size: 16.5px; }
+.inst-card-head .sub { font-size: 11.5px; color: var(--text-3); }
+.inst-now { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.inst-now .k { color: var(--text-2); }
+.inst-card-foot { display: flex; gap: 10px; margin-top: 16px; }
+.add-card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; min-height: 180px; border-style: dashed; border-width: 1.5px;
+    color: var(--text-3); background: transparent; cursor: pointer; font-size: 14px;
+}
+.add-card:hover { border-color: var(--accent); color: var(--accent); }
+.add-card .plus { font-size: 28px; font-weight: 300; }
+
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 8px; }
+.stat-card { padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
+.stat-icon {
+    width: 42px; height: 42px; border-radius: 11px; display: flex;
+    align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0;
+}
+.stat-icon.blue { background: var(--accent-soft); }
+.stat-icon.green { background: var(--green-soft); }
+.stat-icon.yellow { background: var(--yellow-soft); }
+.stat-num { font-size: 24px; font-weight: 700; line-height: 1.1; }
+.stat-lbl { font-size: 13px; color: var(--text-2); }
+
+/* ============ 视图2：调度总览 ============ */
+.ov-layout { display: grid; grid-template-columns: minmax(320px, 400px) 1fr; gap: 18px; height: 100%; }
+.ov-left { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.hero-sched { padding: 20px 22px; display: flex; align-items: center; gap: 16px; overflow: hidden; }
+.hero-sched::before {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 4px;
+    background: var(--grad-accent); border-radius: 4px 0 0 4px;
+}
+.hero-sched.running-hero::before { background: linear-gradient(180deg, #55d9a2, #35b984); }
+.hero-sched .lbl { font-size: 16px; font-weight: 700; }
+.hero-sched .sub { font-size: 12.5px; color: var(--text-2); margin-top: 3px; }
+.queue-card { padding: 18px 20px; flex: 1; }
+.timeline { position: relative; padding-left: 22px; }
+.timeline::before {
+    content: ""; position: absolute; left: 6px; top: 8px; bottom: 8px;
+    width: 2px; background: var(--border); border-radius: 2px;
+}
+.tl-item { position: relative; padding: 11px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; background: var(--card-2); display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.tl-item::before {
+    content: ""; position: absolute; left: -21px; top: 50%; transform: translateY(-50%);
+    width: 10px; height: 10px; border-radius: 50%; background: var(--text-3);
+    border: 2px solid var(--card);
+}
+.tl-item .t { color: var(--text-2); margin-left: auto; font-size: 12.5px; white-space: nowrap; }
+.tl-item.tl-running { border-color: transparent; background: linear-gradient(var(--card-2), var(--card-2)) padding-box, linear-gradient(135deg, #55d9a2, #4a9eda) border-box; }
+.tl-item.tl-running::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.tl-item.tl-next::before { background: var(--yellow); }
+.queue-group-label { font-size: 12px; color: var(--text-3); margin: 0 0 12px; letter-spacing: .08em; font-weight: 600; }
+.log-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.log-head { display: flex; align-items: center; gap: 10px; padding: 13px 18px; border-bottom: 1px solid var(--border); }
+.log-head .lbl { font-weight: 700; font-size: 15px; }
+.log-head .note { font-size: 11.5px; color: var(--text-3); }
+.log-body {
+    flex: 1; overflow-y: auto; padding: 14px 18px; background: var(--log-bg);
+    font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace; font-size: 12.5px;
+    color: var(--text-2); line-height: 2.1; min-height: 320px; max-height: calc(100vh - 170px);
+}
+.log-body .ts { color: var(--text-3); display: inline-block; width: 96px; }
+.lv-chip {
+    display: inline-block; width: 56px; text-align: center;
+    padding: 0; border-radius: 5px; font-size: 11px; font-weight: 700;
+    margin-right: 10px; flex-shrink: 0;
+}
+.lv-info { background: var(--accent-soft); color: var(--accent); }
+.lv-warn { background: var(--yellow-soft); color: var(--yellow); }
+.lv-err { background: var(--red-soft); color: var(--red); }
+.lv-ok { background: var(--green-soft); color: var(--green); }
+
+/* ============ 任务页（双列填满） ============ */
+.task-layout { display: grid; grid-template-columns: 1fr 160px; gap: 18px; align-items: start; }
+.task-hero { padding: 20px 24px; display: flex; align-items: center; gap: 16px; margin-bottom: 18px; overflow: hidden; }
+.task-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 200px; height: 200px;
+    background: radial-gradient(circle, var(--bg-glow-1), transparent 70%); pointer-events: none;
+}
+.task-icon {
+    width: 48px; height: 48px; border-radius: 13px; background: var(--grad-violet);
+    display: flex; align-items: center; justify-content: center; font-size: 23px;
+    box-shadow: 0 4px 14px rgba(122, 92, 231, .35); flex-shrink: 0;
+}
+.task-hero h2 { font-size: 19px; }
+.task-hero .sub { font-size: 12.5px; color: var(--text-2); margin-top: 3px; }
+/* 分组卡片双列排布，宽屏不再留白 */
+.cfg-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 18px; align-items: start; }
+.group-card { padding: 0; overflow: hidden; }
+.group-head {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 16px 22px; border: none; background: transparent; color: var(--text);
+    text-align: left; cursor: default;
+}
+.group-head.clickable { cursor: pointer; }
+.group-head.clickable:hover { background: var(--card-2); }
+.group-head > h4 { font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.group-head > h4::before { content: ""; width: 3px; height: 15px; border-radius: 2px; background: var(--grad-accent); }
+.group-head .chev { font-size: 10px; color: var(--text-3); transition: transform .15s; margin-left: auto; }
+.group-card.collapsed .group-head .chev { transform: rotate(-90deg); }
+.group-summary { font-size: 12.5px; color: var(--text-2); margin-left: auto; padding-right: 8px; }
+.group-card.collapsed .group-summary { display: inline; }
+.group-summary + .chev { margin-left: 0; }
+.group-body { padding: 0 22px 8px; }
+.group-card.collapsed .group-body { display: none; }
+.ghelp { font-size: 12.5px; color: var(--text-2); margin: 0 0 6px; }
+
+/* —— 表单控件统一规格 —— */
+.field { display: flex; align-items: center; gap: 16px; padding: 13px 0; border-top: 1px solid var(--border); }
+.field.hidden-by-search { display: none; }
+.field-label { width: 200px; flex-shrink: 0; }
+.field-label .fname { font-size: 14.5px; }
+.field-label .fhelp { font-size: 12.5px; color: var(--text-3); margin-top: 3px; line-height: 1.5; }
+.field-control { flex: 1; display: flex; align-items: center; gap: 10px; }
+.field-control input[type="text"], .field-control select {
+    width: 280px; height: 38px; padding: 0 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card-2); color: var(--text);
+    font-size: 14px; font-family: inherit; outline: none; transition: all .15s;
+}
+.field-control textarea {
+    width: 420px; padding: 9px 12px; border-radius: 8px; resize: vertical; min-height: 68px;
+    border: 1px solid var(--border); background: var(--card-2); color: var(--text);
+    font-size: 14px; font-family: inherit; outline: none; transition: all .15s;
+}
+.field-control input:focus, .field-control select:focus, .field-control textarea:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.input-affix { display: inline-flex; align-items: stretch; }
+.input-affix input[type="text"] { width: 110px; border-radius: 8px 0 0 8px; border-right: none; text-align: right; }
+.input-affix .suffix {
+    display: inline-flex; align-items: center; padding: 0 13px; height: 38px;
+    background: var(--card-3); border: 1px solid var(--border); border-radius: 0 8px 8px 0;
+    color: var(--text-2); font-size: 13px; white-space: nowrap;
+}
+.input-affix:focus-within .suffix { border-color: var(--accent); }
+.input-icon { position: relative; display: inline-flex; }
+.input-icon input[type="text"] { padding-right: 36px; }
+.input-icon .icon {
+    position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--text-3); font-size: 14px; pointer-events: none;
+}
+.saved-flash { font-size: 12px; color: var(--green); opacity: 0; transition: opacity .3s; white-space: nowrap; }
+
+.anchor-nav { position: sticky; top: 0; padding: 12px; }
+.anchor-nav-item {
+    display: block; width: 100%; text-align: left; padding: 8px 12px;
+    border: none; background: transparent; color: var(--text-2);
+    font-size: 13px; border-left: 2px solid var(--border); transition: all .12s;
+}
+.anchor-nav-item:hover { color: var(--text); }
+.anchor-nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; }
+.cfg-search { display: flex; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 18px; }
+.cfg-search input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 14px; }
+.cfg-search input::placeholder { color: var(--text-3); }
+
+/* ============ 实例管理 ============ */
+.table-card { overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 14px 18px; text-align: left; font-size: 14px; border-bottom: 1px solid var(--border); }
+th { color: var(--text-2); font-weight: 600; font-size: 12.5px; background: var(--card-2); letter-spacing: .04em; }
+tr:last-child td { border-bottom: none; }
+tbody tr { transition: background .12s; }
+tbody tr:hover { background: var(--card-2); }
+
+/* ============ 方案说明 ============ */
+.spec-banner {
+    margin-bottom: 18px; padding: 13px 18px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent-soft), transparent);
+    border: 1px solid var(--accent-2);
+    display: flex; align-items: center; gap: 12px; font-size: 13.5px;
+}
+.spec-banner .btns { margin-left: auto; display: flex; gap: 8px; }
+.spec-panel { padding: 24px 28px; line-height: 1.9; font-size: 14.5px; max-width: 960px; }
+.spec-panel h3 { margin: 18px 0 8px; font-size: 15.5px; color: var(--accent); }
+.spec-panel h3:first-child { margin-top: 0; }
+.spec-panel ul { padding-left: 20px; }
+.spec-panel li { margin-bottom: 4px; }
+.spec-panel code { background: var(--card-3); padding: 1px 7px; border-radius: 5px; font-size: 13px; }
+
+@media (max-width: 1200px) {
+    .task-layout { grid-template-columns: 1fr; }
+    .anchor-nav { display: none; }
+    .ov-layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body data-theme="dark">
+<div class="app">
+
+    <!-- ================= 全局侧边栏 ================= -->
+    <nav class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">N</div>
+            <div>
+                <div class="brand-name">NKAS</div>
+                <div class="brand-sub">NIKKE AUTO</div>
+            </div>
+        </div>
+
+        <div class="side-section">
+            <button class="side-item active" data-view="dashboard" id="side-dashboard">
+                <span class="sicon">📊</span>全局总览
+            </button>
+        </div>
+
+        <div class="side-section">
+            <div class="side-label">实例</div>
+            <div id="side-instances"></div>
+            <button class="side-item" data-view="manage">
+                <span class="sicon">＋</span>新建实例
+            </button>
+        </div>
+
+        <div class="side-section">
+            <div class="side-label">系统</div>
+            <button class="side-item" data-view="manage"><span class="sicon">🗂</span>实例管理</button>
+            <button class="side-item" data-view="settings"><span class="sicon">⚙️</span>设置 / 更新</button>
+            <button class="side-item" data-view="about"><span class="sicon">ℹ️</span>关于</button>
+        </div>
+
+        <div class="side-spacer"></div>
+        <div class="side-footer">
+            <button class="icon-btn" id="theme-toggle">🌙 深色</button>
+            <button class="icon-btn">简体中文</button>
+        </div>
+    </nav>
+
+    <!-- ================= 实例任务栏（二级） ================= -->
+    <div class="rail" id="rail">
+        <div class="rail-head">
+            <div class="rail-inst">
+                <span class="inst-avatar">N<span class="ring running"></span></span>
+                <div>
+                    <div class="rail-inst-name" id="rail-inst-name">nkas</div>
+                    <div class="rail-inst-state"><span class="pulse" style="width:6px;height:6px"></span>调度运行中</div>
+                </div>
+            </div>
+            <div class="rail-search">
+                🔍 <input type="text" id="rail-search" placeholder="筛选任务…">
+            </div>
+        </div>
+        <div class="rail-list" id="rail-list">
+            <button class="rail-item active" data-page="instance" id="rail-overview">
+                <span class="sicon">📈</span>调度总览
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= 主区 ================= -->
+    <div class="main">
+        <div class="topbar">
+            <div class="crumb" id="crumb"><span class="cur">全局总览</span></div>
+            <span class="status-pill running" id="topbar-status" style="display:none"><span class="pulse"></span>调度运行中</span>
+            <div class="topbar-right">
+                <button class="btn sm" id="spec-btn">📋 方案说明</button>
+            </div>
+        </div>
+
+        <!-- ========== 方案说明 ========== -->
+        <div class="view" id="view-spec">
+            <div class="card spec-panel">
+                <h3>v4 调整（按审查反馈）</h3>
+                <ul>
+                    <li><b>字体系统重做</b>：全局字号上调（正文 15px、导航 14.5px、表单 14.5px、辅助文字 ≥12.5px），字体栈改为 <code>Segoe UI Variable / Microsoft YaHei UI / PingFang SC</code>（UI 优化字形），日志用 <code>Cascadia Code</code> 等宽字体。</li>
+                    <li><b>调度器组默认折叠</b>：任务页的「调度器」卡片收起为一行摘要（启用状态 + 下次执行时间），点击展开；成功间隔 / 失败间隔 / 服务器刷新时间为自动化内部字段，不再对用户展示。</li>
+                    <li><b>任务页双列填满</b>：分组卡片改为 <code>auto-fit minmax(440px, 1fr)</code> 网格，宽屏下多张卡片并排，右侧不再整片空白。</li>
+                    <li><b>入口自适应</b>：仅 1 个实例时启动直接进入该实例的调度总览（全局总览仍在侧边栏可点）；多实例时才落在全局总览。全局总览横幅上有「模拟单实例入口」按钮可现场演示。</li>
+                </ul>
+                <h3>框架</h3>
+                <ul>
+                    <li>后端：Python FastAPI REST + WebSocket（日志/状态推送），复用现有进程管理与 <code>args.json</code> 配置体系。</li>
+                    <li>前端：Vue 3 + Vite SPA + Naive UI，表单由 <code>args.json</code> + i18n 驱动的通用渲染器生成（覆盖全部 50 任务 / 447 字段）；哪些字段对用户展示由 <code>args.json</code> 的 <code>display</code> 标记控制，间隔类字段标 hide。</li>
+                    <li>客户端：Electron 壳保留，渲染层从 iframe 换成 SPA；浏览器直连同样可用。</li>
+                </ul>
+                <h3>操作逻辑</h3>
+                <ul>
+                    <li>入口：单实例 → 实例调度总览；多实例 → 全局总览（运行统计 + 实例卡片墙 + 全局启停）。</li>
+                    <li>实例 = 工作台：任务栏常驻（两级折叠、状态点：绿=启用，旋转=运行中），点任务两级直达配置。</li>
+                    <li>任务页 = 页头（启用开关 + 立即运行）+ 可折叠调度器卡 + 参数分组卡（双列）+ 右侧锚点；即改即存。</li>
+                    <li>工具任务页 = 页头（启动/停止）+ 参数卡 + 实时日志卡，与普通任务同级。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ========== 视图1：全局总览 ========== -->
+        <div class="view active" id="view-dashboard">
+            <div class="spec-banner">
+                <span id="banner-text">UI 重构预览 v4（假数据）。入口按实例数自适应：单实例直接进调度总览。</span>
+                <div class="btns">
+                    <button class="btn sm" id="demo-single">模拟单实例入口</button>
+                    <button class="btn sm" onclick="showView('spec')">查看方案</button>
+                </div>
+            </div>
+            <div class="stat-row">
+                <div class="card stat-card hoverable">
+                    <div class="stat-icon blue">🖥️</div>
+                    <div><div class="stat-num" id="stat-total">2</div><div class="stat-lbl">实例总数</div></div>
+                </div>
+                <div class="card stat-card hoverable">
+                    <div class="stat-icon green">▶️</div>
+                    <div><div class="stat-num" style="color:var(--green)" id="stat-running">1</div><div class="stat-lbl">运行中</div></div>
+                </div>
+                <div class="card stat-card hoverable">
+                    <div class="stat-icon yellow">⏱️</div>
+                    <div><div class="stat-num" style="color:var(--yellow)">6</div><div class="stat-lbl">今日待执行任务</div></div>
+                </div>
+            </div>
+            <div class="section-title">实例 <span class="hint">单实例用户启动时跳过本页，直接进入实例调度总览</span></div>
+            <div class="inst-grid" id="inst-grid"></div>
+            <div class="section-title">全局操作</div>
+            <div style="display:flex;gap:10px">
+                <button class="btn primary">▶ 全部启动</button>
+                <button class="btn">■ 全部停止</button>
+                <button class="btn">⟳ 检查更新</button>
+            </div>
+        </div>
+
+        <!-- ========== 视图2：调度总览 ========== -->
+        <div class="view" id="view-instance">
+            <div class="ov-layout">
+                <div class="ov-left">
+                    <div class="card hero-sched running-hero">
+                        <div style="flex:1">
+                            <div class="lbl">调度器</div>
+                            <div class="sub" id="sched-sub">正在执行：咨询 · 已运行 2:13</div>
+                        </div>
+                        <span class="status-pill running" id="sched-pill"><span class="pulse"></span>运行中</span>
+                        <label class="switch"><input type="checkbox" checked id="sched-switch"><span class="slider"></span></label>
+                    </div>
+                    <div class="card queue-card">
+                        <div class="queue-group-label">任务队列 · 按下次执行时间排序</div>
+                        <div class="timeline">
+                            <div class="tl-item tl-running"><span class="spin"></span>咨询 Conversation<span class="t">进行中 03:42</span></div>
+                            <div class="tl-item tl-next">商店 Shop<span class="t">14:20 · 13 分钟后</span></div>
+                            <div class="tl-item">模拟室 SimulationRoom<span class="t">15:00</span></div>
+                            <div class="tl-item">日常 Daily<span class="t">明天 04:00</span></div>
+                            <div class="tl-item">异常拦截战 Interception<span class="t">明天 04:30</span></div>
+                            <div class="tl-item">协同作战 Coop<span class="t">周五 12:00</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card log-card">
+                    <div class="log-head">
+                        <span class="lbl">实时日志</span>
+                        <span class="note">WebSocket 推送</span>
+                        <label style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2)">
+                            <input type="checkbox" checked> 自动滚动
+                        </label>
+                    </div>
+                    <div class="log-body" id="log-body">
+                        <div><span class="ts">14:06:12.301</span><span class="lv-chip lv-info">INFO</span>任务开始: Conversation</div>
+                        <div><span class="ts">14:06:12.855</span><span class="lv-chip lv-info">INFO</span>[Screen] HOME_PAGE</div>
+                        <div><span class="ts">14:06:13.120</span><span class="lv-chip lv-info">INFO</span>点击 NIKKE_AVATAR (112, 940)</div>
+                        <div><span class="ts">14:06:15.447</span><span class="lv-chip lv-warn">WARN</span>模板匹配度偏低 0.82: CONVERSATION_CHECK</div>
+                        <div><span class="ts">14:06:16.210</span><span class="lv-chip lv-info">INFO</span>选择对话选项 2</div>
+                        <div><span class="ts">14:06:18.930</span><span class="lv-chip lv-ok">OK</span>好感度 +100 (阿妮斯)</div>
+                        <div><span class="ts">14:06:19.104</span><span class="lv-chip lv-err">ERROR</span>演示：错误日志同样对齐</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 视图3：普通任务配置（咨询） ========== -->
+        <div class="view" id="view-task">
+            <div class="task-layout">
+                <div>
+                    <div class="card task-hero">
+                        <div class="task-icon">💬</div>
+                        <div style="flex:1">
+                            <h2>咨询</h2>
+                            <div class="sub">Daily / Conversation · 每日与妮姬咨询提升好感度</div>
+                        </div>
+                        <button class="btn sm">▶ 立即运行</button>
+                        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="card cfg-search">
+                        🔍 <input type="text" class="cfg-field-search" placeholder="搜索本任务配置项…">
+                    </div>
+                    <div class="cfg-groups">
+                        <!-- 调度器：默认折叠，仅保留对用户有意义的字段 -->
+                        <div class="card group-card collapsed">
+                            <button class="group-head clickable" data-collapse>
+                                <h4>调度器</h4>
+                                <span class="group-summary">已启用 · 下次执行 07-26 14:20</span>
+                                <span class="chev">▾</span>
+                            </button>
+                            <div class="group-body">
+                                <div class="ghelp">间隔与服务器刷新时间由脚本自动管理，无需手动设置</div>
+                                <div class="field" data-keywords="nextrun 下次执行 时间">
+                                    <div class="field-label"><div class="fname">下次执行时间</div><div class="fhelp">留空则按间隔自动计算</div></div>
+                                    <div class="field-control">
+                                        <span class="input-icon"><input type="text" value="2026-07-26 14:20:00"><span class="icon">📅</span></span>
+                                        <span class="saved-flash">✓ 已保存</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card group-card">
+                            <div class="group-head"><h4>咨询</h4></div>
+                            <div class="group-body">
+                                <div class="ghelp">咨询对象筛选策略</div>
+                                <div class="field" data-keywords="favourite 喜欢 优先">
+                                    <div class="field-label"><div class="fname">仅咨询喜欢的妮姬</div><div class="fhelp">只咨询已在游戏中标记喜欢的妮姬</div></div>
+                                    <div class="field-control"><label class="switch"><input type="checkbox" checked><span class="slider"></span></label><span class="saved-flash">✓ 已保存</span></div>
+                                </div>
+                                <div class="field" data-keywords="logs 图鉴 花絮">
+                                    <div class="field-label"><div class="fname">仅咨询花絮未满的妮姬</div><div class="fhelp">优先补齐花絮图鉴</div></div>
+                                    <div class="field-control"><label class="switch"><input type="checkbox"><span class="slider"></span></label><span class="saved-flash">✓ 已保存</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card anchor-nav">
+                    <div class="side-label" style="padding:0 12px 8px">本页分组</div>
+                    <button class="anchor-nav-item active">调度器</button>
+                    <button class="anchor-nav-item">咨询</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 视图4：工具任务（自动爬塔） ========== -->
+        <div class="view" id="view-tool">
+            <div class="task-layout">
+                <div>
+                    <div class="card task-hero">
+                        <div class="task-icon" style="background:linear-gradient(135deg,#f5a86a,#ef6f6f);box-shadow:0 4px 14px rgba(239,111,111,.3)">🗼</div>
+                        <div style="flex:1">
+                            <h2>自动爬塔</h2>
+                            <div class="sub">工具 / AutoTower · 手动辅助工具，不参与调度队列</div>
+                        </div>
+                        <span class="status-pill idle" id="tool-pill">未运行</span>
+                        <button class="btn success" id="tool-run-btn">▶ 启动</button>
+                    </div>
+                    <div class="cfg-groups">
+                        <div class="card group-card">
+                            <div class="group-head"><h4>参数</h4></div>
+                            <div class="group-body">
+                                <div class="ghelp">保存后立即生效，工具运行中也可修改</div>
+                                <div class="field">
+                                    <div class="field-label"><div class="fname">目标塔</div></div>
+                                    <div class="field-control"><select><option>企业塔 · 极乐净土</option><option>企业塔 · 米西利斯</option><option>无限之塔</option></select></div>
+                                </div>
+                                <div class="field">
+                                    <div class="field-label"><div class="fname">最大层数</div><div class="fhelp">达到后自动停止，0 = 不限</div></div>
+                                    <div class="field-control"><span class="input-affix"><input type="text" value="0"><span class="suffix">层</span></span></div>
+                                </div>
+                                <div class="field">
+                                    <div class="field-label"><div class="fname">失败重试</div></div>
+                                    <div class="field-control"><span class="input-affix"><input type="text" value="3"><span class="suffix">次</span></span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card log-card">
+                            <div class="log-head">
+                                <span class="lbl">运行日志</span>
+                                <span class="note">工具任务与调度任务共用日志通道</span>
+                            </div>
+                            <div class="log-body" style="min-height:180px;max-height:280px" id="tool-log">
+                                <div><span class="ts">13:58:02.114</span><span class="lv-chip lv-info">INFO</span>AutoTower 已就绪，等待启动</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card anchor-nav">
+                    <div class="side-label" style="padding:0 12px 8px">本页分组</div>
+                    <button class="anchor-nav-item active">参数</button>
+                    <button class="anchor-nav-item">运行日志</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 视图5：实例管理 ========== -->
+        <div class="view" id="view-manage">
+            <div style="display:flex;gap:10px;margin-bottom:18px">
+                <button class="btn primary">＋ 新建实例</button>
+                <button class="btn">⤒ 导入配置</button>
+            </div>
+            <div class="card table-card">
+                <table>
+                    <thead><tr><th>名称</th><th>Mod</th><th>状态</th><th>操作</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><div style="display:flex;align-items:center;gap:10px"><span class="inst-avatar" style="width:25px;height:25px;font-size:11.5px">N</span>nkas</div></td>
+                            <td>nkas</td>
+                            <td><span class="status-pill running"><span class="pulse"></span>运行中</span></td>
+                            <td><div style="display:flex;gap:8px">
+                                <button class="btn sm">导出</button>
+                                <button class="btn sm danger" disabled title="运行中的实例不可删除">删除</button>
+                            </div></td>
+                        </tr>
+                        <tr>
+                            <td><div style="display:flex;align-items:center;gap:10px"><span class="inst-avatar idle" style="width:25px;height:25px;font-size:11.5px">N</span>nkas2</div></td>
+                            <td>nkas</td>
+                            <td><span class="status-pill idle">待机</span></td>
+                            <td><div style="display:flex;gap:8px">
+                                <button class="btn sm">导出</button>
+                                <button class="btn sm danger">删除</button>
+                            </div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========== 视图6：设置 / 更新 ========== -->
+        <div class="view" id="view-settings">
+            <div class="task-layout" style="grid-template-columns:1fr">
+                <div class="cfg-groups">
+                    <div class="card group-card">
+                        <div class="group-head"><h4>应用更新</h4></div>
+                        <div class="group-body">
+                            <div class="ghelp">更新器与重启，从原「工具/更新」页迁入</div>
+                            <div class="field">
+                                <div class="field-label"><div class="fname">当前版本</div></div>
+                                <div class="field-control"><span style="color:var(--text-2)">page_refine @ 69e00b0</span></div>
+                            </div>
+                            <div class="field">
+                                <div class="field-label"><div class="fname">更新</div></div>
+                                <div class="field-control">
+                                    <button class="btn sm primary">检查更新</button>
+                                    <button class="btn sm">查看更新日志</button>
+                                    <button class="btn sm danger">强制重启</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card group-card">
+                        <div class="group-head"><h4>界面</h4></div>
+                        <div class="group-body">
+                            <div class="field">
+                                <div class="field-label"><div class="fname">主题</div></div>
+                                <div class="field-control">
+                                    <button class="btn sm primary">深色</button>
+                                    <button class="btn sm">浅色</button>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <div class="field-label"><div class="fname">语言</div></div>
+                                <div class="field-control"><select><option>简体中文</option><option>English</option><option>日本語</option></select></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card group-card">
+                        <div class="group-head"><h4>远程访问</h4></div>
+                        <div class="group-body">
+                            <div class="field">
+                                <div class="field-label"><div class="fname">启用远程访问</div><div class="fhelp">通过 SSH 隧道在外网访问面板</div></div>
+                                <div class="field-control"><label class="switch"><input type="checkbox"><span class="slider"></span></label></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 视图7：关于 ========== -->
+        <div class="view" id="view-about">
+            <div class="card spec-panel">
+                <h3>关于 NKAS</h3>
+                <ul>
+                    <li>NKAS 是免费开源软件，付费购买请退款。项目地址：github.com/megumiss/NIKKEAutoScript</li>
+                    <li>捐赠二维码与帮助入口（GitHub Issues / QQ 群）集中在本页，不再占用首屏。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ================= 实例数据（动态渲染，支持单/多实例演示） ================= */
+const ALL_INSTANCES = [
+    { name: 'nkas', running: true, current: '咨询 Conversation', next: '商店 · 14:20', uptime: '2 小时 13 分', badge: '咨询中' },
+    { name: 'nkas2', running: false, current: null, next: '日常 · 明天 04:00', uptime: null, badge: '待机' },
+];
+let INSTANCES = ALL_INSTANCES.slice();
+
+function renderInstances() {
+    /* 侧边栏实例列表 */
+    const side = document.getElementById('side-instances');
+    side.innerHTML = '';
+    INSTANCES.forEach(inst => {
+        const b = document.createElement('button');
+        b.className = 'side-item';
+        b.dataset.view = 'instance';
+        b.innerHTML = `
+            <span class="inst-avatar ${inst.running ? '' : 'idle'}">${inst.name[0].toUpperCase()}<span class="ring ${inst.running ? 'running' : 'idle'}"></span></span>${inst.name}
+            <span class="badge ${inst.running ? '' : 'idle-badge'}">${inst.badge}</span>`;
+        b.addEventListener('click', () => showView('instance'));
+        side.appendChild(b);
+    });
+
+    /* 全局总览卡片 */
+    const grid = document.getElementById('inst-grid');
+    grid.innerHTML = '';
+    INSTANCES.forEach(inst => {
+        const card = document.createElement('div');
+        card.className = 'card inst-card hoverable' + (inst.running ? ' is-running' : '');
+        card.innerHTML = `
+            <div class="inst-card-head">
+                <span class="inst-avatar ${inst.running ? '' : 'idle'}">${inst.name[0].toUpperCase()}<span class="ring ${inst.running ? 'running' : 'idle'}"></span></span>
+                <div><h3>${inst.name}</h3><div class="sub">mod: nkas</div></div>
+                <span class="status-pill ${inst.running ? 'running' : 'idle'}" style="margin-left:auto">${inst.running ? '<span class="pulse"></span>运行中' : '待机'}</span>
+            </div>
+            <div class="inst-now"><span class="k">当前任务</span><span>${inst.current || '<span style="color:var(--text-3)">无</span>'}</span></div>
+            <div class="inst-now"><span class="k">下一任务</span><span>${inst.next}</span></div>
+            <div class="inst-now"><span class="k">已运行</span><span>${inst.uptime || '<span style="color:var(--text-3)">—</span>'}</span></div>
+            <div class="inst-card-foot">
+                ${inst.running
+                    ? '<button class="btn danger sm" style="flex:1">停止</button>'
+                    : '<button class="btn success sm" style="flex:1">启动</button>'}
+                <button class="btn primary sm" style="flex:1" data-view="instance">进入 →</button>
+            </div>`;
+        card.querySelector('[data-view]').addEventListener('click', () => showView('instance'));
+        grid.appendChild(card);
+    });
+    const add = document.createElement('div');
+    add.className = 'card add-card';
+    add.innerHTML = '<span class="plus">＋</span>新建实例';
+    add.addEventListener('click', () => showView('manage'));
+    grid.appendChild(add);
+
+    document.getElementById('stat-total').textContent = INSTANCES.length;
+    document.getElementById('stat-running').textContent = INSTANCES.filter(i => i.running).length;
+    document.getElementById('rail-inst-name').textContent = INSTANCES[0].name;
+}
+
+/* 入口自适应：单实例直接进调度总览，多实例落全局总览 */
+function entryView() {
+    return INSTANCES.length === 1 ? 'instance' : 'dashboard';
+}
+
+/* 单/多实例演示切换 */
+let demoSingle = false;
+document.getElementById('demo-single').addEventListener('click', function() {
+    demoSingle = !demoSingle;
+    INSTANCES = demoSingle ? ALL_INSTANCES.slice(0, 1) : ALL_INSTANCES.slice();
+    renderInstances();
+    this.textContent = demoSingle ? '恢复双实例' : '模拟单实例入口';
+    document.getElementById('banner-text').textContent = demoSingle
+        ? '单实例模式：启动时直接进入调度总览（已自动跳转），全局总览仍可从侧边栏打开。'
+        : 'UI 重构预览 v4（假数据）。入口按实例数自适应：单实例直接进调度总览。';
+    if (demoSingle) showView('instance'); else showView('dashboard');
+});
+
+/* ================= 任务树（与 menu.json + zh-CN i18n 一致） ================= */
+const TASK_TREE = [
+    { group: 'NKAS', icon: '⚙️', tasks: [['NKAS设置', 1], ['模拟器', 1], ['PC客户端', 0], ['通知任务', 0], ['重启设置', 0]] },
+    { group: '收获', icon: '💰', tasks: [['收获', 1], ['歼灭', 1], ['邮箱', 1]] },
+    { group: '日常', icon: '📅', tasks: [['每日抽卡', 1], ['日常', 1], ['季票', 0], ['咨询', 1, 'running'], ['商店', 1], ['废铁商店', 0], ['花絮鉴赏会', 0]] },
+    { group: '前哨基地', icon: '🏕️', tasks: [['派遣', 1], ['解放', 0], ['同步器', 1], ['循环室', 0], ['基地剧情', 0]] },
+    { group: '方舟', icon: '🛡️', tasks: [['模拟室', 1], ['模拟室超频', 0], ['企业塔', 0], ['异常拦截战', 1], ['新人竞技场', 0], ['特殊竞技场', 0], ['特殊竞技场监控', 0], ['冠军竞技场', 0]] },
+    { group: '限时作战', icon: '⚔️', tasks: [['协同作战', 0], ['单人突击', 0], ['联盟突袭', 0]] },
+    { group: '剧情活动', icon: '📖', tasks: [['剧情活动', 0], ['剧情活动2', 0]] },
+    { group: '地面(BETA)', icon: '🌍', tasks: [['地面每日', 0]] },
+    { group: '妮游社', icon: '💬', tasks: [['Cookie', 0], ['妮游社日常', 0], ['妮游社CDK', 0], ['妮游社兑换', 0]] },
+    { group: '免费礼包', icon: '🎁', tasks: [['SETPUP礼包', 0], ['每日礼包', 1], ['每周礼包', 1], ['每月礼包', 0]] },
+    { group: '数据图表', icon: '📈', tasks: [['物品统计', 0], ['异常拦截', 0]] },
+    { group: '工具', icon: '🛠️', tasks: [['自动爬塔', 0, 'tool'], ['半自动点击', 0, 'tool'], ['花絮鉴赏', 0, 'tool'], ['CDK兑换', 0, 'tool'], ['屏幕旋转', 0, 'tool'], ['Hosts修改', 0, 'tool']] },
+];
+
+const railList = document.getElementById('rail-list');
+
+TASK_TREE.forEach(g => {
+    const enabledCount = g.tasks.filter(t => t[1]).length;
+    const hasRunning = g.tasks.some(t => t[2] === 'running');
+    const defaultOpen = enabledCount > 0 || hasRunning;
+
+    const gh = document.createElement('button');
+    gh.className = 'rail-group' + (defaultOpen ? ' expanded' : '');
+    gh.dataset.defaultOpen = defaultOpen ? '1' : '';
+    gh.innerHTML = `<span class="chev">▸</span><span class="gicon">${g.icon}</span>${g.group}<span class="rail-count">${enabledCount}/${g.tasks.length}</span>`;
+
+    const box = document.createElement('div');
+    box.className = 'rail-tasks';
+    box.style.display = defaultOpen ? '' : 'none';
+
+    g.tasks.forEach(([name, enabled, flag]) => {
+        const b = document.createElement('button');
+        b.className = 'rail-item';
+        b.dataset.taskName = name;
+        const right = flag === 'running'
+            ? '<span class="spin" title="运行中"></span>'
+            : `<span class="mini-dot ${enabled ? 'on' : 'off'}" title="${enabled ? '已启用' : '未启用'}"></span>`;
+        b.innerHTML = `${name}${right}`;
+        b.addEventListener('click', () => {
+            document.querySelectorAll('.rail-item').forEach(x => x.classList.remove('active'));
+            b.classList.add('active');
+            showView(flag === 'tool' ? 'tool' : 'task');
+        });
+        box.appendChild(b);
+    });
+
+    gh.addEventListener('click', () => {
+        const open = box.style.display !== 'none';
+        box.style.display = open ? 'none' : '';
+        gh.classList.toggle('expanded', !open);
+    });
+
+    railList.appendChild(gh);
+    railList.appendChild(box);
+});
+document.getElementById('rail-overview').addEventListener('click', function() {
+    document.querySelectorAll('.rail-item').forEach(x => x.classList.remove('active'));
+    this.classList.add('active');
+    showView('instance');
+});
+
+/* 任务栏筛选 */
+document.getElementById('rail-search').addEventListener('input', function() {
+    const q = this.value.trim().toLowerCase();
+    railList.querySelectorAll('.rail-group').forEach(gh => {
+        const box = gh.nextElementSibling;
+        let any = false;
+        box.querySelectorAll('.rail-item').forEach(it => {
+            const hit = !q || it.dataset.taskName.toLowerCase().includes(q);
+            it.style.display = hit ? '' : 'none';
+            if (hit) any = true;
+        });
+        gh.style.display = any ? '' : 'none';
+        if (q) {
+            box.style.display = any ? '' : 'none';
+            gh.classList.toggle('expanded', any);
+        } else {
+            const defOpen = gh.dataset.defaultOpen === '1';
+            box.style.display = defOpen ? '' : 'none';
+            gh.classList.toggle('expanded', defOpen);
+        }
+    });
+});
+
+/* ================= 视图切换 ================= */
+const crumbs = {
+    dashboard: '<span class="cur">全局总览</span>',
+    instance: '<span class="pre">nkas</span><span class="sep">/</span><span class="cur">调度总览</span>',
+    task: '<span class="pre">nkas</span><span class="sep">/</span><span class="cur">咨询</span>',
+    tool: '<span class="pre">nkas</span><span class="sep">/</span><span class="cur">自动爬塔</span>',
+    manage: '<span class="cur">实例管理</span>',
+    settings: '<span class="cur">设置 / 更新</span>',
+    about: '<span class="cur">关于</span>',
+    spec: '<span class="cur">方案说明</span>',
+};
+const topStatus = document.getElementById('topbar-status');
+const rail = document.getElementById('rail');
+function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    document.getElementById('crumb').innerHTML = crumbs[name] || name;
+    const inInst = ['instance', 'task', 'tool'].includes(name);
+    rail.classList.toggle('show', inInst);
+    topStatus.style.display = inInst ? 'inline-flex' : 'none';
+    document.querySelectorAll('.side-item').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === (inInst ? 'instance' : name));
+    });
+}
+document.querySelectorAll('.side-item[data-view]').forEach(b =>
+    b.addEventListener('click', () => showView(b.dataset.view)));
+document.getElementById('spec-btn').addEventListener('click', () => showView('spec'));
+
+/* 主题切换 */
+const themeBtn = document.getElementById('theme-toggle');
+themeBtn.addEventListener('click', () => {
+    const cur = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.body.dataset.theme = cur;
+    themeBtn.textContent = cur === 'dark' ? '🌙 深色' : '☀️ 浅色';
+});
+
+/* 分组卡片折叠 */
+document.querySelectorAll('[data-collapse]').forEach(head => {
+    head.addEventListener('click', () => {
+        head.closest('.group-card').classList.toggle('collapsed');
+    });
+});
+
+/* 调度器开关 */
+document.getElementById('sched-switch').addEventListener('change', function() {
+    const pill = document.getElementById('sched-pill');
+    const hero = document.querySelector('.hero-sched');
+    pill.innerHTML = this.checked ? '<span class="pulse"></span>运行中' : '已停止';
+    pill.className = 'status-pill ' + (this.checked ? 'running' : 'idle');
+    hero.classList.toggle('running-hero', this.checked);
+    document.getElementById('sched-sub').textContent = this.checked
+        ? '正在执行：咨询 · 已运行 2:13' : '调度已停止，任务不会自动执行';
+});
+
+/* 工具任务 启动/停止 */
+const toolBtn = document.getElementById('tool-run-btn');
+toolBtn.addEventListener('click', () => {
+    const pill = document.getElementById('tool-pill');
+    const running = pill.classList.contains('running');
+    pill.textContent = running ? '未运行' : '运行中';
+    pill.className = 'status-pill ' + (running ? 'idle' : 'running');
+    toolBtn.textContent = running ? '▶ 启动' : '■ 停止';
+    toolBtn.className = 'btn ' + (running ? 'success' : 'danger');
+    const log = document.getElementById('tool-log');
+    const div = document.createElement('div');
+    div.innerHTML = running
+        ? '<span class="ts">14:10:05.220</span><span class="lv-chip lv-warn">WARN</span>用户手动停止 AutoTower'
+        : '<span class="ts">14:10:01.008</span><span class="lv-chip lv-ok">OK</span>AutoTower 启动，目标：企业塔 · 极乐净土';
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+});
+
+/* 任务页字段搜索 */
+document.querySelectorAll('.cfg-field-search').forEach(input => {
+    input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase();
+        const container = input.closest('.task-layout').querySelector('.cfg-groups');
+        container.querySelectorAll('.group-card').forEach(card => {
+            let any = false;
+            card.querySelectorAll('.field').forEach(f => {
+                const hit = !q || (f.textContent + ' ' + (f.dataset.keywords || '')).toLowerCase().includes(q);
+                f.classList.toggle('hidden-by-search', !hit);
+                if (hit) any = true;
+            });
+            card.style.display = any ? '' : 'none';
+        });
+    });
+});
+
+/* 即改即存闪现 */
+document.querySelectorAll('.field-control input, .field-control select').forEach(el => {
+    el.addEventListener('change', () => {
+        const flash = el.closest('.field-control').querySelector('.saved-flash');
+        if (!flash) return;
+        flash.style.opacity = 1;
+        setTimeout(() => flash.style.opacity = 0, 1200);
+    });
+});
+
+/* 模拟日志推送 */
+const logLines = [
+    ['14:06:22.410', 'INFO', 'lv-info', '点击 CONVERSATION_CONFIRM (300, 980)'],
+    ['14:06:23.812', 'OK', 'lv-ok', '好感度 +100 (拉毗)'],
+    ['14:06:24.006', 'INFO', 'lv-info', '今日咨询次数剩余: 3'],
+    ['14:06:25.551', 'WARN', 'lv-warn', 'OCR 重试 (1/3): 对话选项区域'],
+    ['14:06:26.903', 'INFO', 'lv-info', '选择对话选项 1'],
+    ['14:06:29.214', 'OK', 'lv-ok', '好感度 +200 (丽塔)'],
+    ['14:06:31.087', 'ERROR', 'lv-err', '截图超时，重新连接模拟器…'],
+    ['14:06:32.456', 'OK', 'lv-ok', '重连成功: 127.0.0.1:7555'],
+];
+const logBody = document.getElementById('log-body');
+let logIdx = 0;
+setInterval(() => {
+    if (!document.getElementById('view-instance').classList.contains('active')) return;
+    const [ts, lv, cls, msg] = logLines[logIdx % logLines.length];
+    logIdx++;
+    const div = document.createElement('div');
+    div.innerHTML = `<span class="ts">${ts}</span><span class="lv-chip ${cls}">${lv}</span>${msg}`;
+    logBody.appendChild(div);
+    const auto = document.querySelector('.log-head input[type=checkbox]');
+    if (auto && auto.checked) logBody.scrollTop = logBody.scrollHeight;
+}, 2000);
+
+/* ================= 初始化 ================= */
+renderInstances();
+showView(entryView());
+</script>
+</body>
+</html>

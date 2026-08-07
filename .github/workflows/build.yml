@@ -1,5 +1,11 @@
 name: Build and Release NKAS
 
+# ==============================================================================
+# 桌面 exe 发布说明：
+#   tag 推送（push）时，末尾的 deploy-desktop job 会自动把桌面 exe 发布到 VPS；
+#   workflow_dispatch 手动触发默认不发布，需要勾选 publish_exe 才会发布。
+# ==============================================================================
+
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +16,11 @@ on:
       release_note:
         description: 'Custom release note (Optional)'
         required: false
+      publish_exe:
+        description: 'Publish desktop exe to VPS'
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -73,43 +84,122 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
       with:
-        node-version: '16'
+        node-version: '20'
         cache: 'yarn'
-        cache-dependency-path: webapp/yarn.lock
+        cache-dependency-path: |
+          webapp/yarn.lock
+          webui/yarn.lock
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache Cargo
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: webapp/src-tauri
 
     # ==========================
-    # 4. 构建 Webapp
+    # 4. 构建 SPA 和 Tauri 桌面壳
     # ==========================
-    - name: Build Webapp
+    - name: Build WebUI
+      working-directory: webui
+      run: |
+        yarn install --frozen-lockfile
+        yarn run typecheck
+        yarn run build
+        if (-not (Test-Path "dist\index.html")) { exit 1 }
+
+    - name: Verify Desktop Version
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $false
+        $currentToml = Get-Content "webapp\src-tauri\Cargo.toml" -Raw
+        $currentVersion = [regex]::Match($currentToml, '(?m)^version = "([^"]+)"').Groups[1].Value
+        if (-not $currentVersion) {
+          throw "Unable to read the current desktop version from Cargo.toml"
+        }
+
+        $describeOutput = @(& git describe --tags --abbrev=0 "$env:GITHUB_SHA^" 2>$null)
+        $describeExitCode = $LASTEXITCODE
+        if ($describeExitCode -ne 0 -or $describeOutput.Count -eq 0) {
+          Write-Host "No previous release tag was found; skipping the desktop version bump check."
+          exit 0
+        }
+        $previousTag = $describeOutput[0].Trim()
+
+        $previousToml = @(& git show "${previousTag}:webapp/src-tauri/Cargo.toml" 2>$null)
+        $showExitCode = $LASTEXITCODE
+        if ($showExitCode -ne 0) {
+          Write-Host "$previousTag predates the Tauri desktop project; skipping the desktop version bump check."
+          exit 0
+        }
+
+        $previousVersion = [regex]::Match(($previousToml -join "`n"), '(?m)^version = "([^"]+)"').Groups[1].Value
+        if (-not $previousVersion) {
+          throw "Unable to read the desktop version from $previousTag"
+        }
+        $range = "$previousTag..$($env:GITHUB_SHA)"
+        $desktopChanges = @(& git diff --name-only $range -- webapp/src-tauri webapp/shell webapp/package.json webapp/yarn.lock)
+        if ($LASTEXITCODE -ne 0) {
+          throw "Unable to compare desktop inputs with $previousTag"
+        }
+        if ($desktopChanges.Count -gt 0 -and $currentVersion -eq $previousVersion) {
+          throw "Desktop inputs changed since $previousTag but desktop version is still $currentVersion"
+        }
+        Write-Host "Desktop version check passed: $previousVersion -> $currentVersion"
+
+    - name: Build Tauri Shell
       working-directory: webapp
       run: |
         yarn install --frozen-lockfile
+        yarn test
+        yarn run check
         yarn run compile
-        if (Test-Path "dist\win-unpacked") {
-            # 将编译产物移动到项目根目录下的 app 文件夹
-            Move-Item -Path "dist\win-unpacked" -Destination "..\app" -Force
-        } else {
-            exit 1
+        $binary = "src-tauri\target\release\nkas.exe"
+        if (-not (Test-Path $binary)) { exit 1 }
+        Copy-Item $binary "..\nkas.exe" -Force
+
+        $desktopVersion = [regex]::Match((Get-Content "src-tauri\Cargo.toml" -Raw), '(?m)^version = "([^"]+)"').Groups[1].Value
+        if (-not $desktopVersion) {
+          throw "Unable to read the desktop version from Cargo.toml"
         }
+        $assetDir = Join-Path $env:RUNNER_TEMP "nkas-desktop-assets"
+        New-Item -ItemType Directory -Path $assetDir -Force | Out-Null
+        $assetExe = Join-Path $assetDir "nkas-win-x64.exe"
+        $assetManifest = Join-Path $assetDir "nkas-desktop.json"
+        Copy-Item $binary $assetExe -Force
+        $file = Get-Item $assetExe
+        if ($file.Length -gt 30MB) { throw "Desktop executable exceeds 30 MiB: $($file.Length) bytes" }
+        $sha256 = (Get-FileHash $assetExe -Algorithm SHA256).Hash.ToLowerInvariant()
+        # Note: this manifest's url points at GitHub Release; the VPS manifest
+        # (nkas.megumiss.top) is generated and pushed by the deploy-desktop job
+        # at the end of this workflow.
+        $manifest = [ordered]@{
+          schema = 1
+          project_version = $env:TAG_NAME
+          desktop_version = $desktopVersion
+          target = "x86_64-pc-windows-msvc"
+          url = "https://github.com/${{ github.repository }}/releases/download/$env:TAG_NAME/nkas-win-x64.exe"
+          sha256 = $sha256
+          size = $file.Length
+        } | ConvertTo-Json
+        [System.IO.File]::WriteAllText($assetManifest, $manifest, [System.Text.UTF8Encoding]::new($false))
+        "DESKTOP_EXE=$assetExe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "DESKTOP_MANIFEST=$assetManifest" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     # ==========================
     # 5. 清理与组装基础环境
     # ==========================
-    - name: Clean Unnecessary Files
-      run: |
-        $keep = @("zh-CN.pak", "zh-TW.pak", "ja.pak", "en-US.pak", "en-GB.pak")
-        if (Test-Path "app\locales") {
-            Get-ChildItem "app\locales\*.pak" | Where-Object { $_.Name -notin $keep } | Remove-Item -Force
-        }
-        $filesToDelete = @("app\vulkan-1.dll", "app\vk_swiftshader_icd.json", "app\vk_swiftshader.dll", "app\LICENSES.chromium.html", "app\LICENSE.electron.txt")
-        foreach ($file in $filesToDelete) { if (Test-Path $file) { Remove-Item $file -Force } }
-
-    - name: Remove Webapp Artifacts
-      working-directory: webapp
+    - name: Remove Frontend Build Artifacts
       run: |
         Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue
-        Remove-Item output -Recurse -Force -ErrorAction SilentlyContinue
-        Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item webapp\node_modules -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item webapp\src-tauri\target -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item webui\node_modules -Recurse -Force -ErrorAction SilentlyContinue
+
+    - name: Verify Root Desktop Layout
+      run: |
+        if (-not (Test-Path "nkas.exe")) { throw "Root nkas.exe is missing" }
+        if (Test-Path "app") { throw "Legacy app directory must not be packaged" }
 
     # 从资源仓库复制 toolkit 到主项目根目录
     - name: Copy Toolkit
@@ -119,9 +209,6 @@ jobs:
     - name: Remove Build Resources Source
       run: Remove-Item "build_resources" -Recurse -Force -ErrorAction SilentlyContinue
 
-    - name: Copy nkas.exe
-      run: Copy-Item -Path "deploy\build\nkas.exe" -Destination "nkas.exe" -Force
-
     - name: Install Python Dependencies
       run: |
         & "toolkit\python.exe" -m pip install -r deploy\requirements.txt -i https://pypi.org/simple
@@ -129,6 +216,16 @@ jobs:
     - name: Setup Default Config
       working-directory: config
       run: if (Test-Path "deploy.template.yaml") { Copy-Item "deploy.template.yaml" -Destination "deploy.yaml" -Force }
+
+    - name: Verify Package Layout
+      run: |
+        $nodeModules = @(Get-ChildItem -Path . -Directory -Filter node_modules -Recurse -Force -ErrorAction SilentlyContinue)
+        if ($nodeModules.Count -gt 0) {
+          $paths = ($nodeModules | ForEach-Object FullName) -join "`n"
+          throw "node_modules must not be included in release packages:`n$paths"
+        }
+        if (Test-Path "webapp\src-tauri\target") { throw "Tauri target directory must not be packaged" }
+        if (Test-Path "app") { throw "Legacy app directory must not be packaged" }
 
     # ==========================
     # 6. 打包阶段 1: Standard
@@ -209,5 +306,118 @@ jobs:
         files: |
           ${{ env.ASSET_STD }}
           ${{ env.ASSET_CN }}
+          ${{ env.DESKTOP_EXE }}
+          ${{ env.DESKTOP_MANIFEST }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==========================
+  # deploy-desktop: 发布桌面 exe 到 VPS
+  # tag 推送时自动发布；workflow_dispatch 默认不发布，需勾选 publish_exe
+  # 需要的 secrets（Settings -> Secrets and variables -> Actions）：
+  #   VPS_HOST / VPS_USERNAME / VPS_SSH_KEY / VPS_PORT（可选，默认 22）
+  #   VPS_DEPLOY_PATH（可选，默认 /www/wwwroot/nkas.megumiss.top/releases/latest）
+  # ==========================
+  deploy-desktop:
+    needs: build-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    if: github.event_name == 'push' || inputs.publish_exe == true
+    steps:
+      # ==========================
+      # 1. Resolve the tag to deploy
+      # ==========================
+      - name: Resolve Tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ inputs.tag_name }}"
+          fi
+          echo "TAG_NAME=$TAG" >> "$GITHUB_ENV"
+          echo "Deploying tag: $TAG"
+
+      # ==========================
+      # 2. Checkout the release tag
+      # ==========================
+      # Only needed to read the desktop version from webapp/src-tauri/Cargo.toml.
+      # The desktop version is independent from the project release tag
+      # (see the version check in the build-release job).
+      - name: Checkout Release Tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: ${{ env.TAG_NAME }}
+
+      # ==========================
+      # 3. Download the desktop executable from GitHub Release
+      # ==========================
+      # The binary is built once by the build-release job and uploaded to the
+      # release; this job only re-distributes it, so the VPS channel and the
+      # GitHub channel always serve the exact same file. Draft releases can be
+      # downloaded with the workflow token.
+      - name: Download Desktop Executable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$TAG_NAME" \
+            --repo ${{ github.repository }} \
+            --pattern "nkas-win-x64.exe" \
+            --dir dist --clobber
+          ls -lh dist/nkas-win-x64.exe
+
+      # ==========================
+      # 4. Generate the VPS manifest (nkas-desktop.json)
+      # ==========================
+      # Identical to the manifest build-release uploads to the release, except
+      # the `url` field: the release manifest points at github.com while this
+      # one points at nkas.megumiss.top.  The VPS exe carries the desktop
+      # version in its name so each release is an immutable URL — no CDN cache
+      # purge needed and old versions stay available for rollback.
+      - name: Generate VPS Manifest
+        run: |
+          DESKTOP_VERSION=$(grep -m1 '^version = "' webapp/src-tauri/Cargo.toml | cut -d'"' -f2)
+          if [ -z "$DESKTOP_VERSION" ]; then
+            echo "Unable to read the desktop version from Cargo.toml" >&2
+            exit 1
+          fi
+          VERSIONED_EXE="nkas-win-x64-$DESKTOP_VERSION.exe"
+          mv dist/nkas-win-x64.exe "dist/$VERSIONED_EXE"
+          echo "VERSIONED_EXE=$VERSIONED_EXE" >> "$GITHUB_ENV"
+          SHA256=$(sha256sum "dist/$VERSIONED_EXE" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "dist/$VERSIONED_EXE")
+          jq -n \
+            --arg project_version "$TAG_NAME" \
+            --arg desktop_version "$DESKTOP_VERSION" \
+            --arg url "https://nkas.megumiss.top/releases/latest/$VERSIONED_EXE" \
+            --arg sha256 "$SHA256" \
+            --argjson size "$SIZE" \
+            '{
+              schema: 1,
+              project_version: $project_version,
+              desktop_version: $desktop_version,
+              target: "x86_64-pc-windows-msvc",
+              url: $url,
+              sha256: $sha256,
+              size: $size
+            }' > dist/nkas-desktop.json
+          cat dist/nkas-desktop.json
+
+      # ==========================
+      # 5. Upload to the VPS (1Panel nginx static site)
+      # ==========================
+      # nkas-desktop.json is overwritten in place while the versioned exe is
+      # uploaded as a new immutable file.  Clients verify both size and
+      # SHA-256 before replacing themselves, so an interrupted transfer can
+      # never brick an installation.
+      - name: Upload to VPS
+        uses: appleboy/scp-action@dbfeced2b0e6fb277845e6fd2d57cfc1743ecb1a  # v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "dist/${{ env.VERSIONED_EXE }},dist/nkas-desktop.json"
+          target: ${{ secrets.VPS_DEPLOY_PATH || '/www/wwwroot/nkas.megumiss.top/releases/latest' }}
+          strip_components: 1
+

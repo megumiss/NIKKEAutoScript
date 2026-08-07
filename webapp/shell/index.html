@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NKAS</title>
+  <script>document.documentElement.dataset.theme = window.__nkasTheme || 'dark'</script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c0f11;
+      --panel: #171b1e;
+      --border: #2a3033;
+      --border-soft: #242a2d;
+      --text: #e7ece9;
+      --text-2: #b7c2bd;
+      --text-3: #81908a;
+      --text-4: #68736f;
+      --faint: #59645f;
+      --level: #718079;
+      --track: #30373a;
+      --scrollbar: #3e4944;
+      --accent: #55c68a;
+      --accent-glow: rgba(85, 198, 138, 0.12);
+      --stage: #70d7a1;
+      --warn: #e3b45f;
+      --danger: #ef7777;
+      --danger-bar: #e16464;
+      font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    :root[data-theme='light'] {
+      color-scheme: light;
+      --bg: #eef1f6;
+      --panel: #ffffff;
+      --border: #dde3ec;
+      --border-soft: #e6ebf3;
+      --text: #21262e;
+      --text-2: #5f6a78;
+      --text-3: #5f6a78;
+      --text-4: #97a1af;
+      --faint: #97a1af;
+      --level: #5f6a78;
+      --track: #dde3ec;
+      --scrollbar: #c2cddc;
+      --accent: #1cab72;
+      --accent-glow: rgba(28, 171, 114, 0.15);
+      --stage: #1cab72;
+      --warn: #bd7a18;
+      --danger: #d34545;
+      --danger-bar: #d34545;
+    }
+
+    * {
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: auto;
+    }
+
+    body {
+      background: var(--bg);
+    }
+
+    .startup {
+      display: grid;
+      grid-template-columns: minmax(250px, 29%) 1fr;
+      grid-template-rows: minmax(0, 1fr);
+      width: 100%;
+      height: 100%;
+      min-height: 560px;
+    }
+
+    .identity {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      padding: 48px 38px 36px;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand img {
+      width: 64px;
+      height: 64px;
+      flex: 0 0 64px;
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-name {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .brand-edition {
+      margin-top: 7px;
+      color: var(--text-4);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .status-block {
+      margin-top: auto;
+      padding-top: 48px;
+    }
+
+    .status-label {
+      margin-bottom: 10px;
+      color: var(--text-3);
+      font-size: 12px;
+    }
+
+    #status {
+      min-height: 54px;
+      margin: 0;
+      overflow-wrap: anywhere;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .progress-track {
+      position: relative;
+      width: 100%;
+      height: 4px;
+      margin-top: 24px;
+      overflow: hidden;
+      background: var(--track);
+    }
+
+    .progress-bar {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 36%;
+      background: var(--accent);
+      animation: progress 1.45s ease-in-out infinite;
+    }
+
+    .progress-track.ready .progress-bar {
+      width: 100%;
+      animation: none;
+    }
+
+    .progress-track.error .progress-bar {
+      width: 100%;
+      animation: none;
+      background: var(--danger-bar);
+    }
+
+    .version {
+      margin-top: 18px;
+      color: var(--text-4);
+      font-family: Consolas, monospace;
+      font-size: 11px;
+    }
+
+    .activity {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+      min-height: 0;
+      background: var(--bg);
+    }
+
+    .activity-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 74px;
+      padding: 0 220px 0 34px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .activity-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-3);
+      font-size: 12px;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    #log {
+      min-height: 0;
+      margin: 0;
+      padding: 26px 34px;
+      overflow: auto;
+      color: var(--text-2);
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      scrollbar-color: var(--scrollbar) transparent;
+    }
+
+    .log-line {
+      display: grid;
+      grid-template-columns: 74px 64px minmax(0, 1fr);
+      gap: 10px;
+      min-height: 21px;
+    }
+
+    .log-time {
+      color: var(--faint);
+    }
+
+    .log-level {
+      color: var(--level);
+    }
+
+    .log-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .log-line.stage .log-level,
+    .log-line.stage .log-text {
+      color: var(--stage);
+    }
+
+    .log-line.warning .log-level,
+    .log-line.warning .log-text {
+      color: var(--warn);
+    }
+
+    .log-line.error .log-level,
+    .log-line.error .log-text {
+      color: var(--danger);
+    }
+
+    .activity-footer {
+      min-height: 46px;
+      padding: 14px 34px;
+      border-top: 1px solid var(--border-soft);
+      color: var(--text-4);
+      font-size: 11px;
+    }
+
+    @keyframes progress {
+      0% { transform: translateX(-105%); }
+      50% { transform: translateX(90%); }
+      100% { transform: translateX(280%); }
+    }
+
+    .titlebar {
+      position: fixed;
+      z-index: 10;
+      top: 0;
+      right: 0;
+      left: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      height: 56px;
+      padding: 0 10px;
+    }
+
+    .tb-btn {
+      display: grid;
+      width: 40px;
+      height: 34px;
+      place-items: center;
+      border: 0;
+      border-radius: 8px;
+      color: var(--text-3);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .tb-btn:hover {
+      color: var(--text);
+      background: var(--track);
+    }
+
+    .tb-btn.tb-close:hover {
+      color: #fff;
+      background: #e81123;
+    }
+
+    .tb-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    @media (max-width: 760px) {
+      .startup {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-height: 480px;
+      }
+
+      .identity {
+        display: grid;
+        grid-template-columns: 1fr minmax(190px, 42%);
+        gap: 28px;
+        padding: 24px 26px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .status-block {
+        margin: 0;
+        padding: 0;
+      }
+
+      .version {
+        display: none;
+      }
+
+      #status {
+        min-height: 42px;
+        font-size: 15px;
+      }
+
+      .activity-header,
+      #log,
+      .activity-footer {
+        padding-right: 24px;
+        padding-left: 24px;
+      }
+
+      .activity-header {
+        padding-right: 220px;
+      }
+
+      .log-line {
+        grid-template-columns: 64px minmax(0, 1fr);
+      }
+
+      .log-level {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .progress-bar {
+        width: 65%;
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="titlebar" data-tauri-drag-region>
+    <button id="tb-hide" class="tb-btn" title="隐藏到托盘"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4v7"/><path d="M6.5 8 10 11.5 13.5 8"/><path d="M4 15.5h12"/></svg></button>
+    <button id="tb-min" class="tb-btn" title="最小化"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 10.5h10"/></svg></button>
+    <button id="tb-max" class="tb-btn" title="最大化">
+      <svg id="tb-max-on" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5.5" y="5.5" width="9" height="9" rx="1"/></svg>
+      <svg id="tb-max-off" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="display:none"><rect x="4" y="7.5" width="8" height="8" rx="1"/><path d="M8 7.5v-2A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5v5a1.5 1.5 0 0 1-1.5 1.5h-2"/></svg>
+    </button>
+    <button id="tb-close" class="tb-btn tb-close" title="关闭"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
+  </div>
+  <main class="startup">
+    <section class="identity">
+      <div class="brand">
+        <img src="icon.png" alt="NKAS">
+        <div class="brand-copy">
+          <h1 class="brand-name">NKAS</h1>
+          <div class="brand-edition">NIKKE Auto Script</div>
+        </div>
+      </div>
+
+      <div class="status-block">
+        <div class="status-label">当前状态</div>
+        <p id="status" aria-live="polite">正在初始化桌面环境</p>
+        <div id="progress" class="progress-track" aria-hidden="true">
+          <div class="progress-bar"></div>
+        </div>
+        <div class="version">NKAS Desktop</div>
+      </div>
+    </section>
+
+    <section class="activity">
+      <header class="activity-header">
+        <h2 class="activity-title">启动日志</h2>
+        <div class="live"><span class="live-dot"></span><span>LIVE</span></div>
+      </header>
+      <div id="log" role="log" aria-live="polite"></div>
+      <footer class="activity-footer">127.0.0.1 · Local desktop session</footer>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const log = document.getElementById('log');
+      const status = document.getElementById('status');
+      const progress = document.getElementById('progress');
+      const ansi = /\x1b\[[0-?]*[ -/]*[@-~]/g;
+      const labels = {
+        log: 'INFO',
+        stage: 'STAGE',
+        warning: 'WARN',
+        error: 'ERROR',
+        ready: 'READY',
+      };
+
+      function clean(message) {
+        return String(message ?? '').replace(ansi, '').replace(/\r/g, '');
+      }
+
+      function append(message, level = 'log') {
+        const text = clean(message);
+        if (!text.trim()) return;
+        const row = document.createElement('div');
+        row.className = `log-line ${level}`;
+
+        const time = document.createElement('span');
+        time.className = 'log-time';
+        time.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+        const type = document.createElement('span');
+        type.className = 'log-level';
+        type.textContent = labels[level] || labels.log;
+
+        const content = document.createElement('span');
+        content.className = 'log-text';
+        content.textContent = text;
+
+        row.append(time, type, content);
+        log.appendChild(row);
+        while (log.childElementCount > 500) log.firstElementChild.remove();
+        log.scrollTop = log.scrollHeight;
+      }
+
+      window.nkasStartup = {
+        log(message) {
+          append(message, 'log');
+        },
+        warning(message) {
+          append(message, 'warning');
+        },
+        stage(message) {
+          const text = clean(message);
+          status.textContent = text;
+          append(text, 'stage');
+        },
+        error(message) {
+          status.textContent = '启动失败';
+          progress.className = 'progress-track error';
+          append(message, 'error');
+        },
+        ready(message) {
+          const text = clean(message);
+          status.textContent = text;
+          progress.className = 'progress-track ready';
+          append(text, 'ready');
+        },
+      };
+
+      append('Desktop shell loaded.', 'log');
+
+      // Window controls for the frameless startup window.
+      const tauriWin = window.__TAURI__?.window?.getCurrentWindow?.();
+      document.getElementById('tb-hide').addEventListener('click', () => tauriWin?.hide());
+      document.getElementById('tb-min').addEventListener('click', () => tauriWin?.minimize());
+      document.getElementById('tb-max').addEventListener('click', async () => {
+        if (!tauriWin) return;
+        await tauriWin.toggleMaximize();
+        const maximized = await tauriWin.isMaximized();
+        document.getElementById('tb-max-on').style.display = maximized ? 'none' : '';
+        document.getElementById('tb-max-off').style.display = maximized ? '' : 'none';
+      });
+      document.getElementById('tb-close').addEventListener('click', () => tauriWin?.close());
+    })();
+  </script>
+</body>
+</html>

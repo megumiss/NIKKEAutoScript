@@ -8,7 +8,8 @@
       "PCClient",
       "Notify",
       "Restart"
-    ]
+    ],
+    "icon": "⚙️"
   },
   "Reward": {
     "menu": "collapse",
@@ -17,7 +18,8 @@
       "Reward",
       "Destruction",
       "Mailbox"
-    ]
+    ],
+    "icon": "🎁"
   },
   "Daily": {
     "menu": "collapse",
@@ -30,7 +32,8 @@
       "Shop",
       "RubbishShop",
       "EpisodeViewing"
-    ]
+    ],
+    "icon": "📅"
   },
   "Outpost": {
     "menu": "collapse",
@@ -41,7 +44,8 @@
       "Synchro",
       "Recycling",
       "OutpostStory"
-    ]
+    ],
+    "icon": "🏢"
   },
   "Ark": {
     "menu": "collapse",
@@ -55,7 +59,8 @@
       "SpecialArena",
       "SpecialArenaWatch",
       "ChampionArena"
-    ]
+    ],
+    "icon": "🏛️"
   },
   "LimitedTimeEvent": {
     "menu": "collapse",
@@ -64,7 +69,8 @@
       "Coop",
       "SoloRaid",
       "UnionRaid"
-    ]
+    ],
+    "icon": "⏱️"
   },
   "StoryEvent": {
     "menu": "collapse",
@@ -72,14 +78,16 @@
     "tasks": [
       "Event",
       "Event2"
-    ]
+    ],
+    "icon": "📖"
   },
   "Surface": {
     "menu": "collapse",
     "page": "setting",
     "tasks": [
       "SurfaceDaily"
-    ]
+    ],
+    "icon": "🗺️"
   },
   "Blablalink": {
     "menu": "collapse",
@@ -89,7 +97,8 @@
       "BlaDaily",
       "BlaCDK",
       "BlaExchange"
-    ]
+    ],
+    "icon": "💬"
   },
   "Gift": {
     "menu": "collapse",
@@ -99,7 +108,8 @@
       "DailyGift",
       "WeeklyGift",
       "MonthlyGift"
-    ]
+    ],
+    "icon": "🎁"
   },
   "DataChart": {
     "menu": "collapse",
@@ -107,7 +117,8 @@
     "tasks": [
       "WarehouseStats",
       "InterceptionTaskStats"
-    ]
+    ],
+    "icon": "📈"
   },
   "Tool": {
     "menu": "collapse",
@@ -119,6 +130,7 @@
       "BlaCDKManual",
       "ScreenRotate",
       "UpdateHosts"
-    ]
+    ],
+    "icon": "🛠️"
   }
 }

@@ -90,17 +90,17 @@ class GeneratedConfig:
 
     # Group `GeneralShop`
     GeneralShop_enable = True
-    GeneralShop_priority = 'GRATIS > CORE_DUST_CASE > ORNAMENT'
+    GeneralShop_priority = 'GRATIS > CORE_DUST_CASE > ORNAMENT'  # GRATIS, CORE_DUST_CASE, ORNAMENT
 
     # Group `ArenaShop`
     ArenaShop_enable = False
     ArenaShop_AutoFillCodeManual = False
     ArenaShop_CodeManualBuyThreshold = 3000
-    ArenaShop_priority = None
+    ArenaShop_priority = None  # ELECTRIC_CODE, FIRE_CODE, IRON_CODE, WATER_CODE, WIND_CODE, MANUAL_SELECTION_BOX, ORNAMENT, WEAPON
 
     # Group `RubbishShop`
-    RubbishShop_priority = 'GEM > CORE_DUST_CASE'
-    RubbishShop_bonePriority = None
+    RubbishShop_priority = 'GEM > CORE_DUST_CASE'  # GEM, CORE_DUST_CASE, CREDIT_CASE, CREDIT, BATTLE_DATA_SET_CASE, GROWTH_SET, ORNAMENT, GENERAL_TICKET, ELYSION_TICKET, MISSILIS_TICKET, TETRA_TICKET, PILGRIM_TICKET, ABNORMAL_TICKET
+    RubbishShop_bonePriority = None  # GOOD_TEAMWORK_BOX, MAINTENANCE_KIT_BOX_2, CURATED_MANUFACTURER_ARMS
 
     # Group `Notification`
     Notification_WhenDailyTaskCompleted = False
@@ -115,7 +115,7 @@ class GeneratedConfig:
 
     # Group `CollectionItems`
     CollectionItems_Enable = False
-    CollectionItems_Priority = None
+    CollectionItems_Priority = None  # Diesel, Exia, Laplace, Frima, Viper, Helm, Miranda, Drake, Milk, Poli, Julia, Bay, Tove, Privaty, Moran, Zwei, Centi, Phantom, Sugar, Rosanna, Flora
 
     # Group `RookieArena`
     RookieArena_Times = 5  # 1, 2, 3, 4, 5
@@ -153,7 +153,7 @@ class GeneratedConfig:
     CDK_Source = 'https://gamewith.jp/nikke/article/show/371014'
 
     # Group `BlaExchange`
-    BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'
+    BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'  # Gem_×320, Welcome_Gift_Core_Dust_×30, Gem_×30, Skill_Manual_I_×5, Ultra_Boost_Module_×5, Code_Manual_Selection_Box_×5, Gem_×60, Mid-Quality_Mold_×3, Credit_Case_(1H)_x9, Core_Dust_Case_(1H)_×3, Gem_×120, Mid-Quality_Mold_×8, Battle_Data_Set_Case_(1H)_×6, Core_Dust_Case_(1H)_×6, Skill_Manual_I_×30, Ultra_Boost_Module_×30, Code_Manual_Selection_Box_×30
 
     # Group `EventInfo`
     EventInfo_Event = ''  # event_20260723, event_20260702

@@ -1,4 +1,5 @@
 import pickle
+import os
 from functools import cached_property
 
 from deploy.config import DeployConfig
@@ -8,24 +9,37 @@ from deploy.utils import *
 
 class NKASManager(DeployConfig):
     @cached_property
-    def nkas_folder(self):
-        return [
-            self.filepath("PythonExecutable"),
-            self.root_filepath
-        ]
-
-    @cached_property
     def self_pid(self):
         return os.getpid()
 
-    def iter_process_by_name(self, name):
+    @staticmethod
+    def normalize_executable_path(path):
+        if not path:
+            return ''
+        return os.path.normcase(os.path.realpath(os.path.abspath(path)))
+
+    @classmethod
+    def is_target_process(cls, executable_path, process_id, allowed_paths, excluded_pids):
+        try:
+            process_id = int(process_id)
+        except (TypeError, ValueError):
+            return False
+        if process_id in excluded_pids:
+            return False
+        executable_path = cls.normalize_executable_path(executable_path)
+        return executable_path in {
+            cls.normalize_executable_path(path) for path in allowed_paths if path
+        }
+
+    def iter_process_by_name(self, name, allowed_paths, excluded_pids=None):
         """
         Args:
             name (str): process name, such as 'nkas.exe'
 
         Yields:
-            str, str, str: executable_path, process_name, process_id
+            str, str, int: executable_path, process_name, process_id
         """
+        excluded_pids = {self.self_pid, *(excluded_pids or set())}
         for _ in range(2):
             try:
                 from win32com.client import GetObject
@@ -67,33 +81,34 @@ class NKASManager(DeployConfig):
             for p in processes:
                 executable_path = p.Properties_["ExecutablePath"].Value
                 process_name = p.Properties_("Name").Value
-                process_id = p.Properties_["ProcessID"].Value
+                process_id = int(p.Properties_["ProcessID"].Value)
 
-                if executable_path is not None and process_name == name and process_id != self.self_pid:
-                    executable_path = executable_path.replace(r'\\', '/').replace('\\', '/')
-                    for folder in self.nkas_folder:
-                        if folder in executable_path:
-                            yield executable_path, process_name, process_id
+                if process_name != name:
+                    continue
+                if self.is_target_process(executable_path, process_id, allowed_paths, excluded_pids):
+                    yield self.normalize_executable_path(executable_path), process_name, process_id
         except Exception as e:
             # Possible exception
             # pywintypes.com_error: (-2147217392, 'OLE error 0x80041010', None, None)
             logger.info(str(e))
             return False
 
-    def kill_by_name(self, name):
+    def kill_by_name(self, name, allowed_paths, excluded_pids=None):
         """
         Args:
             name (str): Process name
         """
         logger.hr(f'Kill {name}', 1)
-        for row in self.iter_process_by_name(name):
+        for row in self.iter_process_by_name(name, allowed_paths, excluded_pids):
             logger.info(' '.join(map(str, row)))
             self.execute(f'taskkill /f /pid {row[2]}', allow_failure=True, output=False)
 
-    def nkas_kill(self):
+    def nkas_kill(self, excluded_pids=None):
         logger.hr('Kill existing NKAS', 0)
-        self.kill_by_name('nkas.exe')
-        self.kill_by_name('python.exe')
+        root_executable = os.path.join(self.root_filepath, 'nkas.exe')
+        python_executable = self.filepath('PythonExecutable')
+        self.kill_by_name('nkas.exe', {root_executable}, excluded_pids)
+        self.kill_by_name(os.path.basename(python_executable), {python_executable}, excluded_pids)
 
 if __name__ == '__main__':
     NKASManager().nkas_kill()
