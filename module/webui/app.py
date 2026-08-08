@@ -1,7 +1,16 @@
 import argparse
+import mimetypes
 import sys
 import threading
 from typing import Any, Dict, List
+
+# On Windows, mimetypes reads Content-Type from the registry (HKCR\.js),
+# which may be hijacked to "text/plain" by third-party software.
+# Browsers refuse to execute module scripts with a non-JS MIME type,
+# resulting in a blank page. Force correct types here.
+mimetypes.add_type('text/javascript', '.js')
+mimetypes.add_type('text/javascript', '.mjs')
+mimetypes.add_type('text/css', '.css')
 
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
