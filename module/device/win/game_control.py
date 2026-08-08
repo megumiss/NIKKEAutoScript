@@ -55,15 +55,24 @@ class WinClient:
             logger.error('Path does not exist')
             return False
 
-        # 通过 explorer 间接拉起程序：游戏会成为 explorer 的子进程，
-        # 脱离脚本的进程树（以及桌面壳的 Job Object），避免脚本退出时游戏被连带终止
+        folder = os.path.dirname(path)
+        # CREATE_BREAKAWAY_FROM_JOB: 脱离桌面壳的 Job Object（需桌面壳允许 breakaway），
+        # 避免脚本退出时游戏被连带终止；直接拉起可继承脚本的管理员权限，不会弹 UAC
+        creationflags = subprocess.CREATE_BREAKAWAY_FROM_JOB | subprocess.CREATE_NEW_PROCESS_GROUP
         try:
-            subprocess.Popen(['explorer.exe', path])
+            subprocess.Popen(path, cwd=folder, creationflags=creationflags)
             logger.info('Program started successfully')
             return True
         except OSError as e:
-            logger.error(f'Error occurred while starting program: {e}')
-            return False
+            logger.warning(f'Failed to start program with breakaway: {e}')
+            # 回退：通过 explorer 拉起（若程序要求管理员权限会弹 UAC）
+            try:
+                subprocess.Popen(['explorer.exe', path])
+                logger.info('Program started successfully (fallback)')
+                return True
+            except OSError as e:
+                logger.error(f'Error occurred while starting program: {e}')
+                return False
 
     def stop_program(self) -> bool:
         """终止程序"""

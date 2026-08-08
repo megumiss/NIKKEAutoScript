@@ -17,7 +17,7 @@ use windows::Win32::Foundation::{CloseHandle, HANDLE};
 #[cfg(windows)]
 use windows::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
-    SetInformationJobObject, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+    SetInformationJobObject, JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_BREAKAWAY_OK,
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
 };
 #[cfg(windows)]
@@ -289,7 +289,10 @@ fn assign_kill_job(process_id: u32) -> Result<HANDLE> {
         let job = CreateJobObjectW(None, PCWSTR::null())
             .context("Unable to create Windows Job Object")?;
         let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
-        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        // KILL_ON_JOB_CLOSE: 桌面壳退出时清理后端进程树
+        // BREAKAWAY_OK: 允许后端用 CREATE_BREAKAWAY_FROM_JOB 拉起游戏等独立程序，避免被连带终止
+        info.BasicLimitInformation.LimitFlags =
+            JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_BREAKAWAY_OK;
         if let Err(error) = SetInformationJobObject(
             job,
             JobObjectExtendedLimitInformation,
