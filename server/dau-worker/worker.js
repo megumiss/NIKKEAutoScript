@@ -101,6 +101,11 @@ const INDEX_HTML = `<!DOCTYPE html>
   input { padding: 6px 8px; width: 16em; }
   button { padding: 6px 12px; cursor: pointer; }
   .err { color: #c00; }
+  .trend-chart { width: 100%; height: auto; display: block; }
+  .trend-chart .col { fill: #4a90d9; }
+  .trend-chart .col:hover { fill: #357abd; }
+  .trend-chart .axis { stroke: #ccc; stroke-width: 1; }
+  .trend-chart text { font-size: 10px; fill: #666; }
 </style>
 </head>
 <body>
@@ -138,14 +143,35 @@ async function api(path) {
   return r.json();
 }
 
-function bars(el, rows, unit) {
-  if (!rows.length) { el.innerHTML = '暂无数据'; return; }
-  const total = rows.reduce((s, r) => s + r[1], 0);
-  const max = Math.max(...rows.map(r => r[1]), 1);
-  el.innerHTML = rows.map(([k, n]) =>
-    '<div class="bar-row"><span class="label">' + k + '</span>' +
-    '<div class="bar" style="width:' + Math.round(n / max * 280) + 'px"></div>' +
-    '<span class="num">' + n + unit + '</span></div>').join('');
+function trendChart(days) {
+  const W = 720, H = 220, padL = 36, padR = 8, padT = 12, padB = 24;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const max = Math.max(...days.map(d => d.dau), 1);
+  // y 轴刻度取整到好看的步长
+  const step = Math.max(1, Math.ceil(max / 4));
+  const yMax = step * 4;
+  const bw = innerW / days.length;
+  let s = '<svg class="trend-chart" viewBox="0 0 ' + W + ' ' + H + '">';
+  // 横向网格线与 y 轴刻度
+  for (let v = 0; v <= yMax; v += step) {
+    const y = padT + innerH - v / yMax * innerH;
+    s += '<line class="axis" x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '"/>' +
+      '<text x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end">' + v + '</text>';
+  }
+  days.forEach((d, i) => {
+    const h = d.dau / yMax * innerH;
+    const x = padL + i * bw + bw * 0.15;
+    const y = padT + innerH - h;
+    s += '<rect class="col" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) +
+      '" width="' + (bw * 0.7).toFixed(1) + '" height="' + Math.max(h, 0).toFixed(1) + '">' +
+      '<title>' + d.date + '：' + d.dau + '</title></rect>';
+    // x 轴日期标签隔 5 天显示一个
+    if (i % 5 === 0 || i === days.length - 1) {
+      s += '<text x="' + (padL + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 8) +
+        '" text-anchor="middle">' + d.date.slice(5) + '</text>';
+    }
+  });
+  return s + '</svg>';
 }
 
 async function load() {
@@ -154,8 +180,8 @@ async function load() {
     document.getElementById('auth').style.display = 'none';
     document.getElementById('content').style.display = '';
     document.getElementById('dau').textContent = stats.dau;
-    const tr = trend.days.map(d => [d.date, d.dau]);
-    bars(document.getElementById('trend'), tr, '');
+    const trendEl = document.getElementById('trend');
+    trendEl.innerHTML = trend.days.length ? trendChart(trend.days) : '暂无数据';
     const dims = { v: stats.versions, os: stats.os, res: stats.res, geo: stats.geo };
     for (const [dim, dist] of Object.entries(dims)) {
       const rows = Object.entries(dist || {}).sort((a, b) => b[1] - a[1]);
