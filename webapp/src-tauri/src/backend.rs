@@ -73,15 +73,21 @@ impl Drop for Backend {
     }
 }
 
-pub fn url(port: u16, path: &str) -> String {
-    format!("http://127.0.0.1:{port}{path}")
+pub fn url(host: &str, port: u16, path: &str) -> String {
+    // DesktopConfig.host is stored without brackets; IPv6 literals need them
+    // inside a URL.
+    if host.contains(':') {
+        format!("http://[{host}]:{port}{path}")
+    } else {
+        format!("http://{host}:{port}{path}")
+    }
 }
 
-pub fn health(port: u16) -> bool {
+pub fn health(host: &str, port: u16) -> bool {
     reqwest::blocking::Client::builder()
         .timeout(Duration::from_millis(600))
         .build()
-        .and_then(|client| client.get(url(port, "/api/system/status")).send())
+        .and_then(|client| client.get(url(host, port, "/api/system/status")).send())
         .and_then(|response| response.error_for_status())
         .and_then(|response| response.json::<HealthStatus>())
         .map(|status| status.api_version == 2 && status.capabilities.spa)
@@ -91,9 +97,9 @@ pub fn health(port: u16) -> bool {
 pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> Result<Backend> {
     log(format!(
         "Checking for an existing backend at {}",
-        url(config.port, "/api/system/status")
+        url(&config.host, config.port, "/api/system/status")
     ));
-    if health(config.port) {
+    if health(&config.host, config.port) {
         log("Connected to an existing NKAS backend; startup update is skipped.".into());
         return Ok(Backend::external());
     }
@@ -102,7 +108,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> 
     }
     log("Running project update and dependency checks...".into());
     run_prepare(config, output.clone())?;
-    if health(config.port) {
+    if health(&config.host, config.port) {
         log("A compatible backend became available during preparation.".into());
         return Ok(Backend::external());
     }
@@ -147,7 +153,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> 
     let started = Instant::now();
     let mut next_notice = Duration::from_secs(2);
     while started.elapsed() < Duration::from_secs(60) {
-        if health(config.port) {
+        if health(&config.host, config.port) {
             log("Backend health check passed.".into());
             return Ok(backend);
         }
@@ -170,7 +176,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> 
     }
     anyhow::bail!(
         "Timed out waiting 60 seconds for {}",
-        url(config.port, "/api/system/status")
+        url(&config.host, config.port, "/api/system/status")
     )
 }
 
@@ -321,8 +327,14 @@ mod tests {
     use std::sync::Mutex;
 
     #[test]
-    fn backend_urls_are_loopback_only() {
-        assert_eq!(url(12271, "/app/"), "http://127.0.0.1:12271/app/");
+    fn backend_urls_follow_the_configured_host() {
+        assert_eq!(url("127.0.0.1", 12271, "/app/"), "http://127.0.0.1:12271/app/");
+        assert_eq!(url("192.168.1.5", 12271, "/app/"), "http://192.168.1.5:12271/app/");
+    }
+
+    #[test]
+    fn backend_urls_bracket_ipv6_hosts() {
+        assert_eq!(url("::1", 12271, "/app/"), "http://[::1]:12271/app/");
     }
 
     #[test]

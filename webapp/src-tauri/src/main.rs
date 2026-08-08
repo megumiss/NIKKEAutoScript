@@ -146,9 +146,14 @@ fn show_native_message(title: &str, message: &str, error: bool) {
     eprintln!("{title}: {message}");
 }
 
-fn is_local_webui_url(url: &Url, port: u16) -> bool {
+fn is_local_webui_url(url: &Url, host: &str, port: u16) -> bool {
+    // Url::host_str keeps the brackets of IPv6 literals ([::1]) while
+    // DesktopConfig.host is stored without them, so compare unbracketed.
     url.scheme() == "http"
-        && url.host_str() == Some("127.0.0.1")
+        && url
+            .host_str()
+            .map(|value| value.trim_matches(|c| c == '[' || c == ']'))
+            == Some(host)
         && url.port_or_known_default() == Some(port)
 }
 
@@ -161,6 +166,7 @@ fn create_window(
     config: &DesktopConfig,
     reporter: StartupReporter,
 ) -> Result<WebviewWindow> {
+    let allowed_host = config.host.clone();
     let allowed_port = config.port;
     let load_reporter = reporter.clone();
     // Apply the configured theme before first paint so the startup screen
@@ -190,7 +196,7 @@ fn create_window(
         })
         .on_navigation(move |url| {
             let target = url.as_str();
-            let local = is_local_webui_url(url, allowed_port);
+            let local = is_local_webui_url(url, &allowed_host, allowed_port);
             let startup = is_startup_url(url);
             if !local && !startup && matches!(url.scheme(), "http" | "https") {
                 let _ = open::that_detached(target);
@@ -257,7 +263,7 @@ fn start_application_inner(
     reporter.stage("Opening the application");
     reporter.complete("Startup complete. Opening NKAS...");
     thread::sleep(std::time::Duration::from_millis(150));
-    let page: Url = backend::url(config.port, "/app/")
+    let page: Url = backend::url(&config.host, config.port, "/app/")
         .parse()
         .context("Invalid WebUI URL")?;
     window.navigate(page)?;
@@ -311,10 +317,10 @@ fn install_tray(app: &AppHandle) -> Result<()> {
     Ok(())
 }
 
-fn post(port: u16, path: &'static str) {
+fn post(host: String, port: u16, path: &'static str) {
     thread::spawn(move || {
         let _ = reqwest::blocking::Client::new()
-            .post(backend::url(port, path))
+            .post(backend::url(&host, port, path))
             .send();
     });
 }
@@ -334,12 +340,13 @@ fn install_shortcuts(app: &AppHandle, config: &DesktopConfig) -> Result<()> {
         let Ok(shortcut) = Shortcut::from_str(value) else {
             continue;
         };
+        let host = config.host.clone();
         let port = config.port;
         let _ = app
             .global_shortcut()
             .on_shortcut(shortcut, move |_app, _shortcut, event| {
                 if event.state() == ShortcutState::Pressed {
-                    post(port, path);
+                    post(host.clone(), port, path);
                 }
             });
     }
@@ -454,10 +461,22 @@ mod tests {
         let local = Url::parse("http://127.0.0.1:12271/app/").unwrap();
         let userinfo_bypass = Url::parse("http://127.0.0.1:12271@evil.example/app/").unwrap();
         let wrong_port = Url::parse("http://127.0.0.1:12272/app/").unwrap();
+        let wrong_host = Url::parse("http://192.168.1.5:12271/app/").unwrap();
 
-        assert!(is_local_webui_url(&local, 12271));
-        assert!(!is_local_webui_url(&userinfo_bypass, 12271));
-        assert!(!is_local_webui_url(&wrong_port, 12271));
+        assert!(is_local_webui_url(&local, "127.0.0.1", 12271));
+        assert!(!is_local_webui_url(&userinfo_bypass, "127.0.0.1", 12271));
+        assert!(!is_local_webui_url(&wrong_port, "127.0.0.1", 12271));
+        assert!(!is_local_webui_url(&wrong_host, "127.0.0.1", 12271));
+    }
+
+    #[test]
+    fn local_navigation_accepts_the_configured_host() {
+        let lan = Url::parse("http://192.168.1.5:12271/app/").unwrap();
+        let ipv6 = Url::parse("http://[::1]:12271/app/").unwrap();
+
+        assert!(is_local_webui_url(&lan, "192.168.1.5", 12271));
+        assert!(is_local_webui_url(&ipv6, "::1", 12271));
+        assert!(!is_local_webui_url(&lan, "::1", 12271));
     }
 
     #[test]

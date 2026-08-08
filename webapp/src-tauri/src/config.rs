@@ -4,6 +4,10 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+fn default_webui_host() -> String {
+    // Mirrors deploy/config.py; resolved to a connectable address by load().
+    "0.0.0.0".into()
+}
 fn default_webui_port() -> u16 {
     12271
 }
@@ -60,6 +64,8 @@ struct PythonConfig {
 
 #[derive(Debug, Default, Deserialize)]
 struct WebuiConfig {
+    #[serde(rename = "WebuiHost", default = "default_webui_host")]
+    host: String,
     #[serde(rename = "WebuiPort", default = "default_webui_port")]
     port: u16,
     #[serde(rename = "DpiScaling", default = "default_dpi_scaling")]
@@ -74,6 +80,9 @@ struct WebuiConfig {
 pub struct DesktopConfig {
     pub root: PathBuf,
     pub python: PathBuf,
+    /// Address the shell uses to reach the backend, derived from WebuiHost.
+    /// Stored without IPv6 brackets; backend::url adds them when needed.
+    pub host: String,
     pub port: u16,
     pub desktop_update_manifest: String,
     pub dpi_scaling: bool,
@@ -99,6 +108,19 @@ pub fn locate_root(current_dir: &Path, executable: &Path) -> Result<PathBuf> {
     anyhow::bail!("Unable to locate the NKAS root containing gui.py and config/deploy.yaml")
 }
 
+/// Resolve WebuiHost (the bind address) into an address the shell can
+/// connect to.  Wildcard binds are reachable via loopback; anything else is
+/// a local interface address and used as-is.  Mirrors the mapping in
+/// module/webui/remote_access.py.
+pub fn resolve_connect_host(host: &str) -> String {
+    let host = host.trim().trim_matches(|c| c == '[' || c == ']');
+    match host {
+        "" | "0.0.0.0" => "127.0.0.1".into(),
+        "::" | "::0" | "0:0:0:0:0:0:0:0" => "::1".into(),
+        _ => host.to_string(),
+    }
+}
+
 pub fn load(root: PathBuf) -> Result<DesktopConfig> {
     let config_path = root.join("config/deploy.yaml");
     let content = fs::read_to_string(&config_path)
@@ -114,6 +136,7 @@ pub fn load(root: PathBuf) -> Result<DesktopConfig> {
         shortcuts: load_shortcuts(&root),
         root,
         python,
+        host: resolve_connect_host(&raw.deploy.webui.host),
         port: raw.deploy.webui.port,
         desktop_update_manifest: raw.deploy.update.desktop_update_manifest,
         dpi_scaling: raw.deploy.webui.dpi_scaling,
@@ -177,6 +200,7 @@ mod tests {
         DesktopConfig {
             root: PathBuf::from("C:/NKAS"),
             python: PathBuf::from("python.exe"),
+            host: "127.0.0.1".into(),
             port: 12271,
             desktop_update_manifest: default_desktop_update_manifest(),
             dpi_scaling: true,
@@ -221,6 +245,23 @@ mod tests {
             webview_arguments(&config, None),
             Some("--force-device-scale-factor=1".into())
         );
+    }
+
+    #[test]
+    fn wildcard_hosts_resolve_to_loopback() {
+        assert_eq!(resolve_connect_host("0.0.0.0"), "127.0.0.1");
+        assert_eq!(resolve_connect_host(""), "127.0.0.1");
+        assert_eq!(resolve_connect_host("::"), "::1");
+        assert_eq!(resolve_connect_host("[::]"), "::1");
+    }
+
+    #[test]
+    fn explicit_hosts_are_kept_as_is() {
+        assert_eq!(resolve_connect_host("127.0.0.1"), "127.0.0.1");
+        assert_eq!(resolve_connect_host("192.168.1.5"), "192.168.1.5");
+        assert_eq!(resolve_connect_host("::1"), "::1");
+        assert_eq!(resolve_connect_host("[::1]"), "::1");
+        assert_eq!(resolve_connect_host("localhost"), "localhost");
     }
 
     #[test]

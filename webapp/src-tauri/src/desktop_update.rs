@@ -850,6 +850,7 @@ mod tests {
         DesktopConfig {
             root: PathBuf::from("C:/NKAS"),
             python: PathBuf::from("python.exe"),
+            host: "127.0.0.1".into(),
             port: 12271,
             desktop_update_manifest: manifest.into(),
             dpi_scaling: true,
