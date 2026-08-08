@@ -55,18 +55,14 @@ class WinClient:
             logger.error('Path does not exist')
             return False
 
-        folder = path.rpartition('\\')[0]
-        if not os.system(f'cmd /C start "" /D "{folder}" "{path}"'):
+        # 通过 explorer 间接拉起程序：游戏会成为 explorer 的子进程，
+        # 脱离脚本的进程树（以及桌面壳的 Job Object），避免脚本退出时游戏被连带终止
+        try:
+            subprocess.Popen(['explorer.exe', path])
             logger.info('Program started successfully')
             return True
-        else:
-            logger.error('Error occurred while starting program')
-            try:
-                subprocess.Popen(path)
-                logger.info('Program started successfully')
-                return True
-            except Exception as e:
-                logger.error(f'Error occurred while starting program: {e}')
+        except OSError as e:
+            logger.error(f'Error occurred while starting program: {e}')
             return False
 
     def stop_program(self) -> bool:
