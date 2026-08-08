@@ -10,15 +10,14 @@
  *   GET  /trend?days=30&token=<STATS_TOKEN>
  *                 返回最近 days 天（含今天）的每日 DAU 列表。
  *   GET  /        展示页面（HTML），输入口令后查看趋势与各维度占比。
+ *
+ * 存储：D1（reports 表，见 schema.sql），保留最近 92 天数据。
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TZ_OFFSET_MS = 8 * 60 * 60 * 1000; // UTC+8
-// 去重 key 保留 8 天，统计计数 key 保留 92 天
-const DEDUP_TTL_SECONDS = 8 * 24 * 3600;
-const COUNT_TTL_SECONDS = 92 * 24 * 3600;
-// 维度 key 前缀：v=版本 os=系统 res=分辨率 geo=地区
-const DIMS = ['v', 'os', 'res', 'geo'];
+// 数据保留 92 天
+const RETENTION_DAYS = 92;
 const OS_LABELS = ['Windows 10', 'Windows 11', 'Linux', 'macOS'];
 
 function today() {
@@ -67,17 +66,6 @@ function checkAuth(url, env) {
 function dateOffset(day, offsetDays) {
   const t = new Date(`${day}T00:00:00Z`).getTime() - offsetDays * DAY_MS;
   return new Date(t).toISOString().slice(0, 10);
-}
-
-async function getDist(env, dim, date) {
-  const prefix = `${dim}:${date}:`;
-  const list = await env.STATS.list({ prefix });
-  const values = await Promise.all(list.keys.map((k) => env.STATS.get(k.name)));
-  const dist = {};
-  list.keys.forEach((k, i) => {
-    dist[k.name.slice(prefix.length)] = parseInt(values[i] || '0', 10);
-  });
-  return dist;
 }
 
 const INDEX_HTML = `<!DOCTYPE html>
@@ -203,7 +191,7 @@ async function load() {
 </html>`;
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     // 通过路由挂在子路径下时（如 nkas.megumiss.top/status/*），
@@ -236,13 +224,6 @@ export default {
         return json({ error: 'invalid id' }, 400);
       }
 
-      const day = today();
-      const dedupKey = `d:${day}:${body.id}`;
-      const seen = await env.STATS.get(dedupKey);
-      if (seen !== null) {
-        return json({ ok: true, dedup: true });
-      }
-
       // 各维度取值：客户端字段缺失计 unknown，校验不过计 other；地区来自 CF 边缘节点
       const dims = {
         v: sanitizeVersion(body.version),
@@ -250,16 +231,22 @@ export default {
         res: sanitizeRes(body.res),
         geo: sanitizeCountry(request.cf && request.cf.country),
       };
-      const countKeys = [`c:${day}`, ...DIMS.map((d) => `${d}:${day}:${dims[d]}`)];
-      const counts = await Promise.all(countKeys.map((k) => env.STATS.get(k)));
-      await Promise.all([
-        env.STATS.put(dedupKey, '1', { expirationTtl: DEDUP_TTL_SECONDS }),
-        ...countKeys.map((k, i) =>
-          env.STATS.put(k, String(parseInt(counts[i] || '0', 10) + 1), {
-            expirationTtl: COUNT_TTL_SECONDS,
-          }),
-        ),
-      ]);
+      const day = today();
+      // 主键 (day, id) 去重：已存在则 INSERT OR IGNORE 不生效，changes 为 0
+      const r = await env.STATS.prepare(
+        'INSERT OR IGNORE INTO reports (day, id, v, os, res, geo) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+        .bind(day, body.id, dims.v, dims.os, dims.res, dims.geo)
+        .run();
+      // 顺带清理过期数据，不阻塞响应
+      ctx.waitUntil(
+        env.STATS.prepare('DELETE FROM reports WHERE day < ?')
+          .bind(dateOffset(day, RETENTION_DAYS))
+          .run(),
+      );
+      if (!r.meta.changes) {
+        return json({ ok: true, dedup: true });
+      }
       return json({ ok: true });
     }
 
@@ -271,10 +258,21 @@ export default {
       if (!isValidDate(date)) {
         return json({ error: 'invalid date, expect YYYY-MM-DD' }, 400);
       }
-      const dau = parseInt((await env.STATS.get(`c:${date}`)) || '0', 10);
-      const [versions, os, res, geo] = await Promise.all(
-        DIMS.map((d) => getDist(env, d, date)),
-      );
+      const [dauStmt, dimStmt] = await env.STATS.batch([
+        env.STATS.prepare('SELECT COUNT(*) AS c FROM reports WHERE day = ?').bind(date),
+        env.STATS.prepare(
+          `SELECT 'v' AS dim, v AS k, COUNT(*) AS n FROM reports WHERE day = ? GROUP BY v
+           UNION ALL SELECT 'os', os, COUNT(*) FROM reports WHERE day = ? GROUP BY os
+           UNION ALL SELECT 'res', res, COUNT(*) FROM reports WHERE day = ? GROUP BY res
+           UNION ALL SELECT 'geo', geo, COUNT(*) FROM reports WHERE day = ? GROUP BY geo`,
+        ).bind(date, date, date, date),
+      ]);
+      const dau = dauStmt.results[0].c;
+      const versions = {}, os = {}, res = {}, geo = {};
+      const dists = { v: versions, os, res, geo };
+      for (const row of dimStmt.results) {
+        dists[row.dim][row.k] = row.n;
+      }
       return json({ date, dau, versions, os, res, geo });
     }
 
@@ -291,9 +289,14 @@ export default {
       for (let i = days - 1; i >= 0; i--) {
         keys.push(dateOffset(day, i));
       }
-      const counts = await Promise.all(keys.map((d) => env.STATS.get(`c:${d}`)));
+      const { results } = await env.STATS.prepare(
+        'SELECT day, COUNT(*) AS dau FROM reports WHERE day >= ? GROUP BY day',
+      )
+        .bind(keys[0])
+        .all();
+      const byDay = Object.fromEntries(results.map((r) => [r.day, r.dau]));
       return json({
-        days: keys.map((d, i) => ({ date: d, dau: parseInt(counts[i] || '0', 10) })),
+        days: keys.map((d) => ({ date: d, dau: byDay[d] || 0 })),
       });
     }
 

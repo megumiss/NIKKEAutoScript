@@ -1,6 +1,6 @@
 # NKAS DAU 统计 Worker
 
-基于 Cloudflare Workers + KV 的每日活跃用户统计接口，免费额度足够小规模使用。
+基于 Cloudflare Workers + D1 的每日活跃用户统计接口，免费额度（每天 10 万次写入）足够小规模使用。
 
 ## 部署步骤
 
@@ -12,14 +12,17 @@ cd server/dau-worker
 # 1. 登录 Cloudflare（会打开浏览器授权）
 npx wrangler login
 
-# 2. 创建 KV 命名空间，记下输出中的 id
-npx wrangler kv namespace create STATS
+# 2. 创建 D1 数据库，记下输出中的 database_id
+npx wrangler d1 create nkas-dau
 
 # 3. 编辑 wrangler.toml：
-#    - 把 KV 的 id 填入 [[kv_namespaces]] 的 id 字段
+#    - 把 D1 的 database_id 填入 [[d1_databases]] 的 database_id 字段
 #    - 把 STATS_TOKEN 改成你自己的随机字符串
 
-# 4. 部署
+# 4. 建表
+npx wrangler d1 execute nkas-dau --remote --file=schema.sql
+
+# 5. 部署
 npx wrangler deploy
 ```
 
@@ -112,5 +115,5 @@ Cloudflare 控制台 → Workers 和 Pages → 进入 `nkas-dau` → **设置** 
 ## 说明
 
 - 日期按 UTC+8（北京时间）划分。
-- 去重数据保留 8 天，每日计数保留 92 天；更早的历史数据需要定期导出（也可以之后再加一个归档接口）。
+- 数据按上报明细存储（每天每个匿名 ID 一行），保留最近 92 天，过期数据在上报时自动清理；更早的历史数据需要定期导出（也可以之后再加一个归档接口）。
 - 国内访问 `*.workers.dev` 偶尔不稳定，正式使用建议绑定自有域名。

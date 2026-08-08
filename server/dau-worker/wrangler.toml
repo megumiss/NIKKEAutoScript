@@ -2,11 +2,13 @@ name = "nkas-dau"
 main = "worker.js"
 compatibility_date = "2025-01-01"
 
-# 部署前用以下命令创建 KV 命名空间，把返回的 id 填到这里：
-#   npx wrangler kv namespace create STATS
-[[kv_namespaces]]
+# 部署前用以下命令创建 D1 数据库，把返回的 database_id 填到这里，
+# 再执行 npx wrangler d1 execute nkas-dau --remote --file=schema.sql 建表：
+#   npx wrangler d1 create nkas-dau
+[[d1_databases]]
 binding = "STATS"
-id = "在这里填入你的KV命名空间ID"
+database_name = "nkas-dau"
+database_id = "在这里填入你的D1数据库ID"
 
 # 查询接口的访问口令，改成你自己的随机字符串
 [vars]
