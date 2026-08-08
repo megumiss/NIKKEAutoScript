@@ -20,9 +20,11 @@
     document.documentElement.dataset.theme = (h >= 19 || h < 7) ? 'dark' : 'light';
 })();
 </script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css">
 <style>
-/* ===== 与主站一致的设计变量 ===== */
+/* ======================================================================
+   样式完全自写（不依赖 docsify 官方主题），与主站共用设计变量，
+   浅色/暗色都走变量，避免基础主题与覆盖补丁互相打架。
+   ====================================================================== */
 :root {
     --bg: #f7f8fc;
     --bg-2: rgba(255,255,255,.72);
@@ -35,7 +37,9 @@
     --accent-2: #12b5a5;
     --gradient: linear-gradient(135deg, #4f6ef7 0%, #12b5a5 100%);
     --code-bg: #eef1fe;
+    --table-alt: #f2f4fa;
     --nav-height: 56px;
+    --sidebar-width: 280px;
 }
 [data-theme="dark"] {
     --bg: #0e1220;
@@ -49,13 +53,16 @@
     --accent-2: #2dd4c4;
     --gradient: linear-gradient(135deg, #7b93ff 0%, #2dd4c4 100%);
     --code-bg: #0d1120;
+    --table-alt: #1a2033;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
+    margin: 0;
     font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Kaku Gothic ProN", sans-serif;
     background: var(--bg);
     color: var(--text);
+    font-size: 15px;
     line-height: 1.7;
     transition: background .3s, color .3s;
 }
@@ -74,11 +81,13 @@ body {
 .site-nav .brand {
     display: flex; align-items: center; gap: 12px;
     font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none;
+    white-space: nowrap;
 }
 .site-nav .brand img { width: 34px; height: 34px; border-radius: 8px; }
 .site-nav .links { display: flex; gap: 28px; align-items: center; }
 .site-nav .links > a {
     color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color .2s;
+    white-space: nowrap;
 }
 .site-nav .links > a:hover { color: var(--text); }
 .site-nav .links > a.active { color: var(--text); font-weight: 600; }
@@ -88,11 +97,12 @@ body {
     color: #fff !important; text-decoration: none;
     background: var(--gradient);
     transition: transform .15s, box-shadow .15s;
+    white-space: nowrap;
 }
 .site-nav .gh-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,110,247,.30); }
 .site-nav .theme-toggle {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; border-radius: 8px;
+    width: 32px; height: 32px; border-radius: 8px; flex: none;
     border: 1px solid var(--card-border); background: transparent;
     color: var(--text-dim); font-size: 15px; cursor: pointer;
     transition: all .15s; font-family: inherit;
@@ -100,7 +110,7 @@ body {
 .site-nav .theme-toggle:hover { border-color: var(--accent); color: var(--text); }
 
 /* 语言切换（同主站样式） */
-.site-nav .lang-switch { display: flex; border: 1px solid var(--card-border); border-radius: 8px; overflow: hidden; }
+.site-nav .lang-switch { display: flex; flex: none; border: 1px solid var(--card-border); border-radius: 8px; overflow: hidden; }
 .site-nav .lang-switch button {
     border: none; background: transparent; color: var(--text-dim);
     font-size: 12.5px; font-weight: 600; padding: 6px 11px; cursor: pointer;
@@ -109,110 +119,256 @@ body {
 .site-nav .lang-switch button.active { background: var(--gradient); color: #fff; }
 .site-nav .lang-switch button:not(.active):hover { color: var(--text); }
 
-/* ===== docsify 布局适配：给固定导航留出空间 ===== */
-.sidebar { top: var(--nav-height) !important; }
-main { padding-top: var(--nav-height); }
-.sidebar-toggle { top: calc(var(--nav-height) + 10px); }
-@media (min-width: 769px) { .sidebar-toggle { display: none; } }
-
-/* ===== 侧边栏 ===== */
+/* ===== docsify 布局（自写，替代官方主题） ===== */
+main { display: block; padding-top: var(--nav-height); }
 .sidebar {
+    position: fixed; top: var(--nav-height); bottom: 0; left: 0;
+    width: var(--sidebar-width);
+    overflow-y: auto; overscroll-behavior: contain;
     background: var(--bg-2);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-right: 1px solid var(--card-border);
+    padding: 0 0 40px;
+    z-index: 200;
+    transition: transform .25s ease;
 }
-.sidebar h1, .sidebar h2 {
-    font-size: 15px; color: var(--text); margin: 18px 0 6px;
+.content {
+    margin-left: var(--sidebar-width);
+    padding: 28px 0 0;
+    min-height: calc(100vh - var(--nav-height));
+    transition: margin .25s ease;
 }
-.sidebar h1 { font-size: 13px; color: var(--text-dim); text-transform: none; }
-.sidebar ul { padding-left: 0; }
-.sidebar ul li { margin: 2px 0; }
-.sidebar ul li a {
+
+/* 汉堡按钮：仅移动端显示 */
+.sidebar-toggle {
+    position: fixed; top: calc(var(--nav-height) + 10px); left: 10px; z-index: 210;
+    display: none;
+    width: 36px; height: 36px; padding: 0;
+    border: 1px solid var(--card-border); border-radius: 8px;
+    background: var(--card); cursor: pointer;
+}
+.sidebar-toggle .sidebar-toggle-button {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    width: 100%; height: 100%;
+}
+.sidebar-toggle .sidebar-toggle-button span {
+    display: block; width: 16px; height: 2px; background: var(--text-dim);
+}
+@media (min-width: 769px) {
+    /* 桌面端始终展开侧边栏（docsify 会给 body 加 close，这里忽略它） */
+    body.close .sidebar { transform: none; }
+    body.close .content { margin-left: var(--sidebar-width); }
+}
+
+/* ===== 侧边栏内容 ===== */
+.sidebar-nav { padding: 8px 18px 0; }
+.sidebar-nav > p { margin: 12px 0 4px; color: var(--text-dim); font-size: 13px; }
+.sidebar-nav ul { list-style: none; margin: 0; padding: 0; }
+.sidebar-nav ul li { margin: 1px 0; }
+.sidebar-nav ul li a {
+    display: block;
+    padding: 5px 10px;
     color: var(--text-dim); font-size: 14px; text-decoration: none;
-    transition: color .2s;
+    border-radius: 6px;
+    transition: color .15s, background .15s;
+    word-break: break-word;
 }
-.sidebar ul li a:hover { color: var(--text); }
-.sidebar ul li.active > a {
-    color: var(--accent); font-weight: 600;
-    border-right: 2px solid var(--accent);
+.sidebar-nav ul li a:hover { color: var(--text); background: var(--table-alt); }
+.sidebar-nav ul li.active > a,
+.sidebar-nav ul li a.active {
+    color: var(--accent); font-weight: 600; background: var(--table-alt);
 }
-.sidebar hr { border-color: var(--card-border); margin: 12px 0; }
+/* 页内目录（当前页的 h2 子项） */
+.sidebar-nav ul li ul { padding-left: 14px; margin: 2px 0 6px; }
+.sidebar-nav ul li ul li a { font-size: 13px; padding: 3px 10px; }
+.sidebar-nav hr { border: none; border-top: 1px solid var(--card-border); margin: 12px 0; }
+.sidebar-nav img { display: none; } /* 分区标题里的 emoji 图标不需要 */
 
 /* 搜索框 */
-.search { border-bottom: 1px solid var(--card-border); padding: 12px 16px; margin-bottom: 0; }
+.search { padding: 14px 16px 10px; border-bottom: 1px solid var(--card-border); }
 .search input {
-    background: var(--card); border: 1px solid var(--card-border);
-    color: var(--text); border-radius: 8px; font-size: 14px;
-    padding: 7px 12px; outline: none; width: 100%;
+    width: 100%; padding: 7px 12px;
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 8px;
+    color: var(--text); font-size: 14px; font-family: inherit; outline: none;
     transition: border-color .2s;
+    -webkit-appearance: none; appearance: none;
 }
 .search input:focus { border-color: var(--accent); }
 .search input::placeholder { color: var(--text-dim); }
-.search .matching-post { border-bottom: 1px solid var(--card-border); }
-.search .matching-post a { color: var(--text); }
-.search .matching-post p { color: var(--text-dim); }
+.search .results-panel {
+    margin-top: 8px; padding: 4px 0;
+    color: var(--text-dim); font-size: 13px;
+}
+.search .results-panel:empty { display: none; }
+.search .matching-post { border-bottom: 1px solid var(--card-border); padding: 8px 0; }
+.search .matching-post:last-child { border-bottom: none; }
+.search .matching-post a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; }
+.search .matching-post a:hover { color: var(--accent); }
+.search .matching-post p { margin: 4px 0 0; color: var(--text-dim); font-size: 12.5px; line-height: 1.5; }
+.search .matching-post h2 { margin: 0; font-size: 14px; }
+.search .search-keyword { color: var(--accent); font-style: normal; font-weight: 700; }
 
-/* ===== 正文 ===== */
-.content { padding-top: 28px; }
-.markdown-section { max-width: 900px; margin: 0 auto; padding: 0 36px 80px; }
-.markdown-section h1, .markdown-section h2,
-.markdown-section h3, .markdown-section h4 { color: var(--text); font-weight: 700; }
-.markdown-section h1 { font-size: 28px; }
+/* ===== 正文排版 ===== */
+.markdown-section {
+    max-width: 900px; margin: 0 auto; padding: 0 36px 80px;
+}
+.markdown-section h1,
+.markdown-section h2,
+.markdown-section h3,
+.markdown-section h4 {
+    color: var(--text); font-weight: 700; line-height: 1.35;
+    scroll-margin-top: calc(var(--nav-height) + 16px);
+}
+.markdown-section h1 { font-size: 28px; margin: 8px 0 18px; }
 .markdown-section h2 {
-    font-size: 22px; margin-top: 40px; padding-bottom: 6px;
+    font-size: 22px; margin: 40px 0 14px; padding-bottom: 6px;
     border-bottom: 1px solid var(--card-border);
 }
-.markdown-section h3 { font-size: 17px; margin-top: 28px; }
-.markdown-section p, .markdown-section li { color: var(--text); font-size: 15px; }
+.markdown-section h3 { font-size: 17px; margin: 28px 0 10px; }
+.markdown-section h4 { font-size: 15px; margin: 22px 0 8px; }
+/* 标题锚点：docsify 会把整个标题文本包进 a.anchor，必须按普通文本着色（不能隐藏） */
+.markdown-section h1 .anchor,
+.markdown-section h2 .anchor,
+.markdown-section h3 .anchor,
+.markdown-section h4 .anchor {
+    color: inherit; text-decoration: none;
+}
+.markdown-section h1 .anchor:hover,
+.markdown-section h2 .anchor:hover,
+.markdown-section h3 .anchor:hover,
+.markdown-section h4 .anchor:hover { text-decoration: none; }
+
+.markdown-section p { margin: 12px 0; color: var(--text); font-size: 15px; }
+.markdown-section ul,
+.markdown-section ol { margin: 12px 0; padding-left: 26px; color: var(--text); }
+.markdown-section li { margin: 4px 0; font-size: 15px; }
+.markdown-section li > ul,
+.markdown-section li > ol { margin: 4px 0; }
+.markdown-section li::marker { color: var(--text-dim); }
+.markdown-section strong, .markdown-section b { color: var(--text); font-weight: 700; }
+.markdown-section em { color: var(--text); }
+.markdown-section del { color: var(--text-dim); }
 .markdown-section a { color: var(--accent); text-decoration: none; }
+.markdown-section a:visited { color: var(--accent); }
 .markdown-section a:hover { text-decoration: underline; }
 .markdown-section hr { border: none; border-top: 1px solid var(--card-border); margin: 32px 0; }
-.markdown-section img { max-width: 100%; border-radius: 10px; border: 1px solid var(--card-border); }
+.markdown-section img {
+    max-width: 100%; border-radius: 10px; border: 1px solid var(--card-border);
+    background: var(--card);
+}
 
 /* 引用块（注意/提示） */
 .markdown-section blockquote {
+    margin: 18px 0; padding: 12px 18px;
     background: var(--card);
     border: 1px solid var(--card-border);
     border-left: 3px solid var(--accent);
     border-radius: 0 8px 8px 0;
-    padding: 12px 18px; margin: 18px 0;
-    color: var(--text-dim);
 }
 .markdown-section blockquote p { color: var(--text-dim); margin: 4px 0; }
 .markdown-section blockquote strong { color: var(--text); }
+.markdown-section blockquote a { color: var(--accent); }
+.markdown-section blockquote ul,
+.markdown-section blockquote ol { color: var(--text-dim); }
+
+/* docsify 提示语法 !> / ?> */
+.markdown-section p.tip,
+.markdown-section p.warn {
+    margin: 18px 0; padding: 12px 18px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 0 8px 8px 0;
+    color: var(--text-dim);
+}
+.markdown-section p.tip { border-left: 3px solid var(--accent-2); }
+.markdown-section p.warn { border-left: 3px solid #e8a13c; }
+.markdown-section p.tip strong,
+.markdown-section p.warn strong { color: var(--text); }
 
 /* 表格 */
-.markdown-section table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; display: block; overflow-x: auto; }
-.markdown-section th, .markdown-section td {
-    border: 1px solid var(--card-border); padding: 8px 14px; text-align: left;
+.markdown-section table {
+    border-collapse: collapse; width: 100%; margin: 16px 0;
+    font-size: 14px; display: block; overflow-x: auto;
 }
-.markdown-section th { background: var(--card); font-weight: 600; color: var(--text); }
-.markdown-section td { color: var(--text); }
-.markdown-section tr:nth-child(even) td { background: var(--bg-2); }
+.markdown-section thead th {
+    background: var(--card); color: var(--text); font-weight: 600;
+    border: 1px solid var(--card-border); padding: 8px 14px; text-align: left;
+    white-space: nowrap;
+}
+.markdown-section tbody td {
+    border: 1px solid var(--card-border); padding: 8px 14px;
+    color: var(--text); background: transparent;
+}
+.markdown-section tbody tr:nth-child(even) td { background: var(--table-alt); }
 
 /* 代码 */
 .markdown-section code {
     font-family: Consolas, "Cascadia Mono", Monaco, monospace;
     background: var(--code-bg); color: var(--accent);
     border-radius: 5px; padding: 2px 6px; font-size: 13px;
+    word-break: break-word;
 }
 .markdown-section pre {
+    position: relative;
+    margin: 16px 0; padding: 16px 18px;
     background: var(--code-bg); border: 1px solid var(--card-border);
-    border-radius: 10px; padding: 16px 18px; font-size: 13.5px; line-height: 1.6;
+    border-radius: 10px;
+    font-size: 13.5px; line-height: 1.6;
+    overflow-x: auto;
 }
-.markdown-section pre code { background: transparent; color: var(--text); padding: 0; }
-.markdown-section pre::after { color: var(--text-dim); }
+.markdown-section pre code {
+    display: block; background: transparent; color: var(--text);
+    padding: 0; border-radius: 0; word-break: normal; white-space: pre;
+}
+/* 复制按钮（docsify-copy-code 插件） */
+.docsify-copy-code-button {
+    position: absolute; top: 8px; right: 8px; z-index: 1;
+    padding: 4px 10px; border: 1px solid var(--card-border); border-radius: 6px;
+    background: var(--card); color: var(--text-dim);
+    font-size: 12px; cursor: pointer; font-family: inherit;
+    opacity: 0; transition: opacity .15s;
+}
+.markdown-section pre:hover .docsify-copy-code-button { opacity: 1; }
+.docsify-copy-code-button.success, .docsify-copy-code-button.error { opacity: 1; }
 
-/* 移动端 */
+/* 键盘按键 */
+.markdown-section kbd {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-bottom-width: 2px; border-radius: 5px;
+    padding: 1px 6px; font-size: 12.5px;
+    font-family: Consolas, "Cascadia Mono", Monaco, monospace;
+}
+
+/* 任务列表 */
+.markdown-section .task-list-item { list-style: none; margin-left: -22px; }
+.markdown-section .task-list-item-checkbox { margin-right: 6px; }
+
+/* ===== 移动端 ===== */
 @media (max-width: 768px) {
     body { overflow-x: hidden; }
-    main { margin-left: 0 !important; }
-    .content { margin-left: 0 !important; left: 0 !important; width: 100%; }
-    .site-nav { padding: 0 16px; }
+    .site-nav { padding: 0 14px; gap: 8px; }
+    .site-nav .brand { font-size: 15px; gap: 8px; }
+    .site-nav .brand img { width: 28px; height: 28px; }
+    .site-nav .links { gap: 10px; }
     .site-nav .links > a:not(.gh-btn) { display: none; }
+    .site-nav .gh-btn { display: none; } /* 小屏导航放不下，GitHub 入口在正文/主站均有 */
+    .sidebar {
+        width: min(300px, 84vw);
+        transform: translateX(-102%); /* 默认收起；docsify 约定移动端 body.close 为展开态 */
+        box-shadow: none;
+        padding-top: 46px; /* 给汉堡按钮留位 */
+    }
+    body.close .sidebar {
+        transform: translateX(0);
+        box-shadow: 6px 0 24px rgba(0,0,0,.18);
+    }
+    .content { margin-left: 0 !important; }
+    .sidebar-toggle { display: block; transition: left .25s ease; }
+    body.close .sidebar-toggle { left: calc(min(300px, 84vw) + 10px); }
     .markdown-section { padding: 0 18px 60px; }
-    .sidebar { padding-top: 10px; }
+    .markdown-section h1 { font-size: 24px; }
+    .markdown-section h2 { font-size: 19px; }
 }
 </style>
 </head>
@@ -275,7 +431,7 @@ window.$docsify = {
     homepage: 'zh-cn/Home.md',
     loadSidebar: true, // 每个语言目录下各自的 _sidebar.md
     relativePath: true, // 相对链接（Page.md、../en/Page.md）基于当前路由目录解析
-    subMaxLevel: 2,
+    subMaxLevel: 2, // 当前页的 h2 作为页内目录显示在侧边栏
     auto2top: true,
     executeScript: false,
     search: {

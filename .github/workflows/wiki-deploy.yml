@@ -72,9 +72,13 @@ jobs:
                 "$f" > "$out"
           done
 
-          # _Sidebar.md 含「中文文档」与「English」两个分区，拆成各语言目录自己的 _sidebar.md
-          sed -n '/^## .*中文文档/,/^## .*English/p' wiki/_Sidebar.md | sed '$d' > dist/zh-cn/_sidebar.md
-          sed -n '/^## .*English/,$p' wiki/_Sidebar.md > dist/en/_sidebar.md
+          # _Sidebar.md 含「中文文档」与「English」两个分区，拆成各语言目录自己的 _sidebar.md；
+          # 站内版的侧边栏不保留 ## 分区标题与语言行（顶部导航已有语言切换，标题会造成视觉重复），
+          # 源文件里的结构保留给 GitHub wiki 页面使用
+          sed -n '/^## .*中文文档/,/^## .*English/p' wiki/_Sidebar.md | sed '$d' \
+            | grep -v -e '^## ' -e '^\*\*语言\*\*' > dist/zh-cn/_sidebar.md
+          sed -n '/^## .*English/,$p' wiki/_Sidebar.md \
+            | grep -v -e '^## ' -e '^\*\*Language\*\*' > dist/en/_sidebar.md
           sed -i -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)\.zh-CN|\1.md|g" \
                  -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)|../en/\1.md|g" dist/zh-cn/_sidebar.md
           sed -i -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)\.zh-CN|../zh-cn/\1.md|g" \
