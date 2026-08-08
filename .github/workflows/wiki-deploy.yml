@@ -46,21 +46,50 @@ jobs:
 
       - name: Build wiki site directory
         run: |
-          mkdir -p dist
+          set -e
+          mkdir -p dist/zh-cn dist/en
           cp main/doc/wiki-site/index.html dist/
-          cp wiki/*.md dist/
           cp -r wiki/assets dist/
-          # 站外 wiki 链接改写为站内 hash 路由：
-          # https://github.com/<owner>/<repo>/wiki/PageName -> #/PageName
-          sed -i "s|https://github.com/${GITHUB_REPOSITORY}/wiki/|#/|g" dist/*.md
+
+          # wiki 源文件按语言拆到 zh-cn/ 与 en/ 目录：
+          # docsify 会把正文中 #/ 开头的链接误判为页内锚点（且带点号的路由路径有缺陷），
+          # 因此站内链接改写为相对链接（同语言 Page.md，跨语言 ../en/Page.md）
+          WIKI_URL="https://github.com/${GITHUB_REPOSITORY}/wiki"
+          for f in wiki/*.md; do
+            base=$(basename "$f" .md)
+            [ "$base" = "_Sidebar" ] && continue
+            if [[ "$base" == *.zh-CN ]]; then
+              out="dist/zh-cn/${base%.zh-CN}.md"
+              zh_rep='\1.md'; en_rep='../en/\1.md'
+            else
+              out="dist/en/$base.md"
+              zh_rep='../zh-cn/\1.md'; en_rep='\1.md'
+            fi
+            sed -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)\.zh-CN|$zh_rep|g" \
+                -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)|$en_rep|g" \
+                -e 's|](assets/|](../assets/|g' \
+                -e 's|src="assets/|src="../assets/|g' \
+                "$f" > "$out"
+          done
+
+          # _Sidebar.md 含「中文文档」与「English」两个分区，拆成各语言目录自己的 _sidebar.md
+          sed -n '/^## .*中文文档/,/^## .*English/p' wiki/_Sidebar.md | sed '$d' > dist/zh-cn/_sidebar.md
+          sed -n '/^## .*English/,$p' wiki/_Sidebar.md > dist/en/_sidebar.md
+          sed -i -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)\.zh-CN|\1.md|g" \
+                 -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)|../en/\1.md|g" dist/zh-cn/_sidebar.md
+          sed -i -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)\.zh-CN|../zh-cn/\1.md|g" \
+                 -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)|\1.md|g" dist/en/_sidebar.md
 
       - name: Verify wiki files
         run: |
           test -f dist/index.html
-          test -f dist/Home.zh-CN.md
-          ls -lh dist
+          test -f dist/zh-cn/Home.md
+          test -f dist/en/Home.md
+          test -f dist/zh-cn/_sidebar.md
+          test -f dist/en/_sidebar.md
+          ls -lh dist dist/zh-cn dist/en
           echo '--- leftover external wiki links ---'
-          grep -rn "github.com/${GITHUB_REPOSITORY}/wiki/" dist/*.md || echo 'none'
+          grep -rn "github.com/${GITHUB_REPOSITORY}/wiki/" dist/zh-cn dist/en || echo 'none'
 
       - name: Upload wiki to VPS
         uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634  # v0.1.7

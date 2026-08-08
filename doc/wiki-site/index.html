@@ -238,21 +238,29 @@ main { padding-top: var(--nav-height); }
 </nav>
 <div id="app">正在加载文档…</div>
 <script>
-/* 导航/界面语言：与主站共享 localStorage('nkas-lang')；
-   不带 hash 进入时按主站语言落到对应首页（中文 Home.zh-CN / 英文 Home） */
+/* 路由约定：#/zh-cn/<Page> 与 #/en/<Page>（docsify 对带点号的路由路径处理有缺陷，
+   wiki 源文件的 Page.zh-CN 命名在构建时会改写到 zh-cn/ 目录） */
 var NAV_I18N = {
     zh: { features: '功能', download: '下载', quickstart: '快速上手', faq: '常见问题', docs: '文档' },
     en: { features: 'Features', download: 'Download', quickstart: 'Quick Start', faq: 'FAQ', docs: 'Docs' }
 };
+/* 进入时路由归一化：兼容旧链接（#/Page.zh-CN、#/Page），无 hash 时按主站语言（nkas-lang）落地 */
 (function () {
-    if (location.hash) return;
-    var saved = null;
-    try { saved = localStorage.getItem('nkas-lang'); } catch (e) {}
-    if (saved === 'en') location.replace('#/Home');
+    var h = location.hash;
+    if (!h || h === '#/') {
+        var saved = null;
+        try { saved = localStorage.getItem('nkas-lang'); } catch (e) {}
+        location.replace(saved === 'en' ? '#/en/Home' : '#/zh-cn/Home');
+        return;
+    }
+    if (h.indexOf('#/zh-cn/') === 0 || h.indexOf('#/en/') === 0) return;
+    var m = h.match(/^#\/([^?]+?)(\.zh-CN)?(\?.*)?$/);
+    if (!m) return;
+    var dir = m[2] ? 'zh-cn' : 'en';
+    location.replace('#/' + dir + '/' + m[1] + (m[3] || ''));
 })();
 function wikiIsZh() {
-    var h = location.hash;
-    return h === '' || h === '#/' || h.indexOf('.zh-CN') !== -1;
+    return location.hash.indexOf('#/zh-cn/') === 0;
 }
 function applyNavLang() {
     var d = wikiIsZh() ? NAV_I18N.zh : NAV_I18N.en;
@@ -264,8 +272,9 @@ var initialZh = wikiIsZh();
 
 window.$docsify = {
     name: '',
-    homepage: 'Home.zh-CN.md',
-    loadSidebar: '_Sidebar.md',
+    homepage: 'zh-cn/Home.md',
+    loadSidebar: true, // 每个语言目录下各自的 _sidebar.md
+    relativePath: true, // 相对链接（Page.md、../en/Page.md）基于当前路由目录解析
     subMaxLevel: 2,
     auto2top: true,
     executeScript: false,
@@ -276,28 +285,6 @@ window.$docsify = {
         depth: 4
     }
 };
-
-/* 侧边栏按页面语言过滤：_Sidebar.md 含「中文文档」与「English」两个 h2 分区，
-   只显示与当前页面语言一致的分区（GitHub wiki 上则两个分区都正常显示） */
-window.$docsify.plugins = [
-    function (hook) {
-        hook.doneEach(function () {
-            var h = location.hash;
-            var zh = h.indexOf('.zh-CN') !== -1 || h === '' || h === '#/';
-            var root = document.querySelector('.sidebar-nav');
-            if (!root) return;
-            var section = null;
-            Array.prototype.forEach.call(root.children, function (el) {
-                if (el.tagName === 'H2') {
-                    section = /english/i.test(el.textContent) ? 'en' : 'zh';
-                }
-                if (section) {
-                    el.style.display = (section === (zh ? 'zh' : 'en')) ? '' : 'none';
-                }
-            });
-        });
-    }
-];
 
 /* 主题切换：与主站共享 localStorage('nkas-theme') */
 (function () {
@@ -314,15 +301,11 @@ window.$docsify.plugins = [
     syncIcon();
 })();
 
-/* 语言切换：wiki 页面为 Page.zh-CN.md / Page.md 双文件，切换即改路由后缀；
+/* 语言切换：同一页面的 zh-cn/en 路由互换；
    同时写回 localStorage('nkas-lang')，返回主站时语言保持一致 */
 (function () {
     var zhBtn = document.getElementById('lang-zh');
     var enBtn = document.getElementById('lang-en');
-    function currentRoute() {
-        var h = location.hash.replace(/^#\/?/, '').replace(/\.md$/, '');
-        return h || 'Home.zh-CN';
-    }
     function syncLang() {
         var zh = wikiIsZh();
         zhBtn.classList.toggle('active', zh);
@@ -331,9 +314,9 @@ window.$docsify.plugins = [
         document.documentElement.lang = zh ? 'zh-CN' : 'en';
     }
     function goto(zh) {
-        var base = currentRoute().replace(/\.zh-CN$/, '');
+        var page = location.hash.replace(/^#\/(zh-cn|en)\//, '').replace(/\.md$/, '') || 'Home';
         try { localStorage.setItem('nkas-lang', zh ? 'zh-CN' : 'en'); } catch (e) {}
-        location.hash = '#/' + (zh ? base + '.zh-CN' : base);
+        location.hash = '#/' + (zh ? 'zh-cn' : 'en') + '/' + page;
     }
     zhBtn.addEventListener('click', function () { goto(true); });
     enBtn.addEventListener('click', function () { goto(false); });
