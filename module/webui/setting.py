@@ -58,7 +58,7 @@ class State:
     restart_event: threading.Event = None
     manager: SyncManager = None
     electron: bool = False
-    theme: str = "dark"
+    theme: str = "light"
 
     @classmethod
     def init(cls):

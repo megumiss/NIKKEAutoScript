@@ -87,7 +87,7 @@ function closeToast(id: number) { toasts.value = toasts.value.filter(toast => to
 // Errors are transient toasts, not a persistent topbar strip: every
 // `error.value = ...` assignment flows through this watcher.
 watch(error, value => { if (value) { notify(value, 'error', 10000); error.value = '' } })
-const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'dark', language: 'zh-CN', home_page: 'overview' })
+const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'light', language: 'zh-CN', home_page: 'overview' })
 const updateInfo = ref<any>({})
 const notices = ref<any[]>([])
 const taskFilter = ref('')

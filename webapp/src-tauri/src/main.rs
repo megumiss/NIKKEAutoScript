@@ -170,7 +170,7 @@ fn create_window(
     // a global and let each page apply it itself.
     let theme_script = format!(
         "window.__nkasTheme={};",
-        serde_json::to_string(&config.theme).unwrap_or_else(|_| "\"dark\"".into())
+        serde_json::to_string(&config.theme).unwrap_or_else(|_| "\"light\"".into())
     );
     WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("NKAS")

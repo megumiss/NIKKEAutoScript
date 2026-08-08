@@ -100,8 +100,8 @@ Deploy:
     # Language to use on web ui
     Language: zh-CN
     # Theme of web ui
-    # 'dark' for dark theme
-    Theme: dark
+    # 'light' for light theme, 'dark' for dark theme
+    Theme: light
     # Home page shown when opening the web ui
     # 'overview' for dashboard, 'instance' for the first instance page
     HomePage: overview

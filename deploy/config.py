@@ -45,7 +45,7 @@ class ConfigModel:
     HardwareAcceleration: bool = False
 
     Language: str = "zh-CN"
-    Theme: str = "dark"
+    Theme: str = "light"
     HomePage: str = "overview"
     Password: Optional[str] = None
     CDN: Union[str, bool] = False

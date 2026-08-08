@@ -11,7 +11,7 @@ fn default_dpi_scaling() -> bool {
     true
 }
 fn default_theme() -> String {
-    "dark".into()
+    "light".into()
 }
 fn default_desktop_update_manifest() -> String {
     // Desktop updates are fetched from the official VPS by default.
