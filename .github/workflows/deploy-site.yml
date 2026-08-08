@@ -1,0 +1,46 @@
+name: Deploy Site to VPS
+
+# ==============================================================================
+# 静态站点发布说明：
+#   doc/site 目录在 master 分支发生更新时，自动将整个目录推送到 VPS 站点根目录；
+#   也支持 workflow_dispatch 手动触发（用于首次部署或补救发布）。
+#   使用增量覆盖方式上传，不会删除 VPS 上的其他文件（如 releases/ 目录）。
+# 需要的 secrets（Settings -> Secrets and variables -> Actions）：
+#   VPS_HOST / VPS_USERNAME / VPS_SSH_KEY / VPS_PORT（可选，默认 22）
+#   VPS_SITE_DEPLOY_PATH（可选，默认 /www/wwwroot/nkas.megumiss.top）
+# ==============================================================================
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'doc/site/**'
+  workflow_dispatch: # 允许手动触发
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-site:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+
+      - name: Verify site files
+        run: |
+          test -f doc/site/index.html
+          ls -lh doc/site
+
+      - name: Upload site to VPS
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634  # v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "doc/site/*"
+          target: ${{ secrets.VPS_SITE_DEPLOY_PATH || '/www/wwwroot/nkas.megumiss.top' }}
+          strip_components: 2
