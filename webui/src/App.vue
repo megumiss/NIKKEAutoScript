@@ -87,7 +87,7 @@ function closeToast(id: number) { toasts.value = toasts.value.filter(toast => to
 // Errors are transient toasts, not a persistent topbar strip: every
 // `error.value = ...` assignment flows through this watcher.
 watch(error, value => { if (value) { notify(value, 'error', 10000); error.value = '' } })
-const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'dark', language: 'zh-CN' })
+const systemStatus = ref<any>({ version: '—', updater_state: 'idle', theme: 'dark', language: 'zh-CN', home_page: 'overview' })
 const updateInfo = ref<any>({})
 const notices = ref<any[]>([])
 const taskFilter = ref('')
@@ -412,6 +412,7 @@ async function saveDeployValue(field: any, value: any) {
     field.value = result.value
     notify(t('已保存'))
     if (field.key === 'Theme') { document.documentElement.dataset.theme = result.value; localStorage.setItem('nkas-theme', result.value); systemStatus.value.theme = result.value }
+    if (field.key === 'HomePage') systemStatus.value.home_page = result.value
     if (field.key === 'Language') await setLanguage(result.value)
   } catch (exception: any) { error.value = exception.message }
 }
@@ -792,7 +793,7 @@ async function healthCheck() {
     backendDown.value = true
   }
 }
-onMounted(async () => { if (sessionStorage.getItem('nkas-desktop-updated')) { sessionStorage.removeItem('nkas-desktop-updated'); notify(t('启动器更新完成'), 'ok', 4000) } if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); await loadWorkspace(); startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
+onMounted(async () => { if (sessionStorage.getItem('nkas-desktop-updated')) { sessionStorage.removeItem('nkas-desktop-updated'); notify(t('启动器更新完成'), 'ok', 4000) } if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); if (route.path === '/' && systemStatus.value.home_page === 'instance' && instances.value.length) { router.replace(`/i/${instances.value[0].name}/overview`) } else { await loadWorkspace() } startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
   // Only a different instance needs a schema reload and socket swap; task
   // switches and global pages retain the current instance's log scrollback.

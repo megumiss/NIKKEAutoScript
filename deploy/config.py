@@ -46,6 +46,7 @@ class ConfigModel:
 
     Language: str = "zh-CN"
     Theme: str = "dark"
+    HomePage: str = "overview"
     Password: Optional[str] = None
     CDN: Union[str, bool] = False
     Run: Optional[str] = None

@@ -22,6 +22,7 @@ async def status(_: Request):
         'api_version': 2, 'spa_version': '1', 'capabilities': {'spa': True, 'websocket': True},
         'version': _git_version(), 'updater_state': updater.state,
         'theme': State.deploy_config.Theme, 'language': lang.LANG,
+        'home_page': State.deploy_config.HomePage,
     })
 
 

@@ -31,6 +31,7 @@ WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManif
 SELECT_OPTIONS = {
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
+    'HomePage': ['overview', 'instance'],
 }
 # Language options are self-named in every UI language; theme labels follow
 # the UI language.
@@ -40,6 +41,11 @@ OPTION_LABELS = {
         'zh-CN': {'dark': '深色', 'light': '浅色'},
         'en-US': {'dark': 'Dark', 'light': 'Light'},
         'ja-JP': {'dark': 'ダーク', 'light': 'ライト'},
+    },
+    'HomePage': {
+        'zh-CN': {'overview': '总览', 'instance': '实例页'},
+        'en-US': {'overview': 'Overview', 'instance': 'Instance'},
+        'ja-JP': {'overview': '概要', 'instance': 'インスタンス'},
     },
 }
 # Templates offered by the one-click reset.
@@ -234,6 +240,10 @@ FIELD_I18N = {
         'zh-CN': {'desc': 'Web UI 主题'},
         'ja-JP': {'desc': 'Web UI のテーマ'},
     },
+    'HomePage': {
+        'zh-CN': {'desc': "打开 Web UI 时显示的首页\n'overview' 为总览页，'instance' 为第一个实例的页面"},
+        'ja-JP': {'desc': "Web UI を開いたときに表示するホームページ\n'overview' はダッシュボード、'instance' は最初のインスタンスページ"},
+    },
     'Run': {
         'zh-CN': {'desc': '--run，启动时自动运行指定实例'},
         'ja-JP': {'desc': '--run 起動時に自動実行する設定'},
@@ -322,7 +332,7 @@ def _widget(key, default):
 
 def _select_options(key):
     labels = OPTION_LABELS[key]
-    if key == 'Theme':
+    if key in ('Theme', 'HomePage'):
         labels = labels.get(lang.LANG) or labels['en-US']
     return [{'value': value, 'label': labels.get(value, value)} for value in SELECT_OPTIONS[key]]
 

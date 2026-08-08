@@ -100,6 +100,9 @@ Deploy:
     # Theme of web ui
     # 'dark' for dark theme
     Theme: dark
+    # Home page shown when opening the web ui
+    # 'overview' for dashboard, 'instance' for the first instance page
+    HomePage: overview
     # --run. Auto-run specified config when startup
     Run: null
     # Notice ids marked as read by current user, comma separated
