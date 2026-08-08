@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文档 - NIKKEAutoScript</title>
+<link rel="icon" type="image/png" href="/nkas.png">
+<meta name="description" content="NIKKEAutoScript 使用文档：安装指南、PC端/模拟器使用指南、配置教程、常见问题。">
+<meta name="robots" content="index,follow">
+<script>
+/* 首屏前确定主题，与主站逻辑一致：优先手动选择（共享 localStorage），否则按时间（19:00 - 07:00 暗色） */
+(function () {
+    var saved = null;
+    try { saved = localStorage.getItem('nkas-theme'); } catch (e) {}
+    if (saved === 'light' || saved === 'dark') {
+        document.documentElement.dataset.theme = saved;
+        return;
+    }
+    var h = new Date().getHours();
+    document.documentElement.dataset.theme = (h >= 19 || h < 7) ? 'dark' : 'light';
+})();
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css">
+<style>
+/* ===== 与主站一致的设计变量 ===== */
+:root {
+    --bg: #f7f8fc;
+    --bg-2: rgba(255,255,255,.72);
+    --nav-bg: rgba(255,255,255,.85);
+    --card: #ffffff;
+    --card-border: #e6e8f0;
+    --text: #1c2333;
+    --text-dim: #67708a;
+    --accent: #4f6ef7;
+    --accent-2: #12b5a5;
+    --gradient: linear-gradient(135deg, #4f6ef7 0%, #12b5a5 100%);
+    --code-bg: #eef1fe;
+    --nav-height: 56px;
+}
+[data-theme="dark"] {
+    --bg: #0e1220;
+    --bg-2: rgba(23,28,46,.72);
+    --nav-bg: rgba(14,18,32,.78);
+    --card: #171c2e;
+    --card-border: #262e4a;
+    --text: #e6eaf5;
+    --text-dim: #98a1bd;
+    --accent: #7b93ff;
+    --accent-2: #2dd4c4;
+    --gradient: linear-gradient(135deg, #7b93ff 0%, #2dd4c4 100%);
+    --code-bg: #0d1120;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    transition: background .3s, color .3s;
+}
+
+/* ===== 顶部导航（复刻主站） ===== */
+.site-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+    display: flex; align-items: center; justify-content: space-between;
+    height: var(--nav-height);
+    padding: 0 48px;
+    background: var(--nav-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--card-border);
+}
+.site-nav .brand {
+    display: flex; align-items: center; gap: 12px;
+    font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none;
+}
+.site-nav .brand img { width: 34px; height: 34px; border-radius: 8px; }
+.site-nav .links { display: flex; gap: 28px; align-items: center; }
+.site-nav .links > a {
+    color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color .2s;
+}
+.site-nav .links > a:hover { color: var(--text); }
+.site-nav .links > a.active { color: var(--text); font-weight: 600; }
+.site-nav .gh-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    color: #fff !important; text-decoration: none;
+    background: var(--gradient);
+    transition: transform .15s, box-shadow .15s;
+}
+.site-nav .gh-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,110,247,.30); }
+.site-nav .theme-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--card-border); background: transparent;
+    color: var(--text-dim); font-size: 15px; cursor: pointer;
+    transition: all .15s; font-family: inherit;
+}
+.site-nav .theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+/* 语言切换（同主站样式） */
+.site-nav .lang-switch { display: flex; border: 1px solid var(--card-border); border-radius: 8px; overflow: hidden; }
+.site-nav .lang-switch button {
+    border: none; background: transparent; color: var(--text-dim);
+    font-size: 12.5px; font-weight: 600; padding: 6px 11px; cursor: pointer;
+    font-family: inherit; transition: all .15s;
+}
+.site-nav .lang-switch button.active { background: var(--gradient); color: #fff; }
+.site-nav .lang-switch button:not(.active):hover { color: var(--text); }
+
+/* ===== docsify 布局适配：给固定导航留出空间 ===== */
+.sidebar { top: var(--nav-height) !important; }
+main { padding-top: var(--nav-height); }
+.sidebar-toggle { top: calc(var(--nav-height) + 10px); }
+@media (min-width: 769px) { .sidebar-toggle { display: none; } }
+
+/* ===== 侧边栏 ===== */
+.sidebar {
+    background: var(--bg-2);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-right: 1px solid var(--card-border);
+}
+.sidebar h1, .sidebar h2 {
+    font-size: 15px; color: var(--text); margin: 18px 0 6px;
+}
+.sidebar h1 { font-size: 13px; color: var(--text-dim); text-transform: none; }
+.sidebar ul { padding-left: 0; }
+.sidebar ul li { margin: 2px 0; }
+.sidebar ul li a {
+    color: var(--text-dim); font-size: 14px; text-decoration: none;
+    transition: color .2s;
+}
+.sidebar ul li a:hover { color: var(--text); }
+.sidebar ul li.active > a {
+    color: var(--accent); font-weight: 600;
+    border-right: 2px solid var(--accent);
+}
+.sidebar hr { border-color: var(--card-border); margin: 12px 0; }
+
+/* 搜索框 */
+.search { border-bottom: 1px solid var(--card-border); padding: 12px 16px; margin-bottom: 0; }
+.search input {
+    background: var(--card); border: 1px solid var(--card-border);
+    color: var(--text); border-radius: 8px; font-size: 14px;
+    padding: 7px 12px; outline: none; width: 100%;
+    transition: border-color .2s;
+}
+.search input:focus { border-color: var(--accent); }
+.search input::placeholder { color: var(--text-dim); }
+.search .matching-post { border-bottom: 1px solid var(--card-border); }
+.search .matching-post a { color: var(--text); }
+.search .matching-post p { color: var(--text-dim); }
+
+/* ===== 正文 ===== */
+.content { padding-top: 28px; }
+.markdown-section { max-width: 900px; margin: 0 auto; padding: 0 36px 80px; }
+.markdown-section h1, .markdown-section h2,
+.markdown-section h3, .markdown-section h4 { color: var(--text); font-weight: 700; }
+.markdown-section h1 { font-size: 28px; }
+.markdown-section h2 {
+    font-size: 22px; margin-top: 40px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--card-border);
+}
+.markdown-section h3 { font-size: 17px; margin-top: 28px; }
+.markdown-section p, .markdown-section li { color: var(--text); font-size: 15px; }
+.markdown-section a { color: var(--accent); text-decoration: none; }
+.markdown-section a:hover { text-decoration: underline; }
+.markdown-section hr { border: none; border-top: 1px solid var(--card-border); margin: 32px 0; }
+.markdown-section img { max-width: 100%; border-radius: 10px; border: 1px solid var(--card-border); }
+
+/* 引用块（注意/提示） */
+.markdown-section blockquote {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 18px; margin: 18px 0;
+    color: var(--text-dim);
+}
+.markdown-section blockquote p { color: var(--text-dim); margin: 4px 0; }
+.markdown-section blockquote strong { color: var(--text); }
+
+/* 表格 */
+.markdown-section table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; display: block; overflow-x: auto; }
+.markdown-section th, .markdown-section td {
+    border: 1px solid var(--card-border); padding: 8px 14px; text-align: left;
+}
+.markdown-section th { background: var(--card); font-weight: 600; color: var(--text); }
+.markdown-section td { color: var(--text); }
+.markdown-section tr:nth-child(even) td { background: var(--bg-2); }
+
+/* 代码 */
+.markdown-section code {
+    font-family: Consolas, "Cascadia Mono", Monaco, monospace;
+    background: var(--code-bg); color: var(--accent);
+    border-radius: 5px; padding: 2px 6px; font-size: 13px;
+}
+.markdown-section pre {
+    background: var(--code-bg); border: 1px solid var(--card-border);
+    border-radius: 10px; padding: 16px 18px; font-size: 13.5px; line-height: 1.6;
+}
+.markdown-section pre code { background: transparent; color: var(--text); padding: 0; }
+.markdown-section pre::after { color: var(--text-dim); }
+
+/* 移动端 */
+@media (max-width: 768px) {
+    body { overflow-x: hidden; }
+    main { margin-left: 0 !important; }
+    .content { margin-left: 0 !important; left: 0 !important; width: 100%; }
+    .site-nav { padding: 0 16px; }
+    .site-nav .links > a:not(.gh-btn) { display: none; }
+    .markdown-section { padding: 0 18px 60px; }
+    .sidebar { padding-top: 10px; }
+}
+</style>
+</head>
+<body>
+<nav class="site-nav">
+    <a class="brand" href="/">
+        <img src="/nkas.png" alt="NKAS">
+        <span>NIKKEAutoScript</span>
+    </a>
+    <div class="links">
+        <a href="/#features" data-nav="features">功能</a>
+        <a href="/#download" data-nav="download">下载</a>
+        <a href="/#quickstart" data-nav="quickstart">快速上手</a>
+        <a href="/#faq" data-nav="faq">常见问题</a>
+        <a href="/wiki/" data-nav="docs" class="active">文档</a>
+        <button class="theme-toggle" id="theme-toggle" title="切换主题">🌙</button>
+        <div class="lang-switch">
+            <button id="lang-zh" class="active">中文</button>
+            <button id="lang-en">EN</button>
+        </div>
+        <a class="gh-btn" href="https://github.com/megumiss/NIKKEAutoScript" target="_blank" rel="noopener">★ GitHub</a>
+    </div>
+</nav>
+<div id="app">正在加载文档…</div>
+<script>
+/* 导航/界面语言：与主站共享 localStorage('nkas-lang')；
+   不带 hash 进入时按主站语言落到对应首页（中文 Home.zh-CN / 英文 Home） */
+var NAV_I18N = {
+    zh: { features: '功能', download: '下载', quickstart: '快速上手', faq: '常见问题', docs: '文档' },
+    en: { features: 'Features', download: 'Download', quickstart: 'Quick Start', faq: 'FAQ', docs: 'Docs' }
+};
+(function () {
+    if (location.hash) return;
+    var saved = null;
+    try { saved = localStorage.getItem('nkas-lang'); } catch (e) {}
+    if (saved === 'en') location.replace('#/Home');
+})();
+function wikiIsZh() {
+    var h = location.hash;
+    return h === '' || h === '#/' || h.indexOf('.zh-CN') !== -1;
+}
+function applyNavLang() {
+    var d = wikiIsZh() ? NAV_I18N.zh : NAV_I18N.en;
+    Array.prototype.forEach.call(document.querySelectorAll('.site-nav .links a[data-nav]'), function (a) {
+        a.textContent = d[a.getAttribute('data-nav')];
+    });
+}
+var initialZh = wikiIsZh();
+
+window.$docsify = {
+    name: '',
+    homepage: 'Home.zh-CN.md',
+    loadSidebar: '_Sidebar.md',
+    subMaxLevel: 2,
+    auto2top: true,
+    executeScript: false,
+    search: {
+        paths: 'auto',
+        placeholder: initialZh ? '搜索文档…' : 'Search documentation…',
+        noData: initialZh ? '没有找到相关内容' : 'No results',
+        depth: 4
+    }
+};
+
+/* 侧边栏按页面语言过滤：_Sidebar.md 含「中文文档」与「English」两个 h2 分区，
+   只显示与当前页面语言一致的分区（GitHub wiki 上则两个分区都正常显示） */
+window.$docsify.plugins = [
+    function (hook) {
+        hook.doneEach(function () {
+            var h = location.hash;
+            var zh = h.indexOf('.zh-CN') !== -1 || h === '' || h === '#/';
+            var root = document.querySelector('.sidebar-nav');
+            if (!root) return;
+            var section = null;
+            Array.prototype.forEach.call(root.children, function (el) {
+                if (el.tagName === 'H2') {
+                    section = /english/i.test(el.textContent) ? 'en' : 'zh';
+                }
+                if (section) {
+                    el.style.display = (section === (zh ? 'zh' : 'en')) ? '' : 'none';
+                }
+            });
+        });
+    }
+];
+
+/* 主题切换：与主站共享 localStorage('nkas-theme') */
+(function () {
+    var btn = document.getElementById('theme-toggle');
+    function syncIcon() {
+        btn.textContent = document.documentElement.dataset.theme === 'dark' ? '☀️' : '🌙';
+    }
+    btn.addEventListener('click', function () {
+        var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem('nkas-theme', next); } catch (e) {}
+        syncIcon();
+    });
+    syncIcon();
+})();
+
+/* 语言切换：wiki 页面为 Page.zh-CN.md / Page.md 双文件，切换即改路由后缀；
+   同时写回 localStorage('nkas-lang')，返回主站时语言保持一致 */
+(function () {
+    var zhBtn = document.getElementById('lang-zh');
+    var enBtn = document.getElementById('lang-en');
+    function currentRoute() {
+        var h = location.hash.replace(/^#\/?/, '').replace(/\.md$/, '');
+        return h || 'Home.zh-CN';
+    }
+    function syncLang() {
+        var zh = wikiIsZh();
+        zhBtn.classList.toggle('active', zh);
+        enBtn.classList.toggle('active', !zh);
+        applyNavLang();
+        document.documentElement.lang = zh ? 'zh-CN' : 'en';
+    }
+    function goto(zh) {
+        var base = currentRoute().replace(/\.zh-CN$/, '');
+        try { localStorage.setItem('nkas-lang', zh ? 'zh-CN' : 'en'); } catch (e) {}
+        location.hash = '#/' + (zh ? base + '.zh-CN' : base);
+    }
+    zhBtn.addEventListener('click', function () { goto(true); });
+    enBtn.addEventListener('click', function () { goto(false); });
+    window.addEventListener('hashchange', syncLang);
+    syncLang();
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/docsify@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2/dist/docsify-copy-code.min.js"></script>
+</body>
+</html>

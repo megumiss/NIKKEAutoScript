@@ -347,6 +347,7 @@ footer a { color: var(--accent); text-decoration: none; }
         <a href="#download" data-i18n="nav.download">下载</a>
         <a href="#quickstart" data-i18n="nav.quickstart">快速上手</a>
         <a href="#faq" data-i18n="nav.faq">常见问题</a>
+        <a href="/wiki/" data-i18n="nav.docs">文档</a>
         <button class="theme-toggle" id="themeToggle" title="主题：自动">🌓</button>
         <div class="lang-switch">
             <button data-lang="zh-CN" class="active">中文</button>
@@ -369,7 +370,7 @@ footer a { color: var(--accent); text-decoration: none; }
     </div>
     <div class="cta">
         <a class="btn btn-primary" href="#download" data-i18n="hero.cta.download">立即下载</a>
-        <a class="btn btn-ghost" href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN" target="_blank" rel="noopener" data-i18n="hero.cta.guide" data-i18n-href="hero.cta.guide.url">安装教程</a>
+        <a class="btn btn-ghost" href="/wiki/#/Installation-Guide.zh-CN" target="_blank" rel="noopener" data-i18n="hero.cta.guide" data-i18n-href="hero.cta.guide.url">安装教程</a>
         <a class="btn btn-ghost" href="https://www.bilibili.com/video/BV1YMbrzFE4g" target="_blank" rel="noopener" data-i18n="hero.cta.demo">功能演示 ▶</a>
     </div>
 </header>
@@ -466,14 +467,14 @@ footer a { color: var(--accent); text-decoration: none; }
         </div>
         <div class="step">
             <h3 data-i18n="s3.t">配置并运行</h3>
-            <p data-i18n-html="s3.p">在设置中选择客户端与模拟器，勾选需要的任务，点击开始即可。详见 <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN" target="_blank" rel="noopener">Wiki 安装指南</a>。</p>
+            <p data-i18n-html="s3.p">在设置中选择客户端与模拟器，勾选需要的任务，点击开始即可。详见 <a href="/wiki/#/Installation-Guide.zh-CN" target="_blank" rel="noopener">Wiki 安装指南</a>。</p>
         </div>
     </div>
 </section>
 
 <section id="faq">
     <h2 class="section-title"><span data-i18n="faq.title">常见问题</span></h2>
-    <p class="section-sub" data-i18n-html="faq.sub">更多问题请查阅 <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions.zh-CN" target="_blank" rel="noopener">Wiki 常见问题</a></p>
+    <p class="section-sub" data-i18n-html="faq.sub">更多问题请查阅 <a href="/wiki/#/Frequently-Asked-Questions.zh-CN" target="_blank" rel="noopener">Wiki 常见问题</a></p>
     <div class="faq-item">
         <button class="faq-q"><span data-i18n="q1">支持国服吗？</span><span class="arrow">▾</span></button>
         <div class="faq-a"><p data-i18n-html="a1">不支持。NKAS 支持国际服、日服、韩服等所有 PC/<del>模拟器</del> 客户端，唯独不支持国服客户端。</p></div>
@@ -525,10 +526,10 @@ footer a { color: var(--accent); text-decoration: none; }
 const I18N = {
 'zh-CN': {
     'doc.title': 'NIKKEAutoScript - 胜利女神：NIKKE 自动日常脚本',
-    'nav.features': '功能', 'nav.download': '下载', 'nav.quickstart': '快速上手', 'nav.faq': '常见问题',
+    'nav.features': '功能', 'nav.download': '下载', 'nav.quickstart': '快速上手', 'nav.faq': '常见问题', 'nav.docs': '文档',
     'hero.tagline': '胜利女神：NIKKE 自动日常脚本<br>支持所有 PC / <del>模拟器</del> 客户端（国服除外），解放双手，日常全包',
     'hero.cta.download': '立即下载', 'hero.cta.guide': '安装教程', 'hero.cta.demo': '功能演示 ▶',
-    'hero.cta.guide.url': 'https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN',
+    'hero.cta.guide.url': '/wiki/#/Installation-Guide.zh-CN',
     'features.title': '功能特性', 'features.sub': '从每日日常到大型活动，一站式自动化',
     'f1.t': '全客户端支持', 'f1.p': 'PC 客户端 / 各类模拟器通吃，支持多屏幕、自动启动游戏与任务，并提供快捷键与接口控制。',
     'f2.t': '日常全托管', 'f2.p': '收获、歼灭、派遣、咨询送礼、友情点、免费钻、商店购买、每日/每周任务与 Pass 领取，一次配置全自动。',
@@ -550,8 +551,8 @@ const I18N = {
     'quickstart.title': '快速上手', 'quickstart.sub': '三步开始自动化日常',
     's1.t': '下载并解压', 's1.p': '从 Release 下载完整包，解压到<b>纯英文路径</b>，避免运行期编码问题。',
     's2.t': '启动 nkas.exe', 's2.p': '双击运行 <code>nkas.exe</code>，等待自更新完成后自动打开 Web UI。',
-    's3.t': '配置并运行', 's3.p': '在设置中选择客户端与模拟器，勾选需要的任务，点击开始即可。详见 <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN" target="_blank" rel="noopener">Wiki 安装指南</a>。',
-    'faq.title': '常见问题', 'faq.sub': '更多问题请查阅 <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions.zh-CN" target="_blank" rel="noopener">Wiki 常见问题</a>',
+    's3.t': '配置并运行', 's3.p': '在设置中选择客户端与模拟器，勾选需要的任务，点击开始即可。详见 <a href="/wiki/#/Installation-Guide.zh-CN" target="_blank" rel="noopener">Wiki 安装指南</a>。',
+    'faq.title': '常见问题', 'faq.sub': '更多问题请查阅 <a href="/wiki/#/Frequently-Asked-Questions.zh-CN" target="_blank" rel="noopener">Wiki 常见问题</a>',
     'q1': '支持国服吗？', 'a1': '不支持。NKAS 支持国际服、日服、韩服等所有 PC/<del>模拟器</del> 客户端，唯独不支持国服客户端。',
     'q2': '支持哪些平台？', 'a2': '项目目前主要支持 <b>PC 端</b>、<del>主流安卓模拟器</del>，Windows 桌面版开箱即用；同时支持 <b>ARM 架构</b>的模拟器和开发板，配合 Docker 部署 NKAS 即可运行。',
     'q3': '脚本收费吗？安全吗？', 'a3': '完全免费并基于 GPL-3.0 开源，源码可审计。项目仅供学习交流，请遵守游戏用户协议。',
@@ -563,10 +564,10 @@ const I18N = {
 },
 'en': {
     'doc.title': 'NIKKEAutoScript - GODDESS OF VICTORY: NIKKE Auto Daily Script',
-    'nav.features': 'Features', 'nav.download': 'Download', 'nav.quickstart': 'Quick Start', 'nav.faq': 'FAQ',
+    'nav.features': 'Features', 'nav.download': 'Download', 'nav.quickstart': 'Quick Start', 'nav.faq': 'FAQ', 'nav.docs': 'Docs',
     'hero.tagline': 'GODDESS OF VICTORY: NIKKE automatic daily script<br>Supports all PC / <del>Emulator</del> clients (except the CN server) — hands-free dailies, fully covered.',
     'hero.cta.download': 'Download Now', 'hero.cta.guide': 'Installation Guide', 'hero.cta.demo': 'Feature Demo ▶',
-    'hero.cta.guide.url': 'https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide',
+    'hero.cta.guide.url': '/wiki/#/Installation-Guide',
     'features.title': 'Features', 'features.sub': 'From dailies to major events — all-in-one automation',
     'f1.t': 'All Clients Supported', 'f1.p': 'Works with the PC client and popular emulators, with multi-monitor support, auto-launch of game & tasks, plus hotkeys and API control.',
     'f2.t': 'Dailies on Autopilot', 'f2.p': 'Rewards, annihilation, dispatch, advise & gifts, friendship points, free gems, shop purchases, daily/weekly missions and Pass claims — configure once, fully automatic.',
@@ -588,8 +589,8 @@ const I18N = {
     'quickstart.title': 'Quick Start', 'quickstart.sub': 'Start automating in three steps',
     's1.t': 'Download & Extract', 's1.p': 'Download the full package from Releases and extract it to an <b>ASCII-only path</b> to avoid encoding issues.',
     's2.t': 'Launch nkas.exe', 's2.p': 'Double-click <code>nkas.exe</code> and wait for the self-update; the Web UI opens automatically.',
-    's3.t': 'Configure & Run', 's3.p': 'Pick your client or emulator in settings, select the tasks you need and hit start. See the <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide" target="_blank" rel="noopener">Wiki guide</a> for details.',
-    'faq.title': 'FAQ', 'faq.sub': 'More answers in the <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions" target="_blank" rel="noopener">Wiki FAQ</a>',
+    's3.t': 'Configure & Run', 's3.p': 'Pick your client or emulator in settings, select the tasks you need and hit start. See the <a href="/wiki/#/Installation-Guide" target="_blank" rel="noopener">Wiki guide</a> for details.',
+    'faq.title': 'FAQ', 'faq.sub': 'More answers in the <a href="/wiki/#/Frequently-Asked-Questions" target="_blank" rel="noopener">Wiki FAQ</a>',
     'q1': 'Is the CN server supported?', 'a1': 'No. NKAS supports the global, JP and KR clients on PC and <del>emulators</del> — everything except the CN server.',
     'q2': 'Which platforms are supported?', 'a2': 'The project now mainly supports the <b>PC client</b> and <del>popular Android emulators</del> — the Windows desktop build works out of the box. <b>ARM-based</b> emulators and ARM dev boards are also supported by deploying NKAS with Docker.',
     'q3': 'Is it free? Is it safe?', 'a3': 'Completely free and open source under GPL-3.0 — the code is fully auditable. Provided for learning purposes only; please follow the game\'s terms of service.',
@@ -601,10 +602,10 @@ const I18N = {
 },
 'ja': {
     'doc.title': 'NIKKEAutoScript - 勝利の女神：NIKKE 自動デイリースクリプト',
-    'nav.features': '機能', 'nav.download': 'ダウンロード', 'nav.quickstart': 'クイックスタート', 'nav.faq': 'よくある質問',
+    'nav.features': '機能', 'nav.download': 'ダウンロード', 'nav.quickstart': 'クイックスタート', 'nav.faq': 'よくある質問', 'nav.docs': 'ドキュメント',
     'hero.tagline': '勝利の女神：NIKKE 自動デイリースクリプト<br>すべての PC / <del>エミュレーター</del> クライアントに対応（中国サーバーを除く）。デイリーをまるごと自動化。',
     'hero.cta.download': '今すぐダウンロード', 'hero.cta.guide': 'インストールガイド', 'hero.cta.demo': '機能デモ ▶',
-    'hero.cta.guide.url': 'https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide',
+    'hero.cta.guide.url': '/wiki/#/Installation-Guide',
     'features.title': '機能特徴', 'features.sub': 'デイリーから大型イベントまで、ワンストップで自動化',
     'f1.t': '全クライアント対応', 'f1.p': 'PC クライアントと主要エミュレーターに対応。マルチモニター、ゲームとタスクの自動起動、ショートカットキーと API 制御も。',
     'f2.t': 'デイリー完全自動化', 'f2.p': '収穫、殲滅、派遣、面談・プレゼント、フレンドポイント、無料ジュエル、ショップ購入、デイリー/ウィークリー任務とパスの受け取りまで、一度設定すれば全自動。',
@@ -626,8 +627,8 @@ const I18N = {
     'quickstart.title': 'クイックスタート', 'quickstart.sub': '3 ステップで自動化を開始',
     's1.t': 'ダウンロードと展開', 's1.p': 'Releases からフルパッケージをダウンロードし、文字化け防止のため<b>英数字のみのパス</b>に展開。',
     's2.t': 'nkas.exe を起動', 's2.p': '<code>nkas.exe</code> をダブルクリックし、自己更新の完了を待つと Web UI が自動で開きます。',
-    's3.t': '設定して実行', 's3.p': '設定でクライアントやエミュレーターを選び、必要なタスクにチェックを入れて開始。詳しくは <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide" target="_blank" rel="noopener">Wiki ガイド</a>へ。',
-    'faq.title': 'よくある質問', 'faq.sub': 'その他は <a href="https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions" target="_blank" rel="noopener">Wiki の FAQ</a> をご覧ください',
+    's3.t': '設定して実行', 's3.p': '設定でクライアントやエミュレーターを選び、必要なタスクにチェックを入れて開始。詳しくは <a href="/wiki/#/Installation-Guide" target="_blank" rel="noopener">Wiki ガイド</a>へ。',
+    'faq.title': 'よくある質問', 'faq.sub': 'その他は <a href="/wiki/#/Frequently-Asked-Questions" target="_blank" rel="noopener">Wiki の FAQ</a> をご覧ください',
     'q1': '中国サーバーに対応していますか？', 'a1': '対応していません。NKAS はグローバル・日本・韓国などすべての PC/<del>エミュレーター</del> クライアントに対応していますが、中国サーバーのみ非対応です。',
     'q2': '対応プラットフォームは？', 'a2': '現在プロジェクトは主に <b>PC 版</b>、<del>主要な Android エミュレーター</del>をサポートしており、Windows デスクトップ版はすぐ使えます。また、<b>ARM アーキテクチャ</b>のエミュレーターや開発ボードでも Docker で NKAS をデプロイして利用できます。',
     'q3': '有料ですか？安全ですか？', 'a3': '完全無料で GPL-3.0 のオープンソースです。コードはすべて監査可能。学習目的の提供のため、ゲームの利用規約に従ってご利用ください。',

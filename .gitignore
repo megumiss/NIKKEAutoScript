@@ -18,3 +18,6 @@ bin/paddleocr/
 **.acc
 data/
 .workbuddy/
+# GitHub wiki 本地克隆（独立仓库，勿提交）
+doc/wiki/
+doc/NIKKEAutoScript.wiki/

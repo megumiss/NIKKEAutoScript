@@ -1,0 +1,74 @@
+name: Deploy Wiki to VPS
+
+# ==============================================================================
+# Wiki 文档站发布说明：
+#   GitHub wiki 是独立仓库、不能跑 Actions，因此本工作流放在主仓库，
+#   在 wiki 编辑（gollum 事件）或 doc/wiki-site 站点壳更新时触发：
+#   拉取 wiki 内容（markdown + assets），套入 doc/wiki-site 的 docsify 壳，
+#   并将页面间的 GitHub wiki 链接改写为站内路由后，推送到 VPS 站点 /wiki 子路径；
+#   也支持 workflow_dispatch 手动触发（用于首次部署或补救发布）。
+#   使用增量覆盖方式上传，不会删除 VPS 上的其他文件；
+#   wiki 页面改名/删除后需手动清理 VPS 上的旧文件。
+# 需要的 secrets（Settings -> Secrets and variables -> Actions）：
+#   VPS_HOST / VPS_USERNAME / VPS_SSH_KEY / VPS_PORT（可选，默认 22）
+#   VPS_WIKI_DEPLOY_PATH（可选，默认 /www/wwwroot/nkas.megumiss.top/wiki）
+# ==============================================================================
+
+on:
+  gollum: # wiki 页面编辑
+  push:
+    branches:
+      - master
+    paths:
+      - 'doc/wiki-site/**' # 站点壳更新
+  workflow_dispatch: # 允许手动触发
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 主仓库：提供 doc/wiki-site/ 下的 docsify 站点壳
+      - name: Checkout main repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          path: main
+
+      # wiki 仓库：文档内容（markdown + assets）
+      - name: Checkout wiki repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - name: Build wiki site directory
+        run: |
+          mkdir -p dist
+          cp main/doc/wiki-site/index.html dist/
+          cp wiki/*.md dist/
+          cp -r wiki/assets dist/
+          # 站外 wiki 链接改写为站内 hash 路由：
+          # https://github.com/<owner>/<repo>/wiki/PageName -> #/PageName
+          sed -i "s|https://github.com/${GITHUB_REPOSITORY}/wiki/|#/|g" dist/*.md
+
+      - name: Verify wiki files
+        run: |
+          test -f dist/index.html
+          test -f dist/Home.zh-CN.md
+          ls -lh dist
+          echo '--- leftover external wiki links ---'
+          grep -rn "github.com/${GITHUB_REPOSITORY}/wiki/" dist/*.md || echo 'none'
+
+      - name: Upload wiki to VPS
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634  # v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "dist/**"
+          target: ${{ secrets.VPS_WIKI_DEPLOY_PATH || '/www/wwwroot/nkas.megumiss.top/wiki' }}
+          strip_components: 1
