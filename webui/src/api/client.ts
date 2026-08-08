@@ -4,7 +4,11 @@ export async function request(path: string, init: RequestInit = {}) {
     headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
   })
   const body = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(body.error || body.message || `Request failed (${response.status})`)
+  if (!response.ok) {
+    const error = new Error(body.error || body.message || `Request failed (${response.status})`) as Error & { code?: string }
+    if (body.code) error.code = body.code
+    throw error
+  }
   return body
 }
 

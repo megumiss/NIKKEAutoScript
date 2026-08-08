@@ -148,6 +148,8 @@ const staticLabels: Record<string, Record<string, string>> = {
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
   '已保存': { 'en-US': 'Saved', 'ja-JP': '保存しました' },
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
+  '管理员权限不足': { 'en-US': 'Administrator privileges required', 'ja-JP': '管理者権限が必要です' },
+  'PC 客户端需要脚本以管理员权限运行。请退出程序，右键启动程序或快捷方式，在「属性 → 兼容性」中勾选「以管理员身份运行此程序」，然后重新启动。': { 'en-US': 'The PC client requires the script to run with administrator privileges. Exit the program, right-click the launcher or shortcut, tick "Run this program as an administrator" under Properties → Compatibility, then start it again.', 'ja-JP': 'PCクライアントの利用には管理者権限が必要です。プログラムを終了し、起動プログラムまたはショートカットを右クリックして、「プロパティ → 互換性」で「管理者としてこのプログラムを実行する」にチェックを入れてから再起動してください。' },
   '公告中心': { 'en-US': 'Announcements', 'ja-JP': 'お知らせ' }, '暂无公告': { 'en-US': 'No announcements', 'ja-JP': 'お知らせはありません' }, '未读': { 'en-US': 'Unread', 'ja-JP': '未読' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
@@ -325,7 +327,15 @@ function openQueueItem(item: any) {
   router.push(`/i/${selectedName.value}/${menu?.page === 'tool' ? 'tool' : 'task'}/${item.command}`)
 }
 function toggleRail(menu: any) { railCollapsed.value[menu.key] = !railCollapsed.value[menu.key] }
-async function lifecycle(action: 'start' | 'stop', name = selectedName.value) { try { await api.post(`/api/${name}/${action}`); await loadInstances() } catch (exception: any) { error.value = exception.message } }
+async function lifecycle(action: 'start' | 'stop', name = selectedName.value) {
+  try { await api.post(`/api/${name}/${action}`); await loadInstances() } catch (exception: any) {
+    if (action === 'start' && exception?.code === 'admin_required') {
+      openAlertModal(t('管理员权限不足'), t('PC 客户端需要脚本以管理员权限运行。请退出程序，右键启动程序或快捷方式，在「属性 → 兼容性」中勾选「以管理员身份运行此程序」，然后重新启动。'))
+      return
+    }
+    error.value = exception.message
+  }
+}
 async function saveValue(field: Field, value: any) {
   try {
     const result = await api.patch(`/api/${selectedName.value}/config`, { key: field.key, value })
@@ -491,7 +501,7 @@ async function refreshLogs() { await loadLogFiles(); await queryLogs() }
 let logsKeywordTimer = 0
 watch([logsDate, logsSource, logsLevel], queryLogs)
 watch(logsKeyword, () => { window.clearTimeout(logsKeywordTimer); logsKeywordTimer = window.setTimeout(queryLogs, 400) })
-const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy' | 'confirm'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
+const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy' | 'confirm' | 'alert'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 const deployTemplateOptions = computed(() => [{ value: 'intl', label: t('国际') }, { value: 'cn', label: t('大陆') }, { value: 'docker-intl', label: t('Docker国际') }, { value: 'docker-cn', label: t('Docker国内') }])
 // Pre-fill the create form with the first free nkas-style name (nkas, nkas2,
@@ -515,9 +525,19 @@ function openConfirmModal(message: string, action: () => void | Promise<void>) {
   modalConfirmAction = action
   modal.value = { type: 'confirm', name: '', origin: '', template: '', busy: false }
 }
+// Information-only popup (no follow-up action), e.g. the administrator
+// privilege warning shown when a PC-client instance cannot start.
+const modalAlertTitle = ref('')
+const modalAlertMessage = ref('')
+function openAlertModal(title: string, message: string) {
+  modalAlertTitle.value = title
+  modalAlertMessage.value = message
+  modal.value = { type: 'alert', name: '', origin: '', template: '', busy: false }
+}
 async function confirmModal() {
   const m = modal.value
   if (m.busy) return
+  if (m.type === 'alert') { m.type = ''; return }
   m.busy = true
   try {
     if (m.type === 'create') {
@@ -1201,7 +1221,7 @@ onBeforeUnmount(() => {
     </div>
     <div v-if="modal.type" class="modal-mask" @click.self="modal.type = ''">
       <div class="modal-card">
-        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : t('删除') }}</h3>
+        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : modal.type === 'alert' ? modalAlertTitle : t('删除') }}</h3>
         <template v-if="modal.type === 'create'">
           <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
           <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
@@ -1211,10 +1231,11 @@ onBeforeUnmount(() => {
           <label class="modal-field">{{ t('模板') }}<AppSelect v-model="modal.template" :options="deployTemplateOptions"/></label>
         </template>
         <p v-else-if="modal.type === 'confirm'" class="modal-text">{{ modalConfirmMessage }}</p>
+        <p v-else-if="modal.type === 'alert'" class="modal-text">{{ modalAlertMessage }}</p>
         <p v-else class="modal-text">{{ t('删除') }} {{ modal.name }}？{{ t('此操作不可恢复。') }}</p>
         <div class="modal-actions">
-          <button class="btn" @click="modal.type = ''">{{ t('取消') }}</button>
-          <button class="btn" :class="modal.type === 'create' || modal.type === 'confirm' ? 'primary' : 'danger'" :disabled="modal.busy || (modal.type === 'create' && !modal.name.trim())" @click="confirmModal">{{ t('确定') }}</button>
+          <button v-if="modal.type !== 'alert'" class="btn" @click="modal.type = ''">{{ t('取消') }}</button>
+          <button class="btn" :class="modal.type === 'delete' || modal.type === 'resetDeploy' ? 'danger' : 'primary'" :disabled="modal.busy || (modal.type === 'create' && !modal.name.trim())" @click="confirmModal">{{ modal.type === 'alert' ? t('知道了') : t('确定') }}</button>
         </div>
       </div>
     </div>

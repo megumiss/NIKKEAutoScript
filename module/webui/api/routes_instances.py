@@ -1,12 +1,13 @@
 import json
 import os
 import re
+import sys
 from pathlib import Path
 
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 
-from module.config.utils import filepath_config, nkas_instance, nkas_template
+from module.config.utils import deep_get, filepath_config, nkas_instance, nkas_template, read_file
 from module.logger import logger
 from module.submodule.utils import get_config_mod, load_config
 from module.webui.api.deps import InstanceNotFound, validate_instance
@@ -18,6 +19,32 @@ from module.webui.updater import updater
 
 def _response_error(message, status_code=400):
     return JSONResponse({'status': 'error', 'message': message}, status_code=status_code)
+
+
+def _is_windows_admin():
+    """
+    Whether the current process holds administrator privileges.
+    Non-Windows platforms and undetectable cases are treated as admin so
+    the check never blocks a start it cannot reason about.
+    """
+    if sys.platform != 'win32':
+        return True
+    try:
+        import ctypes
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except (AttributeError, OSError):
+        return True
+
+
+def _pc_client_requires_admin(name):
+    """
+    The PC client (NKAS.Client.Platform == 'win') requires administrator
+    privileges to capture and control the game window.
+    """
+    if _is_windows_admin():
+        return False
+    platform = deep_get(read_file(filepath_config(name)), keys='NKAS.Client.Platform', default='adb')
+    return platform == 'win'
 
 
 # Lives outside ./config because nkas_instance() treats every *.json there
@@ -94,6 +121,13 @@ async def start(request: Request):
         manager = ProcessManager.get_manager(name)
         if manager.alive:
             return _response_error(f'Instance "{name}" is already running.', 409)
+        if _pc_client_requires_admin(name):
+            logger.warning(f'Instance "{name}" start blocked: PC client requires administrator privileges')
+            return JSONResponse({
+                'status': 'error', 'code': 'admin_required',
+                'message': 'PC client requires NKAS to run as administrator. '
+                           'Restart NKAS with "Run as administrator".',
+            }, status_code=403)
         manager.start(func=get_config_mod(name), ev=updater.event)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
     results = []
@@ -101,6 +135,13 @@ async def start(request: Request):
         manager = ProcessManager.get_manager(instance)
         if manager.alive:
             results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
+            continue
+        if _pc_client_requires_admin(instance):
+            logger.warning(f'Instance "{instance}" start blocked: PC client requires administrator privileges')
+            results.append({
+                'instance': instance, 'status': 'error', 'code': 'admin_required',
+                'message': 'PC client requires administrator privileges.',
+            })
             continue
         manager.start(func=get_config_mod(instance), ev=updater.event)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
