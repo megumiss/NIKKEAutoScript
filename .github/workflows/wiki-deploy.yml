@@ -53,7 +53,9 @@ jobs:
 
           # wiki 源文件按语言拆到 zh-cn/ 与 en/ 目录：
           # docsify 会把正文中 #/ 开头的链接误判为页内锚点（且带点号的路由路径有缺陷），
-          # 因此站内链接改写为相对链接（同语言 Page.md，跨语言 ../en/Page.md）
+          # 因此站内链接改写为相对链接（同语言 Page.md，跨语言 ../en/Page.md）。
+          # 图片 assets/ 路径保持原样：hash 路由下浏览器始终以 /wiki/ 为基准解析，
+          # assets/... 正好落在 /wiki/assets/...，加 ../ 反而会跳出 wiki 目录
           WIKI_URL="https://github.com/${GITHUB_REPOSITORY}/wiki"
           for f in wiki/*.md; do
             base=$(basename "$f" .md)
@@ -67,8 +69,6 @@ jobs:
             fi
             sed -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)\.zh-CN|$zh_rep|g" \
                 -e "s|$WIKI_URL/\([A-Za-z0-9-]*\)|$en_rep|g" \
-                -e 's|](assets/|](../assets/|g' \
-                -e 's|src="assets/|src="../assets/|g' \
                 "$f" > "$out"
           done
 
