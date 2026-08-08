@@ -162,7 +162,7 @@ main { display: block; padding-top: var(--nav-height); }
 }
 
 /* ===== 侧边栏内容 ===== */
-.sidebar-nav { padding: 8px 18px 0; }
+.sidebar-nav { padding: 14px 18px 0; }
 .sidebar-nav > p { margin: 12px 0 4px; color: var(--text-dim); font-size: 13px; }
 .sidebar-nav ul { list-style: none; margin: 0; padding: 0; }
 .sidebar-nav ul li { margin: 1px 0; }
@@ -185,22 +185,26 @@ main { display: block; padding-top: var(--nav-height); }
 .sidebar-nav hr { border: none; border-top: 1px solid var(--card-border); margin: 12px 0; }
 .sidebar-nav img { display: none; } /* 分区标题里的 emoji 图标不需要 */
 
-/* 搜索框 */
-.search { padding: 14px 16px 10px; border-bottom: 1px solid var(--card-border); }
-.search input {
-    width: 100%; padding: 7px 12px;
+/* 搜索框：位于顶部导航，结果为下拉面板 */
+.site-nav .search { position: relative; display: flex; align-items: center; }
+.site-nav .search input {
+    width: 170px; padding: 6px 12px;
     background: var(--card); border: 1px solid var(--card-border); border-radius: 8px;
-    color: var(--text); font-size: 14px; font-family: inherit; outline: none;
-    transition: border-color .2s;
+    color: var(--text); font-size: 13.5px; font-family: inherit; outline: none;
+    transition: border-color .2s, width .2s;
     -webkit-appearance: none; appearance: none;
 }
-.search input:focus { border-color: var(--accent); }
-.search input::placeholder { color: var(--text-dim); }
-.search .results-panel {
-    margin-top: 8px; padding: 4px 0;
+.site-nav .search input:focus { border-color: var(--accent); width: 240px; }
+.site-nav .search input::placeholder { color: var(--text-dim); }
+.site-nav .search .results-panel {
+    position: absolute; top: calc(100% + 10px); right: 0; z-index: 400;
+    width: min(360px, 88vw); max-height: 65vh; overflow-y: auto;
+    margin: 0; padding: 6px 16px;
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(15,20,40,.18);
     color: var(--text-dim); font-size: 13px;
 }
-.search .results-panel:empty { display: none; }
+.site-nav .search .results-panel:empty { display: none; }
 .search .matching-post { border-bottom: 1px solid var(--card-border); padding: 8px 0; }
 .search .matching-post:last-child { border-bottom: none; }
 .search .matching-post a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; }
@@ -363,12 +367,17 @@ main { display: block; padding-top: var(--nav-height); }
         transform: translateX(0);
         box-shadow: 6px 0 24px rgba(0,0,0,.18);
     }
+    .site-nav .search { flex: 1; min-width: 0; }
+    .site-nav .search input, .site-nav .search input:focus { width: 100%; }
     .content { margin-left: 0 !important; }
     .sidebar-toggle { display: block; transition: left .25s ease; }
     body.close .sidebar-toggle { left: calc(min(300px, 84vw) + 10px); }
     .markdown-section { padding: 0 18px 60px; }
     .markdown-section h1 { font-size: 24px; }
     .markdown-section h2 { font-size: 19px; }
+}
+@media (max-width: 480px) {
+    .site-nav .brand span { display: none; } /* 超小屏给搜索框让位 */
 }
 </style>
 </head>
@@ -434,6 +443,21 @@ window.$docsify = {
     subMaxLevel: 2, // 当前页的 h2 作为页内目录显示在侧边栏
     auto2top: true,
     executeScript: false,
+    plugins: [
+        /* 搜索框默认渲染在侧边栏内，挪到顶部导航（主题切换按钮前） */
+        function (hook) {
+            function moveSearch() {
+                var box = document.querySelector('.sidebar .search');
+                var toggle = document.getElementById('theme-toggle');
+                if (box && toggle) toggle.parentNode.insertBefore(box, toggle);
+            }
+            hook.ready(function () {
+                moveSearch();
+                setTimeout(moveSearch, 300);
+            });
+            hook.doneEach(moveSearch);
+        }
+    ],
     search: {
         paths: 'auto',
         placeholder: initialZh ? '搜索文档…' : 'Search documentation…',
