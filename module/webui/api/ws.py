@@ -6,6 +6,7 @@ import re
 import threading
 
 from starlette.websockets import WebSocket, WebSocketDisconnect
+from websockets.exceptions import ConnectionClosed
 
 from module.config.utils import nkas_instance
 from module.logger import HTMLConsole
@@ -185,7 +186,7 @@ async def log_socket(websocket: WebSocket):
                 continue
             fragment = await loop.run_in_executor(None, renderer.render, entry)
             await websocket.send_json({'type': 'log', 'html': fragment})
-    except (WebSocketDisconnect, RuntimeError):
+    except (WebSocketDisconnect, RuntimeError, ConnectionClosed):
         pass
     finally:
         LogBroker.unsubscribe(name, subscriber)
@@ -202,7 +203,7 @@ async def state_socket(websocket: WebSocket):
                     await websocket.send_json({'type': 'state', 'name': name, 'state': value})
             previous = current
             await asyncio.sleep(1)
-    except (WebSocketDisconnect, RuntimeError):
+    except (WebSocketDisconnect, RuntimeError, ConnectionClosed):
         pass
 
 
@@ -221,5 +222,5 @@ async def queue_socket(websocket: WebSocket):
                 await websocket.send_json({'type': 'queue', 'name': name, **current})
                 previous = encoded
             await asyncio.sleep(10)
-    except (WebSocketDisconnect, RuntimeError, OSError):
+    except (WebSocketDisconnect, RuntimeError, OSError, ConnectionClosed):
         pass
