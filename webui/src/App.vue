@@ -23,6 +23,9 @@ const router = useRouter()
 // dev_tools/replace_project_icons.py.
 const brandIcon = '/static/gui/icon/nkas.png'
 const instances = ref<Instance[]>([])
+// Serial execution state from GET /api/serial/state; null when serial is off
+// or the backend is older than this feature.
+const serialState = ref<any>(null)
 const schema = ref<any>({ menus: [], tasks: {} })
 const queue = ref<any>({ running: [], pending: [], waiting: [] })
 // Entries carry a stable id so the v-for patch is append/remove-only instead
@@ -143,6 +146,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '重启中…': { 'en-US': 'Restarting…', 'ja-JP': '再起動中…' }, '后端正在重启，页面将自动刷新…': { 'en-US': 'Backend restarting, the page will reload…', 'ja-JP': 'バックエンド再起動中、ページを再読み込みします…' }, '重启超时，请手动刷新页面': { 'en-US': 'Restart timed out, please reload manually', 'ja-JP': '再起動がタイムアウト、手動で再読み込みしてください' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '队列中': { 'en-US': 'Queued', 'ja-JP': 'キュー中' }, '等待中': { 'en-US': 'Waiting', 'ja-JP': '待機中' },
+  '等待令牌': { 'en-US': 'Waiting for turn', 'ja-JP': 'ターン待ち' },
   '暂无运行任务': { 'en-US': 'No running task', 'ja-JP': '実行中のタスクなし' }, '队列为空': { 'en-US': 'Queue is empty', 'ja-JP': 'キューは空です' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
@@ -271,6 +275,19 @@ function formatDate(value: string) { const m = String(value || '').match(/^(\d{4
 
 async function loadInstances() {
   try { instances.value = await api.get('/api/instances') } catch (exception: any) { error.value = exception.message }
+  await loadSerial()
+}
+async function loadSerial() {
+  try { serialState.value = await api.get('/api/serial/state') } catch { serialState.value = null }
+}
+// An instance is "waiting for the token" when serial is on, it is in the
+// group, alive, not the current holder, and has a task already due.
+function serialWaiting(name: string) {
+  const serial = serialState.value
+  if (!serial?.enable) return false
+  const info = serial.instances?.[name]
+  if (!info || info.current || !info.alive) return false
+  return Boolean(info.due_at) && new Date(info.due_at).getTime() <= Date.now()
 }
 async function loadSystem() {
   try {
@@ -803,6 +820,7 @@ async function healthCheck() {
   try {
     const status = await api.get('/api/system/status')
     watchUpdaterState(status.updater_state)
+    await loadSerial()
     if (backendDown.value) {
       backendDown.value = false
       workspaceName = ''
@@ -904,6 +922,7 @@ onBeforeUnmount(() => {
     <main class="main">
       <header class="topbar" data-tauri-drag-region @mousedown="onTopbarMouseDown">
         <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
+        <span v-if="isWorkspace && serialWaiting(selectedName)" class="status-pill idle">{{ t('等待令牌') }}</span>
         <span v-if="isWorkspace" class="status-pill" :class="stateClass(selectedInstance?.state)">{{ stateText(selectedInstance?.state) }}</span>
         <div class="topbar-right">
           <button class="tb-btn tb-bell" :title="t('公告中心')" @click="openAnnouncementCenter">
@@ -947,7 +966,8 @@ onBeforeUnmount(() => {
             <div class="inst-card-head">
               <span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>
               <div><h3>{{ instance.name }}</h3><div v-if="instance.mod !== 'nkas'" class="sub">mod: {{ instance.mod }}</div></div>
-              <span class="status-pill" :class="stateClass(instance.state)" style="margin-left:auto"><span v-if="instance.state === 1" class="pulse"></span>{{ instance.state === 1 ? t('运行中') : t('待机') }}</span>
+              <span v-if="serialWaiting(instance.name)" class="status-pill idle" style="margin-left:auto">{{ t('等待令牌') }}</span>
+              <span class="status-pill" :class="stateClass(instance.state)" :style="serialWaiting(instance.name) ? '' : 'margin-left:auto'"><span v-if="instance.state === 1" class="pulse"></span>{{ instance.state === 1 ? t('运行中') : t('待机') }}</span>
             </div>
             <div class="inst-now"><span class="k">{{ t('当前任务') }}</span><span>{{ instance.current_task || t('无') }}</span></div>
             <div class="inst-now"><span class="k">{{ t('下一任务') }}</span><span>{{ instance.next_task || '—' }}</span></div>
@@ -1122,6 +1142,7 @@ onBeforeUnmount(() => {
                   <div v-else-if="field.widget === 'multiselect'" class="deploy-multisel">
                     <label v-for="opt in field.options" :key="opt.value" class="deploy-multi-opt" :class="{ on: (field.value || []).includes(opt.value) }"><input type="checkbox" hidden :checked="(field.value || []).includes(opt.value)" @change="toggleDeployMulti(field, opt.value)">{{ opt.label }}</label>
                   </div>
+                  <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value || ''" :options="field.options" :placeholder="t('添加')" @change="(value: string) => saveDeployValue(field, value)"/>
                   <input v-else :type="field.widget === 'number' ? 'number' : 'text'" :value="field.value ?? ''" @change="saveDeployField(field, $event)">
                 </div>
               </div>

@@ -536,6 +536,65 @@ class NikkeAutoScript:
             if self.config.should_reload():
                 return False
 
+    def serial_report_due(self, due_at):
+        """
+        串行模式下向编排器上报最近一个待跑任务的时间。
+
+        Args:
+            due_at (datetime):
+        """
+        from module.config.serial_state import read_serial_config, report_due
+
+        config = read_serial_config()
+        if not config.enable or self.config_name not in config.group:
+            return
+        try:
+            report_due(self.config_name, due_at)
+        except Exception as e:
+            logger.warning(f'Serial report_due failed: {e}')
+
+    def serial_wait_turn(self, task):
+        """
+        串行模式闸门：等待编排器授予令牌，保证同一时刻只有一个实例操作设备。
+        仅在串行开启、本实例在 SerialGroup 内、且任务需要操作设备时生效。
+
+        Args:
+            task (str): 即将执行的任务名
+
+        Returns:
+            bool: True 表示可以执行；False 表示等待过令牌（或串行配置有变），
+                  需要重新加载配置并重新取任务，避免执行过期任务。
+        """
+        if task in self.config.INDEPENDENT_TASKS:
+            return True
+        from module.config.serial_state import is_my_turn, read_serial_config
+
+        config = read_serial_config()
+        if not config.enable or self.config_name not in config.group:
+            return True
+        if is_my_turn(self.config_name):
+            return True
+        logger.info('Serial mode: waiting for turn')
+        self.config.start_watching()
+        while 1:
+            if self.stop_event is not None:
+                if self.stop_event.is_set():
+                    logger.info('Update event detected')
+                    logger.info(f'[{self.config_name}] exited. Reason: Update')
+                    exit(0)
+
+            time.sleep(5)
+
+            config = read_serial_config()
+            if not config.enable or self.config_name not in config.group:
+                logger.info('Serial mode disabled, continue')
+                return False
+            if is_my_turn(self.config_name):
+                logger.info('Serial mode: got the turn')
+                return False
+            if self.config.should_reload():
+                return False
+
     def get_next_task(self):
         """
         Returns:
@@ -552,6 +611,7 @@ class NikkeAutoScript:
                 release_resources(next_task=task.command)
 
             if task.next_run > datetime.now():
+                self.serial_report_due(task.next_run)
                 logger.info(f'Wait until {task.next_run} for task `{task.command}`')
                 self.is_first_task = False
                 method = self.config.Optimization_WhenTaskQueueEmpty
@@ -615,6 +675,8 @@ class NikkeAutoScript:
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
+            # 任务已到期，上报"现在有事可做"，供编排器授予令牌
+            self.serial_report_due(datetime.now())
             break
 
         return task.command
@@ -642,6 +704,10 @@ class NikkeAutoScript:
             #     self.config.task_call('Restart')
             # Get task
             task = self.get_next_task()
+            # 串行模式：等待令牌，等待过则重新取任务
+            if not self.serial_wait_turn(task):
+                del_cached_property(self, 'config')
+                continue
             # 妮游社任务不需要device，不需要操作游戏
             if task not in self.config.INDEPENDENT_TASKS:
                 # Init device and change server

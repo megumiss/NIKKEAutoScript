@@ -228,6 +228,9 @@ def startup():
         task_handler.add(updater.check_update, updater.delay)
     task_handler.add(updater.schedule_update(), 86400)
     task_handler.start()
+    # 多实例顺序执行编排器（SerialEnable 开启时生效）
+    from module.webui.serial_orchestrator import serial_orchestrator
+    serial_orchestrator.start(ev=updater.event)
     # if State.deploy_config.DiscordRichPresence:
     #     init_discord_rpc()
     # if State.deploy_config.StartOcrServer:
@@ -245,6 +248,8 @@ def clearup():
     all process will NOT EXIT after close electron app.
     """
     logger.info("Start clearup")
+    from module.webui.serial_orchestrator import serial_orchestrator
+    serial_orchestrator.stop()
     RemoteAccess.kill_ssh_process()
     # close_discord_rpc()
     # stop_ocr_server_process()
