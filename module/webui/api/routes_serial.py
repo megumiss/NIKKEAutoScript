@@ -25,6 +25,8 @@ async def state(_: Request):
             'failed': name in s['failed'],
             'retried': name in s['retried'],
             'current': s.get('current') == name,
+            # 实例进程上报的等待令牌状态；进程已退出时忽略残留标记
+            'waiting': bool(s['instances'].get(name, {}).get('waiting')) and manager.alive,
         }
     return JSONResponse({
         'enable': config.enable,

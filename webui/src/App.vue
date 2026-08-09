@@ -130,7 +130,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '自动滚动': { 'en-US': 'Auto-scroll', 'ja-JP': '自動スクロール' }, '当前任务': { 'en-US': 'Current task', 'ja-JP': '現在のタスク' }, '清空': { 'en-US': 'Clear', 'ja-JP': 'クリア' },
   '下一任务': { 'en-US': 'Next task', 'ja-JP': '次のタスク' }, '启动': { 'en-US': 'Start', 'ja-JP': '開始' }, '停止': { 'en-US': 'Stop', 'ja-JP': '停止' },
   '任务设置': { 'en-US': 'Task settings', 'ja-JP': 'タスク設定' }, '实例总数': { 'en-US': 'Instances', 'ja-JP': 'インスタンス数' },
-  '运行中': { 'en-US': 'Running', 'ja-JP': '実行中' }, '空闲': { 'en-US': 'Idle', 'ja-JP': '待機中' }, '调度运行中': { 'en-US': 'Scheduler running', 'ja-JP': 'スケジューラー実行中' }, '已停止或异常': { 'en-US': 'Stopped or failed', 'ja-JP': '停止または異常' }, '正在导入…': { 'en-US': 'Importing…', 'ja-JP': 'インポート中…' },
+  '运行中': { 'en-US': 'Running', 'ja-JP': '実行中' }, '空闲': { 'en-US': 'Idle', 'ja-JP': '待機中' }, '已停止或异常': { 'en-US': 'Stopped or failed', 'ja-JP': '停止または異常' }, '正在导入…': { 'en-US': 'Importing…', 'ja-JP': 'インポート中…' },
   '无': { 'en-US': 'None', 'ja-JP': 'なし' }, '进入 →': { 'en-US': 'Open →', 'ja-JP': '開く →' }, '＋ 新建实例': { 'en-US': '＋ New instance', 'ja-JP': '＋ 新しいインスタンス' },
   '导入配置': { 'en-US': 'Import configuration', 'ja-JP': '設定をインポート' }, '名称': { 'en-US': 'Name', 'ja-JP': '名前' }, '状态': { 'en-US': 'Status', 'ja-JP': '状態' }, '操作': { 'en-US': 'Actions', 'ja-JP': '操作' },
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
@@ -146,7 +146,6 @@ const staticLabels: Record<string, Record<string, string>> = {
   '重启中…': { 'en-US': 'Restarting…', 'ja-JP': '再起動中…' }, '后端正在重启，页面将自动刷新…': { 'en-US': 'Backend restarting, the page will reload…', 'ja-JP': 'バックエンド再起動中、ページを再読み込みします…' }, '重启超时，请手动刷新页面': { 'en-US': 'Restart timed out, please reload manually', 'ja-JP': '再起動がタイムアウト、手動で再読み込みしてください' },
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '队列中': { 'en-US': 'Queued', 'ja-JP': 'キュー中' }, '等待中': { 'en-US': 'Waiting', 'ja-JP': '待機中' },
-  '等待令牌': { 'en-US': 'Waiting for turn', 'ja-JP': 'ターン待ち' },
   '暂无运行任务': { 'en-US': 'No running task', 'ja-JP': '実行中のタスクなし' }, '队列为空': { 'en-US': 'Queue is empty', 'ja-JP': 'キューは空です' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
@@ -193,7 +192,7 @@ const isLogs = computed(() => route.path === '/logs')
 const isAbout = computed(() => route.path === '/about')
 const isWorkspace = computed(() => Boolean(selectedName.value))
 const selectedInstance = computed(() => instances.value.find(item => item.name === selectedName.value))
-const runningCount = computed(() => instances.value.filter(item => item.state === 1).length)
+const runningCount = computed(() => instances.value.filter(item => item.state === 1 && !serialWaiting(item.name)).length)
 const visibleMenus = computed(() => schema.value.menus.map((menu: any) => ({ ...menu, tasks: menu.tasks.filter((task: any) => !taskFilter.value || task.name.toLowerCase().includes(taskFilter.value.toLowerCase())) })).filter((menu: any) => menu.tasks.length))
 let stateSocket: JsonSocket | undefined
 let logSocket: JsonSocket | undefined
@@ -206,8 +205,11 @@ let workspaceName = ''
 let socketsName = ''
 
 function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.some((group: any) => group.fields.some((field: Field) => field.key.endsWith('.Scheduler.Enable') && field.value)) }
-function stateText(state?: number) { return state === 1 ? t('调度运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
+function stateText(state?: number) { return state === 1 ? t('运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
 function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
+// 串行模式下等待中优先于进程状态展示：排队的实例不再是"运行中"
+function displayStatus(name: string, state?: number) { return serialWaiting(name) ? t('等待中') : stateText(state) }
+function displayStatusClass(name: string, state?: number) { return serialWaiting(name) ? 'idle' : stateClass(state) }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
 function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
@@ -280,14 +282,16 @@ async function loadInstances() {
 async function loadSerial() {
   try { serialState.value = await api.get('/api/serial/state') } catch { serialState.value = null }
 }
-// An instance is "waiting for the token" when serial is on, it is in the
-// group, alive, not the current holder, and has a task already due.
+// An instance is "waiting" when serial is on, it is in the group, alive,
+// not the current holder, and the instance itself reported the waiting
+// state (waiting for the turn, or queued until its next task is due).
+// Backed by /api/serial/state -> instances[name].waiting.
 function serialWaiting(name: string) {
   const serial = serialState.value
   if (!serial?.enable) return false
   const info = serial.instances?.[name]
   if (!info || info.current || !info.alive) return false
-  return Boolean(info.due_at) && new Date(info.due_at).getTime() <= Date.now()
+  return Boolean(info.waiting)
 }
 async function loadSystem() {
   try {
@@ -875,9 +879,9 @@ onBeforeUnmount(() => {
       <div class="side-section">
         <div class="side-label">{{ t('实例') }}</div>
         <button v-for="instance in instances" :key="instance.name" class="side-item" :class="{ active: selectedName === instance.name }" @click="enter(instance.name)">
-          <span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>
+          <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state)"></span></span>
           <span class="side-text">{{ instance.name }}</span>
-          <span class="badge" :class="{ 'idle-badge': instance.state !== 1 }">{{ instance.state === 1 ? t('运行中') : t('空闲') }}</span>
+          <span class="badge" :class="{ 'idle-badge': displayStatusClass(instance.name, instance.state) === 'idle' }">{{ displayStatus(instance.name, instance.state) }}</span>
         </button>
       </div>
       <div class="side-section">
@@ -897,8 +901,8 @@ onBeforeUnmount(() => {
     <aside v-if="isWorkspace" class="rail">
       <div class="rail-head">
         <div class="rail-inst">
-          <span class="inst-avatar" :class="{ idle: selectedInstance?.state !== 1 }">{{ initials(selectedName) }}<span class="ring" :class="stateClass(selectedInstance?.state)"></span></span>
-          <div><div class="rail-inst-name">{{ selectedName }}</div><div class="rail-inst-state">{{ stateText(selectedInstance?.state) }}</div></div>
+          <span class="inst-avatar" :class="{ idle: displayStatusClass(selectedName, selectedInstance?.state) === 'idle' }">{{ initials(selectedName) }}<span class="ring" :class="displayStatusClass(selectedName, selectedInstance?.state)"></span></span>
+          <div><div class="rail-inst-name">{{ selectedName }}</div><div class="rail-inst-state">{{ displayStatus(selectedName, selectedInstance?.state) }}</div></div>
         </div>
         <label class="rail-search">🔍 <input v-model="taskFilter" :placeholder="t('筛选任务…')"><button v-if="taskFilter" type="button" class="rail-clear" @click.prevent="taskFilter = ''">✕</button></label>
       </div>
@@ -922,8 +926,7 @@ onBeforeUnmount(() => {
     <main class="main">
       <header class="topbar" data-tauri-drag-region @mousedown="onTopbarMouseDown">
         <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
-        <span v-if="isWorkspace && serialWaiting(selectedName)" class="status-pill idle">{{ t('等待令牌') }}</span>
-        <span v-if="isWorkspace" class="status-pill" :class="stateClass(selectedInstance?.state)">{{ stateText(selectedInstance?.state) }}</span>
+        <span v-if="isWorkspace" class="status-pill" :class="displayStatusClass(selectedName, selectedInstance?.state)">{{ displayStatus(selectedName, selectedInstance?.state) }}</span>
         <div class="topbar-right">
           <button class="tb-btn tb-bell" :title="t('公告中心')" @click="openAnnouncementCenter">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2a4.6 4.6 0 0 0-4.6 4.6v2.6c0 .5-.17 1-.47 1.42l-1.05 1.5h12.24l-1.05-1.5a2.3 2.3 0 0 1-.47-1.42V7.8A4.6 4.6 0 0 0 10 3.2Z"/><path d="M8.3 15.6a1.8 1.8 0 0 0 3.4 0"/></svg>
@@ -962,12 +965,11 @@ onBeforeUnmount(() => {
         </div>
         <div class="section-title">{{ t('实例') }}</div>
         <div class="inst-grid">
-          <article v-for="instance in instances" :key="instance.name" class="card inst-card hoverable" :class="{ 'is-running': instance.state === 1 }">
+          <article v-for="instance in instances" :key="instance.name" class="card inst-card hoverable" :class="{ 'is-running': displayStatusClass(instance.name, instance.state) === 'running' }">
             <div class="inst-card-head">
-              <span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>
+              <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state)"></span></span>
               <div><h3>{{ instance.name }}</h3><div v-if="instance.mod !== 'nkas'" class="sub">mod: {{ instance.mod }}</div></div>
-              <span v-if="serialWaiting(instance.name)" class="status-pill idle" style="margin-left:auto">{{ t('等待令牌') }}</span>
-              <span class="status-pill" :class="stateClass(instance.state)" :style="serialWaiting(instance.name) ? '' : 'margin-left:auto'"><span v-if="instance.state === 1" class="pulse"></span>{{ instance.state === 1 ? t('运行中') : t('待机') }}</span>
+              <span class="status-pill" :class="displayStatusClass(instance.name, instance.state)" style="margin-left:auto"><span v-if="displayStatusClass(instance.name, instance.state) === 'running'" class="pulse"></span>{{ displayStatus(instance.name, instance.state) }}</span>
             </div>
             <div class="inst-now"><span class="k">{{ t('当前任务') }}</span><span>{{ instance.current_task || t('无') }}</span></div>
             <div class="inst-now"><span class="k">{{ t('下一任务') }}</span><span>{{ instance.next_task || '—' }}</span></div>
@@ -1090,9 +1092,9 @@ onBeforeUnmount(() => {
             <thead><tr><th>{{ t('名称') }}</th><th>Mod</th><th>{{ t('状态') }}</th><th>{{ t('备注') }}</th><th>{{ t('操作') }}</th></tr></thead>
             <tbody>
               <tr v-for="instance in instances" :key="instance.name">
-                <td><span class="cell-inst"><span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>{{ instance.name }}</span></td>
+                <td><span class="cell-inst"><span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state)"></span></span>{{ instance.name }}</span></td>
                 <td>{{ instance.mod }}</td>
-                <td><span class="status-pill" :class="stateClass(instance.state)">{{ stateText(instance.state) }}</span></td>
+                <td><span class="status-pill" :class="displayStatusClass(instance.name, instance.state)">{{ displayStatus(instance.name, instance.state) }}</span></td>
                 <td><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
                 <td><a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></td>
               </tr>

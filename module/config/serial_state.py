@@ -174,6 +174,37 @@ def report_due(name, due_at):
     modify_state(_fn)
 
 
+def report_waiting(name):
+    """
+    实例上报自己正在等待串行令牌（任务已到期但未轮到）。
+
+    Args:
+        name (str): 实例名
+    """
+    def _fn(state):
+        entry = state['instances'].setdefault(name, {})
+        entry['waiting'] = True
+        entry['updated'] = time.time()
+
+    modify_state(_fn)
+
+
+def clear_waiting(name):
+    """
+    实例离开等待令牌状态（拿到令牌 / 串行关闭 / 配置变化 / 进程退出）。
+
+    Args:
+        name (str): 实例名
+    """
+    def _fn(state):
+        entry = state['instances'].get(name)
+        if entry and entry.get('waiting'):
+            entry.pop('waiting', None)
+            entry['updated'] = time.time()
+
+    modify_state(_fn)
+
+
 def get_due_at(state, name):
     """
     Returns:
