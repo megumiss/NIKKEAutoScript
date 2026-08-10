@@ -5,6 +5,7 @@ import { api } from './api/client'
 import { JsonSocket } from './api/ws'
 import AppSelect from './components/AppSelect.vue'
 import EventCalendar from './components/EventCalendar.vue'
+import MaintenanceBanner from './components/MaintenanceBanner.vue'
 import FieldItemTable from './components/config/FieldItemTable.vue'
 import FieldPathPicker from './components/config/FieldPathPicker.vue'
 import FieldPriority from './components/config/FieldPriority.vue'
@@ -953,6 +954,7 @@ onBeforeUnmount(() => {
           </template>
         </div>
       </header>
+      <MaintenanceBanner :language="systemStatus.language" />
       <div v-if="notices.length" class="notice-stack">
         <article v-for="notice in notices" :key="notice.key" class="notice-card" :class="notice.type">
           <div>
