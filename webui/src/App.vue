@@ -94,6 +94,9 @@ const taskFilter = ref('')
 const collapsed = ref<Record<string, boolean>>({})
 const railCollapsed = ref<Record<string, boolean>>({})
 const sidebarCollapsed = ref(false)
+// 移动端抽屉导航：'' = 关闭，'sidebar' = 总导航抽屉，'rail' = 任务列表抽屉。
+// 桌面端（>768px）此状态无效果，布局保持不变。
+const mobileNav = ref<'sidebar' | 'rail' | ''>('')
 const schemaReady = ref(false)
 const importBusy = ref<Record<string, boolean>>({})
 const notifyTestBusy = ref(false)
@@ -326,10 +329,10 @@ async function loadWorkspace() {
     error.value = ''
   } catch (exception: any) { error.value = exception.message }
 }
-function dashboard() { router.push('/') }
+function dashboard() { mobileNav.value = ''; router.push('/') }
 function calendarError(message: string) { error.value = message }
-function enter(name: string) { router.push(`/i/${name}/overview`) }
-function openTask(task: any, page: string) { router.push(`/i/${selectedName.value}/${page}/${task.key}`) }
+function enter(name: string) { mobileNav.value = ''; router.push(`/i/${name}/overview`) }
+function openTask(task: any, page: string) { mobileNav.value = ''; router.push(`/i/${selectedName.value}/${page}/${task.key}`) }
 function openQueueItem(item: any) {
   const menu = schema.value.menus.find((item2: any) => item2.tasks.some((task: any) => task.key === item.command))
   router.push(`/i/${selectedName.value}/${menu?.page === 'tool' ? 'tool' : 'task'}/${item.command}`)
@@ -836,6 +839,8 @@ async function healthCheck() {
 }
 onMounted(async () => { if (sessionStorage.getItem('nkas-desktop-updated')) { sessionStorage.removeItem('nkas-desktop-updated'); notify(t('启动器更新完成'), 'ok', 4000) } if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); if (route.path === '/' && systemStatus.value.home_page === 'instance' && instances.value.length) { router.replace(`/i/${instances.value[0].name}/overview`) } else { await loadWorkspace() } startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
+  // 路由变化时收起移动端抽屉，避免残留遮挡主内容。
+  mobileNav.value = ''
   // Only a different instance needs a schema reload and socket swap; task
   // switches and global pages retain the current instance's log scrollback.
   if (selectedName.value && selectedName.value !== workspaceName) {
@@ -850,7 +855,10 @@ watch(() => route.fullPath, async () => {
   if (isLogs.value) await refreshLogs()
 })
 watch(logTick, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
+// 抽屉打开时锁定背景滚动，避免移动端误触翻页。
+watch(mobileNav, open => { document.body.style.overflow = open ? 'hidden' : '' })
 onBeforeUnmount(() => {
+  document.body.style.overflow = ''
   window.removeEventListener('resize', syncMaximized)
   stateSocket?.close()
   logSocket?.close()
@@ -866,7 +874,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="app" :class="{ 'legacy-electron': legacyElectron, 'side-collapsed': sidebarCollapsed }">
     <div class="app-body">
-    <nav class="sidebar">
+    <nav class="sidebar" :class="{ 'mobile-open': mobileNav === 'sidebar' }">
       <div class="brand">
         <img class="brand-logo brand-logo-img" :src="brandIcon" alt="NKAS">
         <div class="brand-text"><div class="brand-name">NKAS</div><div class="brand-sub">NIKKE AUTO SCRIPT</div></div>
@@ -897,7 +905,7 @@ onBeforeUnmount(() => {
         <AppSelect class="lang-select" :model-value="systemStatus.language" :options="languageOptions" @change="setLanguage"/>
       </div>
     </nav>
-    <aside v-if="isWorkspace" class="rail">
+    <aside v-if="isWorkspace" class="rail" :class="{ 'mobile-open': mobileNav === 'rail' }">
       <div class="rail-head">
         <div class="rail-inst">
           <span class="inst-avatar" :class="{ idle: selectedInstance?.state !== 1 }">{{ initials(selectedName) }}<span class="ring" :class="stateClass(selectedInstance?.state)"></span></span>
@@ -924,6 +932,9 @@ onBeforeUnmount(() => {
     </aside>
     <main class="main">
       <header class="topbar" data-tauri-drag-region @mousedown="onTopbarMouseDown">
+        <button class="tb-btn tb-menu" :title="t('菜单')" @click="mobileNav = mobileNav === 'sidebar' ? '' : 'sidebar'">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 5.5h14M3 10h14M3 14.5h14"/></svg>
+        </button>
         <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
         <span v-if="isWorkspace" class="status-pill" :class="stateClass(selectedInstance?.state)">{{ stateText(selectedInstance?.state) }}</span>
         <div class="topbar-right">
@@ -1095,11 +1106,11 @@ onBeforeUnmount(() => {
             <thead><tr><th>{{ t('名称') }}</th><th>Mod</th><th>{{ t('状态') }}</th><th>{{ t('备注') }}</th><th>{{ t('操作') }}</th></tr></thead>
             <tbody>
               <tr v-for="instance in instances" :key="instance.name">
-                <td><span class="cell-inst"><span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>{{ instance.name }}</span></td>
-                <td>{{ instance.mod }}</td>
-                <td><span class="status-pill" :class="stateClass(instance.state)">{{ stateText(instance.state) }}</span></td>
-                <td><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
-                <td><a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></td>
+                <td :data-label="t('名称')"><span class="cell-inst"><span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>{{ instance.name }}</span></td>
+                <td :data-label="t('Mod')">{{ instance.mod }}</td>
+                <td :data-label="t('状态')"><span class="status-pill" :class="stateClass(instance.state)">{{ stateText(instance.state) }}</span></td>
+                <td :data-label="t('备注')"><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
+                <td :data-label="t('操作')"><a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></td>
               </tr>
             </tbody>
           </table>
@@ -1222,6 +1233,12 @@ onBeforeUnmount(() => {
       </section>
     </main>
     </div>
+    <!-- 移动端：贴右边缘的悬浮把手，点击滑出/收起任务列表抽屉 -->
+    <button v-if="isWorkspace" class="rail-trigger" :class="{ open: mobileNav === 'rail' }" :title="mobileNav === 'rail' ? t('收起任务列表') : t('任务列表')" @click="mobileNav = mobileNav === 'rail' ? '' : 'rail'">
+      <svg v-if="mobileNav === 'rail'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>
+    </button>
+    <div v-if="mobileNav" class="mobile-scrim" @click="mobileNav = ''"></div>
     <div v-if="backendDown" class="backend-down"><div class="backend-down-card">{{ t('后端连接中断，正在等待恢复…') }}</div></div>
     <div v-if="announcementCenterOpen" class="modal-mask" @click.self="announcementCenterOpen = false">
       <div class="modal-card announcement-card">
