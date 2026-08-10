@@ -8,7 +8,7 @@ from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
 from . import (routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_maintenance,
-               routes_notify, routes_stats, routes_system, routes_tasks, ws)
+               routes_notify, routes_proxy, routes_stats, routes_system, routes_tasks, ws)
 
 
 def create_spa_mount():
@@ -47,6 +47,8 @@ def mount_api(app):
         Route('/api/system/deploy/reset', routes_deploy.deploy_reset, methods=['POST']),
         Route('/api/system/logs/files', routes_logs.log_files, methods=['GET']),
         Route('/api/system/logs', routes_logs.log_query, methods=['GET']),
+        Route('/api/proxy/links', routes_proxy.proxy_links, methods=['GET']),
+        Route('/api/proxy', routes_proxy.proxy, methods=['GET']),
         Route('/api/{name:str}/start', routes_instances.start, methods=['POST']),
         Route('/api/{name:str}/stop', routes_instances.stop, methods=['POST']),
         Route('/api/{name:str}/remark', routes_instances.remark, methods=['POST']),
