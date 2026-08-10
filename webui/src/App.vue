@@ -115,13 +115,36 @@ async function tbToggleMaximize() { const win = tauriWindow(); if (!win) return;
 async function tbHide() { await tauriWindow()?.hide() }
 async function tbClose() { await tauriWindow()?.close() }
 async function syncMaximized() { const win = tauriWindow(); if (win) isMaximized.value = await win.isMaximized() }
-// data-tauri-drag-region only fires when the exact attributed element is
-// hit, and the topbar is almost fully covered by children, so drive dragging
-// from a mousedown handler instead (the window buttons are excluded).
-function onTopbarMouseDown(event: MouseEvent) {
-  if (!isTauri || event.button !== 0 || (event.target as HTMLElement).closest('.tb-btn')) return
+// The topbar previously also carried data-tauri-drag-region; on the header's
+// own empty areas that native region raced with this handler and started the
+// OS drag loop twice, which made dragging intermittently fail. Dragging is
+// now driven solely from this mousedown handler (the window buttons are
+// excluded). preventDefault also stops text selection from stealing the drag.
+let lastDragDownAt = 0
+let lastDragDownX = 0
+let lastDragDownY = 0
+// Shared window-drag driver for the in-page titlebar surfaces (topbar and
+// sidebar brand). exclude is a selector for interactive children that must
+// keep their own clicks (window buttons, sidebar toggle). Double-click
+// toggles maximize, mirroring native windows.
+function onWindowDragAreaMouseDown(event: MouseEvent, exclude: string) {
+  if (!isTauri || event.button !== 0 || (event.target as HTMLElement).closest(exclude)) return
+  const now = Date.now()
+  if (now - lastDragDownAt < 300
+    && Math.abs(event.clientX - lastDragDownX) < 5
+    && Math.abs(event.clientY - lastDragDownY) < 5) {
+    lastDragDownAt = 0
+    tbToggleMaximize()
+    return
+  }
+  lastDragDownAt = now
+  lastDragDownX = event.clientX
+  lastDragDownY = event.clientY
+  event.preventDefault()
   tauriWindow()?.startDragging()
 }
+function onTopbarMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, '.tb-btn') }
+function onBrandMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, '.side-toggle') }
 const staticLabels: Record<string, Record<string, string>> = {
   '总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
@@ -876,7 +899,7 @@ onBeforeUnmount(() => {
   <div class="app" :class="{ 'legacy-electron': legacyElectron, 'side-collapsed': sidebarCollapsed }">
     <div class="app-body">
     <nav class="sidebar" :class="{ 'mobile-open': mobileNav === 'sidebar' }">
-      <div class="brand">
+      <div class="brand" @mousedown="onBrandMouseDown">
         <img class="brand-logo brand-logo-img" :src="brandIcon" alt="NKAS">
         <div class="brand-text"><div class="brand-name">NKAS</div><div class="brand-sub">NIKKE AUTO SCRIPT</div></div>
         <button class="side-toggle" @click="sidebarCollapsed = !sidebarCollapsed">{{ sidebarCollapsed ? '»' : '«' }}</button>
@@ -932,7 +955,7 @@ onBeforeUnmount(() => {
       </div>
     </aside>
     <main class="main">
-      <header class="topbar" data-tauri-drag-region @mousedown="onTopbarMouseDown">
+      <header class="topbar" @mousedown="onTopbarMouseDown">
         <button class="tb-btn tb-menu" :title="t('菜单')" @click="mobileNav = mobileNav === 'sidebar' ? '' : 'sidebar'">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 5.5h14M3 10h14M3 14.5h14"/></svg>
         </button>
