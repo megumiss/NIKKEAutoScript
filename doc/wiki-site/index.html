@@ -185,17 +185,40 @@ main { display: block; padding-top: var(--nav-height); }
 .sidebar-nav hr { border: none; border-top: 1px solid var(--card-border); margin: 12px 0; }
 .sidebar-nav img { display: none; } /* 分区标题里的 emoji 图标不需要 */
 
-/* 搜索框：位于顶部导航，结果为下拉面板 */
-.site-nav .search { position: relative; display: flex; align-items: center; }
+/* 搜索框：位于顶部导航中央，结果为下拉面板 */
+.site-nav .search-anchor {
+    flex: 1 1 auto; min-width: 0; padding: 0 16px;
+    display: flex; align-items: center; justify-content: center;
+}
+.site-nav .search { position: relative; display: flex; align-items: center; width: auto !important; }
 .site-nav .search input {
-    width: 170px; padding: 6px 12px;
-    background: var(--card); border: 1px solid var(--card-border); border-radius: 8px;
+    width: 170px; padding: 6px 30px 6px 12px;
+    background: var(--card);
+    /* 覆盖 docsify search 插件注入的“无边框 + 底部横线”下划线样式 */
+    border: 1px solid var(--card-border) !important;
+    border-bottom: 1px solid var(--card-border) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
     color: var(--text); font-size: 13.5px; font-family: inherit; outline: none;
     transition: border-color .2s, width .2s;
     -webkit-appearance: none; appearance: none;
 }
+.site-nav .search input::-webkit-search-cancel-button { display: none; -webkit-appearance: none; }
 .site-nav .search input:focus { border-color: var(--accent); width: 240px; }
 .site-nav .search input::placeholder { color: var(--text-dim); }
+/* 清空按钮：内嵌在输入框内部右侧 */
+.site-nav .search .clear-search {
+    position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px; padding: 0; margin: 0;
+    display: none; align-items: center; justify-content: center;
+    border: none; border-radius: 50%;
+    background: transparent !important;
+    color: var(--text-dim); font-size: 13px; line-height: 1; cursor: pointer;
+    font-family: inherit;
+}
+.site-nav .search .clear-search::before { content: '✕'; }
+.site-nav .search .clear-search.show { display: inline-flex; }
+.site-nav .search .clear-search:hover { color: var(--text); background: var(--table-alt); }
 .site-nav .search .results-panel {
     position: absolute; top: calc(100% + 10px); right: 0; z-index: 400;
     width: min(360px, 88vw); max-height: 65vh; overflow-y: auto;
@@ -367,7 +390,8 @@ main { display: block; padding-top: var(--nav-height); }
         transform: translateX(0);
         box-shadow: 6px 0 24px rgba(0,0,0,.18);
     }
-    .site-nav .search { flex: 1; min-width: 0; }
+    .site-nav .search-anchor { flex: 1; min-width: 0; padding: 0; }
+    .site-nav .search { flex: 1; min-width: 0; width: 100% !important; }
     .site-nav .search input, .site-nav .search input:focus { width: 100%; }
     .content { margin-left: 0 !important; }
     .sidebar-toggle { display: block; transition: left .25s ease; }
@@ -387,6 +411,7 @@ main { display: block; padding-top: var(--nav-height); }
         <img src="/nkas.png" alt="NKAS">
         <span>NIKKEAutoScript</span>
     </a>
+    <div class="search-anchor"></div>
     <div class="links">
         <a href="/#features" data-nav="features">功能</a>
         <a href="/#download" data-nav="download">下载</a>
@@ -444,12 +469,12 @@ window.$docsify = {
     auto2top: true,
     executeScript: false,
     plugins: [
-        /* 搜索框默认渲染在侧边栏内，挪到顶部导航（主题切换按钮前） */
+        /* 搜索框默认渲染在侧边栏内，挪到顶部导航中央（search-anchor） */
         function (hook) {
             function moveSearch() {
                 var box = document.querySelector('.sidebar .search');
-                var toggle = document.getElementById('theme-toggle');
-                if (box && toggle) toggle.parentNode.insertBefore(box, toggle);
+                var anchor = document.querySelector('.search-anchor');
+                if (box && anchor && box.parentNode !== anchor) anchor.appendChild(box);
             }
             hook.ready(function () {
                 moveSearch();
