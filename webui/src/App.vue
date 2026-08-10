@@ -96,6 +96,7 @@ const railCollapsed = ref<Record<string, boolean>>({})
 const sidebarCollapsed = ref(false)
 const schemaReady = ref(false)
 const importBusy = ref<Record<string, boolean>>({})
+const notifyTestBusy = ref(false)
 const backendDown = ref(false)
 function isLegacyElectronLayout() { return window.parent !== window }
 const legacyElectron = isLegacyElectronLayout()
@@ -174,6 +175,13 @@ const staticLabels: Record<string, Record<string, string>> = {
   '刷新': { 'en-US': 'Refresh', 'ja-JP': '再読み込み' }, '没有匹配的日志': { 'en-US': 'No matching logs', 'ja-JP': '一致するログがありません' },
   '详细信息': { 'en-US': 'Details', 'ja-JP': '詳細情報' },
   '查看 log 目录下的日志文件，支持按类型、级别、日期和关键字筛选。': { 'en-US': 'Browse the log files in the log directory by type, level, date and keyword.', 'ja-JP': 'log ディレクトリのログファイルを種類・レベル・日付・キーワードで絞り込みます。' },
+  '测试通知': { 'en-US': 'Test notification', 'ja-JP': 'テスト通知' },
+  '发送一条测试通知，验证当前通知设置是否生效。': { 'en-US': 'Send a test notification to verify the current notification settings.', 'ja-JP': 'テスト通知を送信して、現在の通知設定が有効かどうかを確認します。' },
+  '发送中…': { 'en-US': 'Sending…', 'ja-JP': '送信中…' },
+  '系统通知已发送': { 'en-US': 'System notification sent', 'ja-JP': 'システム通知を送信しました' },
+  '系统通知发送失败': { 'en-US': 'Failed to send system notification', 'ja-JP': 'システム通知の送信に失敗しました' },
+  'OnePush 推送成功': { 'en-US': 'OnePush push succeeded', 'ja-JP': 'OnePush プッシュ成功' },
+  'OnePush 推送失败，请检查配置': { 'en-US': 'OnePush push failed, please check the configuration', 'ja-JP': 'OnePush プッシュ失敗、設定を確認してください' },
 }
 
 const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]
@@ -408,6 +416,19 @@ async function importInterception(field: Field, path: string) {
   if (!field.data_endpoint) return
   importBusy.value[field.key] = true
   try { const result = await api.post(field.data_endpoint, { path }); if (!result.ok) throw new Error(result.message || t('导入失败')); const chart = allFields().find(item => item.widget === 'interception_stone_charts'); if (chart) await refreshSpecial(chart); notify(`已导入 ${result.imported || 0} 条，跳过 ${result.skipped || 0} 条。`, 'ok', 3000) } catch (exception: any) { error.value = exception.message } finally { delete importBusy.value[field.key] }
+}
+async function testNotify() {
+  if (notifyTestBusy.value) return
+  notifyTestBusy.value = true
+  try {
+    const result = await api.post(`/api/${selectedName.value}/notify/test`)
+    const parts: string[] = []
+    if (result.windows === true) parts.push(t('系统通知已发送'))
+    if (result.windows === false) parts.push(t('系统通知发送失败'))
+    if (result.onepush === true) parts.push(t('OnePush 推送成功'))
+    if (result.onepush === false) parts.push(t('OnePush 推送失败，请检查配置'))
+    notify(parts.join('；'), result.ok ? 'ok' : 'error', 4000)
+  } catch (exception: any) { error.value = exception.message } finally { notifyTestBusy.value = false }
 }
 function toggleTheme() { const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; localStorage.setItem('nkas-theme', theme); api.post('/api/system/theme', { theme }).then(() => systemStatus.value.theme = theme).catch(exception => error.value = exception.message) }
 async function setLanguage(language: string) { try { await api.post('/api/system/language', { language }); await loadSystem(); await loadWorkspace() } catch (exception: any) { error.value = exception.message } }
@@ -1037,6 +1058,10 @@ onBeforeUnmount(() => {
                       </template>
                       <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
                     </div>
+                  </div>
+                  <div v-if="selectedTask === 'NKAS' && group.key === 'Notification'" class="field">
+                    <div class="field-label"><div class="fname">{{ t('测试通知') }}</div><div class="fhelp">{{ t('发送一条测试通知，验证当前通知设置是否生效。') }}</div></div>
+                    <div class="field-control"><button class="btn" :disabled="notifyTestBusy" @click="testNotify">{{ notifyTestBusy ? t('发送中…') : t('测试通知') }}</button></div>
                   </div>
                 </div>
               </article>

@@ -7,7 +7,7 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
-from . import (routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_stats,
+from . import (routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_notify, routes_stats,
                routes_system, routes_tasks, ws)
 
 
@@ -57,6 +57,7 @@ def mount_api(app):
         Route('/api/{name:str}/warehouse', routes_stats.warehouse, methods=['GET']),
         Route('/api/{name:str}/interception/stats', routes_stats.interception_stats, methods=['GET']),
         Route('/api/{name:str}/interception/import', routes_stats.import_interception, methods=['POST']),
+        Route('/api/{name:str}/notify/test', routes_notify.test_notify, methods=['POST']),
         Route('/api/{name:str}/task/{task:str}/run', routes_tasks.run_task, methods=['POST']),
         Route('/api/{name:str}/tool/{task:str}/start', routes_tasks.start_tool, methods=['POST']),
         Route('/api/{name:str}', routes_instances.delete, methods=['DELETE']),
