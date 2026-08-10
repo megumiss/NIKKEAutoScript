@@ -17,6 +17,24 @@ from module.webui.setting import State
 from module.webui.utils import TaskHandler, get_next_time
 
 
+def _decode_output(data: bytes) -> str:
+    """Decode subprocess stdout tolerantly.
+
+    On Windows, git emits CJK commit messages in the ANSI code page (GBK),
+    so strict UTF-8 decoding (e.g. under PEP 540 UTF-8 mode) raises
+    UnicodeDecodeError in the reader thread.  Try UTF-8 first, fall back to
+    GBK, then give up with replacement chars rather than crashing.
+    """
+    if not data:
+        return ''
+    for encoding in ('utf-8', 'gbk'):
+        try:
+            return data.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return data.decode('utf-8', errors='replace')
+
+
 class Updater(DeployConfig, GitManager, PipManager):
     def __init__(self, file=DEPLOY_CONFIG):
         super().__init__(file=file)
@@ -40,10 +58,8 @@ class Updater(DeployConfig, GitManager, PipManager):
 
     def execute_output(self, command) -> str:
         command = command.replace(r"\\", "/").replace("\\", "/").replace('"', '"')
-        log = subprocess.run(
-            command, capture_output=True, text=True, encoding="utf8", shell=True
-        ).stdout
-        return log
+        result = subprocess.run(command, capture_output=True, shell=True)
+        return _decode_output(result.stdout)
 
     def get_commit(self, revision="", n=1, short_sha1=False) -> Tuple:
         """
