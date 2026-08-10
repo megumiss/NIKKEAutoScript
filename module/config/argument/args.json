@@ -276,7 +276,9 @@
           "left",
           "right",
           "topleft",
-          "topright"
+          "topright",
+          "bottomleft",
+          "bottomright"
         ]
       },
       "GameResolutionCompat": {

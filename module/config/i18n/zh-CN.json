@@ -393,7 +393,9 @@
       "left": "靠左居中",
       "right": "靠右居中",
       "topleft": "左上角",
-      "topright": "右上角"
+      "topright": "右上角",
+      "bottomleft": "左下角",
+      "bottomright": "右下角"
     },
     "GameResolutionCompat": {
       "name": "游戏分辨率设置兼容模式",

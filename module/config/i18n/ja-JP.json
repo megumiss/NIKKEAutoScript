@@ -393,7 +393,9 @@
       "left": "左寄せ中央",
       "right": "右寄せ中央",
       "topleft": "左上",
-      "topright": "右上"
+      "topright": "右上",
+      "bottomleft": "左下",
+      "bottomright": "右下"
     },
     "GameResolutionCompat": {
       "name": "ゲーム解像度設定互換モード",

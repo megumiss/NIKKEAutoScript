@@ -433,7 +433,7 @@ class WinClient:
         参数:
             window_width: 窗口宽度（含边框）
             window_height: 窗口高度（含边框）
-            position: 位置模式，支持 center/left/right/topleft/topright
+            position: 位置模式，支持 center/left/right/topleft/topright/bottomleft/bottomright
 
         返回:
             (x, y): 窗口左上角坐标 (coordenadas virtuais)
@@ -467,6 +467,12 @@ class WinClient:
         elif position == 'topright':
             x_rel = screen_width - window_width
             y_rel = 0
+        elif position == 'bottomleft':
+            x_rel = 0
+            y_rel = screen_height - window_height
+        elif position == 'bottomright':
+            x_rel = screen_width - window_width
+            y_rel = screen_height - window_height
         else:
             # Padrão é 'center'
             x_rel = (screen_width - window_width) // 2
