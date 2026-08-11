@@ -250,6 +250,16 @@ function isWideField(field: Field) { return Boolean(field.path_picker) || ['item
 const TEXTAREA_MAX_HEIGHT = 400
 function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight + 2, TEXTAREA_MAX_HEIGHT)}px` }
 function resizeTextarea(event: Event) { fitTextarea(event.target as HTMLTextAreaElement) }
+function onTextareaInput(field: Field, event: Event) {
+  resizeTextarea(event)
+  // Structured textareas (yaml/json) render a transparent <textarea> over a
+  // highlighted <pre>; keeping the field model in sync on every input makes
+  // the highlight follow the edit live, instead of only after blur/change.
+  // For plain textareas this also protects in-progress edits from being
+  // reset by a later re-render that re-applies the stale bound value.
+  const input = event.target as HTMLTextAreaElement
+  if (field.value !== input.value) field.value = input.value
+}
 const vAutosize = { mounted: (el: HTMLTextAreaElement) => fitTextarea(el), updated: (el: HTMLTextAreaElement) => fitTextarea(el) }
 function escapeHtml(source: string) { return source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 function highlightYaml(source: string) {
@@ -1080,7 +1090,7 @@ onBeforeUnmount(() => {
                       </template>
                       <div v-else-if="field.widget === 'textarea'" class="code-wrap">
                         <pre v-if="isStructuredTextarea(field)" class="code-highlight" v-html="highlightTextarea(field)"></pre>
-                        <textarea v-autosize :class="{ 'code-input': isStructuredTextarea(field), 'textarea-mono': field.mode !== 'text' }" :value="field.value" :readonly="field.display !== 'show'" :inputmode="field.mode === 'url' ? 'url' : 'text'" spellcheck="false" @input="resizeTextarea" @change="save(field, $event)"></textarea>
+                        <textarea v-autosize :class="{ 'code-input': isStructuredTextarea(field), 'textarea-mono': field.mode !== 'text' }" :value="field.value" :readonly="field.display !== 'show'" :inputmode="field.mode === 'url' ? 'url' : 'text'" spellcheck="false" @input="onTextareaInput(field, $event)" @change="save(field, $event)"></textarea>
                       </div>
                       <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                       <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value" :options="field.options" :disabled="field.display !== 'show'" :placeholder="t('添加')" @change="(value: string) => saveValue(field, value).catch(() => {})"/>
