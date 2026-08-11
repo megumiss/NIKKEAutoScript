@@ -14,9 +14,10 @@ from module.ui.ui import UI
 from module.webui.icon import ICON
 
 from .onebot11 import OneBot11
-from .smtp import smtp_image_parser
+from .smtp import SMTP, smtp_image_parser
 
 onepush.core._all_providers['onebot11'] = OneBot11
+onepush.core._all_providers['smtp'] = SMTP
 onepush.core.log = logger
 
 
@@ -54,10 +55,15 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
             logger.info('No provider specified, skip sending')
             return False
         notifier: Provider = get_notifier(provider_name)
+        logger.info(f'Push notify via provider: {notifier.name}')
+        title = kwargs.get('title')
+        if title:
+            logger.info(f'Push notify title: {title}')
 
         required: list[str] = notifier.params['required']
         image_path = kwargs.get('image_path')
         if image_path and os.path.exists(image_path):
+            logger.info(f'Push notify with image: {image_path}')
             if provider_name.lower() == 'smtp':
                 # 调用从 smtp.py 导入的解析器
                 notifier.set_message_parser(smtp_image_parser)
@@ -82,7 +88,7 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
         resp = notifier.notify(**config)
         if isinstance(resp, Response):
             if resp.status_code != 200:
-                logger.warning('Push notify failed!')
+                logger.warning(f'Push notify failed via {notifier.name}!')
                 logger.warning(f'HTTP Code:{resp.status_code}')
                 return False
     except OnePushException:
@@ -92,7 +98,7 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
         logger.exception(e)
         return False
 
-    logger.info('Push notify success')
+    logger.info(f'Push notify success via {notifier.name}')
     return True
 
 

@@ -163,6 +163,19 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .manage-table tbody tr { transition:background .15s; }
 .manage-table tbody tr:hover { background:var(--card-2); }
 .manage-table tbody tr:last-child td { border-bottom:0; }
+/* Manual reorder via the drag handle on each row. */
+.manage-table tbody tr.dragging { opacity:.45; }
+.manage-table tbody tr.drag-over td { border-top:2px solid var(--accent); }
+.manage-table tbody tr.dragging td { border-top-color:transparent; }
+.drag-handle { cursor:grab; flex:none; color:var(--text-3); font-size:13px; user-select:none; }
+.drag-handle:active { cursor:grabbing; }
+.row-actions { display:flex; gap:6px; align-items:center; justify-content:flex-start; flex-wrap:wrap; }
+/* Long instance names: ellipsis in the sidebar list and the rail header,
+   full name stays available via the title tooltip. */
+.side-item .side-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.side-item .badge { flex:none; }
+.rail-inst-info { min-width:0; }
+.rail-inst-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cell-inst { display:flex; gap:10px; align-items:center; font-weight:600; }
 .remark-input { width:100%; height:32px; padding:0 10px; border:1px solid transparent; border-radius:7px; outline:0; color:var(--text); background:transparent; font-size:13px; transition:all .15s; }
 .remark-input:hover { background:var(--card-2); }
@@ -385,4 +398,176 @@ button:focus-visible,
   outline:0;
   border-color:var(--accent);
   box-shadow:0 0 0 3px var(--accent-soft);
+}
+
+/* ============ 移动端适配（≤768px） ============
+   桌面三栏布局在窄屏退化为单栏 + 抽屉导航：
+   - .sidebar（总导航）与 .rail（任务列表）变为左右滑入的抽屉，
+     由 .tb-menu / .tb-tasks 顶部按钮与 .mobile-scrim 遮罩驱动；
+   - 表单字段垂直化、控件全宽，表格横向滚动。
+   桌面端（>768px）样式完全不受影响。 */
+/* 桌面端隐藏移动端专用控件：顶部汉堡按钮与右侧任务列表悬浮把手 */
+.tb-menu,
+.rail-trigger { display: none; }
+
+@media (max-width: 768px) {
+  body { min-width: 0; height: 100dvh; }
+  .app { height: 100dvh; }
+
+  /* 顶部栏 */
+  .topbar { height: 52px; padding: 0 6px 0 2px; gap: 4px; }
+  .tb-btn { width: 40px; height: 40px; }
+  .tb-menu { display: grid; }
+  .crumb { gap: 5px; min-width: 0; font-size: 14px; }
+  .crumb .pre { white-space: nowrap; }
+  .crumb .cur { max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+  .status-pill { padding: 3px 9px; font-size: 11.5px; }
+
+  /* 总导航抽屉 */
+  .sidebar {
+    position: fixed; z-index: 80; top: 0; bottom: 0; left: 0;
+    width: min(280px, 84vw);
+    padding-top: env(safe-area-inset-top);
+    transform: translateX(-105%);
+    transition: transform .22s ease;
+    box-shadow: 0 0 42px rgba(0,0,0,.35);
+  }
+  .sidebar.mobile-open { transform: none; }
+  .side-toggle { display: none; }
+  .side-item { padding: 12px 10px; }
+  .side-footer { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+
+  /* 桌面折叠态在抽屉模式下恢复展开样式 */
+  .app.side-collapsed .sidebar { width: min(280px, 84vw); }
+  .app.side-collapsed .brand { flex-direction: row; gap: 9px; padding: 14px 12px; }
+  .app.side-collapsed .brand-text,
+  .app.side-collapsed .side-text,
+  .app.side-collapsed .side-label,
+  .app.side-collapsed .badge,
+  .app.side-collapsed .side-footer .app-select { display: initial; }
+  .app.side-collapsed .side-item { justify-content: flex-start; gap: 10px; padding: 12px 10px; }
+  .app.side-collapsed .side-footer { justify-content: stretch; }
+  .app.side-collapsed .side-footer .icon-btn { width: 100%; }
+
+  /* 任务列表抽屉 */
+  .rail {
+    position: fixed; z-index: 80; top: 0; bottom: 0; right: 0;
+    width: min(310px, 86vw);
+    padding-top: env(safe-area-inset-top);
+    transform: translateX(105%);
+    transition: transform .22s ease;
+    box-shadow: 0 0 42px rgba(0,0,0,.35);
+  }
+  .rail.mobile-open { transform: none; }
+  .rail-head { padding: 18px 16px 10px; }
+  .rail-item { padding: 10px 9px; }
+
+  /* 右侧悬浮把手：点击滑出/收回任务列表抽屉；抽屉打开时贴到其左缘作为关闭钮 */
+  .rail-trigger {
+    position: fixed; z-index: 85; top: 50%; right: 0;
+    display: grid; width: 34px; height: 96px;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-right: 0;
+    border-radius: 14px 0 0 14px;
+    color: var(--text-2);
+    background: var(--card);
+    box-shadow: -2px 2px 12px rgba(0,0,0,.14);
+    transform: translateY(-50%);
+    transition: right .22s ease, color .15s ease, background .15s ease;
+  }
+  .rail-trigger svg { width: 22px; height: 22px; }
+  .rail-trigger.open { right: min(310px, 86vw); color: var(--accent); background: var(--accent-soft); }
+
+  /* 遮罩层 */
+  .mobile-scrim { position: fixed; z-index: 70; inset: 0; background: rgba(0,0,0,.45); animation: rise .15s ease both; }
+
+  /* 主区域 */
+  .main { width: 100%; }
+  .view { padding: 14px 12px 30px; }
+  .notice-stack { top: 60px; right: 12px; width: calc(100vw - 24px); }
+
+  /* 卡片与统计 */
+  .inst-grid { grid-template-columns: 1fr; gap: 14px; }
+  .inst-card { padding: 16px; }
+  .stat-row { gap: 10px; margin-bottom: 20px; }
+  .section-title { margin: 22px 0 12px; }
+  .ov-layout { gap: 12px; }
+  .hero-sched { padding: 12px 16px; }
+  .queue-card { padding: 14px 16px; }
+  .log-head { padding: 11px 14px; }
+  .log-autoscroll { flex-wrap: wrap; }
+  .log-card .log-body { min-height: 240px; }
+
+  /* 任务配置表单垂直化：标签在上、控件全宽 */
+  .field { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 0; }
+  .field-label { width: auto; }
+  .field-control { justify-content: flex-start; }
+  .field-control input:not([type='checkbox']),
+  .field-control select,
+  .field-control .app-select,
+  .field-control .dt-field,
+  .field-control textarea { width: 100%; }
+  .group-head { padding: 14px 16px; }
+  .group-body { padding: 0 16px 8px; }
+  .path-field,
+  .dt-field { width: 100%; }
+  .deploy-multisel { justify-content: flex-start; }
+
+  /* 日志行在窄屏压缩时间戳与级别列 */
+  .log-line { grid-template-columns: 64px 46px minmax(0,1fr); column-gap: 6px; }
+  .logs-merge .log-line { grid-template-columns: 64px 46px 62px minmax(0,1fr); }
+  .log-frag > .log-traceback { margin-left: 122px; }
+
+  /* 任务页布局 */
+  .task-layout { grid-template-columns: 1fr; }
+  .task-hero { flex-wrap: wrap; gap: 10px; padding: 14px 16px; }
+  .task-hero .btn { flex: none; }
+
+  /* 多开表格卡片化：每行实例一张卡片，字段带列名全部展示，无需横向滚动 */
+  .manage-table { overflow: visible; }
+  .manage-table table,
+  .manage-table thead,
+  .manage-table tbody,
+  .manage-table tbody tr,
+  .manage-table tbody td { display: block; }
+  .manage-table thead { display: none; }
+  .manage-table tbody tr {
+    margin-bottom: 12px;
+    padding: 4px 14px 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+  .manage-table tbody td {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .manage-table tbody td::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--text-3);
+    font-size: 12px;
+  }
+  .manage-table tbody tr td:last-child { border-bottom: 0; }
+  .manage-table .remark-input { flex: 1; width: auto; text-align: right; }
+
+  /* 公告中心 */
+  .announcement-body { grid-template-columns: 1fr; gap: 12px; }
+  .announcement-card { max-height: 86vh; overflow-y: auto; }
+
+  /* 日志页面筛选 */
+  .logs-kw { width: 100%; }
+  .logs-filter-item { flex: 1 1 42%; }
+  .logs-filter-item .app-select { width: 100%; }
+
+  /* 关于页 */
+  .about-panel { padding: 18px 16px; }
+  .about-panel .brand-logo { width: 40px; height: 40px; }
 }

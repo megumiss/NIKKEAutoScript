@@ -75,6 +75,18 @@ I18N_NOTIFY = {
             'ja-JP': '{recruit_type} でSSRを獲得しました！',
         },
     },
+    'Test': {
+        'title': {
+            'zh-CN': '[NKAS通知] 实例 {config_name} 测试通知',
+            'en-US': '[NKAS Notification] Instance {config_name} test notification',
+            'ja-JP': '[NKAS通知] インスタンス {config_name} テスト通知',
+        },
+        'content': {
+            'zh-CN': '这是一条测试通知，当前通知设置已生效。',
+            'en-US': 'This is a test notification. Your notification settings are working.',
+            'ja-JP': 'これはテスト通知です。通知設定は有効です。',
+        },
+    },
     'RecruitType': {
         'EventFree': {'zh-CN': '活动免费', 'en-US': 'Event Free', 'ja-JP': 'イベント無料'},
         '150Gem': {'zh-CN': '150钻', 'en-US': '150 Gem', 'ja-JP': '150ジュエル'},

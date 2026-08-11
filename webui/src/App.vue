@@ -5,6 +5,7 @@ import { api } from './api/client'
 import { JsonSocket } from './api/ws'
 import AppSelect from './components/AppSelect.vue'
 import EventCalendar from './components/EventCalendar.vue'
+import MaintenanceBanner from './components/MaintenanceBanner.vue'
 import FieldItemTable from './components/config/FieldItemTable.vue'
 import FieldPathPicker from './components/config/FieldPathPicker.vue'
 import FieldPriority from './components/config/FieldPriority.vue'
@@ -97,8 +98,12 @@ const taskFilter = ref('')
 const collapsed = ref<Record<string, boolean>>({})
 const railCollapsed = ref<Record<string, boolean>>({})
 const sidebarCollapsed = ref(false)
+// 移动端抽屉导航：'' = 关闭，'sidebar' = 总导航抽屉，'rail' = 任务列表抽屉。
+// 桌面端（>768px）此状态无效果，布局保持不变。
+const mobileNav = ref<'sidebar' | 'rail' | ''>('')
 const schemaReady = ref(false)
 const importBusy = ref<Record<string, boolean>>({})
+const notifyTestBusy = ref(false)
 const backendDown = ref(false)
 function isLegacyElectronLayout() { return window.parent !== window }
 const legacyElectron = isLegacyElectronLayout()
@@ -113,13 +118,36 @@ async function tbToggleMaximize() { const win = tauriWindow(); if (!win) return;
 async function tbHide() { await tauriWindow()?.hide() }
 async function tbClose() { await tauriWindow()?.close() }
 async function syncMaximized() { const win = tauriWindow(); if (win) isMaximized.value = await win.isMaximized() }
-// data-tauri-drag-region only fires when the exact attributed element is
-// hit, and the topbar is almost fully covered by children, so drive dragging
-// from a mousedown handler instead (the window buttons are excluded).
-function onTopbarMouseDown(event: MouseEvent) {
-  if (!isTauri || event.button !== 0 || (event.target as HTMLElement).closest('.tb-btn')) return
+// The topbar previously also carried data-tauri-drag-region; on the header's
+// own empty areas that native region raced with this handler and started the
+// OS drag loop twice, which made dragging intermittently fail. Dragging is
+// now driven solely from this mousedown handler (the window buttons are
+// excluded). preventDefault also stops text selection from stealing the drag.
+let lastDragDownAt = 0
+let lastDragDownX = 0
+let lastDragDownY = 0
+// Shared window-drag driver for the in-page titlebar surfaces (topbar and
+// sidebar brand). exclude is a selector for interactive children that must
+// keep their own clicks (window buttons, sidebar toggle). Double-click
+// toggles maximize, mirroring native windows.
+function onWindowDragAreaMouseDown(event: MouseEvent, exclude: string) {
+  if (!isTauri || event.button !== 0 || (event.target as HTMLElement).closest(exclude)) return
+  const now = Date.now()
+  if (now - lastDragDownAt < 300
+    && Math.abs(event.clientX - lastDragDownX) < 5
+    && Math.abs(event.clientY - lastDragDownY) < 5) {
+    lastDragDownAt = 0
+    tbToggleMaximize()
+    return
+  }
+  lastDragDownAt = now
+  lastDragDownX = event.clientX
+  lastDragDownY = event.clientY
+  event.preventDefault()
   tauriWindow()?.startDragging()
 }
+function onTopbarMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, '.tb-btn') }
+function onBrandMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, '.side-toggle') }
 const staticLabels: Record<string, Record<string, string>> = {
   '总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
@@ -134,6 +162,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '无': { 'en-US': 'None', 'ja-JP': 'なし' }, '进入 →': { 'en-US': 'Open →', 'ja-JP': '開く →' }, '＋ 新建实例': { 'en-US': '＋ New instance', 'ja-JP': '＋ 新しいインスタンス' },
   '导入配置': { 'en-US': 'Import configuration', 'ja-JP': '設定をインポート' }, '名称': { 'en-US': 'Name', 'ja-JP': '名前' }, '状态': { 'en-US': 'Status', 'ja-JP': '状態' }, '操作': { 'en-US': 'Actions', 'ja-JP': '操作' },
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
+  '重命名': { 'en-US': 'Rename', 'ja-JP': 'リネーム' }, '拖动排序': { 'en-US': 'Drag to sort', 'ja-JP': 'ドラッグで並べ替え' },
   '源码更新': { 'en-US': 'Source update', 'ja-JP': 'ソースコード更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' }, '更新超时，请稍后手动刷新页面': { 'en-US': 'Update timed out, please reload later', 'ja-JP': '更新がタイムアウト、後で再読み込みしてください' },
@@ -177,6 +206,13 @@ const staticLabels: Record<string, Record<string, string>> = {
   '刷新': { 'en-US': 'Refresh', 'ja-JP': '再読み込み' }, '没有匹配的日志': { 'en-US': 'No matching logs', 'ja-JP': '一致するログがありません' },
   '详细信息': { 'en-US': 'Details', 'ja-JP': '詳細情報' },
   '查看 log 目录下的日志文件，支持按类型、级别、日期和关键字筛选。': { 'en-US': 'Browse the log files in the log directory by type, level, date and keyword.', 'ja-JP': 'log ディレクトリのログファイルを種類・レベル・日付・キーワードで絞り込みます。' },
+  '测试通知': { 'en-US': 'Test notification', 'ja-JP': 'テスト通知' },
+  '发送一条测试通知，验证当前通知设置是否生效。': { 'en-US': 'Send a test notification to verify the current notification settings.', 'ja-JP': 'テスト通知を送信して、現在の通知設定が有効かどうかを確認します。' },
+  '发送中…': { 'en-US': 'Sending…', 'ja-JP': '送信中…' },
+  '系统通知已发送': { 'en-US': 'System notification sent', 'ja-JP': 'システム通知を送信しました' },
+  '系统通知发送失败': { 'en-US': 'Failed to send system notification', 'ja-JP': 'システム通知の送信に失敗しました' },
+  'OnePush 推送成功': { 'en-US': 'OnePush push succeeded', 'ja-JP': 'OnePush プッシュ成功' },
+  'OnePush 推送失败，请检查配置': { 'en-US': 'OnePush push failed, please check the configuration', 'ja-JP': 'OnePush プッシュ失敗、設定を確認してください' },
 }
 
 const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]
@@ -221,6 +257,16 @@ function isWideField(field: Field) { return Boolean(field.path_picker) || ['item
 const TEXTAREA_MAX_HEIGHT = 400
 function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight + 2, TEXTAREA_MAX_HEIGHT)}px` }
 function resizeTextarea(event: Event) { fitTextarea(event.target as HTMLTextAreaElement) }
+function onTextareaInput(field: Field, event: Event) {
+  resizeTextarea(event)
+  // Structured textareas (yaml/json) render a transparent <textarea> over a
+  // highlighted <pre>; keeping the field model in sync on every input makes
+  // the highlight follow the edit live, instead of only after blur/change.
+  // For plain textareas this also protects in-progress edits from being
+  // reset by a later re-render that re-applies the stale bound value.
+  const input = event.target as HTMLTextAreaElement
+  if (field.value !== input.value) field.value = input.value
+}
 const vAutosize = { mounted: (el: HTMLTextAreaElement) => fitTextarea(el), updated: (el: HTMLTextAreaElement) => fitTextarea(el) }
 function escapeHtml(source: string) { return source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 function highlightYaml(source: string) {
@@ -339,10 +385,10 @@ async function loadWorkspace() {
     error.value = ''
   } catch (exception: any) { error.value = exception.message }
 }
-function dashboard() { router.push('/') }
+function dashboard() { mobileNav.value = ''; router.push('/') }
 function calendarError(message: string) { error.value = message }
-function enter(name: string) { router.push(`/i/${name}/overview`) }
-function openTask(task: any, page: string) { router.push(`/i/${selectedName.value}/${page}/${task.key}`) }
+function enter(name: string) { mobileNav.value = ''; router.push(`/i/${name}/overview`) }
+function openTask(task: any, page: string) { mobileNav.value = ''; router.push(`/i/${selectedName.value}/${page}/${task.key}`) }
 function openQueueItem(item: any) {
   const menu = schema.value.menus.find((item2: any) => item2.tasks.some((task: any) => task.key === item.command))
   router.push(`/i/${selectedName.value}/${menu?.page === 'tool' ? 'tool' : 'task'}/${item.command}`)
@@ -429,6 +475,19 @@ async function importInterception(field: Field, path: string) {
   if (!field.data_endpoint) return
   importBusy.value[field.key] = true
   try { const result = await api.post(field.data_endpoint, { path }); if (!result.ok) throw new Error(result.message || t('导入失败')); const chart = allFields().find(item => item.widget === 'interception_stone_charts'); if (chart) await refreshSpecial(chart); notify(`已导入 ${result.imported || 0} 条，跳过 ${result.skipped || 0} 条。`, 'ok', 3000) } catch (exception: any) { error.value = exception.message } finally { delete importBusy.value[field.key] }
+}
+async function testNotify() {
+  if (notifyTestBusy.value) return
+  notifyTestBusy.value = true
+  try {
+    const result = await api.post(`/api/${selectedName.value}/notify/test`)
+    const parts: string[] = []
+    if (result.windows === true) parts.push(t('系统通知已发送'))
+    if (result.windows === false) parts.push(t('系统通知发送失败'))
+    if (result.onepush === true) parts.push(t('OnePush 推送成功'))
+    if (result.onepush === false) parts.push(t('OnePush 推送失败，请检查配置'))
+    notify(parts.join('；'), result.ok ? 'ok' : 'error', 4000)
+  } catch (exception: any) { error.value = exception.message } finally { notifyTestBusy.value = false }
 }
 function toggleTheme() { const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; localStorage.setItem('nkas-theme', theme); api.post('/api/system/theme', { theme }).then(() => systemStatus.value.theme = theme).catch(exception => error.value = exception.message) }
 async function setLanguage(language: string) { try { await api.post('/api/system/language', { language }); await loadSystem(); await loadWorkspace() } catch (exception: any) { error.value = exception.message } }
@@ -522,7 +581,7 @@ async function refreshLogs() { await loadLogFiles(); await queryLogs() }
 let logsKeywordTimer = 0
 watch([logsDate, logsSource, logsLevel], queryLogs)
 watch(logsKeyword, () => { window.clearTimeout(logsKeywordTimer); logsKeywordTimer = window.setTimeout(queryLogs, 400) })
-const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy' | 'confirm' | 'alert'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
+const modal = ref<{ type: '' | 'create' | 'rename' | 'delete' | 'resetDeploy' | 'confirm' | 'alert'; name: string; renameTarget: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', renameTarget: '', origin: 'template-nkas', template: 'intl', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 const deployTemplateOptions = computed(() => [{ value: 'intl', label: t('国际') }, { value: 'cn', label: t('大陆') }, { value: 'docker-intl', label: t('Docker国际') }, { value: 'docker-cn', label: t('Docker国内') }])
 // Pre-fill the create form with the first free nkas-style name (nkas, nkas2,
@@ -534,9 +593,10 @@ function defaultInstanceName() {
   while (names.has(`nkas${index}`)) index++
   return `nkas${index}`
 }
-function openCreateModal() { modal.value = { type: 'create', name: defaultInstanceName(), origin: instances.value[0]?.name || 'template-nkas', template: 'intl', busy: false } }
-function openDeleteModal(name: string) { modal.value = { type: 'delete', name, origin: '', template: '', busy: false } }
-function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', origin: '', template: 'intl', busy: false } }
+function openCreateModal() { modal.value = { type: 'create', name: defaultInstanceName(), renameTarget: '', origin: instances.value[0]?.name || 'template-nkas', template: 'intl', busy: false } }
+function openRenameModal(name: string) { modal.value = { type: 'rename', name, renameTarget: name, origin: '', template: '', busy: false } }
+function openDeleteModal(name: string) { modal.value = { type: 'delete', name, renameTarget: '', origin: '', template: '', busy: false } }
+function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', renameTarget: '', origin: '', template: 'intl', busy: false } }
 // Generic confirmation so every risky action shares the same modal instead of
 // mixing native confirm() with custom cards.
 const modalConfirmMessage = ref('')
@@ -544,7 +604,7 @@ let modalConfirmAction: (() => void | Promise<void>) | null = null
 function openConfirmModal(message: string, action: () => void | Promise<void>) {
   modalConfirmMessage.value = message
   modalConfirmAction = action
-  modal.value = { type: 'confirm', name: '', origin: '', template: '', busy: false }
+  modal.value = { type: 'confirm', name: '', renameTarget: '', origin: '', template: '', busy: false }
 }
 // Information-only popup (no follow-up action), e.g. the administrator
 // privilege warning shown when a PC-client instance cannot start.
@@ -553,7 +613,7 @@ const modalAlertMessage = ref('')
 function openAlertModal(title: string, message: string) {
   modalAlertTitle.value = title
   modalAlertMessage.value = message
-  modal.value = { type: 'alert', name: '', origin: '', template: '', busy: false }
+  modal.value = { type: 'alert', name: '', renameTarget: '', origin: '', template: '', busy: false }
 }
 async function confirmModal() {
   const m = modal.value
@@ -565,6 +625,16 @@ async function confirmModal() {
       const name = m.name.trim()
       if (!name) return
       await api.post('/api/instances', { name, origin: m.origin })
+    } else if (m.type === 'rename') {
+      const newName = m.name.trim()
+      if (!newName || newName === m.renameTarget) return
+      await api.post(`/api/instances/${m.renameTarget}/rename`, { name: newName })
+      // Keep the workspace route pointing at the renamed instance.
+      if (selectedName.value === m.renameTarget) {
+        const old = m.renameTarget
+        m.renameTarget = newName
+        router.replace(route.path.replace(`/i/${old}/`, `/i/${newName}/`))
+      }
     } else if (m.type === 'delete') {
       await api.del(`/api/${m.name}`)
       if (selectedName.value === m.name) dashboard()
@@ -745,6 +815,47 @@ async function executeForceRestart() {
   error.value = t('重启超时，请手动刷新页面')
   restarting.value = false
 }
+// Manual reorder on the multi-instance page: native HTML5 drag-and-drop
+// driven by a dedicated handle so table inputs keep working.  The new order
+// is persisted to the backend and applies to the dashboard grid and sidebar
+// too, because every view renders the same instances list.
+const dragIndex = ref(-1)
+const dragOverIndex = ref(-1)
+function onDragStart(index: number, event: DragEvent) {
+  // The handle itself is the draggable element (draggable lives on it, not on
+  // the row): dragstart then bubbles up from the handle, so this guard passes
+  // only for handle-initiated drags and text selection inside remark inputs
+  // never moves rows.
+  const handle = (event.target as HTMLElement).closest('.drag-handle')
+  if (!handle) { event.preventDefault(); return }
+  dragIndex.value = index
+  dragOverIndex.value = -1
+  // Show the whole row as the drag image instead of just the handle glyph.
+  const row = handle.closest('tr')
+  if (row && event.dataTransfer) event.dataTransfer.setDragImage(row, 24, 24)
+}
+function onDragOver(index: number, event: DragEvent) {
+  if (dragIndex.value < 0) return
+  event.preventDefault()
+  if (dragOverIndex.value !== index) dragOverIndex.value = index
+}
+function onDragEnd() { dragIndex.value = -1; dragOverIndex.value = -1 }
+function onDrop() {
+  const from = dragIndex.value
+  const to = dragOverIndex.value
+  dragIndex.value = -1
+  dragOverIndex.value = -1
+  if (from < 0 || to < 0 || from === to) return
+  const list = [...instances.value]
+  const [moved] = list.splice(from, 1)
+  list.splice(to, 0, moved)
+  instances.value = list
+  persistOrder()
+}
+async function persistOrder() {
+  try { await api.post('/api/instances/order', { names: instances.value.map(item => item.name) }) }
+  catch (exception: any) { error.value = exception.message; await loadInstances() }
+}
 async function saveRemark(instance: Instance, event: Event) {
   const input = event.target as HTMLInputElement
   try {
@@ -837,6 +948,8 @@ async function healthCheck() {
 }
 onMounted(async () => { if (sessionStorage.getItem('nkas-desktop-updated')) { sessionStorage.removeItem('nkas-desktop-updated'); notify(t('启动器更新完成'), 'ok', 4000) } if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); if (route.path === '/' && systemStatus.value.home_page === 'instance' && instances.value.length) { router.replace(`/i/${instances.value[0].name}/overview`) } else { await loadWorkspace() } startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
+  // 路由变化时收起移动端抽屉，避免残留遮挡主内容。
+  mobileNav.value = ''
   // Only a different instance needs a schema reload and socket swap; task
   // switches and global pages retain the current instance's log scrollback.
   if (selectedName.value && selectedName.value !== workspaceName) {
@@ -851,7 +964,10 @@ watch(() => route.fullPath, async () => {
   if (isLogs.value) await refreshLogs()
 })
 watch(logTick, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
+// 抽屉打开时锁定背景滚动，避免移动端误触翻页。
+watch(mobileNav, open => { document.body.style.overflow = open ? 'hidden' : '' })
 onBeforeUnmount(() => {
+  document.body.style.overflow = ''
   window.removeEventListener('resize', syncMaximized)
   stateSocket?.close()
   logSocket?.close()
@@ -867,8 +983,8 @@ onBeforeUnmount(() => {
 <template>
   <div class="app" :class="{ 'legacy-electron': legacyElectron, 'side-collapsed': sidebarCollapsed }">
     <div class="app-body">
-    <nav class="sidebar">
-      <div class="brand">
+    <nav class="sidebar" :class="{ 'mobile-open': mobileNav === 'sidebar' }">
+      <div class="brand" @mousedown="onBrandMouseDown">
         <img class="brand-logo brand-logo-img" :src="brandIcon" alt="NKAS">
         <div class="brand-text"><div class="brand-name">NKAS</div><div class="brand-sub">NIKKE AUTO SCRIPT</div></div>
         <button class="side-toggle" @click="sidebarCollapsed = !sidebarCollapsed">{{ sidebarCollapsed ? '»' : '«' }}</button>
@@ -880,7 +996,7 @@ onBeforeUnmount(() => {
         <div class="side-label">{{ t('实例') }}</div>
         <button v-for="instance in instances" :key="instance.name" class="side-item" :class="{ active: selectedName === instance.name }" @click="enter(instance.name)">
           <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state)"></span></span>
-          <span class="side-text">{{ instance.name }}</span>
+          <span class="side-text" :title="instance.name">{{ instance.name }}</span>
           <span class="badge" :class="{ 'idle-badge': displayStatusClass(instance.name, instance.state) === 'idle' }">{{ displayStatus(instance.name, instance.state) }}</span>
         </button>
       </div>
@@ -898,11 +1014,11 @@ onBeforeUnmount(() => {
         <AppSelect class="lang-select" :model-value="systemStatus.language" :options="languageOptions" @change="setLanguage"/>
       </div>
     </nav>
-    <aside v-if="isWorkspace" class="rail">
+    <aside v-if="isWorkspace" class="rail" :class="{ 'mobile-open': mobileNav === 'rail' }">
       <div class="rail-head">
         <div class="rail-inst">
           <span class="inst-avatar" :class="{ idle: displayStatusClass(selectedName, selectedInstance?.state) === 'idle' }">{{ initials(selectedName) }}<span class="ring" :class="displayStatusClass(selectedName, selectedInstance?.state)"></span></span>
-          <div><div class="rail-inst-name">{{ selectedName }}</div><div class="rail-inst-state">{{ displayStatus(selectedName, selectedInstance?.state) }}</div></div>
+          <div class="rail-inst-info"><div class="rail-inst-name" :title="selectedName">{{ selectedName }}</div><div class="rail-inst-state">{{ displayStatus(selectedName, selectedInstance?.state) }}</div></div>
         </div>
         <label class="rail-search">🔍 <input v-model="taskFilter" :placeholder="t('筛选任务…')"><button v-if="taskFilter" type="button" class="rail-clear" @click.prevent="taskFilter = ''">✕</button></label>
       </div>
@@ -924,7 +1040,10 @@ onBeforeUnmount(() => {
       </div>
     </aside>
     <main class="main">
-      <header class="topbar" data-tauri-drag-region @mousedown="onTopbarMouseDown">
+      <header class="topbar" @mousedown="onTopbarMouseDown">
+        <button class="tb-btn tb-menu" :title="t('菜单')" @click="mobileNav = mobileNav === 'sidebar' ? '' : 'sidebar'">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 5.5h14M3 10h14M3 14.5h14"/></svg>
+        </button>
         <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
         <span v-if="isWorkspace" class="status-pill" :class="displayStatusClass(selectedName, selectedInstance?.state)">{{ displayStatus(selectedName, selectedInstance?.state) }}</span>
         <div class="topbar-right">
@@ -943,6 +1062,7 @@ onBeforeUnmount(() => {
           </template>
         </div>
       </header>
+      <MaintenanceBanner :language="systemStatus.language" />
       <div v-if="notices.length" class="notice-stack">
         <article v-for="notice in notices" :key="notice.key" class="notice-card" :class="notice.type">
           <div>
@@ -1045,7 +1165,7 @@ onBeforeUnmount(() => {
                       </template>
                       <div v-else-if="field.widget === 'textarea'" class="code-wrap">
                         <pre v-if="isStructuredTextarea(field)" class="code-highlight" v-html="highlightTextarea(field)"></pre>
-                        <textarea v-autosize :class="{ 'code-input': isStructuredTextarea(field), 'textarea-mono': field.mode !== 'text' }" :value="field.value" :readonly="field.display !== 'show'" :inputmode="field.mode === 'url' ? 'url' : 'text'" spellcheck="false" @input="resizeTextarea" @change="save(field, $event)"></textarea>
+                        <textarea v-autosize :class="{ 'code-input': isStructuredTextarea(field), 'textarea-mono': field.mode !== 'text' }" :value="field.value" :readonly="field.display !== 'show'" :inputmode="field.mode === 'url' ? 'url' : 'text'" spellcheck="false" @input="onTextareaInput(field, $event)" @change="save(field, $event)"></textarea>
                       </div>
                       <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                       <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value" :options="field.options" :disabled="field.display !== 'show'" :placeholder="t('添加')" @change="(value: string) => saveValue(field, value).catch(() => {})"/>
@@ -1059,6 +1179,10 @@ onBeforeUnmount(() => {
                       </template>
                       <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
                     </div>
+                  </div>
+                  <div v-if="selectedTask === 'NKAS' && group.key === 'Notification'" class="field">
+                    <div class="field-label"><div class="fname">{{ t('测试通知') }}</div><div class="fhelp">{{ t('发送一条测试通知，验证当前通知设置是否生效。') }}</div></div>
+                    <div class="field-control"><button class="btn" :disabled="notifyTestBusy" @click="testNotify">{{ notifyTestBusy ? t('发送中…') : t('测试通知') }}</button></div>
                   </div>
                 </div>
               </article>
@@ -1088,15 +1212,17 @@ onBeforeUnmount(() => {
         </article>
         <article class="card manage-table" style="overflow:hidden">
           <table>
-            <colgroup><col style="width:22%"><col style="width:10%"><col style="width:15%"><col><col style="width:200px"></colgroup>
+            <colgroup><col style="width:22%"><col style="width:10%"><col style="width:15%"><col><col style="width:240px"></colgroup>
             <thead><tr><th>{{ t('名称') }}</th><th>Mod</th><th>{{ t('状态') }}</th><th>{{ t('备注') }}</th><th>{{ t('操作') }}</th></tr></thead>
             <tbody>
-              <tr v-for="instance in instances" :key="instance.name">
-                <td><span class="cell-inst"><span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state)"></span></span>{{ instance.name }}</span></td>
-                <td>{{ instance.mod }}</td>
-                <td><span class="status-pill" :class="displayStatusClass(instance.name, instance.state)">{{ displayStatus(instance.name, instance.state) }}</span></td>
-                <td><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
-                <td><a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></td>
+              <tr v-for="(instance, index) in instances" :key="instance.name"
+                  :class="{ dragging: dragIndex === index, 'drag-over': dragIndex >= 0 && dragOverIndex === index && dragOverIndex !== dragIndex }"
+                  @dragstart="onDragStart(index, $event)" @dragover="onDragOver(index, $event)" @drop="onDrop" @dragend="onDragEnd">
+                <td :data-label="t('名称')"><span class="cell-inst"><span class="drag-handle" draggable="true" :title="t('拖动排序')">⠿</span><span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state)"></span></span>{{ instance.name }}</span></td>
+                <td :data-label="t('Mod')">{{ instance.mod }}</td>
+                <td :data-label="t('状态')"><span class="status-pill" :class="displayStatusClass(instance.name, instance.state)">{{ displayStatus(instance.name, instance.state) }}</span></td>
+                <td :data-label="t('备注')"><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
+                <td :data-label="t('操作')"><span class="row-actions"><a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn sm" :disabled="instance.state === 1" @click="openRenameModal(instance.name)">{{ t('重命名') }}</button> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></span></td>
               </tr>
             </tbody>
           </table>
@@ -1220,6 +1346,12 @@ onBeforeUnmount(() => {
       </section>
     </main>
     </div>
+    <!-- 移动端：贴右边缘的悬浮把手，点击滑出/收起任务列表抽屉 -->
+    <button v-if="isWorkspace" class="rail-trigger" :class="{ open: mobileNav === 'rail' }" :title="mobileNav === 'rail' ? t('收起任务列表') : t('任务列表')" @click="mobileNav = mobileNav === 'rail' ? '' : 'rail'">
+      <svg v-if="mobileNav === 'rail'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+      <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>
+    </button>
+    <div v-if="mobileNav" class="mobile-scrim" @click="mobileNav = ''"></div>
     <div v-if="backendDown" class="backend-down"><div class="backend-down-card">{{ t('后端连接中断，正在等待恢复…') }}</div></div>
     <div v-if="announcementCenterOpen" class="modal-mask" @click.self="announcementCenterOpen = false">
       <div class="modal-card announcement-card">
@@ -1244,10 +1376,13 @@ onBeforeUnmount(() => {
     </div>
     <div v-if="modal.type" class="modal-mask" @click.self="modal.type = ''">
       <div class="modal-card">
-        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : modal.type === 'alert' ? modalAlertTitle : t('删除') }}</h3>
+        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'rename' ? t('重命名') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : modal.type === 'alert' ? modalAlertTitle : t('删除') }}</h3>
         <template v-if="modal.type === 'create'">
           <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
           <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
+        </template>
+        <template v-else-if="modal.type === 'rename'">
+          <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
         </template>
         <template v-else-if="modal.type === 'resetDeploy'">
           <p class="modal-text">{{ t('将全部部署配置还原为默认值？') }}{{ t('此操作不可恢复。') }}</p>
@@ -1258,7 +1393,7 @@ onBeforeUnmount(() => {
         <p v-else class="modal-text">{{ t('删除') }} {{ modal.name }}？{{ t('此操作不可恢复。') }}</p>
         <div class="modal-actions">
           <button v-if="modal.type !== 'alert'" class="btn" @click="modal.type = ''">{{ t('取消') }}</button>
-          <button class="btn" :class="modal.type === 'delete' || modal.type === 'resetDeploy' ? 'danger' : 'primary'" :disabled="modal.busy || (modal.type === 'create' && !modal.name.trim())" @click="confirmModal">{{ modal.type === 'alert' ? t('知道了') : t('确定') }}</button>
+          <button class="btn" :class="modal.type === 'delete' || modal.type === 'resetDeploy' ? 'danger' : 'primary'" :disabled="modal.busy || ((modal.type === 'create' || modal.type === 'rename') && !modal.name.trim())" @click="confirmModal">{{ modal.type === 'alert' ? t('知道了') : t('确定') }}</button>
         </div>
       </div>
     </div>

@@ -7,8 +7,8 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
-from . import (routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_serial,
-               routes_stats, routes_system, routes_tasks, ws)
+from . import (routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_maintenance,
+               routes_notify, routes_serial, routes_stats, routes_system, routes_tasks, ws)
 
 
 def create_spa_mount():
@@ -26,7 +26,10 @@ def mount_api(app):
         Route('/api/instances', routes_instances.instances, methods=['GET']),
         Route('/api/instances', routes_instances.create, methods=['POST']),
         Route('/api/instances/import', routes_instances.import_config, methods=['POST']),
+        Route('/api/instances/order', routes_instances.reorder, methods=['POST']),
+        Route('/api/instances/{name:str}/rename', routes_instances.rename, methods=['POST']),
         Route('/api/calendar', routes_calendar.calendar, methods=['GET']),
+        Route('/api/maintenance', routes_maintenance.maintenance, methods=['GET']),
         Route('/api/restart', routes_system.restart, methods=['POST']),
         Route('/api/update', routes_system.update, methods=['POST']),
         Route('/api/update/check', routes_system.check_update, methods=['POST']),
@@ -59,6 +62,7 @@ def mount_api(app):
         Route('/api/{name:str}/warehouse', routes_stats.warehouse, methods=['GET']),
         Route('/api/{name:str}/interception/stats', routes_stats.interception_stats, methods=['GET']),
         Route('/api/{name:str}/interception/import', routes_stats.import_interception, methods=['POST']),
+        Route('/api/{name:str}/notify/test', routes_notify.test_notify, methods=['POST']),
         Route('/api/{name:str}/task/{task:str}/run', routes_tasks.run_task, methods=['POST']),
         Route('/api/{name:str}/tool/{task:str}/start', routes_tasks.start_tool, methods=['POST']),
         Route('/api/{name:str}', routes_instances.delete, methods=['DELETE']),

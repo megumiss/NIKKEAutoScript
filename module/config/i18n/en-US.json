@@ -393,7 +393,9 @@
       "left": "Left Center",
       "right": "Right Center",
       "topleft": "Top Left",
-      "topright": "Top Right"
+      "topright": "Top Right",
+      "bottomleft": "Bottom Left",
+      "bottomright": "Bottom Right"
     },
     "GameResolutionCompat": {
       "name": "Game Resolution Compatibility Mode",

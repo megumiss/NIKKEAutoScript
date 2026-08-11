@@ -65,9 +65,15 @@ class OneBot11(Provider):
         title = kwargs.get('title', '')
         content = kwargs.get('content', '')
         text_msg = f"{title}\n{content}".strip()
-        
+
+        image_path = kwargs.get('image_path')
+        has_image = bool(image_path and os.path.exists(image_path))
+        target = group_id if message_type == 'group' else user_id
+        logger.info(f'OneBot11 push start: message_type={message_type}, target={target}, '
+                    f'text={bool(text_msg)}, image={has_image}')
+
         success = True
-        
+
         # 1. 优先发送文本消息
         if text_msg:
             payload_text = payload_base.copy()
@@ -77,13 +83,14 @@ class OneBot11(Provider):
                 if resp_text.status_code != 200:
                     logger.warning(f'OneBot11 text push failed! HTTP Code:{resp_text.status_code}')
                     success = False
+                else:
+                    logger.info('OneBot11 text push success')
             except Exception as e:
                 logger.error(f'OneBot11 text push error: {e}')
                 success = False
 
         # 2. 随后发送图片消息 (转 Base64)
-        image_path = kwargs.get('image_path')
-        if image_path and os.path.exists(image_path):
+        if has_image:
             try:
                 with open(image_path, 'rb') as f:
                     b64_data = base64.b64encode(f.read()).decode('utf-8')
@@ -95,6 +102,8 @@ class OneBot11(Provider):
                 if resp_img.status_code != 200:
                     logger.warning(f'OneBot11 image push failed! HTTP Code:{resp_img.status_code}')
                     success = False
+                else:
+                    logger.info('OneBot11 image push success')
             except Exception as e:
                 logger.error(f'OneBot11 image push error: {e}')
                 success = False
