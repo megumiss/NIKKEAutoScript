@@ -1,0 +1,36 @@
+# 「常用链接」页展示的站点列表，按顺序显示为标签页。
+# name 为默认显示名（中文），i18n 按语言覆盖显示名；当前语言没有对应
+# 条目时回退到 name 原样显示。专名（各语言同形）无需提供 i18n。
+# direct=true 表示站点允许被 iframe 直接嵌入（无 X-Frame-Options / CSP
+# frame-ancestors 限制），前端直连原站，页面 JS 同域运行、功能完整；
+# direct=false 的站点禁止嵌入，走后端代理转发（仅限本列表中的主机）。
+- name: 项目官网
+  url: https://nkas.megumiss.top/
+  direct: true
+  i18n:
+    en-US: Project Homepage
+    ja-JP: プロジェクトサイト
+- name: NIKKE 官网
+  url: https://nikke-en.com/
+  direct: true
+  i18n:
+    en-US: NIKKE Official
+    ja-JP: NIKKE 公式
+- name: 项目 Wiki
+  url: https://github.com/megumiss/NIKKEAutoScript/wiki
+  direct: false
+  i18n:
+    en-US: Project Wiki
+    ja-JP: プロジェクト Wiki
+- name: GameKee Wiki
+  url: https://www.gamekee.com/nikke/
+  direct: true
+- name: BlaBlaLink
+  url: https://www.blablalink.com/
+  direct: true
+- name: Fandom Wiki
+  url: https://nikke-goddess-of-victory-international.fandom.com/
+  direct: false
+- name: NIKKE-DB
+  url: https://nikke-db.pages.dev/
+  direct: true

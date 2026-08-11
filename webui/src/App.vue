@@ -105,6 +105,27 @@ const schemaReady = ref(false)
 const importBusy = ref<Record<string, boolean>>({})
 const notifyTestBusy = ref(false)
 const backendDown = ref(false)
+// 常用链接页：白名单内的站点链接，点击后在界面内 iframe 打开。
+// direct=true 的站点允许被 iframe 直接嵌入（无 X-Frame-Options/CSP 限制），
+// 直连原站使页面 JS 同域运行、功能完整；direct=false 走后端代理转发。
+// 显示名由后端 yaml 下发：i18n 按当前语言覆盖 name，缺省回退到 name 原文。
+interface WebLink { name: string; url: string; direct?: boolean; i18n?: Record<string, string> }
+const webLinks = ref<WebLink[]>([])
+const webUrl = ref('')
+const webLoaded = ref(false)
+const webBusy = ref(false)
+function webFrameSrc(link: WebLink | undefined) { return link?.direct ? link.url : `/api/proxy?url=${encodeURIComponent(link?.url || '')}` }
+function webLink(url: string) { return webLinks.value.find(item => item.url === url) }
+function webLinkName(link: WebLink) { return link.i18n?.[systemStatus.value.language] || t(link.name) }
+async function loadWebLinks() {
+  try {
+    const result = await api.get('/api/proxy/links')
+    webLinks.value = result.links || []
+    if (!webUrl.value && webLinks.value.length) webUrl.value = webLinks.value[0].url
+  } catch (exception: any) { error.value = exception.message }
+  finally { webLoaded.value = true }
+}
+function openWeb(url: string) { if (url !== webUrl.value) { webBusy.value = true; webUrl.value = url } }
 function isLegacyElectronLayout() { return window.parent !== window }
 const legacyElectron = isLegacyElectronLayout()
 // Custom titlebar for the Tauri desktop shell, which runs without native
@@ -200,8 +221,8 @@ const staticLabels: Record<string, Record<string, string>> = {
   '修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。': { 'en-US': 'Changing deploy settings may break updates or prevent startup; changes apply only after a restart. Proceed with care.', 'ja-JP': 'デプロイ設定の変更は更新失敗や起動不能を招く可能性があります。変更は再起動後に有効になります。慎重に操作してください。' },
   '将全部部署配置还原为默认值？': { 'en-US': 'Reset all deploy settings to defaults?', 'ja-JP': 'すべてのデプロイ設定をデフォルトに戻しますか？' },
   '已还原为默认值': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻しました' },
-  '日志': { 'en-US': 'Logs', 'ja-JP': 'ログ' }, '类型': { 'en-US': 'Type', 'ja-JP': '種類' }, '级别': { 'en-US': 'Level', 'ja-JP': 'レベル' },
-  '日期': { 'en-US': 'Date', 'ja-JP': '日付' }, '关键字': { 'en-US': 'Keyword', 'ja-JP': 'キーワード' },
+  '日志': { 'en-US': 'Logs', 'ja-JP': 'ログ' }, '常用链接': { 'en-US': 'Links', 'ja-JP': 'リンク' }, '其他': { 'en-US': 'Others', 'ja-JP': 'その他' }, '外部打开': { 'en-US': 'Open externally', 'ja-JP': '外部で開く' }, '此页面无法进行登录操作': { 'en-US': 'Login is not available on this page', 'ja-JP': 'このページではログインできません' }, '暂无可用链接': { 'en-US': 'No links available', 'ja-JP': '利用可能なリンクがありません' }, '加载中…': { 'en-US': 'Loading…', 'ja-JP': '読み込み中…' }, '请选择链接': { 'en-US': 'Select a link', 'ja-JP': 'リンクを選択してください' },
+  '类型': { 'en-US': 'Type', 'ja-JP': '種類' }, '级别': { 'en-US': 'Level', 'ja-JP': 'レベル' }, '日期': { 'en-US': 'Date', 'ja-JP': '日付' }, '关键字': { 'en-US': 'Keyword', 'ja-JP': 'キーワード' },
   '搜索关键字…': { 'en-US': 'Search keyword…', 'ja-JP': 'キーワード検索…' }, '全部': { 'en-US': 'All', 'ja-JP': 'すべて' },
   '刷新': { 'en-US': 'Refresh', 'ja-JP': '再読み込み' }, '没有匹配的日志': { 'en-US': 'No matching logs', 'ja-JP': '一致するログがありません' },
   '详细信息': { 'en-US': 'Details', 'ja-JP': '詳細情報' },
@@ -225,6 +246,7 @@ const isManage = computed(() => route.path === '/manage')
 const isSettings = computed(() => route.path === '/settings')
 const isDeploy = computed(() => route.path === '/deploy')
 const isLogs = computed(() => route.path === '/logs')
+const isLinks = computed(() => route.path === '/links')
 const isAbout = computed(() => route.path === '/about')
 const isWorkspace = computed(() => Boolean(selectedName.value))
 const selectedInstance = computed(() => instances.value.find(item => item.name === selectedName.value))
@@ -257,7 +279,7 @@ function stateClass(state?: number, task?: string) {
 function displayStatus(name: string, state?: number, task?: string) { return serialWaiting(name) ? t('等待中') : stateText(state, task) }
 function displayStatusClass(name: string, state?: number, task?: string) { return serialWaiting(name) ? 'idle' : stateClass(state, task) }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
-function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
+function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isLinks.value ? t('常用链接') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
 function isWideField(field: Field) { return Boolean(field.path_picker) || ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea', 'priority'].includes(field.widget) }
 // Autosized textareas are capped: an unbounded value (e.g. the Hosts entries)
@@ -958,7 +980,7 @@ async function healthCheck() {
     backendDown.value = true
   }
 }
-onMounted(async () => { if (sessionStorage.getItem('nkas-desktop-updated')) { sessionStorage.removeItem('nkas-desktop-updated'); notify(t('启动器更新完成'), 'ok', 4000) } if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); if (route.path === '/' && systemStatus.value.home_page === 'instance' && instances.value.length) { router.replace(`/i/${instances.value[0].name}/overview`) } else { await loadWorkspace() } startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); healthTimer = window.setInterval(healthCheck, 4000) })
+onMounted(async () => { if (sessionStorage.getItem('nkas-desktop-updated')) { sessionStorage.removeItem('nkas-desktop-updated'); notify(t('启动器更新完成'), 'ok', 4000) } if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) } await loadSystem(); await notifyDesktopUpdate(); await loadInstances(); if (route.path === '/' && systemStatus.value.home_page === 'instance' && instances.value.length) { router.replace(`/i/${instances.value[0].name}/overview`) } else { await loadWorkspace() } startStateSocket(); startSockets(); if (isDeploy.value) await loadDeploy(); if (isLogs.value) await refreshLogs(); if (isLinks.value) await loadWebLinks(); healthTimer = window.setInterval(healthCheck, 4000) })
 watch(() => route.fullPath, async () => {
   // 路由变化时收起移动端抽屉，避免残留遮挡主内容。
   mobileNav.value = ''
@@ -974,6 +996,7 @@ watch(() => route.fullPath, async () => {
   else { window.clearTimeout(updatePollTimer); window.clearTimeout(desktopUpdatePollTimer) }
   if (isDeploy.value) await loadDeploy()
   if (isLogs.value) await refreshLogs()
+  if (isLinks.value && !webLoaded.value) await loadWebLinks()
 })
 watch(logTick, async () => { if (autoScroll.value) { await nextTick(); if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight } })
 // 抽屉打开时锁定背景滚动，避免移动端误触翻页。
@@ -1019,6 +1042,10 @@ onBeforeUnmount(() => {
         <button class="side-item" :class="{ active: isLogs }" @click="router.push('/logs')"><span class="sicon">📄</span><span class="side-text">{{ t('日志') }}</span></button>
         <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')"><span class="sicon">⚙️</span><span class="side-text">{{ t('更新') }}</span></button>
         <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')"><span class="sicon">ℹ️</span><span class="side-text">{{ t('关于') }}</span></button>
+      </div>
+      <div class="side-section">
+        <div class="side-label">{{ t('其他') }}</div>
+        <button class="side-item" :class="{ active: isLinks }" @click="router.push('/links')"><span class="sicon">🌐</span><span class="side-text">{{ t('常用链接') }}</span></button>
       </div>
       <div class="side-spacer"></div>
       <div class="side-footer">
@@ -1322,6 +1349,21 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </article>
+      </section>
+      <section v-else-if="isLinks" class="view web-view">
+        <div v-if="webLoaded && !webLinks.length" class="card web-empty">{{ t('暂无可用链接') }}</div>
+        <template v-else>
+          <div class="web-tabs">
+            <button v-for="link in webLinks" :key="link.url" class="web-tab" :class="{ active: webUrl === link.url }" @click="openWeb(link.url)">{{ webLinkName(link) }}</button>
+            <span class="web-login-hint">⚠ {{ t('此页面无法进行登录操作') }}</span>
+            <a v-if="webUrl" class="web-tab web-open" :href="webUrl" target="_blank" rel="noopener">{{ t('外部打开') }}</a>
+          </div>
+          <div class="web-frame-wrap">
+            <iframe v-if="webUrl" class="web-frame" :src="webFrameSrc(webLink(webUrl))" @load="webBusy = false" @error="webBusy = false"></iframe>
+            <div v-if="webBusy" class="web-loading">{{ t('加载中…') }}</div>
+            <div v-if="!webUrl" class="web-empty">{{ t('请选择链接') }}</div>
+          </div>
+        </template>
       </section>
       <section v-else class="view">
         <article class="card about-panel">
