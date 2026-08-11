@@ -1,9 +1,11 @@
 import copy
 import os
 from functools import cached_property
-from deploy.utils import DEPLOY_CONFIG, poor_yaml_read, DEPLOY_TEMPLATE, poor_yaml_write
-from module.logger import logger
 from typing import Optional, Union
+
+from deploy.utils import DEPLOY_CONFIG, DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
+from module.logger import logger
+
 
 class ExecutionError(Exception):
     def __init__(self, message='', command=None, error_code=None):
@@ -51,6 +53,12 @@ class ConfigModel:
     CDN: Union[str, bool] = False
     Run: Optional[str] = None
     ReadNoticeIds: Optional[str] = None
+
+    # Serial execution
+    SerialEnable: bool = False
+    SerialGroup: Optional[str] = None
+    SerialOnError: str = "skip"
+    SerialIdleThreshold: int = 5
 
     # Statistics
     EnableStatistics: bool = True

@@ -7,6 +7,7 @@ from pathlib import Path
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 
+from module.config.serial_state import modify_state, read_serial_config
 from module.config.utils import deep_get, filepath_config, nkas_instance, nkas_template, read_file
 from module.logger import logger
 from module.submodule.utils import get_config_mod, load_config
@@ -411,6 +412,27 @@ async def rename(request: Request):
     if name in order:
         order[order.index(name)] = new_name
         _save_order(order)
+    # 串行组（SerialGroup）中的旧名同步替换，否则重命名后的实例会脱离
+    # 顺序执行约束，与组内实例并行操作设备
+    serial_config = read_serial_config()
+    if name in serial_config.group:
+        group = [new_name if item == name else item for item in serial_config.group]
+        try:
+            setattr(State.deploy_config, 'SerialGroup', ' > '.join(group))
+        except OSError as exc:
+            logger.warning(f'Unable to update SerialGroup after rename: {exc}')
+
+        def _rename_serial_state(s):
+            entry = s['instances'].pop(name, None)
+            if entry is not None:
+                s['instances'][new_name] = entry
+            if name in s['failed']:
+                s['failed'][new_name] = s['failed'].pop(name)
+            if name in s['retried']:
+                s['retried'][s['retried'].index(name)] = new_name
+            if s.get('current') == name:
+                s['current'] = new_name
+        modify_state(_rename_serial_state)
     ProcessManager.rename_process(name, new_name)
     logger.info(f'Instance "{name}" renamed to "{new_name}"')
     return JSONResponse({'status': 'success', 'name': new_name})
