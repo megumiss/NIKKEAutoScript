@@ -24,6 +24,9 @@ const router = useRouter()
 // dev_tools/replace_project_icons.py.
 const brandIcon = '/static/gui/icon/nkas.png'
 const instances = ref<Instance[]>([])
+// Serial execution state from GET /api/serial/state; null when serial is off
+// or the backend is older than this feature.
+const serialState = ref<any>(null)
 const schema = ref<any>({ menus: [], tasks: {} })
 const queue = ref<any>({ running: [], pending: [], waiting: [] })
 // Entries carry a stable id so the v-for patch is append/remove-only instead
@@ -173,10 +176,11 @@ const staticLabels: Record<string, Record<string, string>> = {
   '自动滚动': { 'en-US': 'Auto-scroll', 'ja-JP': '自動スクロール' }, '当前任务': { 'en-US': 'Current task', 'ja-JP': '現在のタスク' }, '清空': { 'en-US': 'Clear', 'ja-JP': 'クリア' },
   '下一任务': { 'en-US': 'Next task', 'ja-JP': '次のタスク' }, '启动': { 'en-US': 'Start', 'ja-JP': '開始' }, '停止': { 'en-US': 'Stop', 'ja-JP': '停止' },
   '任务设置': { 'en-US': 'Task settings', 'ja-JP': 'タスク設定' }, '实例总数': { 'en-US': 'Instances', 'ja-JP': 'インスタンス数' },
-  '运行中': { 'en-US': 'Running', 'ja-JP': '実行中' }, '空闲': { 'en-US': 'Idle', 'ja-JP': '待機中' }, '调度运行中': { 'en-US': 'Scheduler running', 'ja-JP': 'スケジューラー実行中' }, '已停止或异常': { 'en-US': 'Stopped or failed', 'ja-JP': '停止または異常' }, '正在导入…': { 'en-US': 'Importing…', 'ja-JP': 'インポート中…' },
+  '运行中': { 'en-US': 'Running', 'ja-JP': '実行中' }, '空闲': { 'en-US': 'Idle', 'ja-JP': '待機中' }, '已停止': { 'en-US': 'Stopped', 'ja-JP': '停止' }, '正在导入…': { 'en-US': 'Importing…', 'ja-JP': 'インポート中…' },
   '无': { 'en-US': 'None', 'ja-JP': 'なし' }, '进入 →': { 'en-US': 'Open →', 'ja-JP': '開く →' }, '＋ 新建实例': { 'en-US': '＋ New instance', 'ja-JP': '＋ 新しいインスタンス' },
   '导入配置': { 'en-US': 'Import configuration', 'ja-JP': '設定をインポート' }, '名称': { 'en-US': 'Name', 'ja-JP': '名前' }, '状态': { 'en-US': 'Status', 'ja-JP': '状態' }, '操作': { 'en-US': 'Actions', 'ja-JP': '操作' },
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
+  '重命名': { 'en-US': 'Rename', 'ja-JP': 'リネーム' }, '拖动排序': { 'en-US': 'Drag to sort', 'ja-JP': 'ドラッグで並べ替え' },
   '源码更新': { 'en-US': 'Source update', 'ja-JP': 'ソースコード更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' }, '更新超时，请稍后手动刷新页面': { 'en-US': 'Update timed out, please reload later', 'ja-JP': '更新がタイムアウト、後で再読み込みしてください' },
@@ -244,7 +248,7 @@ const isLinks = computed(() => route.path === '/links')
 const isAbout = computed(() => route.path === '/about')
 const isWorkspace = computed(() => Boolean(selectedName.value))
 const selectedInstance = computed(() => instances.value.find(item => item.name === selectedName.value))
-const runningCount = computed(() => instances.value.filter(item => item.state === 1).length)
+const runningCount = computed(() => instances.value.filter(item => item.state === 1 && !serialWaiting(item.name)).length)
 const visibleMenus = computed(() => schema.value.menus.map((menu: any) => ({ ...menu, tasks: menu.tasks.filter((task: any) => !taskFilter.value || task.name.toLowerCase().includes(taskFilter.value.toLowerCase())) })).filter((menu: any) => menu.tasks.length))
 let stateSocket: JsonSocket | undefined
 let logSocket: JsonSocket | undefined
@@ -257,8 +261,21 @@ let workspaceName = ''
 let socketsName = ''
 
 function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.some((group: any) => group.fields.some((field: Field) => field.key.endsWith('.Scheduler.Enable') && field.value)) }
-function stateText(state?: number) { return state === 1 ? t('调度运行中') : state === 2 ? t('空闲') : t('已停止或异常') }
-function stateClass(state?: number) { return state === 1 ? 'running' : 'idle' }
+// 进程活着但没有到期任务（current_task 为空）时显示"空闲"，出错停止（3）
+// 与正常停止（2）文案同为"已停止"，靠 error 红色样式区分；4 为更新重启。
+function stateText(state?: number, task?: string) {
+  if (state === undefined || state === null) return '—'
+  if (state === 1) return task ? t('运行中') : t('空闲')
+  if (state === 4) return t('更新中…')
+  return t('已停止')
+}
+function stateClass(state?: number, task?: string) {
+  if (state === 1) return task ? 'running' : 'idle'
+  return state === 3 ? 'error' : 'idle'
+}
+// 串行模式下等待中优先于进程状态展示：排队的实例不再是"运行中"
+function displayStatus(name: string, state?: number, task?: string) { return serialWaiting(name) ? t('等待中') : stateText(state, task) }
+function displayStatusClass(name: string, state?: number, task?: string) { return serialWaiting(name) ? 'idle' : stateClass(state, task) }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
 function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isLinks.value ? t('网页') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
@@ -270,6 +287,16 @@ function isWideField(field: Field) { return Boolean(field.path_picker) || ['item
 const TEXTAREA_MAX_HEIGHT = 400
 function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight + 2, TEXTAREA_MAX_HEIGHT)}px` }
 function resizeTextarea(event: Event) { fitTextarea(event.target as HTMLTextAreaElement) }
+function onTextareaInput(field: Field, event: Event) {
+  resizeTextarea(event)
+  // Structured textareas (yaml/json) render a transparent <textarea> over a
+  // highlighted <pre>; keeping the field model in sync on every input makes
+  // the highlight follow the edit live, instead of only after blur/change.
+  // For plain textareas this also protects in-progress edits from being
+  // reset by a later re-render that re-applies the stale bound value.
+  const input = event.target as HTMLTextAreaElement
+  if (field.value !== input.value) field.value = input.value
+}
 const vAutosize = { mounted: (el: HTMLTextAreaElement) => fitTextarea(el), updated: (el: HTMLTextAreaElement) => fitTextarea(el) }
 function escapeHtml(source: string) { return source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 function highlightYaml(source: string) {
@@ -326,6 +353,21 @@ function formatDate(value: string) { const m = String(value || '').match(/^(\d{4
 
 async function loadInstances() {
   try { instances.value = await api.get('/api/instances') } catch (exception: any) { error.value = exception.message }
+  await loadSerial()
+}
+async function loadSerial() {
+  try { serialState.value = await api.get('/api/serial/state') } catch { serialState.value = null }
+}
+// An instance is "waiting" when serial is on, it is in the group, alive,
+// not the current holder, and the instance itself reported the waiting
+// state (waiting for the turn, or queued until its next task is due).
+// Backed by /api/serial/state -> instances[name].waiting.
+function serialWaiting(name: string) {
+  const serial = serialState.value
+  if (!serial?.enable) return false
+  const info = serial.instances?.[name]
+  if (!info || info.current || !info.alive) return false
+  return Boolean(info.waiting)
 }
 async function loadSystem() {
   try {
@@ -569,7 +611,7 @@ async function refreshLogs() { await loadLogFiles(); await queryLogs() }
 let logsKeywordTimer = 0
 watch([logsDate, logsSource, logsLevel], queryLogs)
 watch(logsKeyword, () => { window.clearTimeout(logsKeywordTimer); logsKeywordTimer = window.setTimeout(queryLogs, 400) })
-const modal = ref<{ type: '' | 'create' | 'delete' | 'resetDeploy' | 'confirm' | 'alert'; name: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', origin: 'template-nkas', template: 'intl', busy: false })
+const modal = ref<{ type: '' | 'create' | 'rename' | 'delete' | 'resetDeploy' | 'confirm' | 'alert'; name: string; renameTarget: string; origin: string; template: string; busy: boolean }>({ type: '', name: '', renameTarget: '', origin: 'template-nkas', template: 'intl', busy: false })
 const originOptions = computed(() => ['template-nkas', ...instances.value.map(item => item.name)])
 const deployTemplateOptions = computed(() => [{ value: 'intl', label: t('国际') }, { value: 'cn', label: t('大陆') }, { value: 'docker-intl', label: t('Docker国际') }, { value: 'docker-cn', label: t('Docker国内') }])
 // Pre-fill the create form with the first free nkas-style name (nkas, nkas2,
@@ -581,9 +623,10 @@ function defaultInstanceName() {
   while (names.has(`nkas${index}`)) index++
   return `nkas${index}`
 }
-function openCreateModal() { modal.value = { type: 'create', name: defaultInstanceName(), origin: instances.value[0]?.name || 'template-nkas', template: 'intl', busy: false } }
-function openDeleteModal(name: string) { modal.value = { type: 'delete', name, origin: '', template: '', busy: false } }
-function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', origin: '', template: 'intl', busy: false } }
+function openCreateModal() { modal.value = { type: 'create', name: defaultInstanceName(), renameTarget: '', origin: instances.value[0]?.name || 'template-nkas', template: 'intl', busy: false } }
+function openRenameModal(name: string) { modal.value = { type: 'rename', name, renameTarget: name, origin: '', template: '', busy: false } }
+function openDeleteModal(name: string) { modal.value = { type: 'delete', name, renameTarget: '', origin: '', template: '', busy: false } }
+function openResetDeployModal() { modal.value = { type: 'resetDeploy', name: '', renameTarget: '', origin: '', template: 'intl', busy: false } }
 // Generic confirmation so every risky action shares the same modal instead of
 // mixing native confirm() with custom cards.
 const modalConfirmMessage = ref('')
@@ -591,7 +634,7 @@ let modalConfirmAction: (() => void | Promise<void>) | null = null
 function openConfirmModal(message: string, action: () => void | Promise<void>) {
   modalConfirmMessage.value = message
   modalConfirmAction = action
-  modal.value = { type: 'confirm', name: '', origin: '', template: '', busy: false }
+  modal.value = { type: 'confirm', name: '', renameTarget: '', origin: '', template: '', busy: false }
 }
 // Information-only popup (no follow-up action), e.g. the administrator
 // privilege warning shown when a PC-client instance cannot start.
@@ -600,7 +643,7 @@ const modalAlertMessage = ref('')
 function openAlertModal(title: string, message: string) {
   modalAlertTitle.value = title
   modalAlertMessage.value = message
-  modal.value = { type: 'alert', name: '', origin: '', template: '', busy: false }
+  modal.value = { type: 'alert', name: '', renameTarget: '', origin: '', template: '', busy: false }
 }
 async function confirmModal() {
   const m = modal.value
@@ -612,6 +655,16 @@ async function confirmModal() {
       const name = m.name.trim()
       if (!name) return
       await api.post('/api/instances', { name, origin: m.origin })
+    } else if (m.type === 'rename') {
+      const newName = m.name.trim()
+      if (!newName || newName === m.renameTarget) return
+      await api.post(`/api/instances/${m.renameTarget}/rename`, { name: newName })
+      // Keep the workspace route pointing at the renamed instance.
+      if (selectedName.value === m.renameTarget) {
+        const old = m.renameTarget
+        m.renameTarget = newName
+        router.replace(route.path.replace(`/i/${old}/`, `/i/${newName}/`))
+      }
     } else if (m.type === 'delete') {
       await api.del(`/api/${m.name}`)
       if (selectedName.value === m.name) dashboard()
@@ -792,6 +845,47 @@ async function executeForceRestart() {
   error.value = t('重启超时，请手动刷新页面')
   restarting.value = false
 }
+// Manual reorder on the multi-instance page: native HTML5 drag-and-drop
+// driven by a dedicated handle so table inputs keep working.  The new order
+// is persisted to the backend and applies to the dashboard grid and sidebar
+// too, because every view renders the same instances list.
+const dragIndex = ref(-1)
+const dragOverIndex = ref(-1)
+function onDragStart(index: number, event: DragEvent) {
+  // The handle itself is the draggable element (draggable lives on it, not on
+  // the row): dragstart then bubbles up from the handle, so this guard passes
+  // only for handle-initiated drags and text selection inside remark inputs
+  // never moves rows.
+  const handle = (event.target as HTMLElement).closest('.drag-handle')
+  if (!handle) { event.preventDefault(); return }
+  dragIndex.value = index
+  dragOverIndex.value = -1
+  // Show the whole row as the drag image instead of just the handle glyph.
+  const row = handle.closest('tr')
+  if (row && event.dataTransfer) event.dataTransfer.setDragImage(row, 24, 24)
+}
+function onDragOver(index: number, event: DragEvent) {
+  if (dragIndex.value < 0) return
+  event.preventDefault()
+  if (dragOverIndex.value !== index) dragOverIndex.value = index
+}
+function onDragEnd() { dragIndex.value = -1; dragOverIndex.value = -1 }
+function onDrop() {
+  const from = dragIndex.value
+  const to = dragOverIndex.value
+  dragIndex.value = -1
+  dragOverIndex.value = -1
+  if (from < 0 || to < 0 || from === to) return
+  const list = [...instances.value]
+  const [moved] = list.splice(from, 1)
+  list.splice(to, 0, moved)
+  instances.value = list
+  persistOrder()
+}
+async function persistOrder() {
+  try { await api.post('/api/instances/order', { names: instances.value.map(item => item.name) }) }
+  catch (exception: any) { error.value = exception.message; await loadInstances() }
+}
 async function saveRemark(instance: Instance, event: Event) {
   const input = event.target as HTMLInputElement
   try {
@@ -871,6 +965,9 @@ async function healthCheck() {
   try {
     const status = await api.get('/api/system/status')
     watchUpdaterState(status.updater_state)
+    // loadInstances 内含 loadSerial；周期刷新让状态展示（运行中/空闲）拿到
+    // 最新的 current_task
+    await loadInstances()
     if (backendDown.value) {
       backendDown.value = false
       workspaceName = ''
@@ -931,9 +1028,9 @@ onBeforeUnmount(() => {
       <div class="side-section">
         <div class="side-label">{{ t('实例') }}</div>
         <button v-for="instance in instances" :key="instance.name" class="side-item" :class="{ active: selectedName === instance.name }" @click="enter(instance.name)">
-          <span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>
-          <span class="side-text">{{ instance.name }}</span>
-          <span class="badge" :class="{ 'idle-badge': instance.state !== 1 }">{{ instance.state === 1 ? t('运行中') : t('空闲') }}</span>
+          <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>
+          <span class="side-text" :title="instance.name">{{ instance.name }}</span>
+          <span class="badge" :class="{ 'idle-badge': displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle', 'error-badge': displayStatusClass(instance.name, instance.state, instance.current_task) === 'error' }">{{ displayStatus(instance.name, instance.state, instance.current_task) }}</span>
         </button>
       </div>
       <div class="side-section">
@@ -954,8 +1051,8 @@ onBeforeUnmount(() => {
     <aside v-if="isWorkspace" class="rail" :class="{ 'mobile-open': mobileNav === 'rail' }">
       <div class="rail-head">
         <div class="rail-inst">
-          <span class="inst-avatar" :class="{ idle: selectedInstance?.state !== 1 }">{{ initials(selectedName) }}<span class="ring" :class="stateClass(selectedInstance?.state)"></span></span>
-          <div><div class="rail-inst-name">{{ selectedName }}</div><div class="rail-inst-state">{{ stateText(selectedInstance?.state) }}</div></div>
+          <span class="inst-avatar" :class="{ idle: displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task) === 'idle' }">{{ initials(selectedName) }}<span class="ring" :class="displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task)"></span></span>
+          <div class="rail-inst-info"><div class="rail-inst-name" :title="selectedName">{{ selectedName }}</div><div class="rail-inst-state">{{ displayStatus(selectedName, selectedInstance?.state, selectedInstance?.current_task) }}</div></div>
         </div>
         <label class="rail-search">🔍 <input v-model="taskFilter" :placeholder="t('筛选任务…')"><button v-if="taskFilter" type="button" class="rail-clear" @click.prevent="taskFilter = ''">✕</button></label>
       </div>
@@ -982,7 +1079,7 @@ onBeforeUnmount(() => {
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 5.5h14M3 10h14M3 14.5h14"/></svg>
         </button>
         <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
-        <span v-if="isWorkspace" class="status-pill" :class="stateClass(selectedInstance?.state)">{{ stateText(selectedInstance?.state) }}</span>
+        <span v-if="isWorkspace" class="status-pill" :class="displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task)">{{ displayStatus(selectedName, selectedInstance?.state, selectedInstance?.current_task) }}</span>
         <div class="topbar-right">
           <button class="tb-btn tb-bell" :title="t('公告中心')" @click="openAnnouncementCenter">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2a4.6 4.6 0 0 0-4.6 4.6v2.6c0 .5-.17 1-.47 1.42l-1.05 1.5h12.24l-1.05-1.5a2.3 2.3 0 0 1-.47-1.42V7.8A4.6 4.6 0 0 0 10 3.2Z"/><path d="M8.3 15.6a1.8 1.8 0 0 0 3.4 0"/></svg>
@@ -1022,11 +1119,11 @@ onBeforeUnmount(() => {
         </div>
         <div class="section-title">{{ t('实例') }}</div>
         <div class="inst-grid">
-          <article v-for="instance in instances" :key="instance.name" class="card inst-card hoverable" :class="{ 'is-running': instance.state === 1 }">
+          <article v-for="instance in instances" :key="instance.name" class="card inst-card hoverable" :class="{ 'is-running': displayStatusClass(instance.name, instance.state, instance.current_task) === 'running' }">
             <div class="inst-card-head">
-              <span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>
+              <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>
               <div><h3>{{ instance.name }}</h3><div v-if="instance.mod !== 'nkas'" class="sub">mod: {{ instance.mod }}</div></div>
-              <span class="status-pill" :class="stateClass(instance.state)" style="margin-left:auto"><span v-if="instance.state === 1" class="pulse"></span>{{ instance.state === 1 ? t('运行中') : t('待机') }}</span>
+              <span class="status-pill" :class="displayStatusClass(instance.name, instance.state, instance.current_task)" style="margin-left:auto"><span v-if="displayStatusClass(instance.name, instance.state, instance.current_task) === 'running'" class="pulse"></span>{{ displayStatus(instance.name, instance.state, instance.current_task) }}</span>
             </div>
             <div class="inst-now"><span class="k">{{ t('当前任务') }}</span><span>{{ instance.current_task || t('无') }}</span></div>
             <div class="inst-now"><span class="k">{{ t('下一任务') }}</span><span>{{ instance.next_task || '—' }}</span></div>
@@ -1102,7 +1199,7 @@ onBeforeUnmount(() => {
                       </template>
                       <div v-else-if="field.widget === 'textarea'" class="code-wrap">
                         <pre v-if="isStructuredTextarea(field)" class="code-highlight" v-html="highlightTextarea(field)"></pre>
-                        <textarea v-autosize :class="{ 'code-input': isStructuredTextarea(field), 'textarea-mono': field.mode !== 'text' }" :value="field.value" :readonly="field.display !== 'show'" :inputmode="field.mode === 'url' ? 'url' : 'text'" spellcheck="false" @input="resizeTextarea" @change="save(field, $event)"></textarea>
+                        <textarea v-autosize :class="{ 'code-input': isStructuredTextarea(field), 'textarea-mono': field.mode !== 'text' }" :value="field.value" :readonly="field.display !== 'show'" :inputmode="field.mode === 'url' ? 'url' : 'text'" spellcheck="false" @input="onTextareaInput(field, $event)" @change="save(field, $event)"></textarea>
                       </div>
                       <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                       <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value" :options="field.options" :disabled="field.display !== 'show'" :placeholder="t('添加')" @change="(value: string) => saveValue(field, value).catch(() => {})"/>
@@ -1149,15 +1246,17 @@ onBeforeUnmount(() => {
         </article>
         <article class="card manage-table" style="overflow:hidden">
           <table>
-            <colgroup><col style="width:22%"><col style="width:10%"><col style="width:15%"><col><col style="width:200px"></colgroup>
+            <colgroup><col style="width:22%"><col style="width:10%"><col style="width:15%"><col><col style="width:240px"></colgroup>
             <thead><tr><th>{{ t('名称') }}</th><th>Mod</th><th>{{ t('状态') }}</th><th>{{ t('备注') }}</th><th>{{ t('操作') }}</th></tr></thead>
             <tbody>
-              <tr v-for="instance in instances" :key="instance.name">
-                <td :data-label="t('名称')"><span class="cell-inst"><span class="inst-avatar" :class="{ idle: instance.state !== 1 }">{{ initials(instance.name) }}<span class="ring" :class="stateClass(instance.state)"></span></span>{{ instance.name }}</span></td>
+              <tr v-for="(instance, index) in instances" :key="instance.name"
+                  :class="{ dragging: dragIndex === index, 'drag-over': dragIndex >= 0 && dragOverIndex === index && dragOverIndex !== dragIndex }"
+                  @dragstart="onDragStart(index, $event)" @dragover="onDragOver(index, $event)" @drop="onDrop" @dragend="onDragEnd">
+                <td :data-label="t('名称')"><span class="cell-inst"><span class="drag-handle" draggable="true" :title="t('拖动排序')">⠿</span><span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>{{ instance.name }}</span></td>
                 <td :data-label="t('Mod')">{{ instance.mod }}</td>
-                <td :data-label="t('状态')"><span class="status-pill" :class="stateClass(instance.state)">{{ stateText(instance.state) }}</span></td>
+                <td :data-label="t('状态')"><span class="status-pill" :class="displayStatusClass(instance.name, instance.state, instance.current_task)">{{ displayStatus(instance.name, instance.state, instance.current_task) }}</span></td>
                 <td :data-label="t('备注')"><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
-                <td :data-label="t('操作')"><a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></td>
+                <td :data-label="t('操作')"><span class="row-actions"><a class="btn sm" :href="`/api/${instance.name}/export`">{{ t('导出') }}</a> <button class="btn sm" :disabled="instance.state === 1" @click="openRenameModal(instance.name)">{{ t('重命名') }}</button> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)">{{ t('删除') }}</button></span></td>
               </tr>
             </tbody>
           </table>
@@ -1205,6 +1304,7 @@ onBeforeUnmount(() => {
                   <div v-else-if="field.widget === 'multiselect'" class="deploy-multisel">
                     <label v-for="opt in field.options" :key="opt.value" class="deploy-multi-opt" :class="{ on: (field.value || []).includes(opt.value) }"><input type="checkbox" hidden :checked="(field.value || []).includes(opt.value)" @change="toggleDeployMulti(field, opt.value)">{{ opt.label }}</label>
                   </div>
+                  <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value || ''" :options="field.options" :placeholder="t('添加')" @change="(value: string) => saveDeployValue(field, value)"/>
                   <input v-else :type="field.widget === 'number' ? 'number' : 'text'" :value="field.value ?? ''" @change="saveDeployField(field, $event)">
                 </div>
               </div>
@@ -1323,10 +1423,13 @@ onBeforeUnmount(() => {
     </div>
     <div v-if="modal.type" class="modal-mask" @click.self="modal.type = ''">
       <div class="modal-card">
-        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : modal.type === 'alert' ? modalAlertTitle : t('删除') }}</h3>
+        <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'rename' ? t('重命名') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : modal.type === 'alert' ? modalAlertTitle : t('删除') }}</h3>
         <template v-if="modal.type === 'create'">
           <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
           <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
+        </template>
+        <template v-else-if="modal.type === 'rename'">
+          <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
         </template>
         <template v-else-if="modal.type === 'resetDeploy'">
           <p class="modal-text">{{ t('将全部部署配置还原为默认值？') }}{{ t('此操作不可恢复。') }}</p>
@@ -1337,7 +1440,7 @@ onBeforeUnmount(() => {
         <p v-else class="modal-text">{{ t('删除') }} {{ modal.name }}？{{ t('此操作不可恢复。') }}</p>
         <div class="modal-actions">
           <button v-if="modal.type !== 'alert'" class="btn" @click="modal.type = ''">{{ t('取消') }}</button>
-          <button class="btn" :class="modal.type === 'delete' || modal.type === 'resetDeploy' ? 'danger' : 'primary'" :disabled="modal.busy || (modal.type === 'create' && !modal.name.trim())" @click="confirmModal">{{ modal.type === 'alert' ? t('知道了') : t('确定') }}</button>
+          <button class="btn" :class="modal.type === 'delete' || modal.type === 'resetDeploy' ? 'danger' : 'primary'" :disabled="modal.busy || ((modal.type === 'create' || modal.type === 'rename') && !modal.name.trim())" @click="confirmModal">{{ modal.type === 'alert' ? t('知道了') : t('确定') }}</button>
         </div>
       </div>
     </div>

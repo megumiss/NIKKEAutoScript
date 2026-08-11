@@ -68,8 +68,9 @@ class RichRenderableHandler(RichHandler):
 
         """
             self._func为 进程共享渲染队列 State.manager.Queue()的put(item)方法
+            队列元素为 (levelno, renderable)，供接收端按级别分类保留
         """
-        self._func(log_renderable)
+        self._func((record.levelno, log_renderable))
 
     def handle(self, record: logging.LogRecord) -> bool:
         if not self._func:
@@ -342,7 +343,8 @@ def print(*objects: ConsoleRenderable, **kwargs):
     for hdlr in logger.handlers:
         if isinstance(hdlr, RichRenderableHandler):
             for renderable in _get_renderables(hdlr.console, *objects, **kwargs):
-                hdlr._func(renderable)
+                # 直接 print 的内容（如 rule）按 INFO 归类，避免被 DEBUG 冲刷淘汰
+                hdlr._func((logging.INFO, renderable))
         elif isinstance(hdlr, RichHandler):
             hdlr.console.print(*objects)
 

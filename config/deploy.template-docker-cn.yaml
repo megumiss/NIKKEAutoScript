@@ -108,6 +108,29 @@ Deploy:
     # Notice ids marked as read by current user, comma separated
     ReadNoticeIds: null
 
+  Serial:
+    # Enable serial execution for multiple instances, works on any platform.
+    # Instances in SerialGroup take turns to run tasks; only one instance operates the device at a time.
+    # Typical uses:
+    # - win platform: parallel instances fight for the global mouse and window focus;
+    # - adb platform: stagger instances sharing one emulator or reduce load on weak machines.
+    # Instance processes keep running; the turn is passed automatically. Processes must be started as usual (e.g. via Run or start all).
+    # [Default] false
+    SerialEnable: false
+    # Instances to run serially, in execution order (ordered picker on the deploy settings page).
+    # Stored as an ordered 'a > b' string; instances not in the list are unaffected and run in parallel as before.
+    SerialGroup: null
+    # Behavior when an instance stops with an error
+    # 'skip': Skip it and continue with the next instance
+    # 'stop': Stop granting turns until the next day or a manual reset
+    # 'retry': Skip it for now, restart it once when no other instance needs the turn
+    # [Default] skip
+    SerialOnError: skip
+    # Release the turn when the holder's next task is more than X minutes away.
+    # High-frequency tasks (e.g. SpecialArenaWatch) get the turn back when they become due.
+    # [Default] 5
+    SerialIdleThreshold: 5
+
   Statistics:
     # Report anonymous usage statistics at startup, at most once per day. No account, config or any personal data is collected
     # Reported data: random anonymous ID, source commit hash, OS platform name, screen resolution

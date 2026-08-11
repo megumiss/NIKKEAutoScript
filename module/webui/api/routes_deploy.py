@@ -27,11 +27,13 @@ from module.webui.setting import State
 EXCLUDED_KEYS = {'ReadNoticeIds', 'StartupNoticeDismissedId'}
 # Path/URL values that benefit from a full-row input instead of the standard
 # narrow control.
-WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy'}
+WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy',
+             'SerialGroup'}
 SELECT_OPTIONS = {
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
     'HomePage': ['overview', 'instance'],
+    'SerialOnError': ['skip', 'stop', 'retry'],
 }
 # Language options are self-named in every UI language; theme labels follow
 # the UI language.
@@ -46,6 +48,11 @@ OPTION_LABELS = {
         'zh-CN': {'overview': '总览', 'instance': '实例页'},
         'en-US': {'overview': 'Overview', 'instance': 'Instance'},
         'ja-JP': {'overview': '概要', 'instance': 'インスタンス'},
+    },
+    'SerialOnError': {
+        'zh-CN': {'skip': '跳过并继续', 'stop': '停止串行执行', 'retry': '稍后重试一次'},
+        'en-US': {'skip': 'Skip and continue', 'stop': 'Stop serial run', 'retry': 'Retry once later'},
+        'ja-JP': {'skip': 'スキップして続行', 'stop': 'シリアル実行を停止', 'retry': '後で一度リトライ'},
     },
 }
 # Templates offered by the one-click reset.
@@ -248,6 +255,32 @@ FIELD_I18N = {
         'zh-CN': {'desc': '--run，启动时自动运行指定实例'},
         'ja-JP': {'desc': '--run 起動時に自動実行する設定'},
     },
+    'SerialEnable': {
+        'zh-CN': {'desc': '开启多实例顺序执行，不限平台\nSerialGroup 中的实例轮流执行任务，同一时刻只有一个实例操作设备。\n'
+                          'win 平台可避免并行实例互相抢鼠标和窗口焦点；adb 平台可用于错峰共用模拟器或降低机器负载。\n'
+                          '实例进程保持运行，令牌自动交接；实例需照常启动（通过 Run 或全部启动）。',
+                  'hints': {'Default': 'false'}},
+        'ja-JP': {'desc': '複数インスタンスの順次実行を有効化（プラットフォーム不問）\nSerialGroup のインスタンスが交代でタスクを実行し、同時に操作するのは1つのみ。\n'
+                          'win ではマウスやフォーカスの競合を防止、adb ではエミュレータ共用の時差実行や負荷軽減に。\n'
+                          'プロセスは常駐し、ターンは自動で引き継がれます。',
+                  'hints': {'Default': 'false'}},
+    },
+    'SerialGroup': {
+        'zh-CN': {'desc': '参与顺序执行的实例，按列表顺序依次执行（用 ‹ › 调整顺序）\n不在列表中的实例不受影响，仍并行运行'},
+        'ja-JP': {'desc': '順次実行するインスタンス。リストの順に実行（‹ › で並べ替え）\nリスト外のインスタンスは従来通り並行実行'},
+    },
+    'SerialOnError': {
+        'zh-CN': {'desc': '实例出错停止后的行为\nskip：跳过该实例，继续下一个\nstop：停止整个串行执行，直到次日或手动重置\nretry：暂时跳过，没有其他实例需要令牌时重启一次',
+                  'hints': {'Default': 'skip'}},
+        'ja-JP': {'desc': 'インスタンスがエラー停止した場合の動作\nskip：スキップして次へ\nstop：翌日または手動リセットまで停止\nretry：空きができたら一度再起動',
+                  'hints': {'Default': 'skip'}},
+    },
+    'SerialIdleThreshold': {
+        'zh-CN': {'desc': '持有者下一个任务距今超过 X 分钟时释放令牌，让下一个实例开始。\n高频任务（如竞技场监控）到期时会重新获得令牌。',
+                  'hints': {'Default': '5'}},
+        'ja-JP': {'desc': '保持者の次タスクまで X 分以上ある場合にターンを解放。\n高頻度タスク（アリーナ監視など）は期限が来るとターンを再取得。',
+                  'hints': {'Default': '5'}},
+    },
     'EnableStatistics': {
         'zh-CN': {'desc': '启动时上报匿名使用统计，每天最多一次，不收集账号、配置等任何个人数据\n'
                           '上报内容：随机匿名 ID、源码Commit号、系统平台名称、屏幕分辨率'},
@@ -332,7 +365,7 @@ def _widget(key, default):
 
 def _select_options(key):
     labels = OPTION_LABELS[key]
-    if key in ('Theme', 'HomePage'):
+    if key in ('Theme', 'HomePage', 'SerialOnError'):
         labels = labels.get(lang.LANG) or labels['en-US']
     return [{'value': value, 'label': labels.get(value, value)} for value in SELECT_OPTIONS[key]]
 
@@ -350,6 +383,15 @@ def _run_value(raw):
         except ValueError:
             pass
     return []
+
+
+def _serial_group_value(raw):
+    """SerialGroup is stored as an ordered 'a > b' string (legacy 'a,b' is
+    accepted); the priority widget works on the '>'-joined form."""
+    if not raw:
+        return ''
+    parts = [part.strip() for part in re.split(r'[>,]', str(raw)) if part.strip()]
+    return ' > '.join(parts)
 
 
 def _coerce(key, value, default):
@@ -382,6 +424,13 @@ async def deploy_schema(_: Request):
                 field['options'] = [{'value': name, 'label': name} for name in nkas_instance()]
                 field['value'] = _run_value(config.config.get(key))
                 field['default'] = []
+            elif key == 'SerialGroup':
+                # Ordered picker (same widget as task priority args); stored
+                # as an ordered 'a > b' string, order = execution order.
+                field['widget'] = 'priority'
+                field['options'] = [{'value': name, 'label': name} for name in nkas_instance()]
+                field['value'] = _serial_group_value(config.config.get(key))
+                field['default'] = ''
             else:
                 field['widget'] = _widget(key, default)
                 field['value'] = config.config.get(key)
@@ -413,6 +462,24 @@ async def deploy_patch(request: Request):
             logger.exception(exc)
             return _json_error(str(exc), 500)
         return JSONResponse({'status': 'success', 'value': value})
+    if key == 'SerialGroup':
+        # The priority widget sends an ordered 'a > b' string; normalize and
+        # keep only existing instance names (null when empty).
+        if value is None or (isinstance(value, str) and not value.strip()):
+            normalized = None
+        elif isinstance(value, str):
+            known = set(nkas_instance())
+            parts = [part.strip() for part in re.split(r'[>,]', value) if part.strip()]
+            parts = [part for part in parts if part in known]
+            normalized = ' > '.join(parts) if parts else None
+        else:
+            return _json_error('SerialGroup must be a string.', 422)
+        try:
+            setattr(config, key, normalized)
+        except OSError as exc:
+            logger.exception(exc)
+            return _json_error(str(exc), 500)
+        return JSONResponse({'status': 'success', 'value': normalized})
     if key in SELECT_OPTIONS and value not in SELECT_OPTIONS[key]:
         return _json_error(f'{key} must be one of {SELECT_OPTIONS[key]}.', 422)
     try:

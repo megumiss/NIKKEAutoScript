@@ -8,7 +8,7 @@ from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
 from . import (routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_maintenance,
-               routes_notify, routes_proxy, routes_stats, routes_system, routes_tasks, ws)
+               routes_notify, routes_proxy, routes_serial, routes_stats, routes_system, routes_tasks, ws)
 
 
 def create_spa_mount():
@@ -26,6 +26,8 @@ def mount_api(app):
         Route('/api/instances', routes_instances.instances, methods=['GET']),
         Route('/api/instances', routes_instances.create, methods=['POST']),
         Route('/api/instances/import', routes_instances.import_config, methods=['POST']),
+        Route('/api/instances/order', routes_instances.reorder, methods=['POST']),
+        Route('/api/instances/{name:str}/rename', routes_instances.rename, methods=['POST']),
         Route('/api/calendar', routes_calendar.calendar, methods=['GET']),
         Route('/api/maintenance', routes_maintenance.maintenance, methods=['GET']),
         Route('/api/restart', routes_system.restart, methods=['POST']),
@@ -45,6 +47,8 @@ def mount_api(app):
         Route('/api/system/deploy', routes_deploy.deploy_schema, methods=['GET']),
         Route('/api/system/deploy', routes_deploy.deploy_patch, methods=['PATCH']),
         Route('/api/system/deploy/reset', routes_deploy.deploy_reset, methods=['POST']),
+        Route('/api/serial/state', routes_serial.state, methods=['GET']),
+        Route('/api/serial/reset', routes_serial.reset, methods=['POST']),
         Route('/api/system/logs/files', routes_logs.log_files, methods=['GET']),
         Route('/api/system/logs', routes_logs.log_query, methods=['GET']),
         Route('/api/proxy/links', routes_proxy.proxy_links, methods=['GET']),
