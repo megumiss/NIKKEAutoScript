@@ -48,30 +48,124 @@ def _pc_client_requires_admin(name):
 
 
 # Lives outside ./config because nkas_instance() treats every *.json there
-# as an instance.
-REMARKS_FILE = './data/instance_remarks.json'
+# as an instance.  Per-instance metadata lives in a single file keyed by
+# instance name, each entry carrying its display order and remark:
+#     {"nkas": {"order": 0, "remark": "..."}, "nkas2": {"order": 1}}
+META_FILE = './data/instance_meta.json'
+# Legacy remarks store, merged into META_FILE once and then removed.
+LEGACY_REMARKS_FILE = './data/instance_remarks.json'
 
 
-def _load_remarks():
+def _read_meta():
     try:
-        with open(REMARKS_FILE, 'r', encoding='utf-8') as f:
+        with open(META_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (FileNotFoundError, OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _load_meta():
+    """Read the metadata file; on first use migrate the legacy
+    instance_remarks.json into it and drop it."""
+    meta = _read_meta()
+    if meta:
+        return meta
+    try:
+        with open(LEGACY_REMARKS_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except (FileNotFoundError, OSError, ValueError):
         return {}
     if not isinstance(data, dict):
         return {}
-    return {str(key): str(value) for key, value in data.items()}
+    migrated = False
+    for name, text in data.items():
+        if text:
+            meta.setdefault(str(name), {})['remark'] = str(text)
+            migrated = True
+    if migrated:
+        _save_meta(meta)
+        try:
+            os.remove(LEGACY_REMARKS_FILE)
+        except OSError:
+            pass
+    return meta
+
+
+def _save_meta(meta):
+    with open(META_FILE, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+
+def _load_remarks():
+    remarks = {}
+    for name, entry in _load_meta().items():
+        if isinstance(entry, dict) and entry.get('remark'):
+            remarks[str(name)] = str(entry['remark'])
+    return remarks
 
 
 def _save_remarks(remarks):
-    with open(REMARKS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(remarks, f, ensure_ascii=False, indent=2)
+    meta = _load_meta()
+    for name, text in remarks.items():
+        name = str(name)
+        entry = meta.get(name)
+        if not isinstance(entry, dict):
+            entry = {}
+            meta[name] = entry
+        if text:
+            entry['remark'] = str(text)
+        else:
+            entry.pop('remark', None)
+    for name, entry in meta.items():
+        if name not in remarks and isinstance(entry, dict):
+            entry.pop('remark', None)
+    for name in [name for name, entry in meta.items() if isinstance(entry, dict) and not entry]:
+        del meta[name]
+    _save_meta(meta)
+
+
+def _load_order():
+    ranked = []
+    for name, entry in _load_meta().items():
+        if isinstance(entry, dict) and isinstance(entry.get('order'), int):
+            ranked.append((str(name), entry['order']))
+    ranked.sort(key=lambda item: item[1])
+    return [name for name, _ in ranked]
+
+
+def _save_order(order):
+    meta = _load_meta()
+    for index, name in enumerate(order):
+        name = str(name)
+        entry = meta.get(name)
+        if not isinstance(entry, dict):
+            entry = {}
+            meta[name] = entry
+        entry['order'] = index
+    for name, entry in meta.items():
+        if name not in order and isinstance(entry, dict):
+            entry.pop('order', None)
+    for name in [name for name, entry in meta.items() if isinstance(entry, dict) and not entry]:
+        del meta[name]
+    _save_meta(meta)
+
+
+def ordered_instances():
+    """Instances ordered by the saved manual order; unknown or new instances
+    are appended at the end in their filesystem enumeration order."""
+    instances = nkas_instance()
+    ranked = [name for name in _load_order() if name in instances]
+    for name in instances:
+        if name not in ranked:
+            ranked.append(name)
+    return ranked
 
 
 async def instances(_: Request):
     result = []
     remarks = _load_remarks()
-    for name in nkas_instance():
+    for name in ordered_instances():
         manager = ProcessManager.get_manager(name)
         current_task = next_task = None
         try:
@@ -187,6 +281,24 @@ async def create(request: Request):
     return JSONResponse({'status': 'success', 'name': name}, status_code=201)
 
 
+async def reorder(request: Request):
+    """Persist the manual display order of instances."""
+    try:
+        data = await request.json()
+        names = data['names']
+    except (ValueError, TypeError, KeyError):
+        return _response_error('Expected JSON body with names array.')
+    if not isinstance(names, list):
+        return _response_error('Expected JSON body with names array.')
+    instances = nkas_instance()
+    ordered = [str(name) for name in names if isinstance(name, str) and name in instances]
+    for name in instances:
+        if name not in ordered:
+            ordered.append(name)
+    _save_order(ordered)
+    return JSONResponse({'status': 'success', 'names': ordered})
+
+
 async def delete(request: Request):
     name = request.path_params['name']
     try:
@@ -205,7 +317,103 @@ async def delete(request: Request):
     remarks = _load_remarks()
     if remarks.pop(name, None) is not None:
         _save_remarks(remarks)
+    order = _load_order()
+    if name in order:
+        order.remove(name)
+        _save_order(order)
     return JSONResponse({'status': 'success'})
+
+
+def _migrate_instance_assets(name, new_name):
+    """Move the per-instance files and directories that carry the instance
+    name so a renamed instance keeps its stats, CDK history and log history.
+    Every step is best-effort: a failure here must not abort the rename after
+    the config file was already moved."""
+    # ./data/<name>/ — warehouse and interception stats CSV directory.
+    old_data = Path('./data') / name
+    new_data = Path('./data') / new_name
+    if old_data.is_dir() and not new_data.exists():
+        try:
+            os.rename(old_data, new_data)
+        except OSError as exc:
+            logger.warning(f'Unable to migrate data directory {old_data}: {exc}')
+    # ./tmp/<name>/ — CDK redeem history and temporary notify screenshots.
+    old_tmp = Path('./tmp') / name
+    new_tmp = Path('./tmp') / new_name
+    if old_tmp.is_dir() and not new_tmp.exists():
+        try:
+            os.rename(old_tmp, new_tmp)
+        except OSError as exc:
+            logger.warning(f'Unable to migrate tmp directory {old_tmp}: {exc}')
+    # ./log/<date>_<name>.txt — historical instance logs.  Only files whose
+    # source segment equals the old name exactly are moved, so e.g. renaming
+    # "nkas" never touches "2026-08-01_nkas2.txt".
+    log_dir = Path('./log')
+    if log_dir.is_dir():
+        pattern = re.compile(r'^(\d{4}-\d{2}-\d{2})_' + re.escape(name) + r'\.txt$')
+        for old_log in log_dir.iterdir():
+            if not old_log.is_file():
+                continue
+            match = pattern.match(old_log.name)
+            if not match:
+                continue
+            new_log = log_dir / f'{match.group(1)}_{new_name}.txt'
+            try:
+                os.rename(old_log, new_log)
+            except OSError as exc:
+                logger.warning(f'Unable to migrate log file {old_log.name}: {exc}')
+
+
+async def rename(request: Request):
+    """Rename an instance: config file, account file, remarks, order, stats
+    directories and historical logs are migrated.  The instance must be
+    stopped so no running process points at the old name."""
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+        data = await request.json()
+        new_name = str(data['name']).strip()
+    except InstanceNotFound as exc:
+        return _response_error(str(exc), 404)
+    except (ValueError, TypeError, KeyError):
+        return _response_error('Expected JSON body with name.')
+    if not new_name or new_name == name:
+        return _response_error('Invalid or already used instance name.')
+    if new_name in nkas_instance() or re.search(r'[.\\/:*?"\'<>|]', new_name) or new_name.lower().startswith('template'):
+        return _response_error('Invalid or already used instance name.')
+    if ProcessManager.get_manager(name).alive:
+        return _response_error('Stop the instance before renaming it.', 409)
+    mod = get_config_mod(name)
+    old_path = Path(filepath_config(name, mod))
+    new_path = Path(filepath_config(new_name, mod))
+    if not old_path.exists():
+        return _response_error(f'Instance "{name}" config not found.', 404)
+    if new_path.exists():
+        return _response_error('Invalid or already used instance name.')
+    os.rename(old_path, new_path)
+    from module.config.account import _get_account_file
+    old_acc = Path(_get_account_file(name))
+    new_acc = Path(_get_account_file(new_name))
+    if old_acc.exists():
+        try:
+            os.rename(old_acc, new_acc)
+        except OSError as exc:
+            # Best-effort like the asset migration below: the config file is
+            # already renamed, so a leftover or colliding .acc file must not
+            # abort the rename half-way.
+            logger.warning(f'Unable to migrate account file {old_acc}: {exc}')
+    _migrate_instance_assets(name, new_name)
+    remarks = _load_remarks()
+    if name in remarks:
+        remarks[new_name] = remarks.pop(name)
+        _save_remarks(remarks)
+    order = _load_order()
+    if name in order:
+        order[order.index(name)] = new_name
+        _save_order(order)
+    ProcessManager.rename_process(name, new_name)
+    logger.info(f'Instance "{name}" renamed to "{new_name}"')
+    return JSONResponse({'status': 'success', 'name': new_name})
 
 
 async def export(request: Request):

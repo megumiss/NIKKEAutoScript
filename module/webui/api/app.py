@@ -26,6 +26,8 @@ def mount_api(app):
         Route('/api/instances', routes_instances.instances, methods=['GET']),
         Route('/api/instances', routes_instances.create, methods=['POST']),
         Route('/api/instances/import', routes_instances.import_config, methods=['POST']),
+        Route('/api/instances/order', routes_instances.reorder, methods=['POST']),
+        Route('/api/instances/{name:str}/rename', routes_instances.rename, methods=['POST']),
         Route('/api/calendar', routes_calendar.calendar, methods=['GET']),
         Route('/api/maintenance', routes_maintenance.maintenance, methods=['GET']),
         Route('/api/restart', routes_system.restart, methods=['POST']),

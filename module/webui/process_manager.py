@@ -160,6 +160,15 @@ class ProcessManager:
             cls._processes[config_name] = ProcessManager(config_name)
         return cls._processes[config_name]
 
+    @classmethod
+    def rename_process(cls, name: str, new_name: str) -> None:
+        """Re-key an existing manager after an instance rename; no-op when no
+        manager exists for the old name (the instance was never started)."""
+        manager = cls._processes.pop(name, None)
+        if manager is not None:
+            manager.config_name = new_name
+            cls._processes[new_name] = manager
+
     @staticmethod
     def run_process(
         config_name, func: str, q: queue.Queue, e: threading.Event = None
