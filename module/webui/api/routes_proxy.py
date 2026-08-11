@@ -9,34 +9,57 @@ Only hosts listed in _ALLOWED_HOSTS may be proxied (SSRF guard); the fixed
 links are defined in PROXY_LINKS below.  Edit that list to add/remove entries.
 """
 
+import os
 import re
 from urllib.parse import urlparse
 
 import httpx
+import yaml
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 
 from module.logger import logger
 
-# Fixed links shown on the SPA "web" page.  name is used as a lookup key for
-# the frontend i18n table and falls back to the raw string when missing.
-# direct=True means the site allows being embedded in an <iframe> without
-# X-Frame-Options / CSP frame-ancestors restrictions, so the SPA loads it
-# straight from the origin (no proxy): its JS then runs same-origin and keeps
-# full functionality.  direct=False sites block embedding and go through the
-# backend proxy instead.
-PROXY_LINKS = [
-    {'name': 'NIKKE 官网', 'url': 'https://nikke-en.com/', 'direct': True},
-    {'name': 'NIKKE Wiki (Prydwen)', 'url': 'https://prydwen.gg/nikke/', 'direct': False},
-    {'name': 'GameKee Wiki', 'url': 'https://www.gamekee.com/nikke/', 'direct': True},
-    {'name': 'GitHub 项目', 'url': 'https://github.com/megumiss/NIKKEAutoScript', 'direct': False},
-    {'name': 'GitHub Wiki', 'url': 'https://github.com/megumiss/NIKKEAutoScript/wiki', 'direct': False},
-    {'name': '项目官网', 'url': 'https://nkas.megumiss.top/', 'direct': True},
-]
+# Links shown on the SPA "web" page live in proxy_links.yaml next to this
+# file.  name is used as a lookup key for the frontend i18n table and falls
+# back to the raw string when missing; see the yaml header for direct=.
+_LINKS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'proxy_links.yaml')
 
-# Hosts (and their subdomains) allowed to be proxied.  Keep it to trusted
-# sites so the endpoint cannot be abused as an open proxy.
-_ALLOWED_HOSTS = ('nikke-en.com', 'prydwen.gg', 'gamekee.com', 'nkas.megumiss.top', 'github.com')
+
+def _load_links() -> list:
+    """Read the link list from proxy_links.yaml, dropping invalid entries."""
+    try:
+        with open(_LINKS_FILE, encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError) as e:
+        logger.error(f'Failed to load proxy links: {e}')
+        return []
+    links = []
+    for item in data or []:
+        if not isinstance(item, dict) or not item.get('name') or not item.get('url'):
+            logger.warning(f'Proxy link skipped, missing name/url: {item}')
+            continue
+        # direct 缺省按 False 处理，未知的站点一律走代理更安全。
+        link = {
+            'name': str(item['name']),
+            'url': str(item['url']),
+            'direct': bool(item.get('direct', False)),
+        }
+        i18n = item.get('i18n')
+        if isinstance(i18n, dict):
+            link['i18n'] = {str(lang): str(text) for lang, text in i18n.items()}
+        links.append(link)
+    return links
+
+
+PROXY_LINKS = _load_links()
+
+# Hosts (and their subdomains) allowed to be proxied, derived from the link
+# list so the two cannot drift apart.  Hosts stay pinned to exactly what the
+# urls use (e.g. nikke-db.pages.dev, not pages.dev).
+_ALLOWED_HOSTS = tuple(
+    host for host in (urlparse(link['url']).hostname for link in PROXY_LINKS) if host
+)
 
 # Response headers that would prevent embedding inside an iframe.
 _STRIP_HEADERS = {

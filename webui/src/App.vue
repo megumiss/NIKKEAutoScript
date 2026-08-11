@@ -105,15 +105,18 @@ const schemaReady = ref(false)
 const importBusy = ref<Record<string, boolean>>({})
 const notifyTestBusy = ref(false)
 const backendDown = ref(false)
-// 网页页：白名单常用链接，点击后在界面内 iframe 打开。
+// 常用链接页：白名单内的站点链接，点击后在界面内 iframe 打开。
 // direct=true 的站点允许被 iframe 直接嵌入（无 X-Frame-Options/CSP 限制），
 // 直连原站使页面 JS 同域运行、功能完整；direct=false 走后端代理转发。
-const webLinks = ref<{ name: string; url: string; direct?: boolean }[]>([])
+// 显示名由后端 yaml 下发：i18n 按当前语言覆盖 name，缺省回退到 name 原文。
+interface WebLink { name: string; url: string; direct?: boolean; i18n?: Record<string, string> }
+const webLinks = ref<WebLink[]>([])
 const webUrl = ref('')
 const webLoaded = ref(false)
 const webBusy = ref(false)
-function webFrameSrc(link: { url: string; direct?: boolean } | undefined) { return link?.direct ? link.url : `/api/proxy?url=${encodeURIComponent(link?.url || '')}` }
+function webFrameSrc(link: WebLink | undefined) { return link?.direct ? link.url : `/api/proxy?url=${encodeURIComponent(link?.url || '')}` }
 function webLink(url: string) { return webLinks.value.find(item => item.url === url) }
+function webLinkName(link: WebLink) { return link.i18n?.[systemStatus.value.language] || t(link.name) }
 async function loadWebLinks() {
   try {
     const result = await api.get('/api/proxy/links')
@@ -218,8 +221,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。': { 'en-US': 'Changing deploy settings may break updates or prevent startup; changes apply only after a restart. Proceed with care.', 'ja-JP': 'デプロイ設定の変更は更新失敗や起動不能を招く可能性があります。変更は再起動後に有効になります。慎重に操作してください。' },
   '将全部部署配置还原为默认值？': { 'en-US': 'Reset all deploy settings to defaults?', 'ja-JP': 'すべてのデプロイ設定をデフォルトに戻しますか？' },
   '已还原为默认值': { 'en-US': 'Reset to defaults', 'ja-JP': 'デフォルトに戻しました' },
-  '日志': { 'en-US': 'Logs', 'ja-JP': 'ログ' }, '网页': { 'en-US': 'Web', 'ja-JP': 'ウェブ' }, '暂无可用链接': { 'en-US': 'No links available', 'ja-JP': '利用可能なリンクがありません' }, '加载中…': { 'en-US': 'Loading…', 'ja-JP': '読み込み中…' }, '请选择链接': { 'en-US': 'Select a link', 'ja-JP': 'リンクを選択してください' },
-  'NIKKE 官网': { 'en-US': 'NIKKE Official', 'ja-JP': 'NIKKE 公式' }, 'NIKKE Wiki (Prydwen)': { 'en-US': 'NIKKE Wiki (Prydwen)', 'ja-JP': 'NIKKE Wiki (Prydwen)' }, 'GameKee Wiki': { 'en-US': 'GameKee Wiki', 'ja-JP': 'GameKee Wiki' }, 'GitHub 项目': { 'en-US': 'GitHub Project', 'ja-JP': 'GitHub プロジェクト' }, 'GitHub Wiki': { 'en-US': 'GitHub Wiki', 'ja-JP': 'GitHub Wiki' }, '项目官网': { 'en-US': 'Project Homepage', 'ja-JP': 'プロジェクトサイト' },
+  '日志': { 'en-US': 'Logs', 'ja-JP': 'ログ' }, '常用链接': { 'en-US': 'Links', 'ja-JP': 'リンク' }, '其他': { 'en-US': 'Others', 'ja-JP': 'その他' }, '外部打开': { 'en-US': 'Open externally', 'ja-JP': '外部で開く' }, '此页面无法进行登录操作': { 'en-US': 'Login is not available on this page', 'ja-JP': 'このページではログインできません' }, '暂无可用链接': { 'en-US': 'No links available', 'ja-JP': '利用可能なリンクがありません' }, '加载中…': { 'en-US': 'Loading…', 'ja-JP': '読み込み中…' }, '请选择链接': { 'en-US': 'Select a link', 'ja-JP': 'リンクを選択してください' },
   '类型': { 'en-US': 'Type', 'ja-JP': '種類' }, '级别': { 'en-US': 'Level', 'ja-JP': 'レベル' }, '日期': { 'en-US': 'Date', 'ja-JP': '日付' }, '关键字': { 'en-US': 'Keyword', 'ja-JP': 'キーワード' },
   '搜索关键字…': { 'en-US': 'Search keyword…', 'ja-JP': 'キーワード検索…' }, '全部': { 'en-US': 'All', 'ja-JP': 'すべて' },
   '刷新': { 'en-US': 'Refresh', 'ja-JP': '再読み込み' }, '没有匹配的日志': { 'en-US': 'No matching logs', 'ja-JP': '一致するログがありません' },
@@ -277,7 +279,7 @@ function stateClass(state?: number, task?: string) {
 function displayStatus(name: string, state?: number, task?: string) { return serialWaiting(name) ? t('等待中') : stateText(state, task) }
 function displayStatusClass(name: string, state?: number, task?: string) { return serialWaiting(name) ? 'idle' : stateClass(state, task) }
 function initials(name: string) { return name.slice(0, 1).toUpperCase() }
-function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isLinks.value ? t('网页') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
+function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isLinks.value ? t('常用链接') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : taskSchema.value?.name || selectedTask.value }
 function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
 function isWideField(field: Field) { return Boolean(field.path_picker) || ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea', 'priority'].includes(field.widget) }
 // Autosized textareas are capped: an unbounded value (e.g. the Hosts entries)
@@ -1038,9 +1040,12 @@ onBeforeUnmount(() => {
         <button class="side-item" :class="{ active: isManage }" @click="router.push('/manage')"><span class="sicon">🗂</span><span class="side-text">{{ t('多开') }}</span></button>
         <button class="side-item" :class="{ active: isDeploy }" @click="router.push('/deploy')"><span class="sicon">📦</span><span class="side-text">{{ t('部署') }}</span></button>
         <button class="side-item" :class="{ active: isLogs }" @click="router.push('/logs')"><span class="sicon">📄</span><span class="side-text">{{ t('日志') }}</span></button>
-        <button class="side-item" :class="{ active: isLinks }" @click="router.push('/links')"><span class="sicon">🌐</span><span class="side-text">{{ t('网页') }}</span></button>
         <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')"><span class="sicon">⚙️</span><span class="side-text">{{ t('更新') }}</span></button>
         <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')"><span class="sicon">ℹ️</span><span class="side-text">{{ t('关于') }}</span></button>
+      </div>
+      <div class="side-section">
+        <div class="side-label">{{ t('其他') }}</div>
+        <button class="side-item" :class="{ active: isLinks }" @click="router.push('/links')"><span class="sicon">🌐</span><span class="side-text">{{ t('常用链接') }}</span></button>
       </div>
       <div class="side-spacer"></div>
       <div class="side-footer">
@@ -1349,7 +1354,9 @@ onBeforeUnmount(() => {
         <div v-if="webLoaded && !webLinks.length" class="card web-empty">{{ t('暂无可用链接') }}</div>
         <template v-else>
           <div class="web-tabs">
-            <button v-for="link in webLinks" :key="link.url" class="web-tab" :class="{ active: webUrl === link.url }" @click="openWeb(link.url)">{{ link.name }}</button>
+            <button v-for="link in webLinks" :key="link.url" class="web-tab" :class="{ active: webUrl === link.url }" @click="openWeb(link.url)">{{ webLinkName(link) }}</button>
+            <span class="web-login-hint">⚠ {{ t('此页面无法进行登录操作') }}</span>
+            <a v-if="webUrl" class="web-tab web-open" :href="webUrl" target="_blank" rel="noopener">{{ t('外部打开') }}</a>
           </div>
           <div class="web-frame-wrap">
             <iframe v-if="webUrl" class="web-frame" :src="webFrameSrc(webLink(webUrl))" @load="webBusy = false" @error="webBusy = false"></iframe>

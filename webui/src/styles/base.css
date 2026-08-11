@@ -142,6 +142,8 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .web-tab { flex:none; padding:6px 14px; border:1px solid var(--border-light); border-radius:8px; color:var(--text-2); background:var(--card-3); font-size:13px; cursor:pointer; }
 .web-tab:hover { border-color:var(--accent); color:var(--accent); }
 .web-tab.active { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); font-weight:500; }
+.web-login-hint { margin-left:auto; flex:none; padding:4px 10px; border-radius:8px; color:var(--yellow); background:var(--yellow-soft); font-size:13px; font-weight:500; white-space:nowrap; }
+.web-open { display:flex; align-items:center; text-decoration:none; }
 .web-frame-wrap { position:relative; flex:1; min-height:0; }
 .web-frame { display:block; width:100%; height:100%; border:0; background:var(--card); }
 .web-loading { position:absolute; top:16px; left:50%; transform:translateX(-50%); padding:6px 16px; border:1px solid var(--border); border-radius:20px; color:var(--text-2); background:var(--card); font-size:12.5px; box-shadow:var(--shadow); }
