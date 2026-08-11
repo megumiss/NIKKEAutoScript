@@ -220,9 +220,11 @@ def startup():
     lang.reload()
     from module.warehouse_stats.data import init_warehouse_stats_files, preload_warehouse_assets
     init_warehouse_stats_files(preload_assets=False)
-    # Assets import pulls in module.map_detection (scipy) and costs ~0.5s;
-    # warm it up off the startup critical path so the backend reports ready sooner.
-    threading.Thread(target=preload_warehouse_assets, daemon=True).start()
+    # 必须在 fork 实例进程之前完成资产预载：若在后台线程预载（import scipy
+    # 等大模块）期间 fork，子进程会继承「进行中」的 import 锁，导致实例进程
+    # 同样 import 这些模块时死锁，表现为更新重启后实例卡在 [Script Path]
+    # （Docker/Linux fork 环境，Windows spawn 不受影响）。同步预载约 0.5s。
+    preload_warehouse_assets()
     updater.event = State.manager.Event()
     if updater.delay > 0:
         task_handler.add(updater.check_update, updater.delay)
