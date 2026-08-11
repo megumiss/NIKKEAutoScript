@@ -133,7 +133,7 @@ class LogBroker:
 
     @staticmethod
     def replay(name):
-        return list(ProcessManager.get_manager(name).renderables)
+        return ProcessManager.get_manager(name).replay_renderables()
 
     @staticmethod
     def subscribe(name):

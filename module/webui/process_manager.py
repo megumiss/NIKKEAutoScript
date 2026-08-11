@@ -1,9 +1,10 @@
 import argparse
+import logging
 import os
 import queue
 import threading
 from multiprocessing import Process
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import inflection
 from rich.console import Console, ConsoleRenderable
@@ -19,10 +20,14 @@ class ProcessManager:
 
     def __init__(self, config_name: str = "nkas") -> None:
         self.config_name = config_name
-        self._renderable_queue: queue.Queue[ConsoleRenderable] = State.manager.Queue()
-        self.renderables: List[ConsoleRenderable] = []
+        self._renderable_queue: queue.Queue[Tuple[int, ConsoleRenderable]] = State.manager.Queue()
+        # Replay buffer entries are (levelno, renderable).  Retention is per
+        # level class so a debug flood cannot push info/warn/error lines out
+        # of the replay: the SPA filter defaults to info and would otherwise
+        # show only a handful of rows after a page load or reconnect.
+        self.renderables: List[Tuple[int, ConsoleRenderable]] = []
         self.renderables_max_length = 400
-        self.renderables_reduce_length = 80
+        self.renderables_max_total = self.renderables_max_length * 2
         # WebSocket consumers receive an independent bounded queue.  Keeping
         # these queues out of the logging thread's critical path preserves the
         # existing RichLog behaviour even when a browser is slow or closed.
@@ -70,7 +75,7 @@ class ProcessManager:
             if self.alive:
                 self._process.kill()
                 self.renderables.append(
-                    f"[{self.config_name}] exited. Reason: Manual stop\n"
+                    (logging.INFO, f"[{self.config_name}] exited. Reason: Manual stop\n")
                 )
             if self.thd_log_queue_handler is not None:
                 self.thd_log_queue_handler.join(timeout=1)
@@ -83,14 +88,40 @@ class ProcessManager:
     def _thread_log_queue_handler(self) -> None:
         while self.alive:
             try:
-                log = self._renderable_queue.get(timeout=1)
+                item = self._renderable_queue.get(timeout=1)
             except queue.Empty:
                 continue
-            self.renderables.append(log)
-            if len(self.renderables) > self.renderables_max_length:
-                self.renderables = self.renderables[self.renderables_reduce_length :]
+            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], int):
+                levelno, log = item
+            else:
+                # Legacy producers put bare renderables; treat them as
+                # non-debug so a debug flood cannot evict them.
+                levelno, log = logging.INFO, item
+            self.renderables.append((levelno, log))
+            self._trim_renderables()
             self._publish_log(log)
         logger.info("End of log queue handler loop")
+
+    def _trim_renderables(self) -> None:
+        # Evict the oldest entry of whichever level class is over its limit;
+        # debug and non-debug lines each keep the last renderables_max_length
+        # entries.  The SPA live buffer applies the same rule.
+        if len(self.renderables) <= self.renderables_max_total:
+            return
+        debug_count = sum(1 for levelno, _ in self.renderables if levelno <= logging.DEBUG)
+        while len(self.renderables) > self.renderables_max_total:
+            evict_debug = debug_count > self.renderables_max_length
+            for index, (levelno, _) in enumerate(self.renderables):
+                if (levelno <= logging.DEBUG) == evict_debug:
+                    del self.renderables[index]
+                    if evict_debug:
+                        debug_count -= 1
+                    break
+            else:
+                break
+
+    def replay_renderables(self) -> List[ConsoleRenderable]:
+        return [log for _, log in self.renderables]
 
     def subscribe_log(self) -> queue.Queue:
         """Return a bounded queue which receives new rendered log entries."""
@@ -140,7 +171,7 @@ class ProcessManager:
         else:
             console = Console(no_color=True)
             with console.capture() as capture:
-                console.print(self.renderables[-1])
+                console.print(self.renderables[-1][1])
             s = capture.get().strip()
             if s.endswith("Reason: Manual stop"):
                 return 2
