@@ -15,7 +15,7 @@ import re
 from collections import deque
 
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import FileResponse, JSONResponse
 
 from module.webui.api.log_utils import attr_value_kind, split_traceback
 
@@ -117,6 +117,26 @@ def _decorate_record(record):
 
 async def log_files(_: Request):
     return JSONResponse({'files': _list_files()})
+
+
+async def log_download(request: Request):
+    """Download one raw log file, without any level/keyword filtering.
+
+    Names are validated against the directory listing, same as log_query,
+    so query params cannot escape the log directory.
+    """
+    params = request.query_params
+    date = params.get('date', '')
+    source = params.get('source', '')
+    for item in _list_files():
+        if item['date'] == date and item['source'] == source:
+            filename = f"{item['date']}_{item['source']}.txt"
+            return FileResponse(
+                os.path.join(LOG_DIR, filename),
+                filename=filename,
+                media_type='text/plain; charset=utf-8',
+            )
+    return JSONResponse({'error': 'Log file not found'}, status_code=404)
 
 
 async def log_query(request: Request):

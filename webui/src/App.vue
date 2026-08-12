@@ -610,6 +610,12 @@ async function queryLogs() {
   } catch (exception: any) { error.value = exception.message } finally { if (seq === logsQuerySeq) logsLoading.value = false }
 }
 async function refreshLogs() { await loadLogFiles(); await queryLogs() }
+// Raw download of the selected file with no level/keyword filtering.  The
+// merged 全部 view has no single backing file, so the export button is
+// hidden while it is selected.
+const logsExportUrl = computed(() => logsDate.value && logsSource.value
+  ? `/api/system/logs/download?date=${encodeURIComponent(logsDate.value)}&source=${encodeURIComponent(logsSource.value)}`
+  : '')
 let logsKeywordTimer = 0
 watch([logsDate, logsSource, logsLevel], queryLogs)
 watch(logsKeyword, () => { window.clearTimeout(logsKeywordTimer); logsKeywordTimer = window.setTimeout(queryLogs, 400) })
@@ -1322,6 +1328,7 @@ onBeforeUnmount(() => {
           <div class="task-icon">📄</div>
           <div style="flex:1"><h2>{{ t('日志') }}</h2><div class="sub">{{ t('查看 log 目录下的日志文件，支持按类型、级别、日期和关键字筛选。') }}</div></div>
           <button class="btn" @click="refreshLogs">↻ {{ t('刷新') }}</button>
+          <a v-if="logsExportUrl" class="btn" :href="logsExportUrl" :download="`${logsDate}_${logsSource}.txt`">⬇ {{ t('导出') }}</a>
         </article>
         <article class="card log-card logs-card">
           <div class="log-head logs-filter">

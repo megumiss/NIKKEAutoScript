@@ -50,6 +50,7 @@ def mount_api(app):
         Route('/api/serial/state', routes_serial.state, methods=['GET']),
         Route('/api/serial/reset', routes_serial.reset, methods=['POST']),
         Route('/api/system/logs/files', routes_logs.log_files, methods=['GET']),
+        Route('/api/system/logs/download', routes_logs.log_download, methods=['GET']),
         Route('/api/system/logs', routes_logs.log_query, methods=['GET']),
         Route('/api/proxy/links', routes_proxy.proxy_links, methods=['GET']),
         Route('/api/proxy', routes_proxy.proxy, methods=['GET']),
