@@ -1,4 +1,6 @@
+import io
 import re
+import time
 from statistics import mean
 
 import cv2
@@ -287,6 +289,47 @@ def save_image(image, file):
     # image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     # cv2.imwrite(file, image)
     Image.fromarray(image).save(file)
+
+
+_preview_queue = None
+_preview_last_write = 0.0
+
+
+def set_preview_queue(q):
+    """
+    worker 进程启动时注入预览帧队列；web 进程不调用，保持 None 即全部 no-op。
+
+    Args:
+        q: multiprocessing.Manager().Queue()
+    """
+    global _preview_queue
+    _preview_queue = q
+
+
+def publish_preview_frame(image, interval=1.0):
+    """
+    节流地把最新截图编码为 JPEG 推入预览队列，供 Web UI 画面预览。
+    任何失败都静默忽略，绝不影响自动化主流程。
+
+    Args:
+        image (np.ndarray): RGB 截图
+        interval (float): 最小发布间隔（秒）
+    """
+    global _preview_last_write
+    q = _preview_queue
+    if q is None:
+        return
+    now = time.time()
+    if now - _preview_last_write < interval:
+        return
+    _preview_last_write = now
+    try:
+        buf = io.BytesIO()
+        Image.fromarray(image).save(buf, 'JPEG', quality=70)
+        q.put_nowait(buf.getvalue())
+    except Exception:
+        # queue.Full（消费慢时丢帧）与编码异常都直接丢弃
+        pass
 
 
 def extract_letters(image, letter=(255, 255, 255), threshold=128):

@@ -2,6 +2,7 @@ from collections import deque
 
 from module.base.button import Button
 from module.base.timer import Timer
+from module.base.utils import publish_preview_frame
 from module.device.adb.app_control import AppControl
 from module.device.adb.control import Control
 from module.device.adb.env import IS_WINDOWS
@@ -68,6 +69,7 @@ class Device(Screenshot, Control, AppControl):
         """
         self.stuck_record_check()
         super().screenshot()
+        publish_preview_frame(self.image)
         return self.image
 
     def handle_control_check(self, button: Button):

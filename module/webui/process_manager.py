@@ -3,12 +3,14 @@ import logging
 import os
 import queue
 import threading
+import time
 from multiprocessing import Process
 from typing import Dict, List, Tuple, Union
 
 import inflection
 from rich.console import Console, ConsoleRenderable
 
+from module.base.utils import set_preview_queue
 from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
     get_func_mod, list_mod_instance, load_mod
 from module.logger import logger, set_file_logger, set_func_logger
@@ -33,9 +35,15 @@ class ProcessManager:
         # existing RichLog behaviour even when a browser is slow or closed.
         self._log_subscribers: List[queue.Queue] = []
         self._log_subscribers_lock = threading.Lock()
+        # Preview frames published by the worker (JPEG bytes). The web process
+        # drains this queue on a thread and keeps only the newest frame in
+        # memory; nothing touches disk.
+        self._preview_queue: queue.Queue = State.manager.Queue(maxsize=2)
+        self.latest_preview: Tuple[float, bytes] = None
         self._process: Process = None
         self._process_locks: Dict[str, threading.Lock] = {}
         self.thd_log_queue_handler: threading.Thread = None
+        self.thd_preview_handler: threading.Thread = None
 
     def start(self, func, ev: threading.Event = None) -> None:
         if not self.alive:
@@ -47,11 +55,13 @@ class ProcessManager:
                     self.config_name,
                     func,
                     self._renderable_queue,
+                    self._preview_queue,
                     ev,
                 ),
             )
             self._process.start()
             self.start_log_queue_handler()
+            self.start_preview_handler()
 
     def start_log_queue_handler(self):
         if (
@@ -63,6 +73,30 @@ class ProcessManager:
             target=self._thread_log_queue_handler
         )
         self.thd_log_queue_handler.start()
+
+    def start_preview_handler(self):
+        if (
+            self.thd_preview_handler is not None
+            and self.thd_preview_handler.is_alive()
+        ):
+            return
+        self.thd_preview_handler = threading.Thread(
+            target=self._thread_preview_handler
+        )
+        self.thd_preview_handler.daemon = True
+        self.thd_preview_handler.start()
+
+    def _thread_preview_handler(self) -> None:
+        while self.alive:
+            try:
+                item = self._preview_queue.get(timeout=1)
+            except queue.Empty:
+                continue
+            except (EOFError, OSError):
+                # Worker died and the queue pipe broke; keep the last frame.
+                break
+            if isinstance(item, bytes):
+                self.latest_preview = (time.time(), item)
 
     def stop(self) -> None:
         try:
@@ -202,7 +236,7 @@ class ProcessManager:
 
     @staticmethod
     def run_process(
-        config_name, func: str, q: queue.Queue, e: threading.Event = None
+        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None
     ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -219,6 +253,7 @@ class ProcessManager:
             from module.logger import console_hdlr
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
+        set_preview_queue(pq)
 
         from module.config.config import NikkeConfig
 

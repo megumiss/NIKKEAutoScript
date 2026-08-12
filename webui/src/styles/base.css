@@ -583,3 +583,10 @@ button:focus-visible,
   .about-panel { padding: 18px 16px; }
   .about-panel .brand-logo { width: 40px; height: 40px; }
 }
+
+/* 总览页右栏：实时日志 + 画面预览横向并排（窄屏竖向堆叠） */
+.ov-right { display: flex; gap: 18px; min-width: 0; min-height: 0; }
+.ov-right .log-card { flex: 1; min-width: 0; }
+@media (max-width: 1200px) {
+  .ov-right { flex-direction: column; }
+}

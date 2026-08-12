@@ -3,6 +3,7 @@ from datetime import time
 
 from module.base.button import Button
 from module.base.timer import Timer
+from module.base.utils import publish_preview_frame
 from module.device.win.app_control import AppControl
 from module.device.win.automation import Automation
 from module.exception import (
@@ -59,6 +60,7 @@ class Device(AppControl, Automation):
         self.stuck_record_check()
         super().screenshot()
         self.image = self.current_window.image
+        publish_preview_frame(self.image)
         return self.image
 
     def handle_control_check(self, button: Button):
