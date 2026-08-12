@@ -253,29 +253,53 @@ def cleanup_old_logs(name=pyw_name, retention_days: Optional[int] = None):
 def _set_file_logger(name=pyw_name):
     name = _normalize_logger_name(name)
     cleanup_old_logs(name=name)
-    log_file = f'./log/{datetime.date.today()}_{name}.txt'
-    _install_file_handler(log_file)
+    _install_file_handler(name)
 
 
 def set_file_logger(name=pyw_name, retention_days: Optional[int] = None):
     name = _normalize_logger_name(name)
     cleanup_old_logs(name=name, retention_days=retention_days)
-    log_file = f'./log/{datetime.date.today()}_{name}.txt'
-    _install_file_handler(log_file)
+    _install_file_handler(name)
 
 
-def _install_file_handler(log_file: str):
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+class DailyFileHandler(logging.FileHandler):
+    """
+    File handler that rolls over to a new daily file when the date changes,
+    so long-running processes don't keep writing to the startup day's file.
+    """
+
+    def __init__(self, name: str, **kwargs):
+        self._daily_name = name
+        self._daily_date = None
+        super().__init__(self._daily_filename(), **kwargs)
+
+    def _daily_filename(self) -> str:
+        self._daily_date = datetime.date.today()
+        return f'./log/{self._daily_date}_{self._daily_name}.txt'
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if self._daily_date is not None and datetime.date.today() != self._daily_date:
+            self.close()
+            log_file = self._daily_filename()
+            self.baseFilename = log_file
+            self.stream = self._open()
+            logger.log_file = log_file
+            cleanup_old_logs(name=self._daily_name)
+        super().emit(record)
+
+
+def _install_file_handler(name: str):
+    os.makedirs('./log', exist_ok=True)
     for handler in list(logger.handlers):
         if isinstance(handler, logging.FileHandler):
             logger.removeHandler(handler)
             handler.close()
 
-    handler = logging.FileHandler(log_file, encoding='utf-8')
+    handler = DailyFileHandler(name, encoding='utf-8')
     handler.setFormatter(file_formatter)
     handler.setLevel(logging.DEBUG)
     logger.addHandler(handler)
-    logger.log_file = log_file
+    logger.log_file = handler.baseFilename
 
 
 def set_func_logger(func):
