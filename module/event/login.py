@@ -53,7 +53,7 @@ class EventLogin(EventBase):
                 click_timer.reached()
                 and self.appear(self.event_assets.LOGIN_STAMP_CHECK, offset=10)
                 and self.appear(self.event_assets.LOGIN_STAMP_DONE, threshold=10)
-                and self.appear_then_click(GOTO_BACK, offset=(30, 30), interval=2)
+                and self.appear_then_click_any([self.event_assets.GOTO_BACK, GOTO_BACK], offset=(30, 30), interval=2)
             ):
                 click_timer.reset()
                 continue

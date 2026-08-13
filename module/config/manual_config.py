@@ -100,7 +100,7 @@ class ManualConfig:
             "event_name": "PERSONA ON FRONTLINE",
             # 大型活动
             "event_type": 1,
-            "mini_game": True,
+            "mini_game": False,
             "mini_game_play": True,
             "extend": False,
             "story_part": "Story_1",  # Story_1, Story_2
@@ -108,9 +108,9 @@ class ManualConfig:
             "pending_click_offset": (0, 0),
             "pending_finder": {
                 "mode": "grid",
-                "area": (100, 300, 620, 1050),
-                "rows": 6,
-                "columns": 2,
+                "area": (25, 350, 325, 1175),
+                "rows": 10,
+                "columns": 1,
                 "vertical_direction": "bottom_to_top",
                 "horizontal_direction": "right_to_left",
             },

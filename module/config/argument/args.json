@@ -2135,8 +2135,8 @@
         "type": "select",
         "value": "",
         "option": [
-          "event_20260723",
-          "event_20260702"
+          "event_20260813",
+          "event_20260723"
         ],
         "display": "disabled"
       },
@@ -2270,8 +2270,8 @@
         "type": "select",
         "value": "",
         "option": [
-          "event_20260723",
-          "event_20260702"
+          "event_20260813",
+          "event_20260723"
         ],
         "display": "disabled"
       },

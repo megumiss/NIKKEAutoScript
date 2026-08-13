@@ -70,9 +70,7 @@ class EventReward(EventBase):
                 click_timer.reached()
                 and self.appear(self.event_assets.REWARD_MISSION_CHECK, threshold=5)
                 and self.appear(self.event_assets.REWARD_MISSION_CLEARED, offset=10)
-                and self.appear_then_click(
-                    self.event_assets.REWARD_CHALLENGE_HIDDEN, offset=10, threshold=0.95, interval=1
-                )
+                and self.appear_then_click(self.event_assets.REWARD_CHALLENGE_HIDDEN, threshold=5, interval=1)
             ):
                 click_timer.reset()
                 continue
@@ -82,9 +80,7 @@ class EventReward(EventBase):
                 click_timer.reached()
                 and self.appear(self.event_assets.REWARD_MISSION_CHECK, threshold=5)
                 and self.appear(self.event_assets.REWARD_RECEIVE_DONE, threshold=5)
-                and self.appear_then_click(
-                    self.event_assets.REWARD_CHALLENGE_HIDDEN, offset=10, threshold=0.95, interval=1
-                )
+                and self.appear_then_click(self.event_assets.REWARD_CHALLENGE_HIDDEN, threshold=5, interval=1)
             ):
                 click_timer.reset()
                 continue
