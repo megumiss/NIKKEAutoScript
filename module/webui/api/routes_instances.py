@@ -205,6 +205,25 @@ async def remark(request: Request):
     return JSONResponse({'status': 'success', 'remark': text})
 
 
+def _clear_serial_failed(name):
+    """
+    手动启动实例视为用户要求重跑：清除该实例的串行出错标记，并解除
+    OnError=stop 的全组停止。否则出错记录还在，编排器永远不会把令牌
+    授予它，实例会一直卡在等待令牌状态。
+    """
+    config = read_serial_config()
+    if not config.enable or name not in config.group:
+        return
+
+    def _fn(s):
+        cleared = s['failed'].pop(name, None) is not None or bool(s.get('halted'))
+        s['halted'] = False
+        return cleared
+
+    if modify_state(_fn):
+        logger.info(f'Instance "{name}" manually started, cleared serial failed/halted marks')
+
+
 async def start(request: Request):
     name = request.path_params['name']
     names = nkas_instance() if name == 'all' else [name]
@@ -224,6 +243,7 @@ async def start(request: Request):
                            'Restart NKAS with "Run as administrator".',
             }, status_code=403)
         manager.start(func=get_config_mod(name), ev=updater.event)
+        _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
     results = []
     for instance in names:
@@ -239,6 +259,7 @@ async def start(request: Request):
             })
             continue
         manager.start(func=get_config_mod(instance), ev=updater.event)
+        _clear_serial_failed(instance)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
     return JSONResponse({'status': 'success', 'results': results})
 
