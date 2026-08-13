@@ -387,8 +387,11 @@ class ConfigUpdater:
             deep_set(new, keys=keys, value=value)
 
         # Update to latest event
-
         if not is_template:
+            for task, event in zip(['Event', 'Event2'], ManualConfig.EVENTS):
+                deep_set(new, keys=f'{task}.EventInfo.Event', value=event.get('event_id'))
+                deep_set(new, keys=f'{task}.EventInfo.StoryPart', value=event.get('story_part'))
+                deep_set(new, keys=f'{task}.EventInfo.StoryDifficulty', value=event.get('story_difficulty'))
             new = self.config_redirect(old, new)
         new = self._override(new)
 
@@ -495,6 +498,19 @@ class ConfigUpdater:
         # The updated config did not write into file, although it doesn't matters.
         # Commented for performance issue
         # self.write_file(config_name, new)
+        if not is_template:
+            # Persist latest event to config file, so the file itself stays
+            # up to date without waiting for the scheduler to run
+            dirty = False
+            for task in ['Event', 'Event2']:
+                for arg in ['Event', 'StoryPart', 'StoryDifficulty']:
+                    key = f'{task}.EventInfo.{arg}'
+                    value = deep_get(new, key)
+                    if value is not None and deep_get(old, key) != value:
+                        deep_set(old, key, value)
+                        dirty = True
+            if dirty:
+                self.write_file(config_name, old)
         return new
 
     @staticmethod

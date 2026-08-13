@@ -1,5 +1,10 @@
 # 公告列表，新的公告追加到文件顶部
-# id 需唯一（建议 notice_日期），date 用于展示与排序，type: info / warning / important
+- id: notice_20260813
+  date: 2026-08-13
+  title: 剧情活动提醒
+  type: info
+  content: |
+    <b>本次剧情活动启用了新的自动推图逻辑，有问题请反馈</b>
 - id: notice_20260806
   date: 2026-08-06
   title: 全新版本更新

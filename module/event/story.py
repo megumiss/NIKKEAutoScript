@@ -511,6 +511,7 @@ class EventStory(EventBase):
                         grid_retry_timer.reached()
                         and self.appear(self.STORY_PART_CHECK(open_story), threshold=10)
                         and self.appear(self.STORY_PART_CHECK(open_story), offset=30)
+                        and not self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
                     ):
                         result = self.find_pending_stage_by_grid(open_story)
                         if result == 'found':
@@ -578,7 +579,7 @@ class EventStory(EventBase):
                 if self.appear_then_click(ANSWER_CHECK, offset=100, interval=3):
                     continue
                 # 跳过剧情
-                if self.appear_then_click(SKIP, offset=(150, 10), interval=1):
+                if self.appear_then_click(self.event_assets.SKIP, offset=(150, 10), interval=1):
                     continue
                 # 剧情推完提示
                 if self.appear_then_click(STAGE_COMPLETE_CONFIRM, offset=10, interval=1):

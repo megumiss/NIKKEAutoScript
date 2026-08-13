@@ -128,7 +128,9 @@ def back_to_event(self, skip_first_screenshot=True):
             click_timer.reset()
             continue
 
-        if click_timer.reached() and self.appear_then_click(GOTO_BACK, offset=10, interval=2):
+        if click_timer.reached() and self.appear_then_click_any(
+            [self.event_assets.GOTO_BACK, GOTO_BACK], offset=10, interval=2
+        ):
             click_timer.reset()
             continue
 

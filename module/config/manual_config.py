@@ -96,6 +96,26 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20260813",
+            "event_name": "PERSONA ON FRONTLINE",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": False,
+            "mini_game_play": True,
+            "extend": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal",  # Normal, Hard
+            "pending_click_offset": (0, 0),
+            "pending_finder": {
+                "mode": "grid",
+                "area": (25, 350, 325, 1175),
+                "rows": 10,
+                "columns": 1,
+                "vertical_direction": "bottom_to_top",
+                "horizontal_direction": "right_to_left",
+            },
+        },
+        {
             "event_id": "event_20260723",
             "event_name": "PROJECT MATIS",
             # 大型活动

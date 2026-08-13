@@ -97,7 +97,7 @@ class EventBase(UI):
             if (
                 click_timer.reached()
                 and not self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30))
-                and self.appear_then_click(GOTO_BACK, offset=10, interval=2)
+                and self.appear_then_click_any([self.event_assets.GOTO_BACK, GOTO_BACK], offset=10, interval=2)
             ):
                 click_timer.reset()
                 continue
