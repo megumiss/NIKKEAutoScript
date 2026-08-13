@@ -19,6 +19,7 @@ bin/paddleocr/
 **.acc
 data/
 .workbuddy/
+dev_tools/.button_extract_cache.json
 # GitHub wiki 本地克隆（独立仓库，勿提交）
 doc/wiki/
 doc/NIKKEAutoScript.wiki/

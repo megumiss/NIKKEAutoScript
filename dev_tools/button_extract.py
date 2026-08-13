@@ -1,4 +1,5 @@
 import concurrent.futures
+import json
 import os
 
 import imageio
@@ -12,6 +13,7 @@ from module.logger import logger
 
 MODULE_FOLDER = './module'
 BUTTON_FILE = 'assets.py'
+CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.button_extract_cache.json')
 IMPORT_EXP = """
 from module.base.button import Button
 from module.base.template import Template
@@ -22,81 +24,236 @@ from module.base.template import Template
 IMPORT_EXP = IMPORT_EXP.strip().split('\n') + ['']
 
 
+class FileIndex:
+    """
+    One-shot index of the assets tree.
+    Replaces per-file os.listdir()/os.path.exists() calls with dict lookups.
+    """
+
+    def __init__(self, root):
+        self.dirs = {}
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirpath = dirpath.replace('\\', '/').rstrip('/')
+            self.dirs[dirpath] = (sorted(dirnames), set(filenames))
+
+    def _normalize(self, path):
+        return path.replace('\\', '/').rstrip('/')
+
+    def exists_file(self, path):
+        path = self._normalize(path)
+        dirname, _, filename = path.rpartition('/')
+        entry = self.dirs.get(dirname)
+        return entry is not None and filename in entry[1]
+
+    def listdir(self, path):
+        """
+        Returns:
+            (list[str], list[str]): sorted subdir names, sorted file names
+        """
+        entry = self.dirs.get(self._normalize(path))
+        if entry is None:
+            return [], []
+        dirnames, filenames = entry
+        return dirnames, sorted(filenames)
+
+
+class ExtractCache:
+    """
+    Persistent cache of image extraction results, keyed by file fingerprint (mtime_ns + size).
+    Unchanged images skip decoding entirely on later runs.
+    """
+
+    def __init__(self, path):
+        self.path = path
+        self.data = {}
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    self.data = json.load(f)
+            except (json.JSONDecodeError, OSError, ValueError):
+                logger.warning(f'Extract cache {path} is broken, rebuilding from scratch')
+                self.data = {}
+
+    @staticmethod
+    def key(file):
+        return os.path.relpath(file).replace('\\', '/')
+
+    @staticmethod
+    def fingerprint(file):
+        st = os.stat(file)
+        return st.st_mtime_ns, st.st_size
+
+    def get(self, file):
+        """
+        Returns:
+            (bbox, mean) or None if missing / stale
+        """
+        entry = self.data.get(self.key(file))
+        if not entry:
+            return None
+        try:
+            mtime_ns, size = self.fingerprint(file)
+        except OSError:
+            return None
+        if entry.get('mtime_ns') != mtime_ns or entry.get('size') != size:
+            return None
+        bbox = entry['bbox']
+        mean = entry['mean']
+        bbox = tuple(bbox) if bbox is not None else None
+        mean = tuple(mean) if mean is not None else None
+        return bbox, mean
+
+    def set(self, file, bbox, mean):
+        mtime_ns, size = self.fingerprint(file)
+        self.data[self.key(file)] = {
+            'mtime_ns': mtime_ns,
+            'size': size,
+            'bbox': [int(v) for v in bbox] if bbox is not None else None,
+            'mean': [int(v) for v in mean] if mean is not None else None,
+        }
+
+    def prune(self):
+        """Drop entries whose file no longer exists."""
+        missing = [key for key in self.data if not os.path.exists(key)]
+        for key in missing:
+            del self.data[key]
+        if missing:
+            logger.info(f'Pruned {len(missing)} stale cache entries')
+
+    def save(self):
+        with open(self.path, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f)
+
+
+def decode_image(file):
+    """
+    Decode an image and extract (bbox, mean).
+    Runs in worker processes during prefetch.
+
+    Returns:
+        (tuple, tuple): bbox, mean
+    """
+    if os.path.splitext(file)[1] == '.gif':
+        # In a gif Button, use the first image.
+        bbox = None
+        mean = None
+        for image in imageio.mimread(file):
+            image = image[:, :, :3] if len(image.shape) == 3 else image
+            new_bbox, new_mean = _extract_image(image, file)
+            if bbox is None:
+                bbox = new_bbox
+            elif bbox != new_bbox:
+                logger.warning(f'{file} has multiple different bbox, this will cause unexpected behaviour')
+            if mean is None:
+                mean = new_mean
+        return bbox, mean
+    else:
+        image = load_image(file)
+        return _extract_image(image, file)
+
+
+def _extract_image(image, file):
+    size = image_size(image)
+    if size != (720, 1280):
+        logger.warning(f'{file} has wrong resolution: {size}')
+    bbox = get_bbox(image)
+    mean = get_color(image=image, area=bbox)
+    bbox = tuple(int(v) for v in bbox)
+    mean = tuple(int(v) for v in np.rint(mean))
+    return bbox, mean
+
+
+def get_file(index, module, name, genre='', language='zh-CN'):
+    """
+    Args:
+        index(FileIndex):
+        module(str): relative path under assets/zh-CN, e.g. 'event_minigame/event_20250924'
+        name(str): filename without extension, e.g. 'GET_MISSION'
+        genre(str): '' or 'AREA' / 'COLOR' / 'BUTTON'
+        language(str):
+
+    Returns:
+        str: resolved file path (may not exist when nothing matched)
+    """
+    names = [f'{name}.{genre}{ext}' if genre else f'{name}{ext}' for ext in ['.png', '.gif']]
+    base_dir = os.path.join(NikkeConfig.ASSETS_FOLDER, language, module).replace('\\', '/')
+
+    # 1) base_dir 下查找
+    for fname in names:
+        candidate = f'{base_dir}/{fname}'
+        if index.exists_file(candidate):
+            return candidate
+
+    # 2) base_dir 一级子目录查找
+    subdirs, _ = index.listdir(base_dir)
+    for sub in subdirs:
+        for fname in names:
+            candidate = f'{base_dir}/{sub}/{fname}'
+            if index.exists_file(candidate):
+                return candidate
+
+    # 3) fallback 返回 base_dir 下默认 png
+    return f'{base_dir}/{name}.png'
+
+
+def resolve_files(module_path, name, index):
+    """
+    List all image files an asset depends on (all languages + AREA/COLOR/BUTTON overrides).
+    Mirrors ImageExtractor.load() resolution logic, used to prefetch decoding.
+
+    Returns:
+        list[str]: existing files to decode
+    """
+    files = []
+    for language in VALID_LANGUAGE:
+        base = get_file(index, module_path, name, language=language)
+        if not index.exists_file(base):
+            continue
+        files.append(base)
+        for suffix in ['AREA', 'COLOR', 'BUTTON']:
+            override = get_file(index, module_path, name, genre=suffix, language=language)
+            if index.exists_file(override):
+                files.append(override)
+    return files
+
+
 class ImageExtractor:
-    def __init__(self, module, file):
+    def __init__(self, module, file, index, cache):
         """
         Args:
             module(str): relative path under assets/zh-CN, e.g. 'event_minigame/event_20250924'
             file(str): filename, e.g. 'GET_MISSION.png'
+            index(FileIndex):
+            cache(ExtractCache):
         """
         self.module = module
         self.name, self.ext = os.path.splitext(file)
+        self.index = index
+        self.cache = cache
         self.area, self.color, self.button, self.file = {}, {}, {}, {}
         for language in VALID_LANGUAGE:
             self.load(language)
 
     def get_file(self, genre='', language='zh-CN'):
-        names = [f'{self.name}.{genre}{ext}' if genre else f'{self.name}{ext}' for ext in ['.png', '.gif']]
-        base_dir = os.path.join(NikkeConfig.ASSETS_FOLDER, language, self.module).replace('\\', '/')
-
-        # 1) base_dir 下查找
-        for fname in names:
-            candidate = os.path.join(base_dir, fname).replace('\\', '/')
-            if os.path.exists(candidate):
-                return candidate
-
-        # 2) base_dir 一级子目录查找
-        if os.path.isdir(base_dir):
-            for sub in sorted(os.listdir(base_dir)):
-                subpath = os.path.join(base_dir, sub).replace('\\', '/')
-                if not os.path.isdir(subpath):
-                    continue
-                for fname in names:
-                    candidate = os.path.join(subpath, fname).replace('\\', '/')
-                    if os.path.exists(candidate):
-                        return candidate
-
-        # 3) fallback 返回 base_dir 下默认 png
-        return os.path.join(base_dir, f'{self.name}.png')
+        return get_file(self.index, self.module, self.name, genre=genre, language=language)
 
     def extract(self, file):
-        if os.path.splitext(file)[1] == '.gif':
-            # In a gif Button, use the first image.
-            bbox = None
-            mean = None
-            for image in imageio.mimread(file):
-                image = image[:, :, :3] if len(image.shape) == 3 else image
-                new_bbox, new_mean = self._extract(image, file)
-                if bbox is None:
-                    bbox = new_bbox
-                elif bbox != new_bbox:
-                    logger.warning(f'{file} has multiple different bbox, this will cause unexpected behaviour')
-                if mean is None:
-                    mean = new_mean
-            return bbox, mean
-        else:
-            image = load_image(file)
-            return self._extract(image, file)
-
-    @staticmethod
-    def _extract(image, file):
-        size = image_size(image)
-        if size != (720, 1280):
-            logger.warning(f'{file} has wrong resolution: {size}')
-        bbox = get_bbox(image)
-        mean = get_color(image=image, area=bbox)
-        mean = tuple(np.rint(mean).astype(int))
+        result = self.cache.get(file)
+        if result is not None:
+            return result
+        bbox, mean = decode_image(file)
+        self.cache.set(file, bbox, mean)
         return bbox, mean
 
     def load(self, language='zh-CN'):
         file = self.get_file(language=language)
-        if os.path.exists(file):
+        if self.index.exists_file(file):
             area, color = self.extract(file)
             button = area
 
             for suffix, attr in [('AREA', 'area'), ('COLOR', 'color'), ('BUTTON', 'button')]:
                 override_file = self.get_file(suffix, language=language)
-                if os.path.exists(override_file):
+                if self.index.exists_file(override_file):
                     a, c = self.extract(override_file)
                     if attr == 'area':
                         area = a
@@ -123,31 +280,29 @@ class ImageExtractor:
 
 
 class TemplateExtractor(ImageExtractor):
-    # def __init__(self, module, file, config):
-    #     """
-    #     Args:
-    #         module(str):
-    #         file(str): xxx.png
-    #         config(NikkeConfig):
-    #     """
-    #     self.module = module
-    #     self.file = file
-    #     self.config = config
+    def __init__(self, module, file, index, cache):
+        """
+        Templates only need the file path, skip image decoding entirely.
+        """
+        self.module = module
+        self.name, self.ext = os.path.splitext(file)
+        self.index = index
+        self.cache = cache
+        self.area, self.color, self.button, self.file = {}, {}, {}, {}
+        for language in VALID_LANGUAGE:
+            self.load_template(language)
 
-    @staticmethod
-    def extract(file):
-        image = load_image(file)
-        bbox = get_bbox(image)
-        mean = get_color(image=image, area=bbox)
-        mean = tuple(np.rint(mean).astype(int))
-        return bbox, mean
+    def load_template(self, language='zh-CN'):
+        file = self.get_file(language=language)
+        if self.index.exists_file(file):
+            self.file[language] = file
+        else:
+            logger.attr(language, f'{self.name} not found, use zh-CN language assets')
+            self.file[language] = self.file['zh-CN']
 
     @property
     def expression(self):
         return '%s = Template(file=%s)' % (self.name, self.file)
-        # return '%s = Template(area=%s, color=%s, button=%s, file=\'%s\')' % (
-        #     self.name, self.area, self.color, self.button,
-        #     self.config.ASSETS_FOLDER + '/' + self.module + '/' + self.name + '.png')
 
 
 class ModuleExtractor:
@@ -172,11 +327,10 @@ class ModuleExtractor:
         _, sub, _ = self.split(file)
         return sub == ''
 
-    def list_files(self):
+    def list_files(self, index):
         files = []
-        if not os.path.exists(self.folder):
-            return files
-        for file in os.listdir(self.folder):
+        _, filenames = index.listdir(self.folder)
+        for file in filenames:
             if file[0].isdigit():
                 continue
             if file.startswith('TEMPLATE_'):
@@ -204,11 +358,11 @@ class ModuleExtractor:
         logger.info('Module: %s(%s)' % (self.folder, len(self.expressions)))
 
 
-def process_file(module_path, file):
+def process_file(module_path, file, index, cache):
     if file.startswith('TEMPLATE_'):
-        return TemplateExtractor(module=module_path, file=file).expression
+        return TemplateExtractor(module=module_path, file=file, index=index, cache=cache).expression
     else:
-        return ImageExtractor(module=module_path, file=file).expression
+        return ImageExtractor(module=module_path, file=file, index=index, cache=cache).expression
 
 
 class AssetExtractor:
@@ -228,21 +382,31 @@ class AssetExtractor:
         E.g. BATTLE_STATUS_S.BUTTON.png overwrites the attribute 'button' of BATTLE_STATUS_S
     Asset name starts with 'OCR_' will treat as button.
         E.g. OCR_EXERCISE_TIMES.png.
+
+    Speed:
+        - Assets tree is indexed once, file lookups are dict queries.
+        - Extraction results are cached in dev_tools/.button_extract_cache.json,
+          keyed by file mtime + size. Only changed images get decoded again.
+        - TEMPLATE_ files never get decoded (they only need the file path).
     """
 
     def __init__(self):
         logger.info('Assets extract')
-        
+
+        index = FileIndex(NikkeConfig.ASSETS_FOLDER)
+        cache = ExtractCache(CACHE_FILE)
+
         module_extractors = {}
         tasks = []
-        
+
         base_path = os.path.join(NikkeConfig.ASSETS_FOLDER, 'zh-CN')
-        modules = [m for m in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, m))]
-        
+        modules, _ = index.listdir(base_path)
+
         for m in modules:
             m_path = os.path.join(base_path, m)
-            subfolders = [f for f in os.listdir(m_path) if os.path.isdir(os.path.join(m_path, f)) and f.startswith('event_')]
-            
+            subfolders, _ = index.listdir(m_path)
+            subfolders = [f for f in subfolders if f.startswith('event_')]
+
             if subfolders:
                 for sub in subfolders:
                     me = ModuleExtractor(name=m, subfolder=sub)
@@ -252,17 +416,51 @@ class AssetExtractor:
                 module_extractors[(m, None)] = me
 
         for key, me in module_extractors.items():
-            for f in me.list_files():
+            for f in me.list_files(index):
                 tasks.append((key, me.module_path, f))
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            futures = {executor.submit(process_file, t[1], t[2]): t[0] for t in tasks}
-            for future in tqdm(concurrent.futures.as_completed(futures), total=len(tasks)):
-                key = futures[future]
-                module_extractors[key].expressions.append(future.result())
+        self.prefetch(tasks, index, cache)
+
+        for key, module_path, f in tqdm(tasks, desc='Generating expressions'):
+            module_extractors[key].expressions.append(process_file(module_path, f, index, cache))
 
         for me in module_extractors.values():
             me.write()
+
+        cache.prune()
+        cache.save()
+
+    @staticmethod
+    def prefetch(tasks, index, cache):
+        """
+        Decode all stale images in parallel before building expressions,
+        so expression building runs on cache hits only.
+        """
+        needed = set()
+        for _, module_path, f in tasks:
+            if f.startswith('TEMPLATE_'):
+                continue
+            name = os.path.splitext(f)[0]
+            needed.update(resolve_files(module_path, name, index))
+
+        stale = [f for f in needed if cache.get(f) is None]
+        logger.info(f'Assets: {len(needed)} images, {len(stale)} to decode, {len(needed) - len(stale)} cached')
+        if not stale:
+            return
+
+        if len(stale) <= 32:
+            # Spawning worker processes costs seconds on Windows,
+            # not worth it for a handful of images.
+            for file in tqdm(stale, desc='Decoding images'):
+                bbox, mean = decode_image(file)
+                cache.set(file, bbox, mean)
+            return
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for file, result in tqdm(zip(stale, executor.map(decode_image, stale)),
+                                     total=len(stale), desc='Decoding images'):
+                bbox, mean = result
+                cache.set(file, bbox, mean)
 
 
 if __name__ == '__main__':
