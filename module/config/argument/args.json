@@ -173,6 +173,20 @@
         "mode": "path"
       }
     },
+    "Scrcpy": {
+      "WebUrl": {
+        "type": "input",
+        "value": ""
+      },
+      "Bitrate": {
+        "type": "input",
+        "value": 16000000
+      },
+      "MaxFps": {
+        "type": "input",
+        "value": 60
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

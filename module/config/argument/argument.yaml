@@ -36,6 +36,10 @@ Emulator:
     option: [ minitouch, ]
   AdbRestart: false
   ScreenshotInterval: 0.5
+Scrcpy:
+  WebUrl: ''
+  Bitrate: 16000000
+  MaxFps: 60
 EmulatorInfo:
   Emulator:
     value: auto

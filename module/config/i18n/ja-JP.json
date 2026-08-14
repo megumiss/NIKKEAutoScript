@@ -335,6 +335,24 @@
       "help": ""
     }
   },
+  "Scrcpy": {
+    "_info": {
+      "name": "インタラクティブ操作",
+      "help": ""
+    },
+    "WebUrl": {
+      "name": "ws-scrcpy URL",
+      "help": "概要ページの画面プレビューのインタラクティブモード（クリック・ドラッグでゲームを操作）に使用します。例: https://scrcpy.example.com。空欄で無効。デプロイと使い方は Wiki を参照：https://github.com/megumiss/NIKKEAutoScript/wiki/Interactive-Control"
+    },
+    "Bitrate": {
+      "name": "ビットレート",
+      "help": "インタラクティブモード接続時の初期ビットレート（bps）、デフォルト 16000000。高いほど鮮明になりますが帯域を消費します"
+    },
+    "MaxFps": {
+      "name": "フレームレート",
+      "help": "インタラクティブモード接続時の初期フレームレート上限、デフォルト 60"
+    }
+  },
   "EmulatorInfo": {
     "_info": {
       "name": "エミュレーター設定",
