@@ -17,8 +17,8 @@
     en-US: NIKKE Official
     ja-JP: NIKKE 公式
 - name: 项目 Wiki
-  url: https://github.com/megumiss/NIKKEAutoScript/wiki
-  direct: false
+  url: https://nkas.megumiss.top/wiki
+  direct: true
   i18n:
     en-US: Project Wiki
     ja-JP: プロジェクト Wiki
