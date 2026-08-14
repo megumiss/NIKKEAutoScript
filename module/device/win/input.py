@@ -1,3 +1,4 @@
+import ctypes
 import time
 
 import numpy as np
@@ -5,6 +6,108 @@ import pyautogui
 from pynput.mouse import Button, Controller
 
 from module.logger import logger
+
+# SendInput 相关常量
+_INPUT_KEYBOARD = 1
+_KEYEVENTF_EXTENDEDKEY = 0x0001
+_KEYEVENTF_KEYUP = 0x0002
+_KEYEVENTF_SCANCODE = 0x0008
+
+# 需要用 EXTENDEDKEY 标志发送的扩展键（方向键等）
+_EXTENDED_VK = {0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E}
+
+_KEY_NAME_TO_VK = {
+    'backspace': 0x08,
+    'tab': 0x09,
+    'enter': 0x0D,
+    'shift': 0x10,
+    'ctrl': 0x11,
+    'alt': 0x12,
+    'esc': 0x1B,
+    'escape': 0x1B,
+    'space': 0x20,
+    'pageup': 0x21,
+    'pagedown': 0x22,
+    'end': 0x23,
+    'home': 0x24,
+    'left': 0x25,
+    'up': 0x26,
+    'right': 0x27,
+    'down': 0x28,
+    'insert': 0x2D,
+    'delete': 0x2E,
+}
+
+
+class _KEYBDINPUT(ctypes.Structure):
+    _fields_ = [
+        ('wVk', ctypes.c_ushort),
+        ('wScan', ctypes.c_ushort),
+        ('dwFlags', ctypes.c_ulong),
+        ('time', ctypes.c_ulong),
+        ('dwExtraInfo', ctypes.POINTER(ctypes.c_ulong)),
+    ]
+
+
+class _MOUSEINPUT(ctypes.Structure):
+    _fields_ = [
+        ('dx', ctypes.c_long),
+        ('dy', ctypes.c_long),
+        ('mouseData', ctypes.c_ulong),
+        ('dwFlags', ctypes.c_ulong),
+        ('time', ctypes.c_ulong),
+        ('dwExtraInfo', ctypes.POINTER(ctypes.c_ulong)),
+    ]
+
+
+class _HARDWAREINPUT(ctypes.Structure):
+    _fields_ = [
+        ('uMsg', ctypes.c_ulong),
+        ('wParamL', ctypes.c_short),
+        ('wParamH', ctypes.c_ushort),
+    ]
+
+
+class _INPUT_UNION(ctypes.Union):
+    _fields_ = [('ki', _KEYBDINPUT), ('mi', _MOUSEINPUT), ('hi', _HARDWAREINPUT)]
+
+
+class _INPUT(ctypes.Structure):
+    _fields_ = [('type', ctypes.c_ulong), ('ii', _INPUT_UNION)]
+
+
+_VK_SHIFT = 0x10
+
+
+def _key_name_to_vk(key):
+    """将按键名转换为虚拟键码，返回 (vk, need_shift)"""
+    if len(key) == 1:
+        vk_scan = ctypes.windll.user32.VkKeyScanW(ctypes.c_wchar(key))
+        vk = vk_scan & 0xFF
+        if vk_scan != -1 and vk != 0xFF:
+            # 高字节为修饰键状态：1=Shift（大写字母、@! 等符号需要）
+            return vk, bool((vk_scan >> 8) & 1)
+        raise ValueError(f'无法识别的按键: {key}')
+    vk = _KEY_NAME_TO_VK.get(key.lower())
+    if vk is None:
+        raise ValueError(f'无法识别的按键: {key}')
+    return vk, False
+
+
+def _send_scan_key(vk, key_up=False):
+    """通过 SendInput 以扫描码方式发送按键，兼容读取 DirectInput 的游戏窗口"""
+    scan = ctypes.windll.user32.MapVirtualKeyW(vk, 0)
+    flags = _KEYEVENTF_SCANCODE
+    if vk in _EXTENDED_VK:
+        flags |= _KEYEVENTF_EXTENDEDKEY
+    if key_up:
+        flags |= _KEYEVENTF_KEYUP
+
+    extra = ctypes.c_ulong(0)
+    ii = _INPUT_UNION()
+    ii.ki = _KEYBDINPUT(0, scan, flags, 0, ctypes.pointer(extra))
+    x = _INPUT(_INPUT_KEYBOARD, ii)
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
 
 class Input:
@@ -72,10 +175,14 @@ class Input:
     def secretly_press_key(self, key, wait_time=0.2):
         """(不输出具体键位)模拟键盘按键，可以指定按下的时间"""
         try:
-            pyautogui.write
-            pyautogui.keyDown(key)
+            vk, need_shift = _key_name_to_vk(key)
+            if need_shift:
+                _send_scan_key(_VK_SHIFT)
+            _send_scan_key(vk)
             time.sleep(wait_time)  # 等待指定的时间
-            pyautogui.keyUp(key)
+            _send_scan_key(vk, key_up=True)
+            if need_shift:
+                _send_scan_key(_VK_SHIFT, key_up=True)
             logger.debug('键盘按下 *')
         except Exception as e:
             logger.error(f'键盘按下 * 出错：{e}')

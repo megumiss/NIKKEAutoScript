@@ -100,7 +100,7 @@ class ManualConfig:
             "event_name": "PERSONA ON FRONTLINE",
             # 大型活动
             "event_type": 1,
-            "mini_game": False,
+            "mini_game": True,
             "mini_game_play": True,
             "extend": False,
             "story_part": "Story_1",  # Story_1, Story_2
