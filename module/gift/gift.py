@@ -104,7 +104,7 @@ class GiftBase(UI):
 
             # 打开礼礼包页面
             if click_timer.reached() and self.appear_then_click(
-                GOTO_GENERAL_GIFT, offset=(120, 10), threshold=0.95, interval=1
+                GOTO_GENERAL_GIFT, offset=(300, 10), threshold=0.95, interval=1
             ):
                 click_timer.reset()
                 continue
@@ -146,7 +146,7 @@ class GiftBase(UI):
 
             # 打开礼包页面
             if click_timer.reached() and self.appear_then_click(
-                GOTO_STEPUP_GIFT, offset=(120, 10), threshold=0.95, interval=1
+                GOTO_STEPUP_GIFT, offset=(300, 10), threshold=0.95, interval=1
             ):
                 click_timer.reset()
                 continue
