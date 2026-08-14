@@ -36,6 +36,7 @@ Emulator:
     option: [ minitouch, ]
   AdbRestart: false
   ScreenshotInterval: 0.5
+  ScrcpyWebUrl: ''
 EmulatorInfo:
   Emulator:
     value: auto

@@ -333,6 +333,10 @@
     "ScreenshotInterval": {
       "name": "エミュレーターのスクリーンショット間隔",
       "help": ""
+    },
+    "ScrcpyWebUrl": {
+      "name": "ws-scrcpy URL",
+      "help": "概要ページの画面プレビューのインタラクティブモード（クリック・ドラッグでゲームを操作）に使用します。例: https://scrcpy.example.com:4433。空欄で無効"
     }
   },
   "EmulatorInfo": {

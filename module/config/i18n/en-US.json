@@ -333,6 +333,10 @@
     "ScreenshotInterval": {
       "name": "Emulator Screenshot Interval",
       "help": ""
+    },
+    "ScrcpyWebUrl": {
+      "name": "ws-scrcpy URL",
+      "help": "Used by the interactive mode of the screen preview on the overview page (click and drag to control the game). Example: https://scrcpy.example.com:4433. Leave empty to disable interactive mode"
     }
   },
   "EmulatorInfo": {

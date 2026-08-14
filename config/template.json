@@ -34,7 +34,8 @@
       "ScreenshotMethod": "DroidCast",
       "ControlMethod": "minitouch",
       "AdbRestart": false,
-      "ScreenshotInterval": 0.5
+      "ScreenshotInterval": 0.5,
+      "ScrcpyWebUrl": null
     },
     "EmulatorInfo": {
       "Emulator": "auto",

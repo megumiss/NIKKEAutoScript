@@ -333,6 +333,10 @@
     "ScreenshotInterval": {
       "name": "模拟器截图间隔",
       "help": ""
+    },
+    "ScrcpyWebUrl": {
+      "name": "ws-scrcpy 地址",
+      "help": "用于总览页画面预览的互动模式（可点击、拖拽操作游戏）。填入 ws-scrcpy 服务地址，如 https://scrcpy.example.com:4433，留空则关闭互动模式"
     }
   },
   "EmulatorInfo": {

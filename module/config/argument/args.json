@@ -139,6 +139,10 @@
       "ScreenshotInterval": {
         "type": "input",
         "value": 0.5
+      },
+      "ScrcpyWebUrl": {
+        "type": "input",
+        "value": ""
       }
     },
     "EmulatorInfo": {
