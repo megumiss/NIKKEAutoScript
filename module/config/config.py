@@ -227,16 +227,18 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         limit_next_run(["Reward"], limit=now + timedelta(hours=24, seconds=-1))
         # limit_next_run(self.args.keys(), limit=now + timedelta(hours=24, seconds=-1))
         # 选择最新的活动
-        for task in ["Event"]:
-            # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
-            self.modified[f"{task}.EventInfo.Event"] = self.EVENTS[0].get('event_id')
-            self.modified[f"{task}.EventInfo.StoryPart"] = self.EVENTS[0].get('story_part')
-            self.modified[f"{task}.EventInfo.StoryDifficulty"] = self.EVENTS[0].get('story_difficulty')
-        for task in ["Event2"]:
-            # deep_set(self.data, keys=f"{task}.Event.Event", value=self.EVENTS[0].get('event_id'))
-            self.modified[f"{task}.EventInfo.Event"] = self.EVENTS[1].get('event_id')
-            self.modified[f"{task}.EventInfo.StoryPart"] = self.EVENTS[1].get('story_part')
-            self.modified[f"{task}.EventInfo.StoryDifficulty"] = self.EVENTS[1].get('story_difficulty')
+        # 仅在值真的变化时标记 modified：Web 端只读场景（如画面预览代理）也会
+        # 实例化 NikkeConfig，无条件标记会导致每次实例化都重写配置文件，
+        # 触发调度端 ConfigWatcher 反复重载。
+        for task, event in zip(["Event", "Event2"], self.EVENTS):
+            for key, value in {
+                'Event': event.get('event_id'),
+                'StoryPart': event.get('story_part'),
+                'StoryDifficulty': event.get('story_difficulty'),
+            }.items():
+                path = f"{task}.EventInfo.{key}"
+                if deep_get(self.data, keys=path, default=None) != value:
+                    self.modified[path] = value
 
     def get_next(self):
         """
