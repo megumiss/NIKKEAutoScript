@@ -300,6 +300,14 @@ function onTextareaInput(field: Field, event: Event) {
   const input = event.target as HTMLTextAreaElement
   if (field.value !== input.value) field.value = input.value
 }
+// Plain text inputs also save on change (blur), so they share the textarea's
+// reset problem: any re-render re-applies the stale bound :value and wipes an
+// edit that has not blurred yet.  Keep the model in sync on every input so
+// re-renders are idempotent.
+function onTextInput(model: { value: any }, event: Event) {
+  const input = event.target as HTMLInputElement
+  if (model.value !== input.value) model.value = input.value
+}
 const vAutosize = { mounted: (el: HTMLTextAreaElement) => fitTextarea(el), updated: (el: HTMLTextAreaElement) => fitTextarea(el) }
 function escapeHtml(source: string) { return source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 function highlightYaml(source: string) {
@@ -1208,7 +1216,7 @@ onBeforeUnmount(() => {
                       <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" :disabled="field.display !== 'show'" @change="(value: any) => saveValue(field, value).catch(() => {})"/>
                       <template v-else-if="field.path_picker">
                         <div class="path-field">
-                          <input type="text" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                          <input type="text" :value="field.value" :readonly="field.display !== 'show'" @input="onTextInput(field, $event)" @change="save(field, $event)">
                           <FieldPathPicker :value="field.value" :picker="field.path_picker" :disabled="field.display !== 'show'" @picked="pickedPath(field, $event)" @error="error = $event"/>
                         </div>
                       </template>
@@ -1226,7 +1234,7 @@ onBeforeUnmount(() => {
                           <button v-if="field.display === 'show'" type="button" class="dt-clear" :title="t('清空')" @mousedown.prevent @click="clearField(field)">✕</button>
                         </div>
                       </template>
-                      <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @change="save(field, $event)">
+                      <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @input="onTextInput(field, $event)" @change="save(field, $event)">
                     </div>
                   </div>
                   <div v-if="selectedTask === 'NKAS' && group.key === 'Notification'" class="field">
@@ -1320,7 +1328,7 @@ onBeforeUnmount(() => {
                     <label v-for="opt in field.options" :key="opt.value" class="deploy-multi-opt" :class="{ on: (field.value || []).includes(opt.value) }"><input type="checkbox" hidden :checked="(field.value || []).includes(opt.value)" @change="toggleDeployMulti(field, opt.value)">{{ opt.label }}</label>
                   </div>
                   <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value || ''" :options="field.options" :placeholder="t('添加')" @change="(value: string) => saveDeployValue(field, value)"/>
-                  <input v-else :type="field.widget === 'number' ? 'number' : 'text'" :value="field.value ?? ''" @change="saveDeployField(field, $event)">
+                  <input v-else :type="field.widget === 'number' ? 'number' : 'text'" :value="field.value ?? ''" @input="onTextInput(field, $event)" @change="saveDeployField(field, $event)">
                 </div>
               </div>
             </div>
