@@ -28,7 +28,11 @@ class GeneratedConfig:
     Emulator_ControlMethod = 'minitouch'  # minitouch
     Emulator_AdbRestart = False
     Emulator_ScreenshotInterval = 0.5
-    Emulator_ScrcpyWebUrl = None
+
+    # Group `Scrcpy`
+    Scrcpy_WebUrl = None
+    Scrcpy_Bitrate = 16000000
+    Scrcpy_MaxFps = 60
 
     # Group `EmulatorInfo`
     EmulatorInfo_Emulator = 'auto'  # auto, NoxPlayer, NoxPlayer64, BlueStacks4, BlueStacks5, BlueStacks4HyperV, BlueStacks5HyperV, LDPlayer3, LDPlayer4, LDPlayer9, MuMuPlayer, MuMuPlayerX, MuMuPlayer12, MEmuPlayer

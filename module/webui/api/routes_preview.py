@@ -1,5 +1,6 @@
 """In-memory game screen preview frames."""
 
+import json
 import posixpath
 from urllib.parse import quote, urlparse
 
@@ -41,7 +42,7 @@ async def scrcpy(request):
         config = load_instance_config(name)
     except InstanceNotFound:
         return JSONResponse({'available': False, 'reason': 'not_configured'})
-    base = str(config.Emulator_ScrcpyWebUrl or '').strip()
+    base = str(config.Scrcpy_WebUrl or '').strip()
     if not base:
         return JSONResponse({'available': False, 'reason': 'not_configured'})
     if config.Client_Platform != 'adb':
@@ -79,12 +80,61 @@ async def scrcpy_page(request):
     if base is None:
         return JSONResponse({'error': 'not configured'}, status_code=404)
     try:
+        config = load_instance_config(name)
+    except InstanceNotFound:
+        return JSONResponse({'error': 'not configured'}, status_code=404)
+    try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(f'{base}/')
         resp.raise_for_status()
     except httpx.HTTPError as e:
         return JSONResponse({'error': f'upstream unreachable: {e}'}, status_code=502)
-    return HTMLResponse(resp.text)
+    html = resp.text
+    serial = str(config.Emulator_Serial or '')
+    if serial and serial != 'auto':
+        bitrate = _positive_int(config.Scrcpy_Bitrate, DEFAULT_SCRCPY_BITRATE)
+        max_fps = _positive_int(config.Scrcpy_MaxFps, DEFAULT_SCRCPY_MAX_FPS)
+        primer = _settings_primer_script(serial, bitrate, max_fps)
+        html = html.replace('<script defer', primer + '<script defer', 1)
+    return HTMLResponse(html)
+
+
+# ws-scrcpy 前端把每台设备的视频设置存在 localStorage，key 形如
+# `播放器名:udid:窗口宽x高`，流启动（bundle.js，defer）时读取；其 broadway
+# 默认仅 480x480/2Mbps，一打开很糊，且 URL hash 不支持码率参数。这里在
+# bundle.js 之前注入一段内联脚本，按 iframe 当前真实视口尺寸预写实例配置
+# （Scrcpy 组）里的码率/帧率（从父页面写会差 1-2px 导致 key 不匹配）。
+# 用户在 ⋮ 菜单手动保存的设置写在带 displayId/分辨率的完整 key 下，
+# 优先级更高，不会被这份默认值覆盖。
+DEFAULT_SCRCPY_BITRATE = 16000000
+DEFAULT_SCRCPY_MAX_FPS = 60
+
+
+def _positive_int(value, default):
+    """用户可能把输入框清空（None/''）或填非法值，此时回退默认值。"""
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+def _settings_primer_script(serial: str, bitrate: int, max_fps: int) -> str:
+    key_prefix = json.dumps(f'BroadwayDecoder:{serial}:')
+    settings = json.dumps({
+        'displayId': 0,
+        'bitrate': bitrate,
+        'maxFps': max_fps,
+        'iFrameInterval': 5,
+        'bounds': {'width': 1280, 'height': 1280},
+        'lockedVideoOrientation': -1,
+        'sendFrameMeta': False,
+    }, separators=(',', ':'))
+    return (
+        '<script>(function(){try{'
+        f'localStorage.setItem({key_prefix}+window.innerWidth+"x"+window.innerHeight,{json.dumps(settings)});'
+        '}catch(e){}})();</script>'
+    )
 
 
 async def scrcpy_asset(request):
@@ -113,6 +163,6 @@ def _scrcpy_base(name: str):
         config = load_instance_config(name)
     except InstanceNotFound:
         return None
-    base = str(config.Emulator_ScrcpyWebUrl or '').strip().rstrip('/')
+    base = str(config.Scrcpy_WebUrl or '').strip().rstrip('/')
     return base or None
 

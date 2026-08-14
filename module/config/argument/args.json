@@ -139,10 +139,6 @@
       "ScreenshotInterval": {
         "type": "input",
         "value": 0.5
-      },
-      "ScrcpyWebUrl": {
-        "type": "input",
-        "value": ""
       }
     },
     "EmulatorInfo": {
@@ -175,6 +171,20 @@
         "type": "textarea",
         "value": null,
         "mode": "path"
+      }
+    },
+    "Scrcpy": {
+      "WebUrl": {
+        "type": "input",
+        "value": ""
+      },
+      "Bitrate": {
+        "type": "input",
+        "value": 16000000
+      },
+      "MaxFps": {
+        "type": "input",
+        "value": 60
       }
     },
     "Storage": {

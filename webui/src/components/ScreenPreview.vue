@@ -73,14 +73,16 @@ const showControlBar = ref(true)
 const wrapW = ref(0)
 const wrapH = ref(0)
 
-// 注入到 iframe 内的样式：视频画布拉伸填满 .video，控制栏默认隐藏
+// 注入到 iframe 内的样式：视频画布拉伸填满 .video，控制栏默认隐藏。
+// 注意控制栏必须 flex-direction:column：ws-scrcpy 原生靠 float/block 纵向堆叠按钮，
+// 只给 display:flex 会变成横向排列，按钮被挤到 52px 宽度里看不见（空白条）。
 const IFRAME_CSS = `
 html, body { height:100% !important; margin:0 !important; overflow:hidden !important; background:#000 !important; }
 .device-view { display:flex !important; width:100% !important; height:100% !important; }
 .video { flex:1 1 auto !important; width:auto !important; height:100% !important; position:relative !important; overflow:hidden !important; }
 .video canvas { position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; }
 .control-buttons-list { display:none !important; }
-html.nkas-show-bar .control-buttons-list { display:flex !important; flex:0 0 auto !important; order:2 !important; height:100% !important; }
+html.nkas-show-bar .control-buttons-list { display:flex !important; flex-direction:column !important; align-items:center !important; flex:0 0 auto !important; order:2 !important; height:100% !important; }
 `
 
 const frameSrc = computed(() => {
@@ -106,6 +108,8 @@ function updateBarVisibility() {
   // 内联 !important 双保险：即使注入样式表被覆盖/丢失也能生效
   if (showControlBar.value) {
     bar.style.setProperty('display', 'flex', 'important')
+    bar.style.setProperty('flex-direction', 'column', 'important')
+    bar.style.setProperty('align-items', 'center', 'important')
     if (bar.offsetWidth > 0) barW.value = bar.offsetWidth
   } else {
     bar.style.setProperty('display', 'none', 'important')
@@ -168,7 +172,18 @@ function measure() {
     wrapH.value = Math.round((wrapW.value - extraW) / aspect)
   } else {
     wrapH.value = Math.round(body.clientHeight - BODY_PADDING_X)
-    wrapW.value = Math.round(wrapH.value * aspect) + extraW
+    let w = Math.round(wrapH.value * aspect) + extraW
+    // 预览卡与日志卡共享 .ov-right 横向空间（日志卡 flex:1、min-width:0，
+    // 会被无限制挤压），横向流按高度推出的宽度可能吃掉整行——表现为卡片
+    // 先撑满再退回。把宽度钳制在容器的一定比例内，超出就按宽度反推高度。
+    // 注意不能按 body.clientWidth 钳制：body 宽度由卡片宽度决定，会正反馈收缩。
+    const parent = body.parentElement?.parentElement
+    const maxW = parent ? Math.round(parent.clientWidth * 0.55) : w
+    if (w > maxW) {
+      w = maxW
+      wrapH.value = Math.max(0, Math.round((w - extraW) / aspect))
+    }
+    wrapW.value = w
     cardWidth.value = wrapW.value + BODY_PADDING_X
   }
 }
@@ -217,7 +232,7 @@ async function loadScrcpy() {
 function toggleInteractive() {
   if (!scrcpy.value?.available) return
   interactive.value = !interactive.value
-  // 进入互动模式时默认显示控制栏（与之前版本行为一致），可用 ⇥ 收起
+  // 进入互动模式时默认显示控制栏（与之前版本行为一致），可用侧栏按钮收起
   if (interactive.value) showControlBar.value = true
   // The iframe covers the frame area; no point polling JPEG frames meanwhile.
   if (interactive.value) stopPolling()
@@ -329,13 +344,21 @@ onBeforeUnmount(() => {
       <b>{{ t('画面预览') }}</b>
       <span v-if="frameUrl && !interactive" class="preview-badge" :class="status">{{ statusText }}</span>
       <span class="preview-icons">
-        <button class="preview-icon" :class="{ 'control-active': interactive }" type="button" :disabled="scrcpy !== null && !scrcpy.available" :title="controlTitle" @click="toggleInteractive">🎮</button>
-        <button v-if="interactive" class="preview-icon" :class="{ 'control-active': showControlBar }" type="button" :title="t('操作栏')" @click="toggleControlBar">⇥</button>
+        <button class="preview-icon" :class="{ 'control-active': interactive }" type="button" :disabled="scrcpy !== null && !scrcpy.available" :title="controlTitle" @click="toggleInteractive">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
+        </button>
+        <button v-if="interactive" class="preview-icon" :class="{ 'control-active': showControlBar }" type="button" :title="t('操作栏')" @click="toggleControlBar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+        </button>
         <template v-if="!interactive">
           <button class="preview-rate" type="button" :title="t('刷新频率')" @click="cycleRate">{{ pollRate }}s</button>
-          <button class="preview-icon" :class="{ spinning: refreshing }" type="button" :title="t('刷新')" @click="refresh">↻</button>
+          <button class="preview-icon" :class="{ spinning: refreshing }" type="button" :title="t('刷新')" @click="refresh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
         </template>
-        <button class="preview-icon preview-toggle" type="button" :title="t('画面预览')" @click="expanded = false">›</button>
+        <button class="preview-icon preview-toggle" type="button" :title="t('画面预览')" @click="expanded = false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </span>
     </div>
     <div ref="bodyEl" class="preview-body">
@@ -348,7 +371,7 @@ onBeforeUnmount(() => {
     </div>
   </article>
   <button v-else class="card preview-strip" type="button" :title="t('画面预览')" @click="expanded = true">
-    <span class="preview-strip-arrow">‹</span>
+    <svg class="preview-strip-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     <span class="preview-strip-text">{{ t('画面预览') }}</span>
   </button>
 </template>
@@ -359,7 +382,8 @@ onBeforeUnmount(() => {
 .preview-badge { padding:2px 9px; border-radius:7px; font-size:11px; font-weight:700; }
 .preview-badge.live { color:var(--green); background:var(--green-soft); }
 .preview-badge.stale { color:var(--text-3); background:var(--card-3); }
-.preview-icon { padding:0 4px; border:0; color:var(--text-3); background:transparent; font-size:16px; line-height:1; cursor:pointer; }
+.preview-icon { display:inline-flex; align-items:center; justify-content:center; padding:2px; border:0; color:var(--text-3); background:transparent; cursor:pointer; }
+.preview-icon svg { display:block; width:15px; height:15px; }
 .preview-icon:hover { color:var(--text); }
 .preview-icon:disabled { opacity:.35; cursor:not-allowed; }
 .preview-icon:disabled:hover { color:var(--text-3); }
@@ -377,7 +401,7 @@ onBeforeUnmount(() => {
 .preview-empty { color:var(--text-3); font-size:13px; }
 .preview-strip { display:flex; width:40px; flex:none; flex-direction:column; gap:10px; align-items:center; padding:14px 0; cursor:pointer; }
 .preview-strip:hover { border-color:var(--accent); }
-.preview-strip-arrow { color:var(--text-3); font-size:15px; }
+.preview-strip-arrow { width:15px; height:15px; color:var(--text-3); }
 .preview-strip:hover .preview-strip-arrow { color:var(--accent); }
 .preview-strip-text { color:var(--text-2); font-size:13px; letter-spacing:.15em; writing-mode:vertical-rl; }
 @media (max-width:1200px) {

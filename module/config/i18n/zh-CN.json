@@ -333,10 +333,24 @@
     "ScreenshotInterval": {
       "name": "模拟器截图间隔",
       "help": ""
+    }
+  },
+  "Scrcpy": {
+    "_info": {
+      "name": "互动控制",
+      "help": ""
     },
-    "ScrcpyWebUrl": {
+    "WebUrl": {
       "name": "ws-scrcpy 地址",
-      "help": "用于总览页画面预览的互动模式（可点击、拖拽操作游戏）。填入 ws-scrcpy 服务地址，如 https://scrcpy.example.com:4433，留空则关闭互动模式"
+      "help": "用于总览页画面预览的互动模式（可点击、拖拽操作游戏）。填入 ws-scrcpy 服务地址，如 https://scrcpy.example.com，留空则关闭互动模式。部署与使用说明见 Wiki：https://github.com/megumiss/NIKKEAutoScript/wiki/Interactive-Control.zh-CN"
+    },
+    "Bitrate": {
+      "name": "视频码率",
+      "help": "互动模式初始连接的视频码率（bps），默认 16000000。码率越高画面越清晰，带宽占用越大"
+    },
+    "MaxFps": {
+      "name": "视频帧率",
+      "help": "互动模式初始连接的帧率上限，默认 60"
     }
   },
   "EmulatorInfo": {
