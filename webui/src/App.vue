@@ -178,7 +178,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
   '多开': { 'en-US': 'Multi-instance', 'ja-JP': 'マルチインスタンス' },
   '关于': { 'en-US': 'About', 'ja-JP': '情報' }, '主题': { 'en-US': 'Theme', 'ja-JP': 'テーマ' }, '任务总览': { 'en-US': 'Task overview', 'ja-JP': 'タスク概要' },
-  '筛选任务…': { 'en-US': 'Filter tasks…', 'ja-JP': 'タスクを絞り込む…' }, '调度器': { 'en-US': 'Scheduler', 'ja-JP': 'スケジューラー' },
+  '筛选任务/设置': { 'en-US': 'Filter tasks/settings', 'ja-JP': 'タスクを絞り込む/設定' }, '调度器': { 'en-US': 'Scheduler', 'ja-JP': 'スケジューラー' },
   '实时日志': { 'en-US': 'Live log', 'ja-JP': 'リアルタイムログ' },
   '自动滚动': { 'en-US': 'Auto-scroll', 'ja-JP': '自動スクロール' }, '当前任务': { 'en-US': 'Current task', 'ja-JP': '現在のタスク' }, '清空': { 'en-US': 'Clear', 'ja-JP': 'クリア' },
   '下一任务': { 'en-US': 'Next task', 'ja-JP': '次のタスク' }, '启动': { 'en-US': 'Start', 'ja-JP': '開始' }, '停止': { 'en-US': 'Stop', 'ja-JP': '停止' },
@@ -255,7 +255,28 @@ const isAbout = computed(() => route.path === '/about')
 const isWorkspace = computed(() => Boolean(selectedName.value))
 const selectedInstance = computed(() => instances.value.find(item => item.name === selectedName.value))
 const runningCount = computed(() => instances.value.filter(item => item.state === 1 && !serialWaiting(item.name)).length)
-const visibleMenus = computed(() => schema.value.menus.map((menu: any) => ({ ...menu, tasks: menu.tasks.filter((task: any) => !taskFilter.value || task.name.toLowerCase().includes(taskFilter.value.toLowerCase())) })).filter((menu: any) => menu.tasks.length))
+const visibleMenus = computed(() => {
+  const q = taskFilter.value.trim().toLowerCase()
+  return schema.value.menus.map((menu: any) => {
+    const tasks = menu.tasks.map((task: any) => {
+      const nameMatched = !q || task.name.toLowerCase().includes(q)
+      let matchedFields: any[] = []
+      if (!nameMatched) {
+        const page = menu.page === 'tool' ? 'tool' : 'task'
+        for (const group of schema.value.tasks[task.key]?.groups || []) {
+          for (const field of group.fields || []) {
+            if ((field.title || '').toLowerCase().includes(q) || (field.help || '').toLowerCase().includes(q)) {
+              matchedFields.push({ ...field, groupKey: group.key, page })
+            }
+          }
+        }
+      }
+      if (!nameMatched && !matchedFields.length) return null
+      return { ...task, nameMatched, matchedFields }
+    }).filter(Boolean)
+    return { ...menu, tasks }
+  }).filter((menu: any) => menu.tasks.length)
+})
 let stateSocket: JsonSocket | undefined
 let logSocket: JsonSocket | undefined
 let queueSocket: JsonSocket | undefined
@@ -433,6 +454,25 @@ function dashboard() { mobileNav.value = ''; router.push('/') }
 function calendarError(message: string) { error.value = message }
 function enter(name: string) { mobileNav.value = ''; router.push(`/i/${name}/overview`) }
 function openTask(task: any, page: string) { mobileNav.value = ''; router.push(`/i/${selectedName.value}/${page}/${task.key}`) }
+function openField(task: any, field: any) {
+  mobileNav.value = ''
+  taskFilter.value = ''
+  if (collapsed.value[field.groupKey]) collapsed.value[field.groupKey] = false
+  router.push(`/i/${selectedName.value}/${field.page}/${task.key}`)
+  const id = `field-${field.key}`
+  let tries = 0
+  const scrollToField = () => {
+    const el = document.getElementById(id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('field-flash')
+      setTimeout(() => el.classList.remove('field-flash'), 1600)
+    } else if (++tries < 20) {
+      setTimeout(scrollToField, 100)
+    }
+  }
+  setTimeout(scrollToField, 200)
+}
 function openQueueItem(item: any) {
   const menu = schema.value.menus.find((item2: any) => item2.tasks.some((task: any) => task.key === item.command))
   router.push(`/i/${selectedName.value}/${menu?.page === 'tool' ? 'tool' : 'task'}/${item.command}`)
@@ -1077,7 +1117,7 @@ onBeforeUnmount(() => {
           <span class="inst-avatar" :class="{ idle: displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task) === 'idle' }">{{ initials(selectedName) }}<span class="ring" :class="displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task)"></span></span>
           <div class="rail-inst-info"><div class="rail-inst-name" :title="selectedName">{{ selectedName }}</div><div class="rail-inst-state">{{ displayStatus(selectedName, selectedInstance?.state, selectedInstance?.current_task) }}</div></div>
         </div>
-        <label class="rail-search">🔍 <input v-model="taskFilter" :placeholder="t('筛选任务…')"><button v-if="taskFilter" type="button" class="rail-clear" @click.prevent="taskFilter = ''">✕</button></label>
+        <label class="rail-search">🔍 <input v-model="taskFilter" :placeholder="t('筛选任务/设置')"><button v-if="taskFilter" type="button" class="rail-clear" @click.prevent="taskFilter = ''">✕</button></label>
       </div>
       <div class="rail-list">
         <button class="rail-item" :class="{ active: selectedPage === 'overview' }" @click="router.push(`/i/${selectedName}/overview`)">📈 {{ t('任务总览') }}</button>
@@ -1087,11 +1127,18 @@ onBeforeUnmount(() => {
             <span class="rail-count">{{ menu.tasks.filter((task: any) => taskEnabled(task.key)).length }}/{{ menu.tasks.length }}</span>
           </button>
           <div v-show="!railCollapsed[menu.key] || taskFilter" class="rail-tasks">
-            <button v-for="task in menu.tasks" :key="task.key" class="rail-item" :class="{ active: selectedTask === task.key }" @click="openTask(task, menu.page === 'tool' ? 'tool' : 'task')">
-              {{ task.name }}
-              <span v-if="selectedInstance?.current_task === task.key" class="spin"></span>
-              <span v-else-if="taskEnabled(task.key)" class="mini-dot on"></span>
-            </button>
+            <template v-for="task in menu.tasks" :key="task.key">
+              <button class="rail-item" :class="{ active: selectedTask === task.key }" @click="openTask(task, menu.page === 'tool' ? 'tool' : 'task')">
+                {{ task.name }}
+                <span v-if="selectedInstance?.current_task === task.key" class="spin"></span>
+                <span v-else-if="taskEnabled(task.key)" class="mini-dot on"></span>
+              </button>
+              <div v-if="task.matchedFields?.length" class="rail-field-list">
+                <button v-for="field in task.matchedFields" :key="field.key" class="rail-item rail-field" @click="openField(task, field)">
+                  <span class="field-ico">⚙️</span><span class="field-name">{{ field.title }}</span>
+                </button>
+              </div>
+            </template>
           </div>
         </template>
       </div>
@@ -1212,7 +1259,7 @@ onBeforeUnmount(() => {
                   <span class="group-summary">›</span>
                 </button>
                 <div class="group-body">
-                  <div v-for="field in group.fields" :key="field.key" class="field" :class="{ 'field-wide': isWideField(field) }">
+                  <div v-for="field in group.fields" :key="field.key" :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
                     <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
                     <div class="field-control">
                       <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><span class="slider"></span></label>
