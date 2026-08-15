@@ -449,7 +449,7 @@
     },
     "LauncherPath": {
       "name": "启动器路径",
-      "help": "游戏启动器路径，必填，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
+      "help": "游戏启动器路径，必填，位于游戏安装路径下的 Launcher 目录，例如：E:\\NIKKE\\Launcher\\nikke_launcher.exe"
     },
     "LauncherTitleName": {
       "name": "启动器标题",
@@ -461,7 +461,7 @@
     },
     "GamePath": {
       "name": "游戏路径",
-      "help": "游戏路径，一般无需手动填写，会根据启动器路径自动填写，如果自动填写的路径错误请手动更改"
+      "help": "游戏路径，位于游戏安装路径下的 NIKKE\\game 目录，一般无需手动填写，会根据启动器路径自动填写，如果自动填写的路径错误请手动更改"
     },
     "GameTitleName": {
       "name": "游戏标题",

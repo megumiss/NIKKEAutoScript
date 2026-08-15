@@ -502,10 +502,18 @@ function save(field: Field, event: Event) {
   const input = event.target as HTMLInputElement
   const value = field.widget === 'checkbox' ? input.checked : input.value
   // Roll the control back to the last persisted value when the save fails.
-  saveValue(field, value).catch(() => {
-    if (field.widget === 'checkbox') input.checked = Boolean(field.value)
-    else input.value = field.value ?? ''
-  })
+  saveValue(field, value)
+    .then(() => {
+      // Manually typed launcher paths autofill the game path too, matching
+      // the file-dialog picker behavior.
+      if (field.path_picker?.after_select === 'autofill_game_path_from_launcher' && field.widget !== 'checkbox') {
+        autofillGamePathFromLauncher(input.value)
+      }
+    })
+    .catch(() => {
+      if (field.widget === 'checkbox') input.checked = Boolean(field.value)
+      else input.value = field.value ?? ''
+    })
 }
 // datetime-local only renders the "T" separator; stored values may use a
 // space ("1989-12-27 00:00:00"), which would otherwise render as an empty
@@ -546,14 +554,31 @@ function clearField(field: Field) {
   cancelDatetimeSave(field)
   saveValue(field, '').catch(() => {})
 }
+// Resolve `..` segments so the auto-filled path has no `..` (e.g. D:\a\..\b -> D:\b).
+function normalizePath(path: string): string {
+  const separator = path.includes('\\') ? '\\' : '/'
+  const prefix = /^[A-Za-z]:[\\/]/.test(path) ? path.slice(0, 3) : path.startsWith('\\\\') ? '\\\\' : ''
+  const stack: string[] = []
+  for (const part of path.slice(prefix.length).split(/[\\/]+/)) {
+    if (!part || part === '.') continue
+    if (part === '..') stack.pop()
+    else stack.push(part)
+  }
+  return prefix + stack.join(separator)
+}
+async function autofillGamePathFromLauncher(launcherPath: string) {
+  // An empty/cleared launcher path cannot derive a game path; do not fill garbage.
+  if (!launcherPath) return
+  const gamePath = allFields().find(item => item.key === 'PCClient.PCClientInfo.GamePath')
+  if (gamePath && !gamePath.value) {
+    const separator = launcherPath.includes('\\') ? '\\' : '/'
+    await saveValue(gamePath, normalizePath(`${launcherPath.replace(/[\\/][^\\/]+$/, '')}${separator}..${separator}NIKKE${separator}game${separator}nikke.exe`)).catch(() => null)
+  }
+}
 async function pickedPath(field: Field, path: string) {
   try { await saveValue(field, path) } catch { return }
   if (field.path_picker?.after_select !== 'autofill_game_path_from_launcher') return
-  const gamePath = allFields().find(item => item.key === 'PCClient.PCClientInfo.GamePath')
-  if (gamePath && !gamePath.value) {
-    const separator = path.includes('\\') ? '\\' : '/'
-    await saveValue(gamePath, `${path.replace(/[\\/][^\\/]+$/, '')}${separator}..${separator}NIKKE${separator}game${separator}nikke.exe`).catch(() => null)
-  }
+  await autofillGamePathFromLauncher(path)
 }
 async function importInterception(field: Field, path: string) {
   if (!field.data_endpoint) return

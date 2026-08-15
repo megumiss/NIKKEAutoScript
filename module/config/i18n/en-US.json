@@ -449,7 +449,7 @@
     },
     "LauncherPath": {
       "name": "Launcher Path",
-      "help": "Game launcher path. Required. Example: E:\\NIKKE\\Launcher\\nikke_launcher.exe"
+      "help": "Game launcher path. Required. Located in the Launcher directory under the game installation path. Example: E:\\NIKKE\\Launcher\\nikke_launcher.exe"
     },
     "LauncherTitleName": {
       "name": "Launcher Title",
@@ -461,7 +461,7 @@
     },
     "GamePath": {
       "name": "Game Path",
-      "help": "Game path; usually auto-filled based on launcher path. Manually change if auto-filled path is incorrect"
+      "help": "Game path; located in the NIKKE\\game directory under the game installation path. Usually auto-filled based on launcher path. Manually change if auto-filled path is incorrect"
     },
     "GameTitleName": {
       "name": "Game Title",
