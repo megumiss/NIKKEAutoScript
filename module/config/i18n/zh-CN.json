@@ -862,6 +862,14 @@
     "XCommonParams": {
       "name": "XCommonParams",
       "help": "请求header中的x-common-params参数，需要包含openid。必须手动填写，一般情况下不需要更新"
+    },
+    "AutoRenew": {
+      "name": "自动续期（BETA）",
+      "help": "在Cookie临近过期时自动续期（需要在NKAS设置-账号设置中填写LiPass账号）；Cookie一旦过期将无法续期，请保持任务正常运行。依赖playwright和浏览器，首次续期会自动安装playwright，Docker用户还会下载chromium"
+    },
+    "TokenExpire": {
+      "name": "Token过期时间",
+      "help": ""
     }
   },
   "BlaDaily": {

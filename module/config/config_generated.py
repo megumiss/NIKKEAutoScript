@@ -145,6 +145,8 @@ class GeneratedConfig:
     BlaAuth_UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
     BlaAuth_Cookie = None
     BlaAuth_XCommonParams = None
+    BlaAuth_AutoRenew = False
+    BlaAuth_TokenExpire = None
 
     # Group `BlaDaily`
     BlaDaily_Immediately = False

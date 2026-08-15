@@ -10,6 +10,7 @@ from typing import Dict, Tuple
 import requests
 
 from module.blablalink.langs import BlaLangs
+from module.blablalink.renew import RenewError, renew_cookie
 from module.config.delay import next_month
 from module.config.utils import deep_get
 from module.exception import RequestHumanTakeover
@@ -385,6 +386,75 @@ class Blablalink(UI):
             logger.error(f'Login check exception: {str(e)}')
             return False
 
+    def _auto_renew_enabled(self) -> bool:
+        return bool(deep_get(self.config.data, keys='BlaAuth.BlaAuth.AutoRenew', default=False))
+
+    def _renew_cookie(self) -> bool:
+        """执行 cookie 续期，成功则更新 header 并写回配置"""
+        # 账号密码加密存储在 config/<name>.acc（GUI 保存时 NKAS.Account.* 只写掩码）
+        from module.config.account import load_account
+        account, _ = load_account(self.config.config_name)
+        if not account:
+            logger.error('LiPass account not set, please fill it in Account settings first')
+            return False
+        try:
+            result = renew_cookie(
+                cookie=self.common_headers.get('cookie', ''),
+                account=account,
+                user_agent=self.common_headers.get('user-agent', ''),
+            )
+        except RenewError as e:
+            logger.error(f'Auto renew failed: {e}')
+            return False
+        except Exception as e:
+            logger.error(f'Auto renew exception: {e}')
+            return False
+        if not result:
+            return False
+
+        new_cookie, expire = result
+        # 存储为带时区偏移的本地时间字符串（如 2026-09-14 12:34:56 +0800），
+        # 显示为宿主机本地时间，回读时按偏移解析，与宿主机时区无关
+        expire_text = datetime.fromtimestamp(expire).astimezone().strftime('%Y-%m-%d %H:%M:%S %z')
+        self.common_headers['cookie'] = new_cookie
+        self.config.modified['BlaAuth.BlaAuth.Cookie'] = new_cookie
+        self.config.modified['BlaAuth.BlaAuth.TokenExpire'] = expire_text
+        self.config.update()
+        logger.info(f'Cookie renewed and saved, expire: {expire_text}')
+        return True
+
+    def _renew_if_expiring(self):
+        """cookie 仍有效但临近过期（<7 天）或过期时间未知时，机会性续期"""
+        if not self._auto_renew_enabled():
+            return
+        expire_text = deep_get(self.config.data, keys='BlaAuth.BlaAuth.TokenExpire', default='') or ''
+        expire = 0
+        if expire_text:
+            try:
+                # 带时区偏移的本地时间字符串，偏移自带时区信息；旧值解析失败按未知处理，触发一次续期即可自愈
+                expire = datetime.strptime(str(expire_text).strip(), '%Y-%m-%d %H:%M:%S %z').timestamp()
+            except (TypeError, ValueError):
+                expire = 0
+        if expire and expire - time.time() > 7 * 86400:
+            return
+        logger.info('Token expiring soon or expire unknown, renewing opportunistically...')
+        self._renew_cookie()
+
+    def ensure_login(self):
+        """确保登录有效：先检查，失效或临期时按配置自动续期"""
+        if self.check_login():
+            self._renew_if_expiring()
+            return
+        if not self._auto_renew_enabled():
+            raise RequestHumanTakeover
+        logger.info('Cookie invalid, trying auto renew...')
+        if not self._renew_cookie():
+            raise RequestHumanTakeover
+        if not self.check_login():
+            logger.error('CheckLogin still failed after renew')
+            raise RequestHumanTakeover
+
+
     def parse_task_status(self, tasks_data: Dict) -> Dict:
         """解析任务状态
         :return: 包含任务状态和必要ID的字典
@@ -428,9 +498,8 @@ class Blablalink(UI):
 
     def daily(self):
         logger.info('Starting blablalink daily tasks')
-        # 检查Cookie
-        if not self.check_login():
-            raise RequestHumanTakeover
+        # 检查登录，失效时按需自动续期
+        self.ensure_login()
 
         # 获取任务列表
         tasks_data = self.get_tasks()
@@ -462,6 +531,8 @@ class Blablalink(UI):
     def cdk(self, cdk: str = None):
         """CDK兑换功能"""
         logger.info('Starting CDK redemption task')
+        # 检查登录，失效时按需自动续期
+        self.ensure_login()
 
         # 1. 获取兑换历史记录并追加到临时文件
         redeemed_cdks = self.get_cdk_redemption_history()
@@ -678,6 +749,8 @@ class Blablalink(UI):
     def exchange(self):
         """金币兑换功能"""
         logger.info('Starting point exchange task')
+        # 检查登录，失效时按需自动续期
+        self.ensure_login()
 
         # 3. 根据优先级筛选需要兑换的奖励
         priority_list = self.exchange_priority

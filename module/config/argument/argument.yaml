@@ -245,6 +245,11 @@ BlaAuth:
     value: ''
     type: textarea
     mode: json
+  AutoRenew:
+    value: false
+  TokenExpire:
+    value: ''
+    display: disabled
 BlaDaily:
   Immediately: false
   Points:

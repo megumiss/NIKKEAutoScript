@@ -2450,6 +2450,15 @@
         "type": "textarea",
         "value": "",
         "mode": "json"
+      },
+      "AutoRenew": {
+        "type": "checkbox",
+        "value": false
+      },
+      "TokenExpire": {
+        "type": "input",
+        "value": "",
+        "display": "disabled"
       }
     },
     "Storage": {
