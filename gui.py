@@ -25,6 +25,16 @@ def func(ev: threading.Event):
 
     State.restart_event = ev
 
+    # 子进程由父进程 fork 而来时（Linux/Docker，multiprocessing 默认 fork），
+    # 会继承父进程启动时初始化的 deploy 配置缓存（如公告已读 ReadNoticeIds）。
+    # 运行期的新修改只写入了子进程内存与磁盘，父进程缓存不更新；程序重启后
+    # 新子进程若沿用旧缓存，即使磁盘已持久化也不会重新读取，导致已读等状态丢失。
+    # 清掉缓存强制子进程从磁盘重新加载。Windows spawn 不继承内存，本操作无害。
+    try:
+        delattr(State, '_deploy_config_')
+    except AttributeError:
+        pass
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--host',
