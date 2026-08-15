@@ -1,4 +1,17 @@
 # 公告列表，新的公告追加到文件顶部
+- id: notice_20260816
+  date: 2026-08-16
+  title: 妮游社 Cookie 自动续期
+  type: info
+  content: |
+    <b>妮游社 Cookie 现已支持自动续期</b>
+    Cookie 临近过期时任务会自动续期，无需再手动更新 Cookie。
+
+    <b>开启方法</b>
+    妮游社 → Cookie → 勾选「自动续期（BETA）」，并在 NKAS 设置-账号设置 中填写 LiPass 账号（只填写账号即可）。
+
+    <b>注意事项</b>
+    Cookie 一旦过期将无法续期，请保持任务正常运行。首次续期会自动安装 playwright，Docker 用户还会下载 chromium。
 - id: notice_20260813
   date: 2026-08-13
   title: 剧情活动提醒
