@@ -207,7 +207,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
   '管理员权限不足': { 'en-US': 'Administrator privileges required', 'ja-JP': '管理者権限が必要です' },
   'PC 客户端需要脚本以管理员权限运行。请退出程序，右键启动程序或快捷方式，在「属性 → 兼容性」中勾选「以管理员身份运行此程序」，然后重新启动。': { 'en-US': 'The PC client requires the script to run with administrator privileges. Exit the program, right-click the launcher or shortcut, tick "Run this program as an administrator" under Properties → Compatibility, then start it again.', 'ja-JP': 'PCクライアントの利用には管理者権限が必要です。プログラムを終了し、起動プログラムまたはショートカットを右クリックして、「プロパティ → 互換性」で「管理者としてこのプログラムを実行する」にチェックを入れてから再起動してください。' },
-  '公告中心': { 'en-US': 'Announcements', 'ja-JP': 'お知らせ' }, '暂无公告': { 'en-US': 'No announcements', 'ja-JP': 'お知らせはありません' }, '未读': { 'en-US': 'Unread', 'ja-JP': '未読' },
+  '公告中心': { 'en-US': 'Announcements', 'ja-JP': 'お知らせ' }, '暂无公告': { 'en-US': 'No announcements', 'ja-JP': 'お知らせはありません' }, '未读': { 'en-US': 'Unread', 'ja-JP': '未読' }, '我知道了': { 'en-US': 'Got it', 'ja-JP': 'わかりました' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
   '导入失败': { 'en-US': 'Import failed', 'ja-JP': 'インポート失敗' },
@@ -996,9 +996,13 @@ function openAnnouncementCenter() {
   const target = announcements.value.find(item => !item.read) || announcements.value[0]
   if (target) selectAnnouncement(target)
 }
-async function selectAnnouncement(announcement: Announcement) {
+function selectAnnouncement(announcement: Announcement) {
+  // 仅切换查看的公告；已读必须由用户显式点击「我知道了」触发
   activeAnnouncementId.value = announcement.id
-  if (announcement.read) return
+}
+async function markAnnouncementRead() {
+  const announcement = activeAnnouncement.value
+  if (!announcement || announcement.read) return
   // Optimistic local read so the badge updates immediately; roll back when
   // the mark-read call fails.
   announcement.read = true
@@ -1517,9 +1521,14 @@ onBeforeUnmount(() => {
               <span v-if="!item.read" class="announcement-dot" :title="t('未读')"></span>
             </button>
           </div>
-          <!-- 公告正文来自仓库自带的公告文件（可信来源），用 v-html 渲染以支持
-               链接与强调；notice-content 的 pre-line 让纯文本公告照常换行 -->
-          <div class="modal-text notice-content announcement-content" v-html="activeAnnouncement?.content || ''"></div>
+          <div class="announcement-view">
+            <div class="announcement-scroll">
+              <!-- 公告正文来自仓库自带的公告文件（可信来源），用 v-html 渲染以支持
+                   链接与强调；notice-content 的 pre-line 让纯文本公告照常换行 -->
+              <div class="modal-text notice-content announcement-content" v-html="activeAnnouncement?.content || ''"></div>
+            </div>
+            <button v-if="activeAnnouncement && !activeAnnouncement.read" class="btn primary" @click="markAnnouncementRead">{{ t('我知道了') }}</button>
+          </div>
         </div>
       </div>
     </div>
