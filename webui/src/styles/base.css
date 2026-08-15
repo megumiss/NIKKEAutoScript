@@ -36,6 +36,9 @@ input[type='radio'] { width:16px; height:16px; margin:0; appearance:none; border
 .toast.error { border-color:var(--red); background:var(--toast-error-bg); }
 @keyframes toast-in { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
 .code-wrap { position:relative; width:100%; }
+/* 结构化（yaml/json）编辑框：拖右下角调整整个高亮块高度，pre 与 textarea 同步跟随 */
+.code-wrap-resizable { display:flex; flex-direction:column; resize:vertical; overflow:hidden; }
+.code-wrap-resizable .code-highlight { flex:1; overflow-y:auto; }
 .code-highlight,.code-input { font:12.5px/1.6 Consolas,'Cascadia Code',monospace; }
 .textarea-mono:not(.code-input) { font:12.5px/1.6 Consolas,'Cascadia Code',monospace; tab-size:2; }
 .code-highlight { min-height:66px; margin:0; padding:9px 12px; border:1px solid var(--border); border-radius:8px; color:var(--text); background:var(--card-2); white-space:pre-wrap; word-break:break-all; }

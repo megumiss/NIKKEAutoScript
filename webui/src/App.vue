@@ -312,7 +312,13 @@ function isWideField(field: Field) { return Boolean(field.path_picker) || ['item
 // does not scroll, which pushed the log card out of reach.  Past the cap the
 // textarea scrolls internally instead.
 const TEXTAREA_MAX_HEIGHT = 400
-function fitTextarea(el: HTMLTextAreaElement) { if (el.classList.contains('code-input')) { el.style.height = ''; return } el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight + 2, TEXTAREA_MAX_HEIGHT)}px` }
+function fitTextarea(el: HTMLTextAreaElement) {
+  if (el.classList.contains('code-input')) { el.style.height = ''; return }
+  // 用户手动拖拽过右下角手柄后（dataset.userSized），不再自动重置高度
+  if (el.dataset.userSized === '1') return
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight + 2, TEXTAREA_MAX_HEIGHT)}px`
+}
 function resizeTextarea(event: Event) { fitTextarea(event.target as HTMLTextAreaElement) }
 function onTextareaInput(field: Field, event: Event) {
   resizeTextarea(event)
@@ -332,7 +338,14 @@ function onTextInput(model: { value: any }, event: Event) {
   const input = event.target as HTMLInputElement
   if (model.value !== input.value) model.value = input.value
 }
-const vAutosize = { mounted: (el: HTMLTextAreaElement) => fitTextarea(el), updated: (el: HTMLTextAreaElement) => fitTextarea(el) }
+// 在右下角 resize 手柄区域按下时标记 userSized，autosize 之后不再覆盖用户手动调整的高度
+function watchUserResize(el: HTMLTextAreaElement) {
+  el.addEventListener('mousedown', (event: MouseEvent) => {
+    const rect = el.getBoundingClientRect()
+    if (event.clientX >= rect.right - 16 && event.clientY >= rect.bottom - 16) el.dataset.userSized = '1'
+  })
+}
+const vAutosize = { mounted: (el: HTMLTextAreaElement) => { fitTextarea(el); watchUserResize(el) }, updated: (el: HTMLTextAreaElement) => fitTextarea(el) }
 function escapeHtml(source: string) { return source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 function highlightYaml(source: string) {
   return source.split('\n').map(line => {
@@ -1299,7 +1312,7 @@ onBeforeUnmount(() => {
                           <FieldPathPicker :value="field.value" :picker="field.path_picker" :disabled="field.display !== 'show'" @picked="pickedPath(field, $event)" @error="error = $event"/>
                         </div>
                       </template>
-                      <div v-else-if="field.widget === 'textarea'" class="code-wrap">
+                      <div v-else-if="field.widget === 'textarea'" class="code-wrap" :class="{ 'code-wrap-resizable': isStructuredTextarea(field) }">
                         <pre v-if="isStructuredTextarea(field)" class="code-highlight" v-html="highlightTextarea(field)"></pre>
                         <textarea v-autosize :class="{ 'code-input': isStructuredTextarea(field), 'textarea-mono': field.mode !== 'text' }" :value="field.value" :readonly="field.display !== 'show'" :inputmode="field.mode === 'url' ? 'url' : 'text'" spellcheck="false" @input="onTextareaInput(field, $event)" @change="save(field, $event)"></textarea>
                       </div>
