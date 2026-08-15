@@ -3,13 +3,13 @@
   --bg: #0d1117; --bg-glow-1: rgba(102, 184, 234, .07); --bg-glow-2: rgba(122, 92, 231, .05);
   --card: #151a22; --card-2: #1a2029; --card-3: #232b38; --border: #262f3d; --border-light: #38465a;
   --text: #e8ebf0; --text-2: #97a0af; --text-3: #646d7b; --accent: #66b8ea; --accent-2: #4a9eda;
-  --violet: #9a8bf5; --accent-soft: rgba(102, 184, 234, .14); --grad-accent: linear-gradient(135deg, #66b8ea, #4a9eda);
+  --violet: #9a8bf5; --accent-soft: rgba(102, 184, 234, .14); --selection: rgba(102, 184, 234, .28); --grad-accent: linear-gradient(135deg, #66b8ea, #4a9eda);
   --grad-violet: linear-gradient(135deg, #8ec5f5, #9a8bf5); --green: #55d9a2; --green-soft: rgba(85, 217, 162, .13);
   --yellow: #ffc178; --yellow-soft: rgba(255, 193, 120, .13); --red: #ef6f6f; --red-soft: rgba(239, 111, 111, .15);
   --log-bg: #10141b; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25); --shadow-hover: 0 6px 24px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.3);
   --toast-ok-bg: #16382e; --toast-error-bg: #3b2028; --toast-shadow: 0 14px 36px rgba(0,0,0,.62), 0 0 0 1px rgba(255,255,255,.06);
 }
-:root, :root[data-theme='light'] { color-scheme: light; --bg: #eef1f6; --bg-glow-1: rgba(47,143,208,.06); --bg-glow-2: rgba(122,92,231,.04); --card: #fff; --card-2: #f5f7fb; --card-3: #e6ebf3; --border: #dde3ec; --border-light: #c2cddc; --text: #21262e; --text-2: #5f6a78; --text-3: #97a1af; --accent: #2f8fd0; --accent-2: #2579b4; --violet: #7a68d8; --accent-soft: rgba(47,143,208,.1); --grad-accent: linear-gradient(135deg, #66b8ea, #4a9eda); --grad-violet: linear-gradient(135deg, #8ec5f5, #9a8bf5); --green: #1cab72; --green-soft: rgba(28,171,114,.1); --yellow: #bd7a18; --yellow-soft: rgba(189,122,24,.1); --red: #d34545; --red-soft: rgba(211,69,69,.1); --log-bg: #f2f4f8; --shadow: 0 1px 2px rgba(30,40,60,.06), 0 2px 8px rgba(30,40,60,.06); --shadow-hover: 0 8px 24px rgba(30,40,60,.12); --toast-ok-bg: #e8f8f1; --toast-error-bg: #fff0f2; --toast-shadow: 0 12px 32px rgba(25,72,108,.2), 0 3px 10px rgba(30,40,60,.1); }
+:root, :root[data-theme='light'] { color-scheme: light; --bg: #eef1f6; --bg-glow-1: rgba(47,143,208,.06); --bg-glow-2: rgba(122,92,231,.04); --card: #fff; --card-2: #f5f7fb; --card-3: #e6ebf3; --border: #dde3ec; --border-light: #c2cddc; --text: #21262e; --text-2: #5f6a78; --text-3: #97a1af; --accent: #2f8fd0; --accent-2: #2579b4; --violet: #7a68d8; --accent-soft: rgba(47,143,208,.1); --grad-accent: linear-gradient(135deg, #66b8ea, #4a9eda); --grad-violet: linear-gradient(135deg, #8ec5f5, #9a8bf5); --green: #1cab72; --green-soft: rgba(28,171,114,.1); --yellow: #bd7a18; --yellow-soft: rgba(189,122,24,.1); --red: #d34545; --red-soft: rgba(211,69,69,.1); --log-bg: #f2f4f8; --shadow: 0 1px 2px rgba(30,40,60,.06), 0 2px 8px rgba(30,40,60,.06); --shadow-hover: 0 8px 24px rgba(30,40,60,.12); --toast-ok-bg: #e8f8f1; --toast-error-bg: #fff0f2; --toast-shadow: 0 12px 32px rgba(25,72,108,.2), 0 3px 10px rgba(30,40,60,.1); --selection: rgba(47, 143, 208, .26); }
 :root[data-theme='dark'] { --button-bg:rgba(255,255,255,.025); --button-bg-hover:rgba(102,184,234,.1); --button-border:rgba(151,160,175,.24); --button-border-hover:rgba(102,184,234,.58); }
 :root, :root[data-theme='light'] { --button-bg:rgba(255,255,255,.72); --button-bg-hover:rgba(47,143,208,.08); --button-border:rgba(95,106,120,.22); --button-border-hover:rgba(47,143,208,.48); }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,7 +39,9 @@ input[type='radio'] { width:16px; height:16px; margin:0; appearance:none; border
 .code-highlight,.code-input { font:12.5px/1.6 Consolas,'Cascadia Code',monospace; }
 .textarea-mono:not(.code-input) { font:12.5px/1.6 Consolas,'Cascadia Code',monospace; tab-size:2; }
 .code-highlight { min-height:66px; margin:0; padding:9px 12px; border:1px solid var(--border); border-radius:8px; color:var(--text); background:var(--card-2); white-space:pre-wrap; word-break:break-all; }
-.code-input { position:absolute; inset:0; width:100%; height:100%; margin:0; border-color:transparent !important; color:transparent !important; background:transparent !important; caret-color:var(--text); resize:none; }
+.code-input { position:absolute; inset:0; width:100%; height:100%; margin:0; border-color:transparent !important; color:transparent !important; background:transparent !important; caret-color:var(--text); resize:none; white-space:pre-wrap; word-break:break-all; }
+/* 选中时用半透明背景，让底层 <pre> 的语法高亮依然可见；文字保持透明，避免选区盖掉高亮色 */
+.code-input::selection { background:var(--selection); color:transparent; }
 .code-wrap:focus-within .code-highlight { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
 .tok-key { color:var(--accent); }
 .tok-str { color:var(--green); }
