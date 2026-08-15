@@ -25,8 +25,9 @@ def _read_pypi_mirror() -> Optional[str]:
     """读取 deploy.yaml 里的 pip 镜像配置"""
     try:
         from deploy.utils import DEPLOY_CONFIG, poor_yaml_read
+        # poor_yaml_read 会把嵌套 yaml 打平，PypiMirror 在顶层
         deploy = poor_yaml_read(DEPLOY_CONFIG)
-        mirror = deploy.get('Deploy', {}).get('PypiMirror')
+        mirror = deploy.get('PypiMirror')
         if mirror and isinstance(mirror, str) and mirror.lower() != 'null':
             return mirror
     except Exception as e:
