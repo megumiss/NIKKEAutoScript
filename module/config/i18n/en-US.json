@@ -342,7 +342,7 @@
     },
     "WebUrl": {
       "name": "ws-scrcpy URL",
-      "help": "Used by the interactive mode of the screen preview on the overview page (click and drag to control the game). Example: https://scrcpy.example.com. Leave empty to disable interactive mode. See the Wiki for deployment and usage: https://github.com/megumiss/NIKKEAutoScript/wiki/Interactive-Control"
+      "help": "Used by the interactive mode of the screen preview on the overview page (click and drag to control the game). Example: https://scrcpy.example.com. Leave empty to disable interactive mode. See the Wiki for deployment and usage: https://nkas.megumiss.top/wiki/#/en/Interactive-Control"
     },
     "Bitrate": {
       "name": "Video bitrate",
@@ -857,7 +857,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "For acquisition methods and auto-update procedures, please refer to the documentation:: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide#7-nikke-community-site-configuration"
+      "help": "For acquisition methods and auto-update procedures, please refer to the documentation:: https://nkas.megumiss.top/wiki/#/en/Configuration-Guide?id=_9-nikke-community-site"
     },
     "XCommonParams": {
       "name": "XCommonParams",

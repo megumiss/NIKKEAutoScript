@@ -342,7 +342,7 @@
     },
     "WebUrl": {
       "name": "ws-scrcpy 地址",
-      "help": "用于总览页画面预览的互动模式（可点击、拖拽操作游戏）。填入 ws-scrcpy 服务地址，如 https://scrcpy.example.com，留空则关闭互动模式。部署与使用说明见 Wiki：https://github.com/megumiss/NIKKEAutoScript/wiki/Interactive-Control.zh-CN"
+      "help": "用于总览页画面预览的互动模式（可点击、拖拽操作游戏）。填入 ws-scrcpy 服务地址，如 https://scrcpy.example.com，留空则关闭互动模式。部署与使用说明见 Wiki：https://nkas.megumiss.top/wiki/#/zh-cn/Interactive-Control"
     },
     "Bitrate": {
       "name": "视频码率",
@@ -857,7 +857,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "获取方式及自动更新方法请查看文档：https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN#7-%E5%A6%AE%E6%B8%B8%E7%A4%BE%E9%85%8D%E7%BD%AE"
+      "help": "获取方式及自动更新方法请查看文档：https://nkas.megumiss.top/wiki/#/zh-cn/Configuration-Guide?id=_9-%e5%a6%ae%e6%b8%b8%e7%a4%be"
     },
     "XCommonParams": {
       "name": "XCommonParams",

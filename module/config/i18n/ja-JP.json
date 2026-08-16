@@ -342,7 +342,7 @@
     },
     "WebUrl": {
       "name": "ws-scrcpy URL",
-      "help": "概要ページの画面プレビューのインタラクティブモード（クリック・ドラッグでゲームを操作）に使用します。例: https://scrcpy.example.com。空欄で無効。デプロイと使い方は Wiki を参照：https://github.com/megumiss/NIKKEAutoScript/wiki/Interactive-Control"
+      "help": "概要ページの画面プレビューのインタラクティブモード（クリック・ドラッグでゲームを操作）に使用します。例: https://scrcpy.example.com。空欄で無効。デプロイと使い方は Wiki を参照：https://nkas.megumiss.top/wiki/#/zh-cn/Interactive-Control"
     },
     "Bitrate": {
       "name": "ビットレート",
@@ -857,7 +857,7 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "入手方法および自動更新の手順については、こちらのドキュメントをご参照ください: https://github.com/megumiss/NIKKEAutoScript/wiki/Configuration-Guide.zh-CN#7-%E5%A6%AE%E6%B8%B8%E7%A4%BE%E9%85%8D%E7%BD%AE"
+      "help": "入手方法および自動更新の手順については、こちらのドキュメントをご参照ください: https://nkas.megumiss.top/wiki/#/zh-cn/Configuration-Guide?id=_9-%e5%a6%ae%e6%b8%b8%e7%a4%be"
     },
     "XCommonParams": {
       "name": "XCommonParams",
