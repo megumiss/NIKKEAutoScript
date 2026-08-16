@@ -29,7 +29,7 @@ class LoginHandler(UI):
             self.device.screenshot()
 
             # 当 MAIN_CHECK 累计出现6次，并且保持在5秒以上
-            if self.appear(MAIN_CHECK, offset=(30, 30)):
+            if self.appear(MAIN_CHECK, offset=(30, 30)) and self.appear(MAIN_CHECK, threshold=10):
                 if confirm_timer.reached():
                     logger.info('Login to main confirm')
                     break
@@ -107,7 +107,7 @@ class LoginHandler(UI):
             if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()
                 continue
-            
+
             # 活动剧情
             if click_timer.reached() and self.handle_event_popup():
                 click_timer.reset()
