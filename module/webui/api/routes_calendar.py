@@ -242,7 +242,7 @@ def _is_allowed(category: str, item: Dict[str, Any]) -> bool:
     if category == 'simulation_room':
         return event_type == 'SimulationOverclockSeason'
     if category == 'version_event':
-        return event_type == 'StoryEvent'
+        return event_type in {'StoryEvent', 'FieldHubEvent'}
     if category == 'arena':
         return str(item.get('arena_type') or event_type) in ARENA_TYPES
     return category in CATEGORY_ORDER
