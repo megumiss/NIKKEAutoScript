@@ -51,10 +51,23 @@ class Updater(DeployConfig, GitManager, PipManager):
     def schedule_time(self):
         self.read()
         t = self.AutoRestartTime
-        if t is not None:
-            return datetime.time.fromisoformat(t)
-        else:
+        if t is None:
             return None
+        try:
+            return datetime.time.fromisoformat(t)
+        except ValueError:
+            # Python < 3.11 的 fromisoformat 不接受省略前导零的格式（如 '3:50'）。
+            # 此前解析失败会让 schedule_update 任务异常并被 TaskHandler 移除，
+            # 导致定时重启更新静默失效（手动更新不受影响）。这里兜底解析 HH:MM[:SS]。
+            try:
+                parts = t.split(':')
+                hour = int(parts[0])
+                minute = int(parts[1]) if len(parts) > 1 else 0
+                second = int(parts[2]) if len(parts) > 2 else 0
+                return datetime.time(hour=hour, minute=minute, second=second)
+            except (ValueError, TypeError, IndexError):
+                logger.warning(f'Invalid AutoRestartTime: {t!r}, scheduled restart disabled')
+                return None
 
     def execute_output(self, command) -> str:
         command = command.replace(r"\\", "/").replace("\\", "/").replace('"', '"')
