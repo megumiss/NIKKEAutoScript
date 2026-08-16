@@ -8,6 +8,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 import module.webui.lang as lang
+from deploy.utils import DEPLOY_CONFIG, poor_yaml_read
 from module.logger import logger
 from module.webui.setting import State
 from module.webui.updater import updater
@@ -45,7 +46,16 @@ ANNOUNCEMENT_TYPES = {'info', 'warning', 'important'}
 
 
 def _read_notice_ids() -> set:
-    raw = str(getattr(State.deploy_config, 'ReadNoticeIds', '') or '')
+    """Read the persisted ids from the deploy file on every call, so the
+    result always reflects the latest state on disk.  The in-memory deploy
+    config is per-process and can lag behind the file (forked children on
+    Linux/Docker, multiple instances sharing one config, manual edits to the
+    file), which made announcements re-pop after the ids were persisted."""
+    raw = ''
+    try:
+        raw = str((poor_yaml_read(DEPLOY_CONFIG) or {}).get('ReadNoticeIds') or '')
+    except OSError as exc:
+        logger.warning(f'Unable to read deploy config for ReadNoticeIds: {exc}')
     return {item.strip() for item in raw.split(',') if item.strip()}
 
 
