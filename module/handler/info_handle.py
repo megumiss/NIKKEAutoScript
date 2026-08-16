@@ -40,13 +40,13 @@ class InfoHandler(ModuleBase):
         self._last_login_reward_check = current_time
 
         # Daily Login, Memories Spring, Monthly Card, etc.
-        reward = self.appear_text(Langs.CLAIM_ALL)
+        reward = self.appear_text(Langs.CLAIM_ALL) or self.appear_text(Langs.CLAIM_REWARD)
         if reward:
             # 重置限速机制，因为有奖励可领取
             self._last_login_reward_check = 0
 
             x, y = reward[0], reward[1]
-            logger.info(f'Click {point2str(x, y)} @ {Langs.CLAIM_ALL}')
+            logger.info(f'Click {point2str(x, y)} @ {Langs.CLAIM_ALL}/{Langs.CLAIM_REWARD}')
             self.device.click_minitouch(x, y)
 
             reward_done = False
@@ -56,7 +56,7 @@ class InfoHandler(ModuleBase):
 
                 # 领取完奖励，返回主界面
                 if reward_done:
-                    if self.appear(MAIN_CHECK, offset=30):
+                    if self.appear(MAIN_CHECK, offset=30) and self.appear(MAIN_CHECK, threshold=10):
                         logger.info('Page arrive: main')
                         return True
 
@@ -72,7 +72,7 @@ class InfoHandler(ModuleBase):
                         continue
 
                 # 无奖励可领
-                if self.appear(NO_REWARD, offset=30):
+                if self.appear(NO_REWARD, offset=30) or self.appear(CANNOT_REWARD, offset=30):
                     logger.info('Reward done')
                     reward_done = True
                     confirm_timer.clear()

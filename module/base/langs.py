@@ -20,6 +20,7 @@ class LangMeta(type):
         "FAVORITE_ITEM_NUM": {"en-US": "Owned", "zh-CN": "持有数", "ja-JP": ""},
         # 其他
         "CLAIM_ALL": {"en-US": "Claim All", "zh-CN": "全部领取", "ja-JP": ""},
+        "CLAIM_REWARD": {"en-US": "Claim Reward", "zh-CN": "获得奖励", "ja-JP": ""},
         # 咨询对话文件名
         "DIALOGUE_JSON": {"en-US": "dialogue.en-US.json", "zh-CN": "dialogue.zh-CN.json", "ja-JP": ""},
         # 弹窗公告检查
