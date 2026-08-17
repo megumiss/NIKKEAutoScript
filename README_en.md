@@ -6,10 +6,7 @@
 
 # NIKKEAutoScript
 
-GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC and emulator clients, **excluding the Chinese mainland server (CN)**.  
-Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
-
-**If you find this project helpful, please give it a ⭐ Star to support!**
+GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC/Emulator clients, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 **🌐 Official Website: [nkas.megumiss.top](https://nkas.megumiss.top)**
 
@@ -22,103 +19,38 @@ Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
   <img alt="stars" src="https://img.shields.io/github/stars/megumiss/NIKKEAutoScript?style=social">
 </p>
 
+**If you find it helpful, please give it a ⭐ Star to support!**
+
 </div>
 
 ---
 
-### Acknowledgements
+## Features
 
-To all developers of **Alas** — I still find the source code absolutely amazing.  
-It made me realize, “Wow, Python can actually be written like this!”  
-Then I looked back at my own first version and thought, “Damn, that was some real crap.” 😅😅😅  
-Well… even though NKAS is still crap now, at least it works. 😅😅😅
-
-Special thanks to:  
-- [AzurLaneAutoScript](https://github.com/LmeSzinc/AzurLaneAutoScript) for the script framework  
-- [March7thAssistant](https://github.com/moesnow/March7thAssistant) for the PC-side support code  
-
----
-
-### Collaboration
-
-Other platform/implementation scripts:  
-- [DoroHelper](https://github.com/1204244136/DoroHelper) (PC + AutoHotkey)  
-- [autoxjs-scripts](https://github.com/Zebartin/autoxjs-scripts) (Android + autojs)  
-- [MNA](https://github.com/MAA-Nikke/MNA) (Android + MaaFramework)
-
-Other tools:  
-- [Nikke-CDK-Tool](https://github.com/Small-tailqwq/Nikke-CDK-Tool) (CDK collection/redeem)
+- **Reward**: Collection, annihilation, mailbox
+- **Daily**: Daily recruit, dailies, season pass, consultation, shop, scrap shop, episode viewing
+- **Outpost**: Dispatch, liberation, synchro device, recycling room, outpost story
+- **Ark**: Simulation room, overclock, tribe tower, interception, rookie arena, special arena, special arena watch, champion arena
+- **Limited-time operations**: Co-op, solo raid, union raid
+- **Story events**: Story events, auto map progression, auto sweep, minigame dailies, shop purchases
+- **Surface**: Surface dailies
+- **Blablalink**: Daily missions, auto CDK redemption, point exchange, cookie auto-renewal
+- **Gifts**: STEPUP gift, daily gift, weekly gift, monthly gift
+- **Data charts**: Item statistics, interception statistics
+- **Tools**: Auto tower, semi-auto clicking (semi-auto main story), highlight viewing, CDK redemption, screen rotation, Hosts modification, event countdown
+- **Others**: PC client/ARM emulator support, multi-monitor support; automatic task startup, custom hotkeys; auto and scheduled updates; multi-instance and sequential execution; Docker deployment; notifications
 
 ---
 
-### Demonstration
+## Quick Start
 
-👉 [Installation Demo](https://www.bilibili.com/video/BV1rqWczJECp)  
-👉 [Feature Demo](https://www.bilibili.com/video/BV1YMbrzFE4g)
+- Installation: [Wiki Installation Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide)
+- Usage: [Wiki PC Client Usage Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/Usage-Guide-PC-Client)
 
----
+### Demo Videos
 
-### How to Use
-
-Please refer to the detailed installation guide:  
-[Wiki Installation Guide](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide)
-
----
-
-### FAQ
-
-Detailed answers can be found here:  
-[Wiki FAQ Page](https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions)
-
-> 💡 **Need Help?**  
-> If you encounter issues while using this project, you can:  
-> - Submit an issue on [GitHub Issues](https://github.com/megumiss/NIKKEAutoScript/issues)  
-> - Join our QQ group: [823265807](https://qm.qq.com/q/ibQKuQI9Ko)
-
----
-
-### Supported Languages
-
-- [ ] English **(In Progress)**
-- [x] 简体中文
-
-### Supported Features
-
-- [x] PC client/emulator support, multi-monitor support on PC  
-- [x] Automatic startup of emulator, automatic startup of PC client, automatic startup of tasks  
-- [x] Daily collection, annihilation, dispatch, collectible selection  
-- [x] Synchronizer and room upgrade  
-- [x] Claim friendship points and special arena tokens  
-- [x] Daily, weekly, and monthly free gem collection  
-- [x] Normal shop, arena shop, scrap shop  
-- [x] Daily company tower, automatic normal tower  
-- [x] Interception with auto red-circle battle and drop screenshots  
-- [x] Simulation room and overclock  
-- [x] Daily consultation and gifting  
-- [x] Normal/special arena auto battle, champion arena betting  
-- [x] Major events: sweep, challenge, sign-in, rewards, shop, co-op, minigames (partial)  
-- [x] Minor events: sweep, challenge, rewards, shop  
-- [x] Co-op battles, solo raids, alliance raids  
-- [x] Event and friendship daily pulls  
-- [x] Mail and ranking rewards collection  
-- [x] Daily and weekly mission rewards  
-- [x] Daily pass collection  
-- [x] blablalink community daily missions, auto purchases, CDK auto/manual redeem  
-- [x] Semi-auto battle and clicking  
-- [x] Hotkeys and APIs for start/stop/restart/update/screen rotation, with custom bindings  
-- [x] Auto update and scheduled update  
-- [x] Docker deployment support  
-- [x] Hosts file modification  
-
-### Planned Updates
-
-- [ ] ~~Fix uiautomator auto installation~~  
-- [ ] pjjc monitoring/notifications/counteractions (pending demand)  
-- [ ] Dashboard (in progress)  
-- [ ] ~~Auto/manual account switching (may not be possible due to architecture)~~  
-- [ ] Simulation room buff farming (complex)  
-
----
+- [Watch installation demo](https://www.bilibili.com/video/BV1rqWczJECp)
+- [Watch feature demo](https://www.bilibili.com/video/BV1YMbrzFE4g)
 
 ### GUI Preview
 
@@ -126,26 +58,91 @@ Detailed answers can be found here:
 
 ---
 
-### 💖 Support Me
+## FAQ
 
-If you enjoy this project, consider buying the author a cup of Mixue Ice Cream 🍦  
-Your support keeps the project alive and growing 🚀  
+- [Wiki FAQ](https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions)
+- [Wiki Error Handling](https://github.com/megumiss/NIKKEAutoScript/wiki/Error-Handling)
+
+### Need Help
+
+- Submit an issue on [GitHub Issues](https://github.com/megumiss/NIKKEAutoScript/issues)
+- Join our QQ group: [823265807](https://qm.qq.com/q/ibQKuQI9Ko)
+- Join our TG group: [Telegram](https://t.me/+D-Pguv_oapwyMjhl)
+
+---
+
+## Roadmap
+
+- [ ] Nothing planned yet
+
+---
+
+## Supported Languages
+
+- [x] 简体中文 (Simplified Chinese)
+- [ ] English (No longer maintained)
+
+---
+
+## Acknowledgements
+
+- Thanks to Alas' script framework [AzurLaneAutoScript](https://github.com/LmeSzinc/AzurLaneAutoScript)
+- Thanks to [March7thAssistant](https://github.com/moesnow/March7thAssistant) for the PC-side support code
+
+---
+
+## Related Projects
+
+### Scripts for Other Platforms
+
+- [DoroHelper](https://github.com/1204244136/DoroHelper) (PC + AutoHotkey)
+- [autoxjs-scripts](https://github.com/Zebartin/autoxjs-scripts) (Android + autojs)
+- [MNA](https://github.com/MAA-Nikke/MNA) (Android + MaaFramework)
+
+### Other Tools
+
+- [Nikke-CDK-Tool](https://github.com/Small-tailqwq/Nikke-CDK-Tool) (CDK collection/redeem)
+
+---
+
+## 💖 Support Me
+
+If you enjoy this project, consider buying the author a cup of Mixue Ice Cream 🍦
+
+Your support keeps the project alive and growing 🚀
 
 <p>
-  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/wechat.png" alt="WeChat Pay" width="200"/>
-  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipay.png" alt="Alipay" width="200"/>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/assets/gui/donate/wechat.png" alt="WeChat Pay" width="200"/>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/assets/gui/donate/alipay.png" alt="Alipay" width="200"/>
 </p>
 
 **For international supporters:**
 
 <p>
-  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/doc/assets/alipayremit.png" alt="Alipay Remit" width="200"/>
+  <img src="https://raw.githubusercontent.com/megumiss/NIKKEAutoScript/master/assets/gui/donate/alipayremit.png" alt="Alipay Remit" width="200"/>
 </p>
 
 Support: Hanpass PandaRemit WireBarley GmoneyTrans Debunk PayForex koala transfer Sendly GME
 
 ---
 
+## ⚠️ Risks & Disclaimer
+
+Please read carefully before downloading:
+
+- Using automation scripts may violate the Terms of Service of GODDESS OF VICTORY: NIKKE and carries a risk of account restriction or ban. Evaluate the risk and assume all consequences yourself.
+- This project is provided for learning and technical exchange only, without warranty of any kind. The author is not liable for any loss of accounts, devices, or data arising from its use.
+- This is a non-profit open-source project and is not affiliated with SHIFT UP or Tencent / Level Infinite. Copyright of game-related assets belongs to their respective owners.
+- By downloading and using this software you acknowledge that you have read, understood and agreed to the above terms. If you do not agree, stop using it immediately.
+
+---
+
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=megumiss/NIKKEAutoScript&type=Timeline)](https://www.star-history.com/#megumiss/NIKKEAutoScript&Timeline)
+<a href="https://www.star-history.com/?repos=megumiss%2FNIKKEAutoScript&type=timeline&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=megumiss/NIKKEAutoScript&type=timeline&theme=dark&legend=top-left&sealed_token=XDAm8uCkduN7gQxqynUtMyNHwihAjyLayFQmNnGEPlkhvw3q52NEZ1gox5edaZZzkITwmJ4ZRtsLbHUUsYF8bYLFge9mohYsDOFnTpaFG9aXZ_Ajt2eWkyuYy9HJPXixFyVRFdj87uPEOHuFfYDVMtA3J_9JHCst8sDdeqrMkaxbCd6Ugj1oxWFUCtFs" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=megumiss/NIKKEAutoScript&type=timeline&legend=top-left&sealed_token=XDAm8uCkduN7gQxqynUtMyNHwihAjyLayFQmNnGEPlkhvw3q52NEZ1gox5edaZZzkITwmJ4ZRtsLbHUUsYF8bYLFge9mohYsDOFnTpaFG9aXZ_Ajt2eWkyuYy9HJPXixFyVRFdj87uPEOHuFfYDVMtA3J_9JHCst8sDdeqrMkaxbCd6Ugj1oxWFUCtFs" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=megumiss/NIKKEAutoScript&type=timeline&legend=top-left&sealed_token=XDAm8uCkduN7gQxqynUtMyNHwihAjyLayFQmNnGEPlkhvw3q52NEZ1gox5edaZZzkITwmJ4ZRtsLbHUUsYF8bYLFge9mohYsDOFnTpaFG9aXZ_Ajt2eWkyuYy9HJPXixFyVRFdj87uPEOHuFfYDVMtA3J_9JHCst8sDdeqrMkaxbCd6Ugj1oxWFUCtFs" />
+ </picture>
+</a>
