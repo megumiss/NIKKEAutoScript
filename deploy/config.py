@@ -82,7 +82,14 @@ class DeployConfig(ConfigModel):
         self.file = file
         self.config = {}
         self.read()
-        self.write()
+        # deploy.yaml 是跨进程共享的程序级配置（启动器、Web UI 工作进程、
+        # 实例进程都会实例化 DeployConfig）。构造时无条件 write() 会让每个
+        # 进程用各自的快照全量重写文件：启动瞬间多进程并发重写互相覆盖，
+        # 陈旧快照（如 ReadNoticeIds 在持久化之前读到的 null）会把别人刚
+        # 写入的值冲掉。因此仅在文件不存在时创建默认文件，真正的修改统一
+        # 走 DeployConfig.__setattr__（module/webui/config.py）显式落盘。
+        if not os.path.exists(self.file):
+            self.write()
         self.show_config()
 
     def read(self):
