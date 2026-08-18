@@ -146,6 +146,7 @@ class GeneratedConfig:
     BlaAuth_Cookie = None
     BlaAuth_XCommonParams = None
     BlaAuth_AutoRenew = False
+    BlaAuth_LoginUser = None
     BlaAuth_TokenExpire = None
 
     # Group `BlaDaily`

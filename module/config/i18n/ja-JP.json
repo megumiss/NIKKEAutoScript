@@ -867,6 +867,10 @@
       "name": "自動更新（BETA）",
       "help": "Cookieの有効期限が近づくと自動で更新します。期限切れになったCookieは更新できないため、タスクを定期的に実行してください。期限切れの場合は、上の「ワンクリックログイン」で再取得できます。playwrightとブラウザに依存します。初回更新時にplaywrightが自動インストールされ、Dockerユーザーはchromiumもダウンロードされます"
     },
+    "LoginUser": {
+      "name": "現在のユーザー",
+      "help": ""
+    },
     "TokenExpire": {
       "name": "Cookie有効期限",
       "help": ""

@@ -2455,6 +2455,11 @@
         "type": "checkbox",
         "value": false
       },
+      "LoginUser": {
+        "type": "input",
+        "value": "",
+        "display": "disabled"
+      },
       "TokenExpire": {
         "type": "input",
         "value": "",

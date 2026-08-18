@@ -867,6 +867,10 @@
       "name": "自动续期（BETA）",
       "help": "在Cookie临近过期时自动续期；Cookie一旦过期将无法续期，请保持任务正常运行，过期后可点击上方「一键登录」重新获取。依赖playwright和浏览器，首次续期会自动安装playwright，Docker用户还会下载chromium"
     },
+    "LoginUser": {
+      "name": "当前登录用户",
+      "help": ""
+    },
     "TokenExpire": {
       "name": "Cookie过期时间",
       "help": ""

@@ -41,6 +41,7 @@ def _run_session(name: str, session):
     for key, value in (
         ('BlaAuth.BlaAuth.Cookie', session.result['cookie']),
         ('BlaAuth.BlaAuth.XCommonParams', session.result['xcommonparams']),
+        ('BlaAuth.BlaAuth.LoginUser', session.result.get('username') or ''),
         ('BlaAuth.BlaAuth.TokenExpire', expire_text),
     ):
         result = service.patch(name, key, value)

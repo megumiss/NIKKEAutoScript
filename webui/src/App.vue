@@ -671,6 +671,7 @@ async function pollBlaLogin() {
     const apply = (key: string, value: string) => { const field = allFields().find(item => item.key === key); if (field && value !== undefined) field.value = value }
     apply('BlaAuth.BlaAuth.Cookie', result.cookie)
     apply('BlaAuth.BlaAuth.XCommonParams', result.xcommonparams)
+    apply('BlaAuth.BlaAuth.LoginUser', result.username || '')
     if (result.expire) apply('BlaAuth.BlaAuth.TokenExpire', blaFormatExpire(result.expire))
     blaLoginStop()
     notify(t('登录成功，Cookie 已自动填写'), 'ok', 4000)

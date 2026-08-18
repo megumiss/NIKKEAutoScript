@@ -57,23 +57,6 @@ def build_cookie(openid: str, token: str, extra: Optional[dict] = None) -> str:
     return '; '.join(f'{k}={v}' for k, v in data.items())
 
 
-def build_xcommonparams(openid: str, language: str = 'zh-TW') -> str:
-    """构造 x-common-params，除 openid/language 外均为常量"""
-    params = {
-        'game_id': '16',
-        'area_id': 'global',
-        'source': 'pc_web',
-        'intl_game_id': '29080',
-        'language': language,
-        'env': 'prod',
-        'data_statistics_scene': 'outer',
-        'data_statistics_page_id': f'https://www.blablalink.com/user?openid={openid}',
-        'data_statistics_client_type': 'pc_web',
-        'data_statistics_lang': language,
-    }
-    return json.dumps(params, separators=(',', ':'))
-
-
 def check_login_cookie(cookie: str, xcommonparams: str, user_agent: str, language: str = 'zh-TW') -> bool:
     """用抓回的 cookie 调 CheckLogin 验证有效性"""
     import requests
@@ -90,6 +73,24 @@ def check_login_cookie(cookie: str, xcommonparams: str, user_agent: str, languag
         logger.error(f'CheckLogin request failed: {e}')
         return False
     return data.get('code') == 0 and data.get('msg') == 'ok'
+
+
+def _parse_username(data) -> str:
+    """从 GetUserProfile 响应中提取用户名（data.info.username），做宽容搜索"""
+    result = ['']
+
+    def walk(obj):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if k.lower() in ('username', 'nickname', 'nick_name', 'user_name') and isinstance(v, str) and v and not result[0]:
+                    result[0] = v
+                walk(v)
+        elif isinstance(obj, list):
+            for item in obj:
+                walk(item)
+
+    walk(data)
+    return result[0]
 
 
 class BlaLoginSession:
@@ -218,8 +219,29 @@ class BlaLoginSession:
                 context = browser.new_context(**context_args)
                 page = context.new_page()
 
+                # 捕获站点真实请求中的 x-common-params 与用户信息（字段并非常量，以站点实际发出为准）
+                # 只抓登录成功后的请求：未登录时站点也会发公开请求，其 page_id/language 不是登录态的值
+                captured = {'xcommonparams': '', 'profile': {}}
+
+                def on_request(req):
+                    if not self._login_ok.is_set():
+                        return
+                    if 'api.blablalink.com' in req.url:
+                        xcp = req.headers.get('x-common-params')
+                        if xcp:
+                            captured['xcommonparams'] = xcp
+                            logger.info(f'Captured x-common-params from {req.url[-60:]}')
+
                 def on_response(resp):
-                    if 'account/login' not in resp.url:
+                    url = resp.url
+                    if 'GetUserProfile' in url and 'api.blablalink.com' in url:
+                        try:
+                            captured['profile'] = resp.json()
+                            logger.info(f'GetUserProfile response: {resp.text()[:400]}')
+                        except Exception:
+                            pass
+                        return
+                    if 'account/login' not in url:
                         return
                     try:
                         body = resp.text()
@@ -229,6 +251,7 @@ class BlaLoginSession:
                     if '"ret":0' in body.replace(' ', ''):
                         self._login_ok.set()
 
+                page.on('request', on_request)
                 page.on('response', on_response)
                 page.on('console', lambda msg: logger.info(f'[page] {msg.text[:150]}')
                           if any(k in msg.text.lower() for k in ('signin', 'captcha', 'login')) else None)
@@ -338,16 +361,58 @@ class BlaLoginSession:
                     pass
 
                 cookie = build_cookie(openid, token, extra)
-                xcommonparams = build_xcommonparams(openid, self.language)
+
+                # 登录后诊断：上下文现有 cookie
+                try:
+                    keys = sorted(c['name'] for c in context.cookies(BLA_HOME))
+                    logger.info(f'Context cookies after login: {keys}')
+                except Exception:
+                    pass
+
+                # 登录后可能弹出 Additional Information 对话框，不关掉会挡住后续操作
+                try:
+                    page.click('button:has-text("Done")', timeout=3000)
+                    logger.info('Dismissed additional information dialog')
+                except Exception:
+                    pass
+
+                # 直接进入自己的主页，让站点以登录态发出真实请求：
+                # 既触发 GetUserProfile（取用户名/uid），又能拿到 page_id 带 openid 的 x-common-params
+                openid_b64 = base64.b64encode(f'29080-{openid}'.encode()).decode()
+                try:
+                    page.goto(f'https://www.blablalink.com/user?openid={openid_b64}', wait_until='domcontentloaded')
+                except Exception as e:
+                    logger.warning(f'Open profile page failed: {str(e)[:100]}')
+                for _ in range(15):
+                    self._raise_if_cancelled()
+                    if captured['xcommonparams'] and captured['profile']:
+                        break
+                    page.wait_for_timeout(1000)
+
+                xcommonparams = captured['xcommonparams']
+                if not xcommonparams:
+                    # 留档：页面 img 清单与截图，便于调整触发方式
+                    try:
+                        imgs = page.evaluate("[...document.querySelectorAll('img')].map(e => (e.src || '').slice(-60))")
+                        logger.warning(f'Page imgs: {imgs}')
+                        page.screenshot(path='log/bla_login_capture_fail.png')
+                    except Exception:
+                        pass
+                    raise LoginVerifyError('Failed to capture x-common-params from site requests')
+
+                # 从 GetUserProfile 响应提取用户名，用于「当前登录用户」展示
+                username = _parse_username(captured['profile'])
+
                 if not check_login_cookie(cookie, xcommonparams, self.user_agent, self.language):
                     raise LoginVerifyError('CheckLogin failed with captured cookie')
                 self.result = {
                     'cookie': cookie,
                     'xcommonparams': xcommonparams,
                     'expire': expire,
+                    'username': username,
                 }
                 self._set_state('success')
-                logger.info(f'Login capture verified, expire: {expire}')
+                logger.info(f'Login capture verified, user: {username}, expire: {expire}')
         except LoginCancelled:
             self._set_state('cancelled')
             logger.info('Login session cancelled by user')

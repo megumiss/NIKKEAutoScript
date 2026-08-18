@@ -62,20 +62,7 @@ class Blablalink(UI):
             logger.error('x-common-params not configured')
             raise RequestHumanTakeover('x-common-params not set')
 
-        # 构建x-common-params
-        # common_params = {
-        #     'game_id': '16',
-        #     'area_id': 'global',
-        #     'source': 'pc_web',
-        #     'intl_game_id': '29080',
-        #     'language': 'zh-TW',
-        #     'env': 'prod',
-        #     'data_statistics_scene': 'outer',
-        #     'data_statistics_page_id': f'https://www.blablalink.com/user?openid={openid}',
-        #     'data_statistics_client_type': 'pc_web',
-        #     'data_statistics_lang': 'zh-TW',
-        # }
-        # self.common_headers['x-common-params'] = json.dumps(common_params, ensure_ascii=False)
+        # x-common-params 由「一键登录」抓取站点真实请求自动填写（login.py），此处直接使用配置值
         self.common_headers['x-common-params'] = xCommonParams
         # 获取并设置语言
         try:

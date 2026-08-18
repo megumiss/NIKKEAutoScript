@@ -247,6 +247,9 @@ BlaAuth:
     mode: json
   AutoRenew:
     value: false
+  LoginUser:
+    value: ''
+    display: disabled
   TokenExpire:
     value: ''
     display: disabled

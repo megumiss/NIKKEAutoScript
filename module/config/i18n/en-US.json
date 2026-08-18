@@ -867,6 +867,10 @@
       "name": "Auto Renew (BETA)",
       "help": "Automatically renews the cookie shortly before it expires. An expired cookie cannot be renewed, so keep tasks running regularly; if it expires, click \"One-click login\" above to obtain a new one. Depends on playwright and a browser; the first renewal automatically installs playwright, and Docker users will also download chromium."
     },
+    "LoginUser": {
+      "name": "Current User",
+      "help": ""
+    },
     "TokenExpire": {
       "name": "Cookie Expire Time",
       "help": ""
