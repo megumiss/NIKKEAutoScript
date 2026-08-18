@@ -857,18 +857,18 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "入手方法および自動更新の手順については、こちらのドキュメントをご参照ください: https://nkas.megumiss.top/wiki/#/zh-cn/Configuration-Guide?id=_9-%e5%a6%ae%e6%b8%b8%e7%a4%be"
+      "help": "上の「ワンクリックログイン」ボタンで自動取得・入力することをお勧めします。その他の入手方法については、こちらのドキュメントをご参照ください: https://nkas.megumiss.top/wiki/#/zh-cn/Configuration-Guide?id=_9-%e5%a6%ae%e6%b8%b8%e7%a4%be"
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "リクエストヘッダー内の x-common-params パラメータには、openid を含める必要があります。手動で入力する必要がありますが、通常、更新する必要はありません。"
+      "help": "リクエストヘッダー内の x-common-params パラメータには、openid を含める必要があります。「ワンクリックログイン」で自動入力されるため、通常、更新する必要はありません。"
     },
     "AutoRenew": {
       "name": "自動更新（BETA）",
-      "help": "Cookieの有効期限が近づくと自動で更新します（NKAS設定-アカウント設定でLiPassアカウントの入力が必要です）。期限切れになったCookieは更新できないため、タスクを定期的に実行してください。playwrightとブラウザに依存します。初回更新時にplaywrightが自動インストールされ、Dockerユーザーはchromiumもダウンロードされます"
+      "help": "Cookieの有効期限が近づくと自動で更新します。期限切れになったCookieは更新できないため、タスクを定期的に実行してください。期限切れの場合は、上の「ワンクリックログイン」で再取得できます。playwrightとブラウザに依存します。初回更新時にplaywrightが自動インストールされ、Dockerユーザーはchromiumもダウンロードされます"
     },
     "TokenExpire": {
-      "name": "Token有効期限",
+      "name": "Cookie有効期限",
       "help": ""
     }
   },

@@ -1,4 +1,17 @@
 # 公告列表，新的公告追加到文件顶部
+- id: notice_20260819
+  date: 2026-08-19
+  title: 妮游社自动登录获取 Cookie
+  type: info
+  content: |
+    <b>妮游社 Cookie 现已支持一键登录自动获取</b>
+    无需再手动复制 Cookie：妮游社 → Cookie → 点击「一键登录」，脚本会自动完成登录，并自动填写 Cookie、XCommonParams 和 Cookie 过期时间。
+
+    <b>使用前准备</b>
+    在 NKAS 设置-账号设置 中填写 LiPass 账号和密码。
+
+    <b>注意事项</b>
+    登录过程中如出现滑块验证码，在弹窗中的图片上拖动完成即可。首次使用会自动安装 playwright，本机没有 Chrome/Edge 时会自动下载 chromium，Docker 环境亦可使用。
 - id: notice_20260816
   date: 2026-08-16
   title: 妮游社 Cookie 自动续期

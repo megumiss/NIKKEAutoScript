@@ -857,18 +857,18 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "获取方式及自动更新方法请查看文档：https://nkas.megumiss.top/wiki/#/zh-cn/Configuration-Guide?id=_9-%e5%a6%ae%e6%b8%b8%e7%a4%be"
+      "help": "推荐点击上方「一键登录」按钮自动获取并填写；其他获取方式请查看文档：https://nkas.megumiss.top/wiki/#/zh-cn/Configuration-Guide?id=_9-%e5%a6%ae%e6%b8%b8%e7%a4%be"
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "请求header中的x-common-params参数，需要包含openid。必须手动填写，一般情况下不需要更新"
+      "help": "请求header中的x-common-params参数，需要包含openid；随「一键登录」自动填写，一般情况下不需要更新"
     },
     "AutoRenew": {
       "name": "自动续期（BETA）",
-      "help": "在Cookie临近过期时自动续期（需要在NKAS设置-账号设置中填写LiPass账号）；Cookie一旦过期将无法续期，请保持任务正常运行。依赖playwright和浏览器，首次续期会自动安装playwright，Docker用户还会下载chromium"
+      "help": "在Cookie临近过期时自动续期；Cookie一旦过期将无法续期，请保持任务正常运行，过期后可点击上方「一键登录」重新获取。依赖playwright和浏览器，首次续期会自动安装playwright，Docker用户还会下载chromium"
     },
     "TokenExpire": {
-      "name": "Token过期时间",
+      "name": "Cookie过期时间",
       "help": ""
     }
   },

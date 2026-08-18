@@ -7,7 +7,7 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
-from . import (routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_maintenance,
+from . import (routes_bla, routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_maintenance,
                routes_notify, routes_preview, routes_proxy, routes_serial, routes_stats, routes_system, routes_tasks, ws)
 
 
@@ -66,6 +66,11 @@ def mount_api(app):
         Route('/api/{name:str}/interception/stats', routes_stats.interception_stats, methods=['GET']),
         Route('/api/{name:str}/interception/import', routes_stats.import_interception, methods=['POST']),
         Route('/api/{name:str}/notify/test', routes_notify.test_notify, methods=['POST']),
+        Route('/api/{name:str}/bla/login', routes_bla.login_start, methods=['POST']),
+        Route('/api/{name:str}/bla/login/status', routes_bla.login_status, methods=['GET']),
+        Route('/api/{name:str}/bla/login/shot', routes_bla.login_shot, methods=['GET']),
+        Route('/api/{name:str}/bla/login/drag', routes_bla.login_drag, methods=['POST']),
+        Route('/api/{name:str}/bla/login/cancel', routes_bla.login_cancel, methods=['POST']),
         Route('/api/{name:str}/screenshot', routes_preview.screenshot, methods=['GET']),
         Route('/api/{name:str}/scrcpy', routes_preview.scrcpy, methods=['GET']),
         Route('/scrcpy/{name:str}/', routes_preview.scrcpy_page, methods=['GET']),

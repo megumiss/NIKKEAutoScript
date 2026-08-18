@@ -240,6 +240,16 @@ const staticLabels: Record<string, Record<string, string>> = {
   '系统通知发送失败': { 'en-US': 'Failed to send system notification', 'ja-JP': 'システム通知の送信に失敗しました' },
   'OnePush 推送成功': { 'en-US': 'OnePush push succeeded', 'ja-JP': 'OnePush プッシュ成功' },
   'OnePush 推送失败，请检查配置': { 'en-US': 'OnePush push failed, please check the configuration', 'ja-JP': 'OnePush プッシュ失敗、設定を確認してください' },
+  '登录获取 Cookie（BETA）': { 'en-US': 'Login for Cookie (BETA)', 'ja-JP': 'ログインで Cookie 取得（BETA）' },
+  '使用NKAS设置-账号设置中的LiPass账号自动登录妮游社，成功后自动填写 Cookie 和 XCommonParams；如出现滑块验证码，在弹窗中的图片上拖动完成。': { 'en-US': 'Log in to Blablalink automatically with the LiPass account from NKAS Settings - Account Settings; Cookie and XCommonParams are filled in on success. If a slider captcha appears, drag it on the image in the popup.', 'ja-JP': 'NKAS設定-アカウント設定の LiPass アカウントで Blablalink に自動ログインし、成功時に Cookie と XCommonParams を自動入力します。スライダー認証が出た場合はポップアップ内の画像上でドラッグしてください。' },
+  '一键登录': { 'en-US': 'One-click login', 'ja-JP': 'ワンクリックログイン' },
+  '登录中…': { 'en-US': 'Logging in…', 'ja-JP': 'ログイン中…' },
+  '正在启动浏览器…': { 'en-US': 'Launching browser…', 'ja-JP': 'ブラウザを起動中…' },
+  '正在自动填写账号密码…': { 'en-US': 'Filling in account and password…', 'ja-JP': 'アカウント情報を自動入力中…' },
+  '请完成滑块验证': { 'en-US': 'Please complete the slider captcha', 'ja-JP': 'スライダー認証を完了してください' },
+  '登录成功，Cookie 已自动填写': { 'en-US': 'Login succeeded, Cookie filled in', 'ja-JP': 'ログイン成功、Cookie を自動入力しました' },
+  '登录失败': { 'en-US': 'Login failed', 'ja-JP': 'ログイン失敗' },
+  '登录超时，请重试': { 'en-US': 'Login timed out, please retry', 'ja-JP': 'ログインがタイムアウトしました。再試行してください' },
 }
 
 const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]
@@ -612,6 +622,103 @@ async function testNotify() {
     if (result.onepush === false) parts.push(t('OnePush 推送失败，请检查配置'))
     notify(parts.join('；'), result.ok ? 'ok' : 'error', 4000)
   } catch (exception: any) { error.value = exception.message } finally { notifyTestBusy.value = false }
+}
+// BlaAuth 自动登录：后端无头浏览器跑登录流程，前端弹窗轮询状态；
+// 出现滑块验证码时把截图渲染在弹窗里，拖拽事件实时转发给后端驱动页面鼠标。
+const blaLoginOpen = ref(false)
+const blaLoginBusy = ref(false)
+const blaLoginState = ref('')
+const blaShotUrl = ref('')
+let blaLoginTimer: ReturnType<typeof setTimeout> | undefined
+let blaShotTimer: ReturnType<typeof setInterval> | undefined
+let blaDragging = false
+let blaLastMoveSent = 0
+function blaStateText() {
+  if (blaLoginState.value === 'launching') return t('正在启动浏览器…')
+  if (blaLoginState.value === 'logging_in') return t('正在自动填写账号密码…')
+  if (blaLoginState.value === 'captcha') return t('请完成滑块验证')
+  return t('登录中…')
+}
+function blaLoginStop() {
+  if (blaLoginTimer) { clearTimeout(blaLoginTimer); blaLoginTimer = undefined }
+  if (blaShotTimer) { clearInterval(blaShotTimer); blaShotTimer = undefined }
+  blaLoginBusy.value = false; blaShotUrl.value = ''; blaDragging = false
+}
+function blaFormatExpire(ts: number) {
+  const d = new Date(ts * 1000)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const off = -d.getTimezoneOffset()
+  const sign = off >= 0 ? '+' : '-'
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${sign}${pad(Math.floor(Math.abs(off) / 60))}${pad(Math.abs(off) % 60)}`
+}
+async function pollBlaLogin() {
+  let st: any
+  try { st = await api.get(`/api/${selectedName.value}/bla/login/status`) } catch { blaLoginTimer = setTimeout(pollBlaLogin, 2000); return }
+  blaLoginState.value = st.state || ''
+  if (st.state === 'captcha') {
+    // 验证码图片走独立端点 200ms 直刷，跟手且不占状态轮询
+    if (!blaShotTimer) {
+      blaShotUrl.value = `/api/${selectedName.value}/bla/login/shot?t=${Date.now()}`
+      blaShotTimer = setInterval(() => { blaShotUrl.value = `/api/${selectedName.value}/bla/login/shot?t=${Date.now()}` }, 200)
+    }
+    blaLoginTimer = setTimeout(pollBlaLogin, 800)
+    return
+  }
+  if (st.state === 'launching' || st.state === 'logging_in') { blaLoginTimer = setTimeout(pollBlaLogin, 1000); return }
+  blaLoginOpen.value = false
+  if (st.state === 'success') {
+    const result = st.result || {}
+    const apply = (key: string, value: string) => { const field = allFields().find(item => item.key === key); if (field && value !== undefined) field.value = value }
+    apply('BlaAuth.BlaAuth.Cookie', result.cookie)
+    apply('BlaAuth.BlaAuth.XCommonParams', result.xcommonparams)
+    if (result.expire) apply('BlaAuth.BlaAuth.TokenExpire', blaFormatExpire(result.expire))
+    blaLoginStop()
+    notify(t('登录成功，Cookie 已自动填写'), 'ok', 4000)
+    return
+  }
+  if (st.state === 'cancelled') { blaLoginStop(); return }
+  if (st.state === 'timeout') { blaLoginStop(); notify(t('登录超时，请重试'), 'error', 4000); return }
+  if (st.state === 'error') { blaLoginStop(); notify(`${t('登录失败')}${st.error ? `：${st.error}` : ''}`, 'error', 6000); return }
+  blaLoginStop()
+}
+async function startBlaLogin() {
+  if (blaLoginBusy.value) return
+  blaLoginOpen.value = true
+  blaLoginBusy.value = true
+  blaLoginState.value = 'launching'
+  try {
+    await api.post(`/api/${selectedName.value}/bla/login`)
+    blaLoginTimer = setTimeout(pollBlaLogin, 800)
+  } catch (exception: any) { blaLoginOpen.value = false; blaLoginStop(); error.value = exception.message }
+}
+async function closeBlaLogin() {
+  try { await api.post(`/api/${selectedName.value}/bla/login/cancel`) } catch { /* ignore */ }
+  blaLoginOpen.value = false
+  blaLoginStop()
+}
+function blaSendDrag(phase: string, event: PointerEvent) {
+  const img = event.target as HTMLImageElement
+  const scale = img.naturalWidth > 0 && img.clientWidth > 0 ? img.naturalWidth / img.clientWidth : 1
+  api.post(`/api/${selectedName.value}/bla/login/drag`, { phase, x: event.offsetX * scale, y: event.offsetY * scale }).catch(() => {})
+}
+function blaDragStart(event: PointerEvent) {
+  event.preventDefault()
+  ;(event.target as HTMLImageElement).setPointerCapture(event.pointerId)
+  blaDragging = true
+  blaLastMoveSent = 0
+  blaSendDrag('start', event)
+}
+function blaDragMove(event: PointerEvent) {
+  if (!blaDragging) return
+  const now = Date.now()
+  if (now - blaLastMoveSent < 40) return
+  blaLastMoveSent = now
+  blaSendDrag('move', event)
+}
+function blaDragEnd(event: PointerEvent) {
+  if (!blaDragging) return
+  blaDragging = false
+  blaSendDrag('end', event)
 }
 function toggleTheme() { const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; localStorage.setItem('nkas-theme', theme); api.post('/api/system/theme', { theme }).then(() => systemStatus.value.theme = theme).catch(exception => error.value = exception.message) }
 async function setLanguage(language: string) { try { await api.post('/api/system/language', { language }); await loadSystem(); await loadWorkspace() } catch (exception: any) { error.value = exception.message } }
@@ -1316,6 +1423,10 @@ onBeforeUnmount(() => {
                   <span class="group-summary">›</span>
                 </button>
                 <div class="group-body">
+                  <div v-if="selectedTask === 'BlaAuth' && group.key === 'BlaAuth'" class="field">
+                    <div class="field-label"><div class="fname">{{ t('登录获取 Cookie（BETA）') }}</div><div class="fhelp">{{ t('使用NKAS设置-账号设置中的LiPass账号自动登录妮游社，成功后自动填写 Cookie 和 XCommonParams；如出现滑块验证码，在弹窗中的图片上拖动完成。') }}</div></div>
+                    <div class="field-control"><button class="btn primary" :disabled="blaLoginBusy" @click="startBlaLogin">{{ blaLoginBusy ? t('登录中…') : t('一键登录') }}</button></div>
+                  </div>
                   <div v-for="field in group.fields" :key="field.key" :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
                     <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
                     <div class="field-control">
@@ -1583,6 +1694,18 @@ onBeforeUnmount(() => {
         <div class="modal-actions">
           <button v-if="modal.type !== 'alert'" class="btn" @click="modal.type = ''">{{ t('取消') }}</button>
           <button class="btn" :class="modal.type === 'delete' || modal.type === 'resetDeploy' ? 'danger' : 'primary'" :disabled="modal.busy || ((modal.type === 'create' || modal.type === 'rename') && !modal.name.trim())" @click="confirmModal">{{ modal.type === 'alert' ? t('知道了') : t('确定') }}</button>
+        </div>
+      </div>
+    </div>
+    <div v-if="blaLoginOpen" class="modal-mask">
+      <div class="modal-card">
+        <h3>{{ t('登录获取 Cookie（BETA）') }}</h3>
+        <p class="modal-text">{{ blaStateText() }}</p>
+        <template v-if="blaLoginState === 'captcha'">
+          <img :src="blaShotUrl" draggable="false" alt="captcha" style="display:block;margin:0 auto;max-width:100%;touch-action:none;user-select:none;-webkit-user-drag:none;cursor:grab" @pointerdown="blaDragStart" @pointermove="blaDragMove" @pointerup="blaDragEnd">
+        </template>
+        <div class="modal-actions">
+          <button class="btn danger" @click="closeBlaLogin">{{ t('取消') }}</button>
         </div>
       </div>
     </div>

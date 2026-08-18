@@ -857,18 +857,18 @@
     },
     "Cookie": {
       "name": "Cookie",
-      "help": "For acquisition methods and auto-update procedures, please refer to the documentation:: https://nkas.megumiss.top/wiki/#/en/Configuration-Guide?id=_9-nikke-community-site"
+      "help": "Recommended: click the \"One-click login\" button above to obtain and fill in automatically. For other methods, see: https://nkas.megumiss.top/wiki/#/en/Configuration-Guide?id=_9-nikke-community-site"
     },
     "XCommonParams": {
       "name": "XCommonParams",
-      "help": "The x-common-params parameter in the request header must include the openid. It must be filled in manually; under normal circumstances, no updates are required."
+      "help": "The x-common-params parameter in the request header must include the openid. Filled in automatically by \"One-click login\"; under normal circumstances, no updates are required."
     },
     "AutoRenew": {
       "name": "Auto Renew (BETA)",
-      "help": "Automatically renews the cookie shortly before it expires (requires the LiPass account set in NKAS Settings - Account Settings). An expired cookie cannot be renewed, so keep tasks running regularly. Depends on playwright and a browser; the first renewal automatically installs playwright, and Docker users will also download chromium."
+      "help": "Automatically renews the cookie shortly before it expires. An expired cookie cannot be renewed, so keep tasks running regularly; if it expires, click \"One-click login\" above to obtain a new one. Depends on playwright and a browser; the first renewal automatically installs playwright, and Docker users will also download chromium."
     },
     "TokenExpire": {
-      "name": "Token Expire Time",
+      "name": "Cookie Expire Time",
       "help": ""
     }
   },
