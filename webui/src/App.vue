@@ -191,7 +191,7 @@ const staticLabels: Record<string, Record<string, string>> = {
   '源码更新': { 'en-US': 'Source update', 'ja-JP': 'ソースコード更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
   '检查中…': { 'en-US': 'Checking…', 'ja-JP': '確認中…' }, '更新中…': { 'en-US': 'Updating…', 'ja-JP': '更新中…' }, '更新失败': { 'en-US': 'Update failed', 'ja-JP': '更新失敗' }, '更新完成，正在刷新页面…': { 'en-US': 'Update finished, reloading…', 'ja-JP': '更新完了、再読み込み中…' }, '立即更新': { 'en-US': 'Update now', 'ja-JP': '今すぐ更新' }, '重试更新': { 'en-US': 'Retry update', 'ja-JP': '更新を再試行' }, '更新超时，请稍后手动刷新页面': { 'en-US': 'Update timed out, please reload later', 'ja-JP': '更新がタイムアウト、後で再読み込みしてください' },
-  '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' }, '发现新版本，可在更新页更新': { 'en-US': 'New version found — see the update page', 'ja-JP': '新しいバージョンを検出、更新ページへ' }, '前往更新': { 'en-US': 'Go to update', 'ja-JP': '更新ページへ' },
+  '有新版本可用': { 'en-US': 'Update available', 'ja-JP': '新しいバージョンあり' }, '已是最新': { 'en-US': 'Up to date', 'ja-JP': '最新です' }, '检查更新失败': { 'en-US': 'Update check failed', 'ja-JP': '更新の確認に失敗しました' }, '发现新版本，可在更新页更新': { 'en-US': 'New version found — see the update page', 'ja-JP': '新しいバージョンを検出、更新ページへ' }, '前往更新': { 'en-US': 'Go to update', 'ja-JP': '更新ページへ' },
   '启动器更新': { 'en-US': 'Launcher update', 'ja-JP': 'ランチャー更新' }, '此功能仅在1.x版本中可用': { 'en-US': 'Only available in version 1.x', 'ja-JP': 'バージョン1.xでのみ利用できます' },
   '更新nkas程序（exe）本身': { 'en-US': 'Updates the nkas program (exe) itself', 'ja-JP': 'nkasプログラム（exe）本体を更新します' },
   '启动器有新版本，可在更新页更新': { 'en-US': 'New launcher version available — see the update page', 'ja-JP': 'ランチャーの新しいバージョンがあります。更新ページへ' },
@@ -209,6 +209,8 @@ const staticLabels: Record<string, Record<string, string>> = {
   'PC 客户端需要脚本以管理员权限运行。请退出程序，右键启动程序或快捷方式，在「属性 → 兼容性」中勾选「以管理员身份运行此程序」，然后重新启动。': { 'en-US': 'The PC client requires the script to run with administrator privileges. Exit the program, right-click the launcher or shortcut, tick "Run this program as an administrator" under Properties → Compatibility, then start it again.', 'ja-JP': 'PCクライアントの利用には管理者権限が必要です。プログラムを終了し、起動プログラムまたはショートカットを右クリックして、「プロパティ → 互換性」で「管理者としてこのプログラムを実行する」にチェックを入れてから再起動してください。' },
   '公告中心': { 'en-US': 'Announcements', 'ja-JP': 'お知らせ' }, '暂无公告': { 'en-US': 'No announcements', 'ja-JP': 'お知らせはありません' }, '未读': { 'en-US': 'Unread', 'ja-JP': '未読' }, '我知道了': { 'en-US': 'Got it', 'ja-JP': 'わかりました' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
+  '自动更新失败': { 'en-US': 'Auto-update failed', 'ja-JP': '自動更新に失敗しました' },
+  '启动时的自动更新未成功，已跳过更新并继续使用当前版本。': { 'en-US': 'Auto-update at startup did not succeed; skipped and continuing with the current version.', 'ja-JP': '起動時の自動更新に失敗しました。更新をスキップし、現在のバージョンで続行します。' },
   '后端连接中断，正在等待恢复…': { 'en-US': 'Backend disconnected, waiting to reconnect…', 'ja-JP': 'バックエンド切断、再接続待ち…' },
   '导入失败': { 'en-US': 'Import failed', 'ja-JP': 'インポート失敗' },
   '取消': { 'en-US': 'Cancel', 'ja-JP': 'キャンセル' }, '确定': { 'en-US': 'OK', 'ja-JP': 'OK' },
@@ -883,6 +885,13 @@ async function checkUpdate() {
       updateInfo.value = await api.get('/api/system/update')
       if (updateInfo.value.state !== 'checking') break
     }
+    // A failed check resolves to state "failed" (with the reason in
+    // `error`) instead of the idle 0/false, so surface it as a toast
+    // rather than letting the card silently read "up to date".
+    if (updateInfo.value.state === 'failed') {
+      const reason = String(updateInfo.value.error || '')
+      notify(t('检查更新失败') + (reason ? `：${reason}` : ''), 'error', 10000)
+    }
   } catch (exception: any) { error.value = exception.message } finally { updateChecking.value = false }
 }
 const updating = ref(false)
@@ -1212,10 +1221,16 @@ onBeforeUnmount(() => {
       <div v-if="notices.length" class="notice-stack">
         <article v-for="notice in notices" :key="notice.key" class="notice-card" :class="notice.type">
           <div>
-            <strong>{{ notice.key === 'auto_update' ? autoUpdateTitle(notice.data) : (notice.data.title || t('系统通知')) }}</strong>
+            <strong>{{ notice.key === 'auto_update' ? autoUpdateTitle(notice.data) : notice.key === 'auto_update_failed' ? t('自动更新失败') : (notice.data.title || t('系统通知')) }}</strong>
             <ul v-if="autoUpdatePreview(notice.data).length" class="notice-messages">
               <li v-for="(msg, index) in autoUpdatePreview(notice.data)" :key="index">• {{ msg }}</li>
             </ul>
+            <!-- Startup auto-update failure: explain what happened in the
+                 user's language, keep the raw git error as detail. -->
+            <template v-else-if="notice.key === 'auto_update_failed'">
+              <p>{{ t('启动时的自动更新未成功，已跳过更新并继续使用当前版本。') }}</p>
+              <p v-if="notice.data.error" class="notice-error-detail">{{ notice.data.error }}</p>
+            </template>
             <p v-else>{{ notice.data.content || notice.data.error || t('有新的系统通知。') }}</p>
           </div>
           <button class="btn sm" @click="dismissNotice(notice)">{{ t('知道了') }}</button>
@@ -1388,9 +1403,12 @@ onBeforeUnmount(() => {
         </article>
         <article class="card task-hero">
           <div class="task-icon">🚀</div>
-          <div style="flex:1"><h2>{{ t('源码更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span></div></div>
+          <div style="flex:1"><h2>{{ t('源码更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span><span v-else-if="updateInfo.state === 'failed'" class="update-error"> · {{ updateInfo.error ? t('检查更新失败') : t('更新失败') }}<span v-if="updateInfo.error">：{{ updateInfo.error }}</span></span></div></div>
           <button v-if="Number(updateInfo.state) === 1" class="btn success" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('立即更新') }}</button>
-          <button v-else-if="updateInfo.state === 'failed'" class="btn danger" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('重试更新') }}</button>
+          <!-- "failed" with an error message means the *check* failed (e.g.
+               network), so offer re-check instead of a full update+restart;
+               an empty error means a real update run failed, offer retry. -->
+          <button v-else-if="updateInfo.state === 'failed' && !updateInfo.error" class="btn danger" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('重试更新') }}</button>
           <button v-else class="btn primary" :disabled="updating || updateChecking || updateInfo.state === 'checking'" @click="checkUpdate">{{ updating ? t('更新中…') : (updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新')) }}</button>
           <button class="btn danger" :disabled="restarting" @click="forceRestart"><span v-if="restarting" class="btn-spin"></span>{{ restarting ? t('重启中…') : t('强制重启') }}</button>
         </article>

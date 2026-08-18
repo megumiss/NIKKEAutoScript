@@ -31,7 +31,10 @@ async def update_status(_: Request):
     local = updater.get_commit(short_sha1=True)
     upstream = updater.get_commit(f'origin/{updater.Branch}', short_sha1=True)
     history = updater.get_commit(f'origin/{updater.Branch}', n=20, short_sha1=True)
-    return JSONResponse({'state': updater.state, 'local': local, 'upstream': upstream, 'history': history or []})
+    return JSONResponse({
+        'state': updater.state, 'error': updater.check_error,
+        'local': local, 'upstream': upstream, 'history': history or [],
+    })
 
 
 async def remote_status(_: Request):

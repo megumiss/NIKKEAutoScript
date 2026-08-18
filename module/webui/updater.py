@@ -41,6 +41,10 @@ class Updater(DeployConfig, GitManager, PipManager):
         self.state = 0
         self.event: threading.Event = None
         self._check_started_at = 0.0
+        # Human-readable reason of the last failed update check, surfaced to
+        # the SPA via /api/system/update so a failure is not silently shown
+        # as "up to date".
+        self.check_error = ''
 
     @property
     def delay(self):
@@ -116,13 +120,19 @@ class Updater(DeployConfig, GitManager, PipManager):
 
     def _check_update(self) -> bool:
         self.state = "checking"
+        self.check_error = ''
         # Any unexpected failure must not leave the state machine in
         # "checking" forever; it would block every later check and update.
+        # Distinguish failure (state "failed") from a clean "no update"
+        # (state 0/False) so the UI can surface the error instead of
+        # reporting "up to date".
         try:
             return self._do_check_update()
         except Exception as e:
             logger.exception(e)
             logger.warning("Check update failed")
+            self.state = "failed"
+            self.check_error = str(e) or e.__class__.__name__
             return False
 
     def _do_check_update(self) -> bool:
@@ -144,7 +154,10 @@ class Updater(DeployConfig, GitManager, PipManager):
                 break
         else:
             logger.warning("Git fetch failed")
-            return False
+            raise ExecutionError(
+                "Git fetch failed: cannot reach the remote repository. "
+                "Check the network connection or the repository address."
+            )
 
         log = self.execute_output(
             f'"{self.git}" log --not --remotes={source}/* -1 --oneline'
@@ -245,7 +258,12 @@ class Updater(DeployConfig, GitManager, PipManager):
         elif self.state not in (0, "failed", "finish"):
             return
         self._check_started_at = time.time()
-        self.state = self._check_update()
+        result = self._check_update()
+        # _check_update() sets state to "failed" itself when the check failed;
+        # don't let the boolean return value overwrite that, or the failure
+        # would be reported as a clean "no update" (state 0) on the UI.
+        if self.state != "failed":
+            self.state = result
 
     @retry(ExecutionError, tries=3, delay=5, logger=None)
     def git_update(self):
