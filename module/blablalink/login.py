@@ -1,3 +1,31 @@
+"""
+blablalink 一键登录获取 Cookie
+
+运行机制：
+1. 纯接口登录不可行（lipass 登录接口有 sig 签名，VM 混淆；且腾讯验证码有
+   machine check），所以用无头浏览器驱动真实登录页完成登录。
+   浏览器按 系统 Chrome → 系统 Edge → 自动下载内置 Chromium 的回退链启动。
+2. 页面流程：打开主页 → 接受 OneTrust cookie 提示 → Sign In → 填账号密码 →
+   Log in。腾讯验证码先走无感校验（可能直接通过）；返回 ret=2170 时站点 SDK
+   会弹出交互滑块（腾讯验证码 iframe 不能搬离官方域名渲染，会按 entry_url
+   域名校验 403），此时把验证码区域截图推到 Web UI 弹窗，用户在其中拖动，
+   鼠标事件实时转发回页面完成验证。
+3. 登录成功后从 localStorage 的 logined_account_cache_key（base64 JSON）取
+   openid/token/token_expire_time/channel_info.channelId；
+   gameID 取自登录 SDK 初始化时打印的 login_pop_config（console 监听）。
+   所有值均来自站点运行时，不写死；取不到直接报错。
+4. 站点的 x-common-params 拦截器按 URL ?gameid= → 上下文 cookie → localStorage
+   解析游戏上下文；真实浏览器的该 cookie 由站点在此前访问中种好（365 天），
+   全新无头上下文里站点自己不会设置（实测点头像也不会），导致请求头里
+   game_id/area_id/intl_game_id 全空。因此登录后按站点自身机制补种
+   __ss_storage_cookie_cache_game_id__ / __ss_storage_cookie_cache_lang__
+   （先按名清旧值，避免域差异产生重复 cookie）。
+5. 进入个人主页一次：站点此时发出的请求自带完整 x-common-params（抓取时按
+   非空字段数记分，只留最完整的一份），同时 GetUserProfile 提供用户名。
+6. 用运行时值构造最小业务 cookie（game_openid/game_channelid/game_token/
+   game_gameid 等），调 CheckLogin 验证有效后写回配置
+   （Cookie/XCommonParams/LoginUser/TokenExpire）。
+"""
 import base64
 import json
 import queue
@@ -5,7 +33,7 @@ import threading
 import time
 from typing import Optional
 
-from module.blablalink.renew import BLA_HOME, _launch_browser, ensure_playwright
+from module.blablalink.renew import BLA_HOME, SEL_COOKIE_ACCEPT, SEL_SIGN_IN, _launch_browser, ensure_playwright
 from module.logger import logger
 
 CHECK_LOGIN_URL = 'https://api.blablalink.com/api/user/CheckLogin'
@@ -14,9 +42,8 @@ LOGIN_CACHE_KEY = 'logined_account_cache_key'
 # 验证码截图刷新间隔（秒）
 SHOT_INTERVAL = 0.7
 
-# 登录表单选择器（blablalink 当前页面结构，页面改版可能需要更新）
-SEL_COOKIE_ACCEPT = '#onetrust-accept-btn-handler'
-SEL_SIGN_IN = 'button:has-text("Sign In")'
+# 登录表单选择器（blablalink 当前页面结构，页面改版可能需要更新；
+# SEL_COOKIE_ACCEPT / SEL_SIGN_IN 与续期共用，定义在 renew.py）
 SEL_ACCOUNT = '#loginPwdForm_account'
 SEL_PASSWORD = '#loginPwdForm_password'
 SEL_SUBMIT = 'button:has-text("Log in")'
@@ -42,13 +69,13 @@ class LoginFormError(LoginError):
     pass
 
 
-def build_cookie(openid: str, token: str, extra: Optional[dict] = None) -> str:
+def build_cookie(openid: str, token: str, game_id: str, channel_id: str, extra: Optional[dict] = None) -> str:
     """按站点 cookie 结构构造最小可用 cookie（实测业务接口只需这些字段）"""
     data = {
         'game_openid': openid,
-        'game_channelid': '131',
+        'game_channelid': channel_id,
         'game_token': token,
-        'game_gameid': '29080',
+        'game_gameid': game_id,
         'game_login_game': '0',
         'game_adult_status': '1',
     }
@@ -73,6 +100,28 @@ def check_login_cookie(cookie: str, xcommonparams: str, user_agent: str, languag
         logger.error(f'CheckLogin request failed: {e}')
         return False
     return data.get('code') == 0 and data.get('msg') == 'ok'
+
+
+def _xcp_score(xcp: str) -> int:
+    """x-common-params 完整度记分：非空字段数；解析失败记 0"""
+    try:
+        data = json.loads(xcp)
+    except Exception:
+        return 0
+    if not isinstance(data, dict):
+        return 0
+    return sum(1 for v in data.values() if v)
+
+
+def _xcp_empty_keys(xcp: str) -> list:
+    """列出 x-common-params 中的空字段，用于判断登录态是否初始化完整"""
+    try:
+        data = json.loads(xcp)
+    except Exception:
+        return ['<parse failed>']
+    if not isinstance(data, dict):
+        return ['<not a dict>']
+    return [k for k, v in data.items() if not v]
 
 
 def _parse_username(data) -> str:
@@ -221,16 +270,34 @@ class BlaLoginSession:
 
                 # 捕获站点真实请求中的 x-common-params 与用户信息（字段并非常量，以站点实际发出为准）
                 # 只抓登录成功后的请求：未登录时站点也会发公开请求，其 page_id/language 不是登录态的值
-                captured = {'xcommonparams': '', 'profile': {}}
+                captured = {'xcommonparams': '', 'score': -1, 'profile': {}, 'game_id': ''}
 
                 def on_request(req):
                     if not self._login_ok.is_set():
                         return
                     if 'api.blablalink.com' in req.url:
                         xcp = req.headers.get('x-common-params')
-                        if xcp:
+                        if not xcp:
+                            return
+                        # 登录态初始化需要时间，早期请求的 x-common-params 可能带空字段
+                        # （如 game_id），按非空字段数记分，只保留最完整的一份
+                        score = _xcp_score(xcp)
+                        if score > captured['score']:
                             captured['xcommonparams'] = xcp
-                            logger.info(f'Captured x-common-params from {req.url[-60:]}')
+                            captured['score'] = score
+                            logger.info(f'Captured x-common-params from {req.url[-60:]}, score {score}')
+
+                def on_console(msg):
+                    text = msg.text
+                    # 登录 SDK 初始化时打印的配置，含本站 gameID（站点运行时真实值）
+                    if text.startswith('[login] login_pop_config'):
+                        try:
+                            cfg = json.loads(text.split(' ', 2)[2])
+                            captured['game_id'] = str(cfg.get('gameID', ''))
+                        except Exception:
+                            pass
+                    if any(k in text.lower() for k in ('signin', 'captcha', 'login')):
+                        logger.info(f'[page] {text[:150]}')
 
                 def on_response(resp):
                     url = resp.url
@@ -253,8 +320,7 @@ class BlaLoginSession:
 
                 page.on('request', on_request)
                 page.on('response', on_response)
-                page.on('console', lambda msg: logger.info(f'[page] {msg.text[:150]}')
-                          if any(k in msg.text.lower() for k in ('signin', 'captcha', 'login')) else None)
+                page.on('console', on_console)
 
                 page.goto(BLA_HOME, wait_until='domcontentloaded')
                 page.wait_for_timeout(5000)
@@ -360,7 +426,18 @@ class BlaLoginSession:
                 except Exception:
                     pass
 
-                cookie = build_cookie(openid, token, extra)
+                # 游戏 ID 与渠道 ID 必须来自站点运行时数据：
+                # gameID 取自登录 SDK 初始化时的 login_pop_config，
+                # channelId 取自 localStorage 凭证缓存的 channel_info；
+                # 取不到说明页面结构/日志变了，直接报错，不使用任何固定值
+                intl_game_id = captured['game_id']
+                if not intl_game_id:
+                    raise LoginVerifyError('gameID not found in login_pop_config')
+                channel_id = str(creds.get('channel_info', {}).get('channelId', ''))
+                if not channel_id:
+                    raise LoginVerifyError('channelId not found in login cache (channel_info)')
+
+                cookie = build_cookie(openid, token, intl_game_id, channel_id, extra)
 
                 # 登录后诊断：上下文现有 cookie
                 try:
@@ -376,16 +453,36 @@ class BlaLoginSession:
                 except Exception:
                     pass
 
-                # 直接进入自己的主页，让站点以登录态发出真实请求：
-                # 既触发 GetUserProfile（取用户名/uid），又能拿到 page_id 带 openid 的 x-common-params
-                openid_b64 = base64.b64encode(f'29080-{openid}'.encode()).decode()
+                # 站点拦截器按 URL ?gameid= → cookie __ss_storage_cookie_cache_game_id__ → localStorage
+                # 的顺序解析游戏上下文；真实浏览器里该 cookie 由站点在此前的访问中种好（365 天），
+                # 全新无头上下文里站点任何交互都不会设置它（实测点头像也不行），
+                # 导致 game_id/area_id/intl_game_id 全空。这里按站点自身机制补齐上下文，
+                # 再让站点重新发出完整的 x-common-params。
+                # 先按名清掉站点已种的旧值（域不一致时直接 add 会产生重复 cookie，读不到新值）
                 try:
-                    page.goto(f'https://www.blablalink.com/user?openid={openid_b64}', wait_until='domcontentloaded')
+                    context.clear_cookies(name='__ss_storage_cookie_cache_game_id__')
+                    context.clear_cookies(name='__ss_storage_cookie_cache_lang__')
+                    context.add_cookies([
+                        {'name': '__ss_storage_cookie_cache_game_id__', 'value': intl_game_id,
+                         'domain': 'www.blablalink.com', 'path': '/'},
+                        {'name': '__ss_storage_cookie_cache_lang__', 'value': self.language,
+                         'domain': 'www.blablalink.com', 'path': '/'},
+                    ])
+                except Exception as e:
+                    logger.warning(f'Plant context cookies failed: {str(e)[:100]}')
+
+                # 进入自己的主页：站点以登录态发出带完整参数的 x-common-params，
+                # 同时触发 GetUserProfile（取用户名，用于「当前登录用户」展示）
+                openid_b64 = base64.b64encode(f'{intl_game_id}-{openid}'.encode()).decode()
+                user_url = f'https://www.blablalink.com/user?openid={openid_b64}'
+                try:
+                    page.goto(user_url, wait_until='domcontentloaded')
                 except Exception as e:
                     logger.warning(f'Open profile page failed: {str(e)[:100]}')
                 for _ in range(15):
                     self._raise_if_cancelled()
-                    if captured['xcommonparams'] and captured['profile']:
+                    if captured['xcommonparams'] and not _xcp_empty_keys(captured['xcommonparams']) \
+                            and captured['profile']:
                         break
                     page.wait_for_timeout(1000)
 
@@ -399,6 +496,10 @@ class BlaLoginSession:
                     except Exception:
                         pass
                     raise LoginVerifyError('Failed to capture x-common-params from site requests')
+
+                empty_keys = _xcp_empty_keys(xcommonparams)
+                if empty_keys:
+                    raise LoginVerifyError(f'x-common-params incomplete, empty fields: {empty_keys}')
 
                 # 从 GetUserProfile 响应提取用户名，用于「当前登录用户」展示
                 username = _parse_username(captured['profile'])

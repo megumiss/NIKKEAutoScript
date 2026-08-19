@@ -1,3 +1,25 @@
+"""
+blablalink Cookie 自动续期
+
+运行机制：
+1. Cookie 里的 game_token 有效期约 30 天。临期或失效时，不必重新输账号密码登录：
+   lipass（Level Infinite Pass）支持用仍在有效期内的 game_openid/game_token
+   直接换新 token，有效期重新计算 30 天，理论可无限滚动续期。
+2. 换 token 必须走官方 Web SDK（接口有 sig 签名，VM 混淆，无法纯 HTTP 重放）：
+   用无头浏览器打开 blablalink 主页，注入 Pass SDK（index.umd.js），在页面内执行两步：
+   refreshCAccTokenByOpenID（game_token 换 lipass token）
+   → intlSignIn（lipass token 换新 game_token）。
+3. Pass SDK 初始化需要的 env/gameID/appID 不写死：点开主页的 Sign In 触发站点
+   登录 SDK 初始化，从 console 的 login_pop_config 抓站点运行时配置；
+   gameID 备用来源是 cookie 的 game_gameid 与 XCommonParams 的 intl_game_id；
+   channelID 从现有 cookie 的 game_channelid 取（与一键登录写入的值同源）。
+   都取不到直接报错。
+4. 浏览器按 系统 Chrome → 系统 Edge → 自动下载内置 Chromium 的回退链启动；
+   playwright 缺失时自动 pip 安装（尊重 deploy.yaml 的 PypiMirror）。
+5. 返回码约定：refresh 阶段 ret=11002 表示 token 已彻底失效，只能重新登录
+   （走 login.py 的一键登录）；signin 阶段 ret=808099001 表示缺 account 字段，
+   调用方需传入 LiPass 账号邮箱。
+"""
 import json
 import subprocess
 import sys
@@ -5,13 +27,13 @@ from typing import Optional, Tuple
 
 from module.logger import logger
 
-# Level Infinite Pass（lipass）Web SDK 常量，来自 blablalink 登录链路实测
+# Level Infinite Pass（lipass）Web SDK 地址与站点入口
 LIPASS_SDK_URL = 'https://common-web.intlgame.com/sdk-cdn/infinite-pass/latest/index.umd.js'
-LIPASS_ENV = 'aws-na'
-LIPASS_APP_ID = '09af79d65d6e4fdf2d2569f0d365739d'
 BLA_HOME = 'https://www.blablalink.com/'
-GAME_ID = '29080'
-CHANNEL_ID = 131
+# 主页登录入口按钮（触发登录 SDK 初始化，从而暴露 login_pop_config）
+SEL_SIGN_IN = 'button:has-text("Sign In")'
+# OneTrust cookie 提示的接受按钮，不点掉会挡住 Sign In
+SEL_COOKIE_ACCEPT = '#onetrust-accept-btn-handler'
 
 # refresh_sacc_token 返回码：token 已过期/失效，只能人工重新登录
 RET_TOKEN_INVALID = 11002
@@ -160,7 +182,7 @@ async ({ gameOpenid, gameToken, account }) => {
 """
 
 
-def renew_cookie(cookie: str, account: str = '', user_agent: str = '') -> Optional[Tuple[str, int]]:
+def renew_cookie(cookie: str, account: str = '', user_agent: str = '', game_id: str = '') -> Optional[Tuple[str, int]]:
     """
     用 cookie 中仍在有效期内的 game_openid/game_token 续期，换取新 game_token（新 30 天有效期）。
 
@@ -168,6 +190,8 @@ def renew_cookie(cookie: str, account: str = '', user_agent: str = '') -> Option
         cookie: 现有的 BlaAuth cookie 字符串
         account: LiPass 账号邮箱（intlSignIn 的 channel_info.account，可空）
         user_agent: 浏览器 UA
+        game_id: gameID 备用来源（XCommonParams 的 intl_game_id），
+            优先取站点 login_pop_config 与 cookie 的 game_gameid
 
     Returns:
         (新 cookie 字符串, 过期时间戳)；续期失败返回 None
@@ -178,14 +202,13 @@ def renew_cookie(cookie: str, account: str = '', user_agent: str = '') -> Option
     if not game_openid or not game_token:
         logger.error('Cookie missing game_openid or game_token, cannot renew')
         return None
+    # channelID 不写死：取现有 cookie 的 game_channelid（一键登录写入的值）
+    channel_id = creds.get('game_channelid', '')
+    if not channel_id:
+        logger.error('channel_id not found in cookie (game_channelid), cannot renew')
+        return None
 
     sync_playwright = ensure_playwright()
-
-    js = (_RENEW_JS
-          .replace('ENV_PLACEHOLDER', LIPASS_ENV)
-          .replace('GAME_ID_PLACEHOLDER', GAME_ID)
-          .replace('APP_ID_PLACEHOLDER', LIPASS_APP_ID)
-          .replace('CHANNEL_ID_PLACEHOLDER', str(CHANNEL_ID)))
 
     with sync_playwright() as p:
         browser = _launch_browser(p)
@@ -195,8 +218,51 @@ def renew_cookie(cookie: str, account: str = '', user_agent: str = '') -> Option
                 context_args['user_agent'] = user_agent
             context = browser.new_context(**context_args)
             page = context.new_page()
+
+            # env/gameID/appID 不写死：点 Sign In 触发站点登录 SDK 初始化，
+            # 从 console 的 login_pop_config 抓站点运行时配置
+            sdk_conf = {}
+
+            def on_console(msg):
+                if msg.text.startswith('[login] login_pop_config'):
+                    try:
+                        sdk_conf.update(json.loads(msg.text.split(' ', 2)[2]))
+                    except Exception:
+                        pass
+
+            page.on('console', on_console)
             page.goto(BLA_HOME, wait_until='domcontentloaded')
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(5000)
+            try:
+                page.click(SEL_COOKIE_ACCEPT, timeout=3000)
+            except Exception:
+                pass
+            try:
+                page.click(SEL_SIGN_IN, timeout=10000)
+            except Exception as e:
+                logger.warning(f'Click Sign In failed: {str(e)[:100]}')
+            for _ in range(10):
+                if sdk_conf:
+                    break
+                page.wait_for_timeout(1000)
+            env = str(sdk_conf.get('env', ''))
+            app_id = str(sdk_conf.get('appID', ''))
+            # gameID 优先站点运行时配置，其次 cookie / XCommonParams
+            game_id_final = str(sdk_conf.get('gameID', '')) or creds.get('game_gameid', '') or game_id
+            if not env or not app_id:
+                logger.error(f'login_pop_config not captured (env={env!r}, appID={app_id!r}), cannot renew')
+                return None
+            if not game_id_final:
+                logger.error('game_id not found in login_pop_config, cookie or XCommonParams, cannot renew')
+                return None
+            logger.info(f'Pass SDK config: env={env}, gameID={game_id_final}, appID={app_id[:8]}..., channel={channel_id}')
+
+            js = (_RENEW_JS
+                  .replace('ENV_PLACEHOLDER', env)
+                  .replace('GAME_ID_PLACEHOLDER', game_id_final)
+                  .replace('APP_ID_PLACEHOLDER', app_id)
+                  .replace('CHANNEL_ID_PLACEHOLDER', channel_id))
+
             page.add_script_tag(url=LIPASS_SDK_URL)
             page.wait_for_function('window.PassFactory !== undefined', timeout=15000)
 

@@ -77,6 +77,8 @@ class Blablalink(UI):
         lang = x_common_params['language']
         self.common_headers['x-language'] = lang
         BlaLangs.use(lang)
+        # 保留解析结果，续期时取 intl_game_id 初始化 Pass SDK
+        self.x_common_params = x_common_params
 
         # 获取user-agent
         useragent = deep_get(self.config.data, keys='BlaAuth.BlaAuth.UserAgent')
@@ -389,6 +391,7 @@ class Blablalink(UI):
                 cookie=self.common_headers.get('cookie', ''),
                 account=account,
                 user_agent=self.common_headers.get('user-agent', ''),
+                game_id=str(self.x_common_params.get('intl_game_id', '')),
             )
         except RenewError as e:
             logger.error(f'Auto renew failed: {e}')
