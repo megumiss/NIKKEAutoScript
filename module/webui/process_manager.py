@@ -19,6 +19,10 @@ from module.webui.setting import State
 
 class ProcessManager:
     _processes: Dict[str, "ProcessManager"] = {}
+    # get_manager 的 check-then-act 必须加锁：后端启动时编排器线程与
+    # restart_processes 会并发调用，否则同一实例名可能创建出两个 manager，
+    # 后写入的空对象覆盖真正 fork 了实例进程的对象（表现为后端误判实例已停止）。
+    _processes_lock = threading.Lock()
 
     def __init__(self, config_name: str = "nkas") -> None:
         self.config_name = config_name
@@ -221,18 +225,20 @@ class ProcessManager:
         """
         Create a new nkas if not exists.
         """
-        if config_name not in cls._processes:
-            cls._processes[config_name] = ProcessManager(config_name)
-        return cls._processes[config_name]
+        with cls._processes_lock:
+            if config_name not in cls._processes:
+                cls._processes[config_name] = ProcessManager(config_name)
+            return cls._processes[config_name]
 
     @classmethod
     def rename_process(cls, name: str, new_name: str) -> None:
         """Re-key an existing manager after an instance rename; no-op when no
         manager exists for the old name (the instance was never started)."""
-        manager = cls._processes.pop(name, None)
-        if manager is not None:
-            manager.config_name = new_name
-            cls._processes[new_name] = manager
+        with cls._processes_lock:
+            manager = cls._processes.pop(name, None)
+            if manager is not None:
+                manager.config_name = new_name
+                cls._processes[new_name] = manager
 
     @staticmethod
     def run_process(

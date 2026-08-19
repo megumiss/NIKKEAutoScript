@@ -162,6 +162,10 @@ class TaskHandler:
     def stop(self) -> None:
         self.remove_pending_task()
         self._alive = False
+        # clearup() 可能由本线程内运行的任务（如 schedule_update）触发，
+        # join 自身线程会抛 RuntimeError
+        if self._thread is threading.current_thread():
+            return
         self._thread.join(timeout=2)
         if not self._thread.is_alive():
             logger.info("Finish task handler")
