@@ -10,7 +10,7 @@ from typing import Dict, Tuple
 import requests
 
 from module.blablalink.langs import BlaLangs
-from module.blablalink.renew import RenewError, renew_cookie
+from module.blablalink.renew import RenewError, _parse_cookie, renew_cookie
 from module.config.delay import next_month
 from module.config.utils import deep_get
 from module.exception import RequestHumanTakeover
@@ -77,8 +77,11 @@ class Blablalink(UI):
         lang = x_common_params['language']
         self.common_headers['x-language'] = lang
         BlaLangs.use(lang)
-        # 保留解析结果，续期时取 intl_game_id 初始化 Pass SDK
+        # 保留解析结果，任务接口与续期的 gameID 备用来源都从这里取
         self.x_common_params = x_common_params
+        if not self.intl_game_id:
+            logger.error("Missing game id in both cookie (game_gameid) and XCommonParams (intl_game_id)")
+            raise RequestHumanTakeover('Cookie 和 XCommonParams 都缺少游戏 ID，请重新使用一键登录填写')
 
         # 获取user-agent
         useragent = deep_get(self.config.data, keys='BlaAuth.BlaAuth.UserAgent')
@@ -93,6 +96,13 @@ class Blablalink(UI):
     def exchange_priority(self) -> list:
         priority = re.sub(r'\s+', '', self.config.BlaExchange_Priority).split('>')
         return priority
+
+    @property
+    def intl_game_id(self) -> str:
+        """站点游戏上下文 ID：优先 cookie 的 game_gameid（账号自己的区服），
+        其次 XCommonParams 的 intl_game_id，两处都是一键登录写入的运行时值"""
+        creds = _parse_cookie(self.common_headers.get('cookie', ''))
+        return creds.get('game_gameid', '') or str(self.x_common_params.get('intl_game_id', ''))
 
     def _request_with_retry(self, method: str, url: str, max_retries: int = 3, **kwargs) -> Dict:
         """带重试机制的请求封装"""
@@ -133,8 +143,8 @@ class Blablalink(UI):
         try:
             return self._request_with_retry(
                 'GET',
-                'https://api.blablalink.com/api/lip/proxy/lipass/Points/GetTaskListWithStatusV2?get_top=false&intl_game_id=29080',
-                # params={'get_top': 'false', 'intl_game_id': '29080'}
+                'https://api.blablalink.com/api/lip/proxy/lipass/Points/GetTaskListWithStatusV2',
+                params={'get_top': 'false', 'intl_game_id': self.intl_game_id},
             )
         except Exception as e:
             logger.error(f'Failed to get task list: {str(e)}')
@@ -386,12 +396,16 @@ class Blablalink(UI):
         if not account:
             logger.error('LiPass account not set, please fill it in Account settings first')
             return False
+        from module.blablalink.renew import server_from_client
+        # gameID 备用来源：XCommonParams 的 intl_game_id；区服按实例客户端设置推导
+        game_id = str(self.x_common_params.get('intl_game_id', ''))
         try:
             result = renew_cookie(
                 cookie=self.common_headers.get('cookie', ''),
                 account=account,
                 user_agent=self.common_headers.get('user-agent', ''),
-                game_id=str(self.x_common_params.get('intl_game_id', '')),
+                game_id=game_id,
+                server=server_from_client(self.config.data),
             )
         except RenewError as e:
             logger.error(f'Auto renew failed: {e}')
@@ -841,7 +855,7 @@ class Blablalink(UI):
                 result = self._request_with_retry(
                     'POST',
                     'https://api.blablalink.com/api/lip/proxy/commodity/Commodity/GetUserCommodityList',
-                    json={'page_num': page_num, 'page_size': page_size, 'game_id_list': ['29080'], 'is_bind_lip': True},
+                    json={'page_num': page_num, 'page_size': page_size, 'game_id_list': [self.intl_game_id], 'is_bind_lip': True},
                 )
 
                 if result.get('code') != 0:

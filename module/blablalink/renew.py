@@ -9,10 +9,12 @@ blablalink Cookie 自动续期
    用无头浏览器打开 blablalink 主页，注入 Pass SDK（index.umd.js），在页面内执行两步：
    refreshCAccTokenByOpenID（game_token 换 lipass token）
    → intlSignIn（lipass token 换新 game_token）。
-3. Pass SDK 初始化需要的 env/gameID/appID 不写死：点开主页的 Sign In 触发站点
-   登录 SDK 初始化，从 console 的 login_pop_config 抓站点运行时配置；
-   gameID 备用来源是 cookie 的 game_gameid 与 XCommonParams 的 intl_game_id；
-   channelID 从现有 cookie 的 game_channelid 取（与一键登录写入的值同源）。
+3. Pass SDK 初始化需要的 env/appID 不写死：点开主页的 Sign In 触发站点登录 SDK
+   初始化，从 console 的 login_pop_config 抓站点运行时配置；港澳台账号（按实例
+   客户端设置：PC 端 PCClientInfo.Client / 模拟器 Emulator.PackageName）先在
+   登录弹窗的区域下拉框点选 HK/MC/TW，配置随切换重新打印。
+   gameID 优先取现有 cookie 的 game_gameid，其次 login_pop_config，
+   最后 XCommonParams 的 intl_game_id；channelID 取 cookie 的 game_channelid。
    都取不到直接报错。
 4. 浏览器按 系统 Chrome → 系统 Edge → 自动下载内置 Chromium 的回退链启动；
    playwright 缺失时自动 pip 安装（尊重 deploy.yaml 的 PypiMirror）。
@@ -37,6 +39,55 @@ SEL_COOKIE_ACCEPT = '#onetrust-accept-btn-handler'
 
 # refresh_sacc_token 返回码：token 已过期/失效，只能人工重新登录
 RET_TOKEN_INVALID = 11002
+
+
+def server_from_client(config_data) -> str:
+    """
+    实例的区服设置：PC 端（NKAS.Client.Platform=win）取 PCClient.PCClientInfo.Client，
+    adb 模拟器取 Emulator.Emulator.PackageName 经 to_server 转换。
+    返回 'intl' / 'tw' / 'hmt'（tw 与 hmt 同义，都是港澳台）。
+    """
+    from module.config.server import to_server
+    from module.config.utils import deep_get
+    if deep_get(config_data, 'NKAS.Client.Platform', 'win') == 'win':
+        return deep_get(config_data, 'PCClient.PCClientInfo.Client', '')
+    return to_server(deep_get(config_data, 'Emulator.Emulator.PackageName', ''))
+
+
+def select_login_region(page, server: str) -> bool:
+    """
+    在登录弹窗的区域下拉框中按 NKAS 区服点选区域（港澳台账号必须选对，
+    否则会按站点默认的国际服初始化登录 SDK）。
+    下拉选项与切换后的 env/gameID/appID 全部由站点运行时提供
+    （login_pop_config 随切换重新打印），代码里不存任何区域 ID。
+    当前选中已匹配或无需选择时返回 False；成功切换返回 True。
+    港澳台区服选不上时抛 RenewError（继续按国际服登录会得到错误区域的凭证）。
+    """
+    if not server:
+        return False
+    want_hmt = server in ('tw', 'hmt')
+    # 站点默认区域是国际服，intl 无需任何操作
+    if not want_hmt:
+        return False
+    try:
+        dd = page.query_selector('.login-area-dropdown')
+        if not dd:
+            raise RenewError('Login area dropdown not found, cannot switch region to HK/MC/TW')
+        current = (dd.inner_text() or '').upper()
+        if 'TW' in current:
+            return False
+        dd.query_selector('button').click()
+        page.wait_for_timeout(1000)
+        # 选项在弹层里，按站点界面文本点选（与 Sign In / Log in 按钮同为 UI 文本匹配）
+        page.click('[data-radix-popper-content-wrapper] >> :text-is("HK/MC/TW")', timeout=5000)
+        logger.info(f'Selected login region HK/MC/TW for server={server}')
+        # 等登录 SDK 按新区域重新初始化（会重新打印 login_pop_config）
+        page.wait_for_timeout(2000)
+        return True
+    except RenewError:
+        raise
+    except Exception as e:
+        raise RenewError(f'Failed to switch login region to HK/MC/TW: {str(e)[:150]}')
 
 
 class RenewError(Exception):
@@ -182,7 +233,8 @@ async ({ gameOpenid, gameToken, account }) => {
 """
 
 
-def renew_cookie(cookie: str, account: str = '', user_agent: str = '', game_id: str = '') -> Optional[Tuple[str, int]]:
+def renew_cookie(cookie: str, account: str = '', user_agent: str = '',
+                 game_id: str = '', server: str = '') -> Optional[Tuple[str, int]]:
     """
     用 cookie 中仍在有效期内的 game_openid/game_token 续期，换取新 game_token（新 30 天有效期）。
 
@@ -191,7 +243,8 @@ def renew_cookie(cookie: str, account: str = '', user_agent: str = '', game_id: 
         account: LiPass 账号邮箱（intlSignIn 的 channel_info.account，可空）
         user_agent: 浏览器 UA
         game_id: gameID 备用来源（XCommonParams 的 intl_game_id），
-            优先取站点 login_pop_config 与 cookie 的 game_gameid
+            优先取 cookie 的 game_gameid 与站点 login_pop_config
+        server: NKAS 区服（intl/tw/hmt），港澳台需要在登录弹窗切换区域
 
     Returns:
         (新 cookie 字符串, 过期时间戳)；续期失败返回 None
@@ -220,13 +273,14 @@ def renew_cookie(cookie: str, account: str = '', user_agent: str = '', game_id: 
             page = context.new_page()
 
             # env/gameID/appID 不写死：点 Sign In 触发站点登录 SDK 初始化，
-            # 从 console 的 login_pop_config 抓站点运行时配置
-            sdk_conf = {}
+            # 从 console 的 login_pop_config 抓站点运行时配置；切换区域会重新打印，
+            # 逐条收集，取最新一份
+            sdk_confs = []
 
             def on_console(msg):
                 if msg.text.startswith('[login] login_pop_config'):
                     try:
-                        sdk_conf.update(json.loads(msg.text.split(' ', 2)[2]))
+                        sdk_confs.append(json.loads(msg.text.split(' ', 2)[2]))
                     except Exception:
                         pass
 
@@ -241,14 +295,22 @@ def renew_cookie(cookie: str, account: str = '', user_agent: str = '', game_id: 
                 page.click(SEL_SIGN_IN, timeout=10000)
             except Exception as e:
                 logger.warning(f'Click Sign In failed: {str(e)[:100]}')
-            for _ in range(10):
-                if sdk_conf:
+            page.wait_for_timeout(2000)
+            # 港澳台账号需在登录弹窗切换区域，SDK 配置随切换重新打印
+            switched = select_login_region(page, server)
+            for _ in range(15):
+                if sdk_confs and (not switched or len(sdk_confs) >= 2):
                     break
                 page.wait_for_timeout(1000)
+            sdk_conf = sdk_confs[-1] if sdk_confs else {}
+            if switched and len(sdk_confs) < 2:
+                logger.error('login_pop_config not refreshed after region switch, cannot renew')
+                return None
             env = str(sdk_conf.get('env', ''))
             app_id = str(sdk_conf.get('appID', ''))
-            # gameID 优先站点运行时配置，其次 cookie / XCommonParams
-            game_id_final = str(sdk_conf.get('gameID', '')) or creds.get('game_gameid', '') or game_id
+            # gameID 优先 cookie 的 game_gameid（账号自己的区服），
+            # 其次站点 login_pop_config，最后 XCommonParams 备用
+            game_id_final = creds.get('game_gameid', '') or str(sdk_conf.get('gameID', '')) or game_id
             if not env or not app_id:
                 logger.error(f'login_pop_config not captured (env={env!r}, appID={app_id!r}), cannot renew')
                 return None

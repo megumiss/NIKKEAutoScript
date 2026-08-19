@@ -27,26 +27,82 @@ def _current_session():
 
 def _run_session(name: str, session):
     """线程入口：跑登录流程，成功后写回配置"""
+    import logging
+
+    from module.logger import (
+        WEB_THEME,
+        DailyFileHandler,
+        Highlighter,
+        HTMLConsole,
+        RichRenderableHandler,
+        file_formatter,
+        web_formatter,
+    )
+    from module.webui.process_manager import ProcessManager
+
+    # 登录跑在 GUI 进程，日志默认只进 gui 日志、不进实例的日志流。
+    # 给会话线程单独挂两个 handler（按线程过滤，不混 GUI 进程其他日志）：
+    # 实时日志 broker（Web UI 日志窗口经 websocket 即时可见）+ 实例日志文件
+    # ./log/<date>_<name>.txt（与任务日志同格式，日志查看器可查）
+    thread_id = threading.get_ident()
+    handlers = []
+
+    manager = ProcessManager.get_manager(name)
+
+    def publish(item):
+        levelno, log = item
+        manager.renderables.append((levelno, log))
+        manager._trim_renderables()
+        manager._publish_log(log)
+
+    live_handler = RichRenderableHandler(
+        func=publish,
+        console=HTMLConsole(
+            force_terminal=False, force_interactive=False, width=80,
+            color_system='truecolor', markup=False, safe_box=False,
+            highlighter=Highlighter(), theme=WEB_THEME,
+        ),
+        show_path=False, show_time=False, show_level=True,
+        rich_tracebacks=True, tracebacks_show_locals=False, tracebacks_extra_lines=1,
+        highlighter=Highlighter(),
+    )
+    live_handler.setFormatter(web_formatter)
+    live_handler.setLevel(logging.INFO)
+    handlers.append(live_handler)
+
+    file_handler = DailyFileHandler(name, encoding='utf-8')
+    file_handler.setFormatter(file_formatter)
+    file_handler.setLevel(logging.INFO)
+    handlers.append(file_handler)
+
+    for handler in handlers:
+        handler.addFilter(lambda record: record.thread == thread_id)
+        logger.addHandler(handler)
     try:
-        session.run()
-    except Exception as e:
-        logger.error(f'Bla login session thread exception: {e}')
-    if not session.result:
-        return
-    expire = session.result.get('expire') or 0
-    expire_text = ''
-    if expire:
-        expire_text = datetime.fromtimestamp(expire).astimezone().strftime('%Y-%m-%d %H:%M:%S %z')
-    service = ConfigService()
-    for key, value in (
-        ('BlaAuth.BlaAuth.Cookie', session.result['cookie']),
-        ('BlaAuth.BlaAuth.XCommonParams', session.result['xcommonparams']),
-        ('BlaAuth.BlaAuth.LoginUser', session.result.get('username') or ''),
-        ('BlaAuth.BlaAuth.TokenExpire', expire_text),
-    ):
-        result = service.patch(name, key, value)
-        if not result.ok:
-            logger.error(f'Failed to save {key}: {result.error}')
+        try:
+            session.run()
+        except Exception as e:
+            logger.error(f'Bla login session thread exception: {e}')
+        if not session.result:
+            return
+        expire = session.result.get('expire') or 0
+        expire_text = ''
+        if expire:
+            expire_text = datetime.fromtimestamp(expire).astimezone().strftime('%Y-%m-%d %H:%M:%S %z')
+        service = ConfigService()
+        for key, value in (
+            ('BlaAuth.BlaAuth.Cookie', session.result['cookie']),
+            ('BlaAuth.BlaAuth.XCommonParams', session.result['xcommonparams']),
+            ('BlaAuth.BlaAuth.LoginUser', session.result.get('username') or ''),
+            ('BlaAuth.BlaAuth.TokenExpire', expire_text),
+        ):
+            result = service.patch(name, key, value)
+            if not result.ok:
+                logger.error(f'Failed to save {key}: {result.error}')
+    finally:
+        for handler in handlers:
+            logger.removeHandler(handler)
+            handler.close()
 
 
 async def login_start(request: Request):
@@ -60,6 +116,7 @@ async def login_start(request: Request):
         return JSONResponse({'status': 'error', 'message': 'A login session is already running.'}, status_code=409)
 
     from module.blablalink.login import BlaLoginSession
+    from module.blablalink.renew import server_from_client
     from module.config.account import load_account
 
     account, password = load_account(name)
@@ -77,8 +134,12 @@ async def login_start(request: Request):
         language = params.get('language') or 'zh-TW'
     except (TypeError, ValueError):
         pass
+    # 区服按实例客户端设置推导（PC 端取 PCClientInfo.Client，模拟器取包名），
+    # 首次登录没有 XCommonParams 也有依据
+    server = server_from_client(config)
 
-    session = BlaLoginSession(account=account, password=password, user_agent=user_agent, language=language)
+    session = BlaLoginSession(account=account, password=password, user_agent=user_agent,
+                              language=language, server=server)
     with _session_lock:
         _session = session
     threading.Thread(target=_run_session, args=(name, session), daemon=True).start()

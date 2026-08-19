@@ -5,7 +5,10 @@ blablalink 一键登录获取 Cookie
 1. 纯接口登录不可行（lipass 登录接口有 sig 签名，VM 混淆；且腾讯验证码有
    machine check），所以用无头浏览器驱动真实登录页完成登录。
    浏览器按 系统 Chrome → 系统 Edge → 自动下载内置 Chromium 的回退链启动。
-2. 页面流程：打开主页 → 接受 OneTrust cookie 提示 → Sign In → 填账号密码 →
+2. 页面流程：接受 OneTrust cookie 提示 → Sign In → 港澳台账号（按实例客户端
+   设置：PC 端 PCClient.PCClientInfo.Client / 模拟器 Emulator.PackageName）
+   在登录弹窗的区域下拉框点选 HK/MC/TW，首次登录没有 XCommonParams 也有区服
+   依据，切换后登录 SDK 重新初始化（login_pop_config 重新打印）→ 填账号密码 →
    Log in。腾讯验证码先走无感校验（可能直接通过）；返回 ret=2170 时站点 SDK
    会弹出交互滑块（腾讯验证码 iframe 不能搬离官方域名渲染，会按 entry_url
    域名校验 403），此时把验证码区域截图推到 Web UI 弹窗，用户在其中拖动，
@@ -33,7 +36,14 @@ import threading
 import time
 from typing import Optional
 
-from module.blablalink.renew import BLA_HOME, SEL_COOKIE_ACCEPT, SEL_SIGN_IN, _launch_browser, ensure_playwright
+from module.blablalink.renew import (
+    BLA_HOME,
+    SEL_COOKIE_ACCEPT,
+    SEL_SIGN_IN,
+    _launch_browser,
+    ensure_playwright,
+    select_login_region,
+)
 from module.logger import logger
 
 CHECK_LOGIN_URL = 'https://api.blablalink.com/api/user/CheckLogin'
@@ -149,11 +159,13 @@ class BlaLoginSession:
     """
 
     def __init__(self, account: str, password: str, user_agent: str = '',
-                 language: str = 'zh-TW', timeout: int = 300):
+                 language: str = 'zh-TW', server: str = '', timeout: int = 300):
         self.account = account
         self.password = password
         self.user_agent = user_agent
         self.language = language
+        # NKAS 区服（intl/tw/hmt），港澳台需要在登录弹窗的区域下拉框切换
+        self.server = server
         self.timeout = timeout
 
         self._lock = threading.Lock()
@@ -280,9 +292,11 @@ class BlaLoginSession:
                         if not xcp:
                             return
                         # 登录态初始化需要时间，早期请求的 x-common-params 可能带空字段
-                        # （如 game_id），按非空字段数记分，只保留最完整的一份
+                        # （如 game_id），按非空字段数记分，只保留最完整的一份；
+                        # 同分时后到的覆盖：最后导航的个人主页请求 page_id 带 openid、
+                        # language 是种入的配置语言，更贴近真实浏览器的登录态请求
                         score = _xcp_score(xcp)
-                        if score > captured['score']:
+                        if score >= captured['score']:
                             captured['xcommonparams'] = xcp
                             captured['score'] = score
                             logger.info(f'Captured x-common-params from {req.url[-60:]}, score {score}')
@@ -335,6 +349,10 @@ class BlaLoginSession:
                     except Exception:
                         pass
                     page.click(SEL_SIGN_IN, timeout=5000)
+                    page.wait_for_timeout(2000)
+                    # 港澳台账号需在登录弹窗切换区域（选不上会抛错，不会按错误的国际服继续），
+                    # 切换后登录 SDK 重新初始化并重新打印 login_pop_config，on_console 覆盖为最新值
+                    select_login_region(page, self.server)
                     page.wait_for_selector(SEL_ACCOUNT, timeout=10000)
                     page.fill(SEL_ACCOUNT, self.account)
                     page.fill(SEL_PASSWORD, self.password)
