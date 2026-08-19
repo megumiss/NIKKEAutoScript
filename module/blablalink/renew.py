@@ -37,6 +37,12 @@ SEL_SIGN_IN = 'button:has-text("Sign In")'
 # OneTrust cookie 提示的接受按钮，不点掉会挡住 Sign In
 SEL_COOKIE_ACCEPT = '#onetrust-accept-btn-handler'
 
+# 超时统一约定（大陆访问海外站点偏慢，网络等待给足余量；单位毫秒/秒见注释）
+GOTO_TIMEOUT = 60000       # page.goto 导航（ms）
+ELEMENT_TIMEOUT = 60000    # 按钮/输入框/选项等元素出现与点击（ms）
+SDK_LOAD_TIMEOUT = 30000   # Pass SDK CDN 加载（ms）
+WAIT_SHORT = 10000          # 弹窗渲染、SDK 重初始化等固定短等待（ms）
+
 # refresh_sacc_token 返回码：token 已过期/失效，只能人工重新登录
 RET_TOKEN_INVALID = 11002
 
@@ -77,12 +83,12 @@ def select_login_region(page, server: str) -> bool:
         if 'TW' in current:
             return False
         dd.query_selector('button').click()
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(WAIT_SHORT)
         # 选项在弹层里，按站点界面文本点选（与 Sign In / Log in 按钮同为 UI 文本匹配）
-        page.click('[data-radix-popper-content-wrapper] >> :text-is("HK/MC/TW")', timeout=5000)
+        page.click('[data-radix-popper-content-wrapper] >> :text-is("HK/MC/TW")', timeout=ELEMENT_TIMEOUT)
         logger.info(f'Selected login region HK/MC/TW for server={server}')
         # 等登录 SDK 按新区域重新初始化（会重新打印 login_pop_config）
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(WAIT_SHORT)
         return True
     except RenewError:
         raise
@@ -285,20 +291,20 @@ def renew_cookie(cookie: str, account: str = '', user_agent: str = '',
                         pass
 
             page.on('console', on_console)
-            page.goto(BLA_HOME, wait_until='domcontentloaded')
-            page.wait_for_timeout(5000)
+            page.goto(BLA_HOME, wait_until='domcontentloaded', timeout=GOTO_TIMEOUT)
+            page.wait_for_timeout(WAIT_SHORT)
             try:
-                page.click(SEL_COOKIE_ACCEPT, timeout=3000)
+                page.click(SEL_COOKIE_ACCEPT, timeout=ELEMENT_TIMEOUT)
             except Exception:
                 pass
             try:
-                page.click(SEL_SIGN_IN, timeout=10000)
+                page.click(SEL_SIGN_IN, timeout=ELEMENT_TIMEOUT)
             except Exception as e:
                 logger.warning(f'Click Sign In failed: {str(e)[:100]}')
-            page.wait_for_timeout(2000)
+            page.wait_for_timeout(WAIT_SHORT)
             # 港澳台账号需在登录弹窗切换区域，SDK 配置随切换重新打印
             switched = select_login_region(page, server)
-            for _ in range(15):
+            for _ in range(20):
                 if sdk_confs and (not switched or len(sdk_confs) >= 2):
                     break
                 page.wait_for_timeout(1000)
@@ -326,7 +332,7 @@ def renew_cookie(cookie: str, account: str = '', user_agent: str = '',
                   .replace('CHANNEL_ID_PLACEHOLDER', channel_id))
 
             page.add_script_tag(url=LIPASS_SDK_URL)
-            page.wait_for_function('window.PassFactory !== undefined', timeout=15000)
+            page.wait_for_function('window.PassFactory !== undefined', timeout=SDK_LOAD_TIMEOUT)
 
             logger.info('Refreshing lipass token...')
             result = page.evaluate(js, {

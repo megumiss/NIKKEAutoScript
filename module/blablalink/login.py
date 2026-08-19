@@ -38,8 +38,11 @@ from typing import Optional
 
 from module.blablalink.renew import (
     BLA_HOME,
+    ELEMENT_TIMEOUT,
+    GOTO_TIMEOUT,
     SEL_COOKIE_ACCEPT,
     SEL_SIGN_IN,
+    WAIT_SHORT,
     _launch_browser,
     ensure_playwright,
     select_login_region,
@@ -51,6 +54,13 @@ CHECK_LOGIN_URL = 'https://api.blablalink.com/api/user/CheckLogin'
 LOGIN_CACHE_KEY = 'logined_account_cache_key'
 # 验证码截图刷新间隔（秒）
 SHOT_INTERVAL = 0.7
+# 提交后等登录结果的时长（秒）：无感验证本身可能耗时 30s+，
+# 2170 后 SDK 还要再加载交互验证码
+LOGIN_WAIT_TIMEOUT = 120
+# 滑块人机拖动阶段的默认时长（秒）
+CAPTCHA_TIMEOUT = 180
+# CheckLogin HTTP 请求超时（秒）
+HTTP_TIMEOUT = 30
 
 # 登录表单选择器（blablalink 当前页面结构，页面改版可能需要更新；
 # SEL_COOKIE_ACCEPT / SEL_SIGN_IN 与续期共用，定义在 renew.py）
@@ -104,7 +114,7 @@ def check_login_cookie(cookie: str, xcommonparams: str, user_agent: str, languag
         'user-agent': user_agent,
     }
     try:
-        resp = requests.get(CHECK_LOGIN_URL, headers=headers, timeout=15)
+        resp = requests.get(CHECK_LOGIN_URL, headers=headers, timeout=HTTP_TIMEOUT)
         data = resp.json()
     except Exception as e:
         logger.error(f'CheckLogin request failed: {e}')
@@ -159,7 +169,7 @@ class BlaLoginSession:
     """
 
     def __init__(self, account: str, password: str, user_agent: str = '',
-                 language: str = 'zh-TW', server: str = '', timeout: int = 300):
+                 language: str = 'zh-TW', server: str = '', timeout: int = CAPTCHA_TIMEOUT):
         self.account = account
         self.password = password
         self.user_agent = user_agent
@@ -336,8 +346,8 @@ class BlaLoginSession:
                 page.on('response', on_response)
                 page.on('console', on_console)
 
-                page.goto(BLA_HOME, wait_until='domcontentloaded')
-                page.wait_for_timeout(5000)
+                page.goto(BLA_HOME, wait_until='domcontentloaded', timeout=GOTO_TIMEOUT)
+                page.wait_for_timeout(WAIT_SHORT)
                 if self._cancel.is_set():
                     raise LoginCancelled
 
@@ -345,18 +355,18 @@ class BlaLoginSession:
                 self._set_state('logging_in')
                 try:
                     try:
-                        page.click(SEL_COOKIE_ACCEPT, timeout=3000)
+                        page.click(SEL_COOKIE_ACCEPT, timeout=ELEMENT_TIMEOUT)
                     except Exception:
                         pass
-                    page.click(SEL_SIGN_IN, timeout=5000)
-                    page.wait_for_timeout(2000)
+                    page.click(SEL_SIGN_IN, timeout=ELEMENT_TIMEOUT)
+                    page.wait_for_timeout(WAIT_SHORT)
                     # 港澳台账号需在登录弹窗切换区域（选不上会抛错，不会按错误的国际服继续），
                     # 切换后登录 SDK 重新初始化并重新打印 login_pop_config，on_console 覆盖为最新值
                     select_login_region(page, self.server)
-                    page.wait_for_selector(SEL_ACCOUNT, timeout=10000)
+                    page.wait_for_selector(SEL_ACCOUNT, timeout=ELEMENT_TIMEOUT)
                     page.fill(SEL_ACCOUNT, self.account)
                     page.fill(SEL_PASSWORD, self.password)
-                    page.click(SEL_SUBMIT, timeout=5000)
+                    page.click(SEL_SUBMIT, timeout=ELEMENT_TIMEOUT)
                 except LoginCancelled:
                     raise
                 except Exception as e:
@@ -364,8 +374,7 @@ class BlaLoginSession:
                 logger.info('Login form submitted')
 
                 # 等待：无感验证直接成功，或出现交互滑块
-                # 无感验证本身可能耗时 30s+，2170 后 SDK 还要再加载交互验证码，给足余量
-                deadline = time.time() + 150
+                deadline = time.time() + LOGIN_WAIT_TIMEOUT
                 box = None
                 while time.time() < deadline:
                     self._raise_if_cancelled()
@@ -392,7 +401,7 @@ class BlaLoginSession:
                             page.screenshot(path='log/bla_login_timeout.png')
                         except Exception:
                             pass
-                        raise LoginTimeout('No captcha and no login response in 150s')
+                        raise LoginTimeout(f'No captcha and no login response in {LOGIN_WAIT_TIMEOUT}s')
                     self._set_state('captcha')
                     logger.info('Captcha shown, waiting for user drag via Web UI')
                     drag = {'active': False, 'box': None}
@@ -423,12 +432,12 @@ class BlaLoginSession:
                 # 登录成功：从 localStorage 取凭证
                 logger.info('Login succeeded, reading credentials from localStorage')
                 creds = {}
-                for _ in range(10):
+                for _ in range(5):
                     self._raise_if_cancelled()
                     creds = self._read_login_cache(page)
                     if creds.get('openid') and creds.get('token'):
                         break
-                    page.wait_for_timeout(2000)
+                    page.wait_for_timeout(WAIT_SHORT)
                 openid = str(creds.get('openid', ''))
                 token = creds.get('token', '')
                 if not openid or not token:
@@ -466,7 +475,7 @@ class BlaLoginSession:
 
                 # 登录后可能弹出 Additional Information 对话框，不关掉会挡住后续操作
                 try:
-                    page.click('button:has-text("Done")', timeout=3000)
+                    page.click('button:has-text("Done")', timeout=ELEMENT_TIMEOUT)
                     logger.info('Dismissed additional information dialog')
                 except Exception:
                     pass
@@ -494,10 +503,10 @@ class BlaLoginSession:
                 openid_b64 = base64.b64encode(f'{intl_game_id}-{openid}'.encode()).decode()
                 user_url = f'https://www.blablalink.com/user?openid={openid_b64}'
                 try:
-                    page.goto(user_url, wait_until='domcontentloaded')
+                    page.goto(user_url, wait_until='domcontentloaded', timeout=GOTO_TIMEOUT)
                 except Exception as e:
                     logger.warning(f'Open profile page failed: {str(e)[:100]}')
-                for _ in range(15):
+                for _ in range(20):
                     self._raise_if_cancelled()
                     if captured['xcommonparams'] and not _xcp_empty_keys(captured['xcommonparams']) \
                             and captured['profile']:
