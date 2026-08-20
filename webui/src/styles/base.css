@@ -207,6 +207,10 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .about-panel h3::before { width:3px; height:14px; border-radius:2px; content:''; background:var(--grad-accent); }
 .about-hero { justify-content:center; }
 .about-donations { justify-content:center; }
+.about-disclaimer { margin-top:24px; padding:14px 18px; border:1px solid var(--border); border-radius:10px; background:var(--card-2); }
+.about-disclaimer h3 { margin-top:0; color:var(--yellow); }
+.about-disclaimer h3::before { background:var(--yellow); }
+.about-disclaimer p { margin:0; }
 .about-donations figure { transition:all .18s; }
 .about-donations figure:hover { border-color:var(--border-light); box-shadow:var(--shadow-hover); transform:translateY(-3px); }
 @keyframes rise { from { opacity:0; transform:translateY(6px); } }

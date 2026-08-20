@@ -1638,6 +1638,13 @@ onBeforeUnmount(() => {
             <figure><img :src="'/static/gui/donate/alipay.png'" alt="Alipay"><figcaption>Alipay (支付宝)</figcaption></figure>
             <figure><img :src="'/static/gui/donate/alipayremit.png'" alt="Alipay Remit"><figcaption>Alipay Remit (For international)</figcaption></figure>
           </div>
+          <div class="about-disclaimer">
+            <h3>⚠️ Disclaimer / 使用风险与免责声明</h3>
+            <p>
+              NKAS is an automation tool that works by screen capture and simulated input. Using such tools may violate the game's Terms of Service and could result in account penalties, including but not limited to warnings, restrictions or bans. By using NKAS you acknowledge and accept these risks; the authors assume no responsibility for any loss arising from the use of this software.<br>
+              NKAS 是一款基于截图与模拟输入的自动化工具。使用此类工具可能违反游戏用户协议，可能导致账号受到处罚（包括但不限于警告、限制或封禁）。使用 NKAS 即表示您已知晓并自行承担上述风险；因使用本软件造成的任何损失，作者概不负责。
+            </p>
+          </div>
         </article>
       </section>
     </main>
