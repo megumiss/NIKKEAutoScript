@@ -18,6 +18,10 @@ class LangMeta(type):
         "COOP_TIMELINE_TIMEOUT": {"en-US": "Times Up", "zh-CN": "时间到", "ja-JP": ""},
         # 派遣
         "FAVORITE_ITEM_NUM": {"en-US": "Owned", "zh-CN": "持有数", "ja-JP": ""},
+        # mission pass
+        "PASS_MISSION_TAB": {"en-US": "Claim Reward", "zh-CN": "领取奖励", "ja-JP": ""},
+        "PASS_REWARD_TAB": {"en-US": "Common Rewards", "zh-CN": "普通奖励", "ja-JP": ""},
+        "PASS_CHECK": {"en-US": "Purchase Pass", "zh-CN": "购买PASS", "ja-JP": ""},
         # 其他
         "CLAIM_ALL": {"en-US": "Claim All", "zh-CN": "全部领取", "ja-JP": ""},
         "CLAIM_REWARD": {"en-US": "Claim Reward", "zh-CN": "获得奖励", "ja-JP": ""},
