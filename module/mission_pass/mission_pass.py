@@ -19,8 +19,7 @@ PASS_REWARD_BUTTONS = [PASS_REWARD, PASS_REWARD_2]
 
 class MissionPass(UI):
     def receive(self, skip_first_screenshot=True):
-        click_timer = Timer(0.3)
-        # flag = False
+        
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -28,59 +27,45 @@ class MissionPass(UI):
                 self.device.screenshot()
 
             # 打开任务页面
-            if (
-                click_timer.reached()
-                and self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
-                and self.appear_then_click_any(PASS_MISSION_BUTTONS, offset=30, interval=1)
+            if self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50)) and self.appear_then_click_any(
+                PASS_MISSION_BUTTONS, offset=30, interval=1
             ):
-                click_timer.reset()
                 continue
 
             # 返回奖励页面
             if (
-                click_timer.reached()
-                and not self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
+                not self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
                 and self.appear(REWARD_RED_POINT, offset=(-25, -50, 10, 50))
                 and self.appear_then_click_any(PASS_REWARD_BUTTONS, offset=30, interval=1)
             ):
-                click_timer.reset()
                 continue
 
             # 任务全部领取
-            if (
-                click_timer.reached()
-                and self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
-                and self.appear_any(PASS_MISSION_BUTTONS, offset=30)
+            if self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50)) and self.appear_any(
+                PASS_MISSION_BUTTONS, offset=30
             ):
-                # self.device.click_minitouch(360, 1190)
                 if self.appear_text_then_click(Langs.CLAIM_ALL, threshold=0.7, interval=1):
                     self.device.sleep(1)
                 logger.info('Reward pass mission')
-                click_timer.reset()
                 continue
 
             # 升级
-            if click_timer.reached() and self.appear_then_click(RANK_UP_CHECK, offset=30, interval=1):
-                click_timer.reset()
+            if self.appear_then_click(RANK_UP_CHECK, offset=30, interval=1):
                 continue
 
             # 奖励全部领取
             if (
-                click_timer.reached()
-                and not self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
+                not self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
                 and self.appear(REWARD_RED_POINT, offset=(-25, -50, 10, 50))
                 and self.appear_any(PASS_REWARD_BUTTONS, offset=30)
             ):
-                # self.device.click_minitouch(360, 1190)
                 if self.appear_text_then_click(Langs.CLAIM_ALL, threshold=0.7, interval=1):
                     self.device.sleep(1)
                 logger.info('Reward pass reward')
-                click_timer.reset()
                 continue
 
             # 奖励领取
-            if click_timer.reached() and self.appear_then_click(REWARD, offset=30, interval=1, static=False):
-                click_timer.reset()
+            if self.appear_then_click(REWARD, offset=30, interval=1, static=False):
                 continue
 
             # 关闭
@@ -91,7 +76,6 @@ class MissionPass(UI):
             ):
                 self.device.click_minitouch(1, 1)
                 self.device.sleep(0.5)
-                click_timer.reset()
                 continue
 
             # 回到主页面
