@@ -1,0 +1,27 @@
+name: 功能建议 / Feature Request
+description: 提出新功能或改进建议 / Suggest a new feature or improvement
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先搜索已有 issue，避免重复建议。
+        Please search existing issues before suggesting to avoid duplicates.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 功能描述 / Description
+      description: 你希望增加什么功能？解决什么问题？/ What feature do you want? What problem does it solve?
+      placeholder: 例如：希望在任务全部完成后自动关机……
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: 补充说明 / Additional Context
+      description: 相关的游戏界面截图、使用场景等（可选）/ Related screenshots or use cases (optional)
+    validations:
+      required: false

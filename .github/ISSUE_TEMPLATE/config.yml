@@ -1,0 +1,17 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 常见问题 FAQ
+    url: https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions.zh-CN
+    about: 提交 issue 前请先查阅 FAQ，大多数问题已有解答
+  - name: Frequently Asked Questions
+    url: https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions
+    about: Please check the FAQ before opening an issue
+  - name: 报错自查
+    url: https://github.com/megumiss/NIKKEAutoScript/wiki/Error-Handling.zh-CN
+    about: 常见报错的排查与解决方法
+  - name: Error Handling
+    url: https://github.com/megumiss/NIKKEAutoScript/wiki/Error-Handling
+    about: Troubleshooting for common errors
+  - name: 使用文档 / Documentation
+    url: https://nkas.megumiss.top
+    about: 安装与使用说明 / Installation and usage guide

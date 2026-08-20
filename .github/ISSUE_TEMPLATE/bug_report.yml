@@ -1,0 +1,94 @@
+name: Bug 反馈 / Bug Report
+description: 反馈脚本运行中的问题 / Report a problem with the script
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请先阅读 [FAQ](https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions.zh-CN) 和 [报错自查](https://github.com/megumiss/NIKKEAutoScript/wiki/Error-Handling.zh-CN)，并搜索已有 issue，避免重复提交。
+        缺少日志和截图的反馈通常无法定位问题，请尽量填写完整。
+        **注意：脚本仅支持国际服，不支持国服。**
+
+        Before opening an issue, please read the [FAQ](https://github.com/megumiss/NIKKEAutoScript/wiki/Frequently-Asked-Questions) and [Error Handling](https://github.com/megumiss/NIKKEAutoScript/wiki/Error-Handling), and search existing issues.
+        Reports without logs or screenshots are usually impossible to diagnose.
+        **Note: only the Global server is supported.**
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述 / Description
+      description: 发生了什么？期望的行为是什么？/ What happened? What did you expect?
+      placeholder: 例如：日常任务执行到商店时卡在 XX 界面……
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: 运行方式 / Game Client
+      description: 你使用哪种方式运行游戏 / How do you run the game
+      multiple: false
+      options:
+        - 模拟器 / Emulator
+        - PC 客户端 / PC Client
+    validations:
+      required: true
+
+  - type: dropdown
+    id: latest
+    attributes:
+      label: 是否是最新源码版本 / Are you on the latest source
+      description: 请先通过更新功能或 git pull 更新到最新源码再反馈，旧版本的问题可能已被修复 / Please update to the latest source before reporting — your issue may already be fixed
+      multiple: false
+      options:
+        - 是，已更新到最新源码 / Yes, I am on the latest source
+        - 否 / No
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤 / Steps to Reproduce
+      description: 如何稳定复现该问题？勾选了哪些任务/选项？/ How to reproduce? Which tasks/options were enabled?
+      placeholder: |
+        1. 勾选任务 XX
+        2. 启动脚本
+        3. 运行到 XX 界面时卡住
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / Logs
+      description: |
+        请上传 `log/` 目录下当日的日志文件（如 `2026-08-20_nkas.txt`）和 `log/error/` 下对应的错误截图，不要只粘贴片段。
+        Please attach the full log file from `log/` and error screenshots from `log/error/` — do not paste fragments only.
+      placeholder: 拖拽日志文件和截图到此处 / Drag and drop log files and screenshots here
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 游戏画面截图 / Game Screenshots
+      description: |
+        请先停止脚本，再截取卡住/出错时游戏界面的**完整原图**（不要裁剪、不要缩放、不要只截报错弹窗），界面识别问题必须提供原图才能定位。
+        Please stop the script first, then take a **full-size original screenshot** of the game screen where it got stuck (no cropping, no scaling, no error-dialog-only shots) — UI recognition issues cannot be diagnosed without the original image.
+      placeholder: 拖拽图片到此处 / Drag and drop images here
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认 / Checklist
+      options:
+        - label: 我已查阅 FAQ 和报错自查，问题不在其中 / I have checked the FAQ and error handling docs
+          required: true
+        - label: 我已搜索现有 issue，确认没有重复 / I have searched existing issues and this is not a duplicate
+          required: true
+        - label: 我已附上完整日志文件 / I have attached the full log file
+          required: true
