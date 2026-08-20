@@ -134,8 +134,8 @@ class SoloRaid(SoloRaidChallenge):
                 continue
 
             # 结算弹窗
-            if self.appear(ENEMY_DEFEATED, offset=10) and self.appear_then_click(
-                ENEMY_DEFEATED_CONFIRM, offset=10, interval=1
+            if self.appear(ENEMY_DEFEATED, offset=200) and self.appear_then_click(
+                ENEMY_DEFEATED_CONFIRM, offset=200, interval=1
             ):
                 break
 
