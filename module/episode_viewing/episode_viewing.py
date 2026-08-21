@@ -1,5 +1,4 @@
 from module.base.timer import Timer
-from module.config.delay import next_tuesday
 from module.daemon.assets import *
 from module.episode_viewing.assets import *
 from module.logger import logger
@@ -71,4 +70,4 @@ class EpisodeViewing(UI):
         except Exception as e:
             logger.error(e)
 
-        self.config.task_delay(target=next_tuesday())
+        self.config.task_delay(schedule=True)

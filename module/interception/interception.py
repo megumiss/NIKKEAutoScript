@@ -468,7 +468,7 @@ class Interception(UI):
             self._run()
         except NoOpportunity:
             pass
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)
 
 
 def _normalize_import_path(path: str) -> str:

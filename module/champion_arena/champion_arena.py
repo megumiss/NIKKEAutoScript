@@ -172,4 +172,4 @@ class ChampionArena(UI, ArenaBase):
             self.cheer()
         except ChampionArenaIsUnavailable:
             pass
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

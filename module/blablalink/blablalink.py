@@ -11,7 +11,6 @@ import requests
 
 from module.blablalink.langs import BlaLangs
 from module.blablalink.renew import RenewError, _parse_cookie, renew_cookie
-from module.config.delay import next_month
 from module.config.utils import deep_get
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -974,13 +973,13 @@ class Blablalink(UI):
             if self.config.BlaDaily_Immediately or beijing_now.hour < 4 or beijing_now >= target_time:
                 if task == 'daily':
                     self.daily()
-                    self.config.task_delay(server_update=True)
+                    self.config.task_delay(schedule=True)
                 elif task == 'cdk':
                     self.cdk()
-                    self.config.task_delay(server_update=True)
+                    self.config.task_delay(schedule=True)
                 elif task == 'exchange':
                     self.exchange()
-                    self.config.task_delay(target=next_month())
+                    self.config.task_delay(schedule=True)
                 return
         except MissingHeader:
             logger.error('Please check all parameters settings')

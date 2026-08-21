@@ -343,4 +343,4 @@ class Conversation(UI):
                 pass
         else:
             logger.info('There are no opportunities remaining')
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

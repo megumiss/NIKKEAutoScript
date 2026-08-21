@@ -2,101 +2,74 @@ from datetime import datetime, timedelta, timezone
 
 BEIJING_TZ = timezone(timedelta(hours=8))  # 北京时区
 
-def next_tuesday() -> datetime:
+
+def _beijing_now() -> datetime:
+    return datetime.now(timezone.utc).astimezone(BEIJING_TZ)
+
+
+def _to_local_naive(beijing_time: datetime) -> datetime:
     """
-    返回北京时间下个周二4:00时，本地时区的 naive datetime（不带时区）。
-    
+    将一个北京时间(aware)转换为本地时区的 naive datetime（不带时区）。
+
     例如：
     目标是 北京时间 11-04 04:00 (UTC+8)。
     本地时区是 UTC-6。
     这个时间点在本地是 11-03 14:00 (UTC-6)。
     函数将返回 naive datetime: datetime(2025, 11, 3, 14, 0, 0)
     """
-    utc_now = datetime.now(timezone.utc)
-    beijing_now = utc_now.astimezone(BEIJING_TZ)
+    return beijing_time.astimezone(None).replace(tzinfo=None)
 
-    # 计算到下一个周二 (weekday 1) 的天数
-    days_ahead = (1 - beijing_now.weekday() + 7) % 7
-    
-    # 目标日期的 04:00（北京时间）
-    target_beijing = beijing_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=days_ahead)
 
-    # 如果计算出的时间点在当前时间之前或等于当前时间
-    # (例如：今天是周二 10:00，days_ahead=0，target_beijing 是【今天】04:00)
-    # 则需要推到下周二
-    if target_beijing <= beijing_now:
-        target_beijing += timedelta(days=7)
+def _parse_time(time_str: str) -> tuple:
+    h, m = [int(x) for x in time_str.strip().split(':')]
+    return h, m
 
-    # 1. 将北京时间点(aware)转换为本地时区(aware)
-    local_time_aware = target_beijing.astimezone(None)
-    
-    # 2. 移除时区信息，使其变为 naive 并返回
-    return local_time_aware.replace(tzinfo=None)
 
-def next_tuesday_or_friday() -> datetime:
+def next_weekday(days, time_str: str = '04:00') -> datetime:
     """
-    返回北京时间下个周二或周五 04:00 时，本地时区的 naive datetime（不带时区）。
-    根据当前时间判断选择离当前时间更近的目标日期。
+    返回北京时间下个“星期几 HH:mm”时，本地时区的 naive datetime（不带时区）。
+    多个星期几取离当前最近的一个。
+
+    Args:
+        days (str, int): 星期几，1=周一 ... 7=周日，如 '2' 或 '2, 5'
+        time_str (str): 形如 '04:00'
     """
-    utc_now = datetime.now(timezone.utc)
-    beijing_now = utc_now.astimezone(BEIJING_TZ)
+    if isinstance(days, int):
+        days = str(days)
+    weekdays = sorted({int(d) for d in str(days).replace(' ', '').split(',') if d})
+    h, m = _parse_time(time_str)
 
-    # 计算下一个周二（weekday 1）和下一个周五（weekday 4）
-    days_ahead_tuesday = (1 - beijing_now.weekday() + 7) % 7
-    days_ahead_friday = (4 - beijing_now.weekday() + 7) % 7
+    beijing_now = _beijing_now()
+    candidates = []
+    for day in weekdays:
+        # 配置里 1=周一，python weekday() 0=周一
+        days_ahead = (day - 1 - beijing_now.weekday() + 7) % 7
+        target = beijing_now.replace(hour=h, minute=m, second=0, microsecond=0) + timedelta(days=days_ahead)
+        # 计算出的时间点在过去（例如今天就是该星期但时间已过）则推到下周
+        if target <= beijing_now:
+            target += timedelta(days=7)
+        candidates.append(target)
 
-    # 计算目标日期的 04:00（北京时间）
-    target_tuesday = beijing_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=days_ahead_tuesday)
-    target_friday = beijing_now.replace(hour=4, minute=0, second=0, microsecond=0) + timedelta(days=days_ahead_friday)
+    return _to_local_naive(min(candidates))
 
-    # 如果计算出的时间点在当前时间之前或等于当前时间
-    # 则需要推到下下周
-    if target_tuesday <= beijing_now:
-        target_tuesday += timedelta(days=7)
-    if target_friday <= beijing_now:
-        target_friday += timedelta(days=7)
 
-    # 选择离当前时间更近的那个目标日期
-    if target_tuesday < target_friday:
-        target_time = target_tuesday
-    else:
-        target_time = target_friday
-
-    # 1. 将北京时间点(aware)转换为本地时区(aware)
-    local_time_aware = target_time.astimezone(None)
-    
-    # 2. 移除时区信息，使其变为 naive 并返回
-    return local_time_aware.replace(tzinfo=None)
-
-def next_month() -> datetime:
+def next_month_day(day, time_str: str = '04:00') -> datetime:
     """
-    返回下个月 1 日 04:00（北京时间）时，本地时区的 naive datetime（不带时区）。
+    返回北京时间下个“每月 N 日 HH:mm”时，本地时区的 naive datetime（不带时区）。
+    本月的该时间点已过则取下个月。
 
-    例如：
-    目标是 北京时间 11-01 04:00 (UTC+8)。
-    本地时区是 UTC-6。
-    这个时间点在本地是 10-31 14:00 (UTC-6)。
-    函数将返回 naive datetime: datetime(2025, 10, 31, 14, 0, 0)
+    Args:
+        day (str, int): 每月第几天，1-28
+        time_str (str): 形如 '04:00'
     """
-    utc_now = datetime.now(timezone.utc)
-    beijing_now = utc_now.astimezone(BEIJING_TZ)
+    day = int(day)
+    h, m = _parse_time(time_str)
 
-    next_month_val = beijing_now.month % 12 + 1
-    next_year = beijing_now.year + 1 if next_month_val == 1 else beijing_now.year
+    beijing_now = _beijing_now()
+    target = beijing_now.replace(day=day, hour=h, minute=m, second=0, microsecond=0)
+    if target <= beijing_now:
+        next_month_val = beijing_now.month % 12 + 1
+        next_year = beijing_now.year + 1 if next_month_val == 1 else beijing_now.year
+        target = target.replace(year=next_year, month=next_month_val)
 
-    # 下个月 1 日 04:00（北京时间）
-    target_beijing = beijing_now.replace(
-        year=next_year,
-        month=next_month_val,
-        day=1,
-        hour=4,
-        minute=0,
-        second=0,
-        microsecond=0,
-    )
-
-    # 1. 将北京时间点(aware)转换为本地时区(aware)
-    local_time_aware = target_beijing.astimezone(None)
-    
-    # 2. 移除时区信息，使其变为 naive 并返回
-    return local_time_aware.replace(tzinfo=None)
+    return _to_local_naive(target)

@@ -356,4 +356,4 @@ class DailyRecruit(UI):
                 self.social_point_recruit()
             except NotEnoughSocialPoint:
                 pass
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

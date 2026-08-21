@@ -286,7 +286,7 @@ class SimulationRoom(UI):
         except OperationFailed:
             logger.warning('failed to overcome the current battle, will skip simulation task')
             self.handle_failed()
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)
 
     def handle_failed(self, skip_first_screenshot=True):
         timeout = Timer(10).start()

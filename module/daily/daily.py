@@ -279,4 +279,4 @@ class Daily(UI):
         self.ui_ensure(page_daily)
         # 每日任务结算
         self.receive()
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

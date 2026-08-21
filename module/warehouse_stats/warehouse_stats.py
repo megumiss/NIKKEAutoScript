@@ -561,7 +561,7 @@ class WarehouseStats(UI):
         except WarehouseStatsScanError:
             logger.error('WarehouseStats Scan failed.')
 
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)
 
     @staticmethod
     def _to_int(value, default: int = 0) -> int:

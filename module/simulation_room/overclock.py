@@ -554,4 +554,4 @@ class Overclock(UI):
         except OperationAlreadyDone:
             pass
 
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

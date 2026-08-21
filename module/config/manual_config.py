@@ -18,6 +18,12 @@ class ManualConfig:
 
     GENERAL_SHOP_PRIORITY = """GRATIS"""
 
+    # 执行时间管理页（module/webui/api/routes_schedule.py）
+    # 不允许切换周期的任务：Restart/Notify 是系统任务，SpecialArenaWatch 是固定间隔轮询
+    SCHEDULE_LOCKED_TASKS = {
+        'Restart', 'Notify', 'SpecialArenaWatch',
+    }
+
     ARENA_SHOP_PRIORITY = """"""
 
     GENERAL_SHOP_PRODUCT = {"GRATIS": 1, "CORE_DUST_CASE": 1, "ORNAMENT": 1}

@@ -52,6 +52,7 @@ function openField(task: any, field: any) {
     </div>
     <div class="rail-list">
       <button class="rail-item" :class="{ active: selectedPage === 'overview' }" @click="router.push(`/i/${selectedName}/overview`)">📈 {{ t('任务总览') }}</button>
+      <button class="rail-item" :class="{ active: selectedPage === 'schedule' }" @click="router.push(`/i/${selectedName}/schedule`)">🕒 {{ t('执行时间') }}</button>
       <template v-if="schemaReady" v-for="menu in visibleMenus" :key="menu.key">
         <button class="rail-group" :class="{ expanded: !railCollapsed[menu.key] || taskFilter }" @click="toggleRail(menu)">
           <span class="chev">›</span><span class="sicon">{{ menu.icon || '•' }}</span>{{ menu.name }}

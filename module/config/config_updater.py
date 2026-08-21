@@ -146,12 +146,10 @@ class ConfigGenerator:
                 print(f'`{".".join(path)}` is not a existing argument')
                 return False
             # Check type
-            # But allow `Interval` to be different
             old_value = old.get('value', None) if isinstance(old, dict) else old
             value = old.get('value', None) if isinstance(value, dict) else value
             if type(value) != type(old_value) \
-                    and old_value is not None \
-                    and path[2] not in ['SuccessInterval', 'FailureInterval']:
+                    and old_value is not None:
                 print(
                     f'`{value}` ({type(value)}) and `{".".join(path)}` ({type(old_value)}) are in different types')
                 return False

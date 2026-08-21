@@ -70,7 +70,8 @@ async def schema(request: Request):
         for group, fields in groups.items():
             output_fields = []
             for arg, spec in fields.items():
-                if spec.get('display') == 'hide':
+                # hide_keep: 不在任务页显示，但保留用户已存值（config_update 不重置）
+                if spec.get('display') in ('hide', 'hide_keep'):
                     continue
                 # Storage is a script-managed record dump, not a user setting;
                 # it must not show up as a 任务状态 group on the task page.

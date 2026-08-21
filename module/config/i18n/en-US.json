@@ -270,17 +270,32 @@
       "name": "Internal Task Name",
       "help": ""
     },
-    "SuccessInterval": {
-      "name": "Delay next run by X minutes after success",
-      "help": ""
-    },
-    "FailureInterval": {
-      "name": "Delay next run by X minutes after failure",
-      "help": ""
+    "Cadence": {
+      "name": "Run Cadence",
+      "help": "Daily/Weekly/Monthly, managed on the schedule page",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
     },
     "ServerUpdate": {
-      "name": "Server Refresh Time",
-      "help": ""
+      "name": "Daily Run Time",
+      "help": "Format HH:mm, multiple times separated by commas, e.g. 04:00, 20:00. Server time (UTC+8); after each run the task is delayed to the next time point"
+    },
+    "WeeklyDay": {
+      "name": "Weekly Run Day",
+      "help": "1=Monday, 7=Sunday, multiple days separated by commas, e.g. 2, 5"
+    },
+    "WeeklyTime": {
+      "name": "Weekly Run Time",
+      "help": "Format HH:mm, server time (UTC+8)"
+    },
+    "MonthlyDay": {
+      "name": "Monthly Run Day",
+      "help": "Day of month, 1-28"
+    },
+    "MonthlyTime": {
+      "name": "Monthly Run Time",
+      "help": "Format HH:mm, server time (UTC+8)"
     }
   },
   "Client": {

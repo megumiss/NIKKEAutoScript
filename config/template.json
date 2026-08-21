@@ -81,9 +81,12 @@
       "Enable": true,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Notify",
-      "SuccessInterval": 0,
-      "FailureInterval": 0,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -94,9 +97,12 @@
       "Enable": true,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Restart",
-      "SuccessInterval": 0,
-      "FailureInterval": 0,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -107,9 +113,12 @@
       "Enable": true,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Reward",
-      "SuccessInterval": "720-720",
-      "FailureInterval": "720-720",
-      "ServerUpdate": "04:00, 20:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Reward": {
       "CollectSocialPoint": true,
@@ -125,9 +134,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Destruction",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -138,9 +150,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Mailbox",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -151,9 +166,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "DailyRecruit",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "DailyRecruit": {
       "EventFreeRecruit": true,
@@ -171,9 +189,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Daily",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Daily": {
       "SendGift": false,
@@ -189,9 +210,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "MissionPass",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00, 20:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -202,9 +226,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Conversation",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Conversation": {
       "OnlyFavourite": false,
@@ -219,9 +246,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Shop",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "GeneralShop": {
       "enable": true,
@@ -242,9 +272,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "RubbishShop",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": "2, 5",
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "RubbishShop": {
       "priority": "GEM > CORE_DUST_CASE",
@@ -259,9 +292,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "EpisodeViewing",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -272,9 +308,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Commission",
-      "SuccessInterval": "720-720",
-      "FailureInterval": "720-720",
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "CollectionItems": {
       "Enable": false,
@@ -289,9 +328,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Liberation",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00, 20:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -302,9 +344,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Synchro",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Synchro": {
       "UseBox": true
@@ -318,9 +363,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Recycling",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -331,9 +379,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "OutpostStory",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -344,9 +395,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "SimulationRoom",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "SimulationRoom": {
       "QuickSimulation": true,
@@ -366,9 +420,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Overclock",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Overclock": {
       "SkipRatioCheck": false,
@@ -384,9 +441,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "TribeTower",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Overcome": {
       "OnlyToCompleteDailyMission": false
@@ -400,9 +460,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Interception",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Interception": {
       "Boss": "Kraken",
@@ -436,9 +499,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "RookieArena",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "RookieArena": {
       "Times": 5
@@ -457,9 +523,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "SpecialArena",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "SpecialArena": {
       "Times": 2
@@ -478,9 +547,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "SpecialArenaWatch",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "SpecialArenaWatch": {
       "CheckInterval": 10,
@@ -495,9 +567,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "ChampionArena",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "CheerStrategy": {
       "Enable": false,
@@ -512,9 +587,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Coop",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00, 16:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Coop": {
       "MatchDifficulty": "Normal"
@@ -528,9 +606,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "SoloRaid",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "SoloRaid": {
       "Challenge": false
@@ -544,9 +625,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "UnionRaid",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -557,9 +641,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Event",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "EventInfo": {
       "Event": "",
@@ -593,9 +680,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "Event2",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "EventInfo": {
       "Event": "",
@@ -629,9 +719,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "SurfaceDaily",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "SurfaceDaily": {
       "AutoPlace": true,
@@ -659,9 +752,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "BlaDaily",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "BlaDaily": {
       "Immediately": false,
@@ -676,9 +772,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "BlaCDK",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00, 16:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "CDK": {
       "Extra": false,
@@ -693,9 +792,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "BlaExchange",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "monthly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "BlaExchange": {
       "Priority": "Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30"
@@ -709,9 +811,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "StepUpGift",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -722,9 +827,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "DailyGift",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -735,9 +843,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "WeeklyGift",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -748,9 +859,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "MonthlyGift",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "monthly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "Storage": {
       "Storage": {}
@@ -761,9 +875,12 @@
       "Enable": false,
       "NextRun": "1989-12-27 00:00:00",
       "Command": "WarehouseStats",
-      "SuccessInterval": 0,
-      "FailureInterval": 120,
-      "ServerUpdate": "04:00"
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
     },
     "WarehouseStats": {
       "ItemMapPath": "./config/warehouse_items.yaml",

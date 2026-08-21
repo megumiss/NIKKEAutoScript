@@ -256,4 +256,4 @@ class RookieArena(UI, ArenaBase):
         except RookieArenaTimesReached:
             logger.warning('Reach the number of battle times')
             pass
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

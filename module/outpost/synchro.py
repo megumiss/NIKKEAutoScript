@@ -1,5 +1,4 @@
 from module.base.timer import Timer
-from module.config.delay import next_tuesday
 from module.logger import logger
 from module.outpost.assets import *
 from module.ui.page import page_synchro
@@ -83,4 +82,4 @@ class Synchro(UI):
         except NoEnoughItems:
             logger.info('No enough items left, upgrade done')
 
-        self.config.task_delay(target=next_tuesday())
+        self.config.task_delay(schedule=True)

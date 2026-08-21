@@ -270,17 +270,32 @@
       "name": "内部任务名称",
       "help": ""
     },
-    "SuccessInterval": {
-      "name": "运行成功后，推迟下一次运行 X 分钟",
-      "help": ""
-    },
-    "FailureInterval": {
-      "name": "运行失败后，推迟下一次运行 X 分钟",
-      "help": ""
+    "Cadence": {
+      "name": "执行周期",
+      "help": "每日/每周/每月，在执行时间管理页修改",
+      "daily": "每日",
+      "weekly": "每周",
+      "monthly": "每月"
     },
     "ServerUpdate": {
-      "name": "服务器刷新时间",
-      "help": ""
+      "name": "每日执行时间",
+      "help": "格式 HH:mm，多个时间用英文逗号分隔，如 04:00, 20:00。按服务器时间（UTC+8）执行，任务每次跑完后自动推迟到下一个时间点"
+    },
+    "WeeklyDay": {
+      "name": "每周执行日",
+      "help": "1=周一，7=周日，多个用英文逗号分隔，如 2, 5"
+    },
+    "WeeklyTime": {
+      "name": "每周执行时间",
+      "help": "格式 HH:mm，服务器时间（UTC+8）"
+    },
+    "MonthlyDay": {
+      "name": "每月执行日",
+      "help": "每月第几天，1-28"
+    },
+    "MonthlyTime": {
+      "name": "每月执行时间",
+      "help": "格式 HH:mm，服务器时间（UTC+8）"
     }
   },
   "Client": {
