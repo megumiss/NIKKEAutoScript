@@ -302,6 +302,9 @@ class ConfigGenerator:
             if value not in ['setting', 'tool']:
                 value = 'setting'
             deep_set(data, keys=[task_group, 'page'], value=value)
+            value = deep_get(self.task, keys=[task_group, 'icon'])
+            if isinstance(value, str) and value:
+                deep_set(data, keys=[task_group, 'icon'], value=value)
             tasks = deep_get(self.task, keys=[task_group, 'tasks'], default={})
             tasks = list(tasks.keys())
             deep_set(data, keys=[task_group, 'tasks'], value=tasks)
