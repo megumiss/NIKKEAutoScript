@@ -329,8 +329,7 @@
         "option": [
           true,
           false
-        ],
-        "display": "disabled"
+        ]
       },
       "NextRun": {
         "type": "datetime",
@@ -355,7 +354,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -426,7 +425,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -496,7 +495,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -580,7 +579,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -650,7 +649,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -720,7 +719,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -817,7 +816,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -901,7 +900,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -971,7 +970,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -1051,7 +1050,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -1170,13 +1169,13 @@
       "WeeklyDay": {
         "type": "input",
         "value": "2, 5",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^[1-7](\\s*,\\s*[1-7])*$"
       },
       "WeeklyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       },
       "MonthlyDay": {
@@ -1270,13 +1269,13 @@
       "WeeklyDay": {
         "type": "input",
         "value": "2",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^[1-7](\\s*,\\s*[1-7])*$"
       },
       "WeeklyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       },
       "MonthlyDay": {
@@ -1334,7 +1333,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -1437,7 +1436,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -1513,13 +1512,13 @@
       "WeeklyDay": {
         "type": "input",
         "value": "2",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^[1-7](\\s*,\\s*[1-7])*$"
       },
       "WeeklyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       },
       "MonthlyDay": {
@@ -1590,13 +1589,13 @@
       "WeeklyDay": {
         "type": "input",
         "value": "2",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^[1-7](\\s*,\\s*[1-7])*$"
       },
       "WeeklyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       },
       "MonthlyDay": {
@@ -1660,13 +1659,13 @@
       "WeeklyDay": {
         "type": "input",
         "value": "2",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^[1-7](\\s*,\\s*[1-7])*$"
       },
       "WeeklyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       },
       "MonthlyDay": {
@@ -1724,7 +1723,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -1835,7 +1834,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -1920,7 +1919,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -1996,7 +1995,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -2247,7 +2246,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -2350,7 +2349,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -2450,7 +2449,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -2531,7 +2530,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -2616,7 +2615,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -2695,7 +2694,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -2771,7 +2770,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -2841,7 +2840,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -3001,7 +3000,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -3161,7 +3160,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -3283,7 +3282,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -3364,7 +3363,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -3464,13 +3463,13 @@
       "MonthlyDay": {
         "type": "input",
         "value": "1",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([1-9]|1\\d|2[0-8])$"
       },
       "MonthlyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
@@ -3547,13 +3546,13 @@
       "WeeklyDay": {
         "type": "input",
         "value": "2",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^[1-7](\\s*,\\s*[1-7])*$"
       },
       "WeeklyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       },
       "MonthlyDay": {
@@ -3611,7 +3610,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {
@@ -3687,13 +3686,13 @@
       "WeeklyDay": {
         "type": "input",
         "value": "2",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^[1-7](\\s*,\\s*[1-7])*$"
       },
       "WeeklyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       },
       "MonthlyDay": {
@@ -3769,13 +3768,13 @@
       "MonthlyDay": {
         "type": "input",
         "value": "1",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([1-9]|1\\d|2[0-8])$"
       },
       "MonthlyTime": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
@@ -3821,7 +3820,7 @@
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "show",
+        "display": "hide_keep",
         "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
       },
       "WeeklyDay": {

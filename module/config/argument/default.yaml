@@ -108,10 +108,44 @@ UnionRaid:
   Scheduler:
     Enable: false
 
+# ==================== 周/月任务默认周期 ====================
+
 Synchro:
   Scheduler:
     Enable: false
+    Cadence: weekly
 
 Recycling:
   Scheduler:
     Enable: false
+    Cadence: weekly
+
+OutpostStory:
+  Scheduler:
+    Cadence: weekly
+
+EpisodeViewing:
+  Scheduler:
+    Cadence: weekly
+
+WeeklyGift:
+  Scheduler:
+    Cadence: weekly
+
+StepUpGift:
+  Scheduler:
+    Cadence: weekly
+
+RubbishShop:
+  Scheduler:
+    Cadence: weekly
+    # 周二+周五双档，统一到单天会改变既有行为
+    WeeklyDay: '2, 5'
+
+MonthlyGift:
+  Scheduler:
+    Cadence: monthly
+
+BlaExchange:
+  Scheduler:
+    Cadence: monthly
