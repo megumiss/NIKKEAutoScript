@@ -795,14 +795,9 @@ class NikkeAutoScript:
             if success:
                 del_cached_property(self, 'config')
                 continue
-            # elif self.config.Error_HandleError:
             else:
-                # self.config.task_delay(success=False)
                 del_cached_property(self, 'config')
-                # self.checker.check_now()
                 continue
-            # else:
-            #     break
 
 
 if __name__ == '__main__':

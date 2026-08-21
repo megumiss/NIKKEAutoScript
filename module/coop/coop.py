@@ -295,4 +295,4 @@ class Coop(UI):
         except NoOpportunityRemain:
             pass
 
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

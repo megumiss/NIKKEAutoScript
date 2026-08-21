@@ -8,6 +8,7 @@ from module.base.filter import Filter
 from module.base.utils import ensure_time
 from module.config.config_generated import GeneratedConfig
 from module.config.config_updater import ConfigUpdater
+from module.config.delay import next_month_day, next_weekday
 from module.config.manual_config import ManualConfig
 from module.config.utils import deep_get, DEFAULT_TIME, deep_set, filepath_config, path_to_arg, dict_to_kv, \
     get_server_next_update, nearest_future
@@ -280,11 +281,9 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                 {
                     'Enable': True, 
                     'NextRun': datetime.datetime(1989, 12, 27, 0, 0),
-                    'Command': 'Restart',         
-                    'SuccessInterval': 0,
-                    'FailureInterval': 0, 
+                    'Command': 'Restart',
                     'ServerUpdate': '04:00'
-                 },  
+                 },
             'Storage': 
                 {
                     'Storage': {}
@@ -345,17 +344,10 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         """
         return deep_get(self.data, keys=keys, default=default)
 
-    def task_delay(self, success=None, server_update=None, target=None, minute=None, task=None):
+    def task_delay(self, server_update=None, target=None, minute=None, schedule=None, task=None):
         def ensure_delta(delay):
             return timedelta(seconds=int(ensure_time(delay, precision=3) * 60))
         run = []
-        if success is not None:
-            interval = (
-                self.Scheduler_SuccessInterval
-                if success
-                else self.Scheduler_FailureInterval
-            )
-            run.append(datetime.now() + ensure_delta(interval))
         """
             服务器更新时
         """
@@ -363,6 +355,17 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             if server_update is True:
                 server_update = self.Scheduler_ServerUpdate
             run.append(get_server_next_update(server_update))
+        """
+            按任务配置的周期（Scheduler.Cadence：每日/每周/每月）推迟到下一个时间点
+        """
+        if schedule is not None:
+            cadence = self.Scheduler_Cadence
+            if cadence == 'weekly':
+                run.append(next_weekday(self.Scheduler_WeeklyDay, self.Scheduler_WeeklyTime))
+            elif cadence == 'monthly':
+                run.append(next_month_day(self.Scheduler_MonthlyDay, self.Scheduler_MonthlyTime))
+            else:
+                run.append(get_server_next_update(self.Scheduler_ServerUpdate))
         if target is not None:
             target = [target] if not isinstance(target, list) else target
             target = nearest_future(target)
@@ -373,8 +376,8 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
             run = min(run).replace(microsecond=0)
             kv = dict_to_kv(
                 {
-                    "success": success,
                     "server_update": server_update,
+                    "schedule": schedule,
                     "target": target,
                     "minute": minute,
                 },

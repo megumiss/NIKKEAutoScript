@@ -450,4 +450,4 @@ class Shop(ShopBase):
             pass
         del_cached_property(self, 'general_shop_priority')
         del_cached_property(self, 'arena_shop_priority')
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

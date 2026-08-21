@@ -86,4 +86,4 @@ class Liberation(UI):
     def run(self):
         self.ui_ensure(page_team, skip_first_screenshot=True)
         self._run()
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

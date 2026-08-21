@@ -589,4 +589,4 @@ class SurfaceDaily(UI):
         self.ui_ensure(page_surface)
         self._run()
         self.close_mission_board()
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

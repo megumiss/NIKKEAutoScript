@@ -243,4 +243,4 @@ class Reward(UI):
             self.receive_ranking()
 
         if not internal_call:
-            self.config.task_delay(server_update=True)
+            self.config.task_delay(schedule=True)

@@ -10,7 +10,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: App },
     { path: '/i/:name', redirect: to => `/i/${to.params.name}/overview` },
-    { path: '/i/:name/:page(overview|task|tool)/:task?', component: App },
+    { path: '/i/:name/:page(overview|task|tool|schedule)/:task?', component: App },
     { path: '/manage', component: App },
     { path: '/settings', component: App },
     { path: '/deploy', component: App },

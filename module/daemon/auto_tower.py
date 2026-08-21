@@ -153,4 +153,4 @@ class AutoTower(UI):
     def run(self):
         self.ui_ensure(page_tribe_tower)
         self._run()
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

@@ -1,6 +1,5 @@
 from module.base.timer import Timer
 from module.base.utils import point2str
-from module.config.delay import next_month, next_tuesday
 from module.gift.assets import *
 from module.handler.assets import ANNOUNCEMENT
 from module.logger import logger
@@ -241,22 +240,22 @@ class GiftBase(UI):
 class DailyGift(GiftBase):
     def run(self):
         self._run(DAILY, DAILY_CHECK)
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)
 
 
 class WeeklyGift(GiftBase):
     def run(self):
         self._run(WEEKLY, WEEKLY_CHECK)
-        self.config.task_delay(target=next_tuesday())
+        self.config.task_delay(schedule=True)
 
 
 class MonthlyGift(GiftBase):
     def run(self):
         self._run(MONTHLY, MONTHLY_CHECK)
-        self.config.task_delay(target=next_month())
+        self.config.task_delay(schedule=True)
 
 
 class StepUpGift(GiftBase):
     def run(self):
         self._run(STEPUP, STEPUP_CHECK)
-        self.config.task_delay(target=next_tuesday())
+        self.config.task_delay(schedule=True)

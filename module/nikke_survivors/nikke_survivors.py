@@ -54,4 +54,4 @@ class NikkeSurvivors(UI):
                 click_timer.reset()
                 continue
 
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

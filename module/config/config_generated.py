@@ -13,9 +13,12 @@ class GeneratedConfig:
     Scheduler_Enable = False  # True, False
     Scheduler_NextRun = datetime.datetime(1989, 12, 27, 0, 0)
     Scheduler_Command = 'NKAS'
-    Scheduler_SuccessInterval = 0
-    Scheduler_FailureInterval = 120
+    Scheduler_Cadence = 'daily'  # daily, weekly, monthly
     Scheduler_ServerUpdate = '04:00'
+    Scheduler_WeeklyDay = 2
+    Scheduler_WeeklyTime = '04:00'
+    Scheduler_MonthlyDay = 1
+    Scheduler_MonthlyTime = '04:00'
 
     # Group `Client`
     Client_Platform = 'win'  # adb, win

@@ -38,4 +38,4 @@ class Mailbox(UI):
             self.check()
         else:
             logger.info('The mailbox has no letters that need to be checked.')
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

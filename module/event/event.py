@@ -138,4 +138,4 @@ class Event(
         # 若协同未开启则调整延迟时间
         if self.config.Event_Coop and coop_reschedule:
             self.config.Scheduler_ServerUpdate = '04:00, 16:00'
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

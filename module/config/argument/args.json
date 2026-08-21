@@ -342,20 +342,45 @@
         "value": "Notify",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -388,20 +413,45 @@
         "value": "Restart",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -433,20 +483,45 @@
         "value": "Reward",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": "720-720",
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": "720-720",
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00, 20:00",
-        "display": "hide"
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Reward": {
@@ -492,20 +567,45 @@
         "value": "Destruction",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -537,20 +637,45 @@
         "value": "Mailbox",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -582,20 +707,45 @@
         "value": "DailyRecruit",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "DailyRecruit": {
@@ -654,20 +804,45 @@
         "value": "Daily",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Daily": {
@@ -713,20 +888,45 @@
         "value": "MissionPass",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00, 20:00",
-        "display": "hide"
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -758,20 +958,45 @@
         "value": "Conversation",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Conversation": {
@@ -813,20 +1038,45 @@
         "value": "Shop",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "GeneralShop": {
@@ -901,20 +1151,45 @@
         "value": "RubbishShop",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "weekly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2, 5",
+        "display": "show",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "RubbishShop": {
@@ -976,20 +1251,45 @@
         "value": "EpisodeViewing",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "weekly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "show",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -1021,20 +1321,45 @@
         "value": "Commission",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": "720-720",
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": "720-720",
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "CollectionItems": {
@@ -1099,20 +1424,45 @@
         "value": "Liberation",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00, 20:00",
-        "display": "hide"
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -1144,20 +1494,45 @@
         "value": "Synchro",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "weekly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "show",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Synchro": {
@@ -1196,20 +1571,45 @@
         "value": "Recycling",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "weekly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "show",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -1241,20 +1641,45 @@
         "value": "OutpostStory",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "weekly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "show",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -1286,20 +1711,45 @@
         "value": "SimulationRoom",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "SimulationRoom": {
@@ -1372,20 +1822,45 @@
         "value": "Overclock",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Overclock": {
@@ -1432,20 +1907,45 @@
         "value": "TribeTower",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Overcome": {
@@ -1483,20 +1983,45 @@
         "value": "Interception",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Interception": {
@@ -1709,20 +2234,45 @@
         "value": "RookieArena",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "RookieArena": {
@@ -1787,20 +2337,45 @@
         "value": "SpecialArena",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "SpecialArena": {
@@ -1862,20 +2437,45 @@
         "value": "SpecialArenaWatch",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "SpecialArenaWatch": {
@@ -1918,20 +2518,45 @@
         "value": "ChampionArena",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "CheerStrategy": {
@@ -1978,20 +2603,45 @@
         "value": "Coop",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00, 16:00",
-        "display": "hide"
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Coop": {
@@ -2032,20 +2682,45 @@
         "value": "SoloRaid",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "SoloRaid": {
@@ -2083,20 +2758,45 @@
         "value": "UnionRaid",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -2128,20 +2828,45 @@
         "value": "Event",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "EventInfo": {
@@ -2263,20 +2988,45 @@
         "value": "Event2",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "EventInfo": {
@@ -2398,20 +3148,45 @@
         "value": "SurfaceDaily",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "SurfaceDaily": {
@@ -2495,20 +3270,45 @@
         "value": "BlaDaily",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "BlaDaily": {
@@ -2551,20 +3351,45 @@
         "value": "BlaCDK",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
-        "value": "04:00, 16:00",
-        "display": "hide"
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "CDK": {
@@ -2608,20 +3433,45 @@
         "value": "BlaExchange",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "monthly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "show",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "BlaExchange": {
@@ -2678,20 +3528,45 @@
         "value": "StepUpGift",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "weekly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "show",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -2723,20 +3598,45 @@
         "value": "DailyGift",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -2768,20 +3668,45 @@
         "value": "WeeklyGift",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "weekly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "show",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -2813,20 +3738,45 @@
         "value": "MonthlyGift",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "monthly",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "show",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "Storage": {
@@ -2858,20 +3808,45 @@
         "value": "WarehouseStats",
         "display": "hide"
       },
-      "SuccessInterval": {
-        "type": "input",
-        "value": 0,
-        "display": "hide"
-      },
-      "FailureInterval": {
-        "type": "input",
-        "value": 120,
-        "display": "hide"
+      "Cadence": {
+        "type": "select",
+        "value": "daily",
+        "option": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "display": "hide_keep"
       },
       "ServerUpdate": {
         "type": "input",
         "value": "04:00",
-        "display": "hide"
+        "display": "show",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d(\\s*,\\s*([01]\\d|2[0-3]):[0-5]\\d)*$"
+      },
+      "WeeklyDay": {
+        "type": "input",
+        "value": "2",
+        "display": "hide_keep",
+        "validate": "^[1-7](\\s*,\\s*[1-7])*$"
+      },
+      "WeeklyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
+      },
+      "MonthlyDay": {
+        "type": "input",
+        "value": "1",
+        "display": "hide_keep",
+        "validate": "^([1-9]|1\\d|2[0-8])$"
+      },
+      "MonthlyTime": {
+        "type": "input",
+        "value": "04:00",
+        "display": "hide_keep",
+        "validate": "^([01]\\d|2[0-3]):[0-5]\\d$"
       }
     },
     "WarehouseStats": {

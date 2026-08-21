@@ -5,18 +5,12 @@ Restart:
     Enable:
       value: true
       display: disabled
-    SuccessInterval: 0
-    FailureInterval: 0
-    ServerUpdate: 04:00
 
 Notify:
   Scheduler:
     Enable:
       value: true
       display: disabled
-    SuccessInterval: 0
-    FailureInterval: 0
-    ServerUpdate: 04:00
 
 # ==================== Reward ====================
 
@@ -25,27 +19,74 @@ Reward:
     Enable:
       value: true
       type: lock
-    SuccessInterval: 720-720
-    FailureInterval: 720-720
-    ServerUpdate: 04:00, 20:00
 
-Commission:
-  Scheduler:
-    SuccessInterval: 720-720
-    FailureInterval: 720-720
+# ==================== 周常任务 ====================
+# 默认周期 weekly；按周期裁剪任务页字段：显示每周执行日/时间；
+# ServerUpdate 用 hide_keep 隐藏但保留用户值（周期被切成 daily 时仍生效）
 
-BlaCDK:
+Synchro:
   Scheduler:
-    ServerUpdate: 04:00, 16:00
+    Cadence: { value: weekly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    WeeklyDay: { display: show }
+    WeeklyTime: { display: show }
 
-MissionPass:
+Recycling:
   Scheduler:
-    ServerUpdate: 04:00, 20:00
+    Cadence: { value: weekly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    WeeklyDay: { display: show }
+    WeeklyTime: { display: show }
 
-Liberation:
+OutpostStory:
   Scheduler:
-    ServerUpdate: 04:00, 20:00
+    Cadence: { value: weekly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    WeeklyDay: { display: show }
+    WeeklyTime: { display: show }
 
-Coop:
+EpisodeViewing:
   Scheduler:
-    ServerUpdate: 04:00, 16:00
+    Cadence: { value: weekly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    WeeklyDay: { display: show }
+    WeeklyTime: { display: show }
+
+WeeklyGift:
+  Scheduler:
+    Cadence: { value: weekly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    WeeklyDay: { display: show }
+    WeeklyTime: { display: show }
+
+StepUpGift:
+  Scheduler:
+    Cadence: { value: weekly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    WeeklyDay: { display: show }
+    WeeklyTime: { display: show }
+
+RubbishShop:
+  Scheduler:
+    Cadence: { value: weekly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    WeeklyDay:
+      value: '2, 5'
+      display: show
+    WeeklyTime: { display: show }
+
+# ==================== 月常任务 ====================
+
+MonthlyGift:
+  Scheduler:
+    Cadence: { value: monthly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    MonthlyDay: { display: show }
+    MonthlyTime: { display: show }
+
+BlaExchange:
+  Scheduler:
+    Cadence: { value: monthly, display: hide_keep }
+    ServerUpdate: { display: hide_keep }
+    MonthlyDay: { display: show }
+    MonthlyTime: { display: show }

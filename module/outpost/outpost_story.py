@@ -1,4 +1,3 @@
-from module.config.delay import next_tuesday
 from module.handler.assets import REWARD
 from module.logger import logger
 from module.outpost.assets import *
@@ -101,4 +100,4 @@ class OutpostStory(UI):
         except NoTimesRemaining:
             logger.warning('No times remaining for story')
 
-        self.config.task_delay(target=next_tuesday())
+        self.config.task_delay(schedule=True)

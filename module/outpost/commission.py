@@ -311,4 +311,4 @@ class Commission(UI):
         except NoOpportunity:
             logger.warning('Commission running or allready done')
 
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)

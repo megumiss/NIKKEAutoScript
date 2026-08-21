@@ -270,17 +270,32 @@
       "name": "内部タスク名",
       "help": ""
     },
-    "SuccessInterval": {
-      "name": "実行成功後、次回実行をX分遅延する",
-      "help": ""
-    },
-    "FailureInterval": {
-      "name": "実行失敗後、次回実行をX分遅延する",
-      "help": ""
+    "Cadence": {
+      "name": "実行周期",
+      "help": "毎日/毎週/毎月、スケジュール管理ページで変更",
+      "daily": "毎日",
+      "weekly": "毎週",
+      "monthly": "毎月"
     },
     "ServerUpdate": {
-      "name": "サーバー更新時間",
-      "help": ""
+      "name": "毎日実行時刻",
+      "help": "HH:mm 形式、複数はカンマ区切り（例: 04:00, 20:00）。サーバー時間（UTC+8）、実行後に次の時刻へ自動延期"
+    },
+    "WeeklyDay": {
+      "name": "毎週実行曜日",
+      "help": "1=月曜、7=日曜。複数はカンマ区切り（例: 2, 5）"
+    },
+    "WeeklyTime": {
+      "name": "毎週実行時刻",
+      "help": "HH:mm 形式、サーバー時間（UTC+8）"
+    },
+    "MonthlyDay": {
+      "name": "毎月実行日",
+      "help": "毎月の日付、1-28"
+    },
+    "MonthlyTime": {
+      "name": "毎月実行時刻",
+      "help": "HH:mm 形式、サーバー時間（UTC+8）"
     }
   },
   "Client": {

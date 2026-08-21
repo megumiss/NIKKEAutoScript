@@ -221,4 +221,4 @@ class MissionPass(UI):
                 logger.info('ALL MISSION PASS DONE')
                 break
 
-        self.config.task_delay(server_update=True)
+        self.config.task_delay(schedule=True)
