@@ -2,6 +2,7 @@
   "NKAS": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "⚙️",
     "tasks": [
       "NKAS",
       "Emulator",
@@ -13,6 +14,7 @@
   "Reward": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "🎁",
     "tasks": [
       "Reward",
       "Destruction",
@@ -22,6 +24,7 @@
   "Daily": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "📅",
     "tasks": [
       "DailyRecruit",
       "Daily",
@@ -35,6 +38,7 @@
   "Outpost": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "🏢",
     "tasks": [
       "Commission",
       "Liberation",
@@ -46,6 +50,7 @@
   "Ark": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "🏛️",
     "tasks": [
       "SimulationRoom",
       "Overclock",
@@ -60,6 +65,7 @@
   "LimitedTimeEvent": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "⏱️",
     "tasks": [
       "Coop",
       "SoloRaid",
@@ -69,6 +75,7 @@
   "StoryEvent": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "📖",
     "tasks": [
       "Event",
       "Event2"
@@ -77,6 +84,7 @@
   "Surface": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "🗺️",
     "tasks": [
       "SurfaceDaily"
     ]
@@ -84,6 +92,7 @@
   "Blablalink": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "💬",
     "tasks": [
       "BlaAuth",
       "BlaDaily",
@@ -94,6 +103,7 @@
   "Gift": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "🎁",
     "tasks": [
       "StepUpGift",
       "DailyGift",
@@ -104,6 +114,7 @@
   "DataChart": {
     "menu": "collapse",
     "page": "setting",
+    "icon": "📈",
     "tasks": [
       "WarehouseStats",
       "InterceptionTaskStats"
@@ -112,6 +123,7 @@
   "Tool": {
     "menu": "collapse",
     "page": "tool",
+    "icon": "🛠️",
     "tasks": [
       "AutoTower",
       "SemiCombat",

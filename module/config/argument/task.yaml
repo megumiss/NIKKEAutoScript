@@ -3,6 +3,7 @@
 NKAS:
   menu: 'collapse'
   page: 'setting'
+  icon: '⚙️'
   tasks:
     NKAS:
       - Client
@@ -27,6 +28,7 @@ NKAS:
 Reward:
   menu: 'collapse'
   page: 'setting'
+  icon: '🎁'
   tasks:
     Reward:
       - Scheduler
@@ -41,6 +43,7 @@ Reward:
 Daily:
   menu: 'collapse'
   page: 'setting'
+  icon: '📅'
   tasks:
     DailyRecruit:
       - Scheduler
@@ -68,6 +71,7 @@ Daily:
 Outpost:
   menu: 'collapse'
   page: 'setting'
+  icon: '🏢'
   tasks:
     Commission:
       - Scheduler
@@ -87,6 +91,7 @@ Outpost:
 Ark:
   menu: 'collapse'
   page: 'setting'
+  icon: '🏛️'
   tasks:
     SimulationRoom:
       - Scheduler
@@ -123,6 +128,7 @@ Ark:
 LimitedTimeEvent:
   menu: 'collapse'
   page: 'setting'
+  icon: '⏱️'
   tasks:
     Coop:
       - Scheduler
@@ -138,6 +144,7 @@ LimitedTimeEvent:
 StoryEvent:
   menu: 'collapse'
   page: 'setting'
+  icon: '📖'
   tasks:
     Event:
       - Scheduler
@@ -155,6 +162,7 @@ StoryEvent:
 Surface:
   menu: 'collapse'
   page: 'setting'
+  icon: '🗺️'
   tasks:
     SurfaceDaily:
       - Scheduler
@@ -165,6 +173,7 @@ Surface:
 Blablalink:
   menu: 'collapse'
   page: 'setting'
+  icon: '💬'
   tasks:
     BlaAuth:
       - BlaAuth
@@ -183,6 +192,7 @@ Blablalink:
 Gift:
   menu: 'collapse'
   page: 'setting'
+  icon: '🎁'
   tasks:
     StepUpGift:
       - Scheduler
@@ -198,6 +208,7 @@ Gift:
 DataChart:
   menu: 'collapse'
   page: 'setting'
+  icon: '📈'
   tasks:
     WarehouseStats:
       - Scheduler
@@ -212,6 +223,7 @@ DataChart:
 Tool:
   menu: 'collapse'
   page: 'tool'
+  icon: '🛠️'
   tasks:
     AutoTower:
       - AutoTower
