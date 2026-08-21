@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppSelect from '../components/AppSelect.vue'
+import TimePicker from '../components/TimePicker.vue'
 import { api } from '../api/client'
 import { t } from '../i18n'
 import { formatTime } from '../utils'
@@ -12,6 +13,9 @@ type Cadence = 'daily' | 'weekly' | 'monthly'
 interface ScheduleTask {
   command: string
   name_i18n: string
+  enabled: boolean
+  locked: boolean // 系统任务：整行置灰只读
+  enable_locked: boolean // Enable 被强制锁定，不允许开关
   cadence: Cadence
   cadence_locked: boolean
   next_run: string
@@ -21,8 +25,9 @@ interface ScheduleTask {
   monthly_day?: string // 每月第几天（1-28）
   monthly_time?: string
 }
-// 草稿全量快照三套周期字段 + 周期本身；编辑只作用于当前（草稿）周期的字段
+// 草稿全量快照三套周期字段 + 周期本身 + 启用状态；编辑只作用于当前（草稿）周期的字段
 interface Draft {
+  enabled?: boolean
   cadence?: Cadence
   daily_times?: string[]
   weekly_days?: number[]
@@ -32,7 +37,7 @@ interface Draft {
 }
 
 const workspace = useWorkspaceStore()
-const { selectedName } = storeToRefs(workspace)
+const { selectedName, schema } = storeToRefs(workspace)
 const toast = useToastStore()
 
 const tasks = ref<ScheduleTask[]>([])
@@ -63,6 +68,7 @@ function parseDays(value?: string) { return parseTimes(value).map(Number).filter
 function draftOf(task: ScheduleTask): Draft {
   if (!drafts.value[task.command]) {
     drafts.value[task.command] = {
+      enabled: task.enabled,
       cadence: task.cadence,
       daily_times: parseTimes(task.daily_times),
       weekly_days: parseDays(task.weekly_days),
@@ -85,6 +91,7 @@ const monthlyTime = (task: ScheduleTask) => drafts.value[task.command]?.monthly_
 function isDirty(task: ScheduleTask) {
   const draft = drafts.value[task.command]
   if (!draft) return false
+  if ((draft.enabled ?? task.enabled) !== task.enabled) return true
   const cadence = draft.cadence ?? task.cadence
   if (cadence !== task.cadence) return true
   if (cadence === 'daily') return (draft.daily_times || []).join(',') !== parseTimes(task.daily_times).join(',')
@@ -95,14 +102,21 @@ function isDirty(task: ScheduleTask) {
 }
 const dirtyCount = computed(() => tasks.value.filter(task => isDirty(task)).length)
 
+function setEnabled(task: ScheduleTask, event: Event) { draftOf(task).enabled = (event.target as HTMLInputElement).checked }
 function setCadence(task: ScheduleTask, cadence: Cadence) { draftOf(task).cadence = cadence }
-function addTime(task: ScheduleTask, event: Event) {
-  const input = event.target as HTMLInputElement
-  const value = input.value
-  input.value = ''
+function addTime(task: ScheduleTask, value: string) {
   if (!value) return
   const draft = draftOf(task)
   if (!draft.daily_times!.includes(value)) draft.daily_times = [...draft.daily_times!, value].sort()
+}
+// 直接修改已添加的时间：与现有时间重复时只移除原项（等效于合并去重）
+function changeTime(task: ScheduleTask, index: number, value: string) {
+  if (!value) return
+  const draft = draftOf(task)
+  const times = [...draft.daily_times!]
+  if (times.includes(value)) times.splice(index, 1)
+  else times[index] = value
+  draft.daily_times = times.sort()
 }
 function removeTime(task: ScheduleTask, index: number) {
   const draft = draftOf(task)
@@ -119,22 +133,22 @@ function toggleDay(task: ScheduleTask, day: number) {
     draft.weekly_days = [...days, day].sort((a, b) => a - b)
   }
 }
-function setWeeklyTime(task: ScheduleTask, event: Event) { draftOf(task).weekly_time = (event.target as HTMLInputElement).value }
-function setMonthlyTime(task: ScheduleTask, event: Event) { draftOf(task).monthly_time = (event.target as HTMLInputElement).value }
+function setWeeklyTime(task: ScheduleTask, value: string) { draftOf(task).weekly_time = value }
+function setMonthlyTime(task: ScheduleTask, value: string) { draftOf(task).monthly_time = value }
 function setMonthlyDay(task: ScheduleTask, event: Event) {
   const value = parseInt((event.target as HTMLInputElement).value, 10)
   // 非法值保留原样交给后端 422 校验，行标红提示
   draftOf(task).monthly_day = Number.isNaN(value) ? 0 : value
 }
 
-// next_run 年份 < 2000 是"尽快执行"的哨兵值
+// next_run 早于当前时间（含 1989 哨兵值）即为已到期：启用中的任务显示"尽快执行"，
+// 未启用的不会被调度，显示"未启用"避免误导
 function nextRunText(task: ScheduleTask) {
-  const value = String(task.next_run || '')
-  const year = Number(value.slice(0, 4))
-  if (!year || year < 2000) return t('尽快执行')
-  return formatTime(value)
+  const time = new Date(String(task.next_run || '').replace(' ', 'T')).getTime()
+  if (!time) return '-'
+  if (time < Date.now()) return task.enabled ? t('尽快执行') : t('未启用')
+  return formatTime(task.next_run)
 }
-const cadenceText = (cadence: Cadence) => cadence === 'daily' ? t('每日') : cadence === 'weekly' ? t('每周') : t('每月')
 
 const filteredTasks = computed(() => {
   const q = keyword.value.trim().toLowerCase()
@@ -143,35 +157,61 @@ const filteredTasks = computed(() => {
     && (!q || task.name_i18n.toLowerCase().includes(q) || task.command.toLowerCase().includes(q)))
 })
 
-const allFilteredSelected = computed(() => filteredTasks.value.length > 0 && filteredTasks.value.every(task => selected.value.has(task.command)))
+// 布局切换：列表 / 按任务分组（分组来自菜单定义，与左侧任务栏一致）
+type ViewMode = 'list' | 'group'
+const viewMode = ref<ViewMode>(localStorage.getItem('nkas-schedule-view') === 'group' ? 'group' : 'list')
+watch(viewMode, value => localStorage.setItem('nkas-schedule-view', value))
+
+const displayGroups = computed(() => {
+  if (viewMode.value === 'list') return [{ key: '', name: '', icon: '', tasks: filteredTasks.value }]
+  const byCommand = new Map(filteredTasks.value.map(task => [task.command, task]))
+  const assigned = new Set<string>()
+  const groups: { key: string, name: string, icon: string, tasks: ScheduleTask[] }[] = []
+  for (const menu of (schema.value.menus || []) as any[]) {
+    const items = menu.tasks.map((item: any) => byCommand.get(item.key)).filter(Boolean) as ScheduleTask[]
+    items.forEach(task => assigned.add(task.command))
+    if (items.length) groups.push({ key: menu.key, name: menu.name, icon: menu.icon || '', tasks: items })
+  }
+  const rest = filteredTasks.value.filter(task => !assigned.has(task.command))
+  if (rest.length) groups.push({ key: '__other', name: t('其他'), icon: '📦', tasks: rest })
+  return groups
+})
+
+const allFilteredSelected = computed(() => {
+  const selectable = filteredTasks.value.filter(task => !task.locked)
+  return selectable.length > 0 && selectable.every(task => selected.value.has(task.command))
+})
 function toggleSelectAll() {
-  if (allFilteredSelected.value) filteredTasks.value.forEach(task => selected.value.delete(task.command))
-  else filteredTasks.value.forEach(task => selected.value.add(task.command))
+  const selectable = filteredTasks.value.filter(task => !task.locked)
+  if (allFilteredSelected.value) selectable.forEach(task => selected.value.delete(task.command))
+  else selectable.forEach(task => selected.value.add(task.command))
 }
 function toggleSelect(command: string) {
+  const task = tasks.value.find(item => item.command === command)
+  if (task?.locked) return
   if (selected.value.has(command)) selected.value.delete(command)
   else selected.value.add(command)
 }
 
-// 批量设置弹窗：只写入各行 draft（按各行当前草稿周期），不直接发请求
+// 批量设置弹窗：周期在弹窗里直接选，所选任务统一应用该周期+时间（只写草稿，不直接发请求）
 const batchOpen = ref(false)
+const batchCadence = ref<Cadence>('daily')
 const batchTimes = ref<string[]>([])
 const batchDays = ref<number[]>([])
-const selectionHasWeekly = computed(() => [...selected.value].some(command => {
-  const task = tasks.value.find(item => item.command === command)
-  return task ? effectiveCadence(task) === 'weekly' : false
-}))
 function openBatch() {
+  batchCadence.value = 'daily'
   batchTimes.value = ['04:00']
   batchDays.value = []
   batchOpen.value = true
 }
-function batchAddTime(event: Event) {
-  const input = event.target as HTMLInputElement
-  const value = input.value
-  input.value = ''
+function batchAddTime(value: string) {
   if (!value) return
   if (!batchTimes.value.includes(value)) batchTimes.value = [...batchTimes.value, value].sort()
+}
+function batchChangeTime(index: number, value: string) {
+  if (!value) return
+  if (batchTimes.value.includes(value)) batchTimes.value = batchTimes.value.filter((_, i) => i !== index)
+  else batchTimes.value = batchTimes.value.map((time, i) => i === index ? value : time).sort()
 }
 function batchRemoveTime(index: number) {
   if (batchTimes.value.length <= 1) { toast.notify(t('至少保留一个时间点'), 'error'); return }
@@ -188,9 +228,9 @@ function applyBatch() {
     const task = tasks.value.find(item => item.command === command)
     if (!task) continue
     const draft = draftOf(task)
-    const cadence = draft.cadence ?? task.cadence
-    if (cadence === 'daily') draft.daily_times = [...batchTimes.value]
-    else if (cadence === 'weekly') {
+    draft.cadence = batchCadence.value
+    if (batchCadence.value === 'daily') draft.daily_times = [...batchTimes.value]
+    else if (batchCadence.value === 'weekly') {
       draft.weekly_time = first
       if (batchDays.value.length) draft.weekly_days = [...batchDays.value]
     } else draft.monthly_time = first
@@ -203,12 +243,34 @@ function reset() {
   rowErrors.value = {}
 }
 
+// 还原默认：直接调后端重置（周期+时间回默认值，启用状态不动），不走草稿
+const resetOpen = ref(false)
+const resetting = ref(false)
+async function resetDefaults() {
+  if (resetting.value) return
+  resetting.value = true
+  try {
+    await api.post(`/api/${selectedName.value}/schedule/reset`)
+    toast.notify(t('已还原为默认值'))
+    resetOpen.value = false
+    drafts.value = {}
+    rowErrors.value = {}
+    await load()
+  } catch (exception: any) {
+    toast.error = exception.message
+  } finally {
+    resetting.value = false
+  }
+}
+
 async function save() {
   const changes = tasks.value.filter(task => isDirty(task)).map(task => {
     const draft = drafts.value[task.command]!
     const cadence = draft.cadence ?? task.cadence
-    const change: Record<string, string> = { command: task.command }
-    // cadence 不传表示不修改周期
+    const change: Record<string, string | boolean> = { command: task.command }
+    // enable/cadence 不传表示不修改
+    const enabled = draft.enabled ?? task.enabled
+    if (enabled !== task.enabled) change.enable = enabled
     if (cadence !== task.cadence) change.cadence = cadence
     if (cadence === 'daily') change.daily_times = (draft.daily_times || []).join(', ')
     else if (cadence === 'weekly') { change.weekly_days = (draft.weekly_days || []).join(', '); change.weekly_time = draft.weekly_time ?? '' }
@@ -267,43 +329,68 @@ watch(selectedName, () => {
           <button v-for="tab in tabs" :key="tab.value" type="button" class="sched-tab" :class="{ active: cadenceTab === tab.value }" @click="cadenceTab = tab.value as any">{{ tab.label }}</button>
         </div>
         <label class="sched-search">🔍 <input v-model="keyword" :placeholder="t('搜索任务')"><button v-if="keyword" type="button" class="sched-search-clear" @click.prevent="keyword = ''">✕</button></label>
+        <div class="sched-view-toggle">
+          <button type="button" class="sched-tab" :class="{ active: viewMode === 'list' }" :title="t('列表')" @click="viewMode = 'list'">☰</button>
+          <button type="button" class="sched-tab" :class="{ active: viewMode === 'group' }" :title="t('分组')" @click="viewMode = 'group'">▦</button>
+        </div>
       </div>
       <div class="sched-select-bar">
-        <label class="sched-check"><input type="checkbox" :checked="allFilteredSelected" @change="toggleSelectAll"> {{ t('全选') }}</label>
+        <label class="sched-check"><span class="cbox" :class="{ on: allFilteredSelected }"><input type="checkbox" hidden :checked="allFilteredSelected" @change="toggleSelectAll"></span> {{ t('全选') }}</label>
         <span class="sched-selected-count">{{ selected.size }} {{ t('项已选') }}</span>
+        <p class="sched-hint">💡 {{ t('每日任务建议保持同一时间：到点后按优先级一次跑完。分散到不同时间会打乱执行顺序，可能导致漏领奖励；需要一天跑多次的任务再单独添加时间。') }}</p>
+        <button type="button" class="btn sm danger" @click="resetOpen = true">{{ t('还原默认') }}</button>
         <button type="button" class="btn sm primary" :disabled="!selected.size" @click="openBatch">{{ t('批量设置时间') }}</button>
       </div>
       <div class="sched-list">
         <div v-if="loading && !tasks.length" class="sched-empty">{{ t('加载中…') }}</div>
         <div v-else-if="!filteredTasks.length" class="sched-empty">{{ t('没有匹配的任务') }}</div>
-        <div v-for="task in filteredTasks" :key="task.command" class="sched-row" :class="{ dirty: isDirty(task), invalid: rowErrors[task.command] }">
-          <input type="checkbox" class="sched-row-check" :checked="selected.has(task.command)" @change="toggleSelect(task.command)">
-          <div class="sched-name">
-            <b>{{ task.name_i18n }}</b>
-            <span v-if="rowErrors[task.command]" class="sched-row-error">{{ rowErrors[task.command] }}</span>
+        <template v-else>
+          <div class="sched-row sched-head">
+            <span></span>
+            <span>{{ t('任务') }}</span>
+            <span>{{ t('周期') }}</span>
+            <span>{{ t('执行时间') }}</span>
+            <span>{{ t('下次运行') }}</span>
+            <span>{{ t('启用') }}</span>
           </div>
-          <span :title="task.cadence_locked ? t('该任务不支持修改周期') : ''">
-            <AppSelect class="sched-cadence" :model-value="effectiveCadence(task)" :options="cadenceOptions" :disabled="task.cadence_locked" @change="(value: Cadence) => setCadence(task, value)" />
-          </span>
-          <span class="sched-badge" :class="effectiveCadence(task)">{{ cadenceText(effectiveCadence(task)) }}</span>
-          <div class="sched-editor">
-            <template v-if="effectiveCadence(task) === 'daily'">
-              <span v-for="(time, index) in dailyTimes(task)" :key="time" class="time-chip">🕒{{ time }}<button type="button" class="chip-x" @click="removeTime(task, index)">✕</button></span>
-              <input type="time" class="sched-input sched-time-add" :title="t('添加时间')" @change="addTime(task, $event)">
-            </template>
-            <template v-else-if="effectiveCadence(task) === 'weekly'">
-              <span class="sched-days">
-                <button v-for="day in WEEKDAYS" :key="day.value" type="button" class="day-toggle" :class="{ on: weeklyDays(task).includes(day.value) }" @click="toggleDay(task, day.value)">{{ t(day.key) }}</button>
-              </span>
-              <input type="time" class="sched-input" :value="weeklyTime(task)" @change="setWeeklyTime(task, $event)">
-            </template>
-            <template v-else>
-              <span class="sched-monthly">{{ t('每月第') }} <input type="number" class="sched-input sched-day-input" min="1" max="28" :value="monthlyDay(task)" @change="setMonthlyDay(task, $event)"> {{ t('日') }}</span>
-              <input type="time" class="sched-input" :value="monthlyTime(task)" @change="setMonthlyTime(task, $event)">
-            </template>
+          <template v-for="group in displayGroups" :key="group.key || '__all'">
+            <div v-if="group.key" class="sched-group-head"><span class="sicon">{{ group.icon }}</span>{{ group.name }}</div>
+            <div v-for="task in group.tasks" :key="task.command" class="sched-row" :class="{ dirty: isDirty(task), invalid: rowErrors[task.command], locked: task.locked }" :title="task.locked ? t('该任务由系统调度，仅展示') : ''">
+              <label class="cbox" :class="{ on: selected.has(task.command), disabled: task.locked }"><input type="checkbox" hidden :checked="selected.has(task.command)" :disabled="task.locked" @change="toggleSelect(task.command)"></label>
+              <div class="sched-name">
+                <b>{{ task.name_i18n }}</b>
+                <span v-if="rowErrors[task.command]" class="sched-row-error">{{ rowErrors[task.command] }}</span>
+              </div>
+            <span :title="task.cadence_locked ? t('该任务不支持修改周期') : ''">
+              <AppSelect class="sched-cadence" :model-value="effectiveCadence(task)" :options="cadenceOptions" :disabled="task.cadence_locked" @change="(value: Cadence) => setCadence(task, value)" />
+            </span>
+            <div class="sched-editor">
+              <template v-if="effectiveCadence(task) === 'daily'">
+                <span v-for="(time, index) in dailyTimes(task)" :key="time" class="time-chip">
+                  <TimePicker :model-value="time" :disabled="task.locked" @change="(value: string) => changeTime(task, index, value)" />
+                  <button type="button" class="chip-x" :disabled="task.locked" @click="removeTime(task, index)">✕</button>
+                </span>
+                <TimePicker class="sched-time-add" :title="t('添加时间')" :disabled="task.locked" @change="(value: string) => addTime(task, value)" />
+              </template>
+              <template v-else-if="effectiveCadence(task) === 'weekly'">
+                <span class="sched-days">
+                  <button v-for="day in WEEKDAYS" :key="day.value" type="button" class="day-toggle" :class="{ on: weeklyDays(task).includes(day.value) }" :disabled="task.locked" @click="toggleDay(task, day.value)">{{ t(day.key) }}</button>
+                </span>
+                <TimePicker :model-value="weeklyTime(task)" :disabled="task.locked" @change="(value: string) => setWeeklyTime(task, value)" />
+              </template>
+              <template v-else>
+                <span class="sched-monthly">{{ t('每月第') }} <input type="number" class="sched-input sched-day-input" min="1" max="28" :value="monthlyDay(task)" :disabled="task.locked" @change="setMonthlyDay(task, $event)"> {{ t('日') }}</span>
+                <TimePicker :model-value="monthlyTime(task)" :disabled="task.locked" @change="(value: string) => setMonthlyTime(task, value)" />
+              </template>
+            </div>
+            <span class="sched-next">{{ nextRunText(task) }}</span>
+            <label class="switch sm" :title="task.enable_locked ? t('该任务的启用状态由系统锁定') : t('启用该任务')">
+              <input type="checkbox" :checked="drafts[task.command]?.enabled ?? task.enabled" :disabled="task.enable_locked" @change="setEnabled(task, $event)">
+              <span class="slider"></span>
+            </label>
           </div>
-          <span class="sched-next">{{ t('下次') }}: {{ nextRunText(task) }}</span>
-        </div>
+          </template>
+        </template>
       </div>
     </article>
     <div v-if="dirtyCount" class="sched-footer">
@@ -311,18 +398,34 @@ watch(selectedName, () => {
       <button type="button" class="btn sm" @click="reset">{{ t('重置') }}</button>
       <button type="button" class="btn sm primary" :disabled="saving" @click="save">{{ t('保存') }}</button>
     </div>
+    <div v-if="resetOpen" class="modal-mask" @click.self="resetOpen = false">
+      <div class="modal-card">
+        <h3>{{ t('还原默认') }}</h3>
+        <p class="modal-text">{{ t('将所有任务的周期与执行时间还原为默认值？启用状态不受影响。') }}</p>
+        <div class="modal-actions">
+          <button type="button" class="btn" @click="resetOpen = false">{{ t('取消') }}</button>
+          <button type="button" class="btn danger" :disabled="resetting" @click="resetDefaults">{{ t('确定') }}</button>
+        </div>
+      </div>
+    </div>
     <div v-if="batchOpen" class="modal-mask" @click.self="batchOpen = false">
       <div class="modal-card">
         <h3>{{ t('批量设置时间') }}</h3>
+        <div class="sched-batch-cadence">
+          <AppSelect v-model="batchCadence" :options="cadenceOptions" />
+        </div>
         <div class="sched-batch-times">
-          <span v-for="(time, index) in batchTimes" :key="time" class="time-chip">🕒{{ time }}<button type="button" class="chip-x" @click="batchRemoveTime(index)">✕</button></span>
-          <input type="time" class="sched-input sched-time-add" :title="t('添加时间')" @change="batchAddTime">
+          <span v-for="(time, index) in batchTimes" :key="time" class="time-chip">
+            <TimePicker :model-value="time" @change="(value: string) => batchChangeTime(index, value)" />
+            <button type="button" class="chip-x" @click="batchRemoveTime(index)">✕</button>
+          </span>
+          <TimePicker class="sched-time-add" :title="t('添加时间')" @change="batchAddTime" />
         </div>
-        <div v-if="selectionHasWeekly" class="sched-batch-days">
+        <div v-if="batchCadence === 'weekly'" class="sched-batch-days">
           <button v-for="day in WEEKDAYS" :key="day.value" type="button" class="day-toggle" :class="{ on: batchDays.includes(day.value) }" @click="batchToggleDay(day.value)">{{ t(day.key) }}</button>
-          <span class="sched-batch-hint">{{ t('仅作用于每周任务') }}</span>
+          <span class="sched-batch-hint">{{ t('不选择星期则保持各任务原设置') }}</span>
         </div>
-        <p class="modal-text">{{ t('每日任务将设置为全部时间点；每周/每月任务使用第一个时间点') }}</p>
+        <p class="modal-text">{{ t('所选任务将统一设置为该周期；每周/每月任务使用第一个时间点') }}</p>
         <div class="modal-actions">
           <button type="button" class="btn" @click="batchOpen = false">{{ t('取消') }}</button>
           <button type="button" class="btn primary" :disabled="!batchTimes.length" @click="applyBatch">{{ t('确定') }}</button>
@@ -334,39 +437,59 @@ watch(selectedName, () => {
 
 <style scoped>
 .sched-card { padding: 16px 18px; }
-.sched-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.sched-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .sched-tabs { display: flex; gap: 6px; }
 .sched-tab { padding: 6px 14px; border: 1px solid var(--border-light); border-radius: 9px; color: var(--text-2); background: var(--card-3); font-size: 13px; }
 .sched-tab:hover { border-color: var(--accent); color: var(--accent); }
 .sched-tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 700; }
-.sched-search { display: flex; gap: 7px; align-items: center; min-width: 220px; padding: 7px 11px; border: 1px solid var(--border); border-radius: 9px; color: var(--text-3); background: var(--card-2); }
+.sched-hint { flex: 1; min-width: 0; margin: 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+.sched-search { display: flex; gap: 7px; align-items: center; min-width: 220px; margin-left: auto; padding: 7px 11px; border: 1px solid var(--border); border-radius: 9px; color: var(--text-3); background: var(--card-2); }
 .sched-search input { width: 100%; border: 0; outline: 0; color: var(--text); background: transparent; font-size: 13px; }
 .sched-search-clear { border: 0; color: var(--text-3); background: transparent; font-size: 12px; }
 .sched-search-clear:hover { color: var(--red); }
 .sched-select-bar { display: flex; gap: 14px; align-items: center; margin-top: 12px; padding: 8px 2px; font-size: 13px; color: var(--text-2); }
 .sched-check { display: flex; gap: 6px; align-items: center; cursor: pointer; }
 .sched-selected-count { color: var(--text-3); }
-.sched-select-bar .btn { margin-left: auto; }
 .sched-list { margin-top: 6px; border-top: 1px solid var(--border); }
+.sched-view-toggle { display: flex; gap: 6px; }
+.sched-group-head { display: flex; gap: 7px; align-items: center; padding: 14px 8px 4px; color: var(--text-3); font-size: 13px; font-weight: 600; letter-spacing: .05em; }
 .sched-empty { padding: 26px 0; color: var(--text-3); font-size: 13px; text-align: center; }
-.sched-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+.sched-row { display: grid; grid-template-columns: 22px minmax(120px, 150px) 100px minmax(0, 1fr) 110px 40px; gap: 10px; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--border); }
 .sched-row.dirty { background: var(--accent-soft); }
 .sched-row.invalid { box-shadow: inset 3px 0 0 var(--red); }
-.sched-name { display: flex; flex-direction: column; min-width: 130px; }
+.sched-row.locked { opacity: .55; }
+.sched-head { padding: 8px; color: var(--text-3); font-size: 11.5px; font-weight: 600; }
+.cbox { position: relative; display: inline-block; flex: none; width: 16px; height: 16px; border: 1px solid var(--border-light); border-radius: 5px; background: var(--card); cursor: pointer; transition: border-color .15s, background .15s; }
+.cbox:hover { border-color: var(--accent); }
+.cbox.on { border-color: transparent; background: var(--grad-accent); }
+.cbox.on::after { position: absolute; inset: 0; content: '✓'; color: #fff; font-size: 11px; font-weight: 700; line-height: 15px; text-align: center; }
+.cbox.disabled { cursor: not-allowed; }
+.sched-name { display: flex; flex-direction: column; }
 .sched-row-error { color: var(--red); font-size: 11.5px; }
-.sched-cadence { width: 96px; }
-.sched-badge { flex: none; padding: 2px 9px; border-radius: 8px; font-size: 11.5px; background: var(--card-3); color: var(--text-2); }
-.sched-badge.daily { color: var(--accent); background: var(--accent-soft); }
-.sched-badge.weekly { color: var(--green); background: var(--green-soft); }
-.sched-badge.monthly { color: var(--orange, #e2a35a); background: var(--card-3); }
-.sched-editor { display: flex; flex: 1; flex-wrap: wrap; gap: 6px; align-items: center; }
-.time-chip { display: inline-flex; gap: 5px; align-items: center; padding: 3px 6px 3px 9px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--card-3); font-size: 12.5px; }
+.sched-cadence { width: 100px; }
+.sched-cadence :deep(.app-select) { width: 100%; margin-top: 0; }
+.sched-cadence :deep(.app-select-btn) { height: 30px; padding: 0 10px; border-color: var(--border-light); background: var(--card); font-size: 12.5px; font-weight: 600; }
+.sched-cadence :deep(.app-select-btn:hover) { border-color: var(--accent); color: var(--accent); }
+.sched-cadence :deep(.app-select.open .app-select-btn) { border-color: var(--accent); }
+.sched-cadence :deep(.app-select-arrow) { color: var(--accent); }
+.sched-editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.time-chip { display: inline-flex; gap: 2px; align-items: center; width: 104px; height: 30px; padding: 0 5px 0 3px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-2); transition: border-color .15s; }
+.time-chip:hover { border-color: var(--border-light); }
+.time-chip :deep(.tp) { flex: 1; min-width: 0; }
+.time-chip :deep(.tp-btn) { height: 28px; padding: 0 2px; border: 0; background: transparent; }
+.time-chip :deep(.tp-btn:hover) { border-color: transparent; }
+.time-chip :deep(.tp.open .tp-btn) { box-shadow: none; }
+.time-chip :deep(.tp-arrow) { font-size: 11px; }
 .chip-x { border: 0; padding: 0 2px; color: var(--text-3); background: transparent; font-size: 11px; }
 .chip-x:hover { color: var(--red); }
-.sched-input { padding: 4px 7px; border: 1px solid var(--border-light); border-radius: 8px; color: var(--text); background: var(--card-2); font-size: 12.5px; }
-.sched-time-add { max-width: 96px; }
+.sched-input { height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; outline: 0; color: var(--text); background: var(--card-2); font-size: 12.5px; transition: border-color .15s, box-shadow .15s; }
+.sched-input:hover { border-color: var(--border-light); }
+.sched-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sched-input:disabled { cursor: not-allowed; }
+.sched-input::-webkit-calendar-picker-indicator { cursor: pointer; }
+.sched-time-add { width: 104px; }
 .sched-days { display: inline-flex; gap: 4px; }
-.day-toggle { min-width: 34px; padding: 4px 6px; border: 1px solid var(--border-light); border-radius: 7px; color: var(--text-2); background: var(--card-3); font-size: 12px; }
+.day-toggle { min-width: 34px; height: 26px; padding: 0 6px; border: 1px solid var(--border); border-radius: 7px; color: var(--text-2); background: var(--card-2); font-size: 12px; transition: border-color .15s, color .15s; }
 .day-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .day-toggle.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 700; }
 .sched-monthly { display: inline-flex; gap: 4px; align-items: center; color: var(--text-2); font-size: 12.5px; }
@@ -375,6 +498,7 @@ watch(selectedName, () => {
 .sched-footer { position: sticky; z-index: 5; bottom: 0; display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 14px; padding: 12px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--card); box-shadow: var(--shadow-hover); font-size: 13px; }
 .sched-dirty-dot { color: var(--orange, #e2a35a); }
 .sched-batch-times { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; }
+.sched-batch-cadence { width: 160px; margin-bottom: 12px; }
 .sched-batch-days { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 12px; }
 .sched-batch-hint { margin-left: 8px; color: var(--text-3); font-size: 11.5px; }
 </style>

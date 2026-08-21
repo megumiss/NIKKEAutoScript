@@ -5,15 +5,16 @@ Scheduler:
     option: [ true, false ]
   NextRun: 1989-12-27 00:00:00
   Command: NKAS
-  # 任务周期：daily/weekly/monthly，仅在执行时间管理页修改，不在任务设置页显示；
-  # hide_keep = 不显示但保留用户已存值（config_update 只重置 display: hide 的字段）
+  # 任务周期：daily/weekly/monthly，仅在执行时间管理页修改
   Cadence:
     value: daily
     option: [ daily, weekly, monthly ]
     display: hide_keep
+  # 时间字段统一在执行时间管理页维护，任务设置页不显示；
+  # hide_keep = 不显示但保留用户已存值（config_update 只重置 display: hide 的字段）
   ServerUpdate:
     value: 04:00
-    display: show
+    display: hide_keep
     validate: '^([01]\d|2[0-3]):[0-5]\d(\s*,\s*([01]\d|2[0-3]):[0-5]\d)*$'
   WeeklyDay:
     value: '2'

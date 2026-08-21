@@ -19,9 +19,12 @@ class ManualConfig:
     GENERAL_SHOP_PRIORITY = """GRATIS"""
 
     # 执行时间管理页（module/webui/api/routes_schedule.py）
-    # 不允许切换周期的任务：Restart/Notify 是系统任务，SpecialArenaWatch 是固定间隔轮询
-    SCHEDULE_LOCKED_TASKS = {
-        'Restart', 'Notify', 'SpecialArenaWatch',
+    # 整行置灰只读的任务（仅当时间字段对该任务完全不生效时使用）
+    SCHEDULE_LOCKED_TASKS = set()
+    # 不允许切换周期的任务：Restart 承担每日服务器刷新重启职责、Reward 是每日固定收获，
+    # 两者的启用状态也被强制常开（override.yaml），仅执行时间可改
+    SCHEDULE_CADENCE_LOCKED_TASKS = {
+        'Restart', 'Reward',
     }
 
     ARENA_SHOP_PRIORITY = """"""

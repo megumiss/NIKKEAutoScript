@@ -113,4 +113,5 @@ class Notify(UI):
             )
         else:
             logger.info('Notify config disabled, skip sending')
-        self.config.task_delay(server_update=True)
+        # 按任务配置的周期/时间排期（执行时间管理页可改），不再写死服务器刷新时间
+        self.config.task_delay(schedule=True)
