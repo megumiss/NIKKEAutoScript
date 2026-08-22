@@ -312,6 +312,17 @@ async function load() {
   try {
     const result = await api.get(`/api/${selectedName.value}/schedule`)
     tasks.value = result.tasks || []
+    // 调度保存/还原直接改写了配置，把最新 Enable/NextRun 同步进 workspace 缓存的
+    // schema，否则打开任务设置页会看到加载时的旧值（schema 只在切换实例时重新拉取）
+    for (const task of tasks.value) {
+      for (const group of schema.value.tasks[task.command]?.groups || []) {
+        if (group.key !== 'Scheduler') continue
+        for (const field of group.fields) {
+          if (field.arg === 'Enable') field.value = task.enabled
+          else if (field.arg === 'NextRun') field.value = task.next_run
+        }
+      }
+    }
     // 已消失的任务从选中集中剔除
     const commands = new Set(tasks.value.map((task: ScheduleTask) => task.command))
     selected.value = new Set([...selected.value].filter(command => commands.has(command)))
@@ -367,7 +378,7 @@ watch(selectedName, () => {
             <div v-for="task in group.tasks" :key="task.command" class="sched-row" :class="{ dirty: isDirty(task), invalid: rowErrors[task.command], locked: task.locked }" :title="task.locked ? t('该任务由系统调度，仅展示') : ''">
               <label class="cbox" :class="{ on: selected.has(task.command), disabled: task.locked || task.cadence_locked }"><input type="checkbox" hidden :checked="selected.has(task.command)" :disabled="task.locked || task.cadence_locked" @change="toggleSelect(task.command)"></label>
               <div class="sched-name">
-                <b>{{ task.name_i18n }}</b>
+                <b class="sched-name-link" :title="t('打开任务设置')" @click="workspace.openQueueItem(task)">{{ task.name_i18n }}</b>
                 <span v-if="rowErrors[task.command]" class="sched-row-error">{{ rowErrors[task.command] }}</span>
               </div>
             <span :title="task.cadence_locked ? t('该任务不支持修改周期') : ''">
@@ -485,6 +496,8 @@ watch(selectedName, () => {
 .cbox.on::after { position: absolute; inset: 0; content: '✓'; color: #fff; font-size: 11px; font-weight: 700; line-height: 15px; text-align: center; }
 .cbox.disabled { cursor: not-allowed; }
 .sched-name { display: flex; flex-direction: column; }
+.sched-name-link { cursor: pointer; transition: color .15s; }
+.sched-name-link:hover { color: var(--accent); }
 .sched-row-error { color: var(--red); font-size: 11.5px; }
 .sched-cadence { width: 100px; }
 .sched-cadence :deep(.app-select) { width: 100%; margin-top: 0; }

@@ -95,6 +95,7 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '添加时间': { 'en-US': 'Add time', 'ja-JP': '時間を追加' },
   '每月第': { 'en-US': 'Day', 'ja-JP': '毎月' }, '日': { 'en-US': 'of the month', 'ja-JP': '日' },
   '执行日': { 'en-US': 'Run day', 'ja-JP': '実行日' },
+  '打开任务设置': { 'en-US': 'Open task settings', 'ja-JP': 'タスク設定を開く' },
   '保存成功': { 'en-US': 'Saved', 'ja-JP': '保存しました' }, '保存失败': { 'en-US': 'Save failed', 'ja-JP': '保存に失敗しました' },
   '至少保留一个时间点': { 'en-US': 'Keep at least one time point', 'ja-JP': '時間帯は最低1つ必要です' },
   '至少保留一天': { 'en-US': 'Keep at least one day', 'ja-JP': '曜日は最低1つ必要です' },
