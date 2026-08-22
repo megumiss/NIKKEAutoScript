@@ -48,6 +48,8 @@ const rowErrors = ref<Record<string, string>>({})
 const cadenceTab = ref<'all' | Cadence>('all')
 const keyword = ref('')
 const selected = ref<Set<string>>(new Set())
+// 全选只作用于当前筛选结果，切页签时清空选中，避免把其他周期的隐藏任务带进批量操作
+watch(cadenceTab, () => { selected.value = new Set() })
 
 const WEEKDAYS = [
   { value: 1, key: '周一' }, { value: 2, key: '周二' }, { value: 3, key: '周三' },
@@ -178,17 +180,17 @@ const displayGroups = computed(() => {
 })
 
 const allFilteredSelected = computed(() => {
-  const selectable = filteredTasks.value.filter(task => !task.locked)
+  const selectable = filteredTasks.value.filter(task => !task.locked && !task.cadence_locked)
   return selectable.length > 0 && selectable.every(task => selected.value.has(task.command))
 })
 function toggleSelectAll() {
-  const selectable = filteredTasks.value.filter(task => !task.locked)
+  const selectable = filteredTasks.value.filter(task => !task.locked && !task.cadence_locked)
   if (allFilteredSelected.value) selectable.forEach(task => selected.value.delete(task.command))
   else selectable.forEach(task => selected.value.add(task.command))
 }
 function toggleSelect(command: string) {
   const task = tasks.value.find(item => item.command === command)
-  if (task?.locked) return
+  if (!task || task.locked || task.cadence_locked) return
   if (selected.value.has(command)) selected.value.delete(command)
   else selected.value.add(command)
 }
@@ -198,10 +200,14 @@ const batchOpen = ref(false)
 const batchCadence = ref<Cadence>('daily')
 const batchTimes = ref<string[]>([])
 const batchDays = ref<number[]>([])
+// 空字符串表示不修改各任务原有的每月执行日
+const batchMonthlyDay = ref('')
 function openBatch() {
-  batchCadence.value = 'daily'
+  // 弹窗周期跟随当前页签，「全部」页签默认每日
+  batchCadence.value = cadenceTab.value === 'all' ? 'daily' : cadenceTab.value
   batchTimes.value = ['04:00']
   batchDays.value = []
+  batchMonthlyDay.value = ''
   batchOpen.value = true
 }
 function batchAddTime(value: string) {
@@ -224,16 +230,19 @@ function batchToggleDay(day: number) {
 function applyBatch() {
   const first = batchTimes.value[0]
   if (!first) return
-  for (const command of selected.value) {
-    const task = tasks.value.find(item => item.command === command)
-    if (!task) continue
+  for (const task of filteredTasks.value) {
+    if (!selected.value.has(task.command)) continue
     const draft = draftOf(task)
     draft.cadence = batchCadence.value
     if (batchCadence.value === 'daily') draft.daily_times = [...batchTimes.value]
     else if (batchCadence.value === 'weekly') {
       draft.weekly_time = first
       if (batchDays.value.length) draft.weekly_days = [...batchDays.value]
-    } else draft.monthly_time = first
+    } else {
+      draft.monthly_time = first
+      const day = Number(batchMonthlyDay.value)
+      if (Number.isInteger(day) && day >= 1 && day <= 28) draft.monthly_day = day
+    }
   }
   batchOpen.value = false
 }
@@ -356,7 +365,7 @@ watch(selectedName, () => {
           <template v-for="group in displayGroups" :key="group.key || '__all'">
             <div v-if="group.key" class="sched-group-head"><span class="sicon">{{ group.icon }}</span>{{ group.name }}</div>
             <div v-for="task in group.tasks" :key="task.command" class="sched-row" :class="{ dirty: isDirty(task), invalid: rowErrors[task.command], locked: task.locked }" :title="task.locked ? t('该任务由系统调度，仅展示') : ''">
-              <label class="cbox" :class="{ on: selected.has(task.command), disabled: task.locked }"><input type="checkbox" hidden :checked="selected.has(task.command)" :disabled="task.locked" @change="toggleSelect(task.command)"></label>
+              <label class="cbox" :class="{ on: selected.has(task.command), disabled: task.locked || task.cadence_locked }"><input type="checkbox" hidden :checked="selected.has(task.command)" :disabled="task.locked || task.cadence_locked" @change="toggleSelect(task.command)"></label>
               <div class="sched-name">
                 <b>{{ task.name_i18n }}</b>
                 <span v-if="rowErrors[task.command]" class="sched-row-error">{{ rowErrors[task.command] }}</span>
@@ -411,21 +420,32 @@ watch(selectedName, () => {
     <div v-if="batchOpen" class="modal-mask" @click.self="batchOpen = false">
       <div class="modal-card">
         <h3>{{ t('批量设置时间') }}</h3>
-        <div class="sched-batch-cadence">
-          <AppSelect v-model="batchCadence" :options="cadenceOptions" />
+        <div class="sched-batch-row">
+          <span class="sched-batch-label">{{ t('周期') }}</span>
+          <AppSelect class="sched-batch-cadence" v-model="batchCadence" :options="cadenceOptions" />
         </div>
-        <div class="sched-batch-times">
-          <span v-for="(time, index) in batchTimes" :key="time" class="time-chip">
-            <TimePicker :model-value="time" @change="(value: string) => batchChangeTime(index, value)" />
-            <button type="button" class="chip-x" @click="batchRemoveTime(index)">✕</button>
-          </span>
-          <TimePicker class="sched-time-add" :title="t('添加时间')" @change="batchAddTime" />
+        <div v-if="batchCadence === 'weekly'" class="sched-batch-row">
+          <span class="sched-batch-label">{{ t('执行日') }}</span>
+          <div class="sched-batch-days">
+            <button v-for="day in WEEKDAYS" :key="day.value" type="button" class="day-toggle" :class="{ on: batchDays.includes(day.value) }" @click="batchToggleDay(day.value)">{{ t(day.key) }}</button>
+          </div>
         </div>
-        <div v-if="batchCadence === 'weekly'" class="sched-batch-days">
-          <button v-for="day in WEEKDAYS" :key="day.value" type="button" class="day-toggle" :class="{ on: batchDays.includes(day.value) }" @click="batchToggleDay(day.value)">{{ t(day.key) }}</button>
-          <span class="sched-batch-hint">{{ t('不选择星期则保持各任务原设置') }}</span>
+        <div v-else-if="batchCadence === 'monthly'" class="sched-batch-row">
+          <span class="sched-batch-label">{{ t('执行日') }}</span>
+          <div class="sched-batch-days">
+            <span class="sched-monthly">{{ t('每月第') }} <input type="number" class="sched-input sched-day-input" min="1" max="28" v-model="batchMonthlyDay"> {{ t('日') }}</span>
+          </div>
         </div>
-        <p class="modal-text">{{ t('所选任务将统一设置为该周期；每周/每月任务使用第一个时间点') }}</p>
+        <div class="sched-batch-row">
+          <span class="sched-batch-label">{{ t('执行时间') }}</span>
+          <div class="sched-batch-times">
+            <span v-for="(time, index) in batchTimes" :key="time" class="time-chip">
+              <TimePicker :model-value="time" @change="(value: string) => batchChangeTime(index, value)" />
+              <button type="button" class="chip-x" @click="batchRemoveTime(index)">✕</button>
+            </span>
+            <TimePicker class="sched-time-add" :title="t('添加时间')" @change="batchAddTime" />
+          </div>
+        </div>
         <div class="modal-actions">
           <button type="button" class="btn" @click="batchOpen = false">{{ t('取消') }}</button>
           <button type="button" class="btn primary" :disabled="!batchTimes.length" @click="applyBatch">{{ t('确定') }}</button>
@@ -497,8 +517,9 @@ watch(selectedName, () => {
 .sched-next { flex: none; color: var(--text-3); font-size: 12px; }
 .sched-footer { position: sticky; z-index: 5; bottom: 0; display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 14px; padding: 12px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--card); box-shadow: var(--shadow-hover); font-size: 13px; }
 .sched-dirty-dot { color: var(--orange, #e2a35a); }
-.sched-batch-times { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; }
-.sched-batch-cadence { width: 160px; margin-bottom: 12px; }
-.sched-batch-days { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 12px; }
-.sched-batch-hint { margin-left: 8px; color: var(--text-3); font-size: 11.5px; }
+.sched-batch-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.sched-batch-label { flex: none; width: 56px; padding-top: 8px; color: var(--text-2); font-size: 13px; text-align: right; }
+.sched-batch-times { display: flex; flex: 1; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sched-batch-cadence { width: 160px; }
+.sched-batch-days { display: flex; flex: 1; flex-wrap: wrap; gap: 4px; align-items: center; padding-top: 4px; }
 </style>
