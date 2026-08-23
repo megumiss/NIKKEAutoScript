@@ -62,14 +62,14 @@ const BODY_PADDING_X = 24
 
 // ws-scrcpy 页面经后端同源代理（/scrcpy/page）下发，因此可以直接读写 iframe 内容。
 // 布局方案：向 iframe 注入 CSS 强制视频画布拉伸填满 .video 区域，控制栏用
-// display:none 裁掉（⇥ 按钮切换显示，进入互动模式时默认显示）；父页面只需读取
+// display:none 裁掉（三点按钮切换显示，默认收起）；父页面只需读取
 // 视频画布的原始像素尺寸（rawW/rawH，因各浏览器 localStorage 里的视频设置而异，
 // 不能硬编码），按真实宽高比决定卡片宽度。iframe 始终 100% 填满遮罩，不使用 transform。
 const frameEl = ref<HTMLIFrameElement>()
 const rawW = ref(256)
 const rawH = ref(480)
 const barW = ref(52)
-const showControlBar = ref(true)
+const showControlBar = ref(false)
 const wrapW = ref(0)
 const wrapH = ref(0)
 
@@ -232,8 +232,8 @@ async function loadScrcpy() {
 function toggleInteractive() {
   if (!scrcpy.value?.available) return
   interactive.value = !interactive.value
-  // 进入互动模式时默认显示控制栏（与之前版本行为一致），可用侧栏按钮收起
-  if (interactive.value) showControlBar.value = true
+  // 进入互动模式时控制栏默认收起，可用头部按钮展开
+  if (interactive.value) showControlBar.value = false
   // The iframe covers the frame area; no point polling JPEG frames meanwhile.
   if (interactive.value) stopPolling()
   else startPolling()
@@ -348,7 +348,7 @@ onBeforeUnmount(() => {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
         </button>
         <button v-if="interactive" class="preview-icon" :class="{ 'control-active': showControlBar }" type="button" :title="t('操作栏')" @click="toggleControlBar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
         <template v-if="!interactive">
           <button class="preview-rate" type="button" :title="t('刷新频率')" @click="cycleRate">{{ pollRate }}s</button>
