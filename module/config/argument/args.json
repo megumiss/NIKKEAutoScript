@@ -756,6 +756,15 @@
         "type": "checkbox",
         "value": true
       },
+      "SocialPointRecruitCount": {
+        "type": "select",
+        "value": 1,
+        "option": [
+          1,
+          2,
+          3
+        ]
+      },
       "Ordinary150GemRecruit": {
         "type": "checkbox",
         "value": false

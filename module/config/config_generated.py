@@ -80,6 +80,7 @@ class GeneratedConfig:
     # Group `DailyRecruit`
     DailyRecruit_EventFreeRecruit = True
     DailyRecruit_SocialPointRecruit = True
+    DailyRecruit_SocialPointRecruitCount = 1  # 1, 2, 3
     DailyRecruit_Ordinary150GemRecruit = False
     DailyRecruit_SSRNotifyPush = False
     DailyRecruit_ScreenshotPath = None

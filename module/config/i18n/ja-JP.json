@@ -567,6 +567,13 @@
       "name": "友情ポイント単発募集",
       "help": ""
     },
+    "SocialPointRecruitCount": {
+      "name": "友情ポイント単発募集回数",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3"
+    },
     "Ordinary150GemRecruit": {
       "name": "Ordinary 150Gems Recruit",
       "help": "通常募集での毎日1回の150ジュエルガチャ"

@@ -256,6 +256,8 @@ class DailyRecruit(UI):
         logger.hr('Social point recruit', 2)
         confirm_timer = Timer(5, count=3).start()
         click_timer = Timer(0.5)
+        recruit_times = self.config.DailyRecruit_SocialPointRecruitCount
+        recruit_count = 0
 
         while 1:
             if skip_first_screenshot:
@@ -323,7 +325,9 @@ class DailyRecruit(UI):
 
                 confirm_timer.reset()
                 click_timer.reset()
-                recruit_end = True
+                recruit_count += 1
+                logger.info(f'Social point recruit count: {recruit_count}/{recruit_times}')
+                recruit_end = recruit_count >= recruit_times
                 continue
             # 结束
             if (

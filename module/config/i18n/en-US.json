@@ -567,6 +567,13 @@
       "name": "Social Point Single Pull",
       "help": ""
     },
+    "SocialPointRecruitCount": {
+      "name": "Social Point Pull Count",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3"
+    },
     "Ordinary150GemRecruit": {
       "name": "Ordinary 150Gems Recruit",
       "help": "Daily 150-gem gacha in ordinary recruit"

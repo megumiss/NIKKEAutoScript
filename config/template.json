@@ -176,6 +176,7 @@
     "DailyRecruit": {
       "EventFreeRecruit": true,
       "SocialPointRecruit": true,
+      "SocialPointRecruitCount": 1,
       "Ordinary150GemRecruit": false,
       "SSRNotifyPush": false,
       "ScreenshotPath": null

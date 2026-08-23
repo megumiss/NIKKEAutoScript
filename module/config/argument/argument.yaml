@@ -158,6 +158,9 @@ Reward:
 DailyRecruit:
   EventFreeRecruit: true
   SocialPointRecruit: true
+  SocialPointRecruitCount:
+    value: 1
+    option: [ 1, 2, 3 ]
   Ordinary150GemRecruit: false
   SSRNotifyPush: false
   ScreenshotPath:

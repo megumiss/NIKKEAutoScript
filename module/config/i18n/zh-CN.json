@@ -567,6 +567,13 @@
       "name": "友情点单抽",
       "help": ""
     },
+    "SocialPointRecruitCount": {
+      "name": "友情点单抽次数",
+      "help": "",
+      "1": "1",
+      "2": "2",
+      "3": "3"
+    },
     "Ordinary150GemRecruit": {
       "name": "普通150钻单抽",
       "help": "普通招募中每天一次的150钻抽卡"
