@@ -77,7 +77,7 @@ class MissionPass(UI):
 
             # 关闭
             if (
-                self.appear_text(Langs.PASS_CHECK, threshold=1)
+                (self.appear_text(Langs.PASS_CHECK, threshold=1) or self.appear_text(Langs.PASS_CHECK_2, threshold=1))
                 and not self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
                 and not self.appear(REWARD_RED_POINT, offset=(-25, -50, 10, 50))
             ):
@@ -179,7 +179,9 @@ class MissionPass(UI):
                         self.device.screenshot()
 
                         # pass弹窗
-                        if self.appear_text(Langs.PASS_CHECK, threshold=1):
+                        if self.appear_text(Langs.PASS_CHECK, threshold=1) or self.appear_text(
+                            Langs.PASS_CHECK_2, threshold=1
+                        ):
                             logger.info('Open misson pass')
                             break
 

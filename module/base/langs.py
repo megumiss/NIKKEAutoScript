@@ -22,6 +22,7 @@ class LangMeta(type):
         "PASS_MISSION_TAB": {"en-US": "Claim Reward", "zh-CN": "领取奖励", "ja-JP": ""},
         "PASS_REWARD_TAB": {"en-US": "Common Rewards", "zh-CN": "普通奖励", "ja-JP": ""},
         "PASS_CHECK": {"en-US": "Purchase Pass", "zh-CN": "购买PASS", "ja-JP": ""},
+        "PASS_CHECK_2": {"en-US": "Purchase Done", "zh-CN": "购买完毕", "ja-JP": ""},
         # 其他
         "CLAIM_ALL": {"en-US": "Claim All", "zh-CN": "全部领取", "ja-JP": ""},
         "CLAIM_REWARD": {"en-US": "Claim Reward", "zh-CN": "获得奖励", "ja-JP": ""},
