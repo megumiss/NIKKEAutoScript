@@ -46,6 +46,9 @@
       "Bitrate": 16000000,
       "MaxFps": 60
     },
+    "PhysicalDevice": {
+      "Enable": false
+    },
     "Storage": {
       "Storage": {}
     }

@@ -333,13 +333,17 @@
     },
     "ScreenshotMethod": {
       "name": "エミュレーターのスクリーンショット方法",
-      "help": "",
-      "DroidCast": "DroidCast"
+      "help": "Android 15 以降の実機では DroidCast のスクリーンショットがシステムに制限されます。ADB を選択してください",
+      "DroidCast": "DroidCast",
+      "ADB": "ADB (screencap)"
     },
     "ControlMethod": {
       "name": "エミュレーターの制御方法",
-      "help": "",
-      "minitouch": "minitouch"
+      "help": "実機では minitouch は使用できません。MaaTouch（推奨）、uiautomator2 または ADB を選択してください",
+      "minitouch": "minitouch",
+      "uiautomator2": "uiautomator2",
+      "ADB": "ADB (input)",
+      "MaaTouch": "MaaTouch"
     },
     "AdbRestart": {
       "name": "デバイスが検出されない場合にadbを再起動しようと試みる",
@@ -348,6 +352,18 @@
     "ScreenshotInterval": {
       "name": "エミュレーターのスクリーンショット間隔",
       "help": ""
+    }
+  },
+  "PhysicalDevice": {
+    "_info": {
+      "name": "実機設定",
+      "help": "adb で実機（エミュレーター以外）に接続する場合に使用します"
+    },
+    "Enable": {
+      "name": "実機モードを有効化",
+      "help": "有効化後：デバイスの解像度が一時的に 720x1280 に変更され、密度も比例調整されます（インスタンス停止時に自動復元。異常終了した場合は adb shell wm size reset && adb shell wm density reset を手動実行）。スクリーンショットは上記「エミュレーターのスクリーンショット方法」に従います（Android 15 以降では DroidCast がシステムに制限されるため ADB を選択）。タップは上記「エミュレーターの制御方法」に従います（実機では uiautomator2 または ADB を選択。minitouch は root なしの実機では使用不可）。接続失敗時にエミュレーターの起動を試みません。縦画面のみ対応",
+      "True": "True",
+      "False": "False"
     }
   },
   "Scrcpy": {

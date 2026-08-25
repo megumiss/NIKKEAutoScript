@@ -48,12 +48,17 @@ Emulator:
     option: [ com.proximabeta.nikke, com.gamamobi.nikke, ]
   ScreenshotMethod:
     value: DroidCast
-    option: [ DroidCast, ]
+    option: [ DroidCast, ADB ]
   ControlMethod:
     value: minitouch
-    option: [ minitouch, ]
+    option: [ minitouch, uiautomator2, ADB, MaaTouch ]
   AdbRestart: false
   ScreenshotInterval: 0.5
+PhysicalDevice:
+  Enable:
+    type: checkbox
+    value: false
+    option: [ true, false ]
 Scrcpy:
   WebUrl: ''
   Bitrate: 16000000

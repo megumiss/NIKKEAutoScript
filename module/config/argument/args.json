@@ -122,14 +122,18 @@
         "type": "select",
         "value": "DroidCast",
         "option": [
-          "DroidCast"
+          "DroidCast",
+          "ADB"
         ]
       },
       "ControlMethod": {
         "type": "select",
         "value": "minitouch",
         "option": [
-          "minitouch"
+          "minitouch",
+          "uiautomator2",
+          "ADB",
+          "MaaTouch"
         ]
       },
       "AdbRestart": {
@@ -185,6 +189,16 @@
       "MaxFps": {
         "type": "input",
         "value": 60
+      }
+    },
+    "PhysicalDevice": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       }
     },
     "Storage": {

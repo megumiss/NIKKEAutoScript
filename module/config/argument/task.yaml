@@ -15,6 +15,7 @@ NKAS:
       - Emulator
       - EmulatorInfo
       - Scrcpy
+      - PhysicalDevice
     PCClient:
       - PCClientInfo
       - PCClient
