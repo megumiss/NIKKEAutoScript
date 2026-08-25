@@ -1,7 +1,9 @@
 import argparse
+import json
 import logging
 import os
 import queue
+import subprocess
 import threading
 import time
 from multiprocessing import Process
@@ -115,6 +117,7 @@ class ProcessManager:
                 self.renderables.append(
                     (logging.INFO, f"[{self.config_name}] exited. Reason: Manual stop\n")
                 )
+            self._restore_physical_device_resolution()
             if self.thd_log_queue_handler is not None:
                 self.thd_log_queue_handler.join(timeout=1)
                 if self.thd_log_queue_handler.is_alive():
@@ -122,6 +125,59 @@ class ProcessManager:
                         "Log queue handler thread does not stop within 1 seconds"
                     )
         logger.info(f"[{self.config_name}] exited")
+
+    def _restore_physical_device_resolution(self) -> None:
+        """
+        真机模式停止实例时恢复设备分辨率（wm size reset）。
+        实例进程被 kill 时其 atexit 不会执行，所以由 webui 进程兜底。
+        直接读配置 JSON，避免在 webui 进程里实例化 NikkeConfig 带来的副作用。
+        """
+        from module.config.utils import filepath_config
+
+        try:
+            with open(filepath_config(self.config_name), encoding='utf-8') as f:
+                data = json.load(f)
+            emulator = data.get('Emulator', {})
+            if not emulator.get('PhysicalDevice', {}).get('Enable', False):
+                return
+            serial = str(emulator.get('Emulator', {}).get('Serial', ''))
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f'[{self.config_name}] Failed to read config for resolution restore: {e}')
+            return
+        if not serial or serial == 'auto':
+            return
+
+        adb = State.deploy_config.AdbExecutable.replace('\\', '/')
+        if not os.path.exists(adb):
+            adb = next((f for f in [
+                './bin/adb/adb.exe',
+                './toolkit/Lib/site-packages/adbutils/binaries/adb.exe',
+                '/usr/bin/adb',
+            ] if os.path.exists(f)), 'adb')
+
+        try:
+            result = subprocess.run(
+                [adb, '-s', serial, 'shell', 'wm', 'size', 'reset'],
+                timeout=10, capture_output=True,
+            )
+            result2 = subprocess.run(
+                [adb, '-s', serial, 'shell', 'wm', 'density', 'reset'],
+                timeout=10, capture_output=True,
+            )
+            if result.returncode == 0 and result2.returncode == 0:
+                self.renderables.append(
+                    (logging.INFO, f"[{self.config_name}] Physical device resolution restored (wm size reset)\n")
+                )
+            else:
+                logger.warning(
+                    f'[{self.config_name}] wm size reset failed: {result.stderr!r}, '
+                    f'run `adb -s {serial} shell wm size reset` manually'
+                )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            logger.warning(
+                f'[{self.config_name}] Failed to restore resolution: {e}, '
+                f'run `adb -s {serial} shell wm size reset` manually'
+            )
 
     def _thread_log_queue_handler(self) -> None:
         while self.alive:
