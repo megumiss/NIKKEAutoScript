@@ -1,3 +1,6 @@
+import atexit
+import re
+import time
 from collections import deque
 
 from module.base.button import Button
@@ -40,6 +43,12 @@ class Device(Screenshot, Control, AppControl):
                 super().__init__(*args, **kwargs)
                 break
             except EmulatorNotRunningError:
+                if self.config.PhysicalDevice_Enable:
+                    logger.critical(
+                        f'Failed to connect to physical device "{self.config.Emulator_Serial}", '
+                        f'please check `adb connect` and wireless debugging on the device'
+                    )
+                    raise RequestHumanTakeover
                 if trial >= 3:
                     logger.critical('Failed to start emulator after 3 trial')
                     raise RequestHumanTakeover
@@ -54,8 +63,45 @@ class Device(Screenshot, Control, AppControl):
                     raise RequestHumanTakeover
 
         # Auto-fill emulator info
-        if IS_WINDOWS and self.config.EmulatorInfo_Emulator == 'auto':
+        if IS_WINDOWS and not self.config.PhysicalDevice_Enable \
+                and self.config.EmulatorInfo_Emulator == 'auto':
             _ = self.emulator_instance
+
+        if self.config.PhysicalDevice_Enable:
+            if self.config.Emulator_ControlMethod == 'minitouch':
+                logger.warning('minitouch is unavailable on physical devices, '
+                               'please set Emulator.ControlMethod to uiautomator2 or ADB')
+            self._physical_device_resolution_set()
+
+    def _physical_device_resolution_set(self):
+        """
+        真机模式：临时把设备分辨率改为模板基准 720x1280，进程正常退出时恢复。
+        进程被强杀时由 webui 侧 ProcessManager.stop 兜底恢复。
+        只改 wm size 不改 density 会导致 UI 按原 dp 尺寸渲染，画面等比放大（图标出屏），
+        所以 density 要按宽度比例同步缩放。
+        """
+        size_out = self.adb_shell(['wm', 'size'])
+        logger.info(f'Physical device display: {size_out}')
+        density_out = self.adb_shell(['wm', 'density'])
+        logger.info(f'Physical device density: {density_out}')
+        res = re.search(r'Physical size:\s*(\d+)x(\d+)', size_out)
+        density = re.search(r'Physical density:\s*(\d+)', density_out)
+        self.adb_shell(['wm', 'size', '720x1280'])
+        if res and density:
+            w = int(res.group(1))
+            scaled = round(int(density.group(1)) * 720 / w)
+            self.adb_shell(['wm', 'density', str(scaled)])
+        # wm size 立即写入但显示管线生效有延迟，等它真正切换完成，避免首帧截图拿到旧分辨率
+        time.sleep(2)
+        atexit.register(self._physical_device_resolution_reset)
+
+    def _physical_device_resolution_reset(self):
+        logger.info('Restore physical device resolution')
+        try:
+            self.adb_shell(['wm', 'size', 'reset'])
+            self.adb_shell(['wm', 'density', 'reset'])
+        except Exception as e:
+            logger.warning(f'Failed to restore resolution, run `adb shell wm size reset` manually: {e}')
 
         # TODO
         # self.screenshot_interval_set()
