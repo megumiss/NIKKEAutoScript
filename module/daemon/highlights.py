@@ -130,7 +130,7 @@ class Highlights(UI, DaemonBase):
         self.device.sleep(0.5)
         tmp_image = self.device.image
         logger.info('Click %s @ %s' % (point2str(690, 560), 'NEXT_NIKKE'))
-        self.device.click_minitouch(690, 560)
+        self.device.click_xy(690, 560)
         # 比较头像是否变化
         switch_timer = Timer(3, count=3).start()
         while 1:
@@ -146,7 +146,7 @@ class Highlights(UI, DaemonBase):
                 break
             if switch_timer.reached():
                 logger.info('Click %s @ %s' % (point2str(690, 560), 'NEXT_NIKKE'))
-                self.device.click_minitouch(690, 560)
+                self.device.click_xy(690, 560)
                 switch_timer.reset()
 
 

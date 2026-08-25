@@ -119,7 +119,7 @@ class Conversation(UI):
                 self.device.sleep(0.5)
                 tmp_image = self.device.image
                 logger.info('Click %s @ %s' % (point2str(690, 560), 'NEXT_NIKKE'))
-                self.device.click_minitouch(690, 560)
+                self.device.click_xy(690, 560)
                 # 比较头像是否变化
                 confirm_timer = Timer(3, count=3).start()
                 while 1:
@@ -135,7 +135,7 @@ class Conversation(UI):
                         break
                     if confirm_timer.reached():
                         logger.info('Click %s @ %s' % (point2str(690, 560), 'NEXT_NIKKE'))
-                        self.device.click_minitouch(690, 560)
+                        self.device.click_xy(690, 560)
                         confirm_timer.reset()
             else:
                 self._confirm_timer.reset()
@@ -154,9 +154,9 @@ class Conversation(UI):
                     ]
                     r.sort(key=lambda x: x[1])
                     if len(r) > 0:
-                        self.device.click_minitouch(*find_center(r[0]))
+                        self.device.click_xy(*find_center(r[0]))
                     else:
-                        self.device.click_minitouch(380, 450)
+                        self.device.click_xy(380, 450)
                     # TODO
                     self.device.sleep(2)
             except Exception:
@@ -199,7 +199,7 @@ class Conversation(UI):
             # 咨询确认
             if self.appear(CONFIRM_B, offset=(5, 5), static=False):
                 x, y = CONFIRM_B.location
-                self.device.click_minitouch(x - 75, y)
+                self.device.click_xy(x - 75, y)
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
@@ -215,13 +215,13 @@ class Conversation(UI):
                 return self.communicate()
             # 点击对话
             if self.appear(AUTO_CLICK_CHECK, offset=(30, 30), interval=0.3):
-                self.device.click_minitouch(100, 100)
+                self.device.click_xy(100, 100)
                 logger.info('Click %s @ %s' % (point2str(100, 100), 'WAIT_TO_ANSWER'))
                 click_timer.reset()
                 continue
 
             if click_timer.reached() and not GIFT.match_appear_on(self.device.image, threshold=10):
-                self.device.click_minitouch(100, 100)
+                self.device.click_xy(100, 100)
                 click_timer.reset()
                 continue
 
@@ -283,7 +283,7 @@ class Conversation(UI):
                         continue
                     # 点击对话
                     if self.appear(AUTO_CLICK_CHECK, offset=(30, 30), interval=0.3):
-                        self.device.click_minitouch(100, 100)
+                        self.device.click_xy(100, 100)
                         logger.info('Click %s @ %s' % (point2str(100, 100), 'WAIT_TO_ANSWER'))
                         click_timer.reset()
                         continue

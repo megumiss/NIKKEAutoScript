@@ -81,7 +81,7 @@ class MissionPass(UI):
                 and not self.appear(MISSION_RED_POINT, offset=(-25, -50, 10, 50))
                 and not self.appear(REWARD_RED_POINT, offset=(-25, -50, 10, 50))
             ):
-                self.device.click_minitouch(1, 1)
+                self.device.click_xy(1, 1)
                 self.device.sleep(0.5)
                 continue
 

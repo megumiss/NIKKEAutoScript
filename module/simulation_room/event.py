@@ -51,12 +51,12 @@ class EnemyEvent(EventBase):
                     or self.appear(BOSS_EVENT_CHECK, offset=(30, 30), static=False)
                     or self.appear(SPECIAL_EVENT_CHECK, offset=(30, 30), static=False)
                 ):
-                    self.device.click_minitouch(*self.button)
+                    self.device.click_xy(*self.button)
                     logger.info('Click %s @ %s' % (point2str(*self.button), 'ENEMY_EVENT'))
                     click_timer.reset()
                     continue
                 elif self.appear(TARGET_HP_CHECK, offset=(30, 30), interval=5):
-                    self.device.click_minitouch(360, 840)
+                    self.device.click_xy(360, 840)
                     logger.info('Click %s @ %s' % (point2str(360, 840), 'ENEMY_EVENT'))
                     click_timer.reset()
                     continue
@@ -203,7 +203,7 @@ class RandomEvent(EventBase):
                         button = self.get_effect()
                         confirm_timer.reset()
                         click_timer_2.reset()
-                        self.device.click_minitouch(*button)
+                        self.device.click_xy(*button)
                         logger.info('Click %s @ %s' % (point2str(*button), 'EFFECT'))
                         self.device.sleep(0.6)
 
@@ -247,7 +247,7 @@ class RandomEvent(EventBase):
                             button = self.get_effect_list()[-1]
                             confirm_timer.reset()
                             click_timer_2.reset()
-                            self.device.click_minitouch(*button)
+                            self.device.click_xy(*button)
                             logger.info('Click %s @ %s' % (point2str(*button), 'EFFECT'))
 
                     if click_timer.reached() and self.appear_then_click(
@@ -299,7 +299,7 @@ class RandomEvent(EventBase):
                     continue
 
                 if click_timer.reached() and self.appear(NOTHING, offset=(30, 30), interval=5, static=False):
-                    self.device.click_minitouch(530, 800)
+                    self.device.click_xy(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()
@@ -378,7 +378,7 @@ class ImprovementEvent(EventBase):
                         button = self.get_effect()
                         confirm_timer.reset()
                         click_timer_2.reset()
-                        self.device.click_minitouch(*button)
+                        self.device.click_xy(*button)
                         logger.info('Click %s @ %s' % (point2str(*button), 'EFFECT'))
                         self.device.sleep(0.6)
 
@@ -431,7 +431,7 @@ class ImprovementEvent(EventBase):
                     continue
 
                 if click_timer.reached() and self.appear(NOTHING, offset=(30, 30), interval=5, static=False):
-                    self.device.click_minitouch(530, 800)
+                    self.device.click_xy(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()

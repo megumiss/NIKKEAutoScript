@@ -112,7 +112,7 @@ class Interception(UI):
 
             if self.appear(self.get_boss_button(boss), offset=10, interval=1):
                 logger.info('Click %s @ CHALLANGE' % point2str(360, 1030))
-                self.device.click_minitouch(360, 1030)
+                self.device.click_xy(360, 1030)
                 # self.device.sleep(1)
                 continue
 
@@ -124,7 +124,7 @@ class Interception(UI):
                 or self.appear(ULTRA, offset=10)
             ) and not self.appear(self.get_boss_button(boss), offset=10):
                 logger.info('Click %s @ SWITCH' % point2str(580, 960))
-                self.device.click_minitouch(580, 960)
+                self.device.click_xy(580, 960)
                 self.device.sleep(0.5)
                 continue
 

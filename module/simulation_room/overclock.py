@@ -173,7 +173,7 @@ class Overclock(UI):
                 if click_timer_2.reached():
                     confirm_timer.reset()
                     click_timer_2.reset()
-                    self.device.click_minitouch(*button)
+                    self.device.click_xy(*button)
                     logger.info('Click %s @ %s' % (point2str(*button), 'EFFECT'))
                     self.device.sleep(0.6)
 
@@ -205,7 +205,7 @@ class Overclock(UI):
                     continue
 
                 if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
-                    self.device.click_minitouch(530, 800)
+                    self.device.click_xy(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()
@@ -238,7 +238,7 @@ class Overclock(UI):
                     continue
 
                 if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
-                    self.device.click_minitouch(530, 800)
+                    self.device.click_xy(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()
@@ -271,7 +271,7 @@ class Overclock(UI):
                     continue
 
                 if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
-                    self.device.click_minitouch(530, 800)
+                    self.device.click_xy(530, 800)
                     logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                     confirm_timer.reset()
                     click_timer.reset()
@@ -306,7 +306,7 @@ class Overclock(UI):
                 return
 
             elif self.appear(RESET_TIME_IN, offset=(30, 30), interval=2):
-                self.device.click_minitouch(50, 200)
+                self.device.click_xy(50, 200)
                 continue
 
     def ensure_into_overclock(self, skip_first_screenshot=True):
@@ -507,7 +507,7 @@ class Overclock(UI):
                 continue
 
             if click_timer.reached() and self.appear(END_SIMULATION_CHECK, offset=(30, 30), static=False):
-                self.device.click_minitouch(520, 800)
+                self.device.click_xy(520, 800)
                 logger.info('Click %s @ %s' % (point2str(520, 800), 'END_SIMULATION_CONFIRM'))
                 click_timer.reset()
                 continue
@@ -519,7 +519,7 @@ class Overclock(UI):
                     continue
 
             if click_timer.reached() and self.appear(SKIP_CHECK, offset=(30, 30), interval=5, static=False):
-                self.device.click_minitouch(530, 800)
+                self.device.click_xy(530, 800)
                 logger.info('Click %s @ %s' % (point2str(530, 800), 'SKIP'))
                 click_timer.reset()
                 continue

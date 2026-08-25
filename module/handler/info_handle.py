@@ -47,7 +47,7 @@ class InfoHandler(ModuleBase):
 
             x, y = reward[0], reward[1]
             logger.info(f'Click {point2str(x, y)} @ {Langs.CLAIM_ALL}/{Langs.CLAIM_REWARD}')
-            self.device.click_minitouch(x, y)
+            self.device.click_xy(x, y)
 
             reward_done = False
             confirm_timer = Timer(2, count=3)
@@ -66,7 +66,7 @@ class InfoHandler(ModuleBase):
                             continue
                     else:
                         # 点击空白页
-                        self.device.click_minitouch(1, 420)
+                        self.device.click_xy(1, 420)
                         self.device.sleep(1)
                         logger.info('Click %s @ CLOSE' % point2str(1, 420))
                         continue
@@ -122,7 +122,7 @@ class InfoHandler(ModuleBase):
 
     def handle_level_up(self):
         if self.appear(LEVEL_UP_CHECK, offset=(30, 30)):
-            self.device.click_minitouch(360, 920)
+            self.device.click_xy(360, 920)
             self.device.sleep(1)
             logger.info('Click (360, 920) @ LEVEL_UP')
             return True
@@ -178,7 +178,7 @@ class InfoHandler(ModuleBase):
     #     elif self.appear_then_click(
     #             TOUCH_TO_CONTINUE, offset=(5, 5), static=False, interval=interval
     #     ):
-    #         self.device.click_minitouch(360, 720)
+    #         self.device.click_xy(360, 720)
     #         return True
 
     def handle_login(self):
@@ -256,7 +256,7 @@ class InfoHandler(ModuleBase):
                 logger.info(
                     'Click %s @ %s (dx=%.2f)' % (point2str(x_click, y_click), f'RED_CIRCLE_{template_type}', dx)
                 )
-                self.device.long_click_minitouch(x_click, y_click, 1)
+                self.device.long_click_xy(x_click, y_click, 1)
 
                 # 画面回正
                 self.device.sleep(0.5)

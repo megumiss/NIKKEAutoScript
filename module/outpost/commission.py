@@ -126,7 +126,7 @@ class Commission(UI):
                         break
                     if self.appear(ITEM_SELECTED_NUM_CHECK, offset=200):
                         logger.info('Click %s @ %s' % (point2str(10, 10), 'CLOSE_ITEM'))
-                        self.device.click_minitouch(10, 10)
+                        self.device.click_xy(10, 10)
                         self.device.sleep(0.5)
                         click_timer.reset()
                         continue

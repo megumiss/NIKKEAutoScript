@@ -756,7 +756,7 @@ class EventStory(EventBase):
                                 break
                             # 要取消的nikke序号
 
-                            self.device.click_minitouch(
+                            self.device.click_xy(
                                 self.team_nikke_locations[index][0], self.team_nikke_locations[index][1]
                             )
                             self.device.sleep(0.3)
