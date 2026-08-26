@@ -41,13 +41,14 @@
       "name": null,
       "path": null
     },
+    "PhysicalDevice": {
+      "Enable": false,
+      "AutoRestoreResolution": true
+    },
     "Scrcpy": {
       "WebUrl": null,
       "Bitrate": 16000000,
       "MaxFps": 60
-    },
-    "PhysicalDevice": {
-      "Enable": false
     },
     "Storage": {
       "Storage": {}

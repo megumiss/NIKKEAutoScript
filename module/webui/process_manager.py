@@ -138,7 +138,10 @@ class ProcessManager:
             with open(filepath_config(self.config_name), encoding='utf-8') as f:
                 data = json.load(f)
             emulator = data.get('Emulator', {})
-            if not emulator.get('PhysicalDevice', {}).get('Enable', False):
+            physical = emulator.get('PhysicalDevice', {})
+            if not physical.get('Enable', False):
+                return
+            if not physical.get('AutoRestoreResolution', True):
                 return
             serial = str(emulator.get('Emulator', {}).get('Serial', ''))
         except (OSError, json.JSONDecodeError) as e:

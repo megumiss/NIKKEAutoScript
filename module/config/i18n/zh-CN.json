@@ -318,11 +318,11 @@
   },
   "Emulator": {
     "_info": {
-      "name": "模拟器设置",
+      "name": "ADB 设置",
       "help": ""
     },
     "Serial": {
-      "name": "模拟器 Serial",
+      "name": "Serial",
       "help": "常见的模拟器 Serial 可以查询下方列表，填 \"auto\" 自动检测模拟器，多个模拟器正在运行或使用不支持自动检测的模拟器时无法使用 \"auto\"，必须手动填写 \n模拟器默认 Serial：\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- 雷电模拟器 emulator-5554 或 127.0.0.1:5555\n- 蓝叠模拟器 127.0.0.1:5555"
     },
     "PackageName": {
@@ -332,14 +332,14 @@
       "com.gamamobi.nikke": "港澳台"
     },
     "ScreenshotMethod": {
-      "name": "模拟器截图方案",
-      "help": "真机 Android 15+ 上 DroidCast 截图被系统限制，请改用 ADB",
+      "name": "截图方案",
+      "help": "",
       "DroidCast": "DroidCast",
       "ADB": "ADB (screencap)"
     },
     "ControlMethod": {
-      "name": "模拟器控制方案",
-      "help": "真机上 minitouch 不可用，请改用 MaaTouch（推荐）、uiautomator2 或 ADB",
+      "name": "控制方案",
+      "help": "",
       "minitouch": "minitouch",
       "uiautomator2": "uiautomator2",
       "ADB": "ADB (input)",
@@ -350,18 +350,24 @@
       "help": ""
     },
     "ScreenshotInterval": {
-      "name": "模拟器截图间隔",
+      "name": "截图间隔",
       "help": ""
     }
   },
   "PhysicalDevice": {
     "_info": {
       "name": "真机设置",
-      "help": "通过 adb 连接真实安卓设备（非模拟器）时使用"
+      "help": "通过 adb 连接真实安卓设备时使用"
     },
     "Enable": {
       "name": "启用真机模式",
-      "help": "开启后：设备分辨率将被临时改为 720x1280、密度固定为 240（停止实例时自动恢复，异常退出可手动执行 adb shell wm size reset && adb shell wm density reset）；截图按上方“模拟器截图方案”执行（Android 15+ 上 DroidCast 被系统限制，请选 ADB）；点击按上方“模拟器控制方案”执行（真机请选 uiautomator2 或 ADB，minitouch 在无 root 真机上不可用）；连接失败时不会尝试启动模拟器。仅支持竖屏",
+      "help": "使用前请先阅读 https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device\n开启后：设备分辨率将被临时改为 720x1280、DPI 固定为 240；截图方案建议选择 ADB，控制方案建议选择 uiautomator2 或 MaaTouch",
+      "True": "True",
+      "False": "False"
+    },
+    "AutoRestoreResolution": {
+      "name": "停止时自动还原分辨率",
+      "help": "开启后：停止实例时自动执行 wm size/density reset 恢复设备原生分辨率；关闭后需用下方按钮手动还原",
       "True": "True",
       "False": "False"
     }

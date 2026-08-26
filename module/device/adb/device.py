@@ -74,8 +74,9 @@ class Device(Screenshot, Control, AppControl):
 
     def _physical_device_resolution_set(self):
         """
-        真机模式：临时把设备分辨率改为模板基准 720x1280，进程正常退出时恢复。
-        进程被强杀时由 webui 侧 ProcessManager.stop 兜底恢复。
+        真机模式：临时把设备分辨率改为模板基准 720x1280。
+        AutoRestoreResolution 开启时进程正常退出自动恢复，被强杀时由 webui 侧 ProcessManager.stop 兜底；
+        关闭时由用户在设置页手动还原。
         只改 wm size 不改 density 会导致 UI 按原 dp 尺寸渲染，画面等比放大（图标出屏），
         density 固定为 240，与模拟器的 720x1280@240dpi 一致。
         """
@@ -87,7 +88,8 @@ class Device(Screenshot, Control, AppControl):
         self.adb_shell(['wm', 'density', '240'])
         # wm size 立即写入但显示管线生效有延迟，等它真正切换完成，避免首帧截图拿到旧分辨率
         time.sleep(2)
-        atexit.register(self._physical_device_resolution_reset)
+        if self.config.PhysicalDevice_AutoRestoreResolution:
+            atexit.register(self._physical_device_resolution_reset)
 
     def _physical_device_resolution_reset(self):
         logger.info('Restore physical device resolution')

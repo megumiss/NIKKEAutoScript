@@ -59,6 +59,10 @@ PhysicalDevice:
     type: checkbox
     value: false
     option: [ true, false ]
+  AutoRestoreResolution:
+    type: checkbox
+    value: true
+    option: [ true, false ]
 Scrcpy:
   WebUrl: ''
   Bitrate: 16000000

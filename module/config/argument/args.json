@@ -177,6 +177,24 @@
         "mode": "path"
       }
     },
+    "PhysicalDevice": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "AutoRestoreResolution": {
+        "type": "checkbox",
+        "value": true,
+        "option": [
+          true,
+          false
+        ]
+      }
+    },
     "Scrcpy": {
       "WebUrl": {
         "type": "input",
@@ -189,16 +207,6 @@
       "MaxFps": {
         "type": "input",
         "value": 60
-      }
-    },
-    "PhysicalDevice": {
-      "Enable": {
-        "type": "checkbox",
-        "value": false,
-        "option": [
-          true,
-          false
-        ]
       }
     },
     "Storage": {

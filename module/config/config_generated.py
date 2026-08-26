@@ -34,6 +34,7 @@ class GeneratedConfig:
 
     # Group `PhysicalDevice`
     PhysicalDevice_Enable = False  # True, False
+    PhysicalDevice_AutoRestoreResolution = True  # True, False
 
     # Group `Scrcpy`
     Scrcpy_WebUrl = None

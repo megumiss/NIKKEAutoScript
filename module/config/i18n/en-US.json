@@ -318,11 +318,11 @@
   },
   "Emulator": {
     "_info": {
-      "name": "Emulator Settings",
+      "name": "ADB Settings",
       "help": ""
     },
     "Serial": {
-      "name": "Emulator Serial",
+      "name": "Serial",
       "help": "Common emulator serials are listed below. Set to \"auto\" to auto-detect. If multiple emulators are running or an emulator doesn't support auto-detection, you must set it manually.\nDefault emulator serials:\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- LDPlayer emulator-5554 or 127.0.0.1:5555\n- BlueStacks 127.0.0.1:5555"
     },
     "PackageName": {
@@ -332,14 +332,14 @@
       "com.gamamobi.nikke": "Hong Kong/Taiwan"
     },
     "ScreenshotMethod": {
-      "name": "Emulator Screenshot Method",
-      "help": "DroidCast screenshots are blocked by the system on physical devices running Android 15+, use ADB instead",
+      "name": "Screenshot Method",
+      "help": "",
       "DroidCast": "DroidCast",
       "ADB": "ADB (screencap)"
     },
     "ControlMethod": {
-      "name": "Emulator Control Method",
-      "help": "minitouch is unavailable on physical devices, use MaaTouch (recommended), uiautomator2 or ADB instead",
+      "name": "Control Method",
+      "help": "",
       "minitouch": "minitouch",
       "uiautomator2": "uiautomator2",
       "ADB": "ADB (input)",
@@ -350,18 +350,24 @@
       "help": ""
     },
     "ScreenshotInterval": {
-      "name": "Emulator Screenshot Interval",
+      "name": "Screenshot Interval",
       "help": ""
     }
   },
   "PhysicalDevice": {
     "_info": {
       "name": "Physical Device",
-      "help": "Use when connecting to a real Android device (not an emulator) via adb"
+      "help": "Use when connecting to a physical Android device via adb"
     },
     "Enable": {
       "name": "Enable physical device mode",
-      "help": "When enabled: the device resolution is temporarily set to 720x1280 with density fixed at 240 (restored when the instance stops; if the script exits abnormally, run `adb shell wm size reset && adb shell wm density reset` manually); screenshots follow the 'Emulator Screenshot Method' above (DroidCast is blocked by the system on Android 15+, choose ADB); taps follow the 'Emulator Control Method' above (for physical devices choose uiautomator2 or ADB — minitouch is unusable on unrooted devices); connection failures will not attempt to start an emulator. Portrait only",
+      "help": "Read this first: https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\nWhen enabled: the device resolution is temporarily set to 720x1280 with DPI fixed at 240; ADB is recommended for screenshots, uiautomator2 or MaaTouch for control",
+      "True": "True",
+      "False": "False"
+    },
+    "AutoRestoreResolution": {
+      "name": "Auto restore resolution on stop",
+      "help": "When enabled: stopping the instance automatically runs wm size/density reset to restore the native resolution; when disabled, restore manually with the buttons below",
       "True": "True",
       "False": "False"
     }

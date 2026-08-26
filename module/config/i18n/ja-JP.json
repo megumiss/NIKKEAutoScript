@@ -318,11 +318,11 @@
   },
   "Emulator": {
     "_info": {
-      "name": "エミュレーター設定",
+      "name": "ADB 設定",
       "help": ""
     },
     "Serial": {
-      "name": "エミュレーターシリアル",
+      "name": "シリアル",
       "help": "一般的なエミュレーターのシリアルは以下のリストで確認できます。「auto」を埋めるとエミュレーターを自動検出します。複数のエミュレーターが実行されている場合、または自動検出をサポートしていないエミュレーターを使用している場合は、「auto」は使用できません。手動で入力する必要があります。\nエミュレーターのデフォルトシリアル：\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- LDPlayer emulator-5554 または 127.0.0.1:5555\n- BlueStacks 127.0.0.1:5555"
     },
     "PackageName": {
@@ -332,14 +332,14 @@
       "com.gamamobi.nikke": "香港・マカオ・台湾"
     },
     "ScreenshotMethod": {
-      "name": "エミュレーターのスクリーンショット方法",
-      "help": "Android 15 以降の実機では DroidCast のスクリーンショットがシステムに制限されます。ADB を選択してください",
+      "name": "スクリーンショット方法",
+      "help": "",
       "DroidCast": "DroidCast",
       "ADB": "ADB (screencap)"
     },
     "ControlMethod": {
-      "name": "エミュレーターの制御方法",
-      "help": "実機では minitouch は使用できません。MaaTouch（推奨）、uiautomator2 または ADB を選択してください",
+      "name": "制御方法",
+      "help": "",
       "minitouch": "minitouch",
       "uiautomator2": "uiautomator2",
       "ADB": "ADB (input)",
@@ -350,18 +350,24 @@
       "help": ""
     },
     "ScreenshotInterval": {
-      "name": "エミュレーターのスクリーンショット間隔",
+      "name": "スクリーンショット間隔",
       "help": ""
     }
   },
   "PhysicalDevice": {
     "_info": {
       "name": "実機設定",
-      "help": "adb で実機（エミュレーター以外）に接続する場合に使用します"
+      "help": "adb で実機に接続する場合に使用します"
     },
     "Enable": {
       "name": "実機モードを有効化",
-      "help": "有効化後：デバイスの解像度が一時的に 720x1280 に変更され、密度は 240 に固定されます（インスタンス停止時に自動復元。異常終了した場合は adb shell wm size reset && adb shell wm density reset を手動実行）。スクリーンショットは上記「エミュレーターのスクリーンショット方法」に従います（Android 15 以降では DroidCast がシステムに制限されるため ADB を選択）。タップは上記「エミュレーターの制御方法」に従います（実機では uiautomator2 または ADB を選択。minitouch は root なしの実機では使用不可）。接続失敗時にエミュレーターの起動を試みません。縦画面のみ対応",
+      "help": "使用前にまずお読みください https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\n有効化後：デバイスの解像度が一時的に 720x1280、DPI は 240 に固定されます。スクリーンショット方法は ADB、制御方法は uiautomator2 または MaaTouch を推奨します",
+      "True": "True",
+      "False": "False"
+    },
+    "AutoRestoreResolution": {
+      "name": "停止時に解像度を自動復元",
+      "help": "有効時：インスタンス停止時に wm size/density reset を自動実行して元の解像度に復元します。無効時は下のボタンで手動復元してください",
       "True": "True",
       "False": "False"
     }
