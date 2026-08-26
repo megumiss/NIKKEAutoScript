@@ -174,7 +174,11 @@ class Connection(ConnectionAttr):
         Returns:
             str:
         """
-        logger.info(f'Execute: {cmd}')
+        # screencap 每张截图都会执行一次（约 1s/帧），INFO 级别会刷屏，降为 DEBUG
+        if 'screencap' in cmd:
+            logger.debug(f'Execute: {cmd}')
+        else:
+            logger.info(f'Execute: {cmd}')
         # Use shell=True to disable console window when using GUI.
         # Although, there's still a window when you stop running in GUI, which cause by gooey.
         # To disable it, edit gooey/gui/util/taskkill.py
