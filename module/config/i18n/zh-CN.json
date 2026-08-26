@@ -361,7 +361,7 @@
     },
     "Enable": {
       "name": "启用真机模式",
-      "help": "开启后：设备分辨率将被临时改为 720x1280 并按比例缩放密度（停止实例时自动恢复，异常退出可手动执行 adb shell wm size reset && adb shell wm density reset）；截图按上方“模拟器截图方案”执行（Android 15+ 上 DroidCast 被系统限制，请选 ADB）；点击按上方“模拟器控制方案”执行（真机请选 uiautomator2 或 ADB，minitouch 在无 root 真机上不可用）；连接失败时不会尝试启动模拟器。仅支持竖屏",
+      "help": "开启后：设备分辨率将被临时改为 720x1280、密度固定为 240（停止实例时自动恢复，异常退出可手动执行 adb shell wm size reset && adb shell wm density reset）；截图按上方“模拟器截图方案”执行（Android 15+ 上 DroidCast 被系统限制，请选 ADB）；点击按上方“模拟器控制方案”执行（真机请选 uiautomator2 或 ADB，minitouch 在无 root 真机上不可用）；连接失败时不会尝试启动模拟器。仅支持竖屏",
       "True": "True",
       "False": "False"
     }

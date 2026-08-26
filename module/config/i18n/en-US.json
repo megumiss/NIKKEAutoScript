@@ -361,7 +361,7 @@
     },
     "Enable": {
       "name": "Enable physical device mode",
-      "help": "When enabled: the device resolution is temporarily set to 720x1280 with proportionally scaled density (restored when the instance stops; if the script exits abnormally, run `adb shell wm size reset && adb shell wm density reset` manually); screenshots follow the 'Emulator Screenshot Method' above (DroidCast is blocked by the system on Android 15+, choose ADB); taps follow the 'Emulator Control Method' above (for physical devices choose uiautomator2 or ADB — minitouch is unusable on unrooted devices); connection failures will not attempt to start an emulator. Portrait only",
+      "help": "When enabled: the device resolution is temporarily set to 720x1280 with density fixed at 240 (restored when the instance stops; if the script exits abnormally, run `adb shell wm size reset && adb shell wm density reset` manually); screenshots follow the 'Emulator Screenshot Method' above (DroidCast is blocked by the system on Android 15+, choose ADB); taps follow the 'Emulator Control Method' above (for physical devices choose uiautomator2 or ADB — minitouch is unusable on unrooted devices); connection failures will not attempt to start an emulator. Portrait only",
       "True": "True",
       "False": "False"
     }

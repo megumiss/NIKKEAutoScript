@@ -1,5 +1,4 @@
 import atexit
-import re
 import time
 from collections import deque
 
@@ -78,19 +77,14 @@ class Device(Screenshot, Control, AppControl):
         真机模式：临时把设备分辨率改为模板基准 720x1280，进程正常退出时恢复。
         进程被强杀时由 webui 侧 ProcessManager.stop 兜底恢复。
         只改 wm size 不改 density 会导致 UI 按原 dp 尺寸渲染，画面等比放大（图标出屏），
-        所以 density 要按宽度比例同步缩放。
+        density 固定为 240，与模拟器的 720x1280@240dpi 一致。
         """
         size_out = self.adb_shell(['wm', 'size'])
         logger.info(f'Physical device display: {size_out}')
         density_out = self.adb_shell(['wm', 'density'])
         logger.info(f'Physical device density: {density_out}')
-        res = re.search(r'Physical size:\s*(\d+)x(\d+)', size_out)
-        density = re.search(r'Physical density:\s*(\d+)', density_out)
         self.adb_shell(['wm', 'size', '720x1280'])
-        if res and density:
-            w = int(res.group(1))
-            scaled = round(int(density.group(1)) * 720 / w)
-            self.adb_shell(['wm', 'density', str(scaled)])
+        self.adb_shell(['wm', 'density', '240'])
         # wm size 立即写入但显示管线生效有延迟，等它真正切换完成，避免首帧截图拿到旧分辨率
         time.sleep(2)
         atexit.register(self._physical_device_resolution_reset)
