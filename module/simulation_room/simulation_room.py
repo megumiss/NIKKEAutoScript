@@ -122,8 +122,8 @@ class SimulationRoom(UI):
         if self.appear(END_SIMULATION, offset=(30, 30), static=False):
             return
 
-        if not self.device.click_xy(150, 270):
-            self.device.sleep(2)
+        self.device.click_xy(150, 270)
+        self.device.sleep(2)
 
     def get_effect(self):
         for x in range(3):

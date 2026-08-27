@@ -1,4 +1,5 @@
 import atexit
+import re
 import time
 from collections import deque
 
@@ -72,11 +73,17 @@ class Device(Screenshot, Control, AppControl):
                                'please set Emulator.ControlMethod to uiautomator2 or ADB')
             self._physical_device_resolution_set()
 
+    @staticmethod
+    def _wm_override_value(output: str, key: str):
+        """wm size/density 输出中存在 Override 行时返回其值，否则 None。"""
+        match = re.search(rf'Override {key}: (\S+)', output)
+        return match.group(1) if match else None
+
     def _physical_device_resolution_set(self):
         """
         真机模式：临时把设备分辨率改为模板基准 720x1280。
-        AutoRestoreResolution 开启时进程正常退出自动恢复，被强杀时由 webui 侧 ProcessManager.stop 兜底；
-        关闭时由用户在设置页手动还原。
+        AutoRestoreResolution 开启时进程正常退出自动恢复，被强杀时由 webui 侧 ProcessManager.stop 兜底
+        （兜底路径拿不到 override 记录，仍是 reset，属异常路径可接受）；关闭时由用户在设置页手动还原。
         只改 wm size 不改 density 会导致 UI 按原 dp 尺寸渲染，画面等比放大（图标出屏），
         density 固定为 240，与模拟器的 720x1280@240dpi 一致。
         """
@@ -84,18 +91,32 @@ class Device(Screenshot, Control, AppControl):
         logger.info(f'Physical device display: {size_out}')
         density_out = self.adb_shell(['wm', 'density'])
         logger.info(f'Physical device density: {density_out}')
+        # 记录用户已有的 override，退出时还原具体值；直接 reset 会丢掉用户自己的分辨率/DPI 覆盖
+        self._physical_size_override = self._wm_override_value(size_out, 'size')
+        self._physical_density_override = self._wm_override_value(density_out, 'density')
         self.adb_shell(['wm', 'size', '720x1280'])
         self.adb_shell(['wm', 'density', '240'])
         # wm size 立即写入但显示管线生效有延迟，等它真正切换完成，避免首帧截图拿到旧分辨率
         time.sleep(2)
+        # 读回校验：设备拒绝 wm 命令时 adb_shell 不抛异常，静默继续只会让后续截图/坐标全错
+        size_now = self.adb_shell(['wm', 'size'])
+        density_now = self.adb_shell(['wm', 'density'])
+        if 'Override size: 720x1280' not in size_now or 'Override density: 240' not in density_now:
+            logger.critical(
+                f'Failed to set physical device resolution to 720x1280@240: '
+                f'size={size_now!r}, density={density_now!r}'
+            )
+            raise RequestHumanTakeover
         if self.config.PhysicalDevice_AutoRestoreResolution:
             atexit.register(self._physical_device_resolution_reset)
 
     def _physical_device_resolution_reset(self):
         logger.info('Restore physical device resolution')
+        size = getattr(self, '_physical_size_override', None) or 'reset'
+        density = getattr(self, '_physical_density_override', None) or 'reset'
         try:
-            self.adb_shell(['wm', 'size', 'reset'])
-            self.adb_shell(['wm', 'density', 'reset'])
+            self.adb_shell(['wm', 'size', size])
+            self.adb_shell(['wm', 'density', density])
         except Exception as e:
             logger.warning(f'Failed to restore resolution, run `adb shell wm size reset` manually: {e}')
 

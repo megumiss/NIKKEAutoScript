@@ -6,6 +6,7 @@ from module.base.button import Button
 from module.base.utils import ensure_int, point2str
 from module.device.adb.method.maatouch import MaaTouch
 from module.device.adb.method.minitouch import Minitouch
+from module.exception import RequestHumanTakeover
 from module.logger import logger
 
 
@@ -29,6 +30,12 @@ class Control(Minitouch, MaaTouch):
         """
         method = self.click_methods.get(
             self.config.Emulator_ControlMethod)
+        if method is None:
+            logger.critical(
+                f'Unknown Emulator_ControlMethod: {self.config.Emulator_ControlMethod}, '
+                f'expected one of {list(self.click_methods)}'
+            )
+            raise RequestHumanTakeover
         method(x, y)
 
     def long_click_xy(self, x, y, duration=1.0):
