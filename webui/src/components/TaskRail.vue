@@ -63,7 +63,7 @@ function openField(task: any, field: any) {
         <div v-show="!railCollapsed[menu.key] || taskFilter" class="rail-tasks">
           <template v-for="task in menu.tasks" :key="task.key">
             <button class="rail-item" :class="{ active: selectedTask === task.key }" @click="openTask(task, menu.page === 'tool' ? 'tool' : 'task')">
-              {{ task.name }}
+              {{ task.name }}{{ task.key === 'PhysicalDevice' ? '(BETA)' : '' }}
               <span v-if="selectedInstance?.current_task === task.key" class="spin"></span>
               <span v-else-if="taskEnabled(task.key)" class="mini-dot on"></span>
             </button>

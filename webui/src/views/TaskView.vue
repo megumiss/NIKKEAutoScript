@@ -55,7 +55,7 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
       <div>
         <article class="card task-hero">
           <div class="task-icon">{{ selectedPage === 'tool' ? '🛠' : '⚙️' }}</div>
-          <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
+          <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}{{ selectedTask === 'PhysicalDevice' ? '(BETA)' : '' }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
           <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()">{{ selectedInstance?.state === 1 ? t('停止') : `▶ ${t('启动')}` }}</button>
         </article>
         <div class="cfg-groups">
