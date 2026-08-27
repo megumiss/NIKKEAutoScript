@@ -106,7 +106,7 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                 <div class="field-control"><button class="btn" :disabled="notifyTestBusy" @click="testNotify">{{ notifyTestBusy ? t('发送中…') : t('测试通知') }}</button></div>
               </div>
               <div v-if="group.key === 'PhysicalDevice'" class="field">
-                <div class="field-label"><div class="fname">{{ t('分辨率控制') }}</div><div class="fhelp">{{ t('手动将设备分辨率设为 720x1280（DPI 240），或还原为原生分辨率。') }}</div></div>
+                <div class="field-label"><div class="fname">{{ t('分辨率控制') }}</div><div class="fhelp">{{ t('手动将设备分辨率设为 720x1280（DPI 240）并锁定竖屏，或还原为原生分辨率与屏幕方向。') }}</div></div>
                 <div class="field-control" style="display:flex;gap:8px">
                   <button class="btn primary" :disabled="Boolean(physicalBusy)" @click="physicalResolution('set')">{{ physicalBusy === 'set' ? t('设置中…') : t('设置分辨率') }}</button>
                   <button class="btn" :disabled="Boolean(physicalBusy)" @click="physicalResolution('reset')">{{ physicalBusy === 'reset' ? t('还原中…') : t('还原分辨率') }}</button>

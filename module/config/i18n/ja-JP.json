@@ -361,13 +361,13 @@
     },
     "Enable": {
       "name": "実機モードを有効化",
-      "help": "使用前にまずお読みください https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\n有効化後：デバイスの解像度が一時的に 720x1280、DPI は 240 に固定されます。スクリーンショット方法は ADB、制御方法は uiautomator2 または MaaTouch を推奨します",
+      "help": "使用前にまずお読みください https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\n有効化後：デバイスの解像度が一時的に 720x1280、DPI は 240 に固定され、画面向きが縦向きにロックされます。スクリーンショット方法は ADB、制御方法は uiautomator2 または MaaTouch を推奨します",
       "True": "True",
       "False": "False"
     },
     "AutoRestoreResolution": {
       "name": "停止時に解像度を自動復元",
-      "help": "有効時：インスタンス停止時に wm size/density reset を自動実行して元の解像度に復元します。無効時は下のボタンで手動復元してください",
+      "help": "有効時：インスタンス停止時に元の解像度と画面向きを自動復元します。無効時は下のボタンで手動復元してください",
       "True": "True",
       "False": "False"
     }

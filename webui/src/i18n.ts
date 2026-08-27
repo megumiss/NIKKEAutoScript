@@ -113,6 +113,14 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '输入命令，Enter 执行，↑/↓ 浏览历史': { 'en-US': 'Type a command; Enter to run, ↑/↓ for history', 'ja-JP': 'コマンドを入力（Enter で実行、↑/↓ で履歴）' },
   '在本机执行命令并实时查看输出，命令在脚本所在目录运行。': { 'en-US': 'Run commands on this machine with live output; commands run in the script directory.', 'ja-JP': 'このマシンでコマンドを実行し、出力をリアルタイム表示します。コマンドはスクリプトのディレクトリで実行されます。' },
   '使用完毕后请及时到部署页关闭控制台': { 'en-US': 'For security, please turn the console off on the deploy page when finished.', 'ja-JP': '安全のため、使用後はデプロイページでコンソールを無効にしてください。' },
+  '分辨率控制': { 'en-US': 'Resolution control', 'ja-JP': '解像度制御' },
+  '手动将设备分辨率设为 720x1280（DPI 240）并锁定竖屏，或还原为原生分辨率与屏幕方向。': { 'en-US': 'Manually set the device to 720x1280 (DPI 240) with portrait orientation locked, or restore the native resolution and orientation.', 'ja-JP': 'デバイスを手動で 720x1280（DPI 240）に設定し縦向きにロックするか、元の解像度と画面向きに復元します。' },
+  '设置分辨率': { 'en-US': 'Set resolution', 'ja-JP': '解像度を設定' },
+  '还原分辨率': { 'en-US': 'Restore resolution', 'ja-JP': '解像度を復元' },
+  '设置中…': { 'en-US': 'Setting…', 'ja-JP': '設定中…' },
+  '还原中…': { 'en-US': 'Restoring…', 'ja-JP': '復元中…' },
+  '查询中…': { 'en-US': 'Querying…', 'ja-JP': '検索中…' },
+  '未检测到设备': { 'en-US': 'No device detected', 'ja-JP': 'デバイスが検出されません' },
 }
 
 export const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]

@@ -361,13 +361,13 @@
     },
     "Enable": {
       "name": "启用真机模式",
-      "help": "使用前请先阅读 https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device\n开启后：设备分辨率将被临时改为 720x1280、DPI 固定为 240；截图方案建议选择 ADB，控制方案建议选择 uiautomator2 或 MaaTouch",
+      "help": "使用前请先阅读 https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device\n开启后：设备分辨率将被临时改为 720x1280、DPI 固定为 240、屏幕方向锁定为竖屏；截图方案建议选择 ADB，控制方案建议选择 uiautomator2 或 MaaTouch",
       "True": "True",
       "False": "False"
     },
     "AutoRestoreResolution": {
       "name": "停止时自动还原分辨率",
-      "help": "开启后：停止实例时自动执行 wm size/density reset 恢复设备原生分辨率；关闭后需用下方按钮手动还原",
+      "help": "开启后：停止实例时自动执行 wm size/density reset 恢复设备原生分辨率与屏幕方向；关闭后需用下方按钮手动还原",
       "True": "True",
       "False": "False"
     }

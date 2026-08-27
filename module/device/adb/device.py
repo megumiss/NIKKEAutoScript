@@ -96,6 +96,14 @@ class Device(Screenshot, Control, AppControl):
         self._physical_density_override = self._wm_override_value(density_out, 'density')
         self.adb_shell(['wm', 'size', '720x1280'])
         self.adb_shell(['wm', 'density', '240'])
+        # 锁定竖屏：关闭自动旋转并固定 user_rotation=0（自然方向，手机即竖屏），
+        # 否则设备平放/旋转时画面会横过来，截图与坐标全部错位
+        self._physical_rotation_backup = {
+            key: self.adb_shell(['settings', 'get', 'system', key]).strip()
+            for key in ('accelerometer_rotation', 'user_rotation')
+        }
+        self.adb_shell(['settings', 'put', 'system', 'accelerometer_rotation', '0'])
+        self.adb_shell(['settings', 'put', 'system', 'user_rotation', '0'])
         # wm size 立即写入但显示管线生效有延迟，等它真正切换完成，避免首帧截图拿到旧分辨率
         time.sleep(2)
         # 读回校验：设备拒绝 wm 命令时 adb_shell 不抛异常，静默继续只会让后续截图/坐标全错
@@ -114,9 +122,14 @@ class Device(Screenshot, Control, AppControl):
         logger.info('Restore physical device resolution')
         size = getattr(self, '_physical_size_override', None) or 'reset'
         density = getattr(self, '_physical_density_override', None) or 'reset'
+        rotation = getattr(self, '_physical_rotation_backup', None) or {}
         try:
             self.adb_shell(['wm', 'size', size])
             self.adb_shell(['wm', 'density', density])
+            for key, value in rotation.items():
+                # settings get 在未设置过时返回 null，跳过以免写入字面量
+                if value and value != 'null':
+                    self.adb_shell(['settings', 'put', 'system', key, value])
         except Exception as e:
             logger.warning(f'Failed to restore resolution, run `adb shell wm size reset` manually: {e}')
 

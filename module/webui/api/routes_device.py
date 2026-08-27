@@ -36,8 +36,19 @@ def _apply_resolution(name: str, action: str) -> dict:
         subprocess.run([adb, 'connect', serial], timeout=10, capture_output=True)
 
     commands = {
-        'set': [['shell', 'wm', 'size', '720x1280'], ['shell', 'wm', 'density', '240']],
-        'reset': [['shell', 'wm', 'size', 'reset'], ['shell', 'wm', 'density', 'reset']],
+        'set': [
+            ['shell', 'wm', 'size', '720x1280'],
+            ['shell', 'wm', 'density', '240'],
+            ['shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0'],
+            ['shell', 'settings', 'put', 'system', 'user_rotation', '0'],
+        ],
+        # 手动还原是无状态兜底路径，拿不到任务运行时记录的原值，自动旋转直接恢复为开启
+        'reset': [
+            ['shell', 'wm', 'size', 'reset'],
+            ['shell', 'wm', 'density', 'reset'],
+            ['shell', 'settings', 'put', 'system', 'accelerometer_rotation', '1'],
+            ['shell', 'settings', 'put', 'system', 'user_rotation', '0'],
+        ],
     }[action]
     try:
         for cmd in commands:

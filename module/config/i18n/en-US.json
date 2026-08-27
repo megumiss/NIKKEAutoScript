@@ -361,13 +361,13 @@
     },
     "Enable": {
       "name": "Enable physical device mode",
-      "help": "Read this first: https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\nWhen enabled: the device resolution is temporarily set to 720x1280 with DPI fixed at 240; ADB is recommended for screenshots, uiautomator2 or MaaTouch for control",
+      "help": "Read this first: https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\nWhen enabled: the device resolution is temporarily set to 720x1280 with DPI fixed at 240 and the screen orientation locked to portrait; ADB is recommended for screenshots, uiautomator2 or MaaTouch for control",
       "True": "True",
       "False": "False"
     },
     "AutoRestoreResolution": {
       "name": "Auto restore resolution on stop",
-      "help": "When enabled: stopping the instance automatically runs wm size/density reset to restore the native resolution; when disabled, restore manually with the buttons below",
+      "help": "When enabled: stopping the instance automatically restores the native resolution and screen orientation; when disabled, restore manually with the buttons below",
       "True": "True",
       "False": "False"
     }
