@@ -28,7 +28,7 @@ EXCLUDED_KEYS = {'ReadNoticeIds', 'StartupNoticeDismissedId'}
 # Path/URL values that benefit from a full-row input instead of the standard
 # narrow control.
 WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy',
-             'SerialGroup'}
+             'SerialGroup', 'ConsoleAllowHosts'}
 SELECT_OPTIONS = {
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
@@ -230,6 +230,20 @@ FIELD_I18N = {
                   'hints': {'In most cases': '默认 12271'}},
         'ja-JP': {'desc': '--port リッスンするポート\nhttp://{host}:{port} で Web UI にアクセスできます',
                   'hints': {'In most cases': 'デフォルト 12271'}},
+    },
+    'ConsoleEnabled': {
+        'zh-CN': {'desc': '启用 Web 控制台，可在网页上执行命令行并实时查看输出\n开关即时生效，无需重启；关闭时会断开所有进行中的控制台会话',
+                  'hints': {'Default': 'false'}},
+        'ja-JP': {'desc': 'Web コンソールを有効化。ブラウザからコマンドを実行し、出力をリアルタイム表示\n即時反映・再起動不要。無効化すると進行中のセッションも切断されます',
+                  'hints': {'Default': 'false'}},
+    },
+    'ConsoleAllowHosts': {
+        'zh-CN': {'desc': '允许使用 Web 控制台的 Host 白名单，匹配请求 Host 头的主机部分（忽略端口），逗号或空格分隔\n'
+                          'Host 头可被直连客户端伪造，这不是真正的认证；请勿将 Web UI 直接暴露公网，公网访问需叠加反代认证',
+                  'hints': {'Default': "'127.0.0.1, localhost, ::1'"}},
+        'ja-JP': {'desc': 'Web コンソールを許可する Host ホワイトリスト。リクエストの Host ヘッダーのホスト部分に一致（ポート無視）、カンマ/空白区切り\n'
+                          'Host ヘッダーは直接接続するクライアントが偽装できるため、これは本物の認証ではありません。公開する場合は認証付きリバースプロキシを併用してください',
+                  'hints': {'Default': "「127.0.0.1, localhost, ::1」"}},
     },
     'DpiScaling': {
         'zh-CN': {'desc': '脚本exe 跟随系统显示缩放'},
@@ -486,17 +500,24 @@ async def deploy_patch(request: Request):
         value = _coerce(key, value, config.config_template[key])
     except ValueError as exc:
         return _json_error(str(exc), 422)
+    console_was_enabled = key == 'ConsoleEnabled' and bool(getattr(config, key, False))
     try:
         setattr(config, key, value)
     except OSError as exc:
         logger.exception(exc)
         return _json_error(str(exc), 500)
-    # Theme and language take effect immediately; everything else applies on
-    # the next restart, which the page warning calls out.
+    # Theme, language and the console switch take effect immediately;
+    # everything else applies on the next restart, which the page warning
+    # calls out.
     if key == 'Theme':
         State.theme = value
     elif key == 'Language':
         lang.set_language(value)
+    elif console_was_enabled and not value:
+        # Turning the console off must also cut running sessions; local import
+        # keeps routes_console out of this module's import graph.
+        from module.webui.api import routes_console
+        routes_console.close_all_consoles()
     return JSONResponse({'status': 'success', 'value': value})
 
 

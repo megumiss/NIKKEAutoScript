@@ -106,6 +106,13 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '该任务由系统调度，仅展示': { 'en-US': 'Scheduled by the system; read-only', 'ja-JP': 'システムによるスケジュールのため閲覧のみ' },
   '周一': { 'en-US': 'Mon', 'ja-JP': '月' }, '周二': { 'en-US': 'Tue', 'ja-JP': '火' }, '周三': { 'en-US': 'Wed', 'ja-JP': '水' },
   '周四': { 'en-US': 'Thu', 'ja-JP': '木' }, '周五': { 'en-US': 'Fri', 'ja-JP': '金' }, '周六': { 'en-US': 'Sat', 'ja-JP': '土' }, '周日': { 'en-US': 'Sun', 'ja-JP': '日' },
+  '控制台': { 'en-US': 'Console', 'ja-JP': 'コンソール' }, '执行': { 'en-US': 'Run', 'ja-JP': '実行' }, '清屏': { 'en-US': 'Clear', 'ja-JP': 'クリア' },
+  '控制台未启用，请到部署页开启': { 'en-US': 'Console is disabled; enable it on the deploy page.', 'ja-JP': 'コンソールは無効です。デプロイページで有効にしてください。' },
+  '连接已断开（仅本机可用）': { 'en-US': 'Connection closed (localhost only)', 'ja-JP': '接続が切断されました（localhost のみ利用可能）' },
+  '命令执行中…': { 'en-US': 'Running…', 'ja-JP': '実行中…' }, '暂无输出': { 'en-US': 'No output yet', 'ja-JP': '出力はまだありません' }, '退出码': { 'en-US': 'exit code', 'ja-JP': '終了コード' },
+  '输入命令，Enter 执行，↑/↓ 浏览历史': { 'en-US': 'Type a command; Enter to run, ↑/↓ for history', 'ja-JP': 'コマンドを入力（Enter で実行、↑/↓ で履歴）' },
+  '在本机执行命令并实时查看输出，命令在脚本所在目录运行。': { 'en-US': 'Run commands on this machine with live output; commands run in the script directory.', 'ja-JP': 'このマシンでコマンドを実行し、出力をリアルタイム表示します。コマンドはスクリプトのディレクトリで実行されます。' },
+  '使用完毕后请及时到部署页关闭控制台': { 'en-US': 'For security, please turn the console off on the deploy page when finished.', 'ja-JP': '安全のため、使用後はデプロイページでコンソールを無効にしてください。' },
 }
 
 export const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]

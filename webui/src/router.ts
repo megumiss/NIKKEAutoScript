@@ -15,6 +15,7 @@ const router = createRouter({
     { path: '/settings', component: App },
     { path: '/deploy', component: App },
     { path: '/logs', component: App },
+    { path: '/console', component: App },
     { path: '/links', component: App },
     { path: '/about', component: App },
   ],

@@ -7,9 +7,9 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
-from . import (routes_bla, routes_calendar, routes_config, routes_deploy, routes_device, routes_instances, routes_logs,
-               routes_maintenance, routes_notify, routes_preview, routes_proxy, routes_schedule, routes_serial,
-               routes_stats, routes_system, routes_tasks, ws)
+from . import (routes_bla, routes_calendar, routes_config, routes_console, routes_deploy, routes_device,
+               routes_instances, routes_logs, routes_maintenance, routes_notify, routes_preview, routes_proxy,
+               routes_schedule, routes_serial, routes_stats, routes_system, routes_tasks, ws)
 
 
 def create_spa_mount():
@@ -84,6 +84,7 @@ def mount_api(app):
         Route('/api/{name:str}/task/{task:str}/run', routes_tasks.run_task, methods=['POST']),
         Route('/api/{name:str}/tool/{task:str}/start', routes_tasks.start_tool, methods=['POST']),
         Route('/api/{name:str}', routes_instances.delete, methods=['DELETE']),
+        WebSocketRoute('/ws/console', routes_console.console_socket),
         WebSocketRoute('/ws/state', ws.state_socket),
         WebSocketRoute('/ws/{name:str}/log', ws.log_socket),
         WebSocketRoute('/ws/{name:str}/queue', ws.queue_socket),

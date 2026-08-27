@@ -13,6 +13,7 @@ import { useRouteInfo } from './composables/useRouteInfo'
 import { useTauriShell } from './composables/useTauriShell'
 import { t } from './i18n'
 import AboutView from './views/AboutView.vue'
+import ConsoleView from './views/ConsoleView.vue'
 import DashboardView from './views/DashboardView.vue'
 import DeployView from './views/DeployView.vue'
 import LinksView from './views/LinksView.vue'
@@ -34,7 +35,7 @@ import { useWorkspaceStore } from './stores/workspace'
 
 const route = useRoute()
 const router = useRouter()
-const { selectedName, selectedPage, isDashboard, isManage, isSettings, isDeploy, isLogs, isLinks, isWorkspace } = useRouteInfo()
+const { selectedName, selectedPage, isDashboard, isManage, isSettings, isDeploy, isLogs, isConsole, isLinks, isWorkspace } = useRouteInfo()
 
 const toast = useToastStore()
 const { toasts } = storeToRefs(toast)
@@ -138,6 +139,7 @@ onBeforeUnmount(() => {
       <DeployView v-else-if="isDeploy" />
       <LogsView v-else-if="isLogs" />
       <LinksView v-else-if="isLinks" />
+      <ConsoleView v-else-if="isConsole" />
       <AboutView v-else />
     </main>
     </div>
