@@ -306,7 +306,7 @@
     "Platform": {
       "name": "Client Platform",
       "help": "",
-      "adb": "ADB (Emulator)",
+      "adb": "ADB (Emulator/Device)",
       "win": "Windows (PC)"
     },
     "Language": {
@@ -323,7 +323,7 @@
     },
     "Serial": {
       "name": "Serial",
-      "help": "Common emulator serials are listed below. Set to \"auto\" to auto-detect. If multiple emulators are running or an emulator doesn't support auto-detection, you must set it manually.\nDefault emulator serials:\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- LDPlayer emulator-5554 or 127.0.0.1:5555\n- BlueStacks 127.0.0.1:5555"
+      "help": "Common emulator serials are listed below. Set to \"auto\" to auto-detect. If multiple emulators are running or an emulator doesn't support auto-detection, you must set it manually.\nPhysical device: use the serial shown by adb devices (e.g. 192.168.x.x:5555 for wireless debugging).\nDefault emulator serials:\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- LDPlayer emulator-5554 or 127.0.0.1:5555\n- BlueStacks 127.0.0.1:5555"
     },
     "PackageName": {
       "name": "Game Client",
