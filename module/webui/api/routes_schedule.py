@@ -80,7 +80,7 @@ SCHEDULE_RESET_FIELDS = ('Cadence', 'ServerUpdate', 'WeeklyDay', 'WeeklyTime', '
 
 async def reset_schedule(request: Request):
     """全部任务的周期/执行时间还原为 args 默认值（含 default.yaml 的按任务默认值），
-    启用状态保持不变；仅对未来未到的 NextRun 按默认周期/时间重排，已到期任务保持待执行。"""
+    启用状态保持不变；NextRun 重排只提前不推迟，已排期/已到期任务不会被推到下一周期。"""
     name = request.path_params['name']
     try:
         validate_instance(name)
@@ -102,7 +102,10 @@ async def reset_schedule(request: Request):
                 sch[key] = default
         next_run = sch.get('NextRun')
         if isinstance(next_run, datetime) and next_run > now:
-            sch['NextRun'] = _compute_next_run(str(sch.get('Cadence', 'daily')), sch).replace(microsecond=0)
+            computed = _compute_next_run(str(sch.get('Cadence', 'daily')), sch).replace(microsecond=0)
+            # 只提前不推迟：默认时间已过时重算会落到下一周期，不能把今天待执行的任务推走
+            if computed < next_run:
+                sch['NextRun'] = computed
         reset.append(command)
 
     State.config_updater.write_file(name, config)
