@@ -91,7 +91,11 @@ def _start_command(command: str, loop, events) -> subprocess.Popen:
         # Reuse the deploy-config adb path instead of relying on PATH.
         command = ' '.join([f'"{_adb_binary()}"'] + tokens[1:])
     if sys.platform.startswith('win'):
-        args, kwargs = ['cmd', '/c', command], {}
+        # Raw command line, not a list: list2cmdline re-escapes inner quotes
+        # and cmd then treats them as part of the program name. The outer
+        # quote pair keeps `cmd /c` happy when the command itself is quoted
+        # (e.g. the adb path) and is stripped harmlessly otherwise.
+        args, kwargs = f'cmd /c "{command}"', {}
     else:
         # Own process group so the whole tree dies with one killpg.
         args, kwargs = ['/bin/sh', '-c', command], {'start_new_session': True}
