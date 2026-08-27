@@ -79,6 +79,24 @@ class Device(Screenshot, Control, AppControl):
         match = re.search(rf'Override {key}: (\S+)', output)
         return match.group(1) if match else None
 
+    def _physical_device_debug_state(self, stage: str):
+        """分辨率/方向改动前后的设备显示状态快照，仅 debug 级输出，用于排查厂商 ROM 差异。"""
+        try:
+            lines = [
+                self.adb_shell(['wm', 'size']).strip(),
+                self.adb_shell(['wm', 'density']).strip(),
+                f"accelerometer_rotation={self.adb_shell(['settings', 'get', 'system', 'accelerometer_rotation']).strip()}",
+                f"user_rotation={self.adb_shell(['settings', 'get', 'system', 'user_rotation']).strip()}",
+            ]
+            # DisplayDeviceInfo 行同时含物理(init=)与当前(cur=)显示参数及实际旋转角
+            for line in self.adb_shell(['dumpsys', 'window', 'displays']).splitlines():
+                if 'init=' in line:
+                    lines.append(line.strip())
+                    break
+            logger.debug(f'Physical device state ({stage}): ' + ' | '.join(lines))
+        except Exception as e:
+            logger.debug(f'Physical device state ({stage}) snapshot failed: {e}')
+
     def _physical_device_resolution_set(self):
         """
         真机模式：临时把设备分辨率改为模板基准 720x1280。
@@ -87,6 +105,13 @@ class Device(Screenshot, Control, AppControl):
         只改 wm size 不改 density 会导致 UI 按原 dp 尺寸渲染，画面等比放大（图标出屏），
         density 固定为 240，与模拟器的 720x1280@240dpi 一致。
         """
+        logger.info(
+            'Physical device: '
+            f'{self.adb_getprop("ro.product.model")} '
+            f'(Android {self.adb_getprop("ro.build.version.release")}, '
+            f'SDK {self.adb_getprop("ro.build.version.sdk")})'
+        )
+        self._physical_device_debug_state('before set')
         size_out = self.adb_shell(['wm', 'size'])
         logger.info(f'Physical device display: {size_out}')
         density_out = self.adb_shell(['wm', 'density'])
@@ -115,11 +140,13 @@ class Device(Screenshot, Control, AppControl):
                 f'size={size_now!r}, density={density_now!r}'
             )
             raise RequestHumanTakeover
+        self._physical_device_debug_state('after set')
         if self.config.PhysicalDevice_AutoRestoreResolution:
             atexit.register(self._physical_device_resolution_reset)
 
     def _physical_device_resolution_reset(self):
         logger.info('Restore physical device resolution')
+        self._physical_device_debug_state('before reset')
         size = getattr(self, '_physical_size_override', None) or 'reset'
         density = getattr(self, '_physical_density_override', None) or 'reset'
         rotation = getattr(self, '_physical_rotation_backup', None) or {}
@@ -130,6 +157,7 @@ class Device(Screenshot, Control, AppControl):
                 # settings get 在未设置过时返回 null，跳过以免写入字面量
                 if value and value != 'null':
                     self.adb_shell(['settings', 'put', 'system', key, value])
+            self._physical_device_debug_state('after reset')
         except Exception as e:
             logger.warning(f'Failed to restore resolution, run `adb shell wm size reset` manually: {e}')
 
