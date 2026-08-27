@@ -43,6 +43,21 @@ class Window:
     screenshot_scale_factor: float = field(default=1.0)
 
 
+def get_active_display_device_name(screen_n: int) -> str:
+    """
+    按活动显示器顺序返回第 N 块屏幕的设备名，与 GUI 屏幕下拉
+    （EnumDisplayMonitors）的顺序一致。
+    EnumDisplayDevices 会枚举到未接入桌面的"幽灵"显示器（如独显直连下
+    被禁用的内屏），对其调用 EnumDisplaySettings 会报错，因此不能直接用
+    EnumDisplayDevices 的索引。
+    """
+    monitors = win32api.EnumDisplayMonitors()
+    if not isinstance(screen_n, int) or not 0 <= screen_n < len(monitors):
+        raise IndexError(f'Active monitor {screen_n} not found, total: {len(monitors)}')
+    info = win32api.GetMonitorInfo(monitors[screen_n][0])
+    return str(info.get('Device'))
+
+
 class WinClient:
     def __init__(self, config):
         super().__init__(config)
@@ -165,8 +180,8 @@ class WinClient:
         orientation: 0=横屏, 1=竖屏(90), 2=横屏翻转, 3=竖屏(270)
         """
         try:
-            device = win32api.EnumDisplayDevices(None, screen_n)
-            dm = win32api.EnumDisplaySettings(device.DeviceName, win32con.ENUM_CURRENT_SETTINGS)
+            device_name = get_active_display_device_name(screen_n)
+            dm = win32api.EnumDisplaySettings(device_name, win32con.ENUM_CURRENT_SETTINGS)
         except Exception as e:
             # 捕获异常
             logger.error(f'Failed to get display settings, Please check screen settings. Error: {e}')
@@ -180,7 +195,7 @@ class WinClient:
 
             dm.DisplayOrientation = orientation
             try:
-                win32api.ChangeDisplaySettingsEx(device.DeviceName, dm)
+                win32api.ChangeDisplaySettingsEx(device_name, dm)
                 logger.info(f'Setting screen orientation: {orientation}')
             except Exception as e:
                 logger.error(f'Failed to change screen orientation: {e}')
