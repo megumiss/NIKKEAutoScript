@@ -2,6 +2,7 @@ import win32api
 import win32con
 
 from module.config.utils import deep_get
+from module.device.win.game_control import get_active_display_device_name
 from module.logger import logger
 from module.ui.ui import UI
 
@@ -22,8 +23,8 @@ class ScreenRotate(UI):
         设置屏幕方向
         orientation: 0=横屏, 1=竖屏(90), 2=横屏翻转, 3=竖屏(270)
         """
-        device = win32api.EnumDisplayDevices(None, screen_n)
-        dm = win32api.EnumDisplaySettings(device.DeviceName, win32con.ENUM_CURRENT_SETTINGS)
+        device_name = get_active_display_device_name(screen_n)
+        dm = win32api.EnumDisplaySettings(device_name, win32con.ENUM_CURRENT_SETTINGS)
 
         # 如果当前方向和目标方向不一样
         if dm.DisplayOrientation != orientation:
@@ -32,7 +33,7 @@ class ScreenRotate(UI):
                 dm.PelsWidth, dm.PelsHeight = dm.PelsHeight, dm.PelsWidth
 
             dm.DisplayOrientation = orientation
-            win32api.ChangeDisplaySettingsEx(device.DeviceName, dm)
+            win32api.ChangeDisplaySettingsEx(device_name, dm)
             logger.info(f'设置屏幕方向：{orientation}')
 
 
