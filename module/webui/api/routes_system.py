@@ -208,6 +208,28 @@ async def monitors(_: Request):
     return JSONResponse(_build_screen_number_options())
 
 
+async def vdd_status(_: Request):
+    try:
+        from module.device.win.vdd import vdd_status as _status
+        return JSONResponse(await asyncio.to_thread(_status))
+    except Exception as exc:
+        logger.warning(f'VDD status failed: {exc}')
+        return _json_error(str(exc))
+
+
+async def vdd_set(request: Request):
+    action = request.path_params['action']
+    if action not in ('enable', 'disable'):
+        return _json_error(f'Invalid VDD action: {action}')
+    try:
+        from module.device.win import vdd
+        await asyncio.to_thread(vdd._expect_success, action)
+        return JSONResponse({'status': 'success', 'message': f'VDD {action} done.'})
+    except Exception as exc:
+        logger.exception(exc)
+        return _json_error(f'{exc}(请确认 NKAS 以管理员身份运行)')
+
+
 def _dialog_initial_location(default):
     initialdir, initialfile = '', ''
     if default:

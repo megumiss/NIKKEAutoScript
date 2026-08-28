@@ -106,6 +106,12 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '该任务由系统调度，仅展示': { 'en-US': 'Scheduled by the system; read-only', 'ja-JP': 'システムによるスケジュールのため閲覧のみ' },
   '周一': { 'en-US': 'Mon', 'ja-JP': '月' }, '周二': { 'en-US': 'Tue', 'ja-JP': '火' }, '周三': { 'en-US': 'Wed', 'ja-JP': '水' },
   '周四': { 'en-US': 'Thu', 'ja-JP': '木' }, '周五': { 'en-US': 'Fri', 'ja-JP': '金' }, '周六': { 'en-US': 'Sat', 'ja-JP': '土' }, '周日': { 'en-US': 'Sun', 'ja-JP': '日' },
+  '虚拟屏幕(VDD)': { 'en-US': 'Virtual display (VDD)', 'ja-JP': '仮想ディスプレイ(VDD)' },
+  '启用或禁用 VDD 虚拟屏幕；需要已安装 Virtual Display Driver，且 NKAS 以管理员身份运行。': { 'en-US': 'Enable or disable the VDD virtual display. Requires Virtual Display Driver to be installed and NKAS to run as administrator.', 'ja-JP': 'VDD 仮想ディスプレイを有効/無効にします。Virtual Display Driver のインストールと NKAS の管理者実行が必要です。' },
+  '启动虚拟屏幕': { 'en-US': 'Enable virtual display', 'ja-JP': '仮想ディスプレイを有効化' },
+  '禁用虚拟屏幕': { 'en-US': 'Disable virtual display', 'ja-JP': '仮想ディスプレイを無効化' },
+  '操作成功': { 'en-US': 'Succeeded', 'ja-JP': '成功しました' },
+  '当前配置(未检测到对应显示器)': { 'en-US': 'Current setting (monitor not detected)', 'ja-JP': '現在の設定(モニター未検出)' },
 }
 
 export const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]

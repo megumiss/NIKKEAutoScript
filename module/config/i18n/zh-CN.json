@@ -419,6 +419,14 @@
       "4": "4",
       "5": "5"
     },
+    "VddScreen": {
+      "name": "是否为VDD虚拟屏幕",
+      "help": "目标屏幕是 VDD(Virtual Display Driver)虚拟屏时开启，请在虚拟屏启用状态下选择目标屏幕"
+    },
+    "VddAutoManage": {
+      "name": "自动管理VDD屏幕",
+      "help": "需先开启是否为VDD虚拟屏幕；开启后任务启动时自动启用该虚拟屏，任务结束后自动禁用"
+    },
     "GameWindowPosition": {
       "name": "游戏窗口位置",
       "help": "设置游戏窗口位置，防止被遮挡或者超出屏幕",

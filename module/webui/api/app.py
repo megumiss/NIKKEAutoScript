@@ -42,6 +42,8 @@ def mount_api(app):
         Route('/api/system/notices/read', routes_system.read_announcements, methods=['POST']),
         Route('/api/system/notices/{key:str}/dismiss', routes_system.dismiss_notice, methods=['POST']),
         Route('/api/system/monitors', routes_system.monitors, methods=['GET']),
+        Route('/api/system/vdd/status', routes_system.vdd_status, methods=['GET']),
+        Route('/api/system/vdd/{action:str}', routes_system.vdd_set, methods=['POST']),
         Route('/api/system/pick-path', routes_system.pick_path, methods=['POST']),
         Route('/api/system/language', routes_system.set_language, methods=['POST']),
         Route('/api/system/theme', routes_system.set_theme, methods=['POST']),

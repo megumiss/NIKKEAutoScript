@@ -1,4 +1,21 @@
 # 公告列表，新的公告追加到文件顶部
+- id: notice_20260828
+  date: 2026-08-28
+  title: 1080P 屏幕新方案：VDD 虚拟屏幕
+  type: info
+  content: |
+    <b>1080P 用户不再需要「旋转屏幕」，推荐使用 VDD 虚拟屏幕运行脚本</b>
+    通过 Virtual Display Driver 在系统中创建一块 1080x1920 的虚拟屏幕，游戏窗口放在虚拟屏上竖屏运行，主屏完全不受影响，脚本结束后虚拟屏可自动关闭。
+
+    <b>驱动下载</b>
+    <a href="https://github.com/VirtualDrivers/Virtual-Display-Driver/releases" target="_blank">Virtual Display Driver GitHub Releases</a>
+    建议直接安装：Virtual.Display.Driver-vxx.xx.xx-setup-x64.exe
+
+    <b>使用方法</b>
+    1. 安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080，竖屏
+    2. 进入 NKAS → PC 客户端设置开启「多屏幕模式」，点击「启动虚拟屏幕」，然后在「游戏窗口目标屏幕」中选择虚拟屏幕;
+    3. 勾选「是否为VDD虚拟屏幕」和「自动管理VDD屏幕」，任务启动时会自动启用虚拟屏、结束后自动禁用;
+    4. 原来为 1080P 开启的「旋转屏幕」可以关闭了。
 - id: notice_20260822
   date: 2026-08-22
   title: 调度设置（BETA）

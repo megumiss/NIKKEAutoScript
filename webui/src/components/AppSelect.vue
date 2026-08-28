@@ -7,7 +7,7 @@ const props = defineProps<{
   disabled?: boolean
   placeholder?: string
 }>()
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits(['update:modelValue', 'change', 'open'])
 const open = ref(false)
 const root = ref<HTMLElement>()
 const pop = ref<HTMLElement>()
@@ -25,6 +25,7 @@ function toggle() {
   if (props.disabled) return
   open.value = !open.value
   if (!open.value || !root.value) return
+  emit('open')
   // The popup is teleported to body so it can escape overflow:hidden cards;
   // position it under (or above) the button in viewport coordinates.
   const rect = root.value.getBoundingClientRect()

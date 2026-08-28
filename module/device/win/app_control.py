@@ -10,6 +10,7 @@ from module.config.language import set_language
 from module.config.server import set_server
 from module.device.win.game_control import WinClient, Window
 from module.device.win.login import Login
+from module.device.win.vdd import vdd_auto_start
 from module.exception import AccountError, RequestHumanTakeover
 from module.logger import logger
 
@@ -111,6 +112,10 @@ class AppControl(WinClient, Login):
         #     if script_path and isinstance(script_path, (str, bytes, os.PathLike))
         #     else None
         # )
+
+        # 自动管理 VDD 虚拟屏：启用并等待其出现
+        if self.config.PCClient_VddScreen and self.config.PCClient_VddAutoManage:
+            vdd_auto_start()
 
         # 设置屏幕方向
         if self.config.PCClient_ScreenRotate:
