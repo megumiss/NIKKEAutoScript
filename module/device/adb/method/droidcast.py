@@ -135,6 +135,10 @@ class DroidCast(Uiautomator2):
         return f'http://127.0.0.1:{self._droidcast_port}{url}'
 
     def droidcast_raw_url(self, url='/screenshot'):
+        if self.config.PhysicalDevice_Enable:
+            # 真机固定竖屏，由 DroidCast 服务端缩放到模板基准分辨率
+            return f'http://127.0.0.1:{self._droidcast_port}{url}?width=720&height=1280'
+
         if self.is_mumu_over_version_356:
             w, h = self.droidcast_width, self.droidcast_height
             if self.orientation == 0:
@@ -149,6 +153,7 @@ class DroidCast(Uiautomator2):
 
     def droidcast_init(self):
         logger.hr('DroidCast init')
+        logger.attr('PhysicalDevice', self.config.PhysicalDevice_Enable)
         self.droidcast_stop()
         self._droidcast_update_resolution()
 

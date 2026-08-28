@@ -334,7 +334,7 @@ class SurfaceDaily(UI):
                         break
 
                     # 点击目标点
-                    self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
+                    self.device.click_xy(target_points[squad - 1][0], target_points[squad - 1][1])
                     logger.info(
                         'Click %s @ %s'
                         % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'SQUAD POINT {squad}')
@@ -343,7 +343,7 @@ class SurfaceDaily(UI):
                     # 点击到的是小怪会有小怪弹窗
                     # if self.appear(ENEMY_CLOSE, offset=10):
                     #     target_points = left
-                    #     self.device.click_minitouch(target_points[squad - 1][0], target_points[squad - 1][1])
+                    #     self.device.click_xy(target_points[squad - 1][0], target_points[squad - 1][1])
                     #     logger.info(
                     #         'Click %s @ %s'
                     #         % (point2str(target_points[squad - 1][0], target_points[squad - 1][1]), f'LEFT POINT {squad}')

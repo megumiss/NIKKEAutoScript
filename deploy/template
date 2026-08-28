@@ -93,6 +93,16 @@ Deploy:
     # You will be able to access webui via `http://{host}:{port}`
     # [In most cases] Default to 12271
     WebuiPort: 12271
+    # Enable the web console: run shell commands from the webui with live output
+    # Takes effect immediately; turning it off also closes all running console sessions
+    # [Default] false
+    ConsoleEnabled: false
+    # Hosts allowed to use the web console, matched against the request Host header
+    # (host part only, port ignored), comma or space separated
+    # The Host header can be forged by direct TCP clients, so this is not real authentication;
+    # if the webui is exposed to the internet, put it behind an authenticating reverse proxy
+    # [Default] '127.0.0.1, localhost, ::1'
+    ConsoleAllowHosts: '127.0.0.1, localhost, ::1'
     # Follow system display scaling in the desktop shell
     DpiScaling: true
     # Enable WebView2 GPU acceleration. Restart the desktop shell after changing.

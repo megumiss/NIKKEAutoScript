@@ -7,9 +7,9 @@ export default defineConfig({
   build: {
     target: 'chrome94',
     sourcemap: false,
-    // Keep the out dir as-is before building; stale hashed assets are pruned
-    // separately so builds don't depend on removing the previous output.
-    emptyOutDir: false,
+    // Wipe stale hashed assets before building; dist is committed to git, so
+    // leaving them would accumulate dead bundles in the repo.
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {

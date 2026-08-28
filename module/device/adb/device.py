@@ -1,3 +1,6 @@
+import atexit
+import re
+import time
 from collections import deque
 
 from module.base.button import Button
@@ -40,6 +43,12 @@ class Device(Screenshot, Control, AppControl):
                 super().__init__(*args, **kwargs)
                 break
             except EmulatorNotRunningError:
+                if self.config.PhysicalDevice_Enable:
+                    logger.critical(
+                        f'Failed to connect to physical device "{self.config.Emulator_Serial}", '
+                        f'please check `adb connect` and wireless debugging on the device'
+                    )
+                    raise RequestHumanTakeover
                 if trial >= 3:
                     logger.critical('Failed to start emulator after 3 trial')
                     raise RequestHumanTakeover
@@ -54,8 +63,103 @@ class Device(Screenshot, Control, AppControl):
                     raise RequestHumanTakeover
 
         # Auto-fill emulator info
-        if IS_WINDOWS and self.config.EmulatorInfo_Emulator == 'auto':
+        if IS_WINDOWS and not self.config.PhysicalDevice_Enable \
+                and self.config.EmulatorInfo_Emulator == 'auto':
             _ = self.emulator_instance
+
+        if self.config.PhysicalDevice_Enable:
+            if self.config.Emulator_ControlMethod == 'minitouch':
+                logger.warning('minitouch is unavailable on physical devices, '
+                               'please set Emulator.ControlMethod to uiautomator2 or ADB')
+            self._physical_device_resolution_set()
+
+    @staticmethod
+    def _wm_override_value(output: str, key: str):
+        """wm size/density 输出中存在 Override 行时返回其值，否则 None。"""
+        match = re.search(rf'Override {key}: (\S+)', output)
+        return match.group(1) if match else None
+
+    def _physical_device_debug_state(self, stage: str):
+        """分辨率/方向改动前后的设备显示状态快照，仅 debug 级输出，用于排查厂商 ROM 差异。"""
+        try:
+            lines = [
+                self.adb_shell(['wm', 'size']).strip(),
+                self.adb_shell(['wm', 'density']).strip(),
+                f"accelerometer_rotation={self.adb_shell(['settings', 'get', 'system', 'accelerometer_rotation']).strip()}",
+                f"user_rotation={self.adb_shell(['settings', 'get', 'system', 'user_rotation']).strip()}",
+            ]
+            # DisplayDeviceInfo 行同时含物理(init=)与当前(cur=)显示参数及实际旋转角
+            for line in self.adb_shell(['dumpsys', 'window', 'displays']).splitlines():
+                if 'init=' in line:
+                    lines.append(line.strip())
+                    break
+            logger.debug(f'Physical device state ({stage}): ' + ' | '.join(lines))
+        except Exception as e:
+            logger.debug(f'Physical device state ({stage}) snapshot failed: {e}')
+
+    def _physical_device_resolution_set(self):
+        """
+        真机模式：临时把设备分辨率改为模板基准 720x1280。
+        AutoRestoreResolution 开启时进程正常退出自动恢复，被强杀时由 webui 侧 ProcessManager.stop 兜底
+        （兜底路径拿不到 override 记录，仍是 reset，属异常路径可接受）；关闭时由用户在设置页手动还原。
+        只改 wm size 不改 density 会导致 UI 按原 dp 尺寸渲染，画面等比放大（图标出屏），
+        density 固定为 240，与模拟器的 720x1280@240dpi 一致。
+        """
+        logger.info(
+            'Physical device: '
+            f'{self.adb_getprop("ro.product.model")} '
+            f'(Android {self.adb_getprop("ro.build.version.release")}, '
+            f'SDK {self.adb_getprop("ro.build.version.sdk")})'
+        )
+        self._physical_device_debug_state('before set')
+        size_out = self.adb_shell(['wm', 'size'])
+        logger.info(f'Physical device display: {size_out}')
+        density_out = self.adb_shell(['wm', 'density'])
+        logger.info(f'Physical device density: {density_out}')
+        # 记录用户已有的 override，退出时还原具体值；直接 reset 会丢掉用户自己的分辨率/DPI 覆盖
+        self._physical_size_override = self._wm_override_value(size_out, 'size')
+        self._physical_density_override = self._wm_override_value(density_out, 'density')
+        self.adb_shell(['wm', 'size', '720x1280'])
+        self.adb_shell(['wm', 'density', '240'])
+        # 锁定竖屏：关闭自动旋转并固定 user_rotation=0（自然方向，手机即竖屏），
+        # 否则设备平放/旋转时画面会横过来，截图与坐标全部错位
+        self._physical_rotation_backup = {
+            key: self.adb_shell(['settings', 'get', 'system', key]).strip()
+            for key in ('accelerometer_rotation', 'user_rotation')
+        }
+        self.adb_shell(['settings', 'put', 'system', 'accelerometer_rotation', '0'])
+        self.adb_shell(['settings', 'put', 'system', 'user_rotation', '0'])
+        # wm size 立即写入但显示管线生效有延迟，等它真正切换完成，避免首帧截图拿到旧分辨率
+        time.sleep(2)
+        # 读回校验：设备拒绝 wm 命令时 adb_shell 不抛异常，静默继续只会让后续截图/坐标全错
+        size_now = self.adb_shell(['wm', 'size'])
+        density_now = self.adb_shell(['wm', 'density'])
+        if 'Override size: 720x1280' not in size_now or 'Override density: 240' not in density_now:
+            logger.critical(
+                f'Failed to set physical device resolution to 720x1280@240: '
+                f'size={size_now!r}, density={density_now!r}'
+            )
+            raise RequestHumanTakeover
+        self._physical_device_debug_state('after set')
+        if self.config.PhysicalDevice_AutoRestoreResolution:
+            atexit.register(self._physical_device_resolution_reset)
+
+    def _physical_device_resolution_reset(self):
+        logger.info('Restore physical device resolution')
+        self._physical_device_debug_state('before reset')
+        size = getattr(self, '_physical_size_override', None) or 'reset'
+        density = getattr(self, '_physical_density_override', None) or 'reset'
+        rotation = getattr(self, '_physical_rotation_backup', None) or {}
+        try:
+            self.adb_shell(['wm', 'size', size])
+            self.adb_shell(['wm', 'density', density])
+            for key, value in rotation.items():
+                # settings get 在未设置过时返回 null，跳过以免写入字面量
+                if value and value != 'null':
+                    self.adb_shell(['settings', 'put', 'system', key, value])
+            self._physical_device_debug_state('after reset')
+        except Exception as e:
+            logger.warning(f'Failed to restore resolution, run `adb shell wm size reset` manually: {e}')
 
         # TODO
         # self.screenshot_interval_set()

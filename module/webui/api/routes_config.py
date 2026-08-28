@@ -86,6 +86,7 @@ async def schema(request: Request):
             if output_fields:
                 output_groups.append({
                     'key': group, 'name': _label(f'{group}._info.name', group),
+                    'help': _label(f'{group}._info.help', ''),
                     # All groups (including Scheduler with enable/next-run) stay
                     # expanded by default so settings are visible on entry.
                     'collapsed': False, 'fields': output_fields,

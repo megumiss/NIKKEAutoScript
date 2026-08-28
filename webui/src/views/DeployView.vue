@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import AppSelect from '../components/AppSelect.vue'
+import LinkifiedText from '../components/LinkifiedText.vue'
 import FieldPriority from '../components/config/FieldPriority.vue'
 import { t } from '../i18n'
 import { onTextInput } from '../utils'
@@ -25,7 +26,7 @@ const { openResetDeployModal } = useModalStore()
         <div class="group-head"><h4>{{ group.name }}</h4></div>
         <div class="group-body">
           <div v-for="field in group.fields" :key="field.key" class="field" :class="{ 'field-wide': field.wide }">
-            <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div><div v-for="hint in field.hints || []" :key="hint.tag" class="deploy-hint"><span class="deploy-hint-tag">{{ hint.tag }}</span><span>{{ hint.text }}</span></div></div>
+            <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp"><LinkifiedText :text="field.help" /></div><div v-for="hint in field.hints || []" :key="hint.tag" class="deploy-hint"><span class="deploy-hint-tag">{{ hint.tag }}</span><span>{{ hint.text }}</span></div></div>
             <div class="field-control">
               <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" @change="saveDeployField(field, $event)"><span class="slider"></span></label>
               <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" @change="(value: any) => saveDeployValue(field, value)"/>

@@ -50,7 +50,7 @@ class AutoTower(UI):
                 continue
 
             if click_timer.reached() and self.appear(TRIBE_TOWER_DETAILED_CHECK, offset=10, interval=5):
-                self.device.click_minitouch(360, 560)
+                self.device.click_xy(360, 560)
                 logger.info('Click %s @ %s' % (point2str(360, 560), 'STAGE'))
                 click_timer.reset()
                 continue
@@ -146,7 +146,7 @@ class AutoTower(UI):
                 continue
 
             if click_timer.reached() and self.appear(FIGHT, offset=5):
-                self.device.click_minitouch(1, 1)
+                self.device.click_xy(1, 1)
                 click_timer.reset()
                 continue
 

@@ -21,6 +21,8 @@ export const useDeployStore = defineStore('deploy', () => {
       if (field.key === 'Theme') { document.documentElement.dataset.theme = result.value; localStorage.setItem('nkas-theme', result.value); system.systemStatus.theme = result.value }
       if (field.key === 'HomePage') system.systemStatus.home_page = result.value
       if (field.key === 'Language') await system.setLanguage(result.value)
+      // ConsoleEnabled 等开关即时生效：保存后刷新系统状态，侧边栏入口与控制台页即时显隐
+      await system.loadSystem()
     } catch (exception: any) { toast.error = exception.message }
   }
   function saveDeployField(field: any, event: Event) {

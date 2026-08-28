@@ -200,7 +200,7 @@ class ShopBase(UI):
                             and self.appear(REFRESH, offset=(5, 5), interval=1, static=False)
                         ):
                             x, y = REFRESH.location
-                            self.device.click_minitouch(x - 80, y)
+                            self.device.click_xy(x - 80, y)
                             click_timer.reset()
 
                         # 确认刷新

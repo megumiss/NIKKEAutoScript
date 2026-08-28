@@ -31,6 +31,7 @@ body:
       multiple: false
       options:
         - 模拟器 / Emulator
+        - 真机 / Physical device
         - PC 客户端 / PC Client
     validations:
       required: true

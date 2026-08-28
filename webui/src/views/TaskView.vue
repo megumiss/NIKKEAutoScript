@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
+import AppComboSelect from '../components/AppComboSelect.vue'
 import AppSelect from '../components/AppSelect.vue'
+import LinkifiedText from '../components/LinkifiedText.vue'
 import LiveLog from '../components/LiveLog.vue'
 import FieldItemTable from '../components/config/FieldItemTable.vue'
 import FieldPathPicker from '../components/config/FieldPathPicker.vue'
@@ -22,14 +24,16 @@ const FieldInterception = defineAsyncComponent(() => import('../components/confi
 
 const { selectedPage, selectedTask } = useRouteInfo()
 const workspace = useWorkspaceStore()
-const { schemaReady, collapsed, activeGroup, taskSchema, importBusy, notifyTestBusy } = storeToRefs(workspace)
-const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, startTool } = workspace
+const { schemaReady, collapsed, activeGroup, taskSchema, importBusy, notifyTestBusy, physicalBusy, serialDevices, serialDevicesBusy } = storeToRefs(workspace)
+const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, startTool, physicalResolution, loadSerialDevices } = workspace
 const instancesStore = useInstancesStore()
 const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
 const { blaLoginBusy } = storeToRefs(useBlaLoginStore())
 const { startBlaLogin } = useBlaLoginStore()
 const toast = useToastStore()
+
+const serialDeviceOptions = computed(() => serialDevices.value.map(device => ({ value: device.serial, label: `${device.serial} (${device.status})` })))
 
 function groupId(group: any) { return `group-${group.key}` }
 function onViewScroll(event: Event) {
@@ -51,13 +55,16 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
       <div>
         <article class="card task-hero">
           <div class="task-icon">{{ selectedPage === 'tool' ? '🛠' : '⚙️' }}</div>
-          <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
+          <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}{{ selectedTask === 'PhysicalDevice' ? '(BETA)' : '' }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
           <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()">{{ selectedInstance?.state === 1 ? t('停止') : `▶ ${t('启动')}` }}</button>
         </article>
         <div class="cfg-groups">
           <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
             <button class="group-head" @click="collapsed[group.key] = !collapsed[group.key]">
-              <h4>{{ group.name }}</h4>
+              <div class="group-title">
+                <h4>{{ group.name }}</h4>
+                <div v-if="group.help" class="group-help"><LinkifiedText :text="group.help" /></div>
+              </div>
               <span class="group-summary">›</span>
             </button>
             <div class="group-body">
@@ -66,7 +73,7 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                 <div class="field-control"><button class="btn primary" :disabled="blaLoginBusy" @click="startBlaLogin">{{ blaLoginBusy ? t('登录中…') : t('一键登录') }}</button></div>
               </div>
               <div v-for="field in group.fields" :key="field.key" :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
-                <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp">{{ field.help }}</div></div>
+                <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp"><LinkifiedText :text="field.help" /></div></div>
                 <div class="field-control">
                   <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><span class="slider"></span></label>
                   <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" :disabled="field.display !== 'show'" @change="(value: any) => saveValue(field, value).catch(() => {})"/>
@@ -90,12 +97,20 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                       <button v-if="field.display === 'show'" type="button" class="dt-clear" :title="t('清空')" @mousedown.prevent @click="clearField(field)">✕</button>
                     </div>
                   </template>
+                  <AppComboSelect v-else-if="field.key.endsWith('.Serial')" :model-value="field.value" :options="serialDeviceOptions" :loading="serialDevicesBusy" :loading-text="t('查询中…')" :empty-text="t('未检测到设备')" :disabled="field.display !== 'show'" @update:model-value="(v: string) => field.value = v" @change="(v: string) => saveValue(field, v).catch(() => {})" @dropdown="loadSerialDevices"/>
                   <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @input="onTextInput(field, $event)" @change="save(field, $event)">
                 </div>
               </div>
               <div v-if="selectedTask === 'NKAS' && group.key === 'Notification'" class="field">
                 <div class="field-label"><div class="fname">{{ t('测试通知') }}</div><div class="fhelp">{{ t('发送一条测试通知，验证当前通知设置是否生效。') }}</div></div>
                 <div class="field-control"><button class="btn" :disabled="notifyTestBusy" @click="testNotify">{{ notifyTestBusy ? t('发送中…') : t('测试通知') }}</button></div>
+              </div>
+              <div v-if="group.key === 'PhysicalDevice'" class="field">
+                <div class="field-label"><div class="fname">{{ t('分辨率控制') }}</div><div class="fhelp">{{ t('手动将设备分辨率设为 720x1280（DPI 240）并锁定竖屏，或还原为原生分辨率与屏幕方向。') }}</div></div>
+                <div class="field-control" style="display:flex;gap:8px">
+                  <button class="btn primary" :disabled="Boolean(physicalBusy)" @click="physicalResolution('set')">{{ physicalBusy === 'set' ? t('设置中…') : t('设置分辨率') }}</button>
+                  <button class="btn" :disabled="Boolean(physicalBusy)" @click="physicalResolution('reset')">{{ physicalBusy === 'reset' ? t('还原中…') : t('还原分辨率') }}</button>
+                </div>
               </div>
             </div>
           </article>

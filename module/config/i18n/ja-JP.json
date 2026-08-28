@@ -306,7 +306,7 @@
     "Platform": {
       "name": "クライアントプラットフォーム",
       "help": "",
-      "adb": "ADB (エミュレーター)",
+      "adb": "ADB (エミュレーター/実機)",
       "win": "Windows (PCクライアント)"
     },
     "Language": {
@@ -318,12 +318,12 @@
   },
   "Emulator": {
     "_info": {
-      "name": "エミュレーター設定",
+      "name": "ADB 設定",
       "help": ""
     },
     "Serial": {
-      "name": "エミュレーターシリアル",
-      "help": "一般的なエミュレーターのシリアルは以下のリストで確認できます。「auto」を埋めるとエミュレーターを自動検出します。複数のエミュレーターが実行されている場合、または自動検出をサポートしていないエミュレーターを使用している場合は、「auto」は使用できません。手動で入力する必要があります。\nエミュレーターのデフォルトシリアル：\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- LDPlayer emulator-5554 または 127.0.0.1:5555\n- BlueStacks 127.0.0.1:5555"
+      "name": "シリアル",
+      "help": "一般的なエミュレーターのシリアルは以下のリストで確認できます。「auto」を埋めるとエミュレーターを自動検出します。複数のエミュレーターが実行されている場合、または自動検出をサポートしていないエミュレーターを使用している場合は、「auto」は使用できません。手動で入力する必要があります。\n実機：adb devices に表示されるシリアルを入力（ワイヤレスデバッグは 192.168.x.x:5555 形式）。\nエミュレーターのデフォルトシリアル：\n- MuMu5.0/MuMu12 127.0.0.1:16384\n- LDPlayer emulator-5554 または 127.0.0.1:5555\n- BlueStacks 127.0.0.1:5555"
     },
     "PackageName": {
       "name": "ゲームクライアント",
@@ -332,22 +332,44 @@
       "com.gamamobi.nikke": "香港・マカオ・台湾"
     },
     "ScreenshotMethod": {
-      "name": "エミュレーターのスクリーンショット方法",
+      "name": "スクリーンショット方法",
       "help": "",
-      "DroidCast": "DroidCast"
+      "DroidCast": "DroidCast",
+      "ADB": "ADB (screencap)"
     },
     "ControlMethod": {
-      "name": "エミュレーターの制御方法",
+      "name": "制御方法",
       "help": "",
-      "minitouch": "minitouch"
+      "minitouch": "minitouch",
+      "uiautomator2": "uiautomator2",
+      "ADB": "ADB (input)",
+      "MaaTouch": "MaaTouch"
     },
     "AdbRestart": {
       "name": "デバイスが検出されない場合にadbを再起動しようと試みる",
       "help": ""
     },
     "ScreenshotInterval": {
-      "name": "エミュレーターのスクリーンショット間隔",
+      "name": "スクリーンショット間隔",
       "help": ""
+    }
+  },
+  "PhysicalDevice": {
+    "_info": {
+      "name": "実機設定",
+      "help": "adb で実機に接続する場合に使用します"
+    },
+    "Enable": {
+      "name": "実機モードを有効化",
+      "help": "使用前にまずお読みください https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\n有効化後：デバイスの解像度が一時的に 720x1280、DPI は 240 に固定され、画面向きが縦向きにロックされます。スクリーンショット方法は ADB、制御方法は uiautomator2 または MaaTouch を推奨します",
+      "True": "True",
+      "False": "False"
+    },
+    "AutoRestoreResolution": {
+      "name": "停止時に解像度を自動復元",
+      "help": "有効時：インスタンス停止時に元の解像度と画面向きを自動復元します。無効時は下のボタンで手動復元してください",
+      "True": "True",
+      "False": "False"
     }
   },
   "Scrcpy": {

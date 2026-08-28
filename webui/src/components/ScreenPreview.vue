@@ -17,7 +17,7 @@ const labels: Record<string, Record<string, string>> = {
   '退出控制': { 'en-US': 'Exit control', 'ja-JP': '操作を終了' },
   '未配置 ws-scrcpy 地址': { 'en-US': 'ws-scrcpy URL not configured', 'ja-JP': 'ws-scrcpy URL が未設定です' },
   'Serial 为 auto 时无法使用互动模式': { 'en-US': 'Interactive mode requires a fixed serial (not auto)', 'ja-JP': 'Serial が auto の場合は使用できません' },
-  '仅模拟器（adb）实例可用': { 'en-US': 'Only available for emulator (adb) instances', 'ja-JP': 'エミュレーター（adb）インスタンスのみ利用可能' },
+  '仅 adb 可用': { 'en-US': 'Only available over adb', 'ja-JP': 'adb のみ利用可能' },
 }
 
 function t(source: string) {
@@ -216,7 +216,7 @@ const controlTitle = computed(() => {
   const reasons: Record<string, string> = {
     not_configured: '未配置 ws-scrcpy 地址',
     serial_auto: 'Serial 为 auto 时无法使用互动模式',
-    win_platform: '仅模拟器（adb）实例可用',
+    win_platform: '仅 adb 可用',
   }
   return t(reasons[scrcpy.value.reason || ''] || '未配置 ws-scrcpy 地址')
 })

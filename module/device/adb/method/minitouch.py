@@ -178,7 +178,9 @@ class Command:
             x: int = 0,
             y: int = 0,
             ms: int = 10,
-            pressure: int = 100
+            pressure: int = 100,
+            mode: int = 0,
+            text: str = '',
     ):
         """
         See https://github.com/openstf/minitouch#writable-to-the-socket
@@ -190,6 +192,8 @@ class Command:
             y:
             ms:
             pressure:
+            mode: MaaTouch inject mode, used in to_maatouch_sync
+            text: MaaTouch sync timestamp, used in to_maatouch_sync
         """
         self.operation = operation
         self.contact = contact
@@ -197,6 +201,8 @@ class Command:
         self.y = y
         self.ms = ms
         self.pressure = pressure
+        self.mode = mode
+        self.text = text
 
     def to_minitouch(self) -> str:
         """
@@ -214,6 +220,39 @@ class Command:
             return f'{self.operation} {self.contact}\n'
         elif self.operation == 'w':
             return f'{self.operation} {self.ms}\n'
+        else:
+            return ''
+
+    def to_maatouch_sync(self):
+        """
+        MaaTouch sync protocol, with inject mode on the last command
+        """
+        if self.operation == 'c':
+            return f'{self.operation}\n'
+        elif self.operation == 'r':
+            if self.mode:
+                return f'{self.operation} {self.mode}\n'
+            else:
+                return f'{self.operation}\n'
+        elif self.operation == 'd':
+            if self.mode:
+                return f'{self.operation} {self.contact} {self.x} {self.y} {self.pressure} {self.mode}\n'
+            else:
+                return f'{self.operation} {self.contact} {self.x} {self.y} {self.pressure}\n'
+        elif self.operation == 'm':
+            if self.mode:
+                return f'{self.operation} {self.contact} {self.x} {self.y} {self.pressure} {self.mode}\n'
+            else:
+                return f'{self.operation} {self.contact} {self.x} {self.y} {self.pressure}\n'
+        elif self.operation == 'u':
+            if self.mode:
+                return f'{self.operation} {self.contact} {self.mode}\n'
+            else:
+                return f'{self.operation} {self.ms}\n'
+        elif self.operation == 'w':
+            return f'{self.operation} {self.ms}\n'
+        elif self.operation == 's':
+            return f'{self.operation} {self.text}\n'
         else:
             return ''
 
@@ -314,6 +353,9 @@ class CommandBuilder:
 
     def to_minitouch(self) -> str:
         return ''.join([command.to_minitouch() for command in self.commands])
+
+    def to_maatouch_sync(self) -> str:
+        return ''.join([command.to_maatouch_sync() for command in self.commands])
 
     def to_atx_agent(self) -> List[str]:
         return [command.to_atx_agent(self.max_x, self.max_y) for command in self.commands]

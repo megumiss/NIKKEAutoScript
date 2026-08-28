@@ -147,7 +147,7 @@ class Daily(UI):
             if self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95):
                 # 下一个
                 tmp_image = self.device.image
-                self.device.click_minitouch(690, 560)
+                self.device.click_xy(690, 560)
                 # 比较头像是否变化
                 while 1:
                     if skip_first_screenshot:
@@ -176,9 +176,9 @@ class Daily(UI):
                     ]
                     r.sort(key=lambda x: x[1])
                     if len(r) > 0:
-                        self.device.click_minitouch(*find_center(r[0]))
+                        self.device.click_xy(*find_center(r[0]))
                     else:
-                        self.device.click_minitouch(380, 450)
+                        self.device.click_xy(380, 450)
                     # TODO
                     self.device.sleep(2)
             except Exception:
@@ -253,7 +253,7 @@ class Daily(UI):
                 self.device.screenshot()
 
             if click_timer.reached() and not self.appear(INVENTORY_CHECK, offset=(30, 30)):
-                self.device.click_minitouch(300, 100)
+                self.device.click_xy(300, 100)
                 logger.info('Click %s @ %s' % (point2str(300, 100), 'BACK'))
                 click_timer.reset()
                 continue

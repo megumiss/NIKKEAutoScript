@@ -4,12 +4,15 @@ from module.logger import logger
 
 
 class AppControl(Uiautomator2):
-    _app_u2_family = ['minitouch']
+    _app_u2_family = ['minitouch', 'uiautomator2', 'MaaTouch']
+    _app_adb_family = ['ADB']
 
     def app_is_running(self) -> bool:
         method = self.config.Emulator_ControlMethod
         if method in AppControl._app_u2_family:
             package = self.app_current_uiautomator2()
+        elif method in AppControl._app_adb_family:
+            package = self.app_current_adb()
         else:
             raise RequestHumanTakeover
 
@@ -22,6 +25,8 @@ class AppControl(Uiautomator2):
         logger.info(f'App start: {self.package}')
         if method in AppControl._app_u2_family:
             self.app_start_uiautomator2()
+        elif method in AppControl._app_adb_family:
+            self.app_start_adb()
         else:
             raise RequestHumanTakeover
 
@@ -30,5 +35,7 @@ class AppControl(Uiautomator2):
         logger.info(f'App stop: {self.package}')
         if method in AppControl._app_u2_family:
             self.app_stop_uiautomator2()
+        elif method in AppControl._app_adb_family:
+            self.app_stop_adb()
         else:
             raise RequestHumanTakeover

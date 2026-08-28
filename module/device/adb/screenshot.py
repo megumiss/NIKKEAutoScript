@@ -4,6 +4,7 @@ from functools import cached_property
 
 from module.base.timer import Timer
 from module.base.utils import image_size
+from module.device.adb.method.adb import Adb
 from module.device.adb.method.droidcast import DroidCast
 from module.device.adb.method.nemu_ipc import NemuIpc
 
@@ -12,7 +13,7 @@ class ScreenshotSizeError(Exception):
     pass
 
 
-class Screenshot(DroidCast, NemuIpc):
+class Screenshot(DroidCast, NemuIpc, Adb):
     def __init__(self, config):
         super().__init__(config)
         self._screenshot_interval = Timer(
@@ -23,6 +24,7 @@ class Screenshot(DroidCast, NemuIpc):
     def screenshot_methods(self):
         return {
             "DroidCast": self.screenshot_droidcast_raw,
+            "ADB": self.screenshot_adb,
         }
 
     @cached_property

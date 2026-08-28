@@ -42,6 +42,10 @@
       "name": null,
       "path": null
     },
+    "PhysicalDevice": {
+      "Enable": false,
+      "AutoRestoreResolution": true
+    },
     "Scrcpy": {
       "WebUrl": null,
       "Bitrate": 16000000,
