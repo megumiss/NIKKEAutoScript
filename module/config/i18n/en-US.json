@@ -513,6 +513,10 @@
       "mobile": "Mobile",
       "server": "Server"
     },
+    "OcrThreads": {
+      "name": "OCR Threads",
+      "help": "CPU threads used by PaddleOCR inference. Set to 1 on ARM64 devices if crashes occur"
+    },
     "WhenTaskQueueEmpty": {
       "name": "When task queue is empty",
       "help": "",

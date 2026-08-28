@@ -1,4 +1,24 @@
+import json
+
 import numpy as np
+
+from module.config.utils import filepath_config
+from module.logger import logger
+
+
+def get_ocr_cpu_threads() -> int:
+    """
+    从配置文件读取 OCR 线程数设置（NKAS.Optimization.OcrThreads），
+    缺失、非法或非正数时回退为默认值 10。
+    """
+    try:
+        with open(filepath_config('nkas'), encoding='utf-8') as f:
+            data = json.load(f)
+        threads = int(data.get('NKAS', {}).get('Optimization', {}).get('OcrThreads', 10) or 10)
+        return threads if threads > 0 else 10
+    except (OSError, ValueError, TypeError) as e:
+        logger.warning(f'Failed to read Optimization.OcrThreads from config: {e}')
+        return 10
 
 
 class OcrModel:
@@ -17,6 +37,7 @@ class OcrModel:
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
                 interval=interval,
+                cpu_threads=get_ocr_cpu_threads(),
             )
         return self._paddle_cache[model_type]
 
@@ -33,6 +54,7 @@ class OcrModel:
                 text_det_thresh=0.1,
                 text_det_unclip_ratio=6.0,
                 interval=interval,
+                cpu_threads=get_ocr_cpu_threads(),
             )
         return self._paddle_num_cache[model_type]
 

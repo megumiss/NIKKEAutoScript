@@ -7,6 +7,7 @@
     "Optimization": {
       "AutoRedCircle": false,
       "OcrModelType": "mobile",
+      "OcrThreads": 10,
       "WhenTaskQueueEmpty": "goto_main",
       "ScriptPath": null
     },

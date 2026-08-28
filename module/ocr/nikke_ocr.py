@@ -32,9 +32,13 @@ class NIKKEOcr(PaddleOCR):
         det_model_dir: str = None,
         interval: float = 0,
         model_type: str = 'mobile',
+        cpu_threads: int = 10,
     ):
         """
         初始化OCR
+
+        Args:
+            cpu_threads: PaddleOCR 推理线程数
         """
         logger.hr('PaddleOCR Prepare')
 
@@ -85,6 +89,7 @@ class NIKKEOcr(PaddleOCR):
             text_detection_model_dir=det_model_dir,
             text_recognition_model_name='PP-OCRv5_server_rec' if model_type == 'server' else 'PP-OCRv5_mobile_rec',
             text_recognition_model_dir=rec_model_dir,
+            cpu_threads=cpu_threads if cpu_threads > 0 else 10,
         )
 
         logger.info('PaddleOCR prepared')

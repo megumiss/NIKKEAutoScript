@@ -137,6 +137,7 @@ Optimization:
   OcrModelType:
     value: mobile
     option: [ mobile, server ]
+  OcrThreads: 10
   WhenTaskQueueEmpty:
     value: goto_main
     option: [ stay_there, goto_main, close_game, run_script ]

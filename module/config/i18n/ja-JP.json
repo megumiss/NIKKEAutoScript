@@ -513,6 +513,10 @@
       "mobile": "モバイル",
       "server": "サーバー"
     },
+    "OcrThreads": {
+      "name": "OCR スレッド数",
+      "help": "PaddleOCR 推論に使用する CPU スレッド数。ARM64 デバイスでクラッシュする場合は 1 に設定してください"
+    },
     "WhenTaskQueueEmpty": {
       "name": "タスクキューが空の場合",
       "help": "",

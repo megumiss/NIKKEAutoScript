@@ -31,6 +31,10 @@
           "server"
         ]
       },
+      "OcrThreads": {
+        "type": "input",
+        "value": 10
+      },
       "WhenTaskQueueEmpty": {
         "type": "select",
         "value": "goto_main",

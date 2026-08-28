@@ -513,6 +513,10 @@
       "mobile": "移动端",
       "server": "服务端"
     },
+    "OcrThreads": {
+      "name": "OCR 线程数",
+      "help": "PaddleOCR 推理使用的 CPU 线程数。ARM64 设备如遇崩溃请改为 1"
+    },
     "WhenTaskQueueEmpty": {
       "name": "当任务队列清空时",
       "help": "",
