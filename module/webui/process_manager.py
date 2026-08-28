@@ -115,6 +115,7 @@ class ProcessManager:
                 self.renderables.append(
                     (logging.INFO, f"[{self.config_name}] exited. Reason: Manual stop\n")
                 )
+                self._run_stop_cleanup()
             if self.thd_log_queue_handler is not None:
                 self.thd_log_queue_handler.join(timeout=1)
                 if self.thd_log_queue_handler.is_alive():
@@ -122,6 +123,31 @@ class ProcessManager:
                         "Log queue handler thread does not stop within 1 seconds"
                     )
         logger.info(f"[{self.config_name}] exited")
+
+    def _run_stop_cleanup(self) -> None:
+        """手动停止时实例进程被直接 kill，其 _post_action 不会执行，
+        由 GUI 进程代为清理：还原屏幕方向、禁用 VDD 虚拟屏（仅限 win 实例）。
+        游戏声音恢复依赖游戏窗口句柄，不在此处处理。"""
+        try:
+            from module.config.config import NikkeConfig
+            config = NikkeConfig(self.config_name, task=None)
+        except Exception as e:
+            logger.warning(f'Failed to load config for stop cleanup: {e}')
+            return
+        if config.Client_Platform != 'win':
+            return
+        if config.PCClient_ScreenRotate:
+            try:
+                from module.device.win.game_control import WinClient
+                WinClient.screen_rotate(config.PCClient_ScreenNumber)
+            except Exception as e:
+                logger.warning(f'Failed to restore screen orientation on stop: {e}')
+        if config.PCClient_VddScreen and config.PCClient_VddAutoManage:
+            try:
+                from module.device.win.vdd import vdd_auto_stop
+                vdd_auto_stop()
+            except Exception as e:
+                logger.warning(f'Failed to disable VDD screen on stop: {e}')
 
     def _thread_log_queue_handler(self) -> None:
         while self.alive:
