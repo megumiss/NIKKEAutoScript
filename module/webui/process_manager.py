@@ -10,6 +10,7 @@ from multiprocessing import Process
 from typing import Dict, List, Tuple, Union
 
 import inflection
+import psutil
 from rich.console import Console, ConsoleRenderable
 
 from module.base.utils import set_preview_queue
@@ -113,11 +114,13 @@ class ProcessManager:
 
         with lock:
             if self.alive:
+                self._terminate_worker_children()
                 self._process.kill()
                 self.renderables.append(
                     (logging.INFO, f"[{self.config_name}] exited. Reason: Manual stop\n")
                 )
             self._restore_physical_device_resolution()
+            self._cleanup_virtual_display_server()
             if self.thd_log_queue_handler is not None:
                 self.thd_log_queue_handler.join(timeout=1)
                 if self.thd_log_queue_handler.is_alive():
@@ -126,10 +129,27 @@ class ProcessManager:
                     )
         logger.info(f"[{self.config_name}] exited")
 
-    def _restore_physical_device_resolution(self) -> None:
+    def _terminate_worker_children(self) -> None:
+        try:
+            children = psutil.Process(self._process.pid).children(recursive=True)
+        except (psutil.Error, OSError):
+            return
+        for child in reversed(children):
+            try:
+                child.terminate()
+            except psutil.Error:
+                pass
+        _, alive = psutil.wait_procs(children, timeout=3)
+        for child in alive:
+            try:
+                child.kill()
+            except psutil.Error:
+                pass
+
+    def _physical_device_context(self):
         """
-        真机模式停止实例时恢复设备分辨率（wm size reset）。
-        实例进程被 kill 时其 atexit 不会执行，所以由 webui 进程兜底。
+        读取真机配置，返回 (physical, serial)。
+        非真机模式、serial 无效或读取失败时返回 (None, None)。
         直接读配置 JSON，避免在 webui 进程里实例化 NikkeConfig 带来的副作用。
         """
         from module.config.utils import filepath_config
@@ -140,16 +160,17 @@ class ProcessManager:
             emulator = data.get('Emulator', {})
             physical = emulator.get('PhysicalDevice', {})
             if not physical.get('Enable', False):
-                return
-            if not physical.get('AutoRestoreResolution', True):
-                return
+                return None, None
             serial = str(emulator.get('Emulator', {}).get('Serial', ''))
         except (OSError, json.JSONDecodeError) as e:
-            logger.warning(f'[{self.config_name}] Failed to read config for resolution restore: {e}')
-            return
+            logger.warning(f'[{self.config_name}] Failed to read physical device config: {e}')
+            return None, None
         if not serial or serial == 'auto':
-            return
+            return None, None
+        return physical, serial
 
+    @staticmethod
+    def _find_adb() -> str:
         adb = State.deploy_config.AdbExecutable.replace('\\', '/')
         if not os.path.exists(adb):
             adb = next((f for f in [
@@ -157,6 +178,22 @@ class ProcessManager:
                 './toolkit/Lib/site-packages/adbutils/binaries/adb.exe',
                 '/usr/bin/adb',
             ] if os.path.exists(f)), 'adb')
+        return adb
+
+    def _restore_physical_device_resolution(self) -> None:
+        """
+        真机模式停止实例时恢复设备分辨率（wm size reset）。
+        实例进程被 kill 时其 atexit 不会执行，所以由 webui 进程兜底。
+        """
+        physical, serial = self._physical_device_context()
+        if not physical:
+            return
+        if physical.get('VirtualDisplay', False):
+            return
+        if not physical.get('AutoRestoreResolution', True):
+            return
+
+        adb = self._find_adb()
 
         try:
             result = subprocess.run(
@@ -180,6 +217,39 @@ class ProcessManager:
             logger.warning(
                 f'[{self.config_name}] Failed to restore resolution: {e}, '
                 f'run `adb -s {serial} shell wm size reset` manually'
+            )
+
+    def _cleanup_virtual_display_server(self) -> None:
+        """
+        虚拟屏幕模式停止实例时清理设备端残留的 nkas-vd-server。
+        实例进程被 kill 时其 atexit 不会执行，本地 adb 桥被杀后设备端 app_process 可能存活，
+        继续持有虚拟屏幕和游戏画面；SIGTERM 会触发其 shutdown hook 正常释放虚拟屏幕。
+        worker 正常退出时设备端已被 atexit 清理，pkill 无匹配返回 1，属正常路径。
+        """
+        physical, serial = self._physical_device_context()
+        if not physical or not physical.get('VirtualDisplay', False):
+            return
+
+        adb = self._find_adb()
+
+        try:
+            result = subprocess.run(
+                [adb, '-s', serial, 'shell', 'pkill', '-f', 'com.nkas.virtualdisplay.Server'],
+                timeout=10, capture_output=True,
+            )
+            if result.returncode == 0:
+                self.renderables.append(
+                    (logging.INFO, f"[{self.config_name}] Virtual display server cleaned up on device\n")
+                )
+            elif result.returncode != 1:
+                logger.warning(
+                    f'[{self.config_name}] pkill virtual display server failed: {result.stderr!r}, '
+                    f'run `adb -s {serial} shell pkill -f com.nkas.virtualdisplay.Server` manually'
+                )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            logger.warning(
+                f'[{self.config_name}] Failed to clean up virtual display server: {e}, '
+                f'run `adb -s {serial} shell pkill -f com.nkas.virtualdisplay.Server` manually'
             )
 
     def _thread_log_queue_handler(self) -> None:

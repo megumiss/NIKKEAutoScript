@@ -67,6 +67,32 @@ def retry(func):
 
 
 class Adb(Connection):
+    @property
+    def effective_control_method(self):
+        if getattr(self, '_virtual_display_id', None) is not None:
+            return 'ADB'
+        return self.config.Emulator_ControlMethod
+
+    def _adb_input(self, *args):
+        args = list(args)
+        display_id = getattr(self, '_virtual_display_id', None)
+        if display_id is not None:
+            transform = getattr(self, '_virtual_display_transform_point', None)
+            if callable(transform) and args:
+                try:
+                    if args[0] == 'tap' and len(args) >= 3:
+                        args[1], args[2] = transform(args[1], args[2])
+                    elif args[0] == 'swipe' and len(args) >= 5:
+                        args[1], args[2] = transform(args[1], args[2])
+                        args[3], args[4] = transform(args[3], args[4])
+                except (TypeError, ValueError):
+                    logger.debug(f'Unable to transform virtual-display input: {args!r}')
+            command = ['input', '-d', display_id]
+        else:
+            command = ['input']
+        command.extend(args)
+        return self.adb_shell(command)
+
     @retry
     def screenshot_adb(self):
         """
@@ -88,6 +114,35 @@ class Adb(Connection):
         Returns:
             str: Package name of the current focused app.
         """
+        display_id = getattr(self, '_virtual_display_id', None)
+        if display_id is not None:
+            output = self.adb_shell(['dumpsys', 'activity', 'activities'])
+            blocks = re.split(
+                r'(?=^\s*(?:Display #\d+|Display:\s*mDisplayId=\d+))',
+                output, flags=re.MULTILINE,
+            )
+            for block in blocks:
+                header = re.search(
+                    r'^\s*(?:Display #|Display:\s*mDisplayId=)(\d+)',
+                    block, re.MULTILINE,
+                )
+                if not header or int(header.group(1)) != display_id:
+                    continue
+                activity = re.search(
+                    r'ActivityRecord\{[^}]*?\s(?P<package>[\w.]+)/[^\s}]+',
+                    block,
+                )
+                if activity:
+                    return activity.group('package')
+                component = re.search(
+                    r'(?:topActivity|baseActivity|realActivity|mResumedActivity)\s*[=:]\s*'
+                    r'(?:ComponentInfo\{)?(?P<package>[\w.]+)/[^\s}\]]+',
+                    block,
+                )
+                if component:
+                    return component.group('package')
+            raise OSError(f"Couldn't get focused app on display {display_id}")
+
         _focusedRE = re.compile(
             r'mCurrentFocus=Window{.*\s+(?P<package>[^\s]+)/(?P<activity>[^\s]+)\}'
         )
@@ -113,6 +168,29 @@ class Adb(Connection):
         """
         if not package_name:
             package_name = self.package
+        display_id = getattr(self, '_virtual_display_id', None)
+        if display_id is not None:
+            try:
+                response = self._virtual_display_command(
+                    f'START {package_name}\n'.encode('utf-8'), timeout=5
+                )
+                if isinstance(response, bytes) and response.startswith(b'OK'):
+                    return
+                logger.debug(f'Virtual display START fallback: {response!r}')
+            except Exception as e:
+                logger.debug(f'Virtual display START command unavailable: {e}')
+            resolved = self.adb_shell([
+                'cmd', 'package', 'resolve-activity', '--brief',
+                '-a', 'android.intent.action.MAIN',
+                '-c', 'android.intent.category.LAUNCHER', package_name,
+            ])
+            component = next((line.strip() for line in reversed(resolved.splitlines()) if '/' in line), '')
+            if not component:
+                raise PackageNotInstalled(package_name)
+            result = self.adb_shell(['am', 'start', '--display', display_id, '-n', component])
+            if 'Error:' in result or 'Exception' in result:
+                raise OSError(result)
+            return
         result = self.adb_shell([
             'monkey', '-p', package_name, '-c',
             'android.intent.category.LAUNCHER', '--pct-syskeys', '0', '1'

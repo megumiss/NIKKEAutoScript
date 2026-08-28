@@ -197,6 +197,14 @@
           true,
           false
         ]
+      },
+      "VirtualDisplay": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       }
     },
     "Scrcpy": {

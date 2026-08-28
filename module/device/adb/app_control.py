@@ -8,7 +8,7 @@ class AppControl(Uiautomator2):
     _app_adb_family = ['ADB']
 
     def app_is_running(self) -> bool:
-        method = self.config.Emulator_ControlMethod
+        method = self.effective_control_method
         if method in AppControl._app_u2_family:
             package = self.app_current_uiautomator2()
         elif method in AppControl._app_adb_family:
@@ -21,7 +21,7 @@ class AppControl(Uiautomator2):
         return package == self.package
 
     def app_start(self):
-        method = self.config.Emulator_ControlMethod
+        method = self.effective_control_method
         logger.info(f'App start: {self.package}')
         if method in AppControl._app_u2_family:
             self.app_start_uiautomator2()
@@ -31,7 +31,7 @@ class AppControl(Uiautomator2):
             raise RequestHumanTakeover
 
     def app_stop(self):
-        method = self.config.Emulator_ControlMethod
+        method = self.effective_control_method
         logger.info(f'App stop: {self.package}')
         if method in AppControl._app_u2_family:
             self.app_stop_uiautomator2()

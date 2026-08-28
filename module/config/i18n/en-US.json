@@ -361,13 +361,19 @@
     },
     "Enable": {
       "name": "Enable physical device mode",
-      "help": "Read this first: https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\nWhen enabled: the device resolution is temporarily set to 720x1280 with DPI fixed at 240 and the screen orientation locked to portrait; ADB is recommended for screenshots, uiautomator2 or MaaTouch for control",
+      "help": "Read this first: https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\nAfter enabling, either resize the physical screen to 720x1280 with DPI fixed at 240, or enable “Run game on a virtual display” to leave the physical screen unchanged; \nADB is recommended for screenshots, MaaTouch or uiautomator2 for control",
       "True": "True",
       "False": "False"
     },
     "AutoRestoreResolution": {
       "name": "Auto restore resolution on stop",
       "help": "When enabled: stopping the instance automatically restores the native resolution and screen orientation; when disabled, restore manually with the buttons below",
+      "True": "True",
+      "False": "False"
+    },
+    "VirtualDisplay": {
+      "name": "Run game on a virtual display",
+      "help": "Create a 720x1280@240dpi display inside Android and capture it directly without changing the physical screen. The same implementation works on Windows, Linux, and ARM Linux; the host only needs ADB.",
       "True": "True",
       "False": "False"
     }

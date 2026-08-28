@@ -361,13 +361,19 @@
     },
     "Enable": {
       "name": "启用真机模式",
-      "help": "使用前请先阅读 https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device\n开启后：设备分辨率将被临时改为 720x1280、DPI 固定为 240、屏幕方向锁定为竖屏；截图方案建议选择 ADB，控制方案建议选择 uiautomator2 或 MaaTouch",
+      "help": "使用前请先阅读 https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device\n开启后可选择修改主屏分辨率为 720x1280、DPI 固定为 240，或启用“在虚拟屏幕运行游戏”以保持主屏不变\n截图方案建议选择 ADB，控制方案建议选择 MaaTouch 或 uiautomator2",
       "True": "True",
       "False": "False"
     },
     "AutoRestoreResolution": {
       "name": "停止时自动还原分辨率",
       "help": "开启后：停止实例时自动执行 wm size/density reset 恢复设备原生分辨率与屏幕方向；关闭后需用下方按钮手动还原",
+      "True": "True",
+      "False": "False"
+    },
+    "VirtualDisplay": {
+      "name": "在虚拟屏幕运行游戏",
+      "help": "在 Android 内创建 720x1280@240dpi 虚拟屏幕并直接读取画面，不修改真机主屏分辨率。Windows、Linux 和 ARM Linux 共用同一实现；主机只需可用的 ADB。",
       "True": "True",
       "False": "False"
     }

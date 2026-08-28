@@ -361,13 +361,19 @@
     },
     "Enable": {
       "name": "実機モードを有効化",
-      "help": "使用前にまずお読みください https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\n有効化後：デバイスの解像度が一時的に 720x1280、DPI は 240 に固定され、画面向きが縦向きにロックされます。スクリーンショット方法は ADB、制御方法は uiautomator2 または MaaTouch を推奨します",
+      "help": "使用前にお読みください：https://nkas.megumiss.top/wiki/#/en/Usage-Guide-Physical-Device\n有効化後、実機画面の解像度を 720x1280・DPI 240 に変更するか、「仮想ディスプレイでゲームを実行」を有効にして実機画面を変更せずに使用できます。\nスクリーンショット方法は ADB、制御方法は MaaTouch または uiautomator2 を推奨します",
       "True": "True",
       "False": "False"
     },
     "AutoRestoreResolution": {
       "name": "停止時に解像度を自動復元",
       "help": "有効時：インスタンス停止時に元の解像度と画面向きを自動復元します。無効時は下のボタンで手動復元してください",
+      "True": "True",
+      "False": "False"
+    },
+    "VirtualDisplay": {
+      "name": "仮想ディスプレイでゲームを実行",
+      "help": "Android 内に 720x1280@240dpi の仮想ディスプレイを作成し、実機画面を変更せずに直接キャプチャします。同じ実装が Windows、Linux、ARM Linux で動作し、ホスト側に必要なのは ADB だけです。",
       "True": "True",
       "False": "False"
     }
