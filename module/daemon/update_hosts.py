@@ -6,6 +6,25 @@ from module.config.utils import deep_get
 from module.logger import logger
 from module.ui.ui import UI
 
+HOSTS_PATH = r'C:\Windows\System32\drivers\etc\hosts'
+START_TAG = '# ===== NIKKE BY NKAS START ====='
+END_TAG = '# ===== NIKKE BY NKAS END ====='
+
+
+def read_section(path=HOSTS_PATH):
+    """
+    读取 hosts 文件中当前的 NKAS 段落内容，没有段落或文件不可读时返回 None。
+    """
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except OSError:
+        return None
+    match = re.search(rf'{START_TAG}\n?(.*?)\n?{END_TAG}', content, re.DOTALL)
+    if not match:
+        return None
+    return match.group(1).strip('\n')
+
 
 class UpdateHosts(UI):
     def __init__(self, config):
@@ -25,7 +44,7 @@ class UpdateHosts(UI):
         - Delete: 删除整个 NKAS 段落
         """
 
-        hosts_path = r'C:\Windows\System32\drivers\etc\hosts'
+        hosts_path = HOSTS_PATH
         backup_path = hosts_path + '.bak'
 
         # 参数检查
@@ -53,8 +72,8 @@ class UpdateHosts(UI):
         with open(hosts_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        start_tag = '# ===== NIKKE BY NKAS START ====='
-        end_tag = '# ===== NIKKE BY NKAS END ====='
+        start_tag = START_TAG
+        end_tag = END_TAG
 
         # 处理操作类型
         if action == 'Delete':

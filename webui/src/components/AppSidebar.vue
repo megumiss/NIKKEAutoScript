@@ -11,7 +11,7 @@ import { useSystemStore } from '../stores/system'
 import { useUiStore } from '../stores/ui'
 
 const router = useRouter()
-const { isDashboard, isManage, isSettings, isDeploy, isLogs, isConsole, isLinks, isAbout, selectedName } = useRouteInfo()
+const { isDashboard, isManage, isSettings, isDeploy, isLogs, isTools, isLinks, isAbout, selectedName } = useRouteInfo()
 const instancesStore = useInstancesStore()
 const { instances } = storeToRefs(instancesStore)
 const { displayStatus, displayStatusClass, initials } = instancesStore
@@ -47,12 +47,12 @@ function onBrandMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, 
       <button class="side-item" :class="{ active: isManage }" @click="router.push('/manage')"><span class="sicon">🗂</span><span class="side-text">{{ t('多开') }}</span></button>
       <button class="side-item" :class="{ active: isDeploy }" @click="router.push('/deploy')"><span class="sicon">📦</span><span class="side-text">{{ t('部署') }}</span></button>
       <button class="side-item" :class="{ active: isLogs }" @click="router.push('/logs')"><span class="sicon">📄</span><span class="side-text">{{ t('日志') }}</span></button>
-      <button class="side-item" :class="{ active: isConsole }" @click="router.push('/console')"><span class="sicon">📟</span><span class="side-text">{{ t('控制台') }}</span></button>
       <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')"><span class="sicon">⚙️</span><span class="side-text">{{ t('更新') }}</span></button>
       <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')"><span class="sicon">ℹ️</span><span class="side-text">{{ t('关于') }}</span></button>
     </div>
     <div class="side-section">
       <div class="side-label">{{ t('其他') }}</div>
+      <button class="side-item" :class="{ active: isTools }" @click="router.push('/tools')"><span class="sicon">🧰</span><span class="side-text">{{ t('常用工具') }}</span></button>
       <button class="side-item" :class="{ active: isLinks }" @click="router.push('/links')"><span class="sicon">🌐</span><span class="side-text">{{ t('常用链接') }}</span></button>
     </div>
     <div class="side-spacer"></div>

@@ -245,10 +245,6 @@
     "ScreenRotate": {
       "name": "屏幕旋转",
       "help": ""
-    },
-    "UpdateHosts": {
-      "name": "Hosts修改",
-      "help": ""
     }
   },
   "Scheduler": {

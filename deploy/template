@@ -147,3 +147,10 @@ Deploy:
     # Report anonymous usage statistics at startup, at most once per day. No account, config or any personal data is collected
     # Reported data: random anonymous ID, source commit hash, OS platform name, screen resolution
     EnableStatistics: true
+
+  Log:
+    # Delete log files older than X days under ./log, which is shared by all instances and the GUI.
+    # Applies the next time a process starts or the date rolls over.
+    # [Disable] 0
+    # [Default] 30
+    LogRetentionDays: 30

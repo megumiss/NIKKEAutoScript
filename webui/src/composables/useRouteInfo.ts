@@ -12,9 +12,10 @@ export function useRouteInfo() {
   const isSettings = computed(() => route.path === '/settings')
   const isDeploy = computed(() => route.path === '/deploy')
   const isLogs = computed(() => route.path === '/logs')
-  const isConsole = computed(() => route.path === '/console')
+  const isTools = computed(() => route.path.startsWith('/tools'))
+  const toolsTab = computed(() => String(route.params.tab || 'hosts'))
   const isLinks = computed(() => route.path === '/links')
   const isAbout = computed(() => route.path === '/about')
   const isWorkspace = computed(() => Boolean(selectedName.value))
-  return { selectedName, selectedPage, selectedTask, isDashboard, isManage, isSettings, isDeploy, isLogs, isConsole, isLinks, isAbout, isWorkspace }
+  return { selectedName, selectedPage, selectedTask, isDashboard, isManage, isSettings, isDeploy, isLogs, isTools, toolsTab, isLinks, isAbout, isWorkspace }
 }

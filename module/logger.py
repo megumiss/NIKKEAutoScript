@@ -185,6 +185,15 @@ def _normalize_log_retention_days(retention_days: Optional[int]) -> int:
 
 
 def _get_log_retention_days(name: str) -> int:
+    # ./log 由所有实例与 GUI 共享，保留时长是全局设置，存放在 deploy.yaml；
+    # 旧版本该设置在实例配置里，deploy.yaml 尚无该键时回退读取实例配置。
+    try:
+        from deploy.utils import DEPLOY_CONFIG, poor_yaml_read
+        retention_days = poor_yaml_read(DEPLOY_CONFIG).get('LogRetentionDays')
+    except (ImportError, OSError, ValueError):
+        retention_days = None
+    if retention_days is not None:
+        return _normalize_log_retention_days(retention_days)
     name = _normalize_logger_name(name)
     path = f'./config/{name}.json'
     try:

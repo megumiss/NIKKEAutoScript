@@ -165,8 +165,10 @@ Optimization:
       mode: file
       accept: [ .bat, .ps1, .exe, .sh ]
 Log:
+  # 已迁移到部署页（deploy.yaml LogRetentionDays），此处保留定义以兼容旧实例配置的回退读取
   RetentionDays:
     value: 30
+    display: hide_keep
 Reward:
   CollectSocialPoint: true
   CollectSpecialArenaPoint: false

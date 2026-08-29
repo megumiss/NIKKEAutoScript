@@ -5,6 +5,10 @@ import { JsonSocket } from '../api/ws'
 import { t } from '../i18n'
 import { useSystemStore } from '../stores/system'
 
+// embedded：作为常用工具页的标签页嵌入时隐藏头部卡片，避免与标签栏重复
+const props = defineProps<{ embedded?: boolean }>()
+const embedded = computed(() => Boolean(props.embedded))
+
 const { systemStatus } = storeToRefs(useSystemStore())
 const enabled = computed(() => Boolean(systemStatus.value.console_enabled))
 
@@ -81,16 +85,16 @@ watch(() => lines.value.length, async () => {
 </script>
 
 <template>
-  <section class="view console-view">
+  <section class="view console-view" :class="{ 'console-embedded': embedded }">
     <article v-if="!enabled" class="card console-disabled">📟 {{ t('控制台未启用，请到部署页开启') }}</article>
     <template v-else>
-      <article class="card task-hero">
+      <article v-if="!embedded" class="card task-hero">
         <div class="task-icon">📟</div>
         <div style="flex:1"><h2>{{ t('控制台') }}</h2><div class="sub">{{ t('在本机执行命令并实时查看输出，命令在脚本所在目录运行。') }}</div></div>
         <button class="btn" @click="clearLines">🧹 {{ t('清屏') }}</button>
       </article>
       <article class="card log-card console-card">
-        <div class="console-hint">💡 {{ t('使用完毕后请及时到部署页关闭控制台') }}</div>
+        <div class="console-hint">💡 {{ t('使用完毕后请及时到部署页关闭控制台') }}<button v-if="embedded" class="btn sm console-clear" @click="clearLines">🧹 {{ t('清屏') }}</button></div>
         <div v-if="disconnected" class="console-banner">⚠ {{ t('连接已断开（仅本机可用）') }}</div>
         <div ref="consoleBody" class="log-body">
           <div v-if="!lines.length" class="logs-empty">{{ t('暂无输出') }}</div>

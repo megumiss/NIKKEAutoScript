@@ -245,10 +245,6 @@
     "ScreenRotate": {
       "name": "Screen Rotate",
       "help": ""
-    },
-    "UpdateHosts": {
-      "name": "Hosts Update",
-      "help": ""
     }
   },
   "Scheduler": {

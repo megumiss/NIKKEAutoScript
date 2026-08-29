@@ -127,6 +127,18 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '禁用虚拟屏幕': { 'en-US': 'Disable virtual display', 'ja-JP': '仮想ディスプレイを無効化' },
   '操作成功': { 'en-US': 'Succeeded', 'ja-JP': '成功しました' },
   '当前配置(未检测到对应显示器)': { 'en-US': 'Current setting (monitor not detected)', 'ja-JP': '現在の設定(モニター未検出)' },
+  '常用工具': { 'en-US': 'Tools', 'ja-JP': 'ツール' },
+  'Hosts 修改': { 'en-US': 'Hosts Editor', 'ja-JP': 'Hosts 編集' },
+  '修改系统 hosts 文件中的 NKAS 段落（仅未注释的行生效），用于改善游戏服务器连接。修改需要管理员权限。': { 'en-US': 'Edit the NKAS section in the system hosts file (only uncommented lines take effect) to improve game server connectivity. Administrator privileges are required.', 'ja-JP': 'システム hosts ファイルの NKAS セクションを編集します（コメント解除された行のみ有効）。管理者権限が必要です。' },
+  '已应用': { 'en-US': 'Applied', 'ja-JP': '適用済み' }, '未应用': { 'en-US': 'Not applied', 'ja-JP': '未適用' },
+  '应用': { 'en-US': 'Apply', 'ja-JP': '適用' },
+  '区服': { 'en-US': 'Server', 'ja-JP': 'サーバー' },
+  '已还原': { 'en-US': 'Reverted', 'ja-JP': '元に戻しました' },
+  '将删除 hosts 文件中 NKAS 写入的解析记录，恢复默认 DNS 解析。': { 'en-US': 'Remove the DNS records NKAS wrote into the hosts file, restoring default DNS resolution.', 'ja-JP': 'hosts ファイルに NKAS が書き込んだレコードを削除し、DNS 解決をデフォルトに戻します。' },
+  '当前系统不支持修改 hosts 文件': { 'en-US': 'Editing the hosts file is not supported on this system.', 'ja-JP': 'このシステムでは hosts ファイルを編集できません' },
+  'Hosts 内容不能为空': { 'en-US': 'Hosts content cannot be empty.', 'ja-JP': 'Hosts の内容を入力してください' },
+  '已写入 hosts 文件': { 'en-US': 'Written to the hosts file.', 'ja-JP': 'hosts ファイルに書き込みました' },
+  '没有生效：所有行均为注释或为空': { 'en-US': 'No effect: all lines are comments or empty.', 'ja-JP': 'すべてコメントまたは空行のため反映されませんでした' },
 }
 
 export const languageOptions = [{ value: 'zh-CN', label: '简体中文' }, { value: 'en-US', label: 'English' }, { value: 'ja-JP', label: '日本語' }]

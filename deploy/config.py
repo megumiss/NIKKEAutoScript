@@ -65,6 +65,9 @@ class ConfigModel:
     # Statistics
     EnableStatistics: bool = True
 
+    # Log
+    LogRetentionDays: int = 30
+
     # Remote Access
     EnableRemoteAccess: bool = False
     SSHUser: Optional[str] = None

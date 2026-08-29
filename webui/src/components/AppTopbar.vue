@@ -9,7 +9,7 @@ import { useInstancesStore } from '../stores/instances'
 import { useUiStore } from '../stores/ui'
 import { useWorkspaceStore } from '../stores/workspace'
 
-const { selectedName, selectedPage, isDashboard, isManage, isSettings, isDeploy, isLogs, isLinks, isAbout, isWorkspace } = useRouteInfo()
+const { selectedName, selectedPage, isDashboard, isManage, isSettings, isDeploy, isLogs, isTools, isLinks, isAbout, isWorkspace } = useRouteInfo()
 const workspace = useWorkspaceStore()
 const { taskSchema, selectedTask } = storeToRefs(workspace)
 const instancesStore = useInstancesStore()
@@ -22,7 +22,7 @@ const { mobileNav } = storeToRefs(useUiStore())
 const { isTauri, isMaximized, tbMinimize, tbToggleMaximize, tbHide, tbClose, onWindowDragAreaMouseDown } = useTauriShell()
 function onTopbarMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, '.tb-btn') }
 
-function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isLinks.value ? t('常用链接') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : selectedPage.value === 'schedule' ? `${t('调度设置')}(BETA)` : `${taskSchema.value?.name || selectedTask.value}${selectedTask.value === 'PhysicalDevice' ? '(BETA)' : ''}` }
+function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isTools.value ? t('常用工具') : isLinks.value ? t('常用链接') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : selectedPage.value === 'schedule' ? `${t('调度设置')}(BETA)` : `${taskSchema.value?.name || selectedTask.value}${selectedTask.value === 'PhysicalDevice' ? '(BETA)' : ''}` }
 </script>
 
 <template>
