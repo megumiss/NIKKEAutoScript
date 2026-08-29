@@ -372,8 +372,8 @@
       "False": "False"
     },
     "VirtualDisplay": {
-      "name": "在虚拟屏幕运行游戏",
-      "help": "在 Android 内创建 720x1280@240dpi 虚拟屏幕并直接读取画面，不修改真机主屏分辨率。Windows、Linux 和 ARM Linux 共用同一实现；主机只需可用的 ADB。",
+      "name": "在虚拟屏幕运行游戏（推荐）",
+      "help": "在 Android 内创建 720x1280@240dpi 虚拟屏幕并直接读取画面，不修改真机主屏分辨率，推荐优先使用。Windows、Linux 和 ARM Linux 共用同一实现；主机只需可用的 ADB。开启后模拟器设置中的截图方案与控制方式不生效：截图直接读取虚拟屏幕画面，控制固定使用 ADB。",
       "True": "True",
       "False": "False"
     }

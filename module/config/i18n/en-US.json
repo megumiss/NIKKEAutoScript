@@ -372,8 +372,8 @@
       "False": "False"
     },
     "VirtualDisplay": {
-      "name": "Run game on a virtual display",
-      "help": "Create a 720x1280@240dpi display inside Android and capture it directly without changing the physical screen. The same implementation works on Windows, Linux, and ARM Linux; the host only needs ADB.",
+      "name": "Run game on a virtual display (recommended)",
+      "help": "Create a 720x1280@240dpi display inside Android and capture it directly without changing the physical screen; recommended. The same implementation works on Windows, Linux, and ARM Linux; the host only needs ADB. When enabled, the screenshot and control method settings are ignored: frames are captured from the virtual display and control always uses ADB.",
       "True": "True",
       "False": "False"
     }
