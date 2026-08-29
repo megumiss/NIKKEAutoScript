@@ -72,6 +72,8 @@
     "PCClient": {
       "Screens": false,
       "ScreenNumber": 0,
+      "VddScreen": false,
+      "VddAutoManage": false,
       "GameWindowPosition": "center",
       "GameResolutionCompat": true,
       "ScreenRotate": false,

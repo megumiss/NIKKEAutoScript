@@ -316,6 +316,14 @@
           5
         ]
       },
+      "VddScreen": {
+        "type": "checkbox",
+        "value": false
+      },
+      "VddAutoManage": {
+        "type": "checkbox",
+        "value": false
+      },
       "GameWindowPosition": {
         "type": "select",
         "value": "center",

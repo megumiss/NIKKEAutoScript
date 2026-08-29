@@ -447,6 +447,14 @@
       "4": "4",
       "5": "5"
     },
+    "VddScreen": {
+      "name": "Target Screen Is VDD Virtual Display",
+      "help": "Enable when the target screen is a VDD (Virtual Display Driver) virtual display. Select the target screen while the virtual display is enabled."
+    },
+    "VddAutoManage": {
+      "name": "Auto-Manage VDD Screen",
+      "help": "Requires 'Target Screen Is VDD Virtual Display' to be enabled. When enabled, the virtual display is automatically enabled when a task starts and disabled after it finishes."
+    },
     "GameWindowPosition": {
       "name": "Game Window Position",
       "help": "Set the game window position to prevent it from being obscured or off-screen",
