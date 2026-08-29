@@ -60,6 +60,8 @@ def mount_api(app):
         Route('/api/proxy', routes_proxy.proxy, methods=['GET']),
         Route('/api/tools/hosts', routes_tools.hosts_state, methods=['GET']),
         Route('/api/tools/hosts', routes_tools.hosts_update, methods=['POST']),
+        Route('/api/tools/game_clone', routes_tools.game_clone_info, methods=['GET']),
+        Route('/api/tools/game_clone', routes_tools.game_clone_start, methods=['POST']),
         Route('/api/{name:str}/start', routes_instances.start, methods=['POST']),
         Route('/api/{name:str}/stop', routes_instances.stop, methods=['POST']),
         Route('/api/{name:str}/remark', routes_instances.remark, methods=['POST']),

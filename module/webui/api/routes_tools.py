@@ -74,6 +74,24 @@ async def hosts_state(_: Request):
     return JSONResponse(_hosts_payload())
 
 
+async def game_clone_info(_: Request):
+    from module.tools.game_clone import clone_info, clone_status
+    return JSONResponse({**clone_info(), 'job': clone_status()})
+
+
+async def game_clone_start(request: Request):
+    from module.tools.game_clone import GameCloneError, clone_status, start_clone
+    try:
+        data = await request.json()
+    except ValueError:
+        data = {}
+    try:
+        start_clone(data.get('source'), data.get('target'), data.get('suffix'))
+    except GameCloneError as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=400)
+    return JSONResponse({'status': 'success', 'job': clone_status()})
+
+
 async def hosts_update(request: Request):
     try:
         data = await request.json()

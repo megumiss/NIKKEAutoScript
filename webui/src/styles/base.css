@@ -658,3 +658,17 @@ button:focus-visible,
 .hosts-region { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
 .hosts-region-label { color: var(--text-2); font-size: 13.5px; }
 .hosts-region .app-select { width: 240px; }
+
+/* 游戏多开 */
+.clone-field { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.clone-field .hosts-region-label { width: 90px; flex: none; }
+.clone-input { flex: 1; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; outline: 0; color: var(--text); background: var(--card-2); font-size: 13px; }
+.clone-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.clone-suffix { max-width: 120px; }
+.clone-existing { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.clone-chip { padding: 2px 10px; border-radius: 10px; color: var(--text-2); background: var(--card-3); font-size: 11.5px; }
+.clone-progress { margin: 4px 0 12px; }
+.clone-progress-bar { height: 8px; border-radius: 4px; overflow: hidden; background: var(--card-3); }
+.clone-progress-fill { height: 100%; background: var(--grad-accent); transition: width .3s; }
+.clone-progress-text { display: block; margin-top: 6px; color: var(--text-3); font-size: 12px; }
+.clone-result { margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--green); background: var(--green-soft); font-size: 12.5px; word-break: break-all; }
