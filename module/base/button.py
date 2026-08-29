@@ -294,7 +294,7 @@ class Button(Resource):
             color2=self.color
         )
 
-        logger.debug(f'Button: {self.name}, color1: {color1}, color2: {self.color}, similarity: {diff}, threshold: {threshold}, hit: {diff <= threshold}')
+        logger.debug(f'Button: {self.name}, color1: {color1}, color2: {self.color}, similarity: {similar}, threshold: {threshold}, hit: {similar <= threshold}')
         return similar <= threshold
 
     def load_color(self, image):

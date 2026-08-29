@@ -190,7 +190,7 @@ class Conversation(UI):
             # 咨询
             if (
                 click_timer.reached()
-                and COMMUNICATE.match_appear_on(self.device.image, threshold=6)
+                and COMMUNICATE.match_appear_on(self.device.image, threshold=10)
                 and self.appear_then_click(COMMUNICATE, offset=5, interval=3)
             ):
                 confirm_timer.reset()
@@ -207,7 +207,7 @@ class Conversation(UI):
             if self.appear(ANSWER_CHECK, offset=1, threshold=0.9, static=False):
                 self.answer(nikke)
             elif (
-                not COMMUNICATE.match_appear_on(self.device.image, threshold=6)
+                not COMMUNICATE.match_appear_on(self.device.image, threshold=10)
                 and self.appear(DETAIL_CHECK, offset=(5, 5), static=False)
                 and GIFT.match_appear_on(self.device.image, threshold=10)
                 and confirm_timer.reached()
