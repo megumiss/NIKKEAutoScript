@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import AppIcon from '../components/AppIcon.vue'
 import { t } from '../i18n'
 import { useInstancesStore } from '../stores/instances'
 import { useModalStore } from '../stores/modal'
@@ -13,10 +14,10 @@ const { openCreateModal, openRenameModal, openDeleteModal } = useModalStore()
 <template>
   <section class="view">
     <article class="card task-hero">
-      <div class="task-icon">🗂</div>
+      <div class="task-icon"><AppIcon name="layers" :size="22" /></div>
       <div style="flex:1"><h2>{{ t('多开') }}</h2><div class="sub">{{ t('实例总数') }}: {{ instances.length }}</div></div>
       <button class="btn primary" @click="openCreateModal">{{ t('＋ 新建实例') }}</button>
-      <label class="btn">⤒ {{ t('导入配置') }}<input type="file" accept=".json" hidden @change="importInstance"></label>
+      <label class="btn"><AppIcon name="import" :size="14" /> {{ t('导入配置') }}<input type="file" accept=".json" hidden @change="importInstance"></label>
     </article>
     <article class="card manage-table" style="overflow:hidden">
       <table>
@@ -26,7 +27,7 @@ const { openCreateModal, openRenameModal, openDeleteModal } = useModalStore()
           <tr v-for="(instance, index) in instances" :key="instance.name"
               :class="{ dragging: dragIndex === index, 'drag-over': dragIndex >= 0 && dragOverIndex === index && dragOverIndex !== dragIndex }"
               @dragstart="onDragStart(index, $event)" @dragover="onDragOver(index, $event)" @drop="onDrop" @dragend="onDragEnd">
-            <td :data-label="t('名称')"><span class="cell-inst"><span class="drag-handle" draggable="true" :title="t('拖动排序')">⠿</span><span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>{{ instance.name }}</span></td>
+            <td :data-label="t('名称')"><span class="cell-inst"><span class="drag-handle" draggable="true" :title="t('拖动排序')"><AppIcon name="row-vertical" :size="14" /></span><span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>{{ instance.name }}</span></td>
             <td :data-label="t('Mod')">{{ instance.mod }}</td>
             <td :data-label="t('状态')"><span class="status-pill" :class="displayStatusClass(instance.name, instance.state, instance.current_task)">{{ displayStatus(instance.name, instance.state, instance.current_task) }}</span></td>
             <td :data-label="t('备注')"><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>

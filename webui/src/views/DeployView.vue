@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import AppIcon from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import FieldPriority from '../components/config/FieldPriority.vue'
@@ -17,8 +18,8 @@ const { openResetDeployModal } = useModalStore()
 <template>
   <section class="view">
     <article class="card task-hero">
-      <div class="task-icon">📦</div>
-      <div style="flex:1"><h2>{{ t('部署') }}</h2><div class="sub deploy-warning">⚠ {{ t('修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。') }}</div></div>
+      <div class="task-icon"><AppIcon name="box" :size="22" /></div>
+      <div style="flex:1"><h2>{{ t('部署') }}</h2><div class="sub deploy-warning"><AppIcon name="alert-triangle" :size="14" /> {{ t('修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。') }}</div></div>
       <button class="btn danger" @click="openResetDeployModal">{{ t('还原默认') }}</button>
     </article>
     <div class="cfg-groups">

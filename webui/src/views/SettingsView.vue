@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import AppIcon from '../components/AppIcon.vue'
 import { t } from '../i18n'
 import { useSystemStore } from '../stores/system'
 import { useUpdateStore } from '../stores/update'
@@ -13,7 +14,7 @@ const { checkDesktopUpdate, applyDesktopUpdate, checkUpdate, runUpdate, forceRes
 <template>
   <section class="view">
     <article class="card task-hero">
-      <div class="task-icon">🖥️</div>
+      <div class="task-icon"><AppIcon name="monitor" :size="22" /></div>
       <div style="flex:1"><h2>{{ t('启动器更新') }}</h2><div class="sub">{{ t('更新nkas程序（exe）本身') }}<span v-if="!isDesktopShell" class="desktop-only-hint"> · {{ t('此功能仅在1.x版本中可用') }}</span></div>
         <div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ desktopUpdate?.currentVersion || '—' }}</code><span v-if="desktopUpdate?.updateAvailable" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="desktopUpdate?.checked && !desktopUpdate?.error" class="sub"> · {{ t('已是最新') }}</span><span v-if="desktopUpdate?.error" class="update-hint"> · {{ desktopUpdate.error }}</span></div>
       </div>
@@ -21,7 +22,7 @@ const { checkDesktopUpdate, applyDesktopUpdate, checkUpdate, runUpdate, forceRes
       <button v-else class="btn primary" :disabled="!isDesktopShell || desktopChecking || desktopApplying || desktopUpdate?.checking || desktopUpdate?.applying" @click="checkDesktopUpdate"><span v-if="desktopChecking || desktopApplying || desktopUpdate?.checking || desktopUpdate?.applying" class="btn-spin"></span>{{ desktopApplying || desktopUpdate?.applying ? t('更新中…') : (desktopChecking || desktopUpdate?.checking ? t('检查中…') : t('检查更新')) }}</button>
     </article>
     <article class="card task-hero">
-      <div class="task-icon">🚀</div>
+      <div class="task-icon"><AppIcon name="rocket" :size="22" /></div>
       <div style="flex:1"><h2>{{ t('源码更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span><span v-else-if="updateInfo.state === 'failed'" class="update-error"> · {{ updateInfo.error ? t('检查更新失败') : t('更新失败') }}<span v-if="updateInfo.error">：{{ updateInfo.error }}</span></span></div></div>
       <button v-if="Number(updateInfo.state) === 1" class="btn success" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span>{{ updating ? t('更新中…') : t('立即更新') }}</button>
       <!-- "failed" with an error message means the *check* failed (e.g.

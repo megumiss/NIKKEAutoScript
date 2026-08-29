@@ -2,7 +2,7 @@
   "NKAS": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "⚙️",
+    "icon": "gear",
     "tasks": [
       "NKAS",
       "Emulator",
@@ -14,7 +14,7 @@
   "Reward": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "🎁",
+    "icon": "gift",
     "tasks": [
       "Reward",
       "Destruction",
@@ -24,7 +24,7 @@
   "Daily": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "📅",
+    "icon": "calendar",
     "tasks": [
       "DailyRecruit",
       "Daily",
@@ -38,7 +38,7 @@
   "Outpost": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "🏢",
+    "icon": "building",
     "tasks": [
       "Commission",
       "Liberation",
@@ -50,7 +50,7 @@
   "Ark": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "🏛️",
+    "icon": "bank",
     "tasks": [
       "SimulationRoom",
       "Overclock",
@@ -65,7 +65,7 @@
   "LimitedTimeEvent": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "⏱️",
+    "icon": "timer",
     "tasks": [
       "Coop",
       "SoloRaid",
@@ -75,7 +75,7 @@
   "StoryEvent": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "📖",
+    "icon": "book",
     "tasks": [
       "Event",
       "Event2"
@@ -84,7 +84,7 @@
   "Surface": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "🗺️",
+    "icon": "map",
     "tasks": [
       "SurfaceDaily"
     ]
@@ -92,7 +92,7 @@
   "Blablalink": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "💬",
+    "icon": "message",
     "tasks": [
       "BlaAuth",
       "BlaDaily",
@@ -103,7 +103,7 @@
   "Gift": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "🎁",
+    "icon": "gift",
     "tasks": [
       "StepUpGift",
       "DailyGift",
@@ -114,7 +114,7 @@
   "DataChart": {
     "menu": "collapse",
     "page": "setting",
-    "icon": "📈",
+    "icon": "trend-up",
     "tasks": [
       "WarehouseStats",
       "InterceptionTaskStats"
@@ -123,7 +123,7 @@
   "Tool": {
     "menu": "collapse",
     "page": "tool",
-    "icon": "🛠️",
+    "icon": "designtools",
     "tasks": [
       "AutoTower",
       "SemiCombat",

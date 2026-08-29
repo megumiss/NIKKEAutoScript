@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { JsonSocket } from '../api/ws'
+import AppIcon from '../components/AppIcon.vue'
 import { t } from '../i18n'
 import { useSystemStore } from '../stores/system'
 
@@ -86,16 +87,16 @@ watch(() => lines.value.length, async () => {
 
 <template>
   <section class="view console-view" :class="{ 'console-embedded': embedded }">
-    <article v-if="!enabled" class="card console-disabled">📟 {{ t('控制台未启用，请到部署页开启') }}</article>
+    <article v-if="!enabled" class="card console-disabled"><AppIcon name="terminal-square" :size="16" /> {{ t('控制台未启用，请到部署页开启') }}</article>
     <template v-else>
       <article v-if="!embedded" class="card task-hero">
-        <div class="task-icon">📟</div>
+        <div class="task-icon"><AppIcon name="terminal-square" :size="22" /></div>
         <div style="flex:1"><h2>{{ t('控制台') }}</h2><div class="sub">{{ t('在本机执行命令并实时查看输出，命令在脚本所在目录运行。') }}</div></div>
-        <button class="btn" @click="clearLines">🧹 {{ t('清屏') }}</button>
+        <button class="btn" @click="clearLines"><AppIcon name="broom" :size="16" /> {{ t('清屏') }}</button>
       </article>
       <article class="card log-card console-card">
-        <div class="console-hint">💡 {{ t('使用完毕后请及时到部署页关闭控制台') }}<button v-if="embedded" class="btn sm console-clear" @click="clearLines">🧹 {{ t('清屏') }}</button></div>
-        <div v-if="disconnected" class="console-banner">⚠ {{ t('连接已断开（仅本机可用）') }}</div>
+        <div class="console-hint"><AppIcon name="lightbulb" :size="16" /> {{ t('使用完毕后请及时到部署页关闭控制台') }}<button v-if="embedded" class="btn sm console-clear" @click="clearLines"><AppIcon name="broom" :size="14" /> {{ t('清屏') }}</button></div>
+        <div v-if="disconnected" class="console-banner"><AppIcon name="alert-triangle" :size="16" /> {{ t('连接已断开（仅本机可用）') }}</div>
         <div ref="consoleBody" class="log-body">
           <div v-if="!lines.length" class="logs-empty">{{ t('暂无输出') }}</div>
           <div v-for="(line, index) in lines" :key="index" class="log-line plain" :class="`console-line-${line.kind}`">

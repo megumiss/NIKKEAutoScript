@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import AppIcon from '../components/AppIcon.vue'
 import EventCalendar from '../components/EventCalendar.vue'
 import { t } from '../i18n'
 import { useInstancesStore } from '../stores/instances'
@@ -21,8 +22,8 @@ function calendarError(message: string) { toast.error = message }
 <template>
   <section class="view">
     <div class="stat-row">
-      <article class="card stat-card hoverable"><div class="stat-icon blue">🖥️</div><div><div class="stat-num">{{ instances.length }}</div><div class="stat-lbl">{{ t('实例总数') }}</div></div></article>
-      <article class="card stat-card hoverable"><div class="stat-icon green">▶️</div><div><div class="stat-num" style="color:var(--green)">{{ runningCount }}</div><div class="stat-lbl">{{ t('运行中') }}</div></div></article>
+      <article class="card stat-card hoverable"><div class="stat-icon blue"><AppIcon name="monitor" :size="22" /></div><div><div class="stat-num">{{ instances.length }}</div><div class="stat-lbl">{{ t('实例总数') }}</div></div></article>
+      <article class="card stat-card hoverable"><div class="stat-icon green"><AppIcon name="play" :size="22" /></div><div><div class="stat-num" style="color:var(--green)">{{ runningCount }}</div><div class="stat-lbl">{{ t('运行中') }}</div></div></article>
     </div>
     <div class="section-title">{{ t('实例') }}</div>
     <div class="inst-grid">
@@ -36,10 +37,10 @@ function calendarError(message: string) { toast.error = message }
         <div class="inst-now"><span class="k">{{ t('下一任务') }}</span><span>{{ instance.next_task || '—' }}</span></div>
         <div class="inst-card-foot">
           <button class="btn sm" :class="instance.state === 1 ? 'danger' : 'success'" style="flex:1" @click="lifecycle(instance.state === 1 ? 'stop' : 'start', instance.name)">{{ instance.state === 1 ? t('停止') : t('启动') }}</button>
-          <button class="btn primary sm" style="flex:1" @click="enter(instance.name)">{{ t('进入 →') }}</button>
+          <button class="btn primary sm" style="flex:1" @click="enter(instance.name)">{{ t('进入') }} <AppIcon name="arrow-right" :size="14" /></button>
         </div>
       </article>
-      <button class="card add-card" @click="openCreateModal"><span class="plus">＋</span>{{ t('新建实例') }}</button>
+      <button class="card add-card" @click="openCreateModal"><AppIcon name="plus" :size="28" /><span>{{ t('新建实例') }}</span></button>
     </div>
     <EventCalendar :language="systemStatus.language" @error="calendarError" />
   </section>

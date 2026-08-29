@@ -2,6 +2,7 @@
 import { computed, defineAsyncComponent } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppComboSelect from '../components/AppComboSelect.vue'
+import AppIcon from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import LiveLog from '../components/LiveLog.vue'
@@ -55,9 +56,9 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
     <div class="task-layout">
       <div>
         <article class="card task-hero">
-          <div class="task-icon">{{ selectedPage === 'tool' ? '🛠' : '⚙️' }}</div>
+          <div class="task-icon"><AppIcon :name="selectedPage === 'tool' ? 'tools' : 'gear'" :size="22" /></div>
           <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}{{ selectedTask === 'PhysicalDevice' ? '(BETA)' : '' }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
-          <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()">{{ selectedInstance?.state === 1 ? t('停止') : `▶ ${t('启动')}` }}</button>
+          <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()"><template v-if="selectedInstance?.state === 1">{{ t('停止') }}</template><template v-else><AppIcon name="play" :size="14" /> {{ t('启动') }}</template></button>
         </article>
         <div class="cfg-groups">
           <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
@@ -96,7 +97,7 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                     <template v-else-if="field.widget === 'datetime'">
                       <div class="dt-field">
                         <input type="datetime-local" :value="datetimeValue(field.value)" :readonly="field.display !== 'show'" @input="scheduleDatetimeSave(field, $event)" @blur="flushDatetimeSave(field, $event)">
-                        <button v-if="field.display === 'show'" type="button" class="dt-clear" :title="t('清空')" @mousedown.prevent @click="clearField(field)">✕</button>
+                        <button v-if="field.display === 'show'" type="button" class="dt-clear" :title="t('清空')" @mousedown.prevent @click="clearField(field)"><AppIcon name="x" :size="12" /></button>
                       </div>
                     </template>
                     <AppComboSelect v-else-if="field.key.endsWith('.Serial')" :model-value="field.value" :options="serialDeviceOptions" :loading="serialDevicesBusy" :loading-text="t('查询中…')" :empty-text="t('未检测到设备')" :disabled="field.display !== 'show'" @update:model-value="(v: string) => field.value = v" @change="(v: string) => saveValue(field, v).catch(() => {})" @dropdown="loadSerialDevices"/>

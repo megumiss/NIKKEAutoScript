@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import AppIcon from '../AppIcon.vue'
 import AppSelect from '../AppSelect.vue'
 
 // Ordered multi-select for `>`-joined priority strings.  The stored value
@@ -48,7 +49,7 @@ function move(index: number, offset: number) {
         <template v-if="!disabled">
           <button type="button" class="priority-move" :disabled="index === 0" @click="move(index, -1)">‹</button>
           <button type="button" class="priority-move" :disabled="index === selected.length - 1" @click="move(index, 1)">›</button>
-          <button type="button" class="priority-remove" @click="remove(index)">✕</button>
+          <button type="button" class="priority-remove" @click="remove(index)"><AppIcon name="x" :size="12" /></button>
         </template>
       </span>
     </div>

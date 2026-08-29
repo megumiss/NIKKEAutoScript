@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import AppIcon from './AppIcon.vue'
 import { api } from '../api/client'
 
 type CalendarItem = {
@@ -177,7 +178,7 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
         <div v-if="updatedAt" class="event-updated">{{ t('更新于') }} {{ formatDateTime(updatedAt) }}</div>
       </div>
       <button class="btn sm event-refresh" type="button" :disabled="refreshing" :title="t('刷新')" @click="loadCalendar(true)">
-        <span class="event-refresh-icon" :class="{ spinning: refreshing }" aria-hidden="true">↻</span>
+        <span class="event-refresh-icon" :class="{ spinning: refreshing }" aria-hidden="true"><AppIcon name="refresh" :size="14" /></span>
         {{ t('刷新') }}
       </button>
     </header>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 // Editable dropdown (combobox) styled after AppSelect: the text is freely
 // editable and committing (blur/Enter) emits change, while the toggle opens
@@ -63,7 +64,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
         <template v-else>
           <button v-for="(option, index) in options" :key="index" type="button" class="app-select-option" :class="{ active: valueOf(option) === modelValue }" @click="choose(option)">
             <span class="app-select-option-label">{{ labelOf(option) }}</span>
-            <span v-if="valueOf(option) === modelValue" class="app-select-check">✓</span>
+            <span v-if="valueOf(option) === modelValue" class="app-select-check"><AppIcon name="check" :size="14" /></span>
           </button>
           <div v-if="!options?.length" class="app-select-empty">{{ emptyText || '—' }}</div>
         </template>

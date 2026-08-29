@@ -1,9 +1,10 @@
+# 各组 icon 填图标名，可选值见 webui/src/assets/icons/ 下的 svg 文件名（不含扩展名）。
 # ==================== NKAS ====================
 
 NKAS:
   menu: 'collapse'
   page: 'setting'
-  icon: '⚙️'
+  icon: 'gear'
   tasks:
     NKAS:
       - Client
@@ -29,7 +30,7 @@ NKAS:
 Reward:
   menu: 'collapse'
   page: 'setting'
-  icon: '🎁'
+  icon: 'gift'
   tasks:
     Reward:
       - Scheduler
@@ -44,7 +45,7 @@ Reward:
 Daily:
   menu: 'collapse'
   page: 'setting'
-  icon: '📅'
+  icon: 'calendar'
   tasks:
     DailyRecruit:
       - Scheduler
@@ -72,7 +73,7 @@ Daily:
 Outpost:
   menu: 'collapse'
   page: 'setting'
-  icon: '🏢'
+  icon: 'building'
   tasks:
     Commission:
       - Scheduler
@@ -92,7 +93,7 @@ Outpost:
 Ark:
   menu: 'collapse'
   page: 'setting'
-  icon: '🏛️'
+  icon: 'bank'
   tasks:
     SimulationRoom:
       - Scheduler
@@ -129,7 +130,7 @@ Ark:
 LimitedTimeEvent:
   menu: 'collapse'
   page: 'setting'
-  icon: '⏱️'
+  icon: 'timer'
   tasks:
     Coop:
       - Scheduler
@@ -145,7 +146,7 @@ LimitedTimeEvent:
 StoryEvent:
   menu: 'collapse'
   page: 'setting'
-  icon: '📖'
+  icon: 'book'
   tasks:
     Event:
       - Scheduler
@@ -163,7 +164,7 @@ StoryEvent:
 Surface:
   menu: 'collapse'
   page: 'setting'
-  icon: '🗺️'
+  icon: 'map'
   tasks:
     SurfaceDaily:
       - Scheduler
@@ -174,7 +175,7 @@ Surface:
 Blablalink:
   menu: 'collapse'
   page: 'setting'
-  icon: '💬'
+  icon: 'message'
   tasks:
     BlaAuth:
       - BlaAuth
@@ -193,7 +194,7 @@ Blablalink:
 Gift:
   menu: 'collapse'
   page: 'setting'
-  icon: '🎁'
+  icon: 'gift'
   tasks:
     StepUpGift:
       - Scheduler
@@ -209,7 +210,7 @@ Gift:
 DataChart:
   menu: 'collapse'
   page: 'setting'
-  icon: '📈'
+  icon: 'trend-up'
   tasks:
     WarehouseStats:
       - Scheduler
@@ -224,7 +225,7 @@ DataChart:
 Tool:
   menu: 'collapse'
   page: 'tool'
-  icon: '🛠️'
+  icon: 'tools'
   tasks:
     AutoTower:
       - AutoTower
