@@ -214,6 +214,18 @@ class Automation:
         else:
             raise ValueError(f'未知的动作类型: {action}')
 
+    # 与 adb 端 Control 的坐标级接口对齐，供业务层跨平台调用
+    def click_xy(self, x, y):
+        self.click_minitouch(x, y)
+
+    def long_click_xy(self, x, y, duration=1.0):
+        self.long_click_minitouch(x, y, duration=duration)
+
+    def drag_xy(self, p1, p2):
+        p1 = p1[0] + self.current_window.offset[0], p1[1] + self.current_window.offset[1]
+        p2 = p2[0] + self.current_window.offset[0], p2[1] + self.current_window.offset[1]
+        self.mouse_swipe(p1, p2, speed=5)
+
     def click_minitouch(self, x, y, action='click'):
         x += self.current_window.offset[0]
         y += self.current_window.offset[1]

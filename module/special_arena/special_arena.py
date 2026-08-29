@@ -118,7 +118,7 @@ class SpecialArena(UI, ArenaBase):
                 opponent = self.button[opponent_id - 1]
                 logger.info(f'Secect opponent {opponent_id}')
 
-                self.device.click_minitouch(opponent[0], opponent[1])
+                self.device.click_xy(opponent[0], opponent[1])
                 logger.info('Click %s @ %s' % (point2str(opponent[0], opponent[1]), 'START_COMPETITION'))
                 confirm_timer.reset()
                 click_timer.reset()
@@ -142,7 +142,7 @@ class SpecialArena(UI, ArenaBase):
             if click_timer.reached() and self.appear(END_COMPETITION, offset=5, interval=2):
                 logger.info('Click %s @ %s' % (point2str(100, 100), 'END_COMPETITION'))
                 self.device.handle_control_check(END_COMPETITION)
-                self.device.click_minitouch(100, 100)
+                self.device.click_xy(100, 100)
                 already_start = True
                 confirm_timer.reset()
                 click_timer.reset()

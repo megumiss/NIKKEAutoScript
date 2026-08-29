@@ -194,7 +194,7 @@ class Reward(UI):
                 break
 
             if click_timer.reached():
-                self.device.click_minitouch(100, 100)
+                self.device.click_xy(100, 100)
                 click_timer.reset()
 
     def temporary(self, button, skip_first_screenshot=True):

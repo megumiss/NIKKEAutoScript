@@ -19,6 +19,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const activeGroup = ref('')
   const importBusy = ref<Record<string, boolean>>({})
   const notifyTestBusy = ref(false)
+  const physicalBusy = ref('')
+  const serialDevices = ref<{ serial: string; status: string }[]>([])
+  const serialDevicesBusy = ref(false)
 
   const selectedName = computed(() => String(router.currentRoute.value.params.name || ''))
   const selectedTask = computed(() => String(router.currentRoute.value.params.task || ''))
@@ -294,17 +297,35 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       toast.notify(parts.join('；'), result.ok ? 'ok' : 'error', 4000)
     } catch (exception: any) { toast.error = exception.message } finally { notifyTestBusy.value = false }
   }
+  async function physicalResolution(action: 'set' | 'reset') {
+    if (physicalBusy.value) return
+    physicalBusy.value = action
+    try {
+      const result = await api.post(`/api/${selectedName.value}/physical_device/resolution`, { action })
+      if (!result.ok) throw new Error(result.message || t('操作失败'))
+      toast.notify(result.message || t('已完成'), 'ok', 3000)
+    } catch (exception: any) { toast.error = exception.message } finally { physicalBusy.value = '' }
+  }
+  async function loadSerialDevices() {
+    if (serialDevicesBusy.value) return
+    serialDevicesBusy.value = true
+    try {
+      const result = await api.get('/api/adb/devices')
+      if (result.ok) serialDevices.value = result.devices || []
+      else throw new Error(result.message || t('查询失败'))
+    } catch (exception: any) { toast.error = exception.message } finally { serialDevicesBusy.value = false }
+  }
   async function startTool() {
     try { await api.post(`/api/${selectedName.value}/tool/${selectedTask.value}/start`) } catch (exception: any) { toast.error = exception.message }
   }
 
   return {
-    schema, queue, schemaReady, collapsed, railCollapsed, taskFilter, activeGroup, importBusy, notifyTestBusy,
+    schema, queue, schemaReady, collapsed, railCollapsed, taskFilter, activeGroup, importBusy, notifyTestBusy, physicalBusy, serialDevices, serialDevicesBusy,
     selectedName, selectedTask, taskSchema, workspaceName, socketsName,
     logs, logTick, autoScroll, logLevel, pushLogs, visibleLogs, visibleMenus,
     taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddSet, loadWorkspace,
     startStateSocket, startSockets, closeSockets, openQueueItem,
     saveValue, save, datetimeValue, cancelDatetimeSave, scheduleDatetimeSave, flushDatetimeSave, clearField, clearDatetimeSaveTimers,
-    normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, startTool,
+    normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, startTool, physicalResolution, loadSerialDevices,
   }
 })

@@ -174,7 +174,11 @@ class Connection(ConnectionAttr):
         Returns:
             str:
         """
-        logger.info(f'Execute: {cmd}')
+        # screencap 每张截图都会执行一次（约 1s/帧），INFO 级别会刷屏，降为 DEBUG
+        if 'screencap' in cmd:
+            logger.debug(f'Execute: {cmd}')
+        else:
+            logger.info(f'Execute: {cmd}')
         # Use shell=True to disable console window when using GUI.
         # Although, there's still a window when you stop running in GUI, which cause by gooey.
         # To disable it, edit gooey/gui/util/taskkill.py
@@ -709,6 +713,9 @@ class Connection(ConnectionAttr):
     def adb_shell_input_text(self, text, timeout=10):
         escaped = self.adb_shell_text_escape(text)
         logger.info('ADB shell input text')
+        display_id = getattr(self, '_virtual_display_id', None)
+        if display_id is not None:
+            return self.adb_shell(f'input -d {display_id} text {escaped}', timeout=timeout)
         return self.adb_shell(f'input text {escaped}', timeout=timeout)
 
     def adb_shell_input_keyevent(self, *keycodes, longpress=False, timeout=10):
@@ -720,6 +727,8 @@ class Connection(ConnectionAttr):
             cmd.append('--longpress')
         cmd.extend(map(str, keycodes))
         logger.info(f'ADB shell input keyevent: {list(map(str, keycodes))}')
+        if getattr(self, '_virtual_display_id', None) is not None:
+            return self._adb_input(*cmd[1:])
         return self.adb_shell(cmd, timeout=timeout)
 
     def adb_shell_clear_text(self, max_length=64, timeout=10):

@@ -1,13 +1,16 @@
 import argparse
+import json
 import logging
 import os
 import queue
+import subprocess
 import threading
 import time
 from multiprocessing import Process
 from typing import Dict, List, Tuple, Union
 
 import inflection
+import psutil
 from rich.console import Console, ConsoleRenderable
 
 from module.base.utils import set_preview_queue
@@ -111,6 +114,7 @@ class ProcessManager:
 
         with lock:
             if self.alive:
+                self._terminate_worker_children()
                 self._process.kill()
                 self.renderables.append(
                     (logging.INFO, f"[{self.config_name}] exited. Reason: Manual stop\n")
@@ -124,10 +128,137 @@ class ProcessManager:
                     )
         logger.info(f"[{self.config_name}] exited")
 
+    def _terminate_worker_children(self) -> None:
+        try:
+            children = psutil.Process(self._process.pid).children(recursive=True)
+        except (psutil.Error, OSError):
+            return
+        for child in reversed(children):
+            try:
+                child.terminate()
+            except psutil.Error:
+                pass
+        _, alive = psutil.wait_procs(children, timeout=3)
+        for child in alive:
+            try:
+                child.kill()
+            except psutil.Error:
+                pass
+
+    def _physical_device_context(self):
+        """
+        读取真机配置，返回 (physical, serial)。
+        非真机模式、serial 无效或读取失败时返回 (None, None)。
+        直接读配置 JSON，避免在 webui 进程里实例化 NikkeConfig 带来的副作用。
+        """
+        from module.config.utils import filepath_config
+
+        try:
+            with open(filepath_config(self.config_name), encoding='utf-8') as f:
+                data = json.load(f)
+            emulator = data.get('Emulator', {})
+            physical = emulator.get('PhysicalDevice', {})
+            if not physical.get('Enable', False):
+                return None, None
+            serial = str(emulator.get('Emulator', {}).get('Serial', ''))
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f'[{self.config_name}] Failed to read physical device config: {e}')
+            return None, None
+        if not serial or serial == 'auto':
+            return None, None
+        return physical, serial
+
+    @staticmethod
+    def _find_adb() -> str:
+        adb = State.deploy_config.AdbExecutable.replace('\\', '/')
+        if not os.path.exists(adb):
+            adb = next((f for f in [
+                './bin/adb/adb.exe',
+                './toolkit/Lib/site-packages/adbutils/binaries/adb.exe',
+                '/usr/bin/adb',
+            ] if os.path.exists(f)), 'adb')
+        return adb
+
+    def _restore_physical_device_resolution(self) -> None:
+        """
+        真机模式停止实例时恢复设备分辨率（wm size reset）。
+        实例进程被 kill 时其 atexit 不会执行，所以由 webui 进程兜底。
+        """
+        physical, serial = self._physical_device_context()
+        if not physical:
+            return
+        if physical.get('VirtualDisplay', False):
+            return
+        if not physical.get('AutoRestoreResolution', True):
+            return
+
+        adb = self._find_adb()
+
+        try:
+            result = subprocess.run(
+                [adb, '-s', serial, 'shell', 'wm', 'size', 'reset'],
+                timeout=10, capture_output=True,
+            )
+            result2 = subprocess.run(
+                [adb, '-s', serial, 'shell', 'wm', 'density', 'reset'],
+                timeout=10, capture_output=True,
+            )
+            if result.returncode == 0 and result2.returncode == 0:
+                self.renderables.append(
+                    (logging.INFO, f"[{self.config_name}] Physical device resolution restored (wm size reset)\n")
+                )
+            else:
+                logger.warning(
+                    f'[{self.config_name}] wm size reset failed: {result.stderr!r}, '
+                    f'run `adb -s {serial} shell wm size reset` manually'
+                )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            logger.warning(
+                f'[{self.config_name}] Failed to restore resolution: {e}, '
+                f'run `adb -s {serial} shell wm size reset` manually'
+            )
+
+    def _cleanup_virtual_display_server(self) -> None:
+        """
+        虚拟屏幕模式停止实例时清理设备端残留的 nkas-vd-server。
+        实例进程被 kill 时其 atexit 不会执行，本地 adb 桥被杀后设备端 app_process 可能存活，
+        继续持有虚拟屏幕和游戏画面；SIGTERM 会触发其 shutdown hook 正常释放虚拟屏幕。
+        worker 正常退出时设备端已被 atexit 清理，pkill 无匹配返回 1，属正常路径。
+        """
+        physical, serial = self._physical_device_context()
+        if not physical or not physical.get('VirtualDisplay', False):
+            return
+
+        adb = self._find_adb()
+
+        try:
+            result = subprocess.run(
+                [adb, '-s', serial, 'shell', 'pkill', '-f', 'com.nkas.virtualdisplay.Server'],
+                timeout=10, capture_output=True,
+            )
+            if result.returncode == 0:
+                self.renderables.append(
+                    (logging.INFO, f"[{self.config_name}] Virtual display server cleaned up on device\n")
+                )
+            elif result.returncode != 1:
+                logger.warning(
+                    f'[{self.config_name}] pkill virtual display server failed: {result.stderr!r}, '
+                    f'run `adb -s {serial} shell pkill -f com.nkas.virtualdisplay.Server` manually'
+                )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            logger.warning(
+                f'[{self.config_name}] Failed to clean up virtual display server: {e}, '
+                f'run `adb -s {serial} shell pkill -f com.nkas.virtualdisplay.Server` manually'
+            )
+
     def _run_stop_cleanup(self) -> None:
-        """手动停止时实例进程被直接 kill，其 _post_action 不会执行，
-        由 GUI 进程代为清理：还原屏幕方向、禁用 VDD 虚拟屏（仅限 win 实例）。
+        """手动停止时实例进程被直接 kill，其 _post_action/atexit 不会执行，
+        由 GUI 进程代为清理：真机实例还原分辨率、清理设备端 vd-server；
+        win 实例还原屏幕方向、禁用 VDD 虚拟屏。
         游戏声音恢复依赖游戏窗口句柄，不在此处处理。"""
+        # 真机清理只读配置 JSON，不实例化 NikkeConfig，避免 win 提前返回把它跳过
+        self._restore_physical_device_resolution()
+        self._cleanup_virtual_display_server()
         try:
             from module.config.config import NikkeConfig
             config = NikkeConfig(self.config_name, task=None)

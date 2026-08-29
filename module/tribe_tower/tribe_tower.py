@@ -75,7 +75,7 @@ class TribeTower(UI):
 
             if click_timer.reached() and self.appear(TRIBE_TOWER_CHECK, offset=(30, 30), interval=5):
                 button = self.available_company[0].get('button')
-                self.device.click_minitouch(*button)
+                self.device.click_xy(*button)
                 logger.info('Click %s @ %s' % (point2str(*button), 'TOWER'))
                 confirm_timer.reset()
                 click_timer.reset()
@@ -96,7 +96,7 @@ class TribeTower(UI):
                 continue
 
             if click_timer.reached() and self.appear(TRIBE_TOWER_DETAILED_CHECK, offset=(30, 30), interval=5):
-                self.device.click_minitouch(360, 560)
+                self.device.click_xy(360, 560)
                 logger.info('Click %s @ %s' % (point2str(360, 560), 'STAGE'))
                 confirm_timer.reset()
                 click_timer.reset()
@@ -230,7 +230,7 @@ class TribeTower(UI):
                 continue
 
             if click_timer.reached() and self.appear(FIGHT, offset=5):
-                self.device.click_minitouch(1, 1)
+                self.device.click_xy(1, 1)
                 confirm_timer.reset()
                 click_timer.reset()
                 continue

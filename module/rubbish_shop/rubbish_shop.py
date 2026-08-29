@@ -71,7 +71,7 @@ class RubbishShop(ShopBase):
 
             # 点击屏幕以显示货币数量
             if click_timer.reached() and not self.appear(CONFIRM_A, offset=5, static=False):
-                self.device.click_minitouch(600, 600)
+                self.device.click_xy(600, 600)
                 click_timer.reset()
                 continue
 
@@ -93,7 +93,7 @@ class RubbishShop(ShopBase):
 
             # 点击屏幕以关闭货币显示
             if click_timer.reached() and self.appear(CONFIRM_A, offset=5, static=False):
-                self.device.click_minitouch(100, 100)
+                self.device.click_xy(100, 100)
                 click_timer.reset()
                 continue
 

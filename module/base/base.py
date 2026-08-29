@@ -333,7 +333,7 @@ class ModuleBase:
         start_time = time.time()
         location = self.appear_text(text, threshold=threshold, interval=interval)
         if location:
-            self.device.click_minitouch(location[0], location[1])
+            self.device.click_xy(location[0], location[1])
             logger.info(
                 "Click %s @ %s %ss" % (
                     point2str(location[0], location[1]),
@@ -349,7 +349,7 @@ class ModuleBase:
         start_time = time.time()
         _ = self.appear_text(text, interval, model_type=model_type)
         if _:
-            self.device.click_minitouch(location[0], location[1])
+            self.device.click_xy(location[0], location[1])
             logger.info(
                 'Click %s @ %s %ss' % (
                     point2str(location[0], location[1]), f"{label}", float2str(time.time() - start_time))

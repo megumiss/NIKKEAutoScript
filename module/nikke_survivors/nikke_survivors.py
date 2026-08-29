@@ -14,7 +14,7 @@ class NikkeSurvivors(UI):
         confirm_timer = Timer(5, count=5).start()
         start_time = time.time()
 
-        self.device.click_minitouch(1, 1)
+        self.device.click_xy(1, 1)
         if hasattr(self.device, '_minitouch_pid'):
             self.device.adb_shell('kill %s' % self.device._minitouch_pid)
             del_cached_property(self.device, 'minitouch_builder')
@@ -31,14 +31,14 @@ class NikkeSurvivors(UI):
                 confirm_timer.reset()
 
             if click_timer.reached() and self.appear(SW):
-                self.device.drag_minitouch((360, 640), (500, 640))
+                self.device.drag_xy((360, 640), (500, 640))
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
                 click_timer.reset()
                 continue
 
             if click_timer.reached() and self.appear(LU_CHECK, offset=(30, 30)):
-                self.device.click_minitouch(360, 640)
+                self.device.click_xy(360, 640)
                 click_timer.reset()
                 continue
 

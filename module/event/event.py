@@ -82,7 +82,7 @@ class Event(
                 and not self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30))
                 and not self.appear(MAIN_CHECK, offset=10)
             ):
-                self.device.click_minitouch(10, 10)
+                self.device.click_xy(10, 10)
                 skip_click_timer.reset()
 
     def run(self):

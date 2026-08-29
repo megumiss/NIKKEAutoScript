@@ -103,7 +103,7 @@ class DailyRecruit(UI):
             if not self.appear(FREE_RECRUIT_CHECK, offset=(5, 5), static=False):
                 # 向右点击
                 logger.info('Click %s @ %s' % (point2str(690, 670), 'TO_RIGHT_RECRUIT'))
-                self.device.click_minitouch(690, 670)
+                self.device.click_xy(690, 670)
                 click_timer.reset()
                 time.sleep(1)
                 continue
@@ -124,7 +124,7 @@ class DailyRecruit(UI):
                 and self.appear(FREE_RECRUIT_CHECK, offset=(10, 10), static=False)
             ):
                 logger.info('Click %s @ %s' % (point2str(130, 1050), 'FREE_RECRUIT'))
-                self.device.click_minitouch(130, 1050)
+                self.device.click_xy(130, 1050)
                 click_timer.reset()
                 time.sleep(1)
                 continue
@@ -191,7 +191,7 @@ class DailyRecruit(UI):
             if not self.appear(ORDINARY_RECRUIT_CHECK, offset=(30, 10), threshold=0.85):
                 # 向右点击
                 logger.info('Click %s @ %s' % (point2str(690, 670), 'TO_RIGHT_RECRUIT'))
-                self.device.click_minitouch(690, 670)
+                self.device.click_xy(690, 670)
                 click_timer.reset()
                 time.sleep(1)
                 continue
@@ -269,7 +269,7 @@ class DailyRecruit(UI):
             if not self.appear(SOCIAL_RECRUIT_CHECK, offset=(5, 5), static=False):
                 # 向左点击
                 logger.info('Click %s @ %s' % (point2str(30, 670), 'TO_LEFT_RECRUIT'))
-                self.device.click_minitouch(30, 670)
+                self.device.click_xy(30, 670)
                 click_timer.reset()
                 time.sleep(1)
                 continue

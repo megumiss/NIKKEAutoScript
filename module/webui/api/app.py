@@ -7,9 +7,9 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
-from . import (routes_bla, routes_calendar, routes_config, routes_deploy, routes_instances, routes_logs, routes_maintenance,
-               routes_notify, routes_preview, routes_proxy, routes_schedule, routes_serial, routes_stats, routes_system,
-               routes_tasks, ws)
+from . import (routes_bla, routes_calendar, routes_config, routes_console, routes_deploy, routes_device,
+               routes_instances, routes_logs, routes_maintenance, routes_notify, routes_preview, routes_proxy,
+               routes_schedule, routes_serial, routes_stats, routes_system, routes_tasks, ws)
 
 
 def create_spa_mount():
@@ -52,6 +52,7 @@ def mount_api(app):
         Route('/api/system/deploy/reset', routes_deploy.deploy_reset, methods=['POST']),
         Route('/api/serial/state', routes_serial.state, methods=['GET']),
         Route('/api/serial/reset', routes_serial.reset, methods=['POST']),
+        Route('/api/adb/devices', routes_device.devices, methods=['GET']),
         Route('/api/system/logs/files', routes_logs.log_files, methods=['GET']),
         Route('/api/system/logs/download', routes_logs.log_download, methods=['GET']),
         Route('/api/system/logs', routes_logs.log_query, methods=['GET']),
@@ -72,6 +73,7 @@ def mount_api(app):
         Route('/api/{name:str}/interception/stats', routes_stats.interception_stats, methods=['GET']),
         Route('/api/{name:str}/interception/import', routes_stats.import_interception, methods=['POST']),
         Route('/api/{name:str}/notify/test', routes_notify.test_notify, methods=['POST']),
+        Route('/api/{name:str}/physical_device/resolution', routes_device.resolution, methods=['POST']),
         Route('/api/{name:str}/bla/login', routes_bla.login_start, methods=['POST']),
         Route('/api/{name:str}/bla/login/status', routes_bla.login_status, methods=['GET']),
         Route('/api/{name:str}/bla/login/shot', routes_bla.login_shot, methods=['GET']),
@@ -84,6 +86,7 @@ def mount_api(app):
         Route('/api/{name:str}/task/{task:str}/run', routes_tasks.run_task, methods=['POST']),
         Route('/api/{name:str}/tool/{task:str}/start', routes_tasks.start_tool, methods=['POST']),
         Route('/api/{name:str}', routes_instances.delete, methods=['DELETE']),
+        WebSocketRoute('/ws/console', routes_console.console_socket),
         WebSocketRoute('/ws/state', ws.state_socket),
         WebSocketRoute('/ws/{name:str}/log', ws.log_socket),
         WebSocketRoute('/ws/{name:str}/queue', ws.queue_socket),

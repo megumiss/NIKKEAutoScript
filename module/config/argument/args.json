@@ -126,14 +126,18 @@
         "type": "select",
         "value": "DroidCast",
         "option": [
-          "DroidCast"
+          "DroidCast",
+          "ADB"
         ]
       },
       "ControlMethod": {
         "type": "select",
         "value": "minitouch",
         "option": [
-          "minitouch"
+          "minitouch",
+          "uiautomator2",
+          "ADB",
+          "MaaTouch"
         ]
       },
       "AdbRestart": {
@@ -175,6 +179,32 @@
         "type": "textarea",
         "value": null,
         "mode": "path"
+      }
+    },
+    "PhysicalDevice": {
+      "Enable": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "AutoRestoreResolution": {
+        "type": "checkbox",
+        "value": true,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "VirtualDisplay": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       }
     },
     "Scrcpy": {

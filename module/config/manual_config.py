@@ -103,6 +103,9 @@ class ManualConfig:
     DROIDCAST_RAW_FILEPATH_LOCAL = "./bin/DroidCast/DroidCastS-release-1.1.5.apk"
     DROIDCAST_RAW_FILEPATH_REMOTE = "/data/local/tmp/DroidCastS.apk"
 
+    MAATOUCH_FILEPATH_LOCAL = "./bin/MaaTouch/maatouchsync"
+    MAATOUCH_FILEPATH_REMOTE = "/data/local/tmp/maatouchsync"
+
     EVENTS = [
         {
             "event_id": "event_20260813",

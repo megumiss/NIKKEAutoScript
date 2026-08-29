@@ -6,9 +6,9 @@
 
 # NIKKEAutoScript
 
-胜利女神：NIKKE 自动日常脚本，支持所有 PC/模拟器客户端（**国服除外**）。Fork 自 [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+胜利女神：NIKKE 自动日常脚本，支持 PC / ARM模拟器（**国服除外**）。Fork 自 [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
-GODDESS OF VICTORY: NIKKE automatic daily script, supporting all PC/Emulator clients, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+GODDESS OF VICTORY: NIKKE automatic daily script, supporting PC / ARM emulators, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 **🌐 官网 / Official Website: [nkas.megumiss.top](https://nkas.megumiss.top)**
 

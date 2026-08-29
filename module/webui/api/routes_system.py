@@ -24,6 +24,7 @@ async def status(_: Request):
         'version': _git_version(), 'updater_state': updater.state,
         'theme': State.deploy_config.Theme, 'language': lang.LANG,
         'home_page': State.deploy_config.HomePage,
+        'console_enabled': bool(State.deploy_config.ConsoleEnabled),
     })
 
 
