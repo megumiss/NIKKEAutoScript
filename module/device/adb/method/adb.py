@@ -208,11 +208,11 @@ class Adb(Connection):
     @retry
     def click_adb(self, x, y):
         start = time.time()
-        self.adb_shell(['input', 'tap', x, y])
+        self._adb_input('tap', x, y)
         if time.time() - start <= 0.05:
             self.sleep(0.05)
 
     @retry
     def swipe_adb(self, p1, p2, duration=0.1):
         duration = int(duration * 1000)
-        self.adb_shell(['input', 'swipe', *p1, *p2, duration])
+        self._adb_input('swipe', *p1, *p2, duration)

@@ -39,6 +39,21 @@ class VirtualDisplayTests(unittest.TestCase):
         Adb._adb_input(device, 'tap', 10, 20)
         self.assertEqual(calls, [['input', '-d', 19, 'tap', 1259, 10]])
 
+    def test_adb_click_and_swipe_use_virtual_input_router(self):
+        calls = []
+        device = SimpleNamespace(
+            _adb_input=lambda *args: calls.append(args),
+            sleep=lambda _: None,
+        )
+
+        Adb.click_adb.__wrapped__(device, 10, 20)
+        Adb.swipe_adb.__wrapped__(device, (1, 2), (3, 4), duration=0.5)
+
+        self.assertEqual(calls, [
+            ('tap', 10, 20),
+            ('swipe', 1, 2, 3, 4, 500),
+        ])
+
     def test_current_app_is_read_from_target_display(self):
         output = (
             'Display #0 (activities from top to bottom):\n'
