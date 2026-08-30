@@ -89,6 +89,12 @@ def func(ev: threading.Event):
 
 
 if __name__ == "__main__":
+    # Linux 下 multiprocessing 默认 fork，worker 继承主进程内存，代码更新后
+    # 重启的 worker 仍加载旧模块；改用 spawn 让子进程重新 import 磁盘代码。
+    # Windows 默认即为 spawn，无需设置。
+    if sys.platform != "win32":
+        import multiprocessing as mp
+        mp.set_start_method("spawn", force=True)
     if State.deploy_config.EnableReload:
         should_exit = False
         while not should_exit:
