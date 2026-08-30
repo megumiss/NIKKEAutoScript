@@ -14,6 +14,9 @@ export const useInstancesStore = defineStore('instances', () => {
   // or the backend is older than this feature.
   const serialState = ref<any>(null)
 
+  // 实例头像由后端托管（Mount /avatars -> assets/gui/avatars），直接按文件名引用。
+  function avatarUrl(name?: string) { return name ? `/avatars/${name}` : '' }
+
   async function loadInstances() {
     try { instances.value = await api.get('/api/instances') } catch (exception: any) { toast.error = exception.message }
     await loadSerial()
@@ -116,7 +119,7 @@ export const useInstancesStore = defineStore('instances', () => {
 
   return {
     instances, serialState, loadInstances, loadSerial, serialWaiting,
-    stateText, stateClass, displayStatus, displayStatusClass, initials, runningCount, lifecycle,
+    stateText, stateClass, displayStatus, displayStatusClass, initials, avatarUrl, runningCount, lifecycle,
     dragIndex, dragOverIndex, onDragStart, onDragOver, onDragEnd, onDrop, saveRemark, importInstance,
   }
 })

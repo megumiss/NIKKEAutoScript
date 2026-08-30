@@ -1,21 +1,42 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppSelect from './AppSelect.vue'
+import { api } from '../api/client'
 import { t } from '../i18n'
 import { useModalStore } from '../stores/modal'
 
 const modalStore = useModalStore()
 const { modal, originOptions, deployTemplateOptions, modalConfirmMessage, modalAlertTitle, modalAlertMessage } = storeToRefs(modalStore)
 const { confirmModal } = modalStore
+// 头像由后端托管（/avatars/），列表从 API 获取。
+const avatarFiles = ref<string[]>([])
+onMounted(async () => { try { avatarFiles.value = await api.get('/api/avatars') } catch { avatarFiles.value = [] } })
 </script>
 
 <template>
   <div v-if="modal.type" class="modal-mask" @click.self="modal.type = ''">
     <div class="modal-card">
-      <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'rename' ? t('重命名') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : modal.type === 'alert' ? modalAlertTitle : t('删除') }}</h3>
+      <h3>{{ modal.type === 'create' ? t('新建实例') : modal.type === 'avatar' ? t('更改头像') : modal.type === 'rename' ? t('重命名') : modal.type === 'resetDeploy' ? t('还原默认') : modal.type === 'confirm' ? t('确认') : modal.type === 'alert' ? modalAlertTitle : t('删除') }}</h3>
       <template v-if="modal.type === 'create'">
         <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
         <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
+        <div class="modal-field">
+          <span class="avatar-picker-label">{{ t('头像') }}</span>
+          <div class="avatar-picker">
+            <button type="button" class="avatar-opt text" :class="{ active: !modal.avatar }" @click="modal.avatar = ''">{{ t('无') }}</button>
+            <button v-for="file in avatarFiles" :key="file" type="button" class="avatar-opt" :class="{ active: modal.avatar === file }" :title="file" @click="modal.avatar = file"><img :src="`/avatars/${file}`" alt=""></button>
+          </div>
+        </div>
+      </template>
+      <template v-else-if="modal.type === 'avatar'">
+        <p class="modal-text">{{ t('为') }} {{ modal.name }} {{ t('选择头像') }}</p>
+        <div class="modal-field">
+          <div class="avatar-picker">
+            <button type="button" class="avatar-opt text" :class="{ active: !modal.avatar }" @click="modal.avatar = ''">{{ t('无') }}</button>
+            <button v-for="file in avatarFiles" :key="file" type="button" class="avatar-opt" :class="{ active: modal.avatar === file }" :title="file" @click="modal.avatar = file"><img :src="`/avatars/${file}`" alt=""></button>
+          </div>
+        </div>
       </template>
       <template v-else-if="modal.type === 'rename'">
         <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>

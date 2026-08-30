@@ -26,6 +26,7 @@ def mount_api(app):
     routes = [
         Route('/api/instances', routes_instances.instances, methods=['GET']),
         Route('/api/instances', routes_instances.create, methods=['POST']),
+        Route('/api/avatars', routes_instances.avatar_list, methods=['GET']),
         Route('/api/instances/import', routes_instances.import_config, methods=['POST']),
         Route('/api/instances/order', routes_instances.reorder, methods=['POST']),
         Route('/api/instances/{name:str}/rename', routes_instances.rename, methods=['POST']),
@@ -65,6 +66,7 @@ def mount_api(app):
         Route('/api/{name:str}/start', routes_instances.start, methods=['POST']),
         Route('/api/{name:str}/stop', routes_instances.stop, methods=['POST']),
         Route('/api/{name:str}/remark', routes_instances.remark, methods=['POST']),
+        Route('/api/{name:str}/avatar', routes_instances.set_avatar, methods=['POST']),
         Route('/api/{name:str}/export', routes_instances.export, methods=['GET']),
         Route('/api/{name:str}/schema', routes_config.schema, methods=['GET']),
         Route('/api/{name:str}/config', routes_config.config, methods=['GET']),
@@ -94,6 +96,7 @@ def mount_api(app):
         WebSocketRoute('/ws/state', ws.state_socket),
         WebSocketRoute('/ws/{name:str}/log', ws.log_socket),
         WebSocketRoute('/ws/{name:str}/queue', ws.queue_socket),
+        Mount('/avatars', app=StaticFiles(directory='./assets/gui/avatars'), name='avatars'),
         create_spa_mount(),
     ]
     app.router.routes.extend(routes)

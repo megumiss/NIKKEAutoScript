@@ -24,6 +24,7 @@ class InstanceInfo:
     current_task: Optional[str] = None
     next_task: Optional[str] = None
     remark: str = ''
+    avatar: str = ''
 
     def dict(self) -> Dict[str, Any]:
         return asdict(self)

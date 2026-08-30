@@ -7,8 +7,8 @@ import { useModalStore } from '../stores/modal'
 
 const instancesStore = useInstancesStore()
 const { instances, dragIndex, dragOverIndex } = storeToRefs(instancesStore)
-const { displayStatus, displayStatusClass, initials, onDragStart, onDragOver, onDragEnd, onDrop, saveRemark, importInstance } = instancesStore
-const { openCreateModal, openRenameModal, openDeleteModal } = useModalStore()
+const { displayStatus, displayStatusClass, initials, avatarUrl, onDragStart, onDragOver, onDragEnd, onDrop, saveRemark, importInstance } = instancesStore
+const { openCreateModal, openRenameModal, openDeleteModal, openAvatarModal } = useModalStore()
 </script>
 
 <template>
@@ -27,7 +27,7 @@ const { openCreateModal, openRenameModal, openDeleteModal } = useModalStore()
           <tr v-for="(instance, index) in instances" :key="instance.name"
               :class="{ dragging: dragIndex === index, 'drag-over': dragIndex >= 0 && dragOverIndex === index && dragOverIndex !== dragIndex }"
               @dragstart="onDragStart(index, $event)" @dragover="onDragOver(index, $event)" @drop="onDrop" @dragend="onDragEnd">
-            <td :data-label="t('名称')"><span class="cell-inst"><span class="drag-handle" draggable="true" :title="t('拖动排序')"><AppIcon name="sort-v" :size="14" /></span><span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>{{ instance.name }}</span></td>
+            <td :data-label="t('名称')"><span class="cell-inst"><span class="drag-handle" draggable="true" :title="t('拖动排序')"><AppIcon name="sort-v" :size="14" /></span><span class="inst-avatar avatar-clickable" :title="t('点击更改头像')" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }" @click="openAvatarModal(instance.name)"><img v-if="avatarUrl(instance.avatar)" class="inst-avatar-img" :src="avatarUrl(instance.avatar)" :alt="instance.name"><template v-else>{{ initials(instance.name) }}</template><span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>{{ instance.name }}</span></td>
             <td :data-label="t('Mod')">{{ instance.mod }}</td>
             <td :data-label="t('状态')"><span class="status-pill" :class="displayStatusClass(instance.name, instance.state, instance.current_task)">{{ displayStatus(instance.name, instance.state, instance.current_task) }}</span></td>
             <td :data-label="t('备注')"><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
