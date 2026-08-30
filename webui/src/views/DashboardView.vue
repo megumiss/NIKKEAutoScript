@@ -11,7 +11,7 @@ import { useUiStore } from '../stores/ui'
 
 const instancesStore = useInstancesStore()
 const { instances, runningCount } = storeToRefs(instancesStore)
-const { displayStatus, displayStatusClass, initials, lifecycle } = instancesStore
+const { displayStatus, displayStatusClass, initials, avatarUrl, lifecycle } = instancesStore
 const { systemStatus } = storeToRefs(useSystemStore())
 const { enter } = useUiStore()
 const { openCreateModal } = useModalStore()
@@ -29,7 +29,7 @@ function calendarError(message: string) { toast.error = message }
     <div class="inst-grid">
       <article v-for="instance in instances" :key="instance.name" class="card inst-card hoverable" :class="{ 'is-running': displayStatusClass(instance.name, instance.state, instance.current_task) === 'running' }">
         <div class="inst-card-head">
-          <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>
+          <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }"><img v-if="avatarUrl(instance.avatar)" class="inst-avatar-img" :src="avatarUrl(instance.avatar)" :alt="instance.name"><template v-else>{{ initials(instance.name) }}</template><span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>
           <div><h3>{{ instance.name }}</h3><div v-if="instance.mod !== 'nkas'" class="sub">mod: {{ instance.mod }}</div></div>
           <span class="status-pill" :class="displayStatusClass(instance.name, instance.state, instance.current_task)" style="margin-left:auto"><span v-if="displayStatusClass(instance.name, instance.state, instance.current_task) === 'running'" class="pulse"></span>{{ displayStatus(instance.name, instance.state, instance.current_task) }}</span>
         </div>

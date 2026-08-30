@@ -15,7 +15,7 @@ const router = useRouter()
 const { isDashboard, isManage, isSettings, isDeploy, isLogs, isTools, isLinks, isAbout, selectedName } = useRouteInfo()
 const instancesStore = useInstancesStore()
 const { instances } = storeToRefs(instancesStore)
-const { displayStatus, displayStatusClass, initials } = instancesStore
+const { displayStatus, displayStatusClass, initials, avatarUrl } = instancesStore
 const { systemStatus } = storeToRefs(useSystemStore())
 const { toggleTheme, setLanguage } = useSystemStore()
 const ui = useUiStore()
@@ -38,7 +38,7 @@ function onBrandMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, 
     <div class="side-section">
       <div class="side-label">{{ t('实例') }}</div>
       <button v-for="instance in instances" :key="instance.name" class="side-item" :class="{ active: selectedName === instance.name }" @click="enter(instance.name)">
-        <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }">{{ initials(instance.name) }}<span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>
+        <span class="inst-avatar" :class="{ idle: displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle' }"><img v-if="avatarUrl(instance.avatar)" class="inst-avatar-img" :src="avatarUrl(instance.avatar)" :alt="instance.name"><template v-else>{{ initials(instance.name) }}</template><span class="ring" :class="displayStatusClass(instance.name, instance.state, instance.current_task)"></span></span>
         <span class="side-text" :title="instance.name">{{ instance.name }}</span>
         <span class="badge" :class="{ 'idle-badge': displayStatusClass(instance.name, instance.state, instance.current_task) === 'idle', 'error-badge': displayStatusClass(instance.name, instance.state, instance.current_task) === 'error' }">{{ displayStatus(instance.name, instance.state, instance.current_task) }}</span>
       </button>

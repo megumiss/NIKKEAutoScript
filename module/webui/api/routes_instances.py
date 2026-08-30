@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import re
 import sys
 from pathlib import Path
@@ -163,9 +164,28 @@ def ordered_instances():
     return ranked
 
 
+# Avatar pool scanned from the GUI asset directory; used to auto-assign an
+# avatar to existing instances that do not have one yet. Served back to the
+# SPA via Mount('/avatars') in app.py.
+AVATAR_DIR = './assets/gui/avatars'
+
+
+def _avatar_pool():
+    try:
+        return sorted(f for f in os.listdir(AVATAR_DIR) if f.endswith('.webp'))
+    except OSError:
+        return []
+
+
+async def avatar_list(_: Request):
+    """File names of every available avatar, for the avatar picker."""
+    return JSONResponse(_avatar_pool())
+
+
 async def instances(_: Request):
     result = []
     remarks = _load_remarks()
+    pool = _avatar_pool()
     for name in ordered_instances():
         manager = ProcessManager.get_manager(name)
         current_task = next_task = None
@@ -182,7 +202,20 @@ async def instances(_: Request):
                 next_task = queue['waiting'][0]['name_i18n']
         except (AttributeError, OSError, KeyError) as exc:
             logger.warning(f'Unable to read queue for {name}: {exc}')
-        result.append(InstanceInfo(name, manager.state, get_config_mod(name), current_task, next_task, remarks.get(name, '')).dict())
+        # Optional per-instance avatar file name stored at the top level of
+        # the instance config (config/<name>.json -> avatar). Existing
+        # instances without one get a random avatar assigned once and saved.
+        avatar = ''
+        try:
+            cfg = read_file(filepath_config(name))
+            avatar = str(cfg.get('avatar', '') or '')
+            if not avatar and pool:
+                avatar = random.choice(pool)
+                cfg['avatar'] = avatar
+                State.config_updater.write_file(name, cfg, get_config_mod(name))
+        except (OSError, ValueError):
+            avatar = ''
+        result.append(InstanceInfo(name, manager.state, get_config_mod(name), current_task, next_task, remarks.get(name, ''), avatar).dict())
     return JSONResponse(result)
 
 
@@ -203,6 +236,30 @@ async def remark(request: Request):
         remarks.pop(name, None)
     _save_remarks(remarks)
     return JSONResponse({'status': 'success', 'remark': text})
+
+
+async def set_avatar(request: Request):
+    """Update the avatar file name of an instance (empty clears it back to
+    the text placeholder)."""
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+        data = await request.json()
+        avatar = str(data.get('avatar', '') or '').strip()
+    except InstanceNotFound as exc:
+        return _response_error(str(exc), 404)
+    except (ValueError, TypeError):
+        return _response_error('Expected JSON body with avatar.')
+    try:
+        cfg = read_file(filepath_config(name))
+        if avatar:
+            cfg['avatar'] = avatar
+        else:
+            cfg.pop('avatar', None)
+        State.config_updater.write_file(name, cfg, get_config_mod(name))
+    except (OSError, ValueError) as exc:
+        return _response_error(f'Failed to update avatar: {exc}')
+    return JSONResponse({'status': 'success', 'avatar': avatar})
 
 
 def _clear_serial_failed(name):
@@ -293,6 +350,7 @@ async def create(request: Request):
         data = await request.json()
         name = str(data['name']).strip()
         origin = str(data.get('origin', 'template-nkas'))
+        avatar = str(data.get('avatar', '') or '').strip()
     except (ValueError, TypeError, KeyError):
         return _response_error('Expected JSON body with name and optional origin.')
     if not name or name in nkas_instance() or re.search(r'[.\\/:*?"\'<>|]', name) or name.lower().startswith('template'):
@@ -300,6 +358,10 @@ async def create(request: Request):
     if origin not in nkas_instance() + nkas_template():
         return _response_error('Source instance not found.', 404)
     State.config_updater.write_file(name, load_config(origin).read_file(origin), get_config_mod(origin))
+    if avatar:
+        cfg = read_file(filepath_config(name))
+        cfg['avatar'] = avatar
+        State.config_updater.write_file(name, cfg, get_config_mod(name))
     return JSONResponse({'status': 'success', 'name': name}, status_code=201)
 
 
