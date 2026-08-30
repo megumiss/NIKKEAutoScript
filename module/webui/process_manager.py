@@ -133,6 +133,18 @@ class ProcessManager:
             children = psutil.Process(self._process.pid).children(recursive=True)
         except (psutil.Error, OSError):
             return
+        # win 平台：游戏与启动器由实例进程 Popen 拉起，属于其子进程树，不能连带终止
+        protected = self._win_protected_process_names()
+        if protected:
+            kept = []
+            for child in children:
+                try:
+                    if child.name().lower() in protected:
+                        continue
+                except psutil.Error:
+                    pass
+                kept.append(child)
+            children = kept
         for child in reversed(children):
             try:
                 child.terminate()
@@ -144,6 +156,35 @@ class ProcessManager:
                 child.kill()
             except psutil.Error:
                 pass
+
+    def _win_protected_process_names(self):
+        """
+        win 平台手动停止时需要保护的进程名（游戏本体与启动器，小写）。
+        非 win 平台或读取失败时返回空集。
+        直接读配置 JSON，避免在 webui 进程里 import win 设备模块带来的副作用。
+        """
+        from module.config.utils import filepath_config
+
+        try:
+            with open(filepath_config(self.config_name), encoding='utf-8') as f:
+                data = json.load(f)
+            if data.get('NKAS', {}).get('Client', {}).get('Platform') != 'win':
+                return set()
+            info = data.get('PCClient', {}).get('PCClientInfo', {})
+            client = info.get('Client', 'intl')
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f'[{self.config_name}] Failed to read PC client config: {e}')
+            return set()
+        # 默认值与 module/device/win/app_control.py 的 GAME_/LAUNCHER_PROCESS 保持一致
+        defaults = {
+            'intl': ('nikke.exe', 'nikke_launcher.exe'),
+            'hmt': ('nikke.exe', 'nikke_launcher_hmt.exe'),
+        }
+        default_game, default_launcher = defaults.get(client, defaults['intl'])
+        return {
+            str(info.get('GameProcessName') or default_game).lower(),
+            str(info.get('LauncherProcessName') or default_launcher).lower(),
+        }
 
     def _physical_device_context(self):
         """
