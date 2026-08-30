@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import AppIcon from '../components/AppIcon.vue'
 import { t } from '../i18n'
 import { useLinksStore } from '../stores/links'
 
@@ -14,8 +15,8 @@ const { webFrameSrc, webLink, webLinkName, openWeb, refreshWeb } = links
     <template v-else>
       <div class="web-tabs">
         <button v-for="link in webLinks" :key="link.url" class="web-tab" :class="{ active: webUrl === link.url }" @click="openWeb(link.url)">{{ webLinkName(link) }}</button>
-        <span class="web-login-hint">⚠ {{ t('此页面无法进行登录操作') }}</span>
-        <button v-if="webUrl" class="web-tab web-refresh" type="button" :title="t('刷新')" @click="refreshWeb">⟳</button>
+        <span class="web-login-hint"><AppIcon name="alert-triangle" :size="14" /> {{ t('此页面无法进行登录操作') }}</span>
+        <button v-if="webUrl" class="web-tab web-refresh" type="button" :title="t('刷新')" @click="refreshWeb"><AppIcon name="refresh" :size="14" /></button>
         <a v-if="webUrl" class="web-tab web-open" :href="webUrl" target="_blank" rel="noopener">{{ t('外部打开') }}</a>
       </div>
       <div class="web-frame-wrap">

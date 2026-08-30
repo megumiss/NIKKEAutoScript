@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps<{
   modelValue: any
@@ -59,7 +60,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
       <div v-if="open" ref="pop" class="app-select-pop" :style="popStyle">
         <button v-for="(option, index) in options" :key="index" type="button" class="app-select-option" :class="{ active: valueOf(option) === modelValue }" @click="choose(option)">
           <span class="app-select-option-label">{{ labelOf(option) }}</span>
-          <span v-if="valueOf(option) === modelValue" class="app-select-check">✓</span>
+          <span v-if="valueOf(option) === modelValue" class="app-select-check"><AppIcon name="check" :size="14" /></span>
         </button>
         <div v-if="!options?.length" class="app-select-empty">—</div>
       </div>

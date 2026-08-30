@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api/client'
+import AppIcon from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
 import FieldPathPicker from '../components/config/FieldPathPicker.vue'
 import { useRouteInfo } from '../composables/useRouteInfo'
@@ -131,13 +132,13 @@ watch(toolsTab, tab => {
 <template>
   <section class="view tools-view" :class="{ 'tools-console': toolsTab === 'console' }">
     <article class="card task-hero">
-      <div class="task-icon">🧰</div>
+      <div class="task-icon"><AppIcon name="designtools" :size="22" /></div>
       <div style="flex:1"><h2>{{ t('常用工具') }}</h2></div>
     </article>
     <div class="tools-tabs">
-      <button class="tools-tab" :class="{ active: toolsTab === 'hosts' }" @click="router.push('/tools/hosts')">🌐 {{ t('Hosts 修改') }}</button>
-      <button class="tools-tab" :class="{ active: toolsTab === 'clone' }" @click="router.push('/tools/clone')">🎮 {{ t('游戏多开') }}</button>
-      <button class="tools-tab" :class="{ active: toolsTab === 'console' }" @click="router.push('/tools/console')">📟 {{ t('控制台') }}</button>
+      <button class="tools-tab" :class="{ active: toolsTab === 'hosts' }" @click="router.push('/tools/hosts')"><AppIcon name="globe" :size="16" /> {{ t('Hosts 修改') }}</button>
+      <button class="tools-tab" :class="{ active: toolsTab === 'clone' }" @click="router.push('/tools/clone')"><AppIcon name="gamepad" :size="16" /> {{ t('游戏多开') }}</button>
+      <button class="tools-tab" :class="{ active: toolsTab === 'console' }" @click="router.push('/tools/console')"><AppIcon name="terminal-square" :size="16" /> {{ t('控制台') }}</button>
     </div>
     <article v-if="toolsTab === 'hosts'" class="card group-card">
       <div class="group-head">
@@ -146,7 +147,7 @@ watch(toolsTab, tab => {
       </div>
       <div class="group-body hosts-body">
         <p class="fhelp">{{ t('修改系统 hosts 文件中的 NKAS 段落（仅未注释的行生效），用于改善游戏服务器连接。修改需要管理员权限。') }}</p>
-        <div v-if="!hostsSupported" class="hosts-unsupported">⚠ {{ t('当前系统不支持修改 hosts 文件') }}</div>
+        <div v-if="!hostsSupported" class="hosts-unsupported"><AppIcon name="alert-triangle" :size="14" /> {{ t('当前系统不支持修改 hosts 文件') }}</div>
         <div v-if="regionOptions.length" class="hosts-region">
           <span class="hosts-region-label">{{ t('区服') }}</span>
           <AppSelect :model-value="selectedRegion" :options="regionOptions" @change="onRegionChange" />
@@ -184,7 +185,7 @@ watch(toolsTab, tab => {
           <div class="clone-progress-bar"><div class="clone-progress-fill" :style="{ width: `${cloneProgress}%` }"></div></div>
           <span class="clone-progress-text">{{ t(cloneJob.step || '准备') }} {{ formatSize(cloneJob.copied) }} / {{ formatSize(cloneJob.total) }} ({{ cloneProgress }}%)</span>
         </div>
-        <div v-if="cloneJob.error" class="hosts-unsupported">⚠ {{ cloneJob.error }}</div>
+        <div v-if="cloneJob.error" class="hosts-unsupported"><AppIcon name="alert-triangle" :size="14" /> {{ cloneJob.error }}</div>
         <div v-if="cloneJob.result" class="clone-result">
           <div>{{ t('启动器') }}: {{ cloneJob.result.launcher }}</div>
           <div>{{ t('游戏程序') }}: {{ cloneJob.result.game }}</div>

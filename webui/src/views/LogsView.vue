@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import AppIcon from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
 import { logLevelOptions, t } from '../i18n'
 import { useLogsPageStore } from '../stores/logsPage'
@@ -20,17 +21,17 @@ watch(logsRecords, async () => {
 <template>
   <section class="view logs-view">
     <article class="card task-hero">
-      <div class="task-icon">📄</div>
+      <div class="task-icon"><AppIcon name="file-text" :size="22" /></div>
       <div style="flex:1"><h2>{{ t('日志') }}</h2><div class="sub">{{ t('查看 log 目录下的日志文件，支持按类型、级别、日期和关键字筛选。') }}</div></div>
-      <button class="btn" @click="refreshLogs">↻ {{ t('刷新') }}</button>
-      <a v-if="logsExportUrl" class="btn" :href="logsExportUrl" :download="`${logsDate}_${logsSource}.txt`">⬇ {{ t('导出') }}</a>
+      <button class="btn" @click="refreshLogs"><AppIcon name="refresh" :size="16" /> {{ t('刷新') }}</button>
+      <a v-if="logsExportUrl" class="btn" :href="logsExportUrl" :download="`${logsDate}_${logsSource}.txt`"><AppIcon name="download" :size="16" /> {{ t('导出') }}</a>
     </article>
     <article class="card log-card logs-card">
       <div class="log-head logs-filter">
         <label class="logs-filter-item">{{ t('日期') }}<AppSelect v-model="logsDate" :options="logsDateOptions"/></label>
         <label class="logs-filter-item">{{ t('类型') }}<AppSelect v-model="logsSource" :options="logsSourceOptions"/></label>
         <label class="logs-filter-item">{{ t('级别') }}<AppSelect v-model="logsLevel" :options="logLevelOptions"/></label>
-        <label class="logs-filter-item logs-keyword">{{ t('关键字') }}<span class="logs-kw"><input v-model="logsKeyword" :placeholder="t('搜索关键字…')"><button v-if="logsKeyword" type="button" class="logs-kw-clear" @click.prevent="logsKeyword = ''">✕</button></span></label>
+        <label class="logs-filter-item logs-keyword">{{ t('关键字') }}<span class="logs-kw"><input v-model="logsKeyword" :placeholder="t('搜索关键字…')"><button v-if="logsKeyword" type="button" class="logs-kw-clear" @click.prevent="logsKeyword = ''"><AppIcon name="x" :size="12" /></button></span></label>
         <span class="logs-meta">{{ logsCountText() }}<span v-if="logsLoading"> · …</span></span>
       </div>
       <div ref="logsBody" class="log-body" :class="{ 'logs-merge': !logsSource }">

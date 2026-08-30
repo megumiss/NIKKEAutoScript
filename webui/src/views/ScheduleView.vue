@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import AppIcon from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
 import TimePicker from '../components/TimePicker.vue'
 import { api } from '../api/client'
@@ -175,7 +176,7 @@ const displayGroups = computed(() => {
     if (items.length) groups.push({ key: menu.key, name: menu.name, icon: menu.icon || '', tasks: items })
   }
   const rest = filteredTasks.value.filter(task => !assigned.has(task.command))
-  if (rest.length) groups.push({ key: '__other', name: t('其他'), icon: '📦', tasks: rest })
+  if (rest.length) groups.push({ key: '__other', name: t('其他'), icon: 'box', tasks: rest })
   return groups
 })
 
@@ -348,16 +349,16 @@ watch(selectedName, () => {
         <div class="sched-tabs">
           <button v-for="tab in tabs" :key="tab.value" type="button" class="sched-tab" :class="{ active: cadenceTab === tab.value }" @click="cadenceTab = tab.value as any">{{ tab.label }}</button>
         </div>
-        <label class="sched-search">🔍 <input v-model="keyword" :placeholder="t('搜索任务')"><button v-if="keyword" type="button" class="sched-search-clear" @click.prevent="keyword = ''">✕</button></label>
+        <label class="sched-search"><AppIcon name="search-normal" :size="14" /> <input v-model="keyword" :placeholder="t('搜索任务')"><button v-if="keyword" type="button" class="sched-search-clear" @click.prevent="keyword = ''"><AppIcon name="x" :size="12" /></button></label>
         <div class="sched-view-toggle">
-          <button type="button" class="sched-tab" :class="{ active: viewMode === 'list' }" :title="t('列表')" @click="viewMode = 'list'">☰</button>
-          <button type="button" class="sched-tab" :class="{ active: viewMode === 'group' }" :title="t('分组')" @click="viewMode = 'group'">▦</button>
+          <button type="button" class="sched-tab" :class="{ active: viewMode === 'list' }" :title="t('列表')" @click="viewMode = 'list'"><AppIcon name="menu" :size="14" /></button>
+          <button type="button" class="sched-tab" :class="{ active: viewMode === 'group' }" :title="t('分组')" @click="viewMode = 'group'"><AppIcon name="grid" :size="14" /></button>
         </div>
       </div>
       <div class="sched-select-bar">
         <label class="sched-check"><span class="cbox" :class="{ on: allFilteredSelected }"><input type="checkbox" hidden :checked="allFilteredSelected" @change="toggleSelectAll"></span> {{ t('全选') }}</label>
         <span class="sched-selected-count">{{ selected.size }} {{ t('项已选') }}</span>
-        <p class="sched-hint">💡 {{ t('每日任务建议保持同一时间：到点后按优先级一次跑完。分散到不同时间会打乱执行顺序，可能导致漏领奖励；需要一天跑多次的任务再单独添加时间。') }}</p>
+        <p class="sched-hint"><AppIcon name="lightbulb" :size="13" /> {{ t('每日任务建议保持同一时间：到点后按优先级一次跑完。分散到不同时间会打乱执行顺序，可能导致漏领奖励；需要一天跑多次的任务再单独添加时间。') }}</p>
         <button type="button" class="btn sm danger" @click="resetOpen = true">{{ t('还原默认') }}</button>
         <button type="button" class="btn sm primary" :disabled="!selected.size" @click="openBatch">{{ t('批量设置时间') }}</button>
       </div>
@@ -374,7 +375,7 @@ watch(selectedName, () => {
             <span>{{ t('启用') }}</span>
           </div>
           <template v-for="group in displayGroups" :key="group.key || '__all'">
-            <div v-if="group.key" class="sched-group-head"><span class="sicon">{{ group.icon }}</span>{{ group.name }}</div>
+            <div v-if="group.key" class="sched-group-head"><span class="sicon"><AppIcon :name="group.icon || 'box'" :size="16" /></span>{{ group.name }}</div>
             <div v-for="task in group.tasks" :key="task.command" class="sched-row" :class="{ dirty: isDirty(task), invalid: rowErrors[task.command], locked: task.locked }" :title="task.locked ? t('该任务由系统调度，仅展示') : ''">
               <label class="cbox" :class="{ on: selected.has(task.command), disabled: task.locked || task.cadence_locked }"><input type="checkbox" hidden :checked="selected.has(task.command)" :disabled="task.locked || task.cadence_locked" @change="toggleSelect(task.command)"></label>
               <div class="sched-name">
@@ -388,7 +389,7 @@ watch(selectedName, () => {
               <template v-if="effectiveCadence(task) === 'daily'">
                 <span v-for="(time, index) in dailyTimes(task)" :key="time" class="time-chip">
                   <TimePicker :model-value="time" :disabled="task.locked" @change="(value: string) => changeTime(task, index, value)" />
-                  <button type="button" class="chip-x" :disabled="task.locked" @click="removeTime(task, index)">✕</button>
+                  <button type="button" class="chip-x" :disabled="task.locked" @click="removeTime(task, index)"><AppIcon name="x" :size="10" /></button>
                 </span>
                 <TimePicker class="sched-time-add" :title="t('添加时间')" :disabled="task.locked" @change="(value: string) => addTime(task, value)" />
               </template>
@@ -452,7 +453,7 @@ watch(selectedName, () => {
           <div class="sched-batch-times">
             <span v-for="(time, index) in batchTimes" :key="time" class="time-chip">
               <TimePicker :model-value="time" @change="(value: string) => batchChangeTime(index, value)" />
-              <button type="button" class="chip-x" @click="batchRemoveTime(index)">✕</button>
+              <button type="button" class="chip-x" @click="batchRemoveTime(index)"><AppIcon name="x" :size="10" /></button>
             </span>
             <TimePicker class="sched-time-add" :title="t('添加时间')" @change="batchAddTime" />
           </div>
@@ -492,8 +493,8 @@ watch(selectedName, () => {
 .sched-head { padding: 8px; color: var(--text-3); font-size: 11.5px; font-weight: 600; }
 .cbox { position: relative; display: inline-block; flex: none; width: 16px; height: 16px; border: 1px solid var(--border-light); border-radius: 5px; background: var(--card); cursor: pointer; transition: border-color .15s, background .15s; }
 .cbox:hover { border-color: var(--accent); }
-.cbox.on { border-color: transparent; background: var(--grad-accent); }
-.cbox.on::after { position: absolute; inset: 0; content: '✓'; color: #fff; font-size: 11px; font-weight: 700; line-height: 15px; text-align: center; }
+.cbox.on { border-color: transparent; background: var(--grad-accent); --check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21.5303 5.46967C21.8232 5.76256 21.8232 6.23744 21.5303 6.53033L9.53033 18.5303C9.23744 18.8232 8.76256 18.8232 8.46967 18.5303L2.46967 12.5303C2.17678 12.2374 2.17678 11.7626 2.46967 11.4697C2.76256 11.1768 3.23744 11.1768 3.53033 11.4697L9 16.9393L20.4697 5.46967C20.7626 5.17678 21.2374 5.17678 21.5303 5.46967Z' fill='%23fff'/%3E%3C/svg%3E"); }
+.cbox.on::after { position: absolute; inset: 0; content: ''; background: #fff; -webkit-mask: var(--check-mask) center / 10px 10px no-repeat; mask: var(--check-mask) center / 10px 10px no-repeat; }
 .cbox.disabled { cursor: not-allowed; }
 .sched-name { display: flex; flex-direction: column; }
 .sched-name-link { cursor: pointer; transition: color .15s; }

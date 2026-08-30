@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
+import AppIcon from './AppIcon.vue'
 import { useRouteInfo } from '../composables/useRouteInfo'
 import { t } from '../i18n'
 import { useInstancesStore } from '../stores/instances'
@@ -48,16 +49,16 @@ function openField(task: any, field: any) {
         <span class="inst-avatar" :class="{ idle: displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task) === 'idle' }">{{ initials(selectedName) }}<span class="ring" :class="displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task)"></span></span>
         <div class="rail-inst-info"><div class="rail-inst-name" :title="selectedName">{{ selectedName }}</div><div class="rail-inst-state">{{ displayStatus(selectedName, selectedInstance?.state, selectedInstance?.current_task) }}</div></div>
       </div>
-      <label class="rail-search">🔍 <input v-model="taskFilter" :placeholder="t('筛选任务/设置')"><button v-if="taskFilter" type="button" class="rail-clear" @click.prevent="taskFilter = ''">✕</button></label>
+      <label class="rail-search"><AppIcon name="search-normal" :size="14" /> <input v-model="taskFilter" :placeholder="t('筛选任务/设置')"><button v-if="taskFilter" type="button" class="rail-clear" @click.prevent="taskFilter = ''"><AppIcon name="x" :size="12" /></button></label>
     </div>
     <div class="rail-list">
       <div class="rail-top">
-        <button class="rail-item" :class="{ active: selectedPage === 'overview' }" @click="router.push(`/i/${selectedName}/overview`)"><span class="sicon">📈</span>{{ t('任务总览') }}</button>
-        <button class="rail-item" :class="{ active: selectedPage === 'schedule' }" @click="router.push(`/i/${selectedName}/schedule`)"><span class="sicon">🗓️</span>{{ t('调度设置') }}(BETA)</button>
+        <button class="rail-item" :class="{ active: selectedPage === 'overview' }" @click="router.push(`/i/${selectedName}/overview`)"><span class="sicon"><AppIcon name="trend-up" :size="16" /></span>{{ t('任务总览') }}</button>
+        <button class="rail-item" :class="{ active: selectedPage === 'schedule' }" @click="router.push(`/i/${selectedName}/schedule`)"><span class="sicon"><AppIcon name="calendar" :size="16" /></span>{{ t('调度设置') }}(BETA)</button>
       </div>
       <template v-if="schemaReady" v-for="menu in visibleMenus" :key="menu.key">
         <button class="rail-group" :class="{ expanded: !railCollapsed[menu.key] || taskFilter }" @click="toggleRail(menu)">
-          <span class="chev">›</span><span class="sicon">{{ menu.icon || '•' }}</span>{{ menu.name }}
+          <span class="chev">›</span><span class="sicon"><AppIcon :name="menu.icon || 'box'" :size="16" /></span>{{ menu.name }}
           <span class="rail-count">{{ menu.tasks.filter((task: any) => taskEnabled(task.key)).length }}/{{ menu.tasks.length }}</span>
         </button>
         <div v-show="!railCollapsed[menu.key] || taskFilter" class="rail-tasks">
@@ -69,7 +70,7 @@ function openField(task: any, field: any) {
             </button>
             <div v-if="task.matchedFields?.length" class="rail-field-list">
               <button v-for="field in task.matchedFields" :key="field.key" class="rail-item rail-field" @click="openField(task, field)">
-                <span class="field-ico">⚙️</span><span class="field-name">{{ field.title }}</span>
+                <span class="field-ico"><AppIcon name="gear" :size="16" /></span><span class="field-name">{{ field.title }}</span>
               </button>
             </div>
           </template>

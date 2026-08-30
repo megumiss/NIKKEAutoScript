@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
+import AppIcon from './AppIcon.vue'
 import { api } from '../api/client'
 
 type Notice = {
@@ -122,7 +123,7 @@ onBeforeUnmount(() => {
     <span class="mn-sep">·</span>
     <span v-if="!inProgress" class="mn-left">{{ t('距维护开始') }} {{ startsInText }}</span>
     <span v-else class="mn-left">{{ t('预计结束') }} {{ formatDateTime(notice?.end_time || 0) }}</span>
-    <button type="button" class="mn-close" :title="t('关闭')" @click="dismissed = true">✕</button>
+    <button type="button" class="mn-close" :title="t('关闭')" @click="dismissed = true"><AppIcon name="x" :size="14" /></button>
   </div>
 </template>
 

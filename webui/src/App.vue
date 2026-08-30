@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AnnouncementCenter from './components/AnnouncementCenter.vue'
+import AppIcon from './components/AppIcon.vue'
 import AppModal from './components/AppModal.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import AppTopbar from './components/AppTopbar.vue'
@@ -128,7 +129,7 @@ onBeforeUnmount(() => {
         </article>
       </div>
       <div class="toast-stack">
-        <div v-for="toastItem in toasts" :key="toastItem.id" class="toast" :class="toastItem.kind"><span>{{ toastItem.kind === 'error' ? '✕' : '✓' }} {{ toastItem.text }}</span><button v-if="toastItem.action" type="button" class="toast-action" @click="toastItem.action.run(); closeToast(toastItem.id)">{{ toastItem.action.label }}</button><button type="button" class="toast-close" @click="closeToast(toastItem.id)">✕</button></div>
+        <div v-for="toastItem in toasts" :key="toastItem.id" class="toast" :class="toastItem.kind"><span><AppIcon :name="toastItem.kind === 'error' ? 'x' : 'check'" :size="14" /> {{ toastItem.text }}</span><button v-if="toastItem.action" type="button" class="toast-action" @click="toastItem.action.run(); closeToast(toastItem.id)">{{ toastItem.action.label }}</button><button type="button" class="toast-close" @click="closeToast(toastItem.id)"><AppIcon name="x" :size="12" /></button></div>
       </div>
       <DashboardView v-if="isDashboard" />
       <OverviewView v-else-if="isWorkspace && selectedPage === 'overview'" />

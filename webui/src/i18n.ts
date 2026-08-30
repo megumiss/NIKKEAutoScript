@@ -14,7 +14,7 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '下一任务': { 'en-US': 'Next task', 'ja-JP': '次のタスク' }, '启动': { 'en-US': 'Start', 'ja-JP': '開始' }, '停止': { 'en-US': 'Stop', 'ja-JP': '停止' },
   '任务设置': { 'en-US': 'Task settings', 'ja-JP': 'タスク設定' }, '实例总数': { 'en-US': 'Instances', 'ja-JP': 'インスタンス数' },
   '运行中': { 'en-US': 'Running', 'ja-JP': '実行中' }, '空闲': { 'en-US': 'Idle', 'ja-JP': '待機中' }, '已停止': { 'en-US': 'Stopped', 'ja-JP': '停止' }, '正在导入…': { 'en-US': 'Importing…', 'ja-JP': 'インポート中…' },
-  '无': { 'en-US': 'None', 'ja-JP': 'なし' }, '进入 →': { 'en-US': 'Open →', 'ja-JP': '開く →' }, '＋ 新建实例': { 'en-US': '＋ New instance', 'ja-JP': '＋ 新しいインスタンス' },
+  '无': { 'en-US': 'None', 'ja-JP': 'なし' }, '进入': { 'en-US': 'Open', 'ja-JP': '開く' }, '＋ 新建实例': { 'en-US': '＋ New instance', 'ja-JP': '＋ 新しいインスタンス' },
   '导入配置': { 'en-US': 'Import configuration', 'ja-JP': '設定をインポート' }, '名称': { 'en-US': 'Name', 'ja-JP': '名前' }, '状态': { 'en-US': 'Status', 'ja-JP': '状態' }, '操作': { 'en-US': 'Actions', 'ja-JP': '操作' },
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
   '重命名': { 'en-US': 'Rename', 'ja-JP': 'リネーム' }, '拖动排序': { 'en-US': 'Drag to sort', 'ja-JP': 'ドラッグで並べ替え' },
