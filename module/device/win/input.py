@@ -207,7 +207,8 @@ class Input:
         """
         distance = np.linalg.norm(np.array(p2) - np.array(p1))
 
-        segments = int(distance / 20)
+        # 短距离滑动也必须至少生成一个移动段，避免滚动改走滑动后除零。
+        segments = max(1, int(distance / 20))
         total_time = max(0.05, min(distance / (100 * speed), 0.15))
         step_delay = total_time / segments
 

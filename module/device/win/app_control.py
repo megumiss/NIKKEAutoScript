@@ -155,6 +155,9 @@ class AppControl(WinClient, Login):
             raise RequestHumanTakeover
 
     def app_is_running(self) -> bool:
+        # 后台控制方案仍需精确校验窗口和进程路径，但不能调用 SetForegroundWindow。
+        if self._background_control:
+            return bool(self.find_program_window())
         return self.switch_to_program()
 
     def get_process_path(name):

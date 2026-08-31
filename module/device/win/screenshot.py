@@ -41,10 +41,15 @@ class Screenshot:
             )
 
     @staticmethod
-    def get_window(title):
+    def get_window(title, class_name, hwnd):
         windows = pyautogui.getWindowsWithTitle(title)
-        if windows:
-            window = windows[0]
+        for window in windows:
+            if window.title != title:
+                continue
+            if hwnd is not None and getattr(window, '_hWnd', None) != hwnd:
+                continue
+            if class_name and win32gui.GetClassName(window._hWnd) != class_name:
+                continue
             return window
         return False
 
@@ -133,8 +138,17 @@ class Screenshot:
             win32gui.ReleaseDC(window._hWnd, hwnd_dc)
 
     @staticmethod
-    def take_screenshot(title, resolution, screens=False, crop=(0, 0, 1, 1), screenshot_method='pyautogui'):
-        window = Screenshot.get_window(title)
+    def take_screenshot(
+        title,
+        resolution,
+        screens=False,
+        crop=(0, 0, 1, 1),
+        screenshot_method='pyautogui',
+        class_name=None,
+        *,
+        hwnd,
+    ):
+        window = Screenshot.get_window(title, class_name=class_name, hwnd=hwnd)
         if window:
             left, top, width, height = Screenshot.get_window_region(window)
 

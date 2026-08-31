@@ -528,6 +528,12 @@
     "ScreenshotInterval": {
       "name": "截图间隔",
       "help": ""
+    },
+    "ControlScheme": {
+      "name": "控制方案 (BETA)",
+      "help": "pyautogui：完美的前台模式，模拟物理鼠标输入，点击、滚动和滑动会占用真实鼠标。\npostmessage：不完美的后台模式，点击、滚动和滑动通过窗口消息发送，并短暂移动真实鼠标，但不会前置游戏窗口，此时截图方式请选择 PrintWindow 保证截图不被遮挡。启动器仍然依赖前台操作。",
+      "pyautogui": "pyautogui（前台模式）",
+      "postmessage": "postmessage（后台模式）"
     }
   },
   "Optimization": {

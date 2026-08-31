@@ -147,6 +147,9 @@ PCClientInfo:
     value: pyautogui
     option: [ pyautogui, mss, PrintWindow ]
   ScreenshotInterval: 0.3
+  ControlScheme:
+    value: pyautogui
+    option: [ pyautogui, postmessage ]
 Optimization:
   AutoRedCircle: false
   OcrModelType:

@@ -67,7 +67,8 @@
       "GameTitleName": null,
       "GameProcessName": null,
       "ScreenshotMethod": "pyautogui",
-      "ScreenshotInterval": 0.3
+      "ScreenshotInterval": 0.3,
+      "ControlScheme": "pyautogui"
     },
     "PCClient": {
       "Screens": false,

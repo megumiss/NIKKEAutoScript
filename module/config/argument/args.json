@@ -298,6 +298,14 @@
       "ScreenshotInterval": {
         "type": "input",
         "value": 0.3
+      },
+      "ControlScheme": {
+        "type": "select",
+        "value": "pyautogui",
+        "option": [
+          "pyautogui",
+          "postmessage"
+        ]
       }
     },
     "PCClient": {

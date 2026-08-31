@@ -115,8 +115,7 @@ class WinClient:
             if self.is_process_running(process):
                 logger.info('Program is running')
                 return True
-            else:
-                False
+            return False
         except Exception as e:
             logger.error(f'Error checking program: {e}')
             return False
@@ -250,13 +249,10 @@ class WinClient:
         else:
             logger.info(f'Initial attempt [SUCCESS]: Window {hwnd_hex} is now in the foreground.')
 
-    def switch_to_program(self) -> bool:
-        """将程序窗口切换到前台，并精确匹配进程路径"""
-        logger.info(f'Switching window to foreground: [{self.current_window.name}]:{self.current_window.title}')
-
+    def find_program_window(self):
+        """按窗口标题、窗口类名和进程路径查找当前程序，不激活窗口。"""
         matched_hwnd = None
         try:
-            # 遍历所有顶层窗口，查找所有符合条件的窗口句柄
             def enum_windows_callback(hwnd, hwnd_list):
                 try:
                     title = win32gui.GetWindowText(hwnd)
@@ -297,11 +293,60 @@ class WinClient:
                     logger.warning(f'Failed to check process path for window: {e}')
             if not matched_hwnd:
                 logger.error(f'No window matched expected process path=[{self.current_window.path}]')
-                return False
+                return None
 
-            # 切换到目标窗口
-            self.set_foreground_window_with_retry(matched_hwnd)
-            logger.info('Window switched to foreground successfully.')
+            self.current_window.hwnd = matched_hwnd
+            return matched_hwnd
+        except Exception as e:
+            logger.error(f'Error finding window: {e}')
+            return None
+
+    def get_current_window_hwnd(self):
+        """返回当前窗口已验证的 HWND，失效时通过进程路径重新解析。"""
+        window = getattr(self, 'current_window', None)
+        if window is None:
+            return 0
+
+        hwnd = getattr(window, 'hwnd', 0)
+        if hwnd:
+            try:
+                if win32gui.IsWindow(hwnd):
+                    title_matches = win32gui.GetWindowText(hwnd) == window.title
+                    class_matches = win32gui.GetClassName(hwnd) == window.class_name
+                    if title_matches and class_matches:
+                        expected_path = getattr(window, 'path', None)
+                        if not expected_path:
+                            return hwnd
+                        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                        actual_path = psutil.Process(pid).exe()
+                        if os.path.normcase(os.path.normpath(actual_path)) == os.path.normcase(
+                            os.path.normpath(expected_path)
+                        ):
+                            return hwnd
+            except (OSError, psutil.Error, win32gui.error):
+                pass
+
+        return self.find_program_window() or 0
+
+    def switch_to_program(self) -> bool:
+        """
+        精确匹配进程路径找到程序窗口。
+
+        pyautogui 方案会顺带把窗口切换到前台；postmessage 后台方案只匹配
+        游戏窗口，不做激活（SetForegroundWindow）。
+        """
+        logger.info(f'Switching window to foreground: [{self.current_window.name}]:{self.current_window.title}')
+
+        matched_hwnd = self.find_program_window()
+        if not matched_hwnd:
+            return False
+
+        try:
+            if self._background_control:
+                logger.info('Window matched in background mode, not activated')
+            else:
+                self.set_foreground_window_with_retry(matched_hwnd)
+                logger.info('Window switched to foreground successfully.')
             return True
         except Exception as e:
             logger.error(f'Error activating window: {e}')
@@ -343,7 +388,7 @@ class WinClient:
         """获取程序窗口的分辨率"""
         logger.info(f'Getting window resolution: [{self.current_window.name}]:{self.current_window.title}')
         try:
-            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
+            hwnd = self.get_current_window_hwnd()
             if hwnd == 0:
                 logger.warning('Window not found')
                 return None
@@ -503,6 +548,24 @@ class WinClient:
 
         return x, y
 
+    @property
+    def _background_control(self) -> bool:
+        """postmessage 仅控制游戏窗口；启动器仍依赖前台输入。"""
+        window = getattr(self, 'current_window', None)
+        return str(self.config.PCClientInfo_ControlScheme) == 'postmessage' and getattr(window, 'name', None) == 'Game'
+
+    def _set_window_pos_flags(self):
+        """
+        SetWindowPos 标志：默认不带 SWP_NOACTIVATE 时会激活窗口（拉到前台）。
+
+        postmessage 为后台控制方案，调整分辨率不应抢占前台，故追加
+        SWP_NOACTIVATE；pyautogui 方案依赖真实前台，保持原行为。
+        """
+        flags = win32con.SWP_NOZORDER
+        if self._background_control:
+            flags |= win32con.SWP_NOACTIVATE
+        return flags
+
     def change_resolution(self, screen_n, client_width, client_height, position='center'):
         """
         设置窗口客户区大小为指定分辨率，并调整位置
@@ -518,7 +581,7 @@ class WinClient:
         )
         try:
             # 查找窗口句柄
-            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
+            hwnd = self.get_current_window_hwnd()
             if hwnd == 0:
                 logger.error('Window not found')
                 raise Exception('Window not found')
@@ -570,7 +633,7 @@ class WinClient:
                 x += delta
                 logger.debug(f'Adjusted X position rightward by {delta}px to fit work area')
 
-            result = win32gui.SetWindowPos(hwnd, 0, x, y, window_width, window_height, win32con.SWP_NOZORDER)
+            result = win32gui.SetWindowPos(hwnd, 0, x, y, window_width, window_height, self._set_window_pos_flags())
             if result == 0:
                 logger.error('Failed to set window size')
                 raise Exception('Failed to set window size')
@@ -604,7 +667,7 @@ class WinClient:
         )
         try:
             # 查找窗口句柄
-            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
+            hwnd = self.get_current_window_hwnd()
             if hwnd == 0:
                 logger.error('Window not found')
                 raise Exception('Window not found')
@@ -676,7 +739,7 @@ class WinClient:
                 x += delta
                 logger.debug(f'Adjusted X position rightward by {delta}px to fit work area')
 
-            result = win32gui.SetWindowPos(hwnd, 0, x, y, window_width, window_height, win32con.SWP_NOZORDER)
+            result = win32gui.SetWindowPos(hwnd, 0, x, y, window_width, window_height, self._set_window_pos_flags())
             if result == 0:
                 logger.error('Failed to set window size')
                 raise Exception('Failed to set window size')
@@ -708,7 +771,7 @@ class WinClient:
             else:
                 self.change_resolution(screen_n, client_width, client_height, position)
             time.sleep(interval)
-            hwnd = win32gui.FindWindow(self.current_window.class_name, self.current_window.title)
+            hwnd = self.get_current_window_hwnd()
             if hwnd:
                 rect = win32gui.GetClientRect(hwnd)
                 if rect[2] == client_width and rect[3] == client_height:

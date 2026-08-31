@@ -69,6 +69,7 @@ class GeneratedConfig:
     PCClientInfo_GameProcessName = None
     PCClientInfo_ScreenshotMethod = 'pyautogui'  # pyautogui, mss, PrintWindow
     PCClientInfo_ScreenshotInterval = 0.3
+    PCClientInfo_ControlScheme = 'pyautogui'  # pyautogui, postmessage
 
     # Group `Optimization`
     Optimization_AutoRedCircle = False
