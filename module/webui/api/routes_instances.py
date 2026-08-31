@@ -153,6 +153,32 @@ def _save_order(order):
     _save_meta(meta)
 
 
+def _load_avatar(name):
+    """Avatar file name of an instance from instance_meta.json. Returns None
+    when the instance has no avatar entry at all (caller should assign one),
+    '' when the user explicitly cleared it (keep the placeholder)."""
+    entry = _load_meta().get(str(name))
+    if isinstance(entry, dict) and 'avatar' in entry:
+        return str(entry.get('avatar') or '')
+    return None
+
+
+def _save_avatar(name, avatar):
+    """Persist an avatar file name for an instance in instance_meta.json.
+    An empty avatar keeps the key so it reads back as '' (explicitly
+    cleared) instead of None (never assigned)."""
+    meta = _load_meta()
+    name = str(name)
+    entry = meta.get(name)
+    if not isinstance(entry, dict):
+        entry = {}
+        meta[name] = entry
+    entry['avatar'] = str(avatar) if avatar else ''
+    for key in [key for key, item in meta.items() if isinstance(item, dict) and not item]:
+        del meta[key]
+    _save_meta(meta)
+
+
 def ordered_instances():
     """Instances ordered by the saved manual order; unknown or new instances
     are appended at the end in their filesystem enumeration order."""
@@ -202,19 +228,14 @@ async def instances(_: Request):
                 next_task = queue['waiting'][0]['name_i18n']
         except (AttributeError, OSError, KeyError) as exc:
             logger.warning(f'Unable to read queue for {name}: {exc}')
-        # Optional per-instance avatar file name stored at the top level of
-        # the instance config (config/<name>.json -> avatar). Existing
-        # instances without one get a random avatar assigned once and saved.
-        avatar = ''
-        try:
-            cfg = read_file(filepath_config(name))
-            avatar = str(cfg.get('avatar', '') or '')
-            if not avatar and pool:
-                avatar = random.choice(pool)
-                cfg['avatar'] = avatar
-                State.config_updater.write_file(name, cfg, get_config_mod(name))
-        except (OSError, ValueError):
-            avatar = ''
+        # Per-instance avatar file name lives in data/instance_meta.json,
+        # outside the game config, so template-driven config rebuilds can
+        # never drop it. Instances never assigned one get a random avatar
+        # picked once and saved; '' (explicitly cleared) stays a placeholder.
+        avatar = _load_avatar(name)
+        if avatar is None:
+            avatar = random.choice(pool) if pool else ''
+            _save_avatar(name, avatar)
         result.append(InstanceInfo(name, manager.state, get_config_mod(name), current_task, next_task, remarks.get(name, ''), avatar).dict())
     return JSONResponse(result)
 
@@ -239,8 +260,8 @@ async def remark(request: Request):
 
 
 async def set_avatar(request: Request):
-    """Update the avatar file name of an instance (empty clears it back to
-    the text placeholder)."""
+    """Update the avatar file name of an instance in instance_meta.json
+    (empty clears it back to the text placeholder)."""
     name = request.path_params['name']
     try:
         validate_instance(name)
@@ -250,15 +271,7 @@ async def set_avatar(request: Request):
         return _response_error(str(exc), 404)
     except (ValueError, TypeError):
         return _response_error('Expected JSON body with avatar.')
-    try:
-        cfg = read_file(filepath_config(name))
-        if avatar:
-            cfg['avatar'] = avatar
-        else:
-            cfg.pop('avatar', None)
-        State.config_updater.write_file(name, cfg, get_config_mod(name))
-    except (OSError, ValueError) as exc:
-        return _response_error(f'Failed to update avatar: {exc}')
+    _save_avatar(name, avatar)
     return JSONResponse({'status': 'success', 'avatar': avatar})
 
 
@@ -359,9 +372,7 @@ async def create(request: Request):
         return _response_error('Source instance not found.', 404)
     State.config_updater.write_file(name, load_config(origin).read_file(origin), get_config_mod(origin))
     if avatar:
-        cfg = read_file(filepath_config(name))
-        cfg['avatar'] = avatar
-        State.config_updater.write_file(name, cfg, get_config_mod(name))
+        _save_avatar(name, avatar)
     return JSONResponse({'status': 'success', 'name': name}, status_code=201)
 
 
@@ -398,6 +409,10 @@ async def delete(request: Request):
     acc = Path(_get_account_file(name))
     if acc.exists():
         acc.unlink()
+    # Drop the whole metadata entry (remark, order, avatar) at once.
+    meta = _load_meta()
+    if meta.pop(name, None) is not None:
+        _save_meta(meta)
     remarks = _load_remarks()
     if remarks.pop(name, None) is not None:
         _save_remarks(remarks)
@@ -487,6 +502,11 @@ async def rename(request: Request):
             # abort the rename half-way.
             logger.warning(f'Unable to migrate account file {old_acc}: {exc}')
     _migrate_instance_assets(name, new_name)
+    # Move the whole metadata entry (remark, order, avatar) to the new name.
+    meta = _load_meta()
+    if name in meta:
+        meta[new_name] = meta.pop(name)
+        _save_meta(meta)
     remarks = _load_remarks()
     if name in remarks:
         remarks[new_name] = remarks.pop(name)

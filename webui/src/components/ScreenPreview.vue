@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { api } from '../api/client'
 
@@ -26,7 +26,10 @@ function t(source: string) {
 
 type PreviewStatus = 'none' | 'live' | 'stale'
 
-const expanded = ref(false)
+// Open/closed state is persisted locally so a reload keeps the preview as
+// the user left it; the polling cadence below is persisted the same way.
+const EXPANDED_STORAGE_KEY = 'nkas-preview-expanded'
+const expanded = ref(localStorage.getItem(EXPANDED_STORAGE_KEY) === '1')
 const frameUrl = ref('')
 const status = ref<PreviewStatus>('none')
 // Frames older than this many seconds are reported as idle instead of live.
@@ -306,17 +309,29 @@ function resetFrame() {
   }
 }
 
-watch(expanded, async value => {
-  if (value) {
-    startPolling()
-    if (!scrcpy.value) loadScrcpy()
-    await nextTick()
-    startObserver()
-  } else {
-    interactive.value = false
-    stopPolling()
-    stopObserver()
-  }
+async function openPreview() {
+  startPolling()
+  if (!scrcpy.value) loadScrcpy()
+  await nextTick()
+  startObserver()
+}
+
+function closePreview() {
+  interactive.value = false
+  stopPolling()
+  stopObserver()
+}
+
+watch(expanded, value => {
+  localStorage.setItem(EXPANDED_STORAGE_KEY, value ? '1' : '0')
+  if (value) openPreview()
+  else closePreview()
+})
+
+// The watcher is not immediate, so when the persisted state reopens the
+// preview right on mount the polling/layout tracking must start here.
+onMounted(() => {
+  if (expanded.value) openPreview()
 })
 
 watch(frameAspect, measure)
