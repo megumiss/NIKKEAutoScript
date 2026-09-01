@@ -267,7 +267,8 @@ class Automation:
             pixel_distance = end_x - start_x if horizontal else end_y - start_y
             if not pixel_distance:
                 pixel_distance = end_x - start_x
-            scroll_count = round(abs(pixel_distance) / 65) - 1
+            # 非零距离至少滚动一次，避免短距离被 round 和 -1 抹成空操作
+            scroll_count = max(1, round(abs(pixel_distance) / 65) - 1) if pixel_distance else 0
             if horizontal:
                 direction = 1 if pixel_distance < 0 else -1
             else:

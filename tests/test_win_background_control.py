@@ -52,6 +52,33 @@ class BackgroundControlTests(unittest.TestCase):
         automation.mouse_move.assert_called_once_with((110 + 110) // 2, (220 + 520) // 2)
         automation.mouse_scroll.assert_called_once_with(4, direction=1)
 
+    def test_automation_short_scroll_still_scrolls_once(self):
+        for scheme in ('postmessage', 'pyautogui'):
+            with self.subTest(scheme=scheme):
+                automation = Automation.__new__(Automation)
+                automation.config = SimpleNamespace(PCClientInfo_ControlScheme=scheme)
+                automation.current_window = SimpleNamespace(offset=(100, 200))
+                automation.mouse_move = Mock()
+                automation.mouse_scroll = Mock()
+
+                # 60px 短距离：round(60/65)-1 = 0，必须兜底为至少一次滚动
+                automation.swipe((10, 20), (10, 80), speed=7, method='scroll')
+
+                automation.mouse_scroll.assert_called_once_with(1, direction=1)
+
+    def test_automation_zero_distance_scroll_does_nothing(self):
+        for scheme in ('postmessage', 'pyautogui'):
+            with self.subTest(scheme=scheme):
+                automation = Automation.__new__(Automation)
+                automation.config = SimpleNamespace(PCClientInfo_ControlScheme=scheme)
+                automation.current_window = SimpleNamespace(offset=(100, 200))
+                automation.mouse_move = Mock()
+                automation.mouse_scroll = Mock()
+
+                automation.swipe((10, 20), (10, 20), speed=7, method='scroll')
+
+                automation.mouse_scroll.assert_called_once_with(0, direction=1)
+
     def test_child_window_geometry_matches_interaction_layout(self):
         def enum_children(_hwnd, callback, context):
             callback(20, context)
