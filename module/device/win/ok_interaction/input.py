@@ -224,18 +224,20 @@ class PostMessageInput(Input):
     def _scroll(self, count, direction):
         if not self._ensure_window():
             return
+        count = int(count)
+        if count <= 0:
+            return
         try:
             position = self._mouse_screen_position or win32api.GetCursorPos()
-            distance = 65 * int(direction)
-            for index in range(max(0, int(count))):
-                self._postmessage_swipe(
-                    position,
-                    (position[0], position[1] + distance),
-                    0.2,
-                    release_delay=0.12,
-                )
-                if index + 1 < count:
-                    time.sleep(0.1)
+            # 合并为一次长拖拽，避免同一滚动被拆成多段 press/release 手势
+            distance = 65 * count * int(direction)
+            duration = min(0.2 * count, 0.8)
+            self._postmessage_swipe(
+                position,
+                (position[0], position[1] + distance),
+                duration,
+                release_delay=0.12,
+            )
             logger.debug(f'Cursor-assisted PostMessage scroll {count} x {direction}')
         except Exception as e:
             logger.error(f'PostMessage scroll error: {e}')

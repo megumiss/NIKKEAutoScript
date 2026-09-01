@@ -287,7 +287,7 @@ class ShopBase(UI):
                 # 滑动屏幕继续查找
                 self.ensure_sroll((505, 1000), (505, 700), speed=5, count=1, delay=0.5, method='scroll')
                 swipe_count += 1
-                if swipe_count > 10:
+                if swipe_count > 20:
                     logger.warning('Too many swipes, may game stuck here')
                     raise GameStuckError
 
