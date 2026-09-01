@@ -1065,10 +1065,6 @@
       "name": "Challenge",
       "help": "Requires teams to be set up in advance"
     },
-    "Coop": {
-      "name": "Coop",
-      "help": "Built-in Coop in large events defaults to easy play for Normal difficulty"
-    },
     "Shop": {
       "name": "Shop",
       "help": "Attempt to buy all event currency items except titles in order (may not always work)"

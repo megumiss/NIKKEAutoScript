@@ -190,7 +190,6 @@ class GeneratedConfig:
     # Group `Event`
     Event_LoginStamp = True
     Event_Challenge = True
-    Event_Coop = False
     Event_Shop = False
     Event_ShopDelayList = 'TITLE'
     Event_Game = False

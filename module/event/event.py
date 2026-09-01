@@ -93,7 +93,7 @@ class Event(
         # self.appear_text('8')
 
         # 是否需要重新执行
-        coop_reschedule = False
+        # coop_reschedule = False
 
         try:
             self.ui_ensure(page_main)
@@ -114,8 +114,8 @@ class Event(
                 self.back_to_event()
                 self.device.sleep(3)
                 self.story()
-            if self.config.Event_Coop:
-                coop_reschedule = self.coop()
+            # if self.config.Event_Coop:
+            #     coop_reschedule = self.coop()
             if self.config.Event_Game:
                 self.game()
 
@@ -136,6 +136,6 @@ class Event(
             pass
 
         # 若协同未开启则调整延迟时间
-        if self.config.Event_Coop and coop_reschedule:
-            self.config.Scheduler_ServerUpdate = '04:00, 16:00'
+        # if self.config.Event_Coop and coop_reschedule:
+        #     self.config.Scheduler_ServerUpdate = '04:00, 16:00'
         self.config.task_delay(schedule=True)

@@ -672,7 +672,6 @@
     "Event": {
       "LoginStamp": true,
       "Challenge": true,
-      "Coop": false,
       "Shop": false,
       "ShopDelayList": "TITLE",
       "Game": false,
@@ -711,7 +710,6 @@
     "Event": {
       "LoginStamp": true,
       "Challenge": true,
-      "Coop": false,
       "Shop": false,
       "ShopDelayList": "TITLE",
       "Game": false,

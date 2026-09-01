@@ -2984,10 +2984,6 @@
         "type": "checkbox",
         "value": true
       },
-      "Coop": {
-        "type": "checkbox",
-        "value": false
-      },
       "Shop": {
         "type": "checkbox",
         "value": false
@@ -3143,10 +3139,6 @@
       "Challenge": {
         "type": "checkbox",
         "value": true
-      },
-      "Coop": {
-        "type": "checkbox",
-        "value": false
       },
       "Shop": {
         "type": "checkbox",

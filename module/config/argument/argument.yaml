@@ -363,7 +363,6 @@ StoryStage:
 Event:
   LoginStamp: true
   Challenge: true
-  Coop: false
   Shop: false
   ShopDelayList:
     value: 'TITLE'
