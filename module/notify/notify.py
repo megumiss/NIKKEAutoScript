@@ -103,6 +103,10 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
 
 
 class Notify(UI):
+    def __init__(self, config):
+        # 推送任务只发通知并重排期，全程不接触 device
+        super().__init__(config, independent=True)
+
     def run(self):
         if self.config.Notification_WhenDailyTaskCompleted:
             handle_notify(

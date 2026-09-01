@@ -131,10 +131,25 @@ class NikkeAutoScript:
                 )
             exit(1)
 
+    def is_independent_task(self, command: str) -> bool:
+        """
+        判断任务是否为独立任务（不依赖游戏运行）。
+
+        独立任务全程不接触 device：win 平台创建 Device 会直接拉起游戏，
+        adb 平台则会走 Restart 的登录流程，因此必须在调度各阶段跳过。
+
+        Args:
+            command (str): 任务名，驼峰（BlaDaily）或下划线（bla_daily）均可
+
+        Returns:
+            bool: True 表示不依赖游戏运行
+        """
+        return command in self.config.INDEPENDENT_TASKS or command in self.config.INDEPENDENT_TASKS_UNDER
+
     def run(self, command, skip_first_screenshot=False):
         try:
-            # 妮游社任务不需要device
-            if command not in self.config.INDEPENDENT_TASKS_UNDER and not skip_first_screenshot:
+            # 妮游社等独立任务不需要device
+            if not self.is_independent_task(command) and not skip_first_screenshot:
                 self.device.screenshot()
             try:
                 self.__getattribute__(command)()
@@ -507,7 +522,8 @@ class NikkeAutoScript:
     def notify(self):
         from module.notify.notify import Notify
 
-        Notify(config=self.config, device=self.device).run()
+        # 推送不依赖游戏运行，不传 device 以免拉起游戏
+        Notify(config=self.config).run()
 
     def warehouse_stats(self):
         from module.warehouse_stats.warehouse_stats import WarehouseStats
@@ -595,7 +611,7 @@ class NikkeAutoScript:
             bool: True 表示可以执行；False 表示等待过令牌（或串行配置有变），
                   需要重新加载配置并重新取任务，避免执行过期任务。
         """
-        if task in self.config.INDEPENDENT_TASKS:
+        if self.is_independent_task(task):
             return True
         from module.config.serial_state import is_my_turn, read_serial_config
 
@@ -672,14 +688,15 @@ class NikkeAutoScript:
                     if not self.wait_until(task.next_run):
                         del_cached_property(self, 'config')
                         continue
-                    if task.command != 'Restart':
+                    # 待跑任务是妮游社等独立任务时不需要游戏，跳过 Restart
+                    if task.command != 'Restart' and not self.is_independent_task(task.command):
                         self.config.task_call('Restart')
                         del_cached_property(self, 'config')
                         continue
                 elif method == 'goto_main':
                     logger.info('Goto main page during wait')
-                    # 只运行妮游社任务时不会初始化device，不需要操作游戏
-                    if 'device' in self.__dict__:
+                    # 只运行妮游社任务时不会初始化device，待跑任务不依赖游戏时也不需要回主界面
+                    if 'device' in self.__dict__ and not self.is_independent_task(task.command):
                         self.run('goto_main')
                     release_resources()
                     # self.device.release_during_wait()
@@ -745,21 +762,23 @@ class NikkeAutoScript:
             #     self.config.task_call('Restart')
             # Get task
             task = self.get_next_task()
+            # Skip first restart
+            # 须在令牌等待与 device 初始化之前：win 平台创建 device 会拉起游戏，
+            # 且被跳过的任务不应占用串行令牌
+            if self.is_first_task and task == 'Restart':
+                logger.info('Skip task `Restart` at scheduler start')
+                self.config.task_delay(server_update=True)
+                del_cached_property(self, 'config')
+                continue
             # 串行模式：等待令牌，等待过则重新取任务
             if not self.serial_wait_turn(task):
                 del_cached_property(self, 'config')
                 continue
-            # 妮游社任务不需要device，不需要操作游戏
-            if task not in self.config.INDEPENDENT_TASKS:
+            # 妮游社等独立任务不需要device，不需要操作游戏
+            if not self.is_independent_task(task):
                 # Init device and change server
                 _ = self.device
                 self.device.config = self.config
-                # Skip first restart
-                if self.is_first_task and task == 'Restart':
-                    logger.info('Skip task `Restart` at scheduler start')
-                    self.config.task_delay(server_update=True)
-                    del_cached_property(self, 'config')
-                    continue
 
                 # Run
                 logger.info(f'Scheduler: Start task `{task}`')
