@@ -60,10 +60,10 @@ def start_game(self, skip_first_screenshot=True):
                 self.device.sleep(1)
 
             # 仅 PC 客户端支持按键操作
-            # if self.config.CLIENT_PLATFORM == 'win':
-            #     self.device.secretly_press_key('w', wait_time=0.2)
-            #     self.device.secretly_press_key(random.choice(['a', 'd']), wait_time=0.2)
-            # else:
+            if self.config.CLIENT_PLATFORM == 'win' and self.config.PCClientInfo_ControlScheme == 'pyautogui':
+                self.device.secretly_press_key('w', wait_time=0.2)
+                self.device.secretly_press_key(random.choice(['a', 'd']), wait_time=0.2)
+            else:
                 # w
                 self.ensure_sroll((350, 750), (400, 650), method='swipe', count=1, delay=0.2)
                 # a / d 随机一个
