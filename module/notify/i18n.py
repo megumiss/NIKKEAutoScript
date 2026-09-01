@@ -19,6 +19,11 @@ I18N_NOTIFY = {
         'en-US': 'Request Human Takeover',
         'ja-JP': '手動操作が必要です',
     },
+    'CaptchaRequired': {
+        'zh-CN': '需要处理验证码，请人工接管',
+        'en-US': 'Captcha required, please take over manually',
+        'ja-JP': '認証コードの処理が必要です。手動で対応してください',
+    },
     'ExceptionOccurred': {
         'zh-CN': '发生异常',
         'en-US': 'Exception Occurred',

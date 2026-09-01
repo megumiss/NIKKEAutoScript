@@ -3,6 +3,11 @@ class RequestHumanTakeover(Exception):
     pass
 
 
+class CaptchaRequired(RequestHumanTakeover):
+    # 登录出现验证码，需人工处理
+    pass
+
+
 class EmulatorNotRunningError(Exception):
     # 模拟器未运行
     pass

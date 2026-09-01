@@ -13,6 +13,7 @@ from module.config.config import NikkeConfig, TaskEnd
 from module.config.utils import deep_get, deep_set
 from module.exception import (
     AccountError,
+    CaptchaRequired,
     GameNotRunningError,
     GamePageUnknownError,
     GameServerUnderMaintenance,
@@ -178,6 +179,17 @@ class NikkeAutoScript:
                     config=self.config,
                     title_key='crashed',
                     content_key='GameServerUnderMaintenance',
+                    always=self.config.Notification_WinOnePush,
+                )
+            self._post_action()
+            exit(1)
+        except CaptchaRequired:
+            logger.critical('Captcha required, please handle manually')
+            if self.config.Notification_WhenDailyTaskCrashed:
+                handle_notify(
+                    config=self.config,
+                    title_key='crashed',
+                    content_key='CaptchaRequired',
                     always=self.config.Notification_WinOnePush,
                 )
             self._post_action()
