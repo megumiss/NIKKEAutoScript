@@ -18,6 +18,87 @@ const { openConfirmModal } = useModalStore()
 function onPickError(message: string) { toast.error = message }
 
 interface HostsSection { name: string; lines: string[]; common: boolean; default_on: boolean }
+interface ShortcutDefinition { key: string; label: string }
+
+const shortcutDefinitions: ShortcutDefinition[] = [
+  { key: 'UPDATE', label: '源码更新' },
+  { key: 'START', label: '全部启动' },
+  { key: 'STOP', label: '全部停止' },
+  { key: 'RESTART', label: '后端重启' },
+  { key: 'ROTATE', label: '屏幕旋转' },
+  { key: 'DEV_TOOLS', label: '开发者工具' },
+  { key: 'REFRESH', label: '刷新页面' },
+  { key: 'HARD_REFRESH', label: '强制刷新页面' },
+]
+
+const shortcuts = ref<Record<string, string>>({})
+const shortcutDefaults = ref<Record<string, string>>({})
+const savedShortcuts = ref<Record<string, string>>({})
+const shortcutsEnabled = ref(true)
+const savedShortcutsEnabled = ref(true)
+const shortcutsBusy = ref(false)
+const shortcutsDirty = computed(() =>
+  shortcutsEnabled.value !== savedShortcutsEnabled.value
+  || shortcutDefinitions.some(({ key }) => shortcuts.value[key] !== savedShortcuts.value[key]))
+
+async function loadShortcuts() {
+  try {
+    const data = await api.get('/api/tools/shortcuts')
+    shortcuts.value = { ...(data.shortcuts || {}) }
+    shortcutDefaults.value = { ...(data.defaults || {}) }
+    shortcutsEnabled.value = data.enabled !== false
+    savedShortcuts.value = { ...shortcuts.value }
+    savedShortcutsEnabled.value = shortcutsEnabled.value
+  } catch (exception: any) { toast.error = exception.message }
+}
+function resetShortcuts() {
+  shortcuts.value = { ...shortcutDefaults.value }
+  shortcutsEnabled.value = true
+}
+async function saveShortcuts() {
+  if (shortcutsBusy.value || !shortcutsDirty.value) return
+  shortcutsBusy.value = true
+  try {
+    const data = await api.post('/api/tools/shortcuts', { shortcuts: shortcuts.value, enabled: shortcutsEnabled.value })
+    shortcuts.value = { ...(data.shortcuts || shortcuts.value) }
+    shortcutsEnabled.value = data.enabled !== false
+    savedShortcuts.value = { ...shortcuts.value }
+    savedShortcutsEnabled.value = shortcutsEnabled.value
+    toast.notify(t('快捷键已保存，重启桌面程序后生效'), 'ok', 5000)
+  } catch (exception: any) { toast.error = exception.message } finally { shortcutsBusy.value = false }
+}
+
+// 点击输入框进入按键捕获：按下一次组合键即填入，Esc 取消
+const SHORTCAPTURE_MODIFIER_KEYS: Record<string, string> = { Control: 'Ctrl', Alt: 'Alt', Shift: 'Shift', Meta: 'Super' }
+const SHORTCAPTURE_NAMED_KEYS: Record<string, string> = {
+  Backspace: 'Backspace', Delete: 'Delete', End: 'End', Enter: 'Enter', Home: 'Home',
+  Insert: 'Insert', PageDown: 'PageDown', PageUp: 'PageUp', ' ': 'Space', Tab: 'Tab',
+  ArrowDown: 'ArrowDown', ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowUp: 'ArrowUp',
+}
+const recordingShortcut = ref<string | null>(null)
+
+function onShortcutKeydown(event: KeyboardEvent, key: string) {
+  if (recordingShortcut.value !== key) return
+  event.preventDefault()
+  event.stopPropagation()
+  // 只按下修饰键时继续等待主按键
+  if (SHORTCAPTURE_MODIFIER_KEYS[event.key]) return
+  if (event.key === 'Escape' && !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+    (event.target as HTMLInputElement).blur()
+    return
+  }
+  let main: string | undefined = SHORTCAPTURE_NAMED_KEYS[event.key]
+  if (!main && /^[a-z0-9]$/i.test(event.key)) main = event.key.toUpperCase()
+  if (!main && /^F(?:[1-9]|1[0-9]|2[0-4])$/i.test(event.key)) main = event.key.toUpperCase()
+  if (!main) { toast.notify(t('不支持的按键'), 'error', 3000); return }
+  const modifiers: string[] = []
+  if (event.ctrlKey) modifiers.push('Ctrl')
+  if (event.altKey) modifiers.push('Alt')
+  if (event.shiftKey) modifiers.push('Shift')
+  if (event.metaKey) modifiers.push('Super')
+  shortcuts.value[key] = [...modifiers, main].join('+')
+  ;(event.target as HTMLInputElement).blur()
+}
 
 const hostsSupported = ref(true)
 const hostsApplied = ref(false)
@@ -121,10 +202,11 @@ async function startClone() {
   } catch (exception: any) { toast.error = exception.message }
 }
 
-onMounted(() => { loadHosts(); loadCloneInfo() })
+onMounted(() => { loadHosts(); loadShortcuts(); loadCloneInfo() })
 onBeforeUnmount(stopClonePolling)
 watch(toolsTab, tab => {
   if (tab === 'hosts') loadHosts()
+  if (tab === 'shortcuts') loadShortcuts()
   if (tab === 'clone') loadCloneInfo()
 })
 </script>
@@ -137,6 +219,7 @@ watch(toolsTab, tab => {
     </article>
     <div class="tools-tabs">
       <button class="tools-tab" :class="{ active: toolsTab === 'hosts' }" @click="router.push('/tools/hosts')"><AppIcon name="globe" :size="16" /> {{ t('Hosts 修改') }}</button>
+      <button class="tools-tab" :class="{ active: toolsTab === 'shortcuts' }" @click="router.push('/tools/shortcuts')"><AppIcon name="gear" :size="16" /> {{ t('快捷键设置') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'clone' }" @click="router.push('/tools/clone')"><AppIcon name="gamepad" :size="16" /> {{ t('游戏多开') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'console' }" @click="router.push('/tools/console')"><AppIcon name="terminal-square" :size="16" /> {{ t('控制台') }}</button>
     </div>
@@ -156,6 +239,35 @@ watch(toolsTab, tab => {
         <div class="hosts-actions">
           <button class="btn danger" :disabled="hostsBusy || !hostsApplied" @click="revertHosts">{{ t('还原') }}</button>
           <button class="btn primary" :disabled="hostsBusy || !hostsSupported" @click="applyHosts">{{ t('应用') }}</button>
+        </div>
+      </div>
+    </article>
+    <article v-else-if="toolsTab === 'shortcuts'" class="card group-card">
+      <div class="group-head">
+        <h4>{{ t('快捷键设置') }}</h4>
+        <span class="shortcut-head-hint">{{ t('点击输入框，按下新的快捷键即可填入，Esc 取消；保存后重启桌面程序生效') }}</span>
+      </div>
+      <div class="group-body shortcut-body">
+        <div class="shortcut-field">
+          <div class="shortcut-label">
+            <span>{{ t('启用快捷键') }}</span>
+          </div>
+          <div class="shortcut-control">
+            <label class="switch"><input v-model="shortcutsEnabled" type="checkbox"><span class="slider"></span></label>
+          </div>
+        </div>
+        <div v-for="item in shortcutDefinitions" :key="item.key" class="shortcut-field">
+          <div class="shortcut-label">
+            <span>{{ t(item.label) }}</span>
+            <code>{{ item.key }}</code>
+          </div>
+          <div class="shortcut-control">
+            <input :value="shortcuts[item.key]" class="shortcut-input" :class="{ recording: recordingShortcut === item.key }" readonly spellcheck="false" autocomplete="off" :placeholder="recordingShortcut === item.key ? t('按下快捷键，Esc 取消') : shortcutDefaults[item.key]" :disabled="!shortcutsEnabled" @focus="recordingShortcut = item.key" @blur="recordingShortcut = null" @keydown="onShortcutKeydown($event, item.key)">
+          </div>
+        </div>
+        <div class="hosts-actions">
+          <button class="btn danger" :disabled="shortcutsBusy" @click="resetShortcuts">{{ t('恢复默认') }}</button>
+          <button class="btn primary" :disabled="shortcutsBusy || !shortcutsDirty" @click="saveShortcuts">{{ shortcutsBusy ? t('保存中…') : t('保存') }}</button>
         </div>
       </div>
     </article>

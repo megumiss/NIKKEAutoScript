@@ -15,7 +15,7 @@ const router = createRouter({
     { path: '/settings', component: App },
     { path: '/deploy', component: App },
     { path: '/logs', component: App },
-    { path: '/tools/:tab(hosts|clone|console)?', component: App },
+    { path: '/tools/:tab(hosts|shortcuts|clone|console)?', component: App },
     { path: '/console', redirect: '/tools/console' },
     { path: '/links', component: App },
     { path: '/about', component: App },

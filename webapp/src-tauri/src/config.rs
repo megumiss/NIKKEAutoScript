@@ -88,6 +88,7 @@ pub struct DesktopConfig {
     pub dpi_scaling: bool,
     pub hardware_acceleration: bool,
     pub theme: String,
+    pub shortcuts_enabled: bool,
     pub shortcuts: HashMap<String, String>,
 }
 
@@ -132,8 +133,10 @@ pub fn load(root: PathBuf) -> Result<DesktopConfig> {
     } else {
         root.join(raw.deploy.python.executable)
     };
+    let (shortcuts_enabled, shortcuts) = load_shortcuts(&root);
     Ok(DesktopConfig {
-        shortcuts: load_shortcuts(&root),
+        shortcuts_enabled,
+        shortcuts,
         root,
         python,
         host: resolve_connect_host(&raw.deploy.webui.host),
@@ -145,7 +148,7 @@ pub fn load(root: PathBuf) -> Result<DesktopConfig> {
     })
 }
 
-fn load_shortcuts(root: &Path) -> HashMap<String, String> {
+fn load_shortcuts(root: &Path) -> (bool, HashMap<String, String>) {
     let mut shortcuts = HashMap::from([
         ("UPDATE".into(), "F8".into()),
         ("START".into(), "F9".into()),
@@ -157,16 +160,24 @@ fn load_shortcuts(root: &Path) -> HashMap<String, String> {
         ("HARD_REFRESH".into(), "Ctrl+Shift+R".into()),
     ]);
     let Ok(content) = fs::read_to_string(root.join("config/shortcuts.yaml")) else {
-        return shortcuts;
+        return (true, shortcuts);
     };
-    if let Ok(values) = serde_yaml::from_str::<HashMap<String, String>>(&content) {
+    let mut enabled = true;
+    // ENABLED 是布尔值，不能直接按 HashMap<String, String> 解析
+    if let Ok(values) = serde_yaml::from_str::<HashMap<String, serde_yaml::Value>>(&content) {
         for (key, value) in values {
-            if shortcuts.contains_key(&key) && !value.trim().is_empty() {
-                shortcuts.insert(key, value);
+            if key == "ENABLED" {
+                enabled = value.as_bool().unwrap_or(true);
+                continue;
+            }
+            if let Some(value) = value.as_str() {
+                if shortcuts.contains_key(&key) && !value.trim().is_empty() {
+                    shortcuts.insert(key, value.to_string());
+                }
             }
         }
     }
-    shortcuts
+    (enabled, shortcuts)
 }
 
 pub fn webview_arguments(config: &DesktopConfig, inherited: Option<&str>) -> Option<String> {
@@ -206,6 +217,7 @@ mod tests {
             dpi_scaling: true,
             hardware_acceleration: false,
             theme: default_theme(),
+            shortcuts_enabled: true,
             shortcuts: HashMap::new(),
         }
     }

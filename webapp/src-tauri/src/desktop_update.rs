@@ -856,6 +856,7 @@ mod tests {
             dpi_scaling: true,
             hardware_acceleration: false,
             theme: "dark".into(),
+            shortcuts_enabled: true,
             shortcuts: Default::default(),
         }
     }
