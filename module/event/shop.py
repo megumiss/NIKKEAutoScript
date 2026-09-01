@@ -219,7 +219,7 @@ class EventShop(EventBase):
                 self.device.click_record_clear()
                 self.ensure_sroll((360, 1100), (360, 480), speed=5, count=1, delay=3, method='scroll')
                 swipe_count += 1
-                if swipe_count > 15:
+                if swipe_count > 30:
                     logger.warning('Too many swipes, may game stuck here')
                     raise GameStuckError
 

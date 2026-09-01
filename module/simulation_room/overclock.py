@@ -437,7 +437,7 @@ class Overclock(UI):
             found = False
             for i, option in enumerate(remaining_options[:]):  # 使用切片创建副本，避免在迭代时修改列表
                 button = self.get_bios_setting_button(option)
-                if self.appear(button, offset=450, threshold=0.95):
+                if self.appear(button, offset=450, threshold=0.9):
                     self.device.click(button)
                     self.device.sleep(0.3)
                     found = True
