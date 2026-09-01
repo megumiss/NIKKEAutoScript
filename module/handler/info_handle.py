@@ -7,7 +7,7 @@ from module.base.utils import point2str
 from module.config.account import load_account
 
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
-from module.exception import AccountError, GameServerUnderMaintenance, GameStuckError
+from module.exception import AccountError, CaptchaRequired, GameServerUnderMaintenance, GameStuckError
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE_LEFT, TEMPLATE_RED_CIRCLE_RIGHT, TEMPLATE_RED_CIRCLE_TOP
 from module.logger import logger
@@ -307,6 +307,12 @@ class InfoHandler(ModuleBase):
 
                 while 1:
                     self.device.screenshot()
+
+                    # LIPASS 登录验证码，需要人工接管
+                    if self.appear(LIPASS_CAPTCHA, offset=30):
+                        logger.critical('LiPass captcha detected, request human takeover')
+                        raise CaptchaRequired()
+
                     if self.appear(LIPASS_CHECK, offset=(30, 30)):
                         break
                     if self.appear(LIPASS_PASSWORD_CHECK, offset=(30, 30)) and self.appear_then_click(
