@@ -24,15 +24,19 @@ def _input(window_name='Game'):
 
 
 class BackgroundControlTests(unittest.TestCase):
-    def test_automation_scroll_uses_swipe_coordinates(self):
+    def test_automation_background_scroll_uses_inertia_free_scroll(self):
         automation = Automation.__new__(Automation)
         automation.config = SimpleNamespace(PCClientInfo_ControlScheme='postmessage')
         automation.current_window = SimpleNamespace(offset=(100, 200))
         automation.mouse_swipe = Mock()
+        automation.mouse_move = Mock()
+        automation.mouse_scroll = Mock()
 
         automation.swipe((10, 20), (10, 320), speed=7, method='scroll')
 
-        automation.mouse_swipe.assert_called_once_with((110, 220), (110, 520), speed=7)
+        automation.mouse_swipe.assert_not_called()
+        automation.mouse_move.assert_called_once_with(110, 370)
+        automation.mouse_scroll.assert_called_once_with(4, direction=1)
 
     def test_automation_foreground_scroll_uses_wheel(self):
         automation = Automation.__new__(Automation)
@@ -146,8 +150,8 @@ class BackgroundControlTests(unittest.TestCase):
         self.assertEqual(
             handler._postmessage_swipe.call_args_list,
             [
-                call((100, 200), (100, 135), 0.2),
-                call((100, 200), (100, 135), 0.2),
+                call((100, 200), (100, 135), 0.2, release_delay=0.12),
+                call((100, 200), (100, 135), 0.2, release_delay=0.12),
             ],
         )
         sleep.assert_any_call(0.1)
@@ -171,6 +175,26 @@ class BackgroundControlTests(unittest.TestCase):
         handler._block_input.assert_called_once_with()
         handler._unblock_input.assert_called_once_with()
         self.assertEqual(set_cursor.call_args_list[-1].args, ((300, 400),))
+
+    def test_inertia_free_scroll_waits_at_endpoint_before_release(self):
+        handler = _input()
+        handler._ensure_window = Mock(return_value=True)
+        handler.interaction = Mock()
+        handler.interaction.hwnd = 42
+        handler._to_client = Mock(return_value=(10, 20))
+        handler.interaction.update_mouse_pos.side_effect = [1001, 1002, 1003, 1004, 1005, 1006, 1007]
+        events = Mock()
+        events.attach_mock(handler.interaction.post, 'post')
+
+        with (
+            patch('module.device.win.ok_interaction.input.win32api.SetCursorPos'),
+            patch('module.device.win.ok_interaction.input.time.sleep') as sleep,
+        ):
+            events.attach_mock(sleep, 'sleep')
+            handler._postmessage_swipe((10, 20), (30, 40), 0.15, release_delay=0.12)
+
+        self.assertEqual(events.mock_calls[-2], call.sleep(0.12))
+        self.assertEqual(events.mock_calls[-1], call.post(0x0202, 0, 1007, hwnd=42))
 
     def test_swipe_does_not_change_foreground_window(self):
         handler = _input()

@@ -228,7 +228,12 @@ class PostMessageInput(Input):
             position = self._mouse_screen_position or win32api.GetCursorPos()
             distance = 65 * int(direction)
             for index in range(max(0, int(count))):
-                self._postmessage_swipe(position, (position[0], position[1] + distance), 0.2)
+                self._postmessage_swipe(
+                    position,
+                    (position[0], position[1] + distance),
+                    0.2,
+                    release_delay=0.12,
+                )
                 if index + 1 < count:
                     time.sleep(0.1)
             logger.debug(f'Cursor-assisted PostMessage scroll {count} x {direction}')
@@ -257,7 +262,7 @@ class PostMessageInput(Input):
         self._operate(lambda: self._postmessage_swipe(p1, p2, duration), block=True, restore_cursor=True)
         logger.debug(f'Cursor-assisted PostMessage swipe ({p1[0]}, {p1[1]}) -> ({p2[0]}, {p2[1]})')
 
-    def _postmessage_swipe(self, p1, p2, duration):
+    def _postmessage_swipe(self, p1, p2, duration, release_delay=0):
         """Perform one cursor-assisted drag inside an existing protected operation."""
         if not self._ensure_window():
             return
@@ -269,6 +274,7 @@ class PostMessageInput(Input):
         last_target = start_target
         last_pos = start_pos
         distance_x, distance_y = p2[0] - p1[0], p2[1] - p1[1]
+        completed = False
         try:
             win32api.SetCursorPos((int(p1[0]), int(p1[1])))
             time.sleep(0.025)
@@ -292,5 +298,9 @@ class PostMessageInput(Input):
                 last_target = target
                 last_pos = move_pos
                 time.sleep(duration / steps)
+            completed = True
         finally:
+            if completed and release_delay:
+                # 保持终点一段时间，让游戏在松手前采样到零速度，避免滚动惯性。
+                time.sleep(release_delay)
             self.interaction.post(win32con.WM_LBUTTONUP, 0, last_pos, hwnd=last_target)
