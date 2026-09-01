@@ -326,6 +326,9 @@ fn post(host: String, port: u16, path: &'static str) {
 }
 
 fn install_shortcuts(app: &AppHandle, config: &DesktopConfig) -> Result<()> {
+    if !config.shortcuts_enabled {
+        return Ok(());
+    }
     let api_paths = HashMap::from([
         ("UPDATE", "/api/update"),
         ("START", "/api/all/start"),
