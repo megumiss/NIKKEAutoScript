@@ -762,6 +762,14 @@ class NikkeAutoScript:
             #     self.config.task_call('Restart')
             # Get task
             task = self.get_next_task()
+            # Skip first restart
+            # 须在令牌等待与 device 初始化之前：win 平台创建 device 会拉起游戏，
+            # 且被跳过的任务不应占用串行令牌
+            if self.is_first_task and task == 'Restart':
+                logger.info('Skip task `Restart` at scheduler start')
+                self.config.task_delay(server_update=True)
+                del_cached_property(self, 'config')
+                continue
             # 串行模式：等待令牌，等待过则重新取任务
             if not self.serial_wait_turn(task):
                 del_cached_property(self, 'config')
@@ -771,12 +779,6 @@ class NikkeAutoScript:
                 # Init device and change server
                 _ = self.device
                 self.device.config = self.config
-                # Skip first restart
-                if self.is_first_task and task == 'Restart':
-                    logger.info('Skip task `Restart` at scheduler start')
-                    self.config.task_delay(server_update=True)
-                    del_cached_property(self, 'config')
-                    continue
 
                 # Run
                 logger.info(f'Scheduler: Start task `{task}`')
