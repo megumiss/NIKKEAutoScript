@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
 import { t } from '../i18n'
@@ -29,19 +29,21 @@ export const useUpdateStore = defineStore('update', () => {
   // mirrors the source update card but drives window.__TAURI__.core.invoke.
   // In plain browsers the bridge is absent and the card stays disabled.
   const desktopInvoke = (): any => (window as any).__TAURI__?.core?.invoke
-  const isDesktopShell = Boolean(desktopInvoke())
+  // Must stay a computed: storeToRefs() only extracts refs/computed, a plain
+  // boolean would arrive in views as undefined (always falsy).
+  const isDesktopShell = computed(() => Boolean(desktopInvoke()))
   const desktopUpdate = ref<any>(null)
   const desktopChecking = ref(false)
   const desktopApplying = ref(false)
   let desktopUpdatePollTimer = 0
   async function refreshDesktopUpdate() {
     window.clearTimeout(desktopUpdatePollTimer)
-    if (!isDesktopShell) return
+    if (!isDesktopShell.value) return
     try { desktopUpdate.value = await desktopInvoke()('desktop_update_status') } catch { return }
     if (isSettings() && desktopUpdate.value?.checking) desktopUpdatePollTimer = window.setTimeout(refreshDesktopUpdate, 3000)
   }
   async function checkDesktopUpdate() {
-    if (desktopChecking.value || !isDesktopShell) return
+    if (desktopChecking.value || !isDesktopShell.value) return
     desktopChecking.value = true
     try {
       desktopUpdate.value = await desktopInvoke()('desktop_update_check')
@@ -55,7 +57,7 @@ export const useUpdateStore = defineStore('update', () => {
     } catch (exception: any) { toast.error = String(exception?.message || exception) } finally { desktopChecking.value = false }
   }
   async function applyDesktopUpdate() {
-    if (desktopApplying.value || !isDesktopShell) return
+    if (desktopApplying.value || !isDesktopShell.value) return
     useModalStore().openConfirmModal(t('更新启动器将中断正在运行的任务并自动重启程序，确定继续？'), async () => {
       desktopApplying.value = true
       // A successful apply exits and relaunches the shell, so the invoke may
@@ -95,7 +97,7 @@ export const useUpdateStore = defineStore('update', () => {
   // The launcher checks for its own updates once in the background at startup;
   // surface the same kind of toast as the source updater when it found one.
   async function notifyDesktopUpdate() {
-    if (!isDesktopShell) return
+    if (!isDesktopShell.value) return
     try { desktopUpdate.value = await desktopInvoke()('desktop_update_status') } catch { return }
     if (desktopUpdate.value?.updateAvailable) toast.notify(t('启动器有新版本，可在更新页更新'), 'ok', 0, { label: t('前往更新'), run: () => router.push('/settings') })
   }
