@@ -6,9 +6,9 @@
 
 # NIKKEAutoScript
 
-胜利女神：NIKKE 自动日常脚本，支持 PC / ARM模拟器（**国服除外**）。Fork 自 [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+胜利女神：NIKKE 自动日常脚本，支持 PC / 安卓真机 / ARM模拟器（**国服除外**）。Fork 自 [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
-GODDESS OF VICTORY: NIKKE automatic daily script, supporting PC / ARM emulators, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+GODDESS OF VICTORY: NIKKE automatic daily script, supporting PC / Android phones / ARM emulators, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 **🌐 官网 / Official Website: [nkas.megumiss.top](https://nkas.megumiss.top)**
 
@@ -37,11 +37,13 @@ GODDESS OF VICTORY: NIKKE automatic daily script, supporting PC / ARM emulators,
 - **限时作战**：协同作战、单人突击、联盟突袭
 - **剧情活动**：剧情活动、自动推图、自动扫荡、小游戏日常、商店购买
 - **地面**：地面每日
-- **妮游社**：妮游社日常、CDK 自动兑换、妮游社兑换、Cookie 自动续期
+- **妮游社**：妮游社日常、CDK 自动兑换、妮游社兑换、一键登录自动获取 Cookie、Cookie 自动续期
 - **免费礼包**：STEPUP 礼包、每日礼包、每周礼包、每月礼包
 - **数据图表**：物品统计、异常拦截统计
 - **工具**：自动爬塔、半自动点击（半自动主线）、花絮鉴赏、CDK 兑换、屏幕旋转、Hosts 修改、活动倒计时
-- **其他**：PC 客户端/ARM模拟器支持，PC 端多屏幕支持；任务自动启动，快捷键自定义；自动更新、定时更新；实例多开、顺序执行；Docker 部署；通知推送
+- **运行平台**：PC 客户端、安卓真机、ARM 模拟器；PC 端多屏幕支持、VDD 虚拟屏幕；游戏窗口后台控制
+- **调度与控制**：调度设置集中管理任务执行周期/时间/启用；任务自动启动；快捷键自定义；多实例顺序执行
+- **其他**：自动更新、定时更新；实例多开；游戏多开；Docker 部署；通知推送
 
 ---
 

@@ -6,7 +6,7 @@
 
 # NIKKEAutoScript
 
-GODDESS OF VICTORY: NIKKE automatic daily script, supporting PC / ARM emulators, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
+GODDESS OF VICTORY: NIKKE automatic daily script, supporting PC / Android phones / ARM emulators, **except the Chinese server (CN)**. Forked from [NIKKEAutoScript](https://github.com/takagisanmie/NIKKEAutoScript)
 
 **🌐 Official Website: [nkas.megumiss.top](https://nkas.megumiss.top)**
 
@@ -34,11 +34,13 @@ GODDESS OF VICTORY: NIKKE automatic daily script, supporting PC / ARM emulators,
 - **Limited-time operations**: Co-op, solo raid, union raid
 - **Story events**: Story events, auto map progression, auto sweep, minigame dailies, shop purchases
 - **Surface**: Surface dailies
-- **Blablalink**: Daily missions, auto CDK redemption, point exchange, cookie auto-renewal
+- **Blablalink**: Daily missions, auto CDK redemption, point exchange, one-click login to auto-fetch cookie, cookie auto-renewal
 - **Gifts**: STEPUP gift, daily gift, weekly gift, monthly gift
 - **Data charts**: Item statistics, interception statistics
 - **Tools**: Auto tower, semi-auto clicking (semi-auto main story), highlight viewing, CDK redemption, screen rotation, Hosts modification, event countdown
-- **Others**: PC client/ARM emulator support, multi-monitor support; automatic task startup, custom hotkeys; auto and scheduled updates; multi-instance and sequential execution; Docker deployment; notifications
+- **Platforms**: PC client, Android phones, ARM emulators; multi-monitor support, VDD virtual display; background control of the game window
+- **Scheduling & Control**: schedule settings for centrally managing task cycles/times/enabled state; automatic task startup; custom hotkeys; sequential execution of instances
+- **Others**: auto and scheduled updates; multiple instances; multiple game clients; Docker deployment; notifications
 
 ---
 
