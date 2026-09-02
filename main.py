@@ -88,7 +88,7 @@ class NikkeAutoScript:
 
             return device
         except RequestHumanTakeover:
-            self._post_action()
+            self._post_action_safely()
             logger.critical('Request human takeover')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
@@ -99,7 +99,7 @@ class NikkeAutoScript:
                 )
             exit(1)
         except AccountError:
-            self._post_action()
+            self._post_action_safely()
             logger.critical('Game offline, please relogin or input account')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
@@ -110,7 +110,7 @@ class NikkeAutoScript:
                 )
             exit(1)
         except ScreenResolutionNotEnough:
-            self._post_action()
+            self._post_action_safely()
             logger.critical('Screen resolution not enough')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
@@ -121,7 +121,7 @@ class NikkeAutoScript:
                 )
             exit(1)
         except Exception as e:
-            self._post_action()
+            self._post_action_safely()
             logger.exception(e)
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
@@ -165,7 +165,7 @@ class NikkeAutoScript:
             return False
         except (GameStuckError, GameTooManyClickError, ScreenshotError) as e:
             logger.error(e)
-            self.save_error_log()
+            self._save_error_log_safely()
             logger.warning(f'Game stuck, {self.device.package} will be restarted in 10 seconds')
             logger.warning('If you are playing by hand, please stop NKAS')
             self.config.task_call('Restart')
@@ -175,7 +175,7 @@ class NikkeAutoScript:
             logger.info('Game server may be under maintenance or network may be broken, check server status now')
             # self.device.app_stop()
             logger.critical('Game page unknown')
-            image_path = self.save_error_log()
+            image_path = self._save_error_log_safely()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     config=self.config,
@@ -184,11 +184,14 @@ class NikkeAutoScript:
                     always=self.config.Notification_WinOnePush,
                     image_path=image_path,
                 )
-            self._post_action()
+            self._post_action_safely()
             exit(1)
         except GameServerUnderMaintenance as e:
             logger.error(e)
-            self.device.app_stop()
+            try:
+                self.device.app_stop()
+            except Exception as stop_error:
+                logger.warning(f'Failed to stop game after maintenance error: {stop_error}')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     config=self.config,
@@ -196,7 +199,7 @@ class NikkeAutoScript:
                     content_key='GameServerUnderMaintenance',
                     always=self.config.Notification_WinOnePush,
                 )
-            self._post_action()
+            self._post_action_safely()
             exit(1)
         except CaptchaRequired:
             logger.critical('Captcha required, please handle manually')
@@ -212,13 +215,15 @@ class NikkeAutoScript:
         except RequestHumanTakeover:
             logger.critical('Request human takeover')
             if self.config.Notification_WhenDailyTaskCrashed:
+                image_path = self._save_error_log_safely()
                 handle_notify(
                     config=self.config,
                     title_key='crashed',
                     content_key='RequestHumanTakeover',
                     always=self.config.Notification_WinOnePush,
+                    image_path=image_path,
                 )
-            self._post_action()
+            self._post_action_safely()
             exit(1)
         except AccountError:
             logger.critical('Game offline, please relogin or input account')
@@ -229,11 +234,11 @@ class NikkeAutoScript:
                     content_key='AccountError',
                     always=self.config.Notification_WinOnePush,
                 )
-            self._post_action()
+            self._post_action_safely()
             exit(1)
         except Exception as e:
             logger.exception(e)
-            image_path = self.save_error_log()
+            image_path = self._save_error_log_safely()
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     config=self.config,
@@ -242,7 +247,7 @@ class NikkeAutoScript:
                     always=self.config.Notification_WinOnePush,
                     image_path=image_path,
                 )
-            self._post_action()
+            self._post_action_safely()
             exit(1)
 
     def _post_action(self):
@@ -262,6 +267,13 @@ class NikkeAutoScript:
             from module.device.win.vdd import vdd_auto_stop
             vdd_auto_stop()
 
+    def _post_action_safely(self):
+        """Run cleanup during exception handling without masking the original error."""
+        try:
+            self._post_action()
+        except Exception as e:
+            logger.exception(f'Failed to run post-action cleanup: {e}')
+
     def save_error_log(self):
         """
         Save last 60 screenshots in ./log/error/<timestamp>
@@ -270,34 +282,65 @@ class NikkeAutoScript:
         from module.base.utils import save_image
         from module.handler.sensitive_info import handle_sensitive_logs
 
-        if not os.path.exists('./log/error'):
-            os.mkdir('./log/error')
+        os.makedirs('./log/error', exist_ok=True)
         folder = f'./log/error/{int(time.time() * 1000)}'
         logger.warning(f'Saving error: {folder}')
-        os.mkdir(folder)
+        os.makedirs(folder, exist_ok=True)
         last_image_path = None
-        for data in self.device.screenshot_deque:
-            image_time = datetime.strftime(data['time'], '%Y-%m-%d_%H-%M-%S-%f')
+        device = self.__dict__.get('device')
+        screenshots = list(getattr(device, 'screenshot_deque', ())) if device else []
+        if not screenshots and device:
+            image = getattr(device, 'image', None)
+            if image is None:
+                current_window = getattr(device, 'current_window', None)
+                image = getattr(current_window, 'image', None)
+            if image is not None:
+                screenshots = [{'time': datetime.now(), 'image': image}]
+
+        for data in screenshots:
+            if not isinstance(data, dict):
+                logger.warning('Skip malformed error screenshot record')
+                continue
+            image = data.get('image')
+            if image is None:
+                logger.warning('Skip empty error screenshot record')
+                continue
+            image_time = datetime.strftime(data.get('time', datetime.now()), '%Y-%m-%d_%H-%M-%S-%f')
             # 遮挡个人消息
             # image = handle_sensitive_image(data['image'])
-            image = data['image']
             filepath = f'{folder}/{image_time}.png'
-            save_image(image, filepath)
+            try:
+                save_image(image, filepath)
+            except (TypeError, ValueError, OSError) as e:
+                logger.warning(f'Failed to save error screenshot: {e}')
+                continue
             last_image_path = filepath
-        with open(logger.log_file, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            start = 0
-            for index, line in enumerate(lines):
-                line = line.strip(' \r\t\n')
-                # 从最后一个任务截取
-                if re.match('^═{15,}$', line):
-                    start = index
-            lines = lines[start - 2 :]
-            # 替换真实路径
-            lines = handle_sensitive_logs(lines)
+
+        lines = []
+        log_file = getattr(logger, 'log_file', None)
+        if log_file and os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                start = 0
+                for index, line in enumerate(lines):
+                    line = line.strip(' \r\t\n')
+                    # 从最后一个任务截取
+                    if re.match('^═{15,}$', line):
+                        start = index
+                lines = lines[start - 2 :]
+                # 替换真实路径
+                lines = handle_sensitive_logs(lines)
         with open(f'{folder}/log.txt', 'w', encoding='utf-8') as f:
             f.writelines(lines)
         return last_image_path
+
+    def _save_error_log_safely(self):
+        """Save diagnostic data without masking the original exception path."""
+        try:
+            return self.save_error_log()
+        except Exception as e:
+            logger.exception(f'Failed to save error log for notification: {e}')
+            return None
 
     def restart(self):
         from module.handler.login import LoginHandler
@@ -817,14 +860,16 @@ class NikkeAutoScript:
                 )
                 logger.critical('Request human takeover')
                 if self.config.Notification_WhenDailyTaskCrashed:
+                    image_path = self._save_error_log_safely()
                     handle_notify(
                         config=self.config,
                         title_key='crashed',
                         content_key=['RequestHumanTakeover', 'TaskFailedThreeTimes'],
                         always=self.config.Notification_WinOnePush,
                         task=task,
+                        image_path=image_path,
                     )
-                self._post_action()
+                self._post_action_safely()
                 exit(1)
 
             if success:
