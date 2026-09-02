@@ -275,34 +275,48 @@ class BackgroundControlTests(unittest.TestCase):
         handler = _input()
         handler._ensure_window = Mock(return_value=True)
         handler.hwnd_window.top_hwnd = 42
-        handler.interaction = Mock()
-        handler.interaction.make_key_lparam.side_effect = [0x10001, 0xC0000001]
+        handler._foreground_send_key = Mock(return_value=True)
 
-        with patch('module.device.win.ok_interaction.input._key_name_to_vk', return_value=(0x41, False)):
+        handler.press_key('a', wait_time=0.1)
+
+        handler._foreground_send_key.assert_called_once_with(42, 'a', 0.1)
+
+    def test_background_keyboard_reports_undelivered_key(self):
+        handler = _input()
+        handler._ensure_window = Mock(return_value=True)
+        handler.hwnd_window.top_hwnd = 42
+        handler._foreground_send_key = Mock(return_value=False)
+
+        with patch('module.device.win.ok_interaction.input.logger.warning') as warning:
             handler.press_key('a', wait_time=0.1)
 
-        handler.interaction.try_activate.assert_called_once_with()
-        handler.interaction.send_key.assert_called_once_with(0x41, wait_time=0.1, hwnd=42)
-        self.assertEqual(handler.interaction._dynamic_target_hwnd, 0)
+        warning.assert_called_once_with('Foreground key press a was not delivered')
+
+    def test_foreground_keyboard_restores_previous_window(self):
+        handler = _input()
+        handler.foreground_switcher = Mock()
+
+        with (
+            patch('module.device.win.ok_interaction.input.win32gui.GetForegroundWindow', side_effect=[100, 42]),
+            patch('module.device.win.ok_interaction.input.win32gui.IsWindow', return_value=True),
+            patch('module.device.win.ok_interaction.input.win32gui.SetForegroundWindow') as set_foreground,
+            patch.object(Input, 'secretly_press_key') as send_input,
+        ):
+            self.assertTrue(handler._foreground_send_key(42, 'a', 0.1))
+
+        handler.foreground_switcher.assert_called_once_with(42)
+        send_input.assert_called_once_with(handler, 'a', wait_time=0.1)
+        set_foreground.assert_called_once_with(100)
 
     def test_background_keyboard_holds_shift_for_shifted_character(self):
         handler = _input()
         handler._ensure_window = Mock(return_value=True)
         handler.hwnd_window.top_hwnd = 42
-        handler.interaction = Mock()
-        handler.interaction.make_key_lparam.side_effect = [0x10010, 0xC0000010]
+        handler._foreground_send_key = Mock(return_value=True)
 
-        with patch('module.device.win.ok_interaction.input._key_name_to_vk', return_value=(0x31, True)):
-            handler.secretly_press_key('!', wait_time=0.1)
+        handler.secretly_press_key('!', wait_time=0.1)
 
-        self.assertEqual(
-            handler.interaction.post.call_args_list,
-            [
-                call(0x0100, 0x10, 0x10010, hwnd=42),
-                call(0x0101, 0x10, 0xC0000010, hwnd=42),
-            ],
-        )
-        handler.interaction.send_key.assert_called_once_with(0x31, wait_time=0.1, hwnd=42)
+        handler._foreground_send_key.assert_called_once_with(42, '!', 0.1)
 
     def test_key_lparam_contains_scan_code_and_key_up_bits(self):
         with patch('module.device.win.ok_interaction.post_message.win32api.MapVirtualKey', return_value=0x4D):

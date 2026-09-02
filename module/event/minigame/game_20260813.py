@@ -30,8 +30,8 @@ def start_game(self, skip_first_screenshot=True):
             continue
 
         # 关闭弹窗
-        if self.appear_then_click(MINI_GAME_EXEC_CLOSE, offset=30, interval=1, static=False):
-            continue
+        # if self.appear_then_click(MINI_GAME_EXEC_CLOSE, offset=30, interval=1, static=False):
+        #     continue
 
         if self.appear(MINI_GAME_EXEC_CHECK, offset=10):
             break
@@ -60,7 +60,7 @@ def start_game(self, skip_first_screenshot=True):
                 self.device.sleep(1)
 
             # 仅 PC 客户端支持按键操作
-            if self.config.CLIENT_PLATFORM == 'win' and self.config.PCClientInfo_ControlScheme == 'pyautogui':
+            if self.config.CLIENT_PLATFORM == 'win':
                 self.device.secretly_press_key('w', wait_time=0.2)
                 self.device.secretly_press_key(random.choice(['a', 'd']), wait_time=0.2)
             else:

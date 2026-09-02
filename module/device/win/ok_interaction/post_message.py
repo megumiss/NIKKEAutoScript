@@ -36,13 +36,15 @@ class PostMessageInteraction:
         return self.hwnd_window.top_hwnd if self.hwnd_window.top_hwnd else self.hwnd_window.hwnd
 
     def post(self, message, wParam=0, lParam=0, hwnd=None):
-        """向目标窗口 PostMessage，失败仅记录日志不抛异常"""
+        """向目标窗口 PostMessage，返回是否成功提交。"""
         if hwnd is None:
             hwnd = self.hwnd
         try:
             win32gui.PostMessage(hwnd, message, wParam, lParam)
+            return True
         except Exception as e:
             logger.error(f'PostMessage error {hwnd}: {e}')
+            return False
 
     def move(self, x, y, down_btn=0):
         long_pos = self.update_mouse_pos(x, y, True)
@@ -66,18 +68,30 @@ class PostMessageInteraction:
             value |= (1 << 30) | (1 << 31)
         return value
 
-    def send_key(self, vk, wait_time=0.2, key_up=True, hwnd=None):
+    def send_key(self, vk, wait_time=0.2, key_up=True, hwnd=None, char_code=None):
         """Post one virtual-key press without changing the foreground window."""
         target = hwnd or self.hwnd
         down_lparam = self.make_key_lparam(vk)
-        self.post(win32con.WM_KEYDOWN, vk, down_lparam, hwnd=target)
+        sent = self.post(win32con.WM_KEYDOWN, vk, down_lparam, hwnd=target)
+        if char_code is not None:
+            sent = self.post(win32con.WM_CHAR, char_code, down_lparam, hwnd=target) and sent
         time.sleep(wait_time)
         if key_up:
-            self.post(win32con.WM_KEYUP, vk, self.make_key_lparam(vk, key_up=True), hwnd=target)
+            sent = self.post(win32con.WM_KEYUP, vk, self.make_key_lparam(vk, key_up=True), hwnd=target) and sent
+        return sent
+
+    def input_text(self, text, hwnd=None):
+        """Post text characters directly, matching Win32 edit-control behavior."""
+        target = hwnd or self.hwnd
+        for char in str(text):
+            if not self.post(win32con.WM_CHAR, ord(char), 0, hwnd=target):
+                return False
+            time.sleep(0.01)
+        return True
 
     def try_activate(self):
         # PostMessage WM_ACTIVATE 消息假激活，不调用 SetForegroundWindow，
-        # 不改变真实前台窗口；后台输入需要它让游戏接收消息
+        # 不改变真实前台窗口；鼠标后台消息需要它让游戏接收消息
         base_hwnd = self.hwnd_window.hwnd
         current_hwnd = self.hwnd
 

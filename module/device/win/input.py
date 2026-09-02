@@ -108,7 +108,7 @@ def _send_scan_key(vk, key_up=False):
     ii = _INPUT_UNION()
     ii.ki = _KEYBDINPUT(0, scan, flags, 0, ctypes.pointer(extra))
     x = _INPUT(_INPUT_KEYBOARD, ii)
-    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+    return ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x)) == 1
 
 
 class Input:
@@ -177,16 +177,21 @@ class Input:
         """(不输出具体键位)模拟键盘按键，可以指定按下的时间"""
         try:
             vk, need_shift = _key_name_to_vk(key)
+            sent = True
             if need_shift:
-                _send_scan_key(_VK_SHIFT)
-            _send_scan_key(vk)
+                sent = _send_scan_key(_VK_SHIFT) and sent
+            sent = _send_scan_key(vk) and sent
             time.sleep(wait_time)  # 等待指定的时间
-            _send_scan_key(vk, key_up=True)
+            sent = _send_scan_key(vk, key_up=True) and sent
             if need_shift:
-                _send_scan_key(_VK_SHIFT, key_up=True)
+                sent = _send_scan_key(_VK_SHIFT, key_up=True) and sent
+            if not sent:
+                logger.warning('SendInput key press was not delivered')
             logger.debug('键盘按下 *')
+            return sent
         except Exception as e:
             logger.error(f'键盘按下 * 出错：{e}')
+            return False
 
     def press_mouse(self, wait_time=0.2):
         """模拟鼠标左键的点击操作，可以指定按下的时间"""

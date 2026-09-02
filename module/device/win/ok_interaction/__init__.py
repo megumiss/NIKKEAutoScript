@@ -11,8 +11,8 @@ ok-script 许可证为 AGPL-3.0（https://github.com/ok-oldking/ok-script），
 适配改动（相对 ok 原版）：
 - ok.util.logger -> module.logger
 - ok 的 BaseInteraction / capture 体系 -> 由调用方提供窗口信息（HwndWindowAdapter）
-- 键盘输入移植为 WM_KEYDOWN / WM_KEYUP 窗口消息，游戏窗口可在后台接收；
-  启动器仍回退到 module.device.win.input.Input 的前台输入链路
+- 鼠标操作使用后台 PostMessage；Unity 游戏键盘操作改用短暂前台的
+  module.device.win.input.Input.SendInput 链路，启动器同样回退到前台输入
 - ok 的 swipe 已扩展为光标辅助的后台拖拽消息，滚动同样转换为拖拽：真实光标沿路径移动，
   鼠标按键和移动状态通过 PostMessage 发送到游戏窗口
 """

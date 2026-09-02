@@ -106,7 +106,11 @@ class Automation:
         if str(self.config.PCClientInfo_ControlScheme) == 'postmessage':
             from module.device.win.ok_interaction.input import PostMessageInput
 
-            self.input_handler = PostMessageInput(lambda: self.current_window, hwnd_resolver=self.get_current_window_hwnd)
+            self.input_handler = PostMessageInput(
+                lambda: self.current_window,
+                hwnd_resolver=self.get_current_window_hwnd,
+                foreground_switcher=self.set_foreground_window_with_retry,
+            )
             logger.info('Control scheme: postmessage')
         else:
             self.input_handler = Input()
