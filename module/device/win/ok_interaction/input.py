@@ -134,17 +134,17 @@ class PostMessageInput(Input):
         """短暂激活游戏后使用系统级输入；启动器仍使用前台输入。"""
         if not self._use_postmessage():
             return super().press_key(key, wait_time=wait_time)
-        self._post_key(key, wait_time=wait_time, log_key=True)
+        return self._post_key(key, wait_time=wait_time, log_key=True)
 
     def secretly_press_key(self, key, wait_time=0.2):
         """短暂激活游戏后使用系统级输入，但不记录具体键位。"""
         if not self._use_postmessage():
             return super().secretly_press_key(key, wait_time=wait_time)
-        self._post_key(key, wait_time=wait_time, log_key=False)
+        return self._post_key(key, wait_time=wait_time, log_key=False)
 
     def _post_key(self, key, wait_time=0.2, log_key=False):
         if not self._ensure_window():
-            return
+            return False
         with self._input_lock:
             try:
                 target = self.hwnd_window.top_hwnd or self.hwnd_window.hwnd
@@ -152,14 +152,16 @@ class PostMessageInput(Input):
                 if not sent:
                     label = key if log_key else '*'
                     logger.warning(f'Foreground key press {label} was not delivered')
-                    return
+                    return False
                 if log_key:
                     logger.debug(f'Foreground SendInput key press {key}')
                 else:
                     logger.debug('Foreground SendInput key press *')
+                return True
             except Exception as e:
                 label = key if log_key else '*'
                 logger.error(f'Foreground SendInput key press {label} error: {e}')
+                return False
 
     def _foreground_send_key(self, target, key, wait_time):
         """Temporarily foreground the game so Unity can observe SendInput."""

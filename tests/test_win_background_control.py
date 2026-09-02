@@ -292,6 +292,21 @@ class BackgroundControlTests(unittest.TestCase):
 
         warning.assert_called_once_with('Foreground key press a was not delivered')
 
+    def test_background_keyboard_returns_false_when_window_is_missing(self):
+        handler = _input()
+        handler._ensure_window = Mock(return_value=False)
+
+        self.assertFalse(handler.press_key('a', wait_time=0.1))
+
+    def test_background_keyboard_returns_false_on_send_exception(self):
+        handler = _input()
+        handler._ensure_window = Mock(return_value=True)
+        handler.hwnd_window.top_hwnd = 42
+        handler._foreground_send_key = Mock(side_effect=RuntimeError('send failed'))
+
+        with patch('module.device.win.ok_interaction.input.logger.error'):
+            self.assertFalse(handler.secretly_press_key('a', wait_time=0.1))
+
     def test_foreground_keyboard_restores_previous_window(self):
         handler = _input()
         handler.foreground_switcher = Mock()
