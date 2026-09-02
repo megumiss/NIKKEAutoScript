@@ -3,7 +3,8 @@ PostMessageInput：ok 控制方案策略层，移植自 ok-bd2 的 BD2Interactio
 （src/interaction/BD2Interaction.py，基于 ok-script PostMessageInteraction）。
 
 与 module.device.win.input.Input 接口完全对齐（mouse_click / mouse_down /
-mouse_up / mouse_move / mouse_scroll / mouse_swipe / press_mouse_click），
+mouse_up / mouse_move / mouse_scroll / mouse_swipe / press_mouse_click /
+press_key / secretly_press_key），
 由 Automation._init_input() 按 PCClientInfo.ControlScheme 选择。
 
 策略与现有 pyautogui 方案（全局物理输入）的区别：
@@ -31,7 +32,7 @@ import win32api
 import win32con
 import win32gui
 
-from module.device.win.input import Input
+from module.device.win.input import Input, _key_name_to_vk
 from module.device.win.ok_interaction.hwnd_window import HwndWindowAdapter
 from module.device.win.ok_interaction.post_message import PostMessageInteraction
 from module.logger import logger
@@ -122,6 +123,55 @@ class PostMessageInput(Input):
         base_hwnd = self.hwnd_window.top_hwnd or self.hwnd_window.hwnd
         origin_x, origin_y = win32gui.ClientToScreen(base_hwnd, (0, 0))
         return x - origin_x, y - origin_y
+
+    # ------------------------------------------------------------------
+    # 键盘（窗口消息方案，不改变真实前台窗口）
+    # ------------------------------------------------------------------
+    def press_key(self, key, wait_time=0.2):
+        """向游戏窗口投递一次按键；启动器仍使用前台输入。"""
+        if not self._use_postmessage():
+            return super().press_key(key, wait_time=wait_time)
+        self._post_key(key, wait_time=wait_time, log_key=True)
+
+    def secretly_press_key(self, key, wait_time=0.2):
+        """向游戏窗口投递一次按键，但不记录具体键位。"""
+        if not self._use_postmessage():
+            return super().secretly_press_key(key, wait_time=wait_time)
+        self._post_key(key, wait_time=wait_time, log_key=False)
+
+    def _post_key(self, key, wait_time=0.2, log_key=False):
+        if not self._ensure_window():
+            return
+        with self._input_lock:
+            try:
+                vk, need_shift = _key_name_to_vk(key)
+                # 键盘没有坐标可用于重新命中子窗口，始终使用当前顶层窗口，
+                # 避免窗口切换后沿用旧的动态子窗口句柄。
+                self.interaction._dynamic_target_hwnd = 0
+                target = self.hwnd_window.top_hwnd or self.hwnd_window.hwnd
+                self.interaction.try_activate()
+                if need_shift:
+                    self.interaction.post(
+                        win32con.WM_KEYDOWN,
+                        0x10,
+                        self.interaction.make_key_lparam(0x10),
+                        hwnd=target,
+                    )
+                self.interaction.send_key(vk, wait_time=wait_time, hwnd=target)
+                if need_shift:
+                    self.interaction.post(
+                        win32con.WM_KEYUP,
+                        0x10,
+                        self.interaction.make_key_lparam(0x10, key_up=True),
+                        hwnd=target,
+                    )
+                if log_key:
+                    logger.debug(f'PostMessage key press {key}')
+                else:
+                    logger.debug('PostMessage key press *')
+            except Exception as e:
+                label = key if log_key else '*'
+                logger.error(f'PostMessage key press {label} error: {e}')
 
     # ------------------------------------------------------------------
     # 点击（BD2Interaction 正式版方案：SetCursorPos + PostMessage）

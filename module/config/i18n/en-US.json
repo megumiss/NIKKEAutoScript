@@ -531,7 +531,7 @@
     },
     "ControlScheme": {
       "name": "Control Scheme (BETA)",
-      "help": "pyautogui: a perfect foreground mode; simulates physical mouse input, and clicks, scrolling, and swipes occupy the real mouse.\npostmessage: an imperfect background mode; clicks, scrolling, and swipes are sent as window messages with brief real-cursor movement, and do not bring the game window to the foreground. In this mode, select PrintWindow as the screenshot method to avoid occluded captures. The launcher still requires foreground input.",
+      "help": "pyautogui: a perfect foreground mode; simulates physical mouse input, and clicks, scrolling, and swipes occupy the real mouse.\npostmessage: an imperfect background mode; clicks, scrolling, swipes, and ordinary keyboard presses are sent as window messages with brief real-cursor movement, and do not bring the game window to the foreground. Some DirectInput/Raw Input paths may ignore background keyboard messages. In this mode, select PrintWindow as the screenshot method to avoid occluded captures. The launcher still requires foreground input.",
       "pyautogui": "pyautogui (foreground mode)",
       "postmessage": "postmessage (background mode)"
     }

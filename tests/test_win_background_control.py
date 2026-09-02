@@ -7,6 +7,7 @@ from module.device.win.automation import Automation
 from module.device.win.input import Input
 from module.device.win.ok_interaction.hwnd_window import HwndWindowAdapter
 from module.device.win.ok_interaction.input import PostMessageInput
+from module.device.win.ok_interaction.post_message import PostMessageInteraction
 
 
 def _client(window_name):
@@ -269,3 +270,41 @@ class BackgroundControlTests(unittest.TestCase):
         handler._block_input.assert_called_once_with()
         handler._unblock_input.assert_called_once_with()
         self.assertEqual(set_cursor.call_args_list[-1].args, ((300, 400),))
+
+    def test_background_keyboard_posts_key_messages_to_current_top_window(self):
+        handler = _input()
+        handler._ensure_window = Mock(return_value=True)
+        handler.hwnd_window.top_hwnd = 42
+        handler.interaction = Mock()
+        handler.interaction.make_key_lparam.side_effect = [0x10001, 0xC0000001]
+
+        with patch('module.device.win.ok_interaction.input._key_name_to_vk', return_value=(0x41, False)):
+            handler.press_key('a', wait_time=0.1)
+
+        handler.interaction.try_activate.assert_called_once_with()
+        handler.interaction.send_key.assert_called_once_with(0x41, wait_time=0.1, hwnd=42)
+        self.assertEqual(handler.interaction._dynamic_target_hwnd, 0)
+
+    def test_background_keyboard_holds_shift_for_shifted_character(self):
+        handler = _input()
+        handler._ensure_window = Mock(return_value=True)
+        handler.hwnd_window.top_hwnd = 42
+        handler.interaction = Mock()
+        handler.interaction.make_key_lparam.side_effect = [0x10010, 0xC0000010]
+
+        with patch('module.device.win.ok_interaction.input._key_name_to_vk', return_value=(0x31, True)):
+            handler.secretly_press_key('!', wait_time=0.1)
+
+        self.assertEqual(
+            handler.interaction.post.call_args_list,
+            [
+                call(0x0100, 0x10, 0x10010, hwnd=42),
+                call(0x0101, 0x10, 0xC0000010, hwnd=42),
+            ],
+        )
+        handler.interaction.send_key.assert_called_once_with(0x31, wait_time=0.1, hwnd=42)
+
+    def test_key_lparam_contains_scan_code_and_key_up_bits(self):
+        with patch('module.device.win.ok_interaction.post_message.win32api.MapVirtualKey', return_value=0x4D):
+            self.assertEqual(PostMessageInteraction.make_key_lparam(0x4D), 0x4D0001)
+            self.assertEqual(PostMessageInteraction.make_key_lparam(0x4D, key_up=True), 0xC04D0001)

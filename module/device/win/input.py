@@ -37,6 +37,7 @@ _KEY_NAME_TO_VK = {
     'insert': 0x2D,
     'delete': 0x2E,
 }
+_KEY_NAME_TO_VK.update({f'f{index}': 0x6F + index for index in range(1, 25)})
 
 
 class _KEYBDINPUT(ctypes.Structure):

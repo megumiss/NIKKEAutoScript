@@ -11,8 +11,10 @@ https://github.com/ok-oldking/ok-script）。
 相对 ok 原版的适配：
 - 去除 BaseInteraction 基类与 capture 依赖，__init__ 只接收 hwnd_window
 - ok.util.logger -> module.logger
-- 键盘方法（send_key / input_text / make_lparam）未移植
+- 键盘输入通过 WM_KEYDOWN / WM_KEYUP 投递到目标窗口
 """
+import time
+
 import win32api
 import win32con
 import win32gui
@@ -52,6 +54,26 @@ class PostMessageInteraction:
 
     def deactivate(self, hwnd=None):
         self.post(win32con.WM_ACTIVATE, win32con.WA_INACTIVE, 0, hwnd=hwnd)
+
+    @staticmethod
+    def make_key_lparam(vk, key_up=False):
+        """Build the key message lParam expected by Win32 controls and games."""
+        scan = win32api.MapVirtualKey(vk, 0)
+        value = 1 | (scan << 16)
+        if vk in {0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E}:
+            value |= 1 << 24
+        if key_up:
+            value |= (1 << 30) | (1 << 31)
+        return value
+
+    def send_key(self, vk, wait_time=0.2, key_up=True, hwnd=None):
+        """Post one virtual-key press without changing the foreground window."""
+        target = hwnd or self.hwnd
+        down_lparam = self.make_key_lparam(vk)
+        self.post(win32con.WM_KEYDOWN, vk, down_lparam, hwnd=target)
+        time.sleep(wait_time)
+        if key_up:
+            self.post(win32con.WM_KEYUP, vk, self.make_key_lparam(vk, key_up=True), hwnd=target)
 
     def try_activate(self):
         # PostMessage WM_ACTIVATE 消息假激活，不调用 SetForegroundWindow，
