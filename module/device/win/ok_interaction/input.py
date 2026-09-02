@@ -3,7 +3,8 @@ PostMessageInput：ok 控制方案策略层，移植自 ok-bd2 的 BD2Interactio
 （src/interaction/BD2Interaction.py，基于 ok-script PostMessageInteraction）。
 
 与 module.device.win.input.Input 接口完全对齐（mouse_click / mouse_down /
-mouse_up / mouse_move / mouse_scroll / mouse_swipe / press_mouse_click），
+mouse_up / mouse_move / mouse_scroll / mouse_swipe / press_mouse_click /
+press_key / secretly_press_key），
 由 Automation._init_input() 按 PCClientInfo.ControlScheme 选择。
 
 策略与现有 pyautogui 方案（全局物理输入）的区别：
@@ -14,6 +15,8 @@ mouse_up / mouse_move / mouse_scroll / mouse_swipe / press_mouse_click），
   不调用 SetForegroundWindow
 - 滚动：NIKKE 不消费后台投递的 WM_MOUSEWHEEL，转换为光标辅助的后台拖拽；
   与滑动相同，仅短暂占用鼠标，不切换真实前台窗口
+- 键盘：Unity 游戏短暂切到前台后使用 SendInput，完成后恢复原前台窗口；
+  这是为了兼容读取 Raw Input/DirectInput 的游戏输入层。
 - 横切：_input_lock 互斥；_operate 记录/恢复光标，BlockInput 期间
   屏蔽用户输入防止干扰；try_activate 为 PostMessage 假激活
   （WM_ACTIVATE 消息），不调用 SetForegroundWindow 抢占真实前台
@@ -31,14 +34,14 @@ import win32api
 import win32con
 import win32gui
 
-from module.device.win.input import Input
+from module.device.win.input import Input, _key_name_to_vk
 from module.device.win.ok_interaction.hwnd_window import HwndWindowAdapter
 from module.device.win.ok_interaction.post_message import PostMessageInteraction
 from module.logger import logger
 
 
 class PostMessageInput(Input):
-    def __init__(self, window_provider, hwnd_resolver):
+    def __init__(self, window_provider, hwnd_resolver, foreground_switcher=None):
         """
         Args:
             window_provider: () -> Window，延迟获取当前操作的窗口
@@ -46,6 +49,7 @@ class PostMessageInput(Input):
         super().__init__()
         self.hwnd_window = HwndWindowAdapter(window_provider, hwnd_resolver=hwnd_resolver)
         self.interaction = PostMessageInteraction(self.hwnd_window)
+        self.foreground_switcher = foreground_switcher
         self.cursor_position = None
         self._mouse_screen_position = None
         self._operating = False
@@ -122,6 +126,64 @@ class PostMessageInput(Input):
         base_hwnd = self.hwnd_window.top_hwnd or self.hwnd_window.hwnd
         origin_x, origin_y = win32gui.ClientToScreen(base_hwnd, (0, 0))
         return x - origin_x, y - origin_y
+
+    # ------------------------------------------------------------------
+    # 键盘（Unity 需要真实输入；鼠标仍保持后台 PostMessage）
+    # ------------------------------------------------------------------
+    def press_key(self, key, wait_time=0.2):
+        """短暂激活游戏后使用系统级输入；启动器仍使用前台输入。"""
+        if not self._use_postmessage():
+            return super().press_key(key, wait_time=wait_time)
+        return self._post_key(key, wait_time=wait_time, log_key=True)
+
+    def secretly_press_key(self, key, wait_time=0.2):
+        """短暂激活游戏后使用系统级输入，但不记录具体键位。"""
+        if not self._use_postmessage():
+            return super().secretly_press_key(key, wait_time=wait_time)
+        return self._post_key(key, wait_time=wait_time, log_key=False)
+
+    def _post_key(self, key, wait_time=0.2, log_key=False):
+        if not self._ensure_window():
+            return False
+        with self._input_lock:
+            try:
+                target = self.hwnd_window.top_hwnd or self.hwnd_window.hwnd
+                sent = self._foreground_send_key(target, key, wait_time)
+                if not sent:
+                    label = key if log_key else '*'
+                    logger.warning(f'Foreground key press {label} was not delivered')
+                    return False
+                if log_key:
+                    logger.debug(f'Foreground SendInput key press {key}')
+                else:
+                    logger.debug('Foreground SendInput key press *')
+                return True
+            except Exception as e:
+                label = key if log_key else '*'
+                logger.error(f'Foreground SendInput key press {label} error: {e}')
+                return False
+
+    def _foreground_send_key(self, target, key, wait_time):
+        """Temporarily foreground the game so Unity can observe SendInput."""
+        previous = win32gui.GetForegroundWindow()
+        target_is_foreground = previous == target
+        if not target_is_foreground:
+            if self.foreground_switcher is not None:
+                self.foreground_switcher(target)
+            else:
+                win32gui.SetForegroundWindow(target)
+            if win32gui.GetForegroundWindow() != target:
+                return False
+        try:
+            # Reuse Input's scan-code SendInput implementation. It handles
+            # shifted characters and releases all keys in its normal path.
+            return bool(Input.secretly_press_key(self, key, wait_time=wait_time))
+        finally:
+            if not target_is_foreground and previous and win32gui.IsWindow(previous):
+                try:
+                    win32gui.SetForegroundWindow(previous)
+                except Exception as e:
+                    logger.warning(f'Failed to restore previous foreground window {previous}: {e}')
 
     # ------------------------------------------------------------------
     # 点击（BD2Interaction 正式版方案：SetCursorPos + PostMessage）
