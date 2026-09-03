@@ -14,10 +14,19 @@ is_running() {
     [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
 }
 
+is_healthy() {
+    command -v curl >/dev/null 2>&1 || return 1
+    curl -fsS --max-time 3 http://127.0.0.1:12271/api/system/status >/dev/null 2>&1
+}
+
 start_service() {
-    if is_running; then
+    if is_running && is_healthy; then
         echo "running"
         return 0
+    fi
+    if is_running; then
+        kill "$(cat "$PID_FILE")" 2>/dev/null || true
+        rm -f "$PID_FILE"
     fi
     [ -d "$REPO_DIR" ] || { echo "NKAS repository is missing" >&2; return 1; }
     nohup proot-distro run \
@@ -38,7 +47,7 @@ stop_service() {
 }
 
 status_service() {
-    if is_running; then
+    if is_running && is_healthy; then
         echo "running"
         return 0
     fi

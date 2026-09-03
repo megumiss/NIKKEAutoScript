@@ -21,6 +21,7 @@ class SetupActivity : android.app.Activity() {
     private lateinit var action: Button
     private var checking = false
     private var waitingForPermission = false
+    private var destroyed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,38 +104,43 @@ class SetupActivity : android.app.Activity() {
     }
 
     private fun pollBackend() {
-        if (checking) return
+        if (destroyed || checking) return
         checking = true
-        executor.execute {
-            val ready = try {
-                val connection = URL("http://127.0.0.1:12271/api/system/status").openConnection() as HttpURLConnection
-                connection.connectTimeout = 1500
-                connection.readTimeout = 1500
-                connection.requestMethod = "GET"
-                connection.responseCode == 200
-            } catch (_: Exception) {
-                false
-            }
-            handler.post {
-                checking = false
-                if (ready) {
-                    startActivity(Intent(this, MainActivity::class.java))
-                    finish()
-                } else {
-                    if (action.text != "下载 Termux") {
+        try {
+            executor.execute {
+                val ready = try {
+                    val connection = URL("http://127.0.0.1:12271/api/system/status").openConnection() as HttpURLConnection
+                    connection.connectTimeout = 1500
+                    connection.readTimeout = 1500
+                    connection.requestMethod = "GET"
+                    connection.responseCode == 200
+                } catch (_: Exception) {
+                    false
+                }
+                handler.post {
+                    if (destroyed) return@post
+                    checking = false
+                    if (ready) {
+                        startActivity(Intent(this, MainActivity::class.java))
+                        finish()
+                    } else if (action.text != "下载 Termux") {
                         status.text = "NKAS 尚未就绪，初始化仍在进行中。"
                         action.text = "重试初始化"
                         action.isEnabled = true
-                        handler.postDelayed({ pollBackend() }, 3000)
+                        if (!destroyed) handler.postDelayed({ pollBackend() }, 3000)
                     }
                 }
             }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            checking = false
         }
     }
 
     private fun isArm64(): Boolean = Build.SUPPORTED_ABIS.any { it == "arm64-v8a" }
 
     override fun onDestroy() {
+        destroyed = true
+        handler.removeCallbacksAndMessages(null)
         executor.shutdownNow()
         super.onDestroy()
     }
