@@ -31,8 +31,9 @@ input[type='radio'] { width:16px; height:16px; margin:0; appearance:none; border
 .dashboard-hint { color:var(--text-3); font-size:12px; }
 .dashboard-actions { display:flex; gap:8px; align-items:center; }
 .dashboard-grid { min-height:520px; }
-.dashboard-grid-static.vgl-layout { display:flex; min-height:0; height:auto !important; flex-direction:column; gap:0; }
+.dashboard-grid-static.vgl-layout { display:flex; min-height:0; height:auto !important; flex-flow:row wrap; align-content:flex-start; gap:0 18px; }
 .dashboard-grid-static .vgl-item { position:static !important; width:100% !important; height:auto !important; min-height:0; margin:0 !important; transform:none !important; transition:none !important; }
+.dashboard-grid-static .vgl-item.dashboard-grid-item--instance { width:calc(50% - 9px) !important; }
 .dashboard-grid-static .dashboard-zone { height:auto; overflow:visible; }
 .dashboard-grid-static .dashboard-zone-body { flex:none; min-height:auto; }
 .dashboard-grid-static .dashboard-grid-item:not(.dashboard-grid-item--instance) .dashboard-zone.is-static { display:contents; border:0; border-radius:0; background:transparent; box-shadow:none; }
