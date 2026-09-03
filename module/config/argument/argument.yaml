@@ -156,6 +156,7 @@ Optimization:
     value: mobile
     option: [ mobile, server ]
   OcrThreads: 10
+  ClickRandomOffset: 5
   WhenTaskQueueEmpty:
     value: goto_main
     option: [ stay_there, goto_main, close_game, run_script ]

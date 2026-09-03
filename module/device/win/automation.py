@@ -5,7 +5,7 @@ from functools import cached_property, wraps
 
 from module.base.button import Button
 from module.base.timer import Timer
-from module.base.utils import ensure_int, image_size, point2str
+from module.base.utils import ensure_int, image_size, point2str, random_click_offset
 from module.config.config import NikkeConfig
 from module.device.win.screenshot import Screenshot
 from module.device.win.utils import (
@@ -188,7 +188,7 @@ class Automation:
 
         raise ScreenshotSizeError('The game window display size must be 720*1280')
 
-    def click(self, button: Button, click_offset=0, action='click'):
+    def click(self, button: Button, click_offset=0, action='click', random_offset=None):
         """点击窗口中的按钮"""
         x, y = button.location
         # 如果 click_offset 是单个数字，代表 x 和 y 都偏移同样的量
@@ -199,6 +199,13 @@ class Automation:
         elif isinstance(click_offset, (tuple, list)) and len(click_offset) == 2:
             x += click_offset[0]
             y += click_offset[1]
+
+        if random_offset is None:
+            random_offset = self.config.Optimization_ClickRandomOffset
+        if random_offset:
+            offset_x, offset_y = random_click_offset(random_offset)
+            x += offset_x
+            y += offset_y
 
         x, y = ensure_int(x, y)
         logger.info('Click %s @ %s' % (point2str(x, y), button))

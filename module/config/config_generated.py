@@ -75,6 +75,7 @@ class GeneratedConfig:
     Optimization_AutoRedCircle = False
     Optimization_OcrModelType = 'mobile'  # mobile, server
     Optimization_OcrThreads = 10
+    Optimization_ClickRandomOffset = 5
     Optimization_WhenTaskQueueEmpty = 'goto_main'  # stay_there, goto_main, close_game, run_script
     Optimization_ScriptPath = None
 

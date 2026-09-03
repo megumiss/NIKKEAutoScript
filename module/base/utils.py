@@ -1,4 +1,5 @@
 import io
+import random
 import re
 import time
 from statistics import mean
@@ -40,6 +41,22 @@ def random_rectangle_point(area, n=3):
     x = random_normal_distribution_int(area[0], area[2], n=n)
     y = random_normal_distribution_int(area[1], area[3], n=n)
     return x, y
+
+
+def random_click_offset(offset=0):
+    """Generate a random click offset within the requested range."""
+    if isinstance(offset, (int, float)):
+        x_range = y_range = abs(offset)
+        return random.uniform(-x_range, x_range), random.uniform(-y_range, y_range)
+
+    if isinstance(offset, (tuple, list)) and len(offset) == 2:
+        x_range, y_range = (abs(value) for value in offset)
+        return random.uniform(-x_range, x_range), random.uniform(-y_range, y_range)
+
+    if isinstance(offset, (tuple, list)) and len(offset) == 4:
+        return random.uniform(offset[0], offset[2]), random.uniform(offset[1], offset[3])
+
+    raise ValueError('random click offset must be a number or a 2/4-item sequence')
 
 def ensure_time(second, n=3, precision=3):
     """Ensure to be time.

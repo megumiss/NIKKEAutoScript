@@ -35,6 +35,10 @@
         "type": "input",
         "value": 10
       },
+      "ClickRandomOffset": {
+        "type": "input",
+        "value": 5
+      },
       "WhenTaskQueueEmpty": {
         "type": "select",
         "value": "goto_main",
