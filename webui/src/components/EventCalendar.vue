@@ -22,7 +22,7 @@ type CalendarItem = {
   background_url?: string
 }
 
-const props = defineProps<{ language: string }>()
+const props = withDefaults(defineProps<{ language: string; showTitle?: boolean }>(), { showTitle: false })
 const emit = defineEmits<{ error: [message: string]; height: [height: number] }>()
 
 const labels: Record<string, Record<string, string>> = {
@@ -72,6 +72,7 @@ let clockTimer: number | undefined
 let contentObserver: ResizeObserver | undefined
 const calendarRoot = ref<HTMLElement | null>(null)
 
+// 内容高度上报：总览页按内容自动展开日历区（用户手动调整高度后不再跟随）
 function reportHeight() {
   if (calendarRoot.value) emit('height', calendarRoot.value.scrollHeight)
 }
@@ -167,7 +168,6 @@ onMounted(() => {
   loadCalendar()
   contentObserver = new ResizeObserver(reportHeight)
   if (calendarRoot.value) contentObserver.observe(calendarRoot.value)
-  reportHeight()
   clockTimer = window.setInterval(() => {
     const previous = now.value
     now.value = Math.floor(Date.now() / 1000)
@@ -192,6 +192,7 @@ onBeforeUnmount(() => {
   <section ref="calendarRoot" class="event-calendar">
     <header class="event-calendar-head">
       <div>
+        <h2 v-if="props.showTitle">{{ t('活动日历') }}</h2>
         <div v-if="updatedAt" class="event-updated">{{ t('更新于') }} {{ formatDateTime(updatedAt) }}</div>
       </div>
       <button class="btn sm event-refresh" type="button" :disabled="refreshing" :title="t('刷新')" @click="loadCalendar(true)">
@@ -274,6 +275,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .event-calendar { margin-top:0; padding-top:2px; }
 .event-calendar-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; }
+.event-calendar-head h2 { font-size:16px; }
 .event-updated { margin-top:4px; color:var(--text-3); font-size:11.5px; }
 .event-refresh { display:inline-flex; align-items:center; gap:7px; }
 .event-refresh-icon { display:inline-block; font-size:17px; line-height:1; }
