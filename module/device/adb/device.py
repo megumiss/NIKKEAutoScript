@@ -263,9 +263,16 @@ class Device(Screenshot, Control, AppControl):
         # Some vendor ROMs (notably One UI and several Android 16 builds) move
         # a newly launched task back to display 0. Give the bridge time to pin
         # it again, while keeping the capture thread free to deliver frames.
-        deadline = time.time() + 20
+        started_at = time.time()
+        deadline = started_at + 30
+        ready_after = started_at + 10
+        logger.info('Virtual display startup grace: 10s')
+        # Let the game and SurfaceFlinger render their first frame before
+        # starting the ADB capture polling loop on low-power physical devices.
+        time.sleep(5)
         image = None
         attempts = 0
+        stable_frames = 0
         last_info = 0.0
         last_repin = 0.0
         try:
@@ -289,7 +296,12 @@ class Device(Screenshot, Control, AppControl):
                 # Keep polling until a non-black frame is available; otherwise
                 # the old `app_on_target` shortcut stopped the loop and the
                 # final black-frame check immediately tore the bridge down.
-                if image is not None and image.shape[:2] == (1280, 720) and image.max() > 20:
+                frame_ready = image is not None and image.shape[:2] == (1280, 720) and image.max() > 20
+                if frame_ready and now >= ready_after:
+                    stable_frames += 1
+                else:
+                    stable_frames = 0
+                if stable_frames >= 3:
                     break
                 attempts += 1
                 if now - last_repin >= 1.5:
@@ -310,10 +322,13 @@ class Device(Screenshot, Control, AppControl):
             self._virtual_display_stop()
             logger.critical(f'Cannot capture the Android virtual display: {e}')
             raise RequestHumanTakeover
-        if image is None or image.shape[:2] != (1280, 720) or image.max() <= 20:
+        if stable_frames < 3 or image is None or image.shape[:2] != (1280, 720) or image.max() <= 20:
             shape = None if image is None else image.shape
             self._virtual_display_stop()
-            logger.critical(f'Virtual display stayed black or has an invalid shape: {shape}')
+            logger.critical(
+                f'Virtual display did not provide 3 stable frames: '
+                f'stable_frames={stable_frames}, shape={shape}'
+            )
             raise RequestHumanTakeover
 
         logger.info(
