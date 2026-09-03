@@ -9,6 +9,7 @@ import EventCalendar from '../components/EventCalendar.vue'
 import { t } from '../i18n'
 import { useDashboardLayoutStore } from '../stores/dashboardLayout'
 import { useInstancesStore } from '../stores/instances'
+import { useModalStore } from '../stores/modal'
 import { useSystemStore } from '../stores/system'
 import { useToastStore } from '../stores/toast'
 import { useUiStore } from '../stores/ui'
@@ -20,6 +21,7 @@ const { systemStatus } = storeToRefs(useSystemStore())
 const dashboard = useDashboardLayoutStore()
 const { editing, layout, narrow } = storeToRefs(dashboard)
 const { enter } = useUiStore()
+const { openCreateModal } = useModalStore()
 const toast = useToastStore()
 const grid = ref<InstanceType<typeof GridLayout> | null>(null)
 let resizeObserver: ResizeObserver | undefined
@@ -27,7 +29,11 @@ let resizeObserver: ResizeObserver | undefined
 const instanceByName = computed(() => new Map(instances.value.map(instance => [instance.name, instance])))
 const renderLayout = computed(() => editing.value
   ? layout.value
-  : [...layout.value].sort((left, right) => left.y - right.y || left.x - right.x))
+  : [...layout.value].sort((left, right) => {
+    if (left.i === 'calendar') return right.i === 'calendar' ? 0 : 1
+    if (right.i === 'calendar') return -1
+    return left.y - right.y || left.x - right.x
+  }))
 function calendarError(message: string) { toast.error = message }
 function itemName(item: { i: string }) { return item.i.startsWith('instance:') ? item.i.slice('instance:'.length) : '' }
 function itemInstance(item: { i: string }) { return instanceByName.value.get(itemName(item)) }
@@ -65,7 +71,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 
 <template>
   <section class="view dashboard-view">
-    <div class="dashboard-toolbar">
+    <div v-if="editing && !narrow" class="dashboard-toolbar">
       <div>
         <div class="section-title dashboard-title">{{ t('总览') }}</div>
         <div class="dashboard-hint">{{ narrow ? t('窄屏已切换为单列') : t('横屏布局可自定义') }}</div>
@@ -75,6 +81,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
         <button v-if="!narrow" class="btn primary sm" type="button" :aria-pressed="editing" @click="dashboard.toggleEdit"><AppIcon :name="editing ? 'check' : 'designtools'" :size="14" /> {{ editing ? t('完成') : t('编辑布局') }}</button>
       </div>
     </div>
+    <button v-else-if="!narrow" class="dashboard-edit-fab" type="button" :aria-label="t('编辑布局')" :title="t('编辑布局')" @click="dashboard.toggleEdit"><AppIcon name="designtools" :size="16" /></button>
 
     <GridLayout
       ref="grid"
@@ -92,7 +99,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
       :responsive="false"
       @layout-updated="onLayoutUpdated"
     >
-      <GridItem v-for="item in renderLayout" :key="item.i" v-bind="item" class="dashboard-grid-item" :class="{ 'is-editing': editing && !narrow }">
+      <GridItem v-for="item in renderLayout" :key="item.i" v-bind="item" class="dashboard-grid-item" :class="[{ 'is-editing': editing && !narrow }, `dashboard-grid-item--${itemType(item)}`]">
         <article class="card dashboard-zone" :class="{ 'is-static': !editing || narrow }">
           <header class="dashboard-zone-head" :class="{ 'drag-handle': editing && !narrow }">
             <span class="dashboard-zone-grip" aria-hidden="true"><AppIcon v-if="editing && !narrow" name="sort-v" :size="13" /></span>
@@ -125,6 +132,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
                   <button class="btn primary sm" style="flex:1" @click="enter(instance.name)">{{ t('进入') }} <AppIcon name="arrow-right" :size="14" /></button>
                 </div>
               </article>
+              <button class="card add-card" type="button" @click="openCreateModal"><AppIcon name="plus" :size="28" /><span>{{ t('新建实例') }}</span></button>
             </div>
           </div>
 
