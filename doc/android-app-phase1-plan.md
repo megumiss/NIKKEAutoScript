@@ -312,3 +312,151 @@ android/app/build/outputs/apk/debug/app-debug.apk
 ### 12.3 编译与运行测试的区别
 
 编译 APK 不需要 Termux、Python、NKAS 容器或真机无线调试。测试完整安装流程时，仍需要一台 Android 11+ ARM64 真机，并按页面提示完成 Termux、无线调试和电池优化授权。
+
+## 13. 云端构建到本地真机自动测试
+
+### 13.1 总体链路
+
+GitHub 公共云 Runner 不能直接访问本地局域网中的手机。因此采用“两段式”流水线：
+
+```text
+GitHub 云端 Runner
+  -> 编译 app-debug.apk
+  -> 上传 APK Artifact
+  -> 本地 self-hosted Runner 下载 Artifact
+  -> adb 无线安装到真机
+  -> 启动 APK 并执行冒烟测试
+  -> 上传 Logcat 和测试结果
+```
+
+本地 Runner 使用 VSCode 所在的 Windows 电脑，手机和电脑连接同一个 Wi-Fi。该电脑不需要安装 Android Studio，只需要 JDK、Android SDK 命令行工具和 ADB。
+
+### 13.2 本地 Runner 一次性准备
+
+在本地电脑完成以下操作：
+
+1. 安装 GitHub Actions self-hosted Runner，标签设置为 `android-local`；
+2. 安装 JDK 17 和 Android SDK 命令行组件；
+3. 将 `adb` 加入 PATH；
+4. 在手机上确认 Android 11+、ARM64 和无线调试已开启；
+5. 首次执行无线调试配对：
+
+```powershell
+adb pair <手机配对地址>:<配对端口>
+adb connect <手机调试地址>:<调试端口>
+adb devices
+```
+
+6. 将 Runner 服务设置为与首次配对时相同的 Windows 用户运行；
+7. 保存设备 Serial 到 Runner 用户环境变量 `NKAS_DEVICE_SERIAL`。
+
+无线调试端口可能在手机重启或重新开启无线调试后变化。端口变化时只需重新执行一次 `adb connect`，无需重新安装 Runner。
+
+### 13.3 GitHub Actions 工作流
+
+新增 `.github/workflows/android-build-test.yml`，分为两个 Job：
+
+```yaml
+name: Android Build And Local Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/android-apk-phase1-plan]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Build debug APK
+        shell: bash
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nkas-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  local-test:
+    needs: build
+    runs-on: [self-hosted, windows, android-local]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: nkas-debug-apk
+          path: artifacts
+      - name: Install and smoke test
+        shell: powershell
+        run: .\deploy\android\ci-smoke-test.ps1 -ApkPath .\artifacts\app-debug.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nkas-android-test-results
+          path: |
+            artifacts\logcat.txt
+            artifacts\test-result.json
+```
+
+实际工程中应将分支名改为默认开发分支，并根据仓库的 APK 模块路径调整 Artifact 路径。对外部 Pull Request 不应使用本地 Runner，避免不受信任代码访问内网设备。
+
+### 13.4 本地自动测试脚本
+
+新增 `deploy/android/ci-smoke-test.ps1`，执行以下步骤：
+
+1. 检查 `NKAS_DEVICE_SERIAL` 是否存在；
+2. 执行 `adb connect` 或确认设备已在线；
+3. 执行 `adb install -r app-debug.apk`；
+4. 清理旧日志并启动 `com.megumiss.nkas`；
+5. 等待 APK Activity 进入前台；
+6. 使用 `adb logcat` 采集启动日志；
+7. 使用 `adb forward tcp:12271 tcp:12271` 转发 NKAS 端口；
+8. 轮询 `http://127.0.0.1:12271/api/system/status`；
+9. 校验返回的 `api_version` 和 `capabilities`；
+10. 输出 `test-result.json`，失败时返回非零退出码。
+
+建议的最小检查命令：
+
+```powershell
+adb -s $env:NKAS_DEVICE_SERIAL install -r $ApkPath
+adb -s $env:NKAS_DEVICE_SERIAL shell am force-stop com.megumiss.nkas
+adb -s $env:NKAS_DEVICE_SERIAL shell monkey -p com.megumiss.nkas 1
+adb -s $env:NKAS_DEVICE_SERIAL forward tcp:12271 tcp:12271
+Invoke-WebRequest http://127.0.0.1:12271/api/system/status
+```
+
+### 13.5 首次设备准备与每次自动测试的边界
+
+首次设备准备仍需人工完成：
+
+- 安装 Termux；
+- 允许 Termux 外部命令；
+- 无线调试配对；
+- Android 安装权限；
+- 电池优化设置；
+- APK 首次启动时的系统授权。
+
+完成基线准备后，每次推送代码可以自动完成：
+
+- 云端编译 Debug APK；
+- 下载到本地 Runner；
+- 无线安装 APK；
+- 启动应用；
+- 检查本地 WebView 对应的 NKAS 服务；
+- 采集 Logcat 和测试结果；
+- 在 GitHub Actions 页面查看成功或失败。
+
+### 13.6 测试设备安全要求
+
+- 使用专用测试手机或测试账号；
+- self-hosted Runner 只允许受信任分支触发；
+- 不把手机 IP、配对码或 Serial 提交到仓库；
+- 使用 Runner 本地环境变量保存设备信息；
+- 测试失败时只上传脱敏日志；
+- 不在 CI 中保存账号密码、Cookie 或通知配置。
