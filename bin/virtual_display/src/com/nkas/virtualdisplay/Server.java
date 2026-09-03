@@ -9,6 +9,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
+import java.util.UUID;
 
 public final class Server {
     private static final Object FRAME_LOCK = new Object();
@@ -18,6 +19,7 @@ public final class Server {
     private static final int ROTATION_0 = 0;
     private static final int DISPLAY_NONE = -1;
     private static final int FRAME_BUFFER_COUNT = 3;
+    private static final String DISPLAY_NAME_PREFIX = "NIKKE-";
 
     private static Object imageReader;
     private static Object virtualDisplay;
@@ -219,7 +221,7 @@ public final class Server {
             }
             previous = flags;
             try {
-                Object display = create.invoke(manager, "NKAS", width, height, dpi, surface, flags);
+                Object display = create.invoke(manager, virtualDisplayName(), width, height, dpi, surface, flags);
                 if (display != null) {
                     System.out.println("NKAS_VD_FLAGS sdk=" + sdk + " flags=0x"
                             + Integer.toHexString(flags));
@@ -232,6 +234,10 @@ public final class Server {
             }
         }
         throw new RuntimeException("Could not create virtual display", lastError);
+    }
+
+    private static String virtualDisplayName() {
+        return DISPLAY_NAME_PREFIX + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
     }
 
     private static void updateDisplayGeometry(Object display, int fallbackWidth, int fallbackHeight) {
