@@ -225,7 +225,7 @@ DataChart:
 Tool:
   menu: 'collapse'
   page: 'tool'
-  icon: 'tools'
+  icon: 'designtools'
   tasks:
     AutoTower:
       - AutoTower
