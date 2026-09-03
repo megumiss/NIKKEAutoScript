@@ -260,3 +260,55 @@ WebView 只允许访问本地 NKAS 服务；外部链接按系统浏览器 Inten
 - Termux 调用和状态协议；
 - Android 11+ ARM64 真机回归记录；
 - 安装、权限和故障恢复文档。
+
+## 12. APK 编译方式
+
+一期不要求开发者安装 Android Studio。
+
+### 12.1 默认方式：GitHub Actions
+
+推荐使用 VSCode 编写代码，推送分支后由 GitHub Actions 编译测试 APK：
+
+```text
+VSCode 修改代码
+  -> 提交并推送分支
+  -> GitHub Actions 执行 assembleDebug
+  -> 下载 app-debug.apk Artifact
+```
+
+工作流需要完成以下操作：
+
+- 配置 JDK 17；
+- 配置 Android SDK；
+- 使用项目内的 Gradle Wrapper；
+- 执行 `./gradlew assembleDebug`；
+- 上传 `app-debug.apk` 作为构建产物。
+
+本机不需要安装 Android Studio、全局 Gradle 或 NDK。
+
+### 12.2 可选方式：Android SDK 命令行
+
+需要本地编译时，只安装以下组件即可：
+
+- JDK 17；
+- Android Command-line Tools；
+- Android SDK Platform 35；
+- Android SDK Build-Tools；
+- Android SDK Platform-Tools。
+
+安装 SDK 后，在 VSCode 终端执行：
+
+```powershell
+sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+.\gradlew.bat assembleDebug
+```
+
+Debug APK 默认输出到：
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### 12.3 编译与运行测试的区别
+
+编译 APK 不需要 Termux、Python、NKAS 容器或真机无线调试。测试完整安装流程时，仍需要一台 Android 11+ ARM64 真机，并按页面提示完成 Termux、无线调试和电池优化授权。
