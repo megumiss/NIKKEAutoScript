@@ -31,9 +31,11 @@ run_stage() {
 }
 
 prepare_tools() {
-    pkg update -y
-    pkg upgrade -y
-    pkg install -y git proot-distro android-tools
+    export DEBIAN_FRONTEND=noninteractive
+    dpkg --force-confold --configure -a
+    apt-get -o Acquire::Retries=3 update -y
+    apt-get -o Acquire::Retries=3 -y -o Dpkg::Options::=--force-confold upgrade
+    apt-get -o Acquire::Retries=3 --fix-missing -y -o Dpkg::Options::=--force-confold install git proot-distro android-tools
 }
 
 sync_repository() {
@@ -61,18 +63,18 @@ create_config() {
 }
 
 install_container() {
-    if ! proot-distro list 2>/dev/null | grep -qE '(^|[[:space:]])nkas([[:space:]]|$)'; then
+    if [ ! -d "${PREFIX}/var/lib/proot-distro/containers/nkas/rootfs" ]; then
         proot-distro install megumiss/nkas:latest --name nkas
     fi
 }
 
 start_service() {
-    bash "$REPO_DIR/deploy/android/nkas-service.sh" start
+    bash "$STATE_DIR/nkas-service.sh" start
 }
 
 current_state="$(cat "$STATE_FILE" 2>/dev/null || true)"
 if [ "$current_state" = "ready" ]; then
-    bash "$REPO_DIR/deploy/android/nkas-service.sh" status && exit 0 || true
+    bash "$STATE_DIR/nkas-service.sh" status && exit 0 || true
 fi
 
 run_stage installing-termux-tools prepare_tools

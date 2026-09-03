@@ -27,3 +27,4 @@ doc/wiki/
 doc/NIKKEAutoScript.wiki/
 
 android/.gradle/
+android/**/build/

@@ -20,6 +20,7 @@ class SetupActivity : android.app.Activity() {
     private lateinit var status: TextView
     private lateinit var action: Button
     private var checking = false
+    private var waitingForPermission = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +71,12 @@ class SetupActivity : android.app.Activity() {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TERMUX_URL)))
             return
         }
+        if (checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            waitingForPermission = true
+            status.text = "请允许 NKAS 调用 Termux 执行初始化命令。"
+            requestPermissions(arrayOf(TermuxBridge.RUN_COMMAND_PERMISSION), RUN_COMMAND_REQUEST)
+            return
+        }
         status.text = "正在请求 Termux 执行初始化。请确认 Termux 已允许外部应用执行命令。"
         action.isEnabled = false
         val result = BootstrapService(this).start()
@@ -79,6 +86,20 @@ class SetupActivity : android.app.Activity() {
             return
         }
         handler.postDelayed({ pollBackend() }, 1500)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != RUN_COMMAND_REQUEST || !waitingForPermission) return
+        waitingForPermission = false
+        if (grantResults.firstOrNull() == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            status.text = "Termux 执行权限已获得，请点击开始初始化。"
+            action.text = "开始初始化"
+            action.isEnabled = true
+        } else {
+            status.text = "未获得 Termux 执行权限，无法自动初始化。"
+            action.isEnabled = true
+        }
     }
 
     private fun pollBackend() {
@@ -120,5 +141,6 @@ class SetupActivity : android.app.Activity() {
 
     companion object {
         private const val TERMUX_URL = "https://github.com/termux/termux-app/releases/latest"
+        private const val RUN_COMMAND_REQUEST = 1001
     }
 }
