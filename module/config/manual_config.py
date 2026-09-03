@@ -131,6 +131,17 @@ class ManualConfig:
             # },
         },
         {
+            "event_id": "event_20260903",
+            "event_name": "GREAT VILLAIN UNION",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "mini_game_play": True,
+            "extend": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Normal"  # Normal, Hard
+        },
+        {
             "event_id": "event_20260723",
             "event_name": "PROJECT MATIS",
             # 大型活动
