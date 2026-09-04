@@ -96,7 +96,7 @@ class SetupActivity : Activity() {
         heading("初始化", "准备 Termux、NKAS 服务和本地 Web UI\n请开启 Termux 和 NKAS 的自启动、关联启动，并允许后台运行")
         status = TextView(this).apply { textSize = 14f; setTextColor(text2); setPadding(0, 0, 0, dp(16)); visibility = View.GONE }
         section("环境准备")
-        step("Termux", "安装官方 Termux v0.118.3", "termux")
+        step("Termux", termuxDetail(), "termux")
         step("Android 外部命令权限", "系统授权：允许 NKAS 调用 Termux", "permission")
         val termuxSettingStep = step("Termux 外部应用开关", "Termux 配置 allow-external-apps=true", "termux_setting")
         manualCommand(termuxSettingStep.wrapper)
@@ -132,14 +132,15 @@ class SetupActivity : Activity() {
 
     private fun section(label: String) { content.addView(TextView(this).apply { text = label.uppercase(); textSize = 11f; setTextColor(text2); setTypeface(Typeface.DEFAULT, Typeface.BOLD); setPadding(0, dp(8), 0, dp(8)) }) }
 
-    private data class Step(val dot: TextView, val state: TextView, val progress: ProgressBar, val key: String, val wrapper: LinearLayout, val log: TextView)
+    private data class Step(val dot: TextView, val state: TextView, val progress: ProgressBar, val key: String, val wrapper: LinearLayout, val detail: TextView, val log: TextView)
     private fun step(name: String, detail: String, key: String): Step {
         val wrapper = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = rounded(card, 10) }
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val dot = TextView(this).apply { text = "○"; textSize = 22f; setTextColor(text2); gravity = Gravity.CENTER }
         val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         labels.addView(TextView(this).apply { text = name; textSize = 15f; setTextColor(this@SetupActivity.text) })
-        labels.addView(TextView(this).apply { text = detail; textSize = 12f; setTextColor(text2); setPadding(0, dp(3), 0, 0) })
+        val detailView = TextView(this).apply { text = detail; textSize = 12f; setTextColor(text2); setPadding(0, dp(3), 0, 0) }
+        labels.addView(detailView)
         val state = TextView(this).apply { textSize = 12f; setTextColor(text2); gravity = Gravity.CENTER }
         val progress = ProgressBar(this).apply { isIndeterminate = true; visibility = View.GONE }
         val log = TextView(this).apply { textSize = 11f; setTextColor(text2); setPadding(dp(10), dp(8), dp(10), dp(8)); background = rounded(card2, 6); visibility = View.GONE; typeface = Typeface.MONOSPACE; maxLines = 12 }
@@ -149,7 +150,7 @@ class SetupActivity : Activity() {
         }
         row.addView(dot, LinearLayout.LayoutParams(dp(30), dp(30))); row.addView(labels, LinearLayout.LayoutParams(0, -2, 1f)); row.addView(statusBox, LinearLayout.LayoutParams(dp(64), dp(30)))
         wrapper.addView(row); wrapper.addView(log, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
-        val item = Step(dot, state, progress, key, wrapper, log)
+        val item = Step(dot, state, progress, key, wrapper, detailView, log)
         steps[key] = item
         content.addView(wrapper, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
         return item
@@ -167,6 +168,17 @@ class SetupActivity : Activity() {
             info.log.visibility = View.GONE
             if (expandedLogKey == key) expandedLogKey = null
         }
+    }
+
+    private fun setStepDetail(key: String, value: String) {
+        steps[key]?.detail?.text = value
+    }
+
+    private fun termuxDetail(): String {
+        val version = runCatching {
+            packageManager.getPackageInfo("com.termux", 0).versionName
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+        return if (version == null) "需要安装官方 Termux" else "已安装版本：Termux v$version"
     }
 
     private fun setStepLog(key: String, value: String, expanded: Boolean = true) {
@@ -235,6 +247,7 @@ class SetupActivity : Activity() {
         val installed = bridge.isInstalled()
         val permission = checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) == PackageManager.PERMISSION_GRANTED
         val wireless = isWirelessDebugEnabled()
+        setStepDetail("termux", termuxDetail())
         setStep("termux", installed, if (installed) "已安装" else "待安装")
         setStep("permission", permission, if (permission) "已授权" else "待授权")
         setStep("wireless", wireless, if (wireless) "已开启" else "待开启")
