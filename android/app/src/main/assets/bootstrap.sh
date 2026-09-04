@@ -76,8 +76,15 @@ sync_repository() {
 
 create_config() {
     cd "$REPO_DIR" || return 1
+    if [ ! -f config/nkas.json ]; then
+        cp config/template.json config/nkas.json || return 1
+    fi
+    sed -i -E 's/"Platform":[[:space:]]*"win"/"Platform": "adb"/' config/nkas.json
+    sed -i -E 's/"ScreenshotMethod":[[:space:]]*"DroidCast"/"ScreenshotMethod": "ADB"/' config/nkas.json
+    sed -i -E 's/"ControlMethod":[[:space:]]*"minitouch"/"ControlMethod": "ADB"/' config/nkas.json
+    sed -i -E '/"PhysicalDevice"[[:space:]]*:[[:space:]]*\{/,/^[[:space:]]*\},?[[:space:]]*$/ s/"Enable":[[:space:]]*false/"Enable": true/' config/nkas.json
     if [ ! -f config/deploy.yaml ]; then
-        cp config/deploy.template-docker-cn.yaml config/deploy.yaml
+        cp config/deploy.template-docker-cn.yaml config/deploy.yaml || return 1
     fi
     sed -i -E 's/^([[:space:]]+WebuiHost:).*/\1 127.0.0.1/' config/deploy.yaml
     sed -i -E 's/^([[:space:]]+WebuiPort:).*/\1 12271/' config/deploy.yaml
@@ -97,7 +104,13 @@ source_ready() {
 }
 
 config_ready() {
-    [ -f "$REPO_DIR/config/deploy.yaml" ] && \
+    local config="$REPO_DIR/config/nkas.json"
+    [ -f "$config" ] && \
+        grep -Eq '"Platform"[[:space:]]*:[[:space:]]*"adb"' "$config" && \
+        grep -Eq '"ScreenshotMethod"[[:space:]]*:[[:space:]]*"ADB"' "$config" && \
+        grep -Eq '"ControlMethod"[[:space:]]*:[[:space:]]*"ADB"' "$config" && \
+        sed -n '/"PhysicalDevice"[[:space:]]*:[[:space:]]*\{/,/^[[:space:]]*\},?[[:space:]]*$/p' "$config" | grep -Eq '"Enable"[[:space:]]*:[[:space:]]*true' && \
+        [ -f "$REPO_DIR/config/deploy.yaml" ] && \
         grep -Eq '^[[:space:]]+WebuiHost:[[:space:]]*127\.0\.0\.1([[:space:]]*#.*)?$' "$REPO_DIR/config/deploy.yaml" && \
         grep -Eq '^[[:space:]]+WebuiPort:[[:space:]]*12271([[:space:]]*#.*)?$' "$REPO_DIR/config/deploy.yaml"
 }
@@ -142,7 +155,7 @@ start_service() {
     return 1
 }
 
-if service_ready; then
+if service_ready && config_ready; then
     set_state ready
     exit 0
 fi

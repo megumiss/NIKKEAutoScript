@@ -295,7 +295,7 @@ class SetupActivity : Activity() {
                 artifactChecking = false
                 val output = check.stdout + if (check.stderr.isNotBlank()) "\n[stderr]\n${check.stderr}" else ""
                 applyArtifactResults(output, check.exitCode)
-                if (artifactState["termux_setting"] == true && (artifactState["service"] != true || SettingsStore.settingsChanged(this@SetupActivity))) startBootstrap()
+                if (artifactState["termux_setting"] == true && (artifactState["service"] != true || artifactState["config"] != true || SettingsStore.settingsChanged(this@SetupActivity))) startBootstrap()
             }
         }
     }
@@ -438,6 +438,7 @@ class SetupActivity : Activity() {
         when {
             !wirelessReady -> { status.text = "请先开启 Android 无线调试，环境准备完成后才能安装项目。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; setActionEnabled(false) }
             !setting -> { status.text = "未检测到 Termux 的 allow-external-apps=true，请执行上方步骤中的命令并重启 Termux。"; action.text = "等待 Termux 设置"; setActionEnabled(false) }
+            !configReady -> { status.text = "需要安装并应用 Android 设备配置。"; action.text = "开始安装"; action.setOnClickListener { onAction() } }
             serviceReady && SettingsStore.settingsChanged(this) -> { status.text = "设置已变更，需要重新应用后才能启动服务。"; action.text = "应用设置并重启"; action.setOnClickListener { onAction() } }
             serviceReady -> { SettingsStore.markApplied(this); status.text = "已检测到 NKAS Web UI 服务，可以打开 UI。"; action.text = "打开 NKAS UI"; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() } }
             else -> { status.text = ""; action.text = "开始安装"; action.setOnClickListener { onAction() } }
