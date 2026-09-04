@@ -63,11 +63,14 @@ create_config() {
 }
 
 install_container() {
-    if [ ! -d "${PREFIX}/var/lib/proot-distro/containers/debian/rootfs" ]; then
-        proot-distro install debian || return 1
+    if [ -d "${PREFIX}/var/lib/proot-distro/containers/nkas/rootfs" ] && \
+        proot-distro run -b "$REPO_DIR:/app/NIKKEAutoScript" nkas -- /usr/local/bin/python -c 'import uvicorn' >/dev/null 2>&1; then
+        return 0
     fi
-    proot-distro run -b "$REPO_DIR:/app/NIKKEAutoScript" debian -- bash -lc \
-        'export DEBIAN_FRONTEND=noninteractive; apt-get update; apt-get install -y python3 python3-pip git adb libgomp1 openssh-client libgl1 libglib2.0-0 libsm6; python3 -m pip install --break-system-packages -r /app/NIKKEAutoScript/requirements.txt'
+    if [ -d "${PREFIX}/var/lib/proot-distro/containers/nkas/rootfs" ]; then
+        proot-distro remove nkas || return 1
+    fi
+    proot-distro install megumiss/nkas:latest --name nkas || return 1
 }
 
 start_service() {

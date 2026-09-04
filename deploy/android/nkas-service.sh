@@ -32,7 +32,7 @@ start_service() {
     nohup proot-distro run \
         -b "$REPO_DIR:/app/NIKKEAutoScript" \
         -w /app/NIKKEAutoScript \
-        debian -- /usr/bin/python3 gui.py --host 127.0.0.1 --port 12271 \
+        nkas -- /usr/local/bin/python gui.py --host 127.0.0.1 --port 12271 \
         >>"$LOG_FILE" 2>&1 &
     echo $! > "$PID_FILE"
     echo "started"

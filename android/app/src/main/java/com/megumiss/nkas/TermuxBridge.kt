@@ -62,7 +62,7 @@ class TermuxBridge(private val context: Context) {
             check_setting() { grep -Eq 'allow-external-apps[[:space:]]*=[[:space:]]*true' "${'$'}HOME/.termux/termux.properties" 2>/dev/null && printf 'yes' || printf 'no'; }
             check_source() { [ -d "${'$'}HOME/NIKKEAutoScript/.git" ] && git -C "${'$'}HOME/NIKKEAutoScript" rev-parse --is-inside-work-tree >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
             check_config() { [ -f "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" ] && grep -Eq 'WebuiHost:[[:space:]]*127\.0\.0\.1' "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" && grep -Eq 'WebuiPort:[[:space:]]*12271' "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" && printf 'yes' || printf 'no'; }
-            check_container() { [ -d "${'$'}PREFIX/var/lib/proot-distro/containers/debian/rootfs" ] && proot-distro run -b "${'$'}HOME/NIKKEAutoScript:/app/NIKKEAutoScript" debian -- bash -lc 'test -x /usr/bin/python3 && python3 -c "import uvicorn"' >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
+            check_container() { [ -d "${'$'}PREFIX/var/lib/proot-distro/containers/nkas/rootfs" ] && proot-distro run -b "${'$'}HOME/NIKKEAutoScript:/app/NIKKEAutoScript" nkas -- /usr/local/bin/python -c 'import uvicorn' >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
             check_service() { curl -fsS --max-time 3 http://127.0.0.1:12271/api/system/status >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
             printf 'termux_setting=%s\n' "${'$'}(check_setting)"
             printf 'tools=%s\n' "${'$'}(check_cmds)"
