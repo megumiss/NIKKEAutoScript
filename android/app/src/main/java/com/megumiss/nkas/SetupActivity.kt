@@ -104,6 +104,7 @@ class SetupActivity : Activity() {
         step("项目配置", "写入本地设备和 Web UI 配置", "config")
         step("容器", "安装或检查 NKAS 运行容器", "container")
         step("容器服务", "启动本地服务和 Web UI", "service")
+        setProjectBlocked()
         action = Button(this).apply { text = "开始初始化"; textSize = 14f; isAllCaps = false; setTextColor(accent); background = rounded(Color.rgb(28, 54, 72), 10); setOnClickListener { onAction() } }
         floatingHost.removeAllViews()
         floatingHost.addView(action, android.widget.FrameLayout.LayoutParams(-1, dp(52)).apply { leftMargin = dp(24); rightMargin = dp(24); topMargin = dp(10) })
