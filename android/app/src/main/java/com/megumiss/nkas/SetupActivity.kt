@@ -17,6 +17,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.app.AlertDialog
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
@@ -35,6 +36,7 @@ class SetupActivity : Activity() {
     private var artifactChecking = false
     private var expandedLogKey: String? = null
     private var bootstrapStageIndex = -1
+    private var initialNoticeShowing = false
     private val artifactState = mutableMapOf<String, Boolean>()
     private val steps = linkedMapOf<String, Step>()
 
@@ -224,9 +226,42 @@ class SetupActivity : Activity() {
     }
 
     private fun onAction() {
+        if (bootstrapActive || artifactChecking || checking || initialNoticeShowing) return
         val bridge = TermuxBridge(this)
         if (!bridge.isInstalled()) { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TERMUX_URL))); return }
         if (checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(TermuxBridge.RUN_COMMAND_PERMISSION), RUN_COMMAND_REQUEST); return }
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_INITIAL_NOTICE_SHOWN, false)) {
+            showInitialNotice()
+            return
+        }
+        beginInitializationCheck()
+    }
+
+    private fun showInitialNotice() {
+        initialNoticeShowing = true
+        action.isEnabled = false
+        AlertDialog.Builder(this)
+            .setTitle("初始化前提醒")
+            .setMessage("初始化可能需要较长时间。执行期间请保持 NKAS Mobile 始终在前台，并确保网络连接稳定；切换到其他应用或断网可能导致下载失败。")
+            .setNegativeButton("取消") { _, _ ->
+                initialNoticeShowing = false
+                action.isEnabled = true
+            }
+            .setPositiveButton("继续初始化") { _, _ ->
+                getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_INITIAL_NOTICE_SHOWN, true).apply()
+                initialNoticeShowing = false
+                beginInitializationCheck()
+            }
+            .setOnCancelListener {
+                initialNoticeShowing = false
+                action.isEnabled = true
+            }
+            .show()
+    }
+
+    private fun beginInitializationCheck() {
+        val bridge = TermuxBridge(this)
         status.text = "正在重新检查实际产物……"
         action.isEnabled = false
         artifactChecking = true
@@ -344,5 +379,10 @@ class SetupActivity : Activity() {
     private fun rounded(color: Int, radius: Int) = android.graphics.drawable.GradientDrawable().apply { setColor(color); cornerRadius = dp(radius).toFloat(); setStroke(dp(1), border) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     override fun onDestroy() { destroyed = true; handler.removeCallbacksAndMessages(null); executor.shutdownNow(); super.onDestroy() }
-    companion object { private const val TERMUX_URL = "https://github.com/termux/termux-app/releases/latest"; private const val RUN_COMMAND_REQUEST = 1001 }
+    companion object {
+        private const val TERMUX_URL = "https://github.com/termux/termux-app/releases/latest"
+        private const val RUN_COMMAND_REQUEST = 1001
+        private const val PREFS_NAME = "nkas_state"
+        private const val KEY_INITIAL_NOTICE_SHOWN = "initial_notice_shown"
+    }
 }
