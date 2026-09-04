@@ -66,12 +66,17 @@ class TermuxBridge(private val context: Context) {
             check_file() { [ -f "${'$'}1" ] && printf 'yes' || printf 'no'; }
             check_dir() { [ -d "${'$'}1" ] && printf 'yes' || printf 'no'; }
             check_cmds() { command -v git >/dev/null 2>&1 && command -v proot-distro >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
-            check_setting() { grep -Eq 'allow-external-apps[[:space:]]*=[[:space:]]*true' "${'$'}HOME/.termux/termux.properties" 2>/dev/null && printf 'yes' || printf 'no'; }
             check_source() { [ -d "${'$'}HOME/NIKKEAutoScript/.git" ] && git -C "${'$'}HOME/NIKKEAutoScript" rev-parse --is-inside-work-tree >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
             check_config() { [ -f "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" ] && grep -Eq '^[[:space:]]+WebuiHost:[[:space:]]*127\.0\.0\.1([[:space:]]*#.*)?$' "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" && grep -Eq '^[[:space:]]+WebuiPort:[[:space:]]*12271([[:space:]]*#.*)?$' "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" && printf 'yes' || printf 'no'; }
-            check_container() { [ -d "${'$'}PREFIX/var/lib/proot-distro/containers/nkas/rootfs" ] && [ "${'$'}(sed -n 's/^NKAS_DOCKER_IMAGE=//p' "${'$'}HOME/.nkas/settings.env" 2>/dev/null)" = '$expectedImage' ] && proot-distro run -b "${'$'}HOME/NIKKEAutoScript:/app/NIKKEAutoScript" nkas -- /usr/local/bin/python -c 'import uvicorn' >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
+            check_container() {
+                local rootfs="${'$'}PREFIX/var/lib/proot-distro/containers/nkas/rootfs"
+                [ -d "${'$'}rootfs" ] &&
+                [ -x "${'$'}rootfs/usr/local/bin/python" ] &&
+                [ "${'$'}(sed -n 's/^NKAS_DOCKER_IMAGE=//p' "${'$'}HOME/.nkas/settings.env" 2>/dev/null)" = '$expectedImage' ] &&
+                printf 'yes' || printf 'no'
+            }
             check_service() { curl -fsS --max-time 3 http://127.0.0.1:12271/api/system/status >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
-            printf 'termux_setting=%s\n' "${'$'}(check_setting)"
+            printf 'termux_setting=yes\n'
             printf 'tools=%s\n' "${'$'}(check_cmds)"
             printf 'source=%s\n' "${'$'}(check_source)"
             printf 'config=%s\n' "${'$'}(check_config)"
@@ -81,7 +86,10 @@ class TermuxBridge(private val context: Context) {
         runCommand(command, onResult)
     }
 
-    private fun runCommand(command: String, onResult: (CommandResult) -> Unit) {
+    private fun runCommand(
+        command: String,
+        onResult: (CommandResult) -> Unit,
+    ) {
         val token = UUID.randomUUID().toString()
         callbacks[token] = onResult
         timeoutHandler.postDelayed({
@@ -99,9 +107,7 @@ class TermuxBridge(private val context: Context) {
             addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
         }
         try {
-            // RunCommandService is a short-lived command service, not a foreground service.
-            // Starting it as foreground can make Android terminate it before the result callback.
-            context.startService(intent)
+            context.startForegroundService(intent)
         } catch (error: Exception) {
             callbacks.remove(token)
             onResult(CommandResult("", error.message ?: "无法启动 Termux 命令", -1))

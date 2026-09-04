@@ -40,6 +40,7 @@ class SetupActivity : Activity() {
     private var expandedLogKey: String? = null
     private var bootstrapStageIndex = -1
     private var initialNoticeShowing = false
+    private var resumedOnce = false
     private val artifactState = mutableMapOf<String, Boolean>()
     private val steps = linkedMapOf<String, Step>()
 
@@ -66,7 +67,8 @@ class SetupActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        if (::content.isInitialized && currentPage == "setup") refreshState()
+        if (resumedOnce && ::content.isInitialized && currentPage == "setup") refreshState()
+        resumedOnce = true
     }
 
     private fun buildShell(): View {
@@ -395,6 +397,24 @@ class SetupActivity : Activity() {
         val values = raw.lineSequence()
             .mapNotNull { line -> line.trim().split('=', limit = 2).takeIf { it.size == 2 } }
             .associate { it[0] to (it[1] == "yes") }
+        val expectedKeys = setOf("termux_setting", "tools", "source", "config", "container", "service")
+        if (exitCode != 0 || !values.keys.containsAll(expectedKeys)) {
+            val externalAppsRejected = raw.contains("allow-external-apps", ignoreCase = true) && exitCode != -2
+            setProjectBlocked()
+            if (externalAppsRejected) {
+                setStep("termux_setting", false, "待设置")
+                status.text = "Termux 拒绝了外部命令，请执行上方命令并完全重启 Termux。"
+                action.text = "等待 Termux 设置"
+                setActionEnabled(false)
+            } else {
+                setStep("termux_setting", false, "检查失败")
+                status.text = "Termux 外部命令服务暂时未返回，配置并未被判定为失效，请稍后重新检查。"
+                action.text = "重新检查"
+                action.setOnClickListener { refreshState() }
+                setActionEnabled(true)
+            }
+            return
+        }
         artifactState.clear()
         artifactState.putAll(values)
         val setting = values["termux_setting"] == true
@@ -411,12 +431,6 @@ class SetupActivity : Activity() {
         setStep("config", configReady, if (configReady) "已检测" else "待配置")
         setStep("container", containerReady, if (containerReady) "已检测" else "待安装")
         setStep("service", serviceReady, if (serviceReady) "运行中" else "未运行")
-        if (exitCode != 0 && raw.isBlank()) {
-            status.text = "无法读取 Termux 实际产物：请确认 allow-external-apps=true。"
-            action.text = "打开 Termux 设置"
-            setActionEnabled(false)
-            return
-        }
         when {
             !wirelessReady -> { status.text = "请先开启 Android 无线调试，环境准备完成后才能安装项目。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; setActionEnabled(false) }
             !setting -> { status.text = "未检测到 Termux 的 allow-external-apps=true，请执行上方步骤中的命令并重启 Termux。"; action.text = "等待 Termux 设置"; setActionEnabled(false) }
