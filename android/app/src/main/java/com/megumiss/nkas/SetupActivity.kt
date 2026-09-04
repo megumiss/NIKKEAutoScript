@@ -144,7 +144,11 @@ class SetupActivity : Activity() {
         val state = TextView(this).apply { textSize = 12f; setTextColor(text2); gravity = Gravity.CENTER }
         val progress = ProgressBar(this).apply { isIndeterminate = true; visibility = View.GONE }
         val log = TextView(this).apply { textSize = 11f; setTextColor(text2); setPadding(dp(10), dp(8), dp(10), dp(8)); background = rounded(card2, 6); visibility = View.GONE; typeface = Typeface.MONOSPACE; maxLines = 12 }
-        row.addView(dot, LinearLayout.LayoutParams(dp(30), dp(30))); row.addView(labels, LinearLayout.LayoutParams(0, -2, 1f)); row.addView(progress, LinearLayout.LayoutParams(dp(28), dp(28))); row.addView(state, LinearLayout.LayoutParams(dp(64), -2))
+        val statusBox = android.widget.FrameLayout(this).apply {
+            addView(progress, android.widget.FrameLayout.LayoutParams(dp(28), dp(28), Gravity.END or Gravity.CENTER_VERTICAL))
+            addView(state, android.widget.FrameLayout.LayoutParams(-1, -2, Gravity.CENTER_VERTICAL))
+        }
+        row.addView(dot, LinearLayout.LayoutParams(dp(30), dp(30))); row.addView(labels, LinearLayout.LayoutParams(0, -2, 1f)); row.addView(statusBox, LinearLayout.LayoutParams(dp(64), dp(30)))
         wrapper.addView(row); wrapper.addView(log, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         val item = Step(dot, state, progress, key, wrapper, log)
         steps[key] = item
