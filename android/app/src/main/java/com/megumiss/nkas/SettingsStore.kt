@@ -6,12 +6,12 @@ data class SourceChoice(val label: String, val value: String)
 
 object SettingsStore {
     const val PREFS_NAME = "nkas_settings"
-    const val DEFAULT_APT_SOURCE = "https://mirrors.tuna.tsinghua.edu.cn/termux/termux-main"
+    const val DEFAULT_APT_SOURCE = "https://mirrors.tuna.tsinghua.edu.cn/termux/apt/termux-main"
     const val DEFAULT_DOCKER_IMAGE = "docker.1ms.run/megumiss/nkas:latest"
 
     val aptSources = listOf(
         SourceChoice("清华 Termux 源（国内）", DEFAULT_APT_SOURCE),
-        SourceChoice("阿里云 Termux 源（国内）", "https://mirrors.aliyun.com/termux/termux-main"),
+        SourceChoice("中科大 Termux 源（国内）", "https://mirrors.ustc.edu.cn/termux/apt/termux-main"),
         SourceChoice("官方 Termux 源", "https://packages.termux.dev/apt/termux-main")
     )
 
