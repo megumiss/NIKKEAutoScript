@@ -34,6 +34,7 @@ class SetupActivity : Activity() {
     private var bootstrapActive = false
     private var artifactChecking = false
     private var expandedLogKey: String? = null
+    private var bootstrapStageIndex = -1
     private val artifactState = mutableMapOf<String, Boolean>()
     private val steps = linkedMapOf<String, Step>()
 
@@ -173,6 +174,8 @@ class SetupActivity : Activity() {
         val mapping = listOf("installing-termux-tools" to "tools", "cloning-nkas" to "source", "creating-config" to "config", "installing-container" to "container", "starting-nkas" to "service")
         var active: String? = null
         val currentIndex = mapping.indexOfFirst { it.first == state }
+        if (currentIndex >= 0 && bootstrapStageIndex > currentIndex) return
+        if (currentIndex >= 0) bootstrapStageIndex = currentIndex
         mapping.forEach { (stage, key) ->
             if (state == stage) active = key
             val stageIndex = mapping.indexOfFirst { it.first == stage }
@@ -238,16 +241,15 @@ class SetupActivity : Activity() {
     }
 
     private fun startBootstrap() {
-        status.text = "正在启动初始化脚本，日志会显示在当前步骤中……"; action.isEnabled = false; bootstrapActive = true; setStep("tools", false, "执行中"); setStepLog("tools", "正在请求 Termux 执行脚本……", true)
+        status.text = "正在启动初始化脚本，日志会显示在当前步骤中……"; action.isEnabled = false; bootstrapActive = true; bootstrapStageIndex = -1; setStep("tools", false, "执行中"); setStepLog("tools", "正在请求 Termux 执行脚本……", true)
         val result = BootstrapService(this).start { result ->
             handler.post {
-                val output = buildString { append(result.stdout); if (result.stderr.isNotBlank()) append("\n[stderr]\n").append(result.stderr); append("\n[exit=${result.exitCode}]") }
-                setStepLog("service", output, result.exitCode != 0)
                 if (result.exitCode != 0) {
                     bootstrapActive = false
                     status.text = "Termux 命令返回失败，详见日志。"
                     action.isEnabled = true
                     action.text = "重试初始化"
+                    pollLogOnce()
                 }
             }
         }

@@ -54,8 +54,8 @@ create_config() {
     if [ ! -f config/deploy.yaml ]; then
         cp config/deploy.template-docker-cn.yaml config/deploy.yaml
     fi
-    sed -i -E 's/^(  WebuiHost:).*/\1 127.0.0.1/' config/deploy.yaml
-    sed -i -E 's/^(  WebuiPort:).*/\1 12271/' config/deploy.yaml
+    sed -i -E 's/^([[:space:]]+WebuiHost:).*/\1 127.0.0.1/' config/deploy.yaml
+    sed -i -E 's/^([[:space:]]+WebuiPort:).*/\1 12271/' config/deploy.yaml
     sed -i -E '/^Client:/,/^Emulator:/ s/^(    value:) win$/\1 adb/' config/deploy.yaml
     sed -i -E '/^Emulator:/,/^PhysicalDevice:/ s/^(    value:) DroidCast$/\1 ADB/' config/deploy.yaml
     sed -i -E '/^Emulator:/,/^PhysicalDevice:/ s/^(    value:) minitouch$/\1 MaaTouch/' config/deploy.yaml
