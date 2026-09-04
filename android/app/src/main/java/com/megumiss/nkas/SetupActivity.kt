@@ -102,10 +102,10 @@ class SetupActivity : Activity() {
         manualCommand(termuxSettingStep.wrapper)
         step("无线调试", "开启并检查 Android 无线调试", "wireless")
         section("项目安装")
-        step("Termux 工具", "安装 bash、git、python 等依赖", "tools")
+        step("Termux 工具", "安装 bash、git、adb、curl 等工具", "tools")
         step("NKAS 源码", "下载并更新项目文件", "source")
         step("项目配置", "写入本地设备和 Web UI 配置", "config")
-        step("容器", "安装或检查 NKAS 运行容器", "container")
+        step("容器", "安装包含 Python 运行环境的 NKAS 容器", "container")
         step("容器服务", "启动本地服务和 Web UI", "service")
         setProjectBlocked()
         action = Button(this).apply { text = "开始安装"; textSize = 14f; isAllCaps = false; setOnClickListener { onAction() }; elevation = dp(6).toFloat() }
