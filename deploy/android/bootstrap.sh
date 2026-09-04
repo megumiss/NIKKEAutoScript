@@ -15,8 +15,6 @@ REPOSITORY="${NKAS_REPOSITORY:-https://git.megumiss.top/megumiss/NIKKEAutoScript
 BRANCH="${NKAS_BRANCH:-master}"
 
 mkdir -p "$STATE_DIR"
-touch "$LOG_FILE"
-exec > >(tee -a "$LOG_FILE") 2>&1
 
 LOCK_DIR="${STATE_DIR}/bootstrap.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
@@ -30,6 +28,10 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
 fi
 printf '%s\n' "$$" > "$LOCK_DIR/pid"
 trap 'rm -rf "$LOCK_DIR"' EXIT
+
+# Keep the visible log scoped to this run so retries cannot mix old stages into the current one.
+: > "$LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 set_state() {
     printf '%s\n' "$1" > "$STATE_FILE"
