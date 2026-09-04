@@ -1,9 +1,10 @@
 <resources>
-    <style name="Theme.Nkas" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.Nkas" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#1565C0</item>
-        <item name="android:navigationBarColor">#FFFFFF</item>
-        <item name="android:statusBarColor">#FFFFFF</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#66B8EA</item>
+        <item name="android:windowBackground">#0D1117</item>
+        <item name="android:navigationBarColor">#0D1117</item>
+        <item name="android:statusBarColor">#0D1117</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

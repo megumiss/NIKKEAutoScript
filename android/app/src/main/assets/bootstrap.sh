@@ -35,7 +35,7 @@ prepare_tools() {
     dpkg --force-confold --configure -a
     apt-get -o Acquire::Retries=3 update -y
     apt-get -o Acquire::Retries=3 -y -o Dpkg::Options::=--force-confold upgrade
-    apt-get -o Acquire::Retries=3 --fix-missing -y -o Dpkg::Options::=--force-confold install git proot-distro android-tools
+    apt-get -o Acquire::Retries=3 --fix-missing -y -o Dpkg::Options::=--force-confold install git proot-distro android-tools curl
 }
 
 sync_repository() {
@@ -69,7 +69,18 @@ install_container() {
 }
 
 start_service() {
-    bash "$STATE_DIR/nkas-service.sh" start
+    bash "$STATE_DIR/nkas-service.sh" start || return 1
+    local attempt
+    for attempt in $(seq 1 30); do
+        if bash "$STATE_DIR/nkas-service.sh" status; then
+            printf '[nkas] Web UI is healthy (attempt=%s)\n' "$attempt"
+            return 0
+        fi
+        printf '[nkas] waiting for Web UI (attempt=%s/30)\n' "$attempt"
+        sleep 2
+    done
+    printf '[nkas] Web UI health check timed out\n' >&2
+    return 1
 }
 
 current_state="$(cat "$STATE_FILE" 2>/dev/null || true)"
