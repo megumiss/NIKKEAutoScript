@@ -15,6 +15,7 @@
         android:theme="@style/Theme.Nkas"
         android:usesCleartextTraffic="true">
         <activity android:name=".MainActivity" />
+        <activity android:name=".SettingsActivity" />
         <receiver android:name=".TermuxResultReceiver" android:exported="false" />
         <activity android:name=".SetupActivity" android:exported="true">
             <intent-filter>

@@ -70,6 +70,7 @@ class SetupActivity : Activity() {
             when (key) {
                 "setup" -> { renderSetup(); refreshState() }
                 "ui" -> { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)); finish() }
+                "settings" -> { startActivity(Intent(this, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)); finish() }
                 "about" -> renderAbout()
             }
         }
@@ -270,7 +271,7 @@ class SetupActivity : Activity() {
                 artifactChecking = false
                 val output = check.stdout + if (check.stderr.isNotBlank()) "\n[stderr]\n${check.stderr}" else ""
                 applyArtifactResults(output, check.exitCode)
-                if (artifactState["termux_setting"] == true && artifactState["service"] != true) startBootstrap()
+                if (artifactState["termux_setting"] == true && (artifactState["service"] != true || SettingsStore.settingsChanged(this@SetupActivity))) startBootstrap()
             }
         }
     }
@@ -368,7 +369,8 @@ class SetupActivity : Activity() {
         }
         when {
             !setting -> { status.text = "未检测到 Termux 的 allow-external-apps=true，请执行步骤中的命令并重启 Termux。"; action.text = "等待 Termux 设置" }
-            serviceReady -> { status.text = "已检测到 NKAS Web UI 服务，可以打开 UI。"; action.text = "打开 NKAS UI"; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() } }
+            serviceReady && SettingsStore.settingsChanged(this) -> { status.text = "设置已变更，需要重新应用后才能启动服务。"; action.text = "应用设置并重启"; action.setOnClickListener { onAction() } }
+            serviceReady -> { SettingsStore.markApplied(this); status.text = "已检测到 NKAS Web UI 服务，可以打开 UI。"; action.text = "打开 NKAS UI"; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() } }
             else -> { status.text = "实际产物检查完成，可以开始初始化缺失步骤。"; action.text = "开始初始化"; action.setOnClickListener { onAction() } }
         }
         action.isEnabled = true

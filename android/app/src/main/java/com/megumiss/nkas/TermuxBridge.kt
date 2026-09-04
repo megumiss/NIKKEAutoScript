@@ -44,9 +44,11 @@ class TermuxBridge(private val context: Context) {
     fun startBootstrap(onResult: (CommandResult) -> Unit = {}) {
         val script = context.assets.open("bootstrap.sh").use { it.readBytes() }
         val service = context.assets.open("nkas-service.sh").use { it.readBytes() }
+        val settings = "NKAS_APT_SOURCE=${SettingsStore.aptSource(context)}\nNKAS_DOCKER_IMAGE=${SettingsStore.dockerImage(context)}\n"
         val encoded = Base64.encodeToString(script, Base64.NO_WRAP)
         val encodedService = Base64.encodeToString(service, Base64.NO_WRAP)
-        val command = "mkdir -p \$HOME/.nkas; printf '%s\\n' starting > \$HOME/.nkas/state; echo $encodedService | base64 -d > \$HOME/.nkas/nkas-service.sh; chmod 700 \$HOME/.nkas/nkas-service.sh; echo $encoded | base64 -d > \$HOME/.nkas/bootstrap.sh; chmod 700 \$HOME/.nkas/bootstrap.sh; \$HOME/.nkas/bootstrap.sh"
+        val encodedSettings = Base64.encodeToString(settings.toByteArray(), Base64.NO_WRAP)
+        val command = "mkdir -p \$HOME/.nkas; printf '%s\\n' starting > \$HOME/.nkas/state; echo $encodedSettings | base64 -d > \$HOME/.nkas/settings.env; echo $encodedService | base64 -d > \$HOME/.nkas/nkas-service.sh; chmod 700 \$HOME/.nkas/nkas-service.sh; echo $encoded | base64 -d > \$HOME/.nkas/bootstrap.sh; chmod 700 \$HOME/.nkas/bootstrap.sh; \$HOME/.nkas/bootstrap.sh"
         runCommand(command, onResult)
     }
 
@@ -55,6 +57,7 @@ class TermuxBridge(private val context: Context) {
     }
 
     fun checkArtifacts(onResult: (CommandResult) -> Unit) {
+        val expectedImage = SettingsStore.dockerImage(context).replace("'", "")
         val command = """
             check_file() { [ -f "${'$'}1" ] && printf 'yes' || printf 'no'; }
             check_dir() { [ -d "${'$'}1" ] && printf 'yes' || printf 'no'; }
@@ -62,7 +65,7 @@ class TermuxBridge(private val context: Context) {
             check_setting() { grep -Eq 'allow-external-apps[[:space:]]*=[[:space:]]*true' "${'$'}HOME/.termux/termux.properties" 2>/dev/null && printf 'yes' || printf 'no'; }
             check_source() { [ -d "${'$'}HOME/NIKKEAutoScript/.git" ] && git -C "${'$'}HOME/NIKKEAutoScript" rev-parse --is-inside-work-tree >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
             check_config() { [ -f "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" ] && grep -Eq '^[[:space:]]+WebuiHost:[[:space:]]*127\.0\.0\.1([[:space:]]*#.*)?$' "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" && grep -Eq '^[[:space:]]+WebuiPort:[[:space:]]*12271([[:space:]]*#.*)?$' "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" && printf 'yes' || printf 'no'; }
-            check_container() { [ -d "${'$'}PREFIX/var/lib/proot-distro/containers/nkas/rootfs" ] && proot-distro run -b "${'$'}HOME/NIKKEAutoScript:/app/NIKKEAutoScript" nkas -- /usr/local/bin/python -c 'import uvicorn' >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
+            check_container() { [ -d "${'$'}PREFIX/var/lib/proot-distro/containers/nkas/rootfs" ] && [ "${'$'}(sed -n 's/^NKAS_DOCKER_IMAGE=//p' "${'$'}HOME/.nkas/settings.env" 2>/dev/null)" = '$expectedImage' ] && proot-distro run -b "${'$'}HOME/NIKKEAutoScript:/app/NIKKEAutoScript" nkas -- /usr/local/bin/python -c 'import uvicorn' >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
             check_service() { curl -fsS --max-time 3 http://127.0.0.1:12271/api/system/status >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
             printf 'termux_setting=%s\n' "${'$'}(check_setting)"
             printf 'tools=%s\n' "${'$'}(check_cmds)"

@@ -4,7 +4,13 @@ set -u
 STATE_DIR="${HOME}/.nkas"
 STATE_FILE="${STATE_DIR}/state"
 LOG_FILE="${STATE_DIR}/bootstrap.log"
+CONTAINER_MARKER="${STATE_DIR}/container-image"
 REPO_DIR="${HOME}/NIKKEAutoScript"
+if [ -f "$STATE_DIR/settings.env" ]; then
+    . "$STATE_DIR/settings.env"
+fi
+APT_SOURCE="${NKAS_APT_SOURCE:-https://mirrors.tuna.tsinghua.edu.cn/termux/termux-main}"
+DOCKER_IMAGE="${NKAS_DOCKER_IMAGE:-m.daocloud.io/docker.io/megumiss/nkas:latest}"
 REPOSITORY="${NKAS_REPOSITORY:-https://git.megumiss.top/megumiss/NIKKEAutoScript}"
 BRANCH="${NKAS_BRANCH:-master}"
 
@@ -32,6 +38,10 @@ run_stage() {
 
 prepare_tools() {
     export DEBIAN_FRONTEND=noninteractive
+    case "$APT_SOURCE" in
+        https://*) printf 'deb %s stable main\n' "$APT_SOURCE" > "${PREFIX}/etc/apt/sources.list" ;;
+        *) return 1 ;;
+    esac
     dpkg --force-confold --configure -a
     apt-get -o Acquire::Retries=3 update -y
     apt-get -o Acquire::Retries=3 -y -o Dpkg::Options::=--force-confold upgrade
@@ -63,14 +73,18 @@ create_config() {
 }
 
 install_container() {
-    if [ -d "${PREFIX}/var/lib/proot-distro/containers/nkas/rootfs" ] && \
+    if [ -d "${PREFIX}/var/lib/proot-distro/containers/nkas/rootfs" ] && [ -f "$CONTAINER_MARKER" ] && [ "$(cat "$CONTAINER_MARKER")" = "$DOCKER_IMAGE" ] && \
         proot-distro run -b "$REPO_DIR:/app/NIKKEAutoScript" nkas -- /usr/local/bin/python -c 'import uvicorn' >/dev/null 2>&1; then
         return 0
     fi
     if [ -d "${PREFIX}/var/lib/proot-distro/containers/nkas/rootfs" ]; then
         proot-distro remove nkas || return 1
     fi
-    proot-distro install megumiss/nkas:latest --name nkas || return 1
+    case "$DOCKER_IMAGE" in
+        *[!A-Za-z0-9._:/-]*|'') return 1 ;;
+    esac
+    proot-distro install "$DOCKER_IMAGE" --name nkas || return 1
+    printf '%s\n' "$DOCKER_IMAGE" > "$CONTAINER_MARKER"
 }
 
 start_service() {
