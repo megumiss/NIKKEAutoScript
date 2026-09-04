@@ -213,6 +213,7 @@ class SetupActivity : Activity() {
         BootstrapService(this).checkArtifacts { result ->
             handler.post {
                 artifactChecking = false
+                if (bootstrapActive) return@post
                 val output = result.stdout + if (result.stderr.isNotBlank()) "\n[stderr]\n${result.stderr}" else ""
                 applyArtifactResults(output, result.exitCode)
             }
@@ -225,8 +226,10 @@ class SetupActivity : Activity() {
         if (checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(TermuxBridge.RUN_COMMAND_PERMISSION), RUN_COMMAND_REQUEST); return }
         status.text = "正在重新检查实际产物……"
         action.isEnabled = false
+        artifactChecking = true
         bridge.checkArtifacts { check ->
             handler.post {
+                artifactChecking = false
                 val output = check.stdout + if (check.stderr.isNotBlank()) "\n[stderr]\n${check.stderr}" else ""
                 applyArtifactResults(output, check.exitCode)
                 if (artifactState["termux_setting"] == true && artifactState["service"] != true) startBootstrap()
@@ -264,7 +267,27 @@ class SetupActivity : Activity() {
         checking = true
         executor.execute {
             val ready = try { (URL("http://127.0.0.1:12271/api/system/status").openConnection() as HttpURLConnection).apply { connectTimeout = 1500; readTimeout = 1500; requestMethod = "GET" }.responseCode == 200 } catch (_: Exception) { false }
-            handler.post { if (!destroyed) { checking = false; if (ready) { bootstrapActive = false; refreshState() } else { if (bootstrapActive) { status.text = "初始化仍在执行，当前步骤日志会持续更新……"; handler.postDelayed({ pollBackend() }, 3500) } else { status.text = "服务尚未就绪，请展开失败步骤查看日志后重试。"; action.text = "重试初始化"; action.isEnabled = true; handler.postDelayed({ pollBackend() }, 3500) } } } }
+            handler.post {
+                if (destroyed) return@post
+                checking = false
+                if (ready) {
+                    if (bootstrapActive) {
+                        status.text = "Web UI 已响应，等待初始化脚本完成最后检查……"
+                        handler.postDelayed({ pollBackend() }, 3500)
+                    } else {
+                        bootstrapActive = false
+                        refreshState()
+                    }
+                } else if (bootstrapActive) {
+                    status.text = "初始化仍在执行，当前步骤日志会持续更新……"
+                    handler.postDelayed({ pollBackend() }, 3500)
+                } else {
+                    status.text = "服务尚未就绪，请展开失败步骤查看日志后重试。"
+                    action.text = "重试初始化"
+                    action.isEnabled = true
+                    handler.postDelayed({ pollBackend() }, 3500)
+                }
+            }
         }
     }
 
