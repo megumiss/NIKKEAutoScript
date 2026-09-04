@@ -56,7 +56,7 @@ class SettingsActivity : Activity() {
         aptSpinner = spinner(SettingsStore.aptSources)
         aptSpinner.setSelection(SettingsStore.aptSources.indexOfFirst { it.value == SettingsStore.aptSource(this) }.coerceAtLeast(0))
         content.addView(aptSpinner, LinearLayout.LayoutParams(-1, dp(50)).apply { bottomMargin = dp(18) })
-        sourceLabel("Docker 镜像", "用于安装 NKAS 容器，默认使用 m.daocloud.io 镜像代理")
+        sourceLabel("Docker 镜像", "用于安装 NKAS 容器，默认使用项目镜像 megumiss/nkas:latest")
         dockerInput = EditText(this).apply {
             setText(SettingsStore.dockerImage(this@SettingsActivity))
             setTextColor(this@SettingsActivity.text)
@@ -109,7 +109,7 @@ class SettingsActivity : Activity() {
         val apt = SettingsStore.aptSources[aptSpinner.selectedItemPosition].value
         val docker = dockerInput.text.toString().trim()
         if (!docker.matches(Regex("[A-Za-z0-9._/-]+:[A-Za-z0-9._-]+"))) {
-            status.text = "Docker 镜像格式不正确，例如：m.daocloud.io/docker.io/megumiss/nkas:latest"
+            status.text = "Docker 镜像格式不正确，例如：megumiss/nkas:latest"
             return
         }
         getSharedPreferences(SettingsStore.PREFS_NAME, MODE_PRIVATE).edit()
