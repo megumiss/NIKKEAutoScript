@@ -32,8 +32,9 @@ class SetupActivity : Activity() {
     private var destroyed = false
     private var currentPage = "setup"
     private var bootstrapActive = false
+    private var artifactChecking = false
+    private val artifactState = mutableMapOf<String, Boolean>()
     private val steps = linkedMapOf<String, Step>()
-    private val prefs by lazy { getSharedPreferences("nkas", MODE_PRIVATE) }
 
     private val bg = Color.rgb(13, 17, 23)
     private val card = Color.rgb(21, 26, 34)
@@ -105,7 +106,6 @@ class SetupActivity : Activity() {
         val open = Button(this).apply { text = "打开 Termux"; isAllCaps = false; textSize = 12f; setOnClickListener { packageManager.getLaunchIntentForPackage("com.termux")?.let { startActivity(it) } } }
         val copy = Button(this).apply { text = "复制命令"; isAllCaps = false; textSize = 12f; setOnClickListener { (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Termux 命令", command)); text = "已复制" } }
         val verify = Button(this).apply { text = "我已执行并重启"; isAllCaps = false; textSize = 12f; setOnClickListener {
-            prefs.edit().putBoolean("termux_external_apps_confirmed", true).apply()
             refreshState()
         } }
         actions.addView(open, LinearLayout.LayoutParams(0, dp(42), 1f)); actions.addView(copy, LinearLayout.LayoutParams(0, dp(42), 1f).apply { leftMargin = dp(8) }); actions.addView(verify, LinearLayout.LayoutParams(0, dp(42), 1f).apply { leftMargin = dp(8) })
@@ -178,10 +178,8 @@ class SetupActivity : Activity() {
         }
         if (state == "ready") {
             bootstrapActive = false
-            status.text = "初始化完成，NKAS 服务已就绪。"
-            action.isEnabled = true
-            action.text = "打开 NKAS UI"
-            action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)); finish() }
+            status.text = "初始化脚本已结束，正在重新检查实际产物……"
+            refreshState()
         }
     }
 
@@ -190,22 +188,39 @@ class SetupActivity : Activity() {
         val bridge = TermuxBridge(this)
         val installed = bridge.isInstalled()
         val permission = checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) == PackageManager.PERMISSION_GRANTED
-        val termuxSetting = prefs.getBoolean("termux_external_apps_confirmed", false)
         setStep("termux", installed, if (installed) "已安装" else "待安装")
         setStep("permission", permission, if (permission) "已授权" else "待授权")
-        setStep("termux_setting", termuxSetting, if (termuxSetting) "已确认" else "待设置")
         if (!installed) { status.text = "未检测到 Termux，请先下载并安装官方版本。"; action.text = "下载 Termux"; return }
         if (!permission) { status.text = "Termux 已安装，还需要允许外部命令权限。"; action.text = "授权并继续"; return }
-        if (!termuxSetting) { status.text = "系统权限已授权，但 Termux 仍需设置 allow-external-apps=true。"; action.text = "完成 Termux 设置后重试"; return }
-        status.text = "可以开始初始化。"; action.text = "开始初始化"; action.isEnabled = true
-        pollLogOnce()
+        if (artifactChecking) return
+        artifactChecking = true
+        status.text = "正在检查实际产物，不读取上次保存的状态……"
+        action.isEnabled = false
+        BootstrapService(this).checkArtifacts { result ->
+            handler.post {
+                artifactChecking = false
+                val output = result.stdout + if (result.stderr.isNotBlank()) "\n[stderr]\n${result.stderr}" else ""
+                applyArtifactResults(output, result.exitCode)
+            }
+        }
     }
 
     private fun onAction() {
         val bridge = TermuxBridge(this)
         if (!bridge.isInstalled()) { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TERMUX_URL))); return }
         if (checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(TermuxBridge.RUN_COMMAND_PERMISSION), RUN_COMMAND_REQUEST); return }
-        if (!prefs.getBoolean("termux_external_apps_confirmed", false)) { status.text = "请先在 Termux 执行命令，并点击“我已执行并重启”。"; return }
+        status.text = "正在重新检查实际产物……"
+        action.isEnabled = false
+        bridge.checkArtifacts { check ->
+            handler.post {
+                val output = check.stdout + if (check.stderr.isNotBlank()) "\n[stderr]\n${check.stderr}" else ""
+                applyArtifactResults(output, check.exitCode)
+                if (artifactState["termux_setting"] == true && artifactState["service"] != true) startBootstrap()
+            }
+        }
+    }
+
+    private fun startBootstrap() {
         status.text = "正在启动初始化脚本，日志会显示在当前步骤中……"; action.isEnabled = false; bootstrapActive = true; setStep("tools", false, "执行中"); setStepLog("tools", "正在请求 Termux 执行脚本……", true)
         val result = BootstrapService(this).start { result ->
             handler.post {
@@ -220,7 +235,6 @@ class SetupActivity : Activity() {
             }
         }
         if (result.isFailure) {
-            prefs.edit().putBoolean("termux_external_apps_confirmed", false).apply()
             status.text = "Termux 拒绝了外部命令。请确认已设置 allow-external-apps=true，并重启 Termux。"
             action.isEnabled = true
             setStep("termux_setting", false, "待设置")
@@ -236,7 +250,7 @@ class SetupActivity : Activity() {
         checking = true
         executor.execute {
             val ready = try { (URL("http://127.0.0.1:12271/api/system/status").openConnection() as HttpURLConnection).apply { connectTimeout = 1500; readTimeout = 1500; requestMethod = "GET" }.responseCode == 200 } catch (_: Exception) { false }
-            handler.post { if (!destroyed) { checking = false; if (ready) { bootstrapActive = false; setStep("tools", true, "完成"); setStep("source", true, "完成"); setStep("config", true, "完成"); setStep("container", true, "完成"); setStep("service", true, "运行中"); status.text = "NKAS 服务已就绪，可以打开 UI。"; action.text = "打开 NKAS UI"; action.isEnabled = true; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)) } } else { if (bootstrapActive) { status.text = "初始化仍在执行，当前步骤日志会持续更新……"; handler.postDelayed({ pollBackend() }, 3500) } else { status.text = "服务尚未就绪，请展开失败步骤查看日志后重试。"; action.text = "重试初始化"; action.isEnabled = true; handler.postDelayed({ pollBackend() }, 3500) } } } }
+            handler.post { if (!destroyed) { checking = false; if (ready) { bootstrapActive = false; refreshState() } else { if (bootstrapActive) { status.text = "初始化仍在执行，当前步骤日志会持续更新……"; handler.postDelayed({ pollBackend() }, 3500) } else { status.text = "服务尚未就绪，请展开失败步骤查看日志后重试。"; action.text = "重试初始化"; action.isEnabled = true; handler.postDelayed({ pollBackend() }, 3500) } } } }
         }
     }
 
@@ -252,6 +266,38 @@ class SetupActivity : Activity() {
                 if (bootstrapActive && !destroyed) handler.postDelayed({ pollLog() }, 1400)
             }
         }
+    }
+
+    private fun applyArtifactResults(raw: String, exitCode: Int) {
+        val values = raw.lineSequence()
+            .mapNotNull { line -> line.trim().split('=', limit = 2).takeIf { it.size == 2 } }
+            .associate { it[0] to (it[1] == "yes") }
+        artifactState.clear()
+        artifactState.putAll(values)
+        val setting = values["termux_setting"] == true
+        val toolsReady = values["tools"] == true
+        val sourceReady = values["source"] == true
+        val configReady = values["config"] == true
+        val containerReady = values["container"] == true
+        val serviceReady = values["service"] == true
+        setStep("termux_setting", setting, if (setting) "已检测" else "待设置")
+        setStep("tools", toolsReady, if (toolsReady) "已检测" else "待安装")
+        setStep("source", sourceReady, if (sourceReady) "已检测" else "待下载")
+        setStep("config", configReady, if (configReady) "已检测" else "待配置")
+        setStep("container", containerReady, if (containerReady) "已检测" else "待安装")
+        setStep("service", serviceReady, if (serviceReady) "运行中" else "未运行")
+        if (exitCode != 0 && raw.isBlank()) {
+            status.text = "无法读取 Termux 实际产物：请确认 allow-external-apps=true。"
+            action.text = "打开 Termux 设置"
+            action.isEnabled = true
+            return
+        }
+        when {
+            !setting -> { status.text = "未检测到 Termux 的 allow-external-apps=true，请执行步骤中的命令并重启 Termux。"; action.text = "等待 Termux 设置" }
+            serviceReady -> { status.text = "已检测到 NKAS Web UI 服务，可以打开 UI。"; action.text = "打开 NKAS UI"; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() } }
+            else -> { status.text = "实际产物检查完成，可以开始初始化缺失步骤。"; action.text = "开始初始化"; action.setOnClickListener { onAction() } }
+        }
+        action.isEnabled = true
     }
 
     private fun renderAbout() { currentPage = "about"; content.removeAllViews(); heading("关于 NKAS Mobile", "NIKKEAutoScript 的 Android 控制端"); content.addView(TextView(this).apply { text = "应用负责初始化 Termux 环境，并通过本地 Web UI 管理 NKAS。\n\n包名：com.megumiss.nkas.mobile\n版本：0.2.0\n\n不会自动启动 NIKKE 游戏。"; textSize = 14f; setTextColor(text2); setPadding(dp(16), dp(16), dp(16), dp(16)); background = rounded(card, 10) }) }

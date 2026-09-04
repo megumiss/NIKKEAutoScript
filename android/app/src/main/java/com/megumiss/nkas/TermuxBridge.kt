@@ -54,6 +54,26 @@ class TermuxBridge(private val context: Context) {
         runCommand("printf '%s\\n' '---STATE---'; cat \$HOME/.nkas/state 2>/dev/null || true; printf '%s\\n' '---LOG---'; tail -n 80 \$HOME/.nkas/bootstrap.log 2>/dev/null || true; printf '%s\\n' '---SERVICE---'; tail -n 40 \$HOME/.nkas/nkas-service.log 2>/dev/null || true", onResult)
     }
 
+    fun checkArtifacts(onResult: (CommandResult) -> Unit) {
+        val command = """
+            check_file() { [ -f "${'$'}1" ] && printf 'yes' || printf 'no'; }
+            check_dir() { [ -d "${'$'}1" ] && printf 'yes' || printf 'no'; }
+            check_cmds() { command -v git >/dev/null 2>&1 && command -v proot-distro >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
+            check_setting() { grep -Eq 'allow-external-apps[[:space:]]*=[[:space:]]*true' "${'$'}HOME/.termux/termux.properties" 2>/dev/null && printf 'yes' || printf 'no'; }
+            check_source() { [ -d "${'$'}HOME/NIKKEAutoScript/.git" ] && git -C "${'$'}HOME/NIKKEAutoScript" rev-parse --is-inside-work-tree >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
+            check_config() { [ -f "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" ] && grep -Eq 'WebuiHost:[[:space:]]*127\.0\.0\.1' "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" && grep -Eq 'WebuiPort:[[:space:]]*12271' "${'$'}HOME/NIKKEAutoScript/config/deploy.yaml" && printf 'yes' || printf 'no'; }
+            check_container() { [ -d "${'$'}PREFIX/var/lib/proot-distro/containers/debian/rootfs" ] && proot-distro run -b "${'$'}HOME/NIKKEAutoScript:/app/NIKKEAutoScript" debian -- bash -lc 'test -x /usr/bin/python3 && python3 -c "import uvicorn"' >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
+            check_service() { curl -fsS --max-time 3 http://127.0.0.1:12271/api/system/status >/dev/null 2>&1 && printf 'yes' || printf 'no'; }
+            printf 'termux_setting=%s\n' "${'$'}(check_setting)"
+            printf 'tools=%s\n' "${'$'}(check_cmds)"
+            printf 'source=%s\n' "${'$'}(check_source)"
+            printf 'config=%s\n' "${'$'}(check_config)"
+            printf 'container=%s\n' "${'$'}(check_container)"
+            printf 'service=%s\n' "${'$'}(check_service)"
+        """.trimIndent().replace("\n", ";")
+        runCommand(command, onResult)
+    }
+
     private fun runCommand(command: String, onResult: (CommandResult) -> Unit) {
         val token = UUID.randomUUID().toString()
         callbacks[token] = onResult

@@ -8,4 +8,6 @@ class BootstrapService(context: Context) {
     fun start(onResult: (TermuxBridge.CommandResult) -> Unit = {}): Result<Unit> = runCatching { bridge.startBootstrap(onResult) }
 
     fun readLog(onResult: (TermuxBridge.CommandResult) -> Unit) = bridge.readBootstrapLog(onResult)
+
+    fun checkArtifacts(onResult: (TermuxBridge.CommandResult) -> Unit) = bridge.checkArtifacts(onResult)
 }
