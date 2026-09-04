@@ -213,6 +213,8 @@ class SetupActivity : Activity() {
     private fun refreshState() {
         if (!::status.isInitialized) return
         if (bootstrapActive) return
+        action.isEnabled = true
+        action.setOnClickListener { onAction() }
         val bridge = TermuxBridge(this)
         val installed = bridge.isInstalled()
         val permission = checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) == PackageManager.PERMISSION_GRANTED
@@ -220,9 +222,9 @@ class SetupActivity : Activity() {
         setStep("termux", installed, if (installed) "已安装" else "待安装")
         setStep("permission", permission, if (permission) "已授权" else "待授权")
         setStep("wireless", wireless, if (wireless) "已开启" else "待开启")
-        if (!installed) { status.text = "未检测到 Termux，请先下载并安装官方版本。"; action.text = "下载 Termux"; return }
-        if (!permission) { status.text = "Termux 已安装，还需要允许外部命令权限。"; action.text = "授权并继续"; return }
-        if (!wireless) { status.text = "请先开启 Android 无线调试，完成后再继续项目安装。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; return }
+        if (!installed) { setProjectBlocked(); status.text = "未检测到 Termux，请先下载并安装官方版本。"; action.text = "下载 Termux"; return }
+        if (!permission) { setProjectBlocked(); status.text = "Termux 已安装，还需要允许外部命令权限。"; action.text = "授权并继续"; return }
+        if (!wireless) { setProjectBlocked(); status.text = "请先开启 Android 无线调试，完成后再继续项目安装。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; return }
         if (artifactChecking) return
         artifactChecking = true
         status.text = "正在检查实际产物，不读取上次保存的状态……"
@@ -297,6 +299,12 @@ class SetupActivity : Activity() {
     private fun openWirelessSettings() {
         val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
         runCatching { startActivity(intent) }.onFailure { startActivity(Intent(Settings.ACTION_SETTINGS)) }
+    }
+
+    private fun setProjectBlocked() {
+        listOf("tools", "source", "config", "container", "service").forEach { key ->
+            setStep(key, false, "等待环境")
+        }
     }
 
     private fun startBootstrap() {
