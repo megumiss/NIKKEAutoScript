@@ -79,7 +79,7 @@ class SetupActivity : Activity() {
             }
         }
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(24), dp(24), dp(96)) }
+        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(24), dp(24), dp(170)) }
         scroll.addView(content)
         built.content.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
         floatingHost = android.widget.FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT); visibility = View.GONE }
