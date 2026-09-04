@@ -33,6 +33,7 @@ class SetupActivity : Activity() {
     private var currentPage = "setup"
     private var bootstrapActive = false
     private var artifactChecking = false
+    private var expandedLogKey: String? = null
     private val artifactState = mutableMapOf<String, Boolean>()
     private val steps = linkedMapOf<String, Step>()
 
@@ -143,13 +144,25 @@ class SetupActivity : Activity() {
         info.dot.setTextColor(if (done) green else text2)
         info.state.text = label
         info.state.setTextColor(if (done) green else text2)
-        if (done) info.log.visibility = View.GONE
+        if (done) {
+            info.log.visibility = View.GONE
+            if (expandedLogKey == key) expandedLogKey = null
+        }
     }
 
     private fun setStepLog(key: String, value: String, expanded: Boolean = true) {
         val info = steps[key] ?: return
         info.log.text = value.takeLast(5000)
-        info.log.visibility = if (expanded && value.isNotBlank()) View.VISIBLE else View.GONE
+        if (expanded && value.isNotBlank()) {
+            steps.values.forEach { other ->
+                if (other.key != key) other.log.visibility = View.GONE
+            }
+            expandedLogKey = key
+            info.log.visibility = View.VISIBLE
+        } else {
+            info.log.visibility = View.GONE
+            if (expandedLogKey == key) expandedLogKey = null
+        }
     }
 
     private fun applyBootstrapLog(raw: String) {
@@ -185,6 +198,7 @@ class SetupActivity : Activity() {
 
     private fun refreshState() {
         if (!::status.isInitialized) return
+        if (bootstrapActive) return
         val bridge = TermuxBridge(this)
         val installed = bridge.isInstalled()
         val permission = checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) == PackageManager.PERMISSION_GRANTED
