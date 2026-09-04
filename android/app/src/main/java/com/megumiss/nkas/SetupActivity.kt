@@ -94,8 +94,7 @@ class SetupActivity : Activity() {
         floatingHost.visibility = View.VISIBLE
         content.removeAllViews()
         heading("初始化", "准备 Termux、NKAS 服务和本地 Web UI\n请开启 Termux 和 NKAS 的自启动、关联启动，并允许后台运行")
-        status = TextView(this).apply { textSize = 14f; setTextColor(text2); setPadding(0, 0, 0, dp(16)) }
-        content.addView(status)
+        status = TextView(this).apply { textSize = 14f; setTextColor(text2); setPadding(0, 0, 0, dp(16)); visibility = View.GONE }
         section("环境准备")
         step("Termux", "安装官方 Termux v0.118.3", "termux")
         step("Android 外部命令权限", "系统授权：允许 NKAS 调用 Termux", "permission")
