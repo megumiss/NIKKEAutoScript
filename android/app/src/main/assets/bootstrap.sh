@@ -104,15 +104,7 @@ source_ready() {
 }
 
 config_ready() {
-    local config="$REPO_DIR/config/nkas.json"
-    [ -f "$config" ] && \
-        grep -Eq '"Platform"[[:space:]]*:[[:space:]]*"adb"' "$config" && \
-        grep -Eq '"ScreenshotMethod"[[:space:]]*:[[:space:]]*"ADB"' "$config" && \
-        grep -Eq '"ControlMethod"[[:space:]]*:[[:space:]]*"ADB"' "$config" && \
-        sed -n '/"PhysicalDevice"[[:space:]]*:[[:space:]]*\{/,/^[[:space:]]*\},?[[:space:]]*$/p' "$config" | grep -Eq '"Enable"[[:space:]]*:[[:space:]]*true' && \
-        [ -f "$REPO_DIR/config/deploy.yaml" ] && \
-        grep -Eq '^[[:space:]]+WebuiHost:[[:space:]]*127\.0\.0\.1([[:space:]]*#.*)?$' "$REPO_DIR/config/deploy.yaml" && \
-        grep -Eq '^[[:space:]]+WebuiPort:[[:space:]]*12271([[:space:]]*#.*)?$' "$REPO_DIR/config/deploy.yaml"
+    [ -f "$REPO_DIR/config/nkas.json" ]
 }
 
 container_ready() {
