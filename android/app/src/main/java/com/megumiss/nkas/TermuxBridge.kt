@@ -8,6 +8,8 @@ import android.util.Base64
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import android.os.Handler
+import android.os.Looper
 
 class TermuxBridge(private val context: Context) {
     companion object {
@@ -19,7 +21,9 @@ class TermuxBridge(private val context: Context) {
         private const val EXTRA_BACKGROUND = "com.termux.RUN_COMMAND_BACKGROUND"
         private const val EXTRA_PENDING_INTENT = "com.termux.RUN_COMMAND_PENDING_INTENT"
         private const val TOKEN = "nkas_result_token"
+        private const val COMMAND_TIMEOUT_MS = 12_000L
         private val callbacks = ConcurrentHashMap<String, (CommandResult) -> Unit>()
+        private val timeoutHandler = Handler(Looper.getMainLooper())
 
         internal fun deliver(intent: Intent) {
             val token = intent.getStringExtra(TOKEN) ?: return
@@ -80,6 +84,10 @@ class TermuxBridge(private val context: Context) {
     private fun runCommand(command: String, onResult: (CommandResult) -> Unit) {
         val token = UUID.randomUUID().toString()
         callbacks[token] = onResult
+        timeoutHandler.postDelayed({
+            val callback = callbacks.remove(token) ?: return@postDelayed
+            callback(CommandResult("", "Termux 外部命令等待超时，请确认 Termux 已完全重启且 allow-external-apps=true。", -2))
+        }, COMMAND_TIMEOUT_MS)
         val callbackIntent = Intent(context, TermuxResultReceiver::class.java).putExtra(TOKEN, token)
         val pendingIntent = PendingIntent.getBroadcast(context, token.hashCode(), callbackIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
         val intent = Intent(RUN_COMMAND).apply {
@@ -91,7 +99,9 @@ class TermuxBridge(private val context: Context) {
             addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
         }
         try {
-            context.startForegroundService(intent)
+            // RunCommandService is a short-lived command service, not a foreground service.
+            // Starting it as foreground can make Android terminate it before the result callback.
+            context.startService(intent)
         } catch (error: Exception) {
             callbacks.remove(token)
             onResult(CommandResult("", error.message ?: "无法启动 Termux 命令", -1))
