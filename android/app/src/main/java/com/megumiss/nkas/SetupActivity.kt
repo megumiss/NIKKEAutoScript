@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -29,6 +30,7 @@ class SetupActivity : Activity() {
     private lateinit var content: LinearLayout
     private lateinit var status: TextView
     private lateinit var action: Button
+    private lateinit var floatingHost: android.widget.FrameLayout
     private var checking = false
     private var destroyed = false
     private var currentPage = "setup"
@@ -75,30 +77,36 @@ class SetupActivity : Activity() {
             }
         }
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(24), dp(24), dp(28)) }
+        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(24), dp(24), dp(96)) }
         scroll.addView(content)
         built.content.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
+        floatingHost = android.widget.FrameLayout(this).apply { setBackgroundColor(bg); visibility = View.GONE }
+        built.content.addView(floatingHost, android.widget.FrameLayout.LayoutParams(-1, dp(78), Gravity.BOTTOM))
         return built.root
     }
 
     private fun renderSetup() {
         currentPage = "setup"
+        floatingHost.visibility = View.VISIBLE
         content.removeAllViews()
         heading("初始化", "准备 Termux、NKAS 服务和本地 Web UI")
         status = TextView(this).apply { textSize = 14f; setTextColor(text2); setPadding(0, 0, 0, dp(16)) }
         content.addView(status)
-        section("执行步骤")
+        section("环境准备")
         step("Termux", "安装官方 Termux v0.118.3", "termux")
         step("Android 外部命令权限", "系统授权：允许 NKAS 调用 Termux", "permission")
         step("Termux 外部应用开关", "Termux 配置 allow-external-apps=true", "termux_setting")
         manualCommand()
+        step("无线调试", "开启并检查 Android 无线调试", "wireless")
+        section("项目安装")
         step("Termux 工具", "安装 bash、git、python 等依赖", "tools")
         step("NKAS 源码", "下载并更新项目文件", "source")
         step("项目配置", "写入本地设备和 Web UI 配置", "config")
         step("容器", "安装或检查 NKAS 运行容器", "container")
         step("容器服务", "启动本地服务和 Web UI", "service")
         action = Button(this).apply { text = "开始初始化"; textSize = 14f; isAllCaps = false; setTextColor(accent); background = rounded(Color.rgb(28, 54, 72), 10); setOnClickListener { onAction() } }
-        content.addView(action, LinearLayout.LayoutParams(-1, dp(48)))
+        floatingHost.removeAllViews()
+        floatingHost.addView(action, android.widget.FrameLayout.LayoutParams(-1, dp(52)).apply { leftMargin = dp(24); rightMargin = dp(24); topMargin = dp(10) })
     }
 
     private fun manualCommand() {
@@ -208,10 +216,13 @@ class SetupActivity : Activity() {
         val bridge = TermuxBridge(this)
         val installed = bridge.isInstalled()
         val permission = checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) == PackageManager.PERMISSION_GRANTED
+        val wireless = isWirelessDebugEnabled()
         setStep("termux", installed, if (installed) "已安装" else "待安装")
         setStep("permission", permission, if (permission) "已授权" else "待授权")
+        setStep("wireless", wireless, if (wireless) "已开启" else "待开启")
         if (!installed) { status.text = "未检测到 Termux，请先下载并安装官方版本。"; action.text = "下载 Termux"; return }
         if (!permission) { status.text = "Termux 已安装，还需要允许外部命令权限。"; action.text = "授权并继续"; return }
+        if (!wireless) { status.text = "请先开启 Android 无线调试，完成后再继续项目安装。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; return }
         if (artifactChecking) return
         artifactChecking = true
         status.text = "正在检查实际产物，不读取上次保存的状态……"
@@ -231,6 +242,7 @@ class SetupActivity : Activity() {
         val bridge = TermuxBridge(this)
         if (!bridge.isInstalled()) { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TERMUX_URL))); return }
         if (checkSelfPermission(TermuxBridge.RUN_COMMAND_PERMISSION) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(TermuxBridge.RUN_COMMAND_PERMISSION), RUN_COMMAND_REQUEST); return }
+        if (!isWirelessDebugEnabled()) { openWirelessSettings(); return }
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         if (!prefs.getBoolean(KEY_INITIAL_NOTICE_SHOWN, false)) {
             showInitialNotice()
@@ -274,6 +286,17 @@ class SetupActivity : Activity() {
                 if (artifactState["termux_setting"] == true && (artifactState["service"] != true || SettingsStore.settingsChanged(this@SetupActivity))) startBootstrap()
             }
         }
+    }
+
+    private fun isWirelessDebugEnabled(): Boolean = try {
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R && Settings.Global.getInt(contentResolver, "adb_wifi_enabled", 0) == 1
+    } catch (_: Settings.SettingNotFoundException) {
+        false
+    }
+
+    private fun openWirelessSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+        runCatching { startActivity(intent) }.onFailure { startActivity(Intent(Settings.ACTION_SETTINGS)) }
     }
 
     private fun startBootstrap() {
@@ -355,7 +378,9 @@ class SetupActivity : Activity() {
         val configReady = values["config"] == true
         val containerReady = values["container"] == true
         val serviceReady = values["service"] == true
+        val wirelessReady = isWirelessDebugEnabled()
         setStep("termux_setting", setting, if (setting) "已检测" else "待设置")
+        setStep("wireless", wirelessReady, if (wirelessReady) "已开启" else "待开启")
         setStep("tools", toolsReady, if (toolsReady) "已检测" else "待安装")
         setStep("source", sourceReady, if (sourceReady) "已检测" else "待下载")
         setStep("config", configReady, if (configReady) "已检测" else "待配置")
@@ -368,6 +393,7 @@ class SetupActivity : Activity() {
             return
         }
         when {
+            !wirelessReady -> { status.text = "请先开启 Android 无线调试，环境准备完成后才能安装项目。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() } }
             !setting -> { status.text = "未检测到 Termux 的 allow-external-apps=true，请执行步骤中的命令并重启 Termux。"; action.text = "等待 Termux 设置" }
             serviceReady && SettingsStore.settingsChanged(this) -> { status.text = "设置已变更，需要重新应用后才能启动服务。"; action.text = "应用设置并重启"; action.setOnClickListener { onAction() } }
             serviceReady -> { SettingsStore.markApplied(this); status.text = "已检测到 NKAS Web UI 服务，可以打开 UI。"; action.text = "打开 NKAS UI"; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() } }
@@ -376,7 +402,7 @@ class SetupActivity : Activity() {
         action.isEnabled = true
     }
 
-    private fun renderAbout() { currentPage = "about"; content.removeAllViews(); heading("关于 NKAS Mobile", "NIKKEAutoScript 的 Android 控制端"); content.addView(TextView(this).apply { text = "应用负责初始化 Termux 环境，并通过本地 Web UI 管理 NKAS。\n\n包名：com.megumiss.nkas.mobile\n版本：0.2.0\n\n不会自动启动 NIKKE 游戏。"; textSize = 14f; setTextColor(text2); setPadding(dp(16), dp(16), dp(16), dp(16)); background = rounded(card, 10) }) }
+    private fun renderAbout() { currentPage = "about"; floatingHost.visibility = View.GONE; content.removeAllViews(); heading("关于 NKAS Mobile", "NIKKEAutoScript 的 Android 控制端"); content.addView(TextView(this).apply { text = "应用负责初始化 Termux 环境，并通过本地 Web UI 管理 NKAS。\n\n包名：com.megumiss.nkas.mobile\n版本：0.2.0\n\n不会自动启动 NIKKE 游戏。"; textSize = 14f; setTextColor(text2); setPadding(dp(16), dp(16), dp(16), dp(16)); background = rounded(card, 10) }) }
     override fun onBackPressed() { if (currentPage == "about") { renderSetup(); refreshState() } else super.onBackPressed() }
     private fun rounded(color: Int, radius: Int) = android.graphics.drawable.GradientDrawable().apply { setColor(color); cornerRadius = dp(radius).toFloat(); setStroke(dp(1), border) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
