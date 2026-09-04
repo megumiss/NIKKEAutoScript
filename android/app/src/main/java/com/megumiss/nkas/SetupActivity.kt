@@ -214,7 +214,10 @@ class SetupActivity : Activity() {
 
     private fun refreshState() {
         if (!::status.isInitialized) return
-        if (bootstrapActive) return
+        if (bootstrapActive || artifactChecking) {
+            setActionEnabled(false)
+            return
+        }
         setActionEnabled(true)
         action.setOnClickListener { onAction() }
         val bridge = TermuxBridge(this)
@@ -227,7 +230,6 @@ class SetupActivity : Activity() {
         if (!installed) { setProjectBlocked(); status.text = "未检测到 Termux，请先下载并安装官方版本。"; action.text = "下载 Termux"; setActionEnabled(false); return }
         if (!permission) { setProjectBlocked(); status.text = "Termux 已安装，还需要允许外部命令权限。"; action.text = "授权并继续"; setActionEnabled(false); return }
         if (!wireless) { setProjectBlocked(); status.text = "请先开启 Android 无线调试，完成后再继续项目安装。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; setActionEnabled(false); return }
-        if (artifactChecking) return
         artifactChecking = true
         status.text = "正在检查实际产物，不读取上次保存的状态……"
         setActionEnabled(false)
