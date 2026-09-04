@@ -97,8 +97,8 @@ class SetupActivity : Activity() {
         section("环境准备")
         step("Termux", "安装官方 Termux v0.118.3", "termux")
         step("Android 外部命令权限", "系统授权：允许 NKAS 调用 Termux", "permission")
-        step("Termux 外部应用开关", "Termux 配置 allow-external-apps=true", "termux_setting")
-        manualCommand()
+        val termuxSettingStep = step("Termux 外部应用开关", "Termux 配置 allow-external-apps=true", "termux_setting")
+        manualCommand(termuxSettingStep.wrapper)
         step("无线调试", "开启并检查 Android 无线调试", "wireless")
         section("项目安装")
         step("Termux 工具", "安装 bash、git、python 等依赖", "tools")
@@ -108,26 +108,20 @@ class SetupActivity : Activity() {
         step("容器服务", "启动本地服务和 Web UI", "service")
         setProjectBlocked()
         action = Button(this).apply { text = "开始初始化"; textSize = 14f; isAllCaps = false; setOnClickListener { onAction() }; elevation = dp(6).toFloat() }
-        setActionEnabled(true)
+        setActionEnabled(false)
         floatingHost.removeAllViews()
         floatingHost.addView(action, android.widget.FrameLayout.LayoutParams(-1, dp(52)).apply { leftMargin = dp(24); rightMargin = dp(24); topMargin = dp(10) })
     }
 
-    private fun manualCommand() {
-        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(12), dp(14), dp(12)); background = rounded(card2, 10) }
-        box.addView(TextView(this).apply { text = "Termux 外部命令配置"; textSize = 14f; setTextColor(this@SetupActivity.text); setTypeface(Typeface.DEFAULT, Typeface.BOLD) })
-        box.addView(TextView(this).apply { text = "在 Termux 中执行以下命令，然后完全退出并重新打开 Termux："; textSize = 12f; setTextColor(text2); setPadding(0, dp(6), 0, dp(6)) })
+    private fun manualCommand(parent: LinearLayout) {
+        parent.addView(TextView(this).apply { text = "在 Termux 中执行以下命令，然后完全退出并重新打开 Termux。页面会根据实际配置自动更新状态。"; textSize = 12f; setTextColor(text2); setPadding(0, dp(8), 0, dp(6)) })
         val command = "mkdir -p ~/.termux\necho 'allow-external-apps=true' > ~/.termux/termux.properties"
-        box.addView(TextView(this).apply { text = command; textSize = 12f; setTextColor(accent); setPadding(dp(10), dp(10), dp(10), dp(10)); background = rounded(card, 6) })
+        parent.addView(TextView(this).apply { text = command; textSize = 12f; setTextColor(accent); setPadding(dp(10), dp(10), dp(10), dp(10)); background = rounded(card2, 6) })
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val open = Button(this).apply { text = "打开 Termux"; isAllCaps = false; textSize = 12f; setOnClickListener { packageManager.getLaunchIntentForPackage("com.termux")?.let { startActivity(it) } } }
         val copy = Button(this).apply { text = "复制命令"; isAllCaps = false; textSize = 12f; setOnClickListener { (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Termux 命令", command)); text = "已复制" } }
-        val verify = Button(this).apply { text = "我已执行并重启"; isAllCaps = false; textSize = 12f; setOnClickListener {
-            refreshState()
-        } }
-        actions.addView(open, LinearLayout.LayoutParams(0, dp(42), 1f)); actions.addView(copy, LinearLayout.LayoutParams(0, dp(42), 1f).apply { leftMargin = dp(8) }); actions.addView(verify, LinearLayout.LayoutParams(0, dp(42), 1f).apply { leftMargin = dp(8) })
-        box.addView(actions, LinearLayout.LayoutParams(-1, dp(42)).apply { topMargin = dp(8) })
-        content.addView(box, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+        actions.addView(open, LinearLayout.LayoutParams(0, dp(42), 1f)); actions.addView(copy, LinearLayout.LayoutParams(0, dp(42), 1f).apply { leftMargin = dp(8) })
+        parent.addView(actions, LinearLayout.LayoutParams(-1, dp(42)).apply { topMargin = dp(8) })
     }
 
     private fun heading(main: String, sub: String) {
@@ -138,7 +132,7 @@ class SetupActivity : Activity() {
     private fun section(label: String) { content.addView(TextView(this).apply { text = label.uppercase(); textSize = 11f; setTextColor(text2); setTypeface(Typeface.DEFAULT, Typeface.BOLD); setPadding(0, dp(8), 0, dp(8)) }) }
 
     private data class Step(val dot: TextView, val state: TextView, val progress: ProgressBar, val key: String, val wrapper: LinearLayout, val log: TextView)
-    private fun step(name: String, detail: String, key: String) {
+    private fun step(name: String, detail: String, key: String): Step {
         val wrapper = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = rounded(card, 10) }
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         val dot = TextView(this).apply { text = "○"; textSize = 22f; setTextColor(text2); gravity = Gravity.CENTER }
@@ -153,6 +147,7 @@ class SetupActivity : Activity() {
         val item = Step(dot, state, progress, key, wrapper, log)
         steps[key] = item
         content.addView(wrapper, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        return item
     }
 
     private fun setStep(key: String, done: Boolean, label: String) {
@@ -229,9 +224,9 @@ class SetupActivity : Activity() {
         setStep("termux", installed, if (installed) "已安装" else "待安装")
         setStep("permission", permission, if (permission) "已授权" else "待授权")
         setStep("wireless", wireless, if (wireless) "已开启" else "待开启")
-        if (!installed) { setProjectBlocked(); status.text = "未检测到 Termux，请先下载并安装官方版本。"; action.text = "下载 Termux"; return }
-        if (!permission) { setProjectBlocked(); status.text = "Termux 已安装，还需要允许外部命令权限。"; action.text = "授权并继续"; return }
-        if (!wireless) { setProjectBlocked(); status.text = "请先开启 Android 无线调试，完成后再继续项目安装。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; return }
+        if (!installed) { setProjectBlocked(); status.text = "未检测到 Termux，请先下载并安装官方版本。"; action.text = "下载 Termux"; setActionEnabled(false); return }
+        if (!permission) { setProjectBlocked(); status.text = "Termux 已安装，还需要允许外部命令权限。"; action.text = "授权并继续"; setActionEnabled(false); return }
+        if (!wireless) { setProjectBlocked(); status.text = "请先开启 Android 无线调试，完成后再继续项目安装。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; setActionEnabled(false); return }
         if (artifactChecking) return
         artifactChecking = true
         status.text = "正在检查实际产物，不读取上次保存的状态……"
@@ -417,17 +412,17 @@ class SetupActivity : Activity() {
         if (exitCode != 0 && raw.isBlank()) {
             status.text = "无法读取 Termux 实际产物：请确认 allow-external-apps=true。"
             action.text = "打开 Termux 设置"
-            setActionEnabled(true)
+            setActionEnabled(false)
             return
         }
         when {
-            !wirelessReady -> { status.text = "请先开启 Android 无线调试，环境准备完成后才能安装项目。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() } }
-            !setting -> { status.text = "未检测到 Termux 的 allow-external-apps=true，请执行步骤中的命令并重启 Termux。"; action.text = "等待 Termux 设置" }
+            !wirelessReady -> { status.text = "请先开启 Android 无线调试，环境准备完成后才能安装项目。"; action.text = "打开无线调试设置"; action.setOnClickListener { openWirelessSettings() }; setActionEnabled(false) }
+            !setting -> { status.text = "未检测到 Termux 的 allow-external-apps=true，请执行上方步骤中的命令并重启 Termux。"; action.text = "等待 Termux 设置"; setActionEnabled(false) }
             serviceReady && SettingsStore.settingsChanged(this) -> { status.text = "设置已变更，需要重新应用后才能启动服务。"; action.text = "应用设置并重启"; action.setOnClickListener { onAction() } }
             serviceReady -> { SettingsStore.markApplied(this); status.text = "已检测到 NKAS Web UI 服务，可以打开 UI。"; action.text = "打开 NKAS UI"; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() } }
             else -> { status.text = "实际产物检查完成，可以开始初始化缺失步骤。"; action.text = "开始初始化"; action.setOnClickListener { onAction() } }
         }
-        setActionEnabled(true)
+        setActionEnabled(wirelessReady && setting)
     }
 
     private fun renderAbout() { currentPage = "about"; floatingHost.visibility = View.GONE; content.removeAllViews(); heading("关于 NKAS Mobile", "NIKKEAutoScript 的 Android 控制端"); content.addView(TextView(this).apply { text = "应用负责初始化 Termux 环境，并通过本地 Web UI 管理 NKAS。\n\n包名：com.megumiss.nkas.mobile\n版本：0.2.0\n\n不会自动启动 NIKKE 游戏。"; textSize = 14f; setTextColor(text2); setPadding(dp(16), dp(16), dp(16), dp(16)); background = rounded(card, 10) }) }
