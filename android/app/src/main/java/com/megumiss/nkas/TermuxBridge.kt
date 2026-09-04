@@ -48,7 +48,7 @@ class TermuxBridge(private val context: Context) {
         val encoded = Base64.encodeToString(script, Base64.NO_WRAP)
         val encodedService = Base64.encodeToString(service, Base64.NO_WRAP)
         val encodedSettings = Base64.encodeToString(settings.toByteArray(), Base64.NO_WRAP)
-        val command = "mkdir -p \$HOME/.nkas; printf '%s\\n' starting > \$HOME/.nkas/state; echo $encodedSettings | base64 -d > \$HOME/.nkas/settings.env; echo $encodedService | base64 -d > \$HOME/.nkas/nkas-service.sh; chmod 700 \$HOME/.nkas/nkas-service.sh; echo $encoded | base64 -d > \$HOME/.nkas/bootstrap.sh; chmod 700 \$HOME/.nkas/bootstrap.sh; \$HOME/.nkas/bootstrap.sh"
+        val command = "mkdir -p \$HOME/.nkas; echo $encodedSettings | base64 -d > \$HOME/.nkas/settings.env; echo $encodedService | base64 -d > \$HOME/.nkas/nkas-service.sh; chmod 700 \$HOME/.nkas/nkas-service.sh; echo $encoded | base64 -d > \$HOME/.nkas/bootstrap.sh; chmod 700 \$HOME/.nkas/bootstrap.sh; \$HOME/.nkas/bootstrap.sh"
         runCommand(command, onResult)
     }
 

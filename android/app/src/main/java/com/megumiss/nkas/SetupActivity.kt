@@ -325,6 +325,13 @@ class SetupActivity : Activity() {
         val result = BootstrapService(this).start { result ->
             handler.post {
                 if (result.exitCode != 0) {
+                    val output = result.stdout + "\n" + result.stderr
+                    if (output.contains("bootstrap already running")) {
+                        status.text = "已有初始化任务正在执行，继续等待其完成……"
+                        setActionEnabled(false)
+                        pollLog()
+                        return@post
+                    }
                     bootstrapActive = false
                     status.text = "Termux 命令返回失败，详见日志。"
                     setActionEnabled(true)

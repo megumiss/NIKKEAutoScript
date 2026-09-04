@@ -18,6 +18,19 @@ mkdir -p "$STATE_DIR"
 touch "$LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
+LOCK_DIR="${STATE_DIR}/bootstrap.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    existing_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+    if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+        printf '[nkas] bootstrap already running (PID %s)\n' "$existing_pid"
+        exit 2
+    fi
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" || exit 2
+fi
+printf '%s\n' "$$" > "$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR"' EXIT
+
 set_state() {
     printf '%s\n' "$1" > "$STATE_FILE"
     printf '[nkas] state=%s\n' "$1"
