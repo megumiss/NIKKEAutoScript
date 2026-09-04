@@ -15,12 +15,12 @@ import android.widget.Spinner
 import android.widget.TextView
 
 class SettingsActivity : Activity() {
-    private val bg = Color.rgb(13, 17, 23)
-    private val card = Color.rgb(21, 26, 34)
-    private val border = Color.rgb(38, 47, 61)
-    private val text = Color.rgb(232, 235, 240)
-    private val text2 = Color.rgb(151, 160, 175)
-    private val accent = Color.rgb(102, 184, 234)
+    private val bg = Color.rgb(248, 250, 252)
+    private val card = Color.rgb(255, 255, 255)
+    private val border = Color.rgb(220, 226, 232)
+    private val text = Color.rgb(25, 35, 48)
+    private val text2 = Color.rgb(92, 105, 120)
+    private val accent = Color.rgb(26, 112, 170)
     private lateinit var content: LinearLayout
     private lateinit var aptSpinner: Spinner
     private lateinit var dockerInput: EditText
@@ -73,7 +73,7 @@ class SettingsActivity : Activity() {
             textSize = 14f
             isAllCaps = false
             setTextColor(accent)
-            background = rounded(Color.rgb(28, 54, 72), 10)
+            background = rounded(Color.rgb(229, 241, 250), 10)
             setOnClickListener { saveSettings() }
         }
         content.addView(save, LinearLayout.LayoutParams(-1, dp(48)))

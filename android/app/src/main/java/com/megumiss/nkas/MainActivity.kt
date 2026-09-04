@@ -11,12 +11,7 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 
 class MainActivity : Activity() {
-    private val bg = Color.rgb(13, 17, 23)
-    private val card = Color.rgb(21, 26, 34)
-    private val border = Color.rgb(38, 47, 61)
-    private val text = Color.rgb(232, 235, 240)
-    private val text2 = Color.rgb(151, 160, 175)
-    private val accent = Color.rgb(102, 184, 234)
+    private val bg = Color.rgb(248, 250, 252)
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)

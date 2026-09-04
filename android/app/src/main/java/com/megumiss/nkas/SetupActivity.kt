@@ -16,6 +16,7 @@ import android.view.View
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.app.AlertDialog
@@ -42,14 +43,15 @@ class SetupActivity : Activity() {
     private val artifactState = mutableMapOf<String, Boolean>()
     private val steps = linkedMapOf<String, Step>()
 
-    private val bg = Color.rgb(13, 17, 23)
-    private val card = Color.rgb(21, 26, 34)
-    private val card2 = Color.rgb(26, 32, 41)
-    private val border = Color.rgb(38, 47, 61)
-    private val text = Color.rgb(232, 235, 240)
-    private val text2 = Color.rgb(151, 160, 175)
-    private val accent = Color.rgb(102, 184, 234)
-    private val green = Color.rgb(85, 217, 162)
+    private val bg = Color.rgb(248, 250, 252)
+    private val card = Color.rgb(255, 255, 255)
+    private val card2 = Color.rgb(243, 246, 249)
+    private val border = Color.rgb(220, 226, 232)
+    private val text = Color.rgb(25, 35, 48)
+    private val text2 = Color.rgb(92, 105, 120)
+    private val accent = Color.rgb(26, 112, 170)
+    private val green = Color.rgb(24, 145, 95)
+    private val disabled = Color.rgb(210, 216, 223)
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -80,7 +82,7 @@ class SetupActivity : Activity() {
         content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(24), dp(24), dp(96)) }
         scroll.addView(content)
         built.content.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
-        floatingHost = android.widget.FrameLayout(this).apply { setBackgroundColor(bg); visibility = View.GONE }
+        floatingHost = android.widget.FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT); visibility = View.GONE }
         built.content.addView(floatingHost, android.widget.FrameLayout.LayoutParams(-1, dp(78), Gravity.BOTTOM))
         return built.root
     }
@@ -105,7 +107,8 @@ class SetupActivity : Activity() {
         step("容器", "安装或检查 NKAS 运行容器", "container")
         step("容器服务", "启动本地服务和 Web UI", "service")
         setProjectBlocked()
-        action = Button(this).apply { text = "开始初始化"; textSize = 14f; isAllCaps = false; setTextColor(accent); background = rounded(Color.rgb(28, 54, 72), 10); setOnClickListener { onAction() } }
+        action = Button(this).apply { text = "开始初始化"; textSize = 14f; isAllCaps = false; setOnClickListener { onAction() }; elevation = dp(6).toFloat() }
+        setActionEnabled(true)
         floatingHost.removeAllViews()
         floatingHost.addView(action, android.widget.FrameLayout.LayoutParams(-1, dp(52)).apply { leftMargin = dp(24); rightMargin = dp(24); topMargin = dp(10) })
     }
@@ -134,7 +137,7 @@ class SetupActivity : Activity() {
 
     private fun section(label: String) { content.addView(TextView(this).apply { text = label.uppercase(); textSize = 11f; setTextColor(text2); setTypeface(Typeface.DEFAULT, Typeface.BOLD); setPadding(0, dp(8), 0, dp(8)) }) }
 
-    private data class Step(val dot: TextView, val state: TextView, val key: String, val wrapper: LinearLayout, val log: TextView)
+    private data class Step(val dot: TextView, val state: TextView, val progress: ProgressBar, val key: String, val wrapper: LinearLayout, val log: TextView)
     private fun step(name: String, detail: String, key: String) {
         val wrapper = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(10), dp(14), dp(10)); background = rounded(card, 10) }
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -143,10 +146,11 @@ class SetupActivity : Activity() {
         labels.addView(TextView(this).apply { text = name; textSize = 15f; setTextColor(this@SetupActivity.text) })
         labels.addView(TextView(this).apply { text = detail; textSize = 12f; setTextColor(text2); setPadding(0, dp(3), 0, 0) })
         val state = TextView(this).apply { textSize = 12f; setTextColor(text2); gravity = Gravity.CENTER }
+        val progress = ProgressBar(this).apply { isIndeterminate = true; visibility = View.GONE }
         val log = TextView(this).apply { textSize = 11f; setTextColor(text2); setPadding(dp(10), dp(8), dp(10), dp(8)); background = rounded(card2, 6); visibility = View.GONE; typeface = Typeface.MONOSPACE; maxLines = 12 }
-        row.addView(dot, LinearLayout.LayoutParams(dp(30), dp(30))); row.addView(labels, LinearLayout.LayoutParams(0, -2, 1f)); row.addView(state, LinearLayout.LayoutParams(dp(64), -2))
+        row.addView(dot, LinearLayout.LayoutParams(dp(30), dp(30))); row.addView(labels, LinearLayout.LayoutParams(0, -2, 1f)); row.addView(progress, LinearLayout.LayoutParams(dp(28), dp(28))); row.addView(state, LinearLayout.LayoutParams(dp(64), -2))
         wrapper.addView(row); wrapper.addView(log, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
-        val item = Step(dot, state, key, wrapper, log)
+        val item = Step(dot, state, progress, key, wrapper, log)
         steps[key] = item
         content.addView(wrapper, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
     }
@@ -155,7 +159,9 @@ class SetupActivity : Activity() {
         val info = steps[key] ?: return
         info.dot.text = if (done) "✓" else "○"
         info.dot.setTextColor(if (done) green else text2)
-        info.state.text = label
+        val running = !done && label == "执行中"
+        info.progress.visibility = if (running) View.VISIBLE else View.GONE
+        info.state.text = if (running) "" else label
         info.state.setTextColor(if (done) green else text2)
         if (done) {
             info.log.visibility = View.GONE
@@ -201,7 +207,7 @@ class SetupActivity : Activity() {
             setStep(failed, false, "失败")
             setStepLog(failed, log.ifBlank { raw }, true)
             status.text = "初始化失败，当前步骤日志已展开。"
-            action.isEnabled = true
+            setActionEnabled(true)
             action.text = "重试当前初始化"
         }
         if (state == "ready") {
@@ -214,7 +220,7 @@ class SetupActivity : Activity() {
     private fun refreshState() {
         if (!::status.isInitialized) return
         if (bootstrapActive) return
-        action.isEnabled = true
+        setActionEnabled(true)
         action.setOnClickListener { onAction() }
         val bridge = TermuxBridge(this)
         val installed = bridge.isInstalled()
@@ -229,7 +235,7 @@ class SetupActivity : Activity() {
         if (artifactChecking) return
         artifactChecking = true
         status.text = "正在检查实际产物，不读取上次保存的状态……"
-        action.isEnabled = false
+        setActionEnabled(false)
         BootstrapService(this).checkArtifacts { result ->
             handler.post {
                 artifactChecking = false
@@ -256,13 +262,13 @@ class SetupActivity : Activity() {
 
     private fun showInitialNotice() {
         initialNoticeShowing = true
-        action.isEnabled = false
+        setActionEnabled(false)
         AlertDialog.Builder(this)
             .setTitle("初始化前提醒")
             .setMessage("初始化可能需要较长时间。执行期间请保持 NKAS Mobile 始终在前台，并确保网络连接稳定；切换到其他应用或断网可能导致下载失败。")
             .setNegativeButton("取消") { _, _ ->
                 initialNoticeShowing = false
-                action.isEnabled = true
+                setActionEnabled(true)
             }
             .setPositiveButton("继续初始化") { _, _ ->
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_INITIAL_NOTICE_SHOWN, true).apply()
@@ -271,7 +277,7 @@ class SetupActivity : Activity() {
             }
             .setOnCancelListener {
                 initialNoticeShowing = false
-                action.isEnabled = true
+                setActionEnabled(true)
             }
             .show()
     }
@@ -279,7 +285,7 @@ class SetupActivity : Activity() {
     private fun beginInitializationCheck() {
         val bridge = TermuxBridge(this)
         status.text = "正在重新检查实际产物……"
-        action.isEnabled = false
+        setActionEnabled(false)
         artifactChecking = true
         bridge.checkArtifacts { check ->
             handler.post {
@@ -308,14 +314,20 @@ class SetupActivity : Activity() {
         }
     }
 
+    private fun setActionEnabled(enabled: Boolean) {
+        action.isEnabled = enabled
+        action.setTextColor(if (enabled) Color.WHITE else text2)
+        action.background = rounded(if (enabled) accent else disabled, 12)
+    }
+
     private fun startBootstrap() {
-        status.text = "正在启动初始化脚本，日志会显示在当前步骤中……"; action.isEnabled = false; bootstrapActive = true; bootstrapStageIndex = -1; setStep("tools", false, "执行中"); setStepLog("tools", "正在请求 Termux 执行脚本……", true)
+        status.text = "正在启动初始化脚本，日志会显示在当前步骤中……"; setActionEnabled(false); bootstrapActive = true; bootstrapStageIndex = -1; setStep("tools", false, "执行中"); setStepLog("tools", "正在请求 Termux 执行脚本……", true)
         val result = BootstrapService(this).start { result ->
             handler.post {
                 if (result.exitCode != 0) {
                     bootstrapActive = false
                     status.text = "Termux 命令返回失败，详见日志。"
-                    action.isEnabled = true
+                    setActionEnabled(true)
                     action.text = "重试初始化"
                     pollLogOnce()
                 }
@@ -323,7 +335,7 @@ class SetupActivity : Activity() {
         }
         if (result.isFailure) {
             status.text = "Termux 拒绝了外部命令。请确认已设置 allow-external-apps=true，并重启 Termux。"
-            action.isEnabled = true
+            setActionEnabled(true)
             setStep("termux_setting", false, "待设置")
             setStep("tools", false, "未执行")
             return
@@ -354,7 +366,7 @@ class SetupActivity : Activity() {
                 } else {
                     status.text = "服务尚未就绪，请展开失败步骤查看日志后重试。"
                     action.text = "重试初始化"
-                    action.isEnabled = true
+                    setActionEnabled(true)
                     handler.postDelayed({ pollBackend() }, 3500)
                 }
             }
@@ -398,7 +410,7 @@ class SetupActivity : Activity() {
         if (exitCode != 0 && raw.isBlank()) {
             status.text = "无法读取 Termux 实际产物：请确认 allow-external-apps=true。"
             action.text = "打开 Termux 设置"
-            action.isEnabled = true
+            setActionEnabled(true)
             return
         }
         when {
@@ -408,7 +420,7 @@ class SetupActivity : Activity() {
             serviceReady -> { SettingsStore.markApplied(this); status.text = "已检测到 NKAS Web UI 服务，可以打开 UI。"; action.text = "打开 NKAS UI"; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() } }
             else -> { status.text = "实际产物检查完成，可以开始初始化缺失步骤。"; action.text = "开始初始化"; action.setOnClickListener { onAction() } }
         }
-        action.isEnabled = true
+        setActionEnabled(true)
     }
 
     private fun renderAbout() { currentPage = "about"; floatingHost.visibility = View.GONE; content.removeAllViews(); heading("关于 NKAS Mobile", "NIKKEAutoScript 的 Android 控制端"); content.addView(TextView(this).apply { text = "应用负责初始化 Termux 环境，并通过本地 Web UI 管理 NKAS。\n\n包名：com.megumiss.nkas.mobile\n版本：0.2.0\n\n不会自动启动 NIKKE 游戏。"; textSize = 14f; setTextColor(text2); setPadding(dp(16), dp(16), dp(16), dp(16)); background = rounded(card, 10) }) }
