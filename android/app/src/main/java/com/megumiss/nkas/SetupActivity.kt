@@ -202,7 +202,13 @@ class SetupActivity : Activity() {
         }
         active?.let { setStepLog(it, log.ifBlank { "正在执行……" }, true) }
         if (service.isNotBlank()) setStepLog("service", service, active == "service")
+        if (bootstrapActive && active != null && state != "failed" && state != "ready") {
+            status.text = "安装正在执行，当前步骤日志会持续更新……"
+            action.text = "安装中"
+            setActionEnabled(false)
+        }
         if (state == "failed") {
+            bootstrapActive = false
             val failed = active ?: mapping.firstOrNull { (stage, _) -> log.contains("stage $stage") }?.second ?: "tools"
             setStep(failed, false, "失败")
             setStepLog(failed, log.ifBlank { raw }, true)
@@ -328,8 +334,16 @@ class SetupActivity : Activity() {
             handler.post {
                 if (result.exitCode != 0) {
                     val output = result.stdout + "\n" + result.stderr
+                    if (result.exitCode == -2) {
+                        status.text = "安装仍在执行，当前步骤日志会持续更新……"
+                        action.text = "安装中"
+                        setActionEnabled(false)
+                        pollLog()
+                        return@post
+                    }
                     if (output.contains("bootstrap already running")) {
                         status.text = "已有安装任务正在执行，继续等待其完成……"
+                        action.text = "安装中"
                         setActionEnabled(false)
                         pollLog()
                         return@post
