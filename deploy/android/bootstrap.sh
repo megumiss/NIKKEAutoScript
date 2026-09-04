@@ -87,6 +87,31 @@ create_config() {
     sed -i -E '/^PhysicalDevice:/,/^Scrcpy:/ s/^(    value:) false$/\1 true/' config/deploy.yaml
 }
 
+tools_ready() {
+    command -v git >/dev/null 2>&1 && command -v proot-distro >/dev/null 2>&1 && \
+        command -v curl >/dev/null 2>&1 && command -v adb >/dev/null 2>&1
+}
+
+source_ready() {
+    [ -d "$REPO_DIR/.git" ] && git -C "$REPO_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+config_ready() {
+    [ -f "$REPO_DIR/config/deploy.yaml" ] && \
+        grep -Eq '^[[:space:]]+WebuiHost:[[:space:]]*127\.0\.0\.1([[:space:]]*#.*)?$' "$REPO_DIR/config/deploy.yaml" && \
+        grep -Eq '^[[:space:]]+WebuiPort:[[:space:]]*12271([[:space:]]*#.*)?$' "$REPO_DIR/config/deploy.yaml"
+}
+
+container_ready() {
+    [ -d "${PREFIX}/var/lib/proot-distro/containers/nkas/rootfs" ] && \
+        [ -f "$CONTAINER_MARKER" ] && [ "$(cat "$CONTAINER_MARKER")" = "$DOCKER_IMAGE" ] && \
+        proot-distro run -b "$REPO_DIR:/app/NIKKEAutoScript" nkas -- /usr/local/bin/python -c 'import uvicorn' >/dev/null 2>&1
+}
+
+service_ready() {
+    curl -fsS --max-time 3 http://127.0.0.1:12271/api/system/status >/dev/null 2>&1
+}
+
 install_container() {
     if [ -d "${PREFIX}/var/lib/proot-distro/containers/nkas/rootfs" ] && [ -f "$CONTAINER_MARKER" ] && [ "$(cat "$CONTAINER_MARKER")" = "$DOCKER_IMAGE" ] && \
         proot-distro run -b "$REPO_DIR:/app/NIKKEAutoScript" nkas -- /usr/local/bin/python -c 'import uvicorn' >/dev/null 2>&1; then
@@ -117,15 +142,23 @@ start_service() {
     return 1
 }
 
-current_state="$(cat "$STATE_FILE" 2>/dev/null || true)"
-if [ "$current_state" = "ready" ]; then
-    bash "$STATE_DIR/nkas-service.sh" status && exit 0 || true
+if service_ready; then
+    set_state ready
+    exit 0
 fi
 
-run_stage installing-termux-tools prepare_tools
-run_stage cloning-nkas sync_repository
-run_stage creating-config create_config
-run_stage installing-container install_container
+if ! tools_ready; then
+    run_stage installing-termux-tools prepare_tools
+fi
+if ! source_ready; then
+    run_stage cloning-nkas sync_repository
+fi
+if ! config_ready; then
+    run_stage creating-config create_config
+fi
+if ! container_ready; then
+    run_stage installing-container install_container
+fi
 run_stage starting-nkas start_service
 
 set_state ready

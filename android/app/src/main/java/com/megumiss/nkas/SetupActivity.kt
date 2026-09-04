@@ -321,7 +321,7 @@ class SetupActivity : Activity() {
     }
 
     private fun startBootstrap() {
-        status.text = "正在启动初始化脚本，日志会显示在当前步骤中……"; setActionEnabled(false); bootstrapActive = true; bootstrapStageIndex = -1; setStep("tools", false, "执行中"); setStepLog("tools", "正在请求 Termux 执行脚本……", true)
+        status.text = "正在恢复初始化，日志会显示在当前步骤中……"; setActionEnabled(false); bootstrapActive = true; bootstrapStageIndex = -1; setStepLog("tools", "正在请求 Termux 恢复执行脚本……", true)
         val result = BootstrapService(this).start { result ->
             handler.post {
                 if (result.exitCode != 0) {
