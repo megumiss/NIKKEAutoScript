@@ -10,7 +10,7 @@ if [ -f "$STATE_DIR/settings.env" ]; then
     . "$STATE_DIR/settings.env"
 fi
 APT_SOURCE="${NKAS_APT_SOURCE:-https://mirrors.tuna.tsinghua.edu.cn/termux/termux-main}"
-DOCKER_IMAGE="${NKAS_DOCKER_IMAGE:-megumiss/nkas:latest}"
+DOCKER_IMAGE="${NKAS_DOCKER_IMAGE:-docker.1ms.run/megumiss/nkas:latest}"
 REPOSITORY="${NKAS_REPOSITORY:-https://git.megumiss.top/megumiss/NIKKEAutoScript}"
 BRANCH="${NKAS_BRANCH:-master}"
 
