@@ -117,7 +117,7 @@ class SettingsActivity : Activity() {
             .putString("docker_image", docker)
             .putBoolean("settings_changed", true)
             .apply()
-        status.text = "已保存。下次初始化或重试时将应用新的源。"
+        status.text = "已保存。下次安装或重试时将应用新的源。"
     }
 
     private fun heading(main: String, sub: String) {

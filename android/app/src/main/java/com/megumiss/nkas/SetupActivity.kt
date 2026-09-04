@@ -93,7 +93,7 @@ class SetupActivity : Activity() {
         currentPage = "setup"
         floatingHost.visibility = View.VISIBLE
         content.removeAllViews()
-        heading("初始化", "准备 Termux、NKAS 服务和本地 Web UI")
+        heading("初始化", "准备 Termux、NKAS 服务和本地 Web UI\n请开启 Termux 和 NKAS 的自启动、关联启动，并允许后台运行")
         status = TextView(this).apply { textSize = 14f; setTextColor(text2); setPadding(0, 0, 0, dp(16)) }
         content.addView(status)
         section("环境准备")
@@ -109,7 +109,7 @@ class SetupActivity : Activity() {
         step("容器", "安装或检查 NKAS 运行容器", "container")
         step("容器服务", "启动本地服务和 Web UI", "service")
         setProjectBlocked()
-        action = Button(this).apply { text = "开始初始化"; textSize = 14f; isAllCaps = false; setOnClickListener { onAction() }; elevation = dp(6).toFloat() }
+        action = Button(this).apply { text = "开始安装"; textSize = 14f; isAllCaps = false; setOnClickListener { onAction() }; elevation = dp(6).toFloat() }
         setActionEnabled(false)
         floatingHost.removeAllViews()
         floatingHost.addView(action, android.widget.FrameLayout.LayoutParams(-1, dp(52)).apply { leftMargin = dp(24); rightMargin = dp(24); topMargin = dp(10) })
@@ -203,13 +203,13 @@ class SetupActivity : Activity() {
             val failed = active ?: mapping.firstOrNull { (stage, _) -> log.contains("stage $stage") }?.second ?: "tools"
             setStep(failed, false, "失败")
             setStepLog(failed, log.ifBlank { raw }, true)
-            status.text = "初始化失败，当前步骤日志已展开。"
+            status.text = "安装失败，当前步骤日志已展开。"
             setActionEnabled(true)
-            action.text = "重试当前初始化"
+            action.text = "重试当前安装"
         }
         if (state == "ready") {
             bootstrapActive = false
-            status.text = "初始化脚本已结束，正在重新检查实际产物……"
+            status.text = "安装脚本已结束，正在重新检查实际产物……"
             refreshState()
         }
     }
@@ -263,13 +263,13 @@ class SetupActivity : Activity() {
         initialNoticeShowing = true
         setActionEnabled(false)
         AlertDialog.Builder(this)
-            .setTitle("初始化前提醒")
-            .setMessage("初始化可能需要较长时间。执行期间请保持 NKAS Mobile 始终在前台，并确保网络连接稳定；切换到其他应用或断网可能导致下载失败。")
+            .setTitle("安装前提醒")
+            .setMessage("安装可能需要较长时间。执行期间请保持 NKAS Mobile 始终在前台，并确保网络连接稳定；切换到其他应用或断网可能导致下载失败。")
             .setNegativeButton("取消") { _, _ ->
                 initialNoticeShowing = false
                 setActionEnabled(true)
             }
-            .setPositiveButton("继续初始化") { _, _ ->
+            .setPositiveButton("继续安装") { _, _ ->
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_INITIAL_NOTICE_SHOWN, true).apply()
                 initialNoticeShowing = false
                 beginInitializationCheck()
@@ -320,13 +320,13 @@ class SetupActivity : Activity() {
     }
 
     private fun startBootstrap() {
-        status.text = "正在恢复初始化，日志会显示在当前步骤中……"; setActionEnabled(false); bootstrapActive = true; bootstrapStageIndex = -1; setStepLog("tools", "正在请求 Termux 恢复执行脚本……", true)
+        status.text = "正在恢复安装，日志会显示在当前步骤中……"; setActionEnabled(false); bootstrapActive = true; bootstrapStageIndex = -1; setStepLog("tools", "正在请求 Termux 恢复安装脚本……", true)
         val result = BootstrapService(this).start { result ->
             handler.post {
                 if (result.exitCode != 0) {
                     val output = result.stdout + "\n" + result.stderr
                     if (output.contains("bootstrap already running")) {
-                        status.text = "已有初始化任务正在执行，继续等待其完成……"
+                        status.text = "已有安装任务正在执行，继续等待其完成……"
                         setActionEnabled(false)
                         pollLog()
                         return@post
@@ -334,7 +334,7 @@ class SetupActivity : Activity() {
                     bootstrapActive = false
                     status.text = "Termux 命令返回失败，详见日志。"
                     setActionEnabled(true)
-                    action.text = "重试初始化"
+                    action.text = "重试安装"
                     pollLogOnce()
                 }
             }
@@ -360,18 +360,18 @@ class SetupActivity : Activity() {
                 checking = false
                 if (ready) {
                     if (bootstrapActive) {
-                        status.text = "Web UI 已响应，等待初始化脚本完成最后检查……"
+                        status.text = "Web UI 已响应，等待安装脚本完成最后检查……"
                         handler.postDelayed({ pollBackend() }, 3500)
                     } else {
                         bootstrapActive = false
                         refreshState()
                     }
                 } else if (bootstrapActive) {
-                    status.text = "初始化仍在执行，当前步骤日志会持续更新……"
+                    status.text = "安装仍在执行，当前步骤日志会持续更新……"
                     handler.postDelayed({ pollBackend() }, 3500)
                 } else {
                     status.text = "服务尚未就绪，请展开失败步骤查看日志后重试。"
-                    action.text = "重试初始化"
+                    action.text = "重试安装"
                     setActionEnabled(true)
                     handler.postDelayed({ pollBackend() }, 3500)
                 }
@@ -436,7 +436,7 @@ class SetupActivity : Activity() {
             !setting -> { status.text = "未检测到 Termux 的 allow-external-apps=true，请执行上方步骤中的命令并重启 Termux。"; action.text = "等待 Termux 设置"; setActionEnabled(false) }
             serviceReady && SettingsStore.settingsChanged(this) -> { status.text = "设置已变更，需要重新应用后才能启动服务。"; action.text = "应用设置并重启"; action.setOnClickListener { onAction() } }
             serviceReady -> { SettingsStore.markApplied(this); status.text = "已检测到 NKAS Web UI 服务，可以打开 UI。"; action.text = "打开 NKAS UI"; action.setOnClickListener { startActivity(Intent(this, MainActivity::class.java)); finish() } }
-            else -> { status.text = "实际产物检查完成，可以开始初始化缺失步骤。"; action.text = "开始初始化"; action.setOnClickListener { onAction() } }
+            else -> { status.text = ""; action.text = "开始安装"; action.setOnClickListener { onAction() } }
         }
         setActionEnabled(wirelessReady && setting)
     }
