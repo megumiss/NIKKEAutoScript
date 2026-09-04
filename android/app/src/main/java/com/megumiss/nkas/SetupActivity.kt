@@ -159,9 +159,12 @@ class SetupActivity : Activity() {
         val service = raw.substringAfter("---SERVICE---", "").trim()
         val mapping = listOf("installing-termux-tools" to "tools", "cloning-nkas" to "source", "creating-config" to "config", "installing-container" to "container", "starting-nkas" to "service")
         var active: String? = null
+        val currentIndex = mapping.indexOfFirst { it.first == state }
         mapping.forEach { (stage, key) ->
             if (state == stage) active = key
-            setStep(key, state == "ready" || mapping.indexOfFirst { it.first == state } > mapping.indexOfFirst { it.first == stage }, if (state == "ready") "完成" else if (state == stage) "执行中" else "等待")
+            val stageIndex = mapping.indexOfFirst { it.first == stage }
+            val done = state == "ready" || (currentIndex >= 0 && currentIndex > stageIndex)
+            setStep(key, done, if (done) "完成" else if (state == stage) "执行中" else "等待")
         }
         active?.let { setStepLog(it, log.ifBlank { "正在执行……" }, true) }
         if (service.isNotBlank()) setStepLog("service", service, active == "service")
