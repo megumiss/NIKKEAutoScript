@@ -80,9 +80,19 @@ create_config() {
         cp config/template.json config/nkas.json || return 1
     fi
     sed -i -E 's/"Platform":[[:space:]]*"win"/"Platform": "adb"/' config/nkas.json
+    sed -i -E 's/"OcrThreads"[[:space:]]*:[[:space:]]*[0-9]+/"OcrThreads": 1/' config/nkas.json
     sed -i -E 's/"ScreenshotMethod":[[:space:]]*"DroidCast"/"ScreenshotMethod": "ADB"/' config/nkas.json
-    sed -i -E 's/"ControlMethod":[[:space:]]*"minitouch"/"ControlMethod": "ADB"/' config/nkas.json
+    sed -i -E 's/("ControlMethod"[[:space:]]*:[[:space:]]*)"[^"]*"/\1"MaaTouch"/' config/nkas.json
     sed -i -E '/"PhysicalDevice"[[:space:]]*:[[:space:]]*\{/,/^[[:space:]]*\},?[[:space:]]*$/ s/"Enable":[[:space:]]*false/"Enable": true/' config/nkas.json
+    sed -i -E '/"PhysicalDevice"[[:space:]]*:[[:space:]]*\{/,/^[[:space:]]*\},?[[:space:]]*$/ s/("VirtualDisplay"[[:space:]]*:[[:space:]]*)(true|false)/\1true/' config/nkas.json
+    local serial
+    serial="$(detect_wireless_serial || true)"
+    if [ -n "$serial" ]; then
+        sed -i -E "s/(\"Serial\"[[:space:]]*:[[:space:]]*)\"[^\"]*\"/\1\"$serial\"/" config/nkas.json
+        printf '[nkas] detected wireless serial: %s\n' "$serial"
+    else
+        printf '[nkas] wireless serial was not detected; keeping existing value\n'
+    fi
     if [ ! -f config/deploy.yaml ]; then
         cp config/deploy.template-docker-cn.yaml config/deploy.yaml || return 1
     fi
@@ -101,6 +111,27 @@ tools_ready() {
 
 source_ready() {
     [ -d "$REPO_DIR/.git" ] && git -C "$REPO_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+detect_wireless_serial() {
+    local local_ip candidate serial
+    local_ip="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1)"
+    if [ -z "$local_ip" ]; then
+        local_ip="$(ip -4 addr show scope global 2>/dev/null | sed -n 's/.* inet \([0-9.]*\)\/.*/\1/p' | head -n1)"
+    fi
+
+    if [ -n "$local_ip" ]; then
+        for candidate in $(adb mdns services 2>/dev/null | awk -v ip="$local_ip" '$2 == "_adb-tls-connect._tcp" && index($3, ip ":") == 1 { print $3 }'); do
+            adb connect "$candidate" >/dev/null 2>&1 || true
+            if adb -s "$candidate" get-state >/dev/null 2>&1; then
+                printf '%s\n' "$candidate"
+                return 0
+            fi
+        done
+    fi
+
+    serial="$(adb devices 2>/dev/null | awk '$2 == "device" && $1 ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$/ { print $1; exit }')"
+    [ -n "$serial" ] && printf '%s\n' "$serial"
 }
 
 config_ready() {
@@ -147,19 +178,16 @@ start_service() {
     return 1
 }
 
-if service_ready && config_ready; then
-    set_state ready
-    exit 0
-fi
-
 if ! tools_ready; then
     run_stage installing-termux-tools prepare_tools
 fi
 if ! source_ready; then
     run_stage cloning-nkas sync_repository
 fi
-if ! config_ready; then
-    run_stage creating-config create_config
+run_stage creating-config create_config
+if service_ready && config_ready; then
+    set_state ready
+    exit 0
 fi
 if ! container_ready; then
     run_stage installing-container install_container
