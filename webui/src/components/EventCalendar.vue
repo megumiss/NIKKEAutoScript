@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import AppIcon from './AppIcon.vue'
 import { api } from '../api/client'
@@ -22,8 +22,8 @@ type CalendarItem = {
   background_url?: string
 }
 
-const props = defineProps<{ language: string }>()
-const emit = defineEmits<{ error: [message: string] }>()
+const props = withDefaults(defineProps<{ language: string; showTitle?: boolean }>(), { showTitle: false })
+const emit = defineEmits<{ error: [message: string]; height: [height: number] }>()
 
 const labels: Record<string, Record<string, string>> = {
   '活动日历': { 'en-US': 'Activity calendar', 'ja-JP': 'イベントカレンダー' },
@@ -69,6 +69,13 @@ const updatedAt = ref(0)
 const now = ref(Math.floor(Date.now() / 1000))
 const failedBanners = ref<Record<string, boolean>>({})
 let clockTimer: number | undefined
+let contentObserver: ResizeObserver | undefined
+const calendarRoot = ref<HTMLElement | null>(null)
+
+// 内容高度上报：总览页按内容自动展开日历区（用户手动调整高度后不再跟随）
+function reportHeight() {
+  if (calendarRoot.value) emit('height', calendarRoot.value.scrollHeight)
+}
 
 function t(source: string) {
   return props.language === 'zh-CN' ? source : labels[source]?.[props.language] || source
@@ -152,11 +159,15 @@ async function loadCalendar(forceRefresh = false) {
   } finally {
     loading.value = false
     refreshing.value = false
+    await nextTick()
+    reportHeight()
   }
 }
 
 onMounted(() => {
   loadCalendar()
+  contentObserver = new ResizeObserver(reportHeight)
+  if (calendarRoot.value) contentObserver.observe(calendarRoot.value)
   clockTimer = window.setInterval(() => {
     const previous = now.value
     now.value = Math.floor(Date.now() / 1000)
@@ -167,14 +178,21 @@ onMounted(() => {
 })
 
 watch(() => props.language, () => loadCalendar())
-onBeforeUnmount(() => window.clearInterval(clockTimer))
+watch(activeTab, async () => {
+  await nextTick()
+  reportHeight()
+})
+onBeforeUnmount(() => {
+  window.clearInterval(clockTimer)
+  contentObserver?.disconnect()
+})
 </script>
 
 <template>
-  <section class="event-calendar">
+  <section ref="calendarRoot" class="event-calendar">
     <header class="event-calendar-head">
       <div>
-        <h2>{{ t('活动日历') }}</h2>
+        <h2 v-if="props.showTitle">{{ t('活动日历') }}</h2>
         <div v-if="updatedAt" class="event-updated">{{ t('更新于') }} {{ formatDateTime(updatedAt) }}</div>
       </div>
       <button class="btn sm event-refresh" type="button" :disabled="refreshing" :title="t('刷新')" @click="loadCalendar(true)">
@@ -255,7 +273,7 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
 </template>
 
 <style scoped>
-.event-calendar { margin-top:30px; padding-top:2px; }
+.event-calendar { margin-top:0; padding-top:2px; }
 .event-calendar-head { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; }
 .event-calendar-head h2 { font-size:16px; }
 .event-updated { margin-top:4px; color:var(--text-3); font-size:11.5px; }

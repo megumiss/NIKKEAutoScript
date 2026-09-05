@@ -10,6 +10,8 @@ import { useModalStore } from './modal'
 export const useInstancesStore = defineStore('instances', () => {
   const toast = useToastStore()
   const instances = ref<Instance[]>([])
+  // 首次加载完成前为 false；总览布局依赖它区分「实例列表未就绪」与「没有实例」
+  const loaded = ref(false)
   // Serial execution state from GET /api/serial/state; null when serial is off
   // or the backend is older than this feature.
   const serialState = ref<any>(null)
@@ -20,6 +22,7 @@ export const useInstancesStore = defineStore('instances', () => {
   async function loadInstances() {
     try { instances.value = await api.get('/api/instances') } catch (exception: any) { toast.error = exception.message }
     await loadSerial()
+    loaded.value = true
   }
   async function loadSerial() {
     try { serialState.value = await api.get('/api/serial/state') } catch { serialState.value = null }
@@ -118,7 +121,7 @@ export const useInstancesStore = defineStore('instances', () => {
   async function importInstance(event: Event) { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; try { const response = await fetch('/api/instances/import', { method: 'POST', headers: { 'X-NKAS-Filename': file.name }, body: await file.arrayBuffer() }); const result = await response.json(); if (!response.ok) throw new Error(result.message); await loadInstances() } catch (exception: any) { toast.error = exception.message } }
 
   return {
-    instances, serialState, loadInstances, loadSerial, serialWaiting,
+    instances, serialState, loaded, loadInstances, loadSerial, serialWaiting,
     stateText, stateClass, displayStatus, displayStatusClass, initials, avatarUrl, runningCount, lifecycle,
     dragIndex, dragOverIndex, onDragStart, onDragOver, onDragEnd, onDrop, saveRemark, importInstance,
   }

@@ -8,11 +8,14 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "browserslist": ["Chrome 94"],
+  "browserslist": [
+    "Chrome 94"
+  ],
   "dependencies": {
     "@vitejs/plugin-vue": "4.6.2",
     "dayjs": "1.11.13",
     "echarts": "5.6.0",
+    "grid-layout-plus": "1.1.1",
     "naive-ui": "2.41.0",
     "pinia": "2.3.1",
     "vue": "3.5.13",
