@@ -138,7 +138,13 @@ detect_wireless_serial() {
     fi
 
     if [ -n "$local_ip" ]; then
-        for candidate in $(adb mdns services 2>/dev/null | awk -v ip="$local_ip" '$2 == "_adb-tls-connect._tcp" && index($3, ip ":") == 1 { print $3 }'); do
+        # `adb mdns services` inserts a count column when multiple services
+        # share the same name, so the service type/address may be in columns
+        # 2/3 or 3/4 depending on the daemon output.
+        for candidate in $(adb mdns services 2>/dev/null | awk -v ip="$local_ip" '
+            ($2 == "_adb-tls-connect._tcp" && index($3, ip ":") == 1) { print $3 }
+            ($3 == "_adb-tls-connect._tcp" && index($4, ip ":") == 1) { print $4 }
+        '); do
             adb connect "$candidate" >/dev/null 2>&1 || true
             if adb -s "$candidate" get-state >/dev/null 2>&1; then
                 printf '%s\n' "$candidate"
