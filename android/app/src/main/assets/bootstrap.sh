@@ -114,10 +114,27 @@ source_ready() {
 }
 
 detect_wireless_serial() {
-    local local_ip candidate serial
+    local local_ip wireless_port candidate serial
     local_ip="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1)"
     if [ -z "$local_ip" ]; then
         local_ip="$(ip -4 addr show scope global 2>/dev/null | sed -n 's/.* inet \([0-9.]*\)\/.*/\1/p' | head -n1)"
+    fi
+    if [ -z "$local_ip" ]; then
+        local_ip="$(getprop dhcp.wlan0.ipaddress 2>/dev/null | tr -d '\r' | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -n1)"
+    fi
+
+    wireless_port="$(settings get global adb_wifi_port 2>/dev/null | tr -d '\r' | grep -E '^[0-9]+$' | head -n1)"
+    if [ -z "$wireless_port" ]; then
+        wireless_port="$(getprop persist.adb.tcp.port 2>/dev/null | tr -d '\r' | grep -E '^[0-9]+$' | head -n1)"
+    fi
+
+    if [ -n "$local_ip" ] && [ -n "$wireless_port" ]; then
+        candidate="${local_ip}:${wireless_port}"
+        adb connect "$candidate" >/dev/null 2>&1 || true
+        if adb -s "$candidate" get-state >/dev/null 2>&1; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
     fi
 
     if [ -n "$local_ip" ]; then
