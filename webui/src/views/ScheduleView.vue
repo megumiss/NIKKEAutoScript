@@ -536,4 +536,33 @@ watch(selectedName, () => {
 .sched-batch-times { display: flex; flex: 1; flex-wrap: wrap; gap: 6px; align-items: center; }
 .sched-batch-cadence { width: 160px; }
 .sched-batch-days { display: flex; flex: 1; flex-wrap: wrap; gap: 4px; align-items: center; padding-top: 4px; }
+
+/* 移动端：工具行/操作行换行，任务行由六列网格改为三行卡片式布局 */
+@media (max-width: 768px) {
+  .sched-card { padding: 12px; }
+  .sched-toolbar { gap: 8px; }
+  .sched-search { order: 3; flex: 1 1 100%; min-width: 0; margin-left: 0; }
+  .sched-view-toggle { margin-left: auto; }
+  .sched-select-bar { flex-wrap: wrap; gap: 10px; }
+  .sched-hint { order: 5; flex: 1 1 100%; }
+  .sched-head { display: none; }
+  .sched-row {
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'cbox name switch'
+      'cadence cadence next'
+      'editor editor editor';
+    row-gap: 8px;
+  }
+  .sched-row > :nth-child(1) { grid-area: cbox; }
+  .sched-name { grid-area: name; }
+  .sched-row > :nth-child(3) { grid-area: cadence; }
+  .sched-editor { grid-area: editor; }
+  .sched-next { grid-area: next; justify-self: end; }
+  .sched-row > :nth-child(6) { grid-area: switch; justify-self: end; }
+  .sched-footer { flex-wrap: wrap; gap: 8px; }
+  .sched-batch-row { flex-direction: column; gap: 6px; }
+  .sched-batch-label { width: auto; padding-top: 0; text-align: left; }
+  .sched-batch-cadence { width: 100%; }
+}
 </style>

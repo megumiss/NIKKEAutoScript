@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import AppSelect from './AppSelect.vue'
 import { api } from '../api/client'
@@ -9,6 +10,9 @@ import { useModalStore } from '../stores/modal'
 const modalStore = useModalStore()
 const { modal, originOptions, deployTemplateOptions, modalConfirmMessage, modalAlertTitle, modalAlertMessage } = storeToRefs(modalStore)
 const { confirmModal } = modalStore
+// 路由切换时关闭弹窗，避免弹窗残留遮挡新页面（移动端尤其明显）
+const route = useRoute()
+watch(() => route.fullPath, () => { modal.value.type = '' })
 // 头像由后端托管（/avatars/），列表从 API 获取。
 const avatarFiles = ref<string[]>([])
 onMounted(async () => { try { avatarFiles.value = await api.get('/api/avatars') } catch { avatarFiles.value = [] } })
