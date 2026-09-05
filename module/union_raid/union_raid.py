@@ -43,7 +43,6 @@ class UnionRaid(UI):
     def ensure_into_union(self, skip_first_screenshot=True):
         """进入联盟"""
         logger.hr('UNION RAID START')
-        click_timer = Timer(0.3)
         confirm_timer = Timer(10, count=10).start()
 
         while 1:
@@ -52,12 +51,7 @@ class UnionRaid(UI):
             else:
                 self.device.screenshot()
 
-            if (
-                click_timer.reached()
-                and self.appear(MAIN_CHECK, offset=10)
-                and self.appear_then_click(UNION, offset=70, interval=3)
-            ):
-                click_timer.reset()
+            if self.appear(MAIN_CHECK, offset=10) and self.appear_then_click(UNION, offset=70, interval=3):
                 continue
 
             # 联盟主页
@@ -71,7 +65,6 @@ class UnionRaid(UI):
 
     def ensure_into_unionraid(self, skip_first_screenshot=True):
         """进入联盟突袭"""
-        click_timer = Timer(0.3)
         confirm_timer = Timer(3, count=3)
 
         while 1:
@@ -80,30 +73,19 @@ class UnionRaid(UI):
             else:
                 self.device.screenshot()
 
-            if (
-                click_timer.reached()
-                and self.appear(UNION_CHECK, offset=10)
-                and self.appear_then_click(UNION_RAID, offset=10, interval=3)
-            ):
-                click_timer.reset()
+            if self.appear(UNION_CHECK, offset=10) and self.appear_then_click(UNION_RAID, offset=10, interval=3):
                 continue
 
             # 结算弹窗
-            if (
-                click_timer.reached()
-                and self.appear(ENEMY_DEFEATED, offset=10)
-                and self.appear_then_click(ENEMY_DEFEATED_CONFIRM_SKIP, offset=(10, 10), interval=2)
+            if self.appear(ENEMY_DEFEATED, offset=10, static=False) and self.appear_then_click(
+                ENEMY_DEFEATED_CONFIRM_SKIP, offset=10, static=False, interval=2
             ):
-                click_timer.reset()
                 continue
 
             # 结算弹窗
-            if (
-                click_timer.reached()
-                and self.appear(ENEMY_DEFEATED, offset=10)
-                and self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=(10, 10), interval=2)
+            if self.appear(ENEMY_DEFEATED, offset=10, static=False) and self.appear_then_click(
+                ENEMY_DEFEATED_CONFIRM, offset=10, static=False, interval=2
             ):
-                click_timer.reset()
                 continue
 
             # 突袭主页
@@ -125,7 +107,6 @@ class UnionRaid(UI):
 
     def union_raid(self, skip_first_screenshot=True):
         logger.hr('Start a union raid')
-        click_timer = Timer(0.3)
 
         teamindex = 0
         while 1:
@@ -139,50 +120,37 @@ class UnionRaid(UI):
                 raise NoOpportunityRemain
 
             # 点击莱彻
-            if (
-                click_timer.reached()
-                and self.appear(UNION_RAID_CHECK, offset=10)
-                and self.appear_then_click(UNION_RAID_SELECT, offset=(50, 10), interval=2)
+            if self.appear(UNION_RAID_CHECK, offset=10) and self.appear_then_click(
+                UNION_RAID_SELECT, offset=(50, 10), interval=2
             ):
-                click_timer.reset()
                 continue
 
             # 切换队伍
-            if (
-                click_timer.reached()
-                and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear_then_click(self.teams[teamindex], threshold=10, interval=1)
+            if self.appear(UNION_RAID_ENEMY_CHECK, offset=10) and self.appear_then_click(
+                self.teams[teamindex], threshold=10, interval=1
             ):
                 self.device.sleep(0.5)
-                click_timer.reset()
                 continue
 
             # 禁止提示
             if (
-                click_timer.reached()
-                and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
+                self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
                 and not self.appear_then_click(self.teams[teamindex], threshold=10)
                 and self.appear(ENTER_FIGHT_DISABLE, threshold=10)
             ):
                 teamindex += 1
-                click_timer.reset()
                 continue
 
             # 进入战斗
-            if (
-                click_timer.reached()
-                and self.appear(UNION_RAID_ENEMY_CHECK, offset=10)
-                and self.appear_then_click(ENTER_FIGHT, threshold=10, interval=2)
+            if self.appear(UNION_RAID_ENEMY_CHECK, offset=10) and self.appear_then_click(
+                ENTER_FIGHT, threshold=10, interval=2
             ):
-                click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=10, threshold=0.9, interval=5):
-                click_timer.reset()
+            if self.appear_then_click(AUTO_SHOOT, offset=10, threshold=0.9, interval=5):
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=10, threshold=0.9, interval=5):
-                click_timer.reset()
+            if self.appear_then_click(AUTO_BURST, offset=10, threshold=0.9, interval=5):
                 continue
 
             # 红圈
@@ -191,14 +159,12 @@ class UnionRaid(UI):
                     continue
 
             # 战斗结束
-            if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
+            if self.appear(END_FIGHTING, offset=30):
                 while 1:
                     self.device.screenshot()
                     if not self.appear(END_FIGHTING, offset=30):
-                        click_timer.reset()
                         break
                     if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
-                        click_timer.reset()
                         continue
                 logger.info('Complete a union raid')
                 break
@@ -208,21 +174,15 @@ class UnionRaid(UI):
             self.device.screenshot()
 
             # 结算弹窗
-            if (
-                click_timer.reached()
-                and self.appear(ENEMY_DEFEATED, offset=10)
-                and self.appear_then_click(ENEMY_DEFEATED_CONFIRM_SKIP, offset=(10, 10), interval=2)
+            if self.appear(ENEMY_DEFEATED, offset=10, static=False) and self.appear_then_click(
+                ENEMY_DEFEATED_CONFIRM_SKIP, offset=10, static=False, interval=2
             ):
-                click_timer.reset()
                 continue
 
             # 结算弹窗
-            if (
-                click_timer.reached()
-                and self.appear(ENEMY_DEFEATED, offset=10)
-                and self.appear_then_click(ENEMY_DEFEATED_CONFIRM, offset=(10, 10), interval=2)
+            if self.appear(ENEMY_DEFEATED, offset=10, static=False) and self.appear_then_click(
+                ENEMY_DEFEATED_CONFIRM, offset=10, static=False, interval=2
             ):
-                click_timer.reset()
                 continue
 
             # 突袭主页
