@@ -30,6 +30,20 @@ npx wrangler deploy
 
 ## 接口
 
+### App 授权
+
+App 首次启动时打开 `/oauth/start?state=<随机值>`。Worker 使用 GitHub OAuth 获取当前账号，
+检查该账号是否 Star `megumiss/NIKKEAutoScript`，成功后跳转到 `nkas://auth/callback`，并携带一年有效的 RSA 签名授权密钥。
+APK 只内置公钥并在本地验证密钥，不保存 GitHub access token。
+
+部署前需要配置以下变量：
+
+- `GITHUB_CLIENT_ID`：GitHub OAuth App 的 Client ID。
+- `GITHUB_CLIENT_SECRET`：通过 `wrangler secret put` 配置。
+- `GITHUB_OAUTH_CALLBACK_URL`：Worker 的 `/oauth/callback` 地址，并填入 GitHub OAuth App 的回调地址。
+- `APP_CALLBACK_URI`：固定为 `nkas://auth/callback`。
+- `LICENSE_PRIVATE_KEY_PEM`：通过 `wrangler secret put` 配置，与 APK 内公钥匹配的 PKCS#8 RSA 私钥。
+
 ### 上报（客户端调用）
 
 ```bash

@@ -8,7 +8,9 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_MY_PACKAGE_REPLACED -> InstanceNotificationService.start(context)
+            Intent.ACTION_MY_PACKAGE_REPLACED -> if (AccessGate.isAuthorized(context)) {
+                InstanceNotificationService.start(context)
+            }
         }
     }
 }

@@ -18,6 +18,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TZ_OFFSET_MS = 8 * 60 * 60 * 1000; // UTC+8
 // 数据保留 92 天
 const RETENTION_DAYS = 92;
+const LICENSE_TTL_SECONDS = 365 * 24 * 60 * 60;
+const REPOSITORY_OWNER = 'megumiss';
+const REPOSITORY_NAME = 'NIKKEAutoScript';
 const OS_LABELS = ['Windows 10', 'Windows 11', 'Linux', 'macOS'];
 
 function today() {
@@ -66,6 +69,63 @@ function checkAuth(url, env) {
 function dateOffset(day, offsetDays) {
   const t = new Date(`${day}T00:00:00Z`).getTime() - offsetDays * DAY_MS;
   return new Date(t).toISOString().slice(0, 10);
+}
+
+function base64Url(value) {
+  const bytes = value instanceof ArrayBuffer ? new Uint8Array(value) : new TextEncoder().encode(value);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function pemToBytes(pem) {
+  const encoded = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, '');
+  const binary = atob(encoded);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+async function signLicense(username, env) {
+  if (!env.LICENSE_PRIVATE_KEY_PEM) throw new Error('LICENSE_PRIVATE_KEY_PEM is not configured');
+  const header = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const now = Math.floor(Date.now() / 1000);
+  const payload = base64Url(JSON.stringify({
+    iss: 'nkas-worker',
+    sub: username,
+    repo: `${REPOSITORY_OWNER}/${REPOSITORY_NAME}`,
+    starred: true,
+    iat: now,
+    exp: now + LICENSE_TTL_SECONDS,
+  }));
+  const signingInput = `${header}.${payload}`;
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    pemToBytes(env.LICENSE_PRIVATE_KEY_PEM),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(signingInput));
+  return `${signingInput}.${base64Url(signature)}`;
+}
+
+function appCallback(env) {
+  return env.APP_CALLBACK_URI || 'nkas://auth/callback';
+}
+
+function redirectToApp(env, params) {
+  const callback = new URL(appCallback(env));
+  Object.entries(params).forEach(([key, value]) => callback.searchParams.set(key, value));
+  return Response.redirect(callback.toString(), 302);
+}
+
+async function githubRequest(path, token) {
+  return fetch(`https://api.github.com${path}`, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'User-Agent': 'NKAS-Mobile',
+    },
+  });
 }
 
 const INDEX_HTML = `<!DOCTYPE html>
@@ -211,6 +271,58 @@ export default {
       return new Response(INDEX_HTML, {
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
       });
+    }
+
+    if (path === '/oauth/start' && request.method === 'GET') {
+      if (!env.GITHUB_CLIENT_ID || !env.GITHUB_OAUTH_CALLBACK_URL) {
+        return json({ error: 'oauth_not_configured' }, 503);
+      }
+      const state = url.searchParams.get('state');
+      if (!state || !/^[0-9a-f-]{16,80}$/i.test(state)) {
+        return json({ error: 'invalid state' }, 400);
+      }
+      const authorize = new URL('https://github.com/login/oauth/authorize');
+      authorize.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
+      authorize.searchParams.set('redirect_uri', env.GITHUB_OAUTH_CALLBACK_URL);
+      authorize.searchParams.set('scope', 'read:user');
+      authorize.searchParams.set('state', state);
+      return Response.redirect(authorize.toString(), 302);
+    }
+
+    if (path === '/oauth/callback' && request.method === 'GET') {
+      const state = url.searchParams.get('state') || '';
+      if (url.searchParams.get('error')) {
+        return redirectToApp(env, { state, error: 'oauth_cancelled' });
+      }
+      const code = url.searchParams.get('code');
+      if (!code || !env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET || !env.GITHUB_OAUTH_CALLBACK_URL) {
+        return redirectToApp(env, { state, error: 'oauth_not_configured' });
+      }
+      try {
+        const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'NKAS-Mobile' },
+          body: JSON.stringify({
+            client_id: env.GITHUB_CLIENT_ID,
+            client_secret: env.GITHUB_CLIENT_SECRET,
+            code,
+            redirect_uri: env.GITHUB_OAUTH_CALLBACK_URL,
+          }),
+        });
+        const tokenData = await tokenResponse.json();
+        if (!tokenResponse.ok || !tokenData.access_token) throw new Error('github_token_exchange_failed');
+        const userResponse = await githubRequest('/user', tokenData.access_token);
+        const user = await userResponse.json();
+        if (!userResponse.ok || !user.login) throw new Error('github_user_lookup_failed');
+        const starredResponse = await githubRequest(`/user/starred/${REPOSITORY_OWNER}/${REPOSITORY_NAME}`, tokenData.access_token);
+        if (starredResponse.status !== 204) {
+          return redirectToApp(env, { state, error: starredResponse.status === 404 ? 'repository_not_starred' : 'star_check_failed' });
+        }
+        const key = await signLicense(user.login, env);
+        return redirectToApp(env, { state, key });
+      } catch (error) {
+        return redirectToApp(env, { state, error: error instanceof Error ? error.message : 'oauth_failed' });
+      }
     }
 
     if (path === '/report' && request.method === 'POST') {

@@ -13,6 +13,12 @@ database_id = "在这里填入你的D1数据库ID"
 # 查询接口的访问口令，改成你自己的随机字符串
 [vars]
 STATS_TOKEN = "change-me-to-a-random-string"
+# OAuth and license values are configured as secrets before deployment:
+# npx wrangler secret put GITHUB_CLIENT_SECRET
+# npx wrangler secret put LICENSE_PRIVATE_KEY_PEM
+# GITHUB_CLIENT_ID = "your GitHub OAuth App client id"
+# GITHUB_OAUTH_CALLBACK_URL = "https://your-worker.example.com/oauth/callback"
+# APP_CALLBACK_URI = "nkas://auth/callback"
 
 # 通过路由挂在现有域名子路径下时（如 nkas.megumiss.top/status/*），
 # 取消注释并填写路径前缀；绑整个子域名（自定义域）时保持注释即可

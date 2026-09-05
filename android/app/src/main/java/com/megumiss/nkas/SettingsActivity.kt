@@ -28,6 +28,11 @@ class SettingsActivity : Activity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
+        if (!AccessGate.isAuthorized(this)) {
+            startActivity(Intent(this, GateActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
+            finish()
+            return
+        }
         window.statusBarColor = bg
         window.navigationBarColor = bg
         setContentView(buildShell())
