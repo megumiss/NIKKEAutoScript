@@ -1,7 +1,6 @@
 package com.megumiss.nkas
 
 import android.content.Context
-import android.util.Base64
 import org.json.JSONObject
 import java.nio.charset.StandardCharsets
 import java.security.KeyFactory
@@ -60,11 +59,13 @@ object AccessGate {
     }.getOrNull()
 
     private fun publicKey() = KeyFactory.getInstance("RSA").generatePublic(
-        X509EncodedKeySpec(decode(GateConfig.LICENSE_PUBLIC_KEY_PEM
-            .replace("-----BEGIN PUBLIC KEY-----", "")
-            .replace("-----END PUBLIC KEY-----", "")
-            .replace("\\s".toRegex(), ""))),
+        X509EncodedKeySpec(java.util.Base64.getDecoder().decode(
+            GateConfig.LICENSE_PUBLIC_KEY_PEM
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replace("\\s".toRegex(), ""),
+        )),
     )
 
-    private fun decode(value: String): ByteArray = Base64.decode(value, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+    private fun decode(value: String): ByteArray = java.util.Base64.getUrlDecoder().decode(value)
 }
