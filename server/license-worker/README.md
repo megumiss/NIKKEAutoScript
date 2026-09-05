@@ -15,7 +15,7 @@ nkas-license
 普通变量：
 
 - `GITHUB_CLIENT_ID`
-- `GITHUB_OAUTH_CALLBACK_URL`，例如 `https://nkas-license.example.workers.dev/oauth/callback`
+- `GITHUB_OAUTH_CALLBACK_URL`，例如 `https://nkas-license.example.workers.dev/oauth/callback`；不填写时自动使用当前 Worker 域名加 `/oauth/callback`
 - `APP_CALLBACK_URI`，固定为 `nkas://auth/callback`
 
 加密 Secret：

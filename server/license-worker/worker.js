@@ -31,6 +31,10 @@ function callbackUri(env) {
   return env.APP_CALLBACK_URI || 'nkas://auth/callback';
 }
 
+function oauthCallbackUrl(request, env) {
+  return env.GITHUB_OAUTH_CALLBACK_URL || `${new URL(request.url).origin}/oauth/callback`;
+}
+
 function redirectToApp(env, values) {
   const callback = new URL(callbackUri(env));
   Object.entries(values).forEach(([key, value]) => callback.searchParams.set(key, value));
@@ -79,7 +83,7 @@ async function handleOAuthCallback(request, env) {
   }
 
   const code = url.searchParams.get('code');
-  if (!code || !env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET || !env.GITHUB_OAUTH_CALLBACK_URL) {
+  if (!code || !env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
     return redirectToApp(env, { state, error: 'oauth_not_configured' });
   }
 
@@ -95,7 +99,7 @@ async function handleOAuthCallback(request, env) {
         client_id: env.GITHUB_CLIENT_ID,
         client_secret: env.GITHUB_CLIENT_SECRET,
         code,
-        redirect_uri: env.GITHUB_OAUTH_CALLBACK_URL,
+        redirect_uri: oauthCallbackUrl(request, env),
       }),
     });
     const tokenData = await tokenResponse.json();
@@ -131,7 +135,7 @@ export default {
     }
 
     if (url.pathname === '/oauth/start' && request.method === 'GET') {
-      if (!env.GITHUB_CLIENT_ID || !env.GITHUB_OAUTH_CALLBACK_URL) {
+      if (!env.GITHUB_CLIENT_ID) {
         return json({ error: 'oauth_not_configured' }, 503);
       }
       const state = url.searchParams.get('state');
@@ -140,7 +144,7 @@ export default {
       }
       const authorize = new URL('https://github.com/login/oauth/authorize');
       authorize.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
-      authorize.searchParams.set('redirect_uri', env.GITHUB_OAUTH_CALLBACK_URL);
+      authorize.searchParams.set('redirect_uri', oauthCallbackUrl(request, env));
       authorize.searchParams.set('scope', 'user');
       authorize.searchParams.set('state', state);
       return Response.redirect(authorize.toString(), 302);
