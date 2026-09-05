@@ -145,7 +145,8 @@ export default {
       const authorize = new URL('https://github.com/login/oauth/authorize');
       authorize.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
       authorize.searchParams.set('redirect_uri', oauthCallbackUrl(request, env));
-      authorize.searchParams.set('scope', 'user');
+      // Only read the signed-in profile; the app never writes user data.
+      authorize.searchParams.set('scope', 'read:user');
       authorize.searchParams.set('state', state);
       return Response.redirect(authorize.toString(), 302);
     }

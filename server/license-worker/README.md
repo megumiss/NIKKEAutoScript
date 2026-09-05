@@ -2,6 +2,8 @@
 
 这是独立的 GitHub Star 授权 Worker，不复用 `nkas-dau` Worker，也不需要 D1。
 
+GitHub OAuth 仅申请 `read:user` 权限，用于确认当前登录账号；不会读取邮箱、关注者，也不会写入 GitHub 用户数据。
+
 Cloudflare 控制台中创建新 Worker，例如：
 
 ```text
