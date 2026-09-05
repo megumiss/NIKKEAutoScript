@@ -3,8 +3,7 @@ package com.megumiss.nkas
 import android.net.Uri
 
 object GateConfig {
-    // Replace this with the deployed Worker URL before publishing the APK.
-    const val WORKER_BASE_URL = "https://nkas-license.example.workers.dev"
+    const val WORKER_BASE_URL = "https://nkas-star.megumiss.top"
     const val REPOSITORY_URL = "https://github.com/megumiss/NIKKEAutoScript"
     const val CALLBACK_URI = "nkas://auth/callback"
 

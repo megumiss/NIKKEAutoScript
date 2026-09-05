@@ -488,7 +488,7 @@ class SetupActivity : Activity() {
         setActionEnabled(wirelessReady && setting)
     }
 
-    private fun renderAbout() { currentPage = "about"; floatingHost.visibility = View.GONE; content.removeAllViews(); heading("关于 NKAS Mobile", "NIKKEAutoScript 的 Android 控制端"); content.addView(TextView(this).apply { text = "应用负责初始化 Termux 环境，并通过本地 Web UI 管理 NKAS。\n\n包名：com.megumiss.nkas.mobile\n版本：0.2.8\n\n不会自动启动 NIKKE 游戏。"; textSize = 14f; setTextColor(text2); setPadding(dp(16), dp(16), dp(16), dp(16)); background = rounded(card, 10) }) }
+    private fun renderAbout() { currentPage = "about"; floatingHost.visibility = View.GONE; content.removeAllViews(); heading("关于 NKAS Mobile", "NIKKEAutoScript 的 Android 控制端"); content.addView(TextView(this).apply { text = "应用负责初始化 Termux 环境，并通过本地 Web UI 管理 NKAS。\n\n包名：com.megumiss.nkas.mobile\n版本：0.2.9\n\n不会自动启动 NIKKE 游戏。"; textSize = 14f; setTextColor(text2); setPadding(dp(16), dp(16), dp(16), dp(16)); background = rounded(card, 10) }) }
     override fun onBackPressed() { if (currentPage == "about") { renderSetup(); refreshState() } else super.onBackPressed() }
     private fun rounded(color: Int, radius: Int) = android.graphics.drawable.GradientDrawable().apply { setColor(color); cornerRadius = dp(radius).toFloat(); setStroke(dp(1), border) }
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
