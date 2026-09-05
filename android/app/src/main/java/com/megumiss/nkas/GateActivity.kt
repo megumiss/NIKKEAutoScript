@@ -65,6 +65,9 @@ class GateActivity : Activity() {
         }
         scroll.addView(content)
         built.content.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
+        // Render a usable state before handling a possible OAuth callback. This also
+        // guarantees that callback errors have a visible status target.
+        renderWaiting()
         return built.root
     }
 
