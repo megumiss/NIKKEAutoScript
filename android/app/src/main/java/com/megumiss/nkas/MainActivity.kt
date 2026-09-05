@@ -15,15 +15,11 @@ class MainActivity : Activity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        if (!AccessGate.isAuthorized(this)) {
-            startActivity(Intent(this, GateActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
-            finish()
-            return
-        }
         window.statusBarColor = bg
         window.navigationBarColor = bg
         val built = DrawerShell.build(this, "ui") { key ->
             when (key) {
+                "gate" -> { startActivity(Intent(this, GateActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)); finish() }
                 "setup" -> { startActivity(Intent(this, SetupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)); finish() }
                 "about" -> { startActivity(Intent(this, SetupActivity::class.java).putExtra("page", "about").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)); finish() }
                 "settings" -> { startActivity(Intent(this, SettingsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)); finish() }

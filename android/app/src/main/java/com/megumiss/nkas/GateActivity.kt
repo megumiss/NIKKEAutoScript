@@ -48,6 +48,15 @@ class GateActivity : Activity() {
     }
 
     private fun buildView(): View {
+        val built = DrawerShell.build(this, "gate") { key ->
+            when (key) {
+                "gate" -> renderCurrentGate()
+                "setup" -> startActivity(Intent(this, SetupActivity::class.java))
+                "ui" -> startActivity(Intent(this, MainActivity::class.java))
+                "settings" -> startActivity(Intent(this, SettingsActivity::class.java))
+                "about" -> startActivity(Intent(this, SetupActivity::class.java).putExtra("page", "about"))
+            }
+        }
         val scroll = ScrollView(this).apply { isFillViewport = true; setBackgroundColor(bg) }
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -55,8 +64,12 @@ class GateActivity : Activity() {
             setPadding(dp(24), dp(42), dp(24), dp(32))
         }
         scroll.addView(content)
-        renderWaiting()
-        return scroll
+        built.content.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
+        return built.root
+    }
+
+    private fun renderCurrentGate() {
+        AccessGate.storedLicense(this)?.let(::renderAuthorized) ?: renderWaiting()
     }
 
     private fun renderWaiting() {
@@ -80,7 +93,7 @@ class GateActivity : Activity() {
             setPadding(0, dp(16), 0, dp(8))
         })
         panel.addView(TextView(this).apply {
-            text = "使用 NKAS 前，请先使用 GitHub 完成项目授权。授权后即可进入初始化页面。"
+            text = "使用 NKAS 前需要 Star 本项目，感谢你的支持。"
             textSize = 14f
             setTextColor(text2)
             gravity = Gravity.CENTER
@@ -113,13 +126,6 @@ class GateActivity : Activity() {
         }
         panel.addView(openRepository, LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(10) })
         content.addView(panel, LinearLayout.LayoutParams(-1, -2))
-        content.addView(TextView(this).apply {
-            text = "授权密钥有效期为一年。App 只验证签名，不保存 GitHub 密码。"
-            textSize = 12f
-            setTextColor(text2)
-            gravity = Gravity.CENTER
-            setPadding(0, dp(18), 0, 0)
-        }, LinearLayout.LayoutParams(-1, -2))
         status.text = "尚未完成授权"
     }
 

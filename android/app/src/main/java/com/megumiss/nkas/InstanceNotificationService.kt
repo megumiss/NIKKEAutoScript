@@ -37,10 +37,6 @@ class InstanceNotificationService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        if (!AccessGate.isAuthorized(this)) {
-            stopSelf()
-            return
-        }
         notifications = getSystemService(NotificationManager::class.java)
         createChannel()
         startForegroundCompat(buildSummary(emptyList(), false))
@@ -236,7 +232,6 @@ class InstanceNotificationService : Service() {
         private val CONTROL_OPERATIONS = setOf("start", "stop")
 
     fun start(context: Context) {
-            if (!AccessGate.isAuthorized(context)) return
             val intent = Intent(context, InstanceNotificationService::class.java)
             runCatching {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent)
