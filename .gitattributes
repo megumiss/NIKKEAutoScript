@@ -6,3 +6,4 @@
 *.json linguist-detectable=false
 *.py linguist-detectable=true
 *.vue linguist-detectable=true
+android/app/src/main/assets/*.sh text eol=lf
