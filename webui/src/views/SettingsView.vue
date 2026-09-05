@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppIcon from '../components/AppIcon.vue'
 import { t } from '../i18n'
@@ -9,6 +10,8 @@ const { systemStatus, updateInfo } = storeToRefs(useSystemStore())
 const update = useUpdateStore()
 const { isDesktopShell, desktopUpdate, desktopChecking, desktopApplying, updateChecking, updating, restarting } = storeToRefs(update)
 const { checkDesktopUpdate, applyDesktopUpdate, checkUpdate, runUpdate, forceRestart } = update
+// git 不可用（fetch 失败等）时后端会返回 [null,...] 占位，过滤掉避免渲染整页崩溃
+const historyCommits = computed(() => ((updateInfo.value.history || []) as any[]).filter(commit => commit && commit[0]))
 </script>
 
 <template>
@@ -35,7 +38,7 @@ const { checkDesktopUpdate, applyDesktopUpdate, checkUpdate, runUpdate, forceRes
     <article class="card group-card">
       <div class="group-head"><h4>{{ t('更新记录') }}</h4></div>
       <div class="group-body history-body">
-        <div v-for="commit in updateInfo.history || []" :key="commit[0]" class="history-row" :class="{ current: updateInfo.local && commit[0] === updateInfo.local[0] }"><span class="msg">{{ commit[3] }}</span><small><code>{{ commit[0] }}</code><span v-if="updateInfo.local && commit[0] === updateInfo.local[0]" class="current-pill">{{ t('当前版本') }}</span>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
+        <div v-for="commit in historyCommits" :key="commit[0]" class="history-row" :class="{ current: updateInfo.local?.[0] && commit[0] === updateInfo.local[0] }"><span class="msg">{{ commit[3] }}</span><small><code>{{ commit[0] }}</code><span v-if="updateInfo.local?.[0] && commit[0] === updateInfo.local[0]" class="current-pill">{{ t('当前版本') }}</span>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
       </div>
     </article>
   </section>

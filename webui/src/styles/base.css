@@ -545,6 +545,17 @@ button:focus-visible,
   .log-autoscroll { flex-wrap: wrap; }
   .log-card .log-body { min-height: 240px; }
 
+  /* 任务总览：左右栏不再撑满视口高度，队列卡片按内容自然展开，
+     避免 flex:1 + 高度约束把卡片压缩到裁切/交叠 */
+  .ov-layout { height: auto; }
+  .queue-card { flex: none; overflow: visible; }
+
+  /* hero 卡片标题区不被按钮挤压成竖排：保证最小宽度，按钮自动换行 */
+  .task-hero > div:not(.task-icon) { min-width: 180px; }
+
+  /* 弹窗在矮视口内可滚动，避免内容超出屏幕无法操作 */
+  .modal-card { max-height: calc(100dvh - 32px); overflow-y: auto; }
+
   /* 任务配置表单垂直化：标签在上、控件全宽 */
   .field { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 0; }
   .field-label { width: auto; }

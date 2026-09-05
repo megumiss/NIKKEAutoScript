@@ -31,6 +31,8 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '立即运行': { 'en-US': 'Run now', 'ja-JP': '今すぐ実行' }, '本页分组': { 'en-US': 'Groups on this page', 'ja-JP': 'このページのグループ' },
   '队列中': { 'en-US': 'Queued', 'ja-JP': 'キュー中' }, '等待中': { 'en-US': 'Waiting', 'ja-JP': '待機中' },
   '暂无运行任务': { 'en-US': 'No running task', 'ja-JP': '実行中のタスクなし' }, '队列为空': { 'en-US': 'Queue is empty', 'ja-JP': 'キューは空です' },
+  '请从任务列表选择任务': { 'en-US': 'Select a task from the task list', 'ja-JP': 'タスクリストからタスクを選択してください' },
+  '请从列表选择工具': { 'en-US': 'Select a tool from the list', 'ja-JP': 'リストからツールを選択してください' },
   '未启用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '已启用': { 'en-US': 'Enabled', 'ja-JP': '有効' },
   '待机': { 'en-US': 'Standby', 'ja-JP': '待機' },
   '已保存': { 'en-US': 'Saved', 'ja-JP': '保存しました' },

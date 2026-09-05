@@ -55,10 +55,14 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
   <section class="view" :class="{ 'tool-view': selectedPage === 'tool' }" @scroll.passive="onViewScroll">
     <div class="task-layout">
       <div>
-        <article class="card task-hero">
+        <article v-if="taskSchema" class="card task-hero">
           <div class="task-icon"><AppIcon :name="selectedPage === 'tool' ? 'tools' : 'gear'" :size="22" /></div>
           <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}{{ selectedTask === 'PhysicalDevice' ? '(BETA)' : '' }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
           <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()"><template v-if="selectedInstance?.state === 1">{{ t('停止') }}</template><template v-else><AppIcon name="play" :size="14" /> {{ t('启动') }}</template></button>
+        </article>
+        <!-- 未选中任务时原空白 hero 没有信息量，换成引导提示（移动端任务列表收在右侧抽屉里） -->
+        <article v-else class="card group-card">
+          <div class="group-body special-empty" style="padding:16px 22px">{{ selectedPage === 'tool' ? t('请从列表选择工具') : t('请从任务列表选择任务') }}</div>
         </article>
         <div class="cfg-groups">
           <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
