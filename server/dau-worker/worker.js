@@ -18,7 +18,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TZ_OFFSET_MS = 8 * 60 * 60 * 1000; // UTC+8
 // 数据保留 92 天
 const RETENTION_DAYS = 92;
-const OS_LABELS = ['Windows 10', 'Windows 11', 'Linux', 'macOS'];
+const OS_LABELS = ['Windows 10', 'Windows 11', 'Linux', 'macOS', 'Android'];
 
 function today() {
   return new Date(Date.now() + TZ_OFFSET_MS).toISOString().slice(0, 10);

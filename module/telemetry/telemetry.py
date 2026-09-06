@@ -1,5 +1,7 @@
 import datetime
 import json
+import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -41,6 +43,38 @@ def _get_client_id(state):
     return str(uuid.uuid4())
 
 
+def _is_android_runtime():
+    """Detect Android even when NKAS runs outside the Termux app process."""
+    prefix = os.environ.get('PREFIX', '')
+    if os.environ.get('TERMUX_VERSION') or '/com.termux/' in prefix.replace('\\', '/'):
+        return True
+    if os.environ.get('ANDROID_ROOT') and os.environ.get('ANDROID_DATA'):
+        return True
+
+    # proot distributions launched by Termux may not inherit Termux variables,
+    # but Android's system `getprop` remains available on the executable path.
+    getprop = shutil.which('getprop')
+    if not getprop:
+        for candidate in ('/system/bin/getprop', '/system/xbin/getprop'):
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                getprop = candidate
+                break
+    if not getprop:
+        return False
+    try:
+        sdk = subprocess.run(
+            [getprop, 'ro.build.version.sdk'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=1,
+            check=False,
+            text=True,
+        ).stdout.strip()
+        return sdk.isdigit() and int(sdk) > 0
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return False
+
+
 def _get_os_label():
     if sys.platform == 'win32':
         try:
@@ -51,6 +85,8 @@ def _get_os_label():
     if sys.platform == 'darwin':
         return 'macOS'
     if sys.platform.startswith('linux'):
+        if _is_android_runtime():
+            return 'Android'
         return 'Linux'
     return None
 
