@@ -36,9 +36,8 @@
   content: |
     <b>NKAS 现已支持真机使用</b>
     支持 PC 运行 NKAS + 安卓真机运行游戏，安卓真机运行 NKAS + 安卓真机运行游戏
+    增加 apk 以支持安卓快捷安装 NKAS，QQ群文件获取
     感谢群友 @不会起名字 的大力支持
-
-    <b style="color:#e5484d;">⚠️ 风险提示：真机使用已有被临时封禁的案例，原因不明，用别怕，怕别用，封别叫</b>
 
     具体使用请查看教程：<a href="https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device" target="_blank">https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device</a> 。
 - id: notice_20260828
