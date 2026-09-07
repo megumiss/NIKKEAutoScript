@@ -15,9 +15,9 @@ function drawCharts() {
   charts = []
   if (props.widget !== 'interception_stone_charts' || !chartRoot.value) return
   const series = props.data?.series || {}
-  const text3 = cssVar('--text-3', '#97a0af')
-  const border = cssVar('--border', '#262f3d')
-  const entries = [['daily', '近 30 天', '#66b8ea'], ['weekly', '近 12 周', '#55d9a2'], ['monthly', '近 12 月', '#ffc178']]
+  const text3 = cssVar('--text-3', '#a3a3a3')
+  const border = cssVar('--border', '#e5e5e5')
+  const entries = [['daily', '近 30 天', '#0099ff'], ['weekly', '近 12 周', '#22c55e'], ['monthly', '近 12 月', '#ff7a3d']]
   entries.forEach(([key, title, color], index) => {
     const element = chartRoot.value?.children[index] as HTMLElement | undefined
     if (!element) return

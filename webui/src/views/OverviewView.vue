@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import LiveLog from '../components/LiveLog.vue'
 import ScreenPreview from '../components/ScreenPreview.vue'
+import AppIcon from '../components/AppIcon.vue'
 import { t } from '../i18n'
 import { dayOf, formatDate, formatTime } from '../utils'
 import { useInstancesStore } from '../stores/instances'
@@ -24,7 +25,7 @@ const selectedInstance = computed(() => instancesStore.instances.find(item => it
       <div class="ov-left">
         <article class="card hero-sched">
           <div style="flex:1"><b>{{ t('调度器') }}</b></div>
-          <button class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'success'" @click="lifecycle(selectedInstance?.state === 1 ? 'stop' : 'start')">{{ selectedInstance?.state === 1 ? t('停止') : t('启动') }}</button>
+          <button class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'success'" @click="lifecycle(selectedInstance?.state === 1 ? 'stop' : 'start')"><AppIcon :name="selectedInstance?.state === 1 ? 'stop' : 'play'" :size="15" /> {{ selectedInstance?.state === 1 ? t('停止') : t('启动') }}</button>
         </article>
         <article class="card queue-card">
           <div class="timeline">

@@ -237,8 +237,8 @@ watch(toolsTab, tab => {
         </div>
         <textarea v-model="hostsContent" class="textarea-mono hosts-editor" spellcheck="false" :disabled="!hostsSupported"></textarea>
         <div class="hosts-actions">
-          <button class="btn danger" :disabled="hostsBusy || !hostsApplied" @click="revertHosts">{{ t('还原') }}</button>
-          <button class="btn primary" :disabled="hostsBusy || !hostsSupported" @click="applyHosts">{{ t('应用') }}</button>
+          <button class="btn danger" :disabled="hostsBusy || !hostsApplied" @click="revertHosts"><AppIcon name="undo" :size="14" /> {{ t('还原') }}</button>
+          <button class="btn primary" :disabled="hostsBusy || !hostsSupported" @click="applyHosts"><AppIcon name="check" :size="14" /> {{ t('应用') }}</button>
         </div>
       </div>
     </article>
@@ -266,8 +266,8 @@ watch(toolsTab, tab => {
           </div>
         </div>
         <div class="hosts-actions">
-          <button class="btn danger" :disabled="shortcutsBusy" @click="resetShortcuts">{{ t('恢复默认') }}</button>
-          <button class="btn primary" :disabled="shortcutsBusy || !shortcutsDirty" @click="saveShortcuts">{{ shortcutsBusy ? t('保存中…') : t('保存') }}</button>
+          <button class="btn danger" :disabled="shortcutsBusy" @click="resetShortcuts"><AppIcon name="undo" :size="14" /> {{ t('恢复默认') }}</button>
+          <button class="btn primary" :disabled="shortcutsBusy || !shortcutsDirty" @click="saveShortcuts"><AppIcon name="check" :size="14" /> {{ shortcutsBusy ? t('保存中…') : t('保存') }}</button>
         </div>
       </div>
     </article>
@@ -303,7 +303,7 @@ watch(toolsTab, tab => {
           <div>{{ t('游戏程序') }}: {{ cloneJob.result.game }}</div>
         </div>
         <div class="hosts-actions">
-          <button class="btn primary" :disabled="cloneJob.running" @click="startClone">{{ cloneJob.running ? t('复制中…') : t('开始复制') }}</button>
+          <button class="btn primary" :disabled="cloneJob.running" @click="startClone"><AppIcon name="copy" :size="14" /> {{ cloneJob.running ? t('复制中…') : t('开始复制') }}</button>
         </div>
       </div>
     </article>

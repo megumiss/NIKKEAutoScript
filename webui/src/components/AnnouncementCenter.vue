@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import AppIcon from './AppIcon.vue'
 import { t } from '../i18n'
 import { useAnnouncementsStore } from '../stores/announcements'
 
@@ -30,7 +31,7 @@ const { selectAnnouncement, markAnnouncementRead } = announcementsStore
                  链接与强调；notice-content 的 pre-line 让纯文本公告照常换行 -->
             <div class="modal-text notice-content announcement-content" v-html="activeAnnouncement?.content || ''"></div>
           </div>
-          <button v-if="activeAnnouncement && !activeAnnouncement.read" class="btn primary" @click="markAnnouncementRead">{{ t('我知道了') }}</button>
+          <button v-if="activeAnnouncement && !activeAnnouncement.read" class="btn primary" @click="markAnnouncementRead"><AppIcon name="check" :size="15" /> {{ t('我知道了') }}</button>
         </div>
       </div>
     </div>

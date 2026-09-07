@@ -36,8 +36,8 @@ function calendarError(message: string) { toast.error = message }
         <div class="inst-now"><span class="k">{{ t('当前任务') }}</span><span>{{ instance.current_task || t('无') }}</span></div>
         <div class="inst-now"><span class="k">{{ t('下一任务') }}</span><span>{{ instance.next_task || '—' }}</span></div>
         <div class="inst-card-foot">
-          <button class="btn sm" :class="instance.state === 1 ? 'danger' : 'success'" style="flex:1" @click="lifecycle(instance.state === 1 ? 'stop' : 'start', instance.name)">{{ instance.state === 1 ? t('停止') : t('启动') }}</button>
-          <button class="btn primary sm" style="flex:1" @click="enter(instance.name)">{{ t('进入') }} <AppIcon name="arrow-right" :size="14" /></button>
+          <button class="btn sm" :class="instance.state === 1 ? 'danger' : 'success'" style="flex:1" @click="lifecycle(instance.state === 1 ? 'stop' : 'start', instance.name)"><AppIcon :name="instance.state === 1 ? 'stop' : 'play'" :size="13" /> {{ instance.state === 1 ? t('停止') : t('启动') }}</button>
+          <button class="btn accent sm" style="flex:1" @click="enter(instance.name)">{{ t('进入') }} <AppIcon name="arrow-right" :size="14" /></button>
         </div>
       </article>
       <button class="card add-card" @click="openCreateModal"><AppIcon name="plus" :size="28" /><span>{{ t('新建实例') }}</span></button>

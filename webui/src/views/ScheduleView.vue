@@ -359,8 +359,8 @@ watch(selectedName, () => {
         <label class="sched-check"><span class="cbox" :class="{ on: allFilteredSelected }"><input type="checkbox" hidden :checked="allFilteredSelected" @change="toggleSelectAll"></span> {{ t('全选') }}</label>
         <span class="sched-selected-count">{{ selected.size }} {{ t('项已选') }}</span>
         <p class="sched-hint"><AppIcon name="lightbulb" :size="13" /> {{ t('每日任务建议保持同一时间：到点后按优先级一次跑完。分散到不同时间会打乱执行顺序，可能导致漏领奖励；需要一天跑多次的任务再单独添加时间。') }}</p>
-        <button type="button" class="btn sm danger" @click="resetOpen = true">{{ t('还原默认') }}</button>
-        <button type="button" class="btn sm primary" :disabled="!selected.size" @click="openBatch">{{ t('批量设置时间') }}</button>
+        <button type="button" class="btn sm danger" @click="resetOpen = true"><AppIcon name="undo" :size="13" /> {{ t('还原默认') }}</button>
+        <button type="button" class="btn sm primary" :disabled="!selected.size" @click="openBatch"><AppIcon name="timer" :size="13" color="currentColor" /> {{ t('批量设置时间') }}</button>
       </div>
       <div class="sched-list">
         <div v-if="loading && !tasks.length" class="sched-empty">{{ t('加载中…') }}</div>
@@ -416,8 +416,8 @@ watch(selectedName, () => {
     </article>
     <div v-if="dirtyCount" class="sched-footer">
       <span class="sched-dirty-dot">●</span> {{ t('有未保存的修改') }} ({{ dirtyCount }})
-      <button type="button" class="btn sm" @click="reset">{{ t('重置') }}</button>
-      <button type="button" class="btn sm primary" :disabled="saving" @click="save">{{ t('保存') }}</button>
+      <button type="button" class="btn sm" @click="reset"><AppIcon name="undo" :size="13" /> {{ t('重置') }}</button>
+      <button type="button" class="btn sm primary" :disabled="saving" @click="save"><AppIcon name="check" :size="13" /> {{ t('保存') }}</button>
     </div>
     <div v-if="resetOpen" class="modal-mask" @click.self="resetOpen = false">
       <div class="modal-card">
@@ -471,7 +471,7 @@ watch(selectedName, () => {
 .sched-card { padding: 16px 18px; }
 .sched-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .sched-tabs { display: flex; gap: 6px; }
-.sched-tab { padding: 6px 14px; border: 1px solid var(--border-light); border-radius: 9px; color: var(--text-2); background: var(--card-3); font-size: 13px; }
+.sched-tab { padding: 7px 15px; border: 1px solid var(--button-border); border-radius: 999px; color: var(--text-2); background: var(--button-bg); font-size: 13.5px; }
 .sched-tab:hover { border-color: var(--accent); color: var(--accent); }
 .sched-tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 700; }
 .sched-hint { flex: 1; min-width: 0; margin: 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
@@ -493,7 +493,7 @@ watch(selectedName, () => {
 .sched-head { padding: 8px; color: var(--text-3); font-size: 11.5px; font-weight: 600; }
 .cbox { position: relative; display: inline-block; flex: none; width: 16px; height: 16px; border: 1px solid var(--border-light); border-radius: 5px; background: var(--card); cursor: pointer; transition: border-color .15s, background .15s; }
 .cbox:hover { border-color: var(--accent); }
-.cbox.on { border-color: transparent; background: var(--grad-accent); --check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21.5303 5.46967C21.8232 5.76256 21.8232 6.23744 21.5303 6.53033L9.53033 18.5303C9.23744 18.8232 8.76256 18.8232 8.46967 18.5303L2.46967 12.5303C2.17678 12.2374 2.17678 11.7626 2.46967 11.4697C2.76256 11.1768 3.23744 11.1768 3.53033 11.4697L9 16.9393L20.4697 5.46967C20.7626 5.17678 21.2374 5.17678 21.5303 5.46967Z' fill='%23fff'/%3E%3C/svg%3E"); }
+.cbox.on { border-color: transparent; background: var(--accent-on); --check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21.5303 5.46967C21.8232 5.76256 21.8232 6.23744 21.5303 6.53033L9.53033 18.5303C9.23744 18.8232 8.76256 18.8232 8.46967 18.5303L2.46967 12.5303C2.17678 12.2374 2.17678 11.7626 2.46967 11.4697C2.76256 11.1768 3.23744 11.1768 3.53033 11.4697L9 16.9393L20.4697 5.46967C20.7626 5.17678 21.2374 5.17678 21.5303 5.46967Z' fill='%23fff'/%3E%3C/svg%3E"); }
 .cbox.on::after { position: absolute; inset: 0; content: ''; background: #fff; -webkit-mask: var(--check-mask) center / 10px 10px no-repeat; mask: var(--check-mask) center / 10px 10px no-repeat; }
 .cbox.disabled { cursor: not-allowed; }
 .sched-name { display: flex; flex-direction: column; }
@@ -502,7 +502,7 @@ watch(selectedName, () => {
 .sched-row-error { color: var(--red); font-size: 11.5px; }
 .sched-cadence { width: 100px; }
 .sched-cadence :deep(.app-select) { width: 100%; margin-top: 0; }
-.sched-cadence :deep(.app-select-btn) { height: 30px; padding: 0 10px; border-color: var(--border-light); background: var(--card); font-size: 12.5px; font-weight: 600; }
+.sched-cadence :deep(.app-select-btn) { height: 30px; padding: 0 10px; border-color: var(--border); background: var(--card-2); font-size: 12.5px; font-weight: 600; }
 .sched-cadence :deep(.app-select-btn:hover) { border-color: var(--accent); color: var(--accent); }
 .sched-cadence :deep(.app-select.open .app-select-btn) { border-color: var(--accent); }
 .sched-cadence :deep(.app-select-arrow) { color: var(--accent); }
@@ -516,7 +516,7 @@ watch(selectedName, () => {
 .time-chip :deep(.tp-arrow) { font-size: 11px; }
 .chip-x { border: 0; padding: 0 2px; color: var(--text-3); background: transparent; font-size: 11px; }
 .chip-x:hover { color: var(--red); }
-.sched-input { height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; outline: 0; color: var(--text); background: var(--card-2); font-size: 12.5px; transition: border-color .15s, box-shadow .15s; }
+.sched-input { height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 10px; outline: 0; color: var(--text); background: var(--card-2); font-size: 12.5px; transition: border-color .15s, box-shadow .15s; }
 .sched-input:hover { border-color: var(--border-light); }
 .sched-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .sched-input:disabled { cursor: not-allowed; }
@@ -530,7 +530,7 @@ watch(selectedName, () => {
 .sched-day-input { width: 58px; }
 .sched-next { flex: none; color: var(--text-3); font-size: 12px; }
 .sched-footer { position: sticky; z-index: 5; bottom: 0; display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 14px; padding: 12px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--card); box-shadow: var(--shadow-hover); font-size: 13px; }
-.sched-dirty-dot { color: var(--orange, #e2a35a); }
+.sched-dirty-dot { color: var(--yellow, #ff7a3d); }
 .sched-batch-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
 .sched-batch-label { flex: none; width: 56px; padding-top: 8px; color: var(--text-2); font-size: 13px; text-align: right; }
 .sched-batch-times { display: flex; flex: 1; flex-wrap: wrap; gap: 6px; align-items: center; }

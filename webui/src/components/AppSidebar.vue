@@ -33,7 +33,7 @@ function onBrandMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, 
       <button class="side-toggle" @click="sidebarCollapsed = !sidebarCollapsed">{{ sidebarCollapsed ? '»' : '«' }}</button>
     </div>
     <div class="side-section">
-      <button class="side-item" :class="{ active: isDashboard }" @click="dashboard"><span class="sicon" style="color:#3b82f6"><AppIcon name="chart-square" :size="18" /></span><span class="side-text">{{ t('总览') }}</span></button>
+      <button class="side-item" :class="{ active: isDashboard }" @click="dashboard"><span class="sicon" style="color:#0099ff"><AppIcon name="chart-square" :size="18" /></span><span class="side-text">{{ t('总览') }}</span></button>
     </div>
     <div class="side-section">
       <div class="side-label">{{ t('实例') }}</div>
@@ -45,16 +45,16 @@ function onBrandMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, 
     </div>
     <div class="side-section">
       <div class="side-label">{{ t('系统') }}</div>
-      <button class="side-item" :class="{ active: isManage }" @click="router.push('/manage')"><span class="sicon" style="color:#8b5cf6"><AppIcon name="layers" :size="18" /></span><span class="side-text">{{ t('多开') }}</span></button>
-      <button class="side-item" :class="{ active: isDeploy }" @click="router.push('/deploy')"><span class="sicon" style="color:#f59e0b"><AppIcon name="box" :size="18" /></span><span class="side-text">{{ t('部署') }}</span></button>
-      <button class="side-item" :class="{ active: isLogs }" @click="router.push('/logs')"><span class="sicon" style="color:#10b981"><AppIcon name="file-text" :size="18" /></span><span class="side-text">{{ t('日志') }}</span></button>
-      <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')"><span class="sicon" style="color:#ef4444"><AppIcon name="square-top-up" :size="18" /></span><span class="side-text">{{ t('更新') }}</span></button>
-      <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')"><span class="sicon" style="color:#06b6d4"><AppIcon name="info-circle" :size="18" /></span><span class="side-text">{{ t('关于') }}</span></button>
+      <button class="side-item" :class="{ active: isManage }" @click="router.push('/manage')"><span class="sicon" style="color:#6a4cf5"><AppIcon name="layers" :size="18" /></span><span class="side-text">{{ t('多开') }}</span></button>
+      <button class="side-item" :class="{ active: isDeploy }" @click="router.push('/deploy')"><span class="sicon" style="color:#ff7a3d"><AppIcon name="box" :size="18" /></span><span class="side-text">{{ t('部署') }}</span></button>
+      <button class="side-item" :class="{ active: isLogs }" @click="router.push('/logs')"><span class="sicon" style="color:#22c55e"><AppIcon name="file-text" :size="18" /></span><span class="side-text">{{ t('日志') }}</span></button>
+      <button class="side-item" :class="{ active: isSettings }" @click="router.push('/settings')"><span class="sicon" style="color:#ff5577"><AppIcon name="square-top-up" :size="18" /></span><span class="side-text">{{ t('更新') }}</span></button>
+      <button class="side-item" :class="{ active: isAbout }" @click="router.push('/about')"><span class="sicon" style="color:#0099ff"><AppIcon name="info-circle" :size="18" /></span><span class="side-text">{{ t('关于') }}</span></button>
     </div>
     <div class="side-section">
       <div class="side-label">{{ t('其他') }}</div>
-      <button class="side-item" :class="{ active: isTools }" @click="router.push('/tools')"><span class="sicon" style="color:#ec4899"><AppIcon name="designtools" :size="18" /></span><span class="side-text">{{ t('常用工具') }}</span></button>
-      <button class="side-item" :class="{ active: isLinks }" @click="router.push('/links')"><span class="sicon" style="color:#6366f1"><AppIcon name="globe" :size="18" /></span><span class="side-text">{{ t('常用链接') }}</span></button>
+      <button class="side-item" :class="{ active: isTools }" @click="router.push('/tools')"><span class="sicon" style="color:#d44df0"><AppIcon name="designtools" :size="18" /></span><span class="side-text">{{ t('常用工具') }}</span></button>
+      <button class="side-item" :class="{ active: isLinks }" @click="router.push('/links')"><span class="sicon" style="color:#6a4cf5"><AppIcon name="globe" :size="18" /></span><span class="side-text">{{ t('常用链接') }}</span></button>
     </div>
     <div class="side-spacer"></div>
     <div class="side-footer">

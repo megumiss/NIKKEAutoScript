@@ -20,7 +20,7 @@ const { openResetDeployModal } = useModalStore()
     <article class="card task-hero">
       <div class="task-icon"><AppIcon name="box" :size="22" /></div>
       <div style="flex:1"><h2>{{ t('部署') }}</h2><div class="sub deploy-warning"><AppIcon name="alert-triangle" :size="14" /> {{ t('修改部署配置可能导致更新失败或程序无法启动，修改需要重启后生效，请谨慎操作。') }}</div></div>
-      <button class="btn danger" @click="openResetDeployModal">{{ t('还原默认') }}</button>
+      <button class="btn danger" @click="openResetDeployModal"><AppIcon name="undo" :size="15" /> {{ t('还原默认') }}</button>
     </article>
     <div class="cfg-groups">
       <article v-for="group in deployGroups" :key="group.key" class="card group-card">
