@@ -87,6 +87,7 @@ def mount_api(app):
         Route('/api/{name:str}/bla/login/shot', routes_bla.login_shot, methods=['GET']),
         Route('/api/{name:str}/bla/login/drag', routes_bla.login_drag, methods=['POST']),
         Route('/api/{name:str}/bla/login/cancel', routes_bla.login_cancel, methods=['POST']),
+        Route('/api/{name:str}/bla/bind', routes_bla.bind_to_bot, methods=['POST']),
         Route('/api/{name:str}/screenshot', routes_preview.screenshot, methods=['GET']),
         Route('/api/{name:str}/scrcpy', routes_preview.scrcpy, methods=['GET']),
         Route('/scrcpy/{name:str}/', routes_preview.scrcpy_page, methods=['GET']),

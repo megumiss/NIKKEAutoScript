@@ -13,6 +13,7 @@ import { highlightTextarea, isStructuredTextarea, onTextareaInput, vAutosize } f
 import { useRouteInfo } from '../composables/useRouteInfo'
 import { t } from '../i18n'
 import { onTextInput } from '../utils'
+import { useBlaBindBotStore } from '../stores/blaBindBot'
 import { useBlaLoginStore } from '../stores/blaLogin'
 import { useInstancesStore } from '../stores/instances'
 import { useToastStore } from '../stores/toast'
@@ -32,6 +33,8 @@ const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
 const { blaLoginBusy } = storeToRefs(useBlaLoginStore())
 const { startBlaLogin } = useBlaLoginStore()
+const { bindBusy } = storeToRefs(useBlaBindBotStore())
+const { openBind } = useBlaBindBotStore()
 const toast = useToastStore()
 
 const serialDeviceOptions = computed(() => serialDevices.value.map(device => ({ value: device.serial, label: `${device.serial} (${device.status})` })))
@@ -77,6 +80,10 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
               <div v-if="selectedTask === 'BlaAuth' && group.key === 'BlaAuth'" class="field">
                 <div class="field-label"><div class="fname">{{ t('登录获取 Cookie（BETA）') }}</div><div class="fhelp">{{ t('使用NKAS设置-账号设置中的LiPass账号自动登录妮游社，成功后自动填写 Cookie 和 XCommonParams；如出现滑块验证码，在弹窗中的图片上拖动完成。') }}</div></div>
                 <div class="field-control"><button class="btn primary" :disabled="blaLoginBusy" @click="startBlaLogin"><AppIcon name="key" :size="14" /> {{ blaLoginBusy ? t('登录中…') : t('一键登录') }}</button></div>
+              </div>
+              <div v-if="selectedTask === 'BlaAuth' && group.key === 'BlaAuth'" class="field">
+                <div class="field-label"><div class="fname">{{ t('绑定到 Bot') }}</div><div class="fhelp">{{ t('绑定步骤：① 私聊机器人发送 #妮姬 账号 绑定，获取 10 分钟内有效、仅可使用一次的绑定链接；② 切到该账号所在实例，点本按钮并粘贴完整链接确认绑定；③ 若提示缺少 game_uid 或 Cookie 已失效，请先重新「一键登录」再绑定。') }}</div></div>
+                <div class="field-control"><button class="btn" :disabled="bindBusy" @click="openBind"><AppIcon name="external" :size="14" /> {{ t('绑定到 Bot') }}</button></div>
               </div>
               <template v-for="field in group.fields" :key="field.key">
                 <div :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">

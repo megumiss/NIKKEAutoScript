@@ -7,6 +7,7 @@ import AppIcon from './components/AppIcon.vue'
 import AppModal from './components/AppModal.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import AppTopbar from './components/AppTopbar.vue'
+import BlaBindBotModal from './components/BlaBindBotModal.vue'
 import BlaLoginModal from './components/BlaLoginModal.vue'
 import MaintenanceBanner from './components/MaintenanceBanner.vue'
 import TaskRail from './components/TaskRail.vue'
@@ -154,5 +155,6 @@ onBeforeUnmount(() => {
     <AnnouncementCenter />
     <AppModal />
     <BlaLoginModal />
+    <BlaBindBotModal />
   </div>
 </template>

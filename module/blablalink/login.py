@@ -464,6 +464,16 @@ class BlaLoginSession:
                 if not channel_id:
                     raise LoginVerifyError('channelId not found in login cache (channel_info)')
 
+                # game_uid 取自凭证缓存的 channel_info.openid（站点前端即此口径），
+                # 缺它下游绑定会被直接拒绝；user_name 为选填展示字段
+                channel_openid = str(creds.get('channel_info', {}).get('openid', ''))
+                if not channel_openid:
+                    raise LoginVerifyError('openid not found in login cache (channel_info)')
+                extra['game_uid'] = channel_openid
+                user_name = str(creds.get('user_name', '') or '')
+                if user_name:
+                    extra['game_user_name'] = user_name
+
                 cookie = build_cookie(openid, token, intl_game_id, channel_id, extra)
 
                 # 登录后诊断：上下文现有 cookie
