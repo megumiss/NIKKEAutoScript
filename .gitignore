@@ -19,6 +19,7 @@ bin/paddleocr/
 /tmp
 **.acc
 data/
+android/
 .workbuddy/
 dev_tools/.button_extract_cache.json
 dev_tools/.template_capture_config.json
