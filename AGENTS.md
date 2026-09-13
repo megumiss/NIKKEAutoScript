@@ -9,7 +9,15 @@
 桌面 Tauri 2 工程位于 `webapp/`；Vue SPA 位于 `webui/`，由 Python 后端托管。  
 SPA 源码结构：`webui/src/views/`（按页面拆分）、`webui/src/stores/`（Pinia 共享状态）、`webui/src/composables/`（Tauri 壳、文本域等复用逻辑）、`webui/src/components/`（壳与通用组件）；`App.vue` 只是布局壳，按路由切换视图。
 
+## 任务范围与 Skill 选择
+- 本文件只适用于 NIKKEAutoScript。
+- 按实际任务和技术栈选择 Skill。Vue 界面复用现有组件与主题；纯协议、数据解析、文档或构建说明修改不触发 UI 设计、品牌或营销流程。
+- 只读取与当前改动相关的文档章节；本任务中已读且未变更的内容不重复读取。
+- 目标明确的低风险、可逆操作按上下文继续；仅在关键信息无法推断，或敏感、范围外操作尚缺必要授权时确认。已有会话授权在原范围内有效，Git 推送仍遵守下方限制。
+
 ## 构建、测试与开发命令
+以下为环境初始化和启动命令；验证要求统一见“测试规范”。依赖已就绪且依赖清单未变更时无需重复安装。
+
 Python 环境初始化：
 ```powershell
 python -m venv .venv
@@ -21,20 +29,13 @@ pip install -r requirements.txt
 python main.py
 python gui.py --host 127.0.0.1 --port 12271
 ```
-变更后快速语法检查：
-```powershell
-python -m py_compile module\...\*.py
-```
-桌面壳开发（在 `webapp/` 目录，需要 Node.js 20、stable Rust 和 Windows C++ Build Tools）：
+桌面壳依赖初始化（在 `webapp/` 目录，需要 Node.js 20、stable Rust 和 Windows C++ Build Tools）：
 ```powershell
 yarn install --frozen-lockfile
-yarn test
-yarn run compile
 ```
-SPA 开发（在 `webui/` 目录）：
+SPA 依赖初始化（在 `webui/` 目录）：
 ```powershell
 yarn install --frozen-lockfile
-yarn run build
 ```
 构建产物 `webui/dist` 提交入库。注意 `webui/vite.config.ts` 设置了 `emptyOutDir: false`，构建不会自动清理旧的哈希产物；提交 `dist` 前先删除不再被 `index.html`/chunk 引用的旧文件，只提交当前构建实际引用的文件。
 
@@ -66,9 +67,17 @@ Python 使用 4 空格缩进，单行不超过 120 字符，字符串优先单�
 - 日志习惯：关键流程用 `logger.hr` 标阶段，分支结果用 `logger.info/warning`，异常路径保留足够上下文便于复现。
 
 ## 测试规范
-仓库当前没有完整的 Python 单元测试体系；Python 改动至少执行 `py_compile`，并进行针对性运行验证。  
-桌面壳改动需执行 `yarn test`、`yarn run check` 和 `yarn run compile`；SPA 改动需执行 `yarn run build`。
-涉及 OCR/模板资源改动时，需提供可复现的游戏内验证路径，并覆盖对应语言资源。
+按受影响的模块选择检查，跨模块改动合并对应要求；以下为唯一验证清单。
+
+| 改动范围 | 必要检查 |
+| --- | --- |
+| 纯文档（含 AGENTS.md），不修改应用源码或构建输入 | 核对内容、引用路径和 `git diff --check`；不触发应用构建 |
+| Python 源码 | 对改动的 `.py` 文件执行 `python -m py_compile`，并进行相关路径的运行验证；目前没有完整的 Python 单元测试体系 |
+| 桌面壳源码或构建配置 | 在 `webapp/` 执行 `yarn test` 和 `yarn run compile` |
+| SPA 源码或构建配置 | 在 `webui/` 执行 `yarn run build`，交互变化验证相关页面流程 |
+| OCR/模板资源 | 提供可复现的游戏内验证路径，覆盖受影响的语言资源 |
+
+桌面开发可先用 `yarn run check` 快速反馈；相同 target/features 的检查已由测试或构建覆盖时不重复执行，不同配置仍需单独验证。检查通过后，仅在相关输入变更、新失败或尚未覆盖的风险出现时重跑。无法完成的必要验证应说明原因，不把构建通过当作游戏内验证完成。
 
 ## 提交与合并请求规范
 提交信息保持简短、祈使语气，历史中常用中文，数据更新常带 `ZH:` 前缀。示例：
