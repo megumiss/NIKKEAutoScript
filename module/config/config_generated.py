@@ -86,6 +86,10 @@ class GeneratedConfig:
     Reward_CollectSpecialArenaPoint = False
     Reward_CollectRanking = True
 
+    # Group `Destruction`
+    Destruction_UseGem = False
+    Destruction_GemTimes = 2  # 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+
     # Group `DailyRecruit`
     DailyRecruit_EventFreeRecruit = True
     DailyRecruit_SocialPointRecruit = True

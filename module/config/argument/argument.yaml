@@ -176,6 +176,11 @@ Reward:
   CollectSocialPoint: true
   CollectSpecialArenaPoint: false
   CollectRanking: true
+Destruction:
+  UseGem: false
+  GemTimes:
+    value: 2
+    option: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
 DailyRecruit:
   EventFreeRecruit: true
   SocialPointRecruit: true

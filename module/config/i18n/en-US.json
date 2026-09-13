@@ -596,6 +596,30 @@
       "help": ""
     }
   },
+  "Destruction": {
+    "_info": {
+      "name": "Destruction Settings",
+      "help": ""
+    },
+    "UseGem": {
+      "name": "Use Gems",
+      "help": ""
+    },
+    "GemTimes": {
+      "name": "Gem Runs",
+      "help": "",
+      "1": "1 run (50 gems, 50 total)",
+      "2": "2 runs (70 gems, 120 total)",
+      "3": "3 runs (100 gems, 220 total)",
+      "4": "4 runs (150 gems, 370 total)",
+      "5": "5 runs (200 gems, 570 total)",
+      "6": "6 runs (250 gems, 820 total)",
+      "7": "7 runs (300 gems, 1120 total)",
+      "8": "8 runs (350 gems, 1470 total)",
+      "9": "9 runs (400 gems, 1870 total)",
+      "10": "10 runs (500 gems, 2370 total)"
+    }
+  },
   "DailyRecruit": {
     "_info": {
       "name": "Daily Recruitment",

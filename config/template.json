@@ -150,6 +150,10 @@
       "MonthlyDay": 1,
       "MonthlyTime": "04:00"
     },
+    "Destruction": {
+      "UseGem": false,
+      "GemTimes": 2
+    },
     "Storage": {
       "Storage": {}
     }
