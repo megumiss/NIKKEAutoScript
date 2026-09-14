@@ -7,6 +7,7 @@
 **/log
 **/node_modules
 config/deploy.yaml
+config/.security/
 config/nkas.json
 config/nkas2.json
 config/serial/state.json

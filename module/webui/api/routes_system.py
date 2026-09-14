@@ -18,14 +18,22 @@ def _json_error(message, status=400):
     return JSONResponse({'status': 'error', 'message': message}, status_code=status)
 
 
-async def status(_: Request):
-    return JSONResponse({
-        'api_version': 2, 'spa_version': '1', 'capabilities': {'spa': True, 'websocket': True},
+async def status(request: Request):
+    security = request.app.state.security_entry
+    authorized = getattr(request.state, 'security_entry_authorized', False)
+    result = {
+        'api_version': 2, 'spa_version': '1', 'capabilities': {'spa': True, 'websocket': True, 'security_entry': True},
+        'security_entry': {'enabled': security.enabled, 'authorized': authorized},
+    }
+    if not authorized:
+        return JSONResponse(result, headers={'Cache-Control': 'no-store'})
+    result.update({
         'version': _git_version(), 'updater_state': updater.state,
         'theme': State.deploy_config.Theme, 'language': lang.LANG,
         'home_page': State.deploy_config.HomePage,
         'console_enabled': bool(State.deploy_config.ConsoleEnabled),
     })
+    return JSONResponse(result, headers={'Cache-Control': 'no-store'})
 
 
 async def update_status(_: Request):

@@ -3,6 +3,7 @@
 mod backend;
 mod config;
 mod desktop_update;
+mod security_entry;
 
 use anyhow::{Context, Result};
 use backend::Backend;
@@ -196,8 +197,25 @@ fn available_export_path(directory: &Path, filename: &str) -> std::path::PathBuf
 }
 
 #[tauri::command]
+async fn refresh_security_entry(window: WebviewWindow, config: tauri::State<'_, DesktopConfig>) -> Result<(), String> {
+    let current = window.url().map_err(|_| "Unable to read application URL")?;
+    if !is_local_webui_url(&current, &config.host, config.port) {
+        return Err("Security entry is restricted to the configured backend".into());
+    }
+    let config = config.inner().clone();
+    let page = tauri::async_runtime::spawn_blocking(move || security_entry::page(&config))
+        .await.map_err(|_| "Unable to read local security entry")?
+        .map_err(|_| "Unable to read local security entry")?;
+    if !page.path().starts_with("/entry/") {
+        return Err("No local security entry is available".into());
+    }
+    window.navigate(page).map_err(|_| "Unable to open local security entry".into())
+}
+
+#[tauri::command]
 async fn save_export_file(
     window: WebviewWindow,
+    config: tauri::State<'_, DesktopConfig>,
     url_path: String,
     filename: String,
 ) -> Result<String, String> {
@@ -211,6 +229,10 @@ async fn save_export_file(
     let current_url = window
         .url()
         .map_err(|error| format!("Unable to read the application URL: {error}"))?;
+    if !is_local_webui_url(&current_url, &config.host, config.port) {
+        return Err("Exports are restricted to the configured backend".into());
+    }
+    let config = config.inner().clone();
     let export_url = current_url
         .join(&url_path)
         .map_err(|error| format!("Invalid export URL: {error}"))?;
@@ -226,8 +248,10 @@ async fn save_export_file(
         fs::create_dir_all(&downloads)
             .map_err(|error| format!("Unable to create Downloads directory: {error}"))?;
         let destination = available_export_path(&downloads, &filename);
-        let mut response = reqwest::blocking::Client::new()
-            .get(export_url)
+        let client = reqwest::blocking::Client::builder()
+            .redirect(reqwest::redirect::Policy::none()).build().map_err(|_| "Unable to create export client")?;
+        let mut response = security_entry::authorize(client.get(export_url), &config)
+            .map_err(|_| "Unable to read local security entry")?
             .send()
             .and_then(|response| response.error_for_status())
             .map_err(|error| format!("Unable to download export: {error}"))?;
@@ -345,9 +369,7 @@ fn start_application_inner(
     reporter.stage("Opening the application");
     reporter.complete("Startup complete. Opening NKAS...");
     thread::sleep(std::time::Duration::from_millis(150));
-    let page: Url = backend::url(&config.host, config.port, "/app/")
-        .parse()
-        .context("Invalid WebUI URL")?;
+    let page = security_entry::page(config)?;
     window.navigate(page)?;
     window.show()?;
     window.set_focus()?;
@@ -399,11 +421,12 @@ fn install_tray(app: &AppHandle) -> Result<()> {
     Ok(())
 }
 
-fn post(host: String, port: u16, path: &'static str) {
+fn post(config: DesktopConfig, path: &'static str) {
     thread::spawn(move || {
-        let _ = reqwest::blocking::Client::new()
-            .post(backend::url(&host, port, path))
-            .send();
+        let Ok(client) = reqwest::blocking::Client::builder().redirect(reqwest::redirect::Policy::none()).build() else { return; };
+        if let Ok(request) = security_entry::authorize(client.post(backend::url(&config.host, config.port, path)), &config) {
+            let _ = request.send();
+        }
     });
 }
 
@@ -425,13 +448,12 @@ fn install_shortcuts(app: &AppHandle, config: &DesktopConfig) -> Result<()> {
         let Ok(shortcut) = Shortcut::from_str(value) else {
             continue;
         };
-        let host = config.host.clone();
-        let port = config.port;
+        let request_config = config.clone();
         let _ = app
             .global_shortcut()
             .on_shortcut(shortcut, move |_app, _shortcut, event| {
                 if event.state() == ShortcutState::Pressed {
-                    post(host.clone(), port, path);
+                    post(request_config.clone(), path);
                 }
             });
     }
@@ -496,6 +518,7 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             desktop_update::desktop_update_check,
             desktop_update::desktop_update_apply,
             save_export_file,
+            refresh_security_entry,
         ])
         .on_window_event(|window, event| {
             if window.label() == "main"
@@ -505,6 +528,7 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             }
         })
         .setup(move |app| {
+            app.manage(app_config.clone());
             app.manage(BackendState(Mutex::new(None)));
             app.manage(Arc::new(desktop_update::DesktopUpdateManager::new(
                 app_config.clone(),
