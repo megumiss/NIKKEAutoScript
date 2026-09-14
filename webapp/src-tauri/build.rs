@@ -7,6 +7,7 @@ fn main() {
             "desktop_update_status",
             "desktop_update_check",
             "desktop_update_apply",
+            "save_export_file",
         ])),
     )
     .expect("failed to run tauri-build");

@@ -1,14 +1,27 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import AppIcon from '../components/AppIcon.vue'
+import { exportTextFile } from '../composables/useFileExport'
 import { t } from '../i18n'
 import { useInstancesStore } from '../stores/instances'
 import { useModalStore } from '../stores/modal'
+import { useToastStore } from '../stores/toast'
 
 const instancesStore = useInstancesStore()
+const toast = useToastStore()
 const { instances, dragIndex, dragOverIndex } = storeToRefs(instancesStore)
 const { displayStatus, displayStatusClass, initials, avatarUrl, onDragStart, onDragOver, onDragEnd, onDrop, saveRemark, importInstance } = instancesStore
 const { openCreateModal, openRenameModal, openDeleteModal, openAvatarModal } = useModalStore()
+
+async function exportInstance(name: string, mod: string) {
+  const filename = mod === 'nkas' ? `${name}.json` : `${name}.${mod}.json`
+  try {
+    const path = await exportTextFile(`/api/${encodeURIComponent(name)}/export`, filename)
+    toast.notify(path ? `${t('导出成功')}: ${path}` : t('导出成功'))
+  } catch (exception: any) {
+    toast.error = exception?.message || t('导出失败')
+  }
+}
 </script>
 
 <template>
@@ -31,7 +44,7 @@ const { openCreateModal, openRenameModal, openDeleteModal, openAvatarModal } = u
             <td :data-label="t('Mod')">{{ instance.mod }}</td>
             <td :data-label="t('状态')"><span class="status-pill" :class="displayStatusClass(instance.name, instance.state, instance.current_task)">{{ displayStatus(instance.name, instance.state, instance.current_task) }}</span></td>
             <td :data-label="t('备注')"><input class="remark-input" :value="instance.remark" placeholder="—" @change="saveRemark(instance, $event)"></td>
-            <td :data-label="t('操作')"><span class="row-actions"><a class="btn sm" :href="`/api/${instance.name}/export`"><AppIcon name="download" :size="13" color="currentColor" /> {{ t('导出') }}</a> <button class="btn sm" :disabled="instance.state === 1" @click="openRenameModal(instance.name)"><AppIcon name="edit" :size="13" /> {{ t('重命名') }}</button> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)"><AppIcon name="trash" :size="13" /> {{ t('删除') }}</button></span></td>
+            <td :data-label="t('操作')"><span class="row-actions"><button class="btn sm" @click="exportInstance(instance.name, instance.mod)"><AppIcon name="download" :size="13" color="currentColor" /> {{ t('导出') }}</button> <button class="btn sm" :disabled="instance.state === 1" @click="openRenameModal(instance.name)"><AppIcon name="edit" :size="13" /> {{ t('重命名') }}</button> <button class="btn danger sm" :disabled="instance.state === 1" @click="openDeleteModal(instance.name)"><AppIcon name="trash" :size="13" /> {{ t('删除') }}</button></span></td>
           </tr>
         </tbody>
       </table>

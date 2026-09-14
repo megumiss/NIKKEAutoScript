@@ -4,11 +4,24 @@ import { storeToRefs } from 'pinia'
 import AppIcon from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
 import { logLevelOptions, t } from '../i18n'
+import { exportTextFile } from '../composables/useFileExport'
 import { useLogsPageStore } from '../stores/logsPage'
+import { useToastStore } from '../stores/toast'
 
 const logsPage = useLogsPageStore()
+const toast = useToastStore()
 const { logsDate, logsSource, logsLevel, logsKeyword, logsRecords, logsLoading, logsDateOptions, logsSourceOptions, logsExportUrl } = storeToRefs(logsPage)
 const { logsRankClass, logsCountText, refreshLogs } = logsPage
+
+async function exportLogs() {
+  if (!logsExportUrl.value) return
+  try {
+    const path = await exportTextFile(logsExportUrl.value, `${logsDate.value}_${logsSource.value}.txt`)
+    toast.notify(path ? `${t('导出成功')}: ${path}` : t('导出成功'))
+  } catch (exception: any) {
+    toast.error = exception?.message || t('导出失败')
+  }
+}
 
 // 查询结果更新后滚到底部（原 App.vue 中 queryLogs 内的滚动逻辑）。
 const logsBody = ref<HTMLElement>()
@@ -24,7 +37,7 @@ watch(logsRecords, async () => {
       <div class="task-icon"><AppIcon name="file-text" :size="22" /></div>
       <div style="flex:1"><h2>{{ t('日志') }}</h2><div class="sub">{{ t('查看 log 目录下的日志文件，支持按类型、级别、日期和关键字筛选。') }}</div></div>
       <button class="btn" @click="refreshLogs"><AppIcon name="refresh" :size="16" /> {{ t('刷新') }}</button>
-      <a v-if="logsExportUrl" class="btn" :href="logsExportUrl" :download="`${logsDate}_${logsSource}.txt`"><AppIcon name="download" :size="16" /> {{ t('导出') }}</a>
+      <button v-if="logsExportUrl" class="btn" @click="exportLogs"><AppIcon name="download" :size="16" /> {{ t('导出') }}</button>
     </article>
     <article class="card log-card logs-card">
       <div class="log-head logs-filter">

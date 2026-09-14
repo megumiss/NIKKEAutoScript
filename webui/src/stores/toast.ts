@@ -6,7 +6,7 @@ export const useToastStore = defineStore('toast', () => {
   const toasts = ref<{ id: number; text: string; kind: string; action?: { label: string; run: () => void } }[]>([])
   let toastSeq = 0
   // duration <= 0 keeps the toast until it is closed manually.
-  function notify(text: string, kind = 'ok', duration = 1600, action?: { label: string; run: () => void }) {
+  function notify(text: string, kind = 'ok', duration = 4000, action?: { label: string; run: () => void }) {
     const id = ++toastSeq
     toasts.value.push({ id, text, kind, action })
     if (duration > 0) setTimeout(() => closeToast(id), duration)

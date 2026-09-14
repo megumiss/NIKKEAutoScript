@@ -9,6 +9,9 @@ use backend::Backend;
 use config::DesktopConfig;
 use std::collections::HashMap;
 use std::env;
+use std::fs;
+use std::io;
+use std::path::{Component, Path};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -159,6 +162,85 @@ fn is_local_webui_url(url: &Url, host: &str, port: u16) -> bool {
 
 fn is_startup_url(url: &Url) -> bool {
     url.scheme() == "tauri" || url.host_str() == Some("tauri.localhost")
+}
+
+fn is_valid_export_filename(filename: &str) -> bool {
+    let path = Path::new(filename);
+    !filename.is_empty()
+        && path.components().count() == 1
+        && matches!(path.components().next(), Some(Component::Normal(_)))
+        && path.file_name().and_then(|name| name.to_str()) == Some(filename)
+}
+
+fn available_export_path(directory: &Path, filename: &str) -> std::path::PathBuf {
+    let path = Path::new(filename);
+    let stem = path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or(filename);
+    let extension = path.extension().and_then(|value| value.to_str());
+    let original = directory.join(filename);
+    if !original.exists() {
+        return original;
+    }
+    for index in 1.. {
+        let candidate = match extension {
+            Some(extension) => directory.join(format!("{stem} ({index}).{extension}")),
+            None => directory.join(format!("{stem} ({index})")),
+        };
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    unreachable!()
+}
+
+#[tauri::command]
+async fn save_export_file(
+    window: WebviewWindow,
+    url_path: String,
+    filename: String,
+) -> Result<String, String> {
+    if !is_valid_export_filename(&filename) {
+        return Err("Invalid export filename".into());
+    }
+    if !url_path.starts_with("/api/") || url_path.starts_with("//") {
+        return Err("Invalid export URL".into());
+    }
+
+    let current_url = window
+        .url()
+        .map_err(|error| format!("Unable to read the application URL: {error}"))?;
+    let export_url = current_url
+        .join(&url_path)
+        .map_err(|error| format!("Invalid export URL: {error}"))?;
+    if current_url.origin() != export_url.origin() || !export_url.path().starts_with("/api/") {
+        return Err("Invalid export URL".into());
+    }
+    let downloads = window
+        .app_handle()
+        .path()
+        .download_dir()
+        .map_err(|error| format!("Unable to locate the Downloads directory: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || {
+        fs::create_dir_all(&downloads)
+            .map_err(|error| format!("Unable to create Downloads directory: {error}"))?;
+        let destination = available_export_path(&downloads, &filename);
+        let mut response = reqwest::blocking::Client::new()
+            .get(export_url)
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map_err(|error| format!("Unable to download export: {error}"))?;
+        let mut file = fs::File::create(&destination)
+            .map_err(|error| format!("Unable to create export file: {error}"))?;
+        if let Err(error) = io::copy(&mut response, &mut file) {
+            let _ = fs::remove_file(&destination);
+            return Err(format!("Unable to save export: {error}"));
+        }
+        Ok(destination.to_string_lossy().into_owned())
+    })
+    .await
+    .map_err(|error| format!("Export task failed: {error}"))?
 }
 
 fn create_window(
@@ -413,6 +495,7 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             desktop_update::desktop_update_status,
             desktop_update::desktop_update_check,
             desktop_update::desktop_update_apply,
+            save_export_file,
         ])
         .on_window_event(|window, event| {
             if window.label() == "main"
@@ -500,6 +583,36 @@ mod tests {
             script,
             "window.nkasStartup?.log(\"line \\\"one\\\"\\nline two\");"
         );
+    }
+
+    #[test]
+    fn export_filename_rejects_paths() {
+        assert!(is_valid_export_filename("2026-09-14_nkas.txt"));
+        assert!(is_valid_export_filename("nkas.json"));
+        assert!(!is_valid_export_filename(""));
+        assert!(!is_valid_export_filename("../nkas.json"));
+        assert!(!is_valid_export_filename("folder/nkas.json"));
+        assert!(!is_valid_export_filename(r"folder\nkas.json"));
+    }
+
+    #[test]
+    fn export_path_adds_a_suffix_when_the_name_exists() {
+        let directory = env::temp_dir().join(format!(
+            "nkas-export-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).unwrap();
+        fs::write(directory.join("nkas.json"), "first").unwrap();
+        fs::write(directory.join("nkas (1).json"), "second").unwrap();
+        assert_eq!(
+            available_export_path(&directory, "nkas.json"),
+            directory.join("nkas (2).json")
+        );
+        fs::remove_dir_all(directory).unwrap();
     }
 }
 

@@ -17,6 +17,7 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '无': { 'en-US': 'None', 'ja-JP': 'なし' }, '进入': { 'en-US': 'Open', 'ja-JP': '開く' }, '＋ 新建实例': { 'en-US': '＋ New instance', 'ja-JP': '＋ 新しいインスタンス' },
   '导入配置': { 'en-US': 'Import configuration', 'ja-JP': '設定をインポート' }, '名称': { 'en-US': 'Name', 'ja-JP': '名前' }, '状态': { 'en-US': 'Status', 'ja-JP': '状態' }, '操作': { 'en-US': 'Actions', 'ja-JP': '操作' },
   '导出': { 'en-US': 'Export', 'ja-JP': 'エクスポート' }, '删除': { 'en-US': 'Delete', 'ja-JP': '削除' }, '备注': { 'en-US': 'Remark', 'ja-JP': '備考' },
+  '导出成功': { 'en-US': 'Exported successfully', 'ja-JP': 'エクスポートしました' }, '导出失败': { 'en-US': 'Export failed', 'ja-JP': 'エクスポートに失敗しました' },
   '重命名': { 'en-US': 'Rename', 'ja-JP': 'リネーム' }, '拖动排序': { 'en-US': 'Drag to sort', 'ja-JP': 'ドラッグで並べ替え' },
   '源码更新': { 'en-US': 'Source update', 'ja-JP': 'ソースコード更新' }, '当前版本': { 'en-US': 'Current version', 'ja-JP': '現在のバージョン' }, '更新': { 'en-US': 'Update', 'ja-JP': '更新' },
   '检查更新': { 'en-US': 'Check for updates', 'ja-JP': '更新を確認' }, '强制重启': { 'en-US': 'Restart now', 'ja-JP': '今すぐ再起動' }, '更新记录': { 'en-US': 'History', 'ja-JP': '更新履歴' },
