@@ -34,7 +34,7 @@ class Destruction(UI):
             else:
                 self.device.screenshot()
 
-            if self.appear_then_click(DESTROY, offset=10, interval=3):
+            if self.appear_then_click(DESTROY, offset=10, interval=3, static=False):
                 continue
 
             # 处理领取 升级等
