@@ -47,6 +47,7 @@ onMounted(async () => { try { avatarFiles.value = await api.get('/api/avatars') 
       </template>
       <template v-else-if="modal.type === 'resetDeploy'">
         <p class="modal-text">{{ t('将全部部署配置还原为默认值？') }}{{ t('此操作不可恢复。') }}</p>
+        <p class="modal-text">安全入口开关和密钥保持不变。</p>
         <label class="modal-field">{{ t('模板') }}<AppSelect v-model="modal.template" :options="deployTemplateOptions"/></label>
       </template>
       <p v-else-if="modal.type === 'confirm'" class="modal-text">{{ modalConfirmMessage }}</p>

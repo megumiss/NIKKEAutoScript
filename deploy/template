@@ -93,6 +93,9 @@ Deploy:
     # You will be able to access webui via `http://{host}:{port}`
     # [In most cases] Default to 12271
     WebuiPort: 12271
+    # Optional security entry. Takes effect immediately; does not change host or port.
+    # Enable manually on the Deploy page. Keep the private entry URL secret; use HTTPS remotely.
+    SecurityEntryEnabled: false
     # Enable the web console: run shell commands from the webui with live output
     # Takes effect immediately; turning it off also closes all running console sessions
     # [Default] false

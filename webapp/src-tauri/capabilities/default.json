@@ -15,6 +15,7 @@
     "allow-desktop-update-status",
     "allow-desktop-update-check",
     "allow-desktop-update-apply",
-    "allow-save-export-file"
+    "allow-save-export-file",
+    "allow-refresh-security-entry"
   ]
 }

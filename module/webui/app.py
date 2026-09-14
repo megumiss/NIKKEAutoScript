@@ -34,7 +34,7 @@ task_handler = TaskHandler()
 class HeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
-        response.headers["Cache-Control"] = "no-cache"
+        response.headers.setdefault("Cache-Control", "no-cache")
         return response
 
 
@@ -296,12 +296,14 @@ def app():
         """Published entry point for browsers and legacy Electron iframe shells."""
         return RedirectResponse('/app/', status_code=302)
 
+    from module.webui.security_entry import SecurityEntry, SecurityEntryMiddleware
+    security_entry = SecurityEntry(State.deploy_config)
     app = Starlette(
         routes=[
             Route('/', spa_index, methods=['GET']),
             Mount('/static', app=StaticFiles(directory='./assets'), name='static'),
         ],
-        middleware=[Middleware(HeaderMiddleware)],
+        middleware=[Middleware(SecurityEntryMiddleware, security=security_entry), Middleware(HeaderMiddleware)],
         debug=True,
         on_startup=[
             startup,
@@ -312,6 +314,7 @@ def app():
         on_shutdown=[clearup],
     )
 
+    app.state.security_entry = security_entry
     from module.webui.api import mount_api
     mount_api(app)
 

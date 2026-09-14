@@ -7,6 +7,7 @@ import { useToastStore } from './toast'
 import { useAnnouncementsStore } from './announcements'
 import { useInstancesStore } from './instances'
 import { useWorkspaceStore } from './workspace'
+import { checkEntry, entryRequired } from '../api/security'
 
 // Cross-store references are resolved lazily inside actions (never at module
 // top level) so the store modules may import each other without init cycles.
@@ -69,6 +70,7 @@ export const useSystemStore = defineStore('system', () => {
     lastUpdaterState = state
   }
   async function healthCheck() {
+    if (entryRequired.value) { await checkEntry().catch(() => false); return }
     try {
       const status = await api.get('/api/system/status')
       watchUpdaterState(status.updater_state)
