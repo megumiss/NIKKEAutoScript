@@ -11,6 +11,7 @@ config/.security/
 config/nkas.json
 config/nkas2.json
 config/serial/state.json
+config/.security/entry.key
 data/telemetry.json
 **.lock
 !yarn.lock
