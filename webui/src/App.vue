@@ -9,6 +9,7 @@ import AppSidebar from './components/AppSidebar.vue'
 import AppTopbar from './components/AppTopbar.vue'
 import BlaBindBotModal from './components/BlaBindBotModal.vue'
 import BlaLoginModal from './components/BlaLoginModal.vue'
+import CookieSyncModal from './components/CookieSyncModal.vue'
 import MaintenanceBanner from './components/MaintenanceBanner.vue'
 import TaskRail from './components/TaskRail.vue'
 import { useRouteInfo } from './composables/useRouteInfo'
@@ -34,6 +35,7 @@ import { useToastStore } from './stores/toast'
 import { useUiStore } from './stores/ui'
 import { useUpdateStore } from './stores/update'
 import { useWorkspaceStore } from './stores/workspace'
+import { useCookieSyncStore } from './stores/cookieSync'
 import { entryRequired } from './api/security'
 
 const route = useRoute()
@@ -56,6 +58,7 @@ const logsPage = useLogsPageStore()
 const links = useLinksStore()
 const { mobileNav, sidebarCollapsed } = storeToRefs(useUiStore())
 const { isTauri, syncMaximized } = useTauriShell()
+const cookieSync = useCookieSyncStore()
 
 function isLegacyElectronLayout() { return window.parent !== window }
 const legacyElectron = isLegacyElectronLayout()
@@ -71,6 +74,7 @@ onMounted(async () => {
   if (route.path === '/' && systemStatus.value.home_page === 'instance' && instancesStore.instances.length) { router.replace(`/i/${instancesStore.instances[0].name}/overview`) } else { await loadWorkspace() }
   startStateSocket()
   startSockets()
+  cookieSync.start()
   if (isDeploy.value) await deploy.loadDeploy()
   if (isLogs.value) await logsPage.refreshLogs()
   if (isLinks.value) await links.loadWebLinks()
@@ -100,6 +104,7 @@ onBeforeUnmount(() => {
   document.body.style.overflow = ''
   window.removeEventListener('resize', syncMaximized)
   workspace.closeSockets()
+  cookieSync.stop()
   window.clearInterval(healthTimer)
   update.clearPollTimers()
   workspace.clearDatetimeSaveTimers()
@@ -162,6 +167,7 @@ onBeforeUnmount(() => {
     <AppModal />
     <BlaLoginModal />
     <BlaBindBotModal />
+    <CookieSyncModal />
   </div>
 </template>
 
