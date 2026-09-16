@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import queue
+import re
 import subprocess
 import threading
 import time
@@ -271,10 +272,16 @@ class ProcessManager:
             return
 
         adb = self._find_adb()
+        virtual_display_id = str(physical.get('VirtualDisplayId') or '').strip().lower()
+        process_pattern = (
+            f'nkas-id-{virtual_display_id}'
+            if re.fullmatch(r'[a-z0-9]{12}', virtual_display_id)
+            else 'com.nkas.virtualdisplay.Server'
+        )
 
         try:
             result = subprocess.run(
-                [adb, '-s', serial, 'shell', 'pkill', '-f', 'com.nkas.virtualdisplay.Server'],
+                [adb, '-s', serial, 'shell', 'pkill', '-f', process_pattern],
                 timeout=10, capture_output=True,
             )
             if result.returncode == 0:
@@ -284,12 +291,12 @@ class ProcessManager:
             elif result.returncode != 1:
                 logger.warning(
                     f'[{self.config_name}] pkill virtual display server failed: {result.stderr!r}, '
-                    f'run `adb -s {serial} shell pkill -f com.nkas.virtualdisplay.Server` manually'
+                    f'run `adb -s {serial} shell pkill -f {process_pattern}` manually'
                 )
         except (subprocess.TimeoutExpired, OSError) as e:
             logger.warning(
                 f'[{self.config_name}] Failed to clean up virtual display server: {e}, '
-                f'run `adb -s {serial} shell pkill -f com.nkas.virtualdisplay.Server` manually'
+                f'run `adb -s {serial} shell pkill -f {process_pattern}` manually'
             )
 
     def _run_stop_cleanup(self) -> None:

@@ -7,6 +7,10 @@ order follows NKAS's RGB screenshot contract. This avoids device-specific
 premultiplied-alpha and Bitmap color conversion. The host only needs ADB and Python, so the same JAR is
 used from Windows, x86_64 Linux, and ARM Linux.
 
+The optional fifth server argument is a persistent NKAS virtual-display ID. It
+is used in the Android display name (`NIKKE-<id>`) and reported by READY/INFO;
+Android still assigns its own numeric display ID for each runtime instance.
+
 The bridge also loads `bin/scrcpy/scrcpy-server` for its Android compatibility
 context. It does not start scrcpy video capture or depend on a host scrcpy
 executable.

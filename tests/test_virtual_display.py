@@ -8,16 +8,40 @@ import numpy as np
 from module.device.adb.device import Device
 from module.device.adb.method.adb import Adb
 from module.device.adb.screenshot import Screenshot
+from module.config.config_updater import ConfigUpdater, ensure_virtual_display_id
 
 
 class VirtualDisplayTests(unittest.TestCase):
+    def test_virtual_display_identity_is_generated_once(self):
+        data = {'NKAS': {'PhysicalDevice': {'VirtualDisplayId': ''}}}
+        with patch('module.config.config_updater.random_id', return_value='abc123def456'):
+            self.assertEqual(ensure_virtual_display_id(data), 'abc123def456')
+        with patch('module.config.config_updater.random_id') as generate:
+            self.assertEqual(ensure_virtual_display_id(data), 'abc123def456')
+        generate.assert_not_called()
+
+    def test_virtual_display_identity_is_persisted_on_config_read(self):
+        old = {'NKAS': {'PhysicalDevice': {}}}
+        normalized = {'NKAS': {'PhysicalDevice': {'VirtualDisplayId': None}}}
+        updater = ConfigUpdater()
+        with patch('module.config.config_updater.read_file', return_value=old), \
+                patch.object(updater, 'config_update', return_value=normalized), \
+                patch.object(updater, 'write_file') as write, \
+                patch('module.config.config_updater.FileLock'), \
+                patch('module.config.config_updater.random_id', return_value='abc123def456'):
+            data = updater.read_file('nkas')
+
+        self.assertEqual(data['NKAS']['PhysicalDevice']['VirtualDisplayId'], 'abc123def456')
+        self.assertEqual(old['NKAS']['PhysicalDevice']['VirtualDisplayId'], 'abc123def456')
+        write.assert_called_once_with('nkas', old)
+
     def test_parse_bridge_display_id(self):
         self.assertEqual(Device._bridge_display_id('NKAS_VD_READY id=19 socket=nkas-vd'), 19)
         self.assertIsNone(Device._bridge_display_id('unrelated output'))
 
     def test_parse_bridge_display_geometry(self):
         info = Device._bridge_display_info(
-            'OK id=19 frames=4 size=1280x720 rotation=1'
+            'OK id=19 identity=abc123def456 frames=4 size=1280x720 rotation=1'
         )
         self.assertEqual(info, {
             'id': 19, 'width': 1280, 'height': 720, 'rotation': 1,

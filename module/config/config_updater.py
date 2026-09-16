@@ -4,6 +4,8 @@ from copy import deepcopy
 from datetime import datetime
 from functools import cached_property
 
+from filelock import FileLock
+
 from module.config.utils import read_file, filepath_config, deep_get, parse_value, filepath_args, deep_set, deep_iter, \
     write_file, filepath_argument, data_to_type, path_to_arg, filepath_code, deep_default
 from deploy.utils import DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
@@ -27,6 +29,18 @@ class GeneratedConfig:
     Auto generated configuration
     """
 '''.strip().split('\n')
+
+VIRTUAL_DISPLAY_ID_KEY = 'NKAS.PhysicalDevice.VirtualDisplayId'
+VIRTUAL_DISPLAY_ID_PATTERN = re.compile(r'^[a-z0-9]{12}$')
+
+
+def ensure_virtual_display_id(data):
+    """Return a persistent, shell-safe identity for one NKAS virtual display."""
+    value = str(deep_get(data, keys=VIRTUAL_DISPLAY_ID_KEY, default='') or '').strip().lower()
+    if not VIRTUAL_DISPLAY_ID_PATTERN.fullmatch(value):
+        value = random_id(12)
+    deep_set(data, keys=VIRTUAL_DISPLAY_ID_KEY, value=value)
+    return value
 
 
 class ConfigGenerator:
@@ -506,6 +520,19 @@ class ConfigUpdater:
             # Persist latest event to config file, so the file itself stays
             # up to date without waiting for the scheduler to run
             dirty = False
+            virtual_display_id = str(deep_get(old, VIRTUAL_DISPLAY_ID_KEY, default='') or '').strip().lower()
+            if not VIRTUAL_DISPLAY_ID_PATTERN.fullmatch(virtual_display_id):
+                lock_path = f'{filepath_config(config_name)}.virtual_display_id.lock'
+                with FileLock(lock_path):
+                    current = read_file(filepath_config(config_name))
+                    virtual_display_id = str(
+                        deep_get(current, VIRTUAL_DISPLAY_ID_KEY, default='') or ''
+                    ).strip().lower()
+                    if not VIRTUAL_DISPLAY_ID_PATTERN.fullmatch(virtual_display_id):
+                        virtual_display_id = ensure_virtual_display_id(current)
+                        self.write_file(config_name, current)
+            deep_set(old, VIRTUAL_DISPLAY_ID_KEY, virtual_display_id)
+            deep_set(new, VIRTUAL_DISPLAY_ID_KEY, virtual_display_id)
             for task in ['Event', 'Event2']:
                 for arg in ['Event', 'StoryPart', 'StoryDifficulty']:
                     key = f'{task}.EventInfo.{arg}'

@@ -36,6 +36,7 @@ class GeneratedConfig:
     PhysicalDevice_Enable = False  # True, False
     PhysicalDevice_AutoRestoreResolution = True  # True, False
     PhysicalDevice_VirtualDisplay = False  # True, False
+    PhysicalDevice_VirtualDisplayId = None
 
     # Group `Scrcpy`
     Scrcpy_WebUrl = None

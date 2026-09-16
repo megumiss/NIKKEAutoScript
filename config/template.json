@@ -45,7 +45,8 @@
     "PhysicalDevice": {
       "Enable": false,
       "AutoRestoreResolution": true,
-      "VirtualDisplay": false
+      "VirtualDisplay": false,
+      "VirtualDisplayId": null
     },
     "Scrcpy": {
       "WebUrl": null,

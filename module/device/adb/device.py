@@ -224,11 +224,15 @@ class Device(Screenshot, Control, AppControl):
         self.adb_push(bridge, remote_bridge)
         self.adb_push(scrcpy_server, remote_scrcpy)
 
+        virtual_display_id = str(self.config.PhysicalDevice_VirtualDisplayId or '').strip().lower()
+        if not re.fullmatch(r'[a-z0-9]{12}', virtual_display_id):
+            logger.critical(f'Invalid virtual display ID: {virtual_display_id!r}')
+            raise RequestHumanTakeover
         self._virtual_socket_name = f'nkas-vd-{os.getpid()}-{int(time.time() * 1000) % 1000000}'
         remote_command = (
             f'CLASSPATH={remote_bridge}:{remote_scrcpy} app_process / '
             'com.nkas.virtualdisplay.Server 720 1280 240 '
-            f'{self._virtual_socket_name}'
+            f'{self._virtual_socket_name} nkas-id-{virtual_display_id}'
         )
         command = [
             self.adb_binary, '-s', self.serial, 'shell', remote_command,
@@ -332,7 +336,8 @@ class Device(Screenshot, Control, AppControl):
             raise RequestHumanTakeover
 
         logger.info(
-            f'Virtual display ready: logical={self._virtual_display_id}, '
+            f'Virtual display ready: identity={virtual_display_id}, '
+            f'logical={self._virtual_display_id}, '
             f'capture=tcp:{self._virtual_capture_port}, '
             f'raw={self._virtual_display_raw_width}x{self._virtual_display_raw_height}, '
             f'rotation={self._virtual_display_rotation}'
