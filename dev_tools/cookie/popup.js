@@ -97,12 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateStatusUI(state, text) {
         statusDot.className = `status-dot ${state}`;
         statusText.textContent = text;
-        statusText.style.color = state === 'success' ? '#28a745' : (state === 'error' ? '#dc3545' : '#333');
+        statusText.style.color = state === 'success' ? 'var(--green)' : (state === 'error' ? 'var(--red)' : 'var(--text)');
     }
 
     function showLog(msg, isError = false) {
         logMsg.textContent = msg;
-        logMsg.style.color = isError ? '#dc3545' : '#666';
+        logMsg.style.color = isError ? 'var(--red)' : 'var(--text-2)';
     }
 
     // 掩码脱敏辅助函数
