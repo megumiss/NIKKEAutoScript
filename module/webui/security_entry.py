@@ -151,6 +151,11 @@ class SecurityEntryMiddleware:
         scope.setdefault('state', {})['security_entry_authorized'] = authorized
         path = scope['path']
         if scope['type'] == 'http':
+            extension_sync = path == '/api/cookie-sync/request' or path.startswith('/api/cookie-sync/status/')
+            origin = connection.headers.get('origin', '')
+            if extension_sync and origin.startswith(('chrome-extension://', 'moz-extension://')):
+                if scope['method'] in ('GET', 'POST', 'OPTIONS'):
+                    return await self.app(scope, receive, send)
             if path.startswith('/entry/'):
                 # Entry URLs never reach application handlers or error pages.
                 valid = scope['method'] in ('GET', 'HEAD') and self.security.enabled and self.security.matches(path[7:])
