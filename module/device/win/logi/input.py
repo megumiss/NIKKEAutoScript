@@ -24,9 +24,9 @@ ERROR_ALREADY_EXISTS = 183
 
 # 单击按下时长。实测 0.06~0.09s 区间有效（等价于 2~5 帧 @60fps），取 0.09 与人类点击一致。
 CLICK_HOLD = 0.09
-# 拖拽参数。按下后必须先跳一段，否则光标静止过久会被游戏识别成长按并弹出详情面板。
-DRAG_LEAD_PIXELS = 50
-DRAG_STEP_INTERVAL = 0.02
+# 拖动参数。手势总时长 = min(distance / (100 * speed), DRAG_MAX_DURATION)，再均分成
+# duration / DRAG_REPORT_INTERVAL 份相对位移报告按等间隔发出。
+DRAG_REPORT_INTERVAL = 0.004
 DRAG_MIN_STEPS = 8
 DRAG_MAX_DURATION = 0.6
 DRAG_SETTLE_DELAY = 0.06
@@ -214,9 +214,8 @@ class LogiInput(Input):
         if distance < 1:
             return
         duration = max(0.05, min(distance / (100 * speed), DRAG_MAX_DURATION))
-        steps = max(DRAG_MIN_STEPS, round(duration / DRAG_STEP_INTERVAL))
-        # 按下后立刻朝目标方向跳一段，否则静止太久会被游戏识别为长按
-        lead_ratio = min(DRAG_LEAD_PIXELS, distance / 4) / distance
+        steps = max(DRAG_MIN_STEPS, round(duration / DRAG_REPORT_INTERVAL))
+        interval = duration / steps
 
         with self._lock:
             if not self._move_to(x1, y1):
@@ -226,18 +225,7 @@ class LogiInput(Input):
                 self._checked(False, f'drag down ({x1}, {y1})')
                 return
             try:
-                lead_x = int(round(x1 + (x2 - x1) * lead_ratio))
-                lead_y = int(round(y1 + (y2 - y1) * lead_ratio))
-                ok = self.mouse_driver.move_to(lead_x, lead_y, buttons=BTN_LEFT)
-                if ok:
-                    for index in range(1, steps + 1):
-                        ratio = lead_ratio + (1 - lead_ratio) * index / steps
-                        target_x = int(round(x1 + (x2 - x1) * ratio))
-                        target_y = int(round(y1 + (y2 - y1) * ratio))
-                        ok = self.mouse_driver.move_to(target_x, target_y, buttons=BTN_LEFT)
-                        if not ok:
-                            break
-                        time.sleep(DRAG_STEP_INTERVAL)
+                ok = self.mouse_driver.drag_stream(x2, y2, steps, interval, buttons=BTN_LEFT)
             finally:
                 # 无论中途如何退出，都必须把左键还回去，避免按键卡在按下态
                 if not self.mouse_driver.release():

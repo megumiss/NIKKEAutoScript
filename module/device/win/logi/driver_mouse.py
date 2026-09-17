@@ -60,12 +60,32 @@ MOVE_STEP_RECOVER = 1.6
 MOVE_APPROACH_DAMP = 0.45
 MOVE_POLL_INTERVAL = 0.004
 
+# 拖动流参数。拖动不需要每个路点的落点精度，所以不做「到达即停」的收敛，而是在整个
+# duration 内匀速推进 —— 位移曲线连续，游戏读到的才是平滑拖动。
+# 增益实测随请求量变化（请求 8 约 11.5px、请求 20 约 46px），所以按实测比值在线估计。
+DRAG_GAIN_INIT = 1.5
+DRAG_GAIN_SMOOTH = 0.4
+DRAG_GAIN_RANGE = (0.2, 5.0)
+DRAG_GAIN_FLOOR = 0.2
+# 单报告请求上下限。下限与 MOVE_STEP_MIN 同源：更小的请求会被整数截断成零位移。
+DRAG_MIN_REPORT = 3.0
+DRAG_MAX_REPORT = 60.0
+# 单报告期望位移上限。末段剩余误差会全部压到最后一个报告上，不夹住会出现可见跳变。
+DRAG_MAX_WANT = 30.0
+
+# 定时器粒度。默认 15.62ms 会把 sleep 向上量到整刻度：实测 sleep(4ms) 实际 15.46ms、
+# sleep(20ms) 实际 30.95ms。闭环每轮多等 11ms、拖动节拍被量化成 15.6/31ms，表现为
+# 「一卡一卡」且手势时长成倍拉长。请求 0.5ms 后 sleep(4ms) 实测 4.01ms。
+# 逐项实测见 tmp/driver-validation/timer_granularity_probe.py。
+TIMER_RESOLUTION_100NS = 5000
+
 # 滚轮：每格一个独立报告。间隔过小可能被合并，0.02 是已验证值（连续 40 格无丢格）。
 WHEEL_INTERVAL = 0.02
 
 _user32 = ctypes.WinDLL('user32', use_last_error=True)
 _kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
 _ntdll = ctypes.WinDLL('ntdll')
+_winmm = ctypes.WinDLL('winmm')
 
 _user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
 _user32.GetCursorPos.restype = wintypes.BOOL
@@ -84,6 +104,44 @@ _ntdll.NtDeviceIoControlFile.argtypes = [
     wintypes.HANDLE, wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
     wintypes.ULONG, ctypes.c_void_p, wintypes.ULONG, ctypes.c_void_p, wintypes.ULONG,
 ]
+_ntdll.NtSetTimerResolution.restype = ctypes.c_long
+_ntdll.NtSetTimerResolution.argtypes = [
+    wintypes.ULONG, ctypes.c_int, ctypes.POINTER(wintypes.ULONG),
+]
+
+_timer_resolution_held = False
+
+
+def _raise_timer_resolution():
+    """把定时器粒度提到 0.5ms，否则 time.sleep 会被量到 15.62ms 整刻度。
+
+    进程内幂等。这是系统级计时器请求（同时影响其它进程的 Sleep 精度），
+    因此驱动通道关闭时会还原，不长期占用。
+    """
+    global _timer_resolution_held
+    if _timer_resolution_held:
+        return
+    actual = wintypes.ULONG()
+    if _ntdll.NtSetTimerResolution(TIMER_RESOLUTION_100NS, 1, ctypes.byref(actual)) == 0:
+        _timer_resolution_held = True
+        logger.info(f'Timer resolution raised to {actual.value / 10000:.2f}ms')
+        return
+    # 回退：winmm 的 timeBeginPeriod，粒度 1ms，比 15.62ms 已经足够
+    if _winmm.timeBeginPeriod(1) == 0:
+        _timer_resolution_held = True
+        logger.info('Timer resolution raised to 1ms via timeBeginPeriod')
+        return
+    logger.warning('Could not raise timer resolution, input pacing will be quantized')
+
+
+def _restore_timer_resolution():
+    global _timer_resolution_held
+    if not _timer_resolution_held:
+        return
+    actual = wintypes.ULONG()
+    _ntdll.NtSetTimerResolution(TIMER_RESOLUTION_100NS, 0, ctypes.byref(actual))
+    _winmm.timeEndPeriod(1)
+    _timer_resolution_held = False
 
 
 class _IO_STATUS_BLOCK(ctypes.Structure):
@@ -122,6 +180,38 @@ def approach_request(error, step):
     return int(magnitude) if error > 0 else -int(magnitude)
 
 
+def _drag_want(remaining_error, remaining_reports):
+    """本轮期望位移：剩余误差按剩余次数平摊，再夹到 DRAG_MAX_WANT。
+
+    平摊本身就是比例修正 —— 落后了剩余误差变大、请求随之变大；冲过了符号翻转、请求反向。
+    夹上限是为了不让末段的修正量集中到最后一个报告上（那会变成一次可见跳变）。
+    """
+    want = remaining_error / remaining_reports
+    return max(-DRAG_MAX_WANT, min(DRAG_MAX_WANT, want))
+
+
+def _drag_request(want, gain):
+    """把期望位移换算成请求量：请求 = 期望 / 增益估计，夹在 [DRAG_MIN_REPORT, DRAG_MAX_REPORT]。"""
+    if abs(want) < 0.5:
+        return 0
+    magnitude = abs(want) / max(gain, DRAG_GAIN_FLOOR)
+    magnitude = min(DRAG_MAX_REPORT, max(DRAG_MIN_REPORT, magnitude))
+    return int(magnitude) if want > 0 else -int(magnitude)
+
+
+def _update_gain(gain, request, measured):
+    """用「实测位移 / 请求量」在线更新增益估计。
+
+    请求量低于可动下限时比值不可信（实测请求 1 有 2/6 概率零位移），跳过不更新。
+    """
+    if abs(request) < DRAG_MIN_REPORT:
+        return gain
+    ratio = measured / request
+    if not DRAG_GAIN_RANGE[0] <= ratio <= DRAG_GAIN_RANGE[1]:
+        return gain
+    return gain + (ratio - gain) * DRAG_GAIN_SMOOTH
+
+
 class LogiMouseDriver:
     """设备句柄的发现、持有与自愈。"""
 
@@ -148,6 +238,7 @@ class LogiMouseDriver:
             if self._ioctl(handle, make_report()) == STATUS_SUCCESS:
                 self._handle = handle
                 self.device_path = path
+                _raise_timer_resolution()
                 logger.info(f'Logitech driver device opened: {path}')
                 return True
             _kernel32.CloseHandle(handle)
@@ -159,6 +250,7 @@ class LogiMouseDriver:
             _kernel32.CloseHandle(self._handle)
             self._handle = None
             self.device_path = None
+        _restore_timer_resolution()
 
     @staticmethod
     def _ioctl(handle, report):
@@ -264,6 +356,40 @@ class LogiMouse:
 
     def release(self):
         return self.driver.send(buttons=0)
+
+    def drag_stream(self, x, y, steps, interval, buttons=BTN_LEFT):
+        """拖动流：按固定节拍把剩余误差平摊成 steps 次相对报告，边发边修正增益估计。
+
+        与 move_to 的区别是「不追求每步落点」：拖动过程中光标在哪一点无所谓，只要位移
+        曲线连续、总位移正确。所以这里不做「到达即停」的收敛 —— 逐路点闭环会让每个路点
+        都停下来收敛再等一个固定间隔，游戏读到的就是一段段突进加整帧静止。
+        实测 300px 手势：逐路点闭环 767ms / 停顿 ≥20ms 七次 / 每帧位移 p10 = 0；
+        流式 100ms（= 名义时长）/ 零停顿 / p10 = 48px。
+        """
+        start = time.perf_counter()
+        position = self.cursor()
+        previous_position = position
+        previous_request = None
+        gain_x = gain_y = DRAG_GAIN_INIT
+        for index in range(steps):
+            if previous_request is not None:
+                gain_x = _update_gain(
+                    gain_x, previous_request[0], position[0] - previous_position[0])
+                gain_y = _update_gain(
+                    gain_y, previous_request[1], position[1] - previous_position[1])
+            previous_position = position
+            remaining = steps - index
+            request_x = _drag_request(_drag_want(x - position[0], remaining), gain_x)
+            request_y = _drag_request(_drag_want(y - position[1], remaining), gain_y)
+            if not self.driver.send(buttons=buttons, dx=request_x, dy=request_y):
+                return False
+            previous_request = (request_x, request_y)
+            # 用绝对截止时刻推进，避免「发送 + 读回」的开销逐轮累积成节拍漂移
+            delay = start + (index + 1) * interval - time.perf_counter()
+            if delay > 0:
+                time.sleep(delay)
+            position = self.cursor()
+        return True
 
     # ---- 滚轮 ----
     def wheel(self, notches):
