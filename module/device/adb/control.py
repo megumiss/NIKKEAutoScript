@@ -3,7 +3,7 @@ from functools import cached_property
 import numpy as np
 
 from module.base.button import Button
-from module.base.utils import ensure_int, point2str
+from module.base.utils import ensure_int, point2str, random_click_offset
 from module.device.adb.method.maatouch import MaaTouch
 from module.device.adb.method.minitouch import Minitouch
 from module.exception import RequestHumanTakeover
@@ -63,12 +63,14 @@ class Control(Minitouch, MaaTouch):
         else:
             self.drag_minitouch(p1, p2)
 
-    def click(self, button: Button, click_offset=0, control_check=True):
+    def click(self, button: Button, click_offset=0, control_check=True, random_offset=None):
         """Method to click a button.
 
         Args:
             button (button.Button): AzurLane Button instance.
             control_check (bool):
+            random_offset: Random x/y range around the click point. Supports a
+                scalar, a two-item (x, y) range, or four explicit bounds.
         """
         if control_check:
             self.handle_control_check(button)
@@ -83,6 +85,13 @@ class Control(Minitouch, MaaTouch):
         elif isinstance(click_offset, (tuple, list)) and len(click_offset) == 2:
             x += click_offset[0]
             y += click_offset[1]
+
+        if random_offset is None:
+            random_offset = self.config.Optimization_ClickRandomOffset
+        if random_offset:
+            offset_x, offset_y = random_click_offset(random_offset)
+            x += offset_x
+            y += offset_y
 
         x, y = ensure_int(x, y)
         logger.info(

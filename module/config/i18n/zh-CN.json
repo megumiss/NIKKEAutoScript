@@ -555,6 +555,10 @@
       "name": "OCR 线程数",
       "help": "PaddleOCR 推理使用的 CPU 线程数。ARM64 设备如遇崩溃请改为 1"
     },
+    "ClickRandomOffset": {
+      "name": "点击随机偏移",
+      "help": "普通按钮点击时在中心点附近随机偏移的最大像素数，X/Y 轴分别随机。设置为 0 表示关闭；数值过大可能点出按钮区域。"
+    },
     "WhenTaskQueueEmpty": {
       "name": "当任务队列清空时",
       "help": "",

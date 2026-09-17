@@ -8,6 +8,7 @@
       "AutoRedCircle": false,
       "OcrModelType": "mobile",
       "OcrThreads": 10,
+      "ClickRandomOffset": 5,
       "WhenTaskQueueEmpty": "goto_main",
       "ScriptPath": null
     },

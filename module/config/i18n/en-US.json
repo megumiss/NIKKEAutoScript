@@ -555,6 +555,10 @@
       "name": "OCR Threads",
       "help": "CPU threads used by PaddleOCR inference. Set to 1 on ARM64 devices if crashes occur"
     },
+    "ClickRandomOffset": {
+      "name": "Random click offset",
+      "help": "Maximum random offset in pixels around the center of normal button clicks, randomized independently on each axis. Set to 0 to disable; large values may click outside the button."
+    },
     "WhenTaskQueueEmpty": {
       "name": "When task queue is empty",
       "help": "",
