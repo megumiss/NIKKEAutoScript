@@ -7,7 +7,9 @@ import AppIcon from './components/AppIcon.vue'
 import AppModal from './components/AppModal.vue'
 import AppSidebar from './components/AppSidebar.vue'
 import AppTopbar from './components/AppTopbar.vue'
+import BlaBindBotModal from './components/BlaBindBotModal.vue'
 import BlaLoginModal from './components/BlaLoginModal.vue'
+import CookieSyncModal from './components/CookieSyncModal.vue'
 import MaintenanceBanner from './components/MaintenanceBanner.vue'
 import TaskRail from './components/TaskRail.vue'
 import { useRouteInfo } from './composables/useRouteInfo'
@@ -33,6 +35,8 @@ import { useToastStore } from './stores/toast'
 import { useUiStore } from './stores/ui'
 import { useUpdateStore } from './stores/update'
 import { useWorkspaceStore } from './stores/workspace'
+import { useCookieSyncStore } from './stores/cookieSync'
+import { entryRequired } from './api/security'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,6 +58,7 @@ const logsPage = useLogsPageStore()
 const links = useLinksStore()
 const { mobileNav, sidebarCollapsed } = storeToRefs(useUiStore())
 const { isTauri, syncMaximized } = useTauriShell()
+const cookieSync = useCookieSyncStore()
 
 function isLegacyElectronLayout() { return window.parent !== window }
 const legacyElectron = isLegacyElectronLayout()
@@ -63,17 +68,20 @@ onMounted(async () => {
   if (sessionStorage.getItem('nkas-desktop-updated')) { sessionStorage.removeItem('nkas-desktop-updated'); toast.notify(t('启动器更新完成'), 'ok', 4000) }
   if (isTauri) { syncMaximized(); window.addEventListener('resize', syncMaximized) }
   await loadSystem()
+  if (entryRequired.value) return
   await update.notifyDesktopUpdate()
   await loadInstances()
   if (route.path === '/' && systemStatus.value.home_page === 'instance' && instancesStore.instances.length) { router.replace(`/i/${instancesStore.instances[0].name}/overview`) } else { await loadWorkspace() }
   startStateSocket()
   startSockets()
+  cookieSync.start()
   if (isDeploy.value) await deploy.loadDeploy()
   if (isLogs.value) await logsPage.refreshLogs()
   if (isLinks.value) await links.loadWebLinks()
   healthTimer = window.setInterval(healthCheck, 4000)
 })
 watch(() => route.fullPath, async () => {
+  if (entryRequired.value) return
   // 路由变化时收起移动端抽屉，避免残留遮挡主内容。
   mobileNav.value = ''
   // Only a different instance needs a schema reload and socket swap; task
@@ -96,6 +104,7 @@ onBeforeUnmount(() => {
   document.body.style.overflow = ''
   window.removeEventListener('resize', syncMaximized)
   workspace.closeSockets()
+  cookieSync.stop()
   window.clearInterval(healthTimer)
   update.clearPollTimers()
   workspace.clearDatetimeSaveTimers()
@@ -103,7 +112,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app" :class="{ 'legacy-electron': legacyElectron, 'side-collapsed': sidebarCollapsed }">
+  <main v-if="entryRequired" class="entry-required" role="alert">
+    <article class="card"><h1>需要安全入口</h1><p>入口已开启或已更新，请使用部署页提供的最新完整入口地址重新访问。</p><p class="sub">本机 exe 会自动尝试恢复；远程 App 请在设置中重新粘贴完整入口。</p></article>
+  </main>
+  <div v-else class="app" :class="{ 'legacy-electron': legacyElectron, 'side-collapsed': sidebarCollapsed }">
     <div class="app-body">
     <AppSidebar />
     <TaskRail v-if="isWorkspace" />
@@ -154,5 +166,12 @@ onBeforeUnmount(() => {
     <AnnouncementCenter />
     <AppModal />
     <BlaLoginModal />
+    <BlaBindBotModal />
+    <CookieSyncModal />
   </div>
 </template>
+
+<style scoped>
+.entry-required { max-width: 640px; margin: 12vh auto; padding: 20px; }
+.entry-required .card { padding: 24px; }
+</style>

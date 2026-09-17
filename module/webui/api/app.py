@@ -7,7 +7,8 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
-from . import (routes_bla, routes_calendar, routes_config, routes_console, routes_deploy, routes_device,
+from module.webui.security_entry import entry_info, regenerate_entry
+from . import (routes_bla, routes_calendar, routes_config, routes_console, routes_cookie_sync, routes_deploy, routes_device,
                routes_instances, routes_logs, routes_maintenance, routes_notify, routes_preview, routes_proxy,
                routes_schedule, routes_serial, routes_stats, routes_system, routes_tasks, routes_tools, ws)
 
@@ -24,6 +25,8 @@ def create_spa_mount():
 
 def mount_api(app):
     routes = [
+        Route('/api/security/entry', entry_info, methods=['GET']),
+        Route('/api/security/entry/regenerate', regenerate_entry, methods=['POST']),
         Route('/api/instances', routes_instances.instances, methods=['GET']),
         Route('/api/instances', routes_instances.create, methods=['POST']),
         Route('/api/avatars', routes_instances.avatar_list, methods=['GET']),
@@ -31,6 +34,13 @@ def mount_api(app):
         Route('/api/instances/order', routes_instances.reorder, methods=['POST']),
         Route('/api/instances/{name:str}/rename', routes_instances.rename, methods=['POST']),
         Route('/api/calendar', routes_calendar.calendar, methods=['GET']),
+        Route('/api/cookie-sync/request', routes_cookie_sync.request_sync, methods=['POST']),
+        Route('/api/cookie-sync/request', routes_cookie_sync.options, methods=['OPTIONS']),
+        Route('/api/cookie-sync/pending', routes_cookie_sync.pending_requests, methods=['GET']),
+        Route('/api/cookie-sync/status/{request_id:str}', routes_cookie_sync.status, methods=['GET']),
+        Route('/api/cookie-sync/status/{request_id:str}', routes_cookie_sync.options, methods=['OPTIONS']),
+        Route('/api/cookie-sync/{request_id:str}/confirm', routes_cookie_sync.confirm, methods=['POST']),
+        Route('/api/cookie-sync/{request_id:str}/reject', routes_cookie_sync.reject, methods=['POST']),
         Route('/api/maintenance', routes_maintenance.maintenance, methods=['GET']),
         Route('/api/restart', routes_system.restart, methods=['POST']),
         Route('/api/update', routes_system.update, methods=['POST']),
@@ -87,6 +97,7 @@ def mount_api(app):
         Route('/api/{name:str}/bla/login/shot', routes_bla.login_shot, methods=['GET']),
         Route('/api/{name:str}/bla/login/drag', routes_bla.login_drag, methods=['POST']),
         Route('/api/{name:str}/bla/login/cancel', routes_bla.login_cancel, methods=['POST']),
+        Route('/api/{name:str}/bla/bind', routes_bla.bind_to_bot, methods=['POST']),
         Route('/api/{name:str}/screenshot', routes_preview.screenshot, methods=['GET']),
         Route('/api/{name:str}/scrcpy', routes_preview.scrcpy, methods=['GET']),
         Route('/scrcpy/{name:str}/', routes_preview.scrcpy_page, methods=['GET']),

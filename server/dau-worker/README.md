@@ -44,7 +44,7 @@ curl -X POST https://nkas-dau.<你的子域>.workers.dev/report \
 
 - `id`：必填，匿名 ID（uuid，hex 和连字符，8~64 位）。
 - `version`：可选，客户端版本，`[\w.-]{1,32}`，不合法归 `other`，缺省归 `unknown`。
-- `os`：可选，仅接受 `Windows 10` / `Windows 11` / `Linux` / `macOS`，其它值归 `other`，缺省归 `unknown`。
+- `os`：可选，仅接受 `Windows 10` / `Windows 11` / `Linux` / `macOS` / `Android`，其它值归 `other`，缺省归 `unknown`。Android 客户端应上报 `Android`。
 - `res`：可选，分辨率如 `1920x1080`（分隔符 `x` `*` `×` 均可，存储统一为 `x`），不合法归 `other`，缺省归 `unknown`。
 - 地区无需客户端上报，由服务端从 `request.cf.country` 取两位国家码。
 

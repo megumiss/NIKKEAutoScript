@@ -37,6 +37,7 @@ Reward:
       - Reward
     Destruction:
       - Scheduler
+      - Destruction
     Mailbox:
       - Scheduler
 

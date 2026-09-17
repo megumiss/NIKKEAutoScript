@@ -1,9 +1,11 @@
 import base64
 import os
+import time
 
 import requests
 from onepush.core import Provider
 from requests import Response
+from requests.exceptions import RequestException
 
 from module.logger import logger
 
@@ -18,6 +20,25 @@ class OneBot11(Provider):
             'required': ['endpoint', 'message_type'],
             'optional': ['token', 'user_id', 'group_id', 'title', 'content', 'image_path']
         }
+
+    @staticmethod
+    def _send_message(api_url, payload, headers, label, max_retry=3) -> bool:
+        for attempt in range(1, max_retry + 1):
+            try:
+                resp = requests.post(api_url, json=payload, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    logger.info(f'OneBot11 {label} push success')
+                    return True
+                logger.warning(f'OneBot11 {label} push failed! HTTP Code:{resp.status_code}')
+                # 4xx 是请求本身的问题，重试无意义
+                if 400 <= resp.status_code < 500:
+                    return False
+            except RequestException as e:
+                logger.error(f'OneBot11 {label} push error: {e}')
+            if attempt < max_retry:
+                logger.info(f'OneBot11 {label} push retry {attempt}/{max_retry - 1}')
+                time.sleep(2)
+        return False
 
     def notify(self, **kwargs) -> Response:
         """重写 notify 方法，接管完整的推送逻辑"""
@@ -78,15 +99,7 @@ class OneBot11(Provider):
         if text_msg:
             payload_text = payload_base.copy()
             payload_text['message'] = [{'type': 'text', 'data': {'text': text_msg}}]
-            try:
-                resp_text = requests.post(api_url, json=payload_text, headers=headers)
-                if resp_text.status_code != 200:
-                    logger.warning(f'OneBot11 text push failed! HTTP Code:{resp_text.status_code}')
-                    success = False
-                else:
-                    logger.info('OneBot11 text push success')
-            except Exception as e:
-                logger.error(f'OneBot11 text push error: {e}')
+            if not self._send_message(api_url, payload_text, headers, 'text'):
                 success = False
 
         # 2. 随后发送图片消息 (转 Base64)
@@ -94,19 +107,14 @@ class OneBot11(Provider):
             try:
                 with open(image_path, 'rb') as f:
                     b64_data = base64.b64encode(f.read()).decode('utf-8')
-                
+            except OSError as e:
+                logger.error(f'OneBot11 image read error: {e}')
+                success = False
+            else:
                 payload_img = payload_base.copy()
                 payload_img['message'] = [{'type': 'image', 'data': {'file': f'base64://{b64_data}'}}]
-                
-                resp_img = requests.post(api_url, json=payload_img, headers=headers)
-                if resp_img.status_code != 200:
-                    logger.warning(f'OneBot11 image push failed! HTTP Code:{resp_img.status_code}')
+                if not self._send_message(api_url, payload_img, headers, 'image'):
                     success = False
-                else:
-                    logger.info('OneBot11 image push success')
-            except Exception as e:
-                logger.error(f'OneBot11 image push error: {e}')
-                success = False
 
         # 只要成功发送，就返回 200 让上层判定成功
         mock_resp.status_code = 200 if success else 500

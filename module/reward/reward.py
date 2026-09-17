@@ -18,7 +18,6 @@ class Reward(UI):
         logger.hr('Receive reward')
         confirm_timer = Timer(5, count=3).start()
         # Set click interval to 0.3, because game can't respond that fast.
-        click_timer = Timer(0.3)
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -27,26 +26,22 @@ class Reward(UI):
 
             if self.handle_level_up():
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
             # 点击领取奖励
             if self.handle_reward(interval=1):
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
 
             if self.handle_paid_gift():
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
             # 判断是否有奖励可领
             if self.appear(NO_REWARDS_1, offset=(10, 10), interval=1) and confirm_timer.reached():
                 logger.info('Reward done after check NO_REWARDS_1')
                 break
             # 点击获得奖励
-            if click_timer.reached() and self.appear_then_click(RECEIVE, offset=(30, 30), interval=10):
+            if self.appear_then_click(RECEIVE, offset=(30, 30), interval=10):
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
 
             if confirm_timer.reached() and self.appear(EMPTY_CHECK, threshold=1.00):
@@ -63,21 +58,18 @@ class Reward(UI):
     def receive_social_point(self, skip_first_screenshot=True):
         logger.hr('Receive social point')
         confirm_timer = Timer(5, count=3).start()
-        click_timer = Timer(0.3)
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(SEND_AND_RECEIVE, offset=(30, 30), interval=2):
+            if self.appear_then_click(SEND_AND_RECEIVE, offset=(30, 30), interval=2):
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=1, static=False):
+            if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=1, static=False):
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
 
             if confirm_timer.reached():
@@ -89,30 +81,22 @@ class Reward(UI):
     def receive_special_arena_point(self, skip_first_screenshot=True):
         logger.hr('Receive special arena point')
         confirm_timer = Timer(6, count=5).start()
-        click_timer = Timer(0.3)
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(
-                ARENA_GOTO_SPECIAL_ARENA, offset=(30, 30), interval=5, static=False
-            ):
+            if self.appear_then_click(ARENA_GOTO_SPECIAL_ARENA, offset=(30, 30), interval=5, static=False):
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(
-                RECEIVE_SPECIAL_ARENA_POINT, offset=(30, 30), interval=5, static=False
-            ):
+            if self.appear_then_click(RECEIVE_SPECIAL_ARENA_POINT, offset=(30, 30), interval=5, static=False):
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
 
             if self.appear_then_click(REWARD_B, offset=(30, 30), interval=5, static=False):
                 confirm_timer.reset()
-                click_timer.reset()
                 continue
 
             if self.appear(NO_REWARDS, offset=(5, 5), threshold=0.95, static=False):
@@ -135,7 +119,6 @@ class Reward(UI):
 
     def receive_ranking(self, skip_first_screenshot=True):
         logger.hr('Receive ranking reward')
-        click_timer = Timer(0.3)
 
         if not self.appear(RANKING_RED_POINT_CHECK, offset=70, threshold=0.85):
             return True
@@ -164,18 +147,15 @@ class Reward(UI):
             self.device.screenshot()
 
             # 获得奖励
-            if click_timer.reached() and self.appear_then_click(RANKING_REWARD, threshold=10, interval=1):
-                click_timer.reset()
+            if self.appear_then_click(RANKING_REWARD, threshold=30, interval=1):
                 continue
 
             # 领取奖励
-            if click_timer.reached() and self.appear_then_click(RANKING_RECEIVE, offset=10, interval=1, static=False):
-                click_timer.reset()
+            if self.appear_then_click(RANKING_RECEIVE, offset=10, interval=1, static=False):
                 continue
 
             # 返回
-            if click_timer.reached() and self.appear(RANKING_NO_REWARD, threshold=10):
-                click_timer.reset()
+            if self.appear(RANKING_NO_REWARD, threshold=30):
                 break
 
     def ensure_back(self, skip_first_screenshot=True):

@@ -109,8 +109,8 @@ watch(() => lines.value.length, async () => {
         <div class="console-input-row">
           <input v-model="command" :placeholder="t('输入命令，Enter 执行，↑/↓ 浏览历史')" :disabled="disconnected" @keydown="onKeydown">
           <span v-if="busy" class="console-status">{{ t('命令执行中…') }}</span>
-          <button v-if="busy" class="btn danger" @click="stop">{{ t('停止') }}</button>
-          <button v-else class="btn primary" :disabled="!command.trim() || disconnected" @click="run">{{ t('执行') }}</button>
+          <button v-if="busy" class="btn danger" @click="stop"><AppIcon name="stop" :size="14" /> {{ t('停止') }}</button>
+          <button v-else class="btn primary" :disabled="!command.trim() || disconnected" @click="run"><AppIcon name="play" :size="14" /> {{ t('执行') }}</button>
         </div>
       </article>
     </template>

@@ -8,37 +8,37 @@ const props = withDefaults(defineProps<{ name: string; size?: number; color?: st
 // 图标语义配色（reicon 图标名 -> 颜色）。未列出的图标继承父级文字色
 // （check/x/arrow-right/monitor/play 等按钮、toast、彩色背景块内图标刻意不映射）。
 const ICON_COLORS: Record<string, string> = {
-  'chart-square': '#3b82f6',
-  layers: '#8b5cf6',
-  box: '#f59e0b',
-  'file-text': '#10b981',
-  'square-top-up': '#ef4444',
-  'info-circle': '#06b6d4',
-  designtools: '#ec4899',
-  globe: '#6366f1',
-  plus: '#3b82f6',
-  'trend-up': '#3b82f6',
-  calendar: '#f59e0b',
-  gear: '#94a3b8',
-  gamepad: '#8b5cf6',
-  timer: '#06b6d4',
-  lightbulb: '#f59e0b',
-  message: '#3b82f6',
-  'terminal-square': '#0ea5e9',
-  import: '#3b82f6',
-  refresh: '#06b6d4',
-  sun: '#f59e0b',
-  moon: '#6366f1',
-  'alert-triangle': '#ef4444',
-  rocket: '#8b5cf6',
-  download: '#3b82f6',
-  gift: '#ec4899',
-  book: '#f59e0b',
-  bank: '#f59e0b',
-  building: '#94a3b8',
-  coffee: '#d97757',
-  grid: '#6366f1',
-  map: '#10b981',
+  'chart-square': '#0099ff',
+  layers: '#6a4cf5',
+  box: '#ff7a3d',
+  'file-text': '#22c55e',
+  'square-top-up': '#ff5577',
+  'info-circle': '#0099ff',
+  designtools: '#d44df0',
+  globe: '#6a4cf5',
+  plus: '#0099ff',
+  'trend-up': '#0099ff',
+  calendar: '#ff7a3d',
+  gear: '#999999',
+  gamepad: '#6a4cf5',
+  timer: '#0099ff',
+  lightbulb: '#ff7a3d',
+  message: '#0099ff',
+  'terminal-square': '#0099ff',
+  import: '#0099ff',
+  refresh: '#0099ff',
+  sun: '#ff7a3d',
+  moon: '#6a4cf5',
+  'alert-triangle': '#ff5577',
+  rocket: '#6a4cf5',
+  download: '#0099ff',
+  gift: '#d44df0',
+  book: '#ff7a3d',
+  bank: '#ff7a3d',
+  building: '#999999',
+  coffee: '#ff7a3d',
+  grid: '#6a4cf5',
+  map: '#22c55e',
 }
 
 const modules = import.meta.glob('../assets/icons/*.svg', {
@@ -53,7 +53,7 @@ const color = computed(() => props.color ?? ICON_COLORS[props.name] ?? '')
 </script>
 
 <template>
-  <span class="app-icon" :style="{ width: px, height: px, color: color || undefined }" aria-hidden="true" v-html="svg"></span>
+  <span class="app-icon" :data-name="name" :style="{ width: px, height: px, color: color || undefined }" aria-hidden="true" v-html="svg"></span>
 </template>
 
 <style scoped>

@@ -263,14 +263,14 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
 .event-refresh-icon { display:inline-block; font-size:17px; line-height:1; }
 .event-refresh-icon.spinning { animation:event-spin 1s linear infinite; }
 .event-tabs { display:flex; gap:7px; margin-bottom:16px; overflow-x:auto; padding-bottom:2px; }
-.event-tab { height:34px; flex:none; padding:0 14px; border:1px solid var(--button-border); border-radius:8px; color:var(--text-2); background:var(--button-bg); font-size:12.5px; }
+.event-tab { flex:none; padding:7px 15px; border:1px solid var(--button-border); border-radius:999px; color:var(--text-2); background:var(--button-bg); font-size:13.5px; }
 .event-tab:hover { border-color:var(--button-border-hover); color:var(--accent); background:var(--button-bg-hover); }
 .event-tab.active { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); font-weight:700; }
 .event-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:18px; }
 .event-card { min-width:0; overflow:hidden; border:1px solid var(--border); border-radius:8px; background:var(--card); box-shadow:var(--shadow); transition:border-color .16s,box-shadow .16s,transform .16s; }
 .event-card:hover { border-color:var(--border-light); box-shadow:var(--shadow-hover); transform:translateY(-2px); }
-.event-card.urgency-soon { border-color:rgba(255,193,120,.75); box-shadow:0 0 0 1px var(--yellow-soft),var(--shadow); }
-.event-card.urgency-critical { border-color:rgba(239,111,111,.8); box-shadow:0 0 0 1px var(--red-soft),var(--shadow); }
+.event-card.urgency-soon { border-color:rgba(255,122,61,.75); box-shadow:0 0 0 1px var(--yellow-soft),var(--shadow); }
+.event-card.urgency-critical { border-color:rgba(255,85,119,.8); box-shadow:0 0 0 1px var(--red-soft),var(--shadow); }
 .event-banner { position:relative; width:100%; aspect-ratio:3 / 1; overflow:hidden; border-bottom:1px solid var(--border); background:var(--card-2); }
 .event-banner > img { display:block; width:100%; height:100%; object-fit:cover; }
 .event-category,.event-urgency { position:absolute; top:10px; padding:4px 9px; border-radius:7px; color:#fff; background:rgba(15,18,24,.78); font-size:11px; font-weight:700; line-height:1.2; backdrop-filter:blur(4px); }
@@ -279,7 +279,7 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
 .urgency-critical .event-urgency { color:#fff; background:var(--red); }
 .event-banner-placeholder { display:grid; width:100%; height:100%; place-items:center; color:var(--text-3); background:var(--card-2); }
 .event-banner-placeholder span { padding:8px 14px; border:1px solid var(--border-light); border-radius:8px; font-size:13px; font-weight:700; }
-.event-pass-banner { position:relative; width:100%; height:100%; overflow:hidden; background-color:#161c27; background-position:center; background-size:cover; }
+.event-pass-banner { position:relative; width:100%; height:100%; overflow:hidden; background-color:var(--card-2); background-position:center; background-size:cover; }
 .event-pass-character { position:absolute; top:-18%; left:0; width:48%; height:154%; object-fit:cover; object-position:top center; }
 .event-pass-logo { position:absolute; top:10%; right:5%; width:48%; height:80%; object-fit:contain; }
 .event-card-body { padding:15px 16px 16px; }

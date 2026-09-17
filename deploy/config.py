@@ -43,6 +43,7 @@ class ConfigModel:
 
     WebuiHost: str = "0.0.0.0"
     WebuiPort: int = 12271
+    SecurityEntryEnabled: bool = False
     ConsoleEnabled: bool = False
     ConsoleAllowHosts: str = '127.0.0.1, localhost, ::1'
     DpiScaling: bool = True

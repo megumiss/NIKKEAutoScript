@@ -7,9 +7,11 @@
 **/log
 **/node_modules
 config/deploy.yaml
+config/.security/
 config/nkas.json
 config/nkas2.json
 config/serial/state.json
+config/.security/entry.key
 data/telemetry.json
 **.lock
 !yarn.lock
@@ -19,6 +21,7 @@ bin/paddleocr/
 /tmp
 **.acc
 data/
+android/
 .workbuddy/
 dev_tools/.button_extract_cache.json
 dev_tools/.template_capture_config.json

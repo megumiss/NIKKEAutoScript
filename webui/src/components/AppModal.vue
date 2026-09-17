@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import AppSelect from './AppSelect.vue'
 import { api } from '../api/client'
@@ -9,6 +10,9 @@ import { useModalStore } from '../stores/modal'
 const modalStore = useModalStore()
 const { modal, originOptions, deployTemplateOptions, modalConfirmMessage, modalAlertTitle, modalAlertMessage } = storeToRefs(modalStore)
 const { confirmModal } = modalStore
+// 路由切换时关闭弹窗，避免弹窗残留遮挡新页面（移动端尤其明显）
+const route = useRoute()
+watch(() => route.fullPath, () => { modal.value.type = '' })
 // 头像由后端托管（/avatars/），列表从 API 获取。
 const avatarFiles = ref<string[]>([])
 onMounted(async () => { try { avatarFiles.value = await api.get('/api/avatars') } catch { avatarFiles.value = [] } })
@@ -43,6 +47,7 @@ onMounted(async () => { try { avatarFiles.value = await api.get('/api/avatars') 
       </template>
       <template v-else-if="modal.type === 'resetDeploy'">
         <p class="modal-text">{{ t('将全部部署配置还原为默认值？') }}{{ t('此操作不可恢复。') }}</p>
+        <p class="modal-text">安全入口开关和密钥保持不变。</p>
         <label class="modal-field">{{ t('模板') }}<AppSelect v-model="modal.template" :options="deployTemplateOptions"/></label>
       </template>
       <p v-else-if="modal.type === 'confirm'" class="modal-text">{{ modalConfirmMessage }}</p>

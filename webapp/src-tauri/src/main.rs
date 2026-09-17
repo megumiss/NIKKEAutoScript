@@ -3,12 +3,16 @@
 mod backend;
 mod config;
 mod desktop_update;
+mod security_entry;
 
 use anyhow::{Context, Result};
 use backend::Backend;
 use config::DesktopConfig;
 use std::collections::HashMap;
 use std::env;
+use std::fs;
+use std::io;
+use std::path::{Component, Path};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -161,6 +165,108 @@ fn is_startup_url(url: &Url) -> bool {
     url.scheme() == "tauri" || url.host_str() == Some("tauri.localhost")
 }
 
+fn is_valid_export_filename(filename: &str) -> bool {
+    let path = Path::new(filename);
+    !filename.is_empty()
+        && path.components().count() == 1
+        && matches!(path.components().next(), Some(Component::Normal(_)))
+        && path.file_name().and_then(|name| name.to_str()) == Some(filename)
+}
+
+fn available_export_path(directory: &Path, filename: &str) -> std::path::PathBuf {
+    let path = Path::new(filename);
+    let stem = path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or(filename);
+    let extension = path.extension().and_then(|value| value.to_str());
+    let original = directory.join(filename);
+    if !original.exists() {
+        return original;
+    }
+    for index in 1.. {
+        let candidate = match extension {
+            Some(extension) => directory.join(format!("{stem} ({index}).{extension}")),
+            None => directory.join(format!("{stem} ({index})")),
+        };
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    unreachable!()
+}
+
+#[tauri::command]
+async fn refresh_security_entry(window: WebviewWindow, config: tauri::State<'_, DesktopConfig>) -> Result<(), String> {
+    let current = window.url().map_err(|_| "Unable to read application URL")?;
+    if !is_local_webui_url(&current, &config.host, config.port) {
+        return Err("Security entry is restricted to the configured backend".into());
+    }
+    let config = config.inner().clone();
+    let page = tauri::async_runtime::spawn_blocking(move || security_entry::page(&config))
+        .await.map_err(|_| "Unable to read local security entry")?
+        .map_err(|_| "Unable to read local security entry")?;
+    if !page.path().starts_with("/entry/") {
+        return Err("No local security entry is available".into());
+    }
+    window.navigate(page).map_err(|_| "Unable to open local security entry".into())
+}
+
+#[tauri::command]
+async fn save_export_file(
+    window: WebviewWindow,
+    config: tauri::State<'_, DesktopConfig>,
+    url_path: String,
+    filename: String,
+) -> Result<String, String> {
+    if !is_valid_export_filename(&filename) {
+        return Err("Invalid export filename".into());
+    }
+    if !url_path.starts_with("/api/") || url_path.starts_with("//") {
+        return Err("Invalid export URL".into());
+    }
+
+    let current_url = window
+        .url()
+        .map_err(|error| format!("Unable to read the application URL: {error}"))?;
+    if !is_local_webui_url(&current_url, &config.host, config.port) {
+        return Err("Exports are restricted to the configured backend".into());
+    }
+    let config = config.inner().clone();
+    let export_url = current_url
+        .join(&url_path)
+        .map_err(|error| format!("Invalid export URL: {error}"))?;
+    if current_url.origin() != export_url.origin() || !export_url.path().starts_with("/api/") {
+        return Err("Invalid export URL".into());
+    }
+    let downloads = window
+        .app_handle()
+        .path()
+        .download_dir()
+        .map_err(|error| format!("Unable to locate the Downloads directory: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || {
+        fs::create_dir_all(&downloads)
+            .map_err(|error| format!("Unable to create Downloads directory: {error}"))?;
+        let destination = available_export_path(&downloads, &filename);
+        let client = reqwest::blocking::Client::builder()
+            .redirect(reqwest::redirect::Policy::none()).build().map_err(|_| "Unable to create export client")?;
+        let mut response = security_entry::authorize(client.get(export_url), &config)
+            .map_err(|_| "Unable to read local security entry")?
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map_err(|error| format!("Unable to download export: {error}"))?;
+        let mut file = fs::File::create(&destination)
+            .map_err(|error| format!("Unable to create export file: {error}"))?;
+        if let Err(error) = io::copy(&mut response, &mut file) {
+            let _ = fs::remove_file(&destination);
+            return Err(format!("Unable to save export: {error}"));
+        }
+        Ok(destination.to_string_lossy().into_owned())
+    })
+    .await
+    .map_err(|error| format!("Export task failed: {error}"))?
+}
+
 fn create_window(
     app: &AppHandle,
     config: &DesktopConfig,
@@ -263,9 +369,7 @@ fn start_application_inner(
     reporter.stage("Opening the application");
     reporter.complete("Startup complete. Opening NKAS...");
     thread::sleep(std::time::Duration::from_millis(150));
-    let page: Url = backend::url(&config.host, config.port, "/app/")
-        .parse()
-        .context("Invalid WebUI URL")?;
+    let page = security_entry::page(config)?;
     window.navigate(page)?;
     window.show()?;
     window.set_focus()?;
@@ -317,11 +421,12 @@ fn install_tray(app: &AppHandle) -> Result<()> {
     Ok(())
 }
 
-fn post(host: String, port: u16, path: &'static str) {
+fn post(config: DesktopConfig, path: &'static str) {
     thread::spawn(move || {
-        let _ = reqwest::blocking::Client::new()
-            .post(backend::url(&host, port, path))
-            .send();
+        let Ok(client) = reqwest::blocking::Client::builder().redirect(reqwest::redirect::Policy::none()).build() else { return; };
+        if let Ok(request) = security_entry::authorize(client.post(backend::url(&config.host, config.port, path)), &config) {
+            let _ = request.send();
+        }
     });
 }
 
@@ -343,13 +448,12 @@ fn install_shortcuts(app: &AppHandle, config: &DesktopConfig) -> Result<()> {
         let Ok(shortcut) = Shortcut::from_str(value) else {
             continue;
         };
-        let host = config.host.clone();
-        let port = config.port;
+        let request_config = config.clone();
         let _ = app
             .global_shortcut()
             .on_shortcut(shortcut, move |_app, _shortcut, event| {
                 if event.state() == ShortcutState::Pressed {
-                    post(host.clone(), port, path);
+                    post(request_config.clone(), path);
                 }
             });
     }
@@ -413,6 +517,8 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             desktop_update::desktop_update_status,
             desktop_update::desktop_update_check,
             desktop_update::desktop_update_apply,
+            save_export_file,
+            refresh_security_entry,
         ])
         .on_window_event(|window, event| {
             if window.label() == "main"
@@ -422,6 +528,7 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             }
         })
         .setup(move |app| {
+            app.manage(app_config.clone());
             app.manage(BackendState(Mutex::new(None)));
             app.manage(Arc::new(desktop_update::DesktopUpdateManager::new(
                 app_config.clone(),
@@ -500,6 +607,36 @@ mod tests {
             script,
             "window.nkasStartup?.log(\"line \\\"one\\\"\\nline two\");"
         );
+    }
+
+    #[test]
+    fn export_filename_rejects_paths() {
+        assert!(is_valid_export_filename("2026-09-14_nkas.txt"));
+        assert!(is_valid_export_filename("nkas.json"));
+        assert!(!is_valid_export_filename(""));
+        assert!(!is_valid_export_filename("../nkas.json"));
+        assert!(!is_valid_export_filename("folder/nkas.json"));
+        assert!(!is_valid_export_filename(r"folder\nkas.json"));
+    }
+
+    #[test]
+    fn export_path_adds_a_suffix_when_the_name_exists() {
+        let directory = env::temp_dir().join(format!(
+            "nkas-export-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).unwrap();
+        fs::write(directory.join("nkas.json"), "first").unwrap();
+        fs::write(directory.join("nkas (1).json"), "second").unwrap();
+        assert_eq!(
+            available_export_path(&directory, "nkas.json"),
+            directory.join("nkas (2).json")
+        );
+        fs::remove_dir_all(directory).unwrap();
     }
 }
 

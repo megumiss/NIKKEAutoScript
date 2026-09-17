@@ -3,6 +3,12 @@
 The desktop client is a Tauri 2 shell. It starts the existing Python web service
 and opens the backend-hosted SPA in the system WebView2 runtime.
 
+The optional security entry is off by default and is enabled on the deployment
+page. For a local installation the shell reads `config/.security/entry.key`,
+opens the entry automatically and authenticates native exports/shortcuts. After
+rotation it rereads the local key; local credentials are not forwarded to a
+configured remote host. See [security entry usage](../doc/security-entry.md).
+
 ```powershell
 yarn install --frozen-lockfile
 yarn test

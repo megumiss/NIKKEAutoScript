@@ -368,7 +368,6 @@ class EventStory(EventBase):
     @Config.when(EVENT_TYPE=2)
     def story(self, skip_first_screenshot=True):
         logger.hr('START EVENT STORY', 2)
-        click_timer = Timer(0.3)
 
         open_story = 'story_1_normal'
         while 1:
@@ -385,31 +384,29 @@ class EventStory(EventBase):
                     self.device.screenshot()
 
                 # story主页
-                if click_timer.reached() and self.appear_then_click(
-                    self.event_assets.STORY_1_CHECK, offset=(10, 10), interval=3
-                ):
-                    click_timer.reset()
+                if self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10, 10), interval=3):
                     continue
 
                 # story困难解锁，困难更新后需要重新截图
-                if click_timer.reached() and self.appear_then_click(
-                    self.event_assets.STORY_1_HARD_UNLOCK, offset=10, interval=1
+                if self.appear_then_click(self.event_assets.STORY_1_HARD_UNLOCK, offset=10, interval=1):
+                    continue
+
+                # 设备太慢可能会打开关卡弹窗，关掉
+                if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=10) and self.appear_then_click(
+                    FIGHT_CLOSE, offset=10, interval=1
                 ):
-                    click_timer.reset()
                     continue
 
                 # story普通难度列表页面
-                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10, 10)) and self.appear(
-                    self.event_assets.STORY_1_NORMAL, threshold=20
-                ):
-                    click_timer.reset()
+                if not self.appear_then_click(
+                    self.event_assets.STORY_1_CHECK, offset=(10, 10), interval=3
+                ) and self.appear(self.event_assets.STORY_1_NORMAL, threshold=20):
                     break
 
                 # story困难难度列表页面，困难更新后需要重新截图
-                if not self.appear_then_click(self.event_assets.STORY_1_CHECK, offset=(10, 10)) and self.appear(
-                    self.event_assets.STORY_1_HARD, threshold=10
-                ):
-                    click_timer.reset()
+                if not self.appear_then_click(
+                    self.event_assets.STORY_1_CHECK, offset=(10, 10), interval=3
+                ) and self.appear(self.event_assets.STORY_1_HARD, threshold=10):
                     break
 
             self.device.sleep(1)
@@ -451,15 +448,11 @@ class EventStory(EventBase):
                         self.device.screenshot()
 
                     # story困难难度切换
-                    if click_timer.reached() and self.appear_then_click(
-                        self.event_assets.STORY_1_HARD_HIDDEN, threshold=10
-                    ):
-                        click_timer.reset()
+                    if self.appear_then_click(self.event_assets.STORY_1_HARD_HIDDEN, threshold=10):
                         continue
 
                     # story困难难度列表页面
                     if self.appear(self.event_assets.STORY_1_HARD, threshold=10):
-                        click_timer.reset()
                         break
 
                 logger.info('Open event story hard')

@@ -141,14 +141,11 @@ onBeforeUnmount(() => {
   padding: 10px 14px;
   border-radius: 12px;
   color: #fff;
-  background: var(--red);
+  background: var(--red-on);
   box-shadow: var(--shadow-hover);
   transform: translateX(-50%);
   font-size: 13px;
   animation: mn-in .25s ease both;
-}
-:root[data-theme='dark'] .maintenance-notice {
-  background: #c23f3f;
 }
 .maintenance-notice > span {
   white-space: nowrap;

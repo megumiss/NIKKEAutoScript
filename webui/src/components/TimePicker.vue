@@ -89,7 +89,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
 <!-- 浮层 teleport 到 body，scoped 样式够不到；用 .tp- 前缀全局样式（同 AppSelect 走 base.css 的思路） -->
 <style>
 .tp { position: relative; display: inline-block; width: 104px; }
-.tp-btn { display: flex; gap: 6px; align-items: center; width: 100%; height: 30px; padding: 0 9px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: var(--card-2); font-size: 12.5px; transition: border-color .15s, box-shadow .15s; }
+.tp-btn { display: flex; gap: 6px; align-items: center; width: 100%; height: 30px; padding: 0 9px; border: 1px solid var(--border); border-radius: 10px; color: var(--text); background: var(--card-2); font-size: 12.5px; transition: border-color .15s, box-shadow .15s; }
 .tp-btn:hover { border-color: var(--border-light); }
 .tp.open .tp-btn { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .tp.disabled { opacity: .55; }

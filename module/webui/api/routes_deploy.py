@@ -11,13 +11,12 @@ keeps all comments intact.
 
 import json
 import re
-import shutil
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 import module.webui.lang as lang
-from deploy.utils import DEPLOY_CONFIG, DEPLOY_TEMPLATE
+from deploy.utils import DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
 from module.config.utils import nkas_instance
 from module.logger import logger
 from module.webui.setting import State
@@ -85,6 +84,10 @@ TAG_I18N = {
 # lines, `hints` replaces `[Tag] advice` lines matched by tag; anything
 # missing falls back to the English template text.
 FIELD_I18N = {
+    'SecurityEntryEnabled': {
+        'zh-CN': {'desc': '安全入口（即时生效）。默认关闭；开启后浏览器和远程 App 必须使用完整入口地址。不会更改监听地址或开放端口。'},
+        'ja-JP': {'desc': 'セキュリティ入口（即時反映）。初期状態では無効。待受アドレスやポートは変更しません。'},
+    },
     'Repository': {
         'zh-CN': {'desc': 'NKAS 仓库地址', 'hints': {
             'CN user': "使用 'https://git.megumiss.top/megumiss/NIKKEAutoScript'，下载更快更稳定",
@@ -471,6 +474,21 @@ async def deploy_patch(request: Request):
     config = State.deploy_config
     if key in EXCLUDED_KEYS or key not in config.config_template:
         return _json_error(f'Unknown deploy key: {key}', 404)
+    if key == 'SecurityEntryEnabled':
+        if not isinstance(value, bool):
+            return _json_error('Expected a boolean value.', 422)
+        security = request.app.state.security_entry
+        before = security.enabled
+        try:
+            if value:
+                security.ensure_key()
+            setattr(config, key, value)
+        except (OSError, ValueError):
+            # __setattr__ updates memory before attempting the disk write.
+            object.__setattr__(config, key, before)
+            config.config[key] = before
+            return _json_error('无法保存安全入口，请检查配置目录权限和私有密钥文件。', 500)
+        return security.response(request, value=value, changed=before != value)
     if key == 'Run':
         # The widget sends a list; the file keeps the '["nkas","nkas2"]'
         # string format (null when empty).
@@ -534,7 +552,10 @@ async def deploy_reset(request: Request):
         data = {}
     template = RESET_TEMPLATES.get(data.get('template'), RESET_TEMPLATES['intl'])
     try:
-        shutil.copyfile(template, DEPLOY_CONFIG)
+        replacement = poor_yaml_read(template)
+        # A general deploy reset must never silently remove access protection.
+        replacement['SecurityEntryEnabled'] = State.deploy_config.SecurityEntryEnabled
+        poor_yaml_write(replacement, State.deploy_config.file)
         State.deploy_config.read()
     except OSError as exc:
         logger.exception(exc)

@@ -13,6 +13,7 @@ import { highlightTextarea, isStructuredTextarea, onTextareaInput, vAutosize } f
 import { useRouteInfo } from '../composables/useRouteInfo'
 import { t } from '../i18n'
 import { onTextInput } from '../utils'
+import { useBlaBindBotStore } from '../stores/blaBindBot'
 import { useBlaLoginStore } from '../stores/blaLogin'
 import { useInstancesStore } from '../stores/instances'
 import { useToastStore } from '../stores/toast'
@@ -32,6 +33,8 @@ const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
 const { blaLoginBusy } = storeToRefs(useBlaLoginStore())
 const { startBlaLogin } = useBlaLoginStore()
+const { bindBusy } = storeToRefs(useBlaBindBotStore())
+const { openBind } = useBlaBindBotStore()
 const toast = useToastStore()
 
 const serialDeviceOptions = computed(() => serialDevices.value.map(device => ({ value: device.serial, label: `${device.serial} (${device.status})` })))
@@ -55,10 +58,14 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
   <section class="view" :class="{ 'tool-view': selectedPage === 'tool' }" @scroll.passive="onViewScroll">
     <div class="task-layout">
       <div>
-        <article class="card task-hero">
-          <div class="task-icon"><AppIcon :name="selectedPage === 'tool' ? 'tools' : 'gear'" :size="22" /></div>
+        <article v-if="taskSchema" class="card task-hero">
+          <div class="task-icon"><AppIcon :name="selectedPage === 'tool' ? 'designtools' : 'gear'" :size="22" /></div>
           <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}{{ selectedTask === 'PhysicalDevice' ? '(BETA)' : '' }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
-          <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()"><template v-if="selectedInstance?.state === 1">{{ t('停止') }}</template><template v-else><AppIcon name="play" :size="14" /> {{ t('启动') }}</template></button>
+          <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()"><template v-if="selectedInstance?.state === 1"><AppIcon name="stop" :size="14" /> {{ t('停止') }}</template><template v-else><AppIcon name="play" :size="14" /> {{ t('启动') }}</template></button>
+        </article>
+        <!-- 未选中任务时原空白 hero 没有信息量，换成引导提示（移动端任务列表收在右侧抽屉里） -->
+        <article v-else class="card group-card">
+          <div class="group-body special-empty" style="padding:16px 22px">{{ selectedPage === 'tool' ? t('请从列表选择工具') : t('请从任务列表选择任务') }}</div>
         </article>
         <div class="cfg-groups">
           <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
@@ -72,7 +79,11 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
             <div class="group-body">
               <div v-if="selectedTask === 'BlaAuth' && group.key === 'BlaAuth'" class="field">
                 <div class="field-label"><div class="fname">{{ t('登录获取 Cookie（BETA）') }}</div><div class="fhelp">{{ t('使用NKAS设置-账号设置中的LiPass账号自动登录妮游社，成功后自动填写 Cookie 和 XCommonParams；如出现滑块验证码，在弹窗中的图片上拖动完成。') }}</div></div>
-                <div class="field-control"><button class="btn primary" :disabled="blaLoginBusy" @click="startBlaLogin">{{ blaLoginBusy ? t('登录中…') : t('一键登录') }}</button></div>
+                <div class="field-control"><button class="btn primary" :disabled="blaLoginBusy" @click="startBlaLogin"><AppIcon name="key" :size="14" /> {{ blaLoginBusy ? t('登录中…') : t('一键登录') }}</button></div>
+              </div>
+              <div v-if="selectedTask === 'BlaAuth' && group.key === 'BlaAuth'" class="field">
+                <div class="field-label"><div class="fname">{{ t('绑定到 Bot') }}</div><div class="fhelp">{{ t('绑定步骤：① 私聊机器人发送 #妮姬 账号 绑定，获取 10 分钟内有效、仅可使用一次的绑定链接；② 切到该账号所在实例，点本按钮并粘贴完整链接确认绑定；③ 若提示缺少 game_uid 或 Cookie 已失效，请先重新「一键登录」再绑定。') }}</div></div>
+                <div class="field-control"><button class="btn" :disabled="bindBusy" @click="openBind"><AppIcon name="external" :size="14" /> {{ t('绑定到 Bot') }}</button></div>
               </div>
               <template v-for="field in group.fields" :key="field.key">
                 <div :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
@@ -108,21 +119,21 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                   <div class="field-label"><div class="fname">{{ t('虚拟屏幕(VDD)') }}</div><div class="fhelp">{{ t('启用或禁用 VDD 虚拟屏幕；需要已安装 Virtual Display Driver，且 NKAS 以管理员身份运行。') }}</div></div>
                   <div class="field-control">
                     <div style="display:flex;gap:8px">
-                      <button class="btn primary" :disabled="vddBusy" @click="vddSet('enable')">{{ t('启动虚拟屏幕') }}</button>
-                      <button class="btn danger" :disabled="vddBusy" @click="vddSet('disable')">{{ t('禁用虚拟屏幕') }}</button>
+                      <button class="btn primary" :disabled="vddBusy" @click="vddSet('enable')"><AppIcon name="play" :size="14" /> {{ t('启动虚拟屏幕') }}</button>
+                      <button class="btn danger" :disabled="vddBusy" @click="vddSet('disable')"><AppIcon name="stop" :size="14" /> {{ t('禁用虚拟屏幕') }}</button>
                     </div>
                   </div>
                 </div>
               </template>
               <div v-if="selectedTask === 'NKAS' && group.key === 'Notification'" class="field">
                 <div class="field-label"><div class="fname">{{ t('测试通知') }}</div><div class="fhelp">{{ t('发送一条测试通知，验证当前通知设置是否生效。') }}</div></div>
-                <div class="field-control"><button class="btn" :disabled="notifyTestBusy" @click="testNotify">{{ notifyTestBusy ? t('发送中…') : t('测试通知') }}</button></div>
+                <div class="field-control"><button class="btn" :disabled="notifyTestBusy" @click="testNotify"><AppIcon name="message" :size="14" color="currentColor" /> {{ notifyTestBusy ? t('发送中…') : t('测试通知') }}</button></div>
               </div>
               <div v-if="group.key === 'PhysicalDevice'" class="field">
                 <div class="field-label"><div class="fname">{{ t('分辨率控制') }}</div><div class="fhelp">{{ t('手动将设备分辨率设为 720x1280（DPI 240）并锁定竖屏，或还原为原生分辨率与屏幕方向。') }}</div></div>
                 <div class="field-control" style="display:flex;gap:8px">
-                  <button class="btn primary" :disabled="Boolean(physicalBusy)" @click="physicalResolution('set')">{{ physicalBusy === 'set' ? t('设置中…') : t('设置分辨率') }}</button>
-                  <button class="btn" :disabled="Boolean(physicalBusy)" @click="physicalResolution('reset')">{{ physicalBusy === 'reset' ? t('还原中…') : t('还原分辨率') }}</button>
+                  <button class="btn primary" :disabled="Boolean(physicalBusy)" @click="physicalResolution('set')"><AppIcon name="monitor" :size="14" /> {{ physicalBusy === 'set' ? t('设置中…') : t('设置分辨率') }}</button>
+                  <button class="btn" :disabled="Boolean(physicalBusy)" @click="physicalResolution('reset')"><AppIcon name="undo" :size="14" /> {{ physicalBusy === 'reset' ? t('还原中…') : t('还原分辨率') }}</button>
                 </div>
               </div>
             </div>
