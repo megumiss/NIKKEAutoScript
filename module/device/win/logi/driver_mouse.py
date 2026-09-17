@@ -42,13 +42,22 @@ BTN_LEFT = 0x01
 BTN_RIGHT = 0x02
 BTN_MIDDLE = 0x04
 
-# 光标闭环参数。步长 20 是已验证值：请求量与实际位移既非线性、又有轴向串扰
-# （实测请求 dx=40/dy=0，实际 (+88, -35)），所以只做「小步长 + 读回 + 超冲收敛」。
+# 光标闭环参数。请求量与实际位移非线性（实测同一请求量的实际位移会因前序运动状态
+# 抖动 40% 以上），所以只做「读回 + 逼近 + 过冲收敛」。
+# 逐项实测依据见 tmp/driver-validation/REPORT-move-speed-root-cause.md §8/§9。
 MOVE_TOLERANCE = 2
 MOVE_MAX_ITERATIONS = 400
-MOVE_STEP_LIMIT = 20.0
-MOVE_STEP_MIN = 1.0
+# 单次报告上限。实测请求 160 的实际位移约 350px，20 的单步只有 ~46px，一次 800px
+# 移动会被硬拆成 18 轮以上；提到 160 后同一目标的中位耗时从 78ms 降到 36ms。
+MOVE_STEP_LIMIT = 160.0
+# 请求下限。实测请求 1 有 2/6 概率零位移、2 仅约 1.5px，3 起稳定有 2px 且无零位移。
+MOVE_STEP_MIN = 3.0
 MOVE_STEP_DECAY = 0.6
+# 空转恢复：请求发出后光标没动，说明请求量落在死区，放大而不是原地重试。
+MOVE_STEP_RECOVER = 1.6
+# 末段阻尼。实测增益（实际位移/请求量）在 1.17~2.6 之间且恒 > 1，|误差| 小于步长上限
+# 时若直接 request = error 必然过冲 → 必然衰减。按 1/增益 折算请求后一次落到容差内。
+MOVE_APPROACH_DAMP = 0.45
 MOVE_POLL_INTERVAL = 0.004
 
 # 滚轮：每格一个独立报告。间隔过小可能被合并，0.02 是已验证值（连续 40 格无丢格）。
@@ -97,6 +106,20 @@ def make_report(buttons=0, dx=0, dy=0, wheel=0):
     )
     assert len(report) == REPORT_SIZE
     return report
+
+
+def approach_request(error, step):
+    """单轴请求量：末段（|误差| 小于步长）按 MOVE_APPROACH_DAMP 折算，其余按步长截断。
+
+    折算后仍不小于 MOVE_STEP_MIN —— 小于它的请求实测大概率零位移。
+    """
+    magnitude = abs(error)
+    if magnitude < step:
+        wish = max(MOVE_STEP_MIN, round(magnitude * MOVE_APPROACH_DAMP))
+        magnitude = min(wish, magnitude)
+    else:
+        magnitude = step
+    return int(magnitude) if error > 0 else -int(magnitude)
 
 
 class LogiMouseDriver:
@@ -196,24 +219,40 @@ class LogiMouse:
     def move_to(self, x, y, buttons=0, tolerance=None):
         """Shape B：闭环相对移动。
 
-        请求量与实际位移非线性且存在轴向串扰，所以必须「读回实际位置 → 算误差 →
-        小步逼近」，并在检测到超冲（误差符号翻转）时收敛步长。
+        请求量与实际位移非线性，所以必须「读回实际位置 → 算误差 → 逼近」。三条规则
+        缺一不可，对应实测里三种失效：
+        - 两轴各自持有步长：过冲按轴隔离判定。原先共用一个 step 且判定用 or，任一轴
+          过冲都会把另一轴的单步一起砍掉（实测零过冲的那个轴被砍掉 78%，迭代数
+          154→19 只差这一项）。
+        - 末段阻尼：|误差| 小于步长上限时按 MOVE_APPROACH_DAMP 折算请求，避免
+          request == error 在增益 > 1 时必然过冲 → 衰减 → 剩余长距离只能按最小步长爬。
+        - 空转放大：请求发出后位置没动，说明请求量落在死区，立即放大而不是原地重试。
         """
         tolerance = MOVE_TOLERANCE if tolerance is None else tolerance
-        step = MOVE_STEP_LIMIT
+        step_x = step_y = MOVE_STEP_LIMIT
         previous = None
+        previous_position = None
         for _ in range(MOVE_MAX_ITERATIONS):
             current_x, current_y = self.cursor()
             error_x, error_y = int(x) - current_x, int(y) - current_y
             if abs(error_x) <= tolerance and abs(error_y) <= tolerance:
                 return True
-            if previous is not None and (previous[0] * error_x < 0 or previous[1] * error_y < 0):
-                step = max(MOVE_STEP_MIN, step * MOVE_STEP_DECAY)
-            step_x = int(round(max(-step, min(step, error_x))))
-            step_y = int(round(max(-step, min(step, error_y))))
-            if not self.driver.send(buttons=buttons, dx=step_x, dy=step_y):
+            if previous is not None:
+                if previous[0] * error_x < 0:
+                    step_x = max(MOVE_STEP_MIN, step_x * MOVE_STEP_DECAY)
+                if previous[1] * error_y < 0:
+                    step_y = max(MOVE_STEP_MIN, step_y * MOVE_STEP_DECAY)
+            if previous_position == (current_x, current_y):
+                step_x = min(MOVE_STEP_LIMIT, step_x * MOVE_STEP_RECOVER)
+                step_y = min(MOVE_STEP_LIMIT, step_y * MOVE_STEP_RECOVER)
+            if not self.driver.send(
+                buttons=buttons,
+                dx=approach_request(error_x, step_x),
+                dy=approach_request(error_y, step_y),
+            ):
                 return False
             previous = (error_x, error_y)
+            previous_position = (current_x, current_y)
             # 这里必须真的等一次输入落地再读回：去掉它闭环就失去可观测性，
             # 实测 400 次迭代仍不收敛（读到的永远是上一帧位置）。
             time.sleep(MOVE_POLL_INTERVAL)
