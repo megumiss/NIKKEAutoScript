@@ -149,7 +149,7 @@ PCClientInfo:
   ScreenshotInterval: 0.3
   ControlScheme:
     value: pyautogui
-    option: [ pyautogui, postmessage ]
+    option: [ pyautogui, postmessage, driver ]
 Optimization:
   AutoRedCircle: false
   OcrModelType:
