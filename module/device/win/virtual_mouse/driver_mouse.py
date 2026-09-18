@@ -1,12 +1,12 @@
-"""G HUB 虚拟 HID 鼠标设备（驱动级）的用户态注入封装。
+"""虚拟鼠标 HID 设备（驱动级）的用户态注入封装。
 
-原理：安装 G HUB 后系统里存在一个虚拟鼠标 HID 设备。用户态进程可以直接打开它的
+原理：安装虚拟鼠标驱动后系统里会存在一个虚拟鼠标 HID 设备。用户态进程可以直接打开它的
 设备接口，用 IOCTL 0x2A2010 提交 7 字节鼠标报告，由驱动投递进系统输入栈 —— 这条
 路径不经过 SendInput，因此 WH_MOUSE_LL 钩子读到的 MSLLHOOKSTRUCT.flags == 0x000000
 （不带 LLMHF_INJECTED）。
 
 本模块只做两件事：找到设备、发报告。
-不安装驱动、不写注册表、不落盘、不改动 G HUB 的任何文件。
+本模块只负责找到设备并发送报告：不安装驱动、不写注册表、不落盘。
 """
 import ctypes
 import struct
@@ -16,18 +16,18 @@ from ctypes import wintypes
 
 from module.logger import logger
 
-# G HUB 的虚拟鼠标设备接口 GUID。LGS 是另一套（df31f106-...，5 字节报告），不支持。
-G_HUB_INTERFACE_GUID = '{1abc05c0-c378-41b9-9cef-df1aba82b015}'
+# 虚拟鼠标设备接口 GUID。另一套（df31f106-...，5 字节报告）不支持。
+VIRTUAL_MOUSE_INTERFACE_GUID = '{1abc05c0-c378-41b9-9cef-df1aba82b015}'
 DEVICE_INDEX_RANGE = range(10)
 
 
-def g_hub_device_path(index):
-    """G HUB 虚拟鼠标设备接口路径，index 取 0..9（本机命中 2）。
+def virtual_mouse_device_path(index):
+    """虚拟鼠标设备接口路径，index 取 0..9。
 
     注意：不要写成 `模板.format(index=...)` —— GUID 自带 `{...}`，会被 str.format
     当成替换字段而抛 KeyError。这里用 f-string，GUID 只在运行期代入。
     """
-    return rf'\??\ROOT#SYSTEM#000{index}#{G_HUB_INTERFACE_GUID}'
+    return rf'\??\ROOT#SYSTEM#000{index}#{VIRTUAL_MOUSE_INTERFACE_GUID}'
 
 IOCTL_SEND_MOUSE = 0x2A2010
 REPORT_SIZE = 7
@@ -212,7 +212,7 @@ def _update_gain(gain, request, measured):
     return gain + (ratio - gain) * DRAG_GAIN_SMOOTH
 
 
-class LogiMouseDriver:
+class VirtualMouseDevice:
     """设备句柄的发现、持有与自愈。"""
 
     def __init__(self):
@@ -239,10 +239,10 @@ class LogiMouseDriver:
                 self._handle = handle
                 self.device_path = path
                 _raise_timer_resolution()
-                logger.info(f'Logitech driver device opened: {path}')
+                logger.info(f'Virtual mouse device opened: {path}')
                 return True
             _kernel32.CloseHandle(handle)
-        logger.error('No G HUB virtual mouse interface answered IOCTL 0x2A2010')
+        logger.error('No virtual mouse interface answered IOCTL 0x2A2010')
         return False
 
     def close(self):
@@ -262,24 +262,24 @@ class LogiMouseDriver:
         return status & 0xFFFFFFFF
 
     def send(self, buttons=0, dx=0, dy=0, wheel=0):
-        """提交一次报告。句柄失效（G HUB 重启 / 设备重枚举）时自动重开一次。"""
+        """提交一次报告。句柄失效（驱动重启 / 设备重枚举）时自动重开一次。"""
         if not self.opened and not self.open():
             return False
         report = make_report(buttons=buttons, dx=dx, dy=dy, wheel=wheel)
         if self._ioctl(self._handle, report) == STATUS_SUCCESS:
             return True
-        logger.warning('Logitech driver IOCTL failed, reopening device once')
+        logger.warning('Virtual mouse IOCTL failed, reopening device once')
         self.close()
         if not self.open():
             return False
         return self._ioctl(self._handle, report) == STATUS_SUCCESS
 
 
-class LogiMouse:
-    """在 LogiMouseDriver 之上提供「光标定位 + 按键 + 滚轮」三个语义。"""
+class VirtualMouse:
+    """在 VirtualMouseDevice 之上提供「光标定位 + 按键 + 滚轮」三个语义。"""
 
     def __init__(self, driver=None):
-        self.driver = driver or LogiMouseDriver()
+        self.driver = driver or VirtualMouseDevice()
 
     # ---- 设备 ----
     def open(self):
@@ -407,7 +407,7 @@ class LogiMouse:
 
 # 驱动对象是进程级共享的：Device.__init__ 在 GameNotRunningError 时会重试构造
 # （device.py:32-46），每次重试都会走一遍 Automation._init_input()。共享同一个
-# LogiMouse 可以避免重复打开设备句柄。
+# VirtualMouse 可以避免重复打开设备句柄。
 _shared_lock = threading.RLock()
 _shared_mouse = None
 
@@ -416,5 +416,5 @@ def shared_mouse():
     global _shared_mouse
     with _shared_lock:
         if _shared_mouse is None:
-            _shared_mouse = LogiMouse()
+            _shared_mouse = VirtualMouse()
         return _shared_mouse

@@ -63,7 +63,7 @@ export const useInstancesStore = defineStore('instances', () => {
         return
       }
       if (action === 'start' && exception?.code === 'driver_not_installed') {
-        useModalStore().openAlertModal(t('罗技驱动未安装'), t('当前实例的控制方案为 driver，需要先安装罗技 G HUB 虚拟 HID 驱动。请前往「常用工具 → 罗技驱动」完成安装后再启动。'))
+        useModalStore().openAlertModal(t('虚拟鼠标驱动未安装'), t('当前实例的控制方案为 driver，需要先安装虚拟鼠标驱动。请前往「常用工具 → 虚拟鼠标驱动」完成安装后再启动。'))
         return
       }
       toast.error = exception.message

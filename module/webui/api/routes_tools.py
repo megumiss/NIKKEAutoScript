@@ -211,13 +211,14 @@ async def game_clone_start(request: Request):
     return JSONResponse({'status': 'success', 'job': clone_status()})
 
 
-async def logi_driver_state(_: Request):
-    from module.tools.logi_driver import driver_status
+async def virtual_mouse_driver_state(_: Request):
+    from module.tools.virtual_mouse_driver import driver_status
     return JSONResponse(driver_status())
 
 
-async def logi_driver_install(request: Request):
-    from module.tools.logi_driver import LogiDriverError, driver_status, install_driver, uninstall_driver
+async def virtual_mouse_driver_update(request: Request):
+    from module.tools.virtual_mouse_driver import (driver_status, install_driver,
+                                                   uninstall_driver, VirtualMouseDriverError)
     try:
         data = await request.json()
     except ValueError:
@@ -227,7 +228,7 @@ async def logi_driver_install(request: Request):
         return JSONResponse({'status': 'error', 'message': 'Expected action: install/uninstall.'}, status_code=400)
     try:
         await asyncio.to_thread(install_driver if action == 'install' else uninstall_driver)
-    except LogiDriverError as exc:
+    except VirtualMouseDriverError as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=400)
     return JSONResponse({'status': 'success', 'action': action, **driver_status()})
 

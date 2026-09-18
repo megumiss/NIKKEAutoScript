@@ -1,4 +1,4 @@
-"""LogiInput：G HUB 驱动级鼠标方案（PCClientInfo.ControlScheme == 'driver'）。
+"""VirtualMouseInput：虚拟鼠标驱动级鼠标方案（PCClientInfo.ControlScheme == 'driver'）。
 
 只替换 Input 的 8 个鼠标原语，其余（键盘、insert_swipe）全部继承。
 业务层 click_xy / appear_then_click / ensure_sroll / ui_ensure 零改动。
@@ -10,7 +10,7 @@ import threading
 import time
 
 from module.device.win.input import Input
-from module.device.win.logi.driver_mouse import (
+from module.device.win.virtual_mouse.driver_mouse import (
     BTN_LEFT,
     WHEEL_INTERVAL,
     shared_mouse,
@@ -47,7 +47,7 @@ def claim_scheme_mutex():
 
     幂等：本进程已认领则直接返回 True。这一点是必需的 —— Device.__init__ 在
     GameNotRunningError 时会重试构造（device.py:32-46），每次重试都会新建一个
-    LogiInput；若每次都去 CreateMutexW，同进程的第二次创建同样会得到
+    VirtualMouseInput；若每次都去 CreateMutexW，同进程的第二次创建同样会得到
     ERROR_ALREADY_EXISTS，会被误判成「另一个实例在占用」。
     """
     global _scheme_mutex
@@ -66,7 +66,7 @@ def claim_scheme_mutex():
         return True
 
 
-class LogiInput(Input):
+class VirtualMouseInput(Input):
     # Shape B（驱动闭环）是已验证路径，保持为默认值。
     # 'cursor'（Shape A：SetCursorPos 直定位）未验证，仅作为可选路径保留。
     MOVE_BACKEND = 'driver'
@@ -97,7 +97,7 @@ class LogiInput(Input):
             raise RequestHumanTakeover
         if not self.mouse_driver.open():
             logger.error(
-                'Control scheme driver requires Logitech G HUB installed and running, which '
+                'Control scheme driver requires the virtual mouse driver to be installed, which '
                 'provides the virtual HID mouse device (GUID 1abc05c0-...). '
                 'No interface answered IOCTL 0x2A2010.'
             )
@@ -111,10 +111,10 @@ class LogiInput(Input):
             self._failures = 0
             return True
         self._failures += 1
-        logger.error(f'Logitech driver {what} failed ({self._failures}/{FAILURE_LIMIT})')
+        logger.error(f'Virtual mouse driver {what} failed ({self._failures}/{FAILURE_LIMIT})')
         if self._failures >= FAILURE_LIMIT:
             logger.critical(
-                'Logitech driver channel is no longer usable. '
+                'Virtual mouse driver channel is no longer usable. '
                 'Stop instead of silently falling back to SendInput.'
             )
             raise RequestHumanTakeover
@@ -132,7 +132,7 @@ class LogiInput(Input):
         with self._lock:
             if not self._checked(self._move_to(x, y), f'move ({int(x)}, {int(y)})'):
                 return
-            logger.debug(f'Logitech mouse move ({int(x)}, {int(y)})')
+            logger.debug(f'Virtual mouse move ({int(x)}, {int(y)})')
 
     # ------------------------------------------------------------------
     # 点击 / 长按
@@ -158,7 +158,7 @@ class LogiInput(Input):
             # 一次完整操作成功后才清零，避免定位成功掩盖连续按键失败。
             if not self._press_hold_release(CLICK_HOLD):
                 return
-            logger.debug(f'Logitech click ({int(x)}, {int(y)})')
+            logger.debug(f'Virtual mouse click ({int(x)}, {int(y)})')
 
     def press_mouse_click(self, x, y, wait_time=0.2):
         with self._lock:
@@ -167,7 +167,7 @@ class LogiInput(Input):
                 return
             if not self._press_hold_release(wait_time):
                 return
-            logger.debug(f'Logitech press {wait_time}s ({int(x)}, {int(y)})')
+            logger.debug(f'Virtual mouse press {wait_time}s ({int(x)}, {int(y)})')
 
     def mouse_down(self, x, y):
         with self._lock:
@@ -202,7 +202,7 @@ class LogiInput(Input):
                 f'wheel {direction} x {count}',
             ):
                 return
-            logger.debug(f'Logitech wheel {count * int(direction)} 格')
+            logger.debug(f'Virtual mouse wheel {count * int(direction)} 格')
 
     # ------------------------------------------------------------------
     # 拖拽
@@ -234,4 +234,4 @@ class LogiInput(Input):
             if not self._checked(ok, f'drag ({x1}, {y1}) -> ({x2}, {y2})'):
                 return
             time.sleep(DRAG_SETTLE_DELAY)
-        logger.debug(f'Logitech drag ({x1}, {y1}) -> ({x2}, {y2}), {duration:.2f}s / {steps} 段')
+        logger.debug(f'Virtual mouse drag ({x1}, {y1}) -> ({x2}, {y2}), {duration:.2f}s / {steps} 段')

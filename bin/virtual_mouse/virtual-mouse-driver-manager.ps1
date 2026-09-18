@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Install or uninstall the bundled Logitech G HUB virtual HID driver (driver_hid_virtual).
+Install or uninstall the bundled virtual mouse HID driver (driver_hid_virtual).
 
 .DESCRIPTION
 - The caller is expected to already be elevated: NKAS runs as administrator and
@@ -8,13 +8,14 @@ Install or uninstall the bundled Logitech G HUB virtual HID driver (driver_hid_v
   itself (no UAC prompt, no re-launch).
 - install: copies the bundled depot into
   %ProgramData%\LGHUB\depots\<DepotId>\driver_hid_virtual and then runs
-  virtual_driver_manager.exe --install from that directory.
+  virtual_driver_manager.exe --install from that directory. The depot path is
+  fixed by the driver package layout, not a preference.
 - uninstall: runs virtual_driver_manager.exe --uninstall, preferring the copy
   inside the installed directory and falling back to the bundled one.
 - With -Json, machine-readable JSON lines are printed for the NKAS backend.
 
 .EXAMPLE
-powershell.exe -ExecutionPolicy Bypass -File .\logi-driver-manager.ps1 -Action install -Json -Silent
+powershell.exe -ExecutionPolicy Bypass -File .\virtual-mouse-driver-manager.ps1 -Action install -Json -Silent
 #>
 [CmdletBinding()]
 param(
@@ -76,7 +77,7 @@ try {
     if ($proc.ExitCode -ne 0) {
         throw "virtual_driver_manager.exe $argument exited with code $($proc.ExitCode)"
     }
-    $message = if ($Action -eq 'install') { 'Logitech virtual HID driver installed.' } else { 'Logitech virtual HID driver uninstalled.' }
+    $message = if ($Action -eq 'install') { 'Virtual mouse driver installed.' } else { 'Virtual mouse driver uninstalled.' }
     Write-Record @{ status = 'success'; action = $Action; message = $message }
     exit 0
 } catch {

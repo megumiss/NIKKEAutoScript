@@ -8,8 +8,8 @@ from module.device.win.input import Input
 from module.device.win.ok_interaction.hwnd_window import HwndWindowAdapter
 from module.device.win.ok_interaction.input import PostMessageInput
 from module.device.win.ok_interaction.post_message import PostMessageInteraction
-from module.device.win.logi.driver_mouse import BTN_LEFT, LogiMouse, LogiMouseDriver, make_report
-from module.device.win.logi.input import FAILURE_LIMIT, LogiInput
+from module.device.win.virtual_mouse.driver_mouse import BTN_LEFT, VirtualMouse, VirtualMouseDevice, make_report
+from module.device.win.virtual_mouse.input import FAILURE_LIMIT, VirtualMouseInput
 from module.exception import RequestHumanTakeover
 
 
@@ -345,17 +345,17 @@ class BackgroundControlTests(unittest.TestCase):
 class DriverSchemeTests(unittest.TestCase):
     def _handler(self, driver=None):
         with (
-            patch.object(LogiInput, '_preflight', return_value=None),
+            patch.object(VirtualMouseInput, '_preflight', return_value=None),
             patch.object(Input, '__init__', return_value=None),
         ):
-            handler = LogiInput(config_name='nkas')
+            handler = VirtualMouseInput(config_name='nkas')
         handler.mouse_driver = driver or Mock()
         return handler
 
     def test_automation_selects_logi_input_for_driver_scheme(self):
         automation = Automation.__new__(Automation)
         automation.config = SimpleNamespace(PCClientInfo_ControlScheme='driver', config_name='nkas')
-        with patch('module.device.win.logi.input.LogiInput') as logi:
+        with patch('module.device.win.virtual_mouse.input.VirtualMouseInput') as logi:
             automation._init_input()
         logi.assert_called_once_with(config_name='nkas')
 
@@ -374,29 +374,29 @@ class DriverSchemeTests(unittest.TestCase):
 
     def test_preflight_stops_when_device_is_missing(self):
         with (
-            patch('module.device.win.logi.input.claim_scheme_mutex', return_value=True),
-            patch.object(LogiMouseDriver, 'open', return_value=False),
+            patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=True),
+            patch.object(VirtualMouseDevice, 'open', return_value=False),
             patch.object(Input, '__init__', return_value=None),
-            patch('module.device.win.logi.input.logger.error'),
+            patch('module.device.win.virtual_mouse.input.logger.error'),
         ):
             with self.assertRaises(RequestHumanTakeover):
-                LogiInput(config_name='nkas')
+                VirtualMouseInput(config_name='nkas')
 
     def test_preflight_stops_when_another_instance_holds_the_scheme(self):
         with (
-            patch('module.device.win.logi.input.claim_scheme_mutex', return_value=False),
-            patch.object(LogiMouseDriver, 'open', return_value=True) as opened,
+            patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=False),
+            patch.object(VirtualMouseDevice, 'open', return_value=True) as opened,
             patch.object(Input, '__init__', return_value=None),
-            patch('module.device.win.logi.input.logger.error'),
+            patch('module.device.win.virtual_mouse.input.logger.error'),
         ):
             with self.assertRaises(RequestHumanTakeover):
-                LogiInput(config_name='nkas')
+                VirtualMouseInput(config_name='nkas')
         opened.assert_not_called()
 
     def test_mouse_click_moves_then_presses_then_releases(self):
         driver = Mock()
         handler = self._handler(driver)
-        with patch('module.device.win.logi.input.time.sleep'):
+        with patch('module.device.win.virtual_mouse.input.time.sleep'):
             handler.mouse_click(120, 340)
         self.assertEqual(
             driver.mock_calls,
@@ -414,7 +414,7 @@ class DriverSchemeTests(unittest.TestCase):
     def test_swipe_holds_left_button_on_every_waypoint(self):
         driver = Mock()
         handler = self._handler(driver)
-        with patch('module.device.win.logi.input.time.sleep'):
+        with patch('module.device.win.virtual_mouse.input.time.sleep'):
             handler.mouse_swipe((100, 100), (100, 350), speed=5)
         calls = driver.move_to.call_args_list
         self.assertEqual(calls[0], call(100, 100, buttons=0))
@@ -428,8 +428,8 @@ class DriverSchemeTests(unittest.TestCase):
         driver.move_to.return_value = False
         handler = self._handler(driver)
         with (
-            patch('module.device.win.logi.input.logger.error'),
-            patch('module.device.win.logi.input.logger.critical'),
+            patch('module.device.win.virtual_mouse.input.logger.error'),
+            patch('module.device.win.virtual_mouse.input.logger.critical'),
         ):
             with self.assertRaises(RequestHumanTakeover):
                 for _ in range(FAILURE_LIMIT):
@@ -446,7 +446,7 @@ class DriverSchemeTests(unittest.TestCase):
                 driver = Mock()
                 driver.move_to.return_value = False
                 handler = self._handler(driver)
-                with patch('module.device.win.logi.input.time.sleep'):
+                with patch('module.device.win.virtual_mouse.input.time.sleep'):
                     getattr(handler, method)(120, 340)
                 driver.press.assert_not_called()
                 self.assertEqual(handler._failures, 1)
@@ -457,7 +457,7 @@ class DriverSchemeTests(unittest.TestCase):
                 driver = Mock()
                 getattr(driver, failure).return_value = False
                 handler = self._handler(driver)
-                with patch('module.device.win.logi.input.time.sleep'):
+                with patch('module.device.win.virtual_mouse.input.time.sleep'):
                     with self.assertRaises(RequestHumanTakeover):
                         for _ in range(FAILURE_LIMIT):
                             handler.mouse_click(120, 340)
@@ -465,7 +465,7 @@ class DriverSchemeTests(unittest.TestCase):
     def test_interrupted_hold_still_releases_left_button(self):
         driver = Mock()
         handler = self._handler(driver)
-        with patch('module.device.win.logi.input.time.sleep', side_effect=KeyboardInterrupt):
+        with patch('module.device.win.virtual_mouse.input.time.sleep', side_effect=KeyboardInterrupt):
             with self.assertRaises(KeyboardInterrupt):
                 handler.press_mouse()
         driver.release.assert_called_once_with()
@@ -476,7 +476,7 @@ class DriverSchemeTests(unittest.TestCase):
                 driver = Mock()
                 driver.move_to.side_effect = [True] * successful_moves + [False] * 40
                 handler = self._handler(driver)
-                with patch('module.device.win.logi.input.time.sleep'):
+                with patch('module.device.win.virtual_mouse.input.time.sleep'):
                     handler.mouse_swipe((100, 100), (100, 350), speed=5)
                 self.assertEqual(driver.move_to.call_count, successful_moves + 1)
                 driver.release.assert_called_once_with()
@@ -487,12 +487,12 @@ class DriverSchemeTests(unittest.TestCase):
             with self.subTest(method=method):
                 handler = self._handler()
                 handler._failures = FAILURE_LIMIT - 1
-                with patch('module.device.win.logi.input.time.sleep'):
+                with patch('module.device.win.virtual_mouse.input.time.sleep'):
                     getattr(handler, method)(*args)
                 self.assertEqual(handler._failures, 0)
 
     def test_driver_reopens_once_and_resends_the_same_report(self):
-        driver = LogiMouseDriver()
+        driver = VirtualMouseDevice()
         driver._handle = 42
         with (
             patch.object(driver, '_ioctl', side_effect=[1, 0]) as ioctl,
@@ -506,7 +506,7 @@ class DriverSchemeTests(unittest.TestCase):
         self.assertEqual(ioctl.call_args_list[0], ioctl.call_args_list[1])
 
     def test_driver_stops_after_reopen_failure(self):
-        driver = LogiMouseDriver()
+        driver = VirtualMouseDevice()
         driver._handle = 42
         with (
             patch.object(driver, '_ioctl', return_value=1) as ioctl,
@@ -526,10 +526,10 @@ class DriverSchemeTests(unittest.TestCase):
             return True
 
         driver.send.side_effect = accelerated_move
-        mouse = LogiMouse(driver)
+        mouse = VirtualMouse(driver)
         with (
             patch.object(mouse, 'cursor', side_effect=lambda: tuple(position)),
-            patch('module.device.win.logi.driver_mouse.time.sleep'),
+            patch('module.device.win.virtual_mouse.driver_mouse.time.sleep'),
         ):
             self.assertTrue(mouse.move_to(165, 145, buttons=BTN_LEFT))
         self.assertLessEqual(abs(position[0] - 165), 2)
@@ -539,15 +539,15 @@ class DriverSchemeTests(unittest.TestCase):
     def test_closed_loop_stops_when_device_rejects_movement(self):
         driver = Mock()
         driver.send.return_value = False
-        mouse = LogiMouse(driver)
+        mouse = VirtualMouse(driver)
         with patch.object(mouse, 'cursor', return_value=(100, 100)):
             self.assertFalse(mouse.move_to(200, 200))
         driver.send.assert_called_once()
 
     def test_wheel_emits_one_signed_report_per_notch(self):
         driver = Mock()
-        mouse = LogiMouse(driver)
-        with patch('module.device.win.logi.driver_mouse.time.sleep'):
+        mouse = VirtualMouse(driver)
+        with patch('module.device.win.virtual_mouse.driver_mouse.time.sleep'):
             self.assertTrue(mouse.wheel(-3))
             self.assertTrue(mouse.wheel(2))
             self.assertTrue(mouse.wheel(0))

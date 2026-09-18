@@ -102,7 +102,7 @@ class Automation:
         按 PCClientInfo.ControlScheme 选择控制链路：
         - pyautogui：现有方案（Input，全局物理鼠标）
         - postmessage：窗口消息方案（PostMessageInput）
-        - driver：G HUB 虚拟 HID 驱动方案（LogiInput，需 G HUB 运行中）
+        - driver：虚拟鼠标驱动方案（VirtualMouseInput，需已安装虚拟鼠标驱动）
         """
         scheme = str(self.config.PCClientInfo_ControlScheme)
         if scheme == 'postmessage':
@@ -115,9 +115,9 @@ class Automation:
             )
             logger.info('Control scheme: postmessage')
         elif scheme == 'driver':
-            from module.device.win.logi.input import LogiInput
+            from module.device.win.virtual_mouse.input import VirtualMouseInput
 
-            self.input_handler = LogiInput(config_name=self.config.config_name)
+            self.input_handler = VirtualMouseInput(config_name=self.config.config_name)
             logger.info('Control scheme: driver')
         else:
             self.input_handler = Input()
