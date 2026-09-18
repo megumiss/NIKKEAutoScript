@@ -1,17 +1,24 @@
 # 公告列表，新的公告追加到文件顶部
+# pinned: true 的公告在客户端列表顶部置顶显示，可同时置顶多条；组内仍按文件顺序（新的在前）
 - id: notice_20260918
   date: 2026-09-18
   title: 新增虚拟鼠标控制方式
   type: info
+  pinned: true
   content: |
     <b>PC 客户端新增 driver 控制方案，鼠标输入由虚拟鼠标驱动在驱动层发送</b>
-    仅支持前台运行，游戏窗口不在前台时无法使用。
+    游戏反作弊升级，原先的控制方式 pyautogui和postmessage 已被屏蔽
+    新增 driver 控制方案，仅支持前台运行，游戏窗口不在前台时无法使用。
 
     <b>使用方法</b>
     1. 安装驱动，以下任一方式即可：
     - 在「常用工具 → 虚拟鼠标驱动」中点击安装；
     - 安装最新版本的 <a href="https://www.logitechg.com/zh-cn/software/ghub" target="_blank">GHUB</a>。若已安装 GHUB，可在「常用工具 → 虚拟鼠标驱动」中确认状态是否为「已安装」。
     2. 进入 NKAS → PC客户端 → PC端设置，将「控制方案」改为 driver。
+
+    <b>常见问题</b>
+    1. 报错 Virtual mouse driver move，在常用工具中将虚拟鼠标驱动卸载，重启电脑，再重新安装
+    2. 报错 Driver installer ran but no device was detected afterwards，按照以下步骤修复：重启电脑，卸载虚拟鼠标驱动，再重启电脑，重新安装虚拟鼠标驱动；或者直接卸载 GHUB，重启后重新安装 GHUB
 
     <b style="color:var(--red)">注意事项</b>
     <span style="color:var(--red)">此方案未经过广泛测试，仍然可能会被反作弊检测、警告、封禁。</span>

@@ -136,6 +136,7 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .announcement-item.warning { border-left:3px solid var(--yellow); }
 .announcement-item.important { border-left:3px solid var(--red); }
 .announcement-date { display:block; margin-bottom:2px; color:var(--text-3); font-size:11.5px; }
+.announcement-pin { width:11px; height:11px; margin-right:4px; color:var(--accent); vertical-align:-1px; }
 .announcement-title { display:block; padding-right:14px; font-size:13.5px; }
 .announcement-dot { position:absolute; top:12px; right:12px; width:8px; height:8px; border-radius:50%; background:var(--red); }
 .announcement-content { margin-bottom:0; }

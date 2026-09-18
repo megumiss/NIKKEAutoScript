@@ -40,7 +40,7 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '知道了': { 'en-US': 'Got it', 'ja-JP': '了解' }, '系统通知': { 'en-US': 'System notice', 'ja-JP': 'システム通知' },
   '管理员权限不足': { 'en-US': 'Administrator privileges required', 'ja-JP': '管理者権限が必要です' },
   'PC 客户端需要脚本以管理员权限运行。请退出程序，右键启动程序或快捷方式，在「属性 → 兼容性」中勾选「以管理员身份运行此程序」，然后重新启动。': { 'en-US': 'The PC client requires the script to run with administrator privileges. Exit the program, right-click the launcher or shortcut, tick "Run this program as an administrator" under Properties → Compatibility, then start it again.', 'ja-JP': 'PCクライアントの利用には管理者権限が必要です。プログラムを終了し、起動プログラムまたはショートカットを右クリックして、「プロパティ → 互換性」で「管理者としてこのプログラムを実行する」にチェックを入れてから再起動してください。' },
-  '公告中心': { 'en-US': 'Announcements', 'ja-JP': 'お知らせ' }, '暂无公告': { 'en-US': 'No announcements', 'ja-JP': 'お知らせはありません' }, '未读': { 'en-US': 'Unread', 'ja-JP': '未読' }, '我知道了': { 'en-US': 'Got it', 'ja-JP': 'わかりました' },
+  '公告中心': { 'en-US': 'Announcements', 'ja-JP': 'お知らせ' }, '暂无公告': { 'en-US': 'No announcements', 'ja-JP': 'お知らせはありません' }, '未读': { 'en-US': 'Unread', 'ja-JP': '未読' }, '置顶': { 'en-US': 'Pinned', 'ja-JP': 'ピン留め' }, '我知道了': { 'en-US': 'Got it', 'ja-JP': 'わかりました' },
   '有新的系统通知。': { 'en-US': 'You have a new system notice.', 'ja-JP': '新しいシステム通知があります。' },
   '自动更新失败': { 'en-US': 'Auto-update failed', 'ja-JP': '自動更新に失敗しました' },
   '启动时的自动更新未成功，已跳过更新并继续使用当前版本。': { 'en-US': 'Auto-update at startup did not succeed; skipped and continuing with the current version.', 'ja-JP': '起動時の自動更新に失敗しました。更新をスキップし、現在のバージョンで続行します。' },

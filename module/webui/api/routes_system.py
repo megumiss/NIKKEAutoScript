@@ -74,7 +74,11 @@ def _read_notice_ids() -> set:
 def _load_announcements():
     """Announcements ship with the repo in config/notices.yaml. Startup
     update hard-resets tracked files to upstream, and this is read from disk
-    on every request, so the content never goes stale."""
+    on every request, so the content never goes stale.
+
+    Rows carrying `pinned: true` are moved to the top of the list (any number
+    of rows may set it); within each group the file order is kept, newest
+    first, because new notices are appended at the top of the file."""
     file = Path('./config/notices.yaml')
     if not file.is_file():
         return []
@@ -100,8 +104,10 @@ def _load_announcements():
             'title': str(row.get('title') or ''),
             'type': notice_type if notice_type in ANNOUNCEMENT_TYPES else 'info',
             'content': str(row.get('content') or ''),
+            'pinned': bool(row.get('pinned')),
             'read': notice_id in read,
         })
+    result.sort(key=lambda item: not item['pinned'])
     return result
 
 
