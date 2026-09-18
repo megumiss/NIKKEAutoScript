@@ -131,6 +131,17 @@ class ManualConfig:
             # },
         },
         {
+            "event_id": "event_20260903",
+            "event_name": "GREAT VILLAIN UNION",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "mini_game_play": True,
+            "extend": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
+        },
+        {
             "event_id": "event_20260813",
             "event_name": "PERSONA ON FRONTLINE",
             # 大型活动
@@ -150,17 +161,6 @@ class ManualConfig:
             #     "vertical_direction": "bottom_to_top",
             #     "horizontal_direction": "right_to_left",
             # },
-        },
-        {
-            "event_id": "event_20260903",
-            "event_name": "GREAT VILLAIN UNION",
-            # 小型活动
-            "event_type": 2,
-            "mini_game": False,
-            "mini_game_play": True,
-            "extend": False,
-            "story_part": "Story_1",  # Story_1, Story_2
-            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20260723",
