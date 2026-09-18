@@ -202,12 +202,57 @@ async function startClone() {
   } catch (exception: any) { toast.error = exception.message }
 }
 
-onMounted(() => { loadHosts(); loadShortcuts(); loadCloneInfo() })
+// ---- 罗技驱动 ----
+const driverSupported = ref(true)
+const driverBundled = ref(true)
+const driverInstalled = ref(false)
+const driverDevice = ref('')
+const driverVersion = ref('')
+const driverBusy = ref(false)
+// 当前正在执行的动作，按钮文案据此显示「安装中…」/「卸载中…」
+const driverAction = ref<'install' | 'uninstall' | ''>('')
+
+async function loadDriver() {
+  try {
+    const data = await api.get('/api/tools/logi_driver')
+    driverSupported.value = Boolean(data.supported)
+    driverBundled.value = Boolean(data.bundled)
+    driverInstalled.value = Boolean(data.installed)
+    driverDevice.value = data.device || ''
+    driverVersion.value = data.version || ''
+  } catch (exception: any) { toast.error = exception.message }
+}
+function manageDriver(action: 'install' | 'uninstall') {
+  const installing = action === 'install'
+  openConfirmModal(
+    installing
+      ? t('将把驱动文件复制到 C:\\ProgramData\\LGHUB 并安装罗技虚拟 HID 驱动，确定继续？')
+      : t('将移除系统中的罗技虚拟 HID 驱动，之后 driver 控制方案的实例将无法启动，确定继续？'),
+    async () => {
+      driverBusy.value = true
+      driverAction.value = action
+      try {
+        const data = await api.post('/api/tools/logi_driver', { action })
+        driverInstalled.value = Boolean(data.installed)
+        driverDevice.value = data.device || ''
+        // 以探测结果为准：安装器自报的成败不作数，只看设备是否真的在/不在
+        if (installing ? driverInstalled.value : !driverInstalled.value) {
+          toast.notify(installing ? t('驱动安装完成') : t('驱动已卸载'))
+        } else {
+          toast.notify(installing ? t('安装命令已执行，但未探测到驱动设备，请重试') : t('卸载命令已执行，但仍探测到驱动设备，请重试'), 'error', 5000)
+        }
+      } catch (exception: any) { toast.error = exception.message } finally { driverBusy.value = false; driverAction.value = '' }
+    },
+  )
+}
+
+onMounted(() => { loadHosts(); loadShortcuts(); loadCloneInfo(); loadDriver() })
 onBeforeUnmount(stopClonePolling)
 watch(toolsTab, tab => {
   if (tab === 'hosts') loadHosts()
   if (tab === 'shortcuts') loadShortcuts()
   if (tab === 'clone') loadCloneInfo()
+  if (tab === 'driver') loadDriver()
 })
 </script>
 
@@ -221,6 +266,7 @@ watch(toolsTab, tab => {
       <button class="tools-tab" :class="{ active: toolsTab === 'hosts' }" @click="router.push('/tools/hosts')"><AppIcon name="globe" :size="16" /> {{ t('Hosts 修改') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'shortcuts' }" @click="router.push('/tools/shortcuts')"><AppIcon name="gear" :size="16" /> {{ t('快捷键设置') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'clone' }" @click="router.push('/tools/clone')"><AppIcon name="gamepad" :size="16" /> {{ t('游戏多开') }}</button>
+      <button class="tools-tab" :class="{ active: toolsTab === 'driver' }" @click="router.push('/tools/driver')"><AppIcon name="layers" :size="16" /> {{ t('罗技驱动') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'console' }" @click="router.push('/tools/console')"><AppIcon name="terminal-square" :size="16" /> {{ t('控制台') }}</button>
     </div>
     <article v-if="toolsTab === 'hosts'" class="card group-card">
@@ -304,6 +350,30 @@ watch(toolsTab, tab => {
         </div>
         <div class="hosts-actions">
           <button class="btn primary" :disabled="cloneJob.running" @click="startClone"><AppIcon name="copy" :size="14" /> {{ cloneJob.running ? t('复制中…') : t('开始复制') }}</button>
+        </div>
+      </div>
+    </article>
+    <article v-else-if="toolsTab === 'driver'" class="card group-card">
+      <div class="group-head">
+        <h4>{{ t('罗技驱动') }}</h4>
+        <span class="hosts-status" :class="{ on: driverInstalled }">{{ driverInstalled ? t('已安装') : t('未安装') }}</span>
+      </div>
+      <div class="group-body hosts-body">
+        <p class="fhelp">{{ t('driver 控制方案依赖罗技 G HUB 虚拟 HID 驱动。安装会把驱动文件复制到 C:\\ProgramData\\LGHUB 并运行安装器。') }}</p>
+        <div v-if="!driverSupported" class="hosts-unsupported"><AppIcon name="alert-triangle" :size="14" /> {{ t('当前系统不支持安装罗技驱动') }}</div>
+        <div v-if="driverSupported && !driverBundled" class="hosts-unsupported"><AppIcon name="alert-triangle" :size="14" /> {{ t('未找到项目内置的驱动安装文件') }}</div>
+        <div class="clone-field">
+          <span class="hosts-region-label">{{ t('驱动版本') }}</span>
+          <code>{{ driverVersion || '—' }}</code>
+        </div>
+        <div v-if="driverDevice" class="clone-field">
+          <span class="hosts-region-label">{{ t('设备接口') }}</span>
+          <code>{{ driverDevice }}</code>
+        </div>
+        <div class="hosts-actions">
+          <button class="btn" :disabled="driverBusy" @click="loadDriver"><AppIcon name="refresh" :size="14" /> {{ t('刷新状态') }}</button>
+          <button class="btn danger" :disabled="driverBusy || !driverInstalled" @click="manageDriver('uninstall')"><AppIcon name="undo" :size="14" /> {{ driverBusy && driverAction === 'uninstall' ? t('卸载中…') : t('卸载驱动') }}</button>
+          <button class="btn primary" :disabled="driverBusy || !driverSupported || !driverBundled || driverInstalled" @click="manageDriver('install')"><AppIcon name="download" :size="14" /> {{ driverBusy && driverAction === 'install' ? t('安装中…') : (driverInstalled ? t('已安装') : t('安装驱动')) }}</button>
         </div>
       </div>
     </article>

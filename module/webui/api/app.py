@@ -75,6 +75,8 @@ def mount_api(app):
         Route('/api/tools/shortcuts', routes_tools.shortcuts_update, methods=['POST']),
         Route('/api/tools/game_clone', routes_tools.game_clone_info, methods=['GET']),
         Route('/api/tools/game_clone', routes_tools.game_clone_start, methods=['POST']),
+        Route('/api/tools/logi_driver', routes_tools.logi_driver_state, methods=['GET']),
+        Route('/api/tools/logi_driver', routes_tools.logi_driver_install, methods=['POST']),
         Route('/api/{name:str}/start', routes_instances.start, methods=['POST']),
         Route('/api/{name:str}/stop', routes_instances.stop, methods=['POST']),
         Route('/api/{name:str}/remark', routes_instances.remark, methods=['POST']),

@@ -1,0 +1,23 @@
+{
+  "installer": {
+    "extensions": [
+      {
+        "name": "virtual_hid",
+        "version": "2026.0.0.0",
+        "autoInstall": true,
+        "installer": {
+          "pipelineUri": "pipeline://driver_hid_virtual/virtual_driver_manager.exe",
+          "arguments": [
+            "--install"
+          ]
+        },
+        "uninstaller": {
+          "pipelineUri": "pipeline://driver_hid_virtual/virtual_driver_manager.exe",
+          "arguments": [
+            "--uninstall"
+          ]
+        }
+      }
+    ]
+  }
+}
