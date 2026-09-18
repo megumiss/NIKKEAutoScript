@@ -227,10 +227,14 @@ async def virtual_mouse_driver_update(request: Request):
     if action not in ('install', 'uninstall'):
         return JSONResponse({'status': 'error', 'message': 'Expected action: install/uninstall.'}, status_code=400)
     try:
-        await asyncio.to_thread(install_driver if action == 'install' else uninstall_driver)
+        result = await asyncio.to_thread(install_driver if action == 'install' else uninstall_driver)
     except VirtualMouseDriverError as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=400)
-    return JSONResponse({'status': 'success', 'action': action, **driver_status()})
+    payload = {'status': 'success', 'action': action, **driver_status()}
+    # 安装成功但驱动切换被推迟到重启时，把 reboot_required/提示透传给前端
+    if isinstance(result, dict):
+        payload.update(result)
+    return JSONResponse(payload)
 
 
 async def hosts_update(request: Request):

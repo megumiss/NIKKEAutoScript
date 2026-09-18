@@ -15,19 +15,7 @@ import time
 from ctypes import wintypes
 
 from module.logger import logger
-
-# 虚拟鼠标设备接口 GUID。另一套（df31f106-...，5 字节报告）不支持。
-VIRTUAL_MOUSE_INTERFACE_GUID = '{1abc05c0-c378-41b9-9cef-df1aba82b015}'
-DEVICE_INDEX_RANGE = range(10)
-
-
-def virtual_mouse_device_path(index):
-    """虚拟鼠标设备接口路径，index 取 0..9。
-
-    注意：不要写成 `模板.format(index=...)` —— GUID 自带 `{...}`，会被 str.format
-    当成替换字段而抛 KeyError。这里用 f-string，GUID 只在运行期代入。
-    """
-    return rf'\??\ROOT#SYSTEM#000{index}#{VIRTUAL_MOUSE_INTERFACE_GUID}'
+from module.tools.virtual_mouse_driver import enum_interface_paths
 
 IOCTL_SEND_MOUSE = 0x2A2010
 REPORT_SIZE = 7
@@ -224,11 +212,14 @@ class VirtualMouseDevice:
         return self._handle is not None
 
     def open(self):
-        """按 0000–0009 逐个尝试，用一次零报告确认 IOCTL 被接受。已打开则直接返回 True。"""
+        """枚举驱动注册的设备接口，用一次零报告确认 IOCTL 被接受。已打开则直接返回 True。
+
+        路径来自 SetupAPI 枚举（与 module/tools/virtual_mouse_driver 的发现逻辑同源），
+        不按 ROOT#SYSTEM#000N 猜序号。
+        """
         if self.opened:
             return True
-        for index in DEVICE_INDEX_RANGE:
-            path = virtual_mouse_device_path(index)
+        for path in enum_interface_paths():
             handle = _kernel32.CreateFileW(
                 path, GENERIC_READ_WRITE, FILE_SHARE_BOTH, None, OPEN_EXISTING, 0, None,
             )

@@ -237,7 +237,11 @@ function manageDriver(action: 'install' | 'uninstall') {
         driverDevice.value = data.device || ''
         // 以探测结果为准：安装器自报的成败不作数，只看设备是否真的在/不在
         if (installing ? driverInstalled.value : !driverInstalled.value) {
-          toast.notify(installing ? t('驱动安装完成') : t('驱动已卸载'))
+          if (installing && data.reboot_required) {
+            toast.notify(t('驱动已安装，但 Windows 要重启后才完成驱动切换，请重启系统使新驱动生效'), 'ok', 8000)
+          } else {
+            toast.notify(installing ? t('驱动安装完成') : t('驱动已卸载'))
+          }
         } else {
           toast.notify(installing ? t('安装命令已执行，但未探测到驱动设备，请重试') : t('卸载命令已执行，但仍探测到驱动设备，请重试'), 'error', 5000)
         }

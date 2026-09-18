@@ -184,6 +184,7 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '安装驱动': { 'en-US': 'Install driver', 'ja-JP': 'ドライバーをインストール' }, '安装中…': { 'en-US': 'Installing…', 'ja-JP': 'インストール中…' },
   '将把驱动文件复制到系统目录并安装虚拟鼠标驱动，确定继续？': { 'en-US': 'This copies the driver files to a system directory and installs the virtual mouse driver. Continue?', 'ja-JP': 'ドライバーファイルをシステムフォルダにコピーし、仮想マウスドライバーをインストールします。続行しますか？' },
   '驱动安装完成': { 'en-US': 'Driver installed', 'ja-JP': 'ドライバーのインストールが完了しました' },
+  '驱动已安装，但 Windows 要重启后才完成驱动切换，请重启系统使新驱动生效': { 'en-US': 'Driver installed, but Windows finishes swapping the driver only after a reboot. Restart the system for the new driver to take effect.', 'ja-JP': 'ドライバーをインストールしましたが、切り替えは Windows 再起動後に完了します。新しいドライバーを有効にするには再起動してください。' },
   '安装命令已执行，但未探测到驱动设备，请重试': { 'en-US': 'Installer ran but no driver device was detected. Please retry.', 'ja-JP': 'インストーラーは実行されましたが、ドライバーデバイスが検出されません。再試行してください。' },
   '卸载驱动': { 'en-US': 'Uninstall driver', 'ja-JP': 'ドライバーをアンインストール' }, '卸载中…': { 'en-US': 'Uninstalling…', 'ja-JP': 'アンインストール中…' },
   '将移除系统中的虚拟鼠标驱动，之后 driver 控制方案的实例将无法启动，确定继续？': { 'en-US': 'This removes the virtual mouse driver from the system; instances using the "driver" control scheme will no longer start. Continue?', 'ja-JP': 'システムから仮想マウスドライバーを削除します。driver 制御方式のインスタンスは起動できなくなります。続行しますか？' },
