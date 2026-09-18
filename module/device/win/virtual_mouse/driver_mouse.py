@@ -228,7 +228,7 @@ class VirtualMouseDevice:
         if self.opened:
             return True
         for index in DEVICE_INDEX_RANGE:
-            path = g_hub_device_path(index)
+            path = virtual_mouse_device_path(index)
             handle = _kernel32.CreateFileW(
                 path, GENERIC_READ_WRITE, FILE_SHARE_BOTH, None, OPEN_EXISTING, 0, None,
             )
