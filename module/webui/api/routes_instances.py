@@ -49,6 +49,20 @@ def _pc_client_requires_admin(name):
     return platform == 'win'
 
 
+def _driver_scheme_missing_driver(name):
+    """
+    driver 控制方案（NKAS.PCClientInfo.ControlScheme == 'driver'，仅 PC 客户端生效）
+    依赖虚拟鼠标驱动，未安装时启动后所有点击/滑动都会失败。
+    """
+    config = read_file(filepath_config(name))
+    if deep_get(config, keys='NKAS.Client.Platform', default='adb') != 'win':
+        return False
+    if deep_get(config, keys='NKAS.PCClientInfo.ControlScheme', default='pyautogui') != 'driver':
+        return False
+    from module.tools.virtual_mouse_driver import probe_device
+    return probe_device() is None
+
+
 # Lives outside ./config because nkas_instance() treats every *.json there
 # as an instance.  Per-instance metadata lives in a single file keyed by
 # instance name, each entry carrying its display order and remark:
@@ -312,6 +326,13 @@ async def start(request: Request):
                 'message': 'PC client requires NKAS to run as administrator. '
                            'Restart NKAS with "Run as administrator".',
             }, status_code=403)
+        if _driver_scheme_missing_driver(name):
+            logger.warning(f'Instance "{name}" start blocked: control scheme "driver" requires the virtual mouse driver')
+            return JSONResponse({
+                'status': 'error', 'code': 'driver_not_installed',
+                'message': 'Control scheme "driver" requires the virtual mouse driver. '
+                           'Install it from Tools > Virtual mouse driver first.',
+            }, status_code=400)
         manager.start(func=get_config_mod(name), ev=updater.event)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
@@ -326,6 +347,13 @@ async def start(request: Request):
             results.append({
                 'instance': instance, 'status': 'error', 'code': 'admin_required',
                 'message': 'PC client requires administrator privileges.',
+            })
+            continue
+        if _driver_scheme_missing_driver(instance):
+            logger.warning(f'Instance "{instance}" start blocked: control scheme "driver" requires the virtual mouse driver')
+            results.append({
+                'instance': instance, 'status': 'error', 'code': 'driver_not_installed',
+                'message': 'Control scheme "driver" requires the virtual mouse driver.',
             })
             continue
         manager.start(func=get_config_mod(instance), ev=updater.event)

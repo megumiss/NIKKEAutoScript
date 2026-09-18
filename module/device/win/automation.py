@@ -102,8 +102,10 @@ class Automation:
         按 PCClientInfo.ControlScheme 选择控制链路：
         - pyautogui：现有方案（Input，全局物理鼠标）
         - postmessage：窗口消息方案（PostMessageInput）
+        - driver：虚拟鼠标驱动方案（VirtualMouseInput，需已安装虚拟鼠标驱动）
         """
-        if str(self.config.PCClientInfo_ControlScheme) == 'postmessage':
+        scheme = str(self.config.PCClientInfo_ControlScheme)
+        if scheme == 'postmessage':
             from module.device.win.ok_interaction.input import PostMessageInput
 
             self.input_handler = PostMessageInput(
@@ -112,6 +114,11 @@ class Automation:
                 foreground_switcher=self.set_foreground_window_with_retry,
             )
             logger.info('Control scheme: postmessage')
+        elif scheme == 'driver':
+            from module.device.win.virtual_mouse.input import VirtualMouseInput
+
+            self.input_handler = VirtualMouseInput(config_name=self.config.config_name)
+            logger.info('Control scheme: driver')
         else:
             self.input_handler = Input()
         self.mouse_click = self.input_handler.mouse_click

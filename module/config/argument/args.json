@@ -308,7 +308,8 @@
         "value": "pyautogui",
         "option": [
           "pyautogui",
-          "postmessage"
+          "postmessage",
+          "driver"
         ]
       }
     },

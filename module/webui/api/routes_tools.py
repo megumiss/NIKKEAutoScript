@@ -211,6 +211,28 @@ async def game_clone_start(request: Request):
     return JSONResponse({'status': 'success', 'job': clone_status()})
 
 
+async def virtual_mouse_driver_state(_: Request):
+    from module.tools.virtual_mouse_driver import driver_status
+    return JSONResponse(driver_status())
+
+
+async def virtual_mouse_driver_update(request: Request):
+    from module.tools.virtual_mouse_driver import (driver_status, install_driver,
+                                                   uninstall_driver, VirtualMouseDriverError)
+    try:
+        data = await request.json()
+    except ValueError:
+        data = {}
+    action = data.get('action', 'install')
+    if action not in ('install', 'uninstall'):
+        return JSONResponse({'status': 'error', 'message': 'Expected action: install/uninstall.'}, status_code=400)
+    try:
+        await asyncio.to_thread(install_driver if action == 'install' else uninstall_driver)
+    except VirtualMouseDriverError as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=400)
+    return JSONResponse({'status': 'success', 'action': action, **driver_status()})
+
+
 async def hosts_update(request: Request):
     try:
         data = await request.json()

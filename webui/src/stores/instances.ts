@@ -62,6 +62,10 @@ export const useInstancesStore = defineStore('instances', () => {
         useModalStore().openAlertModal(t('管理员权限不足'), t('PC 客户端需要脚本以管理员权限运行。请退出程序，右键启动程序或快捷方式，在「属性 → 兼容性」中勾选「以管理员身份运行此程序」，然后重新启动。'))
         return
       }
+      if (action === 'start' && exception?.code === 'driver_not_installed') {
+        useModalStore().openAlertModal(t('虚拟鼠标驱动未安装'), t('当前实例的控制方案为 driver，需要先安装虚拟鼠标驱动。请前往「常用工具 → 虚拟鼠标驱动」完成安装后再启动。'))
+        return
+      }
       toast.error = exception.message
     }
   }
