@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppComboSelect from '../components/AppComboSelect.vue'
 import AppIcon from '../components/AppIcon.vue'
@@ -27,7 +27,8 @@ const FieldInterception = defineAsyncComponent(() => import('../components/confi
 const { selectedPage, selectedTask } = useRouteInfo()
 const workspace = useWorkspaceStore()
 const { schemaReady, collapsed, activeGroup, taskSchema, importBusy, notifyTestBusy, physicalBusy, serialDevices, serialDevicesBusy, vddBusy } = storeToRefs(workspace)
-const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, startTool, physicalResolution, loadSerialDevices, refreshMonitors, vddSet } = workspace
+const { clientOptions, selectedClientName, clientPlaceholder } = storeToRefs(workspace)
+const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, startTool, physicalResolution, loadSerialDevices, refreshMonitors, vddSet, loadClientProfiles, applyClientProfile } = workspace
 const instancesStore = useInstancesStore()
 const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
@@ -52,6 +53,8 @@ function onViewScroll(event: Event) {
   activeGroup.value = current
 }
 function jumpToGroup(group: any) { activeGroup.value = group.key; document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+// 客户端列表只在 PC 端设置里用到，按任务切换时刷新，避免每次实例加载都扫描 %APPDATA%。
+watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, { immediate: true })
 </script>
 
 <template>
@@ -86,6 +89,12 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                 <div class="field-control"><button class="btn" :disabled="bindBusy" @click="openBind"><AppIcon name="external" :size="14" /> {{ t('绑定到 Bot') }}</button></div>
               </div>
               <template v-for="field in group.fields" :key="field.key">
+                <div v-if="field.key.endsWith('.PCClientInfo.LauncherPath')" class="field">
+                  <div class="field-label"><div class="fname">{{ t('选择游戏客户端') }}</div><div class="fhelp">{{ t('列出本机检测到的可用游戏客户端，选择后会覆盖下方的启动器路径和游戏路径。') }}</div></div>
+                  <div class="field-control">
+                    <AppSelect :model-value="selectedClientName" :options="clientOptions" :placeholder="clientPlaceholder" :empty-text="t('未检测到可用客户端')" :disabled="field.display !== 'show'" @change="applyClientProfile" @open="loadClientProfiles"/>
+                  </div>
+                </div>
                 <div :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
                   <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp"><LinkifiedText :text="field.help" /></div></div>
                   <div class="field-control">
