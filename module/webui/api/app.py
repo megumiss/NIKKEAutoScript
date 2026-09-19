@@ -75,6 +75,8 @@ def mount_api(app):
         Route('/api/tools/shortcuts', routes_tools.shortcuts_update, methods=['POST']),
         Route('/api/tools/game_clone', routes_tools.game_clone_info, methods=['GET']),
         Route('/api/tools/game_clone', routes_tools.game_clone_start, methods=['POST']),
+        Route('/api/tools/game_clone/cancel', routes_tools.game_clone_cancel, methods=['POST']),
+        Route('/api/tools/game_clone/delete', routes_tools.game_clone_delete, methods=['POST']),
         Route('/api/tools/virtual_mouse_driver', routes_tools.virtual_mouse_driver_state, methods=['GET']),
         Route('/api/tools/virtual_mouse_driver', routes_tools.virtual_mouse_driver_update, methods=['POST']),
         Route('/api/{name:str}/start', routes_instances.start, methods=['POST']),

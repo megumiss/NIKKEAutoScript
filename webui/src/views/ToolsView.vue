@@ -19,6 +19,17 @@ function onPickError(message: string) { toast.error = message }
 
 interface HostsSection { name: string; lines: string[]; common: boolean; default_on: boolean }
 interface ShortcutDefinition { key: string; label: string }
+interface CloneClient {
+  name: string
+  region: 'intl' | 'hmt'
+  suffix: string
+  is_clone: boolean
+  install_path: string
+  launcher_path: string
+  game_path: string
+  status: 'ready' | 'missing' | 'incomplete' | 'invalid'
+  shared_with: string[]
+}
 
 const shortcutDefinitions: ShortcutDefinition[] = [
   { key: 'UPDATE', label: '源码更新' },
@@ -163,7 +174,7 @@ function revertHosts() {
 const cloneSource = ref('')
 const cloneTarget = ref('')
 const cloneSuffix = ref('')
-const cloneList = ref<string[]>([])
+const cloneClients = ref<CloneClient[]>([])
 const cloneJob = ref<any>({ running: false, step: '', total: 0, copied: 0, error: '', result: null })
 let cloneTimer: number | undefined
 
@@ -174,6 +185,17 @@ function formatSize(bytes: number) {
 }
 const cloneProgress = computed(() => cloneJob.value.total ? Math.min(100, Math.floor(cloneJob.value.copied / cloneJob.value.total * 100)) : 0)
 
+function cloneClientTitle(client: CloneClient) {
+  const region = client.region === 'hmt' ? t('港澳台客户端') : t('国际客户端')
+  return client.is_clone ? `${region} · ${t('副本')} ${client.suffix}` : `${region} · ${t('本体')}`
+}
+function cloneClientStatus(status: CloneClient['status']) {
+  if (status === 'ready') return t('可用')
+  if (status === 'missing') return t('安装目录不存在')
+  if (status === 'incomplete') return t('文件不完整')
+  return t('配置不可用')
+}
+
 function stopClonePolling() { if (cloneTimer) { clearInterval(cloneTimer); cloneTimer = undefined } }
 function startClonePolling() {
   stopClonePolling()
@@ -182,7 +204,7 @@ function startClonePolling() {
 async function loadCloneInfo() {
   try {
     const data = await api.get('/api/tools/game_clone')
-    cloneList.value = data.clones || []
+    cloneClients.value = Array.isArray(data.clients) ? data.clients : []
     if (!cloneSuffix.value) cloneSuffix.value = String(data.next_suffix || '')
     cloneJob.value = data.job || cloneJob.value
     if (cloneJob.value.running) startClonePolling()
@@ -200,6 +222,27 @@ async function startClone() {
     await api.post('/api/tools/game_clone', { source: cloneSource.value, target: cloneTarget.value, suffix: cloneSuffix.value })
     startClonePolling()
   } catch (exception: any) { toast.error = exception.message }
+}
+async function cancelClone() {
+  if (!cloneJob.value.running) return
+  try {
+    await api.post('/api/tools/game_clone/cancel', {})
+  } catch (exception: any) { toast.error = exception.message }
+}
+function deleteClone(client: CloneClient) {
+  if (!client.is_clone || cloneJob.value.running) return
+  const sharers = (client.shared_with || []).map(name => `${name}.exe`)
+  const shared = sharers.length > 0
+  const message = shared
+    ? `${t('安装目录')} ${client.install_path} ${t('同时被以下客户端使用')}: ${sharers.join('、')}。${t('将仅删除此副本的配置，安装目录会保留给其他客户端。')}${t('此操作不可恢复。')}`
+    : `${t('删除副本及其安装目录')}: ${client.install_path || client.name}？${t('此操作不可恢复。')}`
+  openConfirmModal(message, async () => {
+    try {
+      const data = await api.post('/api/tools/game_clone/delete', { name: client.name, mode: shared ? 'config' : 'full' })
+      cloneClients.value = Array.isArray(data.clients) ? data.clients : []
+      toast.notify(shared ? t('副本配置已删除，安装目录已保留') : t('副本已删除'), 'ok', 4000)
+    } catch (exception: any) { toast.error = exception.message }
+  })
 }
 
 // ---- 虚拟鼠标驱动 ----
@@ -321,10 +364,11 @@ watch(toolsTab, tab => {
         </div>
       </div>
     </article>
-    <article v-else-if="toolsTab === 'clone'" class="card group-card">
-      <div class="group-head"><h4>{{ t('游戏多开') }}</h4></div>
+    <template v-else-if="toolsTab === 'clone'">
+      <article class="card group-card">
+        <div class="group-head"><h4>{{ t('游戏多开') }}</h4></div>
       <div class="group-body hosts-body">
-        <p class="fhelp">{{ t('复制一份游戏安装目录，重命名新副本的启动器与游戏程序，并写入新副本的路径配置。复制前请关闭游戏和启动器。') }}</p>
+        <p class="fhelp">{{ t('复制一份游戏安装目录，重命名新副本的启动器，并写入新副本的路径配置。复制前请关闭游戏和启动器。') }}</p>
         <div class="clone-field">
           <span class="hosts-region-label">{{ t('游戏安装目录') }}</span>
           <input v-model="cloneSource" class="clone-input" spellcheck="false" :disabled="cloneJob.running">
@@ -339,10 +383,6 @@ watch(toolsTab, tab => {
           <span class="hosts-region-label">{{ t('副本编号') }}</span>
           <input v-model="cloneSuffix" class="clone-input clone-suffix" type="number" min="2" :disabled="cloneJob.running">
         </div>
-        <div v-if="cloneList.length" class="clone-existing">
-          <span class="hosts-region-label">{{ t('已有配置') }}</span>
-          <span v-for="name in cloneList" :key="name" class="clone-chip">{{ name }}</span>
-        </div>
         <div v-if="cloneJob.running" class="clone-progress">
           <div class="clone-progress-bar"><div class="clone-progress-fill" :style="{ width: `${cloneProgress}%` }"></div></div>
           <span class="clone-progress-text">{{ t(cloneJob.step || '准备') }} {{ formatSize(cloneJob.copied) }} / {{ formatSize(cloneJob.total) }} ({{ cloneProgress }}%)</span>
@@ -350,13 +390,43 @@ watch(toolsTab, tab => {
         <div v-if="cloneJob.error" class="hosts-unsupported"><AppIcon name="alert-triangle" :size="14" /> {{ cloneJob.error }}</div>
         <div v-if="cloneJob.result" class="clone-result">
           <div>{{ t('启动器') }}: {{ cloneJob.result.launcher }}</div>
-          <div>{{ t('游戏程序') }}: {{ cloneJob.result.game }}</div>
+          <div>{{ t('游戏路径') }}: {{ cloneJob.result.game }}</div>
         </div>
         <div class="hosts-actions">
-          <button class="btn primary" :disabled="cloneJob.running" @click="startClone"><AppIcon name="copy" :size="14" /> {{ cloneJob.running ? t('复制中…') : t('开始复制') }}</button>
+          <button v-if="!cloneJob.running" class="btn primary" @click="startClone"><AppIcon name="copy" :size="14" /> {{ t('开始复制') }}</button>
+          <button v-else class="btn danger" @click="cancelClone"><AppIcon name="x" :size="14" /> {{ t('停止复制') }}</button>
         </div>
       </div>
-    </article>
+      </article>
+      <article class="card group-card">
+        <div class="group-head clone-list-head">
+          <h4>{{ t('已检测客户端') }}</h4>
+          <span class="clone-count">{{ cloneClients.length }}</span>
+        </div>
+        <div class="group-body hosts-body">
+          <div v-if="cloneClients.length" class="clone-instance-list">
+            <div v-for="client in cloneClients" :key="client.name" class="clone-instance">
+              <div class="clone-instance-head">
+                <div class="clone-instance-title">
+                  <strong>{{ cloneClientTitle(client) }}</strong>
+                  <code>{{ client.name }}.exe</code>
+                </div>
+                <span class="clone-instance-status" :class="client.status">{{ cloneClientStatus(client.status) }}</span>
+              </div>
+              <div class="clone-instance-path"><span>{{ t('安装目录') }}</span><code>{{ client.install_path || '—' }}</code></div>
+              <div class="clone-instance-path"><span>{{ t('启动器路径') }}</span><code>{{ client.launcher_path || '—' }}</code></div>
+              <div class="clone-instance-path"><span>{{ t('游戏路径') }}</span><code>{{ client.game_path || '—' }}</code></div>
+              <div v-if="client.shared_with?.length" class="clone-instance-path"><span>{{ t('共用安装目录') }}</span><code>{{ client.shared_with.map(name => `${name}.exe`).join('、') }}</code></div>
+              <div class="clone-instance-actions">
+                <button v-if="client.is_clone" class="btn danger sm" :disabled="cloneJob.running" :title="t('删除副本')" @click="deleteClone(client)"><AppIcon name="trash" :size="13" /> {{ t('删除') }}</button>
+                <span v-else class="clone-protected">{{ t('本体不可删除') }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="clone-empty">{{ t('未检测到游戏客户端') }}</div>
+        </div>
+      </article>
+    </template>
     <article v-else-if="toolsTab === 'driver'" class="card group-card">
       <div class="group-head">
         <h4>{{ t('虚拟鼠标驱动') }}</h4>
