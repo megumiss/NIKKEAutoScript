@@ -27,9 +27,9 @@ param(
 
     [switch]$Json,
     [switch]$Silent,
-    # install 时跳过复制捆绑 depot：depot 已在 TargetDir（如重启后设备变隐藏的
-    # 自愈重装），直接运行其中的安装器即可。仅当两侧文件一致时才跳过；TargetDir
-    # 缺失或版本不同步（G HUB 自行更新过 / NKAS 升级了捆绑包）时仍会复制。
+    # Skip copying the bundled depot on install if target depot is already in
+    # place and identical (e.g. self-repair after reboot). Only skips when all files
+    # match; copies if TargetDir is missing or hashes differ.
     [switch]$SkipCopy
 )
 
@@ -40,7 +40,7 @@ $TargetDir = Join-Path $env:ProgramData "LGHUB\depots\$DepotId\driver_hid_virtua
 
 function Get-Sha256 {
     param([string]$Path)
-    # 用 .NET 而非 Get-FileHash：部分机器的 Microsoft.PowerShell.Utility 模块不可用
+    # Use .NET rather than Get-FileHash: Microsoft.PowerShell.Utility may be unavailable on some systems
     $sha = [System.Security.Cryptography.SHA256]::Create()
     try {
         $stream = [System.IO.File]::OpenRead($Path)
@@ -50,7 +50,7 @@ function Get-Sha256 {
 }
 
 function Test-DepotConsistent {
-    # 已就位的 depot 与捆绑 depot 逐文件比对哈希，全部一致才算同步
+    # Compare target and bundled depots file-by-file; all must match to be considered consistent
     foreach ($name in @('virtual_driver_manager.exe', 'manifest.json')) {
         $target = Join-Path $TargetDir $name
         if (-not (Test-Path $target)) { return $false }
