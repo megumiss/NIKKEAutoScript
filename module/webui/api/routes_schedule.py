@@ -39,7 +39,7 @@ def schedule_data(name):
             continue
         # SpecialArenaWatch 是固定间隔轮询，时间字段对它不生效：整行置灰只读
         locked = command in ManualConfig.SCHEDULE_LOCKED_TASKS
-        # Enable 被强制锁定的任务（type lock / display disabled，如 Reward/Restart/Notify）不允许开关
+        # Enable 被强制锁定的任务（type lock / display disabled，如 Restart）不允许开关
         enable_spec = deep_get(args, f'{command}.Scheduler.Enable', default={})
         enable_locked = enable_spec.get('type') == 'lock' or enable_spec.get('display') == 'disabled'
         tasks.append({

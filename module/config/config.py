@@ -214,16 +214,6 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
                 )
                 if isinstance(next_run, datetime) and next_run > limit:
                     deep_set(self.data, keys=f"{task}.Scheduler.NextRun", value=now)
-        for task in ["Reward"]:
-            if not self.is_task_enabled(task):
-                self.modified[f"{task}.Scheduler.Enable"] = True
-        # force_enable = list
-        #
-        # force_enable(
-        #     [
-        #         "Reward",
-        #     ]
-        # )
         # 当运行时间大于24小时之后时，设为现在运行
         limit_next_run(["Reward"], limit=now + timedelta(hours=24, seconds=-1))
         # limit_next_run(self.args.keys(), limit=now + timedelta(hours=24, seconds=-1))

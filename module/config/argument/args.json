@@ -521,7 +521,7 @@
   "Reward": {
     "Scheduler": {
       "Enable": {
-        "type": "lock",
+        "type": "checkbox",
         "value": true,
         "option": [
           true,
