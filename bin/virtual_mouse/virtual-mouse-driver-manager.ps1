@@ -9,7 +9,9 @@ Install or uninstall the bundled virtual mouse HID driver (driver_hid_virtual).
 - install: copies the bundled depot into
   %ProgramData%\LGHUB\depots\<DepotId>\driver_hid_virtual and then runs
   virtual_driver_manager.exe --install from that directory. The depot path is
-  fixed by the driver package layout, not a preference.
+  fixed by the driver package layout, not a preference. -SkipCopy reuses the
+  depot already in place (self-repair after a reboot hid the device), copying
+  only when the installed depot is missing or out of sync with the bundled one.
 - uninstall: runs virtual_driver_manager.exe --uninstall, preferring the copy
   inside the installed directory and falling back to the bundled one.
 - With -Json, machine-readable JSON lines are printed for the NKAS backend.
@@ -24,13 +26,38 @@ param(
     [string]$Action,
 
     [switch]$Json,
-    [switch]$Silent
+    [switch]$Silent,
+    # install 时跳过复制捆绑 depot：depot 已在 TargetDir（如重启后设备变隐藏的
+    # 自愈重装），直接运行其中的安装器即可。仅当两侧文件一致时才跳过；TargetDir
+    # 缺失或版本不同步（G HUB 自行更新过 / NKAS 升级了捆绑包）时仍会复制。
+    [switch]$SkipCopy
 )
 
 $ErrorActionPreference = 'Stop'
 $DepotId = '869589'
 $SourceDir = Join-Path $PSScriptRoot 'driver_hid_virtual'
 $TargetDir = Join-Path $env:ProgramData "LGHUB\depots\$DepotId\driver_hid_virtual"
+
+function Get-Sha256 {
+    param([string]$Path)
+    # 用 .NET 而非 Get-FileHash：部分机器的 Microsoft.PowerShell.Utility 模块不可用
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $stream = [System.IO.File]::OpenRead($Path)
+        try { return [BitConverter]::ToString($sha.ComputeHash($stream)) }
+        finally { $stream.Dispose() }
+    } finally { $sha.Dispose() }
+}
+
+function Test-DepotConsistent {
+    # 已就位的 depot 与捆绑 depot 逐文件比对哈希，全部一致才算同步
+    foreach ($name in @('virtual_driver_manager.exe', 'manifest.json')) {
+        $target = Join-Path $TargetDir $name
+        if (-not (Test-Path $target)) { return $false }
+        if ((Get-Sha256 (Join-Path $SourceDir $name)) -ne (Get-Sha256 $target)) { return $false }
+    }
+    return $true
+}
 
 function Write-Record {
     param([hashtable]$Record)
@@ -78,8 +105,10 @@ try {
             throw "Bundled driver installer not found: $bundled"
         }
         if ($Action -eq 'install') {
-            New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
-            Copy-Item -Path (Join-Path $SourceDir '*') -Destination $TargetDir -Force
+            if (-not $SkipCopy -or -not (Test-DepotConsistent)) {
+                New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
+                Copy-Item -Path (Join-Path $SourceDir '*') -Destination $TargetDir -Force
+            }
         }
         # Uninstall uses the copy inside the installed directory (its manifest lives
         # next to it), falling back to the bundled copy when that directory is gone.

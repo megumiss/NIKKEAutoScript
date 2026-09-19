@@ -11,6 +11,9 @@ from module.device.win.ok_interaction.post_message import PostMessageInteraction
 from module.device.win.virtual_mouse.driver_mouse import BTN_LEFT, VirtualMouse, VirtualMouseDevice, make_report
 from module.device.win.virtual_mouse.input import FAILURE_LIMIT, VirtualMouseInput
 from module.exception import RequestHumanTakeover
+from module.tools import virtual_mouse_driver
+
+_DEVICE_PATH = r'\\?\root#system#0002#{1abc05c0-c378-41b9-9cef-df1aba82b015}'
 
 
 def _client(window_name):
@@ -376,11 +379,69 @@ class DriverSchemeTests(unittest.TestCase):
         with (
             patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=True),
             patch.object(VirtualMouseDevice, 'open', return_value=False),
+            patch('module.device.win.virtual_mouse.input.driver_package_present', return_value=False),
+            patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=None),
             patch.object(Input, '__init__', return_value=None),
             patch('module.device.win.virtual_mouse.input.logger.error'),
         ):
             with self.assertRaises(RequestHumanTakeover):
                 VirtualMouseInput(config_name='nkas')
+
+    def test_preflight_repairs_hidden_device_and_retries_open(self):
+        with (
+            patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=True),
+            patch.object(VirtualMouseDevice, 'open', side_effect=[False, True]),
+            patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=True),
+            patch('module.device.win.virtual_mouse.input.driver_package_present', return_value=True),
+            patch('module.device.win.virtual_mouse.input.repair_driver', return_value=True) as repair,
+            patch.object(Input, '__init__', return_value=None),
+        ):
+            VirtualMouseInput(config_name='nkas')
+        repair.assert_called_once_with()
+
+    def test_preflight_repairs_when_hid_sub_device_is_phantom(self):
+        # 接口能打开但子设备是幽灵设备（代码 45）：只有补上子设备判据才会触发修复
+        with (
+            patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=True),
+            patch.object(VirtualMouseDevice, 'open', return_value=True),
+            patch('module.device.win.virtual_mouse.input.sub_device_present',
+                  side_effect=[False, True]) as sub_device,
+            patch('module.device.win.virtual_mouse.input.driver_package_present', return_value=True),
+            patch('module.device.win.virtual_mouse.input.repair_driver', return_value=True) as repair,
+            patch.object(Input, '__init__', return_value=None),
+        ):
+            VirtualMouseInput(config_name='nkas')
+        repair.assert_called_once_with()
+        self.assertEqual(sub_device.call_count, 2)
+
+    def test_preflight_stops_when_hid_sub_device_stays_phantom(self):
+        with (
+            patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=True),
+            patch.object(VirtualMouseDevice, 'open', return_value=True),
+            patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=False),
+            patch('module.device.win.virtual_mouse.input.driver_package_present', return_value=True),
+            patch('module.device.win.virtual_mouse.input.repair_driver', return_value=True),
+            patch.object(Input, '__init__', return_value=None),
+            patch('module.device.win.virtual_mouse.input.logger.error') as logged,
+        ):
+            with self.assertRaises(RequestHumanTakeover):
+                VirtualMouseInput(config_name='nkas')
+        self.assertIn('code 45', logged.call_args[0][0])
+
+    def test_preflight_stops_when_repair_fails(self):
+        for repaired in (False, True):
+            with self.subTest(repaired=repaired):
+                with (
+                    patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=True),
+                    patch.object(VirtualMouseDevice, 'open', return_value=False),
+                    patch('module.device.win.virtual_mouse.input.driver_package_present', return_value=repaired),
+                    patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=None),
+                    patch('module.device.win.virtual_mouse.input.repair_driver', return_value=False),
+                    patch.object(Input, '__init__', return_value=None),
+                    patch('module.device.win.virtual_mouse.input.logger.error'),
+                ):
+                    with self.assertRaises(RequestHumanTakeover):
+                        VirtualMouseInput(config_name='nkas')
 
     def test_preflight_stops_when_another_instance_holds_the_scheme(self):
         with (
@@ -552,3 +613,62 @@ class DriverSchemeTests(unittest.TestCase):
             self.assertTrue(mouse.wheel(2))
             self.assertTrue(mouse.wheel(0))
         self.assertEqual(driver.send.call_args_list, [call(wheel=-1)] * 3 + [call(wheel=1)] * 2)
+
+    # ------------------------------------------------------------------
+    # HID 子设备判据（幽灵设备 / Windows 代码 45）
+    # ------------------------------------------------------------------
+    def test_sub_device_present_true_when_a_present_hid_device_is_enumerated(self):
+        with patch.object(virtual_mouse_driver, '_device_instance_ids',
+                          return_value=['LGHUBDEVICE\\VID_046D&PID_C231']):
+            self.assertIs(virtual_mouse_driver.sub_device_present(), True)
+
+    def test_sub_device_present_false_when_all_records_are_phantom(self):
+        with patch.object(virtual_mouse_driver, '_device_instance_ids',
+                          side_effect=[[], ['LGHUBDEVICE\\VID_046D&PID_C231']]):
+            self.assertIs(virtual_mouse_driver.sub_device_present(), False)
+
+    def test_sub_device_present_none_when_the_enumerator_does_not_exist(self):
+        with patch.object(virtual_mouse_driver, '_device_instance_ids', return_value=[]):
+            self.assertIsNone(virtual_mouse_driver.sub_device_present())
+
+    def test_sub_device_present_queries_present_first_then_falls_back_to_all(self):
+        with patch.object(virtual_mouse_driver, '_device_instance_ids',
+                          side_effect=[[], ['ghost']]) as ids:
+            virtual_mouse_driver.sub_device_present()
+        self.assertEqual(ids.call_args_list, [
+            call(virtual_mouse_driver.VIRTUAL_HID_ENUMERATOR, present_only=True),
+            call(virtual_mouse_driver.VIRTUAL_HID_ENUMERATOR),
+        ])
+
+    def test_install_driver_rejects_a_phantom_hid_device(self):
+        # 接口能打开、安装器 exit 0，但报告投不出去：不能报成功
+        with (
+            patch.object(virtual_mouse_driver, '_run_manager', return_value=[{'status': 'success'}]),
+            patch.object(virtual_mouse_driver, 'enum_interface_paths', return_value=[_DEVICE_PATH]),
+            patch.object(virtual_mouse_driver, 'open_device', return_value=True),
+            patch.object(virtual_mouse_driver, 'sub_device_present', return_value=False),
+        ):
+            with self.assertRaises(virtual_mouse_driver.VirtualMouseDriverError) as raised:
+                virtual_mouse_driver.install_driver()
+        self.assertIn('code 45', str(raised.exception))
+
+    def test_install_driver_succeeds_when_the_sub_device_is_present(self):
+        with (
+            patch.object(virtual_mouse_driver, '_run_manager', return_value=[{'status': 'success'}]),
+            patch.object(virtual_mouse_driver, 'enum_interface_paths', return_value=[_DEVICE_PATH]),
+            patch.object(virtual_mouse_driver, 'open_device', return_value=True),
+            patch.object(virtual_mouse_driver, 'sub_device_present', return_value=True),
+            patch.object(virtual_mouse_driver.logger, 'info'),
+        ):
+            self.assertEqual(virtual_mouse_driver.install_driver(), {'reboot_required': False})
+
+    def test_install_driver_keeps_legacy_result_when_the_sub_device_is_unknown(self):
+        # 系统中没有该枚举器时判不出来（None），此时不做判据，行为与改动前一致
+        with (
+            patch.object(virtual_mouse_driver, '_run_manager', return_value=[{'status': 'success'}]),
+            patch.object(virtual_mouse_driver, 'enum_interface_paths', return_value=[_DEVICE_PATH]),
+            patch.object(virtual_mouse_driver, 'open_device', return_value=True),
+            patch.object(virtual_mouse_driver, 'sub_device_present', return_value=None),
+            patch.object(virtual_mouse_driver.logger, 'info'),
+        ):
+            self.assertEqual(virtual_mouse_driver.install_driver(), {'reboot_required': False})

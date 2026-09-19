@@ -59,8 +59,19 @@ def _driver_scheme_missing_driver(name):
         return False
     if deep_get(config, keys='NKAS.PCClientInfo.ControlScheme', default='pyautogui') != 'driver':
         return False
-    from module.tools.virtual_mouse_driver import probe_device
-    return probe_device() is None
+    from module.tools.virtual_mouse_driver import (
+        driver_package_present,
+        probe_device,
+        repair_driver,
+        sub_device_present,
+    )
+    # 接口能打开不等于通道可用：幽灵设备（代码 45）下同样能打开却没有输入
+    if probe_device() is not None and sub_device_present() is not False:
+        return False
+    # 重启后设备可能变隐藏（接口没注册或 HID 子设备变幽灵）：驱动包还在时重跑一次安装即可重建
+    if driver_package_present() and repair_driver():
+        return False
+    return True
 
 
 # Lives outside ./config because nkas_instance() treats every *.json there

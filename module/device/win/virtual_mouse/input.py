@@ -17,6 +17,7 @@ from module.device.win.virtual_mouse.driver_mouse import (
 )
 from module.exception import RequestHumanTakeover
 from module.logger import logger
+from module.tools.virtual_mouse_driver import driver_package_present, repair_driver, sub_device_present
 
 # 跨进程互斥体。Local\ 前缀：非管理员即可创建，作用域为当前登录会话。
 SCHEME_MUTEX_NAME = 'Local\\NKAS.DriverControlScheme'
@@ -84,7 +85,7 @@ class VirtualMouseInput(Input):
         self._preflight()
 
     # ------------------------------------------------------------------
-    # 启动预检：两道闸门，失败即显式中止
+    # 启动预检：两道闸门，失败即显式中止（设备缺失时先尝试修复）
     # ------------------------------------------------------------------
     def _preflight(self):
         if not claim_scheme_mutex():
@@ -95,13 +96,34 @@ class VirtualMouseInput(Input):
                 f'Switch the other instance back to postmessage.'
             )
             raise RequestHumanTakeover
-        if not self.mouse_driver.open():
+        if self._channel_ready():
+            return
+        # 重启后虚拟鼠标设备可能在设备管理器中变隐藏（G HUB 已知问题）：驱动包还在
+        # 但接口没注册或 HID 子设备未呈现，重跑一次安装即可重建，修复成功则重试
+        if driver_package_present() and repair_driver() and self._channel_ready():
+            return
+        if sub_device_present() is False:
+            logger.error(
+                'Control scheme driver: the virtual mouse interface exists but its HID '
+                'sub-device is not present (Windows problem code 45), so injected reports are '
+                'discarded and the cursor never moves. Restart the G HUB bus device '
+                '(pnputil /restart-device) or reboot Windows, then retry.'
+            )
+        else:
             logger.error(
                 'Control scheme driver requires the virtual mouse driver to be installed, which '
                 'provides the virtual HID mouse device (GUID 1abc05c0-...). '
                 'No interface answered IOCTL 0x2A2010.'
             )
-            raise RequestHumanTakeover
+        raise RequestHumanTakeover
+
+    def _channel_ready(self):
+        """接口能打开且 HID 子设备实际呈现。
+
+        幽灵设备（代码 45）下接口照样能打开、IOCTL 也返回成功，只测 open() 会把它误判成
+        可用；子设备判不出来（None）时按可用处理，不改变既有行为。
+        """
+        return self.mouse_driver.open() and sub_device_present() is not False
 
     # ------------------------------------------------------------------
     # 失败处理：显式报错，绝不静默降级

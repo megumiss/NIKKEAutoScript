@@ -9,6 +9,10 @@ driver 控制方案（module/device/win/virtual_mouse/driver_mouse.py）依赖�
 
 设备接口靠 SetupAPI 按接口类 GUID 枚举真实路径，不按 ROOT#SYSTEM#000N 猜序号：
 该序号取决于本机已存在的根枚举设备，实测有机器上是 0002 而非 0001。
+
+接口能打开不等于通道可用：接口收到的报告由总线上的 logi_joy_xlcore 过滤驱动转发给
+HID 子设备，子设备变成幽灵设备（Windows 代码 45）时接口照旧存在、IOCTL 照旧返回成功，
+只是报告被静默丢弃。因此凡是判定「通道可用」的地方都同时看 sub_device_present()。
 """
 
 import json
@@ -34,6 +38,15 @@ OPEN_EXISTING = 3
 # SetupAPI 标志：只枚举当前存在的设备接口
 DIGCF_PRESENT = 0x00000002
 DIGCF_DEVICEINTERFACE = 0x00000010
+
+# CM_Get_Device_ID_ListW 的过滤标志与返回值
+CM_GETIDLIST_FILTER_ENUMERATOR = 0x00000001
+CM_GETIDLIST_FILTER_PRESENT = 0x00000100
+CR_SUCCESS = 0
+
+# G HUB 虚拟总线（logi_joy_bus_enum）枚举出的 HID 子设备，鼠标 C231 / 键盘 C232。
+# 接口由挂在同一总线上的 xlcore 过滤驱动注册，子设备才是报告的实际消费者。
+VIRTUAL_HID_ENUMERATOR = 'LGHUBDevice'
 
 # 驱动包落地后的文件特征：DriverStore 里的包目录 + System32\drivers 下的镜像
 DRIVER_STORE_PREFIX = 'logi_joy'
@@ -172,6 +185,8 @@ def probe_device():
     """返回第一个能打开的虚拟鼠标设备接口路径；不存在返回 None。
 
     只做 CreateFileW 打开/关闭，不发送任何报告，因此不会移动光标或按键。
+
+    注意打开成功不证明通道可用，幽灵设备（代码 45）下同样能打开，判据见 sub_device_present()。
     """
     for path in enum_interface_paths():
         if open_device(path):
@@ -179,11 +194,66 @@ def probe_device():
     return None
 
 
+def _device_instance_ids(enumerator, present_only=False):
+    """列出某个枚举器下的设备实例 ID。
+
+    present_only 为假时包含幽灵设备（Windows 代码 45，即曾经存在、当前未呈现）。
+
+    Args:
+        enumerator: 枚举器名，例如 'LGHUBDevice'。
+        present_only: 只统计实际呈现的设备。
+
+    Returns:
+        list[str]: 设备实例 ID；枚举器不存在或调用失败时为空列表。
+    """
+    if os.name != 'nt':
+        return []
+    cfgmgr32 = ctypes.WinDLL('cfgmgr32', use_last_error=True)
+    cfgmgr32.CM_Get_Device_ID_List_SizeW.restype = ctypes.c_ulong
+    cfgmgr32.CM_Get_Device_ID_List_SizeW.argtypes = [
+        ctypes.POINTER(ctypes.c_ulong), wintypes.LPCWSTR, ctypes.c_ulong,
+    ]
+    cfgmgr32.CM_Get_Device_ID_ListW.restype = ctypes.c_ulong
+    cfgmgr32.CM_Get_Device_ID_ListW.argtypes = [
+        wintypes.LPCWSTR, ctypes.c_wchar_p, ctypes.c_ulong, ctypes.c_ulong,
+    ]
+    flags = CM_GETIDLIST_FILTER_ENUMERATOR
+    if present_only:
+        flags |= CM_GETIDLIST_FILTER_PRESENT
+    size = ctypes.c_ulong()
+    if cfgmgr32.CM_Get_Device_ID_List_SizeW(ctypes.byref(size), enumerator, flags) != CR_SUCCESS:
+        return []
+    if not size.value:
+        return []
+    buffer = ctypes.create_unicode_buffer(size.value)
+    if cfgmgr32.CM_Get_Device_ID_ListW(enumerator, buffer, size.value, flags) != CR_SUCCESS:
+        return []
+    return [item for item in buffer[:].split('\0') if item]
+
+
+def sub_device_present():
+    """虚拟鼠标的 HID 子设备是否实际呈现。纯 CM 查询，无副作用。
+
+    Returns:
+        bool: True 表示子设备存在，报告能被投递；
+        False 表示总线有该设备的记录但全部未呈现（幽灵设备，代码 45），此时接口和
+            IOCTL 都正常却没有任何输入，需要重建设备节点；
+        None 表示系统中没有该枚举器（未安装这套驱动体系），此处不构成判据。
+    """
+    if os.name != 'nt':
+        return None
+    if _device_instance_ids(VIRTUAL_HID_ENUMERATOR, present_only=True):
+        return True
+    if not _device_instance_ids(VIRTUAL_HID_ENUMERATOR):
+        return None
+    return False
+
+
 def driver_package_present():
     """驱动包是否已落地到系统（DriverStore 包目录 + System32\\drivers 镜像）。
 
-    只读文件系统。用来区分两种失败：安装器完全没生效 vs 驱动装上了但设备接口没注册 ——
-    两者的用户动作完全不同（前者重试/查拦截，后者重装无用、要重建设备栈）。
+    只读文件系统。用来区分两种失败：安装器完全没生效 vs 驱动装上了但设备接口没注册。
+    后者包含重启后设备变隐藏的场景（见 repair_driver），重跑一次安装即可恢复。
     """
     if os.name != 'nt':
         return False
@@ -220,6 +290,7 @@ def driver_status():
             'version': str,      # 捆绑驱动包版本（如 2026.0.0.0）
             'package': bool,     # 驱动包是否已落地到系统
             'interfaces': int,   # 枚举到的接口实例数（0 且 package 为真 = 接口未注册）
+            'sub_device': bool or None,  # HID 子设备是否呈现（False = 幽灵设备，代码 45）
         }
     """
     paths = enum_interface_paths()
@@ -232,23 +303,27 @@ def driver_status():
         'version': bundled_version(),
         'package': driver_package_present(),
         'interfaces': len(paths),
+        'sub_device': sub_device_present(),
     }
 
 
-def _run_manager(action, timeout=120):
-    """调用 virtual-mouse-driver-manager.ps1 并解析其 JSON 行输出（与 vdd._run_manager 同约定）。"""
+def _run_manager(action, timeout=120, skip_copy=False):
+    """调用 virtual-mouse-driver-manager.ps1 并解析其 JSON 行输出（与 vdd._run_manager 同约定）。
+
+    skip_copy 仅对 install 有效：跳过复制捆绑 depot，直接运行已就位的安装器。
+    """
     if os.name != 'nt':
         raise VirtualMouseDriverError('Virtual mouse driver management is only supported on Windows')
     if not os.path.isfile(MANAGER_SCRIPT):
         raise VirtualMouseDriverError(f'Driver manager script not found: {MANAGER_SCRIPT}')
+    command = [
+        'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+        '-File', MANAGER_SCRIPT, '-Action', action, '-Json', '-Silent',
+    ]
+    if skip_copy and action == 'install':
+        command.append('-SkipCopy')
     try:
-        result = subprocess.run(
-            [
-                'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
-                '-File', MANAGER_SCRIPT, '-Action', action, '-Json', '-Silent',
-            ],
-            capture_output=True, text=True, timeout=timeout,
-        )
+        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         raise VirtualMouseDriverError(f'Driver {action} timed out after {timeout}s')
     output = result.stdout + result.stderr
@@ -282,12 +357,18 @@ def _reboot_requested(records):
     return any(record.get('reboot_required') for record in records)
 
 
-def install_driver():
+def install_driver(skip_copy=False):
     """复制捆绑 depot 到 %ProgramData%\\LGHUB 并运行安装器。
 
     需要 NKAS 本身以管理员权限运行（脚本不再自行提权）。成败以安装后的设备探测为准，
-    而不是安装器自报的结果；失败时按「是否需要重启」和「驱动包是否落地」给出不同的
-    指引 —— 重装对「驱动包已装但接口未注册」这一种完全无效。
+    而不是安装器自报的结果；探测同时看接口能否打开和 HID 子设备是否呈现，失败时按
+    「子设备未呈现」「是否需要重启」「驱动包是否落地」给出不同的指引。
+    重跑安装可以重建消失的设备接口（重启后设备变隐藏的场景，见 repair_driver）。
+
+    Args:
+        skip_copy: depot 已在 %ProgramData%\\LGHUB 就位时跳过复制，直接运行其中的安装器
+            （供 repair_driver 使用）；脚本会逐文件校验与捆绑 depot 一致后才跳过，
+            缺失或版本不同步时仍会复制。
 
     Returns:
         dict: {'reboot_required': bool, 'message': str}。reboot_required 为真表示
@@ -297,12 +378,15 @@ def install_driver():
     Raises:
         VirtualMouseDriverError: 当前进程不是管理员、安装器返回非零，或安装后探测不到设备。
     """
-    records = _run_manager('install')
+    records = _run_manager('install', skip_copy=skip_copy)
     _raise_on_error(records, 'install')
     reboot_required = _reboot_requested(records)
     paths = enum_interface_paths()
     device = next((path for path in paths if open_device(path)), None)
-    if device is not None:
+    # 接口能打开不代表通道可用：报告由 xlcore 转发给 HID 子设备，子设备是幽灵设备
+    # （代码 45）时报告被丢弃、光标不动。子设备判不出来（None）时不改既有行为。
+    sub_device_missing = sub_device_present() is False
+    if device is not None and not sub_device_missing:
         if reboot_required:
             logger.warning(f'Virtual mouse driver install: device present ({device}), '
                            'but the driver swap is pending a reboot')
@@ -313,6 +397,14 @@ def install_driver():
             }
         logger.info(f'Virtual mouse driver install: device detected ({device})')
         return {'reboot_required': False}
+    if sub_device_missing:
+        # 安装器刚跑完子设备仍是幽灵设备，说明它重建设备节点没能生效（常见于驱动文件被
+        # 运行中的驱动占用、Windows 把替换推迟到下次启动），只剩重启这一条路。
+        raise VirtualMouseDriverError(
+            'The virtual mouse interface is present but its HID sub-device is missing '
+            '(Windows problem code 45), so injected reports are discarded and the cursor does '
+            'not move. Restart the G HUB bus device (pnputil /restart-device) or reboot Windows, '
+            'then retry.')
     if reboot_required:
         # 驱动文件被运行中的驱动占用，Windows 把替换推迟到下次启动：设备栈仍挂着旧驱动，
         # 接口不会出现，此时再点安装只会重复同一结果。
@@ -332,9 +424,29 @@ def install_driver():
             'Retry the install; if it keeps failing, check whether security software blocked the driver files.')
     raise VirtualMouseDriverError(
         'Driver package is installed but the virtual mouse interface is not registered. '
-        'Reinstalling does not help: the interface is registered by the logi_joy_xlcore upper filter '
-        'when the bus device starts, and reinstalling never rebuilds a running device stack. '
-        'Restart the bus device (pnputil /restart-device) or reboot Windows, then retry.')
+        'The interface is registered by the logi_joy_xlcore upper filter when the bus '
+        'device starts. Restart the bus device (pnputil /restart-device) or reboot '
+        'Windows, then retry.')
+
+
+def repair_driver():
+    """驱动包还在系统中、设备接口却消失时，重跑一次安装以重建接口。
+
+    针对重启后虚拟鼠标设备在设备管理器中变隐藏的场景（G HUB 的已知问题）：
+    驱动文件仍在，--install 会重新注册设备接口。失败只记日志并返回 False，
+    由调用方走原有的报错路径。
+
+    Returns:
+        bool: 修复后设备接口可用。
+    """
+    logger.warning('Virtual mouse device is missing while its driver package is still '
+                   'installed (a reboot can hide it); reinstalling to recover the interface')
+    try:
+        install_driver(skip_copy=True)
+    except VirtualMouseDriverError as exc:
+        logger.warning(f'Virtual mouse driver repair failed: {exc}')
+        return False
+    return True
 
 
 def uninstall_driver():
