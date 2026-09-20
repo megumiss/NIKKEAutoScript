@@ -17,6 +17,7 @@ HID 子设备，子设备变成幽灵设备（Windows 代码 45）时接口照�
 
 import json
 import os
+import platform
 import subprocess
 
 from module.logger import logger
@@ -51,6 +52,31 @@ VIRTUAL_HID_ENUMERATOR = 'LGHUBDevice'
 # 驱动包落地后的文件特征：DriverStore 里的包目录 + System32\drivers 下的镜像
 DRIVER_STORE_PREFIX = 'logi_joy'
 DRIVER_IMAGE_PREFIX = 'logi_joy'
+
+# 安装器固定从 %ProgramData%\LGHUB\depots\<DepotId>\driver_hid_virtual 运行，该路径由
+# 驱动包布局决定，与 virtual-mouse-driver-manager.ps1 的 $DepotId 必须保持一致。
+LGHUB_DEPOT_ID = '869589'
+
+# 驱动链路涉及的内核服务：总线枚举器负责枚举子设备，xlcore 是上过滤驱动（注册设备接口
+# 并把接口收到的报告转发给子设备），vir_hid 是子设备的实际承载驱动。子设备是幽灵设备时
+# vir_hid 会停在 stopped，但那是结果不是原因，别只盯着它。
+DRIVER_SERVICES = ('logi_joy_bus_enum', 'logi_joy_xlcore', 'logi_joy_vir_hid')
+
+# cfgmgr32：定位设备节点并取问题代码
+CM_LOCATE_DEVNODE_NORMAL = 0x00000000
+CM_LOCATE_DEVNODE_PHANTOM = 0x00000001
+DN_HAS_PROBLEM = 0x00000400
+
+# advapi32：查询服务状态与启动类型
+SC_MANAGER_CONNECT = 0x0001
+SERVICE_QUERY_STATUS = 0x0004
+SERVICE_QUERY_CONFIG = 0x0001
+SC_STATUS_PROCESS_INFO = 0
+SERVICE_STATE_NAMES = {
+    1: 'stopped', 2: 'start_pending', 3: 'stop_pending', 4: 'running',
+    5: 'continue_pending', 6: 'pause_pending', 7: 'paused',
+}
+SERVICE_START_NAMES = {0: 'boot', 1: 'system', 2: 'auto', 3: 'manual', 4: 'disabled'}
 
 
 class VirtualMouseDriverError(Exception):
@@ -88,6 +114,36 @@ if os.name == 'nt':
             ('InterfaceClassGuid', _GUID),
             ('Flags', wintypes.DWORD),
             ('Reserved', ctypes.c_void_p),
+        ]
+
+    class _SERVICE_STATUS_PROCESS(ctypes.Structure):
+        """QueryServiceStatusEx(SC_STATUS_PROCESS_INFO) 的返回结构。"""
+
+        _fields_ = [
+            ('dwServiceType', wintypes.DWORD),
+            ('dwCurrentState', wintypes.DWORD),
+            ('dwControlsAccepted', wintypes.DWORD),
+            ('dwWin32ExitCode', wintypes.DWORD),
+            ('dwServiceSpecificExitCode', wintypes.DWORD),
+            ('dwCheckPoint', wintypes.DWORD),
+            ('dwWaitHint', wintypes.DWORD),
+            ('dwProcessId', wintypes.DWORD),
+            ('dwServiceFlags', wintypes.DWORD),
+        ]
+
+    class _QUERY_SERVICE_CONFIGW(ctypes.Structure):
+        """QueryServiceConfigW 的返回结构。"""
+
+        _fields_ = [
+            ('dwServiceType', wintypes.DWORD),
+            ('dwStartType', wintypes.DWORD),
+            ('dwErrorControl', wintypes.DWORD),
+            ('lpBinaryPathName', wintypes.LPWSTR),
+            ('lpLoadOrderGroup', wintypes.LPWSTR),
+            ('dwTagId', wintypes.DWORD),
+            ('lpDependencies', wintypes.LPWSTR),
+            ('lpServiceStartName', wintypes.LPWSTR),
+            ('lpDisplayName', wintypes.LPWSTR),
         ]
 
 
@@ -249,6 +305,24 @@ def sub_device_present():
     return False
 
 
+def driver_images():
+    """System32\\drivers 下的 logi_joy*.sys 镜像文件名。"""
+    if os.name != 'nt':
+        return []
+    root = os.environ.get('SystemRoot', r'C:\Windows')
+    return sorted(name for name in _listdir(os.path.join(root, 'System32', 'drivers'))
+                  if name.startswith(DRIVER_IMAGE_PREFIX) and name.endswith('.sys'))
+
+
+def driver_store_packages():
+    """DriverStore 里的 logi_joy 包目录名。"""
+    if os.name != 'nt':
+        return []
+    root = os.environ.get('SystemRoot', r'C:\Windows')
+    store = _listdir(os.path.join(root, 'System32', 'DriverStore', 'FileRepository'))
+    return sorted(name for name in store if name.startswith(DRIVER_STORE_PREFIX))
+
+
 def driver_package_present():
     """驱动包是否已落地到系统（DriverStore 包目录 + System32\\drivers 镜像）。
 
@@ -257,18 +331,21 @@ def driver_package_present():
     """
     if os.name != 'nt':
         return False
-    root = os.environ.get('SystemRoot', r'C:\Windows')
-    images = _listdir(os.path.join(root, 'System32', 'drivers'))
-    if not any(name.startswith(DRIVER_IMAGE_PREFIX) and name.endswith('.sys') for name in images):
-        return False
-    store = _listdir(os.path.join(root, 'System32', 'DriverStore', 'FileRepository'))
-    return any(name.startswith(DRIVER_STORE_PREFIX) for name in store)
+    return bool(driver_images()) and bool(driver_store_packages())
 
 
-def bundled_version():
-    """捆绑驱动包 manifest 中的版本号；读不到返回空串。"""
+def depot_dir():
+    """安装器实际运行所在的 LGHUB depot 目录；非 Windows 返回空串。"""
+    if os.name != 'nt':
+        return ''
+    root = os.environ.get('ProgramData', r'C:\ProgramData')
+    return os.path.normpath(os.path.join(root, 'LGHUB', 'depots', LGHUB_DEPOT_ID, 'driver_hid_virtual'))
+
+
+def _manifest_version(path):
+    """读 manifest.json 中 virtual_hid 扩展的版本号；读不到返回空串。"""
     try:
-        with open(BUNDLED_MANIFEST, 'r', encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         extensions = data.get('installer', {}).get('extensions', [])
         for ext in extensions:
@@ -277,6 +354,189 @@ def bundled_version():
     except (OSError, ValueError, AttributeError):
         pass
     return ''
+
+
+def bundled_version():
+    """捆绑驱动包 manifest 中的版本号；读不到返回空串。"""
+    return _manifest_version(BUNDLED_MANIFEST)
+
+
+def depot_present():
+    """LGHUB depot 目录是否已就位（安装器可从其中运行）。"""
+    directory = depot_dir()
+    return bool(directory) and os.path.isfile(os.path.join(directory, 'virtual_driver_manager.exe'))
+
+
+def installed_version():
+    """已安装 depot 中 manifest 的版本号；depot 不在时返回空串。
+
+    与 bundled_version() 不一致说明系统里跑的是别的版本（旧包残留或复制没完成）。
+    """
+    directory = depot_dir()
+    if not directory:
+        return ''
+    return _manifest_version(os.path.join(directory, 'manifest.json'))
+
+
+def bundled_files():
+    """捆绑驱动包的文件清单。
+
+    Returns:
+        list[dict]: [{'name': str, 'size': int}]；目录不存在时为空列表。
+    """
+    files = []
+    for name in sorted(_listdir(BUNDLED_DIR)):
+        try:
+            files.append({'name': name, 'size': os.path.getsize(os.path.join(BUNDLED_DIR, name))})
+        except OSError:
+            continue
+    return files
+
+
+def _devnode_status(instance_id):
+    """查询任意设备实例的存在性与问题代码。
+
+    Returns:
+        tuple: (problem, present)。problem 为 None 表示设备正常（或取不到问题码），
+        否则是 Windows 的 CM_PROB_* 代码（45 = CM_PROB_PHANTOM，幽灵设备）。
+        设备实例完全不存在时返回 (None, False)。
+    """
+    if os.name != 'nt' or not instance_id:
+        return None, False
+    cfgmgr32 = ctypes.WinDLL('cfgmgr32', use_last_error=True)
+    cfgmgr32.CM_Locate_DevNodeW.restype = ctypes.c_ulong
+    cfgmgr32.CM_Locate_DevNodeW.argtypes = [
+        ctypes.POINTER(wintypes.DWORD), wintypes.LPCWSTR, ctypes.c_ulong,
+    ]
+    cfgmgr32.CM_Get_DevNode_Status.restype = ctypes.c_ulong
+    cfgmgr32.CM_Get_DevNode_Status.argtypes = [
+        ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_ulong),
+        wintypes.DWORD, ctypes.c_ulong,
+    ]
+    devinst = wintypes.DWORD()
+    # 幽灵设备只有带 PHANTOM 标志才定位得到，先按常规定位才能把它和「正常但有问题」区分开
+    present = cfgmgr32.CM_Locate_DevNodeW(
+        ctypes.byref(devinst), instance_id, CM_LOCATE_DEVNODE_NORMAL) == CR_SUCCESS
+    if not present and cfgmgr32.CM_Locate_DevNodeW(
+            ctypes.byref(devinst), instance_id, CM_LOCATE_DEVNODE_PHANTOM) != CR_SUCCESS:
+        return None, False
+    status = ctypes.c_ulong()
+    problem = ctypes.c_ulong()
+    if cfgmgr32.CM_Get_DevNode_Status(
+            ctypes.byref(status), ctypes.byref(problem), devinst, 0) != CR_SUCCESS:
+        return None, present
+    if status.value & DN_HAS_PROBLEM:
+        return int(problem.value), present
+    return None, present
+
+
+def bus_device_id(path):
+    """从设备接口路径取出所属设备实例 ID。
+
+    SetupAPI 给的是 Win32 设备路径 r'\\\\?\\ROOT#SYSTEM#0003#{1abc05c0-...}'，去掉
+    prefix 与接口类 GUID、把 '#' 换回 '\\' 就是设备实例 ID。结果统一转大写：实例 ID
+    不区分大小写，但注册表与设备管理器里存的是大写形式，小写会让人怀疑指向了别的设备。
+    """
+    if not path:
+        return ''
+    body = path.split('#{', 1)[0]
+    for prefix in ('\\\\?\\', '\\??\\'):
+        if body.startswith(prefix):
+            body = body[len(prefix):]
+            break
+    return body.replace('#', '\\').upper()
+
+
+def sub_device_details():
+    """LGHUBDevice 枚举器下每个设备实例的存在性与问题代码。
+
+    刻意包含幽灵设备（代码 45）：它们曾经存在、当前未呈现，按 present_only 过滤就看不到，
+    而它们恰恰是「接口能打开、IOCTL 返回成功，报告却被丢弃」的现场证据。
+
+    Returns:
+        list[dict]: [{'instance_id': str, 'present': bool, 'problem': int or None}]
+    """
+    details = []
+    for instance_id in _device_instance_ids(VIRTUAL_HID_ENUMERATOR):
+        problem, present = _devnode_status(instance_id)
+        details.append({'instance_id': instance_id, 'present': present, 'problem': problem})
+    return details
+
+
+def driver_service_states():
+    """驱动相关内核服务的运行状态与启动类型。纯查询，不启动也不停止。
+
+    Returns:
+        list[dict]: [{'name': str, 'state': str, 'start': str}]，state/start 用 SCM 的
+        英文标识（running/stopped/auto/manual/disabled 等）；服务不存在时两者均为
+        'missing'，取不到时为空串。
+    """
+    if os.name != 'nt':
+        return []
+    advapi32 = ctypes.WinDLL('advapi32', use_last_error=True)
+    advapi32.OpenSCManagerW.restype = wintypes.HANDLE
+    advapi32.OpenSCManagerW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD]
+    advapi32.OpenServiceW.restype = wintypes.HANDLE
+    advapi32.OpenServiceW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, wintypes.DWORD]
+    advapi32.QueryServiceStatusEx.restype = wintypes.BOOL
+    advapi32.QueryServiceStatusEx.argtypes = [
+        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    advapi32.QueryServiceConfigW.restype = wintypes.BOOL
+    advapi32.QueryServiceConfigW.argtypes = [
+        wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD),
+    ]
+    advapi32.CloseServiceHandle.argtypes = [wintypes.HANDLE]
+
+    invalid = wintypes.HANDLE(-1).value
+    results = []
+    manager = advapi32.OpenSCManagerW(None, None, SC_MANAGER_CONNECT)
+    try:
+        for name in DRIVER_SERVICES:
+            state = start = 'missing'
+            handle = invalid if manager == invalid else advapi32.OpenServiceW(
+                manager, name, SERVICE_QUERY_STATUS | SERVICE_QUERY_CONFIG)
+            if handle != invalid:
+                try:
+                    status = _SERVICE_STATUS_PROCESS()
+                    needed = wintypes.DWORD()
+                    if advapi32.QueryServiceStatusEx(handle, SC_STATUS_PROCESS_INFO,
+                                                     ctypes.byref(status), ctypes.sizeof(status),
+                                                     ctypes.byref(needed)):
+                        state = SERVICE_STATE_NAMES.get(status.dwCurrentState, '')
+                    # 字符串追加在结构体之后，缓冲区必须比 sizeof 大；先取长度再分配
+                    needed = wintypes.DWORD()
+                    advapi32.QueryServiceConfigW(handle, None, 0, ctypes.byref(needed))
+                    if needed.value:
+                        buffer = ctypes.create_string_buffer(needed.value)
+                        if advapi32.QueryServiceConfigW(handle, buffer, needed.value,
+                                                        ctypes.byref(needed)):
+                            config = ctypes.cast(
+                                buffer, ctypes.POINTER(_QUERY_SERVICE_CONFIGW)).contents
+                            start = SERVICE_START_NAMES.get(config.dwStartType, '')
+                finally:
+                    advapi32.CloseServiceHandle(handle)
+            results.append({'name': name, 'state': state, 'start': start})
+    finally:
+        if manager != invalid:
+            advapi32.CloseServiceHandle(manager)
+    return results
+
+
+def is_admin():
+    """当前进程是否持有管理员权限。
+
+    安装/卸载都要过 virtual-mouse-driver-manager.ps1 的提权校验，这是那条路径唯一的
+    前置条件，失败时脚本会直接返回 error 记录。非 Windows 平台恒为 False（这两个动作
+    本身也只支持 Windows）。
+    """
+    if os.name != 'nt':
+        return False
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except (AttributeError, OSError):
+        return False
 
 
 def driver_status():
@@ -291,10 +551,36 @@ def driver_status():
             'package': bool,     # 驱动包是否已落地到系统
             'interfaces': int,   # 枚举到的接口实例数（0 且 package 为真 = 接口未注册）
             'sub_device': bool or None,  # HID 子设备是否呈现（False = 幽灵设备，代码 45）
+            'admin': bool,       # 当前进程是否有管理员权限（安装/卸载的前置条件）
+
+            # 以下为详细诊断，供前端逐项展开
+            'interface_paths': list,     # [{'path','openable'}] 每个接口实例及其能否打开
+            'bus_device': str,           # 接口所属的总线设备实例 ID（如 ROOT\SYSTEM\0003）
+            'bus_present': bool,         # 总线设备是否呈现
+            'bus_problem': int or None,  # 总线设备问题代码，None = 正常
+            'sub_devices': list,         # HID 子设备清单，含幽灵设备
+            'services': list,            # 内核服务状态与启动类型
+            'bundled_files': list,       # 捆绑驱动包的文件清单
+            'depot': bool,               # LGHUB depot 目录是否就位
+            'depot_version': str,        # 已安装 depot 的版本
+            'driver_store': list,        # DriverStore 里的包目录名
+            'driver_images': list,       # System32\drivers 下的 logi_joy*.sys
+            'os': str,                   # 系统版本
+            'arch': str,                 # 机器架构
         }
     """
     paths = enum_interface_paths()
     device = next((path for path in paths if open_device(path)), None)
+    # 子设备清单一并给出三态判据，省掉一次重复的枚举查询
+    sub_devices = sub_device_details()
+    if any(item['present'] for item in sub_devices):
+        sub_device = True
+    elif sub_devices:
+        sub_device = False
+    else:
+        sub_device = None
+    bus_id = bus_device_id(device)
+    bus_problem, bus_present = _devnode_status(bus_id)
     return {
         'supported': os.name == 'nt',
         'installed': device is not None,
@@ -303,7 +589,21 @@ def driver_status():
         'version': bundled_version(),
         'package': driver_package_present(),
         'interfaces': len(paths),
-        'sub_device': sub_device_present(),
+        'sub_device': sub_device,
+        'admin': is_admin(),
+        'interface_paths': [{'path': path, 'openable': open_device(path)} for path in paths],
+        'bus_device': bus_id,
+        'bus_present': bus_present,
+        'bus_problem': bus_problem,
+        'sub_devices': sub_devices,
+        'services': driver_service_states(),
+        'bundled_files': bundled_files(),
+        'depot': depot_present(),
+        'depot_version': installed_version(),
+        'driver_store': driver_store_packages(),
+        'driver_images': driver_images(),
+        'os': f'{platform.system()} {platform.version()}',
+        'arch': platform.machine(),
     }
 
 

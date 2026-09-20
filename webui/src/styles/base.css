@@ -661,6 +661,22 @@ button:focus-visible,
 .hosts-status.on { color: var(--green); background: var(--green-soft); }
 .hosts-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 
+/* 虚拟鼠标驱动：诊断信息区块，按驱动包/设备接口/系统服务/运行环境分组 */
+.driver-debug { margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--border); }
+.driver-debug-head { margin-bottom: 14px; color: var(--text-3); font-size: 12px; }
+.driver-debug-group { margin-bottom: 16px; }
+.driver-debug-group:last-child { margin-bottom: 0; }
+.driver-debug-title { margin-bottom: 10px; color: var(--text); font-size: 12.5px; font-weight: 700; }
+.driver-debug code.debug-warn { color: var(--yellow); }
+/* 设备实例 ID、接口路径、服务名可能很长，允许折行而不是撑破卡片 */
+.driver-debug .clone-field { align-items: flex-start; }
+.driver-debug .clone-field code { word-break: break-all; line-height: 1.5; }
+.driver-row { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
+.driver-row .driver-id { flex: 1; min-width: 0; word-break: break-all; line-height: 1.5; }
+.driver-row .hosts-region-label { flex: none; width: 90px; color: var(--text-2); font-size: 13.5px; }
+.driver-tag { flex: none; color: var(--green); font-size: 12px; }
+.driver-tag.warn { color: var(--yellow); }
+
 /* 控制台嵌入常用工具页：去掉外层 .view 的 padding/滚动，卡片撑满剩余视口高度 */
 .console-embedded { padding: 0; overflow: visible; }
 .tools-console { display: flex; flex-direction: column; overflow: hidden; }
