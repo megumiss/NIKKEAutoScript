@@ -30,41 +30,46 @@ BTN_LEFT = 0x01
 BTN_RIGHT = 0x02
 BTN_MIDDLE = 0x04
 
-# 光标闭环参数。请求量与实际位移非线性（实测同一请求量的实际位移会因前序运动状态
-# 抖动 40% 以上），所以只做「读回 + 逼近 + 过冲收敛」。
-# 逐项实测依据见 tmp/driver-validation/REPORT-move-speed-root-cause.md §8/§9。
+# 光标闭环参数（driver 后端专用；默认的 cursor 后端用 SetCursorPos 直接定位，不用这些）。
+# 请求量与实际位移非线性（实测同一请求量的实际位移会因前序运动状态抖动 40% 以上），
+# 所以只做「读回 + 逼近 + 过冲收敛」。
 MOVE_TOLERANCE = 2
 MOVE_MAX_ITERATIONS = 400
-# 单次报告上限。实测请求 160 的实际位移约 350px，20 的单步只有 ~46px，一次 800px
-# 移动会被硬拆成 18 轮以上；提到 160 后同一目标的中位耗时从 78ms 降到 36ms。
+# 单次报告上限。单报告位移随系统鼠标设置与运动史变化（本机实测请求 160 走 560~820px，
+# 请求 20 约 65px），大位移必须靠这个上限一次多走，否则会被硬拆成十几轮。
 MOVE_STEP_LIMIT = 160.0
-# 请求下限。实测请求 1 有 2/6 概率零位移、2 仅约 1.5px，3 起稳定有 2px 且无零位移。
-MOVE_STEP_MIN = 3.0
 MOVE_STEP_DECAY = 0.6
 # 空转恢复：请求发出后光标没动，说明请求量落在死区，放大而不是原地重试。
+# 同时用作末段请求下限的抬升系数。
 MOVE_STEP_RECOVER = 1.6
-# 末段阻尼。实测增益（实际位移/请求量）在 1.17~2.6 之间且恒 > 1，|误差| 小于步长上限
-# 时若直接 request = error 必然过冲 → 必然衰减。按 1/增益 折算请求后一次落到容差内。
-MOVE_APPROACH_DAMP = 0.45
+# 末段请求下限。1 起步 —— 再小会被整数量子截断成零位移（等于不发）。实测零位移时
+# 抬升，用来逃出死区：死区位置随系统鼠标设置变化，写死成 3 在别的机器上会直接失效。
+MOVE_REQUEST_FLOOR_MIN = 1.0
+# 末段增益估计的最小采样请求量。请求 1 在部分机器上有 2/6 概率零位移（此时比值为 0，
+# 会被 _update_gain 的区间检查丢掉），但正常机器请求 1 是有位移的，所以从 1 起采样。
+MOVE_GAIN_MIN_REQUEST = 1
+# 连续零位移多少轮就放弃。死区里请求被 |误差| 夹住无法继续抬升，不退出就会空转到
+# MOVE_MAX_ITERATIONS（400 轮 ≈ 6s），期间光标一直不动而任务在等它。
+MOVE_STALL_LIMIT = 20
 MOVE_POLL_INTERVAL = 0.004
+# 末段反算复用 DRAG_GAIN_* 那组估计参数 —— 估计的是同一个物理量（实际位移 / 请求量）。
 
-# 拖动流参数。拖动不需要每个路点的落点精度，所以不做「到达即停」的收敛，而是在整个
-# duration 内匀速推进 —— 位移曲线连续，游戏读到的才是平滑拖动。
-# 增益实测随请求量变化（请求 8 约 11.5px、请求 20 约 46px），所以按实测比值在线估计。
+# 拖动流参数（driver 后端专用）。拖动不需要每个路点的落点精度，所以不做「到达即停」的
+# 收敛，而是在整个 duration 内匀速推进 —— 位移曲线连续，游戏读到的才是平滑拖动。
+# 增益实测随请求量变化（请求 8 约 16px、请求 20 约 65px），所以按实测比值在线估计。
 DRAG_GAIN_INIT = 1.5
 DRAG_GAIN_SMOOTH = 0.4
 DRAG_GAIN_RANGE = (0.2, 5.0)
 DRAG_GAIN_FLOOR = 0.2
-# 单报告请求上下限。下限与 MOVE_STEP_MIN 同源：更小的请求会被整数截断成零位移。
+# 单报告请求上下限。下限与 MOVE_REQUEST_FLOOR_MIN 同源：更小的请求会被整数截断成零位移。
 DRAG_MIN_REPORT = 3.0
 DRAG_MAX_REPORT = 60.0
 # 单报告期望位移上限。末段剩余误差会全部压到最后一个报告上，不夹住会出现可见跳变。
 DRAG_MAX_WANT = 30.0
 
-# 定时器粒度。默认 15.62ms 会把 sleep 向上量到整刻度：实测 sleep(4ms) 实际 15.46ms、
-# sleep(20ms) 实际 30.95ms。闭环每轮多等 11ms、拖动节拍被量化成 15.6/31ms，表现为
-# 「一卡一卡」且手势时长成倍拉长。请求 0.5ms 后 sleep(4ms) 实测 4.01ms。
-# 逐项实测见 tmp/driver-validation/timer_granularity_probe.py。
+# 定时器粒度。默认 15.62ms 会把 sleep 向上量到整刻度：实测 sleep(4ms) 中位 15.47ms、
+# sleep(20ms) 中位 30.66ms。拖动的 4ms 节拍会被量化成 15.5ms（手势时长成倍拉长且一顿
+# 一顿）、滚轮的 20ms 变成 31ms。请求 0.5ms 后实测 4.31ms / 20.37ms。
 TIMER_RESOLUTION_100NS = 5000
 
 # 滚轮：每格一个独立报告。间隔过小可能被合并，0.02 是已验证值（连续 40 格无丢格）。
@@ -154,18 +159,27 @@ def make_report(buttons=0, dx=0, dy=0, wheel=0):
     return report
 
 
-def approach_request(error, step):
-    """单轴请求量：末段（|误差| 小于步长）按 MOVE_APPROACH_DAMP 折算，其余按步长截断。
+def approach_request(error, step, gain, floor):
+    """单轴请求量：末段（|误差| 小于步长）按**在线增益反算**，其余按步长截断。
 
-    折算后仍不小于 MOVE_STEP_MIN —— 小于它的请求实测大概率零位移。
+    反算：request = |误差| / 增益估计。增益是「实际位移 / 请求量」，由指针曲线（指针
+    精确度开关）与灵敏度滑块共同决定，逐机不同，所以不能折算成固定系数 —— 原先的
+    `round(|误差| * 0.45)` 等于把增益写死成 2.22，且在增益 > 1.67 的机器上会让末段
+    量子（请求 3）产生的位移超过容差，形成 +3/-3 的极限环：每轮请求都被下限抬到 3，
+    位移总是过冲，误差永远 > 容差，最后空转 400 轮返回 False（点击被跳过）。
+    反算后请求随增益自动缩小，增益 > 1 时天然小于误差，不再过冲。
+
+    floor 是动态下限（只用下限兜底，不参与钳位）：零位移时由调用方抬升以逃出死区。
     """
     magnitude = abs(error)
     if magnitude < step:
-        wish = max(MOVE_STEP_MIN, round(magnitude * MOVE_APPROACH_DAMP))
-        magnitude = min(wish, magnitude)
+        magnitude = magnitude / max(gain, DRAG_GAIN_FLOOR)
+        magnitude = max(magnitude, floor)
+        magnitude = min(magnitude, abs(error))
     else:
         magnitude = step
-    return int(magnitude) if error > 0 else -int(magnitude)
+    # 取整用四舍五入而非截断：截断会让 1~2 counts 的请求全都退化成 1，末段精度变差。
+    return int(magnitude + 0.5) if error > 0 else -int(magnitude + 0.5)
 
 
 def _drag_want(remaining_error, remaining_reports):
@@ -187,12 +201,14 @@ def _drag_request(want, gain):
     return int(magnitude) if want > 0 else -int(magnitude)
 
 
-def _update_gain(gain, request, measured):
+def _update_gain(gain, request, measured, min_request=DRAG_MIN_REPORT):
     """用「实测位移 / 请求量」在线更新增益估计。
 
     请求量低于可动下限时比值不可信（实测请求 1 有 2/6 概率零位移），跳过不更新。
+    末段反算传 MOVE_GAIN_MIN_REQUEST（1）—— 那里用到的就是 1 counts 级的小请求，
+    采样门槛必须跟着降到同一量级；拖动流传默认值。
     """
-    if abs(request) < DRAG_MIN_REPORT:
+    if abs(request) < min_request:
         return gain
     ratio = measured / request
     if not DRAG_GAIN_RANGE[0] <= ratio <= DRAG_GAIN_RANGE[1]:
@@ -292,7 +308,10 @@ class VirtualMouse:
 
     @staticmethod
     def set_cursor(x, y):
-        """Shape A：直接用光标位置 API 定位。不属于本次默认路径，见实施文档 §3.1。"""
+        """绝对定位：直接设置光标位置，不经过指针弹道，落点即目标点。
+
+        不产生 WM_INPUT 位移事件，靠 Raw Input 增量维护光标的程序看不到它。
+        """
         return bool(_user32.SetCursorPos(int(x), int(y)))
 
     def move_rel(self, dx, dy, buttons=0):
@@ -302,19 +321,27 @@ class VirtualMouse:
     def move_to(self, x, y, buttons=0, tolerance=None):
         """Shape B：闭环相对移动。
 
-        请求量与实际位移非线性，所以必须「读回实际位置 → 算误差 → 逼近」。三条规则
-        缺一不可，对应实测里三种失效：
+        请求量与实际位移非线性，所以必须「读回实际位置 → 算误差 → 逼近」。四条规则
+        缺一不可，对应实测里四种失效：
         - 两轴各自持有步长：过冲按轴隔离判定。原先共用一个 step 且判定用 or，任一轴
           过冲都会把另一轴的单步一起砍掉（实测零过冲的那个轴被砍掉 78%，迭代数
           154→19 只差这一项）。
-        - 末段阻尼：|误差| 小于步长上限时按 MOVE_APPROACH_DAMP 折算请求，避免
-          request == error 在增益 > 1 时必然过冲 → 衰减 → 剩余长距离只能按最小步长爬。
-        - 空转放大：请求发出后位置没动，说明请求量落在死区，立即放大而不是原地重试。
+        - 末段按增益反算（见 approach_request）：不能把增益折算成固定系数，它随系统
+          鼠标设置变化。原先固定的 0.45/3 在增益 > 1.67 的机器上形成 ±3 极限环，
+          误差永远 > 容差，空转 400 轮后返回 False（点击被跳过）。
+        - 空转放大：请求发出后位置没动，说明请求量落在死区，抬升请求下限并放大步长，
+          而不是原地重试。
+        - 无进展退出：连续 MOVE_STALL_LIMIT 轮零位移直接返回 False，不再空转。
         """
         tolerance = MOVE_TOLERANCE if tolerance is None else tolerance
         step_x = step_y = MOVE_STEP_LIMIT
+        gain_x = gain_y = DRAG_GAIN_INIT
+        floor_x = floor_y = MOVE_REQUEST_FLOOR_MIN
+        stall = 0
         previous = None
         previous_position = None
+        previous_request = None
+        previous_tail = (False, False)
         for _ in range(MOVE_MAX_ITERATIONS):
             current_x, current_y = self.cursor()
             error_x, error_y = int(x) - current_x, int(y) - current_y
@@ -322,20 +349,44 @@ class VirtualMouse:
                 return True
             if previous is not None:
                 if previous[0] * error_x < 0:
-                    step_x = max(MOVE_STEP_MIN, step_x * MOVE_STEP_DECAY)
+                    step_x = max(MOVE_REQUEST_FLOOR_MIN, step_x * MOVE_STEP_DECAY)
                 if previous[1] * error_y < 0:
-                    step_y = max(MOVE_STEP_MIN, step_y * MOVE_STEP_DECAY)
+                    step_y = max(MOVE_REQUEST_FLOOR_MIN, step_y * MOVE_STEP_DECAY)
             if previous_position == (current_x, current_y):
+                stall += 1
+                if stall >= MOVE_STALL_LIMIT:
+                    logger.warning(
+                        f'Virtual mouse stalled after {stall} reports with no movement, '
+                        f'residual ({error_x}, {error_y})'
+                    )
+                    return False
+                floor_x = min(MOVE_STEP_LIMIT, floor_x * MOVE_STEP_RECOVER)
+                floor_y = min(MOVE_STEP_LIMIT, floor_y * MOVE_STEP_RECOVER)
                 step_x = min(MOVE_STEP_LIMIT, step_x * MOVE_STEP_RECOVER)
                 step_y = min(MOVE_STEP_LIMIT, step_y * MOVE_STEP_RECOVER)
-            if not self.driver.send(
-                buttons=buttons,
-                dx=approach_request(error_x, step_x),
-                dy=approach_request(error_y, step_y),
-            ):
+            else:
+                stall = 0
+                # 增益只在末段采样：逼近段用步长截断，与末段反算不是同一个工作点，
+                # 混在一起估计会被大请求量的增益带偏（实测曲线 160 counts → 5.1，
+                # 而末段用到的 1~8 counts 只有 1.0~1.44）。
+                if previous_tail[0]:
+                    gain_x = _update_gain(
+                        gain_x, previous_request[0], current_x - previous_position[0],
+                        MOVE_GAIN_MIN_REQUEST,
+                    )
+                if previous_tail[1]:
+                    gain_y = _update_gain(
+                        gain_y, previous_request[1], current_y - previous_position[1],
+                        MOVE_GAIN_MIN_REQUEST,
+                    )
+            request_x = approach_request(error_x, step_x, gain_x, floor_x)
+            request_y = approach_request(error_y, step_y, gain_y, floor_y)
+            if not self.driver.send(buttons=buttons, dx=request_x, dy=request_y):
                 return False
             previous = (error_x, error_y)
             previous_position = (current_x, current_y)
+            previous_request = (request_x, request_y)
+            previous_tail = (abs(error_x) < step_x, abs(error_y) < step_y)
             # 这里必须真的等一次输入落地再读回：去掉它闭环就失去可观测性，
             # 实测 400 次迭代仍不收敛（读到的永远是上一帧位置）。
             time.sleep(MOVE_POLL_INTERVAL)

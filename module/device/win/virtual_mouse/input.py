@@ -3,6 +3,9 @@
 只替换 Input 的 8 个鼠标原语，其余（键盘、insert_swipe）全部继承。
 业务层 click_xy / appear_then_click / ensure_sroll / ui_ensure 零改动。
 
+光标定位由 SetCursorPos 直接设定，按键与滚轮仍由虚拟鼠标设备在驱动层注入（见
+MOVE_BACKEND）。因此仍然保留驱动安装预检 —— 缺了设备就没有按键。
+
 坐标约定与 Input 完全一致：方法入参为屏幕绝对坐标（Automation 已叠加窗口 offset）。
 """
 import ctypes
@@ -33,6 +36,10 @@ DRAG_MAX_DURATION = 0.6
 DRAG_SETTLE_DELAY = 0.06
 # 连续失败达到该次数即中止，绝不静默降级到 SendInput
 FAILURE_LIMIT = 3
+# 直定位落点校验阈值（px）。超过它说明光标没停在目标点，必须留痕：该偏差只会来自
+# 「目标窗口 ClipCursor 把光标拽回」或「进程 DPI 与显示器缩放不一致」，两者都会让点击
+# 落在别的位置而不产生任何报错。
+CURSOR_LANDING_WARN = 16
 
 _kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
 _kernel32.CreateMutexW.restype = ctypes.c_void_p
@@ -68,9 +75,12 @@ def claim_scheme_mutex():
 
 
 class VirtualMouseInput(Input):
-    # Shape B（驱动闭环）是已验证路径，保持为默认值。
-    # 'cursor'（Shape A：SetCursorPos 直定位）未验证，仅作为可选路径保留。
-    MOVE_BACKEND = 'driver'
+    # 光标定位后端。'cursor'：SetCursorPos 直定位 —— 一次调用落点即目标点，不受指针
+    # 弹道（提高指针精确度、灵敏度滑块）影响，也不需要在线估计增益；'driver'：相对报告
+    # 闭环逼近，作为回退路径保留。
+    # NIKKE 的 Unity 输入层读取系统光标位置（见 ok_interaction/input.py 的 postmessage
+    # 方案：它是 SetCursorPos + PostMessage 的形态），所以直定位对游戏可见。
+    MOVE_BACKEND = 'cursor'
 
     def __init__(self, config_name=None):
         """
@@ -81,6 +91,7 @@ class VirtualMouseInput(Input):
         self._config_name = config_name or 'nkas'
         self._lock = threading.RLock()
         self._failures = 0
+        self._landing_warned = False
         self.mouse_driver = shared_mouse()
         self._preflight()
 
@@ -105,9 +116,9 @@ class VirtualMouseInput(Input):
         if sub_device_present() is False:
             logger.error(
                 'Control scheme driver: the virtual mouse interface exists but its HID '
-                'sub-device is not present (Windows problem code 45), so injected reports are '
-                'discarded and the cursor never moves. Restart the G HUB bus device '
-                '(pnputil /restart-device) or reboot Windows, then retry.'
+                'sub-device is not present (Windows problem code 45), so injected button and '
+                'wheel reports are discarded and clicks never reach the game. Restart the '
+                'G HUB bus device (pnputil /restart-device) or reboot Windows, then retry.'
             )
         else:
             logger.error(
@@ -146,9 +157,31 @@ class VirtualMouseInput(Input):
     # 光标
     # ------------------------------------------------------------------
     def _move_to(self, x, y, buttons=0):
-        if self.MOVE_BACKEND == 'cursor' and not buttons:
-            return self.mouse_driver.set_cursor(x, y)
+        if self.MOVE_BACKEND == 'cursor':
+            return self._set_cursor_checked(x, y)
         return self.mouse_driver.move_to(x, y, buttons=buttons)
+
+    def _set_cursor_checked(self, x, y):
+        """直定位并核对落点。
+
+        绝对定位本身不产生 WM_INPUT 位移，但 NIKKE 的输入层读系统光标位置，所以对游戏
+        可见；偏差过大时告警（每次会话只报一次），避免「点在了别的地方」却没有任何报错。
+        """
+        if not self.mouse_driver.set_cursor(x, y):
+            return False
+        actual_x, actual_y = self.mouse_driver.cursor()
+        offset_x, offset_y = actual_x - int(x), actual_y - int(y)
+        if not self._landing_warned and (
+            abs(offset_x) > CURSOR_LANDING_WARN or abs(offset_y) > CURSOR_LANDING_WARN
+        ):
+            self._landing_warned = True
+            logger.warning(
+                f'Virtual mouse cursor landed at ({actual_x}, {actual_y}) instead of '
+                f'({int(x)}, {int(y)}), off by ({offset_x}, {offset_y}). The target window '
+                f'is likely clipping the cursor, or this process DPI does not match the '
+                f'monitor scale; clicks are landing at the wrong place.'
+            )
+        return True
 
     def mouse_move(self, x, y):
         with self._lock:
@@ -247,7 +280,10 @@ class VirtualMouseInput(Input):
                 self._checked(False, f'drag down ({x1}, {y1})')
                 return
             try:
-                ok = self.mouse_driver.drag_stream(x2, y2, steps, interval, buttons=BTN_LEFT)
+                if self.MOVE_BACKEND == 'cursor':
+                    ok = self._drag_absolute(x1, y1, x2, y2, steps, interval)
+                else:
+                    ok = self.mouse_driver.drag_stream(x2, y2, steps, interval, buttons=BTN_LEFT)
             finally:
                 # 无论中途如何退出，都必须把左键还回去，避免按键卡在按下态
                 if not self.mouse_driver.release():
@@ -257,3 +293,21 @@ class VirtualMouseInput(Input):
                 return
             time.sleep(DRAG_SETTLE_DELAY)
         logger.debug(f'Virtual mouse drag ({x1}, {y1}) -> ({x2}, {y2}), {duration:.2f}s / {steps} 段')
+
+    def _drag_absolute(self, x1, y1, x2, y2, steps, interval):
+        """直定位拖动：按等间隔把光标沿直线推到终点，每个路点都是绝对坐标。
+
+        按键仍由虚拟鼠标设备保持按下，所以游戏看到的是「光标连续移动 + 真实按键」的拖拽。
+        与驱动闭环的 drag_stream 相比，这里不依赖增益估计，落点即目标点。
+        """
+        start = time.perf_counter()
+        span_x, span_y = x2 - x1, y2 - y1
+        for index in range(1, steps + 1):
+            ratio = index / steps
+            if not self.mouse_driver.set_cursor(round(x1 + span_x * ratio), round(y1 + span_y * ratio)):
+                return False
+            # 用绝对截止时刻推进，避免「发送」的开销逐轮累积成节拍漂移
+            delay = start + index * interval - time.perf_counter()
+            if delay > 0:
+                time.sleep(delay)
+        return True
