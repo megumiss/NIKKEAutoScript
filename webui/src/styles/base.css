@@ -62,7 +62,7 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .about-panel h3 { margin:22px 0 5px; color:var(--text); font-size:15px; }.about-donations { display:flex; gap:18px; flex-wrap:wrap; margin-top:18px; }.about-donations figure { padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--card-2); text-align:center; }.about-donations img { display:block; width:160px; height:160px; object-fit:contain; }.about-donations figcaption { margin-top:5px; color:var(--text-2); font-size:12px; }
 .notice-stack { position:absolute; z-index:4; top:68px; right:24px; width:min(420px,calc(100vw - 280px)); }.notice-card { display:flex; gap:16px; align-items:flex-start; margin-bottom:10px; padding:14px 16px; border:1px solid var(--border-light); border-radius:12px; background:var(--card); box-shadow:var(--shadow-hover); }.notice-card.success { border-color:var(--green); background:var(--toast-ok-bg); box-shadow:var(--toast-shadow); }.notice-card.error { border-color:var(--red); background:var(--toast-error-bg); box-shadow:var(--toast-shadow); }.notice-card strong { display:block; margin-bottom:3px; }.notice-card p { color:var(--text-2); font-size:12.5px; line-height:1.5; }.notice-card .notice-error-detail { margin-top:4px; color:var(--text-3); font-size:11.5px; font-family:'Cascadia Code','JetBrains Mono',Consolas,'Microsoft YaHei UI',monospace; overflow-wrap:anywhere; }.notice-card .btn { margin-left:auto; flex:none; }
 .notice-messages { margin:0; padding:0; list-style:none; color:var(--text-2); font-size:12.5px; line-height:1.6; }
-.notice-content { white-space:pre-line; line-height:1.7; max-height:60vh; overflow-y:auto; }
+.notice-content { white-space:pre-line; line-height:1.7; }
 .notice-content a { color:var(--accent); text-decoration:none; }
 .notice-content a:hover { text-decoration:underline; }
 .notice-content b { color:var(--text); }
@@ -123,7 +123,7 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .modal-field input:focus,.modal-field select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
 .modal-text { margin-bottom:16px; color:var(--text-2); font-size:14px; }
 .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
-.announcement-card { width:760px; height:480px; display:flex; flex-direction:column; }
+.announcement-card { width:760px; height:480px; display:flex; flex-direction:column; overflow:hidden; }
 .announcement-head { display:flex; flex:none; align-items:center; margin-bottom:14px; }
 .announcement-head h3 { margin-bottom:0; }
 .announcement-close { flex:none; width:32px; height:32px; margin-left:auto; }
@@ -622,8 +622,8 @@ button:focus-visible,
   .manage-table .remark-input { flex: 1; width: auto; text-align: right; }
 
   /* 公告中心 */
-  .announcement-body { grid-template-columns: 1fr; gap: 12px; }
-  .announcement-card { width:min(760px, calc(100vw - 48px)); height:auto; max-height:86vh; overflow-y:auto; }
+  .announcement-body { grid-template-columns:1fr; grid-template-rows:minmax(96px, 0.9fr) minmax(0, 1.1fr); gap:12px; }
+  .announcement-card { width:min(760px, calc(100vw - 48px)); height:min(480px, calc(100dvh - 32px)); max-height:calc(100dvh - 32px); }
 
   /* 日志页面筛选 */
   .logs-kw { width: 100%; }

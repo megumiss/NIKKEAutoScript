@@ -17,7 +17,7 @@
     2. 进入 NKAS → PC客户端 → PC端设置，将「控制方案」改为 driver。
 
     <b>常见问题</b>
-    1. 报错 Virtual mouse driver move，在常用工具中将虚拟鼠标驱动卸载，重启电脑，再重新安装
+    1. 报错 Virtual mouse driver move，首先尝试将 鼠标移动方式 更改为 cursor，如果没有解决，再尝试按下面的步骤重装：在常用工具中将虚拟鼠标驱动卸载，重启电脑，再重新安装
     2. 报错 Driver installer ran but no device was detected afterwards，按照以下步骤修复：重启电脑，卸载虚拟鼠标驱动，再重启电脑，重新安装虚拟鼠标驱动；或者直接卸载 GHUB，重启后重新安装 GHUB
 
     <b style="color:var(--red)">注意事项</b>
