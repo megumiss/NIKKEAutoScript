@@ -28,6 +28,7 @@ class Destruction(UI):
         logger.hr('Destruction')
         confirm_timer = Timer(2, count=3)
 
+        reward = False
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -41,11 +42,13 @@ class Destruction(UI):
             if self.handle_level_up():
                 continue
             if self.handle_reward(interval=1):
+                reward = True
                 continue
             if self.handle_paid_gift():
                 continue
 
-            if self.appear(DESTROY_CHECK, offset=10):
+            # 歼灭结算完奖励后回到歼灭页，视为免费歼灭完成
+            if (reward and self.appear(DESTROY_CHECK, offset=10)) or self.appear(DESTROY_GEM_CHECK, offset=10):
                 if not confirm_timer.started():
                     confirm_timer.start()
                 if confirm_timer.reached():
