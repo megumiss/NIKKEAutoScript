@@ -134,21 +134,12 @@ class DeployConfig(ConfigModel):
         Returns:
             str: Absolute filepath.
         """
-        return (
-            os.path.abspath(os.path.join(self.root_filepath, self.config[key]))
-            .replace(r"\\", "/")
-            .replace("\\", "/")
-            .replace('"', '"')
-        )
+        # Keep drive and UNC prefixes intact; do not rewrite native separators.
+        return os.path.normpath(os.path.join(self.root_filepath, self.config[key]))
 
     @cached_property
     def root_filepath(self):
-        return (
-            os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
-            .replace(r"\\", "/")
-            .replace("\\", "/")
-            .replace('"', '"')
-        )
+        return os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
     def execute(self, command, allow_failure=False, output=True):
         """
@@ -161,7 +152,6 @@ class DeployConfig(ConfigModel):
             bool: If success.
                 Terminate installation if failed to execute and not allow_failure.
         """
-        command = command.replace(r"\\", "/").replace("\\", "/").replace('"', '"')
         if not output:
             command = command + ' >nul 2>nul'
         logger.info(command)

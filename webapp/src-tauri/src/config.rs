@@ -101,9 +101,10 @@ pub fn locate_root(current_dir: &Path, executable: &Path) -> Result<PathBuf> {
     );
     for candidate in candidates {
         if candidate.join("gui.py").is_file() && candidate.join("config/deploy.yaml").is_file() {
-            return candidate
-                .canonicalize()
-                .or_else(|_| Ok(candidate.to_path_buf()));
+            // Keep the path spelling used to launch the app. On Windows,
+            // canonicalize() converts mapped drives into UNC paths, which
+            // the Python deployment layer cannot safely normalize.
+            return Ok(candidate.to_path_buf());
         }
     }
     anyhow::bail!("Unable to locate the NKAS root containing gui.py and config/deploy.yaml")
@@ -300,7 +301,7 @@ mod tests {
 
         assert_eq!(
             locate_root(&root.join("webapp"), &executable).unwrap(),
-            fs::canonicalize(&root).unwrap()
+            root
         );
         let _ = fs::remove_dir_all(root);
     }
