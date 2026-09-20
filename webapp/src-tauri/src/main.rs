@@ -19,6 +19,7 @@ use std::thread;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::webview::{NewWindowResponse, PageLoadEvent};
+use tauri::image::Image;
 use tauri::{AppHandle, Manager, RunEvent, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -286,6 +287,8 @@ fn create_window(
     );
     WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("NKAS")
+        // The window icon and the tray icon need different sizes; see `window_icon`.
+        .icon(window_icon())?
         .inner_size(1440.0, 900.0)
         .min_inner_size(1000.0, 640.0)
         // Native chrome is replaced by the in-page titlebar (webui App.vue and
@@ -381,17 +384,62 @@ fn start_application_inner(
     Ok(())
 }
 
+/// Size the shell draws a notification-area (tray) icon at.
+///
+/// The tray renders at a fixed size per display scaling and GDI rescales the icon handle with a
+/// low-quality stretch whenever it differs, so the tray needs an exact match here. `tauri-codegen`
+/// embeds only the first ICO directory entry (Pillow always writes 16x16 first), which is why the
+/// original code had to blow 16x16 up to 24x24 at 150%.
+#[cfg(windows)]
+fn shell_icon_size() -> u32 {
+    use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON};
+    // SAFETY: GetSystemMetrics is a pure query and SM_CXSMICON is a fixed index.
+    unsafe { GetSystemMetrics(SM_CXSMICON).max(1) as u32 }
+}
+
+#[cfg(not(windows))]
+fn shell_icon_size() -> u32 {
+    16
+}
+
+/// Tray icon, pre-scaled to `shell_icon_size()`.
+///
+/// `tray-icon` passes the image size straight to `CreateIcon`, so an exact-size tier keeps the
+/// 1:1 path. The four tiers cover 100%/150%/200%/300% display scaling. Regenerate them with
+/// `dev_tools/replace_project_icons.py` when the source icon changes.
+///
+/// `include_image!` resolves a relative path against the crate root (`CARGO_MANIFEST_DIR`), not
+/// against the directory of this file, so the `icons/` prefix here is not a typo — it differs
+/// from how `include_bytes!` would resolve the same string.
+fn tray_icon() -> Image<'static> {
+    match shell_icon_size() {
+        s if s <= 16 => tauri::include_image!("icons/tray-16.png"),
+        s if s <= 24 => tauri::include_image!("icons/tray-24.png"),
+        s if s <= 32 => tauri::include_image!("icons/tray-32.png"),
+        _ => tauri::include_image!("icons/tray-48.png"),
+    }
+}
+
+/// Icon handed to the native window.
+///
+/// The taskbar button and Alt+Tab / task view all read this one slot: nothing sets `ICON_BIG`,
+/// so both fall back to `ICON_SMALL`, which tao is the only writer of. The taskbar button draws
+/// at `24px * dpi_scale` — 36px on a 150% display — so a 48px source lets the shell scale down,
+/// whereas a source sized to `SM_CXSMICON` gets magnified 1.5x and comes out blurry. The tray
+/// draws at a fixed size instead, which is why it keeps the exact-match `tray_icon()`.
+fn window_icon() -> Image<'static> {
+    tauri::include_image!("icons/tray-48.png")
+}
+
 fn install_tray(app: &AppHandle) -> Result<()> {
     let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
     let hide = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
     let exit = MenuItem::with_id(app, "exit", "Exit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &hide, &exit])?;
-    let icon = app
-        .default_window_icon()
-        .cloned()
-        .context("Application icon is missing")?;
+    // Do not reuse `default_window_icon` here: it is 16x16 and the shell would upscale it.
+    // See `tray_icon` for the full explanation.
     TrayIconBuilder::new()
-        .icon(icon)
+        .icon(tray_icon())
         .tooltip("NKAS")
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
