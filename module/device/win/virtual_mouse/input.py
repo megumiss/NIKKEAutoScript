@@ -3,8 +3,9 @@
 只替换 Input 的 8 个鼠标原语，其余（键盘、insert_swipe）全部继承。
 业务层 click_xy / appear_then_click / ensure_sroll / ui_ensure 零改动。
 
-光标定位由 SetCursorPos 直接设定，按键与滚轮仍由虚拟鼠标设备在驱动层注入（见
-MOVE_BACKEND）。因此仍然保留驱动安装预检 —— 缺了设备就没有按键。
+光标移动方式由 PCClientInfo.MoveBackend 选择：driver（相对报告闭环）或 cursor
+（SetCursorPos 直定位）。按键与滚轮一律由虚拟鼠标设备在驱动层注入，因此仍然保留驱动
+安装预检 —— 缺了设备就没有按键。
 
 坐标约定与 Input 完全一致：方法入参为屏幕绝对坐标（Automation 已叠加窗口 offset）。
 """
@@ -75,25 +76,41 @@ def claim_scheme_mutex():
 
 
 class VirtualMouseInput(Input):
-    # 光标定位后端。'cursor'：SetCursorPos 直定位 —— 一次调用落点即目标点，不受指针
-    # 弹道（提高指针精确度、灵敏度滑块）影响，也不需要在线估计增益；'driver'：相对报告
-    # 闭环逼近，作为回退路径保留。
+    # 光标移动方式的候选值。'driver'：相对位移报告闭环逼近；'cursor'：SetCursorPos
+    # 直定位 —— 一次调用落点即目标点，不受指针弹道（提高指针精确度、灵敏度滑块）影响，
+    # 也不需要在线估计增益。
     # NIKKE 的 Unity 输入层读取系统光标位置（见 ok_interaction/input.py 的 postmessage
     # 方案：它是 SetCursorPos + PostMessage 的形态），所以直定位对游戏可见。
-    MOVE_BACKEND = 'cursor'
+    MOVE_BACKENDS = ('driver', 'cursor')
+    # 缺省值，实际取值由 PCClientInfo.MoveBackend 经构造函数传入。
+    MOVE_BACKEND = 'driver'
 
-    def __init__(self, config_name=None):
+    def __init__(self, config_name=None, move_backend=None):
         """
         Args:
             config_name: 实例名，仅用于日志与报错提示，可为 None
+            move_backend: 光标移动方式，'driver' 或 'cursor'，None 时用 MOVE_BACKEND
         """
         super().__init__()
         self._config_name = config_name or 'nkas'
+        self.move_backend = self._parse_move_backend(move_backend)
         self._lock = threading.RLock()
         self._failures = 0
         self._landing_warned = False
         self.mouse_driver = shared_mouse()
+        logger.info(f'Virtual mouse move backend: {self.move_backend}')
         self._preflight()
+
+    @classmethod
+    def _parse_move_backend(cls, value):
+        """校验配置值。非法值退回类默认值，而不是让实例带着未知 backend 跑下去。"""
+        backend = str(value if value is not None else cls.MOVE_BACKEND).strip().lower()
+        if backend not in cls.MOVE_BACKENDS:
+            logger.warning(
+                f'Unknown virtual mouse move backend {value!r}, fall back to {cls.MOVE_BACKEND}'
+            )
+            backend = cls.MOVE_BACKEND
+        return backend
 
     # ------------------------------------------------------------------
     # 启动预检：两道闸门，失败即显式中止（设备缺失时先尝试修复）
@@ -157,7 +174,7 @@ class VirtualMouseInput(Input):
     # 光标
     # ------------------------------------------------------------------
     def _move_to(self, x, y, buttons=0):
-        if self.MOVE_BACKEND == 'cursor':
+        if self.move_backend == 'cursor':
             return self._set_cursor_checked(x, y)
         return self.mouse_driver.move_to(x, y, buttons=buttons)
 
@@ -280,7 +297,7 @@ class VirtualMouseInput(Input):
                 self._checked(False, f'drag down ({x1}, {y1})')
                 return
             try:
-                if self.MOVE_BACKEND == 'cursor':
+                if self.move_backend == 'cursor':
                     ok = self._drag_absolute(x1, y1, x2, y2, steps, interval)
                 else:
                     ok = self.mouse_driver.drag_stream(x2, y2, steps, interval, buttons=BTN_LEFT)

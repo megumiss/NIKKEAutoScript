@@ -150,6 +150,9 @@ PCClientInfo:
   ControlScheme:
     value: pyautogui
     option: [ pyautogui, postmessage, driver ]
+  MoveBackend:
+    value: driver
+    option: [ driver, cursor ]
 Optimization:
   AutoRedCircle: false
   OcrModelType:

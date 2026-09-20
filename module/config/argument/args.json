@@ -311,6 +311,14 @@
           "postmessage",
           "driver"
         ]
+      },
+      "MoveBackend": {
+        "type": "select",
+        "value": "driver",
+        "option": [
+          "driver",
+          "cursor"
+        ]
       }
     },
     "PCClient": {

@@ -355,12 +355,53 @@ class DriverSchemeTests(unittest.TestCase):
         handler.mouse_driver = driver or Mock()
         return handler
 
+    def _handler_with_backend(self, move_backend):
+        with (
+            patch.object(VirtualMouseInput, '_preflight', return_value=None),
+            patch.object(Input, '__init__', return_value=None),
+        ):
+            return VirtualMouseInput(config_name='nkas', move_backend=move_backend)
+
+    def test_move_backend_defaults_to_driver(self):
+        self.assertEqual(self._handler().move_backend, 'driver')
+
+    def test_move_backend_cursor_uses_absolute_positioning(self):
+        handler = self._handler_with_backend('cursor')
+        driver = Mock()
+        driver.set_cursor.return_value = True
+        driver.cursor.return_value = (120, 340)
+        handler.mouse_driver = driver
+
+        handler.mouse_move(120, 340)
+
+        self.assertEqual(driver.mock_calls, [call.set_cursor(120, 340), call.cursor()])
+
+    def test_move_backend_driver_uses_relative_positioning(self):
+        handler = self._handler_with_backend('driver')
+        driver = Mock()
+        driver.move_to.return_value = True
+        handler.mouse_driver = driver
+
+        handler.mouse_move(120, 340)
+
+        self.assertEqual(driver.mock_calls, [call.move_to(120, 340, buttons=0)])
+
+    def test_unknown_move_backend_falls_back_to_default(self):
+        with patch('module.device.win.virtual_mouse.input.logger.warning') as warned:
+            handler = self._handler_with_backend('bogus')
+        self.assertEqual(handler.move_backend, 'driver')
+        warned.assert_called_once()
+
     def test_automation_selects_logi_input_for_driver_scheme(self):
         automation = Automation.__new__(Automation)
-        automation.config = SimpleNamespace(PCClientInfo_ControlScheme='driver', config_name='nkas')
+        automation.config = SimpleNamespace(
+            PCClientInfo_ControlScheme='driver',
+            PCClientInfo_MoveBackend='cursor',
+            config_name='nkas',
+        )
         with patch('module.device.win.virtual_mouse.input.VirtualMouseInput') as logi:
             automation._init_input()
-        logi.assert_called_once_with(config_name='nkas')
+        logi.assert_called_once_with(config_name='nkas', move_backend='cursor')
 
     def test_automation_unknown_scheme_falls_back_to_plain_input(self):
         automation = Automation.__new__(Automation)

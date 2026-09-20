@@ -103,6 +103,8 @@ class Automation:
         - pyautogui：现有方案（Input，全局物理鼠标）
         - postmessage：窗口消息方案（PostMessageInput）
         - driver：虚拟鼠标驱动方案（VirtualMouseInput，需已安装虚拟鼠标驱动）
+          该方案下光标移动方式另由 PCClientInfo.MoveBackend 选择（driver 相对报告闭环 /
+          cursor 光标直定位），按键与滚轮始终走驱动。
         """
         scheme = str(self.config.PCClientInfo_ControlScheme)
         if scheme == 'postmessage':
@@ -117,7 +119,10 @@ class Automation:
         elif scheme == 'driver':
             from module.device.win.virtual_mouse.input import VirtualMouseInput
 
-            self.input_handler = VirtualMouseInput(config_name=self.config.config_name)
+            self.input_handler = VirtualMouseInput(
+                config_name=self.config.config_name,
+                move_backend=self.config.PCClientInfo_MoveBackend,
+            )
             logger.info('Control scheme: driver')
         else:
             self.input_handler = Input()
