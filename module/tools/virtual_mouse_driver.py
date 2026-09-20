@@ -49,6 +49,11 @@ CR_SUCCESS = 0
 # 接口由挂在同一总线上的 xlcore 过滤驱动注册，子设备才是报告的实际消费者。
 VIRTUAL_HID_ENUMERATOR = 'LGHUBDevice'
 
+# 鼠标子设备的硬件 ID 片段（键盘是 PID_C232）。实例 ID 形如
+# 'LGHUBDevice\VID_046D&PID_C231\1&1a590e2c&3&02'，按它过滤才能区分
+# 「键盘呈现、鼠标却是幽灵设备」——按全列表判定会把这种场景误报成可用。
+VIRTUAL_MOUSE_HARDWARE_ID = 'PID_C231'
+
 # 驱动包落地后的文件特征：DriverStore 里的包目录 + System32\drivers 下的镜像
 DRIVER_STORE_PREFIX = 'logi_joy'
 DRIVER_IMAGE_PREFIX = 'logi_joy'
@@ -287,6 +292,15 @@ def _device_instance_ids(enumerator, present_only=False):
     return [item for item in buffer[:].split('\0') if item]
 
 
+def _mouse_device_ids(present_only=False):
+    """LGHUBDevice 枚举器下鼠标子设备（PID_C231）的实例 ID，键盘（PID_C232）不计。"""
+    if present_only:
+        ids = _device_instance_ids(VIRTUAL_HID_ENUMERATOR, present_only=True)
+    else:
+        ids = _device_instance_ids(VIRTUAL_HID_ENUMERATOR)
+    return [item for item in ids if VIRTUAL_MOUSE_HARDWARE_ID in item.upper()]
+
+
 def sub_device_present():
     """虚拟鼠标的 HID 子设备是否实际呈现。纯 CM 查询，无副作用。
 
@@ -298,9 +312,9 @@ def sub_device_present():
     """
     if os.name != 'nt':
         return None
-    if _device_instance_ids(VIRTUAL_HID_ENUMERATOR, present_only=True):
+    if _mouse_device_ids(present_only=True):
         return True
-    if not _device_instance_ids(VIRTUAL_HID_ENUMERATOR):
+    if not _mouse_device_ids():
         return None
     return False
 
@@ -550,7 +564,7 @@ def driver_status():
             'version': str,      # 捆绑驱动包版本（如 2026.0.0.0）
             'package': bool,     # 驱动包是否已落地到系统
             'interfaces': int,   # 枚举到的接口实例数（0 且 package 为真 = 接口未注册）
-            'sub_device': bool or None,  # HID 子设备是否呈现（False = 幽灵设备，代码 45）
+            'sub_device': bool or None,  # 鼠标 HID 子设备是否呈现（False = 幽灵设备，代码 45）
             'admin': bool,       # 当前进程是否有管理员权限（安装/卸载的前置条件）
 
             # 以下为详细诊断，供前端逐项展开
@@ -571,11 +585,15 @@ def driver_status():
     """
     paths = enum_interface_paths()
     device = next((path for path in paths if open_device(path)), None)
-    # 子设备清单一并给出三态判据，省掉一次重复的枚举查询
+    # 子设备清单一并给出三态判据，省掉一次重复的枚举查询。
+    # 汇总口径只看鼠标子设备（与 sub_device_present 一致）：键盘呈现而鼠标是
+    # 幽灵设备时按全列表判定会误报可用。
     sub_devices = sub_device_details()
-    if any(item['present'] for item in sub_devices):
+    mouse_devices = [item for item in sub_devices
+                     if VIRTUAL_MOUSE_HARDWARE_ID in item['instance_id'].upper()]
+    if any(item['present'] for item in mouse_devices):
         sub_device = True
-    elif sub_devices:
+    elif mouse_devices:
         sub_device = False
     else:
         sub_device = None
@@ -753,13 +771,46 @@ def uninstall_driver():
     """移除已安装的虚拟鼠标驱动。
 
     与 install_driver 同理，需要管理员权限，成败以卸载后的设备探测为准。
+    接口消失不代表清理干净：Windows 可能已把删除推迟到重启（reboot_required），
+    幽灵子设备节点与 DriverStore 里的驱动包也可能残留，这些都会透传给前端，
+    而不是笼统报「卸载成功」。
+
+    Returns:
+        dict: {'reboot_required': bool, 'message': str}。reboot_required 为真表示
+            删除被 Windows 推迟到重启后才完成；无残留时不含 message。
 
     Raises:
-        VirtualMouseDriverError: 当前进程不是管理员、卸载器返回非零，或卸载后设备仍在。
+        VirtualMouseDriverError: 当前进程不是管理员、卸载器返回非零，或卸载后设备仍在
+            （句柄被占用、PNP veto 拒绝移除的典型表现）。
     """
     records = _run_manager('uninstall')
     _raise_on_error(records, 'uninstall')
-    if probe_device() is None:
-        logger.info('Virtual mouse driver uninstall: device no longer present')
-        return
-    raise VirtualMouseDriverError('Driver uninstaller ran but the device is still present')
+    reboot_required = _reboot_requested(records)
+    if probe_device() is not None:
+        raise VirtualMouseDriverError(
+            'Driver uninstaller ran but the device is still present. Another process may be '
+            'holding the device handle, or Windows vetoed the removal (PNP_VetoOutstandingOpen). '
+            'Stop all NKAS instances and close the GUI, then retry.')
+    if reboot_required:
+        # 「接口已消失 + 待重启」不是完成态：挂起的 PNP 操作要重启后才真正生效，
+        # 重启前重装只会回到同一状态
+        logger.warning('Virtual mouse driver uninstall: removal is pending a reboot')
+        return {
+            'reboot_required': True,
+            'message': 'Driver uninstall is pending a reboot. Restart Windows to finish the '
+                       'removal; reinstalling before the reboot leaves the device stack in a '
+                       'mixed state.',
+        }
+    residue = []
+    if sub_device_present() is False:
+        residue.append('ghost HID sub-device nodes')
+    if driver_store_packages():
+        residue.append('driver packages in DriverStore')
+    if residue:
+        message = ('Driver uninstalled, but ' + ' and '.join(residue) + ' remain. '
+                   'A reboot usually clears them; if they persist, remove the leftover device '
+                   'nodes in Device Manager (show hidden devices) and retry.')
+        logger.warning(f'Virtual mouse driver uninstall: residue after removal: {residue}')
+        return {'reboot_required': False, 'message': message}
+    logger.info('Virtual mouse driver uninstall: device no longer present')
+    return {'reboot_required': False}

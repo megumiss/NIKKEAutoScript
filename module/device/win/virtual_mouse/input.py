@@ -75,6 +75,15 @@ def claim_scheme_mutex():
         return True
 
 
+def release_scheme_mutex():
+    """释放驱动通道互斥体。与 claim_scheme_mutex 配对，在进程正常退出路径调用。"""
+    global _scheme_mutex
+    with _claim_lock:
+        if _scheme_mutex is not None:
+            _kernel32.CloseHandle(_scheme_mutex)
+            _scheme_mutex = None
+
+
 class VirtualMouseInput(Input):
     # 光标移动方式的候选值。'driver'：相对位移报告闭环逼近；'cursor'：SetCursorPos
     # 直定位 —— 一次调用落点即目标点，不受指针弹道（提高指针精确度、灵敏度滑块）影响，
@@ -126,6 +135,10 @@ class VirtualMouseInput(Input):
             raise RequestHumanTakeover
         if self._channel_ready():
             return
+        # repair 前必须释放本进程持有的设备句柄：重装期间句柄被占用会让 Windows 以
+        # PNP_VetoOutstandingOpen 拒绝移除，repair 必然失败。幽灵设备（代码 45）场景下
+        # open() 成功、句柄常驻，正是这条路径在自我占用。
+        self.mouse_driver.close()
         # 重启后虚拟鼠标设备可能在设备管理器中变隐藏（G HUB 已知问题）：驱动包还在
         # 但接口没注册或 HID 子设备未呈现，重跑一次安装即可重建，修复成功则重试
         if driver_package_present() and repair_driver() and self._channel_ready():

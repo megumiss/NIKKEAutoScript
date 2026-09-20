@@ -455,6 +455,25 @@ class DriverSchemeTests(unittest.TestCase):
         repair.assert_called_once_with()
         self.assertEqual(sub_device.call_count, 2)
 
+    def test_preflight_closes_the_device_handle_before_repair(self):
+        # 重装前必须释放本进程持有的设备句柄，否则 Windows 以 PNP veto 拒绝移除
+        parent = Mock()
+        with (
+            patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=True),
+            patch.object(VirtualMouseDevice, 'open', return_value=True),
+            patch('module.device.win.virtual_mouse.input.sub_device_present',
+                  side_effect=[False, True]),
+            patch('module.device.win.virtual_mouse.input.driver_package_present', return_value=True),
+            patch.object(VirtualMouse, 'close') as closed,
+            patch('module.device.win.virtual_mouse.input.repair_driver', return_value=True) as repair,
+            patch.object(Input, '__init__', return_value=None),
+        ):
+            parent.attach_mock(closed, 'close')
+            parent.attach_mock(repair, 'repair')
+            VirtualMouseInput(config_name='nkas')
+        self.assertLess(parent.mock_calls.index(call.close()),
+                        parent.mock_calls.index(call.repair()))
+
     def test_preflight_stops_when_hid_sub_device_stays_phantom(self):
         with (
             patch('module.device.win.virtual_mouse.input.claim_scheme_mutex', return_value=True),
@@ -681,6 +700,14 @@ class DriverSchemeTests(unittest.TestCase):
             call(virtual_mouse_driver.VIRTUAL_HID_ENUMERATOR),
         ])
 
+    def test_sub_device_present_false_when_only_the_keyboard_is_present(self):
+        # 键盘 C232 呈现、鼠标 C231 是幽灵设备：按全列表判定会误报可用，必须只看鼠标
+        with patch.object(virtual_mouse_driver, '_device_instance_ids', side_effect=[
+            ['LGHUBDEVICE\\VID_046D&PID_C232'],
+            ['LGHUBDEVICE\\VID_046D&PID_C231', 'LGHUBDEVICE\\VID_046D&PID_C232'],
+        ]):
+            self.assertIs(virtual_mouse_driver.sub_device_present(), False)
+
     def test_install_driver_rejects_a_phantom_hid_device(self):
         # 接口能打开、安装器 exit 0，但报告投不出去：不能报成功
         with (
@@ -713,3 +740,45 @@ class DriverSchemeTests(unittest.TestCase):
             patch.object(virtual_mouse_driver.logger, 'info'),
         ):
             self.assertEqual(virtual_mouse_driver.install_driver(), {'reboot_required': False})
+
+    def test_uninstall_driver_reports_a_pending_reboot(self):
+        # 「接口消失 + 待重启」不是完成态：挂起的 PNP 操作重启后才生效，必须透传
+        with (
+            patch.object(virtual_mouse_driver, '_run_manager',
+                         return_value=[{'status': 'success', 'reboot_required': True}]),
+            patch.object(virtual_mouse_driver, 'probe_device', return_value=None),
+            patch.object(virtual_mouse_driver.logger, 'warning'),
+        ):
+            result = virtual_mouse_driver.uninstall_driver()
+        self.assertTrue(result['reboot_required'])
+        self.assertIn('message', result)
+
+    def test_uninstall_driver_reports_residue(self):
+        with (
+            patch.object(virtual_mouse_driver, '_run_manager', return_value=[{'status': 'success'}]),
+            patch.object(virtual_mouse_driver, 'probe_device', return_value=None),
+            patch.object(virtual_mouse_driver, 'sub_device_present', return_value=False),
+            patch.object(virtual_mouse_driver, 'driver_store_packages', return_value=['logi_joy_x64']),
+            patch.object(virtual_mouse_driver.logger, 'warning'),
+        ):
+            result = virtual_mouse_driver.uninstall_driver()
+        self.assertFalse(result['reboot_required'])
+        self.assertIn('remain', result['message'])
+
+    def test_uninstall_driver_returns_clean_result(self):
+        with (
+            patch.object(virtual_mouse_driver, '_run_manager', return_value=[{'status': 'success'}]),
+            patch.object(virtual_mouse_driver, 'probe_device', return_value=None),
+            patch.object(virtual_mouse_driver, 'sub_device_present', return_value=None),
+            patch.object(virtual_mouse_driver, 'driver_store_packages', return_value=[]),
+            patch.object(virtual_mouse_driver.logger, 'info'),
+        ):
+            self.assertEqual(virtual_mouse_driver.uninstall_driver(), {'reboot_required': False})
+
+    def test_uninstall_driver_fails_when_the_device_is_still_present(self):
+        with (
+            patch.object(virtual_mouse_driver, '_run_manager', return_value=[{'status': 'success'}]),
+            patch.object(virtual_mouse_driver, 'probe_device', return_value=_DEVICE_PATH),
+        ):
+            with self.assertRaises(virtual_mouse_driver.VirtualMouseDriverError):
+                virtual_mouse_driver.uninstall_driver()

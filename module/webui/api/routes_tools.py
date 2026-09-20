@@ -9,7 +9,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from module.config.deep import deep_get
-from module.config.utils import filepath_argument, read_file, write_file
+from module.config.utils import filepath_argument, filepath_config, read_file, write_file
 from module.daemon.update_hosts import HOSTS_PATH, UpdateHosts, read_section
 from module.logger import logger
 
@@ -240,6 +240,18 @@ async def virtual_mouse_driver_state(_: Request):
     return JSONResponse(driver_status())
 
 
+def _driver_scheme_running_instances():
+    """正在运行且使用 driver 控制方案的实例名。这些实例的 worker 进程持有虚拟鼠标
+    设备句柄，装/卸期间会让 Windows 以 PNP_VetoOutstandingOpen 拒绝移除。"""
+    from module.webui.process_manager import ProcessManager
+    names = []
+    for manager in ProcessManager.running_instances():
+        config = read_file(filepath_config(manager.config_name))
+        if deep_get(config, keys='NKAS.PCClientInfo.ControlScheme', default='pyautogui') == 'driver':
+            names.append(manager.config_name)
+    return names
+
+
 async def virtual_mouse_driver_update(request: Request):
     from module.tools.virtual_mouse_driver import (driver_status, install_driver,
                                                    uninstall_driver, VirtualMouseDriverError)
@@ -250,6 +262,16 @@ async def virtual_mouse_driver_update(request: Request):
     action = data.get('action', 'install')
     if action not in ('install', 'uninstall'):
         return JSONResponse({'status': 'error', 'message': 'Expected action: install/uninstall.'}, status_code=400)
+    # 有 driver 实例在线时拒绝装/卸：worker 持有的设备句柄会让 Windows 否决设备移除，
+    # 操作失败或挂起到重启，正是排查记录里反复装/卸翻车的现场
+    blocking = _driver_scheme_running_instances()
+    if blocking:
+        return JSONResponse({
+            'status': 'error',
+            'message': f"Instance(s) using the driver control scheme are running: "
+                       f"{', '.join(blocking)}. Stop them before installing or uninstalling "
+                       f"the driver, otherwise Windows vetoes the device removal.",
+        }, status_code=400)
     try:
         result = await asyncio.to_thread(install_driver if action == 'install' else uninstall_driver)
     except VirtualMouseDriverError as exc:

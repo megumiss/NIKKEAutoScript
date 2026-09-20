@@ -487,6 +487,18 @@ class ProcessManager:
             logger.info(f"[{config_name}] exited. Reason: Finish\n")
         except Exception as e:
             logger.exception(e)
+        finally:
+            # driver 方案的设备句柄与互斥体在进程退出时才由系统回收；正常退出路径
+            # 显式释放，避免阻塞紧随其后的驱动装/卸/修复。被 kill 时本钩子不执行，
+            # 由系统回收兜底。
+            if os.name == 'nt':
+                try:
+                    from module.device.win.virtual_mouse.driver_mouse import close_shared_mouse
+                    from module.device.win.virtual_mouse.input import release_scheme_mutex
+                    close_shared_mouse()
+                    release_scheme_mutex()
+                except Exception as exc:
+                    logger.warning(f'Failed to release virtual mouse resources: {exc}')
 
     @classmethod
     def running_instances(cls) -> List["ProcessManager"]:

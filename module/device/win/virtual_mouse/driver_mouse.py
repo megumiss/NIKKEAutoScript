@@ -460,3 +460,16 @@ def shared_mouse():
         if _shared_mouse is None:
             _shared_mouse = VirtualMouse()
         return _shared_mouse
+
+
+def close_shared_mouse():
+    """关闭并释放进程级共享的 VirtualMouse。
+
+    任务结束、驱动安装/卸载/修复前必须调用：设备句柄被持有期间，Windows 会以
+    PNP_VetoOutstandingOpen 拒绝移除设备，装/卸/修复必然失败或挂起到重启。
+    """
+    global _shared_mouse
+    with _shared_lock:
+        if _shared_mouse is not None:
+            _shared_mouse.close()
+            _shared_mouse = None
