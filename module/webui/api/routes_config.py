@@ -32,7 +32,9 @@ def _json_value(value):
 
 
 def _field(instance_name, task, group, arg, spec, value):
-    widget = spec.get('type', 'input')
+    # widget 可覆盖 type：type/mode 仍决定存储与校验方式（如 yaml 文本），
+    # widget 只决定前端用哪个控件渲染。
+    widget = spec.get('widget') or spec.get('type', 'input')
     display = spec.get('display', 'show')
     if widget == 'lock':
         # lock 类型值由系统锁定（config_updater 始终用默认值），渲染为禁用的开关
@@ -46,6 +48,7 @@ def _field(instance_name, task, group, arg, spec, value):
         'item_table': f'/api/{{name}}/warehouse',
         'interception_stone_charts': f'/api/{{name}}/interception/stats',
         'interception_stone_import': f'/api/{{name}}/interception/import',
+        'notify_channel': f'/api/{{name}}/notify/providers',
     }.get(widget)
     return {
         'key': f'{task}.{group}.{arg}', 'arg': arg, 'widget': widget,

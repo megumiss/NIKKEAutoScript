@@ -88,7 +88,8 @@
       "OnePushConfig": {
         "type": "textarea",
         "value": "provider: null",
-        "mode": "yaml"
+        "mode": "yaml",
+        "widget": "notify_channel"
       }
     },
     "Account": {

@@ -7,6 +7,7 @@ import AppSelect from '../components/AppSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import LiveLog from '../components/LiveLog.vue'
 import FieldItemTable from '../components/config/FieldItemTable.vue'
+import FieldNotify from '../components/config/FieldNotify.vue'
 import FieldPathPicker from '../components/config/FieldPathPicker.vue'
 import FieldPriority from '../components/config/FieldPriority.vue'
 import { highlightTextarea, isStructuredTextarea, onTextareaInput, vAutosize } from '../composables/useTextarea'
@@ -28,7 +29,7 @@ const { selectedPage, selectedTask } = useRouteInfo()
 const workspace = useWorkspaceStore()
 const { schemaReady, collapsed, activeGroup, taskSchema, importBusy, notifyTestBusy, physicalBusy, serialDevices, serialDevicesBusy, vddBusy } = storeToRefs(workspace)
 const { clientOptions, selectedClientName, clientPlaceholder } = storeToRefs(workspace)
-const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, startTool, physicalResolution, loadSerialDevices, refreshMonitors, vddSet, loadClientProfiles, applyClientProfile } = workspace
+const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, saveNotifyConfig, saveNotifyRaw, startTool, physicalResolution, loadSerialDevices, refreshMonitors, vddSet, loadClientProfiles, applyClientProfile } = workspace
 const instancesStore = useInstancesStore()
 const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
@@ -95,7 +96,9 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                     <AppSelect :model-value="selectedClientName" :options="clientOptions" :placeholder="clientPlaceholder" :empty-text="t('未检测到可用客户端')" :disabled="field.display !== 'show'" @change="applyClientProfile" @open="loadClientProfiles"/>
                   </div>
                 </div>
-                <div :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
+                <!-- 通知渠道自带整行布局（标题与渠道下拉同行），不吃通用的 field 结构 -->
+                <FieldNotify v-if="field.widget === 'notify_channel'" :field="field" :data="field.special_data" :scope="workspace.selectedName" :disabled="field.display !== 'show'" :busy="notifyTestBusy" @save="(payload: any) => saveNotifyConfig(field, payload)" @save-raw="(value: string) => saveNotifyRaw(field, value)" @test="testNotify"/>
+                <div v-else :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
                   <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp"><LinkifiedText :text="field.help" /></div></div>
                   <div class="field-control">
                     <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><span class="slider"></span></label>
@@ -134,10 +137,6 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                   </div>
                 </div>
               </template>
-              <div v-if="selectedTask === 'NKAS' && group.key === 'Notification'" class="field">
-                <div class="field-label"><div class="fname">{{ t('测试通知') }}</div><div class="fhelp">{{ t('发送一条测试通知，验证当前通知设置是否生效。') }}</div></div>
-                <div class="field-control"><button class="btn" :disabled="notifyTestBusy" @click="testNotify"><AppIcon name="message" :size="14" color="currentColor" /> {{ notifyTestBusy ? t('发送中…') : t('测试通知') }}</button></div>
-              </div>
               <div v-if="group.key === 'PhysicalDevice'" class="field">
                 <div class="field-label"><div class="fname">{{ t('分辨率控制') }}</div><div class="fhelp">{{ t('手动将设备分辨率设为 720x1280（DPI 240）并锁定竖屏，或还原为原生分辨率与屏幕方向。') }}</div></div>
                 <div class="field-control" style="display:flex;gap:8px">

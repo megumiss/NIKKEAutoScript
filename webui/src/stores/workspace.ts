@@ -330,6 +330,21 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     importBusy.value[field.key] = true
     try { const result = await api.post(field.data_endpoint, { path }); if (!result.ok) throw new Error(result.message || t('导入失败')); const chart = allFields().find(item => item.widget === 'interception_stone_charts'); if (chart) await refreshSpecial(chart); toast.notify(`已导入 ${result.imported || 0} 条，跳过 ${result.skipped || 0} 条。`, 'ok', 3000) } catch (exception: any) { toast.error = exception.message } finally { delete importBusy.value[field.key] }
   }
+  // 通知渠道表单写回 OnePushConfig：YAML 由后端生成，这里只回填文本与解析结果。
+  async function saveNotifyConfig(field: Field, payload: { provider: string; params: Record<string, any> }) {
+    try {
+      const result = await api.post(`/api/${selectedName.value}/notify/config`, payload)
+      if (!result.ok) throw new Error(result.message || t('保存失败'))
+      field.value = result.value
+      await refreshSpecial(field).catch(() => null)
+      toast.notify(t('已保存'))
+    } catch (exception: any) { toast.error = exception.message }
+  }
+  // 源码模式直接改 YAML：走普通字段保存，再刷新一次解析结果让渠道下拉跟上。
+  async function saveNotifyRaw(field: Field, value: string) {
+    try { await saveValue(field, value) } catch { return }
+    await refreshSpecial(field).catch(() => null)
+  }
   async function testNotify() {
     if (notifyTestBusy.value) return
     notifyTestBusy.value = true
@@ -373,6 +388,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddSet, loadWorkspace,
     startStateSocket, startSockets, closeSockets, openQueueItem,
     saveValue, save, datetimeValue, cancelDatetimeSave, scheduleDatetimeSave, flushDatetimeSave, clearField, clearDatetimeSaveTimers,
-    normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, startTool, physicalResolution, loadSerialDevices,
+    normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, saveNotifyConfig, saveNotifyRaw, startTool, physicalResolution, loadSerialDevices,
   }
 })

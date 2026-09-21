@@ -813,7 +813,7 @@
     },
     "OnePushConfig": {
       "name": "Push Settings",
-      "help": "Use Onepush to send an error message. Configuration: https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D\nChange the provider value in config from gocqhttp to onebot11 to enable onebot support. \nCurrently only smtp and onebot11 support image sending, such as error screenshots and gacha screenshots."
+      "help": "Pick a channel and fill in its fields; no need to write YAML by hand. Switch to YAML mode for legacy configs or special fields.\nCurrently only smtp and onebot11 support image sending, such as error screenshots and gacha screenshots."
     }
   },
   "Daily": {

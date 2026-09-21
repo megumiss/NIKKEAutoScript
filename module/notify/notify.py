@@ -13,11 +13,9 @@ from module.notify import handle_notify
 from module.ui.ui import UI
 from module.webui.icon import ICON
 
-from .onebot11 import OneBot11
-from .smtp import SMTP, smtp_image_parser
+from . import providers  # noqa: F401  导入即把 onebot11 / smtp 注册进 onepush
+from .smtp import smtp_image_parser
 
-onepush.core._all_providers['onebot11'] = OneBot11
-onepush.core._all_providers['smtp'] = SMTP
 onepush.core.log = logger
 
 
@@ -69,6 +67,8 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
                 notifier.set_message_parser(smtp_image_parser)
 
         config.update(kwargs)
+        # 少数渠道（gotify）用 message 而不是 content 作正文，运行时只注入 content
+        config.setdefault('message', kwargs.get('content'))
 
         # pre check
         for key in required:

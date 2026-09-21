@@ -95,6 +95,8 @@ def mount_api(app):
         Route('/api/{name:str}/interception/stats', routes_stats.interception_stats, methods=['GET']),
         Route('/api/{name:str}/interception/import', routes_stats.import_interception, methods=['POST']),
         Route('/api/{name:str}/notify/test', routes_notify.test_notify, methods=['POST']),
+        Route('/api/{name:str}/notify/providers', routes_notify.providers, methods=['GET']),
+        Route('/api/{name:str}/notify/config', routes_notify.save_config, methods=['POST']),
         Route('/api/{name:str}/physical_device/resolution', routes_device.resolution, methods=['POST']),
         Route('/api/{name:str}/bla/login', routes_bla.login_start, methods=['POST']),
         Route('/api/{name:str}/bla/login/status', routes_bla.login_status, methods=['GET']),

@@ -245,6 +245,7 @@ Notification:
   OnePushConfig:
     type: textarea
     mode: yaml
+    widget: notify_channel
     value: 'provider: null'
 Daily:
   SendGift: false

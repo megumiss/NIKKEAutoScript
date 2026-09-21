@@ -58,6 +58,25 @@ input[type='radio'] { width:16px; height:16px; margin:0; appearance:none; border
 .warehouse-item img { transition:transform .15s; }
 .warehouse-item:hover img { transform:scale(1.12); }.warehouse-item img,.warehouse-fallback { width:30px; height:30px; object-fit:contain; flex:none; }.warehouse-fallback { display:grid; place-items:center; border-radius:6px; color:var(--text-3); background:var(--card-3); }.warehouse-item div { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.warehouse-item small { color:var(--text-3); }.warehouse-item b { color:var(--accent); }.import-field { display:flex; gap:8px; }.import-field input { flex:1; min-width:160px; }.charts-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; }.charts-grid > div { height:240px; border:1px solid var(--border); border-radius:9px; background:var(--card-2); } @keyframes spin { to { transform:rotate(360deg); } }
 table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; border-bottom:1px solid var(--border); text-align:left; font-size:14px; } th { color:var(--text-2); background:var(--card-2); font-size:12.5px; font-weight:600; letter-spacing:.04em; } tbody tr:hover { background:var(--card-2); }
+/* 通知渠道：渠道下拉 + 该渠道的参数字段（字段由后端 schema 驱动） */
+.notify-field { display:flex; flex-direction:column; gap:12px; padding-bottom:13px; width:100%; }
+.notify-notice { padding:8px 11px; border:1px solid var(--border); border-radius:9px; color:var(--text-2); background:var(--card-2); font-size:12.5px; line-height:1.6; }
+.notify-notice code { padding:1px 5px; border-radius:5px; color:var(--accent); background:var(--accent-soft); font:12px Consolas,'Microsoft YaHei UI',monospace; }
+.notify-params { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:0 20px; }
+.notify-param { display:flex; flex-direction:column; gap:6px; min-width:0; padding:10px 0; border-bottom:1px solid var(--border); }
+.notify-label { color:var(--text-2); font-size:12.5px; font-weight:600; }
+.notify-required { margin-left:4px; color:var(--red); }
+.notify-control { display:flex; gap:8px; align-items:center; min-width:0; }
+.notify-control input:not([type='checkbox']) { width:100%; height:36px; padding:0 11px; border:1px solid var(--border); border-radius:9px; outline:0; color:var(--text); background:var(--card-2); }
+.notify-control input:not([type='checkbox']):focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+.notify-control .app-select { width:100%; }
+.notify-secret { display:flex; gap:8px; align-items:center; width:100%; min-width:0; }
+.notify-secret .btn { flex:none; }
+.notify-json { width:100%; min-height:62px; padding:8px 11px; border:1px solid var(--border); border-radius:9px; outline:0; color:var(--text); background:var(--card-2); font:12px/1.5 Consolas,'Microsoft YaHei UI',monospace; resize:vertical; }
+.notify-json:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+.notify-help { color:var(--text-3); font-size:12px; line-height:1.5; }
+.notify-foot { display:flex; gap:10px; align-items:center; }
+.notify-mode { margin-left:auto; }
 .about-panel { max-width:960px; padding:24px 28px; font-size:14.5px; line-height:1.9; }.about-panel h2 { margin-bottom:12px; color:var(--accent); font-size:20px; }.about-panel p { margin:6px 0; }.about-panel a { color:var(--accent); }.about-links { display:flex; gap:10px; margin-top:20px; }
 .about-panel h3 { margin:22px 0 5px; color:var(--text); font-size:15px; }.about-donations { display:flex; gap:18px; flex-wrap:wrap; margin-top:18px; }.about-donations figure { padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--card-2); text-align:center; }.about-donations img { display:block; width:160px; height:160px; object-fit:contain; }.about-donations figcaption { margin-top:5px; color:var(--text-2); font-size:12px; }
 .notice-stack { position:absolute; z-index:4; top:68px; right:24px; width:min(420px,calc(100vw - 280px)); }.notice-card { display:flex; gap:16px; align-items:flex-start; margin-bottom:10px; padding:14px 16px; border:1px solid var(--border-light); border-radius:12px; background:var(--card); box-shadow:var(--shadow-hover); }.notice-card.success { border-color:var(--green); background:var(--toast-ok-bg); box-shadow:var(--toast-shadow); }.notice-card.error { border-color:var(--red); background:var(--toast-error-bg); box-shadow:var(--toast-shadow); }.notice-card strong { display:block; margin-bottom:3px; }.notice-card p { color:var(--text-2); font-size:12.5px; line-height:1.5; }.notice-card .notice-error-detail { margin-top:4px; color:var(--text-3); font-size:11.5px; font-family:'Cascadia Code','JetBrains Mono',Consolas,'Microsoft YaHei UI',monospace; overflow-wrap:anywhere; }.notice-card .btn { margin-left:auto; flex:none; }
