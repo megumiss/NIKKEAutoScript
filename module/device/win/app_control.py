@@ -10,7 +10,7 @@ from module.config.language import set_language
 from module.config.server import set_server
 from module.device.win.game_control import WinClient, Window
 from module.device.win.login import Login
-from module.device.win.vdd import vdd_auto_start
+from module.device.win.vdd import vdd_auto_start, vdd_find_screen_n
 from module.exception import AccountError, RequestHumanTakeover
 from module.logger import logger
 
@@ -113,9 +113,23 @@ class AppControl(WinClient, Login):
         #     else None
         # )
 
-        # 自动管理 VDD 虚拟屏：启用并等待其出现
-        if self.config.PCClient_VddScreen and self.config.PCClient_VddAutoManage:
-            vdd_auto_start()
+        # VDD 虚拟屏：自动管理时启用并等待其出现
+        # 开启 VddScreen 后不再使用手动选择的屏幕序号，改为运行时自动定位
+        # （回填只作用于内存，不落盘）
+        if self.config.PCClient_VddScreen:
+            if self.config.PCClient_VddAutoManage:
+                screen_n = vdd_auto_start(self.config)
+            else:
+                # 用户自行常驻开着虚拟屏，只解析序号，不触发启停
+                screen_n = vdd_find_screen_n(self.config)
+            if screen_n is not None:
+                self.config.PCClient_ScreenNumber = screen_n
+                logger.info(f'VDD screen index resolved at runtime: {screen_n}')
+            else:
+                logger.warning(
+                    f'Failed to locate VDD screen, falling back to configured '
+                    f'ScreenNumber={self.config.PCClient_ScreenNumber}'
+                )
 
         # 设置屏幕方向
         if self.config.PCClient_ScreenRotate:

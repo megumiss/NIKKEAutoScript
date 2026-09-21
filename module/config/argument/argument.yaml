@@ -104,6 +104,9 @@ PCClient:
     value: 0
     option: [ 0, 1, 2, 3, 4, 5 ]
   VddScreen: false
+  VddType:
+    value: parsecvdd
+    option: [ parsecvdd, mttvdd ]
   VddAutoManage: false
   GameWindowPosition:
     value: center

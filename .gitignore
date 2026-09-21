@@ -18,11 +18,14 @@ data/telemetry.json
 !webapp/src-tauri/Cargo.lock
 /nkas.exe
 bin/paddleocr/
+# ParsecDisplay 运行期日志，写在自身目录下
+bin/parsec_vdd/debug.log
 /tmp
 **.acc
 data/
 android/
 .workbuddy/
+.workbuddy-ai/
 dev_tools/.button_extract_cache.json
 dev_tools/.template_capture_config.json
 # GitHub wiki 本地克隆（独立仓库，勿提交）

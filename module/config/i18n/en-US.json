@@ -435,7 +435,7 @@
     },
     "ScreenNumber": {
       "name": "Game Window Target Screen",
-      "help": "Select the screen that meets the resolution requirements. The default is 0 (main screen). You must enable Multi-Screen Mode first. After selection, the game window will move to the corresponding screen. The screen order may differ from the system display settings.",
+      "help": "Select the screen that meets the resolution requirements. The default is 0 (main screen). You must enable Multi-Screen Mode first. After selection, the game window will move to the corresponding screen. The screen order may differ from the system display settings. This option is ignored when 'Target Screen Is VDD Virtual Display' is enabled; the screen index is then located automatically.",
       "0": "0",
       "1": "1",
       "2": "2",
@@ -445,11 +445,17 @@
     },
     "VddScreen": {
       "name": "Target Screen Is VDD Virtual Display",
-      "help": "Enable when the target screen is a VDD (Virtual Display Driver) virtual display. Select the target screen while the virtual display is enabled."
+      "help": "Enable when the target screen is a VDD (Virtual Display Driver) virtual display. When enabled, the screen index is located automatically at task startup, so there is no need to select the target screen ('Game Window Target Screen' is ignored)."
+    },
+    "VddType": {
+      "name": "Virtual Display Type",
+      "help": "How the virtual display is managed. ParsecVDD requires the official Parsec VDD driver to be installed manually; the display is then managed by the bundled ParsecDisplay and needs no administrator rights. MttVDD uses the script bundled with this project and requires administrator rights. Only effective when 'Target Screen Is VDD Virtual Display' is enabled.",
+      "parsecvdd": "ParsecVDD",
+      "mttvdd": "MttVDD"
     },
     "VddAutoManage": {
       "name": "Auto-Manage VDD Screen",
-      "help": "Requires 'Target Screen Is VDD Virtual Display' to be enabled. When enabled, the virtual display is automatically enabled when a task starts and disabled after it finishes."
+      "help": "Requires 'Target Screen Is VDD Virtual Display' to be enabled. When enabled, the virtual display is automatically enabled and its screen index located when a task starts, and disabled after it finishes."
     },
     "GameWindowPosition": {
       "name": "Game Window Position",

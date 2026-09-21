@@ -145,7 +145,7 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '查询中…': { 'en-US': 'Querying…', 'ja-JP': '検索中…' },
   '未检测到设备': { 'en-US': 'No device detected', 'ja-JP': 'デバイスが検出されません' },
   '虚拟屏幕(VDD)': { 'en-US': 'Virtual display (VDD)', 'ja-JP': '仮想ディスプレイ(VDD)' },
-  '启用或禁用 VDD 虚拟屏幕；需要已安装 Virtual Display Driver，且 NKAS 以管理员身份运行。': { 'en-US': 'Enable or disable the VDD virtual display. Requires Virtual Display Driver to be installed and NKAS to run as administrator.', 'ja-JP': 'VDD 仮想ディスプレイを有効/無効にします。Virtual Display Driver のインストールと NKAS の管理者実行が必要です。' },
+  '启用或禁用虚拟屏幕。ParsecVDD 需先自行安装官方 Parsec VDD 驱动，无需管理员权限；MttVDD 需已安装 Virtual Display Driver，且 NKAS 以管理员身份运行。': { 'en-US': 'Enable or disable the virtual display. ParsecVDD requires the official Parsec VDD driver to be installed manually and needs no administrator rights; MttVDD requires Virtual Display Driver and NKAS to run as administrator.', 'ja-JP': '仮想ディスプレイを有効/無効にします。ParsecVDD は公式 Parsec VDD ドライバーの手動インストールが必要で、管理者権限は不要です。MttVDD は Virtual Display Driver のインストールと NKAS の管理者実行が必要です。' },
   '启动虚拟屏幕': { 'en-US': 'Enable virtual display', 'ja-JP': '仮想ディスプレイを有効化' },
   '禁用虚拟屏幕': { 'en-US': 'Disable virtual display', 'ja-JP': '仮想ディスプレイを無効化' },
   '操作成功': { 'en-US': 'Succeeded', 'ja-JP': '成功しました' },

@@ -223,8 +223,44 @@ async def monitors(_: Request):
     return JSONResponse(_build_screen_number_options())
 
 
-async def vdd_status(_: Request):
+VDD_TYPES = ('parsecvdd', 'mttvdd')
+
+
+def _vdd_type_from(request: Request) -> str:
+    """读取 ?type= 查询参数，非法值或缺省时按配置默认值 parsecvdd 处理"""
+    value = (request.query_params.get('type') or '').strip().lower()
+    return value if value in VDD_TYPES else 'parsecvdd'
+
+
+def _parsec_vdd_status() -> dict:
+    """ParsecVDD 状态：驱动安装状态 + 常驻进程状态 + 屏幕列表"""
+    from module.device.win import parsec_vdd
+
+    status = parsec_vdd.driver_status()
+    displays = []
+    error = ''
+    if status['installed']:
+        try:
+            displays = parsec_vdd.list_displays()
+        except Exception as exc:
+            error = str(exc)
+    return {
+        'type': 'parsecvdd',
+        'installed': status['installed'],
+        'status': status['status'],
+        'version': status['version'],
+        'message': status['message'],
+        'app_running': parsec_vdd.is_app_running(),
+        'displays': displays,
+        'error': error,
+    }
+
+
+async def vdd_status(request: Request):
+    vdd_type = _vdd_type_from(request)
     try:
+        if vdd_type == 'parsecvdd':
+            return JSONResponse(await asyncio.to_thread(_parsec_vdd_status))
         from module.device.win.vdd import vdd_status as _status
         return JSONResponse(await asyncio.to_thread(_status))
     except Exception as exc:
@@ -236,12 +272,23 @@ async def vdd_set(request: Request):
     action = request.path_params['action']
     if action not in ('enable', 'disable'):
         return _json_error(f'Invalid VDD action: {action}')
+    vdd_type = _vdd_type_from(request)
     try:
+        if vdd_type == 'parsecvdd':
+            from module.device.win import parsec_vdd
+            if action == 'enable':
+                screen_n = await asyncio.to_thread(parsec_vdd.ensure_screen_1080p_portrait)
+                return JSONResponse({'status': 'success', 'message': f'ParsecVDD enabled (screen {screen_n}).'})
+            await asyncio.to_thread(parsec_vdd.auto_stop)
+            return JSONResponse({'status': 'success', 'message': 'ParsecVDD disabled.'})
         from module.device.win import vdd
         await asyncio.to_thread(vdd._expect_success, action)
         return JSONResponse({'status': 'success', 'message': f'VDD {action} done.'})
     except Exception as exc:
         logger.exception(exc)
+        # ParsecVDD 不需要管理员权限，管理员提示只对 MttVDD 有意义
+        if vdd_type == 'parsecvdd':
+            return _json_error(str(exc))
         return _json_error(f'{exc}(请确认 NKAS 以管理员身份运行)')
 
 

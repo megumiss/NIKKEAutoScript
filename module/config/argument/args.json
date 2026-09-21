@@ -343,6 +343,14 @@
         "type": "checkbox",
         "value": false
       },
+      "VddType": {
+        "type": "select",
+        "value": "parsecvdd",
+        "option": [
+          "parsecvdd",
+          "mttvdd"
+        ]
+      },
       "VddAutoManage": {
         "type": "checkbox",
         "value": false

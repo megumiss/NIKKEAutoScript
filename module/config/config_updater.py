@@ -448,6 +448,13 @@ class ConfigUpdater:
             elif (deep_get(old, keys=target) is None) or (source == target):
                 deep_set(new, keys=target, value=value)
 
+        # 2026-09: 新增 VddType，旧版只有 MttVDD；已开启 VddScreen 的老用户迁移到
+        # mttvdd 以保持原有行为，未开启过的用户保持默认值 parsecvdd。
+        # 仅当旧配置里没有 VddType 时才写入，不覆盖用户手改。
+        if deep_get(old, keys='PCClient.PCClient.VddScreen') is True \
+                and deep_get(old, keys='PCClient.PCClient.VddType') is None:
+            deep_set(new, keys='PCClient.PCClient.VddType', value='mttvdd')
+
         return new
 
     def _override(self, data):

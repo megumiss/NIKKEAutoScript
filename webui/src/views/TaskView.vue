@@ -128,7 +128,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                   </div>
                 </div>
                 <div v-if="field.key.endsWith('.VddAutoManage')" class="field">
-                  <div class="field-label"><div class="fname">{{ t('虚拟屏幕(VDD)') }}</div><div class="fhelp">{{ t('启用或禁用 VDD 虚拟屏幕；需要已安装 Virtual Display Driver，且 NKAS 以管理员身份运行。') }}</div></div>
+                  <div class="field-label"><div class="fname">{{ t('虚拟屏幕(VDD)') }}</div><div class="fhelp">{{ t('启用或禁用虚拟屏幕。ParsecVDD 需先自行安装官方 Parsec VDD 驱动，无需管理员权限；MttVDD 需已安装 Virtual Display Driver，且 NKAS 以管理员身份运行。') }}</div></div>
                   <div class="field-control">
                     <div style="display:flex;gap:8px">
                       <button class="btn primary" :disabled="vddBusy" @click="vddSet('enable')"><AppIcon name="play" :size="14" /> {{ t('启动虚拟屏幕') }}</button>

@@ -76,6 +76,7 @@
       "Screens": false,
       "ScreenNumber": 0,
       "VddScreen": false,
+      "VddType": "parsecvdd",
       "VddAutoManage": false,
       "GameWindowPosition": "center",
       "GameResolutionCompat": true,

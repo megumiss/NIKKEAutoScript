@@ -122,11 +122,16 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (monitors) applyMonitorOptions(field, monitors)
   }
   const vddBusy = ref(false)
+  // 当前表单里选择的虚拟屏幕类型，决定后端按哪套实现启停（与 VddType 字段同源）
+  function vddTypeValue() {
+    const field = allFields().find((item: Field) => item.key.endsWith('.VddType'))
+    return String(field?.value || 'parsecvdd')
+  }
   async function vddSet(action: 'enable' | 'disable') {
     if (vddBusy.value) return
     vddBusy.value = true
     try {
-      await api.post(`/api/system/vdd/${action}`)
+      await api.post(`/api/system/vdd/${action}?type=${encodeURIComponent(vddTypeValue())}`)
       toast.notify(t('操作成功'), 'ok')
     } catch (exception: any) { toast.error = exception.message } finally { vddBusy.value = false }
   }

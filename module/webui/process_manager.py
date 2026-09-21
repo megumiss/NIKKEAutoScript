@@ -309,15 +309,29 @@ class ProcessManager:
         if config.Client_Platform != 'win':
             return
         if config.PCClient_ScreenRotate:
+            # 实例进程被 kill，内存里回填的屏幕序号不会带过来；此刻 VDD 仍开着，
+            # 先按 VddType 重新解析一次，解析失败再回退配置值
+            screen_n = config.PCClient_ScreenNumber
+            if config.PCClient_VddScreen:
+                try:
+                    from module.device.win.vdd import vdd_find_screen_n
+                    resolved = vdd_find_screen_n(config)
+                except Exception as e:
+                    resolved = None
+                    logger.warning(f'Failed to resolve VDD screen index on stop: {e}')
+                if resolved is not None:
+                    screen_n = resolved
+                else:
+                    logger.warning(f'VDD screen not resolved on stop, fall back to ScreenNumber={screen_n}')
             try:
                 from module.device.win.game_control import WinClient
-                WinClient.screen_rotate(config.PCClient_ScreenNumber)
+                WinClient.screen_rotate(screen_n)
             except Exception as e:
                 logger.warning(f'Failed to restore screen orientation on stop: {e}')
         if config.PCClient_VddScreen and config.PCClient_VddAutoManage:
             try:
                 from module.device.win.vdd import vdd_auto_stop
-                vdd_auto_stop()
+                vdd_auto_stop(config)
             except Exception as e:
                 logger.warning(f'Failed to disable VDD screen on stop: {e}')
 
