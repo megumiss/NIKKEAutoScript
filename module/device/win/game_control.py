@@ -203,6 +203,11 @@ class WinClient:
     def set_foreground_window_with_retry(hwnd):
         """尝试将窗口设置为前台，失败时先最小化再恢复"""
         hwnd_hex = hex(hwnd) if isinstance(hwnd, int) else hwnd
+        user32 = ctypes.windll.user32
+
+        # 目标已是前台且未最小化时直接返回：否则任务循环每次都会注入 Alt 并重复激活窗口，干扰用户正常操作
+        if user32.GetForegroundWindow() == hwnd and not user32.IsIconic(hwnd):
+            return
         logger.debug(f'Attempting to set window {hwnd_hex} to foreground.')
 
         def toggle_window_state(hwnd, minimize=False):
@@ -226,7 +231,8 @@ class WinClient:
 
         bypass_foreground_lock()
         time.sleep(0.5)
-        toggle_window_state(hwnd, minimize=False)
+        if user32.IsIconic(hwnd):
+            toggle_window_state(hwnd, minimize=False)
 
         if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
             logger.warning(
