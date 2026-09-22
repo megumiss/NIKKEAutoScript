@@ -431,25 +431,17 @@
     },
     "Screens": {
       "name": "多屏幕模式",
-      "help": "开启后支持游戏窗口在副屏/虚拟屏幕上运行，还需要手动选择游戏窗口目标屏幕"
+      "help": "开启后支持游戏窗口在副屏/虚拟屏幕上运行，还需要手动选择游戏窗口目标屏幕；开启「启用VDD虚拟屏幕」时会自动开启该选项"
     },
     "ScreenNumber": {
       "name": "游戏窗口目标屏幕",
-      "help": "选择符合分辨率要求的屏幕，默认为0，即主屏幕；需要先开启多屏幕模式，选择后，游戏窗口会移动到对应的屏幕中，屏幕顺序可能和系统设置中的顺序不同",
+      "help": "选择符合分辨率要求的屏幕，默认为0，即主屏幕；需要先开启多屏幕模式，选择后，游戏窗口会移动到对应的屏幕中，屏幕顺序可能和系统设置中的顺序不同；开启「启用VDD虚拟屏幕」时该选项被忽略，屏幕序号会自动定位",
       "0": "0",
       "1": "1",
       "2": "2",
       "3": "3",
       "4": "4",
       "5": "5"
-    },
-    "VddScreen": {
-      "name": "是否为VDD虚拟屏幕",
-      "help": "目标屏幕是 VDD(Virtual Display Driver)虚拟屏时开启，请在虚拟屏启用状态下选择目标屏幕"
-    },
-    "VddAutoManage": {
-      "name": "自动管理VDD屏幕",
-      "help": "需先开启是否为VDD虚拟屏幕；开启后任务启动时自动启用该虚拟屏，任务结束后自动禁用"
     },
     "GameWindowPosition": {
       "name": "游戏窗口位置",
@@ -477,6 +469,26 @@
     "DisableVoice": {
       "name": "禁用声音",
       "help": "脚本运行时自动禁用游戏进程声音，运行结束后会自动恢复；如果没有自动恢复，需要在系统任务栏中的音量合成器中手动开启"
+    }
+  },
+  "Vdd": {
+    "_info": {
+      "name": "虚拟屏幕",
+      "help": "VDD 虚拟屏幕设置"
+    },
+    "VddScreen": {
+      "name": "启用VDD虚拟屏幕",
+      "help": "需要使用虚拟屏幕时开启，建议 1080P 屏幕的用户使用该方式；开启后会将游戏窗口移动到虚拟屏幕来满足分辨率要求，屏幕序号会在任务启动时自动定位，无需手动选择目标屏幕"
+    },
+    "VddType": {
+      "name": "虚拟屏幕类型",
+      "help": "ParsecVDD（推荐）：只需手动安装官方 ParsecVDD 驱动即可使用 https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe；\nMttVDD：需要手动安装官方 MttVDD 驱动 https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe，安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080、竖屏。",
+      "parsecvdd": "ParsecVDD",
+      "mttvdd": "MttVDD"
+    },
+    "VddAutoManage": {
+      "name": "自动管理VDD屏幕",
+      "help": "开启后任务启动时自动启用该虚拟屏并定位屏幕序号，任务结束后自动禁用"
     }
   },
   "PCClientInfo": {

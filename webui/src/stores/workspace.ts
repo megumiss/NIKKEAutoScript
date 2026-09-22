@@ -122,11 +122,16 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (monitors) applyMonitorOptions(field, monitors)
   }
   const vddBusy = ref(false)
+  // 当前表单里选择的虚拟屏幕类型，决定后端按哪套实现启停（与 VddType 字段同源）
+  function vddTypeValue() {
+    const field = allFields().find((item: Field) => item.key.endsWith('.Vdd.VddType'))
+    return String(field?.value || 'parsecvdd')
+  }
   async function vddSet(action: 'enable' | 'disable') {
     if (vddBusy.value) return
     vddBusy.value = true
     try {
-      await api.post(`/api/system/vdd/${action}`)
+      await api.post(`/api/system/vdd/${action}?type=${encodeURIComponent(vddTypeValue())}`)
       toast.notify(t('操作成功'), 'ok')
     } catch (exception: any) { toast.error = exception.message } finally { vddBusy.value = false }
   }
@@ -385,7 +390,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     clientOptions, selectedClientName, clientPlaceholder, loadClientProfiles, applyClientProfile,
     selectedName, selectedTask, taskSchema, workspaceName, socketsName,
     logs, logTick, autoScroll, logLevel, pushLogs, visibleLogs, visibleMenus,
-    taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddSet, loadWorkspace,
+    taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddTypeValue, vddSet, loadWorkspace,
     startStateSocket, startSockets, closeSockets, openQueueItem,
     saveValue, save, datetimeValue, cancelDatetimeSave, scheduleDatetimeSave, flushDatetimeSave, clearField, clearDatetimeSaveTimers,
     normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, saveNotifyConfig, saveNotifyRaw, startTool, physicalResolution, loadSerialDevices,

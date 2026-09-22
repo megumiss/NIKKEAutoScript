@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import random
@@ -72,6 +73,37 @@ def _driver_scheme_missing_driver(name):
     if driver_package_present() and repair_driver():
         return False
     return True
+
+
+def _vdd_missing_driver(name):
+    """
+    开启了虚拟屏且由 NKAS 自行管理（NKAS.Vdd.VddScreen + VddAutoManage，仅 PC 客户端生效）
+    时，虚拟屏驱动未安装会让实例初始化直接失败：ParsecVDD 抛 ParsecVddError，
+    MttVDD 则是设备不存在。这里在拉起进程前拦下，避免启动后才失败。
+
+    调用方是 PC 模式的实例启动，此时管理员校验已经通过（_pc_client_requires_admin 在前），
+    探测不会因权限不足失败。所以查询报错只剩「驱动工具链缺失 / 输出无法解析」这一类，
+    和驱动未安装一样都跑不了 VDD，一并按未安装处理。
+    """
+    config = read_file(filepath_config(name))
+    if deep_get(config, keys='NKAS.Client.Platform', default='adb') != 'win':
+        return False
+    if not deep_get(config, keys='NKAS.Vdd.VddScreen', default=False):
+        return False
+    if not deep_get(config, keys='NKAS.Vdd.VddAutoManage', default=False):
+        return False
+
+    from module.device.win import parsec_vdd, vdd
+
+    vdd_type = str(deep_get(config, keys='NKAS.Vdd.VddType', default='parsecvdd') or 'parsecvdd').lower()
+    if vdd_type == 'parsecvdd':
+        # driver_status() 内部已用 PnP 兜底，查不到就是 installed=False，不会抛异常
+        return not parsec_vdd.driver_status()['installed']
+    try:
+        return not vdd.vdd_status().get('installed')
+    except (vdd.VddError, OSError) as e:
+        logger.warning(f'VDD status query failed for "{name}": {e}')
+        return True
 
 
 # Lives outside ./config because nkas_instance() treats every *.json there
@@ -344,6 +376,14 @@ async def start(request: Request):
                 'message': 'Control scheme "driver" requires the virtual mouse driver. '
                            'Install it from Tools > Virtual mouse driver first.',
             }, status_code=400)
+        if await asyncio.to_thread(_vdd_missing_driver, name):
+            logger.warning(f'Instance "{name}" start blocked: virtual display (VDD) driver is not installed')
+            return JSONResponse({
+                'status': 'error', 'code': 'vdd_driver_not_installed',
+                'message': 'Virtual display (VDD) is enabled and managed by NKAS, but its driver is '
+                           'not installed. Install the Parsec VDD driver (or the Virtual Display '
+                           'Driver for MttVDD) first, or turn off the VDD auto-manage option.',
+            }, status_code=400)
         manager.start(func=get_config_mod(name), ev=updater.event)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
@@ -365,6 +405,13 @@ async def start(request: Request):
             results.append({
                 'instance': instance, 'status': 'error', 'code': 'driver_not_installed',
                 'message': 'Control scheme "driver" requires the virtual mouse driver.',
+            })
+            continue
+        if await asyncio.to_thread(_vdd_missing_driver, instance):
+            logger.warning(f'Instance "{instance}" start blocked: virtual display (VDD) driver is not installed')
+            results.append({
+                'instance': instance, 'status': 'error', 'code': 'vdd_driver_not_installed',
+                'message': 'Virtual display (VDD) driver is not installed.',
             })
             continue
         manager.start(func=get_config_mod(instance), ev=updater.event)

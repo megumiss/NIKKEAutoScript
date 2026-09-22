@@ -103,8 +103,6 @@ PCClient:
   ScreenNumber:
     value: 0
     option: [ 0, 1, 2, 3, 4, 5 ]
-  VddScreen: false
-  VddAutoManage: false
   GameWindowPosition:
     value: center
     option: [ center, left, right, topleft, topright, bottomleft, bottomright ]
@@ -113,6 +111,12 @@ PCClient:
   ScreenRotate: false
   CloseAutoHdr: true
   DisableVoice: false
+Vdd:
+  VddScreen: false
+  VddType:
+    value: parsecvdd
+    option: [ parsecvdd, mttvdd ]
+  VddAutoManage: true
 PCClientInfo:
   Client:
     value: intl

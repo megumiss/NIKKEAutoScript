@@ -75,13 +75,16 @@
     "PCClient": {
       "Screens": false,
       "ScreenNumber": 0,
-      "VddScreen": false,
-      "VddAutoManage": false,
       "GameWindowPosition": "center",
       "GameResolutionCompat": true,
       "ScreenRotate": false,
       "CloseAutoHdr": true,
       "DisableVoice": false
+    },
+    "Vdd": {
+      "VddScreen": false,
+      "VddType": "parsecvdd",
+      "VddAutoManage": true
     },
     "Storage": {
       "Storage": {}
@@ -665,7 +668,7 @@
       "MonthlyTime": "04:00"
     },
     "EventInfo": {
-      "Event": "",
+      "Event": "event_20260917",
       "StoryPart": "Story_1",
       "StoryDifficulty": "Normal"
     },
@@ -703,9 +706,9 @@
       "MonthlyTime": "04:00"
     },
     "EventInfo": {
-      "Event": "",
+      "Event": "event_20260903",
       "StoryPart": "Story_1",
-      "StoryDifficulty": "Normal"
+      "StoryDifficulty": "Hard"
     },
     "StoryStage": {
       "AutoPush": false,

@@ -37,7 +37,7 @@ SPA 依赖初始化（在 `webui/` 目录）：
 ```powershell
 yarn install --frozen-lockfile
 ```
-构建产物 `webui/dist` 提交入库。注意 `webui/vite.config.ts` 设置了 `emptyOutDir: false`，构建不会自动清理旧的哈希产物；提交 `dist` 前先删除不再被 `index.html`/chunk 引用的旧文件，只提交当前构建实际引用的文件。
+构建产物 `webui/dist` 提交入库。`webui/vite.config.ts` 设置了 `emptyOutDir: true`，构建会先清空 `dist`，直接全量提交当前构建产物即可。
 
 ## 代码风格与命名规范
 Python 使用 4 空格缩进，单行不超过 120 字符，字符串优先单引号（见 `pyproject.toml` 的 Ruff 配置）。  

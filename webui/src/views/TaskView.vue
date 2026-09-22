@@ -10,6 +10,7 @@ import FieldItemTable from '../components/config/FieldItemTable.vue'
 import FieldNotify from '../components/config/FieldNotify.vue'
 import FieldPathPicker from '../components/config/FieldPathPicker.vue'
 import FieldPriority from '../components/config/FieldPriority.vue'
+import FieldVddStatus from '../components/config/FieldVddStatus.vue'
 import { highlightTextarea, isStructuredTextarea, onTextareaInput, vAutosize } from '../composables/useTextarea'
 import { useRouteInfo } from '../composables/useRouteInfo'
 import { t } from '../i18n'
@@ -127,8 +128,8 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                     <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @input="onTextInput(field, $event)" @change="save(field, $event)">
                   </div>
                 </div>
-                <div v-if="field.key.endsWith('.VddAutoManage')" class="field">
-                  <div class="field-label"><div class="fname">{{ t('虚拟屏幕(VDD)') }}</div><div class="fhelp">{{ t('启用或禁用 VDD 虚拟屏幕；需要已安装 Virtual Display Driver，且 NKAS 以管理员身份运行。') }}</div></div>
+                <div v-if="field.key.endsWith('.Vdd.VddAutoManage')" class="field">
+                  <div class="field-label"><div class="fname">{{ t('手动管理VDD屏幕') }}</div><div class="fhelp">{{ t('启用或禁用虚拟屏幕，可以手动测试安装的驱动是否能够使用，或者当自动管理未生效时手动设置屏幕状态。') }}</div></div>
                   <div class="field-control">
                     <div style="display:flex;gap:8px">
                       <button class="btn primary" :disabled="vddBusy" @click="vddSet('enable')"><AppIcon name="play" :size="14" /> {{ t('启动虚拟屏幕') }}</button>
@@ -136,6 +137,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                     </div>
                   </div>
                 </div>
+                <FieldVddStatus v-if="field.key.endsWith('.Vdd.VddAutoManage')" :type="workspace.vddTypeValue()" :scope="workspace.selectedName" :busy="vddBusy" />
               </template>
               <div v-if="group.key === 'PhysicalDevice'" class="field">
                 <div class="field-label"><div class="fname">{{ t('分辨率控制') }}</div><div class="fhelp">{{ t('手动将设备分辨率设为 720x1280（DPI 240）并锁定竖屏，或还原为原生分辨率与屏幕方向。') }}</div></div>

@@ -258,9 +258,9 @@ class NikkeAutoScript:
         if self.config.PCClient_DisableVoice:
             self.device.mute_window(False)
         # 自动管理 VDD 虚拟屏：任务结束后禁用
-        if self.config.PCClient_VddScreen and self.config.PCClient_VddAutoManage:
+        if self.config.Vdd_VddScreen and self.config.Vdd_VddAutoManage:
             from module.device.win.vdd import vdd_auto_stop
-            vdd_auto_stop()
+            vdd_auto_stop(self.config)
 
     def save_error_log(self):
         """
