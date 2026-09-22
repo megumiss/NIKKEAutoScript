@@ -50,14 +50,16 @@ class GeneratedConfig:
     # Group `PCClient`
     PCClient_Screens = False
     PCClient_ScreenNumber = 0  # 0, 1, 2, 3, 4, 5
-    PCClient_VddScreen = False
-    PCClient_VddType = 'parsecvdd'  # parsecvdd, mttvdd
-    PCClient_VddAutoManage = False
     PCClient_GameWindowPosition = 'center'  # center, left, right, topleft, topright, bottomleft, bottomright
     PCClient_GameResolutionCompat = True
     PCClient_ScreenRotate = False
     PCClient_CloseAutoHdr = True
     PCClient_DisableVoice = False
+
+    # Group `Vdd`
+    Vdd_VddScreen = False
+    Vdd_VddType = 'parsecvdd'  # parsecvdd, mttvdd
+    Vdd_VddAutoManage = True
 
     # Group `PCClientInfo`
     PCClientInfo_Client = 'intl'  # intl, hmt

@@ -312,7 +312,7 @@ class ProcessManager:
             # 实例进程被 kill，内存里回填的屏幕序号不会带过来；此刻 VDD 仍开着，
             # 先按 VddType 重新解析一次，解析失败再回退配置值
             screen_n = config.PCClient_ScreenNumber
-            if config.PCClient_VddScreen:
+            if config.Vdd_VddScreen:
                 try:
                     from module.device.win.vdd import vdd_find_screen_n
                     resolved = vdd_find_screen_n(config)
@@ -328,7 +328,7 @@ class ProcessManager:
                 WinClient.screen_rotate(screen_n)
             except Exception as e:
                 logger.warning(f'Failed to restore screen orientation on stop: {e}')
-        if config.PCClient_VddScreen and config.PCClient_VddAutoManage:
+        if config.Vdd_VddScreen and config.Vdd_VddAutoManage:
             try:
                 from module.device.win.vdd import vdd_auto_stop
                 vdd_auto_stop(config)

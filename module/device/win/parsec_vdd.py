@@ -39,7 +39,9 @@ TARGET_HEIGHT = 1920
 TARGET_HZ = 60
 TARGET_ORIENTATION = 1  # DMDO_90，竖屏
 
-WAIT_DISPLAY_TIMEOUT = 15
+# 等待虚拟屏出现在 EnumDisplayMonitors 的超时。驱动恢复快照/首次建屏在部分机器上
+# 耗时较长（实测会超过 15s），取 60s 留足余量，避免误判成建屏失败而中断任务。
+WAIT_DISPLAY_TIMEOUT = 60
 
 
 class ParsecVddError(VddError):

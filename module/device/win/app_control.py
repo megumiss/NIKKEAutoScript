@@ -118,8 +118,8 @@ class AppControl(WinClient, Login):
         # （回填只作用于内存，不落盘）
         vdd_auto_started = False
         try:
-            if self.config.PCClient_VddScreen:
-                if self.config.PCClient_VddAutoManage:
+            if self.config.Vdd_VddScreen:
+                if self.config.Vdd_VddAutoManage:
                     screen_n = vdd_auto_start(self.config)
                     # From this point on, this device owns the auto-managed VDD
                     # lifecycle and must release it if initialization fails.

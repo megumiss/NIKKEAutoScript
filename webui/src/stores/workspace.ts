@@ -124,7 +124,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const vddBusy = ref(false)
   // 当前表单里选择的虚拟屏幕类型，决定后端按哪套实现启停（与 VddType 字段同源）
   function vddTypeValue() {
-    const field = allFields().find((item: Field) => item.key.endsWith('.VddType'))
+    const field = allFields().find((item: Field) => item.key.endsWith('.Vdd.VddType'))
     return String(field?.value || 'parsecvdd')
   }
   async function vddSet(action: 'enable' | 'disable') {

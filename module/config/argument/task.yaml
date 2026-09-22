@@ -20,6 +20,7 @@ NKAS:
     PCClient:
       - PCClientInfo
       - PCClient
+      - Vdd
     Notify:
       - Scheduler
     Restart:

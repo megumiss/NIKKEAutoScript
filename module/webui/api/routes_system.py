@@ -282,14 +282,24 @@ async def vdd_set(request: Request):
             await asyncio.to_thread(parsec_vdd.auto_stop)
             return JSONResponse({'status': 'success', 'message': 'ParsecVDD disabled.'})
         from module.device.win import vdd
+        if action == 'enable':
+            # 驱动缺失时提前拦截：脚本只输出 Warning，_expect_success 只认 success，
+            # 最终会把 dict 文本当成错误抛出。
+            # 状态查询本身失败不拦截，照常尝试 enable。
+            try:
+                status = await asyncio.to_thread(vdd.vdd_status)
+            except Exception as status_error:
+                logger.warning(f'VDD status check failed, try to enable anyway: {status_error}')
+            else:
+                if not status.get('installed'):
+                    return _json_error(vdd.VDD_NOT_INSTALLED_MESSAGE)
         await asyncio.to_thread(vdd._expect_success, action)
         return JSONResponse({'status': 'success', 'message': f'VDD {action} done.'})
     except Exception as exc:
         logger.exception(exc)
-        # ParsecVDD 不需要管理员权限，管理员提示只对 MttVDD 有意义
-        if vdd_type == 'parsecvdd':
-            return _json_error(str(exc))
-        return _json_error(f'{exc}(请确认 NKAS 以管理员身份运行)')
+        # MttVDD 脚本自己处理提权（Start-Process -Verb RunAs -Wait）并把结果写回同一份
+        # JSON 输出，失败原因已经完整地带在 exc 里，直接透出即可。
+        return _json_error(str(exc))
 
 
 def _dialog_initial_location(default):

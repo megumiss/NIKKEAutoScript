@@ -12,6 +12,14 @@ class VddError(Exception):
     pass
 
 
+# 驱动未安装时的统一提示。启用脚本在这种情况下只输出 Warning，_expect_success 只认
+# success，报错会退化成 dict 文本，因此这里在调用方提前拦截并复用同一段文案。
+VDD_NOT_INSTALLED_MESSAGE = (
+    'MttVDD 驱动未安装，请先安装 Virtual Display Driver'
+    '（可执行 bin/vdd/virtual-driver-manager.ps1 -Action install）。'
+)
+
+
 def _run_manager(action, timeout=60):
     """
     调用 virtual-driver-manager.ps1 并解析其 JSON 行输出。
@@ -77,12 +85,13 @@ def vdd_disable():
     _expect_success('disable')
 
 
-def wait_vdd_monitor(baseline_count, timeout=15):
+def wait_vdd_monitor(baseline_count, timeout=60):
     """
     启用虚拟屏后屏幕重现有几秒延迟，轮询等待活动显示器数量增加。
 
     Args:
         baseline_count: 启用前的活动显示器数量
+        timeout: 等待上限（秒），驱动侧建屏较慢时需要放宽
     """
     import win32api
 
@@ -101,11 +110,15 @@ def _mttvdd_auto_start():
 
     logger.hr('VDD enable', level=2)
     try:
-        if vdd_status().get('status') == 'enabled':
-            logger.info('VDD screen is already enabled')
-            return
+        status = vdd_status()
     except VddError as e:
         logger.warning(f'VDD status check failed, try to enable anyway: {e}')
+    else:
+        if not status.get('installed'):
+            raise VddError(VDD_NOT_INSTALLED_MESSAGE)
+        if status.get('status') == 'enabled':
+            logger.info('VDD screen is already enabled')
+            return
     baseline = len(win32api.EnumDisplayMonitors())
     vdd_enable()
     wait_vdd_monitor(baseline)
@@ -190,7 +203,7 @@ def find_screen_n():
 
 def vdd_auto_start(config):
     """
-    任务启动时按 config.PCClient_VddType 分发到对应的虚拟屏实现。
+    任务启动时按 config.Vdd_VddType 分发到对应的虚拟屏实现。
 
     MttVDD 分支 = 内置脚本启用 + 解析屏幕序号；
     ParsecVDD 分支 = 拉起内置 ParsecDisplay 并确保 1080p 竖屏。
@@ -211,7 +224,7 @@ def vdd_auto_start(config):
 
 
 def vdd_auto_stop(config):
-    """任务结束后按 config.PCClient_VddType 分发停止逻辑"""
+    """任务结束后按 config.Vdd_VddType 分发停止逻辑"""
     if _vdd_type(config) == 'parsecvdd':
         from module.device.win import parsec_vdd
 
@@ -241,5 +254,5 @@ def vdd_find_screen_n(config):
 
 def _vdd_type(config):
     """读取 VddType 并归一化，缺省按默认值 parsecvdd 处理"""
-    value = getattr(config, 'PCClient_VddType', None)
+    value = getattr(config, 'Vdd_VddType', None)
     return str(value or 'parsecvdd').lower()

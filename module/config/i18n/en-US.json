@@ -431,31 +431,17 @@
     },
     "Screens": {
       "name": "Multi-Screen Mode",
-      "help": "When enabled, supports running the game window on secondary or virtual displays. You will also need to manually select the target screen for the game window."
+      "help": "When enabled, supports running the game window on secondary or virtual displays. You will also need to manually select the target screen for the game window. Enabling \"Enable VDD virtual screen\" turns this option on automatically."
     },
     "ScreenNumber": {
       "name": "Game Window Target Screen",
-      "help": "Select the screen that meets the resolution requirements. The default is 0 (main screen). You must enable Multi-Screen Mode first. After selection, the game window will move to the corresponding screen. The screen order may differ from the system display settings. This option is ignored when 'Target Screen Is VDD Virtual Display' is enabled; the screen index is then located automatically.",
+      "help": "Select the screen that meets the resolution requirements. The default is 0 (main screen). You must enable Multi-Screen Mode first. After selection, the game window will move to the corresponding screen. The screen order may differ from the system display settings. This option is ignored when 'Enable VDD Virtual Display' is enabled; the screen index is then located automatically.",
       "0": "0",
       "1": "1",
       "2": "2",
       "3": "3",
       "4": "4",
       "5": "5"
-    },
-    "VddScreen": {
-      "name": "Target Screen Is VDD Virtual Display",
-      "help": "Enable when the target screen is a VDD (Virtual Display Driver) virtual display. When enabled, the screen index is located automatically at task startup, so there is no need to select the target screen ('Game Window Target Screen' is ignored)."
-    },
-    "VddType": {
-      "name": "Virtual Display Type",
-      "help": "How the virtual display is managed. ParsecVDD requires the official Parsec VDD driver to be installed manually; the display is then managed by the bundled ParsecDisplay and needs no administrator rights. MttVDD uses the script bundled with this project and requires administrator rights. Only effective when 'Target Screen Is VDD Virtual Display' is enabled.",
-      "parsecvdd": "ParsecVDD",
-      "mttvdd": "MttVDD"
-    },
-    "VddAutoManage": {
-      "name": "Auto-Manage VDD Screen",
-      "help": "Requires 'Target Screen Is VDD Virtual Display' to be enabled. When enabled, the virtual display is automatically enabled and its screen index located when a task starts, and disabled after it finishes."
     },
     "GameWindowPosition": {
       "name": "Game Window Position",
@@ -483,6 +469,26 @@
     "DisableVoice": {
       "name": "Disable Voice",
       "help": "Automatically mute the game process while the script is running and restore it after completion. If it does not restore automatically, you will need to re-enable it manually in the system volume mixer on the taskbar."
+    }
+  },
+  "Vdd": {
+    "_info": {
+      "name": "Virtual Display",
+      "help": "VDD virtual display settings"
+    },
+    "VddScreen": {
+      "name": "Enable VDD Virtual Display",
+      "help": "Enable this when you need a virtual display; recommended for users with a 1080p screen. Once enabled, the game window is moved to the virtual display to meet the resolution requirement, and the screen index is located automatically at task startup, so there is no need to select the target screen manually."
+    },
+    "VddType": {
+      "name": "Virtual Display Type",
+      "help": "ParsecVDD (recommended): just install the official ParsecVDD driver manually and it is ready to use https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe;\nMttVDD: install the official MttVDD driver manually https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe. After installing the driver, open the system display settings, select the new screen that appears, and set its resolution to 1920x1080 in portrait orientation.",
+      "parsecvdd": "ParsecVDD",
+      "mttvdd": "MttVDD"
+    },
+    "VddAutoManage": {
+      "name": "Auto-Manage VDD Screen",
+      "help": "When enabled, the virtual display is automatically enabled and its screen index located when a task starts, and disabled after it finishes."
     }
   },
   "PCClientInfo": {

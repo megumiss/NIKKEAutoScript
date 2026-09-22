@@ -339,22 +339,6 @@
           5
         ]
       },
-      "VddScreen": {
-        "type": "checkbox",
-        "value": false
-      },
-      "VddType": {
-        "type": "select",
-        "value": "parsecvdd",
-        "option": [
-          "parsecvdd",
-          "mttvdd"
-        ]
-      },
-      "VddAutoManage": {
-        "type": "checkbox",
-        "value": false
-      },
       "GameWindowPosition": {
         "type": "select",
         "value": "center",
@@ -383,6 +367,24 @@
       "DisableVoice": {
         "type": "checkbox",
         "value": false
+      }
+    },
+    "Vdd": {
+      "VddScreen": {
+        "type": "checkbox",
+        "value": false
+      },
+      "VddType": {
+        "type": "select",
+        "value": "parsecvdd",
+        "option": [
+          "parsecvdd",
+          "mttvdd"
+        ]
+      },
+      "VddAutoManage": {
+        "type": "checkbox",
+        "value": true
       }
     },
     "Storage": {

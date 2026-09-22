@@ -66,6 +66,10 @@ export const useInstancesStore = defineStore('instances', () => {
         useModalStore().openAlertModal(t('虚拟鼠标驱动未安装'), t('当前实例的控制方案为 driver，需要先安装虚拟鼠标驱动。请前往「常用工具 → 虚拟鼠标驱动」完成安装后再启动。'))
         return
       }
+      if (action === 'start' && exception?.code === 'vdd_driver_not_installed') {
+        useModalStore().openAlertModal(t('虚拟屏幕驱动未安装'), t('当前实例开启了「虚拟屏幕(VDD)」并交由脚本自动管理，需要先安装对应的虚拟屏驱动：ParsecVDD 请安装官方 Parsec VDD 驱动，MttVDD 请安装 Virtual Display Driver。也可以在任务设置的「虚拟屏幕(VDD)」分组中关闭自动管理后重试。'))
+        return
+      }
       toast.error = exception.message
     }
   }
