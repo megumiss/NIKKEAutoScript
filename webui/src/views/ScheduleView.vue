@@ -273,6 +273,27 @@ async function resetDefaults() {
   }
 }
 
+// 重置日期：将所选任务的 NextRun 写回默认哨兵值（尽快执行），周期/时间/启用状态不动
+const resetNextRunOpen = ref(false)
+const resettingNextRun = ref(false)
+async function resetSelectedNextRun() {
+  if (resettingNextRun.value || !selected.value.size) return
+  resettingNextRun.value = true
+  try {
+    await api.post(`/api/${selectedName.value}/schedule/reset-next-run`, { commands: [...selected.value] })
+    toast.notify(t('已重置为默认日期'))
+    resetNextRunOpen.value = false
+    drafts.value = {}
+    rowErrors.value = {}
+    selected.value = new Set()
+    await load()
+  } catch (exception: any) {
+    toast.error = exception.message
+  } finally {
+    resettingNextRun.value = false
+  }
+}
+
 async function save() {
   const changes = tasks.value.filter(task => isDirty(task)).map(task => {
     const draft = drafts.value[task.command]!
@@ -360,6 +381,7 @@ watch(selectedName, () => {
         <span class="sched-selected-count">{{ selected.size }} {{ t('项已选') }}</span>
         <p class="sched-hint"><AppIcon name="lightbulb" :size="13" /> {{ t('每日任务建议保持同一时间：到点后按优先级一次跑完。分散到不同时间会打乱执行顺序，可能导致漏领奖励；需要一天跑多次的任务再单独添加时间。') }}</p>
         <button type="button" class="btn sm danger" @click="resetOpen = true"><AppIcon name="undo" :size="13" /> {{ t('还原默认') }}</button>
+        <button type="button" class="btn sm" :disabled="!selected.size" @click="resetNextRunOpen = true"><AppIcon name="undo" :size="13" /> {{ t('重置日期') }}</button>
         <button type="button" class="btn sm primary" :disabled="!selected.size" @click="openBatch"><AppIcon name="timer" :size="13" color="currentColor" /> {{ t('批量设置时间') }}</button>
       </div>
       <div class="sched-list">
@@ -426,6 +448,16 @@ watch(selectedName, () => {
         <div class="modal-actions">
           <button type="button" class="btn" @click="resetOpen = false">{{ t('取消') }}</button>
           <button type="button" class="btn danger" :disabled="resetting" @click="resetDefaults">{{ t('确定') }}</button>
+        </div>
+      </div>
+    </div>
+    <div v-if="resetNextRunOpen" class="modal-mask" @click.self="resetNextRunOpen = false">
+      <div class="modal-card">
+        <h3>{{ t('重置日期') }}</h3>
+        <p class="modal-text">{{ t('将选中任务的下次运行日期重置为默认日期？启用后将尽快执行。') }}</p>
+        <div class="modal-actions">
+          <button type="button" class="btn" @click="resetNextRunOpen = false">{{ t('取消') }}</button>
+          <button type="button" class="btn primary" :disabled="resettingNextRun" @click="resetSelectedNextRun">{{ t('确定') }}</button>
         </div>
       </div>
     </div>

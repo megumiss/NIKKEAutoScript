@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 import module.webui.lang as lang
 from module.config.delay import next_month_day, next_weekday
 from module.config.manual_config import ManualConfig
-from module.config.utils import deep_get, deep_set, filepath_args, get_server_next_update, read_file
+from module.config.utils import DEFAULT_TIME, deep_get, deep_set, filepath_args, get_server_next_update, read_file
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.setting import State
 from module.webui.utils import re_fullmatch
@@ -106,6 +106,38 @@ async def reset_schedule(request: Request):
             # 只提前不推迟：默认时间已过时重算会落到下一周期，不能把今天待执行的任务推走
             if computed < next_run:
                 sch['NextRun'] = computed
+        reset.append(command)
+
+    State.config_updater.write_file(name, config)
+    return JSONResponse({'status': 'success', 'reset': reset})
+
+
+async def reset_next_run(request: Request):
+    """将所选任务的 NextRun 重置为默认日期（哨兵值，早于现在即尽快执行）。"""
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+    except InstanceNotFound as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({'status': 'error', 'message': 'Invalid JSON body.'}, status_code=400)
+    commands = body.get('commands')
+    if not isinstance(commands, list) or not commands:
+        return JSONResponse({'status': 'error', 'message': 'Empty commands.'}, status_code=400)
+
+    config = State.config_updater.read_file(name)
+    reset = []
+    for command in commands:
+        command = str(command)
+        if command in ManualConfig.SCHEDULE_LOCKED_TASKS:
+            continue
+        sch = deep_get(config, f'{command}.Scheduler')
+        if not isinstance(sch, dict):
+            continue
+        deep_set(config, f'{command}.Scheduler.NextRun', DEFAULT_TIME)
         reset.append(command)
 
     State.config_updater.write_file(name, config)
