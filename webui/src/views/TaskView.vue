@@ -10,6 +10,7 @@ import FieldItemTable from '../components/config/FieldItemTable.vue'
 import FieldNotify from '../components/config/FieldNotify.vue'
 import FieldPathPicker from '../components/config/FieldPathPicker.vue'
 import FieldPriority from '../components/config/FieldPriority.vue'
+import FieldVddStatus from '../components/config/FieldVddStatus.vue'
 import { highlightTextarea, isStructuredTextarea, onTextareaInput, vAutosize } from '../composables/useTextarea'
 import { useRouteInfo } from '../composables/useRouteInfo'
 import { t } from '../i18n'
@@ -136,6 +137,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                     </div>
                   </div>
                 </div>
+                <FieldVddStatus v-if="field.key.endsWith('.Vdd.VddAutoManage')" :type="workspace.vddTypeValue()" :scope="workspace.selectedName" :busy="vddBusy" />
               </template>
               <div v-if="group.key === 'PhysicalDevice'" class="field">
                 <div class="field-label"><div class="fname">{{ t('分辨率控制') }}</div><div class="fhelp">{{ t('手动将设备分辨率设为 720x1280（DPI 240）并锁定竖屏，或还原为原生分辨率与屏幕方向。') }}</div></div>

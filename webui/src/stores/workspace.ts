@@ -390,7 +390,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     clientOptions, selectedClientName, clientPlaceholder, loadClientProfiles, applyClientProfile,
     selectedName, selectedTask, taskSchema, workspaceName, socketsName,
     logs, logTick, autoScroll, logLevel, pushLogs, visibleLogs, visibleMenus,
-    taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddSet, loadWorkspace,
+    taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddTypeValue, vddSet, loadWorkspace,
     startStateSocket, startSockets, closeSockets, openQueueItem,
     saveValue, save, datetimeValue, cancelDatetimeSave, scheduleDatetimeSave, flushDatetimeSave, clearField, clearDatetimeSaveTimers,
     normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, saveNotifyConfig, saveNotifyRaw, startTool, physicalResolution, loadSerialDevices,
