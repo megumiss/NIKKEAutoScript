@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -181,8 +181,62 @@ fn load_shortcuts(root: &Path) -> (bool, HashMap<String, String>) {
     (enabled, shortcuts)
 }
 
+/// 交给 WebView2 的 `--disable-features` 列表。
+///
+/// 前三项是 wry 的默认值。wry 只在没收到 `additional_browser_args` 时才用它自己的默认串，
+/// 一旦我们传值就整串替换掉（Tauri 的 `additional_browser_args` 文档同样提示了这点），
+/// 所以这三项必须自己补齐，否则迷你菜单 / PDF 工具条 / SmartScreen 会回来。
+///
+/// 第四项是本项目要关的：Windows 上 Chromium 的原生窗口遮挡检测会把被其他窗口盖住的
+/// WebView 判成隐藏并停止合成，表现为画面预览有新帧、屏幕却不动，要点一下窗口才刷新。
+/// 它只能写在这个列表里，没有别的开关能替代。
+pub const DISABLE_FEATURES: &str = concat!(
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,",
+    "CalculateNativeWinOcclusion"
+);
+
+fn merge_disable_features(inherited: &str) -> String {
+    let mut arguments = Vec::new();
+    let mut features = Vec::new();
+    let mut seen_features = HashSet::new();
+    let mut position = None;
+    for argument in inherited.split_whitespace() {
+        if let Some(value) = argument.strip_prefix("--disable-features=") {
+            if position.is_none() {
+                position = Some(arguments.len());
+            }
+            for feature in value
+                .split(',')
+                .map(str::trim)
+                .filter(|feature| !feature.is_empty())
+            {
+                if seen_features.insert(feature.to_string()) {
+                    features.push(feature.to_string());
+                }
+            }
+        } else {
+            arguments.push(argument.to_string());
+        }
+    }
+    for feature in DISABLE_FEATURES
+        .trim_start_matches("--disable-features=")
+        .split(',')
+        .map(str::trim)
+        .filter(|feature| !feature.is_empty())
+    {
+        if seen_features.insert(feature.to_string()) {
+            features.push(feature.to_string());
+        }
+    }
+    arguments.insert(
+        position.unwrap_or(arguments.len()),
+        format!("--disable-features={}", features.join(",")),
+    );
+    arguments.join(" ")
+}
+
 pub fn webview_arguments(config: &DesktopConfig, inherited: Option<&str>) -> Option<String> {
-    let mut args = inherited.unwrap_or_default().trim().to_string();
+    let mut args = merge_disable_features(inherited.unwrap_or_default().trim());
     let mut append = |value: &str| {
         if !args.split_whitespace().any(|item| item == value) {
             if !args.is_empty() {
@@ -228,7 +282,7 @@ mod tests {
         let config = sample_config();
         assert_eq!(
             webview_arguments(&config, Some("--foo")),
-            Some("--foo --disable-gpu".into())
+            Some(format!("--foo {DISABLE_FEATURES} --disable-gpu"))
         );
     }
 
@@ -236,7 +290,7 @@ mod tests {
     fn enabled_gpu_does_not_add_disable_flag() {
         let mut config = sample_config();
         config.hardware_acceleration = true;
-        assert_eq!(webview_arguments(&config, None), None);
+        assert_eq!(webview_arguments(&config, None), Some(DISABLE_FEATURES.to_string()));
     }
 
     #[test]
@@ -245,7 +299,7 @@ mod tests {
         config.dpi_scaling = false;
         assert_eq!(
             webview_arguments(&config, Some("--disable-gpu")),
-            Some("--disable-gpu --force-device-scale-factor=1".into())
+            Some(format!("--disable-gpu {DISABLE_FEATURES} --force-device-scale-factor=1"))
         );
     }
 
@@ -256,8 +310,49 @@ mod tests {
         config.dpi_scaling = false;
         assert_eq!(
             webview_arguments(&config, None),
-            Some("--force-device-scale-factor=1".into())
+            Some(format!("{DISABLE_FEATURES} --force-device-scale-factor=1"))
         );
+    }
+
+    /// 被遮挡时停止合成正是画面卡住的直接原因，必须确保它一直关着；
+    /// 它只能写在 --disable-features 里，单独加开关无效。
+    #[test]
+    fn native_window_occlusion_detection_stays_disabled() {
+        let config = sample_config();
+        let arguments = webview_arguments(&config, None).unwrap();
+        assert!(arguments.contains("--disable-features="));
+        assert!(arguments.contains("CalculateNativeWinOcclusion"));
+    }
+
+    #[test]
+    fn inherited_disable_features_are_merged_and_deduplicated() {
+        let config = sample_config();
+        let arguments = webview_arguments(
+            &config,
+            Some(
+                "--foo --disable-features=CustomFeature,msPdfOOUI --bar \
+                 --disable-features=OtherFeature",
+            ),
+        )
+        .unwrap();
+        assert_eq!(
+            arguments,
+            concat!(
+                "--foo --disable-features=CustomFeature,msPdfOOUI,OtherFeature,",
+                "msWebOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion ",
+                "--bar --disable-gpu"
+            )
+        );
+    }
+
+    /// run() 会把结果写回环境变量、create_window() 再读回来拼一次，必须幂等，
+    /// 否则 --disable-features 会被追加两次。
+    #[test]
+    fn webview_arguments_are_idempotent() {
+        let config = sample_config();
+        let first = webview_arguments(&config, None).unwrap();
+        let second = webview_arguments(&config, Some(&first)).unwrap();
+        assert_eq!(second, first);
     }
 
     #[test]
