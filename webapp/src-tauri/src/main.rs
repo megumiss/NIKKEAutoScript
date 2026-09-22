@@ -285,6 +285,16 @@ fn create_window(
         "window.__nkasTheme={};",
         serde_json::to_string(&config.theme).unwrap_or_else(|_| "\"light\"".into())
     );
+    // wry 会把这里的值交给 WebView2（没传值时用它自己的默认串），而 WebView2 一旦从 API
+    // 拿到这个值就忽略 WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS 环境变量，所以参数只能经这个
+    // API 下发；下发会整串替换 wry 的默认值，被替换掉的默认项由 config 负责补齐。
+    let webview_arguments = config::webview_arguments(
+        config,
+        std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS")
+            .ok()
+            .as_deref(),
+    )
+    .unwrap_or_default();
     WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("NKAS")
         // The window icon and the tray icon need different sizes; see `window_icon`.
@@ -297,6 +307,7 @@ fn create_window(
         .decorations(false)
         .shadow(true)
         .visible(true)
+        .additional_browser_args(&webview_arguments)
         .initialization_script(&theme_script)
         .on_page_load(move |window, payload| {
             if payload.event() == PageLoadEvent::Finished && is_startup_url(payload.url()) {
