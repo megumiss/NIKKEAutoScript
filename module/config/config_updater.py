@@ -523,12 +523,15 @@ class ConfigUpdater:
         Returns:
             dict:
         """
-        old = read_file(filepath_config(config_name))
+        filepath = filepath_config(config_name)
+        old = read_file(filepath)
         new = self.config_update(old, is_template=is_template)
         # The updated config did not write into file, although it doesn't matters.
         # Commented for performance issue
         # self.write_file(config_name, new)
-        if not is_template:
+        # 文件不存在时禁止回写：read_file 对缺失文件返回空 dict，比对必然
+        # dirty，会把已删除实例的配置文件重新创建出来
+        if not is_template and os.path.exists(filepath):
             # Persist latest event to config file, so the file itself stays
             # up to date without waiting for the scheduler to run
             dirty = False

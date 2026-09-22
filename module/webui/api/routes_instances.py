@@ -524,6 +524,24 @@ async def delete(request: Request):
     if name in order:
         order.remove(name)
         _save_order(order)
+    # 串行组（SerialGroup）与串行状态同步移除，否则编排器会按残留的组配置
+    # 把已删实例重新拉起，worker 保存配置时实例会“复活”
+    serial_config = read_serial_config()
+    if name in serial_config.group:
+        group = [item for item in serial_config.group if item != name]
+        try:
+            setattr(State.deploy_config, 'SerialGroup', ' > '.join(group))
+        except OSError as exc:
+            logger.warning(f'Unable to update SerialGroup after delete: {exc}')
+
+        def _delete_serial_state(s):
+            s['instances'].pop(name, None)
+            s['failed'].pop(name, None)
+            if name in s['retried']:
+                s['retried'].remove(name)
+            if s.get('current') == name:
+                s['current'] = None
+        modify_state(_delete_serial_state)
     return JSONResponse({'status': 'success'})
 
 
