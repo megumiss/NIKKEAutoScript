@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -195,8 +195,48 @@ pub const DISABLE_FEATURES: &str = concat!(
     "CalculateNativeWinOcclusion"
 );
 
+fn merge_disable_features(inherited: &str) -> String {
+    let mut arguments = Vec::new();
+    let mut features = Vec::new();
+    let mut seen_features = HashSet::new();
+    let mut position = None;
+    for argument in inherited.split_whitespace() {
+        if let Some(value) = argument.strip_prefix("--disable-features=") {
+            if position.is_none() {
+                position = Some(arguments.len());
+            }
+            for feature in value
+                .split(',')
+                .map(str::trim)
+                .filter(|feature| !feature.is_empty())
+            {
+                if seen_features.insert(feature.to_string()) {
+                    features.push(feature.to_string());
+                }
+            }
+        } else {
+            arguments.push(argument.to_string());
+        }
+    }
+    for feature in DISABLE_FEATURES
+        .trim_start_matches("--disable-features=")
+        .split(',')
+        .map(str::trim)
+        .filter(|feature| !feature.is_empty())
+    {
+        if seen_features.insert(feature.to_string()) {
+            features.push(feature.to_string());
+        }
+    }
+    arguments.insert(
+        position.unwrap_or(arguments.len()),
+        format!("--disable-features={}", features.join(",")),
+    );
+    arguments.join(" ")
+}
+
 pub fn webview_arguments(config: &DesktopConfig, inherited: Option<&str>) -> Option<String> {
-    let mut args = inherited.unwrap_or_default().trim().to_string();
+    let mut args = merge_disable_features(inherited.unwrap_or_default().trim());
     let mut append = |value: &str| {
         if !args.split_whitespace().any(|item| item == value) {
             if !args.is_empty() {
@@ -205,7 +245,6 @@ pub fn webview_arguments(config: &DesktopConfig, inherited: Option<&str>) -> Opt
             args.push_str(value);
         }
     };
-    append(DISABLE_FEATURES);
     if !config.hardware_acceleration {
         append("--disable-gpu");
     }
@@ -283,6 +322,27 @@ mod tests {
         let arguments = webview_arguments(&config, None).unwrap();
         assert!(arguments.contains("--disable-features="));
         assert!(arguments.contains("CalculateNativeWinOcclusion"));
+    }
+
+    #[test]
+    fn inherited_disable_features_are_merged_and_deduplicated() {
+        let config = sample_config();
+        let arguments = webview_arguments(
+            &config,
+            Some(
+                "--foo --disable-features=CustomFeature,msPdfOOUI --bar \
+                 --disable-features=OtherFeature",
+            ),
+        )
+        .unwrap();
+        assert_eq!(
+            arguments,
+            concat!(
+                "--foo --disable-features=CustomFeature,msPdfOOUI,OtherFeature,",
+                "msWebOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion ",
+                "--bar --disable-gpu"
+            )
+        );
     }
 
     /// run() 会把结果写回环境变量、create_window() 再读回来拼一次，必须幂等，
