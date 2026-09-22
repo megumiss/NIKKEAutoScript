@@ -383,35 +383,44 @@ def ensure_screen_1080p_portrait():
     logger.attr('ParsecVDD', f'driver {status["version"] or status["status"]}')
 
     baseline = len(win32api.EnumDisplayMonitors())
-    if not is_app_running():
-        start_app()
-        # -silent 会按注册表快照重建之前用过的屏幕，等待其出现
-        _wait_monitor_count(baseline + 1)
-    else:
-        logger.info('ParsecDisplay is already running')
+    started_here = not is_app_running()
+    try:
+        if started_here:
+            start_app()
+            # -silent 会按注册表快照重建之前用过的屏幕，等待其出现
+            _wait_monitor_count(baseline + 1)
+        else:
+            logger.info('ParsecDisplay is already running')
 
-    if not list_displays():
-        logger.info('No Parsec virtual display, adding one')
-        _cli('add')
-        if not _wait_monitor_count(baseline + 1):
-            raise ParsecVddError('Failed to create a Parsec virtual display')
-        # 屏幕刚出现时 CLI 列表可能还没同步，留出重试余量
-        for _ in range(5):
-            if list_displays():
-                break
-            time.sleep(0.5)
+        if not list_displays():
+            logger.info('No Parsec virtual display, adding one')
+            _cli('add')
+            if not _wait_monitor_count(baseline + 1):
+                raise ParsecVddError('Failed to create a Parsec virtual display')
+            # 屏幕刚出现时 CLI 列表可能还没同步，留出重试余量
+            for _ in range(5):
+                if list_displays():
+                    break
+                time.sleep(0.5)
 
-    displays = list_displays()
-    for display in displays:
-        if display.get('device'):
-            _set_mode_1080p_portrait(display['device'])
+        displays = list_displays()
+        for display in displays:
+            if display.get('device'):
+                _set_mode_1080p_portrait(display['device'])
 
-    screen_n = find_screen_n()
-    if screen_n is None:
-        logger.warning('Parsec VDD screen index not resolved, falling back to configured ScreenNumber')
-    else:
-        logger.info(f'Parsec VDD screen index: {screen_n}')
-    return screen_n
+        screen_n = find_screen_n()
+        if screen_n is None:
+            logger.warning('Parsec VDD screen index not resolved, falling back to configured ScreenNumber')
+        else:
+            logger.info(f'Parsec VDD screen index: {screen_n}')
+        return screen_n
+    except Exception:
+        if started_here:
+            try:
+                stop_app()
+            except Exception as cleanup_error:
+                logger.warning(f'Failed to clean up ParsecDisplay after enable failed: {cleanup_error}')
+        raise
 
 
 def auto_stop():
