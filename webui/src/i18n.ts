@@ -50,6 +50,8 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '最小化': { 'en-US': 'Minimize', 'ja-JP': '最小化' }, '最大化': { 'en-US': 'Maximize', 'ja-JP': '最大化' },
   '还原': { 'en-US': 'Restore', 'ja-JP': '元に戻す' }, '隐藏到托盘': { 'en-US': 'Hide to tray', 'ja-JP': 'トレイに隠す' }, '关闭': { 'en-US': 'Close', 'ja-JP': '閉じる' },
   '复制来源实例': { 'en-US': 'Copy settings from', 'ja-JP': 'コピー元インスタンス' },
+  '保留执行时间': { 'en-US': 'Keep run schedule', 'ja-JP': '実行時間を保持' },
+  '关闭时，新实例各任务的执行时间将重置为默认值': { 'en-US': "When off, the new instance's task schedules are reset to defaults", 'ja-JP': 'オフの場合、新しいインスタンスの各タスクの実行時間はデフォルトに戻されます' },
   '此操作不可恢复。': { 'en-US': 'This cannot be undone.', 'ja-JP': '元に戻せません。' },
   '未知任务': { 'en-US': 'Unknown task', 'ja-JP': '不明なタスク' },
   '调试': { 'en-US': 'Debug', 'ja-JP': 'デバッグ' }, '信息': { 'en-US': 'Info', 'ja-JP': '情報' }, '警告': { 'en-US': 'Warning', 'ja-JP': '警告' }, '错误': { 'en-US': 'Error', 'ja-JP': 'エラー' },

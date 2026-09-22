@@ -10,11 +10,12 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 
 from module.config.serial_state import modify_state, read_serial_config
-from module.config.utils import deep_get, filepath_config, nkas_instance, nkas_template, read_file
+from module.config.utils import DEFAULT_TIME, deep_get, filepath_args, filepath_config, nkas_instance, nkas_template, read_file
 from module.logger import logger
 from module.submodule.utils import get_config_mod, load_config
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.api.models import InstanceInfo
+from module.webui.api.routes_schedule import reset_scheduler_fields
 from module.webui.process_manager import ProcessManager
 from module.webui.setting import State
 from module.webui.updater import updater
@@ -450,16 +451,33 @@ async def create(request: Request):
         name = str(data['name']).strip()
         origin = str(data.get('origin', 'template-nkas'))
         avatar = str(data.get('avatar', '') or '').strip()
+        keep_schedule = bool(data.get('keep_schedule', False))
     except (ValueError, TypeError, KeyError):
         return _response_error('Expected JSON body with name and optional origin.')
     if not name or name in nkas_instance() or re.search(r'[.\\/:*?"\'<>|]', name) or name.lower().startswith('template'):
         return _response_error('Invalid or already used instance name.')
     if origin not in nkas_instance() + nkas_template():
         return _response_error('Source instance not found.', 404)
-    State.config_updater.write_file(name, load_config(origin).read_file(origin), get_config_mod(origin))
+    config = load_config(origin).read_file(origin)
+    if not keep_schedule:
+        _reset_schedule_to_default(config)
+    State.config_updater.write_file(name, config, get_config_mod(origin))
     if avatar:
         _save_avatar(name, avatar)
     return JSONResponse({'status': 'success', 'name': name}, status_code=201)
+
+
+def _reset_schedule_to_default(config):
+    """新实例不保留来源实例的执行时间：周期/时间字段还原为 args 默认值，
+    NextRun 置哨兵值让任务尽快重排；Enable 保持复制结果不动。"""
+    args = read_file(filepath_args('args', 'nkas'))
+    for command, task_data in config.items():
+        sch = task_data.get('Scheduler') if isinstance(task_data, dict) else None
+        sch_args = deep_get(args, f'{command}.Scheduler')
+        if not isinstance(sch, dict) or not isinstance(sch_args, dict):
+            continue
+        reset_scheduler_fields(sch, sch_args)
+        sch['NextRun'] = DEFAULT_TIME
 
 
 async def reorder(request: Request):

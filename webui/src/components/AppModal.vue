@@ -25,6 +25,10 @@ onMounted(async () => { try { avatarFiles.value = await api.get('/api/avatars') 
       <template v-if="modal.type === 'create'">
         <label class="modal-field">{{ t('名称') }}<input v-model="modal.name" @keyup.enter="confirmModal"></label>
         <label class="modal-field">{{ t('复制来源实例') }}<AppSelect v-model="modal.origin" :options="originOptions"/></label>
+        <template v-if="modal.origin !== 'template-nkas'">
+          <label class="modal-field modal-switch">{{ t('保留执行时间') }}<span class="switch sm"><input type="checkbox" v-model="modal.keepSchedule"><span class="slider"></span></span></label>
+          <p class="modal-hint">{{ t('关闭时，新实例各任务的执行时间将重置为默认值') }}</p>
+        </template>
         <div class="modal-field">
           <span class="avatar-picker-label">{{ t('头像') }}</span>
           <div class="avatar-picker">

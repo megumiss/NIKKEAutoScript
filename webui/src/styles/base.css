@@ -141,6 +141,9 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .modal-field input,.modal-field select { display:block; width:100%; height:38px; margin-top:6px; padding:0 12px; border:1px solid var(--border); border-radius:10px; outline:0; color:var(--text); background:var(--card-2); }
 .modal-field input:focus,.modal-field select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
 .modal-text { margin-bottom:16px; color:var(--text-2); font-size:14px; }
+.modal-switch { display:flex; align-items:center; justify-content:space-between; }
+.modal-switch .switch input { display:none; }
+.modal-hint { margin:-8px 0 14px; color:var(--text-3); font-size:12px; }
 .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
 .announcement-card { width:760px; height:480px; display:flex; flex-direction:column; overflow:hidden; }
 .announcement-head { display:flex; flex:none; align-items:center; margin-bottom:14px; }

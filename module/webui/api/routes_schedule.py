@@ -78,6 +78,14 @@ async def schedule(request: Request):
 SCHEDULE_RESET_FIELDS = ('Cadence', 'ServerUpdate', 'WeeklyDay', 'WeeklyTime', 'MonthlyDay', 'MonthlyTime')
 
 
+def reset_scheduler_fields(sch, sch_args):
+    """按 args 默认值重置单个 Scheduler 的周期/时间字段；Enable 与 NextRun 由调用方处理。"""
+    for key in SCHEDULE_RESET_FIELDS:
+        default = deep_get(sch_args, f'{key}.value')
+        if default is not None:
+            sch[key] = default
+
+
 async def reset_schedule(request: Request):
     """全部任务的周期/执行时间还原为 args 默认值（含 default.yaml 的按任务默认值），
     启用状态保持不变；NextRun 重排只提前不推迟，已排期/已到期任务不会被推到下一周期。"""
@@ -96,10 +104,7 @@ async def reset_schedule(request: Request):
         sch_args = deep_get(args, f'{command}.Scheduler')
         if not isinstance(sch, dict) or not isinstance(sch_args, dict):
             continue
-        for key in SCHEDULE_RESET_FIELDS:
-            default = deep_get(sch_args, f'{key}.value')
-            if default is not None:
-                sch[key] = default
+        reset_scheduler_fields(sch, sch_args)
         next_run = sch.get('NextRun')
         if isinstance(next_run, datetime) and next_run > now:
             computed = _compute_next_run(str(sch.get('Cadence', 'daily')), sch).replace(microsecond=0)
