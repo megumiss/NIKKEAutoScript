@@ -76,7 +76,12 @@ def claim_scheme_mutex():
 
 
 def release_scheme_mutex():
-    """释放驱动通道互斥体。与 claim_scheme_mutex 配对，在进程正常退出路径调用。"""
+    """释放驱动通道互斥体。
+
+    调用点：进程正常退出路径（process_manager），以及串行模式下实例进入
+    空闲/等待令牌时（main.py serial_release_driver）——实例进程常驻，不能只
+    靠进程退出释放，否则令牌移交后下一个实例的预检必然失败。
+    """
     global _scheme_mutex
     with _claim_lock:
         if _scheme_mutex is not None:

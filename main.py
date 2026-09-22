@@ -553,6 +553,9 @@ class NikkeAutoScript:
             bool: True if wait finished, False if config changed.
         """
         future = future + timedelta(seconds=1)
+        # 进入空闲等待：串行模式下释放驱动通道互斥体，令牌移交后下一个实例才能认领。
+        # 注意必须放在各空闲分支的设备操作（goto_main、_post_action 等）之后
+        self.serial_release_driver()
         self.config.start_watching()
         while 1:
             if datetime.now() > future:
@@ -611,6 +614,64 @@ class NikkeAutoScript:
         except Exception as e:
             logger.warning(f'Serial clear_waiting failed: {e}')
 
+    def serial_release_driver(self):
+        """
+        串行模式下释放驱动通道互斥体（进入空闲等待 / 等待令牌时调用）。
+
+        实例进程常驻，互斥体若随进程一直持有，令牌移交给下一个实例后其
+        VirtualMouseInput 预检必然失败。仅串行组内且后端在线时释放：
+        非串行模式保留"第二个 driver 实例启动即报错"的独占保护。
+        """
+        if os.name != 'nt':
+            return
+        try:
+            from module.config.serial_state import backend_alive, read_serial_config
+
+            config = read_serial_config()
+            if not config.enable or self.config_name not in config.group:
+                return
+            if not backend_alive():
+                return
+            from module.device.win.virtual_mouse.input import release_scheme_mutex
+
+            release_scheme_mutex()
+        except Exception as e:
+            logger.warning(f'Failed to release driver scheme mutex: {e}')
+
+    def serial_claim_driver(self):
+        """
+        串行模式拿到令牌后认领驱动通道互斥体（仅 win 平台 + driver 控制方案）。
+
+        device 是 cached_property，令牌再次轮到时不会重新构造，互斥体必须在
+        每次拿到令牌时重新认领。令牌移交与上一个实例的空闲释放存在时间差，
+        故短窗口重试，而不是失败一次就报错。
+        """
+        if os.name != 'nt':
+            return
+        if self.config.Client_Platform != 'win':
+            return
+        if str(self.config.PCClientInfo_ControlScheme) != 'driver':
+            return
+        from module.device.win.virtual_mouse.input import SCHEME_MUTEX_NAME, claim_scheme_mutex
+
+        for attempt in range(15):
+            if claim_scheme_mutex():
+                return
+            if attempt == 0:
+                logger.info('Serial mode: waiting for driver scheme mutex')
+            if self.stop_event is not None and self.stop_event.is_set():
+                logger.info('Update event detected')
+                logger.info(f'[{self.config_name}] exited. Reason: Update')
+                exit(0)
+            time.sleep(2)
+        logger.error(
+            f'Control scheme driver is already in use by another NKAS instance '
+            f'(mutex {SCHEME_MUTEX_NAME}). The driver channel drives the single global '
+            f'physical cursor, so two instances would fight over it. '
+            f'Switch the other instance back to postmessage.'
+        )
+        raise RequestHumanTakeover
+
     def serial_wait_turn(self, task):
         """
         串行模式闸门：等待编排器授予令牌，保证同一时刻只有一个实例操作设备。
@@ -633,8 +694,12 @@ class NikkeAutoScript:
         if is_my_turn(self.config_name):
             # 防残留：排队状态不应带到任务执行
             self.serial_clear_waiting()
+            # 空闲期间互斥体已释放，每次轮到都要重新认领
+            self.serial_claim_driver()
             return True
         logger.info('Serial mode: waiting for turn')
+        # 未持令牌时不应占用驱动通道互斥体（防残留，正常路径下是 no-op）
+        self.serial_release_driver()
         # 上报等待中状态，供 Web UI 展示（拿到令牌/串行关闭/配置变化都会清理）
         self.serial_report_waiting()
         self.config.start_watching()
