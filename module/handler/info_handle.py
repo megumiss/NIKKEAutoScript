@@ -66,9 +66,9 @@ class InfoHandler(ModuleBase):
                             continue
                     else:
                         # 点击空白页
-                        self.device.click_xy(1, 420)
+                        self.device.click_xy(5, 420)
                         self.device.sleep(1)
-                        logger.info('Click %s @ CLOSE' % point2str(1, 420))
+                        logger.info('Click %s @ CLOSE' % point2str(5, 420))
                         continue
 
                 # 无奖励可领
