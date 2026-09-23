@@ -4,6 +4,7 @@ import numpy as np
 
 from module.config.utils import filepath_config
 from module.logger import logger
+from module.ocr.progress import OcrInitProgress
 
 
 def get_ocr_cpu_threads() -> int:
@@ -28,7 +29,9 @@ class OcrModel:
 
     def paddle(self, model_type, interval):
         if model_type not in self._paddle_cache:
-            from module.ocr.nikke_ocr import NIKKEOcr
+            # 首次 import paddle 需数十秒，包一层心跳日志避免看起来像卡死
+            with OcrInitProgress('Importing paddle library'):
+                from module.ocr.nikke_ocr import NIKKEOcr
 
             self._paddle_cache[model_type] = NIKKEOcr(
                 lang='ch',
@@ -43,7 +46,8 @@ class OcrModel:
 
     def paddle_num(self, model_type, interval):
         if model_type not in self._paddle_num_cache:
-            from module.ocr.nikke_ocr import NIKKEOcr
+            with OcrInitProgress('Importing paddle library'):
+                from module.ocr.nikke_ocr import NIKKEOcr
 
             self._paddle_num_cache[model_type] = NIKKEOcr(
                 lang='en',
