@@ -1,5 +1,23 @@
 # 公告列表，新的公告追加到文件顶部
 # pinned: true 的公告在客户端列表顶部置顶显示，可同时置顶多条；组内仍按文件顺序（新的在前）
+- id: notice_20260923
+  date: 2026-09-23
+  title: OCR 新增 GPU 加速支持
+  type: info
+  content: |
+    <b>PaddleOCR 现已支持 NVIDIA GPU 加速</b>
+
+    <b>使用方法</b>
+    1. 进入 NKAS → 部署页面，将 OcrDevice 改为 gpu；
+    2. 完全退出并重新打开 nkas.exe，启动器会自动把 paddle 包切换为 GPU 版（约 2~3GB，请耐心等待）；
+    3. 网页内重启无效，必须完全退出程序再启动。
+
+    <b>环境要求</b>
+    需要 NVIDIA 显卡且驱动支持 CUDA >= 11.8；CUDA 变体（PaddleCuda）默认 auto 自动检测，RTX 50 系列显卡请使用 cu129，也可手动指定 cu126 / cu118。
+
+    <b>注意事项</b>
+    1. 没有 N 卡或不确定的用户请保持 cpu，默认 cpu 即可正常使用；
+    2. 若启用后提示 GPU 不可用，启动器会在 OCR 初始化前拦截并提示，按提示改回 cpu 或重新安装依赖即可。
 - id: notice_20260918
   date: 2026-09-18
   title: 新增虚拟鼠标控制方式
