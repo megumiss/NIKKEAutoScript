@@ -2,6 +2,7 @@ import os
 import time
 
 import numpy as np
+import paddle
 from paddleocr import PaddleOCR
 
 from module.exception import RequestHumanTakeover
@@ -33,6 +34,7 @@ class NIKKEOcr(PaddleOCR):
         det_model_dir: str = None,
         interval: float = 0,
         model_type: str = 'mobile',
+        device: str = 'cpu',
         cpu_threads: int = 10,
     ):
         """
@@ -41,6 +43,14 @@ class NIKKEOcr(PaddleOCR):
         Args:
             cpu_threads: PaddleOCR 推理线程数
         """
+        if device.startswith('gpu') and not paddle.is_compiled_with_cuda():
+            logger.critical(
+                'OcrDevice is gpu, but the loaded PaddlePaddle has no CUDA support. '
+                'Enable InstallDependencies and fully exit and relaunch nkas.exe to install paddlepaddle-gpu, '
+                'or set OcrDevice to cpu.'
+            )
+            raise RequestHumanTakeover
+
         logger.hr('PaddleOCR Prepare')
 
         # 如果没有传入模型路径，根据model_type下载/设置路径
@@ -75,11 +85,11 @@ class NIKKEOcr(PaddleOCR):
         self.last_time = 0
 
         # 调用父类 PaddleOCR 的 __init__ 完成模型加载
-        logger.info('PaddleOCR Initializing')
+        logger.info(f'PaddleOCR Initializing, device: {device}')
         with OcrInitProgress('PaddleOCR initializing'):
             super().__init__(
                 ocr_version='PP-OCRv5',
-                device='CPU',  # CPU模式
+                device=device,
                 lang=lang,
                 use_doc_orientation_classify=use_doc_orientation_classify,
                 use_doc_unwarping=use_doc_unwarping,

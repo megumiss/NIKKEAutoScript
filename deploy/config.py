@@ -28,6 +28,8 @@ class ConfigModel:
     PypiMirror: Optional[str] = None
     InstallDependencies: bool = True
     RequirementsFile: str = "requirements.txt"
+    OcrDevice: str = "cpu"
+    PaddleCuda: str = "auto"
 
     AdbExecutable: str = "./toolkit/Lib/site-packages/adbutils/binaries/adb.exe"
     ReplaceAdb: bool = True

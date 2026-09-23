@@ -303,10 +303,8 @@ class ModuleBase:
         if current_hash != self._ocr_cache["last_hash"]:
             # 重新 OCR
             ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
-            self._ocr_cache["last_result"] = ocr_instance.ocr(self.device.image, direct_ocr=True, show_log=False)
+            self._ocr_cache["last_result"] = ocr_instance.ocr(self.device.image, direct_ocr=True)
             self._ocr_cache["last_hash"] = current_hash
-            details = (self._ocr_cache["last_result"] or {}).get('details') or []
-            logger.debug(f"OCR result: {[item.get('text') for item in details]}")
         res = self._ocr_cache["last_result"]
 
         location = self.device.get_location(text, res, threshold=threshold)

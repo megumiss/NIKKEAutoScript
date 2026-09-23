@@ -41,6 +41,19 @@ Deploy:
     # [In most cases] Use 'requirements.txt'
     # [In Docker] Use './deploy/docker/requirements.txt'
     RequirementsFile: ./deploy/docker/requirements.txt
+    # After changing this setting, fully exit and relaunch nkas.exe to install dependencies.
+    # Restarting from the Web UI is not sufficient.
+    # Device used by PaddleOCR, 'cpu' or 'gpu'
+    # 'gpu' requires an NVIDIA GPU with driver CUDA >= 11.8; the paddle package is swapped automatically at startup
+    # [In most cases] Use 'cpu'
+    OcrDevice: cpu
+    # After changing this setting, fully exit and relaunch nkas.exe to install dependencies.
+    # Restarting from the Web UI is not sufficient.
+    # CUDA variant of paddlepaddle-gpu, used only when OcrDevice is 'gpu'
+    # 'auto' detects from `nvidia-smi`; 'cu129' needs driver CUDA >= 12.9 and supports RTX 50 series
+    # 'cu126' needs driver CUDA >= 12.6, 'cu118' needs >= 11.8
+    # [In most cases] Use 'auto'
+    PaddleCuda: auto
 
   Adb:
     # Filepath of ADB executable `adb.exe`
