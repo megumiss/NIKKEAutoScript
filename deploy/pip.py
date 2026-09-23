@@ -188,8 +188,10 @@ class PipManager(DeployConfig):
                 'OcrDevice is gpu but nvidia-smi was not found; '
                 'install an NVIDIA driver or set PaddleCuda to cu129/cu126/cu118 manually'
             )
-        result = subprocess.run([exe], capture_output=True, text=True)
-        match = re.search(r'CUDA(?: UMD)? Version:\s*(\d+)\.(\d+)', result.stdout)
+        # nvidia-smi 的进程列表可能带系统 ANSI 代码页（如 GBK）编码的进程路径，
+        # 严格 UTF-8 解码会在读取线程抛 UnicodeDecodeError，导致 stdout 为 None
+        result = subprocess.run([exe], capture_output=True, text=True, encoding='utf-8', errors='replace')
+        match = re.search(r'CUDA(?: UMD)? Version:\s*(\d+)\.(\d+)', result.stdout or '')
         if not match:
             raise ExecutionError(f'Failed to parse CUDA Version from nvidia-smi output: {result.stdout.strip()[:200]}')
         major, minor = int(match.group(1)), int(match.group(2))
