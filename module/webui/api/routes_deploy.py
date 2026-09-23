@@ -34,14 +34,14 @@ SELECT_OPTIONS = {
     'HomePage': ['overview', 'instance'],
     'SerialOnError': ['skip', 'stop', 'retry'],
     'OcrDevice': ['cpu', 'gpu'],
-    'PaddleCuda': ['auto', 'cu126', 'cu118'],
+    'PaddleCuda': ['auto', 'cu129', 'cu126', 'cu118'],
 }
 # Language options are self-named in every UI language; theme labels follow
 # the UI language.
 OPTION_LABELS = {
     'Language': {'zh-CN': '简体中文', 'en-US': 'English', 'ja-JP': '日本語'},
     'OcrDevice': {'cpu': 'CPU', 'gpu': 'GPU'},
-    'PaddleCuda': {'auto': 'auto', 'cu126': 'CUDA 12.6', 'cu118': 'CUDA 11.8'},
+    'PaddleCuda': {'auto': 'auto', 'cu129': 'CUDA 12.9', 'cu126': 'CUDA 12.6', 'cu118': 'CUDA 11.8'},
     'Theme': {
         'zh-CN': {'dark': '深色', 'light': '浅色'},
         'en-US': {'dark': 'Dark', 'light': 'Light'},
@@ -167,19 +167,25 @@ FIELD_I18N = {
             'In Docker': "「./deploy/docker/requirements.txt」"}},
     },
     'OcrDevice': {
-        'zh-CN': {'desc': "PaddleOCR 使用的设备，'cpu' 或 'gpu'\n"
+        'zh-CN': {'desc': "修改后需完全退出并重新打开 nkas.exe，等待启动器完成依赖安装；网页内重启无效。\n"
+                          "PaddleOCR 使用的设备，'cpu' 或 'gpu'\n"
                           "选 'gpu' 需要 NVIDIA 显卡且驱动支持 CUDA >= 11.8，启动时会自动把 paddle 包切换为 GPU 版（约 2~3GB）",
                   'hints': {'In most cases': "使用 'cpu'"}},
-        'ja-JP': {'desc': "PaddleOCR が使用するデバイス（'cpu' / 'gpu'）\n"
+        'ja-JP': {'desc': "変更後は nkas.exe を完全に終了して起動し直し、依存パッケージのインストール完了を待ってください。Web UI 内の再起動では反映されません。\n"
+                          "PaddleOCR が使用するデバイス（'cpu' / 'gpu'）\n"
                           "'gpu' は NVIDIA GPU と CUDA 11.8 以上対応ドライバーが必要。起動時に paddle パッケージが自動で GPU 版に切り替わります",
                   'hints': {'In most cases': "「cpu」"}},
     },
     'PaddleCuda': {
-        'zh-CN': {'desc': "paddlepaddle-gpu 的 CUDA 变体，仅 OcrDevice 为 'gpu' 时生效\n"
-                          "'auto' 根据 nvidia-smi 自动选择；'cu126' 需要驱动支持 CUDA >= 12.6，'cu118' 需要 >= 11.8",
+        'zh-CN': {'desc': "修改后需完全退出并重新打开 nkas.exe，等待启动器完成依赖安装；网页内重启无效。\n"
+                          "paddlepaddle-gpu 的 CUDA 变体，仅 OcrDevice 为 'gpu' 时生效\n"
+                          "'auto' 根据 nvidia-smi 自动选择；'cu129' 需要驱动支持 CUDA >= 12.9，RTX 50 系列使用此版本\n"
+                          "'cu126' 需要 CUDA >= 12.6，'cu118' 需要 >= 11.8",
                   'hints': {'In most cases': "使用 'auto'"}},
-        'ja-JP': {'desc': "paddlepaddle-gpu の CUDA バリアント。OcrDevice が 'gpu' の場合のみ有効\n"
-                          "'auto' は nvidia-smi から自動選択。'cu126' は CUDA 12.6 以上、'cu118' は 11.8 以上のドライバーが必要",
+        'ja-JP': {'desc': "変更後は nkas.exe を完全に終了して起動し直し、依存パッケージのインストール完了を待ってください。Web UI 内の再起動では反映されません。\n"
+                          "paddlepaddle-gpu の CUDA バリアント。OcrDevice が 'gpu' の場合のみ有効\n"
+                          "'auto' は nvidia-smi から自動選択。'cu129' は CUDA 12.9 以上が必要（RTX 50 シリーズ対応）\n"
+                          "'cu126' は CUDA 12.6 以上、'cu118' は 11.8 以上のドライバーが必要",
                   'hints': {'In most cases': "「auto」"}},
     },
     'AdbExecutable': {
