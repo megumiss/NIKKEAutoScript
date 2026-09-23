@@ -33,6 +33,7 @@ class NIKKEOcr(PaddleOCR):
         det_model_dir: str = None,
         interval: float = 0,
         model_type: str = 'mobile',
+        device: str = 'cpu',
         cpu_threads: int = 10,
     ):
         """
@@ -75,11 +76,11 @@ class NIKKEOcr(PaddleOCR):
         self.last_time = 0
 
         # 调用父类 PaddleOCR 的 __init__ 完成模型加载
-        logger.info('PaddleOCR Initializing')
+        logger.info(f'PaddleOCR Initializing, device: {device}')
         with OcrInitProgress('PaddleOCR initializing'):
             super().__init__(
                 ocr_version='PP-OCRv5',
-                device='CPU',  # CPU模式
+                device=device,
                 lang=lang,
                 use_doc_orientation_classify=use_doc_orientation_classify,
                 use_doc_unwarping=use_doc_unwarping,

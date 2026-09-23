@@ -33,11 +33,15 @@ SELECT_OPTIONS = {
     'Theme': ['dark', 'light'],
     'HomePage': ['overview', 'instance'],
     'SerialOnError': ['skip', 'stop', 'retry'],
+    'OcrDevice': ['cpu', 'gpu'],
+    'PaddleCuda': ['auto', 'cu126', 'cu118'],
 }
 # Language options are self-named in every UI language; theme labels follow
 # the UI language.
 OPTION_LABELS = {
     'Language': {'zh-CN': '简体中文', 'en-US': 'English', 'ja-JP': '日本語'},
+    'OcrDevice': {'cpu': 'CPU', 'gpu': 'GPU'},
+    'PaddleCuda': {'auto': 'auto', 'cu126': 'CUDA 12.6', 'cu118': 'CUDA 11.8'},
     'Theme': {
         'zh-CN': {'dark': '深色', 'light': '浅色'},
         'en-US': {'dark': 'Dark', 'light': 'Light'},
@@ -161,6 +165,22 @@ FIELD_I18N = {
         'ja-JP': {'desc': 'requirements.txt のパス', 'hints': {
             'In most cases': "「requirements.txt」",
             'In Docker': "「./deploy/docker/requirements.txt」"}},
+    },
+    'OcrDevice': {
+        'zh-CN': {'desc': "PaddleOCR 使用的设备，'cpu' 或 'gpu'\n"
+                          "选 'gpu' 需要 NVIDIA 显卡且驱动支持 CUDA >= 11.8，启动时会自动把 paddle 包切换为 GPU 版（约 2~3GB）",
+                  'hints': {'In most cases': "使用 'cpu'"}},
+        'ja-JP': {'desc': "PaddleOCR が使用するデバイス（'cpu' / 'gpu'）\n"
+                          "'gpu' は NVIDIA GPU と CUDA 11.8 以上対応ドライバーが必要。起動時に paddle パッケージが自動で GPU 版に切り替わります",
+                  'hints': {'In most cases': "「cpu」"}},
+    },
+    'PaddleCuda': {
+        'zh-CN': {'desc': "paddlepaddle-gpu 的 CUDA 变体，仅 OcrDevice 为 'gpu' 时生效\n"
+                          "'auto' 根据 nvidia-smi 自动选择；'cu126' 需要驱动支持 CUDA >= 12.6，'cu118' 需要 >= 11.8",
+                  'hints': {'In most cases': "使用 'auto'"}},
+        'ja-JP': {'desc': "paddlepaddle-gpu の CUDA バリアント。OcrDevice が 'gpu' の場合のみ有効\n"
+                          "'auto' は nvidia-smi から自動選択。'cu126' は CUDA 12.6 以上、'cu118' は 11.8 以上のドライバーが必要",
+                  'hints': {'In most cases': "「auto」"}},
     },
     'AdbExecutable': {
         'zh-CN': {'desc': 'ADB 可执行文件 adb.exe 的路径', 'hints': {

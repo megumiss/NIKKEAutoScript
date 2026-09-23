@@ -22,6 +22,21 @@ def get_ocr_cpu_threads() -> int:
         return 10
 
 
+def get_ocr_device() -> str:
+    """
+    从 deploy.yaml 读取 OCR 设备（OcrDevice: cpu/gpu），缺失或非法时回退为 cpu。
+    GPU 包是否安装由 deploy/pip.py 在启动时保证，这里只按配置透传，不做可用性回退。
+    """
+    from deploy.utils import DEPLOY_CONFIG, poor_yaml_read
+
+    try:
+        device = str(poor_yaml_read(DEPLOY_CONFIG).get('OcrDevice', 'cpu') or 'cpu').strip().lower()
+        return device if device in ('cpu', 'gpu') else 'cpu'
+    except (OSError, ValueError, TypeError) as e:
+        logger.warning(f'Failed to read OcrDevice from deploy config: {e}')
+        return 'cpu'
+
+
 class OcrModel:
     def __init__(self):
         self._paddle_cache = {}
@@ -40,6 +55,7 @@ class OcrModel:
                 use_doc_unwarping=False,
                 use_textline_orientation=False,
                 interval=interval,
+                device=get_ocr_device(),
                 cpu_threads=get_ocr_cpu_threads(),
             )
         return self._paddle_cache[model_type]
@@ -58,6 +74,7 @@ class OcrModel:
                 text_det_thresh=0.1,
                 text_det_unclip_ratio=6.0,
                 interval=interval,
+                device=get_ocr_device(),
                 cpu_threads=get_ocr_cpu_threads(),
             )
         return self._paddle_num_cache[model_type]
