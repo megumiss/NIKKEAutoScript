@@ -42,7 +42,7 @@ class LauncherOcr:
         if current_hash != self._ocr_cache['last_hash']:
             # 重新 OCR
             ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
-            self._ocr_cache['last_result'] = ocr_instance.ocr(self.launcher.image, direct_ocr=True, show_log=False)
+            self._ocr_cache['last_result'] = ocr_instance.ocr(self.launcher.image, direct_ocr=True)
             self._ocr_cache['last_hash'] = current_hash
         res = self._ocr_cache['last_result']
 
@@ -87,7 +87,7 @@ class LauncherOcr:
         if current_hash != self._ocr_cache['last_hash']:
             # 重新 OCR
             ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
-            self._ocr_cache['last_result'] = ocr_instance.ocr(self.launcher.image, direct_ocr=True, show_log=False)
+            self._ocr_cache['last_result'] = ocr_instance.ocr(self.launcher.image, direct_ocr=True)
             self._ocr_cache['last_hash'] = current_hash
 
         return self._ocr_cache['last_result']

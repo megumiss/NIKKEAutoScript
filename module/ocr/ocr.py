@@ -282,7 +282,6 @@ class Ocr:
         image,
         direct_ocr=False,
         threshold: float = 0.51,
-        show_log=True,
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
         text_color_preprocess: Optional[Tuple[float, int, float]] = None,
@@ -332,11 +331,9 @@ class Ocr:
         processed_result = self._process_ocr_result(result, threshold, bbox_scale=bbox_scale)
         processed_result['text'] = self.after_process(processed_result['text'])
 
-        if show_log:
-            logger.attr(
-                name='%s %ss' % (self.name, float2str(time.time() - start_time)),
-                text=str(processed_result['text'].replace('\n', ' ')),
-            )
+        elapsed = float2str(time.time() - start_time)
+        text = str(processed_result['text']).replace('\n', ' ')
+        logger.info(f'OCR {self.name} {elapsed}s: {text}')
 
         return processed_result
 
