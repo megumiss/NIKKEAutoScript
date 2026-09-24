@@ -1,5 +1,16 @@
 # 公告列表，新的公告追加到文件顶部
 # pinned: true 的公告在客户端列表顶部置顶显示，可同时置顶多条；组内仍按文件顺序（新的在前）
+- id: notice_20260924
+  date: 2026-09-24
+  title: 求个 Star
+  type: info
+  pinned: true
+  content: |
+    <b>如果 NKAS 帮到了你，欢迎到 GitHub 点个 Star</b>
+    <a href="https://github.com/megumiss/NIKKEAutoScript" target="_blank">https://github.com/megumiss/NIKKEAutoScript</a>
+    你的 Star 是我持续更新的动力。
+    
+    如果有问题或需求，欢迎到 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">Issues</a> 反馈。
 - id: notice_20260923
   date: 2026-09-23
   title: OCR 新增 GPU 加速支持
