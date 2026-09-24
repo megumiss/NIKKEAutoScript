@@ -1,11 +1,4 @@
 import ctypes
-
-from module.exception import RequestHumanTakeover, ScreenResolutionNotEnough
-
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
-except Exception:
-    pass
 import os
 import subprocess
 import time
@@ -24,6 +17,7 @@ from numpy import ndarray
 from module.base.utils import ensure_time
 from module.device.win.registry.game_auto_hdr import get_game_auto_hdr, set_game_auto_hdr
 from module.device.win.registry.setting import get_game_resolution, set_game_resolution
+from module.exception import RequestHumanTakeover, ScreenResolutionNotEnough
 from module.logger import logger
 
 

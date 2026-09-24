@@ -4,7 +4,7 @@ ParsecVDD 虚拟屏管理。
 与 MttVDD（见 `vdd.py`）不同，ParsecVDD 由官方驱动 + 本仓库内置的
 `bin/parsec_vdd/ParsecDisplay.exe` 管理：
 
-- 开 = 启动 `ParsecDisplay.exe -silent`，该进程按注册表快照自动重建虚拟屏；
+- 开 = 启动 `ParsecDisplay.exe -silent`，由 NKAS 建屏、拆分复制关系并设置方向；
 - 关 = 结束该进程，驱动约 1 秒后自动移除所有虚拟屏。
 
 因此不需要管理员权限（MttVDD 需要 Enable-PnpDevice）。NKAS 只依赖
@@ -16,6 +16,7 @@ CLI 调用约定（`-cli` 前缀即上游 vdd 命令）：
 - 输出文本使用系统 ANSI 代码页（中文系统为 GBK），解码见 `_decode`。
 """
 
+import json
 import os
 import re
 import subprocess
@@ -23,6 +24,7 @@ import time
 
 import psutil
 
+from module.device.win import display_config
 from module.device.win.vdd import VddError
 from module.logger import logger
 
@@ -32,6 +34,9 @@ PROCESS_NAME = 'ParsecDisplay.exe'
 
 # 官方驱动在设备管理器中的硬件 ID
 DRIVER_HARDWARE_ID = r'Root\Parsec\VDA'
+DISPLAY_DEVICE_MARKER = r'\DISPLAY#PSCCDD0#'
+PARSEC_REGISTRY_PATH = r'SOFTWARE\ParsecDisplay'
+RESTORE_BACKUP_VALUE = 'NKASRestoreDisplaysBackup'
 
 # 目标模式：1080p 竖屏
 TARGET_WIDTH = 1080
@@ -39,7 +44,7 @@ TARGET_HEIGHT = 1920
 TARGET_HZ = 60
 TARGET_ORIENTATION = 1  # DMDO_90，竖屏
 
-# 等待虚拟屏出现在 EnumDisplayMonitors 的超时。驱动恢复快照/首次建屏在部分机器上
+# 等待 Parsec 显示目标接入当前桌面的超时。驱动恢复快照/首次建屏在部分机器上
 # 耗时较长（实测会超过 15s），取 60s 留足余量，避免误判成建屏失败而中断任务。
 WAIT_DISPLAY_TIMEOUT = 60
 
@@ -181,8 +186,74 @@ def is_app_running() -> bool:
     return bool(_iter_app_processes())
 
 
+def _disable_snapshot_restore():
+    import winreg
+
+    # ParsecDisplay 自行恢复方向会早于复制组拆分；备份放在 HKCU，允许负责停止的另一个进程恢复。
+    with winreg.CreateKeyEx(
+        winreg.HKEY_CURRENT_USER, PARSEC_REGISTRY_PATH, access=winreg.KEY_READ | winreg.KEY_WRITE,
+    ) as key:
+        try:
+            winreg.QueryValueEx(key, RESTORE_BACKUP_VALUE)
+        except FileNotFoundError:
+            try:
+                original = winreg.QueryValueEx(key, 'RestoreDisplays')
+            except FileNotFoundError:
+                original = None
+            winreg.SetValueEx(key, RESTORE_BACKUP_VALUE, 0, winreg.REG_SZ, json.dumps(original))
+        winreg.SetValueEx(key, 'RestoreDisplays', 0, winreg.REG_DWORD, 0)
+
+
+def _restore_snapshot_restore():
+    import winreg
+
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, PARSEC_REGISTRY_PATH, 0, winreg.KEY_READ | winreg.KEY_WRITE)
+    except FileNotFoundError:
+        return
+    with key:
+        try:
+            original = json.loads(winreg.QueryValueEx(key, RESTORE_BACKUP_VALUE)[0])
+        except FileNotFoundError:
+            return
+        if original is None:
+            try:
+                winreg.DeleteValue(key, 'RestoreDisplays')
+            except FileNotFoundError:
+                pass
+        else:
+            value, kind = original
+            winreg.SetValueEx(key, 'RestoreDisplays', 0, kind, value)
+        winreg.DeleteValue(key, RESTORE_BACKUP_VALUE)
+
+
+def _wait_app_ready(process, timeout=10):
+    import pywintypes
+    import win32gui
+    import win32process
+
+    end_time = time.monotonic() + timeout
+    while process.poll() is None and time.monotonic() < end_time:
+        windows = []
+
+        def visit(hwnd, _):
+            try:
+                if win32process.GetWindowThreadProcessId(hwnd)[1] == process.pid:
+                    windows.append(hwnd)
+            except pywintypes.error:
+                pass
+            return True
+
+        # CLI/GUI 共用的控制台子系统 exe 不支持 WaitForInputIdle；托盘窗口出现后才开始建屏。
+        win32gui.EnumWindows(visit, None)
+        if windows:
+            return True
+        time.sleep(0.1)
+    return False
+
+
 def start_app():
-    """启动 `ParsecDisplay.exe -silent` 常驻进程（自带 RestoreDisplays，按注册表快照重建屏幕）"""
+    """启动常驻进程；接管期间禁用其快照恢复，避免拆分前修改共享桌面的方向。"""
     if is_app_running():
         logger.info('ParsecDisplay is already running')
         return
@@ -192,9 +263,13 @@ def start_app():
     # 与 game_control.start_program 一致：脱离桌面壳的 Job Object，避免脚本退出时被连带终止
     creationflags = subprocess.CREATE_BREAKAWAY_FROM_JOB | subprocess.CREATE_NEW_PROCESS_GROUP
     try:
-        subprocess.Popen([PARSEC_EXE, '-silent'], cwd=PARSEC_DIR, creationflags=creationflags)
+        _disable_snapshot_restore()
+        process = subprocess.Popen([PARSEC_EXE, '-silent'], cwd=PARSEC_DIR, creationflags=creationflags)
     except OSError as e:
+        _restore_snapshot_restore()
         raise ParsecVddError(f'Failed to start ParsecDisplay: {e}')
+    if not _wait_app_ready(process):
+        raise ParsecVddError('Timed out waiting for ParsecDisplay to initialize')
 
 
 def stop_app(timeout=10):
@@ -202,6 +277,7 @@ def stop_app(timeout=10):
     processes = _iter_app_processes()
     if not processes:
         logger.info('ParsecDisplay is not running')
+        _restore_snapshot_restore()
         return
     for proc, path in processes:
         # 内置副本之外的实例也能关掉，但要留下痕迹便于排查
@@ -214,8 +290,10 @@ def stop_app(timeout=10):
         except psutil.TimeoutExpired:
             logger.warning(f'ParsecDisplay pid={proc.pid} did not exit in {timeout}s, killing')
             proc.kill()
+            proc.wait(timeout)
         except psutil.NoSuchProcess:
             continue
+    _restore_snapshot_restore()
 
 
 def list_displays() -> list:
@@ -270,26 +348,39 @@ def list_displays() -> list:
     return displays
 
 
-def find_screen_n():
-    """
-    返回虚拟屏在 EnumDisplayMonitors 中的下标（与 GUI 屏幕下拉顺序一致）。
+def _active_displays():
+    try:
+        return display_config.active_displays()
+    except OSError as e:
+        raise ParsecVddError(f'Failed to query active display targets: {e}') from e
 
-    `-cli list` 的 Device（如 `\\\\.\\DISPLAY38`）与 GetMonitorInfo 的
-    Device 字段一致，据此把 VDD 屏映射回活动显示器下标。
 
-    Returns:
-        int | None: 解析失败返回 None
-    """
+def _is_parsec(display):
+    return DISPLAY_DEVICE_MARKER in display['target']
+
+
+def _require_extended_display(target):
+    displays = _active_displays()
+    display = next((item for item in displays if item['target'] == target and _is_parsec(item)), None)
+    if display is None:
+        raise ParsecVddError(f'Parsec display target is no longer active: {target}')
+    if not display_config.is_extended(display, displays):
+        raise ParsecVddError('Parsec 虚拟屏仍处于复制模式，请在 Windows 中将其设为扩展后重试')
+    return display
+
+
+def find_screen_n(target=None):
+    """返回独立 Parsec 桌面的屏幕下标；复制模式不能作为游戏的目标桌面。"""
     import win32api
 
-    displays = list_displays()
+    active = _active_displays()
+    displays = [item for item in active if _is_parsec(item) and (target is None or item['target'] == target)]
     if not displays:
         logger.warning('No Parsec virtual display is present')
         return None
-    wanted = {str(d['device']).upper() for d in displays if d.get('device')}
+    wanted = {item['device'].upper() for item in displays if display_config.is_extended(item, active)}
     if not wanted:
-        logger.warning('ParsecDisplay reported displays without a device name')
-        return None
+        raise ParsecVddError('Parsec 虚拟屏处于复制模式，请启用自动管理或先在 Windows 中将其设为扩展')
 
     for n, monitor in enumerate(win32api.EnumDisplayMonitors()):
         device = str(win32api.GetMonitorInfo(monitor[0]).get('Device', '')).upper()
@@ -300,22 +391,23 @@ def find_screen_n():
     return None
 
 
-def _wait_monitor_count(expected, timeout=WAIT_DISPLAY_TIMEOUT, interval=0.5) -> bool:
-    """等待活动显示器数量达到预期（启用/创建屏幕有几秒延迟）"""
-    import win32api
-
-    end_time = time.time() + timeout
-    while time.time() < end_time:
-        if len(win32api.EnumDisplayMonitors()) >= expected:
-            return True
+def _wait_parsec_displays(timeout=WAIT_DISPLAY_TIMEOUT, interval=0.5):
+    """按显示目标识别建屏完成；复制模式不会增加 EnumDisplayMonitors 的数量。"""
+    end_time = time.monotonic() + timeout
+    while True:
+        displays = [item for item in _active_displays() if _is_parsec(item)]
+        if displays:
+            return displays
+        if time.monotonic() >= end_time:
+            break
         time.sleep(interval)
     logger.warning(f'Timed out waiting for Parsec virtual display after {timeout}s')
-    return False
+    return []
 
 
-def _set_mode_1080p_portrait(device_name) -> bool:
+def _set_mode_1080p_portrait(target) -> bool:
     """
-    用 ChangeDisplaySettingsEx 把指定显示设备设为 1080x1920@60 竖屏。
+    确认 Parsec 目标拥有独立桌面后，将其设为 1080x1920@60 竖屏。
 
     `vdd add` 默认产生 1920x1080@60 横屏，且驱动不提供 1080x1920 的预置模式；
     但直接按设备名提交 orientation=1 + 宽高互换的模式可以被驱动接受
@@ -327,20 +419,23 @@ def _set_mode_1080p_portrait(device_name) -> bool:
     import win32api
     import win32con
 
+    device_name = _require_extended_display(target)['device']
     dm = win32api.EnumDisplaySettings(device_name, win32con.ENUM_CURRENT_SETTINGS)
-    if (dm.PelsWidth, dm.PelsHeight, dm.DisplayOrientation) == (
-        TARGET_WIDTH, TARGET_HEIGHT, TARGET_ORIENTATION
+    if (dm.PelsWidth, dm.PelsHeight, dm.DisplayOrientation, dm.DisplayFrequency) == (
+        TARGET_WIDTH, TARGET_HEIGHT, TARGET_ORIENTATION, TARGET_HZ
     ):
         logger.info(f'Parsec VDD already at {TARGET_WIDTH}x{TARGET_HEIGHT} portrait')
         return True
 
     logger.info(
-        f'Setting Parsec VDD to {TARGET_WIDTH}x{TARGET_HEIGHT}@'
+        f'Setting Parsec VDD {device_name} to {TARGET_WIDTH}x{TARGET_HEIGHT}@'
         f'{TARGET_HZ} portrait (current {dm.PelsWidth}x{dm.PelsHeight} '
         f'orientation={dm.DisplayOrientation})'
     )
     # 优先按目标刷新率提交，失败则沿用当前刷新率再试一次
     for hz in dict.fromkeys([TARGET_HZ, dm.DisplayFrequency]):
+        if _require_extended_display(target)['device'] != device_name:
+            raise ParsecVddError('Parsec display device changed before applying portrait mode')
         if hz:
             dm.DisplayFrequency = hz
         dm.PelsWidth, dm.PelsHeight = TARGET_WIDTH, TARGET_HEIGHT
@@ -349,11 +444,16 @@ def _set_mode_1080p_portrait(device_name) -> bool:
         if result == win32con.DISP_CHANGE_SUCCESSFUL:
             # 回读确认，避免驱动接受请求但未真正生效
             applied = win32api.EnumDisplaySettings(device_name, win32con.ENUM_CURRENT_SETTINGS)
-            if (applied.PelsWidth, applied.PelsHeight) == (TARGET_WIDTH, TARGET_HEIGHT):
-                logger.info(f'Parsec VDD mode applied: {applied.PelsWidth}x{applied.PelsHeight}@{hz}Hz')
+            if (applied.PelsWidth, applied.PelsHeight, applied.DisplayOrientation) == (
+                TARGET_WIDTH, TARGET_HEIGHT, TARGET_ORIENTATION
+            ):
+                logger.info(
+                    f'Parsec VDD mode applied: {applied.PelsWidth}x{applied.PelsHeight}@{applied.DisplayFrequency}Hz'
+                )
                 return True
             logger.warning(
-                f'Parsec VDD mode did not stick: got {applied.PelsWidth}x{applied.PelsHeight}'
+                f'Parsec VDD mode did not stick: got {applied.PelsWidth}x{applied.PelsHeight} '
+                f'orientation={applied.DisplayOrientation}'
             )
         else:
             logger.warning(f'ChangeDisplaySettingsEx failed with code {result} (hz={hz})')
@@ -364,19 +464,17 @@ def _set_mode_1080p_portrait(device_name) -> bool:
 
 def ensure_screen_1080p_portrait():
     """
-    确保存在一块 1080x1920@60 竖屏的 Parsec 虚拟屏，并返回其屏幕下标。
+    确保存在一块独立扩展的 1080x1920@60 Parsec 虚拟屏，并返回其屏幕下标。
 
-    流程：检查驱动 -> 拉起常驻进程（RestoreDisplays 可能自动恢复出旧屏幕）
-    -> 没有屏幕则 add -> 校正为 1080p 竖屏 -> 解析屏幕下标。
+    流程：检查驱动 -> 拉起常驻进程（禁用其自行恢复方向）
+    -> 没有屏幕则 add -> 从复制组拆出 -> 校正为 1080p 竖屏 -> 解析屏幕下标。
 
     Returns:
-        int | None: 屏幕在 EnumDisplayMonitors 中的下标，解析失败返回 None
+        int: 屏幕在 EnumDisplayMonitors 中的下标
 
     Raises:
-        ParsecVddError: 驱动未安装、进程/屏幕创建失败
+        ParsecVddError: 驱动不可用、建屏/拆分/模式设置失败或无法定位独立桌面
     """
-    import win32api
-
     logger.hr('Parsec VDD enable', level=2)
 
     status = driver_status()
@@ -384,37 +482,36 @@ def ensure_screen_1080p_portrait():
         raise ParsecVddError(f'Parsec VDD 驱动不可用，请先安装官方 Parsec VDD 驱动。{status["message"]}')
     logger.attr('ParsecVDD', f'driver {status["version"] or status["status"]}')
 
-    baseline = len(win32api.EnumDisplayMonitors())
     started_here = not is_app_running()
     try:
         if started_here:
             start_app()
-            # -silent 会按注册表快照重建之前用过的屏幕，等待其出现
-            _wait_monitor_count(baseline + 1)
         else:
             logger.info('ParsecDisplay is already running')
+        displays = [item for item in _active_displays() if _is_parsec(item)]
 
-        if not list_displays():
-            logger.info('No Parsec virtual display, adding one')
-            _cli('add')
-            if not _wait_monitor_count(baseline + 1):
-                raise ParsecVddError('Failed to create a Parsec virtual display')
-            # 屏幕刚出现时 CLI 列表可能还没同步，留出重试余量
-            for _ in range(5):
-                if list_displays():
-                    break
-                time.sleep(0.5)
+        if not displays:
+            if not list_displays():
+                logger.info('No Parsec virtual display, adding one')
+                output = _cli('add')
+                logger.info(f'ParsecDisplay add: {output.strip()}')
+            displays = _wait_parsec_displays()
+            if not displays:
+                raise ParsecVddError('Parsec 虚拟屏未接入当前桌面，请检查驱动及 Windows 显示设置')
 
-        displays = list_displays()
-        for display in displays:
-            if display.get('device'):
-                _set_mode_1080p_portrait(display['device'])
+        target = displays[0]['target']
+        logger.info(f'Ensuring independent Parsec desktop: {target}')
+        try:
+            display_config.extend_display(target)
+        except OSError as e:
+            raise ParsecVddError(f'无法将 Parsec 虚拟屏设为独立扩展桌面，已停止旋转：{e}') from e
+        if not _set_mode_1080p_portrait(target):
+            raise ParsecVddError('Failed to set the independent Parsec display to portrait mode')
 
-        screen_n = find_screen_n()
+        screen_n = find_screen_n(target)
         if screen_n is None:
-            logger.warning('Parsec VDD screen index not resolved, falling back to configured ScreenNumber')
-        else:
-            logger.info(f'Parsec VDD screen index: {screen_n}')
+            raise ParsecVddError('无法定位独立 Parsec 桌面，已停止启动以避免使用实体屏')
+        logger.info(f'Parsec VDD screen index: {screen_n}')
         return screen_n
     except Exception:
         if started_here:
@@ -430,5 +527,5 @@ def auto_stop():
     logger.hr('Parsec VDD stop', level=2)
     try:
         stop_app()
-    except (ParsecVddError, psutil.Error) as e:
+    except (ParsecVddError, psutil.Error, OSError, ValueError) as e:
         logger.warning(f'Failed to stop ParsecDisplay: {e}')
