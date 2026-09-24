@@ -56,8 +56,8 @@ class AppControl(WinClient, Login):
         self.check_path_format(launcher_path, 'Launcher')
 
         if self.config.PCClientInfo_AutoFillName:
-            # 使用固定的 GAME_ / LAUNCHER_ 信息
-            launcher_process = LAUNCHER_PROCESS[self.config.PCClientInfo_Client]
+            # 多开副本会重命名启动器，进程名必须与所选 exe 一致才能正确检查和关闭。
+            launcher_process = os.path.basename(launcher_path)
             launcher_window_title = LAUNCHER_TITLE[self.config.PCClientInfo_Client]
             game_process = GAME_PROCESS[self.config.PCClientInfo_Client]
             game_window_title = GAME_TITLE[self.config.PCClientInfo_Client]
@@ -131,10 +131,8 @@ class AppControl(WinClient, Login):
                     self.config.PCClient_ScreenNumber = screen_n
                     logger.info(f'VDD screen index resolved at runtime: {screen_n}')
                 else:
-                    logger.warning(
-                        f'Failed to locate VDD screen, falling back to configured '
-                        f'ScreenNumber={self.config.PCClient_ScreenNumber}'
-                    )
+                    logger.error('Failed to locate an independent VDD screen; refusing to use the physical display')
+                    raise RequestHumanTakeover
 
             # 设置屏幕方向
             if self.config.PCClient_ScreenRotate:
@@ -221,6 +219,8 @@ class AppControl(WinClient, Login):
         else:
             self.change_auto_hdr('unset')
         for retry in range(MAX_RETRY):
+            # 上一轮清理可能停留在启动器，不能把它当成已启动的游戏。
+            self.current_window = self.game
             try:
                 # 检查是否已进入游戏
                 if self.switch_to_program():
