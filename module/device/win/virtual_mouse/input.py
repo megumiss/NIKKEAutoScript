@@ -65,8 +65,8 @@ def claim_scheme_mutex():
             return True
         handle = _kernel32.CreateMutexW(None, True, SCHEME_MUTEX_NAME)
         if not handle:
-            logger.error(f'CreateMutexW failed for {SCHEME_MUTEX_NAME}')
-            return False
+            error = ctypes.get_last_error()
+            raise OSError(error, f'CreateMutexW failed for {SCHEME_MUTEX_NAME}: {ctypes.FormatError(error)}')
         # 必须紧接 CreateMutexW 读取，中间不能插入其它 API 调用
         if ctypes.get_last_error() == ERROR_ALREADY_EXISTS:
             _kernel32.CloseHandle(handle)
@@ -75,18 +75,34 @@ def claim_scheme_mutex():
         return True
 
 
+def scheme_mutex_owned():
+    with _claim_lock:
+        return _scheme_mutex is not None
+
+
 def release_scheme_mutex():
     """释放驱动通道互斥体。
 
-    调用点：进程正常退出路径（process_manager），以及串行模式下实例进入
-    空闲/等待令牌时（main.py serial_release_driver）——实例进程常驻，不能只
-    靠进程退出释放，否则令牌移交后下一个实例的预检必然失败。
+    命名对象的存在即表示占用；竞争者立即关闭自己的句柄，持有者关闭最后一个
+    句柄后其他实例才能创建对象。不要混用 WaitForSingleObject 的所有权协议。
     """
     global _scheme_mutex
     with _claim_lock:
         if _scheme_mutex is not None:
             _kernel32.CloseHandle(_scheme_mutex)
             _scheme_mutex = None
+
+
+def release_driver_control():
+    """先关闭设备句柄，再交出控制权；保留共享对象供缓存的 input_handler 再次使用。"""
+    with _claim_lock:
+        if not scheme_mutex_owned():
+            return
+        try:
+            shared_mouse().close()
+        finally:
+            release_scheme_mutex()
+            logger.info('Driver control: released mouse control')
 
 
 class VirtualMouseInput(Input):
@@ -134,8 +150,8 @@ class VirtualMouseInput(Input):
             logger.error(
                 f'Control scheme driver is already in use by another NKAS instance '
                 f'(mutex {SCHEME_MUTEX_NAME}). The driver channel drives the single global '
-                f'physical cursor, so two instances would fight over it. '
-                f'Switch the other instance back to postmessage.'
+                f'physical cursor. Run through the scheduler to wait for mouse control, '
+                f'or stop the instance currently using it. Serial execution can set the instance order.'
             )
             raise RequestHumanTakeover
         if self._channel_ready():
