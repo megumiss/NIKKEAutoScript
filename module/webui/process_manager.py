@@ -483,13 +483,13 @@ class ProcessManager:
             if func == "nkas":
                 from main import NikkeAutoScript
 
-                if e is not None:
-                    NikkeAutoScript.stop_event = e
+                NikkeAutoScript.stop_event = e
                 NikkeAutoScript(config_name=config_name).loop()
             elif func in get_available_func():
                 from main import NikkeAutoScript
 
-                NikkeAutoScript(config_name=config_name).run(inflection.underscore(func), skip_first_screenshot=True)
+                NikkeAutoScript.stop_event = e
+                NikkeAutoScript(config_name=config_name).run_once(inflection.underscore(func), skip_first_screenshot=True)
             elif func in get_available_mod():
                 mod = load_mod(func)
 
@@ -504,15 +504,15 @@ class ProcessManager:
         except Exception as e:
             logger.exception(e)
         finally:
-            # driver 方案的设备句柄与互斥体在进程退出时才由系统回收；正常退出路径
-            # 显式释放，避免阻塞紧随其后的驱动装/卸/修复。被 kill 时本钩子不执行，
-            # 由系统回收兜底。
+            # 单次工具或初始化失败也可能持有句柄；退出时兜底清理，被 kill 时由系统回收。
             if os.name == 'nt':
                 try:
                     from module.device.win.virtual_mouse.driver_mouse import close_shared_mouse
                     from module.device.win.virtual_mouse.input import release_scheme_mutex
-                    close_shared_mouse()
-                    release_scheme_mutex()
+                    try:
+                        close_shared_mouse()
+                    finally:
+                        release_scheme_mutex()
                 except Exception as exc:
                     logger.warning(f'Failed to release virtual mouse resources: {exc}')
 
