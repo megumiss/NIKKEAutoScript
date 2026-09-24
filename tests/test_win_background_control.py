@@ -9,7 +9,7 @@ from module.device.win.ok_interaction.hwnd_window import HwndWindowAdapter
 from module.device.win.ok_interaction.input import PostMessageInput
 from module.device.win.ok_interaction.post_message import PostMessageInteraction
 from module.device.win.virtual_mouse.driver_mouse import BTN_LEFT, VirtualMouse, VirtualMouseDevice, make_report
-from module.device.win.virtual_mouse.input import FAILURE_LIMIT, VirtualMouseInput
+from module.device.win.virtual_mouse.input import FAILURE_LIMIT, MOVE_RECOVERY_LIMIT, VirtualMouseInput
 from module.exception import RequestHumanTakeover
 from module.tools import virtual_mouse_driver
 
@@ -551,10 +551,118 @@ class DriverSchemeTests(unittest.TestCase):
         with (
             patch('module.device.win.virtual_mouse.input.logger.error'),
             patch('module.device.win.virtual_mouse.input.logger.critical'),
+            patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=True),
         ):
             with self.assertRaises(RequestHumanTakeover):
                 for _ in range(FAILURE_LIMIT):
                     handler.mouse_move(10, 10)
+
+    def test_move_recovery_waits_for_consecutive_failure_limit(self):
+        driver = Mock()
+        driver.move_to.return_value = False
+        handler = self._handler(driver)
+
+        for _ in range(FAILURE_LIMIT - 1):
+            handler.mouse_click(120, 340)
+
+        driver.close.assert_not_called()
+        driver.open.assert_not_called()
+        driver.press.assert_not_called()
+        self.assertEqual(handler._failures, FAILURE_LIMIT - 1)
+
+    def test_move_recovery_reopens_and_retries_before_original_operation(self):
+        operations = (
+            ('mouse_move', (120, 340), []),
+            ('mouse_click', (120, 340), [call.press(BTN_LEFT), call.release()]),
+            ('press_mouse_click', (120, 340), [call.press(BTN_LEFT), call.release()]),
+            ('mouse_down', (120, 340), [call.press(BTN_LEFT)]),
+        )
+        for method, args, tail in operations:
+            with self.subTest(method=method):
+                driver = Mock()
+                driver.move_to.side_effect = [False, False, True]
+                handler = self._handler(driver)
+                handler._failures = FAILURE_LIMIT - 1
+                with (
+                    patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=True),
+                    patch('module.device.win.virtual_mouse.input.time.sleep'),
+                ):
+                    getattr(handler, method)(*args)
+
+                self.assertEqual(driver.mock_calls, [
+                    call.move_to(120, 340, buttons=0),
+                    call.close(), call.open(), call.move_to(120, 340, buttons=0),
+                    call.close(), call.open(), call.move_to(120, 340, buttons=0),
+                    *tail,
+                ])
+                self.assertEqual(handler._failures, 0)
+                self.assertEqual(handler._move_recoveries, 0)
+
+    def test_move_recovery_allows_third_attempt_and_resets_after_success(self):
+        driver = Mock()
+        failures = [False] * (FAILURE_LIMIT + MOVE_RECOVERY_LIMIT - 1)
+        driver.move_to.side_effect = (failures + [True]) * 2
+        handler = self._handler(driver)
+        with (
+            patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=True),
+            patch('module.device.win.virtual_mouse.input.time.sleep'),
+        ):
+            for _ in range(FAILURE_LIMIT * 2):
+                handler.mouse_click(120, 340)
+
+        self.assertEqual(driver.close.call_count, MOVE_RECOVERY_LIMIT * 2)
+        self.assertEqual(driver.open.call_count, MOVE_RECOVERY_LIMIT * 2)
+        self.assertEqual(driver.press.call_count, 2)
+        self.assertEqual(driver.release.call_count, 2)
+        self.assertEqual(handler._failures, 0)
+        self.assertEqual(handler._move_recoveries, 0)
+
+    def test_move_recovery_exhaustion_does_not_restart_on_next_call(self):
+        driver = Mock()
+        driver.move_to.return_value = False
+        handler = self._handler(driver)
+        with patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=True):
+            for _ in range(FAILURE_LIMIT - 1):
+                handler.mouse_click(120, 340)
+            for _ in range(2):
+                with self.assertRaises(RequestHumanTakeover):
+                    handler.mouse_click(120, 340)
+
+        self.assertEqual(driver.close.call_count, MOVE_RECOVERY_LIMIT)
+        self.assertEqual(driver.open.call_count, MOVE_RECOVERY_LIMIT)
+        self.assertEqual(driver.move_to.call_count, FAILURE_LIMIT + MOVE_RECOVERY_LIMIT + 1)
+        driver.press.assert_not_called()
+        driver.set_cursor.assert_not_called()
+
+    def test_move_recovery_does_not_retry_movement_on_unusable_channel(self):
+        for opened, present in ((False, None), (True, False)):
+            with self.subTest(opened=opened, present=present):
+                driver = Mock()
+                driver.move_to.return_value = False
+                driver.open.return_value = opened
+                handler = self._handler(driver)
+                handler._failures = FAILURE_LIMIT - 1
+                with patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=present):
+                    with self.assertRaises(RequestHumanTakeover):
+                        handler.mouse_click(120, 340)
+
+                self.assertEqual(driver.close.call_count, MOVE_RECOVERY_LIMIT)
+                self.assertEqual(driver.open.call_count, MOVE_RECOVERY_LIMIT)
+                driver.move_to.assert_called_once_with(120, 340, buttons=0)
+                driver.press.assert_not_called()
+
+    def test_recovered_position_does_not_reset_failures_when_press_fails(self):
+        driver = Mock()
+        driver.move_to.side_effect = [False, True]
+        driver.press.return_value = False
+        handler = self._handler(driver)
+        handler._failures = FAILURE_LIMIT - 1
+        with patch('module.device.win.virtual_mouse.input.sub_device_present', return_value=True):
+            with self.assertRaises(RequestHumanTakeover):
+                handler.mouse_click(120, 340)
+
+        self.assertEqual(handler._failures, FAILURE_LIMIT)
+        self.assertEqual(handler._move_recoveries, 1)
 
     def test_report_layout_is_seven_bytes_little_endian(self):
         self.assertEqual(make_report(buttons=1, dx=0, dy=0, wheel=0).hex(), '01000000000000')

@@ -35,8 +35,9 @@ DRAG_REPORT_INTERVAL = 0.004
 DRAG_MIN_STEPS = 8
 DRAG_MAX_DURATION = 0.6
 DRAG_SETTLE_DELAY = 0.06
-# 连续失败达到该次数即中止，绝不静默降级到 SendInput
-FAILURE_LIMIT = 3
+# 连续失败达到该次数时，移动先尝试恢复驱动，其他操作直接中止。
+FAILURE_LIMIT = 10
+MOVE_RECOVERY_LIMIT = 3
 # 直定位落点校验阈值（px）。超过它说明光标没停在目标点，必须留痕：该偏差只会来自
 # 「目标窗口 ClipCursor 把光标拽回」或「进程 DPI 与显示器缩放不一致」，两者都会让点击
 # 落在别的位置而不产生任何报错。
@@ -110,6 +111,7 @@ class VirtualMouseInput(Input):
         self.move_backend = self._parse_move_backend(move_backend)
         self._lock = threading.RLock()
         self._failures = 0
+        self._move_recoveries = 0
         self._landing_warned = False
         self.mouse_driver = shared_mouse()
         logger.info(f'Virtual mouse move backend: {self.move_backend}')
@@ -177,6 +179,7 @@ class VirtualMouseInput(Input):
     def _checked(self, ok, what):
         if ok:
             self._failures = 0
+            self._move_recoveries = 0
             return True
         self._failures += 1
         logger.error(f'Virtual mouse driver {what} failed ({self._failures}/{FAILURE_LIMIT})')
@@ -194,7 +197,30 @@ class VirtualMouseInput(Input):
     def _move_to(self, x, y, buttons=0):
         if self.move_backend == 'cursor':
             return self._set_cursor_checked(x, y)
-        return self.mouse_driver.move_to(x, y, buttons=buttons)
+        if self.mouse_driver.move_to(x, y, buttons=buttons):
+            return True
+        if self._failures + 1 < FAILURE_LIMIT:
+            return False
+
+        # 只在完整操作成功后重置恢复次数，避免外层启动重试重复消耗一整轮恢复。
+        while self._move_recoveries < MOVE_RECOVERY_LIMIT:
+            self._move_recoveries += 1
+            attempt = f'{self._move_recoveries}/{MOVE_RECOVERY_LIMIT}'
+            logger.warning(
+                f'Virtual mouse move ({int(x)}, {int(y)}) failed; '
+                f'reinitializing driver ({attempt})'
+            )
+            self.mouse_driver.close()
+            if not self._channel_ready():
+                logger.warning(f'Virtual mouse driver reinitialization failed ({attempt})')
+                continue
+            if self.mouse_driver.move_to(x, y, buttons=buttons):
+                logger.info(f'Virtual mouse move ({int(x)}, {int(y)}) recovered ({attempt})')
+                return True
+            logger.warning(f'Virtual mouse move ({int(x)}, {int(y)}) retry failed ({attempt})')
+
+        logger.error(f'Virtual mouse move recovery exhausted ({MOVE_RECOVERY_LIMIT} attempts)')
+        return False
 
     def _set_cursor_checked(self, x, y):
         """直定位并核对落点。
