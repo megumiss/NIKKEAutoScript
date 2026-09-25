@@ -35,8 +35,8 @@ function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ?
     </button>
     <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
     <span v-if="isWorkspace" class="status-pill" :class="displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task)">{{ displayStatus(selectedName, selectedInstance?.state, selectedInstance?.current_task) }}</span>
-    <GlobalSearch />
     <div class="topbar-right">
+      <GlobalSearch />
       <button class="tb-btn tb-bell" :title="t('公告中心')" @click="openAnnouncementCenter">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2a4.6 4.6 0 0 0-4.6 4.6v2.6c0 .5-.17 1-.47 1.42l-1.05 1.5h12.24l-1.05-1.5a2.3 2.3 0 0 1-.47-1.42V7.8A4.6 4.6 0 0 0 10 3.2Z"/><path d="M8.3 15.6a1.8 1.8 0 0 0 3.4 0"/></svg>
         <span v-if="unreadAnnouncementCount" class="tb-badge">{{ unreadAnnouncementCount > 99 ? '99+' : unreadAnnouncementCount }}</span>

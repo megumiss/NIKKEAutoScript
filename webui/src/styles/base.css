@@ -775,10 +775,12 @@ button:focus-visible,
 .gs-clear { flex:none; padding:0 2px; border:0; color:var(--text-3); background:transparent; line-height:1; cursor:pointer; }
 .gs-clear:hover { color:var(--text); }
 .gs-spin { flex:none; width:12px; height:12px; border:2px solid var(--accent-soft); border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; }
-.gs-panel { position:absolute; z-index:40; top:calc(100% + 8px); right:0; width:min(440px,calc(100vw - 20px)); max-height:min(70vh,520px); overflow:auto; padding:6px; border:1px solid var(--border-light); border-radius:12px; background:var(--card); box-shadow:var(--shadow-hover); }
+/* 触发框在 56px 顶栏里垂直居中，多留 20px 让面板落在顶栏下边框之外 */
+.gs-panel { position:absolute; z-index:40; top:calc(100% + 20px); right:0; width:min(440px,calc(100vw - 20px)); max-height:min(70vh,520px); overflow:auto; padding:6px; border:1px solid var(--border-light); border-radius:12px; background:var(--card); box-shadow:var(--shadow-hover); }
 .gs-group { display:flex; align-items:center; gap:8px; padding:8px 10px 5px; color:var(--text-3); font-size:11px; font-weight:600; letter-spacing:.06em; }
 .gs-more { padding:0 6px; border-radius:8px; background:var(--card-3); font-size:10.5px; letter-spacing:0; }
-.gs-item { display:flex; align-items:center; gap:9px; width:100%; padding:7px 10px; border-radius:8px; color:var(--text-2); cursor:pointer; }
+/* 页面命中是 button、设置命中是 div，统一重置按钮默认边框与内边距 */
+.gs-item { display:flex; align-items:center; gap:9px; width:100%; padding:7px 10px; border:0; border-radius:8px; color:var(--text-2); background:transparent; font:inherit; text-align:left; cursor:pointer; }
 .gs-item:hover,.gs-item:focus-visible { color:var(--text); background:var(--card-2); }
 .gs-ico { display:flex; flex:none; align-items:center; color:var(--text-3); }
 .gs-text { display:flex; flex-direction:column; gap:1px; min-width:0; }
