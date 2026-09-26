@@ -216,6 +216,8 @@ def _build_screen_number_options(current_value: Any = None) -> List[Dict[str, An
 
 
 def startup():
+    from module.device.adb.virtual_display_session import sessions
+    sessions().prepare()
     State.init()
     lang.reload()
     from module.warehouse_stats.data import init_warehouse_stats_files, preload_warehouse_assets
@@ -255,10 +257,21 @@ def clearup():
     RemoteAccess.kill_ssh_process()
     # close_discord_rpc()
     # stop_ocr_server_process()
-    for nkas in ProcessManager._processes.values():
-        nkas.stop()
-    State.clearup()
-    task_handler.stop()
+    errors = []
+    for nkas in list(ProcessManager._processes.values()):
+        try:
+            nkas.stop()
+        except Exception as exc:
+            errors.append(str(exc))
+            logger.exception(exc)
+    from module.device.adb.virtual_display_session import close_sessions
+    try:
+        close_sessions()
+    finally:
+        State.clearup()
+        task_handler.stop()
+    if errors:
+        raise RuntimeError('; '.join(errors))
     logger.info("NKAS closed.")
 
 

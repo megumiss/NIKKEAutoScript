@@ -5,6 +5,7 @@ import posixpath
 from urllib.parse import quote, urlparse
 
 import httpx
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import HTMLResponse, JSONResponse, Response
 
 from module.webui.api.deps import InstanceNotFound, load_instance_config
@@ -13,6 +14,33 @@ from module.webui.process_manager import ProcessManager
 # ws-scrcpy 设备端 WS 服务端口（其前端 bundle 内常量 SERVER_PORT），
 # 流地址里的 ws 参数必须是 proxy-adb 形式的完整 WebSocket URL，否则其前端启动即报错白屏。
 SCRCPY_WS_SERVER_PORT = 8886
+
+
+def control_target(name, config):
+    from module.device.adb.virtual_display_session import sessions
+    manager = sessions()
+    enabled = config.PhysicalDevice_Enable and config.PhysicalDevice_VirtualDisplay
+    try:
+        result = manager.resolve_instance(name, enabled, config.PhysicalDevice_VirtualDisplayId)
+    except (OSError, RuntimeError) as exc:
+        return {'enabled': True, 'available': False, 'reason': str(exc)}
+    if result is None:
+        return {'enabled': False, 'available': True}
+    return {
+        'enabled': True, 'available': True, 'identity': result['identity'],
+        'displayId': result['display_id'], 'sessionId': result['generation'],
+        'socket': result['socket'], 'deviceUid': result['device_uid'], 'bootId': result['boot_id'],
+        'serial': result['serial'], 'package': result['package'],
+    }
+
+
+async def virtual_display(request):
+    name = request.path_params['name']
+    try:
+        config = load_instance_config(name)
+    except InstanceNotFound:
+        return JSONResponse({'available': False, 'reason': 'Unknown instance'}, status_code=404)
+    return JSONResponse(await run_in_threadpool(control_target, name, config))
 
 
 async def screenshot(request):
@@ -48,6 +76,11 @@ async def scrcpy(request):
     if config.Client_Platform != 'adb':
         return JSONResponse({'available': False, 'reason': 'win_platform'})
     serial = str(config.Emulator_Serial or '')
+    target = await run_in_threadpool(control_target, name, config)
+    if target['enabled']:
+        if not target['available']:
+            return JSONResponse({'available': False, 'reason': target['reason']})
+        serial = target['serial']
     if serial == 'auto':
         return JSONResponse({'available': False, 'reason': 'serial_auto'})
     base_url = base.rstrip('/')
@@ -60,7 +93,7 @@ async def scrcpy(request):
     )
     hash_params = f'action=stream&udid={quote(serial, safe="")}&player=broadway&ws={quote(ws_url, safe="")}'
     url = f'{base_url}/#!{hash_params}'
-    return JSONResponse({'available': True, 'url': url})
+    return JSONResponse({'available': True, 'url': url, 'sessionId': target.get('sessionId')})
 
 
 async def scrcpy_page(request):
@@ -91,10 +124,15 @@ async def scrcpy_page(request):
         return JSONResponse({'error': f'upstream unreachable: {e}'}, status_code=502)
     html = resp.text
     serial = str(config.Emulator_Serial or '')
+    target = await run_in_threadpool(control_target, name, config)
+    if target['enabled']:
+        if not target['available']:
+            return JSONResponse({'error': target['reason']}, status_code=409)
+        serial = target['serial']
     if serial and serial != 'auto':
         bitrate = _positive_int(config.Scrcpy_Bitrate, DEFAULT_SCRCPY_BITRATE)
         max_fps = _positive_int(config.Scrcpy_MaxFps, DEFAULT_SCRCPY_MAX_FPS)
-        primer = _settings_primer_script(serial, bitrate, max_fps)
+        primer = _settings_primer_script(serial, bitrate, max_fps, target.get('displayId', 0))
         html = html.replace('<script defer', primer + '<script defer', 1)
     return HTMLResponse(html)
 
@@ -119,10 +157,10 @@ def _positive_int(value, default):
     return value if value > 0 else default
 
 
-def _settings_primer_script(serial: str, bitrate: int, max_fps: int) -> str:
+def _settings_primer_script(serial: str, bitrate: int, max_fps: int, display_id: int = 0) -> str:
     key_prefix = json.dumps(f'BroadwayDecoder:{serial}:')
     settings = json.dumps({
-        'displayId': 0,
+        'displayId': display_id,
         'bitrate': bitrate,
         'maxFps': max_fps,
         'iFrameInterval': 5,
@@ -132,6 +170,12 @@ def _settings_primer_script(serial: str, bitrate: int, max_fps: int) -> str:
     }, separators=(',', ':'))
     return (
         '<script>(function(){try{'
+        f'const prefix={key_prefix},displayId={int(display_id)};'
+        'const original=Storage.prototype.getItem;'
+        'Storage.prototype.getItem=function(key){let value=original.call(this,key);'
+        'if(displayId>0&&String(key).startsWith(prefix)&&value){try{'
+        'const settings=JSON.parse(value);settings.displayId=displayId;value=JSON.stringify(settings);'
+        '}catch(e){}}return value;};'
         f'localStorage.setItem({key_prefix}+window.innerWidth+"x"+window.innerHeight,{json.dumps(settings)});'
         '}catch(e){}})();</script>'
     )

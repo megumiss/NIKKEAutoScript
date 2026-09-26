@@ -4,6 +4,7 @@ from unittest.mock import Mock, call, patch
 
 from module.device.win.app_control import AppControl
 from module.device.win.automation import Automation
+from module.device.win.game_control import WinClient
 from module.device.win.input import Input
 from module.device.win.ok_interaction.hwnd_window import HwndWindowAdapter
 from module.device.win.ok_interaction.input import PostMessageInput
@@ -25,6 +26,81 @@ def _input(window_name='Game'):
 
 
 class BackgroundControlTests(unittest.TestCase):
+    def test_process_running_check_distinguishes_same_name_by_path(self):
+        other = Mock()
+        other.info = {
+            'pid': 1,
+            'name': 'nikke.exe',
+            'username': r'DESKTOP\user',
+            'exe': r'D:\NIKKE-1\NIKKE\game\nikke.exe',
+        }
+        current = Mock()
+        current.info = {
+            'pid': 2,
+            'name': 'nikke.exe',
+            'username': r'DESKTOP\user',
+            'exe': r'D:\NIKKE-2\NIKKE\game\nikke.exe',
+        }
+
+        with (
+            patch.object(WinClient, '_current_username', return_value='user'),
+            patch('module.device.win.game_control.psutil.process_iter', return_value=[other, current]),
+        ):
+            self.assertTrue(
+                WinClient.is_process_running('nikke.exe', target_path=r'D:\NIKKE-2\NIKKE\game\nikke.exe')
+            )
+            self.assertFalse(
+                WinClient.is_process_running('nikke.exe', target_path=r'D:\NIKKE-3\NIKKE\game\nikke.exe')
+            )
+
+    def test_process_stop_only_terminates_matching_path(self):
+        other = Mock()
+        other.info = {
+            'pid': 1,
+            'name': 'nikke.exe',
+            'username': r'DESKTOP\user',
+            'exe': r'D:\NIKKE-1\NIKKE\game\nikke.exe',
+        }
+        current = Mock()
+        current.info = {
+            'pid': 2,
+            'name': 'nikke.exe',
+            'username': r'DESKTOP\user',
+            'exe': r'D:\NIKKE-2\NIKKE\game\nikke.exe',
+        }
+
+        with (
+            patch.object(WinClient, '_current_username', return_value='user'),
+            patch('module.device.win.game_control.psutil.process_iter', return_value=[other, current]),
+        ):
+            self.assertTrue(
+                WinClient.terminate_named_process(
+                    'nikke.exe', target_path=r'D:\NIKKE-2\NIKKE\game\nikke.exe'
+                )
+            )
+
+        other.terminate.assert_not_called()
+        current.terminate.assert_called_once_with()
+        current.wait.assert_called_once_with(10)
+
+    def test_program_check_and_stop_pass_current_executable_path(self):
+        client = WinClient.__new__(WinClient)
+        client.current_window = SimpleNamespace(
+            name='Game', process='nikke.exe', path=r'D:\NIKKE-2\NIKKE\game\nikke.exe'
+        )
+        client.is_process_running = Mock(return_value=True)
+        client.terminate_named_process = Mock(return_value=True)
+
+        self.assertTrue(client.check_program())
+        self.assertTrue(client.stop_program())
+
+        client.is_process_running.assert_called_once_with(
+            'nikke.exe', target_path=r'D:\NIKKE-2\NIKKE\game\nikke.exe'
+        )
+        client.terminate_named_process.assert_called_once_with(
+            'nikke.exe', target_path=r'D:\NIKKE-2\NIKKE\game\nikke.exe'
+        )
+
     def test_automation_background_scroll_uses_inertia_free_scroll(self):
         automation = Automation.__new__(Automation)
         automation.config = SimpleNamespace(PCClientInfo_ControlScheme='postmessage')

@@ -209,7 +209,7 @@ const refreshing = ref(false)
 
 // Interactive mode swaps the JPEG frame for the external ws-scrcpy stream.
 // The availability info is per instance and loaded lazily on first expand.
-type ScrcpyInfo = { available: boolean; url?: string; reason?: string }
+type ScrcpyInfo = { available: boolean; url?: string; reason?: string; sessionId?: string }
 const scrcpy = ref<ScrcpyInfo | null>(null)
 const interactive = ref(false)
 
@@ -221,7 +221,7 @@ const controlTitle = computed(() => {
     serial_auto: 'Serial 为 auto 时无法使用互动模式',
     win_platform: '仅 adb 可用',
   }
-  return t(reasons[scrcpy.value.reason || ''] || '未配置 ws-scrcpy 地址')
+  return t(reasons[scrcpy.value.reason || ''] || scrcpy.value.reason || '未配置 ws-scrcpy 地址')
 })
 
 async function loadScrcpy() {
@@ -232,7 +232,8 @@ async function loadScrcpy() {
   }
 }
 
-function toggleInteractive() {
+async function toggleInteractive() {
+  if (!interactive.value) await loadScrcpy()
   if (!scrcpy.value?.available) return
   interactive.value = !interactive.value
   // 进入互动模式时控制栏默认收起，可用头部按钮展开
@@ -334,6 +335,31 @@ onMounted(() => {
   if (expanded.value) openPreview()
 })
 
+let controlCheck: ReturnType<typeof setInterval> | undefined
+let checkingControl = false
+onMounted(() => {
+  controlCheck = setInterval(async () => {
+    if (!expanded.value || checkingControl) return
+    checkingControl = true
+    const name = props.name
+    const previous = scrcpy.value?.sessionId
+    try {
+      const current: ScrcpyInfo = await api.get(`/api/${encodeURIComponent(name)}/scrcpy`)
+      if (name !== props.name) return
+      if (interactive.value && (!current.available || current.sessionId !== previous)) {
+        interactive.value = false
+        startPolling()
+      }
+      scrcpy.value = current
+    } catch {
+      if (interactive.value && previous) {
+        interactive.value = false
+        startPolling()
+      }
+    } finally { checkingControl = false }
+  }, 2000)
+})
+
 watch(frameAspect, measure)
 
 watch(() => props.name, () => {
@@ -347,6 +373,7 @@ watch(() => props.name, () => {
 })
 
 onBeforeUnmount(() => {
+  if (controlCheck) clearInterval(controlCheck)
   stopPolling()
   stopObserver()
   if (frameUrl.value) URL.revokeObjectURL(frameUrl.value)

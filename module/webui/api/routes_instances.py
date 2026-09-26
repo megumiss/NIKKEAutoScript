@@ -5,6 +5,7 @@ import re
 import sys
 from pathlib import Path
 
+from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 
@@ -312,7 +313,7 @@ async def start(request: Request):
                 'message': 'PC client requires NKAS to run as administrator. '
                            'Restart NKAS with "Run as administrator".',
             }, status_code=403)
-        manager.start(func=get_config_mod(name), ev=updater.event)
+        await run_in_threadpool(manager.start, get_config_mod(name), ev=updater.event)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
     results = []
@@ -328,7 +329,7 @@ async def start(request: Request):
                 'message': 'PC client requires administrator privileges.',
             })
             continue
-        manager.start(func=get_config_mod(instance), ev=updater.event)
+        await run_in_threadpool(manager.start, get_config_mod(instance), ev=updater.event)
         _clear_serial_failed(instance)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
     return JSONResponse({'status': 'success', 'results': results})
@@ -343,17 +344,19 @@ async def stop(request: Request):
         except InstanceNotFound as exc:
             return _response_error(str(exc), 404)
         manager = ProcessManager.get_manager(name)
-        if not manager.alive:
-            return _response_error(f'Instance "{name}" is not running.', 409)
-        manager.stop()
+        try:
+            await run_in_threadpool(manager.stop)
+        except RuntimeError as exc:
+            return _response_error(str(exc), 503)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" stopped.'})
     results = []
     for instance in names:
         manager = ProcessManager.get_manager(instance)
-        if not manager.alive:
-            results.append({'instance': instance, 'status': 'skipped', 'message': 'Not running.'})
+        try:
+            await run_in_threadpool(manager.stop)
+        except RuntimeError as exc:
+            results.append({'instance': instance, 'status': 'error', 'message': str(exc)})
             continue
-        manager.stop()
         results.append({'instance': instance, 'status': 'success', 'message': 'Stopped.'})
     return JSONResponse({'status': 'success', 'results': results})
 
@@ -370,7 +373,10 @@ async def create(request: Request):
         return _response_error('Invalid or already used instance name.')
     if origin not in nkas_instance() + nkas_template():
         return _response_error('Source instance not found.', 404)
-    State.config_updater.write_file(name, load_config(origin).read_file(origin), get_config_mod(origin))
+    from module.config.config_updater import renew_virtual_display_id
+    copied = load_config(origin).read_file(origin)
+    renew_virtual_display_id(copied)
+    State.config_updater.write_file(name, copied, get_config_mod(origin))
     if avatar:
         _save_avatar(name, avatar)
     return JSONResponse({'status': 'success', 'name': name}, status_code=201)
@@ -402,6 +408,11 @@ async def delete(request: Request):
         return _response_error(str(exc), 404)
     if ProcessManager.get_manager(name).alive:
         return _response_error('Stop the instance before deleting it.', 409)
+    from module.device.adb.virtual_display_session import sessions
+    try:
+        await run_in_threadpool(sessions().release_instance, name)
+    except (OSError, RuntimeError) as exc:
+        return _response_error(str(exc), 503)
     path = Path(filepath_config(name, get_config_mod(name)))
     if path.exists():
         path.unlink()
@@ -536,6 +547,8 @@ async def rename(request: Request):
             if s.get('current') == name:
                 s['current'] = new_name
         modify_state(_rename_serial_state)
+    from module.device.adb.virtual_display_session import sessions
+    await run_in_threadpool(sessions().rename, name, new_name)
     ProcessManager.rename_process(name, new_name)
     logger.info(f'Instance "{name}" renamed to "{new_name}"')
     return JSONResponse({'status': 'success', 'name': new_name})
@@ -576,5 +589,7 @@ async def import_config(request: Request):
         return _response_error('Invalid configuration filename.')
     if not name or re.search(r'[\\/:*?"\'<>|]', name) or name.lower().startswith('template'):
         return _response_error('Invalid instance name.')
+    from module.config.config_updater import renew_virtual_display_id
+    renew_virtual_display_id(config)
     State.config_updater.write_file(name, config, mod)
     return JSONResponse({'status': 'success', 'name': name})

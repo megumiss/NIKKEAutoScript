@@ -3,7 +3,6 @@ import typing as t
 from copy import deepcopy
 from datetime import datetime
 from functools import cached_property
-
 from filelock import FileLock
 
 from module.config.utils import read_file, filepath_config, deep_get, parse_value, filepath_args, deep_set, deep_iter, \
@@ -30,7 +29,8 @@ class GeneratedConfig:
     """
 '''.strip().split('\n')
 
-VIRTUAL_DISPLAY_ID_KEY = 'NKAS.PhysicalDevice.VirtualDisplayId'
+VIRTUAL_DISPLAY_ID_KEY = 'Emulator.PhysicalDevice.VirtualDisplayId'
+LEGACY_VIRTUAL_DISPLAY_ID_KEY = 'NKAS.PhysicalDevice.VirtualDisplayId'
 VIRTUAL_DISPLAY_ID_PATTERN = re.compile(r'^[a-z0-9]{12}$')
 
 
@@ -38,9 +38,18 @@ def ensure_virtual_display_id(data):
     """Return a persistent, shell-safe identity for one NKAS virtual display."""
     value = str(deep_get(data, keys=VIRTUAL_DISPLAY_ID_KEY, default='') or '').strip().lower()
     if not VIRTUAL_DISPLAY_ID_PATTERN.fullmatch(value):
-        value = random_id(12)
+        value = str(deep_get(data, keys=LEGACY_VIRTUAL_DISPLAY_ID_KEY, default='') or '').strip().lower()
+        if not VIRTUAL_DISPLAY_ID_PATTERN.fullmatch(value):
+            value = random_id(12)
     deep_set(data, keys=VIRTUAL_DISPLAY_ID_KEY, value=value)
+    deep_pop(data, keys=LEGACY_VIRTUAL_DISPLAY_ID_KEY)
     return value
+
+
+def renew_virtual_display_id(data):
+    deep_pop(data, keys=VIRTUAL_DISPLAY_ID_KEY)
+    deep_pop(data, keys=LEGACY_VIRTUAL_DISPLAY_ID_KEY)
+    return ensure_virtual_display_id(data)
 
 
 class ConfigGenerator:
@@ -501,6 +510,13 @@ class ConfigUpdater:
             yield ".".join(key), datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def read_file(self, config_name, is_template=False):
+        if is_template:
+            return self._read_file(config_name, is_template=True)
+        # File read/write locks alone leave a race between generation and persistence.
+        with FileLock(f'{filepath_config(config_name)}.virtual_display_id.lock'):
+            return self._read_file(config_name)
+
+    def _read_file(self, config_name, is_template=False):
         """
         Read and update config file.
 
@@ -512,6 +528,9 @@ class ConfigUpdater:
             dict:
         """
         old = read_file(filepath_config(config_name))
+        previous = deepcopy(old)
+        if not is_template:
+            ensure_virtual_display_id(old)
         new = self.config_update(old, is_template=is_template)
         # The updated config did not write into file, although it doesn't matters.
         # Commented for performance issue
@@ -519,18 +538,11 @@ class ConfigUpdater:
         if not is_template:
             # Persist latest event to config file, so the file itself stays
             # up to date without waiting for the scheduler to run
-            dirty = False
+            dirty = old != previous
             virtual_display_id = str(deep_get(old, VIRTUAL_DISPLAY_ID_KEY, default='') or '').strip().lower()
             if not VIRTUAL_DISPLAY_ID_PATTERN.fullmatch(virtual_display_id):
-                lock_path = f'{filepath_config(config_name)}.virtual_display_id.lock'
-                with FileLock(lock_path):
-                    current = read_file(filepath_config(config_name))
-                    virtual_display_id = str(
-                        deep_get(current, VIRTUAL_DISPLAY_ID_KEY, default='') or ''
-                    ).strip().lower()
-                    if not VIRTUAL_DISPLAY_ID_PATTERN.fullmatch(virtual_display_id):
-                        virtual_display_id = ensure_virtual_display_id(current)
-                        self.write_file(config_name, current)
+                virtual_display_id = ensure_virtual_display_id(old)
+                dirty = True
             deep_set(old, VIRTUAL_DISPLAY_ID_KEY, virtual_display_id)
             deep_set(new, VIRTUAL_DISPLAY_ID_KEY, virtual_display_id)
             for task in ['Event', 'Event2']:

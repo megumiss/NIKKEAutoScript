@@ -375,7 +375,7 @@
     },
     "VirtualDisplayId": {
       "name": "虚拟屏幕 ID",
-      "help": "由 NKAS 自动生成并保存，用于稳定识别和管理这个实例的虚拟屏幕。Android 系统运行时分配的数字 displayId 仍可能在重建后变化。"
+      "help": "由 NKAS 自动生成并保存，用于在日志和 Android 显示列表中识别这个实例。它不是 Android 运行时分配的数字 displayId，虚拟屏幕重建后数字 displayId 仍可能变化。"
     }
   },
   "Scrcpy": {

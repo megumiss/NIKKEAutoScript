@@ -33,6 +33,7 @@ public final class Server {
     private static int physicalDisplayRotation = DISPLAY_NONE;
     private static int displayId = -1;
     private static String displayIdentity;
+    private static String displaySocket;
     private static int forcedDisplaySizeId = DISPLAY_NONE;
     private static final byte[][] frameBuffers = new byte[FRAME_BUFFER_COUNT][];
     private static final int[] frameReaders = new int[FRAME_BUFFER_COUNT];
@@ -52,6 +53,7 @@ public final class Server {
         int height = Integer.parseInt(args[1]);
         int dpi = Integer.parseInt(args[2]);
         String socketName = args[3];
+        displaySocket = socketName;
         displayIdentity = args.length >= 5 ? normalizeDisplayIdentity(args[4]) : randomDisplayIdentity();
         frameWidth = width;
         frameHeight = height;
@@ -68,7 +70,7 @@ public final class Server {
         updateDisplayGeometry(display, width, height);
 
         System.out.println("NKAS_VD_READY id=" + displayId + " identity=" + displayIdentity
-                + " socket=" + socketName
+                + " pid=" + android.os.Process.myPid() + " socket=" + socketName
                 + " size=" + actualDisplayWidth + "x" + actualDisplayHeight
                 + " rotation=" + displayRotation);
         System.out.flush();
@@ -248,7 +250,10 @@ public final class Server {
         if (identity.startsWith("nkas-id-")) {
             identity = identity.substring("nkas-id-".length());
         }
-        return identity.matches("[a-z0-9]{12}") ? identity : randomDisplayIdentity();
+        if (!identity.matches("[a-z0-9]{12}")) {
+            throw new IllegalArgumentException("Invalid display identity");
+        }
+        return identity;
     }
 
     private static String virtualDisplayName(String identity) {
@@ -861,6 +866,8 @@ public final class Server {
             Object socket = serverClass.getMethod("accept").invoke(server);
             try {
                 handleClient(socket);
+            } catch (java.io.IOException e) {
+                System.err.println("NKAS_VD_CLIENT_DISCONNECTED " + e.getMessage());
             } finally {
                 socket.getClass().getMethod("close").invoke(socket);
             }
@@ -892,6 +899,12 @@ public final class Server {
                 releaseFrame(frame);
             }
         } else if ("INFO".equals(command)) {
+            Object display = virtualDisplay.getClass().getMethod("getDisplay").invoke(virtualDisplay);
+            if (!(Boolean) display.getClass().getMethod("isValid").invoke(display)) {
+                rawOutput.write("ERROR display removed\n".getBytes("UTF-8"));
+                rawOutput.flush();
+                return;
+            }
             int width;
             int height;
             long frames;
@@ -901,7 +914,7 @@ public final class Server {
                 frames = frameCount;
             }
             rawOutput.write(("OK id=" + displayId + " identity=" + displayIdentity
-                    + " frames=" + frames
+                    + " pid=" + android.os.Process.myPid() + " socket=" + displaySocket + " frames=" + frames
                     + " size=" + width + "x" + height
                     + " rotation=" + displayRotation + "\n").getBytes("UTF-8"));
             rawOutput.flush();

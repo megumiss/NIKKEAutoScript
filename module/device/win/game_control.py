@@ -100,7 +100,7 @@ class WinClient:
         logger.info(f'Stopping program: [{self.current_window.name}]:{self.current_window.process}')
         process = self.current_window.process
         try:
-            self.terminate_named_process(process)
+            self.terminate_named_process(process, target_path=self.current_window.path)
             logger.info('Program stopped successfully')
             return True
         except Exception as e:
@@ -112,7 +112,7 @@ class WinClient:
         logger.info(f'Checking program: [{self.current_window.name}]:{self.current_window.process}')
         process = self.current_window.process
         try:
-            if self.is_process_running(process):
+            if self.is_process_running(process, target_path=self.current_window.path):
                 logger.info('Program is running')
                 return True
             return False
@@ -121,53 +121,84 @@ class WinClient:
             return False
 
     @staticmethod
-    def terminate_named_process(target_process, termination_timeout=10):
+    def _current_username() -> str:
+        try:
+            return os.getlogin()
+        except OSError:
+            import getpass
+
+            return getpass.getuser()
+
+    @staticmethod
+    def _normalize_process_path(path: str) -> str:
+        return os.path.normcase(os.path.abspath(os.path.normpath(path)))
+
+    @staticmethod
+    def _process_matches(
+        process, target_process: str, target_path: Optional[str], system_username: str
+    ) -> bool:
+        process_name = process.info.get('name') or ''
+        if target_path and process_name.casefold() != target_process.casefold():
+            return False
+        if not target_path and target_process.casefold() not in process_name.casefold():
+            return False
+
+        process_username = process.info.get('username') or process.username()
+        if process_username.rsplit('\\', 1)[-1].casefold() != system_username.casefold():
+            return False
+
+        if target_path:
+            process_path = process.info.get('exe') or process.exe()
+            if not process_path:
+                return False
+            return WinClient._normalize_process_path(process_path) == WinClient._normalize_process_path(target_path)
+        return True
+
+    @staticmethod
+    def terminate_named_process(
+        target_process: str, termination_timeout: int = 10, target_path: Optional[str] = None
+    ) -> bool:
         """
-        根据进程名终止属于当前用户的进程。
+        根据进程名和可选的完整路径终止属于当前用户的进程。
 
         参数:
         - target_process (str): 要终止的进程名。
         - termination_timeout (int, optional): 终止进程前等待的超时时间（秒）。
+        - target_path (str, optional): 要终止的进程完整路径，用于区分同名多开实例。
 
         返回值:
-        - bool: 如果成功终止进程则返回True, 否则返回False。
+        - bool: 是否找到并成功终止了匹配的进程。
         """
-        system_username = os.getlogin()  # 获取当前系统用户名
-        # 遍历所有运行中的进程
-        for process in psutil.process_iter(attrs=['pid', 'name']):
-            # 检查当前进程名是否匹配并属于当前用户
-            if target_process in process.info['name']:
-                process_username = process.username().split('\\')[-1]  # 从进程所有者中提取用户名
-                if system_username == process_username:
-                    proc_to_terminate = psutil.Process(process.info['pid'])
-                    proc_to_terminate.terminate()
-                    proc_to_terminate.wait(termination_timeout)
+        system_username = WinClient._current_username()
+        terminated = False
+        for process in psutil.process_iter(attrs=['pid', 'name', 'username', 'exe']):
+            try:
+                if not WinClient._process_matches(process, target_process, target_path, system_username):
+                    continue
+                process.terminate()
+                process.wait(termination_timeout)
+                terminated = True
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return terminated
 
     @staticmethod
-    def is_process_running(target_process: str) -> bool:
+    def is_process_running(target_process: str, target_path: Optional[str] = None) -> bool:
         """
-        检查指定进程名是否正在运行（仅限当前用户）。
+        检查指定进程名和可选的完整路径是否正在运行（仅限当前用户）。
 
         参数:
         - target_process (str): 要检查的进程名。
+        - target_path (str, optional): 要检查的进程完整路径，用于区分同名多开实例。
 
         返回值:
         - bool: 如果进程存在并属于当前用户则返回 True，否则返回 False。
         """
-        try:
-            system_username = os.getlogin()  # 当前系统用户名
-        except Exception:
-            # 有时 os.getlogin() 在服务或计划任务中会失败，用这种方式兜底
-            import getpass
-
-            system_username = getpass.getuser()
-
-        for process in psutil.process_iter(attrs=['pid', 'name', 'username']):
+        system_username = WinClient._current_username()
+        for process in psutil.process_iter(attrs=['pid', 'name', 'username', 'exe']):
             try:
-                if target_process.lower() in (process.info['name'] or '').lower():
-                    process_username = process.info['username'].split('\\')[-1]
-                    if system_username == process_username:
-                        return True
+                if WinClient._process_matches(process, target_process, target_path, system_username):
+                    return True
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         return False

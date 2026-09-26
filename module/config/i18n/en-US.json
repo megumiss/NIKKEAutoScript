@@ -375,7 +375,7 @@
     },
     "VirtualDisplayId": {
       "name": "Virtual display ID",
-      "help": "Automatically generated and saved by NKAS to identify and manage this instance's virtual display. Android's numeric runtime displayId may still change when the display is recreated."
+      "help": "Automatically generated and saved by NKAS to identify this instance in logs and Android display lists. It is not Android's numeric runtime displayId, which may change when the display is recreated."
     }
   },
   "Scrcpy": {

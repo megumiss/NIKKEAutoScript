@@ -3,11 +3,10 @@ import json
 import logging
 import os
 import queue
-import re
 import subprocess
 import threading
 import time
-from multiprocessing import Process
+from multiprocessing import Event, Pipe, Process
 from typing import Dict, List, Tuple, Union
 
 import inflection
@@ -50,24 +49,52 @@ class ProcessManager:
         self.latest_preview: Tuple[float, bytes] = None
         self._process: Process = None
         self._process_locks: Dict[str, threading.Lock] = {}
+        self._lifecycle_lock = threading.Lock()
+        self._request_generation = 0
+        self._worker_stop = None
+        self._display_thread = None
         self.thd_log_queue_handler: threading.Thread = None
         self.thd_preview_handler: threading.Thread = None
 
     def start(self, func, ev: threading.Event = None) -> None:
-        if not self.alive:
+        from module.device.adb.virtual_display_session import sessions, serve_worker
+        generation = self._request_generation
+        with self._lifecycle_lock:
+            if generation != self._request_generation or self.alive:
+                return
+            if self._display_thread is not None and self._display_thread.is_alive():
+                self._worker_stop.set()
+                self._display_thread.join(timeout=45)
+                if self._display_thread.is_alive():
+                    raise RuntimeError('Previous virtual display request has not finished')
+            if generation != self._request_generation:
+                return
+            sessions().prepare()
             if func is None:
                 func = get_config_mod(self.config_name)
+            stopped = Event()
+            self._worker_stop = stopped
+            parent, child = Pipe()
             self._process = Process(
                 target=ProcessManager.run_process,
-                args=(
-                    self.config_name,
-                    func,
-                    self._renderable_queue,
-                    self._preview_queue,
-                    ev,
-                ),
+                args=(self.config_name, func, self._renderable_queue, self._preview_queue, ev, child, stopped),
             )
-            self._process.start()
+            try:
+                self._process.start()
+                sessions().track_worker(self.config_name, self._process.pid)
+            except BaseException:
+                stopped.set()
+                if self.alive:
+                    self._process.kill()
+                    self._process.join(timeout=3)
+                parent.close()
+                raise
+            finally:
+                child.close()
+            self._display_thread = threading.Thread(
+                target=serve_worker, args=(parent, stopped, self._process.is_alive), daemon=True,
+            )
+            self._display_thread.start()
             self.start_log_queue_handler()
             self.start_preview_handler()
 
@@ -107,27 +134,33 @@ class ProcessManager:
                 self.latest_preview = (time.time(), item)
 
     def stop(self) -> None:
-        try:
-            lock = self._process_locks[self.config_name]
-        except KeyError:
-            lock = threading.Lock()
-            self._process_locks[self.config_name] = lock
-
-        with lock:
-            if self.alive:
-                self._terminate_worker_children()
-                self._process.kill()
-                self.renderables.append(
-                    (logging.INFO, f"[{self.config_name}] exited. Reason: Manual stop\n")
-                )
+        from module.device.adb.virtual_display_session import sessions
+        self._request_generation += 1
+        if self._worker_stop is not None:
+            self._worker_stop.set()
+        with self._lifecycle_lock:
+            if self._worker_stop is not None:
+                self._worker_stop.set()
+            was_alive = self.alive
+            if was_alive:
+                self._process.join(timeout=2)
+                if self.alive:
+                    self._terminate_worker_children()
+                    self._process.kill()
+                    self._process.join(timeout=3)
+                if self.alive:
+                    raise RuntimeError(f'[{self.config_name}] Worker stop could not be confirmed')
+                self.renderables.append((logging.INFO, f'[{self.config_name}] exited. Reason: Manual stop\n'))
+            sessions().forget_worker(self.config_name)
+            if self._display_thread is not None:
+                self._display_thread.join(timeout=45)
+                if self._display_thread.is_alive():
+                    raise RuntimeError('Virtual display startup cancellation is still pending')
+            if was_alive:
                 self._run_stop_cleanup()
             if self.thd_log_queue_handler is not None:
                 self.thd_log_queue_handler.join(timeout=1)
-                if self.thd_log_queue_handler.is_alive():
-                    logger.warning(
-                        "Log queue handler thread does not stop within 1 seconds"
-                    )
-        logger.info(f"[{self.config_name}] exited")
+        logger.info(f'[{self.config_name}] stopped; managed virtual display retained')
 
     def _terminate_worker_children(self) -> None:
         try:
@@ -260,53 +293,13 @@ class ProcessManager:
                 f'run `adb -s {serial} shell wm size reset` manually'
             )
 
-    def _cleanup_virtual_display_server(self) -> None:
-        """
-        虚拟屏幕模式停止实例时清理设备端残留的 nkas-vd-server。
-        实例进程被 kill 时其 atexit 不会执行，本地 adb 桥被杀后设备端 app_process 可能存活，
-        继续持有虚拟屏幕和游戏画面；SIGTERM 会触发其 shutdown hook 正常释放虚拟屏幕。
-        worker 正常退出时设备端已被 atexit 清理，pkill 无匹配返回 1，属正常路径。
-        """
-        physical, serial = self._physical_device_context()
-        if not physical or not physical.get('VirtualDisplay', False):
-            return
-
-        adb = self._find_adb()
-        virtual_display_id = str(physical.get('VirtualDisplayId') or '').strip().lower()
-        process_pattern = (
-            f'nkas-id-{virtual_display_id}'
-            if re.fullmatch(r'[a-z0-9]{12}', virtual_display_id)
-            else 'com.nkas.virtualdisplay.Server'
-        )
-
-        try:
-            result = subprocess.run(
-                [adb, '-s', serial, 'shell', 'pkill', '-f', process_pattern],
-                timeout=10, capture_output=True,
-            )
-            if result.returncode == 0:
-                self.renderables.append(
-                    (logging.INFO, f"[{self.config_name}] Virtual display server cleaned up on device\n")
-                )
-            elif result.returncode != 1:
-                logger.warning(
-                    f'[{self.config_name}] pkill virtual display server failed: {result.stderr!r}, '
-                    f'run `adb -s {serial} shell pkill -f {process_pattern}` manually'
-                )
-        except (subprocess.TimeoutExpired, OSError) as e:
-            logger.warning(
-                f'[{self.config_name}] Failed to clean up virtual display server: {e}, '
-                f'run `adb -s {serial} shell pkill -f {process_pattern}` manually'
-            )
-
     def _run_stop_cleanup(self) -> None:
         """手动停止时实例进程被直接 kill，其 _post_action/atexit 不会执行，
-        由 GUI 进程代为清理：真机实例还原分辨率、清理设备端 vd-server；
+        由 GUI 进程代为清理：真机实例还原非虚拟屏模式的分辨率；
         win 实例还原屏幕方向、禁用 VDD 虚拟屏。
         游戏声音恢复依赖游戏窗口句柄，不在此处处理。"""
         # 真机清理只读配置 JSON，不实例化 NikkeConfig，避免 win 提前返回把它跳过
         self._restore_physical_device_resolution()
-        self._cleanup_virtual_display_server()
         try:
             from module.config.config import NikkeConfig
             config = NikkeConfig(self.config_name, task=None)
@@ -447,7 +440,8 @@ class ProcessManager:
 
     @staticmethod
     def run_process(
-        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None
+        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None,
+        display_pipe=None, worker_stop=None
     ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -468,24 +462,29 @@ class ProcessManager:
 
         from module.config.config import NikkeConfig
 
-        NikkeConfig.stop_event = e
+        from module.device.adb.virtual_display_session import configure_worker
+        configure_worker(display_pipe, worker_stop)
+        class StopEvents:
+            def is_set(self):
+                return (worker_stop is not None and worker_stop.is_set()) or (e is not None and e.is_set())
+        stop_events = StopEvents()
+        NikkeConfig.stop_event = stop_events
         try:
             # Run nkas
             if func == "nkas":
                 from main import NikkeAutoScript
 
-                if e is not None:
-                    NikkeAutoScript.stop_event = e
+                NikkeAutoScript.stop_event = stop_events
                 NikkeAutoScript(config_name=config_name).loop()
             elif func in get_available_func():
                 from main import NikkeAutoScript
 
+                NikkeAutoScript.stop_event = stop_events
                 NikkeAutoScript(config_name=config_name).run(inflection.underscore(func), skip_first_screenshot=True)
             elif func in get_available_mod():
                 mod = load_mod(func)
 
-                if e is not None:
-                    mod.set_stop_event(e)
+                mod.set_stop_event(stop_events)
                 mod.loop(config_name)
             elif func in get_available_mod_func():
                 getattr(load_mod(get_func_mod(func)), inflection.underscore(func))(config_name)
@@ -494,6 +493,11 @@ class ProcessManager:
             logger.info(f"[{config_name}] exited. Reason: Finish\n")
         except Exception as e:
             logger.exception(e)
+        finally:
+            if worker_stop is not None:
+                worker_stop.set()
+            if display_pipe is not None:
+                display_pipe.close()
 
     @classmethod
     def running_instances(cls) -> List["ProcessManager"]:

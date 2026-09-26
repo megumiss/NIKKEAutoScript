@@ -334,8 +334,8 @@ class Updater(DeployConfig, GitManager, PipManager):
                     f.writelines(names)
                 from module.webui.app import clearup
 
-                self._trigger_reload(2)
                 clearup()
+                self._trigger_reload(0)
             else:
                 self.state = "finish"
         else:

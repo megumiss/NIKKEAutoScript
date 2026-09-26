@@ -375,7 +375,7 @@
     },
     "VirtualDisplayId": {
       "name": "仮想ディスプレイ ID",
-      "help": "このインスタンスの仮想ディスプレイを安定して識別・管理するため、NKAS が自動生成して保存します。Android が実行時に割り当てる数値 displayId は再作成後に変わる場合があります。"
+      "help": "ログと Android のディスプレイ一覧でこのインスタンスを識別するため、NKAS が自動生成して保存します。Android の実行時 displayId そのものではなく、再作成後に数値 displayId は変わる場合があります。"
     }
   },
   "Scrcpy": {
