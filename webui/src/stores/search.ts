@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
 import { t } from '../i18n'
@@ -8,7 +8,7 @@ import { useWorkspaceStore } from './workspace'
 
 // 全站入口注册表：路由与文案都留在 SPA（后端不认识这些路由），后端只提供任务/
 // 设置的目录。instance 为 true 的条目要先确定目标实例，再替换路径里的占位符。
-type SearchPage = { key: string; label: string; group: string; path: string; instance?: boolean }
+export type SearchPage = { key: string; label: string; group: string; path: string; instance?: boolean }
 
 const PAGES: SearchPage[] = [
   { key: 'dashboard', label: '总览', group: '系统', path: '/' },
@@ -29,6 +29,8 @@ const PAGES: SearchPage[] = [
 ]
 
 const DEBOUNCE_MS = 160
+// 后端上限 100；一次取满上限，「+N」只在总命中超过上限时出现。
+const SEARCH_LIMIT = 100
 // 跨实例跳转要先等目标实例的 schema 加载完才渲染出字段，比实例内跳转留更长的重试窗口。
 const SCROLL_TRIES = 40
 
@@ -74,6 +76,29 @@ export const useSearchStore = defineStore('search', () => {
     return PAGES.filter(page => `${page.label} ${t(page.label)} ${t(page.group)}`.toLowerCase().includes(q))
   })
 
+  // 多实例时同一批命中按实例分组展示，每组指向各自的实例；单实例只有一组。
+  const hitGroups = computed(() => {
+    if (!settings.value.length) return [] as { name: string; hits: SearchHit[] }[]
+    if (!multiInstance.value) return [{ name: '', hits: settings.value }]
+    return instanceNames.value.map(name => ({ name, hits: settings.value }))
+  })
+
+  // 键盘导航用的扁平列表，顺序与面板渲染顺序一致：页面在前，命中分组在后。
+  type SearchItem = { type: 'page'; page: SearchPage } | { type: 'hit'; hit: SearchHit; instance: string }
+  const items = computed<SearchItem[]>(() => {
+    const list: SearchItem[] = pageHits.value.map(page => ({ type: 'page', page }))
+    for (const group of hitGroups.value) {
+      for (const hit of group.hits) list.push({ type: 'hit', hit, instance: group.name })
+    }
+    return list
+  })
+  const activeIndex = ref(0)
+  watch(items, () => { activeIndex.value = 0 })
+  function moveActive(delta: number) {
+    if (!items.value.length) return
+    activeIndex.value = (activeIndex.value + delta + items.value.length) % items.value.length
+  }
+
   function reset() {
     query.value = ''
     settings.value = []
@@ -93,7 +118,7 @@ export const useSearchStore = defineStore('search', () => {
     const token = ++seq
     loading.value = true
     try {
-      const data = await api.get(`/api/search?q=${encodeURIComponent(q)}`)
+      const data = await api.get(`/api/search?q=${encodeURIComponent(q)}&limit=${SEARCH_LIMIT}`)
       if (token !== seq) return
       settings.value = data.settings || []
       total.value = data.total || 0
@@ -150,9 +175,16 @@ export const useSearchStore = defineStore('search', () => {
     setTimeout(scrollToField, 200)
   }
 
+  function activate(index = activeIndex.value) {
+    const item = items.value[index]
+    if (!item) return
+    if (item.type === 'page') openPage(item.page)
+    else openHit(item.hit, item.instance || undefined)
+  }
+
   return {
     open, query, loading, settings, total, error,
-    instanceNames, targetInstance, multiInstance, pageHits,
-    toggle, close, reset, schedule, run, openPage, openHit,
+    instanceNames, targetInstance, multiInstance, pageHits, hitGroups, activeIndex,
+    toggle, close, reset, schedule, run, openPage, openHit, moveActive, activate,
   }
 })
