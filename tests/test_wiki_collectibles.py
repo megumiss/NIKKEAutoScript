@@ -118,6 +118,13 @@ class ImportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'changed after matching'):
             save_annotations(self.package, self.article, [{**self.match, 'image_sha256': 'stale'}])
 
+    def test_surface_identity_is_preserved_with_wiki_point(self):
+        save_annotations(self.package, self.article, [{**self.match, 'surface_id': 'surface_2'}])
+        saved = AnnotationStore(self.root).load(self.package.name)['annotations']['objects'][0]
+        self.assertEqual(saved['surface_id'], 'surface_2')
+        self.assertEqual(saved['source']['surface_id'], 'surface_2')
+        self.assertEqual(saved['points'], [[20, 30]])
+
     def test_ambiguous_chapter_packages_require_explicit_root(self):
         second = self.root / 'another' / 'chapter_38'
         second.mkdir(parents=True)

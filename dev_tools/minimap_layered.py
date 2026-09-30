@@ -214,6 +214,18 @@ def regularize_surfaces(ratios, confidence, road, matrix):
     return result, weight, labels, records
 
 
+def surface_winners(best, x, y, candidate):
+    """选择每个输出像素的最佳观测，让深度、来源和颜色使用同一组索引。"""
+    # 比较值与存储值必须同精度，否则向上舍入会让最大值也无法认领像素。
+    candidate = np.asarray(candidate, dtype=best.dtype)
+    previous = best[y, x].copy()
+    np.maximum.at(best, (y, x), candidate)
+    selected = np.flatnonzero((candidate == best[y, x]) & (candidate > previous))
+    # 四邻点投影可重复命中同一像素；并列时固定使用首个观测，避免重复索引写入。
+    _, first = np.unique(y[selected] * best.shape[1] + x[selected], return_index=True)
+    return selected[first]
+
+
 def fusion_consistency(roads, camera, matrix, vertical, rotation, origin, ratios):
     """将候选三维道路重投影到全部原帧，用空白视野的反证排除错位和单帧尖刺。"""
     yy, xx = np.indices(ratios.shape, dtype=np.float32)
@@ -242,8 +254,13 @@ def fusion_consistency(roads, camera, matrix, vertical, rotation, origin, ratios
     return probability, positive, seen
 
 
-def reconstruct(source, output, depth_cache=None):
+def reconstruct(source, output, depth_cache=None, stop_file=None):
     """在新目录导出道路、局部高度和反查坐标；原始扫描及其他地图包保持不变。"""
+    def check_stop():
+        if stop_file is not None and Path(stop_file).exists():
+            raise KeyboardInterrupt('Stopped during layered reconstruction.')
+
+    check_stop()
     source, output = Path(source).resolve(), Path(output).resolve()
     if output.exists() or output.is_relative_to(source):
         raise ValueError('Use a new output directory outside the source scan')
@@ -278,10 +295,12 @@ def reconstruct(source, output, depth_cache=None):
     camera = np.asarray([frame['position'] for frame in data['frames']], float)
     print(f'Collecting local road tracks from {len(images)} cached frames', flush=True)
     tracks = prepare_tracks(camera, collect_tracks(source, data, step=1, corners=400, distance=6), data['cell_px'])
+    check_stop()
     if len(tracks) < 20:
         raise ValueError('Insufficient local surface tracks')
     model = fit_model(camera, tracks, data['cell_px'], np.asarray(data['warp_size']) / 2, True,
                       return_geometry=True)
+    check_stop()
     if not model['converged']:
         raise ValueError('Local surface optimization did not converge')
     print(json.dumps(model['validation']), flush=True)
@@ -301,6 +320,7 @@ def reconstruct(source, output, depth_cache=None):
     rotation = orientation[:2, :2]
     batches, frame_reports = [], []
     for index, image in enumerate(images):
+        check_stop()
         if depth_cache is None:
             ratios, weights = sweep_surface(index, images, camera, matrix, support[index])
         else:
@@ -370,11 +390,8 @@ def reconstruct(source, output, depth_cache=None):
             np.add.at(roads, (y, x), w * road)
             np.add.at(frame_road, (y, x), w * road)
             candidate = w * (road > .5)
-            previous = best[y, x].copy()
-            np.maximum.at(best, (y, x), candidate)
-            choose = (candidate >= best[y, x]) & (candidate > previous)
+            choose = surface_winners(best, x, y, candidate)
             xx, yy = x[choose], y[choose]
-            best[yy, xx] = w[choose]
             reference[yy, xx] = colors[choose]
             source_frame[yy, xx] = index
             source_roi[yy, xx] = roi[choose]

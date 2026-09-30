@@ -16,8 +16,11 @@ let newCategory = 'normal_collectible', difficulty = 'normal';
 let history = [], future = [], draft = [], connectFrom = null, gesture = null, cursor = null;
 let space = false, busy = false, saving = false, view = { x: 0, y: 0, scale: 1 };
 const movement = createMovementController({ api, map: () => current, token: () => token,
-  selected: selectedItem, busy: () => busy || saving || Boolean(draft.length || gesture),
+  selected: selectedItem, busy: () => busy || saving || scan.running || Boolean(draft.length || gesture),
   selectTool: setTool, redraw: renderGeometry, sync: syncState });
+const scan = createScanController({ api, token: () => token, moving: () => movement.running,
+  busy: () => busy || saving || Boolean(draft.length || gesture), sync: syncState,
+  refresh: refreshMaps, open: openMap });
 
 function element(name, attributes = {}, text) {
   const node = document.createElementNS(NS, name);
@@ -27,6 +30,9 @@ function element(name, attributes = {}, text) {
 }
 function message(text, kind = '') { $('message').textContent = text; $('message').className = kind; }
 function snapshot() { return JSON.stringify(doc); }
+function roadTool() { return tool.startsWith('road-'); }
+function roadOperation() { return tool === 'road-erase' ? 'erase' : tool === 'road-polygon' ? $('road-operation').value : 'add'; }
+function roadColor(operation) { return current?.terrain_colors?.[operation] || (operation === 'add' ? '#3b8bba' : '#1c232c'); }
 function dirty() { return doc && snapshot() !== saved; }
 function itemById(id) { return doc && [...doc.objects, ...doc.connections].find(item => item.id === id); }
 function selectedItem() { return itemById(selected); }
@@ -117,10 +123,13 @@ async function openMap(id) {
     current = data; doc = data.annotations; saved = snapshot();
     history = []; future = []; draft = []; selected = null; connectFrom = null; gesture = null;
     movement.reset();
+    scan.mapOpened(data);
     $('map-select').value = id; $('layer').value = 'map.png';
     $('layer').querySelector('[value="reference.png"]').disabled = !data.reference;
     const image = $('base-image'); image.setAttribute('href', imageURL(id, 'map.png'));
     image.setAttribute('width', data.size[0]); image.setAttribute('height', data.size[1]);
+    $('terrain-bounds').setAttribute('width', data.size[0]); $('terrain-bounds').setAttribute('height', data.size[1]);
+    $('terrain-export-link').hidden = true;
     $('empty-state').hidden = true;
     $('dimensions').textContent = `${data.size[0]} × ${data.size[1]} px · 原图坐标`;
     $('map-status').textContent = data.coverage_verified ? '采集覆盖已验证' : '采集覆盖尚未完全验证';
@@ -136,7 +145,10 @@ function syncState() {
   const loaded = Boolean(current), changed = dirty();
   $('save-state').textContent = saving ? '正在保存…' : !loaded ? '未打开地图' : changed ? '有未保存的修改' : '已与磁盘同步';
   $('save-state').classList.toggle('dirty', Boolean(changed));
-  $('save').disabled = !loaded || saving || busy || movement.running;
+  $('save').disabled = !loaded || saving || busy || movement.running || Boolean(gesture);
+  $('export-terrain').disabled = !loaded || saving || busy || movement.running || Boolean(gesture)
+    || (!(doc?.terrain_edits?.length) && !(tool === 'road-polygon' && draft.length >= 3));
+  $('road-count').textContent = `${doc?.terrain_edits?.length || 0} 笔道路修订`;
   $('map-select').disabled = busy || saving || movement.running;
   $('refresh-maps').disabled = busy || saving || movement.running;
   $('reload').disabled = !loaded || busy || saving || movement.running;
@@ -144,14 +156,15 @@ function syncState() {
   $('download').disabled = !loaded;
   $('undo').disabled = !history.length || busy || movement.running;
   $('redo').disabled = !future.length || busy || movement.running;
-  const minimum = tool === 'polygon' ? 3 : 2;
-  $('finish').disabled = !['polyline', 'polygon'].includes(tool) || draft.length < minimum;
+  const minimum = ['polygon', 'road-polygon'].includes(tool) ? 3 : 2;
+  $('finish').disabled = !['polyline', 'polygon', 'road-polygon'].includes(tool) || draft.length < minimum;
   $('cancel').disabled = !draft.length && !connectFrom && !gesture;
   const hint = $('drawing-hint');
   hint.hidden = !draft.length && !connectFrom;
   hint.textContent = connectFrom ? `已选 ${itemById(connectFrom)?.label || connectFrom}，点击目标电梯完成传送关系 · Esc 取消`
     : `${draft.length} 个顶点 · 继续单击添加 · 双击 / Enter 完成 · Esc 取消`;
   movement.sync();
+  scan.sync();
 }
 
 function remember(previous) {
@@ -182,6 +195,7 @@ function setTool(next) {
     message('当前类型是电梯传送关系。请先切换到收集品、地面机关或地面电梯。'); return;
   }
   tool = next; connectFrom = null;
+  if (roadTool()) { $('show-terrain').checked = true; selected = null; }
   if (!['select', 'pan'].includes(next)) $('show-annotations').checked = true;
   for (const button of document.querySelectorAll('[data-tool]')) button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
   svg.dataset.tool = tool; movement.toolChanged(tool); renderGeometry(); syncState();
@@ -228,8 +242,12 @@ function addObject(type, points) {
   message(`已添加${typeNames[type]}「${item.label}」。Ctrl+S 保存。`);
 }
 function finishDraft() {
-  const minimum = tool === 'polygon' ? 3 : 2;
+  const minimum = ['polygon', 'road-polygon'].includes(tool) ? 3 : 2;
   if (draft.length < minimum) { message(`至少需要 ${minimum} 个不同的顶点。`, 'error'); return false; }
+  if (tool === 'road-polygon') {
+    change(() => { (doc.terrain_edits ??= []).push({ type: 'polygon', operation: roadOperation(), points: draft.map(bounded) }); draft = []; });
+    message('已填充道路区域。Ctrl+Z 撤销，Ctrl+S 保存。'); return true;
+  }
   addObject(tool, draft); return true;
 }
 function connectTo(id) {
@@ -274,10 +292,33 @@ function drawLabel(parent, item, point) {
     'paint-order': 'stroke', 'pointer-events': 'none' }, item.label || item.id);
   parent.append(label);
 }
+function renderTerrain() {
+  $('terrain').replaceChildren(); $('terrain-preview').replaceChildren();
+  if (!doc || !$('show-terrain').checked) return;
+  $('terrain').setAttribute('opacity', $('layer').value === 'reference.png' ? '.55' : '1');
+  for (const edit of doc.terrain_edits || []) {
+    const color = roadColor(edit.operation), points = edit.points.map(p => p.join(',')).join(' ');
+    if (edit.type === 'polygon') $('terrain').append(element('polygon', { points, fill: color }));
+    else if (edit.points.length === 1) $('terrain').append(element('circle', {
+      cx: edit.points[0][0], cy: edit.points[0][1], r: edit.width / 2, fill: color }));
+    else $('terrain').append(element('polyline', { points, fill: 'none', stroke: color,
+      'stroke-width': edit.width, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+  }
+  if (tool === 'road-polygon' && draft.length) {
+    const points = [...draft, ...(cursor && inside(cursor) ? [bounded(cursor)] : [])];
+    $('terrain-preview').append(element('polygon', { points: points.map(p => p.join(',')).join(' '),
+      fill: roadColor(roadOperation()), 'fill-opacity': .5, stroke: '#ffffff', 'stroke-width': 1 / view.scale }));
+    for (const p of draft) $('terrain-preview').append(element('circle', { cx: p[0], cy: p[1], r: 3 / view.scale, fill: '#fff' }));
+  } else if (['road-brush', 'road-erase'].includes(tool) && cursor && inside(cursor)) {
+    $('terrain-preview').append(element('circle', { cx: cursor[0], cy: cursor[1], r: Number($('road-width').value) / 2,
+      fill: 'none', stroke: '#ffffff', 'stroke-width': 1 / view.scale }));
+  }
+}
 function renderGeometry() {
   $('scene').setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.scale})`);
   $('zoom').textContent = `${Math.round(view.scale * 100)}%`;
   for (const id of ['objects', 'connections', 'handles', 'draft']) $(id).replaceChildren();
+  renderTerrain();
   movement.draw(view.scale);
   if (!doc || !$('show-annotations').checked) return;
   const z = view.scale;
@@ -318,7 +359,7 @@ function renderGeometry() {
     const a = gesture.start, b = bounded(cursor || a);
     preview = [a, [b[0], a[1]], b, [a[0], b[1]]];
   } else if (draft.length && cursor) preview = [...draft, bounded(cursor)];
-  if (preview.length) {
+  if (preview.length && !roadTool()) {
     const polygon = tool === 'polygon' || tool === 'rectangle';
     $('draft').append(element(polygon ? 'polygon' : 'polyline', { points: preview.map(p => p.join(',')).join(' '),
       fill: polygon ? $('new-color').value : 'none', 'fill-opacity': .15, stroke: $('new-color').value,
@@ -403,6 +444,11 @@ svg.addEventListener('pointerdown', event => {
   const p = localPoint(event);
   if (event.button === 1 || space || tool === 'pan') {
     event.preventDefault(); gesture = { kind: 'pan', start: [event.clientX, event.clientY], x: view.x, y: view.y };
+  } else if (['road-brush', 'road-erase'].includes(tool) && inside(p)) {
+    $('show-terrain').checked = true;
+    const edit = { type: 'brush', operation: roadOperation(), width: Number($('road-width').value), points: [bounded(p)] };
+    gesture = { kind: 'road', previous: snapshot(), edit };
+    (doc.terrain_edits ??= []).push(edit); renderGeometry(); syncState();
   } else if (tool === 'rectangle' && inside(p) && $('show-annotations').checked) {
     gesture = { kind: 'rectangle', start: bounded(p) }; cursor = bounded(p);
   } else if (tool === 'select' && $('show-annotations').checked) {
@@ -421,6 +467,9 @@ svg.addEventListener('pointermove', event => {
   $('coordinates').textContent = inside(p) ? `X ${p[0].toFixed(1)} · Y ${p[1].toFixed(1)}` : 'X — · Y —';
   if (gesture?.kind === 'pan') {
     view.x = gesture.x + event.clientX - gesture.start[0]; view.y = gesture.y + event.clientY - gesture.start[1];
+  } else if (gesture?.kind === 'road') {
+    const point = bounded(p), previous = gesture.edit.points.at(-1);
+    if (Math.hypot(point[0] - previous[0], point[1] - previous[1]) >= .5) gesture.edit.points.push(point);
   } else if (gesture?.kind === 'vertex') {
     selectedItem().points[gesture.index] = bounded(p);
   } else if (gesture?.kind === 'object') {
@@ -429,11 +478,12 @@ svg.addEventListener('pointermove', event => {
       Math.min(current.size[axis] - 1 - Math.max(...gesture.points.map(q => q[axis])), v)));
     selectedItem().points = gesture.points.map(q => bounded([q[0] + delta[0], q[1] + delta[1]]));
   }
-  if (gesture || draft.length) renderGeometry();
+  if (gesture || draft.length || roadTool()) renderGeometry();
 });
 svg.addEventListener('pointerup', event => {
   if (!gesture) return;
   const ending = gesture; gesture = null;
+  if (ending.kind === 'road') ending.edit.points.push(bounded(localPoint(event)));
   if (svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
   if (ending.kind === 'rectangle') {
     const a = ending.start, b = bounded(localPoint(event));
@@ -448,6 +498,11 @@ svg.addEventListener('click', event => {
   if (!doc || busy || movement.running || space || event.button !== 0 || event.detail > 1) return;
   const p = localPoint(event);
   if (tool === 'move-target') { if (inside(p)) movement.select(bounded(p)); return; }
+  if (tool === 'road-polygon' && inside(p)) {
+    const point = bounded(p);
+    if (!draft.some(q => q[0] === point[0] && q[1] === point[1])) draft.push(point);
+    renderGeometry(); syncState(); return;
+  }
   if (!$('show-annotations').checked) return;
   if (tool === 'connect') { connectTo(event.target.closest('[data-object]')?.dataset.object); return; }
   if (!inside(p)) return;
@@ -459,7 +514,7 @@ svg.addEventListener('click', event => {
   }
 });
 svg.addEventListener('dblclick', event => {
-  if (['polyline', 'polygon'].includes(tool) && draft.length) { event.preventDefault(); finishDraft(); }
+  if (['polyline', 'polygon', 'road-polygon'].includes(tool) && draft.length) { event.preventDefault(); finishDraft(); }
 });
 svg.addEventListener('wheel', event => {
   event.preventDefault(); const rect = svg.getBoundingClientRect();
@@ -468,7 +523,7 @@ svg.addEventListener('wheel', event => {
 svg.addEventListener('contextmenu', event => { event.preventDefault(); cancelDraft(); });
 
 async function save() {
-  if (!doc || busy || saving || movement.running) return;
+  if (!doc || busy || saving || movement.running || gesture) return false;
   document.activeElement?.blur();
   if (draft.length && !finishDraft()) return;
   const content = snapshot(); saving = true; syncState();
@@ -476,8 +531,10 @@ async function save() {
     const result = await api('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Annotation-Token': token },
       body: JSON.stringify({ id: current.id, annotations: JSON.parse(content), revision: current.revision }) });
     current.revision = result.revision; saved = content;
-    message(`已保存 ${JSON.parse(content).objects.length} 个对象、${JSON.parse(content).connections.length} 条连接。${result.backup ? '原文件已备份。' : ''}`, 'success');
-  } catch (error) { message(`保存失败：${error.message}`, 'error'); }
+    const stored = JSON.parse(content);
+    message(`已保存 ${stored.objects.length} 个对象、${stored.connections.length} 条连接、${stored.terrain_edits?.length || 0} 笔道路修订。${result.backup ? '原文件已备份。' : ''}`, 'success');
+    return true;
+  } catch (error) { message(`保存失败：${error.message}`, 'error'); return false; }
   finally { saving = false; syncState(); }
 }
 function deleteSelected() {
@@ -526,6 +583,23 @@ $('map-select').addEventListener('change', () => openMap($('map-select').value))
 $('refresh-maps').addEventListener('click', () => refreshMaps());
 $('reload').addEventListener('click', () => current && openMap(current.id));
 $('save').addEventListener('click', save);
+$('road-width').addEventListener('input', () => { $('road-width-value').textContent = `${$('road-width').value} px`; renderGeometry(); });
+$('road-operation').addEventListener('change', renderGeometry);
+$('show-terrain').addEventListener('change', renderGeometry);
+$('export-terrain').addEventListener('click', async () => {
+  if (!(await save()) || dirty()) return;
+  busy = true; syncState();
+  try {
+    const result = await api('/api/terrain/export', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Annotation-Token': token },
+      body: JSON.stringify({ id: current.id, revision: current.revision }) });
+    const link = $('terrain-export-link');
+    link.href = `/api/export-image?${new URLSearchParams({ map: current.id, export: result.export })}`;
+    link.hidden = false;
+    message(`修订图已导出：${result.path}`, 'success');
+  } catch (error) { message(`导出失败：${error.message}`, 'error'); }
+  finally { busy = false; syncState(); }
+});
 $('undo').addEventListener('click', undo); $('redo').addEventListener('click', redo);
 $('finish').addEventListener('click', finishDraft); $('cancel').addEventListener('click', cancelDraft);
 $('delete').addEventListener('click', deleteSelected); $('fit').addEventListener('click', fit);
@@ -539,7 +613,7 @@ $('search').addEventListener('input', renderList);
 $('layer').addEventListener('change', async () => {
   if (!current) return; const id = current.id, filename = $('layer').value;
   try { await loadImage(imageURL(id, filename));
-    if (current.id === id && $('layer').value === filename) $('base-image').setAttribute('href', imageURL(id, filename));
+    if (current.id === id && $('layer').value === filename) { $('base-image').setAttribute('href', imageURL(id, filename)); renderGeometry(); }
   } catch (error) { message(error.message, 'error'); }
 });
 for (const id of ['show-labels', 'show-annotations', 'new-color']) $(id).addEventListener('input', renderGeometry);
@@ -565,7 +639,8 @@ document.addEventListener('keydown', event => {
     if (event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); }
     return;
   }
-  const keys = { v: 'select', h: 'pan', p: 'point', l: 'polyline', g: 'polygon', r: 'rectangle', c: 'connect' };
+  const keys = { v: 'select', h: 'pan', p: 'point', l: 'polyline', g: 'polygon', r: 'rectangle', c: 'connect',
+    b: 'road-brush', e: 'road-erase', f: 'road-polygon' };
   if (keys[event.key.toLowerCase()]) setTool(keys[event.key.toLowerCase()]);
 });
 document.addEventListener('keyup', event => { if (event.code === 'Space') space = false; });

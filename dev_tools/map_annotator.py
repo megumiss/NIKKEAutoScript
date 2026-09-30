@@ -21,9 +21,13 @@ from PIL import Image
 if __package__:
     from .map_paths import DEFAULT_MAPS_ROOT
     from .map_movement import MovementJobs
+    from .map_scan import ScanJobs
+    from .map_terrain import render_terrain, terrain_colors, validate_terrain_edits
 else:
     from map_paths import DEFAULT_MAPS_ROOT
     from map_movement import MovementJobs
+    from map_scan import ScanJobs
+    from map_terrain import render_terrain, terrain_colors, validate_terrain_edits
 
 UI = Path(__file__).with_suffix('')
 COORDINATES = {'unit': 'pixel', 'origin': 'top_left', 'x': 'right', 'y': 'down'}
@@ -47,6 +51,7 @@ def validate_annotations(document, image_hash, size):
         raise ConflictError('标注绑定的底图与当前 map.png 不一致，请使用对应版本的地图包。')
     if document.get('coordinates') != COORDINATES:
         raise ValueError('标注必须使用原图像素坐标：左上角原点，X 向右，Y 向下。')
+    validate_terrain_edits(document.get('terrain_edits', []), size)
     objects, connections = document.get('objects'), document.get('connections')
     if not isinstance(objects, list) or not isinstance(connections, list):
         raise ValueError('objects 和 connections 必须是数组。')
@@ -123,6 +128,8 @@ class AnnotationStore:
         """枚举可读地图元数据，忽略损坏记录并按修改时间返回可选地图。"""
         maps = []
         for path in sorted(self.root.rglob('map.json'), key=lambda p: p.stat().st_mtime, reverse=True):
+            if any(part.startswith('.') for part in path.relative_to(self.root).parts[:-1]):
+                continue
             if not path.resolve().is_relative_to(self.root):
                 continue
             try:
@@ -146,7 +153,10 @@ class AnnotationStore:
             size = list(image.size)
         if metadata.get('image_sha256') != image_hash or metadata.get('size') != size:
             raise ConflictError('map.png 已变化，与 map.json 的尺寸或哈希不一致。请重新导出地图包。')
-        if metadata.get('coordinates') != COORDINATES:
+        coordinates = metadata.get('coordinates')
+        layered_pixels = (metadata.get('coordinate_model') == 'local_parallax'
+                          and coordinates == {**COORDINATES, 'unit': 'rectified_grid_pixel'})
+        if coordinates != COORDINATES and not layered_pixels:
             raise ValueError('当前工具只支持左上角原点的原图像素坐标。')
         reference = (package / 'reference.png').is_file()
         if reference:
@@ -168,6 +178,7 @@ class AnnotationStore:
             }
             validate_annotations(document, image_hash, size)
             return {'id': identifier, 'chapter': metadata.get('chapter'), 'size': size,
+                    'terrain_colors': terrain_colors(metadata),
                     'path': str(package), 'reference': reference, 'annotations': document,
                     'revision': digest(raw), 'coverage_verified': metadata.get('capture', {}).get(
                         'whole_camera_domain_verified', False)}
@@ -202,11 +213,38 @@ class AnnotationStore:
                     temporary.unlink()
             return {'revision': digest(content), 'path': str(path), 'backup': str(backup) if backup else None}
 
+    def export_terrain(self, identifier, revision):
+        """从已保存的修订生成独立快照，不覆盖 map.png 或更改旧标注的图像绑定。"""
+        with self.lock:
+            loaded = self.load(identifier)
+            if revision != loaded['revision']:
+                raise ConflictError('道路修订已变化，请重新保存后导出。')
+            document = loaded['annotations']
+            if not document.get('terrain_edits'):
+                raise ValueError('还没有道路修订，请先绘制并保存。')
+            package = self.package(identifier)
+            name = str(time.time_ns())
+            folder = package / 'manual_exports' / name
+            with Image.open(package / 'map.png') as image:
+                edited, override = render_terrain(image, document['terrain_edits'], loaded['terrain_colors'])
+            folder.mkdir(parents=True)
+            edited.save(folder / 'map.png')
+            override.save(folder / 'terrain_override.png')
+            manifest = {'schema_version': 1, 'source_image_sha256': document['image_sha256'],
+                        'image_sha256': digest((folder / 'map.png').read_bytes()),
+                        'annotation_revision': revision, 'size': loaded['size'], 'coordinates': COORDINATES,
+                        'terrain_edits': document['terrain_edits'], 'colors': loaded['terrain_colors'],
+                        'override_values': {'unchanged': 0, 'erase': 1, 'add': 2}, 'navigation_ready': False}
+            (folder / 'edits.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+            return {'export': name, 'path': str(folder / 'map.png'), 'edits': len(document['terrain_edits'])}
 
-def make_server(store, port=8766, initial=None, movement=None):
+
+def make_server(store, port=8766, initial=None, movement=None, scans=None):
     """建立仅监听本机的服务；保存和移动请求共用会话令牌，设备在子进程中执行。"""
     token = secrets.token_urlsafe(32)
     movement = movement or MovementJobs(store)
+    scans = scans or ScanJobs(store)
+    device_lock = threading.RLock()
 
     class Handler(BaseHTTPRequestHandler):
         def send(self, content, content_type='application/json; charset=utf-8', status=200):
@@ -237,6 +275,7 @@ def make_server(store, port=8766, initial=None, movement=None):
                 assets = {'/': ('index.html', 'text/html; charset=utf-8'),
                           '/editor.js': ('editor.js', 'text/javascript; charset=utf-8'),
                           '/movement.js': ('movement.js', 'text/javascript; charset=utf-8'),
+                          '/scan.js': ('scan.js', 'text/javascript; charset=utf-8'),
                           '/editor.css': ('editor.css', 'text/css; charset=utf-8')}
                 if request.path in assets:
                     name, mime = assets[request.path]
@@ -246,11 +285,19 @@ def make_server(store, port=8766, initial=None, movement=None):
                                       'token': token, 'initial': initial})
                 if request.path == '/api/movement':
                     return self.send(movement.status())
+                if request.path == '/api/scan':
+                    return self.send(scans.status())
                 if request.path == '/api/movement/preview':
                     return self.send(movement.preview(params.get('job', [''])[0]), 'image/jpeg')
                 identifier = params.get('map', [''])[0]
                 if request.path == '/api/map':
                     return self.send(store.load(identifier))
+                if request.path == '/api/export-image':
+                    name = params.get('export', [''])[0]
+                    if not re.fullmatch(r'\d{15,25}', name):
+                        raise ValueError('无效的导出版本。')
+                    return self.send((store.package(identifier) / 'manual_exports' / name / 'map.png').read_bytes(),
+                                     'image/png')
                 if request.path == '/api/image':
                     filename = params.get('image', ['map.png'])[0]
                     if filename not in ('map.png', 'reference.png'):
@@ -267,15 +314,28 @@ def make_server(store, port=8766, initial=None, movement=None):
             if not self.allowed_host() or self.headers.get('X-Annotation-Token') != token:
                 return self.send({'error': '页面会话已失效，请刷新后重试。'}, status=403)
             endpoint = urlsplit(self.path).path
-            if endpoint not in ('/api/save', '/api/movement/start', '/api/movement/stop'):
+            if endpoint not in ('/api/save', '/api/terrain/export', '/api/movement/start', '/api/movement/stop',
+                                '/api/scan/start', '/api/scan/stop'):
                 return self.send({'error': '未找到资源。'}, status=404)
             try:
                 length = int(self.headers.get('Content-Length', '0'))
                 if not 0 < length <= 10_000_000:
                     raise ValueError('标注文件不能为空，也不能超过 10 MB。')
                 payload = json.loads(self.rfile.read(length))
-                if endpoint == '/api/movement/start':
-                    result = movement.start(payload)
+                if endpoint == '/api/terrain/export':
+                    result = store.export_terrain(payload['id'], payload['revision'])
+                elif endpoint == '/api/movement/start':
+                    with device_lock:
+                        if scans.status().get('running'):
+                            raise ValueError('地图扫描正在运行，请先停止扫描。')
+                        result = movement.start(payload)
+                elif endpoint == '/api/scan/start':
+                    with device_lock:
+                        if movement.status().get('running'):
+                            raise ValueError('小队移动正在运行，请先停止移动。')
+                        result = scans.start(payload)
+                elif endpoint == '/api/scan/stop':
+                    result = scans.stop(payload['job'])
                 elif endpoint == '/api/movement/stop':
                     result = movement.stop(payload['job'])
                 else:
@@ -293,9 +353,12 @@ def make_server(store, port=8766, initial=None, movement=None):
 
     class Server(ThreadingHTTPServer):
         def server_close(self):
-            """服务退出也必须停止本服务持有的移动进程。"""
+            """服务退出也必须停止本服务持有的扫描和移动进程。"""
             try:
-                movement.close()
+                try:
+                    scans.close()
+                finally:
+                    movement.close()
             finally:
                 super().server_close()
 

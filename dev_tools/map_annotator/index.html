@@ -6,6 +6,7 @@
   <title>地图标注 · NIKKE</title>
   <link rel="stylesheet" href="/editor.css">
   <script src="/movement.js" defer></script>
+  <script src="/scan.js" defer></script>
   <script src="/editor.js" defer></script>
 </head>
 <body>
@@ -18,6 +19,18 @@
 
   <main class="workspace">
     <aside class="tools-panel" aria-label="绘制工具">
+      <div class="section-label">道路修订</div>
+      <div class="tools" role="group" aria-label="道路修订工具">
+        <button data-tool="road-brush" aria-pressed="false" title="按住拖动补齐道路 (B)">画笔补路 <kbd>B</kbd></button>
+        <button data-tool="road-erase" aria-pressed="false" title="按住拖动擦除碎片 (E)">橡皮擦 <kbd>E</kbd></button>
+        <button data-tool="road-polygon" aria-pressed="false" title="单击添加顶点，双击或 Enter 填充 (F)">多边形填充 <kbd>F</kbd></button>
+      </div>
+      <label>画笔直径 <output id="road-width-value">12 px</output><input id="road-width" type="range" min="1" max="160" value="12"></label>
+      <label>多边形操作<select id="road-operation"><option value="add">补齐道路</option><option value="erase">擦除区域</option></select></label>
+      <label class="check"><input id="show-terrain" type="checkbox" checked>显示道路修订</label>
+      <p id="road-count" class="muted">0 笔道路修订</p>
+      <button id="export-terrain" disabled>保存并导出修订图</button>
+      <a id="terrain-export-link" hidden target="_blank" rel="noopener">查看导出的地图</a>
       <div class="section-label">新标注</div>
       <label>标注类型<select id="new-category" aria-describedby="category-help"></select></label>
       <p id="category-help" class="muted category-help"></p>
@@ -60,7 +73,8 @@
       <div id="stage" class="stage">
         <svg id="canvas" xmlns="http://www.w3.org/2000/svg" tabindex="0" aria-label="地图画布，使用左侧工具绘制，滚轮缩放">
           <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d6dce5"/></marker></defs>
-          <g id="scene"><image id="base-image" x="0" y="0"/><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="movement-markers" pointer-events="none"></g></g>
+          <defs><clipPath id="terrain-clip"><rect id="terrain-bounds" x="0" y="0"/></clipPath></defs>
+          <g id="scene"><image id="base-image" x="0" y="0"/><g id="terrain" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="terrain-preview" pointer-events="none"></g><g id="movement-markers" pointer-events="none"></g></g>
         </svg>
         <div id="empty-state" class="empty-state"><h2>打开一张地图，开始标注</h2><p>从上方选择地图包。使用 --root 可指定其他地图目录。</p></div>
         <div id="drawing-hint" class="drawing-hint" hidden></div>
@@ -70,6 +84,18 @@
     </section>
 
     <aside class="inspector" aria-label="标注管理">
+      <section class="movement-panel" aria-labelledby="scan-heading">
+        <h2 id="scan-heading">地图扫描</h2>
+        <p class="muted">先进入指定章节。扫描会操作游戏，请保持游戏在前台；新地图另存，不覆盖当前修订。</p>
+        <label>章节<input id="scan-chapter" type="number" min="1" max="99" value="40"></label>
+        <label class="check"><input id="scan-3d" type="checkbox" checked>需要 3D 处理（分层地图）</label>
+        <label>扫描步长<input id="scan-stroke" type="number" min="1" max="240" value="120"></label>
+        <div class="movement-actions"><button id="scan-start" class="primary">开始扫描</button><button id="scan-stop" disabled>停止扫描</button></div>
+        <p id="scan-status" class="muted" role="status" aria-live="polite">先进入指定章节，再开始扫描。</p>
+        <p id="scan-progress" class="muted"></p>
+        <button id="scan-open" disabled>打开扫描结果</button>
+        <details><summary>扫描日志位置</summary><p id="scan-log" class="muted"></p></details>
+      </section>
       <section class="movement-panel" aria-labelledby="movement-heading">
         <h2 id="movement-heading">小队移动测试</h2>
         <p class="muted">选一个道路目标，自动换算落点并移动。测试期间保持游戏在前台。</p>

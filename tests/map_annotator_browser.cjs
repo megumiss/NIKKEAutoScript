@@ -263,6 +263,7 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
   assert.deepEqual(movementRequest.target, pickedTarget);
   assert.equal(await page.locator('#move-start').isDisabled(), true);
   assert.equal(await page.locator('#map-select').isDisabled(), true);
+  assert.equal(await page.locator('#scan-start').isDisabled(), true);
   await waitUntil(async () => (await page.locator('#move-metrics').textContent()).includes('24.0'));
   await page.locator('#move-stop').click();
   await waitUntil(async () => !(await page.locator('#map-select').isDisabled()));
@@ -274,7 +275,72 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
   assert.equal(await page.locator('#move-start').isDisabled(), true);
   await page.locator('#map-select').selectOption('chapter_01'); await difficulty('all'); await count(9);
 
+  let scanJob = { state: 'idle', running: false }, scanRequest;
+  await page.route(/\/api\/scan(?:[/?]|$)/, async route => {
+    const endpoint = new URL(route.request().url()).pathname;
+    if (endpoint === '/api/scan/start') {
+      scanRequest = route.request().postDataJSON();
+      scanJob = { ...scanRequest, id: 'scan-test', state: 'running', running: true,
+        frames: 12, message: '正在扫描（测试桩）' };
+    }
+    if (endpoint === '/api/scan/stop') scanJob = { ...scanJob, state: 'cancelled', running: false };
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(scanJob) });
+  });
+  assert.equal(await page.locator('#scan-3d').isChecked(), false);
+  await page.locator('#scan-chapter').fill('40'); await page.locator('#scan-chapter').press('Tab');
+  assert.equal(await page.locator('#scan-3d').isChecked(), true);
+  await page.locator('#scan-start').click();
+  await waitUntil(async () => scanRequest);
+  assert.deepEqual(scanRequest, { chapter: 40, stroke_px: 120, process_3d: true });
+  assert.equal(await page.locator('#move-start').isDisabled(), true);
+  await waitUntil(async () => (await page.locator('#scan-progress').textContent()).includes('12'));
+  await page.locator('#scan-stop').click();
+  await waitUntil(async () => await page.locator('#scan-start').isEnabled());
+  assert.equal(await page.locator('#scan-open').isDisabled(), true);
+  await page.locator('#scan-chapter').fill('1'); await page.locator('#scan-chapter').press('Tab');
+  assert.equal(await page.locator('#scan-3d').isChecked(), false);
+  await page.locator('#scan-start').click();
+  await waitUntil(async () => scanRequest.process_3d === false);
+  scanJob = { ...scanJob, state: 'complete', running: false, map_id: 'chapter_02', message: '扫描完成' };
+  await waitUntil(async () => await page.locator('#scan-open').isEnabled());
+  assert.equal(await page.locator('#map-select').inputValue(), 'chapter_01');
+  await page.locator('#scan-open').click();
+  await waitUntil(async () => (await page.locator('#dimensions').textContent()).includes('600 × 500'));
+  await page.locator('#map-select').selectOption('chapter_01'); await difficulty('all'); await count(9);
+
   await page.locator('#fit').click();
+  // 道路修订沿用同一原图坐标，保存和导出都不能覆写基线。
+  const originalMap = fs.readFileSync(path.join(temporary, 'chapter_01/map.png'));
+  await tool('road-brush');
+  await page.locator('#road-width').fill('20');
+  await drag([200, 500], [400, 500]);
+  assert.equal(await page.locator('#terrain > *').count(), 1);
+  await tool('road-erase'); await click([300, 500]);
+  assert.equal(await page.locator('#terrain > *').count(), 2);
+  await tool('road-polygon');
+  await click([500, 200]); await click([600, 200]); await click([600, 300]);
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#terrain > *').count(), 3);
+  await page.locator('#undo').click(); assert.equal(await page.locator('#terrain > *').count(), 2);
+  await page.locator('#redo').click(); assert.equal(await page.locator('#terrain > *').count(), 3);
+  await page.locator('#show-annotations').uncheck();
+  assert.equal(await page.locator('#terrain > *').count(), 3);
+  await page.locator('#show-terrain').uncheck(); assert.equal(await page.locator('#terrain > *').count(), 0);
+  await page.locator('#show-terrain').check();
+  await save(); assert.equal(annotations().terrain_edits.length, 3);
+  await page.reload();
+  await waitUntil(async () => await page.locator('#terrain > *').count() === 3);
+  await page.locator('#export-terrain').click();
+  await waitUntil(async () => await page.locator('#terrain-export-link').isVisible());
+  const exported = new URL(await page.locator('#terrain-export-link').getAttribute('href'), url).searchParams.get('export');
+  const png = path.join(temporary, 'chapter_01/manual_exports', exported, 'map.png');
+  const pixels = spawnSync(python, ['-c', 'from PIL import Image; import sys,json; im=Image.open(sys.argv[1]); print(json.dumps([im.getpixel(p) for p in [(240,500),(300,500),(580,220)]]))', png], { encoding: 'utf8' });
+  assert.equal(pixels.status, 0, pixels.stderr);
+  assert.deepEqual(JSON.parse(pixels.stdout), [[45,141,199],[15,20,28],[45,141,199]]);
+  assert.deepEqual(fs.readFileSync(path.join(temporary, 'chapter_01/map.png')), originalMap);
+  const exportedResponse = await page.request.get(new URL(await page.locator('#terrain-export-link').getAttribute('href'), url).href);
+  assert.equal(exportedResponse.status(), 200);
+  await tool('road-brush');
   fs.mkdirSync(path.dirname(path.resolve(screenshot)), { recursive: true });
   await page.screenshot({ path: screenshot });
   await page.setViewportSize({ width: 760, height: 900 });
@@ -286,6 +352,8 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
     'vertex drag and numeric edit', 'undo/redo and delete',
     'layer/zoom/pan preserve coordinates', 'reload and map switching', 'save backup', 'concurrent-save rejection',
     'download current copy', 'movement target coordinates, start, stop and map reset',
+    'scan mode, step, progress, stop, explicit result opening and movement exclusion',
+    'road brush/erase/polygon, undo/redo, visibility, save/reload, PNG export and baseline preservation',
     'responsive width', 'no browser errors'] }, null, 2));
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
   if (browser) await browser.close(); server.kill();

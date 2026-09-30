@@ -2544,7 +2544,7 @@ def parse_args(argv=None):
     parser.add_argument('--drag-speed', type=float, default=420.0,
                         help='Continuous cursor speed in screen pixels/second.')
     parser.add_argument('--keyframe-px', type=float, default=80.0, help='Measured camera travel between saved views.')
-    parser.add_argument('--stroke-px', type=float, default=240.0, help='Cursor travel per press-drag stroke.')
+    parser.add_argument('--stroke-px', type=float, default=120.0, help='Cursor travel per press-drag stroke (default: 120).')
     parser.add_argument('--max-world', type=float, default=12000.0, help='Segment length cap in rectified pixels.')
     args = parser.parse_args(argv)
     if min(*args.client, args.capture_px, args.capture_interval, args.drag_speed, args.keyframe_px,

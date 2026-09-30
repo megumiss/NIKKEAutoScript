@@ -119,6 +119,12 @@ class MapMatcher:
         self.digest = hashlib.sha256((self.package / 'map.png').read_bytes()).hexdigest()
         if meta['image_sha256'] != self.digest:
             raise ValueError('Map hash differs from metadata.')
+        self.surface_matcher = None
+        if meta.get('coordinate_model') == 'orthographic_surfaces':
+            from module.campaign_prototype.surface_localizer import SurfaceLocalizer
+            self.surface_matcher = SurfaceLocalizer(self.package)
+            self.cache_digest = self.surface_matcher.cache_digest
+            return
         if meta.get('capture', {}).get('registration', {}).get('status') != 'joint_grid_road':
             raise ValueError('Map package lacks accepted road registration.')
         self.projection = np.asarray(meta['transforms']['projection'], float)
@@ -140,6 +146,10 @@ class MapMatcher:
     def match(self, image, review=None):
         """粗搜索尺度和位移后细化最佳候选，以 IoU、远处候选分差及参数分散度联合决定是否接受。"""
         panel, road, valid, player = minimap_masks(image)
+        if self.surface_matcher is not None:
+            result = self.surface_matcher.locate(panel, player, valid, review)
+            result.update(roi=list(ROI), normalized_size=[1920, 1080], match_version=MATCH_VERSION)
+            return result
         coarse = []
         parameters = {(round(float(a), 2), round(float(b), 2))
                       for a in np.arange(.6, 2.21, .2) for b in np.arange(.65, 1.56, .15)}

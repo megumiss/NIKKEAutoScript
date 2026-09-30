@@ -137,3 +137,14 @@ def plan_click(target, surface_id, calibration, registration, client=(1776, 999)
     if tuple(client) != (1776, 999) or not (250 <= click[0] <= 1500 and 180 <= click[1] <= 880):
         raise ValueError('Target lies outside the validated field area')
     return click
+
+
+def plan_map_click(geometry, target, surface_id, image_sha256, calibration, registration, client=(1776, 999)):
+    """地图目标先按自己的高度返回标定视角，再使用该表面的实测落点标定。"""
+    if (not image_sha256 or calibration.get('image_sha256') != image_sha256
+            or registration.get('image_sha256') != image_sha256):
+        raise ValueError('Surface movement evidence belongs to a different map')
+    if calibration.get('surface_id') != surface_id or registration.get('surface_id') != surface_id:
+        raise ValueError('Movement target and evidence belong to different surfaces')
+    reference_roi = geometry.roi_point(calibration.get('source_frame'), surface_id, target)
+    return plan_click(reference_roi, surface_id, calibration, registration, client)

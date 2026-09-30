@@ -19,6 +19,7 @@ if __package__:
     from .map_paths import DEFAULT_MAPS_ROOT
     from .minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 else:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from map_paths import DEFAULT_MAPS_ROOT
     from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 
@@ -116,7 +117,7 @@ def write_progress(path, results):
     temporary.replace(path)
 
 
-def existing_package(package, chapter):
+def existing_package(package, chapter, process_3d=False):
     """核对已有地图的章节、图片哈希与道路配准状态，决定能否跳过重复采集。"""
     if not (package / 'map.json').exists():
         return False
@@ -125,6 +126,15 @@ def existing_package(package, chapter):
         raise ValueError('Existing package belongs to a different chapter.')
     if hashlib.sha256((package / 'map.png').read_bytes()).hexdigest() != metadata['image_sha256']:
         raise ValueError('Existing map hash changed; preserve the package for inspection.')
+    if metadata.get('processing_3d', False) != process_3d:
+        raise ValueError('Existing package uses a different processing mode; choose a new output root.')
+    if process_3d:
+        if (metadata.get('map_render_mode') != 'projected_raw_regions'
+                or metadata.get('capture', {}).get('status') != 'roads_exhausted'
+                or not all((package / name).is_file() for name in
+                           ['redraw_data.npz', 'surface_data.npz', 'reference.png', 'source/scan.json'])):
+            raise ValueError('Incomplete 3D package; preserve it and choose a new output root.')
+        return True
     if metadata['capture'].get('registration', {}).get('status') != 'joint_grid_road':
         raise ValueError('Existing package failed registration; use a new output root to recollect.')
     if metadata['capture']['status'] != 'roads_exhausted':
@@ -143,7 +153,7 @@ def archive_source(package):
     source.rename(target)
 
 
-def finish_scan(package, chapter):
+def finish_scan(package, chapter, process_3d=False, stop=None):
     """仅重建已完成的同章扫描，再导出静态包，支持进程中断后的离线续跑。"""
     output = package / 'source'
     data = json.loads((output / 'scan.json').read_text(encoding='utf-8'))
@@ -151,8 +161,51 @@ def finish_scan(package, chapter):
         raise ValueError('Saved scan belongs to a different chapter.')
     if data.get('status') != 'roads_exhausted':
         raise ValueError(f"Scan is incomplete: {data.get('stop_reason', data.get('status'))}")
+    if process_3d:
+        return finish_scan_3d(package, chapter, data, stop)
     rebuild(output)
     return export_static(package, chapter)
+
+
+def finish_scan_3d(package, chapter, scan, stop=None):
+    """正式 3D 分支：分层重建、原帧区域重绘、最后发布元数据，保留各阶段证据。"""
+    from dev_tools.minimap_layered import reconstruct
+    from dev_tools.minimap_projected_redraw import redraw
+
+    if any((package / name).exists() for name in ['map.json', 'annotations.json']):
+        raise ValueError('Preserve existing package and annotations; choose a new output root.')
+    work = package / '.processing' / str(time.time_ns())
+    work.mkdir(parents=True)
+
+    def stage(name):
+        if stop is not None and stop.exists():
+            raise KeyboardInterrupt('Stopped by STOP file.')
+        write_progress(package / 'processing_status.json', {'phase': name})
+        print(f'Chapter {chapter}: {name}', flush=True)
+
+    stage('layered')
+    reconstruct(package / 'source', work / 'layered', stop_file=stop)
+    stage('redraw')
+    redraw(work / 'layered', work / 'redrawn', regions=True, stop_file=stop)
+    stage('export')
+    final = work / 'redrawn'
+    metadata = json.loads((final / 'map.json').read_text(encoding='utf-8'))
+    summary = {'frames': len(scan['frames']), 'status': scan['status'], 'whole_camera_domain_verified': False,
+               'processing_3d': True}
+    metadata.update(chapter=chapter, processing_3d=True, capture=summary,
+                    coordinates={'unit': 'pixel', 'origin': 'top_left', 'x': 'right', 'y': 'down'},
+                    navigation_ready=False)
+    for item in final.iterdir():
+        if item.name in ('source', 'map.json'):
+            continue
+        if item.is_dir():
+            shutil.copytree(item, package / item.name, dirs_exist_ok=True)
+        else:
+            shutil.copyfile(item, package / item.name)
+    stage('publishing')
+    write_progress(package / 'map.json', metadata)
+    write_progress(package / 'processing_status.json', {'phase': 'complete'})
+    return summary
 
 
 def capture_chapter(args, chapter, model, stop):
@@ -214,13 +267,13 @@ def run_batch(options, model):
         package = root / f'chapter_{chapter:02d}'
         output = package / 'source'
         args = parse_args(['--output', str(output), '--driver-root', str(options.driver_root),
-                           '--stroke-px', str(getattr(options, 'stroke_px', 240.0)),
+                           '--stroke-px', str(getattr(options, 'stroke_px', 120.0)),
                            '--keyframe-px', str(getattr(options, 'keyframe_px', 80.0)),
                            '--stop-file', str(stop)])
         record = {'chapter': chapter, 'output': str(package), 'attempts': [], 'status': 'pending'}
         results.append(record)
         try:
-            if existing_package(package, chapter):
+            if existing_package(package, chapter, getattr(options, 'process_3d', False)):
                 record['status'] = 'existing'
             elif (package / 'annotations.json').exists() or (package / 'map.json').exists():
                 raise ValueError('Preserve existing annotations/package; choose a new output root.')
@@ -234,22 +287,31 @@ def run_batch(options, model):
                     try:
                         # A completed scan can survive a process crash before rebuild/export.
                         summary = None
-                        if (output / 'scan.json').exists() and attempt == 0:
+                        process_3d = getattr(options, 'process_3d', False)
+                        if (output / 'scan.json').exists() and (attempt == 0 or process_3d):
                             entry['phase'] = 'resume_rebuild'
                             try:
-                                summary = finish_scan(package, chapter)
+                                summary = finish_scan(package, chapter, getattr(options, 'process_3d', False), stop)
                             except Exception as exc:
                                 entry['resume_error'] = f'{type(exc).__name__}: {exc}'
                                 if (package / 'map.json').exists() or (package / 'annotations.json').exists():
+                                    raise
+                                try:
+                                    saved_scan = json.loads((output / 'scan.json').read_text(encoding='utf-8'))
+                                except ValueError:
+                                    saved_scan = {}
+                                if process_3d and saved_scan.get('status') == 'roads_exhausted':
                                     raise
                         if summary is None:
                             if output.exists():
                                 archive_source(package)
                             output.mkdir(parents=True)
                             entry['phase'] = 'capture'
+                            write_progress(progress, results)
                             capture_chapter(args, chapter, model, stop)
                             entry['phase'] = 'rebuild'
-                            summary = finish_scan(package, chapter)
+                            write_progress(progress, results)
+                            summary = finish_scan(package, chapter, getattr(options, 'process_3d', False), stop)
                         record.update(status='captured', frames=summary['frames'],
                                       whole_camera_domain_verified=summary['whole_camera_domain_verified'])
                         entry['status'] = 'captured'
@@ -302,7 +364,9 @@ def main(argv=None):
                         help='Chapter collection directory (default: data/chapter_maps/current).')
     parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--retries', type=int, default=2, help='Additional attempts per failed chapter.')
-    parser.add_argument('--stroke-px', type=float, default=240.0, help='Cursor travel per drag (default: 240).')
+    parser.add_argument('--process-3d', action='store_true',
+                        help='Use layered reconstruction and raw-region redraw; omit for flat maps.')
+    parser.add_argument('--stroke-px', type=float, default=120.0, help='Cursor travel per drag (default: 120).')
     parser.add_argument('--keyframe-px', type=float, default=80.0,
                         help='Tracked camera travel between saved frames (default: 80).')
     options = parser.parse_args(argv)

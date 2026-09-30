@@ -328,6 +328,9 @@ def save_annotations(package, article, matches, update=False):
                'points': [[round(v, 1) for v in item['position']]],
                'color': '#ffd166' if difficulty == 'normal' else '#c792ea',
                'note': f"{item['name']}\n按 Wiki 小队圆环中心配准。\n{article['url']}", 'source': source}
+        if item.get('surface_id') is not None:
+            obj['surface_id'] = item['surface_id']
+            source['surface_id'] = item['surface_id']
         if identifier in by_id:
             old = by_id[identifier]
             if old.get('source', {}).get('url') != article['url']:
@@ -417,6 +420,8 @@ def process_article(client, article, roots, options, matchers):
             result.update(best)
             if spread > 20:
                 result.update(status='needs_review', reason='Screenshots disagree on the item position.')
+            if len({match.get('surface_id') for match in accepted}) > 1:
+                result.update(status='needs_review', reason='Screenshots disagree on the item surface.')
         matches.append(result)
         print(json.dumps({'chapter': article['chapter'], 'difficulty': article['difficulty'],
                           'item': item['number'], 'status': result['status']}), flush=True)

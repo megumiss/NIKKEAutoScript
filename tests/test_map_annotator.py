@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 from PIL import Image
 
 from dev_tools.map_annotator import AnnotationStore, ConflictError, COORDINATES, make_server, validate_annotations
+from dev_tools.map_terrain import render_terrain
 
 
 class MapFixture:
@@ -42,6 +43,60 @@ class MapFixture:
 
 
 class AnnotationTests(MapFixture, unittest.TestCase):
+    def test_single_pixel_brush_exports_a_pixel_at_canvas_edge(self):
+        edited, mask = render_terrain(Image.new('RGB', (4, 4)),
+                                      [{'type': 'brush', 'operation': 'add', 'width': 1, 'points': [[0, 0]]}],
+                                      {'add': '#3b8bba', 'erase': '#1c232c'})
+        self.assertEqual(mask.getpixel((0, 0)), 2)
+        self.assertEqual(mask.getpixel((1, 0)), 0)
+        self.assertEqual(edited.getpixel((0, 0)), (59, 139, 186))
+
+    def test_layered_grid_pixels_open_as_raster_coordinates_without_rewriting_metadata(self):
+        self.metadata.update(coordinate_model='local_parallax',
+                             coordinates={**COORDINATES, 'unit': 'rectified_grid_pixel'})
+        (self.package / 'map.json').write_text(json.dumps(self.metadata))
+        previous = (self.package / 'map.json').read_bytes()
+        loaded = self.store.load('chapter_01')
+        self.assertEqual(loaded['annotations']['coordinates'], COORDINATES)
+        self.assertEqual(loaded['terrain_colors'], {'add': '#3b8bba', 'erase': '#1c232c'})
+        self.assertEqual((self.package / 'map.json').read_bytes(), previous)
+
+    def test_road_edits_roundtrip_export_and_original_preservation(self):
+        loaded = self.document()
+        original = (self.package / 'map.png').read_bytes()
+        metadata = (self.package / 'map.json').read_bytes()
+        loaded['annotations']['terrain_edits'] = [
+            {'type': 'brush', 'operation': 'add', 'width': 20, 'points': [[20, 40], [100, 40]]},
+            {'type': 'brush', 'operation': 'erase', 'width': 8, 'points': [[60, 40]]},
+            {'type': 'polygon', 'operation': 'add', 'points': [[150, 60], [200, 60], [200, 100]]},
+        ]
+        saved = self.store.save('chapter_01', loaded['annotations'], loaded['revision'])
+        self.assertEqual(self.store.load('chapter_01')['annotations'], loaded['annotations'])
+        export = self.store.export_terrain('chapter_01', saved['revision'])
+        with Image.open(export['path']) as edited:
+            self.assertEqual(edited.getpixel((30, 40)), (45, 141, 199))
+            self.assertEqual(edited.getpixel((60, 40)), (15, 20, 28))
+            self.assertEqual(edited.getpixel((185, 70)), (45, 141, 199))
+            self.assertEqual(edited.getpixel((10, 10)), (32, 49, 62))
+        with Image.open(Path(export['path']).with_name('terrain_override.png')) as mask:
+            self.assertEqual([mask.getpixel(p) for p in [(10, 10), (60, 40), (30, 40)]], [0, 1, 2])
+        self.assertEqual((self.package / 'map.png').read_bytes(), original)
+        self.assertEqual((self.package / 'map.json').read_bytes(), metadata)
+        with self.assertRaises(ConflictError):
+            self.store.export_terrain('chapter_01', loaded['revision'])
+
+    def test_invalid_road_edits_are_rejected_before_save(self):
+        loaded = self.document()
+        valid = {'type': 'brush', 'operation': 'add', 'width': 12, 'points': [[20, 40]]}
+        invalid = [dict(valid, operation='unknown'), dict(valid, width=True), dict(valid, width=161),
+                   dict(valid, points=[[float('nan'), 40]]), dict(valid, points=[[-1, 40]]),
+                   dict(valid, type='polygon'), dict(valid, points=[[320, 40]])]
+        for edit in invalid:
+            with self.subTest(edit=edit), self.assertRaises(ValueError):
+                loaded['annotations']['terrain_edits'] = [edit]
+                self.store.save('chapter_01', loaded['annotations'], loaded['revision'])
+        self.assertFalse((self.package / 'annotations.json').exists())
+
     def test_categories_and_elevator_connections_roundtrip(self):
         loaded = self.document()
         document = loaded['annotations']
@@ -218,6 +273,33 @@ class HTTPTests(MapFixture, unittest.TestCase):
         with patch('dev_tools.map_annotator.MovementJobs.stop', return_value={'state': 'stopping'}) as stop:
             self.request('/api/movement/stop', {'job': 'job'}, catalog['token'])
             stop.assert_called_once_with('job')
+
+    def test_scan_api_token_and_device_exclusion(self):
+        token = json.loads(self.request('/api/maps'))['token']
+        payload = {'chapter': 40, 'process_3d': True, 'stroke_px': 120}
+        self.assertEqual(json.loads(self.request('/api/scan'))['state'], 'idle')
+        self.assertIn(b'createScanController', self.request('/scan.js'))
+        with patch('dev_tools.map_annotator.ScanJobs.start', return_value={'id': 'scan'}) as start:
+            with self.assertRaises(HTTPError) as error:
+                self.request('/api/scan/start', payload)
+            self.assertEqual(error.exception.code, 403)
+            start.assert_not_called()
+            with patch('dev_tools.map_annotator.MovementJobs.status', return_value={'running': True}):
+                with self.assertRaises(HTTPError) as error:
+                    self.request('/api/scan/start', payload, token)
+                self.assertEqual(error.exception.code, 400)
+                start.assert_not_called()
+            self.assertEqual(json.loads(self.request('/api/scan/start', payload, token)), {'id': 'scan'})
+            start.assert_called_once_with(payload)
+        with patch('dev_tools.map_annotator.ScanJobs.status', return_value={'running': True}), patch(
+                'dev_tools.map_annotator.MovementJobs.start') as move:
+            with self.assertRaises(HTTPError) as error:
+                self.request('/api/movement/start', {'id': 'chapter_01', 'target': [20, 30]}, token)
+            self.assertEqual(error.exception.code, 400)
+            move.assert_not_called()
+        with patch('dev_tools.map_annotator.ScanJobs.stop', return_value={'state': 'stopping'}) as stop:
+            self.request('/api/scan/stop', {'job': 'scan'}, token)
+            stop.assert_called_once_with('scan')
 
 
 if __name__ == '__main__':

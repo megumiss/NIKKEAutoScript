@@ -8,11 +8,39 @@ import cv2
 import numpy as np
 
 from dev_tools.minimap_layered import (
-    fusion_consistency, project, ratio_field, reconstruct, regularize_surfaces, surface_projection, sweep_surface,
+    fusion_consistency, project, ratio_field, reconstruct, regularize_surfaces, surface_projection, surface_winners,
+    sweep_surface,
 )
 
 
 class LayeredMapTests(unittest.TestCase):
+    def test_surface_winners_do_not_leave_depth_holes_after_float_rounding(self):
+        """真实采集中的双精度权重舍入后，也必须写入对应深度和来源。"""
+        best = np.zeros((1, 3), np.float32)
+        source = np.full(best.shape, -1, int)
+        depth = np.full(best.shape, np.nan, np.float32)
+        x, y = np.arange(3), np.zeros(3, int)
+        weights = np.array([0.003355671311643646, .1, .7], np.float64)
+        ratios = np.array([1., 1.2, 1.4], np.float32)
+        selected = surface_winners(best, x, y, weights)
+        source[y[selected], x[selected]] = selected
+        depth[y[selected], x[selected]] = ratios[selected]
+        np.testing.assert_array_equal(best > 0, source >= 0)
+        np.testing.assert_array_equal(best > 0, np.isfinite(depth))
+        np.testing.assert_allclose(depth[0], ratios)
+
+    def test_surface_winners_choose_one_observation_per_pixel_and_preserve_stronger_history(self):
+        """重复投影、同权重和后续较弱观测不能混写不同高度的元数据。"""
+        best = np.array([[0., .8, 0.]], np.float32)
+        x, y = np.array([0, 0, 0, 1, 1, 2]), np.zeros(6, int)
+        weights = np.array([.2, .6, .6, .7, 0., 0.])
+        selected = surface_winners(best, x, y, weights)
+        np.testing.assert_array_equal(selected, [1])
+        np.testing.assert_allclose(best, [[.6, .8, 0.]])
+        selected = surface_winners(best, np.array([0, 0, 1]), np.zeros(3, int), np.array([.9, .4, .8]))
+        np.testing.assert_array_equal(selected, [0])
+        np.testing.assert_allclose(best, [[.9, .8, 0.]])
+
     def test_vertical_origin_recovers_common_coordinates_for_two_heights(self):
         """不同高度和相机位置对同一地面坐标的恢复必须一致，不能使用随意的图片中心。"""
         angle = .65
