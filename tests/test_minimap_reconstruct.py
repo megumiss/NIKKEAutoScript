@@ -111,6 +111,8 @@ class TerrainCropTests(unittest.TestCase):
             source.mkdir()
             image = np.zeros((120, 160, 3), np.uint8)
             image[40:80, 45:95] = (200, 130, 20)
+            # A blue control inside the excluded corner must not become a floating road fragment.
+            image[100:115, 120:155] = (200, 130, 20)
             cv2.imwrite(str(source / 'frame.png'), image)
             positions = np.array([[0.0, 0.0], [30.0, 0.0]])
             data = {'matrix': np.eye(3).tolist(), 'warp_size': [160, 120], 'roi': [0, 0, 160, 120],
@@ -282,7 +284,9 @@ class MinimapResetTests(unittest.TestCase):
     def window(self, images):
         window = DriverWindow.__new__(DriverWindow)
         window.focus = Mock()
+        window.check = Mock()
         window.gui = Mock()
+        window.gui.GetForegroundWindow.return_value = 1
         window.gui.ClientToScreen.return_value = (100, 200)
         window.hwnd = 1
         window.args = SimpleNamespace(map_open=[42, 98])
@@ -492,6 +496,34 @@ class ProjectionRecoveryTests(unittest.TestCase):
         result, report = recover_map_projection(self.output, self.data, self.source)
         self.assertIsNone(result)
         self.assertEqual(report['reason'], 'no_better_projection')
+
+    def test_rebuild_checks_perspective_even_after_nominal_registration_success(self):
+        """低约束残差不能跳过透视复核；成功路径也应修复已知的投影畸变。"""
+        import dev_tools.minimap_reconstruct as reconstruct
+
+        data = json.loads(json.dumps(self.bad))
+        data.update(roi=[0, 0, 486, 462], status='roads_exhausted', coverage_definition='test',
+                    display_orientation='screen_oblique')
+        for i, frame in enumerate(data['frames']):
+            frame.update(id=i, kind='node')
+        original = json.dumps(data)
+        refine = reconstruct.refine_map_positions
+        calls = []
+
+        def initially_accepted(output, scan, source):
+            calls.append(scan)
+            if len(calls) == 1:
+                return np.asarray([f['position'] for f in scan['frames']]), {
+                    'status': 'joint_grid_road', 'residual_median_px': 0.001}
+            return refine(output, scan, source)
+
+        with patch.object(reconstruct, 'refine_map_positions', side_effect=initially_accepted):
+            rebuild_v2(self.output, data)
+        report = json.loads((self.output / 'registration.json').read_text())
+        self.assertEqual(report['projection_recovery']['status'], 'accepted')
+        self.assertEqual(report['original_registration']['status'], 'joint_grid_road')
+        np.testing.assert_allclose(report['positions'], self.poses * 1.3, atol=2)
+        self.assertEqual(json.dumps(data), original)
 
     def test_better_overlap_alone_does_not_bypass_joint_registration(self):
         self.bad['strokes'] = []

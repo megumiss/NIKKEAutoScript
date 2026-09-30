@@ -6,6 +6,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import time
 import traceback
 from pathlib import Path
@@ -15,12 +16,15 @@ import numpy as np
 from PIL import ImageGrab
 
 if __package__:
+    from .map_paths import DEFAULT_MAPS_ROOT
     from .minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 else:
+    from map_paths import DEFAULT_MAPS_ROOT
     from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 
 
 def screenshot(window):
+    """在窗口尺寸及焦点有效时截取完整客户区，供章节 OCR 和页面稳定性检查。"""
     window.check()
     if window.gui.GetForegroundWindow() != window.hwnd:
         raise RuntimeError('Game lost focus during chapter transition.')
@@ -30,6 +34,7 @@ def screenshot(window):
 
 
 def chapter_number(image, model):
+    """放大章节数字区域做 OCR，仅接受高置信度的一到两位数字。"""
     crop = cv2.resize(image[917:953, 1608:1663], None, fx=3, fy=3)
     result = next(iter(model.predict(crop)))
     text = result['rec_text'].strip()
@@ -37,6 +42,7 @@ def chapter_number(image, model):
 
 
 def wait_for_chapter(window, chapter, model, output, stop=None):
+    """同时确认章节号、紧凑小地图和道路稳定，加载最少等待八秒、最多两分钟。"""
     deadline = time.monotonic() + 120
     started = time.monotonic()
     previous = None
@@ -61,6 +67,7 @@ def wait_for_chapter(window, chapter, model, output, stop=None):
 
 
 def click(window, point):
+    """将客户区坐标换算为屏幕坐标，发送前校验窗口并检查驱动失败计数。"""
     window.check()
     if window.gui.GetForegroundWindow() != window.hwnd:
         raise RuntimeError('Game lost focus before chapter control click.')
@@ -71,6 +78,7 @@ def click(window, point):
 
 
 def export_static(output, chapter):
+    """将合格重建导出为底图、实拍图和绑定哈希的元数据，禁止覆盖既有标注坐标系。"""
     source = output / 'source'
     summary = json.loads((source / 'summary.json').read_text(encoding='utf-8'))
     if (output / 'map.json').exists() or (output / 'annotations.json').exists():
@@ -102,12 +110,14 @@ def export_static(output, chapter):
 
 
 def write_progress(path, results):
+    """通过同目录临时文件原子替换批次进度，避免留下半份 JSON。"""
     temporary = path.with_suffix('.tmp')
     temporary.write_text(json.dumps(results, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     temporary.replace(path)
 
 
 def existing_package(package, chapter):
+    """核对已有地图的章节、图片哈希与道路配准状态，决定能否跳过重复采集。"""
     if not (package / 'map.json').exists():
         return False
     metadata = json.loads((package / 'map.json').read_text(encoding='utf-8'))
@@ -123,6 +133,7 @@ def existing_package(package, chapter):
 
 
 def archive_source(package):
+    """把失败采集移动到本章 attempts 目录，先验证源与目标均位于该地图包内。"""
     source = (package / 'source').resolve()
     target = (package / 'attempts' / f'{time.time_ns()}').resolve()
     boundary = package.resolve()
@@ -133,6 +144,7 @@ def archive_source(package):
 
 
 def finish_scan(package, chapter):
+    """仅重建已完成的同章扫描，再导出静态包，支持进程中断后的离线续跑。"""
     output = package / 'source'
     data = json.loads((output / 'scan.json').read_text(encoding='utf-8'))
     if data.get('chapter', chapter) != chapter:
@@ -144,6 +156,7 @@ def finish_scan(package, chapter):
 
 
 def capture_chapter(args, chapter, model, stop):
+    """验证章节后采集，失败保留扫描记录；成功时最小化，异常时直接释放而不补发点击。"""
     window = None
     scanner = None
     try:
@@ -166,12 +179,14 @@ def capture_chapter(args, chapter, model, stop):
     finally:
         if window is not None:
             try:
-                window.reset_minimap(expanded=False)
+                if sys.exc_info()[0] is None:
+                    window.reset_minimap(expanded=False)
             finally:
                 window.close()
 
 
 def move_to_previous(args, chapter, model, stop):
+    """确认当前章节后点击上一章，等待新章节稳定并无条件释放驱动。"""
     window = DriverWindow(args)
     try:
         window.focus()
@@ -184,6 +199,7 @@ def move_to_previous(args, chapter, model, stop):
 
 
 def run_batch(options, model):
+    """按章节倒序执行有限重试、失败归档和续跑；切章不确定时停止批次并报告恢复位置。"""
     root = options.output.resolve()
     root.mkdir(parents=True, exist_ok=True)
     progress = root / 'progress.json'
@@ -198,6 +214,8 @@ def run_batch(options, model):
         package = root / f'chapter_{chapter:02d}'
         output = package / 'source'
         args = parse_args(['--output', str(output), '--driver-root', str(options.driver_root),
+                           '--stroke-px', str(getattr(options, 'stroke_px', 240.0)),
+                           '--keyframe-px', str(getattr(options, 'keyframe_px', 80.0)),
                            '--stop-file', str(stop)])
         record = {'chapter': chapter, 'output': str(package), 'attempts': [], 'status': 'pending'}
         results.append(record)
@@ -276,17 +294,24 @@ def run_batch(options, model):
 
 
 def main(argv=None):
+    """初始化章节 OCR 与批次参数，将取消、批次失败和初始化失败映射为明确退出码。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--start', type=int, required=True)
     parser.add_argument('--end', type=int, default=1)
-    parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--driver-root', type=Path, required=True)
+    parser.add_argument('--output', type=Path, default=DEFAULT_MAPS_ROOT,
+                        help='Chapter collection directory (default: data/chapter_maps/current).')
+    parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--retries', type=int, default=2, help='Additional attempts per failed chapter.')
+    parser.add_argument('--stroke-px', type=float, default=240.0, help='Cursor travel per drag (default: 240).')
+    parser.add_argument('--keyframe-px', type=float, default=80.0,
+                        help='Tracked camera travel between saved frames (default: 80).')
     options = parser.parse_args(argv)
     if not 1 <= options.end <= options.start <= 99:
         parser.error('Expected 1 <= end <= start <= 99.')
     if options.retries < 0:
         parser.error('--retries must be nonnegative.')
+    if not 0 < options.stroke_px <= 240 or not 0 < options.keyframe_px < float('inf'):
+        parser.error('Expected 0 < --stroke-px <= 240 and a positive finite --keyframe-px.')
     os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
     try:
         from paddleocr import TextRecognition

@@ -15,6 +15,7 @@ MATCH_VERSION = 2
 
 
 def minimap_masks(image):
+    """将支持的横屏截图归一化后裁出紧凑地图，排除细网格、控件及小队标记再提取道路。"""
     height, width = image.shape[:2]
     if abs(width / height - 16 / 9) > 0.12:
         raise ValueError('Unsupported screenshot layout; retain for manual review.')
@@ -42,6 +43,7 @@ def minimap_masks(image):
 
 
 def player_center(panel):
+    """在预期区域用三点 RANSAC 与最小二乘拟合小队圆环，不用固定截图中心代替物品位置。"""
     white = cv2.inRange(cv2.cvtColor(panel, cv2.COLOR_BGR2HSV), (0, 0, 145), (179, 90, 255))
     white[:74] = white[134:] = white[:, :78] = white[:, 143:] = 0
     ys, xs = np.nonzero(white)
@@ -82,6 +84,7 @@ def player_center(panel):
 
 
 def template_matrix(projection, a, b, shape):
+    """枚举尺度与透视组合，将紧凑地图映射到地图投影平面并返回有效模板边界。"""
     height, width = shape
     transform = np.array([[a, 0, 243 - a * width / 2], [0, a, 231 - a * height / 2], [0, 0, 1.]])
     matrix = np.diag([b * SCALE, b * SCALE, 1.]) @ projection @ transform
@@ -95,6 +98,7 @@ def template_matrix(projection, a, b, shape):
 
 
 def iou_surface(target, road, valid, matrix, size):
+    """在有效模板域计算所有平移候选的道路交并比，排除模板超界或道路证据过少的情况。"""
     if size[0] > target.shape[1] or size[1] > target.shape[0]:
         return None
     r = cv2.warpPerspective(road, matrix, size, flags=cv2.INTER_LINEAR).astype(np.float32) / 255
@@ -109,6 +113,7 @@ def iou_surface(target, road, valid, matrix, size):
 
 class MapMatcher:
     def __init__(self, package):
+        """核对底图哈希、配准状态和缓存投影，再构建粗搜索与全分辨率搜索画布。"""
         self.package = Path(package)
         meta = json.loads((self.package / 'map.json').read_text(encoding='utf-8'))
         self.digest = hashlib.sha256((self.package / 'map.png').read_bytes()).hexdigest()
@@ -133,6 +138,7 @@ class MapMatcher:
                                        cv2.BORDER_CONSTANT, value=0)
 
     def match(self, image, review=None):
+        """粗搜索尺度和位移后细化最佳候选，以 IoU、远处候选分差及参数分散度联合决定是否接受。"""
         panel, road, valid, player = minimap_masks(image)
         coarse = []
         parameters = {(round(float(a), 2), round(float(b), 2))

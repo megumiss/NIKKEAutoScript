@@ -6,10 +6,10 @@
 
 ## 一条命令运行
 
-在仓库根目录、项目 Python 环境中运行。`--maps-root` 指向一套章节包的集合目录，也可以直接指向单章包：
+在仓库根目录、项目 Python 环境中运行。采集、标注和 Wiki 导入共用默认目录 `data/chapter_maps/current/`。`--maps-root` 可显式指定其他集合目录或单章包：
 
 ```powershell
-python dev_tools/wiki_collectibles.py --maps-root data/chapter_maps/manual_live
+python dev_tools/wiki_collectibles.py
 ```
 
 默认处理 Wiki 当前公布的全部普通／困难文章，缓存位于 `data/wiki_collectibles/`。可以多次传入 `--maps-root`，按给定顺序选择本章底图；同一根目录内若有多个同章包，则报告歧义，需缩小根目录，避免混用坐标。不会自动用最新修改时间替用户挑地图。
@@ -20,16 +20,16 @@ python dev_tools/wiki_collectibles.py --maps-root data/chapter_maps/manual_live
 
 ```powershell
 # 只处理第 38 章两种难度；当前已验证的底图包
-python dev_tools/wiki_collectibles.py --chapters 38 --maps-root tmp/minimap_crop_resolution_20260929
+python dev_tools/wiki_collectibles.py --chapters 38
 
 # 地图尚未采齐时，先下载 Wiki 资料
 python dev_tools/wiki_collectibles.py --download-only
 
 # 沿用缓存，补图后离线配准及导入
-python dev_tools/wiki_collectibles.py --offline --maps-root data/chapter_maps/manual_live
+python dev_tools/wiki_collectibles.py --offline
 
 # 只核对配准结果，不写 annotations.json
-python dev_tools/wiki_collectibles.py --chapters 38 --dry-run --maps-root tmp/minimap_crop_resolution_20260929
+python dev_tools/wiki_collectibles.py --chapters 38 --dry-run
 ```
 
 `--difficulty normal|hard|both` 默认 `both`；`--cache` 指定可复用缓存；`--refresh` 重新获取文章和图片；`--retries` 默认每次下载额外重试 2 次。HTTP 被 CDN 拦截时，脚本用独立的无头 Edge 浏览器打开公开 Wiki 页面并读取响应。此路径需要 Python `playwright` 和已安装的 Microsoft Edge；当前工作环境已就绪。其他设备若缺少 Python 包，可在其项目环境执行 `python -m pip install playwright`，无需下载额外浏览器。不会使用个人浏览器资料或登录状态。
@@ -51,10 +51,20 @@ python dev_tools/wiki_collectibles.py --chapters 38 --dry-run --maps-root tmp/mi
 
 ```powershell
 # 先在游戏进入普通 38 章野外；按当前实际章节修改 --start
-python dev_tools/minimap_chapters.py --start 38 --end 1 --output data/chapter_maps/batch_retry --driver-root D:/PCR/NIKKEAutoScript --retries 2
+python dev_tools/minimap_chapters.py --start 38 --end 1 --retries 2
 ```
 
-游戏以管理员身份运行时，命令也需同等权限。工具核对窗口、焦点、章节 OCR 和紧凑地图后才扫描或切章。继续复用正上方俯视比例、游戏斜向朝向、240px 连续拖动和高频采样；本次不改变手势或降低配准门槛。
+游戏以管理员身份运行时，命令也需同等权限。工具核对窗口、焦点、章节 OCR 和紧凑地图后才扫描或切章。默认复用正上方俯视比例、游戏斜向朝向、240px 连续拖动和高频采样。
+
+`--output` 默认 `data/chapter_maps/current/`，`--driver-root` 默认当前代码所在仓库。每章固定为 `chapter_NN/`；日常续采继续使用默认目录。历史预览和失败包不放进 `current/`，需检查旧数据时显式指定 `--root` / `--maps-root`。已有不合格旧包不自动升级为可用地图。
+
+批量入口支持较短的探索拖动和更密集的保存帧，例如：
+
+```powershell
+python dev_tools/minimap_chapters.py --start 34 --end 1 --stroke-px 120 --keyframe-px 40
+```
+
+`--stroke-px` 是探索阶段的鼠标行程，默认 240；最初两次运动标定仍各拖动 240px。`--keyframe-px` 是保存原始帧的相机位移间距，默认 80；高频截图间隔仍为 0.03 秒。缩短拖动并减小关键帧间距有助于增加重叠，但不能修复透视偏差或缺少道路约束；短拖动组合尚需游戏内对照验证，不作为已验证的质量提升。已有合格包会跳过，参数不会自动重采或改变它的坐标。
 
 - 每章最多 1 次初始采集＋`--retries` 次重试。采集、校准、重建或配准失败都有记录，失败次数耗尽后仍可继续下一章。
 - 失败扫描移入该章 `attempts/时间戳/`，保留原图和扫描记录。已完整扫描但尚未导出的数据优先尝试重建；无效旧扫描不会占用本次初始采集次数。
@@ -64,7 +74,16 @@ python dev_tools/minimap_chapters.py --start 38 --end 1 --output data/chapter_ma
 - **无法确认切章页面时会受控暂停，退出码 `2`。** 后续章节的输入依赖当前页面，不能为了继续批次而盲点。`progress.json` 记录暂停原因；处理现场后从实际章节续跑。扫描期间也检查输出根目录的 `STOP` 文件，停止不进入下一章。
 - 退出码 `0` 为所选章节均已采集／跳过，`1` 为批次已走完但有失败章节，`2` 为页面不确定或全局错误，`130` 为用户停止。
 
-## 本次验证
+## 2026-09-29：统一目录与第 34 章碎片诊断
+
+- 当前地图统一放在 `data/chapter_maps/current/`，本机已归入第 34、38、41 章；38 章保留普通／困难共 20 个标注。旧版 35–37、39–40 章的配准未通过，留在历史目录等待补采，不作为当前可用包。迁移来源与逐文件哈希保存在 `current/migration_20260929.json`。
+- 第 34 章存在透视偏差、非相邻道路约束不足以及道路／覆盖掩码不一致的问题。重建会复核已通过配准的投影，以直接道路重访约束减小局部漂移，并在融合前排除控件区域。
+- 使用相同 200 帧离线重建，12 对移动帧的道路重叠中位数从 0.862 提升到 0.924；最终相邻约束 169 条、道路重访约束 311 条。约束子图从 79 个减为 16 个，仍有 15 帧仅由弱里程计连接。残差只描述已有约束的一致性，不代表全图绝对精度。
+- 修正版已保存到 `current/chapter_34/`，旧副本保存在 `history/20260929_before_repair/chapter_34/`，最初的 `batch_retry/chapter_34/` 也保留。原始 200 张 PNG 与 `scan.json` 哈希一致；新地图、参考图、坐标缓存及元数据一致，38 章标注和 41 章包未改变。
+- 大块重影减少，局部仍有残留；未验证整个相机域，也未重新进行游戏采集。79 项回归、相关 Python 语法检查、默认目录发现与包校验通过。短拖动是否进一步改善需用同章游戏内对照采集验证。
+- 本机对比及证据：`tmp/ch34_fragments_20260929/comparison.jpg`、`verification.json`、`constraint_audit.json`、`rebuild.log`、`tests.log`。
+
+## Wiki 批量功能验证
 
 - 96 篇真实文章全部解析出条目；第 38 章普通 14 张、困难 6 张原图下载成功。
 - 第 38 章自动配准通过 18/20：困难 6/6、普通 12/14。普通 11、14 号候选分差分别约 0.095、0.085，保留待复核；原有两个点的坐标未覆盖。

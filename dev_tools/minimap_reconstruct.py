@@ -21,11 +21,13 @@ from PIL import Image
 
 
 def stop_requested(args, output):
+    """同时检查当前采集目录和批次共享的停止文件，允许外层统一取消。"""
     sentinel = getattr(args, 'stop_file', None)
     return (output / 'STOP').exists() or (sentinel is not None and sentinel.exists())
 
 
 def terrain(image):
+    """按青蓝色阈值提取道路，过滤小连通块并闭运算填补细缝，输出二值掩码。"""
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, (85, 65, 125), (115, 255, 255))
     count, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
@@ -37,7 +39,10 @@ def terrain(image):
 
 
 def grid_horizon(image):
-    """Fit the two grid-line vanishing points, away from terrain and controls."""
+    """从避开道路及控件的两组网格线拟合消失点，以残差和地平线范围拒绝错误标定。
+
+    Fit the two grid-line vanishing points, away from terrain and controls.
+    """
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, (90, 80, 95), (115, 255, 240))
     mask[cv2.dilate(terrain(image), np.ones((21, 21), np.uint8)) > 0] = 0
@@ -76,6 +81,7 @@ def grid_horizon(image):
 
 class Projection:
     def __init__(self, shape, horizon):
+        """建立旧版地平线透视校正矩阵，同时生成去掉边框与计数器的有效域。"""
         height, width = shape
         self.size = (width, height)
         self.matrix = np.array([[1, width / (2 * -horizon), 0], [0, 1, 0], [0, 1 / -horizon, 1.0]])
@@ -86,10 +92,12 @@ class Projection:
         self.valid = cv2.warpPerspective(source, self.matrix, self.size, flags=cv2.INTER_NEAREST)
 
     def mask(self, image):
+        """将道路掩码投影到旧版校正平面，最近邻插值保持二值边界。"""
         return cv2.warpPerspective(terrain(image), self.matrix, self.size, flags=cv2.INTER_NEAREST)
 
 
 def overlap(first, second, valid, shift):
+    """在两帧共同有效域内计算平移后的道路交并比和并集面积。"""
     matrix = np.float32([[1, 0, -shift[0]], [0, 1, -shift[1]]])
     size = first.shape[::-1]
     moved = cv2.warpAffine(second, matrix, size, flags=cv2.INTER_NEAREST)
@@ -100,7 +108,10 @@ def overlap(first, second, valid, shift):
 
 
 def register(first, second, valid, prediction=(0, 0)):
-    """Translation after grid-plane rectification; reject texture-only matches."""
+    """用预测位移、相位相关和零位移初始化 ECC，只接受道路重叠充分的平移。
+
+    Translation after grid-plane rectification; reject texture-only matches.
+    """
     stationary_iou, stationary_area = overlap(first, second, valid, (0, 0))
     if stationary_iou >= 0.995 and stationary_area >= 80:
         return {'delta': [0.0, 0.0], 'iou': stationary_iou, 'area': stationary_area}
@@ -133,6 +144,7 @@ def register(first, second, valid, prediction=(0, 0)):
 
 class DriverWindow:
     def __init__(self, args):
+        """锁定游戏客户区与屏幕原点，按目标尺寸初始化虚拟鼠标，初始化失败也释放控制。"""
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
         sys.path.insert(0, str(args.driver_root.resolve()))
         import win32gui
@@ -144,16 +156,23 @@ class DriverWindow:
             raise RuntimeError('Open NIKKE and expand the minimap before capture.')
         self.roi = tuple(args.roi)
         self.args = args
+        self._focused = False
         self.ensure_client_size()
+        self._origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
         working_directory = Path.cwd()
         try:
             from module.device.win.virtual_mouse.input import VirtualMouseInput, release_driver_control
         finally:
             os.chdir(working_directory)
         self.release = release_driver_control
-        self.handler = VirtualMouseInput(config_name='minimap_reconstruct', move_backend='driver')
+        try:
+            self.handler = VirtualMouseInput(config_name='minimap_reconstruct', move_backend='driver')
+        except BaseException:
+            self.release()
+            raise
 
     def ensure_client_size(self):
+        """按真实边框调整客户区，连续一秒尺寸稳定后才允许采集，最多重试三次。"""
         import pywintypes
         import win32api
         import win32con
@@ -198,15 +217,25 @@ class DriverWindow:
         raise RuntimeError(f'Game client did not stabilize at {self.args.client}; observed {actual[2:]}.')
 
     def check(self):
+        """检查停止请求、客户区尺寸、窗口位置及已取得的焦点，拒绝失效坐标继续操作。"""
+        sentinel = getattr(self.args, 'stop_file', None)
+        if sentinel is not None and sentinel.exists():
+            raise KeyboardInterrupt(f'Stopped by STOP file: {sentinel}')
         if self.gui.GetClientRect(self.hwnd) != (0, 0, *self.args.client):
             raise RuntimeError(f'Client size changed; expected {self.args.client}. Capture stopped.')
+        if hasattr(self, '_origin') and self.gui.ClientToScreen(self.hwnd, (0, 0)) != self._origin:
+            raise RuntimeError('Game window moved; screen coordinates invalidated.')
+        if getattr(self, '_focused', False) and self.gui.GetForegroundWindow() != self.hwnd:
+            raise RuntimeError('Game focus lost; no further input.')
 
     @staticmethod
     def map_visible(image):
+        """以地图青蓝色像素占比识别面板；此判据不负责识别章节身份。"""
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         return ((hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 115) & (hsv[:, :, 1] > 40)).mean() >= 0.45
 
     def capture(self, require_map=True):
+        """截取当前前台游戏的地图 ROI，复用 GDI 位图并可要求展开面板可见。"""
         import win32con
         import win32ui
 
@@ -230,16 +259,18 @@ class DriverWindow:
             raise RuntimeError('Expanded minimap no longer visible or is covered. Capture stopped.')
         return image
 
-    def reset_minimap(self, expanded=True):
+    def reset_minimap(self, expanded=True, reset=True):
+        """识别关闭、紧凑、展开三态；展开返回只点左上角最小化，reset=False 保持目标态不重置视野。"""
         from PIL import ImageGrab
 
         self.focus()
-        origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
         x, y = self.args.map_open
 
         def state():
+            """先检查展开 ROI，再检查紧凑地图及开关图标，未知页面禁止猜测点击。"""
             if self.map_visible(self.capture(require_map=False)):
                 return 'expanded'
+            origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
             panel = ImageGrab.grab(bbox=(origin[0] + x - 22, origin[1] + y - 22,
                                        origin[0] + x + 186, origin[1] + y + 196), all_screens=True)
             panel = cv2.cvtColor(np.array(panel), cv2.COLOR_RGB2BGR)
@@ -252,12 +283,17 @@ class DriverWindow:
             return 'unknown'
 
         def click(point):
-            self.focus()
+            """点击前重新核对窗口状态与屏幕原点，驱动失败立即上报。"""
+            self.check()
+            if self.gui.GetForegroundWindow() != self.hwnd:
+                raise RuntimeError('Game lost focus before minimap toggle; no click sent.')
+            origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
             self.handler.mouse_click(origin[0] + point[0], origin[1] + point[1])
             if self.handler._failures:
                 raise RuntimeError('Driver failed to toggle the minimap; scan not started.')
 
         def wait_for(expected):
+            """给面板动画预留时间，并在有界等待内确认目标状态真正出现。"""
             deadline = time.monotonic() + 3
             # The panel becomes visible before its opening animation accepts another click.
             time.sleep(1.2)
@@ -272,6 +308,8 @@ class DriverWindow:
         current = state()
         if current == 'unknown':
             raise RuntimeError('Minimap controls are not visible; no toggle click sent.')
+        if not reset and current == ('expanded' if expanded else 'compact'):
+            return
         if current == 'expanded':
             click((self.roi[0] + 14, self.roi[1] - 11))
             wait_for('compact')
@@ -285,10 +323,12 @@ class DriverWindow:
         print(json.dumps({'minimap_reset': 'expanded' if expanded else 'compact'}), flush=True)
 
     def focus(self):
+        """首次尝试获得游戏焦点；控制开始后失焦由 check 拦截，避免自动抢回焦点再点击。"""
         import pywintypes
 
         self.check()
         if self.gui.GetForegroundWindow() == self.hwnd:
+            self._focused = True
             return
         origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
         try:
@@ -301,9 +341,13 @@ class DriverWindow:
         time.sleep(0.25)
         if self.gui.GetForegroundWindow() != self.hwnd:
             raise RuntimeError('Cannot focus the game; no drag sent.')
+        self._focused = True
 
     def drag_vector(self, sx, sy):
-        """Swipe along an arbitrary screen vector; the camera moves opposite to the content."""
+        """将屏幕方向位移转换为地图面板内的对称拖动端点，并限制端点在安全内框。
+
+        Swipe along an arbitrary screen vector; the camera moves opposite to the content.
+        """
         self.focus()
         origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
         left, top, right, bottom = self.roi
@@ -321,6 +365,7 @@ class DriverWindow:
         time.sleep(self.args.settle)
 
     def drag(self, direction):
+        """按固定步长沿给定方向拖动；交换端点可复现相反的透视位移。"""
         self.focus()
         self.capture()
         origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
@@ -342,6 +387,7 @@ class DriverWindow:
         time.sleep(self.args.settle)
 
     def close(self):
+        """先抬起鼠标，再清理截图资源；任何清理异常都不能跳过驱动释放。"""
         try:
             self.handler.mouse_up()
         finally:
@@ -360,6 +406,7 @@ class Scanner:
     DIRECTIONS = ((0, -1), (-1, 0), (0, 1), (1, 0))
 
     def __init__(self, args, window):
+        """初始化旧版逐步扫描器，以首帧道路与地平线为统一投影基准。"""
         self.args, self.window = args, window
         self.output = args.output
         self.output.mkdir(parents=True, exist_ok=True)
@@ -385,7 +432,10 @@ class Scanner:
         self.add(first, (0, 0), 'start')
 
     def relocalize(self, exclude_id):
-        """Fringe views are weak anchors; try any other accepted frame near the predicted pose."""
+        """边缘视野定位不足时，尝试附近已接受帧中的清晰道路锚点。
+
+        Fringe views are weak anchors; try any other accepted frame near the predicted pose.
+        """
         if np.count_nonzero(self.current_mask) < 150:
             return None
         best = None
@@ -402,7 +452,10 @@ class Scanner:
         return best
 
     def return_to(self, anchor, direction):
-        """Close each excursion using terrain, since edge sliding makes inverse gestures insufficient."""
+        """沿记录的路径回到已知帧，并通过配准复核是否恢复到锚点。
+
+        Close each excursion using terrain, since edge sliding makes inverse gestures insufficient.
+        """
         anchor_image = cv2.imread(str(self.output / anchor['file']))
         anchor_mask = self.projection.mask(anchor_image)
         last_direction = np.asarray(direction, float)
@@ -444,7 +497,10 @@ class Scanner:
         raise RuntimeError('Could not visually return to the parent view within twelve corrections.')
 
     def explore_terrain(self):
-        """Explore visible terrain with verified returns; an empty halo is not a world boundary."""
+        """沿可见道路扩展旧版扫描，不把没有地形的空网格当作新道路。
+
+        Explore visible terrain with verified returns; an empty halo is not a world boundary.
+        """
         self.data['coverage_definition'] = 'visually connected terrain views; empty areas do not prove chapter limits'
         self.data['unresolved_frontiers'] = []
         accepted = [self.data['frames'][0]]
@@ -453,6 +509,7 @@ class Scanner:
         height, width = self.current_mask.shape
 
         def new_area(position):
+            """从候选有效域扣除已有帧覆盖，计算仍未观察到的像素面积。"""
             unseen = self.projection.valid.copy()
             for old in accepted:
                 shift = np.asarray(old['position']) - position
@@ -496,6 +553,7 @@ class Scanner:
         self.save()
 
     def save(self):
+        """保存旧版扫描元数据，使帧、边界证据和状态可以离线复核。"""
         temporary = self.output / 'scan.json.tmp'
         temporary.write_text(json.dumps(self.data, indent=2), encoding='utf-8')
         # Defender/indexer can briefly lock the target; os.replace fails with WinError 5 then.
@@ -508,6 +566,7 @@ class Scanner:
         temporary.replace(self.output / 'scan.json')
 
     def add(self, image, tile, kind, registration=None, direction=None):
+        """保存帧与道路特征，根据配准更新位置；弱观测保留定位来源而不伪装成精确测量。"""
         index = len(self.data['frames'])
         name = f'frame_{index:05d}.png'
         if not cv2.imwrite(str(self.output / name), image):
@@ -548,6 +607,7 @@ class Scanner:
         return record
 
     def prediction(self, direction):
+        """优先使用同方向历史位移的中位数，其次反向历史，最后使用初始运动估计。"""
         key = tuple(direction)
         if key in self.motion:
             return np.median(self.motion[key], axis=0)
@@ -557,6 +617,7 @@ class Scanner:
         return np.array(direction, float) * np.array([0.34, 0.21]) * self.args.step
 
     def move(self, direction, tile, kind):
+        """检查停止和帧预算后拖动一次，再用道路配准更新扫描轨迹。"""
         if stop_requested(self.args, self.output):
             raise RuntimeError('Stopped by STOP file; scan remains incomplete.')
         if len(self.data['frames']) >= self.args.max_frames:
@@ -571,17 +632,20 @@ class Scanner:
         return self.add(image, tile, kind, match, direction)
 
     def axis_direction(self, axis, sign):
+        """将地面网格轴映射为屏幕拖动方向，补偿地平线造成的纵向缩放。"""
         height = self.projection.size[1]
         raw_slope = self.args.axis_slope * (1 + height / (2 * -self.data['horizon']))
         return (float(sign if axis == 0 else -sign), float(sign * raw_slope))
 
     def axis_progress(self, match, axis):
+        """提取指定网格轴上的实际进展，配准失败返回未知而非零位移。"""
         if match is None:
             return None
         dx, dy = match['delta']
         return abs(((dx if axis == 0 else -dx) + dy / self.args.axis_slope) / 2)
 
     def seek_edge(self, axis, sign, row, phase):
+        """沿网格轴搜索边界，必须有连续静止配准证据，预算耗尽不等于触边。"""
         direction = self.axis_direction(axis, sign)
         still = []
         blanks = 0
@@ -604,7 +668,9 @@ class Scanner:
         raise RuntimeError(f'Axis {axis}, sign {sign}: no verifiable boundary after {self.args.max_axis_steps} steps.')
 
     def probe_blank_edge(self, axis, sign, row):
-        """Observe an empty limit indirectly by returning to the same visible landmark.
+        """通过退回地标、额外外推、再次退回的实验间接判断空白区域相机是否受限。
+
+        Observe an empty limit indirectly by returning to the same visible landmark.
 
         From a blank view, retreat n gestures to an anchor. Advance n+2 and
         retreat n again. A saturated normal component returns to the anchor;
@@ -647,6 +713,7 @@ class Scanner:
     def explore(self):
         # Camera limits follow the ground grid, not screen x/y. A zero normal component is a clamp
         # even when the other component slides along that edge.
+        """沿网格轴执行蛇形扫描，以可验证相机边界结束各行。"""
         self.seek_edge(0, 1, -1, 'seek_corner_a')
         self.seek_edge(1, 1, -1, 'seek_corner_b')
         self.seek_edge(0, 1, -1, 'confirm_corner_a')
@@ -673,6 +740,7 @@ class Scanner:
 
 
 def terrain_crop_bounds(probability, margin=48):
+    """取所有可见道路的外接框并保留边距，包含分离道路和弱接缝，空图保留原画布。"""
     height, width = probability.shape
     ys, xs = np.nonzero(probability > 0.15)
     margin = max(0, int(np.ceil(margin)))
@@ -687,6 +755,7 @@ def terrain_crop_bounds(probability, margin=48):
 
 
 def rebuild(output, registration='joint'):
+    """按扫描版本选择重建路径，旧版使用帧间约束修正位置后融合并导出裁剪结果。"""
     data = json.loads((output / 'scan.json').read_text(encoding='utf-8'))
     if data.get('version') == 2:
         rebuild_v2(output, data, registration=registration)
@@ -791,7 +860,10 @@ def rebuild(output, registration='joint'):
 # ---------------------------------------------------------------------------
 
 def raw_grid(image):
-    """Background grid lines, excluding terrain and the stage counter corner."""
+    """提取背景网格线，排除道路膨胀区和关卡计数器，避免不同图层混入标定。
+
+    Background grid lines, excluding terrain and the stage counter corner.
+    """
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, (90, 80, 95), (115, 255, 240))
     mask[cv2.dilate(terrain(image), np.ones((21, 21), np.uint8)) > 0] = 0
@@ -800,7 +872,10 @@ def raw_grid(image):
 
 
 def detect_markers(image, matrix):
-    """Find fixed-size HUD symbols before the ground projection stretches them."""
+    """在原始 ROI 中识别小队与敌人符号，再投影中心，避免透视拉伸破坏形状判定。
+
+    Find fixed-size HUD symbols before the ground projection stretches them.
+    """
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     red = cv2.inRange(hsv, (155, 60, 140), (179, 255, 255)) | cv2.inRange(hsv, (0, 60, 140), (8, 255, 255))
     white = cv2.inRange(hsv, (0, 0, 185), (179, 100, 255))
@@ -834,6 +909,7 @@ def detect_markers(image, matrix):
                 players.append([float(x), float(y)])
 
     def project(points):
+        """批量投影已识别的标记中心；空列表保持为空。"""
         if not points:
             return []
         return cv2.perspectiveTransform(np.array([points], np.float32), matrix)[0].round(1).tolist()
@@ -850,6 +926,7 @@ class MetricGrid:
     """
 
     def __init__(self, image, cell_px=48.0):
+        """由网格消失点恢复俯视比例，估计网格周期并生成统一尺度的投影与有效域。"""
         try:
             _, calibration = grid_horizon(image)
             v1, v2 = (np.array(point[:2]) for point in calibration['vanishing_points'])
@@ -885,7 +962,9 @@ class MetricGrid:
 
     @staticmethod
     def _vanishing_from_dots(image):
-        """Fit the two grid vanishing points from dot centroids when lines are too dim.
+        """网格线太暗时，按点阵邻居方向聚类拟合两组汇聚直线，恢复消失点。
+
+        Fit the two grid vanishing points from dot centroids when lines are too dim.
 
         Each dot votes for its nearest-neighbour directions; the two dominant
         direction families form line bundles that concur at the vanishing points.
@@ -937,6 +1016,7 @@ class MetricGrid:
 
     @staticmethod
     def _layout(homography, warped_corners, scale):
+        """给投影后的角点统一缩放、平移和留边，返回可容纳校正图的画布。"""
         translation = -warped_corners.min(axis=0) * scale + 20
         matrix = np.array([[1.0, 0, translation[0]], [0, 1.0, translation[1]], [0, 0, 1.0]]) \
             @ np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1.0]]) @ homography
@@ -945,6 +1025,7 @@ class MetricGrid:
 
     @staticmethod
     def _cell_period(image, matrix, size):
+        """对校正网格的横纵投影做自相关，使用首个显著周期峰估计格距。"""
         from scipy.signal import find_peaks
 
         grid = cv2.warpPerspective(raw_grid(image), matrix, size, flags=cv2.INTER_NEAREST)
@@ -960,21 +1041,30 @@ class MetricGrid:
         return periods
 
     def warp(self, image):
+        """按固定地图标定将当前 ROI 变换到网格平面。"""
         return cv2.warpPerspective(image, self.matrix, self.size)
 
     def blue(self, image):
-        """Rectified blue channel; carries the aperiodic shading that disambiguates grid aliases."""
+        """提取校正后的蓝色通道，保留可辅助区分周期网格歧义的非周期明暗。
+
+        Rectified blue channel; carries the aperiodic shading that disambiguates grid aliases.
+        """
         return self.warp(image)[:, :, 0].astype(np.float32)
 
     def grid_mask(self, image):
+        """将原始网格投影为零到一的浮点掩码，供平移相关使用。"""
         return cv2.warpPerspective(raw_grid(image), self.matrix, self.size,
                                    flags=cv2.INTER_NEAREST).astype(np.float32) / 255
 
     def terrain_mask(self, image):
+        """在统一平面中生成道路二值掩码，保持与网格投影同一坐标基准。"""
         return cv2.warpPerspective(terrain(image), self.matrix, self.size, flags=cv2.INTER_NEAREST)
 
     def dots(self, image):
-        """Grid dot points via top-hat; the signal that survives in dim blank regions."""
+        """用顶帽运算突出暗背景上的网格点，并裁去无效投影区域。
+
+        Grid dot points via top-hat; the signal that survives in dim blank regions.
+        """
         blue = self.warp(image)[:, :, 0]
         tophat = cv2.morphologyEx(blue, cv2.MORPH_TOPHAT,
                                   cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25)))
@@ -983,6 +1073,7 @@ class MetricGrid:
         return mask
 
     def markers(self, image):
+        """按当前投影返回小队与敌人中心，与道路掩码使用相同坐标。"""
         return detect_markers(image, self.matrix)
 
 
@@ -995,10 +1086,12 @@ class GridTracker:
     """
 
     def __init__(self, grid):
+        """保存网格标定并预计算中心权重，降低投影边缘的不稳定贡献。"""
         self.grid = grid
         self.center_weight = cv2.distanceTransform(grid.valid, cv2.DIST_L2, 3)
 
     def _candidates(self, before, after, prediction):
+        """围绕相位相关和运动预测枚举整格周期别名，限制搜索半径。"""
         cell = self.grid.cell
         radius = 3.2 * cell if prediction is None else 1.6 * cell
         anchor = (0.0, 0.0) if prediction is None else tuple(prediction)
@@ -1013,6 +1106,7 @@ class GridTracker:
         return seeds
 
     def _score(self, before, after, before_terrain, after_terrain, shift):
+        """在共同有效域计算去均值相关及道路重叠，给每个位移候选评分。"""
         matrix = np.float32([[1, 0, -shift[0]], [0, 1, -shift[1]]])
         moved = cv2.warpAffine(after, matrix, self.grid.size, flags=cv2.INTER_LINEAR)
         common = (self.grid.valid > 0) & (cv2.warpAffine(self.grid.valid, matrix, self.grid.size,
@@ -1036,7 +1130,9 @@ class GridTracker:
         return score
 
     def measure(self, before, after, before_terrain, after_terrain, prediction):
-        """Translation aligning `after` onto `before`; the camera moved by -delta.
+        """在周期歧义中优先选择接近运动预测的合格候选，再用 ECC 细化平移。
+
+        Translation aligning `after` onto `before`; the camera moved by -delta.
 
         Along featureless straight roads every lattice alias scores equally
         (aperture problem), so the candidate nearest to the motion-model
@@ -1079,7 +1175,9 @@ class GridTracker:
         return {'delta': best.tolist(), 'score': round(float(score), 4)}
 
     def measure_terrain(self, before_terrain, after_terrain, prediction):
-        """Alias-free registration on terrain alone; needs >=150 terrain px in both views.
+        """只用非周期道路消除整格歧义，先比较候选 IoU 再做局部 ECC 校正。
+
+        Alias-free registration on terrain alone; needs >=150 terrain px in both views.
 
         ECC converges only within about one cell, so candidates are lattice
         aliases scored by raw terrain IoU first; the winner is ECC-refined.
@@ -1139,7 +1237,9 @@ class GridTracker:
         return {'delta': delta.tolist(), 'score': round(float(1 + iou), 4)}
 
     def measure_dots(self, before_dots, after_dots, prediction):
-        """Last-resort tracking through blank regions using grid dots.
+        """道路不足时按点阵和速度预测维持里程计，不能用周期点阵独立证明绝对位置。
+
+        Last-resort tracking through blank regions using grid dots.
 
         Dots are exactly periodic, so the alias nearest the velocity prediction
         wins; the pose is re-anchored against terrain when roads reappear.
@@ -1183,6 +1283,7 @@ class RasterScanner:
     """Boundary-aware serpentine scan; the camera pose is always measured, never assumed."""
 
     def __init__(self, args, window):
+        """初始化第二版扫描记录和度量网格，禁止覆盖已有扫描结果。"""
         self.args, self.window = args, window
         self.output = args.output
         self.output.mkdir(parents=True, exist_ok=True)
@@ -1208,6 +1309,7 @@ class RasterScanner:
         self.jacobian = None
 
     def record(self, image, kind, save=True):
+        """保存关键帧、当前位姿及标记观测，帧预算耗尽时明确停止。"""
         if len(self.data['frames']) >= self.args.max_frames:
             raise RuntimeError('Frame budget reached; scan is incomplete, not a map boundary.')
         index = len(self.data['frames'])
@@ -1233,6 +1335,7 @@ class RasterScanner:
         return frame
 
     def save(self):
+        """先写临时元数据再替换目标，短暂文件锁仅进行有限重试。"""
         temporary = self.output / 'scan.json.tmp'
         temporary.write_text(json.dumps(self.data, indent=2), encoding='utf-8')
         # Defender/indexer can briefly lock the target; os.replace fails with WinError 5 then.
@@ -1245,6 +1348,7 @@ class RasterScanner:
         temporary.replace(self.output / 'scan.json')
 
     def swipe(self, screen, prediction):
+        """执行一次拖动，以道路优先、背景相关兜底测量位移，跟踪失败保存证据并停止。"""
         if stop_requested(self.args, self.output):
             raise RuntimeError('Stopped by STOP file; scan remains incomplete.')
         before, before_terrain = self.current, self.current_terrain
@@ -1270,7 +1374,9 @@ class RasterScanner:
         return match
 
     def hunt_terrain(self):
-        """Drag any visible terrain strip back into the view centre before calibration.
+        """标定前最多四次把可见道路拖向中央；这些未定位帧不进入拼接轨迹。
+
+        Drag any visible terrain strip back into the view centre before calibration.
 
         Hunt frames are not recorded: the camera pose is only tracked from the
         first calibrated frame on.
@@ -1297,7 +1403,9 @@ class RasterScanner:
             raise RuntimeError('No terrain found within four hunt drags; open the map over a road.')
 
     def calibrate_motion(self):
-        """Alias-free screen->world Jacobian from terrain registration over two drag axes.
+        """通过两轴拖动及往返残差估计屏幕到地图的局部 Jacobian，拒绝退化标定。
+
+        Alias-free screen->world Jacobian from terrain registration over two drag axes.
 
         Drags pull content toward the terrain centroid, so the camera moves
         into the map instead of off the roads; the return drag doubles as a
@@ -1307,6 +1415,7 @@ class RasterScanner:
 
         def directed(vector):
             # Content follows the drag; pull the terrain centroid toward the view centre.
+            """选择将道路质心拉向视野中心的拖动符号，减少标定时离开道路。"""
             mask = terrain(self.current_raw)
             if not mask.any():
                 return vector
@@ -1334,6 +1443,7 @@ class RasterScanner:
         self.save()
 
     def move_towards(self, target, attempts=6):
+        """按运动矩阵闭环平移到目标视野，限制拖动幅度与尝试次数。"""
         target = np.asarray(target, float)
         for _ in range(attempts):
             delta = target - self.position
@@ -1349,7 +1459,10 @@ class RasterScanner:
         return False
 
     def frontier_sides(self):
-        """World-axis directions whose view edge still shows terrain: unexplored road that way."""
+        """检查有效视野四个网格轴边缘是否仍有道路，为继续探索提供方向。
+
+        World-axis directions whose view edge still shows terrain: unexplored road that way.
+        """
         valid = self.grid.valid > 0
         terr = self.current_terrain > 0
         margin = int(round(self.grid.cell * 0.6))
@@ -1368,7 +1481,10 @@ class RasterScanner:
         return sides
 
     def explore_frontier(self):
-        """BFS over road frontiers; sides whose view edge has no terrain are never entered."""
+        """广度遍历道路前沿，按位置去重，空边不继续扩展。
+
+        BFS over road frontiers; sides whose view edge has no terrain are never entered.
+        """
         from collections import deque
 
         self.hunt_terrain()
@@ -1410,10 +1526,12 @@ class FlowTracker:
     """Track small raw-image motions before transforming points onto the grid plane."""
 
     def __init__(self, grid):
+        """保留同一网格投影，用于把原图光流转换为地图平面位移。"""
         self.grid = grid
 
     @staticmethod
     def background(image):
+        """提取稳定网格背景，排除道路、点击闪光及控件边缘。"""
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, (85, 40, 25), (120, 255, 220))
         # Roads and click flashes must not displace the persistent ground grid.
@@ -1424,6 +1542,7 @@ class FlowTracker:
         return mask
 
     def measure(self, before, after):
+        """双向 LK 光流跟踪背景角点，经往返误差与内点离散度过滤后返回中位位移。"""
         a = cv2.cvtColor(before, cv2.COLOR_BGR2GRAY)
         b = cv2.cvtColor(after, cv2.COLOR_BGR2GRAY)
         points = cv2.goodFeaturesToTrack(a, 350, 0.01, 8, mask=self.background(before))
@@ -1457,7 +1576,10 @@ class FlowTracker:
 
 
 def stationary_tail(samples, minimum_travel=60.0):
-    """Require tracked stationary views while the physical cursor keeps moving."""
+    """要求鼠标持续移动而多帧网格保持静止，避免把未输入时的静止误判为触边。
+
+    Require tracked stationary views while the physical cursor keeps moving.
+    """
     travel = 0.0
     count = 0
     for sample in reversed(samples):
@@ -1472,7 +1594,10 @@ def stationary_tail(samples, minimum_travel=60.0):
 
 
 def stationary_stroke(samples):
-    """Subpixel grid shimmer can accumulate; require a whole driven gesture near zero."""
+    """用整段手势的光流幅度、离散度与鼠标行程判定静止，抑制亚像素闪烁累积。
+
+    Subpixel grid shimmer can accumulate; require a whole driven gesture near zero.
+    """
     if len(samples) < 8:
         return False
     cursor_travel = sum(float(np.linalg.norm(sample['cursor_delta'])) for sample in samples)
@@ -1486,6 +1611,7 @@ class DriftScanner(RasterScanner):
     """Stream complete driver gestures while tracking the map on the capture thread."""
 
     def __init__(self, args, window):
+        """建立连续拖动扫描器，分别维护道路前沿、访问点、相机限位和未解决前沿。"""
         super().__init__(args, window)
         self.flow = FlowTracker(self.grid)
         self.cursor_map = None
@@ -1495,12 +1621,15 @@ class DriftScanner(RasterScanner):
         self.camera_limits = {}
         self.data['strokes'] = []
         self.data['capture_mode'] = 'live_keyframes'
+        self.data['capture_settings'] = {'stroke_px': args.stroke_px, 'keyframe_px': args.keyframe_px,
+                                         'calibration_stroke_px': 240.0}
         self.data['display_orientation'] = getattr(args, 'orientation', 'screen_oblique')
         self.data['terrain_edges'] = []
         self.data['unresolved_frontiers'] = []
         self.data['coverage_definition'] = 'visible blue-road frontiers; empty grid is not explored as new map'
 
     def store_pose(self, image, kind):
+        """保存关键帧并连接里程计边，同时从新视野补充道路前沿。"""
         previous = self.data['frames'][-1]
         frame = self.record(image, kind, save=False)
         self.data['moves'].append({'a': previous['id'], 'b': frame['id'],
@@ -1509,6 +1638,7 @@ class DriftScanner(RasterScanner):
         self.queue_frontiers()
 
     def queue_frontiers(self):
+        """只对可见道路边缘生成目标，按探索半径与已访问位置去重。"""
         radius = self.args.grid_step * 0.55
         for direction, visible in zip(((-1, 0), (1, 0), (0, -1), (0, 1)), self.frontier_sides()):
             if not visible:
@@ -1519,6 +1649,7 @@ class DriftScanner(RasterScanner):
             self.frontiers.append(target)
 
     def clip_target(self, target):
+        """将目标限制在已有证据的相机轴向边界内，避免重复越界拖动。"""
         target = target.copy()
         for (axis, sign), value in self.camera_limits.items():
             if sign * (target[axis] - value) > 0:
@@ -1526,6 +1657,7 @@ class DriftScanner(RasterScanner):
         return target
 
     def stroke(self, cursor_vec):
+        """输入线程执行连续拖动，采样线程高频测量光流并保存关键帧，失败后停止并抬起鼠标。"""
         from module.device.win.virtual_mouse.input import BTN_LEFT
 
         if stop_requested(self.args, self.output):
@@ -1550,6 +1682,7 @@ class DriftScanner(RasterScanner):
         began = time.perf_counter()
 
         def sample():
+            """同步截图和真实鼠标位置，检查采样间隙及光流质量，再累计相机位移。"""
             image = self.window.capture()
             cursor = np.asarray(handler.mouse_driver.cursor(), float)
             stamp = time.perf_counter()
@@ -1584,6 +1717,7 @@ class DriftScanner(RasterScanner):
             return match
 
         def drag():
+            """在输入锁内执行按下、连续拖动和无条件抬起，向采样侧传播驱动错误。"""
             with handler._lock:
                 try:
                     handler.mouse_down(round(ox + start[0]), round(oy + start[1]))
@@ -1654,6 +1788,7 @@ class DriftScanner(RasterScanner):
         return measurements
 
     def calibrate_cursor(self):
+        """用两次正交拖动估计鼠标位移到地图位移的矩阵，要求足够移动样本和良好条件数。"""
         columns = []
         for axis in (0, 1):
             direction = np.eye(2)[axis]
@@ -1672,6 +1807,7 @@ class DriftScanner(RasterScanner):
         self.save()
 
     def explore_drift(self):
+        """按最近道路前沿连续探索；有限尝试后记录道路终止、相机限位或未解决前沿。"""
         self.record(self.window.capture(), 'origin')
         if np.count_nonzero(self.current_terrain) < 800:
             raise RuntimeError('Open the minimap over a blue road before scanning.')
@@ -1754,6 +1890,7 @@ class DriftScanner(RasterScanner):
 
 
 def merge_enemy_markers(observations, radius):
+    """按空间距离聚类跨帧敌人观测，同一帧的不同敌人禁止合并。"""
     groups = []
     for observation in observations:
         point = np.asarray(observation['position'])
@@ -1778,6 +1915,7 @@ def merge_enemy_markers(observations, radius):
 
 
 def marker_contributes(observation, source_frames, radius):
+    """检查标记附近的最终拼图是否来自该观测帧，过滤被拼接覆盖的重复符号。"""
     x, y = np.rint(observation['position']).astype(int)
     height, width = source_frames.shape
     if not 0 <= x < width or not 0 <= y < height:
@@ -1791,6 +1929,7 @@ def marker_contributes(observation, source_frames, radius):
 
 
 def annotate_markers(image, player, enemies):
+    """在预览副本上绘制小队与敌人编号，不改变用于配准的道路底图。"""
     result = image.copy()
     marks = [(item['id'], item['position'], (125, 115, 255)) for item in enemies]
     if player is not None:
@@ -1814,6 +1953,7 @@ class JointRegistration:
     """Align roads using the separately measured motion of the perspective grid."""
 
     def __init__(self, matrix, warp_size, source, cell):
+        """预计算缩小投影、有效域和全相关位移网格，降低多帧联合配准成本。"""
         self.scale = min(0.25, 320 / max(warp_size))
         self.matrix = np.diag([self.scale, self.scale, 1]) @ matrix
         self.size = tuple(max(1, round(v * self.scale)) for v in warp_size)
@@ -1825,6 +1965,7 @@ class JointRegistration:
         self.shifts = np.stack([xx - self.center[0], yy - self.center[1]], axis=-1) / self.scale
 
     def features(self, image):
+        """分别提取道路、背景网格和背景有效域，保留不同渲染层的独立证据。"""
         roads = cv2.warpPerspective(terrain(image), self.matrix, self.size).astype(np.float32) / 255
         roads *= self.valid
         grid = cv2.warpPerspective(raw_grid(image), self.matrix, self.size).astype(np.float32) / 255
@@ -1833,12 +1974,14 @@ class JointRegistration:
         return tuple(np.uint8(np.clip(value * 255, 0, 255)) for value in (roads, grid, background))
 
     def correlate(self, first, second):
+        """用 FFT 计算全平移域的道路 IoU 与网格相似度及有效重叠面积。"""
         from scipy.signal import correlate
 
         a, ga, va = (value.astype(np.float32) / 255 for value in first)
         b, gb, vb = (value.astype(np.float32) / 255 for value in second)
 
         def corr(x, y):
+            """对两张特征图做完整二维 FFT 互相关，供面积与相似度计算复用。"""
             return correlate(x, y, mode='full', method='fft')
 
         intersection = corr(b, a)
@@ -1849,6 +1992,7 @@ class JointRegistration:
         return iou, grid, union, corr(vb, va)
 
     def peak(self, scores, allowed):
+        """在允许域找峰并作亚像素修正，再比较空间独立峰得到歧义分差。"""
         if not np.any(allowed):
             return None
         candidates = np.where(allowed, scores, -10)
@@ -1867,6 +2011,7 @@ class JointRegistration:
 
     @staticmethod
     def fit_motion(grid_moves, road_moves, cell):
+        """鲁棒拟合网格层到道路层的二维运动映射，要求双轴激励、足够内点和合理尺度。"""
         from scipy.optimize import least_squares
 
         grid, roads = np.asarray(grid_moves), np.asarray(road_moves)
@@ -1887,6 +2032,7 @@ class JointRegistration:
                         'median_error_px': float(np.median(error[inliers]))}
 
     def measure_roads(self, first, second, prediction, radius):
+        """只接受高 IoU 且峰值独立的道路约束，避免直路上的滑移歧义。"""
         roads, _, area, _ = self.correlate(first, second)
         allowed = (np.linalg.norm(self.shifts - prediction, axis=2) < radius)
         allowed &= area > 1600 * self.scale ** 2
@@ -1901,6 +2047,7 @@ class JointRegistration:
                 'prediction_error_px': float(np.linalg.norm(delta - prediction))}
 
     def measure(self, first, second, prediction, motion_map, radius):
+        """将网格位移域映射到道路层后联合评分，按预测邻域与重叠面积筛选。"""
         roads, grid, road_area, grid_area = self.correlate(first, second)
         # Grid and roads move together, but their rendered layers need not have equal displacement.
         grid_shifts = self.shifts @ np.linalg.inv(motion_map)
@@ -1919,6 +2066,7 @@ class JointRegistration:
 
 
 def solve_joint_positions(positions, moves, constraints, motion_map, cell):
+    """以弱里程计链维持连通，联合道路约束稀疏求解全部帧位姿并迭代降权离群边。"""
     from scipy.sparse import coo_matrix
     from scipy.sparse.linalg import lsqr
 
@@ -1953,6 +2101,7 @@ def solve_joint_positions(positions, moves, constraints, motion_map, cell):
 
 
 def refine_map_positions(output, data, source):
+    """构建相邻帧及重访约束，标定层间运动再求全局位置，证据不足明确标为失败。"""
     started = time.perf_counter()
     positions = np.array([f['position'] for f in data['frames']], dtype=float)
     report = {'status': 'insufficient_joint_evidence', 'reason': 'too_few_frames_or_no_strokes'}
@@ -2019,6 +2168,26 @@ def refine_map_positions(output, data, source):
         report.update(reason='too_few_constraints', constraints_found=len(constraints))
         return positions, report
     corrected, residual = solve_joint_positions(positions, data['moves'], constraints, motion_map, cell)
+    # Use coarse poses to connect overlapping road views; periodic background grids can leave islands drifting.
+    constraints = [edge for edge in constraints if edge['kind'] != 'loop']
+    for i in range(len(views)):
+        candidates = [j for j in range(i + 2, len(views))
+                      if np.linalg.norm(corrected[i] - corrected[j]) < cell * 8.4]
+        candidates.sort(key=lambda j: np.linalg.norm(corrected[i] - corrected[j]))
+        selected = []
+        for j in candidates:
+            if any(abs(j - previous) < 4 for previous in selected):
+                continue
+            selected.append(j)
+            road = matcher.measure_roads(views[i], views[j], corrected[i] - corrected[j], cell * 4)
+            if road is not None:
+                constraints.append(dict(road, a=i, b=j, kind='loop'))
+            if len(selected) == 5:
+                break
+    if len(constraints) < 12:
+        report.update(reason='too_few_road_constraints', constraints_found=len(constraints))
+        return positions, report
+    corrected, residual = solve_joint_positions(positions, data['moves'], constraints, motion_map, cell)
     accepted = [edge for edge, error in zip(constraints, residual) if error < cell / 3]
     rejected = len(constraints) - len(accepted)
     if len(accepted) < 12:
@@ -2039,7 +2208,10 @@ def refine_map_positions(output, data, source):
 
 
 def reproject_scan(data, matrix, warp_size, shape):
-    """Convert odometry seeds locally; road constraints must then solve the new poses."""
+    """更换投影时只转换里程计初值，最终位姿仍须重新由道路约束求解。
+
+    Convert odometry seeds locally; road constraints must then solve the new poses.
+    """
     height, width = shape
     points = np.array([[[width / 2, height / 2], [width / 2 + 1, height / 2],
                         [width / 2, height / 2 + 1]]], float)
@@ -2056,6 +2228,7 @@ def reproject_scan(data, matrix, warp_size, shape):
 
 
 def projection_road_score(data, source, images, pairs):
+    """对同一组移动帧计算道路重叠中位数，用于公平比较投影候选。"""
     matcher = JointRegistration(np.asarray(data['matrix']), data['warp_size'], source, data['cell_px'])
     views = {i: matcher.features(image) for i, image in images.items()}
     positions = np.array([f['position'] for f in data['frames']])
@@ -2071,7 +2244,10 @@ def projection_road_score(data, source, images, pairs):
 
 
 def recover_map_projection(output, data, source):
-    """Retry failed calibration using saved views, gated by measured road overlap."""
+    """从保存帧复核投影；已有配准仍需道路重叠达标，候选须显著改善并通过联合约束。
+
+    Audit accepted calibration too: low constraint residuals do not prove correct perspective.
+    """
     positions = np.array([f['position'] for f in data['frames']])
     lengths = np.linalg.norm(np.diff(positions, axis=0), axis=1)
     eligible = np.flatnonzero((lengths > data['cell_px'] * 0.7) & (lengths < data['cell_px'] * 3.4))
@@ -2118,7 +2294,10 @@ def recover_map_projection(output, data, source):
 
 
 def map_orientation(matrix, warp_size, shape, mode='screen_ne_up'):
-    """Orient the rectified map without changing distances or angles."""
+    """用旋转或反射恢复指定显示朝向，保持俯视地图的距离与角度比例。
+
+    Orient the rectified map without changing distances or angles.
+    """
     height, width = shape
     center = np.array([width / 2, height / 2], float)
     if mode == 'screen_oblique':
@@ -2166,6 +2345,7 @@ def map_orientation(matrix, warp_size, shape, mode='screen_ne_up'):
 
 
 def rebuild_v2(output, data, registration='joint'):
+    """联合配准后融合道路和实拍帧，统一朝向与裁剪，并同步保存坐标、覆盖和质量元数据。"""
     matrix = np.array(data['matrix'])
     warp_size = tuple(data['warp_size'])
     source = np.full((data['roi'][3] - data['roi'][1], data['roi'][2] - data['roi'][0]), 255, np.uint8)
@@ -2177,16 +2357,17 @@ def rebuild_v2(output, data, registration='joint'):
     registration_report = {'status': 'odometry'}
     if registration == 'joint':
         positions, registration_report = refine_map_positions(output, data, source)
-        if registration_report['status'] == 'insufficient_joint_evidence':
-            initial_report = registration_report.copy()
-            recovered, recovery_report = recover_map_projection(output, data, source)
-            if recovered is not None:
-                data, positions, registration_report = recovered
-                matrix = np.asarray(data['matrix'])
-                warp_size = tuple(data['warp_size'])
-                registration_report['original_registration'] = initial_report
-            else:
-                registration_report['projection_recovery'] = recovery_report
+        initial_report = {key: value for key, value in registration_report.items()
+                          if key not in ('constraints', 'positions')}
+        recovered, recovery_report = recover_map_projection(output, data, source)
+        if recovered is not None:
+            data, positions, registration_report = recovered
+            matrix = np.asarray(data['matrix'])
+            warp_size = tuple(data['warp_size'])
+            registration_report['original_registration'] = initial_report
+        else:
+            registration_report['projection_recovery'] = recovery_report
+            if registration_report['status'] == 'insufficient_joint_evidence':
                 print('WARNING: Road registration failed; reconstruction is an unverified odometry preview. '
                       f"Reason: {registration_report['reason']}", flush=True)
     if registration_report['status'] != 'joint_grid_road' and len(data['moves']) >= 2:
@@ -2233,7 +2414,9 @@ def rebuild_v2(output, data, registration='joint'):
             continue
         mosaic_frames += 1
         image = cv2.imread(str(output / frame['file']))
-        mask = cv2.warpPerspective(terrain(image), matrix, warp_size, flags=cv2.INTER_NEAREST)
+        road_mask = terrain(image)
+        road_mask[source == 0] = 0
+        mask = cv2.warpPerspective(road_mask, matrix, warp_size, flags=cv2.INTER_NEAREST)
         transform = np.float32([[1, 0, position[0] - lo[0]], [0, 1, position[1] - lo[1]]])
         weight = cv2.warpAffine(center_weight, transform, size)
         coverage += cv2.warpAffine(valid.astype(np.float32) / 255, transform, size)
@@ -2331,6 +2514,7 @@ def rebuild_v2(output, data, registration='joint'):
 
 
 def parse_args(argv=None):
+    """解析采集、重建和预算参数，校验客户区与采样参数的基本范围。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[1])
@@ -2372,6 +2556,7 @@ def parse_args(argv=None):
 
 
 def main():
+    """选择离线重建或现场采集；现场异常保存未完成状态，并在退出前释放驱动。"""
     args = parse_args()
     if args.rebuild:
         rebuild(args.output, registration=args.registration)

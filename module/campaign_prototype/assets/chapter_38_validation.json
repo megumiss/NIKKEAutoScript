@@ -1,0 +1,21 @@
+{
+  "sha256": {
+    "map.json": "6a2b9d716b1bd2a400e0dbffb3c8d4c4070a157ac3a297903719ecdb643e36c3",
+    "map.png": "5f6efc8ce8b4cd0b53deee84d4e7e1ca9fe228861692461450cd58a4e1fb3c65",
+    "annotations.json": "69bb07a502131876c362ff476c9ae95aee0de55befb2b3a8b8c912694a4769ba",
+    "source/map_data.npz": "65abb98be5371f844389e319a9f9ad5a187fb46b6ac4457f8fc0d3fed2461357",
+    "calibration.json": "36798b8622aeee6fa26e30ab41c41a347358aa2af9f2d501d524964926876906"
+  },
+  "client": [
+    1776,
+    999
+  ],
+  "roi": [
+    644,
+    280,
+    1130,
+    742
+  ],
+  "coverage": "observed_roads",
+  "whole_camera_domain_verified": false
+}

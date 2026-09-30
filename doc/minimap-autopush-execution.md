@@ -1,6 +1,6 @@
 # 小地图重建与自动推图执行记录
 
-更新时间：2026-09-29（Asia/Hong_Kong）。状态：已完成第 38 章地图修复、裁剪、标注，以及多个收集点的远距离单击到达验证；导航返回已改为左上角最小化。自动寻敌、战斗和战后刷新尚未形成持续推图闭环。新增 Wiki 普通／困难批量导入及采集失败恢复，详见[批量工具说明](wiki-collectibles-batch.md)；最新自动推图差距与阶段验收见[自动推图计划](autopush-plan.md)。
+更新时间：2026-09-29（Asia/Hong_Kong）。最新：原型已迁入 `module/campaign_prototype/`，补齐 M0 控制／失败／地图包校验及中文原理文档；真实十次地图切换复测通过，最终保留紧凑地图、驱动已释放。此前状态：已完成第 38 章地图修复、裁剪、标注，以及多个收集点的远距离单击到达验证；导航返回已改为左上角最小化。自动寻敌、战斗和战后刷新尚未形成持续推图闭环。新增 Wiki 普通／困难批量导入及采集失败恢复，详见[批量工具说明](wiki-collectibles-batch.md)；最新自动推图差距与阶段验收见[自动推图计划](autopush-plan.md)。
 
 ## 目标与当前验收点
 
@@ -8,11 +8,11 @@
 
 当前已验证：第 38 章 14 号短程到达、14→10 号远程单击到达，以及 10→7→9→5→8 的随机多点单击到达；均以黄色放大镜三角提示确认。最后四段各一次移动点击，无微调。场景落点仍借助 Wiki 参照与人工复核，没有实现通用的无人值守导航。
 
-下一验收点：统一小地图控制与失败返回，再完成不依赖 Wiki 全场景截图／人工给坐标的 `goto_world`，随后接入普通敌人、EX 跳过和单场战斗。批量地图采集继续保留为独立工作线，不必先采完全部章节才验证单章闭环。
+下一验收点：完成不依赖 Wiki 全场景截图／人工给坐标的 `goto_world`，随后接入普通敌人、EX 跳过和单场战斗。批量地图采集继续保留为独立工作线，不必先采完全部章节才验证单章闭环。
 
 约定：忽略 EX；道路可通行时优先让游戏自动寻路，末段才必要微调；放大小地图后点击左上角最小化。采集保持正上方俯视比例、游戏斜向朝向及 240px 连续拖动／高频采样，较早的去特效与正北朝向要求已被替代。
 
-最后一次已验证现场：2026-09-29 19:30，普通 38 章 8 号收集点，位置约 `(77.8,1348.9)`，未拾取、未进入战斗，紧凑小地图保留、驱动已释放。本次文档盘点没有重新截图；继续操作前必须重新核对。早期 41-21 普通弹窗和窗口权限失败均为历史状态。
+最后一次现场检查：2026-09-29 22:51，客户区 `1776×999`，十次展开／最小化循环全部完成。20 次点击仅为开关与左上角最小化，20 张状态截图通过检查，最终保留紧凑小地图，驱动已释放。首次 22:38 测试因失焦受控停止，22:51 在操作者留出前台时间后复测成功。本轮没有小队移动、拾取或战斗；未重新定位小队，不能把此前 38 章 8 号点坐标直接当作当前坐标。
 
 来源聊天：`codex://threads/01a0e5bd-4d74-73e0-aac5-e56a689a6f09`、`codex://threads/01a0eb6f-28b2-7c11-a08d-1b5177e37ded`、`codex://threads/01a0ec86-23c5-75b3-9a5d-cb69253741b6`，以及本次会话的最小化纠正与随机验证。
 
@@ -20,7 +20,7 @@
 
 ## 环境与运行约定
 
-- 工作区：`D:\PCR\NIKKEAutoScript-virtual-display-minimal`，分支 `codex/virtual-display-minimal`。
+- 当前工作区：`D:\PCR\NIKKEAutoScript`，分支 `auto_push`。旧工作树保留历史原型与截图，当前代码不从该处导入。
 - Python：`D:\PCR\NIKKEAutoScript\.venv\Scripts\python.exe`，设置 `PYTHONIOENCODING=utf-8`。
 - 虚拟鼠标驱动根：`D:\PCR\NIKKEAutoScript`；采集初始化自动将游戏客户区调整为 `1776×999`，确认稳定后继续。脚本须具备与游戏相同的权限；游戏以管理员身份运行时，采集脚本也需要以管理员身份启动。
 - 展开地图 ROI：`[644, 280, 1130, 742]`；地图开关客户区坐标 `(42, 98)`。
@@ -48,23 +48,23 @@
 - 扫描器：[dev_tools/minimap_reconstruct.py](../dev_tools/minimap_reconstruct.py)。
 - 扫描回归：[tests/test_minimap_reconstruct.py](../tests/test_minimap_reconstruct.py)。
 - 章节采集和导出：[dev_tools/minimap_chapters.py](../dev_tools/minimap_chapters.py)；标注工具：[dev_tools/map_annotator.py](../dev_tools/map_annotator.py)。
-- 本轮使用的地图包：`tmp/minimap_crop_resolution_20260929/chapter_38/`，含 `map.png`、`reference.png`、元数据、普通 14／困难 6 个标注及 `source/map_data.npz`。不同尺寸旧包的坐标不可直接混用。
-- 新定位与道路规划：[adaptive.py](../tmp/collectible_live_20260929/adaptive.py)、[probe.py](../tmp/collectible_live_20260929/probe.py)；脚下锚点／短程原型：[live.py](../tmp/collectible_live_20260929/live.py)。
-- 远程测试入口：[run.py](../tmp/collectible_far_retry_20260929/run.py)；镜头控制：[camera_to.py](../tmp/collectible_random_20260929/camera_to.py)；场景参照匹配：[match_scene.py](../tmp/collectible_random_20260929/match_scene.py)。
+- 当前运行包：`data/campaign_prototype/chapter_38/`，含底图、元数据、普通 14／困难 6 个标注、NPZ、独立标定和哈希清单；是原已验证 38 章地图的副本。不同尺寸旧包的坐标不可直接混用。
+- 新定位与道路规划：[adaptive.py](../module/campaign_prototype/adaptive.py)、[probe.py](../module/campaign_prototype/probe.py)；脚下锚点／短程原型：[live.py](../module/campaign_prototype/live.py)。
+- 远程测试入口：[run.py](../module/campaign_prototype/run.py)；镜头控制：[camera_to.py](../module/campaign_prototype/camera_to.py)；场景参照匹配：[match_scene.py](../module/campaign_prototype/match_scene.py)。
 - 最新验证：[四点回执](../tmp/collectible_random_20260929/verification.json)、[压缩预览](../tmp/collectible_random_20260929/arrivals_preview.jpg)、[现场交接](../tmp/collectible_random_20260929/HANDOFF.md)。
-- 旧寻敌探针及共用地图控制：[tmp/minimap_goto_probe.py](../tmp/minimap_goto_probe.py)；旧 41 章缓存 `tmp/minimap_drift_20260926_c/`；普通／EX 弹窗模板在 `tmp/minimap_goto_probe/`。
+- 旧寻敌探针及共用地图控制：[tmp/minimap_goto_probe.py](../module/campaign_prototype/goto.py)；旧 41 章缓存 `tmp/minimap_drift_20260926_c/`；普通／EX 弹窗模板在 `tmp/minimap_goto_probe/`。
 - 旧寻敌证据：[普通 41-21 弹窗](../tmp/minimap_normal_retry_20260928/battle_popup_0_after_move.png)；旧离线回归：[tmp/test_minimap_goto_probe.py](../tmp/test_minimap_goto_probe.py)。它们不覆盖后续所有新导航能力。
 - 正式仓库可复用战斗代码：[module/daemon/semi_combat.py](../module/daemon/semi_combat.py)，已有 [main.py](../main.py) 入口，但没有与新地图导航整合。
 
 两条原型路线尚未合并：旧寻敌探针优先检测准备弹窗，EX 关闭后退出、普通弹窗保留后退出，使用旧相关分数和同帧相对位移兜底；新收集点路线采用自适应道路配准、镜头平移、Wiki 场景匹配和人工复核点击。新路线按固定观察时间等待并在最后重新定位，尚无自动选目标、到达提示识别和战斗接管。
 
-采集器的最小化、失败保留、有限重试与异常释放已修正并离线验证；导航原型的写盘释放顺序、子进程失败结果和地图包硬编码仍需处理，详见计划。已有测试结果仅代表各自记录的输入与范围，不等于完成新方案的正式集成。
+采集器及原型的最小化、失败保留、有限重试、先释放后写回执、子进程失败与地图包绑定已修正并离线验证；入口与原理见[原型说明](../module/campaign_prototype/README.md)。真实十次切换也已复测通过。已有测试结果仅代表各自记录的输入与范围，不等于完成新方案的正式集成。
 
 ## 未解决问题与下一步
 
 以[自动推图计划](autopush-plan.md) 的 M0～M5 为当前实施顺序；原采集与历史实测记录保留在下方。
 
-1. **M0：统一基础控制。** 小地图最小化覆盖全部相关路径，明确坐标空间、地图包质量、失败返回和无条件释放，迁移最小运行时代码。
+1. **M0：本轮范围已完成。** 独立原型迁移、基础控制、失败契约与十次真实切换均已验收；正式架构接入延后。
 2. **M1：通用导航。** 不依赖 Wiki 全场景图或人工 `--click` 的落点换算、自动到达／卡住检测和有限恢复，保持游戏自动寻路为主要移动方式。
 3. **M2～M3：敌人和战斗。** 新定位器接入普通／EX 识别，EX 记忆后继续；复用现有动作形成可返回结果的单场战斗，战后失效旧观测并重新定位。
 4. **M4～M5：持续闭环与入口。** 连续普通关卡、分批出怪／剧情区域处理、存档恢复、Boss 与真正章节完成的独立判据，接入任务／配置／页面流程。
@@ -266,3 +266,29 @@ print('RESULT:', probe.main(), flush=True)
 - 批量采集现有逐章状态、有限重试、失败扫描归档、扫描后重建续跑和全局 STOP；采集／重置返回统一为左上角最小化。单章失败可继续后续章；切章页面无法确认时受控暂停，保留非零退出码和恢复信息。保存、最小化异常不跳过驱动释放。
 - 77 项回归和 Python 语法检查通过。证据：`tmp/wiki_batch_verify_20260929/catalog_audit.json`、`chapter_38/`、`repeat_verification.json`，以及 `tmp/wiki_batch_tests_20260929.log`、`tmp/wiki_batch_import_20260929.log`。新增测试位于 `tests/test_wiki_collectibles.py`、`tests/test_minimap_chapters.py`。
 - 本轮未控制游戏、未执行完整地图重采或新困难点的游戏内到达验证；最后已验证现场仍为此前普通 38 章 8 号点。Wiki 批次中缺图、截图布局不支持和配准不确定会保留待办，不意味着已经取得全章节地图。导航原型和持续战斗集成仍按 M0～M5 继续。
+
+### 2026-09-29：独立原型迁移、M0 修复和中文原理文档
+
+- 继续聊天 `codex://threads/01a0ed62-813f-7402-a87d-f898b1ee03e9`。定位、镜头、地面圆环、单步移动、旧寻敌及场景匹配共 10 份原型已迁入 [module/campaign_prototype](../module/campaign_prototype/README.md)，必要模板一并迁入，来源哈希保存在 `migration.json`。未接入任务调度、正式配置或 SPA。
+- 代码不再从旧工作树 `tmp/` 导入；本机地图副本在 `data/campaign_prototype/`，运行证据在 `log/campaign_prototype/`。新增独立地图导入入口，校验后才发布新目录，保留原静态包与标注。旧 41 章寻敌入口仅允许图片回放。
+- M0 地图控制统一到采集器三态状态机；导航已在目标态时不重复重置视野，返回只用左上角最小化。窗口尺寸、屏幕原点、焦点变化和 STOP 均阻止后续输入；错误 ROI 不得套用当前标定。
+- 失败处理改为先释放驱动再写回执；取消和原始操作异常不被回执写盘失败覆盖。子进程非零退出向上报告，超时／取消通过共享 STOP 协作释放；停止文件写盘失败也会回收子进程。采集失败直接释放，不在清理阶段重新点击不确定页面。
+- 地图包绑定章节／难度、5 个关键文件哈希、投影、原点、帧位置、朝向、裁剪、标注和覆盖质量；错误包在取得输入控制前拒绝。38 章副本通过校验，仍明确为 `observed_roads`，未宣称全相机域覆盖。普通运行不混用困难点。
+- 对独立原型及地图采集、章节批量、Wiki 下载／配准、标注存储中的 **210 个方法／内部辅助函数** 补齐中文说明。新增[原型运行与导航原理](campaign-prototype-principles.md)、[地图采集与 Wiki 标注原理](minimap-wiki-principles.md)，覆盖坐标公式、算法分层、质量门槛、缓存、版本冲突、停止恢复与能力边界。
+- **离线验证：94 项回归通过**，其中 M0 新回归 17 项、采集与章节 55 项、Wiki 13 项、标注存储 9 项。覆盖模拟十次切换、错误包、失焦、尺寸／位置变化、取消、写盘／释放异常、子进程失败与超时；24 个改动／新增 Python 文件语法检查通过，中文方法覆盖、文档引用和差异空白检查通过。
+- **历史真实帧回放：** 使用 38 章 14 号点保存 ROI，新定位器输出 `(627.4253,115.1977)`、道路 IoU `0.98614`，与原记录一致；这是离线定位回归，不是本轮重新走到物品。证据为 `log/campaign_prototype/m0_replay_14_location.json`。
+- **现场验证：** 首次测试在展开尝试后失焦，回执 `failed`、完整循环数 0，驱动释放正确。操作者确认可保留游戏前台后，22:51 复测 **10/10** 完整展开／最小化循环通过；20 张状态截图的尺寸与地图状态、20 次点击位置及驱动释放日志均核对通过。最终保持紧凑地图，没有小队移动点击、拾取或战斗。
+- 证据：[代码验证回执](../log/campaign_prototype/code_verification.json)、[现场验证回执](../log/campaign_prototype/m0_controls_verification.json)、[十次循环报告](../log/campaign_prototype/m0_controls_retry_20260929.json)。同目录 `m0_tests.log`、`collection_tests.log`、`wiki_tests.log`、`annotation_tests.log` 和两次 `m0_controls*.log` 保留详细诊断；图片只存本机，没有向聊天重新载入此前报错的画面。
+- 范围：完成独立原型范围内 M0；正式设备／战斗生命周期接入按要求延后。未做新一轮地图批采、Wiki 全量下载或新到达测试，M1 通用落点、自动到达、战斗与持续推图仍待后续任务。未修改个人配置、提交或推送 Git。
+
+### 2026-09-30：第 40 章远点单击绕行与终点复核
+
+- 继续聊天 `codex://threads/01a0ef9c-49e8-7a30-9f44-0c8899991728` 的“测试一个较远的目标点”。优先验证小队移动，Wiki 标注不作为前置条件。现场为普通第 40 章，中文客户区 `1776×999`。
+- 原测试于 10:53 单击可见道路点 `(430, 740)`，起点脚下估计 `(858.5, 421.5)`，直线距离约 **533.9 个场景像素**。只发送 **1 次移动点击**，小队沿连接道路绕行，约 10 秒时画面已趋于稳定，之后保持同一终点；没有补点、拾取或进入战斗。本次续接只截取当前可见窗口并离线回放，没有取得游戏输入控制。
+- 原目标区域混入上端凸起与右侧边沿，地面多数点残差很小，但高出地面的点偏离约 4～12px，导致留出验证失败。事后将选区限定为 `[(385,585),(525,585),(525,850),(340,870)]`，继续使用原 3px 配准门槛与目标支持域检查，没有把失败的圆环改用包围框补算。
+- 回放全部 **22 帧**，其中 **6 帧**同时通过区域配准、目标支持域、圆环识别与静止检查，时间覆盖单击后 15.39～49.94 秒。估计落点偏差 **5.73～6.12px，中位数 6.03px**；这些帧的留出角点最大误差 **1.49px**。其他帧的配准、支持域或圆环失败均保留在报告中。偏差来自图像配准与圆环估计，不是独立世界坐标真值。
+- 轨迹与终点截图人工核对支持“单击后绕行到达所选地面点附近”。续接的只读现场截图显示小队仍在该处，目标道路配准留出误差 0.56px，但该帧圆环存在中心歧义，仍拒绝输出自动落点距离。
+- **自动到达检查未完成**：原程序要求连续 3 次有效终点观测，实际被间歇配准失败打断，最后因失焦结束，`far_02/result.json` 仍为 `failed`。本次事后复核没有修改原回执，也不把视觉到达结论当作无人值守闭环通过。
+- 验证：局部道路／标定／圆环 7 项回归通过；相关 Python 语法与文档差异检查通过。局部配准和标定函数见 [surface_motion.py](../module/campaign_prototype/surface_motion.py)，原理与当前调用边界见[导航原理](campaign-prototype-principles.md#高低差与局部道路区域)。
+- 证据：[移动过程核对图](../tmp/ch40_movement_20260930/resume_far/movement_verified.jpg)、[终点细节](../tmp/ch40_movement_20260930/resume_far/arrival_detail.jpg)、[逐帧复核与输入哈希](../tmp/ch40_movement_20260930/resume_far/verification.json)、[原运行回执](../tmp/ch40_movement_20260930/far_02/result.json)。复现：在仓库根目录设置 `$env:PYTHONPATH=(Get-Location).Path`，执行 `.venv\Scripts\python.exe tmp/ch40_movement_20260930/verify_far.py`；该脚本只读取本机证据，不发送输入。
+- 后续缺口：小地图到目标道路的独立现场标定、道路区域选择与绑定、动画／遮挡下稳定的到达判定。本次人工选择可见地面点，不依赖 Wiki 场景参照，但仍不能替代 M1 通用 `goto_world`，也没有验证第 39 章或任意跨层目标。未提交或推送 Git。

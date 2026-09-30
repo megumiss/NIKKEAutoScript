@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>地图标注 · NIKKE</title>
   <link rel="stylesheet" href="/editor.css">
+  <script src="/movement.js" defer></script>
   <script src="/editor.js" defer></script>
 </head>
 <body>
@@ -17,21 +18,23 @@
 
   <main class="workspace">
     <aside class="tools-panel" aria-label="绘制工具">
-      <div class="section-label">绘制</div>
-      <div class="tools" role="group" aria-label="标注类型">
+      <div class="section-label">新标注</div>
+      <label>标注类型<select id="new-category" aria-describedby="category-help"></select></label>
+      <p id="category-help" class="muted category-help"></p>
+      <label>名称 / 标签<input id="new-label" list="label-options" value="普通收集品" maxlength="256"></label>
+      <datalist id="label-options"></datalist>
+      <label class="color-row">颜色<input id="new-color" type="color" value="#ffd166" aria-label="新标注颜色"></label>
+      <label id="new-direction" class="check" hidden><input id="new-directed" type="checkbox">新传送为单向</label>
+      <div class="section-label">绘制方式</div>
+      <div class="tools" role="group" aria-label="绘制方式">
         <button data-tool="select" aria-pressed="true" title="选择对象、拖动对象或顶点 (V)">选择 <kbd>V</kbd></button>
         <button data-tool="pan" aria-pressed="false" title="拖动画布 (H)，也可按住空格拖动">平移 <kbd>H</kbd></button>
         <button data-tool="point" aria-pressed="false" title="单击创建点 (P)">点 <kbd>P</kbd></button>
         <button data-tool="polyline" aria-pressed="false" title="连续单击，双击或 Enter 完成 (L)">折线 <kbd>L</kbd></button>
         <button data-tool="polygon" aria-pressed="false" title="至少三个顶点，双击或 Enter 完成 (G)">多边形 <kbd>G</kbd></button>
         <button data-tool="rectangle" aria-pressed="false" title="按住拖动绘制矩形 (R)">矩形 <kbd>R</kbd></button>
-        <button data-tool="connect" aria-pressed="false" title="依次点击两个对象创建连接 (C)">连接 <kbd>C</kbd></button>
+        <button data-tool="connect" aria-pressed="false" title="依次点击两部地面电梯建立传送关系 (C)">电梯传送 <kbd>C</kbd></button>
       </div>
-      <div class="section-label">新标注</div>
-      <label>类别 / 标签<input id="new-label" list="label-options" value="路口" maxlength="256"></label>
-      <datalist id="label-options"></datalist>
-      <label class="color-row">颜色<input id="new-color" type="color" value="#ffb454" aria-label="新标注颜色"></label>
-      <label class="check"><input id="new-directed" type="checkbox">新连接为单向</label>
       <div class="section-label">显示</div>
       <label>图层<select id="layer"><option value="map.png">道路底图</option><option value="reference.png">实拍参考图</option></select></label>
       <label class="check"><input id="show-annotations" type="checkbox" checked>显示标注</label>
@@ -40,6 +43,15 @@
     </aside>
 
     <section class="canvas-panel" aria-label="标注工作区">
+      <div class="collectible-toolbar">
+        <span>收集品</span>
+        <div class="difficulty-switch" role="group" aria-label="收集品难度切换">
+          <button data-difficulty="normal" aria-pressed="true">普通</button>
+          <button data-difficulty="hard" aria-pressed="false">困难</button>
+          <button data-difficulty="all" aria-pressed="false">全部</button>
+        </div>
+        <span id="difficulty-summary" class="muted">机关与电梯共用</span>
+      </div>
       <div class="canvas-toolbar">
         <div class="toolbar-group"><button id="undo" disabled title="撤销 (Ctrl+Z)">撤销</button><button id="redo" disabled title="重做 (Ctrl+Shift+Z)">重做</button></div>
         <div class="toolbar-group"><button id="finish" disabled>完成绘制</button><button id="cancel" disabled>取消</button></div>
@@ -48,7 +60,7 @@
       <div id="stage" class="stage">
         <svg id="canvas" xmlns="http://www.w3.org/2000/svg" tabindex="0" aria-label="地图画布，使用左侧工具绘制，滚轮缩放">
           <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d6dce5"/></marker></defs>
-          <g id="scene"><image id="base-image" x="0" y="0"/><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g></g>
+          <g id="scene"><image id="base-image" x="0" y="0"/><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="movement-markers" pointer-events="none"></g></g>
         </svg>
         <div id="empty-state" class="empty-state"><h2>打开一张地图，开始标注</h2><p>从上方选择地图包。使用 --root 可指定其他地图目录。</p></div>
         <div id="drawing-hint" class="drawing-hint" hidden></div>
@@ -58,6 +70,17 @@
     </section>
 
     <aside class="inspector" aria-label="标注管理">
+      <section class="movement-panel" aria-labelledby="movement-heading">
+        <h2 id="movement-heading">小队移动测试</h2>
+        <p class="muted">选一个道路目标，自动换算落点并移动。测试期间保持游戏在前台。</p>
+        <div class="movement-actions"><button id="move-pick" aria-pressed="false">在图上选目标</button><button id="move-use-selected" disabled>使用选中标注</button></div>
+        <output id="move-target">尚未选择目标</output>
+        <label>测试难度<select id="move-difficulty"><option value="normal">普通</option><option value="hard">困难</option></select></label>
+        <div class="movement-actions"><button id="move-start" class="primary" disabled>移动到目标</button><button id="move-stop" disabled>停止测试</button></div>
+        <p id="move-status" class="muted" role="status" aria-live="polite">选择目标点后开始移动测试。</p>
+        <p id="move-metrics" class="muted"></p>
+        <details id="move-evidence" hidden><summary>查看现场与日志</summary><img id="move-preview" alt="本次移动测试的游戏现场" hidden><p id="move-log" class="muted"></p></details>
+      </section>
       <div class="inspector-heading"><h2>标注对象</h2><span id="object-count" class="badge">0</span></div>
       <input id="search" type="search" placeholder="搜索标签或 ID" aria-label="搜索标注">
       <div id="object-list" class="object-list"><p class="muted empty-list">暂无标注。选择左侧工具在图上绘制。</p></div>
@@ -65,7 +88,8 @@
       <p id="no-selection" class="muted">选择图上的标注或列表项目，即可编辑。</p>
       <form id="properties" hidden>
         <div class="object-identity"><span id="selected-type"></span><code id="selected-id"></code></div>
-        <label>类别 / 标签<input id="edit-label" list="label-options" maxlength="256"></label>
+        <label>标注类型<select id="edit-category"></select></label>
+        <label>名称 / 标签<input id="edit-label" list="label-options" maxlength="256"></label>
         <label class="color-row">颜色<input id="edit-color" type="color" aria-label="标注颜色"></label>
         <label>备注<textarea id="edit-note" rows="2" maxlength="4000" placeholder="例如：战斗后开放、需要调查"></textarea></label>
         <div id="connection-properties" hidden><p id="connection-endpoints" class="muted"></p><label class="check"><input id="edit-directed" type="checkbox">单向连接</label></div>

@@ -15,9 +15,11 @@ import requests
 from bs4 import BeautifulSoup
 
 if __package__:
+    from .map_paths import DEFAULT_MAPS_ROOT
     from .map_annotator import AnnotationStore
     from .wiki_collectible_match import MATCH_VERSION, MapMatcher
 else:
+    from map_paths import DEFAULT_MAPS_ROOT
     from map_annotator import AnnotationStore
     from wiki_collectible_match import MATCH_VERSION, MapMatcher
 
@@ -27,6 +29,7 @@ TREE_URL = BASE + '/v1/entry/getEntryTreeById?id=183583'
 
 
 def write_json(path, value):
+    """先写临时文件再替换缓存或进度，避免中断留下无法读取的半份 JSON。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix('.tmp')
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -34,10 +37,12 @@ def write_json(path, value):
 
 
 def clean(text):
+    """统一 Wiki 文本中的空白、BOM 和字面换行转义，便于解析标题与表格。"""
     return re.sub(r'\s+', ' ', text.replace('\ufeff', '').replace('\\r', ' ').replace('\\n', ' ')).strip()
 
 
 def public_url(url):
+    """把 Wiki 相对链接规范为 HTTPS 地址，并拒绝不属于 GameKee 子域的资源。"""
     result = urljoin(BASE + '/nikke/', url)
     parts = urlsplit(result)
     if parts.scheme != 'https' or not (parts.hostname or '').endswith('.gamekee.com'):
@@ -46,6 +51,7 @@ def public_url(url):
 
 
 def chapter_number(title):
+    """解析标题中的阿拉伯或中文章节数字，供普通与困难目录归并。"""
     found = re.search(r'第([一二三四五六七八九十百零〇\d]+)章', title)
     if not found:
         raise ValueError(f'Unrecognized chapter title: {title}')
@@ -60,12 +66,14 @@ def chapter_number(title):
 
 
 def walk(nodes):
+    """递归遍历兼容 children 和 child 字段的 Wiki 内容树。"""
     for node in nodes or []:
         yield node
         yield from walk(node.get('children') or node.get('child'))
 
 
 def parse_catalog(data):
+    """只提取普通和困难收集攻略，以章节及难度组成唯一键并拒绝重复目录。"""
     articles = []
     for category in walk(data):
         name = category.get('name', '')
@@ -85,6 +93,7 @@ def parse_catalog(data):
 
 
 def parse_article(document):
+    """兼容 JSON 表格、HTML 表格及早期标题图片组，保留每件物品的原始图片角色。"""
     content = document.get('content', '')
     rows = []
     assets = []
@@ -106,6 +115,7 @@ def parse_article(document):
         soup = BeautifulSoup(content, 'html.parser')
 
         def images(element):
+            """优先读取原图 data-real 地址，避免把占位图或缩略图当成配准输入。"""
             return [public_url(img.get('data-real') or img.get('src')) for img in element.select('img')
                     if img.get('data-real') or img.get('src')]
 
@@ -164,6 +174,7 @@ def parse_article(document):
 
 class WikiClient:
     def __init__(self, cache, offline=False, refresh=False, retries=2):
+        """初始化缓存、会话和有限重试参数，浏览器仅在服务器要求时按需启动。"""
         self.cache = Path(cache)
         self.cache.mkdir(parents=True, exist_ok=True)
         self.offline, self.refresh, self.retries = offline, refresh, retries
@@ -174,6 +185,7 @@ class WikiClient:
         self.playwright = self.browser = self.page = None
 
     def browser_get(self, url):
+        """用无头 Edge 加载公开 Wiki 页面并读取目标响应，处理直接请求被站点拒绝的情况。"""
         if self.page is None:
             from playwright.sync_api import sync_playwright
             self.playwright = sync_playwright().start()
@@ -198,6 +210,7 @@ class WikiClient:
         return response.body()
 
     def get(self, url, path, image=False):
+        """优先验证已有缓存，缺失时下载并原子保存；离线模式不发网络请求。"""
         path = Path(path)
         if path.exists() and (self.offline or not self.refresh):
             body = path.read_bytes()
@@ -237,6 +250,7 @@ class WikiClient:
 
     @staticmethod
     def validate(body, image):
+        """检查响应能否解码为图片或有效 JSON，避免缓存错误页及 API 错误结果。"""
         if image:
             if cv2.imdecode(np.frombuffer(body, np.uint8), cv2.IMREAD_COLOR) is None:
                 raise ValueError('Response is not a decodable image.')
@@ -246,12 +260,14 @@ class WikiClient:
                 raise ValueError(f"Wiki API failed: {document.get('msg')}")
 
     def api(self, url, path):
+        """读取 API 包装并检查成功码，只向调用方返回实际 data 内容。"""
         payload = json.loads(self.get(url, path))
         if payload.get('code') != 0:
             raise ValueError(f'Wiki API failed: {payload.get("msg")}')
         return payload['data']
 
     def close(self):
+        """释放浏览器、Playwright 和 HTTP 会话，避免批次结束后残留连接。"""
         try:
             if self.browser is not None:
                 self.browser.close()
@@ -262,6 +278,7 @@ class WikiClient:
 
 
 def find_package(roots, chapter):
+    """按用户给定根目录优先级查找同章地图，单个根内多包冲突时要求明确选择。"""
     for root in roots:
         matches = []
         for path in sorted(root.rglob('map.json')):
@@ -281,6 +298,7 @@ def find_package(roots, chapter):
 
 
 def save_annotations(package, article, matches, update=False):
+    """用稳定来源 ID 增量合并标注；默认保留已有坐标，写入前复核底图哈希与版本。"""
     store = AnnotationStore(package.parent)
     loaded = store.load(package.name)
     document = copy.deepcopy(loaded['annotations'])
@@ -331,6 +349,7 @@ def save_annotations(package, article, matches, update=False):
 
 
 def process_article(client, article, roots, options, matchers):
+    """下载单篇攻略、逐图配准并比较同物品坐标一致性，保存待复核结果及标注回执。"""
     folder = client.cache / f"chapter_{article['chapter']:02d}" / article['difficulty']
     folder.mkdir(parents=True, exist_ok=True)
     detail = client.api(f"{BASE}/v1/content/detail/{article['article_id']}", folder / 'detail.json')
@@ -409,6 +428,7 @@ def process_article(client, article, roots, options, matchers):
 
 
 def main(argv=None):
+    """按章节和难度批量执行缓存、配准和导入，逐篇隔离失败并持久化进度与取消状态。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--maps-root', type=Path, action='append', help='Collection roots in priority order.')
     parser.add_argument('--cache', type=Path, default=Path('data/wiki_collectibles'))
@@ -425,7 +445,7 @@ def main(argv=None):
     options = parser.parse_args(argv)
     if options.retries < 0 or (options.chapters and min(options.chapters) < 1):
         parser.error('Retries must be nonnegative; chapter numbers must be positive.')
-    roots = [p.resolve() for p in (options.maps_root or [Path('data/chapter_maps')])]
+    roots = [p.resolve() for p in (options.maps_root or [DEFAULT_MAPS_ROOT])]
     cv2.setNumThreads(2)
     client = WikiClient(options.cache.resolve(), options.offline, options.refresh, options.retries)
     results = []

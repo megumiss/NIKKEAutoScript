@@ -18,9 +18,16 @@ from urllib.parse import parse_qs, urlsplit
 
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parents[1]
+if __package__:
+    from .map_paths import DEFAULT_MAPS_ROOT
+    from .map_movement import MovementJobs
+else:
+    from map_paths import DEFAULT_MAPS_ROOT
+    from map_movement import MovementJobs
+
 UI = Path(__file__).with_suffix('')
 COORDINATES = {'unit': 'pixel', 'origin': 'top_left', 'x': 'right', 'y': 'down'}
+CATEGORIES = {'normal_collectible', 'hard_collectible', 'ground_mechanism', 'ground_elevator', 'elevator_connection'}
 
 
 class ConflictError(ValueError):
@@ -28,10 +35,12 @@ class ConflictError(ValueError):
 
 
 def digest(content):
+    """计算内容的 SHA-256，同时用于图片绑定和标注乐观并发版本。"""
     return hashlib.sha256(content).hexdigest()
 
 
 def validate_annotations(document, image_hash, size):
+    """校验原图坐标、几何顶点、唯一 ID 与连接引用，防止错图、越界或悬空连接入库。"""
     if not isinstance(document, dict) or document.get('schema_version') != 1:
         raise ValueError('不支持的标注格式，需要 schema_version = 1。')
     if document.get('image') != 'map.png' or document.get('image_sha256') != image_hash:
@@ -58,8 +67,16 @@ def validate_annotations(document, image_hash, size):
                 raise ValueError(f'{identifier} 的 {field} 必须是长度不超过 {limit} 的文字。')
         if 'color' in item and not re.fullmatch(r'#[0-9a-fA-F]{6}', str(item['color'])):
             raise ValueError(f'{identifier} 的颜色必须为 #RRGGBB。')
-    object_ids = {item['id'] for item in objects}
+        if 'category' in item and (not isinstance(item['category'], str) or item['category'] not in CATEGORIES):
+            raise ValueError(f'{identifier} 的标注类型无效。')
+    objects_by_id = {item['id']: item for item in objects}
     for item in objects:
+        category = item.get('category')
+        if category == 'elevator_connection':
+            raise ValueError('电梯传送关系必须保存为连接。')
+        if category in ('normal_collectible', 'hard_collectible'):
+            if item.get('difficulty') != category.removesuffix('_collectible'):
+                raise ValueError(f'{item["id"]} 的收集品类型与难度不一致。')
         kind, points = item.get('type'), item.get('points')
         minimum = {'point': 1, 'polyline': 2, 'polygon': 3}.get(kind)
         if minimum is None or not isinstance(points, list) or not minimum <= len(points) <= 10000:
@@ -76,26 +93,34 @@ def validate_annotations(document, image_hash, size):
         if len({tuple(point) for point in points}) < minimum:
             raise ValueError(f'{item["id"]} 需要至少 {minimum} 个不同的顶点。')
     for item in connections:
-        if item.get('from') not in object_ids or item.get('to') not in object_ids:
+        if item.get('from') not in objects_by_id or item.get('to') not in objects_by_id:
             raise ValueError(f'{item["id"]} 引用了不存在的对象。')
         if item['from'] == item['to'] or not isinstance(item.get('directed'), bool):
             raise ValueError(f'{item["id"]} 的连接端点或方向无效。')
+        if 'category' in item:
+            if item['category'] != 'elevator_connection':
+                raise ValueError('连接的标注类型必须是电梯传送关系。')
+            if any(objects_by_id[item[end]].get('category') != 'ground_elevator' for end in ('from', 'to')):
+                raise ValueError('传送关系只能连接两部地面电梯。')
 
 
 class AnnotationStore:
     def __init__(self, root):
+        """固定允许访问的地图根目录，并用可重入锁保护同进程读写。"""
         self.root = Path(root).resolve()
         if not self.root.is_dir():
             raise ValueError(f'地图目录不存在：{self.root}')
         self.lock = threading.RLock()
 
     def package(self, identifier):
+        """解析地图标识并验证实际路径仍在根目录内，拒绝越界或非地图目录。"""
         path = (self.root / identifier).resolve()
         if not path.is_relative_to(self.root) or not (path / 'map.json').is_file():
             raise ValueError('地图包不在指定目录内，或缺少 map.json。')
         return path
 
     def catalog(self):
+        """枚举可读地图元数据，忽略损坏记录并按修改时间返回可选地图。"""
         maps = []
         for path in sorted(self.root.rglob('map.json'), key=lambda p: p.stat().st_mtime, reverse=True):
             if not path.resolve().is_relative_to(self.root):
@@ -112,6 +137,7 @@ class AnnotationStore:
         return maps
 
     def metadata(self, package):
+        """核对底图文件的实际尺寸、哈希和坐标约定，实拍图必须能共用相同像素坐标。"""
         metadata = json.loads((package / 'map.json').read_text(encoding='utf-8'))
         if not isinstance(metadata, dict):
             raise ValueError('map.json 必须是包含图像尺寸和哈希的对象。')
@@ -130,6 +156,7 @@ class AnnotationStore:
         return metadata, image_hash, size, reference
 
     def load(self, identifier):
+        """在锁内读取并校验标注，缺省创建空文档，同时返回磁盘内容摘要作为版本。"""
         with self.lock:
             package = self.package(identifier)
             metadata, image_hash, size, reference = self.metadata(package)
@@ -146,6 +173,7 @@ class AnnotationStore:
                         'whole_camera_domain_verified', False)}
 
     def save(self, identifier, document, revision):
+        """校验请求版本后备份旧标注，以同目录临时文件和原子替换提交新内容。"""
         with self.lock:
             package = self.package(identifier)
             _, image_hash, size, _ = self.metadata(package)
@@ -175,11 +203,14 @@ class AnnotationStore:
             return {'revision': digest(content), 'path': str(path), 'backup': str(backup) if backup else None}
 
 
-def make_server(store, port=8766, initial=None):
+def make_server(store, port=8766, initial=None, movement=None):
+    """建立仅监听本机的服务；保存和移动请求共用会话令牌，设备在子进程中执行。"""
     token = secrets.token_urlsafe(32)
+    movement = movement or MovementJobs(store)
 
     class Handler(BaseHTTPRequestHandler):
         def send(self, content, content_type='application/json; charset=utf-8', status=200):
+            """统一发送 JSON 或静态资源，设置长度、禁缓存和页面资源策略。"""
             if not isinstance(content, bytes):
                 content = json.dumps(content, ensure_ascii=False).encode('utf-8')
             self.send_response(status)
@@ -193,9 +224,11 @@ def make_server(store, port=8766, initial=None):
             self.wfile.write(content)
 
         def allowed_host(self):
+            """只接受当前本机服务的 Host，避免其他来源借用本地标注接口。"""
             return self.headers.get('Host') == f'127.0.0.1:{self.server.server_port}'
 
         def do_GET(self):
+            """提供编辑器、地图列表、标注和白名单图片，将版本冲突与输入错误区分返回。"""
             if not self.allowed_host():
                 return self.send({'error': '不允许的访问来源。'}, status=403)
             request = urlsplit(self.path)
@@ -203,6 +236,7 @@ def make_server(store, port=8766, initial=None):
             try:
                 assets = {'/': ('index.html', 'text/html; charset=utf-8'),
                           '/editor.js': ('editor.js', 'text/javascript; charset=utf-8'),
+                          '/movement.js': ('movement.js', 'text/javascript; charset=utf-8'),
                           '/editor.css': ('editor.css', 'text/css; charset=utf-8')}
                 if request.path in assets:
                     name, mime = assets[request.path]
@@ -210,6 +244,10 @@ def make_server(store, port=8766, initial=None):
                 if request.path == '/api/maps':
                     return self.send({'maps': store.catalog(), 'root': str(store.root),
                                       'token': token, 'initial': initial})
+                if request.path == '/api/movement':
+                    return self.send(movement.status())
+                if request.path == '/api/movement/preview':
+                    return self.send(movement.preview(params.get('job', [''])[0]), 'image/jpeg')
                 identifier = params.get('map', [''])[0]
                 if request.path == '/api/map':
                     return self.send(store.load(identifier))
@@ -225,16 +263,23 @@ def make_server(store, port=8766, initial=None):
                 self.send({'error': str(exc)}, status=400)
 
         def do_POST(self):
+            """校验会话令牌、路径及请求大小，再执行带版本检查的标注保存。"""
             if not self.allowed_host() or self.headers.get('X-Annotation-Token') != token:
                 return self.send({'error': '页面会话已失效，请刷新后重试。'}, status=403)
-            if urlsplit(self.path).path != '/api/save':
+            endpoint = urlsplit(self.path).path
+            if endpoint not in ('/api/save', '/api/movement/start', '/api/movement/stop'):
                 return self.send({'error': '未找到资源。'}, status=404)
             try:
                 length = int(self.headers.get('Content-Length', '0'))
                 if not 0 < length <= 10_000_000:
                     raise ValueError('标注文件不能为空，也不能超过 10 MB。')
                 payload = json.loads(self.rfile.read(length))
-                result = store.save(payload['id'], payload['annotations'], payload['revision'])
+                if endpoint == '/api/movement/start':
+                    result = movement.start(payload)
+                elif endpoint == '/api/movement/stop':
+                    result = movement.stop(payload['job'])
+                else:
+                    result = store.save(payload['id'], payload['annotations'], payload['revision'])
                 self.send(result)
             except ConflictError as exc:
                 self.send({'error': str(exc)}, status=409)
@@ -242,13 +287,23 @@ def make_server(store, port=8766, initial=None):
                 self.send({'error': str(exc)}, status=400)
 
         def log_message(self, fmt, *args):
+            """只记录非成功响应，减少静态图片与轮询产生的重复日志。"""
             if len(args) > 1 and str(args[1]) not in ('200', '304'):
                 super().log_message(fmt, *args)
 
-    return ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    class Server(ThreadingHTTPServer):
+        def server_close(self):
+            """服务退出也必须停止本服务持有的移动进程。"""
+            try:
+                movement.close()
+            finally:
+                super().server_close()
+
+    return Server(('127.0.0.1', port), Handler)
 
 
 def main():
+    """选择地图根目录和初始地图，启动独立编辑器并在退出时关闭服务器。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, help='Root containing chapter map packages; searched recursively.')
     parser.add_argument('--map', type=Path, help='Chapter directory containing map.png and map.json to open first.')
@@ -256,7 +311,7 @@ def main():
     parser.add_argument('--no-open', action='store_true', help='Do not open the browser automatically.')
     args = parser.parse_args()
     selected = args.map.resolve() if args.map else None
-    root = args.root or (selected.parent if selected else ROOT / 'data' / 'chapter_maps')
+    root = args.root or (selected.parent if selected else DEFAULT_MAPS_ROOT)
     store = AnnotationStore(root)
     initial = None
     if selected:

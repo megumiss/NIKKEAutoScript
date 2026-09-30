@@ -42,6 +42,43 @@ class MapFixture:
 
 
 class AnnotationTests(MapFixture, unittest.TestCase):
+    def test_categories_and_elevator_connections_roundtrip(self):
+        loaded = self.document()
+        document = loaded['annotations']
+        document['objects'] = [
+            {'id': 'normal', 'type': 'point', 'category': 'normal_collectible',
+             'difficulty': 'normal', 'points': [[20, 30]], 'label': '普通收集品'},
+            {'id': 'hard', 'type': 'point', 'category': 'hard_collectible',
+             'difficulty': 'hard', 'points': [[20, 30]], 'label': '困难收集品'},
+            {'id': 'switch', 'type': 'polygon', 'category': 'ground_mechanism',
+             'points': [[40, 40], [60, 40], [60, 60]]},
+            {'id': 'a', 'type': 'point', 'category': 'ground_elevator', 'points': [[70, 80]]},
+            {'id': 'b', 'type': 'point', 'category': 'ground_elevator', 'points': [[90, 80]]},
+        ]
+        document['connections'][0]['category'] = 'elevator_connection'
+        self.store.save('chapter_01', document, loaded['revision'])
+        self.assertEqual(self.store.load('chapter_01')['annotations'], document)
+
+    def test_invalid_categories_difficulty_and_elevator_endpoints_are_rejected(self):
+        original = self.document()['annotations']
+        invalid = []
+        for category in ['unknown', 'elevator_connection', None, []]:
+            document = copy.deepcopy(original)
+            document['objects'][0]['category'] = category
+            invalid.append(document)
+        for difficulty in [None, 'hard']:
+            document = copy.deepcopy(original)
+            document['objects'][0].update(category='normal_collectible', difficulty=difficulty)
+            invalid.append(document)
+        for category in ['ground_mechanism', 'elevator_connection']:
+            document = copy.deepcopy(original)
+            document['connections'][0]['category'] = category
+            document['objects'][0]['category'] = 'ground_elevator'
+            invalid.append(document)
+        for document in invalid:
+            with self.subTest(document=document), self.assertRaises(ValueError):
+                validate_annotations(document, self.image_hash, [320, 200])
+
     def test_roundtrip_all_types_preserves_source_and_additional_fields(self):
         loaded = self.document()
         loaded['annotations']['objects'][0]['note'] = '战斗后开放'
@@ -165,6 +202,22 @@ class HTTPTests(MapFixture, unittest.TestCase):
         with self.assertRaises(HTTPError) as error:
             self.request('/api/image?map=chapter_01&image=../map.json')
         self.assertEqual(error.exception.code, 400)
+
+    def test_movement_endpoints_require_token_and_forward_target_without_scaling(self):
+        catalog = json.loads(self.request('/api/maps'))
+        self.assertEqual(json.loads(self.request('/api/movement'))['state'], 'idle')
+        self.assertIn(b'createMovementController', self.request('/movement.js'))
+        payload = {'id': 'chapter_01', 'target': [37.25, 85.5], 'difficulty': 'normal'}
+        with patch('dev_tools.map_annotator.MovementJobs.start', return_value={'id': 'job'}) as start:
+            with self.assertRaises(HTTPError) as error:
+                self.request('/api/movement/start', payload)
+            self.assertEqual(error.exception.code, 403)
+            start.assert_not_called()
+            self.assertEqual(json.loads(self.request('/api/movement/start', payload, catalog['token'])), {'id': 'job'})
+            start.assert_called_once_with(payload)
+        with patch('dev_tools.map_annotator.MovementJobs.stop', return_value={'state': 'stopping'}) as stop:
+            self.request('/api/movement/stop', {'job': 'job'}, catalog['token'])
+            stop.assert_called_once_with('job')
 
 
 if __name__ == '__main__':

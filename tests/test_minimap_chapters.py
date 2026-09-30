@@ -67,6 +67,19 @@ class BatchCaptureTests(unittest.TestCase):
             self.assertEqual(run_batch(self.options, None), 0)
         capture.assert_not_called()
 
+    def test_shorter_strokes_and_denser_keyframes_reach_each_capture(self):
+        """批量入口必须把用户的短拖动和关键帧间距传入每章扫描器。"""
+        self.options.stroke_px = 120.0
+        self.options.keyframe_px = 40.0
+        with patch('dev_tools.minimap_chapters.capture_chapter') as capture, patch(
+                'dev_tools.minimap_chapters.finish_scan', return_value=self.summary), patch(
+                'dev_tools.minimap_chapters.move_to_previous'):
+            self.assertEqual(run_batch(self.options, None), 0)
+        self.assertEqual(capture.call_count, 3)
+        for call in capture.call_args_list:
+            self.assertEqual(call.args[0].stroke_px, 120.0)
+            self.assertEqual(call.args[0].keyframe_px, 40.0)
+
     def test_interrupted_scan_can_finish_export_without_recapture(self):
         source = self.root / 'chapter_03/source'
         source.mkdir(parents=True)
@@ -77,7 +90,8 @@ class BatchCaptureTests(unittest.TestCase):
             self.assertEqual(run_batch(self.options, None), 0)
         capture.assert_not_called()
 
-    def test_driver_released_even_if_failure_save_and_minimize_both_fail(self):
+    def test_failure_save_releases_without_cleanup_clicks(self):
+        """采集及写盘同时失败时保留原始异常，不在清理阶段补发最小化点击。"""
         window = Mock()
         window.reset_minimap.side_effect = [None, None, RuntimeError('Cannot minimize')]
         scanner = Mock()
@@ -88,8 +102,9 @@ class BatchCaptureTests(unittest.TestCase):
         with patch('dev_tools.minimap_chapters.DriverWindow', return_value=window), patch(
                 'dev_tools.minimap_chapters.DriftScanner', return_value=scanner), patch(
                 'dev_tools.minimap_chapters.wait_for_chapter'):
-            with self.assertRaisesRegex(RuntimeError, 'Cannot minimize'):
+            with self.assertRaisesRegex(RuntimeError, 'Tracking lost'):
                 capture_chapter(args, 3, None, self.root / 'STOP')
+        self.assertEqual(window.reset_minimap.call_count, 2)
         window.close.assert_called_once()
 
     def test_incomplete_old_scan_does_not_consume_capture_budget(self):
