@@ -14,7 +14,11 @@ from .surface_motion import contains, fit_calibration, project, register_surface
 
 
 def track_localization(localizer, reference, report, current, point=None):
-    """短距离跟踪始终回到已通过全局定位的实拍帧，不累积逐步位移误差。"""
+    """短距离跟踪始终回到已通过全局定位的实拍帧，不累积逐步位移误差。
+
+    reference/report 必须属于已验证的固定参考，current 是新 ROI；未传 point 时要求唯一小队圆环。
+    比较多个局部道路范围的留出验证和坐标一致性，返回保留来源身份的新报告；支持不足或分歧超过 3px 时拒绝。
+    """
     from dev_tools.minimap_reconstruct import detect_markers
     if point is None:
         players, _ = detect_markers(current, np.eye(3))
@@ -53,12 +57,20 @@ def track_localization(localizer, reference, report, current, point=None):
 
 
 def binding(localizer, difficulty):
+    """返回底图、道路修订、几何、章节和难度组成的缓存身份字典。
+
+    同一字典用于保存和加载参考帧及标定，防止把不同版本道路上的证据混用。
+    """
     return dict(image_sha256=localizer.digest, edits_sha256=localizer.edits_digest,
                 geometry_sha256=localizer.cache_digest, chapter=localizer.metadata['chapter'], difficulty=difficulty)
 
 
 def recover_localization(localizer, references, current):
-    """仅用直接通过固定参考定位的实拍帧交叉恢复，不再把恢复结果作为下一跳参考。"""
+    """用直接通过固定参考定位的实拍帧交叉恢复，禁止恢复结果作为下一跳参考。
+
+    最多使用最近三组直接参考跟踪证据，至少两组恢复成功且位置差不超过 6px。
+    返回带交叉恢复标记的报告；恢复报告不应成为后续参考，以限制多跳配准漂移。
+    """
     candidates = []
     for image, report in references[-3:]:
         try:
@@ -76,6 +88,10 @@ def recover_localization(localizer, references, current):
 
 
 def save_live_references(cache, localizer, difficulty, references):
+    """只保留 accepted、参考深度不超过一层且非交叉恢复的最近三组图像与报告。
+
+    图片写入后将哈希和绑定信息通过临时 JSON 原子发布；不合格参考不会写入复用记录。
+    """
     cache = Path(cache)
     cache.mkdir(parents=True, exist_ok=True)
     direct = [(image, report) for image, report in references
@@ -92,6 +108,10 @@ def save_live_references(cache, localizer, difficulty, references):
 
 
 def load_live_references(cache, localizer, difficulty):
+    """逐个检查最多三个缓存槽的地图绑定、图片哈希、定位状态和参考深度。
+
+    缺失、损坏或不合格记录被跳过，返回解码成功的图像／报告列表，空列表由恢复逻辑决定是否失败。
+    """
     references = []
     for index in range(3):
         path = Path(cache) / f'live_{index}.json'
@@ -115,6 +135,10 @@ def load_live_references(cache, localizer, difficulty):
 
 
 def load_calibration(package, localizer, difficulty):
+    """从 movement_calibration/<difficulty> 读取 local_displacement 标定及参考图。
+
+    校验地图版本、参考图和道路掩码哈希后返回数据与 BGR 图；缺失或不匹配时抛错，不能静默复用。
+    """
     path = Path(package) / 'movement_calibration' / difficulty
     metadata = path / 'calibration.json'
     if not metadata.exists():
@@ -132,7 +156,11 @@ def load_calibration(package, localizer, difficulty):
 
 
 def run_movement(session):
-    """显式采集或按需自动标定，验证保存成功后才进入原移动闭环。"""
+    """根据请求选择标定采集或复用，验证成功后进入导航闭环。
+
+    action=calibrate 时直接采样；移动请求先加载标定，只有显式 auto_calibrate 才允许缺失后采集。
+    成功加载后以 20 地图像素、连续两次近点观测调用 navigate；采集失败不会进入移动循环。
+    """
     from .manual_move import navigate
     request = session.request
     if request.get('action') == 'calibrate':
@@ -155,6 +183,10 @@ def run_movement(session):
 
 
 def surface_mask(localizer, observation):
+    """从观测引用的原始帧和局部高度标签投影到地图，再与修订道路求交。
+
+    返回包含小队的连通区域二值掩码；小队不在有效表面内时抛错，不能用相邻层补足道路。
+    """
     frame, label = observation['reference_frame'], observation['local_surface']
     ref = localizer.references[frame]
     plane = localizer.metadata['frame_support'][frame]['local_planes'][label]
@@ -170,6 +202,10 @@ def surface_mask(localizer, observation):
 
 
 def checked_segment(road, start, end):
+    """沿 start 到 end 按约一地图像素间距采样并检查二值道路掩码。
+
+    无返回值；越界或任何采样点无道路都抛出 ValueError，用于阻止直线跨空洞和擦除区。
+    """
     points = np.rint(np.linspace(start, end, max(2, int(np.linalg.norm(np.asarray(end) - start)) + 1))).astype(int)
     if (np.any(points < 0) or np.any(points >= road.shape[::-1])
             or not np.all(road[points[:, 1], points[:, 0]])):
@@ -177,7 +213,11 @@ def checked_segment(road, start, end):
 
 
 def calibrate(session):
-    """采集九个实际停靠点，六点拟合、三点验证；失败保留日志而不发布标定。"""
+    """采集九个实际停靠点，六点拟合、三点验证；失败保留日志而不发布标定。
+
+    每个样本先直接采样箭头，再执行客户区短偏移，停稳后以真实地图位移构造样本对。
+    仅在原同层道路内且净空足够时采集九点，逐次保存证据；六点训练、三点验证通过后才发布标定。
+    """
     from . import goto
     from .movement_feedback import resolve_anchor
     observation = session.observe()
@@ -230,7 +270,11 @@ def calibrate(session):
 
 
 def publish_calibration(session, reference, origin, supported, samples, evidence, locations):
-    """按地图到点容差验证实测位移；场景像素只作诊断，避免混用两种坐标单位。"""
+    """按地图到点容差验证实测位移；场景像素只作诊断，避免混用两种坐标单位。
+
+    samples 的第一项是地图位移，第二项是客户区点击偏移；按地图误差 8/12px 验证拟合与留出样本。
+    检查固定偏移后绑定版本和道路证据，备份已有标定，再写图像与原子 JSON；返回 calibrated 状态和验证误差。
+    """
     calibration = fit_calibration(samples[:6], samples[6:], map_error_limits=(8, 12))
     if np.linalg.norm(np.asarray(calibration['matrix'])[:2, 2]) > 8:
         raise ValueError('标定出现过大的固定偏移，可能受到障碍或定位偏差影响。')
@@ -264,13 +308,17 @@ def publish_calibration(session, reference, origin, supported, samples, evidence
 
 class ParallaxSessionMixin:
     def observe(self):
+        """优先用固定实拍参考跟踪，再尝试独立实拍交叉恢复及原始帧全局定位。
+
+        唯一小队标记最多重试六次；缓存必须通过绑定与图片哈希校验，最终结果统一经 finish_observation 检查。
+        """
         from . import goto
         self.check()
         if self.win is None:
             self.win = runtime.Window()
             self.win.focus()
         self.identity(goto.capture_client(self.win))
-        goto.map_open(self.win)
+        goto.map_open(self.win, reset=True)
         from dev_tools.minimap_reconstruct import detect_markers
         for attempt in range(6):
             image = self.win.capture()
@@ -291,8 +339,12 @@ class ParallaxSessionMixin:
                 self.live_references = [*getattr(self, 'live_references', []), (image.copy(), report)][-3:]
                 save_live_references(cache, self.localizer, self.request['difficulty'], self.live_references)
             except ValueError:
-                report = recover_localization(self.localizer, getattr(self, 'live_references', []), image)
-            return self.finish_observation(image, report)
+                try:
+                    report = recover_localization(self.localizer, getattr(self, 'live_references', []), image)
+                except ValueError:
+                    report = None
+            if report is not None:
+                return self.finish_observation(image, report)
         report = self.localizer.locate_squad(image, self.folder / f'localization_{self.index:03}.jpg')
         (self.folder / f'global_localization_{self.index:03}.json').write_text(json.dumps(report), encoding='utf-8')
         if report['status'] == 'accepted':
@@ -322,6 +374,10 @@ class ParallaxSessionMixin:
         return self.finish_observation(image, report)
 
     def finish_observation(self, image, report):
+        """保存定位 JSON 后确认 status=accepted，并比较定位期间的新旧道路掩码。
+
+        变化超过 3% 时抛错；否则附加普通敌人坐标并返回报告，避免把陈旧位置交给规划器。
+        """
         from . import goto
         (self.folder / f'localization_{self.index:03}.json').write_text(json.dumps(report), encoding='utf-8')
         if report['status'] != 'accepted':
@@ -332,8 +388,11 @@ class ParallaxSessionMixin:
         return report
 
     def plan(self, observation, target):
-        from . import goto
-        from .movement_feedback import resolve_anchor
+        """检查目标仍在标定附近及同层连续道路内，并核对保存的道路掩码哈希。
+
+        超出实测位移凸包时按比例缩短至可支持落点，再调用镜头规划器；不能将局部标定外推到整章。
+        """
+        from .camera_navigation import plan_world_move
         data, _ = self.calibration
         position = np.asarray(observation['position'], float)
         if np.linalg.norm(np.asarray(target) - data['origin']) > data['radius']:
@@ -346,11 +405,6 @@ class ParallaxSessionMixin:
             raise ValueError('标定道路掩码发生变化。')
         mask = (cv2.imread(str(path), cv2.IMREAD_GRAYSCALE) > 0).astype(np.uint8) & self.localizer.road
         checked_segment(mask, observation['position'], target)
-        goto.map_close(self.win)
-        field = goto.capture_client(self.win)
-        self.identity(field)
-        self.check_collectible(field)
-        self.preview(field)
         delta = np.asarray(target) - position
         for _ in range(8):
             if contains(data['support'], delta):
@@ -358,9 +412,5 @@ class ParallaxSessionMixin:
             delta *= .75
         else:
             raise ValueError('移动方向不在实测位移范围内。')
-        if not hasattr(self, 'anchor_reference') and data.get('origin_anchor'):
-            self.anchor_reference = (self.calibration[1], np.asarray(data['origin_anchor']), np.asarray(data['origin']))
-        click = resolve_anchor(self, field, observation) + project(data['matrix'], delta)
-        if not (250 <= click[0] <= 1500 and 180 <= click[1] <= 880):
-            raise ValueError('目标超出有效场景点击区域。')
-        return click
+        self.emit(road_remaining=float(np.linalg.norm(np.asarray(target) - position)))
+        return plan_world_move(self, observation, position + delta, calibration=data, surface=mask)

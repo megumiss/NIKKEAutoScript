@@ -12,7 +12,11 @@ from .map_package import MapPackage
 
 @runtime.command
 def main():
-    """在临时目录绑定文件哈希和标定，质量校验通过后才发布新目录。"""
+    """在临时目录绑定文件哈希和标定，质量校验通过后才发布新目录。
+
+    从 --source 导入静态地图至尚不存在的 --destination，写入标定和逐文件哈希清单。
+    先在临时目录执行 MapPackage 验证，再发布目标目录；已有目的目录拒绝覆盖，避免混合不同坐标版本。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--destination', type=Path, required=True)

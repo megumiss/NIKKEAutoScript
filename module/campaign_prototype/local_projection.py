@@ -4,7 +4,11 @@ import numpy as np
 
 
 def frame_plane_to_map(metadata, frame, plane):
-    """将仿射视差平面严格展开为 ROI→map 单应，不重新拟合全局坐标。"""
+    """将仿射视差平面严格展开为 ROI→map 单应，不重新拟合全局坐标。
+
+    读取指定原始帧的相机、视差平面及全局旋转／原点，构造精确的 3×3 单应。
+    返回归一化 ROI→map 矩阵，保留坡度和共享画布；退化或非有限结果抛错。
+    """
     coefficients = np.asarray(plane['ratio_plane'], float)
     slope = coefficients[:2] / plane['coordinate_scale']
     offset = coefficients[2] - slope @ np.asarray(plane['center'])
@@ -24,7 +28,11 @@ def frame_plane_to_map(metadata, frame, plane):
 
 
 def compose_registration(roi_to_map, query_to_roi):
-    """截图先配准到原始帧，再进入绘制使用的同一局部变换。"""
+    """截图先配准到原始帧，再进入绘制使用的同一局部变换。
+
+    roi_to_map 作用在原始帧，query_to_roi 把查询截图配准到该帧，按此顺序左乘。
+    返回归一化查询图→map 单应；矩阵形状、有限性或可逆性不合格时抛出 ValueError。
+    """
     result = np.asarray(roi_to_map, float) @ np.asarray(query_to_roi, float)
     if result.shape != (3, 3) or not np.isfinite(result).all() or abs(np.linalg.det(result)) < 1e-12:
         raise ValueError('Invalid local registration')

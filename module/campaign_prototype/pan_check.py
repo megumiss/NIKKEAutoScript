@@ -12,7 +12,11 @@ from .map_package import MapPackage
 
 @runtime.command
 def main():
-    """在展开面板内拖动一次并记录前后视野，验证小地图平移与主场景镜头的区别。"""
+    """在展开面板内拖动一次并记录前后视野，验证小地图平移与主场景镜头的区别。
+
+    在展开的小地图面板内执行指定拖动，并比较拖动前后的配准观测。
+    保存图像和位置变化用于确认面板平移行为；窗口与鼠标在 finally 中释放，结果不表示小队已移动。
+    """
     p = argparse.ArgumentParser()
     p.add_argument('--tag', required=True)
     p.add_argument('--dx', type=float, required=True)

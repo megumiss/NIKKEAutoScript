@@ -11,7 +11,11 @@ import numpy as np
 
 @runtime.command
 def main():
-    """对 Wiki 场景与现场图做 SIFT/RANSAC 配准，生成待人工复核的落点估计，不发送输入。"""
+    """对 Wiki 场景与现场图做 SIFT/RANSAC 配准，生成待人工复核的落点估计，不发送输入。
+
+    读取 Wiki 参考图和现场图，通过 SIFT 对应与 RANSAC 单应估计场景目标。
+    输出匹配叠图及落点证据供人工复核；特征配准不等同于道路可通行验证，入口不控制鼠标。
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--target', type=int, required=True)
     parser.add_argument('--tag', required=True)

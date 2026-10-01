@@ -29,6 +29,7 @@ class ClientSizeTests(unittest.TestCase):
         self.window.gui.GetWindowPlacement.return_value = (0, 1, (0, 0), (0, 0), (0, 0, 1800, 1100))
         self.window.gui.GetClientRect.return_value = (0, 0, 1766, 993)
         self.window.gui.GetWindowRect.return_value = (5389, 412, 7177, 1461)
+        self.window.gui.ClientToScreen.return_value = (5400, 457)
         self.api = Mock()
         self.api.GetMonitorInfo.return_value = {'Work': (3840, 0, 7680, 2088)}
         constants = SimpleNamespace(SW_RESTORE=9, SW_SHOWMAXIMIZED=3, MONITOR_DEFAULTTONEAREST=2,
@@ -58,6 +59,7 @@ class ClientSizeTests(unittest.TestCase):
         self.window.gui.IsIconic.return_value = True
         self.window.gui.GetClientRect.return_value = (0, 0, 1776, 999)
         self.window.gui.GetWindowRect.return_value = (7000, 1600, 8798, 2655)
+        self.window.gui.ClientToScreen.return_value = (7011, 1645)
         self.window.ensure_client_size()
         self.window.gui.ShowWindow.assert_called_once_with(1, 9)
         self.window.gui.SetWindowPos.assert_called_once_with(1, 0, 5882, 1033, 1798, 1055, 20)
@@ -75,6 +77,49 @@ class ClientSizeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'does not fit'):
             self.window.ensure_client_size()
         self.window.gui.SetWindowPos.assert_not_called()
+
+    def test_1080p_allows_bottom_border_overlap_while_keeping_client_visible(self):
+        for work_top in (0, 48):
+            with self.subTest(work_top=work_top):
+                self.api.GetMonitorInfo.return_value = {'Work': (3840, work_top, 5760, work_top + 1032)}
+                self.window.gui.GetClientRect.return_value = (0, 0, 1183, 664)
+                self.window.gui.GetWindowRect.return_value = (4337, 290, 5536, 993)
+                self.window.gui.ClientToScreen.return_value = (4345, 321)
+
+                def apply_size(hwnd, after, x, y, width, height, flags):
+                    self.window.gui.GetClientRect.return_value = (0, 0, width - 16, height - 39)
+                    self.window.gui.GetWindowRect.return_value = (x, y, x + width, y + height)
+                    self.window.gui.ClientToScreen.return_value = (x + 8, y + 31)
+
+                self.window.gui.SetWindowPos.side_effect = apply_size
+                self.window.ensure_client_size()
+                self.assertEqual(self.window.gui.GetClientRect.return_value, (0, 0, 1776, 999))
+                left, top, right, bottom = self.window.gui.GetWindowRect.return_value
+                _, client_y = self.window.gui.ClientToScreen.return_value
+                self.assertEqual(top, work_top)
+                self.assertGreaterEqual(left, 3840)
+                self.assertLessEqual(right, 5760)
+                self.assertEqual(client_y + 999, work_top + 1030)
+                self.assertEqual(bottom, work_top + 1038)
+
+    def test_1080p_accepts_existing_client_at_top_without_resizing(self):
+        self.api.GetMonitorInfo.return_value = {'Work': (3840, 0, 5760, 1032)}
+        self.window.gui.GetClientRect.return_value = (0, 0, 1776, 999)
+        self.window.gui.GetWindowRect.return_value = (3904, 0, 5696, 1038)
+        self.window.gui.ClientToScreen.return_value = (3912, 31)
+        self.window.ensure_client_size()
+        self.window.gui.SetWindowPos.assert_not_called()
+
+    def test_client_or_side_border_outside_work_area_still_stops(self):
+        self.window.gui.GetClientRect.return_value = (0, 0, 1776, 999)
+        self.window.gui.GetWindowRect.return_value = (3904, 0, 5696, 1038)
+        self.window.gui.ClientToScreen.return_value = (3912, 31)
+        for width, height in ((1920, 1029), (1791, 1032)):
+            with self.subTest(width=width, height=height):
+                self.api.GetMonitorInfo.return_value = {'Work': (3840, 0, 3840 + width, height)}
+                with self.assertRaisesRegex(RuntimeError, 'does not fit'):
+                    self.window.ensure_client_size()
+                self.window.gui.SetWindowPos.assert_not_called()
 
     def test_windows_permission_error_is_reported_without_retrying_input(self):
         self.window.gui.SetWindowPos.side_effect = OSError(5, 'Access denied')
@@ -280,7 +325,7 @@ class MinimapResetTests(unittest.TestCase):
         self.blank = np.zeros_like(self.blue)
         self.compact_panel = np.full((218, 208, 3), (30, 100, 160), np.uint8)
         self.closed_panel = np.zeros_like(self.compact_panel)
-        self.closed_panel[9:35, 12:31] = 240
+        cv2.circle(self.closed_panel, (22, 22), 10, (240, 240, 240), 2)
         self.compact_panel[:44, :44] = self.closed_panel[:44, :44]
         self.expanded_panel = np.zeros_like(self.compact_panel)
 
@@ -365,11 +410,39 @@ class MinimapResetTests(unittest.TestCase):
     def test_road_under_compact_icon_does_not_require_dark_background(self, grab, sleep):
         panel = self.compact_panel.copy()
         panel[:44, :44] = (30, 100, 160)
-        panel[9:35, 12:31] = 240
+        cv2.circle(panel, (22, 22), 10, (240, 240, 240), 2)
         grab.side_effect = [panel, self.expanded_panel]
         window = self.window([self.blank, self.blue])
         window.reset_minimap()
         window.handler.mouse_click.assert_called_once_with(142, 298)
+
+    @patch('dev_tools.minimap_reconstruct.time.monotonic', side_effect=[0, 0, 4, 4, 4])
+    @patch('dev_tools.minimap_reconstruct.time.sleep')
+    @patch('PIL.ImageGrab.grab')
+    def test_missed_minimize_retries_only_after_confirming_the_control(self, grab, sleep, monotonic):
+        grab.side_effect = [self.expanded_panel, self.expanded_panel,
+                            self.closed_panel[:44, :44], self.compact_panel]
+        window = self.window([self.blue, self.blue, self.blank])
+        window.reset_minimap(expanded=False, reset=False)
+        self.assertEqual([call.args for call in window.handler.mouse_click.call_args_list],
+                         [(758, 469), (758, 469)])
+
+    @patch('dev_tools.minimap_reconstruct.time.monotonic', side_effect=[0, 0, 4])
+    @patch('dev_tools.minimap_reconstruct.time.sleep')
+    @patch('PIL.ImageGrab.grab')
+    def test_changed_page_after_missed_toggle_never_receives_retry(self, grab, sleep, monotonic):
+        grab.side_effect = [self.expanded_panel, np.zeros_like(self.compact_panel)]
+        window = self.window([self.blue, self.blank])
+        with self.assertRaisesRegex(RuntimeError, 'observed unknown'):
+            window.reset_minimap(expanded=False)
+        window.handler.mouse_click.assert_called_once_with(758, 469)
+
+    def test_control_shape_survives_additional_bright_background(self):
+        icon = self.closed_panel[:44, :44].copy()
+        icon[:9] = 255
+        icon[-7:] = 255
+        self.assertTrue(DriverWindow.minimap_control_visible(icon))
+        self.assertFalse(DriverWindow.minimap_control_visible(np.full_like(icon, 255)))
 
 
 class MetricGridBoundsTests(unittest.TestCase):

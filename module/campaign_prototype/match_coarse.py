@@ -1,4 +1,4 @@
-"""Road correlation helpers migrated from the Wiki registration experiment."""
+"""Wiki 与现场定位共用的道路相关搜索、有效域掩码和候选投影。"""
 import cv2
 import numpy as np
 
@@ -7,7 +7,11 @@ PAD=180
 ROI=(25,96,243,307)
 
 def masks(image):
-    """从历史 Wiki 截图裁出紧凑地图，屏蔽控件、亮图标和圆环后返回道路及有效掩码。"""
+    """从历史 Wiki 截图裁出紧凑地图，屏蔽控件、亮图标和圆环后返回道路及有效掩码。
+
+    从参考截图取得小地图裁剪，排除边框、计数器和小队标记等非道路观测。
+    返回裁剪 BGR 图、道路及有效区域掩码；掩码使用裁剪后的 ROI 坐标，供相关匹配计算交并比。
+    """
     x,y,r,b=ROI
     im=image[y:b,x:r]
     hsv=cv2.cvtColor(im,cv2.COLOR_BGR2HSV)
@@ -24,7 +28,11 @@ def masks(image):
     return im,road,valid
 
 def template_matrix(projection,a,b,shape):
-    """将候选尺度与透视投影组合到粗搜索分辨率，并平移模板角点至正坐标。"""
+    """将候选尺度与透视投影组合到粗搜索分辨率，并平移模板角点至正坐标。
+
+    在基础 projection 上应用候选尺度 a 与透视参数 b，并包围变换后的图像角点。
+    返回平移到非负模板坐标的矩阵和画布大小，调用者需检查模板能否放入搜索图。
+    """
     h,w=shape
     T=np.array([[a,0,243-a*w/2],[0,a,231-a*h/2],[0,0,1.0]])
     matrix=np.diag([b*SCALE,b*SCALE,1.])@projection@T
@@ -34,7 +42,11 @@ def template_matrix(projection,a,b,shape):
     return matrix,tuple(size)
 
 def match(road,valid,matrix,size,target):
-    """计算粗搜索道路 IoU，屏蔽最佳峰附近后保留独立候选，供歧义门槛检查。"""
+    """计算粗搜索道路 IoU，屏蔽最佳峰附近后保留独立候选，供歧义门槛检查。
+
+    将 road/valid 按候选矩阵变换，在 target 上计算道路交并比峰值。
+    返回最佳位置、得分及抑制邻近峰后的竞争得分，供全局歧义判断；无有效模板支持时返回 None。
+    """
     r=cv2.warpPerspective(road,matrix,size,flags=cv2.INTER_AREA).astype(np.float32)/255
     v=cv2.warpPerspective(valid,matrix,size,flags=cv2.INTER_NEAREST).astype(np.float32)/255
     r*=v

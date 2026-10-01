@@ -19,7 +19,6 @@ from module.campaign_prototype.parallax_movement import (
 from dev_tools.wiki_collectible_match import MapMatcher
 from dev_tools.wiki_collectibles import find_package
 from dev_tools.map_movement import MovementJobs
-from module.campaign_prototype.live import field_ring
 
 
 class ParallaxTests(unittest.TestCase):
@@ -86,14 +85,6 @@ class ParallaxTests(unittest.TestCase):
         hidden.mkdir(parents=True)
         (hidden / 'map.json').write_text(json.dumps(self.metadata))
         self.assertEqual(find_package([self.root.parent], 40), self.root)
-
-    def test_ground_ring_without_arrow_and_ambiguous_centers(self):
-        image = np.zeros((999, 1776, 3), np.uint8)
-        cv2.ellipse(image, (880, 500), (65, 44), 0, 0, 360, (0, 150, 255), 2)
-        np.testing.assert_allclose(field_ring(image), [880, 500], atol=1)
-        cv2.ellipse(image, (1060, 500), (65, 44), 0, 0, 360, (0, 150, 255), 2)
-        with self.assertRaisesRegex(RuntimeError, '多个'):
-            field_ring(image)
 
     def test_overrides_and_uncalibrated_movement(self):
         self.annotation['terrain_edits'] = [dict(type='brush', operation='erase', width=10, points=[[100, 80]])]

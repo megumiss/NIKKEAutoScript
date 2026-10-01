@@ -14,7 +14,11 @@ from .surface_motion import contains, fit_registration, project
 
 class SurfaceLocalizer:
     def __init__(self, package):
-        """核对地图与分层缓存，参考特征只来自参与拼图的帧。"""
+        """核对地图与分层缓存，参考特征只来自参与拼图的帧。
+
+        加载 orthographic_surfaces 地图及对应原始缓存，验证底图哈希并建立表面几何。
+        参考特征仅从参与拼图的帧提取，避免把留出帧混入匹配证据；格式或绑定错误直接拒绝。
+        """
         self.path = Path(package)
         self.metadata = json.loads((self.path / 'map.json').read_text(encoding='utf-8'))
         meta = self.metadata
@@ -54,7 +58,11 @@ class SurfaceLocalizer:
             self.references.append((frame, points, identity, descriptors))
 
     def locate(self, image, point, valid=None, review=None):
-        """按各表面分别配准，同一目标落入多个候选时保留歧义，不套整图单应。"""
+        """按各表面分别配准，同一目标落入多个候选时保留歧义，不套整图单应。
+
+        对查询图中的 point 搜索各表面局部对应，valid 用于屏蔽不可用像素，review 可保存诊断叠图。
+        返回候选位置、表面身份和质量状态；存在多层歧义或几何未验收时保留 needs_review，不能据此驱动移动。
+        """
         if image is None or image.ndim != 3 or image.shape[2] != 3:
             raise ValueError('Expected a BGR minimap image')
         point = np.asarray(point, float)
@@ -149,7 +157,11 @@ class SurfaceLocalizer:
         return result
 
     def locate_squad(self, image, review=None):
-        """小队和 Wiki 圆环最终都进入 locate，区别只在截图布局和圆环检测。"""
+        """小队和 Wiki 圆环最终都进入 locate，区别只在截图布局和圆环检测。
+
+        识别唯一小队圆环后交由共享局部定位流程处理。
+        返回报告保留 ROI 小队坐标和定位质量；圆环缺失或多解抛错，不使用画面中心代替。
+        """
         players, _ = detect_markers(image, np.eye(3))
         if len(players) != 1:
             raise ValueError('Expected exactly one squad ring')

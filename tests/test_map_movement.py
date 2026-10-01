@@ -155,15 +155,15 @@ class NavigationTests(unittest.TestCase):
             navigate(session, [100, 100], Mock(), max_moves=1)
         session.move.assert_called_once()
 
-    def test_plan_uses_current_projection_and_bounds_scene_displacement(self):
+    def test_plan_uses_current_projection_without_old_distance_caps(self):
         loc = SimpleNamespace(old_matrix=np.eye(3), route=lambda a, b: (b, np.array([a, b])))
-        observation = {'position_kind': 'squad', 'position': [20, 30], 'player_roi': [150, 160],
+        observation = {'position_kind': 'squad', 'position': [300, 320], 'player_roi': [150, 160],
                        'roi_to_map': [[2, 0, 0], [0, 2, 0], [0, 0, 1]]}
-        click, _ = movement_plan(loc, observation, np.array([120, 130]), [888, 499])
-        self.assertLessEqual(np.linalg.norm(click - [888, 499]), 240)
-        shifted = dict(observation, roi_to_map=np.eye(3).tolist())
-        twice, _ = movement_plan(loc, shifted, np.array([120, 130]), [888, 499])
+        click, _ = movement_plan(loc, observation, np.array([420, 360]), [888, 499])
+        shifted = dict(observation, roi_to_map=np.eye(3).tolist(), player_roi=[300, 320])
+        twice, _ = movement_plan(loc, shifted, np.array([420, 360]), [888, 499])
         np.testing.assert_allclose(twice - [888, 499], 2 * (click - [888, 499]))
+        self.assertGreater(np.linalg.norm(twice - [888, 499]), 240)
         with self.assertRaisesRegex(ValueError, '小队'):
             movement_plan(loc, dict(observation, position_kind='viewport_center'), [120, 130], [888, 499])
 

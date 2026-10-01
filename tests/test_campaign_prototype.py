@@ -285,7 +285,9 @@ class ControlTests(unittest.TestCase):
         blue = np.full((462, 486, 3), (160, 100, 30), np.uint8)
         blank = np.zeros_like(blue)
         window.capture = Mock(side_effect=[blank, blue, blue, blank] * 10)
-        grab.return_value = np.full((218, 208, 3), (30, 100, 160), np.uint8)
+        compact = np.full((218, 208, 3), (30, 100, 160), np.uint8)
+        cv2.circle(compact, (22, 22), 10, (255, 255, 255), 2)
+        grab.side_effect = [compact, np.zeros_like(compact), np.zeros_like(compact), compact] * 10
         for _ in range(10):
             goto.map_open(window)
             goto.map_close(window)
@@ -302,11 +304,32 @@ class ControlTests(unittest.TestCase):
         window.focus = Mock()
         blue = np.full((462, 486, 3), (160, 100, 30), np.uint8)
         window.capture = Mock(return_value=blue)
+        grab.return_value = np.zeros((218, 208, 3), np.uint8)
         goto.map_open(window)
         window.capture.return_value = np.zeros_like(blue)
         grab.return_value = np.full((218, 208, 3), (30, 100, 160), np.uint8)
+        cv2.circle(grab.return_value, (22, 22), 10, (255, 255, 255), 2)
         goto.map_close(window)
         window.handler.handler.mouse_click.assert_not_called()
+        window.close()
+
+    @patch('dev_tools.minimap_reconstruct.time.sleep')
+    @patch('PIL.ImageGrab.grab')
+    def test_squad_map_refresh_minimizes_then_reopens(self, grab, sleep):
+        """小队定位显式刷新已经展开的面板，必须先点最小化再重新打开。"""
+        window = self.window()
+        window.args.map_open = [42, 98]
+        window.roi = (644, 280, 1130, 742)
+        window.focus = Mock()
+        blue = np.full((462, 486, 3), (160, 100, 30), np.uint8)
+        blank = np.zeros_like(blue)
+        compact = np.full((218, 208, 3), (30, 100, 160), np.uint8)
+        cv2.circle(compact, (22, 22), 10, (255, 255, 255), 2)
+        window.capture = Mock(side_effect=[blue, blank, blue])
+        grab.side_effect = [np.zeros_like(compact), compact, np.zeros_like(compact)]
+        goto.map_open(window, reset=True)
+        clicks = [call.args for call in window.handler.handler.mouse_click.call_args_list]
+        self.assertEqual(clicks, [(668, 289), (52, 118)])
         window.close()
 
     def test_localizers_reject_full_client_as_roi(self):

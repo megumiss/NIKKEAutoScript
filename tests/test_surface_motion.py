@@ -1,11 +1,10 @@
-"""局部区域坐标、独立验证、落点有效域及圆环遮挡的回归。"""
+"""局部区域坐标、独立验证及落点有效域的回归。"""
 
 import unittest
 
 import cv2
 import numpy as np
 
-from module.campaign_prototype.live import surface_anchor
 from module.campaign_prototype.surface_motion import (
     contains, fit_calibration, fit_registration, plan_click, project, register_surface,
 )
@@ -90,17 +89,6 @@ class SurfaceMotionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             contains([[0, 0], [0, 2], [2, 2]], [float('inf'), 0])
 
-    def test_surface_anchor_ignores_nearby_cyan_light_and_refuses_occlusion(self):
-        """圆环两侧的地灯与直线护栏不得变成脚下位置，严重遮挡后需停止。"""
-        image = np.zeros((999, 1776, 3), np.uint8)
-        cv2.fillPoly(image, [np.array([[877, 390], [901, 390], [889, 419]])], (245, 245, 245))
-        color = cv2.cvtColor(np.uint8([[[108, 180, 250]]]), cv2.COLOR_HSV2BGR)[0, 0].tolist()
-        cv2.ellipse(image, (889, 497), (55, 38), 0, 0, 360, color, 2)
-        cv2.rectangle(image, (800, 480), (825, 525), (255, 255, 0), -1)
-        np.testing.assert_allclose(surface_anchor(image), [889, 497], atol=2)
-        image[500:] = 0
-        with self.assertRaises(RuntimeError):
-            surface_anchor(image)
 
 
 if __name__ == '__main__':

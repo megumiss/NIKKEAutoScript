@@ -14,7 +14,12 @@ from .match_coarse import PAD, SCALE, match, template_matrix
 
 class AdaptiveLocalizer(Localizer):
     def locate(self, image, tag, require_player=True):
-        """先搜索尺度与透视，再用受限 ECC 细化道路单应；低 IoU 或有远处竞争候选时拒绝定位。"""
+        """先搜索尺度与透视，再用受限 ECC 细化道路单应；低 IoU 或有远处竞争候选时拒绝定位。
+
+        输入固定尺寸展开 ROI，搜索尺度与透视参数后对道路匹配进行受限 ECC 细化。
+        返回 ROI→map、地图位置、质量分数及地图绑定；require_player=False 时允许视野中心，但 position_kind 不标记为小队。
+        IoU 至少 0.85 且最佳与远处竞争候选差至少 0.10 才通过；失败也保留定位证据。
+        """
         if image is None or image.shape != (462, 486, 3):
             raise ValueError('Expected a 486x462 BGR expanded minimap ROI')
         players, _ = goto.mr.detect_markers(image, np.eye(3))
@@ -40,7 +45,11 @@ class AdaptiveLocalizer(Localizer):
         candidates = []
 
         def evaluate(a, b):
-            """评估一组投影参数和全图平移峰，将候选变换还原为 ROI 到地图矩阵。"""
+            """评估一组投影参数和全图平移峰，将候选变换还原为 ROI 到地图矩阵。
+
+            在候选尺度 a、透视系数 b 下生成模板，并把相关峰换算回完整地图坐标。
+            有效结果附加到外层 candidates，尺寸不适合或无匹配则跳过；每次计算前检查共享停止信号。
+            """
             runtime.check_stop()
             matrix, size = template_matrix(self.matrix, a, b, road.shape)
             if min(size) < 10 or size[0] >= target.shape[1] or size[1] >= target.shape[0]:
@@ -114,7 +123,11 @@ class AdaptiveLocalizer(Localizer):
 
 @runtime.command
 def main():
-    """从保存的展开小地图离线定位并写配准证据，不取得游戏输入控制。"""
+    """从保存的展开小地图离线定位并写配准证据，不取得游戏输入控制。
+
+    读取 image 指定的离线 BGR 小地图，按 --tag 保存定位报告和叠图。
+    地图包参数沿用 settings；图像不可读时失败，整个入口不会创建窗口或发送手势。
+    """
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('image', type=Path)

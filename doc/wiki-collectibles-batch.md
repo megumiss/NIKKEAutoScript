@@ -2,7 +2,7 @@
 
 入口：[wiki_collectibles.py](../dev_tools/wiki_collectibles.py)。它读取 GameKee 的“地图收集（主线）”和“地图收集（困难）”目录，下载文章与图片，将可靠配准的点写入已有地图包。无需启动游戏；所有图片、文章和配准结果保存在缓存目录，可以重复执行。
 
-2026-09-29 实际检查了普通、困难各 48 篇，共 96 篇文章，解析到 877 个条目（普通 608、困难 269）。这是当前 Wiki 的条目数，不作为游戏内收集总数或未来文章数量的硬编码。解析覆盖结构化表格、HTML 表格、无表头旧表格和早期“标题＋图片组”。同一条目的场景图和地图图不会重复计数。
+解析支持结构化表格、HTML 表格、无表头表格和“标题＋图片组”。同一条目的场景图和地图图不会重复计数；文章及条目总数按实际获取结果统计。
 
 ## 一条命令运行
 
@@ -19,7 +19,7 @@ python dev_tools/wiki_collectibles.py
 常用参数：
 
 ```powershell
-# 只处理第 38 章两种难度；当前已验证的底图包
+# 只处理第 38 章两种难度
 python dev_tools/wiki_collectibles.py --chapters 38
 
 # 地图尚未采齐时，先下载 Wiki 资料
@@ -32,7 +32,7 @@ python dev_tools/wiki_collectibles.py --offline
 python dev_tools/wiki_collectibles.py --chapters 38 --dry-run
 ```
 
-`--difficulty normal|hard|both` 默认 `both`；`--cache` 指定可复用缓存；`--refresh` 重新获取文章和图片；`--retries` 默认每次下载额外重试 2 次。HTTP 被 CDN 拦截时，脚本用独立的无头 Edge 浏览器打开公开 Wiki 页面并读取响应。此路径需要 Python `playwright` 和已安装的 Microsoft Edge；当前工作环境已就绪。其他设备若缺少 Python 包，可在其项目环境执行 `python -m pip install playwright`，无需下载额外浏览器。不会使用个人浏览器资料或登录状态。
+`--difficulty normal|hard|both` 默认 `both`；`--cache` 指定可复用缓存；`--refresh` 重新获取文章和图片；`--retries` 默认每次下载额外重试 2 次。HTTP 被 CDN 拦截时，脚本用独立的无头 Edge 浏览器打开公开 Wiki 页面并读取响应。此路径需要 Python `playwright` 和已安装的 Microsoft Edge。其他设备若缺少 Python 包，可在其项目环境执行 `python -m pip install playwright`，无需下载额外浏览器。不会使用个人浏览器资料或登录状态。
 
 ## 缓存、续跑与写入规则
 
@@ -74,21 +74,13 @@ python dev_tools/minimap_chapters.py --start 34 --end 1 --stroke-px 120 --keyfra
 - **无法确认切章页面时会受控暂停，退出码 `2`。** 后续章节的输入依赖当前页面，不能为了继续批次而盲点。`progress.json` 记录暂停原因；处理现场后从实际章节续跑。扫描期间也检查输出根目录的 `STOP` 文件，停止不进入下一章。
 - 退出码 `0` 为所选章节均已采集／跳过，`1` 为批次已走完但有失败章节，`2` 为页面不确定或全局错误，`130` 为用户停止。
 
-## 2026-09-29：统一目录与第 34 章碎片诊断
+## 验证
 
-- 当前地图统一放在 `data/chapter_maps/current/`，本机已归入第 34、38、41 章；38 章保留普通／困难共 20 个标注。旧版 35–37、39–40 章的配准未通过，留在历史目录等待补采，不作为当前可用包。迁移来源与逐文件哈希保存在 `current/migration_20260929.json`。
-- 第 34 章存在透视偏差、非相邻道路约束不足以及道路／覆盖掩码不一致的问题。重建会复核已通过配准的投影，以直接道路重访约束减小局部漂移，并在融合前排除控件区域。
-- 使用相同 200 帧离线重建，12 对移动帧的道路重叠中位数从 0.862 提升到 0.924；最终相邻约束 169 条、道路重访约束 311 条。约束子图从 79 个减为 16 个，仍有 15 帧仅由弱里程计连接。残差只描述已有约束的一致性，不代表全图绝对精度。
-- 修正版已保存到 `current/chapter_34/`，旧副本保存在 `history/20260929_before_repair/chapter_34/`，最初的 `batch_retry/chapter_34/` 也保留。原始 200 张 PNG 与 `scan.json` 哈希一致；新地图、参考图、坐标缓存及元数据一致，38 章标注和 41 章包未改变。
-- 大块重影减少，局部仍有残留；未验证整个相机域，也未重新进行游戏采集。79 项回归、相关 Python 语法检查、默认目录发现与包校验通过。短拖动是否进一步改善需用同章游戏内对照采集验证。
-- 本机对比及证据：`tmp/ch34_fragments_20260929/comparison.jpg`、`verification.json`、`constraint_audit.json`、`rebuild.log`、`tests.log`。
+离线回归覆盖解析变体、幂等导入、人工修改保护、哈希变化、缺失圆环、失败续跑、停止及写盘失败时释放：
 
-## Wiki 批量功能验证
+```powershell
+.venv\Scripts\python.exe -m unittest tests.test_wiki_collectibles tests.test_wiki_minimap_crop tests.test_map_wiki tests.test_minimap_chapters
+```
 
-- 96 篇真实文章全部解析出条目；第 38 章普通 14 张、困难 6 张原图下载成功。
-- 第 38 章自动配准通过 18/20：困难 6/6、普通 12/14。普通 11、14 号候选分差分别约 0.095、0.085，保留待复核；原有两个点的坐标未覆盖。
-- 当前第 38 章包包含普通 14 点、困难 6 点；重复离线运行后底图、参考图、元数据、标注文件哈希全部不变。
-- 77 项回归和 Python 语法检查通过，覆盖解析变体、幂等导入、手工修改保护、哈希变化、网格干扰、缺失圆环、失败继续、重试证据、停止、页面不确定和写盘失败时释放。
-- 本次未启动整批游戏地图采集；连续真实切章和重采仍需现场验证，不能用离线回归替代全章节采集验收。
-
-本机证据：`tmp/wiki_batch_verify_20260929/catalog_audit.json`、该目录的 `chapter_38/`、`repeat_verification.json`；日志 `tmp/wiki_batch_tests_20260929.log`、`tmp/wiki_batch_import_20260929.log`。`tmp/` 与 `data/` 中的运行资料均不随源码提交。
+真实采集需核对章节切换、道路覆盖和导出包；匹配需核对普通／困难来源及目标坐标。
+回归中的合成地图不能代替全章节采集或游戏内到点验证。

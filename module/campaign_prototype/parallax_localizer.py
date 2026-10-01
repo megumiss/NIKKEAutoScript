@@ -15,6 +15,10 @@ from .surface_motion import contains, fit_registration, project
 
 class ParallaxLocalizer:
     def __init__(self, package):
+        """加载 local_parallax 包并核对底图和原始帧哈希，读取各帧局部高度标签及道路特征。
+
+        修订道路和几何共同形成缓存身份；只建立离线配准数据，不创建游戏窗口。
+        """
         self.path = Path(package)
         self.metadata = meta = json.loads((self.path / 'map.json').read_text(encoding='utf-8'))
         self.digest = hashlib.sha256((self.path / 'map.png').read_bytes()).hexdigest()
@@ -47,13 +51,21 @@ class ParallaxLocalizer:
         self.camera = np.asarray(meta['camera'])
 
     def allows_position(self, point):
+        """检查地图点距修订道路不超过 10px，并且未落入人工擦除掩码。
+
+        非法或越界点经 road_distance 判为不可用；返回布尔值，不证明目标与小队所在道路连通。
+        """
         if road_distance(self.road, point) > 10:
             return False
         x, y = np.floor(point).astype(int)
         return self.override[y, x] != 1
 
     def road_proposals(self, image, point, valid):
-        """整图道路只提供搜索种子；最终位置由原始帧的局部平面和道路互验决定。"""
+        """整图道路只提供搜索种子；最终位置由原始帧的局部平面和道路互验决定。
+
+        纹理匹配不足时通过整图道路候选确定搜索区域，再对原始帧局部平面进行验证。
+        返回局部候选及粗匹配信息；粗相关峰只是种子，最终接受还需要相机跨度和道路一致性。
+        """
         from dev_tools.wiki_collectible_match import MapMatcher, SCALE, PAD
         seed_matcher = MapMatcher.__new__(MapMatcher)
         seed_matcher.surface_matcher = None
@@ -128,6 +140,10 @@ class ParallaxLocalizer:
         return proposals, seed
 
     def locate(self, image, point, valid=None, review=None):
+        """image 为查询小地图，point 为其中的目标点，valid 可排除遮挡，review 可指定叠图路径。
+
+        按原始帧局部表面配准并投影到地图，返回 accepted 或 needs_review 及候选证据；独立视角不足不强行接受。
+        """
         point = np.asarray(point, float)
         if (point.shape != (2,) or not np.isfinite(point).all() or np.any(point < 0)
                 or np.any(point >= image.shape[1::-1])):
@@ -241,6 +257,10 @@ class ParallaxLocalizer:
         return result
 
     def locate_squad(self, image, review=None):
+        """先在输入小地图中识别唯一小队圆环，再复用 locate 的局部表面验证。
+
+        结果补齐 position_kind、player_roi 和 iou 供导航消费；零个或多个圆环直接抛错。
+        """
         players, _ = detect_markers(image, np.eye(3))
         if len(players) != 1:
             raise ValueError('Expected exactly one squad ring')
