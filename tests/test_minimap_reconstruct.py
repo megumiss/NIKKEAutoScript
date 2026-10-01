@@ -444,6 +444,12 @@ class MinimapResetTests(unittest.TestCase):
         self.assertTrue(DriverWindow.minimap_control_visible(icon))
         self.assertFalse(DriverWindow.minimap_control_visible(np.full_like(icon, 255)))
 
+    def test_ch48_control_with_multiple_inner_contours(self):
+        fixture = Path(__file__).parent / 'fixtures/minimap_control/ch48_multiple_holes.png'
+        icon = cv2.imread(str(fixture))
+        self.assertIsNotNone(icon)
+        self.assertTrue(DriverWindow.minimap_control_visible(icon))
+
 
 class MetricGridBoundsTests(unittest.TestCase):
     def test_near_vertical_family_can_cross_both_slope_signs(self):

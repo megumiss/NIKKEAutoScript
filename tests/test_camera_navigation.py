@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import json
 import tempfile
 import unittest
 from contextlib import ExitStack
@@ -73,12 +74,12 @@ class CameraTests(unittest.TestCase):
                 camera, 'observe_camera', return_value=self.view(target)) as observe:
             click = camera.plan_world_move(self.session, self.observation, target)
         np.testing.assert_allclose(click, [888, 500])
-        pan.assert_called_once()
+        self.assertEqual(pan.call_count, 2)
         np.testing.assert_array_equal(observe.call_args.args[1], [243, 231])
         self.assertEqual(self.observation['position'], [243, 231])
         self.assertEqual(self.session.emit.call_args.kwargs['navigation_method'], 'camera_pan')
-        self.assertEqual(self.session.emit.call_args.kwargs['camera_pans'], 3)
-        self.assertEqual(self.session.emit.call_args.kwargs['plan_camera_pans'], 1)
+        self.assertEqual(self.session.emit.call_args.kwargs['camera_pans'], 4)
+        self.assertEqual(self.session.emit.call_args.kwargs['plan_camera_pans'], 2)
 
     def test_full_height_and_diagonal_drags_stay_in_clear_scene_regions(self):
         chart = camera.field_chart(self.session.localizer, self.observation, [888, 500])
@@ -100,15 +101,137 @@ class CameraTests(unittest.TestCase):
 
     def test_planner_compensates_for_partial_camera_response(self):
         target = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [2100, 0])
-        first_center = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [864, 0])
+        first_center = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [1050, 0])
         with self.planning(), patch.object(camera, 'pan_scene') as pan, patch.object(
                 camera, 'observe_camera', side_effect=[self.view(first_center), self.view(target)]):
             camera.plan_world_move(self.session, self.observation, target)
-        self.assertEqual(pan.call_count, 2)
-        np.testing.assert_allclose(pan.call_args_list[1].args[1], [-1728, 0], atol=1e-9)
+        self.assertEqual(pan.call_count, 4)
+        np.testing.assert_allclose(pan.call_args_list[2].args[1], [-1728, 0], atol=1e-9)
         gains = [call.kwargs['camera_gain'] for call in self.session.emit.call_args_list
                  if call.kwargs.get('state') == 'panning']
-        np.testing.assert_allclose(gains, [1, .5])
+        np.testing.assert_allclose(gains, [1, 1, .5, .5])
+
+    def test_perspective_batch_preserves_relative_diagonal_direction(self):
+        root = Path(__file__).parent / 'fixtures/camera_navigation'
+        data = json.loads((root / 'ch48_diagonal_target.json').read_text())
+        self.session.localizer.old_matrix = np.asarray(data['old_matrix'])
+        with self.planning(), patch.object(camera, 'pan_scene') as pan, patch.object(
+                camera, 'observe_camera', side_effect=RuntimeError('correction reached')) as observe:
+            with self.assertRaisesRegex(RuntimeError, 'correction reached'):
+                camera.plan_world_move(self.session, data['observation'], data['target'], anchor=data['anchor'])
+        self.assertEqual(pan.call_count, 2)
+        observe.assert_called_once()
+        first, second = [call.args[1] for call in pan.call_args_list]
+        np.testing.assert_allclose(first / np.linalg.norm(first), second / np.linalg.norm(second), atol=1e-8)
+        self.assertGreater(first[0], 1600)
+        self.assertLess(first[1], -500)
+        self.assertGreater(second[0], 400)
+        self.assertLess(second[1], -100)
+
+    def test_static_scene_is_only_a_correction_signal_not_a_motion_estimate(self):
+        rng = np.random.default_rng(7)
+        before = rng.integers(0, 256, self.field.shape, dtype=np.uint8)
+        after = before.copy()
+        after[400:500, 850:950] = 0
+        self.assertTrue(camera.scene_unchanged(before, after))
+        shifted = cv2.warpAffine(before, np.float32([[1, 0, 20], [0, 1, 10]]), (1776, 999))
+        self.assertFalse(camera.scene_unchanged(before, shifted))
+        self.assertFalse(camera.scene_unchanged(self.field, self.field))
+
+    def test_clamped_camera_corrects_after_one_pan_and_stops_without_click(self):
+        rng = np.random.default_rng(8)
+        self.field = rng.integers(0, 256, self.field.shape, dtype=np.uint8)
+        target = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [9000, 3000])
+        with self.planning(), patch.object(camera, 'pan_scene') as pan, patch.object(
+                camera, 'observe_camera', return_value=self.observation) as observe:
+            with self.assertRaisesRegex(ValueError, '边界'):
+                camera.plan_world_move(self.session, self.observation, target)
+        pan.assert_called_once()
+        observe.assert_called_once()
+        reasons = [call.kwargs['camera_correction_reason'] for call in self.session.emit.call_args_list
+                   if 'camera_correction_reason' in call.kwargs]
+        self.assertEqual(reasons, ['no_scene_motion'])
+        self.session.win.handler.mouse_click.assert_not_called()
+
+    def test_camera_clamps_partway_through_batch_and_replans_from_observation(self):
+        target = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [9000, 3000])
+        with self.planning(), patch.object(camera, 'pan_scene') as pan, patch.object(
+                camera, 'scene_unchanged', side_effect=[False, True]), patch.object(
+                camera, 'observe_camera', return_value=self.view(target)) as observe:
+            click = camera.plan_world_move(self.session, self.observation, target)
+        self.assertEqual(pan.call_count, 2)
+        observe.assert_called_once()
+        np.testing.assert_allclose(click, [888, 500])
+
+    def test_recorded_viewport_outside_cropped_map_is_not_an_outside_squad(self):
+        from module.campaign_prototype.adaptive import AdaptiveLocalizer
+        with np.load(Path(__file__).parent / 'fixtures/camera_navigation/ch48_camera_boundary.npz') as data:
+            localizer = AdaptiveLocalizer.__new__(AdaptiveLocalizer)
+            localizer.road = data['road'].astype(np.float32)
+            localizer.matrix = data['projection']
+            localizer.package = SimpleNamespace(binding={})
+            image = data['roi']
+        with tempfile.TemporaryDirectory() as directory, patch(
+                'module.campaign_prototype.settings.output', Path(directory)), patch(
+                'module.campaign_prototype.runtime.check_stop'):
+            report = localizer.locate(image, 'boundary', require_player=False)
+            self.assertEqual(report['position_kind'], 'viewport_center')
+            self.assertIsNone(report['player_roi'])
+            self.assertGreater(report['position'][1], localizer.road.shape[0])
+            self.assertGreater(report['iou'], .95)
+            with self.assertRaisesRegex(RuntimeError, 'Expected one squad ring'):
+                localizer.locate(image, 'squad', require_player=True)
+
+    def test_batch_uses_long_drags_and_only_clicks_after_minimap_confirmation(self):
+        target = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [4200, 0])
+        confirmed = target + [5, 0]
+        with self.planning(), patch.object(camera, 'pan_scene') as pan, patch.object(
+                camera, 'observe_camera', return_value=self.view(confirmed)) as observe:
+            click = camera.plan_world_move(self.session, self.observation, target)
+        self.assertEqual(pan.call_count, 3)
+        observe.assert_called_once()
+        np.testing.assert_allclose(pan.call_args_list[0].args[1], [-1728, 0], atol=1e-9)
+        np.testing.assert_allclose(pan.call_args_list[1].args[1], [-1728, 0], atol=1e-9)
+        np.testing.assert_allclose(click, [888, 500] + camera.goto.A_INV @ [-5, 0])
+        modes = [call.kwargs['camera_tracking'] for call in self.session.emit.call_args_list
+                 if 'camera_tracking' in call.kwargs]
+        self.assertEqual(modes, ['predicted', 'predicted', 'minimap'])
+
+    def test_ch48_recorded_perspective_target_batches_two_drags(self):
+        fixture = Path(__file__).parent / 'fixtures/camera_navigation/ch48_far_target.json'
+        data = json.loads(fixture.read_text(encoding='utf-8'))
+        self.session.localizer.old_matrix = np.asarray(data['old_matrix'])
+        with self.planning(), patch.object(camera, 'pan_scene') as pan, patch.object(
+                camera, 'observe_camera', side_effect=RuntimeError('correction reached')) as observe:
+            with self.assertRaisesRegex(RuntimeError, 'correction reached'):
+                camera.plan_world_move(self.session, data['observation'], data['target'], anchor=data['anchor'])
+        self.assertEqual(pan.call_count, 2)
+        observe.assert_called_once()
+        self.assertAlmostEqual(pan.call_args_list[0].args[1][0], -1728)
+        self.assertGreater(abs(pan.call_args_list[1].args[1][0]), 790)
+
+    def test_batch_is_corrected_after_three_pans_even_when_target_is_far(self):
+        target = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [9000, 0])
+        with self.planning(), patch.object(camera, 'pan_scene') as pan, patch.object(
+                camera, 'observe_camera', side_effect=RuntimeError('correction reached')) as observe:
+            with self.assertRaisesRegex(RuntimeError, 'correction reached'):
+                camera.plan_world_move(self.session, self.observation, target)
+        self.assertEqual(pan.call_count, 3)
+        observe.assert_called_once()
+
+    def test_predicted_arrival_requires_correction_and_replans_if_target_is_still_offscreen(self):
+        target = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [4200, 0])
+        first = np.array([243, 231]) + np.linalg.solve(camera.goto.A_INV, [2100, 0])
+        with self.planning(), patch.object(camera, 'pan_scene') as pan, patch.object(
+                camera, 'observe_camera', side_effect=[self.view(first), self.view(target)]) as observe:
+            click = camera.plan_world_move(self.session, self.observation, target)
+        self.assertEqual(observe.call_count, 2)
+        self.assertGreater(pan.call_count, 3)
+        np.testing.assert_allclose(click, [888, 500])
+        gains = [call.kwargs['camera_gain'] for call in self.session.emit.call_args_list
+                 if call.kwargs.get('state') == 'panning']
+        np.testing.assert_allclose(gains[:3], [1, 1, 1])
+        self.assertAlmostEqual(gains[3], .5)
 
     def test_pan_failure_boundary_and_budget_never_produce_click(self):
         for failure in (RuntimeError('focus lost'), KeyboardInterrupt('stop')):
@@ -151,41 +274,75 @@ class CameraTests(unittest.TestCase):
         self.assertIs(self.session.localizer.locate.call_args.kwargs['require_player'], False)
         self.session.localizer.locate.return_value = {**self.observation, 'position': [280, 231]}
         with self.planning(), patch('module.campaign_prototype.goto.map_open'):
-            with self.assertRaisesRegex(ValueError, '小队位置发生变化'):
+            with self.assertRaisesRegex(RuntimeError, '小队位置发生变化'):
                 camera.observe_camera(self.session, [243, 231])
 
+    def compact_sample(self, player, shift=0):
+        road = np.zeros((100, 120), np.uint8)
+        road[30:70, 30 + shift:70 + shift] = 255
+        return None, road, np.full_like(road, 255), np.asarray(player, float)
+
     def test_static_camera_does_not_end_wait_while_squad_moves_or_is_hidden(self):
-        players = [[], [[100, 100]], [[115, 100]], [[130, 100]], [],
-                   [[150, 100]], [[150, 100]], [[150, 100]]]
-        self.session.win.capture.return_value = np.zeros((462, 486, 3), np.uint8)
+        samples = [ValueError('hidden'), *[self.compact_sample([x, 50]) for x in (30, 40, 50)],
+                   ValueError('hidden'), *[self.compact_sample([70, 50]) for _ in range(4)]]
         with self.planning(), patch('module.campaign_prototype.goto.map_open') as open_map, patch(
-                'module.campaign_prototype.goto.mr.detect_markers', side_effect=[(p, []) for p in players]):
+                'dev_tools.wiki_collectible_match.minimap_masks', side_effect=samples):
             camera.wait_for_squad(self.session)
-        self.assertEqual(self.session.pause.call_count, 32)
-        self.assertEqual(open_map.call_count, 8)
+        self.assertEqual(self.session.pause.call_count, 9)
+        open_map.assert_not_called()
         self.session.preview.assert_called_once()
 
-    def test_stationary_marker_pulse_and_missing_marker_timeout(self):
-        pulse = [[143.5, 193.5], [147.5, 199.5], [144.5, 192.5]]
+    def test_recorded_squad_change_invalidates_camera_plan(self):
+        from module.campaign_prototype.movement_feedback import SquadPositionChanged
+        path = Path(__file__).parent / 'fixtures/camera_navigation/ch48_squad_changed.json'
+        data = json.loads(path.read_text())
+        self.session.localizer.locate = Mock(return_value=data['after'])
         self.session.win.capture.return_value = np.zeros((462, 486, 3), np.uint8)
-        panel = {'expanded': False}
-        snapshots = [([], [])] + [([p], []) for p in pulse]
-        self.session.pause.side_effect = lambda seconds: self.assertFalse(panel['expanded'])
-        with self.planning(), patch('module.campaign_prototype.goto.map_close',
-                                   side_effect=lambda win: panel.update(expanded=False)), patch(
-                'module.campaign_prototype.goto.map_open',
-                side_effect=lambda win: panel.update(expanded=True)) as open_map, patch(
-                'module.campaign_prototype.goto.mr.detect_markers', side_effect=snapshots):
+        with self.planning(), patch('module.campaign_prototype.goto.map_open'):
+            with self.assertRaises(SquadPositionChanged) as caught:
+                camera.observe_camera(self.session, np.asarray(data['before']['position']))
+        self.assertEqual(caught.exception.before, data['before']['position'])
+        self.assertEqual(caught.exception.after, data['after']['position'])
+        self.session.win.handler.mouse_click.assert_not_called()
+
+    def test_stationary_marker_pulse_and_missing_marker_timeout(self):
+        pulse = [[110, 100], [112, 103], [108, 99], [111, 102]]
+        samples = [ValueError('hidden'), *[self.compact_sample(p) for p in pulse]]
+        with self.planning(), patch('module.campaign_prototype.goto.map_open') as open_map, patch(
+                'dev_tools.wiki_collectible_match.minimap_masks', side_effect=samples):
             camera.wait_for_squad(self.session)
-        self.assertEqual(self.session.pause.call_count, 16)
-        self.assertEqual(open_map.call_count, 4)
-        self.assertFalse(panel['expanded'])
+        self.assertEqual(self.session.pause.call_count, 5)
+        open_map.assert_not_called()
         self.session.preview.reset_mock()
-        with self.planning(), patch('module.campaign_prototype.goto.map_open'), patch(
-                'module.campaign_prototype.goto.mr.detect_markers', return_value=([], [])):
+        with self.planning(), patch('module.campaign_prototype.goto.map_open') as open_map, patch(
+                'dev_tools.wiki_collectible_match.minimap_masks', side_effect=ValueError('hidden')):
             with self.assertRaisesRegex(RuntimeError, '超时'):
                 camera.wait_for_squad(self.session)
         self.session.preview.assert_not_called()
+        open_map.assert_not_called()
+
+    def test_centered_squad_with_moving_roads_does_not_end_wait(self):
+        samples = [self.compact_sample([50, 50], shift=x) for x in (0, 5, 10, 15, 15, 15, 15)]
+        with self.planning(), patch('module.campaign_prototype.goto.map_open') as open_map, patch(
+                'dev_tools.wiki_collectible_match.minimap_masks', side_effect=samples):
+            camera.wait_for_squad(self.session)
+        self.assertEqual(self.session.pause.call_count, 7)
+        open_map.assert_not_called()
+
+    def test_recorded_compact_map_waits_without_expanding(self):
+        frames = []
+        root = Path(__file__).parent / 'fixtures/movement_feedback'
+        for index in (5, 10, 11, 10, 11):
+            frame = self.field.copy()
+            frame[80:290, 18:230] = cv2.imread(str(root / f'ch48_compact_{index:03}.png'))
+            frames.append(frame)
+        with patch('module.campaign_prototype.goto.map_close'), patch(
+                'module.campaign_prototype.goto.map_open') as open_map, patch(
+                'module.campaign_prototype.goto.capture_client', side_effect=frames):
+            camera.wait_for_squad(self.session)
+        self.assertEqual(self.session.pause.call_count, 5)
+        open_map.assert_not_called()
+        self.session.preview.assert_called_once()
 
     def test_parallax_camera_rejects_reference_outside_calibrated_surface(self):
         self.session.calibration = ({}, None)

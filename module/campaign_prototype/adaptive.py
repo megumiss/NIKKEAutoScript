@@ -116,7 +116,9 @@ class AdaptiveLocalizer(Localizer):
         if iou < .85 or best['score'] - rival < .10:
             raise RuntimeError(f'Uncertain adaptive localization: {report}')
         p = report['position']
-        if not (0 <= p[0] < self.road.shape[1] and 0 <= p[1] < self.road.shape[0]):
+        # 镜头中心可能落在裁剪底图外；道路配准通过即可用于镜头换算，不能冒充小队位置。
+        if report['position_kind'] == 'squad' and not (
+                0 <= p[0] < self.road.shape[1] and 0 <= p[1] < self.road.shape[0]):
             raise RuntimeError('Squad outside annotated map')
         return report
 

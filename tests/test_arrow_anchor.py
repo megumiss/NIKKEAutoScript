@@ -32,6 +32,31 @@ class ArrowTests(unittest.TestCase):
         field = self.field('white') | self.field('white', x=970)
         self.assertIsNone(squad_arrow(field))
 
+    def test_arrow_search_covers_shifted_squad_in_each_direction(self):
+        for color in ('white', 'orange'):
+            baseline = squad_arrow(self.field(color))
+            for x, y in ((300, 380), (1380, 380), (860, 130), (860, 800)):
+                with self.subTest(color=color, x=x, y=y):
+                    np.testing.assert_allclose(squad_arrow(self.field(color, x=x, y=y)),
+                                               baseline + [x - 860, y - 380], atol=1)
+        self.assertIsNone(squad_arrow(self.field('white', x=300) | self.field('white', x=1380)))
+        self.assertIsNone(squad_arrow(self.field('white', x=40, y=150)))
+
+    def test_recorded_ch48_arrow_outside_old_search_range(self):
+        field = np.zeros((999, 1776, 3), np.uint8)
+        field[120:880, 250:1500] = cv2.imread(str(
+            Path(__file__).parent / 'fixtures/squad_arrow/ch48_shifted_scene.png'))
+        np.testing.assert_allclose(squad_arrow(field), [1119, 405.5], atol=1)
+
+    def test_shifted_arrow_cycle_produces_shifted_ground_anchor(self):
+        heights = [0, 1, 5, 11, 14, 8, 3, 0] * 2
+        frames = [self.field('white', x=1095, y=380 + h) for h in heights]
+        session = SimpleNamespace(check=Mock(), pause=Mock(), identity=Mock(), emit=Mock(), win=Mock())
+        with patch('module.campaign_prototype.goto.capture_client', side_effect=frames[1:]):
+            anchor, _ = sample_ground_anchor(session, frames[0])
+        np.testing.assert_allclose(anchor, [1119, 497], atol=1)
+        self.assertEqual(session.emit.call_args.kwargs['arrow_missed_frames'], 0)
+
     def test_verified_snow_small_arrow_and_hidden_arrow_frames(self):
         for chapter, expected in [(18, [888, 423.5]), (39, [888, 420]), (38, None)]:
             with self.subTest(chapter=chapter):

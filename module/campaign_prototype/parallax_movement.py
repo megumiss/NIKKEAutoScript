@@ -317,7 +317,9 @@ class ParallaxSessionMixin:
         if self.win is None:
             self.win = runtime.Window()
             self.win.focus()
-        self.identity(goto.capture_client(self.win))
+        field = goto.capture_client(self.win)
+        self.identity(field)
+        self.check_collectible(field)
         goto.map_open(self.win, reset=True)
         from dev_tools.minimap_reconstruct import detect_markers
         for attempt in range(6):

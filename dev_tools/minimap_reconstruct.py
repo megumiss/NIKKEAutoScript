@@ -323,9 +323,12 @@ class DriverWindow:
             x, y, width, height = cv2.boundingRect(contour)
             if (child >= 0 and 18 <= width <= 32 and 18 <= height <= 32
                     and np.linalg.norm(np.array([x + width / 2, y + height / 2]) - 22) < 8
-                    and 200 <= cv2.contourArea(contour) <= 550
-                    and 80 <= cv2.contourArea(contours[child]) <= 350):
-                return True
+                    and 200 <= cv2.contourArea(contour) <= 550):
+                # 抗锯齿会产生多个孔洞；第一个子轮廓不一定是控件中心的主孔洞。
+                while child >= 0:
+                    if 80 <= cv2.contourArea(contours[child]) <= 350:
+                        return True
+                    child = hierarchy[0][child][0]
         return False
 
     def capture(self, require_map=True):

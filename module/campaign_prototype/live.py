@@ -15,13 +15,15 @@ from .probe import goto
 def squad_arrow(image):
     """分别匹配白／橙箭头及高亮笔画，避免背景颜色混入同一形状掩码。
 
-    在固定客户区中央搜索白色、橙色和高亮三种掩码，按多种模板尺度比较候选。
+    在避开固定 UI 的主场景内搜索白色、橙色和高亮三种掩码，按多种模板尺度比较候选。
     最佳分数至少 0.72，且远处无相近得分竞争者才返回箭头中心；否则返回 None，地面补偿由周期采样完成。
     """
     template = cv2.imread(str(Path(__file__).parent / 'assets/squad_arrow_tpl.png'), cv2.IMREAD_GRAYSCALE)
     if template is None:
         raise RuntimeError('小队箭头模板缺失。')
-    hsv = cv2.cvtColor(image[200:650, 670:1110], cv2.COLOR_BGR2HSV)
+    # 镜头平移后小队不一定在屏幕中央；搜索范围覆盖可点击场景并留出箭头动画余量。
+    left, top, right, bottom = 250, 120, 1500, 880
+    hsv = cv2.cvtColor(image[top:bottom, left:right], cv2.COLOR_BGR2HSV)
     masks = [cv2.inRange(hsv, (0, 0, 215), (179, 110, 255)),
              cv2.inRange(hsv, (0, 0, 245), (179, 80, 255)),
              cv2.inRange(hsv, (5, 160, 190), (30, 255, 255))]
@@ -32,7 +34,7 @@ def squad_arrow(image):
             scores = cv2.matchTemplate(mask, resized, cv2.TM_CCOEFF_NORMED)
             for _ in range(2):
                 _, score, _, (x, y) = cv2.minMaxLoc(scores)
-                center = np.array([x + 670 + resized.shape[1] / 2, y + 200 + resized.shape[0] / 2])
+                center = np.array([x + left + resized.shape[1] / 2, y + top + resized.shape[0] / 2])
                 candidates.append((score, center))
                 scores[max(0, y - 30):y + 31, max(0, x - 30):x + 31] = -1
     score, center = max(candidates, key=lambda candidate: candidate[0])

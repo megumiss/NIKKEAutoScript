@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 
+import cv2
 import numpy as np
 
 from . import goto, runtime, settings
@@ -74,17 +75,21 @@ def target_projection(chart, observation, target):
     return roi, project(chart, roi)
 
 
+def camera_offset(chart, observation, target):
+    """在最近一次实测视野上，把目标相对位置换算为场景方向和距离。"""
+    matrix = np.asarray(observation['roi_to_map'], float)
+    center = np.array([243., 231.])
+    return jacobian(chart, center) @ np.linalg.solve(jacobian(matrix, center),
+                                                     np.asarray(target) - project(matrix, center))
+
+
 def camera_drag(chart, observation, target, gain=1.):
     """远处点只用局部方向规划镜头，避免视野外的透视地平线反转拖动方向。
 
     target 使用地图像素，gain 表示实测镜头响应比例；仅在 ROI 中心线性化目标方向。
     结果为避开固定 UI 的客户区拖动向量；幅度不足 8px 时抛出 ValueError，防止无效微拖循环。
     """
-    matrix = np.asarray(observation['roi_to_map'], float)
-    center = np.array([243., 231.])
-    delta = jacobian(chart, center) @ np.linalg.solve(jacobian(matrix, center),
-                                                     np.asarray(target) - project(matrix, center))
-    drag = -delta / gain
+    drag = -camera_offset(chart, observation, target) / gain
     _, scale = pan_region(drag)
     drag *= scale
     if np.linalg.norm(drag) < 8:
@@ -170,7 +175,8 @@ def observe_camera(session, squad_position, surface=None):
         raise ValueError('镜头定位期间画面仍在变化。')
     if (report.get('position_kind') == 'squad'
             and np.linalg.norm(np.asarray(report['position']) - squad_position) > 12):
-        raise ValueError('平移期间小队位置发生变化，必须重新开始定位。')
+        from .movement_feedback import SquadPositionChanged
+        raise SquadPositionChanged(squad_position, report['position'])
     goto.map_close(session.win)
     field = goto.capture_client(session.win)
     session.identity(field)
@@ -178,12 +184,34 @@ def observe_camera(session, squad_position, surface=None):
     return report
 
 
+def predict_camera(chart, view, drag, gain):
+    """用本批实测基准和累计拖动估算相对位移，不重复外推透视；不能作为点击依据。"""
+    center = np.array([243., 231.])
+    matrix = np.asarray(view['roi_to_map'])
+    translation = np.eye(3)
+    translation[:2, 2] = jacobian(matrix, center) @ np.linalg.solve(
+        jacobian(chart, center), -np.asarray(drag) * gain)
+    matrix = translation @ matrix
+    return dict(roi_to_map=matrix.tolist(), position=project(matrix, [243, 231]).tolist(),
+                position_kind='predicted_viewport', player_roi=None)
+
+
+def scene_unchanged(before, after):
+    """仅检测长拖后画面是否基本没变，不用场景配准估计位移或透视。"""
+    frames = [cv2.resize(cv2.cvtColor(frame[320:880, 250:1490], cv2.COLOR_BGR2GRAY), (248, 112))
+              for frame in (before, after)]
+    # 空白或遮挡画面不足以判断边缘；少量角色动画不影响大部分静止地形。
+    return bool(min(frame.std() for frame in frames) > 12
+                and np.mean(cv2.absdiff(*frames) <= 6) > .95)
+
+
 def plan_world_move(session, observation, target, calibration=None, max_pans=8, anchor=None, surface=None):
     """优先点击完整目标；视野外先平移，不按固定地图距离切成短步。
 
     以真实小队观测和箭头锚点建立场景投影，target 是调用者已验证的地图目标。
     目标同时进入 ROI 与场景安全区后返回客户区点击坐标；最多平移 max_pans 次，边界、身份或定位异常会中止。
-    平移过程中冻结小队位置，响应增益取最近三次有效测量的中位数；实际移动由调用者发送。
+    每批最多三次长拖动，以同一实测基准累计相对位移；估计位移完成或画面不动时提前校正。
+    批末及点击前用小地图确认，估算位置不能直接用于点击。
     """
     from .movement_feedback import resolve_anchor
     target = np.asarray(target, float)
@@ -199,6 +227,8 @@ def plan_world_move(session, observation, target, calibration=None, max_pans=8, 
         anchor = resolve_anchor(session, field, observation)
     chart = field_chart(session.localizer, observation, anchor, calibration)
     view, previous_center, responses = observation, None, []
+    batch_pans, batch_drag = 0, np.zeros(2)
+    batch_start = observation
     session.camera_pans = getattr(session, 'camera_pans', 0)
     for count in range(max_pans + 1):
         session.check()
@@ -206,7 +236,7 @@ def plan_world_move(session, observation, target, calibration=None, max_pans=8, 
             roi, click = target_projection(chart, view, target)
         except ValueError:
             roi = click = np.array([np.nan, np.nan])
-        if inside(roi, ROI_BOUNDS) and inside(click, FIELD_BOUNDS):
+        if batch_pans == 0 and inside(roi, ROI_BOUNDS) and inside(click, FIELD_BOUNDS):
             field = goto.capture_client(session.win)
             session.identity(field)
             session.check_collectible(field)
@@ -219,70 +249,87 @@ def plan_world_move(session, observation, target, calibration=None, max_pans=8, 
         if count == max_pans:
             raise ValueError(f'已平移 {max_pans} 次，目标仍不在有效画面内；未发送移动点击。')
         center = project(view['roi_to_map'], [243, 231])
-        if previous_center is not None and np.linalg.norm(center - previous_center) < 3:
+        if batch_pans == 0 and previous_center is not None and np.linalg.norm(center - previous_center) < 3:
             raise ValueError('镜头已到边界或没有产生有效平移，未发送移动点击。')
-        previous_center = center
+        if batch_pans == 0:
+            previous_center = center
+            batch_start = view
         gain = float(np.median(responses[-3:])) if responses else 1.
         drag = camera_drag(chart, view, target, gain=gain)
         session.emit(state='panning', camera_pans=session.camera_pans + 1, plan_camera_pans=count + 1,
                      camera_drag=drag.tolist(), camera_gain=gain,
                      message=f'正在平移画面寻找目标（{count + 1}/{max_pans}）…')
+        before = goto.capture_client(session.win)
         pan_scene(session, drag)
         session.camera_pans += 1
-        updated = (observe_camera(session, squad_position, surface=surface) if calibration is not None
-                   else observe_camera(session, squad_position))
-        response = camera_response(chart, view, updated, drag)
-        if response is not None:
-            responses.append(response)
+        current = goto.capture_client(session.win)
+        session.identity(current)
+        session.check_collectible(current)
+        session.preview(current)
+        batch_pans += 1
+        batch_drag += drag
+        reason = 'prediction_failed'
+        try:
+            updated = predict_camera(chart, batch_start, batch_drag, gain)
+            remaining = camera_offset(chart, updated, target)
+            reason = ('no_scene_motion' if scene_unchanged(before, current) else
+                      'pan_budget' if count + 1 == max_pans else
+                      'batch_limit' if batch_pans >= 3 else
+                      'relative_target_reached' if np.linalg.norm(remaining) < 8 else None)
+        except ValueError:
+            pass
+        needs_fix = reason is not None
+        if needs_fix:
+            session.emit(camera_correction_reason=reason)
+            updated = (observe_camera(session, squad_position, surface=surface) if calibration is not None
+                       else observe_camera(session, squad_position))
+            roi, click = target_projection(chart, updated, target)
+            if (np.linalg.norm(project(updated['roi_to_map'], [243, 231])
+                               - project(batch_start['roi_to_map'], [243, 231])) < 3
+                    and not (inside(roi, ROI_BOUNDS) and inside(click, FIELD_BOUNDS))):
+                raise ValueError('镜头已到边界或没有产生有效平移，未发送移动点击。')
+            response = camera_response(chart, batch_start, updated, batch_drag)
+            if response is not None:
+                responses.append(response)
+            batch_pans, batch_drag = 0, np.zeros(2)
+        session.emit(camera_tracking='minimap' if needs_fix else 'predicted', camera_batch_pans=batch_pans)
         view = updated
         session.emit(camera_view_position=view['position'], camera_position_kind=view['position_kind'])
     raise AssertionError('Unreachable camera planning state')
 
 
 def wait_for_squad(session):
-    """在紧凑态等待，间隔展开取新快照，避免展开面板冻结的旧画面被当作停稳。
+    """直接采样实时紧凑地图，四帧道路与小队圆环都稳定后返回。
 
-    紧凑道路连续稳定后，重新展开采集一次小队圆环和道路，再立即收起面板。
-    三张跨开关快照的圆环坐标跨度不超过 10px 才返回；最多采样 120 轮，持续移动或标记缺失以超时失败结束。
+    圆环缺失或道路证据不足时重新累计；最多采样 120 轮，不展开会冻结画面的小地图面板。
     """
+    from dev_tools.wiki_collectible_match import minimap_masks
+
     goto.map_close(session.win)
-    previous_compact, previous_road, positions, stable = None, None, [], 0
+    samples = []
     for index in range(120):
         session.pause(1)
         session.check()
         field = goto.capture_client(session.win)
         session.identity(field)
         session.check_collectible(field)
-        compact = goto.mr.terrain(field[123:250, 25:206])
-        stable = stable + 1 if previous_compact is not None and np.mean(compact != previous_compact) < .005 else 0
-        previous_compact = compact
         if index % 10 == 0:
             session.emit(state='moving', message='正在等待小队标记与地图道路停稳…', wait_samples=index + 1)
-        if stable < 3:
-            continue
-        goto.map_open(session.win)
         try:
-            image = session.win.capture()
-        finally:
-            goto.map_close(session.win)
-        road = goto.mr.terrain(image)
-        players, _ = goto.mr.detect_markers(image, np.eye(3))
-        player = np.asarray(players[0]) if len(players) == 1 else None
-        if player is None:
-            positions = []
-        elif previous_road is None or np.mean(road != previous_road) >= .005:
-            positions = [player]
-        else:
-            positions = [*positions, player][-3:]
-        previous_road = road
-        previous_compact, stable = None, 0
-        session.emit(wait_player_roi=None if player is None else player.tolist())
-        # 标记自身会脉动；三次跨开关的新快照相隔数秒，容忍中心抖动但不能接受持续行走。
-        stopped = len(positions) == 3 and np.max(np.ptp(positions, axis=0)) <= 10
-        if stopped:
-            field = goto.capture_client(session.win)
-            session.identity(field)
-            session.check_collectible(field)
+            _, road, valid, player = minimap_masks(field)
+        except ValueError:
+            samples = []
+            session.emit(wait_player_compact=None)
+            continue
+        samples = [*samples, (road, valid, player)][-4:]
+        session.emit(wait_player_compact=player.tolist())
+        if len(samples) < 4 or np.max(np.ptp([s[2] for s in samples], axis=0)) > 6:
+            continue
+        # 圆环脉动及其遮挡不算道路位移；只比较每帧都可见的道路区域。
+        common = np.logical_and.reduce([s[1] > 0 for s in samples])
+        if np.count_nonzero((samples[0][0] > 0) & common) < 200:
+            continue
+        if all(np.mean((s[0] != samples[0][0])[common]) < .005 for s in samples[1:]):
             session.preview(field)
             return
     raise RuntimeError('等待小队停稳超时，未追加移动点击。')

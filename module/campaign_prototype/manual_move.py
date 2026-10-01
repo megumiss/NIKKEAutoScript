@@ -112,9 +112,12 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
     session 提供观测、规划、输入及停稳接口，target、到达半径和位置差都使用原图像素。
     到点模式按 required_near 次连续近点观测确认；收集品和敌人模式在附近进行有限试点，耗尽后返回 needs_review。
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
+    镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     """
+    from .movement_feedback import SquadPositionChanged
+
     target = np.asarray(target, float)
-    clicks, near, stagnant = 0, 0, 0
+    clicks, near, stagnant, replans = 0, 0, 0, 0
     previous = None
     probes = None
     probe_index = 0
@@ -153,26 +156,38 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
         if clicks >= max_moves:
             raise RuntimeError(f'已达到 {max_moves} 次移动上限，尚未到达目标。')
         emit(state='planning', message='正在自动换算道路落点…')
-        if purpose != 'position' and (distance <= arrival_radius or probes is not None):
-            from .movement_feedback import probe_targets
-            if probes is None:
-                probes = probe_targets(approach)
-            click = None
-            while probe_index < len(probes):
-                candidate = probes[probe_index]
-                probe_index += 1
-                try:
-                    click = session.plan(observation, candidate)
-                    break
-                except ValueError as exc:
-                    emit(message=f'附近落点不可用：{exc}')
-            if click is None:
-                session.finish_view()
-                return dict(state='needs_review', message='已到目标附近，有限范围尝试后仍未确认触发，请检查现场。',
-                            movement_clicks=clicks, position=position.tolist(), distance=distance)
-            emit(state='probing', message=f'正在尝试目标附近落点（{probe_index}/{len(probes)}）…')
-        else:
-            click = session.plan(observation, approach)
+        try:
+            if purpose != 'position' and (distance <= arrival_radius or probes is not None):
+                from .movement_feedback import probe_targets
+                if probes is None:
+                    probes = probe_targets(approach)
+                click = None
+                while probe_index < len(probes):
+                    candidate = probes[probe_index]
+                    probe_index += 1
+                    try:
+                        click = session.plan(observation, candidate)
+                        break
+                    except ValueError as exc:
+                        emit(message=f'附近落点不可用：{exc}')
+                if click is None:
+                    session.finish_view()
+                    return dict(state='needs_review', message='已到目标附近，有限范围尝试后仍未确认触发，请检查现场。',
+                                movement_clicks=clicks, position=position.tolist(), distance=distance)
+                emit(state='probing', message=f'正在尝试目标附近落点（{probe_index}/{len(probes)}）…')
+            else:
+                click = session.plan(observation, approach)
+        except SquadPositionChanged as error:
+            replans += 1
+            emit(state='locating', message='镜头平移后小队位置变化，正在停稳并重新定位…',
+                 camera_replans=replans, squad_before_pan=error.before, squad_after_pan=error.after)
+            if replans > 2:
+                raise RuntimeError('镜头平移后小队位置反复变化，已用尽两次重新定位机会；未追加移动点击。') from error
+            session.anchor_reference = None
+            session.anchor_reference_method = None
+            previous, probes, probe_index, stagnant, near = None, None, 0, 0, 0
+            session.wait_stopped()
+            continue
         session.check()
         session.move(click)
         clicks += 1
@@ -243,13 +258,17 @@ class GameSession:
             raise RuntimeError('游戏普通／困难难度与所选目标不符，或难度无法识别。')
 
     def check_collectible(self, field):
-        """仅对 collectible 请求读取紧凑地图计数器，以首个有效读数建立基线。
+        """收集品橙色倒三角出现即停止；自动拾取导致计数增加时也保留成功反馈。
 
-        同一总数下连续两次已收集数增加才抛出 TargetTriggered；漏识别或计数回落会清空连续确认次数。
+        提示出现立即抛出 TargetTriggered；未见提示时才检查计数，同一总数下连续两次增加作为拾取反馈。
         """
         if self.request.get('purpose') != 'collectible':
             return
-        from .movement_feedback import collectible_counter, TargetTriggered
+        from .movement_feedback import collectible_indicator, collectible_counter, TargetTriggered
+        indicator = collectible_indicator(field)
+        if indicator is not None:
+            self.preview(field)
+            raise TargetTriggered('已发现收集品橙色倒三角，移动测试已停止。', indicator)
         value = collectible_counter(field, self.model)
         if value is None:
             self.counter_confirmation = 0
@@ -288,7 +307,9 @@ class GameSession:
         if self.win is None:
             self.win = runtime.Window()
             self.win.focus()
-        self.identity(goto.capture_client(self.win))
+        field = goto.capture_client(self.win)
+        self.identity(field)
+        self.check_collectible(field)
         goto.map_open(self.win, reset=True)
         observed = self.win.capture()
         self.index += 1
@@ -316,6 +337,11 @@ class GameSession:
         click 是客户区像素，按窗口屏幕原点转换并四舍五入后发送一次点击。
         实际焦点、取消和驱动错误检查由窗口的 GuardedInput 执行；本方法不判断是否到达。
         """
+        from . import goto
+        self.check()
+        field = goto.capture_client(self.win)
+        self.identity(field)
+        self.check_collectible(field)
         x, y = self.win.gui.ClientToScreen(self.win.hwnd, (0, 0))
         self.win.handler.mouse_click(x + round(click[0]), y + round(click[1]))
 
@@ -328,7 +354,7 @@ class GameSession:
         runtime.pause(seconds)
 
     def wait_stopped(self):
-        """调用共享停稳检测，等待紧凑道路及跨开关的小队圆环快照稳定。
+        """调用共享停稳检测，等待紧凑地图的道路和小队圆环稳定。
 
         无返回值；超时和身份异常向 navigate 传播，阻止在上一段运动未结束时叠加输入。
         """

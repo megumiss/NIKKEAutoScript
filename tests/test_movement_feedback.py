@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -8,12 +9,114 @@ import numpy as np
 from module.campaign_prototype.manual_move import navigate, GameSession
 from module.campaign_prototype.arrow_anchor import ArrowUnavailable
 from module.campaign_prototype.movement_feedback import (
-    scene_anchor, collectible_counter, TargetTriggered, resolve_anchor,
+    scene_anchor, collectible_counter, collectible_indicator, TargetTriggered, resolve_anchor, SquadPositionChanged,
 )
 from module.campaign_prototype.surface_motion import fit_calibration
 
 
 class FeedbackTests(unittest.TestCase):
+    def test_squad_change_discards_plan_and_reobserves_after_waiting(self):
+        for purpose in ('position', 'collectible'):
+            session = Mock()
+            positions = ([0, 0], [40, 0], [100, 0]) if purpose == 'position' else ([100, 0], [40, 0], [100, 0])
+            session.observe.side_effect = [dict(position=p, position_kind='squad', iou=.95) for p in positions]
+            session.plan.side_effect = [SquadPositionChanged(positions[0], [30, 0]), np.array([800, 500])]
+            session.wait_stopped.side_effect = [None, TargetTriggered('done', {})]
+            with self.subTest(purpose=purpose), self.assertRaises(TargetTriggered):
+                navigate(session, [100, 0], Mock(), purpose=purpose)
+            self.assertEqual(session.observe.call_count, 2)
+            self.assertEqual(session.wait_stopped.call_count, 2)
+            session.move.assert_called_once()
+            self.assertEqual(session.plan.call_args.args[0]['position'], [40, 0])
+            self.assertIsNone(session.anchor_reference)
+            self.assertIsNone(session.anchor_reference_method)
+            calls = [call[0] for call in session.mock_calls]
+            self.assertLess(calls.index('wait_stopped'), calls.index('move'))
+
+    def test_repeated_squad_changes_stop_without_movement_clicks(self):
+        session = Mock()
+        session.observe.return_value = dict(position=[0, 0], position_kind='squad', iou=.95)
+        session.plan.side_effect = SquadPositionChanged([0, 0], [30, 0])
+        with self.assertRaisesRegex(RuntimeError, '两次重新定位'):
+            navigate(session, [100, 0], Mock())
+        self.assertEqual(session.plan.call_count, 3)
+        self.assertEqual(session.wait_stopped.call_count, 2)
+        session.move.assert_not_called()
+
+    def test_recovery_wait_failure_or_collectible_stops_before_replanning(self):
+        for error in (KeyboardInterrupt('cancel'), RuntimeError('identity'), TargetTriggered('indicator', {})):
+            session = Mock()
+            session.observe.return_value = dict(position=[0, 0], position_kind='squad', iou=.95)
+            session.plan.side_effect = SquadPositionChanged([0, 0], [30, 0])
+            session.wait_stopped.side_effect = error
+            with self.subTest(error=type(error)), self.assertRaises(type(error)):
+                navigate(session, [100, 0], Mock())
+            session.observe.assert_called_once()
+            session.plan.assert_called_once()
+            session.move.assert_not_called()
+
+    def recorded_field(self, index):
+        root = Path(__file__).parent / 'fixtures/movement_feedback'
+        field = np.zeros((999, 1776, 3), np.uint8)
+        field[310:650, 750:1100] = cv2.imread(str(root / f'ch48_scene_{index:03}.png'))
+        field[80:290, 18:230] = cv2.imread(str(root / f'ch48_compact_{index:03}.png'))
+        return field
+
+    def test_recorded_indicator_detects_prompt_not_squad_arrow_or_counter(self):
+        for index in range(4, 12):
+            with self.subTest(index=index):
+                result = collectible_indicator(self.recorded_field(index))
+                if index < 6:
+                    self.assertIsNone(result)
+                else:
+                    self.assertEqual(result['kind'], 'collectible_indicator')
+        self.assertIsNone(collectible_indicator(np.zeros((999, 1776, 3), np.uint8)))
+
+    def test_indicator_stops_before_ocr_and_only_for_collectible(self):
+        field = self.recorded_field(6)
+        for purpose in ('position', 'enemy', 'collectible'):
+            session = SimpleNamespace(request={'purpose': purpose}, model=Mock(), preview=Mock())
+            if purpose == 'collectible':
+                with self.assertRaises(TargetTriggered) as caught:
+                    GameSession.check_collectible(session, field)
+                self.assertEqual(caught.exception.evidence['kind'], 'collectible_indicator')
+                session.preview.assert_called_once()
+            else:
+                GameSession.check_collectible(session, field)
+                session.preview.assert_not_called()
+            session.model.predict.assert_not_called()
+
+    def test_indicator_stops_before_observation_or_movement_input(self):
+        from module.campaign_prototype.parallax_movement import ParallaxSessionMixin
+        for operation in (GameSession.observe, ParallaxSessionMixin.observe, GameSession.move):
+            session = SimpleNamespace(request={'purpose': 'collectible'}, model=Mock(), preview=Mock(),
+                                      check=Mock(), identity=Mock(), win=Mock())
+            session.check_collectible = lambda field: GameSession.check_collectible(session, field)
+            with self.subTest(operation=operation.__qualname__), patch(
+                    'module.campaign_prototype.goto.capture_client', return_value=self.recorded_field(6)), patch(
+                    'module.campaign_prototype.goto.map_open') as open_map:
+                with self.assertRaises(TargetTriggered):
+                    operation(session, [888, 500]) if operation is GameSession.move else operation(session)
+            open_map.assert_not_called()
+            session.win.handler.mouse_click.assert_not_called()
+
+    def test_indicator_during_wait_prevents_next_navigation_iteration(self):
+        from module.campaign_prototype.camera_navigation import wait_for_squad
+        session = Mock()
+        session.request = {'purpose': 'collectible'}
+        session.observe.return_value = dict(position=[20, 20], position_kind='squad', iou=.95)
+        session.plan.return_value = np.array([888, 500])
+        session.wait_stopped.side_effect = lambda: wait_for_squad(session)
+        session.check_collectible.side_effect = lambda field: GameSession.check_collectible(session, field)
+        with patch('module.campaign_prototype.goto.capture_client', return_value=self.recorded_field(6)), patch(
+                'module.campaign_prototype.goto.map_open') as open_map, patch(
+                'module.campaign_prototype.goto.map_close'):
+            with self.assertRaises(TargetTriggered):
+                navigate(session, [100, 100], Mock(), purpose='collectible')
+        session.move.assert_called_once()
+        session.observe.assert_called_once()
+        open_map.assert_not_called()
+
     def test_local_calibration_checks_map_units_with_independent_samples(self):
         points = np.array([[-20, -20], [20, -20], [20, 20], [-20, 20], [0, -20], [0, 20]], float)
         validation = np.array([[-10, -10], [10, -10], [0, 10]], float)
