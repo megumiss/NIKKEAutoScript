@@ -211,6 +211,8 @@ class WikiClient:
 
     def get(self, url, path, image=False):
         """优先验证已有缓存，缺失时下载并原子保存；离线模式不发网络请求。"""
+        if (self.cache / 'STOP').exists():
+            raise KeyboardInterrupt('Stopped by STOP file.')
         path = Path(path)
         if path.exists() and (self.offline or not self.refresh):
             body = path.read_bytes()
@@ -282,7 +284,7 @@ def find_package(roots, chapter):
     for root in roots:
         matches = []
         for path in sorted(root.rglob('map.json')):
-            if 'attempts' in path.parts:
+            if 'attempts' in path.parts or any(part.startswith('.') for part in path.relative_to(root).parts):
                 continue
             try:
                 meta = json.loads(path.read_text(encoding='utf-8'))
@@ -318,11 +320,20 @@ def save_annotations(package, article, matches, update=False):
             continue
         if item['image_sha256'] != document['image_sha256']:
             raise ValueError('Map changed after matching; recompute positions.')
+        if item.get('edits_sha256') is not None:
+            edits_raw = json.dumps(document.get('terrain_edits', []), sort_keys=True).encode()
+            edits_digest = hashlib.sha256(edits_raw).hexdigest()
+            if item['edits_sha256'] != edits_digest:
+                raise ValueError('Road edits changed after matching; recompute positions.')
         source = {key: item[key] for key in ('number', 'road_iou', 'roi', 'roi_to_map', 'player_center')}
         source.update(url=article['url'], article_id=article['article_id'], difficulty=difficulty,
                       author=article.get('author', ''), article_updated=article.get('updated_at'),
                       image_url=item['image_url'], item_name=item['name'], importer='wiki_collectibles',
                       position_basis='squad_marker_center', normalized_size=item['normalized_size'])
+        for key in ('coordinate_model', 'reference_frame', 'local_surface', 'edits_sha256', 'edited_road_iou',
+                    'screenshot_layout'):
+            if key in item:
+                source[key] = item[key]
         obj = {'id': identifier, 'type': 'point', 'difficulty': difficulty,
                'label': f"{'普通' if difficulty == 'normal' else '困难'}收集物 {item['number']:02d}",
                'points': [[round(v, 1) for v in item['position']]],
@@ -390,6 +401,8 @@ def process_article(client, article, roots, options, matchers):
     matcher = matchers[package]
     matches = []
     for item in parsed['items']:
+        if (client.cache / 'STOP').exists():
+            raise KeyboardInterrupt('Stopped by STOP file.')
         result = {**item, 'status': 'needs_review', 'errors': []}
         accepted = []
         for screenshot in item['images']:

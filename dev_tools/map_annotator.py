@@ -22,11 +22,13 @@ if __package__:
     from .map_paths import DEFAULT_MAPS_ROOT
     from .map_movement import MovementJobs
     from .map_scan import ScanJobs
+    from .map_wiki import WikiJobs
     from .map_terrain import render_terrain, terrain_colors, validate_terrain_edits
 else:
     from map_paths import DEFAULT_MAPS_ROOT
     from map_movement import MovementJobs
     from map_scan import ScanJobs
+    from map_wiki import WikiJobs
     from map_terrain import render_terrain, terrain_colors, validate_terrain_edits
 
 UI = Path(__file__).with_suffix('')
@@ -178,6 +180,7 @@ class AnnotationStore:
             }
             validate_annotations(document, image_hash, size)
             return {'id': identifier, 'chapter': metadata.get('chapter'), 'size': size,
+                    'coordinate_model': metadata.get('coordinate_model'),
                     'terrain_colors': terrain_colors(metadata),
                     'path': str(package), 'reference': reference, 'annotations': document,
                     'revision': digest(raw), 'coverage_verified': metadata.get('capture', {}).get(
@@ -239,11 +242,12 @@ class AnnotationStore:
             return {'export': name, 'path': str(folder / 'map.png'), 'edits': len(document['terrain_edits'])}
 
 
-def make_server(store, port=8766, initial=None, movement=None, scans=None):
+def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=None):
     """建立仅监听本机的服务；保存和移动请求共用会话令牌，设备在子进程中执行。"""
     token = secrets.token_urlsafe(32)
     movement = movement or MovementJobs(store)
     scans = scans or ScanJobs(store)
+    wiki = wiki or WikiJobs(store)
     device_lock = threading.RLock()
 
     class Handler(BaseHTTPRequestHandler):
@@ -276,6 +280,8 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None):
                           '/editor.js': ('editor.js', 'text/javascript; charset=utf-8'),
                           '/movement.js': ('movement.js', 'text/javascript; charset=utf-8'),
                           '/scan.js': ('scan.js', 'text/javascript; charset=utf-8'),
+                          '/wiki.js': ('wiki.js', 'text/javascript; charset=utf-8'),
+                          '/panels.js': ('panels.js', 'text/javascript; charset=utf-8'),
                           '/editor.css': ('editor.css', 'text/css; charset=utf-8')}
                 if request.path in assets:
                     name, mime = assets[request.path]
@@ -287,9 +293,15 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None):
                     return self.send(movement.status())
                 if request.path == '/api/scan':
                     return self.send(scans.status())
+                if request.path == '/api/wiki':
+                    return self.send(wiki.status())
+                if request.path == '/api/wiki/review':
+                    return self.send(wiki.review())
                 if request.path == '/api/movement/preview':
                     return self.send(movement.preview(params.get('job', [''])[0]), 'image/jpeg')
                 identifier = params.get('map', [''])[0]
+                if request.path == '/api/movement/calibration':
+                    return self.send(movement.calibration(identifier, params.get('difficulty', ['normal'])[0]))
                 if request.path == '/api/map':
                     return self.send(store.load(identifier))
                 if request.path == '/api/export-image':
@@ -315,7 +327,8 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None):
                 return self.send({'error': '页面会话已失效，请刷新后重试。'}, status=403)
             endpoint = urlsplit(self.path).path
             if endpoint not in ('/api/save', '/api/terrain/export', '/api/movement/start', '/api/movement/stop',
-                                '/api/scan/start', '/api/scan/stop'):
+                                '/api/scan/start', '/api/scan/stop', '/api/wiki/start', '/api/wiki/stop',
+                                '/api/wiki/apply'):
                 return self.send({'error': '未找到资源。'}, status=404)
             try:
                 length = int(self.headers.get('Content-Length', '0'))
@@ -338,6 +351,15 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None):
                     result = scans.stop(payload['job'])
                 elif endpoint == '/api/movement/stop':
                     result = movement.stop(payload['job'])
+                elif endpoint == '/api/wiki/start':
+                    result = wiki.start(payload)
+                elif endpoint == '/api/wiki/stop':
+                    result = wiki.stop(payload['job'])
+                elif endpoint == '/api/wiki/apply':
+                    with device_lock:
+                        if movement.status().get('running'):
+                            raise ValueError('请在小队移动结束后导入。')
+                        result = wiki.apply(payload)
                 else:
                     result = store.save(payload['id'], payload['annotations'], payload['revision'])
                 self.send(result)
@@ -356,7 +378,10 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None):
             """服务退出也必须停止本服务持有的扫描和移动进程。"""
             try:
                 try:
-                    scans.close()
+                    try:
+                        wiki.close()
+                    finally:
+                        scans.close()
                 finally:
                     movement.close()
             finally:

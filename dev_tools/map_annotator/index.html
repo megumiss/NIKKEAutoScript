@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="/editor.css">
   <script src="/movement.js" defer></script>
   <script src="/scan.js" defer></script>
+  <script src="/wiki.js" defer></script>
+  <script src="/panels.js" defer></script>
   <script src="/editor.js" defer></script>
 </head>
 <body>
@@ -19,6 +21,8 @@
 
   <main class="workspace">
     <aside class="tools-panel" aria-label="绘制工具">
+      <details class="tool-section" id="road-tools">
+      <summary>修订道路</summary>
       <div class="section-label">道路修订</div>
       <div class="tools" role="group" aria-label="道路修订工具">
         <button data-tool="road-brush" aria-pressed="false" title="按住拖动补齐道路 (B)">画笔补路 <kbd>B</kbd></button>
@@ -31,6 +35,9 @@
       <p id="road-count" class="muted">0 笔道路修订</p>
       <button id="export-terrain" disabled>保存并导出修订图</button>
       <a id="terrain-export-link" hidden target="_blank" rel="noopener">查看导出的地图</a>
+      </details>
+      <details class="tool-section" id="annotation-tools" open>
+      <summary>绘制标注</summary>
       <div class="section-label">新标注</div>
       <label>标注类型<select id="new-category" aria-describedby="category-help"></select></label>
       <p id="category-help" class="muted category-help"></p>
@@ -48,10 +55,14 @@
         <button data-tool="rectangle" aria-pressed="false" title="按住拖动绘制矩形 (R)">矩形 <kbd>R</kbd></button>
         <button data-tool="connect" aria-pressed="false" title="依次点击两部地面电梯建立传送关系 (C)">电梯传送 <kbd>C</kbd></button>
       </div>
+      </details>
+      <details class="tool-section">
+      <summary>图层与显示</summary>
       <div class="section-label">显示</div>
       <label>图层<select id="layer"><option value="map.png">道路底图</option><option value="reference.png">实拍参考图</option></select></label>
       <label class="check"><input id="show-annotations" type="checkbox" checked>显示标注</label>
       <label class="check"><input id="show-labels" type="checkbox" checked>显示标签</label>
+      </details>
       <div class="tool-help"><strong>操作提示</strong><p>滚轮缩放 · 空格拖动平移</p><p>Enter 完成 · Esc 取消</p><p>绘制时 Backspace 撤回顶点</p><p>选中后拖动顶点修正位置</p></div>
     </aside>
 
@@ -84,7 +95,14 @@
     </section>
 
     <aside class="inspector" aria-label="标注管理">
-      <section class="movement-panel" aria-labelledby="scan-heading">
+      <div class="manager-tabs" role="tablist" aria-label="地图管理">
+        <button id="tab-objects" role="tab" aria-controls="panel-objects" aria-selected="true" data-panel="objects">对象</button>
+        <button id="tab-wiki" role="tab" aria-controls="panel-wiki" aria-selected="false" tabindex="-1" data-panel="wiki">Wiki</button>
+        <button id="tab-movement" role="tab" aria-controls="panel-movement" aria-selected="false" tabindex="-1" data-panel="movement">移动</button>
+        <button id="tab-scan" role="tab" aria-controls="panel-scan" aria-selected="false" tabindex="-1" data-panel="scan">扫描</button>
+      </div>
+      <p id="task-summary" class="task-summary" role="status" aria-live="polite">当前无运行任务</p>
+      <section id="panel-scan" class="movement-panel" role="tabpanel" aria-labelledby="tab-scan" hidden>
         <h2 id="scan-heading">地图扫描</h2>
         <p class="muted">先进入指定章节。扫描会操作游戏，请保持游戏在前台；新地图另存，不覆盖当前修订。</p>
         <label>章节<input id="scan-chapter" type="number" min="1" max="99" value="40"></label>
@@ -96,17 +114,40 @@
         <button id="scan-open" disabled>打开扫描结果</button>
         <details><summary>扫描日志位置</summary><p id="scan-log" class="muted"></p></details>
       </section>
-      <section class="movement-panel" aria-labelledby="movement-heading">
+      <section id="panel-movement" class="movement-panel" role="tabpanel" aria-labelledby="tab-movement" hidden>
         <h2 id="movement-heading">小队移动测试</h2>
         <p class="muted">选一个道路目标，自动换算落点并移动。测试期间保持游戏在前台。</p>
         <div class="movement-actions"><button id="move-pick" aria-pressed="false">在图上选目标</button><button id="move-use-selected" disabled>使用选中标注</button></div>
         <output id="move-target">尚未选择目标</output>
         <label>测试难度<select id="move-difficulty"><option value="normal">普通</option><option value="hard">困难</option></select></label>
+        <section id="move-calibration-panel" class="calibration-settings" aria-labelledby="calibration-heading">
+          <h3 id="calibration-heading">移动标定</h3>
+          <p id="move-calibration-status" class="muted" role="status" aria-live="polite">正在检查当前地图的标定…</p>
+          <p id="move-calibration-metrics" class="muted"></p>
+          <p class="muted">自动采集短距离位移、验证并保存。有效标定会直接复用。请让小队停在当前区域的开阔道路上。</p>
+        </section>
+        <label>到点行为<select id="move-purpose"><option value="position">到达附近</option><option value="collectible">寻找并触发收集品</option><option value="enemy">接触敌人</option></select></label>
+        <p class="muted">收集品和敌人到点后最多尝试 5 个附近道路落点。出现交互提示即停止并保留现场。</p>
         <div class="movement-actions"><button id="move-start" class="primary" disabled>移动到目标</button><button id="move-stop" disabled>停止测试</button></div>
+        <p class="muted">标定仅适用于采样附近的同层道路。自动标定失败时会停止，并显示原因。</p>
+        <p class="muted">跨区需先标记电梯／传送点并建立配对。当前局部移动测试不会自动跨区，传送后需重新定位和标定。</p>
         <p id="move-status" class="muted" role="status" aria-live="polite">选择目标点后开始移动测试。</p>
         <p id="move-metrics" class="muted"></p>
         <details id="move-evidence" hidden><summary>查看现场与日志</summary><img id="move-preview" alt="本次移动测试的游戏现场" hidden><p id="move-log" class="muted"></p></details>
       </section>
+      <section id="panel-wiki" class="movement-panel" role="tabpanel" aria-labelledby="tab-wiki" hidden>
+        <h2>Wiki 收集品标注</h2>
+        <p class="muted">自动匹配当前地图和已保存的道路修订。先查看结果，再导入通过的标注。</p>
+        <label>攻略难度<select id="wiki-difficulty"><option value="both">普通与困难</option><option value="normal">普通</option><option value="hard">困难</option></select></label>
+        <div class="movement-actions"><button id="wiki-start" class="primary" disabled>匹配 Wiki 标注</button><button id="wiki-stop" disabled>停止</button></div>
+        <p id="wiki-status" class="muted" role="status" aria-live="polite">选择地图后开始匹配。</p>
+        <div id="wiki-counts" class="result-counts"></div>
+        <button id="wiki-apply" class="primary" disabled>导入通过的标注</button>
+        <p class="muted">已有标注的坐标保留。修改道路或标注后，需重新匹配再导入。</p>
+        <div id="wiki-review" class="wiki-review" aria-label="收集品匹配结果"></div>
+        <details><summary>日志与复核文件</summary><p id="wiki-log" class="muted"></p></details>
+      </section>
+      <section id="panel-objects" role="tabpanel" aria-labelledby="tab-objects">
       <div class="inspector-heading"><h2>标注对象</h2><span id="object-count" class="badge">0</span></div>
       <input id="search" type="search" placeholder="搜索标签或 ID" aria-label="搜索标注">
       <div id="object-list" class="object-list"><p class="muted empty-list">暂无标注。选择左侧工具在图上绘制。</p></div>
@@ -123,6 +164,7 @@
         <button id="delete" type="button" class="danger">删除选中标注 <kbd>Del</kbd></button>
       </form>
       <details class="file-details"><summary>文件与副本</summary><p id="package-path" class="muted"></p><button id="download" disabled>下载 JSON 副本</button><button id="reload" disabled>重新加载磁盘标注</button><p class="muted">保存前自动备份原文件；底图保持不变。</p></details>
+      </section>
     </aside>
   </main>
 </body>

@@ -79,6 +79,60 @@ def grid_horizon(image):
     return float(y), {'vanishing_points': [v.tolist() for v in vanishing], 'residuals': residuals}
 
 
+def grid_horizon_directions(image):
+    """按无向角度分组短网格线，稳健拟合近水平／竖直网格，避免按斜率正负拆错线族。"""
+    segments = cv2.HoughLinesP(raw_grid(image), 1, np.pi / 720, 15, minLineLength=45, maxLineGap=35)
+    if segments is None:
+        raise ValueError('Not enough grid segments for directional calibration.')
+    segments = segments.reshape(-1, 4)
+    delta = segments[:, 2:] - segments[:, :2]
+    angles = np.arctan2(delta[:, 1], delta[:, 0]) % np.pi
+    histogram, edges = np.histogram(angles, bins=72, range=(0, np.pi))
+    # Perspective spreads a real line family over several bins; isolated parallel clutter must not win.
+    histogram = sum(np.roll(histogram, offset) for offset in range(-5, 6))
+    first = int(np.argmax(histogram))
+    distance = (np.arange(72) - first) % 72
+    other = histogram.copy()
+    other[(distance < 10) | (distance > 62)] = 0
+    second = int(np.argmax(other))
+    if not other[second]:
+        raise ValueError('Only one grid direction found.')
+    vanishing, residuals = [], []
+    for peak in (first, second):
+        distance = np.abs(angles - (edges[peak] + np.pi / 144))
+        selected = segments[np.minimum(distance, np.pi - distance) < np.deg2rad(25)]
+        if len(selected) < 4:
+            raise ValueError('Insufficient segments in a grid direction.')
+        lines = np.cross(np.c_[selected[:, :2], np.ones(len(selected))],
+                         np.c_[selected[:, 2:], np.ones(len(selected))]).astype(float)
+        lines /= np.linalg.norm(lines[:, :2], axis=1)[:, None]
+        best = np.zeros(len(lines), dtype=bool)
+        rng = np.random.default_rng(0)
+        for _ in range(1000):
+            a, b = rng.choice(len(lines), 2, replace=False)
+            point = np.cross(lines[a], lines[b])
+            if abs(point[2]) < 1e-8:
+                continue
+            point /= point[2]
+            inliers = np.abs(lines @ point) < 3
+            if inliers.sum() > best.sum():
+                best = inliers
+        if best.sum() < 4:
+            raise ValueError('Grid segments do not agree on a vanishing point.')
+        lines = lines[best]
+        point = np.r_[np.linalg.lstsq(lines[:, :2], -lines[:, 2], rcond=None)[0], 1]
+        vanishing.append(point)
+        residuals.append(float(np.median(np.abs(lines @ point))))
+    horizon = np.cross(*vanishing)
+    if abs(horizon[2]) < 1e-8 or abs(horizon[1]) < 1e-8:
+        raise ValueError('Degenerate grid horizon.')
+    horizon /= horizon[2]
+    y = -1 / horizon[1]
+    if not -2000 < y < -100 or max(residuals) > 8 or abs(horizon[0]) > 0.00015:
+        raise ValueError(f'Unreliable directional grid calibration: {y=}, {residuals=}')
+    return float(y), {'vanishing_points': [point.tolist() for point in vanishing], 'residuals': residuals}
+
+
 class Projection:
     def __init__(self, shape, horizon):
         """建立旧版地平线透视校正矩阵，同时生成去掉边框与计数器的有效域。"""
@@ -267,19 +321,21 @@ class DriverWindow:
         x, y = self.args.map_open
 
         def state():
-            """先检查展开 ROI，再检查紧凑地图及开关图标，未知页面禁止猜测点击。"""
-            if self.map_visible(self.capture(require_map=False)):
-                return 'expanded'
+            """优先核对左上角亮起的控件，避免把蓝色场景误认成展开地图。"""
+            expanded_image = self.capture(require_map=False)
             origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
             panel = ImageGrab.grab(bbox=(origin[0] + x - 22, origin[1] + y - 22,
                                        origin[0] + x + 186, origin[1] + y + 196), all_screens=True)
             panel = cv2.cvtColor(np.array(panel), cv2.COLOR_RGB2BGR)
-            if self.map_visible(panel[42:197, 7:187]):
-                return 'compact'
             icon = cv2.cvtColor(panel[:44, :44], cv2.COLOR_BGR2HSV)
             white = cv2.inRange(icon, (0, 0, 185), (179, 70, 255))
-            if 150 <= np.count_nonzero(white) <= 550 and (icon[:, :, 2] < 130).mean() > 0.5:
-                return 'closed'
+            if 150 <= np.count_nonzero(white) <= 550:
+                if self.map_visible(panel[42:197, 7:187]):
+                    return 'compact'
+                if (icon[:, :, 2] < 130).mean() > 0.5:
+                    return 'closed'
+            if self.map_visible(expanded_image):
+                return 'expanded'
             return 'unknown'
 
         def click(point):
@@ -926,13 +982,24 @@ class MetricGrid:
     """
 
     def __init__(self, image, cell_px=48.0):
-        """由网格消失点恢复俯视比例，估计网格周期并生成统一尺度的投影与有效域。"""
+        """保留原标定路径，失败时用无向网格线重新标定并通过相同周期与画布检查。"""
         try:
-            _, calibration = grid_horizon(image)
-            v1, v2 = (np.array(point[:2]) for point in calibration['vanishing_points'])
+            self._calibrate(image, cell_px)
         except ValueError:
-            # Dim chapters only show the grid as sparse intersection dots.
-            v1, v2 = self._vanishing_from_dots(image)
+            _, calibration = grid_horizon_directions(image)
+            self._calibrate(image, cell_px, calibration)
+
+    def _calibrate(self, image, cell_px, calibration=None):
+        """由网格消失点恢复俯视比例，估计网格周期并生成统一尺度的投影与有效域。"""
+        if calibration is None:
+            try:
+                _, calibration = grid_horizon(image)
+                v1, v2 = (np.array(point[:2]) for point in calibration['vanishing_points'])
+            except ValueError:
+                # Dim chapters only show the grid as sparse intersection dots.
+                v1, v2 = self._vanishing_from_dots(image)
+        else:
+            v1, v2 = (np.array(point[:2]) for point in calibration['vanishing_points'])
         height, width = image.shape[:2]
         center = np.array([width / 2, height / 2])
         focal2 = -float(np.dot(v1 - center, v2 - center))
@@ -1017,10 +1084,13 @@ class MetricGrid:
     @staticmethod
     def _layout(homography, warped_corners, scale):
         """给投影后的角点统一缩放、平移和留边，返回可容纳校正图的画布。"""
+        size = (warped_corners.max(axis=0) - warped_corners.min(axis=0)) * scale + 40
+        # A vanishing point inside the view can otherwise allocate tens of GB before calibration fails.
+        if not np.isfinite(size).all() or np.any(size <= 0) or np.max(size) > 8192 or np.prod(size) > 16_000_000:
+            raise ValueError('Grid projection exceeds the calibration canvas limit; reject degenerate geometry.')
         translation = -warped_corners.min(axis=0) * scale + 20
         matrix = np.array([[1.0, 0, translation[0]], [0, 1.0, translation[1]], [0, 0, 1.0]]) \
             @ np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1.0]]) @ homography
-        size = (warped_corners.max(axis=0) - warped_corners.min(axis=0)) * scale + 40
         return matrix, tuple(int(v) for v in size)
 
     @staticmethod
@@ -1543,8 +1613,9 @@ class FlowTracker:
 
     def measure(self, before, after):
         """双向 LK 光流跟踪背景角点，经往返误差与内点离散度过滤后返回中位位移。"""
-        a = cv2.cvtColor(before, cv2.COLOR_BGR2GRAY)
-        b = cv2.cvtColor(after, cv2.COLOR_BGR2GRAY)
+        # Decorative background texture can move independently of the grid used by the projection.
+        a = cv2.GaussianBlur(raw_grid(before), (5, 5), 0.8)
+        b = cv2.GaussianBlur(raw_grid(after), (5, 5), 0.8)
         points = cv2.goodFeaturesToTrack(a, 350, 0.01, 8, mask=self.background(before))
         if points is None or len(points) < 24:
             return None

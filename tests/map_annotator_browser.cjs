@@ -74,7 +74,12 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
   async function click(point, count = 1) { const p = await screen(point); await page.mouse.click(p.x, p.y, { clickCount: count }); }
   async function drag(from, to) { const a = await screen(from), b = await screen(to);
     await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move(b.x, b.y, { steps: 5 }); await page.mouse.up(); }
-  const tool = name => page.locator(`[data-tool="${name}"]`).click();
+  const tool = async name => {
+    const section = name.startsWith('road-') ? '#road-tools' : '#annotation-tools';
+    if (await page.locator(section).getAttribute('open') === null)
+      await page.locator(`${section} > summary`).click();
+    await page.locator(`[data-tool="${name}"]`).click();
+  };
   const category = name => page.locator('#new-category').selectOption(name);
   const difficulty = name => page.locator(`[data-difficulty="${name}"]`).click();
   const count = expected => waitUntil(async () => await page.locator('#object-list button').count() === expected);
@@ -119,6 +124,7 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
   assert.equal(saved.connections[0].category, 'elevator_connection');
   assert.equal(saved.objects[0].category, 'ground_elevator');
 
+  await page.getByText('图层与显示', { exact: true }).click();
   await page.locator('#layer').selectOption('reference.png');
   await waitUntil(async () => (await page.locator('#base-image').getAttribute('href')).includes('reference.png'));
   await page.locator('#zoom-in').click(); await page.keyboard.down('Space'); await drag([500, 300], [540, 340]); await page.keyboard.up('Space');
@@ -232,11 +238,18 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
   // Browser movement actions use an explicit fake job; this regression never controls the game.
   const beforeMovement = fs.readFileSync(path.join(temporary, 'chapter_01/annotations.json'), 'utf8');
   let movementJob = { state: 'idle', message: '选择目标点后开始移动测试。' }, movementRequest;
+  let calibrationInfo = { state: 'missing', message: '尚未标定' };
   await page.route(/\/api\/movement(?:[/?]|$)/, async route => {
     const endpoint = new URL(route.request().url()).pathname;
+    if (endpoint === '/api/movement/calibration') {
+      const info = new URL(route.request().url()).searchParams.get('difficulty') === 'hard'
+        ? { state: 'missing', message: '困难尚未标定' } : calibrationInfo;
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify(info) });
+    }
     if (endpoint === '/api/movement/start') {
       movementRequest = route.request().postDataJSON();
       movementJob = { id: 'browser-test', map_id: movementRequest.id, target: movementRequest.target,
+        action: movementRequest.action,
         chapter: 1, difficulty: movementRequest.difficulty, state: 'moving', running: true,
         message: '正在移动（测试桩）', movement_clicks: 1, position: [220, 300], distance: 24 };
     }
@@ -246,6 +259,7 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(movementJob) });
   });
   await page.locator('#object-list button').filter({ hasText: '起点 A' }).click();
+  await page.locator('#tab-movement').click();
   await page.locator('#move-use-selected').click();
   assert.match(await page.locator('#move-target').textContent(), /231\.5.*220\.0/);
   await page.locator('#fit').click(); await page.locator('#zoom-in').click();
@@ -287,6 +301,7 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(scanJob) });
   });
   assert.equal(await page.locator('#scan-3d').isChecked(), false);
+  await page.locator('#tab-scan').click();
   await page.locator('#scan-chapter').fill('40'); await page.locator('#scan-chapter').press('Tab');
   assert.equal(await page.locator('#scan-3d').isChecked(), true);
   await page.locator('#scan-start').click();
@@ -309,6 +324,28 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
   await page.locator('#map-select').selectOption('chapter_01'); await difficulty('all'); await count(9);
 
   await page.locator('#fit').click();
+  await page.route(/\/api\/map\?map=chapter_01$/, async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, json: { ...await response.json(), coordinate_model: 'local_parallax' } });
+  });
+  await page.locator('#map-select').selectOption('chapter_02');
+  await waitUntil(async () => (await page.locator('#dimensions').textContent()).includes('600 × 500'));
+  await page.locator('#map-select').selectOption('chapter_01'); await difficulty('all'); await count(9);
+  await page.locator('#tab-movement').click();
+  assert.equal(await page.locator('#move-calibration-panel').isVisible(), true);
+  await page.locator('#move-pick').click(); await click([241, 317]);
+  assert.equal(await page.locator('#move-start').isDisabled(), true);
+  calibrationInfo = { state: 'ready', message: '已标定，可复用', training_samples: 6, validation_samples: 3, validation: 5.2 };
+  await waitUntil(async () => (await page.locator('#move-calibration-status').textContent()).includes('已标定'));
+  await page.locator('#move-pick').click(); await click([241, 317]);
+  await page.locator('#move-start').click();
+  await waitUntil(async () => movementRequest.action !== 'calibrate');
+  assert.equal(movementRequest.auto_calibrate, false);
+  await page.locator('#move-stop').click();
+  await waitUntil(async () => await page.locator('#move-start').isEnabled());
+  await page.locator('#move-difficulty').selectOption('hard');
+  await waitUntil(async () => (await page.locator('#move-calibration-status').textContent()).includes('困难尚未标定'));
+  assert.equal(await page.locator('#move-start').isDisabled(), true);
   // 道路修订沿用同一原图坐标，保存和导出都不能覆写基线。
   const originalMap = fs.readFileSync(path.join(temporary, 'chapter_01/map.png'));
   await tool('road-brush');
@@ -323,6 +360,7 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
   assert.equal(await page.locator('#terrain > *').count(), 3);
   await page.locator('#undo').click(); assert.equal(await page.locator('#terrain > *').count(), 2);
   await page.locator('#redo').click(); assert.equal(await page.locator('#terrain > *').count(), 3);
+  if (!(await page.locator('#show-annotations').isVisible())) await page.getByText('图层与显示', { exact: true }).click();
   await page.locator('#show-annotations').uncheck();
   assert.equal(await page.locator('#terrain > *').count(), 3);
   await page.locator('#show-terrain').uncheck(); assert.equal(await page.locator('#terrain > *').count(), 0);
@@ -330,6 +368,7 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
   await save(); assert.equal(annotations().terrain_edits.length, 3);
   await page.reload();
   await waitUntil(async () => await page.locator('#terrain > *').count() === 3);
+  await page.locator('#road-tools > summary').click();
   await page.locator('#export-terrain').click();
   await waitUntil(async () => await page.locator('#terrain-export-link').isVisible());
   const exported = new URL(await page.locator('#terrain-export-link').getAttribute('href'), url).searchParams.get('export');
@@ -353,6 +392,7 @@ const approx = (actual, expected, tolerance = 1.5) => assert.ok(Math.abs(actual 
     'layer/zoom/pan preserve coordinates', 'reload and map switching', 'save backup', 'concurrent-save rejection',
     'download current copy', 'movement target coordinates, start, stop and map reset',
     'scan mode, step, progress, stop, explicit result opening and movement exclusion',
+    'shared planar movement, pending layered movement, existing calibration and difficulty binding',
     'road brush/erase/polygon, undo/redo, visibility, save/reload, PNG export and baseline preservation',
     'responsive width', 'no browser errors'] }, null, 2));
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {

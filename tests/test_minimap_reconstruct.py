@@ -11,8 +11,9 @@ import cv2
 import numpy as np
 
 from dev_tools.minimap_reconstruct import (
-    DriverWindow, DriftScanner, FlowTracker, JointRegistration, detect_markers, marker_contributes,
-    map_orientation, merge_enemy_markers, recover_map_projection, reproject_scan, solve_joint_positions,
+    DriverWindow, DriftScanner, FlowTracker, JointRegistration, MetricGrid, detect_markers, marker_contributes,
+    grid_horizon_directions, map_orientation, merge_enemy_markers, recover_map_projection, reproject_scan,
+    solve_joint_positions,
     stationary_stroke, stationary_tail,
     rebuild_v2, terrain_crop_bounds,
 )
@@ -280,6 +281,8 @@ class MinimapResetTests(unittest.TestCase):
         self.compact_panel = np.full((218, 208, 3), (30, 100, 160), np.uint8)
         self.closed_panel = np.zeros_like(self.compact_panel)
         self.closed_panel[9:35, 12:31] = 240
+        self.compact_panel[:44, :44] = self.closed_panel[:44, :44]
+        self.expanded_panel = np.zeros_like(self.compact_panel)
 
     def window(self, images):
         window = DriverWindow.__new__(DriverWindow)
@@ -298,7 +301,7 @@ class MinimapResetTests(unittest.TestCase):
     @patch('dev_tools.minimap_reconstruct.time.sleep')
     @patch('PIL.ImageGrab.grab')
     def test_expanded_map_is_minimized_then_reopened(self, grab, sleep):
-        grab.side_effect = [self.compact_panel]
+        grab.side_effect = [self.expanded_panel, self.compact_panel, self.expanded_panel]
         window = self.window([self.blue, self.blank, self.blue])
         window.reset_minimap()
         self.assertEqual([call.args for call in window.handler.mouse_click.call_args_list],
@@ -307,7 +310,7 @@ class MinimapResetTests(unittest.TestCase):
     @patch('dev_tools.minimap_reconstruct.time.sleep')
     @patch('PIL.ImageGrab.grab')
     def test_compact_map_is_expanded_directly(self, grab, sleep):
-        grab.side_effect = [self.compact_panel]
+        grab.side_effect = [self.compact_panel, self.expanded_panel]
         window = self.window([self.blank, self.blue])
         window.reset_minimap()
         self.assertEqual([call.args for call in window.handler.mouse_click.call_args_list],
@@ -316,7 +319,7 @@ class MinimapResetTests(unittest.TestCase):
     @patch('dev_tools.minimap_reconstruct.time.sleep')
     @patch('PIL.ImageGrab.grab')
     def test_return_to_compact_uses_upper_left_minimize(self, grab, sleep):
-        grab.side_effect = [self.compact_panel]
+        grab.side_effect = [self.expanded_panel, self.compact_panel]
         window = self.window([self.blue, self.blank])
         window.reset_minimap(expanded=False)
         window.handler.mouse_click.assert_called_once_with(758, 469)
@@ -324,7 +327,7 @@ class MinimapResetTests(unittest.TestCase):
     @patch('dev_tools.minimap_reconstruct.time.sleep')
     @patch('PIL.ImageGrab.grab')
     def test_closed_map_is_opened_and_expanded(self, grab, sleep):
-        grab.side_effect = [self.closed_panel, self.compact_panel]
+        grab.side_effect = [self.closed_panel, self.compact_panel, self.expanded_panel]
         window = self.window([self.blank, self.blank, self.blue])
         window.reset_minimap()
         self.assertEqual([call.args for call in window.handler.mouse_click.call_args_list],
@@ -341,11 +344,63 @@ class MinimapResetTests(unittest.TestCase):
 
     @patch('dev_tools.minimap_reconstruct.time.monotonic', side_effect=[0, 0, 4])
     @patch('dev_tools.minimap_reconstruct.time.sleep')
-    def test_failed_minimize_stops_without_sending_an_open_click(self, sleep, monotonic):
+    @patch('PIL.ImageGrab.grab')
+    def test_failed_minimize_stops_without_sending_an_open_click(self, grab, sleep, monotonic):
+        grab.return_value = self.expanded_panel
         window = self.window([self.blue, self.blue])
         with self.assertRaisesRegex(RuntimeError, 'did not reach compact.*observed expanded'):
             window.reset_minimap()
         window.handler.mouse_click.assert_called_once_with(758, 469)
+
+    @patch('dev_tools.minimap_reconstruct.time.sleep')
+    @patch('PIL.ImageGrab.grab')
+    def test_blue_scene_with_compact_controls_is_not_minimized(self, grab, sleep):
+        grab.side_effect = [self.compact_panel, self.expanded_panel]
+        window = self.window([self.blue, self.blue])
+        window.reset_minimap()
+        window.handler.mouse_click.assert_called_once_with(142, 298)
+
+    @patch('dev_tools.minimap_reconstruct.time.sleep')
+    @patch('PIL.ImageGrab.grab')
+    def test_road_under_compact_icon_does_not_require_dark_background(self, grab, sleep):
+        panel = self.compact_panel.copy()
+        panel[:44, :44] = (30, 100, 160)
+        panel[9:35, 12:31] = 240
+        grab.side_effect = [panel, self.expanded_panel]
+        window = self.window([self.blank, self.blue])
+        window.reset_minimap()
+        window.handler.mouse_click.assert_called_once_with(142, 298)
+
+
+class MetricGridBoundsTests(unittest.TestCase):
+    def test_near_vertical_family_can_cross_both_slope_signs(self):
+        segments = []
+        for y in np.linspace(50, 420, 16):
+            slope = (y + 400) / 4000
+            segments.append([0, y, 486, y + 486 * slope])
+        for x in np.linspace(10, 475, 16):
+            top_x = 350 + (x - 350) * 400 / 850
+            segments.append([top_x, 0, x, 450])
+        segments.extend([[0, 100, 100, 200], [100, 100, 200, 200], [200, 100, 300, 200]])
+        with patch('dev_tools.minimap_reconstruct.cv2.HoughLinesP',
+                   return_value=np.round(segments).astype(np.int32)[:, None]):
+            horizon, report = grid_horizon_directions(np.zeros((462, 486, 3), np.uint8))
+        self.assertAlmostEqual(horizon, -400, delta=10)
+        self.assertLess(max(report['residuals']), 3)
+
+    def test_one_grid_direction_is_not_a_calibration(self):
+        segments = np.array([[[0, y, 400, y + 40]] for y in range(0, 300, 20)])
+        with patch('dev_tools.minimap_reconstruct.cv2.HoughLinesP', return_value=segments):
+            with self.assertRaisesRegex(ValueError, 'Only one grid direction'):
+                grid_horizon_directions(np.zeros((462, 486, 3), np.uint8))
+
+    def test_degenerate_projection_is_rejected_before_allocating_canvas(self):
+        for corners in [np.array([[0, 0], [100000, 100000]]),
+                        np.array([[0, 0], [5000, 5000]]),
+                        np.array([[0, 0], [np.inf, 10]])]:
+            with self.subTest(corners=corners):
+                with self.assertRaisesRegex(ValueError, 'calibration canvas limit'):
+                    MetricGrid._layout(np.eye(3), corners, 1)
 
 
 class FlowTests(unittest.TestCase):
@@ -375,6 +430,22 @@ class FlowTests(unittest.TestCase):
     def test_featureless_image_has_no_motion_evidence(self):
         image = np.zeros_like(self.image)
         self.assertIsNone(self.tracker.measure(image, image))
+
+    def test_tracks_grid_independently_of_stationary_background_texture(self):
+        rng = np.random.default_rng(45)
+        texture = rng.integers(30, 90, self.image.shape[:2], dtype=np.uint8)
+        background = np.stack([texture, texture // 2, texture // 3], axis=2)
+        grid = np.zeros(self.image.shape[:2], np.uint8)
+        grid[20::40, :] = 255
+        grid[:, 20::40] = 255
+        before = background.copy()
+        before[grid > 0] = (120, 85, 30)
+        moved = cv2.warpAffine(grid, np.float32([[1, 0, 7], [0, 1, -5]]), (486, 462))
+        after = background.copy()
+        after[moved > 0] = (120, 85, 30)
+        result = self.tracker.measure(before, after)
+        self.assertIsNotNone(result)
+        np.testing.assert_allclose(result['delta'], (7, -5), atol=0.4)
 
 
 class JointRegistrationTests(unittest.TestCase):

@@ -11,7 +11,7 @@ import numpy as np
 ROI = (25, 96, 243, 307)
 SCALE = 0.25
 PAD = 180
-MATCH_VERSION = 2
+MATCH_VERSION = 5
 
 
 def minimap_masks(image):
@@ -120,6 +120,11 @@ class MapMatcher:
         if meta['image_sha256'] != self.digest:
             raise ValueError('Map hash differs from metadata.')
         self.surface_matcher = None
+        if meta.get('coordinate_model') == 'local_parallax':
+            from module.campaign_prototype.parallax_localizer import ParallaxLocalizer
+            self.surface_matcher = ParallaxLocalizer(self.package)
+            self.cache_digest = self.surface_matcher.cache_digest
+            return
         if meta.get('coordinate_model') == 'orthographic_surfaces':
             from module.campaign_prototype.surface_localizer import SurfaceLocalizer
             self.surface_matcher = SurfaceLocalizer(self.package)
@@ -134,6 +139,10 @@ class MapMatcher:
             self.terrain = (cache['terrain_probability'] >= .5).astype(np.float32)
             if not np.allclose(cache['projection'], self.projection):
                 raise ValueError('Cached projection differs from map metadata.')
+        from module.campaign_prototype.edited_map import edited_roads
+        self.terrain, _, edits_digest = edited_roads(self.package, meta, self.terrain)
+        self.terrain = self.terrain.astype(np.float32)
+        self.cache_digest = hashlib.sha256((self.cache_digest + edits_digest).encode()).hexdigest()
         if list(self.terrain.shape[::-1]) != meta['size']:
             raise ValueError('Cached terrain dimensions differ from the map.')
         self.target = cv2.copyMakeBorder(cv2.resize(self.terrain, None, fx=SCALE, fy=SCALE,
@@ -145,11 +154,28 @@ class MapMatcher:
 
     def match(self, image, review=None):
         """粗搜索尺度和位移后细化最佳候选，以 IoU、远处候选分差及参数分散度联合决定是否接受。"""
-        panel, road, valid, player = minimap_masks(image)
+        cropped = None
+        try:
+            panel, road, valid, player = minimap_masks(image)
+        except ValueError:
+            from dev_tools.wiki_minimap_crop import cropped_minimap
+            panel, road, valid, player, cropped = cropped_minimap(image)
         if self.surface_matcher is not None:
             result = self.surface_matcher.locate(panel, player, valid, review)
             result.update(roi=list(ROI), normalized_size=[1920, 1080], match_version=MATCH_VERSION)
-            return result
+        else:
+            result = self.match_panel(panel, road, valid, player, review)
+        if cropped is not None:
+            x, y, right, bottom = cropped
+            scale = np.array([panel.shape[1] / (right - x), panel.shape[0] / (bottom - y)])
+            result.update(roi=list(cropped), normalized_size=list(image.shape[1::-1]),
+                          player_center=(player / scale).tolist(), screenshot_layout='cropped_minimap')
+            if result.get('roi_to_map') is not None:
+                result['roi_to_map'] = (np.asarray(result['roi_to_map']) @ np.diag([*scale, 1.])).tolist()
+        return result
+
+    def match_panel(self, panel, road, valid, player, review=None):
+        """已裁剪小地图的道路搜索，可作为分层原始帧配准的候选种子。"""
         coarse = []
         parameters = {(round(float(a), 2), round(float(b), 2))
                       for a in np.arange(.6, 2.21, .2) for b in np.arange(.65, 1.56, .15)}

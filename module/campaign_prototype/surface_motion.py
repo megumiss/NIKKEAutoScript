@@ -50,7 +50,7 @@ def fit_registration(source, destination):
             'validation_max_px': float(error[validation].max()), 'p90_px': float(np.percentile(error, 90))}
 
 
-def register_surface(reference, current, polygon, minimap=False):
+def register_surface(reference, current, polygon, minimap=False, exclude=None):
     """仅跟踪给定道路区域，双向光流与留出角点验证成功后返回参考图到当前图的变换。"""
     if (reference is None or current is None or reference.shape != current.shape
             or reference.ndim != 3 or reference.shape[2] != 3):
@@ -61,8 +61,12 @@ def register_surface(reference, current, polygon, minimap=False):
         raise ValueError('Surface polygon lies outside the reference image')
     mask = np.zeros(reference.shape[:2], np.uint8)
     cv2.fillPoly(mask, [np.rint(polygon).astype(np.int32)], 255)
+    if exclude is not None:
+        cv2.fillPoly(mask, [np.rint(exclude).astype(np.int32)], 0)
     if minimap:
-        first, second = [cv2.GaussianBlur(terrain(im), (5, 5), 1) for im in (reference, current)]
+        first, second = [cv2.GaussianBlur(cv2.morphologyEx(terrain(im), cv2.MORPH_OPEN,
+                                                        np.ones((3, 3), np.uint8)), (5, 5), 1)
+                         for im in (reference, current)]
         players, _ = detect_markers(reference, np.eye(3))
         for player in players:
             cv2.circle(mask, tuple(np.rint(player).astype(int)), 28, 0, -1)
@@ -99,7 +103,7 @@ def register_surface(reference, current, polygon, minimap=False):
     return fit_registration(points[keep, 0], moved[keep, 0])
 
 
-def fit_calibration(training, validation):
+def fit_calibration(training, validation, training_limit=6, validation_limit=8, map_error_limits=None):
     """用实际小队落点拟合局部仿射变换；独立停靠样本和可插值范围同时限制使用域。"""
     training, validation = np.asarray(training, float), np.asarray(validation, float)
     for values, minimum in ((training, 6), (validation, 3)):
@@ -114,14 +118,25 @@ def fit_calibration(training, validation):
     matrix[:2] = np.linalg.lstsq(np.column_stack([source, np.ones(len(source))]), destination, rcond=None)[0].T
     training_error = np.linalg.norm(project(matrix, source) - destination, axis=1)
     validation_error = np.linalg.norm(project(matrix, validation[:, 0]) - validation[:, 1], axis=1)
-    if training_error.max() > 6 or validation_error.max() > 8:
-        raise ValueError('Surface click calibration failed independent validation')
+    map_metrics = {}
+    if map_error_limits is None:
+        if training_error.max() > training_limit or validation_error.max() > validation_limit:
+            raise ValueError('Surface click calibration failed independent validation')
+    else:
+        inverse = np.linalg.inv(matrix)
+        training_map = np.linalg.norm(project(inverse, destination) - source, axis=1)
+        validation_map = np.linalg.norm(project(inverse, validation[:, 1]) - validation[:, 0], axis=1)
+        if training_map.max() > map_error_limits[0] or validation_map.max() > map_error_limits[1]:
+            raise ValueError('Local movement calibration exceeds map arrival tolerance')
+        map_metrics = dict(training_map_max_px=float(training_map.max()),
+                           validation_map_max_px=float(validation_map.max()), map_error_limits=list(map_error_limits))
     support = cv2.convexHull(source.astype(np.float32))[:, 0]
     if any(not contains(support, p) for p in validation[:, 0]):
         raise ValueError('Calibration validation leaves the sampled surface')
     return {'matrix': matrix.tolist(), 'support': support.tolist(), 'training_samples': len(training),
             'validation_samples': len(validation), 'training_max_px': float(training_error.max()),
-            'validation_max_px': float(validation_error.max())}
+            'training_limit_px': training_limit, 'validation_limit_px': validation_limit,
+            'validation_max_px': float(validation_error.max()), **map_metrics}
 
 
 def plan_click(target, surface_id, calibration, registration, client=(1776, 999)):

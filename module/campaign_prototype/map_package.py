@@ -109,6 +109,11 @@ class MapPackage:
             raise ValueError('Map cache does not match projection, crop or dimensions')
         # The legacy mosaic divides interpolated terrain and coverage separately; edges can exceed one.
         self.terrain = np.minimum(self.terrain, 1)
+        if annotations.get('terrain_edits'):
+            from .edited_map import edited_roads
+            _, override, _ = edited_roads(self.path, metadata, self.terrain >= .5)
+            self.terrain[override == 1] = 0
+            self.terrain[override == 2] = 1
         calibration = json.loads((self.path / 'calibration.json').read_text(encoding='utf-8'))
         if calibration.get('client') != manifest['client'] or calibration.get('roi') != manifest['roi']:
             raise ValueError('Calibration capture geometry differs from package')

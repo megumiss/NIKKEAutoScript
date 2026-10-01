@@ -22,13 +22,32 @@ def sha(path):
 
 
 def prepare(request, folder):
-    """为本次测试复制并校验地图，不给尚未完成标定的章节套用旧场景矩阵。"""
+    """平面地图共享第 38 章现用标定，分层地图校验各自已有标定。"""
     source = Path(request['package'])
+    if request.get('action', 'move') not in ('move', 'calibrate'):
+        raise ValueError('未知移动操作。')
     if sha(source / 'map.png') != request['image_sha256'] or sha(
             source / 'annotations.json') != request['revision']:
         raise ValueError('地图或标注已变化，请重新加载后选择目标。')
-    if request['chapter'] != 38:
-        raise ValueError(f"第 {request['chapter']} 章尚无可用的自动移动标定；当前支持第 38 章。")
+    metadata = json.loads((source / 'map.json').read_text(encoding='utf-8'))
+    if metadata.get('coordinate_model') == 'local_parallax':
+        from .parallax_localizer import ParallaxLocalizer
+        from .parallax_movement import load_calibration
+        if metadata['chapter'] != request['chapter']:
+            raise ValueError('所选地图章节已变化。')
+        localizer = ParallaxLocalizer(source)
+        if request.get('action', 'move') != 'calibrate':
+            load_calibration(source, localizer, request['difficulty'])
+            request['auto_calibrate'] = False
+            from .edited_map import road_distance
+            if road_distance(localizer.road, request['target']) > 0:
+                raise ValueError('目标不在修订后的道路上。')
+        names = ['map.json', 'map.png', 'annotations.json']
+        return source, {name: sha(source / name) for name in names}
+    if request.get('action') == 'calibrate':
+        raise ValueError('该标定入口用于分层地图。')
+    if metadata.get('coordinate_model') is not None:
+        raise ValueError('非平面地图移动待定；当前只支持已有有效局部分层标定的地图。')
     destination = folder / 'map'
     (destination / 'source').mkdir(parents=True)
     names = ('map.json', 'map.png', 'annotations.json', 'source/map_data.npz')
@@ -80,11 +99,13 @@ def movement_plan(localizer, observation, target, anchor):
     return click, float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum())
 
 
-def navigate(session, target, emit, max_moves=24):
+def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_near=3, purpose='position'):
     """有限步执行并重新定位，连续三次近点观测才算到达，无进展或预算耗尽明确失败。"""
     target = np.asarray(target, float)
     clicks, near, stagnant = 0, 0, 0
     previous = None
+    probes = None
+    probe_index = 0
     deadline = time.monotonic() + 600
     while time.monotonic() < deadline:
         session.check()
@@ -94,26 +115,52 @@ def navigate(session, target, emit, max_moves=24):
         if (observation.get('position_kind') != 'squad' or position.shape != (2,)
                 or not np.isfinite(position).all()):
             raise RuntimeError('小队定位无效，停止移动。')
-        distance = float(np.linalg.norm(target - position))
+        approach = target
+        if purpose == 'enemy':
+            markers = [np.asarray(p) for p in observation.get('enemy_markers', [])
+                       if np.linalg.norm(np.asarray(p) - target) <= 30]
+            if len(markers) == 1:
+                approach = markers[0]
+                emit(target_marker=approach.tolist())
+        distance = float(np.linalg.norm(approach - position))
         emit(position=position.tolist(), distance=distance, iou=observation['iou'])
-        if distance <= 12:
+        if distance <= arrival_radius and purpose == 'position':
             near += 1
-            if near >= 3:
+            if near >= required_near:
                 session.finish_view()
-                return {'state': 'arrived', 'message': '已到达目标附近（连续三次定位在 12 地图像素内）。',
+                return {'state': 'arrived', 'message': f'已到达目标附近（连续 {required_near} 次在 {arrival_radius} 地图像素内）。',
                         'movement_clicks': clicks, 'position': position.tolist(), 'distance': distance}
-            emit(state='verifying', message=f'正在复核到达位置（{near}/3）…')
+            emit(state='verifying', message=f'正在复核到达位置（{near}/{required_near}）…')
             session.pause(1)
             continue
         near = 0
-        if previous is not None:
+        if previous is not None and probes is None:
             stagnant = stagnant + 1 if np.linalg.norm(position - previous) < 3 else 0
             if stagnant >= 2:
                 raise RuntimeError('连续移动后小队没有明显位移，停止测试。')
         if clicks >= max_moves:
             raise RuntimeError(f'已达到 {max_moves} 次移动上限，尚未到达目标。')
         emit(state='planning', message='正在自动换算道路落点…')
-        click = session.plan(observation, target)
+        if purpose != 'position' and (distance <= arrival_radius or probes is not None):
+            from .movement_feedback import probe_targets
+            if probes is None:
+                probes = probe_targets(approach)
+            click = None
+            while probe_index < len(probes):
+                candidate = probes[probe_index]
+                probe_index += 1
+                try:
+                    click = session.plan(observation, candidate)
+                    break
+                except ValueError as exc:
+                    emit(message=f'附近落点不可用：{exc}')
+            if click is None:
+                session.finish_view()
+                return dict(state='needs_review', message='已到目标附近，有限范围尝试后仍未确认触发，请检查现场。',
+                            movement_clicks=clicks, position=position.tolist(), distance=distance)
+            emit(state='probing', message=f'正在尝试目标附近落点（{probe_index}/{len(probes)}）…')
+        else:
+            click = session.plan(observation, approach)
         session.check()
         session.move(click)
         clicks += 1
@@ -132,7 +179,12 @@ class GameSession:
         self.model = TextRecognition(model_name='PP-OCRv5_mobile_rec',
                                      model_dir=str(settings.ROOT / 'bin/paddleocr/PP-OCRv5_mobile_rec_infer'),
                                      device='cpu', cpu_threads=2)
-        self.localizer = AdaptiveLocalizer()
+        metadata = json.loads((Path(request['package']) / 'map.json').read_text(encoding='utf-8'))
+        if metadata.get('coordinate_model') == 'local_parallax':
+            from .parallax_localizer import ParallaxLocalizer
+            self.localizer = ParallaxLocalizer(request['package'])
+        else:
+            self.localizer = AdaptiveLocalizer()
         self.request, self.hashes, self.folder, self.emit = request, hashes, folder, emit
         self.index = 0
         self.win = None
@@ -153,6 +205,10 @@ class GameSession:
         from dev_tools.minimap_chapters import chapter_number
         from . import goto
         if goto.battle_popup_score(field) > .8:
+            from .movement_feedback import TargetTriggered
+            if self.request.get('purpose') == 'enemy':
+                self.preview(field)
+                raise TargetTriggered('已接触敌人，战斗准备界面已出现。', {'kind': 'battle_popup'})
             raise RuntimeError('出现战斗弹窗，移动测试已停止。')
         if chapter_number(field, self.model) != self.request['chapter']:
             raise RuntimeError(f"游戏章节与所选第 {self.request['chapter']} 章不符，或章节号无法识别。")
@@ -161,6 +217,26 @@ class GameSession:
         if (text['rec_text'].strip().upper() != self.request['difficulty'].upper()
                 or text['rec_score'] < .9):
             raise RuntimeError('游戏普通／困难难度与所选目标不符，或难度无法识别。')
+
+    def check_collectible(self, field):
+        if self.request.get('purpose') != 'collectible':
+            return
+        from .movement_feedback import collectible_counter, TargetTriggered
+        value = collectible_counter(field, self.model)
+        if value is None:
+            self.counter_confirmation = 0
+            return
+        if not hasattr(self, 'counter_baseline'):
+            self.counter_baseline = value
+        base = self.counter_baseline
+        if value[1] == base[1] and value[0] > base[0]:
+            self.counter_confirmation = getattr(self, 'counter_confirmation', 0) + 1
+            if self.counter_confirmation >= 2:
+                self.preview(field)
+                raise TargetTriggered('收集品计数增加，已确认拾取。', {'kind': 'collectible_counter',
+                                                                   'before': base, 'after': value})
+        else:
+            self.counter_confirmation = 0
 
     def preview(self, field):
         """原子更新压缩截图供页面轮询，并保留每次完整观测。"""
@@ -183,17 +259,21 @@ class GameSession:
         report = self.localizer.locate(observed, f'observe_{self.index:03}')
         if np.mean(goto.mr.terrain(observed) != goto.mr.terrain(self.win.capture())) > .03:
             raise RuntimeError('定位期间地图发生变化，请重新开始测试。')
+        if report.get('roi_to_map') is not None:
+            report['enemy_markers'] = goto.normal_enemy_markers(observed, np.asarray(report['roi_to_map']))
         return report
 
     def plan(self, observation, target):
-        """最小化后识别地面圆环，使用当前投影而非固定场景中心换算落点。"""
+        """最小化后优先用箭头周期定位地面，再按当前地图投影换算落点。"""
         from . import goto
-        from .live import ground_anchor
+        from .movement_feedback import resolve_anchor
         goto.map_close(self.win)
         field = goto.capture_client(self.win)
         self.identity(field)
+        self.check_collectible(field)
         self.preview(field)
-        click, length = movement_plan(self.localizer, observation, target, ground_anchor(field))
+        anchor = resolve_anchor(self, field, observation)
+        click, length = movement_plan(self.localizer, observation, target, anchor)
         self.emit(road_remaining=length)
         return click
 
@@ -215,7 +295,12 @@ class GameSession:
             self.check()
             field = goto.capture_client(self.win)
             if goto.battle_popup_score(field) > .8:
+                if self.request.get('purpose') == 'enemy':
+                    from .movement_feedback import TargetTriggered
+                    self.preview(field)
+                    raise TargetTriggered('已接触敌人，战斗准备界面已出现。', {'kind': 'battle_popup'})
                 raise RuntimeError('移动后出现战斗弹窗，测试停止。')
+            self.check_collectible(field)
             road = goto.mr.terrain(field[123:250, 25:206])
             stable = stable + 1 if previous is not None and np.mean(road != previous) < .005 else 0
             previous = road
@@ -236,6 +321,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--request', type=Path, required=True)
     args = parser.parse_args()
+    cv2.setNumThreads(2)
     folder = args.request.resolve().parent
     state = {'state': 'starting', 'message': '正在校验地图…', 'movement_clicks': 0}
 
@@ -258,16 +344,29 @@ def main():
         runtime.check_stop()
         settings.package, hashes = prepare(request, folder)
         emit(message='正在加载小队定位和章节识别…')
-        session = GameSession(request, hashes, folder, emit)
-        result = navigate(session, request['target'], emit)
+        metadata = json.loads((settings.package / 'map.json').read_text(encoding='utf-8'))
+        if metadata.get('coordinate_model') == 'local_parallax':
+            from .parallax_movement import ParallaxSessionMixin, run_movement
+            class ParallaxSession(ParallaxSessionMixin, GameSession):
+                pass
+            session = ParallaxSession(request, hashes, folder, emit)
+            result = run_movement(session)
+        else:
+            session = GameSession(request, hashes, folder, emit)
+            result = navigate(session, request['target'], emit, arrival_radius=20, required_near=2,
+                              purpose=request.get('purpose', 'position'))
         state.update(result)
     except KeyboardInterrupt as exc:
         state.update(state='cancelled', message=f'测试已停止：{exc}')
     except Timeout:
         state.update(state='failed', message='另一个标注窗口正在执行移动测试。')
     except Exception as exc:
-        traceback.print_exc()
-        state.update(state='failed', message=f'移动测试失败：{exc}')
+        from .movement_feedback import TargetTriggered
+        if isinstance(exc, TargetTriggered):
+            state.update(state='triggered', message=str(exc), evidence=exc.evidence)
+        else:
+            traceback.print_exc()
+            state.update(state='failed', message=f'移动测试失败：{exc}')
     finally:
         try:
             if session is not None and session.win is not None:

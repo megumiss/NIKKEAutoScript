@@ -22,6 +22,8 @@ class JobTests(unittest.TestCase):
         self.store = Mock()
         self.loaded = {'id': 'chapter_38', 'chapter': 38, 'path': str(self.root / 'source'),
                        'revision': 'rev', 'size': [200, 150], 'annotations': {'image_sha256': 'hash'}}
+        Path(self.loaded['path']).mkdir()
+        (Path(self.loaded['path']) / 'map.json').write_text('{}')
         self.store.load.return_value = self.loaded
         self.jobs = MovementJobs(self.store, self.root / 'runs')
         self.payload = {'id': 'chapter_38', 'revision': 'rev', 'image_sha256': 'hash',
@@ -30,7 +32,7 @@ class JobTests(unittest.TestCase):
     def test_rejects_stale_or_invalid_target_before_starting_process(self):
         for fields in [{'revision': 'old'}, {'image_sha256': 'old'}, {'target': [True, 1]},
                        {'target': [float('nan'), 1]}, {'target': [-1, 50]}, {'target': [200, 50]},
-                       {'target': [1]}, {'difficulty': 'all'}]:
+                       {'target': [1]}, {'difficulty': 'all'}, {'auto_calibrate': 'true'}]:
             with self.subTest(fields=fields), patch('dev_tools.map_movement.subprocess.Popen') as start:
                 with self.assertRaises(ValueError):
                     self.jobs.start(dict(self.payload, **fields))
@@ -40,10 +42,11 @@ class JobTests(unittest.TestCase):
         process = Mock()
         process.poll.return_value = None
         with patch('dev_tools.map_movement.subprocess.Popen', return_value=process) as start:
-            first = self.jobs.start(self.payload)
+            first = self.jobs.start(dict(self.payload, auto_calibrate=True))
             folder = self.jobs.output / first['id']
             saved = json.loads((folder / 'request.json').read_text())
             self.assertEqual(saved['target'], [80.25, 60.5])
+            self.assertIs(saved['auto_calibrate'], False)
             self.assertIn('module.campaign_prototype.manual_move', start.call_args.args[0])
             with self.assertRaisesRegex(ValueError, '已有'):
                 self.jobs.start(self.payload)
@@ -68,13 +71,43 @@ class JobTests(unittest.TestCase):
         self.assertTrue((folder / 'STOP').exists())
         process.wait.assert_called_once_with(timeout=5)
 
-    def test_unqualified_chapter_fails_before_package_or_device_setup(self):
+    def test_unsupported_nonplanar_fails_before_package_or_device_setup(self):
+        (self.root / 'map.json').write_text('{"chapter":40,"coordinate_model":"orthographic_surfaces"}')
         with patch('module.campaign_prototype.manual_move.sha', side_effect=['hash', 'rev']), patch(
                 'module.campaign_prototype.manual_move.MapPackage') as package:
-            with self.assertRaisesRegex(ValueError, '40.*标定'):
+            with self.assertRaisesRegex(ValueError, '非平面.*标定'):
                 prepare({'package': str(self.root), 'image_sha256': 'hash', 'revision': 'rev',
                          'chapter': 40}, self.root)
             package.assert_not_called()
+
+    def test_planar_chapters_share_calibration(self):
+        from module.campaign_prototype.manual_move import sha
+        source = Path(self.loaded['path'])
+        (source / 'source').mkdir()
+        for name in ('map.png', 'annotations.json', 'source/map_data.npz'):
+            (source / name).write_bytes(b'fixture')
+        for chapter in (1, 33, 38, 40):
+            (source / 'map.json').write_text(json.dumps(dict(chapter=chapter, size=[200, 150],
+                capture=dict(whole_camera_domain_verified=False))))
+            request = dict(package=str(source), image_sha256=sha(source / 'map.png'),
+                           revision=sha(source / 'annotations.json'), chapter=chapter,
+                           difficulty='hard', target=[80, 60])
+            with patch('module.campaign_prototype.manual_move.MapPackage',
+                       return_value=SimpleNamespace(terrain=np.ones((150, 200)))):
+                destination, _ = prepare(request, self.root / f'run{chapter}')
+            self.assertEqual((destination / 'calibration.json').read_bytes(),
+                             Path('module/campaign_prototype/assets/calibration.json').read_bytes())
+            self.assertEqual(json.loads((destination / 'map.json').read_text())['chapter'], chapter)
+            self.assertEqual(self.jobs.calibration(self.loaded['id'], 'hard')['state'], 'shared')
+
+    def test_pending_nonplanar_cannot_launch_or_auto_calibrate(self):
+        source = Path(self.loaded['path'])
+        for model in ('local_parallax', 'orthographic_surfaces', 'shared_plane_reference'):
+            (source / 'map.json').write_text(json.dumps(dict(coordinate_model=model)))
+            with self.subTest(model=model), patch('dev_tools.map_movement.subprocess.Popen') as start:
+                with self.assertRaisesRegex(ValueError, '待定'):
+                    self.jobs.start(dict(self.payload, auto_calibrate=True))
+                start.assert_not_called()
 
 
 class NavigationTests(unittest.TestCase):

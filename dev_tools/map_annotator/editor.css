@@ -81,6 +81,22 @@ kbd { font-family: inherit; font-size: 11px; opacity: .7; white-space: nowrap; }
 #message.error { color: var(--danger); }
 #message.success { color: var(--success); }
 .inspector { background: var(--card); border-left: 1px solid var(--border); padding: 18px 14px; overflow-y: auto; }
+.manager-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; position: sticky; top: -18px; background: var(--card); padding: 8px 0; z-index: 1; }
+.manager-tabs button { min-height: 44px; padding: 7px 4px; border-color: transparent; background: transparent; }
+.manager-tabs [aria-selected='true'] { background: var(--accent-soft); color: var(--focus); border-color: #23577b; }
+.task-summary { font-size: 12px; color: var(--muted); padding: 8px 0 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.tool-section { border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 14px; }
+.tool-section summary { cursor: pointer; min-height: 40px; font-weight: 600; padding: 10px 0; }
+.tool-section label { margin: 10px 0; }
+.tool-section .section-label { display: none; }
+.calibration-settings { border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+.calibration-settings summary { cursor: pointer; }
+.calibration-settings button { width: 100%; margin: 12px 0; }
+.result-counts { display: grid; gap: 8px; font-size: 13px; }
+.wiki-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; border-bottom: 1px solid var(--border); padding: 12px 0; font-size: 12px; line-height: 1.6; }
+.wiki-item .accepted { color: var(--success); }
+#wiki-log { overflow-wrap: anywhere; }
+#wiki-status.error, #scan-status.error { color: var(--danger); }
 .inspector-heading, .properties-heading, .vertices-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 13px; }
 .badge { font-size: 11px; color: var(--muted); padding: 2px 7px; border: 1px solid var(--border); border-radius: 20px; }
 .object-list { margin: 10px -4px 22px; max-height: 250px; overflow-y: auto; }
@@ -113,6 +129,9 @@ kbd { font-family: inherit; font-size: 11px; opacity: .7; white-space: nowrap; }
 .movement-actions button[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); }
 #move-target { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text); }
 #move-status.error { color: var(--danger); }
+.calibration-settings { border: 1px solid var(--border); border-radius: 6px; padding: 12px; display: grid; gap: 10px; }
+.calibration-settings h3 { margin: 0; font-size: 13px; }
+.calibration-settings button { width: 100%; min-height: 44px; }
 #move-preview { width: 100%; display: block; border-radius: 5px; margin: 8px 0; }
 #move-log { overflow-wrap: anywhere; }
 #move-evidence summary { font-size: 12px; cursor: pointer; }

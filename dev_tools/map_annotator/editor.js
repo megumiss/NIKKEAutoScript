@@ -16,11 +16,14 @@ let newCategory = 'normal_collectible', difficulty = 'normal';
 let history = [], future = [], draft = [], connectFrom = null, gesture = null, cursor = null;
 let space = false, busy = false, saving = false, view = { x: 0, y: 0, scale: 1 };
 const movement = createMovementController({ api, map: () => current, token: () => token,
-  selected: selectedItem, busy: () => busy || saving || scan.running || Boolean(draft.length || gesture),
+  selected: selectedItem, busy: () => busy || saving || scan.running || dirty() || Boolean(draft.length || gesture),
   selectTool: setTool, redraw: renderGeometry, sync: syncState });
 const scan = createScanController({ api, token: () => token, moving: () => movement.running,
   busy: () => busy || saving || Boolean(draft.length || gesture), sync: syncState,
   refresh: refreshMaps, open: openMap });
+const wiki = createWikiController({ api, token: () => token, map: () => current, save, dirty,
+  busy: () => busy || saving || movement.running || Boolean(draft.length || gesture),
+  sync: syncState, reload: () => openMap(current.id) });
 
 function element(name, attributes = {}, text) {
   const node = document.createElementNS(NS, name);
@@ -165,6 +168,9 @@ function syncState() {
     : `${draft.length} 个顶点 · 继续单击添加 · 双击 / Enter 完成 · Esc 取消`;
   movement.sync();
   scan.sync();
+  wiki.sync();
+  const tasks = [scan.running && '扫描中', movement.running && '小队移动中', wiki.running && 'Wiki 匹配中'].filter(Boolean);
+  $('task-summary').textContent = tasks.join(' · ') || '当前无运行任务';
 }
 
 function remember(previous) {
@@ -195,7 +201,7 @@ function setTool(next) {
     message('当前类型是电梯传送关系。请先切换到收集品、地面机关或地面电梯。'); return;
   }
   tool = next; connectFrom = null;
-  if (roadTool()) { $('show-terrain').checked = true; selected = null; }
+  if (roadTool()) { $('show-terrain').checked = true; selected = null; $('road-tools').open = true; }
   if (!['select', 'pan'].includes(next)) $('show-annotations').checked = true;
   for (const button of document.querySelectorAll('[data-tool]')) button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
   svg.dataset.tool = tool; movement.toolChanged(tool); renderGeometry(); syncState();

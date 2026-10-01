@@ -2,8 +2,9 @@
 
 `dev_tools/minimap_layered.py` 消费已完成的版本 2 扫描，在独立目录生成局部视差重建预览。
 当前输出固定标记为 `needs_geometry_review`、`navigation_ready: false`。正式章节扫描可通过
-`--process-3d` 接入分层重建与原始道路区域重绘；Wiki 自动标注和小队移动尚未完成验收，
-不能作为已验收的导航地图。
+`--process-3d` 接入分层重建与原始道路区域重绘；`local_parallax` 已接通 Wiki 原始帧定位和
+独立的局部移动标定入口，整章几何、跨层移动仍未验收，不能作为已验收的全章导航地图。
+当前使用方式见 [分层地图的 Wiki 和移动测试](map-annotation.md#分层地图的-wiki-和移动测试)。
 
 正式单章入口（游戏须先进入第 40 章普通野外页面，使用新的输出目录）：
 
