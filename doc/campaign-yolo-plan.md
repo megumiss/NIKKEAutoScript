@@ -1,12 +1,12 @@
 # 自动推图 YOLO 接入方案与替换清单
 
-更新：2026-10-02。本文定义接入范围、替换位置、依赖和验收标准。原型调用点已接入 YOLO 适配器，模型仍在训练和验收，尚未分发到应用目录。实现状态见[实施记录](campaign-yolo-progress.md)，不能将工具或训练完成视为识别替换完成。
+更新：2026-10-02。本文定义接入范围、替换位置、依赖和验收标准。原型调用点已接入 YOLO 适配器，第四版模型随应用分发，验收重点为普通关卡识别；EX 类别仅作辅助，敌人移动模式通过弹窗确认并排除 EX。实现状态见[实施记录](campaign-yolo-progress.md)，不能将工具或训练完成视为识别替换完成。
 
 范围以 [战役地图独立原型](../module/campaign_prototype/README.md) 为主，并盘点活动推图与战斗模块可复用的部分。当前原型尚未形成持续推图闭环，检测器升级不改变[自动推图计划](autopush-plan.md)中的导航、单场战斗和恢复任务。
 
 ## 建议结论
 
-让 YOLO 负责识别小队箭头、收集提示、小地图普通敌人、EX 和小队圆环；保留道路配准、坐标投影、OCR 和有界动作状态机。首批与第二批作为同一交付范围，包含展开和紧凑小地图；可以分步开发，但全部路径通过验收后才算替换完成。
+让 YOLO 负责识别小队箭头、收集提示、小地图普通敌人和小队圆环，并保留辅助 EX 类别；保留道路配准、坐标投影、OCR 和有界动作状态机。首批与第二批作为同一交付范围，包含展开和紧凑小地图；可以分步开发，但全部路径通过验收后才算替换完成。
 
 建议从 YOLO11n 的目标检测模型微调开始，导出 ONNX，在运行端使用 ONNX Runtime CPU。这是候选基线，不是性能或准确率结论；YOLOv8n 也可作为对照，但首版只实现并验证一种导出契约。通用预训练权重不认识 NIKKE 的这些图标，不能安装库后直接替换现有识别。
 
@@ -16,7 +16,7 @@
 | --- | --- | --- | --- |
 | 首批 | 主场景白／橙小队箭头：[live.py](../module/campaign_prototype/live.py) `squad_arrow` | 用 YOLO 找箭头候选，替代全场景多尺度模板搜索；候选内精定位后返回原语义的中心 | 多个小队候选时拒绝定位；[arrow_anchor.py](../module/campaign_prototype/arrow_anchor.py) 的静止检查、周期采样和地面换算继续生效 |
 | 首批 | 带放大镜的橙色收集提示：[movement_feedback.py](../module/campaign_prototype/movement_feedback.py) `collectible_indicator` | 替换透明模板匹配，输出提示位置、类别和检测分数 | 排除小地图计数图标与 HUD；[manual_move.py](../module/campaign_prototype/manual_move.py) 中发现提示即停止的行为保留，不据此宣布已拾取 |
-| 首批 | 小地图普通敌人／EX：[goto.py](../module/campaign_prototype/goto.py) `normal_enemy_markers` | 用不同类别代替红色轮廓的实心／空心规则；普通敌人中心再按本帧矩阵投影 | 边缘截断、计数器区域排除；EX 或类别冲突不进入普通目标表；弹窗级 EX 确认保留 |
+| 首批 | 小地图普通敌人／EX：[goto.py](../module/campaign_prototype/goto.py) `normal_enemy_markers` | 用不同类别代替红色轮廓的实心／空心规则；普通敌人中心再按本帧矩阵投影 | 边缘截断、计数器区域排除；已识别 EX 或类别冲突不进入普通目标表；接触后用弹窗确认，EX 关闭一次并终止本次移动 |
 | 第二批，同次交付 | 展开小地图圆环：[minimap_reconstruct.py](../dev_tools/minimap_reconstruct.py) `detect_markers`；紧凑小地图圆环：[wiki_collectible_match.py](../dev_tools/wiki_collectible_match.py) `minimap_masks` | YOLO 定位圆环候选，候选内拟合中心；通过原型适配器接入 | 不能将视野中心当小队；紧凑和展开模式单独验证；先不改变地图采集器的默认识别 |
 | 有数据后 | Boss、机关、区域入口、场景敌人 | 对实际需要的对象补类别和标注，再接目标选择器 | 当前没有统一可靠识别器可以直接替换；发现对象不等于可达、机关已激活或章节完成 |
 | 后续可选 | 战斗准备／EX 弹窗：[goto.py](../module/campaign_prototype/goto.py) `battle_popup_score`、`check_battle_popup` | 固定模板易受皮肤或布局影响时再训练；以页面状态与按钮联合判定 | YOLO 分数不能代入原来的模板相关分数阈值；未知页面不继续移动 |
@@ -90,7 +90,7 @@
 | `scene_squad_arrow` | 白／橙箭头的稳定主体，不含动画光晕 | 场景小队候选；颜色作为同一类别的变化 |
 | `scene_collectible_indicator` | 带放大镜的橙色倒三角完整主体 | 收集提示出现检测 |
 | `minimap_enemy_normal` | 完整的普通敌人图标 | 普通目标候选 |
-| `minimap_enemy_ex` | 完整的 EX 图标 | 明确排除 EX |
+| `minimap_enemy_ex` | 完整的 EX 图标 | 辅助筛除；最终通过弹窗排除 EX |
 | `minimap_squad_ring` | 小队圆环主体，中心语义与现有圆拟合一致 | 展开／紧凑小地图定位和停稳 |
 
 Boss 在有可靠正样本后单列 `minimap_boss`，不能预先把所有非 EX 红点都标成普通敌人。看不清类型的图标先标为待复核，不灌入普通类别训练；部分遮挡、截断目标的标注策略需固定，运行时不将截断中心用于导航。
@@ -118,7 +118,7 @@ Boss 在有可靠正样本后单列 `minimap_boss`，不能预先把所有非 EX
 
 ## 接入接口与坐标约定
 
-原型内的 [detection.py](../module/campaign_prototype/detection.py) 实现推理与坐标还原，[perception.py](../module/campaign_prototype/perception.py) 已接入原型调用点。以下为接入约定；自动移动仍需通过模型验收并安装权重。
+原型内的 [detection.py](../module/campaign_prototype/detection.py) 实现推理与坐标还原，[perception.py](../module/campaign_prototype/perception.py) 已接入原型调用点。以下为接入约定；应用目录已包含第四版模型；仍需符合原型的地图绑定和有界移动约束。
 
 ```text
 BGR 截图／ROI
@@ -151,11 +151,11 @@ BGR 截图／ROI
 4. **通过回归及专项验收。** 编译改动 Python 文件，运行 `test_campaign_yolo.py`、`test_arrow_anchor.py`、`test_movement_feedback.py`、`test_camera_navigation.py`、`test_campaign_prototype.py`、`test_surface_localizer.py`、`test_surface_motion.py`、`test_parallax_integration.py` 及相关受影响路径。箭头需验证周期成功率、锚点偏差与漏检恢复；圆环需分别验证两种小地图和各定位器；不能只报框的 mAP。
 5. **启用并交付已验收模型。** 检查所有计划调用点均已迁移，再在受保护的有界移动入口完成现场验证，记录模型哈希和失败原因。活动／战斗等可选替换按自己的样本和流程另行接入。
 
-五类验收至少报告各类别样本数和 precision／recall、普通与 EX 混淆、场景负样本误报、箭头／圆环中心误差，以及目标机器上的端到端 p50／p95 耗时。展开／紧凑、相邻／边缘／透视样本分别列出结果，不能用整体均值掩盖某类缺样本。阈值只用验证集选择。独立回放集中不得出现 EX 被选为可点击普通目标；有限样本零误选不代表真实环境零风险，弹窗复核仍保留。性能需包含场景所有分块、预处理和后处理，训练日志中的单图 GPU 耗时不能代替运行端 CPU 测速。
+五类验收至少报告各类别样本数和 precision／recall、普通与 EX 混淆、场景负样本误报、箭头／圆环中心误差，以及目标机器上的端到端 p50／p95 耗时。展开／紧凑、相邻／边缘／透视样本分别列出结果，不能用整体均值掩盖某类缺样本。阈值只用验证集选择。验收以普通关卡的检测精度及有效目标中心为重点，EX 检测精度不作为独立阻断条件；候选实际触发 EX 弹窗时必须关闭并排除，不进入战斗。检测召回与边界过滤后的目标数量分别报告，有限样本不代表任意场景的准确率保证。性能需包含场景所有分块、预处理和后处理，训练日志中的单图 GPU 耗时不能代替运行端 CPU 测速。
 
 可复现的现场验证路径：在已核对地图包的中文 `1776×999` 客户区，记录一次紧凑→展开→紧凑切换；分别录制白／橙箭头完整周期、镜头平移后的偏心小队、一次遮挡恢复、普通／EX 同图以及收集提示出现／未出现。先只记录检测，再在受保护的有界移动入口验证普通目标接近与 EX 排除；检查日志中模型哈希、模式、坐标转换和失败原因。完整战斗胜负及章节完成仍按自动推图原计划验收。
 
-本次方案核对覆盖实际调用位置、依赖清单、已有训练产物和文档链接；文档修改执行 `git diff --check`。五类独立精度验收、全部识别路径切换及游戏现场验证仍待实施，不以此文档的完成替代。
+本次方案核对覆盖实际调用位置、依赖清单、已有训练产物和文档链接；文档修改执行 `git diff --check`。第四版结果、样本局限和现场证据见实施记录；新增语言、尺寸及完整推图闭环需单独验证。
 
 ## 依赖参考
 

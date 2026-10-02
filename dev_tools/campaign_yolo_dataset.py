@@ -396,7 +396,7 @@ def select_reviewed_partitions(records):
     return result, dict(excluded)
 
 
-def build(output, destination):
+def build(output, destination, extra_frame_reviews=()):
     from module.campaign_prototype.detection import scene_tiles
 
     if destination.exists():
@@ -417,6 +417,9 @@ def build(output, destination):
     exclusions = {}
     if frame_review_path.exists():
         apply_frame_reviews(records, frame_review_path)
+    for path in extra_frame_reviews:
+        apply_frame_reviews(records, path)
+    if frame_review_path.exists() or extra_frame_reviews:
         records, exclusions = select_reviewed_partitions(records)
     destination.mkdir(parents=True)
     write_jsonl(destination / 'frames.jsonl', records)
@@ -487,6 +490,8 @@ def build(output, destination):
                    annotation_quality=Counter(m['quality'] for m in manifest), exclusions=exclusions,
                    frame_reviews_sha256=hashlib.sha256(frame_review_path.read_bytes()).hexdigest()
                    if frame_review_path.exists() else None,
+                   extra_frame_reviews={str(path): hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                                        for path in extra_frame_reviews},
                    note='Mixed training labels; final accuracy must use unmasked reviewed frames and runtime gates.')
     (destination / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
     balance_training(destination)
@@ -523,6 +528,7 @@ def main():
     parser.add_argument('--label', choices=LABELS, default=LABELS[0])
     parser.add_argument('--page', type=int, default=0)
     parser.add_argument('--destination', type=Path)
+    parser.add_argument('--frame-reviews', type=Path, action='append', default=[])
     args = parser.parse_args()
     if args.action == 'inventory':
         inventory(args.output, args.roots)
@@ -535,7 +541,7 @@ def main():
     elif args.action == 'build':
         if args.destination is None:
             parser.error('build requires --destination')
-        build(args.output, args.destination)
+        build(args.output, args.destination, args.frame_reviews)
     else:
         contact_sheet(args.output, args.label, args.page)
 

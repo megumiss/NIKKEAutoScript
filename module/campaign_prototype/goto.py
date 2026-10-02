@@ -76,13 +76,14 @@ def battle_popup_score(image):
     return float(cv2.minMaxLoc(result)[1])
 
 
-def check_battle_popup(win, log, iteration, phase):
+def check_battle_popup(win, log, iteration, phase, image=None):
     """普通准备弹窗保留供上层处理；EX 弹窗只关闭一次并确认结果。
 
-    在客户区确认准备按钮后区分普通和 EX 弹窗，保存带 iteration/phase 的截图与日志。
+    使用已采集的 image（缺省时重新截图）确认准备按钮，区分普通和 EX 并保存截图与日志。
     无弹窗返回 None，普通弹窗保留；EX 仅关闭一次并复查，关闭失败抛错。
     """
-    image = capture_client(win)
+    if image is None:
+        image = capture_client(win)
     score = battle_popup_score(image)
     if score <= 0.8:
         return None

@@ -9,6 +9,7 @@ import numpy as np
 from module.campaign_prototype.detection import (
     LABELS, Detection, decode, detect_scene, letterbox, scene_mask, suppress,
 )
+from module.campaign_prototype.perception import marker_candidates, refine_ring
 
 
 class DecodeTests(unittest.TestCase):
@@ -56,6 +57,32 @@ class DecodeTests(unittest.TestCase):
                       np.zeros((5, 5, 3), np.float32)):
             with self.assertRaises(ValueError):
                 letterbox(image, 640)
+
+
+class RingTests(unittest.TestCase):
+    def test_translucent_perspective_ring_on_cyan_road(self):
+        image = np.full((100, 100, 3), (170, 120, 45), np.uint8)
+        color = cv2.cvtColor(np.uint8([[[100, 135, 220]]]), cv2.COLOR_HSV2BGR)[0, 0]
+        cv2.ellipse(image, (47, 51), (19, 9), 20, 0, 360, tuple(int(v) for v in color), 1)
+        candidate = Detection('minimap_squad_ring', .9, (24, 36, 70, 66))
+        np.testing.assert_allclose(refine_ring(image, candidate), [47, 51], atol=1)
+
+    def test_solid_bright_patch_is_not_a_ring(self):
+        image = np.zeros((100, 100, 3), np.uint8)
+        cv2.circle(image, (50, 50), 15, (220, 220, 220), -1)
+        candidate = Detection('minimap_squad_ring', .9, (30, 30, 70, 70))
+        self.assertIsNone(refine_ring(image, candidate))
+
+
+class MarkerTests(unittest.TestCase):
+    def test_complete_enemy_above_counter_is_retained_but_hud_icon_is_excluded(self):
+        enemy = Detection('minimap_enemy_normal', .9, (437, 407, 471, 439))
+        counter = Detection('minimap_enemy_normal', .9, (422, 434, 443, 458))
+        truncated = Detection('minimap_enemy_normal', .9, (460, 400, 486, 429))
+        with patch('module.campaign_prototype.perception.detect_minimap',
+                   return_value=[enemy, counter, truncated]):
+            result = marker_candidates(np.zeros((462, 486, 3), np.uint8))
+        self.assertEqual(result, [enemy])
 
 
 class SceneTests(unittest.TestCase):

@@ -1,0 +1,1488 @@
+{
+  "schema_version": 1,
+  "review_method": "visual_full_frame_before_holdout_inference",
+  "evaluation_role": "diagnostic_after_refinement_tuning",
+  "tuning_history": [
+    {
+      "frame_id": "01c85d07d05a5ba7beda",
+      "change": "Raised ring HSV saturation ceiling from 105 to 145 after refinement failed on a cyan road.",
+      "effect": "This capture set is no longer an untouched final test set."
+    }
+  ],
+  "model_sha256": "673f164ab926fc5b16a22b0dcbd4dc322381fee70f78e546a26629f817ee9196",
+  "thresholds": {
+    "scene_squad_arrow": 0.5,
+    "scene_collectible_indicator": 0.5,
+    "minimap_enemy_normal": 0.5,
+    "minimap_enemy_ex": 0.7,
+    "minimap_squad_ring": 0.5
+  },
+  "frames": [
+    {
+      "id": "7c9b2e505b66e96416ac",
+      "pixel_sha256": "7c9b2e505b66e96416acc4c2c013a11560dbfb94c4c56cb4e2eb5a99f479e7bc",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00000.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00000.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            222.0,
+            262.0,
+            273.0,
+            310.0
+          ],
+          "status": "complete",
+          "center": [
+            245.3,
+            285.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block"
+      ]
+    },
+    {
+      "id": "331c6c2788c687fddae7",
+      "pixel_sha256": "331c6c2788c687fddae72233df2c537f28242017bcd367eafad827e66e6d52ee",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00002.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00002.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block",
+        "negative"
+      ]
+    },
+    {
+      "id": "7466660012d807106c49",
+      "pixel_sha256": "7466660012d807106c49d70a92c9e76856c36f66acad2d4356eff910a003f403",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00003.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00003.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block",
+        "negative"
+      ]
+    },
+    {
+      "id": "e958983bf0d9c5030de7",
+      "pixel_sha256": "e958983bf0d9c5030de7bf5fc6d76c144915d62b36a079a3560eeebb9a3d1b2d",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00006.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00006.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            187.0,
+            303.0,
+            212.0,
+            327.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            151.0,
+            273.0,
+            176.0,
+            296.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            38.0,
+            116.0,
+            80.0,
+            143.0
+          ],
+          "status": "complete",
+          "center": [
+            58.1,
+            128.2
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block"
+      ]
+    },
+    {
+      "id": "774a31a1deb63fe18a44",
+      "pixel_sha256": "774a31a1deb63fe18a44d0905bc548358387dcb460bbc7c316a41bc182af7337",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00007.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00007.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            398.0,
+            294.0,
+            421.0,
+            317.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            355.0,
+            265.0,
+            376.0,
+            286.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            194.0,
+            112.0,
+            233.0,
+            139.0
+          ],
+          "status": "complete",
+          "center": [
+            212.1,
+            124.7
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block"
+      ]
+    },
+    {
+      "id": "74f769eb220e99f7c24f",
+      "pixel_sha256": "74f769eb220e99f7c24f91fb0368c65a2cc98a7e0637ff58529386e4f3875b9c",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00008.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00008.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            243.0,
+            326.0,
+            319.0,
+            409.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            364.0,
+            150.0,
+            384.0,
+            162.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            331.0,
+            132.0,
+            350.0,
+            144.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            202.0,
+            30.0,
+            236.0,
+            49.0
+          ],
+          "status": "complete",
+          "center": [
+            218.8,
+            39.2
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block",
+        "flattened"
+      ]
+    },
+    {
+      "id": "af982f4dc3dcc38aea1b",
+      "pixel_sha256": "af982f4dc3dcc38aea1b7d90b3cf94aa221f28e4fc9eb4c2306d1732cc4ce79d",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00009.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00009.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            445.0,
+            300.0,
+            486.0,
+            342.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            468.0,
+            113.0,
+            486.0,
+            126.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            319.0,
+            16.0,
+            353.0,
+            36.0
+          ],
+          "status": "complete",
+          "center": [
+            336.0,
+            26.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block",
+        "edge",
+        "flattened"
+      ]
+    },
+    {
+      "id": "aa9ad2cfc6e9562adc20",
+      "pixel_sha256": "aa9ad2cfc6e9562adc20a651232b835bf684cf1d1f1c54068c1a118ab05b7d9c",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00010.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00010.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            419.0,
+            174.0,
+            479.0,
+            224.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            477.0,
+            59.0,
+            486.0,
+            66.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            447.0,
+            47.0,
+            466.0,
+            57.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block",
+        "edge",
+        "flattened"
+      ]
+    },
+    {
+      "id": "a5a2bf62c957b26f5e81",
+      "pixel_sha256": "a5a2bf62c957b26f5e8135c446e2467700f974f30b43b3453b0418a9c807376e",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00011.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00011.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            0.0,
+            155.0,
+            6.0,
+            160.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            27.0,
+            114.0,
+            50.0,
+            131.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            67.0,
+            107.0,
+            90.0,
+            122.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block",
+        "edge"
+      ]
+    },
+    {
+      "id": "5c9d5b93eab8cc7ee602",
+      "pixel_sha256": "5c9d5b93eab8cc7ee60245fb3aa0ece1bdff2fa93d0bf3bf0f2ce8283c4f326c",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00012.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00012.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            0.0,
+            306.0,
+            6.0,
+            325.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            33.0,
+            244.0,
+            63.0,
+            268.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            84.0,
+            231.0,
+            113.0,
+            254.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            4.0,
+            9.0,
+            12.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block",
+        "edge"
+      ]
+    },
+    {
+      "id": "64bbd9e9f3f3fd728b23",
+      "pixel_sha256": "64bbd9e9f3f3fd728b23d7e8710bbd3cb248291c8af3063cc4783a5eb029ec01",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00013.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00013.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            0.0,
+            14.0,
+            14.0,
+            38.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block",
+        "edge"
+      ]
+    },
+    {
+      "id": "1fe8be6cbfbf3871f067",
+      "pixel_sha256": "1fe8be6cbfbf3871f06703057b1805c7d26c24c9f66b3edc7eb4bde85fc8f0e5",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00014.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00014.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "group": "chapter_41",
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            378.0,
+            136.0,
+            421.0,
+            166.0
+          ],
+          "status": "complete",
+          "center": [
+            398.7,
+            149.9
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "expanded",
+        "oblique",
+        "held_out_capture_block"
+      ]
+    },
+    {
+      "id": "8a5f582b301383990b32",
+      "pixel_sha256": "8a5f582b301383990b322875a0ea592c1a1901cb592838256a141486d687b69e",
+      "source": "log/chapter_maps/goal_01_48_20261001/movement/chapter_12/after.png",
+      "aliases": [],
+      "chapters": [
+        12
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "chapter_12",
+      "min_known_phash_distance": 12,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            871.0,
+            387.0,
+            913.0,
+            424.0
+          ],
+          "status": "complete",
+          "center": [
+            892.0,
+            405.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "scene"
+      ]
+    },
+    {
+      "id": "b1fb537c277d25ff17e8",
+      "pixel_sha256": "b1fb537c277d25ff17e8465e493b566e02d79e55e210cc3c333405266047cdce",
+      "source": "log/chapter_maps/goal_01_48_20261001/movement/chapter_12/before.png",
+      "aliases": [],
+      "chapters": [
+        12
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "chapter_12",
+      "min_known_phash_distance": 12,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": [],
+      "tags": [
+        "scene",
+        "negative"
+      ]
+    },
+    {
+      "id": "89cc01ec473f0676d269",
+      "pixel_sha256": "89cc01ec473f0676d269f0704a170cadf43e13a06fab516f81a903b42cff4bf4",
+      "source": "log/chapter_maps/goal_01_48_20261001/movement/chapter_18/before.png",
+      "aliases": [],
+      "chapters": [
+        18
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "chapter_18",
+      "min_known_phash_distance": 12,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            869.0,
+            400.0,
+            907.0,
+            433.0
+          ],
+          "status": "complete",
+          "center": [
+            888.0,
+            416.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "scene"
+      ]
+    },
+    {
+      "id": "eb69fa169e6784719c79",
+      "pixel_sha256": "eb69fa169e6784719c79d1ebf44d46cb9498655ad9f79758e9e9a39da5b7c335",
+      "source": "log/chapter_maps/goal_01_48_20261001/movement/chapter_28/before.png",
+      "aliases": [],
+      "chapters": [
+        28
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "chapter_28",
+      "min_known_phash_distance": 12,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            868.0,
+            397.0,
+            910.0,
+            434.0
+          ],
+          "status": "complete",
+          "center": [
+            889.0,
+            415.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "scene"
+      ]
+    },
+    {
+      "id": "0f72880a0ec071640df6",
+      "pixel_sha256": "0f72880a0ec071640df67f10d9fa6154c9fccb4815afac5f57825645e084cb15",
+      "source": "tmp/ch33_calibration_test/20261001_011554/03_anchor_3.png",
+      "aliases": [],
+      "chapters": [
+        33
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "chapter_33",
+      "min_known_phash_distance": 12,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            868.0,
+            392.0,
+            910.0,
+            429.0
+          ],
+          "status": "complete",
+          "center": [
+            889.0,
+            410.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "scene"
+      ]
+    },
+    {
+      "id": "1ddc464907a78efd91b9",
+      "pixel_sha256": "1ddc464907a78efd91b9e04af4afb0501e1a38ebc6818392c61acc5dc995844d",
+      "source": "tmp/ch33_calibration_test/20261001_011554/01_anchor_1.png",
+      "aliases": [],
+      "chapters": [
+        33
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "chapter_33",
+      "min_known_phash_distance": 14,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            872.0,
+            392.0,
+            914.0,
+            429.0
+          ],
+          "status": "complete",
+          "center": [
+            893.0,
+            410.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "scene",
+        "orange_arrow"
+      ]
+    },
+    {
+      "id": "06ab57ce9014707d6c39",
+      "pixel_sha256": "06ab57ce9014707d6c39c8bca775d884e1bb7dac954f2e67a19134e1048e1fb8",
+      "source": "log/campaign_prototype/camera_pan_20261001/field_003.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "log/campaign_prototype/camera_pan_20261001",
+      "min_known_phash_distance": 18,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            269.0,
+            325.0,
+            307.0,
+            358.0
+          ],
+          "status": "complete",
+          "center": [
+            288.0,
+            341.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "scene",
+        "orange_arrow",
+        "near_minimap"
+      ]
+    },
+    {
+      "id": "61048340c0d80d47e485",
+      "pixel_sha256": "61048340c0d80d47e485ee0915253bf08a0fc79726b56f23a8f9f8a6ac55208d",
+      "source": "log/campaign_prototype/camera_pan_20261001/field_001.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "log/campaign_prototype/camera_pan_20261001",
+      "min_known_phash_distance": 12,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            865.0,
+            395.0,
+            907.0,
+            432.0
+          ],
+          "status": "complete",
+          "center": [
+            886.0,
+            413.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "scene",
+        "orange_arrow"
+      ]
+    },
+    {
+      "id": "fe7619f8bd71a9c5daa5",
+      "pixel_sha256": "fe7619f8bd71a9c5daa5c65551280465a2eb094dadc4cf0223216fd3429351a0",
+      "source": "log/campaign_prototype/camera_pan_20261001/waiting.jpg",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "log/campaign_prototype/camera_pan_20261001",
+      "min_known_phash_distance": 14,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": [],
+      "tags": [
+        "scene",
+        "expanded_map_overlay",
+        "negative"
+      ]
+    },
+    {
+      "id": "5105db9855f76d2acc94",
+      "pixel_sha256": "5105db9855f76d2acc94f17cf50b4b625f7ce7c31b37d94dfaf44689454f0a14",
+      "source": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/camera_003_field.jpg",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "min_known_phash_distance": 14,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": [],
+      "tags": [
+        "scene",
+        "negative"
+      ]
+    },
+    {
+      "id": "f29e8cf7efb735b4467b",
+      "pixel_sha256": "f29e8cf7efb735b4467b167069776c12b53ee840444f6a8c69b81f816f96554c",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/f29e8cf7efb735b4467b.png",
+      "aliases": [],
+      "chapters": [
+        12
+      ],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "chapter_12",
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_12/before.png",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 20,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            92,
+            124,
+            118
+          ],
+          "status": "complete",
+          "center": [
+            109.0,
+            105.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact"
+      ]
+    },
+    {
+      "id": "019134d63571ec32dc79",
+      "pixel_sha256": "019134d63571ec32dc79f87abdb8d7b2986f4b1701c2e2d66c283abc692f15a7",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/019134d63571ec32dc79.png",
+      "aliases": [],
+      "chapters": [
+        18
+      ],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "chapter_18",
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_18/before.png",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 22,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            93,
+            91,
+            123,
+            117
+          ],
+          "status": "complete",
+          "center": [
+            108.0,
+            104.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact"
+      ]
+    },
+    {
+      "id": "88a45df78aa55b885287",
+      "pixel_sha256": "88a45df78aa55b885287085beba310c1be21ad97a618a422ae5a053e33080f26",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/88a45df78aa55b885287.png",
+      "aliases": [],
+      "chapters": [
+        28
+      ],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "chapter_28",
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_28/before.png",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 24,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            89,
+            122,
+            115
+          ],
+          "status": "complete",
+          "center": [
+            108.0,
+            102.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact"
+      ]
+    },
+    {
+      "id": "953026a826a690ba9d15",
+      "pixel_sha256": "953026a826a690ba9d151a04847e62fa76f8817fad943a8adecf7bc200532619",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/953026a826a690ba9d15.png",
+      "aliases": [],
+      "chapters": [
+        28
+      ],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "chapter_28",
+      "source_origin": "data/chapter_maps/current/chapter_28/source/chapter_verified.png",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 18,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            95,
+            92,
+            123,
+            118
+          ],
+          "status": "complete",
+          "center": [
+            109.0,
+            105.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact"
+      ]
+    },
+    {
+      "id": "a28995c27cfa0a46b9e7",
+      "pixel_sha256": "a28995c27cfa0a46b9e79acaac550b49b0535d27b371fbe8f7450dde11aa6089",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/a28995c27cfa0a46b9e7.png",
+      "aliases": [],
+      "chapters": [
+        43
+      ],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "chapter_43",
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_43/field_003.png",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 12,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            96,
+            89,
+            122,
+            113
+          ],
+          "status": "complete",
+          "center": [
+            109.0,
+            101.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact"
+      ]
+    },
+    {
+      "id": "ac8fc68b05593e5052c4",
+      "pixel_sha256": "ac8fc68b05593e5052c43c8650feb2832bb5229fb8bccdb10c5b333e2478637e",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/ac8fc68b05593e5052c4.png",
+      "aliases": [],
+      "chapters": [
+        43
+      ],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "chapter_43",
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_43/before.png",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 22,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            94,
+            122,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            108.0,
+            105.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact"
+      ]
+    },
+    {
+      "id": "c890bd95bff45812d568",
+      "pixel_sha256": "c890bd95bff45812d56821a805a57819b64435af5b456e519f3358f05ebed5ef",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/c890bd95bff45812d568.png",
+      "aliases": [],
+      "chapters": [
+        47
+      ],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "chapter_47",
+      "source_origin": "log/chapter_calibration_20261001/chapter_47/1790849829926573500/failed_field.png",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 20,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            88,
+            124,
+            112
+          ],
+          "status": "complete",
+          "center": [
+            109.0,
+            100.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact"
+      ]
+    },
+    {
+      "id": "efa489dc4304a3dfc88e",
+      "pixel_sha256": "efa489dc4304a3dfc88e1fc009708c8278ee32294cf0e1a436b74f9a30767386",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/efa489dc4304a3dfc88e.png",
+      "aliases": [],
+      "chapters": [
+        47
+      ],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "chapter_47",
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_47/before.png",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 20,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            90,
+            123,
+            114
+          ],
+          "status": "complete",
+          "center": [
+            108.5,
+            102.0
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact"
+      ]
+    },
+    {
+      "id": "01c85d07d05a5ba7beda",
+      "pixel_sha256": "01c85d07d05a5ba7beda20dc65f99b13a3577961cdb8d9c1ce58faf317fdd235",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/01c85d07d05a5ba7beda.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "log/campaign_prototype/camera_pan_20261001",
+      "source_origin": "log/campaign_prototype/camera_pan_20261001/camera_002_field.jpg",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 24,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            9,
+            80,
+            37,
+            105
+          ],
+          "status": "complete",
+          "center": [
+            23.0,
+            92.5
+          ]
+        }
+      ],
+      "ignored": [],
+      "tags": [
+        "compact",
+        "edge"
+      ]
+    },
+    {
+      "id": "2a72194d310142383c4a",
+      "pixel_sha256": "2a72194d310142383c4a90f8c3a3f1e054acffae8c2a703546190f4990fad272",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/2a72194d310142383c4a.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        218,
+        211
+      ],
+      "domain": "minimap",
+      "group": "log/campaign_prototype/camera_pan_20261001",
+      "source_origin": "log/campaign_prototype/camera_pan_20261001/camera_003_field.jpg",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "roi_kind": "compact",
+      "min_known_phash_distance": 18,
+      "split": "test",
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": [],
+      "tags": [
+        "compact",
+        "negative"
+      ]
+    }
+  ]
+}

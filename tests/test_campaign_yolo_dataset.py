@@ -49,6 +49,51 @@ class DatasetTests(unittest.TestCase):
 
 
 class ReplayTests(unittest.TestCase):
+    def test_detected_normal_without_clickable_center_is_a_failed_frame(self):
+        record = dict(id='normal', source='normal.png', split='test', domain='minimap',
+                      review_scope='full_frame', objects=[
+                          dict(label='minimap_enemy_normal', box=[30, 30, 70, 70], status='complete')])
+        normal = Detection('minimap_enemy_normal', .99, (30, 30, 70, 70))
+        with patch('dev_tools.campaign_yolo_evaluate.load_frame', return_value=np.zeros((160, 160, 3), np.uint8)), \
+                patch('module.campaign_prototype.detection.detect_minimap', return_value=[normal]):
+            result = evaluate([record], None, ['test'])
+        self.assertEqual(result['metrics']['minimap_enemy_normal']['recall'], 1.)
+        self.assertEqual(result['failing_frames'], 1)
+        self.assertEqual(result['normal_navigation']['missing'], 1)
+        self.assertEqual([e['kind'] for e in result['details'][0]['errors']], ['runtime_normal_missing'])
+
+    def test_indicator_adapter_missing_or_wrong_position_is_a_failed_frame(self):
+        record = dict(id='indicator', source='scene.png', split='test', domain='scene',
+                      review_scope='full_frame', objects=[
+                          dict(label='scene_collectible_indicator', box=[800, 400, 850, 450], status='complete')])
+        indicator = Detection('scene_collectible_indicator', .99, (800, 400, 850, 450))
+        for value, error in [(None, 'runtime_indicator_missing'),
+                             (dict(position=[300, 300]), 'runtime_indicator_wrong')]:
+            with self.subTest(error=error), \
+                    patch('dev_tools.campaign_yolo_evaluate.load_frame',
+                          return_value=np.zeros((999, 1776, 3), np.uint8)), \
+                    patch('module.campaign_prototype.detection.detect_scene', return_value=[indicator]), \
+                    patch('module.campaign_prototype.perception.collectible_indicator', return_value=value):
+                result = evaluate([record], None, ['test'])
+            self.assertEqual(result['metrics']['scene_collectible_indicator']['recall'], 1.)
+            self.assertEqual(result['failing_frames'], 1)
+            self.assertEqual([e['kind'] for e in result['details'][0]['errors']], [error])
+
+    def test_detected_ring_without_runtime_center_is_a_failed_frame(self):
+        record = dict(id='ring', source='ring.png', split='test', domain='minimap',
+                      review_scope='full_frame', ignored=[], objects=[
+                          dict(label='minimap_squad_ring', box=[30, 30, 70, 70],
+                               center=[50, 50], status='complete')])
+        ring = Detection('minimap_squad_ring', .99, (30, 30, 70, 70))
+        with patch('dev_tools.campaign_yolo_evaluate.load_frame', return_value=np.zeros((160, 160, 3), np.uint8)), \
+                patch('module.campaign_prototype.detection.detect_minimap', return_value=[ring]):
+            result = evaluate([record], None, ['test'])
+        self.assertEqual(result['metrics']['minimap_squad_ring']['recall'], 1.)
+        self.assertEqual(result['metrics']['minimap_squad_ring']['refinement_missing'], 1)
+        self.assertEqual(result['failing_frames'], 1)
+        self.assertEqual({e['kind'] for e in result['details'][0]['errors']},
+                         {'refinement_missing', 'runtime_ring_missing'})
+
     def test_wrong_class_cannot_count_as_recall_and_unsafe_click_is_reported(self):
         record = dict(id='frame', source='frame.png', split='test', domain='minimap',
                       review_scope='full_frame', ignored=[], objects=[
@@ -64,6 +109,8 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(result['metrics']['minimap_enemy_normal']['recall'], 0.)
         self.assertEqual(result['metrics']['minimap_enemy_normal']['fp'], 1)
         self.assertEqual(result['unsafe_normal_click_frames'], 1)
+        self.assertEqual(result['normal_navigation'],
+                         dict(expected=1, matched=0, missing=1, unsafe=0, ex_popup_required=1))
 
 
 if __name__ == '__main__':

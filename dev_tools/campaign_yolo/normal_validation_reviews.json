@@ -1,0 +1,1172 @@
+{
+  "schema_version": 1,
+  "evaluation_role": "frozen_v4_normal_priority",
+  "review_method": "visual_full_frame_before_inference",
+  "model_sha256": "7ebbcd59a9221b38bd7dd5a62a9c96e29d56c3a3999a55ca5f5cf0219126f0ac",
+  "training_manifest_sha256": "a7b0e7ff39af2bb5e27cb1636d54960452bec7c938a7edbd339fb7b7141a03a1",
+  "note": "Ordinary triangles include their rotating triangular outlines. Samples share chapters; directories and pixels are disjoint from training, same-size perceptual distance >8. EX recognition is advisory; enemy mode verifies the popup.",
+  "frames": [
+    {
+      "id": "2a8cd1516382d0c31f8d",
+      "pixel_sha256": "2a8cd1516382d0c31f8d406e249f4c480a8a5b25c3c7e0915c00406fa2394dfc",
+      "source": "data/chapter_maps/oblique_preview_20260929/chapter_41/source/frame_00071.png",
+      "aliases": [],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            425.0,
+            241.0,
+            447.0,
+            261.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            176.0,
+            236.0,
+            201.0,
+            256.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            179.0,
+            201.0,
+            202.0,
+            219.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            443.0,
+            195.0,
+            466.0,
+            213.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            480.0,
+            184.0,
+            486.0,
+            191.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            138.0,
+            184.0,
+            160.0,
+            200.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            55.0,
+            122.0,
+            75.0,
+            134.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            52.0,
+            101.0,
+            71.0,
+            113.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            26.0,
+            90.0,
+            43.0,
+            101.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            216.0,
+            60.0,
+            233.0,
+            70.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            226.0,
+            42.0,
+            242.0,
+            50.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            255.0,
+            31.0,
+            271.0,
+            40.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            90.0,
+            18.0,
+            103.0,
+            27.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            65.0,
+            18.0,
+            77.0,
+            27.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            103.0,
+            4.0,
+            114.0,
+            11.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9912662783033154,
+      "min_train_phash_distance": 18,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "b10fb1d66bdf9ae93c7b",
+      "pixel_sha256": "b10fb1d66bdf9ae93c7bd8ae3cdabd856216a58e536223f979f75cb53363a709",
+      "source": "data/chapter_maps/oblique_preview_20260929/chapter_41/source/frame_00073.png",
+      "aliases": [],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            307.0,
+            273.0,
+            339.0,
+            300.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            302.0,
+            234.0,
+            332.0,
+            258.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            254.0,
+            215.0,
+            282.0,
+            237.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            151.0,
+            146.0,
+            175.0,
+            163.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            144.0,
+            123.0,
+            167.0,
+            139.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            115,
+            111,
+            137,
+            126
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            310.0,
+            78.0,
+            331.0,
+            92.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            316.0,
+            59.0,
+            336.0,
+            71.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            344.0,
+            49.0,
+            364.0,
+            59.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            168.0,
+            33.0,
+            187.0,
+            44.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            141.0,
+            33.0,
+            160.0,
+            44.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            178.0,
+            18.0,
+            195.0,
+            27.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            335.0,
+            0.0,
+            352.0,
+            6.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            309.0,
+            0.0,
+            327.0,
+            6.0
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9891017761388132,
+      "min_train_phash_distance": 18,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "pixel_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0",
+      "source": "data/chapter_maps/oblique_preview_20260929/chapter_41/source/frame_00068.png",
+      "aliases": [
+        "data/chapter_maps/oblique_preview_20260929/chapter_41/source/frame_00069.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            313.0,
+            325.0,
+            345.0,
+            357.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            24.0,
+            318.0,
+            59.0,
+            349.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            38.0,
+            274.0,
+            70.0,
+            302.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            346.0,
+            266.0,
+            376.0,
+            293.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            392.0,
+            252.0,
+            421.0,
+            278.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            252.0,
+            27.0,
+            277.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            117.0,
+            102.0,
+            140.0,
+            115.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            132.0,
+            79.0,
+            154.0,
+            92.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            168.0,
+            68.0,
+            188.0,
+            80.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            52.0,
+            9.0,
+            61.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            6.0,
+            34.0,
+            26.0,
+            46.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            178.0,
+            12.0,
+            196.0,
+            22.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            152.0,
+            11.0,
+            171.0,
+            22.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            124.0,
+            0.0,
+            146.0,
+            9.0
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9836059002725669,
+      "min_train_phash_distance": 16,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "08e11dfa4a21b280c5b1",
+      "pixel_sha256": "08e11dfa4a21b280c5b1f0a826245eabfda9844ed55a4485d695f4f394ca7123",
+      "source": "data/chapter_maps/current/chapter_33/source/frame_00093.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_33/source/frame_00093.png"
+      ],
+      "chapters": [
+        33
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_33",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            417.0,
+            298.0,
+            475.0,
+            352.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9968868579979691,
+      "min_train_phash_distance": 10,
+      "ignored": [
+        {
+          "box": [
+            404.0,
+            346.0,
+            411.0,
+            352.0
+          ],
+          "reason": "EX_exclamation_animation"
+        },
+        {
+          "box": [
+            400.0,
+            319.0,
+            411.0,
+            343.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "cb91a97c6c0ec3de1b84",
+      "pixel_sha256": "cb91a97c6c0ec3de1b84e4dc231a6fbc5a9eb07b096076e0eaf68df0f9f5b01b",
+      "source": "data/chapter_maps/current/chapter_41/source/frame_00001.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_41/source/frame_00001.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            312.0,
+            263.0,
+            366.0,
+            311.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9970828211568953,
+      "min_train_phash_distance": 14,
+      "ignored": [
+        {
+          "box": [
+            22.0,
+            334.0,
+            31.0,
+            343.0
+          ],
+          "reason": "EX_exclamation_animation"
+        },
+        {
+          "box": [
+            31.0,
+            314.0,
+            57.0,
+            336.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "4225fd2e1ed6513e169e",
+      "pixel_sha256": "4225fd2e1ed6513e169e2786373ebdf71718c99e9c77ff1600b1c6f437dcd641",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/4225fd2e1ed6513e169e.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_005.png",
+      "parent": "14a3c9a3b8d414d5ba6f",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            89,
+            89,
+            126,
+            121
+          ],
+          "status": "complete"
+        }
+      ],
+      "blue_fraction": 0.9208226444628027,
+      "min_train_phash_distance": 22,
+      "ignored": [
+        {
+          "box": [
+            27,
+            120,
+            110,
+            200
+          ],
+          "reason": "scene_EX_visible_through_map"
+        }
+      ],
+      "review_scope": "full_frame",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "34459b05154a5afce1b0",
+      "pixel_sha256": "34459b05154a5afce1b09afb48759bfd45f8c24e3b996609a6bbfaf92723f6ae",
+      "source": "data/chapter_maps/current/chapter_33/source/frame_00067.png",
+      "aliases": [
+        "data/chapter_maps/current/chapter_33/source/frame_00068.png",
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_33/source/frame_00067.png",
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_33/source/frame_00068.png"
+      ],
+      "chapters": [
+        33
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_33",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            126.0,
+            94.0,
+            164.0,
+            120.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9980047387454795,
+      "min_train_phash_distance": 18,
+      "ignored": [
+        {
+          "box": [
+            108.0,
+            105.0,
+            121.0,
+            120.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "75413dbedb900d49af71",
+      "pixel_sha256": "75413dbedb900d49af71d1e49a847e8f3d4449b80a9ffe444b1b74b9bb62d8d1",
+      "source": "data/chapter_maps/current/chapter_33/source/frame_00075.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_33/source/frame_00075.png"
+      ],
+      "chapters": [
+        33
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_33",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            279.0,
+            37.0,
+            313.0,
+            57.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9978221367110256,
+      "min_train_phash_distance": 18,
+      "ignored": [
+        {
+          "box": [
+            268.0,
+            45.0,
+            275.0,
+            57.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "ef0727fcaae1d3f625b4",
+      "pixel_sha256": "ef0727fcaae1d3f625b41bcf3a8e06e51d587ddb7cb6e9c0c928c6afa0ffbca4",
+      "source": "data/chapter_maps/current/chapter_39/source/frame_00055.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_39/source/frame_00055.png"
+      ],
+      "chapters": [
+        39
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_39",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            259.0,
+            219.0,
+            315.0,
+            271.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9951588192328933,
+      "min_train_phash_distance": 18,
+      "ignored": [
+        {
+          "box": [
+            0.0,
+            110.0,
+            6.0,
+            115.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "751879f18476ef784d08",
+      "pixel_sha256": "751879f18476ef784d08822a194a2aa4f4e74541debac2deb1b850d46aca971a",
+      "source": "data/chapter_maps/current/chapter_39/source/frame_00056.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_39/source/frame_00056.png"
+      ],
+      "chapters": [
+        39
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_39",
+      "objects": [],
+      "review": "accepted",
+      "blue_fraction": 0.9973366825218677,
+      "min_train_phash_distance": 18,
+      "ignored": [
+        {
+          "box": [
+            303.0,
+            184.0,
+            324.0,
+            203.0
+          ],
+          "reason": "EX_exclamation_animation"
+        },
+        {
+          "box": [
+            19.0,
+            82.0,
+            27.0,
+            92.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "4c9750167b3ffc2c0b48",
+      "pixel_sha256": "4c9750167b3ffc2c0b4854597b60b23862df44e2a1b09a813fd553febc3b1d9c",
+      "source": "data/chapter_maps/current/chapter_39/source/frame_00059.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_39/source/frame_00059.png"
+      ],
+      "chapters": [
+        39
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_39",
+      "objects": [],
+      "review": "accepted",
+      "blue_fraction": 0.9976039050113125,
+      "min_train_phash_distance": 16,
+      "ignored": [
+        {
+          "box": [
+            423.0,
+            92.0,
+            442.0,
+            106.0
+          ],
+          "reason": "EX_exclamation_animation"
+        },
+        {
+          "box": [
+            138.0,
+            27.0,
+            148.0,
+            36.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "de21afe19db6ebb3765e",
+      "pixel_sha256": "de21afe19db6ebb3765e1782b7db61a14da6b3bd24f08b4f9bbc9a578a4e5693",
+      "source": "data/chapter_maps/current/chapter_41/source/frame_00210.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_41/source/frame_00210.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            166.0,
+            6.0,
+            198.0,
+            22.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.997902303457859,
+      "min_train_phash_distance": 18,
+      "ignored": [
+        {
+          "box": [
+            0.0,
+            22.0,
+            13.0,
+            28.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "bc663c4048ee291b9519",
+      "pixel_sha256": "bc663c4048ee291b9519d2d56fc90fc623cf870cb3a12d13d0c23f6b565ba9a0",
+      "source": "data/chapter_maps/current/chapter_41/source/frame_00213.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_41/source/frame_00213.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            283.0,
+            66.0,
+            320.0,
+            88.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.997750877380507,
+      "min_train_phash_distance": 16,
+      "ignored": [
+        {
+          "box": [
+            88.0,
+            88.0,
+            109.0,
+            100.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "359725bd2a0dd9e4972f",
+      "pixel_sha256": "359725bd2a0dd9e4972f7936660ce13c41b7942d0c600e0554f610175f8a9607",
+      "source": "data/chapter_maps/current/chapter_43/source/frame_00183.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_43/source/frame_00183.png"
+      ],
+      "chapters": [
+        43
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_43",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            0,
+            395,
+            18,
+            450
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.996993746993747,
+      "min_train_phash_distance": 18,
+      "ignored": [
+        {
+          "box": [
+            384.0,
+            319.0,
+            393.0,
+            326.0
+          ],
+          "reason": "EX_exclamation_animation"
+        },
+        {
+          "box": [
+            366.0,
+            296.0,
+            387.0,
+            318.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    },
+    {
+      "id": "55521a915d5aff564501",
+      "pixel_sha256": "55521a915d5aff564501b8fc135c627477b55eb670614bfc978b78e534a53384",
+      "source": "data/chapter_maps/current/chapter_47/source/frame_00073.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_47/source/frame_00073.png"
+      ],
+      "chapters": [
+        47
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "test",
+      "group": "chapter_47",
+      "objects": [],
+      "review": "accepted",
+      "blue_fraction": 0.9970872748650527,
+      "min_train_phash_distance": 16,
+      "ignored": [
+        {
+          "box": [
+            40.0,
+            315.0,
+            48.0,
+            323.0
+          ],
+          "reason": "EX_exclamation_animation"
+        },
+        {
+          "box": [
+            45.0,
+            292.0,
+            66.0,
+            314.0
+          ],
+          "reason": "EX_exclamation_animation"
+        }
+      ],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "unseen_acquisition_directory",
+        "oblique",
+        "normal_priority"
+      ]
+    }
+  ]
+}

@@ -30,6 +30,12 @@
 
 `assets/chapter_38_validation.json` 保存本机已验证地图副本的初始文件清单，用于核对历史数据；实际运行读取所选包自己的 `validation.json`。Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/wiki_references/NN.png`；没有它们仍可运行地图校验、定位回放及控制检查。
 
+## YOLO 模型
+
+`models/campaign.onnx` 与 `campaign.json` 为已分发的第四版模型，适用于中文 Windows `1776×999`。运行依赖可用 `.venv\Scripts\python.exe -m pip install -r requirements-yolo.txt` 安装；训练环境无需随应用安装。模型契约、数据与已验证范围见 [模型说明](models/README.md)。
+
+普通关卡优先使用 YOLO 识别；敌人移动模式出现普通战斗准备弹窗时保留，出现 EX 弹窗时关闭一次并返回 `ex_stage_skipped`，结束本次移动。该结果不表示普通关卡到达或战斗完成。
+
 ## 常用入口
 
 从仓库根目录执行，默认使用项目已有虚拟环境。查看任意入口参数：

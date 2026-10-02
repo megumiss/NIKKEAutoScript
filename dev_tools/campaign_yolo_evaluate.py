@@ -30,8 +30,9 @@ def inside(point, box, margin=0):
 
 def evaluate(records, model, splits):
     counters = {label: Counter() for label in detection.LABELS}
+    normal_navigation = Counter(expected=0, matched=0, missing=0, unsafe=0, ex_popup_required=0)
     center_errors = {label: [] for label in detection.LABELS}
-    latencies, failures, details = {}, [], []
+    latencies, detector_latencies, failures, details = {}, {}, [], []
     with patch.object(detection, 'detector', return_value=model):
         for record in records:
             if record['split'] not in splits or record.get('review_scope') != 'full_frame':
@@ -40,7 +41,8 @@ def evaluate(records, model, splits):
             domain = record.get('roi_kind', record['domain'])
             start = time.perf_counter()
             predicted = detection.detect_scene(image) if record['domain'] == 'scene' else detection.detect_minimap(image)
-            latencies.setdefault(domain, []).append((time.perf_counter() - start) * 1000)
+            detector_ms = (time.perf_counter() - start) * 1000
+            detector_latencies.setdefault(domain, []).append(detector_ms)
             complete = [obj for obj in record['objects'] if obj.get('status') == 'complete']
             partial = [obj for obj in record['objects'] if obj.get('status') != 'complete']
             ignored = record.get('ignored', [])
@@ -56,9 +58,15 @@ def evaluate(records, model, splits):
                 item, obj = predicted[i], complete[j]
                 counters[item.label]['tp'] += 1
                 if 'center' in obj:
-                    center = perception.refine_ring(image, item) if item.label == 'minimap_squad_ring' else item.center
+                    if item.label == 'minimap_squad_ring':
+                        center = perception.refine_ring(image, item)
+                    elif item.label == 'scene_squad_arrow':
+                        center = perception.refine_arrow(image, item)
+                    else:
+                        center = item.center
                     if center is None:
                         counters[item.label]['refinement_missing'] += 1
+                        errors.append(dict(kind='refinement_missing', label=item.label, expected=obj))
                     else:
                         center_errors[item.label].append(float(np.linalg.norm(center - obj['center'])))
             for j, obj in enumerate(complete):
@@ -76,11 +84,34 @@ def evaluate(records, model, splits):
                     errors.append(dict(kind='false_positive', predicted=item.__dict__))
             # Cache this frame's detections so the action-adapter check sees exactly the measured output.
             unsafe, runtime = [], {}
+            runtime_start = time.perf_counter()
             if record['domain'] == 'minimap':
                 with patch.object(perception, 'detect_minimap', return_value=predicted):
                     players, enemies = perception.detect_markers(image, np.eye(3))
                     normals = perception.normal_enemy_markers(image, np.eye(3))
                 runtime = dict(players=players, enemies=enemies, normals=normals)
+                rings = [obj for obj in complete if obj['label'] == 'minimap_squad_ring']
+                for obj in rings:
+                    if not any(inside(np.asarray(point), obj['box']) for point in players):
+                        errors.append(dict(kind='runtime_ring_missing', expected=obj))
+                for point in players:
+                    if not any(inside(np.asarray(point), obj['box']) for obj in rings):
+                        errors.append(dict(kind='runtime_ring_wrong', point=point))
+                normal_targets = [obj for obj in complete if obj['label'] == 'minimap_enemy_normal']
+                ex_targets = [obj for obj in complete if obj['label'] == 'minimap_enemy_ex']
+                normal_navigation['expected'] += len(normal_targets)
+                for obj in normal_targets:
+                    if not any(inside(np.asarray(point), obj['box']) for point in normals):
+                        normal_navigation['missing'] += 1
+                        errors.append(dict(kind='runtime_normal_missing', expected=obj))
+                    else:
+                        normal_navigation['matched'] += 1
+                for point in normals:
+                    if not any(inside(np.asarray(point), obj['box']) for obj in normal_targets):
+                        key = ('ex_popup_required' if any(inside(np.asarray(point), obj['box']) for obj in ex_targets)
+                               else 'unsafe')
+                        normal_navigation[key] += 1
+                        errors.append(dict(kind='runtime_normal_wrong', point=point))
                 forbidden = partial + ignored + [obj for obj in complete if obj['label'] == 'minimap_enemy_ex']
                 for point in normals:
                     if any(inside(np.asarray(point), obj['box']) for obj in forbidden):
@@ -95,6 +126,13 @@ def evaluate(records, model, splits):
                     errors.append(dict(kind='runtime_arrow_missing'))
                 elif center is not None and not any(inside(center, obj['box']) for obj in arrows):
                     errors.append(dict(kind='runtime_arrow_wrong', point=center.tolist()))
+                indicators = [obj for obj in complete if obj['label'] == 'scene_collectible_indicator']
+                if indicators and indicator is None:
+                    errors.append(dict(kind='runtime_indicator_missing'))
+                elif indicator is not None and not any(
+                        inside(np.asarray(indicator['position']), obj['box']) for obj in indicators):
+                    errors.append(dict(kind='runtime_indicator_wrong', point=indicator['position']))
+            latencies.setdefault(domain, []).append(detector_ms + (time.perf_counter() - runtime_start) * 1000)
             if unsafe:
                 errors.append(dict(kind='unsafe_normal_click', points=unsafe))
             detail = dict(id=record['id'], source=record.get('source_origin') or record['source'],
@@ -113,7 +151,11 @@ def evaluate(records, model, splits):
                               center_samples=len(values))
     timing = {domain: dict(frames=len(values), median_ms=float(np.median(values)),
                            p95_ms=float(np.quantile(values, .95))) for domain, values in latencies.items()}
-    return dict(frames=len(details), metrics=metrics, latency=timing, failing_frames=len(failures),
+    detector_timing = {domain: dict(median_ms=float(np.median(values)), p95_ms=float(np.quantile(values, .95)))
+                       for domain, values in detector_latencies.items()}
+    return dict(frames=len(details), metrics=metrics, normal_navigation=dict(normal_navigation),
+                latency=timing, detector_latency=detector_timing,
+                failing_frames=len(failures),
                 unsafe_normal_click_frames=sum(any(e['kind'] == 'unsafe_normal_click' for e in f['errors'])
                                                for f in failures), details=details)
 
@@ -130,6 +172,8 @@ def main():
     model = detection.Detector(args.model)
     result = evaluate(records, model, args.splits)
     result.update(model_sha256=model.metadata['sha256'],
+                  thresholds=dict(model.thresholds),
+                  model_metadata_sha256=hashlib.sha256((args.model / 'campaign.json').read_bytes()).hexdigest(),
                   frames_sha256=hashlib.sha256(args.frames.read_bytes()).hexdigest(), splits=args.splits,
                   note='Replay metrics only; capture independence depends on the training manifest.')
     args.output.parent.mkdir(parents=True, exist_ok=True)

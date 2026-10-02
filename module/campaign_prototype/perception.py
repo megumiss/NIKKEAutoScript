@@ -71,7 +71,8 @@ def refine_ring(image, candidate):
     """Fit the observed ellipse inside a YOLO ring box, including perspective-flattened rings."""
     patch, offset = crop_candidate(image, candidate)
     hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
-    white = cv2.inRange(hsv, (0, 0, 145), (179, 105, 255))
+    # Translucent rings inherit cyan from the road, especially in the compact map.
+    white = cv2.inRange(hsv, (0, 0, 145), (179, 145, 255))
     red = cv2.inRange(hsv, (135, 45, 80), (179, 255, 255))
     white[cv2.dilate(red, np.ones((3, 3), np.uint8)) > 0] = 0
     ys, xs = np.nonzero(white)
@@ -119,7 +120,7 @@ def marker_candidates(image):
         left, top, right, bottom = item.box
         if left <= 3 or top <= 3 or right >= width - 3 or bottom >= height - 3:
             continue
-        if right >= width - 75 and bottom >= height - 35:
+        if item.center[0] >= width - 75 and item.center[1] >= height - 31:
             continue
         if width < 300 and top < 29 and (left < 42 or right > width - 34):
             continue

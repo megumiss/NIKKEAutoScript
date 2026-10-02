@@ -239,7 +239,7 @@ class GameSession:
         """核对当前章节、难度和战斗弹窗，不自动切章或进入战斗。
 
         field 使用完整客户区 BGR 图，章节号及 NORMAL/HARD 文字必须与请求一致。
-        敌人模式发现准备弹窗时携带证据抛出 TargetTriggered，其余身份不符或低置信度结果按失败处理。
+        敌人模式保留普通准备弹窗、关闭并排除 EX，再携带证据抛出 TargetTriggered；关闭失败按错误处理。
         """
         from dev_tools.minimap_chapters import chapter_number
         from . import goto
@@ -247,6 +247,11 @@ class GameSession:
             from .movement_feedback import TargetTriggered
             if self.request.get('purpose') == 'enemy':
                 self.preview(field)
+                evidence = []
+                status = goto.check_battle_popup(self.win, evidence, self.index, 'enemy', image=field)
+                if status == 'ex_stage_skipped':
+                    raise TargetTriggered('已排除 EX 关卡并关闭弹窗，本次移动已停止。',
+                                          dict(kind=status, **evidence[-1]))
                 raise TargetTriggered('已接触敌人，战斗准备界面已出现。', {'kind': 'battle_popup'})
             raise RuntimeError('出现战斗弹窗，移动测试已停止。')
         if chapter_number(field, self.model) != self.request['chapter']:
