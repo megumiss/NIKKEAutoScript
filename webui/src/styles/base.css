@@ -763,3 +763,35 @@ button:focus-visible,
   .clone-instance-status { align-self:flex-start; }
   .clone-instance-path { grid-template-columns:1fr; gap:2px; }
 }
+
+/* 顶栏全局搜索：结果面板是覆盖层，不参与 topbar 的高度与排版 */
+.global-search { position: relative; }
+.gs-trigger { display:flex; align-items:center; gap:7px; height:32px; padding:0 10px; border:1px solid var(--border); border-radius:9px; color:var(--text-3); background:var(--card-2); font-size:12.5px; }
+.gs-trigger:hover { border-color:var(--border-light); color:var(--text-2); }
+.gs-trigger-label { white-space:nowrap; }
+.gs-kbd { flex:none; padding:1px 5px; border:1px solid var(--border-light); border-radius:5px; color:var(--text-3); background:var(--card); font-family:inherit; font-size:10.5px; }
+/* 108px 留给窄屏下的汉堡菜单、公告铃和顶栏内边距，避免顶栏被输入框顶溢出 */
+.gs-box { display:flex; align-items:center; gap:7px; width:min(440px,calc(100vw - 108px)); height:32px; padding:0 10px; border:1px solid var(--accent); border-radius:9px; color:var(--text-3); background:var(--card-2); }
+.gs-box input { width:100%; min-width:0; border:0; outline:0; color:var(--text); background:transparent; font-size:13px; }
+.gs-clear { flex:none; padding:0 2px; border:0; color:var(--text-3); background:transparent; line-height:1; cursor:pointer; }
+.gs-clear:hover { color:var(--text); }
+.gs-spin { flex:none; width:12px; height:12px; border:2px solid var(--accent-soft); border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; }
+/* 触发框在 56px 顶栏里垂直居中，多留 20px 让面板落在顶栏下边框之外。
+   宽度用 left/right:0 跟随 .gs-box，而不是写死数值——两处各写一个宽度迟早会漂移，
+   只有同宽同右边距时输入框和结果面板才看起来是一整块。 */
+.gs-panel { position:absolute; z-index:40; top:calc(100% + 20px); left:0; right:0; max-height:min(70vh,520px); overflow:auto; padding:6px; border:1px solid var(--border-light); border-radius:12px; background:var(--card); box-shadow:var(--shadow-hover); }
+.gs-group { display:flex; align-items:center; gap:8px; padding:8px 10px 5px; color:var(--text-3); font-size:11px; font-weight:600; letter-spacing:.06em; }
+.gs-more { padding:0 6px; border-radius:8px; background:var(--card-3); font-size:10.5px; letter-spacing:0; }
+/* 页面命中是 button、设置命中是 div，统一重置按钮默认边框与内边距 */
+.gs-item { display:flex; align-items:center; gap:9px; width:100%; padding:7px 10px; border:0; border-radius:8px; color:var(--text-2); background:transparent; font:inherit; text-align:left; cursor:pointer; }
+.gs-item:hover,.gs-item:focus-visible,.gs-item.active { color:var(--text); background:var(--card-2); }
+.gs-ico { display:flex; flex:none; align-items:center; color:var(--text-3); }
+.gs-text { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.gs-title { overflow:hidden; color:var(--text); font-size:13.5px; text-overflow:ellipsis; white-space:nowrap; }
+.gs-sub { overflow:hidden; color:var(--text-3); font-size:11.5px; text-overflow:ellipsis; white-space:nowrap; }
+.gs-empty { padding:14px 12px; color:var(--text-3); font-size:12.5px; }
+
+@media (max-width: 768px) {
+  .gs-trigger-label,.gs-kbd { display:none; }
+  .gs-trigger { padding:0 9px; }
+}
