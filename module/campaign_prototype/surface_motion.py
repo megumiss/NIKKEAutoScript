@@ -3,7 +3,8 @@
 import cv2
 import numpy as np
 
-from dev_tools.minimap_reconstruct import terrain, detect_markers
+from dev_tools.minimap_reconstruct import terrain
+from .perception import detect_markers
 
 
 def project(matrix, points):

@@ -19,7 +19,7 @@ def track_localization(localizer, reference, report, current, point=None):
     reference/report 必须属于已验证的固定参考，current 是新 ROI；未传 point 时要求唯一小队圆环。
     比较多个局部道路范围的留出验证和坐标一致性，返回保留来源身份的新报告；支持不足或分歧超过 3px 时拒绝。
     """
-    from dev_tools.minimap_reconstruct import detect_markers
+    from .perception import detect_markers
     if point is None:
         players, _ = detect_markers(current, np.eye(3))
         if len(players) != 1:
@@ -321,7 +321,7 @@ class ParallaxSessionMixin:
         self.identity(field)
         self.check_collectible(field)
         goto.map_open(self.win, reset=True)
-        from dev_tools.minimap_reconstruct import detect_markers
+        from .perception import detect_markers
         for attempt in range(6):
             image = self.win.capture()
             players, _ = detect_markers(image, np.eye(3))

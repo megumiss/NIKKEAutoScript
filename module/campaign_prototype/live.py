@@ -8,42 +8,15 @@ from . import settings, runtime
 import cv2
 import numpy as np
 
+from . import perception
+
 from .adaptive import AdaptiveLocalizer
 from .probe import goto
 
 
 def squad_arrow(image):
-    """分别匹配白／橙箭头及高亮笔画，避免背景颜色混入同一形状掩码。
-
-    在避开固定 UI 的主场景内搜索白色、橙色和高亮三种掩码，按多种模板尺度比较候选。
-    最佳分数至少 0.72，且远处无相近得分竞争者才返回箭头中心；否则返回 None，地面补偿由周期采样完成。
-    """
-    template = cv2.imread(str(Path(__file__).parent / 'assets/squad_arrow_tpl.png'), cv2.IMREAD_GRAYSCALE)
-    if template is None:
-        raise RuntimeError('小队箭头模板缺失。')
-    # 镜头平移后小队不一定在屏幕中央；搜索范围覆盖可点击场景并留出箭头动画余量。
-    left, top, right, bottom = 250, 120, 1500, 880
-    hsv = cv2.cvtColor(image[top:bottom, left:right], cv2.COLOR_BGR2HSV)
-    masks = [cv2.inRange(hsv, (0, 0, 215), (179, 110, 255)),
-             cv2.inRange(hsv, (0, 0, 245), (179, 80, 255)),
-             cv2.inRange(hsv, (5, 160, 190), (30, 255, 255))]
-    candidates = []
-    for scale in (.7, .75, .8, .85, .9, .95, 1., 1.05, 1.1):
-        resized = cv2.resize(template, None, fx=scale, fy=scale, interpolation=cv2.INTER_NEAREST)
-        for mask in masks:
-            scores = cv2.matchTemplate(mask, resized, cv2.TM_CCOEFF_NORMED)
-            for _ in range(2):
-                _, score, _, (x, y) = cv2.minMaxLoc(scores)
-                center = np.array([x + left + resized.shape[1] / 2, y + top + resized.shape[0] / 2])
-                candidates.append((score, center))
-                scores[max(0, y - 30):y + 31, max(0, x - 30):x + 31] = -1
-    score, center = max(candidates, key=lambda candidate: candidate[0])
-    if score < .72:
-        return None
-    if any(other_score > score * .95 and np.linalg.norm(point - center) > 30
-           for other_score, point in candidates):
-        return None
-    return center
+    """从 YOLO 候选内精定位小队箭头，保持周期采样的中心语义。"""
+    return perception.squad_arrow(image)
 
 
 @runtime.command

@@ -7,6 +7,8 @@ from . import settings, runtime
 import cv2
 import numpy as np
 
+from . import perception
+
 from .probe import Localizer, goto, project
 
 from .match_coarse import PAD, SCALE, match, template_matrix
@@ -22,7 +24,7 @@ class AdaptiveLocalizer(Localizer):
         """
         if image is None or image.shape != (462, 486, 3):
             raise ValueError('Expected a 486x462 BGR expanded minimap ROI')
-        players, _ = goto.mr.detect_markers(image, np.eye(3))
+        players, _ = perception.detect_markers(image, np.eye(3))
         if len(players) > 1 or (require_player and len(players) != 1):
             raise RuntimeError(f'Expected one squad ring, got {players}')
         player = np.asarray(players[0] if len(players) == 1 else [image.shape[1] / 2, image.shape[0] / 2])

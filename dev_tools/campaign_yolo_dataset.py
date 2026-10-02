@@ -307,6 +307,95 @@ def client_map_crops(output):
         o['label'] for r in additions for o in r['objects']))))
 
 
+def load_frame(record):
+    """Reconstruct derived ROIs from repository captures and verify the reviewed pixels."""
+    source = record.get('source_origin') if record.get('crop') else record['source']
+    image = cv2.imread(str(ROOT / source))
+    if image is None:
+        raise FileNotFoundError(source)
+    if record.get('crop'):
+        image = cv2.resize(image, tuple(record['client']))
+        left, top, right, bottom = record['crop']
+        image = image[top:bottom, left:right]
+    digest = hashlib.sha256(cv2.cvtColor(image, cv2.COLOR_BGR2RGB).tobytes()).hexdigest()
+    if digest != record['pixel_sha256']:
+        raise ValueError(f'Capture pixels changed: {record["id"]}')
+    return image
+
+
+def apply_frame_reviews(records, path):
+    reviews = json.loads(Path(path).read_text('utf-8'))['frames']
+    by_id = {record['id']: record for record in records}
+    for review in reviews:
+        if review.get('review_scope') != 'full_frame' or review.get('review') != 'accepted':
+            raise ValueError(f'Incomplete frame review: {review["id"]}')
+        original = by_id.get(review['id'])
+        if original is None or original['pixel_sha256'] != review['pixel_sha256']:
+            raise ValueError(f'Frame review source changed: {review["id"]}')
+        original.update(review)
+        original['quality'] = 'full_frame_reviewed'
+    return reviews
+
+
+def perceptual_hash(image):
+    small = cv2.resize(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), (32, 32))
+    low = cv2.dct(small.astype(np.float32))[:8, :8].reshape(-1)[1:]
+    return low > np.median(low)
+
+
+def select_reviewed_partitions(records):
+    """Reserve reviewed captures and their acquisition groups before image augmentation."""
+    reviewed = [r for r in records if r.get('quality') == 'full_frame_reviewed']
+    held = [r for r in reviewed if r['split'] != 'train']
+    held_chapters = {c for r in held for c in r['chapters'] if c != 41}
+    held_groups = {r['group'] for r in held if not r['chapters']}
+    held_origins = {str(Path(r.get('source_origin') or r['source']).parent) for r in held
+                    if not r['chapters']}
+    hashes = [(r['split'], r['size'], perceptual_hash(load_frame(r))) for r in held]
+    selected, excluded = [], Counter()
+    for record in records:
+        gold = record.get('quality') == 'full_frame_reviewed'
+        if not gold and record['split'] != 'train':
+            excluded['unreviewed_evaluation'] += 1
+            continue
+        if record['split'] == 'train':
+            origin = str(Path(record.get('source_origin') or record['source']).parent)
+            if (set(record['chapters']) & held_chapters or record['group'] in held_groups
+                    or origin in held_origins):
+                excluded['held_acquisition_group'] += 1
+                continue
+            # Chapter 41 uses separated capture blocks; only the reviewed training block is eligible.
+            if 41 in record['chapters'] and not gold:
+                excluded['unreviewed_chapter41'] += 1
+                continue
+            if record.get('review') == 'excluded_diagnostic':
+                continue
+            if not gold and record['domain'] == 'minimap':
+                if record.get('roi_kind') == 'compact' or any(
+                        o['label'].startswith('minimap_enemy') and not o.get('reviewed')
+                        for o in record['objects']):
+                    excluded['unreviewed_minimap'] += 1
+                    continue
+            fingerprint = perceptual_hash(load_frame(record))
+            if any(size == record['size'] and np.count_nonzero(fingerprint != other) <= 8
+                   for _, size, other in hashes):
+                excluded['near_duplicate_of_holdout'] += 1
+                continue
+        selected.append(record)
+    # Evaluation partitions must also be distinct; drop validation copies of test captures.
+    tests = [(r['size'], perceptual_hash(load_frame(r))) for r in selected if r['split'] == 'test']
+    result = []
+    for record in selected:
+        if record['split'] == 'val':
+            fingerprint = perceptual_hash(load_frame(record))
+            if any(size == record['size'] and np.count_nonzero(fingerprint != other) <= 8
+                   for size, other in tests):
+                excluded['validation_near_test'] += 1
+                continue
+        result.append(record)
+    return result, dict(excluded)
+
+
 def build(output, destination):
     from module.campaign_prototype.detection import scene_tiles
 
@@ -324,7 +413,13 @@ def build(output, destination):
             if len(matches) != 1:
                 raise ValueError(f'Annotation review box changed: {review["id"]} {review["box"]}')
             matches[0].update(label=review['label'], uncertain=review['uncertain'], reviewed=True)
+    frame_review_path = ROOT / 'dev_tools/campaign_yolo/frame_reviews.json'
+    exclusions = {}
+    if frame_review_path.exists():
+        apply_frame_reviews(records, frame_review_path)
+        records, exclusions = select_reviewed_partitions(records)
     destination.mkdir(parents=True)
+    write_jsonl(destination / 'frames.jsonl', records)
     manifest, counts, negatives = [], Counter(), Counter()
     rng = np.random.default_rng(20261002)
     for split in ('train', 'val', 'test'):
@@ -333,7 +428,11 @@ def build(output, destination):
     for record in records:
         if record.get('review') == 'excluded_diagnostic' or any(o.get('uncertain') for o in record['objects']):
             continue
-        image = cv2.imread(str(ROOT / record['source']))
+        image = load_frame(record)
+        # YOLO has no ignore-region labels. Hide ambiguous symbols from its training loss.
+        for ignored in record.get('ignored', []):
+            left, top, right, bottom = np.asarray(ignored['box']).astype(int)
+            image[top:bottom, left:right] = 0
         objects = record['objects']
         if record['domain'] == 'minimap':
             if not objects:
@@ -376,7 +475,7 @@ def build(output, destination):
             manifest.append(dict(image=path.relative_to(destination).as_posix(), source=record['source'],
                                  source_id=record['id'], source_origin=record.get('source_origin'),
                                  group=record['group'], split=split, roi_kind=record.get('roi_kind', record['domain']),
-                                 offset=list(offset), quality='reviewed' if record['review'] == 'accepted' else 'weak',
+                                 offset=list(offset), quality=record.get('quality', 'weak'),
                                  labels_sha256=hashlib.sha256(label_path.read_bytes()).hexdigest(),
                                  pixels_sha256=hashlib.sha256(tile.tobytes()).hexdigest(), objects=len(annotations)))
             counts.update(f'{split}/{LABELS[a[0]]}' for a in annotations)
@@ -384,15 +483,18 @@ def build(output, destination):
     yaml = f'path: {destination.as_posix()}\ntrain: train.txt\nval: images/val\ntest: images/test\nnames:\n'
     yaml += ''.join(f'  {i}: {label}\n' for i, label in enumerate(LABELS))
     (destination / 'dataset.yaml').write_text(yaml, encoding='utf-8')
-    summary = dict(images=Counter(m['split'] for m in manifest), objects=counts, annotation_quality='weak_baseline',
-                   note='Training/validation proposals are not an independently reviewed accuracy benchmark.')
+    summary = dict(images=Counter(m['split'] for m in manifest), objects=counts,
+                   annotation_quality=Counter(m['quality'] for m in manifest), exclusions=exclusions,
+                   frame_reviews_sha256=hashlib.sha256(frame_review_path.read_bytes()).hexdigest()
+                   if frame_review_path.exists() else None,
+                   note='Mixed training labels; final accuracy must use unmasked reviewed frames and runtime gates.')
     (destination / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
     balance_training(destination)
     print(json.dumps(summary), flush=True)
 
 
 def balance_training(destination):
-    """Resample the scarce collectible class within training only; keep real validation frames unchanged."""
+    """Resample scarce reviewed targets within training; never duplicate evaluation captures."""
     destination = Path(destination)
     manifest = read_jsonl(destination / 'manifest.jsonl')
     training = []
@@ -400,8 +502,14 @@ def balance_training(destination):
         if record['split'] != 'train':
             continue
         labels = destination / record['image'].replace('images/', 'labels/').replace('.png', '.txt')
-        rare = any(line.startswith('1 ') for line in labels.read_text('utf-8').splitlines())
-        training.extend(['./' + record['image']] * (8 if rare else 1))
+        classes = {int(line.split()[0]) for line in labels.read_text('utf-8').splitlines()}
+        repeats = 8 if 1 in classes else 1
+        if record['quality'] == 'full_frame_reviewed':
+            if 2 in classes:
+                repeats = max(repeats, 16)
+            if 3 in classes or (4 in classes and record['roi_kind'] == 'compact'):
+                repeats = max(repeats, 8)
+        training.extend(['./' + record['image']] * repeats)
     (destination / 'train.txt').write_text('\n'.join(training) + '\n', encoding='utf-8')
     yaml_path = destination / 'dataset.yaml'
     yaml_path.write_text(yaml_path.read_text('utf-8').replace('train: images/train', 'train: train.txt'), encoding='utf-8')

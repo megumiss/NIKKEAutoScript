@@ -5,6 +5,8 @@ from types import SimpleNamespace
 import cv2
 import numpy as np
 
+from . import perception
+
 from . import goto, runtime, settings
 from .probe import jacobian
 from .surface_motion import project
@@ -150,7 +152,7 @@ def observe_camera(session, squad_position, surface=None):
     session.index += 1
     tag = f'{getattr(session, "tag", "camera")}_{session.index:03}'
     if hasattr(session, 'calibration'):
-        players, _ = goto.mr.detect_markers(image, np.eye(3))
+        players, _ = perception.detect_markers(image, np.eye(3))
         if len(players) > 1:
             raise ValueError('镜头观测中存在多个小队标记。')
         if players:
@@ -303,7 +305,7 @@ def wait_for_squad(session):
 
     圆环缺失或道路证据不足时重新累计；最多采样 120 轮，不展开会冻结画面的小地图面板。
     """
-    from dev_tools.wiki_collectible_match import minimap_masks
+    from .perception import minimap_masks
 
     goto.map_close(session.win)
     samples = []

@@ -15,6 +15,8 @@ from . import settings, runtime
 
 import cv2
 import numpy as np
+
+from . import perception
 from dev_tools import minimap_reconstruct as mr
 
 ARGS = settings.driver_args()
@@ -103,39 +105,8 @@ def check_battle_popup(win, log, iteration, phase):
 
 
 def normal_enemy_markers(image, matrix):
-    """用红色实心轮廓识别普通敌人，排除空心 EX、裁切边缘和计数器后投影中心。
-
-    image 为展开 ROI，matrix 指定 ROI→目标坐标系的透视变换。
-    按红色连通轮廓的尺寸、实心程度和边界位置筛选普通敌人，返回投影后中心列表，无候选返回空列表。
-    """
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    red = cv2.inRange(hsv, (155, 60, 140), (179, 255, 255)) | cv2.inRange(hsv, (0, 60, 140), (8, 255, 255))
-    red = cv2.morphologyEx(red, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
-    contours, _ = cv2.findContours(red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    height, width = red.shape
-    markers = []
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        # Perspective enlarges nearby normal markers; EX outlines have sparse interiors.
-        area = cv2.contourArea(contour)
-        if not (10 <= w <= 44 and 10 <= h <= 44 and 45 <= area <= 1000):
-            continue
-        hull_area = cv2.contourArea(cv2.convexHull(contour))
-        if area / max(hull_area, 1) < 0.7:
-            continue
-        filled = np.zeros((h, w), np.uint8)
-        cv2.drawContours(filled, [contour - [x, y]], -1, 255, cv2.FILLED)
-        if np.count_nonzero(red[y:y + h, x:x + w] & filled) < np.count_nonzero(filled) * 0.65:
-            continue
-        if x <= 3 or y <= 3 or x + w >= width - 3 or y + h >= height - 3:
-            continue
-        if x + w >= width - 75 and y + h >= height - 35:
-            continue
-        moments = cv2.moments(contour)
-        markers.append([moments['m10'] / moments['m00'], moments['m01'] / moments['m00']])
-    if not markers:
-        return []
-    return cv2.perspectiveTransform(np.array([markers], np.float32), matrix)[0].round(1).tolist()
+    """检测普通敌人并排除 EX，将完整候选按本帧矩阵投影。"""
+    return perception.normal_enemy_markers(image, matrix)
 
 
 def movement_click(anchor, offset):
@@ -233,7 +204,7 @@ class Localizer:
         mask = (mask > 0).astype(np.float32)
         result = cv2.matchTemplate(self.terrain, mask, cv2.TM_CCOEFF_NORMED)
         _, score, _, loc = cv2.minMaxLoc(result)
-        players, _ = mr.detect_markers(image, self.matrix)
+        players, _ = perception.detect_markers(image, self.matrix)
         enemies = normal_enemy_markers(image, self.matrix)
         self_world = None
         self.coordinate_source = 'unlocalized'

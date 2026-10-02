@@ -9,6 +9,8 @@ from . import settings, runtime
 import cv2
 import numpy as np
 
+from . import perception
+
 from . import goto
 
 
@@ -58,7 +60,7 @@ class Localizer:
         """
         if image is None or image.shape != (462, 486, 3):
             raise ValueError('Expected a 486x462 BGR expanded minimap ROI')
-        players, _ = goto.mr.detect_markers(image, np.eye(3))
+        players, _ = perception.detect_markers(image, np.eye(3))
         if len(players) != 1:
             raise RuntimeError(f'Expected one squad ring, got {players}')
         player = np.asarray(players[0])

@@ -286,7 +286,7 @@ class CameraTests(unittest.TestCase):
         samples = [ValueError('hidden'), *[self.compact_sample([x, 50]) for x in (30, 40, 50)],
                    ValueError('hidden'), *[self.compact_sample([70, 50]) for _ in range(4)]]
         with self.planning(), patch('module.campaign_prototype.goto.map_open') as open_map, patch(
-                'dev_tools.wiki_collectible_match.minimap_masks', side_effect=samples):
+                'module.campaign_prototype.perception.minimap_masks', side_effect=samples):
             camera.wait_for_squad(self.session)
         self.assertEqual(self.session.pause.call_count, 9)
         open_map.assert_not_called()
@@ -309,13 +309,13 @@ class CameraTests(unittest.TestCase):
         pulse = [[110, 100], [112, 103], [108, 99], [111, 102]]
         samples = [ValueError('hidden'), *[self.compact_sample(p) for p in pulse]]
         with self.planning(), patch('module.campaign_prototype.goto.map_open') as open_map, patch(
-                'dev_tools.wiki_collectible_match.minimap_masks', side_effect=samples):
+                'module.campaign_prototype.perception.minimap_masks', side_effect=samples):
             camera.wait_for_squad(self.session)
         self.assertEqual(self.session.pause.call_count, 5)
         open_map.assert_not_called()
         self.session.preview.reset_mock()
         with self.planning(), patch('module.campaign_prototype.goto.map_open') as open_map, patch(
-                'dev_tools.wiki_collectible_match.minimap_masks', side_effect=ValueError('hidden')):
+                'module.campaign_prototype.perception.minimap_masks', side_effect=ValueError('hidden')):
             with self.assertRaisesRegex(RuntimeError, '超时'):
                 camera.wait_for_squad(self.session)
         self.session.preview.assert_not_called()
@@ -324,7 +324,7 @@ class CameraTests(unittest.TestCase):
     def test_centered_squad_with_moving_roads_does_not_end_wait(self):
         samples = [self.compact_sample([50, 50], shift=x) for x in (0, 5, 10, 15, 15, 15, 15)]
         with self.planning(), patch('module.campaign_prototype.goto.map_open') as open_map, patch(
-                'dev_tools.wiki_collectible_match.minimap_masks', side_effect=samples):
+                'module.campaign_prototype.perception.minimap_masks', side_effect=samples):
             camera.wait_for_squad(self.session)
         self.assertEqual(self.session.pause.call_count, 7)
         open_map.assert_not_called()
@@ -351,7 +351,7 @@ class CameraTests(unittest.TestCase):
         surface = np.zeros((700, 700), np.uint8)
         surface[100:400, 100:400] = 1
         with self.planning(), patch('module.campaign_prototype.goto.map_open'), patch(
-                'module.campaign_prototype.goto.mr.detect_markers', return_value=([], [])), patch(
+                'module.campaign_prototype.perception.detect_markers', return_value=([], [])), patch(
                 'module.campaign_prototype.goto.mr.terrain', return_value=np.ones((462, 486), np.uint8)), patch(
                 'module.campaign_prototype.runtime.write_image'):
             report = camera.observe_camera(self.session, [243, 231], surface)

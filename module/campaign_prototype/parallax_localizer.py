@@ -7,7 +7,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from dev_tools.minimap_reconstruct import detect_markers, terrain
+from dev_tools.minimap_reconstruct import terrain
+from .perception import detect_markers
 from .edited_map import edited_roads, road_distance
 from .local_projection import frame_plane_to_map
 from .surface_motion import contains, fit_registration, project

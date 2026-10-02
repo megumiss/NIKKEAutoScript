@@ -52,8 +52,10 @@ def main():
         provenance = dict(versions=versions, dataset=str(args.data.resolve()),
                           manifest_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(),
                           train_script_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                          train_list_sha256=hashlib.sha256((manifest.parent / 'train.txt').read_bytes()).hexdigest(),
+                          dataset_summary=json.loads((manifest.parent / 'summary.json').read_text('utf-8')),
                           labels=list(LABELS), seed=20261002,
-                          annotation_note='Weak training baseline; acceptance requires separately reviewed captures.')
+                          annotation_note='Acceptance requires unmasked runtime replay and acquisition-group isolation.')
         (workspace / f'{args.name}-provenance.json').write_text(json.dumps(provenance, indent=2), encoding='utf-8')
         model.train(data=str(args.data.resolve()), project=str(workspace / 'runs'), name=args.name,
                     epochs=args.epochs, patience=20, imgsz=640, batch=args.batch, device=0, workers=args.workers,

@@ -1,11 +1,11 @@
 """箭头周期定位、小地图辅助恢复与有限目标触发。"""
 
 import re
-from functools import lru_cache
-from pathlib import Path
 
 import cv2
 import numpy as np
+
+from . import perception
 
 from .surface_motion import contains, project, register_surface
 
@@ -95,30 +95,11 @@ def resolve_anchor(session, field, observation, allow_scene=True):
     raise ValueError(f'无法恢复小队箭头位置，未追加点击；现场已保存。{reason}')
 
 
-@lru_cache(maxsize=1)
-def collectible_indicator_template():
-    """加载带透明遮罩的提示图，匹配时排除随场景变化的背景。"""
-    path = Path(__file__).parent / 'assets/collectible_indicator.png'
-    image = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
-    if image is None:
-        raise FileNotFoundError(path)
-    return image[:, :, :3].copy(), image[:, :, 3].copy()
 
 
 def collectible_indicator(field):
-    """识别场景中带放大镜的橙色倒三角，排除小地图计数图标和上下方 HUD。"""
-    template, mask = collectible_indicator_template()
-    scene = field[120:890, 250:1650]
-    if scene.shape[0] < template.shape[0] or scene.shape[1] < template.shape[1]:
-        return None
-    scores = cv2.matchTemplate(scene, template, cv2.TM_SQDIFF_NORMED, mask=mask)
-    scores[~np.isfinite(scores)] = 1
-    error, _, point, _ = cv2.minMaxLoc(scores)
-    if error > .08:
-        return None
-    return {'kind': 'collectible_indicator', 'match_error': max(0., error),
-            'position': [point[0] + 250 + template.shape[1] // 2,
-                         point[1] + 120 + template.shape[0] // 2]}
+    """检测场景收集提示，返回 YOLO 置信度与客户区位置。"""
+    return perception.collectible_indicator(field)
 
 
 def collectible_counter(field, model):

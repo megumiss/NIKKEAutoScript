@@ -1,0 +1,6658 @@
+{
+  "schema_version": 1,
+  "review_method": "visual_full_frame",
+  "frames": [
+    {
+      "id": "e061532b43a9e0ce165e",
+      "pixel_sha256": "e061532b43a9e0ce165ecff795cf0fbb9a2bb5957f2f246f956307f0f1dd3be5",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00000.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            206.0,
+            433.0,
+            241.0,
+            462.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            163.0,
+            391.0,
+            197.0,
+            432.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            219.0,
+            263.0,
+            273.0,
+            309.0
+          ],
+          "status": "complete",
+          "center": [
+            246.0,
+            286.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "b5520284af1592bdcdeb",
+      "pixel_sha256": "b5520284af1592bdcdebae1f369d837a005b7ba52d1960e2236e9fbdab17562f",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00005.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "d35a2bddd4f212ca6243",
+      "pixel_sha256": "d35a2bddd4f212ca62435fb33b557c673542fdbe444d5c0ab26486d906442bd0",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00010.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "0e684c7eb69575ea437b",
+      "pixel_sha256": "0e684c7eb69575ea437b366990d509f85ec2d3e8c3ed19713a36a58d62533b2a",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00015.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            21.0,
+            245.0,
+            68.0,
+            285.0
+          ],
+          "status": "complete",
+          "center": [
+            44.5,
+            265.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "eda7f2d32473402a435e",
+      "pixel_sha256": "eda7f2d32473402a435ec8ab2c23fea6460751361f490bb7683134ae207e64c0",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00020.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            156.0,
+            389.0,
+            190.0,
+            423.0
+          ],
+          "status": "partial_outline"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            281.0,
+            175.0,
+            305.0,
+            194.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            249.0,
+            155.0,
+            272.0,
+            174.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            279.0,
+            90.0,
+            319.0,
+            114.0
+          ],
+          "status": "complete",
+          "center": [
+            299.0,
+            102.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "ff62af22e5fc7ad3fd15",
+      "pixel_sha256": "ff62af22e5fc7ad3fd158253b8ae1378e7c82caee237674c32d2dad835f713c1",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00025.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            416.0,
+            249.0,
+            486.0,
+            314.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            450.0,
+            89.0,
+            472.0,
+            103.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            457.0,
+            39.0,
+            486.0,
+            59.0
+          ],
+          "status": "truncated",
+          "center": [
+            471.5,
+            49.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "078f49e62bfcbdaf1929",
+      "pixel_sha256": "078f49e62bfcbdaf1929e37d0c71e8e35a375c5a7f8f68274bbebc7eef72abe2",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00030.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            18.0,
+            71.0,
+            40.0,
+            84.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            55.0,
+            64.0,
+            76.0,
+            76.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "30142b780e7feb527032",
+      "pixel_sha256": "30142b780e7feb527032c088c927a0b3ba6111390406a7afef57bfd00422d230",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00035.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            145.0,
+            20.0,
+            160.0,
+            28.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            4.0,
+            6.0,
+            9.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            172.0,
+            0.0,
+            185.0,
+            8.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "df11767bd626c0d797b8",
+      "pixel_sha256": "df11767bd626c0d797b824cf0d406d040535c97565cbd33b09282666d4a46556",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00040.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "0c835f2711a6d4b48da3",
+      "pixel_sha256": "0c835f2711a6d4b48da3dcd48d42a73b112f7ee63712bb88b5436cbaef380047",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00045.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "42e3da5c5561f616ae3b",
+      "pixel_sha256": "42e3da5c5561f616ae3b8a298bf5b9e61e12eccfc5e7bfe45b56d9147ac0dc94",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00050.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "1334640705eb5420b57e",
+      "pixel_sha256": "1334640705eb5420b57e595de48bf70250b0fbe743064cfb324480a74d646179",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00055.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            212.0,
+            62.0,
+            259.0,
+            93.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "fe5bde725b8db262be6a",
+      "pixel_sha256": "fe5bde725b8db262be6a6d48fbc6cabc8db9d2e2b728c30850f512c26852a22a",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00060.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            271.0,
+            164.0,
+            329.0,
+            213.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            364.0,
+            52.0,
+            380.0,
+            63.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            338.0,
+            41.0,
+            352.0,
+            49.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            354.0,
+            0.0,
+            384.0,
+            16.0
+          ],
+          "status": "truncated",
+          "center": [
+            369.0,
+            8.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "aa551596839c6cc89259",
+      "pixel_sha256": "aa551596839c6cc892596f324bbff6d7a965d1101a19f266e6dc1eb6d0b6a264",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00065.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            112.0,
+            100.0,
+            129.0,
+            112.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            89.0,
+            86.0,
+            106.0,
+            96.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            133.0,
+            36.0,
+            168.0,
+            56.0
+          ],
+          "status": "complete",
+          "center": [
+            150.5,
+            46.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "7de3f55d78c4d2e9a005",
+      "pixel_sha256": "7de3f55d78c4d2e9a00592cf81f8c5a72766dae5f8dbbf644ce1ee394d6eb62c",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00070.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": [
+        {
+          "box": [
+            296.0,
+            267.0,
+            378.0,
+            349.0
+          ],
+          "reason": "blue_diamond_non_target",
+          "forbid_normal": true
+        }
+      ]
+    },
+    {
+      "id": "99376f252de3876cb33a",
+      "pixel_sha256": "99376f252de3876cb33adf32c8fba28ac10f6dbdbf197f73e3c58d2f2c724ad7",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00075.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "77ca81e1d97196a93f67",
+      "pixel_sha256": "77ca81e1d97196a93f6708aa279877a952a86de4dd8928823cda8590f294a6d3",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00080.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "54c1095dfa3317e9a4be",
+      "pixel_sha256": "54c1095dfa3317e9a4bea42c879f92c4e7258b34318e9e3a7ff0f902f4bb1b13",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00085.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "e8ac6590c22819054f6e",
+      "pixel_sha256": "e8ac6590c22819054f6e884c3ef81d48d94aad9eb2bb3f4a5bb52f709042c8ce",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00110.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            18.0,
+            403.0,
+            55.0,
+            441.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "32225459971e2e201807",
+      "pixel_sha256": "32225459971e2e2018078c49f44da7b587e56910de6da406ea740493261704c5",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00115.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            191.0,
+            146.0,
+            214.0,
+            164.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            142.0,
+            7.0,
+            152.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            117.0,
+            18.0,
+            133.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            223.0,
+            113.0,
+            245.0,
+            129.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            260.0,
+            104.0,
+            280.0,
+            119.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            66.0,
+            10.0,
+            84.0,
+            20.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            85.0,
+            0.0,
+            95.0,
+            5.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "pixel_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00120.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            421.0,
+            277.0,
+            451.0,
+            303.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            161.0,
+            271.0,
+            191.0,
+            297.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            165.0,
+            233.0,
+            193.0,
+            256.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            444.0,
+            226.0,
+            470.0,
+            248.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            123.0,
+            213.0,
+            150.0,
+            234.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            37.0,
+            145.0,
+            63.0,
+            162.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            35.0,
+            122.0,
+            59.0,
+            137.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            9.0,
+            110.0,
+            32.0,
+            124.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            207.0,
+            78.0,
+            228.0,
+            91.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            217.0,
+            58.0,
+            237.0,
+            70.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            249.0,
+            48.0,
+            267.0,
+            58.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            77.0,
+            32.0,
+            97.0,
+            43.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            51.0,
+            32.0,
+            71.0,
+            43.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            90.0,
+            17.0,
+            109.0,
+            27.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            253.0,
+            0.0,
+            263.0,
+            5.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            229.0,
+            0.0,
+            238.0,
+            5.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "0d520eefb381017c20d6",
+      "pixel_sha256": "0d520eefb381017c20d6a64e8f552b233e1064e2f1cdfc328520b215681bad01",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00125.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            276.0,
+            391.0,
+            312.0,
+            430.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            258.0,
+            343.0,
+            291.0,
+            377.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            213.0,
+            318.0,
+            244.0,
+            349.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            468.0,
+            255.0,
+            486.0,
+            282.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            468.0,
+            219.0,
+            486.0,
+            241.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            262.0,
+            172.0,
+            287.0,
+            192.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            228.0,
+            172.0,
+            252.0,
+            191.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            272.0,
+            145.0,
+            295.0,
+            162.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            463.0,
+            109.0,
+            486.0,
+            124.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            431.0,
+            109.0,
+            455.0,
+            124.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": [
+        {
+          "box": [
+            364.0,
+            71.0,
+            411.0,
+            103.0
+          ],
+          "reason": "unknown_large_symbol",
+          "forbid_normal": true
+        }
+      ]
+    },
+    {
+      "id": "e41c9afc92a6c7a85804",
+      "pixel_sha256": "e41c9afc92a6c7a85804590ef359c2fa070bb887526f2bf0fb0fb8e648993a93",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00130.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            471.0,
+            390.0,
+            486.0,
+            425.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            421.0,
+            390.0,
+            456.0,
+            425.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            469.0,
+            338.0,
+            486.0,
+            369.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "0b5f82477a7c53816575",
+      "pixel_sha256": "0b5f82477a7c5381657523db99dc51939cd6b886964d77848a2ec3c33b46da08",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00135.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "665e7c98f98b04f99c55",
+      "pixel_sha256": "665e7c98f98b04f99c55d63a464c79d999e992f61802437be8c64e4e61bb51b7",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00140.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "6d42ae0eb57ddc7c16e2",
+      "pixel_sha256": "6d42ae0eb57ddc7c16e2c414f17d160d009803b27adfee34768d4ade4a556598",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00170.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            425.0,
+            343.0,
+            461.0,
+            375.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            377.0,
+            309.0,
+            410.0,
+            340.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            399.0,
+            208.0,
+            448.0,
+            247.0
+          ],
+          "status": "complete",
+          "center": [
+            423.5,
+            227.5
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "014748a7b30208d79d9b",
+      "pixel_sha256": "014748a7b30208d79d9bec4a1f99b075d3608b979923ec1a2695c22bf495159c",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00175.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            102.0,
+            311.0,
+            133.0,
+            339.0
+          ],
+          "status": "partial_outline"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            231.0,
+            134.0,
+            253.0,
+            150.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            202.0,
+            116.0,
+            224.0,
+            132.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            236.0,
+            60.0,
+            272.0,
+            82.0
+          ],
+          "status": "complete",
+          "center": [
+            254.0,
+            71.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "33e7149752df953d1891",
+      "pixel_sha256": "33e7149752df953d1891f15795a7a807ca456b4258b87141f7afcc2a94480596",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00180.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            0.0,
+            115.0,
+            50.0,
+            155.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            130.0,
+            22.0,
+            147.0,
+            30.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            111.0,
+            11.0,
+            127.0,
+            19.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "ecb34342f3ca030794b3",
+      "pixel_sha256": "ecb34342f3ca030794b3c6d6647ff8ec63d38c4ff92e63ef2f09eb91bd749cea",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00185.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "f3d4c309cee3febac9e3",
+      "pixel_sha256": "f3d4c309cee3febac9e346e9b5601c1a6364d818dc7063e83c0a05d21af122c6",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00190.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "a55ac2aa2407a4452633",
+      "pixel_sha256": "a55ac2aa2407a4452633dc83a9a16ad8511099517f7efaea9847d18b93dc9d77",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00195.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            17.0,
+            121.0,
+            41.0,
+            138.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            105.0,
+            20.0,
+            118.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            52.0,
+            51.0,
+            86.0,
+            70.0
+          ],
+          "status": "complete",
+          "center": [
+            69.0,
+            60.5
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "a0a68100d167042a1ecc",
+      "pixel_sha256": "a0a68100d167042a1eccfb7ec0e9e8f95d2067ac73e343819725eb64a33d6677",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00200.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            88.0,
+            337.0,
+            123.0,
+            371.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            56.0,
+            305.0,
+            89.0,
+            336.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            127.0,
+            202.0,
+            176.0,
+            241.0
+          ],
+          "status": "complete",
+          "center": [
+            151.5,
+            221.5
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "f0bb1181619648852935",
+      "pixel_sha256": "f0bb11816196488529357aa45cdd7bab329f15783857f101a71153f7067dfe73",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00205.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [],
+      "ignored": []
+    },
+    {
+      "id": "149ce9e7649b92cb427e",
+      "pixel_sha256": "149ce9e7649b92cb427eecab7b9f20410f42df4711e61e71869d70dc8caa2a4d",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00016.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            39.0,
+            297.0,
+            72.0,
+            326.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            9.0,
+            268.0,
+            41.0,
+            295.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            84.0,
+            177.0,
+            130.0,
+            211.0
+          ],
+          "status": "complete",
+          "center": [
+            107.0,
+            194.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "1233677cc9b9874a290b",
+      "pixel_sha256": "1233677cc9b9874a290b1eb5f4c073db894111090f0fdb068d60ae9b0106f58f",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00021.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            249.0,
+            356.0,
+            328.0,
+            447.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            372.0,
+            164.0,
+            396.0,
+            183.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            337.0,
+            146.0,
+            360.0,
+            163.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            359.0,
+            84.0,
+            396.0,
+            110.0
+          ],
+          "status": "complete",
+          "center": [
+            377.5,
+            97.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "550125b58a0b71cedd27",
+      "pixel_sha256": "550125b58a0b71cedd2731e82954754efa67f15147734f80e50c4e3a7cf3e7be",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00029.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            472.0,
+            128.0,
+            486.0,
+            137.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            19.0,
+            85.0,
+            41.0,
+            98.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "261112745096be119cad",
+      "pixel_sha256": "261112745096be119cad2297d9b657cf9b74574907023b2f05542e25efa900af",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00033.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            105.0,
+            38.0,
+            122.0,
+            48.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            135.0,
+            17.0,
+            151.0,
+            26.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            166.0,
+            11.0,
+            182.0,
+            20.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "7265ec7e2c2b67fdb6c3",
+      "pixel_sha256": "7265ec7e2c2b67fdb6c37eacba7bbe9d48bbafd5740b040607131515b5ae2c04",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00057.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            300.0,
+            87.0,
+            319.0,
+            99.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            357.0,
+            0.0,
+            368.0,
+            5.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "ae54b6045ffe696116e8",
+      "pixel_sha256": "ae54b6045ffe696116e8eaac64a1af2a61fa56764fd2b0f466e8da69147bde4a",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00066.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "train",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            39.0,
+            104.0,
+            60.0,
+            116.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            19.0,
+            89.0,
+            39.0,
+            101.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            71.0,
+            37.0,
+            106.0,
+            57.0
+          ],
+          "status": "complete",
+          "center": [
+            88.5,
+            47.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "7536d937a396504519ec",
+      "pixel_sha256": "7536d937a396504519ecd03ab4a7ccbf14a475e66bff16f0b0e81322b397d421",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00111.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            327.0,
+            34.0,
+            358.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            58.0,
+            310.0,
+            91.0,
+            340.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "2dda1663cb753ce63def",
+      "pixel_sha256": "2dda1663cb753ce63def3eed88481ea01b8219e84da6717814956a14d174c14f",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00117.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            278.0,
+            147.0,
+            297.0,
+            161.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            66.0,
+            143.0,
+            88.0,
+            159.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            75.0,
+            117.0,
+            95.0,
+            133.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            304.0,
+            113.0,
+            324.0,
+            128.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            340.0,
+            105.0,
+            360.0,
+            119.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            41.0,
+            105.0,
+            62.0,
+            118.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            130.0,
+            10.0,
+            146.0,
+            19.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            143.0,
+            0.0,
+            156.0,
+            5.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "e1d4158030f02d39e632",
+      "pixel_sha256": "e1d4158030f02d39e6328e7c2493a08105c8104b61d7d8e0bc78738b638b0fca",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00121.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            220.0,
+            343.0,
+            252.0,
+            377.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            221.0,
+            295.0,
+            251.0,
+            326.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            171.0,
+            272.0,
+            200.0,
+            300.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            70.0,
+            191.0,
+            97.0,
+            212.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            65.0,
+            164.0,
+            91.0,
+            183.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            36.0,
+            150.0,
+            61.0,
+            168.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            252.0,
+            113.0,
+            273.0,
+            129.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            260.0,
+            90.0,
+            280.0,
+            104.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            293.0,
+            77.0,
+            312.0,
+            91.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            106.0,
+            61.0,
+            125.0,
+            73.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            78.0,
+            60.0,
+            97.0,
+            73.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            120.0,
+            43.0,
+            137.0,
+            55.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            288.0,
+            20.0,
+            304.0,
+            29.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            262.0,
+            19.0,
+            279.0,
+            29.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            226.0,
+            0.0,
+            251.0,
+            16.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            214.0,
+            0.0,
+            224.0,
+            6.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": [
+        {
+          "box": [
+            113.0,
+            111.0,
+            195.0,
+            193.0
+          ],
+          "reason": "blue_diamond_non_target",
+          "forbid_normal": true
+        }
+      ]
+    },
+    {
+      "id": "b483af4e8b1e854e9aff",
+      "pixel_sha256": "b483af4e8b1e854e9affa19891142eeefeff4ef07e14e8f61bd2be709a18bf7e",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00126.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            294.0,
+            414.0,
+            331.0,
+            454.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            274.0,
+            364.0,
+            308.0,
+            397.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            227.0,
+            337.0,
+            260.0,
+            369.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            275.0,
+            184.0,
+            300.0,
+            203.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            238.0,
+            184.0,
+            265.0,
+            203.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            283.0,
+            155.0,
+            307.0,
+            173.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            479.0,
+            119.0,
+            486.0,
+            125.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            446.0,
+            118.0,
+            468.0,
+            133.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": [
+        {
+          "box": [
+            380.0,
+            78.0,
+            425.0,
+            111.0
+          ],
+          "reason": "unknown_large_symbol",
+          "forbid_normal": true
+        }
+      ]
+    },
+    {
+      "id": "85c3a2625a37e0882c56",
+      "pixel_sha256": "85c3a2625a37e0882c56c2f5f88dbdb9b548a7e3eeeb019ecfd2c616691f1159",
+      "source": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_41/source/frame_00174.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        41
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            115.0,
+            392.0,
+            203.0,
+            462.0
+          ],
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            276.0,
+            189.0,
+            298.0,
+            206.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            244.0,
+            168.0,
+            266.0,
+            184.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            278.0,
+            99.0,
+            318.0,
+            125.0
+          ],
+          "status": "complete",
+          "center": [
+            298.0,
+            112.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "6b4963b1af13b427a35a",
+      "pixel_sha256": "6b4963b1af13b427a35a38a70cc44dfc9f19ae6ee3378a87a0a9870943c1a779",
+      "source": "data/chapter_maps/current/chapter_33/source/frame_00003.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        33
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            367.0,
+            367.0,
+            446.0,
+            447.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            430.0,
+            369.0,
+            486.0,
+            427.0
+          ],
+          "status": "truncated",
+          "center": [
+            458.0,
+            398.0
+          ]
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "2607f62883c056d3523d",
+      "pixel_sha256": "2607f62883c056d3523d0c0af2fb36388c81569aaa53a440e37e62f797289f11",
+      "source": "data/chapter_maps/current/chapter_39/source/frame_00117.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        39
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            159.0,
+            305.0,
+            256.0,
+            413.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "2cde28ed3b99856076f9",
+      "pixel_sha256": "2cde28ed3b99856076f9c9c2b42bb990a7a91bdc18ffaaf99d588e2b14d69cf8",
+      "source": "data/chapter_maps/current/chapter_43/source/frame_00203.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        43
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            375.0,
+            357.0,
+            459.0,
+            452.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "1735ae0dc5279053ef6f",
+      "pixel_sha256": "1735ae0dc5279053ef6f7fb06944e898eeded34b0e23c974a79fbbac23285053",
+      "source": "data/chapter_maps/current/chapter_47/source/frame_00081.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "val",
+      "chapters": [
+        47
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            296.0,
+            241.0,
+            398.0,
+            332.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "2952075f516d65370e30",
+      "pixel_sha256": "2952075f516d65370e3020a9bd3ae4cb327b5aab74f27bd5d6bdceab3b3df19d",
+      "source": "data/chapter_maps/current/chapter_48/source/frame_00143.png",
+      "domain": "minimap",
+      "size": [
+        486,
+        462
+      ],
+      "split": "test",
+      "chapters": [
+        48
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            155.0,
+            356.0,
+            266.0,
+            462.0
+          ],
+          "status": "truncated"
+        }
+      ],
+      "ignored": []
+    },
+    {
+      "id": "70eb2e75c7fbc69c0b9e",
+      "pixel_sha256": "70eb2e75c7fbc69c0b9ede80b109a16c86b2f972ce6c02cabc3f3eb331dcdcc6",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/70eb2e75c7fbc69c0b9e.png",
+      "aliases": [],
+      "source_origin": "data/chapter_maps/batch_retry/chapter_28/source/chapter_verified.png",
+      "parent": "4fe9833d95ba70befe8b",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        28
+      ],
+      "split": "test",
+      "group": "chapter_28",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            91,
+            88,
+            125,
+            117
+          ],
+          "status": "complete",
+          "center": [
+            108.0,
+            102.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9617157267707291,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "635851157886de6c023d",
+      "pixel_sha256": "635851157886de6c023dd50c1c521b7a48f9f044e296628410257d1b1654458d",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/635851157886de6c023d.png",
+      "aliases": [],
+      "source_origin": "data/chapter_maps/current/chapter_12/source/chapter_verified.png",
+      "parent": "59057a355a08d98dc6b4",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        12
+      ],
+      "split": "val",
+      "group": "chapter_12",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            93,
+            88,
+            126,
+            117
+          ],
+          "status": "complete",
+          "center": [
+            109.5,
+            102.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.8762337492934476,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "0c04b7962db2c53176d8",
+      "pixel_sha256": "0c04b7962db2c53176d81767333fe081e99f15089a74a8620f62eaa3af8e67c4",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/0c04b7962db2c53176d8.png",
+      "aliases": [],
+      "source_origin": "data/chapter_maps/current/chapter_18/source/chapter_verified.png",
+      "parent": "eba443412b5b63371cc1",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        18
+      ],
+      "split": "test",
+      "group": "chapter_18",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            90,
+            87,
+            123,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            106.5,
+            101.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9659115613722336,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "a20a407f6b7166770236",
+      "pixel_sha256": "a20a407f6b7166770236aa7ae398aec88afb84fe7385dac640c721a0141dfd0b",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/a20a407f6b7166770236.png",
+      "aliases": [],
+      "source_origin": "data/chapter_maps/current/chapter_33/source/chapter_verified.png",
+      "parent": "206f23da1306469bdb11",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        33
+      ],
+      "split": "val",
+      "group": "chapter_33",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            93,
+            86,
+            125,
+            115
+          ],
+          "status": "complete",
+          "center": [
+            109.0,
+            100.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.963585373277099,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "55aaaf3aa67be8b39787",
+      "pixel_sha256": "55aaaf3aa67be8b39787bf8ef485b091f4eb79bc5a3f7a078cb1895f9b45cb9b",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/55aaaf3aa67be8b39787.png",
+      "aliases": [],
+      "source_origin": "data/chapter_maps/current/chapter_43/source/chapter_verified.png",
+      "parent": "b30dbc530217acd742c5",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        43
+      ],
+      "split": "test",
+      "group": "chapter_43",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            92,
+            91,
+            125,
+            119
+          ],
+          "status": "complete",
+          "center": [
+            108.5,
+            105.0
+          ]
+        }
+      ],
+      "blue_fraction": 0.827449019522588,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "8a500dbd6c3232f3cf2c",
+      "pixel_sha256": "8a500dbd6c3232f3cf2cd2028d3f6fa4e9911d91cafc16e90441295742c7c20d",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/8a500dbd6c3232f3cf2c.png",
+      "aliases": [],
+      "source_origin": "data/chapter_maps/current/chapter_47/source/chapter_verified.png",
+      "parent": "4195d957ede9f2396ac9",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        47
+      ],
+      "split": "val",
+      "group": "chapter_47",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            88,
+            127,
+            115
+          ],
+          "status": "complete",
+          "center": [
+            110.5,
+            101.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.939606069829123,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "78760b12012e9c1d564e",
+      "pixel_sha256": "78760b12012e9c1d564e5bac7525bb2610e64fc1be9f0130cae1ce49b70d2a82",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/78760b12012e9c1d564e.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_004.png",
+      "parent": "53b562de7fe6f9b6e143",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            96,
+            90,
+            128,
+            115
+          ],
+          "status": "complete",
+          "center": [
+            112.0,
+            102.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9549763033175356,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "176af5b94936cd723921",
+      "pixel_sha256": "176af5b94936cd7239212736d116d4488f171eddecbcb5f1e515ab2bcb0b70f4",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/176af5b94936cd723921.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_006.png",
+      "parent": "e3f676696d855276efd7",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            96,
+            88,
+            127,
+            115
+          ],
+          "status": "complete",
+          "center": [
+            111.5,
+            101.5
+          ]
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            44,
+            157,
+            101,
+            211
+          ],
+          "status": "truncated"
+        }
+      ],
+      "blue_fraction": 0.9324970650897865,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "aa3548e35e6ec7fa04bc",
+      "pixel_sha256": "aa3548e35e6ec7fa04bccf078d34fb242fc690666612492da30654dcc7bd9605",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/aa3548e35e6ec7fa04bc.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_009.png",
+      "parent": "e0cf321a66d690d2bb84",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            91,
+            87,
+            124,
+            119
+          ],
+          "status": "complete",
+          "center": [
+            107.5,
+            103.0
+          ]
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            44,
+            143,
+            100,
+            199
+          ],
+          "status": "complete"
+        }
+      ],
+      "blue_fraction": 0.9258880820905256,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "a6acf6ee23d6c11f52c0",
+      "pixel_sha256": "a6acf6ee23d6c11f52c06b44fd8117d2675bbdc6a6a068b6d36364d561ef8a95",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/a6acf6ee23d6c11f52c0.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_011.png",
+      "parent": "9035cb8ed76314c502bf",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            95,
+            87,
+            127,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            111.0,
+            101.5
+          ]
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            41,
+            151,
+            96,
+            207
+          ],
+          "status": "complete"
+        }
+      ],
+      "blue_fraction": 0.9283229705639375,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "df35608bc6eea14c958d",
+      "pixel_sha256": "df35608bc6eea14c958deb913ebaa48bbd6c0b9d5d12ae735444f5e01c85e6d1",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/df35608bc6eea14c958d.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/55293f750d98beca2719769b/field_003.png",
+      "parent": "87c0dc249dc6ac258e7c",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "train",
+      "group": "log/campaign_prototype/manual_movement/55293f750d98beca2719769b",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            84,
+            85,
+            118,
+            113
+          ],
+          "status": "complete",
+          "center": [
+            101.0,
+            99.0
+          ]
+        }
+      ],
+      "blue_fraction": 0.958237314665855,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "d3fa659d3a3be85f2c1c",
+      "pixel_sha256": "d3fa659d3a3be85f2c1cf934068037f4fa418881272d7cf216ad022438cb325f",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/d3fa659d3a3be85f2c1c.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/63a8d92c9a084243fbd9e0f1/field_005.png",
+      "parent": "504b027f99394ae45b6a",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "train",
+      "group": "log/campaign_prototype/manual_movement/63a8d92c9a084243fbd9e0f1",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            85,
+            126,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            110.0,
+            100.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9584764554980651,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "8f53f2acd10f2fef5146",
+      "pixel_sha256": "8f53f2acd10f2fef5146155dbac319d9bd74f749d4362d0680cf5d667f433847",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/8f53f2acd10f2fef5146.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_001.png",
+      "parent": "967d3cecc671f4e68358",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "val",
+      "group": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            92,
+            88,
+            123,
+            115
+          ],
+          "status": "complete",
+          "center": [
+            107.5,
+            101.5
+          ]
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            42,
+            178,
+            100,
+            211
+          ],
+          "status": "truncated"
+        }
+      ],
+      "blue_fraction": 0.9314318013826688,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "5ea36d5fb9628d08d666",
+      "pixel_sha256": "5ea36d5fb9628d08d6668a09b7250e1c9e4280716ab10eb1b3cf4d2341b3b088",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/5ea36d5fb9628d08d666.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_004.png",
+      "parent": "177c1f9c649e7ba1018e",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "val",
+      "group": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            92,
+            89,
+            124,
+            117
+          ],
+          "status": "complete",
+          "center": [
+            108.0,
+            103.0
+          ]
+        }
+      ],
+      "blue_fraction": 0.9532153571894431,
+      "review_scope": "full_frame",
+      "ignored": [
+        {
+          "box": [
+            0,
+            132,
+            10,
+            148
+          ],
+          "reason": "Unidentifiable clipped red symbol at the left border"
+        }
+      ]
+    },
+    {
+      "id": "1d24399fce5902780dd6",
+      "pixel_sha256": "1d24399fce5902780dd6ae711667afd3ea60ebd1b359e39f0f257b4e81f0a415",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/1d24399fce5902780dd6.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_005.png",
+      "parent": "8ddecd1bb6fd5df36f94",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "val",
+      "group": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            90,
+            89,
+            123,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            106.5,
+            102.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9536284186268968,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "b9daf322b6714d24f1b8",
+      "pixel_sha256": "b9daf322b6714d24f1b8a5ab37c18e28353ad855a173aba45466d7309ca7b3af",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/b9daf322b6714d24f1b8.png",
+      "aliases": [],
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_12/field_003.png",
+      "parent": "c095b0877147a95d6a91",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        12
+      ],
+      "split": "val",
+      "group": "chapter_12",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            88,
+            128,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            111.0,
+            102.0
+          ]
+        }
+      ],
+      "blue_fraction": 0.964476716378973,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "1d6b33497991b12fb8ec",
+      "pixel_sha256": "1d6b33497991b12fb8ec5b06e574b0ec83fe01d388bd47006c6cb014130ada67",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/1d6b33497991b12fb8ec.png",
+      "aliases": [],
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_18/field_003.png",
+      "parent": "7ae1b4d47872c501a8d9",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        18
+      ],
+      "split": "test",
+      "group": "chapter_18",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            95,
+            90,
+            128,
+            117
+          ],
+          "status": "complete",
+          "center": [
+            111.5,
+            103.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9652810991782251,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "e33a02de1a32fccff3a6",
+      "pixel_sha256": "e33a02de1a32fccff3a6c31765aa6c8f17e6dbfe5f6a9857a62f0fcafcdc04ab",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/e33a02de1a32fccff3a6.png",
+      "aliases": [],
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_28/field_003.png",
+      "parent": "ac5f67f3742416742a3b",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        28
+      ],
+      "split": "test",
+      "group": "chapter_28",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            88,
+            125,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            109.5,
+            102.0
+          ]
+        }
+      ],
+      "blue_fraction": 0.9615852863167964,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "1eb247131dbb8d6f0c6c",
+      "pixel_sha256": "1eb247131dbb8d6f0c6c5f561d6d435b9f60af97726494919f99e1f27a858fc0",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/1eb247131dbb8d6f0c6c.png",
+      "aliases": [],
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_46/after.png",
+      "parent": "41df3a64c0376e9975fc",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        46
+      ],
+      "split": "train",
+      "group": "chapter_46",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            96,
+            89,
+            129,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            112.5,
+            102.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9608461237445106,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "57a684479d5904276f96",
+      "pixel_sha256": "57a684479d5904276f965140a13956e2d23a36aa594a7f36bfa41d58ba728b03",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/57a684479d5904276f96.png",
+      "aliases": [],
+      "source_origin": "log/chapter_calibration_20261001/chapter_43/1790850589031042900/sample_01_before.png",
+      "parent": "331e1a395c0672c31c33",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        43
+      ],
+      "split": "test",
+      "group": "chapter_43",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            93,
+            91,
+            126,
+            120
+          ],
+          "status": "complete",
+          "center": [
+            109.5,
+            105.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9604113222314014,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "1f4c043d1f4fc3931f0e",
+      "pixel_sha256": "1f4c043d1f4fc3931f0e7cbef5d49d18b883b0846409af3b2666f3198bbf1e41",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/1f4c043d1f4fc3931f0e.png",
+      "aliases": [],
+      "source_origin": "log/chapter_calibration_20261001/chapter_47/diagnostic/reference.png",
+      "parent": "2a186375c773b6fbc5e9",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        47
+      ],
+      "split": "val",
+      "group": "chapter_47",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            92,
+            89,
+            125,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            108.5,
+            102.5
+          ]
+        }
+      ],
+      "blue_fraction": 0.9543458411235272,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "80fe592b2e80d2a46867",
+      "pixel_sha256": "80fe592b2e80d2a4686727cfa0d5aae58796e77c6d1adef90e09fb40a7f7823b",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/80fe592b2e80d2a46867.png",
+      "aliases": [],
+      "source_origin": "tmp/ch33_calibration_test/initial.png",
+      "parent": "367d01013aa10124d791",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        33
+      ],
+      "split": "val",
+      "group": "chapter_33",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            90,
+            126,
+            117
+          ],
+          "status": "complete",
+          "center": [
+            110.0,
+            103.5
+          ]
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            39,
+            114,
+            99,
+            171
+          ],
+          "status": "complete"
+        }
+      ],
+      "blue_fraction": 0.9397365102830558,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "53b562de7fe6f9b6e143",
+      "pixel_sha256": "53b562de7fe6f9b6e1439868fe03c74b0306c8102ff38e5b88e190f9c12421a4",
+      "source": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_004.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            871.0,
+            396.0,
+            913.0,
+            433.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.9095008969306946,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "e3f676696d855276efd7",
+      "pixel_sha256": "e3f676696d855276efd72e1e3caf6db7f9114332d5b38f77cb74b15cb250f735",
+      "source": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_006.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "objects": [
+        {
+          "label": "scene_collectible_indicator",
+          "box": [
+            893.0,
+            460.0,
+            932.0,
+            497.0
+          ],
+          "method": "indicator_template",
+          "reviewed": true,
+          "score": 0.9890429591760039,
+          "status": "complete"
+        },
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            870.0,
+            391.0,
+            912.0,
+            428.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8740627765655518,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "e0cf321a66d690d2bb84",
+      "pixel_sha256": "e0cf321a66d690d2bb840a15eb6c150f0f1ccade7c37b83d4ed31eaf4010abb3",
+      "source": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_009.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "objects": [
+        {
+          "label": "scene_collectible_indicator",
+          "box": [
+            908.0,
+            435.0,
+            947.0,
+            472.0
+          ],
+          "method": "indicator_template",
+          "reviewed": true,
+          "score": 0.9781303387135267,
+          "status": "complete"
+        },
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            865.0,
+            392.0,
+            907.0,
+            429.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8410407304763794,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "9035cb8ed76314c502bf",
+      "pixel_sha256": "9035cb8ed76314c502bfd609247327200615e5c0e8715ab2524aea32817d9953",
+      "source": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_011.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927",
+      "objects": [
+        {
+          "label": "scene_collectible_indicator",
+          "box": [
+            899.0,
+            442.0,
+            938.0,
+            479.0
+          ],
+          "method": "indicator_template",
+          "reviewed": true,
+          "score": 0.9663666263222694,
+          "status": "complete"
+        },
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            871.0,
+            392.0,
+            913.0,
+            429.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8878628015518188,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "967d3cecc671f4e68358",
+      "pixel_sha256": "967d3cecc671f4e683583528c0948b1c726bd861d93ebb3ffaf2fcf6fb96d9a8",
+      "source": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_001.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            865.0,
+            389.0,
+            903.0,
+            422.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8922629952430725,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "177c1f9c649e7ba1018e",
+      "pixel_sha256": "177c1f9c649e7ba1018e90ae1c0bd31de5aae4439f116f008e3e5b27e9261ed5",
+      "source": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_004.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36",
+      "objects": [
+        {
+          "label": "scene_collectible_indicator",
+          "box": [
+            819.0,
+            420.0,
+            858.0,
+            457.0
+          ],
+          "method": "indicator_template",
+          "reviewed": true,
+          "score": 0.9676836431026459,
+          "status": "complete"
+        },
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            863.0,
+            395.0,
+            905.0,
+            432.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.9032850861549377,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "8ddecd1bb6fd5df36f94",
+      "pixel_sha256": "8ddecd1bb6fd5df36f94d5d21e9339fe1b896927405a3cd262d452e411fa1be0",
+      "source": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_005.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36",
+      "objects": [
+        {
+          "label": "scene_collectible_indicator",
+          "box": [
+            819.0,
+            420.0,
+            858.0,
+            457.0
+          ],
+          "method": "indicator_template",
+          "reviewed": true,
+          "score": 0.9676856249570847,
+          "status": "complete"
+        },
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            863.0,
+            390.0,
+            905.0,
+            427.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.906194806098938,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "87c0dc249dc6ac258e7c",
+      "pixel_sha256": "87c0dc249dc6ac258e7c06e11d4584de2621cfd6c0978d5eb5305ffe2400d7f9",
+      "source": "log/campaign_prototype/manual_movement/55293f750d98beca2719769b/field_003.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "train",
+      "group": "log/campaign_prototype/manual_movement/55293f750d98beca2719769b",
+      "objects": [
+        {
+          "label": "scene_collectible_indicator",
+          "box": [
+            848.0,
+            432.0,
+            887.0,
+            469.0
+          ],
+          "method": "indicator_template",
+          "reviewed": true,
+          "score": 0.9668060094118118,
+          "status": "complete"
+        },
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            866.0,
+            387.0,
+            908.0,
+            424.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8397024869918823,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "504b027f99394ae45b6a",
+      "pixel_sha256": "504b027f99394ae45b6ae5943969bd6640e525e28722a1eb153312838b93e29f",
+      "source": "log/campaign_prototype/manual_movement/63a8d92c9a084243fbd9e0f1/field_005.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "train",
+      "group": "log/campaign_prototype/manual_movement/63a8d92c9a084243fbd9e0f1",
+      "objects": [
+        {
+          "label": "scene_collectible_indicator",
+          "box": [
+            900.0,
+            410.0,
+            939.0,
+            447.0
+          ],
+          "method": "indicator_template",
+          "reviewed": true,
+          "score": 0.9679211974143982,
+          "status": "complete"
+        },
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            871.0,
+            390.0,
+            913.0,
+            427.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.6609044671058655,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "59057a355a08d98dc6b4",
+      "pixel_sha256": "59057a355a08d98dc6b4aa79a843425922d24a316656039f8912756d41b98ae3",
+      "source": "data/chapter_maps/current/chapter_12/source/chapter_verified.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_12/source/chapter_verified.png"
+      ],
+      "chapters": [
+        12
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "chapter_12",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            868.0,
+            391.0,
+            910.0,
+            428.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8975586295127869,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "c095b0877147a95d6a91",
+      "pixel_sha256": "c095b0877147a95d6a914fd4ab75235df6804126c6d17eb4bc7836dd0d2ce299",
+      "source": "log/chapter_maps/goal_01_48_20261001/movement/chapter_12/field_003.png",
+      "aliases": [],
+      "chapters": [
+        12
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "chapter_12",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            871.0,
+            391.0,
+            913.0,
+            428.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8958737850189209,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "eba443412b5b63371cc1",
+      "pixel_sha256": "eba443412b5b63371cc1631e1d0f13ef0ff7ed07e4a85de9114f9b311820946c",
+      "source": "data/chapter_maps/current/chapter_18/source/chapter_verified.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_18/source/chapter_verified.png"
+      ],
+      "chapters": [
+        18
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "chapter_18",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            869.0,
+            407.0,
+            907.0,
+            440.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8177673816680908,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "7ae1b4d47872c501a8d9",
+      "pixel_sha256": "7ae1b4d47872c501a8d960e6265b059aca8eeb4c65bc3e63af2d96f9cabdc6df",
+      "source": "log/chapter_maps/goal_01_48_20261001/movement/chapter_18/field_003.png",
+      "aliases": [],
+      "chapters": [
+        18
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "chapter_18",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            872.0,
+            397.0,
+            914.0,
+            434.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8958737850189209,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "4fe9833d95ba70befe8b",
+      "pixel_sha256": "4fe9833d95ba70befe8b1726d913a35ff489354eb61ecb5705a912cc9a60620c",
+      "source": "data/chapter_maps/batch_retry/chapter_28/source/chapter_verified.png",
+      "aliases": [
+        "data/chapter_maps/manual_live/chapter_28/source/chapter_verified.png"
+      ],
+      "chapters": [
+        28
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "chapter_28",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            867.0,
+            393.0,
+            909.0,
+            430.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.902945339679718,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "ac5f67f3742416742a3b",
+      "pixel_sha256": "ac5f67f3742416742a3bcff61aeb3b8932dbe22907f34f582423c49b0c3fd62a",
+      "source": "log/chapter_maps/goal_01_48_20261001/movement/chapter_28/field_003.png",
+      "aliases": [],
+      "chapters": [
+        28
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "chapter_28",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            870.0,
+            387.0,
+            912.0,
+            424.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.930600643157959,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "206f23da1306469bdb11",
+      "pixel_sha256": "206f23da1306469bdb11a95295336a916e8ac94c101ef4ed7561d8ffb7d2e3b7",
+      "source": "data/chapter_maps/current/chapter_33/source/chapter_verified.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_33/source/chapter_verified.png"
+      ],
+      "chapters": [
+        33
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "chapter_33",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            865.0,
+            381.0,
+            911.0,
+            422.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.9115414023399353,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "367d01013aa10124d791",
+      "pixel_sha256": "367d01013aa10124d79170155021a692aa17ba58975bf2be6f47288989a5024b",
+      "source": "tmp/ch33_calibration_test/initial.png",
+      "aliases": [],
+      "chapters": [
+        33
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "chapter_33",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            868.0,
+            381.0,
+            910.0,
+            418.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.853309690952301,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "b30dbc530217acd742c5",
+      "pixel_sha256": "b30dbc530217acd742c5cf0c9d0f7a7b90ccb3d76050e89559cb88d004fd1fab",
+      "source": "data/chapter_maps/current/chapter_43/source/chapter_verified.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_43/source/chapter_verified.png"
+      ],
+      "chapters": [
+        43
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "chapter_43",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            868.0,
+            397.0,
+            910.0,
+            434.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.9077524542808533,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "331e1a395c0672c31c33",
+      "pixel_sha256": "331e1a395c0672c31c338ee0741566d26e0cc55a5ba3f23ad70c380444b3f00c",
+      "source": "log/chapter_calibration_20261001/chapter_43/1790850589031042900/sample_01_before.png",
+      "aliases": [],
+      "chapters": [
+        43
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "test",
+      "group": "chapter_43",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            868.0,
+            391.0,
+            910.0,
+            428.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.9123289585113525,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "4195d957ede9f2396ac9",
+      "pixel_sha256": "4195d957ede9f2396ac9476d727bba3f7055c2045f3c7e26d9a45ddc77375e38",
+      "source": "data/chapter_maps/current/chapter_47/source/chapter_verified.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_47/source/chapter_verified.png"
+      ],
+      "chapters": [
+        47
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "chapter_47",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            868.0,
+            389.0,
+            910.0,
+            426.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8331648707389832,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "2a186375c773b6fbc5e9",
+      "pixel_sha256": "2a186375c773b6fbc5e935b0d8df72337c38fed386ea9fbf311c28593c14138a",
+      "source": "log/chapter_calibration_20261001/chapter_47/diagnostic/reference.png",
+      "aliases": [],
+      "chapters": [
+        47
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "val",
+      "group": "chapter_47",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            868.0,
+            388.0,
+            910.0,
+            425.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.8749211430549622,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "41df3a64c0376e9975fc",
+      "pixel_sha256": "41df3a64c0376e9975fcce0c4033d0ccf56ffce254acc328fad416ea64948b39",
+      "source": "log/chapter_maps/goal_01_48_20261001/movement/chapter_46/after.png",
+      "aliases": [],
+      "chapters": [
+        46
+      ],
+      "size": [
+        1776,
+        999
+      ],
+      "domain": "scene",
+      "split": "train",
+      "group": "chapter_46",
+      "objects": [
+        {
+          "label": "scene_squad_arrow",
+          "box": [
+            871.0,
+            392.0,
+            913.0,
+            429.0
+          ],
+          "method": "arrow_template",
+          "reviewed": true,
+          "score": 0.9138705730438232,
+          "status": "complete"
+        },
+        {
+          "label": "scene_collectible_indicator",
+          "box": [
+            904.0,
+            434.0,
+            943.0,
+            471.0
+          ],
+          "method": "indicator_template",
+          "reviewed": true,
+          "score": 0.9069811478257179,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "ea0bfc0b708cab7d7040",
+      "pixel_sha256": "ea0bfc0b708cab7d70404476e2eda4eb5448d33890b709722338d936d52dbb71",
+      "source": "data/chapter_maps/batch_retry/chapter_34/attempts/1790693950975786000/frame_00002.png",
+      "aliases": [
+        "data/chapter_maps/history/20260929_before_repair/chapter_34/attempts/1790693950975786000/frame_00002.png"
+      ],
+      "chapters": [
+        34
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_34",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            0.0,
+            210.0,
+            61.0,
+            268.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.33317951084448544,
+          "clipped": true,
+          "uncertain": false,
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            421.0,
+            264.0,
+            476.0,
+            310.0
+          ],
+          "method": "white_ellipse",
+          "reviewed": true,
+          "center": [
+            447.68707275390625,
+            287.8243713378906
+          ],
+          "axes": [
+            41.40237045288086,
+            54.641326904296875
+          ],
+          "angle": 121.03785705566406,
+          "uncertain": false,
+          "clipped": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9939919476956514,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "d67cd73f15f24dbe69b6",
+      "pixel_sha256": "d67cd73f15f24dbe69b6e189bff316ffe8ad7e026ce4684ac5fdca49d84710c2",
+      "source": "data/chapter_maps/batch_retry/chapter_34/attempts/1790693950975786000/frame_00003.png",
+      "aliases": [
+        "data/chapter_maps/history/20260929_before_repair/chapter_34/attempts/1790693950975786000/frame_00003.png"
+      ],
+      "chapters": [
+        34
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_34",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            0.0,
+            210.0,
+            65.0,
+            268.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.33121019108280253,
+          "clipped": true,
+          "uncertain": false,
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            425.0,
+            265.0,
+            478.0,
+            304.0
+          ],
+          "method": "white_ellipse",
+          "reviewed": true,
+          "center": [
+            449.6795959472656,
+            284.0301513671875
+          ],
+          "axes": [
+            35.31660461425781,
+            49.533077239990234
+          ],
+          "angle": 102.25871276855469,
+          "uncertain": false,
+          "clipped": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9939295957814477,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "c223fdc8afd9832da7d2",
+      "pixel_sha256": "c223fdc8afd9832da7d21ce988049d7f25b68962f17181543257341091975a90",
+      "source": "data/chapter_maps/batch_retry/chapter_34/attempts/1790693950975786000/frame_00004.png",
+      "aliases": [
+        "data/chapter_maps/history/20260929_before_repair/chapter_34/attempts/1790693950975786000/frame_00004.png"
+      ],
+      "chapters": [
+        34
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_34",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            0.0,
+            302.0,
+            40.0,
+            381.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.37355848434925865,
+          "clipped": true,
+          "uncertain": false,
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            463,
+            364,
+            486,
+            418
+          ],
+          "status": "truncated",
+          "reviewed": true
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9933372525965118,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "c337a779dff061a2abff",
+      "pixel_sha256": "c337a779dff061a2abffc57dd1bcb8aa74a67f073c1fce42dd62e832f5d46e05",
+      "source": "data/chapter_maps/chapter40_package_20260930/chapter_40/source/frame_00012.png",
+      "aliases": [
+        "data/chapter_maps/frame_projection_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/frame_projection_diagnostic_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/orthographic_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/orthographic_package_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/orthographic_surfaces_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/projected_redraw_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/projected_redraw_final_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/projected_redraw_v2_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/raw_frame_repair_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/road_region_projection_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/source_regions_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/source_regions_checked_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/source_regions_final_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/stroke120_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/stroke120_fusion_fix_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/stroke120_layered_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/surface_repair_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/surface_repair_final_20260930/chapter_40/source/frame_00012.png",
+        "data/chapter_maps/surface_repair_v2_20260930/chapter_40/source/frame_00012.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/.processing/1790760706589494500/layered/source/frame_00012.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/.processing/1790760706589494500/redrawn/source/frame_00012.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/source/frame_00012.png"
+      ],
+      "chapters": [
+        40
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_40",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            400.0,
+            256.0,
+            479.0,
+            334.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3378419920073778,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9925623073771221,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "5b8b123b6753ce3f9883",
+      "pixel_sha256": "5b8b123b6753ce3f98834daa27181443e8a88a7f125df093626e2eb39ef083cd",
+      "source": "data/chapter_maps/chapter40_package_20260930/chapter_40/source/frame_00013.png",
+      "aliases": [
+        "data/chapter_maps/chapter40_package_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/frame_projection_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/frame_projection_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/frame_projection_diagnostic_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/frame_projection_diagnostic_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/orthographic_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/orthographic_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/orthographic_package_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/orthographic_package_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/orthographic_surfaces_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/orthographic_surfaces_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/projected_redraw_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/projected_redraw_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/projected_redraw_final_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/projected_redraw_final_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/projected_redraw_v2_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/projected_redraw_v2_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/raw_frame_repair_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/raw_frame_repair_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/road_region_projection_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/road_region_projection_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/source_regions_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/source_regions_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/source_regions_checked_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/source_regions_checked_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/source_regions_final_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/source_regions_final_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/stroke120_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/stroke120_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/stroke120_fusion_fix_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/stroke120_fusion_fix_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/stroke120_layered_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/stroke120_layered_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/surface_repair_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/surface_repair_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/surface_repair_final_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/surface_repair_final_20260930/chapter_40/source/frame_00014.png",
+        "data/chapter_maps/surface_repair_v2_20260930/chapter_40/source/frame_00013.png",
+        "data/chapter_maps/surface_repair_v2_20260930/chapter_40/source/frame_00014.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/.processing/1790760706589494500/layered/source/frame_00013.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/.processing/1790760706589494500/layered/source/frame_00014.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/.processing/1790760706589494500/redrawn/source/frame_00013.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/.processing/1790760706589494500/redrawn/source/frame_00014.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/source/frame_00013.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/source/frame_00014.png"
+      ],
+      "chapters": [
+        40
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_40",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            286.0,
+            272.0,
+            366.0,
+            349.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.35707561970505175,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9924910480466036,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "115ad5e6b190d7d1e260",
+      "pixel_sha256": "115ad5e6b190d7d1e2605db69d6a8ff9629ba29108aea01d287a0a600e0f9874",
+      "source": "data/chapter_maps/chapter40_package_20260930/chapter_40/source/frame_00015.png",
+      "aliases": [
+        "data/chapter_maps/frame_projection_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/frame_projection_diagnostic_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/orthographic_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/orthographic_package_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/orthographic_surfaces_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/projected_redraw_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/projected_redraw_final_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/projected_redraw_v2_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/raw_frame_repair_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/road_region_projection_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/source_regions_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/source_regions_checked_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/source_regions_final_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/stroke120_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/stroke120_fusion_fix_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/stroke120_layered_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/surface_repair_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/surface_repair_final_20260930/chapter_40/source/frame_00015.png",
+        "data/chapter_maps/surface_repair_v2_20260930/chapter_40/source/frame_00015.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/.processing/1790760706589494500/layered/source/frame_00015.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/.processing/1790760706589494500/redrawn/source/frame_00015.png",
+        "tmp/formal_3d_validation/1790760706374962600/chapter_40/source/frame_00015.png"
+      ],
+      "chapters": [
+        40
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_40",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            233.0,
+            242.0,
+            316.0,
+            318.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.36179123711340205,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9923707979263535,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "758fe62b1ddb3802f0bb",
+      "pixel_sha256": "758fe62b1ddb3802f0bb483c4ea63a810fb779891cd555f60e02a5ca482cc89b",
+      "source": "data/chapter_maps/current/chapter_35/source/frame_00100.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_35/source/frame_00100.png"
+      ],
+      "chapters": [
+        35
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_35",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            445.0,
+            217.0,
+            486.0,
+            277.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3407665505226481,
+          "clipped": true,
+          "uncertain": false,
+          "status": "truncated"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9955195695936436,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "f9e8c8d90611e4a7158e",
+      "pixel_sha256": "f9e8c8d90611e4a7158ee9d8ab86a548b319fdfe81c1c54df1068db939b756e3",
+      "source": "data/chapter_maps/current/chapter_35/source/frame_00101.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_35/source/frame_00101.png"
+      ],
+      "chapters": [
+        35
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_35",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            367.0,
+            212.0,
+            444.0,
+            278.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3346839546191248,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9937692622877808,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "e1f595baabf66983776b",
+      "pixel_sha256": "e1f595baabf66983776ba010ea947af2a59555df38042fec075847d69557c94d",
+      "source": "data/chapter_maps/current/chapter_35/source/frame_00102.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_35/source/frame_00102.png"
+      ],
+      "chapters": [
+        35
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_35",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            322.0,
+            192.0,
+            385.0,
+            246.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.35074626865671643,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9948782356189764,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "433ad89ccfd6f7c5da8b",
+      "pixel_sha256": "433ad89ccfd6f7c5da8b282f122c1549a4847d0c0ee1fab9db11bbec3eb45a89",
+      "source": "data/chapter_maps/current/chapter_36/source/frame_00110.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_36/source/frame_00110.png"
+      ],
+      "chapters": [
+        36
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_36",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            426.0,
+            362.0,
+            486.0,
+            427.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3416402356139556,
+          "clipped": true,
+          "uncertain": false,
+          "status": "truncated"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9936890955409474,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "e4c88645cc436c10fa4d",
+      "pixel_sha256": "e4c88645cc436c10fa4d9c0b4e841bc50c79ea99f0abf528cfd5481ede8d00a9",
+      "source": "data/chapter_maps/current/chapter_36/source/frame_00111.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_36/source/frame_00111.png"
+      ],
+      "chapters": [
+        36
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_36",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            347.0,
+            322.0,
+            417.0,
+            384.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.36108512628624884,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9941656423137905,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "257f966c095bbc8e4fa7",
+      "pixel_sha256": "257f966c095bbc8e4fa7e585040b53ba9c5a34bb4cf2a1fa91beac73c4ac2bf6",
+      "source": "data/chapter_maps/current/chapter_36/source/frame_00112.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_36/source/frame_00112.png"
+      ],
+      "chapters": [
+        36
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_36",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            322.0,
+            275.0,
+            393.0,
+            334.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.341130604288499,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9946332816703187,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "73eb10d2a304e1d04e87",
+      "pixel_sha256": "73eb10d2a304e1d04e87a04611aea892920c25c3895fa661486952d7f65756b5",
+      "source": "data/chapter_maps/current/chapter_37/source/frame_00076.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_37/source/frame_00076.png"
+      ],
+      "chapters": [
+        37
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_37",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            324.0,
+            162.0,
+            383.0,
+            209.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3454018826937002,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9955373844262733,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "7ad012e5e6abf037e8e4",
+      "pixel_sha256": "7ad012e5e6abf037e8e456bca8ca4b07f5f2bbea1d8a4c38a2f9564f529558db",
+      "source": "data/chapter_maps/current/chapter_37/source/frame_00077.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_37/source/frame_00077.png"
+      ],
+      "chapters": [
+        37
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_37",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            284.0,
+            203.0,
+            349.0,
+            261.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.345100105374078,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9947624392068837,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "4203c0754e0c3e498f50",
+      "pixel_sha256": "4203c0754e0c3e498f500f7425c1e3a6b388ab4256d5cba259f612333260b72a",
+      "source": "data/chapter_maps/current/chapter_37/source/frame_00078.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_37/source/frame_00078.png"
+      ],
+      "chapters": [
+        37
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_37",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            252.0,
+            270.0,
+            319.0,
+            339.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.34413965087281795,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9936401047512159,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "a04558d6acf952a008f6",
+      "pixel_sha256": "a04558d6acf952a008f6d41b085eb6f9fc4c477eb3f27427fd002f3d7481156d",
+      "source": "data/chapter_maps/current/chapter_38/source/frame_00001.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_38/source/frame_00001.png"
+      ],
+      "chapters": [
+        38
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_38",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            335.0,
+            131.0,
+            402.0,
+            177.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.347597103357472,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            313.0,
+            266.0,
+            367.0,
+            316.0
+          ],
+          "method": "white_ellipse",
+          "reviewed": true,
+          "center": [
+            338.5675354003906,
+            290.994140625
+          ],
+          "axes": [
+            44.3243408203125,
+            52.596500396728516
+          ],
+          "angle": 114.87293243408203,
+          "uncertain": false,
+          "clipped": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9952701619368286,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "887937535a15462ddb23",
+      "pixel_sha256": "887937535a15462ddb2360f41f4395e4078fbbbc7638443138e89842ecb29867",
+      "source": "data/chapter_maps/current/chapter_38/source/frame_00002.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_38/source/frame_00002.png"
+      ],
+      "chapters": [
+        38
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_38",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            421.0,
+            130.0,
+            486.0,
+            176.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3362299465240642,
+          "clipped": true,
+          "uncertain": false,
+          "status": "truncated"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            411.0,
+            266.0,
+            468.0,
+            316.0
+          ],
+          "method": "white_ellipse",
+          "reviewed": true,
+          "center": [
+            438.61260986328125,
+            290.5028076171875
+          ],
+          "axes": [
+            41.404178619384766,
+            56.8162727355957
+          ],
+          "angle": 120.98092651367188,
+          "uncertain": false,
+          "clipped": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9954082268897084,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "7bd1c0d4c5d8eb93a48d",
+      "pixel_sha256": "7bd1c0d4c5d8eb93a48dc1cd5f600e7e424e74c7727bfe64ce4d2c62b2c76205",
+      "source": "data/chapter_maps/current/chapter_38/source/frame_00013.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_38_to_01_20260930_212632/chapter_38/source/frame_00013.png"
+      ],
+      "chapters": [
+        38
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_38",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            47.0,
+            393.0,
+            138.0,
+            462.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3485489721886336,
+          "clipped": true,
+          "uncertain": false,
+          "status": "truncated"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9921080291450661,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "f0e08d4fd8eadaf2067b",
+      "pixel_sha256": "f0e08d4fd8eadaf2067b42ee18b1e705da37e6eebcd095421c0a10579737a560",
+      "source": "data/chapter_maps/current/chapter_42/source/frame_00047.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_42/source/frame_00047.png"
+      ],
+      "chapters": [
+        42
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_42",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            17.0,
+            284.0,
+            83.0,
+            349.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.36820276497695853,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9941211052322163,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "b5f7acd7e40a5558259b",
+      "pixel_sha256": "b5f7acd7e40a5558259b67310c2d5e2d956f5fc349020667c4f08d7a2dd66d3a",
+      "source": "data/chapter_maps/current/chapter_42/source/frame_00050.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_42/source/frame_00050.png"
+      ],
+      "chapters": [
+        42
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_42",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            210.0,
+            271.0,
+            281.0,
+            344.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.339292364990689,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9936044750859566,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "4a224c69692d1cabbabb",
+      "pixel_sha256": "4a224c69692d1cabbabb3b346c4cf1c378f09201c509f811b48d517fbc0289ef",
+      "source": "data/chapter_maps/current/chapter_42/source/frame_00051.png",
+      "aliases": [
+        "data/chapter_maps/current/chapter_42/source/frame_00052.png",
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_42/source/frame_00051.png",
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_42/source/frame_00052.png"
+      ],
+      "chapters": [
+        42
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_42",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            308.0,
+            291.0,
+            387.0,
+            368.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.35364193328795096,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            0,
+            148,
+            22,
+            181
+          ],
+          "status": "truncated",
+          "reviewed": true
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9929364188623447,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "45a5e8cd5ad69dc5c4eb",
+      "pixel_sha256": "45a5e8cd5ad69dc5c4eb842a4edfbe00c18b357be1c1390284b0e8b2f31b9e07",
+      "source": "data/chapter_maps/current/chapter_44/source/frame_00013.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_44/source/frame_00013.png"
+      ],
+      "chapters": [
+        44
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_44",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            63.0,
+            280.0,
+            138.0,
+            351.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3523375142531357,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9933951508025582,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "e86e1db07e9179646a4b",
+      "pixel_sha256": "e86e1db07e9179646a4b8a2ac31c2bcf452a5c427e3b75b6f62937590a8ca1ef",
+      "source": "data/chapter_maps/current/chapter_44/source/frame_00014.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_44/source/frame_00014.png"
+      ],
+      "chapters": [
+        44
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_44",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            91.0,
+            360.0,
+            168.0,
+            442.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3729924614880367,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9925311314200204,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "a3caa07b549d462e84c2",
+      "pixel_sha256": "a3caa07b549d462e84c2e5e27da673b4d6506f00c9c36bb4099140461a53c3f7",
+      "source": "data/chapter_maps/current/chapter_44/source/frame_00090.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_44/source/frame_00090.png"
+      ],
+      "chapters": [
+        44
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_44",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            4.0,
+            124.0,
+            63.0,
+            165.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.33876500857632935,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9959783015338571,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "ed0788a11aff97c2dc3a",
+      "pixel_sha256": "ed0788a11aff97c2dc3aa7a3fc7dd663b4cb264843d6079285bf8e0996228e0f",
+      "source": "data/chapter_maps/current/chapter_45/source/frame_00011.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_45/source/frame_00011.png"
+      ],
+      "chapters": [
+        45
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_45",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            341.0,
+            242.0,
+            422.0,
+            311.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.34425597532767926,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.993738086330679,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "2a2dd15d6b4b10385cc8",
+      "pixel_sha256": "2a2dd15d6b4b10385cc8db6bdb84126e427a0d23990f6536e9474c8ff047431f",
+      "source": "data/chapter_maps/current/chapter_45/source/frame_00012.png",
+      "aliases": [
+        "data/chapter_maps/current/chapter_45/source/frame_00013.png",
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_45/source/frame_00012.png",
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_45/source/frame_00013.png"
+      ],
+      "chapters": [
+        45
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_45",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            251.0,
+            217.0,
+            319.0,
+            276.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.36451448906964923,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9945753834642723,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "b81a832932f0a4d7dce8",
+      "pixel_sha256": "b81a832932f0a4d7dce8cfc63eae4e6874453f5dc9805456df92e4635dffaa65",
+      "source": "data/chapter_maps/current/chapter_45/source/frame_00015.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_45/source/frame_00015.png"
+      ],
+      "chapters": [
+        45
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_45",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            299.0,
+            170.0,
+            367.0,
+            222.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3404977375565611,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9949494949494949,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "97f264efe3578add2011",
+      "pixel_sha256": "97f264efe3578add2011384cd706c3e165b322f5f0e94de474a868c589d8f189",
+      "source": "data/chapter_maps/current/chapter_46/source/frame_00001.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_46/source/frame_00001.png"
+      ],
+      "chapters": [
+        46
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_46",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            30.0,
+            188.0,
+            87.0,
+            238.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3460207612456747,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            319.0,
+            263.0,
+            372.0,
+            312.0
+          ],
+          "method": "white_ellipse",
+          "reviewed": true,
+          "center": [
+            344.85211181640625,
+            287.1758728027344
+          ],
+          "axes": [
+            44.14290237426758,
+            51.41386413574219
+          ],
+          "angle": 118.77244567871094,
+          "uncertain": false,
+          "clipped": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9955329307181159,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "efcb09b1524442327ea3",
+      "pixel_sha256": "efcb09b1524442327ea31eaf842330b7b07637898f626c940714efc0e1522cc8",
+      "source": "data/chapter_maps/current/chapter_46/source/frame_00003.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_46/source/frame_00003.png"
+      ],
+      "chapters": [
+        46
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_46",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            109.0,
+            177.0,
+            199.0,
+            257.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.21665319320937754,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            437.0,
+            264.0,
+            486.0,
+            313.0
+          ],
+          "method": "white_ellipse",
+          "reviewed": true,
+          "center": [
+            459.6188659667969,
+            287.3353271484375
+          ],
+          "axes": [
+            40.17180633544922,
+            51.29485321044922
+          ],
+          "angle": 128.7484893798828,
+          "uncertain": false,
+          "clipped": true,
+          "status": "truncated"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9932481784333637,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "20038d7c930dc19c53f1",
+      "pixel_sha256": "20038d7c930dc19c53f150f8b31ee3d8b6b876cad73a573dbd8447753acbe443",
+      "source": "data/chapter_maps/current/chapter_46/source/frame_00004.png",
+      "aliases": [
+        "data/chapter_maps/history/before_formal_01_48_20261001/scans/batch_39_to_48_20261001/chapter_46/source/frame_00004.png"
+      ],
+      "chapters": [
+        46
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_46",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            116.0,
+            264.0,
+            185.0,
+            334.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3598093725178713,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            469,
+            363,
+            486,
+            421
+          ],
+          "status": "truncated",
+          "reviewed": true
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9938004382448827,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "1dbb58a7c85fbf3d0afd",
+      "pixel_sha256": "1dbb58a7c85fbf3d0afddb8da2f0ea23ea325e2a0cb7bc65715cd2b2c35e4f92",
+      "source": "log/campaign_prototype/manual_movement/34383e503d2ea233b6889b93/camera_003_roi.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "log/campaign_prototype/manual_movement/34383e503d2ea233b6889b93",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            369.0,
+            241.0,
+            439.0,
+            306.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3455818022747157,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9943838740135036,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "028699cc13798cc8e082",
+      "pixel_sha256": "028699cc13798cc8e08256646ad43a51b13c7747c38ea1f8cb9d1f18d7ca0767",
+      "source": "log/campaign_prototype/manual_movement/34383e503d2ea233b6889b93/camera_004_roi.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "log/campaign_prototype/manual_movement/34383e503d2ea233b6889b93",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            250.0,
+            241.0,
+            314.0,
+            307.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.35610401057734686,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9940453921935404,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "7df8080fd957a12f8f82",
+      "pixel_sha256": "7df8080fd957a12f8f82874796ea0448f3a9270da4f3468c77fadff8e9355335",
+      "source": "log/campaign_prototype/manual_movement/636373eb43de544177bfb2b8/observe_001_roi.png",
+      "aliases": [],
+      "chapters": [],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "log/campaign_prototype/manual_movement/636373eb43de544177bfb2b8",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            301.0,
+            106.0,
+            353.0,
+            146.0
+          ],
+          "method": "red_component",
+          "reviewed": true,
+          "fill": 0.3391384051329056,
+          "clipped": false,
+          "uncertain": false,
+          "status": "complete"
+        },
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            213.0,
+            269.0,
+            267.0,
+            318.0
+          ],
+          "method": "white_ellipse",
+          "reviewed": true,
+          "center": [
+            238.77093505859375,
+            292.375
+          ],
+          "axes": [
+            46.314632415771484,
+            50.36744689941406
+          ],
+          "angle": 89.44268035888672,
+          "uncertain": false,
+          "clipped": false,
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9959025884951811,
+      "review_scope": "full_frame",
+      "ignored": []
+    },
+    {
+      "id": "43629ee69216977b8ad9",
+      "pixel_sha256": "43629ee69216977b8ad9df754afb0ee5d0edc9df7b3e23383d39fa21a564871a",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/43629ee69216977b8ad9.png",
+      "aliases": [],
+      "source_origin": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_40/attempts/1790702498962762300/chapter_verified.png",
+      "parent": "e2029a59dfb75700b972",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        40
+      ],
+      "split": "train",
+      "group": "chapter_40",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            98,
+            84,
+            123,
+            103
+          ],
+          "status": "complete",
+          "center": [
+            110.5,
+            93.5
+          ],
+          "reviewed": true
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            41,
+            122,
+            101,
+            178
+          ],
+          "status": "complete",
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.9384103656680726,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "796b3acd75de3f46b726",
+      "pixel_sha256": "796b3acd75de3f46b726b49ad9dac53933960d09925b4e03391f999d31dcd7d6",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/796b3acd75de3f46b726.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t14_move_t020.png",
+      "parent": "09f039edd4b3400c54c4",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        34
+      ],
+      "split": "train",
+      "group": "chapter_34",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            89,
+            127,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            110.5,
+            102.5
+          ],
+          "reviewed": true
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            43,
+            119,
+            101,
+            175
+          ],
+          "status": "complete",
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.9354971955302405,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "b1991f1b57ea64ff522c",
+      "pixel_sha256": "b1991f1b57ea64ff522c69c351708b853614541308d2ba2af72e3097a08a17a4",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/b1991f1b57ea64ff522c.png",
+      "aliases": [],
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_26/field_003.png",
+      "parent": "4f349984af033cff3953",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        26
+      ],
+      "split": "train",
+      "group": "chapter_26",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            94,
+            89,
+            127,
+            114
+          ],
+          "status": "complete",
+          "center": [
+            110.5,
+            101.5
+          ],
+          "reviewed": true
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            44,
+            119,
+            101,
+            172
+          ],
+          "status": "complete",
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.8828427322927084,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "cc0ff8c24cc82282bb8c",
+      "pixel_sha256": "cc0ff8c24cc82282bb8ca008138e7049e7ce39f0088f8bbe837ba8f0b8b9017f",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/cc0ff8c24cc82282bb8c.png",
+      "aliases": [],
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_31/field_001.png",
+      "parent": "be89b6deb157d84446b0",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        31
+      ],
+      "split": "train",
+      "group": "chapter_31",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            93,
+            89,
+            125,
+            118
+          ],
+          "status": "complete",
+          "center": [
+            109.0,
+            103.5
+          ],
+          "reviewed": true
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            42,
+            122,
+            101,
+            178
+          ],
+          "status": "complete",
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.9344319318231228,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "e0cb35333f5aae8f0ea2",
+      "pixel_sha256": "e0cb35333f5aae8f0ea2f4d694e19c01128de5f886efd730416b92248d0f321a",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/e0cb35333f5aae8f0ea2.png",
+      "aliases": [],
+      "source_origin": "log/chapter_calibration_20261001/chapter_44/1790850509140650500/anchor_unresolved.png",
+      "parent": "e956a353b4074f884914",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        44
+      ],
+      "split": "train",
+      "group": "chapter_44",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            93,
+            92,
+            126,
+            119
+          ],
+          "status": "complete",
+          "center": [
+            109.5,
+            105.5
+          ],
+          "reviewed": true
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            44,
+            122,
+            100,
+            176
+          ],
+          "status": "complete",
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.891973564068003,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "f66a108011e68a414cbc",
+      "pixel_sha256": "f66a108011e68a414cbc1929c232a71787b557292e294fef729f02225d32a5a8",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/f66a108011e68a414cbc.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t09_pan03_field.png",
+      "parent": "9be0579b56690888563a",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        34
+      ],
+      "split": "train",
+      "group": "chapter_34",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [],
+      "blue_fraction": 0.96386799426062,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "557819e54d4bc4ad9118",
+      "pixel_sha256": "557819e54d4bc4ad9118f8527c53ca1527690d486903846d7bf58f913a4f0310",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/557819e54d4bc4ad9118.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t09_pan07_before.png",
+      "parent": "5a320bfc0940bae592a7",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        34
+      ],
+      "split": "train",
+      "group": "chapter_34",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [],
+      "blue_fraction": 0.9639549545632419,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "560745b93038532b6328",
+      "pixel_sha256": "560745b93038532b632847ca8f17ce27eed441576512c672cf7fcc2a15f13f46",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/560745b93038532b6328.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/manual_movement/34383e503d2ea233b6889b93/camera_003_field.jpg",
+      "parent": "cc1f84dfe1ffae0860e6",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "train",
+      "group": "log/campaign_prototype/manual_movement/34383e503d2ea233b6889b93",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            178,
+            78,
+            218,
+            112
+          ],
+          "status": "truncated",
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.958280794817166,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "6934c6d17b0028098f53",
+      "pixel_sha256": "6934c6d17b0028098f53aafcbf931d7f6bfba8410ef016d5e23e231c21e60ce7",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/6934c6d17b0028098f53.png",
+      "aliases": [],
+      "source_origin": "tmp/arrow_anchor_probe/orange/field.png",
+      "parent": "425adcca8225f9c13bf8",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [],
+      "split": "train",
+      "group": "tmp/arrow_anchor_probe/orange",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            91,
+            90,
+            123,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            107.0,
+            103.0
+          ],
+          "reviewed": true
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            24,
+            4,
+            48,
+            19
+          ],
+          "status": "truncated",
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.9632375320666116,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "cab10c31e62a7c075f91",
+      "pixel_sha256": "cab10c31e62a7c075f91b08a62d88813ad934d44e065a591dcb2d5c61bbe0512",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/cab10c31e62a7c075f91.png",
+      "aliases": [],
+      "source_origin": "data/chapter_maps/batch_retry/chapter_34/attempts/1790693950975786000/chapter_verified.png",
+      "parent": "ff0146af51153a2d0bd4",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        34
+      ],
+      "split": "train",
+      "group": "chapter_34",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            92,
+            89,
+            124,
+            117
+          ],
+          "status": "complete",
+          "center": [
+            108.0,
+            103.0
+          ],
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.966259402582721,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "546af37dc0c3a8bdd388",
+      "pixel_sha256": "546af37dc0c3a8bdd388bfda92fd4788c1e4b4b8f707b015eabf6ddd0c1f5910",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/546af37dc0c3a8bdd388.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t09_move_field.png",
+      "parent": "0b0c7ea449f8ac4a16f9",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        34
+      ],
+      "split": "train",
+      "group": "chapter_34",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            91,
+            88,
+            124,
+            115
+          ],
+          "status": "complete",
+          "center": [
+            107.5,
+            101.5
+          ],
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.9612374451063089,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "c5635a6b7ed4432bcd63",
+      "pixel_sha256": "c5635a6b7ed4432bcd63a1acc809139bb061c4c30d9d24006615a910fb111b95",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/c5635a6b7ed4432bcd63.png",
+      "aliases": [],
+      "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t14_pan02_before.png",
+      "parent": "701783fd560ff59728b1",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        34
+      ],
+      "split": "train",
+      "group": "chapter_34",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            0,
+            93,
+            33,
+            122
+          ],
+          "status": "truncated",
+          "center": [
+            16.5,
+            107.5
+          ],
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.9606722031392669,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "c8910000b871591b842b",
+      "pixel_sha256": "c8910000b871591b842bbc741bc837ca06beed5e186febd504525d50be9aa60a",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/c8910000b871591b842b.png",
+      "aliases": [],
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_04/before.png",
+      "parent": "42c176e07ec3fee80e7b",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        4
+      ],
+      "split": "train",
+      "group": "chapter_04",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            92,
+            88,
+            125,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            108.5,
+            102.0
+          ],
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.9606504630636115,
+      "ignored": [],
+      "review_scope": "full_frame"
+    },
+    {
+      "id": "d36f30c9f597a1e427be",
+      "pixel_sha256": "d36f30c9f597a1e427be49a809102916c1a8a88b56008d9e7effdf21c6df1e50",
+      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/d36f30c9f597a1e427be.png",
+      "aliases": [],
+      "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_34/field_003.png",
+      "parent": "5485831adb035fb05ac3",
+      "crop": [
+        25,
+        96,
+        243,
+        307
+      ],
+      "client": [
+        1920,
+        1080
+      ],
+      "chapters": [
+        34
+      ],
+      "split": "train",
+      "group": "chapter_34",
+      "domain": "minimap",
+      "roi_kind": "compact",
+      "size": [
+        218,
+        211
+      ],
+      "review": "accepted",
+      "objects": [
+        {
+          "label": "minimap_squad_ring",
+          "box": [
+            95,
+            89,
+            128,
+            116
+          ],
+          "status": "complete",
+          "center": [
+            111.5,
+            102.5
+          ],
+          "reviewed": true
+        }
+      ],
+      "blue_fraction": 0.9605417626853342,
+      "ignored": [],
+      "review_scope": "full_frame"
+    }
+  ]
+}
