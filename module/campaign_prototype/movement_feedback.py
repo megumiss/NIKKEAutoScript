@@ -1,6 +1,7 @@
 """箭头周期定位、小地图辅助恢复与有限目标触发。"""
 
 import re
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -17,6 +18,10 @@ class SquadPositionChanged(RuntimeError):
         super().__init__('平移期间小队位置发生变化，需要停稳后重新定位。')
         self.before = np.asarray(before, float).tolist()
         self.after = np.asarray(after, float).tolist()
+
+
+class AnchorUnresolved(ValueError):
+    """箭头和会话地面基准均无法提供落点，允许导航层尝试一次道路短移。"""
 
 
 class TargetTriggered(RuntimeError):
@@ -92,9 +97,95 @@ def resolve_anchor(session, field, observation, allow_scene=True):
             session.emit(anchor_method='minimap_ground_projection', ground_anchor=anchor.tolist())
             return anchor
     runtime.write_image(session.folder / 'anchor_unresolved.png', field)
-    raise ValueError(f'无法恢复小队箭头位置，未追加点击；现场已保存。{reason}')
+    raise AnchorUnresolved(f'无法恢复小队箭头位置，未追加点击；现场已保存。{reason}')
 
 
+def road_recovery_click(session, observation, target):
+    """从已验证的标定截图投影附近同层道路，仅生成一次恢复短移的落点。"""
+    from . import goto
+    from .camera_navigation import FIELD_BOUNDS, inside
+    from .parallax_movement import checked_segment, load_calibration
+
+    if observation.get('position_kind') != 'squad' or not hasattr(session, 'calibration'):
+        raise ValueError('道路短移需要真实小队圆环和已验证的局部场景标定。')
+    data, reference = load_calibration(session.request['package'], session.localizer, session.request['difficulty'])
+    position = np.asarray(observation['position'], float)
+    origin = np.asarray(data['origin'], float)
+    if np.linalg.norm(position - origin) > data['radius']:
+        raise ValueError('小队超出局部标定范围，无法进行道路短移。')
+    path = Path(session.request['package']) / 'movement_calibration' / session.request['difficulty'] / 'surface.png'
+    road = (cv2.imread(str(path), cv2.IMREAD_GRAYSCALE) > 0).astype(np.uint8) & session.localizer.road
+    goto.map_close(session.win)
+    field = goto.capture_client(session.win)
+    session.identity(field)
+    session.check_collectible(field)
+    session.preview(field)
+    matrix = np.asarray(data['matrix'], float)[:2, :2]
+    direction = np.asarray(target, float) - position
+    angle = np.arctan2(direction[1], direction[0])
+    candidates = [position + radius * np.array([np.cos(angle + turn), np.sin(angle + turn)])
+                  for radius in (10, 6) for turn in (0, np.pi / 4, -np.pi / 4, np.pi / 2, -np.pi / 2, np.pi)]
+    for candidate in candidates:
+        if (np.linalg.norm(candidate - origin) > data['radius']
+                or not contains(data['support'], candidate - position)):
+            continue
+        try:
+            checked_segment(road, position, candidate)
+            click = scene_anchor(reference, field, data['origin_anchor'], matrix @ (candidate - origin))
+        except ValueError:
+            continue
+        if inside(click, FIELD_BOUNDS):
+            session.emit(navigation_method='arrow_road_recovery', recovery_target=candidate.tolist(),
+                         message='箭头不可见，尝试沿附近道路短移一次后重新识别。')
+            return click
+    raise ValueError('附近没有同时通过连续道路和场景配准验证的短移落点。')
+
+
+def wake_arrow_click(session, observation):
+    """站位不渲染箭头时，向附近开阔道路生成一次唤醒短移落点。
+
+    台座类站位显示橙环且等再久也不出现箭头，需离开约 200 客户区像素才恢复。
+    无箭头可用，按镜头居中特性把小队近似为客户区 (888, 505)，结合道路净空、敌人距离和路径验证选路；
+    仅用于平面地图，分层地图的投影必须由实测标定建立。
+    """
+    from . import goto
+    from .camera_navigation import FIELD_BOUNDS, field_chart, inside, target_projection
+    from .parallax_localizer import ParallaxLocalizer
+
+    if isinstance(session.localizer, ParallaxLocalizer):
+        raise ValueError('分层地图不使用镜头居中近似做唤醒短移。')
+    if observation.get('position_kind') != 'squad':
+        raise ValueError('唤醒短移需要可信的小队圆环定位。')
+    position = np.asarray(observation['position'], float)
+    enemies = np.asarray(observation.get('enemy_markers', []), float)
+    if enemies.size and np.min(np.linalg.norm(enemies - position, axis=-1)) < 60:
+        raise ValueError('站位无箭头且敌人标记过近，放弃唤醒短移。')
+    clearance = cv2.distanceTransform(session.localizer.road.astype(np.uint8), cv2.DIST_L2, 5)
+    ys, xs = np.where(clearance >= 40)
+    if enemies.size:
+        keep = np.min(np.linalg.norm(np.stack([xs, ys], 1)[None] - enemies[:, None, :], axis=-1), axis=0) >= 50
+        xs, ys = xs[keep], ys[keep]
+    distances = np.hypot(xs - position[0], ys - position[1])
+    # 过近的落点等于点击小队自身，无法离开橙环站位；80 地图像素约对应 200 客户区像素的恢复距离。
+    nearby = np.where((distances >= 80) & (distances <= 400))[0]
+    chart = field_chart(session.localizer, observation, np.array([888., 505.]))
+    scores = distances[nearby] - 1.5 * clearance[ys[nearby], xs[nearby]]
+    for candidate in nearby[np.argsort(scores)]:
+        target = np.array([xs[candidate], ys[candidate]], float)
+        try:
+            session.localizer.route(position, target)
+            _, projected = target_projection(chart, observation, target)
+        except ValueError:
+            continue
+        if inside(projected, FIELD_BOUNDS):
+            goto.map_close(session.win)
+            session.emit(navigation_method='arrow_wake', wake_target=target.tolist(),
+                         message='站位不显示箭头，向开阔道路短移一次唤醒后再重新识别。')
+            return projected
+    goto.map_close(session.win)
+    session.emit(navigation_method='arrow_wake', wake_target=None,
+                 message='站位不显示箭头且附近开阔道路不可投影，向画面下方盲移一次尝试唤醒。')
+    return np.array([888., 700.])
 
 
 def collectible_indicator(field):

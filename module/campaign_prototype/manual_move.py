@@ -114,7 +114,8 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     """
-    from .movement_feedback import AnchorUnresolved, SquadPositionChanged, road_recovery_click, resolve_anchor
+    from .movement_feedback import (AnchorUnresolved, SquadPositionChanged, road_recovery_click, resolve_anchor,
+                                    wake_arrow_click)
 
     target = np.asarray(target, float)
     clicks, near, stagnant, replans = 0, 0, 0, 0
@@ -183,7 +184,10 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
         except AnchorUnresolved:
             if arrow_recoveries:
                 raise
-            click = road_recovery_click(session, observation, approach)
+            try:
+                click = road_recovery_click(session, observation, approach)
+            except ValueError:
+                click = wake_arrow_click(session, observation)
             session.check()
             session.move(click)
             clicks += 1
