@@ -9,6 +9,9 @@ from deploy.config import ExecutionError
 from deploy.git import GitManager
 from deploy.pip import PipManager
 from deploy.utils import DEPLOY_CONFIG
+from deploy.mirrorchyan import Client, MirrorError, enabled
+from deploy.source_update import check_source, refresh_history, run_update as run_source_update
+from deploy.update_package import assert_ready
 from module.base.retry import retry
 from module.logger import logger
 from module.webui.config import DeployConfig
@@ -45,6 +48,10 @@ class Updater(DeployConfig, GitManager, PipManager):
         # the SPA via /api/system/update so a failure is not silently shown
         # as "up to date".
         self.check_error = ''
+        self.failure_stage = ''
+        self.download_progress = None
+        self.remote_version = ''
+        self.history_fresh = False
 
     @property
     def delay(self):
@@ -136,6 +143,15 @@ class Updater(DeployConfig, GitManager, PipManager):
             return False
 
     def _do_check_update(self) -> bool:
+        self.read()
+        self.failure_stage = 'check'
+        if enabled(self.root_filepath):
+            info, available = check_source(self.root_filepath, self.git, require_url=False)
+            self.remote_version = info['version_name']
+            self.history_fresh = refresh_history(self.root_filepath, self.remote_version)
+            if available:
+                Client.require_download(info)
+            return available
         if State.deploy_config.GitOverCdn:
             status = self.goc_client.get_status()
             if status == "uptodate":
@@ -158,6 +174,11 @@ class Updater(DeployConfig, GitManager, PipManager):
                 "Git fetch failed: cannot reach the remote repository. "
                 "Check the network connection or the repository address."
             )
+
+        from pathlib import Path
+        if (Path(self.root_filepath) / 'app-version.json').exists():
+            # A package install leaves Git HEAD behind until the user switches back.
+            return True
 
         log = self.execute_output(
             f'"{self.git}" log --not --remotes={source}/* -1 --oneline'
@@ -255,7 +276,7 @@ class Updater(DeployConfig, GitManager, PipManager):
             # all checks until the backend restarts.
             if time.time() - self._check_started_at < 600:
                 return
-        elif self.state not in (0, "failed", "finish"):
+        elif self.state not in (0, 1, "failed", "finish"):
             return
         self._check_started_at = time.time()
         result = self._check_update()
@@ -275,12 +296,19 @@ class Updater(DeployConfig, GitManager, PipManager):
 
     def update(self):
         logger.hr("Run update")
+        self.failure_stage = 'apply'
+        self.check_error = ''
+        self.download_progress = None
         try:
-            self.git_update()
-            self.pip_install()
-        except ExecutionError:
+            run_source_update(self, progress=self._download_progress)
+        except (ExecutionError, MirrorError, OSError, ValueError) as error:
+            self.check_error = str(error)
+            logger.error(self.check_error)
             return False
         return True
+
+    def _download_progress(self, downloaded, total):
+        self.download_progress = {'downloaded': downloaded, 'total': total}
 
     def run_update(self):
         if self.state not in ("failed", 0, 1):
@@ -341,6 +369,10 @@ class Updater(DeployConfig, GitManager, PipManager):
         else:
             self.state = "failed"
             logger.warning("Update failed")
+            try:
+                assert_ready(self.root_filepath)
+            except MirrorError:
+                return False
             self.event.clear()
             ProcessManager.restart_processes(instances, self.event)
             return False

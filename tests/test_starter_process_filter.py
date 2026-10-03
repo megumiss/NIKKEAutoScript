@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -37,6 +38,16 @@ class ProcessFilterTests(unittest.TestCase):
 
 
 class StarterPrepareTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = patch.object(Starter, 'root_filepath', temporary.name)
+        git = patch.object(Starter, 'git', 'git')
+        root.start()
+        git.start()
+        self.addCleanup(root.stop)
+        self.addCleanup(git.stop)
+
     @patch('deploy.atomic.atomic_failure_cleanup')
     def test_auto_update_false_skips_git_and_pip_but_still_cleans_processes(self, cleanup):
         starter = Starter.__new__(Starter)

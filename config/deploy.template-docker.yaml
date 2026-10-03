@@ -79,6 +79,8 @@ Deploy:
     InstallUiautomator2: true
 
   Update:
+    # Use MirrorChyan exclusively when enabled. CDK is optional for checking; errors do not change channels.
+    MirrorChyanEnabled: false
     # Use auto update and builtin updater feature
     # This may cause problem https://github.com/LmeSzinc/AzurLaneAutoScript/issues/876
     EnableReload: true

@@ -226,6 +226,15 @@ def startup():
     # （Docker/Linux fork 环境，Windows spawn 不受影响）。同步预载约 0.5s。
     preload_warehouse_assets()
     updater.event = State.manager.Event()
+    from deploy.mirrorchyan import MirrorError
+    from deploy.update_package import assert_ready
+    try:
+        assert_ready('.')
+    except MirrorError as error:
+        updater.state = 'failed'
+        updater.failure_stage = 'apply'
+        updater.check_error = str(error)
+        updater.event.set()
     if updater.delay > 0:
         task_handler.add(updater.check_update, updater.delay)
     task_handler.add(updater.schedule_update(), 86400)
@@ -309,7 +318,7 @@ def app():
             startup,
             lambda: ProcessManager.restart_processes(
                 instances=instances, ev=updater.event
-            ),
+            ) if not updater.event.is_set() else None,
         ],
         on_shutdown=[clearup],
     )

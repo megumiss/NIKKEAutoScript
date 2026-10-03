@@ -79,6 +79,8 @@ Deploy:
     InstallUiautomator2: true
 
   Update:
+    # 开启后只使用 Mirror 酱；CDK 可留空检查版本，失败直接报错，使用原渠道需手动关闭。
+    MirrorChyanEnabled: false
     # Use auto update and builtin updater feature
     # This may cause problem https://github.com/LmeSzinc/AzurLaneAutoScript/issues/876
     EnableReload: true

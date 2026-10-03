@@ -53,6 +53,15 @@ class ProcessManager:
         self.thd_preview_handler: threading.Thread = None
 
     def start(self, func, ev: threading.Event = None) -> None:
+        from deploy.update_package import UpdateLock, assert_ready
+        from deploy.mirrorchyan import MirrorError
+        if ev is not None and ev.is_set():
+            raise MirrorError('更新期间不能启动新任务')
+        with UpdateLock('.'):
+            assert_ready('.')
+            self._start(func, ev)
+
+    def _start(self, func, ev: threading.Event = None) -> None:
         if not self.alive:
             if func is None:
                 func = get_config_mod(self.config_name)

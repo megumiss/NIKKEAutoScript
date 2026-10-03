@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
@@ -24,6 +24,12 @@ def create_spa_mount():
 
 
 def mount_api(app):
+    from deploy.mirrorchyan import MirrorError
+
+    async def update_error(_, error):
+        return JSONResponse({'status': 'error', 'message': str(error)}, status_code=409)
+
+    app.add_exception_handler(MirrorError, update_error)
     routes = [
         Route('/api/security/entry', entry_info, methods=['GET']),
         Route('/api/security/entry/regenerate', regenerate_entry, methods=['POST']),
@@ -61,6 +67,7 @@ def mount_api(app):
         Route('/api/system/deploy', routes_deploy.deploy_schema, methods=['GET']),
         Route('/api/system/deploy', routes_deploy.deploy_patch, methods=['PATCH']),
         Route('/api/system/deploy/reset', routes_deploy.deploy_reset, methods=['POST']),
+        Route('/api/system/mirror-cdk', routes_deploy.mirror_cdk, methods=['GET', 'POST']),
         Route('/api/serial/state', routes_serial.state, methods=['GET']),
         Route('/api/serial/reset', routes_serial.reset, methods=['POST']),
         Route('/api/adb/devices', routes_device.devices, methods=['GET']),

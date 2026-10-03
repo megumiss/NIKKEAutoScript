@@ -1,5 +1,17 @@
 # 公告列表，新的公告追加到文件顶部
 # pinned: true 的公告在客户端列表顶部置顶显示，可同时置顶多条；组内仍按文件顺序（新的在前）
+- id: notice_20261003_mirrorchyan
+  date: 2026-10-03
+  title: 新增可选 Mirror 酱更新渠道
+  type: info
+  content: |
+    在部署页开启 MirrorChyanEnabled 后，源码和启动器更新将只使用 Mirror 酱。
+    CDK 可以留空检查版本；需要通过 Mirror 酱下载时，可在同一页面保存有效 CDK。CDK 加密保存在本机，可单独清除。
+    开关和 CDK 修改会在下次检查更新时生效。
+
+    连接失败、有新版本却没有下载链接、下载或校验失败时，会直接报错并停止本次更新。
+    如需使用原来的 Git / VPS / GitHub 更新渠道，请手动关闭开关。
+    <a href="https://mirrorchyan.com/?source=NKAS" target="_blank">前往 Mirror 酱</a>
 - id: notice_20260924
   date: 2026-09-24
   title: 求个 Star
