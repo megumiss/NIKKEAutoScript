@@ -20,7 +20,7 @@ from dev_tools.minimap_chapters import chapter_number, click, wait_for_chapter, 
 from module.campaign_prototype import goto, runtime, settings
 from module.campaign_prototype.camera_navigation import field_chart, inside, target_projection, FIELD_BOUNDS
 from module.campaign_prototype.manual_move import GameSession, prepare, sha
-from module.campaign_prototype.movement_feedback import resolve_anchor
+from module.campaign_prototype.movement_feedback import AnchorUnresolved, resolve_anchor
 from module.campaign_prototype.surface_motion import fit_calibration, project
 
 
@@ -32,6 +32,97 @@ def emit(**values):
 def binding(package):
     return {name: sha(package / name) for name in
             ('map.json', 'map.png', 'annotations.json', 'source/map_data.npz')}
+
+
+def entry_blind_move(session, folder, point, tag):
+    """入口恢复共用的盲移步骤：身份检查后单击、停稳、重新观测并保存现场。"""
+    emit(action='entry_blind_move', tag=tag, click=[int(point[0]), int(point[1])])
+    session.check()
+    session.move(np.array(point))
+    session.wait_stopped()
+    updated = session.observe()
+    write_progress(folder / f'{tag}_observation.json', updated)
+    goto.map_close(session.win)
+    field = goto.capture_client(session.win)
+    session.identity(field)
+    runtime.write_image(folder / f'{tag}_field.png', field)
+    return updated, field
+
+
+def explore_entry_view(session, folder):
+    """未探索章节入口迷雾导致定位置信度不足时，盲移探索揭开迷雾后重试观测。
+
+    迷雾下小地图可见道路过少会使 IoU 低于验收线；按先四向、再斜向的顺序最多盲移八步，
+    每次移动后重新观测，仍无法通过置信度检查则带现场抛错。
+    """
+    points = ((888, 700), (888, 300), (1188, 500), (588, 500),
+              (1088, 680), (688, 320), (1188, 320), (688, 680))
+    for index, point in enumerate(points, 1):
+        goto.map_close(session.win)
+        field = goto.capture_client(session.win)
+        session.identity(field)
+        try:
+            updated, _ = entry_blind_move(session, folder, point, f'explore_{index:02}')
+        except RuntimeError as error:
+            if 'Uncertain adaptive localization' not in str(error):
+                raise
+            continue
+        return updated
+    raise RuntimeError('Entry view exploration did not yield a confident localization.')
+
+
+def wake_entry_arrow(session, observation, folder):
+    """入口站位不显示箭头时，沿道路向更开阔处盲移一次唤醒箭头，再恢复锚点。
+
+    入口触发台座上小队显示橙色圆环且不显示箭头，需离开台座约 200 客户区像素才恢复。
+    小队初始位置由入口镜头居中特性近似为 (888, 505)，结合地图净空选择唤醒方向；
+    台座可能连续分布，最多引导盲移四次，每次从新位置重新选路；
+    仅在定位可信且附近没有敌人标记时尝试；无位移或仍无箭头则带现场抛错。
+    """
+    from module.campaign_prototype.camera_navigation import field_chart, target_projection
+
+    if observation.get('position_kind') != 'squad':
+        raise AnchorUnresolved('入口无箭头且小队定位不可信，放弃唤醒短移。')
+    clearance = cv2.distanceTransform(session.localizer.road.astype(np.uint8), cv2.DIST_L2, 5)
+    for attempt in range(4):
+        position = np.asarray(observation['position'], float)
+        enemies = np.asarray(observation.get('enemy_markers', []), float)
+        if enemies.size and np.min(np.linalg.norm(enemies - position, axis=-1)) < 60:
+            raise AnchorUnresolved('入口无箭头且敌人标记过近，放弃唤醒短移。')
+        ys, xs = np.where(clearance >= 40)
+        if enemies.size:
+            keep = np.min(np.linalg.norm(np.stack([xs, ys], 1)[None] - enemies[:, None, :], axis=-1), axis=0) >= 50
+            xs, ys = xs[keep], ys[keep]
+        distances = np.hypot(xs - position[0], ys - position[1])
+        nearby = np.where(distances <= 400)[0]
+        chart = field_chart(session.localizer, observation, np.array([888., 505.]))
+        point = None
+        scores = distances[nearby] - 1.5 * clearance[ys[nearby], xs[nearby]]
+        for candidate in nearby[np.argsort(scores)]:
+            target = np.array([xs[candidate], ys[candidate]], float)
+            try:
+                session.localizer.route(position, target)
+                _, projected = target_projection(chart, observation, target)
+            except ValueError:
+                continue
+            if inside(projected, FIELD_BOUNDS):
+                point = np.rint(projected).astype(int)
+                break
+        if point is None:
+            point = np.array([888, 700])
+        updated, field = entry_blind_move(session, folder, point, f'wake_{attempt + 1:02}')
+        if np.linalg.norm(np.asarray(updated['position'], float) - position) < 2:
+            blind = ((888, 700), (888, 300), (1188, 500), (588, 500))[attempt]
+            updated, field = entry_blind_move(session, folder, blind, f'wake_{attempt + 1:02}b')
+            if np.linalg.norm(np.asarray(updated['position'], float) - position) < 2:
+                raise AnchorUnresolved('唤醒短移未产生小队位移，入口仍无箭头。')
+        observation = updated
+        try:
+            return observation, field, resolve_anchor(session, field, observation, allow_scene=False)
+        except AnchorUnresolved:
+            if attempt == 3:
+                raise
+    raise AnchorUnresolved('多次唤醒短移后入口仍无箭头。')
 
 
 def calibrate(chapter, folder):
@@ -56,24 +147,42 @@ def calibrate(chapter, folder):
     session = GameSession(request, hashes, folder, emit)
     samples, evidence = [], []
     try:
-        observation = session.observe()
+        try:
+            observation = session.observe()
+        except RuntimeError as error:
+            if 'Uncertain adaptive localization' not in str(error):
+                raise
+            observation = explore_entry_view(session, folder)
         write_progress(folder / 'initial_observation.json', observation)
         goto.map_close(session.win)
         field = goto.capture_client(session.win)
         runtime.write_image(folder / 'reference.png', field)
         clearance = cv2.distanceTransform(session.localizer.road.astype(np.uint8), cv2.DIST_L2, 5)
-        anchor = resolve_anchor(session, field, observation, allow_scene=False)
-        for attempt in range(4):
+        try:
+            anchor = resolve_anchor(session, field, observation, allow_scene=False)
+        except AnchorUnresolved:
+            observation, field, anchor = wake_entry_arrow(session, observation, folder)
+        for attempt in range(9):
             position = np.asarray(observation['position'])
             available = float(clearance[round(position[1]), round(position[0])])
             emit(chapter=chapter, position=position.tolist(), clearance=available)
             if available >= 35:
                 break
-            if attempt == 3:
-                raise ValueError('Open-road repositioning did not converge after three measured moves.')
+            if attempt == 8:
+                if available >= 35:
+                    break
+                raise ValueError('Open-road repositioning did not converge after eight measured moves.')
             ys, xs = np.where(clearance >= 50)
             distances = np.hypot(xs - position[0], ys - position[1])
             nearby = np.where(distances <= 120)[0]
+            if not nearby.size:
+                # 入口附近没有开阔区域时先向更高净空处爬坡，逐次移位接近采样区。
+                ys, xs = np.where(clearance >= max(available + 5, 15))
+                distances = np.hypot(xs - position[0], ys - position[1])
+                nearby = np.where(distances <= 120)[0]
+                if not nearby.size:
+                    raise ValueError('No reachable open road for calibration.')
+                emit(chapter=chapter, action='reposition_hill_climb', clearance=available)
             chart = field_chart(session.localizer, observation, anchor)
             scores = distances[nearby] - 1.5 * clearance[ys[nearby], xs[nearby]]
             for candidate in nearby[np.argsort(scores)]:
@@ -99,6 +208,9 @@ def calibrate(chapter, folder):
                 anchor = resolve_anchor(session, field, observation, allow_scene=False)
                 break
             else:
+                if available >= 35:
+                    # 更好的位置不可达时接受当前合格站位，不因此判负。
+                    break
                 raise ValueError('No reachable open road for calibration.')
         offsets = [(40, 25), (-40, -25), (40, -25), (-40, 25), (0, 25), (0, -25),
                    (-15, -10), (15, -10), (0, 10)]

@@ -114,13 +114,14 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     """
-    from .movement_feedback import SquadPositionChanged
+    from .movement_feedback import AnchorUnresolved, SquadPositionChanged, road_recovery_click, resolve_anchor
 
     target = np.asarray(target, float)
     clicks, near, stagnant, replans = 0, 0, 0, 0
     previous = None
     probes = None
     probe_index = 0
+    arrow_recoveries = 0
     deadline = time.monotonic() + 600
     while time.monotonic() < deadline:
         session.check()
@@ -168,6 +169,8 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
                     try:
                         click = session.plan(observation, candidate)
                         break
+                    except AnchorUnresolved:
+                        raise
                     except ValueError as exc:
                         emit(message=f'附近落点不可用：{exc}')
                 if click is None:
@@ -177,6 +180,27 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
                 emit(state='probing', message=f'正在尝试目标附近落点（{probe_index}/{len(probes)}）…')
             else:
                 click = session.plan(observation, approach)
+        except AnchorUnresolved:
+            if arrow_recoveries:
+                raise
+            click = road_recovery_click(session, observation, approach)
+            session.check()
+            session.move(click)
+            clicks += 1
+            arrow_recoveries += 1
+            emit(state='moving', movement_clicks=clicks, arrow_recoveries=arrow_recoveries,
+                 click=click.tolist(), message='正在沿道路短移，停稳后重新识别箭头…')
+            session.wait_stopped()
+            updated = session.observe()
+            from . import goto
+            goto.map_close(session.win)
+            field = goto.capture_client(session.win)
+            session.identity(field)
+            session.check_collectible(field)
+            session.preview(field)
+            resolve_anchor(session, field, updated, allow_scene=False)
+            previous, probes, probe_index, stagnant, near = None, None, 0, 0, 0
+            continue
         except SquadPositionChanged as error:
             replans += 1
             emit(state='locating', message='镜头平移后小队位置变化，正在停稳并重新定位…',
@@ -254,12 +278,22 @@ class GameSession:
                                           dict(kind=status, **evidence[-1]))
                 raise TargetTriggered('已接触敌人，战斗准备界面已出现。', {'kind': 'battle_popup'})
             raise RuntimeError('出现战斗弹窗，移动测试已停止。')
-        if chapter_number(field, self.model) != self.request['chapter']:
+        # 移动后的个别帧里章节／难度控件可能处于动画或遮挡状态，允许短暂重试再判失败。
+        for _ in range(3):
+            if chapter_number(field, self.model) == self.request['chapter']:
+                break
+            time.sleep(0.5)
+            field = goto.capture_client(self.win)
+        else:
             raise RuntimeError(f"游戏章节与所选第 {self.request['chapter']} 章不符，或章节号无法识别。")
-        crop = cv2.resize(field[898:912, 1613:1670], None, fx=4, fy=4)
-        text = next(iter(self.model.predict(crop)))
-        if (text['rec_text'].strip().upper() != self.request['difficulty'].upper()
-                or text['rec_score'] < .9):
+        for _ in range(3):
+            crop = cv2.resize(field[898:912, 1613:1670], None, fx=4, fy=4)
+            text = next(iter(self.model.predict(crop)))
+            if text['rec_text'].strip().upper() == self.request['difficulty'].upper() and text['rec_score'] >= .9:
+                break
+            time.sleep(0.5)
+            field = goto.capture_client(self.win)
+        else:
             raise RuntimeError('游戏普通／困难难度与所选目标不符，或难度无法识别。')
 
     def check_collectible(self, field):
