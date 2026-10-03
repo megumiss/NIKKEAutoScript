@@ -1,5 +1,6 @@
 use crate::config::DesktopConfig;
 use anyhow::{Context, Result};
+use fs2::FileExt;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -152,11 +153,14 @@ pub struct DesktopUpdateStatus {
     pub update_available: bool,
     pub applying: bool,
     pub error: Option<String>,
+    pub channel: String,
+    pub release_note: String,
 }
 
 pub struct DesktopUpdateManager {
     config: DesktopConfig,
     status: Mutex<DesktopUpdateStatus>,
+    install_lock: Mutex<Option<fs::File>>,
 }
 
 impl DesktopUpdateManager {
@@ -171,7 +175,10 @@ impl DesktopUpdateManager {
                 update_available: false,
                 applying: false,
                 error: None,
+                channel: String::new(),
+                release_note: String::new(),
             }),
+            install_lock: Mutex::new(None),
         }
     }
 
@@ -182,12 +189,15 @@ impl DesktopUpdateManager {
     // Runs a single manifest check on a background thread; repeated calls
     // while a check is running are ignored.
     pub fn start_check(self: &Arc<Self>) {
-        if self.config.desktop_update_manifest.trim().is_empty() {
+        if self.config.desktop_update_manifest.trim().is_empty()
+            && (!self.config.root.join("config/deploy.yaml").exists()
+                || matches!(mirror_enabled(&self.config.root), Ok(false)))
+        {
             return;
         }
         {
             let mut status = self.lock_status();
-            if status.checking {
+            if status.checking || status.applying {
                 return;
             }
             status.checking = true;
@@ -197,19 +207,32 @@ impl DesktopUpdateManager {
     }
 
     fn check(&self) {
-        update_log(
-            &self.config.root,
-            format!(
-                "checking for desktop updates: {}",
-                self.config.desktop_update_manifest
-            ),
-        );
-        let result = fetch_manifest(&self.config.desktop_update_manifest)
-            .and_then(|manifest| validate_manifest(&manifest));
+        update_log(&self.config.root, "checking for desktop updates");
+        let mut channel = String::new();
+        let mut release_note = String::new();
+        let result = (|| -> Result<Version> {
+            let mirror = mirror_enabled(&self.config.root)?;
+            channel = if mirror { "MirrorChyan" } else { "VPS/GitHub" }.into();
+            if mirror {
+                let result = mirror_command(&self.config, "desktop-check", None)?;
+                let remote = Version::parse(&result.version).context("Invalid MirrorChyan desktop version")?;
+                let current = Version::parse(CURRENT_VERSION)?;
+                release_note = result.release_note;
+                if is_newer_version(&remote, &current) && !result.downloadable {
+                    anyhow::bail!("有新版本，但 Mirror 酱未返回下载链接；请检查 CDK，或手动关闭 Mirror 酱开关");
+                }
+                Ok(remote)
+            } else {
+                fetch_manifest(&self.config.desktop_update_manifest)
+                    .and_then(|manifest| validate_manifest(&manifest))
+            }
+        })();
         let current = Version::parse(CURRENT_VERSION);
         let mut status = self.lock_status();
         status.checking = false;
         status.checked = true;
+        status.channel = channel;
+        status.release_note = release_note;
         match (result, current) {
             (Ok(remote), Ok(current)) => {
                 let available = is_newer_version(&remote, &current);
@@ -234,6 +257,7 @@ impl DesktopUpdateManager {
             (Err(error), _) => {
                 update_log_levelled(&self.config.root, "ERROR", format!("check failed: {error:#}"));
                 status.update_available = false;
+                status.remote_version = None;
                 status.error = Some(format!("{error:#}"));
             }
         }
@@ -259,16 +283,34 @@ impl DesktopUpdateManager {
         }
         // Fetch the manifest again instead of trusting the cached check.
         update_log(&self.config.root, "applying desktop update");
-        let result = fetch_manifest(&self.config.desktop_update_manifest)
-            .and_then(|manifest| {
+        let result = (|| -> Result<()> {
+            let lock = installation_lock(&self.config.root)?;
+            ensure_install_ready(&self.config.root)?;
+            if mirror_enabled(&self.config.root)? {
+                let checked = mirror_command(&self.config, "desktop-check", None)?;
+                let remote = Version::parse(&checked.version)?;
+                if !is_newer_version(&remote, &Version::parse(CURRENT_VERSION)?) {
+                    anyhow::bail!("The desktop shell is already up to date");
+                }
+                let staged = mirror_command(&self.config, "desktop-stage", Some(&checked.version))?;
+                if staged.version != checked.version {
+                    anyhow::bail!("Mirror 酱目标版本已变化，请重新检查更新");
+                }
+                verify_mirror_stage(&self.config.root, &staged)?;
+                launch_staged(&self.config, Path::new(staged.path.as_deref().unwrap()))?;
+            } else {
+                let manifest = fetch_manifest(&self.config.desktop_update_manifest)?;
                 let remote = validate_manifest(&manifest)?;
                 let current =
                     Version::parse(CURRENT_VERSION).context("Invalid current desktop version")?;
                 if !is_newer_version(&remote, &current) {
                     anyhow::bail!("The desktop shell is already up to date");
                 }
-                stage_and_launch(&self.config, &manifest)
-            });
+                stage_and_launch(&self.config, &manifest)?;
+            }
+            *self.install_lock.lock().unwrap_or_else(|p| p.into_inner()) = Some(lock);
+            Ok(())
+        })();
         let mut status = self.lock_status();
         match result {
             Ok(()) => {
@@ -371,6 +413,93 @@ fn is_newer_version(remote: &Version, current: &Version) -> bool {
     remote > current
 }
 
+fn mirror_enabled(root: &Path) -> Result<bool> {
+    let config: serde_yaml::Value = serde_yaml::from_str(
+        &fs::read_to_string(root.join("config/deploy.yaml"))?
+    ).context("Unable to read update channel")?;
+    match &config["Deploy"]["Update"]["MirrorChyanEnabled"] {
+        serde_yaml::Value::Null => Ok(false),
+        serde_yaml::Value::Bool(value) => Ok(*value),
+        _ => anyhow::bail!("MirrorChyanEnabled must be true or false"),
+    }
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct MirrorResult {
+    #[serde(default)]
+    version: String,
+    #[serde(default)]
+    downloadable: bool,
+    #[serde(default)]
+    release_note: String,
+    path: Option<String>,
+    sha256: Option<String>,
+    size: Option<u64>,
+    error: Option<String>,
+}
+
+fn parse_mirror_result(stdout: &[u8]) -> Result<MirrorResult> {
+    let text = String::from_utf8_lossy(stdout);
+    let line = text.lines().rev().find_map(|line| line.strip_prefix("NKAS_MIRROR_RESULT="))
+        .context("Mirror 酱更新器没有返回结果，请检查 Python 环境")?;
+    let result: MirrorResult = serde_json::from_str(line).context("Invalid MirrorChyan helper result")?;
+    if let Some(error) = &result.error {
+        anyhow::bail!("{error}");
+    }
+    Ok(result)
+}
+
+fn mirror_command(config: &DesktopConfig, action: &str, target: Option<&str>) -> Result<MirrorResult> {
+    let mut command = Command::new(&config.python);
+    command.current_dir(&config.root).args(["-m", "deploy.mirrorchyan", action, "--root"])
+        .arg(&config.root).args(["--current", CURRENT_VERSION])
+        .env("PYTHONIOENCODING", "utf-8").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null());
+    if let Some(target) = target { command.args(["--target", target]); }
+    #[cfg(windows)]
+    command.creation_flags(0x08000000);
+    let mut child = command.spawn().context("无法启动 Mirror 酱更新器")?;
+    let deadline = std::time::Instant::now() + Duration::from_secs(if target.is_some() { 660 } else { 35 });
+    while child.try_wait()?.is_none() {
+        if std::time::Instant::now() > deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            anyhow::bail!("Mirror 酱更新超时，请重试；使用原渠道需手动关闭开关");
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+    let output = child.wait_with_output()?;
+    let result = parse_mirror_result(&output.stdout)?;
+    if !output.status.success() { anyhow::bail!("Mirror 酱更新器执行失败"); }
+    Ok(result)
+}
+
+fn verify_mirror_stage(root: &Path, result: &MirrorResult) -> Result<()> {
+    let staged = Path::new(result.path.as_deref().context("Mirror 酱未返回 EXE")?);
+    if staged.parent().and_then(|p| p.canonicalize().ok()) != Some(update_dir(root).canonicalize()?) {
+        anyhow::bail!("Invalid MirrorChyan staged path");
+    }
+    let mut source = fs::File::open(staged)?;
+    write_verified_download(&mut source, &mut std::io::sink(), result.size.unwrap_or(0),
+        result.sha256.as_deref().unwrap_or(""))
+}
+
+fn installation_lock(root: &Path) -> Result<fs::File> {
+    let path = root.join("config/.update/install.lock");
+    fs::create_dir_all(path.parent().unwrap())?;
+    let file = fs::OpenOptions::new().create(true).truncate(false).read(true).write(true).open(path)?;
+    file.try_lock_exclusive().context("另一个更新正在安装，请稍后重试")?;
+    Ok(file)
+}
+
+fn ensure_install_ready(root: &Path) -> Result<()> {
+    for file in ["journal.json", "desktop-pending.json", "git-transition.json"] {
+        if root.join("config/.update").join(file).exists() {
+            anyhow::bail!("更新尚未完成，请先重试更新或重新启动程序完成恢复");
+        }
+    }
+    Ok(())
+}
+
 fn fetch_manifest(url: &str) -> Result<DesktopManifest> {
     let client = reqwest::blocking::Client::builder()
         .user_agent(format!("NKAS/{CURRENT_VERSION}"))
@@ -459,6 +588,43 @@ fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Resul
         ),
     );
 
+    launch_staged(config, &staged)
+}
+
+fn launch_staged(config: &DesktopConfig, staged: &Path) -> Result<()> {
+    let pending = config.root.join("config/.update/desktop-pending.json");
+    fs::create_dir_all(pending.parent().unwrap())?;
+    let state = serde_json::json!({
+        "pid": std::process::id(),
+        "previous_sha256": file_sha256(&config.root.join("nkas.exe"))?,
+        "target_sha256": file_sha256(staged)?,
+    });
+    write_pending(&pending, &state)?;
+    let result = spawn_replace(config, staged);
+    if result.is_err() { let _ = fs::remove_file(pending); }
+    result
+}
+
+fn file_sha256(path: &Path) -> Result<String> {
+    let mut file = fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let count = file.read(&mut buffer)?;
+        if count == 0 { break; }
+        hasher.update(&buffer[..count]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn write_pending(path: &Path, value: &serde_json::Value) -> Result<()> {
+    let temporary = path.with_extension("json.tmp");
+    fs::write(&temporary, serde_json::to_vec(value)?)?;
+    fs::rename(temporary, path)?;
+    Ok(())
+}
+
+fn spawn_replace(config: &DesktopConfig, staged: &Path) -> Result<()> {
     let target = config.root.join("nkas.exe");
     let mut command = Command::new(&staged);
     command
@@ -502,6 +668,10 @@ fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Resul
             }
         }
     };
+    let pending = config.root.join("config/.update/desktop-pending.json");
+    let mut state: serde_json::Value = serde_json::from_slice(&fs::read(&pending)?)?;
+    state["helper_pid"] = child.id().into();
+    write_pending(&pending, &state)?;
     update_log(
         &config.root,
         format!(
@@ -569,6 +739,7 @@ pub fn run_replace(args: ReplaceArgs) -> Result<()> {
 fn run_replace_inner(args: ReplaceArgs) -> Result<()> {
     verify_replace_paths(&args)?;
     wait_for_process(args.wait_pid)?;
+    let install_lock = installation_lock(&args.root)?;
     update_log(&args.root, "old process exited; replacing nkas.exe");
     let helper = env::current_exe()?;
     let update_dir = update_dir(&args.root);
@@ -588,6 +759,9 @@ fn run_replace_inner(args: ReplaceArgs) -> Result<()> {
             .stderr(Stdio::null());
         #[cfg(windows)]
         command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        fs::remove_file(args.root.join("config/.update/desktop-pending.json"))?;
+        // Release before the new launcher runs its startup update preparation.
+        FileExt::unlock(&install_lock)?;
         command
             .spawn()
             .context("Unable to restart the updated nkas.exe")?;
@@ -755,6 +929,56 @@ mod tests {
             sha256: "0".repeat(64),
             size: 1024,
         }
+    }
+
+    #[test]
+    fn mirror_channel_is_reread_and_failures_do_not_fetch_legacy_manifest() {
+        let root = temporary_directory("mirror-channel");
+        fs::create_dir_all(root.join("config")).unwrap();
+        fs::create_dir_all(root.join("deploy")).unwrap();
+        fs::write(root.join("deploy/__init__.py"), "").unwrap();
+        fs::write(root.join("deploy/mirrorchyan.py"),
+            "from pathlib import Path\nprint('NKAS_MIRROR_RESULT=' + Path('result.json').read_text())\n").unwrap();
+        fs::write(root.join("config/deploy.yaml"), "Deploy:\n  Update:\n    MirrorChyanEnabled: true\n").unwrap();
+        let mut config = test_config("this-is-not-a-manifest-url");
+        config.root = root.clone();
+        config.python = PathBuf::from(if cfg!(windows) { "python.exe" } else { "python3" });
+        let manager = DesktopUpdateManager::new(config);
+        fs::write(root.join("result.json"), r#"{"error":"simulated MirrorChyan network failure"}"#).unwrap();
+        manager.check();
+        assert_eq!(manager.status().channel, "MirrorChyan");
+        assert!(manager.status().error.unwrap().contains("simulated MirrorChyan"));
+        fs::write(root.join("result.json"), r#"{"version":"99.0.0","downloadable":false}"#).unwrap();
+        manager.check();
+        assert!(manager.status().error.unwrap().contains("下载链接"));
+        fs::write(root.join("result.json"), format!(r#"{{"version":"{CURRENT_VERSION}","downloadable":false}}"#)).unwrap();
+        manager.check();
+        assert!(manager.status().error.is_none());
+        assert!(!manager.status().update_available);
+        fs::write(root.join("result.json"), r#"{"version":"99.0.0","downloadable":true}"#).unwrap();
+        manager.check();
+        assert!(manager.status().update_available);
+        fs::write(root.join("config/deploy.yaml"), "Deploy:\n  Update:\n    MirrorChyanEnabled: false\n").unwrap();
+        manager.check();
+        assert_eq!(manager.status().channel, "VPS/GitHub");
+        assert!(manager.status().error.is_some());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn python_and_rust_share_the_installation_lock() {
+        let root = temporary_directory("mirror-lock");
+        fs::create_dir_all(&root).unwrap();
+        let lock = installation_lock(&root).unwrap();
+        let project = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
+        let output = Command::new(if cfg!(windows) { "python.exe" } else { "python3" })
+            .current_dir(project).args(["-c", "import sys; from deploy.update_package import UpdateLock; UpdateLock(sys.argv[1]).__enter__()"])
+            .arg(&root).output().unwrap();
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("MirrorError"));
+        drop(lock);
+        assert!(installation_lock(&root).is_ok());
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

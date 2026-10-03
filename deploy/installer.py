@@ -3,18 +3,16 @@ import sys
 from deploy.config import ExecutionError
 from deploy.git import GitManager
 from deploy.pip import PipManager
+from deploy.mirrorchyan import MirrorError
+from deploy.source_update import run_update
 
 
 class Installer(GitManager, PipManager):
     def install(self):
         try:
-            self.git_install()
-            self.git_update()
-            # self.alas_kill()
-            self.pip_install()
-            # self.app_update()
-            # self.adb_install()
-        except ExecutionError:
+            run_update(self)
+        except (ExecutionError, MirrorError) as e:
+            print(str(e))
             input('Press Enter to continue...')  # Keep window open
             sys.exit(1)
         except Exception as e:

@@ -5,6 +5,7 @@ import AppSelect from '../components/AppSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import FieldPriority from '../components/config/FieldPriority.vue'
 import SecurityEntryActions from '../components/SecurityEntryActions.vue'
+import MirrorCdk from '../components/MirrorCdk.vue'
 import { t } from '../i18n'
 import { onTextInput } from '../utils'
 import { useDeployStore } from '../stores/deploy'
@@ -41,6 +42,7 @@ const { openResetDeployModal } = useModalStore()
               </div>
             </div>
             <SecurityEntryActions v-if="field.key === 'SecurityEntryEnabled' && field.value === true" :disabled="field.saving" @busy="field.entryBusy = $event" />
+            <MirrorCdk v-if="field.key === 'MirrorChyanEnabled'" />
           </template>
         </div>
       </article>

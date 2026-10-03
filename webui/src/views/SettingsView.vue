@@ -26,19 +26,25 @@ const historyCommits = computed(() => ((updateInfo.value.history || []) as any[]
     </article>
     <article class="card task-hero">
       <div class="task-icon"><AppIcon name="rocket" :size="22" /></div>
-      <div style="flex:1"><h2>{{ t('源码更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span><span v-else-if="updateInfo.state === 'failed'" class="update-error"> · {{ updateInfo.error ? t('检查更新失败') : t('更新失败') }}<span v-if="updateInfo.error">：{{ updateInfo.error }}</span></span></div></div>
+      <div style="flex:1"><h2>{{ t('源码更新') }}</h2><div class="sub">{{ t('当前版本') }} <code class="ver-pill">{{ systemStatus.version }}</code><span v-if="Number(updateInfo.state) === 1" class="update-hint"> · {{ t('有新版本可用') }}</span><span v-else-if="Number(updateInfo.state) === 0" class="sub"> · {{ t('已是最新') }}</span><span v-else-if="updateInfo.state === 'failed'" class="update-error"> · {{ updateInfo.failure_stage === 'apply' ? t('更新失败') : t('检查更新失败') }}<span v-if="updateInfo.error">：{{ updateInfo.error }}</span></span></div></div>
       <button v-if="Number(updateInfo.state) === 1" class="btn success" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span><AppIcon name="download" :size="15" color="currentColor" /> {{ updating ? t('更新中…') : t('立即更新') }}</button>
-      <!-- "failed" with an error message means the *check* failed (e.g.
-           network), so offer re-check instead of a full update+restart;
-           an empty error means a real update run failed, offer retry. -->
-      <button v-else-if="updateInfo.state === 'failed' && !updateInfo.error" class="btn danger" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span><AppIcon name="refresh" :size="15" color="currentColor" /> {{ updating ? t('更新中…') : t('重试更新') }}</button>
+      <!-- Failed installations need an explicit retry; checks can run again independently. -->
+      <button v-else-if="updateInfo.state === 'failed' && updateInfo.failure_stage === 'apply'" class="btn danger" :disabled="updating" @click="runUpdate"><span v-if="updating" class="btn-spin"></span><AppIcon name="refresh" :size="15" color="currentColor" /> {{ updating ? t('更新中…') : t('重试更新') }}</button>
       <button v-else class="btn primary" :disabled="updating || updateChecking || updateInfo.state === 'checking'" @click="checkUpdate"><AppIcon name="refresh" :size="15" color="currentColor" /> {{ updating ? t('更新中…') : (updateChecking || updateInfo.state === 'checking' ? t('检查中…') : t('检查更新')) }}</button>
       <button class="btn danger" :disabled="restarting" @click="forceRestart"><span v-if="restarting" class="btn-spin"></span><AppIcon name="power" :size="15" /> {{ restarting ? t('重启中…') : t('强制重启') }}</button>
     </article>
     <article class="card group-card">
+      <div class="group-head"><h4>{{ t('更新渠道') }} · {{ updateInfo.channel === 'Git' ? 'Git / VPS / GitHub' : (updateInfo.channel || '—') }}</h4></div>
+      <div class="group-body">
+        <p>{{ t('渠道由部署页的 Mirror 酱开关决定；开启后失败直接报错，使用原渠道需手动关闭。') }}</p>
+        <p v-if="updateInfo.progress && updating">{{ Math.round(updateInfo.progress.downloaded / updateInfo.progress.total * 100) }}%</p>
+        <p v-if="desktopUpdate?.releaseNote">{{ desktopUpdate.releaseNote }}</p>
+      </div>
+    </article>
+    <article class="card group-card">
       <div class="group-head"><h4>{{ t('更新记录') }}</h4></div>
-      <div class="group-body history-body">
-        <div v-for="commit in historyCommits" :key="commit[0]" class="history-row" :class="{ current: updateInfo.local?.[0] && commit[0] === updateInfo.local[0] }"><span class="msg">{{ commit[3] }}</span><small><code>{{ commit[0] }}</code><span v-if="updateInfo.local?.[0] && commit[0] === updateInfo.local[0]" class="current-pill">{{ t('当前版本') }}</span>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
+      <div class="group-body history-body"><p v-if="updateInfo.channel === 'MirrorChyan' && !updateInfo.history_fresh" class="sub">{{ t('历史尚未刷新，显示本地记录') }}</p>
+        <div v-for="commit in historyCommits" :key="commit[0]" class="history-row" :class="{ current: updateInfo.local?.[0] && commit[0] === updateInfo.local[0] }"><span class="msg">{{ commit[3] }}</span><small><a :href="`https://github.com/megumiss/NIKKEAutoScript/commit/${commit[0]}`" target="_blank" rel="noopener noreferrer"><code>{{ String(commit[0]).slice(0, 8) }}</code></a><span v-if="updateInfo.local?.[0] && commit[0] === updateInfo.local[0]" class="current-pill">{{ t('当前版本') }}</span>{{ String(commit[2] || '').slice(0, 10) }}</small></div>
       </div>
     </article>
   </section>

@@ -20,6 +20,7 @@ from deploy.utils import DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
 from module.config.utils import nkas_instance
 from module.logger import logger
 from module.webui.setting import State
+from deploy.mirrorchyan import MirrorError, credential_path, save_cdk
 
 # Runtime state written by the announcement center, not a user setting.
 # StartupNoticeDismissedId lingers in pre-migration user deploy.yaml files.
@@ -88,6 +89,10 @@ TAG_I18N = {
 # lines, `hints` replaces `[Tag] advice` lines matched by tag; anything
 # missing falls back to the English template text.
 FIELD_I18N = {
+    'MirrorChyanEnabled': {
+        'zh-CN': {'desc': '启用 Mirror 酱（下次检查生效）。开启后源码和 EXE 只使用 Mirror 酱，失败直接报错；使用 Git/VPS 原渠道需手动关闭。CDK 可留空检查版本。'},
+        'ja-JP': {'desc': 'MirrorChyan を有効化（次回確認から反映）。有効時は専用経路を使い、失敗時はエラーで停止します。元の経路を使うには手動で無効化します。CDK は更新確認では省略可能です。'},
+    },
     'SecurityEntryEnabled': {
         'zh-CN': {'desc': '安全入口（即时生效）。默认关闭；开启后浏览器和远程 App 必须使用完整入口地址。不会更改监听地址或开放端口。'},
         'ja-JP': {'desc': 'セキュリティ入口（即時反映）。初期状態では無効。待受アドレスやポートは変更しません。'},
@@ -590,3 +595,18 @@ async def deploy_reset(request: Request):
     State.theme = config.Theme
     lang.set_language(config.Language)
     return JSONResponse({'status': 'success', 'theme': config.Theme, 'language': config.Language})
+
+
+async def mirror_cdk(request: Request):
+    root = State.deploy_config.root_filepath
+    if request.method == 'POST':
+        try:
+            data = await request.json()
+            if not isinstance(data, dict) or type(data.get('clear', False)) is not bool:
+                return _json_error('Expected cdk or clear.', 422)
+            save_cdk(root, data.get('cdk'), clear=data.get('clear', False))
+        except (ValueError, MirrorError):
+            return _json_error('CDK 格式无效，请输入 CDK 或使用清除按钮。', 422)
+        except OSError:
+            return _json_error('无法保存 CDK，请检查配置目录权限。', 500)
+    return JSONResponse({'configured': credential_path(root).is_file()}, headers={'Cache-Control': 'no-store'})

@@ -79,6 +79,9 @@ Deploy:
     InstallUiautomator2: true
 
   Update:
+    # Enable MirrorChyan for source and EXE updates. Errors stop the update; disable manually to use Git/VPS.
+    # CDK is optional for version checks. Takes effect on the next check without restarting.
+    MirrorChyanEnabled: false
     # Use auto update and builtin updater feature
     # This may cause problem https://github.com/LmeSzinc/AzurLaneAutoScript/issues/876
     EnableReload: true

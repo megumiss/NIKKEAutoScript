@@ -9,6 +9,9 @@ from deploy.config import ExecutionError
 from deploy.git import GitManager
 from deploy.nkas import NKASManager
 from deploy.pip import PipManager
+from deploy.mirrorchyan import MirrorError, enabled
+from deploy.source_update import DependencyError, current_version, run_update
+from deploy.update_package import UpdateLock, assert_ready, recover, recover_desktop
 
 
 class Starter(GitManager, PipManager, NKASManager):
@@ -91,18 +94,30 @@ class Starter(GitManager, PipManager, NKASManager):
 
         atomic_failure_cleanup('./config')
         excluded_pids = {int(desktop_pid)} if desktop_pid else set()
+        with UpdateLock(self.root_filepath):
+            recover_desktop(self.root_filepath)
+            recover(self.root_filepath, self.pip_install)
+            repairing_git = (
+                self.AutoUpdate and not enabled(self.root_filepath)
+                and os.path.isfile(os.path.join(self.root_filepath, 'config/.update/git-transition.json'))
+            )
+            if not repairing_git:
+                assert_ready(self.root_filepath)
         if self.AutoUpdate:
-            before_sha, _ = self._get_head_commit()
+            before_sha = current_version(self.root_filepath, self.git)
             try:
-                self.git_update()
-            except ExecutionError as e:
+                run_update(self)
+            except DependencyError:
+                raise
+            except (ExecutionError, MirrorError) as e:
                 error = str(e).strip() or 'Git update failed'
-                print(f'Auto update failed, skip update and continue startup: {error}')
                 self._save_auto_update_failed_notice(error)
+                assert_ready(self.root_filepath)
+                print(f'Auto update failed: {error}')
             else:
-                self.pip_install()
-                after_sha, _ = self._get_head_commit()
-                self._save_auto_update_notice(before_sha, after_sha)
+                after_sha = current_version(self.root_filepath, self.git)
+                if not enabled(self.root_filepath):
+                    self._save_auto_update_notice(before_sha, after_sha)
         self.nkas_kill(excluded_pids=excluded_pids)
 
     def start(self, desktop_pid=None, interactive=True):

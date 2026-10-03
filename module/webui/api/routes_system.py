@@ -12,6 +12,8 @@ from deploy.utils import DEPLOY_CONFIG, poor_yaml_read
 from module.logger import logger
 from module.webui.setting import State
 from module.webui.updater import updater
+from deploy.mirrorchyan import enabled
+from deploy.source_update import current_version, history
 
 
 def _json_error(message, status=400):
@@ -37,12 +39,26 @@ async def status(request: Request):
 
 
 async def update_status(_: Request):
-    local = updater.get_commit(short_sha1=True)
-    upstream = updater.get_commit(f'origin/{updater.Branch}', short_sha1=True)
-    history = updater.get_commit(f'origin/{updater.Branch}', n=20, short_sha1=True)
+    root = updater.root_filepath
+    mirror = enabled(root)
+    packaged = (Path(root) / 'app-version.json').is_file()
+    if mirror or packaged:
+        current = current_version(root, updater.git)
+        local = [current, '', '', '']
+        upstream = [updater.remote_version, '', '', '']
+        commits = [[c.get('sha'), c.get('author'), c.get('date'), c.get('message')]
+                   for c in history(root) if isinstance(c, dict)]
+        if current and not any(c[0] == current for c in commits):
+            commits.append(local)
+    else:
+        local = updater.get_commit(short_sha1=True)
+        upstream = updater.get_commit(f'origin/{updater.Branch}', short_sha1=True)
+        commits = updater.get_commit(f'origin/{updater.Branch}', n=50, short_sha1=True)
     return JSONResponse({
         'state': updater.state, 'error': updater.check_error,
-        'local': local, 'upstream': upstream, 'history': history or [],
+        'failure_stage': updater.failure_stage, 'progress': updater.download_progress,
+        'channel': 'MirrorChyan' if mirror else 'Git', 'history_fresh': updater.history_fresh,
+        'local': local, 'upstream': upstream, 'history': commits or [],
     })
 
 
@@ -161,11 +177,7 @@ async def read_announcements(request: Request):
 
 
 def _git_version():
-    try:
-        import subprocess
-        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], text=True).strip()
-    except (OSError, subprocess.SubprocessError):
-        return 'unknown'
+    return current_version(updater.root_filepath, updater.git)[:8] or 'unknown'
 
 
 async def restart(_: Request):

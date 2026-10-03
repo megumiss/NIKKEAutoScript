@@ -8,6 +8,10 @@
 **/node_modules
 config/deploy.yaml
 config/.security/
+config/.update/
+/app-version.json
+/release-files.json
+/update-history.json
 config/nkas.json
 config/nkas2.json
 config/serial/state.json
