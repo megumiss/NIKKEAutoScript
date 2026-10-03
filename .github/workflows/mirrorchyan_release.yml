@@ -1,0 +1,39 @@
+name: mirrorchyan_release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        default: ''
+        required: false
+  release:
+    types: [published]
+
+jobs:
+  mirrorchyan:
+    if: ${{ github.repository_owner == 'megumiss' }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: win
+            arch: x64
+            filename: 'NKAS_*_full-cn.7z'
+
+    steps:
+      - uses: MirrorChyan/uploading-action@v1
+        with:
+          filetype: latest-release
+          filename: ${{ matrix.filename }}
+          p7zip: true
+          mirrorchyan_rid: NIKKEAutoScript
+          tag: ${{ inputs.tag || github.event.release.tag_name }}
+
+          os: ${{ matrix.os }}
+          arch: ${{ matrix.arch }}
+
+          owner: megumiss
+          repo: NIKKEAutoScript
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          upload_token: ${{ secrets.MirrorChyanUploadToken }}

@@ -31,12 +31,6 @@ permissions:
 jobs:
   build-release:
     runs-on: windows-latest
-    outputs:
-      desktop_changed: ${{ steps.mirror_package.outputs.changed }}
-      desktop_version: ${{ steps.mirror_package.outputs.version }}
-    env:
-      DESKTOP_CHANGED: 'true'
-    
     steps:
     # ==========================
     # 1. 检出代码
@@ -151,9 +145,6 @@ jobs:
           throw "Desktop inputs changed since $previousTag but desktop version is still $currentVersion"
         }
         Write-Host "Desktop version check passed: $previousVersion -> $currentVersion"
-        if ($currentVersion -eq $previousVersion) {
-          "DESKTOP_CHANGED=false" >> $env:GITHUB_ENV
-        }
 
     - name: Build Tauri Shell
       working-directory: webapp
@@ -202,24 +193,6 @@ jobs:
       with:
         name: nkas-desktop-exe
         path: ${{ env.DESKTOP_EXE }}
-
-    - name: Build MirrorChyan Desktop ZIP
-      id: mirror_package
-      run: |
-        $mirrorZip = Join-Path $env:RUNNER_TEMP "NKAS.zip"
-        python -m deploy.build_mirror_package desktop --exe "$env:DESKTOP_EXE" --manifest "$env:DESKTOP_MANIFEST" --output $mirrorZip
-        if ($LASTEXITCODE -ne 0) { throw "MirrorChyan package failed" }
-        "MIRROR_DESKTOP_ZIP=$($mirrorZip -replace '\\','/')" >> $env:GITHUB_ENV
-        $desktopVersion = (Get-Content $env:DESKTOP_MANIFEST -Raw | ConvertFrom-Json).desktop_version
-        "MIRROR_DESKTOP_VERSION=$desktopVersion" >> $env:GITHUB_ENV
-        "version=$desktopVersion" >> $env:GITHUB_OUTPUT
-        "changed=$env:DESKTOP_CHANGED" >> $env:GITHUB_OUTPUT
-
-    - name: Save MirrorChyan Desktop ZIP Artifact
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-      with:
-        name: nkas-mirror-desktop
-        path: ${{ env.MIRROR_DESKTOP_ZIP }}
 
     # ==========================
     # 5. 清理与组装基础环境
@@ -467,34 +440,3 @@ jobs:
           source: "dist/${{ env.VERSIONED_EXE }},dist/nkas-desktop.json"
           target: ${{ secrets.VPS_DEPLOY_PATH || '/www/wwwroot/nkas.megumiss.top/releases/latest' }}
           strip_components: 1
-
-
-  deploy-mirror-desktop:
-    needs: build-release
-    runs-on: ubuntu-latest
-    if: (github.event_name == 'push' || inputs.publish_exe == true) && needs.build-release.outputs.desktop_changed == 'true'
-    permissions:
-      contents: read
-    concurrency:
-      group: mirrorchyan-desktop-stable
-      cancel-in-progress: false
-    env:
-      MIRROR_TOKEN: ${{ secrets.MirrorChyanUploadToken }}
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: nkas-mirror-desktop
-          path: dist
-      - name: Publish desktop ZIP to MirrorChyan
-        if: env.MIRROR_TOKEN != ''
-        uses: MirrorChyan/uploading-action@v1
-        with:
-          filetype: local
-          filename: dist/NKAS.zip
-          version_name: ${{ needs.build-release.outputs.desktop_version }}
-          mirrorchyan_rid: NKAS
-          upload_token: ${{ secrets.MirrorChyanUploadToken }}
-          os: windows
-          arch: amd64
-          auto_channel: 'false'
-          channel: stable
