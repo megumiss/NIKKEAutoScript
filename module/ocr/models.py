@@ -37,12 +37,42 @@ def get_ocr_device() -> str:
         return 'cpu'
 
 
+class SharedOcrClient:
+    """
+    共享 OCR 服务代理的本地包装，接口对齐 NIKKEOcr（调用方只用 predict）。
+    推理在服务端进程执行，间隔限制由服务端 NIKKEOcr 统一控制。
+    """
+
+    def __init__(self, server, lang, model_type, interval):
+        self._server = server
+        self.lang = lang
+        self.model_type = model_type
+        self.interval = interval
+
+    def predict(self, images):
+        return self._server.predict(self.lang, self.model_type, self.interval, images)
+
+
+_SHARED_OCR_SERVER = None
+
+
+def set_shared_ocr_server(server):
+    """
+    worker 进程启动时注入共享 OCR 服务代理。
+    未注入（独立运行 main.py 等场景）时保持进程内本地加载。
+    """
+    global _SHARED_OCR_SERVER
+    _SHARED_OCR_SERVER = server
+
+
 class OcrModel:
     def __init__(self):
         self._paddle_cache = {}
         self._paddle_num_cache = {}
 
     def paddle(self, model_type, interval):
+        if _SHARED_OCR_SERVER is not None:
+            return SharedOcrClient(_SHARED_OCR_SERVER, 'ch', model_type, interval)
         if model_type not in self._paddle_cache:
             # 首次 import paddle 需数十秒，包一层心跳日志避免看起来像卡死
             with OcrInitProgress('Importing paddle library'):
@@ -61,6 +91,8 @@ class OcrModel:
         return self._paddle_cache[model_type]
 
     def paddle_num(self, model_type, interval):
+        if _SHARED_OCR_SERVER is not None:
+            return SharedOcrClient(_SHARED_OCR_SERVER, 'en', model_type, interval)
         if model_type not in self._paddle_num_cache:
             with OcrInitProgress('Importing paddle library'):
                 from module.ocr.nikke_ocr import NIKKEOcr

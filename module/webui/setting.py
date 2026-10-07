@@ -1,13 +1,22 @@
-import multiprocessing
 import threading
 from multiprocessing.managers import SyncManager
 from typing import TYPE_CHECKING, Callable, Generic, TypeVar
+
+from module.ocr.server import get_shared_ocr_server
 
 if TYPE_CHECKING:
     from module.config.config_updater import ConfigUpdater
     from module.webui.config import DeployConfig
 
 T = TypeVar("T")
+
+
+class NkasManager(SyncManager):
+    pass
+
+
+# 多实例 worker 共享一份 OCR 推理服务，模型只在 manager 进程加载一次
+NkasManager.register('ocr', get_shared_ocr_server)
 
 
 class cached_class_property(Generic[T]):
@@ -62,7 +71,8 @@ class State:
 
     @classmethod
     def init(cls):
-        cls.manager = multiprocessing.Manager()
+        cls.manager = NkasManager()
+        cls.manager.start()
         cls._init = True
 
     @classmethod

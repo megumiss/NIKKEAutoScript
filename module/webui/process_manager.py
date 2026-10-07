@@ -64,6 +64,7 @@ class ProcessManager:
                     self._renderable_queue,
                     self._preview_queue,
                     ev,
+                    State.manager.ocr(),
                 ),
             )
             self._process.start()
@@ -456,7 +457,7 @@ class ProcessManager:
 
     @staticmethod
     def run_process(
-        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None
+        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None, ocr_server=None
     ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -474,6 +475,9 @@ class ProcessManager:
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
         set_preview_queue(pq)
+        if ocr_server is not None:
+            from module.ocr.models import set_shared_ocr_server
+            set_shared_ocr_server(ocr_server)
 
         from module.config.config import NikkeConfig
 
