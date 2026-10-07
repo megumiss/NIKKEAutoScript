@@ -455,6 +455,8 @@ whichcraft==0.6.1
     # via
     #   adbutils
     #   uiautomator2
+windows-capture==2.0.1
+    # via -r requirements.in
 winotify==1.1.0
     # via -r requirements.in
 wrapt==1.17.2

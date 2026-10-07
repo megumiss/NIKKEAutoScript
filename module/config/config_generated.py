@@ -70,7 +70,7 @@ class GeneratedConfig:
     PCClientInfo_GamePath = None
     PCClientInfo_GameTitleName = None
     PCClientInfo_GameProcessName = None
-    PCClientInfo_ScreenshotMethod = 'pyautogui'  # pyautogui, mss, PrintWindow
+    PCClientInfo_ScreenshotMethod = 'pyautogui'  # pyautogui, mss, PrintWindow, capture
     PCClientInfo_ScreenshotInterval = 0.3
     PCClientInfo_ControlScheme = 'pyautogui'  # pyautogui, postmessage, driver
     PCClientInfo_MoveBackend = 'driver'  # driver, cursor

@@ -1,5 +1,8 @@
 from ctypes import windll
 
+import threading
+import time
+
 import numpy as np
 import pyautogui
 import win32gui
@@ -10,6 +13,69 @@ try:
     import mss
 except ModuleNotFoundError:
     mss = None
+
+
+class WgcCaptureSession:
+    """
+    单个窗口的 Windows.Graphics.Capture 捕获会话。
+    后台线程持续收帧，只保留最新一帧的私有拷贝，帧缓冲有界。
+    """
+
+    def __init__(self, hwnd):
+        try:
+            from windows_capture import WindowsCapture
+        except ModuleNotFoundError:
+            raise RuntimeError('windows-capture is not installed, run: pip install windows-capture')
+
+        self.hwnd = hwnd
+        self.lock = threading.Lock()
+        self.latest = None
+        self.failed = False
+
+        # WGC 按需出帧，50ms 上限足够覆盖 0.3s 的截图间隔，避免空转收满 60fps
+        capture = WindowsCapture(
+            cursor_capture=False,
+            draw_border=False,
+            minimum_update_interval=50,
+            window_hwnd=int(hwnd),
+        )
+
+        @capture.event
+        def on_frame_arrived(frame, capture_control):
+            # frame_buffer 是原生映射内存的视图，回调返回后可能失效，必须拷贝
+            with self.lock:
+                self.latest = frame.frame_buffer.copy()
+
+        @capture.event
+        def on_closed():
+            self.failed = True
+
+        self.control = capture.start_free_threaded()
+
+    def read(self, timeout=3.0):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            with self.lock:
+                if self.latest is not None:
+                    return self.latest
+            if self.failed:
+                raise RuntimeError('Windows.Graphics.Capture session closed')
+            time.sleep(0.05)
+        raise RuntimeError('Windows.Graphics.Capture received no frame')
+
+
+_wgc_sessions = {}
+_wgc_sessions_lock = threading.Lock()
+
+
+def _wgc_session(hwnd):
+    with _wgc_sessions_lock:
+        session = _wgc_sessions.get(hwnd)
+        if session is None or session.failed or session.control.is_finished():
+            _wgc_sessions.pop(hwnd, None)
+            session = WgcCaptureSession(hwnd)
+            _wgc_sessions[hwnd] = session
+        return session
 
 
 class Screenshot:
@@ -138,6 +204,55 @@ class Screenshot:
             win32gui.ReleaseDC(window._hWnd, hwnd_dc)
 
     @staticmethod
+    def _capture_wgc(window, capture_left, capture_top, capture_width, capture_height):
+        import ctypes
+        from ctypes import wintypes
+
+        hwnd = window._hWnd
+        frame = _wgc_session(hwnd).read()
+
+        # WGC 帧覆盖窗口可见帧（含标题栏），物理像素，原点 = DWM 扩展帧边界原点。
+        # 进程 DPI 不感知时调用方坐标是逻辑像素，需要按窗口 DPI 换算到物理像素。
+        awareness = ctypes.c_int()
+        if ctypes.windll.shcore.GetProcessDpiAwareness(None, ctypes.byref(awareness)) != 0:
+            awareness.value = 2
+        if awareness.value == 0:
+            scale = ctypes.windll.user32.GetDpiForWindow(wintypes.HWND(hwnd)) / 96
+        else:
+            scale = 1.0
+
+        rect = wintypes.RECT()
+        hr = ctypes.windll.dwmapi.DwmGetWindowAttribute(
+            wintypes.HWND(hwnd), ctypes.c_uint32(9), ctypes.byref(rect), ctypes.sizeof(rect)
+        )
+        if hr != 0:
+            raise RuntimeError(f'DwmGetWindowAttribute failed: {hr}')
+
+        if frame.shape[1] != rect.right - rect.left or frame.shape[0] != rect.bottom - rect.top:
+            # 窗口 resize 过渡期内帧尺寸滞后于 EFB，抛错让上层重试
+            raise RuntimeError(
+                f'Windows.Graphics.Capture frame size {frame.shape[1]}x{frame.shape[0]} '
+                f'does not match window frame {rect.right - rect.left}x{rect.bottom - rect.top}'
+            )
+
+        crop_x = int(round(capture_left * scale)) - rect.left
+        crop_y = int(round(capture_top * scale)) - rect.top
+        crop_right = crop_x + int(round(capture_width * scale))
+        crop_bottom = crop_y + int(round(capture_height * scale))
+        if crop_x < 0 or crop_y < 0 or crop_right > frame.shape[1] or crop_bottom > frame.shape[0]:
+            raise RuntimeError(
+                f'Windows.Graphics.Capture crop ({crop_x}, {crop_y}, {crop_right}, {crop_bottom}) '
+                f'out of frame {frame.shape[1]}x{frame.shape[0]}'
+            )
+
+        image = frame[crop_y:crop_bottom, crop_x:crop_right, :3]
+        if image.size == 0:
+            raise RuntimeError('Windows.Graphics.Capture image crop is empty')
+        if scale != 1.0:
+            image = np.array(Image.fromarray(image).resize((int(capture_width), int(capture_height))))
+        return image[:, :, ::-1]  # BGRA -> RGB
+
+    @staticmethod
     def take_screenshot(
         title,
         resolution,
@@ -166,6 +281,14 @@ class Screenshot:
                 image = Screenshot._capture_mss(capture_left, capture_top, capture_width, capture_height)
             elif method == 'PrintWindow':
                 image = Screenshot._capture_printwindow(
+                    window=window,
+                    capture_left=capture_left,
+                    capture_top=capture_top,
+                    capture_width=capture_width,
+                    capture_height=capture_height,
+                )
+            elif method == 'capture':
+                image = Screenshot._capture_wgc(
                     window=window,
                     capture_left=capture_left,
                     capture_top=capture_top,

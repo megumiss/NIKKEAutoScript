@@ -297,7 +297,8 @@
         "option": [
           "pyautogui",
           "mss",
-          "PrintWindow"
+          "PrintWindow",
+          "capture"
         ]
       },
       "ScreenshotInterval": {

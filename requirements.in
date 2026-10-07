@@ -31,4 +31,5 @@ uiautomator2==2.16.26
 uiautomator2cache==0.3.0.1
 uvicorn==0.21.1
 websockets==10.4
+windows-capture==2.0.1
 winotify==1.1.0

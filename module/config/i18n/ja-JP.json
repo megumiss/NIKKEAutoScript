@@ -532,10 +532,11 @@
     },
     "ScreenshotMethod": {
       "name": "スクリーンショット方式",
-      "help": "pyautogui：互換性と安定性は高いですが、速度は遅く、ウィンドウの遮蔽の影響を受けます。\nmss：最速ですが、遮蔽の影響を受けます。\nPrintWindow：mssよりやや遅いですが、遮蔽の影響を受けず、互換性はやや低い可能性があります。",
+      "help": "pyautogui：互換性と安定性は高いですが、速度は遅く、ウィンドウの遮蔽の影響を受けます。\nmss：最速ですが、遮蔽の影響を受けます。\nPrintWindow：mssよりやや遅いですが、遮蔽の影響を受けず、互換性はやや低い可能性があります。\ncapture：Windows.Graphics.Capture ベースで、遮蔽の影響を受けずメモリ使用量も少ない方式です。Windows 10 1903 以降が必要です。",
       "pyautogui": "pyautogui",
       "mss": "mss",
-      "PrintWindow": "PrintWindow"
+      "PrintWindow": "PrintWindow",
+      "capture": "capture"
     },
     "ScreenshotInterval": {
       "name": "スクリーンショット間隔",

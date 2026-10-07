@@ -532,10 +532,11 @@
     },
     "ScreenshotMethod": {
       "name": "截图方式",
-      "help": "pyautogui：兼容性高、最稳定，但速度较慢，且会受遮挡影响。\nmss：速度最快，但会受遮挡影响。\nPrintWindow：速度比mss稍慢，不受遮挡影响，兼容性可能稍差。",
+      "help": "pyautogui：兼容性高、最稳定，但速度较慢，且会受遮挡影响。\nmss：速度最快，但会受遮挡影响。\nPrintWindow：速度比mss稍慢，不受遮挡影响，兼容性可能稍差。\ncapture：基于 Windows.Graphics.Capture，不受遮挡影响且内存占用低，需要 Windows 10 1903 及以上。",
       "pyautogui": "pyautogui",
       "mss": "mss",
-      "PrintWindow": "PrintWindow"
+      "PrintWindow": "PrintWindow",
+      "capture": "capture"
     },
     "ScreenshotInterval": {
       "name": "截图间隔",

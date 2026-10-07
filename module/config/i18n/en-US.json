@@ -532,10 +532,11 @@
     },
     "ScreenshotMethod": {
       "name": "Screenshot Method",
-      "help": "pyautogui: best compatibility and stability, but slower and affected by occlusion.\nmss: fastest, but affected by occlusion.\nPrintWindow: slightly slower than mss, not affected by occlusion, compatibility may be slightly worse.",
+      "help": "pyautogui: best compatibility and stability, but slower and affected by occlusion.\nmss: fastest, but affected by occlusion.\nPrintWindow: slightly slower than mss, not affected by occlusion, compatibility may be slightly worse.\ncapture: based on Windows.Graphics.Capture, not affected by occlusion with low memory usage, requires Windows 10 1903 or later.",
       "pyautogui": "pyautogui",
       "mss": "mss",
-      "PrintWindow": "PrintWindow"
+      "PrintWindow": "PrintWindow",
+      "capture": "capture"
     },
     "ScreenshotInterval": {
       "name": "Screenshot Interval",
