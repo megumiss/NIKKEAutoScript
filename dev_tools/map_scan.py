@@ -8,6 +8,11 @@ import subprocess
 import sys
 import threading
 
+if __package__:
+    from .map_paths import DEFAULT_CAPTURE_ROOT, DEFAULT_MAPS_ROOT
+else:
+    from map_paths import DEFAULT_CAPTURE_ROOT, DEFAULT_MAPS_ROOT
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,7 +39,9 @@ class ScanJobs:
             if type(stroke) not in (int, float) or not 0 < stroke <= 240:
                 raise ValueError('扫描步长必须大于 0，且不超过 240。')
             identifier = secrets.token_hex(10)
-            folder = self.store.root / 'scans' / identifier
+            root = (DEFAULT_CAPTURE_ROOT if self.store.root.is_relative_to(DEFAULT_MAPS_ROOT.resolve())
+                    else self.store.root)
+            folder = root / 'scans' / identifier
             folder.mkdir(parents=True)
             command = [sys.executable, '-X', 'utf8', '-u', '-m', 'dev_tools.minimap_chapters',
                        '--start', str(chapter), '--end', str(chapter), '--output', str(folder),
@@ -77,6 +84,13 @@ class ScanJobs:
                 result.update(state='failed', message=f'扫描未完成（退出码 {code}），请查看日志。')
                 if code == 0:
                     try:
+                        destination = self.store.root / result['map_id']
+                        if package != destination and not destination.exists():
+                            if __package__:
+                                from .map_runtime import export_runtime
+                            else:
+                                from map_runtime import export_runtime
+                            export_runtime(package, destination)
                         self.store.load(result['map_id'])
                         result.update(state='complete', message='扫描与处理完成，可以打开新地图。')
                     except (OSError, ValueError, KeyError) as exc:

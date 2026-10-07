@@ -1,0 +1,537 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "337dea5b6148ecbf446d907bd8176f358b004a2c0c0b4e356037815d5d0b505b",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_704532_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          909.0,
+          1049.5
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "芯尘 ×20\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/704532.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.863615095615387,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2493274138049593,
+            5.447028227664182,
+            573.3537145718265
+          ],
+          [
+            0.07630945319046013,
+            9.982497008402603,
+            676.0273437197924
+          ],
+          [
+            6.816858340422691e-05,
+            0.006069159980574022,
+            1.0277689232582972
+          ]
+        ],
+        "player_center": [
+          115.67383594624648,
+          111.28102505387106
+        ],
+        "url": "https://www.gamekee.com/nikke/704532.html",
+        "article_id": 704532,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1778316273,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1723/h_969/1253/475341/2026/4/9/774732.png",
+        "item_name": "芯尘 ×20",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_702987_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          1088.5,
+          1304.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Red Light [Scenario Ver.] 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/702987.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.8940216898918152,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.262143107484954,
+            6.588030304012098,
+            766.5742721443863
+          ],
+          [
+            0.09505581362662252,
+            11.65151600306046,
+            958.663797615824
+          ],
+          [
+            6.816858340422691e-05,
+            0.006069159980574022,
+            1.0277689232582972
+          ]
+        ],
+        "player_center": [
+          111.05791488184562,
+          102.2220807172842
+        ],
+        "url": "https://www.gamekee.com/nikke/702987.html",
+        "article_id": 702987,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1776931747,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1732/h_974/1253/475341/2026/3/23/270220.png",
+        "item_name": "Red Light [Scenario Ver.] 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_702987_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          712.5,
+          897.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×44000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/702987.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9072170853614807,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.503386199753285,
+            3.7366485695757565,
+            425.44007175383257
+          ],
+          [
+            0.06094282843162116,
+            8.88768499593721,
+            628.3387296464964
+          ],
+          [
+            5.843021434648021e-05,
+            0.005202137126206305,
+            1.1203013166213858
+          ]
+        ],
+        "player_center": [
+          106.90362440600087,
+          89.04231218675685
+        ],
+        "url": "https://www.gamekee.com/nikke/702987.html",
+        "article_id": 702987,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1776931747,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1732/h_974/1253/475341/2026/3/23/112269.png",
+        "item_name": "信用点 ×44000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_702987_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          207.9,
+          924.0
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Red Light 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/702987.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.91225266456604,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.1753196689112397,
+            1.5612923093862972,
+            -135.02886303900053
+          ],
+          [
+            0.07826788945493082,
+            10.12649271003357,
+            486.7046108380649
+          ],
+          [
+            7.790695246197361e-05,
+            0.006936182834941739,
+            0.9352365298952087
+          ]
+        ],
+        "player_center": [
+          100.47009881112805,
+          101.36318379471732
+        ],
+        "url": "https://www.gamekee.com/nikke/702987.html",
+        "article_id": 702987,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1776931747,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1732/h_974/1253/475341/2026/3/23/71938.png",
+        "item_name": "Red Light 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_702987_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          574.1,
+          891.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Red Light - Genesis - 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/702987.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.876735270023346,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2265591069479473,
+            3.4199287941524585,
+            230.07889420355525
+          ],
+          [
+            0.06615233426323032,
+            9.078192171297074,
+            522.8897741543061
+          ],
+          [
+            6.816858340422691e-05,
+            0.006069159980574022,
+            1.0277689232582972
+          ]
+        ],
+        "player_center": [
+          115.07432813380761,
+          107.03770744525067
+        ],
+        "url": "https://www.gamekee.com/nikke/702987.html",
+        "article_id": 702987,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1776931747,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1732/h_974/1253/475341/2026/3/23/432155.png",
+        "item_name": "Red Light - Genesis - 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_702987_09",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 09",
+      "points": [
+        [
+          1251.1,
+          755.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×44000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/702987.html",
+      "source": {
+        "number": 9,
+        "road_iou": 0.9016445875167847,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2551742951847626,
+            8.670879715201579,
+            823.5885801035884
+          ],
+          [
+            0.06432254496423755,
+            8.884915982578999,
+            319.2972719868226
+          ],
+          [
+            7.790695246197361e-05,
+            0.006936182834941739,
+            0.9352365298952087
+          ]
+        ],
+        "player_center": [
+          109.94132160498562,
+          106.199256198601
+        ],
+        "url": "https://www.gamekee.com/nikke/702987.html",
+        "article_id": 702987,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1776931747,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1732/h_974/1253/475341/2026/3/23/775706.png",
+        "item_name": "信用点 ×44000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_702987_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          1409.0,
+          931.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 轨道电梯YML 【重磅消息】轨道电梯攻略失败，是因为内部有间谍！\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/702987.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.8974677920341492,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.5427097340084663,
+            7.2376868555125995,
+            1179.4028578400253
+          ],
+          [
+            0.05989108457338452,
+            8.794046527665497,
+            608.1733059473115
+          ],
+          [
+            5.843021434648021e-05,
+            0.005202137126206305,
+            1.1203013166213858
+          ]
+        ],
+        "player_center": [
+          118.24638179489678,
+          110.01523563415864
+        ],
+        "url": "https://www.gamekee.com/nikke/702987.html",
+        "article_id": 702987,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1776931747,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1732/h_974/1253/475341/2026/3/23/26687.png",
+        "item_name": "遗失物品 轨道电梯YML 【重磅消息】轨道电梯攻略失败，是因为内部有间谍！",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_702987_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          836.9,
+          707.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Red Eyes 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/702987.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.8931859731674194,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.3215446444445504,
+            5.568959589418961,
+            452.6955518108793
+          ],
+          [
+            0.05932010190171555,
+            8.540763890993382,
+            294.8280749495438
+          ],
+          [
+            7.46608294427247e-05,
+            0.006647175216819166,
+            0.9660806610162382
+          ]
+        ],
+        "player_center": [
+          108.98375761788985,
+          101.2427285705701
+        ],
+        "url": "https://www.gamekee.com/nikke/702987.html",
+        "article_id": 702987,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1776931747,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1732/h_974/1253/475341/2026/3/23/923663.png",
+        "item_name": "Red Eyes 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_702987_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          475.6,
+          391.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "NEO GENESIS 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/702987.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.9022292494773865,
+        "roi": [
+          18,
+          80,
+          222,
+          284
+        ],
+        "roi_to_map": [
+          [
+            3.524617702393914,
+            3.718716208793483,
+            74.28163221624288
+          ],
+          [
+            0.04138516909998378,
+            7.167870316940119,
+            -48.04750684525311
+          ],
+          [
+            8.592678580364738e-05,
+            0.007650201656185743,
+            0.8864105757169995
+          ]
+        ],
+        "player_center": [
+          97.52864503962618,
+          94.40352744815775
+        ],
+        "url": "https://www.gamekee.com/nikke/702987.html",
+        "article_id": 702987,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1776931747,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1732/h_974/1253/475341/2026/3/23/197871.png",
+        "item_name": "NEO GENESIS 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1732,
+          974
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

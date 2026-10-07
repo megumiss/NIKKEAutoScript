@@ -1,0 +1,427 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "c39848ff100c352a81fdbab61ec3b3356e82ec1ee143f3b8a0ec6139e61436b0",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_599239_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          521.9,
+          680.3
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Splinter - Heated - 【Two Top】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/599239.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.8603653907775879,
+        "roi": [
+          7,
+          6,
+          538,
+          542
+        ],
+        "roi_to_map": [
+          [
+            2.2026177321754563,
+            1.556507359479154,
+            73.87164635907912
+          ],
+          [
+            0.1780581660368928,
+            4.392445656683022,
+            25.07181239281122
+          ],
+          [
+            0.00022776773669310675,
+            0.00295236883124924,
+            1.2461731462560177
+          ]
+        ],
+        "player_center": [
+          274.1133569557871,
+          342.4044059606189
+        ],
+        "url": "https://www.gamekee.com/nikke/599239.html",
+        "article_id": 599239,
+        "difficulty": "hard",
+        "author": "DEVILS",
+        "article_updated": 1694268491,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_544/h_546/1253/262658/2023/8/9/343217.jpg",
+        "item_name": "Splinter - Heated - 【Two Top】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          544,
+          546
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_599239_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          150.5,
+          698.0
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Blurred Vision [Scenario Ver.] 【Two Top】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/599239.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8619779944419861,
+        "roi": [
+          4,
+          0,
+          535,
+          536
+        ],
+        "roi_to_map": [
+          [
+            2.120165811492552,
+            0.4877498425669292,
+            -377.2430325855993
+          ],
+          [
+            0.1830690562441412,
+            4.4573977709705055,
+            52.48762161044361
+          ],
+          [
+            0.00022776773669310675,
+            0.00295236883124924,
+            1.2461731462560177
+          ]
+        ],
+        "player_center": [
+          263.71322261886337,
+          338.39881416023763
+        ],
+        "url": "https://www.gamekee.com/nikke/599239.html",
+        "article_id": 599239,
+        "difficulty": "hard",
+        "author": "DEVILS",
+        "article_updated": 1694268491,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_542/h_536/1253/262658/2023/8/9/732361.jpg",
+        "item_name": "Blurred Vision [Scenario Ver.] 【Two Top】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          542,
+          536
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_599239_04",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 04",
+      "points": [
+        [
+          640.5,
+          273.4
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "The Harvester 【Two Top】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/599239.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.901756227016449,
+        "roi": [
+          4,
+          0,
+          535,
+          541
+        ],
+        "roi_to_map": [
+          [
+            2.109300872539909,
+            2.20180242459262,
+            173.5836230079229
+          ],
+          [
+            0.09183517537667595,
+            3.1344421443239874,
+            -454.7511631722048
+          ],
+          [
+            0.0002630448945647664,
+            0.0034125963816534657,
+            1.104934586378626
+          ]
+        ],
+        "player_center": [
+          272.35607192694016,
+          341.3505191235583
+        ],
+        "url": "https://www.gamekee.com/nikke/599239.html",
+        "article_id": 599239,
+        "difficulty": "hard",
+        "author": "DEVILS",
+        "article_updated": 1694268491,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_539/h_541/1253/262658/2023/8/9/318675.jpg",
+        "item_name": "The Harvester 【Two Top】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          539,
+          541
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576484_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          831.8,
+          622.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "B\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576484.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.8585494756698608,
+        "roi": [
+          0,
+          10,
+          493,
+          501
+        ],
+        "roi_to_map": [
+          [
+            2.473919103667039,
+            2.6989184431078947,
+            460.04163214460976
+          ],
+          [
+            0.17662159948550696,
+            4.557386140359989,
+            -57.60757283637377
+          ],
+          [
+            0.0002478018894503651,
+            0.003212209357578603,
+            1.2481997640877718
+          ]
+        ],
+        "player_center": [
+          251.0797279778386,
+          324.39704527982167
+        ],
+        "url": "https://www.gamekee.com/nikke/576484.html",
+        "article_id": 576484,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669704299,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_493/h_501/1253/4408/2022/10/29/579134.png",
+        "item_name": "B",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          493,
+          501
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576484_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          785.8,
+          306.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Splinter\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576484.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.89460688829422,
+        "roi": [
+          0,
+          0,
+          512,
+          512
+        ],
+        "roi_to_map": [
+          [
+            2.2748113035870077,
+            2.878214750006269,
+            330.9915808494872
+          ],
+          [
+            0.10665156778437344,
+            3.4345790975066626,
+            -417.7294432623876
+          ],
+          [
+            0.0002783738022438834,
+            0.0036058879735830565,
+            1.1035093125111373
+          ]
+        ],
+        "player_center": [
+          253.79919386257248,
+          321.8217283133026
+        ],
+        "url": "https://www.gamekee.com/nikke/576484.html",
+        "article_id": 576484,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669704299,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/237671.png",
+        "item_name": "Splinter",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576484_09",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 09",
+      "points": [
+        [
+          446.6,
+          439.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "4.旅行团\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576484.html",
+      "source": {
+        "number": 9,
+        "road_iou": 0.8836961984634399,
+        "roi": [
+          5,
+          0,
+          504,
+          512
+        ],
+        "roi_to_map": [
+          [
+            2.1792558193290517,
+            1.6774540548031114,
+            -21.580463314732498
+          ],
+          [
+            0.14209712489753287,
+            3.896132758125294,
+            -275.5089298181693
+          ],
+          [
+            0.0002780093315341987,
+            0.0036058879735830565,
+            1.1054096776677889
+          ]
+        ],
+        "player_center": [
+          239.98788865280133,
+          327.29821450258845
+        ],
+        "url": "https://www.gamekee.com/nikke/576484.html",
+        "article_id": 576484,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669704299,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/676529.png",
+        "item_name": "4.旅行团",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576484_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          387.6,
+          335.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Orange Pop\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576484.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.8832349181175232,
+        "roi": [
+          5,
+          0,
+          504,
+          512
+        ],
+        "roi_to_map": [
+          [
+            2.1614632221108634,
+            1.4466772244937958,
+            -92.32668268547098
+          ],
+          [
+            0.112906145086442,
+            3.5175145208990726,
+            -391.5769459732871
+          ],
+          [
+            0.0002780093315341987,
+            0.0036058879735830565,
+            1.1054096776677889
+          ]
+        ],
+        "player_center": [
+          245.70533433554738,
+          328.0450500552189
+        ],
+        "url": "https://www.gamekee.com/nikke/576484.html",
+        "article_id": 576484,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669704299,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/500573.png",
+        "item_name": "Orange Pop",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

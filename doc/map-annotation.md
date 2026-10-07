@@ -12,13 +12,13 @@
 python dev_tools/map_annotator.py
 ```
 
-默认递归查找 `data/chapter_maps/current/` 下的地图包，与采集和 Wiki 导入共用目录，自动打开浏览器。网页只监听本机 `127.0.0.1:8766`。终端按 Ctrl+C 关闭服务。
+默认递归查找 `data/chapter_maps/runtime/` 下的运行地图，与 Wiki 导入共用目录，自动打开浏览器。完整采集与辅助数据存放在 `data/chapter_maps/local/`，不进入默认地图列表。网页只监听本机 `127.0.0.1:8766`。终端按 Ctrl+C 关闭服务。
 
 指定单张地图或其他集合目录：
 
 ```powershell
-python dev_tools/map_annotator.py --map data/chapter_maps/current/chapter_38
-python dev_tools/map_annotator.py --root data/chapter_maps/current
+python dev_tools/map_annotator.py --map data/chapter_maps/runtime/chapter_38
+python dev_tools/map_annotator.py --root data/chapter_maps/runtime
 ```
 
 `--map` 指向包含 `map.png` 和 `map.json` 的目录；未指定 `--root` 时，同级地图包也会进入下拉列表。`--root` 和 `--map` 一起使用时，后者必须在前者目录内。`--port 0` 可自动选择可用端口，`--no-open` 可关闭自动打开浏览器。
@@ -76,8 +76,8 @@ Ctrl+S 同时保存标注和道路修订；再次打开自动恢复，原始 `ma
   `map.json`、原始帧、深度及重绘证据。扫描任务自动串联上述处理。
 - 页面显示阶段、已保存帧数与日志位置。「停止扫描」请求协作退出，正在计算的阶段可能需要等待；
   已采集帧保留。「打开扫描结果」只在任务成功且地图包校验通过后可用，切换时仍检查未保存编辑。
-- 输出位于编辑器地图根目录的 `scans/<任务 ID>/chapter_XX/`，不会覆盖当前地图或修订。
-  `.processing/` 保存中间证据，目录列表不会展示这些临时地图。
+- 使用默认运行目录时，完整扫描写入 `data/chapter_maps/local/captures/scans/<任务 ID>/chapter_XX/`；成功后自动将运行必需文件导出到 `runtime/scans/<任务 ID>/chapter_XX/`，供「打开扫描结果」使用，不覆盖既有地图或修订。显式打开其他本地地图集合时，仍在该集合的 `scans/` 下输出。
+  `.processing/` 保存中间证据，不会进入运行目录。
 - 同一编辑器中的扫描与小队移动互斥。3D 导出仍标记 `navigation_ready=false`，
   该标记表示整章几何与跨层导航未验收；局部定位和移动测试见下节。
 
@@ -152,9 +152,13 @@ Wiki 缓存绑定底图、几何和道路修订，收集品对象变化不会触
   底图尺寸、SHA-256 和标注绑定必须一致，参考图也必须与底图同尺寸。
 - `local_parallax` 基线的 `rectified_grid_pixel` 在编辑器中按实际栅格像素处理；坐标方向须保持左上角原点、
   X 向右、Y 向下，不修改源地图元数据或进行隐式缩放。
-- 每次覆盖前，将原标注备份到同目录 `.annotation_backups/`，再通过临时文件原子替换。恢复备份时先保留当前副本，再将选中的备份复制为 `annotations.json` 并重新加载。
+- 每次覆盖前，运行地图的原标注备份到 `local/packages/<地图相对路径>/.annotation_backups/`，再通过临时文件原子替换。显式打开其他本地地图包时，备份仍在包内。恢复备份时先保留当前副本，再将选中的备份复制为 `annotations.json` 并重新加载。
 - 未保存修改在离开网页或切换地图时会提示。若其他窗口或程序已经修改标注，保存会拒绝覆盖；先下载当前副本，再重新加载并比较。下载副本不等于保存到地图包。
-- 数据目录受 Git 忽略，地图与人工标注不会因此自动进入版本库；需要时另行备份地图包。
+- `data/chapter_maps/runtime/` 只放需要提交的运行地图；`local/` 放完整采集、实拍参考图、重建缓存、报告和备份，不提交。历史 `current/` 整包与其他历史目录保存在 `local/` 下，作为本地快照；后续标注以 `runtime/` 内文件为准。
+- [map_runtime.py](../dev_tools/map_runtime.py) 按定位模型导出运行文件：所有章节保留 `map.png`、`map.json`、`annotations.json`，平面章节另保留 `source/map_data.npz`。平面实验包再通过 `prepare_package.py` 导入，共用仓库已有的 `assets/calibration.json` 并生成 `validation.json`；移动测试入口也会创建独立运行副本。
+- 第 40 章使用局部视差定位，另保留 `source/scan.json`、该章 134 张参考帧及对应深度文件；不保留平面缓存。局部移动还需 `movement_calibration/<normal|hard>/` 内的 `calibration.json`、`reference.png`、`surface.png`。当前仍缺该章局部移动标定，需在游戏中采集后才能移动。
+- 运行地图的道路导出、标注备份、平面标定采样及旧局部标定写入 `local/packages/<地图相对路径>/`。完整采集包的实拍参考图可通过显式 `--map` 打开；重建与扫描回放使用 `local/` 内完整数据，不使用精简后的运行包。
+- 导出入口只写到新目录，拒绝覆盖已有运行地图；地图与标注保留原始文件字节，避免换行转换破坏哈希绑定。保存后的标注修改仍需 Git 提交。本地 `formal_manifest.json` 是历史采集快照，不能代替运行包的 `validation.json`。
 
 ## 验证
 

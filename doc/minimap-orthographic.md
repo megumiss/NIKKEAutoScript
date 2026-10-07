@@ -32,7 +32,7 @@ Wiki 的 `MapMatcher` 根据 `coordinate_model` 选择平面或分层定位器�
 输出目录必须尚不存在。可使用已生成包复现到新目录：
 
 ```powershell
-.venv\Scripts\python.exe -m dev_tools.minimap_orthographic --source data/chapter_maps/orthographic_package_20260930/chapter_40/source --model data/chapter_maps/orthographic_package_20260930/chapter_40/surface_model.json --tracks data/chapter_maps/orthographic_package_20260930/chapter_40/tracks.json --output data/chapter_maps/orthographic_replay/chapter_40
+.venv\Scripts\python.exe -m dev_tools.minimap_orthographic --source data/chapter_maps/local/orthographic_package_20260930/chapter_40/source --model data/chapter_maps/local/orthographic_package_20260930/chapter_40/surface_model.json --tracks data/chapter_maps/local/orthographic_package_20260930/chapter_40/tracks.json --output data/chapter_maps/local/orthographic_replay/chapter_40
 ```
 
 顶层沿用 `map.json`、`map.png`、`reference.png`、`annotations.json`。

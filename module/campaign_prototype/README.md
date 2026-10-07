@@ -26,7 +26,7 @@
 | `check_controls.py`、`scene_pan.py`、`pan_check.py` | 地图状态切换及两类镜头行为的现场实验 |
 | `assets/`、`migration.json` | 必要弹窗模板、历史标定及迁移来源哈希 |
 
-地图默认在仓库的 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`。两者均为本机数据，不随 Git 分发。`migration.json` 中的哈希对应迁移源文件，不是修改后的目标代码。
+命令行实验包默认在 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`，两者均为本机数据。需要提交的章节地图位于 `data/chapter_maps/runtime/`，由 [map_runtime.py](../../dev_tools/map_runtime.py) 从完整采集包导出；完整采集、重建与辅助数据位于 `data/chapter_maps/local/`，不提交。平面章节使用下方命令导入实验包。第 40 章保留局部定位所需参考帧和深度数据，但仍缺现场局部移动标定。`migration.json` 中的哈希对应迁移源文件，不是修改后的目标代码。
 
 `assets/chapter_38_validation.json` 保存本机已验证地图副本的初始文件清单，用于核对历史数据；实际运行读取所选包自己的 `validation.json`。Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/wiki_references/NN.png`；没有它们仍可运行地图校验、定位回放及控制检查。
 
@@ -48,7 +48,7 @@
 把已导出的静态地图导入到**尚不存在**的目录。下面的源路径应替换为实际采集包；默认标定只在已有 38 章实验中验证过。
 
 ```powershell
-.venv\Scripts\python.exe -m module.campaign_prototype.prepare_package --source data/chapter_maps/repaired/chapter_38 --destination data/campaign_prototype/chapter_38 --chapter 38
+.venv\Scripts\python.exe -m module.campaign_prototype.prepare_package --source data/chapter_maps/runtime/chapter_38 --destination data/campaign_prototype/chapter_38 --chapter 38
 ```
 
 离线定位需传入一张 `486×462` 的展开地图 ROI：

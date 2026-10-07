@@ -9,7 +9,7 @@
 正式单章入口（游戏须先进入第 40 章普通野外页面，使用新的输出目录）：
 
 ```powershell
-.venv\Scripts\python.exe -X utf8 -m dev_tools.minimap_chapters --start 40 --end 40 --process-3d --stroke-px 120 --output data/chapter_maps/formal_3d
+.venv\Scripts\python.exe -X utf8 -m dev_tools.minimap_chapters --start 40 --end 40 --process-3d --stroke-px 120 --output data/chapter_maps/local/formal_3d
 ```
 
 省略 `--process-3d` 时沿用平面重建，默认步长为 120。该选项作用于本次命令的所有章节，
@@ -22,7 +22,7 @@
 从仓库根目录执行，输出目录必须尚不存在：
 
 ```powershell
-.venv\Scripts\python.exe -m dev_tools.minimap_layered --source data/chapter_maps/current/chapter_40/source --output data/chapter_maps/layered_new/chapter_40
+.venv\Scripts\python.exe -m dev_tools.minimap_layered --source data/chapter_maps/local/current/chapter_40/source --output data/chapter_maps/local/layered_new/chapter_40
 ```
 
 可用 `--depth-cache <已有分层重建目录>` 重用其原始逐像素视差。

@@ -1,0 +1,722 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "1a0b1dfe6527bee5c0bd98c1c15b2e50736eb372dc04bdbbf3904c1ac1215789",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_590968_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          430.9,
+          882.6
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Frost Pillar-Another Side- 【White Snow】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590968.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.950223982334137,
+        "roi": [
+          0,
+          0,
+          279,
+          224
+        ],
+        "roi_to_map": [
+          [
+            1.9894358269761234,
+            0.9466006252586617,
+            302.360207847319
+          ],
+          [
+            -0.011398493693773076,
+            4.283438523809128,
+            892.4714911239095
+          ],
+          [
+            -1.0922823363872421e-05,
+            0.0021923669642701198,
+            1.34128433938933
+          ]
+        ],
+        "player_center": [
+          138.0826697504455,
+          124.13781147263167
+        ],
+        "url": "https://www.gamekee.com/nikke/590968.html",
+        "article_id": 590968,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1684312908,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_279/h_224/1253/4408/2023/4/17/817786.png",
+        "item_name": "Frost Pillar-Another Side- 【White Snow】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          279,
+          224
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590968_02",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 02",
+      "points": [
+        [
+          120.8,
+          736.1
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Labyrinth-escape point 【White Snow】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590968.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9492913484573364,
+        "roi": [
+          0,
+          0,
+          240,
+          188
+        ],
+        "roi_to_map": [
+          [
+            2.0383419009723793,
+            0.3361179753726852,
+            -65.75485012201862
+          ],
+          [
+            -0.011293947099934571,
+            4.305854340442719,
+            756.9726708845392
+          ],
+          [
+            -1.269778216050169e-05,
+            0.0025471483402308443,
+            1.3473974954058838
+          ]
+        ],
+        "player_center": [
+          110.66399608339091,
+          96.67252549106543
+        ],
+        "url": "https://www.gamekee.com/nikke/590968.html",
+        "article_id": 590968,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1684312908,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_240/h_188/1253/4408/2023/4/17/545878.png",
+        "item_name": "Labyrinth-escape point 【White Snow】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          240,
+          188
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590968_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          1126.9,
+          1121.0
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "EEEEEEEE-ntertainment 【Wonder Land】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590968.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9134605526924133,
+        "roi": [
+          0,
+          0,
+          284,
+          286
+        ],
+        "roi_to_map": [
+          [
+            2.124673743601204,
+            3.1900589294033304,
+            1136.1538284547312
+          ],
+          [
+            -0.016407406346655606,
+            5.430397628812938,
+            928.325247305824
+          ],
+          [
+            -1.3323729168413743e-05,
+            0.0026718339233190677,
+            1.2051254240356113
+          ]
+        ],
+        "player_center": [
+          89.14747864128334,
+          173.5978299894176
+        ],
+        "url": "https://www.gamekee.com/nikke/590968.html",
+        "article_id": 590968,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1684312908,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_284/h_286/1253/4408/2023/4/17/799511.png",
+        "item_name": "EEEEEEEE-ntertainment 【Wonder Land】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          284,
+          286
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590968_04",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 04",
+      "points": [
+        [
+          757.9,
+          328.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "You CAN'T STOP US 【White Snow】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590968.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.8797591328620911,
+        "roi": [
+          0,
+          0,
+          252,
+          215
+        ],
+        "roi_to_map": [
+          [
+            1.963314258596553,
+            4.758215778055451,
+            485.1975753193936
+          ],
+          [
+            -0.010077122758393288,
+            4.009512633028935,
+            -3.48089453794254
+          ],
+          [
+            -3.0232814667861164e-05,
+            0.00606576721022415,
+            0.9370450650773775
+          ]
+        ],
+        "player_center": [
+          100.82119162754643,
+          154.09632100867478
+        ],
+        "url": "https://www.gamekee.com/nikke/590968.html",
+        "article_id": 590968,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1684312908,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_252/h_215/1253/4408/2023/4/17/852516.png",
+        "item_name": "You CAN'T STOP US 【White Snow】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          252,
+          215
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171576_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          489.4,
+          1452.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "PM 03:42\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171576.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9214423894882202,
+        "roi": [
+          6,
+          0,
+          505,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.9042112231912987,
+            1.1652213604639368,
+            1.4127303827854902
+          ],
+          [
+            -0.017909469429564798,
+            5.510104562217328,
+            732.3829702401783
+          ],
+          [
+            -1.1888584820413607e-05,
+            0.0023879515689664167,
+            0.9769563057856137
+          ]
+        ],
+        "player_center": [
+          250.169571134881,
+          336.308178282142
+        ],
+        "url": "https://www.gamekee.com/nikke/171576.html",
+        "article_id": 171576,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667801418,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/861248.png",
+        "item_name": "PM 03:42",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171576_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          877.7,
+          1262.0
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "咖啡厅设计图\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171576.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9095536470413208,
+        "roi": [
+          5,
+          0,
+          504,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8996697837899006,
+            2.077418859809108,
+            374.61003919288993
+          ],
+          [
+            -0.015817078501172,
+            5.089825086079238,
+            560.4386604219103
+          ],
+          [
+            -1.1888584820413607e-05,
+            0.0023879515689664167,
+            0.9769563057856137
+          ]
+        ],
+        "player_center": [
+          255.94285301072364,
+          323.9694652826029
+        ],
+        "url": "https://www.gamekee.com/nikke/171576.html",
+        "article_id": 171576,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667801418,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/799989.png",
+        "item_name": "咖啡厅设计图",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171576_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          688.7,
+          976.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Frost Pillar\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171576.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8895242214202881,
+        "roi": [
+          2,
+          0,
+          512,
+          510
+        ],
+        "roi_to_map": [
+          [
+            1.911735007228553,
+            1.661240653404413,
+            188.68897501968218
+          ],
+          [
+            -0.012422225340244541,
+            4.412166203743384,
+            276.2288465706105
+          ],
+          [
+            -1.1950853798119238e-05,
+            0.002397316084923148,
+            0.9770375715914409
+          ]
+        ],
+        "player_center": [
+          250.4137905524997,
+          327.7065492113304
+        ],
+        "url": "https://www.gamekee.com/nikke/171576.html",
+        "article_id": 171576,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667801418,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/908211.png",
+        "item_name": "Frost Pillar",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171576_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          101.5,
+          441.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "05.人性保持方法\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171576.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.919055163860321,
+        "roi": [
+          7,
+          0,
+          506,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8216458685793808,
+            0.31088191527561865,
+            -257.3167144067008
+          ],
+          [
+            -0.005221948743033314,
+            2.87473290605608,
+            -123.95051291596526
+          ],
+          [
+            -8.916438615310205e-06,
+            0.0017909636767248123,
+            1.129043655721291
+          ]
+        ],
+        "player_center": [
+          182.89547532029195,
+          298.98035793056357
+        ],
+        "url": "https://www.gamekee.com/nikke/171576.html",
+        "article_id": 171576,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667801418,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/293891.png",
+        "item_name": "05.人性保持方法",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171576_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          216.0,
+          370.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧场设计图\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171576.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.9610509276390076,
+        "roi": [
+          7,
+          0,
+          505,
+          506
+        ],
+        "roi_to_map": [
+          [
+            1.875492353306347,
+            0.6201694401617036,
+            -261.1426453250354
+          ],
+          [
+            -0.00743758030375794,
+            3.3737514007915737,
+            -196.46511358482613
+          ],
+          [
+            -1.3539201460293972e-05,
+            0.002718300600246356,
+            0.9009469148296083
+          ]
+        ],
+        "player_center": [
+          238.67469998042333,
+          224.46649443345672
+        ],
+        "url": "https://www.gamekee.com/nikke/171576.html",
+        "article_id": 171576,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667801418,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/72021.png",
+        "item_name": "剧场设计图",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171576_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          789.5,
+          580.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Labyrinth\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171576.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.9174880385398865,
+        "roi": [
+          0,
+          2,
+          510,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8548741364771963,
+            2.125614499622803,
+            235.50441189951718
+          ],
+          [
+            -0.008340247410776725,
+            3.5387762277744845,
+            -132.46243658042818
+          ],
+          [
+            -1.3444710522884142e-05,
+            0.0026969805955385415,
+            0.9010040548493307
+          ]
+        ],
+        "player_center": [
+          255.7719325825316,
+          332.16998491075276
+        ],
+        "url": "https://www.gamekee.com/nikke/171576.html",
+        "article_id": 171576,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667801418,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/382324.png",
+        "item_name": "Labyrinth",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171576_09",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 09",
+      "points": [
+        [
+          939.9,
+          479.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "可疑会所设计图\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171576.html",
+      "source": {
+        "number": 9,
+        "road_iou": 0.9290143847465515,
+        "roi": [
+          0,
+          2,
+          510,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8528439851882408,
+            2.5328585695491226,
+            371.55602418176613
+          ],
+          [
+            -0.0070092210690111964,
+            3.2717751488161686,
+            -221.66183801051193
+          ],
+          [
+            -1.3444710522884142e-05,
+            0.0026969805955385415,
+            0.9010040548493307
+          ]
+        ],
+        "player_center": [
+          255.1465485905082,
+          330.4390617815623
+        ],
+        "url": "https://www.gamekee.com/nikke/171576.html",
+        "article_id": 171576,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667801418,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/95885.png",
+        "item_name": "可疑会所设计图",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171576_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          677.8,
+          294.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "01.避免狂喜的方法\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171576.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.9444697499275208,
+        "roi": [
+          7,
+          0,
+          505,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8503218605404697,
+            1.835234538899493,
+            153.52172979169572
+          ],
+          [
+            -0.004547625814074888,
+            2.7700616933952316,
+            -385.67559952261627
+          ],
+          [
+            -1.3401514665782505e-05,
+            0.002686445515087219,
+            0.9009126308177751
+          ]
+        ],
+        "player_center": [
+          243.33324634620666,
+          329.14913987206074
+        ],
+        "url": "https://www.gamekee.com/nikke/171576.html",
+        "article_id": 171576,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667801418,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/635508.png",
+        "item_name": "01.避免狂喜的方法",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

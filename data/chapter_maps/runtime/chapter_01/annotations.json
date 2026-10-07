@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "0a9d4ab8461bf26bdf35241b8e8773f3b38941b156046d16ad6328301d1c0192",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_171743_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          678.2,
+          684.3
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "宝石×50\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171743.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.91710364818573,
+        "roi": [
+          6,
+          0,
+          505,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.7765193178548164,
+            1.6301665510827033,
+            194.51558269185583
+          ],
+          [
+            -0.10808203379080025,
+            3.689621577767729,
+            20.50506047114923
+          ],
+          [
+            -0.0001460298199892552,
+            0.0024498083611814853,
+            0.9750157278455824
+          ]
+        ],
+        "player_center": [
+          254.20602567382068,
+          322.29515109809404
+        ],
+        "url": "https://www.gamekee.com/nikke/171743.html",
+        "article_id": 171743,
+        "difficulty": "hard",
+        "author": "小番茄",
+        "article_updated": 1667897226,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/8/198526.png",
+        "item_name": "宝石×50",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171743_02",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 02",
+      "points": [
+        [
+          115.7,
+          496
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Mystery\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171743.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9275631308555603,
+        "roi": [
+          0,
+          0,
+          504,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8593474836124333,
+            0.2484746353763456,
+            -360.1582596693611
+          ],
+          [
+            -0.07889590028994814,
+            3.199659905531432,
+            -174.2958976382412
+          ],
+          [
+            -0.000146066533835605,
+            0.0024498083611814853,
+            0.9753900542848357
+          ]
+        ],
+        "player_center": [
+          258.3390870613472,
+          332.4442864114044
+        ],
+        "url": "https://www.gamekee.com/nikke/171743.html",
+        "article_id": 171743,
+        "difficulty": "hard",
+        "author": "小番茄",
+        "article_updated": 1667897226,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/8/625616.png",
+        "item_name": "Mystery",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_152648_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          280.7,
+          520.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "第一期招募大纲\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/152648.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.919784665107727,
+        "roi": [
+          0,
+          0,
+          507,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.835878664632821,
+            0.6673918651383796,
+            -196.50053507678498
+          ],
+          [
+            -0.08466206270154338,
+            3.2952024316175095,
+            -136.1111613938946
+          ],
+          [
+            -0.00014618665674980132,
+            0.0024498083611814853,
+            0.9756396052443379
+          ]
+        ],
+        "player_center": [
+          254.0277523164749,
+          319.49598327090627
+        ],
+        "url": "https://www.gamekee.com/nikke/152648.html",
+        "article_id": 152648,
+        "difficulty": "normal",
+        "author": "泯尘",
+        "article_updated": 1667653615,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_512/h_512/1253/121201/2022/10/5/891548.png",
+        "item_name": "第一期招募大纲",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_152648_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          473,
+          338.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "第二期招募大纲\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/152648.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9128325581550598,
+        "roi": [
+          5,
+          0,
+          507,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8072281640525394,
+            1.1402048788464063,
+            -3.5733742322074957
+          ],
+          [
+            -0.05701901353041843,
+            2.832188651354209,
+            -320.65308527891256
+          ],
+          [
+            -0.00014615135875227633,
+            0.0024498083611814853,
+            0.9752652788050846
+          ]
+        ],
+        "player_center": [
+          250.98095137672485,
+          325.51547703022663
+        ],
+        "url": "https://www.gamekee.com/nikke/152648.html",
+        "article_id": 152648,
+        "difficulty": "normal",
+        "author": "泯尘",
+        "article_updated": 1667653615,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_512/h_512/1253/121201/2022/10/5/423606.png",
+        "item_name": "第二期招募大纲",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "obj_0bd2d888c39c",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 03",
+      "points": [
+        [
+          293.7,
+          142.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    }
+  ],
+  "connections": []
+}

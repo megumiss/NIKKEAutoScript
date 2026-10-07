@@ -1,0 +1,660 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "d9b22821794fee2acd440171b19aed18f42f6811904dc0d876fddc364b685a83",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_643071_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          703.8,
+          1375.8
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "10红球\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/643071.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.939558207988739,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.108963323103891,
+            5.037835494674922,
+            368.0749910911677
+          ],
+          [
+            -0.11529605371211346,
+            13.353867748976736,
+            989.1536296117472
+          ],
+          [
+            -7.98031373672263e-05,
+            0.007051348011928594,
+            0.9963582487033197
+          ]
+        ],
+        "player_center": [
+          102.77277207869648,
+          104.62791199184733
+        ],
+        "url": "https://www.gamekee.com/nikke/643071.html",
+        "article_id": 643071,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1734356221,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2325/h_1304/1253/613886/2024/11/16/979927.png",
+        "item_name": "10红球",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_643071_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          269.5,
+          601.6
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "10红球\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/643071.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9138191938400269,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.211273714369151,
+            1.0840100460618316,
+            26.096956322162278
+          ],
+          [
+            -0.03160832582642182,
+            6.016850850571903,
+            408.9740769642192
+          ],
+          [
+            -4.352898401848707e-05,
+            0.0038461898246883236,
+            1.3305485547421556
+          ]
+        ],
+        "player_center": [
+          101.58852506497473,
+          105.871319124135
+        ],
+        "url": "https://www.gamekee.com/nikke/643071.html",
+        "article_id": 643071,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1734356221,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2319/h_1306/1253/613886/2024/11/16/223973.png",
+        "item_name": "10红球",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_643071_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          646.2,
+          77.5
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Dwn - dust - 所属专辑 Unknown\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/643071.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.925788402557373,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.8497924161167743,
+            2.5067541341974677,
+            555.6628345296581
+          ],
+          [
+            -0.008905732829672993,
+            3.665441524733757,
+            -225.27549530592137
+          ],
+          [
+            -4.352898401848707e-05,
+            0.0038461898246883236,
+            1.3305485547421556
+          ]
+        ],
+        "player_center": [
+          104.95920923334594,
+          97.67822616803707
+        ],
+        "url": "https://www.gamekee.com/nikke/643071.html",
+        "article_id": 643071,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1734356221,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2322/h_1304/1253/613886/2024/11/16/682489.png",
+        "item_name": "Dwn - dust - 所属专辑 Unknown",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_615137_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          604.8,
+          1487.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "50钻\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/615137.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9304637312889099,
+        "roi": [
+          64,
+          6,
+          423,
+          390
+        ],
+        "roi_to_map": [
+          [
+            1.531396329222103,
+            2.875194618211151,
+            220.48777793429807
+          ],
+          [
+            -0.08278299028001573,
+            8.89359510526937,
+            888.6772821242682
+          ],
+          [
+            -5.375445565885589e-05,
+            0.0047576566841847755,
+            0.8277557634160464
+          ]
+        ],
+        "player_center": [
+          179.37112670880126,
+          189.00407131885487
+        ],
+        "url": "https://www.gamekee.com/nikke/615137.html",
+        "article_id": 615137,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1708863040,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1118/1253/262658/2024/1/25/504256.jpg",
+        "item_name": "50钻",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1118
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_615137_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          171.3,
+          1123.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "yyyy_mm_dd_01.mp3\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/615137.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9251953363418579,
+        "roi": [
+          52,
+          5,
+          423,
+          391
+        ],
+        "roi_to_map": [
+          [
+            1.6923421588010488,
+            0.5039006385038227,
+            -117.62026424427258
+          ],
+          [
+            -0.04137639398786651,
+            5.360605555484046,
+            946.0821525953535
+          ],
+          [
+            -3.379069379332689e-05,
+            0.00298926670312564,
+            1.1609166219841722
+          ]
+        ],
+        "player_center": [
+          187.2502051342939,
+          179.3393529825952
+        ],
+        "url": "https://www.gamekee.com/nikke/615137.html",
+        "article_id": 615137,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1708863040,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1093/1253/262658/2024/1/25/754755.jpg",
+        "item_name": "yyyy_mm_dd_01.mp3",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1093
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_615137_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          1641.5,
+          1648.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点*25000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/615137.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.9055629372596741,
+        "roi": [
+          36,
+          0,
+          438,
+          402
+        ],
+        "roi_to_map": [
+          [
+            1.836840803549965,
+            4.7091714356829675,
+            1527.1143416657378
+          ],
+          [
+            -0.05681643344411824,
+            6.910642072165439,
+            1480.4281546114262
+          ],
+          [
+            -3.248431643170677e-05,
+            0.0028702909139465102,
+            1.1611777958882832
+          ]
+        ],
+        "player_center": [
+          200.78508898904963,
+          199.58279283365573
+        ],
+        "url": "https://www.gamekee.com/nikke/615137.html",
+        "article_id": 615137,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1708863040,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1075/1253/262658/2024/1/25/715548.jpg",
+        "item_name": "信用点*25000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1075
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_615137_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          2056.4,
+          734.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点*25000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/615137.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.9739211201667786,
+        "roi": [
+          49,
+          10,
+          422,
+          392
+        ],
+        "roi_to_map": [
+          [
+            1.692299019704399,
+            10.28181179320646,
+            1258.1184275819191
+          ],
+          [
+            -0.044120648220459815,
+            5.706068394452239,
+            165.93520994116577
+          ],
+          [
+            -5.69883481564643e-05,
+            0.005034279875246498,
+            0.7806577927478584
+          ]
+        ],
+        "player_center": [
+          199.83407825034098,
+          202.94880776044002
+        ],
+        "url": "https://www.gamekee.com/nikke/615137.html",
+        "article_id": 615137,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1708863040,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1121/1253/262658/2024/1/25/560714.jpg",
+        "item_name": "信用点*25000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1121
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_615137_08",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 08",
+      "points": [
+        [
+          1242.2,
+          417.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点*25000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/615137.html",
+      "source": {
+        "number": 8,
+        "road_iou": 0.9180927276611328,
+        "roi": [
+          36,
+          0,
+          438,
+          402
+        ],
+        "roi_to_map": [
+          [
+            1.7789582150220902,
+            4.762692795264191,
+            841.4474012973776
+          ],
+          [
+            -0.0209172849606947,
+            3.681334720517309,
+            -23.53579717480066
+          ],
+          [
+            -4.331242190894236e-05,
+            0.003827054551928681,
+            0.9710447538547914
+          ]
+        ],
+        "player_center": [
+          198.01579683713058,
+          205.7795225233769
+        ],
+        "url": "https://www.gamekee.com/nikke/615137.html",
+        "article_id": 615137,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1708863040,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1096/1253/262658/2024/1/25/266309.jpg",
+        "item_name": "信用点*25000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1096
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_615137_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          604.2,
+          616.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "yyyy_mm_dd_02.mp3\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/615137.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.9251234531402588,
+        "roi": [
+          48,
+          4,
+          429,
+          390
+        ],
+        "roi_to_map": [
+          [
+            1.9468384800859004,
+            1.8463504143722957,
+            344.2412501268399
+          ],
+          [
+            -0.02455313797534128,
+            4.139073719724506,
+            292.4800616773842
+          ],
+          [
+            -3.3817793358194676e-05,
+            0.00298926670312564,
+            1.1610907379202462
+          ]
+        ],
+        "player_center": [
+          177.86271999824288,
+          184.3712501820128
+        ],
+        "url": "https://www.gamekee.com/nikke/615137.html",
+        "article_id": 615137,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1708863040,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1127/1253/262658/2024/1/25/363217.jpg",
+        "item_name": "yyyy_mm_dd_02.mp3",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1127
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_615137_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          562.0,
+          330.0
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "I FEEL SO ALIVE 持有 After World\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/615137.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.8803872466087341,
+        "roi": [
+          36,
+          0,
+          438,
+          402
+        ],
+        "roi_to_map": [
+          [
+            1.872053802561935,
+            1.59777608496495,
+            268.39761092283885
+          ],
+          [
+            -0.014879180930784807,
+            3.205096502260494,
+            -18.652379880347368
+          ],
+          [
+            -3.248431643170677e-05,
+            0.0028702909139465102,
+            1.1611777958882832
+          ]
+        ],
+        "player_center": [
+          204.6922457155527,
+          178.3537221491474
+        ],
+        "url": "https://www.gamekee.com/nikke/615137.html",
+        "article_id": 615137,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1708863040,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1164/1253/262658/2024/1/25/638930.jpg",
+        "item_name": "I FEEL SO ALIVE 持有 After World",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1164
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_615137_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          496.4,
+          126.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "yyyy_mm_dd_03.mp3\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/615137.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.9305357933044434,
+        "roi": [
+          36,
+          0,
+          438,
+          402
+        ],
+        "roi_to_map": [
+          [
+            1.7405776023778938,
+            2.4604157117055925,
+            94.20147893649724
+          ],
+          [
+            -0.011026748480292576,
+            2.742969140835197,
+            -278.67202573752087
+          ],
+          [
+            -5.1433501016869045e-05,
+            0.004544627280415308,
+            0.8284449723296725
+          ]
+        ],
+        "player_center": [
+          158.98543380064066,
+          177.28583161940657
+        ],
+        "url": "https://www.gamekee.com/nikke/615137.html",
+        "article_id": 615137,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1708863040,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1075/1253/262658/2024/1/25/723770.jpg",
+        "item_name": "yyyy_mm_dd_03.mp3",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1075
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

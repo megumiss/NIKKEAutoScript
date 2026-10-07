@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "dbac62d9c4cf695650b103bb069f26a45b58cb0611ddf63991ee641368be9e0e",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_645828_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          1156.2,
+          1077.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "10红球\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/645828.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8700187802314758,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.0063795773123427,
+            3.670271022682667,
+            1297.146610291988
+          ],
+          [
+            -0.02963049132266703,
+            7.052810651431027,
+            1123.626406995535
+          ],
+          [
+            -2.3161869195748858e-05,
+            0.003141502561654421,
+            1.3911548810153995
+          ]
+        ],
+        "player_center": [
+          101.35924615361115,
+          102.32005169727258
+        ],
+        "url": "https://www.gamekee.com/nikke/645828.html",
+        "article_id": 645828,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1737279368,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2323/h_1310/1253/613886/2025/0/19/962031.png",
+        "item_name": "10红球",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_622550_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          113.0,
+          637.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "White City [Scenario Ver.] 持有 Unknown\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622550.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8586089611053467,
+        "roi": [
+          36,
+          3,
+          438,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.7998077626854538,
+            0.5287942332492928,
+            -262.8139585754957
+          ],
+          [
+            -0.024102054662446883,
+            5.073033579134906,
+            106.61141807278828
+          ],
+          [
+            -3.2841456322330474e-05,
+            0.004454369303838358,
+            0.8313316601768828
+          ]
+        ],
+        "player_center": [
+          195.1065986180893,
+          189.64872723499644
+        ],
+        "url": "https://www.gamekee.com/nikke/622550.html",
+        "article_id": 622550,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1716031557,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1093/1253/262658/2024/4/18/535629.jpg",
+        "item_name": "White City [Scenario Ver.] 持有 Unknown",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1093
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622550_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          347.7,
+          515.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 调和魔方观察日志 核心功率剩余3%\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622550.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9103058576583862,
+        "roi": [
+          36,
+          0,
+          438,
+          402
+        ],
+        "roi_to_map": [
+          [
+            1.657854022835327,
+            0.9637794734367584,
+            63.83281790977661
+          ],
+          [
+            -0.013413565745574747,
+            3.484556850277419,
+            208.72489941778787
+          ],
+          [
+            -2.0741972414103456e-05,
+            0.0028132858761084367,
+            1.1587574328850434
+          ]
+        ],
+        "player_center": [
+          205.33033338783946,
+          191.07902854536428
+        ],
+        "url": "https://www.gamekee.com/nikke/622550.html",
+        "article_id": 622550,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1716031557,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1044/1253/262658/2024/4/18/487855.jpg",
+        "item_name": "剧情道具 调和魔方观察日志 核心功率剩余3%",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1044
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622550_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          1464.2,
+          147.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "28000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622550.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.8894322514533997,
+        "roi": [
+          36,
+          6,
+          438,
+          408
+        ],
+        "roi_to_map": [
+          [
+            1.9072537744293176,
+            4.7741789289475625,
+            1160.5185156524087
+          ],
+          [
+            -0.00717952130074496,
+            2.916557925912711,
+            -280.38092485297807
+          ],
+          [
+            -2.4198967816454034e-05,
+            0.0032821668554598427,
+            1.0652072121112832
+          ]
+        ],
+        "player_center": [
+          208.40153108214977,
+          180.01188283979278
+        ],
+        "url": "https://www.gamekee.com/nikke/622550.html",
+        "article_id": 622550,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1716031557,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1188/1253/262658/2024/4/18/713311.jpg",
+        "item_name": "28000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1188
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

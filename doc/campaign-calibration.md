@@ -6,7 +6,7 @@
 ## 适用范围与结果含义
 
 - 按普通章节 48→1 递减执行；39、40 显式跳过，声明了 `processing_3d` 或非空 `coordinate_model` 的地图也跳过。
-- 输入为 `data/chapter_maps/current/chapter_NN/` 中已有的正式地图，不重新扫描地图。
+- 输入为 `data/chapter_maps/runtime/chapter_NN/` 中已有的正式地图，不重新扫描地图；平面标定采样记录写入 `data/chapter_maps/local/packages/chapter_NN/movement_calibration/normal/`。
 - 中文 Windows 客户区固定为 `1776×999`；展开小地图 ROI 为 `(644, 280, 1130, 742)`，尺寸 `486×462`。
 - 每章采集 6 个训练样本和 3 个独立验证样本，得到采样道路附近的局部位移标定。
 - 新结果写入该地图包的 `movement_calibration/normal/flat_calibration.json`。
@@ -70,7 +70,7 @@
 以第 48 章为例，选择尚未存在的预检查目录；重测时改目录名和标签：
 
 ```powershell
-.venv\Scripts\python.exe -m module.campaign_prototype.prepare_package --source data/chapter_maps/current/chapter_48 --destination log/chapter_calibration_preflight_01/map --chapter 48
+.venv\Scripts\python.exe -m module.campaign_prototype.prepare_package --source data/chapter_maps/runtime/chapter_48 --destination log/chapter_calibration_preflight_01/map --chapter 48
 .venv\Scripts\python.exe -m module.campaign_prototype.check_controls --package log/chapter_calibration_preflight_01/map --chapter 48 --cycles 0 --tag snapshot_01 --output log/chapter_calibration_preflight_01 --stop-file log/chapter_calibration_preflight_01/STOP
 .venv\Scripts\python.exe -m module.campaign_prototype.check_controls --package log/chapter_calibration_preflight_01/map --chapter 48 --cycles 3 --tag controls_01 --output log/chapter_calibration_preflight_01 --stop-file log/chapter_calibration_preflight_01/STOP
 ```

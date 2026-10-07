@@ -1,0 +1,486 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "616b38f121ad8828175de823f91f88507e070bda9474ae61a93ea13c55850158",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_576487_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          601.1,
+          255.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Champions Match\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576487.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9551903605461121,
+        "roi": [
+          8,
+          7,
+          507,
+          506
+        ],
+        "roi_to_map": [
+          [
+            2.0577971771681938,
+            1.927321309581624,
+            17.158773818160874
+          ],
+          [
+            0.0196368200321315,
+            2.878212560827125,
+            -437.3594650659956
+          ],
+          [
+            7.373925356084683e-05,
+            0.0032443220207661965,
+            0.8812384447974885
+          ]
+        ],
+        "player_center": [
+          258.24413845437664,
+          323.2621286135732
+        ],
+        "url": "https://www.gamekee.com/nikke/576487.html",
+        "article_id": 576487,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669097648,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/495203.png",
+        "item_name": "Champions Match",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576487_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          856.2,
+          362.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "2.不动产贩卖\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576487.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9595140814781189,
+        "roi": [
+          5,
+          0,
+          504,
+          512
+        ],
+        "roi_to_map": [
+          [
+            2.054252196053312,
+            2.1195853503136957,
+            412.7873999967582
+          ],
+          [
+            0.021590470181837705,
+            2.9601906512225575,
+            -325.1780844557376
+          ],
+          [
+            5.582334602902626e-05,
+            0.002459291844300417,
+            1.0655880957669368
+          ]
+        ],
+        "player_center": [
+          246.5989242212876,
+          343.3620556407417
+        ],
+        "url": "https://www.gamekee.com/nikke/576487.html",
+        "article_id": 576487,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669097648,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/440585.png",
+        "item_name": "2.不动产贩卖",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576487_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          1191.6,
+          669.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "终末之时\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576487.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9287293553352356,
+        "roi": [
+          5,
+          0,
+          504,
+          507
+        ],
+        "roi_to_map": [
+          [
+            2.115674252831182,
+            3.405902646167924,
+            655.127171396619
+          ],
+          [
+            0.04479732386782663,
+            4.013167551556178,
+            -36.87774759605769
+          ],
+          [
+            6.445356977911056e-05,
+            0.00283833738919541,
+            0.9734950389211612
+          ]
+        ],
+        "player_center": [
+          243.81811437569425,
+          325.7636767508345
+        ],
+        "url": "https://www.gamekee.com/nikke/576487.html",
+        "article_id": 576487,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669097648,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/970982.png",
+        "item_name": "终末之时",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576487_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          1395.3,
+          829.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点×4200\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576487.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9095358848571777,
+        "roi": [
+          6,
+          7,
+          505,
+          506
+        ],
+        "roi_to_map": [
+          [
+            2.1411020953631335,
+            3.519756726458555,
+            966.5003890993861
+          ],
+          [
+            0.050170133264386144,
+            4.2687102935380254,
+            194.49510765854194
+          ],
+          [
+            5.7352752769547525e-05,
+            0.0025233615717070415,
+            1.0652065087851768
+          ]
+        ],
+        "player_center": [
+          252.3247130030003,
+          316.30914726936663
+        ],
+        "url": "https://www.gamekee.com/nikke/576487.html",
+        "article_id": 576487,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669097648,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/227584.png",
+        "item_name": "信用点×4200",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576487_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          630.4,
+          603.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "使徒的诞生\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576487.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.9237668514251709,
+        "roi": [
+          1,
+          1,
+          511,
+          511
+        ],
+        "roi_to_map": [
+          [
+            2.0692775851545466,
+            1.808570445339409,
+            102.14901490278311
+          ],
+          [
+            0.044509874932653466,
+            3.9867390423189413,
+            -38.04040960344263
+          ],
+          [
+            6.413226584202626e-05,
+            0.0028216412869060256,
+            0.9732224767913326
+          ]
+        ],
+        "player_center": [
+          248.03354290683797,
+          273.50582795541857
+        ],
+        "url": "https://www.gamekee.com/nikke/576487.html",
+        "article_id": 576487,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669097648,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/353133.png",
+        "item_name": "使徒的诞生",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576487_08",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 08",
+      "points": [
+        [
+          457.0,
+          829.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "GoundZero\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576487.html",
+      "source": {
+        "number": 8,
+        "road_iou": 0.9306641817092896,
+        "roi": [
+          6,
+          0,
+          505,
+          512
+        ],
+        "roi_to_map": [
+          [
+            2.0468845221235914,
+            1.2899730134228151,
+            -60.98575838639468
+          ],
+          [
+            0.05474084975122685,
+            4.4321074000380465,
+            121.94226404274502
+          ],
+          [
+            6.379810974745859e-05,
+            0.0028106192506290486,
+            0.9736585761990584
+          ]
+        ],
+        "player_center": [
+          249.85067071498486,
+          326.5504313916776
+        ],
+        "url": "https://www.gamekee.com/nikke/576487.html",
+        "article_id": 576487,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669097648,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/679225.png",
+        "item_name": "GoundZero",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576487_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          1048.4,
+          1470.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "降临的祈祷\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576487.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.90882408618927,
+        "roi": [
+          0,
+          0,
+          510,
+          510
+        ],
+        "roi_to_map": [
+          [
+            2.096020740010671,
+            2.9851948619792217,
+            507.9827877247688
+          ],
+          [
+            0.09600808440380054,
+            6.25251699570448,
+            743.4572392599974
+          ],
+          [
+            6.413226584202626e-05,
+            0.0028216412869060256,
+            0.9732224767913326
+          ]
+        ],
+        "player_center": [
+          248.20437998417498,
+          326.8888041965143
+        ],
+        "url": "https://www.gamekee.com/nikke/576487.html",
+        "article_id": 576487,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669097648,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/87759.png",
+        "item_name": "降临的祈祷",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_576487_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          529.9,
+          1073.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "D\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/576487.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.9191966652870178,
+        "roi": [
+          5,
+          0,
+          504,
+          506
+        ],
+        "roi_to_map": [
+          [
+            2.080097800641791,
+            1.5327848762415948,
+            9.893624989798573
+          ],
+          [
+            0.07120603412424092,
+            5.175741093884868,
+            358.301218254873
+          ],
+          [
+            6.467205645632789e-05,
+            0.00284394675162465,
+            0.9734405264951955
+          ]
+        ],
+        "player_center": [
+          243.233826123987,
+          322.91799708975634
+        ],
+        "url": "https://www.gamekee.com/nikke/576487.html",
+        "article_id": 576487,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1669097648,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/22/366520.png",
+        "item_name": "D",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

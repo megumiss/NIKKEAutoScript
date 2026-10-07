@@ -1,0 +1,953 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "e83e6e43e06503667844edef4f02945c7082360b2fea98b502a68c443f7f4a53",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_645297_02",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 02",
+      "points": [
+        [
+          1097.7,
+          271.5
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Coagulation 所属专辑 Unknown\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/645297.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9479702115058899,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.6226004214080723,
+            5.855699738473981,
+            820.288929406163
+          ],
+          [
+            -0.08096912004784639,
+            4.835006634484386,
+            -61.99584182160139
+          ],
+          [
+            -0.00021824671616243904,
+            0.00531417528076524,
+            1.0224484179549242
+          ]
+        ],
+        "player_center": [
+          104.72972593197505,
+          100.79467207457535
+        ],
+        "url": "https://www.gamekee.com/nikke/645297.html",
+        "article_id": 645297,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1736777191,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2326/h_1310/1253/613886/2025/0/13/5521.png",
+        "item_name": "Coagulation 所属专辑 Unknown",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_645297_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          1486.2,
+          1158.9
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "10红球\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/645297.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8948175311088562,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.4659103420634096,
+            9.007061257074529,
+            1098.4593513217876
+          ],
+          [
+            -0.3089704290731306,
+            10.359429315128777,
+            751.6547073723962
+          ],
+          [
+            -0.0002494248184713589,
+            0.006073343178017416,
+            0.945754617946492
+          ]
+        ],
+        "player_center": [
+          108.98615183894879,
+          104.36654271393151
+        ],
+        "url": "https://www.gamekee.com/nikke/645297.html",
+        "article_id": 645297,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1736777191,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2323/h_1309/1253/613886/2025/0/13/57151.png",
+        "item_name": "10红球",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_645297_04",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 04",
+      "points": [
+        [
+          525.4,
+          1459.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "10红球\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/645297.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9060006737709045,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.7485287766338,
+            2.7894206014724374,
+            230.33619224617175
+          ],
+          [
+            -0.3393732319841742,
+            11.12699016691043,
+            1148.583085037029
+          ],
+          [
+            -0.00021824671616243904,
+            0.00531417528076524,
+            1.0224484179549242
+          ]
+        ],
+        "player_center": [
+          107.29274023798135,
+          102.48447413913561
+        ],
+        "url": "https://www.gamekee.com/nikke/645297.html",
+        "article_id": 645297,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1736777191,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2322/h_1304/1253/613886/2025/0/13/159539.png",
+        "item_name": "10红球",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_645297_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          136.6,
+          1033.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Coagulation - Crystalized - 所属专辑 Unknown\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/645297.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9025280475616455,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.8288435681815773,
+            0.8338040981508291,
+            -145.9248255612404
+          ],
+          [
+            -0.2477096111959498,
+            8.89503654898903,
+            719.1547494959607
+          ],
+          [
+            -0.00021824671616243904,
+            0.00531417528076524,
+            1.0224484179549242
+          ]
+        ],
+        "player_center": [
+          96.15485834587815,
+          99.70072881806719
+        ],
+        "url": "https://www.gamekee.com/nikke/645297.html",
+        "article_id": 645297,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1736777191,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2316/h_1299/1253/613886/2025/0/13/446009.png",
+        "item_name": "Coagulation - Crystalized - 所属专辑 Unknown",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_645297_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          682.8,
+          439.6
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "10红球\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/645297.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.8758115768432617,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.641249954527195,
+            3.8523853375412647,
+            390.0230580169095
+          ],
+          [
+            -0.12229120030239546,
+            5.777541855699868,
+            107.87094388325673
+          ],
+          [
+            -0.00022863941693207902,
+            0.005567231246515965,
+            0.9968838179521134
+          ]
+        ],
+        "player_center": [
+          102.08555043036908,
+          99.86692750200952
+        ],
+        "url": "https://www.gamekee.com/nikke/645297.html",
+        "article_id": 645297,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1736777191,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2322/h_1305/1253/613886/2025/0/13/902356.png",
+        "item_name": "10红球",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_622289_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          1693.7,
+          572.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 必须死守-录音1\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9232470989227295,
+        "roi": [
+          42,
+          0,
+          423,
+          472
+        ],
+        "roi_to_map": [
+          [
+            1.2142552945280662,
+            5.15862911977738,
+            1188.3939640458634
+          ],
+          [
+            -0.09202582006079875,
+            3.6693704765458057,
+            175.00717550923727
+          ],
+          [
+            -0.0001254216224115604,
+            0.0030559724677524072,
+            0.8619883346937853
+          ]
+        ],
+        "player_center": [
+          192.38183411006494,
+          167.94718671355662
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1070/h_1053/1253/262658/2024/4/16/629374.jpg",
+        "item_name": "剧情道具 必须死守-录音1",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1070,
+          1053
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          1536.8,
+          183.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "27000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9462041258811951,
+        "roi": [
+          33,
+          3,
+          435,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.3738915439732455,
+            5.19423229482387,
+            1067.4643754404697
+          ],
+          [
+            -0.03653864632086545,
+            2.4771117706375527,
+            -203.0994772377737
+          ],
+          [
+            -0.00013960344317426806,
+            0.0033992592414276586,
+            0.9041142025650197
+          ]
+        ],
+        "player_center": [
+          206.49137648554608,
+          199.958565304752
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1058/h_1109/1253/262658/2024/4/16/510442.jpg",
+        "item_name": "27000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1058,
+          1109
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          1165.8,
+          396.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Drifting [Scenario Ver.] 持有 Unknown\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.8745341300964355,
+        "roi": [
+          48,
+          11,
+          429,
+          473
+        ],
+        "roi_to_map": [
+          [
+            1.3057819495464364,
+            3.6499079676505453,
+            735.9865636558092
+          ],
+          [
+            -0.06563631178693159,
+            3.05880576812431,
+            -15.239134769923062
+          ],
+          [
+            -0.00012801297824651,
+            0.0031221190579634986,
+            0.8624819879803431
+          ]
+        ],
+        "player_center": [
+          183.7952157804718,
+          197.69562549273175
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1176/1253/262658/2024/4/16/955034.jpg",
+        "item_name": "Drifting [Scenario Ver.] 持有 Unknown",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1176
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          1098.5,
+          619.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 必须死守-录音2\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.909451425075531,
+        "roi": [
+          43,
+          0,
+          430,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.4245381951947433,
+            3.715024535039931,
+            693.8934152309637
+          ],
+          [
+            -0.09943252594868279,
+            3.993968986779825,
+            207.40097789438377
+          ],
+          [
+            -0.00013873047073891475,
+            0.003374079543343009,
+            0.9028982565749719
+          ]
+        ],
+        "player_center": [
+          187.9026405556243,
+          186.33718404520405
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1179/1253/262658/2024/4/16/218532.jpg",
+        "item_name": "剧情道具 必须死守-录音2",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1179
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_08",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 08",
+      "points": [
+        [
+          977.6,
+          1167.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "27000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 8,
+        "road_iou": 0.9041078686714172,
+        "roi": [
+          48,
+          9,
+          426,
+          400
+        ],
+        "roi_to_map": [
+          [
+            1.490205552152115,
+            3.4461309001533804,
+            587.1465069383927
+          ],
+          [
+            -0.18222966974060595,
+            6.06965003726508,
+            707.0600042035946
+          ],
+          [
+            -0.00014351824872359936,
+            0.0034948905755854695,
+            0.9031788594957522
+          ]
+        ],
+        "player_center": [
+          178.2354183256789,
+          176.08235851146736
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1109/1253/262658/2024/4/16/793120.jpg",
+        "item_name": "27000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1109
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_09",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 09",
+      "points": [
+        [
+          392.2,
+          1438.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "27000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 9,
+        "road_iou": 0.9024300575256348,
+        "roi": [
+          48,
+          0,
+          427,
+          391
+        ],
+        "roi_to_map": [
+          [
+            1.5747059240562775,
+            1.4190943663138076,
+            62.27731560402254
+          ],
+          [
+            -0.22029472638909262,
+            6.992301149219643,
+            945.6426796419191
+          ],
+          [
+            -0.00014363315733871787,
+            0.0034948905755854695,
+            0.903272393802679
+          ]
+        ],
+        "player_center": [
+          173.62999932300858,
+          181.4648162211649
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1127/1253/262658/2024/4/16/412278.jpg",
+        "item_name": "27000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1127
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          458.8,
+          1048.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Drifting -Rally Point. 持有 Unknown\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.8793025612831116,
+        "roi": [
+          46,
+          0,
+          427,
+          440
+        ],
+        "roi_to_map": [
+          [
+            1.5350008850344319,
+            1.2859715429402339,
+            157.14698243781496
+          ],
+          [
+            -0.13436824562085237,
+            4.855603221543894,
+            655.277023886687
+          ],
+          [
+            -0.0001134741081409507,
+            0.0027606105354624623,
+            0.9735875178130607
+          ]
+        ],
+        "player_center": [
+          180.1624627971944,
+          188.06574110805238
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1164/1253/262658/2024/4/16/9633.jpg",
+        "item_name": "Drifting -Rally Point. 持有 Unknown",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1164
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          143.1,
+          1131.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "27000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.8896889686584473,
+        "roi": [
+          36,
+          0,
+          438,
+          402
+        ],
+        "roi_to_map": [
+          [
+            1.5668235024400838,
+            0.49645602317084586,
+            -182.02145250438764
+          ],
+          [
+            -0.16874310700689732,
+            5.696210272269545,
+            653.0966725913
+          ],
+          [
+            -0.00013960344317426806,
+            0.0033992592414276586,
+            0.9041142025650197
+          ]
+        ],
+        "player_center": [
+          194.943933300877,
+          200.7467560542306
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1139/1253/262658/2024/4/16/246241.jpg",
+        "item_name": "27000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1139
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          246.3,
+          736.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "27000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.9120339155197144,
+        "roi": [
+          43,
+          0,
+          429,
+          442
+        ],
+        "roi_to_map": [
+          [
+            1.4919191960274103,
+            0.7768447683375025,
+            -83.46930483518555
+          ],
+          [
+            -0.11134142955689452,
+            4.234971738446147,
+            260.2604177077009
+          ],
+          [
+            -0.00013402814619499403,
+            0.003263391413527458,
+            0.8639629478400168
+          ]
+        ],
+        "player_center": [
+          197.9352207266752,
+          206.75163437984185
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1179/1253/262658/2024/4/16/687487.jpg",
+        "item_name": "27000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1179
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          777.6,
+          1075.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 必须死守-录音3\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.8574865460395813,
+        "roi": [
+          36,
+          3,
+          438,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.4812465917742579,
+            2.5802019381660006,
+            372.2005536679695
+          ],
+          [
+            -0.16413619338214647,
+            5.584034717302433,
+            623.2609039066543
+          ],
+          [
+            -0.00013960344317426806,
+            0.0033992592414276586,
+            0.9041142025650197
+          ]
+        ],
+        "player_center": [
+          215.31965385491557,
+          182.82947587698172
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1182/1253/262658/2024/4/16/270664.jpg",
+        "item_name": "剧情道具 必须死守-录音3",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1182
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_622289_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          787.9,
+          376.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 必须死守-录音4\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/622289.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.9348933696746826,
+        "roi": [
+          36,
+          3,
+          438,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.43170388117869,
+            2.795571307695368,
+            369.78781139060413
+          ],
+          [
+            -0.06610511028724134,
+            3.156334228462892,
+            -33.016171793759064
+          ],
+          [
+            -0.00014735919001728295,
+            0.0035881069770625283,
+            0.867714712817857
+          ]
+        ],
+        "player_center": [
+          206.9262464987767,
+          200.7585104083901
+        ],
+        "url": "https://www.gamekee.com/nikke/622289.html",
+        "article_id": 622289,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1715819924,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1080/h_1191/1253/262658/2024/4/16/113717.jpg",
+        "item_name": "剧情道具 必须死守-录音4",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1191
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

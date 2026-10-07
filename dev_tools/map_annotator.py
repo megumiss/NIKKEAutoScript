@@ -19,13 +19,13 @@ from urllib.parse import parse_qs, urlsplit
 from PIL import Image
 
 if __package__:
-    from .map_paths import DEFAULT_MAPS_ROOT
+    from .map_paths import DEFAULT_MAPS_ROOT, local_package_dir
     from .map_movement import MovementJobs
     from .map_scan import ScanJobs
     from .map_wiki import WikiJobs
     from .map_terrain import render_terrain, terrain_colors, validate_terrain_edits
 else:
-    from map_paths import DEFAULT_MAPS_ROOT
+    from map_paths import DEFAULT_MAPS_ROOT, local_package_dir
     from map_movement import MovementJobs
     from map_scan import ScanJobs
     from map_wiki import WikiJobs
@@ -199,8 +199,8 @@ class AnnotationStore:
             content = (json.dumps(copy.deepcopy(document), ensure_ascii=False, indent=2) + '\n').encode('utf-8')
             backup = None
             if previous:
-                backup = package / '.annotation_backups' / f'annotations-{time.time_ns()}.json'
-                backup.parent.mkdir(exist_ok=True)
+                backup = local_package_dir(package) / '.annotation_backups' / f'annotations-{time.time_ns()}.json'
+                backup.parent.mkdir(parents=True, exist_ok=True)
                 backup.write_bytes(previous)
             # Write beside the destination so replacement remains atomic on the same filesystem.
             temporary = None
@@ -227,7 +227,7 @@ class AnnotationStore:
                 raise ValueError('还没有道路修订，请先绘制并保存。')
             package = self.package(identifier)
             name = str(time.time_ns())
-            folder = package / 'manual_exports' / name
+            folder = local_package_dir(package) / 'manual_exports' / name
             with Image.open(package / 'map.png') as image:
                 edited, override = render_terrain(image, document['terrain_edits'], loaded['terrain_colors'])
             folder.mkdir(parents=True)
@@ -308,7 +308,8 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                     name = params.get('export', [''])[0]
                     if not re.fullmatch(r'\d{15,25}', name):
                         raise ValueError('无效的导出版本。')
-                    return self.send((store.package(identifier) / 'manual_exports' / name / 'map.png').read_bytes(),
+                    folder = local_package_dir(store.package(identifier)) / 'manual_exports' / name
+                    return self.send((folder / 'map.png').read_bytes(),
                                      'image/png')
                 if request.path == '/api/image':
                     filename = params.get('image', ['map.png'])[0]

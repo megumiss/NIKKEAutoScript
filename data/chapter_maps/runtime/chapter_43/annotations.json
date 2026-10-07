@@ -1,0 +1,716 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "71d0ece84c533cfa4392990125a598c992f673c5798c2bb885227cfffc18b81a",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_704526_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          1952.0,
+          928.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "芯尘 ×20\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/704526.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9208395481109619,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            1.3065292618963043,
+            12.470984094811806,
+            1565.0453038707976
+          ],
+          [
+            -0.6670722071705322,
+            8.876101865155713,
+            576.9117192006485
+          ],
+          [
+            -0.0006839766735416334,
+            0.006393091922980183,
+            0.946164718932381
+          ]
+        ],
+        "player_center": [
+          107.02978751163855,
+          103.58450361747109
+        ],
+        "url": "https://www.gamekee.com/nikke/704526.html",
+        "article_id": 704526,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1778315148,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1723/h_969/1253/475341/2026/4/9/966400.png",
+        "item_name": "芯尘 ×20",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_704526_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          1581.4,
+          281.8
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "HATE WORD 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/704526.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9527807831764221,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            1.9216823308039197,
+            9.635152627322727,
+            1213.8778257217248
+          ],
+          [
+            -0.2248283053034343,
+            5.0542592120426555,
+            -56.861408439689214
+          ],
+          [
+            -0.0006554776454773986,
+            0.006126713092856008,
+            0.9711612914514798
+          ]
+        ],
+        "player_center": [
+          110.64691218380557,
+          100.67566192259713
+        ],
+        "url": "https://www.gamekee.com/nikke/704526.html",
+        "article_id": 704526,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1778315148,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1723/h_969/1253/475341/2026/4/9/362295.png",
+        "item_name": "HATE WORD 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_704526_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          755.4,
+          1554.4
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "双模组高级增强器 ×2\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/704526.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9068529009819031,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.520602725814013,
+            3.8656670057113094,
+            448.8675488331259
+          ],
+          [
+            -0.9169353476967055,
+            11.50500485816098,
+            1283.7161591990905
+          ],
+          [
+            -0.0005699805612846945,
+            0.0053275766024834855,
+            1.0461510090087762
+          ]
+        ],
+        "player_center": [
+          121.44710665565287,
+          107.39294541015649
+        ],
+        "url": "https://www.gamekee.com/nikke/704526.html",
+        "article_id": 704526,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1778315148,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1723/h_969/1253/475341/2026/4/9/384525.png",
+        "item_name": "双模组高级增强器 ×2",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_704526_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          1138.9,
+          1718.8
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "HATE WORD - KEY - 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/704526.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.8817270398139954,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.22604157331452,
+            6.1903887063251615,
+            824.212413972954
+          ],
+          [
+            -1.0631129777574604,
+            12.82546807983468,
+            1425.1338768897363
+          ],
+          [
+            -0.0005984795893489292,
+            0.00559395543260766,
+            1.0211544364896774
+          ]
+        ],
+        "player_center": [
+          122.98334742280962,
+          104.09115377461087
+        ],
+        "url": "https://www.gamekee.com/nikke/704526.html",
+        "article_id": 704526,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1778315148,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1723/h_969/1253/475341/2026/4/9/545957.png",
+        "item_name": "HATE WORD - KEY - 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_693409_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          1192.0,
+          659.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×41000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/693409.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.8645526766777039,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.045064226438865,
+            7.624858896615949,
+            824.4422750228631
+          ],
+          [
+            -0.4833267200846334,
+            7.378727605202541,
+            293.9088912342802
+          ],
+          [
+            -0.0006839766735416334,
+            0.006393091922980183,
+            0.946164718932381
+          ]
+        ],
+        "player_center": [
+          105.89958212198198,
+          105.28915928631261
+        ],
+        "url": "https://www.gamekee.com/nikke/693409.html",
+        "article_id": 693409,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1770871791,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1760/h_990/1253/475341/2026/1/12/902293.png",
+        "item_name": "信用点 ×41000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_693409_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          458.5,
+          1617.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×41000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/693409.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.9025358557701111,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.5202000223257865,
+            3.183791040785716,
+            107.345111232125
+          ],
+          [
+            -1.2309702223217673,
+            14.366909834680127,
+            1119.708929209363
+          ],
+          [
+            -0.0007409747296701029,
+            0.006925849583228531,
+            0.8961715738941833
+          ]
+        ],
+        "player_center": [
+          105.81169601182226,
+          105.13740458364916
+        ],
+        "url": "https://www.gamekee.com/nikke/693409.html",
+        "article_id": 693409,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1770871791,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1760/h_990/1253/475341/2026/1/12/617674.png",
+        "item_name": "信用点 ×41000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_693409_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          2116.2,
+          701.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "珠宝 ×50\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/693409.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9550208449363708,
+        "roi": [
+          19,
+          81,
+          226,
+          288
+        ],
+        "roi_to_map": [
+          [
+            2.0531107392091155,
+            8.135920483666013,
+            2216.9318109342316
+          ],
+          [
+            -0.32705975252792996,
+            5.980838374905425,
+            515.8323608413201
+          ],
+          [
+            -0.00041302939223528584,
+            0.0038605627554228156,
+            1.1892627563008429
+          ]
+        ],
+        "player_center": [
+          103.56035525697551,
+          98.6848890148472
+        ],
+        "url": "https://www.gamekee.com/nikke/693409.html",
+        "article_id": 693409,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1770871791,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1760/h_990/1253/475341/2026/1/12/806350.png",
+        "item_name": "珠宝 ×50",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1760,
+          990
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_693409_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          1229.2,
+          1049.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×41000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/693409.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8585473895072937,
+        "roi": [
+          19,
+          81,
+          226,
+          288
+        ],
+        "roi_to_map": [
+          [
+            2.8160994856207875,
+            4.73061152364237,
+            1128.451958147623
+          ],
+          [
+            -0.47619279405292364,
+            7.773480581583175,
+            887.1647294598224
+          ],
+          [
+            -0.00041302939223528584,
+            0.0038605627554228156,
+            1.1892627563008429
+          ]
+        ],
+        "player_center": [
+          100.7301263063185,
+          98.10997174845066
+        ],
+        "url": "https://www.gamekee.com/nikke/693409.html",
+        "article_id": 693409,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1770871791,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1760/h_990/1253/475341/2026/1/12/278855.png",
+        "item_name": "信用点 ×41000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1760,
+          990
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_693409_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          1685.9,
+          356.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 我可不会随便对任何人说.wav 同情是种奢侈.wav\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/693409.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.8664484620094299,
+        "roi": [
+          19,
+          81,
+          226,
+          288
+        ],
+        "roi_to_map": [
+          [
+            1.8586039743515923,
+            11.692906455300262,
+            1206.775964930184
+          ],
+          [
+            -0.30677997615586217,
+            5.977346282441704,
+            -21.769814667542548
+          ],
+          [
+            -0.0007434529060235146,
+            0.006949012959761068,
+            0.9038069938289154
+          ]
+        ],
+        "player_center": [
+          102.54339683024281,
+          99.62322638705645
+        ],
+        "url": "https://www.gamekee.com/nikke/693409.html",
+        "article_id": 693409,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1770871791,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1760/h_990/1253/475341/2026/1/12/115399.png",
+        "item_name": "遗失物品 我可不会随便对任何人说.wav 同情是种奢侈.wav",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1760,
+          990
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_693409_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          750.1,
+          862.0
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×41000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/693409.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.8603523969650269,
+        "roi": [
+          24,
+          86,
+          220,
+          283
+        ],
+        "roi_to_map": [
+          [
+            2.673542139941548,
+            4.205948921305573,
+            478.33925347738716
+          ],
+          [
+            -0.562164872358436,
+            8.391043143178278,
+            571.6943894197062
+          ],
+          [
+            -0.0006066221687958534,
+            0.005679142571175288,
+            1.0461358886719798
+          ]
+        ],
+        "player_center": [
+          99.5503122049984,
+          95.55323389954748
+        ],
+        "url": "https://www.gamekee.com/nikke/693409.html",
+        "article_id": 693409,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1770871791,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1760/h_990/1253/475341/2026/1/12/237401.png",
+        "item_name": "信用点 ×41000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1760,
+          990
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_693409_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          274.0,
+          799.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×41000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/693409.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.9292730093002319,
+        "roi": [
+          24,
+          86,
+          220,
+          283
+        ],
+        "roi_to_map": [
+          [
+            3.0409672529123215,
+            2.071300132949578,
+            -55.649920169452514
+          ],
+          [
+            -0.6712516074772706,
+            9.551950996456014,
+            382.694224221954
+          ],
+          [
+            -0.0007799427884518116,
+            0.007301754734368229,
+            0.9032940113237592
+          ]
+        ],
+        "player_center": [
+          91.13404343419069,
+          92.48116654512928
+        ],
+        "url": "https://www.gamekee.com/nikke/693409.html",
+        "article_id": 693409,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1770871791,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1760/h_990/1253/475341/2026/1/12/322076.png",
+        "item_name": "信用点 ×41000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1760,
+          990
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_693409_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          1006.0,
+          1453.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Password - KEY - 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/693409.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.8951268792152405,
+        "roi": [
+          21,
+          75,
+          192,
+          247
+        ],
+        "roi_to_map": [
+          [
+            2.8954506361002017,
+            6.397896346057734,
+            732.5502744246783
+          ],
+          [
+            -1.0524994663541167,
+            13.42887131973407,
+            1185.7761560701585
+          ],
+          [
+            -0.0006953096203741946,
+            0.006504599340241464,
+            1.0461358886719798
+          ]
+        ],
+        "player_center": [
+          92.43940296093399,
+          85.25940769191287
+        ],
+        "url": "https://www.gamekee.com/nikke/693409.html",
+        "article_id": 693409,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1770871791,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1534/h_863/1253/475341/2026/1/12/743188.png",
+        "item_name": "Password - KEY - 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1534,
+          863
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

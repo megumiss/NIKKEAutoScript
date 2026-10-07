@@ -1,0 +1,768 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "9e2faa24d360b25a1ba12970a852e941b8c5c0069af277d82e4a834bf7967857",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_671264_02",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 02",
+      "points": [
+        [
+          391.8,
+          131.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "芯尘 ×10\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671264.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.8764477372169495,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.827847131865339,
+            3.224512687709985,
+            -80.86090809249117
+          ],
+          [
+            0.03754722521094352,
+            5.5620770325770055,
+            -355.6010860552346
+          ],
+          [
+            0.00016488657628484406,
+            0.007908712389273091,
+            0.8144367775306771
+          ]
+        ],
+        "player_center": [
+          102.88217250819321,
+          101.84281993253047
+        ],
+        "url": "https://www.gamekee.com/nikke/671264.html",
+        "article_id": 671264,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194923,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/451047.png",
+        "item_name": "芯尘 ×10",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671264_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          1735.5,
+          1366.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Clash - Breaker - 所属专辑 Succession\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671264.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8776241540908813,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.274096471372521,
+            9.794482036375364,
+            1496.2547674932864
+          ],
+          [
+            0.1740516419758443,
+            11.418629791264348,
+            1074.688538274657
+          ],
+          [
+            0.00011777612591774576,
+            0.005649080278052208,
+            1.0579630043544939
+          ]
+        ],
+        "player_center": [
+          111.0407184803996,
+          99.76988482824135
+        ],
+        "url": "https://www.gamekee.com/nikke/671264.html",
+        "article_id": 671264,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194923,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/703758.png",
+        "item_name": "Clash - Breaker - 所属专辑 Succession",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671264_04",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 04",
+      "points": [
+        [
+          2128.4,
+          672.0
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Tepid Apple Ade 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671264.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9503310322761536,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.3199113843545245,
+            11.991974264537673,
+            1907.8023761871843
+          ],
+          [
+            0.09255056284076424,
+            7.50946623885222,
+            342.57813926134725
+          ],
+          [
+            0.00011777612591774576,
+            0.005649080278052208,
+            1.0579630043544939
+          ]
+        ],
+        "player_center": [
+          113.10596331637053,
+          98.81198249194642
+        ],
+        "url": "https://www.gamekee.com/nikke/671264.html",
+        "article_id": 671264,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194923,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/157559.png",
+        "item_name": "Tepid Apple Ade 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671264_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          1939.8,
+          1951.8
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "OVER JOY 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671264.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9059920310974121,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.3526136350858167,
+            12.640235138409855,
+            1541.0862673424278
+          ],
+          [
+            0.27545159948469833,
+            16.301423820532026,
+            1495.6683509934205
+          ],
+          [
+            0.00013544254480540762,
+            0.006496442319760039,
+            0.9666406692955626
+          ]
+        ],
+        "player_center": [
+          106.76796913506008,
+          107.6595994258191
+        ],
+        "url": "https://www.gamekee.com/nikke/671264.html",
+        "article_id": 671264,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194923,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/131289.png",
+        "item_name": "OVER JOY 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671264_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          1361.9,
+          1779.6
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Confetti 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671264.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.929935872554779,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.3454891281424213,
+            8.61735826625775,
+            1034.417244281482
+          ],
+          [
+            0.24340123441606723,
+            14.840900078374654,
+            1384.6772707799464
+          ],
+          [
+            0.00012955373850952035,
+            0.006213988305857429,
+            0.9970814476485396
+          ]
+        ],
+        "player_center": [
+          97.08822837341333,
+          102.72505748243822
+        ],
+        "url": "https://www.gamekee.com/nikke/671264.html",
+        "article_id": 671264,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194923,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/955607.png",
+        "item_name": "Confetti 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639716_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          1372.9,
+          1549.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 令人震惊！什么是暗物质！ 有什么用处\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639716.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.8717721700668335,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.0712310859362444,
+            7.426438742104236,
+            1184.8231620565318
+          ],
+          [
+            0.18616010132671776,
+            11.845890786832955,
+            1338.3134954559346
+          ],
+          [
+            0.00011188731962185846,
+            0.005366626264149597,
+            1.088403782707471
+          ]
+        ],
+        "player_center": [
+          104.07771819329014,
+          98.12456562745595
+        ],
+        "url": "https://www.gamekee.com/nikke/639716.html",
+        "article_id": 639716,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1730392441,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2312/h_1298/1253/613886/2024/9/31/775057.png",
+        "item_name": "剧情道具 令人震惊！什么是暗物质！ 有什么用处",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639716_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          1558.4,
+          1032.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Ready to Go 所属专辑 Succession\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639716.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.8959399461746216,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.082386100441374,
+            10.262204761772212,
+            1211.5121991257836
+          ],
+          [
+            0.15300461713094524,
+            10.207628778864676,
+            655.361766641979
+          ],
+          [
+            0.00013544254480540762,
+            0.006496442319760039,
+            0.9666406692955626
+          ]
+        ],
+        "player_center": [
+          98.00386275347688,
+          97.44987156691163
+        ],
+        "url": "https://www.gamekee.com/nikke/639716.html",
+        "article_id": 639716,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1730392441,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2298/h_1285/1253/613886/2024/9/31/231049.png",
+        "item_name": "Ready to Go 所属专辑 Succession",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639716_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          2328.2,
+          702.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Clash 所属专辑 Succession\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639716.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.888925313949585,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.1093113382068887,
+            13.854382630671378,
+            2089.557300120114
+          ],
+          [
+            0.10062806918539662,
+            7.647436869518279,
+            394.2498820028709
+          ],
+          [
+            0.00012366493221363306,
+            0.005931534291954818,
+            1.0275222260015167
+          ]
+        ],
+        "player_center": [
+          105.8364122924547,
+          93.58243951872487
+        ],
+        "url": "https://www.gamekee.com/nikke/639716.html",
+        "article_id": 639716,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1730392441,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2303/h_1291/1253/613886/2024/9/31/849883.png",
+        "item_name": "Clash 所属专辑 Succession",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639716_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          1925.7,
+          1530.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 令人震惊！什么是暗物质！ 使用方法\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639716.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.9166398048400879,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2674235051646527,
+            13.155569153953655,
+            1487.800242916271
+          ],
+          [
+            0.2293333478817508,
+            13.993434618267523,
+            1069.3612546402608
+          ],
+          [
+            0.0001413313511012949,
+            0.006778896333662649,
+            0.9361998909425855
+          ]
+        ],
+        "player_center": [
+          101.77461715460555,
+          100.09363392133841
+        ],
+        "url": "https://www.gamekee.com/nikke/639716.html",
+        "article_id": 639716,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1730392441,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2309/h_1293/1253/613886/2024/9/31/913628.png",
+        "item_name": "剧情道具 令人震惊！什么是暗物质！ 使用方法",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639716_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          2067.9,
+          2022.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Ready to Go - Breaker - 所属专辑 Succession\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639716.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.8984323740005493,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2788739086592043,
+            12.324350358986813,
+            1802.3346302693353
+          ],
+          [
+            0.2631301100638042,
+            15.643265749872555,
+            1712.9051092734094
+          ],
+          [
+            0.00012366493221363306,
+            0.005931534291954818,
+            1.0275222260015167
+          ]
+        ],
+        "player_center": [
+          104.74124213743438,
+          99.70841794498267
+        ],
+        "url": "https://www.gamekee.com/nikke/639716.html",
+        "article_id": 639716,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1730392441,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2304/h_1291/1253/613886/2024/9/31/246014.png",
+        "item_name": "Ready to Go - Breaker - 所属专辑 Succession",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639716_15",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 15",
+      "points": [
+        [
+          1617.5,
+          1727.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Cotton Candy 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639716.html",
+      "source": {
+        "number": 15,
+        "road_iou": 0.956669270992279,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.098419704604356,
+            8.730528924292589,
+            1449.3052812544474
+          ],
+          [
+            0.20697114277638343,
+            12.84408327196478,
+            1540.7565990395242
+          ],
+          [
+            0.00011188731962185846,
+            0.005366626264149597,
+            1.088403782707471
+          ]
+        ],
+        "player_center": [
+          105.04495492926493,
+          94.51671497081244
+        ],
+        "url": "https://www.gamekee.com/nikke/639716.html",
+        "article_id": 639716,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1730392441,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2308/h_1291/1253/613886/2024/10/1/13802.png",
+        "item_name": "Cotton Candy 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639716_18",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 18",
+      "points": [
+        [
+          441.1,
+          1277.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 令人震惊！什么是暗物质！ 注意事项\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639716.html",
+      "source": {
+        "number": 18,
+        "road_iou": 0.8517353534698486,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.1239319108273955,
+            2.5919046818587983,
+            147.35193694130663
+          ],
+          [
+            0.16545398478384887,
+            11.006246930966537,
+            997.457238956779
+          ],
+          [
+            0.00011777612591774576,
+            0.005649080278052208,
+            1.0579630043544939
+          ]
+        ],
+        "player_center": [
+          100.916768982006,
+          92.86572177171105
+        ],
+        "url": "https://www.gamekee.com/nikke/639716.html",
+        "article_id": 639716,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1730392441,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2303/h_1284/1253/613886/2024/10/1/876810.png",
+        "item_name": "剧情道具 令人震惊！什么是暗物质！ 注意事项",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639716_19",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 19",
+      "points": [
+        [
+          221.6,
+          978.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Wrecking Storm 所属专辑 Succession\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639716.html",
+      "source": {
+        "number": 19,
+        "road_iou": 0.9281551241874695,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.9734979865838653,
+            0.8981369427045877,
+            -45.030194859697936
+          ],
+          [
+            0.09284139175573358,
+            7.408278756275554,
+            858.6115551959318
+          ],
+          [
+            8.244328814242203e-05,
+            0.003954356194636546,
+            1.2406076744723566
+          ]
+        ],
+        "player_center": [
+          107.50903876754865,
+          100.06598280139386
+        ],
+        "url": "https://www.gamekee.com/nikke/639716.html",
+        "article_id": 639716,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1730392441,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2307/h_1296/1253/613886/2024/10/1/303571.png",
+        "item_name": "Wrecking Storm 所属专辑 Succession",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    }
+  ],
+  "connections": []
+}

@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 from . import runtime
+from dev_tools.map_paths import local_package_dir
 from .edited_map import road_distance
 from .local_projection import frame_plane_to_map
 from .surface_motion import contains, fit_calibration, project, register_surface
@@ -290,8 +291,9 @@ def publish_calibration(session, reference, origin, supported, samples, evidence
     import time
     import shutil
     if (destination / 'calibration.json').exists():
-        backup = destination / f'backup_{time.time_ns()}'
-        backup.mkdir()
+        backup = local_package_dir(Path(session.request['package'])) / 'movement_calibration' / (
+            session.request['difficulty']) / f'backup_{time.time_ns()}'
+        backup.mkdir(parents=True)
         for name in ['reference.png', 'surface.png', 'calibration.json']:
             if (destination / name).exists():
                 shutil.copyfile(destination / name, backup / name)

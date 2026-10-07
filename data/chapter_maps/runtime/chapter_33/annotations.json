@@ -1,0 +1,830 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "60caa2ed349127d3962729c10864a29e4bb5e39df03f399ad2b5dea5306ca217",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_671262_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          1049.9,
+          993.7
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "芯尘 ×10\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671262.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9314332008361816,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.27285032077493,
+            6.212283177254945,
+            683.9233618037969
+          ],
+          [
+            0.185731091273316,
+            9.448001113067177,
+            596.7534564513867
+          ],
+          [
+            0.00017179438505985405,
+            0.005879382174110957,
+            0.9696445134376724
+          ]
+        ],
+        "player_center": [
+          106.75673130687447,
+          101.30078965763778
+        ],
+        "url": "https://www.gamekee.com/nikke/671262.html",
+        "article_id": 671262,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194086,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/758661.png",
+        "item_name": "芯尘 ×10",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671262_02",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 02",
+      "points": [
+        [
+          1519.5,
+          636.5
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Black Wave - BREAKER - 所属专辑 Succession\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671262.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9045766592025757,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2692150355271217,
+            9.373451363847918,
+            1109.1383857577785
+          ],
+          [
+            0.12896252056097213,
+            7.409175299656352,
+            245.1091409533636
+          ],
+          [
+            0.00017926370614941293,
+            0.006135007486028825,
+            0.9418618870315755
+          ]
+        ],
+        "player_center": [
+          105.74965376474708,
+          100.68729849922777
+        ],
+        "url": "https://www.gamekee.com/nikke/671262.html",
+        "article_id": 671262,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194086,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/611306.png",
+        "item_name": "Black Wave - BREAKER - 所属专辑 Succession",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671262_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          896.7,
+          208.4
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "芯尘 ×10\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671262.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9258168339729309,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.05268065222396,
+            5.905611702482918,
+            527.6264495231142
+          ],
+          [
+            0.05091798957078946,
+            4.623011659211663,
+            -162.1067723884244
+          ],
+          [
+            0.0001867330272389718,
+            0.006390632797946693,
+            0.9140792606254784
+          ]
+        ],
+        "player_center": [
+          94.75285521241408,
+          106.77529866272764
+        ],
+        "url": "https://www.gamekee.com/nikke/671262.html",
+        "article_id": 671262,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194086,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/645338.png",
+        "item_name": "芯尘 ×10",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671262_04",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 04",
+      "points": [
+        [
+          545.1,
+          552.9
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "芯尘 ×10\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671262.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9042513370513916,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.0980181961544324,
+            3.51451921469039,
+            209.6602836426238
+          ],
+          [
+            0.11211173218292732,
+            6.8324845959696425,
+            156.57412357239554
+          ],
+          [
+            0.00017926370614941293,
+            0.006135007486028825,
+            0.9418618870315755
+          ]
+        ],
+        "player_center": [
+          95.22338827653527,
+          105.51668699994411
+        ],
+        "url": "https://www.gamekee.com/nikke/671262.html",
+        "article_id": 671262,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194086,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/998456.png",
+        "item_name": "芯尘 ×10",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671262_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          390.6,
+          886.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Scene of Memory 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671262.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9151026010513306,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.063061773455297,
+            2.3181927549147687,
+            25.997215671466588
+          ],
+          [
+            0.16911759073844063,
+            8.783416976526809,
+            456.08620364843654
+          ],
+          [
+            0.00017926370614941293,
+            0.006135007486028825,
+            0.9418618870315755
+          ]
+        ],
+        "player_center": [
+          117.1526421557682,
+          112.75119157865238
+        ],
+        "url": "https://www.gamekee.com/nikke/671262.html",
+        "article_id": 671262,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194086,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/701298.png",
+        "item_name": "Scene of Memory 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671262_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          871.4,
+          874.9
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "TURN UP THE VOLUME!! 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671262.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.937288761138916,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2369452942974206,
+            4.983492302865755,
+            481.2676584953233
+          ],
+          [
+            0.1640849987557744,
+            8.707198959129197,
+            474.5782477582399
+          ],
+          [
+            0.00017179438505985405,
+            0.005879382174110957,
+            0.9696445134376724
+          ]
+        ],
+        "player_center": [
+          122.5525432623311,
+          104.43310759256221
+        ],
+        "url": "https://www.gamekee.com/nikke/671262.html",
+        "article_id": 671262,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753194086,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/55022.png",
+        "item_name": "TURN UP THE VOLUME!! 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639713_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          700.9,
+          170.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "The Day to Day Sky 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639713.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.9061554074287415,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.0187346659512286,
+            3.4296338245421865,
+            440.86522489623695
+          ],
+          [
+            0.037830937330343,
+            4.213534364803189,
+            -163.12864694237078
+          ],
+          [
+            0.00014191710070161857,
+            0.004856880926439487,
+            1.0807750190620602
+          ]
+        ],
+        "player_center": [
+          107.58404107757598,
+          102.23236764816949
+        ],
+        "url": "https://www.gamekee.com/nikke/639713.html",
+        "article_id": 639713,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1755348780,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2308/h_1295/1253/613886/2024/9/31/832351.png",
+        "item_name": "The Day to Day Sky 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639713_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          707.1,
+          514.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "BOOGIE BOX 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639713.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.868976891040802,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.021289173763858,
+            3.5170576812180974,
+            460.319175239354
+          ],
+          [
+            0.09048218169064348,
+            6.015437188512238,
+            237.83888512965356
+          ],
+          [
+            0.00014191710070161857,
+            0.004856880926439487,
+            1.0807750190620602
+          ]
+        ],
+        "player_center": [
+          101.5069273100054,
+          90.13742604198507
+        ],
+        "url": "https://www.gamekee.com/nikke/639713.html",
+        "article_id": 639713,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1755348780,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2304/h_1284/1253/613886/2024/9/31/721613.png",
+        "item_name": "BOOGIE BOX 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639713_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          328.1,
+          447.0
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "A Little Star 所属专辑 Folk Tale\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639713.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.9097962975502014,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.0122384346826254,
+            1.8930789678996192,
+            9.781758514755158
+          ],
+          [
+            0.08777001644359429,
+            5.96102345235768,
+            95.3785851471655
+          ],
+          [
+            0.0001643250639702952,
+            0.005623756862193091,
+            0.9974271398437693
+          ]
+        ],
+        "player_center": [
+          105.67733800679075,
+          101.24479709340571
+        ],
+        "url": "https://www.gamekee.com/nikke/639713.html",
+        "article_id": 639713,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1755348780,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2305/h_1294/1253/613886/2024/9/31/306294.png",
+        "item_name": "A Little Star 所属专辑 Folk Tale",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639713_17",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 17",
+      "points": [
+        [
+          1002.1,
+          917.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 少女的日记-绝望篇- 复仇\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639713.html",
+      "source": {
+        "number": 17,
+        "road_iou": 0.9051066040992737,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.121514602222872,
+            5.632877281258025,
+            673.0708065108618
+          ],
+          [
+            0.16549577170154392,
+            8.621060448175012,
+            567.1616222932684
+          ],
+          [
+            0.0001643250639702952,
+            0.005623756862193091,
+            0.9974271398437693
+          ]
+        ],
+        "player_center": [
+          110.48779439186765,
+          99.9467564551725
+        ],
+        "url": "https://www.gamekee.com/nikke/639713.html",
+        "article_id": 639713,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1755348780,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2314/h_1300/1253/613886/2024/9/31/372678.png",
+        "item_name": "剧情道具 少女的日记-绝望篇- 复仇",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_639713_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          1357.7,
+          1031.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "剧情道具 少女的日记-绝望篇- 初次见面\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639713.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.8535805344581604,
+        "roi": [
+          39,
+          311,
+          474,
+          746
+        ],
+        "roi_to_map": [
+          [
+            1.6754886189311227,
+            4.318399196731606,
+            882.0676418396368
+          ],
+          [
+            0.1036083494526406,
+            5.09529738573922,
+            550.3127308736302
+          ],
+          [
+            9.272260662900671e-05,
+            0.003173279734152841,
+            0.8982894116578507
+          ]
+        ],
+        "player_center": [
+          216.52159394951812,
+          205.3433360959609
+        ],
+        "url": "https://www.gamekee.com/nikke/639713.html",
+        "article_id": 639713,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1755348780,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1170/h_2532/1253/613886/2024/9/31/793626.PNG",
+        "item_name": "剧情道具 少女的日记-绝望篇- 初次见面",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1170,
+          2532
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_639713_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          1609.1,
+          205.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "31000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639713.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9079309105873108,
+        "roi": [
+          39,
+          311,
+          474,
+          746
+        ],
+        "roi_to_map": [
+          [
+            1.7931376594836146,
+            5.3990530994486345,
+            1025.2066267937698
+          ],
+          [
+            0.028716306123135693,
+            2.618321267286016,
+            -220.1793586596224
+          ],
+          [
+            9.78738625528404e-05,
+            0.0033495730527168875,
+            0.8588252167067367
+          ]
+        ],
+        "player_center": [
+          216.98283046457374,
+          204.30878612135464
+        ],
+        "url": "https://www.gamekee.com/nikke/639713.html",
+        "article_id": 639713,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1755348780,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1170/h_2532/1253/613886/2024/9/31/895494.PNG",
+        "item_name": "31000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1170,
+          2532
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_639713_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          1368.6,
+          214.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Outbreak 所属专辑 Succession\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639713.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.8558754324913025,
+        "roi": [
+          39,
+          311,
+          474,
+          746
+        ],
+        "roi_to_map": [
+          [
+            1.676879458030558,
+            4.365998392743899,
+            895.5419830145046
+          ],
+          [
+            0.027668534623484113,
+            2.496381283468043,
+            -185.38629727414943
+          ],
+          [
+            9.272260662900671e-05,
+            0.003173279734152841,
+            0.8982894116578507
+          ]
+        ],
+        "player_center": [
+          212.3539216215934,
+          206.9449413411289
+        ],
+        "url": "https://www.gamekee.com/nikke/639713.html",
+        "article_id": 639713,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1755348780,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1170/h_2532/1253/613886/2024/9/31/41336.PNG",
+        "item_name": "Outbreak 所属专辑 Succession",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1170,
+          2532
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_639713_08",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 08",
+      "points": [
+        [
+          969.9,
+          63.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Before the Next Step 所属专辑 Succession\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/639713.html",
+      "source": {
+        "number": 8,
+        "road_iou": 0.8741092681884766,
+        "roi": [
+          4,
+          13,
+          278,
+          286
+        ],
+        "roi_to_map": [
+          [
+            2.748101000699686,
+            5.196365473141107,
+            482.2248679879477
+          ],
+          [
+            0.022282203036464197,
+            3.3602273841796384,
+            -347.4691243163335
+          ],
+          [
+            0.00015538368689958237,
+            0.00531944101467182,
+            0.8612536571699564
+          ]
+        ],
+        "player_center": [
+          134.0421342356587,
+          132.44657552149044
+        ],
+        "url": "https://www.gamekee.com/nikke/639713.html",
+        "article_id": 639713,
+        "difficulty": "normal",
+        "author": "玄妙の壮汉",
+        "article_updated": 1755348780,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2286/h_1193/1253/613886/2024/9/31/129072.png",
+        "item_name": "Before the Next Step 所属专辑 Succession",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          2286,
+          1193
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

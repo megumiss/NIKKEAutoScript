@@ -17,6 +17,7 @@ from filelock import FileLock
 import numpy as np
 
 from dev_tools.minimap_chapters import chapter_number, click, wait_for_chapter, write_progress
+from dev_tools.map_paths import DEFAULT_MAPS_ROOT, local_package_dir
 from module.campaign_prototype import goto, runtime, settings
 from module.campaign_prototype.camera_navigation import field_chart, inside, target_projection, FIELD_BOUNDS
 from module.campaign_prototype.manual_move import GameSession, prepare, sha
@@ -126,12 +127,12 @@ def wake_entry_arrow(session, observation, folder):
 
 
 def calibrate(chapter, folder):
-    package = ROOT / f'data/chapter_maps/current/chapter_{chapter:02}'
+    package = DEFAULT_MAPS_ROOT / f'chapter_{chapter:02}'
     metadata = json.loads((package / 'map.json').read_text('utf-8'))
     if chapter in (39, 40) or metadata.get('processing_3d') or metadata.get('coordinate_model'):
         return dict(status='skipped_nonflat', reason='Non-flat chapter excluded by task scope.')
     expected = binding(package)
-    saved = package / 'movement_calibration/normal/flat_calibration.json'
+    saved = local_package_dir(package) / 'movement_calibration/normal/flat_calibration.json'
     if saved.exists():
         data = json.loads(saved.read_text('utf-8'))
         if data.get('binding') == expected and data.get('status') == 'validated':
