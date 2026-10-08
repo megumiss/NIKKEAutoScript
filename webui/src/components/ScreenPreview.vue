@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { api } from '../api/client'
 
 const ScrcpyPlayer = defineAsyncComponent(() => import('./ScrcpyPlayer.vue'))
 
@@ -137,10 +138,29 @@ function stopObserver() {
 const statusText = computed(() => status.value === 'live' ? t('实时') : t('待机'))
 const refreshing = ref(false)
 
+type ScrcpyInfo = { available: boolean; reason?: string; sessionId?: string | null }
+const scrcpy = ref<ScrcpyInfo | null>(null)
 const interactive = ref(false)
+const controlLoading = ref(false)
+let disposed = false
 const controlTitle = computed(() => interactive.value ? t('退出控制') : t('控制'))
 
 async function toggleInteractive() {
+  if (controlLoading.value) return
+  if (!interactive.value) {
+    const name = props.name
+    controlLoading.value = true
+    try {
+      const current: ScrcpyInfo = await api.get(`/api/${encodeURIComponent(name)}/scrcpy`)
+      if (disposed || name !== props.name || !expanded.value) return
+      scrcpy.value = current
+    } catch {
+      if (name === props.name) scrcpy.value = null
+    } finally {
+      controlLoading.value = false
+    }
+    if (disposed || name !== props.name || !expanded.value) return
+  }
   interactive.value = !interactive.value
   showControlBar.value = false
   if (interactive.value) stopPolling()
@@ -242,10 +262,37 @@ onMounted(() => {
   if (expanded.value) openPreview()
 })
 
+let controlCheck: ReturnType<typeof setInterval> | undefined
+let checkingControl = false
+onMounted(() => {
+  controlCheck = setInterval(async () => {
+    if (!expanded.value || checkingControl || controlLoading.value) return
+    checkingControl = true
+    const name = props.name
+    const previous = scrcpy.value?.sessionId || null
+    try {
+      const current: ScrcpyInfo = await api.get(`/api/${encodeURIComponent(name)}/scrcpy`)
+      if (disposed || name !== props.name || controlLoading.value) return
+      const targetChanged = current.available && (current.sessionId || null) !== previous
+      if (interactive.value && (targetChanged || (previous && !current.available))) {
+        interactive.value = false
+        startPolling()
+      }
+      scrcpy.value = current
+    } catch {
+      if (!disposed && name === props.name && interactive.value && previous && !controlLoading.value) {
+        interactive.value = false
+        startPolling()
+      }
+    } finally { checkingControl = false }
+  }, 2000)
+})
+
 watch(frameAspect, measure)
 
 watch(() => props.name, () => {
   resetFrame()
+  scrcpy.value = null
   interactive.value = false
   if (expanded.value) {
     startPolling()
@@ -253,6 +300,8 @@ watch(() => props.name, () => {
 })
 
 onBeforeUnmount(() => {
+  disposed = true
+  if (controlCheck) clearInterval(controlCheck)
   stopPolling()
   stopObserver()
   if (frameUrl.value) URL.revokeObjectURL(frameUrl.value)
@@ -265,7 +314,7 @@ onBeforeUnmount(() => {
       <b>{{ t('画面预览') }}</b>
       <span v-if="frameUrl && !interactive" class="preview-badge" :class="status">{{ statusText }}</span>
       <span class="preview-icons">
-        <button class="preview-icon" :class="{ 'control-active': interactive }" type="button" :aria-pressed="interactive" :aria-label="controlTitle" :title="controlTitle" @click="toggleInteractive">
+        <button class="preview-icon" :class="{ 'control-active': interactive }" type="button" :disabled="controlLoading" :aria-busy="controlLoading" :aria-pressed="interactive" :aria-label="controlTitle" :title="controlTitle" @click="toggleInteractive">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
         </button>
         <button v-if="interactive" class="preview-icon" :class="{ 'control-active': showControlBar }" type="button" :title="t('操作栏')" @click="toggleControlBar">

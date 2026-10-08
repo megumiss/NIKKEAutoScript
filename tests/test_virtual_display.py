@@ -8,9 +8,76 @@ import numpy as np
 from module.device.adb.device import Device
 from module.device.adb.method.adb import Adb
 from module.device.adb.screenshot import Screenshot
+from module.config.config_updater import ConfigUpdater, ensure_virtual_display_id
 
 
 class VirtualDisplayTests(unittest.TestCase):
+    def test_virtual_display_identity_is_generated_once(self):
+        data = {'Emulator': {'PhysicalDevice': {'VirtualDisplayId': ''}}}
+        with patch('module.config.config_updater.random_id', return_value='abc123def456'):
+            self.assertEqual(ensure_virtual_display_id(data), 'abc123def456')
+        with patch('module.config.config_updater.random_id') as generate:
+            self.assertEqual(ensure_virtual_display_id(data), 'abc123def456')
+        generate.assert_not_called()
+
+    def test_virtual_display_identity_is_persisted_on_config_read(self):
+        old = {'Emulator': {'PhysicalDevice': {}}}
+        normalized = {'Emulator': {'PhysicalDevice': {'VirtualDisplayId': None}}}
+        updater = ConfigUpdater()
+        with patch('module.config.config_updater.read_file', return_value=old), \
+                patch('module.config.config_updater.os.path.exists', return_value=True), \
+                patch.object(updater, 'config_update', return_value=normalized), \
+                patch.object(updater, 'write_file') as write, \
+                patch('module.config.config_updater.random_id', return_value='abc123def456'):
+            data = updater.read_file('nkas')
+
+        self.assertEqual(data['Emulator']['PhysicalDevice']['VirtualDisplayId'], 'abc123def456')
+        self.assertEqual(old['Emulator']['PhysicalDevice']['VirtualDisplayId'], 'abc123def456')
+        write.assert_called_once_with('nkas', old)
+
+    def test_reading_deleted_instance_does_not_recreate_config(self):
+        updater = ConfigUpdater()
+        with patch('module.config.config_updater.read_file', return_value={}), \
+                patch('module.config.config_updater.os.path.exists', return_value=False), \
+                patch.object(updater, 'config_update', side_effect=lambda data, **_: data), \
+                patch.object(updater, 'write_file') as write:
+            updater._read_file('deleted')
+        write.assert_not_called()
+
+    def test_identity_migrates_legacy_without_overwriting_correct_value(self):
+        data = {'NKAS': {'PhysicalDevice': {'VirtualDisplayId': 'legacy123456'}},
+                'Emulator': {'PhysicalDevice': {'VirtualDisplayId': 'correct12345'}}}
+        self.assertEqual(ensure_virtual_display_id(data), 'correct12345')
+        self.assertNotIn('VirtualDisplayId', data['NKAS']['PhysicalDevice'])
+        data['Emulator']['PhysicalDevice']['VirtualDisplayId'] = None
+        data['NKAS']['PhysicalDevice']['VirtualDisplayId'] = 'legacy123456'
+        self.assertEqual(ensure_virtual_display_id(data), 'legacy123456')
+
+    def test_real_schema_binding_and_copy_identity(self):
+        import json
+        from pathlib import Path
+        from module.config.config import NikkeConfig
+        from module.config.config_updater import renew_virtual_display_id
+        data = json.loads(Path('config/template.json').read_text(encoding='utf-8'))
+        identity = ensure_virtual_display_id(data)
+        config = object.__new__(NikkeConfig)
+        for key, value in {'data': data, 'bound': {}, 'overridden': {}, 'config_name': 'test'}.items():
+            object.__setattr__(config, key, value)
+        config.bind('NKAS')
+        self.assertEqual(config.PhysicalDevice_VirtualDisplayId, identity)
+        self.assertEqual(config.bound['PhysicalDevice_VirtualDisplayId'], 'Emulator.PhysicalDevice.VirtualDisplayId')
+        self.assertNotEqual(renew_virtual_display_id(data), identity)
+
+    def test_virtual_mode_never_falls_back_to_primary_display(self):
+        from module.exception import RequestHumanTakeover
+        device = SimpleNamespace(_virtual_display_id=None,
+            config=SimpleNamespace(PhysicalDevice_Enable=True, PhysicalDevice_VirtualDisplay=True),
+            adb_shell=lambda *_: self.fail('Input must not reach ADB'))
+        with self.assertRaises(RequestHumanTakeover):
+            Adb._adb_input(device, 'tap', 10, 20)
+        with self.assertRaises(RequestHumanTakeover):
+            Adb.app_start_adb.__wrapped__(device, 'com.example.game')
+
     def test_parse_bridge_display_id(self):
         self.assertEqual(Device._bridge_display_id('NKAS_VD_READY id=19 socket=nkas-vd'), 19)
         self.assertIsNone(Device._bridge_display_id('unrelated output'))

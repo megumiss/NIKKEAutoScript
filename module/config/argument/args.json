@@ -211,6 +211,12 @@
           true,
           false
         ]
+      },
+      "VirtualDisplayId": {
+        "type": "input",
+        "value": "",
+        "valuetype": "str",
+        "display": "readonly"
       }
     },
     "Scrcpy": {

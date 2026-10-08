@@ -69,13 +69,13 @@ def retry(func):
 class Adb(Connection):
     @property
     def effective_control_method(self):
-        if getattr(self, '_virtual_display_id', None) is not None:
+        if self.require_virtual_display() is not None:
             return 'ADB'
         return self.config.Emulator_ControlMethod
 
     def _adb_input(self, *args):
         args = list(args)
-        display_id = getattr(self, '_virtual_display_id', None)
+        display_id = Connection.require_virtual_display(self)
         if display_id is not None:
             transform = getattr(self, '_virtual_display_transform_point', None)
             if callable(transform) and args:
@@ -114,7 +114,7 @@ class Adb(Connection):
         Returns:
             str: Package name of the current focused app.
         """
-        display_id = getattr(self, '_virtual_display_id', None)
+        display_id = Connection.require_virtual_display(self)
         if display_id is not None:
             output = self.adb_shell(['dumpsys', 'activity', 'activities'])
             blocks = re.split(
@@ -168,7 +168,7 @@ class Adb(Connection):
         """
         if not package_name:
             package_name = self.package
-        display_id = getattr(self, '_virtual_display_id', None)
+        display_id = Connection.require_virtual_display(self)
         if display_id is not None:
             try:
                 response = self._virtual_display_command(
@@ -201,6 +201,7 @@ class Adb(Connection):
 
     @retry
     def app_stop_adb(self, package_name=None):
+        Connection.require_virtual_display(self)
         if not package_name:
             package_name = self.package
         self.adb_shell(['am', 'force-stop', package_name])

@@ -108,6 +108,7 @@ def mount_api(app):
         Route('/api/{name:str}/bla/bind', routes_bla.bind_to_bot, methods=['POST']),
         Route('/api/{name:str}/screenshot', routes_preview.screenshot, methods=['GET']),
         Route('/api/{name:str}/scrcpy', routes_preview.scrcpy, methods=['GET']),
+        Route('/api/{name:str}/virtual-display', routes_preview.virtual_display, methods=['GET']),
         Route('/api/{name:str}/task/{task:str}/run', routes_tasks.run_task, methods=['POST']),
         Route('/api/{name:str}/tool/{task:str}/start', routes_tasks.start_tool, methods=['POST']),
         Route('/api/{name:str}', routes_instances.delete, methods=['DELETE']),

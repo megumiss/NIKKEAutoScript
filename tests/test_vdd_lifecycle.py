@@ -44,7 +44,6 @@ class VddLifecycleTests(unittest.TestCase):
             with (
                 self.subTest(error=error),
                 patch.object(manager, '_restore_physical_device_resolution'),
-                patch.object(manager, '_cleanup_virtual_display_server'),
                 patch('module.config.config.NikkeConfig', return_value=config),
                 patch('module.device.win.vdd.vdd_find_screen_n', return_value=None, side_effect=error),
                 patch('module.device.win.vdd.vdd_auto_stop') as stop,

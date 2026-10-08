@@ -1,6 +1,7 @@
 import ctypes
 import multiprocessing
 import os
+import threading
 import unittest
 import uuid
 from contextlib import ExitStack
@@ -328,8 +329,12 @@ class WorkerCleanupTests(unittest.TestCase):
     @unittest.skipUnless(os.name == 'nt', 'Windows worker cleanup')
     def test_single_tool_worker_uses_guarded_entry_and_always_releases(self):
         from module.webui import process_manager
-        stop = Mock()
+        from module.config.config import NikkeConfig
+        stop = threading.Event()
+        worker_stop = threading.Event()
         with (
+            patch.object(NikkeConfig, 'stop_event'),
+            patch('module.device.adb.virtual_display_session.configure_worker'),
             patch('main.NikkeAutoScript') as script_class,
             patch.object(process_manager, 'get_available_func', return_value=['Reward']),
             patch.object(process_manager, 'set_file_logger'),
@@ -339,9 +344,14 @@ class WorkerCleanupTests(unittest.TestCase):
             patch.object(driver_input, 'release_scheme_mutex') as release,
             patch.object(process_manager, 'logger'),
         ):
-            ProcessManager.run_process('driver_test', 'Reward', Mock(), Mock(), stop)
+            ProcessManager.run_process('driver_test', 'Reward', Mock(), Mock(), stop, worker_stop=worker_stop)
             script_class.return_value.run_once.assert_called_once_with('reward', skip_first_screenshot=True)
-            self.assertIs(script_class.stop_event, stop)
+            self.assertTrue(worker_stop.is_set())
+            self.assertTrue(script_class.stop_event.is_set())
+            worker_stop.clear()
+            self.assertFalse(script_class.stop_event.is_set())
+            stop.set()
+            self.assertTrue(script_class.stop_event.is_set())
             release.assert_called_once()
 
 

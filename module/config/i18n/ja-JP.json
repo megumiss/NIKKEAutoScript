@@ -372,6 +372,10 @@
       "help": "Android 内に 720x1280@240dpi の仮想ディスプレイを作成し、実機画面を変更せずに直接キャプチャします。推奨。同じ実装が Windows、Linux、ARM Linux で動作し、ホスト側に必要なのは ADB だけです。有効時、スクリーンショット方法と制御方法の設定は無効になり、キャプチャは仮想ディスプレイから直接行われ、制御は常に ADB を使用します。",
       "True": "True",
       "False": "False"
+    },
+    "VirtualDisplayId": {
+      "name": "仮想ディスプレイ ID",
+      "help": "ログと Android のディスプレイ一覧でこのインスタンスを識別するため、NKAS が自動生成して保存します。Android の実行時 displayId そのものではなく、再作成後に数値 displayId は変わる場合があります。"
     }
   },
   "Scrcpy": {

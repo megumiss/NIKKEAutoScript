@@ -47,7 +47,7 @@ class Screenshot(DroidCast, NemuIpc, Adb):
         self._screenshot_interval.wait()
         self._screenshot_interval.reset()
 
-        if getattr(self, '_virtual_display_id', None) is not None:
+        if self.require_virtual_display() is not None:
             self.image = self.screenshot_virtual_display()
         else:
             method = self.screenshot_methods.get(self.config.Emulator_ScreenshotMethod)
@@ -60,7 +60,14 @@ class Screenshot(DroidCast, NemuIpc, Adb):
         return self.image
 
     def screenshot_virtual_display(self):
-        width, height, data = self._virtual_display_command(b'FRAME\n')
+        try:
+            width, height, data = self._virtual_display_command(b'FRAME\n')
+        except (OSError, ScreenshotSizeError):
+            check = getattr(self, '_check_virtual_display', None)
+            if not callable(check):
+                raise
+            check(force=True)
+            width, height, data = self._virtual_display_command(b'FRAME\n')
         self._virtual_display_raw_width = width
         self._virtual_display_raw_height = height
         # The bridge already follows NKAS's RGB screenshot convention.
@@ -119,6 +126,9 @@ class Screenshot(DroidCast, NemuIpc, Adb):
         return bytes(data)
 
     def _virtual_display_command(self, command, timeout=10):
+        check = getattr(self, 'check_cancelled', None)
+        if callable(check):
+            check()
         port = getattr(self, '_virtual_capture_port', None)
         if port is None:
             raise ScreenshotSizeError('The virtual-display bridge is not connected')
@@ -132,7 +142,15 @@ class Screenshot(DroidCast, NemuIpc, Adb):
                         f'The virtual-display bridge returned invalid frame {width}x{height}/{size}'
                     )
                 return width, height, self._recv_exact(stream, size)
-            return stream.recv(256)
+            response = bytearray()
+            while b'\n' not in response:
+                chunk = stream.recv(256)
+                if not chunk:
+                    raise ScreenshotSizeError('Virtual display response was truncated')
+                response.extend(chunk)
+                if len(response) > 4096:
+                    raise ScreenshotSizeError('Virtual display response is too large')
+            return bytes(response)
 
     def _handle_orientated_image(self, image):
         """
