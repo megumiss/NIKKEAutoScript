@@ -100,16 +100,19 @@ class Conversation(UI):
                 logger.info('All favorite nikke consultations done')
                 raise ConversationFavouriteDone
 
-            # 跳过咨询：咨询已完成 / 好感度满且未开启OnlyLogsNotMax)/ 开启OnlyLogsNotMax且日志已满，默认忽略好感
+            # 强制模式只绕过培养进度筛选，当天已咨询的角色无法重复消耗次数。
+            # 补日志模式以日志数量为准，避免满好感角色被提前排除。
             if (
-                self.appear(COMMUNICATE_DONE, offset=5, threshold=0.95)  # 1. 咨询已完成
+                self.appear(COMMUNICATE_DONE, offset=5, threshold=0.95)
                 or (
-                    self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95)  # 2. 好感度满
-                    and not self.config.Conversation_OnlyLogsNotMax  # 且未开启OnlyLogsNotMax
-                )
-                or (
-                    self.config.Conversation_OnlyLogsNotMax  # 3. 开启OnlyLogsNotMax
-                    and self.logs_quantity >= 20  # 且日志已满
+                    not self.config.Conversation_ForceConsultation
+                    and (
+                        (
+                            not self.config.Conversation_OnlyLogsNotMax
+                            and self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95)
+                        )
+                        or (self.config.Conversation_OnlyLogsNotMax and self.logs_quantity >= 20)
+                    )
                 )
             ):
                 if self._confirm_timer.reached():
@@ -172,6 +175,16 @@ class Conversation(UI):
 
     def ensure_wait_to_answer(self, nikke: str, skip_first_screenshot=True):
         logger.info(f'Communicate NIKKE {nikke}')
+        if not skip_first_screenshot:
+            self.device.screenshot()
+            skip_first_screenshot = True
+        # 此处识别好感满级仅用于选择咨询方式，强制模式也需要保留。
+        rank_max = self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95)
+        # 固定本轮按钮，避免快速咨询防抖或动画期间误点普通咨询。
+        communicate_button = COMMUNICATE_QUICKLY if rank_max else COMMUNICATE
+        color_threshold = 6 if rank_max else 10
+        if rank_max:
+            logger.info('Use quick conversation for max-rank NIKKE %s', nikke)
         confirm_timer = Timer(1.6, count=2).start()
         click_timer = Timer(0.9)
         while 1:
@@ -180,18 +193,11 @@ class Conversation(UI):
             else:
                 self.device.screenshot()
 
-            # if click_timer.reached() \
-            #         and COMMUNICATE_QUICKLY.match_appear_on(self.device.image, threshold=6) \
-            #         and self.appear_then_click(COMMUNICATE_QUICKLY, offset=5, interval=3):
-            #     confirm_timer.reset()
-            #     click_timer.reset()
-            #     continue
-
             # 咨询
             if (
                 click_timer.reached()
-                and COMMUNICATE.match_appear_on(self.device.image, threshold=10)
-                and self.appear_then_click(COMMUNICATE, offset=5, interval=3)
+                and communicate_button.match_appear_on(self.device.image, threshold=color_threshold)
+                and self.appear_then_click(communicate_button, offset=5, interval=3)
             ):
                 confirm_timer.reset()
                 click_timer.reset()
@@ -207,6 +213,7 @@ class Conversation(UI):
             if self.appear(ANSWER_CHECK, offset=1, threshold=0.9, static=False):
                 self.answer(nikke)
             elif (
+                # 快速咨询没有答题阶段，也通过普通咨询按钮失效判断完成。
                 not COMMUNICATE.match_appear_on(self.device.image, threshold=10)
                 and self.appear(DETAIL_CHECK, offset=(5, 5), static=False)
                 and GIFT.match_appear_on(self.device.image, threshold=10)

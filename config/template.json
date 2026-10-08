@@ -254,7 +254,8 @@
     },
     "Conversation": {
       "OnlyFavourite": false,
-      "OnlyLogsNotMax": false
+      "OnlyLogsNotMax": false,
+      "ForceConsultation": false
     },
     "Storage": {
       "Storage": {}

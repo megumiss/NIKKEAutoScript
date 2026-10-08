@@ -1112,6 +1112,10 @@
       "OnlyLogsNotMax": {
         "type": "checkbox",
         "value": false
+      },
+      "ForceConsultation": {
+        "type": "checkbox",
+        "value": false
       }
     },
     "Storage": {

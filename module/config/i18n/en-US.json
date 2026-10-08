@@ -955,6 +955,10 @@
     "OnlyLogsNotMax": {
       "name": "Only converse when logs are not full",
       "help": "Only converse with NIKKE whose conversation logs are under 20. Recommend enabling 'Only converse with favorites' as well"
+    },
+    "ForceConsultation": {
+      "name": "Force consultation",
+      "help": "Converse regardless of bond rank and log count"
     }
   },
   "BlaAuth": {

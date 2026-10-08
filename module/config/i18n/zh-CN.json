@@ -955,6 +955,10 @@
     "OnlyLogsNotMax": {
       "name": "只咨询日志未满",
       "help": "只咨询咨询日志数量不够20的妮姬，建议同时开启只咨询收藏，可以用来补咨询日志"
+    },
+    "ForceConsultation": {
+      "name": "强制咨询",
+      "help": "忽略好感等级和日志数量进行咨询"
     }
   },
   "BlaAuth": {
