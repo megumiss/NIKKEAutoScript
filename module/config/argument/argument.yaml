@@ -350,8 +350,8 @@ EventInfo:
   Event:
     value: ''
     option: [
-      'event_20260917',
-      'event_20260903'
+      'event_20261008',
+      'event_20260917'
     ]
     display: disabled
   StoryPart:

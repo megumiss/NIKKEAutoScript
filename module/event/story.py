@@ -641,11 +641,15 @@ class EventStory(EventBase):
 
                 # 战斗结束
                 if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
+                    confirm_timer = Timer(1, count=3).start()
                     while 1:
                         self.device.screenshot()
                         if not self.appear(END_FIGHTING, offset=30):
-                            click_timer.reset()
-                            break
+                            if confirm_timer.reached():
+                                click_timer.reset()
+                                break
+                        else:
+                            confirm_timer.reset()
                         if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
                             click_timer.reset()
                             continue
