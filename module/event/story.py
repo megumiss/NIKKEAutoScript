@@ -555,13 +555,33 @@ class EventStory(EventBase):
                 if (
                     self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
                     and not self.appear(FIGHT, threshold=20)
-                    and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
+                    and self.appear(FIGHT_CLOSE, offset=10)
                 ):
-                    logger.warning('Story push done, no ticket')
-                    # 没票直接退出
-                    self.back_to_event()
-                    return
-
+                    # 重复确认
+                    confirm_timer = Timer(2, count=3).start()
+                    no_ticket = False
+                    while 1:
+                        self.device.screenshot()
+                        # 中途出现 FIGHT 或弹窗已关，说明不是没票，回外层继续遍历
+                        if not self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) or self.appear(
+                            FIGHT, threshold=20
+                        ):
+                            break
+                        if confirm_timer.reached():
+                            no_ticket = True
+                            logger.warning('Story push done, no ticket')
+                            break
+                    if no_ticket:
+                        # 关闭弹窗，点击未生效则重试
+                        while 1:
+                            self.device.screenshot()
+                            if self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1):
+                                continue
+                            if not self.appear(FIGHT_CLOSE, offset=10):
+                                break
+                        # 没票直接退出
+                        self.back_to_event()
+                        return
                 # 进入战斗
                 if (
                     self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)

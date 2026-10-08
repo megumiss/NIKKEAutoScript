@@ -381,11 +381,7 @@
   "Scrcpy": {
     "_info": {
       "name": "互动控制",
-      "help": ""
-    },
-    "WebUrl": {
-      "name": "ws-scrcpy 地址",
-      "help": "用于总览页画面预览的互动模式（可点击、拖拽操作游戏）。填入 ws-scrcpy 服务地址，如 https://scrcpy.example.com，留空则关闭互动模式。部署与使用说明见 Wiki：https://nkas.megumiss.top/wiki/#/zh-cn/Interactive-Control"
+      "help": "首页画面预览可直接通过 ADB 投屏和控制，无需配置外部服务。高延迟连接可适当降低码率与帧率。"
     },
     "Bitrate": {
       "name": "视频码率",
@@ -435,25 +431,17 @@
     },
     "Screens": {
       "name": "多屏幕模式",
-      "help": "开启后支持游戏窗口在副屏/虚拟屏幕上运行，还需要手动选择游戏窗口目标屏幕"
+      "help": "开启后支持游戏窗口在副屏/虚拟屏幕上运行，还需要手动选择游戏窗口目标屏幕；开启「启用VDD虚拟屏幕」时会自动开启该选项"
     },
     "ScreenNumber": {
       "name": "游戏窗口目标屏幕",
-      "help": "选择符合分辨率要求的屏幕，默认为0，即主屏幕；需要先开启多屏幕模式，选择后，游戏窗口会移动到对应的屏幕中，屏幕顺序可能和系统设置中的顺序不同",
+      "help": "选择符合分辨率要求的屏幕，默认为0，即主屏幕；需要先开启多屏幕模式，选择后，游戏窗口会移动到对应的屏幕中，屏幕顺序可能和系统设置中的顺序不同；开启「启用VDD虚拟屏幕」时该选项被忽略，屏幕序号会自动定位",
       "0": "0",
       "1": "1",
       "2": "2",
       "3": "3",
       "4": "4",
       "5": "5"
-    },
-    "VddScreen": {
-      "name": "是否为VDD虚拟屏幕",
-      "help": "目标屏幕是 VDD(Virtual Display Driver)虚拟屏时开启，请在虚拟屏启用状态下选择目标屏幕"
-    },
-    "VddAutoManage": {
-      "name": "自动管理VDD屏幕",
-      "help": "需先开启是否为VDD虚拟屏幕；开启后任务启动时自动启用该虚拟屏，任务结束后自动禁用"
     },
     "GameWindowPosition": {
       "name": "游戏窗口位置",
@@ -481,6 +469,26 @@
     "DisableVoice": {
       "name": "禁用声音",
       "help": "脚本运行时自动禁用游戏进程声音，运行结束后会自动恢复；如果没有自动恢复，需要在系统任务栏中的音量合成器中手动开启"
+    }
+  },
+  "Vdd": {
+    "_info": {
+      "name": "虚拟屏幕",
+      "help": "VDD 虚拟屏幕设置"
+    },
+    "VddScreen": {
+      "name": "启用VDD虚拟屏幕",
+      "help": "需要使用虚拟屏幕时开启，建议 1080P 屏幕的用户使用该方式；开启后会将游戏窗口移动到虚拟屏幕来满足分辨率要求，屏幕序号会在任务启动时自动定位，无需手动选择目标屏幕"
+    },
+    "VddType": {
+      "name": "虚拟屏幕类型",
+      "help": "ParsecVDD（推荐）：只需手动安装官方 ParsecVDD 驱动即可使用 https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe；\nMttVDD：需要手动安装官方 MttVDD 驱动 https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe，安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080、竖屏。",
+      "parsecvdd": "ParsecVDD",
+      "mttvdd": "MttVDD"
+    },
+    "VddAutoManage": {
+      "name": "自动管理VDD屏幕",
+      "help": "开启后任务启动时自动启用该虚拟屏并定位屏幕序号，任务结束后自动禁用"
     }
   },
   "PCClientInfo": {
@@ -534,10 +542,17 @@
       "help": ""
     },
     "ControlScheme": {
-      "name": "控制方案 (BETA)",
-      "help": "pyautogui：完美的前台模式，模拟物理鼠标输入，点击、滚动和滑动会占用真实鼠标。\npostmessage：不完美的后台模式，点击、滚动、滑动和常规键盘按键通过窗口消息发送，并短暂移动真实鼠标，但不会前置游戏窗口，此时截图方式请选择 PrintWindow 保证截图不被遮挡。当需要使用键盘按键时会短暂前置游戏，随后恢复原前台窗口；启动器仍然依赖前台操作。",
+      "name": "鼠标控制方案 (BETA)",
+      "help": "pyautogui：完美的前台模式（已被屏蔽），模拟物理鼠标输入，点击、滚动和滑动会占用真实鼠标。\npostmessage：不完美的后台模式（已被屏蔽），点击、滚动、滑动和常规键盘按键通过窗口消息发送，并短暂移动真实鼠标，但不会前置游戏窗口，此时截图方式请选择 PrintWindow 保证截图不被遮挡。当需要使用键盘按键时会短暂前置游戏，随后恢复原前台窗口；启动器仍然依赖前台操作。\ndriver：全新的前台模式。鼠标输入经由已安装的虚拟鼠标驱动所提供的虚拟鼠标设备在驱动层发送；需要安装 GHUB 或者在常用工具中安装虚拟鼠标驱动，注意：此方案未经过广泛测试，仍然可能会被反作弊检测。",
       "pyautogui": "pyautogui（前台模式）",
-      "postmessage": "postmessage（后台模式）"
+      "postmessage": "postmessage（后台模式）",
+      "driver": "driver（驱动级前台模式）"
+    },
+    "MoveBackend": {
+      "name": "鼠标移动方式",
+      "help": "仅当控制方案为 driver 时生效。\ndriver：以相对位移报告移动光标，一次移动要发多次报告逐轮逼近目标点，受提高指针精确度与鼠标灵敏度影响。\ncursor：用系统光标 API 直接设定光标位置，一次到位，不受上述鼠标设置影响。",
+      "driver": "driver（相对位移闭环）",
+      "cursor": "cursor（光标直定位）"
     }
   },
   "Optimization": {
@@ -558,6 +573,10 @@
     "OcrThreads": {
       "name": "OCR 线程数",
       "help": "PaddleOCR 推理使用的 CPU 线程数。ARM64 设备如遇崩溃请改为 1"
+    },
+    "ClickRandomOffset": {
+      "name": "点击随机偏移",
+      "help": "普通按钮点击时在中心点附近随机偏移的最大像素数，X/Y 轴分别随机。设置为 0 表示关闭；数值过大可能点出按钮区域。"
     },
     "WhenTaskQueueEmpty": {
       "name": "当任务队列清空时",
@@ -806,7 +825,7 @@
     },
     "OnePushConfig": {
       "name": "推送设置",
-      "help": "使用 Onepush 推送一条错误信息。配置方法见文档：https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Onepush-configuration-%5BCN%5D\n将配置中provider的值从gocqhttp改为onebot11即可支持onebot\n目前仅smtp和onebot11支持图片发送，例如异常截图、抽卡截图"
+      "help": "选择推送渠道后填写对应字段即可，不必再对照文档手写 YAML。需要兼容旧配置或填写特殊字段时，可切换到 YAML 模式直接编辑。\n目前仅 smtp 和 onebot11 支持发送图片，例如异常截图、抽卡截图"
     }
   },
   "Daily": {
@@ -936,6 +955,10 @@
     "OnlyLogsNotMax": {
       "name": "只咨询日志未满",
       "help": "只咨询咨询日志数量不够20的妮姬，建议同时开启只咨询收藏，可以用来补咨询日志"
+    },
+    "ForceConsultation": {
+      "name": "强制咨询",
+      "help": "忽略好感等级和日志数量进行咨询"
     }
   },
   "BlaAuth": {
@@ -1042,7 +1065,7 @@
     "Event": {
       "name": "当前活动",
       "help": "",
-      "event_20260813": "PERSONA ON FRONTLINE",
+      "event_20260917": "COINRUSH SHOWDOWN",
       "event_20260903": "GREAT VILLAIN UNION"
     },
     "StoryPart": {

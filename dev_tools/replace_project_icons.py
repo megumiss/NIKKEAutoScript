@@ -14,10 +14,22 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 # nkas.png 是主图标，浏览器/Web 场景统一引用它；ico 仅用于 Windows 原生场景
 # （通知、窗口、Tauri 嵌入 exe 图标）。Tauri/cookie 的图标均为构建产物，由本工具从源图重新生成。
+#
+# tray-*.png 给 Tauri 的托盘与窗口图标用，按 shell 实际请求的尺寸分成四档
+# （100%/150%/200%/300%）。原因是 Windows 从图标句柄绘制托盘图标时用 GDI 低质量缩放，
+# 只要句柄尺寸和 shell 要的尺寸不一致就会糊：tauri-codegen 从 .ico 里只取第一个目录项
+# （Pillow 恒定把 16x16 写在最前），150% 下 shell 要 24x24，16 放大 / 32 缩小都会明显发糊。
+# Rust 侧用 tauri::include_image! 引用：该宏在编译期把 PNG 解码成裸 RGBA 再嵌入，
+# 展开结果与手写 Image::new(include_bytes!(..)) 一致，运行时无需 image feature。
+# 注意该宏只接受 .png/.ico 扩展名，且 PNG 必须是 RGBA 色彩类型（否则编译期 panic）。
 ICON_TARGETS: List[Tuple[Path, Tuple[int, int], str]] = [
     (Path('assets/gui/icon/nkas.png'), (256, 256), 'webui master icon (png)'),
     (Path('assets/gui/icon/nkas.ico'), (256, 256), 'windows notification icon'),
     (Path('webapp/src-tauri/icons/icon.ico'), (256, 256), 'Tauri exe icon'),
+    (Path('webapp/src-tauri/icons/tray-16.png'), (16, 16), 'Tauri tray/window icon @100%'),
+    (Path('webapp/src-tauri/icons/tray-24.png'), (24, 24), 'Tauri tray/window icon @150%'),
+    (Path('webapp/src-tauri/icons/tray-32.png'), (32, 32), 'Tauri tray/window icon @200%'),
+    (Path('webapp/src-tauri/icons/tray-48.png'), (48, 48), 'Tauri tray/window icon @300%'),
     (Path('dev_tools/cookie/icon.png'), (128, 128), 'cookie extension icon'),
     (Path('webapp/shell/icon.png'), (128, 128), 'Tauri startup screen logo'),
 ]

@@ -24,7 +24,7 @@ class ManualConfig:
     # 整行置灰只读的任务（仅当时间字段对该任务完全不生效时使用）
     SCHEDULE_LOCKED_TASKS = set()
     # 不允许切换周期的任务：Restart 承担每日服务器刷新重启职责、Reward 是每日固定收获，
-    # 两者的启用状态也被强制常开（override.yaml），仅执行时间可改
+    # 两者仅执行时间可改；Restart 的启用状态额外被强制常开（override.yaml）
     SCHEDULE_CADENCE_LOCKED_TASKS = {
         'Restart', 'Reward',
     }
@@ -110,6 +110,38 @@ class ManualConfig:
 
     EVENTS = [
         {
+            "event_id": "event_20260917",
+            "event_name": "COINRUSH SHOWDOWN",
+            # 大型活动
+            "event_type": 1,
+            "mini_game": True,
+            "mini_game_play": True,
+            "extend": False,
+            "story_part": "Story_2",  # Story_1, Story_2
+            "story_difficulty": "Hard",  # Normal, Hard
+            "pending_click_offset": (0, 0),
+            # Story_2 Normal
+            # "pending_finder": {
+            #     "mode": "grid",
+            #     "area": (230, 410, 500, 1045),
+            #     "rows": 8,
+            #     "columns": 1,
+            #     "vertical_direction": "bottom_to_top",
+            #     "horizontal_direction": "right_to_left",
+            # },
+        },
+        {
+            "event_id": "event_20260903",
+            "event_name": "GREAT VILLAIN UNION",
+            # 小型活动
+            "event_type": 2,
+            "mini_game": False,
+            "mini_game_play": True,
+            "extend": False,
+            "story_part": "Story_1",  # Story_1, Story_2
+            "story_difficulty": "Hard"  # Normal, Hard
+        },
+        {
             "event_id": "event_20260813",
             "event_name": "PERSONA ON FRONTLINE",
             # 大型活动
@@ -129,17 +161,6 @@ class ManualConfig:
             #     "vertical_direction": "bottom_to_top",
             #     "horizontal_direction": "right_to_left",
             # },
-        },
-        {
-            "event_id": "event_20260903",
-            "event_name": "GREAT VILLAIN UNION",
-            # 小型活动
-            "event_type": 2,
-            "mini_game": False,
-            "mini_game_play": True,
-            "extend": False,
-            "story_part": "Story_1",  # Story_1, Story_2
-            "story_difficulty": "Hard"  # Normal, Hard
         },
         {
             "event_id": "event_20260723",

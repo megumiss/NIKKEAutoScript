@@ -1,11 +1,4 @@
 import ctypes
-
-from module.exception import RequestHumanTakeover, ScreenResolutionNotEnough
-
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
-except Exception:
-    pass
 import os
 import subprocess
 import time
@@ -24,6 +17,7 @@ from numpy import ndarray
 from module.base.utils import ensure_time
 from module.device.win.registry.game_auto_hdr import get_game_auto_hdr, set_game_auto_hdr
 from module.device.win.registry.setting import get_game_resolution, set_game_resolution
+from module.exception import RequestHumanTakeover, ScreenResolutionNotEnough
 from module.logger import logger
 
 
@@ -234,6 +228,11 @@ class WinClient:
     def set_foreground_window_with_retry(hwnd):
         """尝试将窗口设置为前台，失败时先最小化再恢复"""
         hwnd_hex = hex(hwnd) if isinstance(hwnd, int) else hwnd
+        user32 = ctypes.windll.user32
+
+        # 目标已是前台且未最小化时直接返回：否则任务循环每次都会重复激活窗口，干扰用户正常操作
+        if user32.GetForegroundWindow() == hwnd and not user32.IsIconic(hwnd):
+            return
         logger.debug(f'Attempting to set window {hwnd_hex} to foreground.')
 
         def toggle_window_state(hwnd, minimize=False):
@@ -245,40 +244,69 @@ class WinClient:
             logger.debug(f'Executing window action: {action} (hwnd: {hwnd_hex})')
             ctypes.windll.user32.ShowWindow(hwnd, state)
 
+        def set_foreground():
+            """
+            临时放开前台锁后激活窗口。
+            注入 Alt 的绕过方式会频繁扰动系统前台状态机（Alt 是 LSFW 的解锁键，
+            反复注入/解锁容易把前台状态打进异常），所以常规路径改为临时把
+            ForegroundLockTimeout 改为 1ms（fWinIni=0 不落注册表，仅本会话内存
+            生效），SetForegroundWindow 后立即恢复原值。pvParam 传 0 会被当作空
+            指针拒绝，1ms 等效。
+            注意：前台被 LockSetForegroundWindow(LSFW_LOCK) 锁定时该调用本身会被
+            拒绝（ERROR_INVALID_PARAMETER），此时只能走下方的 Alt 兜底。
+            """
+            SPI_GETFOREGROUNDLOCKTIMEOUT = 0x2000
+            SPI_SETFOREGROUNDLOCKTIMEOUT = 0x2001
+            old = wintypes.UINT(0)
+            user32.SystemParametersInfoW(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, ctypes.byref(old), 0)
+            try:
+                user32.SystemParametersInfoW(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, ctypes.c_void_p(1), 0)
+                return bool(user32.SetForegroundWindow(hwnd))
+            finally:
+                user32.SystemParametersInfoW(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, ctypes.c_void_p(old.value), 0)
+
         def bypass_foreground_lock():
-            """通过模拟按下并释放 Alt 键"""
+            """
+            最后兜底：注入 Alt。前台被 LockSetForegroundWindow(LSFW_LOCK) 锁定时
+            （第三方软件行为，此时 SetForegroundWindow/SPI 均被系统拒绝），Alt 是
+            Windows 官方留的解锁途径——按下 Alt 锁自动解除。
+            """
             VK_MENU = 0x12
             KEYEVENTF_KEYUP = 0x0002
-            logger.debug("Simulating Alt key press.")
-            # 模拟按下 Alt
-            ctypes.windll.user32.keybd_event(VK_MENU, 0, 0, 0)
-            # 模拟释放 Alt
-            ctypes.windll.user32.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
+            logger.debug('Fallback: simulating Alt key press to unlock foreground.')
+            user32.keybd_event(VK_MENU, 0, 0, 0)
+            user32.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
+            time.sleep(0.1)
 
-        bypass_foreground_lock()
-        time.sleep(0.5)
-        toggle_window_state(hwnd, minimize=False)
-
-        if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
-            logger.warning(
-                f'Initial attempt to set window {hwnd_hex} to foreground [FAILED]. Initiating minimize-restore retry strategy...'
-            )
-            bypass_foreground_lock()
-            time.sleep(0.5)
-            toggle_window_state(hwnd, minimize=True)
+        if user32.IsIconic(hwnd):
             toggle_window_state(hwnd, minimize=False)
 
-            if ctypes.windll.user32.SetForegroundWindow(hwnd) == 0:
-                # 获取 Windows 底层错误码
-                error_code = ctypes.GetLastError()
-                logger.error(
-                    f'Retry [FAILED]: Could not set window {hwnd_hex} to foreground. Windows Error Code: {error_code}'
-                )
-                raise Exception(f'Failed to set window foreground for hwnd: {hwnd_hex}, Error Code: {error_code}')
-            else:
-                logger.info(f'Retry [SUCCESS]: Window {hwnd_hex} is now in the foreground.')
-        else:
+        if set_foreground():
             logger.info(f'Initial attempt [SUCCESS]: Window {hwnd_hex} is now in the foreground.')
+            return
+
+        logger.warning(
+            f'Initial attempt to set window {hwnd_hex} to foreground [FAILED]. Initiating minimize-restore retry strategy...'
+        )
+        toggle_window_state(hwnd, minimize=True)
+        toggle_window_state(hwnd, minimize=False)
+
+        if set_foreground():
+            logger.info(f'Retry [SUCCESS]: Window {hwnd_hex} is now in the foreground.')
+            return
+
+        # 前台可能被 LSFW_LOCK 锁定（SPI/SFW 均被拒），Alt 解锁后做最后尝试
+        bypass_foreground_lock()
+        if set_foreground():
+            logger.info(f'Fallback (Alt unlock) [SUCCESS]: Window {hwnd_hex} is now in the foreground.')
+            return
+
+        # 获取 Windows 底层错误码
+        error_code = ctypes.GetLastError()
+        logger.error(
+            f'Retry [FAILED]: Could not set window {hwnd_hex} to foreground. Windows Error Code: {error_code}'
+        )
+        raise Exception(f'Failed to set window foreground for hwnd: {hwnd_hex}, Error Code: {error_code}')
 
     def find_program_window(self):
         """按窗口标题、窗口类名和进程路径查找当前程序，不激活窗口。"""

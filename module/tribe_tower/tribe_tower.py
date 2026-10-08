@@ -230,7 +230,7 @@ class TribeTower(UI):
                 continue
 
             if click_timer.reached() and self.appear(FIGHT, offset=5):
-                self.device.click_xy(1, 1)
+                self.device.click_xy(5, 5)
                 confirm_timer.reset()
                 click_timer.reset()
                 continue

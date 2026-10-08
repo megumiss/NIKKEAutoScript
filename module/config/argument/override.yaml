@@ -5,11 +5,3 @@ Restart:
     Enable:
       value: true
       display: disabled
-
-# ==================== Reward ====================
-
-Reward:
-  Scheduler:
-    Enable:
-      value: true
-      type: lock

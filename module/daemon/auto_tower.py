@@ -146,7 +146,7 @@ class AutoTower(UI):
                 continue
 
             if click_timer.reached() and self.appear(FIGHT, offset=5):
-                self.device.click_xy(1, 1)
+                self.device.click_xy(5, 5)
                 click_timer.reset()
                 continue
 

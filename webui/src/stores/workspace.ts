@@ -22,6 +22,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const physicalBusy = ref('')
   const serialDevices = ref<{ serial: string; status: string }[]>([])
   const serialDevicesBusy = ref(false)
+  const clientProfiles = ref<any[]>([])
 
   const selectedName = computed(() => String(router.currentRoute.value.params.name || ''))
   const selectedTask = computed(() => String(router.currentRoute.value.params.task || ''))
@@ -121,11 +122,16 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (monitors) applyMonitorOptions(field, monitors)
   }
   const vddBusy = ref(false)
+  // 当前表单里选择的虚拟屏幕类型，决定后端按哪套实现启停（与 VddType 字段同源）
+  function vddTypeValue() {
+    const field = allFields().find((item: Field) => item.key.endsWith('.Vdd.VddType'))
+    return String(field?.value || 'parsecvdd')
+  }
   async function vddSet(action: 'enable' | 'disable') {
     if (vddBusy.value) return
     vddBusy.value = true
     try {
-      await api.post(`/api/system/vdd/${action}`)
+      await api.post(`/api/system/vdd/${action}?type=${encodeURIComponent(vddTypeValue())}`)
       toast.notify(t('操作成功'), 'ok')
     } catch (exception: any) { toast.error = exception.message } finally { vddBusy.value = false }
   }
@@ -182,12 +188,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     router.push(`/i/${selectedName.value}/${menu?.page === 'tool' ? 'tool' : 'task'}/${item.command}`)
   }
 
-  async function saveValue(field: Field, value: any) {
+  async function saveValue(field: Field, value: any, silent = false) {
     try {
       const result = await api.patch(`/api/${selectedName.value}/config`, { key: field.key, value })
       if (!result.ok) throw new Error(result.message)
       field.value = result.applied[field.key]
-      toast.notify(t('已保存'))
+      if (!silent) toast.notify(t('已保存'))
     } catch (exception: any) {
       toast.error = exception.message
       throw exception
@@ -279,10 +285,70 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (field.path_picker?.after_select !== 'autofill_game_path_from_launcher') return
     await autofillGamePathFromLauncher(path)
   }
+  // 客户端列表由多开工具扫描 %APPDATA% 得到，只在 PCClient 任务页用；
+  // 路径本身就记录了实例用哪个客户端，所以这里不额外保存客户端名，
+  // 选项只显示区域，本体/副本由后面的安装路径区分，不再标注。
+  function clientRegion(client: any) {
+    return client.region === 'hmt' ? t('港澳台') : t('国际')
+  }
+  async function loadClientProfiles() {
+    try {
+      const data = await api.get('/api/tools/game_clone')
+      clientProfiles.value = Array.isArray(data.clients) ? data.clients : []
+    } catch (exception: any) {
+      clientProfiles.value = []
+      toast.error = exception.message
+    }
+  }
+  // 只有文件完整的客户端能提供可用的启动器/游戏路径，残缺的不列出以免覆盖成无效路径。
+  const clientOptions = computed(() => clientProfiles.value
+    .filter((client: any) => client.status === 'ready')
+    .map((client: any) => ({ value: client.name, label: `${clientRegion(client)}（${client.install_path}）` })))
+  function samePath(left: any, right: any) {
+    return String(left || '').replace(/\//g, '\\').toLowerCase() === String(right || '').replace(/\//g, '\\').toLowerCase()
+  }
+  // 未选中时区分「本机没有可用客户端」和「当前路径不对应任何已检测客户端」。
+  const clientPlaceholder = computed(() => clientOptions.value.length ? t('选择已检测到的客户端') : t('未检测到可用客户端'))
+  const selectedClientName = computed(() => {
+    const launcher = allFields().find((item: Field) => item.key.endsWith('.PCClientInfo.LauncherPath'))
+    const path = launcher?.value
+    if (!path) return ''
+    const hit = clientOptions.value.find((option: any) => {
+      const client = clientProfiles.value.find((item: any) => item.name === option.value)
+      return client && samePath(client.launcher_path, path)
+    })
+    return hit?.value || ''
+  })
+  async function applyClientProfile(name: string) {
+    const client = clientProfiles.value.find((item: any) => item.name === name)
+    if (!client) return
+    const launcher = allFields().find((item: Field) => item.key.endsWith('.PCClientInfo.LauncherPath'))
+    const game = allFields().find((item: Field) => item.key.endsWith('.PCClientInfo.GamePath'))
+    try {
+      if (launcher && client.launcher_path) await saveValue(launcher, client.launcher_path, true)
+      if (game && client.game_path) await saveValue(game, client.game_path, true)
+      toast.notify(t('已应用客户端路径'))
+    } catch { return }
+  }
   async function importInterception(field: Field, path: string) {
     if (!field.data_endpoint) return
     importBusy.value[field.key] = true
     try { const result = await api.post(field.data_endpoint, { path }); if (!result.ok) throw new Error(result.message || t('导入失败')); const chart = allFields().find(item => item.widget === 'interception_stone_charts'); if (chart) await refreshSpecial(chart); toast.notify(`已导入 ${result.imported || 0} 条，跳过 ${result.skipped || 0} 条。`, 'ok', 3000) } catch (exception: any) { toast.error = exception.message } finally { delete importBusy.value[field.key] }
+  }
+  // 通知渠道表单写回 OnePushConfig：YAML 由后端生成，这里只回填文本与解析结果。
+  async function saveNotifyConfig(field: Field, payload: { provider: string; params: Record<string, any> }) {
+    try {
+      const result = await api.post(`/api/${selectedName.value}/notify/config`, payload)
+      if (!result.ok) throw new Error(result.message || t('保存失败'))
+      field.value = result.value
+      await refreshSpecial(field).catch(() => null)
+      toast.notify(t('已保存'))
+    } catch (exception: any) { toast.error = exception.message }
+  }
+  // 源码模式直接改 YAML：走普通字段保存，再刷新一次解析结果让渠道下拉跟上。
+  async function saveNotifyRaw(field: Field, value: string) {
+    try { await saveValue(field, value) } catch { return }
+    await refreshSpecial(field).catch(() => null)
   }
   async function testNotify() {
     if (notifyTestBusy.value) return
@@ -321,11 +387,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   return {
     schema, queue, schemaReady, collapsed, railCollapsed, taskFilter, activeGroup, importBusy, notifyTestBusy, physicalBusy, serialDevices, serialDevicesBusy,
+    clientOptions, selectedClientName, clientPlaceholder, loadClientProfiles, applyClientProfile,
     selectedName, selectedTask, taskSchema, workspaceName, socketsName,
     logs, logTick, autoScroll, logLevel, pushLogs, visibleLogs, visibleMenus,
-    taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddSet, loadWorkspace,
+    taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddTypeValue, vddSet, loadWorkspace,
     startStateSocket, startSockets, closeSockets, openQueueItem,
     saveValue, save, datetimeValue, cancelDatetimeSave, scheduleDatetimeSave, flushDatetimeSave, clearField, clearDatetimeSaveTimers,
-    normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, startTool, physicalResolution, loadSerialDevices,
+    normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, saveNotifyConfig, saveNotifyRaw, startTool, physicalResolution, loadSerialDevices,
   }
 })

@@ -7,6 +7,7 @@ const props = defineProps<{
   options: any[]
   disabled?: boolean
   placeholder?: string
+  emptyText?: string
 }>()
 const emit = defineEmits(['update:modelValue', 'change', 'open'])
 const open = ref(false)
@@ -62,7 +63,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
           <span class="app-select-option-label">{{ labelOf(option) }}</span>
           <span v-if="valueOf(option) === modelValue" class="app-select-check"><AppIcon name="check" :size="14" /></span>
         </button>
-        <div v-if="!options?.length" class="app-select-empty">—</div>
+        <div v-if="!options?.length" class="app-select-empty">{{ emptyText || '—' }}</div>
       </div>
     </Teleport>
   </div>

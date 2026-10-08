@@ -147,14 +147,14 @@ class ModuleBase:
             return None
 
     def appear_then_click(self, button, offset=0, click_offset=0, interval=0, threshold=None,
-                          static=True, screenshot=False) -> bool:
+                          static=True, screenshot=False, random_offset=None) -> bool:
 
         appear = self.appear(button, offset=offset, interval=interval, threshold=threshold, static=static)
         if appear:
             if screenshot:
                 self.device.sleep(self.config.WAIT_BEFORE_SAVING_SCREEN_SHOT)
                 self.device.screenshot()
-            self.device.click(button, click_offset)
+            self.device.click(button, click_offset, random_offset=random_offset)
 
         return appear
 
@@ -231,8 +231,8 @@ class ModuleBase:
 
         return is_matched
 
-    def appear_with_flip_then_click(self, button, offset=0, click_offset=0, interval=0, threshold=None, 
-                        color_threshold=None, static=True, screenshot=False) -> bool:
+    def appear_with_flip_then_click(self, button, offset=0, click_offset=0, interval=0, threshold=None,
+                        color_threshold=None, static=True, screenshot=False, random_offset=None) -> bool:
 
         appear = self.appear_with_flip(button, offset=offset, interval=interval, threshold=threshold, 
                         color_threshold=color_threshold, static=static)
@@ -241,7 +241,7 @@ class ModuleBase:
             if screenshot:
                 self.device.sleep(self.config.WAIT_BEFORE_SAVING_SCREEN_SHOT)
                 self.device.screenshot()
-            self.device.click(button, click_offset)
+            self.device.click(button, click_offset, random_offset=random_offset)
 
         return appear
 
@@ -271,14 +271,14 @@ class ModuleBase:
         return appear
 
     def appear_with_scale_then_click(self, button, click_offset=0, interval=0, threshold=None,
-                          scale_range=(0.9, 1.1), scale_step=0.02, screenshot=False) -> bool:
+                          scale_range=(0.9, 1.1), scale_step=0.02, screenshot=False, random_offset=None) -> bool:
 
         appear = self.appear_with_scale(button, interval=interval, threshold=threshold, scale_range=scale_range, scale_step=scale_step)
         if appear:
             if screenshot:
                 self.device.sleep(self.config.WAIT_BEFORE_SAVING_SCREEN_SHOT)
                 self.device.screenshot()
-            self.device.click(button, click_offset)
+            self.device.click(button, click_offset, random_offset=random_offset)
 
         return appear
 
@@ -303,10 +303,8 @@ class ModuleBase:
         if current_hash != self._ocr_cache["last_hash"]:
             # 重新 OCR
             ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
-            self._ocr_cache["last_result"] = ocr_instance.ocr(self.device.image, direct_ocr=True, show_log=False)
+            self._ocr_cache["last_result"] = ocr_instance.ocr(self.device.image, direct_ocr=True)
             self._ocr_cache["last_hash"] = current_hash
-            details = (self._ocr_cache["last_result"] or {}).get('details') or []
-            logger.debug(f"OCR result: {[item.get('text') for item in details]}")
         res = self._ocr_cache["last_result"]
 
         location = self.device.get_location(text, res, threshold=threshold)

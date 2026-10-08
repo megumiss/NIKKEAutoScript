@@ -251,6 +251,8 @@ class NikkeAutoScript:
         """
         if 'device' not in self.__dict__ or self.config.Client_Platform != 'win':
             return
+        if self.driver_control_required() and not self.driver_control_owned():
+            return
         # 还原屏幕方向
         if self.config.PCClient_ScreenRotate:
             self.device.screen_rotate(self.config.PCClient_ScreenNumber)
@@ -258,9 +260,9 @@ class NikkeAutoScript:
         if self.config.PCClient_DisableVoice:
             self.device.mute_window(False)
         # 自动管理 VDD 虚拟屏：任务结束后禁用
-        if self.config.PCClient_VddScreen and self.config.PCClient_VddAutoManage:
+        if self.config.Vdd_VddScreen and self.config.Vdd_VddAutoManage:
             from module.device.win.vdd import vdd_auto_stop
-            vdd_auto_stop()
+            vdd_auto_stop(self.config)
 
     def save_error_log(self):
         """
@@ -553,6 +555,8 @@ class NikkeAutoScript:
             bool: True if wait finished, False if config changed.
         """
         future = future + timedelta(seconds=1)
+        # 收尾操作已经完成；进程常驻空闲期间不占用鼠标。
+        self.driver_release()
         self.config.start_watching()
         while 1:
             if datetime.now() > future:
@@ -611,6 +615,60 @@ class NikkeAutoScript:
         except Exception as e:
             logger.warning(f'Serial clear_waiting failed: {e}')
 
+    def driver_control_required(self):
+        if os.name != 'nt':
+            return False
+        # 配置重载不会重建已缓存的设备，旧的 driver 输入器仍必须受互斥保护。
+        module = sys.modules.get('module.device.win.virtual_mouse.input')
+        handler = getattr(self.__dict__.get('device'), 'input_handler', None)
+        if module is not None and isinstance(handler, module.VirtualMouseInput):
+            return True
+        return (
+            self.config.Client_Platform == 'win'
+            and str(self.config.PCClientInfo_ControlScheme) == 'driver'
+        )
+
+    def driver_control_owned(self):
+        module = sys.modules.get('module.device.win.virtual_mouse.input')
+        return module is not None and module.scheme_mutex_owned()
+
+    def driver_release(self):
+        module = sys.modules.get('module.device.win.virtual_mouse.input')
+        if module is not None:
+            module.release_driver_control()
+
+    def driver_wait_turn(self, task):
+        """缓存设备同样需要重新认领。等待过则保留锁并重新取任务，避免执行过期任务。"""
+        if self.is_independent_task(task) or not self.driver_control_required():
+            return True
+        from module.config.serial_state import is_my_turn, read_serial_config
+        from module.device.win.virtual_mouse.input import claim_scheme_mutex
+
+        waited = False
+        while 1:
+            if self.stop_event is not None and self.stop_event.is_set():
+                logger.info(f'[{self.config_name}] exited. Reason: Update')
+                exit(0)
+            config = read_serial_config()
+            if config.enable and self.config_name in config.group and not is_my_turn(self.config_name):
+                self.driver_release()
+                return False
+            if waited and self.config.should_reload():
+                return False
+            owned = self.driver_control_owned()
+            if claim_scheme_mutex():
+                if not owned:
+                    logger.info(f'Driver control: [{self.config_name}] acquired mouse control')
+                return not waited
+            if not waited:
+                logger.info(f'Driver control: [{self.config_name}] waiting for mouse control')
+                self.config.start_watching()
+                waited = True
+            if self.stop_event is not None:
+                self.stop_event.wait(1)
+            else:
+                time.sleep(1)
+
     def serial_wait_turn(self, task):
         """
         串行模式闸门：等待编排器授予令牌，保证同一时刻只有一个实例操作设备。
@@ -635,6 +693,8 @@ class NikkeAutoScript:
             self.serial_clear_waiting()
             return True
         logger.info('Serial mode: waiting for turn')
+        # 未持令牌时不应占用驱动通道互斥体（防残留，正常路径下是 no-op）
+        self.driver_release()
         # 上报等待中状态，供 Web UI 展示（拿到令牌/串行关闭/配置变化都会清理）
         self.serial_report_waiting()
         self.config.start_watching()
@@ -660,6 +720,38 @@ class NikkeAutoScript:
         finally:
             self.serial_clear_waiting()
 
+    def idle_cleanup(self, task, method):
+        # 空闲期间配置重载会重新进入这里，但缓存设备已不再持锁，不能再次操作游戏。
+        if self.driver_control_required() and not self.driver_control_owned():
+            return
+        from module.base.resource import release_resources
+
+        if method == 'close_game':
+            logger.info('Close game during wait')
+            if 'device' in self.__dict__:
+                self.device.app_stop()
+                self.device.sleep(1)
+                if self.config.Client_Platform == 'win':
+                    self.device.app_stop('Launcher')
+        elif method == 'goto_main':
+            logger.info('Goto main page during wait')
+            if 'device' in self.__dict__ and not self.is_independent_task(task):
+                self.run('goto_main')
+        elif method == 'run_script':
+            logger.info('Run script during wait')
+        else:
+            if method != 'stay_there':
+                logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
+            logger.info('Stay there during wait')
+        release_resources()
+        self._post_action()
+        if method == 'close_game' and self.config.Client_Platform == 'win':
+            del_cached_property(self, 'device')
+        if method == 'run_script':
+            from module.device.win.script_runner import run_script
+
+            run_script(self.config.Optimization_ScriptPath)
+
     def get_next_task(self):
         """
         Returns:
@@ -682,67 +774,14 @@ class NikkeAutoScript:
                 logger.info(f'Wait until {task.next_run} for task `{task.command}`')
                 self.is_first_task = False
                 method = self.config.Optimization_WhenTaskQueueEmpty
-                if method == 'close_game':
-                    logger.info('Close game during wait')
-                    # 只运行妮游社任务时不会初始化device，不需要操作游戏
-                    if 'device' in self.__dict__:
-                        # 关闭游戏
-                        self.device.app_stop()
-                        self.device.sleep(1)
-                        # 关闭启动器
-                        if self.config.Client_Platform == 'win':
-                            self.device.app_stop('Launcher')
-                    release_resources()
-                    self._post_action()
-                    if self.config.Client_Platform == 'win':
-                        del_cached_property(self, 'device')
-                    # self.device.release_during_wait()
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
-                    # 待跑任务是妮游社等独立任务时不需要游戏，跳过 Restart
-                    if task.command != 'Restart' and not self.is_independent_task(task.command):
-                        self.config.task_call('Restart')
-                        del_cached_property(self, 'config')
-                        continue
-                elif method == 'goto_main':
-                    logger.info('Goto main page during wait')
-                    # 只运行妮游社任务时不会初始化device，待跑任务不依赖游戏时也不需要回主界面
-                    if 'device' in self.__dict__ and not self.is_independent_task(task.command):
-                        self.run('goto_main')
-                    release_resources()
-                    # self.device.release_during_wait()
-                    self._post_action()
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
-                elif method == 'stay_there':
-                    logger.info('Stay there during wait')
-                    release_resources()
-                    # self.device.release_during_wait()
-                    self._post_action()
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
-                elif method == 'run_script':
-                    logger.info('Run script during wait')
-                    release_resources()
-                    # self.device.release_during_wait()
-                    self._post_action()
-                    from module.device.win.script_runner import run_script
-
-                    run_script(self.config.Optimization_ScriptPath)
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
-                else:
-                    logger.warning(f'Invalid Optimization_WhenTaskQueueEmpty: {method}, fallback to stay_there')
-                    release_resources()
-                    # self.device.release_during_wait()
-                    self._post_action()
-                    if not self.wait_until(task.next_run):
-                        del_cached_property(self, 'config')
-                        continue
+                self.idle_cleanup(task.command, method)
+                if not self.wait_until(task.next_run):
+                    del_cached_property(self, 'config')
+                    continue
+                if method == 'close_game' and task.command != 'Restart' and not self.is_independent_task(task.command):
+                    self.config.task_call('Restart')
+                    del_cached_property(self, 'config')
+                    continue
             # 任务已到期，上报"现在有事可做"，供编排器授予令牌
             self.serial_report_due(datetime.now())
             # 即将执行，退出排队等待状态
@@ -754,7 +793,23 @@ class NikkeAutoScript:
     def loop(self):
         logger.set_file_logger(self.config_name)
         logger.info(f'Start scheduler loop: {self.config_name}')
+        try:
+            self._loop()
+        finally:
+            self.driver_release()
 
+    def run_once(self, command, skip_first_screenshot=False):
+        try:
+            while 1:
+                self.serial_report_due(datetime.now())
+                if not self.serial_wait_turn(command) or not self.driver_wait_turn(command):
+                    del_cached_property(self, 'config')
+                    continue
+                return self.run(command, skip_first_screenshot=skip_first_screenshot)
+        finally:
+            self.driver_release()
+
+    def _loop(self):
         while 1:
             # Check update event from GUI
             if self.stop_event is not None:
@@ -784,6 +839,9 @@ class NikkeAutoScript:
                 continue
             # 串行模式：等待令牌，等待过则重新取任务
             if not self.serial_wait_turn(task):
+                del_cached_property(self, 'config')
+                continue
+            if not self.driver_wait_turn(task):
                 del_cached_property(self, 'config')
                 continue
             # 妮游社等独立任务不需要device，不需要操作游戏

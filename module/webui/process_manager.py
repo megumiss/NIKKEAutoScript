@@ -47,6 +47,7 @@ class ProcessManager:
         # memory; nothing touches disk.
         self._preview_queue: queue.Queue = State.manager.Queue(maxsize=2)
         self.latest_preview: Tuple[float, bytes] = None
+        self.preview_source = None
         self._process: Process = None
         self._process_locks: Dict[str, threading.Lock] = {}
         self._lifecycle_lock = threading.Lock()
@@ -70,6 +71,7 @@ class ProcessManager:
             if generation != self._request_generation:
                 return
             sessions().prepare()
+            self.preview_source = None
             if func is None:
                 func = get_config_mod(self.config_name)
             stopped = Event()
@@ -130,6 +132,8 @@ class ProcessManager:
             except (EOFError, OSError):
                 # Worker died and the queue pipe broke; keep the last frame.
                 break
+            if isinstance(item, tuple) and len(item) == 2:
+                item, self.preview_source = item
             if isinstance(item, bytes):
                 self.latest_preview = (time.time(), item)
 
@@ -309,15 +313,31 @@ class ProcessManager:
         if config.Client_Platform != 'win':
             return
         if config.PCClient_ScreenRotate:
-            try:
-                from module.device.win.game_control import WinClient
-                WinClient.screen_rotate(config.PCClient_ScreenNumber)
-            except Exception as e:
-                logger.warning(f'Failed to restore screen orientation on stop: {e}')
-        if config.PCClient_VddScreen and config.PCClient_VddAutoManage:
+            # 实例进程被 kill，内存里回填的屏幕序号不会带过来；此刻 VDD 仍开着，
+            # 先按 VddType 重新解析一次，解析失败时不能用旧序号旋转实体屏
+            screen_n = config.PCClient_ScreenNumber
+            if config.Vdd_VddScreen:
+                try:
+                    from module.device.win.vdd import vdd_find_screen_n
+                    resolved = vdd_find_screen_n(config)
+                except Exception as e:
+                    resolved = None
+                    logger.warning(f'Failed to resolve VDD screen index on stop: {e}')
+                if resolved is not None:
+                    screen_n = resolved
+                else:
+                    screen_n = None
+                    logger.warning('VDD screen not resolved on stop; skipping screen orientation restoration')
+            if screen_n is not None:
+                try:
+                    from module.device.win.game_control import WinClient
+                    WinClient.screen_rotate(screen_n)
+                except Exception as e:
+                    logger.warning(f'Failed to restore screen orientation on stop: {e}')
+        if config.Vdd_VddScreen and config.Vdd_VddAutoManage:
             try:
                 from module.device.win.vdd import vdd_auto_stop
-                vdd_auto_stop()
+                vdd_auto_stop(config)
             except Exception as e:
                 logger.warning(f'Failed to disable VDD screen on stop: {e}')
 
@@ -480,7 +500,7 @@ class ProcessManager:
                 from main import NikkeAutoScript
 
                 NikkeAutoScript.stop_event = stop_events
-                NikkeAutoScript(config_name=config_name).run(inflection.underscore(func), skip_first_screenshot=True)
+                NikkeAutoScript(config_name=config_name).run_once(inflection.underscore(func), skip_first_screenshot=True)
             elif func in get_available_mod():
                 mod = load_mod(func)
 
@@ -498,6 +518,17 @@ class ProcessManager:
                 worker_stop.set()
             if display_pipe is not None:
                 display_pipe.close()
+            # 单次工具或初始化失败也可能持有句柄；退出时兜底清理，被 kill 时由系统回收。
+            if os.name == 'nt':
+                try:
+                    from module.device.win.virtual_mouse.driver_mouse import close_shared_mouse
+                    from module.device.win.virtual_mouse.input import release_scheme_mutex
+                    try:
+                        close_shared_mouse()
+                    finally:
+                        release_scheme_mutex()
+                except Exception as exc:
+                    logger.warning(f'Failed to release virtual mouse resources: {exc}')
 
     @classmethod
     def running_instances(cls) -> List["ProcessManager"]:

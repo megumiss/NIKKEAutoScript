@@ -2,6 +2,7 @@ import os
 import time
 
 import numpy as np
+import paddle
 from paddleocr import PaddleOCR
 
 from module.exception import RequestHumanTakeover
@@ -9,6 +10,7 @@ from module.logger import logger
 
 from .constant import ModelsPath
 from .download import maybe_download
+from .progress import OcrInitProgress
 
 models = {
     'PP-OCRv5_server_rec_infer': 'https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0//PP-OCRv5_server_rec_infer.tar',
@@ -32,6 +34,7 @@ class NIKKEOcr(PaddleOCR):
         det_model_dir: str = None,
         interval: float = 0,
         model_type: str = 'mobile',
+        device: str = 'cpu',
         cpu_threads: int = 10,
     ):
         """
@@ -40,6 +43,14 @@ class NIKKEOcr(PaddleOCR):
         Args:
             cpu_threads: PaddleOCR 推理线程数
         """
+        if device.startswith('gpu') and not paddle.is_compiled_with_cuda():
+            logger.critical(
+                'OcrDevice is gpu, but the loaded PaddlePaddle has no CUDA support. '
+                'Enable InstallDependencies and fully exit and relaunch nkas.exe to install paddlepaddle-gpu, '
+                'or set OcrDevice to cpu.'
+            )
+            raise RequestHumanTakeover
+
         logger.hr('PaddleOCR Prepare')
 
         # 如果没有传入模型路径，根据model_type下载/设置路径
@@ -74,23 +85,24 @@ class NIKKEOcr(PaddleOCR):
         self.last_time = 0
 
         # 调用父类 PaddleOCR 的 __init__ 完成模型加载
-        logger.info('PaddleOCR Initializing')
-        super().__init__(
-            ocr_version='PP-OCRv5',
-            device='CPU',  # CPU模式
-            lang=lang,
-            use_doc_orientation_classify=use_doc_orientation_classify,
-            use_doc_unwarping=use_doc_unwarping,
-            use_textline_orientation=use_textline_orientation,
-            text_det_thresh=text_det_thresh,
-            text_det_unclip_ratio=text_det_unclip_ratio,
-            text_rec_score_thresh=text_rec_score_thresh,
-            text_detection_model_name='PP-OCRv5_server_det' if model_type == 'server' else 'PP-OCRv5_mobile_det',
-            text_detection_model_dir=det_model_dir,
-            text_recognition_model_name='PP-OCRv5_server_rec' if model_type == 'server' else 'PP-OCRv5_mobile_rec',
-            text_recognition_model_dir=rec_model_dir,
-            cpu_threads=cpu_threads if cpu_threads > 0 else 10,
-        )
+        logger.info(f'PaddleOCR Initializing, device: {device}')
+        with OcrInitProgress('PaddleOCR initializing'):
+            super().__init__(
+                ocr_version='PP-OCRv5',
+                device=device,
+                lang=lang,
+                use_doc_orientation_classify=use_doc_orientation_classify,
+                use_doc_unwarping=use_doc_unwarping,
+                use_textline_orientation=use_textline_orientation,
+                text_det_thresh=text_det_thresh,
+                text_det_unclip_ratio=text_det_unclip_ratio,
+                text_rec_score_thresh=text_rec_score_thresh,
+                text_detection_model_name='PP-OCRv5_server_det' if model_type == 'server' else 'PP-OCRv5_mobile_det',
+                text_detection_model_dir=det_model_dir,
+                text_recognition_model_name='PP-OCRv5_server_rec' if model_type == 'server' else 'PP-OCRv5_mobile_rec',
+                text_recognition_model_dir=rec_model_dir,
+                cpu_threads=cpu_threads if cpu_threads > 0 else 10,
+            )
 
         logger.info('PaddleOCR prepared')
 

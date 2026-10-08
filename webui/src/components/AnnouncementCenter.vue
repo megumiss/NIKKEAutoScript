@@ -20,7 +20,10 @@ const { selectAnnouncement, markAnnouncementRead } = announcementsStore
         <div class="announcement-list">
           <div v-if="!announcements.length" class="announcement-empty">{{ t('暂无公告') }}</div>
           <button v-for="item in announcements" :key="item.id" class="announcement-item" :class="[{ active: item.id === activeAnnouncementId }, item.type]" @click="selectAnnouncement(item)">
-            <span class="announcement-date">{{ item.date }}</span>
+            <span class="announcement-date">
+              <svg v-if="item.pinned" class="announcement-pin" :title="t('置顶')" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.9 3.3 16.7 7.1l-2 .55a3.2 3.2 0 0 0-1.62 1l-1.2 1.5-3.03-3.03 1.5-1.2a3.2 3.2 0 0 0 1-1.62l.55-2Z"/><path d="m8.85 11.15-4.6 4.6"/></svg>
+              {{ item.date }}
+            </span>
             <span class="announcement-title">{{ item.title }}</span>
             <span v-if="!item.read" class="announcement-dot" :title="t('未读')"></span>
           </button>

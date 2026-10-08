@@ -25,6 +25,7 @@ class VirtualDisplayTests(unittest.TestCase):
         normalized = {'Emulator': {'PhysicalDevice': {'VirtualDisplayId': None}}}
         updater = ConfigUpdater()
         with patch('module.config.config_updater.read_file', return_value=old), \
+                patch('module.config.config_updater.os.path.exists', return_value=True), \
                 patch.object(updater, 'config_update', return_value=normalized), \
                 patch.object(updater, 'write_file') as write, \
                 patch('module.config.config_updater.random_id', return_value='abc123def456'):
@@ -33,6 +34,15 @@ class VirtualDisplayTests(unittest.TestCase):
         self.assertEqual(data['Emulator']['PhysicalDevice']['VirtualDisplayId'], 'abc123def456')
         self.assertEqual(old['Emulator']['PhysicalDevice']['VirtualDisplayId'], 'abc123def456')
         write.assert_called_once_with('nkas', old)
+
+    def test_reading_deleted_instance_does_not_recreate_config(self):
+        updater = ConfigUpdater()
+        with patch('module.config.config_updater.read_file', return_value={}), \
+                patch('module.config.config_updater.os.path.exists', return_value=False), \
+                patch.object(updater, 'config_update', side_effect=lambda data, **_: data), \
+                patch.object(updater, 'write_file') as write:
+            updater._read_file('deleted')
+        write.assert_not_called()
 
     def test_identity_migrates_legacy_without_overwriting_correct_value(self):
         data = {'NKAS': {'PhysicalDevice': {'VirtualDisplayId': 'legacy123456'}},

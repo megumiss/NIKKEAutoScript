@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppComboSelect from '../components/AppComboSelect.vue'
 import AppIcon from '../components/AppIcon.vue'
@@ -7,8 +7,10 @@ import AppSelect from '../components/AppSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import LiveLog from '../components/LiveLog.vue'
 import FieldItemTable from '../components/config/FieldItemTable.vue'
+import FieldNotify from '../components/config/FieldNotify.vue'
 import FieldPathPicker from '../components/config/FieldPathPicker.vue'
 import FieldPriority from '../components/config/FieldPriority.vue'
+import FieldVddStatus from '../components/config/FieldVddStatus.vue'
 import { highlightTextarea, isStructuredTextarea, onTextareaInput, vAutosize } from '../composables/useTextarea'
 import { useRouteInfo } from '../composables/useRouteInfo'
 import { t } from '../i18n'
@@ -27,7 +29,8 @@ const FieldInterception = defineAsyncComponent(() => import('../components/confi
 const { selectedPage, selectedTask } = useRouteInfo()
 const workspace = useWorkspaceStore()
 const { schemaReady, collapsed, activeGroup, taskSchema, importBusy, notifyTestBusy, physicalBusy, serialDevices, serialDevicesBusy, vddBusy } = storeToRefs(workspace)
-const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, startTool, physicalResolution, loadSerialDevices, refreshMonitors, vddSet } = workspace
+const { clientOptions, selectedClientName, clientPlaceholder } = storeToRefs(workspace)
+const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, saveNotifyConfig, saveNotifyRaw, startTool, physicalResolution, loadSerialDevices, refreshMonitors, vddSet, loadClientProfiles, applyClientProfile } = workspace
 const instancesStore = useInstancesStore()
 const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
@@ -52,6 +55,8 @@ function onViewScroll(event: Event) {
   activeGroup.value = current
 }
 function jumpToGroup(group: any) { activeGroup.value = group.key; document.getElementById(groupId(group))?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+// 客户端列表只在 PC 端设置里用到，按任务切换时刷新，避免每次实例加载都扫描 %APPDATA%。
+watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, { immediate: true })
 </script>
 
 <template>
@@ -86,7 +91,15 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                 <div class="field-control"><button class="btn" :disabled="bindBusy" @click="openBind"><AppIcon name="external" :size="14" /> {{ t('绑定到 Bot') }}</button></div>
               </div>
               <template v-for="field in group.fields" :key="field.key">
-                <div :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
+                <div v-if="field.key.endsWith('.PCClientInfo.LauncherPath')" class="field">
+                  <div class="field-label"><div class="fname">{{ t('选择游戏客户端') }}</div><div class="fhelp">{{ t('列出本机检测到的可用游戏客户端，选择后会覆盖下方的启动器路径和游戏路径。') }}</div></div>
+                  <div class="field-control">
+                    <AppSelect :model-value="selectedClientName" :options="clientOptions" :placeholder="clientPlaceholder" :empty-text="t('未检测到可用客户端')" :disabled="field.display !== 'show'" @change="applyClientProfile" @open="loadClientProfiles"/>
+                  </div>
+                </div>
+                <!-- 通知渠道自带整行布局（标题与渠道下拉同行），不吃通用的 field 结构 -->
+                <FieldNotify v-if="field.widget === 'notify_channel'" :field="field" :data="field.special_data" :scope="workspace.selectedName" :disabled="field.display !== 'show'" :busy="notifyTestBusy" @save="(payload: any) => saveNotifyConfig(field, payload)" @save-raw="(value: string) => saveNotifyRaw(field, value)" @test="testNotify"/>
+                <div v-else :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
                   <div class="field-label"><div class="fname">{{ field.title }}</div><div v-if="field.help" class="fhelp"><LinkifiedText :text="field.help" /></div></div>
                   <div class="field-control">
                     <label v-if="field.widget === 'checkbox'" class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" @change="save(field, $event)"><span class="slider"></span></label>
@@ -115,8 +128,8 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                     <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @input="onTextInput(field, $event)" @change="save(field, $event)">
                   </div>
                 </div>
-                <div v-if="field.key.endsWith('.VddAutoManage')" class="field">
-                  <div class="field-label"><div class="fname">{{ t('虚拟屏幕(VDD)') }}</div><div class="fhelp">{{ t('启用或禁用 VDD 虚拟屏幕；需要已安装 Virtual Display Driver，且 NKAS 以管理员身份运行。') }}</div></div>
+                <div v-if="field.key.endsWith('.Vdd.VddAutoManage')" class="field">
+                  <div class="field-label"><div class="fname">{{ t('手动管理VDD屏幕') }}</div><div class="fhelp">{{ t('启用或禁用虚拟屏幕，可以手动测试安装的驱动是否能够使用，或者当自动管理未生效时手动设置屏幕状态。') }}</div></div>
                   <div class="field-control">
                     <div style="display:flex;gap:8px">
                       <button class="btn primary" :disabled="vddBusy" @click="vddSet('enable')"><AppIcon name="play" :size="14" /> {{ t('启动虚拟屏幕') }}</button>
@@ -124,11 +137,8 @@ function jumpToGroup(group: any) { activeGroup.value = group.key; document.getEl
                     </div>
                   </div>
                 </div>
+                <FieldVddStatus v-if="field.key.endsWith('.Vdd.VddAutoManage')" :type="workspace.vddTypeValue()" :scope="workspace.selectedName" :busy="vddBusy" />
               </template>
-              <div v-if="selectedTask === 'NKAS' && group.key === 'Notification'" class="field">
-                <div class="field-label"><div class="fname">{{ t('测试通知') }}</div><div class="fhelp">{{ t('发送一条测试通知，验证当前通知设置是否生效。') }}</div></div>
-                <div class="field-control"><button class="btn" :disabled="notifyTestBusy" @click="testNotify"><AppIcon name="message" :size="14" color="currentColor" /> {{ notifyTestBusy ? t('发送中…') : t('测试通知') }}</button></div>
-              </div>
               <div v-if="group.key === 'PhysicalDevice'" class="field">
                 <div class="field-label"><div class="fname">{{ t('分辨率控制') }}</div><div class="fhelp">{{ t('手动将设备分辨率设为 720x1280（DPI 240）并锁定竖屏，或还原为原生分辨率与屏幕方向。') }}</div></div>
                 <div class="field-control" style="display:flex;gap:8px">

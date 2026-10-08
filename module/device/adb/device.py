@@ -239,7 +239,10 @@ class Device(Screenshot, Control, AppControl):
         """
         self.stuck_record_check()
         super().screenshot()
-        publish_preview_frame(self.image)
+        publish_preview_frame(self.image, source={
+            'serial': self.serial,
+            'display_id': self._virtual_display_id or 0,
+        })
         return self.image
 
     def handle_control_check(self, button: Button):

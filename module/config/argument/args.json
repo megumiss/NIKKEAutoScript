@@ -35,6 +35,10 @@
         "type": "input",
         "value": 10
       },
+      "ClickRandomOffset": {
+        "type": "input",
+        "value": 5
+      },
       "WhenTaskQueueEmpty": {
         "type": "select",
         "value": "goto_main",
@@ -84,7 +88,8 @@
       "OnePushConfig": {
         "type": "textarea",
         "value": "provider: null",
-        "mode": "yaml"
+        "mode": "yaml",
+        "widget": "notify_channel"
       }
     },
     "Account": {
@@ -215,10 +220,6 @@
       }
     },
     "Scrcpy": {
-      "WebUrl": {
-        "type": "input",
-        "value": ""
-      },
       "Bitrate": {
         "type": "input",
         "value": 16000000
@@ -310,7 +311,16 @@
         "value": "pyautogui",
         "option": [
           "pyautogui",
-          "postmessage"
+          "postmessage",
+          "driver"
+        ]
+      },
+      "MoveBackend": {
+        "type": "select",
+        "value": "driver",
+        "option": [
+          "driver",
+          "cursor"
         ]
       }
     },
@@ -330,14 +340,6 @@
           4,
           5
         ]
-      },
-      "VddScreen": {
-        "type": "checkbox",
-        "value": false
-      },
-      "VddAutoManage": {
-        "type": "checkbox",
-        "value": false
       },
       "GameWindowPosition": {
         "type": "select",
@@ -367,6 +369,24 @@
       "DisableVoice": {
         "type": "checkbox",
         "value": false
+      }
+    },
+    "Vdd": {
+      "VddScreen": {
+        "type": "checkbox",
+        "value": false
+      },
+      "VddType": {
+        "type": "select",
+        "value": "parsecvdd",
+        "option": [
+          "parsecvdd",
+          "mttvdd"
+        ]
+      },
+      "VddAutoManage": {
+        "type": "checkbox",
+        "value": true
       }
     },
     "Storage": {
@@ -522,7 +542,7 @@
   "Reward": {
     "Scheduler": {
       "Enable": {
-        "type": "lock",
+        "type": "checkbox",
         "value": true,
         "option": [
           true,
@@ -1092,6 +1112,10 @@
         "value": false
       },
       "OnlyLogsNotMax": {
+        "type": "checkbox",
+        "value": false
+      },
+      "ForceConsultation": {
         "type": "checkbox",
         "value": false
       }
@@ -2961,7 +2985,7 @@
         "type": "select",
         "value": "",
         "option": [
-          "event_20260813",
+          "event_20260917",
           "event_20260903"
         ],
         "display": "disabled"
@@ -3117,7 +3141,7 @@
         "type": "select",
         "value": "",
         "option": [
-          "event_20260813",
+          "event_20260917",
           "event_20260903"
         ],
         "display": "disabled"

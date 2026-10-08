@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 常量配置 ---
     const TARGET_DOMAIN = "https://www.blablalink.com";
     const DEFAULT_API_URL = "http://127.0.0.1:12271/api/nkas/config";
-    const CONFIG_KEY = "BlaAuth.BlaAuth.Cookie";
 
     // 必填 Cookie：缺失会导致判定为未登录
     const REQUIRED_COOKIES = [
@@ -31,14 +30,54 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     let isLoggedIn = false;
+    let statusTimer = null;
+
+    function apiEndpoint(apiUrl, path) {
+        const url = new URL(apiUrl);
+        url.pathname = path;
+        url.search = '';
+        url.hash = '';
+        return url.toString();
+    }
+
+    async function checkPendingSync() {
+        const result = await chrome.storage.local.get(['pendingSync']);
+        const pending = result.pendingSync;
+        if (!pending || !pending.statusUrl) return;
+        try {
+            const response = await fetch(pending.statusUrl);
+            const data = await response.json();
+            if (data.status === 'approved') {
+                await chrome.storage.local.remove('pendingSync');
+                showLog('🎉 Cookie 已在 NKAS 中确认同步。');
+            } else if (data.status === 'rejected' || data.status === 'error') {
+                await chrome.storage.local.remove('pendingSync');
+                showLog(`❌ ${data.message || 'Cookie 同步未完成'}`, true);
+            } else {
+                showLog('⏳ NKAS 中有待确认的 Cookie 同步请求。');
+            }
+        } catch (error) {
+            showLog(`❌ 查询同步状态失败：${error.message}`, true);
+        }
+    }
+
+    function watchPendingSync(statusUrl) {
+        if (statusTimer) clearInterval(statusTimer);
+        statusTimer = setInterval(checkPendingSync, 2000);
+        setTimeout(() => {
+            if (statusTimer) clearInterval(statusTimer);
+            statusTimer = null;
+        }, 5 * 60 * 1000);
+        void checkPendingSync();
+    }
 
     // 1. 初始化：读取保存的 API 地址和自动同步状态
     chrome.storage.local.get(['savedApiUrl', 'autoSyncEnabled'], (result) => {
         apiUrlInput.value = result.savedApiUrl || DEFAULT_API_URL;
         autoSyncCb.checked = result.autoSyncEnabled || false;
 
-        // 读取配置完毕后，执行首次启动检查
-        checkLoginStatus(true);
+        // 读取配置完毕后，执行首次启动检查；再恢复上次的同步结果，避免状态提示被清空。
+        checkLoginStatus(true).finally(checkPendingSync);
     });
 
     // 2. 监听输入框变化，自动保存
@@ -58,12 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateStatusUI(state, text) {
         statusDot.className = `status-dot ${state}`;
         statusText.textContent = text;
-        statusText.style.color = state === 'success' ? '#28a745' : (state === 'error' ? '#dc3545' : '#333');
+        statusText.style.color = state === 'success' ? 'var(--green)' : (state === 'error' ? 'var(--red)' : 'var(--text)');
     }
 
     function showLog(msg, isError = false) {
         logMsg.textContent = msg;
-        logMsg.style.color = isError ? '#dc3545' : '#666';
+        logMsg.style.color = isError ? 'var(--red)' : 'var(--text-2)';
     }
 
     // 掩码脱敏辅助函数
@@ -185,16 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 构造 JSON Body，直接使用常量的 CONFIG_KEY
-            const payload = {
-                key: CONFIG_KEY,
-                value: cookieString
-            };
-
-            const response = await fetch(apiUrl, {
+            // Submit a pending request; NKAS writes the Cookie only after confirmation.
+            const response = await fetch(apiEndpoint(apiUrl, '/api/cookie-sync/request'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ instance: 'nkas', cookie: cookieString })
             });
 
             // 解析后端的 JSON 响应
@@ -205,8 +239,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`服务器返回了非 JSON 数据，状态码: ${response.status}`);
             }
 
-            if (response.ok && resData.status === 'success') {
-                showLog(`🎉 成功！${resData.message}`);
+            if (response.ok && resData.status === 'pending' && resData.status_url) {
+                const statusUrl = apiEndpoint(apiUrl, resData.status_url);
+                await chrome.storage.local.set({ pendingSync: { requestId: resData.request_id, statusUrl } });
+                showLog('⏳ 请求已发送，请在 NKAS 中确认同步。');
+                watchPendingSync(statusUrl);
             } else {
                 // 输出后端具体的报错信息
                 showLog(`❌ 发送失败：${resData.message || '未知错误'}`, true);

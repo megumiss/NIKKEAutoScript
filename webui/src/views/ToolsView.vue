@@ -19,6 +19,17 @@ function onPickError(message: string) { toast.error = message }
 
 interface HostsSection { name: string; lines: string[]; common: boolean; default_on: boolean }
 interface ShortcutDefinition { key: string; label: string }
+interface CloneClient {
+  name: string
+  region: 'intl' | 'hmt'
+  suffix: string
+  is_clone: boolean
+  install_path: string
+  launcher_path: string
+  game_path: string
+  status: 'ready' | 'missing' | 'incomplete' | 'invalid'
+  shared_with: string[]
+}
 
 const shortcutDefinitions: ShortcutDefinition[] = [
   { key: 'UPDATE', label: '源码更新' },
@@ -163,7 +174,7 @@ function revertHosts() {
 const cloneSource = ref('')
 const cloneTarget = ref('')
 const cloneSuffix = ref('')
-const cloneList = ref<string[]>([])
+const cloneClients = ref<CloneClient[]>([])
 const cloneJob = ref<any>({ running: false, step: '', total: 0, copied: 0, error: '', result: null })
 let cloneTimer: number | undefined
 
@@ -174,6 +185,17 @@ function formatSize(bytes: number) {
 }
 const cloneProgress = computed(() => cloneJob.value.total ? Math.min(100, Math.floor(cloneJob.value.copied / cloneJob.value.total * 100)) : 0)
 
+function cloneClientTitle(client: CloneClient) {
+  const region = client.region === 'hmt' ? t('港澳台客户端') : t('国际客户端')
+  return client.is_clone ? `${region} · ${t('副本')} ${client.suffix}` : `${region} · ${t('本体')}`
+}
+function cloneClientStatus(status: CloneClient['status']) {
+  if (status === 'ready') return t('可用')
+  if (status === 'missing') return t('安装目录不存在')
+  if (status === 'incomplete') return t('文件不完整')
+  return t('配置不可用')
+}
+
 function stopClonePolling() { if (cloneTimer) { clearInterval(cloneTimer); cloneTimer = undefined } }
 function startClonePolling() {
   stopClonePolling()
@@ -182,7 +204,7 @@ function startClonePolling() {
 async function loadCloneInfo() {
   try {
     const data = await api.get('/api/tools/game_clone')
-    cloneList.value = data.clones || []
+    cloneClients.value = Array.isArray(data.clients) ? data.clients : []
     if (!cloneSuffix.value) cloneSuffix.value = String(data.next_suffix || '')
     cloneJob.value = data.job || cloneJob.value
     if (cloneJob.value.running) startClonePolling()
@@ -201,13 +223,161 @@ async function startClone() {
     startClonePolling()
   } catch (exception: any) { toast.error = exception.message }
 }
+async function cancelClone() {
+  if (!cloneJob.value.running) return
+  try {
+    await api.post('/api/tools/game_clone/cancel', {})
+  } catch (exception: any) { toast.error = exception.message }
+}
+function deleteClone(client: CloneClient) {
+  if (!client.is_clone || cloneJob.value.running) return
+  const sharers = (client.shared_with || []).map(name => `${name}.exe`)
+  const shared = sharers.length > 0
+  const message = shared
+    ? `${t('安装目录')} ${client.install_path} ${t('同时被以下客户端使用')}: ${sharers.join('、')}。${t('将仅删除此副本的配置，安装目录会保留给其他客户端。')}${t('此操作不可恢复。')}`
+    : `${t('删除副本及其安装目录')}: ${client.install_path || client.name}？${t('此操作不可恢复。')}`
+  openConfirmModal(message, async () => {
+    try {
+      const data = await api.post('/api/tools/game_clone/delete', { name: client.name, mode: shared ? 'config' : 'full' })
+      cloneClients.value = Array.isArray(data.clients) ? data.clients : []
+      toast.notify(shared ? t('副本配置已删除，安装目录已保留') : t('副本已删除'), 'ok', 4000)
+    } catch (exception: any) { toast.error = exception.message }
+  })
+}
 
-onMounted(() => { loadHosts(); loadShortcuts(); loadCloneInfo() })
+// ---- 虚拟鼠标驱动 ----
+const driverSupported = ref(true)
+const driverBundled = ref(true)
+const driverInstalled = ref(false)
+const driverVersion = ref('')
+// 诊断信息：驱动包是否落地系统、枚举到的接口实例数、HID 子设备是否呈现、进程是否有管理员权限
+const driverPackage = ref(false)
+const driverInterfaces = ref(0)
+const driverSubDevice = ref<boolean | null>(null)
+const driverAdmin = ref(false)
+// 详细诊断：接口逐条状态、总线设备、子设备清单、内核服务、安装目录与驱动文件
+type DriverInterfacePath = { path: string; openable: boolean }
+type DriverDevice = { instance_id: string; present: boolean; problem: number | null }
+type DriverService = { name: string; state: string; start: string }
+const driverInterfacePaths = ref<DriverInterfacePath[]>([])
+const driverBusDevice = ref('')
+const driverBusPresent = ref(true)
+const driverBusProblem = ref<number | null>(null)
+const driverSubDevices = ref<DriverDevice[]>([])
+const driverServices = ref<DriverService[]>([])
+const driverBundledFiles = ref<{ name: string; size: number }[]>([])
+const driverDepot = ref(false)
+const driverDepotVersion = ref('')
+const driverStore = ref<string[]>([])
+const driverImages = ref<string[]>([])
+const driverOs = ref('')
+const driverArch = ref('')
+const driverBusy = ref(false)
+// 当前正在执行的动作，按钮文案据此显示「安装中…」/「卸载中…」
+const driverAction = ref<'install' | 'uninstall' | ''>('')
+
+function driverList<T>(value: unknown, fallback: T[] = []): T[] {
+  return Array.isArray(value) ? value as T[] : fallback
+}
+
+// 状态与诊断字段同出一份 driver_status()，GET 与 POST 的响应结构一致，统一在此落地
+function applyDriverStatus(data: any) {
+  driverSupported.value = Boolean(data.supported)
+  driverBundled.value = Boolean(data.bundled)
+  driverInstalled.value = Boolean(data.installed)
+  driverVersion.value = data.version || ''
+  driverPackage.value = Boolean(data.package)
+  driverInterfaces.value = Number(data.interfaces) || 0
+  // 三态：true 呈现 / false 幽灵设备（代码 45）/ null 无法判定
+  driverSubDevice.value = typeof data.sub_device === 'boolean' ? data.sub_device : null
+  driverAdmin.value = Boolean(data.admin)
+  driverInterfacePaths.value = driverList<DriverInterfacePath>(data.interface_paths)
+  driverBusDevice.value = data.bus_device || ''
+  driverBusPresent.value = Boolean(data.bus_present)
+  driverBusProblem.value = typeof data.bus_problem === 'number' ? data.bus_problem : null
+  driverSubDevices.value = driverList<DriverDevice>(data.sub_devices)
+  driverServices.value = driverList<DriverService>(data.services)
+  driverBundledFiles.value = driverList<{ name: string; size: number }>(data.bundled_files)
+  driverDepot.value = Boolean(data.depot)
+  driverDepotVersion.value = data.depot_version || ''
+  driverStore.value = driverList<string>(data.driver_store)
+  driverImages.value = driverList<string>(data.driver_images)
+  driverOs.value = data.os || ''
+  driverArch.value = data.arch || ''
+}
+const driverSubDeviceText = computed(() => {
+  if (driverSubDevice.value === null) return t('未知')
+  return driverSubDevice.value ? t('已呈现') : t('未呈现（幽灵设备）')
+})
+// 子设备与总线设备的统一状态文案：呈现与否 + Windows 问题代码（45 即幽灵设备）
+function deviceStateText(device: { present: boolean; problem: number | null }) {
+  const base = device.present ? t('已呈现') : t('未呈现')
+  return device.problem === null ? base : `${base} · ${t('代码')} ${device.problem}`
+}
+const driverBundledFilesText = computed(() => {
+  if (!driverBundledFiles.value.length) return '—'
+  const total = driverBundledFiles.value.reduce((sum, file) => sum + (file.size || 0), 0)
+  return `${driverBundledFiles.value.length} · ${formatSize(total)}`
+})
+const driverImagesText = computed(() =>
+  driverImages.value.length ? `${driverImages.value.join(', ')}` : '—')
+// 已安装版本与捆绑版本不一致时高亮：说明系统里跑的不是当前项目捆绑的包
+const driverVersionStale = computed(() =>
+  Boolean(driverDepotVersion.value) && Boolean(driverVersion.value)
+  && driverDepotVersion.value !== driverVersion.value)
+function serviceStateText(state: string) {
+  const labels: Record<string, string> = {
+    running: t('运行中'), stopped: t('已停止'), start_pending: t('启动中'), stop_pending: t('停止中'),
+    paused: t('已暂停'), missing: t('不存在'),
+  }
+  return labels[state] || state
+}
+function serviceStartText(start: string) {
+  const labels: Record<string, string> = {
+    auto: t('自动'), manual: t('手动'), disabled: t('已禁用'), boot: t('引导'), system: t('系统'),
+  }
+  return labels[start] || start
+}
+
+async function loadDriver() {
+  try {
+    applyDriverStatus(await api.get('/api/tools/virtual_mouse_driver'))
+  } catch (exception: any) { toast.error = exception.message }
+}
+function manageDriver(action: 'install' | 'uninstall') {
+  const installing = action === 'install'
+  openConfirmModal(
+    installing
+      ? t('将把驱动文件复制到系统目录并安装虚拟鼠标驱动，确定继续？')
+      : t('将移除系统中的虚拟鼠标驱动，之后 driver 控制方案的实例将无法启动，确定继续？'),
+    async () => {
+      driverBusy.value = true
+      driverAction.value = action
+      try {
+        const data = await api.post('/api/tools/virtual_mouse_driver', { action })
+        applyDriverStatus(data)
+        // 以探测结果为准：安装器自报的成败不作数，只看设备是否真的在/不在
+        if (installing ? driverInstalled.value : !driverInstalled.value) {
+          if (installing && data.reboot_required) {
+            toast.notify(t('驱动已安装，但 Windows 要重启后才完成驱动切换，请重启系统使新驱动生效'), 'ok', 8000)
+          } else {
+            toast.notify(installing ? t('驱动安装完成') : t('驱动已卸载'))
+          }
+        } else {
+          toast.notify(installing ? t('安装命令已执行，但未探测到驱动设备，请重试') : t('卸载命令已执行，但仍探测到驱动设备，请重试'), 'error', 5000)
+        }
+      } catch (exception: any) { toast.error = exception.message } finally { driverBusy.value = false; driverAction.value = '' }
+    },
+  )
+}
+
+onMounted(() => { loadHosts(); loadShortcuts(); loadCloneInfo(); loadDriver() })
 onBeforeUnmount(stopClonePolling)
 watch(toolsTab, tab => {
   if (tab === 'hosts') loadHosts()
   if (tab === 'shortcuts') loadShortcuts()
   if (tab === 'clone') loadCloneInfo()
+  if (tab === 'driver') loadDriver()
 })
 </script>
 
@@ -221,6 +391,7 @@ watch(toolsTab, tab => {
       <button class="tools-tab" :class="{ active: toolsTab === 'hosts' }" @click="router.push('/tools/hosts')"><AppIcon name="globe" :size="16" /> {{ t('Hosts 修改') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'shortcuts' }" @click="router.push('/tools/shortcuts')"><AppIcon name="gear" :size="16" /> {{ t('快捷键设置') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'clone' }" @click="router.push('/tools/clone')"><AppIcon name="gamepad" :size="16" /> {{ t('游戏多开') }}</button>
+      <button class="tools-tab" :class="{ active: toolsTab === 'driver' }" @click="router.push('/tools/driver')"><AppIcon name="layers" :size="16" /> {{ t('虚拟鼠标驱动') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'console' }" @click="router.push('/tools/console')"><AppIcon name="terminal-square" :size="16" /> {{ t('控制台') }}</button>
     </div>
     <article v-if="toolsTab === 'hosts'" class="card group-card">
@@ -271,10 +442,11 @@ watch(toolsTab, tab => {
         </div>
       </div>
     </article>
-    <article v-else-if="toolsTab === 'clone'" class="card group-card">
-      <div class="group-head"><h4>{{ t('游戏多开') }}</h4></div>
+    <template v-else-if="toolsTab === 'clone'">
+      <article class="card group-card">
+        <div class="group-head"><h4>{{ t('游戏多开') }}</h4></div>
       <div class="group-body hosts-body">
-        <p class="fhelp">{{ t('复制一份游戏安装目录，重命名新副本的启动器与游戏程序，并写入新副本的路径配置。复制前请关闭游戏和启动器。') }}</p>
+        <p class="fhelp">{{ t('复制一份游戏安装目录，重命名新副本的启动器，并写入新副本的路径配置。复制前请关闭游戏和启动器。') }}</p>
         <div class="clone-field">
           <span class="hosts-region-label">{{ t('游戏安装目录') }}</span>
           <input v-model="cloneSource" class="clone-input" spellcheck="false" :disabled="cloneJob.running">
@@ -289,10 +461,6 @@ watch(toolsTab, tab => {
           <span class="hosts-region-label">{{ t('副本编号') }}</span>
           <input v-model="cloneSuffix" class="clone-input clone-suffix" type="number" min="2" :disabled="cloneJob.running">
         </div>
-        <div v-if="cloneList.length" class="clone-existing">
-          <span class="hosts-region-label">{{ t('已有配置') }}</span>
-          <span v-for="name in cloneList" :key="name" class="clone-chip">{{ name }}</span>
-        </div>
         <div v-if="cloneJob.running" class="clone-progress">
           <div class="clone-progress-bar"><div class="clone-progress-fill" :style="{ width: `${cloneProgress}%` }"></div></div>
           <span class="clone-progress-text">{{ t(cloneJob.step || '准备') }} {{ formatSize(cloneJob.copied) }} / {{ formatSize(cloneJob.total) }} ({{ cloneProgress }}%)</span>
@@ -300,10 +468,145 @@ watch(toolsTab, tab => {
         <div v-if="cloneJob.error" class="hosts-unsupported"><AppIcon name="alert-triangle" :size="14" /> {{ cloneJob.error }}</div>
         <div v-if="cloneJob.result" class="clone-result">
           <div>{{ t('启动器') }}: {{ cloneJob.result.launcher }}</div>
-          <div>{{ t('游戏程序') }}: {{ cloneJob.result.game }}</div>
+          <div>{{ t('游戏路径') }}: {{ cloneJob.result.game }}</div>
         </div>
         <div class="hosts-actions">
-          <button class="btn primary" :disabled="cloneJob.running" @click="startClone"><AppIcon name="copy" :size="14" /> {{ cloneJob.running ? t('复制中…') : t('开始复制') }}</button>
+          <button v-if="!cloneJob.running" class="btn primary" @click="startClone"><AppIcon name="copy" :size="14" /> {{ t('开始复制') }}</button>
+          <button v-else class="btn danger" @click="cancelClone"><AppIcon name="x" :size="14" /> {{ t('停止复制') }}</button>
+        </div>
+      </div>
+      </article>
+      <article class="card group-card">
+        <div class="group-head clone-list-head">
+          <h4>{{ t('已检测客户端') }}</h4>
+          <span class="clone-count">{{ cloneClients.length }}</span>
+        </div>
+        <div class="group-body hosts-body">
+          <div v-if="cloneClients.length" class="clone-instance-list">
+            <div v-for="client in cloneClients" :key="client.name" class="clone-instance">
+              <div class="clone-instance-head">
+                <div class="clone-instance-title">
+                  <strong>{{ cloneClientTitle(client) }}</strong>
+                  <code>{{ client.name }}.exe</code>
+                </div>
+                <span class="clone-instance-status" :class="client.status">{{ cloneClientStatus(client.status) }}</span>
+              </div>
+              <div class="clone-instance-path"><span>{{ t('安装目录') }}</span><code>{{ client.install_path || '—' }}</code></div>
+              <div class="clone-instance-path"><span>{{ t('启动器路径') }}</span><code>{{ client.launcher_path || '—' }}</code></div>
+              <div class="clone-instance-path"><span>{{ t('游戏路径') }}</span><code>{{ client.game_path || '—' }}</code></div>
+              <div v-if="client.shared_with?.length" class="clone-instance-path"><span>{{ t('共用安装目录') }}</span><code>{{ client.shared_with.map(name => `${name}.exe`).join('、') }}</code></div>
+              <div class="clone-instance-actions">
+                <button v-if="client.is_clone" class="btn danger sm" :disabled="cloneJob.running" :title="t('删除副本')" @click="deleteClone(client)"><AppIcon name="trash" :size="13" /> {{ t('删除') }}</button>
+                <span v-else class="clone-protected">{{ t('本体不可删除') }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="clone-empty">{{ t('未检测到游戏客户端') }}</div>
+        </div>
+      </article>
+    </template>
+    <article v-else-if="toolsTab === 'driver'" class="card group-card">
+      <div class="group-head">
+        <h4>{{ t('虚拟鼠标驱动') }}</h4>
+        <span class="hosts-status" :class="{ on: driverInstalled }">{{ driverInstalled ? t('已安装') : t('未安装') }}</span>
+      </div>
+      <div class="group-body hosts-body">
+        <p class="fhelp">{{ t('driver 控制方案依赖虚拟鼠标驱动。安装会把驱动文件复制到系统目录并运行安装器。') }}</p>
+        <div v-if="!driverSupported" class="hosts-unsupported"><AppIcon name="alert-triangle" :size="14" /> {{ t('当前系统不支持安装虚拟鼠标驱动') }}</div>
+        <div v-if="driverSupported && !driverBundled" class="hosts-unsupported"><AppIcon name="alert-triangle" :size="14" /> {{ t('未找到项目内置的驱动安装文件') }}</div>
+        <div class="driver-debug">
+          <div class="driver-debug-head">{{ t('诊断信息') }}</div>
+
+          <div class="driver-debug-group">
+            <div class="driver-debug-title">{{ t('驱动包') }}</div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('捆绑版本') }}</span>
+              <code>{{ driverVersion || '—' }}</code>
+            </div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('捆绑文件') }}</span>
+              <code>{{ driverBundledFilesText }}</code>
+            </div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('落地状态') }}</span>
+              <code :class="{ 'debug-warn': !driverPackage }">{{ driverPackage ? t('已落地') : t('未落地') }}</code>
+            </div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('安装目录') }}</span>
+              <code :class="{ 'debug-warn': !driverDepot }">{{ driverDepot ? t('已就位') : t('未就位') }}</code>
+            </div>
+            <div v-if="driverDepotVersion" class="clone-field">
+              <span class="hosts-region-label">{{ t('目录版本') }}</span>
+              <code :class="{ 'debug-warn': driverVersionStale }">{{ driverDepotVersion }}{{ driverVersionStale ? ` · ${t('与捆绑版本不一致')}` : '' }}</code>
+            </div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('包目录') }}</span>
+              <code>{{ driverStore.length ? driverStore.join(', ') : '—' }}</code>
+            </div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('内核驱动') }}</span>
+              <code :class="{ 'debug-warn': !driverImages.length }">{{ driverImagesText }}</code>
+            </div>
+          </div>
+
+          <div class="driver-debug-group">
+            <div class="driver-debug-title">{{ t('设备接口') }}</div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('接口实例') }}</span>
+              <code :class="{ 'debug-warn': driverInterfaces !== 1 }">{{ driverInterfaces }}</code>
+            </div>
+            <div v-for="entry in driverInterfacePaths" :key="entry.path" class="driver-row">
+              <code class="driver-id">{{ entry.path }}</code>
+              <span class="driver-tag" :class="{ warn: !entry.openable }">{{ entry.openable ? t('可打开') : t('打不开') }}</span>
+            </div>
+            <div v-if="driverBusDevice" class="driver-row">
+              <span class="hosts-region-label">{{ t('总线设备') }}</span>
+              <code class="driver-id">{{ driverBusDevice }}</code>
+              <span class="driver-tag" :class="{ warn: driverBusProblem !== null }">{{ deviceStateText({ present: driverBusPresent, problem: driverBusProblem }) }}</span>
+            </div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('HID 子设备') }}</span>
+              <code :class="{ 'debug-warn': driverSubDevice === false }">{{ driverSubDeviceText }}</code>
+            </div>
+            <div v-for="device in driverSubDevices" :key="device.instance_id" class="driver-row">
+              <code class="driver-id">{{ device.instance_id }}</code>
+              <span class="driver-tag" :class="{ warn: !device.present }">{{ deviceStateText(device) }}</span>
+            </div>
+          </div>
+
+          <div class="driver-debug-group">
+            <div class="driver-debug-title">{{ t('系统服务') }}</div>
+            <div v-for="service in driverServices" :key="service.name" class="driver-row">
+              <code class="driver-id">{{ service.name }}</code>
+              <span class="driver-tag" :class="{ warn: service.state !== 'running' }">
+                {{ serviceStateText(service.state) }}<template v-if="serviceStartText(service.start)"> · {{ serviceStartText(service.start) }}</template>
+              </span>
+            </div>
+          </div>
+
+          <div class="driver-debug-group">
+            <div class="driver-debug-title">{{ t('运行环境') }}</div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('运行权限') }}</span>
+              <code :class="{ 'debug-warn': !driverAdmin }">{{ driverAdmin ? t('管理员') : t('非管理员') }}</code>
+            </div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('操作系统') }}</span>
+              <code>{{ driverOs || '—' }}</code>
+            </div>
+            <div class="clone-field">
+              <span class="hosts-region-label">{{ t('系统架构') }}</span>
+              <code>{{ driverArch || '—' }}</code>
+            </div>
+          </div>
+        </div>
+        <div v-if="driverSubDevice === false" class="hosts-unsupported">
+          <AppIcon name="alert-triangle" :size="14" /> {{ t('驱动已安装，但 HID 子设备未呈现（Windows 代码 45），注入的报告会被丢弃、光标不会移动。请重启虚拟鼠标总线设备或重启系统后重试。') }}
+        </div>
+        <div class="hosts-actions">
+          <button class="btn" :disabled="driverBusy" @click="loadDriver"><AppIcon name="refresh" :size="14" /> {{ t('刷新状态') }}</button>
+          <button class="btn danger" :disabled="driverBusy || !driverInstalled" @click="manageDriver('uninstall')"><AppIcon name="undo" :size="14" /> {{ driverBusy && driverAction === 'uninstall' ? t('卸载中…') : t('卸载驱动') }}</button>
+          <button class="btn primary" :disabled="driverBusy || !driverSupported || !driverBundled || driverInstalled" @click="manageDriver('install')"><AppIcon name="download" :size="14" /> {{ driverBusy && driverAction === 'install' ? t('安装中…') : (driverInstalled ? t('已安装') : t('安装驱动')) }}</button>
         </div>
       </div>
     </article>

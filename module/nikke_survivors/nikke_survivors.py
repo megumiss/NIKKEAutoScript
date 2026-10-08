@@ -14,7 +14,7 @@ class NikkeSurvivors(UI):
         confirm_timer = Timer(5, count=5).start()
         start_time = time.time()
 
-        self.device.click_xy(1, 1)
+        self.device.click_xy(5, 5)
         if hasattr(self.device, '_minitouch_pid'):
             self.device.adb_shell('kill %s' % self.device._minitouch_pid)
             del_cached_property(self.device, 'minitouch_builder')

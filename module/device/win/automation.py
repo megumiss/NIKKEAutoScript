@@ -5,7 +5,7 @@ from functools import cached_property, wraps
 
 from module.base.button import Button
 from module.base.timer import Timer
-from module.base.utils import ensure_int, image_size, point2str
+from module.base.utils import ensure_int, image_size, point2str, random_click_offset
 from module.config.config import NikkeConfig
 from module.device.win.screenshot import Screenshot
 from module.device.win.utils import (
@@ -102,8 +102,12 @@ class Automation:
         按 PCClientInfo.ControlScheme 选择控制链路：
         - pyautogui：现有方案（Input，全局物理鼠标）
         - postmessage：窗口消息方案（PostMessageInput）
+        - driver：虚拟鼠标驱动方案（VirtualMouseInput，需已安装虚拟鼠标驱动）
+          该方案下光标移动方式另由 PCClientInfo.MoveBackend 选择（driver 相对报告闭环 /
+          cursor 光标直定位），按键与滚轮始终走驱动。
         """
-        if str(self.config.PCClientInfo_ControlScheme) == 'postmessage':
+        scheme = str(self.config.PCClientInfo_ControlScheme)
+        if scheme == 'postmessage':
             from module.device.win.ok_interaction.input import PostMessageInput
 
             self.input_handler = PostMessageInput(
@@ -112,6 +116,14 @@ class Automation:
                 foreground_switcher=self.set_foreground_window_with_retry,
             )
             logger.info('Control scheme: postmessage')
+        elif scheme == 'driver':
+            from module.device.win.virtual_mouse.input import VirtualMouseInput
+
+            self.input_handler = VirtualMouseInput(
+                config_name=self.config.config_name,
+                move_backend=self.config.PCClientInfo_MoveBackend,
+            )
+            logger.info('Control scheme: driver')
         else:
             self.input_handler = Input()
         self.mouse_click = self.input_handler.mouse_click
@@ -188,7 +200,7 @@ class Automation:
 
         raise ScreenshotSizeError('The game window display size must be 720*1280')
 
-    def click(self, button: Button, click_offset=0, action='click'):
+    def click(self, button: Button, click_offset=0, action='click', random_offset=None):
         """点击窗口中的按钮"""
         x, y = button.location
         # 如果 click_offset 是单个数字，代表 x 和 y 都偏移同样的量
@@ -199,6 +211,13 @@ class Automation:
         elif isinstance(click_offset, (tuple, list)) and len(click_offset) == 2:
             x += click_offset[0]
             y += click_offset[1]
+
+        if random_offset is None:
+            random_offset = self.config.Optimization_ClickRandomOffset
+        if random_offset:
+            offset_x, offset_y = random_click_offset(random_offset)
+            x += offset_x
+            y += offset_y
 
         x, y = ensure_int(x, y)
         logger.info('Click %s @ %s' % (point2str(x, y), button))

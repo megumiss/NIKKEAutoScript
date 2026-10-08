@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import random
@@ -10,11 +11,12 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 
 from module.config.serial_state import modify_state, read_serial_config
-from module.config.utils import deep_get, filepath_config, nkas_instance, nkas_template, read_file
+from module.config.utils import DEFAULT_TIME, deep_get, filepath_args, filepath_config, nkas_instance, nkas_template, read_file
 from module.logger import logger
 from module.submodule.utils import get_config_mod, load_config
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.api.models import InstanceInfo
+from module.webui.api.routes_schedule import reset_scheduler_fields
 from module.webui.process_manager import ProcessManager
 from module.webui.setting import State
 from module.webui.updater import updater
@@ -48,6 +50,62 @@ def _pc_client_requires_admin(name):
         return False
     platform = deep_get(read_file(filepath_config(name)), keys='NKAS.Client.Platform', default='adb')
     return platform == 'win'
+
+
+def _driver_scheme_missing_driver(name):
+    """
+    driver 控制方案（NKAS.PCClientInfo.ControlScheme == 'driver'，仅 PC 客户端生效）
+    依赖虚拟鼠标驱动，未安装时启动后所有点击/滑动都会失败。
+    """
+    config = read_file(filepath_config(name))
+    if deep_get(config, keys='NKAS.Client.Platform', default='adb') != 'win':
+        return False
+    if deep_get(config, keys='NKAS.PCClientInfo.ControlScheme', default='pyautogui') != 'driver':
+        return False
+    from module.tools.virtual_mouse_driver import (
+        driver_package_present,
+        probe_device,
+        repair_driver,
+        sub_device_present,
+    )
+    # 接口能打开不等于通道可用：幽灵设备（代码 45）下同样能打开却没有输入
+    if probe_device() is not None and sub_device_present() is not False:
+        return False
+    # 重启后设备可能变隐藏（接口没注册或 HID 子设备变幽灵）：驱动包还在时重跑一次安装即可重建
+    if driver_package_present() and repair_driver():
+        return False
+    return True
+
+
+def _vdd_missing_driver(name):
+    """
+    开启了虚拟屏且由 NKAS 自行管理（NKAS.Vdd.VddScreen + VddAutoManage，仅 PC 客户端生效）
+    时，虚拟屏驱动未安装会让实例初始化直接失败：ParsecVDD 抛 ParsecVddError，
+    MttVDD 则是设备不存在。这里在拉起进程前拦下，避免启动后才失败。
+
+    调用方是 PC 模式的实例启动，此时管理员校验已经通过（_pc_client_requires_admin 在前），
+    探测不会因权限不足失败。所以查询报错只剩「驱动工具链缺失 / 输出无法解析」这一类，
+    和驱动未安装一样都跑不了 VDD，一并按未安装处理。
+    """
+    config = read_file(filepath_config(name))
+    if deep_get(config, keys='NKAS.Client.Platform', default='adb') != 'win':
+        return False
+    if not deep_get(config, keys='NKAS.Vdd.VddScreen', default=False):
+        return False
+    if not deep_get(config, keys='NKAS.Vdd.VddAutoManage', default=False):
+        return False
+
+    from module.device.win import parsec_vdd, vdd
+
+    vdd_type = str(deep_get(config, keys='NKAS.Vdd.VddType', default='parsecvdd') or 'parsecvdd').lower()
+    if vdd_type == 'parsecvdd':
+        # driver_status() 内部已用 PnP 兜底，查不到就是 installed=False，不会抛异常
+        return not parsec_vdd.driver_status()['installed']
+    try:
+        return not vdd.vdd_status().get('installed')
+    except (vdd.VddError, OSError) as e:
+        logger.warning(f'VDD status query failed for "{name}": {e}')
+        return True
 
 
 # Lives outside ./config because nkas_instance() treats every *.json there
@@ -313,6 +371,21 @@ async def start(request: Request):
                 'message': 'PC client requires NKAS to run as administrator. '
                            'Restart NKAS with "Run as administrator".',
             }, status_code=403)
+        if _driver_scheme_missing_driver(name):
+            logger.warning(f'Instance "{name}" start blocked: control scheme "driver" requires the virtual mouse driver')
+            return JSONResponse({
+                'status': 'error', 'code': 'driver_not_installed',
+                'message': 'Control scheme "driver" requires the virtual mouse driver. '
+                           'Install it from Tools > Virtual mouse driver first.',
+            }, status_code=400)
+        if await asyncio.to_thread(_vdd_missing_driver, name):
+            logger.warning(f'Instance "{name}" start blocked: virtual display (VDD) driver is not installed')
+            return JSONResponse({
+                'status': 'error', 'code': 'vdd_driver_not_installed',
+                'message': 'Virtual display (VDD) is enabled and managed by NKAS, but its driver is '
+                           'not installed. Install the Parsec VDD driver (or the Virtual Display '
+                           'Driver for MttVDD) first, or turn off the VDD auto-manage option.',
+            }, status_code=400)
         await run_in_threadpool(manager.start, get_config_mod(name), ev=updater.event)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
@@ -327,6 +400,20 @@ async def start(request: Request):
             results.append({
                 'instance': instance, 'status': 'error', 'code': 'admin_required',
                 'message': 'PC client requires administrator privileges.',
+            })
+            continue
+        if _driver_scheme_missing_driver(instance):
+            logger.warning(f'Instance "{instance}" start blocked: control scheme "driver" requires the virtual mouse driver')
+            results.append({
+                'instance': instance, 'status': 'error', 'code': 'driver_not_installed',
+                'message': 'Control scheme "driver" requires the virtual mouse driver.',
+            })
+            continue
+        if await asyncio.to_thread(_vdd_missing_driver, instance):
+            logger.warning(f'Instance "{instance}" start blocked: virtual display (VDD) driver is not installed')
+            results.append({
+                'instance': instance, 'status': 'error', 'code': 'vdd_driver_not_installed',
+                'message': 'Virtual display (VDD) driver is not installed.',
             })
             continue
         await run_in_threadpool(manager.start, get_config_mod(instance), ev=updater.event)
@@ -367,6 +454,7 @@ async def create(request: Request):
         name = str(data['name']).strip()
         origin = str(data.get('origin', 'template-nkas'))
         avatar = str(data.get('avatar', '') or '').strip()
+        keep_schedule = bool(data.get('keep_schedule', False))
     except (ValueError, TypeError, KeyError):
         return _response_error('Expected JSON body with name and optional origin.')
     if not name or name in nkas_instance() or re.search(r'[.\\/:*?"\'<>|]', name) or name.lower().startswith('template'):
@@ -374,12 +462,27 @@ async def create(request: Request):
     if origin not in nkas_instance() + nkas_template():
         return _response_error('Source instance not found.', 404)
     from module.config.config_updater import renew_virtual_display_id
-    copied = load_config(origin).read_file(origin)
-    renew_virtual_display_id(copied)
-    State.config_updater.write_file(name, copied, get_config_mod(origin))
+    config = load_config(origin).read_file(origin)
+    renew_virtual_display_id(config)
+    if not keep_schedule:
+        _reset_schedule_to_default(config)
+    State.config_updater.write_file(name, config, get_config_mod(origin))
     if avatar:
         _save_avatar(name, avatar)
     return JSONResponse({'status': 'success', 'name': name}, status_code=201)
+
+
+def _reset_schedule_to_default(config):
+    """新实例不保留来源实例的执行时间：周期/时间字段还原为 args 默认值，
+    NextRun 置哨兵值让任务尽快重排；Enable 保持复制结果不动。"""
+    args = read_file(filepath_args('args', 'nkas'))
+    for command, task_data in config.items():
+        sch = task_data.get('Scheduler') if isinstance(task_data, dict) else None
+        sch_args = deep_get(args, f'{command}.Scheduler')
+        if not isinstance(sch, dict) or not isinstance(sch_args, dict):
+            continue
+        reset_scheduler_fields(sch, sch_args)
+        sch['NextRun'] = DEFAULT_TIME
 
 
 async def reorder(request: Request):
@@ -431,6 +534,24 @@ async def delete(request: Request):
     if name in order:
         order.remove(name)
         _save_order(order)
+    # 串行组（SerialGroup）与串行状态同步移除，否则编排器会按残留的组配置
+    # 把已删实例重新拉起，worker 保存配置时实例会“复活”
+    serial_config = read_serial_config()
+    if name in serial_config.group:
+        group = [item for item in serial_config.group if item != name]
+        try:
+            setattr(State.deploy_config, 'SerialGroup', ' > '.join(group))
+        except OSError as exc:
+            logger.warning(f'Unable to update SerialGroup after delete: {exc}')
+
+        def _delete_serial_state(s):
+            s['instances'].pop(name, None)
+            s['failed'].pop(name, None)
+            if name in s['retried']:
+                s['retried'].remove(name)
+            if s.get('current') == name:
+                s['current'] = None
+        modify_state(_delete_serial_state)
     return JSONResponse({'status': 'success'})
 
 

@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 import module.webui.lang as lang
 from module.config.delay import next_month_day, next_weekday
 from module.config.manual_config import ManualConfig
-from module.config.utils import deep_get, deep_set, filepath_args, get_server_next_update, read_file
+from module.config.utils import DEFAULT_TIME, deep_get, deep_set, filepath_args, get_server_next_update, read_file
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.setting import State
 from module.webui.utils import re_fullmatch
@@ -39,7 +39,7 @@ def schedule_data(name):
             continue
         # SpecialArenaWatch 是固定间隔轮询，时间字段对它不生效：整行置灰只读
         locked = command in ManualConfig.SCHEDULE_LOCKED_TASKS
-        # Enable 被强制锁定的任务（type lock / display disabled，如 Reward/Restart/Notify）不允许开关
+        # Enable 被强制锁定的任务（type lock / display disabled，如 Restart）不允许开关
         enable_spec = deep_get(args, f'{command}.Scheduler.Enable', default={})
         enable_locked = enable_spec.get('type') == 'lock' or enable_spec.get('display') == 'disabled'
         tasks.append({
@@ -78,6 +78,14 @@ async def schedule(request: Request):
 SCHEDULE_RESET_FIELDS = ('Cadence', 'ServerUpdate', 'WeeklyDay', 'WeeklyTime', 'MonthlyDay', 'MonthlyTime')
 
 
+def reset_scheduler_fields(sch, sch_args):
+    """按 args 默认值重置单个 Scheduler 的周期/时间字段；Enable 与 NextRun 由调用方处理。"""
+    for key in SCHEDULE_RESET_FIELDS:
+        default = deep_get(sch_args, f'{key}.value')
+        if default is not None:
+            sch[key] = default
+
+
 async def reset_schedule(request: Request):
     """全部任务的周期/执行时间还原为 args 默认值（含 default.yaml 的按任务默认值），
     启用状态保持不变；NextRun 重排只提前不推迟，已排期/已到期任务不会被推到下一周期。"""
@@ -96,16 +104,45 @@ async def reset_schedule(request: Request):
         sch_args = deep_get(args, f'{command}.Scheduler')
         if not isinstance(sch, dict) or not isinstance(sch_args, dict):
             continue
-        for key in SCHEDULE_RESET_FIELDS:
-            default = deep_get(sch_args, f'{key}.value')
-            if default is not None:
-                sch[key] = default
+        reset_scheduler_fields(sch, sch_args)
         next_run = sch.get('NextRun')
         if isinstance(next_run, datetime) and next_run > now:
             computed = _compute_next_run(str(sch.get('Cadence', 'daily')), sch).replace(microsecond=0)
             # 只提前不推迟：默认时间已过时重算会落到下一周期，不能把今天待执行的任务推走
             if computed < next_run:
                 sch['NextRun'] = computed
+        reset.append(command)
+
+    State.config_updater.write_file(name, config)
+    return JSONResponse({'status': 'success', 'reset': reset})
+
+
+async def reset_next_run(request: Request):
+    """将所选任务的 NextRun 重置为默认日期（哨兵值，早于现在即尽快执行）。"""
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+    except InstanceNotFound as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({'status': 'error', 'message': 'Invalid JSON body.'}, status_code=400)
+    commands = body.get('commands')
+    if not isinstance(commands, list) or not commands:
+        return JSONResponse({'status': 'error', 'message': 'Empty commands.'}, status_code=400)
+
+    config = State.config_updater.read_file(name)
+    reset = []
+    for command in commands:
+        command = str(command)
+        if command in ManualConfig.SCHEDULE_LOCKED_TASKS:
+            continue
+        sch = deep_get(config, f'{command}.Scheduler')
+        if not isinstance(sch, dict):
+            continue
+        deep_set(config, f'{command}.Scheduler.NextRun', DEFAULT_TIME)
         reset.append(command)
 
     State.config_updater.write_file(name, config)

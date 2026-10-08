@@ -383,10 +383,7 @@ class ConfigGenerator:
 
 
 class ConfigUpdater:
-    redirection = [
-        # 2026-08: ScrcpyWebUrl 从 Emulator 组移入独立的 Scrcpy 组
-        ('Emulator.Emulator.ScrcpyWebUrl', 'Emulator.Scrcpy.WebUrl'),
-    ]
+    redirection = []
 
     @cached_property
     def args(self):
@@ -471,6 +468,21 @@ class ConfigUpdater:
             elif (deep_get(old, keys=target) is None) or (source == target):
                 deep_set(new, keys=target, value=value)
 
+        # 2026-09: 将 VDD 设置从 PCClient 组迁移到独立的 Vdd 组。
+        # 旧版已启用 VddScreen 且没有 VddType 的用户必须继续使用 MttVDD；
+        # 新配置默认使用 ParsecVDD。
+        old_vdd_screen = deep_get(old, keys='PCClient.PCClient.VddScreen')
+        old_vdd_type = deep_get(old, keys='PCClient.PCClient.VddType')
+        old_vdd_auto_manage = deep_get(old, keys='PCClient.PCClient.VddAutoManage')
+        if old_vdd_screen is not None:
+            deep_set(new, keys='PCClient.Vdd.VddScreen', value=old_vdd_screen)
+        if old_vdd_type is not None:
+            deep_set(new, keys='PCClient.Vdd.VddType', value=old_vdd_type)
+        elif old_vdd_screen is True:
+            deep_set(new, keys='PCClient.Vdd.VddType', value='mttvdd')
+        if old_vdd_auto_manage is not None:
+            deep_set(new, keys='PCClient.Vdd.VddAutoManage', value=old_vdd_auto_manage)
+
         return new
 
     def _override(self, data):
@@ -492,6 +504,12 @@ class ConfigUpdater:
             # for arg in deep_get(self.args, keys='NAKS.DropRecord', default={}).keys():
             #     remove_drop_save(arg)
 
+        # 启用虚拟屏幕(VDD)时强制打开多屏幕模式：VDD 会额外挂一块屏，多屏幕模式关闭时
+        # pyautogui 截图与窗口坐标只按主屏计算，窗口落在虚拟屏上必然截不到。
+        # 只单向开启、不反向关闭，避免覆盖「多屏但不跑 VDD」场景下用户自己的设置。
+        if deep_get(data, keys='PCClient.Vdd.VddScreen', default=False):
+            deep_set(data, keys='PCClient.PCClient.Screens', value=True)
+
         return data
 
     def save_callback(self, key: str, value: t.Any) -> t.Iterable[t.Tuple[str, t.Any]]:
@@ -508,6 +526,11 @@ class ConfigUpdater:
             key = key.split(".")
             key[-1] = key[-1].replace("Value", "Record")
             yield ".".join(key), datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 打开虚拟屏幕(VDD)的同时写入多屏幕模式，配置文件当场就是可用状态，
+        # 不用等下一次读取才被 _override 补上。
+        if key == "PCClient.Vdd.VddScreen" and value:
+            yield "PCClient.PCClient.Screens", True
 
     def read_file(self, config_name, is_template=False):
         if is_template:
@@ -527,7 +550,8 @@ class ConfigUpdater:
         Returns:
             dict:
         """
-        old = read_file(filepath_config(config_name))
+        filepath = filepath_config(config_name)
+        old = read_file(filepath)
         previous = deepcopy(old)
         if not is_template:
             ensure_virtual_display_id(old)
@@ -535,7 +559,9 @@ class ConfigUpdater:
         # The updated config did not write into file, although it doesn't matters.
         # Commented for performance issue
         # self.write_file(config_name, new)
-        if not is_template:
+        # 文件不存在时禁止回写：read_file 对缺失文件返回空 dict，比对必然
+        # dirty，会把已删除实例的配置文件重新创建出来
+        if not is_template and os.path.exists(filepath):
             # Persist latest event to config file, so the file itself stays
             # up to date without waiting for the scheduler to run
             dirty = old != previous

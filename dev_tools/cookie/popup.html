@@ -5,94 +5,244 @@
     <meta charset="utf-8">
     <title>Cookie 同步</title>
     <style>
+        :root {
+            color-scheme: light;
+            --bg: #ffffff;
+            --card: #f5f5f5;
+            --card-2: #ececec;
+            --border: #e5e5e5;
+            --border-light: #d4d4d4;
+            --text: #000000;
+            --text-2: #666666;
+            --text-3: #a3a3a3;
+            --accent: #0099ff;
+            --accent-2: #0077cc;
+            --accent-soft: rgba(0, 153, 255, .1);
+            --green: #22c55e;
+            --green-soft: rgba(34, 197, 94, .12);
+            --yellow: #ff7a3d;
+            --yellow-soft: rgba(255, 122, 61, .12);
+            --red: #ff5577;
+            --red-soft: rgba(255, 85, 119, .1);
+            --button-bg: rgba(255, 255, 255, .8);
+            --button-bg-hover: rgba(0, 153, 255, .08);
+            --button-border: rgba(0, 0, 0, .18);
+            --button-border-hover: rgba(0, 153, 255, .5);
+            --shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 2px 8px rgba(0, 0, 0, .05);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: dark;
+                --bg: #090909;
+                --card: #141414;
+                --card-2: #1c1c1c;
+                --border: #262626;
+                --border-light: #3a3a3a;
+                --text: #ffffff;
+                --text-2: #999999;
+                --text-3: #5c5c5c;
+                --accent-2: #40b0ff;
+                --accent-soft: rgba(0, 153, 255, .14);
+                --green-soft: rgba(34, 197, 94, .13);
+                --yellow-soft: rgba(255, 122, 61, .13);
+                --red-soft: rgba(255, 85, 119, .15);
+                --button-bg: rgba(255, 255, 255, .04);
+                --button-bg-hover: rgba(0, 153, 255, .12);
+                --button-border: rgba(153, 153, 153, .28);
+                --button-border-hover: rgba(0, 153, 255, .58);
+                --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .4);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            width: 320px;
+            width: 360px;
+            min-height: 420px;
+            padding: 14px;
+            color: var(--text);
+            background: var(--bg);
+            font: 13px/1.5 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
+        }
+
+        .shell {
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--card);
+            box-shadow: var(--shadow);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand-mark {
+            display: grid;
+            width: 34px;
+            height: 34px;
+            place-items: center;
+            overflow: hidden;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #6a4cf5, #0099ff);
+            box-shadow: 0 2px 10px rgba(0, 153, 255, .35);
+        }
+
+        .brand-mark img {
+            width: 25px;
+            height: 25px;
+            object-fit: contain;
+        }
+
+        .brand-copy {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .brand-name {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .brand-sub {
+            color: var(--text-3);
+            font-size: 11px;
+        }
+
+        .brand-badge {
+            padding: 3px 8px;
+            border: 1px solid var(--border-light);
+            border-radius: 999px;
+            color: var(--text-2);
+            background: var(--card-2);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .content {
             padding: 15px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            color: #333;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 14px;
         }
 
         label {
             display: block;
-            font-size: 13px;
-            margin-bottom: 5px;
-            color: #555;
+            margin-bottom: 6px;
+            color: var(--text-2);
+            font-size: 11px;
+            font-weight: 600;
         }
 
         input[type="text"] {
             width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 13px;
+            height: 38px;
+            padding: 0 11px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            outline: 0;
+            color: var(--text);
+            background: var(--card-2);
+            font-size: 12px;
+            transition: border-color .15s, box-shadow .15s;
         }
 
-        /* 新增复选框相关样式 */
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
         .checkbox-group {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
+            gap: 9px;
+            margin-bottom: 14px;
+            padding: 9px 11px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-2);
         }
 
         .checkbox-group input[type="checkbox"] {
-            margin: 0 8px 0 0;
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: var(--accent);
             cursor: pointer;
         }
 
         .checkbox-group label {
             margin: 0;
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
-            display: inline;
         }
 
         .status-bar {
             display: flex;
             align-items: center;
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            border: 1px solid #e9ecef;
+            gap: 8px;
+            min-height: 42px;
+            margin-bottom: 10px;
+            padding: 9px 11px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-2);
         }
 
         .status-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
+            flex: none;
             border-radius: 50%;
-            background-color: #6c757d;
-            margin-right: 8px;
+            background: var(--text-3);
         }
 
         .status-dot.success {
-            background-color: #28a745;
+            background: var(--green);
+            box-shadow: 0 0 0 3px var(--green-soft);
         }
 
         .status-dot.error {
-            background-color: #dc3545;
+            background: var(--red);
+            box-shadow: 0 0 0 3px var(--red-soft);
         }
 
         .status-dot.checking {
-            background-color: #ffc107;
+            background: var(--yellow);
+            box-shadow: 0 0 0 3px var(--yellow-soft);
         }
 
         .status-text {
-            font-size: 13px;
-            font-weight: bold;
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 600;
         }
 
-        /* 新增：用户信息样式 */
         .user-info {
-            font-size: 13px;
-            color: #007bff;
-            margin-bottom: 12px;
-            font-weight: bold;
+            margin: 0 0 12px;
+            padding: 9px 11px;
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            color: var(--accent-2);
+            background: var(--accent-soft);
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
             display: none;
-            /* 默认隐藏，登录成功后显示 */
         }
 
         .btn-group {
@@ -103,50 +253,79 @@
 
         button {
             flex: 1;
-            padding: 10px;
-            color: white;
-            border: none;
-            border-radius: 4px;
+            min-height: 38px;
+            padding: 8px 12px;
+            border: 1px solid var(--button-border);
+            border-radius: 999px;
+            color: var(--text);
+            background: var(--button-bg);
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
-            font-weight: bold;
-            transition: opacity 0.2s;
+            transition: border-color .15s, color .15s, background .15s, transform .15s;
         }
 
         button:hover {
-            opacity: 0.9;
+            border-color: var(--button-border-hover);
+            color: var(--accent);
+            background: var(--button-bg-hover);
         }
 
         button:disabled {
-            background-color: #adb5bd !important;
+            opacity: .4;
             cursor: not-allowed;
         }
 
+        button:focus-visible,
+        input:focus-visible {
+            outline: 3px solid var(--accent-soft);
+            outline-offset: 2px;
+        }
+
         #checkBtn {
-            background-color: #6c757d;
+            color: var(--text-2);
         }
 
         #syncBtn {
-            background-color: #007bff;
+            border-color: var(--accent);
+            color: #fff;
+            background: var(--accent);
+            box-shadow: none;
+            font-weight: 700;
+        }
+
+        #syncBtn:hover {
+            border-color: var(--accent-2);
+            color: #fff;
+            background: var(--accent-2);
         }
 
         #logMsg {
-            margin-top: 10px;
-            font-size: 12px;
-            min-height: 16px;
-            word-break: break-all;
-            color: #666;
+            min-height: 34px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            color: var(--text-2);
+            background: transparent;
+            font-size: 11px;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        #logMsg:empty {
+            min-height: 0;
+            padding: 0;
         }
 
         .footer {
-            margin-top: 15px;
+            margin-top: 4px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
             text-align: center;
-            font-size: 12px;
-            border-top: 1px solid #eee;
-            padding-top: 10px;
+            font-size: 11px;
         }
 
         a {
-            color: #007bff;
+            color: var(--accent-2);
             text-decoration: none;
         }
 
@@ -157,35 +336,48 @@
 </head>
 
 <body>
-    <div class="form-group">
-        <label for="apiUrl">NKAS 接口地址：</label>
-        <input type="text" id="apiUrl" placeholder="http://127.0.0.1:12271/api/nkas/config">
-    </div>
+    <div class="shell">
+        <header class="brand">
+            <div class="brand-mark"><img src="icon.png" alt=""></div>
+            <div class="brand-copy">
+                <div class="brand-name">NKAS</div>
+                <div class="brand-sub">BlablaLink Cookie 同步</div>
+            </div>
+            <span class="brand-badge">BETA</span>
+        </header>
 
-    <div class="form-group checkbox-group">
-        <input type="checkbox" id="autoSync">
-        <label for="autoSync">打开插件时自动同步</label>
-    </div>
+        <main class="content">
+            <div class="form-group">
+                <label for="apiUrl">NKAS 接口地址</label>
+                <input type="text" id="apiUrl" placeholder="http://127.0.0.1:12271/api/nkas/config">
+            </div>
 
-    <div class="status-bar">
-        <div class="status-dot" id="statusDot"></div>
-        <span class="status-text" id="statusText">等待检查...</span>
-    </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="autoSync">
+                <label for="autoSync">打开插件时自动同步</label>
+            </div>
 
-    <div class="user-info" id="userInfo"></div>
+            <div class="status-bar">
+                <div class="status-dot" id="statusDot"></div>
+                <span class="status-text" id="statusText">等待检查...</span>
+            </div>
 
-    <div class="btn-group">
-        <button id="checkBtn">检查登录状态</button>
-        <button id="syncBtn" disabled>同步 Cookie</button>
-    </div>
+            <div class="user-info" id="userInfo"></div>
 
-    <div id="logMsg"></div>
+            <div class="btn-group">
+                <button id="checkBtn">检查登录状态</button>
+                <button id="syncBtn" disabled>同步 Cookie</button>
+            </div>
 
-    <div class="footer">
-        <a href="https://nkas.megumiss.top/wiki/#/zh-cn/Configuration-Guide?id=_9-%e5%a6%ae%e6%b8%b8%e7%a4%be"
-            target="_blank" id="githubLink">
-            查看使用教程
-        </a>
+            <div id="logMsg" role="status" aria-live="polite"></div>
+
+            <div class="footer">
+                <a href="https://nkas.megumiss.top/wiki/#/zh-cn/Configuration-Guide?id=_9-%e5%a6%ae%e6%b8%b8%e7%a4%be"
+                    target="_blank" id="githubLink">
+                    查看使用教程
+                </a>
+            </div>
+        </main>
     </div>
 
     <script src="popup.js"></script>

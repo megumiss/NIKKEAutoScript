@@ -8,6 +8,7 @@
       "AutoRedCircle": false,
       "OcrModelType": "mobile",
       "OcrThreads": 10,
+      "ClickRandomOffset": 5,
       "WhenTaskQueueEmpty": "goto_main",
       "ScriptPath": null
     },
@@ -49,7 +50,6 @@
       "VirtualDisplayId": null
     },
     "Scrcpy": {
-      "WebUrl": null,
       "Bitrate": 16000000,
       "MaxFps": 60
     },
@@ -69,18 +69,22 @@
       "GameProcessName": null,
       "ScreenshotMethod": "pyautogui",
       "ScreenshotInterval": 0.3,
-      "ControlScheme": "pyautogui"
+      "ControlScheme": "pyautogui",
+      "MoveBackend": "driver"
     },
     "PCClient": {
       "Screens": false,
       "ScreenNumber": 0,
-      "VddScreen": false,
-      "VddAutoManage": false,
       "GameWindowPosition": "center",
       "GameResolutionCompat": true,
       "ScreenRotate": false,
       "CloseAutoHdr": true,
       "DisableVoice": false
+    },
+    "Vdd": {
+      "VddScreen": false,
+      "VddType": "parsecvdd",
+      "VddAutoManage": true
     },
     "Storage": {
       "Storage": {}
@@ -250,7 +254,8 @@
     },
     "Conversation": {
       "OnlyFavourite": false,
-      "OnlyLogsNotMax": false
+      "OnlyLogsNotMax": false,
+      "ForceConsultation": false
     },
     "Storage": {
       "Storage": {}
@@ -664,7 +669,7 @@
       "MonthlyTime": "04:00"
     },
     "EventInfo": {
-      "Event": "",
+      "Event": "event_20260917",
       "StoryPart": "Story_1",
       "StoryDifficulty": "Normal"
     },
@@ -702,9 +707,9 @@
       "MonthlyTime": "04:00"
     },
     "EventInfo": {
-      "Event": "",
+      "Event": "event_20260903",
       "StoryPart": "Story_1",
-      "StoryDifficulty": "Normal"
+      "StoryDifficulty": "Hard"
     },
     "StoryStage": {
       "AutoPush": false,

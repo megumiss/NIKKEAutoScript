@@ -1,4 +1,91 @@
 # 公告列表，新的公告追加到文件顶部
+# pinned: true 的公告在客户端列表顶部置顶显示，可同时置顶多条；组内仍按文件顺序（新的在前）
+- id: notice_20260924
+  date: 2026-09-24
+  title: 求个 Star
+  type: info
+  pinned: true
+  content: |
+    <b>如果 NKAS 帮到了你，欢迎到 GitHub 点个 Star</b>
+    <a href="https://github.com/megumiss/NIKKEAutoScript" target="_blank">https://github.com/megumiss/NIKKEAutoScript</a>
+    你的 Star 是我持续更新的动力。
+
+    如果有问题或需求，欢迎到 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">Issues</a> 反馈。
+- id: notice_20260923
+  date: 2026-09-23
+  title: OCR 新增 GPU 加速支持
+  type: info
+  content: |
+    <b>PaddleOCR 现已支持 NVIDIA GPU 加速</b>
+
+    <b>使用方法</b>
+    1. 进入 NKAS → 部署页面，将 OcrDevice 改为 gpu；
+    2. 完全退出并重新打开 nkas.exe，启动器会自动把 paddle 包切换为 GPU 版（约 2~3GB，请耐心等待）；
+    3. 网页内重启无效，必须完全退出程序再启动。
+
+    <b>环境要求</b>
+    需要 NVIDIA 显卡且驱动支持 CUDA >= 11.8；CUDA 变体（PaddleCuda）默认 auto 自动检测，RTX 50 系列显卡请使用 cu129，也可手动指定 cu126 / cu118。
+
+    <b>注意事项</b>
+    1. 没有 N 卡或不确定的用户请保持 cpu，默认 cpu 即可正常使用；
+    2. 若启用后提示 GPU 不可用，启动器会在 OCR 初始化前拦截并提示，按提示改回 cpu 或重新安装依赖即可。
+- id: notice_20260918
+  date: 2026-09-18
+  title: 新增虚拟鼠标控制方式
+  type: info
+  pinned: true
+  content: |
+    <b>PC 客户端新增 driver 控制方案，鼠标输入由虚拟鼠标驱动在驱动层发送</b>
+    游戏反作弊升级，原先的控制方式 pyautogui和postmessage 已被屏蔽
+    新增 driver 控制方案，仅支持前台运行，游戏窗口不在前台时无法使用。
+
+    <b>使用方法</b>
+    1. 安装驱动，以下任一方式即可：
+    - 在「常用工具 → 虚拟鼠标驱动」中点击安装；
+    - 安装最新版本的 <a href="https://www.logitechg.com/zh-cn/software/ghub" target="_blank">GHUB</a>。若已安装 GHUB，可在「常用工具 → 虚拟鼠标驱动」中确认状态是否为「已安装」。
+    2. 进入 NKAS → PC客户端 → PC端设置，将「控制方案」改为 driver。
+
+    <b>常见问题</b>
+    1. 报错 Virtual mouse driver move，首先尝试将 鼠标移动方式 更改为 cursor，如果没有解决，再尝试按下面的步骤重装：在常用工具中将虚拟鼠标驱动卸载，重启电脑，再重新安装
+    2. 报错 Driver installer ran but no device was detected afterwards，按照以下步骤修复：重启电脑，卸载虚拟鼠标驱动，再重启电脑，重新安装虚拟鼠标驱动；或者直接卸载 GHUB，重启后重新安装 GHUB
+
+    <b style="color:var(--red)">注意事项</b>
+    <span style="color:var(--red)">此方案未经过广泛测试，仍然可能会被反作弊检测、警告、封禁。</span>
+- id: notice_20260922
+  date: 2026-09-22
+  title: 1080P 屏幕新方案：VDD 虚拟屏幕
+  type: info
+  content: |
+    <b>1080P 用户不再需要「旋转屏幕」，推荐使用 VDD 虚拟屏幕运行脚本</b>
+    通过虚拟显示驱动在系统中创建一块 1080x1920 的虚拟屏幕，游戏窗口放在虚拟屏上竖屏运行，主屏完全不受影响，任务结束后虚拟屏可自动关闭。
+
+    <b>使用方法（ParsecVDD，推荐）</b>
+    1. 安装官方 ParsecVDD 驱动：<a href="https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe" target="_blank">ParsecVDisplay-v0.45-setup.exe</a>
+    2. 进入 NKAS → PC 客户端 → 虚拟屏幕，开启「启用VDD虚拟屏幕」（开启时会自动打开多屏幕模式），「虚拟屏幕类型」选择 ParsecVDD；
+    3. 保持「自动管理VDD屏幕」开启（默认开启）：任务启动时会自动创建虚拟屏并校正为 1080x1920 竖屏、自动定位屏幕序号，任务结束后自动关闭，无需手动设置分辨率和目标屏幕。
+
+    <b>MttVDD（旧方案）</b>
+    1. 安装官方 MttVDD 驱动：<a href="https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe" target="_blank">Virtual.Display.Driver-v25.05.03-setup-x64.exe</a>
+    2. 安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080、竖屏；
+    3. 「虚拟屏幕类型」选择 MttVDD，其余设置同上。
+
+    <b>说明</b>
+    - 开启「启用VDD虚拟屏幕」后，「游戏窗口目标屏幕」无需手动选择，屏幕序号在任务启动时自动定位；
+    - 「手动管理VDD屏幕」下的「启动虚拟屏幕 / 禁用虚拟屏幕」按钮用于手动测试驱动是否可用，或在自动管理未生效时手动控制屏幕状态，旁边的「虚拟屏幕驱动状态」可查看驱动安装与屏幕启用情况；
+    - 原来为 1080P 开启的「旋转屏幕」可以关闭了。
+- id: notice_20260917
+  date: 2026-09-17
+  title: 增加点击坐标随机偏移
+  type: info
+  content: |
+    <b>普通按钮点击现已增加坐标随机偏移</b>
+    默认开启，偏移 5 像素。
+
+    <b>设置入口</b>
+    NKAS → 优化设置 → 点击随机偏移，填写像素值即可。
+
+    <b>注意事项</b>
+    当前版本可能存在某些页面无法正常点击，将「点击随机偏移」设为 0 即可关闭偏移。
 - id: notice_20260903
   date: 2026-09-03
   title: 修复后台模式滑动问题
@@ -40,23 +127,6 @@
     感谢群友 @不会起名字 的大力支持
 
     具体使用请查看教程：<a href="https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device" target="_blank">https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device</a> 。
-- id: notice_20260828
-  date: 2026-08-28
-  title: 1080P 屏幕新方案：VDD 虚拟屏幕
-  type: info
-  content: |
-    <b>1080P 用户不再需要「旋转屏幕」，推荐使用 VDD 虚拟屏幕运行脚本</b>
-    通过 Virtual Display Driver 在系统中创建一块 1080x1920 的虚拟屏幕，游戏窗口放在虚拟屏上竖屏运行，主屏完全不受影响，脚本结束后虚拟屏可自动关闭。
-
-    <b>驱动下载</b>
-    <a href="https://github.com/VirtualDrivers/Virtual-Display-Driver/releases" target="_blank">Virtual Display Driver GitHub Releases</a>
-    建议直接安装：Virtual.Display.Driver-vxx.xx.xx-setup-x64.exe
-
-    <b>使用方法</b>
-    1. 安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080，竖屏
-    2. 进入 NKAS → PC 客户端设置开启「多屏幕模式」，点击「启动虚拟屏幕」，然后在「游戏窗口目标屏幕」中选择虚拟屏幕;
-    3. 勾选「是否为VDD虚拟屏幕」和「自动管理VDD屏幕」，任务启动时会自动启用虚拟屏、结束后自动禁用;
-    4. 原来为 1080P 开启的「旋转屏幕」可以关闭了。
 - id: notice_20260822
   date: 2026-08-22
   title: 调度设置（BETA）
