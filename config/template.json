@@ -668,7 +668,7 @@
       "MonthlyTime": "04:00"
     },
     "EventInfo": {
-      "Event": "event_20260917",
+      "Event": "",
       "StoryPart": "Story_1",
       "StoryDifficulty": "Normal"
     },
@@ -706,9 +706,9 @@
       "MonthlyTime": "04:00"
     },
     "EventInfo": {
-      "Event": "event_20260903",
+      "Event": "",
       "StoryPart": "Story_1",
-      "StoryDifficulty": "Hard"
+      "StoryDifficulty": "Normal"
     },
     "StoryStage": {
       "AutoPush": false,
