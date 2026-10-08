@@ -193,11 +193,14 @@ class Interception(UI):
                     continue
 
             if self.appear(END_FIGHTING, offset=30):
-                saved_path = self.save_drop_image(self.device.image, self.config.Interception_DropScreenshotPath)
-                if saved_path:
-                    logger.info(f'Save drop image to: {saved_path}')
-                stone_count = self.recognize_drop_stone_count(self.device.image)
-                self.write_drop_stone_record(stone_count=stone_count, screenshot_path=saved_path or '', boss=boss)
+                # 结算按钮可能短暂漏检，直到发起下一场战斗前只记录一次掉落。
+                if not end_fighting:
+                    saved_path = self.save_drop_image(self.device.image, self.config.Interception_DropScreenshotPath)
+                    if saved_path:
+                        logger.info(f'Save drop image to: {saved_path}')
+                    stone_count = self.recognize_drop_stone_count(self.device.image)
+                    self.write_drop_stone_record(stone_count=stone_count, screenshot_path=saved_path or '', boss=boss)
+                    end_fighting = True
 
                 while 1:
                     self.device.screenshot()
@@ -205,7 +208,6 @@ class Interception(UI):
                         break
                     if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
                         continue
-                end_fighting = True
                 continue
 
             if end_fighting:
