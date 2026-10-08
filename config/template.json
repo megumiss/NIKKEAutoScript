@@ -49,7 +49,6 @@
       "VirtualDisplay": false
     },
     "Scrcpy": {
-      "WebUrl": null,
       "Bitrate": 16000000,
       "MaxFps": 60
     },
@@ -254,7 +253,8 @@
     },
     "Conversation": {
       "OnlyFavourite": false,
-      "OnlyLogsNotMax": false
+      "OnlyLogsNotMax": false,
+      "ForceConsultation": false
     },
     "Storage": {
       "Storage": {}

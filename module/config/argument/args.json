@@ -214,10 +214,6 @@
       }
     },
     "Scrcpy": {
-      "WebUrl": {
-        "type": "input",
-        "value": ""
-      },
       "Bitrate": {
         "type": "input",
         "value": 16000000
@@ -1110,6 +1106,10 @@
         "value": false
       },
       "OnlyLogsNotMax": {
+        "type": "checkbox",
+        "value": false
+      },
+      "ForceConsultation": {
         "type": "checkbox",
         "value": false
       }

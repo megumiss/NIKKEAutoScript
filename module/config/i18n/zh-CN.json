@@ -377,11 +377,7 @@
   "Scrcpy": {
     "_info": {
       "name": "互动控制",
-      "help": ""
-    },
-    "WebUrl": {
-      "name": "ws-scrcpy 地址",
-      "help": "用于总览页画面预览的互动模式（可点击、拖拽操作游戏）。填入 ws-scrcpy 服务地址，如 https://scrcpy.example.com，留空则关闭互动模式。部署与使用说明见 Wiki：https://nkas.megumiss.top/wiki/#/zh-cn/Interactive-Control"
+      "help": "首页画面预览可直接通过 ADB 投屏和控制，无需配置外部服务。高延迟连接可适当降低码率与帧率。"
     },
     "Bitrate": {
       "name": "视频码率",
@@ -955,6 +951,10 @@
     "OnlyLogsNotMax": {
       "name": "只咨询日志未满",
       "help": "只咨询咨询日志数量不够20的妮姬，建议同时开启只咨询收藏，可以用来补咨询日志"
+    },
+    "ForceConsultation": {
+      "name": "强制咨询",
+      "help": "忽略好感等级和日志数量进行咨询"
     }
   },
   "BlaAuth": {
