@@ -38,7 +38,6 @@ class GeneratedConfig:
     PhysicalDevice_VirtualDisplay = False  # True, False
 
     # Group `Scrcpy`
-    Scrcpy_WebUrl = None
     Scrcpy_Bitrate = 16000000
     Scrcpy_MaxFps = 60
 

@@ -68,7 +68,6 @@ PhysicalDevice:
     value: false
     option: [ true, false ]
 Scrcpy:
-  WebUrl: ''
   Bitrate: 16000000
   MaxFps: 60
 EmulatorInfo:

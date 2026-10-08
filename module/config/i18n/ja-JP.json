@@ -377,11 +377,7 @@
   "Scrcpy": {
     "_info": {
       "name": "インタラクティブ操作",
-      "help": ""
-    },
-    "WebUrl": {
-      "name": "ws-scrcpy URL",
-      "help": "概要ページの画面プレビューのインタラクティブモード（クリック・ドラッグでゲームを操作）に使用します。例: https://scrcpy.example.com。空欄で無効。デプロイと使い方は Wiki を参照：https://nkas.megumiss.top/wiki/#/zh-cn/Interactive-Control"
+      "help": "外部サービスの設定なしで、ADB 経由で概要ページの画面を操作できます。遅延が大きい場合はビットレートとフレームレートを下げてください。"
     },
     "Bitrate": {
       "name": "ビットレート",

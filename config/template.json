@@ -49,7 +49,6 @@
       "VirtualDisplay": false
     },
     "Scrcpy": {
-      "WebUrl": null,
       "Bitrate": 16000000,
       "MaxFps": 60
     },

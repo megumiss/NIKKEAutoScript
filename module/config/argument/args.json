@@ -214,10 +214,6 @@
       }
     },
     "Scrcpy": {
-      "WebUrl": {
-        "type": "input",
-        "value": ""
-      },
       "Bitrate": {
         "type": "input",
         "value": 16000000

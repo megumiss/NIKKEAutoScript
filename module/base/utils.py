@@ -323,7 +323,7 @@ def set_preview_queue(q):
     _preview_queue = q
 
 
-def publish_preview_frame(image, interval=1.0):
+def publish_preview_frame(image, interval=1.0, source=None):
     """
     节流地把最新截图编码为 JPEG 推入预览队列，供 Web UI 画面预览。
     任何失败都静默忽略，绝不影响自动化主流程。
@@ -331,6 +331,7 @@ def publish_preview_frame(image, interval=1.0):
     Args:
         image (np.ndarray): RGB 截图
         interval (float): 最小发布间隔（秒）
+        source (dict): 可选的实际 ADB Serial 与 display_id，供交互预览定位屏幕。
     """
     global _preview_last_write
     q = _preview_queue
@@ -343,7 +344,8 @@ def publish_preview_frame(image, interval=1.0):
     try:
         buf = io.BytesIO()
         Image.fromarray(image).save(buf, 'JPEG', quality=70)
-        q.put_nowait(buf.getvalue())
+        data = buf.getvalue()
+        q.put_nowait((data, source) if source is not None else data)
     except Exception:
         # queue.Full（消费慢时丢帧）与编码异常都直接丢弃
         pass
