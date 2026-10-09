@@ -360,10 +360,7 @@ class ConfigGenerator:
 
 
 class ConfigUpdater:
-    redirection = [
-        # 2026-08: ScrcpyWebUrl 从 Emulator 组移入独立的 Scrcpy 组
-        ('Emulator.Emulator.ScrcpyWebUrl', 'Emulator.Scrcpy.WebUrl'),
-    ]
+    redirection = []
 
     @cached_property
     def args(self):

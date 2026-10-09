@@ -914,8 +914,14 @@ class WinClient:
                     f'Screen {screen_n} resolution: {screen_width}x{screen_height}, Target: {target_width}x{target_height}'
                 )
                 logger.error(
-                    f'Screen {screen_n} resolution is insufficient. Please enable screen rotation / set the screen to portrait / change to a higher resolution display, '
-                    f'or use a graphics card spoofer / UU Super Screen / virtual extended display.'
+                    'Recommended: in "Virtual Display" settings, follow "Virtual Display Type" help to install '
+                    'the official ParsecVDD driver, select "ParsecVDD", and enable "Enable VDD Virtual Display" '
+                    'and "Auto-Manage VDD Screen". NKAS will automatically locate the virtual display.'
+                )
+                logger.error(
+                    'Alternatively, enable "Rotate Screen" or set the display to portrait; '
+                    'or enable "Multi-Screen Mode" and select a "Game Window Target Screen" with a resolution '
+                    f'of at least {target_width}x{target_height}.'
                 )
                 raise ScreenResolutionNotEnough
             else:

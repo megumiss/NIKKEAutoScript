@@ -8,9 +8,14 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "browserslist": ["Chrome 94"],
+  "browserslist": [
+    "Chrome 94"
+  ],
   "dependencies": {
     "@vitejs/plugin-vue": "4.6.2",
+    "@yume-chan/scrcpy": "2.3.0",
+    "@yume-chan/scrcpy-decoder-tinyh264": "2.1.0",
+    "@yume-chan/scrcpy-decoder-webcodecs": "2.5.3",
     "dayjs": "1.11.13",
     "echarts": "5.6.0",
     "naive-ui": "2.41.0",

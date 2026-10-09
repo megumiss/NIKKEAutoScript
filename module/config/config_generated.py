@@ -38,7 +38,6 @@ class GeneratedConfig:
     PhysicalDevice_VirtualDisplay = False  # True, False
 
     # Group `Scrcpy`
-    Scrcpy_WebUrl = None
     Scrcpy_Bitrate = 16000000
     Scrcpy_MaxFps = 60
 
@@ -162,6 +161,7 @@ class GeneratedConfig:
     # Group `Conversation`
     Conversation_OnlyFavourite = False
     Conversation_OnlyLogsNotMax = False
+    Conversation_ForceConsultation = False
 
     # Group `BlaAuth`
     BlaAuth_UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
@@ -186,7 +186,7 @@ class GeneratedConfig:
     BlaExchange_Priority = 'Gem_×320 > Gem_×120 > Gem_×60 > Gem_×30 > Welcome_Gift_Core_Dust_×30'  # Gem_×320, Welcome_Gift_Core_Dust_×30, Gem_×30, Skill_Manual_I_×5, Ultra_Boost_Module_×5, Code_Manual_Selection_Box_×5, Gem_×60, Mid-Quality_Mold_×3, Credit_Case_(1H)_x9, Core_Dust_Case_(1H)_×3, Gem_×120, Mid-Quality_Mold_×8, Battle_Data_Set_Case_(1H)_×6, Core_Dust_Case_(1H)_×6, Skill_Manual_I_×30, Ultra_Boost_Module_×30, Code_Manual_Selection_Box_×30
 
     # Group `EventInfo`
-    EventInfo_Event = ''  # event_20260917, event_20260903
+    EventInfo_Event = ''  # event_20261008, event_20260917
     EventInfo_StoryPart = 'Story_1'  # Story_1, Story_2
     EventInfo_StoryDifficulty = 'Normal'  # Normal, Hard
 

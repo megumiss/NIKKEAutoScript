@@ -168,7 +168,7 @@ class ShopBase(UI):
                     # 检查商品是否可见并点击
                     if self.appear(
                         product, offset=(5, 5), threshold=0.9, interval=0.8, static=False
-                    ) and product.match_appear_on(self.device.image, 6):
+                    ) and product.match_appear_on(self.device.image, 20):
                         if check_price and product.name != ORNAMENT.name:
                             # 检查商品价格
                             area = _area_offset(product.button, (-50, 0, 50, 250))

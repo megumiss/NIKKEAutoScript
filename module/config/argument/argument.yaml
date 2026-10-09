@@ -68,7 +68,6 @@ PhysicalDevice:
     value: false
     option: [ true, false ]
 Scrcpy:
-  WebUrl: ''
   Bitrate: 16000000
   MaxFps: 60
 EmulatorInfo:
@@ -285,9 +284,9 @@ OpponentSelection:
     value: 'Min'
     option: [ 'Max','Middle','Min' ]
 Conversation:
-  #QuickConsultation: false
   OnlyFavourite: false
   OnlyLogsNotMax: false
+  ForceConsultation: false
 BlaAuth:
   UserAgent:
     value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36'
@@ -351,8 +350,8 @@ EventInfo:
   Event:
     value: ''
     option: [
-      'event_20260917',
-      'event_20260903'
+      'event_20261008',
+      'event_20260917'
     ]
     display: disabled
   StoryPart:

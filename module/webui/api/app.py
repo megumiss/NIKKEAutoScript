@@ -10,7 +10,7 @@ from module.logger import logger
 from module.webui.security_entry import entry_info, regenerate_entry
 from . import (routes_bla, routes_calendar, routes_config, routes_console, routes_cookie_sync, routes_deploy, routes_device,
                routes_instances, routes_logs, routes_maintenance, routes_notify, routes_preview, routes_proxy,
-               routes_schedule, routes_serial, routes_stats, routes_system, routes_tasks, routes_tools, ws)
+               routes_schedule, routes_search, routes_serial, routes_stats, routes_system, routes_tasks, routes_tools, ws)
 
 
 def create_spa_mount():
@@ -69,6 +69,7 @@ def mount_api(app):
         Route('/api/system/logs', routes_logs.log_query, methods=['GET']),
         Route('/api/proxy/links', routes_proxy.proxy_links, methods=['GET']),
         Route('/api/proxy', routes_proxy.proxy, methods=['GET']),
+        Route('/api/search', routes_search.search, methods=['GET']),
         Route('/api/tools/hosts', routes_tools.hosts_state, methods=['GET']),
         Route('/api/tools/hosts', routes_tools.hosts_update, methods=['POST']),
         Route('/api/tools/shortcuts', routes_tools.shortcuts_state, methods=['GET']),
@@ -107,13 +108,12 @@ def mount_api(app):
         Route('/api/{name:str}/bla/bind', routes_bla.bind_to_bot, methods=['POST']),
         Route('/api/{name:str}/screenshot', routes_preview.screenshot, methods=['GET']),
         Route('/api/{name:str}/scrcpy', routes_preview.scrcpy, methods=['GET']),
-        Route('/scrcpy/{name:str}/', routes_preview.scrcpy_page, methods=['GET']),
-        Route('/scrcpy/{name:str}/{asset:path}', routes_preview.scrcpy_asset, methods=['GET']),
         Route('/api/{name:str}/task/{task:str}/run', routes_tasks.run_task, methods=['POST']),
         Route('/api/{name:str}/tool/{task:str}/start', routes_tasks.start_tool, methods=['POST']),
         Route('/api/{name:str}', routes_instances.delete, methods=['DELETE']),
         WebSocketRoute('/ws/console', routes_console.console_socket),
         WebSocketRoute('/ws/state', ws.state_socket),
+        WebSocketRoute('/ws/{name:str}/scrcpy', routes_preview.scrcpy_socket),
         WebSocketRoute('/ws/{name:str}/log', ws.log_socket),
         WebSocketRoute('/ws/{name:str}/queue', ws.queue_socket),
         Mount('/avatars', app=StaticFiles(directory='./assets/gui/avatars'), name='avatars'),

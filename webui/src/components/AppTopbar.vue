@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
+import GlobalSearch from './GlobalSearch.vue'
 import { useTauriShell } from '../composables/useTauriShell'
 import { useRouteInfo } from '../composables/useRouteInfo'
 import { t } from '../i18n'
@@ -20,7 +21,9 @@ const { unreadAnnouncementCount } = storeToRefs(announcements)
 const { openAnnouncementCenter } = announcements
 const { mobileNav } = storeToRefs(useUiStore())
 const { isTauri, isMaximized, tbMinimize, tbToggleMaximize, tbHide, tbClose, onWindowDragAreaMouseDown } = useTauriShell()
-function onTopbarMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, '.tb-btn') }
+// 搜索框整块（含结果面板）要保留自己的点击与聚焦，不能被窗口拖拽的
+// preventDefault 吃掉。
+function onTopbarMouseDown(event: MouseEvent) { onWindowDragAreaMouseDown(event, '.tb-btn, .global-search') }
 
 function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ? t('多开') : isSettings.value ? t('更新') : isDeploy.value ? t('部署') : isLogs.value ? t('日志') : isTools.value ? t('常用工具') : isLinks.value ? t('常用链接') : isAbout.value ? t('关于') : selectedPage.value === 'overview' ? t('任务总览') : selectedPage.value === 'schedule' ? `${t('调度设置')}(BETA)` : `${taskSchema.value?.name || selectedTask.value}${selectedTask.value === 'PhysicalDevice' ? '(BETA)' : ''}` }
 </script>
@@ -33,6 +36,7 @@ function pageTitle() { return isDashboard.value ? t('总览') : isManage.value ?
     <div class="crumb"><span v-if="isWorkspace" class="pre">{{ selectedName }} /</span><span class="cur">{{ pageTitle() }}</span></div>
     <span v-if="isWorkspace" class="status-pill" :class="displayStatusClass(selectedName, selectedInstance?.state, selectedInstance?.current_task)">{{ displayStatus(selectedName, selectedInstance?.state, selectedInstance?.current_task) }}</span>
     <div class="topbar-right">
+      <GlobalSearch />
       <button class="tb-btn tb-bell" :title="t('公告中心')" @click="openAnnouncementCenter">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2a4.6 4.6 0 0 0-4.6 4.6v2.6c0 .5-.17 1-.47 1.42l-1.05 1.5h12.24l-1.05-1.5a2.3 2.3 0 0 1-.47-1.42V7.8A4.6 4.6 0 0 0 10 3.2Z"/><path d="M8.3 15.6a1.8 1.8 0 0 0 3.4 0"/></svg>
         <span v-if="unreadAnnouncementCount" class="tb-badge">{{ unreadAnnouncementCount > 99 ? '99+' : unreadAnnouncementCount }}</span>

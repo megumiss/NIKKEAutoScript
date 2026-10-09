@@ -47,6 +47,7 @@ class ProcessManager:
         # memory; nothing touches disk.
         self._preview_queue: queue.Queue = State.manager.Queue(maxsize=2)
         self.latest_preview: Tuple[float, bytes] = None
+        self.preview_source = None
         self._process: Process = None
         self._process_locks: Dict[str, threading.Lock] = {}
         self.thd_log_queue_handler: threading.Thread = None
@@ -54,6 +55,7 @@ class ProcessManager:
 
     def start(self, func, ev: threading.Event = None) -> None:
         if not self.alive:
+            self.preview_source = None
             if func is None:
                 func = get_config_mod(self.config_name)
             self._process = Process(
@@ -102,6 +104,8 @@ class ProcessManager:
             except (EOFError, OSError):
                 # Worker died and the queue pipe broke; keep the last frame.
                 break
+            if isinstance(item, tuple) and len(item) == 2:
+                item, self.preview_source = item
             if isinstance(item, bytes):
                 self.latest_preview = (time.time(), item)
 
