@@ -16,11 +16,11 @@ import numpy as np
 from PIL import ImageGrab
 
 if __package__:
-    from .map_paths import DEFAULT_MAPS_ROOT
+    from .map_paths import DEFAULT_CAPTURE_ROOT
     from .minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from map_paths import DEFAULT_MAPS_ROOT
+    from map_paths import DEFAULT_CAPTURE_ROOT
     from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 
 
@@ -360,8 +360,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--start', type=int, required=True)
     parser.add_argument('--end', type=int, default=1)
-    parser.add_argument('--output', type=Path, default=DEFAULT_MAPS_ROOT,
-                        help='Chapter collection directory (default: data/chapter_maps/current).')
+    parser.add_argument('--output', type=Path, default=DEFAULT_CAPTURE_ROOT,
+                        help='Capture directory (default: data/chapter_maps/local/captures).')
     parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--retries', type=int, default=2, help='Additional attempts per failed chapter.')
     parser.add_argument('--process-3d', action='store_true',

@@ -1,0 +1,722 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "6971ea1a1786341f924854c8c48bd72bcd91de5a01db41d731e50c434a97fa47",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_590969_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          984.2,
+          510.8
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "below zero-Glitched Mix- 【White Snow】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590969.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9212167263031006,
+        "roi": [
+          0,
+          0,
+          311,
+          272
+        ],
+        "roi_to_map": [
+          [
+            2.2720462158869394,
+            2.4009609691739837,
+            865.5208878090999
+          ],
+          [
+            0.010903744454843177,
+            3.808668050122441,
+            195.65435759160982
+          ],
+          [
+            1.7388616452160917e-05,
+            0.002482016796039736,
+            1.2593514626658964
+          ]
+        ],
+        "player_center": [
+          169.08671248259984,
+          176.05145913177242
+        ],
+        "url": "https://www.gamekee.com/nikke/590969.html",
+        "article_id": 590969,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1684313327,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_311/h_272/1253/4408/2023/4/17/350775.png",
+        "item_name": "below zero-Glitched Mix- 【White Snow】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          311,
+          272
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590969_02",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 02",
+      "points": [
+        [
+          683.8,
+          490.5
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Scardi 【White Snow】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590969.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9217351675033569,
+        "roi": [
+          0,
+          0,
+          235,
+          206
+        ],
+        "roi_to_map": [
+          [
+            2.114153181639043,
+            1.8602044223417369,
+            688.8505181860193
+          ],
+          [
+            0.011658788739104158,
+            3.7683112111237462,
+            370.319529352372
+          ],
+          [
+            1.840973520552186e-05,
+            0.0026317876457644493,
+            1.3263724053852244
+          ]
+        ],
+        "player_center": [
+          100.50037757130725,
+          113.0426484287954
+        ],
+        "url": "https://www.gamekee.com/nikke/590969.html",
+        "article_id": 590969,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1684313327,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_235/h_206/1253/4408/2023/4/17/908259.png",
+        "item_name": "Scardi 【White Snow】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          235,
+          206
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590969_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          867.2,
+          328.8
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Ominous Cross 【White Snow】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590969.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9226893186569214,
+        "roi": [
+          0,
+          0,
+          280,
+          252
+        ],
+        "roi_to_map": [
+          [
+            2.221044095719327,
+            2.390363679140582,
+            771.0705141662986
+          ],
+          [
+            0.008793464866261147,
+            3.461619297069871,
+            37.699852795043334
+          ],
+          [
+            1.931378470222159e-05,
+            0.0027608038516472528,
+            1.2490444616197467
+          ]
+        ],
+        "player_center": [
+          141.8692536061817,
+          145.9022609963934
+        ],
+        "url": "https://www.gamekee.com/nikke/590969.html",
+        "article_id": 590969,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1684313327,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_280/h_252/1253/4408/2023/4/17/294778.png",
+        "item_name": "Ominous Cross 【White Snow】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          280,
+          252
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590969_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          232.1,
+          1020.0
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Tomboy Princess 【White Snow】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590969.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9372660517692566,
+        "roi": [
+          0,
+          0,
+          264,
+          240
+        ],
+        "roi_to_map": [
+          [
+            2.1296618914572822,
+            0.6128076647205388,
+            61.378044937713256
+          ],
+          [
+            0.01932182754251999,
+            4.892526915674365,
+            1008.659575140111
+          ],
+          [
+            1.6387453686733473e-05,
+            0.0023448427379990666,
+            1.3160654043390747
+          ]
+        ],
+        "player_center": [
+          110.53868664855968,
+          133.304469411874
+        ],
+        "url": "https://www.gamekee.com/nikke/590969.html",
+        "article_id": 590969,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1684313327,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_264/h_240/1253/4408/2023/4/17/304045.png",
+        "item_name": "Tomboy Princess 【White Snow】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          264,
+          240
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171574_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          828.1,
+          1367.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "AM 10:01\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171574.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.8743321299552917,
+        "roi": [
+          7,
+          0,
+          506,
+          506
+        ],
+        "roi_to_map": [
+          [
+            1.9669088727426272,
+            2.038150285054873,
+            325.61921561341006
+          ],
+          [
+            0.024521713953359593,
+            5.455405311983076,
+            653.1775216403705
+          ],
+          [
+            1.7108633011303947e-05,
+            0.00244434807418571,
+            0.9769210100803066
+          ]
+        ],
+        "player_center": [
+          245.1763251654687,
+          322.96968676310723
+        ],
+        "url": "https://www.gamekee.com/nikke/171574.html",
+        "article_id": 171574,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667972933,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/215697.png",
+        "item_name": "AM 10:01",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171574_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          1166.6,
+          1370.0
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "法院设计图\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171574.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.8878514170646667,
+        "roi": [
+          0,
+          2,
+          510,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.9560906321473415,
+            2.822473109147639,
+            641.3524407906103
+          ],
+          [
+            0.02430007562570309,
+            5.410192642623331,
+            652.1179803731628
+          ],
+          [
+            1.6965834405088773e-05,
+            0.002425176716741116,
+            0.9768633262433293
+          ]
+        ],
+        "player_center": [
+          258.4771411517999,
+          328.5899236791817
+        ],
+        "url": "https://www.gamekee.com/nikke/171574.html",
+        "article_id": 171574,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667972933,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/751556.png",
+        "item_name": "法院设计图",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171574_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          761.2,
+          1163.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "02.粮食确保办法\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171574.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8686094880104065,
+        "roi": [
+          5,
+          0,
+          512,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.9413316302830133,
+            1.85966069570964,
+            261.4392757888874
+          ],
+          [
+            0.020837207642964015,
+            4.908334106945005,
+            457.77553433091697
+          ],
+          [
+            1.6895561718203788e-05,
+            0.002415703370191346,
+            0.9769065891210623
+          ]
+        ],
+        "player_center": [
+          246.55138958268145,
+          323.5394219333438
+        ],
+        "url": "https://www.gamekee.com/nikke/171574.html",
+        "article_id": 171574,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667972933,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/55325.png",
+        "item_name": "02.粮食确保办法",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171574_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          513.8,
+          1012.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "1次招募\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171574.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.8682528138160706,
+        "roi": [
+          0,
+          0,
+          508,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.9396178349922113,
+            1.2291621160896986,
+            4.813424719270003
+          ],
+          [
+            0.018243753241685874,
+            4.533900084565346,
+            306.33946297244296
+          ],
+          [
+            1.691907816853931e-05,
+            0.002415703370191346,
+            0.9768921681618179
+          ]
+        ],
+        "player_center": [
+          259.5039888729646,
+          326.8297800568832
+        ],
+        "url": "https://www.gamekee.com/nikke/171574.html",
+        "article_id": 171574,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667972933,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/9/296291.png",
+        "item_name": "1次招募",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171574_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          915.8,
+          443.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "教会设计图\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171574.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9332201480865479,
+        "roi": [
+          5,
+          0,
+          504,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8890828630965157,
+            2.5119402982944217,
+            362.60491366999975
+          ],
+          [
+            0.009218762296870207,
+            3.1937581206125403,
+            -261.9198114159283
+          ],
+          [
+            1.898711467639644e-05,
+            0.0027176662914652648,
+            0.899149821058743
+          ]
+        ],
+        "player_center": [
+          242.1473279071683,
+          332.3760977994058
+        ],
+        "url": "https://www.gamekee.com/nikke/171574.html",
+        "article_id": 171574,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667972933,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/148013.png",
+        "item_name": "教会设计图",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171574_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          691.9,
+          594.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "04.不认识的人的应对方法\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171574.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.9210603833198547,
+        "roi": [
+          6,
+          0,
+          505,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.8848107622943266,
+            1.900465382714737,
+            160.29620393178254
+          ],
+          [
+            0.01229467487444643,
+            3.6340200598299135,
+            -116.25754040441191
+          ],
+          [
+            1.898711467639644e-05,
+            0.0027176662914652648,
+            0.899149821058743
+          ]
+        ],
+        "player_center": [
+          243.29575236529732,
+          322.58225307694033
+        ],
+        "url": "https://www.gamekee.com/nikke/171574.html",
+        "article_id": 171574,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667972933,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/832969.png",
+        "item_name": "04.不认识的人的应对方法",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171574_08",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 08",
+      "points": [
+        [
+          327.6,
+          610.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Artificial Shangri-La\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171574.html",
+      "source": {
+        "number": 8,
+        "road_iou": 0.9248851537704468,
+        "roi": [
+          1,
+          1,
+          511,
+          511
+        ],
+        "roi_to_map": [
+          [
+            1.8876971750263094,
+            0.909351675018993,
+            -181.62897136589626
+          ],
+          [
+            0.01258810959917613,
+            3.681011004564075,
+            -105.55334169698132
+          ],
+          [
+            1.9086563705724867e-05,
+            0.002728323806333756,
+            0.899020032425544
+          ]
+        ],
+        "player_center": [
+          250.40610507346761,
+          324.98665802527137
+        ],
+        "url": "https://www.gamekee.com/nikke/171574.html",
+        "article_id": 171574,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667972933,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/712532.png",
+        "item_name": "Artificial Shangri-La",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_171574_09",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 09",
+      "points": [
+        [
+          96.8,
+          705.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "宝石×50\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/171574.html",
+      "source": {
+        "number": 9,
+        "road_iou": 0.9350457787513733,
+        "roi": [
+          0,
+          2,
+          510,
+          512
+        ],
+        "roi_to_map": [
+          [
+            1.9379541551683015,
+            0.22995919895138542,
+            -402.9144549635087
+          ],
+          [
+            0.01298386407750888,
+            3.792599772557006,
+            0.5501417688622203
+          ],
+          [
+            1.6965834405088773e-05,
+            0.002425176716741116,
+            0.9768633262433293
+          ]
+        ],
+        "player_center": [
+          257.69478788853644,
+          330.3126408367032
+        ],
+        "url": "https://www.gamekee.com/nikke/171574.html",
+        "article_id": 171574,
+        "difficulty": "normal",
+        "author": "小番茄",
+        "article_updated": 1667972933,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_512/h_512/1253/43637/2022/10/7/774675.png",
+        "item_name": "宝石×50",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          512,
+          512
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

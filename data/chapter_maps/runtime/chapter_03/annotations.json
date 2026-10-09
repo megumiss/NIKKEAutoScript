@@ -1,0 +1,355 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "75a81a6aacd798b1980c801b12cf7ec395748c1e109f58aa00854cb4fc55705e",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_580823_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          270.4,
+          400.1
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "BGM： wandering soul\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/580823.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.8827749490737915,
+        "roi": [
+          11,
+          10,
+          553,
+          552
+        ],
+        "roi_to_map": [
+          [
+            1.2112556768785454,
+            0.6423881641764367,
+            -101.48697428628749
+          ],
+          [
+            -0.18688068915927644,
+            2.5319620536520833,
+            -56.04472212370114
+          ],
+          [
+            -0.00037673324606985885,
+            0.0024639960325330682,
+            0.8885258240936078
+          ]
+        ],
+        "player_center": [
+          265.1587373402433,
+          272.40839479375967
+        ],
+        "url": "https://www.gamekee.com/nikke/580823.html",
+        "article_id": 580823,
+        "difficulty": "hard",
+        "author": "Mt",
+        "article_updated": 1676887992,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_561/h_561/1253/246216/2023/0/12/679392.jpg",
+        "item_name": "BGM： wandering soul",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          561,
+          561
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_152590_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          907.5,
+          1122.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "音乐The Godness Fall\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/152590.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.908388078212738,
+        "roi": [
+          25,
+          73,
+          222,
+          277
+        ],
+        "roi_to_map": [
+          [
+            2.4434153800444434,
+            5.5923567241408625,
+            521.8792649861803
+          ],
+          [
+            -1.1609376757863221,
+            10.881834268247202,
+            641.0621198742626
+          ],
+          [
+            -0.0009492107659726489,
+            0.006201946670121933,
+            0.9150727393210062
+          ]
+        ],
+        "player_center": [
+          94.47315177696765,
+          100.7878265531843
+        ],
+        "url": "https://www.gamekee.com/nikke/152590.html",
+        "article_id": 152590,
+        "difficulty": "normal",
+        "author": "泯尘",
+        "article_updated": 1667654276,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1765/h_980/1253/121201/2022/10/5/853728.png",
+        "item_name": "音乐The Godness Fall",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1765,
+          980
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_152590_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          537.8,
+          742.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点200\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/152590.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.8847095370292664,
+        "roi": [
+          28,
+          80,
+          226,
+          282
+        ],
+        "roi_to_map": [
+          [
+            2.819818396964317,
+            3.324022970015978,
+            178.58915595931865
+          ],
+          [
+            -0.8148375399646736,
+            8.65960822683275,
+            301.75259712516805
+          ],
+          [
+            -0.0009574432104424222,
+            0.006263352082697397,
+            0.9163623567065001
+          ]
+        ],
+        "player_center": [
+          95.53934117077922,
+          96.91047463005853
+        ],
+        "url": "https://www.gamekee.com/nikke/152590.html",
+        "article_id": 152590,
+        "difficulty": "normal",
+        "author": "泯尘",
+        "article_updated": 1667654276,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1783/h_996/1253/121201/2022/10/5/403064.png",
+        "item_name": "信用点200",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1783,
+          996
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_152590_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          365.5,
+          581.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "饭店设计图\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/152590.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.8679221272468567,
+        "roi": [
+          25,
+          88,
+          222,
+          287
+        ],
+        "roi_to_map": [
+          [
+            2.7599492871920135,
+            1.6874557636346035,
+            -55.71997921120863
+          ],
+          [
+            -0.7265481321515798,
+            7.769987911982185,
+            208.02349402148465
+          ],
+          [
+            -0.0010261295694221565,
+            0.006710984169009663,
+            0.8875048769967584
+          ]
+        ],
+        "player_center": [
+          141.84789470847153,
+          84.3103192488115
+        ],
+        "url": "https://www.gamekee.com/nikke/152590.html",
+        "article_id": 152590,
+        "difficulty": "normal",
+        "author": "泯尘",
+        "article_updated": 1667654276,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1768/h_991/1253/121201/2022/10/5/318187.png",
+        "item_name": "饭店设计图",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1768,
+          991
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "obj_1f277f043aed",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 01",
+      "points": [
+        [
+          579.4,
+          1001.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_fd34d6c5d8e3",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 03",
+      "points": [
+        [
+          838.8,
+          847.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_e355a6d07e33",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 06",
+      "points": [
+        [
+          916.2,
+          453.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_450f410af2b5",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 07",
+      "points": [
+        [
+          1069.7,
+          320.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_684f6c10049f",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 08",
+      "points": [
+        [
+          607.9,
+          297
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_a6818d3f94fd",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 09",
+      "points": [
+        [
+          660.9,
+          81
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_2f5822cabf67",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 10",
+      "points": [
+        [
+          75.5,
+          358.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    }
+  ],
+  "connections": []
+}

@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "892b3b50abe6815870538973e9f72587699b329cd0bd03cafefba0ac5ac10b00",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_673384_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          1056.4,
+          673.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Turning Point【Scenario Ver.】 所属专辑 From the Sky，From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/673384.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9727564102564102,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.331210884393024,
+            6.0807633578491345,
+            737.454571324597
+          ],
+          [
+            -0.22118293499237396,
+            7.667181821627863,
+            319.8903319486758
+          ],
+          [
+            -0.0002626593390657744,
+            0.005873136273118608,
+            0.9805463640588485
+          ]
+        ],
+        "player_center": [
+          118.7772760344635,
+          93.19219917020571
+        ],
+        "url": "https://www.gamekee.com/nikke/673384.html",
+        "article_id": 673384,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1754577532,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/7/7/833690.png",
+        "item_name": "Turning Point【Scenario Ver.】 所属专辑 From the Sky，From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ],
+        "coordinate_model": "local_parallax",
+        "reference_frame": 37,
+        "local_surface": 0,
+        "edits_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "edited_road_iou": 0.6953199617956065
+      }
+    },
+    {
+      "id": "wiki_673384_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          428.7,
+          287.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Ziz 所属专辑 From the Sky，From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/673384.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.9792239535594256,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            -31.923989514364933,
+            197.84817616707355,
+            -1846.6882632667468
+          ],
+          [
+            -53.29265941602538,
+            162.1339470594716,
+            -536.013068184168
+          ],
+          [
+            -0.15958109769540008,
+            0.5052416234173179,
+            0.9768340659864196
+          ]
+        ],
+        "player_center": [
+          112.7760538152799,
+          98.63390804630001
+        ],
+        "url": "https://www.gamekee.com/nikke/673384.html",
+        "article_id": 673384,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1754577532,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/7/7/50485.png",
+        "item_name": "Ziz 所属专辑 From the Sky，From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ],
+        "coordinate_model": "local_parallax",
+        "reference_frame": 1,
+        "local_surface": 2,
+        "edits_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "edited_road_iou": 0.9575129533678757
+      }
+    }
+  ],
+  "connections": []
+}

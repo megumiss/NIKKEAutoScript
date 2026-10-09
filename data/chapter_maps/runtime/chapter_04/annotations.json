@@ -1,0 +1,444 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "465c397f4ea8b3f48e90c78f397af75d7af980f41699de1ddbaaf945fe9abc35",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_584342_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          458.7,
+          880.2
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Wandering Soul Hopeless\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/584342.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9165927767753601,
+        "roi": [
+          0,
+          0,
+          190,
+          174
+        ],
+        "roi_to_map": [
+          [
+            2.6524435779417623,
+            2.366983871180985,
+            291.5673168227035
+          ],
+          [
+            -0.04178522826872191,
+            7.595764146402677,
+            737.1664168690002
+          ],
+          [
+            -4.347360121144856e-05,
+            0.005119075922215213,
+            1.1766983448528088
+          ]
+        ],
+        "player_center": [
+          92.18879346839742,
+          96.75505648075783
+        ],
+        "url": "https://www.gamekee.com/nikke/584342.html",
+        "article_id": 584342,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1676970953,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_190/h_174/1253/4408/2023/1/21/462598.png",
+        "item_name": "Wandering Soul Hopeless",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          190,
+          174
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_584342_02",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 02",
+      "points": [
+        [
+          212.5,
+          641
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Wandering Soul Risk - dark side -\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/584342.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9503110647201538,
+        "roi": [
+          0,
+          0,
+          199,
+          206
+        ],
+        "roi_to_map": [
+          [
+            2.9367482744760856,
+            0.49635744412491917,
+            0.44259168139328864
+          ],
+          [
+            -0.017095952073110512,
+            4.949230013755953,
+            486.58434129478513
+          ],
+          [
+            -2.0061938247494268e-05,
+            0.0023584798158837964,
+            1.3770006997900395
+          ]
+        ],
+        "player_center": [
+          99.5352927948561,
+          115.35977971666486
+        ],
+        "url": "https://www.gamekee.com/nikke/584342.html",
+        "article_id": 584342,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1676970953,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_199/h_206/1253/4408/2023/1/21/889660.png",
+        "item_name": "Wandering Soul Risk - dark side -",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          199,
+          206
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_584342_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          506.5,
+          1009
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Living Land Fairy Tale's End - Another Side -\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/584342.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8795415163040161,
+        "roi": [
+          0,
+          0,
+          237,
+          181
+        ],
+        "roi_to_map": [
+          [
+            2.619087538307564,
+            2.1038670124466425,
+            331.5653170647529
+          ],
+          [
+            -0.03909246559735961,
+            7.23255458112475,
+            966.6219777526994
+          ],
+          [
+            -3.485225413576045e-05,
+            0.004097934690036914,
+            1.2511948606371917
+          ]
+        ],
+        "player_center": [
+          113.59906798435149,
+          95.64815297061688
+        ],
+        "url": "https://www.gamekee.com/nikke/584342.html",
+        "article_id": 584342,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1676970953,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_237/h_181/1253/4408/2023/1/21/228629.png",
+        "item_name": "Living Land Fairy Tale's End - Another Side -",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          237,
+          181
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_584342_04",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 04",
+      "points": [
+        [
+          575.1,
+          403.7
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Wandering Soul Kneel Down, Fools\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/584342.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9296661615371704,
+        "roi": [
+          0,
+          0,
+          224,
+          235
+        ],
+        "roi_to_map": [
+          [
+            3.030881238703648,
+            1.9792943891003645,
+            359.666522171138
+          ],
+          [
+            -0.01490126331367389,
+            4.800405554749325,
+            -11.972895263712303
+          ],
+          [
+            -2.9295082959202807e-05,
+            0.003445722284199022,
+            1.2163366388684904
+          ]
+        ],
+        "player_center": [
+          111.64700882585059,
+          147.63165353788406
+        ],
+        "url": "https://www.gamekee.com/nikke/584342.html",
+        "article_id": 584342,
+        "difficulty": "hard",
+        "author": "小埋哥",
+        "article_updated": 1676970953,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_224/h_235/1253/4408/2023/1/21/273706.png",
+        "item_name": "Wandering Soul Kneel Down, Fools",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          224,
+          235
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_152646_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          563.8,
+          124.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "AM 9:55\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/152646.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.9538722038269043,
+        "roi": [
+          26,
+          86,
+          223,
+          284
+        ],
+        "roi_to_map": [
+          [
+            3.6491897339610007,
+            3.2142599586246536,
+            232.33077226420235
+          ],
+          [
+            -0.011645411227009272,
+            5.0551687461701595,
+            -309.7913816237155
+          ],
+          [
+            -4.859088297841377e-05,
+            0.0057254678358660506,
+            1.0558928441930795
+          ]
+        ],
+        "player_center": [
+          99.11022311755323,
+          101.70575836312254
+        ],
+        "url": "https://www.gamekee.com/nikke/152646.html",
+        "article_id": 152646,
+        "difficulty": "normal",
+        "author": "泯尘",
+        "article_updated": 1667655116,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1773/h_993/1253/121201/2022/10/5/85694.png",
+        "item_name": "AM 9:55",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1773,
+          993
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "obj_1fa6083260d4",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 01",
+      "points": [
+        [
+          481.3,
+          1314.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_dcc2939cdddc",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 02",
+      "points": [
+        [
+          1000.3,
+          861.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_0e8de89855f4",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 03",
+      "points": [
+        [
+          765.5,
+          711.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_7b0611e897b5",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 04",
+      "points": [
+        [
+          427.4,
+          713
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_ae872a334129",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 05",
+      "points": [
+        [
+          449.8,
+          526
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_9838f9ed1367",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 06",
+      "points": [
+        [
+          59.4,
+          581.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_bf435d1f402e",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 07",
+      "points": [
+        [
+          262.9,
+          1024.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_821ff7fe8f3b",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 08",
+      "points": [
+        [
+          261.4,
+          508.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    },
+    {
+      "id": "obj_9e74e3e073c1",
+      "type": "point",
+      "category": "normal_collectible",
+      "difficulty": "normal",
+      "label": "普通收集品 09",
+      "points": [
+        [
+          385.5,
+          165.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": ""
+    }
+  ],
+  "connections": []
+}

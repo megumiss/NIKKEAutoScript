@@ -12,7 +12,11 @@ from .map_package import MapPackage
 
 @runtime.command
 def main():
-    """在主场景安全内框执行单次镜头拖动，保存前后地图证据并返回紧凑态。"""
+    """在主场景安全内框执行单次镜头拖动，保存前后地图证据并返回紧凑态。
+
+    对已确认的客户区执行单次主场景拖动，端点必须位于有效场景区域。
+    重新采集地图观测和客户区证据并恢复紧凑地图；输入失败或身份异常会通过统一命令契约返回。
+    """
     p = argparse.ArgumentParser()
     p.add_argument('--tag', required=True)
     p.add_argument('--dx', type=float, required=True)

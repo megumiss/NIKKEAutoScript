@@ -1,0 +1,840 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "42492aaf05803056b2d87d739734989ac14b396f3b7c5e2fa60d47ba10e34cb4",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_590965_01",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 01",
+      "points": [
+        [
+          741.8,
+          1610.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Rapture Storm 「Morning Star」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9739519357681274,
+        "roi": [
+          0,
+          0,
+          354,
+          289
+        ],
+        "roi_to_map": [
+          [
+            2.403630067087095,
+            2.431447490818542,
+            519.0538489590048
+          ],
+          [
+            -0.08390458186199705,
+            7.870634672490906,
+            1560.7840067603888
+          ],
+          [
+            -5.013950574259551e-05,
+            0.0032437979670346213,
+            1.2647388897543905
+          ]
+        ],
+        "player_center": [
+          169.84739350350944,
+          180.08501529240286
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_354/h_289/1253/4408/2023/4/17/966541.png",
+        "item_name": "Rapture Storm 「Morning Star」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          354,
+          289
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          527.4,
+          1324.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Cecil 「Morning Star」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9186689257621765,
+        "roi": [
+          5,
+          6,
+          404,
+          404
+        ],
+        "roi_to_map": [
+          [
+            2.49933379845331,
+            1.779350887853268,
+            65.44674602155868
+          ],
+          [
+            -0.07034478812482893,
+            7.0707593679762315,
+            741.7717018445085
+          ],
+          [
+            -5.189878664584447e-05,
+            0.0033536710472532737,
+            1.0675662730068984
+          ]
+        ],
+        "player_center": [
+          195.83733362648803,
+          255.74266371723468
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_411/h_404/1253/4408/2023/4/17/816880.png",
+        "item_name": "Cecil 「Morning Star」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          411,
+          404
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          266.3,
+          1248.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——上 「特异莱撤报告书05」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9228744506835938,
+        "roi": [
+          4,
+          0,
+          403,
+          401
+        ],
+        "roi_to_map": [
+          [
+            2.5045548429526736,
+            0.8969405530710474,
+            -213.18397347431574
+          ],
+          [
+            -0.0662308711959693,
+            6.790853504267833,
+            657.1214867781863
+          ],
+          [
+            -5.1725790690358325e-05,
+            0.003339713617645192,
+            1.0652997183793194
+          ]
+        ],
+        "player_center": [
+          196.56022509781178,
+          256.7517993374026
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_408/h_401/1253/4408/2023/4/17/209917.png",
+        "item_name": "特异莱彻报告书——上 「特异莱撤报告书05」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          408,
+          401
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          153.8,
+          1280.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——上 「特异莱撤报告书03」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9647232294082642,
+        "roi": [
+          0,
+          0,
+          282,
+          245
+        ],
+        "roi_to_map": [
+          [
+            2.5434410569503956,
+            0.6677159961666735,
+            -98.27979622509643
+          ],
+          [
+            -0.0689951008787717,
+            7.025960548619518,
+            1214.8834527199126
+          ],
+          [
+            -5.2450901397396016e-05,
+            0.003396868483346584,
+            1.3158721913615303
+          ]
+        ],
+        "player_center": [
+          107.84278874573924,
+          175.9733154191527
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_282/h_245/1253/4408/2023/4/17/985.png",
+        "item_name": "特异莱彻报告书——上 「特异莱撤报告书03」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          282,
+          245
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          509.5,
+          888.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "物品「宝石×50」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9021223783493042,
+        "roi": [
+          0,
+          0,
+          326,
+          309
+        ],
+        "roi_to_map": [
+          [
+            2.186270812504992,
+            1.4728519434720986,
+            285.94829369375685
+          ],
+          [
+            -0.044619494648416615,
+            5.0886777363797355,
+            714.3427009054009
+          ],
+          [
+            -4.53716386321033e-05,
+            0.0029306514534743807,
+            1.279202931009695
+          ]
+        ],
+        "player_center": [
+          167.11854376717585,
+          170.03748078455044
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_326/h_309/1253/4408/2023/4/17/833650.png",
+        "item_name": "物品「宝石×50」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          326,
+          309
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          276.3,
+          526.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Into the Swarm 「Morning Star」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.9522400498390198,
+        "roi": [
+          0,
+          0,
+          294,
+          244
+        ],
+        "roi_to_map": [
+          [
+            2.434998611816862,
+            0.9389925700991033,
+            28.301269165807312
+          ],
+          [
+            -0.029603569213360114,
+            4.364761149121064,
+            283.9070616575629
+          ],
+          [
+            -5.031004827913495e-05,
+            0.0032539721409860934,
+            1.3350039793711834
+          ]
+        ],
+        "player_center": [
+          136.45368598706085,
+          158.25892859054207
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_294/h_244/1253/4408/2023/4/17/225495.png",
+        "item_name": "Into the Swarm 「Morning Star」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          294,
+          244
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          374.8,
+          326.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——上 「特异莱撤报告书02」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.943247377872467,
+        "roi": [
+          0,
+          0,
+          288,
+          241
+        ],
+        "roi_to_map": [
+          [
+            2.22585456434579,
+            0.946431350404156,
+            183.31205553887523
+          ],
+          [
+            -0.017500947363951087,
+            3.372076053514692,
+            103.71977555914772
+          ],
+          [
+            -4.108653942796021e-05,
+            0.0026567517512713404,
+            1.4103708791238838
+          ]
+        ],
+        "player_center": [
+          157.20985817724844,
+          142.76512004389588
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_288/h_241/1253/4408/2023/4/17/890210.png",
+        "item_name": "特异莱彻报告书——上 「特异莱撤报告书02」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          288,
+          241
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_08",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 08",
+      "points": [
+        [
+          871.5,
+          284.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——上 「特异莱撤报告书01」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 8,
+        "road_iou": 0.968691885471344,
+        "roi": [
+          0,
+          0,
+          238,
+          196
+        ],
+        "roi_to_map": [
+          [
+            2.0006013517335828,
+            2.119834910748715,
+            1074.0268492358387
+          ],
+          [
+            -0.015584903741520672,
+            3.0408628274491667,
+            197.5881060146858
+          ],
+          [
+            -3.7288624018652966e-05,
+            0.002410995733869558,
+            1.4927527678134571
+          ]
+        ],
+        "player_center": [
+          110.75280196317853,
+          96.95018270479812
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_238/h_196/1253/4408/2023/4/17/680824.png",
+        "item_name": "特异莱彻报告书——上 「特异莱撤报告书01」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          238,
+          196
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_09",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 09",
+      "points": [
+        [
+          950.5,
+          446.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——下 「特异莱撤报告书06」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 9,
+        "road_iou": 0.9508854150772095,
+        "roi": [
+          0,
+          0,
+          176,
+          165
+        ],
+        "roi_to_map": [
+          [
+            2.0312303269713543,
+            4.120815032551693,
+            1119.1806160742572
+          ],
+          [
+            -0.03548737156134697,
+            4.386464391465604,
+            421.78298843958265
+          ],
+          [
+            -6.72325190639349e-05,
+            0.004344268630878822,
+            1.3721073031045774
+          ]
+        ],
+        "player_center": [
+          88.63890309191427,
+          78.24941842354814
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_176/h_165/1253/4408/2023/4/17/368627.png",
+        "item_name": "特异莱彻报告书——下 「特异莱撤报告书06」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          176,
+          165
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          1400.9,
+          764.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——下 「特异莱撤报告书08」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.9573137164115906,
+        "roi": [
+          0,
+          0,
+          265,
+          223
+        ],
+        "roi_to_map": [
+          [
+            2.1117457635662693,
+            4.022916415131183,
+            1681.5661195415396
+          ],
+          [
+            -0.039089843328074636,
+            4.693982561731445,
+            788.8147377810508
+          ],
+          [
+            -4.465254096321713e-05,
+            0.0028826371171495366,
+            1.409095426589907
+          ]
+        ],
+        "player_center": [
+          135.3506575287048,
+          115.79262624046072
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_265/h_223/1253/4408/2023/4/17/414925.png",
+        "item_name": "特异莱彻报告书——下 「特异莱撤报告书08」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          265,
+          223
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          1387.6,
+          1434.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——下 「特异莱撤报告书07」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.9525706171989441,
+        "roi": [
+          0,
+          0,
+          306,
+          236
+        ],
+        "roi_to_map": [
+          [
+            2.2852259010268683,
+            4.40561074677378,
+            1568.0194705803717
+          ],
+          [
+            -0.07329947856477392,
+            7.082856636533811,
+            1587.916241509683
+          ],
+          [
+            -4.833710520936495e-05,
+            0.003121075586320539,
+            1.3637016613856634
+          ]
+        ],
+        "player_center": [
+          133.3468400331521,
+          141.69818237000598
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_306/h_236/1253/4408/2023/4/17/300660.png",
+        "item_name": "特异莱彻报告书——下 「特异莱撤报告书07」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          306,
+          236
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          1455.1,
+          1561.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——下 「特异莱撤报告书09」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.9512298703193665,
+        "roi": [
+          0,
+          0,
+          279,
+          273
+        ],
+        "roi_to_map": [
+          [
+            2.2512576931216532,
+            3.9839854561689663,
+            1646.720373371888
+          ],
+          [
+            -0.07112279554924317,
+            6.9234443751009,
+            1729.8721237116476
+          ],
+          [
+            -4.241191166757183e-05,
+            0.0027471285347194303,
+            1.355526420162878
+          ]
+        ],
+        "player_center": [
+          141.65442322393872,
+          146.8915184066732
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_279/h_273/1253/4408/2023/4/17/176039.png",
+        "item_name": "特异莱彻报告书——下 「特异莱撤报告书09」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          279,
+          273
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          969.0,
+          1098.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "特异莱彻报告书——上 「特异莱撤报告书04」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.9584839344024658,
+        "roi": [
+          0,
+          0,
+          266,
+          238
+        ],
+        "roi_to_map": [
+          [
+            2.3825007549676567,
+            2.795570325796989,
+            1032.4085044915678
+          ],
+          [
+            -0.0526232925591883,
+            5.820290597316945,
+            1127.4360240470762
+          ],
+          [
+            -4.4484674267866695e-05,
+            0.0028724477235781798,
+            1.388688186046277
+          ]
+        ],
+        "player_center": [
+          128.39222873559675,
+          149.7889360239769
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_266/h_238/1253/4408/2023/4/17/364637.png",
+        "item_name": "特异莱彻报告书——上 「特异莱撤报告书04」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          266,
+          238
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_590965_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          822.2,
+          1006.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Into the Swarm【Scenario Ver.】 「Morning Star」\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/590965.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.9570310711860657,
+        "roi": [
+          0,
+          0,
+          263,
+          229
+        ],
+        "roi_to_map": [
+          [
+            2.362530032114418,
+            3.045099510045867,
+            788.463516802024
+          ],
+          [
+            -0.0592147764754418,
+            6.234405969595511,
+            931.3519374017981
+          ],
+          [
+            -5.6240130015458845e-05,
+            0.00363420427257604,
+            1.3158721913615303
+          ]
+        ],
+        "player_center": [
+          118.19080686036673,
+          152.4648606767025
+        ],
+        "url": "https://www.gamekee.com/nikke/590965.html",
+        "article_id": 590965,
+        "difficulty": "normal",
+        "author": "小埋哥",
+        "article_updated": 1684310888,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_263/h_229/1253/4408/2023/4/17/668237.png",
+        "item_name": "Into the Swarm【Scenario Ver.】 「Morning Star」",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          263,
+          229
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

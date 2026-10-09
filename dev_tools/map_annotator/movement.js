@@ -68,7 +68,7 @@ function createMovementController(editor) {
     if (job.id || (!target && !picking)) byId('move-status').textContent = job.message || '正在读取状态…';
     byId('move-status').classList.toggle('error', job.state === 'failed');
     byId('move-metrics').textContent = job.id
-      ? `第 ${job.chapter} 章 · ${job.movement_clicks ?? 0} 次移动${job.calibration_clicks ? ` · 自动标定 ${job.calibration_clicks} 次` : ''}${Number.isFinite(job.distance) ? ` · 距目标 ${job.distance.toFixed(1)} 地图像素` : ''}` : '';
+      ? `第 ${job.chapter} 章 · ${job.movement_clicks ?? 0} 次移动${job.camera_pans ? ` · 镜头平移 ${job.camera_pans} 次` : ''}${job.calibration_clicks ? ` · 自动标定 ${job.calibration_clicks} 次` : ''}${Number.isFinite(job.distance) ? ` · 距目标 ${job.distance.toFixed(1)} 地图像素` : ''}` : '';
     byId('move-evidence').hidden = !job.log_path;
     byId('move-log').textContent = job.log_path || '';
     byId('move-preview').hidden = !job.preview;

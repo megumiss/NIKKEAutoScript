@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "format": "yolo11-detect-bcn-fp32",
+  "labels": [
+    "scene_squad_arrow",
+    "scene_collectible_indicator",
+    "minimap_enemy_normal",
+    "minimap_enemy_ex",
+    "minimap_squad_ring"
+  ],
+  "input_size": 640,
+  "sha256": "7ebbcd59a9221b38bd7dd5a62a9c96e29d56c3a3999a55ca5f5cf0219126f0ac",
+  "thresholds": {
+    "scene_squad_arrow": 0.5,
+    "scene_collectible_indicator": 0.5,
+    "minimap_enemy_normal": 0.5,
+    "minimap_enemy_ex": 0.5,
+    "minimap_squad_ring": 0.5
+  },
+  "versions": {
+    "torch": "2.9.1+cu128",
+    "torchvision": "0.24.1+cu128",
+    "ultralytics": "8.3.230",
+    "onnx": "1.17.0",
+    "onnxruntime": "1.19.2",
+    "numpy": "1.26.4",
+    "opencv-python": "4.10.0.84"
+  },
+  "checkpoint_sha256": "d71a068fb14b67a219902bdb64f64fef4ae4ede38ad1fcaabd3edbf55e1106a2",
+  "acceptance": "validated_normal_priority",
+  "model_version": "campaign_v4_epoch20",
+  "scope": {
+    "language": "zh-CN",
+    "platform": "Windows",
+    "client": [
+      1776,
+      999
+    ],
+    "minimap_modes": [
+      "expanded",
+      "compact"
+    ],
+    "ex_policy": "advisory_detection_then_popup_exclusion"
+  },
+  "training": {
+    "dataset": "dataset-v4",
+    "manifest_sha256": "a7b0e7ff39af2bb5e27cb1636d54960452bec7c938a7edbd339fb7b7141a03a1",
+    "provenance_sha256": "41cf4ef1500f24d8538e3cb26b3b0780d18fddff131d9c9241c3a0622d1431c6",
+    "epochs_completed": 40,
+    "best_epoch": 20
+  },
+  "validation": {
+    "review_file": "dev_tools/campaign_yolo/normal_validation_reviews.json",
+    "review_sha256": "726c74e6397f4121061f939cc50b1ba3ac6dd93f850042be5579d310ca6e700a",
+    "frames": 15,
+    "normal_detection": {
+      "tp": 37,
+      "precision": 1.0,
+      "recall": 1.0,
+      "center_error_p95": null,
+      "center_samples": 0
+    },
+    "normal_navigation": {
+      "expected": 37,
+      "matched": 36,
+      "missing": 1,
+      "unsafe": 0,
+      "ex_popup_required": 0
+    },
+    "regression_tests": 113,
+    "parity_passed": true,
+    "limits": [
+      "37 ordinary targets occur in 3 correlated positive frames; 12 additional frames check interference.",
+      "One detected complete ordinary target is intentionally withheld by the 3px border guard.",
+      "EX class accuracy is advisory. Enemy movement closes confirmed EX popups and stops.",
+      "Scene and ring replay also use previously reviewed diagnostic captures; not new independent accuracy estimates.",
+      "Live V4 check covers camera drags, minimap controls and arrow sampling, not a new enemy approach or battle."
+    ]
+  }
+}

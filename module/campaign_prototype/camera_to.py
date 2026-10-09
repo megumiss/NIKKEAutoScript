@@ -13,7 +13,11 @@ from .probe import Localizer, goto, jacobian, project
 
 @runtime.command
 def main():
-    """从新鲜且绑定正确地图的报告推算镜头方向，逐次启动受保护子进程，最多八次平移。"""
+    """从新鲜且绑定正确地图的报告推算镜头方向，逐次启动受保护子进程，最多八次平移。
+
+    根据目标地图坐标和来源观测计算有限次镜头调整，并通过子进程串行执行现场动作。
+    每次新观测后重新判断可见性，最多八次；子进程失败或超时向上传播，不把镜头位置当小队位置。
+    """
     p = argparse.ArgumentParser()
     p.add_argument('--target', type=int, required=True)
     p.add_argument('--from-tag', required=True)

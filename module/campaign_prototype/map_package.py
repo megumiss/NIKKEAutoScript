@@ -11,7 +11,11 @@ from . import settings
 
 
 def matrix(value, shape=(3, 3)):
-    """检查二维或三维方阵的形状、有限数值和可逆性，拒绝退化坐标变换。"""
+    """检查二维或三维方阵的形状、有限数值和可逆性，拒绝退化坐标变换。
+
+    将输入转为浮点数组，默认要求 3×3，也可显式指定 2×2。
+    形状错误、非有限元素或行列式接近零时抛出 ValueError；返回值可用于后续正逆投影。
+    """
     result = np.asarray(value, dtype=float)
     if result.shape != shape or not np.isfinite(result).all() or abs(np.linalg.det(result)) < 1e-10:
         raise ValueError('Invalid coordinate transform')
@@ -19,7 +23,11 @@ def matrix(value, shape=(3, 3)):
 
 
 def transform(value, point):
-    """按齐次矩阵转换二维坐标并除以尺度，投影地平线附近不允许继续外推。"""
+    """按齐次矩阵转换二维坐标并除以尺度，投影地平线附近不允许继续外推。
+
+    point 是单个二维点，value 为可逆 3×3 齐次变换。
+    返回完成齐次除法的二维数组；输入无效或分母接近零时拒绝，避免无穷大落点进入点击链。
+    """
     point = np.asarray(point, dtype=float)
     if point.shape != (2,) or not np.isfinite(point).all():
         raise ValueError('Invalid coordinate point')
@@ -30,7 +38,11 @@ def transform(value, point):
 
 
 def screenshot_to_client(point, screenshot_size, client_size=(1776, 999)):
-    """按等比例截图尺寸换算客户区像素；裁剪或黑边导致的比例差异必须另行建模。"""
+    """按等比例截图尺寸换算客户区像素；裁剪或黑边导致的比例差异必须另行建模。
+
+    point 属于未裁剪截图，尺寸参数均按宽、高排列，返回对应客户区浮点像素。
+    要求截图与客户区宽高比一致且点在截图内部；黑边、裁剪及非等比缩放必须另建变换。
+    """
     size = np.asarray(screenshot_size, float)
     client = np.asarray(client_size, float)
     point = np.asarray(point, float)
@@ -45,7 +57,11 @@ def screenshot_to_client(point, screenshot_size, client_size=(1776, 999)):
 
 class MapPackage:
     def __init__(self, path=None, chapter=None, difficulty=None):
-        """在取得输入控制前绑定章节、难度、文件哈希、裁剪、投影及覆盖质量，并筛选同难度点目标。"""
+        """在取得输入控制前绑定章节、难度、文件哈希、裁剪、投影及覆盖质量，并筛选同难度点目标。
+
+        读取地图、标注、缓存、标定与 validation.json，严格校验身份、文件哈希、坐标和观测道路覆盖。
+        修订道路覆盖原道路概率，targets 仅收录同难度且带唯一编号的点；任何不一致在取得输入前失败。
+        """
         self.path = Path(path or settings.package).resolve()
         chapter = settings.chapter if chapter is None else chapter
         difficulty = settings.difficulty if difficulty is None else difficulty
@@ -58,6 +74,8 @@ class MapPackage:
                 or metadata.get('image') != 'map.png'):
             raise ValueError('Unsupported map coordinate convention')
         required = {'map.json', 'map.png', 'annotations.json', 'source/map_data.npz', 'calibration.json'}
+        if (self.path / 'connectivity.json').exists():
+            required.add('connectivity.json')
         if set(manifest['sha256']) != required:
             raise ValueError('Incomplete package hash binding')
         for name, expected in manifest['sha256'].items():
@@ -107,13 +125,18 @@ class MapPackage:
                 or min(self.warp_size) <= 0 or self.terrain.shape != (size[1], size[0])
                 or not np.isfinite(self.terrain).all() or self.terrain.min() < 0):
             raise ValueError('Map cache does not match projection, crop or dimensions')
-        # The legacy mosaic divides interpolated terrain and coverage separately; edges can exceed one.
+        # 道路与覆盖权重分别插值后相除，边缘比值可能超过一，消费时限制为有效概率。
         self.terrain = np.minimum(self.terrain, 1)
         if annotations.get('terrain_edits'):
             from .edited_map import edited_roads
             _, override, _ = edited_roads(self.path, metadata, self.terrain >= .5)
             self.terrain[override == 1] = 0
             self.terrain[override == 2] = 1
+        from dev_tools.map_connectivity import build, read_bound
+        road = (self.terrain >= .5).astype(np.uint8)
+        edits = annotations.get('connectivity_edits', [])
+        self.connectivity = (read_bound(self.path / 'connectivity.json', road, digest, edits)
+                             if 'connectivity.json' in required else build(road, digest, edits))
         calibration = json.loads((self.path / 'calibration.json').read_text(encoding='utf-8'))
         if calibration.get('client') != manifest['client'] or calibration.get('roi') != manifest['roi']:
             raise ValueError('Calibration capture geometry differs from package')

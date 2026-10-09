@@ -1,0 +1,768 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "39f2c675472bccdf159b380bf83b0d348116f9a3d85f0a338d32631648a43d1c",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_671270_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          1849.6,
+          1824.6
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "芯尘 ×20\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671270.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9189267754554749,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.3451973141355045,
+            11.03444452856871,
+            1532.978341384192
+          ],
+          [
+            0.1355870565199934,
+            14.85836256428697,
+            1480.5269256388451
+          ],
+          [
+            7.00360579149802e-05,
+            0.006013145297152959,
+            1.0275293959403318
+          ]
+        ],
+        "player_center": [
+          117.02445282563899,
+          101.2097376874677
+        ],
+        "url": "https://www.gamekee.com/nikke/671270.html",
+        "article_id": 671270,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753197265,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/664093.png",
+        "item_name": "芯尘 ×20",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671270_03",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 03",
+      "points": [
+        [
+          596.9,
+          1088.7
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Swarm Nest 所属专辑 From the Sky,From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671270.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9611204266548157,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2033868917986474,
+            3.7906388535771236,
+            253.6979622294518
+          ],
+          [
+            0.08767118624690003,
+            10.686959902879469,
+            699.1783453954972
+          ],
+          [
+            7.337110829188402e-05,
+            0.006299485549398337,
+            0.9969569788373617
+          ]
+        ],
+        "player_center": [
+          107.06798342468255,
+          100.66993915702037
+        ],
+        "url": "https://www.gamekee.com/nikke/671270.html",
+        "article_id": 671270,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753197265,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/838377.png",
+        "item_name": "Swarm Nest 所属专辑 From the Sky,From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671270_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          1376.8,
+          383.0
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "双模组高级增强器 ×2\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671270.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.8863215446472168,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.986908380581548,
+            9.86292037425269,
+            932.6972720573268
+          ],
+          [
+            0.0396637986315424,
+            6.277903365321014,
+            0.6068759876320525
+          ],
+          [
+            8.337625942259546e-05,
+            0.007158506306134474,
+            0.9052397275284517
+          ]
+        ],
+        "player_center": [
+          108.93266203314275,
+          97.64414253808653
+        ],
+        "url": "https://www.gamekee.com/nikke/671270.html",
+        "article_id": 671270,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753197265,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/725628.png",
+        "item_name": "双模组高级增强器 ×2",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671270_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          728.4,
+          419.3
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Struggle 所属专辑 From the Sky,From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671270.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.9464382529258728,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.3058886838667507,
+            4.371668628280392,
+            450.8319459532457
+          ],
+          [
+            0.034685908372179136,
+            6.2335064042017905,
+            26.882182001022024
+          ],
+          [
+            6.670100753807637e-05,
+            0.005726805044907579,
+            1.0581018130433018
+          ]
+        ],
+        "player_center": [
+          91.53679221774865,
+          108.58953415009566
+        ],
+        "url": "https://www.gamekee.com/nikke/671270.html",
+        "article_id": 671270,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753197265,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/659421.png",
+        "item_name": "Struggle 所属专辑 From the Sky,From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          1710.9,
+          1717.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×35000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.9562914371490479,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.177697980011392,
+            9.804597768589423,
+            1475.6299329039025
+          ],
+          [
+            0.12186012019739098,
+            13.526599739902187,
+            1440.5431727644086
+          ],
+          [
+            6.670100753807637e-05,
+            0.005726805044907579,
+            1.0581018130433018
+          ]
+        ],
+        "player_center": [
+          109.02283662967984,
+          102.05048236497893
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/24/910405.png",
+        "item_name": "信用点 ×35000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          892.0,
+          1936.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 拾取物的备忘录 北部下方\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9076542854309082,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.078999322265129,
+            5.440320112542783,
+            599.0885314838469
+          ],
+          [
+            0.1423763488593398,
+            15.240204757217308,
+            1611.9311805141633
+          ],
+          [
+            7.00360579149802e-05,
+            0.006013145297152959,
+            1.0275293959403318
+          ]
+        ],
+        "player_center": [
+          102.60148222391308,
+          104.85261886201187
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/24/740224.png",
+        "item_name": "遗失物品 拾取物的备忘录 北部下方",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          553.8,
+          1495.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Swarm Nest【Scenario Ver.】 所属专辑 From the Sky，From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9144956469535828,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2562515205834797,
+            3.3977500011844515,
+            228.01600853997064
+          ],
+          [
+            0.11240512135013495,
+            12.868011470929343,
+            1140.4146955825952
+          ],
+          [
+            7.00360579149802e-05,
+            0.006013145297152959,
+            1.0275293959403318
+          ]
+        ],
+        "player_center": [
+          103.86664396562861,
+          102.18135929266401
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/24/885108.png",
+        "item_name": "Swarm Nest【Scenario Ver.】 所属专辑 From the Sky，From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          604.0,
+          1086.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 拾取物的备忘录 火山附近\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.9609545469284058,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.203460262906939,
+            3.796938339126522,
+            254.69491920828918
+          ],
+          [
+            0.08811141289665132,
+            10.724756816175859,
+            705.1600872685214
+          ],
+          [
+            7.337110829188402e-05,
+            0.006299485549398337,
+            0.9969569788373617
+          ]
+        ],
+        "player_center": [
+          110.23039234264478,
+          97.05287446339628
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/24/773774.png",
+        "item_name": "遗失物品 拾取物的备忘录 火山附近",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          68.2,
+          1164.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×35000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.9489915370941162,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2427703836967514,
+            0.5963778579464887,
+            -284.24367947579435
+          ],
+          [
+            0.1083701108967867,
+            12.540723851511814,
+            614.1398726575867
+          ],
+          [
+            8.671130979949929e-05,
+            0.007444846558379853,
+            0.8746673104254817
+          ]
+        ],
+        "player_center": [
+          103.41777517665423,
+          104.11220471867402
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/25/397281.png",
+        "item_name": "信用点 ×35000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_08",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 08",
+      "points": [
+        [
+          933.8,
+          1030.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×35000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 8,
+        "road_iou": 0.9593892097473145,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2818146817224476,
+            5.592548034645281,
+            603.0642380581917
+          ],
+          [
+            0.08011849865132907,
+            10.095951488941829,
+            666.7236440541022
+          ],
+          [
+            7.00360579149802e-05,
+            0.006013145297152959,
+            1.0275293959403318
+          ]
+        ],
+        "player_center": [
+          111.51431636251901,
+          100.43844159614815
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/24/298047.png",
+        "item_name": "信用点 ×35000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          1346.2,
+          932.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×35000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.9515467286109924,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.176966309083926,
+            7.2759119878544745,
+            1116.8085993984587
+          ],
+          [
+            0.06697913194911984,
+            8.843360677651301,
+            644.5710280723629
+          ],
+          [
+            6.336595716117255e-05,
+            0.0054404647926622,
+            1.0886742301462717
+          ]
+        ],
+        "player_center": [
+          114.33462667405516,
+          97.95165283463164
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/24/316499.png",
+        "item_name": "信用点 ×35000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          1201.3,
+          128.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 拾取物的备忘录 方舟附近\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.9145348072052002,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.434576428231022,
+            5.557057219952236,
+            1061.7243181793638
+          ],
+          [
+            0.015118235776739918,
+            4.668366318822194,
+            -253.95741968534526
+          ],
+          [
+            5.33608060304611e-05,
+            0.004581444035926064,
+            1.1803914814551817
+          ]
+        ],
+        "player_center": [
+          104.12562858475955,
+          99.21406062538233
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/24/854436.png",
+        "item_name": "遗失物品 拾取物的备忘录 方舟附近",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_657505_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          745.7,
+          451.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Struggle - shout - 所属专辑 From the Sky，From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/657505.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.9276019334793091,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.269768479761071,
+            4.558287043534972,
+            426.32918195645465
+          ],
+          [
+            0.038867260539405736,
+            6.554208908918735,
+            61.508829845246865
+          ],
+          [
+            7.00360579149802e-05,
+            0.006013145297152959,
+            1.0275293959403318
+          ]
+        ],
+        "player_center": [
+          103.20869451223514,
+          104.63356199344844
+        ],
+        "url": "https://www.gamekee.com/nikke/657505.html",
+        "article_id": 657505,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1745563383,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/3/24/906237.png",
+        "item_name": "Struggle - shout - 所属专辑 From the Sky，From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    }
+  ],
+  "connections": []
+}

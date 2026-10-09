@@ -1,0 +1,594 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "f20e4b58887fd8c285a557b7e969d0378bafec741ab929848e4dad54e67a738a",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_671269_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          390.6,
+          109.7
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Deals - Betrayal - 所属专辑 From the Sky,From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671269.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9290174245834351,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.3531063649482697,
+            3.1198783817595754,
+            -41.50216180506522
+          ],
+          [
+            0.024918963204839703,
+            4.822824883864706,
+            -322.30559684575644
+          ],
+          [
+            0.0001299675759464518,
+            0.007929705509452352,
+            0.8147296364169283
+          ]
+        ],
+        "player_center": [
+          108.21784061044822,
+          103.83499748252052
+        ],
+        "url": "https://www.gamekee.com/nikke/671269.html",
+        "article_id": 671269,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753196676,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/51942.png",
+        "item_name": "Deals - Betrayal - 所属专辑 From the Sky,From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671269_02",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 02",
+      "points": [
+        [
+          127.0,
+          725.6
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "芯尘 ×10\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671269.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.8582333922386169,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.0814410758035002,
+            0.934994219866538,
+            -187.1086056035077
+          ],
+          [
+            0.08166158003066776,
+            8.048970501559202,
+            320.02594267190875
+          ],
+          [
+            0.00010211738110078358,
+            0.006230482900283992,
+            0.9970332929223682
+          ]
+        ],
+        "player_center": [
+          96.89978223896611,
+          114.13088652524648
+        ],
+        "url": "https://www.gamekee.com/nikke/671269.html",
+        "article_id": 671269,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753196676,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/953487.png",
+        "item_name": "芯尘 ×10",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_671269_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          870.2,
+          415.4
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "MIND OVER - Betrayal - 所属专辑 From the Sky,From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/671269.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.8871486186981201,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.540331160922569,
+            4.731504223611212,
+            576.1178115994298
+          ],
+          [
+            0.047940095584661856,
+            6.388245513690902,
+            25.071156306441278
+          ],
+          [
+            8.819228367794944e-05,
+            0.00538087159569981,
+            1.0881851211750884
+          ]
+        ],
+        "player_center": [
+          105.61099443393411,
+          102.50319885244963
+        ],
+        "url": "https://www.gamekee.com/nikke/671269.html",
+        "article_id": 671269,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1753196676,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/6/22/681535.png",
+        "item_name": "MIND OVER - Betrayal - 所属专辑 From the Sky,From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_648932_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          113.9,
+          788.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×34000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/648932.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8724634051322937,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.972762185833985,
+            0.845182092722447,
+            -199.42397223446875
+          ],
+          [
+            0.09391679600227082,
+            8.689475156539713,
+            396.22379216318416
+          ],
+          [
+            0.00010675908024172826,
+            0.006513686668478718,
+            0.9666493501714617
+          ]
+        ],
+        "player_center": [
+          100.99796997471928,
+          102.56026028351548
+        ],
+        "url": "https://www.gamekee.com/nikke/648932.html",
+        "article_id": 648932,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1740116847,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/1/21/49055.png",
+        "item_name": "信用点 ×34000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_648932_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          138.7,
+          1113.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×34000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/648932.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.8835591673851013,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.014453186031325,
+            0.7724699781005862,
+            -185.65039419773157
+          ],
+          [
+            0.1127616424187027,
+            9.88214377263173,
+            802.541963194783
+          ],
+          [
+            9.283398281889415e-05,
+            0.005664075363894538,
+            1.0578011784241816
+          ]
+        ],
+        "player_center": [
+          111.2162588188425,
+          104.71189736134423
+        ],
+        "url": "https://www.gamekee.com/nikke/648932.html",
+        "article_id": 648932,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1740116847,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/1/21/387542.png",
+        "item_name": "信用点 ×34000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_648932_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          547.3,
+          1209.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 代办清单 Z\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/648932.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.867135763168335,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.356745457074771,
+            3.341910136024241,
+            172.15582497451308
+          ],
+          [
+            0.133943192627349,
+            11.474714991222452,
+            793.7684739046239
+          ],
+          [
+            0.00010211738110078358,
+            0.006230482900283992,
+            0.9970332929223682
+          ]
+        ],
+        "player_center": [
+          115.30181000962776,
+          104.2348353307713
+        ],
+        "url": "https://www.gamekee.com/nikke/648932.html",
+        "article_id": 648932,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1740116847,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/1/21/427570.png",
+        "item_name": "遗失物品 代办清单 Z",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_648932_09",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 09",
+      "points": [
+        [
+          1219.9,
+          1437.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 代办清单 B\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/648932.html",
+      "source": {
+        "number": 9,
+        "road_iou": 0.9151235818862915,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.192340551678951,
+            7.701298649574953,
+            895.6695505101842
+          ],
+          [
+            0.15641150299644133,
+            12.609683984567084,
+            1049.8543130910823
+          ],
+          [
+            0.00010211738110078358,
+            0.006230482900283992,
+            0.9970332929223682
+          ]
+        ],
+        "player_center": [
+          101.09393721775037,
+          104.47335772759338
+        ],
+        "url": "https://www.gamekee.com/nikke/648932.html",
+        "article_id": 648932,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1740116847,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/1/21/65978.png",
+        "item_name": "遗失物品 代办清单 B",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_648932_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          832.3,
+          1226.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Deals 所属专辑 From the Sky，From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/648932.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.8568716049194336,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.321989155394003,
+            3.837728680329024,
+            639.9034576797051
+          ],
+          [
+            0.1014146171434121,
+            9.447161666492379,
+            1041.8143539110865
+          ],
+          [
+            7.426718625511532e-05,
+            0.00453126029111563,
+            1.179336949427808
+          ]
+        ],
+        "player_center": [
+          102.67889944894743,
+          103.8400727021288
+        ],
+        "url": "https://www.gamekee.com/nikke/648932.html",
+        "article_id": 648932,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1740116847,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/1/21/707032.png",
+        "item_name": "Deals 所属专辑 From the Sky，From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_648932_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          1433.1,
+          463.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 代办清单 L\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/648932.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.9510252475738525,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2124576757558057,
+            8.9287037809309,
+            1092.0851092158907
+          ],
+          [
+            0.05715340856647969,
+            6.553654605491044,
+            80.7379523705404
+          ],
+          [
+            0.00010211738110078358,
+            0.006230482900283992,
+            0.9970332929223682
+          ]
+        ],
+        "player_center": [
+          109.85480131757525,
+          103.62225595491233
+        ],
+        "url": "https://www.gamekee.com/nikke/648932.html",
+        "article_id": 648932,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1740116847,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/1/21/600189.png",
+        "item_name": "遗失物品 代办清单 L",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_648932_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          884.7,
+          298.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Dark Eyes 所属专辑 From the Sky，From the Land\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/648932.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.9142745137214661,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.5137069307650797,
+            5.069383679656433,
+            569.694306226409
+          ],
+          [
+            0.03923260706810231,
+            5.824809256641523,
+            -104.1917799158257
+          ],
+          [
+            9.283398281889415e-05,
+            0.005664075363894538,
+            1.0578011784241816
+          ]
+        ],
+        "player_center": [
+          104.97987142181815,
+          101.23772963543033
+        ],
+        "url": "https://www.gamekee.com/nikke/648932.html",
+        "article_id": 648932,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1740116847,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_1920/h_1080/1253/475341/2025/1/21/906122.png",
+        "item_name": "Dark Eyes 所属专辑 From the Sky，From the Land",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    }
+  ],
+  "connections": []
+}

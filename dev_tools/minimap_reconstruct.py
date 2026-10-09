@@ -198,7 +198,11 @@ def register(first, second, valid, prediction=(0, 0)):
 
 class DriverWindow:
     def __init__(self, args):
-        """锁定游戏客户区与屏幕原点，按目标尺寸初始化虚拟鼠标，初始化失败也释放控制。"""
+        """锁定游戏客户区与屏幕原点，按目标尺寸初始化虚拟鼠标，初始化失败也释放控制。
+
+        args 提供客户区、ROI、驱动根目录和停止路径，创建后记录截图资源及窗口状态。
+        定位窗口并取得驱动资源期间的错误直接传播；成功实例由调用者通过 close 释放。
+        """
         ctypes.windll.shcore.SetProcessDpiAwareness(2)
         sys.path.insert(0, str(args.driver_root.resolve()))
         import win32gui
@@ -226,7 +230,11 @@ class DriverWindow:
             raise
 
     def ensure_client_size(self):
-        """按真实边框调整客户区，连续一秒尺寸稳定后才允许采集，最多重试三次。"""
+        """按真实边框调整客户区，连续一秒尺寸稳定后才允许采集，最多重试三次。
+
+        按 args.client 调整游戏客户区，并把标题栏和完整客户区限制在显示器工作区内。
+        允许底部边框被任务栏覆盖，但不允许内容区域被遮挡；失败时拒绝后续坐标操作。
+        """
         import pywintypes
         import win32api
         import win32con
@@ -243,10 +251,12 @@ class DriverWindow:
                 left, top, right, bottom = self.gui.GetWindowRect(self.hwnd)
                 width = right - left - client[2] + target[2]
                 height = bottom - top - client[3] + target[3]
+                client_top = self.gui.ClientToScreen(self.hwnd, (0, 0))[1] - top
                 monitor = win32api.MonitorFromWindow(self.hwnd, win32con.MONITOR_DEFAULTTONEAREST)
                 wl, wt, wr, wb = win32api.GetMonitorInfo(monitor)['Work']
-                if width > wr - wl or height > wb - wt:
-                    raise RuntimeError(f'Client {self.args.client} with window borders '
+                # 底部边框可被任务栏覆盖，但标题栏和完整客户区必须留在工作区内。
+                if width > wr - wl or client_top + target[3] > wb - wt:
+                    raise RuntimeError(f'Client {self.args.client} with title bar and side borders '
                                        'does not fit the monitor work area.')
                 x, y = max(wl, min(left, wr - width)), max(wt, min(top, wb - height))
                 if client != target or (x, y) != (left, top):
@@ -271,7 +281,11 @@ class DriverWindow:
         raise RuntimeError(f'Game client did not stabilize at {self.args.client}; observed {actual[2:]}.')
 
     def check(self):
-        """检查停止请求、客户区尺寸、窗口位置及已取得的焦点，拒绝失效坐标继续操作。"""
+        """检查停止请求、客户区尺寸、窗口位置及已取得的焦点，拒绝失效坐标继续操作。
+
+        校验 STOP、客户区尺寸和初始化后的屏幕原点，已取得焦点时还检查前台。
+        取消抛出 KeyboardInterrupt，其余状态变化抛出 RuntimeError；不自动移动窗口或抢回焦点。
+        """
         sentinel = getattr(self.args, 'stop_file', None)
         if sentinel is not None and sentinel.exists():
             raise KeyboardInterrupt(f'Stopped by STOP file: {sentinel}')
@@ -284,12 +298,45 @@ class DriverWindow:
 
     @staticmethod
     def map_visible(image):
-        """以地图青蓝色像素占比识别面板；此判据不负责识别章节身份。"""
+        """以地图青蓝色像素占比识别面板；此判据不负责识别章节身份。
+
+        image 是 BGR 面板裁图，统计指定色相与饱和度条件下的青蓝色覆盖率。
+        达到 45% 返回 True；该信号仅表示面板外观，不确认章节、小队或道路定位。
+        """
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         return ((hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 115) & (hsv[:, :, 1] > 40)).mean() >= 0.45
 
+    @staticmethod
+    def minimap_control_visible(image):
+        """识别地图放大／缩小控件的白色外框，避免亮背景改变白色总量导致误判。
+
+        image 为按钮中心附近的 44×44 BGR 裁图，检查白色轮廓及内部孔洞的尺寸、面积和中心。
+        返回是否存在可信控件外框；亮色背景本身不能代替控件形状，未找到轮廓返回 False。
+        """
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        white = cv2.inRange(hsv, (0, 0, 185), (179, 90, 255))
+        contours, hierarchy = cv2.findContours(white, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        if hierarchy is None:
+            return False
+        for contour, relation in zip(contours, hierarchy[0]):
+            child = relation[2]
+            x, y, width, height = cv2.boundingRect(contour)
+            if (child >= 0 and 18 <= width <= 32 and 18 <= height <= 32
+                    and np.linalg.norm(np.array([x + width / 2, y + height / 2]) - 22) < 8
+                    and 200 <= cv2.contourArea(contour) <= 550):
+                # 抗锯齿会产生多个孔洞；第一个子轮廓不一定是控件中心的主孔洞。
+                while child >= 0:
+                    if 80 <= cv2.contourArea(contours[child]) <= 350:
+                        return True
+                    child = hierarchy[0][child][0]
+        return False
+
     def capture(self, require_map=True):
-        """截取当前前台游戏的地图 ROI，复用 GDI 位图并可要求展开面板可见。"""
+        """截取当前前台游戏的地图 ROI，复用 GDI 位图并可要求展开面板可见。
+
+        按固定 ROI 从前台客户区复制 GDI 图像，首次建立后复用位图资源。
+        返回 BGR 数组；require_map=True 时额外验证展开地图可见，失焦或面板被遮挡立即失败。
+        """
         import win32con
         import win32ui
 
@@ -314,22 +361,29 @@ class DriverWindow:
         return image
 
     def reset_minimap(self, expanded=True, reset=True):
-        """识别关闭、紧凑、展开三态；展开返回只点左上角最小化，reset=False 保持目标态不重置视野。"""
+        """识别关闭、紧凑、展开三态；展开返回只点左上角最小化，reset=False 保持目标态不重置视野。
+
+        expanded 选择展开或紧凑目标态，reset=True 会先经过紧凑态使地图回正。
+        每次切换确认面板状态，漏点仅在原状态及原控件仍可信时重试，最多三次；未知状态不发送输入。
+        """
         from PIL import ImageGrab
 
         self.focus()
         x, y = self.args.map_open
 
         def state():
-            """优先核对左上角亮起的控件，避免把蓝色场景误认成展开地图。"""
+            """优先核对左上角亮起的控件，避免把蓝色场景误认成展开地图。
+
+            采集展开 ROI 和左上角控件区域，先判断紧凑／关闭状态，再判断展开面板。
+            返回 compact、closed、expanded 或 unknown；优先控件证据以减少蓝色场景造成的误识别。
+            """
             expanded_image = self.capture(require_map=False)
             origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
             panel = ImageGrab.grab(bbox=(origin[0] + x - 22, origin[1] + y - 22,
                                        origin[0] + x + 186, origin[1] + y + 196), all_screens=True)
             panel = cv2.cvtColor(np.array(panel), cv2.COLOR_RGB2BGR)
             icon = cv2.cvtColor(panel[:44, :44], cv2.COLOR_BGR2HSV)
-            white = cv2.inRange(icon, (0, 0, 185), (179, 70, 255))
-            if 150 <= np.count_nonzero(white) <= 550:
+            if self.minimap_control_visible(panel[:44, :44]):
                 if self.map_visible(panel[42:197, 7:187]):
                     return 'compact'
                 if (icon[:, :, 2] < 130).mean() > 0.5:
@@ -339,7 +393,11 @@ class DriverWindow:
             return 'unknown'
 
         def click(point):
-            """点击前重新核对窗口状态与屏幕原点，驱动失败立即上报。"""
+            """点击前重新核对窗口状态与屏幕原点，驱动失败立即上报。
+
+            point 是客户区按钮坐标，发送前重新读取屏幕原点并检查前台。
+            一次点击后检查驱动失败计数；失败立即抛错，由上层终止面板切换。
+            """
             self.check()
             if self.gui.GetForegroundWindow() != self.hwnd:
                 raise RuntimeError('Game lost focus before minimap toggle; no click sent.')
@@ -349,7 +407,11 @@ class DriverWindow:
                 raise RuntimeError('Driver failed to toggle the minimap; scan not started.')
 
         def wait_for(expected):
-            """给面板动画预留时间，并在有界等待内确认目标状态真正出现。"""
+            """给面板动画预留时间，并在有界等待内确认目标状态真正出现。
+
+            先等待 1.2 秒让面板动画能够接收下一次操作，再在总计三秒内轮询状态。
+            目标态确认后返回 None，超时返回最后状态，供 transition 判断是否允许重试。
+            """
             deadline = time.monotonic() + 3
             # The panel becomes visible before its opening animation accepts another click.
             time.sleep(1.2)
@@ -359,7 +421,30 @@ class DriverWindow:
                 if current == expected:
                     return
                 time.sleep(0.1)
-            raise RuntimeError(f'Minimap did not reach {expected} (observed {current}); scan not started.')
+            return current
+
+        def transition(point, source, expected):
+            """漏点时只在原控件仍可见的情况下重试，避免面板消失后把按钮坐标点到场景上。
+
+            point、source、expected 定义一次面板状态变化，先点击再等待目标态。
+            仅超时仍停留 source 且控件外框可见时继续，最多三次；其他状态或预算耗尽抛错。
+            """
+            for attempt in range(3):
+                click(point)
+                current = wait_for(expected)
+                if current is None:
+                    return
+                if current != source or attempt == 2:
+                    break
+                self.check()
+                origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
+                px, py = np.asarray(origin) + point
+                control = ImageGrab.grab(bbox=(px - 22, py - 22, px + 22, py + 22), all_screens=True)
+                control = cv2.cvtColor(np.asarray(control), cv2.COLOR_RGB2BGR)
+                if not self.minimap_control_visible(control):
+                    break
+                print(json.dumps({'minimap_retry': expected, 'attempt': attempt + 2}), flush=True)
+            raise RuntimeError(f'Minimap did not reach {expected} (observed {current}).')
 
         current = state()
         if current == 'unknown':
@@ -367,19 +452,20 @@ class DriverWindow:
         if not reset and current == ('expanded' if expanded else 'compact'):
             return
         if current == 'expanded':
-            click((self.roi[0] + 14, self.roi[1] - 11))
-            wait_for('compact')
+            transition((self.roi[0] + 14, self.roi[1] - 11), 'expanded', 'compact')
         elif current == 'closed':
-            click((x, y))
-            wait_for('compact')
+            transition((x, y), 'closed', 'compact')
         if expanded:
-            click((x, y))
-            wait_for('expanded')
+            transition((x, y), 'compact', 'expanded')
             time.sleep(0.5)
         print(json.dumps({'minimap_reset': 'expanded' if expanded else 'compact'}), flush=True)
 
     def focus(self):
-        """首次尝试获得游戏焦点；控制开始后失焦由 check 拦截，避免自动抢回焦点再点击。"""
+        """首次尝试获得游戏焦点；控制开始后失焦由 check 拦截，避免自动抢回焦点再点击。
+
+        首次尝试系统前台切换，失败时只点击经过窗口归属检查的标题栏位置。
+        成功设置焦点标记，后续失焦由 check 拦截；无法取得前台时不执行拖动。
+        """
         import pywintypes
 
         self.check()
@@ -402,7 +488,8 @@ class DriverWindow:
     def drag_vector(self, sx, sy):
         """将屏幕方向位移转换为地图面板内的对称拖动端点，并限制端点在安全内框。
 
-        Swipe along an arbitrary screen vector; the camera moves opposite to the content.
+        sx、sy 是面板中的像素拖动向量，以 ROI 中心对称构造起终点。
+        端点需离内框边缘至少 20px，驱动成功后等待 settle；相机观察方向与内容拖动方向相反。
         """
         self.focus()
         origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
@@ -421,7 +508,11 @@ class DriverWindow:
         time.sleep(self.args.settle)
 
     def drag(self, direction):
-        """按固定步长沿给定方向拖动；交换端点可复现相反的透视位移。"""
+        """按固定步长沿给定方向拖动；交换端点可复现相反的透视位移。
+
+        direction 是方向向量，乘 args.step 得到以 ROI 中心对称的拖动端点。
+        先确认展开地图可见及端点安全范围，再执行一次拖动并等待稳定；不使用越界点裁剪改变方向。
+        """
         self.focus()
         self.capture()
         origin = self.gui.ClientToScreen(self.hwnd, (0, 0))
@@ -443,7 +534,11 @@ class DriverWindow:
         time.sleep(self.args.settle)
 
     def close(self):
-        """先抬起鼠标，再清理截图资源；任何清理异常都不能跳过驱动释放。"""
+        """先抬起鼠标，再清理截图资源；任何清理异常都不能跳过驱动释放。
+
+        先尝试抬起鼠标，再清理 GDI 位图、设备上下文和窗口资源。
+        各清理阶段使用 finally 保证驱动释放能执行，异常向调用者传播，不将释放失败隐藏为成功。
+        """
         try:
             self.handler.mouse_up()
         finally:

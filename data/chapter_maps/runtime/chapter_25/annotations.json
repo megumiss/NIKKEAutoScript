@@ -1,0 +1,600 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "e1c1432767b596b6ebefc569c0556843d035e7920809dc4c34872f4109148b21",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_641982_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          720.7,
+          1584.7
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "10红球\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/641982.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9018774628639221,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.7686942240716994,
+            5.654466819681987,
+            337.80469816835455
+          ],
+          [
+            -0.67713805039982,
+            15.765863048043876,
+            1075.352722388002
+          ],
+          [
+            -0.0004088323535924701,
+            0.007664894968906226,
+            0.9044140976797196
+          ]
+        ],
+        "player_center": [
+          98.23744018874743,
+          99.65223569708007
+        ],
+        "url": "https://www.gamekee.com/nikke/641982.html",
+        "article_id": 641982,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1733232322,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2318/h_1294/1253/613886/2024/11/3/207641.png",
+        "item_name": "10红球",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_641982_04",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 04",
+      "points": [
+        [
+          1577.1,
+          137.6
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Enormous gap 所属专辑 Trace\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/641982.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.9378895163536072,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.522326834546927,
+            5.84552928602844,
+            1769.4540018189093
+          ],
+          [
+            -0.05142726732855266,
+            3.798667103359767,
+            -147.60268203626853
+          ],
+          [
+            -0.00019623952972438566,
+            0.003679149585074988,
+            1.301737617872294
+          ]
+        ],
+        "player_center": [
+          98.60603282761463,
+          99.96015059555951
+        ],
+        "url": "https://www.gamekee.com/nikke/641982.html",
+        "article_id": 641982,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1733232322,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2319/h_1300/1253/613886/2024/11/3/843985.png",
+        "item_name": "Enormous gap 所属专辑 Trace",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_641982_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          1396.9,
+          1381.8
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Girls 所属专辑 Trace\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/641982.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.8840715289115906,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.4345810933459573,
+            8.1990727502055,
+            1224.5086810386967
+          ],
+          [
+            -0.4551071918094363,
+            11.404756266821474,
+            1168.8792519983608
+          ],
+          [
+            -0.0003107125887302773,
+            0.005825320176368731,
+            1.0877941839224463
+          ]
+        ],
+        "player_center": [
+          100.67947837781452,
+          100.36739693906155
+        ],
+        "url": "https://www.gamekee.com/nikke/641982.html",
+        "article_id": 641982,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1733232322,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2307/h_1291/1253/613886/2024/11/3/800207.png",
+        "item_name": "Girls 所属专辑 Trace",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_641982_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          2009.8,
+          415.3
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "BOING 所属专辑 Trace\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/641982.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.959211528301239,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            2.600968560725126,
+            6.142292705735965,
+            2423.696211388359
+          ],
+          [
+            -0.09173528375196692,
+            4.648855425203173,
+            220.27377237888254
+          ],
+          [
+            -0.00016353294143698805,
+            0.0030659579875624903,
+            1.3628643132865361
+          ]
+        ],
+        "player_center": [
+          108.36349341490644,
+          103.1735974607359
+        ],
+        "url": "https://www.gamekee.com/nikke/641982.html",
+        "article_id": 641982,
+        "difficulty": "hard",
+        "author": "玄妙の壮汉",
+        "article_updated": 1733232322,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_2320/h_1302/1253/613886/2024/11/3/148335.png",
+        "item_name": "BOING 所属专辑 Trace",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_604714_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          475.1,
+          744.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "关于目击母鲸亚种的报告.wav 821222_1708\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/604714.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.8872371912002563,
+        "roi": [
+          36,
+          3,
+          438,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.5338494962868452,
+            0.8504241760838068,
+            307.30849970369195
+          ],
+          [
+            -0.08762548027935717,
+            3.2222455249493684,
+            654.9712966543062
+          ],
+          [
+            -9.763160682805258e-05,
+            0.0018304226791417857,
+            1.3202067848226868
+          ]
+        ],
+        "player_center": [
+          204.61183494161966,
+          177.8763675824335
+        ],
+        "url": "https://www.gamekee.com/nikke/604714.html",
+        "article_id": 604714,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1699713005,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1096/1253/262658/2023/10/10/875985.jpg",
+        "item_name": "关于目击母鲸亚种的报告.wav 821222_1708",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1096
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_604714_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          927.5,
+          1098.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "23000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/604714.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.8720477819442749,
+        "roi": [
+          36,
+          6,
+          438,
+          408
+        ],
+        "roi_to_map": [
+          [
+            1.6205823940404123,
+            3.4539664970120407,
+            560.7128935325486
+          ],
+          [
+            -0.23250397014758234,
+            6.164096489235786,
+            673.0558633460464
+          ],
+          [
+            -0.00019526321365610517,
+            0.0036608453582835715,
+            0.9719157792876266
+          ]
+        ],
+        "player_center": [
+          183.09459969046702,
+          185.94360344626168
+        ],
+        "url": "https://www.gamekee.com/nikke/604714.html",
+        "article_id": 604714,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1699713005,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1112/1253/262658/2023/10/10/771982.jpg",
+        "item_name": "23000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1112
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_604714_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          1959.4,
+          576.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "关于目击母鲸亚种的报告.wav 821222_2056\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/604714.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.902308464050293,
+        "roi": [
+          36,
+          3,
+          438,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.5727030986138164,
+            5.409028236132621,
+            1892.6125685510165
+          ],
+          [
+            -0.09484170085387703,
+            3.6395764387558702,
+            201.11688646272984
+          ],
+          [
+            -0.00014644741024207885,
+            0.002745634018712678,
+            1.1460612820551568
+          ]
+        ],
+        "player_center": [
+          186.27643983000934,
+          224.448033097822
+        ],
+        "url": "https://www.gamekee.com/nikke/604714.html",
+        "article_id": 604714,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1699713005,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1185/1253/262658/2023/10/10/105738.jpg",
+        "item_name": "关于目击母鲸亚种的报告.wav 821222_2056",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1185
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_604714_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          1831.3,
+          376.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Pursuit 【Trace】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/604714.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.8943362236022949,
+        "roi": [
+          36,
+          6,
+          438,
+          408
+        ],
+        "roi_to_map": [
+          [
+            1.2462380422246073,
+            7.564398657587426,
+            1298.8797130095652
+          ],
+          [
+            -0.0984726630054355,
+            3.4961211540565023,
+            -33.629450990372455
+          ],
+          [
+            -0.0002196711153631183,
+            0.004118451028069017,
+            0.8848430279038616
+          ]
+        ],
+        "player_center": [
+          192.51973027533379,
+          190.27221198159265
+        ],
+        "url": "https://www.gamekee.com/nikke/604714.html",
+        "article_id": 604714,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1699713005,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1112/1253/262658/2023/10/11/445169.jpg",
+        "item_name": "Pursuit 【Trace】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1112
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_604714_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          1707.3,
+          130.8
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "23000信用点\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/604714.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.9071976542472839,
+        "roi": [
+          36,
+          3,
+          438,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.3592886871395689,
+            4.651839633890086,
+            1626.3503264175752
+          ],
+          [
+            -0.0340004683959737,
+            2.245073831985744,
+            -201.22646382541362
+          ],
+          [
+            -0.00014644741024207885,
+            0.002745634018712678,
+            1.1460612820551568
+          ]
+        ],
+        "player_center": [
+          209.43005189249084,
+          187.8542443980502
+        ],
+        "url": "https://www.gamekee.com/nikke/604714.html",
+        "article_id": 604714,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1699713005,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1115/1253/262658/2023/10/11/206065.jpg",
+        "item_name": "23000信用点",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1115
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    },
+    {
+      "id": "wiki_604714_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          721.6,
+          414.7
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Chaser 【Trace】\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/604714.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.949247419834137,
+        "roi": [
+          36,
+          3,
+          438,
+          405
+        ],
+        "roi_to_map": [
+          [
+            1.6658834596086287,
+            2.6046503738902524,
+            335.2284327378192
+          ],
+          [
+            -0.0987486687931503,
+            3.65641741881154,
+            7.29355453402215
+          ],
+          [
+            -0.00019526321365610517,
+            0.0036608453582835715,
+            0.9719157792876266
+          ]
+        ],
+        "player_center": [
+          206.48287701047948,
+          186.76379341384597
+        ],
+        "url": "https://www.gamekee.com/nikke/604714.html",
+        "article_id": 604714,
+        "difficulty": "normal",
+        "author": "DEVILS",
+        "article_updated": 1699713005,
+        "image_url": "https://cdnimg.gamekee.com/wiki2.0/images/w_1080/h_1075/1253/262658/2023/10/10/588920.jpg",
+        "item_name": "Chaser 【Trace】",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1080,
+          1075
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}

@@ -22,7 +22,14 @@ bin/paddleocr/
 bin/parsec_vdd/debug.log
 /tmp
 **.acc
-data/
+# 只分发运行地图；采集、重建及备份数据位于 local/。
+data/*
+!data/chapter_maps/
+data/chapter_maps/*
+!data/chapter_maps/runtime/
+data/chapter_maps/runtime/**/.map-export-*/
+data/chapter_maps/runtime/**/*.tmp
+data/chapter_maps/runtime/**/calibration.pending.json
 android/
 .workbuddy/
 .workbuddy-ai/

@@ -6,3 +6,5 @@
 *.json linguist-detectable=false
 *.py linguist-detectable=true
 *.vue linguist-detectable=true
+# 地图包包含文件哈希绑定，保留导出时的原始字节。
+data/chapter_maps/runtime/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

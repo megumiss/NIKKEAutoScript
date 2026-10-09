@@ -7,7 +7,11 @@ from .map_package import MapPackage
 
 @runtime.command
 def main():
-    """校验地图包后记录现场，最多十次展开与最小化循环，只检验地图控制而不移动小队。"""
+    """校验地图包后记录现场，最多十次展开与最小化循环，只检验地图控制而不移动小队。
+
+    验证地图包后进行客户区与地图开关检查，--cycles 0 只保留初始现场证据。
+    循环次数受命令参数限制，每次切换确认状态；退出时释放控制并写回执，不执行小队导航。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cycles', type=int, default=0)
     parser.add_argument('--tag', default='controls')

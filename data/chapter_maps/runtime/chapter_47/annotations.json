@@ -1,0 +1,885 @@
+{
+  "schema_version": 1,
+  "image": "map.png",
+  "image_sha256": "92dc79a91b2d444d1bde1b80026ce4dafc19d0a15ae6698829875dfcdf6b86a1",
+  "coordinates": {
+    "unit": "pixel",
+    "origin": "top_left",
+    "x": "right",
+    "y": "down"
+  },
+  "objects": [
+    {
+      "id": "wiki_716913_01",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 01",
+      "points": [
+        [
+          432.2,
+          755.0
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Orbital Elevator 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716913.html",
+      "source": {
+        "number": 1,
+        "road_iou": 0.9206821322441101,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.183353085553307,
+            2.55470046464877,
+            101.05951272559199
+          ],
+          [
+            0.19322340528019877,
+            8.146520773840937,
+            404.94165743050536
+          ],
+          [
+            0.0002263916891112028,
+            0.005928972540857812,
+            1.0282004349178926
+          ]
+        ],
+        "player_center": [
+          111.5217049071171,
+          100.51627535919653
+        ],
+        "url": "https://www.gamekee.com/nikke/716913.html",
+        "article_id": 716913,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786684939,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1691/h_951/475341/2026/7/14/35092827msshuoef.png",
+        "item_name": "Orbital Elevator 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716913_05",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 05",
+      "points": [
+        [
+          1573.2,
+          397.4
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "Outbreak of WAR - Encounter - 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716913.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9226298332214355,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.462946254510779,
+            10.646625194821052,
+            1131.5783794990862
+          ],
+          [
+            0.12783826940624096,
+            6.404756969098055,
+            12.218880673296297
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          111.64266868809186,
+          96.08287583813431
+        ],
+        "url": "https://www.gamekee.com/nikke/716913.html",
+        "article_id": 716913,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786684939,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1691/h_951/475341/2026/7/14/45463158mssi16rt.png",
+        "item_name": "Outbreak of WAR - Encounter - 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_02",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 02",
+      "points": [
+        [
+          124.6,
+          862.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "珠宝 ×50\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 2,
+        "road_iou": 0.8669673800468445,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.0926988178043433,
+            0.9502141022867339,
+            -206.8604002604965
+          ],
+          [
+            0.24633814782101912,
+            9.508150596198487,
+            440.5941155649028
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          102.23498833433653,
+          99.17567737357507
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/70942170mssea1m9.png",
+        "item_name": "珠宝 ×50",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_03",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 03",
+      "points": [
+        [
+          223.6,
+          645.2
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 引领胜利的影子 第一页\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 3,
+        "road_iou": 0.9331700205802917,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.11572608675394,
+            1.5532753092996998,
+            -123.61717775972582
+          ],
+          [
+            0.1883818754085512,
+            7.990333625738887,
+            231.0830836528507
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          107.55245276436355,
+          102.29431520428169
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/51391969mssebf6o.png",
+        "item_name": "遗失物品 引领胜利的影子 第一页",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_04",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 04",
+      "points": [
+        [
+          614.0,
+          1147.9
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 引领胜利的影子 第二页\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 4,
+        "road_iou": 0.8788374662399292,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.2166320967577904,
+            4.195903070367753,
+            241.15649387286484
+          ],
+          [
+            0.3164548881057459,
+            11.344438091709877,
+            694.0650514942158
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          107.72652241606066,
+          105.86055439592609
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/69590226mssed27z.png",
+        "item_name": "遗失物品 引领胜利的影子 第二页",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_05",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 05",
+      "points": [
+        [
+          797.0,
+          1129.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Outbreak of WAR 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 5,
+        "road_iou": 0.9025332927703857,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.261392967862063,
+            5.3681456413030695,
+            402.9663533406551
+          ],
+          [
+            0.3138675545159036,
+            11.276678405528646,
+            684.7118804267135
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          113.1619066386617,
+          101.97868522241846
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/11352920mssedryf.png",
+        "item_name": "Outbreak of WAR 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_06",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 06",
+      "points": [
+        [
+          926.7,
+          909.1
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "The Way Forward 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.8889122605323792,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.297356904760871,
+            6.310005279222196,
+            532.9754311789374
+          ],
+          [
+            0.2582398823342938,
+            9.819845152632155,
+            483.6187024754135
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          108.16360613554954,
+          99.5104041432709
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/05382506mssef7cc.png",
+        "item_name": "The Way Forward 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_07",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 07",
+      "points": [
+        [
+          1213.2,
+          824.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×45000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 7,
+        "road_iou": 0.8666912913322449,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.3695435119174713,
+            8.200500523678572,
+            793.9289039622522
+          ],
+          [
+            0.23340147987180754,
+            9.169352165292326,
+            393.8282602273912
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          112.19951331346735,
+          104.64297068629821
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/20881704mssfaz6x.png",
+        "item_name": "信用点 ×45000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_08",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 08",
+      "points": [
+        [
+          1624.2,
+          895.6
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Repair Center 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 8,
+        "road_iou": 0.8991374373435974,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.4774353226138963,
+            11.026079437435952,
+            1183.9561374770992
+          ],
+          [
+            0.2546176153085145,
+            9.724981591978429,
+            470.52426298091024
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          108.94392855776219,
+          99.72916224731847
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/16525615mssfbwsb.png",
+        "item_name": "Repair Center 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_10",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 10",
+      "points": [
+        [
+          1501.2,
+          601.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Greed 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 10,
+        "road_iou": 0.8939238786697388,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.4469047862537567,
+            10.226515140497414,
+            1073.5887188805718
+          ],
+          [
+            0.17596267417730807,
+            7.665087132068972,
+            186.18786252883953
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          106.18942282084107,
+          104.15328146870381
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/61303553mssfdm39.png",
+        "item_name": "Greed 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_11",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 11",
+      "points": [
+        [
+          1137.5,
+          538.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Skies Painted with Blasts 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 11,
+        "road_iou": 0.9262283444404602,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.354536977096386,
+            7.807494343827426,
+            739.6805117707388
+          ],
+          [
+            0.16069740599723842,
+            7.265304983599703,
+            131.0041532305758
+          ],
+          [
+            0.00025873335898423175,
+            0.0067759686181232135,
+            0.9353171067502325
+          ]
+        ],
+        "player_center": [
+          102.61973478440567,
+          102.36979122396207
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/50320974mssfepcv.png",
+        "item_name": "Skies Painted with Blasts 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_12",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 12",
+      "points": [
+        [
+          1698.7,
+          401.3
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "遗失物品 引领胜利的影子 最后一页\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 12,
+        "road_iou": 0.8904833197593689,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.5747964198045494,
+            11.010341154654283,
+            1289.3058890456978
+          ],
+          [
+            0.12119738616449602,
+            6.328813225684281,
+            2.2567304237917676
+          ],
+          [
+            0.0002479528023598888,
+            0.00649363659236808,
+            0.9662782161394525
+          ]
+        ],
+        "player_center": [
+          112.33524915198096,
+          102.90810353845333
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/09918239mssfg2py.png",
+        "item_name": "遗失物品 引领胜利的影子 最后一页",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_13",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 13",
+      "points": [
+        [
+          1867.5,
+          455.5
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "信用点 ×45000\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 13,
+        "road_iou": 0.9112942814826965,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.5371611185657255,
+            10.537815814218368,
+            1628.9280518456576
+          ],
+          [
+            0.12035220259737751,
+            6.287083837974803,
+            103.62586149726343
+          ],
+          [
+            0.0002156111324868598,
+            0.005646640515102678,
+            1.0591615443071125
+          ]
+        ],
+        "player_center": [
+          111.58556685817996,
+          101.3270113808714
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/65107111mssfiltm.png",
+        "item_name": "信用点 ×45000",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716904_14",
+      "type": "point",
+      "difficulty": "normal",
+      "label": "普通收集物 14",
+      "points": [
+        [
+          1243.0,
+          63.4
+        ]
+      ],
+      "color": "#ffd166",
+      "note": "Annihilio 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716904.html",
+      "source": {
+        "number": 14,
+        "road_iou": 0.9390331506729126,
+        "roi": [
+          25,
+          96,
+          243,
+          307
+        ],
+        "roi_to_map": [
+          [
+            3.234332258481991,
+            6.71187530255871,
+            1033.3671263385984
+          ],
+          [
+            0.03445066788112708,
+            3.8806493352305202,
+            -287.7016866948335
+          ],
+          [
+            0.0002048305758625168,
+            0.005364308489347544,
+            1.0901226536963327
+          ]
+        ],
+        "player_center": [
+          106.47442728782767,
+          100.14032377572278
+        ],
+        "url": "https://www.gamekee.com/nikke/716904.html",
+        "article_id": 716904,
+        "difficulty": "normal",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786680976,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1764/h_992/475341/2026/7/14/29513273mssfkiyi.png",
+        "item_name": "Annihilio 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1920,
+          1080
+        ]
+      }
+    },
+    {
+      "id": "wiki_716913_06",
+      "type": "point",
+      "difficulty": "hard",
+      "label": "困难收集物 06",
+      "points": [
+        [
+          1301.6,
+          92.0
+        ]
+      ],
+      "color": "#c792ea",
+      "note": "3RD PLAN 所属专辑 At Last\n按 Wiki 小队圆环中心配准。\nhttps://www.gamekee.com/nikke/716913.html",
+      "source": {
+        "number": 6,
+        "road_iou": 0.9171654582023621,
+        "roi": [
+          18,
+          78,
+          217,
+          277
+        ],
+        "roi_to_map": [
+          [
+            3.6228520665153505,
+            6.69690409590324,
+            1166.7359746059012
+          ],
+          [
+            0.042571914420478946,
+            4.482477075617858,
+            -270.1013215787688
+          ],
+          [
+            0.00019502514496298878,
+            0.0051075140337612165,
+            1.1507810838084545
+          ]
+        ],
+        "player_center": [
+          96.91283080969119,
+          93.09925410683516
+        ],
+        "url": "https://www.gamekee.com/nikke/716913.html",
+        "article_id": 716913,
+        "difficulty": "hard",
+        "author": "左猫猫ZuoCat",
+        "article_updated": 1786684939,
+        "image_url": "https://cdnimg-v2.gamekee.com/wiki2.0/pro/1253/images/w_1691/h_951/475341/2026/7/14/48192480mssi28yj.png",
+        "item_name": "3RD PLAN 所属专辑 At Last",
+        "importer": "wiki_collectibles",
+        "position_basis": "squad_marker_center",
+        "normalized_size": [
+          1691,
+          951
+        ],
+        "screenshot_layout": "cropped_minimap"
+      }
+    }
+  ],
+  "connections": []
+}
