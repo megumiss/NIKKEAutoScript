@@ -9,6 +9,7 @@
   <script src="/scan.js" defer></script>
   <script src="/wiki.js" defer></script>
   <script src="/panels.js" defer></script>
+  <script src="/connectivity.js" defer></script>
   <script src="/editor.js" defer></script>
 </head>
 <body>
@@ -21,6 +22,19 @@
 
   <main class="workspace">
     <aside class="tools-panel" aria-label="绘制工具">
+      <details class="tool-section" id="connectivity-tools" open>
+        <summary>道路连通区域</summary>
+        <label class="check"><input id="show-connectivity" type="checkbox">显示区域编号与连通修订</label>
+        <label>连通图层<select id="connectivity-layer"><option value="effective">修订后的区域</option><option value="automatic">自动初判区域</option></select></label>
+        <p id="connectivity-status" class="muted" role="status" aria-live="polite">打开地图后显示道路连通初判。</p>
+        <div class="tools" role="group" aria-label="连通修订工具">
+          <button data-tool="connectivity-cut" aria-pressed="false">绘制分隔线</button>
+        </div>
+        <label>分隔线宽度（地图像素）<input id="connectivity-width" type="number" min="8" max="160" value="16"></label>
+        <p class="muted">沿边界单击加点，Enter 完成分隔线。可撤销，Ctrl+S 保存。</p>
+        <p class="muted">不同区域只能通过电梯前往，请标记电梯并建立传送关系。分层地图的区域初判不代表同层可通行。</p>
+        <div id="connectivity-edits" aria-label="连通修订列表"></div>
+      </details>
       <details class="tool-section" id="road-tools">
       <summary>修订道路</summary>
       <div class="section-label">道路修订</div>
@@ -85,7 +99,7 @@
         <svg id="canvas" xmlns="http://www.w3.org/2000/svg" tabindex="0" aria-label="地图画布，使用左侧工具绘制，滚轮缩放">
           <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d6dce5"/></marker></defs>
           <defs><clipPath id="terrain-clip"><rect id="terrain-bounds" x="0" y="0"/></clipPath></defs>
-          <g id="scene"><image id="base-image" x="0" y="0"/><g id="terrain" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="terrain-preview" pointer-events="none"></g><g id="movement-markers" pointer-events="none"></g></g>
+          <g id="scene"><image id="base-image" x="0" y="0"/><g id="terrain" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-regions" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-corrections" pointer-events="none"></g><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="terrain-preview" pointer-events="none"></g><g id="movement-markers" pointer-events="none"></g></g>
         </svg>
         <div id="empty-state" class="empty-state"><h2>打开一张地图，开始标注</h2><p>从上方选择地图包。使用 --root 可指定其他地图目录。</p></div>
         <div id="drawing-hint" class="drawing-hint" hidden></div>
@@ -130,7 +144,7 @@
         <p class="muted">收集品和敌人到点后最多尝试 5 个附近道路落点。出现交互提示即停止并保留现场。</p>
         <div class="movement-actions"><button id="move-start" class="primary" disabled>移动到目标</button><button id="move-stop" disabled>停止测试</button></div>
         <p class="muted">标定仅适用于采样附近的同层道路。自动标定失败时会停止，并显示原因。</p>
-        <p class="muted">跨区需先标记电梯／传送点并建立配对。当前局部移动测试不会自动跨区，传送后需重新定位和标定。</p>
+        <p class="muted">平面到点模式会按已保存的道路连通修订和电梯关系规划中转。分层地图仍需已有同层标定，不自动跨区。</p>
         <p id="move-status" class="muted" role="status" aria-live="polite">选择目标点后开始移动测试。</p>
         <p id="move-metrics" class="muted"></p>
         <details id="move-evidence" hidden><summary>查看现场与日志</summary><img id="move-preview" alt="本次移动测试的游戏现场" hidden><p id="move-log" class="muted"></p></details>

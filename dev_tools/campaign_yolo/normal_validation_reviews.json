@@ -648,7 +648,7 @@
     {
       "id": "4225fd2e1ed6513e169e",
       "pixel_sha256": "4225fd2e1ed6513e169e2786373ebdf71718c99e9c77ff1600b1c6f437dcd641",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/4225fd2e1ed6513e169e.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\4225fd2e1ed6513e169e.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_005.png",
       "parent": "14a3c9a3b8d414d5ba6f",

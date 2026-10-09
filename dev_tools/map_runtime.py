@@ -15,6 +15,8 @@ def runtime_files(source):
     names = ['map.png', 'map.json']
     if (source / 'annotations.json').exists():
         names.append('annotations.json')
+    if (source / 'connectivity.json').exists():
+        names.append('connectivity.json')
     model = metadata.get('coordinate_model')
     if model is None:
         names.append('source/map_data.npz')
@@ -51,8 +53,8 @@ def export_runtime(source, destination):
     source, destination = Path(source).resolve(), Path(destination).resolve()
     if destination.exists() or destination.is_relative_to(source):
         raise FileExistsError('Choose a new runtime directory outside the capture package')
-    names = runtime_files(source)
     loaded = AnnotationStore(source.parent).load(source.name)
+    names = runtime_files(source)
     hashes = {name: hashlib.sha256((source / name).read_bytes()).hexdigest() for name in names}
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.map-export-', dir=destination.parent) as temporary:

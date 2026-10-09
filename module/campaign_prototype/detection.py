@@ -55,7 +55,7 @@ def suppress(detections, iou=.45):
 
 def decode(output, scales, padding, thresholds, shape):
     if output.ndim != 3 or output.shape[0] != 1 or output.shape[1] != 4 + len(LABELS):
-        raise ValueError(f'Unsupported YOLO output {output.shape}; expected [1, 9, anchors].')
+        raise ValueError(f'Unsupported YOLO output {output.shape}; expected [1, {4 + len(LABELS)}, anchors].')
     rows = output[0].T
     rows = rows[np.isfinite(rows).all(axis=1)]
     if not len(rows):

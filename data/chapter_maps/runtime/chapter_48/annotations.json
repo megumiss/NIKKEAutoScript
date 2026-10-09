@@ -772,7 +772,7 @@
       "points": [
         [
           836.5,
-          994.0
+          994
         ]
       ],
       "color": "#c792ea",
@@ -940,7 +940,46 @@
         ],
         "screenshot_layout": "cropped_minimap"
       }
+    },
+    {
+      "id": "obj_5d0326a06083",
+      "type": "point",
+      "category": "ground_elevator",
+      "label": "地面电梯",
+      "points": [
+        [
+          671.3,
+          375.5
+        ]
+      ],
+      "color": "#6ccfff",
+      "note": ""
+    },
+    {
+      "id": "obj_fb456a662825",
+      "type": "point",
+      "category": "ground_elevator",
+      "label": "地面电梯",
+      "points": [
+        [
+          527.9,
+          707.6
+        ]
+      ],
+      "color": "#6ccfff",
+      "note": ""
     }
   ],
-  "connections": []
+  "connections": [
+    {
+      "id": "edge_3f600460bf91",
+      "category": "elevator_connection",
+      "from": "obj_fb456a662825",
+      "to": "obj_5d0326a06083",
+      "directed": false,
+      "label": "电梯传送关系",
+      "color": "#ffb454",
+      "note": ""
+    }
+  ]
 }

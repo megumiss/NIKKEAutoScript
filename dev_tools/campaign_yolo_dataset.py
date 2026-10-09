@@ -15,7 +15,8 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 LABELS = ['scene_squad_arrow', 'scene_collectible_indicator', 'minimap_enemy_normal',
-          'minimap_enemy_ex', 'minimap_squad_ring']
+          'minimap_enemy_ex', 'minimap_squad_ring', 'scene_ground_mechanism_off',
+          'scene_ground_mechanism_on', 'scene_elevator_start', 'scene_elevator_end']
 DEFAULT_ROOTS = ['data/chapter_maps', 'log/campaign_prototype', 'log/chapter_maps',
                  'log/chapter_calibration_20261001', 'log/chapter_calibration_restart_20261001',
                  'tmp/arrow_anchor_probe', 'tmp/arrow_fix', 'tmp/ch33_calibration_test',
@@ -61,7 +62,10 @@ def inventory(output, roots):
                 stats['unreadable'] += 1
                 continue
             digest = hashlib.sha256(rgb.tobytes()).hexdigest()
-            relative = path.relative_to(ROOT).as_posix()
+            try:
+                relative = path.relative_to(ROOT).as_posix()
+            except ValueError:
+                relative = path.as_posix()
             chapter = chapter_from_path(relative)
             if digest in hashes:
                 existing = records[hashes[digest]]
@@ -396,7 +400,43 @@ def select_reviewed_partitions(records):
     return result, dict(excluded)
 
 
-def build(output, destination, extra_frame_reviews=()):
+def iou(first, second):
+    a = np.asarray(first, float)
+    b = np.asarray(second, float)
+    inter = np.maximum(0, np.minimum(a[2:], b[2:]) - np.maximum(a[:2], b[:2]))
+    union = np.prod(a[2:] - a[:2]) + np.prod(b[2:] - b[:2]) - np.prod(inter)
+    return float(np.prod(inter) / union) if union > 0 else 0.
+
+
+def merge_extra_objects(records, path):
+    """Append visually confirmed objects (e.g. mechanism/elevator contact-sheet reviews) to frames.
+
+    Merged objects carry no template score so they bypass the weak-proposal threshold;
+    same-label boxes overlapping an existing object (IoU > .5) are skipped as duplicates.
+    """
+    merged = skipped = 0
+    by_id = {record['id']: record for record in records}
+    data = json.loads(Path(path).read_text('utf-8'))
+    for frame in data['frames']:
+        record = by_id.get(frame['id'])
+        if record is None:
+            skipped += 1
+            continue
+        for obj in frame['objects']:
+            if any(existing['label'] == obj['label'] and iou(existing['box'], obj['box']) > .5
+                   for existing in record['objects']):
+                skipped += 1
+                continue
+            merged_obj = {'label': obj['label'], 'box': obj['box'], 'reviewed': True}
+            if obj.get('status'):
+                merged_obj['status'] = obj['status']
+            record['objects'].append(merged_obj)
+            merged += 1
+    return {'path': str(path), 'merged': merged, 'skipped': skipped,
+            'sha256': hashlib.sha256(Path(path).read_bytes()).hexdigest()}
+
+
+def build(output, destination, extra_frame_reviews=(), extra_objects=()):
     from module.campaign_prototype.detection import scene_tiles
 
     if destination.exists():
@@ -421,6 +461,7 @@ def build(output, destination, extra_frame_reviews=()):
         apply_frame_reviews(records, path)
     if frame_review_path.exists() or extra_frame_reviews:
         records, exclusions = select_reviewed_partitions(records)
+    object_merges = [merge_extra_objects(records, path) for path in extra_objects]
     destination.mkdir(parents=True)
     write_jsonl(destination / 'frames.jsonl', records)
     manifest, counts, negatives = [], Counter(), Counter()
@@ -492,6 +533,7 @@ def build(output, destination, extra_frame_reviews=()):
                    if frame_review_path.exists() else None,
                    extra_frame_reviews={str(path): hashlib.sha256(Path(path).read_bytes()).hexdigest()
                                         for path in extra_frame_reviews},
+                   extra_objects=object_merges,
                    note='Mixed training labels; final accuracy must use unmasked reviewed frames and runtime gates.')
     (destination / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
     balance_training(destination)
@@ -514,6 +556,13 @@ def balance_training(destination):
                 repeats = max(repeats, 16)
             if 3 in classes or (4 in classes and record['roi_kind'] == 'compact'):
                 repeats = max(repeats, 8)
+        # New mechanism/elevator classes are contact-sheet reviewed; repeat the rarest ones.
+        if 5 in classes or 8 in classes:
+            repeats = max(repeats, 16)
+        elif 7 in classes:
+            repeats = max(repeats, 4)
+        elif 6 in classes:
+            repeats = max(repeats, 2)
         training.extend(['./' + record['image']] * repeats)
     (destination / 'train.txt').write_text('\n'.join(training) + '\n', encoding='utf-8')
     yaml_path = destination / 'dataset.yaml'
@@ -529,6 +578,8 @@ def main():
     parser.add_argument('--page', type=int, default=0)
     parser.add_argument('--destination', type=Path)
     parser.add_argument('--frame-reviews', type=Path, action='append', default=[])
+    parser.add_argument('--extra-objects', type=Path, action='append', default=[],
+                        help='Reviewed object lists (confirmed-objects.json) merged into frames by id.')
     args = parser.parse_args()
     if args.action == 'inventory':
         inventory(args.output, args.roots)
@@ -541,7 +592,7 @@ def main():
     elif args.action == 'build':
         if args.destination is None:
             parser.error('build requires --destination')
-        build(args.output, args.destination, args.frame_reviews)
+        build(args.output, args.destination, args.frame_reviews, args.extra_objects)
     else:
         contact_sheet(args.output, args.label, args.page)
 

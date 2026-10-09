@@ -24,6 +24,8 @@ const scan = createScanController({ api, token: () => token, moving: () => movem
 const wiki = createWikiController({ api, token: () => token, map: () => current, save, dirty,
   busy: () => busy || saving || movement.running || Boolean(draft.length || gesture),
   sync: syncState, reload: () => openMap(current.id) });
+const connectivity = createConnectivityController({ api, token: () => token, map: () => current, doc: () => doc,
+  change, busy: () => busy || saving || movement.running });
 
 function element(name, attributes = {}, text) {
   const node = document.createElementNS(NS, name);
@@ -124,6 +126,7 @@ async function openMap(id) {
     const data = await api(`/api/map?${new URLSearchParams({ map: id })}`);
     await loadImage(imageURL(id, 'map.png'));
     current = data; doc = data.annotations; saved = snapshot();
+    connectivity.opened(data.connectivity);
     history = []; future = []; draft = []; selected = null; connectFrom = null; gesture = null;
     movement.reset();
     scan.mapOpened(data);
@@ -161,6 +164,7 @@ function syncState() {
   $('redo').disabled = !future.length || busy || movement.running;
   const minimum = ['polygon', 'road-polygon'].includes(tool) ? 3 : 2;
   $('finish').disabled = !['polyline', 'polygon', 'road-polygon'].includes(tool) || draft.length < minimum;
+  if (tool.startsWith('connectivity-')) $('finish').disabled = draft.length < 2;
   $('cancel').disabled = !draft.length && !connectFrom && !gesture;
   const hint = $('drawing-hint');
   hint.hidden = !draft.length && !connectFrom;
@@ -169,6 +173,7 @@ function syncState() {
   movement.sync();
   scan.sync();
   wiki.sync();
+  connectivity.sync();
   const tasks = [scan.running && '扫描中', movement.running && '小队移动中', wiki.running && 'Wiki 匹配中'].filter(Boolean);
   $('task-summary').textContent = tasks.join(' · ') || '当前无运行任务';
 }
@@ -202,6 +207,9 @@ function setTool(next) {
   }
   tool = next; connectFrom = null;
   if (roadTool()) { $('show-terrain').checked = true; selected = null; $('road-tools').open = true; }
+  if (next.startsWith('connectivity-')) {
+    $('show-connectivity').checked = true; $('connectivity-tools').open = true; selected = null;
+  }
   if (!['select', 'pan'].includes(next)) $('show-annotations').checked = true;
   for (const button of document.querySelectorAll('[data-tool]')) button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
   svg.dataset.tool = tool; movement.toolChanged(tool); renderGeometry(); syncState();
@@ -250,6 +258,17 @@ function addObject(type, points) {
 function finishDraft() {
   const minimum = ['polygon', 'road-polygon'].includes(tool) ? 3 : 2;
   if (draft.length < minimum) { message(`至少需要 ${minimum} 个不同的顶点。`, 'error'); return false; }
+  if (tool.startsWith('connectivity-')) {
+    const width = Number($('connectivity-width').value);
+    if (!Number.isInteger(width) || width < 8 || width > 160) {
+      message('分隔线宽度必须为 8～160 地图像素的整数。', 'error'); return false;
+    }
+    change(() => {
+      (doc.connectivity_edits ??= []).push({ id: uniqueId('cut'), operation: 'cut', points: draft.map(bounded), width });
+      draft = [];
+    });
+    message('连通修订已加入预览，Ctrl+S 保存；可按 Ctrl+Z 撤销。'); return true;
+  }
   if (tool === 'road-polygon') {
     change(() => { (doc.terrain_edits ??= []).push({ type: 'polygon', operation: roadOperation(), points: draft.map(bounded) }); draft = []; });
     message('已填充道路区域。Ctrl+Z 撤销，Ctrl+S 保存。'); return true;
@@ -325,6 +344,7 @@ function renderGeometry() {
   $('zoom').textContent = `${Math.round(view.scale * 100)}%`;
   for (const id of ['objects', 'connections', 'handles', 'draft']) $(id).replaceChildren();
   renderTerrain();
+  connectivity.draw(view.scale);
   movement.draw(view.scale);
   if (!doc || !$('show-annotations').checked) return;
   const z = view.scale;
@@ -504,6 +524,12 @@ svg.addEventListener('click', event => {
   if (!doc || busy || movement.running || space || event.button !== 0 || event.detail > 1) return;
   const p = localPoint(event);
   if (tool === 'move-target') { if (inside(p)) movement.select(bounded(p)); return; }
+  if (tool.startsWith('connectivity-') && inside(p)) {
+    const point = bounded(p);
+    if (!draft.some(q => q[0] === point[0] && q[1] === point[1])) draft.push(point);
+    renderGeometry(); syncState();
+    return;
+  }
   if (tool === 'road-polygon' && inside(p)) {
     const point = bounded(p);
     if (!draft.some(q => q[0] === point[0] && q[1] === point[1])) draft.push(point);
@@ -520,6 +546,7 @@ svg.addEventListener('click', event => {
   }
 });
 svg.addEventListener('dblclick', event => {
+  if (tool === 'connectivity-cut' && draft.length) { event.preventDefault(); finishDraft(); return; }
   if (['polyline', 'polygon', 'road-polygon'].includes(tool) && draft.length) { event.preventDefault(); finishDraft(); }
 });
 svg.addEventListener('wheel', event => {
@@ -537,6 +564,7 @@ async function save() {
     const result = await api('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Annotation-Token': token },
       body: JSON.stringify({ id: current.id, annotations: JSON.parse(content), revision: current.revision }) });
     current.revision = result.revision; saved = content;
+    current.connectivity = result.connectivity; connectivity.saved(result.connectivity);
     const stored = JSON.parse(content);
     message(`已保存 ${stored.objects.length} 个对象、${stored.connections.length} 条连接、${stored.terrain_edits?.length || 0} 笔道路修订。${result.backup ? '原文件已备份。' : ''}`, 'success');
     return true;

@@ -126,17 +126,17 @@ def wake_entry_arrow(session, observation, folder):
     raise AnchorUnresolved('多次唤醒短移后入口仍无箭头。')
 
 
-def calibrate(chapter, folder):
+def calibrate(chapter, folder, reuse=True):
     package = DEFAULT_MAPS_ROOT / f'chapter_{chapter:02}'
     metadata = json.loads((package / 'map.json').read_text('utf-8'))
     if chapter in (39, 40) or metadata.get('processing_3d') or metadata.get('coordinate_model'):
         return dict(status='skipped_nonflat', reason='Non-flat chapter excluded by task scope.')
     expected = binding(package)
     saved = local_package_dir(package) / 'movement_calibration/normal/flat_calibration.json'
-    if saved.exists():
+    if reuse and saved.exists():
         data = json.loads(saved.read_text('utf-8'))
         if data.get('binding') == expected and data.get('status') == 'validated':
-            return dict(status='reused', calibration=str(saved), validation_max_px=data['validation_max_px'])
+            return dict(status='reused', calibration=str(saved), validation_max_px=data.get('validation_max_px'))
     with np.load(package / 'source/map_data.npz') as cache:
         ys, xs = np.nonzero(cache['terrain_probability'] >= .5)
     request = dict(package=str(package), chapter=chapter, difficulty='normal', action='move',
@@ -300,6 +300,8 @@ def main():
     parser.add_argument('--end', type=int, default=1, help='最后处理的章节（包含），单章测试请与 --start 相同')
     parser.add_argument('--output', type=Path, default=ROOT / 'log/chapter_calibration',
                         help='进度、截图、样本和 STOP 文件所在目录')
+    parser.add_argument('--no-reuse', action='store_true',
+                        help='忽略已有验证标定，强制重新采集（用于补充场景帧样本）')
     args = parser.parse_args()
     if not 1 <= args.end <= args.start <= 48:
         parser.error('Expected 1 <= end <= start <= 48.')
@@ -322,15 +324,24 @@ def main():
             results.append(record)
             write_progress(progress_path, results)
             emit(chapter=chapter, status='starting')
-            try:
-                record.update(calibrate(chapter, folder))
-            except KeyboardInterrupt:
-                record.update(status='cancelled')
-                write_progress(progress_path, results)
-                raise
-            except Exception as error:
-                record.update(status='failed', reason=f'{type(error).__name__}: {error}')
-                (folder / 'error.txt').write_text(traceback.format_exc(), encoding='utf-8')
+            focus_retries = 0
+            while True:
+                try:
+                    record.update(calibrate(chapter, folder, reuse=not args.no_reuse))
+                    break
+                except KeyboardInterrupt:
+                    record.update(status='cancelled')
+                    write_progress(progress_path, results)
+                    raise
+                except Exception as error:
+                    if 'focus' in str(error).lower() and focus_retries < 3:
+                        focus_retries += 1
+                        emit(chapter=chapter, status='focus_retry', attempt=focus_retries)
+                        time.sleep(30)
+                        continue
+                    record.update(status='failed', reason=f'{type(error).__name__}: {error}')
+                    (folder / 'error.txt').write_text(traceback.format_exc(), encoding='utf-8')
+                    break
             write_progress(progress_path, results)
             emit(**record)
             if chapter > args.end:
@@ -339,6 +350,15 @@ def main():
                 except (ValueError, RuntimeError, OSError) as error:
                     record['transition_error'] = f'{type(error).__name__}: {error}'
                     write_progress(progress_path, results)
+                    if 'focus' in str(error).lower():
+                        emit(chapter=chapter, status='transition_focus_retry')
+                        time.sleep(30)
+                        try:
+                            transition(chapter, model, folder)
+                            continue
+                        except (ValueError, RuntimeError, OSError) as retry_error:
+                            record['transition_error'] = f'{type(retry_error).__name__}: {retry_error}'
+                            write_progress(progress_path, results)
                     raise
     emit(status='batch_finished', end_chapter=args.end)
 

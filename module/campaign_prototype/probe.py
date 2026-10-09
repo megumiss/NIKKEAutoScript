@@ -35,6 +35,10 @@ def jacobian(matrix, point):
                             for step in np.eye(2)])
 
 
+class NoConnectedRoad(RuntimeError):
+    """两点各自可定位到道路，但道路网格之间不连通。"""
+
+
 class Localizer:
     def __init__(self):
         """读取合格地图包、道路和目标，核对配套场景标定。
@@ -48,6 +52,8 @@ class Localizer:
         self.matrix = self.package.projection
         self.size = self.package.warp_size
         self.road = (self.package.terrain >= .5).astype(np.float32)
+        from dev_tools.map_connectivity import decode_labels
+        self.route_labels = decode_labels(self.package.connectivity['effective'], self.road[::8, ::8].shape)
         self.old_matrix = self.package.old_projection
         if not np.allclose(goto.A_INV, self.package.field_inverse):
             raise ValueError('Field calibration differs from the prototype')
@@ -126,7 +132,8 @@ class Localizer:
         start、target 使用地图像素，先吸附到具备净空的 8px 网格节点，再运行八邻域 A*。
         返回局部可直达 waypoint 和完整网格路径；无连通路或无有效节点时失败，二维连通不证明跨层可通行。
         """
-        if not np.isfinite([*start, *target]).all():
+        start, target = np.asarray(start, float), np.asarray(target, float)
+        if start.shape != (2,) or target.shape != (2,) or not np.isfinite([*start, *target]).all():
             raise ValueError('Nonfinite route coordinate')
         for point in (start, target):
             if np.any(np.asarray(point) < 0) or np.any(np.asarray(point) >= self.road.shape[::-1]):
@@ -134,12 +141,20 @@ class Localizer:
         step = 8
         clearance = cv2.distanceTransform(self.road.astype(np.uint8), cv2.DIST_L2, 5)
         grid = clearance[::step, ::step]
+        labels = getattr(self, 'route_labels', None)
+        blocked = np.zeros(grid.shape, bool)
+        if labels is not None:
+            blocked = (grid > 6) & (labels == 0)
+            grid = grid.copy()
+            grid[labels == 0] = 0
         ys, xs = np.nonzero(grid > 6)
         nodes = np.column_stack([xs, ys])
         if not len(nodes):
             raise RuntimeError('No traversable road nodes')
         nearest = lambda point: tuple(nodes[np.argmin(np.linalg.norm(nodes*step-point, axis=1))])
         source, goal = nearest(start), nearest(target)
+        if labels is not None and labels[source[1], source[0]] != labels[goal[1], goal[0]]:
+            raise NoConnectedRoad('No connected road route')
         queue = [(0., source)]
         costs, parents = {source: 0.}, {}
         while queue:
@@ -159,7 +174,7 @@ class Localizer:
                 costs[node], parents[node] = cost, current
                 heapq.heappush(queue, (cost + np.hypot(x-goal[0], y-goal[1]), node))
         if goal not in costs:
-            raise RuntimeError('No connected road route')
+            raise NoConnectedRoad('No connected road route')
         path, node = [goal], goal
         while node != source:
             node = parents[node]
@@ -168,7 +183,8 @@ class Localizer:
         waypoint = path[0]
         for candidate in [*path, target]:
             line = np.rint(np.linspace(start, candidate, max(2, int(np.linalg.norm(candidate-start))))).astype(int)
-            if np.linalg.norm(candidate - start) > 100 or np.any(clearance[line[:, 1], line[:, 0]] < .5):
+            if (np.linalg.norm(candidate - start) > 100 or np.any(clearance[line[:, 1], line[:, 0]] < .5)
+                    or np.any(blocked[line[:, 1] // step, line[:, 0] // step])):
                 break
             waypoint = candidate
         return waypoint, path

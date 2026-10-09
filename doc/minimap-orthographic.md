@@ -43,10 +43,6 @@ Wiki 的 `MapMatcher` 根据 `coordinate_model` 选择平面或分层定位器�
 
 ## 验证边界
 
-```powershell
-.venv\Scripts\python.exe -m unittest tests.test_surface_geometry tests.test_surface_localizer tests.test_surface_motion
-```
-
 检查每个表面与相机的正反投影、来源哈希和地图绑定，再用独立截图复核表面身份与定位。
 未参与取色的帧若参与过模型拟合，就不能作为独立几何验证；道路并集 IoU 也可能掩盖重复表面。
 `navigation_ready=false` 的包不能仅凭预览平滑或回投可逆声明导航可用。

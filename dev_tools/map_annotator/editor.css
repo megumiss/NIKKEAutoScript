@@ -155,3 +155,7 @@ kbd { font-family: inherit; font-size: 11px; opacity: .7; white-space: nowrap; }
   #map-status { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.connectivity-edit { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 6px 0; }
+.connectivity-edit span { min-width: 0; font-size: 12px; }
+.connectivity-edit button { flex: 0 0 auto; min-height: 32px; }
+#connectivity-tools .tools { grid-template-columns: 1fr; }

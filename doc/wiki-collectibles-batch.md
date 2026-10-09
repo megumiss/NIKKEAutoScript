@@ -84,11 +84,5 @@ python dev_tools/minimap_chapters.py --start 34 --end 1 --stroke-px 120 --keyfra
 
 ## 验证
 
-离线回归覆盖解析变体、幂等导入、人工修改保护、哈希变化、缺失圆环、失败续跑、停止及写盘失败时释放：
-
-```powershell
-.venv\Scripts\python.exe -m unittest tests.test_wiki_collectibles tests.test_wiki_minimap_crop tests.test_map_wiki tests.test_minimap_chapters
-```
-
 真实采集需核对章节切换、道路覆盖和导出包；匹配需核对普通／困难来源及目标坐标。
-回归中的合成地图不能代替全章节采集或游戏内到点验证。
+合成地图不能代替全章节采集或游戏内到点验证。

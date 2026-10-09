@@ -65,13 +65,6 @@ ROI 点到地图的换算为：
 整图还需核对远隔重访帧、跨方向观测、层间接缝及真实移动。
 `roads_exhausted` 也不证明全部相机域已经覆盖。
 
-合成回归覆盖双高度共同坐标、不同道路位移、坡道与离群深度、跨层插值保护、
-空白视野反证和原始数据保护。运行：
-
-```powershell
-.venv\Scripts\python.exe -m unittest tests.test_minimap_layered tests.test_minimap_surface_fit -v
-```
-
 ## 离线重建与修订工具
 
 以下工具从本地缓存生成新包，输出目录必须尚不存在；输入地图、原始帧和人工标注应保留。
@@ -109,11 +102,7 @@ Wiki 图先配准到原始帧，再组合 `query_to_map = roi_to_map @ query_to_
 目标必须有同一表面的局部证据；人工道路修订通过 `annotations.json.terrain_edits` 消费。
 已保存有效局部标定的 `local_parallax` 包可进行同层移动测试，详见[地图标注说明](map-annotation.md)。
 
-### 回归与现场检查
-
-```powershell
-.venv\Scripts\python.exe -m unittest tests.test_minimap_reference tests.test_minimap_repair tests.test_minimap_surface_repair tests.test_minimap_region_redraw tests.test_local_projection
-```
+### 现场检查
 
 核对来源颜色、ROI 回投、输入哈希及未绘制区域是否保持一致，再检查远隔重访轮廓、层间接缝与真实道路。
 多组验证帧若共享拟合相机和高度先验，属于一致性检查，不能替代独立几何或游戏内移动验证。

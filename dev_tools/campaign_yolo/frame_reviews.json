@@ -2406,7 +2406,7 @@
     {
       "id": "70eb2e75c7fbc69c0b9e",
       "pixel_sha256": "70eb2e75c7fbc69c0b9ede80b109a16c86b2f972ce6c02cabc3f3eb331dcdcc6",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/70eb2e75c7fbc69c0b9e.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\70eb2e75c7fbc69c0b9e.png",
       "aliases": [],
       "source_origin": "data/chapter_maps/batch_retry/chapter_28/source/chapter_verified.png",
       "parent": "4fe9833d95ba70befe8b",
@@ -2455,7 +2455,7 @@
     {
       "id": "635851157886de6c023d",
       "pixel_sha256": "635851157886de6c023dd50c1c521b7a48f9f044e296628410257d1b1654458d",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/635851157886de6c023d.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\635851157886de6c023d.png",
       "aliases": [],
       "source_origin": "data/chapter_maps/current/chapter_12/source/chapter_verified.png",
       "parent": "59057a355a08d98dc6b4",
@@ -2504,7 +2504,7 @@
     {
       "id": "0c04b7962db2c53176d8",
       "pixel_sha256": "0c04b7962db2c53176d81767333fe081e99f15089a74a8620f62eaa3af8e67c4",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/0c04b7962db2c53176d8.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\0c04b7962db2c53176d8.png",
       "aliases": [],
       "source_origin": "data/chapter_maps/current/chapter_18/source/chapter_verified.png",
       "parent": "eba443412b5b63371cc1",
@@ -2553,7 +2553,7 @@
     {
       "id": "a20a407f6b7166770236",
       "pixel_sha256": "a20a407f6b7166770236aa7ae398aec88afb84fe7385dac640c721a0141dfd0b",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/a20a407f6b7166770236.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\a20a407f6b7166770236.png",
       "aliases": [],
       "source_origin": "data/chapter_maps/current/chapter_33/source/chapter_verified.png",
       "parent": "206f23da1306469bdb11",
@@ -2602,7 +2602,7 @@
     {
       "id": "55aaaf3aa67be8b39787",
       "pixel_sha256": "55aaaf3aa67be8b39787bf8ef485b091f4eb79bc5a3f7a078cb1895f9b45cb9b",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/55aaaf3aa67be8b39787.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\55aaaf3aa67be8b39787.png",
       "aliases": [],
       "source_origin": "data/chapter_maps/current/chapter_43/source/chapter_verified.png",
       "parent": "b30dbc530217acd742c5",
@@ -2651,7 +2651,7 @@
     {
       "id": "8a500dbd6c3232f3cf2c",
       "pixel_sha256": "8a500dbd6c3232f3cf2cd2028d3f6fa4e9911d91cafc16e90441295742c7c20d",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/8a500dbd6c3232f3cf2c.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\8a500dbd6c3232f3cf2c.png",
       "aliases": [],
       "source_origin": "data/chapter_maps/current/chapter_47/source/chapter_verified.png",
       "parent": "4195d957ede9f2396ac9",
@@ -2700,7 +2700,7 @@
     {
       "id": "78760b12012e9c1d564e",
       "pixel_sha256": "78760b12012e9c1d564e5bac7525bb2610e64fc1be9f0130cae1ce49b70d2a82",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/78760b12012e9c1d564e.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\78760b12012e9c1d564e.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_004.png",
       "parent": "53b562de7fe6f9b6e143",
@@ -2747,7 +2747,7 @@
     {
       "id": "176af5b94936cd723921",
       "pixel_sha256": "176af5b94936cd7239212736d116d4488f171eddecbcb5f1e515ab2bcb0b70f4",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/176af5b94936cd723921.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\176af5b94936cd723921.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_006.png",
       "parent": "e3f676696d855276efd7",
@@ -2804,7 +2804,7 @@
     {
       "id": "aa3548e35e6ec7fa04bc",
       "pixel_sha256": "aa3548e35e6ec7fa04bccf078d34fb242fc690666612492da30654dcc7bd9605",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/aa3548e35e6ec7fa04bc.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\aa3548e35e6ec7fa04bc.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_009.png",
       "parent": "e0cf321a66d690d2bb84",
@@ -2861,7 +2861,7 @@
     {
       "id": "a6acf6ee23d6c11f52c0",
       "pixel_sha256": "a6acf6ee23d6c11f52c06b44fd8117d2675bbdc6a6a068b6d36364d561ef8a95",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/a6acf6ee23d6c11f52c0.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\a6acf6ee23d6c11f52c0.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/1188a4fe89faa7c4bca42927/field_011.png",
       "parent": "9035cb8ed76314c502bf",
@@ -2918,7 +2918,7 @@
     {
       "id": "df35608bc6eea14c958d",
       "pixel_sha256": "df35608bc6eea14c958deb913ebaa48bbd6c0b9d5d12ae735444f5e01c85e6d1",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/df35608bc6eea14c958d.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\df35608bc6eea14c958d.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/55293f750d98beca2719769b/field_003.png",
       "parent": "87c0dc249dc6ac258e7c",
@@ -2965,7 +2965,7 @@
     {
       "id": "d3fa659d3a3be85f2c1c",
       "pixel_sha256": "d3fa659d3a3be85f2c1cf934068037f4fa418881272d7cf216ad022438cb325f",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/d3fa659d3a3be85f2c1c.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\d3fa659d3a3be85f2c1c.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/63a8d92c9a084243fbd9e0f1/field_005.png",
       "parent": "504b027f99394ae45b6a",
@@ -3012,7 +3012,7 @@
     {
       "id": "8f53f2acd10f2fef5146",
       "pixel_sha256": "8f53f2acd10f2fef5146155dbac319d9bd74f749d4362d0680cf5d667f433847",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/8f53f2acd10f2fef5146.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\8f53f2acd10f2fef5146.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_001.png",
       "parent": "967d3cecc671f4e68358",
@@ -3069,7 +3069,7 @@
     {
       "id": "5ea36d5fb9628d08d666",
       "pixel_sha256": "5ea36d5fb9628d08d6668a09b7250e1c9e4280716ab10eb1b3cf4d2341b3b088",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/5ea36d5fb9628d08d666.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\5ea36d5fb9628d08d666.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_004.png",
       "parent": "177c1f9c649e7ba1018e",
@@ -3126,7 +3126,7 @@
     {
       "id": "1d24399fce5902780dd6",
       "pixel_sha256": "1d24399fce5902780dd6ae711667afd3ea60ebd1b359e39f0f257b4e81f0a415",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/1d24399fce5902780dd6.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\1d24399fce5902780dd6.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/e4e6069c230e371619b4ad36/field_005.png",
       "parent": "8ddecd1bb6fd5df36f94",
@@ -3173,7 +3173,7 @@
     {
       "id": "b9daf322b6714d24f1b8",
       "pixel_sha256": "b9daf322b6714d24f1b8a5ab37c18e28353ad855a173aba45466d7309ca7b3af",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/b9daf322b6714d24f1b8.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\b9daf322b6714d24f1b8.png",
       "aliases": [],
       "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_12/field_003.png",
       "parent": "c095b0877147a95d6a91",
@@ -3222,7 +3222,7 @@
     {
       "id": "1d6b33497991b12fb8ec",
       "pixel_sha256": "1d6b33497991b12fb8ec5b06e574b0ec83fe01d388bd47006c6cb014130ada67",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/1d6b33497991b12fb8ec.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\1d6b33497991b12fb8ec.png",
       "aliases": [],
       "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_18/field_003.png",
       "parent": "7ae1b4d47872c501a8d9",
@@ -3271,7 +3271,7 @@
     {
       "id": "e33a02de1a32fccff3a6",
       "pixel_sha256": "e33a02de1a32fccff3a6c31765aa6c8f17e6dbfe5f6a9857a62f0fcafcdc04ab",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/e33a02de1a32fccff3a6.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\e33a02de1a32fccff3a6.png",
       "aliases": [],
       "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_28/field_003.png",
       "parent": "ac5f67f3742416742a3b",
@@ -3320,7 +3320,7 @@
     {
       "id": "1eb247131dbb8d6f0c6c",
       "pixel_sha256": "1eb247131dbb8d6f0c6c5f561d6d435b9f60af97726494919f99e1f27a858fc0",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/1eb247131dbb8d6f0c6c.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\1eb247131dbb8d6f0c6c.png",
       "aliases": [],
       "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_46/after.png",
       "parent": "41df3a64c0376e9975fc",
@@ -3369,7 +3369,7 @@
     {
       "id": "57a684479d5904276f96",
       "pixel_sha256": "57a684479d5904276f965140a13956e2d23a36aa594a7f36bfa41d58ba728b03",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/57a684479d5904276f96.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\57a684479d5904276f96.png",
       "aliases": [],
       "source_origin": "log/chapter_calibration_20261001/chapter_43/1790850589031042900/sample_01_before.png",
       "parent": "331e1a395c0672c31c33",
@@ -3418,7 +3418,7 @@
     {
       "id": "1f4c043d1f4fc3931f0e",
       "pixel_sha256": "1f4c043d1f4fc3931f0e7cbef5d49d18b883b0846409af3b2666f3198bbf1e41",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/1f4c043d1f4fc3931f0e.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\1f4c043d1f4fc3931f0e.png",
       "aliases": [],
       "source_origin": "log/chapter_calibration_20261001/chapter_47/diagnostic/reference.png",
       "parent": "2a186375c773b6fbc5e9",
@@ -3467,7 +3467,7 @@
     {
       "id": "80fe592b2e80d2a46867",
       "pixel_sha256": "80fe592b2e80d2a4686727cfa0d5aae58796e77c6d1adef90e09fb40a7f7823b",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/80fe592b2e80d2a46867.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\80fe592b2e80d2a46867.png",
       "aliases": [],
       "source_origin": "tmp/ch33_calibration_test/initial.png",
       "parent": "367d01013aa10124d791",
@@ -5931,7 +5931,7 @@
     {
       "id": "43629ee69216977b8ad9",
       "pixel_sha256": "43629ee69216977b8ad9df754afb0ee5d0edc9df7b3e23383d39fa21a564871a",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/43629ee69216977b8ad9.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\43629ee69216977b8ad9.png",
       "aliases": [],
       "source_origin": "data/chapter_maps/history/before_formal_01_48_20261001/chapter_40/attempts/1790702498962762300/chapter_verified.png",
       "parent": "e2029a59dfb75700b972",
@@ -5992,7 +5992,7 @@
     {
       "id": "796b3acd75de3f46b726",
       "pixel_sha256": "796b3acd75de3f46b726b49ad9dac53933960d09925b4e03391f999d31dcd7d6",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/796b3acd75de3f46b726.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\796b3acd75de3f46b726.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t14_move_t020.png",
       "parent": "09f039edd4b3400c54c4",
@@ -6053,7 +6053,7 @@
     {
       "id": "b1991f1b57ea64ff522c",
       "pixel_sha256": "b1991f1b57ea64ff522c69c351708b853614541308d2ba2af72e3097a08a17a4",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/b1991f1b57ea64ff522c.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\b1991f1b57ea64ff522c.png",
       "aliases": [],
       "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_26/field_003.png",
       "parent": "4f349984af033cff3953",
@@ -6114,7 +6114,7 @@
     {
       "id": "cc0ff8c24cc82282bb8c",
       "pixel_sha256": "cc0ff8c24cc82282bb8ca008138e7049e7ce39f0088f8bbe837ba8f0b8b9017f",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/cc0ff8c24cc82282bb8c.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\cc0ff8c24cc82282bb8c.png",
       "aliases": [],
       "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_31/field_001.png",
       "parent": "be89b6deb157d84446b0",
@@ -6175,7 +6175,7 @@
     {
       "id": "e0cb35333f5aae8f0ea2",
       "pixel_sha256": "e0cb35333f5aae8f0ea2f4d694e19c01128de5f886efd730416b92248d0f321a",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/e0cb35333f5aae8f0ea2.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\e0cb35333f5aae8f0ea2.png",
       "aliases": [],
       "source_origin": "log/chapter_calibration_20261001/chapter_44/1790850509140650500/anchor_unresolved.png",
       "parent": "e956a353b4074f884914",
@@ -6236,7 +6236,7 @@
     {
       "id": "f66a108011e68a414cbc",
       "pixel_sha256": "f66a108011e68a414cbc1929c232a71787b557292e294fef729f02225d32a5a8",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/f66a108011e68a414cbc.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\f66a108011e68a414cbc.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t09_pan03_field.png",
       "parent": "9be0579b56690888563a",
@@ -6270,7 +6270,7 @@
     {
       "id": "557819e54d4bc4ad9118",
       "pixel_sha256": "557819e54d4bc4ad9118f8527c53ca1527690d486903846d7bf58f913a4f0310",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/557819e54d4bc4ad9118.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\557819e54d4bc4ad9118.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t09_pan07_before.png",
       "parent": "5a320bfc0940bae592a7",
@@ -6304,7 +6304,7 @@
     {
       "id": "560745b93038532b6328",
       "pixel_sha256": "560745b93038532b632847ca8f17ce27eed441576512c672cf7fcc2a15f13f46",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/560745b93038532b6328.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\560745b93038532b6328.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/manual_movement/34383e503d2ea233b6889b93/camera_003_field.jpg",
       "parent": "cc1f84dfe1ffae0860e6",
@@ -6348,7 +6348,7 @@
     {
       "id": "6934c6d17b0028098f53",
       "pixel_sha256": "6934c6d17b0028098f53aafcbf931d7f6bfba8410ef016d5e23e231c21e60ce7",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/6934c6d17b0028098f53.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\6934c6d17b0028098f53.png",
       "aliases": [],
       "source_origin": "tmp/arrow_anchor_probe/orange/field.png",
       "parent": "425adcca8225f9c13bf8",
@@ -6407,7 +6407,7 @@
     {
       "id": "cab10c31e62a7c075f91",
       "pixel_sha256": "cab10c31e62a7c075f91b08a62d88813ad934d44e065a591dcb2d5c61bbe0512",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/cab10c31e62a7c075f91.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\cab10c31e62a7c075f91.png",
       "aliases": [],
       "source_origin": "data/chapter_maps/batch_retry/chapter_34/attempts/1790693950975786000/chapter_verified.png",
       "parent": "ff0146af51153a2d0bd4",
@@ -6457,7 +6457,7 @@
     {
       "id": "546af37dc0c3a8bdd388",
       "pixel_sha256": "546af37dc0c3a8bdd388bfda92fd4788c1e4b4b8f707b015eabf6ddd0c1f5910",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/546af37dc0c3a8bdd388.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\546af37dc0c3a8bdd388.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t09_move_field.png",
       "parent": "0b0c7ea449f8ac4a16f9",
@@ -6507,7 +6507,7 @@
     {
       "id": "c5635a6b7ed4432bcd63",
       "pixel_sha256": "c5635a6b7ed4432bcd63a1acc809139bb061c4c30d9d24006615a910fb111b95",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/c5635a6b7ed4432bcd63.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\c5635a6b7ed4432bcd63.png",
       "aliases": [],
       "source_origin": "log/campaign_prototype/chapter_34_random_20260929/t14_pan02_before.png",
       "parent": "701783fd560ff59728b1",
@@ -6557,7 +6557,7 @@
     {
       "id": "c8910000b871591b842b",
       "pixel_sha256": "c8910000b871591b842bbc741bc837ca06beed5e186febd504525d50be9aa60a",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/c8910000b871591b842b.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\c8910000b871591b842b.png",
       "aliases": [],
       "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_04/before.png",
       "parent": "42c176e07ec3fee80e7b",
@@ -6607,7 +6607,7 @@
     {
       "id": "d36f30c9f597a1e427be",
       "pixel_sha256": "d36f30c9f597a1e427be49a809102916c1a8a88b56008d9e7effdf21c6df1e50",
-      "source": "E:/CodexData/NIKKEAutoScript/yolo/dataset/client_maps/d36f30c9f597a1e427be.png",
+      "source": "E:\\CodexData\\NIKKEAutoScript\\yolo\\data\\raw\\legacy\\client_maps\\d36f30c9f597a1e427be.png",
       "aliases": [],
       "source_origin": "log/chapter_maps/goal_01_48_20261001/movement/chapter_34/field_003.png",
       "parent": "5485831adb035fb05ac3",

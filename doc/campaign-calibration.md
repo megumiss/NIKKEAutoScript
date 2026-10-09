@@ -1,7 +1,6 @@
-# 战役地图标定脚本与测试步骤
+# 战役地图标定操作
 
 本文整理普通平面章节的小地图／主场景位移标定入口、复测步骤与验收条件。
-采集器由最近四个会话使用的脚本整理而来；数据与现场结果核对日期为 2026-10-01。
 
 ## 适用范围与结果含义
 
@@ -19,51 +18,27 @@
 
 | 入口／模块 | 用途与边界 |
 | --- | --- |
-| [dev_tools/campaign_calibrate.py](../dev_tools/campaign_calibrate.py) | 本次整理的采集入口；指定起止章节和输出目录，保存进度、截图、样本及通过的标定。会移动小队并切换章节。 |
+| [dev_tools/campaign_calibrate.py](../dev_tools/campaign_calibrate.py) | 批量采集入口；指定起止章节和输出目录，保存进度、截图、样本及通过的标定。会移动小队并切换章节。 |
 | [dev_tools/minimap_chapters.py](../dev_tools/minimap_chapters.py) | 提供章节 OCR、切章等待、进度写入；其独立命令用于地图扫描，不是点击位移标定入口。 |
 | [prepare_package.py](../module/campaign_prototype/prepare_package.py) | 从静态地图导出独立实验包，绑定共享标定与文件哈希；只处理本地数据。 |
 | [check_controls.py](../module/campaign_prototype/check_controls.py) | `--cycles 0` 截图检查；`1..10` 次展开／收回检查，不移动小队。仍会取得游戏输入控制。 |
-| [manual_move.py](../module/campaign_prototype/manual_move.py) | `prepare` 和 `GameSession` 负责快照、身份检查、定位、点击及停稳；其 `action=calibrate` 用于分层地图，平面批量标定走上面的新入口。 |
+| [manual_move.py](../module/campaign_prototype/manual_move.py) | `prepare` 和 `GameSession` 负责快照、身份检查、定位、点击及停稳；其 `action=calibrate` 用于分层地图，平面批量标定使用上述采集入口。 |
 | [arrow_anchor.py](../module/campaign_prototype/arrow_anchor.py)、[movement_feedback.py](../module/campaign_prototype/movement_feedback.py) | 箭头周期采样与地面锚点恢复；本采集器传入 `allow_scene=False`，必须获得箭头锚点。 |
 | [camera_navigation.py](../module/campaign_prototype/camera_navigation.py) | 场景投影、有效落点与紧凑小地图停稳检测。 |
 | [surface_motion.py](../module/campaign_prototype/surface_motion.py) | `fit_calibration` 执行两轴拟合、独立样本验证和支持域检查，可离线运行。 |
 
-历史入口保留在本机，不作为后续修改入口：
-
-- `log/chapter_calibration_20261001/calibrate_chapters.py`：原批次。
-- `log/chapter_calibration_restart_20261001/calibrate_chapters.py`：最新重启批次，本次迁移来源。
-  来源文件 SHA-256：`1adfece5a7b23c2e124783a56f70009df0bff0ce1da469adca8f8f570bffa03a`。
-
-整理后的脚本只调整仓库根目录解析、命令说明及 `--output`，沿用来源脚本的采样和验收流程。
-历史 `log/`、本地 `data/` 和 `tmp/` 不随 Git 分发；新克隆仓库需另行准备地图和模型。
-
-## 测试顺序
+## 操作顺序
 
 以下 PowerShell 命令从仓库根目录执行。使用已有 `.venv`，无需重复安装依赖。
 现场步骤需要可用的项目输入驱动，以及本地 OCR 模型 `bin/paddleocr/PP-OCRv5_mobile_rec_infer`。
 先退出其他移动／扫描任务，进入与 `--start` 对应的普通章节道路页面，保持游戏前台且客户区完整可见。
 采样期间不要拖动窗口或抢占输入；道路应有两轴活动空间，小队箭头不被收集品提示、角色或弹窗遮挡。
 
-### 1. 离线入口与核心回归
+### 1. 检查入口
 
 ```powershell
-.venv\Scripts\python.exe -m py_compile dev_tools/campaign_calibrate.py
 .venv\Scripts\python.exe -X utf8 dev_tools/campaign_calibrate.py --help
-.venv\Scripts\python.exe -m unittest discover -s tests -p test_surface_motion.py
-.venv\Scripts\python.exe -m unittest discover -s tests -p test_arrow_anchor.py
-.venv\Scripts\python.exe -m unittest discover -s tests -p test_camera_navigation.py
-.venv\Scripts\python.exe -m unittest discover -s tests -p test_movement_feedback.py
 ```
-
-| 回归文件 | 需要保障的行为 |
-| --- | --- |
-| `tests/test_surface_motion.py` | 留出坏样本、单轴样本、支持域外验证点和不同表面混用应拒绝。 |
-| `tests/test_arrow_anchor.py` | 箭头颜色／尺寸／位置、动画周期、漏检与歧义处理正确。 |
-| `tests/test_camera_navigation.py` | 镜头规划与小队位置变化处理、停稳判断等公共导航行为。 |
-| `tests/test_movement_feedback.py` | 小地图与静态地面证据、箭头恢复和目标提示处理。 |
-
-这些回归不会取得游戏控制。相关输入没有变化且检查已通过时无需重复运行。
-本地截图回放与数学拟合通过，仍需下面的现场采样才能证明该章节的点击映射有效。
 
 ### 2. 地图包与控件预检查
 
@@ -184,61 +159,3 @@ Remove-Item -LiteralPath log/chapter_calibration_run_01/STOP
 同一输出目录会追加进度，并为每次尝试生成新时间戳目录；不会从未完成的第几个样本继续拟合。
 不要以进程退出码 0 或 `batch_finished` 作为通过依据：采集器会捕获单章失败后正常结束循环，
 必须检查 `progress.json` 的逐章状态和正式标定文件。
-
-## 已有证据与复测起点
-
-最近四个会话依次为：
-
-- `01a0f68f-e451-7661-ba45-bc405bd99cb5`：48→1 标定要求，并确认可跳过 39、40 等非平面地图。
-- `01a0f6cf-f12a-7a43-b00d-41e7499c7fe1`：批量采集脚本与原批次执行记录。
-- `01a0f71f-6dd6-7653-9d4e-fa6a91d8f924`：从 48 章重启的执行记录。
-- `01a0f7a4-13eb-7e90-898e-b7105f63f2cf`：当前来源脚本和最新一次采样证据。
-
-### 2026-10-03 大批量结果（log/chapter_calibration_run_01）
-
-截至 2026-10-03 晚，46 个平面章节统一使用共识标定（`method=consensus_median_of_33_validated_chapters`）：
-取当天 33 个实测 validated 章矩阵的逐元素中位数，support 为各章 support 的包络盒，偏置范数 1.53px。
-这是按任务决定（2026-10-03）的统一覆盖：33 个实测文件已按惯例改名保留为
-`flat_calibration_1791036196359356100.json`（各章目录内），`log/chapter_calibration_run_01/` 保留全部实测证据。
-共识矩阵在 33 个已标定章的全部样本上误差为：max 中位 6.91px、P90 10.68px、最差 12.32px（ch42）；mean 中位 3.80px。
-注意文件 `status=validated` 仅代表"统一生效、批次复用跳过"，仅 33 章有现场测量（`measured_on_site=false` 标注）。
-
-当天实测过程中未通过的 13 章及归类（统一覆盖前的历史记录）：
-
-| 归类 | 章节 | 说明 |
-| --- | --- | --- |
-| 垂直样本退化 | 45、20 | 垂直点击 `(0,±25)`、`(0,10)` 在这些章的镜头几何下地图位移恒低于 2 像素门槛，第 5/6/9 个样本必然失败，与站位无关。 |
-| 采样测量离群 | 36 | 两次 9 样本齐全，但第 3、5 个训练样本系统性离群（训练误差 9~15px，限 6），疑似特定点击方向的镜头回正修正失真。 |
-| 地面不平拟合差 | 26 | 训练误差普遍 5~9px、验证 8.75px，略超线；沙漠起伏地面，仿射模型整体贴合差。 |
-| 漂移出界 | 16、32 | 9 样本轨迹的净漂移把小队推出小广场；32 还叠加调查触发点和大振幅箭头。 |
-| 未人工复核 | 15、14、13、10、7、5、2 | 多为入口台座（橙环隐藏箭头）或同类轨迹问题，可按 42/34/31/21 的人工流程逐章处理。 |
-
-人工补跑流程（本章已多次验证）：`tmp/goto_chapter.py N` 切章 → 截图确认小队状态
-（橙环台座就向开阔路盲点一步唤醒箭头）→ 离线净空分析选广场 →
-`module.campaign_prototype.manual_move` 预导航或手动盲点到位 →
-`dev_tools/campaign_calibrate.py --start N --end N` 单章执行。
-漂移类失败先读最新 `observations.json` 的净漂移方向，把小队放到广场逆漂移侧边缘再跑。
-
-历史记录：截至 2026-10-01 核对时，正式地图目录内没有 `flat_calibration.json`。
-原批次进度覆盖 48～43 章的 8 次失败尝试，原因包括箭头不可用、停稳超时和失焦；
-重启批次有第 48 章的两次失败尝试。未运行章节不能记为通过或已跳过。
-
-最近一次运行证据为：
-
-```text
-log/chapter_calibration_restart_20261001/run_48_resume.log
-log/chapter_calibration_restart_20261001/progress.json
-log/chapter_calibration_restart_20261001/chapter_48/1790862630044577500/
-```
-
-该次已经通过开阔道路移位与箭头采样，`samples.json` 中有 **1 个完整样本**。
-第 2 次采样点击为客户区 `(851, 479)`，随后等待停稳超时，未写入第二个完整样本，也没有发布新标定。
-后续应先复核第 48 章停稳路径，再完成单章 6+3 样本；不能从“地图已完整”推断剩余章节标定完成。
-
-相关真实截图回放与实机复核位置：
-
-- [第 48 章偏离中央的箭头](../tests/fixtures/squad_arrow/ch48_shifted_scene.md)：偏离中央、白／橙箭头、遮挡和歧义。
-- [第 48 章移动反馈](../tests/fixtures/movement_feedback/README.md)：紧凑小地图圆环与收集品提示。
-- [镜头导航回放](../tests/fixtures/camera_navigation/README.md)：小队位置变化、远点与镜头边界。
-
-这些记录主要来自中文 `1776×999` 客户区；不能推广为其他语言、尺寸或整章移动已验收。

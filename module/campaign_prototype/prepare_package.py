@@ -32,6 +32,8 @@ def main():
         candidate = Path(temporary) / 'package'
         (candidate / 'source').mkdir(parents=True)
         names = ('map.json', 'map.png', 'annotations.json', 'source/map_data.npz')
+        if (args.source / 'connectivity.json').exists():
+            names += ('connectivity.json',)
         for name in names:
             shutil.copyfile(args.source / name, candidate / name)
         shutil.copyfile(args.calibration, candidate / 'calibration.json')

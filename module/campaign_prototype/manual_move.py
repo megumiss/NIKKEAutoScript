@@ -59,6 +59,8 @@ def prepare(request, folder):
     destination = folder / 'map'
     (destination / 'source').mkdir(parents=True)
     names = ('map.json', 'map.png', 'annotations.json', 'source/map_data.npz')
+    if (source / 'connectivity.json').exists():
+        names += ('connectivity.json',)
     for name in names:
         shutil.copyfile(source / name, destination / name)
     if sha(destination / 'map.png') != request['image_sha256'] or sha(
@@ -106,13 +108,14 @@ def movement_plan(localizer, observation, target, anchor):
     return click, float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum())
 
 
-def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_near=3, purpose='position'):
+def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_near=3, purpose='position', elevators=None):
     """有限步执行并重新定位，连续三次近点观测才算到达，无进展或预算耗尽明确失败。
 
     session 提供观测、规划、输入及停稳接口，target、到达半径和位置差都使用原图像素。
     到点模式按 required_near 次连续近点观测确认；收集品和敌人模式在附近进行有限试点，耗尽后返回 needs_review。
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
+    平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
     """
     from .movement_feedback import (AnchorUnresolved, SquadPositionChanged, road_recovery_click, resolve_anchor,
                                     wake_arrow_click)
@@ -123,6 +126,8 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
     probes = None
     probe_index = 0
     arrow_recoveries = 0
+    legs, transfers = None, []
+    exit_near, entry_waits, leg_start_clicks = 0, 0, 0
     deadline = time.monotonic() + 600
     while time.monotonic() < deadline:
         session.check()
@@ -132,7 +137,32 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
         if (observation.get('position_kind') != 'squad' or position.shape != (2,)
                 or not np.isfinite(position).all()):
             raise RuntimeError('小队定位无效，停止移动。')
+        if elevators is not None and purpose == 'position':
+            from .elevator_navigation import at_elevator_exit, plan_elevators
+            if legs is None:
+                legs = plan_elevators(session.localizer, elevators, position, target)
+                emit(elevator_route=legs.copy(), elevator_transfers=[])
+            if legs and at_elevator_exit(session.localizer, position, legs[0]):
+                exit_near += 1
+                emit(state='verifying', message=f'正在确认电梯出口（{exit_near}/2）…',
+                     position=position.tolist(), distance=float(np.linalg.norm(target - position)),
+                     iou=observation['iou'])
+                if exit_near < 2:
+                    session.pause(1)
+                    continue
+                transfers.append(dict(legs.pop(0), position=position.tolist()))
+                emit(message='已确认电梯传送，继续前往目标。', elevator_transfers=transfers.copy(),
+                     elevator_entry=None, elevator_exit=None)
+                session.anchor_reference = None
+                session.anchor_reference_method = None
+                previous, probes, probe_index, stagnant, near = None, None, 0, 0, 0
+                exit_near, entry_waits, leg_start_clicks = 0, 0, clicks
+                continue
+            exit_near = 0
+        transferring = bool(legs)
         approach = target
+        if transferring:
+            approach = np.asarray(legs[0]['entry'], float)
         if purpose == 'enemy':
             markers = [np.asarray(p) for p in observation.get('enemy_markers', [])
                        if np.linalg.norm(np.asarray(p) - target) <= 30]
@@ -140,8 +170,11 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
                 approach = markers[0]
                 emit(target_marker=approach.tolist())
         distance = float(np.linalg.norm(approach - position))
-        emit(position=position.tolist(), distance=distance, iou=observation['iou'])
-        if distance <= arrival_radius and purpose == 'position':
+        emit(position=position.tolist(), distance=float(np.linalg.norm(target - position)) if transferring else distance,
+             iou=observation['iou'])
+        if distance <= arrival_radius and purpose == 'position' and not transferring:
+            if elevators is not None:
+                session.localizer.route(position, target)
             near += 1
             if near >= required_near:
                 session.finish_view()
@@ -151,6 +184,17 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
             session.pause(1)
             continue
         near = 0
+        if transferring:
+            emit(message='正在前往电梯入口并等待传送…', elevator_entry=legs[0]['entry'],
+                 elevator_exit=legs[0]['exit'], elevator_distance=distance)
+            if clicks - leg_start_clicks >= 3:
+                raise RuntimeError('已尝试三次前往电梯入口，尚未确认传送，停止移动。')
+            if distance < 2:
+                entry_waits += 1
+                if entry_waits > 3:
+                    raise RuntimeError('已在电梯入口停稳，但未触发传送，停止移动。')
+                session.pause(2)
+                continue
         if previous is not None and probes is None:
             stagnant = stagnant + 1 if np.linalg.norm(position - previous) < 3 else 0
             if stagnant >= 2:
@@ -460,8 +504,10 @@ def main():
             result = run_movement(session)
         else:
             session = GameSession(request, hashes, folder, emit)
+            annotations = json.loads((settings.package / 'annotations.json').read_text(encoding='utf-8'))
             result = navigate(session, request['target'], emit, arrival_radius=20, required_near=2,
-                              purpose=request.get('purpose', 'position'))
+                              purpose=request.get('purpose', 'position'),
+                              elevators=annotations if annotations.get('connections') else None)
         state.update(result)
     except KeyboardInterrupt as exc:
         state.update(state='cancelled', message=f'测试已停止：{exc}')

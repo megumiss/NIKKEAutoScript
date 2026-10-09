@@ -74,6 +74,8 @@ class MapPackage:
                 or metadata.get('image') != 'map.png'):
             raise ValueError('Unsupported map coordinate convention')
         required = {'map.json', 'map.png', 'annotations.json', 'source/map_data.npz', 'calibration.json'}
+        if (self.path / 'connectivity.json').exists():
+            required.add('connectivity.json')
         if set(manifest['sha256']) != required:
             raise ValueError('Incomplete package hash binding')
         for name, expected in manifest['sha256'].items():
@@ -130,6 +132,11 @@ class MapPackage:
             _, override, _ = edited_roads(self.path, metadata, self.terrain >= .5)
             self.terrain[override == 1] = 0
             self.terrain[override == 2] = 1
+        from dev_tools.map_connectivity import build, read_bound
+        road = (self.terrain >= .5).astype(np.uint8)
+        edits = annotations.get('connectivity_edits', [])
+        self.connectivity = (read_bound(self.path / 'connectivity.json', road, digest, edits)
+                             if 'connectivity.json' in required else build(road, digest, edits))
         calibration = json.loads((self.path / 'calibration.json').read_text(encoding='utf-8'))
         if calibration.get('client') != manifest['client'] or calibration.get('roi') != manifest['roi']:
             raise ValueError('Calibration capture geometry differs from package')

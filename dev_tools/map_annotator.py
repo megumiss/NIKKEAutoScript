@@ -19,12 +19,14 @@ from urllib.parse import parse_qs, urlsplit
 from PIL import Image
 
 if __package__:
+    from .map_connectivity import ensure_data, validate_edits, write_data
     from .map_paths import DEFAULT_MAPS_ROOT, local_package_dir
     from .map_movement import MovementJobs
     from .map_scan import ScanJobs
     from .map_wiki import WikiJobs
     from .map_terrain import render_terrain, terrain_colors, validate_terrain_edits
 else:
+    from map_connectivity import ensure_data, validate_edits, write_data
     from map_paths import DEFAULT_MAPS_ROOT, local_package_dir
     from map_movement import MovementJobs
     from map_scan import ScanJobs
@@ -54,6 +56,7 @@ def validate_annotations(document, image_hash, size):
     if document.get('coordinates') != COORDINATES:
         raise ValueError('标注必须使用原图像素坐标：左上角原点，X 向右，Y 向下。')
     validate_terrain_edits(document.get('terrain_edits', []), size)
+    validate_edits(document.get('connectivity_edits', []), size)
     objects, connections = document.get('objects'), document.get('connections')
     if not isinstance(objects, list) or not isinstance(connections, list):
         raise ValueError('objects 和 connections 必须是数组。')
@@ -179,10 +182,11 @@ class AnnotationStore:
                 'coordinates': COORDINATES.copy(), 'objects': [], 'connections': [],
             }
             validate_annotations(document, image_hash, size)
+            connectivity = ensure_data(package, metadata, document, persist=True)
             return {'id': identifier, 'chapter': metadata.get('chapter'), 'size': size,
                     'coordinate_model': metadata.get('coordinate_model'),
                     'terrain_colors': terrain_colors(metadata),
-                    'path': str(package), 'reference': reference, 'annotations': document,
+                    'path': str(package), 'reference': reference, 'annotations': document, 'connectivity': connectivity,
                     'revision': digest(raw), 'coverage_verified': metadata.get('capture', {}).get(
                         'whole_camera_domain_verified', False)}
 
@@ -190,12 +194,13 @@ class AnnotationStore:
         """校验请求版本后备份旧标注，以同目录临时文件和原子替换提交新内容。"""
         with self.lock:
             package = self.package(identifier)
-            _, image_hash, size, _ = self.metadata(package)
+            metadata, image_hash, size, _ = self.metadata(package)
             validate_annotations(document, image_hash, size)
             path = package / 'annotations.json'
             previous = path.read_bytes() if path.exists() else b''
             if digest(previous) != revision:
                 raise ConflictError('标注文件已被其他窗口或程序修改。请先下载当前副本，再重新加载比较。')
+            connectivity = ensure_data(package, metadata, document)
             content = (json.dumps(copy.deepcopy(document), ensure_ascii=False, indent=2) + '\n').encode('utf-8')
             backup = None
             if previous:
@@ -214,7 +219,9 @@ class AnnotationStore:
             finally:
                 if temporary is not None and temporary.exists():
                     temporary.unlink()
-            return {'revision': digest(content), 'path': str(path), 'backup': str(backup) if backup else None}
+            write_data(package / 'connectivity.json', connectivity)
+            return {'revision': digest(content), 'path': str(path), 'backup': str(backup) if backup else None,
+                    'connectivity': connectivity}
 
     def export_terrain(self, identifier, revision):
         """从已保存的修订生成独立快照，不覆盖 map.png 或更改旧标注的图像绑定。"""
@@ -240,6 +247,16 @@ class AnnotationStore:
                         'override_values': {'unchanged': 0, 'erase': 1, 'add': 2}, 'navigation_ready': False}
             (folder / 'edits.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
             return {'export': name, 'path': str(folder / 'map.png'), 'edits': len(document['terrain_edits'])}
+
+    def preview_connectivity(self, identifier, document, revision):
+        with self.lock:
+            package = self.package(identifier)
+            metadata, image_hash, size, _ = self.metadata(package)
+            path = package / 'annotations.json'
+            if digest(path.read_bytes() if path.exists() else b'') != revision:
+                raise ConflictError('标注已变化，请先重新加载地图。')
+            validate_annotations(document, image_hash, size)
+            return ensure_data(package, metadata, document)
 
 
 def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=None):
@@ -282,6 +299,7 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                           '/scan.js': ('scan.js', 'text/javascript; charset=utf-8'),
                           '/wiki.js': ('wiki.js', 'text/javascript; charset=utf-8'),
                           '/panels.js': ('panels.js', 'text/javascript; charset=utf-8'),
+                          '/connectivity.js': ('connectivity.js', 'text/javascript; charset=utf-8'),
                           '/editor.css': ('editor.css', 'text/css; charset=utf-8')}
                 if request.path in assets:
                     name, mime = assets[request.path]
@@ -329,7 +347,7 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
             endpoint = urlsplit(self.path).path
             if endpoint not in ('/api/save', '/api/terrain/export', '/api/movement/start', '/api/movement/stop',
                                 '/api/scan/start', '/api/scan/stop', '/api/wiki/start', '/api/wiki/stop',
-                                '/api/wiki/apply'):
+                                '/api/wiki/apply', '/api/connectivity/preview'):
                 return self.send({'error': '未找到资源。'}, status=404)
             try:
                 length = int(self.headers.get('Content-Length', '0'))
@@ -338,6 +356,8 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                 payload = json.loads(self.rfile.read(length))
                 if endpoint == '/api/terrain/export':
                     result = store.export_terrain(payload['id'], payload['revision'])
+                elif endpoint == '/api/connectivity/preview':
+                    result = store.preview_connectivity(payload['id'], payload['annotations'], payload['revision'])
                 elif endpoint == '/api/movement/start':
                     with device_lock:
                         if scans.status().get('running'):
