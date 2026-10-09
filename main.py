@@ -80,7 +80,12 @@ class NikkeAutoScript:
             if self.config.Client_Platform == 'win':
                 from module.device.win.device import Device
 
-                device = Device(config=self.config)
+                if self.config.task.command in ('AutoMainStory', 'AutoMainCollectible'):
+                    from module.campaign.campaign import Campaign
+
+                    device = Device(config=self.config, resolution=Campaign.RESOLUTION)
+                else:
+                    device = Device(config=self.config)
             if self.config.Client_Platform == 'adb':
                 from module.device.adb.device import Device
 
@@ -149,6 +154,11 @@ class NikkeAutoScript:
 
     def run(self, command, skip_first_screenshot=False):
         try:
+            if command in ('auto_main_story', 'auto_main_collectible'):
+                self.config.init_task(inflection.camelize(command))
+                if self.config.Client_Platform != 'win':
+                    logger.error('自动主线任务目前仅支持 PC 客户端，请使用 PC 实例运行。')
+                    raise RequestHumanTakeover
             # 妮游社等独立任务不需要device
             if not self.is_independent_task(command) and not skip_first_screenshot:
                 self.device.screenshot()
@@ -477,6 +487,16 @@ class NikkeAutoScript:
         from module.blablalink.blablalink import Blablalink
 
         Blablalink(config=self.config).run('exchange')
+
+    def auto_main_story(self):
+        from module.campaign.campaign import Campaign
+
+        Campaign(config=self.config, device=self.device).run()
+
+    def auto_main_collectible(self):
+        from module.campaign.campaign import Campaign
+
+        Campaign(config=self.config, device=self.device).run()
 
     def auto_tower(self):
         from module.daemon.auto_tower import AutoTower

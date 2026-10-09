@@ -4,7 +4,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shutil
 import sys
 import time
@@ -23,6 +22,8 @@ else:
     from map_paths import DEFAULT_CAPTURE_ROOT
     from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 
+from module.campaign.chapter import chapter_number
+
 
 def screenshot(window):
     """在窗口尺寸及焦点有效时截取完整客户区，供章节 OCR 和页面稳定性检查。"""
@@ -32,14 +33,6 @@ def screenshot(window):
     x, y = window.gui.ClientToScreen(window.hwnd, (0, 0))
     return cv2.cvtColor(np.array(ImageGrab.grab(bbox=(x, y, x + 1776, y + 999), all_screens=True)),
                         cv2.COLOR_RGB2BGR)
-
-
-def chapter_number(image, model):
-    """放大章节数字区域做 OCR，仅接受高置信度的一到两位数字。"""
-    crop = cv2.resize(image[917:953, 1608:1663], None, fx=3, fy=3)
-    result = next(iter(model.predict(crop)))
-    text = result['rec_text'].strip()
-    return int(text) if re.fullmatch(r'\d{1,2}', text) and result['rec_score'] >= 0.95 else None
 
 
 def wait_for_chapter(window, chapter, model, output, stop=None):

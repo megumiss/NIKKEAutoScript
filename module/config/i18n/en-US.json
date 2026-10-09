@@ -226,6 +226,14 @@
       "name": "Interception",
       "help": ""
     },
+    "AutoMainStory": {
+      "name": "Auto Main Story",
+      "help": "Open the campaign field first. PC client only. Sets the client to 1776×999 and identifies the current chapter in the log. This initial version ends after identification."
+    },
+    "AutoMainCollectible": {
+      "name": "Auto Main Story Collectibles",
+      "help": "Open the campaign field first. PC client only. Sets the client to 1776×999 and identifies the current chapter in the log. This initial version ends after identification."
+    },
     "AutoTower": {
       "name": "Auto Tower",
       "help": ""

@@ -125,6 +125,8 @@
     "page": "tool",
     "icon": "designtools",
     "tasks": [
+      "AutoMainStory",
+      "AutoMainCollectible",
       "AutoTower",
       "SemiCombat",
       "Highlights",
