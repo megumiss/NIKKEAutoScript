@@ -478,7 +478,7 @@
     },
     "VddType": {
       "name": "虚拟屏幕类型",
-      "help": "ParsecVDD（推荐）：只需手动安装官方 ParsecVDD 驱动即可使用 https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe；\nMttVDD：需要手动安装官方 MttVDD 驱动 https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe，安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080、竖屏。",
+      "help": "ParsecVDD（推荐）：手动安装官方 ParsecVDD 驱动 https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe ，安装完成后右键任务栏的 ParsecDisplay 图标，取消勾选「选项 → 开机启动」并点击「退出」；\nMttVDD：需要手动安装官方 MttVDD 驱动 https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe，安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080、竖屏。",
       "parsecvdd": "ParsecVDD",
       "mttvdd": "MttVDD"
     },

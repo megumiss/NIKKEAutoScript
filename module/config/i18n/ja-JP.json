@@ -478,7 +478,7 @@
     },
     "VddType": {
       "name": "仮想ディスプレイの種類",
-      "help": "ParsecVDD（推奨）：公式の ParsecVDD ドライバーを手動でインストールするだけで使用できます https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe；\nMttVDD：公式の MttVDD ドライバーを手動でインストールしてください https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe。ドライバーをインストールしたら、システムのディスプレイ設定を開き、表示された新しいモニターを選択して、解像度を 1920x1080・縦向きに設定します。",
+      "help": "ParsecVDD（推奨）：公式の ParsecVDD ドライバーを手動でインストールしてください https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe 。インストール後、タスクバーの ParsecDisplay アイコンを右クリックし、「オプション → スタートアップで起動」のチェックを外してから「終了」をクリックしてください；\nMttVDD：公式の MttVDD ドライバーを手動でインストールしてください https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe。ドライバーをインストールしたら、システムのディスプレイ設定を開き、表示された新しいモニターを選択して、解像度を 1920x1080・縦向きに設定します。",
       "parsecvdd": "ParsecVDD",
       "mttvdd": "MttVDD"
     },

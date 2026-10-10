@@ -478,7 +478,7 @@
     },
     "VddType": {
       "name": "Virtual Display Type",
-      "help": "ParsecVDD (recommended): just install the official ParsecVDD driver manually and it is ready to use https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe;\nMttVDD: install the official MttVDD driver manually https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe. After installing the driver, open the system display settings, select the new screen that appears, and set its resolution to 1920x1080 in portrait orientation.",
+      "help": "ParsecVDD (recommended): install the official ParsecVDD driver manually https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe . After installing, right-click the ParsecDisplay icon in the taskbar, untick \"Options -> Run on startup\" and click \"Exit\";\nMttVDD: install the official MttVDD driver manually https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe. After installing the driver, open the system display settings, select the new screen that appears, and set its resolution to 1920x1080 in portrait orientation.",
       "parsecvdd": "ParsecVDD",
       "mttvdd": "MttVDD"
     },
