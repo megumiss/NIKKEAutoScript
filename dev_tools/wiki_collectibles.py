@@ -5,6 +5,7 @@ import copy
 import hashlib
 import json
 import re
+import sys
 import time
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -19,6 +20,8 @@ if __package__:
     from .map_annotator import AnnotationStore
     from .wiki_collectible_match import MATCH_VERSION, MapMatcher
 else:
+    # 分层地图的定位器从仓库根导入 module 包，脚本方式运行时仓库根不在默认路径上。
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from map_paths import DEFAULT_MAPS_ROOT
     from map_annotator import AnnotationStore
     from wiki_collectible_match import MATCH_VERSION, MapMatcher

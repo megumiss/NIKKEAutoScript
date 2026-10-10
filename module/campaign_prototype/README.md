@@ -24,7 +24,7 @@
 | `check_controls.py`、`scene_pan.py`、`pan_check.py` | 地图状态切换及两类镜头行为的现场实验 |
 | `assets/` | 弹窗与箭头模板、共享移动标定 |
 
-命令行实验包默认在 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`，两者均为本机数据。需要提交的章节地图位于 `data/chapter_maps/runtime/`，由 [map_runtime.py](../../dev_tools/map_runtime.py) 从完整采集包导出；完整采集、重建与辅助数据位于 `data/chapter_maps/local/`，不提交。平面章节使用下方命令导入实验包。第 40 章保留局部定位所需参考帧和深度数据，但仍缺现场局部移动标定。
+命令行实验包默认在 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`，两者均为本机数据。需要提交的章节地图位于 `data/resources/maps/`，由 [map_runtime.py](../../dev_tools/map_runtime.py) 从完整采集包导出；完整采集、重建与辅助数据位于 `data/chapter_maps/local/`，不提交。平面章节使用下方命令导入实验包。分层章节保留局部定位所需参考帧和深度数据，移动标定在任务内临时生成，不需要现场标定包。
 
 Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/wiki_references/NN.png`；没有它们仍可运行地图校验、定位回放及控制检查。
 
@@ -46,7 +46,7 @@ Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/w
 把已导出的静态地图导入到**尚不存在**的目录。下面的源路径应替换为实际采集包；默认标定只在已有 38 章实验中验证过。
 
 ```powershell
-.venv\Scripts\python.exe -m module.campaign_prototype.prepare_package --source data/chapter_maps/runtime/chapter_38 --destination data/campaign_prototype/chapter_38 --chapter 38
+.venv\Scripts\python.exe -m module.campaign_prototype.prepare_package --source data/resources/maps/chapter_38 --destination data/campaign_prototype/chapter_38 --chapter 38
 ```
 
 离线定位需传入一张 `486×462` 的展开地图 ROI：
@@ -72,7 +72,7 @@ Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/w
 短移落点须通过标定截图与当前地面的交叉配准，唤醒落点须通过道路净空、敌人距离与路径验证；停稳后重新定位并直接采样箭头，仍不可见则停止，不继续试点。
 收集品模式检测到带放大镜的橙色倒三角即停止并保存现场，不再微调或点击拾取。
 `live --step` 只用于显式短移实验；`run --click`／`--pan` 仍执行指定手势。
-分层地图必须已有有效局部标定，平移和落点都受同层道路及实测支持域约束。
+分层地图在移动任务开始时自动做两点临时标定，平移和落点都限制在小队所在表面的连通道路内。
 
 停止可用 `Ctrl+C`，或在另一终端创建共享停止文件：
 

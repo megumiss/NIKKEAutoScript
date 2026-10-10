@@ -346,8 +346,8 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                 return self.send({'error': '页面会话已失效，请刷新后重试。'}, status=403)
             endpoint = urlsplit(self.path).path
             if endpoint not in ('/api/save', '/api/terrain/export', '/api/movement/start', '/api/movement/stop',
-                                '/api/scan/start', '/api/scan/stop', '/api/wiki/start', '/api/wiki/stop',
-                                '/api/wiki/apply', '/api/connectivity/preview'):
+                                '/api/scan/start', '/api/scan/stop', '/api/scan/adopt', '/api/wiki/start',
+                                '/api/wiki/stop', '/api/wiki/apply', '/api/connectivity/preview'):
                 return self.send({'error': '未找到资源。'}, status=404)
             try:
                 length = int(self.headers.get('Content-Length', '0'))
@@ -370,6 +370,11 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                         result = scans.start(payload)
                 elif endpoint == '/api/scan/stop':
                     result = scans.stop(payload['job'])
+                elif endpoint == '/api/scan/adopt':
+                    with device_lock:
+                        if movement.status().get('running'):
+                            raise ValueError('小队移动正在运行，请先停止移动。')
+                        result = scans.adopt(payload['job'])
                 elif endpoint == '/api/movement/stop':
                     result = movement.stop(payload['job'])
                 elif endpoint == '/api/wiki/start':

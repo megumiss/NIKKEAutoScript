@@ -23,13 +23,8 @@ bin/parsec_vdd/debug.log
 /tmp
 **.acc
 # 只分发运行地图；采集、重建及备份数据位于 local/。
+# 运行地图等资源来自独立的资源仓库，按需同步到 data/resources，不进入本仓库
 data/*
-!data/chapter_maps/
-data/chapter_maps/*
-!data/chapter_maps/runtime/
-data/chapter_maps/runtime/**/.map-export-*/
-data/chapter_maps/runtime/**/*.tmp
-data/chapter_maps/runtime/**/calibration.pending.json
 android/
 .workbuddy/
 .workbuddy-ai/

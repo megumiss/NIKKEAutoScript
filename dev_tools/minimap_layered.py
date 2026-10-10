@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import shutil
+import warnings
 from pathlib import Path
 
 import cv2
@@ -100,6 +101,100 @@ def ratio_field(shape, support):
     return field, confidence
 
 
+SWEEP_RATIOS = np.arange(.76, 1.741, .02)
+
+
+def view_features(image):
+    """高通灰度加道路掩码通道，供平面扫描做光度匹配。"""
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255
+    texture = gray - cv2.GaussianBlur(gray, (31, 31), 5)
+    return np.dstack([texture, terrain(image).astype(np.float32) / 255 * .3])
+
+
+def view_valid(shape):
+    """排除边框和右下角控件的浮点有效域，供扫描时随视角一起变换。"""
+    valid = np.ones(shape, np.float32)
+    valid[:15] = valid[-15:] = 0
+    valid[:, :15] = valid[:, -15:] = 0
+    valid[-50:, -90:] = 0
+    return valid
+
+
+def local_outliers(field, accepted, radius=2, tolerance=.06):
+    """与邻域内已接受像素的中位比例相差过大的像素视为离群；只剔除，不用邻域值填补。"""
+    height, width = field.shape
+    padded = np.full((height + 2 * radius, width + 2 * radius), np.nan, np.float32)
+    padded[radius:-radius, radius:-radius] = np.where(accepted, field, np.nan)
+    stack = np.stack([padded[dy:dy + height, dx:dx + width]
+                      for dy in range(2 * radius + 1) for dx in range(2 * radius + 1)])
+    with np.errstate(all='ignore'), warnings.catch_warnings():
+        # 全空邻域的中位数本就是 NaN，不需要逐帧刷屏告警。
+        warnings.simplefilter('ignore', RuntimeWarning)
+        median = np.nanmedian(stack, axis=0)
+    support = np.sum(np.isfinite(stack), axis=0)
+    return accepted & (support >= 6) & (np.abs(field - median) > tolerance)
+
+
+def sweep_surface_robust(index, images, camera, matrix, support, neighbors=6):
+    """多视角平面扫描：最多 neighbors 个邻帧，每像素按可见观测的较小一半取均值，再做亚像素细化。
+
+    返回与基线相同的 (ratio, confidence) 数组，接受门槛沿用基线，便于直接对照。
+    """
+    shape = images[index].shape[:2]
+    displacement = np.linalg.norm(camera - camera[index], axis=1)
+    candidates = [i for i in range(max(0, index - 8), min(len(images), index + 9))
+                  if 35 < displacement[i] < 190]
+    if len(candidates) < 2:
+        return ratio_field(shape, support)
+    candidates = sorted(candidates, key=lambda i: abs(displacement[i] - 95))[:neighbors]
+    inverse = np.linalg.inv(matrix)
+    first = view_features(images[index])
+    others = [view_features(images[i]) for i in candidates]
+    valid = view_valid(shape)
+    costs = np.empty((len(SWEEP_RATIOS), *shape), np.float32)
+    for r, ratio in enumerate(SWEEP_RATIOS):
+        observations, seen = [], []
+        for other, frame in zip(others, candidates):
+            delta = ratio * (camera[frame] - camera[index])
+            transform = inverse @ np.array([[1, 0, delta[0]], [0, 1, delta[1]], [0, 0, 1.]]) @ matrix
+            warped = cv2.warpPerspective(other, transform, shape[::-1])
+            visible = cv2.warpPerspective(valid, transform, shape[::-1]) >= .99
+            error = cv2.boxFilter(np.abs(warped - first).sum(axis=2), -1, (9, 9))
+            error[~visible] = 1
+            observations.append(error)
+            seen.append(visible)
+        stacked = np.sort(np.asarray(observations), axis=0)
+        # 截尾长度取可见观测的较小一半且至少两帧：单帧或周期网格造成的偶然极小值无法独自胜出。
+        take = np.clip(np.ceil(np.sum(seen, axis=0) / 2).astype(int), 2, len(candidates))
+        cumulative = np.cumsum(stacked, axis=0)
+        costs[r] = np.take_along_axis(cumulative, (take - 1)[None], axis=0)[0] / take
+    yy, xx = np.indices(shape)
+    if support:
+        values = np.asarray(support)
+        distance, nearest = cKDTree(values[:, :2]).query(np.column_stack([xx.ravel(), yy.ravel()]))
+        prior = values[nearest, 2].reshape(shape)
+        strength = np.exp(-distance.reshape(shape) / 45) * .02
+        costs += np.minimum(np.abs(SWEEP_RATIOS[:, None, None] - prior[None]) / .12, 1) * strength
+    best = np.argmin(costs, axis=0)
+    minimum = costs[best, yy, xx]
+    far = np.abs(np.arange(len(SWEEP_RATIOS))[:, None, None] - best[None]) >= 4
+    alternative = np.min(np.where(far, costs, np.inf), axis=0)
+    confidence = np.clip((alternative - minimum) / .025, 0, 1)
+    interior = (best > 0) & (best < len(SWEEP_RATIOS) - 1)
+    lower = costs[np.maximum(best - 1, 0), yy, xx]
+    upper = costs[np.minimum(best + 1, len(SWEEP_RATIOS) - 1), yy, xx]
+    denominator = lower - 2 * minimum + upper
+    with np.errstate(divide='ignore', invalid='ignore'):
+        offset = np.where(denominator > 1e-6, .5 * (lower - upper) / denominator, 0.)
+    step = float(SWEEP_RATIOS[1] - SWEEP_RATIOS[0])
+    field = (SWEEP_RATIOS[best] + np.where(interior, np.clip(offset, -.5, .5), 0.) * step).astype(np.float32)
+    accepted = (minimum < .045) & (confidence > .08) & interior & (valid > 0)
+    accepted &= ~local_outliers(field, accepted)
+    field[~accepted] = np.nan
+    confidence[~accepted] = 0
+    return field, confidence
+
+
 def sweep_surface(index, images, camera, matrix, support):
     """用多视角平面扫描估计稠密视差；稀疏轨迹仅消除周期网格产生的等价匹配。"""
     shape = images[index].shape[:2]
@@ -111,18 +206,9 @@ def sweep_surface(index, images, camera, matrix, support):
         return ratio_field(shape, support)
     candidates = sorted(candidates, key=lambda i: abs(displacement[i] - 95))[:4]
     inverse = np.linalg.inv(matrix)
-
-    def features(image):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255
-        texture = gray - cv2.GaussianBlur(gray, (31, 31), 5)
-        return np.dstack([texture, terrain(image).astype(np.float32) / 255 * .3])
-
-    first = features(reference)
-    others = [features(images[i]) for i in candidates]
-    valid = np.ones(shape, np.float32)
-    valid[:15] = valid[-15:] = 0
-    valid[:, :15] = valid[:, -15:] = 0
-    valid[-50:, -90:] = 0
+    first = view_features(reference)
+    others = [view_features(images[i]) for i in candidates]
+    valid = view_valid(shape)
     ratios = np.arange(.76, 1.741, .02)
     costs = []
     for ratio in ratios:
@@ -158,6 +244,9 @@ def sweep_surface(index, images, camera, matrix, support):
     field[~accepted] = np.nan
     confidence[~accepted] = 0
     return field, confidence
+
+
+DEPTH_METHODS = {'baseline': sweep_surface, 'robust': sweep_surface_robust}
 
 
 def regularize_surfaces(ratios, confidence, road, matrix):
@@ -254,8 +343,120 @@ def fusion_consistency(roads, camera, matrix, vertical, rotation, origin, ratios
     return probability, positive, seen
 
 
-def reconstruct(source, output, depth_cache=None, stop_file=None):
-    """在新目录导出道路、局部高度和反查坐标；原始扫描及其他地图包保持不变。"""
+def frame_valid(shape):
+    """排除边框和右下角控件；与跟踪、扫描阶段使用同一有效域。"""
+    valid = np.ones(shape, np.uint8)
+    valid[:15] = valid[-15:] = 0
+    valid[:, :15] = valid[:, -15:] = 0
+    valid[-50:, -90:] = 0
+    return valid
+
+
+def frame_support_mask(image, ratios, road=None):
+    """道路邻域内有规整深度且位于有效域的像素才参与融合。"""
+    road = terrain(image) if road is None else road
+    valid = frame_valid(road.shape)
+    region = cv2.dilate(road, np.ones((21, 21), np.uint8)) > 0
+    accepted = np.isfinite(ratios) & (valid > 0) & region
+    return road, valid, accepted
+
+
+def frame_batch(index, image, camera, matrix, vertical, rotation, ratios, weights):
+    """把一帧有深度的像素投到共享平面；无支持像素时返回 None。"""
+    road, _, accepted = frame_support_mask(image, ratios)
+    if not accepted.any():
+        return None
+    # 双倍采样后按四邻点加权投票，避免透视放大在输出栅格上留下点状空洞。
+    dense_valid = cv2.resize(accepted.astype(np.uint8), None, fx=2, fy=2, interpolation=cv2.INTER_NEAREST) > 0
+    y, x = np.nonzero(dense_valid)
+    roi = np.column_stack([(x + .5) / 2 - .5, (y + .5) / 2 - .5]).astype(np.float32)
+    source_y, source_x = y // 2, x // 2
+    ratio = ratios[source_y, source_x]
+    point = vertical + (project(matrix, roi) - vertical) / ratio[:, None] + camera[index]
+    point = point @ rotation.T
+    return (index, point.astype(np.float32), roi, ratio, weights[source_y, source_x],
+            road[source_y, source_x] / 255., image[source_y, source_x])
+
+
+def fuse_frames(images, camera, matrix, vertical, rotation, ratios, weights, check_stop=None):
+    """把逐帧规整深度融合到共享画布，再用全部原帧复核；相机可以是闭环修正后的位置。
+
+    ratios 与 weights 按帧给出规整后的比例和置信度；返回融合数组、裁剪后的原点和预览图。
+    """
+    batches = []
+    for index, image in enumerate(images):
+        if check_stop is not None:
+            check_stop()
+        batch = frame_batch(index, image, camera, matrix, vertical, rotation, ratios[index], weights[index])
+        if batch is not None:
+            batches.append(batch)
+    if not batches:
+        raise ValueError('No roads have local surface support')
+    low = np.floor(np.min([batch[1].min(axis=0) for batch in batches], axis=0)).astype(int) - 48
+    high = np.ceil(np.max([batch[1].max(axis=0) for batch in batches], axis=0)).astype(int) + 49
+    size = high - low
+    if np.any(size > 16000) or np.prod(size) > 20_000_000:
+        raise ValueError(f'Implausible surface canvas: {size}')
+    canvas_shape = tuple(size[::-1])
+    coverage = np.zeros(canvas_shape, np.float32)
+    roads = np.zeros_like(coverage)
+    frame_hits = np.zeros(canvas_shape, np.uint16)
+    best = np.zeros_like(coverage)
+    reference = np.zeros((*canvas_shape, 3), np.uint8)
+    source_frame = np.full(canvas_shape, -1, np.int16)
+    source_roi = np.full((*canvas_shape, 2), np.nan, np.float32)
+    parallax = np.full(canvas_shape, np.nan, np.float32)
+    for index, point, roi, ratio, weight, road, colors in batches:
+        frame_road = np.zeros_like(coverage)
+        point = point - low
+        base = np.floor(point).astype(int)
+        fraction = point - base
+        for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):
+            x, y = (base + [dx, dy]).T
+            w = weight * (fraction[:, 0] if dx else 1 - fraction[:, 0])
+            w *= fraction[:, 1] if dy else 1 - fraction[:, 1]
+            np.add.at(coverage, (y, x), w)
+            np.add.at(roads, (y, x), w * road)
+            np.add.at(frame_road, (y, x), w * road)
+            candidate = w * (road > .5)
+            choose = surface_winners(best, x, y, candidate)
+            xx, yy = x[choose], y[choose]
+            reference[yy, xx] = colors[choose]
+            source_frame[yy, xx] = index
+            source_roi[yy, xx] = roi[choose]
+            parallax[yy, xx] = ratio[choose]
+        frame_hits += (frame_road > .15).astype(np.uint16)
+    probability = np.divide(roads, coverage, out=np.zeros_like(roads), where=coverage > 0)
+    bounds = terrain_crop_bounds(probability)
+    left, top, right, bottom = bounds['box']
+    crop = np.s_[top:bottom, left:right]
+    low += [left, top]
+    probability, coverage = probability[crop], coverage[crop]
+    frame_hits = frame_hits[crop]
+    source_frame, source_roi, parallax = source_frame[crop], source_roi[crop], parallax[crop]
+    reference = reference[crop]
+    print('Checking fused surfaces against every source frame', flush=True)
+    raw_probability = probability
+    probability, frame_hits, visible_frames = fusion_consistency(
+        [terrain(image) for image in images], camera, matrix, vertical, rotation, low, parallax)
+    map_image = np.full((*probability.shape, 3), (44, 35, 28), np.uint8)
+    confirmed = (probability > .85) & (frame_hits >= 3)
+    uncertain = (probability > .5) & ~confirmed & (frame_hits >= 3)
+    map_image[confirmed] = (186, 139, 59)
+    map_image[uncertain] = (104, 86, 66)
+    return dict(probability=probability, coverage=coverage, frame_hits=frame_hits, visible_frames=visible_frames,
+                raw_probability=raw_probability, source_frame=source_frame, source_roi=source_roi,
+                parallax=parallax, reference=reference, map_image=map_image, origin=low, bounds=bounds)
+
+
+def reconstruct(source, output, depth_cache=None, stop_file=None, depth_method='baseline'):
+    """在新目录导出道路、局部高度和反查坐标；原始扫描及其他地图包保持不变。
+
+    depth_method 选择稠密扫描策略，baseline 保持原有行为，robust 使用多邻帧截尾与亚像素细化。
+    """
+    if depth_method not in DEPTH_METHODS:
+        raise ValueError(f'Unknown depth method: {depth_method}')
+    sweep = DEPTH_METHODS[depth_method]
     def check_stop():
         if stop_file is not None and Path(stop_file).exists():
             raise KeyboardInterrupt('Stopped during layered reconstruction.')
@@ -312,17 +513,18 @@ def reconstruct(source, output, depth_cache=None, stop_file=None):
         depth_cache = Path(depth_cache).resolve()
         cached_report = json.loads((depth_cache / 'map.json').read_text(encoding='utf-8'))
         if (cached_report['source_sha256'] != hashes
+                or cached_report.get('depth_method', 'baseline') != depth_method
                 or not np.allclose(cached_report['projection'], matrix, atol=1e-10, rtol=0)
                 or not np.allclose(cached_report['camera'], camera, atol=1e-8, rtol=0)):
-            raise ValueError('Depth cache does not match source frames and fitted camera')
+            raise ValueError('Depth cache does not match source frames, depth method and fitted camera')
     support, rejected = frame_support(tracks, model, matrix)
     orientation, _ = map_orientation(matrix, data['warp_size'], shape, 'screen_oblique')
     rotation = orientation[:2, :2]
-    batches, frame_reports = [], []
+    frame_reports, frame_ratios, frame_weights = [], [], []
     for index, image in enumerate(images):
         check_stop()
         if depth_cache is None:
-            ratios, weights = sweep_surface(index, images, camera, matrix, support[index])
+            ratios, weights = sweep(index, images, camera, matrix, support[index])
         else:
             cache_path = depth_cache / 'depth' / f'frame_{index:05d}.npz'
             cached_hashes[cache_path.name] = hashlib.sha256(cache_path.read_bytes()).hexdigest()
@@ -338,88 +540,24 @@ def reconstruct(source, output, depth_cache=None, stop_file=None):
         ratios, weights, labels, planes = regularize_surfaces(ratios, weights, road, matrix)
         np.savez_compressed(depth_root / f'frame_{index:05d}.npz', ratio=ratios, confidence=weights,
                             local_surface=labels, raw_ratio=raw_ratios, raw_confidence=raw_weights)
-        valid = np.ones(shape, np.uint8)
-        valid[:15] = valid[-15:] = 0
-        valid[:, :15] = valid[:, -15:] = 0
-        valid[-50:, -90:] = 0
-        region = cv2.dilate(road, np.ones((21, 21), np.uint8)) > 0
-        accepted = np.isfinite(ratios) & (valid > 0) & region
+        frame_ratios.append(ratios)
+        frame_weights.append(weights)
+        road, valid, accepted = frame_support_mask(image, ratios, road)
         road_count = int(np.count_nonzero((road > 0) & (valid > 0)))
         supported = int(np.count_nonzero(accepted & (road > 0)))
         frame_reports.append({'frame': index, 'road_pixels': road_count, 'supported_road_pixels': supported,
                               'support_points': len(support[index]), 'local_planes': planes})
-        if not accepted.any():
-            continue
-        # 双倍采样后按四邻点加权投票，避免透视放大在输出栅格上留下点状空洞。
-        dense_valid = cv2.resize(accepted.astype(np.uint8), None, fx=2, fy=2, interpolation=cv2.INTER_NEAREST) > 0
-        y, x = np.nonzero(dense_valid)
-        roi = np.column_stack([(x + .5) / 2 - .5, (y + .5) / 2 - .5]).astype(np.float32)
-        source_y, source_x = y // 2, x // 2
-        ratio = ratios[source_y, source_x]
-        point = vertical + (project(matrix, roi) - vertical) / ratio[:, None] + camera[index]
-        point = point @ rotation.T
-        batches.append((index, point.astype(np.float32), roi, ratio,
-                        weights[source_y, source_x], road[source_y, source_x] / 255.,
-                        image[source_y, source_x]))
-    if not batches:
-        raise ValueError('No roads have local surface support')
-    low = np.floor(np.min([batch[1].min(axis=0) for batch in batches], axis=0)).astype(int) - 48
-    high = np.ceil(np.max([batch[1].max(axis=0) for batch in batches], axis=0)).astype(int) + 49
-    size = high - low
-    if np.any(size > 16000) or np.prod(size) > 20_000_000:
-        raise ValueError(f'Implausible surface canvas: {size}')
-    canvas_shape = tuple(size[::-1])
-    coverage = np.zeros(canvas_shape, np.float32)
-    roads = np.zeros_like(coverage)
-    frame_hits = np.zeros(canvas_shape, np.uint16)
-    best = np.zeros_like(coverage)
-    reference = np.zeros((*canvas_shape, 3), np.uint8)
-    source_frame = np.full(canvas_shape, -1, np.int16)
-    source_roi = np.full((*canvas_shape, 2), np.nan, np.float32)
-    parallax = np.full(canvas_shape, np.nan, np.float32)
-    for index, point, roi, ratio, weight, road, colors in batches:
-        frame_road = np.zeros_like(coverage)
-        point = point - low
-        base = np.floor(point).astype(int)
-        fraction = point - base
-        for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):
-            x, y = (base + [dx, dy]).T
-            w = weight * (fraction[:, 0] if dx else 1 - fraction[:, 0])
-            w *= fraction[:, 1] if dy else 1 - fraction[:, 1]
-            np.add.at(coverage, (y, x), w)
-            np.add.at(roads, (y, x), w * road)
-            np.add.at(frame_road, (y, x), w * road)
-            candidate = w * (road > .5)
-            choose = surface_winners(best, x, y, candidate)
-            xx, yy = x[choose], y[choose]
-            reference[yy, xx] = colors[choose]
-            source_frame[yy, xx] = index
-            source_roi[yy, xx] = roi[choose]
-            parallax[yy, xx] = ratio[choose]
-        frame_hits += (frame_road > .15).astype(np.uint16)
-    probability = np.divide(roads, coverage, out=np.zeros_like(roads), where=coverage > 0)
-    bounds = terrain_crop_bounds(probability)
-    left, top, right, bottom = bounds['box']
-    crop = np.s_[top:bottom, left:right]
-    low += [left, top]
-    probability, coverage = probability[crop], coverage[crop]
-    frame_hits = frame_hits[crop]
-    source_frame, source_roi, parallax = source_frame[crop], source_roi[crop], parallax[crop]
-    reference = reference[crop]
-    print('Checking fused surfaces against every source frame', flush=True)
-    raw_probability = probability
-    probability, frame_hits, visible_frames = fusion_consistency(
-        [terrain(image) for image in images], camera, matrix, vertical, rotation, low, parallax)
-    map_image = np.full((*probability.shape, 3), (44, 35, 28), np.uint8)
-    confirmed = (probability > .85) & (frame_hits >= 3)
-    uncertain = (probability > .5) & ~confirmed & (frame_hits >= 3)
-    map_image[confirmed] = (186, 139, 59)
-    map_image[uncertain] = (104, 86, 66)
+    fused = fuse_frames(images, camera, matrix, vertical, rotation, frame_ratios, frame_weights, check_stop)
+    probability, coverage, frame_hits = fused['probability'], fused['coverage'], fused['frame_hits']
+    visible_frames, raw_probability = fused['visible_frames'], fused['raw_probability']
+    source_frame, source_roi, parallax = fused['source_frame'], fused['source_roi'], fused['parallax']
+    reference, map_image, low, bounds = fused['reference'], fused['map_image'], fused['origin'], fused['bounds']
     report = {'schema_version': 2, 'chapter': data.get('chapter'), 'difficulty': 'normal',
               'status': 'needs_geometry_review', 'navigation_ready': False,
               'orientation': 'screen_oblique', 'depth_directory': 'depth', 'raw_frames': 'source',
               'depth_model': 'Per-frame continuous parallax ratio; height/camera_height = 1 - 1/ratio. '
                              'These are relative estimates, not physical heights or connectivity labels.',
+              'depth_method': depth_method,
               'whole_camera_domain_verified': False, 'source': str(source), 'source_sha256': hashes,
               'image': 'map.png', 'reference_image': 'reference.png', 'size': list(probability.shape[::-1]),
               'coordinates': {'unit': 'rectified_grid_pixel', 'origin': 'top_left', 'x': 'right', 'y': 'down'},
@@ -473,9 +611,11 @@ def main():
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--depth-cache', type=Path, help='Reuse raw depth from a reconstruction with identical inputs.')
+    parser.add_argument('--depth-method', choices=sorted(DEPTH_METHODS), default='baseline',
+                        help='Dense sweep strategy; robust uses more neighbours, trimmed costs and subpixel ratios.')
     args = parser.parse_args()
     cv2.setNumThreads(2)
-    reconstruct(args.source, args.output, args.depth_cache)
+    reconstruct(args.source, args.output, args.depth_cache, depth_method=args.depth_method)
 
 
 if __name__ == '__main__':

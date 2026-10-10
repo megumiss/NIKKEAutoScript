@@ -1,65 +1,57 @@
 """自动主线剧情与收集品任务的公共准备流程。"""
 
+import time
 from functools import cached_property
 
 import cv2
 
 from module.base.base import ModuleBase
 from module.base.timer import Timer
-from module.campaign.chapter import CLIENT_SIZE, chapter_number
+from module.base.utils import publish_preview_frame
+from module.campaign.chapter import CLIENT_SIZE, chapter_identity
+from module.campaign.observation import CampaignObserver
 from module.config.config import TaskEnd
 from module.exception import RequestHumanTakeover
 from module.logger import logger
-from module.ocr.constant import ModelsPath
-from module.ocr.models import get_ocr_cpu_threads, get_ocr_device
-from module.ocr.progress import OcrInitProgress
+from module.ocr.ocr import Ocr
 
 
 class Campaign(ModuleBase):
     RESOLUTION = CLIENT_SIZE
     current_chapter = None
+    current_difficulty = None
 
     @cached_property
-    def chapter_model(self):
-        with OcrInitProgress('Preparing campaign chapter OCR'):
-            from paddleocr import TextRecognition
+    def chapter_ocr(self):
+        return Ocr([], name='CampaignIdentity', lang='ch', model_type=self.config.Optimization_OcrModelType)
 
-            from module.ocr.download import maybe_download
-            from module.ocr.nikke_ocr import models
-
-            model_name = 'PP-OCRv5_mobile_rec_infer'
-            model_dir = maybe_download(ModelsPath / model_name, models[model_name])
-            return TextRecognition(
-                model_name='PP-OCRv5_mobile_rec', model_dir=str(model_dir),
-                device=get_ocr_device(), cpu_threads=get_ocr_cpu_threads(),
-            )
+    @cached_property
+    def observer(self):
+        return CampaignObserver()
 
     def detect_current_chapter(self):
-        self.current_chapter = None
-        model = self.chapter_model
+        self.current_chapter = self.current_difficulty = None
+        reader = self.chapter_ocr
         timeout = Timer(30).start()
-        previous = None
-        stable = 0
+        previous, stable = None, 0
         while 1:
             if self.config.stop_event is not None and self.config.stop_event.is_set():
                 raise TaskEnd
             self.device.screenshot()
-            # 设备截图统一为 RGB，Paddle 的 ndarray 输入使用 BGR。
+            captured_at = time.time()
+            # 设备截图统一为 RGB，OCR 与地图检测的 ndarray 输入使用 BGR。
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
-            number = chapter_number(image, model)
-            if number is not None and number == previous:
-                stable += 1
-            else:
-                stable = 1 if number is not None else 0
-            if number != previous:
-                logger.info(f'主线章节识别候选：{number}')
-            previous = number
+            identity = chapter_identity(image, reader)
+            stable = stable + 1 if identity is not None and identity == previous else int(identity is not None)
+            previous = identity
             if stable >= 3:
-                self.current_chapter = number
-                logger.info(f'当前主线章节：第 {number} 章')
-                return number
+                self.current_chapter, self.current_difficulty = identity
+                logger.info(f'当前主线章节：{identity[1].upper()} 第 {identity[0]} 章')
+                snapshot = self.observer.observe(image, identity, captured_at)
+                publish_preview_frame(self.device.image, interval=0, source={'campaign': snapshot})
+                return self.current_chapter
             if timeout.reached():
-                logger.error('无法确认当前主线章节，请进入主线地图页面，确保右下角章节号可见后重试。')
+                logger.error('无法确认主线章节及难度，请确保主线地图右下角章节号和难度标识可见。')
                 raise RequestHumanTakeover
             self.device.sleep(0.5)
 
@@ -68,5 +60,5 @@ class Campaign(ModuleBase):
         self.device.check_resolution(*self.RESOLUTION)
         logger.info('主线任务分辨率：1776×999')
         chapter = self.detect_current_chapter()
-        logger.info('主线准备完成；当前阶段仅设置分辨率并识别章节。')
+        # TODO: 根据任务类型执行推图，并在移动决策与战斗前后发布章节状态。
         return chapter

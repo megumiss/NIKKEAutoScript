@@ -331,7 +331,7 @@ def publish_preview_frame(image, interval=1.0, source=None):
     Args:
         image (np.ndarray): RGB 截图
         interval (float): 最小发布间隔（秒）
-        source (dict): 可选的实际 ADB Serial 与 display_id，供交互预览定位屏幕。
+        source (dict): 可选的 ADB Serial、display_id 或任务观测快照。
     """
     global _preview_last_write
     q = _preview_queue

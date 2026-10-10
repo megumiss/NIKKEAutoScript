@@ -27,7 +27,7 @@ EXCLUDED_KEYS = {'ReadNoticeIds', 'StartupNoticeDismissedId'}
 # Path/URL values that benefit from a full-row input instead of the standard
 # narrow control.
 WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy',
-             'SerialGroup', 'ConsoleAllowHosts'}
+             'SerialGroup', 'ConsoleAllowHosts', 'ResourceRepository'}
 SELECT_OPTIONS = {
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
@@ -101,6 +101,14 @@ FIELD_I18N = {
             'CN user': "「https://git.megumiss.top/megumiss/NIKKEAutoScript」を使うと高速で安定",
             'Gitee': "「https://gitee.com/megumiss/NIKKEAutoScript」（ログインが必要な場合あり）",
             'Other': "「https://github.com/megumiss/NIKKEAutoScript」を使用"}},
+    },
+    'ResourceRepository': {
+        'zh-CN': {'desc': '资源仓库地址（章节地图等运行数据）。在推图页面按需同步到 ./data/resources，不随 NKAS 更新', 'hints': {
+            'In most cases': "使用 'https://github.com/megumiss/NIKKEAutoScriptResource.git'",
+            'Other': '使用同一仓库的镜像地址'}},
+        'ja-JP': {'desc': 'リソースリポジトリの URL（チャプターマップなど）。キャンペーン画面から ./data/resources に同期し、NKAS の更新には追従しません', 'hints': {
+            'In most cases': "「https://github.com/megumiss/NIKKEAutoScriptResource.git」を使用",
+            'Other': '同じリポジトリのミラーを使用'}},
     },
     'Branch': {
         'zh-CN': {'desc': 'NKAS 分支', 'hints': {

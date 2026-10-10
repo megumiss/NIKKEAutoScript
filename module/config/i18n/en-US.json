@@ -228,11 +228,11 @@
     },
     "AutoMainStory": {
       "name": "Auto Main Story",
-      "help": "Open the campaign field first. PC client only. Sets the client to 1776×999 and identifies the current chapter in the log. This initial version ends after identification."
+      "help": "Open the campaign field first. PC client only, at 1776×999 resolution."
     },
     "AutoMainCollectible": {
       "name": "Auto Main Story Collectibles",
-      "help": "Open the campaign field first. PC client only. Sets the client to 1776×999 and identifies the current chapter in the log. This initial version ends after identification."
+      "help": "Open the campaign field first. PC client only, at 1776×999 resolution."
     },
     "AutoTower": {
       "name": "Auto Tower",

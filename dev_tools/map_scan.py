@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import shutil
 import subprocess
 import sys
 import threading
@@ -38,6 +39,10 @@ class ScanJobs:
                 raise ValueError('请选择是否启用 3D 处理。')
             if type(stroke) not in (int, float) or not 0 < stroke <= 240:
                 raise ValueError('扫描步长必须大于 0，且不超过 240。')
+            # 3D 章节默认 40px 保存帧间距：39、40 章实测轨迹数翻倍、稠密视差更稳；平面章节沿用 80px。
+            keyframe = payload.get('keyframe_px', 40 if process_3d else 80)
+            if type(keyframe) not in (int, float) or not 0 < keyframe <= 240:
+                raise ValueError('保存帧间距必须大于 0，且不超过 240。')
             identifier = secrets.token_hex(10)
             root = (DEFAULT_CAPTURE_ROOT if self.store.root.is_relative_to(DEFAULT_MAPS_ROOT.resolve())
                     else self.store.root)
@@ -45,14 +50,16 @@ class ScanJobs:
             folder.mkdir(parents=True)
             command = [sys.executable, '-X', 'utf8', '-u', '-m', 'dev_tools.minimap_chapters',
                        '--start', str(chapter), '--end', str(chapter), '--output', str(folder),
-                       '--driver-root', str(ROOT), '--stroke-px', str(stroke), '--retries', '0']
+                       '--driver-root', str(ROOT), '--stroke-px', str(stroke), '--keyframe-px', str(keyframe),
+                       '--retries', '0']
             if process_3d:
                 command.append('--process-3d')
             with (folder / 'worker.log').open('w', encoding='utf-8') as stream:
                 self.process = subprocess.Popen(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT,
                                                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
             self.job = dict(id=identifier, chapter=chapter, process_3d=process_3d, stroke_px=stroke,
-                            output=str(folder), map_id=f'scans/{identifier}/chapter_{chapter:02d}')
+                            keyframe_px=keyframe, output=str(folder),
+                            map_id=f'scans/{identifier}/chapter_{chapter:02d}')
             return self.status()
 
     def status(self):
@@ -60,6 +67,10 @@ class ScanJobs:
             if self.job is None:
                 return {'state': 'idle', 'running': False, 'message': '先进入指定章节，再开始扫描。'}
             result = dict(self.job)
+            if result.get('state') == 'adopted':
+                result.update(running=False, frames=0, message=f"已采用为第 {result['chapter']} 章运行地图。",
+                              log_path=str(Path(result['output']) / 'worker.log'))
+                return result
             folder = Path(result['output'])
             package = folder / f'chapter_{result["chapter"]:02d}'
             code = self.process.poll()
@@ -70,7 +81,8 @@ class ScanJobs:
                 result['frames'] = len(scan.get('frames', []))
             except (OSError, ValueError):
                 pass
-            phases = {'layered': '正在进行 3D 分层重建…', 'redraw': '正在按原始道路区域投影重绘…',
+            phases = {'layered': '正在进行 3D 分层重建…', 'loops': '正在用重访帧对闭环修正相机…',
+                      'surfaces': '正在按高度连通聚合表面编号…', 'redraw': '正在按原始道路区域投影重绘…',
                       'export': '正在导出地图…', 'publishing': '正在发布地图…', 'complete': '处理完成。'}
             try:
                 phase = json.loads((package / 'processing_status.json').read_text(encoding='utf-8'))['phase']
@@ -105,6 +117,30 @@ class ScanJobs:
                     except (OSError, ValueError, IndexError, KeyError):
                         pass
             return result
+
+    def adopt(self, identifier):
+        """把已完成的扫描采用为本章运行地图：旧运行包备份到本地历史目录，再移除 scans 下的中间副本。"""
+        with self.lock:
+            if self.job is None or identifier != self.job['id']:
+                raise ValueError('扫描任务已更换，请刷新状态。')
+            if self.process.poll() is None:
+                raise ValueError('扫描尚未结束。')
+            if self.status().get('state') != 'complete':
+                raise ValueError('只有处理完成且校验通过的扫描才能采用。')
+            if __package__:
+                from .map_runtime import adopt_runtime
+            else:
+                from map_runtime import adopt_runtime
+            source = self.store.root / self.job['map_id']
+            chapter = self.job['chapter']
+            result = adopt_runtime(source, chapter, self.store.root)
+            map_id = f'chapter_{chapter:02d}'
+            self.store.load(map_id)
+            # 采用后 scans 下的副本与运行包重复，完整采集仍在 captures 目录，删除副本避免双份进入版本库。
+            shutil.rmtree(source.parent, ignore_errors=True)
+            self.job.update(state='adopted', map_id=map_id)
+            return dict(state='adopted', message=f'已采用为第 {chapter} 章运行地图，旧包已备份。', map_id=map_id,
+                        **result)
 
     def stop(self, identifier):
         with self.lock:

@@ -12,6 +12,7 @@ function createScanController(editor) {
     byId('scan-stop').disabled = !job?.running || pending;
     for (const id of ['scan-chapter', 'scan-3d', 'scan-stroke']) byId(id).disabled = blocked;
     byId('scan-open').disabled = job?.state !== 'complete' || blocked;
+    byId('scan-adopt').disabled = job?.state !== 'complete' || blocked;
   }
   function show(value) {
     job = value;
@@ -50,11 +51,22 @@ function createScanController(editor) {
     try { await editor.refresh(); await editor.open(job.map_id); }
     catch (error) { byId('scan-status').textContent = `无法打开结果：${error.message}`; }
   });
+  byId('scan-adopt').addEventListener('click', async () => {
+    if (job?.state !== 'complete' || active()) return;
+    if (!window.confirm(`把这次扫描采用为第 ${job.chapter} 章的运行地图？旧运行包会移到本地历史目录备份，旧标注坐标不会自动迁移。`)) return;
+    pending = true; editor.sync();
+    try {
+      const value = await post('/api/scan/adopt', { job: job.id });
+      show({ ...job, ...value });
+      await editor.refresh(); await editor.open(value.map_id);
+    } catch (error) { byId('scan-status').textContent = `采用失败：${error.message}`; }
+    finally { pending = false; editor.sync(); }
+  });
   byId('scan-chapter').addEventListener('change', () => {
-    byId('scan-3d').checked = Number(byId('scan-chapter').value) === 40;
+    byId('scan-3d').checked = [39, 40].includes(Number(byId('scan-chapter').value));
   });
   setTimeout(poll, 0);
   return { get running() { return active(); }, sync,
     mapOpened(map) { if (active()) return; byId('scan-chapter').value = map.chapter || 40;
-      byId('scan-3d').checked = map.chapter === 40; sync(); } };
+      byId('scan-3d').checked = [39, 40].includes(map.chapter); sync(); } };
 }

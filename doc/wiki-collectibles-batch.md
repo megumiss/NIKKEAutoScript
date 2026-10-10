@@ -6,7 +6,7 @@
 
 ## 一条命令运行
 
-在仓库根目录、项目 Python 环境中运行。标注和 Wiki 导入默认读取 `data/chapter_maps/runtime/`，完整采集包存放在 `data/chapter_maps/local/`。`--maps-root` 可显式指定其他集合目录或单章包：
+在仓库根目录、项目 Python 环境中运行。标注和 Wiki 导入默认读取 `data/resources/maps/`，完整采集包存放在 `data/chapter_maps/local/`。`--maps-root` 可显式指定其他集合目录或单章包：
 
 ```powershell
 python dev_tools/wiki_collectibles.py
@@ -58,13 +58,13 @@ python dev_tools/minimap_chapters.py --start 38 --end 1 --retries 2
 
 `--output` 默认 `data/chapter_maps/local/captures/`，`--driver-root` 默认当前代码所在仓库。每章固定为 `chapter_NN/`；日常续采继续使用该本地目录。历史预览、失败包和旧 `current/` 快照也位于 `local/`，需检查时显式指定 `--root` / `--maps-root`。已有不合格旧包不自动升级为可用地图。
 
-采集结束后，将单章运行所需数据导出到尚不存在的运行目录；既有地图不会被覆盖：
+采集结束后，将单章运行所需数据导出到资源目录下尚不存在的地图包；既有地图不会被覆盖：
 
 ```powershell
-python -m dev_tools.map_runtime --source data/chapter_maps/local/captures/chapter_38 --destination data/chapter_maps/runtime/chapter_38
+python -m dev_tools.map_runtime --source data/chapter_maps/local/captures/chapter_38 --destination data/resources/maps/chapter_38
 ```
 
-若目标已存在，使用新的名称（如 `runtime/rescan_20261007/chapter_38`）并在编辑器中选择该版本。导出保留采集包中已有标注；不会把另一坐标系的旧标注自动迁移到新图。
+若目标已存在，使用新的名称（如 `data/resources/maps/rescan_20261007/chapter_38`）并在编辑器中选择该版本。导出保留采集包中已有标注；不会把另一坐标系的旧标注自动迁移到新图。
 
 批量入口支持分别设置探索拖动和保存帧间距。例如，保持 120px 拖动并把保存帧间距减至 40px：
 

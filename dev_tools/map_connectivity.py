@@ -154,7 +154,7 @@ def ensure_data(package, metadata, annotations, persist=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--root', type=Path, default=Path('data/chapter_maps/runtime'))
+    parser.add_argument('--root', type=Path, default=Path('data/resources/maps'))
     args = parser.parse_args()
     if __package__:
         from .map_annotator import AnnotationStore

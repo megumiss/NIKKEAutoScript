@@ -89,41 +89,22 @@ class MovementJobs:
             return copy.deepcopy(job)
 
     def calibration(self, identifier, difficulty):
-        """仅检查保存的标定及版本绑定，查询状态不加载匹配模型或取得游戏控制。
+        """查询移动标定状态；分层地图在移动任务内自动做两点临时标定，不再读取保存的标定文件。
 
-        读取所选地图元数据及保存的局部标定，核对道路版本和证据哈希。
-        返回 shared、ready 或具体不可用状态；查询只读文件，不采集新标定，也不取得游戏控制。
+        平面地图返回 shared，分层地图返回 ready 并说明临时标定方式；查询只读元数据，不取得游戏控制。
         """
         if difficulty not in ('normal', 'hard'):
             raise ValueError('请选择普通或困难难度。')
         loaded = self.store.load(identifier)
-        package = Path(loaded['path'])
-        raw = (package / 'map.json').read_bytes()
-        metadata = json.loads(raw)
+        metadata = json.loads((Path(loaded['path']) / 'map.json').read_text(encoding='utf-8'))
         if metadata.get('coordinate_model') is None:
             return dict(state='shared', message='平面地图统一使用第 38 章现用标定，不限制章节。')
         if metadata.get('coordinate_model') != 'local_parallax':
             return dict(state='unsupported', message='非平面地图移动待定，尚无可用的移动标定。')
-        directory = package / 'movement_calibration' / difficulty
-        if not (directory / 'calibration.json').exists():
-            return dict(state='missing', message='非平面地图尚未标定，移动待定。')
-        edits = loaded['annotations'].get('terrain_edits', [])
-        edits_digest = hashlib.sha256(json.dumps(edits, sort_keys=True).encode()).hexdigest()
-        expected = dict(image_sha256=loaded['annotations']['image_sha256'], edits_sha256=edits_digest,
-                        geometry_sha256=hashlib.sha256(raw + edits_digest.encode()).hexdigest(),
-                        chapter=loaded['chapter'], difficulty=difficulty)
-        try:
-            data = json.loads((directory / 'calibration.json').read_text(encoding='utf-8'))
-            if data.get('binding') != expected or data.get('method') != 'local_displacement':
-                return dict(state='stale', message='已有标定与地图或道路版本不符，移动待定。')
-            for name in ('reference', 'surface'):
-                if hashlib.sha256((directory / f'{name}.png').read_bytes()).hexdigest() != data[f'{name}_sha256']:
-                    raise ValueError('标定证据发生变化')
-            return dict(state='ready', message='已标定，可复用当前地图的局部同层标定。',
-                        validation=data['validation_map_max_px'], radius=data['radius'],
-                        training_samples=data['training_samples'], validation_samples=data['validation_samples'])
-        except (OSError, ValueError, KeyError, TypeError):
-            return dict(state='invalid', message='标定文件不完整或损坏，移动待定。')
+        surfaces = len(metadata.get('surfaces') or [])
+        return dict(state='ready', temporary=True,
+                    message='分层地图在移动开始时自动做两次正交短停靠的临时标定，仅本次任务有效，不写入地图包。',
+                    detail=f'表面编号 {surfaces} 个，同层道路按表面并集判定' if surfaces else '包未聚合表面编号，同层道路按观测帧的局部平面判定')
 
     def status(self):
         """读取原子发布的状态，进程退出而没有终态时也不能误报成功。

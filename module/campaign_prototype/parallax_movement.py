@@ -1,17 +1,25 @@
-"""分层地图的局部实测标定与移动；不同章节保存各自的地图和场景证据。"""
+"""分层地图的临时两点标定与同层移动；标定只在本次会话内存中使用，不写入地图包。"""
 
 import hashlib
 import json
+import types
 from pathlib import Path
 
 import cv2
 import numpy as np
 
 from . import runtime
-from dev_tools.map_paths import local_package_dir
 from .edited_map import road_distance
 from .local_projection import frame_plane_to_map
-from .surface_motion import contains, fit_calibration, project, register_surface
+from .probe import Localizer as FlatLocalizer, NoConnectedRoad, jacobian
+from .surface_motion import contains, project, register_surface
+
+# 两次正交短停靠：方向固定，步长按开阔程度在 80/60/40 客户区像素中取最长，停靠噪声约 5 地图像素，
+# 步长越长相对误差越小；先验权重与重标次数上限按 40 章实测样本的留出模拟选定。
+CALIBRATION_DIRECTIONS = ((1., 0.), (0., 1.))
+CALIBRATION_LENGTHS = (80., 60., 40.)
+PRIOR_WEIGHT = .3
+RECALIBRATION_LIMIT = 2
 
 
 def track_localization(localizer, reference, report, current, point=None):
@@ -60,7 +68,7 @@ def track_localization(localizer, reference, report, current, point=None):
 def binding(localizer, difficulty):
     """返回底图、道路修订、几何、章节和难度组成的缓存身份字典。
 
-    同一字典用于保存和加载参考帧及标定，防止把不同版本道路上的证据混用。
+    同一字典用于保存和加载参考帧，防止把不同版本道路上的证据混用。
     """
     return dict(image_sha256=localizer.digest, edits_sha256=localizer.edits_digest,
                 geometry_sha256=localizer.cache_digest, chapter=localizer.metadata['chapter'], difficulty=difficulty)
@@ -135,71 +143,58 @@ def load_live_references(cache, localizer, difficulty):
     return references
 
 
-def load_calibration(package, localizer, difficulty):
-    """从 movement_calibration/<difficulty> 读取 local_displacement 标定及参考图。
-
-    校验地图版本、参考图和道路掩码哈希后返回数据与 BGR 图；缺失或不匹配时抛错，不能静默复用。
-    """
-    path = Path(package) / 'movement_calibration' / difficulty
-    metadata = path / 'calibration.json'
-    if not metadata.exists():
-        raise ValueError('这张地图尚无场景标定，请先点击“采集移动标定”。')
-    data = json.loads(metadata.read_text(encoding='utf-8'))
-    if data.get('method') != 'local_displacement':
-        raise ValueError('请重新采集局部位移标定。')
-    if data.get('binding') != binding(localizer, difficulty):
-        raise ValueError('地图或道路修订已变化，请重新采集移动标定。')
-    raw = (path / 'reference.png').read_bytes()
-    if (hashlib.sha256(raw).hexdigest() != data['reference_sha256']
-            or hashlib.sha256((path / 'surface.png').read_bytes()).hexdigest() != data['surface_sha256']):
-        raise ValueError('场景标定参考图或道路证据发生变化。')
-    return data, cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
+def surface_identity(localizer, observation):
+    """返回观测所在局部平面的章节级表面编号；包未聚合表面时为 None。"""
+    plane = localizer.metadata['frame_support'][observation['reference_frame']]['local_planes'][
+        observation['local_surface']]
+    return plane.get('surface_id') if plane else None
 
 
-def run_movement(session):
-    """根据请求选择标定采集或复用，验证成功后进入导航闭环。
-
-    action=calibrate 时直接采样；移动请求先加载标定，只有显式 auto_calibrate 才允许缺失后采集。
-    成功加载后以 20 地图像素、连续两次近点观测调用 navigate；采集失败不会进入移动循环。
-    """
-    from .manual_move import navigate
-    request = session.request
-    if request.get('action') == 'calibrate':
-        return calibrate(session)
-    try:
-        session.calibration = load_calibration(request['package'], session.localizer, request['difficulty'])
-        session.emit(calibration_state='reused', message='已复用保存的标定，正在准备移动…')
-    except (OSError, ValueError, KeyError, TypeError) as exc:
-        if not request.get('auto_calibrate', False):
-            raise
-        session.emit(state='calibrating', calibration_state='collecting',
-                     message=f'需要自动标定：{exc}。正在检查当前位置并采集…')
-        result = calibrate(session)
-        session.check()
-        session.calibration = load_calibration(request['package'], session.localizer, request['difficulty'])
-        session.emit(state='planning', calibration_state='ready', calibration_clicks=result['movement_clicks'],
-                     movement_clicks=0, message='自动标定已保存，继续移动到所选目标…')
-    return navigate(session, request['target'], session.emit, arrival_radius=20, required_near=2,
-                    purpose=request.get('purpose', 'position'))
+def surface_union(localizer, identity):
+    """同一表面编号下所有局部平面投影到地图的并集，按定位器缓存一次。"""
+    cache = getattr(localizer, '_surface_unions', None)
+    if cache is None:
+        cache = localizer._surface_unions = {}
+    if identity not in cache:
+        size = tuple(localizer.metadata['size'])
+        union = np.zeros(size[::-1], np.uint8)
+        for frame, entry in enumerate(localizer.metadata['frame_support']):
+            for label, plane in enumerate(entry['local_planes']):
+                if plane is None or plane.get('surface_id') != identity:
+                    continue
+                matrix = frame_plane_to_map(localizer.metadata, frame, plane)
+                union |= cv2.warpPerspective((localizer.references[frame]['labels'] == label).astype(np.uint8),
+                                             matrix, size, flags=cv2.INTER_NEAREST)
+        cache[identity] = union
+    return cache[identity]
 
 
 def surface_mask(localizer, observation):
-    """从观测引用的原始帧和局部高度标签投影到地图，再与修订道路求交。
+    """小队所在表面的道路掩码：有表面编号时取同编号平面的并集，否则只用观测帧的局部平面。
 
-    返回包含小队的连通区域二值掩码；小队不在有效表面内时抛错，不能用相邻层补足道路。
+    返回包含小队的连通区域；小队不在有效表面内时抛错，不能用相邻层补足道路。
     """
     frame, label = observation['reference_frame'], observation['local_surface']
-    ref = localizer.references[frame]
-    plane = localizer.metadata['frame_support'][frame]['local_planes'][label]
-    matrix = frame_plane_to_map(localizer.metadata, frame, plane)
-    mask = cv2.warpPerspective((ref['labels'] == label).astype(np.uint8), matrix,
-                               tuple(localizer.metadata['size']), flags=cv2.INTER_NEAREST)
+    identity = surface_identity(localizer, observation)
+    if identity is None:
+        plane = localizer.metadata['frame_support'][frame]['local_planes'][label]
+        mask = cv2.warpPerspective((localizer.references[frame]['labels'] == label).astype(np.uint8),
+                                   frame_plane_to_map(localizer.metadata, frame, plane),
+                                   tuple(localizer.metadata['size']), flags=cv2.INTER_NEAREST)
+    else:
+        mask = surface_union(localizer, identity).copy()
     mask &= localizer.road
     count, labels = cv2.connectedComponents(mask)
     x, y = np.rint(observation['position']).astype(int)
     if not 0 <= x < mask.shape[1] or not 0 <= y < mask.shape[0] or not labels[y, x]:
         raise ValueError('小队位置缺少本层道路证据。')
     return (labels == labels[y, x]).astype(np.uint8)
+
+
+def surface_route(mask, start, target):
+    """在同层道路掩码上复用平面原型的 A*；二维连通不证明跨层可通行。"""
+    shim = types.SimpleNamespace(road=mask.astype(np.float32), route_labels=None)
+    return FlatLocalizer.route(shim, start, target)
 
 
 def checked_segment(road, start, end):
@@ -213,11 +208,63 @@ def checked_segment(road, start, end):
         raise ValueError('落点之间没有同层连续道路，不跨越空洞、擦除区或高低层。')
 
 
-def calibrate(session):
-    """采集九个实际停靠点，六点拟合、三点验证；失败保留日志而不发布标定。
+def flat_prior(observation):
+    """把 38 章共用的场景矩阵换到当前观测的地图坐标：两侧都在小队处做局部线性化。
 
-    每个样本先直接采样箭头，再执行客户区短偏移，停稳后以真实地图位移构造样本对。
-    仅在原同层道路内且净空足够时采集九点，逐次保存证据；六点训练、三点验证通过后才发布标定。
+    先验是仓库内的静态资产，不是学习值；它只用来约束两点拟合，不单独用于点击。
+    """
+    asset = json.loads((Path(__file__).parent / 'assets/calibration.json').read_text(encoding='utf-8'))
+    roi = np.asarray(observation['player_roi'], float)
+    flat = jacobian(np.asarray(asset['projection'], float), roi)
+    layered = jacobian(np.asarray(observation['roi_to_map'], float), roi)
+    return np.asarray(asset['field_inverse'], float) @ flat @ np.linalg.inv(layered)
+
+
+def fit_quick(samples, prior, weight=PRIOR_WEIGHT):
+    """向先验收缩的两点岭回归；样本是 (地图位移, 客户区偏移) 对，返回 3×3 矩阵与残差摘要。
+
+    岭回归让近共线或带噪的两点不会把矩阵放大到先验之外，40 章样本模拟下留出残差中位约 7px。
+    """
+    samples = np.asarray(samples, float)
+    if samples.ndim != 3 or samples.shape[1:] != (2, 2) or len(samples) < 2:
+        raise ValueError('临时标定至少需要两个样本。')
+    displacement, offset = samples[:, 0], samples[:, 1]
+    if np.linalg.matrix_rank(displacement, tol=1.) < 2:
+        raise ValueError('两次停靠的地图位移方向过于接近，无法标定两个轴。')
+    ridge = weight * float(np.mean(np.sum(displacement ** 2, axis=1)))
+    linear = (offset.T @ displacement + ridge * prior) @ np.linalg.inv(displacement.T @ displacement
+                                                                      + ridge * np.eye(2))
+    matrix = np.eye(3)
+    matrix[:2, :2] = linear
+    residual = np.linalg.norm(displacement @ linear.T - offset, axis=1)
+    prior_residual = np.linalg.norm(displacement @ prior.T - offset, axis=1)
+    return matrix, dict(samples=int(len(samples)), ridge_lambda=ridge,
+                        fit_residual_max_px=float(residual.max()), prior_residual_max_px=float(prior_residual.max()))
+
+
+def calibration_offset(prior, supported, position, direction, lengths=CALIBRATION_LENGTHS):
+    """按先验预测落点，在同层掩码上沿给定方向选最长且全程净空足够的客户区偏移。
+
+    先验只用来预测大致落点，误差两成以内不影响净空判断；没有一档可行时拒绝标定而不是缩到更短。
+    """
+    clearance = cv2.distanceTransform(supported, cv2.DIST_L2, 5)
+    inverse = np.linalg.inv(prior)
+    for length in lengths:
+        offset = np.asarray(direction, float) * length
+        landing = position + inverse @ offset
+        count = max(2, int(np.linalg.norm(landing - position)) + 1)
+        line = np.rint(np.linspace(position, landing, count)).astype(int)
+        if np.any(line < 0) or np.any(line >= np.asarray(supported.shape[::-1])):
+            continue
+        if np.all(clearance[line[:, 1], line[:, 0]] >= 12):
+            return offset
+    raise ValueError('临时标定需要小队沿两个方向各有至少 40 客户区像素的开阔同层道路；请先把小队移到开阔处。')
+
+
+def quick_calibrate(session, directions=CALIBRATION_DIRECTIONS):
+    """两次正交短停靠拟合本次会话的临时点击矩阵，返回标定结束时的新观测；不写任何地图包文件。
+
+    每次停靠先直接采样箭头，再执行客户区短偏移，停稳后用真实地图位移构造样本；样本与证据写在任务目录。
     """
     from . import goto
     from .movement_feedback import resolve_anchor
@@ -226,34 +273,34 @@ def calibrate(session):
     reference = goto.capture_client(session.win)
     session.identity(reference)
     session.preview(reference)
-    origin = np.asarray(observation['position'], float)
     supported = surface_mask(session.localizer, observation)
     clearance = cv2.distanceTransform(supported, cv2.DIST_L2, 5)
-    session.preview(reference)
     runtime.write_image(session.folder / 'calibration_reference.png', reference)
-    samples, evidence, locations = [], [], [origin]
-    # 验证点位于外围训练点形成的区域内部，不用外推冒充验证。
-    offsets = [(40, 25), (-40, -25), (40, -25), (-40, 25), (0, 25), (0, -25),
-               (-15, -10), (15, -10), (0, 10)]
-    current = reference
-    for index, offset in enumerate(offsets):
+    prior = flat_prior(observation)
+    origin = np.asarray(observation['position'], float)
+    origin_anchor = None
+    samples, evidence, current = [], [], reference
+    for index, direction in enumerate(directions):
         session.check()
         x, y = np.rint(observation['position']).astype(int)
         if not (0 <= y < clearance.shape[0] and 0 <= x < clearance.shape[1]) or clearance[y, x] < 40:
-            raise ValueError('标定需要同一区域内四周至少 40 地图像素的开阔道路；当前位置靠近边界，未追加试点。')
+            raise ValueError('临时标定需要同一表面四周至少 40 地图像素的开阔道路；请先把小队移到开阔处。')
+        offset = calibration_offset(prior, supported, np.asarray(observation['position'], float), direction)
         anchor = resolve_anchor(session, current, observation, allow_scene=False)
+        if origin_anchor is None:
+            origin_anchor = anchor
         before = np.asarray(observation['position'], float)
         click = anchor + offset
         if not (250 <= click[0] <= 1500 and 180 <= click[1] <= 880):
             raise ValueError('标定落点超出有效场景区域。')
-        session.emit(state='calibrating', message=f'正在采集实际停靠点 {index + 1}/9…',
-                     movement_clicks=index, click=click.tolist())
+        session.emit(state='calibrating', message=f'正在做两点临时标定 {index + 1}/{len(directions)}…',
+                     calibration_clicks=index, click=click.tolist())
         session.move(click)
-        session.emit(movement_clicks=index + 1)
+        session.emit(calibration_clicks=index + 1)
         session.wait_stopped()
         observation = session.observe()
         if road_distance(supported, observation['position']) > 2:
-            raise ValueError('标定时小队离开原道路表面，停止采集。')
+            raise ValueError('标定时小队离开原表面道路，停止采集。')
         goto.map_close(session.win)
         current = goto.capture_client(session.win)
         session.identity(current)
@@ -261,51 +308,40 @@ def calibrate(session):
         after = np.asarray(observation['position'], float)
         if np.linalg.norm(after - before) < 2:
             raise ValueError('点击后没有可测的小队位移，停止标定。')
-        samples.append([(after - before).tolist(), list(offset)])
-        locations.append(after)
+        samples.append([(after - before).tolist(), offset.tolist()])
         evidence.append(dict(before=before.tolist(), after=after.tolist(), click=click.tolist(),
                              before_anchor=anchor.tolist()))
-        (session.folder / 'calibration_samples.json').write_text(json.dumps(samples, indent=2), encoding='utf-8')
-        (session.folder / 'calibration_observations.json').write_text(json.dumps(evidence, indent=2), encoding='utf-8')
-    return publish_calibration(session, reference, origin, supported, samples, evidence, locations)
+    matrix, report = fit_quick(samples, prior)
+    data = dict(method='temporary_two_point', matrix=matrix.tolist(), prior=prior.tolist(), samples=samples,
+                origin=origin.tolist(), origin_anchor=origin_anchor.tolist(),
+                surface_id=surface_identity(session.localizer, observation), **report)
+    (session.folder / 'calibration_samples.json').write_text(json.dumps(dict(data, evidence=evidence), indent=2),
+                                                              encoding='utf-8')
+    session.calibration = (data, reference)
+    session.surface = supported
+    session.last_plan = None
+    session.emit(calibration_state='ready', calibration=dict(samples=report['samples'],
+                                                              fit_residual_max_px=report['fit_residual_max_px'],
+                                                              prior_residual_max_px=report['prior_residual_max_px']),
+                 message='两点临时标定完成，继续移动…')
+    return observation
 
 
-def publish_calibration(session, reference, origin, supported, samples, evidence, locations):
-    """按地图到点容差验证实测位移；场景像素只作诊断，避免混用两种坐标单位。
-
-    samples 的第一项是地图位移，第二项是客户区点击偏移；按地图误差 8/12px 验证拟合与留出样本。
-    检查固定偏移后绑定版本和道路证据，备份已有标定，再写图像与原子 JSON；返回 calibrated 状态和验证误差。
-    """
-    calibration = fit_calibration(samples[:6], samples[6:], map_error_limits=(8, 12))
-    if np.linalg.norm(np.asarray(calibration['matrix'])[:2, 2]) > 8:
-        raise ValueError('标定出现过大的固定偏移，可能受到障碍或定位偏差影响。')
-    reference_hash = hashlib.sha256((session.folder / 'calibration_reference.png').read_bytes()).hexdigest()
-    calibration.update(binding=binding(session.localizer, session.request['difficulty']),
-                       reference_sha256=reference_hash,
-                       method='local_displacement', origin=origin.tolist(), samples=samples,
-                       origin_anchor=evidence[0]['before_anchor'],
-                       radius=max(float(np.linalg.norm(p - origin)) for p in locations) + 12)
-    destination = Path(session.request['package']) / 'movement_calibration' / session.request['difficulty']
-    destination.mkdir(parents=True, exist_ok=True)
-    # 先在独立任务目录验证完，再发布；旧标定留在带时间戳的备份中。
-    import time
-    import shutil
-    if (destination / 'calibration.json').exists():
-        backup = local_package_dir(Path(session.request['package'])) / 'movement_calibration' / (
-            session.request['difficulty']) / f'backup_{time.time_ns()}'
-        backup.mkdir(parents=True)
-        for name in ['reference.png', 'surface.png', 'calibration.json']:
-            if (destination / name).exists():
-                shutil.copyfile(destination / name, backup / name)
-    runtime.write_image(destination / 'reference.png', reference)
-    runtime.write_image(destination / 'surface.png', supported * 255)
-    calibration['surface_sha256'] = hashlib.sha256((destination / 'surface.png').read_bytes()).hexdigest()
-    pending = destination / 'calibration.pending.json'
-    pending.write_text(json.dumps(calibration, ensure_ascii=False, indent=2), encoding='utf-8')
-    pending.replace(destination / 'calibration.json')
-    return dict(state='calibrated', message='局部场景标定通过，可以测试该道路已标定区域内的目标。',
-                movement_clicks=len(samples), calibration_path=str(destination),
-                validation=calibration['validation_map_max_px'])
+def run_movement(session):
+    """移动任务不读取任何保存的标定；临时标定在首次规划或显式请求时生成，任务结束即丢弃。"""
+    from .manual_move import navigate
+    request = session.request
+    session.calibration = None
+    if request.get('action') == 'calibrate':
+        quick_calibrate(session)
+        data = session.calibration[0]
+        return dict(state='calibrated', message='两点临时标定完成，仅在本次会话内有效，不写入地图包。',
+                    movement_clicks=len(data['samples']),
+                    calibration=dict(samples=data['samples'], fit_residual_max_px=data['fit_residual_max_px'],
+                                     prior_residual_max_px=data['prior_residual_max_px'],
+                                     surface_id=data['surface_id']))
+    return navigate(session, request['target'], session.emit, arrival_radius=20, required_near=2,
+                    purpose=request.get('purpose', 'position'))
 
 
 class ParallaxSessionMixin:
@@ -391,30 +427,42 @@ class ParallaxSessionMixin:
         report['enemy_markers'] = goto.normal_enemy_markers(image, np.asarray(report['roi_to_map']))
         return report
 
-    def plan(self, observation, target):
-        """检查目标仍在标定附近及同层连续道路内，并核对保存的道路掩码哈希。
+    def _surface_changed(self, observation):
+        """临时标定绑定表面编号；有编号的包里小队换到另一表面就要重标。"""
+        data = self.calibration[0]
+        current = surface_identity(self.localizer, observation)
+        return data.get('surface_id') is not None and current is not None and current != data['surface_id']
 
-        超出实测位移凸包时按比例缩短至可支持落点，再调用镜头规划器；不能将局部标定外推到整章。
+    def _poor_progress(self, observation, target):
+        """同一目标的上一次直达点击若只前进了不到一半，临时矩阵不可信，允许有限次重标。"""
+        last = getattr(self, 'last_plan', None)
+        if (last is None or not np.allclose(last['target'], target)
+                or getattr(self, 'recalibrations', 0) >= RECALIBRATION_LIMIT):
+            return False
+        remaining = float(np.linalg.norm(np.asarray(target, float) - np.asarray(observation['position'], float)))
+        return last['distance'] >= 40 and remaining > .5 * last['distance']
+
+    def plan(self, observation, target):
+        """同层连通检查后直接规划到完整目标；首次落点进展不足或换层时重做两点临时标定。
+
+        不再限制标定半径或采样凸包，长距离误差由停稳重定位的到点循环吸收；跨层目标须先标注电梯。
         """
         from .camera_navigation import plan_world_move
-        data, _ = self.calibration
+        target = np.asarray(target, float)
+        if getattr(self, 'calibration', None) is None or self._surface_changed(observation):
+            self.emit(state='calibrating', message='正在做本次会话的两点临时标定…')
+            observation = quick_calibrate(self)
+        elif self._poor_progress(observation, target):
+            self.recalibrations = getattr(self, 'recalibrations', 0) + 1
+            self.emit(state='calibrating', message='首次落点进展不足，重做两点临时标定…')
+            observation = quick_calibrate(self)
         position = np.asarray(observation['position'], float)
-        if np.linalg.norm(np.asarray(target) - data['origin']) > data['radius']:
-            raise ValueError('目标或小队超出实测标定范围；请在已标定的局部道路内选点。')
-        return_margin = max(np.linalg.norm(p) for p in data['support'])
-        if np.linalg.norm(position - data['origin']) > data['radius'] + return_margin:
-            raise ValueError('小队离标定区域太远，请先返回已标定的同层道路附近。')
-        path = Path(self.request['package']) / 'movement_calibration' / self.request['difficulty'] / 'surface.png'
-        if hashlib.sha256(path.read_bytes()).hexdigest() != data['surface_sha256']:
-            raise ValueError('标定道路掩码发生变化。')
-        mask = (cv2.imread(str(path), cv2.IMREAD_GRAYSCALE) > 0).astype(np.uint8) & self.localizer.road
-        checked_segment(mask, observation['position'], target)
-        delta = np.asarray(target) - position
-        for _ in range(8):
-            if contains(data['support'], delta):
-                break
-            delta *= .75
-        else:
-            raise ValueError('移动方向不在实测位移范围内。')
-        self.emit(road_remaining=float(np.linalg.norm(np.asarray(target) - position)))
-        return plan_world_move(self, observation, position + delta, calibration=data, surface=mask)
+        mask = surface_mask(self.localizer, observation)
+        try:
+            _, path = surface_route(mask, position, target)
+        except NoConnectedRoad as exc:
+            raise ValueError('目标与小队不在同一表面的连通道路上；跨层请先标注电梯传送。') from exc
+        self.emit(road_remaining=float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum()))
+        self.last_plan = dict(target=target.tolist(), distance=float(np.linalg.norm(target - position)))
+        self.surface = mask
+        return plan_world_move(self, observation, target, calibration=self.calibration[0], surface=mask)

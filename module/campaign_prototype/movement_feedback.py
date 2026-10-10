@@ -101,20 +101,19 @@ def resolve_anchor(session, field, observation, allow_scene=True):
 
 
 def road_recovery_click(session, observation, target):
-    """从已验证的标定截图投影附近同层道路，仅生成一次恢复短移的落点。"""
+    """从本次会话的临时标定和同层道路掩码出发，仅生成一次恢复短移的落点。"""
     from . import goto
     from .camera_navigation import FIELD_BOUNDS, inside
-    from .parallax_movement import checked_segment, load_calibration
+    from .parallax_movement import checked_segment
 
-    if observation.get('position_kind') != 'squad' or not hasattr(session, 'calibration'):
-        raise ValueError('道路短移需要真实小队圆环和已验证的局部场景标定。')
-    data, reference = load_calibration(session.request['package'], session.localizer, session.request['difficulty'])
+    if observation.get('position_kind') != 'squad' or getattr(session, 'calibration', None) is None:
+        raise ValueError('道路短移需要真实小队圆环和本次会话的临时标定。')
+    road = getattr(session, 'surface', None)
+    if road is None:
+        raise ValueError('缺少同层道路掩码，无法进行道路短移。')
+    data, reference = session.calibration
     position = np.asarray(observation['position'], float)
     origin = np.asarray(data['origin'], float)
-    if np.linalg.norm(position - origin) > data['radius']:
-        raise ValueError('小队超出局部标定范围，无法进行道路短移。')
-    path = Path(session.request['package']) / 'movement_calibration' / session.request['difficulty'] / 'surface.png'
-    road = (cv2.imread(str(path), cv2.IMREAD_GRAYSCALE) > 0).astype(np.uint8) & session.localizer.road
     goto.map_close(session.win)
     field = goto.capture_client(session.win)
     session.identity(field)
@@ -126,9 +125,6 @@ def road_recovery_click(session, observation, target):
     candidates = [position + radius * np.array([np.cos(angle + turn), np.sin(angle + turn)])
                   for radius in (10, 6) for turn in (0, np.pi / 4, -np.pi / 4, np.pi / 2, -np.pi / 2, np.pi)]
     for candidate in candidates:
-        if (np.linalg.norm(candidate - origin) > data['radius']
-                or not contains(data['support'], candidate - position)):
-            continue
         try:
             checked_segment(road, position, candidate)
             click = scene_anchor(reference, field, data['origin_anchor'], matrix @ (candidate - origin))

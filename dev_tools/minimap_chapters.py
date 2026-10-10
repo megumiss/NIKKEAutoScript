@@ -161,9 +161,11 @@ def finish_scan(package, chapter, process_3d=False, stop=None):
 
 
 def finish_scan_3d(package, chapter, scan, stop=None):
-    """正式 3D 分支：分层重建、原帧区域重绘、最后发布元数据，保留各阶段证据。"""
+    """正式 3D 分支：分层重建、重访闭环、原帧区域重绘、最后发布元数据，保留各阶段证据。"""
     from dev_tools.minimap_layered import reconstruct
+    from dev_tools.minimap_loops import close_loops
     from dev_tools.minimap_projected_redraw import redraw
+    from dev_tools.minimap_surfaces import assign_surfaces
 
     if any((package / name).exists() for name in ['map.json', 'annotations.json']):
         raise ValueError('Preserve existing package and annotations; choose a new output root.')
@@ -177,9 +179,27 @@ def finish_scan_3d(package, chapter, scan, stop=None):
         print(f'Chapter {chapter}: {name}', flush=True)
 
     stage('layered')
-    reconstruct(package / 'source', work / 'layered', stop_file=stop)
+    reconstruct(package / 'source', work / 'layered', stop_file=stop, depth_method='robust')
+    stage('loops')
+    baseline, loop_status = work / 'layered', None
+    try:
+        close_loops(work / 'layered', work / 'loops')
+        baseline = work / 'loops'
+    except ValueError as exc:
+        # 重访对不足时沿用未闭环基线，并把原因写进元数据，避免静默降级。
+        loop_status = {'status': 'skipped', 'reason': str(exc)}
+        print(f'Chapter {chapter}: loop closure skipped: {exc}', flush=True)
+    stage('surfaces')
+    surface_status = None
+    try:
+        assign_surfaces(baseline, work / 'surfaces')
+        baseline = work / 'surfaces'
+    except ValueError as exc:
+        # 没有足够局部平面时不影响重绘，只记录原因；移动端会退回单帧局部平面掩码。
+        surface_status = {'status': 'skipped', 'reason': str(exc)}
+        print(f'Chapter {chapter}: surface clustering skipped: {exc}', flush=True)
     stage('redraw')
-    redraw(work / 'layered', work / 'redrawn', regions=True, stop_file=stop)
+    redraw(baseline, work / 'redrawn', regions=True, stop_file=stop)
     stage('export')
     final = work / 'redrawn'
     metadata = json.loads((final / 'map.json').read_text(encoding='utf-8'))
@@ -188,6 +208,10 @@ def finish_scan_3d(package, chapter, scan, stop=None):
     metadata.update(chapter=chapter, processing_3d=True, capture=summary,
                     coordinates={'unit': 'pixel', 'origin': 'top_left', 'x': 'right', 'y': 'down'},
                     navigation_ready=False)
+    if loop_status is not None:
+        metadata['loop_closure'] = loop_status
+    if surface_status is not None:
+        metadata['surface_clustering'] = surface_status
     for item in final.iterdir():
         if item.name in ('source', 'map.json'):
             continue

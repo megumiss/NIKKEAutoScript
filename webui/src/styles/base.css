@@ -170,6 +170,10 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .view.tool-view { overflow:hidden; }.view.tool-view .task-layout { height:100%; align-items:stretch; }.view.tool-view .task-layout > div:first-child { display:flex; flex-direction:column; min-height:0; }.view.tool-view .anchor-nav { align-self:start; }.tool-log { flex:1 1 0; margin-top:18px; min-height:160px; }
 .view.tool-view .cfg-groups { flex:0 1 auto; min-height:0; overflow:auto; }
 .tool-log .log-body { max-height:none; min-height:0; }
+.view.tool-view.campaign-view { overflow:auto; }
+.view.tool-view.campaign-view .task-layout { height:auto; }
+.view.tool-view.campaign-view .cfg-groups { overflow:visible; flex:none; }
+.campaign-view .tool-log { flex:none; height:280px; }
 .view.web-view { display:flex; flex-direction:column; padding:0; overflow:hidden; }
 .web-tabs { display:flex; flex:none; gap:8px; align-items:center; padding:10px 18px; border-bottom:1px solid var(--border); background:var(--card); overflow-x:auto; }
 .web-tab { flex:none; padding:7px 15px; border:1px solid var(--button-border); border-radius:999px; color:var(--text-2); background:var(--button-bg); font-size:13.5px; cursor:pointer; }

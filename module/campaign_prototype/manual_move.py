@@ -29,7 +29,7 @@ def prepare(request, folder):
     """准备绑定请求版本的运行地图，校验道路目标和对应场景标定。
 
     request 绑定地图图像、标注版本、章节、难度和目标；返回实际运行包路径与源文件哈希。
-    平面包复制到任务目录并生成校验清单，local_parallax 包验证已有标定与修订道路；版本不符或目标无效直接拒绝。
+    平面包复制到任务目录并生成校验清单，local_parallax 包只核对修订道路上的目标，标定在移动时临时生成。
     """
     source = Path(request['package'])
     if request.get('action', 'move') not in ('move', 'calibrate'):
@@ -40,13 +40,10 @@ def prepare(request, folder):
     metadata = json.loads((source / 'map.json').read_text(encoding='utf-8'))
     if metadata.get('coordinate_model') == 'local_parallax':
         from .parallax_localizer import ParallaxLocalizer
-        from .parallax_movement import load_calibration
         if metadata['chapter'] != request['chapter']:
             raise ValueError('所选地图章节已变化。')
         localizer = ParallaxLocalizer(source)
         if request.get('action', 'move') != 'calibrate':
-            load_calibration(source, localizer, request['difficulty'])
-            request['auto_calibrate'] = False
             from .edited_map import road_distance
             if road_distance(localizer.road, request['target']) > 0:
                 raise ValueError('目标不在修订后的道路上。')

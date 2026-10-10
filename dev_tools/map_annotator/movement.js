@@ -40,8 +40,9 @@ function createMovementController(editor) {
       }
       calibrationState = value.state;
       byId('move-calibration-status').textContent = value.message;
-      byId('move-calibration-metrics').textContent = value.state === 'ready'
-        ? `${value.training_samples} 个拟合样本 · ${value.validation_samples} 个验证样本 · 最大误差 ${value.validation.toFixed(1)} 地图像素` : '';
+      byId('move-calibration-metrics').textContent = value.state === 'ready' && Number.isFinite(value.validation)
+        ? `${value.training_samples} 个拟合样本 · ${value.validation_samples} 个验证样本 · 最大误差 ${value.validation.toFixed(1)} 地图像素`
+        : (value.detail || '');
     } catch (error) {
       byId('move-calibration-status').textContent = `读取标定失败：${error.message}`;
       byId('move-calibration-metrics').textContent = '';
