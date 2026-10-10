@@ -6,6 +6,7 @@
 - `gui.py`：Web UI 启动入口（Uvicorn）
 
 配置与运行时文件在 `config/`；模板图与多语言资源在 `assets/`（如 `assets/zh-CN/event_dated/...`）；日志与错误截图在 `log/`。  
+运行地图等资源来自独立仓库 NIKKEAutoScriptResource（部署设置 `ResourceRepository`），按需同步到 `data/resources/`（不提交，`maps/` 为章节地图）；`data/chapter_maps/local/` 为本地采集、原始包与实验数据。
 桌面 Tauri 2 工程位于 `webapp/`；Vue SPA 位于 `webui/`，由 Python 后端托管。  
 SPA 源码结构：`webui/src/views/`（按页面拆分）、`webui/src/stores/`（Pinia 共享状态）、`webui/src/composables/`（Tauri 壳、文本域等复用逻辑）、`webui/src/components/`（壳与通用组件）；`App.vue` 只是布局壳，按路由切换视图。
 
@@ -68,6 +69,8 @@ Python 使用 4 空格缩进，单行不超过 120 字符，字符串优先单�
 
 ## 测试规范
 按受影响的模块选择检查，跨模块改动合并对应要求；以下为唯一验证清单。
+
+非必要情况下不要新增测试代码。优先复用现有测试、临时验证脚本或手动回归；仅在现有验证方式无法覆盖关键行为或回归风险时新增测试。此规则不免除下表中的必要检查。
 
 | 改动范围 | 必要检查 |
 | --- | --- |

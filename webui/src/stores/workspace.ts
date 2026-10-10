@@ -163,7 +163,14 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   function startStateSocket() {
     stateSocket?.close()
     const instancesStore = useInstancesStore()
-    stateSocket = new JsonSocket('/ws/state', event => { const instance = instancesStore.instances.find(item => item.name === event.name); if (instance) instance.state = event.state })
+    stateSocket = new JsonSocket('/ws/state', event => {
+      if (event.type === 'campaign') {
+        instancesStore.campaignRevisions[event.name] = event.revision
+        return
+      }
+      const instance = instancesStore.instances.find(item => item.name === event.name)
+      if (instance) instance.state = event.state
+    })
     stateSocket.connect()
   }
   function startSockets() {

@@ -226,6 +226,14 @@
       "name": "异常拦截",
       "help": ""
     },
+    "AutoMainStory": {
+      "name": "自动主线剧情",
+      "help": "请先进入主线地图页面。仅支持 PC 客户端，分辨率为 1776×999。"
+    },
+    "AutoMainCollectible": {
+      "name": "自动主线收集品",
+      "help": "请先进入主线地图页面。仅支持 PC 客户端，分辨率为 1776×999。"
+    },
     "AutoTower": {
       "name": "自动爬塔",
       "help": ""

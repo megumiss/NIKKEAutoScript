@@ -25,6 +25,13 @@ Deploy:
     # [In most cases] Use true
     AutoUpdate: true
 
+  Resource:
+    # URL of the NKAS resource repository (chapter maps and other runtime data)
+    # Synced on demand from the campaign page into ./data/resources; it does not follow NKAS updates
+    # [In most cases] Use 'https://github.com/megumiss/NIKKEAutoScriptResource.git'
+    # [Other] Use a mirror of the same repository
+    ResourceRepository: 'https://github.com/megumiss/NIKKEAutoScriptResource.git'
+
   Python:
     # Filepath of python executable `python.exe`
     # [Easy installer] Use './toolkit/python.exe'

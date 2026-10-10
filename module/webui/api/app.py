@@ -8,8 +8,10 @@ from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
 from module.webui.security_entry import entry_info, regenerate_entry
-from . import (routes_bla, routes_calendar, routes_config, routes_console, routes_cookie_sync, routes_deploy, routes_device,
+from . import (routes_bla, routes_calendar, routes_campaign, routes_config, routes_console, routes_cookie_sync,
+               routes_deploy, routes_device,
                routes_instances, routes_logs, routes_maintenance, routes_notify, routes_preview, routes_proxy,
+               routes_resource,
                routes_schedule, routes_search, routes_serial, routes_stats, routes_system, routes_tasks, routes_tools, ws)
 
 
@@ -27,6 +29,8 @@ def mount_api(app):
     routes = [
         Route('/api/security/entry', entry_info, methods=['GET']),
         Route('/api/security/entry/regenerate', regenerate_entry, methods=['POST']),
+        Route('/api/resource', routes_resource.status, methods=['GET']),
+        Route('/api/resource/sync', routes_resource.sync, methods=['POST']),
         Route('/api/instances', routes_instances.instances, methods=['GET']),
         Route('/api/instances', routes_instances.create, methods=['POST']),
         Route('/api/avatars', routes_instances.avatar_list, methods=['GET']),
@@ -107,6 +111,8 @@ def mount_api(app):
         Route('/api/{name:str}/bla/login/cancel', routes_bla.login_cancel, methods=['POST']),
         Route('/api/{name:str}/bla/bind', routes_bla.bind_to_bot, methods=['POST']),
         Route('/api/{name:str}/screenshot', routes_preview.screenshot, methods=['GET']),
+        Route('/api/{name:str}/campaign', routes_campaign.campaign, methods=['GET']),
+        Route('/api/{name:str}/campaign/map/{chapter:int}', routes_campaign.map_image, methods=['GET']),
         Route('/api/{name:str}/scrcpy', routes_preview.scrcpy, methods=['GET']),
         Route('/api/{name:str}/task/{task:str}/run', routes_tasks.run_task, methods=['POST']),
         Route('/api/{name:str}/tool/{task:str}/start', routes_tasks.start_tool, methods=['POST']),

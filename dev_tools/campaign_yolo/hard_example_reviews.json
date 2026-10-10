@@ -1,0 +1,1314 @@
+{
+  "schema_version": 1,
+  "review_method": "visual_full_frame_before_new_subset_inference",
+  "evaluation_role": "v4_hard_example_training",
+  "model_sha256": "673f164ab926fc5b16a22b0dcbd4dc322381fee70f78e546a26629f817ee9196",
+  "model_metadata_sha256": "67a79b9443ec74ddd16d952e6a6860e7a12a4c2cd71ca72edb6e802176155678",
+  "training_manifest_sha256": "5e5cb1faea7c5ba81a4c5b17f547861f37c2da144e7511a762a1ac8e61a3633c",
+  "note": "Full-frame corrections from the failed V3 acceptance batch; excluded from all future independent accuracy claims.",
+  "frames": [
+    {
+      "id": "af5d14d06eeb8c52d134",
+      "pixel_sha256": "af5d14d06eeb8c52d134607dfdc3abc605d021c7c92e6bd8a2d6ee20497cf437",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00020.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00020.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            117.0,
+            429.0,
+            150.0,
+            462.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            424.0,
+            348.0,
+            455.0,
+            379.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            375.0,
+            347.0,
+            406.0,
+            378.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            285.0,
+            268.0,
+            353.0,
+            335.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.985066716548198,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "378d663a9e79c8dd918e",
+      "pixel_sha256": "378d663a9e79c8dd918e60f0333221846fe481694990c237a81dd17e5c33094c",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00021.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00021.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            265.0,
+            302.0,
+            292.0,
+            328.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            222.0,
+            301.0,
+            249.0,
+            327.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            276.0,
+            261.0,
+            301.0,
+            284.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            470.0,
+            209.0,
+            486.0,
+            223.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            388.0,
+            154.0,
+            445.0,
+            198.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9900904993497586,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "47924d893712960cb381",
+      "pixel_sha256": "47924d893712960cb381775fcd904d126dfd123a49f1826912e4413c582d8f8a",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00022.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00022.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            438,
+            409,
+            469,
+            439
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            408.0,
+            359.0,
+            438.0,
+            388.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            358.0,
+            332.0,
+            386.0,
+            359.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            377.0,
+            181.0,
+            400.0,
+            198.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            341.0,
+            180.0,
+            361.0,
+            198.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            381.0,
+            153.0,
+            402.0,
+            168.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            461,
+            76,
+            486,
+            100
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9911059448096485,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "ebab3e3c05ae7464a5c5",
+      "pixel_sha256": "ebab3e3c05ae7464a5c5ba1b97d934b9a97f75b2e38aecc6e6fa5960599f8c13",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00023.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00023.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            450.0,
+            370.0,
+            477.0,
+            399.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            422.0,
+            325.0,
+            447.0,
+            350.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            372.0,
+            301.0,
+            396.0,
+            325.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            388.0,
+            161.0,
+            406.0,
+            177.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            354.0,
+            161.0,
+            372.0,
+            176.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            390.0,
+            135.0,
+            408.0,
+            149.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            465.0,
+            70.0,
+            486.0,
+            82.0
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9925044091710759,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "cea903bd0cd3ff0af0a6",
+      "pixel_sha256": "cea903bd0cd3ff0af0a64209b7acb38b457cad47a962a1873d991a28eae68d11",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00026.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00026.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            452.0,
+            364.0,
+            486.0,
+            397.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            388.0,
+            336.0,
+            419.0,
+            367.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            250.0,
+            240.0,
+            275.0,
+            262.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            237.0,
+            208.0,
+            259.0,
+            228.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            200.0,
+            191.0,
+            222.0,
+            210.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            417.0,
+            148.0,
+            440.0,
+            165.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            418.0,
+            122.0,
+            440.0,
+            137.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            448.0,
+            108.0,
+            468.0,
+            121.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            245.0,
+            90.0,
+            262.0,
+            102.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            214.0,
+            90.0,
+            233.0,
+            102.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            253.0,
+            70.0,
+            270.0,
+            81.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            425.0,
+            43.0,
+            440.0,
+            53.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            397.0,
+            43.0,
+            412.0,
+            53.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            337,
+            11,
+            380,
+            40
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            466,
+            430,
+            486,
+            450
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9868170238540609,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "pixel_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00027.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00027.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            181.0,
+            454.0,
+            212.0,
+            462.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            53.0,
+            326.0,
+            84.0,
+            355.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            48.0,
+            285.0,
+            79.0,
+            311.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            14.0,
+            263.0,
+            43.0,
+            288.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            270.0,
+            210.0,
+            295.0,
+            231.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            279.0,
+            177.0,
+            303.0,
+            196.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            316.0,
+            160.0,
+            339.0,
+            177.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            99.0,
+            137.0,
+            122.0,
+            154.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            66.0,
+            137.0,
+            89.0,
+            153.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            115.0,
+            113.0,
+            137.0,
+            127.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            308.0,
+            82.0,
+            326.0,
+            94.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            277.0,
+            81.0,
+            297.0,
+            94.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            225.0,
+            48.0,
+            270.0,
+            75.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9851246147542444,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "e79fd638bc68692b6a7c",
+      "pixel_sha256": "e79fd638bc68692b6a7cd933d3f9d6849b6785bc22e7fcba3ec018ced6acfecf",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00028.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00028.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            71.0,
+            226.0,
+            99.0,
+            248.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            92.0,
+            193.0,
+            118.0,
+            212.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            136.0,
+            174.0,
+            161.0,
+            193.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            153.0,
+            91.0,
+            175.0,
+            105.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            124.0,
+            91.0,
+            145.0,
+            105.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            78.0,
+            55.0,
+            127.0,
+            85.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.992820622450252,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "a5c301dcbe7f14b39ef0",
+      "pixel_sha256": "a5c301dcbe7f14b39ef0e2c8b833ff5c1d302c4033376795aef66f8d4ca76bb7",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00029.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00029.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            433.0,
+            8.0,
+            442.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            5.0,
+            363.0,
+            41.0,
+            399.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            65.0,
+            332.0,
+            99.0,
+            366.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            101.0,
+            203.0,
+            128.0,
+            224.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            63.0,
+            202.0,
+            89.0,
+            224.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            12.0,
+            151.0,
+            72.0,
+            195.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9883624605846828,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "30ad4fd3c685ca643a00",
+      "pixel_sha256": "30ad4fd3c685ca643a00bade4f6a5031e06741986ceaeceb72b2618d6e885dad",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00030.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00030.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            340.0,
+            450.0,
+            354.0,
+            462.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            13.0,
+            208.0,
+            42.0,
+            229.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            38.0,
+            176.0,
+            64.0,
+            195.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            83.0,
+            158.0,
+            109.0,
+            177.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            108.0,
+            81.0,
+            129.0,
+            93.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            81.0,
+            80.0,
+            100.0,
+            92.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_ex",
+          "box": [
+            39.0,
+            49.0,
+            86.0,
+            77.0
+          ],
+          "status": "complete"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9921659273511125,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "9b7c3fe2da3f77ba524c",
+      "pixel_sha256": "9b7c3fe2da3f77ba524c0831096c292cb0e73a38932e3832293f3b8ab0b69b35",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00031.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00031.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            205.0,
+            307.0,
+            235.0,
+            339.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            246.0,
+            252.0,
+            274.0,
+            279.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            293.0,
+            239.0,
+            319.0,
+            263.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            50.0,
+            92.0,
+            72.0,
+            108.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            67.0,
+            71.0,
+            88.0,
+            86.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            103.0,
+            60.0,
+            123.0,
+            73.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            122.0,
+            6.0,
+            139.0,
+            16.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            96.0,
+            6.0,
+            114.0,
+            16.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            81.0,
+            0.0,
+            88.0,
+            4.0
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9913553524664636,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "c85f15ef677ea91a2f78",
+      "pixel_sha256": "c85f15ef677ea91a2f788ec37ee25de0d6e1af7b6d1e3e9075a80a74bf573c2f",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00032.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00032.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            217.0,
+            147.0,
+            241.0,
+            164.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            8.0,
+            144.0,
+            33.0,
+            160.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            20.0,
+            118.0,
+            43.0,
+            134.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            248.0,
+            114.0,
+            270.0,
+            129.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            283.0,
+            106.0,
+            305.0,
+            119.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            106.0,
+            11.0,
+            115.0
+          ],
+          "status": "partial"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            86.0,
+            10.0,
+            105.0,
+            20.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            103.0,
+            0.0,
+            112.0,
+            5.0
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9938761512835587,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    },
+    {
+      "id": "6675074eb3ab33a6da90",
+      "pixel_sha256": "6675074eb3ab33a6da9064000c7592a757863fdf62eb52602d2e1ccb18ebb8f5",
+      "source": "data/chapter_maps/oblique_cached_preview_20260929/chapter_41/source/frame_00033.png",
+      "aliases": [
+        "data/chapter_maps/topdown_oblique_20260929/chapter_41/source/frame_00033.png"
+      ],
+      "chapters": [
+        41
+      ],
+      "size": [
+        486,
+        462
+      ],
+      "domain": "minimap",
+      "split": "train",
+      "group": "chapter_41",
+      "objects": [
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            181.0,
+            51.0,
+            199.0,
+            63.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            8.0,
+            49.0,
+            26.0,
+            61.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            18.0,
+            32.0,
+            36.0,
+            42.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            208.0,
+            28.0,
+            226.0,
+            39.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            238.0,
+            23.0,
+            252.0,
+            33.0
+          ],
+          "status": "complete"
+        },
+        {
+          "label": "minimap_enemy_normal",
+          "box": [
+            0.0,
+            23.0,
+            4.0,
+            30.0
+          ],
+          "status": "partial"
+        }
+      ],
+      "review": "accepted",
+      "blue_fraction": 0.9959961163664868,
+      "ignored": [],
+      "review_scope": "full_frame",
+      "roi_kind": "expanded",
+      "tags": [
+        "historical_holdout",
+        "oblique",
+        "dense",
+        "edge"
+      ]
+    }
+  ],
+  "outcome": "V3 rejected: one EX selected as normal, four of eight complete EX missed. Historical subset used for V4 training; no longer independent of V4."
+}

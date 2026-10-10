@@ -1,0 +1,2 @@
+# Optional runtime for module/campaign_prototype. Python 3.9 and NumPy 1.24 are supported.
+onnxruntime==1.19.2

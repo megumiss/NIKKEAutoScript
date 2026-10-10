@@ -195,12 +195,19 @@ async def log_socket(websocket: WebSocket):
 async def state_socket(websocket: WebSocket):
     await websocket.accept()
     previous = {}
+    campaign_revisions = {}
     try:
         while True:
             current = StateWatcher.states()
             for name, value in current.items():
                 if previous.get(name) != value:
                     await websocket.send_json({'type': 'state', 'name': name, 'state': value})
+                manager = ProcessManager.get_manager(name)
+                snapshot = manager.latest_campaign
+                revision = snapshot['captured_at'] if snapshot else -manager._campaign_started_at
+                if campaign_revisions.get(name) != revision:
+                    await websocket.send_json({'type': 'campaign', 'name': name, 'revision': revision})
+                    campaign_revisions[name] = revision
             previous = current
             await asyncio.sleep(1)
     except (WebSocketDisconnect, RuntimeError, ConnectionClosed):
