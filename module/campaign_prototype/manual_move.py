@@ -405,15 +405,15 @@ class GameSession:
         return report
 
     def plan(self, observation, target):
-        """道路只检查连通性；优先平移到完整目标后交给游戏自动寻路。
+        """道路只检查连通性；平面地图走紧凑小地图闭环规划。
 
         用道路路径验证小队到 target 的连通性，并发布剩余道路长度。
-        随后交给共享镜头规划器返回客户区落点；规划可能平移镜头，小队移动点击仍由 move 执行。
+        返回客户区落点；规划可能平移镜头，小队移动点击仍由 move 执行。
         """
-        from .camera_navigation import plan_world_move
+        from .camera_navigation import plan_world_move_compact
         _, path = self.localizer.route(np.asarray(observation['position']), np.asarray(target))
         self.emit(road_remaining=float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum()))
-        return plan_world_move(self, observation, target)
+        return plan_world_move_compact(self, observation, target)
 
     def move(self, click):
         """仅向当前已验证窗口发送一次地面点击。

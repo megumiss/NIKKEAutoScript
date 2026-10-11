@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '../api/client'
 import { t, uiLanguage } from '../i18n'
 import { useInstancesStore } from '../stores/instances'
-import CampaignMap, { type Enemy, type Point } from './CampaignMap.vue'
+import CampaignMap, { type Block, type Enemy, type Point } from './CampaignMap.vue'
 
 const props = defineProps<{ name: string }>()
 type Snapshot = {
@@ -11,6 +11,7 @@ type Snapshot = {
   map: { size: Point; image_sha256: string } | null
   minimap: { image: string; size: Point; squad: Point | null; enemies: Enemy[]; mode: string } | null
   localization: string; squad: Point | null; enemies: Enemy[]
+  barriers?: { state: string; map: Point }[]; blocks?: Block[]
 }
 const instances = useInstancesStore()
 const snapshot = ref<Snapshot | null>(null)
@@ -53,10 +54,10 @@ onBeforeUnmount(() => { generation++ })
     <div v-if="!snapshot?.chapter" class="campaign-empty">{{ t('推图任务启动后显示章节信息。') }}</div>
     <div v-else class="campaign-content">
       <section class="chapter-map-section">
-        <div class="section-heading"><b>{{ t('章节地图') }}</b><span>{{ t('普通 / 困难共用底图') }}</span></div>
-        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :label="t('章节地图')" @error="mapError = true" />
+        <div class="section-heading"><b>{{ t('章节地图') }}</b><span>{{ snapshot.blocks?.length ? `${snapshot.blocks.length} ${t('处道路封锁')}` : t('普通 / 困难共用底图') }}</span></div>
+        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :blocks="snapshot.blocks ?? []" :label="t('章节地图')" @error="mapError = true" />
         <div v-else class="campaign-empty">{{ t('章节底图不可用') }}</div>
-        <div class="legend"><span class="cyan">○ {{ t('小队') }}</span><span class="red">◆ {{ t('敌人') }}</span><span class="purple">◆ EX</span></div>
+        <div class="legend"><span class="cyan">○ {{ t('小队') }}</span><span class="red">◆ {{ t('敌人') }}</span><span class="purple">◆ EX</span><span v-if="snapshot.blocks?.length" class="blocked">╌ {{ t('道路封锁') }}</span></div>
         <p class="map-note">{{ snapshot.localization === 'accepted' ? t('位置已匹配到章节底图') : t('底图位置未确认，请查看小地图。') }}</p>
       </section>
       <section class="observations">
@@ -92,7 +93,7 @@ h3 { margin:0 0 5px; font-size:16px; }
 .section-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; font-size:13px; }
 .minimap { max-height:240px; }
 .legend { display:flex; gap:16px; flex-wrap:wrap; padding-top:12px; font-size:12px; }
-.cyan { color:var(--accent); }.red { color:var(--red); }.purple { color:var(--violet); }
+.cyan { color:var(--accent); }.red { color:var(--red); }.purple { color:var(--violet); }.blocked { color:#ff5b5b; }
 .map-note { line-height:1.65; margin:10px 0 0; }
 dl { margin:16px 0; }dl > div,.enemy-list > div { display:flex; justify-content:space-between; gap:12px; margin:9px 0; }
 dd { margin:0; font:12px var(--font-mono,monospace); }

@@ -4,14 +4,18 @@ import base64
 import time
 
 import cv2
+import numpy as np
 
 from dev_tools.minimap_reconstruct import DriverWindow
 from dev_tools.wiki_collectible_match import MapMatcher, ROI
+from module.campaign.barriers import mark_blocks, project_barriers
+from module.campaign.map_state import StaticMap
 from module.campaign.maps import chapter_map
 from module.campaign.objects import detect_objects
 from module.campaign.offscreen import squad_offscreen
 from module.campaign_prototype.parallax_movement import surface_identity
-from module.campaign_prototype.perception import marker_candidates, minimap_masks, project_centers, refine_ring
+from module.campaign_prototype.perception import (compact_road_masks, marker_candidates, minimap_masks,
+                                                  project_centers, refine_ring)
 from module.logger import logger
 
 
@@ -20,23 +24,30 @@ class CampaignObserver:
         self.chapter = None
         self.map_info = None
         self.matcher = None
+        self.package = None
+        self.chart = None
+        self.chart_failed = False
         self.last_error = None
         self.last_object_error = None
         self.last_offscreen_error = None
+        self.last_barrier_error = None
+        self.last_viewport_error = None
 
     def observe(self, image, identity, captured_at=None, objects=True):
         chapter, difficulty = identity
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
                         map=None, minimap=None, localization='unavailable', squad=None, enemies=[], objects=[],
-                        offscreen=None, roi_to_map=None)
+                        barriers=[], blocks=[], offscreen=None, viewport=None, roi_to_map=None)
         if objects:
             snapshot['objects'] = self.observe_objects(image)
         snapshot['offscreen'] = self.observe_offscreen(image)
         if chapter != self.chapter:
             self.chapter, self.map_info, self.matcher = chapter, None, None
+            self.package, self.chart, self.chart_failed = None, None, False
             try:
                 package, self.map_info = chapter_map(chapter)
                 self.matcher = MapMatcher(package)
+                self.package = package
             except (OSError, ValueError, KeyError) as exc:
                 logger.warning(f'第 {chapter} 章地图资源不可用于定位：{exc}')
         snapshot['map'] = self.map_info
@@ -69,6 +80,7 @@ class CampaignObserver:
                                    enemies=enemies, mode='compact' if compact else 'expanded')
         if not compact or self.matcher is None:
             return snapshot
+        squad_registration = None
         try:
             _, road, valid, player = minimap_masks(image)
             if self.matcher.surface_matcher is not None:
@@ -85,6 +97,10 @@ class CampaignObserver:
                 snapshot['localization'] = 'needs_review'
                 return snapshot
             snapshot['squad'] = squad
+            if self.matcher.surface_matcher is None:
+                # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
+                squad_registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
+                                          player_center=player)
             # 分层地图的目标规划需要小队所在表面，平面地图没有这个字段。
             snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
             if 'reference_frame' in result and 'local_surface' in result:
@@ -101,7 +117,68 @@ class CampaignObserver:
             if message != self.last_error:
                 logger.warning(f'第 {chapter} 章小地图定位不可用：{message}')
                 self.last_error = message
+        viewport = None
+        if snapshot['squad'] is None and any(item['kind'] == 'barrier' for item in snapshot['objects']):
+            viewport = self.locate_viewport(image)
+            if viewport is not None:
+                snapshot['viewport'] = viewport['position']
+        self.observe_barriers(image, snapshot, squad_registration, viewport)
         return snapshot
+
+    def locate_viewport(self, image):
+        """小队离屏时用紧凑小地图道路配准定位视野中心（无小队圆环种子）；接受时返回配准结果。"""
+        if self.matcher is None or self.matcher.surface_matcher is not None:
+            return None
+        try:
+            panel, road, valid = compact_road_masks(image)
+            center = np.array([panel.shape[1] / 2, panel.shape[0] / 2])
+            result = self.matcher.match_panel(panel, road, valid, center)
+        except (ValueError, cv2.error) as exc:
+            message = str(exc)
+            if message != self.last_viewport_error:
+                logger.warning(f'视野中心定位不可用：{message}')
+                self.last_viewport_error = message
+            return None
+        if result['status'] != 'accepted':
+            return None
+        self.last_viewport_error = None
+        logger.info(f"视野中心定位：{[round(v, 1) for v in result['position']]}，IoU {result['road_iou']:.2f}")
+        return dict(position=result['position'], roi_to_map=result['roi_to_map'], a=result['a'],
+                    panel_size=list(panel.shape[1::-1]))
+
+    def static_map(self):
+        """静态地图信息，按章节只建一次；构建失败记录后本章不再重试。"""
+        if self.chart is None and not self.chart_failed and self.matcher is not None:
+            try:
+                self.chart = StaticMap(self.package, self.matcher)
+            except (OSError, ValueError, KeyError) as exc:
+                self.chart_failed = True
+                logger.warning(f'第 {self.chapter} 章地图无法用于封锁标记：{exc}')
+        return self.chart
+
+    def observe_barriers(self, image, snapshot, squad, viewport):
+        """把屏障投影到地图并标记道路封锁；锚点优先小队箭头，其次视野中心。失败只告警。
+
+        squad / viewport 是本帧的配准结果（见 barriers.project_barriers），分层地图直接跳过。
+        """
+        if not any(item['kind'] == 'barrier' for item in snapshot['objects']):
+            return
+        chart = self.static_map()
+        if chart is None or chart.model is not None:
+            return
+        try:
+            barriers = project_barriers(snapshot['objects'], image, squad, viewport)
+            if not barriers:
+                return
+            snapshot['barriers'] = barriers
+            snapshot['blocks'] = mark_blocks(chart, barriers)
+            self.last_barrier_error = None
+        except (OSError, ValueError, KeyError, np.linalg.LinAlgError, cv2.error) as exc:
+            message = str(exc)
+            if message != self.last_barrier_error:
+                logger.warning(f'屏障封锁标记不可用：{message}')
+                self.last_barrier_error = message
+        return
 
     def observe_objects(self, image):
         """客户区里的机关、电梯与屏障；模型缺类或推理不可用时只告警，不影响章节与定位。"""

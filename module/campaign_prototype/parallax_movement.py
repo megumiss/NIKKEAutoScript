@@ -15,11 +15,10 @@ from .probe import Localizer as FlatLocalizer, NoConnectedRoad, jacobian
 from .surface_motion import contains, project, register_surface
 
 # 两次正交短停靠：方向固定，步长按开阔程度在 80/60/40 客户区像素中取最长，停靠噪声约 5 地图像素，
-# 步长越长相对误差越小；先验权重与重标次数上限按 40 章实测样本的留出模拟选定。
+# 步长越长相对误差越小；先验权重按 40 章实测样本的留出模拟选定。
 CALIBRATION_DIRECTIONS = ((1., 0.), (0., 1.))
 CALIBRATION_LENGTHS = (80., 60., 40.)
 PRIOR_WEIGHT = .3
-RECALIBRATION_LIMIT = 2
 
 
 def track_localization(localizer, reference, report, current, point=None):
@@ -319,7 +318,6 @@ def quick_calibrate(session, directions=CALIBRATION_DIRECTIONS):
                                                               encoding='utf-8')
     session.calibration = (data, reference)
     session.surface = supported
-    session.last_plan = None
     session.emit(calibration_state='ready', calibration=dict(samples=report['samples'],
                                                               fit_residual_max_px=report['fit_residual_max_px'],
                                                               prior_residual_max_px=report['prior_residual_max_px']),
@@ -328,7 +326,7 @@ def quick_calibrate(session, directions=CALIBRATION_DIRECTIONS):
 
 
 def run_movement(session):
-    """移动任务不读取任何保存的标定；临时标定在首次规划或显式请求时生成，任务结束即丢弃。"""
+    """移动走紧凑小地图闭环规划，不再需要任何标定；临时标定只在显式 calibrate 请求时生成。"""
     from .manual_move import navigate
     request = session.request
     session.calibration = None
@@ -427,35 +425,13 @@ class ParallaxSessionMixin:
         report['enemy_markers'] = goto.normal_enemy_markers(image, np.asarray(report['roi_to_map']))
         return report
 
-    def _surface_changed(self, observation):
-        """临时标定绑定表面编号；有编号的包里小队换到另一表面就要重标。"""
-        data = self.calibration[0]
-        current = surface_identity(self.localizer, observation)
-        return data.get('surface_id') is not None and current is not None and current != data['surface_id']
-
-    def _poor_progress(self, observation, target):
-        """同一目标的上一次直达点击若只前进了不到一半，临时矩阵不可信，允许有限次重标。"""
-        last = getattr(self, 'last_plan', None)
-        if (last is None or not np.allclose(last['target'], target)
-                or getattr(self, 'recalibrations', 0) >= RECALIBRATION_LIMIT):
-            return False
-        remaining = float(np.linalg.norm(np.asarray(target, float) - np.asarray(observation['position'], float)))
-        return last['distance'] >= 40 and remaining > .5 * last['distance']
-
     def plan(self, observation, target):
-        """同层连通检查后直接规划到完整目标；首次落点进展不足或换层时重做两点临时标定。
+        """同层连通检查后走紧凑小地图闭环规划；跨层目标须先标注电梯传送。
 
-        不再限制标定半径或采样凸包，长距离误差由停稳重定位的到点循环吸收；跨层目标须先标注电梯。
+        闭环规划的比例误差由实测拖动响应修正，不再需要两点临时标定。
         """
-        from .camera_navigation import plan_world_move
+        from .camera_navigation import plan_world_move_compact
         target = np.asarray(target, float)
-        if getattr(self, 'calibration', None) is None or self._surface_changed(observation):
-            self.emit(state='calibrating', message='正在做本次会话的两点临时标定…')
-            observation = quick_calibrate(self)
-        elif self._poor_progress(observation, target):
-            self.recalibrations = getattr(self, 'recalibrations', 0) + 1
-            self.emit(state='calibrating', message='首次落点进展不足，重做两点临时标定…')
-            observation = quick_calibrate(self)
         position = np.asarray(observation['position'], float)
         mask = surface_mask(self.localizer, observation)
         try:
@@ -463,6 +439,5 @@ class ParallaxSessionMixin:
         except NoConnectedRoad as exc:
             raise ValueError('目标与小队不在同一表面的连通道路上；跨层请先标注电梯传送。') from exc
         self.emit(road_remaining=float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum()))
-        self.last_plan = dict(target=target.tolist(), distance=float(np.linalg.norm(target - position)))
         self.surface = mask
-        return plan_world_move(self, observation, target, calibration=self.calibration[0], surface=mask)
+        return plan_world_move_compact(self, observation, target)

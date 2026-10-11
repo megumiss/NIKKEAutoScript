@@ -190,3 +190,27 @@ def minimap_masks(image):
     if np.count_nonzero(road) < 200:
         raise ValueError('Too little minimap road evidence.')
     return panel, road, valid, player
+
+
+def compact_road_masks(image):
+    """紧凑小地图的道路与有效域，不要求小队圆环；供视野中心定位使用。
+
+    提取规则与 minimap_masks 一致，只去掉圆环周边的遮罩；圆环存在时靠亮度过滤吸收。
+    """
+    if image.shape != (999, 1776, 3):
+        raise ValueError('Expected a 1776x999 client frame for compact-map observation.')
+    panel = cv2.resize(image, (1920, 1080))[96:307, 25:243]
+    hsv = cv2.cvtColor(panel, cv2.COLOR_BGR2HSV)
+    road = cv2.inRange(hsv, (85, 65, 115), (115, 255, 255))
+    road = cv2.morphologyEx(road, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    road = cv2.morphologyEx(road, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+    valid = np.full(road.shape, 255, np.uint8)
+    valid[:3] = valid[-3:] = 0
+    valid[:, :3] = valid[:, -3:] = 0
+    valid[:29, :42] = valid[:29, -34:] = valid[-31:, -76:] = 0
+    bright = (hsv[:, :, 2] > 225).astype(np.uint8) * 255
+    valid[cv2.dilate(bright, np.ones((15, 15), np.uint8)) > 0] = 0
+    road[valid == 0] = 0
+    if np.count_nonzero(road) < 200:
+        raise ValueError('Too little minimap road evidence.')
+    return panel, road, valid

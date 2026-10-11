@@ -103,7 +103,7 @@ class MovementJobs:
             return dict(state='unsupported', message='非平面地图移动待定，尚无可用的移动标定。')
         surfaces = len(metadata.get('surfaces') or [])
         return dict(state='ready', temporary=True,
-                    message='分层地图在移动开始时自动做两次正交短停靠的临时标定，仅本次任务有效，不写入地图包。',
+                    message='分层地图与平面地图统一走紧凑小地图闭环移动，不再需要会话标定。',
                     detail=f'表面编号 {surfaces} 个，同层道路按表面并集判定' if surfaces else '包未聚合表面编号，同层道路按观测帧的局部平面判定')
 
     def status(self):

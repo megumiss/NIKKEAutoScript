@@ -40,6 +40,8 @@ export const staticLabels: Record<string, Record<string, string>> = {
   "底图": { 'en-US': "Map", 'ja-JP': "地図" },
   "小地图": { 'en-US': "Minimap", 'ja-JP': "ミニマップ" },
   "敌人坐标以小地图左上角为原点": { 'en-US': "Enemy coordinates use the top-left of the minimap as origin", 'ja-JP': "敵の座標はミニマップの左上が原点です" },
+  "道路封锁": { 'en-US': "Road blocked", 'ja-JP': "道路封鎖" },
+  "处道路封锁": { 'en-US': "road blocks", 'ja-JP': "か所の道路封鎖" },
   '总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
   '多开': { 'en-US': 'Multi-instance', 'ja-JP': 'マルチインスタンス' },

@@ -24,6 +24,18 @@ ASSETS = Path(__file__).parent / 'assets'
 MAP_MINIMIZE = (644 + 14, 280 - 11)
 # 客户区位移 = A_INV @ 标定参考平面位移；使用前须核对地图包中的配套矩阵。
 A_INV = np.array([[-1.9955, 1.2530], [1.6580, 0.8463]])
+# 展开小地图 ROI → 标定参考平面的单应（calibration.json 的 projection）。参考平面是全局共享的，
+# 与各章节地图像素系不同：A_INV 只能作用在它上面，直接作用在地图像素上会转错方向。
+ROI_TO_PLANE = np.array([[-1.2724089568292891, 3.5215890963515264, 638.6837515677],
+                         [1.3973418443646326, 3.4636053644742213, 20.],
+                         [3.0143883607574224e-05, 0.0026849827674979183, 1.]])
+# 视野中心对应的客户区像素；30 帧历史截图实测均值，见 tmp/barrier_test/historical_error.json。
+VIEWPORT_PIXEL = (887.7, 496.0)
+# 紧凑面板里相机注视点的位置：小队居中停稳时圆环稳定在此（非面板几何中心），实测见
+# tmp/barrier_test/center_first.json。
+GAZE = (107.2, 104.0)
+# template_matrix 把紧凑面板中心钉在展开 ROI 的这个点上（wiki_collectible_match.template_matrix）。
+EXPANDED_CENTER = (243., 231.)
 ENTER_BATTLE_TPL = cv2.imread(str(ASSETS / 'enter_battle_tpl.png'))
 if ENTER_BATTLE_TPL is None:
     raise FileNotFoundError(ASSETS / 'enter_battle_tpl.png')

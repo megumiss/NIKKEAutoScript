@@ -19,6 +19,11 @@ from module.campaign_prototype.parallax_movement import surface_identity, surfac
 ROAD_TOLERANCE = 12
 # 连通分区是在 8 像素网格上计算的（dev_tools/map_connectivity.py），分量查询按同一网格采样。
 GRID = 8
+# 动态封锁：局部道路方向的估计窗口半径，以及切口长度的下限、上限和外扩余量。
+BLOCK_WINDOW = 60
+BLOCK_MIN = 24
+BLOCK_MAX = 160
+BLOCK_MARGIN = 12
 
 TARGET_CATEGORIES = ('ground_mechanism', 'ground_elevator', 'normal_collectible', 'hard_collectible')
 
@@ -62,6 +67,63 @@ class StaticMap:
         self._components = {}
         self.points = self._points()
         self.transfers = self._transfers()
+        # 每帧观测替换的动态道路封锁（如光幕），只用于展示，不改写道路与连通分区。
+        self.blocks = []
+
+    def _snap_road(self, point, tolerance=ROAD_TOLERANCE):
+        """最近的道路像素坐标；点远离道路时返回 None。"""
+        point = np.asarray(point, float)
+        if point.shape != (2,) or not np.isfinite(point).all():
+            return None
+        radius = int(np.ceil(tolerance))
+        x, y = int(np.floor(point[0])), int(np.floor(point[1]))
+        height, width = self.road.shape
+        x0, y0 = max(0, x - radius), max(0, y - radius)
+        x1, y1 = min(width, x + radius + 1), min(height, y + radius + 1)
+        if x0 >= x1 or y0 >= y1:
+            return None
+        ys, xs = np.nonzero(self.road[y0:y1, x0:x1])
+        if not len(xs):
+            return None
+        distance = np.hypot(xs + x0 - point[0], ys + y0 - point[1])
+        nearest = int(np.argmin(distance))
+        if distance[nearest] > tolerance:
+            return None
+        return np.array([xs[nearest] + x0, ys[nearest] + y0], float)
+
+    def mark_barrier(self, point, direction=None, tolerance=ROAD_TOLERANCE, span=None):
+        """把一处屏障标记为道路封锁：吸附到最近道路后沿屏障方向切开，返回封锁段或 None。
+
+        direction 为屏障两根立柱连线的地图向量；缺失时按局部道路主方向的垂线估计。
+        span 为立柱间距时切口长度按屏障物理宽度外加余量；否则取窗口内道路沿封锁方向的
+        跨度外加余量。长度都限制在 BLOCK_MIN～BLOCK_MAX。
+        场景投影误差大于人工标注偏移，屏障落图应传更大的 tolerance。
+        """
+        snapped = self._snap_road(point, tolerance)
+        if snapped is None:
+            return None
+        x, y = (int(v) for v in snapped)
+        top, left = max(0, y - BLOCK_WINDOW), max(0, x - BLOCK_WINDOW)
+        ys, xs = np.nonzero(self.road[top:y + BLOCK_WINDOW + 1, left:x + BLOCK_WINDOW + 1])
+        if len(xs) < 10:
+            return None
+        local = np.column_stack((xs, ys)).astype(float) + [left, top]
+        if direction is None:
+            # 道路沿走向拉长，协方差最小方向即横跨道路的封锁方向。
+            covariance = np.cov((local - snapped).T)
+            across = np.linalg.eigh(covariance)[1][:, 0]
+        else:
+            across = np.asarray(direction, float)
+        norm = np.linalg.norm(across)
+        if norm < 1e-6:
+            return None
+        across = across / norm
+        extent = np.ptp((local - snapped) @ across)
+        length = float(np.clip(extent + 2 * BLOCK_MARGIN, BLOCK_MIN, BLOCK_MAX))
+        ends = [snapped - across * length / 2, snapped + across * length / 2]
+        return dict(point=[round(float(v), 1) for v in snapped],
+                    segment=[[round(float(v), 1) for v in end] for end in ends],
+                    snap=round(float(np.linalg.norm(snapped - np.asarray(point, float))), 1))
 
     def _document(self, image_hash, size):
         path = self.package / 'annotations.json'
