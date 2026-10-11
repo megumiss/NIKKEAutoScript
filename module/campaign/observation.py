@@ -8,6 +8,9 @@ import cv2
 from dev_tools.minimap_reconstruct import DriverWindow
 from dev_tools.wiki_collectible_match import MapMatcher, ROI
 from module.campaign.maps import chapter_map
+from module.campaign.objects import detect_objects
+from module.campaign.offscreen import squad_offscreen
+from module.campaign_prototype.parallax_movement import surface_identity
 from module.campaign_prototype.perception import marker_candidates, minimap_masks, project_centers, refine_ring
 from module.logger import logger
 
@@ -18,11 +21,17 @@ class CampaignObserver:
         self.map_info = None
         self.matcher = None
         self.last_error = None
+        self.last_object_error = None
+        self.last_offscreen_error = None
 
-    def observe(self, image, identity, captured_at=None):
+    def observe(self, image, identity, captured_at=None, objects=True):
         chapter, difficulty = identity
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
-                        map=None, minimap=None, localization='unavailable', squad=None, enemies=[])
+                        map=None, minimap=None, localization='unavailable', squad=None, enemies=[], objects=[],
+                        offscreen=None, roi_to_map=None)
+        if objects:
+            snapshot['objects'] = self.observe_objects(image)
+        snapshot['offscreen'] = self.observe_offscreen(image)
         if chapter != self.chapter:
             self.chapter, self.map_info, self.matcher = chapter, None, None
             try:
@@ -76,6 +85,12 @@ class CampaignObserver:
                 snapshot['localization'] = 'needs_review'
                 return snapshot
             snapshot['squad'] = squad
+            # 分层地图的目标规划需要小队所在表面，平面地图没有这个字段。
+            snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
+            if 'reference_frame' in result and 'local_surface' in result:
+                snapshot['surface'] = dict(reference_frame=result['reference_frame'],
+                                           local_surface=result['local_surface'],
+                                           id=surface_identity(self.matcher.surface_matcher, result))
             positions = project_centers([item['position'] for item in enemies], matrix)
             snapshot['enemies'] = [dict(item, position=position) for item, position in zip(enemies, positions)
                                    if 0 <= position[0] < width and 0 <= position[1] < height]
@@ -87,3 +102,25 @@ class CampaignObserver:
                 logger.warning(f'第 {chapter} 章小地图定位不可用：{message}')
                 self.last_error = message
         return snapshot
+
+    def observe_objects(self, image):
+        """客户区里的机关、电梯与屏障；模型缺类或推理不可用时只告警，不影响章节与定位。"""
+        try:
+            return detect_objects(image)
+        except (OSError, ValueError, KeyError, RuntimeError, cv2.error) as exc:
+            message = str(exc)
+            if message != self.last_object_error:
+                logger.warning(f'场景目标识别不可用：{message}')
+                self.last_object_error = message
+            return []
+
+    def observe_offscreen(self, image):
+        """小队离屏时画面边缘的头像标记；识别失败只告警，不影响其他字段。"""
+        try:
+            return squad_offscreen(image)
+        except (ValueError, cv2.error) as exc:
+            message = str(exc)
+            if message != self.last_offscreen_error:
+                logger.warning(f'小队离屏标记识别不可用：{message}')
+                self.last_offscreen_error = message
+            return None

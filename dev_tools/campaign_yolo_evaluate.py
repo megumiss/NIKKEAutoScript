@@ -32,12 +32,17 @@ def evaluate(records, model, splits):
     counters = {label: Counter() for label in detection.LABELS}
     normal_navigation = Counter(expected=0, matched=0, missing=0, unsafe=0, ex_popup_required=0)
     center_errors = {label: [] for label in detection.LABELS}
-    latencies, detector_latencies, failures, details = {}, {}, [], []
+    latencies, detector_latencies, failures, details, missing = {}, {}, [], [], []
     with patch.object(detection, 'detector', return_value=model):
         for record in records:
             if record['split'] not in splits or record.get('review_scope') != 'full_frame':
                 continue
-            image = load_frame(record)
+            try:
+                image = load_frame(record)
+            except FileNotFoundError:
+                # 帧文件已迁入训练项目，本机可能只剩部分；缺失的记入结果而不是中断回放。
+                missing.append(record['id'])
+                continue
             domain = record.get('roi_kind', record['domain'])
             start = time.perf_counter()
             predicted = detection.detect_scene(image) if record['domain'] == 'scene' else detection.detect_minimap(image)
@@ -153,7 +158,8 @@ def evaluate(records, model, splits):
                            p95_ms=float(np.quantile(values, .95))) for domain, values in latencies.items()}
     detector_timing = {domain: dict(median_ms=float(np.median(values)), p95_ms=float(np.quantile(values, .95)))
                        for domain, values in detector_latencies.items()}
-    return dict(frames=len(details), metrics=metrics, normal_navigation=dict(normal_navigation),
+    return dict(frames=len(details), missing_frames=missing, metrics=metrics,
+                normal_navigation=dict(normal_navigation),
                 latency=timing, detector_latency=detector_timing,
                 failing_frames=len(failures),
                 unsafe_normal_click_frames=sum(any(e['kind'] == 'unsafe_normal_click' for e in f['errors'])

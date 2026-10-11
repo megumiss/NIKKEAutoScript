@@ -1,80 +1,84 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "format": "yolo11-detect-bcn-fp32",
+  "version": "v7",
   "labels": [
     "scene_squad_arrow",
     "scene_collectible_indicator",
     "minimap_enemy_normal",
     "minimap_enemy_ex",
-    "minimap_squad_ring"
+    "minimap_squad_ring",
+    "scene_ground_mechanism_off",
+    "scene_ground_mechanism_on",
+    "scene_elevator_start",
+    "scene_elevator_end",
+    "scene_barrier_curtain",
+    "scene_barrier_pillar"
   ],
   "input_size": 640,
-  "sha256": "7ebbcd59a9221b38bd7dd5a62a9c96e29d56c3a3999a55ca5f5cf0219126f0ac",
+  "input_shape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "output_shape": [
+    1,
+    15,
+    8400
+  ],
+  "input_name": "images",
+  "output_name": "output0",
+  "color": "RGB",
+  "normalization": "float32 / 255",
+  "layout": "NCHW",
+  "box_format": "cx,cy,w,h in input pixels",
+  "output_scores": "11 class probabilities; no separate objectness; NMS is external",
   "thresholds": {
     "scene_squad_arrow": 0.5,
     "scene_collectible_indicator": 0.5,
     "minimap_enemy_normal": 0.5,
     "minimap_enemy_ex": 0.5,
-    "minimap_squad_ring": 0.5
+    "minimap_squad_ring": 0.5,
+    "scene_ground_mechanism_off": 0.5,
+    "scene_ground_mechanism_on": 0.5,
+    "scene_elevator_start": 0.7,
+    "scene_elevator_end": 0.5,
+    "scene_barrier_curtain": 0.5,
+    "scene_barrier_pillar": 0.5
   },
-  "versions": {
-    "torch": "2.9.1+cu128",
-    "torchvision": "0.24.1+cu128",
-    "ultralytics": "8.3.230",
-    "onnx": "1.17.0",
-    "onnxruntime": "1.19.2",
-    "numpy": "1.26.4",
-    "opencv-python": "4.10.0.84"
-  },
-  "checkpoint_sha256": "d71a068fb14b67a219902bdb64f64fef4ae4ede38ad1fcaabd3edbf55e1106a2",
-  "acceptance": "validated_normal_priority",
-  "model_version": "campaign_v4_epoch20",
-  "scope": {
-    "language": "zh-CN",
-    "platform": "Windows",
-    "client": [
+  "scene": {
+    "size": [
       1776,
       999
     ],
-    "minimap_modes": [
-      "expanded",
-      "compact"
+    "tile_size": 640,
+    "x_offsets": [
+      0,
+      384,
+      768,
+      1136
     ],
-    "ex_policy": "advisory_detection_then_popup_exclusion"
+    "y_offsets": [
+      0,
+      359
+    ],
+    "internal_edge_margin": 2,
+    "classwise_nms_iou": 0.45
   },
-  "training": {
-    "dataset": "dataset-v4",
-    "manifest_sha256": "a7b0e7ff39af2bb5e27cb1636d54960452bec7c938a7edbd339fb7b7141a03a1",
-    "provenance_sha256": "41cf4ef1500f24d8538e3cb26b3b0780d18fddff131d9c9241c3a0622d1431c6",
-    "epochs_completed": 40,
-    "best_epoch": 20
+  "sha256": "25fdfbbcd42468b87b107aaf601fa9c81d87de63183aece00177c5f0a22342bb",
+  "checkpoint_sha256": "8aa60140cd6ecd47464db4f5d77aba74b2aa2c725323d106fa31fc48024b61ba",
+  "source_checkpoint": "runs\\campaign_v7_barrier_20261011\\weights\\last.pt",
+  "versions": {
+    "ultralytics": "8.3.230",
+    "torch": "2.9.1+cu128",
+    "torchvision": "0.24.1+cu128",
+    "onnx": "1.17.0",
+    "onnxruntime": "1.19.2",
+    "numpy": "1.26.4",
+    "Pillow": "12.3.0"
   },
-  "validation": {
-    "review_file": "dev_tools/campaign_yolo/normal_validation_reviews.json",
-    "review_sha256": "726c74e6397f4121061f939cc50b1ba3ac6dd93f850042be5579d310ca6e700a",
-    "frames": 15,
-    "normal_detection": {
-      "tp": 37,
-      "precision": 1.0,
-      "recall": 1.0,
-      "center_error_p95": null,
-      "center_samples": 0
-    },
-    "normal_navigation": {
-      "expected": 37,
-      "matched": 36,
-      "missing": 1,
-      "unsafe": 0,
-      "ex_popup_required": 0
-    },
-    "regression_tests": 113,
-    "parity_passed": true,
-    "limits": [
-      "37 ordinary targets occur in 3 correlated positive frames; 12 additional frames check interference.",
-      "One detected complete ordinary target is intentionally withheld by the 3px border guard.",
-      "EX class accuracy is advisory. Enemy movement closes confirmed EX popups and stops.",
-      "Scene and ring replay also use previously reviewed diagnostic captures; not new independent accuracy estimates.",
-      "Live V4 check covers camera drags, minimap controls and arrow sampling, not a new enemy approach or battle."
-    ]
-  }
+  "exported_at_utc": "2026-10-11T02:05:53.531942+00:00",
+  "acceptance": "regression_only_no_independent_scoped_holdout",
+  "application_integration": "Existing application loader has a five-class contract. This eleven-class release is not deployed."
 }
