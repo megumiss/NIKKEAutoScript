@@ -179,7 +179,11 @@ class Conversation(UI):
             self.device.screenshot()
             skip_first_screenshot = True
         # 此处识别好感满级仅用于选择咨询方式，强制模式也需要保留。
-        rank_max = self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95)
+        # 补日志模式下满好感角色仍须普通咨询，快速咨询没有答题阶段、不产生咨询日志。
+        rank_max = (
+            not self.config.Conversation_OnlyLogsNotMax
+            and self.appear(RANK_MAX_CHECK, offset=5, threshold=0.95)
+        )
         # 固定本轮按钮，避免快速咨询防抖或动画期间误点普通咨询。
         communicate_button = COMMUNICATE_QUICKLY if rank_max else COMMUNICATE
         color_threshold = 6 if rank_max else 10
