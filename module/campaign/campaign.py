@@ -5,6 +5,7 @@ from functools import cached_property
 
 import cv2
 
+from dev_tools.minimap_reconstruct import DriverWindow
 from module.base.base import ModuleBase
 from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
@@ -22,6 +23,10 @@ from module.webui.resource import resource_manager
 # 同一进程内每隔若干小时才重新访问远端，避免每次任务都查一遍资源仓库。
 RESOURCE_RECHECK_SECONDS = 6 * 3600
 RESOURCE_SYNC_TIMEOUT = 1800
+# 小地图被关闭时左上角水滴箭头控件的客户区点击坐标；与采集器 args.map_open 同源（紧凑展开按钮）。
+MINIMAP_TOGGLE_POSITION = (42, 98)
+# 小地图重新打开后的面板动画等待秒数；采集器 wait_for 也按 1.2s 预留动画时间。
+MINIMAP_REOPEN_WAIT_SECONDS = 1.5
 
 
 class Campaign(ModuleBase):
@@ -105,6 +110,28 @@ class Campaign(ModuleBase):
         logger.error(f"地图资源同步失败，且本地没有地图资源：{status['error'] or '超时'}")
         raise RequestHumanTakeover
 
+    def reopen_minimap_if_closed(self, image=None):
+        """小地图被关闭（左上角只剩水滴形箭头）时点击箭头重新打开，恢复后返回 True。
+
+        image 为可选的 1776×999 BGR 客户区截图；缺省时用当前 device.image 转 BGR 判定。
+        关闭判据与采集器 reset_minimap 的 closed 态一致：控件外框可见、控件区域偏暗且紧凑面板
+        不可见。确认关闭后点击左上角箭头坐标（与采集器 map_open 同源），等待面板动画后复核；
+        重开失败或状态仍不确定只告警并返回 False，由调用方决定是否放弃本帧观测。
+        """
+        if image is None:
+            image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+        if not self.observer.minimap_closed(image):
+            return False
+        logger.warning('检测到小地图已被关闭，点击左上角箭头重新打开。')
+        self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
+        self.device.sleep(MINIMAP_REOPEN_WAIT_SECONDS)
+        self.device.screenshot()
+        image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+        if self.observer.minimap_closed(image):
+            logger.warning('小地图重开失败，左上角仍为关闭态。')
+            return False
+        return True
+
     def detect_current_chapter(self):
         """连续识别主线地图右下角的章节号与难度，确认后发布一帧章节快照。
 
@@ -123,6 +150,9 @@ class Campaign(ModuleBase):
             captured_at = time.time()
             # 设备截图统一为 RGB，OCR 与地图检测的 ndarray 输入使用 BGR。
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+            # 小地图被关闭时先点箭头重开再识别，否则快照会一直缺小地图导致推图无法继续。
+            if self.reopen_minimap_if_closed(image):
+                image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
             identity = chapter_identity(image, reader)
             stable = stable + 1 if identity is not None and identity == previous else int(identity is not None)
             previous = identity

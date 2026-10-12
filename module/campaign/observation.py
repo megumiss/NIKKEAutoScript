@@ -41,6 +41,23 @@ class CampaignObserver:
         self.last_barrier_error = None
         self.last_viewport_error = None
 
+    @staticmethod
+    def minimap_closed(image):
+        """判断小地图是否被关闭（左上角只剩水滴形箭头控件）。
+
+        image 是 1776×999 BGR 客户区截图。判据沿用采集器 DriverWindow.reset_minimap 的三态
+        识别：左上角控件外框可见，但控件外框偏暗（展开态该处是亮的紧凑面板顶栏）且紧凑面板
+        区域没有青蓝色地图，即认为处于关闭态；控件不可见或面板可见时返回 False，不确定不算关闭。
+        """
+        control = image[76:120, 20:64]
+        if not DriverWindow.minimap_control_visible(control):
+            return False
+        if not DriverWindow.map_visible(image[118:273, 27:207]):
+            icon = cv2.cvtColor(control, cv2.COLOR_BGR2HSV)
+            # 关闭态的控件底色比展开／紧凑态暗，与 reset_minimap 的 closed 判据保持一致。
+            return (icon[:, :, 2] < 130).mean() > 0.5
+        return False
+
     def observe(self, image, identity, captured_at=None, objects=True):
         """观测一帧 1776×999 BGR 客户区截图，返回界面与导航共用的章节快照。
 
@@ -55,7 +72,8 @@ class CampaignObserver:
         chapter, difficulty = identity
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
                         map=None, minimap=None, localization='unavailable', squad=None, enemies=[], objects=[],
-                        barriers=[], blocks=[], offscreen=None, viewport=None, roi_to_map=None)
+                        barriers=[], blocks=[], offscreen=None, viewport=None, roi_to_map=None,
+                        minimap_closed=self.minimap_closed(image))
         if objects:
             snapshot['objects'] = self.observe_objects(image)
         snapshot['offscreen'] = self.observe_offscreen(image)

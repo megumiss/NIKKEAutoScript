@@ -461,7 +461,20 @@ class DriverWindow:
 
         current = state()
         if current == 'unknown':
-            raise RuntimeError('Minimap controls are not visible; no toggle click sent.')
+            # 控件白框识别不出来常见于小地图被完全关闭：左上角只剩水滴箭头，不属于 unknown 的
+            # 异常场景。按箭头坐标点一次尝试恢复；状态不变（真被遮挡或不在地图页）才报错。
+            print(json.dumps({'minimap_reopen': 'attempt'}), flush=True)
+            click((x, y))
+            # 面板动画需要时间才能接受下一次识别；沿用 wait_for 的等待节奏后重新判定状态。
+            time.sleep(1.2)
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline:
+                current = state()
+                if current != 'unknown':
+                    break
+                time.sleep(0.1)
+            if current == 'unknown':
+                raise RuntimeError('Minimap controls are not visible; no toggle click sent.')
         if not reset and current == ('expanded' if expanded else 'compact'):
             return
         if current == 'expanded':
