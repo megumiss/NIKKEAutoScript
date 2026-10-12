@@ -439,11 +439,9 @@ def fuse_frames(images, camera, matrix, vertical, rotation, ratios, weights, che
     raw_probability = probability
     probability, frame_hits, visible_frames = fusion_consistency(
         [terrain(image) for image in images], camera, matrix, vertical, rotation, low, parallax)
-    map_image = np.full((*probability.shape, 3), (44, 35, 28), np.uint8)
+    map_image = np.full((*probability.shape, 3), (55, 43, 30), np.uint8)
     confirmed = (probability > .85) & (frame_hits >= 3)
-    uncertain = (probability > .5) & ~confirmed & (frame_hits >= 3)
-    map_image[confirmed] = (186, 139, 59)
-    map_image[uncertain] = (104, 86, 66)
+    map_image[confirmed] = (199, 141, 45)
     return dict(probability=probability, coverage=coverage, frame_hits=frame_hits, visible_frames=visible_frames,
                 raw_probability=raw_probability, source_frame=source_frame, source_roi=source_roi,
                 parallax=parallax, reference=reference, map_image=map_image, origin=low, bounds=bounds)

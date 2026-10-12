@@ -8,6 +8,7 @@ import math
 import os
 import re
 import secrets
+import shutil
 import tempfile
 import threading
 import time
@@ -24,14 +25,14 @@ if __package__:
     from .map_movement import MovementJobs
     from .map_scan import ScanJobs
     from .map_wiki import WikiJobs
-    from .map_terrain import render_terrain, terrain_colors, validate_terrain_edits
+    from .map_terrain import _atomic_write, bake_terrain, terrain_colors, validate_terrain_edits
 else:
     from map_connectivity import ensure_data, validate_edits, write_data
     from map_paths import DEFAULT_MAPS_ROOT, local_package_dir
     from map_movement import MovementJobs
     from map_scan import ScanJobs
     from map_wiki import WikiJobs
-    from map_terrain import render_terrain, terrain_colors, validate_terrain_edits
+    from map_terrain import _atomic_write, bake_terrain, terrain_colors, validate_terrain_edits
 
 UI = Path(__file__).with_suffix('')
 COORDINATES = {'unit': 'pixel', 'origin': 'top_left', 'x': 'right', 'y': 'down'}
@@ -44,7 +45,6 @@ class ConflictError(ValueError):
     单独一个类型是为了让 HTTP 层把它映射成 409 而不是 400：前端收到 409 的处理是重新加载
     地图再改，和参数错误的处理完全不同。
     """
-    pass
 
 
 def digest(content):
@@ -127,6 +127,7 @@ class AnnotationStore:
     保存走乐观并发：以标注文件内容的 SHA-256 作为版本（revision），版本不符抛 ConflictError，
     避免两个标签页互相覆盖。同进程的读写用可重入锁串行。
     """
+
     def __init__(self, root):
         """固定允许访问的地图根目录，并用可重入锁保护同进程读写。"""
         self.root = Path(root).resolve()
@@ -202,8 +203,90 @@ class AnnotationStore:
                     'revision': digest(raw), 'coverage_verified': metadata.get('capture', {}).get(
                         'whole_camera_domain_verified', False)}
 
+    def _backup_terrain_original(self, package, edits_count):
+        """首次烘焙前把原始底图、元数据与概率缓存复制到本地备份目录，已备份则保持原样。"""
+        backup = local_package_dir(package) / '.annotation_backups' / 'terrain_original'
+        if backup.exists():
+            return str(backup)
+        backup.mkdir(parents=True)
+        for name in ('map.png', 'map.json', 'annotations.json'):
+            source = package / name
+            if source.is_file():
+                shutil.copy2(source, backup / name)
+        cache = package / 'source' / 'map_data.npz'
+        if cache.is_file():
+            (backup / 'source').mkdir(exist_ok=True)
+            shutil.copy2(cache, backup / 'source' / 'map_data.npz')
+        manifest = {'backed_up_at': time.strftime('%Y-%m-%d %H:%M:%S'), 'pending_edits': edits_count}
+        (backup / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n',
+                                              encoding='utf-8')
+        return str(backup)
+
+    def list_backups(self, identifier):
+        """列出可恢复的历史版本：首次烘焙前的原始地形，以及历次保存的标注备份。"""
+        with self.lock:
+            folder = local_package_dir(self.package(identifier)) / '.annotation_backups'
+            result = {'terrain_original': None, 'annotations': []}
+            if not folder.is_dir():
+                return result
+            original = folder / 'terrain_original'
+            if (original / 'map.png').is_file():
+                manifest = {}
+                try:
+                    manifest = json.loads((original / 'manifest.json').read_text(encoding='utf-8'))
+                except (OSError, ValueError):
+                    pass
+                result['terrain_original'] = manifest
+            for path in sorted(folder.glob('annotations-*.json'), reverse=True)[:50]:
+                result['annotations'].append({
+                    'name': path.name,
+                    'saved_at': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(path.stat().st_mtime))})
+            return result
+
+    def restore_backup(self, identifier, kind, name=None):
+        """恢复历史版本：标注备份重新绑定当前底图，原始地形备份整体回滚底图与概率缓存。
+
+        恢复前把当前标注 stash 到备份目录；恢复后重新加载校验并重建道路连通数据。
+        """
+        with self.lock:
+            package = self.package(identifier)
+            folder = local_package_dir(package) / '.annotation_backups'
+            folder.mkdir(parents=True, exist_ok=True)
+            current = package / 'annotations.json'
+            if current.exists():
+                shutil.copy2(current, folder / f'annotations-{time.time_ns()}.json')
+            if kind == 'annotations':
+                if not name or not re.fullmatch(r'annotations-\d+\.json', name):
+                    raise ValueError('无效的标注备份。')
+                source = folder / name
+                if not source.is_file():
+                    raise ValueError('标注备份不存在。')
+                document = json.loads(source.read_bytes())
+                metadata, image_hash, size, _ = self.metadata(package)
+                document['image_sha256'] = image_hash
+                validate_annotations(document, image_hash, size)
+                content = (json.dumps(document, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
+                _atomic_write(current, lambda temporary: temporary.write_bytes(content))
+            elif kind == 'terrain':
+                source = folder / 'terrain_original'
+                if not (source / 'map.png').is_file():
+                    raise ValueError('没有原始地形备份。')
+                for filename in ('map.png', 'map.json', 'annotations.json'):
+                    backup_file = source / filename
+                    if backup_file.is_file():
+                        _atomic_write(package / filename,
+                                      lambda temporary, src=backup_file: shutil.copyfile(src, temporary))
+                cache = source / 'source' / 'map_data.npz'
+                if cache.is_file():
+                    (package / 'source').mkdir(exist_ok=True)
+                    _atomic_write(package / 'source' / 'map_data.npz',
+                                  lambda temporary: shutil.copyfile(cache, temporary))
+            else:
+                raise ValueError('未知的备份类型。')
+            return self.load(identifier)
+
     def save(self, identifier, document, revision):
-        """校验请求版本后备份旧标注，以同目录临时文件和原子替换提交新内容。"""
+        """校验请求版本后备份旧标注；道路修订直接烘焙进底图与概率缓存，再原子提交新标注。"""
         with self.lock:
             package = self.package(identifier)
             metadata, image_hash, size, _ = self.metadata(package)
@@ -212,6 +295,26 @@ class AnnotationStore:
             previous = path.read_bytes() if path.exists() else b''
             if digest(previous) != revision:
                 raise ConflictError('标注文件已被其他窗口或程序修改。请先下载当前副本，再重新加载比较。')
+            baked = 0
+            if document.get('terrain_edits'):
+                baked = len(document['terrain_edits'])
+                self._backup_terrain_original(package, baked)
+                image_hash = bake_terrain(package, metadata, document['terrain_edits'])
+                metadata['image_sha256'] = image_hash
+                temporary = None
+                try:
+                    with tempfile.NamedTemporaryFile(dir=package, suffix='.tmp', delete=False) as stream:
+                        temporary = Path(stream.name)
+                        stream.write((json.dumps(metadata, ensure_ascii=False, indent=2) + '\n').encode('utf-8'))
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    os.replace(temporary, package / 'map.json')
+                finally:
+                    if temporary is not None and temporary.exists():
+                        temporary.unlink()
+                document = copy.deepcopy(document)
+                document['image_sha256'] = image_hash
+                document['terrain_edits'] = []
             connectivity = ensure_data(package, metadata, document)
             content = (json.dumps(copy.deepcopy(document), ensure_ascii=False, indent=2) + '\n').encode('utf-8')
             backup = None
@@ -233,32 +336,7 @@ class AnnotationStore:
                     temporary.unlink()
             write_data(package / 'connectivity.json', connectivity)
             return {'revision': digest(content), 'path': str(path), 'backup': str(backup) if backup else None,
-                    'connectivity': connectivity}
-
-    def export_terrain(self, identifier, revision):
-        """从已保存的修订生成独立快照，不覆盖 map.png 或更改旧标注的图像绑定。"""
-        with self.lock:
-            loaded = self.load(identifier)
-            if revision != loaded['revision']:
-                raise ConflictError('道路修订已变化，请重新保存后导出。')
-            document = loaded['annotations']
-            if not document.get('terrain_edits'):
-                raise ValueError('还没有道路修订，请先绘制并保存。')
-            package = self.package(identifier)
-            name = str(time.time_ns())
-            folder = local_package_dir(package) / 'manual_exports' / name
-            with Image.open(package / 'map.png') as image:
-                edited, override = render_terrain(image, document['terrain_edits'], loaded['terrain_colors'])
-            folder.mkdir(parents=True)
-            edited.save(folder / 'map.png')
-            override.save(folder / 'terrain_override.png')
-            manifest = {'schema_version': 1, 'source_image_sha256': document['image_sha256'],
-                        'image_sha256': digest((folder / 'map.png').read_bytes()),
-                        'annotation_revision': revision, 'size': loaded['size'], 'coordinates': COORDINATES,
-                        'terrain_edits': document['terrain_edits'], 'colors': loaded['terrain_colors'],
-                        'override_values': {'unchanged': 0, 'erase': 1, 'add': 2}, 'navigation_ready': False}
-            (folder / 'edits.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
-            return {'export': name, 'path': str(folder / 'map.png'), 'edits': len(document['terrain_edits'])}
+                    'connectivity': connectivity, 'baked': baked, 'image_sha256': image_hash}
 
     def preview_connectivity(self, identifier, document, revision):
         """按未保存的标注算一次连通分区，只返回结果不写盘。
@@ -290,6 +368,7 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
         所有写操作都要求会话令牌，令牌随服务启动随机生成并只通过本机页面下发；
         响应统一加 no-store 与 CSP，禁止页面被嵌入或加载外部脚本。
         """
+
         def send(self, content, content_type='application/json; charset=utf-8', status=200):
             """统一发送 JSON 或静态资源，设置长度、禁缓存和页面资源策略。"""
             if not isinstance(content, bytes):
@@ -344,13 +423,8 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                     return self.send(movement.calibration(identifier, params.get('difficulty', ['normal'])[0]))
                 if request.path == '/api/map':
                     return self.send(store.load(identifier))
-                if request.path == '/api/export-image':
-                    name = params.get('export', [''])[0]
-                    if not re.fullmatch(r'\d{15,25}', name):
-                        raise ValueError('无效的导出版本。')
-                    folder = local_package_dir(store.package(identifier)) / 'manual_exports' / name
-                    return self.send((folder / 'map.png').read_bytes(),
-                                     'image/png')
+                if request.path == '/api/backups':
+                    return self.send(store.list_backups(identifier))
                 if request.path == '/api/image':
                     filename = params.get('image', ['map.png'])[0]
                     if filename not in ('map.png', 'reference.png'):
@@ -367,7 +441,7 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
             if not self.allowed_host() or self.headers.get('X-Annotation-Token') != token:
                 return self.send({'error': '页面会话已失效，请刷新后重试。'}, status=403)
             endpoint = urlsplit(self.path).path
-            if endpoint not in ('/api/save', '/api/terrain/export', '/api/movement/start', '/api/movement/stop',
+            if endpoint not in ('/api/save', '/api/backup/restore', '/api/movement/start', '/api/movement/stop',
                                 '/api/scan/start', '/api/scan/stop', '/api/scan/adopt', '/api/wiki/start',
                                 '/api/wiki/stop', '/api/wiki/apply', '/api/connectivity/preview'):
                 return self.send({'error': '未找到资源。'}, status=404)
@@ -376,10 +450,10 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                 if not 0 < length <= 10_000_000:
                     raise ValueError('标注文件不能为空，也不能超过 10 MB。')
                 payload = json.loads(self.rfile.read(length))
-                if endpoint == '/api/terrain/export':
-                    result = store.export_terrain(payload['id'], payload['revision'])
-                elif endpoint == '/api/connectivity/preview':
+                if endpoint == '/api/connectivity/preview':
                     result = store.preview_connectivity(payload['id'], payload['annotations'], payload['revision'])
+                elif endpoint == '/api/backup/restore':
+                    result = store.restore_backup(payload['id'], payload['kind'], payload.get('name'))
                 elif endpoint == '/api/movement/start':
                     with device_lock:
                         if scans.status().get('running'):
@@ -427,6 +501,7 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
         扫描和移动子进程都占着游戏控制，服务退出不收尾会把游戏留在被接管的状态，
         所以 server_close 用嵌套 try/finally 保证三个任务都被尝试关闭。
         """
+
         def server_close(self):
             """服务退出也必须停止本服务持有的扫描和移动进程。"""
             try:

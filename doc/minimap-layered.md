@@ -153,7 +153,7 @@ Wiki 普通收集品 14 项离线配准通过 1 → 4 项；第 40 章 93.6% →
 - 未通过检查的区域保留父包像素，`navigation_ready=false` 不会因局部重绘而自动变为真。
 
 Wiki 图先配准到原始帧，再组合 `query_to_map = roi_to_map @ query_to_roi`。
-目标必须有同一表面的局部证据；人工道路修订通过 `annotations.json.terrain_edits` 消费。
+目标必须有同一表面的局部证据；人工道路修订在标注工具保存时直接烘焙进 `map.png`（分层地图无概率缓存）。
 已保存有效局部标定的 `local_parallax` 包可进行同层移动测试，详见[地图标注说明](map-annotation.md)。
 
 ### 现场检查

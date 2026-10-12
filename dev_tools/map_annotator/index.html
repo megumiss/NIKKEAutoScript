@@ -46,9 +46,7 @@
       <label>画笔直径 <output id="road-width-value">12 px</output><input id="road-width" type="range" min="1" max="160" value="12"></label>
       <label>多边形操作<select id="road-operation"><option value="add">补齐道路</option><option value="erase">擦除区域</option></select></label>
       <label class="check"><input id="show-terrain" type="checkbox" checked>显示道路修订</label>
-      <p id="road-count" class="muted">0 笔道路修订</p>
-      <button id="export-terrain" disabled>保存并导出修订图</button>
-      <a id="terrain-export-link" hidden target="_blank" rel="noopener">查看导出的地图</a>
+      <p id="road-count" class="muted">无待保存的道路修订</p>
       </details>
       <details class="tool-section" id="annotation-tools" open>
       <summary>绘制标注</summary>
@@ -177,7 +175,7 @@
         <div id="vertex-properties"><div class="vertices-heading"><span>顶点坐标</span><button id="add-vertex" type="button">插入顶点</button></div><div id="vertices"></div></div>
         <button id="delete" type="button" class="danger">删除选中标注 <kbd>Del</kbd></button>
       </form>
-      <details class="file-details"><summary>文件与副本</summary><p id="package-path" class="muted"></p><button id="download" disabled>下载 JSON 副本</button><button id="reload" disabled>重新加载磁盘标注</button><p class="muted">保存前自动备份原文件；底图保持不变。</p></details>
+      <details class="file-details"><summary>文件与副本</summary><p id="package-path" class="muted"></p><button id="download" disabled>下载 JSON 副本</button><button id="reload" disabled>重新加载磁盘标注</button><div class="section-label">历史版本</div><div id="backup-list" class="backup-list"><p class="muted">打开地图后显示可恢复的备份。</p></div><p class="muted">保存前自动备份原标注；道路修订保存时直接写入底图，首次写入前的原始地图也在此恢复。</p></details>
       </section>
     </aside>
   </main>

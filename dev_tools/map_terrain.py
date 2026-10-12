@@ -1,7 +1,11 @@
-"""人工道路修订的校验与栅格导出；原始地图和扫描证据保持独立。"""
+"""道路修订的校验与栅格化；保存时直接烘焙进 map.png 与道路概率缓存。"""
 
+import hashlib
 import math
+import os
+from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageDraw
 
 
@@ -40,10 +44,14 @@ def validate_terrain_edits(edits, size):
             raise ValueError('道路填充至少需要三个不同顶点。')
 
 
-def terrain_colors(metadata):
-    if metadata.get('coordinate_model') in ('local_parallax', 'orthographic_surfaces'):
-        return {'add': '#3b8bba', 'erase': '#1c232c'}
-    return {'add': '#2d8dc7', 'erase': '#0f141c'}
+def terrain_colors(metadata=None):
+    """道路与背景的渲染颜色。
+
+    留着 metadata 参数是为了兼容按坐标模型取色的旧调用，现在所有模型统一双色，直接忽略。
+    颜色值同时是 package_road 的比色依据（分层地图靠精确比色取道路），改色必须同步改那里。
+    """
+    # 全模型统一双色：道路蓝 #2d8dc7，背景 #1e2b37。擦除语义是"不是路"，必须沿用背景色。
+    return {'add': '#2d8dc7', 'erase': '#1e2b37'}
 
 
 def render_terrain(image, edits, colors):
@@ -71,3 +79,38 @@ def render_terrain(image, edits, colors):
         mask = override.point(lambda pixel: 255 if pixel == value else 0)
         result.paste(colors[operation], (0, 0, *image.size), mask)
     return result, override
+
+
+def _atomic_write(path, writer):
+    """在目标同目录写临时文件后原子替换，避免半截文件进入哈希绑定。"""
+    path = Path(path)
+    temporary = path.with_name(f'.{path.name}.tmp{path.suffix}')
+    try:
+        writer(temporary)
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def bake_terrain(package, metadata, edits):
+    """把道路修订直接写入 map.png 与平面地图的道路概率缓存，返回新的图像哈希。
+
+    分层地图没有概率缓存，只烘焙 map.png；概率缓存的其余数组原样保留。
+    """
+    package = Path(package)
+    with Image.open(package / 'map.png') as image:
+        edited, override = render_terrain(image, edits, terrain_colors(metadata))
+    cache = package / 'source' / 'map_data.npz'
+    if metadata.get('coordinate_model') is None and cache.exists():
+        with np.load(cache, allow_pickle=False) as data:
+            arrays = {name: data[name] for name in data.files}
+        if 'terrain_probability' in arrays:
+            mask = np.asarray(override)
+            probability = arrays['terrain_probability']
+            probability[mask == 1] = 0
+            probability[mask == 2] = 1
+            _atomic_write(cache, lambda temporary: np.savez_compressed(temporary, **arrays))
+    target = package / 'map.png'
+    _atomic_write(target, edited.save)
+    return hashlib.sha256(target.read_bytes()).hexdigest()

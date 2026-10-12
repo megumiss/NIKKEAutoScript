@@ -37,7 +37,7 @@ function message(text, kind = '') { $('message').textContent = text; $('message'
 function snapshot() { return JSON.stringify(doc); }
 function roadTool() { return tool.startsWith('road-'); }
 function roadOperation() { return tool === 'road-erase' ? 'erase' : tool === 'road-polygon' ? $('road-operation').value : 'add'; }
-function roadColor(operation) { return current?.terrain_colors?.[operation] || (operation === 'add' ? '#3b8bba' : '#1c232c'); }
+function roadColor(operation) { return current?.terrain_colors?.[operation] || (operation === 'add' ? '#2d8dc7' : '#1e2b37'); }
 function dirty() { return doc && snapshot() !== saved; }
 function itemById(id) { return doc && [...doc.objects, ...doc.connections].find(item => item.id === id); }
 function selectedItem() { return itemById(selected); }
@@ -135,12 +135,11 @@ async function openMap(id) {
     const image = $('base-image'); image.setAttribute('href', imageURL(id, 'map.png'));
     image.setAttribute('width', data.size[0]); image.setAttribute('height', data.size[1]);
     $('terrain-bounds').setAttribute('width', data.size[0]); $('terrain-bounds').setAttribute('height', data.size[1]);
-    $('terrain-export-link').hidden = true;
     $('empty-state').hidden = true;
     $('dimensions').textContent = `${data.size[0]} × ${data.size[1]} px · 原图坐标`;
     $('map-status').textContent = data.coverage_verified ? '采集覆盖已验证' : '采集覆盖尚未完全验证';
     $('package-path').textContent = data.path;
-    fit(); render(); message('地图已打开。选择工具绘制，Ctrl+S 保存到地图目录。');
+    fit(); render(); refreshBackups(); message('地图已打开。选择工具绘制，Ctrl+S 保存到地图目录。');
   } catch (error) {
     if (current) $('map-select').value = current.id;
     message(`打开失败：${error.message}`, 'error');
@@ -152,9 +151,8 @@ function syncState() {
   $('save-state').textContent = saving ? '正在保存…' : !loaded ? '未打开地图' : changed ? '有未保存的修改' : '已与磁盘同步';
   $('save-state').classList.toggle('dirty', Boolean(changed));
   $('save').disabled = !loaded || saving || busy || movement.running || Boolean(gesture);
-  $('export-terrain').disabled = !loaded || saving || busy || movement.running || Boolean(gesture)
-    || (!(doc?.terrain_edits?.length) && !(tool === 'road-polygon' && draft.length >= 3));
-  $('road-count').textContent = `${doc?.terrain_edits?.length || 0} 笔道路修订`;
+  const roadCount = doc?.terrain_edits?.length || 0;
+  $('road-count').textContent = roadCount ? `${roadCount} 笔道路修订（保存时写入原图）` : '无待保存的道路修订';
   $('map-select').disabled = busy || saving || movement.running;
   $('refresh-maps').disabled = busy || saving || movement.running;
   $('reload').disabled = !loaded || busy || saving || movement.running;
@@ -563,10 +561,19 @@ async function save() {
   try {
     const result = await api('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Annotation-Token': token },
       body: JSON.stringify({ id: current.id, annotations: JSON.parse(content), revision: current.revision }) });
-    current.revision = result.revision; saved = content;
+    current.revision = result.revision;
+    if (result.baked) {
+      doc.terrain_edits = []; doc.image_sha256 = result.image_sha256;
+      const url = `${imageURL(current.id, 'map.png')}&v=${result.image_sha256.slice(0, 12)}`;
+      await loadImage(url);
+      if ($('layer').value === 'map.png') { $('base-image').setAttribute('href', url); renderGeometry(); }
+    }
+    saved = snapshot();
     current.connectivity = result.connectivity; connectivity.saved(result.connectivity);
     const stored = JSON.parse(content);
-    message(`已保存 ${stored.objects.length} 个对象、${stored.connections.length} 条连接、${stored.terrain_edits?.length || 0} 笔道路修订。${result.backup ? '原文件已备份。' : ''}`, 'success');
+    const bakedText = result.baked ? `${result.baked} 笔道路修订已写入地图原图。` : '';
+    message(`已保存 ${stored.objects.length} 个对象、${stored.connections.length} 条连接。${bakedText}${result.backup ? '原文件已备份。' : ''}`, 'success');
+    refreshBackups();
     return true;
   } catch (error) { message(`保存失败：${error.message}`, 'error'); return false; }
   finally { saving = false; syncState(); }
@@ -616,24 +623,46 @@ $('add-vertex').addEventListener('click', () => {
 $('map-select').addEventListener('change', () => openMap($('map-select').value));
 $('refresh-maps').addEventListener('click', () => refreshMaps());
 $('reload').addEventListener('click', () => current && openMap(current.id));
+
+async function refreshBackups() {
+  const box = $('backup-list');
+  if (!current) { box.replaceChildren(); return; }
+  try {
+    const data = await api(`/api/backups?${new URLSearchParams({ map: current.id })}`);
+    box.replaceChildren();
+    if (data.terrain_original) {
+      box.append(backupButton(`恢复原始地图（${data.terrain_original.backed_up_at || '首次修订前'}备份）`, 'terrain'));
+    }
+    for (const entry of data.annotations) {
+      box.append(backupButton(`恢复标注备份 · ${entry.saved_at}`, 'annotations', entry.name));
+    }
+    if (!box.children.length) box.append(backupNote('没有可恢复的备份。'));
+  } catch (error) { box.replaceChildren(backupNote(`读取备份失败：${error.message}`)); }
+}
+function backupNote(text) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = text; return p; }
+function backupButton(label, kind, name) {
+  const button = document.createElement('button');
+  button.textContent = label;
+  button.addEventListener('click', () => restoreBackup(kind, name));
+  return button;
+}
+async function restoreBackup(kind, name) {
+  if (!current || saving || busy || movement.running) return;
+  if (!confirm('恢复备份会用历史版本覆盖当前地图文件。确定继续？')) return;
+  busy = true; syncState();
+  try {
+    await api('/api/backup/restore', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Annotation-Token': token },
+      body: JSON.stringify({ id: current.id, kind, name }) });
+    saved = snapshot();
+    await openMap(current.id);
+    message('已恢复历史版本。', 'success');
+  } catch (error) { message(`恢复失败：${error.message}`, 'error'); }
+  finally { busy = false; syncState(); }
+}
 $('save').addEventListener('click', save);
 $('road-width').addEventListener('input', () => { $('road-width-value').textContent = `${$('road-width').value} px`; renderGeometry(); });
 $('road-operation').addEventListener('change', renderGeometry);
 $('show-terrain').addEventListener('change', renderGeometry);
-$('export-terrain').addEventListener('click', async () => {
-  if (!(await save()) || dirty()) return;
-  busy = true; syncState();
-  try {
-    const result = await api('/api/terrain/export', { method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Annotation-Token': token },
-      body: JSON.stringify({ id: current.id, revision: current.revision }) });
-    const link = $('terrain-export-link');
-    link.href = `/api/export-image?${new URLSearchParams({ map: current.id, export: result.export })}`;
-    link.hidden = false;
-    message(`修订图已导出：${result.path}`, 'success');
-  } catch (error) { message(`导出失败：${error.message}`, 'error'); }
-  finally { busy = false; syncState(); }
-});
 $('undo').addEventListener('click', undo); $('redo').addEventListener('click', redo);
 $('finish').addEventListener('click', finishDraft); $('cancel').addEventListener('click', cancelDraft);
 $('delete').addEventListener('click', deleteSelected); $('fit').addEventListener('click', fit);

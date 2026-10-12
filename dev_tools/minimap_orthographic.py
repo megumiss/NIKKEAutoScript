@@ -180,8 +180,8 @@ def render(source, model_path, tracks_path, output):
     probabilities = probabilities[:, top:bottom, left:right]
     translation = np.array([[1., 0, -left], [0, 1., -top], [0, 0, 1.]])
     matrices, display = translation @ matrices, translation @ display
-    map_image = np.full_like(reference, (44, 35, 28))
-    map_image[masks.any(axis=0)] = (186, 139, 59)
+    map_image = np.full_like(reference, (55, 43, 30))
+    map_image[masks.any(axis=0)] = (199, 141, 45)
     checks = validate_views(images, valid, masks, coverages, matrices, held)
     records = [{'id': identifier, 'height_plane': plane.tolist()} for identifier, plane in surfaces.items()]
     output.mkdir(parents=True)

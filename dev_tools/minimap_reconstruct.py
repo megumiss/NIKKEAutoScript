@@ -139,6 +139,7 @@ class Projection:
     只用一条地平线参数，不做度量纠正，所以同一张图上不同远近的尺度并不一致；
     新扫描走 MetricGrid，这里保留给早期扫描数据的回放。
     """
+
     def __init__(self, shape, horizon):
         """建立旧版地平线透视校正矩阵，同时生成去掉边框与计数器的有效域。"""
         height, width = shape
@@ -208,6 +209,7 @@ class DriverWindow:
     对不上，所以位置校验是每次输入前的必要检查（见 campaign_prototype.runtime.GuardedInput）。
     实例持有 GDI 截图资源和鼠标驱动，必须由调用方显式 close 释放。
     """
+
     def __init__(self, args):
         """锁定游戏客户区与屏幕原点，按目标尺寸初始化虚拟鼠标，初始化失败也释放控制。
 
@@ -571,6 +573,7 @@ class Scanner:
     输出目录已有 scan.json 时拒绝运行，避免把两次扫描的帧混进同一份数据。
     新章节请用 RasterScanner / DriftScanner，这里保留用于复现早期扫描。
     """
+
     DIRECTIONS = ((0, -1), (-1, 0), (0, 1), (1, 0))
 
     def __init__(self, args, window):
@@ -996,9 +999,7 @@ def rebuild(output, registration='joint'):
     observed = observed[top:bottom, left:right]
     lo += (left, top)
     size = (right - left, bottom - top)
-    canvas = np.full((*size[::-1], 3), (15, 20, 28), np.uint8)
-    canvas[coverage > 0.5] = (30, 43, 55)
-    canvas[(probability > 0.15) & (probability < 0.8)] = (86, 108, 128)
+    canvas = np.full((*size[::-1], 3), (30, 43, 55), np.uint8)
     canvas[probability >= 0.5] = (45, 141, 199)
     Image.fromarray(canvas).save(output / 'reconstruction.png')
     cv2.imwrite(str(output / 'observed_mosaic.png'), observed)
@@ -2652,9 +2653,7 @@ def rebuild_v2(output, data, registration='joint'):
         x, y = player['position']
         if not (0 <= x < size[0] and 0 <= y < size[1]):
             player = None
-    canvas = np.full((*size[::-1], 3), (15, 20, 28), np.uint8)
-    canvas[coverage > 0.5] = (30, 43, 55)
-    canvas[(probability > 0.15) & (probability < 0.8)] = (86, 108, 128)
+    canvas = np.full((*size[::-1], 3), (30, 43, 55), np.uint8)
     canvas[probability >= 0.5] = (45, 141, 199)
     Image.fromarray(canvas).save(output / 'reconstruction.png')
     cv2.imwrite(str(output / 'observed_mosaic.png'), observed)
