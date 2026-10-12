@@ -358,12 +358,20 @@ def window_session(win, localizer, evidence, tag):
 
 
 def panel_delta_to_client(a, delta):
-    """紧凑面板位移换算为客户区拖动量：A_INV @ ROI_TO_PLANE 链，与平移项无关。"""
+    """紧凑面板位移换算为客户区拖动量：A_INV @ ROI_TO_PLANE 链在注视点处线性化。
+
+    远点需要的面板位移可达成百上千像素，整段外推会跨过 ROI_TO_PLANE 的透视地平线，
+    越界后 x/w、y/w 符号翻转，客户区拖动随之反向（镜头朝目标反方向撞边界）。
+    这里只在 EXPANDED_CENTER 附近线性化，幅度误差交给响应闭环修正；
+    单位面板位移约 2.7 客户区像素，此处的 Jacobian 与整段外推在界内时差异小于 1 像素。
+    """
     affine = np.eye(3)
     affine[:2, :2] = goto.A_INV
     chain = affine @ goto.ROI_TO_PLANE
     base = np.asarray(goto.EXPANDED_CENTER, float)
-    return project(chain, base + a * np.asarray(delta, float)) - project(chain, base)
+    linear = np.column_stack([project(chain, base + step) - project(chain, base)
+                              for step in np.eye(2)])
+    return linear @ (a * np.asarray(delta, float))
 
 
 def compact_viewport(session, matcher, panel, road, valid):
@@ -391,13 +399,63 @@ def compact_viewport(session, matcher, panel, road, valid):
                 iou=float(report.get('road_iou', 0.)), status=report['status'])
 
 
-def plan_world_move_compact(session, observation, target, max_pans=12):
+def start_viewport(start, squad_position, tolerance=60.):
+    """起始帧的视野中心以展开图小队定位为准：与之一致即采用，不要求配准状态为 accepted。
+
+    相机经 observe 复位在小队上，注视点定位应与小队位置接近；返回偏差像素，超出 tolerance 抛 ValueError。
+    细路视口的软重叠分会压在 match_panel 门槛附近，needs_review 只由调用者记录，不单独否决。
+    """
+    offset = float(np.linalg.norm(np.asarray(start['viewport'], float) - np.asarray(squad_position, float)))
+    if offset > tolerance:
+        raise ValueError(f"紧凑小地图与展开地图定位不一致（{start['status']}，偏差 {offset:.0f}px）。")
+    return offset
+
+
+def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
+    """批末展开小地图重新配准，只修正紧凑矩阵的平移项；不可用时返回 None。
+
+    reference 是「展开 ROI 中心 → 注视点」的地图偏移，由起始帧同时测得的两种定位建立；
+    这要求展开面板随镜头移动且本次规划期间镜头缩放不变，与拖动换算的前提一致。
+    展开面板的道路证据远多于紧凑面板，用它清掉链式跟踪的累积漂移；只改平移项是因为
+    局部比例与透视来自紧凑配准，本次校正不重新估计镜头缩放。
+    修正量超过 limit 视为配准可疑并放弃；定位失败先收起面板，避免随后的落点点在展开面板上。
+    """
+    from .movement_feedback import SquadPositionChanged
+
+    if reference is None:
+        return None
+    try:
+        report = observe_camera(session, squad_position)
+    except SquadPositionChanged:
+        raise
+    except (RuntimeError, ValueError) as error:
+        session.emit(camera_anchor='failed', camera_anchor_error=str(error))
+        goto.map_close(session.win)
+        return None
+    gaze = project(np.asarray(report['roi_to_map'], float), goto.EXPANDED_CENTER) + reference
+    shift = gaze - project(matrix, goto.GAZE)
+    if float(np.linalg.norm(shift)) > limit:
+        session.emit(camera_anchor='rejected', camera_anchor_shift=np.round(shift, 1).tolist())
+        return None
+    translation = np.eye(3)
+    translation[:2, 2] = shift
+    session.emit(camera_anchor='accepted', camera_anchor_shift=np.round(shift, 1).tolist(),
+                 camera_anchor_viewport=np.round(gaze, 1).tolist())
+    return translation @ matrix
+
+
+def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3):
     """平面与分层地图共用的镜头规划：紧凑小地图闭环把目标拖到注视点，返回视野中心点击点。
 
     对准在地图空间进行：视野中心由道路配准给出，远处目标不经逆单应外推（透视地平线）。
     拖动量取注视点处局部 Jacobian 换算，比例误差由实测响应闭环修正；帧间链式跟踪兜底
     空旷走廊的歧义配准，全局配准可用时立即修正漂移。箭头锚点、场景单应与两点临时标定
-    都不参与。实测：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
+    都不参与。面板位移到客户区拖动同样只在注视点线性化，远距离整段外推会跨过 ROI_TO_PLANE
+    的地平线并反向，见 panel_delta_to_client。
+    起始帧的视野中心以与展开图小队定位一致为准（start_viewport），不要求 accepted。
+    平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
+    全局配准被接受即视为批末校正已完成。分层地图没有对应的展开配准入口，保持原行为。
+    实测：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     """
     from dev_tools.wiki_collectible_match import MapMatcher
     from .parallax_localizer import ParallaxLocalizer
@@ -420,19 +478,25 @@ def plan_world_move_compact(session, observation, target, max_pans=12):
     session.preview(field)
     panel, road, valid = perception.compact_road_masks(field)
     start = compact_viewport(session, matcher, panel, road, valid)
+    offset = start_viewport(start, squad_position)
+    session.emit(start_registration=start['status'], start_iou=round(float(start['iou']), 4),
+                 start_offset=round(offset, 1))
     if start['status'] != 'accepted':
-        raise ValueError(f"视野中心定位未接受：{start['status']}")
-    # 相机经 observe 复位在小队上，注视点定位应与小队位置接近；不一致禁止移动。
-    if np.linalg.norm(start['viewport'] - squad_position) > 60:
-        raise ValueError('紧凑小地图与展开地图定位不一致。')
+        session.emit(message=f"起始紧凑配准为 {start['status']}（iou {start['iou']:.3f}），"
+                             f"与展开图小队定位偏差 {offset:.1f}px，按一致采用。")
     matrix, scale_a, road_prev = start['matrix'], start['a'], road
-    gain, responses, stalled = 1., [], 0
+    gain, responses, stalled, batch_pans = 1., [], 0, 0
+    reference = None
+    if matcher is not None and observation.get('roi_to_map') is not None:
+        reference = (np.asarray(start['viewport'], float)
+                     - project(np.asarray(observation['roi_to_map'], float), goto.EXPANDED_CENTER))
     session.camera_pans = getattr(session, 'camera_pans', 0)
     for count in range(max_pans + 1):
         session.check()
         viewport = project(matrix, goto.GAZE)
         delta_map = target - viewport
-        if float(np.linalg.norm(delta_map)) <= 12.:
+        # 残差不超过圆环覆盖半径即可点击：小队走到注视点后圆环仍触到目标，压得更小只是多平移。
+        if float(np.linalg.norm(delta_map)) <= goto.SQUAD_REACH:
             session.emit(state='planning', navigation_method='compact_gaze', camera_pans=session.camera_pans,
                          plan_camera_pans=count, planned_target=target.tolist(),
                          click=list(goto.VIEWPORT_PIXEL),
@@ -473,16 +537,24 @@ def plan_world_move_compact(session, observation, target, max_pans=12):
                 distance_new = float(np.linalg.norm(cand_viewport - target))
                 progress = distance_new < float(np.linalg.norm(viewport - target))
                 sane = float(np.linalg.norm(cand_viewport - viewport)) <= 900.
-                if candidate['iou'] >= .85 and sane and (progress or distance_new <= 30.):
+                # 细路视口的软重叠分约 0.84 封顶；门槛取 0.8，可信度由推进与位移合理性共同判定。
+                # 圆环罩住目标（长轴半径）后，低分配准的误接受由到点判定兜底，可按覆盖范围放宽。
+                if candidate['iou'] >= .8 and sane and (progress or distance_new <= goto.SQUAD_REACH_WIDE):
                     use_matrix, use_a, source = candidate['matrix'], candidate['a'], 'needs_review'
-        if use_matrix is None:
-            if chained is None:
-                raise ValueError('帧间跟踪与全局配准都不可用；未发送移动点击。')
+        if use_matrix is None and chained is not None:
             use_matrix = chained
+        batch_pans = 0 if source == 'accepted' else batch_pans + 1
+        if source != 'accepted' and (use_matrix is None or batch_pans >= batch_limit):
+            anchored = anchor_viewport(session, matrix if use_matrix is None else use_matrix,
+                                       reference, squad_position)
+            if anchored is not None:
+                use_matrix, source, batch_pans = anchored, 'expanded', 0
+        if use_matrix is None:
+            raise ValueError('帧间跟踪、全局配准与批末展开都不可用；未发送移动点击。')
         new_viewport = project(use_matrix, goto.GAZE)
         actual = new_viewport - viewport
         response = float(actual @ delta_map) / float(delta_map @ delta_map)
-        session.emit(camera_tracking=source, camera_response=response)
+        session.emit(camera_tracking=source, camera_response=response, camera_batch_pans=batch_pans)
         if .2 <= response <= 3.:
             responses.append(response)
             gain = float(np.median(responses[-3:]))

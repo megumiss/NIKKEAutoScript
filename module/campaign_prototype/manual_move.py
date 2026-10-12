@@ -105,18 +105,23 @@ def movement_plan(localizer, observation, target, anchor):
     return click, float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum())
 
 
-def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_near=3, purpose='position', elevators=None):
+def navigate(session, target, emit, max_moves=24, arrival_radius=None, required_near=3, purpose='position', elevators=None):
     """有限步执行并重新定位，连续三次近点观测才算到达，无进展或预算耗尽明确失败。
 
     session 提供观测、规划、输入及停稳接口，target、到达半径和位置差都使用原图像素。
     到点模式按 required_near 次连续近点观测确认；收集品和敌人模式在附近进行有限试点，耗尽后返回 needs_review。
+    arrival_radius 缺省取 goto.SQUAD_REACH（圆环覆盖半径）：点击放行残差与到点判定必须同源，
+    否则镜头认为已到而到点循环不认，会空转触发停滞。
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
     """
     from .movement_feedback import (AnchorUnresolved, SquadPositionChanged, road_recovery_click, resolve_anchor,
                                     wake_arrow_click)
+    from .goto import SQUAD_REACH
 
+    if arrival_radius is None:
+        arrival_radius = SQUAD_REACH
     target = np.asarray(target, float)
     clicks, near, stagnant, replans = 0, 0, 0, 0
     previous = None
@@ -509,7 +514,7 @@ def main():
         else:
             session = GameSession(request, hashes, folder, emit)
             annotations = json.loads((settings.package / 'annotations.json').read_text(encoding='utf-8'))
-            result = navigate(session, request['target'], emit, arrival_radius=20, required_near=2,
+            result = navigate(session, request['target'], emit, required_near=2,
                               purpose=request.get('purpose', 'position'),
                               elevators=annotations if annotations.get('connections') else None)
         state.update(result)

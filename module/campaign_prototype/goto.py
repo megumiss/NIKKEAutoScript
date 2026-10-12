@@ -36,6 +36,12 @@ VIEWPORT_PIXEL = (887.7, 496.0)
 GAZE = (107.2, 104.0)
 # template_matrix 把紧凑面板中心钉在展开 ROI 的这个点上（wiki_collectible_match.template_matrix）。
 EXPANDED_CENTER = (243., 231.)
+# 大地图地面圆环在小队脚下覆盖的地图像素半径：客户区投影为 154×215 椭圆（半轴 76.9/107.5 px，
+# 长短轴比 0.72），按 1 地图像素 ≈ 2.7 客户区像素换算得短轴 28、长轴 40。椭圆随镜头朝向旋转，
+# 各向同性判定（点击放行、到点确认）只能用最坏值 SQUAD_REACH；SQUAD_REACH_WIDE 只用于
+# 「目标已被圆环罩住、低分配准也可信」的场景，两者语义不同，不得互相替代。
+SQUAD_REACH = 28.
+SQUAD_REACH_WIDE = 40.
 ENTER_BATTLE_TPL = cv2.imread(str(ASSETS / 'enter_battle_tpl.png'))
 if ENTER_BATTLE_TPL is None:
     raise FileNotFoundError(ASSETS / 'enter_battle_tpl.png')

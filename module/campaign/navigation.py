@@ -11,9 +11,12 @@ from module.logger import logger
 # 没有敌人时机关和电梯的搜索范围，量级按展开小地图一次能看到的道路取。
 NEARBY_RADIUS = 480.0
 # 目标点允许偏离道路的上限；A* 会把场外点吸附到最近网格，必须先挡住跨墙、跨层的候选。
-ROAD_TOLERANCE = 12.0
-# A* 会把端点吸附到最近的净空网格；吸附超过两个网格，说明目标不在可通行道路网格上。
-SNAP_RADIUS = 24.0
+# 依据大地图圆环的短轴覆盖半径（goto.SQUAD_REACH，地图像素）：小队站在路上时圆环能触到路外
+# 圆环半径内的机关落点。取 20 而不是满额 28，是为留出跨墙误吸附的余量，先保守观察误选情况。
+ROAD_TOLERANCE = 20.0
+# A* 会把端点吸附到最近的净空网格；吸附上限按圆环覆盖半径取（介于短轴 28 与长轴 40 之间），
+# 吸附超过它说明目标不在可通行道路网格上。
+SNAP_RADIUS = 32.0
 
 TARGET_CATEGORIES = ('ground_mechanism', 'ground_elevator')
 

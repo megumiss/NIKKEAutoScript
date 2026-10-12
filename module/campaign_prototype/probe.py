@@ -14,6 +14,31 @@ from . import perception
 from . import goto
 
 
+# 8px 网格加净空门槛会在细路上留下一两格的孤立分区；全部章节里 1～3 节点的分区有 68 个，
+# 真实分区最小为 106 节点，所以 4 是量化碎片与真实区域之间的安全切点。
+MIN_REGION_NODES = 4
+
+
+def traversable_grid(grid, minimum=MIN_REGION_NODES):
+    """丢弃只有极少格子的孤立分区，返回可走净空网格。
+
+    这些分区是细路上偶然够宽的单格，不是可去的地方；留在候选里会让吸附按零点几像素的距离差
+    把目标判成不连通（ch38 收集品 02：孤岛 10.6px 对主干 11.3px）。
+    所有分区都退化时按原样返回，宁可规划得差也不要无路可走。
+    """
+    mask = (grid > 6).astype(np.uint8)
+    count, components = cv2.connectedComponents(mask, connectivity=4)
+    if count <= 1:
+        return grid
+    sizes = np.bincount(components.ravel())
+    degenerate = np.isin(components, np.flatnonzero(sizes[1:] < minimum) + 1)
+    if not degenerate.any() or not (mask.astype(bool) & ~degenerate).any():
+        return grid
+    grid = grid.copy()
+    grid[degenerate] = 0
+    return grid
+
+
 
 def project(matrix, point):
     """复用带有限数值及地平线检查的齐次投影，返回同一地图像素坐标。
@@ -137,6 +162,7 @@ class Localizer:
         """在道路距离场上运行带净空代价的八邻域 A*，禁止斜穿墙角，再选择局部可直达路点。
 
         start、target 使用地图像素，先吸附到具备净空的 8px 网格节点，再运行八邻域 A*。
+        吸附前丢弃退化分区（traversable_grid），避免量化碎片按零点几像素的距离差抢走吸附点。
         返回局部可直达 waypoint 和完整网格路径；无连通路或无有效节点时失败，二维连通不证明跨层可通行。
         """
         start, target = np.asarray(start, float), np.asarray(target, float)
@@ -154,6 +180,7 @@ class Localizer:
             blocked = (grid > 6) & (labels == 0)
             grid = grid.copy()
             grid[labels == 0] = 0
+        grid = traversable_grid(grid)
         ys, xs = np.nonzero(grid > 6)
         nodes = np.column_stack([xs, ys])
         if not len(nodes):
@@ -259,7 +286,7 @@ def main():
             if np.mean(goto.mr.terrain(observed) != goto.mr.terrain(win.capture())) > .03:
                 raise RuntimeError('Minimap changed during localization; no move')
             goto.map_close(win)
-            if report['distance'] < 12:
+            if report['distance'] < goto.SQUAD_REACH:
                 report['status'] = 'near_annotation_requires_visual_check'
                 runtime.write_image(str(settings.output / f'{tag}_near.png'), goto.capture_client(win))
                 break

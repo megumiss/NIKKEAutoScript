@@ -338,7 +338,7 @@ def run_movement(session):
                     calibration=dict(samples=data['samples'], fit_residual_max_px=data['fit_residual_max_px'],
                                      prior_residual_max_px=data['prior_residual_max_px'],
                                      surface_id=data['surface_id']))
-    return navigate(session, request['target'], session.emit, arrival_radius=20, required_near=2,
+    return navigate(session, request['target'], session.emit, required_near=2,
                     purpose=request.get('purpose', 'position'))
 
 
