@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from functools import lru_cache
 from pathlib import Path
 
 import cv2
@@ -12,6 +13,26 @@ ROI = (25, 96, 243, 307)
 SCALE = 0.25
 PAD = 180
 MATCH_VERSION = 5
+# match_panel 粗搜索的参数网格；同一个 MapMatcher 实例反复配准时尺度基本不变，先在最近
+# 接受的 (a, b) 附近做小网格热启动，命中即跳过全网格，未命中再退回完整扫描。
+PARAMETER_GRID = sorted({(round(float(a), 2), round(float(b), 2))
+                         for a in np.arange(.6, 2.21, .2) for b in np.arange(.65, 1.56, .15)}
+                        | {(round(float(a), 2), round(float(b), 2))
+                           for a in np.arange(1.9, 3.21, .1) for b in np.arange(.45, .851, .05)})
+# 热启动的小网格半径：a 步长 0.2、b 步长 0.15，各取 ±1 步；超出即视为尺度漂移，退回全扫。
+WARM_START_RADIUS = 1
+
+
+@lru_cache(maxsize=4)
+def cached_parallax_localizer(package):
+    """按地图包路径进程级复用 ParallaxLocalizer；同一包反复构建要重读上百帧做 SIFT。
+
+    ParallaxLocalizer 初始化对约 260 个原始帧逐一读图并计算 SIFT 特征（数秒），移动闭环里
+    观测与镜头配准各自新建 MapMatcher 时会重复这笔开销；定位器加载后只读数据，进程内共享
+    是安全的。缓存按路径计，包内容变化由 ParallaxLocalizer 自己的哈希校验兜底。
+    """
+    from module.campaign_prototype.parallax_localizer import ParallaxLocalizer
+    return ParallaxLocalizer(package)
 
 
 def minimap_masks(image):
@@ -129,7 +150,7 @@ class MapMatcher:
         self.surface_matcher = None
         if meta.get('coordinate_model') == 'local_parallax':
             from module.campaign_prototype.parallax_localizer import ParallaxLocalizer
-            self.surface_matcher = ParallaxLocalizer(self.package)
+            self.surface_matcher = cached_parallax_localizer(self.package)
             self.cache_digest = self.surface_matcher.cache_digest
             return
         if meta.get('coordinate_model') == 'orthographic_surfaces':
@@ -158,6 +179,8 @@ class MapMatcher:
         self.pad = 900
         self.large = cv2.copyMakeBorder(self.terrain, self.pad, self.pad, self.pad, self.pad,
                                        cv2.BORDER_CONSTANT, value=0)
+        self.warm_parameters = None
+        self.warm_margin = None
 
     def match(self, image, review=None):
         """粗搜索尺度和位移后细化最佳候选，以 IoU、远处候选分差及参数分散度联合决定是否接受。"""
@@ -182,28 +205,54 @@ class MapMatcher:
         return result
 
     def match_panel(self, panel, road, valid, player, review=None):
-        """已裁剪小地图的道路搜索，可作为分层原始帧配准的候选种子。"""
+        """已裁剪小地图的道路搜索，可作为分层原始帧配准的候选种子。
+
+        粗搜索优先在最近一次 accepted 配准的 (a, b) 附近做小网格热启动：热启动候选分达标的
+        参数若与缓存一致则复用当时的粗搜 margin，可继续给出 accepted；命中失败或候选分过低
+        退回全网格扫描，行为与无缓存一致。同一实例在移动闭环里反复配准，尺度几乎不变，
+        热启动能省九成以上的 matchTemplate。
+        """
         coarse = []
-        parameters = {(round(float(a), 2), round(float(b), 2))
-                      for a in np.arange(.6, 2.21, .2) for b in np.arange(.65, 1.56, .15)}
-        parameters.update((round(float(a), 2), round(float(b), 2))
-                          for a in np.arange(1.9, 3.21, .1) for b in np.arange(.45, .851, .05))
-        for a, b in sorted(parameters):
-            template = template_matrix(self.projection, a, b, road.shape)
-            if template is None:
-                continue
-            matrix, size = template
-            surface = iou_surface(self.target, road, valid, matrix, size)
-            if surface is None:
-                continue
-            _, score, _, location = cv2.minMaxLoc(surface)
-            cv2.circle(surface, location, round(130 * SCALE), 0, -1)
-            _, second, _, second_location = cv2.minMaxLoc(surface)
-            p = cv2.perspectiveTransform(player[None, None], matrix)[0, 0]
-            coarse.append({'a': a, 'b': b, 'score': score, 'second': second,
-                           'position': (np.asarray(location) + p - PAD) / SCALE,
-                           'second_position': (np.asarray(second_location) + p - PAD) / SCALE,
-                           'location': location, 'matrix': matrix, 'size': size})
+        # 候选分门槛取 0.6：粗搜网格 IoU 明显低于接受线（全分辨率细化后要求 0.85）的参数
+        # 不会成为最终候选，热启动时不值得为它们做完全网格。
+        warm_score_floor = .6
+
+        def sweep(parameters):
+            """对给定 (a, b) 参数做一次粗搜打分，返回粗搜候选列表。"""
+            found = []
+            for a, b in sorted(parameters):
+                template = template_matrix(self.projection, a, b, road.shape)
+                if template is None:
+                    continue
+                matrix, size = template
+                surface = iou_surface(self.target, road, valid, matrix, size)
+                if surface is None:
+                    continue
+                _, score, _, location = cv2.minMaxLoc(surface)
+                cv2.circle(surface, location, round(130 * SCALE), 0, -1)
+                _, second, _, second_location = cv2.minMaxLoc(surface)
+                p = cv2.perspectiveTransform(player[None, None], matrix)[0, 0]
+                found.append({'a': a, 'b': b, 'score': score, 'second': second,
+                              'position': (np.asarray(location) + p - PAD) / SCALE,
+                              'second_position': (np.asarray(second_location) + p - PAD) / SCALE,
+                              'location': location, 'matrix': matrix, 'size': size})
+            return found
+
+        # seed_matcher 等旁路构造的实例没有热启动字段；热启动只对持有完整画布的实例有意义。
+        warm = getattr(self, 'warm_parameters', None)
+        warm_hit = False
+        if warm is not None:
+            steps = sorted({b for _, b in PARAMETER_GRID})
+            neighborhood = {(a, b) for a, b in PARAMETER_GRID
+                            if abs(steps.index(b) - steps.index(warm[1])) <= WARM_START_RADIUS
+                            and abs(a - warm[0]) <= .21 * (WARM_START_RADIUS + 1) + 1e-9}
+            coarse = sweep(neighborhood)
+            # 热启动候选分明显低于接受线说明尺度漂移了，退回全网格而不是拿坏候选继续。
+            warm_hit = bool(coarse) and max(item['score'] for item in coarse) >= warm_score_floor
+            if not warm_hit:
+                coarse = sweep(PARAMETER_GRID)
+        else:
+            coarse = sweep(PARAMETER_GRID)
         if not coarse:
             raise ValueError('No usable registration candidates.')
         coarse.sort(key=lambda r: r['score'], reverse=True)
@@ -235,10 +284,20 @@ class MapMatcher:
         spread = max(np.linalg.norm(np.asarray(r['position']) - point) for r in candidates
                      if r['road_iou'] >= result['road_iou'] - .03)
         inside = np.all(point >= 0) and np.all(point <= np.asarray(self.terrain.shape[::-1]) - 1)
+        # margin 是「粗搜首名与远处歧义候选的分差」，热启动只扫了参数邻域、语义不完整；
+        # 但该分差主要由尺度参数决定，与平移无关，所以热启动命中的参数若正是上次全网格
+        # accepted 的参数，可以直接复用当时的 margin 得出 accepted，避免每帧都做全网格。
+        if warm_hit and self.warm_parameters == (result['a'], result['b']) and self.warm_margin is not None:
+            margin = self.warm_margin
         accepted = bool(inside and result['road_iou'] >= .85 and margin >= .10 and spread <= 20)
         result.update(status='accepted' if accepted else 'needs_review', coarse_margin=float(margin),
                       parameter_spread_px=float(spread), roi=list(ROI), player_center=player.tolist(),
                       normalized_size=[1920, 1080], image_sha256=self.digest, match_version=MATCH_VERSION)
+        # 只有全网格 accepted 才更新热启动：needs_review 的定位不可信，把它的参数喂给下一帧
+        # 会把漂移延续下去；accepted 复用同一参数直接命中，后续帧全部走小网格并复用 margin。
+        if accepted and not warm_hit and hasattr(self, 'warm_parameters'):
+            self.warm_parameters = (result['a'], result['b'])
+            self.warm_margin = float(margin)
         if review is not None:
             recovered = cv2.warpPerspective((self.terrain * 255).astype(np.uint8),
                                             np.linalg.inv(np.asarray(result['roi_to_map'])), panel.shape[1::-1])

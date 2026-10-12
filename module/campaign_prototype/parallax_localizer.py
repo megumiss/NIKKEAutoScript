@@ -107,6 +107,15 @@ class ParallaxLocalizer:
                 if common.sum() < 1500:
                     continue
                 recovered = cv2.warpPerspective(ref['road'].astype(np.float32) / 255, warp, image.shape[1::-1])
+                # ECC 全图配准一次约 75ms，是 road_proposals 的最大成本；先在 1/4 分辨率上比对
+                # 两幅道路掩码的 IoU 预筛。实测好候选 IoU≥0.9、坏候选≤0.46，分界非常清晰；
+                # 门槛取 0.6 留出余量，能对不上的候选不值得做迭代配准。
+                quarter = .25
+                small = cv2.resize(recovered, None, fx=quarter, fy=quarter) > 0
+                qsmall = cv2.resize(query_road, None, fx=quarter, fy=quarter) > 0
+                csmall = cv2.resize(common, None, fx=quarter, fy=quarter) > 0
+                if not (small & qsmall & csmall).sum() / max(1, (small & csmall).sum()) >= .6:
+                    continue
                 try:
                     _, correction = cv2.findTransformECC(query_road, recovered, np.eye(3, dtype=np.float32),
                         cv2.MOTION_HOMOGRAPHY, (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 80, 1e-5),

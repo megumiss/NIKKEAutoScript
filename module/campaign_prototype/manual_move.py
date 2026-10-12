@@ -39,10 +39,11 @@ def prepare(request, folder):
         raise ValueError('地图或标注已变化，请重新加载后选择目标。')
     metadata = json.loads((source / 'map.json').read_text(encoding='utf-8'))
     if metadata.get('coordinate_model') == 'local_parallax':
-        from .parallax_localizer import ParallaxLocalizer
+        from dev_tools.wiki_collectible_match import cached_parallax_localizer
         if metadata['chapter'] != request['chapter']:
             raise ValueError('所选地图章节已变化。')
-        localizer = ParallaxLocalizer(source)
+        # 初始化要读上百个原始帧做 SIFT（数秒），同一进程内连续请求复用同一包的定位器。
+        localizer = cached_parallax_localizer(source)
         if request.get('action', 'move') != 'calibrate':
             from .edited_map import road_distance
             if road_distance(localizer.road, request['target']) > 0:
@@ -293,8 +294,8 @@ class GameSession:
                                      device='cpu', cpu_threads=2)
         metadata = json.loads((Path(request['package']) / 'map.json').read_text(encoding='utf-8'))
         if metadata.get('coordinate_model') == 'local_parallax':
-            from .parallax_localizer import ParallaxLocalizer
-            self.localizer = ParallaxLocalizer(request['package'])
+            from dev_tools.wiki_collectible_match import cached_parallax_localizer
+            self.localizer = cached_parallax_localizer(request['package'])
         else:
             self.localizer = AdaptiveLocalizer()
         self.request, self.hashes, self.folder, self.emit = request, hashes, folder, emit
