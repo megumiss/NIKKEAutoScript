@@ -197,8 +197,10 @@ def export_runtime(source, destination, lean=True):
             if hashlib.sha256(target.read_bytes()).hexdigest() != hashes[name]:
                 raise ValueError(f'Source changed during runtime export: {name}')
         if 'annotations.json' not in names:
-            (candidate / 'annotations.json').write_text(
-                json.dumps(loaded['annotations'], ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            # 写 bytes 而不是 write_text：文本模式在 Windows 上会把换行翻成 CRLF，整份标注在
+            # 仓库里变成全文件 churn，而标注工具（写 bytes）产出的是 LF。
+            (candidate / 'annotations.json').write_bytes(
+                (json.dumps(loaded['annotations'], ensure_ascii=False, indent=2) + '\n').encode('utf-8'))
         AnnotationStore(temporary).load('package')
         if lean:
             slim_package(candidate, LOCAL_MAPS_ROOT / 'runtime_extras' / destination.name)

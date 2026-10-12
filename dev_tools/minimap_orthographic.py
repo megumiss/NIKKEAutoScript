@@ -226,7 +226,7 @@ def render(source, model_path, tracks_path, output):
     (output / 'map.json').write_text(json.dumps(metadata, indent=2), encoding='utf-8')
     annotations = dict(schema_version=1, image='map.png', image_sha256=metadata['image_sha256'],
                        coordinates=COORDINATES.copy(), objects=[], connections=[])
-    (output / 'annotations.json').write_text(json.dumps(annotations, indent=2), encoding='utf-8')
+    (output / 'annotations.json').write_bytes(json.dumps(annotations, indent=2).encode('utf-8'))
     return metadata
 
 

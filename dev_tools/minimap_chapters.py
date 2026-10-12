@@ -96,10 +96,11 @@ def export_static(output, chapter):
         'base_map': 'Reconstructed terrain; no added grid or marker overlays. Not manually verified.',
     }
     (output / 'map.json').write_text(json.dumps(metadata, indent=2), encoding='utf-8')
-    (output / 'annotations.json').write_text(json.dumps({
+    # 写 bytes：文本模式在 Windows 上翻成 CRLF，标注文件在仓库里会变成全文件 churn。
+    (output / 'annotations.json').write_bytes(json.dumps({
         'schema_version': 1, 'image': 'map.png', 'image_sha256': digest,
         'coordinates': metadata['coordinates'], 'objects': [], 'connections': [],
-    }, indent=2), encoding='utf-8')
+    }, indent=2).encode('utf-8'))
     return summary
 
 
