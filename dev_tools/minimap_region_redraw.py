@@ -9,6 +9,7 @@ import shutil
 import cv2
 import numpy as np
 
+from dev_tools.map_terrain import terrain_bgr
 from dev_tools.minimap_layered import project
 from dev_tools.minimap_projected_redraw import warp_patch
 from module.campaign_prototype.local_projection import frame_plane_to_map
@@ -86,6 +87,7 @@ def redraw_regions(source, output, meta, hashes, images, roads, clear, caches, b
     被拒区域按原因计数（rejected）而不是直接丢弃，重绘质量不达标时要能看出是哪一类问题占多数。
     """
     shape = roads[0].shape
+    colors = terrain_bgr()
     sy, sx = np.indices(shape)
     rectified = project(meta['projection'], np.column_stack([sx.ravel(), sy.ravel()]))
     before = cv2.imread(str(source / 'map.png'))
@@ -173,8 +175,8 @@ def redraw_regions(source, output, meta, hashes, images, roads, clear, caches, b
                 rejected['regions_superseded_by_better_source'] += 1
                 continue
             road = warp_patch(roads[frame], matrix, rect) > 0
-            painted = np.full((*road.shape, 3), (44, 35, 28), np.uint8)
-            painted[road] = (186, 139, 59)
+            painted = np.full((*road.shape, 3), colors['erase'], np.uint8)
+            painted[road] = colors['add']
             result[area][selected] = painted[selected]
             color = warp_patch(images[frame], matrix, rect, cv2.INTER_LINEAR)
             reference[area][selected] = color[selected]
@@ -204,7 +206,7 @@ def redraw_regions(source, output, meta, hashes, images, roads, clear, caches, b
         if not cv2.imwrite(str(output / name), image):
             raise OSError(f'Could not write {name}')
     np.savez_compressed(output / 'redraw_data.npz', patch_id=ids, source_frame=owner, source_roi=roi,
-                        road_mask=np.all(result == (186, 139, 59), axis=2))
+                        road_mask=np.all(result == colors['add'], axis=2))
     audit = dict(input=str(source), input_sha256=hashes, method='source_road_regions',
                  attempted_regions=attempted, accepted_regions=len(records),
                  active_regions=sum(r['painted_pixels'] > 0 for r in records),

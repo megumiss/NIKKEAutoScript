@@ -12,6 +12,7 @@ from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import breadth_first_order, maximum_flow
 from scipy.spatial import cKDTree
 
+from dev_tools.map_terrain import terrain_bgr
 from dev_tools.minimap_reconstruct import terrain
 from dev_tools.minimap_repair import evidence, small_components
 
@@ -163,8 +164,9 @@ def restore(source, output):
             colors = cv2.remap(images[int(frame)], roi[:, 0, None], roi[:, 1, None],
                                cv2.INTER_LINEAR)[:, 0]
             reference[y[batch], x[batch]] = colors
-    map_image = np.full((*mask.shape, 3), (44, 35, 28), np.uint8)
-    map_image[mask] = (186, 139, 59)
+    palette = terrain_bgr()
+    map_image = np.full((*mask.shape, 3), palette['erase'], np.uint8)
+    map_image[mask] = palette['add']
     output.mkdir(parents=True)
     for name in ['source', 'depth']:
         shutil.copytree(source / name, output / name)

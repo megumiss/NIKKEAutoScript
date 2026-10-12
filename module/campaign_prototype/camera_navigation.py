@@ -16,6 +16,13 @@ FIELD_BOUNDS = (300, 220, 1450, 820)
 ROI_BOUNDS = (12, 12, 474, 420)
 # 横向利用场景全宽，纵向利用中部全高；两个矩形均避开固定 UI。
 PAN_REGIONS = ((24, 320, 1752, 880), (250, 70, 1490, 880))
+# 融合判据的容差 IoU 接受线：双方道路各膨胀 7px 后，正确位置实测 ~0.36、错位 ±60px 即跌到
+# ~0.07~0.11（38 章失败帧紧凑面板离线复算，判别间隔 ≥3 倍）。膨胀量取底图投影道路与实时
+# 道路的宽度差之半（底图 18px 对 live 4px），门槛 0.25 居中，既接住底图质量差的区域，又排除错位。
+FUSED_IOU = .25
+# 容差 IoU 的膨胀半径（面板像素）：紧凑面板底图投影道路 ~18px、实时道路 ~4px，各膨胀 7px 后
+# 宽度对齐；展开帧场景（宽度基本一致）用同值偏保守但不改变判别方向。
+FUSED_DILATE = 7
 
 
 def pan_region(drag):
@@ -358,7 +365,7 @@ def window_session(win, localizer, evidence, tag):
 
 
 def panel_delta_to_client(a, delta):
-    """紧凑面板位移换算为客户区拖动量：A_INV @ ROI_TO_PLANE 链在注视点处线性化。
+    """紧凑面板位移换算为客户区位移：A_INV @ ROI_TO_PLANE 链在注视点处线性化。
 
     远点需要的面板位移可达成百上千像素，整段外推会跨过 ROI_TO_PLANE 的透视地平线，
     越界后 x/w、y/w 符号翻转，客户区拖动随之反向（镜头朝目标反方向撞边界）。
@@ -372,6 +379,102 @@ def panel_delta_to_client(a, delta):
     linear = np.column_stack([project(chain, base + step) - project(chain, base)
                               for step in np.eye(2)])
     return linear @ (a * np.asarray(delta, float))
+
+
+def squad_ground(image):
+    """小队脚下的客户区像素：箭头锚点向下补偿 ARROW_GROUND_OFFSET 得到脚点。
+
+    箭头不可信（零个或多个候选）时返回 None，调用者据此判定小队不在画面里。
+    """
+    arrow = perception.squad_arrow(image)
+    return None if arrow is None else np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
+
+
+def squad_click(matrix, scale, anchor, observation, target, bounds=FIELD_BOUNDS):
+    """小队相对落点：小队脚下像素加上「目标 − 小队」的客户区相对位移。
+
+    observation 必须来自真实小队定位（position_kind='squad'），其 position 是权威小队坐标；
+    anchor 由 squad_ground 给出。相对向量在地图坐标里做完差，再用闭环拖动用的同一条换算链
+    （注视点局部 Jacobian + A_INV @ ROI_TO_PLANE）换到客户区，因此平移偏差在做差与锚定中抵消，
+    落点不使用视野中心像素与 VIEWPORT_PIXEL；尺度沿用响应增益闭环验证过的换算。
+    返回客户区点击点；箭头不可信、小队定位非权威、单应退化、相对向量跨过投影地平线或落点
+    越出 bounds 时返回 None，表示当前还轮不到小队相对落点（典型是小队已不在画面里）。
+    """
+    if anchor is None or observation.get('position_kind') != 'squad':
+        return None
+    try:
+        delta_map = np.asarray(target, float) - np.asarray(observation['position'], float)
+        delta_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), delta_map)
+        click = np.asarray(anchor, float) + panel_delta_to_client(scale, delta_panel)
+    except (np.linalg.LinAlgError, ValueError):
+        return None
+    return click if inside(click, bounds) else None
+
+
+def tolerance_iou(live_road, panel_valid, base_road, matrix, dilate=FUSED_DILATE):
+    """把底图道路按矩阵拉回面板坐标，与实时面板道路各膨胀 dilate 像素后计算容差交并比。
+
+    底图道路渲染宽度与实时面板不一致（紧凑面板实测底图投影 ~18px 对 live ~4px），
+    逐像素硬碰会把正确位置的分数压到门槛以下；双方膨胀后宽度对齐，正确位置约 0.36、
+    错位 ±60px 跌到 ~0.07~0.11，判别间隔 ≥3 倍（38 章失败帧离线复算）。
+    live_road、panel_valid 为面板坐标（膨胀、腐蚀都在面板坐标系内做），
+    base_road 为地图像素底图道路，matrix 为面板→地图单应。
+    返回容差 IoU 浮点数；任何输入为空时返回 0.0。
+    """
+    if base_road is None or not np.any(base_road) or not np.any(live_road):
+        return 0.
+    base = (np.asarray(base_road, float)[..., None] * 255).astype(np.uint8)
+    base = base[..., 0] if base.ndim == 3 else base
+    recovered = cv2.warpPerspective(base, np.linalg.inv(np.asarray(matrix, float)),
+                                    np.asarray(live_road.shape)[::-1], flags=cv2.INTER_NEAREST) > 0
+    kernel = np.ones((2 * dilate + 1, 2 * dilate + 1), np.uint8)
+    live = cv2.dilate((live_road > 0).astype(np.uint8), kernel) > 0
+    mapped = cv2.dilate(recovered.astype(np.uint8), kernel) > 0
+    common = cv2.erode((panel_valid > 0).astype(np.uint8), kernel) > 0
+    intersection = float((live & mapped & common).sum())
+    union = float(((live | mapped) & common).sum())
+    return intersection / union if union else 0.
+
+
+def fusion_acceptable(session, candidate, matrix, road, valid, origin, predicted, distance_old, target):
+    """观测融合判据：needs_review 候选凭「拖动走廊先验 + 容差 IoU + 推进/位移合理性」接受。
+
+    绝对 IoU 门槛同时检验位置正确性与底图质量，底图质量差的区域（38 章 observed_roads
+    覆盖，失败区域 IoU 天花板 ~0.67）会冤杀正确位置。本判据改问三件事：候选位置落在
+    「拖动起点→期望落点」走廊内（响应不足或过冲都在走廊上，偏离方向即拒绝，半宽随
+    残差自适应）、容差 IoU 达标（形状真伪由 0.36 对 0.07~0.11 的判别间隔把关）、
+    并保持既有 sane 与推进条件。分层地图没有底图道路模板（localizer.road 缺失）或
+    无预测先验时返回 False，维持原有保守行为。
+    返回 True 表示该候选可作为本帧镜头矩阵。
+    """
+    base_road = getattr(session.localizer, 'road', None)
+    if base_road is None or predicted is None:
+        return False
+    viewport = np.asarray(candidate['viewport'], float)
+    origin = np.asarray(origin, float)
+    predicted = np.asarray(predicted, float)
+    # 先验是拖动走廊而非圆形半径：响应不足时正确落点在走廊中段，圆形先验会把正确位置
+    # 拒掉（失败现场实测先验距离 386 > 半径 374）；偏离走廊方向的错位由半宽排除，
+    # 半宽下限由错位对照（±60px 被拒）约束。
+    segment = predicted - origin
+    length = float(segment @ segment)
+    half_width = max(100., .35 * distance_old)
+    if length <= 0:
+        deviation = float(np.linalg.norm(viewport - predicted))
+    else:
+        t = float((viewport - origin) @ segment) / length
+        deviation = float(np.linalg.norm(viewport - (origin + segment * np.clip(t, 0., 1.5))))
+    if deviation > half_width:
+        return False
+    score = tolerance_iou(road, valid, base_road, matrix)
+    if score < FUSED_IOU:
+        return False
+    distance_new = float(np.linalg.norm(viewport - np.asarray(target, float)))
+    if distance_new >= distance_old and distance_new > goto.SQUAD_REACH_WIDE:
+        return False
+    session.emit(fused_iou=round(score, 3), fused_deviation=round(deviation, 1))
+    return True
+
 
 
 def compact_viewport(session, matcher, panel, road, valid):
@@ -445,17 +548,24 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
 
 
 def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3):
-    """平面与分层地图共用的镜头规划：紧凑小地图闭环把目标拖到注视点，返回视野中心点击点。
+    """平面与分层地图共用的镜头规划：目标进入可点范围时按小队相对位置落点，否则先平移接近。
 
     对准在地图空间进行：视野中心由道路配准给出，远处目标不经逆单应外推（透视地平线）。
     拖动量取注视点处局部 Jacobian 换算，比例误差由实测响应闭环修正；帧间链式跟踪兜底
     空旷走廊的歧义配准，全局配准可用时立即修正漂移。箭头锚点、场景单应与两点临时标定
-    都不参与。面板位移到客户区拖动同样只在注视点线性化，远距离整段外推会跨过 ROI_TO_PLANE
-    的地平线并反向，见 panel_delta_to_client。
+    都不参与镜头换算；面板位移到客户区拖动只在注视点线性化，远距离整段外推会跨过
+    ROI_TO_PLANE 的地平线并反向，见 panel_delta_to_client。
+    落点由 squad_click 给出：锚点是小队脚下像素（箭头锚点，不用 VIEWPORT_PIXEL），位移是
+    「目标 − 小队」经拖动用的同一条换算链（注视点局部 Jacobian + A_INV @ ROI_TO_PLANE）得到的
+    客户区向量。相对向量在地图坐标里做完差，平移偏差抵消，所以落点不依赖视野中心；尺度沿用
+    响应增益闭环验证过的换算。点固定注视点等于把落脚点让给相机自己，相机已在小队身上时就是点
+    小队脚下，游戏不会移动，闭环接受的残差会永久留在落点上，探针点也会退化成同一像素的重复点击。
+    小队不在画面里（远目标）时没有箭头锚点，只能先把目标拖到注视点、再点注视点把小队送到相机
+    所在处，那是接近手段。
     起始帧的视野中心以与展开图小队定位一致为准（start_viewport），不要求 accepted。
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
     全局配准被接受即视为批末校正已完成。分层地图没有对应的展开配准入口，保持原行为。
-    实测：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
+    实测（点击固定注视点像素时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     """
     from dev_tools.wiki_collectible_match import MapMatcher
     from .parallax_localizer import ParallaxLocalizer
@@ -493,15 +603,31 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     session.camera_pans = getattr(session, 'camera_pans', 0)
     for count in range(max_pans + 1):
         session.check()
+        # 落点优先走小队相对：箭头锚定 + 「目标 − 小队」相对向量，不使用视野中心。
+        anchor = squad_ground(field)
+        click = squad_click(matrix, scale_a, anchor, observation, target)
+        if click is not None:
+            session.emit(state='planning', navigation_method='squad_anchor', camera_pans=session.camera_pans,
+                         plan_camera_pans=count, planned_target=target.tolist(),
+                         click=np.round(click, 1).tolist(),
+                         squad_anchor=np.round(anchor, 1).tolist(),
+                         click_offset=np.round(click - np.asarray(goto.VIEWPORT_PIXEL, float), 1).tolist(),
+                         message='目标已进入可点击范围，按小队相对位置点击并交给游戏寻路。')
+            return click
         viewport = project(matrix, goto.GAZE)
         delta_map = target - viewport
-        # 残差不超过圆环覆盖半径即可点击：小队走到注视点后圆环仍触到目标，压得更小只是多平移。
+        # 小队不在画面里（远目标）时没有箭头锚点，小队相对落点无从谈起：只能把目标拖到注视点后
+        # 点注视点，让小队走到相机所在处。这是接近手段，不是微调，所以落点仍是固定像素。
+        # 小队仍在画面里却没有可用落点（相对向量越界或跨地平线）时不退化成点注视点——相机就在
+        # 小队身上，那等于点小队脚下、点了也不会动——直接失败交给外层重新观测。
         if float(np.linalg.norm(delta_map)) <= goto.SQUAD_REACH:
+            if anchor is not None:
+                raise ValueError('小队在画面内但小队相对落点不可用；未发送移动点击。')
             session.emit(state='planning', navigation_method='compact_gaze', camera_pans=session.camera_pans,
                          plan_camera_pans=count, planned_target=target.tolist(),
                          click=list(goto.VIEWPORT_PIXEL),
-                         message='目标已到小地图中央，准备点击并交给游戏寻路。')
-            return np.asarray(goto.VIEWPORT_PIXEL)
+                         message='小队不在画面内，先把小队送到镜头注视点。')
+            return np.asarray(goto.VIEWPORT_PIXEL, float)
         if count == max_pans:
             raise ValueError(f'已平移 {max_pans} 次，目标仍未到小地图中央；未发送移动点击。')
         delta_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), delta_map)
@@ -513,6 +639,9 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         session.emit(state='panning', camera_pans=session.camera_pans + 1, plan_camera_pans=count + 1,
                      camera_drag=drag.tolist(), camera_gain=gain,
                      message=f'正在平移画面寻找目标（{count + 1}/{max_pans}）…')
+        # 拖动指令换算的预期视野落点：融合判据的位置先验。响应未知（首拖 gain=1）时先验
+        # 半径按残差自适应放宽，见 fusion_acceptable。
+        predicted = viewport + delta_map * min(1. / gain, 1.5)
         pan_scene(session, drag)
         field = goto.capture_client(session.win)
         session.identity(field)
@@ -541,6 +670,13 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                 # 圆环罩住目标（长轴半径）后，低分配准的误接受由到点判定兜底，可按覆盖范围放宽。
                 if candidate['iou'] >= .8 and sane and (progress or distance_new <= goto.SQUAD_REACH_WIDE):
                     use_matrix, use_a, source = candidate['matrix'], candidate['a'], 'needs_review'
+                elif sane and (progress or distance_new <= goto.SQUAD_REACH_WIDE) and fusion_acceptable(
+                        session, candidate, candidate['matrix'], road, valid, viewport, predicted,
+                        float(np.linalg.norm(viewport - target)), target):
+                    # 绝对 IoU 门槛同时检验位置与底图质量，底图质量差的区域会冤杀正确位置；
+                    # 融合判据用拖动走廊先验 + 容差 IoU + 推进条件替代，错位候选由
+                    # 0.36 对 0.07~0.11 的容差判别间隔排除，误接受由响应闭环与到点权威定位兜底。
+                    use_matrix, use_a, source = candidate['matrix'], candidate['a'], 'fused'
         if use_matrix is None and chained is not None:
             use_matrix = chained
         batch_pans = 0 if source == 'accepted' else batch_pans + 1

@@ -54,6 +54,16 @@ def terrain_colors(metadata=None):
     return {'add': '#2d8dc7', 'erase': '#1e2b37'}
 
 
+def terrain_bgr(metadata=None):
+    """道路与背景的渲染颜色，按 OpenCV 的 BGR 通道顺序给出。
+
+    与 terrain_colors 同源：写图的工具必须从这里取色而不是各写一份字面量。
+    底图道路颜色同时是取路方的比色依据，两边一旦分叉，整包的定位与移动都会失效。
+    """
+    return {operation: tuple(int(color[index:index + 2], 16) for index in (5, 3, 1))
+            for operation, color in terrain_colors(metadata).items()}
+
+
 def render_terrain(image, edits, colors):
     """按操作顺序覆盖，掩码 0=未修订、1=擦除、2=补路，不修改原始观测概率。"""
     validate_terrain_edits(edits, image.size)

@@ -8,6 +8,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from dev_tools.map_terrain import terrain_bgr
 from dev_tools.minimap_layered import project
 from dev_tools.minimap_reconstruct import terrain, terrain_crop_bounds
 
@@ -145,8 +146,9 @@ def render(source, output, holdout_stride=5):
     mask = mask[top:bottom, left:right]
     matrices = np.array([[1., 0, -left], [0, 1., -top], [0, 0, 1.]]) @ matrices
     origin += [left, top]
-    map_image = np.full_like(reference, (44, 35, 28))
-    map_image[mask > 0] = (186, 139, 59)
+    colors = terrain_bgr()
+    map_image = np.full_like(reference, colors['erase'])
+    map_image[mask > 0] = colors['add']
     covered = source_frame >= 0
     source_roi = np.full((*source_frame.shape, 2), np.nan, np.float32)
     for index in selected:

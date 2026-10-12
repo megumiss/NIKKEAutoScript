@@ -9,12 +9,10 @@ VIEWPORT_PIXEL 对应紧凑面板中心。两级都不可用时不标记，等�
 
 import numpy as np
 
-from module.campaign_prototype.goto import EXPANDED_CENTER, VIEWPORT_PIXEL
+from module.campaign_prototype.goto import ARROW_GROUND_OFFSET, EXPANDED_CENTER, VIEWPORT_PIXEL
 from module.campaign_prototype.perception import squad_arrow
 from module.campaign_prototype.surface_motion import project
 
-# 1776×999 客户区，箭头动画中点距小队脚下地面约 90px（arrow_anchor.cycle_ground_anchor 的标定约定）。
-ARROW_GROUND_OFFSET = 90.
 # 立柱与光幕配对的最大地图距离；同一组屏障的立柱在光幕两侧不远处。
 PAIR_DISTANCE = 120.
 # 场景投影的落点误差（视野锚点中位约 6、p90 约 16 地图像素）大于标注偏移，吸附容差单独放宽。

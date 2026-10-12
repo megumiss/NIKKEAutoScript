@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from scipy.spatial import cKDTree
 
+from dev_tools.map_terrain import terrain_bgr
 from dev_tools.minimap_layered import project
 from dev_tools.minimap_reconstruct import terrain
 
@@ -173,8 +174,10 @@ def repair(source, output):
     probability[suppressed] = 0
     confirmed_after = (probability > .85) & (hits >= 3)
     uncertain_after = (probability > .5) & ~confirmed_after & (hits >= 3)
-    map_image = np.full((*shown.shape, 3), (44, 35, 28), np.uint8)
-    map_image[confirmed_after], map_image[uncertain_after] = (186, 139, 59), (104, 86, 66)
+    colors = terrain_bgr()
+    map_image = np.full((*shown.shape, 3), colors['erase'], np.uint8)
+    # 不确定像素只是显示用的中间色，不参与取路比色，因此不必跟随地形配色。
+    map_image[confirmed_after], map_image[uncertain_after] = colors['add'], (104, 86, 66)
     reference = cv2.imread(str(source / 'reference.png'))
     for frame in np.unique(all_frames['source_frame']):
         selected = all_frames['source_frame'] == frame

@@ -10,6 +10,7 @@ from collections import Counter
 import cv2
 import numpy as np
 
+from dev_tools.map_terrain import terrain_bgr
 from dev_tools.minimap_layered import project
 from dev_tools.minimap_reconstruct import terrain
 from dev_tools.minimap_surface_repair import visible_terrain
@@ -41,6 +42,7 @@ def redraw(source, output, regions=False, stop_file=None):
     meta = json.loads((source / 'map.json').read_text(encoding='utf-8'))
     if meta.get('coordinate_model') != 'local_parallax' or meta.get('map_render_mode'):
         raise ValueError('Expected the original local-parallax baseline')
+    colors = terrain_bgr()
     hashes = {name: hashlib.sha256((source / name).read_bytes()).hexdigest()
               for name in ['map.png', 'reference.png', 'map.json', 'surface_data.npz']}
     for name, expected in meta['source_sha256'].items():
@@ -165,8 +167,8 @@ def redraw(source, output, regions=False, stop_file=None):
             valid = first['visible'] & second['visible']
             road = first['road']
             frame, matrix = first['frame'], first['matrix']
-            patch = np.full((*road.shape, 3), (44, 35, 28), np.uint8)
-            patch[road] = (186, 139, 59)
+            patch = np.full((*road.shape, 3), colors['erase'], np.uint8)
+            patch[road] = colors['add']
             result[area][valid] = patch[valid]
             reference[area][valid] = warp_patch(images[frame], matrix, rect, cv2.INTER_LINEAR)[valid]
             py, px = np.indices(road.shape)
@@ -186,7 +188,7 @@ def redraw(source, output, regions=False, stop_file=None):
         if not cv2.imwrite(str(output / name), image):
             raise OSError(f'Could not write {name}')
     np.savez_compressed(output / 'redraw_data.npz', patch_id=patch_ids, source_frame=owner, source_roi=source_roi,
-                        road_mask=np.all(result == (186, 139, 59), axis=2))
+                        road_mask=np.all(result == colors['add'], axis=2))
     changed = np.any(before != result, axis=2)
     dependencies = [Path(__file__), Path('module/campaign_prototype/local_projection.py'),
                     Path('dev_tools/minimap_reconstruct.py'), Path('dev_tools/minimap_surface_repair.py')]
