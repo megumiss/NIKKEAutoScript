@@ -31,7 +31,15 @@ SYNC_ERRORS = (OSError, subprocess.SubprocessError, ValueError, zipfile.BadZipFi
 
 
 class ResourceManager:
+    """进程内唯一的资源仓库管理器：查询版本、在后台线程同步本地副本。
+
+    状态（state/error/log）要被界面轮询和任务线程同时读，统一用 self.lock 保护；同步本体在
+    daemon 线程里跑，调用方只能通过 status 观察进度，不要直接 join。
+    远端信息有 CHECK_CACHE_SECONDS 的缓存，避免界面轮询把远端打满。
+    """
+
     def __init__(self):
+        """初始化同步状态与日志缓冲；真正的目录检查推迟到首次 status/同步时。"""
         self.lock = threading.Lock()
         self.state = 'idle'
         self.error = ''
@@ -41,6 +49,10 @@ class ResourceManager:
 
     @property
     def repository(self):
+        """部署配置里的资源仓库地址，未配置时为空串。
+
+        配置项可能不存在或为 None，这里统一成去掉空白的字符串，调用方只需判断真假。
+        """
         return str(getattr(State.deploy_config, 'ResourceRepository', '') or '').strip()
 
     def git_executable(self):
@@ -54,6 +66,11 @@ class ResourceManager:
         return shutil.which('git')
 
     def git_options(self):
+        """复用主项目部署配置的代理与 SSL 设置，返回插在 git 子命令前的 -c 选项。
+
+        用 `-c` 临时覆盖而不是写进资源仓库的 .git/config：同步目录随时可能被整体替换，
+        写进配置的设置会跟着丢，而且不该影响用户自己的 git 环境。
+        """
         options = []
         proxy = getattr(State.deploy_config, 'GitProxy', None)
         if proxy:
@@ -63,6 +80,10 @@ class ResourceManager:
         return options
 
     def _log(self, message):
+        """记录一条同步进度，同时进日志文件和界面可读的环形缓冲。
+
+        缓冲只保留最近 50 条，避免长时间下载把内存撑大；任务线程按最后一行变化转发到任务日志。
+        """
         logger.info(f'[Resource] {message}')
         with self.lock:
             self.log.append(message)
@@ -70,6 +91,12 @@ class ResourceManager:
 
     @staticmethod
     def _run(args, timeout, cwd=None):
+        """执行一条外部命令并返回 stdout，非零退出码一律转成带末行错误信息的 ValueError。
+
+        取 stderr/stdout 的最后一行是因为 git 的实际原因通常在末行，前面都是进度输出。
+        Windows 上加 CREATE_NO_WINDOW，否则每条 git 命令都会闪一个控制台窗口。
+        超时由调用方按操作量级给：ls-remote 几十秒，克隆和下载需要上千秒。
+        """
         completed = subprocess.run(args, cwd=cwd, capture_output=True, text=True, encoding='utf-8', errors='replace',
                                    timeout=timeout, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         if completed.returncode != 0:
@@ -79,6 +106,13 @@ class ResourceManager:
 
     # ---- 本地与远端信息 ----
     def local(self):
+        """本地资源副本的信息：版本、各类数据的版本、来源分支与上次同步时间。
+
+        以 version.json 是否存在作为「有本地资源」的判据；它来自仓库本身，记录版本与组件。
+        .resource_state.json 是同步时本地写的，记录来源仓库、分支、提交和时间，可能缺失（手工
+        拷贝的副本）或损坏，所以单独读、读坏了就当没有，不影响 exists 与版本号。
+        version.json 读不出来时在 error 里留信息而不抛错，让界面能提示「资源已损坏」。
+        """
         info = dict(path=str(RESOURCE_ROOT), exists=False, version=None, sha=None, branch=None, updated_at=None,
                     synced_at=None, components={}, source=None)
         version_file = RESOURCE_ROOT / VERSION_FILE
@@ -133,6 +167,12 @@ class ResourceManager:
 
     @staticmethod
     def _parse_ls_remote(output):
+        """从 `ls-remote --symref` 的输出里解出（默认分支, 提交）。
+
+        带 `ref:` 的那行才是 HEAD 指向的真实默认分支，优先采用；仓库没给 symref 时退回按
+        DEFAULT_BRANCHES 的顺序挑一个存在的分支。一个分支都解不出来通常是空仓库或地址写错，
+        这种情况必须报错，否则后面会拿着空分支名去克隆。
+        """
         branch, heads = None, {}
         for line in output.splitlines():
             parts = line.split()
@@ -150,12 +190,22 @@ class ResourceManager:
 
     @staticmethod
     def _github_parts(repository):
+        """从仓库地址里解出 (owner, name)，供拼接 raw 与压缩包下载地址使用。
+
+        只有没装 git 时才会走到这里，而退化路径依赖 GitHub 的 raw/codeload 接口，所以非
+        GitHub 地址直接报错说明原因，而不是拼出一个必然 404 的地址。
+        """
         match = GITHUB_URL.match(repository)
         if not match:
             raise ValueError('没有可用的 git 时，只支持 GitHub 地址的资源仓库。')
         return match.group(1), match.group(2)
 
     def _opener(self):
+        """按部署配置构造带代理与 SSL 设置的 urllib opener。
+
+        与 git 路径共用同一份配置，避免「git 能连、压缩包下载连不上」。只有 http(s) 代理能给
+        urllib 用，socks 代理会被忽略（装了 git 的机器走不到这条路径）。
+        """
         handlers = []
         proxy = getattr(State.deploy_config, 'GitProxy', None)
         if proxy and str(proxy).startswith('http'):
@@ -165,6 +215,12 @@ class ResourceManager:
         return urllib.request.build_opener(*handlers)
 
     def _fetch_remote_version(self, repository):
+        """没有 git 时，从 GitHub raw 读远端 version.json，返回（分支, 文档）。
+
+        raw 地址必须带分支名，而此时无法查询默认分支，只能按 DEFAULT_BRANCHES 依次试；
+        全部失败才报错，并带上最后一次的原因（多为 404 或网络不可达）。
+        这条路径拿不到提交号，所以版本比较只能按 version 字段做。
+        """
         owner, name = self._github_parts(repository)
         opener = self._opener()
         last = None
@@ -178,6 +234,13 @@ class ResourceManager:
         raise ValueError(f'读取远端 version.json 失败：{last}')
 
     def status(self, check=True):
+        """汇总本地、远端与同步状态，供界面展示和任务决定是否同步。
+
+        condition 是给调用方的结论：missing（本地没有）、outdated（有新版本）、latest（最新）、
+        unknown（无法比较）。比较优先用提交号，只有 zip 路径没有提交号时才退回 version 字段；
+        任一端缺少可比字段就是 unknown——此时任务应继续用本地资源，而不是当成过期反复同步。
+        check=False 只读缓存的远端信息，用于同步过程中的高频轮询。
+        """
         local = self.local()
         remote = self.remote_info() if check else (self.remote or {})
         up_to_date = None
@@ -199,6 +262,11 @@ class ResourceManager:
 
     # ---- 同步 ----
     def start_sync(self):
+        """启动后台同步线程；已有同步在跑时返回 False 而不排队。
+
+        状态切换和起线程必须在同一把锁内完成，否则界面和任务可能同时判断为空闲、起两个线程
+        去写同一个资源目录。返回 False 的调用方应改为等待当前同步结束。
+        """
         with self.lock:
             if self.state == 'syncing':
                 return False
@@ -208,6 +276,12 @@ class ResourceManager:
         return True
 
     def _sync(self):
+        """同步线程主体：按有无 git 选择克隆/快进或下载压缩包，最后落盘本地状态。
+
+        强制刷新一次远端信息，不能用缓存——同步前必须确认分支与提交。完成后把 remote 缓存清掉，
+        让下一次 status 重新查询，否则界面会拿旧的远端信息和新的本地版本比较出「仍需更新」。
+        只捕获 SYNC_ERRORS 并记进 error 字段，线程不向外抛；状态终值是 finish 或 failed。
+        """
         try:
             self._log('开始同步资源仓库…')
             remote = self.remote_info(force=True)
@@ -230,6 +304,14 @@ class ResourceManager:
                 self.state, self.error = 'failed', str(exc)
 
     def _sync_with_git(self, git, repository, branch):
+        """用 git 同步并返回同步后的提交号：已有仓库就快进，否则浅克隆。
+
+        已有 .git 的目录可能是开发机上的工作副本，所以覆盖前做两道检查：工作区有未提交改动、
+        或本地有未推送的提交，都停止同步，宁可不更新也不要丢掉手里的地图标注。
+        快进用 reset --hard 到 FETCH_HEAD 而不是 pull，浅克隆历史下 merge 容易失败；
+        clean 时排除 STATE_FILE，它是本地同步记录而不是仓库内容。
+        新建副本先克隆到 .part 目录再整体替换，避免中途失败留下半个资源目录。
+        """
         base = [git, *self.git_options()]
         root = str(RESOURCE_ROOT)
         if (RESOURCE_ROOT / '.git').is_dir():
@@ -252,6 +334,13 @@ class ResourceManager:
         return self._run([*base, '-C', root, 'rev-parse', 'HEAD'], timeout=30).strip()
 
     def _sync_with_zip(self, repository, branch):
+        """没有 git 时下载 GitHub 分支压缩包替换本地副本；这条路径拿不到提交号，返回 None。
+
+        解压前逐个检查成员路径，拒绝绝对路径和 `..`，否则压缩包可以写到资源目录之外。
+        压缩包顶层是 `仓库名-分支` 目录，要剥掉一层；缺少 version.json 说明下载到的不是资源
+        仓库（常见于把主项目地址填成了资源地址），此时报错而不是装上一个用不了的目录。
+        临时目录开在 RESOURCE_ROOT 的同级，保证解压完是同盘移动而不是跨盘复制。
+        """
         owner, name = self._github_parts(repository)
         url = f'https://codeload.github.com/{owner}/{name}/zip/refs/heads/{branch}'
         self._log(f'没有可用的 git，下载压缩包 {url} …')
@@ -277,6 +366,11 @@ class ResourceManager:
         return None
 
     def _download(self, url, target):
+        """流式下载到文件，并按 20MB 的步长报告进度。
+
+        资源包有几百 MB，必须分块写盘而不是一次读进内存；进度按已下载量的增量报，不按次数报，
+        否则日志缓冲会被刷满。压缩包不提供可靠的 Content-Length，所以只报已下载量不报百分比。
+        """
         opener = self._opener()
         with opener.open(url, timeout=120) as response, open(target, 'wb') as stream:
             total, reported = 0, 0
@@ -306,6 +400,11 @@ class ResourceManager:
         shutil.rmtree(old, ignore_errors=True)
 
     def _write_state(self, repository, branch, sha):
+        """把来源仓库、分支、提交和时间写进资源目录里的 .resource_state.json。
+
+        必须在替换完目录之后写，文件要落在新目录里；version 顺带从新同步的 version.json 读一份，
+        读不到就留空——状态文件只是辅助信息，不该因为它让整次同步失败。
+        """
         version = None
         try:
             version = json.loads((RESOURCE_ROOT / VERSION_FILE).read_text(encoding='utf-8')).get('version')

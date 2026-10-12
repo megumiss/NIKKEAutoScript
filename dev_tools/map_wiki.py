@@ -13,7 +13,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class WikiJobs:
+    """标注工具里的 Wiki 收集品配准任务：先在子进程里匹配并预览，确认后再增量导入。
+
+    匹配与导入分两步，是因为 Wiki 的坐标要配准到本章道路上，结果必然有需要人工复核的条目；
+    先只产出 matches.json 让人看，确认后才写进标注。
+    导入要求地图版本与底图哈希仍是匹配时那一份（冻结版本），中途有人编辑过就必须重新匹配，
+    否则会把按旧道路配准的坐标写进新标注。
+    同一时刻只跑一个任务，状态由 HTTP 线程并发访问，用可重入锁保护。
+    """
+
     def __init__(self, store, output=None, cache=None):
+        """绑定地图仓库、任务输出目录与共享的 Wiki 缓存目录，不启动进程。"""
         self.store = store
         self.output = Path(output or ROOT / 'log/wiki_annotation')
         self.cache = Path(cache or ROOT / 'data/wiki_collectibles')
@@ -21,6 +31,12 @@ class WikiJobs:
         self.job = self.process = None
 
     def start(self, payload):
+        """冻结地图版本并起一个只匹配不写入的子进程（--dry-run）。
+
+        先核对请求里的 revision 与底图哈希：匹配结果要和某一版标注绑定，版本对不上直接拒绝。
+        共享缓存里的页面树和本章已下载资源会复制到任务私有目录再用，这样取消任务或匹配出错都不会
+        污染命令行导入时建立的缓存。
+        """
         with self.lock:
             if self.process is not None and self.process.poll() is None:
                 raise ValueError('Wiki 标注正在匹配，请等待或停止。')
@@ -53,6 +69,13 @@ class WikiJobs:
             return self.status()
 
     def status(self):
+        """汇总匹配进度与可导入状态。
+
+        ready 表示「跑完且至少有一份可用结果」，是导入按钮的唯一依据：进程退出码为 0 也可能
+        一条都没匹配上，那种情况算 failed。已停止和已导入都会把 ready 压回假，
+        避免前端重复导入或在取消后仍提示可导入。
+        失败时的提示取记录里第一条 error，退出码对使用者没有意义。
+        """
         with self.lock:
             if self.job is None:
                 return dict(state='idle', running=False, message='匹配当前地图的 Wiki 收集品，完成后预览并导入。')
@@ -82,6 +105,11 @@ class WikiJobs:
                         accepted=accepted, total=total, records=records, log_path=str(folder / 'worker.log'))
 
     def review(self):
+        """列出本次匹配的逐条结果，供界面预览与人工复核。
+
+        按难度分别读 matches.json；difficulty 为 both 时两份都读。
+        没有任务时返回空列表而不是报错——界面在任意时刻都可能来拉一次预览。
+        """
         with self.lock:
             if self.job is None:
                 return []
@@ -98,6 +126,14 @@ class WikiJobs:
             return items
 
     def apply(self, payload):
+        """把匹配通过的条目增量写入标注，返回导入后的状态。
+
+        导入是对标注文件的写操作，必须同时持任务锁与仓库锁，否则标注工具的并发保存会和导入
+        互相覆盖。
+        三重版本校验：请求里的 revision、仓库当前 revision、匹配时冻结的 revision 必须一致，
+        底图哈希也要没变——匹配期间有人改了道路修订，这批坐标就不再对应当前道路。
+        导入是增量的：已有标注与道路修订保留，只追加通过的条目，所以重复导入会被 ready 挡住。
+        """
         if __package__:
             from .wiki_collectibles import save_annotations
         else:
@@ -122,6 +158,11 @@ class WikiJobs:
             return self.status()
 
     def stop(self, identifier):
+        """请求停止匹配：放一个 STOP 标记让子进程在检查点自行退出。
+
+        不杀进程是为了让它把已下载的页面与中间结果写完，下次匹配能复用缓存。
+        identifier 不匹配说明前端状态过期，拒绝操作而不是停掉当前任务。
+        """
         with self.lock:
             if self.job is None or identifier != self.job['id']:
                 raise ValueError('Wiki 任务已更换。')
@@ -129,6 +170,10 @@ class WikiJobs:
             return self.status()
 
     def close(self):
+        """标注工具退出时结束匹配进程：先 STOP 等 5 秒，超时再 terminate。
+
+        这里只抓网络和文件，不碰游戏控制，所以等待时间比扫描任务短。
+        """
         with self.lock:
             if self.process is not None and self.process.poll() is None:
                 self.stop(self.job['id'])

@@ -14,6 +14,13 @@ from .surface_motion import contains, fit_registration, project
 
 
 class SurfaceLocalizer:
+    """orthographic_surfaces 分层地图的定位器：先判断小队所在表面，再在该表面上配准。
+
+    地图由若干高度平面（表面）投到同一张俯视画布，不同表面在二维上会重叠，所以定位结果必须带
+    表面身份，不能只给坐标——否则上下两层的道路会被当成连通。
+    参考特征只取参与拼图的帧，留出帧不混入匹配证据，这样验收时的误差才有意义。
+    """
+
     def __init__(self, package):
         """核对地图与分层缓存，参考特征只来自参与拼图的帧。
 

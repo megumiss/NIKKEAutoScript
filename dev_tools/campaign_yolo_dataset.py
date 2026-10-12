@@ -27,21 +27,38 @@ EXCLUDE = re.compile(r'annotat|alignment|mosaic|reconstruct|coverage|preview|ove
 
 
 def read_jsonl(path):
+    """读取 JSONL，跳过空行。
+
+    清单动辄上万条，用 JSONL 而不是单个 JSON 数组，是为了能边跑边追加、中断后还能续。
+    """
     return [json.loads(line) for line in Path(path).read_text('utf-8').splitlines() if line.strip()]
 
 
 def write_jsonl(path, records):
+    """整体重写 JSONL；追加写请直接 open(mode='a')，不要先读再全量回写。"""
     with Path(path).open('w', encoding='utf-8') as stream:
         for record in records:
             stream.write(json.dumps(record, ensure_ascii=False) + '\n')
 
 
 def chapter_from_path(path):
+    """从采集路径里猜章节号，猜不出返回 None。
+
+    采集目录命名不统一（chapter_33、ch33、chapter33 都有），所以用宽松的正则；
+    取最后一个匹配是因为路径前段常含无关数字，而章节目录通常在末端。
+    """
     found = re.findall(r'(?:chapter_?|\bch)(\d{1,2})(?!\d)', str(path).replace('\\', '/'), re.I)
     return int(found[-1]) if found else None
 
 
 def inventory(output, roots):
+    """扫描历史采集目录，整理出可用于标注的截图清单。
+
+    只收两种尺寸：1776×999 的客户区和 486×462 的展开小地图 ROI，其它尺寸的图不是原始采集。
+    文件名含 annotat/overlay/mask 等字样的是诊断叠图，按名字先排掉——这些图上画着旧的检测框，
+    当成采集数据会把标注污染。
+    同时按像素哈希去重：同一帧常被多个实验目录各存一份。
+    """
     output.mkdir(parents=True, exist_ok=True)
     records, hashes, stats = [], {}, Counter()
     for folder in roots:
@@ -98,11 +115,20 @@ def inventory(output, roots):
 
 
 def candidate(label, box, method, **details):
+    """构造一条待复核的弱标注。
+
+    reviewed 一律初始为 False：这些框来自启发式提议，没有人工确认过，不能直接当训练标签。
+    method 记下提议来源，复核时要据此判断该信多少。
+    """
     return dict(label=label, box=[float(v) for v in box], method=method, reviewed=False, **details)
 
 
 def minimap_proposals(image):
-    """Weak labels for review; these heuristics are not ground truth or runtime fallbacks."""
+    """小地图上的弱标注提议，仅供人工复核，既不是真值也不是运行期的兜底识别。
+
+    按红色取敌人、低饱和白色取小队圆环，并把红色膨胀后从白色里剔除，避免重叠处互相干扰。
+    面板右下角图例和紧凑面板顶部两角是界面元素，先清掉。
+    """
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     height, width = image.shape[:2]
     red = cv2.inRange(hsv, (135, 45, 80), (179, 255, 255)) | cv2.inRange(hsv, (0, 50, 100), (8, 255, 255))
@@ -163,6 +189,11 @@ def minimap_proposals(image):
 
 
 def scene_proposals(image):
+    """客户区截图上的弱标注提议，同样只供人工复核。
+
+    箭头用模板在三组白/黄掩码上多尺度匹配；顶栏、底栏和左上任务区先清零，
+    那里的高亮界面元素会刷出大量假候选。
+    """
     assets = ROOT / 'module/campaign_prototype/assets'
     template = cv2.imread(str(assets / 'squad_arrow_tpl.png'), cv2.IMREAD_GRAYSCALE)
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -208,6 +239,11 @@ def scene_proposals(image):
 
 
 def propose(output):
+    """为清单里尚无提议的截图生成弱标注，追加写入 proposals.jsonl。
+
+    已有记录按 id 跳过，所以可以反复运行补做新增采集，不会重复提议、也不会覆盖已复核的结果。
+    逐条写入并 flush，上万张图跑很久，中断后不丢已完成的部分。
+    """
     records = read_jsonl(output / 'inventory.jsonl')
     existing = {r['id']: r for r in read_jsonl(output / 'proposals.jsonl')} if (output / 'proposals.jsonl').exists() else {}
     with (output / 'proposals.jsonl').open('a', encoding='utf-8') as stream:
@@ -226,6 +262,11 @@ def propose(output):
 
 
 def contact_sheet(output, label, page, count=80):
+    """把某一类的候选拼成一张分页缩略图，并输出对应的坐标清单。
+
+    人工复核逐张开图太慢，拼图能一屏看掉几十个候选；旁边的 .json 记录每格对应哪条记录，
+    复核结论要靠它写回。标为 uncertain 的候选不进拼图，它们需要单独看原图判断。
+    """
     records = read_jsonl(output / 'proposals.jsonl')
     items = [(r, i, obj) for r in records for i, obj in enumerate(r['objects'])
              if obj['label'] == label and not obj.get('uncertain')]
@@ -252,6 +293,13 @@ def contact_sheet(output, label, page, count=80):
 
 
 def refresh_minimap(output):
+    """重做所有小地图记录的提议，并把旧文件留存为带版本号的副本。
+
+    判据是面板蓝色占比：地图没打开时截到的是场景，当成小地图标注会引入整类错误标签；
+    紧凑面板留白多，阈值比展开面板低。不达标的记为 excluded_diagnostic 而不是删除，
+    保留记录才能看出排除了多少、为什么排除。
+    旧 proposals.jsonl 改名成 proposals-v<N>.jsonl 而不是覆盖，复核结论只存在于旧文件里。
+    """
     records = read_jsonl(output / 'proposals.jsonl')
     for record in records:
         if record['domain'] != 'minimap':
@@ -276,6 +324,13 @@ def refresh_minimap(output):
 
 
 def client_map_crops(output):
+    """从客户区截图里裁出小地图面板，补成额外的小地图样本。
+
+    紧凑面板要先把画面缩放到 1920×1080 再裁，展开面板直接按 1776×999 裁——两套 ROI 分别是在
+    各自尺寸下标定的，混用会偏。
+    裁出的图按像素哈希与现有记录去重，并记下 source_origin 和 crop，这样 load_frame 能从原图
+    重建出同样的像素而不必再存一份图片。
+    """
     records = read_jsonl(output / 'proposals.jsonl')
     by_hash = {r['pixel_sha256']: r for r in records}
     directory = output / 'client_maps'
@@ -312,7 +367,11 @@ def client_map_crops(output):
 
 
 def load_frame(record):
-    """Reconstruct derived ROIs from repository captures and verify the reviewed pixels."""
+    """按记录重建它所对应的图像，并核对复核时的像素哈希。
+
+    派生 ROI 不单独存图，而是从原始采集重新裁一次（source_origin + crop），避免同一帧存两份。
+    像素哈希不符说明原图被改过或替换过，此时这条复核结论已经不对应这张图，必须报错。
+    """
     source = record.get('source_origin') if record.get('crop') else record['source']
     image = cv2.imread(str(ROOT / source))
     if image is None:
@@ -328,6 +387,12 @@ def load_frame(record):
 
 
 def apply_frame_reviews(records, path):
+    """把整帧复核结论套用到清单记录上，并标记为 full_frame_reviewed。
+
+    只接受 review_scope 为 full_frame 且已 accepted 的条目：部分复核的帧上仍可能有漏标的目标，
+    当成完整真值会把「漏检」算成「误检」。
+    来源像素哈希必须一致，否则这份结论对应的是另一张图，宁可报错中止。
+    """
     reviews = json.loads(Path(path).read_text('utf-8'))['frames']
     by_id = {record['id']: record for record in records}
     for review in reviews:
@@ -342,13 +407,27 @@ def apply_frame_reviews(records, path):
 
 
 def perceptual_hash(image):
+    """63 位感知哈希，用于判断两帧是否近似重复。
+
+    取 DCT 低频 8×8 去掉直流项后与中位数比较，所以对亮度整体变化和轻微压缩不敏感——
+    采集里的「同一处换个时间再截一张」正是这种差异。
+    """
     small = cv2.resize(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), (32, 32))
     low = cv2.dct(small.astype(np.float32))[:8, :8].reshape(-1)[1:]
     return low > np.median(low)
 
 
 def select_reviewed_partitions(records):
-    """Reserve reviewed captures and their acquisition groups before image augmentation."""
+    """划分训练与评估集合：先把已复核的留出帧连同它们的采集批次整体隔离，再挑训练样本。
+
+    评估集只收整帧复核过的帧，否则漏标会被当成误检。
+    隔离是按「采集批次」而不是按单帧做的：同一次扫描里的相邻帧几乎相同，只隔离单帧等于把
+    评估帧的近邻留在训练里，评估结果会虚高。章节、group 和采集目录三条线索任一命中就排除。
+    41 章的采集分成多个独立批次，只有已复核的那批能进训练。
+    最后再用感知哈希排掉与留出帧近似重复的训练帧，以及与测试集近似的验证帧——
+    两个评估集合之间也必须互不重叠。
+    返回（选中记录, 各类排除计数），计数用于核对数据集构成。
+    """
     reviewed = [r for r in records if r.get('quality') == 'full_frame_reviewed']
     held = [r for r in reviewed if r['split'] != 'train']
     held_chapters = {c for r in held for c in r['chapters'] if c != 41}
@@ -401,6 +480,7 @@ def select_reviewed_partitions(records):
 
 
 def iou(first, second):
+    """两个 [x1, y1, x2, y2] 框的交并比；并集为 0 时返回 0 而不是除零。"""
     a = np.asarray(first, float)
     b = np.asarray(second, float)
     inter = np.maximum(0, np.minimum(a[2:], b[2:]) - np.maximum(a[:2], b[:2]))
@@ -409,10 +489,12 @@ def iou(first, second):
 
 
 def merge_extra_objects(records, path):
-    """Append visually confirmed objects (e.g. mechanism/elevator contact-sheet reviews) to frames.
+    """把拼图复核确认的目标（如机关、电梯）按帧 id 合并进记录。
 
-    Merged objects carry no template score so they bypass the weak-proposal threshold;
-    same-label boxes overlapping an existing object (IoU > .5) are skipped as duplicates.
+    合并进来的目标不带模板分数，因此会绕过弱提议的阈值过滤——它们是人工确认过的，
+    不需要再被启发式分数筛一遍。
+    与已有同类目标 IoU 超过 0.5 的视为重复，跳过；返回合并与跳过计数和来源文件哈希，
+    让数据集摘要能追溯这批标注的出处。
     """
     merged = skipped = 0
     by_id = {record['id']: record for record in records}
@@ -437,6 +519,13 @@ def merge_extra_objects(records, path):
 
 
 def build(output, destination, extra_frame_reviews=(), extra_objects=()):
+    """套用各级复核结论，导出一个新版本的 YOLO 数据集目录。
+
+    destination 必须是不存在的新目录：数据集是训练结果的唯一依据，就地覆盖会让已训好的模型
+    失去可复现的来源。
+    逐级校验「结论仍对应当前数据」——标注复核核对来源哈希与框坐标，整帧复核核对像素哈希，
+    任一不符就报错中止，而不是跳过那一条：这类不一致意味着清单被重跑过，整批结论都需要重新确认。
+    """
     from module.campaign_prototype.detection import scene_tiles
 
     if destination.exists():
@@ -541,7 +630,12 @@ def build(output, destination, extra_frame_reviews=(), extra_objects=()):
 
 
 def balance_training(destination):
-    """Resample scarce reviewed targets within training; never duplicate evaluation captures."""
+    """对训练集里稀缺的类别做重复采样，改写 train.txt；评估集永不重复。
+
+    重复采样只改训练清单（train.txt 里同一路径出现多次），不复制图片，所以不会把评估帧带进来。
+    倍数按类别稀缺程度给：新接入的机关、电梯类样本最少，倍数最高；只有整帧复核过的帧才享受
+    更高倍数，未复核帧重复多了会把它的漏标也放大。
+    """
     destination = Path(destination)
     manifest = read_jsonl(destination / 'manifest.jsonl')
     training = []
@@ -570,6 +664,11 @@ def balance_training(destination):
 
 
 def main():
+    """命令行入口：按子命令依次完成清点、提议、拼图复核、补裁与数据集导出。
+
+    各步之间通过 --output 目录下的 inventory.jsonl / proposals.jsonl 传递中间结果，
+    所以要按顺序跑，且可以分多次继续；只有 build 需要 --destination。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['inventory', 'propose', 'sheet', 'refresh-minimap', 'client-crops', 'build'])
     parser.add_argument('--output', type=Path, required=True)

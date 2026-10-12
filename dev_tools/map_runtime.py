@@ -70,6 +70,11 @@ def _stash(package, relative, extras):
 
 
 def _write_atomic(path, writer):
+    """用临时文件加 os.replace 原子替换目标文件。
+
+    精简运行包是就地改写，中途失败会留下一个半截的 npz 或 json，而这些文件带哈希绑定，
+    损坏后整包都用不了。临时文件放同目录（同文件系统）才能保证 replace 是原子的。
+    """
     temporary = path.with_name(f'.{path.name}.tmp{path.suffix}')
     try:
         writer(temporary)
@@ -80,6 +85,11 @@ def _write_atomic(path, writer):
 
 
 def _slim_npz(package, relative, keep, extras, report):
+    """只保留运行期需要的数组重写 npz，其余搬到本地 extras 目录。
+
+    已经不含多余数组时直接返回，不做无意义的重写——重写会改变文件哈希，连带使绑定失效。
+    原件是搬走而不是删除：重建、验收还要用那些中间数组，只是不该进运行包。
+    """
     path = package / relative
     with np.load(path, allow_pickle=False) as data:
         present = list(data.files)
@@ -92,6 +102,11 @@ def _slim_npz(package, relative, keep, extras, report):
 
 
 def _slim_json(package, relative, extras, report, keep=None, drop=(), update=None):
+    """按白名单或黑名单删掉 JSON 里的非运行期字段，必要时再就地改写字段。
+
+    keep 与 drop 可同时给：前者是白名单，后者用来在白名单之外额外剔除。
+    没有字段要删且没有 update 时直接返回，避免只因为缩进或键序变化就改掉文件哈希。
+    """
     path = package / relative
     data = json.loads(path.read_text(encoding='utf-8'))
     removed = [key for key in data if (keep is not None and key not in keep) or key in drop]
@@ -229,6 +244,11 @@ def adopt_runtime(source, chapter, maps_root=None):
 
 
 def main():
+    """命令行入口：导出运行包、就地精简，或替换某章的现有运行包。
+
+    --slim 可以接单个包或包含多个包的根目录，自动判别后逐个处理；它和导出互斥，给了就只精简。
+    --replace 额外要求目标目录名与源包的章节号一致，防止把 38 章的包替换到 39 章目录上。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path)
     parser.add_argument('--destination', type=Path)

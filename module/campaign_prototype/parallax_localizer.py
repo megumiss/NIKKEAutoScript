@@ -15,6 +15,13 @@ from .surface_motion import contains, fit_registration, project
 
 
 class ParallaxLocalizer:
+    """local_parallax 分层地图的定位器：按局部高度标签逐帧配准，而不是整张图一个平面。
+
+    分层章节同一张俯视图上叠着多个高度的道路，单个平面单应无法同时对齐，因此以扫描时的原始帧
+    为参考，用 SIFT 特征配准到最接近的参考帧，再按该帧的局部高度标签换算地图坐标。
+    加载阶段只做离线数据准备，不创建窗口、不发送输入。
+    """
+
     def __init__(self, package):
         """加载 local_parallax 包并核对底图和原始帧哈希，读取各帧局部高度标签及道路特征。
 

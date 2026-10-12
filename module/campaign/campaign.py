@@ -25,6 +25,12 @@ RESOURCE_SYNC_TIMEOUT = 1800
 
 
 class Campaign(ModuleBase):
+    """自动主线任务的公共基类：校验分辨率、准备地图资源并确认当前章节。
+
+    章节、资源检查时间等状态都挂在类上而不是实例上，同一进程内多次建任务实例时共用，
+    避免每个任务都重新查一遍资源仓库；地图静态层与目标选择器按章节缓存，换章才重建。
+    """
+
     RESOLUTION = CLIENT_SIZE
     current_chapter = None
     current_difficulty = None
@@ -35,10 +41,19 @@ class Campaign(ModuleBase):
 
     @cached_property
     def chapter_ocr(self):
+        """章节号与难度共用的 OCR 实例。
+
+        识别对象只有数字和 NORMAL/HARD，候选词表留空走直接识别；模型类型跟随优化设置，
+        保证与其它任务使用同一套 OCR 模型，不额外占用显存。
+        """
         return Ocr([], name='CampaignIdentity', lang='ch', model_type=self.config.Optimization_OcrModelType)
 
     @cached_property
     def observer(self):
+        """章节快照观测器，整个任务生命周期内只建一个。
+
+        观测器内部会缓存章节底图与配准器，复用同一实例才能命中缓存；每次新建都要重新加载地图。
+        """
         return CampaignObserver()
 
     def ensure_resources(self):
@@ -91,6 +106,12 @@ class Campaign(ModuleBase):
         raise RequestHumanTakeover
 
     def detect_current_chapter(self):
+        """连续识别主线地图右下角的章节号与难度，确认后发布一帧章节快照。
+
+        OCR 单帧结果会受动画和特效影响，要求连续三帧得到相同身份才确认；任一帧识别失败会把
+        连续计数清零，30 秒内无法确认则判定为人工介入，通常是章节号被遮挡或不在主线地图。
+        确认的同时做一次观测并推送预览，让界面在任务刚开始时就能看到定位结果。
+        """
         self.current_chapter = self.current_difficulty = None
         reader = self.chapter_ocr
         timeout = Timer(30).start()
@@ -139,6 +160,11 @@ class Campaign(ModuleBase):
         return self.target_finder.find(snapshot)
 
     def run(self):
+        """主线任务入口：准备地图资源、校验分辨率并确认章节。
+
+        推图本体尚未接入，当前只返回确认到的章节号；分辨率检查必须在资源检查之后、识别之前，
+        章节号和难度标识的坐标按 1776×999 客户区固定，分辨率不符时识别区域会整体偏移。
+        """
         logger.hr(self.config.task.command, level=1)
         self.ensure_resources()
         self.device.check_resolution(*self.RESOLUTION)

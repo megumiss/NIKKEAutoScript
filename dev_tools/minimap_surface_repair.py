@@ -72,6 +72,12 @@ def surface_cut(domain, probability, ratios, positive_core, forbidden, smoothnes
 
 
 def restore(source, output):
+    """按表面可达性修补分层地图的道路，结果写到基线之外的新目录。
+
+    只接受像素级修补后的 local_parallax 基线：map_render_mode 已是 surface_road_mask 的包说明
+    这一步做过了，再做一次会把推断结果当成观测证据反复放大。
+    输入文件逐个记哈希，产物据此绑定来源，避免把不同基线的修补结果混用。
+    """
     source, output = Path(source).resolve(), Path(output).resolve()
     if output.exists() or output.is_relative_to(source):
         raise ValueError('Use a new output directory outside the baseline')

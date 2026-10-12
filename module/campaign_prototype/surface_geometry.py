@@ -61,6 +61,12 @@ def surface_to_roi(projection, vertical, camera, coefficients):
 
 
 class SurfaceGeometry:
+    """把多个高度平面绑定到同一张俯视画布的几何，只做坐标换算不判断连通。
+
+    表面以字符串身份索引，调用方必须明确给出小队在哪个表面：二维上多个表面会重叠，靠坐标反推
+    身份必然在交叠处出错。这里也刻意不提供表面之间的可通行判断，那属于标注与导航的职责。
+    """
+
     def __init__(self, projection, vertical, cameras, surfaces, world_to_map):
         """绑定所有表面到同一俯视画布；调用者必须明确表面身份，不能由二维交叉猜测。
 

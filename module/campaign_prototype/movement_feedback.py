@@ -15,6 +15,10 @@ class SquadPositionChanged(RuntimeError):
     """镜头平移后的小队观测已变化，必须丢弃旧计划并重新定位。"""
 
     def __init__(self, before, after):
+        """记录平移前后的小队观测位置，便于日志里看出漂移幅度。
+
+        坐标转成 list 保存，异常对象可能被序列化进状态回调，ndarray 不能直接进 JSON。
+        """
         super().__init__('平移期间小队位置发生变化，需要停稳后重新定位。')
         self.before = np.asarray(before, float).tolist()
         self.after = np.asarray(after, float).tolist()
@@ -25,6 +29,12 @@ class AnchorUnresolved(ValueError):
 
 
 class TargetTriggered(RuntimeError):
+    """导航途中已经触发目标（拾取或进入战斗），属于成功结束而不是失败。
+
+    和「走到点位」「移动失败」是三种不同结局：触发时小队往往还没到计划落点，
+    继续追加移动会把人送进下一场战斗，所以用异常中断整个计划。
+    """
+
     def __init__(self, message, evidence):
         """携带实际触发原因及结构化证据结束导航。
 

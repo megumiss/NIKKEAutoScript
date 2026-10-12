@@ -28,6 +28,12 @@ def chapter_identity(image, reader):
 
 
 def chapter_number(image, model):
+    """只读章节号的轻量版本，直接吃 PaddleOCR 模型而不经过项目的 Ocr 封装。
+
+    供标定、离线批处理等没有任务上下文的场合使用，因此不识别难度；放大三倍再识别是因为
+    原始数字只有约 36px 高。识别分数低于 0.95、不是一到两位数字或解析出 0 时一律返回 None，
+    宁可让调用方重试也不要把误识别的章节号传下去。
+    """
     if image is None or image.shape != (CLIENT_SIZE[1], CLIENT_SIZE[0], 3):
         raise ValueError('章节识别需要 1776×999 的三通道客户区截图。')
     x1, y1, x2, y2 = CHAPTER_AREA

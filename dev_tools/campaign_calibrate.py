@@ -26,11 +26,21 @@ from module.campaign_prototype.surface_motion import fit_calibration, project
 
 
 def emit(**values):
+    """把一条结构化进度打到 stdout，供调用方逐行解析。
+
+    等待小队出现在紧凑地图的事件每轮都会触发，刷屏且没有信息量，直接丢掉不打。
+    其余事件立即 flush，批量标定跑很久，缓冲会让外面看不到进展。
+    """
     if 'wait_player_compact' not in values:
         print(json.dumps(values, ensure_ascii=False), flush=True)
 
 
 def binding(package):
+    """地图包的身份指纹：决定标定身份的四个文件的哈希。
+
+    标定结果绑定在这组哈希上，底图、标注或道路缓存任一变化就不能复用旧标定——
+    同一章节换了一次扫描，像素位移与地图距离的换算关系就变了。
+    """
     return {name: sha(package / name) for name in
             ('map.json', 'map.png', 'annotations.json', 'source/map_data.npz')}
 
@@ -127,6 +137,15 @@ def wake_entry_arrow(session, observation, folder):
 
 
 def calibrate(chapter, folder, reuse=True):
+    """采集并保存一章的局部移动标定，返回状态字典而不抛错给批处理。
+
+    只做普通平面章节：39、40 章和任何带 3D 处理或坐标模型的包按 skipped_nonflat 跳过，
+    分层章节的像素位移与地图距离不是单一线性关系，这套标定不适用。
+    reuse 时若已有标定的 binding 一致且状态为 validated 就直接复用，避免重复占用游戏。
+    采样前要把小队挪到足够开阔的道路上（净空至少 35，优先 120 像素内净空 50 以上的点）：
+    贴墙站位时围绕锚点的九个偏移会有一半撞墙，拟合不出可用的标定。入口迷雾导致定位置信度不足时
+    先盲移探索，没有箭头时先唤醒短移——这两条都是入口场景特有的恢复路径。
+    """
     package = DEFAULT_MAPS_ROOT / f'chapter_{chapter:02}'
     metadata = json.loads((package / 'map.json').read_text('utf-8'))
     if chapter in (39, 40) or metadata.get('processing_3d') or metadata.get('coordinate_model'):
@@ -280,6 +299,11 @@ def calibrate(chapter, folder, reuse=True):
 
 
 def transition(chapter, model, folder):
+    """从当前章节切到上一章（章节号递减），切换前先确认停在安全的地图页。
+
+    有战斗弹窗或 OCR 读到的章节号与预期不符时直接报错：此时点「上一章」按钮会落在别的控件上。
+    切换前把小地图收起，按钮位置是按紧凑状态标定的。
+    """
     settings.output = folder
     win = runtime.Window()
     try:
@@ -295,6 +319,14 @@ def transition(chapter, model, folder):
 
 
 def main():
+    """批量标定入口：从 --start 按章节号递减做到 --end，边做边写进度。
+
+    按章节号递减是因为游戏里只有「上一章」能稳定点到，逐章往前退比跳转可靠。
+    用 FileLock（timeout=0）独占移动测试锁，防止标定和标注工具的移动测试同时操作游戏。
+    每章结果立刻写 progress.json，中断后能看出做到哪一章；失败只记录并继续下一章，
+    但失焦（多为游戏被切到后台）会等 30 秒重试最多三次——这类失败重试就能过。
+    STOP 文件放在输出目录，用于从外部安全中止整轮标定。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--start', type=int, required=True, help='当前普通章节，按章节号递减执行')
     parser.add_argument('--end', type=int, default=1, help='最后处理的章节（包含），单章测试请与 --start 相同')

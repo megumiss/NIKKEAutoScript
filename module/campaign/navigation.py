@@ -44,6 +44,12 @@ class TargetFinder:
     """
 
     def __init__(self, chart):
+        """从章节 StaticMap 取出目标选择需要的道路、分区与标注。
+
+        平面地图在这里就固定好整幅道路和连通分区；分层地图的道路要按小队所在表面逐帧取，
+        所以 road 置空、分区不预存。遇到暂不支持的坐标模型只告警并把 supported 置假，
+        find 会直接返回 None，让推图退回人工而不是拿错误的道路规划。
+        """
         self.chart = chart
         self.chapter = chart.chapter
         self.model = chart.model

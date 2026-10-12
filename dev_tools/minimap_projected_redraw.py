@@ -17,12 +17,24 @@ from module.campaign_prototype.local_projection import frame_plane_to_map
 
 
 def warp_patch(image, matrix, rect, interpolation=cv2.INTER_NEAREST):
+    """只把单应变换的结果画到指定矩形里，返回该矩形大小的图。
+
+    把矩形左上角的平移并进单应，省掉「变换整幅再裁剪」的开销——重绘要对每帧每区域做很多次。
+    默认最近邻：道路掩码和区域编号是标签数据，插值会造出不存在的中间值。
+    """
     left, top, right, bottom = rect
     shift = np.array([[1, 0, -left], [0, 1, -top], [0, 0, 1.]])
     return cv2.warpPerspective(image, shift @ matrix, (right - left, bottom - top), flags=interpolation)
 
 
 def redraw(source, output, regions=False, stop_file=None):
+    """用原始帧按投影重绘分层地图底图，结果写到新目录，不改动基线。
+
+    输出目录必须是基线之外的新目录：重绘是实验性处理，就地改写会毁掉唯一一份已验收的底图。
+    只接受未重绘过的 local_parallax 基线（带 map_render_mode 的已经是重绘产物），
+    并逐个核对原始帧哈希——帧和元数据不配套时重绘出的底图坐标是错的，而这种错很难看出来。
+    stop_file 让长时间重绘能从外部安全中止。
+    """
     source, output = Path(source).resolve(), Path(output).resolve()
     if output.exists() or output.is_relative_to(source):
         raise ValueError('Use a new output directory outside the baseline')

@@ -15,6 +15,11 @@ from module.campaign_prototype.local_projection import frame_plane_to_map
 
 
 def plane_ratio(plane, rectified):
+    """在纠正后的坐标上求局部视差比例平面的取值。
+
+    ratio_plane 是以 plane['center'] 为原点、按 coordinate_scale 归一化后拟合的线性模型，
+    所以必须先做这两步换算再代入；直接拿原始坐标代入量纲不对，误差会随离中心的距离放大。
+    """
     return ((rectified - plane['center']) / plane['coordinate_scale']) @ np.asarray(plane['ratio_plane'][:2]) \
         + plane['ratio_plane'][2]
 
@@ -74,6 +79,12 @@ def check_view(source_road, other_road, other_clear, transform, domain):
 
 
 def redraw_regions(source, output, meta, hashes, images, roads, clear, caches, baseline, stop_file=None):
+    """按原始道路区域逐块重绘底图：每块挑评分最高的来源帧，并记录归属与被拒原因。
+
+    逐像素维护 owner / ids / roi / best 四张图：同一处可能被多帧覆盖，只保留评分最高的那一帧，
+    这样接缝落在证据最弱的地方而不是随机的绘制顺序上。
+    被拒区域按原因计数（rejected）而不是直接丢弃，重绘质量不达标时要能看出是哪一类问题占多数。
+    """
     shape = roads[0].shape
     sy, sx = np.indices(shape)
     rectified = project(meta['projection'], np.column_stack([sx.ravel(), sy.ravel()]))

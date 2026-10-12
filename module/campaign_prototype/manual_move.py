@@ -268,6 +268,13 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=12, required_ne
 
 
 class GameSession:
+    """一次人工移动请求的会话：持有定位器、OCR 与受控窗口，逐步观测并追加移动。
+
+    窗口延迟到首次 observe 才创建，构造阶段失败就不会留下占用鼠标的实例。
+    定位器按地图包的 coordinate_model 选择（分层走 ParallaxLocalizer，其余走 AdaptiveLocalizer），
+    所以同一套会话逻辑能跑平面和分层两种章节。
+    """
+
     def __init__(self, request, hashes, folder, emit):
         """初始化定位器、OCR 与请求上下文，窗口由首次观测延迟创建。
 

@@ -46,6 +46,14 @@ class StaticMap:
     """
 
     def __init__(self, package, matcher):
+        """加载章节地图包，按坐标模型准备道路与连通分区。
+
+        matcher 必须是定位同一章节的 MapMatcher：底图摘要、道路修订和分层配准器都从它取，
+        保证静态层与定位用的是同一份底图，否则连通判断会和实际定位错位。
+        坐标模型为 None 时是平面章节，需要自行合成道路掩码并计算 8 像素网格上的 effective 分区；
+        local_parallax 是分层章节，道路直接复用配准器的掩码，连通性按表面分别判断。
+        其余模型暂不支持，此时 supported 为假、road 为 None，调用方应跳过与道路相关的查询。
+        """
         self.package = Path(package)
         metadata = json.loads((self.package / 'map.json').read_text(encoding='utf-8'))
         self.chapter = int(metadata['chapter'])
@@ -126,6 +134,11 @@ class StaticMap:
                     snap=round(float(np.linalg.norm(snapped - np.asarray(point, float))), 1))
 
     def _document(self, image_hash, size):
+        """读取标注文档，没有标注文件时按当前底图造一份空文档。
+
+        标注坐标是绑定底图的，所以无论读到的还是新造的都要过一遍校验：底图摘要和尺寸不符说明
+        标注与地图包不是同一版本，宁可报错也不要把错位的目标点喂给导航。
+        """
         path = self.package / 'annotations.json'
         if path.exists():
             document = json.loads(path.read_text(encoding='utf-8'))
@@ -237,6 +250,11 @@ class StaticMap:
         return int(window[ys[nearest], xs[nearest]])
 
     def walkable(self, point, key=None):
+        """这个地图坐标能不能站人。
+
+        判据就是能否归属到某个道路连通分量，因此远离道路（超出 ROAD_TOLERANCE）的点一律不可站；
+        分层地图要传 key 指明小队所在表面，缺省会按整张图取并，可能把另一层的道路算进来。
+        """
         return self.component(point, key) != 0
 
     def connected(self, start, target, key=None):

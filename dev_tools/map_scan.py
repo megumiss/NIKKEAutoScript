@@ -19,13 +19,29 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ScanJobs:
+    """标注工具里的单章扫描任务：起子进程、汇报进度、采用或停止。
+
+    同一时刻只允许一个扫描，因为扫描要独占游戏窗口和鼠标；任务状态会被 HTTP 线程并发访问，
+    用可重入锁保护（start/stop 内部还会再调 status）。
+    扫描本体跑在独立子进程里（dev_tools.minimap_chapters），日志进各自输出目录的 worker.log，
+    这样标注工具崩了也不会把扫描带走，重启后还能从目录恢复现场。
+    """
+
     def __init__(self, store):
+        """绑定地图仓库，不启动任何进程。"""
         self.store = store
         self.lock = threading.RLock()
         self.job = None
         self.process = None
 
     def start(self, payload):
+        """校验参数并起一个扫描子进程，返回初始状态。
+
+        已有扫描在跑时直接报错而不是排队：两个扫描会互相抢游戏控制。
+        输出目录放在采集根目录（而不是地图仓库）下的 scans/<随机 id>，避免扫描中间产物进入
+        资源仓库；随机 id 同时用来防止前端拿旧 id 操作新任务。
+        参数来自浏览器，类型要逐个核（注意 bool 是 int 的子类，所以用 type 判等而不是 isinstance）。
+        """
         with self.lock:
             if self.process is not None and self.process.poll() is None:
                 raise ValueError('已有地图扫描正在运行。')
@@ -63,6 +79,15 @@ class ScanJobs:
             return self.status()
 
     def status(self):
+        """汇总当前扫描的状态与给用户看的提示文本。
+
+        状态由三处证据拼出来：子进程退出码、输出目录里的 STOP 标记，以及处理阶段文件。
+        已采用的任务不再看进程和目录（副本已被删除），直接返回采用结论。
+        退出码为 0 时顺手导出运行包并做一次加载校验，校验不过仍算失败——扫描进程自己不知道
+        导出的包能不能被运行期接受。非零退出码则从 progress.json 里取真正的错误原因，
+        退出码本身对使用者没有意义。
+        帧数和阶段文件可能还没写出来，读失败都按「还没进展」处理，不影响整体状态。
+        """
         with self.lock:
             if self.job is None:
                 return {'state': 'idle', 'running': False, 'message': '先进入指定章节，再开始扫描。'}
@@ -143,6 +168,11 @@ class ScanJobs:
                         **result)
 
     def stop(self, identifier):
+        """请求停止扫描：只放一个 STOP 标记文件，不杀进程。
+
+        扫描进程正占着鼠标和游戏窗口，强杀会把游戏留在被接管的状态；标记文件让它跑到检查点
+        自行释放控制并保留已采集的原始帧。identifier 不匹配说明前端状态过期，拒绝操作。
+        """
         with self.lock:
             if self.job is None or identifier != self.job['id']:
                 raise ValueError('扫描任务已更换，请刷新状态。')
@@ -151,6 +181,11 @@ class ScanJobs:
             return self.status()
 
     def close(self):
+        """标注工具退出时收尾：先礼后兵地结束扫描进程。
+
+        先走 STOP 让它自己释放游戏控制，等 10 秒；超时才 terminate 再等 5 秒。
+        直接 terminate 会让游戏停在被接管的状态，需要人工点一下才能恢复操作。
+        """
         with self.lock:
             if self.process is None or self.process.poll() is not None:
                 return

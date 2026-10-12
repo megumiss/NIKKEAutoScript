@@ -25,16 +25,33 @@ NMS_IOU = .45
 
 @dataclass(frozen=True)
 class Detection:
+    """一个检测结果：类别、置信度和 (x1, y1, x2, y2) 框。
+
+    坐标始终落在传入 predict 的那张图上，切片推理的偏移由调用方补回；不可变是为了能直接放进
+    集合、按类别分组做抑制而不担心被就地改动。
+    """
+
     label: str
     confidence: float
     box: tuple
 
     @property
     def center(self):
+        """检测框的几何中心。
+
+        这是框中心而不是符号的精确中心：小队圆环和箭头的落点需要亚像素精度，应改用
+        perception 里对应的精定位，这里的中心只够做选择和展示。
+        """
         return (np.asarray(self.box[:2]) + self.box[2:]) / 2
 
 
 def letterbox(image, size):
+    """把任意尺寸的 BGR 图填成正方形输入张量，并返回还原检测框所需的缩放与偏移。
+
+    等比缩放后居中填充，填充值 114 与 YOLO 训练时一致，换成 0 会在边缘造出假边。
+    图像居中而非贴左上，所以还原框时必须先减 padding 再除以 scales，顺序颠倒会整体偏移。
+    返回的 scales 按宽高分开给，因为 round 之后两个方向的实际比例可能差一个像素。
+    """
     if image is None or image.ndim != 3 or image.shape[2] != 3 or image.dtype != np.uint8:
         raise ValueError('YOLO expects a non-empty uint8 BGR image.')
     height, width = image.shape[:2]
@@ -50,6 +67,11 @@ def letterbox(image, size):
 
 
 def suppress(detections, iou=NMS_IOU):
+    """按类别分别做非极大值抑制，返回按置信度降序的结果。
+
+    必须分类别做：同一处会同时出现屏障立柱与光幕、机关的开与关，跨类别抑制会把其中一个吃掉。
+    置信度阈值传 0，因为类别阈值已经在 decode 里按模型元数据应用过，这里只去重叠框。
+    """
     selected = []
     for label in sorted({item.label for item in detections}):
         group = [item for item in detections if item.label == label]
@@ -97,7 +119,21 @@ def decode(output, scales, padding, thresholds, shape, labels, guards=(True, Tru
 
 
 class Detector:
+    """加载并持有战役 YOLO 的 ONNX 会话，只做图像坐标上的推理，不发送任何游戏输入。
+
+    构造时把模型包的契约逐项校验（schema、导出格式、类别、输入尺寸、逐类阈值、模型哈希、
+    输入输出签名）：模型文件与元数据一旦不配套，宁可启动就失败，也不要在推图过程中给出
+    坐标系或类别错位的检测结果。
+    """
+
     def __init__(self, directory=MODEL_DIRECTORY):
+        """校验模型包并建立 ONNX 推理会话。
+
+        模型哈希要与元数据一致，防止换了模型却没换阈值和类别表。
+        onnxruntime 是可选依赖（requirements-yolo.txt），缺失时给出安装提示而不是 ImportError。
+        固定 CPU 执行、4 线程，推图过程中还要跑 OCR 和截图，不能让推理把核吃满；
+        另外配一把锁，界面与任务线程共用同一会话时串行推理，避免线程数成倍放大。
+        """
         directory = Path(directory)
         metadata_path = directory / 'campaign.json'
         self.metadata = json.loads(metadata_path.read_text('utf-8'))
@@ -160,6 +196,12 @@ class Detector:
         return {label: self.thresholds[label] for label in labels}
 
     def predict(self, image, labels=None, guards=(True, True, True, True)):
+        """对一张图推理，返回该图像素坐标下的检测结果。
+
+        labels 为 None 时用模型声明的全部类别；给出子集只是收紧阈值，类别判定仍按全类 argmax，
+        不会在子集上重新取最大值。
+        guards 按左、上、右、下指出哪些边是切片内部边界，整图推理时应保持默认全真。
+        """
         thresholds = self.thresholds if labels is None else self.selected(labels)
         tensor, scales, padding = letterbox(image, self.size)
         with self.lock:
@@ -169,11 +211,21 @@ class Detector:
 
 @lru_cache(maxsize=1)
 def detector():
+    """进程内共享的检测器。
+
+    建会话要读十几 MB 的模型并做一次初始化，每帧新建会把推图拖垮，所以缓存成单例；
+    Detector 内部有锁，多线程共用这一个实例是安全的。
+    """
     return Detector()
 
 
 def scene_mask(image):
-    """Exclude map overlays before tiling so their symbols cannot become scene targets."""
+    """切片前遮掉界面与地图覆盖层，避免它们的符号被当成场景目标。
+
+    顶栏、底栏、左上角任务区和右侧章节区是固定遮罩。展开的小地图位置固定但不一定开着，
+    所以按面板主色（偏蓝的色相且有一定饱和度）占比超过 0.85 才判定为打开并遮掉，
+    否则会把地图下面的真实场景一起挡住。
+    """
     if image.shape != (999, 1776, 3):
         raise ValueError('Campaign scene detection expects a 1776x999 BGR client frame.')
     result = image.copy()
@@ -187,6 +239,11 @@ def scene_mask(image):
 
 
 def scene_tiles(image):
+    """旧五类的遮罩切片：六片 640×640，带重叠覆盖画面中部，逐片给出左上偏移。
+
+    偏移和尺寸是箭头与收集提示验证过的取图方式，和模型包声明的 scene 网格（grid_tiles）
+    不是一回事，不要互换；改这里等于让已验证的箭头检测重新标定。
+    """
     masked = scene_mask(image)
     for top in (120, 260):
         for left in (0, 505, 1010):
@@ -194,6 +251,10 @@ def scene_tiles(image):
 
 
 def detect_scene(image, labels=LEGACY_SCENE_LABELS):
+    """用旧五类的遮罩切片方式检测场景目标，坐标换回客户区像素。
+
+    切片有重叠，同一目标会在相邻片里各出一次，所以补回偏移后要再做一次全局抑制。
+    """
     detections = []
     for tile, offset in scene_tiles(image):
         for item in detector().predict(tile, labels):
@@ -203,6 +264,11 @@ def detect_scene(image, labels=LEGACY_SCENE_LABELS):
 
 
 def detect_minimap(image, labels=MINIMAP_LABELS):
+    """检测小地图面板里的标记，坐标为面板像素。
+
+    传入的必须是调用方按展开或紧凑模式裁好的面板，不是整幅客户区：模型是在面板尺度上训练的，
+    整图送进来标记会小到检不出。
+    """
     return detector().predict(image, labels)
 
 

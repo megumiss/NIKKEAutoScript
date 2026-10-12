@@ -39,6 +39,13 @@ def summary(values):
 
 
 class LayeredPackage:
+    """分层地图包的只读视图，供验收度量使用。
+
+    与运行期的定位器不同，这里对原始帧哈希不符只记录到 hash_mismatches 而不中止：
+    验收的目的就是量出误差并指出问题，因为哈希不符就拒绝度量会把线索一起丢掉。
+    帧本身读不出来仍然报错——没有图就无从度量。
+    """
+
     def __init__(self, package):
         """读取 local_parallax 包的元数据、原始帧与逐帧规整深度；哈希不符只记录，不中止度量。"""
         self.path = Path(package).resolve()

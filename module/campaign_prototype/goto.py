@@ -173,6 +173,12 @@ def find_squad(win, reference=None):
 
 
 class Localizer:
+    """基于旧 41 章回放缓存的定位器，只用于复现早期实验。
+
+    数据来自 legacy_cache 而不是正式地图包，没有 MapPackage 的哈希绑定与覆盖率校验，
+    结果用 coordinate_source='cache' 标记来源，不要用它的定位结论去验收新地图。
+    """
+
     def __init__(self):
         """读取旧 41 章回放缓存并核对截图几何；该缓存没有新地图包的质量保证。
 

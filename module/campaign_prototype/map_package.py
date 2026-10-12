@@ -56,6 +56,12 @@ def screenshot_to_client(point, screenshot_size, client_size=(1776, 999)):
 
 
 class MapPackage:
+    """经过完整校验的运行地图包，是原型取得输入控制前的唯一数据来源。
+
+    身份、文件哈希、坐标约定、投影与观测道路覆盖率都在构造时逐项核对，任何不一致都在创建窗口、
+    取得鼠标之前失败——地图数据错了再去点击，代价是把小队送进错误的位置。
+    """
+
     def __init__(self, path=None, chapter=None, difficulty=None):
         """在取得输入控制前绑定章节、难度、文件哈希、裁剪、投影及覆盖质量，并筛选同难度点目标。
 

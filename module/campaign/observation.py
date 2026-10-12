@@ -20,7 +20,15 @@ from module.logger import logger
 
 
 class CampaignObserver:
+    """逐帧产出章节快照：场景目标、小地图标记与底图定位。
+
+    地图资源、配准器和静态层都按章节缓存，换章才整体重建，所以同一个任务要复用同一个实例。
+    各路识别相互独立，任一路失败只在快照里留空并告警，不影响其他字段；告警按最后一次错误文本
+    去重，避免每帧刷同一行日志。观测器本身不累积历史，快照每帧整体替换。
+    """
+
     def __init__(self):
+        """初始化按章节缓存的地图状态与各路识别的告警去重字段。"""
         self.chapter = None
         self.map_info = None
         self.matcher = None
@@ -34,6 +42,16 @@ class CampaignObserver:
         self.last_viewport_error = None
 
     def observe(self, image, identity, captured_at=None, objects=True):
+        """观测一帧 1776×999 BGR 客户区截图，返回界面与导航共用的章节快照。
+
+        identity 是已确认的（章节号, 难度）；章节变化会丢掉地图缓存并重新加载，加载失败只告警，
+        之后的定位字段保持 unavailable。
+        小地图分展开和紧凑两种形态，按左上角控件判断：展开面板直接从固定区域裁，紧凑面板要先把
+        画面缩放到 1920×1080 再按 ROI 裁，底图配准只在紧凑模式下做。地图不可见时提前返回，
+        展开模式下没有任何标记也提前返回，避免推送无内容的面板。
+        定位成功后敌人和小队都投影到地图坐标，落到图外视为 needs_review——这种情况多半是配准
+        漂移而不是真的出界。objects=False 用于只需要小地图的场合，可以省掉整幅画面的八片推理。
+        """
         chapter, difficulty = identity
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
                         map=None, minimap=None, localization='unavailable', squad=None, enemies=[], objects=[],

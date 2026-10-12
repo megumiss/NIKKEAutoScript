@@ -134,6 +134,11 @@ def grid_horizon_directions(image):
 
 
 class Projection:
+    """旧版地平线透视校正：按单一地平线把斜视的地面拉成俯视。
+
+    只用一条地平线参数，不做度量纠正，所以同一张图上不同远近的尺度并不一致；
+    新扫描走 MetricGrid，这里保留给早期扫描数据的回放。
+    """
     def __init__(self, shape, horizon):
         """建立旧版地平线透视校正矩阵，同时生成去掉边框与计数器的有效域。"""
         height, width = shape
@@ -197,6 +202,12 @@ def register(first, second, valid, prediction=(0, 0)):
 
 
 class DriverWindow:
+    """扫描用的游戏窗口：锁定客户区与屏幕原点，并持有截图资源和虚拟鼠标。
+
+    客户区原点在构造时记下来，之后所有坐标都按它换算——扫描中途窗口被移动会让已采集的帧
+    对不上，所以位置校验是每次输入前的必要检查（见 campaign_prototype.runtime.GuardedInput）。
+    实例持有 GDI 截图资源和鼠标驱动，必须由调用方显式 close 释放。
+    """
     def __init__(self, args):
         """锁定游戏客户区与屏幕原点，按目标尺寸初始化虚拟鼠标，初始化失败也释放控制。
 
@@ -554,6 +565,12 @@ class DriverWindow:
 
 
 class Scanner:
+    """旧版逐步扫描器：按四方向一步一停地采集小地图。
+
+    以首帧的道路与地平线作为统一投影基准，后续帧都配准到它，所以首帧质量决定整次扫描的坐标系。
+    输出目录已有 scan.json 时拒绝运行，避免把两次扫描的帧混进同一份数据。
+    新章节请用 RasterScanner / DriftScanner，这里保留用于复现早期扫描。
+    """
     DIRECTIONS = ((0, -1), (-1, 0), (0, 1), (1, 0))
 
     def __init__(self, args, window):
@@ -1069,11 +1086,10 @@ def detect_markers(image, matrix):
 
 
 class MetricGrid:
-    """Metric rectification of the ground grid from its two vanishing points.
+    """由地面网格的两个消失点做度量纠正，把斜视地面拉成等比的俯视平面。
 
-    Square grid cells make the two vanishing directions orthogonal in the
-    world, which fixes the focal length; the rectified plane is then metric up
-    to a uniform scale, so camera pans become pure translations here.
+    网格单元是正方形，这让两个消失方向在世界里互相垂直，从而定出焦距；纠正后的平面在
+    全局统一的尺度下是度量的，镜头平移在这个平面上就是纯平移——后续的位移测量全部依赖这一点。
     """
 
     def __init__(self, image, cell_px=48.0):
@@ -1243,11 +1259,10 @@ class MetricGrid:
 
 
 class GridTracker:
-    """Translation measurement between rectified views.
+    """在纠正后的俯视平面上测量两帧之间的平移量。
 
-    The grid is periodic, so phase correlation alone aliases by whole cells;
-    candidates are lattice aliases near the motion prediction, scored by masked
-    grid correlation plus terrain IoU, then refined with ECC.
+    网格是周期性的，单靠相位相关会以整个单元为步长发生混淆（aliasing），所以候选取运动预测
+    附近的各个格点别名，用带掩码的网格相关加地形 IoU 打分，再用 ECC 细化到亚像素。
     """
 
     def __init__(self, grid):
@@ -1445,7 +1460,11 @@ class GridTracker:
 
 
 class RasterScanner:
-    """Boundary-aware serpentine scan; the camera pose is always measured, never assumed."""
+    """带边界感知的蛇形扫描；相机位姿一律实测，绝不按指令推算。
+
+    拖动的实际位移与下发的手势并不相等（有惯性、有边界限位），所以每一步都要重新测量位姿——
+    一旦改成按指令累加，误差会沿整条扫描路径累积，最后拼不回一张图。
+    """
 
     def __init__(self, args, window):
         """初始化第二版扫描记录和度量网格，禁止覆盖已有扫描结果。"""
@@ -1688,7 +1707,11 @@ class RasterScanner:
 
 
 class FlowTracker:
-    """Track small raw-image motions before transforming points onto the grid plane."""
+    """先在原始图像上跟踪小位移，再把结果变换到网格平面。
+
+    连续拖动时帧间位移很小，在原图上做光流比在纠正后的平面上更稳：纠正会把远处放大，
+    噪声也一起放大。顺序反过来会让远端的小抖动主导测量结果。
+    """
 
     def __init__(self, grid):
         """保留同一网格投影，用于把原图光流转换为地图平面位移。"""
@@ -1774,7 +1797,11 @@ def stationary_stroke(samples):
 
 
 class DriftScanner(RasterScanner):
-    """Stream complete driver gestures while tracking the map on the capture thread."""
+    """连续拖动扫描：完整下发驱动手势，同时在截图线程上跟踪地图。
+
+    一次长拖动比多次短拖动采得更密，但手势期间不能停下来测量，所以跟踪必须在截图线程上
+    与手势并行进行；另外维护道路前沿、已访问点、相机限位和未解决前沿，以决定下一笔拖向哪里。
+    """
 
     def __init__(self, args, window):
         """建立连续拖动扫描器，分别维护道路前沿、访问点、相机限位和未解决前沿。"""
@@ -2116,7 +2143,12 @@ def annotate_markers(image, player, enemies):
 
 
 class JointRegistration:
-    """Align roads using the separately measured motion of the perspective grid."""
+    """用单独测量的透视网格运动来对齐道路，而不是让道路自己去找对齐。
+
+    道路形状重复度高（长直路、规则拐角），直接做道路配准容易整段滑动对错；先由网格定出运动，
+    道路只在该运动附近做微调。
+    配准在缩小后的投影上进行（上限 0.25 或 320 像素），多帧联合配准的代价才能接受。
+    """
 
     def __init__(self, matrix, warp_size, source, cell):
         """预计算缩小投影、有效域和全相关位移网格，降低多帧联合配准成本。"""

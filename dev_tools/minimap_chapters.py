@@ -173,6 +173,11 @@ def finish_scan_3d(package, chapter, scan, stop=None):
     work.mkdir(parents=True)
 
     def stage(name):
+        """进入下一处理阶段：先响应停止请求，再写阶段文件并打印。
+
+        每个阶段入口都是一个安全的中止点，所以停止检查放在这里而不是各阶段内部。
+        阶段名写进 processing_status.json，标注工具靠它把「正在重建/闭环/导出」显示给使用者。
+        """
         if stop is not None and stop.exists():
             raise KeyboardInterrupt('Stopped by STOP file.')
         write_progress(package / 'processing_status.json', {'phase': name})

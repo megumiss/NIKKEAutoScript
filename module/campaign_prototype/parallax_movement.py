@@ -343,6 +343,12 @@ def run_movement(session):
 
 
 class ParallaxSessionMixin:
+    """分层章节的会话观测与移动：把 GameSession 的平面流程换成按表面跟踪的版本。
+
+    做成 mixin 而不是子类，是因为平面与分层只在观测和落点换算上不同，停止检查、收集品确认、
+    输出目录等会话骨架完全共用，复制一份会出现两套需要同步维护的流程。
+    """
+
     def observe(self):
         """优先用固定实拍参考跟踪，再尝试独立实拍交叉恢复及原始帧全局定位。
 

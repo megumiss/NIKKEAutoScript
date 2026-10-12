@@ -15,6 +15,13 @@ from .match_coarse import PAD, SCALE, match, template_matrix
 
 
 class AdaptiveLocalizer(Localizer):
+    """自适应搜索尺度与透视的展开小地图定位器，用于没有预置标定的平面章节。
+
+    与基类 Localizer 的区别是不依赖固定投影：每次定位都先搜尺度和透视，再用受限 ECC 细化，
+    因此单帧更慢但换章节、换镜头缩放都不用重新标定。
+    质量门槛与基类一致（IoU 与竞争候选分差），不满足就拒绝定位而不是返回低质量结果。
+    """
+
     def locate(self, image, tag, require_player=True):
         """先搜索尺度与透视，再用受限 ECC 细化道路单应；低 IoU 或有远处竞争候选时拒绝定位。
 

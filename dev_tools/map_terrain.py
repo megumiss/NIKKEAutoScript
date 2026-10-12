@@ -6,6 +6,13 @@ from PIL import Image, ImageDraw
 
 
 def validate_terrain_edits(edits, size):
+    """校验人工道路修订；修订会被烘焙进底图，畸形输入必须在落盘前挡住。
+
+    只支持 brush（画笔）与 polygon（填充）两种，各自的顶点数下限不同；除单笔上限外还有总顶点
+    上限，笔数合法但总量过大时栅格化会卡住浏览器端的保存请求。
+    画笔直径按原图像素给整数：修订要能逐像素复现，浮点直径在不同平台的栅格化结果不一致。
+    坐标来自前端，bool 是 int 的子类所以要单独排除，否则 True 会被当成坐标 1。
+    """
     if not isinstance(edits, list) or len(edits) > 10000:
         raise ValueError('道路修订必须是列表，最多 10000 笔。')
     total = 0

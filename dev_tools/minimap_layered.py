@@ -458,6 +458,7 @@ def reconstruct(source, output, depth_cache=None, stop_file=None, depth_method='
         raise ValueError(f'Unknown depth method: {depth_method}')
     sweep = DEPTH_METHODS[depth_method]
     def check_stop():
+        """在各阶段之间检查停止文件；分层重建很长，必须有可中断的检查点。"""
         if stop_file is not None and Path(stop_file).exists():
             raise KeyboardInterrupt('Stopped during layered reconstruction.')
 

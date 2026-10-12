@@ -9,6 +9,12 @@ from .probe import NoConnectedRoad
 
 
 def walking_distance(localizer, start, target):
+    """两点间沿道路的步行距离；不连通时返回无穷大。
+
+    距离按 A* 路径的实际折线长度算，不是直线距离，这样绕行代价才能和电梯中转比较。
+    不连通是正常结果而不是错误，所以 NoConnectedRoad 在这里被吞掉换成无穷大，
+    让上层直接用「是否有限」判断能否步行到达。
+    """
     try:
         _, path = localizer.route(np.asarray(start, float), np.asarray(target, float))
     except NoConnectedRoad:

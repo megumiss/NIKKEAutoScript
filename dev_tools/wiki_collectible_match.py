@@ -112,6 +112,13 @@ def iou_surface(target, road, valid, matrix, size):
 
 
 class MapMatcher:
+    """把小地图面板配准到章节底图，按坐标模型分派到对应的定位实现。
+
+    平面章节在这里自己做粗搜索加全分辨率搜索；分层章节（local_parallax、orthographic_surfaces）
+    转交各自的定位器，并通过 surface_matcher 暴露出去——调用方据此判断「要不要带表面身份」。
+    底图哈希必须与元数据一致，否则配准结果对应的是另一张图。
+    """
+
     def __init__(self, package):
         """核对底图哈希、配准状态和缓存投影，再构建粗搜索与全分辨率搜索画布。"""
         self.package = Path(package)

@@ -41,6 +41,11 @@ OUTER = (_distance >= RADIUS + OUTER_BAND[0]) & (_distance <= RADIUS + OUTER_BAN
 
 
 def annulus(radius, band):
+    """归一化的圆环卷积核，用于在半分辨率上一次算出环带亮度占比。
+
+    核做了归一化，卷积结果直接就是环带内亮像素的比例，RESPONSE、CONTRAST 这些阈值才能按
+    比例写成固定值；传入的半径和环宽都应先除以 SCALE。
+    """
     reach = int(np.ceil(radius + band))
     yy, xx = np.mgrid[-reach:reach + 1, -reach:reach + 1]
     distance = np.hypot(xx, yy)
@@ -49,6 +54,11 @@ def annulus(radius, band):
 
 
 def disc(radius):
+    """归一化的实心圆卷积核，用来量环内亮度。
+
+    与 annulus 同样做归一化，响应即圆内亮像素比例；环内是会变的头像，占比接近 1 说明是
+    实心白盘之类的场景物，可以据此（INNER_MAX）排掉。
+    """
     reach = int(np.ceil(radius))
     yy, xx = np.mgrid[-reach:reach + 1, -reach:reach + 1]
     kernel = (np.hypot(xx, yy) <= radius).astype(np.float32)
@@ -98,6 +108,11 @@ def measure(mask, cx, cy):
 
 
 def tail_verified(score):
+    """环外一圈的高亮是否符合「只有一条朝外小三角」的形态。
+
+    真标记在环外只多出尾巴这一小段连续扇区，所以整圈亮度占比要低，且最长连续段落在
+    TAIL_RUN 之内：太短是噪声毛刺，太长则是粗白边或亮背景，都不能当成尾巴。
+    """
     return score['outer_coverage'] <= OUTER_COVERAGE and TAIL_RUN[0] <= score['tail_run'] <= TAIL_RUN[1]
 
 

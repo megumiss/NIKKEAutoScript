@@ -22,6 +22,13 @@ ALGORITHM = {'name': 'road_grid_v2', 'step': 8, 'clearance': 6, 'diagonal': 'no_
 
 
 def validate_edits(edits, size):
+    """校验人工连通修订；任何畸形输入都在参与计算和哈希绑定之前拒绝。
+
+    只支持 cut（分隔线）：把两块不该互通的道路切开。反向的「让两块互通」不能用画线表达，
+    必须走电梯传送关系，否则分区会凭空多出一条不存在的路。
+    条数、顶点数、线宽和坐标范围都有上限，修订来自浏览器端的标注工具，不能假定其规模可信；
+    线宽按地图像素给（8～160），太细切不断道路，太粗会连带切掉邻近的通路。
+    """
     if not isinstance(edits, list) or len(edits) > 1000:
         raise ValueError('连通修订必须是列表，最多 1000 条。')
     identifiers = set()
@@ -46,6 +53,13 @@ def validate_edits(edits, size):
 
 
 def package_road(package, metadata, annotations):
+    """合成地图包的二值道路掩码，已套用人工地形修订。
+
+    平面章节有扫描得到的道路概率缓存，优先用它（阈值 0.5）再套修订：override 为 1 表示抹掉、
+    2 表示补上，这样人工修订只改局部，不影响其余像素的扫描证据。
+    分层章节没有概率缓存，只能退回渲染出的地形图，按 add 颜色精确比色取道路——所以分层地图的
+    道路完全取决于标注，渲染颜色一变就必须同步改这里。
+    """
     package = Path(package)
     with Image.open(package / 'map.png') as image:
         edited, override = render_terrain(image, annotations.get('terrain_edits', []), terrain_colors(metadata))
@@ -64,12 +78,23 @@ def package_road(package, metadata, annotations):
 
 
 def binding(road, image_hash, edits):
+    """连通数据的绑定指纹：底图哈希、尺寸、道路掩码哈希与修订哈希。
+
+    连通分区是算出来的派生数据，底图、地形修订或分隔线任一变化都会让它失效。
+    修订取 sort_keys 的 JSON 做哈希，保证只是键顺序不同的同一份修订不会被判成变化。
+    """
     return dict(image_sha256=image_hash, size=list(road.shape[::-1]),
                 road_sha256=hashlib.sha256(road.astype(np.uint8).tobytes()).hexdigest(),
                 edits_sha256=hashlib.sha256(json.dumps(edits, sort_keys=True).encode()).hexdigest())
 
 
 def encode_labels(labels):
+    """把分区网格压成按行的游程，并附带每个分区的概要。
+
+    整张分区网格直接存 JSON 会有几十万个数字，而道路很稀疏，游程编码能小一两个数量级。
+    概要里的 center 取离质心最近的实际网格点而不是质心本身：分区可能是 L 形，质心会落在道路外，
+    标注工具拿它定位就会跳到空地。概要坐标乘回 8，换成地图像素，便于直接用于显示。
+    """
     rows, regions = [], []
     for row in labels:
         changes = np.flatnonzero(np.diff(np.r_[0, row, 0]))
@@ -84,6 +109,12 @@ def encode_labels(labels):
 
 
 def decode_labels(data, shape):
+    """把游程还原成分区网格，顺带严格校验数据结构。
+
+    这份数据是外部文件，损坏或被手工改过时不能直接信：行数、游程必须递增不重叠、不越界、
+    标签为正，任一不满足就报错。宁可让调用方重算，也不要还原出一张分区错乱的网格——
+    连通判断错了，推图会往不可达的目标走。
+    """
     labels = np.zeros(shape, np.int32)
     if len(data['rows']) != shape[0]:
         raise ValueError('连通数据行数不正确。')
@@ -98,6 +129,11 @@ def decode_labels(data, shape):
 
 
 def build(road, image_hash, edits):
+    """计算连通数据：automatic 是纯几何结果，effective 额外套用人工分隔线。
+
+    先做距离变换再按 8 像素采样，只保留净空大于 6 的网格：小队有体积，贴墙的细缝实际走不过去。
+    两份分区都算是为了在标注工具里看出「哪些连通是被人工切开的」，排查误切时需要对照。
+    """
     validate_edits(edits, road.shape[::-1])
     clearance = cv2.distanceTransform(road.astype(np.uint8), cv2.DIST_L2, 5)[::8, ::8]
     mask = (clearance > 6).astype(np.uint8)
@@ -115,6 +151,11 @@ def build(road, image_hash, edits):
 
 
 def read_bound(path, road, image_hash, edits):
+    """读取并确认连通数据仍与当前道路、修订配套，不配套即报错。
+
+    算法参数也参与比较：换了步长或净空阈值，旧文件里的分区就不能再用。
+    读出来后两份分区都走一遍 decode_labels，顺带验证结构，避免把损坏的数据交给调用方。
+    """
     data = json.loads(Path(path).read_text(encoding='utf-8'))
     if (data.get('schema_version') != 1 or data.get('algorithm') != ALGORITHM
             or data.get('binding') != binding(road, image_hash, edits)):
@@ -125,6 +166,11 @@ def read_bound(path, road, image_hash, edits):
 
 
 def write_data(path, data):
+    """原子写入连通数据：先写同目录临时文件再 os.replace。
+
+    标注工具可能正在读这份文件，直接覆盖会让它读到半截 JSON；临时文件放同目录才能保证
+    replace 是同一文件系统上的原子操作。finally 里清理残留，写失败不留 .tmp。
+    """
     path = Path(path)
     temporary = None
     try:
@@ -138,6 +184,12 @@ def write_data(path, data):
 
 
 def ensure_data(package, metadata, annotations, persist=False):
+    """取得与当前道路配套的连通数据：缓存可用就复用，否则重算。
+
+    缓存不配套（底图或修订变了）和缓存损坏走同一条路——直接重算，不向调用方报错，
+    因为重算的代价只是几百毫秒，而让运行期因为一份派生文件失败没有意义。
+    persist 默认关闭：运行期只需要结果，写盘留给标注工具和批处理，避免任务进程去改资源目录。
+    """
     road = package_road(package, metadata, annotations)
     edits = annotations.get('connectivity_edits', [])
     path = Path(package) / 'connectivity.json'
@@ -153,6 +205,11 @@ def ensure_data(package, metadata, annotations, persist=False):
 
 
 def main():
+    """批量为地图目录下每个章节重算并写入连通数据，逐行打印分区数量。
+
+    延迟导入 AnnotationStore 是为了避开与 map_annotator 的循环导入；按行输出 JSON 并 flush，
+    方便在标注工具里实时显示进度。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path('data/resources/maps'))
     args = parser.parse_args()

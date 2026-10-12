@@ -39,6 +39,11 @@ CATEGORIES = {'normal_collectible', 'hard_collectible', 'ground_mechanism', 'gro
 
 
 class ConflictError(ValueError):
+    """标注已被别处改动，本次请求基于过期版本。
+
+    单独一个类型是为了让 HTTP 层把它映射成 409 而不是 400：前端收到 409 的处理是重新加载
+    地图再改，和参数错误的处理完全不同。
+    """
     pass
 
 
@@ -115,6 +120,13 @@ def validate_annotations(document, image_hash, size):
 
 
 class AnnotationStore:
+    """标注仓库：在限定的地图根目录内读写章节标注，并提供乐观并发控制。
+
+    所有路径都要经 package() 解析，确保请求里的地图标识不能越出根目录——这是个接受浏览器
+    请求的服务，路径拼接必须当成不可信输入。
+    保存走乐观并发：以标注文件内容的 SHA-256 作为版本（revision），版本不符抛 ConflictError，
+    避免两个标签页互相覆盖。同进程的读写用可重入锁串行。
+    """
     def __init__(self, root):
         """固定允许访问的地图根目录，并用可重入锁保护同进程读写。"""
         self.root = Path(root).resolve()
@@ -249,6 +261,11 @@ class AnnotationStore:
             return {'export': name, 'path': str(folder / 'map.png'), 'edits': len(document['terrain_edits'])}
 
     def preview_connectivity(self, identifier, document, revision):
+        """按未保存的标注算一次连通分区，只返回结果不写盘。
+
+        用于标注工具里即时查看分隔线的效果；仍要校验 revision 和标注合法性，
+        否则预览会和保存用的是两套数据，看着对、存下来却不对。
+        """
         with self.lock:
             package = self.package(identifier)
             metadata, image_hash, size, _ = self.metadata(package)
@@ -268,6 +285,11 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
     device_lock = threading.RLock()
 
     class Handler(BaseHTTPRequestHandler):
+        """标注工具的本机 HTTP 处理器：静态页面加标注、扫描、Wiki 与移动接口。
+
+        所有写操作都要求会话令牌，令牌随服务启动随机生成并只通过本机页面下发；
+        响应统一加 no-store 与 CSP，禁止页面被嵌入或加载外部脚本。
+        """
         def send(self, content, content_type='application/json; charset=utf-8', status=200):
             """统一发送 JSON 或静态资源，设置长度、禁缓存和页面资源策略。"""
             if not isinstance(content, bytes):
@@ -400,6 +422,11 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                 super().log_message(fmt, *args)
 
     class Server(ThreadingHTTPServer):
+        """多线程本机服务，关闭时负责连带结束本服务持有的子进程。
+
+        扫描和移动子进程都占着游戏控制，服务退出不收尾会把游戏留在被接管的状态，
+        所以 server_close 用嵌套 try/finally 保证三个任务都被尝试关闭。
+        """
         def server_close(self):
             """服务退出也必须停止本服务持有的扫描和移动进程。"""
             try:

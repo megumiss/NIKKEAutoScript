@@ -176,6 +176,14 @@ def parse_article(document):
 
 
 class WikiClient:
+    """抓取公开 Wiki 攻略页的客户端：优先直连，被站点拒绝时才退回无头浏览器。
+
+    浏览器按需启动（只在某个域名确实需要时），因为启动一次 Edge 的开销远大于一次请求，
+    而大部分页面直连就能拿到。
+    所有响应都落缓存，offline 可以完全离线复跑，refresh 才强制重新抓——配准调试会反复运行，
+    不该每次都去压 Wiki。
+    """
+
     def __init__(self, cache, offline=False, refresh=False, retries=2):
         """初始化缓存、会话和有限重试参数，浏览器仅在服务器要求时按需启动。"""
         self.cache = Path(cache)

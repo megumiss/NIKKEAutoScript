@@ -18,6 +18,7 @@ from module.campaign_prototype import detection, perception
 
 
 def overlap(first, second):
+    """两个 [x1, y1, x2, y2] 框的交并比；并集为 0 时返回 0 而不是除零。"""
     first, second = np.asarray(first), np.asarray(second)
     intersection = np.prod(np.maximum(0, np.minimum(first[2:], second[2:]) - np.maximum(first[:2], second[:2])))
     union = np.prod(first[2:] - first[:2]) + np.prod(second[2:] - second[:2]) - intersection
@@ -25,10 +26,24 @@ def overlap(first, second):
 
 
 def inside(point, box, margin=0):
+    """点是否落在框内（可带外扩余量）。
+
+    用来判断精定位得到的中心有没有跑出检测框；margin 给标注与精定位之间的合理偏差留余地。
+    """
     return bool(np.all(point >= np.asarray(box[:2]) - margin) and np.all(point <= np.asarray(box[2:]) + margin))
 
 
 def evaluate(records, model, splits):
+    """用复核过的采集回放整条识别链路，统计检测与运行期适配两层指标。
+
+    只回放整帧复核过的帧：部分复核的帧上有漏标，会把正确检出算成误检。
+    除了常规 tp/fp/fn，还把本帧的检测结果用 patch 注入 perception，再跑一遍运行期真正调用的
+    接口（箭头、圆环、普通敌人等）——模型指标好但适配层把中心算错时，推图照样会走错，
+    这一层必须单独量。
+    标为 partial/ignored 的目标上的检出不计误检，但落在 EX 弹窗等禁止区域的普通敌人会单独计入
+    unsafe：这类错误会让推图点进不该点的地方，比漏检严重。
+    帧文件可能已迁走，缺失记入 missing 而不是中断整轮回放。
+    """
     counters = {label: Counter() for label in detection.LABELS}
     normal_navigation = Counter(expected=0, matched=0, missing=0, unsafe=0, ex_popup_required=0)
     center_errors = {label: [] for label in detection.LABELS}
@@ -167,6 +182,12 @@ def evaluate(records, model, splits):
 
 
 def main():
+    """命令行入口：对指定模型回放复核帧，把完整结果写文件、摘要打到终端。
+
+    默认只跑 val 和 test，避免在训练集上自评出虚高的指标。
+    结果里连带记下模型哈希、阈值和帧清单哈希：同一份数字日后要能对上是哪个模型、哪批帧跑出来的。
+    终端只打摘要，details 逐帧明细太长，留在输出文件里。
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--frames', type=Path, required=True)
     parser.add_argument('--model', type=Path, required=True)

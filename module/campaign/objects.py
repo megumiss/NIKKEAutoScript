@@ -43,6 +43,11 @@ def kind_labels(kinds, available):
 
 
 def described(detection, space):
+    """把单个模型检测结果整理成后续逻辑使用的语义对象。
+
+    space 记录坐标系（client 为客户区像素、minimap 为面板像素），两者不能混用；坐标保留一位
+    小数、置信度保留四位，避免日志和快照里出现无意义的长浮点数。
+    """
     kind, state = OBJECTS[detection.label]
     return dict(label=detection.label, kind=kind, state=state, confidence=round(detection.confidence, 4),
                 position=[round(float(value), 1) for value in detection.center],

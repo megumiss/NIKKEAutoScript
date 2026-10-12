@@ -62,6 +62,12 @@ def solve_corrections(count, measurements, rotation, odometry_sigma=1., loop_sig
     weights = np.sqrt(np.asarray([item['weight'] for item in measurements]))[:, None] / loop_sigma
 
     def residual(flat):
+        """位姿图的残差向量：里程计项、重访项、首帧固定项依次拼接。
+
+        首帧项乘 10 是软约束形式的「固定首帧」：位姿图只能确定相对关系，不加这一项整体可以
+        任意平移，解不唯一。里程计项约束相邻帧修正量的变化而不是修正量本身，
+        这样整条轨迹可以平滑漂移，但不会出现突跳。
+        """
         delta = flat.reshape(count, 2)
         odometry = (delta[1:] - delta[:-1]) / odometry_sigma
         loops = (delta[pairs[:, 0]] - delta[pairs[:, 1]] - targets) * weights
