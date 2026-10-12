@@ -118,7 +118,16 @@ class ManualConfig:
             "mini_game_play": True,
             "extend": False,
             "story_part": "Story_1",  # Story_1, Story_2
-            "story_difficulty": "Normal"  # Normal, Hard
+            "story_difficulty": "Normal",  # Normal, Hard
+            # Story_1 Normal
+            "pending_finder": {
+                "mode": "grid",
+                "area": (100, 400, 600, 1050),
+                "rows": 6,
+                "columns": 1,
+                "vertical_direction": "bottom_to_top",
+                "horizontal_direction": "right_to_left",
+            },
         },
         {
             "event_id": "event_20260917",
