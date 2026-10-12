@@ -18,7 +18,7 @@ else:
     from map_terrain import render_terrain, terrain_colors
 
 
-ALGORITHM = {'name': 'road_grid_v2', 'step': 8, 'clearance': 6, 'diagonal': 'no_corner_cutting'}
+ALGORITHM = {'name': 'road_grid_v3', 'step': 8, 'clearance': 0, 'diagonal': 'no_corner_cutting'}
 
 
 def validate_edits(edits, size):
@@ -131,23 +131,28 @@ def decode_labels(data, shape):
 def build(road, image_hash, edits):
     """计算连通数据：automatic 是纯几何结果，effective 额外套用人工分隔线。
 
-    先做距离变换再按 8 像素采样，只保留净空大于 6 的网格：小队有体积，贴墙的细缝实际走不过去。
-    两份分区都算是为了在标注工具里看出「哪些连通是被人工切开的」，排查误切时需要对照。
+    分区在全分辨率道路掩码上按八邻域计算，再重采样到 8 像素网格存储：只要道路像素实际连通
+    就判为能走。旧的「净空大于 6 的网格四邻域」在细路上会同时产生假分裂（门槛砍掉 18% 真实
+    道路、8px 采样在细斜路上漏格）和单格孤岛（吸附按零点几像素差抢走目标后误报不连通）；
+    净空偏好仍由 A* 的边代价承担，不在这里设硬门槛。掩码先开 3×3 去掉孤立噪点，道路很稀疏，
+    开运算不会切断实际通路。两份分区都算是为了在标注工具里看出「哪些连通是被人工切开的」，
+    排查误切时需要对照。
     """
     validate_edits(edits, road.shape[::-1])
-    clearance = cv2.distanceTransform(road.astype(np.uint8), cv2.DIST_L2, 5)[::8, ::8]
-    mask = (clearance > 6).astype(np.uint8)
-    # 禁止穿墙角的八邻域与四邻域具有相同的连通分区。
-    _, automatic = cv2.connectedComponents(mask, connectivity=4)
+    automatic_mask = cv2.morphologyEx(road.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    _, automatic_full = cv2.connectedComponents(automatic_mask, connectivity=8)
+    automatic = encode_labels(automatic_full[::8, ::8])
     cut = Image.new('L', road.shape[::-1], 0)
     draw = ImageDraw.Draw(cut)
     for edit in edits:
         draw.line([tuple(p) for p in edit['points']], fill=255, width=edit['width'], joint='curve')
     cut = np.asarray(cut)
-    mask[cut[::8, ::8] > 0] = 0
-    _, labels = cv2.connectedComponents(mask, connectivity=4)
+    effective_mask = automatic_mask.copy()
+    effective_mask[cut > 0] = 0
+    _, effective_full = cv2.connectedComponents(effective_mask, connectivity=8)
+    effective = encode_labels(effective_full[::8, ::8])
     return dict(schema_version=1, algorithm=ALGORITHM, binding=binding(road, image_hash, edits),
-                automatic=encode_labels(automatic), effective=encode_labels(labels))
+                automatic=automatic, effective=effective)
 
 
 def read_bound(path, road, image_hash, edits):

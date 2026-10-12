@@ -14,24 +14,25 @@ from . import perception
 from . import goto
 
 
-# 8px 网格加净空门槛会在细路上留下一两格的孤立分区；全部章节里 1～3 节点的分区有 68 个，
-# 真实分区最小为 106 节点，所以 4 是量化碎片与真实区域之间的安全切点。
+# 8px 网格采样会在细路上留下与主路不相连的碎片格；吸附落到碎片上会按零点几像素的距离差
+# 抢走目标点并误报不连通（ch38 收集品 02：孤岛 10.6px 对主干 11.3px）。
+# 全部章节里 1～4 节点的碎片有 72 个，v3 分区最小为 106 节点，4 是碎片与真实区域的安全切点。
+# 上限 4 同时保证 20px 见方的合成测试块（网格 4 格）也被视为碎片。
 MIN_REGION_NODES = 4
 
 
-def traversable_grid(grid, minimum=MIN_REGION_NODES):
-    """丢弃只有极少格子的孤立分区，返回可走净空网格。
+def traversable_grid(grid, minimum=MIN_REGION_NODES, threshold=0):
+    """丢弃不超过 minimum 个格子的孤立分区，返回可走网格。
 
-    这些分区是细路上偶然够宽的单格，不是可去的地方；留在候选里会让吸附按零点几像素的距离差
-    把目标判成不连通（ch38 收集品 02：孤岛 10.6px 对主干 11.3px）。
-    所有分区都退化时按原样返回，宁可规划得差也不要无路可走。
+    这些分区是细路采样偶然留下的少量格子，不是可去的地方。threshold 只用于取连通块
+    （v3 无净空门槛，传 0）；所有分区都退化时按原样返回，宁可规划得差也不要无路可走。
     """
-    mask = (grid > 6).astype(np.uint8)
+    mask = (grid > threshold).astype(np.uint8)
     count, components = cv2.connectedComponents(mask, connectivity=4)
     if count <= 1:
         return grid
     sizes = np.bincount(components.ravel())
-    degenerate = np.isin(components, np.flatnonzero(sizes[1:] < minimum) + 1)
+    degenerate = np.isin(components, np.flatnonzero(sizes[1:] <= minimum) + 1)
     if not degenerate.any() or not (mask.astype(bool) & ~degenerate).any():
         return grid
     grid = grid.copy()
@@ -159,10 +160,12 @@ class Localizer:
         return report
 
     def route(self, start, target):
-        """在道路距离场上运行带净空代价的八邻域 A*，禁止斜穿墙角，再选择局部可直达路点。
+        """在道路距离场上运行带净空代价的 A*，边按全分辨率道路像素验证，再选择局部可直达路点。
 
-        start、target 使用地图像素，先吸附到具备净空的 8px 网格节点，再运行八邻域 A*。
-        吸附前丢弃退化分区（traversable_grid），避免量化碎片按零点几像素的距离差抢走吸附点。
+        start、target 使用地图像素，先吸附到道路 8px 网格节点。连通性由 effective 分区
+        （v3 起在全分辨率道路掩码上预算）预检，节点不再设净空硬门槛（旧 >6 门槛会在细路上
+        制造单格孤岛和假分裂，ch38 收集品 02）；净空偏好由边代价承担。节点之间的边要求两格
+        连线处处是路，所以相邻节点即使无正交邻格也能沿细斜路连通，同时不会切过墙角。
         返回局部可直达 waypoint 和完整网格路径；无连通路或无有效节点时失败，二维连通不证明跨层可通行。
         """
         start, target = np.asarray(start, float), np.asarray(target, float)
@@ -174,32 +177,55 @@ class Localizer:
         step = 8
         clearance = cv2.distanceTransform(self.road.astype(np.uint8), cv2.DIST_L2, 5)
         grid = clearance[::step, ::step]
+        road = self.road.astype(np.uint8)
         labels = getattr(self, 'route_labels', None)
         blocked = np.zeros(grid.shape, bool)
         if labels is not None:
-            blocked = (grid > 6) & (labels == 0)
+            blocked = (grid > 0) & (labels == 0)
             grid = grid.copy()
             grid[labels == 0] = 0
-        grid = traversable_grid(grid)
-        ys, xs = np.nonzero(grid > 6)
+        grid = traversable_grid(grid, minimum=MIN_REGION_NODES, threshold=0)
+        ys, xs = np.nonzero(grid > 0)
         nodes = np.column_stack([xs, ys])
         if not len(nodes):
             raise RuntimeError('No traversable road nodes')
         nearest = lambda point: tuple(nodes[np.argmin(np.linalg.norm(nodes*step-point, axis=1))])
         source, goal = nearest(start), nearest(target)
-        if labels is not None and labels[source[1], source[0]] != labels[goal[1], goal[0]]:
-            raise NoConnectedRoad('No connected road route')
+        # 相邻采样格之间的边按全分辨率道路像素验证：两格连线全部落在道路上有边。细斜路在 8px
+        # 网格上常没有正交邻格（采样假拆分的残余），只看格邻接会把实际连通的路判成不连通；
+        # 「连线处处是路」也自然禁止切墙角，不需要单独的正交邻格检查。边表裁剪到网格求交的
+        # 尺寸：道路外沿的格子本来就不可走，交不上只是截断。
+        walkable = grid > 0
+        horizontal = (road[:, step:] & road[:, :-step])[::step, ::step]
+        vertical = (road[step:, :] & road[:-step, :])[::step, ::step]
+        diag_dr = (road[step:, step:] & road[:-step, :-step])[::step, ::step]
+        diag_ur = (road[:-step, step:] & road[step:, :-step])[::step, ::step]
+        horizontal = horizontal[:min(len(horizontal), grid.shape[0]), :min(horizontal.shape[1], grid.shape[1] - 1)] \
+            & walkable[:horizontal.shape[0], :horizontal.shape[1]]
+        vertical = vertical[:min(len(vertical), grid.shape[0] - 1), :min(vertical.shape[1], grid.shape[1])] \
+            & walkable[:vertical.shape[0], :vertical.shape[1]]
+        diag_dr = diag_dr[:min(len(diag_dr), grid.shape[0] - 1), :min(diag_dr.shape[1], grid.shape[1] - 1)] \
+            & walkable[:diag_dr.shape[0], :diag_dr.shape[1]]
+        diag_ur = diag_ur[:min(len(diag_ur), grid.shape[0] - 1), :min(diag_ur.shape[1], grid.shape[1] - 1)] \
+            & walkable[1:diag_ur.shape[0] + 1, :diag_ur.shape[1]]
         queue = [(0., source)]
         costs, parents = {source: 0.}, {}
         while queue:
             _, current = heapq.heappop(queue)
             if current == goal:
                 break
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)):
-                x, y = current[0] + dx, current[1] + dy
-                if not (0 <= x < grid.shape[1] and 0 <= y < grid.shape[0]) or grid[y, x] <= 6:
+            x0, y0 = current
+            # (dx, dy, 边表, 是否反向)：正向边表索引以较小的一行/列 y（或 x）为准；
+            # 向左、向上走等价于以邻居为起点的正向边，反向标记把索引换成邻居坐标。
+            for dx, dy, edge, reverse in ((1, 0, horizontal, False), (0, 1, vertical, False),
+                                          (1, 1, diag_dr, False), (1, -1, diag_ur, False),
+                                          (-1, 0, horizontal, True), (0, -1, vertical, True),
+                                          (-1, -1, diag_dr, True), (-1, 1, diag_ur, True)):
+                x, y = x0 + dx, y0 + dy
+                if not (0 <= x < grid.shape[1] and 0 <= y < grid.shape[0]) or grid[y, x] <= 0:
                     continue
-                if dx and dy and (grid[current[1], x] <= 6 or grid[y, current[0]] <= 6):
+                ex, ey = (x, y) if reverse else (x0, y0)
+                if not (0 <= ex < edge.shape[1] and 0 <= ey < edge.shape[0]) or not edge[ey, ex]:
                     continue
                 cost = costs[current] + np.hypot(dx, dy) * (1 + 8 / grid[y, x])
                 node = (x, y)
