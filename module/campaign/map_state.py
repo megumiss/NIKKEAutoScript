@@ -38,7 +38,7 @@ class StaticMap:
     """章节地图的只读信息，与 MapMatcher 共享同一份底图与道路修订。
 
     平面地图的连通性来自 connectivity 的 effective 分区，只在道路附近归属分量，远离道路的点视为不可站。
-    `navigation.TargetFinder` 从这里读道路、分区与标注，不再自行加载。
+    `navigation.TargetFinder` 从这里读道路、分区与标注，不自己加载地图包。
     """
 
     def __init__(self, package, matcher):

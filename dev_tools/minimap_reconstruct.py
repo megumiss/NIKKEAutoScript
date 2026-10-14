@@ -2001,10 +2001,22 @@ class DriftScanner(RasterScanner):
         return measurements
 
     def calibrate_cursor(self):
-        """用两次正交拖动估计鼠标位移到地图位移的矩阵，要求足够移动样本和良好条件数。"""
+        """用两次正交拖动估计鼠标位移到地图位移的矩阵，要求足够移动样本和良好条件数。
+
+        每个轴向的拖动符号按道路质心选择：把内容拉向视野中心（相机进入地图内部）。
+        出生点在地图边缘时固定方向的拖动会被相机限位吞掉垂直分量并沿边缘侧滑，
+        得到的列向量近零、矩阵退化（ch2 实测复现），因此不能用固定符号。
+        """
         columns = []
         for axis in (0, 1):
             direction = np.eye(2)[axis]
+            mask = terrain(self.current_raw)
+            if mask.any():
+                moments = cv2.moments(mask)
+                centroid = moments['m10'] / moments['m00'], moments['m01'] / moments['m00']
+                center = mask.shape[1] / 2, mask.shape[0] / 2
+                if centroid[axis] >= center[axis]:
+                    direction = -direction
             samples = self.stroke(direction * 240)
             steady = [(-np.asarray(sample['delta']) / sample['cursor_delta'][axis])
                       for sample in samples[3:] if abs(sample['cursor_delta'][axis]) >= 3
@@ -2433,8 +2445,7 @@ def refine_map_positions(output, data, source):
             measured.append((float(roads[point]), prediction, delta))
     # 峰值相关 0.93 是单平面章节的常态水平；多层面章节里异层道路按不同速度移动，互相关被稀释，
     # 帧对的峰值会结构性低于 0.93（39 章 149 对中位仅 0.85）。门槛逐级放宽给这类章节一个机会，
-    # 样本质量由 fit_motion 的鲁棒拟合（60% 内点 @0.25 格）和下游登记残差兜底；
-    # 第一档就通过的章节行为与之前逐位一致。
+    # 样本质量由 fit_motion 的鲁棒拟合（60% 内点 @0.25 格）和下游登记残差兜底。
     calibration = None
     threshold = None
     for threshold in (.93, .88, .85, .80):
@@ -2730,7 +2741,7 @@ def rebuild_v2(output, data, registration='joint'):
     observed = np.zeros((*size[::-1], 3), np.uint8)
     best_weight = np.zeros_like(coverage)
     center_weight = cv2.distanceTransform(valid, cv2.DIST_L2, 3)
-    # 下面两个量在整个融合循环里不变，原先放在循环内等于每帧重算一次 1100x462 的布尔/浮点临时数组。
+    # 下面两个量在整个融合循环里不变：放进循环等于每帧重算一次 1100x462 的布尔/浮点临时数组。
     source_blank = source == 0
     valid_coverage = valid.astype(np.float32) / 255
     source_frames = np.full(size[::-1], -1, np.int32)
