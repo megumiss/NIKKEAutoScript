@@ -29,31 +29,17 @@ def prepare(request, folder):
     """准备绑定请求版本的运行地图，校验道路目标和对应场景标定。
 
     request 绑定地图图像、标注版本、章节、难度和目标；返回实际运行包路径与源文件哈希。
-    平面包复制到任务目录并生成校验清单，local_parallax 包只核对修订道路上的目标，标定在移动时临时生成。
+    平面包复制到任务目录并生成校验清单，标定共用 assets/calibration.json。
     """
     source = Path(request['package'])
-    if request.get('action', 'move') not in ('move', 'calibrate'):
+    if request.get('action', 'move') != 'move':
         raise ValueError('未知移动操作。')
     if sha(source / 'map.png') != request['image_sha256'] or sha(
             source / 'annotations.json') != request['revision']:
         raise ValueError('地图或标注已变化，请重新加载后选择目标。')
     metadata = json.loads((source / 'map.json').read_text(encoding='utf-8'))
-    if metadata.get('coordinate_model') == 'local_parallax':
-        from dev_tools.wiki_collectible_match import cached_parallax_localizer
-        if metadata['chapter'] != request['chapter']:
-            raise ValueError('所选地图章节已变化。')
-        # 初始化要读上百个原始帧做 SIFT（数秒），同一进程内连续请求复用同一包的定位器。
-        localizer = cached_parallax_localizer(source)
-        if request.get('action', 'move') != 'calibrate':
-            from .edited_map import road_distance
-            if road_distance(localizer.road, request['target']) > 0:
-                raise ValueError('目标不在修订后的道路上。')
-        names = ['map.json', 'map.png', 'annotations.json']
-        return source, {name: sha(source / name) for name in names}
-    if request.get('action') == 'calibrate':
-        raise ValueError('该标定入口用于分层地图。')
     if metadata.get('coordinate_model') is not None:
-        raise ValueError('非平面地图移动待定；当前只支持已有有效局部分层标定的地图。')
+        raise ValueError('只支持平面地图。')
     destination = folder / 'map'
     (destination / 'source').mkdir(parents=True)
     names = ('map.json', 'map.png', 'annotations.json', 'source/map_data.npz')
@@ -117,7 +103,7 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=None, required_
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
     """
-    from .movement_feedback import (AnchorUnresolved, SquadPositionChanged, road_recovery_click, resolve_anchor,
+    from .movement_feedback import (AnchorUnresolved, SquadPositionChanged, resolve_anchor,
                                     wake_arrow_click)
     from .goto import SQUAD_REACH
 
@@ -231,10 +217,7 @@ def navigate(session, target, emit, max_moves=24, arrival_radius=None, required_
         except AnchorUnresolved:
             if arrow_recoveries:
                 raise
-            try:
-                click = road_recovery_click(session, observation, approach)
-            except ValueError:
-                click = wake_arrow_click(session, observation)
+            click = wake_arrow_click(session, observation)
             session.check()
             session.move(click)
             clicks += 1
@@ -277,14 +260,12 @@ class GameSession:
     """一次人工移动请求的会话：持有定位器、OCR 与受控窗口，逐步观测并追加移动。
 
     窗口延迟到首次 observe 才创建，构造阶段失败就不会留下占用鼠标的实例。
-    定位器按地图包的 coordinate_model 选择（分层走 ParallaxLocalizer，其余走 AdaptiveLocalizer），
-    所以同一套会话逻辑能跑平面和分层两种章节。
     """
 
     def __init__(self, request, hashes, folder, emit):
         """初始化定位器、OCR 与请求上下文，窗口由首次观测延迟创建。
 
-        保存请求、源文件哈希、输出目录和状态回调，按 coordinate_model 选择定位器。
+        保存请求、源文件哈希、输出目录和状态回调。
         OCR 使用本地 CPU 模型；此处不取得窗口，首次 observe 才创建控制实例，初始化失败不会遗留鼠标占用。
         """
         from paddleocr import TextRecognition
@@ -292,12 +273,7 @@ class GameSession:
         self.model = TextRecognition(model_name='PP-OCRv5_mobile_rec',
                                      model_dir=str(settings.ROOT / 'bin/paddleocr/PP-OCRv5_mobile_rec_infer'),
                                      device='cpu', cpu_threads=2)
-        metadata = json.loads((Path(request['package']) / 'map.json').read_text(encoding='utf-8'))
-        if metadata.get('coordinate_model') == 'local_parallax':
-            from dev_tools.wiki_collectible_match import cached_parallax_localizer
-            self.localizer = cached_parallax_localizer(request['package'])
-        else:
-            self.localizer = AdaptiveLocalizer()
+        self.localizer = AdaptiveLocalizer()
         self.request, self.hashes, self.folder, self.emit = request, hashes, folder, emit
         self.index = 0
         self.win = None
@@ -505,19 +481,11 @@ def main():
         runtime.check_stop()
         settings.package, hashes = prepare(request, folder)
         emit(message='正在加载小队定位和章节识别…')
-        metadata = json.loads((settings.package / 'map.json').read_text(encoding='utf-8'))
-        if metadata.get('coordinate_model') == 'local_parallax':
-            from .parallax_movement import ParallaxSessionMixin, run_movement
-            class ParallaxSession(ParallaxSessionMixin, GameSession):
-                pass
-            session = ParallaxSession(request, hashes, folder, emit)
-            result = run_movement(session)
-        else:
-            session = GameSession(request, hashes, folder, emit)
-            annotations = json.loads((settings.package / 'annotations.json').read_text(encoding='utf-8'))
-            result = navigate(session, request['target'], emit, required_near=2,
-                              purpose=request.get('purpose', 'position'),
-                              elevators=annotations if annotations.get('connections') else None)
+        session = GameSession(request, hashes, folder, emit)
+        annotations = json.loads((settings.package / 'annotations.json').read_text(encoding='utf-8'))
+        result = navigate(session, request['target'], emit, required_near=2,
+                          purpose=request.get('purpose', 'position'),
+                          elevators=annotations if annotations.get('connections') else None)
         state.update(result)
     except KeyboardInterrupt as exc:
         state.update(state='cancelled', message=f'测试已停止：{exc}')

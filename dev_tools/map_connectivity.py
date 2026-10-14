@@ -57,8 +57,7 @@ def package_road(package, metadata, annotations):
 
     平面章节有扫描得到的道路概率缓存，优先用它（阈值 0.5）再套修订：override 为 1 表示抹掉、
     2 表示补上，这样人工修订只改局部，不影响其余像素的扫描证据。
-    分层章节没有概率缓存，只能退回渲染出的地形图，按 add 颜色精确比色取道路——所以分层地图的
-    道路完全取决于标注，渲染颜色一变就必须同步改这里。
+    没有概率缓存的包退回渲染出的地形图，按 add 颜色精确比色取道路。
     """
     package = Path(package)
     with Image.open(package / 'map.png') as image:

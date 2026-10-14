@@ -139,8 +139,7 @@ def wake_entry_arrow(session, observation, folder):
 def calibrate(chapter, folder, reuse=True):
     """采集并保存一章的局部移动标定，返回状态字典而不抛错给批处理。
 
-    只做普通平面章节：39、40 章和任何带 3D 处理或坐标模型的包按 skipped_nonflat 跳过，
-    分层章节的像素位移与地图距离不是单一线性关系，这套标定不适用。
+    只做平面章节：带坐标模型的包按 skipped_nonflat 跳过。
     reuse 时若已有标定的 binding 一致且状态为 validated 就直接复用，避免重复占用游戏。
     采样前要把小队挪到足够开阔的道路上（净空至少 35，优先 120 像素内净空 50 以上的点）：
     贴墙站位时围绕锚点的九个偏移会有一半撞墙，拟合不出可用的标定。入口迷雾导致定位置信度不足时
@@ -148,7 +147,7 @@ def calibrate(chapter, folder, reuse=True):
     """
     package = DEFAULT_MAPS_ROOT / f'chapter_{chapter:02}'
     metadata = json.loads((package / 'map.json').read_text('utf-8'))
-    if chapter in (39, 40) or metadata.get('processing_3d') or metadata.get('coordinate_model'):
+    if metadata.get('processing_3d') or metadata.get('coordinate_model'):
         return dict(status='skipped_nonflat', reason='Non-flat chapter excluded by task scope.')
     expected = binding(package)
     saved = local_package_dir(package) / 'movement_calibration/normal/flat_calibration.json'

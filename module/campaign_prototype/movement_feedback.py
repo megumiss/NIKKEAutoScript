@@ -110,56 +110,15 @@ def resolve_anchor(session, field, observation, allow_scene=True):
     raise AnchorUnresolved(f'无法恢复小队箭头位置，未追加点击；现场已保存。{reason}')
 
 
-def road_recovery_click(session, observation, target):
-    """从本次会话的临时标定和同层道路掩码出发，仅生成一次恢复短移的落点。"""
-    from . import goto
-    from .camera_navigation import FIELD_BOUNDS, inside
-    from .parallax_movement import checked_segment
-
-    if observation.get('position_kind') != 'squad' or getattr(session, 'calibration', None) is None:
-        raise ValueError('道路短移需要真实小队圆环和本次会话的临时标定。')
-    road = getattr(session, 'surface', None)
-    if road is None:
-        raise ValueError('缺少同层道路掩码，无法进行道路短移。')
-    data, reference = session.calibration
-    position = np.asarray(observation['position'], float)
-    origin = np.asarray(data['origin'], float)
-    goto.map_close(session.win)
-    field = goto.capture_client(session.win)
-    session.identity(field)
-    session.check_collectible(field)
-    session.preview(field)
-    matrix = np.asarray(data['matrix'], float)[:2, :2]
-    direction = np.asarray(target, float) - position
-    angle = np.arctan2(direction[1], direction[0])
-    candidates = [position + radius * np.array([np.cos(angle + turn), np.sin(angle + turn)])
-                  for radius in (10, 6) for turn in (0, np.pi / 4, -np.pi / 4, np.pi / 2, -np.pi / 2, np.pi)]
-    for candidate in candidates:
-        try:
-            checked_segment(road, position, candidate)
-            click = scene_anchor(reference, field, data['origin_anchor'], matrix @ (candidate - origin))
-        except ValueError:
-            continue
-        if inside(click, FIELD_BOUNDS):
-            session.emit(navigation_method='arrow_road_recovery', recovery_target=candidate.tolist(),
-                         message='箭头不可见，尝试沿附近道路短移一次后重新识别。')
-            return click
-    raise ValueError('附近没有同时通过连续道路和场景配准验证的短移落点。')
-
-
 def wake_arrow_click(session, observation):
     """站位不渲染箭头时，向附近开阔道路生成一次唤醒短移落点。
 
     台座类站位显示橙环且等再久也不出现箭头，需离开约 200 客户区像素才恢复。
-    无箭头可用，按镜头居中特性把小队近似为客户区 (888, 505)，结合道路净空、敌人距离和路径验证选路；
-    仅用于平面地图，分层地图的投影必须由实测标定建立。
+    无箭头可用，按镜头居中特性把小队近似为客户区 (888, 505)，结合道路净空、敌人距离和路径验证选路。
     """
     from . import goto
     from .camera_navigation import FIELD_BOUNDS, field_chart, inside, target_projection
-    from .parallax_localizer import ParallaxLocalizer
 
-    if isinstance(session.localizer, ParallaxLocalizer):
-        raise ValueError('分层地图不使用镜头居中近似做唤醒短移。')
     if observation.get('position_kind') != 'squad':
         raise ValueError('唤醒短移需要可信的小队圆环定位。')
     position = np.asarray(observation['position'], float)

@@ -13,7 +13,6 @@ from module.campaign.map_state import StaticMap
 from module.campaign.maps import chapter_map
 from module.campaign.objects import detect_objects
 from module.campaign.offscreen import squad_offscreen
-from module.campaign_prototype.parallax_movement import surface_identity
 from module.campaign_prototype.perception import (compact_road_masks, marker_candidates, minimap_masks,
                                                   project_centers, refine_ring)
 from module.logger import logger
@@ -119,10 +118,7 @@ class CampaignObserver:
         squad_registration = None
         try:
             _, road, valid, player = minimap_masks(image)
-            if self.matcher.surface_matcher is not None:
-                result = self.matcher.surface_matcher.locate(panel, player, valid)
-            else:
-                result = self.matcher.match_panel(panel, road, valid, player)
+            result = self.matcher.match_panel(panel, road, valid, player)
             snapshot['localization'] = result['status']
             if result['status'] != 'accepted':
                 return snapshot
@@ -133,16 +129,10 @@ class CampaignObserver:
                 snapshot['localization'] = 'needs_review'
                 return snapshot
             snapshot['squad'] = squad
-            if self.matcher.surface_matcher is None:
-                # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
-                squad_registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
-                                          player_center=player)
-            # 分层地图的目标规划需要小队所在表面，平面地图没有这个字段。
+            # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
+            squad_registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
+                                      player_center=player)
             snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
-            if 'reference_frame' in result and 'local_surface' in result:
-                snapshot['surface'] = dict(reference_frame=result['reference_frame'],
-                                           local_surface=result['local_surface'],
-                                           id=surface_identity(self.matcher.surface_matcher, result))
             positions = project_centers([item['position'] for item in enemies], matrix)
             snapshot['enemies'] = [dict(item, position=position) for item, position in zip(enemies, positions)
                                    if 0 <= position[0] < width and 0 <= position[1] < height]
@@ -163,7 +153,7 @@ class CampaignObserver:
 
     def locate_viewport(self, image):
         """小队离屏时用紧凑小地图道路配准定位视野中心（无小队圆环种子）；接受时返回配准结果。"""
-        if self.matcher is None or self.matcher.surface_matcher is not None:
+        if self.matcher is None:
             return None
         try:
             panel, road, valid = compact_road_masks(image)
@@ -195,7 +185,7 @@ class CampaignObserver:
     def observe_barriers(self, image, snapshot, squad, viewport):
         """把屏障投影到地图并标记道路封锁；锚点优先小队箭头，其次视野中心。失败只告警。
 
-        squad / viewport 是本帧的配准结果（见 barriers.project_barriers），分层地图直接跳过。
+        squad / viewport 是本帧的配准结果（见 barriers.project_barriers）。
         """
         if not any(item['kind'] == 'barrier' for item in snapshot['objects']):
             return

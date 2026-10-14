@@ -48,7 +48,7 @@ def terrain_colors(metadata=None):
     """道路与背景的渲染颜色。
 
     留着 metadata 参数是为了兼容按坐标模型取色的旧调用，现在所有模型统一双色，直接忽略。
-    颜色值同时是 package_road 的比色依据（分层地图靠精确比色取道路），改色必须同步改那里。
+    颜色值同时是 package_road 的比色依据（无概率缓存的包靠精确比色取道路），改色必须同步改那里。
     """
     # 全模型统一双色：道路蓝 #2d8dc7，背景 #1e2b37。擦除语义是"不是路"，必须沿用背景色。
     return {'add': '#2d8dc7', 'erase': '#1e2b37'}
@@ -106,7 +106,7 @@ def _atomic_write(path, writer):
 def bake_terrain(package, metadata, edits):
     """把道路修订直接写入 map.png 与平面地图的道路概率缓存，返回新的图像哈希。
 
-    分层地图没有概率缓存，只烘焙 map.png；概率缓存的其余数组原样保留。
+没有概率缓存的包只烘焙 map.png；概率缓存的其余数组原样保留。
     """
     package = Path(package)
     with Image.open(package / 'map.png') as image:

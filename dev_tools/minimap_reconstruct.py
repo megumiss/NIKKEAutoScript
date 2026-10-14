@@ -273,10 +273,16 @@ class DriverWindow:
                                        'does not fit the monitor work area.')
                 x, y = max(wl, min(left, wr - width)), max(wt, min(top, wb - height))
                 if client != target or (x, y) != (left, top):
-                    print(json.dumps({'client_resize': 'setting', 'from': client[2:],
-                                      'to': target[2:], 'attempt': attempt + 1}), flush=True)
-                    self.gui.SetWindowPos(self.hwnd, 0, x, y, width, height,
-                                          win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)
+                    if client == target and getattr(self.args, 'keep_window_position', False):
+                        # 尺寸已正确，只是位置钳制在工作区内（如底部贴近任务栏）；游戏提权运行
+                        # 时本进程无权移动窗口，按调用方声明保留当前位置，客户区下沿可能被
+                        # 任务栏覆盖数像素，扫描 ROI 不在该区域。
+                        pass
+                    else:
+                        print(json.dumps({'client_resize': 'setting', 'from': client[2:],
+                                          'to': target[2:], 'attempt': attempt + 1}), flush=True)
+                        self.gui.SetWindowPos(self.hwnd, 0, x, y, width, height,
+                                              win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)
                 # Unity may apply another size after WM_SIZE; require a full second of stable client geometry.
                 for _ in range(4):
                     time.sleep(0.25)
@@ -2166,6 +2172,8 @@ class JointRegistration:
 
     def __init__(self, matrix, warp_size, source, cell):
         """预计算缩小投影、有效域和全相关位移网格，降低多帧联合配准成本。"""
+        from scipy import fft as sp_fft
+
         self.scale = min(0.25, 320 / max(warp_size))
         self.matrix = np.diag([self.scale, self.scale, 1]) @ matrix
         self.size = tuple(max(1, round(v * self.scale)) for v in warp_size)
@@ -2175,6 +2183,22 @@ class JointRegistration:
         self.center = np.array(self.valid.shape[::-1]) - 1
         yy, xx = np.indices(tuple(2 * n - 1 for n in self.valid.shape))
         self.shifts = np.stack([xx - self.center[0], yy - self.center[1]], axis=-1) / self.scale
+        # 位移域是规则网格，两轴可分离。半径判据在每个帧对上都要对整片域求模，逐元素写法每次都要分配
+        # 一个 (2h-1, 2w-1, 2) 的临时数组；拆成两条一维轴后结果与 np.linalg.norm(shifts - p, axis=2)
+        # 逐位相同（同样的减法、平方与相加顺序），但临时数组降到二维，norm 的 Python 开销也一并消失。
+        self.axis_x = (np.arange(self.shifts.shape[1]) - self.center[0]) / self.scale
+        self.axis_y = (np.arange(self.shifts.shape[0]) - self.center[1]) / self.scale
+        # 互相关的 full 输出尺寸与 scipy 会选用的快速 FFT 尺寸只取决于特征图尺寸，预计算即可。
+        full = tuple(2 * n - 1 for n in self.valid.shape)
+        self.full_slice = tuple(slice(size) for size in full)
+        self.fshape = tuple(sp_fft.next_fast_len(size, True) for size in full)
+        self._valid_spectra = None
+
+    def shift_distance(self, prediction):
+        """位移域各点到预测位置的欧氏距离，等价于 np.linalg.norm(self.shifts - prediction, axis=2)。"""
+        dx = self.axis_x - prediction[0]
+        dy = self.axis_y - prediction[1]
+        return np.sqrt(dx * dx + (dy * dy)[:, None])
 
     def features(self, image):
         """分别提取道路、背景网格和背景有效域，保留不同渲染层的独立证据。"""
@@ -2187,21 +2211,66 @@ class JointRegistration:
 
     def correlate(self, first, second):
         """用 FFT 计算全平移域的道路 IoU 与网格相似度及有效重叠面积。"""
-        from scipy.signal import correlate
-
-        a, ga, va = (value.astype(np.float32) / 255 for value in first)
-        b, gb, vb = (value.astype(np.float32) / 255 for value in second)
-
-        def corr(x, y):
-            """对两张特征图做完整二维 FFT 互相关，供面积与相似度计算复用。"""
-            return correlate(x, y, mode='full', method='fft')
-
+        corr, a, ga, va, b, gb, vb = self._spectra(first, second)
         intersection = corr(b, a)
         union = corr(self.valid, a) + corr(b, self.valid) - intersection
         iou = np.clip(intersection / np.maximum(union, 1), 0, 1)
         norm = corr(vb, ga * ga) + corr(gb * gb, va)
         grid = np.clip(2 * corr(gb, ga) / np.maximum(norm, 0.1), 0, 1)
         return iou, grid, union, corr(vb, va)
+
+    def road_evidence(self, first, second):
+        """只算道路 IoU 与有效重叠面积；measure_roads 不读网格层证据，那 4 次互相关不必做。"""
+        corr, a, _, _, b, _, _ = self._spectra(first, second)
+        intersection = corr(b, a)
+        union = corr(self.valid, a) + corr(b, self.valid) - intersection
+        return np.clip(intersection / np.maximum(union, 1), 0, 1), union
+
+    def _spectra(self, first, second):
+        """归一化两张特征图并返回互相关闭包；同一操作数只做一次正变换。
+
+        闭包复刻 ``scipy.signal.correlate(x, y, mode='full', method='fft')``：后者等价于
+        ``fftconvolve(x, y[::-1, ::-1])``，即在 next_fast_len 尺寸上做
+        ``rfftn(x) * rfftn(reverse(y))`` 再逆变换，最后裁到 full 形状。这里沿用同一算式与同一
+        尺寸，只把重复出现的操作数收敛成一次正变换，因此结果逐位不变。``self.valid`` 在整个
+        匹配器生命周期内不变，它的两个变换跨调用复用。
+        """
+        from scipy import fft as sp_fft
+
+        a, ga, va = (value.astype(np.float32) / 255 for value in first)
+        b, gb, vb = (value.astype(np.float32) / 255 for value in second)
+        if a.shape != self.valid.shape:
+            full = tuple(2 * n - 1 for n in a.shape)
+            full_slice = tuple(slice(size) for size in full)
+            fshape = tuple(sp_fft.next_fast_len(size, True) for size in full)
+        else:
+            full_slice, fshape = self.full_slice, self.fshape
+        if self._valid_spectra is None:
+            self._valid_spectra = (sp_fft.rfftn(self.valid, fshape, axes=(0, 1)),
+                                   sp_fft.rfftn(self.valid[::-1, ::-1], fshape, axes=(0, 1)))
+        valid_forward, valid_backward = self._valid_spectra
+        forward, backward = {}, {}
+
+        def transform(array, cache, reverse):
+            """按操作数身份复用正变换；reverse 表示 scipy 对第二个操作数做的反序处理。
+
+            缓存里连同操作数一起保存，命中时再用 `is` 复核，避免临时数组释放后 id 被复用导致取错谱。
+            """
+            if array is self.valid:
+                return valid_backward if reverse else valid_forward
+            entry = cache.get(id(array))
+            if entry is None or entry[0] is not array:
+                entry = (array, sp_fft.rfftn(array[::-1, ::-1] if reverse else array,
+                                            fshape, axes=(0, 1)))
+                cache[id(array)] = entry
+            return entry[1]
+
+        def corr(x, y):
+            """对两张特征图做完整二维 FFT 互相关，供面积与相似度计算复用。"""
+            return sp_fft.irfftn(transform(x, forward, False) * transform(y, backward, True),
+                                 fshape, axes=(0, 1))[full_slice]
+
+        return corr, a, ga, va, b, gb, vb
 
     def peak(self, scores, allowed):
         """在允许域找峰并作亚像素修正，再比较空间独立峰得到歧义分差。"""
@@ -2217,7 +2286,7 @@ class JointRegistration:
                 curvature = left - 2 * middle + right
                 if curvature < -1e-5:
                     delta[axis] += np.clip(0.5 * (left - right) / curvature, -0.5, 0.5) / self.scale
-        competing = allowed & (np.linalg.norm(self.shifts - self.shifts[y, x], axis=2) >= self.cell * 0.55)
+        competing = allowed & (self.shift_distance(self.shifts[y, x]) >= self.cell * 0.55)
         gap = float(scores[y, x] - np.max(scores[competing])) if np.any(competing) else 0.0
         return delta, (y, x), gap
 
@@ -2245,8 +2314,8 @@ class JointRegistration:
 
     def measure_roads(self, first, second, prediction, radius):
         """只接受高 IoU 且峰值独立的道路约束，避免直路上的滑移歧义。"""
-        roads, _, area, _ = self.correlate(first, second)
-        allowed = (np.linalg.norm(self.shifts - prediction, axis=2) < radius)
+        roads, area = self.road_evidence(first, second)
+        allowed = (self.shift_distance(prediction) < radius)
         allowed &= area > 1600 * self.scale ** 2
         peak = self.peak(roads, allowed)
         if peak is None:
@@ -2267,7 +2336,7 @@ class JointRegistration:
         map_y = (grid_shifts[:, :, 1] * self.scale + self.center[1]).astype(np.float32)
         grid = cv2.remap(grid, map_x, map_y, cv2.INTER_LINEAR)
         grid_area = cv2.remap(grid_area, map_x, map_y, cv2.INTER_LINEAR)
-        allowed = (np.linalg.norm(self.shifts - prediction, axis=2) <= radius)
+        allowed = (self.shift_distance(prediction) <= radius)
         allowed &= (road_area > 1600 * self.scale ** 2) & (grid_area > 12800 * self.scale ** 2)
         match = self.peak(roads + 0.7 * grid, allowed)
         if match is None:
@@ -2327,26 +2396,55 @@ def refine_map_positions(output, data, source):
         if image is None:
             raise OSError(f"Cannot read scan frame: {frame['file']}")
         views.append(matcher.features(image))
-    grid_moves, road_moves = [], []
     candidates = 0
-    for i in range(len(views) - 1):
-        prediction = positions[i] - positions[i + 1]
-        if not cell * 0.7 < np.linalg.norm(prediction) < cell * 3.4:
+    # 标定需要「运动基线足够」的帧对，但不必是相邻帧：只挑相邻帧会让扫描越密可用样本越少，
+    # 0.55 格/帧的密集包一个样本都凑不出，标定失败后整章退化成无锚里程计，反而比稀疏扫描更差。
+    # 因此相邻帧落在带内的样本照旧保留，另按预测位移累积补上带内的非相邻帧对。
+    pairs = [(i, i + 1) for i in range(len(views) - 1)
+             if cell * 0.7 < np.linalg.norm(positions[i] - positions[i + 1]) < cell * 3.4]
+    seen = set(pairs)
+    index = 0
+    while index < len(views) - 1:
+        step = index + 2
+        while step < len(views) and np.linalg.norm(positions[index] - positions[step]) < cell * 0.7:
+            step += 1
+        if step >= len(views):
+            break
+        prediction = positions[index] - positions[step]
+        if (index, step) not in seen and np.linalg.norm(prediction) <= cell * 3.4:
+            seen.add((index, step))
+            pairs.append((index, step))
+            index = step
             continue
+        index += 1
+    candidates = 0
+    measured = []
+    for first, second in pairs:
+        prediction = positions[first] - positions[second]
         candidates += 1
-        roads, _, area, _ = matcher.correlate(views[i], views[i + 1])
-        allowed = (np.linalg.norm(matcher.shifts - prediction, axis=2) <= cell * 2)
+        roads, area = matcher.road_evidence(views[first], views[second])
+        allowed = (matcher.shift_distance(prediction) <= cell * 2)
         allowed &= area > 1600 * matcher.scale ** 2
         peak = matcher.peak(roads, allowed)
         if peak is None:
             continue
         delta, point, _ = peak
-        if roads[point] > 0.93 and np.linalg.norm(delta - prediction) < cell * 1.7:
-            grid_moves.append(prediction)
-            road_moves.append(delta)
-    calibration = matcher.fit_motion(grid_moves, road_moves, cell)
+        if np.linalg.norm(delta - prediction) < cell * 1.7:
+            measured.append((float(roads[point]), prediction, delta))
+    # 峰值相关 0.93 是单平面章节的常态水平；多层面章节里异层道路按不同速度移动，互相关被稀释，
+    # 帧对的峰值会结构性低于 0.93（39 章 149 对中位仅 0.85）。门槛逐级放宽给这类章节一个机会，
+    # 样本质量由 fit_motion 的鲁棒拟合（60% 内点 @0.25 格）和下游登记残差兜底；
+    # 第一档就通过的章节行为与之前逐位一致。
+    calibration = None
+    threshold = None
+    for threshold in (.93, .88, .85, .80):
+        grid_moves = [prediction for corr, prediction, delta in measured if corr > threshold]
+        road_moves = [delta for corr, prediction, delta in measured if corr > threshold]
+        calibration = matcher.fit_motion(grid_moves, road_moves, cell)
+        if calibration is not None:
+            break
     report.update(reason='motion_calibration_failed', calibration_candidates=candidates,
-                  calibration_samples=len(grid_moves))
+                  calibration_samples=len(grid_moves), calibration_threshold=threshold)
     if calibration is None:
         return positions, report
     motion_map, calibration_report = calibration
@@ -2446,9 +2544,9 @@ def projection_road_score(data, source, images, pairs):
     positions = np.array([f['position'] for f in data['frames']])
     scores = []
     for a, b in pairs:
-        roads, _, area, _ = matcher.correlate(views[a], views[b])
+        roads, area = matcher.road_evidence(views[a], views[b])
         prediction = positions[a] - positions[b]
-        allowed = np.linalg.norm(matcher.shifts - prediction, axis=2) < data['cell_px'] * 2
+        allowed = matcher.shift_distance(prediction) < data['cell_px'] * 2
         allowed &= area > 1600 * matcher.scale ** 2
         peak = matcher.peak(roads, allowed)
         scores.append(float(roads[peak[1]]) if peak is not None else 0.0)
@@ -2462,12 +2560,28 @@ def recover_map_projection(output, data, source):
     """
     positions = np.array([f['position'] for f in data['frames']])
     lengths = np.linalg.norm(np.diff(positions, axis=0), axis=1)
-    eligible = np.flatnonzero((lengths > data['cell_px'] * 0.7) & (lengths < data['cell_px'] * 3.4))
+    cell_px = data['cell_px']
+    eligible_pairs = [(int(i), int(i + 1)) for i in np.flatnonzero((lengths > cell_px * 0.7)
+                                                                   & (lengths < cell_px * 3.4))]
+    # 与 refine_map_positions 同一原因：密集扫描的相邻帧位移可能不足 0.7 格，只挑相邻帧会让整个
+    # 投影复核以「运动帧对不足」被跳过（road_iou 因此拿不到）。这里同样按预测位移累积补上带内的
+    # 非相邻帧对，相邻在带内的样本照旧保留。
+    index = 0
+    while index < len(positions) - 1:
+        step = index + 2
+        while step < len(positions) and np.linalg.norm(positions[index] - positions[step]) < cell_px * 0.7:
+            step += 1
+        if step >= len(positions):
+            break
+        if np.linalg.norm(positions[index] - positions[step]) <= cell_px * 3.4:
+            eligible_pairs.append((index, step))
+            index = step
+            continue
+        index += 1
     report = {'status': 'rejected', 'reason': 'too_few_moving_pairs'}
-    if len(eligible) < 12:
+    if len(eligible_pairs) < 12:
         return None, report
-    indices = eligible[np.linspace(0, len(eligible) - 1, 12, dtype=int)]
-    pairs = [(int(i), int(i + 1)) for i in indices]
+    pairs = [eligible_pairs[int(i)] for i in np.linspace(0, len(eligible_pairs) - 1, 12, dtype=int)]
     references = np.linspace(0, len(positions) - 1, 5, dtype=int)
     images = {}
     for i in sorted(set(references) | {i for pair in pairs for i in pair}):
@@ -2616,22 +2730,29 @@ def rebuild_v2(output, data, registration='joint'):
     observed = np.zeros((*size[::-1], 3), np.uint8)
     best_weight = np.zeros_like(coverage)
     center_weight = cv2.distanceTransform(valid, cv2.DIST_L2, 3)
+    # 下面两个量在整个融合循环里不变，原先放在循环内等于每帧重算一次 1100x462 的布尔/浮点临时数组。
+    source_blank = source == 0
+    valid_coverage = valid.astype(np.float32) / 255
     source_frames = np.full(size[::-1], -1, np.int32)
     enemy_observations = []
     player_observations = []
     player = None
     mosaic_frames = 0
+    # 拖动中采的 drift 帧是运动中拍的，位置带时延：密集扫描里能占到三分之二（30 章 kf25 是 68.5%），
+    # 当成静止观测喂进融合会把同一段路的投票摊开。实测同一密集包：全部帧 10.5% 的洞，只用静止帧 0.6%。
+    # 因此默认只用静止帧；扫描器显式声明 mosaic_frame_kinds 时才按它过滤。
+    mosaic_kinds = tuple(data.get('mosaic_frame_kinds') or ('node', 'origin'))
     for frame, position in zip(data['frames'], positions):
-        if data.get('mosaic_frame_kinds') and frame['kind'] not in data['mosaic_frame_kinds']:
+        if frame['kind'] not in mosaic_kinds:
             continue
         mosaic_frames += 1
         image = cv2.imread(str(output / frame['file']))
         road_mask = terrain(image)
-        road_mask[source == 0] = 0
+        road_mask[source_blank] = 0
         mask = cv2.warpPerspective(road_mask, matrix, warp_size, flags=cv2.INTER_NEAREST)
         transform = np.float32([[1, 0, position[0] - lo[0]], [0, 1, position[1] - lo[1]]])
         weight = cv2.warpAffine(center_weight, transform, size)
-        coverage += cv2.warpAffine(valid.astype(np.float32) / 255, transform, size)
+        coverage += cv2.warpAffine(valid_coverage, transform, size)
         roads += cv2.warpAffine(mask.astype(np.float32) / 255, transform, size)
         color = cv2.warpAffine(cv2.warpPerspective(image, matrix, warp_size), transform, size)
         select = weight > best_weight
@@ -2702,7 +2823,7 @@ def rebuild_v2(output, data, registration='joint'):
         'orientation': display_orientation, 'scan_to_map': orientation.tolist(), 'warp_size': warp_size,
         'capture_mode': data.get('capture_mode', 'legacy_live_keyframes'),
         'mosaic_frames': mosaic_frames,
-        'mosaic_frame_kinds': data.get('mosaic_frame_kinds', 'all'),
+        'mosaic_frame_kinds': list(mosaic_kinds),
         'localized_frames': len(data['frames']), 'excluded_unlocalized_frames': [],
         'confirmed_clamps': data.get('clamps', []),
         'self_marker': player, 'enemy_markers': len(enemies),
@@ -2730,6 +2851,9 @@ def parse_args(argv=None):
     parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--roi', nargs=4, type=int, default=[644, 280, 1130, 742])
     parser.add_argument('--client', nargs=2, type=int, default=[1776, 999])
+    parser.add_argument('--keep-window-position', action='store_true',
+                        help='Keep the current window position when the client size already matches '
+                             '(for an elevated game this process may not move the window).')
     parser.add_argument('--map-open', nargs=2, type=int, default=[42, 98],
                         help='Compact minimap expand button in client coordinates.')
     parser.add_argument('--step', type=int, default=180)

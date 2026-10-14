@@ -48,17 +48,12 @@ class MovementJobs:
                 raise ValueError('已有移动测试正在运行，请等待结束或先停止测试。')
             loaded = self.store.load(payload['id'])
             action = payload.get('action', 'move')
-            if action not in ('move', 'calibrate'):
+            if action != 'move':
                 raise ValueError('未知移动操作。')
             if (payload.get('revision') != loaded['revision']
                     or payload.get('image_sha256') != loaded['annotations']['image_sha256']):
                 raise ValueError('地图或标注已变化，请重新加载后选择目标。')
             target = payload.get('target')
-            if action == 'calibrate':
-                metadata = json.loads((Path(loaded['path']) / 'map.json').read_text(encoding='utf-8'))
-                if metadata.get('coordinate_model') != 'local_parallax':
-                    raise ValueError('此采集入口用于分层地图。')
-                target = [0, 0]
             if (not isinstance(target, list) or len(target) != 2
                     or any(type(v) not in (int, float) or not math.isfinite(v)
                            or not 0 <= v < bound for v, bound in zip(target, loaded['size']))):
@@ -97,22 +92,14 @@ class MovementJobs:
             return copy.deepcopy(job)
 
     def calibration(self, identifier, difficulty):
-        """查询移动标定状态；分层地图在移动任务内自动做两点临时标定，不再读取保存的标定文件。
-
-        平面地图返回 shared，分层地图返回 ready 并说明临时标定方式；查询只读元数据，不取得游戏控制。
-        """
+        """查询移动标定状态；平面地图统一使用共用标定文件，查询只读元数据，不取得游戏控制。"""
         if difficulty not in ('normal', 'hard'):
             raise ValueError('请选择普通或困难难度。')
         loaded = self.store.load(identifier)
         metadata = json.loads((Path(loaded['path']) / 'map.json').read_text(encoding='utf-8'))
-        if metadata.get('coordinate_model') is None:
-            return dict(state='shared', message='平面地图统一使用第 38 章现用标定，不限制章节。')
-        if metadata.get('coordinate_model') != 'local_parallax':
-            return dict(state='unsupported', message='非平面地图移动待定，尚无可用的移动标定。')
-        surfaces = len(metadata.get('surfaces') or [])
-        return dict(state='ready', temporary=True,
-                    message='分层地图与平面地图统一走紧凑小地图闭环移动，不再需要会话标定。',
-                    detail=f'表面编号 {surfaces} 个，同层道路按表面并集判定' if surfaces else '包未聚合表面编号，同层道路按观测帧的局部平面判定')
+        if metadata.get('coordinate_model') is not None:
+            return dict(state='unsupported', message='只支持平面地图。')
+        return dict(state='shared', message='平面地图统一使用第 38 章现用标定，不限制章节。')
 
     def status(self):
         """读取原子发布的状态，进程退出而没有终态时也不能误报成功。

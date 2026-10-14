@@ -52,23 +52,19 @@ def inside(point, bounds):
     return bool(np.isfinite([x, y]).all() and left <= x <= right and top <= y <= bottom)
 
 
-def field_chart(localizer, observation, anchor, calibration=None):
+def field_chart(localizer, observation, anchor):
     """从实测箭头锚点绑定 ROI→场景投影，保留透视项而不外推单点 Jacobian。
 
     observation 必须包含真实小队的地图坐标、player_roi 和 ROI→map 矩阵，anchor 使用客户区像素。
-    平面地图采用配套场景矩阵，分层地图采用实测位移矩阵；返回以箭头锚点校正平移项的 ROI→场景单应。
+    返回以箭头锚点校正平移项的 ROI→场景单应。
     """
     if observation.get('position_kind') != 'squad' or observation.get('player_roi') is None:
         raise ValueError('必须先定位真实小队，才能建立镜头移动基准。')
     if np.linalg.norm(project(observation['roi_to_map'], observation['player_roi']) - observation['position']) > 2:
         raise ValueError('小队坐标与当前地图投影不一致。')
     affine = np.eye(3)
-    if calibration is None:
-        affine[:2, :2] = goto.A_INV
-        chart = affine @ np.asarray(localizer.old_matrix, float)
-    else:
-        affine[:2, :2] = np.asarray(calibration['matrix'], float)[:2, :2]
-        chart = affine @ np.asarray(observation['roi_to_map'], float)
+    affine[:2, :2] = goto.A_INV
+    chart = affine @ np.asarray(localizer.old_matrix, float)
     offset = np.asarray(anchor, float) - project(chart, observation['player_roi'])
     translation = np.eye(3)
     translation[:2, 2] = offset
@@ -146,11 +142,11 @@ def pan_scene(session, drag):
     session.pause(1.2)
 
 
-def observe_camera(session, squad_position, surface=None):
+def observe_camera(session, squad_position):
     """允许小队离屏；接受的视野坐标只用于镜头，不更新冻结的小队位置。
 
-    平移后重新配准展开地图；分层地图无小队圆环时使用可见的同层道路点。
-    返回的视野参考只更新镜头位置；若可见小队偏离冻结坐标超过 12 地图像素，或定位未通过，则拒绝继续。
+    平移后重新配准展开地图。返回的视野参考只更新镜头位置；
+    若可见小队偏离冻结坐标超过 12 地图像素，或定位未通过，则拒绝继续。
     """
     session.check()
     session.identity(goto.capture_client(session.win))
@@ -158,28 +154,7 @@ def observe_camera(session, squad_position, surface=None):
     image = session.win.capture()
     session.index += 1
     tag = f'{getattr(session, "tag", "camera")}_{session.index:03}'
-    if hasattr(session, 'calibration'):
-        players, _ = perception.detect_markers(image, np.eye(3))
-        if len(players) > 1:
-            raise ValueError('镜头观测中存在多个小队标记。')
-        if players:
-            report = session.localizer.locate_squad(image, session.folder / f'{tag}.jpg')
-        else:
-            road = goto.mr.terrain(image)
-            ys, xs = np.nonzero(road[20:420, 20:466])
-            if not len(xs):
-                raise ValueError('镜头视野没有可定位的本层道路。')
-            points = np.column_stack([xs + 20, ys + 20])
-            point = points[np.argmin(np.linalg.norm(points - [243, 231], axis=1))]
-            report = session.localizer.locate(image, point, review=session.folder / f'{tag}.jpg')
-            report.update(position_kind='viewport_reference', player_roi=None)
-        if report['status'] != 'accepted':
-            raise ValueError(f'镜头分层定位失败：{report.get("reason", "证据不足")}')
-        from .edited_map import road_distance
-        if surface is None or road_distance(surface, report['position']) > 2:
-            raise ValueError('镜头定位点不在已标定的同层道路内。')
-    else:
-        report = session.localizer.locate(image, tag, require_player=False)
+    report = session.localizer.locate(image, tag, require_player=False)
     if np.mean(goto.mr.terrain(image) != goto.mr.terrain(session.win.capture())) > .03:
         raise ValueError('镜头定位期间画面仍在变化。')
     if (report.get('position_kind') == 'squad'
@@ -214,7 +189,7 @@ def scene_unchanged(before, after):
                 and np.mean(cv2.absdiff(*frames) <= 6) > .95)
 
 
-def plan_world_move(session, observation, target, calibration=None, max_pans=8, anchor=None, surface=None):
+def plan_world_move(session, observation, target, max_pans=8, anchor=None):
     """优先点击完整目标；视野外先平移，不按固定地图距离切成短步。
 
     以真实小队观测和箭头锚点建立场景投影，target 是调用者已验证的地图目标。
@@ -234,7 +209,7 @@ def plan_world_move(session, observation, target, calibration=None, max_pans=8, 
     session.preview(field)
     if anchor is None:
         anchor = resolve_anchor(session, field, observation)
-    chart = field_chart(session.localizer, observation, anchor, calibration)
+    chart = field_chart(session.localizer, observation, anchor)
     view, previous_center, responses = observation, None, []
     batch_pans, batch_drag = 0, np.zeros(2)
     batch_start = observation
@@ -290,8 +265,7 @@ def plan_world_move(session, observation, target, calibration=None, max_pans=8, 
         needs_fix = reason is not None
         if needs_fix:
             session.emit(camera_correction_reason=reason)
-            updated = (observe_camera(session, squad_position, surface=surface) if calibration is not None
-                       else observe_camera(session, squad_position))
+            updated = observe_camera(session, squad_position)
             roi, click = target_projection(chart, updated, target)
             if (np.linalg.norm(project(updated['roi_to_map'], [243, 231])
                                - project(batch_start['roi_to_map'], [243, 231])) < 3
@@ -443,7 +417,7 @@ def fusion_acceptable(session, candidate, matrix, road, valid, origin, predicted
     覆盖，失败区域 IoU 天花板 ~0.67）会冤杀正确位置。本判据改问三件事：候选位置落在
     「拖动起点→期望落点」走廊内（响应不足或过冲都在走廊上，偏离方向即拒绝，半宽随
     残差自适应）、容差 IoU 达标（形状真伪由 0.36 对 0.07~0.11 的判别间隔把关）、
-    并保持既有 sane 与推进条件。分层地图没有底图道路模板（localizer.road 缺失）或
+    并保持既有 sane 与推进条件。底图道路模板缺失（localizer.road 缺失）或
     无预测先验时返回 False，维持原有保守行为。
     返回 True 表示该候选可作为本帧镜头矩阵。
     """
@@ -478,28 +452,14 @@ def fusion_acceptable(session, candidate, matrix, road, valid, origin, predicted
 
 
 def compact_viewport(session, matcher, panel, road, valid):
-    """紧凑面板的无种子视野定位：平面地图用道路配准，分层地图用注视点附近的道路点做局部表面配准。
+    """紧凑面板的无种子视野定位：用道路配准。
 
     返回 dict(matrix, a, viewport, iou, status)，matrix 为面板→地图单应；失败抛 ValueError。
-    分层地图的比例尺从注视点局部 Jacobian 估计（展开 ROI 的像素≈地图像素），误差由响应闭环修正。
     """
-    if matcher is not None:
-        result = matcher.match_panel(panel, road, valid, np.array([panel.shape[1] / 2, panel.shape[0] / 2]))
-        matrix = np.asarray(result['roi_to_map'], float)
-        return dict(matrix=matrix, a=float(result['a']), viewport=project(matrix, goto.GAZE),
-                    iou=float(result['road_iou']), status=result['status'])
-    ys, xs = np.nonzero(road)
-    if not len(xs):
-        raise ValueError('紧凑面板没有道路证据。')
-    points = np.column_stack((xs, ys)).astype(float)
-    point = points[np.argmin(np.linalg.norm(points - goto.GAZE, axis=1))]
-    if np.linalg.norm(point - np.asarray(goto.GAZE, float)) > 40:
-        raise ValueError('注视点附近没有道路证据。')
-    report = session.localizer.locate(panel, point, valid)
-    matrix = np.asarray(report['roi_to_map'], float)
-    scale = float(np.sqrt(abs(np.linalg.det(jacobian(matrix, goto.GAZE)))))
-    return dict(matrix=matrix, a=scale, viewport=project(matrix, goto.GAZE),
-                iou=float(report.get('road_iou', 0.)), status=report['status'])
+    result = matcher.match_panel(panel, road, valid, np.array([panel.shape[1] / 2, panel.shape[0] / 2]))
+    matrix = np.asarray(result['roi_to_map'], float)
+    return dict(matrix=matrix, a=float(result['a']), viewport=project(matrix, goto.GAZE),
+                iou=float(result['road_iou']), status=result['status'])
 
 
 def start_viewport(start, squad_position, tolerance=60.):
@@ -548,7 +508,7 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
 
 
 def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3):
-    """平面与分层地图共用的镜头规划：目标进入可点范围时按小队相对位置落点，否则先平移接近。
+    """镜头规划：目标进入可点范围时按小队相对位置落点，否则先平移接近。
 
     对准在地图空间进行：视野中心由道路配准给出，远处目标不经逆单应外推（透视地平线）。
     拖动量取注视点处局部 Jacobian 换算，比例误差由实测响应闭环修正；帧间链式跟踪兜底
@@ -564,23 +524,19 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     所在处，那是接近手段。
     起始帧的视野中心以与展开图小队定位一致为准（start_viewport），不要求 accepted。
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
-    全局配准被接受即视为批末校正已完成。分层地图没有对应的展开配准入口，保持原行为。
+    全局配准被接受即视为批末校正已完成。
     实测（点击固定注视点像素时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     """
     from dev_tools.wiki_collectible_match import MapMatcher
-    from .parallax_localizer import ParallaxLocalizer
 
     target = np.asarray(target, float)
     squad_position = np.asarray(observation['position'], float)
     if np.linalg.norm(target - squad_position) < 2:
         raise ValueError('当前落点与小队过近。')
-    if isinstance(getattr(session, 'localizer', None), ParallaxLocalizer):
-        matcher = None
-    else:
-        matcher = getattr(session, 'compact_matcher', None)
-        if matcher is None:
-            matcher = MapMatcher(settings.package)
-            session.compact_matcher = matcher
+    matcher = getattr(session, 'compact_matcher', None)
+    if matcher is None:
+        matcher = MapMatcher(settings.package)
+        session.compact_matcher = matcher
     goto.map_close(session.win)
     field = goto.capture_client(session.win)
     session.identity(field)

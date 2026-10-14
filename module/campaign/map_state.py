@@ -1,19 +1,16 @@
 """推图期间的地图信息。
 
 静态层 `StaticMap` 按章节加载一次，只回答三个问题：这个点能不能站、两点是否连通、某类目标有哪些候选。
-观测层就是 `CampaignObserver.observe` 产出的快照，每帧整体替换；这里只提供读取它所需的表面归属，不累积历史。
+观测层就是 `CampaignObserver.observe` 产出的快照，每帧整体替换；这里只提供读取它所需的道路归属，不累积历史。
 """
 
 import json
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 from dev_tools.map_annotator import COORDINATES, validate_annotations
 from dev_tools.map_connectivity import decode_labels, ensure_data, package_road
-from module.campaign_prototype.local_projection import frame_plane_to_map
-from module.campaign_prototype.parallax_movement import surface_identity, surface_union
 
 # 标记中心和人工标注都会偏出道路几个像素，按最近的道路像素归属分量。
 ROAD_TOLERANCE = 12
@@ -40,18 +37,16 @@ def point_category(item):
 class StaticMap:
     """章节地图的只读信息，与 MapMatcher 共享同一份底图与道路修订。
 
-    平面地图的连通性来自 connectivity 的 effective 分区；分层地图按小队所在表面的道路连通分量判断，
-    表面之间不互通。两种模型都只在道路附近归属分量，远离道路的点视为不可站。
-    `navigation.TargetFinder` 从这里读道路、分区、标注与同层掩码，不再自行加载。
+    平面地图的连通性来自 connectivity 的 effective 分区，只在道路附近归属分量，远离道路的点视为不可站。
+    `navigation.TargetFinder` 从这里读道路、分区与标注，不再自行加载。
     """
 
     def __init__(self, package, matcher):
         """加载章节地图包，按坐标模型准备道路与连通分区。
 
-        matcher 必须是定位同一章节的 MapMatcher：底图摘要、道路修订和分层配准器都从它取，
+        matcher 必须是定位同一章节的 MapMatcher：底图摘要与道路修订都从它取，
         保证静态层与定位用的是同一份底图，否则连通判断会和实际定位错位。
         坐标模型为 None 时是平面章节，需要自行合成道路掩码并计算 8 像素网格上的 effective 分区；
-        local_parallax 是分层章节，道路直接复用配准器的掩码，连通性按表面分别判断。
         其余模型暂不支持，此时 supported 为假、road 为 None，调用方应跳过与道路相关的查询。
         """
         self.package = Path(package)
@@ -60,8 +55,7 @@ class StaticMap:
         self.model = metadata.get('coordinate_model')
         self.size = tuple(int(v) for v in metadata['size'])
         self.image_sha256 = matcher.digest
-        self.localizer = matcher.surface_matcher
-        self.supported = self.model in (None, 'local_parallax')
+        self.supported = self.model is None
         self.annotations = self._document(matcher.digest, metadata['size'])
         self.road = None
         self.regions = None
@@ -70,8 +64,6 @@ class StaticMap:
             connectivity = ensure_data(self.package, metadata, self.annotations)
             self.road = road.astype(np.uint8)
             self.regions = decode_labels(connectivity['effective'], road[::GRID, ::GRID].shape)
-        elif self.model == 'local_parallax':
-            self.road = self.localizer.road.astype(np.uint8)
         self._components = {}
         self.points = self._points()
         self.transfers = self._transfers()
@@ -180,39 +172,16 @@ class StaticMap:
         return [item for item in self.points if item['category'] in categories]
 
     def surface_key(self, snapshot):
-        """观测所在表面的缓存键；平面地图为 None，分层地图没有表面信息时抛错。"""
-        if self.model is None:
-            return None
-        surface = snapshot.get('surface')
-        if not surface:
-            raise ValueError('定位结果没有表面信息，无法限定同层道路。')
-        identity = surface.get('id')
-        if identity is None:
-            identity = surface_identity(self.localizer, surface)
-        if identity is not None:
-            return int(identity)
-        return ('frame', int(surface['reference_frame']), int(surface['local_surface']))
+        """观测分量查询的缓存键；平面地图统一为 None。"""
+        return None
 
     def _labels(self, key):
-        """分量标签图：平面地图按网格分区展开到像素；分层地图按表面道路的连通分量。"""
+        """分量标签图：按 8 像素网格分区展开回全分辨率。"""
         if key in self._components:
             return self._components[key]
-        if self.model is None:
-            labels = np.repeat(np.repeat(self.regions, GRID, axis=0), GRID, axis=1)
-            labels = labels[:self.size[1], :self.size[0]].astype(np.int32)
-            labels[self.road == 0] = 0
-        else:
-            metadata = self.localizer.metadata
-            if isinstance(key, tuple):
-                _, frame, label = key
-                plane = metadata['frame_support'][frame]['local_planes'][label]
-                mask = cv2.warpPerspective((self.localizer.references[frame]['labels'] == label).astype(np.uint8),
-                                           frame_plane_to_map(metadata, frame, plane), self.size,
-                                           flags=cv2.INTER_NEAREST)
-            else:
-                mask = surface_union(self.localizer, key).copy()
-            mask &= self.road
-            _, labels = cv2.connectedComponents(mask)
+        labels = np.repeat(np.repeat(self.regions, GRID, axis=0), GRID, axis=1)
+        labels = labels[:self.size[1], :self.size[0]].astype(np.int32)
+        labels[self.road == 0] = 0
         self._components[key] = labels
         return labels
 
@@ -252,12 +221,11 @@ class StaticMap:
     def walkable(self, point, key=None):
         """这个地图坐标能不能站人。
 
-        判据就是能否归属到某个道路连通分量，因此远离道路（超出 ROAD_TOLERANCE）的点一律不可站；
-        分层地图要传 key 指明小队所在表面，缺省会按整张图取并，可能把另一层的道路算进来。
+        判据就是能否归属到某个道路连通分量，因此远离道路（超出 ROAD_TOLERANCE）的点一律不可站。
         """
         return self.component(point, key) != 0
 
     def connected(self, start, target, key=None):
-        """两点是否在同一连通分量；分层地图的 key 指明小队所在表面。"""
+        """两点是否在同一连通分量。"""
         home = self.component(start, key)
         return home != 0 and self.component(target, key) == home

@@ -9,7 +9,6 @@
 - 中文 Windows 客户区固定为 `1776×999`；展开小地图 ROI 为 `(644, 280, 1130, 742)`，尺寸 `486×462`。
 - 每章采集 6 个训练样本和 3 个独立验证样本，得到采样道路附近的局部位移标定。
 - 新结果写入该地图包的 `movement_calibration/normal/flat_calibration.json`。
-  分层地图不保存标定文件，移动任务开始时自动做两点临时标定。
 - 当前平面移动仍使用 `module/campaign_prototype/assets/calibration.json` 的共享标定。
   新采集文件带有 `runtime_auto_loaded=false`、`whole_chapter_verified=false`，不会自动接入移动执行器。
   管理界面显示 `shared`、地图扫描完整、到达某一点，都不能证明逐章标定已通过。
@@ -22,7 +21,7 @@
 | [dev_tools/minimap_chapters.py](../dev_tools/minimap_chapters.py) | 提供章节 OCR、切章等待、进度写入；其独立命令用于地图扫描，不是点击位移标定入口。 |
 | [prepare_package.py](../module/campaign_prototype/prepare_package.py) | 从静态地图导出独立实验包，绑定共享标定与文件哈希；只处理本地数据。 |
 | [check_controls.py](../module/campaign_prototype/check_controls.py) | `--cycles 0` 截图检查；`1..10` 次展开／收回检查，不移动小队。仍会取得游戏输入控制。 |
-| [manual_move.py](../module/campaign_prototype/manual_move.py) | `prepare` 和 `GameSession` 负责快照、身份检查、定位、点击及停稳；其 `action=calibrate` 对分层地图只试跑一次两点临时标定并报告残差，平面批量标定使用上述采集入口。 |
+| [manual_move.py](../module/campaign_prototype/manual_move.py) | `prepare` 和 `GameSession` 负责快照、身份检查、定位、点击及停稳；平面批量标定使用上述采集入口。 |
 | [arrow_anchor.py](../module/campaign_prototype/arrow_anchor.py)、[movement_feedback.py](../module/campaign_prototype/movement_feedback.py) | 箭头周期采样与地面锚点恢复；本采集器传入 `allow_scene=False`，必须获得箭头锚点。 |
 | [camera_navigation.py](../module/campaign_prototype/camera_navigation.py) | 场景投影、有效落点与紧凑小地图停稳检测。 |
 | [surface_motion.py](../module/campaign_prototype/surface_motion.py) | `fit_calibration` 执行两轴拟合、独立样本验证和支持域检查，可离线运行。 |

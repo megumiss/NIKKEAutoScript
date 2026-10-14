@@ -41,16 +41,14 @@ def walking_distance(road, route_labels, start, target):
 class TargetFinder:
     """选择下一个目标：可连通道路上最近的普通敌人，没有敌人时是附近的地面机关或电梯。
 
-    平面地图使用整幅道路和连通分区；分层地图只用小队所在表面的连通道路，跨分区、跨表面的
-    目标不会被选中。只有点状标注给出唯一目标点，折线和多边形机关、电梯不参与选择。
-    道路、分区、标注与同层掩码都来自章节的 StaticMap，这里不自行加载。
+    使用整幅道路和连通分区，跨分区的目标不会被选中。只有点状标注给出唯一目标点，
+    折线和多边形机关、电梯不参与选择。道路、分区与标注都来自章节的 StaticMap，这里不自行加载。
     """
 
     def __init__(self, chart):
         """从章节 StaticMap 取出目标选择需要的道路、分区与标注。
 
-        平面地图在这里就固定好整幅道路和连通分区；分层地图的道路要按小队所在表面逐帧取，
-        所以 road 置空、分区不预存。遇到暂不支持的坐标模型只告警并把 supported 置假，
+        遇到暂不支持的坐标模型只告警并把 supported 置假，
         find 会直接返回 None，让推图退回人工而不是拿错误的道路规划。
         """
         self.chart = chart
@@ -60,16 +58,8 @@ class TargetFinder:
         if not self.supported:
             logger.warning(f'第 {self.chapter} 章地图模型 {self.model} 暂不支持目标规划，将不选择目标。')
         self.annotations = chart.annotations
-        self.road = chart.road if self.model is None else None
+        self.road = chart.road
         self.route_labels = chart.regions
-        self._surface_warned = False
-
-    def _walkable(self, snapshot, squad):
-        """本次决策使用的道路掩码和分区标签；分层地图要求观测带表面信息。"""
-        if self.model is None:
-            return self.road, self.route_labels
-        key = self.chart.surface_key(snapshot)
-        return self.chart.component_mask(key, squad).astype(np.float32), None
 
     def _nearest(self, field, road, route_labels, squad, candidates, limit):
         """取行走距离最近且可达的候选；limit 对直线距离和行走距离同时生效。
@@ -114,13 +104,7 @@ class TargetFinder:
         squad = np.asarray(snapshot['squad'], float)
         if squad.shape != (2,) or not np.isfinite(squad).all() or not self.supported:
             return None
-        try:
-            road, route_labels = self._walkable(snapshot, squad)
-        except ValueError as exc:
-            if not self._surface_warned:
-                logger.warning(f'第 {self.chapter} 章暂不能选择目标：{exc}')
-                self._surface_warned = True
-            return None
+        road, route_labels = self.road, self.route_labels
         field = cv2.distanceTransform(np.asarray(road <= 0, np.uint8), cv2.DIST_L2, 5)
         enemies = [(('enemy', None, ''), np.asarray(item['position'], float))
                    for item in snapshot.get('enemies', []) if item.get('kind') == 'normal']

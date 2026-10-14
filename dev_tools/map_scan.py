@@ -47,16 +47,13 @@ class ScanJobs:
                 raise ValueError('已有地图扫描正在运行。')
             if not isinstance(payload, dict):
                 raise ValueError('扫描参数必须为对象。')
-            chapter, process_3d = payload.get('chapter'), payload.get('process_3d')
+            chapter = payload.get('chapter')
             stroke = payload.get('stroke_px', 120)
             if type(chapter) is not int or not 1 <= chapter <= 99:
                 raise ValueError('章节必须为 1～99 的整数。')
-            if type(process_3d) is not bool:
-                raise ValueError('请选择是否启用 3D 处理。')
             if type(stroke) not in (int, float) or not 0 < stroke <= 240:
                 raise ValueError('扫描步长必须大于 0，且不超过 240。')
-            # 3D 章节默认 40px 保存帧间距：39、40 章实测轨迹数翻倍、稠密视差更稳；平面章节沿用 80px。
-            keyframe = payload.get('keyframe_px', 40 if process_3d else 80)
+            keyframe = payload.get('keyframe_px', 80)
             if type(keyframe) not in (int, float) or not 0 < keyframe <= 240:
                 raise ValueError('保存帧间距必须大于 0，且不超过 240。')
             identifier = secrets.token_hex(10)
@@ -68,12 +65,10 @@ class ScanJobs:
                        '--start', str(chapter), '--end', str(chapter), '--output', str(folder),
                        '--driver-root', str(ROOT), '--stroke-px', str(stroke), '--keyframe-px', str(keyframe),
                        '--retries', '0']
-            if process_3d:
-                command.append('--process-3d')
             with (folder / 'worker.log').open('w', encoding='utf-8') as stream:
                 self.process = subprocess.Popen(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT,
                                                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-            self.job = dict(id=identifier, chapter=chapter, process_3d=process_3d, stroke_px=stroke,
+            self.job = dict(id=identifier, chapter=chapter, stroke_px=stroke,
                             keyframe_px=keyframe, output=str(folder),
                             map_id=f'scans/{identifier}/chapter_{chapter:02d}')
             return self.status()
@@ -106,9 +101,7 @@ class ScanJobs:
                 result['frames'] = len(scan.get('frames', []))
             except (OSError, ValueError):
                 pass
-            phases = {'layered': '正在进行 3D 分层重建…', 'loops': '正在用重访帧对闭环修正相机…',
-                      'surfaces': '正在按高度连通聚合表面编号…', 'redraw': '正在按原始道路区域投影重绘…',
-                      'export': '正在导出地图…', 'publishing': '正在发布地图…', 'complete': '处理完成。'}
+            phases = {'rebuild': '正在重建地图…', 'export': '正在导出地图…', 'complete': '处理完成。'}
             try:
                 phase = json.loads((package / 'processing_status.json').read_text(encoding='utf-8'))['phase']
                 result['message'] = phases.get(phase, result['message'])

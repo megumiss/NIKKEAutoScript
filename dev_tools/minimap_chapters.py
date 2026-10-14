@@ -111,7 +111,7 @@ def write_progress(path, results):
     temporary.replace(path)
 
 
-def existing_package(package, chapter, process_3d=False):
+def existing_package(package, chapter):
     """核对已有地图的章节、图片哈希与道路配准状态，决定能否跳过重复采集。"""
     if not (package / 'map.json').exists():
         return False
@@ -120,15 +120,8 @@ def existing_package(package, chapter, process_3d=False):
         raise ValueError('Existing package belongs to a different chapter.')
     if hashlib.sha256((package / 'map.png').read_bytes()).hexdigest() != metadata['image_sha256']:
         raise ValueError('Existing map hash changed; preserve the package for inspection.')
-    if metadata.get('processing_3d', False) != process_3d:
+    if metadata.get('coordinate_model') is not None or metadata.get('processing_3d'):
         raise ValueError('Existing package uses a different processing mode; choose a new output root.')
-    if process_3d:
-        if (metadata.get('map_render_mode') != 'projected_raw_regions'
-                or metadata.get('capture', {}).get('status') != 'roads_exhausted'
-                or not all((package / name).is_file() for name in
-                           ['redraw_data.npz', 'surface_data.npz', 'reference.png', 'source/scan.json'])):
-            raise ValueError('Incomplete 3D package; preserve it and choose a new output root.')
-        return True
     if metadata['capture'].get('registration', {}).get('status') != 'joint_grid_road':
         raise ValueError('Existing package failed registration; use a new output root to recollect.')
     if metadata['capture']['status'] != 'roads_exhausted':
@@ -147,7 +140,7 @@ def archive_source(package):
     source.rename(target)
 
 
-def finish_scan(package, chapter, process_3d=False, stop=None):
+def finish_scan(package, chapter, stop=None):
     """仅重建已完成的同章扫描，再导出静态包，支持进程中断后的离线续跑。"""
     output = package / 'source'
     data = json.loads((output / 'scan.json').read_text(encoding='utf-8'))
@@ -155,80 +148,8 @@ def finish_scan(package, chapter, process_3d=False, stop=None):
         raise ValueError('Saved scan belongs to a different chapter.')
     if data.get('status') != 'roads_exhausted':
         raise ValueError(f"Scan is incomplete: {data.get('stop_reason', data.get('status'))}")
-    if process_3d:
-        return finish_scan_3d(package, chapter, data, stop)
     rebuild(output)
     return export_static(package, chapter)
-
-
-def finish_scan_3d(package, chapter, scan, stop=None):
-    """正式 3D 分支：分层重建、重访闭环、原帧区域重绘、最后发布元数据，保留各阶段证据。"""
-    from dev_tools.minimap_layered import reconstruct
-    from dev_tools.minimap_loops import close_loops
-    from dev_tools.minimap_projected_redraw import redraw
-    from dev_tools.minimap_surfaces import assign_surfaces
-
-    if any((package / name).exists() for name in ['map.json', 'annotations.json']):
-        raise ValueError('Preserve existing package and annotations; choose a new output root.')
-    work = package / '.processing' / str(time.time_ns())
-    work.mkdir(parents=True)
-
-    def stage(name):
-        """进入下一处理阶段：先响应停止请求，再写阶段文件并打印。
-
-        每个阶段入口都是一个安全的中止点，所以停止检查放在这里而不是各阶段内部。
-        阶段名写进 processing_status.json，标注工具靠它把「正在重建/闭环/导出」显示给使用者。
-        """
-        if stop is not None and stop.exists():
-            raise KeyboardInterrupt('Stopped by STOP file.')
-        write_progress(package / 'processing_status.json', {'phase': name})
-        print(f'Chapter {chapter}: {name}', flush=True)
-
-    stage('layered')
-    reconstruct(package / 'source', work / 'layered', stop_file=stop, depth_method='robust')
-    stage('loops')
-    baseline, loop_status = work / 'layered', None
-    try:
-        close_loops(work / 'layered', work / 'loops')
-        baseline = work / 'loops'
-    except ValueError as exc:
-        # 重访对不足时沿用未闭环基线，并把原因写进元数据，避免静默降级。
-        loop_status = {'status': 'skipped', 'reason': str(exc)}
-        print(f'Chapter {chapter}: loop closure skipped: {exc}', flush=True)
-    stage('surfaces')
-    surface_status = None
-    try:
-        assign_surfaces(baseline, work / 'surfaces')
-        baseline = work / 'surfaces'
-    except ValueError as exc:
-        # 没有足够局部平面时不影响重绘，只记录原因；移动端会退回单帧局部平面掩码。
-        surface_status = {'status': 'skipped', 'reason': str(exc)}
-        print(f'Chapter {chapter}: surface clustering skipped: {exc}', flush=True)
-    stage('redraw')
-    redraw(baseline, work / 'redrawn', regions=True, stop_file=stop)
-    stage('export')
-    final = work / 'redrawn'
-    metadata = json.loads((final / 'map.json').read_text(encoding='utf-8'))
-    summary = {'frames': len(scan['frames']), 'status': scan['status'], 'whole_camera_domain_verified': False,
-               'processing_3d': True}
-    metadata.update(chapter=chapter, processing_3d=True, capture=summary,
-                    coordinates={'unit': 'pixel', 'origin': 'top_left', 'x': 'right', 'y': 'down'},
-                    navigation_ready=False)
-    if loop_status is not None:
-        metadata['loop_closure'] = loop_status
-    if surface_status is not None:
-        metadata['surface_clustering'] = surface_status
-    for item in final.iterdir():
-        if item.name in ('source', 'map.json'):
-            continue
-        if item.is_dir():
-            shutil.copytree(item, package / item.name, dirs_exist_ok=True)
-        else:
-            shutil.copyfile(item, package / item.name)
-    stage('publishing')
-    write_progress(package / 'map.json', metadata)
-    write_progress(package / 'processing_status.json', {'phase': 'complete'})
-    return summary
 
 
 def capture_chapter(args, chapter, model, stop):
@@ -289,14 +210,20 @@ def run_batch(options, model):
             return 130
         package = root / f'chapter_{chapter:02d}'
         output = package / 'source'
-        args = parse_args(['--output', str(output), '--driver-root', str(options.driver_root),
-                           '--stroke-px', str(getattr(options, 'stroke_px', 120.0)),
-                           '--keyframe-px', str(getattr(options, 'keyframe_px', 80.0)),
-                           '--stop-file', str(stop)])
+        argv = ['--output', str(output), '--driver-root', str(options.driver_root),
+                '--stroke-px', str(getattr(options, 'stroke_px', 120.0)),
+                '--keyframe-px', str(getattr(options, 'keyframe_px', 80.0)),
+                '--stop-file', str(stop)]
+        if getattr(options, 'client', None):
+            # 游戏窗口已被外部调成非默认尺寸且权限不允许改写时，按实际客户区采集。
+            argv += ['--client', str(options.client[0]), str(options.client[1])]
+        if getattr(options, 'keep_window_position', False):
+            argv += ['--keep-window-position']
+        args = parse_args(argv)
         record = {'chapter': chapter, 'output': str(package), 'attempts': [], 'status': 'pending'}
         results.append(record)
         try:
-            if existing_package(package, chapter, getattr(options, 'process_3d', False)):
+            if existing_package(package, chapter):
                 record['status'] = 'existing'
             elif (package / 'annotations.json').exists() or (package / 'map.json').exists():
                 raise ValueError('Preserve existing annotations/package; choose a new output root.')
@@ -310,20 +237,13 @@ def run_batch(options, model):
                     try:
                         # A completed scan can survive a process crash before rebuild/export.
                         summary = None
-                        process_3d = getattr(options, 'process_3d', False)
-                        if (output / 'scan.json').exists() and (attempt == 0 or process_3d):
+                        if (output / 'scan.json').exists() and attempt == 0:
                             entry['phase'] = 'resume_rebuild'
                             try:
-                                summary = finish_scan(package, chapter, getattr(options, 'process_3d', False), stop)
+                                summary = finish_scan(package, chapter, stop)
                             except Exception as exc:
                                 entry['resume_error'] = f'{type(exc).__name__}: {exc}'
                                 if (package / 'map.json').exists() or (package / 'annotations.json').exists():
-                                    raise
-                                try:
-                                    saved_scan = json.loads((output / 'scan.json').read_text(encoding='utf-8'))
-                                except ValueError:
-                                    saved_scan = {}
-                                if process_3d and saved_scan.get('status') == 'roads_exhausted':
                                     raise
                         if summary is None:
                             if output.exists():
@@ -334,7 +254,7 @@ def run_batch(options, model):
                             capture_chapter(args, chapter, model, stop)
                             entry['phase'] = 'rebuild'
                             write_progress(progress, results)
-                            summary = finish_scan(package, chapter, getattr(options, 'process_3d', False), stop)
+                            summary = finish_scan(package, chapter, stop)
                         record.update(status='captured', frames=summary['frames'],
                                       whole_camera_domain_verified=summary['whole_camera_domain_verified'])
                         entry['status'] = 'captured'
@@ -387,11 +307,15 @@ def main(argv=None):
                         help='Capture directory (default: data/chapter_maps/local/captures).')
     parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--retries', type=int, default=2, help='Additional attempts per failed chapter.')
-    parser.add_argument('--process-3d', action='store_true',
-                        help='Use layered reconstruction and raw-region redraw; omit for flat maps.')
     parser.add_argument('--stroke-px', type=float, default=120.0, help='Cursor travel per drag (default: 120).')
     parser.add_argument('--keyframe-px', type=float, default=80.0,
                         help='Tracked camera travel between saved frames (default: 80).')
+    parser.add_argument('--client', type=int, nargs=2, default=None,
+                        help='Expected game client size (default: 1776x999; pass the actual size '
+                             'when the window cannot be resized by this process).')
+    parser.add_argument('--keep-window-position', action='store_true',
+                        help='Keep the current window position when the client size already matches '
+                             '(for an elevated game this process may not move the window).')
     options = parser.parse_args(argv)
     if not 1 <= options.end <= options.start <= 99:
         parser.error('Expected 1 <= end <= start <= 99.')

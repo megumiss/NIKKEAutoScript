@@ -172,9 +172,7 @@ class AnnotationStore:
         if metadata.get('image_sha256') != image_hash or metadata.get('size') != size:
             raise ConflictError('map.png 已变化，与 map.json 的尺寸或哈希不一致。请重新导出地图包。')
         coordinates = metadata.get('coordinates')
-        layered_pixels = (metadata.get('coordinate_model') == 'local_parallax'
-                          and coordinates == {**COORDINATES, 'unit': 'rectified_grid_pixel'})
-        if coordinates != COORDINATES and not layered_pixels:
+        if coordinates != COORDINATES:
             raise ValueError('当前工具只支持左上角原点的原图像素坐标。')
         reference = (package / 'reference.png').is_file()
         if reference:

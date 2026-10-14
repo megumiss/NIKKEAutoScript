@@ -17,41 +17,20 @@ else:
     from map_paths import DEFAULT_MAPS_ROOT, LOCAL_MAPS_ROOT
 
 PLANE_CACHE_KEYS = ('terrain_probability', 'projection', 'warp_size', 'origin', 'positions', 'scan_to_map')
-DEPTH_RUNTIME_KEYS = ('local_surface',)
-SCAN_RUNTIME_KEYS = ('version', 'chapter', 'roi', 'client', 'cell_px', 'matrix', 'warp_size', 'capture_mode',
-                     'display_orientation', 'frames')
-# 运行时定位只读相机、局部平面、表面编号与哈希；重绘审计、闭环报告、深度缓存指纹只服务离线重建，留在原始包里。
-LAYERED_AUDIT_KEYS = ('projected_redraw', 'loop_closure', 'surface_clustering', 'display_evidence', 'limitations',
-                      'depth_model', 'frame_to_map', 'base_map', 'source', 'depth_cache', 'depth_cache_sha256',
-                      'code_sha256', 'validation', 'rejected_observations', 'supported_observation_fraction',
-                      'tracks', 'map_render_mode', 'processing_3d', 'runtime', 'depth_directory', 'raw_frames')
 
 
 def runtime_files(source):
-    """按实际定位模型选择文件，分层地图保留参考帧与深度标签；移动标定在任务内临时生成，不随包导出。"""
+    """平面运行包只含定位实际读取的文件；移动标定在任务内临时生成，不随包导出。"""
     source = Path(source).resolve()
     metadata = json.loads((source / 'map.json').read_text(encoding='utf-8'))
+    if metadata.get('coordinate_model') is not None:
+        raise ValueError(f"Unsupported runtime coordinate model: {metadata.get('coordinate_model')}")
     names = ['map.png', 'map.json']
     if (source / 'annotations.json').exists():
         names.append('annotations.json')
     if (source / 'connectivity.json').exists():
         names.append('connectivity.json')
-    model = metadata.get('coordinate_model')
-    if model is None:
-        names.append('source/map_data.npz')
-    elif model == 'local_parallax':
-        names.append('source/scan.json')
-        scan = json.loads((source / 'source/scan.json').read_text(encoding='utf-8'))
-        for index, frame in enumerate(scan['frames']):
-            name = frame['file']
-            if Path(name).name != name or '\\' in name or '/' in name or ':' in name:
-                raise ValueError('Invalid source frame filename')
-            path = source / 'source' / name
-            if hashlib.sha256(path.read_bytes()).hexdigest() != metadata['source_sha256'][name]:
-                raise ValueError(f'Source frame hash mismatch: {name}')
-            names.extend([f'source/{name}', f'depth/frame_{index:05d}.npz'])
-    else:
-        raise ValueError(f'Unsupported runtime coordinate model: {model}')
+    names.append('source/map_data.npz')
     for name in names:
         path = (source / name).resolve()
         if not path.is_relative_to(source) or not path.is_file():
@@ -101,55 +80,20 @@ def _slim_npz(package, relative, keep, extras, report):
     report.append(dict(file=relative, dropped=sorted(set(present) - set(keep))))
 
 
-def _slim_json(package, relative, extras, report, keep=None, drop=(), update=None):
-    """按白名单或黑名单删掉 JSON 里的非运行期字段，必要时再就地改写字段。
-
-    keep 与 drop 可同时给：前者是白名单，后者用来在白名单之外额外剔除。
-    没有字段要删且没有 update 时直接返回，避免只因为缩进或键序变化就改掉文件哈希。
-    """
-    path = package / relative
-    data = json.loads(path.read_text(encoding='utf-8'))
-    removed = [key for key in data if (keep is not None and key not in keep) or key in drop]
-    if not removed and update is None:
-        return
-    for key in removed:
-        del data[key]
-    if update is not None:
-        update(data)
-    _stash(package, relative, extras)
-    content = (json.dumps(data, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
-    _write_atomic(path, lambda temporary: temporary.write_bytes(content))
-    report.append(dict(file=relative, dropped=removed))
-
-
 def slim_package(package, extras=None):
     """把运行包精简到正式推图实际读取的数据；被替换的原件搬到本地 runtime_extras，不进入版本库。
 
-    平面包的缓存只留道路概率与投影，分层包的深度文件只留局部表面标签，map.json/scan.json 去掉重绘审计与扫描轨迹。
-    底图、标注、连通文件和参考帧不改动，现有哈希绑定保持有效；重复执行不再产生改动。
+    平面包的缓存只留道路概率与投影。
+    底图、标注、连通文件不改动，现有哈希绑定保持有效；重复执行不再产生改动。
     """
     package = Path(package).resolve()
     metadata = json.loads((package / 'map.json').read_text(encoding='utf-8'))
     extras = Path(extras or LOCAL_MAPS_ROOT / 'runtime_extras' / package.name).resolve()
     report = []
-    model = metadata.get('coordinate_model')
-    if model is None:
-        if (package / 'source/map_data.npz').is_file():
-            _slim_npz(package, 'source/map_data.npz', PLANE_CACHE_KEYS, extras, report)
-    elif model == 'local_parallax':
-        scan_path = package / 'source/scan.json'
-        before = hashlib.sha256(scan_path.read_bytes()).hexdigest()
-        _slim_json(package, 'source/scan.json', extras, report, keep=SCAN_RUNTIME_KEYS)
-        after = hashlib.sha256(scan_path.read_bytes()).hexdigest()
-        update = None
-        if after != before and metadata.get('source_sha256', {}).get('scan.json') == before:
-            def update(data):
-                data['source_sha256']['scan.json'] = after
-        _slim_json(package, 'map.json', extras, report, drop=LAYERED_AUDIT_KEYS, update=update)
-        for path in sorted((package / 'depth').glob('frame_*.npz')):
-            _slim_npz(package, f'depth/{path.name}', DEPTH_RUNTIME_KEYS, extras, report)
-    else:
-        raise ValueError(f'Unsupported runtime coordinate model: {model}')
+    if metadata.get('coordinate_model') is not None:
+        raise ValueError(f"Unsupported runtime coordinate model: {metadata.get('coordinate_model')}")
+    if (package / 'source/map_data.npz').is_file():
+        _slim_npz(package, 'source/map_data.npz', PLANE_CACHE_KEYS, extras, report)
     if report:
         manifest = extras / 'manifest.json'
         history = json.loads(manifest.read_text(encoding='utf-8')) if manifest.exists() else []

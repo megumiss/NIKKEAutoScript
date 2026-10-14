@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-from functools import lru_cache
 from pathlib import Path
 
 import cv2
@@ -21,18 +20,6 @@ PARAMETER_GRID = sorted({(round(float(a), 2), round(float(b), 2))
                            for a in np.arange(1.9, 3.21, .1) for b in np.arange(.45, .851, .05)})
 # 热启动的小网格半径：a 步长 0.2、b 步长 0.15，各取 ±1 步；超出即视为尺度漂移，退回全扫。
 WARM_START_RADIUS = 1
-
-
-@lru_cache(maxsize=4)
-def cached_parallax_localizer(package):
-    """按地图包路径进程级复用 ParallaxLocalizer；同一包反复构建要重读上百帧做 SIFT。
-
-    ParallaxLocalizer 初始化对约 260 个原始帧逐一读图并计算 SIFT 特征（数秒），移动闭环里
-    观测与镜头配准各自新建 MapMatcher 时会重复这笔开销；定位器加载后只读数据，进程内共享
-    是安全的。缓存按路径计，包内容变化由 ParallaxLocalizer 自己的哈希校验兜底。
-    """
-    from module.campaign_prototype.parallax_localizer import ParallaxLocalizer
-    return ParallaxLocalizer(package)
 
 
 def minimap_masks(image):
@@ -133,11 +120,10 @@ def iou_surface(target, road, valid, matrix, size):
 
 
 class MapMatcher:
-    """把小地图面板配准到章节底图，按坐标模型分派到对应的定位实现。
+    """把小地图面板配准到章节底图。
 
-    平面章节在这里自己做粗搜索加全分辨率搜索；分层章节（local_parallax、orthographic_surfaces）
-    转交各自的定位器，并通过 surface_matcher 暴露出去——调用方据此判断「要不要带表面身份」。
-    底图哈希必须与元数据一致，否则配准结果对应的是另一张图。
+    平面章节在这里自己做粗搜索加全分辨率搜索。底图哈希必须与元数据一致，
+    否则配准结果对应的是另一张图。
     """
 
     def __init__(self, package):
@@ -147,17 +133,8 @@ class MapMatcher:
         self.digest = hashlib.sha256((self.package / 'map.png').read_bytes()).hexdigest()
         if meta['image_sha256'] != self.digest:
             raise ValueError('Map hash differs from metadata.')
-        self.surface_matcher = None
-        if meta.get('coordinate_model') == 'local_parallax':
-            from module.campaign_prototype.parallax_localizer import ParallaxLocalizer
-            self.surface_matcher = cached_parallax_localizer(self.package)
-            self.cache_digest = self.surface_matcher.cache_digest
-            return
-        if meta.get('coordinate_model') == 'orthographic_surfaces':
-            from module.campaign_prototype.surface_localizer import SurfaceLocalizer
-            self.surface_matcher = SurfaceLocalizer(self.package)
-            self.cache_digest = self.surface_matcher.cache_digest
-            return
+        if meta.get('coordinate_model') is not None:
+            raise ValueError('只支持平面地图包。')
         if meta.get('capture', {}).get('registration', {}).get('status') != 'joint_grid_road':
             raise ValueError('Map package lacks accepted road registration.')
         self.projection = np.asarray(meta['transforms']['projection'], float)
@@ -190,11 +167,7 @@ class MapMatcher:
         except ValueError:
             from dev_tools.wiki_minimap_crop import cropped_minimap
             panel, road, valid, player, cropped = cropped_minimap(image)
-        if self.surface_matcher is not None:
-            result = self.surface_matcher.locate(panel, player, valid, review)
-            result.update(roi=list(ROI), normalized_size=[1920, 1080], match_version=MATCH_VERSION)
-        else:
-            result = self.match_panel(panel, road, valid, player, review)
+        result = self.match_panel(panel, road, valid, player, review)
         if cropped is not None:
             x, y, right, bottom = cropped
             scale = np.array([panel.shape[1] / (right - x), panel.shape[0] / (bottom - y)])
@@ -205,7 +178,7 @@ class MapMatcher:
         return result
 
     def match_panel(self, panel, road, valid, player, review=None):
-        """已裁剪小地图的道路搜索，可作为分层原始帧配准的候选种子。
+        """已裁剪小地图的道路搜索。
 
         粗搜索优先在最近一次 accepted 配准的 (a, b) 附近做小网格热启动：热启动候选分达标的
         参数若与缓存一致则复用当时的粗搜 margin，可继续给出 accepted；命中失败或候选分过低
