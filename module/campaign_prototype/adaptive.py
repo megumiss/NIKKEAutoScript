@@ -35,7 +35,7 @@ class AdaptiveLocalizer(Localizer):
         if len(players) > 1 or (require_player and len(players) != 1):
             raise RuntimeError(f'Expected one squad ring, got {players}')
         player = np.asarray(players[0] if len(players) == 1 else [image.shape[1] / 2, image.shape[0] / 2])
-        road = goto.mr.terrain(image)
+        road = goto.terrain(image)
         valid = np.full(road.shape, 255, np.uint8)
         valid[:4] = valid[-4:] = 0
         valid[:, :4] = valid[:, -4:] = 0
@@ -88,7 +88,7 @@ class AdaptiveLocalizer(Localizer):
         source = cv2.warpPerspective((self.road * 255).astype(np.uint8), np.linalg.inv(matrix),
                                      road.shape[::-1])
         try:
-            _, shift = cv2.findTransformECC(goto.mr.terrain(image).astype(np.float32) / 255,
+            _, shift = cv2.findTransformECC(goto.terrain(image).astype(np.float32) / 255,
                                             source.astype(np.float32) / 255,
                                             np.eye(3, dtype=np.float32), cv2.MOTION_HOMOGRAPHY,
                                             (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 200, 1e-6),

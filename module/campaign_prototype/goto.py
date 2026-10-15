@@ -77,6 +77,9 @@ def capture_client(win):
     在确认前台和窗口几何后截取 1776×999 客户区，返回 BGR 数组。
     截图范围使用客户区屏幕原点并允许多显示器；失焦直接失败，不能返回其他窗口画面。
     """
+    if hasattr(win, 'client'):
+        win.check()
+        return win.client()
     from PIL import ImageGrab
 
     win.check()

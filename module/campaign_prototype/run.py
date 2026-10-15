@@ -72,7 +72,7 @@ def main():
                 current = np.asarray(report['before']['roi_to_map'])
                 if np.linalg.norm(project(old, [243, 231]) - project(current, [243, 231])) > 12:
                     raise RuntimeError('Camera moved since the plan; no pan sent')
-            if np.mean(goto.mr.terrain(before_roi) != goto.mr.terrain(win.capture())) > .03:
+            if np.mean(goto.terrain(before_roi) != goto.terrain(win.capture())) > .03:
                 raise RuntimeError('Map changed during localization; no input sent')
         goto.map_close(win)
         field = goto.capture_client(win)

@@ -126,7 +126,7 @@ class Localizer:
         if len(players) != 1:
             raise RuntimeError(f'Expected one squad ring, got {players}')
         player = np.asarray(players[0])
-        road = goto.mr.terrain(image)
+        road = goto.terrain(image)
         valid = np.full(road.shape, 255, np.uint8)
         valid[:4] = valid[-4:] = 0
         valid[:, :4] = valid[:, -4:] = 0
@@ -335,7 +335,7 @@ def main():
                           distance=float(np.linalg.norm(target-position)))
             reports.append(report)
             print(json.dumps(report), flush=True)
-            if np.mean(goto.mr.terrain(observed) != goto.mr.terrain(win.capture())) > .03:
+            if np.mean(goto.terrain(observed) != goto.terrain(win.capture())) > .03:
                 raise RuntimeError('Minimap changed during localization; no move')
             goto.map_close(win)
             if report['distance'] < goto.SQUAD_REACH:

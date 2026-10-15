@@ -294,3 +294,49 @@ class MapMatcher:
             if not cv2.imwrite(str(review), np.hstack([panel, overlay])):
                 raise OSError(f'Cannot save alignment review: {review}')
         return result
+
+
+def overlap(first, second, valid, shift):
+    """在两帧共同有效域内计算平移后的道路交并比和并集面积。"""
+    matrix = np.float32([[1, 0, -shift[0]], [0, 1, -shift[1]]])
+    size = first.shape[::-1]
+    moved = cv2.warpAffine(second, matrix, size, flags=cv2.INTER_NEAREST)
+    common = (valid > 0) & (cv2.warpAffine(valid, matrix, size, flags=cv2.INTER_NEAREST) > 0)
+    a, b = first > 0, moved > 0
+    union = int(((a | b) & common).sum())
+    return float((a & b & common).sum() / max(1, union)), union
+
+
+def register(first, second, valid, prediction=(0, 0)):
+    """用预测位移、相位相关和零位移初始化 ECC，只接受道路重叠充分的平移。
+
+    Translation after grid-plane rectification; reject texture-only matches.
+    """
+    stationary_iou, stationary_area = overlap(first, second, valid, (0, 0))
+    if stationary_iou >= 0.995 and stationary_area >= 80:
+        return {'delta': [0.0, 0.0], 'iou': stationary_iou, 'area': stationary_area}
+    if min(np.count_nonzero(first), np.count_nonzero(second)) < 150:
+        return None
+    a = cv2.GaussianBlur(first.astype(np.float32) / 255, (7, 7), 0)
+    b = cv2.GaussianBlur(second.astype(np.float32) / 255, (7, 7), 0)
+    phase, _ = cv2.phaseCorrelate(a, b)
+    seeds = [prediction, phase, (0, 0)]
+    best = None
+    for seed in seeds:
+        if max(abs(float(value)) for value in seed) > max(first.shape) * 0.65:
+            continue
+        matrix = np.float32([[1, 0, seed[0]], [0, 1, seed[1]]])
+        try:
+            _, matrix = cv2.findTransformECC(
+                a, b, matrix, cv2.MOTION_TRANSLATION,
+                (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 100, 1e-5), valid, 5,
+            )
+        except cv2.error:
+            continue
+        delta = matrix[:, 2].astype(float)
+        score, area = overlap(first, second, valid, delta)
+        if area < 80 or np.linalg.norm(delta) > max(first.shape) * 0.65:
+            continue
+        if best is None or score > best['iou']:
+            best = {'delta': delta.tolist(), 'iou': score, 'area': area}
+    return best if best and best['iou'] >= 0.86 else None

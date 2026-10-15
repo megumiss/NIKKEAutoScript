@@ -54,14 +54,14 @@ def sample_ground_anchor(session, field):
     points = []
     missing = 0
     failure = '未找到唯一的小队箭头。'
-    first_terrain = goto.mr.terrain(field[90:248, 32:211])
+    first_terrain = goto.terrain(field[90:248, 32:211])
     for index in range(48):
         session.check()
         if index:
             session.pause(.2)
             field = goto.capture_client(session.win)
             session.identity(field)
-        current_terrain = goto.mr.terrain(field[90:248, 32:211])
+        current_terrain = goto.terrain(field[90:248, 32:211])
         # 道路轮廓变化比角色动画可靠；采样期间发生行走或镜头移动时不使用箭头极值。
         if np.mean(first_terrain != current_terrain) > .03:
             raise ValueError('箭头采样期间小地图道路发生变化。')

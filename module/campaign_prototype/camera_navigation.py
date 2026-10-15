@@ -155,7 +155,7 @@ def observe_camera(session, squad_position):
     session.index += 1
     tag = f'{getattr(session, "tag", "camera")}_{session.index:03}'
     report = session.localizer.locate(image, tag, require_player=False)
-    if np.mean(goto.mr.terrain(image) != goto.mr.terrain(session.win.capture())) > .03:
+    if np.mean(goto.terrain(image) != goto.terrain(session.win.capture())) > .03:
         raise ValueError('镜头定位期间画面仍在变化。')
     if (report.get('position_kind') == 'squad'
             and np.linalg.norm(np.asarray(report['position']) - squad_position) > 12):
@@ -527,7 +527,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     全局配准被接受即视为批末校正已完成。
     实测（点击固定注视点像素时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     """
-    from module.campaign.matching import MapMatcher
+    from module.campaign.matching import MapMatcher, register
 
     target = np.asarray(target, float)
     squad_position = np.asarray(observation['position'], float)
@@ -605,7 +605,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         session.preview(field)
         panel, road, valid = perception.compact_road_masks(field)
         chained = None
-        match = goto.mr.register(road_prev, road, valid)
+        match = register(road_prev, road, valid)
         if match is not None and match['iou'] >= .5 and match['area'] >= 80:
             sx, sy = match['delta']
             chained = matrix @ np.array([[1., 0., -sx], [0., 1., -sy], [0., 0., 1.]])

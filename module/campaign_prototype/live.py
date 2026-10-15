@@ -57,7 +57,7 @@ def main():
             delta = waypoint - position
             waypoint = position + delta * min(1, args.step / max(np.linalg.norm(delta), 1))
         win.focus()
-        if np.mean(goto.mr.terrain(observed) != goto.mr.terrain(win.capture())) > .03:
+        if np.mean(goto.terrain(observed) != goto.terrain(win.capture())) > .03:
             raise RuntimeError('Minimap changed during localization; no move')
         goto.map_close(win)
         field = goto.capture_client(win)
