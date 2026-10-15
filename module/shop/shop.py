@@ -162,7 +162,21 @@ class ShopBase(UI):
                 # 检查是否在购买确认页面
                 if self.appear(PURCHASE_CHECK, offset=(5, 5), interval=0.6, static=False):
                     timeout.reset()
-                    self.handle_purchase()
+                    try:
+                        self.handle_purchase()
+                    except NotEnoughMoneyError:
+                        # 余额不足只跳过当前商品，避免中断后续商品（含免费商品）的购买
+                        logger.warning(f'Not enough money to buy {products.first_or_none().name}, skip')
+                        products = products.delete([products.first_or_none()])
+                        logger.attr('PENDING PRODUCT LIST', [i.name for i in products])
+                        self.ensure_back(SHOP_CHECK)
+                        if products.first_or_none() is None:
+                            if refresh and not self.refreshed:
+                                raise Refresh
+                            break
+                        product = products.first_or_none().button
+                        timeout.reset()
+                        continue
 
                 else:
                     # 检查商品是否可见并点击
@@ -434,6 +448,9 @@ class Shop(ShopBase):
                 self.process_purchase(self.general_shop_priority, True, True)
             except ShiftyShopReplaced:
                 logger.warning('General shop replaced by shifty shop')
+            except NotEnoughMoneyError:
+                logger.error('The rest of money is not enough to buy this product')
+                self.ensure_back(GENERAL_SHOP_CHECK)
         try:
             if self.config.ArenaShop_enable:
                 self._auto_fill_arena_code_manual_priority()
