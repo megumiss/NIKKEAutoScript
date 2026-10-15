@@ -1,9 +1,13 @@
-"""运行地图与本地采集、诊断数据使用分离的目录。"""
+"""运行地图与本地采集、诊断数据使用分离的目录。
+
+正式推图按这里的常量找章节地图包；采集、重建、诊断的本地数据在另一棵目录下，不随主项目提交。
+路径按本文件位置回推仓库根（parents[2] 是仓库根），移动本文件要同步改层数。
+"""
 
 from pathlib import Path
 
 
-MAPS_ROOT = Path(__file__).resolve().parents[1] / 'data' / 'chapter_maps'
+MAPS_ROOT = Path(__file__).resolve().parents[2] / 'data' / 'chapter_maps'
 # 运行地图来自独立的资源仓库，data/resources 是它的本地同步副本（maps/ 为章节地图），不随主项目提交。
 RESOURCE_ROOT = MAPS_ROOT.parent / 'resources'
 DEFAULT_MAPS_ROOT = RESOURCE_ROOT / 'maps'

@@ -16,15 +16,15 @@ import requests
 from bs4 import BeautifulSoup
 
 if __package__:
-    from .map_paths import DEFAULT_MAPS_ROOT
     from .map_annotator import AnnotationStore
     from .wiki_collectible_match import MATCH_VERSION, MapMatcher
 else:
     # 脚本方式运行时仓库根不在默认路径上。
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from map_paths import DEFAULT_MAPS_ROOT
     from map_annotator import AnnotationStore
     from wiki_collectible_match import MATCH_VERSION, MapMatcher
+
+from module.campaign.paths import DEFAULT_MAPS_ROOT
 
 
 BASE = 'https://www.gamekee.com'

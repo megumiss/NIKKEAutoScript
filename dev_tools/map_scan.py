@@ -9,10 +9,11 @@ import subprocess
 import sys
 import threading
 
-if __package__:
-    from .map_paths import DEFAULT_CAPTURE_ROOT, DEFAULT_MAPS_ROOT
-else:
-    from map_paths import DEFAULT_CAPTURE_ROOT, DEFAULT_MAPS_ROOT
+if not __package__:
+    # 脚本方式运行时仓库根不在默认路径上。
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from module.campaign.paths import DEFAULT_CAPTURE_ROOT, DEFAULT_MAPS_ROOT
 
 
 ROOT = Path(__file__).resolve().parents[1]

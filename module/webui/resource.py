@@ -18,7 +18,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-from dev_tools.map_paths import RESOURCE_ROOT
+from module.campaign.paths import RESOURCE_ROOT
 from module.logger import logger
 from module.webui.setting import State
 

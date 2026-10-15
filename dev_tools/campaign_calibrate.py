@@ -17,7 +17,7 @@ from filelock import FileLock
 import numpy as np
 
 from dev_tools.minimap_chapters import chapter_number, click, wait_for_chapter, write_progress
-from dev_tools.map_paths import DEFAULT_MAPS_ROOT, local_package_dir
+from module.campaign.paths import DEFAULT_MAPS_ROOT, local_package_dir
 from module.campaign_prototype import goto, runtime, settings
 from module.campaign_prototype.camera_navigation import field_chart, inside, target_projection, FIELD_BOUNDS
 from module.campaign_prototype.manual_move import GameSession, prepare, sha

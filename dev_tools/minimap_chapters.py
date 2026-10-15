@@ -16,14 +16,13 @@ import numpy as np
 from PIL import ImageGrab
 
 if __package__:
-    from .map_paths import DEFAULT_CAPTURE_ROOT
     from .minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from map_paths import DEFAULT_CAPTURE_ROOT
     from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
 
 from module.campaign.chapter import chapter_number
+from module.campaign.paths import DEFAULT_CAPTURE_ROOT
 
 
 def screenshot(window):
