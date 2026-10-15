@@ -173,7 +173,7 @@ class MapMatcher:
         try:
             panel, road, valid, player = minimap_masks(image)
         except ValueError:
-            from dev_tools.wiki_minimap_crop import cropped_minimap
+            from module.campaign.minimap import cropped_minimap
             panel, road, valid, player, cropped = cropped_minimap(image)
         result = self.match_panel(panel, road, valid, player, review)
         if cropped is not None:

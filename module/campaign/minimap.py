@@ -1,4 +1,7 @@
-"""Extract cropped Wiki minimaps without assuming a full-screen layout or fixed squad position."""
+"""Extract cropped Wiki minimaps without assuming a full-screen layout or fixed squad position.
+
+展开小地图面板的边界与小队圆环由这里定位，正式推图与离线 Wiki 配准共用同一份实现。
+"""
 
 import cv2
 import numpy as np
