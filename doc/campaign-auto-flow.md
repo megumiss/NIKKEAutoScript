@@ -119,11 +119,16 @@
 
 移动闭环（`module/campaign_prototype/camera_navigation.py` 的 `plan_world_move_compact` 与
 `module/campaign_prototype/manual_move.py` 的 `navigate`，含注视点居中、响应增益闭环、停稳检测、
-停滞与重规划、箭头恢复）已经现场验证过，但挂在原型的受控窗口上，不是任务调度的 `Device`。
+停滞与重规划、箭头恢复）已经现场验证过，但它是按采集器那套受控窗口写的，不是任务调度的 `Device`。
 
-接入方式是**写适配器**：在 `module/campaign/` 提供一个暴露 `GameSession` 同样接口
-（`observe`／`plan`／`move`／`wait_stopped`／`pause`／`check`／`finish_view`）的会话类，底层接 `Device`，
-`navigate` 原样复用。只保留一份验证过的实现，不重写第二份。
+接入方式是**写适配器**，分两层，只保留一份验证过的移动实现：
+
+| 层 | 位置 | 职责 |
+| --- | --- | --- |
+| 受控窗口 | `module/campaign/window.py` 的 `CampaignWindow` | 把 `Device` 包成闭环要的 `check` / `capture` / `focus` / `hwnd` / `gui` / `handler` / `reset_minimap`；客户区原点、尺寸与前台任一变化即抛 `WindowChanged`，不让点击发到错位坐标上 |
+| 会话 | 待接入 | 补齐 `observe` / `plan` / `move` / `wait_stopped` / `finish_view` / `localizer`，让 `navigate` 原样复用 |
+
+窗口层的接口面由静态扫描闭环代码得出并逐项比对，不靠「跑到一半才发现少个方法」。
 
 ## 10. 护栏
 
@@ -139,7 +144,7 @@
 | 1 | 生产代码不再反向依赖 `dev_tools`：地图库搬进 `module/campaign/` | 已完成 |
 | 2 | `RunState` + tick 骨架 + dry-run（只观测只打日志不点击），用现场帧回放校验决策 | 已完成 |
 | 3 | 光幕进路网：派生切开路网视图 + 三态复核 | 已完成 |
-| 4 | 会话适配器：生产 `Device` 上跑通单目标到点，41 章现场验证 | 未开始 |
+| 4 | 会话适配器：生产 `Device` 上跑通单目标到点，41 章现场验证 | 窗口层已完成，会话层与现场验证未做 |
 | 5 | 解封子目标端到端（38 章，等机关标注）、电梯航段失败回写、前沿探索 | 未开始 |
 | — | 横屏战斗接管（自动射击、结算、胜负判定的横屏模板） | 本期跳过 |
 
