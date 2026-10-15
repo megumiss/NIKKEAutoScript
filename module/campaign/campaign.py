@@ -245,6 +245,26 @@ class Campaign(ModuleBase):
             self.collapse_minimap()
         return snapshot
 
+    def prepare_client(self):
+        """任务准备阶段：核对客户区尺寸与遮挡、应用自动 HDR 设置、检查虚拟鼠标通道。
+
+        与设备启动阶段（AppControl.app_start）做同样几件事，但每次进入任务都重做一遍：device
+        是长驻对象，分辨率、窗口位置、自动 HDR 和鼠标驱动通道都可能在这期间被外部改动（手动
+        拖动窗口、系统 HDR 切换、G HUB 重启），而固定坐标与点击换算全部依赖它们。
+        分辨率检查必须在资源检查之后、章节识别之前：章节号与难度的识别区域按 1776×999 客户区
+        固定，分辨率不符时识别区域会整体偏移；客户区被任务栏切掉同样会让区域偏移。
+        """
+        logger.hr('准备客户区', level=2)
+        width, height = self.RESOLUTION
+        screen_n = self.config.PCClient_ScreenNumber
+        self.device.check_resolution(width, height)
+        if not self.device.ensure_client_visible(screen_n, self.config.PCClient_GameWindowPosition):
+            logger.error('客户区检查未通过：窗口缺失，或客户区被任务栏/屏幕边缘切掉，固定坐标会整体偏移。')
+            raise RequestHumanTakeover
+        self.device.apply_auto_hdr_setting()
+        self.device.verify_input_channel()
+        logger.info(f'主线任务分辨率：{width}×{height}')
+
     def detect_current_chapter(self):
         """连续识别主线地图右下角的章节号与难度，确认后发布一帧章节快照。
 
@@ -304,17 +324,16 @@ class Campaign(ModuleBase):
         return self.target_finder.find(snapshot)
 
     def run(self):
-        """主线任务入口：准备地图资源、校验分辨率并确认章节与小队位置。
+        """主线任务入口：准备地图资源与客户区，并确认章节与小队位置。
 
-        推图本体尚未接入，当前只返回确认到的章节号；分辨率检查必须在资源检查之后、识别之前，
-        章节号和难度标识的坐标按 1776×999 客户区固定，分辨率不符时识别区域会整体偏移。
+        推图本体尚未接入，当前只返回确认到的章节号。客户区准备（分辨率、窗口位置、自动 HDR、
+        鼠标通道）由 prepare_client 负责，必须在章节识别之前完成。
         章节确认后立刻确认小队底图位置：这一步会按需展开大地图并在面板内平移重试，
         退出时恢复紧凑小地图，供后续推图直接使用。
         """
         logger.hr(self.config.task.command, level=1)
         self.ensure_resources()
-        self.device.check_resolution(*self.RESOLUTION)
-        logger.info('主线任务分辨率：1776×999')
+        self.prepare_client()
         chapter = self.detect_current_chapter()
         self.confirm_squad_location(self.last_snapshot)
         # TODO: 根据任务类型执行推图，并在移动决策与战斗前后发布章节状态。

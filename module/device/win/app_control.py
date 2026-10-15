@@ -217,11 +217,8 @@ class AppControl(WinClient, Login):
         self.check_screen_resolution(self.config.PCClient_ScreenNumber, width, height)
         self.launcher_running = False
         self.current_window = self.game
-        # 关闭自动HDR
-        if self.config.PCClient_CloseAutoHdr:
-            self.change_auto_hdr('disable')
-        else:
-            self.change_auto_hdr('unset')
+        # 自动 HDR 会改变截图色彩，按配置统一在这里应用
+        self.apply_auto_hdr_setting()
         for retry in range(MAX_RETRY):
             # 上一轮清理可能停留在启动器，不能把它当成已启动的游戏。
             self.current_window = self.game

@@ -189,6 +189,21 @@ class VirtualMouseInput(Input):
         """
         return self.mouse_driver.open() and sub_device_present() is not False
 
+    def ensure_channel(self):
+        """确认驱动通道可用，不可用时按启动预检的顺序修复一次，返回修复后是否可用。
+
+        长驻设备可能在两次任务之间失效（驱动重启、设备变幽灵），任务开始时重新验证一次。
+        与 _preflight 的区别是不抛异常，由调用方决定是交人工还是继续。
+        修复前必须先关闭本进程持有的设备句柄，否则 Windows 会以 PNP_VetoOutstandingOpen
+        拒绝移除设备，repair 必然失败（同 _preflight）。
+        """
+        if self._channel_ready():
+            return True
+        self.mouse_driver.close()
+        if driver_package_present() and repair_driver() and self._channel_ready():
+            return True
+        return False
+
     # ------------------------------------------------------------------
     # 失败处理：显式报错，绝不静默降级
     # ------------------------------------------------------------------
