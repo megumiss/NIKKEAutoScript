@@ -1,6 +1,7 @@
 # 战役地图原型：运行控制与导航原理
 
-本文对应 [module/campaign_prototype](../module/campaign_prototype/README.md)，解释当前代码的数据流与边界。它是独立实验模块，不是自动推图任务。采集和 Wiki 配准详见[地图数据原理](minimap-wiki-principles.md)。
+本文对应 [自动主线模块](../module/campaign/README.md)，解释共享移动代码的数据流与边界。
+正式任务与实验入口分别通过生产 Device 会话和实验窗口复用同一套地图、视觉与导航实现。采集和 Wiki 配准详见[地图数据原理](minimap-wiki-principles.md)。
 
 ## 1. 从截图到移动计划
 

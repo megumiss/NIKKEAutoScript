@@ -23,8 +23,8 @@ flowchart TD
 | `dev_tools/minimap_reconstruct.py` | 单章地图采集、跟踪、拼接和诊断 | 战斗、章节解锁、收集物拾取 |
 | `dev_tools/minimap_chapters.py` | OCR 确认章节、倒序切章、导出与批次恢复 | 完成主线后自动解锁下一章 |
 | `dev_tools/wiki_collectibles.py` | 目录／文章解析、缓存、逐项配准调度和标注合并 | 游戏控制 |
-| `module/campaign/matching.py` | 将 Wiki 小队圆环投影到本地图 | 证明游戏内已拾取 |
-| `module/campaign/annotations.py` | 标注格式校验与地图包定位（推图只读这一半） | 写盘、备份、版本冲突恢复 |
+| `module/campaign/vision/matching.py` | 将 Wiki 小队圆环投影到本地图 | 证明游戏内已拾取 |
+| `module/campaign/map/annotations.py` | 标注格式校验与地图包定位（推图只读这一半） | 写盘、备份、版本冲突恢复 |
 | `dev_tools/annotation_store.py` | 枚举、加载、保存、备份与连通预览 | 标注格式判据（见上一行） |
 | `dev_tools/map_annotator.py` | 标注编辑器的本机服务与命令行入口 | 标注读写实现（见上一行） |
 
@@ -104,7 +104,7 @@ flowchart TD
 | `map.json` | 章节、底图哈希、尺寸、坐标约定、变换与采集摘要 |
 | `annotations.json` | 绑定底图哈希的点／线／区域／连接及来源信息 |
 
-静态导出保留已有地图和标注，拒绝覆盖。原型需要额外的 `calibration.json` 与 `validation.json`，由[独立包导入器](../module/campaign_prototype/prepare_package.py)生成并核验。
+静态导出保留已有地图和标注，拒绝覆盖。原型需要额外的 `calibration.json` 与 `validation.json`，由[独立包导入器](../module/campaign/tools/prepare_package.py)生成并核验。
 
 ## 8. 章节批量采集与恢复
 

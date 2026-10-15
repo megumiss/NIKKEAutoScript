@@ -1,6 +1,6 @@
 # 移动测试「三路都不可用」失败的根因分析与彻底修复方案
 
-适用范围：`module/campaign_prototype/camera_navigation.py` 的 `plan_world_move_compact` 紧凑闭环镜头规划。
+适用范围：`module/campaign/navigation/camera_navigation.py` 的 `plan_world_move_compact` 紧凑闭环镜头规划。
 本文是修复方案的评审稿，未改动任何代码。
 
 ## 1. 症状

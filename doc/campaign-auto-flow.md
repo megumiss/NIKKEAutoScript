@@ -8,8 +8,8 @@
 
 | 层 | 位置 | 生命周期 |
 | --- | --- | --- |
-| 静态层 | `module/campaign/map_state.py` 的 `StaticMap` | 按章节加载一次：道路掩码、`effective` 连通分区、点状标注、电梯传送关系 |
-| 观测层 | `module/campaign/observation.py` 的 `CampaignObserver.observe` | 每帧整体替换：小地图形态与标记、底图定位、场景目标、屏障、离屏标记 |
+| 静态层 | `module/campaign/map/map_state.py` 的 `StaticMap` | 按章节加载一次：道路掩码、`effective` 连通分区、点状标注、电梯传送关系 |
+| 观测层 | `module/campaign/vision/observation.py` 的 `CampaignObserver.observe` | 每帧整体替换：小地图形态与标记、底图定位、场景目标、屏障、离屏标记 |
 | 运行状态层 | `module/campaign/run_state.py` 的 `RunState` | 按章节＋难度一份，跨帧累积：敌人、机关、封锁、已观测区域、冷却 |
 
 三层已接入。正式任务在准备完成后进入有限执行闭环；空跑入口继续保留，供不发送输入的决策诊断。
@@ -22,7 +22,7 @@
   TL(-168, 992)、TR(540, 1004)、BL(50, 1561)、BR(332, 1560)，小队在 (185, 1395)：
   前方只看到约 400 底图像素，身后只有约 165。光幕后面的近敌根本不在窗口里，
   窗口里反而是更靠后那只，于是「本帧最近的可见敌人」会直接选错。
-- **敌人只有小地图类别。** 模型的十一类里没有场景敌人（见 `module/campaign/objects.py` 的 `OBJECTS`），
+- **敌人只有小地图类别。** 模型的十一类里没有场景敌人（见 `module/campaign/vision/objects.py` 的 `OBJECTS`），
   所以画面里站着的敌人不进检测，只能靠小地图标记「看见」。
 - **快照每帧整体替换。** 机关踩过没有、敌人打掉没有、光幕还在不在，观测层一律不记。
   「踩完机关回主路」这类事实，靠任何单帧都推不出来。
@@ -44,7 +44,7 @@
 ## 4. 光幕：唯一以 YOLO 为主判据的目标
 
 光幕是动态的，没有标注可依，所以它的存在与消失完全由 `scene_barrier_curtain` 检测决定。
-落图走 `module/campaign/barriers.py` 的 `scene_chart` 投影链（箭头锚点实测中位约 6、p90 约 16 底图像素）。
+落图走 `module/campaign/vision/barriers.py` 的 `scene_chart` 投影链（箭头锚点实测中位约 6、p90 约 16 底图像素）。
 
 | 状态 | 含义 | 迁移条件 |
 | --- | --- | --- |
@@ -61,7 +61,7 @@
 
 ### 屏障进路网
 
-派生视图「切开路网」（`module/campaign/routing.py` 的 `CutRoads`）＝`road ∧ ¬(挡路封锁的切口)`，
+派生视图「切开路网」（`module/campaign/navigation/routing.py` 的 `CutRoads`）＝`road ∧ ¬(挡路封锁的切口)`，
 按封锁集合的签名缓存，集合变了才重算分区。挡路封锁取 active 与 stale 两种：stale 是「记过但
 之后没再看过」，规划阶段宁可当它还在，等复核过再解除，否则会把小队送去撞光幕。
 可达性与 A\* 全部走切开后的图；原图保留不动，于是「解封之后能不能走」是一次现成的查询。
@@ -92,7 +92,7 @@
 - 路线用 `StaticMap.transfers`（读标注的 `elevator_connection`，含 `directed`），**只走 entry→exit**，
   终点不当入口；
 - 看得见时用 `scene_elevator_start` 当状态提示：标注点附近检到起点 → 判这条航段现在可用；
-- 被遮挡或检不到就乐观尝试：走到 entry 等传送，用 `module/campaign_prototype/elevator_navigation.py`
+- 被遮挡或检不到就乐观尝试：走到 entry 等传送，用 `module/campaign/navigation/elevator_navigation.py`
   的 `at_elevator_exit` 连续两次确认出口才算传送成功；在 entry 停稳等待若干次没反应 →
   该航段标 `unavailable` 并冷却，重新规划绕路。
 
@@ -121,16 +121,17 @@
 
 ## 9. 执行层
 
-移动闭环（`module/campaign_prototype/camera_navigation.py` 的 `plan_world_move_compact` 与
-`module/campaign_prototype/manual_move.py` 的 `navigate`，含注视点居中、响应增益闭环、停稳检测、
+移动闭环（`module/campaign/navigation/camera_navigation.py` 的 `plan_world_move_compact` 与
+`module/campaign/navigation/movement.py` 的 `navigate`，含注视点居中、响应增益闭环、停稳检测、
 停滞与重规划、箭头恢复）已经现场验证过，但它是按采集器那套受控窗口写的，不是任务调度的 `Device`。
 
-接入方式是**写适配器**，分两层，只保留一份验证过的移动实现：
+地图、视觉与移动代码统一在 `module/campaign/`，按 `map`、`vision`、`navigation`、`tools` 分目录。
+接入方式是**写适配器**，分两层，只保留一份移动实现：
 
 | 层 | 位置 | 职责 |
 | --- | --- | --- |
 | 受控窗口 | `module/campaign/window.py` 的 `CampaignWindow` | 把 `Device` 包成闭环要的 `check` / `capture` / `focus` / `hwnd` / `gui` / `handler` / `reset_minimap`；客户区原点、尺寸与前台任一变化即抛 `WindowChanged`，不让点击发到错位坐标上 |
-| 会话 | `module/campaign/session.py` 的 `CampaignSession` | 补齐 `observe` / `move` / `localizer`，继承共享 `plan` / `wait_stopped` / `finish_view`；生产截图使用 `Device`，移动反馈也更新敌人与封锁 |
+| 会话 | `module/campaign/session.py` 的 `CampaignSession` | 补齐 `observe` / `move` / `localizer`，继承 `navigation.session.NavigationSession` 的共享 `plan` / `wait_stopped` / `finish_view`；生产截图使用 `Device`，移动反馈也更新敌人与封锁 |
 
 `module/campaign/execution.py` 的 `CampaignExecutor` 负责补视野、派出目标与回写结果；
 `module/campaign/subgoals.py` 负责机关和有向电梯的纯规划。
@@ -157,9 +158,9 @@
 | 5 | 解封子目标端到端（38 章，等机关标注）、电梯航段失败回写、前沿探索 | 代码与离线回归完成；标注补齐与实机验收待做 |
 | — | 横屏战斗接管（自动射击、结算、胜负判定的横屏模板） | 本期跳过 |
 
-生产入口及共享闭环导入时均不加载 `dev_tools`。采集器窗口单独留在
-`module/campaign_prototype/window.py`，独立实验命令访问 `runtime.Window` 时才延迟加载。
-运行状态层、切开路网和目标选择仍分别在 `run_state.py`、`routing.py`、`goals.py`，
+生产入口及共享闭环导入时均不加载 `dev_tools` 或 `module.campaign.tools`。采集器窗口单独留在
+`module/campaign/tools/window.py`，独立实验命令访问 `runtime.Window` 时才延迟加载。
+运行状态层、切开路网和目标选择分别在 `run_state.py`、`navigation/routing.py`、`goals.py`，
 `Campaign.plan_tick` 与 `Campaign.dry_run` 可独立诊断决策，空跑不发送输入。
 
 ### 离线验证与剩余验收
