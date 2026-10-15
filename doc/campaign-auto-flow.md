@@ -127,7 +127,7 @@
 | 期 | 内容 | 状态 |
 | --- | --- | --- |
 | 1 | 生产代码不再反向依赖 `dev_tools`：地图库搬进 `module/campaign/` | 已完成 |
-| 2 | `RunState` + tick 骨架 + dry-run（只观测只打日志不点击），用现场帧回放校验决策 | 未开始 |
+| 2 | `RunState` + tick 骨架 + dry-run（只观测只打日志不点击），用现场帧回放校验决策 | 已完成 |
 | 3 | 光幕进路网：派生切开路网视图 + 三态复核 | 未开始 |
 | 4 | 会话适配器：生产 `Device` 上跑通单目标到点，41 章现场验证 | 未开始 |
 | 5 | 解封子目标端到端（38 章，等机关标注）、电梯航段失败回写、前沿探索 | 未开始 |
@@ -135,3 +135,7 @@
 
 `module/campaign/` 下已无 `dev_tools` 导入。只剩 `module/campaign_prototype/runtime.py` 还引用采集器的
 `DriverWindow` 做窗口控制，那条依赖由第 4 期的 `Device` 会话适配器取代，不单独搬。
+
+运行状态层在 `module/campaign/run_state.py`，目标选择在 `module/campaign/goals.py`，
+每拍决策与空跑入口是 `Campaign.plan_tick` 与 `Campaign.dry_run`。空跑不发送任何输入，
+所以第 3 期（封锁进路网）完成之前它只打日志，不能驱动移动。

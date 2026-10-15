@@ -5,15 +5,17 @@ from functools import cached_property
 
 import cv2
 
-from module.campaign.minimap import map_visible
 from module.base.base import ModuleBase
 from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
 from module.campaign.chapter import CLIENT_SIZE, chapter_identity
+from module.campaign.goals import choose_goal, describe
 from module.campaign.map_state import StaticMap
 from module.campaign.maps import chapter_map
+from module.campaign.minimap import map_visible
 from module.campaign.navigation import TargetFinder
 from module.campaign.observation import EXPANDED_ROI, CampaignObserver
+from module.campaign.run_state import RunState
 from module.config.config import TaskEnd
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -42,6 +44,10 @@ SQUAD_LOCATE_ATTEMPTS = 4
 # 连续这么多帧都读不到右下角章节角标才判定当前不在主线地图。
 MAIN_STORY_PAGE_FRAMES = 3
 MAIN_STORY_PAGE_INTERVAL = 0.5
+# 决策空跑的拍数与拍间隔：空跑不发送输入，场面不会变，多拍只为验证跨帧状态确实在累积
+# （同一只敌人要合并、封锁状态要按视野迁移），所以几拍就够。
+DRY_RUN_TICKS = 3
+DRY_RUN_INTERVAL = 1.0
 
 
 class Campaign(ModuleBase):
@@ -50,6 +56,7 @@ class Campaign(ModuleBase):
     章节、资源检查时间等状态都挂在类上而不是实例上，同一进程内多次建任务实例时共用，
     避免每个任务都重新查一遍资源仓库；地图静态层与目标选择器按章节缓存，换章才重建。
     last_snapshot 保存章节确认时那一帧的观测结果，定位已经确认过时不必再配准一次。
+    run_state 是跨帧累积的运行状态，按每次任务重建：上一次任务见过的敌人与封锁不能直接拿来用。
     """
 
     RESOLUTION = CLIENT_SIZE
@@ -60,6 +67,7 @@ class Campaign(ModuleBase):
     target_finder = None
     target_finder_chapter = None
     last_snapshot = None
+    state = None
 
     @cached_property
     def chapter_ocr(self):
@@ -350,6 +358,21 @@ class Campaign(ModuleBase):
                 raise RequestHumanTakeover
             self.device.sleep(0.5)
 
+    def ensure_chart(self, chapter):
+        """按章节建一次静态层与目标选择器，换章才重建；构建失败只告警并返回 None。
+
+        静态层与目标选择器共用同一份道路、分区和标注，所以一起建、一起作废。
+        """
+        if self.target_finder_chapter != chapter:
+            self.target_finder_chapter, self.chart, self.target_finder = chapter, None, None
+            try:
+                package, _ = chapter_map(chapter)
+                self.chart = StaticMap(package, self.observer.matcher)
+                self.target_finder = TargetFinder(self.chart)
+            except (OSError, ValueError, KeyError) as exc:
+                logger.warning(f'第 {chapter} 章地图无法用于目标规划：{exc}')
+        return self.chart
+
     def find_next_target(self, snapshot):
         """选择下一个目标：可连通道路上最近的普通敌人，没有敌人时是附近的地面机关或电梯。
 
@@ -359,15 +382,7 @@ class Campaign(ModuleBase):
         if (chapter is None or snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
                 or self.observer.matcher is None or chapter != self.observer.chapter):
             return None
-        if self.target_finder_chapter != chapter:
-            self.target_finder_chapter, self.chart, self.target_finder = chapter, None, None
-            try:
-                package, _ = chapter_map(chapter)
-                # 静态层按章节只建一次，目标选择与后续的道路、敌人判断共用同一份。
-                self.chart = StaticMap(package, self.observer.matcher)
-                self.target_finder = TargetFinder(self.chart)
-            except (OSError, ValueError, KeyError) as exc:
-                logger.warning(f'第 {chapter} 章地图无法用于目标规划：{exc}')
+        self.ensure_chart(chapter)
         if self.target_finder is None:
             return None
         return self.target_finder.find(snapshot)
@@ -391,15 +406,63 @@ class Campaign(ModuleBase):
         if offscreen is not None:
             logger.info(f"小队离屏：画面边缘标记中心 {offscreen['center']}，朝向 {offscreen['direction']}°")
 
+    def plan_tick(self, snapshot):
+        """一拍决策：把快照并进运行状态，选出下一个目标并打一行日志；不发送任何输入。
+
+        返回目标描述或 None（静态层不可用）。状态在 `dry_run` 里按章节建好，这里只负责推进一拍：
+        快照来自调用方，便于第一拍直接复用章节确认时那帧，省掉一次整幅观测。
+        """
+        changes = self.state.update(snapshot)
+        chart = self.ensure_chart(self.current_chapter)
+        if chart is None:
+            logger.warning('静态层不可用，本拍不做决策。')
+            return None
+        goal = choose_goal(self.state, chart, snapshot)
+        logger.info(f'第 {self.state.tick} 拍决策：{describe(goal)}')
+        if changes:
+            logger.info(f'状态变更：{changes}')
+        return goal
+
+    def dry_run(self, initial, ticks=DRY_RUN_TICKS):
+        """只观测只决策不点击的空跑，返回最后一拍的目标。
+
+        推图的移动与战斗尚未接入，空跑用来在真实场面上验证运行状态层与目标选择：每拍打出
+        选中的目标、被否决的候选和状态变更，最后打一次状态摘要。
+        第一拍用 initial（章节确认／小队定位时那帧），之后每拍重新截图观测。
+        """
+        logger.hr('推图决策空跑', level=2)
+        info = self.observer.map_info
+        if info is None:
+            logger.warning('本章地图信息不可用，跳过决策空跑。')
+            return None
+        identity = (self.current_chapter, self.current_difficulty)
+        self.state = RunState(self.current_chapter, self.current_difficulty, info['size'])
+        goal, snapshot = None, initial
+        for index in range(1, ticks + 1):
+            if self.config.stop_event is not None and self.config.stop_event.is_set():
+                raise TaskEnd
+            if index > 1:
+                self.device.sleep(DRY_RUN_INTERVAL)
+                self.device.screenshot()
+                image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+                snapshot = self.observer.observe(image, identity, time.time())
+            if snapshot is None:
+                logger.warning(f'第 {index}/{ticks} 拍没有可用观测，跳过。')
+                continue
+            goal = self.plan_tick(snapshot)
+        logger.info(f'运行状态：{self.state.summary()}')
+        return goal
+
     def run(self):
         """主线任务入口：准备地图资源与客户区，确认停在主线剧情界面，再确认章节与小队位置。
 
-        推图本体尚未接入，当前只返回确认到的章节号。客户区准备（分辨率、窗口位置、自动 HDR、
-        鼠标通道）由 prepare_client 负责，必须在章节识别之前完成。
+        客户区准备（分辨率、窗口位置、自动 HDR、鼠标通道）由 prepare_client 负责，
+        必须在章节识别之前完成。
         客户区就绪后先用右下角章节角标确认停在主线剧情界面：不在就直接要求人工接管，
         既避免耗完章节识别的 30 秒超时，也避免在别的页面上点小地图控件、拖动视图。
         章节确认后立刻确认小队底图位置：这一步会按需展开大地图并在面板内平移重试，
         退出时恢复紧凑小地图，供后续推图直接使用。
+        移动与战斗尚未接入，确认位置后只做决策空跑：逐拍打出运行状态与选中的目标，不发送输入。
         """
         logger.hr(self.config.task.command, level=1)
         self.ensure_resources()
@@ -408,6 +471,6 @@ class Campaign(ModuleBase):
         chapter = self.detect_current_chapter()
         snapshot = self.confirm_squad_location(self.last_snapshot)
         self.log_snapshot_summary(snapshot)
-        logger.info(f'主线准备完成：{self.current_difficulty.upper()} 第 {chapter} 章；推图本体尚未接入。')
-        # TODO: 根据任务类型执行推图，并在移动决策与战斗前后发布章节状态。
+        self.dry_run(snapshot)
+        logger.info(f'主线决策空跑完成：{self.current_difficulty.upper()} 第 {chapter} 章；移动与战斗尚未接入。')
         return chapter
