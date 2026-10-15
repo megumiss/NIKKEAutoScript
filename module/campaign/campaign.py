@@ -15,6 +15,7 @@ from module.campaign.maps import chapter_map
 from module.campaign.minimap import map_visible
 from module.campaign.navigation import TargetFinder
 from module.campaign.observation import EXPANDED_ROI, CampaignObserver
+from module.campaign.routing import CutRoads
 from module.campaign.run_state import RunState
 from module.config.config import TaskEnd
 from module.exception import RequestHumanTakeover
@@ -68,6 +69,7 @@ class Campaign(ModuleBase):
     target_finder_chapter = None
     last_snapshot = None
     state = None
+    cut = None
 
     @cached_property
     def chapter_ocr(self):
@@ -407,17 +409,21 @@ class Campaign(ModuleBase):
             logger.info(f"小队离屏：画面边缘标记中心 {offscreen['center']}，朝向 {offscreen['direction']}°")
 
     def plan_tick(self, snapshot):
-        """一拍决策：把快照并进运行状态，选出下一个目标并打一行日志；不发送任何输入。
+        """一拍决策：把快照并进运行状态，按封锁刷新派生路网，选出下一个目标并打一行日志。
 
-        返回目标描述或 None（静态层不可用）。状态在 `dry_run` 里按章节建好，这里只负责推进一拍：
-        快照来自调用方，便于第一拍直接复用章节确认时那帧，省掉一次整幅观测。
+        不发送任何输入。返回目标描述或 None（静态层不可用）。
+        派生路网必须在选目标之前刷新：封锁集合变了还用上一拍的切开图，可达性判的就是过期事实。
         """
         changes = self.state.update(snapshot)
         chart = self.ensure_chart(self.current_chapter)
-        if chart is None:
+        if chart is None or chart.road is None:
             logger.warning('静态层不可用，本拍不做决策。')
             return None
-        goal = choose_goal(self.state, chart, snapshot)
+        if self.cut is None or self.cut.chart is not chart:
+            self.cut = CutRoads(chart)
+        if self.cut.update(self.state.blocking()):
+            logger.info(f'按 {len(self.cut.blocks)} 块封锁重算派生路网。')
+        goal = choose_goal(self.state, chart, snapshot, self.cut)
         logger.info(f'第 {self.state.tick} 拍决策：{describe(goal)}')
         if changes:
             logger.info(f'状态变更：{changes}')
