@@ -7,8 +7,8 @@ import cv2
 import numpy as np
 
 from dev_tools.minimap_reconstruct import DriverWindow
-from dev_tools.wiki_collectible_match import (ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU,
-                                              MapMatcher, ROI)
+from module.campaign.matching import (ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU,
+                                       MapMatcher, ROI)
 from module.campaign.minimap import cropped_minimap
 from module.campaign.barriers import mark_blocks, project_barriers
 from module.campaign.map_state import StaticMap

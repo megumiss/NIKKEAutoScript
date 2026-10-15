@@ -1,4 +1,8 @@
-"""Register Wiki minimap screenshots against a chapter package; reject uncertain positions."""
+"""Register Wiki minimap screenshots against a chapter package; reject uncertain positions.
+
+正式推图的小地图→底图配准就走这里（`CampaignObserver` 与原型共用同一份 `MapMatcher`），
+离线 Wiki 收集品批处理也用它，所以接受判据（ACCEPT_*）改动会同时影响现场定位与离线核对。
+"""
 
 import hashlib
 import json

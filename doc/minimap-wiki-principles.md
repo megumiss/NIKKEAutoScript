@@ -11,7 +11,7 @@ flowchart TD
     C --> D[道路底图 实拍拼图 坐标缓存]
     D --> E[minimap_chapters 导出静态地图包]
     W[Wiki 普通和困难目录] --> X[wiki_collectibles 解析文章和缓存原图]
-    X --> Y[wiki_collectible_match 圆环与道路配准]
+    X --> Y[campaign.matching 圆环与道路配准]
     E --> Y
     Y --> Z[AnnotationStore 校验 备份 原子保存]
     E --> Z
@@ -23,7 +23,7 @@ flowchart TD
 | `dev_tools/minimap_reconstruct.py` | 单章地图采集、跟踪、拼接和诊断 | 战斗、章节解锁、收集物拾取 |
 | `dev_tools/minimap_chapters.py` | OCR 确认章节、倒序切章、导出与批次恢复 | 完成主线后自动解锁下一章 |
 | `dev_tools/wiki_collectibles.py` | 目录／文章解析、缓存、逐项配准调度和标注合并 | 游戏控制 |
-| `dev_tools/wiki_collectible_match.py` | 将 Wiki 小队圆环投影到本地图 | 证明游戏内已拾取 |
+| `module/campaign/matching.py` | 将 Wiki 小队圆环投影到本地图 | 证明游戏内已拾取 |
 | `dev_tools/map_annotator.py` | 地图与标注校验、版本冲突、备份和保存 API | 自动理解点／线／区域的推图业务含义 |
 
 这些脚本及原型中的每个 Python 方法、内部辅助函数都有中文 docstring。复杂算法的原有英文说明一并保留；中文说明解释输入所处坐标、拒绝条件或非显然的用途。

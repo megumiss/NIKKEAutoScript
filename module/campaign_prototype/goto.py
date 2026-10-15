@@ -37,7 +37,7 @@ GAZE = (107.2, 104.0)
 # 箭头动画中点距小队脚下地面的客户区像素：箭头锚点换算脚点的标定约定（1776×999 客户区），
 # 场景投影与小队相对落点共用同一数值，见 arrow_anchor.cycle_ground_anchor、barriers.scene_anchor。
 ARROW_GROUND_OFFSET = 90.
-# template_matrix 把紧凑面板中心钉在展开 ROI 的这个点上（wiki_collectible_match.template_matrix）。
+# template_matrix 把紧凑面板中心钉在展开 ROI 的这个点上（module.campaign.matching.template_matrix）。
 EXPANDED_CENTER = (243., 231.)
 # 大地图地面圆环在小队脚下覆盖的地图像素半径：客户区投影为 154×215 椭圆（半轴 76.9/107.5 px，
 # 长短轴比 0.72），按 1 地图像素 ≈ 2.7 客户区像素换算得短轴 28、长轴 40。椭圆随镜头朝向旋转，

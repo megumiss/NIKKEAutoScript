@@ -527,7 +527,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     全局配准被接受即视为批末校正已完成。
     实测（点击固定注视点像素时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     """
-    from dev_tools.wiki_collectible_match import MapMatcher
+    from module.campaign.matching import MapMatcher
 
     target = np.asarray(target, float)
     squad_position = np.asarray(observation['position'], float)
