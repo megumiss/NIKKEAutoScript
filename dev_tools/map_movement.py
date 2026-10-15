@@ -83,7 +83,7 @@ class MovementJobs:
             job = {'id': identifier, 'map_id': loaded['id'], 'target': target, 'chapter': loaded['chapter'],
                    'difficulty': difficulty, 'state': 'starting', 'message': '正在检查地图与移动环境…',
                    'created_at': time.time(), 'movement_clicks': 0, 'action': action}
-            command = [sys.executable, '-X', 'utf8', '-u', '-m', 'module.campaign_prototype.manual_move',
+            command = [sys.executable, '-X', 'utf8', '-u', '-m', 'module.campaign.tools.manual_move',
                        '--request', str((folder / 'request.json').resolve())]
             with (folder / 'worker.log').open('w', encoding='utf-8') as stream:
                 self.process = subprocess.Popen(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT,

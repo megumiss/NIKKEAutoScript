@@ -194,7 +194,7 @@ def scene_proposals(image):
     箭头用模板在三组白/黄掩码上多尺度匹配；顶栏、底栏和左上任务区先清零，
     那里的高亮界面元素会刷出大量假候选。
     """
-    assets = ROOT / 'module/campaign_prototype/assets'
+    assets = ROOT / 'module/campaign/vision/assets'
     template = cv2.imread(str(assets / 'squad_arrow_tpl.png'), cv2.IMREAD_GRAYSCALE)
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     masks = [cv2.inRange(hsv, (0, 0, 215), (179, 110, 255)),
@@ -526,7 +526,7 @@ def build(output, destination, extra_frame_reviews=(), extra_objects=()):
     逐级校验「结论仍对应当前数据」——标注复核核对来源哈希与框坐标，整帧复核核对像素哈希，
     任一不符就报错中止，而不是跳过那一条：这类不一致意味着清单被重跑过，整批结论都需要重新确认。
     """
-    from module.campaign_prototype.detection import scene_tiles
+    from module.campaign.vision.detection import scene_tiles
 
     if destination.exists():
         raise FileExistsError(f'Use a new dataset version: {destination}')

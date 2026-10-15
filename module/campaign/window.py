@@ -1,6 +1,6 @@
 """把生产 `Device` 包成移动闭环要的受控窗口。
 
-已验证的镜头与移动闭环（`campaign_prototype` 的 `plan_world_move_compact`、`manual_move.navigate`）
+已验证的镜头与移动闭环（`campaign.navigation` 的 `plan_world_move_compact`、`manual_move.navigate`）
 是按采集器那套受控窗口写的：它要 `check` / `capture` / `focus` / `hwnd` / `gui` / `handler` /
 `reset_minimap` 这几样。这里用任务调度的 `Device` 把同一组接口补齐，于是那套闭环不用改一行就能
 跑在正式任务上，不必在生产侧重写第二份移动逻辑。
@@ -11,9 +11,9 @@
 import numpy as np
 import win32gui
 
-from module.campaign.chapter import CLIENT_SIZE
-from module.campaign.minimap import map_visible
-from module.campaign.observation import EXPANDED_ROI
+from module.campaign.vision.chapter import CLIENT_SIZE
+from module.campaign.vision.minimap import map_visible
+from module.campaign.vision.observation import EXPANDED_ROI
 from module.logger import logger
 
 

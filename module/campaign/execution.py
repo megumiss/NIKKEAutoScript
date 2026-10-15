@@ -5,8 +5,8 @@ import numpy as np
 from module.campaign.run_state import RunState, panel_quad
 from module.campaign.session import InputBudgetExceeded
 from module.campaign.window import WindowChanged
-from module.campaign_prototype.manual_move import navigate
-from module.campaign_prototype.movement_feedback import TargetTriggered
+from module.campaign.navigation.movement import navigate
+from module.campaign.navigation.movement_feedback import TargetTriggered
 from module.logger import logger
 
 # 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。

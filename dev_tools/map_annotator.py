@@ -23,8 +23,8 @@ else:
     from map_scan import ScanJobs
     from map_wiki import WikiJobs
 
-from module.campaign.annotations import ConflictError
-from module.campaign.paths import DEFAULT_MAPS_ROOT
+from module.campaign.map.annotations import ConflictError
+from module.campaign.map.paths import DEFAULT_MAPS_ROOT
 
 UI = Path(__file__).with_suffix('')
 

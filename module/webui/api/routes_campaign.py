@@ -4,7 +4,7 @@ import asyncio
 
 from starlette.responses import FileResponse, JSONResponse
 
-from module.campaign.maps import chapter_map
+from module.campaign.map.catalog import chapter_map
 from module.webui.process_manager import ProcessManager
 from .deps import InstanceNotFound, validate_instance
 

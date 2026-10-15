@@ -1,6 +1,6 @@
 """标注编辑器的读写仓库：枚举地图、加载、保存、备份与连通预览。
 
-格式判据与地图包定位在 `module/campaign/annotations.py`，这里只加会写盘的那一半，
+格式判据与地图包定位在 `module/campaign/map/annotations.py`，这里只加会写盘的那一半，
 所以运行期的推图任务不会引入任何改资源目录的代码路径。
 保存走乐观并发：以标注文件内容的 SHA-256 作为版本（revision），版本不符抛 ConflictError，
 避免两个标签页互相覆盖。同进程的读写用基类的可重入锁串行。
@@ -20,10 +20,10 @@ if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from module.campaign.annotations import COORDINATES, AnnotationStore, ConflictError, digest, validate_annotations
-from module.campaign.connectivity import ensure_data, write_data
-from module.campaign.paths import local_package_dir
-from module.campaign.terrain import _atomic_write, bake_terrain, terrain_colors
+from module.campaign.map.annotations import COORDINATES, AnnotationStore, ConflictError, digest, validate_annotations
+from module.campaign.map.connectivity import ensure_data, write_data
+from module.campaign.map.paths import local_package_dir
+from module.campaign.map.terrain import _atomic_write, bake_terrain, terrain_colors
 
 
 class EditableAnnotationStore(AnnotationStore):

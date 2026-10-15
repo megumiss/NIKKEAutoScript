@@ -23,8 +23,8 @@ if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from module.campaign.matching import overlap, register
-from module.campaign.minimap import map_visible, minimap_control_visible, terrain
+from module.campaign.vision.matching import overlap, register
+from module.campaign.vision.minimap import map_visible, minimap_control_visible, terrain
 
 
 def stop_requested(args, output):
@@ -156,7 +156,7 @@ class DriverWindow:
     """扫描用的游戏窗口：锁定客户区与屏幕原点，并持有截图资源和虚拟鼠标。
 
     客户区原点在构造时记下来，之后所有坐标都按它换算——扫描中途窗口被移动会让已采集的帧
-    对不上，所以位置校验是每次输入前的必要检查（见 campaign_prototype.runtime.GuardedInput）。
+    对不上，所以位置校验是每次输入前的必要检查（见 campaign.tools.runtime.GuardedInput）。
     实例持有 GDI 截图资源和鼠标驱动，必须由调用方显式 close 释放。
     """
 

@@ -10,7 +10,7 @@
 
 import numpy as np
 
-from module.campaign.navigation import walking_distance
+from module.campaign.navigation.targets import walking_distance
 from module.campaign.run_state import OBSERVED_CELL
 from module.campaign.subgoals import elevator_goal, mechanism_goal, review_goal
 

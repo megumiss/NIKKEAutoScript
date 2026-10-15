@@ -8,14 +8,14 @@ import cv2
 from module.base.base import ModuleBase
 from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
-from module.campaign.chapter import CLIENT_SIZE, chapter_identity
+from module.campaign.vision.chapter import CLIENT_SIZE, chapter_identity
 from module.campaign.goals import choose_goal, describe
-from module.campaign.map_state import StaticMap
-from module.campaign.maps import chapter_map
-from module.campaign.minimap import map_visible
-from module.campaign.navigation import TargetFinder
-from module.campaign.observation import EXPANDED_ROI, CampaignObserver
-from module.campaign.routing import CutRoads
+from module.campaign.map.map_state import StaticMap
+from module.campaign.map.catalog import chapter_map
+from module.campaign.vision.minimap import map_visible
+from module.campaign.navigation.targets import TargetFinder
+from module.campaign.vision.observation import EXPANDED_ROI, CampaignObserver
+from module.campaign.navigation.routing import CutRoads
 from module.campaign.run_state import RunState
 from module.config.config import TaskEnd
 from module.exception import RequestHumanTakeover
@@ -28,7 +28,7 @@ RESOURCE_RECHECK_SECONDS = 6 * 3600
 RESOURCE_SYNC_TIMEOUT = 1800
 # 小地图被关闭时左上角水滴箭头控件的客户区点击坐标；与采集器 args.map_open 同源（紧凑展开按钮）。
 MINIMAP_TOGGLE_POSITION = (42, 98)
-# 展开面板左上角的最小化按钮；与 campaign_prototype.goto.MAP_MINIMIZE 同源。
+# 展开面板左上角的最小化按钮；与 navigation.controls.MAP_MINIMIZE 同源。
 MINIMAP_COLLAPSE_POSITION = (EXPANDED_ROI[0] + 14, EXPANDED_ROI[1] - 11)
 # 小地图重新打开后的面板动画等待秒数；采集器 wait_for 也按 1.2s 预留动画时间。
 MINIMAP_REOPEN_WAIT_SECONDS = 1.5

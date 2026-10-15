@@ -1,6 +1,6 @@
 """章节连通数据的批处理入口：遍历地图目录，逐章重算并写回 connectivity.json。
 
-计算与缓存判定在 module/campaign/connectivity.py，标注工具与生产侧地图包都直接引用那里。
+计算与缓存判定在 module/campaign/map/connectivity.py，标注工具与生产侧地图包都直接引用那里。
 """
 
 import argparse
@@ -15,7 +15,7 @@ if not __package__:
 else:
     from .annotation_store import EditableAnnotationStore
 
-from module.campaign.connectivity import ensure_data
+from module.campaign.map.connectivity import ensure_data
 
 
 def main():

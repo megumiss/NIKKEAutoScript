@@ -3,6 +3,7 @@
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -11,13 +12,13 @@ import numpy as np
 
 from module.campaign.execution import CampaignExecutor, single_transfer_annotations
 from module.campaign.goals import choose_goal
-from module.campaign.routing import CutRoads, component_at
+from module.campaign.navigation.routing import CutRoads, component_at
 from module.campaign.run_state import COOLDOWN_TICKS, RunState, panel_quad
 from module.campaign.session import CampaignLocalizer, CampaignSession, InputBudgetExceeded
 from module.campaign.subgoals import available_annotations
 from module.campaign.window import WindowChanged
-from module.campaign_prototype.manual_move import navigate
-from module.campaign_prototype.movement_feedback import TargetTriggered
+from module.campaign.navigation.movement import navigate
+from module.campaign.navigation.movement_feedback import TargetTriggered
 from module.config.config import TaskEnd
 
 
@@ -223,7 +224,7 @@ class SessionTests(unittest.TestCase):
         self.owner = SimpleNamespace(device=device, config=SimpleNamespace(stop_event=self.stop,
                                     task=SimpleNamespace(command='auto_main_story')),
                                     current_chapter=41, current_difficulty='normal', cut=self.cut,
-                                    observer=SimpleNamespace(matcher=Mock()), chapter_ocr=Mock(), last_snapshot=None,
+                                    observer=SimpleNamespace(matcher=Mock(), package=Path('unused')), chapter_ocr=Mock(), last_snapshot=None,
                                     reopen_minimap_if_closed=Mock(), collapse_minimap=Mock(return_value=True),
                                     expand_minimap=Mock(return_value=True), minimap_expanded=Mock(return_value=False))
         self.session = CampaignSession(self.owner)
@@ -299,7 +300,7 @@ class SessionTests(unittest.TestCase):
     def test_capture_uses_device_and_preserves_bgr(self):
         """共享截图入口使用 Device，不退回桌面 ImageGrab；输出颜色通道正确。"""
         self.owner.device.image[:, :, 0] = 17
-        from module.campaign_prototype.goto import capture_client
+        from module.campaign.navigation.controls import capture_client
         image = capture_client(self.session.win)
         self.assertEqual(image[0, 0, 2], 17)
         self.owner.device.screenshot.assert_called_once()
@@ -527,8 +528,43 @@ class ExecutorTests(unittest.TestCase):
     def test_production_import_does_not_load_capture_tools(self):
         """新进程加载生产入口不会反向导入 dev_tools，也不会初始化采集器驱动。"""
         code = ('import sys; from module.campaign.campaign import Campaign; '
-                "assert not any(name.startswith('dev_tools') for name in sys.modules)")
+                "assert not any(name.startswith(('dev_tools', 'module.campaign.tools')) for name in sys.modules)")
         subprocess.run([sys.executable, '-c', code], check=True, capture_output=True)
+
+    def test_shared_session_finish_view_uses_core_controls(self):
+        """共用会话收尾使用核心控件，不从实验 CLI 导入地图开合函数。"""
+        from module.campaign.navigation.session import NavigationSession
+        session = Mock()
+        field = np.zeros((999, 1776, 3), np.uint8)
+        with (
+            patch('module.campaign.navigation.controls.map_close') as close_map,
+            patch('module.campaign.navigation.controls.capture_client', return_value=field),
+        ):
+            NavigationSession.finish_view(session)
+        close_map.assert_called_once_with(session.win)
+        session.preview.assert_called_once_with(field)
+
+    def test_import_all_core_modules_without_experiment_dependencies(self):
+        """地图、视觉及导航模块均能独立导入，不反向依赖实验工具和采集器。"""
+        code = (
+            'import importlib, pathlib, sys; '
+            "paths = [p for p in pathlib.Path('module/campaign').rglob('*.py') if 'tools' not in p.parts]; "
+            "[importlib.import_module(p.as_posix()[:-3].replace('/', '.')) for p in paths]; "
+            "assert not any(name.startswith(('dev_tools', 'module.campaign.tools')) for name in sys.modules)"
+        )
+        subprocess.run([sys.executable, '-c', code], check=True, capture_output=True)
+
+    def test_reorganized_resource_paths_use_workspace_root(self):
+        """目录多一层后仍从仓库根找运行资源与实验数据，模板只存在于 vision。"""
+        from module.campaign.map.paths import DEFAULT_MAPS_ROOT
+        from module.campaign.navigation.controls import ASSETS
+        from module.campaign.tools import settings
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual(DEFAULT_MAPS_ROOT, root / 'data/resources/maps')
+        self.assertEqual(settings.ROOT, root)
+        self.assertEqual(settings.package, root / 'data/campaign_prototype/chapter_38')
+        self.assertEqual(ASSETS, root / 'module/campaign/vision/assets')
+        self.assertTrue((ASSETS / 'calibration.json').is_file())
 
 
 class CampaignEntryTests(unittest.TestCase):

@@ -17,12 +17,12 @@ from filelock import FileLock
 import numpy as np
 
 from dev_tools.minimap_chapters import chapter_number, click, wait_for_chapter, write_progress
-from module.campaign.paths import DEFAULT_MAPS_ROOT, local_package_dir
-from module.campaign_prototype import goto, runtime, settings
-from module.campaign_prototype.camera_navigation import field_chart, inside, target_projection, FIELD_BOUNDS
-from module.campaign_prototype.manual_move import GameSession, prepare, sha
-from module.campaign_prototype.movement_feedback import AnchorUnresolved, resolve_anchor
-from module.campaign_prototype.surface_motion import fit_calibration, project
+from module.campaign.map.paths import DEFAULT_MAPS_ROOT, local_package_dir
+from module.campaign.tools import goto, runtime, settings
+from module.campaign.navigation.camera_navigation import field_chart, inside, target_projection, FIELD_BOUNDS
+from module.campaign.tools.manual_move import GameSession, prepare, sha
+from module.campaign.navigation.movement_feedback import AnchorUnresolved, resolve_anchor
+from module.campaign.vision.surface_motion import fit_calibration, project
 
 
 def emit(**values):
@@ -90,7 +90,7 @@ def wake_entry_arrow(session, observation, folder):
     台座可能连续分布，最多引导盲移四次，每次从新位置重新选路；
     仅在定位可信且附近没有敌人标记时尝试；无位移或仍无箭头则带现场抛错。
     """
-    from module.campaign_prototype.camera_navigation import field_chart, target_projection
+    from module.campaign.navigation.camera_navigation import field_chart, target_projection
 
     if observation.get('position_kind') != 'squad':
         raise AnchorUnresolved('入口无箭头且小队定位不可信，放弃唤醒短移。')

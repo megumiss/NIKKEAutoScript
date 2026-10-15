@@ -22,8 +22,8 @@ if not __package__:
 else:
     from .annotation_store import EditableAnnotationStore as AnnotationStore
 
-from module.campaign.matching import MATCH_VERSION, MapMatcher
-from module.campaign.paths import DEFAULT_MAPS_ROOT
+from module.campaign.vision.matching import MATCH_VERSION, MapMatcher
+from module.campaign.map.paths import DEFAULT_MAPS_ROOT
 
 
 BASE = 'https://www.gamekee.com'

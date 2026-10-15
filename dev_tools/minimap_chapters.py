@@ -21,9 +21,9 @@ else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild
 
-from module.campaign.chapter import chapter_number
-from module.campaign.minimap import map_visible, terrain
-from module.campaign.paths import DEFAULT_CAPTURE_ROOT
+from module.campaign.vision.chapter import chapter_number
+from module.campaign.vision.minimap import map_visible, terrain
+from module.campaign.map.paths import DEFAULT_CAPTURE_ROOT
 
 
 def screenshot(window):

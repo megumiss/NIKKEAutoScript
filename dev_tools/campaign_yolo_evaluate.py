@@ -14,7 +14,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from dev_tools.campaign_yolo_dataset import load_frame, read_jsonl
-from module.campaign_prototype import detection, perception
+from module.campaign.vision import detection, perception
 
 
 def overlap(first, second):

@@ -16,7 +16,7 @@ if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from module.campaign.paths import DEFAULT_MAPS_ROOT, LOCAL_MAPS_ROOT
+from module.campaign.map.paths import DEFAULT_MAPS_ROOT, LOCAL_MAPS_ROOT
 
 PLANE_CACHE_KEYS = ('terrain_probability', 'projection', 'warp_size', 'origin', 'positions', 'scan_to_map')
 

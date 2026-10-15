@@ -2,9 +2,9 @@
 
 import numpy as np
 
-from module.campaign.navigation import walking_distance
-from module.campaign_prototype.elevator_navigation import plan_elevators
-from module.campaign_prototype.probe import Localizer, NoConnectedRoad
+from module.campaign.navigation.targets import walking_distance
+from module.campaign.navigation.elevator_navigation import plan_elevators
+from module.campaign.navigation.pathfinding import RoadLocalizer as Localizer, NoConnectedRoad
 
 
 class RoadView:

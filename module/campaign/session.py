@@ -7,14 +7,15 @@ import cv2
 import numpy as np
 
 from module.base.utils import publish_preview_frame
-from module.campaign.chapter import chapter_identity
-from module.campaign.minimap import terrain
+from module.campaign.navigation import controls as goto
+from module.campaign.navigation.movement_feedback import TargetTriggered, collectible_indicator
+from module.campaign.navigation.pathfinding import NoConnectedRoad
+from module.campaign.navigation.pathfinding import RoadLocalizer as Localizer
+from module.campaign.navigation.session import NavigationSession
+from module.campaign.vision.chapter import chapter_identity
+from module.campaign.vision.minimap import terrain
+from module.campaign.vision.perception import detect_markers
 from module.campaign.window import CampaignWindow, WindowChanged
-from module.campaign_prototype import goto
-from module.campaign_prototype.manual_move import GameSession
-from module.campaign_prototype.movement_feedback import TargetTriggered, collectible_indicator
-from module.campaign_prototype.perception import detect_markers
-from module.campaign_prototype.probe import Localizer, NoConnectedRoad
 from module.config.config import TaskEnd
 from module.logger import logger
 
@@ -110,8 +111,8 @@ class CampaignLocalizer:
                     position_kind='squad' if players else 'viewport')
 
 
-class CampaignSession(GameSession):
-    """任务 Device 上的会话，复用 GameSession 的 plan、停稳与收尾，不创建采集器窗口。"""
+class CampaignSession(NavigationSession):
+    """任务 Device 上的会话，复用 NavigationSession 的 plan、停稳与收尾，不创建采集器窗口。"""
 
     def __init__(self, owner):
         """绑定已确认的章节与切开图；这里只组装接口，首次 start 才取焦。"""
@@ -124,6 +125,7 @@ class CampaignSession(GameSession):
             f'{owner.current_difficulty}_{owner.current_chapter}')
         self.localizer = CampaignLocalizer(owner.observer.matcher, owner.cut)
         self.compact_matcher = owner.observer.matcher
+        self.package = owner.observer.package
         self.win = CampaignWindow(owner)
         self.win.stop_check = self.check_stop
         self.win.input_check = self.before_input
@@ -206,7 +208,7 @@ class CampaignSession(GameSession):
 
     def preview(self, field):
         """发布任务预览并保留最新证据；截图不代表战斗或拾取完成。"""
-        from module.campaign_prototype.runtime import write_image
+        from module.campaign.navigation.evidence import write_image
         self.folder.mkdir(parents=True, exist_ok=True)
         write_image(self.folder / 'last_field.png', field)
         publish_preview_frame(np.ascontiguousarray(field[:, :, ::-1]), interval=0,
