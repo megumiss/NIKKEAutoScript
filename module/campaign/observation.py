@@ -10,7 +10,7 @@ from module.campaign.minimap import map_visible, minimap_control_visible
 from module.campaign.matching import (ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU,
                                        MapMatcher, ROI)
 from module.campaign.minimap import cropped_minimap
-from module.campaign.barriers import mark_blocks, project_barriers
+from module.campaign.barriers import mark_blocks, project_barriers, scene_anchor
 from module.campaign.map_state import StaticMap
 from module.campaign.maps import chapter_map
 from module.campaign.objects import detect_objects
@@ -81,7 +81,7 @@ class CampaignObserver:
         chapter, difficulty = identity
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
                         map=None, minimap=None, localization='unavailable', squad=None, enemies=[], objects=[],
-                        barriers=[], blocks=[], offscreen=None, viewport=None, roi_to_map=None,
+                        barriers=[], blocks=[], mechanisms=[], barriers_observed=False, offscreen=None, viewport=None, roi_to_map=None,
                         minimap_closed=self.minimap_closed(image))
         if objects:
             snapshot['objects'] = self.observe_objects(image)
@@ -209,6 +209,7 @@ class CampaignObserver:
         # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
         registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
                             player_center=player)
+        snapshot['coverage_size'] = list(panel.shape[1::-1])
         snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
         positions = project_centers([item['position'] for item in markers], matrix)
         snapshot['enemies'] = [dict(item, position=position) for item, position in zip(markers, positions)
@@ -265,24 +266,27 @@ class CampaignObserver:
 
         squad / viewport 是本帧的配准结果（见 barriers.project_barriers）。
         """
-        if not any(item['kind'] == 'barrier' for item in snapshot['objects']):
-            return
         chart = self.static_map()
-        if chart is None or chart.model is not None:
+        if chart is None or chart.model is not None or squad is None:
             return
         try:
-            barriers = project_barriers(snapshot['objects'], image, squad, viewport)
-            if not barriers:
+            if scene_anchor(image, squad, viewport) is None:
                 return
+            projected = project_barriers(snapshot['objects'], image, squad, viewport,
+                                         kinds=('barrier', 'ground_mechanism'))
+            barriers = [item for item in projected if item['kind'] == 'barrier']
             snapshot['barriers'] = barriers
             snapshot['blocks'] = mark_blocks(chart, barriers)
+            snapshot['mechanisms'] = [dict(id=None, position=item['map'], source='scene_fallback')
+                                      for item in projected if item['kind'] == 'ground_mechanism']
+            snapshot['barriers_observed'] = True
             self.last_barrier_error = None
         except (OSError, ValueError, KeyError, np.linalg.LinAlgError, cv2.error) as exc:
             message = str(exc)
             if message != self.last_barrier_error:
-                logger.warning(f'屏障封锁标记不可用：{message}')
+                logger.warning(f'屏障／机关落图不可用：{message}')
                 self.last_barrier_error = message
-        return
+
 
     def observe_objects(self, image):
         """客户区里的机关、电梯与屏障；模型缺类或推理不可用时只告警，不影响章节与定位。"""

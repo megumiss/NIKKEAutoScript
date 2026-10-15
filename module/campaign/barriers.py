@@ -52,13 +52,14 @@ def scene_anchor(image, squad, viewport):
     return None
 
 
-def project_barriers(objects, image, squad, viewport=None):
+def project_barriers(objects, image, squad, viewport=None, kinds=('barrier',)):
     """把屏障检测框的地面落点（底边中点）换算为地图坐标；没有可用锚点时返回空列表。
 
+    kinds 可包含地面机关或电梯，以同一地面锚点提供缺标注时的临时位置。
     squad / viewport 是 observation 保存的配准结果（含 roi_to_map、a、panel_size；squad 另含
     player_center），不是裸坐标。
     """
-    barriers = [item for item in objects if item['kind'] == 'barrier']
+    barriers = [item for item in objects if item['kind'] in kinds]
     if not barriers:
         return []
     anchor = scene_anchor(image, squad, viewport)

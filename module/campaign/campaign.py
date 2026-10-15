@@ -137,10 +137,11 @@ class Campaign(ModuleBase):
         logger.error(f"地图资源同步失败，且本地没有地图资源：{status['error'] or '超时'}")
         raise RequestHumanTakeover
 
-    def reopen_minimap_if_closed(self, image=None):
+    def reopen_minimap_if_closed(self, image=None, check=None, pause=None):
         """小地图被关闭（左上角只剩水滴形箭头）时点击箭头重新打开，恢复后返回 True。
 
         image 为可选的 1776×999 BGR 客户区截图；缺省时用当前 device.image 转 BGR 判定。
+        check / pause 可注入生产会话的输入闸门与可取消等待，默认保持既有准备流程。
         关闭判据与采集器 reset_minimap 的 closed 态一致：控件外框可见、控件区域偏暗且紧凑面板
         不可见。确认关闭后点击左上角箭头坐标（与采集器 map_open 同源），等待面板动画后复核；
         重开失败或状态仍不确定只告警并返回 False，由调用方决定是否放弃本帧观测。
@@ -149,9 +150,13 @@ class Campaign(ModuleBase):
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
         if not self.observer.minimap_closed(image):
             return False
+        if check is not None:
+            check()
+            if not self.observer.minimap_closed(cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)):
+                return False
         logger.warning('检测到小地图已被关闭，点击左上角箭头重新打开。')
         self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
-        self.device.sleep(MINIMAP_REOPEN_WAIT_SECONDS)
+        (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
         self.device.screenshot()
         image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
         if self.observer.minimap_closed(image):
@@ -170,27 +175,33 @@ class Campaign(ModuleBase):
         left, top, right, bottom = EXPANDED_ROI
         return map_visible(image[top:bottom, left:right])
 
-    def expand_minimap(self):
+    def expand_minimap(self, check=None, pause=None):
         """点击左上角控件把紧凑小地图展开成大地图面板，确认面板可见才返回 True。
 
+        check / pause 可注入生产会话闸门与可取消等待。
         已经处于展开态时直接返回 True：那个控件是开合开关，再点一次会把面板收起。
         面板动画期间不接受下一次输入，所以点击后等待固定时长再复核；展开失败只告警并返回 False，
         调用方据此放弃展开形态，不要继续在展开面板里做平移。
         """
         if self.minimap_expanded():
             return True
-        logger.info('紧凑小地图未确认小队位置，展开大地图重新定位。')
+        if check is not None:
+            check()
+            if self.minimap_expanded():
+                return True
+        logger.info('展开大地图补充视野或重新定位。')
         self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
-        self.device.sleep(MINIMAP_REOPEN_WAIT_SECONDS)
+        (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
         self.device.screenshot()
         if self.minimap_expanded():
             return True
         logger.warning('展开大地图失败，中部面板仍不可见。')
         return False
 
-    def collapse_minimap(self):
+    def collapse_minimap(self, check=None, pause=None):
         """把展开的大地图面板收起回紧凑小地图；失败只告警，不影响已经得到的定位结果。
 
+        check / pause 可注入生产会话闸门与可取消等待。
         收起前先确认面板还在：已经是紧凑态时再点一次最小化按钮，坐标会落到场景上，
         可能被游戏当成一次移动指令。收起后必须确认面板消失，任务结束前若仍停在大地图上，
         后续推图会在地图盖住画面的状态下点击。
@@ -198,8 +209,12 @@ class Campaign(ModuleBase):
         for _ in range(2):
             if not self.minimap_expanded():
                 return True
+            if check is not None:
+                check()
+                if not self.minimap_expanded():
+                    return True
             self.device.click_xy(*MINIMAP_COLLAPSE_POSITION)
-            self.device.sleep(MINIMAP_REOPEN_WAIT_SECONDS)
+            (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
             self.device.screenshot()
         if not self.minimap_expanded():
             return True
@@ -423,7 +438,8 @@ class Campaign(ModuleBase):
             self.cut = CutRoads(chart)
         if self.cut.update(self.state.blocking()):
             logger.info(f'按 {len(self.cut.blocks)} 块封锁重算派生路网。')
-        goal = choose_goal(self.state, chart, snapshot, self.cut)
+        goal = choose_goal(self.state, chart, snapshot, self.cut,
+                           purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
         logger.info(f'第 {self.state.tick} 拍决策：{describe(goal)}')
         if changes:
             logger.info(f'状态变更：{changes}')
@@ -432,7 +448,7 @@ class Campaign(ModuleBase):
     def dry_run(self, initial, ticks=DRY_RUN_TICKS):
         """只观测只决策不点击的空跑，返回最后一拍的目标。
 
-        推图的移动与战斗尚未接入，空跑用来在真实场面上验证运行状态层与目标选择：每拍打出
+        空跑用于在真实场面上验证运行状态层与目标选择而不移动：每拍打出
         选中的目标、被否决的候选和状态变更，最后打一次状态摘要。
         第一拍用 initial（章节确认／小队定位时那帧），之后每拍重新截图观测。
         """
@@ -468,7 +484,7 @@ class Campaign(ModuleBase):
         既避免耗完章节识别的 30 秒超时，也避免在别的页面上点小地图控件、拖动视图。
         章节确认后立刻确认小队底图位置：这一步会按需展开大地图并在面板内平移重试，
         退出时恢复紧凑小地图，供后续推图直接使用。
-        移动与战斗尚未接入，确认位置后只做决策空跑：逐拍打出运行状态与选中的目标，不发送输入。
+        确认位置后接入有限推图闭环：逐拍补视野、选目标、移动与回写；战斗弹窗出现即停，不自动战斗。
         """
         logger.hr(self.config.task.command, level=1)
         self.ensure_resources()
@@ -477,6 +493,30 @@ class Campaign(ModuleBase):
         chapter = self.detect_current_chapter()
         snapshot = self.confirm_squad_location(self.last_snapshot)
         self.log_snapshot_summary(snapshot)
-        self.dry_run(snapshot)
-        logger.info(f'主线决策空跑完成：{self.current_difficulty.upper()} 第 {chapter} 章；移动与战斗尚未接入。')
+        if snapshot is None or snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None:
+            logger.error('主线没有可信小队起点，停止并交人工定位。')
+            raise RequestHumanTakeover
+        chart = self.ensure_chart(chapter)
+        if chart is None or not chart.supported or chart.road is None:
+            logger.error('主线地图静态层不可用，不能执行移动。')
+            raise RequestHumanTakeover
+        from module.campaign.execution import CampaignExecutor
+        from module.campaign.session import CampaignSession, InputBudgetExceeded
+        from module.campaign.window import WindowChanged
+
+        self.state = RunState(chapter, self.current_difficulty, chart.size)
+        self.cut = CutRoads(chart)
+        self.cut.update([])
+        session = CampaignSession(self)
+        executor = CampaignExecutor(self, session,
+                                    purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
+        try:
+            result = executor.run(snapshot)
+        except (WindowChanged, InputBudgetExceeded, OSError, ValueError, RuntimeError, cv2.error) as exc:
+            logger.error(f'主线执行停止：{exc}')
+            raise RequestHumanTakeover from exc
+        logger.info(f'主线执行结束：{self.current_difficulty.upper()} 第 {chapter} 章；{result}')
+        logger.info(f'运行状态：{self.state.summary()}')
+        if result['state'] == 'needs_review':
+            raise RequestHumanTakeover
         return chapter

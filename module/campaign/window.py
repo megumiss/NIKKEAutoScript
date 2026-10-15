@@ -41,6 +41,7 @@ class CampaignWindow:
         self.gui = win32gui
         self.handler = getattr(self.device, 'input_handler', None)
         self.origin = None
+        self.handle = None
 
     @property
     def hwnd(self):
@@ -63,6 +64,7 @@ class CampaignWindow:
             raise WindowChanged('找不到游戏窗口。')
         if not self.device.set_foreground_window_with_retry(hwnd):
             logger.warning('未能把游戏窗口提到前台，继续按当前前台状态校验。')
+        self.handle = hwnd
         self.origin = self.client_origin()
         return self.origin is not None
 
@@ -72,9 +74,16 @@ class CampaignWindow:
         这是每次发输入前的闸门，判据与采集器的受控窗口一致。任一条不成立就抛 WindowChanged，
         让移动闭环停下而不是把点击发到错位的坐标上。
         """
+        stop_check = getattr(self, 'stop_check', None)
+        if stop_check is not None:
+            stop_check()
         hwnd = self.hwnd
         if not hwnd:
             raise WindowChanged('游戏窗口已消失。')
+        if self.handle is None:
+            self.handle = hwnd
+        elif hwnd != self.handle:
+            raise WindowChanged('游戏窗口句柄已变化，旧会话不可复用。')
         rect = self.gui.GetClientRect(hwnd)
         if (rect[2], rect[3]) != CLIENT_SIZE:
             raise WindowChanged(f'客户区尺寸变为 {(rect[2], rect[3])}，固定坐标已失效。')
@@ -90,8 +99,13 @@ class CampaignWindow:
 
     def client(self):
         """最新一帧客户区 BGR 截图。"""
+        self.check()
         self.device.screenshot()
-        return np.ascontiguousarray(self.device.image[:, :, ::-1])
+        self.check()
+        image = self.device.image
+        if image is None or image.shape != (CLIENT_SIZE[1], CLIENT_SIZE[0], 3):
+            raise WindowChanged('截图尺寸与固定客户区不符，不能继续换算落点。')
+        return np.ascontiguousarray(image[:, :, ::-1])
 
     def capture(self, require_map=True):
         """展开小地图面板的 ROI 截图（BGR）。
@@ -114,14 +128,18 @@ class CampaignWindow:
         关闭态先用左上角箭头重开，这一步由 reopen_minimap_if_closed 负责。
         """
         self.check()
-        self.owner.reopen_minimap_if_closed()
+        callbacks = {}
+        if getattr(self, 'input_check', None) is not None:
+            callbacks = {'check': self.input_check, 'pause': self.pause}
+        self.owner.reopen_minimap_if_closed(**callbacks)
         if expanded:
             if reset and self.owner.minimap_expanded():
-                self.owner.collapse_minimap()
-            if not self.owner.expand_minimap():
+                if not self.owner.collapse_minimap(**callbacks):
+                    raise WindowChanged('展开地图回正前无法收起，不能沿用偏移视野。')
+            if not self.owner.expand_minimap(**callbacks):
                 raise WindowChanged('展开小地图失败。')
             return 'expanded'
-        if not self.owner.collapse_minimap():
+        if not self.owner.collapse_minimap(**callbacks):
             raise WindowChanged('收起小地图失败。')
         return 'compact'
 
@@ -138,3 +156,4 @@ class CampaignWindow:
         下次会话重新取焦时再记——否则跨会话比对的是过期原点。
         """
         self.origin = None
+        self.handle = None

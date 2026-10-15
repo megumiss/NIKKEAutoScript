@@ -5,14 +5,14 @@
 可达性与行走距离一律走切开图，所以规划不会把小队送去撞光幕；原图只用来判断「这个目标是不是
 只被光幕挡住」——是的话就该去复核封锁或踩机关，而不是当成走不通换目标。
 优先级：最近的 pending 敌人 → 复核挡路的封锁 → 前沿探索 → 无进展。
-踩机关解封与电梯航段还没接，`blocked_by_curtain` 会把挡路的封锁编号报出来等那一步接上。
+机关解封先到点、再回封锁口复核；电梯按有向航段和失败冷却过滤。
 """
 
-import cv2
 import numpy as np
 
 from module.campaign.navigation import walking_distance
 from module.campaign.run_state import OBSERVED_CELL
+from module.campaign.subgoals import elevator_goal, mechanism_goal, review_goal
 
 # 逐候选的行走距离要各自重算距离场与边表（单次 150~350ms），所以先按直线距离排序，
 # 只对最近的若干个算行走距离。直线最近不等于行走最近，这是为把一次决策压在一秒上下的取舍。
@@ -44,6 +44,8 @@ def nearest_enemy(state, cut, squad):
     home = cut.component(squad)
     rejected, candidates = [], []
     for record in state.pending_enemies():
+        if record['kind'] != 'normal':
+            continue
         position = np.asarray(record['position'], float)
         if not home or cut.component(position) != home:
             rejected.append({'id': record['id'], 'reason': 'different_component', 'position': position.tolist()})
@@ -72,7 +74,7 @@ def blocked_candidate(state, chart, cut, squad, rejected):
     说明隔开它们的是光幕而不是地形。拦路封锁用逐个撤销试出来。
     站位只给 stale 封锁：那种是「记过但之后没再看过」，得走到看得见的地方确认它还在不在。
     active 是最近一次在视野内时还在，再去看一眼没有新信息，而且站位就在封锁旁边，
-    会变成反复往同一处走的自锁；该走机关解封，那条路留给后续接入。
+    会变成反复往同一处走的自锁；active 由机关解封子目标处理。
     返回 None 表示没有这种候选。
     """
     squad = np.asarray(squad, float)
@@ -124,12 +126,18 @@ def frontier_point(state, cut, squad):
             continue
         points = np.column_stack((xs + left, ys + top)).astype(float)
         nearest = points[np.argmin(np.linalg.norm(points - centers[index], axis=1))]
-        return {'kind': 'explore', 'id': f'cell-{column}-{row}', 'position': nearest.tolist(),
-                'distance': round(float(spans[index]), 1), 'unseen_cells': int(unseen.sum())}
+        identifier = f'cell-{column}-{row}'
+        if state.cooling(identifier):
+            continue
+        distance = walking_distance(cut.road, cut.regions, squad, nearest)
+        if not np.isfinite(distance):
+            continue
+        return {'kind': 'explore', 'id': identifier, 'position': nearest.tolist(),
+                'distance': round(distance, 1), 'unseen_cells': int(unseen.sum())}
     return None
 
 
-def choose_goal(state, chart, snapshot, cut):
+def choose_goal(state, chart, snapshot, cut, purpose='story'):
     """挑下一个目标，返回目标描述；没有可做的事情时 kind 为 none。
 
     要求本帧定位已被接受且静态层支持当前坐标模型，否则不给目标——坐标不可信时规划出来的
@@ -141,18 +149,49 @@ def choose_goal(state, chart, snapshot, cut):
     if not getattr(chart, 'supported', False) or chart.road is None or cut.road is None:
         return {'kind': 'none', 'reason': 'coordinate_model_unsupported', 'blocking': blocked}
     squad = np.asarray(snapshot['squad'], float)
-    goal, rejected = nearest_enemy(state, cut, squad)
+    if squad.shape != (2,) or not np.isfinite(squad).all():
+        return {'kind': 'none', 'reason': 'localization_unavailable', 'blocking': blocked}
+    goal, rejected = None, []
+    for identifier in list(state.pending_reviews):
+        record = state.blocks.get(identifier)
+        if record is None or record['status'] == 'cleared':
+            continue
+        goal = review_goal(state, cut, squad, identifier)
+        if goal is not None:
+            break
+        return {'kind': 'none', 'reason': 'curtain_review_unavailable', 'blocking': blocked}
+    if purpose == 'collectible':
+        candidates = [item for item in chart.points if item['category'] == f'{state.difficulty}_collectible'
+                      and not state.cooling(item['id'])]
+        if goal is None:
+            distances = [(walking_distance(cut.road, cut.regions, squad, item['position']), item)
+                         for item in sorted(candidates, key=lambda item: np.linalg.norm(
+                             np.asarray(item['position']) - squad))[:PLAN_CANDIDATES] if cut.component(squad)
+                         and cut.component(item['position']) == cut.component(squad)]
+            distances = [item for item in distances if np.isfinite(item[0])]
+            if distances:
+                distance, item = min(distances, key=lambda pair: pair[0])
+                goal = dict(kind='collectible', id=item['id'], position=item['position'],
+                            distance=round(distance, 1), reason='nearest_annotated_collectible')
+        rejected = [dict(id=item['id'], position=item['position'], reason='different_component')
+                    for item in candidates if cut.component(item['position']) != cut.component(squad)]
+    else:
+        candidates = [item for item in state.pending_enemies() if item['kind'] == 'normal']
+        if goal is None:
+            goal, rejected = nearest_enemy(state, cut, squad)
     if goal is None:
         detour = blocked_candidate(state, chart, cut, squad, rejected)
-        if detour is not None and detour['standoff'] is not None:
-            goal = {'kind': 'review_block', 'id': detour['block'], 'position': detour['standoff'],
-                    'distance': round(float(np.linalg.norm(np.asarray(detour['standoff'], float) - squad)), 1),
-                    'block_point': detour['point'], 'block_status': detour['status'],
-                    'for_target': detour['target']}
-        elif detour is not None:
-            # 找到了拦路封锁但同侧没有可站的落点：不猜落点，交给上层报无进展。
-            goal = {'kind': 'none', 'reason': 'blocked_by_curtain', 'blocked_by': detour['culprits'],
-                    'for_target': detour['target']}
+        if detour is not None:
+            record = state.blocks[detour['block']]
+            if record['status'] == 'stale' or record['id'] in state.pending_reviews:
+                goal = review_goal(state, cut, squad, record['id'], detour['target'])
+            else:
+                goal = mechanism_goal(state, chart, cut, squad, record, detour['target'])
+            if goal is None:
+                goal = {'kind': 'none', 'reason': 'blocked_by_curtain', 'blocked_by': detour['culprits'],
+                        'for_target': detour['target']}
+    if goal is None:
+        goal = elevator_goal(state, chart, cut, squad, candidates)
     if goal is None:
         goal = frontier_point(state, cut, squad)
     if goal is None:

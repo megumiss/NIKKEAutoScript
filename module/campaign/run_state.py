@@ -37,7 +37,7 @@ def panel_quad(snapshot):
     minimap = snapshot.get('minimap')
     if matrix is None or minimap is None:
         return None
-    width, height = minimap['size']
+    width, height = snapshot.get('coverage_size', minimap['size'])
     corners = np.array([[0, 0], [width, 0], [width, height], [0, height]], float)
     matrix = np.asarray(matrix, float)
     points = np.column_stack((corners, np.ones(len(corners)))) @ matrix.T
@@ -70,10 +70,12 @@ class RunState:
         self.enemies = {}
         self.blocks = {}
         self.mechanisms = {}
+        self.pending_reviews = {}
+        self.transfers = {}
         self.cooldowns = {}
         shape = (int(np.ceil(self.size[1] / OBSERVED_CELL)), int(np.ceil(self.size[0] / OBSERVED_CELL)))
         self.observed = np.zeros(shape, np.uint8)
-        self._sequence = {'enemy': 0, 'block': 0}
+        self._sequence = {'enemy': 0, 'block': 0, 'mechanism': 0}
 
     def _identifier(self, kind):
         """给新记录发一个本章内稳定的编号，日志里据此跟踪同一个目标。"""
@@ -96,7 +98,12 @@ class RunState:
         changes.update(self._absorb_enemies(snapshot.get('enemies') or []))
         minimap = snapshot.get('minimap') or {}
         if minimap.get('mode') == 'compact':
-            changes.update(self._absorb_blocks(snapshot.get('blocks') or [], quad))
+            changes.update(self._absorb_blocks(snapshot.get('blocks') or [], quad,
+                                              can_clear=snapshot.get('barriers_observed', True)))
+            self._absorb_mechanisms(snapshot.get('mechanisms') or [])
+        for identifier in list(self.pending_reviews):
+            if self.blocks.get(identifier, {}).get('status') == 'cleared':
+                self.pending_reviews.pop(identifier, None)
         return {key: value for key, value in changes.items() if value}
 
     def _absorb_observed(self, quad):
@@ -148,7 +155,7 @@ class RunState:
                 best, distance = identifier, span
         return best
 
-    def _absorb_blocks(self, blocks, quad):
+    def _absorb_blocks(self, blocks, quad, can_clear=True):
         """更新光幕封锁的三态；返回新增、刷新与判定解除的编号。
 
         本帧检到的光幕按距离配对到既有封锁，配对上就刷新为 active；
@@ -177,7 +184,7 @@ class RunState:
         for identifier, record in self.blocks.items():
             if identifier in matched or record['status'] == 'cleared':
                 continue
-            if self._inside(quad, record['point']):
+            if can_clear and self._inside(quad, record['point']):
                 record['status'] = 'cleared'
                 record['cleared_at'] = self.tick
                 cleared.append(identifier)
@@ -231,10 +238,52 @@ class RunState:
         """记下这个机关为哪块封锁踩过，避免同一块封锁反复试同一个机关。"""
         record = self.mechanisms.setdefault(mechanism, {'id': mechanism, 'tried_for': {}})
         record['tried_for'][block] = self.tick
+        self.pending_reviews[block] = mechanism
 
     def tried_for(self, mechanism, block):
         """这个机关是否已经为该封锁踩过。"""
         return block in self.mechanisms.get(mechanism, {}).get('tried_for', {})
+
+    def _absorb_mechanisms(self, mechanisms):
+        """合并缺标注时的机关落点；位置抖动不能清掉针对各块封锁的尝试记录。"""
+        for item in mechanisms:
+            position = np.asarray(item.get('position'), float)
+            if position.shape != (2,) or not np.isfinite(position).all():
+                continue
+            nearest = None
+            for identifier, record in self.mechanisms.items():
+                if record.get('source') != 'scene_fallback' or 'position' not in record:
+                    continue
+                if np.linalg.norm(position - np.asarray(record['position'])) <= ENEMY_MERGE_RADIUS:
+                    nearest = identifier
+                    break
+            identifier = nearest or self._identifier('mechanism')
+            record = self.mechanisms.setdefault(identifier, {'id': identifier, 'tried_for': {}})
+            record.update(position=position.tolist(), source='scene_fallback', last_seen=self.tick)
+
+    @staticmethod
+    def transfer_key(leg):
+        """电梯失败按有向航段记忆，双向连接的一侧失败不封掉反向出口。"""
+        ends = tuple(tuple(round(float(value), 1) for value in leg[end]) for end in ('entry', 'exit'))
+        return (leg['connection'], *ends)
+
+    def transfer_available(self, leg):
+        """失败航段冷却后可重试，累计三次失败后本次任务不再使用该方向。"""
+        record = self.transfers.get(self.transfer_key(leg))
+        return record is None or (record['failures'] < MAX_FAILURES and self.tick >= record['until'])
+
+    def transfer_failed(self, leg):
+        """回写电梯航段失败与冷却；调用方随后重新规划，不把传送边当普通道路。"""
+        key = self.transfer_key(leg)
+        record = self.transfers.setdefault(key, {'failures': 0, 'until': 0, 'status': 'available'})
+        record['failures'] += 1
+        record['until'] = self.tick + COOLDOWN_TICKS
+        record['status'] = 'unavailable'
+        return record
+
+    def transfer_succeeded(self, leg):
+        """只有共享闭环连续两次确认出口后才清掉该航段的失败记录。"""
+        self.transfers.pop(self.transfer_key(leg), None)
 
     def penalize(self, identifier):
         """给目标记一次失败并进入冷却；失败到上限的敌人标为暂时走不到。"""
@@ -265,4 +314,6 @@ class RunState:
         return {'tick': self.tick, 'chapter': self.chapter, 'difficulty': self.difficulty,
                 'enemies': statuses, 'blocks': blocks,
                 'observed_cells': int(self.observed.sum()),
-                'mechanisms_tried': len(self.mechanisms), 'unlocated_frames': self.unlocated}
+                'mechanisms_tried': sum(bool(item['tried_for']) for item in self.mechanisms.values()),
+                'pending_reviews': len(self.pending_reviews), 'failed_transfers': len(self.transfers),
+                'unlocated_frames': self.unlocated}
