@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import os
+import sys
 from pathlib import Path
 import tempfile
 
@@ -12,10 +13,11 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
-if __package__:
-    from .map_terrain import render_terrain, terrain_colors
-else:
-    from map_terrain import render_terrain, terrain_colors
+if not __package__:
+    # 脚本方式运行时仓库根不在默认路径上。
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from module.campaign.terrain import render_terrain, terrain_colors
 
 
 ALGORITHM = {'name': 'road_grid_v3', 'step': 8, 'clearance': 0, 'diagonal': 'no_corner_cutting'}

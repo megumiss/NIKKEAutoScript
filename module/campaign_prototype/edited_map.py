@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from dev_tools.map_terrain import render_terrain, terrain_colors
+from module.campaign.terrain import render_terrain, terrain_colors
 
 
 def edited_roads(package, metadata, baseline=None):
