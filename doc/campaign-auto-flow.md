@@ -10,9 +10,9 @@
 | --- | --- | --- |
 | 静态层 | `module/campaign/map_state.py` 的 `StaticMap` | 按章节加载一次：道路掩码、`effective` 连通分区、点状标注、电梯传送关系 |
 | 观测层 | `module/campaign/observation.py` 的 `CampaignObserver.observe` | 每帧整体替换：小地图形态与标记、底图定位、场景目标、屏障、离屏标记 |
-| 运行状态层 | `RunState`（本文设计） | 按章节＋难度一份，跨帧累积：敌人、机关、封锁、已观测区域、冷却 |
+| 运行状态层 | `module/campaign/run_state.py` 的 `RunState` | 按章节＋难度一份，跨帧累积：敌人、机关、封锁、已观测区域、冷却 |
 
-前两层已接入，运行状态层是推图闭环缺的那一层。
+三层已接入。正式任务在准备完成后进入有限执行闭环；空跑入口继续保留，供不发送输入的决策诊断。
 
 ## 2. 为什么必须有运行状态层
 
@@ -38,6 +38,8 @@
 | `blocks` | `StaticMap.mark_barrier` 给出的切口段、状态（active／stale／cleared） | 只在紧凑帧更新；判据见下节 |
 | `observed` | 已被小地图覆盖过的 32px 粗网格 | 每帧把面板四角投影出的四边形打到网格上，给出前沿 |
 | `cooldowns` | 目标 id → 失败次数与冷却 tick | 同一个走不到的目标不反复选 |
+| `pending_reviews` | 封锁 id → 本次踩过的机关 id | 到机关后先回封锁口复核，没进入可靠视野时保留 |
+| `transfers` | 有向电梯航段 → 失败次数与冷却 tick | 失败冷却五拍，三次失败后本次任务禁用该方向；不封掉反向航段 |
 
 ## 4. 光幕：唯一以 YOLO 为主判据的目标
 
@@ -53,6 +55,7 @@
 两条约束：
 
 - **只在紧凑帧更新。** 展开面板的投影链与 `scene_chart` 的标定不同源，展开帧落点会整体偏。
+  `barriers_observed` 还须为真才允许判消失：场景地面锚点或投影失败时只保留 stale，不能把空结果当解封。
 - **复核要站在能看见它的地方。** 复核站位取封锁段中点沿道路回退一段的安全点，
   不是光幕本体——光幕必须进紧凑窗口才能判定「没了」。
 
@@ -93,7 +96,8 @@
   的 `at_elevator_exit` 连续两次确认出口才算传送成功；在 entry 停稳等待若干次没反应 →
   该航段标 `unavailable` 并冷却，重新规划绕路。
 
-`plan_elevators` 已有这套骨架，接入要做的是把失败回写进 `RunState`。
+`plan_elevators` 与 `navigate` 复用同一套骨架。目标选择先过滤冷却或禁用方向，执行器只派出第一段，
+确认出口后按新快照重选目标。航段失败回写 `RunState`；只有 `elevator_transfers` 的实际出口确认才能清掉失败记录。
 
 ## 7. 视野策略
 
@@ -109,7 +113,7 @@
 ```
 0 发现战斗弹窗 → 按既有契约处理（普通保留 / EX 关掉一次）→ 结束本次任务并上报
 1 切开图上最近的 pending 敌人 → 走到它并停在弹窗
-2 最优目标仅因光幕不可达 → stale 去复核站位，active 报被封锁待解封
+2 踩过机关的封锁先回安全站位复核；最优目标仅因光幕不可达 → stale 复核，active 试同侧未尝试机关
 3 必须换层或跨区 → 电梯航段
 4 前沿探索（展开一次 + 朝本分量最近未观测格移动）
 5 没有可做的 → 报「无进展」交人工
@@ -126,14 +130,19 @@
 | 层 | 位置 | 职责 |
 | --- | --- | --- |
 | 受控窗口 | `module/campaign/window.py` 的 `CampaignWindow` | 把 `Device` 包成闭环要的 `check` / `capture` / `focus` / `hwnd` / `gui` / `handler` / `reset_minimap`；客户区原点、尺寸与前台任一变化即抛 `WindowChanged`，不让点击发到错位坐标上 |
-| 会话 | 待接入 | 补齐 `observe` / `plan` / `move` / `wait_stopped` / `finish_view` / `localizer`，让 `navigate` 原样复用 |
+| 会话 | `module/campaign/session.py` 的 `CampaignSession` | 补齐 `observe` / `move` / `localizer`，继承共享 `plan` / `wait_stopped` / `finish_view`；生产截图使用 `Device`，移动反馈也更新敌人与封锁 |
 
-窗口层的接口面由静态扫描闭环代码得出并逐项比对，不靠「跑到一半才发现少个方法」。
+`module/campaign/execution.py` 的 `CampaignExecutor` 负责补视野、派出目标与回写结果；
+`module/campaign/subgoals.py` 负责机关和有向电梯的纯规划。
+剧情任务选择普通敌人，不主动选择 EX；收集品任务选择当前难度的点状标注，发现橙色提示即停，不追加拾取点击。
+普通战斗弹窗保留，EX 弹窗只关闭一次，任何目标用途遇到战斗弹窗都结束本次任务。
 
 ## 10. 护栏
 
-- 每章点击预算与每 tick 预算；停滞检测沿用 `navigate` 的两次无位移即停；
-- 每轮先跑 `Campaign.check_main_story_page` 确认还在主线剧情界面，章节号变了立即停；
+- 每章最多 120 次输入，单目标最多 32 次输入（含镜头手势与小地图开合），每次任务最多 48 轮；
+  单目标最多 12 次移动点击，停滞检测沿用 `navigate` 的两次无位移即停；
+- 准备阶段先跑 `Campaign.check_main_story_page`；执行期间每次新输入前核对章节与难度，
+  身份不明、窗口原点／句柄／尺寸变化、失焦或停止请求一律禁止后续输入；等待阶段也检查停止与窗口；
 - 战斗结果判不出来就不猜，交人工；
 - 每个决策打一行日志：目标 id、类型、距离、为什么选它；失败时发预览帧留证据。
 
@@ -144,13 +153,29 @@
 | 1 | 生产代码不再反向依赖 `dev_tools`：地图库搬进 `module/campaign/` | 已完成 |
 | 2 | `RunState` + tick 骨架 + dry-run（只观测只打日志不点击），用现场帧回放校验决策 | 已完成 |
 | 3 | 光幕进路网：派生切开路网视图 + 三态复核 | 已完成 |
-| 4 | 会话适配器：生产 `Device` 上跑通单目标到点，41 章现场验证 | 窗口层已完成，会话层与现场验证未做 |
-| 5 | 解封子目标端到端（38 章，等机关标注）、电梯航段失败回写、前沿探索 | 未开始 |
+| 4 | 会话适配器：生产 `Device` 上跑通单目标到点，41 章现场验证 | 代码与离线回归完成；41 章实机验收待做 |
+| 5 | 解封子目标端到端（38 章，等机关标注）、电梯航段失败回写、前沿探索 | 代码与离线回归完成；标注补齐与实机验收待做 |
 | — | 横屏战斗接管（自动射击、结算、胜负判定的横屏模板） | 本期跳过 |
 
-`module/campaign/` 下已无 `dev_tools` 导入。只剩 `module/campaign_prototype/runtime.py` 还引用采集器的
-`DriverWindow` 做窗口控制，那条依赖由第 4 期的 `Device` 会话适配器取代，不单独搬。
+生产入口及共享闭环导入时均不加载 `dev_tools`。采集器窗口单独留在
+`module/campaign_prototype/window.py`，独立实验命令访问 `runtime.Window` 时才延迟加载。
+运行状态层、切开路网和目标选择仍分别在 `run_state.py`、`routing.py`、`goals.py`，
+`Campaign.plan_tick` 与 `Campaign.dry_run` 可独立诊断决策，空跑不发送输入。
 
-运行状态层在 `module/campaign/run_state.py`，切开路网在 `module/campaign/routing.py`，
-目标选择在 `module/campaign/goals.py`，每拍决策与空跑入口是 `Campaign.plan_tick` 与 `Campaign.dry_run`。
-空跑不发送任何输入；可达性已走切开图，所以决策不会规划穿过光幕的路线。
+### 离线验证与剩余验收
+
+- `tests/test_campaign_execution.py` 覆盖生产入口接线、真实 A* 的切口可达性、机关尝试／复核、
+  有向电梯失败与备用路线、共享导航的连续到点及出口确认、探索补视野、取消／失焦／窗口变化、
+  输入预算、普通／EX 弹窗终态与驱动释放。假设备不访问真实窗口，不发送真实输入。
+- 2026-10-15 检查当前资源包：第 38、41、48 章可以加载，但只有收集品点，没有机关点与电梯连接。
+  机关可用可信紧凑帧投影作临时兜底；电梯必须补齐点状入口／出口及传送关系，不凭场景检测猜连接。
+- 第 41 章单目标移动、第 38 章踩机关后光幕解除、补标注后的电梯传送与失败绕行、探索停稳，
+  仍须按[现场验证路径](map-annotation.md#生产任务验收路径)在游戏内验收。
+- 中文客户端及其他语言的章节／难度 OCR、普通／EX 弹窗都没有在本次工作中做实机复测；
+  离线回归不代表游戏内通关，也不代表战斗或拾取成功。
+
+离线回归（仓库根目录）：
+
+```powershell
+.venv\Scripts\python.exe -m unittest discover -s tests -p test_campaign_execution.py -v
+```
