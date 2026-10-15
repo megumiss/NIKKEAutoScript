@@ -118,7 +118,7 @@ class Localizer:
         """使用固定投影的道路相关定位小队，并以最佳分数及远处候选分差拒绝歧义。
 
         image 必须是 486×462 BGR 展开 ROI，要求恰好一个小队圆环并遮蔽图标和边框。
-        粗到细平移搜索后保存截图、叠图和报告；IoU 小于 0.80、竞争峰差小于 0.10 或地图越界时抛错。
+        粗到细平移搜索后保存截图、叠图和报告；IoU 小于 0.70、竞争峰差小于 0.10 或地图越界时抛错。
         """
         if image is None or image.shape != (462, 486, 3):
             raise ValueError('Expected a 486x462 BGR expanded minimap ROI')
@@ -176,7 +176,7 @@ class Localizer:
         cv2.drawMarker(overlay, tuple(np.rint(player).astype(int)), (0, 0, 255), cv2.MARKER_CROSS, 16, 2)
         runtime.write_image(str(settings.output / f'{tag}_alignment.png'), overlay)
         (settings.output / f'{tag}_location.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
-        if score < .80 or coarse - second < .10:
+        if score < .70 or coarse - second < .10:
             raise RuntimeError(f'Uncertain global localization: {report}')
         if not (0 <= position[0] < self.road.shape[1] and 0 <= position[1] < self.road.shape[0]):
             raise RuntimeError('Squad outside annotated map')

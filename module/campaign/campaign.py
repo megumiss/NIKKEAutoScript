@@ -13,7 +13,7 @@ from module.campaign.chapter import CLIENT_SIZE, chapter_identity
 from module.campaign.map_state import StaticMap
 from module.campaign.maps import chapter_map
 from module.campaign.navigation import TargetFinder
-from module.campaign.observation import CampaignObserver
+from module.campaign.observation import EXPANDED_ROI, CampaignObserver
 from module.config.config import TaskEnd
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -25,15 +25,27 @@ RESOURCE_RECHECK_SECONDS = 6 * 3600
 RESOURCE_SYNC_TIMEOUT = 1800
 # 小地图被关闭时左上角水滴箭头控件的客户区点击坐标；与采集器 args.map_open 同源（紧凑展开按钮）。
 MINIMAP_TOGGLE_POSITION = (42, 98)
+# 展开面板左上角的最小化按钮；与 campaign_prototype.goto.MAP_MINIMIZE 同源。
+MINIMAP_COLLAPSE_POSITION = (EXPANDED_ROI[0] + 14, EXPANDED_ROI[1] - 11)
 # 小地图重新打开后的面板动画等待秒数；采集器 wait_for 也按 1.2s 预留动画时间。
 MINIMAP_REOPEN_WAIT_SECONDS = 1.5
+# 展开面板内拖动后等待地图回正／停稳的秒数。
+MINIMAP_PAN_SETTLE_SECONDS = 1.0
+# 一次平移的客户区像素位移，以及各次重试的方向循环（右、下、左）。
+# 位移不可过大：小队圆环会随视图平移移出面板，cropped_minimap 就找不到小队了；
+# 方向轮流用是为了让视图始终围着小队附近转，而不是一路漂到章节边缘。
+MINIMAP_PAN_PIXELS = 140
+MINIMAP_PAN_DIRECTIONS = ((1, 0), (0, 1), (-1, 0))
+# 小队定位的总尝试次数：第 1 次紧凑小地图，第 2 次展开大地图，之后在展开面板内平移后重判。
+SQUAD_LOCATE_ATTEMPTS = 4
 
 
 class Campaign(ModuleBase):
-    """自动主线任务的公共基类：校验分辨率、准备地图资源并确认当前章节。
+    """自动主线任务的公共基类：校验分辨率、准备地图资源并确认当前章节与小队位置。
 
     章节、资源检查时间等状态都挂在类上而不是实例上，同一进程内多次建任务实例时共用，
     避免每个任务都重新查一遍资源仓库；地图静态层与目标选择器按章节缓存，换章才重建。
+    last_snapshot 保存章节确认时那一帧的观测结果，定位已经确认过时不必再配准一次。
     """
 
     RESOLUTION = CLIENT_SIZE
@@ -43,6 +55,7 @@ class Campaign(ModuleBase):
     chart = None
     target_finder = None
     target_finder_chapter = None
+    last_snapshot = None
 
     @cached_property
     def chapter_ocr(self):
@@ -132,6 +145,106 @@ class Campaign(ModuleBase):
             return False
         return True
 
+    def minimap_expanded(self, image=None):
+        """当前画面是否处于展开大地图形态：中部 EXPANDED_ROI 是青蓝色的地图面板。
+
+        image 为可选的 1776×999 BGR 客户区截图；缺省时用当前 device.image 转 BGR 判定。
+        判据与观察器 minimap_mode_and_panel 的展开分支一致，只用于切换后的状态确认。
+        """
+        if image is None:
+            image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+        left, top, right, bottom = EXPANDED_ROI
+        return DriverWindow.map_visible(image[top:bottom, left:right])
+
+    def expand_minimap(self):
+        """点击左上角控件把紧凑小地图展开成大地图面板，确认面板可见才返回 True。
+
+        已经处于展开态时直接返回 True：那个控件是开合开关，再点一次会把面板收起。
+        面板动画期间不接受下一次输入，所以点击后等待固定时长再复核；展开失败只告警并返回 False，
+        调用方据此放弃展开形态，不要继续在展开面板里做平移。
+        """
+        if self.minimap_expanded():
+            return True
+        logger.info('紧凑小地图未确认小队位置，展开大地图重新定位。')
+        self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
+        self.device.sleep(MINIMAP_REOPEN_WAIT_SECONDS)
+        self.device.screenshot()
+        if self.minimap_expanded():
+            return True
+        logger.warning('展开大地图失败，中部面板仍不可见。')
+        return False
+
+    def collapse_minimap(self):
+        """把展开的大地图面板收起回紧凑小地图；失败只告警，不影响已经得到的定位结果。
+
+        收起前先确认面板还在：已经是紧凑态时再点一次最小化按钮，坐标会落到场景上，
+        可能被游戏当成一次移动指令。收起后必须确认面板消失，任务结束前若仍停在大地图上，
+        后续推图会在地图盖住画面的状态下点击。
+        """
+        for _ in range(2):
+            if not self.minimap_expanded():
+                return True
+            self.device.click_xy(*MINIMAP_COLLAPSE_POSITION)
+            self.device.sleep(MINIMAP_REOPEN_WAIT_SECONDS)
+            self.device.screenshot()
+        if not self.minimap_expanded():
+            return True
+        logger.warning('展开大地图收起失败，请检查左上角小地图状态。')
+        return False
+
+    def pan_expanded_minimap(self, direction):
+        """在展开面板内沿给定方向拖动一次，换一段地图区域后再判配准。
+
+        direction 是客户区方向向量（1,0 表示向右拖），起终点以面板中心对称，位移为
+        MINIMAP_PAN_PIXELS。拖动只平移地图视图，小队本身不动：这样原本只露出一小块路的视图
+        会换成道路更完整的一段，配准的道路 IoU 与候选分差通常都会变好。拖动后等待视图停稳，
+        调用方负责重新截图并观测。
+        """
+        left, top, right, bottom = EXPANDED_ROI
+        center = ((left + right) // 2, (top + bottom) // 2)
+        half = MINIMAP_PAN_PIXELS // 2
+        dx, dy = direction
+        self.device.drag_xy((center[0] - dx * half, center[1] - dy * half),
+                            (center[0] + dx * half, center[1] + dy * half))
+        self.device.sleep(MINIMAP_PAN_SETTLE_SECONDS)
+
+    def confirm_squad_location(self, initial=None):
+        """确认小队底图位置：紧凑小地图 → 展开大地图 → 面板内平移，最多 SQUAD_LOCATE_ATTEMPTS 次。
+
+        第 1 次用紧凑小地图；失败就展开大地图重判（展开面板面积是紧凑面板的数倍，道路证据更多，
+        配准分数通常明显更高），仍失败则在面板内换一段区域再判。展开与平移都会改变画面，
+        所以退出前必须收起回紧凑形态，否则后续推图是在大地图盖住画面的状态下操作。
+        initial 是章节确认时已经观测过的那一帧快照：它已经接受定位时直接采用，避免同一画面配准两次。
+        接受时打印小队底图坐标与使用的小地图形态；未接受时保留最后一次快照并发布预览，
+        让界面能看到失败证据（具体未达标项由观察器的告警给出）。
+        """
+        identity = (self.current_chapter, self.current_difficulty)
+        if initial is not None and initial['localization'] == 'accepted':
+            logger.info(f"小队底图位置：{initial['squad']}"
+                        f"（{initial['minimap']['mode']} 小地图，章节确认时已定位）")
+            return initial
+        snapshot, expanded = None, False
+        for attempt in range(1, SQUAD_LOCATE_ATTEMPTS + 1):
+            if attempt == 2:
+                if not self.expand_minimap():
+                    break
+                expanded = True
+            elif attempt > 2:
+                self.pan_expanded_minimap(MINIMAP_PAN_DIRECTIONS[(attempt - 3) % len(MINIMAP_PAN_DIRECTIONS)])
+            self.device.screenshot()
+            image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+            snapshot = self.observer.observe(image, identity, time.time())
+            if snapshot['localization'] == 'accepted':
+                logger.info(f"小队底图位置：{snapshot['squad']}"
+                            f"（{snapshot['minimap']['mode']} 小地图，第 {attempt}/{SQUAD_LOCATE_ATTEMPTS} 次尝试）")
+                break
+            logger.warning(f"第 {attempt}/{SQUAD_LOCATE_ATTEMPTS} 次未确认小队位置，换一种小地图形态或视图重试。")
+        if snapshot is not None:
+            publish_preview_frame(self.device.image, interval=0, source={'campaign': snapshot})
+        if expanded:
+            self.collapse_minimap()
+        return snapshot
+
     def detect_current_chapter(self):
         """连续识别主线地图右下角的章节号与难度，确认后发布一帧章节快照。
 
@@ -160,6 +273,7 @@ class Campaign(ModuleBase):
                 self.current_chapter, self.current_difficulty = identity
                 logger.info(f'当前主线章节：{identity[1].upper()} 第 {identity[0]} 章')
                 snapshot = self.observer.observe(image, identity, captured_at)
+                self.last_snapshot = snapshot
                 publish_preview_frame(self.device.image, interval=0, source={'campaign': snapshot})
                 return self.current_chapter
             if timeout.reached():
@@ -190,15 +304,18 @@ class Campaign(ModuleBase):
         return self.target_finder.find(snapshot)
 
     def run(self):
-        """主线任务入口：准备地图资源、校验分辨率并确认章节。
+        """主线任务入口：准备地图资源、校验分辨率并确认章节与小队位置。
 
         推图本体尚未接入，当前只返回确认到的章节号；分辨率检查必须在资源检查之后、识别之前，
         章节号和难度标识的坐标按 1776×999 客户区固定，分辨率不符时识别区域会整体偏移。
+        章节确认后立刻确认小队底图位置：这一步会按需展开大地图并在面板内平移重试，
+        退出时恢复紧凑小地图，供后续推图直接使用。
         """
         logger.hr(self.config.task.command, level=1)
         self.ensure_resources()
         self.device.check_resolution(*self.RESOLUTION)
         logger.info('主线任务分辨率：1776×999')
         chapter = self.detect_current_chapter()
+        self.confirm_squad_location(self.last_snapshot)
         # TODO: 根据任务类型执行推图，并在移动决策与战斗前后发布章节状态。
         return chapter

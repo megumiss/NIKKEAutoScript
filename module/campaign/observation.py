@@ -7,7 +7,9 @@ import cv2
 import numpy as np
 
 from dev_tools.minimap_reconstruct import DriverWindow
-from dev_tools.wiki_collectible_match import MapMatcher, ROI
+from dev_tools.wiki_collectible_match import (ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU,
+                                              MapMatcher, ROI)
+from dev_tools.wiki_minimap_crop import cropped_minimap
 from module.campaign.barriers import mark_blocks, project_barriers
 from module.campaign.map_state import StaticMap
 from module.campaign.maps import chapter_map
@@ -16,6 +18,11 @@ from module.campaign.offscreen import squad_offscreen
 from module.campaign_prototype.perception import (compact_road_masks, marker_candidates, minimap_masks,
                                                   project_centers, refine_ring)
 from module.logger import logger
+
+# 展开小地图（点击左上角控件后出现的大地图面板）在 1776×999 客户区里的固定 ROI；
+# 与采集器 args.roi、campaign_prototype.goto.MAP_MINIMIZE 同源。展开态下紧凑面板不再显示，
+# 面板四角位置会随窗口尺寸略有浮动，所以配准前还要用 cropped_minimap 自己定位面板边界。
+EXPANDED_ROI = (644, 280, 1130, 742)
 
 
 class CampaignObserver:
@@ -35,6 +42,7 @@ class CampaignObserver:
         self.chart = None
         self.chart_failed = False
         self.last_error = None
+        self.last_localization_error = None
         self.last_object_error = None
         self.last_offscreen_error = None
         self.last_barrier_error = None
@@ -62,9 +70,11 @@ class CampaignObserver:
 
         identity 是已确认的（章节号, 难度）；章节变化会丢掉地图缓存并重新加载，加载失败只告警，
         之后的定位字段保持 unavailable。
-        小地图分展开和紧凑两种形态，按左上角控件判断：展开面板直接从固定区域裁，紧凑面板要先把
-        画面缩放到 1920×1080 再按 ROI 裁，底图配准只在紧凑模式下做。地图不可见时提前返回，
-        展开模式下没有任何标记也提前返回，避免推送无内容的面板。
+        小地图按左上角控件与面板分三态：紧凑（控件可见且左上小面板是地图）、展开（左上小面板
+        不再是地图，地图占满中部 EXPANDED_ROI）、关闭或不在田野页（两者都不是，直接返回）。
+        紧凑面板要先把画面缩放到 1920×1080 再按 ROI 裁，展开面板直接裁固定 ROI，但配准前还要用
+        cropped_minimap 重新定位面板边界——展开面板的位置会随窗口尺寸浮动，而且它给出的圆环
+        自带圆度与道路支持校验，比固定 ROI 更可靠。两种形态的配准结果走同一套接受判据与告警。
         定位成功后敌人和小队都投影到地图坐标，落到图外视为 needs_review——这种情况多半是配准
         漂移而不是真的出界。objects=False 用于只需要小地图的场合，可以省掉整幅画面的八片推理。
         """
@@ -86,57 +96,35 @@ class CampaignObserver:
             except (OSError, ValueError, KeyError) as exc:
                 logger.warning(f'第 {chapter} 章地图资源不可用于定位：{exc}')
         snapshot['map'] = self.map_info
-        compact = DriverWindow.minimap_control_visible(image[76:120, 20:64])
-        if compact:
-            if not DriverWindow.map_visible(image[118:273, 27:207]):
-                return snapshot
-            x1, y1, x2, y2 = ROI
-            panel = cv2.resize(image, (1920, 1080))[y1:y2, x1:x2]
-        else:
-            panel = image[280:742, 644:1130]
-            if not DriverWindow.map_visible(panel):
-                return snapshot
-        players, enemies = [], []
-        for item in marker_candidates(panel):
-            if item.label == 'minimap_squad_ring':
-                center = refine_ring(panel, item)
-                # 检测框中心可展示在原小地图上；底图定位仍要求圆环拟合通过校验。
-                players.append((center if center is not None else item.center).round(1).tolist())
-            elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex'):
-                enemies.append(dict(kind='ex' if item.label.endswith('_ex') else 'normal',
-                                    position=item.center.round(1).tolist(), confidence=round(item.confidence, 3)))
-        if not compact and not players and not enemies:
+        mode, panel = self.minimap_mode_and_panel(image)
+        if mode is None:
+            return snapshot
+        players, enemies = self.minimap_markers(panel)
+        if mode == 'compact' and not players and not enemies:
             return snapshot
         ok, encoded = cv2.imencode('.jpg', panel, [cv2.IMWRITE_JPEG_QUALITY, 85])
         if not ok:
             raise ValueError('Cannot encode campaign minimap.')
         snapshot['minimap'] = dict(image='data:image/jpeg;base64,' + base64.b64encode(encoded).decode('ascii'),
                                    size=list(panel.shape[1::-1]), squad=players[0] if len(players) == 1 else None,
-                                   enemies=enemies, mode='compact' if compact else 'expanded')
-        if not compact or self.matcher is None:
+                                   enemies=enemies, mode=mode)
+        if self.matcher is None:
             return snapshot
         squad_registration = None
         try:
-            _, road, valid, player = minimap_masks(image)
-            result = self.matcher.match_panel(panel, road, valid, player)
-            snapshot['localization'] = result['status']
-            if result['status'] != 'accepted':
-                return snapshot
-            matrix = result['roi_to_map']
-            width, height = self.map_info['size']
-            squad = project_centers([player], matrix)[0]
-            if not (0 <= squad[0] < width and 0 <= squad[1] < height):
-                snapshot['localization'] = 'needs_review'
-                return snapshot
-            snapshot['squad'] = squad
-            # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
-            squad_registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
-                                      player_center=player)
-            snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
-            positions = project_centers([item['position'] for item in enemies], matrix)
-            snapshot['enemies'] = [dict(item, position=position) for item, position in zip(enemies, positions)
-                                   if 0 <= position[0] < width and 0 <= position[1] < height]
-            self.last_error = None
+            if mode == 'compact':
+                _, road, valid, player = minimap_masks(image)
+                markers = enemies
+            else:
+                # 展开面板按蓝框重新裁一次：配准用的面板与上面展示的面板尺寸不同，
+                # 敌人标记必须回到这次配准的面板坐标系里才能一起投影。
+                panel, road, valid, player, _ = cropped_minimap(image)
+                markers = self.minimap_markers(panel)[1]
+            registration = self.locate(snapshot, chapter, panel, road, valid, player, markers)
+            # 屏障投影链（barriers.scene_chart）按「紧凑面板 × a 后钉在展开 ROI 中心」标定，
+            # 而展开形态的面板是裁蓝框后缩放到 300px 的坐标系，与那套标定不同源，
+            # 直接把这份配准喂进去会让屏障落点整体偏。展开帧不标屏障，等下一次紧凑帧再标。
+            squad_registration = registration if mode == 'compact' else None
         except (OSError, ValueError, KeyError, cv2.error) as exc:
             snapshot['localization'] = 'needs_review'
             message = str(exc)
@@ -150,6 +138,96 @@ class CampaignObserver:
                 snapshot['viewport'] = viewport['position']
         self.observe_barriers(image, snapshot, squad_registration, viewport)
         return snapshot
+
+    @staticmethod
+    def minimap_mode_and_panel(image):
+        """判断小地图形态并裁出用于展示与标记识别的面板；小地图不可用时返回 (None, None)。
+
+        紧凑态要求左上角控件可见且紧凑面板是地图（判据与 observe 之前的版本一致）；否则看中部
+        EXPANDED_ROI 是否是地图，是则判为展开态；两者都不满足说明小地图被关闭或当前不在田野页。
+        返回的紧凑面板是 1920×1080 归一化坐标下的裁图，展开面板是客户区 ROI 的原始裁图。
+        """
+        if DriverWindow.map_visible(image[118:273, 27:207]):
+            if not DriverWindow.minimap_control_visible(image[76:120, 20:64]):
+                return None, None
+            x1, y1, x2, y2 = ROI
+            return 'compact', cv2.resize(image, (1920, 1080))[y1:y2, x1:x2]
+        left, top, right, bottom = EXPANDED_ROI
+        panel = image[top:bottom, left:right]
+        if DriverWindow.map_visible(panel):
+            return 'expanded', panel
+        return None, None
+
+    @staticmethod
+    def minimap_markers(panel):
+        """识别小地图面板里的标记，返回（小队圆环中心列表, 敌人列表），坐标都是该面板的像素。
+
+        圆环中心优先用圆环拟合结果，拟合不通过时退回检测框中心（只影响展示，底图定位仍要求
+        圆环拟合通过校验）；敌人保留类型与置信度，投影到底图由调用方按同一份配准矩阵完成。
+        """
+        players, enemies = [], []
+        for item in marker_candidates(panel):
+            if item.label == 'minimap_squad_ring':
+                center = refine_ring(panel, item)
+                players.append((center if center is not None else item.center).round(1).tolist())
+            elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex'):
+                enemies.append(dict(kind='ex' if item.label.endswith('_ex') else 'normal',
+                                    position=item.center.round(1).tolist(), confidence=round(item.confidence, 3)))
+        return players, enemies
+
+    def locate(self, snapshot, chapter, panel, road, valid, player, markers):
+        """对一份已裁好的小地图面板做底图配准并把结果写进快照。
+
+        panel/road/valid/player/markers 必须同属这一份面板的像素坐标系（紧凑与展开形态各调一次），
+        否则投影出的敌人位置会整体偏移。配准被接受时写入 squad、roi_to_map、敌人底图坐标与屏障
+        锚点并返回该锚点；未被接受（判据不足或小队投影越界）时按原因去重告警并返回 None，
+        调用方据此决定是否换形态重试。
+        """
+        result = self.matcher.match_panel(panel, road, valid, player)
+        snapshot['localization'] = result['status']
+        if result['status'] != 'accepted':
+            failed = [name for name, passed in
+                      (('road_iou', result['road_iou'] >= ACCEPT_ROAD_IOU),
+                       ('coarse_margin', result['coarse_margin'] >= ACCEPT_COARSE_MARGIN),
+                       ('parameter_spread', result['parameter_spread_px'] <= ACCEPT_PARAMETER_SPREAD_PX))
+                      if not passed]
+            self.report_localization_error(
+                chapter, f"{result['status']}:{','.join(failed)}",
+                f"{result['status']}，road_iou={result['road_iou']:.3f}，"
+                f"margin={result['coarse_margin']:.3f}，spread={result['parameter_spread_px']:.1f}px，"
+                f"未达标：{','.join(failed) or '小队投影点未落在底图内'}")
+            return None
+        matrix = result['roi_to_map']
+        width, height = self.map_info['size']
+        squad = project_centers([player], matrix)[0]
+        if not (0 <= squad[0] < width and 0 <= squad[1] < height):
+            snapshot['localization'] = 'needs_review'
+            self.report_localization_error(chapter, 'out_of_bounds',
+                                           f'配准已接受，但小队投影 {squad} 超出底图 {width}×{height}')
+            return None
+        snapshot['squad'] = squad
+        # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
+        registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
+                            player_center=player)
+        snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
+        positions = project_centers([item['position'] for item in markers], matrix)
+        snapshot['enemies'] = [dict(item, position=position) for item, position in zip(markers, positions)
+                               if 0 <= position[0] < width and 0 <= position[1] < height]
+        self.last_error = None
+        self.last_localization_error = None
+        return registration
+
+    def report_localization_error(self, chapter, key, detail):
+        """底图定位未被接受时告警，同一种失败只打一次，避免移动闭环里逐帧刷同一行。
+
+        key 是失败原因的稳定标识（未达标的判据组合、投影越界等），detail 带当次的量化指标，
+        因此同一段失败里指标取首次出现的值。配准重新被接受时由 locate 复位，
+        同一原因再次出现会重新告警。
+        """
+        if key == self.last_localization_error:
+            return
+        self.last_localization_error = key
+        logger.warning(f'第 {chapter} 章底图定位未确认（{detail}），小队底图坐标不更新。')
 
     def locate_viewport(self, image):
         """小队离屏时用紧凑小地图道路配准定位视野中心（无小队圆环种子）；接受时返回配准结果。"""

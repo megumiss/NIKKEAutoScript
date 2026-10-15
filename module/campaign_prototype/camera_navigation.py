@@ -622,9 +622,9 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                 distance_new = float(np.linalg.norm(cand_viewport - target))
                 progress = distance_new < float(np.linalg.norm(viewport - target))
                 sane = float(np.linalg.norm(cand_viewport - viewport)) <= 900.
-                # 细路视口的软重叠分约 0.84 封顶；门槛取 0.8，可信度由推进与位移合理性共同判定。
+                # 细路视口的软重叠分约 0.84 封顶；门槛取 0.7，可信度由推进与位移合理性共同判定。
                 # 圆环罩住目标（长轴半径）后，低分配准的误接受由到点判定兜底，可按覆盖范围放宽。
-                if candidate['iou'] >= .8 and sane and (progress or distance_new <= goto.SQUAD_REACH_WIDE):
+                if candidate['iou'] >= .7 and sane and (progress or distance_new <= goto.SQUAD_REACH_WIDE):
                     use_matrix, use_a, source = candidate['matrix'], candidate['a'], 'needs_review'
                 elif sane and (progress or distance_new <= goto.SQUAD_REACH_WIDE) and fusion_acceptable(
                         session, candidate, candidate['matrix'], road, valid, viewport, predicted,

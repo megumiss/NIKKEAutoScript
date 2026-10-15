@@ -12,6 +12,14 @@ ROI = (25, 96, 243, 307)
 SCALE = 0.25
 PAD = 180
 MATCH_VERSION = 5
+# match_panel 的接受判据：道路 IoU、粗搜首名与远处歧义候选的分差、同分候选的参数离散度。
+# 观察器要用同一组常量解释定位为何未被接受，写成常量而不是散在判据里的字面量，避免两边漂移。
+# 道路 IoU 取 0.70：小地图只露出一小块路、或该章配色与底图有固有差异时，正确位置实测落在
+# 0.71~0.84（ch38 实测 0.832 被 0.85 拒掉），把这些正确位置全判死代价太大；错位与歧义主要由
+# margin 与 parameter_spread 两道判据拦截，IoU 只作为「确实压在道路上」的下限。
+ACCEPT_ROAD_IOU = .70
+ACCEPT_COARSE_MARGIN = .10
+ACCEPT_PARAMETER_SPREAD_PX = 20
 # match_panel 粗搜索的参数网格；同一个 MapMatcher 实例反复配准时尺度基本不变，先在最近
 # 接受的 (a, b) 附近做小网格热启动，命中即跳过全网格，未命中再退回完整扫描。
 PARAMETER_GRID = sorted({(round(float(a), 2), round(float(b), 2))
@@ -186,7 +194,7 @@ class MapMatcher:
         热启动能省九成以上的 matchTemplate。
         """
         coarse = []
-        # 候选分门槛取 0.6：粗搜网格 IoU 明显低于接受线（全分辨率细化后要求 0.85）的参数
+        # 候选分门槛取 0.6：粗搜网格 IoU 明显低于接受线（全分辨率细化后要求 ACCEPT_ROAD_IOU）的参数
         # 不会成为最终候选，热启动时不值得为它们做完全网格。
         warm_score_floor = .6
 
@@ -262,7 +270,8 @@ class MapMatcher:
         # accepted 的参数，可以直接复用当时的 margin 得出 accepted，避免每帧都做全网格。
         if warm_hit and self.warm_parameters == (result['a'], result['b']) and self.warm_margin is not None:
             margin = self.warm_margin
-        accepted = bool(inside and result['road_iou'] >= .85 and margin >= .10 and spread <= 20)
+        accepted = bool(inside and result['road_iou'] >= ACCEPT_ROAD_IOU and margin >= ACCEPT_COARSE_MARGIN
+                        and spread <= ACCEPT_PARAMETER_SPREAD_PX)
         result.update(status='accepted' if accepted else 'needs_review', coarse_margin=float(margin),
                       parameter_spread_px=float(spread), roi=list(ROI), player_center=player.tolist(),
                       normalized_size=[1920, 1080], image_sha256=self.digest, match_version=MATCH_VERSION)

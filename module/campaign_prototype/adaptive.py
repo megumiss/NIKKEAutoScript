@@ -27,7 +27,7 @@ class AdaptiveLocalizer(Localizer):
 
         输入固定尺寸展开 ROI，搜索尺度与透视参数后对道路匹配进行受限 ECC 细化。
         返回 ROI→map、地图位置、质量分数及地图绑定；require_player=False 时允许视野中心，但 position_kind 不标记为小队。
-        IoU 至少 0.85 且最佳与远处竞争候选差至少 0.10 才通过；失败也保留定位证据。
+        IoU 至少 0.70 且最佳与远处竞争候选差至少 0.10 才通过；失败也保留定位证据。
         """
         if image is None or image.shape != (462, 486, 3):
             raise ValueError('Expected a 486x462 BGR expanded minimap ROI')
@@ -122,7 +122,7 @@ class AdaptiveLocalizer(Localizer):
         cv2.drawMarker(overlay, tuple(np.rint(player).astype(int)), (0, 0, 255), cv2.MARKER_CROSS, 16, 2)
         runtime.write_image(str(settings.output / f'{tag}_alignment.png'), overlay)
         (settings.output / f'{tag}_location.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
-        if iou < .85 or best['score'] - rival < .10:
+        if iou < .70 or best['score'] - rival < .10:
             raise RuntimeError(f'Uncertain adaptive localization: {report}')
         p = report['position']
         # 镜头中心可能落在裁剪底图外；道路配准通过即可用于镜头换算，不能冒充小队位置。
