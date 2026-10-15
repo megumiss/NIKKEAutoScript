@@ -12,22 +12,18 @@ if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from module.campaign.annotations import AnnotationStore
 from module.campaign.connectivity import ensure_data
 
 
 def main():
     """批量为地图目录下每个章节重算并写入连通数据，逐行打印分区数量。
 
-    延迟导入 AnnotationStore 是为了避开标注工具与扫描模块的重量级导入；按行输出 JSON 并 flush，
-    方便在标注工具里实时显示进度。
+    按行输出 JSON 并 flush，方便在标注工具里实时显示进度。
     """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path('data/resources/maps'))
     args = parser.parse_args()
-    if __package__:
-        from .map_annotator import AnnotationStore
-    else:
-        from map_annotator import AnnotationStore
     store = AnnotationStore(args.root)
     for item in store.catalog():
         package = store.package(item['id'])

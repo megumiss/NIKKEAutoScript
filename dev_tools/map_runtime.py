@@ -119,10 +119,7 @@ def replace_directory(candidate, destination):
 
 def export_runtime(source, destination, lean=True):
     """先在临时目录校验复制结果，再发布到新路径；不覆盖已编辑的运行地图。默认导出即精简。"""
-    if __package__:
-        from .map_annotator import AnnotationStore
-    else:
-        from map_annotator import AnnotationStore
+    from module.campaign.annotations import AnnotationStore
     source, destination = Path(source).resolve(), Path(destination).resolve()
     if destination.exists() or destination.is_relative_to(source):
         raise FileExistsError('Choose a new runtime directory outside the capture package')

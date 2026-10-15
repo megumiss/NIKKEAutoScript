@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from dev_tools.map_annotator import COORDINATES, validate_annotations
+from module.campaign.annotations import COORDINATES, validate_annotations
 from module.campaign.connectivity import decode_labels, ensure_data, package_road
 
 # 标记中心和人工标注都会偏出道路几个像素，按最近的道路像素归属分量。

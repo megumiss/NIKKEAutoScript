@@ -1,6 +1,6 @@
 """普通与困难共用的章节底图资源。"""
 
-from dev_tools.map_annotator import AnnotationStore
+from module.campaign.annotations import AnnotationStore
 from module.campaign.paths import DEFAULT_MAPS_ROOT
 
 

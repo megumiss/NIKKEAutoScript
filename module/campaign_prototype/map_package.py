@@ -6,7 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from dev_tools.map_annotator import COORDINATES, validate_annotations
+from module.campaign.annotations import COORDINATES, validate_annotations
 from . import settings
 
 
