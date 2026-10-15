@@ -23,7 +23,7 @@ else:
 
 from module.campaign.vision.chapter import chapter_number
 from module.campaign.vision.minimap import map_visible, terrain
-from module.campaign.map.paths import DEFAULT_CAPTURE_ROOT
+from module.campaign.map.paths import CHAPTER_NAMES_FILE, DEFAULT_CAPTURE_ROOT
 
 
 def screenshot(window):
@@ -80,7 +80,6 @@ def click(window, point):
 
 # 章节列表（CHAPTER LIST）窗口几何：条目名字在两列间锯齿交替，序章（章节 0）在最上方的左列。
 # 条目左侧的小号数字标签实测无法 OCR（PP-OCRv5 识别分数 <0.2），章节身份一律按大字名字识别。
-CHAPTER_NAMES_FILE = Path(__file__).with_name('chapter_names.json')
 LIST_AREA = (620, 60, 1140, 900)
 LIST_TOP_Y = 200.0
 LIST_PITCH = 94.0

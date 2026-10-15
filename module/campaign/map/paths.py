@@ -7,6 +7,7 @@
 from pathlib import Path
 
 
+CHAPTER_NAMES_FILE = Path(__file__).with_name('chapter_names.json')
 MAPS_ROOT = Path(__file__).resolve().parents[3] / 'data' / 'chapter_maps'
 # 运行地图来自独立的资源仓库，data/resources 是它的本地同步副本（maps/ 为章节地图），不随主项目提交。
 RESOURCE_ROOT = MAPS_ROOT.parent / 'resources'
