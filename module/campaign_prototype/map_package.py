@@ -138,7 +138,7 @@ class MapPackage:
             _, override, _ = edited_roads(self.path, metadata, self.terrain >= .5)
             self.terrain[override == 1] = 0
             self.terrain[override == 2] = 1
-        from dev_tools.map_connectivity import build, read_bound
+        from module.campaign.connectivity import build, read_bound
         road = (self.terrain >= .5).astype(np.uint8)
         edits = annotations.get('connectivity_edits', [])
         self.connectivity = (read_bound(self.path / 'connectivity.json', road, digest, edits)

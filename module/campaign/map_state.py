@@ -10,11 +10,11 @@ from pathlib import Path
 import numpy as np
 
 from dev_tools.map_annotator import COORDINATES, validate_annotations
-from dev_tools.map_connectivity import decode_labels, ensure_data, package_road
+from module.campaign.connectivity import decode_labels, ensure_data, package_road
 
 # 标记中心和人工标注都会偏出道路几个像素，按最近的道路像素归属分量。
 ROAD_TOLERANCE = 12
-# 连通分区是在 8 像素网格上计算的（dev_tools/map_connectivity.py），分量查询按同一网格采样。
+# 连通分区是在 8 像素网格上计算的（module/campaign/connectivity.py），分量查询按同一网格采样。
 GRID = 8
 # 动态封锁：局部道路方向的估计窗口半径，以及切口长度的下限、上限和外扩余量。
 BLOCK_WINDOW = 60

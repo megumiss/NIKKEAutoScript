@@ -21,18 +21,17 @@ from urllib.parse import parse_qs, urlsplit
 from PIL import Image
 
 if __package__:
-    from .map_connectivity import ensure_data, validate_edits, write_data
     from .map_movement import MovementJobs
     from .map_scan import ScanJobs
     from .map_wiki import WikiJobs
 else:
     # 脚本方式运行时仓库根不在默认路径上。
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from map_connectivity import ensure_data, validate_edits, write_data
     from map_movement import MovementJobs
     from map_scan import ScanJobs
     from map_wiki import WikiJobs
 
+from module.campaign.connectivity import ensure_data, validate_edits, write_data
 from module.campaign.paths import DEFAULT_MAPS_ROOT, local_package_dir
 from module.campaign.terrain import _atomic_write, bake_terrain, terrain_colors, validate_terrain_edits
 

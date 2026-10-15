@@ -108,7 +108,7 @@ class Localizer:
         self.matrix = self.package.projection
         self.size = self.package.warp_size
         self.road = (self.package.terrain >= .5).astype(np.float32)
-        from dev_tools.map_connectivity import decode_labels
+        from module.campaign.connectivity import decode_labels
         self.route_labels = decode_labels(self.package.connectivity['effective'], self.road[::8, ::8].shape)
         self.old_matrix = self.package.old_projection
         if not np.allclose(goto.A_INV, self.package.field_inverse):
