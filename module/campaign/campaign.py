@@ -38,6 +38,10 @@ MINIMAP_PAN_PIXELS = 140
 MINIMAP_PAN_DIRECTIONS = ((1, 0), (0, 1), (-1, 0))
 # 小队定位的总尝试次数：第 1 次紧凑小地图，第 2 次展开大地图，之后在展开面板内平移后重判。
 SQUAD_LOCATE_ATTEMPTS = 4
+# 主线剧情界面检查的帧数与帧间隔：单帧 OCR 会被过场动画、技能特效或弹窗干扰，
+# 连续这么多帧都读不到右下角章节角标才判定当前不在主线地图。
+MAIN_STORY_PAGE_FRAMES = 3
+MAIN_STORY_PAGE_INTERVAL = 0.5
 
 
 class Campaign(ModuleBase):
@@ -218,6 +222,7 @@ class Campaign(ModuleBase):
         接受时打印小队底图坐标与使用的小地图形态；未接受时保留最后一次快照并发布预览，
         让界面能看到失败证据（具体未达标项由观察器的告警给出）。
         """
+        logger.hr('确认小队位置', level=2)
         identity = (self.current_chapter, self.current_difficulty)
         if initial is not None and initial['localization'] == 'accepted':
             logger.info(f"小队底图位置：{initial['squad']}"
@@ -230,7 +235,9 @@ class Campaign(ModuleBase):
                     break
                 expanded = True
             elif attempt > 2:
-                self.pan_expanded_minimap(MINIMAP_PAN_DIRECTIONS[(attempt - 3) % len(MINIMAP_PAN_DIRECTIONS)])
+                direction = MINIMAP_PAN_DIRECTIONS[(attempt - 3) % len(MINIMAP_PAN_DIRECTIONS)]
+                logger.info(f'在展开面板内平移视图 {direction}，换一段地图再判定位。')
+                self.pan_expanded_minimap(direction)
             self.device.screenshot()
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
             snapshot = self.observer.observe(image, identity, time.time())
@@ -239,6 +246,9 @@ class Campaign(ModuleBase):
                             f"（{snapshot['minimap']['mode']} 小地图，第 {attempt}/{SQUAD_LOCATE_ATTEMPTS} 次尝试）")
                 break
             logger.warning(f"第 {attempt}/{SQUAD_LOCATE_ATTEMPTS} 次未确认小队位置，换一种小地图形态或视图重试。")
+        if snapshot is None or snapshot['localization'] != 'accepted':
+            status = snapshot['localization'] if snapshot is not None else '没有取到观测帧'
+            logger.warning(f'小队底图位置最终未确认（{status}），后续推图没有可用起点。')
         if snapshot is not None:
             publish_preview_frame(self.device.image, interval=0, source={'campaign': snapshot})
         if expanded:
@@ -265,6 +275,33 @@ class Campaign(ModuleBase):
         self.device.verify_input_channel()
         logger.info(f'主线任务分辨率：{width}×{height}')
 
+    def check_main_story_page(self):
+        """确认当前停在主线剧情界面，不在则直接判定人工介入，并返回这一帧读到的（章节号, 难度）。
+
+        判据是右下角的章节号与难度标识：这两处只在主线地图上显示，大厅、方舟、战斗与结算页都
+        读不到，所以任一帧读到就认为在界面内，不要求连续同值——章节号的确认仍由
+        detect_current_chapter 负责。这个检查的意义是让「任务开始时不在主线地图」在一两秒内
+        失败，而不是耗完 30 秒识别超时，更不要在错误页面上继续点小地图控件、拖动视图。
+        单帧读不到不立刻报错：过场动画、技能特效和弹窗都可能盖住角标，连续
+        MAIN_STORY_PAGE_FRAMES 帧都读不到才算不在界面。
+        必须在 prepare_client 之后调用：识别区域按 1776×999 客户区固定，分辨率不符时
+        chapter_identity 会直接抛 ValueError。
+        """
+        logger.hr('检查主线剧情界面', level=2)
+        for frame in range(1, MAIN_STORY_PAGE_FRAMES + 1):
+            self.device.screenshot()
+            image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+            identity = chapter_identity(image, self.chapter_ocr)
+            if identity is not None:
+                logger.info(f'已在主线剧情界面：右下角 {identity[1].upper()} 第 {identity[0]} 章')
+                return identity
+            logger.warning(f'第 {frame}/{MAIN_STORY_PAGE_FRAMES} 帧未读到右下角章节角标。')
+            if frame < MAIN_STORY_PAGE_FRAMES:
+                self.device.sleep(MAIN_STORY_PAGE_INTERVAL)
+        logger.error('当前不在主线剧情界面：右下角读不到章节号与难度标识。请先进入主线地图，'
+                     '并确认右下角章节角标没有被弹窗或特效遮挡，然后重新运行任务。')
+        raise RequestHumanTakeover
+
     def detect_current_chapter(self):
         """连续识别主线地图右下角的章节号与难度，确认后发布一帧章节快照。
 
@@ -272,10 +309,11 @@ class Campaign(ModuleBase):
         连续计数清零，30 秒内无法确认则判定为人工介入，通常是章节号被遮挡或不在主线地图。
         确认的同时做一次观测并推送预览，让界面在任务刚开始时就能看到定位结果。
         """
+        logger.hr('确认主线章节', level=2)
         self.current_chapter = self.current_difficulty = None
         reader = self.chapter_ocr
         timeout = Timer(30).start()
-        previous, stable = None, 0
+        previous, stable, missing_logged = None, 0, False
         while 1:
             if self.config.stop_event is not None and self.config.stop_event.is_set():
                 raise TaskEnd
@@ -287,6 +325,15 @@ class Campaign(ModuleBase):
             if self.reopen_minimap_if_closed(image):
                 image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
             identity = chapter_identity(image, reader)
+            if identity is None:
+                # 一段连续读不到只告警一次：同一个遮挡逐帧刷同一行没有信息量，恢复后会重新告警。
+                if not missing_logged:
+                    logger.warning('本帧未读到右下角章节号与难度，连续一致计数清零后继续识别。')
+                    missing_logged = True
+            else:
+                missing_logged = False
+                if identity != previous:
+                    logger.info(f'读到 {identity[1].upper()} 第 {identity[0]} 章，等待连续三帧一致。')
             stable = stable + 1 if identity is not None and identity == previous else int(identity is not None)
             previous = identity
             if stable >= 3:
@@ -297,7 +344,9 @@ class Campaign(ModuleBase):
                 publish_preview_frame(self.device.image, interval=0, source={'campaign': snapshot})
                 return self.current_chapter
             if timeout.reached():
-                logger.error('无法确认主线章节及难度，请确保主线地图右下角章节号和难度标识可见。')
+                last = f'{previous[1].upper()} 第 {previous[0]} 章' if previous is not None else '未读到'
+                logger.error(f'无法确认主线章节及难度（最后一帧：{last}，连续一致 {stable}/3 帧），'
+                             f'请确保主线地图右下角章节号和难度标识可见。')
                 raise RequestHumanTakeover
             self.device.sleep(0.5)
 
@@ -323,18 +372,42 @@ class Campaign(ModuleBase):
             return None
         return self.target_finder.find(snapshot)
 
+    def log_snapshot_summary(self, snapshot):
+        """把一帧章节快照里与推图决策相关的计数写进日志，确认各路识别确实有输出。
+
+        只打计数与状态，不逐项展开坐标：小队坐标在定位被接受时已由 confirm_squad_location 打出，
+        敌人与机关的坐标会在移动决策处按选中的目标打印，这里全列出来只会把日志刷满。
+        snapshot 为 None 表示连一帧观测都没拿到（展开小地图失败等），此时只告警一行。
+        """
+        if snapshot is None:
+            logger.warning('本次任务没有拿到章节快照，后续推图缺少观测输入。')
+            return
+        minimap = snapshot['minimap']
+        logger.info(f"观测结果：小地图 {minimap['mode'] if minimap else '不可用'}，"
+                    f"小地图敌人 {len(minimap['enemies']) if minimap else 0}，"
+                    f"底图敌人 {len(snapshot['enemies'])}，场景目标 {len(snapshot['objects'])}，"
+                    f"屏障封锁 {len(snapshot['blocks'])}")
+        offscreen = snapshot['offscreen']
+        if offscreen is not None:
+            logger.info(f"小队离屏：画面边缘标记中心 {offscreen['center']}，朝向 {offscreen['direction']}°")
+
     def run(self):
-        """主线任务入口：准备地图资源与客户区，并确认章节与小队位置。
+        """主线任务入口：准备地图资源与客户区，确认停在主线剧情界面，再确认章节与小队位置。
 
         推图本体尚未接入，当前只返回确认到的章节号。客户区准备（分辨率、窗口位置、自动 HDR、
         鼠标通道）由 prepare_client 负责，必须在章节识别之前完成。
+        客户区就绪后先用右下角章节角标确认停在主线剧情界面：不在就直接要求人工接管，
+        既避免耗完章节识别的 30 秒超时，也避免在别的页面上点小地图控件、拖动视图。
         章节确认后立刻确认小队底图位置：这一步会按需展开大地图并在面板内平移重试，
         退出时恢复紧凑小地图，供后续推图直接使用。
         """
         logger.hr(self.config.task.command, level=1)
         self.ensure_resources()
         self.prepare_client()
+        self.check_main_story_page()
         chapter = self.detect_current_chapter()
-        self.confirm_squad_location(self.last_snapshot)
+        snapshot = self.confirm_squad_location(self.last_snapshot)
+        self.log_snapshot_summary(snapshot)
+        logger.info(f'主线准备完成：{self.current_difficulty.upper()} 第 {chapter} 章；推图本体尚未接入。')
         # TODO: 根据任务类型执行推图，并在移动决策与战斗前后发布章节状态。
         return chapter
