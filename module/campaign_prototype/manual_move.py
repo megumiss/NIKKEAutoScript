@@ -299,7 +299,7 @@ class GameSession:
         field 使用完整客户区 BGR 图，章节号及 NORMAL/HARD 文字必须与请求一致。
         敌人模式保留普通准备弹窗、关闭并排除 EX，再携带证据抛出 TargetTriggered；关闭失败按错误处理。
         """
-        from dev_tools.minimap_chapters import chapter_number
+        from module.campaign.chapter import chapter_number
         from . import goto
         if goto.battle_popup_score(field) > .8:
             from .movement_feedback import TargetTriggered

@@ -17,7 +17,7 @@ import cv2
 import numpy as np
 
 from . import perception
-from dev_tools import minimap_reconstruct as mr
+from module.campaign.minimap import terrain
 
 ARGS = settings.driver_args()
 ASSETS = Path(__file__).parent / 'assets'
@@ -228,7 +228,7 @@ class Localizer:
         优先把同帧普通敌人和小队标记平移到缓存坐标；低分时只保留同帧相对坐标。
         返回匹配分数、可选小队位置和圆环数量，并更新 enemies 与 coordinate_source，调用者必须区分坐标来源。
         """
-        mask = cv2.warpPerspective(mr.terrain(image), self.matrix, self.size, flags=cv2.INTER_NEAREST)
+        mask = cv2.warpPerspective(terrain(image), self.matrix, self.size, flags=cv2.INTER_NEAREST)
         mask = (mask > 0).astype(np.float32)
         result = cv2.matchTemplate(self.terrain, mask, cv2.TM_CCOEFF_NORMED)
         _, score, _, loc = cv2.minMaxLoc(result)

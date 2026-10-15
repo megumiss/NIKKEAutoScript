@@ -5,7 +5,7 @@ from functools import cached_property
 
 import cv2
 
-from dev_tools.minimap_reconstruct import DriverWindow
+from module.campaign.minimap import map_visible
 from module.base.base import ModuleBase
 from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
@@ -158,7 +158,7 @@ class Campaign(ModuleBase):
         if image is None:
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
         left, top, right, bottom = EXPANDED_ROI
-        return DriverWindow.map_visible(image[top:bottom, left:right])
+        return map_visible(image[top:bottom, left:right])
 
     def expand_minimap(self):
         """点击左上角控件把紧凑小地图展开成大地图面板，确认面板可见才返回 True。

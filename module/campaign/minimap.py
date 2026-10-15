@@ -113,3 +113,48 @@ def cropped_minimap(image):
     if not results or any(np.linalg.norm(center - centers[0]) > 5 for center in centers[1:]):
         raise ValueError('Expected one supported cropped minimap and an unambiguous squad ring.')
     return results[0]
+
+def terrain(image):
+    """按青蓝色阈值提取道路，过滤小连通块并闭运算填补细缝，输出二值掩码。"""
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, (85, 65, 125), (115, 255, 255))
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
+    result = np.zeros(mask.shape, np.uint8)
+    for index in range(1, count):
+        if stats[index, cv2.CC_STAT_AREA] >= 90:
+            result[labels == index] = 255
+    return cv2.morphologyEx(result, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+
+
+def map_visible(image):
+    """以地图青蓝色像素占比识别面板；此判据不负责识别章节身份。
+
+    image 是 BGR 面板裁图，统计指定色相与饱和度条件下的青蓝色覆盖率。
+    达到 45% 返回 True；该信号仅表示面板外观，不确认章节、小队或道路定位。
+    """
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    return ((hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 115) & (hsv[:, :, 1] > 40)).mean() >= 0.45
+
+def minimap_control_visible(image):
+    """识别地图放大／缩小控件的白色外框，避免亮背景改变白色总量导致误判。
+
+    image 为按钮中心附近的 44×44 BGR 裁图，检查白色轮廓及内部孔洞的尺寸、面积和中心。
+    返回是否存在可信控件外框；亮色背景本身不能代替控件形状，未找到轮廓返回 False。
+    """
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    white = cv2.inRange(hsv, (0, 0, 185), (179, 90, 255))
+    contours, hierarchy = cv2.findContours(white, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    if hierarchy is None:
+        return False
+    for contour, relation in zip(contours, hierarchy[0]):
+        child = relation[2]
+        x, y, width, height = cv2.boundingRect(contour)
+        if (child >= 0 and 18 <= width <= 32 and 18 <= height <= 32
+                and np.linalg.norm(np.array([x + width / 2, y + height / 2]) - 22) < 8
+                and 200 <= cv2.contourArea(contour) <= 550):
+            # 抗锯齿会产生多个孔洞；第一个子轮廓不一定是控件中心的主孔洞。
+            while child >= 0:
+                if 80 <= cv2.contourArea(contours[child]) <= 350:
+                    return True
+                child = hierarchy[0][child][0]
+    return False

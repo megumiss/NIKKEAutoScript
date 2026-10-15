@@ -6,7 +6,7 @@ import time
 import cv2
 import numpy as np
 
-from dev_tools.minimap_reconstruct import DriverWindow
+from module.campaign.minimap import map_visible, minimap_control_visible
 from module.campaign.matching import (ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU,
                                        MapMatcher, ROI)
 from module.campaign.minimap import cropped_minimap
@@ -57,9 +57,9 @@ class CampaignObserver:
         区域没有青蓝色地图，即认为处于关闭态；控件不可见或面板可见时返回 False，不确定不算关闭。
         """
         control = image[76:120, 20:64]
-        if not DriverWindow.minimap_control_visible(control):
+        if not minimap_control_visible(control):
             return False
-        if not DriverWindow.map_visible(image[118:273, 27:207]):
+        if not map_visible(image[118:273, 27:207]):
             icon = cv2.cvtColor(control, cv2.COLOR_BGR2HSV)
             # 关闭态的控件底色比展开／紧凑态暗，与 reset_minimap 的 closed 判据保持一致。
             return (icon[:, :, 2] < 130).mean() > 0.5
@@ -147,14 +147,14 @@ class CampaignObserver:
         EXPANDED_ROI 是否是地图，是则判为展开态；两者都不满足说明小地图被关闭或当前不在田野页。
         返回的紧凑面板是 1920×1080 归一化坐标下的裁图，展开面板是客户区 ROI 的原始裁图。
         """
-        if DriverWindow.map_visible(image[118:273, 27:207]):
-            if not DriverWindow.minimap_control_visible(image[76:120, 20:64]):
+        if map_visible(image[118:273, 27:207]):
+            if not minimap_control_visible(image[76:120, 20:64]):
                 return None, None
             x1, y1, x2, y2 = ROI
             return 'compact', cv2.resize(image, (1920, 1080))[y1:y2, x1:x2]
         left, top, right, bottom = EXPANDED_ROI
         panel = image[top:bottom, left:right]
-        if DriverWindow.map_visible(panel):
+        if map_visible(panel):
             return 'expanded', panel
         return None, None
 

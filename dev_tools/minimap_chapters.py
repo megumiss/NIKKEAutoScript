@@ -16,12 +16,13 @@ import numpy as np
 from PIL import ImageGrab
 
 if __package__:
-    from .minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
+    from .minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild
 else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild, terrain
+    from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild
 
 from module.campaign.chapter import chapter_number
+from module.campaign.minimap import map_visible, terrain
 from module.campaign.paths import DEFAULT_CAPTURE_ROOT
 
 
@@ -51,7 +52,7 @@ def wait_for_chapter(window, chapter, model, output, stop=None):
         image = screenshot(window)
         number = chapter_number(image, model)
         seen = number if number is not None else seen
-        compact = window.map_visible(image[123:277, 25:206])
+        compact = map_visible(image[123:277, 25:206])
         # Clouds and idle character animations never stop; compare minimap roads instead.
         scene = terrain(image[123:250, 25:206]) > 0
         still = previous is not None and np.mean(scene != previous) < 0.02

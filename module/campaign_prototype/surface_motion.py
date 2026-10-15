@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 
-from dev_tools.minimap_reconstruct import terrain
+from module.campaign.minimap import terrain
 from .perception import detect_markers
 
 

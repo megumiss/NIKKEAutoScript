@@ -19,23 +19,17 @@ import cv2
 import numpy as np
 from PIL import Image
 
+if not __package__:
+    # 脚本方式运行时仓库根不在默认路径上。
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from module.campaign.minimap import map_visible, minimap_control_visible, terrain
+
 
 def stop_requested(args, output):
     """同时检查当前采集目录和批次共享的停止文件，允许外层统一取消。"""
     sentinel = getattr(args, 'stop_file', None)
     return (output / 'STOP').exists() or (sentinel is not None and sentinel.exists())
-
-
-def terrain(image):
-    """按青蓝色阈值提取道路，过滤小连通块并闭运算填补细缝，输出二值掩码。"""
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, (85, 65, 125), (115, 255, 255))
-    count, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
-    result = np.zeros(mask.shape, np.uint8)
-    for index in range(1, count):
-        if stats[index, cv2.CC_STAT_AREA] >= 90:
-            result[labels == index] = 255
-    return cv2.morphologyEx(result, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
 
 
 def grid_horizon(image):
@@ -315,41 +309,6 @@ class DriverWindow:
         if getattr(self, '_focused', False) and self.gui.GetForegroundWindow() != self.hwnd:
             raise RuntimeError('Game focus lost; no further input.')
 
-    @staticmethod
-    def map_visible(image):
-        """以地图青蓝色像素占比识别面板；此判据不负责识别章节身份。
-
-        image 是 BGR 面板裁图，统计指定色相与饱和度条件下的青蓝色覆盖率。
-        达到 45% 返回 True；该信号仅表示面板外观，不确认章节、小队或道路定位。
-        """
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        return ((hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 115) & (hsv[:, :, 1] > 40)).mean() >= 0.45
-
-    @staticmethod
-    def minimap_control_visible(image):
-        """识别地图放大／缩小控件的白色外框，避免亮背景改变白色总量导致误判。
-
-        image 为按钮中心附近的 44×44 BGR 裁图，检查白色轮廓及内部孔洞的尺寸、面积和中心。
-        返回是否存在可信控件外框；亮色背景本身不能代替控件形状，未找到轮廓返回 False。
-        """
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        white = cv2.inRange(hsv, (0, 0, 185), (179, 90, 255))
-        contours, hierarchy = cv2.findContours(white, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-        if hierarchy is None:
-            return False
-        for contour, relation in zip(contours, hierarchy[0]):
-            child = relation[2]
-            x, y, width, height = cv2.boundingRect(contour)
-            if (child >= 0 and 18 <= width <= 32 and 18 <= height <= 32
-                    and np.linalg.norm(np.array([x + width / 2, y + height / 2]) - 22) < 8
-                    and 200 <= cv2.contourArea(contour) <= 550):
-                # 抗锯齿会产生多个孔洞；第一个子轮廓不一定是控件中心的主孔洞。
-                while child >= 0:
-                    if 80 <= cv2.contourArea(contours[child]) <= 350:
-                        return True
-                    child = hierarchy[0][child][0]
-        return False
-
     def capture(self, require_map=True):
         """截取当前前台游戏的地图 ROI，复用 GDI 位图并可要求展开面板可见。
 
@@ -375,7 +334,7 @@ class DriverWindow:
         self.capture_dc.BitBlt((0, 0), (width, height), self.screen_dc, (x + left, y + top), win32con.SRCCOPY)
         image = np.frombuffer(self.capture_bitmap.GetBitmapBits(True), np.uint8).reshape(height, width, 4)
         image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
-        if require_map and not self.map_visible(image):
+        if require_map and not map_visible(image):
             raise RuntimeError('Expanded minimap no longer visible or is covered. Capture stopped.')
         return image
 
@@ -402,12 +361,12 @@ class DriverWindow:
                                        origin[0] + x + 186, origin[1] + y + 196), all_screens=True)
             panel = cv2.cvtColor(np.array(panel), cv2.COLOR_RGB2BGR)
             icon = cv2.cvtColor(panel[:44, :44], cv2.COLOR_BGR2HSV)
-            if self.minimap_control_visible(panel[:44, :44]):
-                if self.map_visible(panel[42:197, 7:187]):
+            if minimap_control_visible(panel[:44, :44]):
+                if map_visible(panel[42:197, 7:187]):
                     return 'compact'
                 if (icon[:, :, 2] < 130).mean() > 0.5:
                     return 'closed'
-            if self.map_visible(expanded_image):
+            if map_visible(expanded_image):
                 return 'expanded'
             return 'unknown'
 
@@ -460,7 +419,7 @@ class DriverWindow:
                 px, py = np.asarray(origin) + point
                 control = ImageGrab.grab(bbox=(px - 22, py - 22, px + 22, py + 22), all_screens=True)
                 control = cv2.cvtColor(np.asarray(control), cv2.COLOR_RGB2BGR)
-                if not self.minimap_control_visible(control):
+                if not minimap_control_visible(control):
                     break
                 print(json.dumps({'minimap_retry': expected, 'attempt': attempt + 2}), flush=True)
             raise RuntimeError(f'Minimap did not reach {expected} (observed {current}).')
