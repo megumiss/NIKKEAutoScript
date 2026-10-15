@@ -487,6 +487,10 @@ class ConfigUpdater:
         if deep_get(data, keys='PCClient.Vdd.VddScreen', default=False):
             deep_set(data, keys='PCClient.PCClient.Screens', value=True)
 
+        # 港澳台客户端只有单区服，游戏区服固定为自动
+        if deep_get(data, keys='PCClient.PCClientInfo.Client', default='intl') == 'hmt':
+            deep_set(data, keys='PCClient.PCClientInfo.GameWorld', value='auto')
+
         return data
 
     def save_callback(self, key: str, value: t.Any) -> t.Iterable[t.Tuple[str, t.Any]]:
@@ -508,6 +512,10 @@ class ConfigUpdater:
         # 不用等下一次读取才被 _override 补上。
         if key == "PCClient.Vdd.VddScreen" and value:
             yield "PCClient.PCClient.Screens", True
+
+        # 港澳台客户端只有单区服，切换客户端时把游戏区服拉回自动
+        if key == "PCClient.PCClientInfo.Client" and value == 'hmt':
+            yield "PCClient.PCClientInfo.GameWorld", 'auto'
 
     def read_file(self, config_name, is_template=False):
         """

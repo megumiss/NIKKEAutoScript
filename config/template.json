@@ -59,6 +59,7 @@
   "PCClient": {
     "PCClientInfo": {
       "Client": "intl",
+      "GameWorld": "auto",
       "AutoFillName": true,
       "LauncherPath": null,
       "LauncherTitleName": null,

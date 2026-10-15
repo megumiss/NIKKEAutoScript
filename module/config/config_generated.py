@@ -62,6 +62,7 @@ class GeneratedConfig:
 
     # Group `PCClientInfo`
     PCClientInfo_Client = 'intl'  # intl, hmt
+    PCClientInfo_GameWorld = 'auto'  # auto, global, jp, na, kr, sea
     PCClientInfo_AutoFillName = True
     PCClientInfo_LauncherPath = None
     PCClientInfo_LauncherTitleName = None

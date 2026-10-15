@@ -120,6 +120,9 @@ PCClientInfo:
   Client:
     value: intl
     option: [ intl, hmt ]
+  GameWorld:
+    value: auto
+    option: [ auto, global, jp, na, kr, sea ]
   AutoFillName: true
   LauncherPath:
     value: ''

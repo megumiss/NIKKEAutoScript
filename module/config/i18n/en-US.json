@@ -498,6 +498,16 @@
       "intl": "International",
       "hmt": "Hong Kong/Taiwan"
     },
+    "GameWorld": {
+      "name": "Game World",
+      "help": "Before launching the game, switch the intl client's world to the selected one, so multi-world accounts no longer need to pick a server manually.\nOnly applied while the game is not running; skipped when the game is already open. The HMT client has a single world and stays on Auto.\nAuto: keep the world's last in-game selection.",
+      "auto": "Auto",
+      "global": "Global (GLOBAL)",
+      "jp": "Japan (JAPAN)",
+      "na": "North America (NA)",
+      "kr": "Korea (KOREA)",
+      "sea": "Southeast Asia (SEA)"
+    },
     "AutoFillName": {
       "name": "Auto Fill Fields",
       "help": "Automatically fills in the launcher and game title and process information"

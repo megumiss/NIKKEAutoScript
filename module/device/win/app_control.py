@@ -11,6 +11,7 @@ from module.config.server import set_server
 from module.device.win.game_control import WinClient, Window
 from module.device.win.login import Login
 from module.device.win.vdd import vdd_auto_start, vdd_auto_stop, vdd_find_screen_n
+from module.device.win.world import set_game_world
 from module.exception import AccountError, RequestHumanTakeover
 from module.logger import logger
 
@@ -232,6 +233,10 @@ class AppControl(WinClient, Login):
                     if self.config.PCClient_DisableVoice:
                         self.mute_window(True)
                     break
+
+                # 启动本体前按配置指定区服；港澳台客户端只有单区服，固定走自动
+                if self.config.PCClientInfo_Client == 'intl' and self.config.PCClientInfo_GameWorld != 'auto':
+                    set_game_world(self.config.PCClientInfo_GameWorld)
 
                 # 启动启动器
                 self.current_window = self.launcher

@@ -242,6 +242,18 @@
           "hmt"
         ]
       },
+      "GameWorld": {
+        "type": "select",
+        "value": "auto",
+        "option": [
+          "auto",
+          "global",
+          "jp",
+          "na",
+          "kr",
+          "sea"
+        ]
+      },
       "AutoFillName": {
         "type": "checkbox",
         "value": true
