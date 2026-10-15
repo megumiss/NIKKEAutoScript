@@ -11,8 +11,10 @@ from pathlib import Path
 if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from annotation_store import EditableAnnotationStore
+else:
+    from .annotation_store import EditableAnnotationStore
 
-from module.campaign.annotations import AnnotationStore
 from module.campaign.connectivity import ensure_data
 
 
@@ -24,7 +26,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path('data/resources/maps'))
     args = parser.parse_args()
-    store = AnnotationStore(args.root)
+    store = EditableAnnotationStore(args.root)
     for item in store.catalog():
         package = store.package(item['id'])
         loaded = store.load(item['id'])

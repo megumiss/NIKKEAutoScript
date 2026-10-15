@@ -11,17 +11,19 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 if __package__:
+    from .annotation_store import EditableAnnotationStore
     from .map_movement import MovementJobs
     from .map_scan import ScanJobs
     from .map_wiki import WikiJobs
 else:
     # 脚本方式运行时仓库根不在默认路径上。
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from annotation_store import EditableAnnotationStore
     from map_movement import MovementJobs
     from map_scan import ScanJobs
     from map_wiki import WikiJobs
 
-from module.campaign.annotations import AnnotationStore, ConflictError
+from module.campaign.annotations import ConflictError
 from module.campaign.paths import DEFAULT_MAPS_ROOT
 
 UI = Path(__file__).with_suffix('')
@@ -201,7 +203,7 @@ def main():
     args = parser.parse_args()
     selected = args.map.resolve() if args.map else None
     root = args.root or (selected.parent if selected else DEFAULT_MAPS_ROOT)
-    store = AnnotationStore(root)
+    store = EditableAnnotationStore(root)
     initial = None
     if selected:
         if not selected.is_relative_to(store.root):
