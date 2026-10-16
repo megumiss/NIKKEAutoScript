@@ -343,6 +343,22 @@ def window_session(win, localizer, evidence, tag, folder=None, pause=None):
                            preview=lambda field: runtime.write_image(folder / f'{tag}_field.png', field))
 
 
+def center_landing(viewport, target, tolerance=None):
+    """中心落点：目标已经落在注视点容差内时返回固定的注视点像素，否则返回 None（还要继续平移）。
+
+    先平移把目标送到镜头注视点，再点注视点，让游戏把小队的落脚点交给相机中心。落点是一个固定
+    像素，不经过任何地图→屏幕换算，所以方向不依赖标定与相机姿态；小队相对落点则要按「目标 −
+    小队」算屏幕向量，标定与当前相机姿态不符时会把小队带向错误方向（38 章实机：小队坐标取自
+    另一帧、差 148 地图像素，落点指到小队右上的水面上，游戏随后把小队带向反方向）。
+    容差取 SQUAD_REACH：点完之后小队落在注视点附近，目标仍在到达半径以内，可以继续下一拍。
+    """
+    if tolerance is None:
+        tolerance = goto.SQUAD_REACH
+    if float(np.linalg.norm(np.asarray(target, float) - np.asarray(viewport, float))) > tolerance:
+        return None
+    return np.asarray(goto.VIEWPORT_PIXEL, float)
+
+
 def panel_delta_to_client(a, delta):
     """紧凑面板位移换算为客户区位移：A_INV @ ROI_TO_PLANE 链在注视点处线性化。
 
@@ -358,36 +374,6 @@ def panel_delta_to_client(a, delta):
     linear = np.column_stack([project(chain, base + step) - project(chain, base)
                               for step in np.eye(2)])
     return linear @ (a * np.asarray(delta, float))
-
-
-def squad_ground(image):
-    """小队脚下的客户区像素：箭头锚点向下补偿 ARROW_GROUND_OFFSET 得到脚点。
-
-    箭头不可信（零个或多个候选）时返回 None，调用者据此判定小队不在画面里。
-    """
-    arrow = perception.squad_arrow(image)
-    return None if arrow is None else np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
-
-
-def squad_click(matrix, scale, anchor, observation, target, bounds=FIELD_BOUNDS):
-    """小队相对落点：小队脚下像素加上「目标 − 小队」的客户区相对位移。
-
-    observation 必须来自真实小队定位（position_kind='squad'），其 position 是权威小队坐标；
-    anchor 由 squad_ground 给出。相对向量在地图坐标里做完差，再用闭环拖动用的同一条换算链
-    （注视点局部 Jacobian + A_INV @ ROI_TO_PLANE）换到客户区，因此平移偏差在做差与锚定中抵消，
-    落点不使用视野中心像素与 VIEWPORT_PIXEL；尺度沿用响应增益闭环验证过的换算。
-    返回客户区点击点；箭头不可信、小队定位非权威、单应退化、相对向量跨过投影地平线或落点
-    越出 bounds 时返回 None，表示当前还轮不到小队相对落点（典型是小队已不在画面里）。
-    """
-    if anchor is None or observation.get('position_kind') != 'squad':
-        return None
-    try:
-        delta_map = np.asarray(target, float) - np.asarray(observation['position'], float)
-        delta_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), delta_map)
-        click = np.asarray(anchor, float) + panel_delta_to_client(scale, delta_panel)
-    except (np.linalg.LinAlgError, ValueError):
-        return None
-    return click if inside(click, bounds) else None
 
 
 def tolerance_iou(live_road, panel_valid, base_road, matrix, dilate=FUSED_DILATE):
@@ -513,24 +499,23 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
 
 
 def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3):
-    """镜头规划：目标进入可点范围时按小队相对位置落点，否则先平移接近。
+    """镜头规划：先把目标平移到镜头注视点，再点固定的注视点像素把小队送过去。
 
     对准在地图空间进行：视野中心由道路配准给出，远处目标不经逆单应外推（透视地平线）。
     拖动量取注视点处局部 Jacobian 换算，比例误差由实测响应闭环修正；帧间链式跟踪兜底
     空旷走廊的歧义配准，全局配准可用时立即修正漂移。箭头锚点、场景单应与两点临时标定
     都不参与镜头换算；面板位移到客户区拖动只在注视点线性化，远距离整段外推会跨过
     ROI_TO_PLANE 的地平线并反向，见 panel_delta_to_client。
-    落点由 squad_click 给出：锚点是小队脚下像素（箭头锚点，不用 VIEWPORT_PIXEL），位移是
-    「目标 − 小队」经拖动用的同一条换算链（注视点局部 Jacobian + A_INV @ ROI_TO_PLANE）得到的
-    客户区向量。相对向量在地图坐标里做完差，平移偏差抵消，所以落点不依赖视野中心；尺度沿用
-    响应增益闭环验证过的换算。点固定注视点等于把落脚点让给相机自己，相机已在小队身上时就是点
-    小队脚下，游戏不会移动，闭环接受的残差会永久留在落点上，探针点也会退化成同一像素的重复点击。
-    小队不在画面里（远目标）时没有箭头锚点，只能先把目标拖到注视点、再点注视点把小队送到相机
-    所在处，那是接近手段。
+    落点由 center_landing 给出：目标进入注视点容差（SQUAD_REACH 地图像素）后点固定的
+    VIEWPORT_PIXEL。落点是固定像素、不经过地图→屏幕换算，所以标定与相机姿态与它无关；
+    小队相对落点要按「目标 − 小队」算屏幕向量，实测会因标定与相机姿态不符把小队带向错误方向
+    （38 章实机：小队坐标取自另一帧、差 148 地图像素，落点指到小队右上的水面，游戏随后把小队
+    带向反方向）。代价是走近目标要多几次平移：每点一次只能把小队送到相机中心，所以要先把目标
+    拖到注视点上。
     起始帧的视野中心以与展开图小队定位一致为准（start_viewport），不要求 accepted。
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
     全局配准被接受即视为批末校正已完成。
-    实测（点击固定注视点像素时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
+    实测（点固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     """
     from module.campaign.vision.matching import MapMatcher, register
 
@@ -564,31 +549,20 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     session.camera_pans = getattr(session, 'camera_pans', 0)
     for count in range(max_pans + 1):
         session.check()
-        # 落点优先走小队相对：箭头锚定 + 「目标 − 小队」相对向量，不使用视野中心。
-        anchor = squad_ground(field)
-        click = squad_click(matrix, scale_a, anchor, observation, target)
-        if click is not None:
-            session.emit(state='planning', navigation_method='squad_anchor', camera_pans=session.camera_pans,
-                         plan_camera_pans=count, planned_target=target.tolist(),
-                         click=np.round(click, 1).tolist(),
-                         squad_anchor=np.round(anchor, 1).tolist(),
-                         click_offset=np.round(click - np.asarray(goto.VIEWPORT_PIXEL, float), 1).tolist(),
-                         message='目标已进入可点击范围，按小队相对位置点击并交给游戏寻路。')
-            return click
+        # 落点固定为镜头注视点像素：先把目标平移到注视点上，再点注视点，由游戏把小队的落脚点交给
+        # 相机中心。落点方向不经过任何地图→屏幕换算，标定与相机姿态因此与它无关（见 center_landing）。
         viewport = project(matrix, goto.GAZE)
         delta_map = target - viewport
-        # 小队不在画面里（远目标）时没有箭头锚点，小队相对落点无从谈起：只能把目标拖到注视点后
-        # 点注视点，让小队走到相机所在处。这是接近手段，不是微调，所以落点仍是固定像素。
-        # 小队仍在画面里却没有可用落点（相对向量越界或跨地平线）时不退化成点注视点——相机就在
-        # 小队身上，那等于点小队脚下、点了也不会动——直接失败交给外层重新观测。
-        if float(np.linalg.norm(delta_map)) <= goto.SQUAD_REACH:
-            if anchor is not None:
-                raise ValueError('小队在画面内但小队相对落点不可用；未发送移动点击。')
+        click = center_landing(viewport, target)
+        if click is not None:
             session.emit(state='planning', navigation_method='compact_gaze', camera_pans=session.camera_pans,
                          plan_camera_pans=count, planned_target=target.tolist(),
-                         click=list(goto.VIEWPORT_PIXEL),
-                         message='小队不在画面内，先把小队送到镜头注视点。')
-            return np.asarray(goto.VIEWPORT_PIXEL, float)
+                         click=np.round(click, 1).tolist(),
+                         camera_view_position=np.round(viewport, 1).tolist(),
+                         camera_view_offset=np.round(delta_map, 1).tolist(),
+                         message=f'目标已到镜头注视点（离注视点 '
+                                 f'{float(np.linalg.norm(delta_map)):.1f} 地图像素），点注视点把小队送过去。')
+            return click
         if count == max_pans:
             raise ValueError(f'已平移 {max_pans} 次，目标仍未到小地图中央；未发送移动点击。')
         delta_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), delta_map)

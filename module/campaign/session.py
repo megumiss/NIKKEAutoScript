@@ -98,6 +98,7 @@ MOVE_FIELDS = (
     ('camera_batch_pans', lambda value: f'本批已平移 {value} 次'),
     ('camera_correction_reason', lambda value: f'提前收尾的原因：{label(CORRECTION_REASONS, value)}'),
     ('camera_view_position', lambda value: f'视野中心 {points_text(value)}'),
+    ('camera_view_offset', lambda value: f'目标离注视点 {points_text(value)}'),
     ('camera_position_kind', lambda value: f'视野坐标取的是{label(POSITION_KINDS, value)}'),
     ('camera_anchor', lambda value: f'展开地图校正 {label(ANCHOR_RESULTS, value)}'),
     ('camera_anchor_error', lambda value: f'展开地图校正失败：{value}'),

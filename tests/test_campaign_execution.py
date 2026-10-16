@@ -24,6 +24,7 @@ from module.base.timer import Timer
 from module.campaign.vision.battle import classify
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
+from module.campaign.navigation.camera_navigation import center_landing
 from module.campaign.navigation.movement_feedback import TargetTriggered
 from module.config.config import TaskEnd
 
@@ -587,6 +588,25 @@ class SessionTests(unittest.TestCase):
             report = localizer.locate(panel, 'test')
             self.assertEqual(report['position_kind'], 'squad')
             self.assertEqual(report['player_roi'], [243, 231])
+
+
+class LandingTests(unittest.TestCase):
+    """落点固定为镜头注视点像素：目标进注视点容差内才点，否则继续平移。"""
+
+    def test_landing_is_the_fixed_gaze_pixel(self):
+        """目标已在注视点容差内时返回固定的注视点像素，与目标的确切位置无关。"""
+        gaze = np.array([500.0, 400.0])
+        near = center_landing(gaze, gaze + np.array([3.0, -4.0]))          # 距离 5
+        self.assertIsNotNone(near)
+        self.assertEqual(near.tolist(), [887.7, 496.0])
+        self.assertEqual(center_landing(gaze, gaze, tolerance=0.).tolist(), [887.7, 496.0])
+
+    def test_landing_refuses_until_the_target_is_centered(self):
+        """目标还在容差外时不给落点：调用方必须先平移，不能凭换算链硬算一个方向。"""
+        gaze = np.array([500.0, 400.0])
+        self.assertIsNone(center_landing(gaze, gaze + np.array([0.0, -90.0])))
+        self.assertIsNone(center_landing(gaze, gaze + np.array([40.0, 0.0]), tolerance=28.))
+        self.assertIsNotNone(center_landing(gaze, gaze + np.array([20.0, 0.0]), tolerance=28.))
 
 
 class BattleStateTests(unittest.TestCase):

@@ -28,7 +28,7 @@ VIEWPORT_PIXEL = (887.7, 496.0)
 # tmp/barrier_test/center_first.json。
 GAZE = (107.2, 104.0)
 # 箭头动画中点距小队脚下地面的客户区像素：箭头锚点换算脚点的标定约定（1776×999 客户区），
-# 场景投影与小队相对落点共用同一数值，见 arrow_anchor.cycle_ground_anchor、barriers.scene_anchor。
+# 场景投影共用同一数值，见 arrow_anchor.cycle_ground_anchor、barriers.scene_anchor。
 ARROW_GROUND_OFFSET = 90.0
 # template_matrix 把紧凑面板中心钉在展开 ROI 的这个点上（module.campaign.vision.matching.template_matrix）。
 EXPANDED_CENTER = (243.0, 231.0)
