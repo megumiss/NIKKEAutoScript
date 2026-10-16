@@ -113,7 +113,7 @@ class NIKKEOcr(PaddleOCR):
     def check_interval(self):
         delta = time.time() - self.last_time
         if delta < self.interval:
-            logger.info(f'OCR interval {delta:.2f}s < {self.interval}s, sleeping {self.interval - delta:.2f}s')
+            logger.debug(f'OCR interval {delta:.2f}s < {self.interval}s, sleeping {self.interval - delta:.2f}s')
             time.sleep(self.interval - delta)
         self.last_time = time.time()
 

@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import shutil
 import sys
 import traceback as traceback_module
@@ -135,7 +136,30 @@ class CompactFileFormatter(logging.Formatter):
         return _format_exception(exc_info)
 
 
+class GameUserPrivacyFilter(logging.Filter):
+    _patterns = (
+        # Full-screen OCR cannot reliably separate nicknames from UI text, especially after OCR errors.
+        (re.compile(r'^(OCR None [\d.]+s: ).*', re.DOTALL), r'\1[REDACTED]'),
+        (re.compile(r'^(GetUserProfile response: ).*', re.DOTALL), r'\1[REDACTED]'),
+        (
+            re.compile(r'^(Login capture verified, user: ).*(, expire: .*)$', re.DOTALL),
+            r'\1[REDACTED]\2',
+        ),
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        redacted = message
+        for pattern, replacement in self._patterns:
+            redacted = pattern.sub(replacement, redacted)
+        if redacted != message:
+            record.msg = redacted
+            record.args = ()
+        return True
+
+
 logger = logging.getLogger('nkas')
+logger.addFilter(GameUserPrivacyFilter())
 logger.setLevel(logging.DEBUG)
 # TODO 临时添加
 logger.propagate = False

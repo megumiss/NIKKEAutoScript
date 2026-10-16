@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from typing import Dict, List, Optional, Tuple
@@ -85,6 +86,7 @@ class WarehouseStats(UI):
             model_type = self.config.Optimization_OcrModelType
             item_num = Ocr(
                 [area],
+                log_level=logging.DEBUG,
                 text_color=(248, 252, 254),
                 text_color_tolerance=(90, 10, 40),
                 text_color_preprocess=(0.7, 20, 0.6),
@@ -418,6 +420,7 @@ class WarehouseStats(UI):
         model_type = self.config.Optimization_OcrModelType
         item_num = Ocr(
             [area],
+            log_level=logging.DEBUG,
             text_color=(151, 151, 151),
             # text_color_tolerance=(80, 10, 40),
             # text_color_preprocess=(0.7, 20, 0.6),

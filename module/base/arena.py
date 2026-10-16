@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Dict, List
 from module.logger import logger
 from module.ocr.ocr import Digit
@@ -11,6 +12,7 @@ class ArenaBase:
         OPPONENT_INFO = Digit(
             [area], 
             name='OPPONENT_INFO',
+            log_level=logging.DEBUG,
             model_type=model_type,
             lang='num'
         )
