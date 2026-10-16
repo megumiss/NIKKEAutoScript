@@ -52,6 +52,47 @@ def inside(point, bounds):
     return bool(np.isfinite([x, y]).all() and left <= x <= right and top <= y <= bottom)
 
 
+def pan_endpoints(region, drag, squad_ground=None):
+    """生成场景拖动端点，并在按下点落在小队脚下时整体平移手势到空地。
+
+    region 是允许起终点出现的客户区矩形，drag 保持调用者计算的向量不变。squad_ground 为 None
+    表示小队不在画面内，可直接使用区域中心。脚下安全椭圆取 120×150 像素半轴，覆盖实测圆环
+    旋转后的外接范围并留识别余量；只在按下点进入椭圆时改点，四个轴向候选中位移最小且起终点
+    均在 region 内者胜出。没有可行空地时抛 ValueError，禁止把手势发成走位点击。
+    """
+    drag = np.asarray(drag, float)
+    left, top, right, bottom = region
+    center = np.array([(left + right) / 2, (top + bottom) / 2])
+    start = np.rint(center - drag / 2).astype(int)
+    end = np.rint(center + drag / 2).astype(int)
+    if squad_ground is not None:
+        ground = np.asarray(squad_ground, float)
+        radii = np.array([120., 150.])
+
+        def on_squad(point):
+            return bool(np.sum(((np.asarray(point, float) - ground) / radii) ** 2) < 1.)
+
+        if on_squad(start):
+            vector = end - start
+            candidates = []
+            for candidate in (
+                np.rint(ground + [radii[0], 0]).astype(int),
+                np.rint(ground - [radii[0], 0]).astype(int),
+                np.rint(ground + [0, radii[1]]).astype(int),
+                np.rint(ground - [0, radii[1]]).astype(int),
+            ):
+                candidate_end = candidate + vector
+                if on_squad(candidate) or not inside(candidate, region) or not inside(candidate_end, region):
+                    continue
+                candidates.append((float(np.linalg.norm(candidate - start)), candidate, candidate_end))
+            if not candidates:
+                raise ValueError('拖动起点被小队占用，安全区内没有可保留向量的空地起点。')
+            _, start, end = min(candidates, key=lambda item: item[0])
+    if not inside(start, region) or not inside(end, region):
+        raise ValueError('镜头拖动超出有效场景区域。')
+    return start, end
+
+
 def field_chart(localizer, observation, anchor):
     """从实测箭头锚点绑定 ROI→场景投影，保留透视项而不外推单点 Jacobian。
 
@@ -123,17 +164,15 @@ def pan_scene(session, drag):
     """收起小地图并核对身份后，把客户区拖动端点换算为屏幕坐标发送一次手势。
 
     端点越界或驱动失败立即抛错；成功后等待场景稳定，本方法不发送小队移动点击。
+    按下点落在小队脚下时整体平移手势到空地，拖动向量保持不变。
     """
     goto.map_close(session.win)
     field = goto.capture_client(session.win)
     session.identity(field)
     region, _ = pan_region(drag)
-    left, top, right, bottom = region
-    center = np.array([(left + right) / 2, (top + bottom) / 2])
-    start = np.rint(center - drag / 2).astype(int)
-    end = np.rint(center + drag / 2).astype(int)
-    if not inside(start, region) or not inside(end, region):
-        raise ValueError('镜头拖动超出有效场景区域。')
+    arrow = perception.squad_arrow(field)
+    ground = None if arrow is None else np.asarray(arrow, float) + [0, goto.ARROW_GROUND_OFFSET]
+    start, end = pan_endpoints(region, drag, ground)
     session.check()
     origin = np.array(session.win.gui.ClientToScreen(session.win.hwnd, (0, 0)))
     session.win.handler.mouse_swipe(tuple(origin + start), tuple(origin + end))

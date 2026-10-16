@@ -24,7 +24,7 @@ from module.base.timer import Timer
 from module.campaign.vision.battle import classify
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
-from module.campaign.navigation.camera_navigation import center_landing
+from module.campaign.navigation.camera_navigation import center_landing, pan_endpoints
 from module.campaign.navigation.movement_feedback import TargetTriggered
 from module.config.config import TaskEnd
 
@@ -607,6 +607,32 @@ class LandingTests(unittest.TestCase):
         self.assertIsNone(center_landing(gaze, gaze + np.array([0.0, -90.0])))
         self.assertIsNone(center_landing(gaze, gaze + np.array([40.0, 0.0]), tolerance=28.))
         self.assertIsNotNone(center_landing(gaze, gaze + np.array([20.0, 0.0]), tolerance=28.))
+
+
+class PanEndpointTests(unittest.TestCase):
+    """镜头拖动的按下点必须避开小队，且不得改变规划器给出的向量。"""
+
+    def test_short_drag_moves_press_off_squad(self):
+        """复现 38 章短拖动：原按下点在小队脚下时，整体移到最近的空地端点。"""
+        region = (24, 320, 1752, 880)
+        start, end = pan_endpoints(region, np.array([-52.2, 217.1]), np.array([884.0, 506.5]))
+        self.assertEqual((end - start).tolist(), [-52, 218])
+        self.assertNotEqual(start.tolist(), [914, 491])
+        self.assertGreaterEqual(np.sum(((start - np.array([884.0, 506.5])) / [120., 150.]) ** 2), 1.)
+        for point in (start, end):
+            self.assertTrue(24 <= point[0] <= 1752 and 320 <= point[1] <= 880)
+
+    def test_clear_drag_keeps_original_endpoints(self):
+        """按下点本来就在空地时不改坐标，长拖动行为保持不变。"""
+        region = (24, 320, 1752, 880)
+        start, end = pan_endpoints(region, np.array([-52.2, 217.1]), np.array([200.0, 100.0]))
+        self.assertEqual(start.tolist(), [914, 491])
+        self.assertEqual(end.tolist(), [862, 709])
+
+    def test_drag_rejects_when_no_safe_empty_start_exists(self):
+        """区域内无法同时避让并保留向量时拒绝发送，不能退化成走位点击。"""
+        with self.assertRaises(ValueError):
+            pan_endpoints((800, 400, 1000, 750), np.array([-52.2, 217.1]), np.array([884.0, 506.5]))
 
 
 class BattleStateTests(unittest.TestCase):
