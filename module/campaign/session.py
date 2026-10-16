@@ -45,6 +45,7 @@ PAN_SETTLE_SECONDS = 1.0
 QUICK_BATTLE_POINT = (1014, 842)
 ENTER_BATTLE_POINT = (1014, 916)
 ENTRY_CLOSE_POINT = (1147, 513)
+AUTO_POINT = (105, 35)
 ADVANCE_POINT = (888, 500)
 DEFEAT_BACK_POINT = (73, 908)
 
@@ -365,8 +366,8 @@ class CampaignSession(NavigationSession):
         """战斗接管的一步：识别当前画面并按状态点一次，返回识别结果。
 
         close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
-        战斗中与野外不发输入（前者等结算，后者由执行层收尾）；点击都走场景输入闸门与预算。
-        返回 battle.battle_state 的结果，状态与分数交给执行层记录与决策。
+        战斗中只在自动射击关闭时点一次 AUTO（开着就不再点）；野外不发输入，交给执行层收尾。
+        点击都走场景输入闸门与预算，返回 battle.battle_state 的结果供执行层记录与决策。
         """
         self.check()
         state = battle.battle_state(self.win.client())
@@ -381,6 +382,10 @@ class CampaignSession(NavigationSession):
             else:
                 logger.info('快速战斗不可用：点进入战斗。')
                 self.tap(ENTER_BATTLE_POINT)
+        elif kind == 'battle':
+            if not state.get('auto', True):
+                logger.info('战斗中自动射击未开启：点 AUTO 打开。')
+                self.tap(AUTO_POINT)
         elif kind == 'victory':
             logger.info('战斗结算：胜利，点继续。')
             self.tap(ADVANCE_POINT)

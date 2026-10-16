@@ -15,9 +15,9 @@ from module.campaign.execution import (BATTLE_ADVANCE_LIMIT, BATTLE_DEFEAT_LIMIT
 from module.campaign.goals import choose_goal
 from module.campaign.navigation.routing import CutRoads, component_at
 from module.campaign.run_state import COOLDOWN_TICKS, RunState, panel_quad
-from module.campaign.session import (ADVANCE_POINT, DEFEAT_BACK_POINT, ENTER_BATTLE_POINT, ENTRY_CLOSE_POINT,
-                                     LOCALIZE_RETRIES, QUICK_BATTLE_POINT, CampaignLocalizer, CampaignSession,
-                                     InputBudgetExceeded)
+from module.campaign.session import (ADVANCE_POINT, AUTO_POINT, DEFEAT_BACK_POINT, ENTER_BATTLE_POINT,
+                                     ENTRY_CLOSE_POINT, LOCALIZE_RETRIES, QUICK_BATTLE_POINT, CampaignLocalizer,
+                                     CampaignSession, InputBudgetExceeded)
 from module.campaign.subgoals import available_annotations
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
@@ -431,11 +431,12 @@ class SessionTests(unittest.TestCase):
         self.handler.mouse_click.assert_not_called()
 
     def test_battle_step_taps_the_state_button(self):
-        """每一步只按识别结果点一次：快速战斗／进入战斗、结算推进、战败返回、战败后只关弹窗。"""
+        """每一步只按识别结果点一次：快速战斗／进入战斗、AUTO 关闭时打开、结算推进、战败返回、战后只关弹窗。"""
         self.session.tap = Mock()
         cases = [(dict(state='entry', quick=True), False, QUICK_BATTLE_POINT),
                  (dict(state='entry', quick=False), False, ENTER_BATTLE_POINT),
                  (dict(state='entry', quick=True), True, ENTRY_CLOSE_POINT),
+                 (dict(state='battle', auto=False), False, AUTO_POINT),
                  (dict(state='victory'), False, ADVANCE_POINT),
                  (dict(state='defeat'), False, DEFEAT_BACK_POINT)]
         for state, close_entry, point in cases:
@@ -446,11 +447,11 @@ class SessionTests(unittest.TestCase):
                     result = self.session.battle_step(close_entry=close_entry)
                 self.assertEqual(result['state'], state['state'])
                 self.session.tap.assert_called_once_with(point)
-        for state in ('battle', 'field', 'unknown'):
+        for state in (dict(state='battle', auto=True), dict(state='field'), dict(state='unknown')):
             with self.subTest(state=state):
                 self.session.tap.reset_mock()
                 with patch('module.campaign.vision.battle.battle_state',
-                           return_value={'state': state, 'scores': {}}):
+                           return_value=dict(state, scores={})):
                     self.session.battle_step()
                 self.session.tap.assert_not_called()
 
