@@ -43,7 +43,7 @@ def validate_terrain_edits(edits, size):
                 raise ValueError('道路修订顶点必须为 [x, y]。')
             if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
                    or not 0 <= v <= bound - 1 for v, bound in zip(point, size)):
-                raise ValueError('道路修订坐标无效或超出底图范围。')
+                raise ValueError('道路坐标无效或超出章节地图范围。')
         if kind == 'polygon' and len({tuple(p) for p in points}) < 3:
             raise ValueError('道路填充至少需要三个不同顶点。')
 

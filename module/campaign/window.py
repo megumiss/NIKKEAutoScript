@@ -86,16 +86,16 @@ class CampaignWindow:
             raise WindowChanged('游戏窗口句柄已变化，旧会话不可复用。')
         rect = self.gui.GetClientRect(hwnd)
         if (rect[2], rect[3]) != CLIENT_SIZE:
-            raise WindowChanged(f'客户区尺寸变为 {(rect[2], rect[3])}，固定坐标已失效。')
+            raise WindowChanged(f'游戏画面尺寸变为 {rect[2]}×{rect[3]}（要求 1776×999），已算出的坐标失效。')
         origin = self.client_origin()
         if origin is None:
-            raise WindowChanged('读不到客户区原点。')
+            raise WindowChanged('无法读取游戏窗口位置。')
         if self.origin is None:
             self.origin = origin
         elif origin != self.origin:
             raise WindowChanged(f'窗口被移动（{self.origin} → {origin}），点击换算已失效。')
         if self.require_foreground and self.gui.GetForegroundWindow() != hwnd:
-            raise WindowChanged('游戏窗口已失焦，驱动输入会被丢弃。')
+            raise WindowChanged('游戏窗口不在前台，鼠标操作会被系统丢弃。')
 
     def client(self):
         """最新一帧客户区 BGR 截图。"""
@@ -104,7 +104,7 @@ class CampaignWindow:
         self.check()
         image = self.device.image
         if image is None or image.shape != (CLIENT_SIZE[1], CLIENT_SIZE[0], 3):
-            raise WindowChanged('截图尺寸与固定客户区不符，不能继续换算落点。')
+            raise WindowChanged('截图尺寸不是 1776×999，无法计算点击位置。')
         return np.ascontiguousarray(image[:, :, ::-1])
 
     def capture(self, require_map=True):
@@ -117,7 +117,7 @@ class CampaignWindow:
         left, top, right, bottom = EXPANDED_ROI
         panel = np.ascontiguousarray(image[top:bottom, left:right])
         if require_map and not map_visible(panel):
-            raise WindowChanged('展开小地图面板不可见，无法取得配准用的 ROI。')
+            raise WindowChanged('展开地图面板不可见，无法用于定位。')
         return panel
 
     def reset_minimap(self, expanded=True, reset=True):

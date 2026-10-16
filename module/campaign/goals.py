@@ -11,6 +11,8 @@
 import numpy as np
 
 from module.campaign.navigation.targets import walking_distance
+from module.campaign.report import (BLOCK_STATUS, GOAL_KINDS, GOAL_REASONS, REJECT_REASONS, TARGET_SOURCES,
+                                    label, points_text)
 from module.campaign.run_state import OBSERVED_CELL, located
 from module.campaign.subgoals import elevator_goal, mechanism_goal, review_goal
 
@@ -206,20 +208,59 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
     return goal
 
 
-def describe(goal):
-    """把目标压成一行日志：类型、编号、落点、距离与选它的理由。"""
-    if goal['kind'] == 'none':
-        detail = f"无目标（{goal['reason']}）"
-        if goal.get('blocked_by'):
-            detail += '，被封锁 ' + '、'.join(goal['blocked_by'])
+def _describe_action(goal):
+    """按目标类型拼「做什么、去哪儿、多远、依据」；各类型可用字段不同，格式各自固定。"""
+    kind = goal['kind']
+    position = points_text(goal['position'])
+    if kind == 'review_block':
+        detail = (f"复核光幕 {goal['id']}（记录状态：{label(BLOCK_STATUS, goal.get('block_status'))}），"
+                  f"站到 {position}，光幕本身在 {points_text(goal['block_point'])}")
+        if goal.get('for_target'):
+            detail += f"，后续目标 {goal['for_target']}"
+    elif kind == 'mechanism':
+        detail = f"踩地面机关 {goal['id']}，位置 {position}"
+        if goal.get('block'):
+            detail += f"，目标是解除光幕 {goal['block']}"
+        detail += f"（坐标来自{label(TARGET_SOURCES, goal.get('source'))}）"
+    elif kind == 'elevator':
+        detail = f"电梯 {goal['id']}：先到入口 {position}，出口 {points_text(goal['leg']['exit'])}"
+        if goal.get('for_target'):
+            detail += f"，后续目标 {goal['for_target']}"
+    elif kind == 'explore':
+        detail = f"{label(GOAL_KINDS, kind)} {goal['id']}，位置 {position}"
+        if goal.get('unseen_cells') is not None:
+            detail += f"，全图还有 {goal['unseen_cells']} 格未探索"
     else:
-        position = [round(value, 1) for value in goal['position']]
-        detail = f"{goal['kind']} {goal['id']} @ {position}，距离 {goal['distance']}（{goal['reason']}）"
-        if goal['kind'] == 'review_block':
-            detail += f"，封锁点 {goal['block_point']}（{goal['block_status']}），为 {goal['for_target']}"
+        detail = f"{label(GOAL_KINDS, kind)} {goal['id']}，位置 {position}"
+    if goal.get('distance') is not None:
+        detail += f"，走过去约 {goal['distance']} 像素"
+        if goal.get('straight') is not None:
+            detail += f"（直线 {goal['straight']}）"
+    detail += f"；选它的依据：{label(GOAL_REASONS, goal.get('reason'))}"
+    return detail
+
+
+def _describe_nothing(goal):
+    """没有可执行目标时说明卡在哪一步；被光幕挡住时补上是谁挡的。"""
+    detail = f"没有可执行的目标（原因：{label(GOAL_REASONS, goal.get('reason'))}）"
+    if goal.get('for_target'):
+        detail += f"，本来想去 {goal['for_target']}"
+    if goal.get('blocked_by'):
+        detail += '，挡住它的是光幕 ' + '、'.join(goal['blocked_by'][:4])
+    return detail
+
+
+def describe(goal):
+    """把目标压成一行中文日志：要做什么、去哪儿、多远、为什么是它，以及本轮排除了谁。
+
+    内部编号（enemy-3、block-1、cell-15-44 之类）保留原样：中文说明让人看懂，编号让人能在日志里
+    检索到同一个目标。查不到的标识由 report.label 原样输出，新增字段不会在日志里消失。
+    """
+    detail = _describe_nothing(goal) if goal['kind'] == 'none' else _describe_action(goal)
     rejected = goal.get('rejected') or []
     if rejected:
-        detail += '；否决 ' + '、'.join(f"{item['id']}:{item['reason']}" for item in rejected[:4])
+        detail += '；本轮排除 ' + '、'.join(
+            f"{item['id']}（{label(REJECT_REASONS, item['reason'])}）" for item in rejected[:4])
     if goal.get('blocking'):
-        detail += '；封锁 ' + '、'.join(goal['blocking'][:4])
+        detail += '；当前挡路的光幕 ' + '、'.join(goal['blocking'][:4])
     return detail

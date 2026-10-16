@@ -16,7 +16,8 @@ from module.campaign.vision.minimap import map_visible
 from module.campaign.navigation.targets import TargetFinder
 from module.campaign.vision.observation import EXPANDED_ROI, CampaignObserver
 from module.campaign.navigation.routing import CutRoads
-from module.campaign.run_state import RunState
+from module.campaign.report import (LOCALIZATION, MINIMAP_MODES, direction_text, label, points_text)
+from module.campaign.run_state import RunState, describe_changes
 from module.campaign.timing import Stopwatch
 from module.config.config import TaskEnd
 from module.exception import RequestHumanTakeover
@@ -246,14 +247,14 @@ class Campaign(ModuleBase):
         配准分数通常明显更高），仍失败则在面板内换一段区域再判。展开与平移都会改变画面，
         所以退出前必须收起回紧凑形态，否则后续推图是在大地图盖住画面的状态下操作。
         initial 是章节确认时已经观测过的那一帧快照：它已经接受定位时直接采用，避免同一画面配准两次。
-        接受时打印小队底图坐标与使用的小地图形态；未接受时保留最后一次快照并发布预览，
+        接受时打印小队在章节地图上的坐标与使用的小地图形态；未接受时保留最后一次快照并发布预览，
         让界面能看到失败证据（具体未达标项由观察器的告警给出）。
         """
         logger.hr('确认小队位置', level=2)
         identity = (self.current_chapter, self.current_difficulty)
         if initial is not None and initial['localization'] == 'accepted':
-            logger.info(f"小队底图位置：{initial['squad']}"
-                        f"（{initial['minimap']['mode']} 小地图，章节确认时已定位）")
+            logger.info(f"小队在章节地图上的位置 {points_text(initial['squad'])}"
+                        f"（{label(MINIMAP_MODES, initial['minimap']['mode'])}小地图，章节确认时已定位）")
             return initial
         snapshot, expanded = None, False
         for attempt in range(1, SQUAD_LOCATE_ATTEMPTS + 1):
@@ -263,19 +264,20 @@ class Campaign(ModuleBase):
                 expanded = True
             elif attempt > 2:
                 direction = MINIMAP_PAN_DIRECTIONS[(attempt - 3) % len(MINIMAP_PAN_DIRECTIONS)]
-                logger.info(f'在展开面板内平移视图 {direction}，换一段地图再判定位。')
+                logger.info(f'{direction_text(direction)}挪一段视图，换个位置重新定位。')
                 self.pan_expanded_minimap(direction)
             self.device.screenshot()
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
             snapshot = self.observer.observe(image, identity, time.time())
             if snapshot['localization'] == 'accepted':
-                logger.info(f"小队底图位置：{snapshot['squad']}"
-                            f"（{snapshot['minimap']['mode']} 小地图，第 {attempt}/{SQUAD_LOCATE_ATTEMPTS} 次尝试）")
+                logger.info(f"小队在章节地图上的位置 {points_text(snapshot['squad'])}"
+                            f"（{label(MINIMAP_MODES, snapshot['minimap']['mode'])}小地图，"
+                            f"第 {attempt}/{SQUAD_LOCATE_ATTEMPTS} 次尝试）")
                 break
-            logger.warning(f"第 {attempt}/{SQUAD_LOCATE_ATTEMPTS} 次未确认小队位置，换一种小地图形态或视图重试。")
+            logger.warning(f"第 {attempt}/{SQUAD_LOCATE_ATTEMPTS} 次未定位到小队，换一种小地图形态或视图重试。")
         if snapshot is None or snapshot['localization'] != 'accepted':
-            status = snapshot['localization'] if snapshot is not None else '没有取到观测帧'
-            logger.warning(f'小队底图位置最终未确认（{status}），后续推图没有可用起点。')
+            status = label(LOCALIZATION, snapshot['localization']) if snapshot is not None else '没有取到画面'
+            logger.warning(f'最终未定位到小队（{status}），后续推图没有可用起点。')
         if snapshot is not None:
             publish_preview_frame(self.device.image, interval=0, source=self.campaign_source(snapshot))
         if expanded:
@@ -296,7 +298,7 @@ class Campaign(ModuleBase):
         screen_n = self.config.PCClient_ScreenNumber
         self.device.check_resolution(width, height)
         if not self.device.ensure_client_visible(screen_n, self.config.PCClient_GameWindowPosition):
-            logger.error('客户区检查未通过：窗口缺失，或客户区被任务栏/屏幕边缘切掉，固定坐标会整体偏移。')
+            logger.error('游戏窗口检查未通过：窗口缺失，或游戏画面被任务栏／屏幕边缘切掉，固定坐标会整体偏移。')
             raise RequestHumanTakeover
         self.device.apply_auto_hdr_setting()
         self.device.verify_input_channel()
@@ -407,49 +409,45 @@ class Campaign(ModuleBase):
         return self.target_finder.find(snapshot)
 
     def log_snapshot_summary(self, snapshot):
-        """把一帧章节快照里与推图决策相关的计数写进日志，确认各路识别确实有输出。
+        """把章节确认那一帧的观测写进日志，措辞与逐轮观测共用 describe_snapshot。
 
-        只打计数与状态，不逐项展开坐标：小队坐标在定位被接受时已由 confirm_squad_location 打出，
-        敌人与机关的坐标会在移动决策处按选中的目标打印，这里全列出来只会把日志刷满。
         snapshot 为 None 表示连一帧观测都没拿到（展开小地图失败等），此时只告警一行。
         """
         if snapshot is None:
-            logger.warning('本次任务没有拿到章节快照，后续推图缺少观测输入。')
+            logger.warning('本次任务没有拿到章节观测，后续推图没有可用的画面信息。')
             return
-        minimap = snapshot['minimap']
-        logger.info(f"观测结果：小地图 {minimap['mode'] if minimap else '不可用'}，"
-                    f"小地图敌人 {len(minimap['enemies']) if minimap else 0}，"
-                    f"底图敌人 {len(snapshot['enemies'])}，场景目标 {len(snapshot['objects'])}，"
-                    f"屏障封锁 {len(snapshot['blocks'])}")
+        from module.campaign.session import describe_snapshot
+        logger.info(f'章节确认时的观测：{describe_snapshot(snapshot)}')
         offscreen = snapshot['offscreen']
         if offscreen is not None:
-            logger.info(f"小队离屏：画面边缘标记中心 {offscreen['center']}，朝向 {offscreen['direction']}°")
+            logger.info(f"小队已离开画面：画面边缘标记中心 {offscreen['center']}，朝向 {offscreen['direction']}°")
 
     def plan_tick(self, snapshot, advance=True):
-        """一拍决策：把快照并进运行状态，按封锁刷新派生路网，选出下一个目标并打一行日志。
+        """一轮决策：把观测并进运行状态，按光幕刷新可行路网，选出下一个目标并打一行日志。
 
-        不发送任何输入。返回目标描述或 None（静态层不可用）。
-        派生路网必须在选目标之前刷新：封锁集合变了还用上一拍的切开图，可达性判的就是过期事实。
-        advance 为假用于同一拍内的补视野、复核帧与重新决策，不推进冷却计数（见 RunState.update）。
-        决策行带上本拍耗时：候选的行走距离重算距离场是这一步的主要开销，几次决策的耗时能直接对比。
+        不发送任何输入。返回目标描述或 None（章节地图底图不可用）。
+        可行路网必须在选目标之前刷新：光幕集合变了还用上一轮的切开图，可达性判的就是过期事实。
+        advance 为假用于同一轮内的补视野、复核帧与重新决策，不推进冷却计数（见 RunState.update）。
+        决策行带上本轮耗时：候选的行走距离要各自重算距离场，是这一步的主要开销，几次决策的耗时能直接对比。
         """
         watch = Stopwatch()
         changes = self.state.update(snapshot, advance=advance)
         chart = self.ensure_chart(self.current_chapter)
         if chart is None or chart.road is None:
-            logger.warning('静态层不可用，本拍不做决策。')
+            logger.warning('本章地图底图不可用，这一轮不做决策。')
             return None
         if self.cut is None or self.cut.chart is not chart:
             self.cut = CutRoads(chart)
         if self.cut.update(self.state.blocking()):
-            logger.info(f'按 {len(self.cut.blocks)} 块封锁重算派生路网。')
+            logger.info(f'有 {len(self.cut.blocks)} 处光幕挡路，可行路网已按它重算。')
         goal = choose_goal(self.state, chart, snapshot, self.cut,
                            purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
         self.last_goal = goal
-        logger.info(f'第 {self.state.tick} 拍决策（耗时 {watch}）：{describe(goal)}')
-        if changes:
-            logger.info(f'状态变更：{changes}')
-        # 每拍都推一次：远处敌人常只在补视野的展开帧里出现，等到移动反馈再推，界面就会漏掉这一拍的记忆与目标。
+        logger.info(f'第 {self.state.tick} 轮决策（耗时 {watch}）：{describe(goal)}')
+        detail = describe_changes(changes)
+        if detail:
+            logger.info(f'本帧变化：{detail}')
+        # 每轮都推一次：远处敌人常只在补视野的展开帧里出现，等到移动反馈再推，界面就会漏掉这一轮的记忆与目标。
         publish_preview_frame(self.device.image, interval=0, source=self.campaign_source(snapshot))
         return goal
 
@@ -468,16 +466,16 @@ class Campaign(ModuleBase):
         return {'campaign': dict(snapshot, memory=memory)}
 
     def dry_run(self, initial, ticks=DRY_RUN_TICKS):
-        """只观测只决策不点击的空跑，返回最后一拍的目标。
+        """只观测只决策不点击的空跑，返回最后一轮的目标。
 
-        空跑用于在真实场面上验证运行状态层与目标选择而不移动：每拍打出
-        选中的目标、被否决的候选和状态变更，最后打一次状态摘要。
-        第一拍用 initial（章节确认／小队定位时那帧），之后每拍重新截图观测。
+        空跑用于在真实场面上验证运行状态层与目标选择而不移动：每轮打出
+        选中的目标、被排除的候选和状态变更，最后打一次状态摘要。
+        第一轮用 initial（章节确认／小队定位时那帧），之后每轮重新截图观测。
         """
-        logger.hr('推图决策空跑', level=2)
+        logger.hr('推图试跑（只看不动）', level=2)
         info = self.observer.map_info
         if info is None:
-            logger.warning('本章地图信息不可用，跳过决策空跑。')
+            logger.warning('本章地图信息不可用，跳过试跑。')
             return None
         identity = (self.current_chapter, self.current_difficulty)
         self.state = RunState(self.current_chapter, self.current_difficulty, info['size'])
@@ -491,10 +489,10 @@ class Campaign(ModuleBase):
                 image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
                 snapshot = self.observer.observe(image, identity, time.time())
             if snapshot is None:
-                logger.warning(f'第 {index}/{ticks} 拍没有可用观测，跳过。')
+                logger.warning(f'第 {index}/{ticks} 轮没有可用的观测，跳过。')
                 continue
             goal = self.plan_tick(snapshot)
-        logger.info(f'运行状态：{self.state.summary()}')
+        logger.info(f'运行状态：{self.state.summary_text()}')
         return goal
 
     def run(self):
@@ -522,10 +520,10 @@ class Campaign(ModuleBase):
             raise RequestHumanTakeover
         chart = self.ensure_chart(chapter)
         if chart is None or not chart.supported or chart.road is None:
-            logger.error('主线地图静态层不可用，不能执行移动。')
+            logger.error('本章地图底图不可用，不能规划移动。')
             raise RequestHumanTakeover
-        logger.info(f'准备阶段结束（资源、客户区、章节与小队定位）耗时 {watch}，'
-                    f'进入推图闭环：地图 {chart.size}，小队起点 {[round(float(v), 1) for v in snapshot["squad"]]}')
+        logger.info(f'准备阶段结束（地图资源、游戏窗口、章节与小队定位）耗时 {watch}，'
+                    f'进入推图闭环：地图 {chart.size}，小队起点 {points_text(snapshot["squad"])}')
         from module.campaign.execution import CampaignExecutor
         from module.campaign.session import CampaignSession, InputBudgetExceeded
         from module.campaign.window import WindowChanged
@@ -543,7 +541,7 @@ class Campaign(ModuleBase):
             raise RequestHumanTakeover from exc
         logger.info(f'主线执行结束：{self.current_difficulty.upper()} 第 {chapter} 章；{result}；'
                     f'任务总耗时 {watch}')
-        logger.info(f'运行状态：{self.state.summary()}')
+        logger.info(f'运行状态：{self.state.summary_text()}')
         if result['state'] == 'needs_review':
             raise RequestHumanTakeover
         return chapter

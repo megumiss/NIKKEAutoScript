@@ -22,7 +22,7 @@ def movement_plan(localizer, observation, target, anchor):
     position = np.asarray(observation['position'], float)
     _, path = localizer.route(position, target)
     if np.linalg.norm(np.asarray(target) - position) < 2:
-        raise ValueError('当前道路没有可用的前进落点，停止测试。')
+        raise ValueError('当前道路没有可用的前进落点，停止移动。')
     roi, click = target_projection(field_chart(localizer, observation, anchor), observation, target)
     if not inside(roi, ROI_BOUNDS) or not inside(click, FIELD_BOUNDS):
         raise ValueError('目标不在当前有效画面内，需要先平移镜头。')
@@ -153,7 +153,7 @@ def navigate(
         if previous is not None and probes is None:
             stagnant = stagnant + 1 if np.linalg.norm(position - previous) < 3 else 0
             if stagnant >= 2:
-                raise RuntimeError('连续移动后小队没有明显位移，停止测试。')
+                raise RuntimeError('连续两次移动后小队几乎没有位移，停止移动。')
         if clicks >= max_moves:
             raise RuntimeError(f'已达到 {max_moves} 次移动上限，尚未到达目标。')
         emit(state='planning', message='正在自动换算道路落点…')
@@ -235,4 +235,4 @@ def navigate(
         previous = position
         emit(state='moving', message='小队正在移动，等待停稳后重新定位…', movement_clicks=clicks, click=click.tolist())
         session.wait_stopped()
-    raise RuntimeError('移动测试超过十分钟，停止测试。')
+    raise RuntimeError('单次移动超过十分钟仍未到达目标，停止移动。')

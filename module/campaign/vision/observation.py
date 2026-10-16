@@ -12,6 +12,7 @@ from module.campaign.vision.minimap import cropped_minimap
 from module.campaign.vision.barriers import mark_blocks, project_barriers, scene_anchor
 from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
+from module.campaign.report import LOCALIZATION, LOCATE_CRITERIA, label, points_text
 from module.campaign.vision.objects import detect_objects
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import compact_road_masks, marker_candidates, minimap_masks, project_centers, refine_ring
@@ -94,7 +95,7 @@ class CampaignObserver:
                 self.matcher = MapMatcher(package)
                 self.package = package
             except (OSError, ValueError, KeyError) as exc:
-                logger.warning(f'第 {chapter} 章地图资源不可用于定位：{exc}')
+                logger.warning(f'第 {chapter} 章地图资源不可用，无法定位：{exc}')
         snapshot['map'] = self.map_info
         mode, panel = self.minimap_mode_and_panel(image)
         if mode is None:
@@ -193,9 +194,10 @@ class CampaignObserver:
                       if not passed]
             self.report_localization_error(
                 chapter, f"{result['status']}:{','.join(failed)}",
-                f"{result['status']}，road_iou={result['road_iou']:.3f}，"
-                f"margin={result['coarse_margin']:.3f}，spread={result['parameter_spread_px']:.1f}px，"
-                f"未达标：{','.join(failed) or '小队投影点未落在底图内'}")
+                f"{label(LOCALIZATION, result['status'])}：道路重合度 {result['road_iou']:.3f}，"
+                f"候选位置分差 {result['coarse_margin']:.3f}，"
+                f"参数离散度 {result['parameter_spread_px']:.1f} 像素，"
+                f"没达标的是 {'、'.join(label(LOCATE_CRITERIA, name) for name in failed) or '小队位置落在章节地图外'}")
             return None
         matrix = result['roi_to_map']
         width, height = self.map_info['size']
@@ -203,7 +205,8 @@ class CampaignObserver:
         if not (0 <= squad[0] < width and 0 <= squad[1] < height):
             snapshot['localization'] = 'needs_review'
             self.report_localization_error(chapter, 'out_of_bounds',
-                                           f'配准已接受，但小队投影 {squad} 超出底图 {width}×{height}')
+                                           f'对齐成功了，但算出来的小队位置 {points_text(squad)} '
+                                           f'超出了章节地图 {width}×{height}')
             return None
         snapshot['squad'] = squad
         # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
@@ -228,7 +231,7 @@ class CampaignObserver:
         if key == self.last_localization_error:
             return
         self.last_localization_error = key
-        logger.warning(f'第 {chapter} 章底图定位未确认（{detail}），小队底图坐标不更新。')
+        logger.warning(f'第 {chapter} 章章节地图定位未通过：{detail}；本帧不采用其坐标。')
 
     def locate_viewport(self, image):
         """小队离屏时用紧凑小地图道路配准定位视野中心（无小队圆环种子）；接受时返回配准结果。"""
@@ -247,7 +250,7 @@ class CampaignObserver:
         if result['status'] != 'accepted':
             return None
         self.last_viewport_error = None
-        logger.info(f"视野中心定位：{[round(v, 1) for v in result['position']]}，IoU {result['road_iou']:.2f}")
+        logger.info(f"视野中心定位到 {points_text(result['position'])}，道路重合度 {result['road_iou']:.3f}")
         return dict(position=result['position'], roi_to_map=result['roi_to_map'], a=result['a'],
                     panel_size=list(panel.shape[1::-1]))
 
@@ -258,7 +261,7 @@ class CampaignObserver:
                 self.chart = StaticMap(self.package, self.matcher)
             except (OSError, ValueError, KeyError) as exc:
                 self.chart_failed = True
-                logger.warning(f'第 {self.chapter} 章地图无法用于封锁标记：{exc}')
+                logger.warning(f'第 {self.chapter} 章地图无法用于标记光幕：{exc}')
         return self.chart
 
     def observe_barriers(self, image, snapshot, squad, viewport):
@@ -288,7 +291,7 @@ class CampaignObserver:
         except (OSError, ValueError, KeyError, np.linalg.LinAlgError, cv2.error) as exc:
             message = str(exc)
             if message != self.last_barrier_error:
-                logger.warning(f'屏障／机关落图不可用：{message}')
+                logger.warning(f'光幕／机关无法换算到章节地图：{message}')
                 self.last_barrier_error = message
 
 
@@ -303,7 +306,7 @@ class CampaignObserver:
         except (OSError, ValueError, KeyError, RuntimeError, cv2.error) as exc:
             message = str(exc)
             if message != self.last_object_error:
-                logger.warning(f'场景目标识别不可用：{message}')
+                logger.warning(f'场景目标（机关、电梯、光幕）识别不可用：{message}')
                 self.last_object_error = message
             return None
 

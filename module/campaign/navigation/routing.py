@@ -137,7 +137,7 @@ class CutRoads:
         """包含该点的切开图连通分量掩码；点不在道路上时抛错，与 StaticMap.component_mask 同语义。"""
         home = self.component(point)
         if not home:
-            raise ValueError('该位置在切开后的路网上缺少道路证据。')
+            raise ValueError('该位置在可行走的道路上没有对应的路面。')
         return (self.labels == home).astype(np.uint8)
 
     def blocked(self, start, target):

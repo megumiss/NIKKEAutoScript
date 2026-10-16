@@ -9,6 +9,7 @@
 import cv2
 import numpy as np
 
+from module.campaign.report import BLOCK_STATUS, ENEMY_STATUS, counts_text, label
 from module.logger import logger
 
 # 小地图标记每帧重检，同一只敌人的落点会在几像素内抖动；超过这个距离才算另一只。
@@ -54,6 +55,34 @@ def panel_quad(snapshot):
         return None
     quad = points[:, :2] / divisor[:, None]
     return quad if np.isfinite(quad).all() else None
+
+
+def describe_changes(changes):
+    """把一帧的运行状态变更写成一句中文；没有可说的变更时返回空串，调用方据此决定要不要打这一行。
+
+    键与 update 返回的 changes 一一对应：列表类字段（新发现的敌人与光幕编号）逐个列出，
+    计数类字段直接说明；定位不可信或沿用旧坐标的帧只说明原因，不带计数。
+    """
+    if not changes:
+        return ''
+    if changes.get('skipped') == 'localization':
+        return '本章地图定位不可信，未并入运行状态'
+    if changes.get('reused') == 'localization':
+        return '沿用战斗前的坐标，只取小队位置，视野与敌人未并入状态'
+    parts = []
+    if changes.get('observed_cells'):
+        parts.append(f"新覆盖 {changes['observed_cells']} 格地图")
+    if changes.get('enemies_added'):
+        parts.append('新发现敌人 ' + '、'.join(changes['enemies_added']))
+    if changes.get('enemies_refreshed'):
+        parts.append(f"刷新了 {changes['enemies_refreshed']} 个已知敌人的位置")
+    if changes.get('blocks_added'):
+        parts.append('新发现挡路光幕 ' + '、'.join(changes['blocks_added']))
+    if changes.get('blocks_refreshed'):
+        parts.append(f"确认 {changes['blocks_refreshed']} 处光幕仍存在")
+    if changes.get('blocks_cleared'):
+        parts.append('光幕 ' + '、'.join(changes['blocks_cleared']) + ' 已消失')
+    return '，'.join(parts)
 
 
 class RunState:
@@ -315,7 +344,7 @@ class RunState:
             enemy['failures'] = record['failures']
             if record['failures'] >= MAX_FAILURES:
                 enemy['status'] = 'unreachable'
-                logger.warning(f"{identifier} 连续 {record['failures']} 次没能到达，标为暂时走不到。")
+                logger.warning(f"目标 {identifier} 连续 {record['failures']} 次未能到达，标为暂时不可达。")
         return record
 
     def cooling(self, identifier):
@@ -323,20 +352,21 @@ class RunState:
         record = self.cooldowns.get(identifier)
         return record is not None and (self.tick < record['until'] or record['failures'] >= MAX_FAILURES)
 
-    def summary(self):
-        """状态摘要，供每 tick 打一行日志与失败时留证。"""
-        statuses = {}
+    def summary_text(self):
+        """状态摘要，供日志打一行：决策轮数、敌人与光幕的各状态计数、看清了多少地图、有多少待办。"""
+        enemies = {}
         for record in self.enemies.values():
-            statuses[record['status']] = statuses.get(record['status'], 0) + 1
+            name = label(ENEMY_STATUS, record['status'])
+            enemies[name] = enemies.get(name, 0) + 1
         blocks = {}
         for record in self.blocks.values():
-            blocks[record['status']] = blocks.get(record['status'], 0) + 1
-        return {'tick': self.tick, 'chapter': self.chapter, 'difficulty': self.difficulty,
-                'enemies': statuses, 'blocks': blocks,
-                'observed_cells': int(self.observed.sum()),
-                'mechanisms_tried': sum(bool(item['tried_for']) for item in self.mechanisms.values()),
-                'pending_reviews': len(self.pending_reviews), 'failed_transfers': len(self.transfers),
-                'unlocated_frames': self.unlocated}
+            name = label(BLOCK_STATUS, record['status'])
+            blocks[name] = blocks.get(name, 0) + 1
+        tried = sum(bool(item['tried_for']) for item in self.mechanisms.values())
+        return (f"已决策 {self.tick} 轮；敌人 {counts_text(enemies)}；光幕 {counts_text(blocks)}；"
+                f"已覆盖 {int(self.observed.sum())} 格地图；试过 {tried} 个机关；"
+                f"待复核光幕 {len(self.pending_reviews)} 处；失败电梯 {len(self.transfers)} 段；"
+                f"定位失败 {self.unlocated} 帧")
 
     def memory(self):
         """推给界面的跨帧记忆：记住的敌人与仍在挡路的封锁，坐标为底图像素。

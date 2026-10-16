@@ -8,6 +8,7 @@ import numpy as np
 from module.campaign.map.geometry import jacobian
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation import evidence as runtime
+from module.campaign.report import LOCALIZATION, label
 from module.campaign.vision import perception
 from module.campaign.vision.surface_motion import project
 
@@ -474,7 +475,7 @@ def start_viewport(start, squad_position, tolerance=60.):
     """
     offset = float(np.linalg.norm(np.asarray(start['viewport'], float) - np.asarray(squad_position, float)))
     if offset > tolerance:
-        raise ValueError(f"紧凑小地图与展开地图定位不一致（{start['status']}，偏差 {offset:.0f}px）。")
+        raise ValueError(f"紧凑小地图与展开地图定位不一致（{label(LOCALIZATION, start['status'])}，偏差 {offset:.0f} 像素）。")
     return offset
 
 
@@ -646,7 +647,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
             if anchored is not None:
                 use_matrix, source, batch_pans = anchored, 'expanded', 0
         if use_matrix is None:
-            raise ValueError('帧间跟踪、全局配准与批末展开都不可用；未发送移动点击。')
+            raise ValueError('帧间跟踪、全局对齐与展开地图重新锚定都不可用；未发送移动点击。')
         new_viewport = project(use_matrix, goto.GAZE)
         actual = new_viewport - viewport
         response = float(actual @ delta_map) / float(delta_map @ delta_map)
