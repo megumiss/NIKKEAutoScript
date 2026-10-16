@@ -10,14 +10,14 @@ from unittest.mock import Mock, call, patch
 import cv2
 import numpy as np
 
-from module.campaign.execution import (BATTLE_ADVANCE_LIMIT, BATTLE_DEFEAT_LIMIT, BATTLE_UNKNOWN_LIMIT,
-                                       CampaignExecutor, single_transfer_annotations)
+from module.campaign.execution import (BATTLE_ADVANCE_LIMIT, BATTLE_DEFEAT_RETRIES, BATTLE_UNKNOWN_LIMIT,
+                                       BattleFailed, CampaignExecutor, single_transfer_annotations)
 from module.campaign.goals import choose_goal
 from module.campaign.navigation.routing import CutRoads, component_at
 from module.campaign.run_state import COOLDOWN_TICKS, RunState, panel_quad
-from module.campaign.session import (ADVANCE_POINT, AUTO_POINT, DEFEAT_BACK_POINT, ENTER_BATTLE_POINT,
-                                     ENTRY_CLOSE_POINT, LOCALIZE_RETRIES, QUICK_BATTLE_POINT, CampaignLocalizer,
-                                     CampaignSession, InputBudgetExceeded)
+from module.campaign.session import (ADVANCE_POINT, AUTO_POINT, DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT,
+                                     ENTER_BATTLE_POINT, ENTRY_CLOSE_POINT, LOCALIZE_RETRIES, QUICK_BATTLE_POINT,
+                                     CampaignLocalizer, CampaignSession, InputBudgetExceeded)
 from module.campaign.subgoals import available_annotations
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
@@ -431,20 +431,21 @@ class SessionTests(unittest.TestCase):
         self.handler.mouse_click.assert_not_called()
 
     def test_battle_step_taps_the_state_button(self):
-        """每一步只按识别结果点一次：快速战斗／进入战斗、AUTO 关闭时打开、结算推进、战败返回、战后只关弹窗。"""
+        """每一步只按识别结果点一次：快速战斗／进入战斗、AUTO 关闭时打开、胜利推进、战败重打或返回。"""
         self.session.tap = Mock()
-        cases = [(dict(state='entry', quick=True), False, QUICK_BATTLE_POINT),
-                 (dict(state='entry', quick=False), False, ENTER_BATTLE_POINT),
-                 (dict(state='entry', quick=True), True, ENTRY_CLOSE_POINT),
-                 (dict(state='battle', auto=False), False, AUTO_POINT),
-                 (dict(state='victory'), False, ADVANCE_POINT),
-                 (dict(state='defeat'), False, DEFEAT_BACK_POINT)]
-        for state, close_entry, point in cases:
-            with self.subTest(state=state):
+        cases = [(dict(state='entry', quick=True), False, True, QUICK_BATTLE_POINT),
+                 (dict(state='entry', quick=False), False, True, ENTER_BATTLE_POINT),
+                 (dict(state='entry', quick=True), True, True, ENTRY_CLOSE_POINT),
+                 (dict(state='battle', auto=False), False, True, AUTO_POINT),
+                 (dict(state='victory'), False, True, ADVANCE_POINT),
+                 (dict(state='defeat'), False, True, DEFEAT_RETRY_POINT),
+                 (dict(state='defeat'), False, False, DEFEAT_BACK_POINT)]
+        for state, close_entry, retry_defeat, point in cases:
+            with self.subTest(state=state, retry=retry_defeat):
                 self.session.tap.reset_mock()
                 with patch('module.campaign.vision.battle.battle_state',
                            return_value=dict(state, scores={})):
-                    result = self.session.battle_step(close_entry=close_entry)
+                    result = self.session.battle_step(close_entry=close_entry, retry_defeat=retry_defeat)
                 self.assertEqual(result['state'], state['state'])
                 self.session.tap.assert_called_once_with(point)
         for state in (dict(state='battle', auto=True), dict(state='field'), dict(state='unknown')):
@@ -592,31 +593,45 @@ class ExecutorTests(unittest.TestCase):
         self.session.close.assert_called_once()
 
     def test_battle_victory_marks_target_cleared(self):
-        """胜利把该敌人记为 cleared、清零连续战败，并打开战后沿用坐标的许可。"""
+        """胜利把该敌人记为 cleared、不再作为目标，并打开战后沿用坐标的许可。"""
         goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
         self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
         self.session.battle_step.side_effect = [dict(state='entry', quick=True), dict(state='battle'),
                                                 dict(state='victory'), dict(state='field')]
         self.assertEqual(self.executor.battle(goal), 'victory')
         self.assertEqual(self.owner.state.enemies['enemy-1']['status'], 'cleared')
-        self.assertEqual(self.executor.battle_defeats, 0)
         self.assertTrue(self.session.reuse_squad)
         self.assertFalse(self.session.battle_mode)
         self.session.begin_target.assert_any_call('battle')
 
-    def test_battle_defeat_cools_target_then_stops_at_limit(self):
-        """战败给目标记冷却并计数；连续到上限抛安全异常交人工，不当作普通目标失败。"""
+    def test_battle_defeat_retries_in_place_then_returns_and_fails(self):
+        """战败先原地重打同一关到上限，再点返回；回到野外后抛 BattleFailed 交人工。"""
         goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
         self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
-        steps = [dict(state='entry', quick=False), dict(state='defeat'), dict(state='field')]
-        self.session.battle_step.side_effect = list(steps)
-        self.assertEqual(self.executor.battle(goal), 'defeat')
-        self.assertTrue(self.owner.state.cooling('enemy-1'))
-        self.assertEqual(self.executor.battle_defeats, 1)
-        self.session.battle_step.side_effect = list(steps)
-        with self.assertRaises(InputBudgetExceeded):
+        self.session.battle_step.side_effect = ([dict(state='entry', quick=False)]
+                                               + [dict(state='defeat')] * (BATTLE_DEFEAT_RETRIES + 1)
+                                               + [dict(state='field')])
+        with self.assertRaises(BattleFailed):
             self.executor.battle(goal)
-        self.assertEqual(self.executor.battle_defeats, BATTLE_DEFEAT_LIMIT)
+        flags = [call.kwargs['retry_defeat'] for call in self.session.battle_step.call_args_list]
+        self.assertEqual(len(flags), BATTLE_DEFEAT_RETRIES + 3)
+        self.assertEqual(flags[:BATTLE_DEFEAT_RETRIES + 1], [True] * (BATTLE_DEFEAT_RETRIES + 1))
+        self.assertEqual(flags[-2:], [False, False])
+        self.assertEqual(self.owner.state.enemies['enemy-1']['status'], 'pending')
+        self.assertTrue(self.session.reuse_squad)
+        self.assertFalse(self.session.battle_mode)
+
+    def test_battle_victory_after_retry_marks_target_cleared(self):
+        """原地重打一次后打赢仍然按胜利收尾：目标记 cleared 并继续推图。"""
+        goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
+        self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
+        self.session.battle_step.side_effect = [dict(state='entry', quick=False), dict(state='defeat'),
+                                                dict(state='battle', auto=True), dict(state='victory'),
+                                                dict(state='field')]
+        self.assertEqual(self.executor.battle(goal), 'victory')
+        self.assertEqual(self.owner.state.enemies['enemy-1']['status'], 'cleared')
+        self.assertFalse(self.session.battle_mode)
+        self.assertTrue(self.session.reuse_squad)
 
     def test_battle_unknown_screen_advances_then_stops(self):
         """连续认不出画面时按上限点几次推进兜底，仍认不出就停下交人工。"""

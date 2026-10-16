@@ -48,6 +48,7 @@ ENTRY_CLOSE_POINT = (1147, 513)
 AUTO_POINT = (105, 35)
 ADVANCE_POINT = (888, 500)
 DEFEAT_BACK_POINT = (73, 908)
+DEFEAT_RETRY_POINT = (1688, 926)
 
 
 class InputBudgetExceeded(RuntimeError):
@@ -362,10 +363,11 @@ class CampaignSession(NavigationSession):
             self.win.reset_minimap(expanded=False, reset=False)
         return snapshot
 
-    def battle_step(self, close_entry=False):
+    def battle_step(self, close_entry=False, retry_defeat=True):
         """战斗接管的一步：识别当前画面并按状态点一次，返回识别结果。
 
         close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
+        retry_defeat 为真时战败点「重新挑战」原地重打同一关，为假时才点返回（重试用尽）。
         战斗中只在自动射击关闭时点一次 AUTO（开着就不再点）；野外不发输入，交给执行层收尾。
         点击都走场景输入闸门与预算，返回 battle.battle_state 的结果供执行层记录与决策。
         """
@@ -390,8 +392,12 @@ class CampaignSession(NavigationSession):
             logger.info('战斗结算：胜利，点继续。')
             self.tap(ADVANCE_POINT)
         elif kind == 'defeat':
-            logger.info('战斗结算：战败，点返回。')
-            self.tap(DEFEAT_BACK_POINT)
+            if retry_defeat:
+                logger.info('战斗结算：战败，点重新挑战原地重打。')
+                self.tap(DEFEAT_RETRY_POINT)
+            else:
+                logger.info('战斗结算：战败且重试用尽，点返回。')
+                self.tap(DEFEAT_BACK_POINT)
         return state
 
     def tap(self, point):

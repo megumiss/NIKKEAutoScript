@@ -21,13 +21,17 @@ REVIEW_FRAMES = 3
 # 一次侦察最多看几屏：每屏最多 3 次拖动，连同展开、收起不超过单目标 32 次输入。
 SCOUT_VIEWS = 8
 # 战斗接管：每次识别之间的间隔、整场接管的时间上限（超过就交人工，不无限等）、
-# 连续无法识别时点一次「推进」的上限，以及连续战败到几次就退出。
+# 连续无法识别时点一次「推进」的上限，以及同一关原地重打的次数上限（用尽就返回并交人工）。
 BATTLE_POLL_SECONDS = 2.0
 BATTLE_TIME_LIMIT = 300
 BATTLE_ADVANCE_EVERY = 5
 BATTLE_ADVANCE_LIMIT = 3
 BATTLE_UNKNOWN_LIMIT = 30
-BATTLE_DEFEAT_LIMIT = 2
+BATTLE_DEFEAT_RETRIES = 3
+
+
+class BattleFailed(RuntimeError):
+    """同一关原地重打用尽仍然战败：按安全失败停止并交人工，不降级成普通目标失败继续点。"""
 
 
 def single_transfer_annotations(leg):
@@ -44,8 +48,6 @@ class CampaignExecutor:
     def __init__(self, owner, session, purpose='story'):
         """注入会话以便离线回放；业务状态仍由 Campaign 统一持有。"""
         self.owner, self.session, self.purpose = owner, session, purpose
-        # 连续战败计数：胜利清零，达到 BATTLE_DEFEAT_LIMIT 直接交人工；「打不过」不是普通目标失败。
-        self.battle_defeats = 0
 
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
@@ -180,25 +182,33 @@ class CampaignExecutor:
 
         每一步都由会话识别并按状态点一次，这里只负责节奏、上限与状态回写。整场超过
         BATTLE_TIME_LIMIT 秒、或连续多帧认不出画面都停下交人工：不无限等，也不盲目连点。
-        快速战斗的结算画面与普通战斗不完全一样，连续认不出时按上限点几次「推进」兜底。
+        战败先原地重打同一关，最多 BATTLE_DEFEAT_RETRIES 次；用尽才点返回，回到野外后抛
+        BattleFailed 直接交人工——打不过不是普通目标失败，不该换个敌人接着点。
         战斗结束时给会话打开一次「沿用战斗前坐标」的许可，第一帧重新配准失败就用旧坐标继续推图。
         """
         self.session.begin_target('battle')
         self.session.battle_mode = True
-        outcome, close_entry, unknown, advances = None, False, 0, 0
+        outcome, close_entry, unknown, advances, retries = None, False, 0, 0, 0
         deadline = time.monotonic() + BATTLE_TIME_LIMIT
         try:
             while 1:
                 if time.monotonic() >= deadline:
                     raise RuntimeError(f'战斗接管超过 {BATTLE_TIME_LIMIT} 秒仍未回到野外，交人工。')
-                state = self.session.battle_step(close_entry=close_entry)
+                state = self.session.battle_step(retry_defeat=retries < BATTLE_DEFEAT_RETRIES,
+                                                 close_entry=close_entry)
                 kind = state['state']
                 if kind == 'field':
                     break
                 if kind == 'victory':
                     outcome, close_entry, unknown = 'victory', False, 0
                 elif kind == 'defeat':
-                    outcome, close_entry, unknown = 'defeat', True, 0
+                    unknown = 0
+                    if retries < BATTLE_DEFEAT_RETRIES:
+                        retries += 1
+                        logger.warning(f'战斗失败：原地重打同一关（第 {retries}/{BATTLE_DEFEAT_RETRIES} 次重试）。')
+                    else:
+                        outcome, close_entry = 'defeat', True
+                        logger.warning('战斗失败且重试用尽：点返回，回到野外后交人工接管。')
                 elif kind in ('entry', 'battle'):
                     unknown = 0
                 else:
@@ -213,18 +223,9 @@ class CampaignExecutor:
         finally:
             self.session.battle_mode = False
         self.session.reuse_squad = True
-        if goal is not None and goal.get('kind') == 'none':
-            goal = None
         if outcome == 'defeat':
-            self.battle_defeats += 1
-            if goal is not None:
-                self.owner.state.penalize(goal['id'])
-            logger.warning(f'战斗失败（连续第 {self.battle_defeats}/{BATTLE_DEFEAT_LIMIT} 次）：'
-                           f'目标 {goal["id"] if goal else "未知"} 记冷却，回去重新找敌人。')
-            if self.battle_defeats >= BATTLE_DEFEAT_LIMIT:
-                raise InputBudgetExceeded(f'连续 {self.battle_defeats} 次战斗失败，停止并交人工。')
-        elif outcome == 'victory':
-            self.battle_defeats = 0
+            raise BattleFailed(f'同一关原地重打 {BATTLE_DEFEAT_RETRIES} 次仍战败，停止并交人工。')
+        if outcome == 'victory':
             if goal is not None and goal.get('kind') == 'enemy':
                 self.owner.state.enemies[goal['id']]['status'] = 'cleared'
                 logger.info(f'战斗胜利：敌人 {goal["id"]} 已打掉，不再作为目标。')
