@@ -34,6 +34,9 @@ MINIMAP_TOGGLE_POSITION = (42, 98)
 MINIMAP_COLLAPSE_POSITION = (EXPANDED_ROI[0] + 14, EXPANDED_ROI[1] - 11)
 # 小地图重新打开后的面板动画等待秒数；采集器 wait_for 也按 1.2s 预留动画时间。
 MINIMAP_REOPEN_WAIT_SECONDS = 1.5
+# 展开大地图的点击次数上限：面板动画期间、或点击落在战斗加载画面上时，第一次点击会被吃掉。
+# 重试仍然安全，因为每次点击之前都会重新确认面板还没展开（那个控件是开合开关）。
+MINIMAP_EXPAND_ATTEMPTS = 2
 # 展开面板内拖动后等待地图回正／停稳的秒数。
 MINIMAP_PAN_SETTLE_SECONDS = 1.0
 # 一次平移的客户区像素位移，以及各次重试的方向循环（右、下、左）。
@@ -182,23 +185,27 @@ class Campaign(ModuleBase):
         """点击左上角控件把紧凑小地图展开成大地图面板，确认面板可见才返回 True。
 
         check / pause 可注入生产会话闸门与可取消等待。
-        已经处于展开态时直接返回 True：那个控件是开合开关，再点一次会把面板收起。
-        面板动画期间不接受下一次输入，所以点击后等待固定时长再复核；展开失败只告警并返回 False，
-        调用方据此放弃展开形态，不要继续在展开面板里做平移。
+        那个控件是开合开关，再点一次会把已经展开的面板收起，所以每次点击之前都重新确认面板还没展开；
+        一次点击没生效（面板动画没走完、或点击被战斗加载画面吃掉）时最多再点一次，而不是直接把失败
+        抛给上层。仍然失败就只告警并返回 False，调用方据此放弃展开形态，不要继续在展开面板里做平移。
         """
-        if self.minimap_expanded():
-            return True
-        if check is not None:
-            check()
+        for attempt in range(MINIMAP_EXPAND_ATTEMPTS):
             if self.minimap_expanded():
                 return True
-        logger.info('展开大地图补充视野或重新定位。')
-        self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
-        (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
-        self.device.screenshot()
-        if self.minimap_expanded():
-            return True
-        logger.warning('展开大地图失败，中部面板仍不可见。')
+            if check is not None:
+                check()
+                if self.minimap_expanded():
+                    return True
+            if attempt:
+                logger.warning(f'展开大地图没有生效，再点一次（{attempt + 1}/{MINIMAP_EXPAND_ATTEMPTS}）。')
+            else:
+                logger.info('展开大地图补充视野或重新定位。')
+            self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
+            (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
+            self.device.screenshot()
+            if self.minimap_expanded():
+                return True
+        logger.warning(f'展开大地图连续 {MINIMAP_EXPAND_ATTEMPTS} 次都没有生效，中部面板仍不可见。')
         return False
 
     def collapse_minimap(self, check=None, pause=None):

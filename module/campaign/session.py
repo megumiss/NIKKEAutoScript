@@ -13,9 +13,9 @@ from module.campaign.navigation.movement_feedback import TargetTriggered, collec
 from module.campaign.navigation.pathfinding import NoConnectedRoad
 from module.campaign.navigation.pathfinding import RoadLocalizer as Localizer
 from module.campaign.navigation.session import NavigationSession
-from module.campaign.report import (ANCHOR_METHODS, ANCHOR_RESULTS, CAMERA_TRACKING, CORRECTION_REASONS,
-                                    LOCALIZATION, MINIMAP_MODES, MOVE_STATES, NAVIGATION_METHODS,
-                                    POSITION_KINDS, label, points_text)
+from module.campaign.report import (ANCHOR_METHODS, ANCHOR_RESULTS, BATTLE_STATES, CAMERA_TRACKING,
+                                    CORRECTION_REASONS, LOCALIZATION, MINIMAP_MODES, MOVE_STATES,
+                                    NAVIGATION_METHODS, POSITION_KINDS, label, points_text)
 from module.campaign.run_state import describe_changes, located
 from module.campaign.timing import Stopwatch
 from module.campaign.vision.chapter import chapter_identity
@@ -56,6 +56,14 @@ AUTO_POINT = (105, 35)
 ADVANCE_POINT = (888, 500)
 DEFEAT_BACK_POINT = (73, 908)
 DEFEAT_RETRY_POINT = (1688, 926)
+# 每个按钮自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：一次点击没生效时，
+# 间隔内的轮询不再重复点。数值照仓库的战斗循环取（进入战斗／快速战斗 2~5 秒、结算 1 秒、自动射击 5 秒）。
+ENTRY_TAP_INTERVAL = 2.
+SETTLE_TAP_INTERVAL = 1.
+AUTO_TAP_INTERVAL = 5.
+# 野外动作前的等待：画面不是野外（加载、过场、黑屏）时按这个间隔重看，最多等这么多秒。
+FIELD_POLL_SECONDS = 0.5
+FIELD_WAIT_LIMIT = 30.
 # AUTO 的点按策略：连续这么多帧都读成关闭外观才点，且同一场战斗最多点一次。实机里 AUTO 按钮
 # 叠在场景上、HUD 会淡出或整体挪动，单帧判据偶尔会把开着的读成关着；照单帧就点，那一下正好
 # 把自动射击关掉（开与关是同一个按钮），战斗会被拖长甚至打输。
@@ -283,6 +291,8 @@ class CampaignSession(NavigationSession):
         self.auto_taps = 0
         self.auto_off_frames = 0
         self.auto_skip_logged = False
+        # 每个按钮上一次点击的时刻：战斗接管的按钮各自有最短点击间隔（见 tap 的 interval）。
+        self.tap_times = {}
         # 战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_registration）。
         self.reuse_squad = False
         self.last_registration = None
@@ -350,13 +360,25 @@ class CampaignSession(NavigationSession):
         self.target_inputs += 1
 
     def popup(self, field):
-        """战斗弹窗闸门：战斗接管之外把它抛给执行层，接管之内放行让会话点它。
+        """战斗闸门：弹窗、战斗中与结算都抛给执行层，接管之内放行让会话点这些按钮。
 
-        弹窗出现时画面已经不是主线地图，平时任何落点点击都可能点进战斗或结算，所以立即停止并交给
-        执行层（普通关卡由执行层接管）；battle_mode 为真说明已经进入接管（或正要接管），这时弹窗
-        就是要被点的对象。EX 弹窗只关一次后仍然是终态：本次实现不接管 EX 关卡。
+        这几种画面上都不是主线地图，平时任何落点点击都可能点进战斗、点掉结算或点错按钮，所以立即
+        停止并交给执行层（普通关卡由执行层接管）；battle_mode 为真说明已经进入接管（或正要接管），
+        这时它们就是要被点的对象。EX 弹窗只关一次后仍然是终态：本次实现不接管 EX 关卡。
+        实机里点「进入战斗」之后战斗更早就开始了：外层若只认弹窗，就会在战斗画面上继续做野外动作
+        （点地图控件、点地面），所以战斗中与结算也在这里拦住。
+        认战斗画面要扫五个模板（约 350ms），而这个闸门每个手势都会走一次，所以先用 0.1ms 的野外判据
+        挡掉正常情况：地图控件在画面上就说明不在战斗里。
         """
-        if goto.battle_popup_score(field) <= .8:
+        score = goto.battle_popup_score(field)
+        if score <= .8:
+            if self.battle_mode or battle.field_visible(field):
+                return
+            kind = battle.battle_state(field)['state']
+            if kind in ('battle', 'victory', 'defeat'):
+                self.preview(field)
+                raise TargetTriggered(f'画面是{label(BATTLE_STATES, kind)}，交由执行层接管这场战斗。',
+                                      {'kind': 'battle_popup', 'chapter': self.expected_identity[0]})
             return
         self.preview(field)
         if self.battle_mode:
@@ -431,16 +453,41 @@ class CampaignSession(NavigationSession):
             logger.info('移动中发现光幕有变化，后面的路线按新的挡路情况重算。')
         return snapshot
 
+    def await_field(self):
+        """等到画面确实可以操作野外再发输入，返回那一帧。
+
+        点「进入战斗」之后的过场、以及结算回野外前的加载，都会有短暂「不是野外」的画面；在那些帧上
+        点地图控件会被动画吃掉，展开随即失败、任务按窗口异常停下。所以野外动作之前先确认画面：
+        弹窗、战斗中与结算由身份闸门交给执行层，认不出（加载、黑屏、剧情对话）就在这里等，
+        等到超过 FIELD_WAIT_LIMIT 秒仍不是野外才按画面异常停下交人工（不再发任何输入）。
+        """
+        watch = Stopwatch()
+        while 1:
+            field = self.win.client()
+            self.identity(field)
+            if self.field_ready(field):
+                return field
+            if watch.seconds >= FIELD_WAIT_LIMIT:
+                raise WindowChanged(f'画面已经 {watch} 不是主线野外，等不到能操作的地图，交人工。')
+            self.pause(FIELD_POLL_SECONDS)
+
+    def field_ready(self, field):
+        """画面是否可以操作野外：小地图控件在（紧凑或关闭态），或展开地图面板开着。
+
+        只用现成的地图外观判据，不额外识别模板：要的就是「这里有地图控件可点」这一条。
+        """
+        return bool(battle.field_visible(field) or self.owner.minimap_expanded(field))
+
     def observe(self):
         """回正并展开地图定位真实小队；配准未被接受时换视野重试，计算后道路变化超过 3% 就拒绝旧结果。
 
         每次尝试的失败原因与量化指标由观察器的告警给出，这里只在成功时补一行：接受了哪一次尝试、
         道路重合度与小队坐标是多少、整段展开与定位花了多久——这一段的耗时是移动闭环的主要开销。
+        成功那一帧上认出的敌人会一并并进运行状态（见 absorb_expanded）。
         """
         self.check()
         watch = Stopwatch()
-        field = self.win.client()
-        self.identity(field)
+        field = self.await_field()
         self.remember_scene(field)
         goto.map_open(self.win, reset=True)
         error = None
@@ -462,9 +509,37 @@ class CampaignSession(NavigationSession):
             logger.info(f"展开地图定位成功：第 {attempt + 1} 次尝试，小队位置 {points_text(report['position'])}，"
                         f"道路重合度 {float(report['road_iou']):.3f}，"
                         f"面板上有 {len(report['enemy_markers'])} 个敌人标记，耗时 {watch}")
+            self.absorb_expanded(panel, report)
             return report
         logger.warning(f'展开地图定位连续 {LOCALIZE_RETRIES + 1} 次未通过，耗时 {watch}，按定位失败处理。')
         raise error
+
+    def absorb_expanded(self, panel, report):
+        """把展开面板上认出的敌人与看到的区域并进运行状态，只记一行敌人的合并结果。
+
+        展开面板本来就认出了整屏敌人标记，但以前只用它们定位小队、以及微调当前目标：同一屏里其它
+        敌人既没进状态、也没参与选目标，于是「面板上有 8 个敌人标记」的下一轮仍按紧凑小地图里的
+        1 个敌人决策。这里按侦察那一套规则并入（RunState 按距离合并到既有敌人，展开帧只补敌人与
+        已观测区域、不推进决策轮）：越走越准的位置由后续帧刷新，远处敌人提前进入候选。
+        """
+        matrix = np.asarray(report['roi_to_map'], float)
+        height, width = panel.shape[:2]
+        enemies = self.panel_enemies(panel, matrix)
+        changes = self.owner.state.update(dict(
+            localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
+            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)
+        detail = describe_changes({key: value for key, value in changes.items()
+                                   if key.startswith('enemies_')})
+        if detail:
+            logger.info(f'展开地图上认出的敌人并进状态：{detail}')
+
+    def panel_enemies(self, panel, matrix):
+        """把面板上的敌人标记按本帧配准投到底图，返回可直接并进状态的记录（含类型与置信度）。"""
+        _, markers = self.owner.observer.minimap_markers(panel)
+        positions = project_centers([item['position'] for item in markers], np.asarray(matrix, float))
+        size = self.owner.state.size
+        return [dict(item, position=position) for item, position in zip(markers, positions)
+                if 0 <= position[0] < size[0] and 0 <= position[1] < size[1]]
 
     def move(self, click):
         """只发送有限、有效的客户区地面落点，窗口代理负责最终校验与扣预算。"""
@@ -502,7 +577,7 @@ class CampaignSession(NavigationSession):
         """
         self.check()
         watch = Stopwatch()
-        self.identity(self.win.client())
+        self.await_field()
         self.win.reset_minimap(expanded=expanded, reset=expanded)
         field = self.win.client()
         self.identity(field)
@@ -520,14 +595,16 @@ class CampaignSession(NavigationSession):
         return snapshot
 
     def battle_step(self, close_entry=False):
-        """战斗接管的一步：识别当前画面并按状态点一次，返回识别结果并交给执行层决策。
+        """战斗接管的一步：截一帧，按优先级最多点一个按钮，返回识别结果交给执行层决策。
 
+        优先级与点法照仓库里已经跑熟的战斗循环（module/daemon/semi_combat.py、module/event/challenge.py）：
+        准备弹窗（关掉／快速战斗／进入战斗）、结算（点继续）、战斗中（自动射击关着才点 AUTO）；
+        每一拍只点一个按钮，认不出画面就什么都不点——加载与过场本来就没有按钮，硬猜只会点错。
+        每个按钮有自己的最短点击间隔（ENTRY_TAP_INTERVAL / SETTLE_TAP_INTERVAL / AUTO_TAP_INTERVAL），
+        一次点击没生效时后续几拍不再重复点同一个按钮。
+        战败不在这里点：重打还是返回要按重试次数决定，属于执行层的策略（见 CampaignExecutor.battle）。
         close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
-        战败结算不在这里点：重打还是返回要按重试次数决定，属于执行层的策略（见 CampaignExecutor.battle）。
-        战斗中只在自动射击关闭时点一次 AUTO（开着就不再点，点法与限量见 handle_auto）；野外不发输入，
-        交给执行层收尾。点击都走场景输入闸门与预算；每次点击的日志都带上当次识别分数与颜色判据的
-        实际读数，便于对着现场截图复盘误判。
-        返回 battle.battle_state 的结果供执行层记录与决策。
+        每次点击的日志都带上当次识别分数与颜色判据的实际读数，便于对着现场截图复盘误判。
         """
         self.check()
         state = battle.battle_state(self.win.client())
@@ -539,23 +616,22 @@ class CampaignSession(NavigationSession):
             self.auto_taps, self.auto_off_frames, self.auto_skip_logged = 0, 0, False
         if kind == 'entry':
             if close_entry:
-                logger.info(f"战斗弹窗再次出现（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
-                            f"按钮橙色占比 {quick}）：本次不再进入，先关掉回到野外。")
-                self.tap(ENTRY_CLOSE_POINT)
+                if self.tap(ENTRY_CLOSE_POINT, SETTLE_TAP_INTERVAL):
+                    logger.info(f"战斗弹窗再次出现（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
+                                f"按钮橙色占比 {quick}）：本次不再进入，先关掉回到野外。")
             elif state['quick']:
-                logger.info(f"快速战斗可用：点快速战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
-                            f"按钮橙色占比 {quick}）。")
-                self.tap(QUICK_BATTLE_POINT)
-            else:
+                if self.tap(QUICK_BATTLE_POINT, ENTRY_TAP_INTERVAL):
+                    logger.info(f"快速战斗可用：点快速战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
+                                f"按钮橙色占比 {quick}）。")
+            elif self.tap(ENTER_BATTLE_POINT, ENTRY_TAP_INTERVAL):
                 logger.info(f"快速战斗不可用：点进入战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
                             f"按钮橙色占比 {quick}）。")
-                self.tap(ENTER_BATTLE_POINT)
         elif kind == 'battle':
             if not state.get('auto', True):
                 self.handle_auto(state)
         elif kind == 'victory':
-            logger.info(f"战斗结算：胜利（结算画面命中度 {battle.score_text(scores, 'victory')}），点继续。")
-            self.tap(ADVANCE_POINT)
+            if self.tap(ADVANCE_POINT, SETTLE_TAP_INTERVAL):
+                logger.info(f"战斗结算：胜利（结算画面命中度 {battle.score_text(scores, 'victory')}），点继续。")
         return state
 
     def handle_auto(self, state):
@@ -564,8 +640,9 @@ class CampaignSession(NavigationSession):
         AUTO 的开与关是同一个按钮，误判一次就等于把开着的自动射击关掉。实机日志里出现过相反方向的
         问题：一整场战斗提示了四次「自动射击未开启」、也就连点了四次 AUTO，而现场观察这个开关一直开着。
         所以判据读数不够硬时宁可不动它：先要求连续 AUTO_CONFIRM_FRAMES 帧都是关闭外观，点过一次之后
-        即使再读成关闭也只告警。按钮没被可靠定位（auto_score 低于阈值）时 battle_state 已按未开启返回，
-        这里的告警会把定位框、模板分与橙色占比一起打出来，便于判断是「按钮是灰的」还是「根本没定位到」。
+        即使再读成关闭也只告警；点击还要过 AUTO_TAP_INTERVAL，避免同一秒里补第二下。
+        按钮没被可靠定位（auto_score 低于阈值）时 battle_state 已按未开启返回，这里的告警会把定位框、
+        模板分与橙色占比一起打出来，便于判断是「按钮是灰的」还是「根本没定位到」。
         """
         ratio = battle.value_text(state.get('auto_ratio'))
         if state.get('auto', True):
@@ -585,13 +662,25 @@ class CampaignSession(NavigationSession):
             logger.info(f'AUTO 读成未开启（{detail}），再确认一帧（'
                         f'{self.auto_off_frames}/{AUTO_CONFIRM_FRAMES}）后才点。')
             return
+        if not self.tap(AUTO_POINT, AUTO_TAP_INTERVAL):
+            return
         self.auto_taps += 1
         logger.info(f'战斗中自动射击未开启（连续 {self.auto_off_frames} 帧关闭外观，{detail}）：点 AUTO 打开。')
-        self.tap(AUTO_POINT)
 
-    def tap(self, point):
-        """按客户区坐标点一次界面按钮：与移动落点共用同一套校验、闸门与预算。"""
+    def tap(self, point, interval=0.):
+        """按客户区坐标点一次界面按钮：与移动落点共用同一套校验、闸门与预算。
+
+        interval 是这一点自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：
+        间隔内的重复点击直接丢掉并返回 False，真的点了返回 True。战斗接管的按钮都靠它防连点——
+        点击没生效时（面板动画中、被过场吃掉）下一轮只是再点一次，而不是每拍补一下。
+        """
+        key = tuple(point)
+        now = time.monotonic()
+        if interval and now - self.tap_times.get(key, 0.) < interval:
+            return False
+        self.tap_times[key] = now
         self.move(point)
+        return True
 
     def remember_registration(self, snapshot):
         """记下最近一次被接受的定位，供战斗结束后沿用。"""
@@ -720,15 +809,11 @@ class CampaignSession(NavigationSession):
         """侦察这一屏的敌人与已看区域并进运行状态。
 
         这一屏只有视野配准、没有小队位置，所以按展开帧并入（不动封锁），也不推进决策拍。
-        敌人标记识别与投影和观测器处理展开帧的方式一致，便于与其它帧的同一只敌人合并。
+        敌人标记识别与投影与 observe 共用 panel_enemies，便于与其它帧的同一只敌人合并。
         """
         matrix = np.asarray(report['roi_to_map'], float)
         height, width = panel.shape[:2]
-        _, markers = self.owner.observer.minimap_markers(panel)
-        positions = project_centers([item['position'] for item in markers], matrix)
-        size = self.owner.state.size
-        enemies = [dict(item, position=position) for item, position in zip(markers, positions)
-                   if 0 <= position[0] < size[0] and 0 <= position[1] < size[1]]
+        enemies = self.panel_enemies(panel, matrix)
         changes = self.owner.state.update(dict(
             localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
             minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)

@@ -9,10 +9,12 @@ from module.campaign.goals import describe
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, TARGET_SOURCES, label, points_text)
 from module.campaign.scouting import scout_focus
-from module.campaign.session import ADVANCE_POINT, DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, InputBudgetExceeded
+from module.campaign.session import (DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL,
+                                     InputBudgetExceeded)
 from module.campaign.timing import Stopwatch
 from module.campaign.vision.battle import score_text, value_text
 from module.campaign.window import WindowChanged
+from module.base.timer import Timer
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.movement_feedback import TargetTriggered
 from module.logger import logger
@@ -25,14 +27,19 @@ TARGET_MOVES = 12
 REVIEW_FRAMES = 3
 # 一次侦察最多看几屏：每屏最多 3 次拖动，连同展开、收起不超过单目标 32 次输入。
 SCOUT_VIEWS = 8
-# 战斗接管：每次识别之间的间隔、整场接管的时间上限（超过就交人工，不无限等）、
-# 连续无法识别时点一次「推进」的上限，以及同一关原地重打的次数上限（用尽就返回并交人工）。
-BATTLE_POLL_SECONDS = 2.0
+# 战斗接管的节奏与上限，照仓库里已经跑熟的战斗循环取（module/daemon/semi_combat.py、
+# module/event/challenge.py）：循环本身跑得快，每个按钮各自有最短点击间隔（间隔在会话里，
+# 见 session.ENTRY_TAP_INTERVAL / SETTLE_TAP_INTERVAL / AUTO_TAP_INTERVAL）。
+BATTLE_POLL_SECONDS = 0.5
+# 一段战斗（进弹窗、重打后重新开打）等的上限：等不到结算就交人工，不无限等。
 BATTLE_TIME_LIMIT = 300
-BATTLE_ADVANCE_EVERY = 5
-BATTLE_ADVANCE_LIMIT = 3
-BATTLE_UNKNOWN_LIMIT = 30
 BATTLE_DEFEAT_RETRIES = 3
+# 结算画面消失的确认窗口：结算被点掉之后，连续 BATTLE_SETTLE_FRAMES 拍、且至少 BATTLE_SETTLE_CONFIRM 秒
+# 都看不到结算，才算这一场结束（与仓库 END_FIGHTING 的 Timer(1, count=3) 同一套写法）。
+BATTLE_SETTLE_CONFIRM = 1.0
+BATTLE_SETTLE_FRAMES = 3
+# 一段战斗超过这么多秒还没有结算就报一次进度：说明一直在等游戏自己推进（战斗里没有该点的按钮）。
+BATTLE_IDLE_REPORT = 60
 
 
 class BattleFailed(RuntimeError):
@@ -247,37 +254,38 @@ class CampaignExecutor:
         return True
 
     def battle(self, goal):
-        """接管一次战斗：准备弹窗→（快速）战斗→结算→回到野外。
+        """按「按钮循环」接管一场战斗：准备弹窗→（快速）战斗→结算被点掉→回到野外。
 
-        每一步都由会话识别并按状态点一次，这里负责节奏、上限与状态回写。整段战斗超过
-        BATTLE_TIME_LIMIT 秒、或连续多帧认不出画面都停下交人工：不无限等，也不盲目连点；
-        每段战斗（进弹窗、重打后重新开打）都重新计时，所以 3 次原地重打不会被前一段的余量卡住，
-        总量仍由会话的章节时限兜住。战败先原地重打同一关，最多 BATTLE_DEFEAT_RETRIES 次；用尽才
-        点返回，回到野外后抛 BattleFailed 直接交人工——打不过不是普通目标失败，不换个敌人接着点。
-        胜利返回 'victory'，没读到结算就返回 None；战斗结束时给会话打开一次「沿用战斗前坐标」的许可，
+        循环照仓库里已经跑熟的战斗循环写（`module/daemon/semi_combat.py`、`module/event/challenge.py`）：
+        每一拍由会话截一帧、按优先级最多点一个按钮，认不出画面就什么都不点——加载与过场本来就没有
+        按钮可点，而「画面像不像野外」正好会在点「进入战斗」之后的过场里为真，用它判断战斗结束
+        等于把战斗丢回给推图流程。所以这里只在拿到结算、并且结算画面稳定消失之后才交回控制权：
+        胜利用「点继续」，战败按 BATTLE_DEFEAT_RETRIES 决定重打还是返回。
+        一段战斗（进弹窗、重打后重新开打）单独计 BATTLE_TIME_LIMIT 秒，等不到结算就交人工：
+        不无限等，也不盲目连点。战斗结束时给会话打开一次「沿用战斗前坐标」的许可，
         第一帧重新配准失败就用旧坐标继续推图。
         """
         self.session.begin_target('battle')
         self.session.battle_mode = True
-        outcome, close_entry, unknown, advances, retries = None, False, 0, 0, 0
-        previous, returning, polls = None, False, 0
-        total = Stopwatch()
+        settled, close_entry, retries, polls = None, False, 0, 0
+        previous = None
+        total, segment = Stopwatch(), Stopwatch()
         deadline = time.monotonic() + BATTLE_TIME_LIMIT
-        segment = Stopwatch()
+        settle_gone = Timer(BATTLE_SETTLE_CONFIRM, count=BATTLE_SETTLE_FRAMES)
+        reported = False
         label_goal = '没有记录（弹窗不是从移动里冒出来的）' if goal is None else goal_brief(goal)
         logger.info(f'开始战斗接管：目标 {label_goal}，每 {BATTLE_POLL_SECONDS} 秒看一次画面，'
-                    f'一段战斗最多等 {BATTLE_TIME_LIMIT} 秒，连续 {BATTLE_UNKNOWN_LIMIT} 帧认不出画面就交人工，'
-                    f'最多原地重打 {BATTLE_DEFEAT_RETRIES} 次。')
+                    f'一段战斗最多等 {BATTLE_TIME_LIMIT} 秒，最多原地重打 {BATTLE_DEFEAT_RETRIES} 次。')
         try:
             while 1:
                 if time.monotonic() >= deadline:
-                    raise RuntimeError(f'战斗接管超过 {BATTLE_TIME_LIMIT} 秒仍未回到野外，交人工。')
+                    raise RuntimeError(f'这一段战斗超过 {BATTLE_TIME_LIMIT} 秒仍未结算，交人工。')
                 state = self.session.battle_step(close_entry=close_entry)
                 # scores 只用于日志：识别状态本身在 state 里，缺分数时按「—」显示而不是编成 0.00。
                 kind, scores = state['state'], state.get('scores')
                 polls += 1
                 if kind != previous:
-                    # 只在画面切换时打分数：同一状态每 2 秒轮询一次，逐次打印会把日志刷满。
+                    # 只在画面切换时打分数：同一状态每 0.5 秒轮询一次，逐次打印会把日志刷满。
                     logger.info(f"战斗画面：{label(BATTLE_STATES, kind)}（第 {polls} 次看画面，"
                                 f"这一段已用 {segment}，接管累计 {total}）；"
                                 f"画面匹配度：准备弹窗 {score_text(scores, 'entry')}、"
@@ -286,61 +294,53 @@ class CampaignExecutor:
                                 f"AUTO 按钮 {score_text(scores, 'auto_tpl')}、"
                                 f"暂停键 {score_text(scores, 'pause')}；"
                                 f"AUTO 橙色占比 {value_text(state.get('auto_ratio'))}")
-                if kind == 'field':
+                if kind in ('victory', 'defeat'):
+                    # 结算还在画面上：确认窗口重新计时。结算被点掉后连续几拍都不再出现，这一场才算完。
+                    settle_gone.reset()
+                elif settled is not None and settle_gone.reached():
                     break
                 if kind == 'victory':
-                    outcome, close_entry, unknown, returning = 'victory', False, 0, False
+                    if settled != 'victory':
+                        settled = 'victory'
+                        logger.info('战斗结果：胜利，结算已点继续，等画面回到野外。')
                 elif kind == 'defeat':
-                    unknown = 0
-                    # 只在「新的一次战败」上计数：结算屏停留超过一个轮询周期时沿用上一次的决定继续点，
-                    # 同一张屏不会把重打额度连刷掉；点没生效时也会重复点同一个按钮，而不是误点返回。
+                    # 只在「新的一次战败」上决定重打还是返回：同一张结算屏停留时沿用上一次的决定，
+                    # 不会把额度连刷掉，点击没生效时也只是继续点同一个按钮。
                     if previous != 'defeat':
                         if retries < BATTLE_DEFEAT_RETRIES:
                             retries += 1
+                            settled = None
                             logger.warning(f'战斗失败：原地重打同一关（第 {retries}/{BATTLE_DEFEAT_RETRIES} 次），'
                                            f'这一段用了 {segment}，接管累计 {total}。')
                         else:
-                            outcome, close_entry, returning = 'defeat', True, True
+                            settled, close_entry = 'defeat', True
                             logger.warning('战斗失败且重打次数用尽：点返回，回到野外后交人工接管。')
-                    if returning:
-                        self.session.tap(DEFEAT_BACK_POINT)
-                        deadline, segment = time.monotonic() + BATTLE_TIME_LIMIT, Stopwatch()
-                    else:
-                        self.session.tap(DEFEAT_RETRY_POINT)
+                        deadline, segment, reported = time.monotonic() + BATTLE_TIME_LIMIT, Stopwatch(), False
+                    self.session.tap(DEFEAT_BACK_POINT if settled == 'defeat' else DEFEAT_RETRY_POINT,
+                                     SETTLE_TAP_INTERVAL)
                 elif kind in ('entry', 'battle'):
-                    unknown = 0
-                    # 每段战斗单独计时：准备弹窗、以及加载结束真正进入战斗时都重置。
+                    # 每段战斗单独计时：准备弹窗、以及加载结束真正进入战斗时都重新计时。
                     if kind == 'entry' or previous != 'battle':
-                        deadline, segment = time.monotonic() + BATTLE_TIME_LIMIT, Stopwatch()
-                else:
-                    unknown += 1
-                    if unknown % BATTLE_ADVANCE_EVERY == 0 and advances < BATTLE_ADVANCE_LIMIT:
-                        advances += 1
-                        logger.info(f'连续 {unknown} 帧无法识别画面，点一次屏幕中央尝试推进'
-                                    f'（{advances}/{BATTLE_ADVANCE_LIMIT}）。')
-                        self.session.tap(ADVANCE_POINT)
-                    if unknown >= BATTLE_UNKNOWN_LIMIT:
-                        raise RuntimeError(f'战斗接管连续 {unknown} 帧认不出画面，交人工。')
+                        deadline, segment, reported = time.monotonic() + BATTLE_TIME_LIMIT, Stopwatch(), False
+                if settled is None and not reported and segment.seconds >= BATTLE_IDLE_REPORT:
+                    reported = True
+                    logger.info(f'这一段已经等了 {segment}，画面上没有可点的按钮（等游戏自己推进战斗）。')
                 previous = kind
                 self.session.pause(BATTLE_POLL_SECONDS)
         finally:
             self.session.battle_mode = False
         self.session.reuse_squad = True
-        logger.info(f'战斗接管结束：{label(BATTLE_OUTCOMES, outcome)}，共看 {polls} 次画面，'
-                    f'原地重打 {retries} 次，兜底推进 {advances} 次，'
-                    f'这场战斗操作累计 {self.session.target_inputs} 次，总耗时 {total}。')
-        if outcome == 'defeat':
+        logger.info(f'战斗接管结束：{label(BATTLE_OUTCOMES, settled)}，共看 {polls} 次画面，'
+                    f'原地重打 {retries} 次，这场战斗操作累计 {self.session.target_inputs} 次，总耗时 {total}。')
+        if settled == 'defeat':
             raise BattleFailed(f'同一关原地重打 {BATTLE_DEFEAT_RETRIES} 次仍战败，停止并交人工。')
-        if outcome == 'victory':
-            if goal is not None and goal.get('kind') == 'enemy':
-                self.owner.state.enemies[goal['id']]['status'] = 'cleared'
-                logger.info(f'战斗胜利：{goal_brief(goal)} 已打掉，不再作为目标。')
-            else:
-                logger.warning(f'战斗胜利，但这次弹窗不是从移动里冒出来的（最近派出的目标：'
-                               f'{goal_brief(goal)}），不改敌人状态。')
+        if goal is not None and goal.get('kind') == 'enemy':
+            self.owner.state.enemies[goal['id']]['status'] = 'cleared'
+            logger.info(f'战斗胜利：{goal_brief(goal)} 已打掉，不再作为目标。')
         else:
-            logger.warning('战斗接管回到野外，但没读到胜负结算，按未结算处理（不改状态）。')
-        return outcome
+            logger.warning(f'战斗胜利，但这次弹窗不是从移动里冒出来的（最近派出的目标：'
+                           f'{goal_brief(goal)}），不改敌人状态。')
+        return settled
 
     def run(self, initial, ticks=CAMPAIGN_TICK_BUDGET):
         """会话开始时核对一次主线身份，之后每轮查弹窗、补视野再决策；遇战斗弹窗接管战斗后继续推图。
