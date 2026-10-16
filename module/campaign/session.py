@@ -6,6 +6,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation.movement_feedback import TargetTriggered, collectible_indicator
@@ -52,6 +53,14 @@ AUTO_POINT = (105, 35)
 ADVANCE_POINT = (888, 500)
 DEFEAT_BACK_POINT = (73, 908)
 DEFEAT_RETRY_POINT = (1688, 926)
+# AUTO 的点按策略：连续这么多帧都读成关闭外观才点，且同一场战斗最多点一次。实机里 AUTO 按钮
+# 叠在场景上、HUD 会淡出或整体挪动，单帧判据偶尔会把开着的读成关着；照单帧就点，那一下正好
+# 把自动射击关掉（开与关是同一个按钮），战斗会被拖长甚至打输。
+AUTO_CONFIRM_FRAMES = 2
+# 设备卡死判据的续期阈值（秒）：它判的是「一直在等某个按钮匹配成功」，而推图全程不做按钮匹配，
+# 计时到 6 分钟就会在 device.screenshot 里抛 GameStuckError('Wait too long')；
+# 调度器只在每个任务开始时清一次计时，而一章可能跑满 20 分钟，所以这里提前续期。
+STUCK_CLEAR_SECONDS = 300
 
 
 def points_text(value):
@@ -265,6 +274,10 @@ class CampaignSession(NavigationSession):
         self.popup_handling = False
         # 战斗接管中：准备弹窗不再是终态，允许会话自己点它上面的按钮。
         self.battle_mode = False
+        # 本场战斗给 AUTO 点过几次、连续几帧读成关闭外观，以及「不再重复点」的告警是否已经打过。
+        self.auto_taps = 0
+        self.auto_off_frames = 0
+        self.auto_skip_logged = False
         # 战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_registration）。
         self.reuse_squad = False
         self.last_registration = None
@@ -300,10 +313,15 @@ class CampaignSession(NavigationSession):
         """检查停止、时限与窗口状态；坐标或焦点变化属于安全失败，不允许换目标继续。
 
         时限放在这里而不只在发输入前：等待停稳、复核换帧等阶段也会走到这里，超时就地停下。
+        这里同时给设备的卡死判据续期（见 STUCK_CLEAR_SECONDS）：这一章的每一步观测都要经过
+        device.screenshot，而那个判据的前提「一直在等按钮匹配」在本会话里从头到尾都不成立。
         """
         self.check_stop()
         if self.deadline is not None and time.monotonic() >= self.deadline:
             raise InputBudgetExceeded(f'主线单次执行超过 {CHAPTER_TIME_LIMIT // 60} 分钟时限，停止并交人工复核。')
+        stuck = getattr(self.owner.device, 'stuck_timer', None)
+        if isinstance(stuck, Timer) and stuck.current() > STUCK_CLEAR_SECONDS:
+            self.owner.device.stuck_record_clear()
         self.win.check()
 
     def begin_target(self, purpose):
@@ -498,34 +516,70 @@ class CampaignSession(NavigationSession):
 
         close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
         战败结算不在这里点：重打还是返回要按重试次数决定，属于执行层的策略（见 CampaignExecutor.battle）。
-        战斗中只在自动射击关闭时点一次 AUTO（开着就不再点）；野外不发输入，交给执行层收尾。
-        点击都走场景输入闸门与预算；每次点击的日志都带上当次识别分数，便于对着现场截图复盘误判。
+        战斗中只在自动射击关闭时点一次 AUTO（开着就不再点，点法与限量见 handle_auto）；野外不发输入，
+        交给执行层收尾。点击都走场景输入闸门与预算；每次点击的日志都带上当次识别分数与颜色判据的
+        实际读数，便于对着现场截图复盘误判。
         返回 battle.battle_state 的结果供执行层记录与决策。
         """
         self.check()
         state = battle.battle_state(self.win.client())
-        # scores 只用于日志，缺项由 battle.score_text 显示为「—」。
+        # scores 与颜色占比都只用于日志，缺项由 battle.value_text / score_text 显示为「—」。
         kind, scores = state['state'], state.get('scores')
+        quick = battle.value_text(state.get('quick_ratio'))
+        if kind not in ('battle', 'unknown'):
+            # 一场战斗从准备弹窗开始；战败重打的下一场没有弹窗，所以结算与回野外也要重置额度。
+            self.auto_taps, self.auto_off_frames, self.auto_skip_logged = 0, 0, False
         if kind == 'entry':
             if close_entry:
-                logger.info(f"战斗弹窗再次出现（进入战斗 {battle.score_text(scores, 'entry')}）：本次不再进入，"
-                            f'先关掉回到野外。')
+                logger.info(f"战斗弹窗再次出现（进入战斗 {battle.score_text(scores, 'entry')}，"
+                            f"按钮橙色占比 {quick}）：本次不再进入，先关掉回到野外。")
                 self.tap(ENTRY_CLOSE_POINT)
             elif state['quick']:
-                logger.info(f"快速战斗可用：点快速战斗（进入战斗 {battle.score_text(scores, 'entry')}）。")
+                logger.info(f"快速战斗可用：点快速战斗（进入战斗 {battle.score_text(scores, 'entry')}，"
+                            f"按钮橙色占比 {quick}）。")
                 self.tap(QUICK_BATTLE_POINT)
             else:
-                logger.info(f"快速战斗不可用：点进入战斗（进入战斗 {battle.score_text(scores, 'entry')}）。")
+                logger.info(f"快速战斗不可用：点进入战斗（进入战斗 {battle.score_text(scores, 'entry')}，"
+                            f"按钮橙色占比 {quick}）。")
                 self.tap(ENTER_BATTLE_POINT)
         elif kind == 'battle':
             if not state.get('auto', True):
-                logger.info(f"战斗中自动射击未开启（AUTO {battle.score_text(scores, 'auto_tpl')}，"
-                            f"暂停键 {battle.score_text(scores, 'pause')}）：点 AUTO 打开。")
-                self.tap(AUTO_POINT)
+                self.handle_auto(state)
         elif kind == 'victory':
             logger.info(f"战斗结算：胜利（STAGE CLEAR {battle.score_text(scores, 'victory')}），点继续。")
             self.tap(ADVANCE_POINT)
         return state
+
+    def handle_auto(self, state):
+        """战斗中把自动射击打开：连续多帧都读成关闭外观才点，且同一场战斗最多点一次。
+
+        AUTO 的开与关是同一个按钮，误判一次就等于把开着的自动射击关掉。实机日志里出现过相反方向的
+        问题：一整场战斗提示了四次「自动射击未开启」、也就连点了四次 AUTO，而现场观察这个开关一直开着。
+        所以判据读数不够硬时宁可不动它：先要求连续 AUTO_CONFIRM_FRAMES 帧都是关闭外观，点过一次之后
+        即使再读成关闭也只告警。按钮没被可靠定位（auto_score 低于阈值）时 battle_state 已按未开启返回，
+        这里的告警会把定位框、模板分与橙色占比一起打出来，便于判断是「按钮是灰的」还是「根本没定位到」。
+        """
+        ratio = battle.value_text(state.get('auto_ratio'))
+        if state.get('auto', True):
+            self.auto_off_frames = 0
+            return
+        self.auto_off_frames += 1
+        box = state.get('auto_box')
+        detail = (f"AUTO 按钮模板 {battle.value_text(state.get('auto_score'))}，"
+                  f"框内橙色占比 {ratio}" + (f"，定位框 {box}" if box else ''))
+        if self.auto_taps:
+            if not self.auto_skip_logged:
+                self.auto_skip_logged = True
+                logger.warning(f'本场战斗已经点过一次 AUTO，仍读成未开启（{detail}）：不再重复点，'
+                               f'继续点只会把这个开关来回拨动。')
+            return
+        if self.auto_off_frames < AUTO_CONFIRM_FRAMES:
+            logger.info(f'AUTO 读成未开启（{detail}），再确认一帧（'
+                        f'{self.auto_off_frames}/{AUTO_CONFIRM_FRAMES}）后才点。')
+            return
+        self.auto_taps += 1
+        logger.info(f'战斗中自动射击未开启（连续 {self.auto_off_frames} 帧关闭外观，{detail}）：点 AUTO 打开。')
+        self.tap(AUTO_POINT)
 
     def tap(self, point):
         """按客户区坐标点一次界面按钮：与移动落点共用同一套校验、闸门与预算。"""

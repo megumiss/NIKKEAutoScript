@@ -8,7 +8,7 @@ from module.campaign.run_state import RunState, located, panel_quad
 from module.campaign.scouting import scout_focus
 from module.campaign.session import ADVANCE_POINT, DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, InputBudgetExceeded
 from module.campaign.timing import Stopwatch
-from module.campaign.vision.battle import score_text
+from module.campaign.vision.battle import score_text, value_text
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.movement_feedback import TargetTriggered
@@ -244,7 +244,8 @@ class CampaignExecutor:
                                 f"接管累计 {total}）：进入战斗 {score_text(scores, 'entry')}，"
                                 f"胜利 {score_text(scores, 'victory')}，战败 {score_text(scores, 'defeat')}，"
                                 f"AUTO 模板 {score_text(scores, 'auto_tpl')}，"
-                                f"暂停键 {score_text(scores, 'pause')}")
+                                f"暂停键 {score_text(scores, 'pause')}，"
+                                f"AUTO 橙色占比 {value_text(state.get('auto_ratio'))}")
                 if kind == 'field':
                     break
                 if kind == 'victory':

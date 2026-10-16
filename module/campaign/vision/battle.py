@@ -38,15 +38,22 @@ EX_TITLE_TPL = _load('battle_ex_title.png')
 THRESHOLD = .9
 ENTRY_THRESHOLD = .8
 EX_THRESHOLD = .85
-# 橙色判据统一用同一段 HSV：准备弹窗的快速战斗按钮与战斗中的 AUTO 图标都是「橙色 = 可用／已开」。
-# 两处的占比阈值不同，是因为橙色面积不同：实心按钮实测 0.64，图标本体只有 0.171（关闭时都是 0.000）。
+# 橙色判据统一用同一段 HSV：准备弹窗的快速战斗按钮与战斗中的 AUTO 按钮都是「橙色 = 可用／已开」。
+# 两处的占比阈值不同，是因为橙色面积不同：实心按钮实测 0.64，AUTO 按钮框实测 0.075~0.077（关闭态 0.000）。
 ORANGE_LOW, ORANGE_HIGH = (5, 110, 110), (30, 255, 255)
 QUICK_BATTLE_ROI = (900, 830, 1130, 856)
 QUICK_BATTLE_ORANGE_RATIO = .2
-# AUTO 图标区（客户区像素）。只看图标本体这一小块，比整条按钮更不容易被变化的背景影响；
-# 这块是叠在场景上的：画面左上角若恰好有大片橙色特效，可能被读成已开启（后果只是不点 AUTO）。
-AUTO_ICON_ROI = (80, 18, 116, 54)
-AUTO_ORANGE_RATIO = .05
+# AUTO 按钮的位置不写死：用模板在整幅画面里定位，再量匹配框内的橙色占比。
+# 实机里 HUD 会随战斗形态整体挪动，写死 ROI 会在挪动后量到按钮旁边的背景，把开着读成关着。
+# AUTO_TPL 自身是按钮右半部分（圆环右缘 + AUTO 字样 + 右侧圆角），开启态框内橙色实测
+# 0.075~0.077、关闭态 0.000；AUTO_PRESENT_SCORE 是「按钮确实被定位到」的下限，关闭态模板分实测 0.755、
+# 开启态 0.909~1.000，低于下限只说明按钮不在画面里，此时不给开关结论（按未开启返回，宁可不点也不乱点）。
+AUTO_PRESENT_SCORE = .7
+AUTO_ORANGE_RATIO = .03
+# 野外判据的两块 ROI 与观察器 minimap_mode_and_panel / minimap_closed 同源。
+COMPACT_PANEL_ROI = (27, 118, 207, 273)
+MINIMAP_CONTROL_ROI = (20, 76, 64, 120)
+CONTROL_DARK_VALUE = 130
 
 
 def orange_ratio(image, roi):
@@ -54,10 +61,6 @@ def orange_ratio(image, roi):
     x1, y1, x2, y2 = roi
     hsv = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
     return float(cv2.inRange(hsv, ORANGE_LOW, ORANGE_HIGH).mean()) / 255
-# 野外判据的两块 ROI 与观察器 minimap_mode_and_panel / minimap_closed 同源。
-COMPACT_PANEL_ROI = (27, 118, 207, 273)
-MINIMAP_CONTROL_ROI = (20, 76, 64, 120)
-CONTROL_DARK_VALUE = 130
 
 
 def score(template, image):
@@ -72,9 +75,24 @@ def quick_battle_available(image):
     return orange_ratio(image, QUICK_BATTLE_ROI) > QUICK_BATTLE_ORANGE_RATIO
 
 
+def auto_judgement(image):
+    """定位画面里的 AUTO 按钮，判断它是否处于开启外观，返回 (是否开启, 定位框, 模板分, 橙色占比)。
+
+    位置由模板匹配给出而不是写死坐标：实机里 HUD 会随战斗形态整体挪动，写死 ROI 会在挪动后
+    量到按钮旁边的背景。模板分低于 AUTO_PRESENT_SCORE 说明按钮不在画面里（或 HUD 淡出到认不出），
+    此时按「未开启」返回——调用方据此只会记录与限量重试，不会盲目点击把开着的自动射击关掉。
+    与 quick_battle_available 一样，只有画面确实在战斗中时结果才有意义。
+    """
+    _, best, _, point = cv2.minMaxLoc(cv2.matchTemplate(image, AUTO_TPL, cv2.TM_CCOEFF_NORMED))
+    height, width = AUTO_TPL.shape[:2]
+    box = (point[0], point[1], point[0] + width, point[1] + height)
+    ratio = orange_ratio(image, box)
+    return bool(best >= AUTO_PRESENT_SCORE and ratio > AUTO_ORANGE_RATIO), box, float(best), ratio
+
+
 def auto_enabled(image):
-    """战斗中的自动射击（左上 AUTO）是否已开启；关闭时要由接管点一下打开。"""
-    return orange_ratio(image, AUTO_ICON_ROI) > AUTO_ORANGE_RATIO
+    """战斗中的自动射击（左上 AUTO）是否处于开启外观；判据见 auto_judgement。"""
+    return auto_judgement(image)[0]
 
 
 def ex_stage(image):
@@ -122,20 +140,30 @@ def classify(scores, field, quick, auto_on):
 def battle_state(image):
     """识别一帧 1776×999 客户区截图属于战斗接管的哪个状态。
 
-    返回 dict(state, quick, auto, scores)：state 是 defeat / victory / entry / battle / field / unknown，
-    quick 只在 entry 时有意义（快速战斗是否可用），auto 是战斗中的自动射击开关状态（不是模板分，
-    模板分在 scores['auto_tpl']），scores 供日志与离线核对。
+    返回 dict(state, quick, auto, scores, quick_ratio, auto_score, auto_ratio, auto_box)：state 是
+    defeat / victory / entry / battle / field / unknown，quick 只在 entry 时有意义（快速战斗是否可用），
+    auto 是战斗中的自动射击开关状态（不是模板分，模板分在 scores['auto_tpl']）；quick_ratio 与
+    auto_ratio 是判据实际量到的橙色占比、auto_score 是 AUTO 按钮的模板分、auto_box 是它的定位框，
+    这几个数只供日志与离线核对，用于区分「按钮是灰的」与「按钮根本没被定位到」。
     """
     if image is None or image.shape != (999, 1776, 3):
         raise ValueError('战斗状态识别需要 1776×999 的三通道客户区截图。')
-    scores = {'auto_tpl': score(AUTO_TPL, image), 'pause': score(PAUSE_TPL, image),
+    auto, auto_box, auto_score, auto_ratio = auto_judgement(image)
+    scores = {'auto_tpl': auto_score, 'pause': score(PAUSE_TPL, image),
               'victory': score(VICTORY_TPL, image), 'defeat': score(DEFEAT_TPL, image),
               'entry': score(ENTER_BATTLE_TPL, image)}
-    quick = quick_battle_available(image) if scores['entry'] >= ENTRY_THRESHOLD else False
-    return dict(classify(scores, field_visible(image), quick, auto_enabled(image)), scores=scores)
+    quick_ratio = orange_ratio(image, QUICK_BATTLE_ROI)
+    quick = bool(scores['entry'] >= ENTRY_THRESHOLD and quick_battle_available(image))
+    return dict(classify(scores, field_visible(image), quick, auto), scores=scores,
+                quick_ratio=quick_ratio, auto_score=auto_score, auto_ratio=auto_ratio,
+                auto_box=list(auto_box))
+
+
+def value_text(value):
+    """把一项识别数值（模板分或橙色占比）写成日志文本；缺项显示为「—」，免得被读成 0.000 的假分数。"""
+    return '—' if value is None else f'{float(value):.3f}'
 
 
 def score_text(scores, key):
-    """把一项识别分数写成日志文本；缺项显示为「—」，免得替身或旧快照被读成 0.00 的假分数。"""
-    value = (scores or {}).get(key)
-    return '—' if value is None else f'{float(value):.2f}'
+    """把一项模板分写成日志文本；缺项显示为「—」，免得替身或旧快照被读成假分数。"""
+    return value_text((scores or {}).get(key))

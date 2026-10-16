@@ -17,8 +17,9 @@ from module.campaign.navigation.routing import CutRoads, component_at
 from module.campaign.run_state import COOLDOWN_TICKS, RunState, panel_quad
 from module.campaign.session import (ADVANCE_POINT, AUTO_POINT, DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT,
                                      ENTER_BATTLE_POINT, ENTRY_CLOSE_POINT, LOCALIZE_RETRIES, QUICK_BATTLE_POINT,
-                                     CampaignLocalizer, CampaignSession, InputBudgetExceeded)
+                                     STUCK_CLEAR_SECONDS, CampaignLocalizer, CampaignSession, InputBudgetExceeded)
 from module.campaign.subgoals import available_annotations
+from module.base.timer import Timer
 from module.campaign.vision.battle import classify
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
@@ -291,6 +292,23 @@ class SessionTests(unittest.TestCase):
         reader.assert_not_called()
         self.handler.mouse_click.assert_called_once_with(110, 220)
 
+    def test_long_session_renews_device_stuck_timer(self):
+        """推图不做按钮匹配：设备卡死计时快到上限前必须清掉，否则 device.screenshot 会抛 Wait too long。"""
+        class Elapsed(Timer):
+            """替身：current() 直接给出超过续期阈值的读数，不必真的等到六分钟。"""
+
+            def current(self):
+                return STUCK_CLEAR_SECONDS + 1
+
+        self.owner.device.stuck_timer = Elapsed(1)
+        self.session.check()
+        self.owner.device.stuck_record_clear.assert_called_once()
+
+        self.owner.device.stuck_record_clear.reset_mock()
+        self.owner.device.stuck_timer = Timer(360, count=60).start()
+        self.session.check()
+        self.owner.device.stuck_record_clear.assert_not_called()
+
     def test_input_budget_and_driver_failure_stop(self):
         """超过执行时限或单目标预算都不发送；驱动第一次失败即停止，不等待累计第三次。"""
         self.session.deadline = 0
@@ -437,6 +455,7 @@ class SessionTests(unittest.TestCase):
         cases = [(dict(state='entry', quick=True), False, QUICK_BATTLE_POINT),
                  (dict(state='entry', quick=False), False, ENTER_BATTLE_POINT),
                  (dict(state='entry', quick=True), True, ENTRY_CLOSE_POINT),
+                 # AUTO 要连续两帧都读成关闭外观才点：单帧灰色读数可能只是 HUD 淡出，点下去反而把开着的关掉。
                  (dict(state='battle', auto=False), False, AUTO_POINT),
                  (dict(state='victory'), False, ADVANCE_POINT)]
         for state, close_entry, point in cases:
@@ -445,6 +464,9 @@ class SessionTests(unittest.TestCase):
                 with patch('module.campaign.vision.battle.battle_state',
                            return_value=dict(state, scores={})):
                     result = self.session.battle_step(close_entry=close_entry)
+                    if point == AUTO_POINT:
+                        self.session.tap.assert_not_called()
+                        self.session.battle_step()
                 self.assertEqual(result['state'], state['state'])
                 self.session.tap.assert_called_once_with(point)
         for state in (dict(state='battle', auto=True), dict(state='defeat'), dict(state='field'),
@@ -455,6 +477,15 @@ class SessionTests(unittest.TestCase):
                            return_value=dict(state, scores={})):
                     self.session.battle_step()
                 self.session.tap.assert_not_called()
+
+    def test_battle_step_taps_auto_at_most_once_per_battle(self):
+        """AUTO 连续读成关闭也只点一次：开关是同一个按钮，重复点会把开着的自动射击关掉。"""
+        self.session.tap = Mock()
+        off = dict(state='battle', auto=False, auto_score=.755, auto_ratio=0.0)
+        with patch('module.campaign.vision.battle.battle_state', return_value=off):
+            for _ in range(4):
+                self.session.battle_step()
+        self.session.tap.assert_called_once_with(AUTO_POINT)
 
     def test_post_battle_frame_reuses_previous_squad_once(self):
         """战斗后第一帧定位未接受时沿用战斗前坐标，只沿用一帧，之后仍走换视野重试。"""
