@@ -11,7 +11,7 @@
 import numpy as np
 
 from module.campaign.navigation.targets import walking_distance
-from module.campaign.run_state import OBSERVED_CELL
+from module.campaign.run_state import OBSERVED_CELL, located
 from module.campaign.subgoals import elevator_goal, mechanism_goal, review_goal
 
 # 逐候选的行走距离要各自重算距离场与边表（单次 150~350ms），所以先按直线距离排序，
@@ -140,11 +140,11 @@ def frontier_point(state, cut, squad):
 def choose_goal(state, chart, snapshot, cut, purpose='story'):
     """挑下一个目标，返回目标描述；没有可做的事情时 kind 为 none。
 
-    要求本帧定位已被接受且静态层支持当前坐标模型，否则不给目标——坐标不可信时规划出来的
-    落点也不可信。cut 必须已按 `state.blocking()` 刷新过，否则可达性判的是过期的封锁集合。
+    要求本帧定位可用（配准被接受，或战后沿用战斗前的坐标）且静态层支持当前坐标模型，否则不给目标——
+    坐标不可信时规划出来的落点也不可信。cut 必须已按 `state.blocking()` 刷新过，否则可达性判的是过期的封锁集合。
     """
     blocked = [record['id'] for record in state.blocking()]
-    if snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None:
+    if not located(snapshot) or snapshot.get('squad') is None:
         return {'kind': 'none', 'reason': 'localization_unavailable', 'blocking': blocked}
     if not getattr(chart, 'supported', False) or chart.road is None or cut.road is None:
         return {'kind': 'none', 'reason': 'coordinate_model_unsupported', 'blocking': blocked}

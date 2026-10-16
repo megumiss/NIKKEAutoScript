@@ -15,6 +15,9 @@ from module.logger import logger
 ENEMY_MERGE_RADIUS = 25.
 # 已观测区域的粗网格边长，只用来回答「这块地方看过没有」，不参与路径规划。
 OBSERVED_CELL = 32
+# 可用的定位状态：accepted 是本帧配准被接受；reused 是战斗结束后沿用战斗前的坐标
+# （见 session.reuse_registration），两者都给了可信的小队底图坐标。
+LOCALIZED = ('accepted', 'reused')
 # 本帧检到的光幕与已记录封锁的配对距离：屏障投影实测中位约 6、p90 约 16 底图像素，
 # mark_barrier 自己还有 28 的吸附容差，取 48 兼顾投影误差与相邻封锁不混淆。
 CURTAIN_MATCH_RADIUS = 48.
@@ -24,6 +27,11 @@ BLOCK_VISIBLE_MARGIN = 24.
 # 同一目标累计失败到这个次数，本次任务就不再选它（敌人同时标为暂时走不到）；冷却期按决策拍计。
 MAX_FAILURES = 3
 COOLDOWN_TICKS = 5
+
+
+def located(snapshot):
+    """本帧是否给出了可用的小队底图坐标：配准被接受，或战后沿用了战斗前的坐标。"""
+    return snapshot.get('localization') in LOCALIZED
 
 
 def panel_quad(snapshot):
@@ -93,9 +101,13 @@ class RunState:
         """
         if advance:
             self.tick += 1
-        if snapshot.get('localization') != 'accepted':
+        if not located(snapshot):
             self.unlocated += 1
             return {'skipped': 'localization'}
+        if snapshot.get('localization') == 'reused':
+            # 沿用战斗前坐标的帧只提供小队位置（供本拍选目标），本帧的视野与标记不并进状态：
+            # 视野四边形是战斗前那一帧的，拿它判断「这块看没看到」会误判封锁与已观测区域。
+            return {'reused': 'localization'}
         quad = panel_quad(snapshot)
         changes = {'observed_cells': self._absorb_observed(quad)}
         changes.update(self._absorb_enemies(snapshot.get('enemies') or []))
@@ -331,11 +343,11 @@ class RunState:
 
         快照每帧整体替换，远处敌人往往只在补视野的展开帧里出现过一次，随后的紧凑帧里就没有了；
         界面要靠这份记忆才能继续把它们画在章节地图上。只给展示字段，冷却与尝试记录不外露。
-        已解除的封锁不再影响路网，不推送。
+        已解除的封锁不再影响路网，不推送；已打掉的敌人也不再画出来。
         """
         enemies = [dict(id=record['id'], kind=record['kind'], status=record['status'],
                         position=[round(float(value), 1) for value in record['position']])
-                   for record in self.enemies.values()]
+                   for record in self.enemies.values() if record['status'] != 'cleared']
         blocks = [dict(id=record['id'], status=record['status'], point=record['point'], segment=record['segment'])
                   for record in self.blocking() if record.get('segment')]
         return dict(tick=self.tick, enemies=enemies, blocks=blocks)

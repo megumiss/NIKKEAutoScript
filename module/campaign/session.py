@@ -12,7 +12,9 @@ from module.campaign.navigation.movement_feedback import TargetTriggered, collec
 from module.campaign.navigation.pathfinding import NoConnectedRoad
 from module.campaign.navigation.pathfinding import RoadLocalizer as Localizer
 from module.campaign.navigation.session import NavigationSession
+from module.campaign.run_state import located
 from module.campaign.vision.chapter import chapter_identity
+from module.campaign.vision import battle
 from module.campaign.vision.minimap import terrain
 from module.campaign.vision.observation import EXPANDED_ROI
 from module.campaign.vision.perception import detect_markers, project_centers
@@ -39,6 +41,12 @@ LOCALIZE_RETRIES = 3
 PAN_DIRECTIONS = ((1., 0.), (-1., 0.), (0., 1.))
 PAN_PIXELS = 140.
 PAN_SETTLE_SECONDS = 1.0
+# 战斗接管的点击落点（客户区像素）：准备弹窗的两个按钮、弹窗右上角关闭、结算页推进与战败返回。
+QUICK_BATTLE_POINT = (1014, 842)
+ENTER_BATTLE_POINT = (1014, 916)
+ENTRY_CLOSE_POINT = (1147, 513)
+ADVANCE_POINT = (888, 500)
+DEFEAT_BACK_POINT = (73, 908)
 
 
 class InputBudgetExceeded(RuntimeError):
@@ -153,6 +161,11 @@ class CampaignSession(NavigationSession):
         self.target_inputs = 0
         self.deadline = None
         self.popup_handling = False
+        # 战斗接管中：准备弹窗不再是终态，允许会话自己点它上面的按钮。
+        self.battle_mode = False
+        # 战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_registration）。
+        self.reuse_squad = False
+        self.last_registration = None
         self.collectible_mode = owner.config.task.command == 'auto_main_collectible'
 
     def start(self):
@@ -207,26 +220,30 @@ class CampaignSession(NavigationSession):
         self.target_inputs += 1
 
     def popup(self, field):
-        """战斗弹窗闸门：普通弹窗保留证据后终态，EX 弹窗只关一次后同样终态。
+        """战斗弹窗闸门：战斗接管之外把它当成终态，接管之内放行让会话点它。
 
-        弹窗出现时画面已经不是主线地图，此时任何落点点击都可能点进战斗或结算，所以立即停止。
+        弹窗出现时画面已经不是主线地图，平时任何落点点击都可能点进战斗或结算，所以立即停止并交给
+        执行层；battle_mode 为真说明已经进入接管（或正要接管），这时弹窗就是要被点的对象。
+        EX 弹窗只关一次后仍然终态：本次实现不接管 EX 关卡。
         """
-        if goto.battle_popup_score(field) > .8:
-            self.preview(field)
-            score = cv2.minMaxLoc(cv2.matchTemplate(field, goto.EX_STAGE_TPL, cv2.TM_CCOEFF_NORMED))[1]
-            evidence = {'kind': 'battle_popup', 'chapter': self.expected_identity[0]}
-            if score > .85:
-                self.popup_handling = True
-                try:
-                    origin = self.win.client_origin()
-                    self.win.handler.mouse_click(origin[0] + 1155, origin[1] + 521)
-                    self.pause(1.2)
-                    if goto.battle_popup_score(self.win.client()) > .8:
-                        raise RuntimeError('EX 战斗弹窗关闭失败，不再重试。')
-                finally:
-                    self.popup_handling = False
-                evidence['kind'] = 'ex_stage_skipped'
-            raise TargetTriggered('已出现战斗准备弹窗，主线任务停止；不自动进入战斗。', evidence)
+        if goto.battle_popup_score(field) <= .8:
+            return
+        self.preview(field)
+        if self.battle_mode:
+            return
+        evidence = {'kind': 'battle_popup', 'chapter': self.expected_identity[0]}
+        if battle.ex_stage(field):
+            self.popup_handling = True
+            try:
+                origin = self.win.client_origin()
+                self.win.handler.mouse_click(origin[0] + 1155, origin[1] + 521)
+                self.pause(1.2)
+                if goto.battle_popup_score(self.win.client()) > .8:
+                    raise RuntimeError('EX 战斗弹窗关闭失败，不再重试。')
+            finally:
+                self.popup_handling = False
+            evidence['kind'] = 'ex_stage_skipped'
+        raise TargetTriggered('已出现战斗准备弹窗，主线任务停止；不自动进入战斗。', evidence)
 
     def identity(self, field):
         """逐帧闸门：只查战斗弹窗与收集品提示，不重读章节身份。
@@ -322,18 +339,80 @@ class CampaignSession(NavigationSession):
             time.sleep(min(.1, max(0, deadline - time.monotonic())))
 
     def snapshot(self, expanded=False):
-        """取得一拍业务观测；定位未被接受时换视野重试，展开只补记忆，返回前恢复紧凑地图。"""
+        """取得一拍业务观测；定位未被接受时换视野重试，展开只补记忆，返回前恢复紧凑地图。
+
+        战斗结束后的第一帧允许沿用战斗前的小队坐标：战斗打断了视野与箭头，重新配准常只差一点
+        没过线，而战斗前后小队不会换位置（见 reuse_registration）。
+        """
         self.check()
         self.identity(self.win.client())
         self.win.reset_minimap(expanded=expanded, reset=expanded)
         field = self.win.client()
         self.identity(field)
         snapshot = self.owner.observer.observe(field, self.expected_identity, time.time())
-        if snapshot['localization'] != 'accepted':
+        if located(snapshot):
+            self.remember_registration(snapshot)
+        elif self.reuse_squad:
+            snapshot = self.reuse_registration(snapshot)
+        else:
             snapshot = self.retry_localization(snapshot)
         self.owner.last_snapshot = snapshot
         if expanded:
             self.win.reset_minimap(expanded=False, reset=False)
+        return snapshot
+
+    def battle_step(self, close_entry=False):
+        """战斗接管的一步：识别当前画面并按状态点一次，返回识别结果。
+
+        close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
+        战斗中与野外不发输入（前者等结算，后者由执行层收尾）；点击都走场景输入闸门与预算。
+        返回 battle.battle_state 的结果，状态与分数交给执行层记录与决策。
+        """
+        self.check()
+        state = battle.battle_state(self.win.client())
+        kind = state['state']
+        if kind == 'entry':
+            if close_entry:
+                logger.info('战斗弹窗再次出现：本次不再进入，先关掉回到野外。')
+                self.tap(ENTRY_CLOSE_POINT)
+            elif state['quick']:
+                logger.info('快速战斗可用：点快速战斗。')
+                self.tap(QUICK_BATTLE_POINT)
+            else:
+                logger.info('快速战斗不可用：点进入战斗。')
+                self.tap(ENTER_BATTLE_POINT)
+        elif kind == 'victory':
+            logger.info('战斗结算：胜利，点继续。')
+            self.tap(ADVANCE_POINT)
+        elif kind == 'defeat':
+            logger.info('战斗结算：战败，点返回。')
+            self.tap(DEFEAT_BACK_POINT)
+        return state
+
+    def tap(self, point):
+        """按客户区坐标点一次界面按钮：与移动落点共用同一套校验、闸门与预算。"""
+        self.move(point)
+
+    def remember_registration(self, snapshot):
+        """记下最近一次被接受的定位，供战斗结束后沿用。"""
+        self.last_registration = dict(squad=list(snapshot['squad']),
+                                      roi_to_map=snapshot.get('roi_to_map'),
+                                      coverage_size=snapshot.get('coverage_size'))
+
+    def reuse_registration(self, snapshot):
+        """战后第一帧定位未接受时，沿用战斗前记下的小队坐标。
+
+        战斗前后小队不会换位置，而战斗打断了视野与箭头，重新配准往往只差一点没过线；
+        沿用旧坐标比再花十几秒换视野重试更贴近事实。只能沿用一帧：之后的观测仍要求重新配准，
+        否则一次沿用会在整段任务里一直传下去。没有记过坐标时原样返回，交给正常重试路径。
+        """
+        self.reuse_squad = False
+        if self.last_registration is None:
+            return snapshot
+        snapshot = dict(snapshot, localization='reused', squad=list(self.last_registration['squad']),
+                        roi_to_map=self.last_registration['roi_to_map'],
+                        coverage_size=self.last_registration['coverage_size'])
+        logger.warning(f"战后沿用战斗前的小队位置：{snapshot['squad']}（本帧未重新配准底图）。")
         return snapshot
 
     def pan_expanded(self, direction):

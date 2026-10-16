@@ -10,11 +10,14 @@ from unittest.mock import Mock, call, patch
 import cv2
 import numpy as np
 
-from module.campaign.execution import CampaignExecutor, single_transfer_annotations
+from module.campaign.execution import (BATTLE_ADVANCE_LIMIT, BATTLE_DEFEAT_LIMIT, BATTLE_UNKNOWN_LIMIT,
+                                       CampaignExecutor, single_transfer_annotations)
 from module.campaign.goals import choose_goal
 from module.campaign.navigation.routing import CutRoads, component_at
 from module.campaign.run_state import COOLDOWN_TICKS, RunState, panel_quad
-from module.campaign.session import LOCALIZE_RETRIES, CampaignLocalizer, CampaignSession, InputBudgetExceeded
+from module.campaign.session import (ADVANCE_POINT, DEFEAT_BACK_POINT, ENTER_BATTLE_POINT, ENTRY_CLOSE_POINT,
+                                     LOCALIZE_RETRIES, QUICK_BATTLE_POINT, CampaignLocalizer, CampaignSession,
+                                     InputBudgetExceeded)
 from module.campaign.subgoals import available_annotations
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
@@ -418,6 +421,60 @@ class SessionTests(unittest.TestCase):
             method = getattr(self.owner, name)
             method.assert_called_once_with(check=self.session.before_input, pause=self.session.pause)
 
+    def test_battle_mode_lets_popup_click_through(self):
+        """接管中准备弹窗不再是终态（要自己点它）；接管之外仍然停止。"""
+        with patch('module.campaign.session.goto.battle_popup_score', return_value=.99):
+            with self.assertRaises(TargetTriggered):
+                self.session.popup(self.owner.device.image)
+            self.session.battle_mode = True
+            self.assertIsNone(self.session.popup(self.owner.device.image))
+        self.handler.mouse_click.assert_not_called()
+
+    def test_battle_step_taps_the_state_button(self):
+        """每一步只按识别结果点一次：快速战斗／进入战斗、结算推进、战败返回、战败后只关弹窗。"""
+        self.session.tap = Mock()
+        cases = [(dict(state='entry', quick=True), False, QUICK_BATTLE_POINT),
+                 (dict(state='entry', quick=False), False, ENTER_BATTLE_POINT),
+                 (dict(state='entry', quick=True), True, ENTRY_CLOSE_POINT),
+                 (dict(state='victory'), False, ADVANCE_POINT),
+                 (dict(state='defeat'), False, DEFEAT_BACK_POINT)]
+        for state, close_entry, point in cases:
+            with self.subTest(state=state):
+                self.session.tap.reset_mock()
+                with patch('module.campaign.vision.battle.battle_state',
+                           return_value=dict(state, scores={})):
+                    result = self.session.battle_step(close_entry=close_entry)
+                self.assertEqual(result['state'], state['state'])
+                self.session.tap.assert_called_once_with(point)
+        for state in ('battle', 'field', 'unknown'):
+            with self.subTest(state=state):
+                self.session.tap.reset_mock()
+                with patch('module.campaign.vision.battle.battle_state',
+                           return_value={'state': state, 'scores': {}}):
+                    self.session.battle_step()
+                self.session.tap.assert_not_called()
+
+    def test_post_battle_frame_reuses_previous_squad_once(self):
+        """战斗后第一帧定位未接受时沿用战斗前坐标，只沿用一帧，之后仍走换视野重试。"""
+        self.owner.observer.observe = Mock(return_value=snapshot_fixture())
+        self.session.win.reset_minimap = Mock()
+        self.session.pause = Mock()
+        self.session.snapshot()
+        self.assertEqual(self.session.last_registration['squad'], [40, 96])
+
+        failed = snapshot_fixture()
+        failed.update(localization='needs_review', squad=None)
+        self.owner.observer.observe = Mock(return_value=failed)
+        self.session.reuse_squad = True
+        snapshot = self.session.snapshot()
+        self.assertEqual(snapshot['localization'], 'reused')
+        self.assertEqual(snapshot['squad'], [40, 96])
+        self.assertFalse(self.session.reuse_squad)
+
+        reused = self.session.snapshot()
+        self.assertEqual(reused['localization'], 'needs_review')
+        self.assertGreaterEqual(self.handler.mouse_swipe.call_count, 1)
+
     def test_localizer_validates_geometry_and_registration(self):
         """原始展开 ROI 之外的尺寸及未接受的配准均不可用于点击换算。"""
         localizer = CampaignLocalizer(Mock(), self.cut)
@@ -502,18 +559,72 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(self.owner.state.cooldowns, {})
 
     def test_terminal_popup_stops_loop_and_releases(self):
-        """敌人弹窗标 engaged，并停止后续拍数；会话始终关闭。"""
+        """EX 弹窗与收集品提示这类终态仍然停止循环并释放会话，不走战斗接管。"""
         goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
         self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
         self.owner.plan_tick.return_value = goal
         with patch.object(self.executor, 'needs_expansion', return_value=False), \
                 patch.object(self.executor, 'scout', return_value=False), \
-                patch.object(self.executor, 'execute', side_effect=TargetTriggered('popup', {'kind': 'battle_popup'})):
+                patch.object(self.executor, 'battle') as battle, \
+                patch.object(self.executor, 'execute',
+                             side_effect=TargetTriggered('ex', {'kind': 'ex_stage_skipped'})):
             result = self.executor.run(snapshot_fixture())
         self.assertEqual(result['state'], 'triggered')
-        self.assertEqual(self.owner.state.enemies['enemy-1']['status'], 'engaged')
         self.owner.plan_tick.assert_called_once()
+        battle.assert_not_called()
         self.session.close.assert_called_once()
+
+    def test_battle_popup_is_taken_over_and_loop_continues(self):
+        """普通战斗弹窗由执行层接管，回到野外后继续下一拍而不是终结任务。"""
+        goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
+        self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
+        self.owner.plan_tick.return_value = goal
+        self.session.snapshot.return_value = snapshot_fixture()
+        with patch.object(self.executor, 'needs_expansion', return_value=False), \
+                patch.object(self.executor, 'scout', return_value=False), \
+                patch.object(self.executor, 'battle') as battle, \
+                patch.object(self.executor, 'execute',
+                             side_effect=TargetTriggered('popup', {'kind': 'battle_popup'})):
+            result = self.executor.run(snapshot_fixture(), ticks=2)
+        self.assertEqual(result['reason'], 'tick_budget')
+        self.assertEqual(battle.call_count, 2)
+        self.session.close.assert_called_once()
+
+    def test_battle_victory_marks_target_cleared(self):
+        """胜利把该敌人记为 cleared、清零连续战败，并打开战后沿用坐标的许可。"""
+        goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
+        self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
+        self.session.battle_step.side_effect = [dict(state='entry', quick=True), dict(state='battle'),
+                                                dict(state='victory'), dict(state='field')]
+        self.assertEqual(self.executor.battle(goal), 'victory')
+        self.assertEqual(self.owner.state.enemies['enemy-1']['status'], 'cleared')
+        self.assertEqual(self.executor.battle_defeats, 0)
+        self.assertTrue(self.session.reuse_squad)
+        self.assertFalse(self.session.battle_mode)
+        self.session.begin_target.assert_any_call('battle')
+
+    def test_battle_defeat_cools_target_then_stops_at_limit(self):
+        """战败给目标记冷却并计数；连续到上限抛安全异常交人工，不当作普通目标失败。"""
+        goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
+        self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
+        steps = [dict(state='entry', quick=False), dict(state='defeat'), dict(state='field')]
+        self.session.battle_step.side_effect = list(steps)
+        self.assertEqual(self.executor.battle(goal), 'defeat')
+        self.assertTrue(self.owner.state.cooling('enemy-1'))
+        self.assertEqual(self.executor.battle_defeats, 1)
+        self.session.battle_step.side_effect = list(steps)
+        with self.assertRaises(InputBudgetExceeded):
+            self.executor.battle(goal)
+        self.assertEqual(self.executor.battle_defeats, BATTLE_DEFEAT_LIMIT)
+
+    def test_battle_unknown_screen_advances_then_stops(self):
+        """连续认不出画面时按上限点几次推进兜底，仍认不出就停下交人工。"""
+        goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
+        self.session.battle_step.return_value = dict(state='unknown')
+        with self.assertRaises(RuntimeError):
+            self.executor.battle(goal)
+        self.assertEqual(self.session.tap.call_count, BATTLE_ADVANCE_LIMIT)
+        self.assertGreaterEqual(self.session.battle_step.call_count, BATTLE_UNKNOWN_LIMIT)
 
     def test_cancel_during_start_still_releases(self):
         """开始阶段失败也走 finally，不能遗留按下鼠标。"""

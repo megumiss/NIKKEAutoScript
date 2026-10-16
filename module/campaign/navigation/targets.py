@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from module.campaign.navigation.pathfinding import RoadLocalizer as FlatLocalizer, NoConnectedRoad
+from module.campaign.run_state import located
 from module.logger import logger
 
 # 没有敌人时机关和电梯的搜索范围，量级按展开小地图一次能看到的道路取。
@@ -96,10 +97,10 @@ class TargetFinder:
     def find(self, snapshot, radius=NEARBY_RADIUS):
         """返回下一个目标，或 None。
 
-        snapshot 需要 accepted 定位、小队坐标和敌人列表；敌人只取普通标记，EX 不进入选择。
+        snapshot 需要可用的定位、小队坐标和敌人列表；敌人只取普通标记，EX 不进入选择。
         radius 只约束没有敌人时的机关和电梯，敌人以观测范围为准。
         """
-        if snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None:
+        if not located(snapshot) or snapshot.get('squad') is None:
             return None
         squad = np.asarray(snapshot['squad'], float)
         if squad.shape != (2,) or not np.isfinite(squad).all() or not self.supported:
