@@ -3,6 +3,7 @@
 import numpy as np
 
 from module.campaign.run_state import RunState, panel_quad
+from module.campaign.scouting import scout_focus
 from module.campaign.session import InputBudgetExceeded
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
@@ -15,6 +16,8 @@ TARGET_MOVES = 12
 # 复核站位上最多连看的紧凑帧数：箭头锚点、配准或检测偶发失手会让单帧不可信，换一帧往往就能看清；
 # 连看都不可信才算这次复核失败。
 REVIEW_FRAMES = 3
+# 一次侦察最多看几屏：每屏最多 3 次拖动，连同展开、收起不超过单目标 32 次输入。
+SCOUT_VIEWS = 8
 
 
 def single_transfer_annotations(leg):
@@ -128,6 +131,38 @@ class CampaignExecutor:
             self.owner.state.penalize(goal['id'])
         logger.info(f"目标 {kind} {goal['id']} 结果：{result}")
 
+    def scout(self, goal, snapshot):
+        """侦察：小队不动，拖展开大地图按路程由近到远看本分量，直到最近的敌人可以确定；返回是否侦察过。
+
+        只用于剧情任务（收集品有标注，不靠看）。刚踩过机关、要先复核光幕时不侦察，复核结果会改变路网。
+        配准失败或落点拖不进视野的格记冷却，累计失败到上限后本次任务不再看它。
+        侦察中遇到安全异常直接向外传播，不补发收起地图的输入。
+        """
+        if self.purpose != 'story' or (goal is not None and goal['kind'] == 'review_block'):
+            return False
+        if snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None:
+            return False
+        state, squad = self.owner.state, snapshot['squad']
+        focus = scout_focus(state, self.owner.cut, squad)
+        if focus is None:
+            return False
+        self.session.begin_target('scout')
+        self.session.scout_begin()
+        for view in range(SCOUT_VIEWS):
+            known = '无' if focus['known'] is None else focus['known']
+            logger.info(f"侦察第 {view + 1} 屏：{focus['id']} @ {[round(value) for value in focus['position']]}，"
+                        f"路程 {focus['distance']}，已知最近敌人路程 {known}")
+            recorded = self.session.scout_view(focus['position'], f'scout_{view + 1:02}')
+            if not recorded or not state.is_observed(focus['position']):
+                state.penalize(focus['id'])
+            focus = scout_focus(state, self.owner.cut, squad)
+            if focus is None:
+                break
+        else:
+            logger.info(f'侦察已达 {SCOUT_VIEWS} 屏上限，按当前已知敌人决策。')
+        self.session.scout_end()
+        return True
+
     def run(self, initial, ticks=CAMPAIGN_TICK_BUDGET):
         """每拍先检查主线身份、补视野再决策；遇弹窗立即终止，不进入战斗或继续探索。"""
         goal, snapshot = None, initial
@@ -143,6 +178,9 @@ class CampaignExecutor:
                 goal = self.owner.plan_tick(snapshot)
                 if self.needs_expansion(goal, snapshot):
                     self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
+                    snapshot = self.session.snapshot()
+                    goal = self.owner.plan_tick(snapshot, advance=False)
+                if self.scout(goal, snapshot):
                     snapshot = self.session.snapshot()
                     goal = self.owner.plan_tick(snapshot, advance=False)
                 if goal is None or goal['kind'] == 'none':

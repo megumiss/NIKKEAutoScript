@@ -9,7 +9,7 @@
 | --- | --- |
 | `campaign.py` | 资源与客户区准备、章节定位、正式任务入口 |
 | `execution.py`、`session.py`、`window.py` | 有限执行、生产 Device 会话、停止与输入护栏 |
-| `goals.py`、`subgoals.py`、`run_state.py` | 目标选择、解封与电梯子目标、跨帧运行状态 |
+| `goals.py`、`subgoals.py`、`scouting.py`、`run_state.py` | 目标选择、解封与电梯子目标、拖展开地图侦察敌人的路程排序、跨帧运行状态 |
 | `map/` | 标注校验、章节资源定位与名称映射、静态道路、连通分区、道路编辑与坐标变换 |
 | `vision/` | 小地图配准、YOLO 感知、箭头／离屏标记、场景地面配准；模型和模板也在此处 |
 | `navigation/` | 共享 A*、切开路网、移动与镜头闭环、电梯、停稳反馈、共同会话接口 |

@@ -14,18 +14,28 @@ from module.campaign.navigation.pathfinding import RoadLocalizer as Localizer
 from module.campaign.navigation.session import NavigationSession
 from module.campaign.vision.chapter import chapter_identity
 from module.campaign.vision.minimap import terrain
-from module.campaign.vision.perception import detect_markers
+from module.campaign.vision.observation import EXPANDED_ROI
+from module.campaign.vision.perception import detect_markers, project_centers
+from module.campaign.vision.surface_motion import project
 from module.campaign.window import CampaignWindow, WindowChanged
 from module.config.config import TaskEnd
 from module.logger import logger
 
-# 包含场景手势与小地图开合，单目标预算之外还有章节总预算。
-CHAPTER_INPUT_BUDGET = 120
+# 单次执行（一章）的时限：到点后不再发新输入，等待中也停下交人工。按时间而不是输入次数限，
+# 是因为镜头拖动、小地图开合与侦察拖动的次数随地形差别很大，次数上限要么误停要么形同虚设。
+CHAPTER_TIME_LIMIT = 20 * 60
+# 单个目标的输入次数上限（含场景手势与小地图开合），挡住单个目标上的原地空转。
 TARGET_INPUT_BUDGET = 32
+# 侦察拖动：每屏最多拖几次把落点拖到面板中心、落点离中心多近就不再拖、单次拖动的最长距离
+# （客户区像素，起止点以面板中心对称，保证都落在 486×462 面板内）与拖完后的停稳等待。
+SCOUT_DRAGS = 3
+SCOUT_CENTER_TOLERANCE = 60.
+SCOUT_DRAG_MAX = 300.
+SCOUT_SETTLE_SECONDS = 1.0
 
 
 class InputBudgetExceeded(RuntimeError):
-    """章节或单目标场景输入预算耗尽；不可降级为普通目标失败后继续点击。"""
+    """单次执行超过时限或单目标输入预算耗尽；不可降级为普通目标失败后继续点击。"""
 
 
 class CampaignInput:
@@ -134,12 +144,14 @@ class CampaignSession(NavigationSession):
         self.win.handler = CampaignInput(self, self.raw_handler) if self.raw_handler is not None else None
         self.inputs = 0
         self.target_inputs = 0
+        self.deadline = None
         self.popup_handling = False
         self.collectible_mode = owner.config.task.command == 'auto_main_collectible'
 
     def start(self):
-        """开始前要求已存在输入通道，取焦一次并锁定窗口；不在会话中重建驱动。"""
+        """开始前要求已存在输入通道，取焦一次并锁定窗口；不在会话中重建驱动。时限从这里起算。"""
         self.check_stop()
+        self.deadline = time.monotonic() + CHAPTER_TIME_LIMIT
         if self.win.handler is None:
             raise WindowChanged('主线移动需要已初始化的鼠标输入通道。')
         self.folder.mkdir(parents=True, exist_ok=True)
@@ -154,23 +166,28 @@ class CampaignSession(NavigationSession):
             raise TaskEnd
 
     def check(self):
-        """检查停止与窗口状态；坐标或焦点变化属于安全失败，不允许换目标继续。"""
+        """检查停止、时限与窗口状态；坐标或焦点变化属于安全失败，不允许换目标继续。
+
+        时限放在这里而不只在发输入前：等待停稳、复核换帧等阶段也会走到这里，超时就地停下。
+        """
         self.check_stop()
+        if self.deadline is not None and time.monotonic() >= self.deadline:
+            raise InputBudgetExceeded(f'主线单次执行超过 {CHAPTER_TIME_LIMIT // 60} 分钟时限，停止并交人工复核。')
         self.win.check()
 
     def begin_target(self, purpose):
-        """切换目标用途并重置单目标预算；章节总预算与已验证箭头基准继续保留。"""
+        """切换目标用途并重置单目标预算；执行时限与已验证箭头基准继续保留。"""
         self.request['purpose'] = purpose
         self.target_inputs = 0
 
     def before_input(self):
-        """每次场景手势之前重新截屏核对身份；达到预算时不发送下一次输入。"""
+        """每次场景手势之前重新截屏核对身份；超时或达到单目标预算时不发送下一次输入。"""
         self.check()
         if not self.popup_handling:
             field = self.win.client()
             self.identity(field)
             self.check_collectible(field)
-        if self.inputs >= CHAPTER_INPUT_BUDGET or self.target_inputs >= TARGET_INPUT_BUDGET:
+        if self.target_inputs >= TARGET_INPUT_BUDGET:
             raise InputBudgetExceeded('主线场景输入预算已耗尽，停止并交人工复核。')
         self.inputs += 1
         self.target_inputs += 1
@@ -274,6 +291,79 @@ class CampaignSession(NavigationSession):
         if expanded:
             self.win.reset_minimap(expanded=False, reset=False)
         return snapshot
+
+    def scout_begin(self):
+        """侦察前展开并回正大地图，视野从小队所在处开始拖。"""
+        self.check()
+        goto.map_open(self.win, reset=True)
+
+    def scout_end(self):
+        """侦察结束收回紧凑小地图；展开视野已被拖偏，之后的观测由 map_open(reset=True) 回正。"""
+        goto.map_close(self.win)
+
+    def scout_locate(self, tag):
+        """配准当前展开视野（不要求小队在画面内），返回 (面板, 配准报告)；配准未接受或画面仍在动时返回 None。"""
+        panel = self.win.capture()
+        try:
+            report = self.localizer.locate(panel, tag, require_player=False)
+        except (RuntimeError, ValueError) as exc:
+            logger.info(f'侦察视野配准未接受：{exc}')
+            return None
+        if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
+            logger.info('侦察视野仍在移动，本屏不记。')
+            return None
+        return panel, report
+
+    def scout_view(self, point, tag):
+        """把展开地图拖到 point（底图坐标）居中后配准这一屏，敌人与已看区域并进运行状态；返回是否记下了这一屏。
+
+        拖动是闭环的：每拖一次都重新配准，用实测视野换算剩余偏移，所以拖动有惯性或比例不准都能收敛；
+        地图边缘拖不动时最多拖 SCOUT_DRAGS 次，之后按当时视野记录，落点没进视野由调用方记冷却。
+        拖动经输入代理发送，与移动输入同样先核对窗口、章节与预算。
+        """
+        located = self.scout_locate(tag)
+        for attempt in range(SCOUT_DRAGS):
+            if located is None:
+                return False
+            panel, report = located
+            height, width = panel.shape[:2]
+            center = np.array([width / 2, height / 2])
+            offset = center - project(np.linalg.inv(np.asarray(report['roi_to_map'], float)), point)
+            length = float(np.linalg.norm(offset))
+            if length <= SCOUT_CENTER_TOLERANCE:
+                break
+            # 地图内容跟手移动：从 center - v/2 拖到 center + v/2，落点正好挪到面板中心。
+            offset *= min(1., SCOUT_DRAG_MAX / length)
+            self.check()
+            base = np.asarray(self.win.client_origin(), float) + EXPANDED_ROI[:2] + center
+            start, end = np.rint(base - offset / 2).astype(int), np.rint(base + offset / 2).astype(int)
+            self.win.handler.mouse_swipe(tuple(start.tolist()), tuple(end.tolist()))
+            self.pause(SCOUT_SETTLE_SECONDS)
+            located = self.scout_locate(f'{tag}_{attempt + 1}')
+        if located is None:
+            return False
+        self.absorb_view(*located)
+        return True
+
+    def absorb_view(self, panel, report):
+        """侦察这一屏的敌人与已看区域并进运行状态。
+
+        这一屏只有视野配准、没有小队位置，所以按展开帧并入（不动封锁），也不推进决策拍。
+        敌人标记识别与投影和观测器处理展开帧的方式一致，便于与其它帧的同一只敌人合并。
+        """
+        matrix = np.asarray(report['roi_to_map'], float)
+        height, width = panel.shape[:2]
+        _, markers = self.owner.observer.minimap_markers(panel)
+        positions = project_centers([item['position'] for item in markers], matrix)
+        size = self.owner.state.size
+        enemies = [dict(item, position=position) for item, position in zip(markers, positions)
+                   if 0 <= position[0] < size[0] and 0 <= position[1] < size[1]]
+        changes = self.owner.state.update(dict(
+            localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
+            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)
+        logger.info(f"侦察视野 {[round(float(value), 1) for value in report['position']]}："
+                    f"敌人 {len(enemies)}，{changes}")
+        self.preview(self.win.client())
 
     def close(self):
         """始终释放已按下鼠标，不关闭调度器 Device，也不在失焦或取消后点控件。"""

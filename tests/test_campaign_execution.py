@@ -286,12 +286,16 @@ class SessionTests(unittest.TestCase):
         self.handler.mouse_click.assert_not_called()
 
     def test_input_budget_and_driver_failure_stop(self):
-        """预算耗尽不发送；驱动第一次失败即停止，不等待累计第三次。"""
-        self.session.inputs = 120
+        """超过执行时限或单目标预算都不发送；驱动第一次失败即停止，不等待累计第三次。"""
+        self.session.deadline = 0
+        with self.assertRaises(InputBudgetExceeded):
+            self.session.move([100, 200])
+        self.session.deadline = None
+        self.session.target_inputs = 32
         with self.assertRaises(InputBudgetExceeded):
             self.session.move([100, 200])
         self.handler.mouse_click.assert_not_called()
-        self.session.inputs = 0
+        self.session.target_inputs = 0
         self.handler._failures = 1
         with self.assertRaises(WindowChanged):
             self.session.move([100, 200])
@@ -461,6 +465,7 @@ class ExecutorTests(unittest.TestCase):
         self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
         self.owner.plan_tick.return_value = goal
         with patch.object(self.executor, 'needs_expansion', return_value=False), \
+                patch.object(self.executor, 'scout', return_value=False), \
                 patch.object(self.executor, 'execute', side_effect=TargetTriggered('popup', {'kind': 'battle_popup'})):
             result = self.executor.run(snapshot_fixture())
         self.assertEqual(result['state'], 'triggered')
@@ -482,7 +487,8 @@ class ExecutorTests(unittest.TestCase):
         enemy = dict(kind='enemy', id='enemy', position=[136, 96])
         self.owner.plan_tick.side_effect = [frontier, frontier, enemy]
         self.session.snapshot.return_value = snapshot_fixture()
-        with patch.object(self.executor, 'execute') as execute:
+        with patch.object(self.executor, 'execute') as execute, \
+                patch.object(self.executor, 'scout', return_value=False):
             result = self.executor.run(snapshot_fixture(), ticks=1)
         self.assertEqual(result['reason'], 'tick_budget')
         self.session.snapshot.assert_any_call(expanded=True)
