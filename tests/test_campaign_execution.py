@@ -5,7 +5,7 @@ import sys
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 import cv2
 import numpy as np
@@ -14,7 +14,7 @@ from module.campaign.execution import CampaignExecutor, single_transfer_annotati
 from module.campaign.goals import choose_goal
 from module.campaign.navigation.routing import CutRoads, component_at
 from module.campaign.run_state import COOLDOWN_TICKS, RunState, panel_quad
-from module.campaign.session import CampaignLocalizer, CampaignSession, InputBudgetExceeded
+from module.campaign.session import LOCALIZE_RETRIES, CampaignLocalizer, CampaignSession, InputBudgetExceeded
 from module.campaign.subgoals import available_annotations
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
@@ -277,13 +277,15 @@ class SessionTests(unittest.TestCase):
                 method.return_value = previous
         self.handler.mouse_click.assert_not_called()
 
-    def test_identity_change_is_fatal(self):
-        """切章、换难度或读不到身份，都禁止下一次手势。"""
-        for identity in ((42, 'normal'), (41, 'hard'), None):
-            with patch('module.campaign.session.chapter_identity', return_value=identity):
-                with self.assertRaises(WindowChanged):
-                    self.session.move([100, 200])
-        self.handler.mouse_click.assert_not_called()
+    def test_identity_checked_at_start_not_per_gesture(self):
+        """身份只在会话开始时核对一次；之后每个手势不再读章节号，只留弹窗与收集品闸门。"""
+        with patch('module.campaign.session.chapter_identity', return_value=(42, 'normal')):
+            with self.assertRaises(WindowChanged):
+                self.session.start()
+        with patch('module.campaign.session.chapter_identity', return_value=(41, 'normal')) as reader:
+            self.session.move([100, 200])
+        reader.assert_not_called()
+        self.handler.mouse_click.assert_called_once_with(110, 220)
 
     def test_input_budget_and_driver_failure_stop(self):
         """超过执行时限或单目标预算都不发送；驱动第一次失败即停止，不等待累计第三次。"""
@@ -343,6 +345,46 @@ class SessionTests(unittest.TestCase):
         with self.assertRaises(TargetTriggered):
             self.session.snapshot(expanded=True)
         self.session.win.reset_minimap.assert_called_once_with(expanded=True, reset=True)
+
+    def test_localization_retry_expands_pans_and_reconfirms(self):
+        """紧凑帧定位未被接受时展开面板换视野重试，过线后收回紧凑地图。"""
+        failed = snapshot_fixture()
+        failed.update(localization='needs_review', squad=None)
+        self.owner.observer.observe = Mock(side_effect=[failed, failed, snapshot_fixture()])
+        self.session.win.reset_minimap = Mock()
+        self.session.pause = Mock()
+        snapshot = self.session.snapshot()
+        self.assertEqual(snapshot['localization'], 'accepted')
+        self.assertEqual(self.owner.observer.observe.call_count, 3)
+        self.handler.mouse_swipe.assert_called_once()
+        self.assertEqual(self.session.win.reset_minimap.call_args_list,
+                         [call(expanded=False, reset=False), call(expanded=True, reset=True),
+                          call(expanded=False, reset=False)])
+
+    def test_localization_retry_gives_up_and_restores_compact_map(self):
+        """连续换视野仍不过线时不再多试，收回紧凑地图并把未接受的快照交回决策层。"""
+        failed = snapshot_fixture()
+        failed.update(localization='needs_review', squad=None)
+        self.owner.observer.observe = Mock(return_value=failed)
+        self.session.win.reset_minimap = Mock()
+        self.session.pause = Mock()
+        snapshot = self.session.snapshot()
+        self.assertEqual(snapshot['localization'], 'needs_review')
+        self.assertEqual(self.owner.observer.observe.call_count, 1 + LOCALIZE_RETRIES)
+        self.assertEqual(self.handler.mouse_swipe.call_count, LOCALIZE_RETRIES - 1)
+        self.assertEqual(self.session.win.reset_minimap.call_args_list[-1], call(expanded=False, reset=False))
+
+    def test_expanded_observe_pans_before_reporting_failure(self):
+        """移动闭环的展开观测配准失败时换视野重试，全部失败才抛回最后一次错误。"""
+        self.owner.state = RunState(41, 'normal', (384, 256))
+        self.session.remember_scene = Mock()
+        self.session.localizer.locate = Mock(side_effect=RuntimeError('配准未被接受'))
+        self.session.win.capture = Mock(return_value=np.zeros((462, 486, 3), np.uint8))
+        self.session.pause = Mock()
+        with self.assertRaises(RuntimeError):
+            self.session.observe()
+        self.assertEqual(self.session.localizer.locate.call_count, LOCALIZE_RETRIES + 1)
+        self.assertEqual(self.handler.mouse_swipe.call_count, LOCALIZE_RETRIES)
 
     def test_movement_feedback_refreshes_curtains_before_next_route(self):
         """移动途中新看到的光幕写进状态，下一次路径检查不能再穿过它。"""

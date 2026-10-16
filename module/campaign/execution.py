@@ -164,7 +164,7 @@ class CampaignExecutor:
         return True
 
     def run(self, initial, ticks=CAMPAIGN_TICK_BUDGET):
-        """每拍先检查主线身份、补视野再决策；遇弹窗立即终止，不进入战斗或继续探索。"""
+        """会话开始时核对一次主线身份，之后每拍查弹窗、补视野再决策；遇弹窗立即终止，不进入战斗或继续探索。"""
         goal, snapshot = None, initial
         try:
             self.session.start()

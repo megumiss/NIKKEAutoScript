@@ -32,6 +32,13 @@ SCOUT_DRAGS = 3
 SCOUT_CENTER_TOLERANCE = 60.
 SCOUT_DRAG_MAX = 300.
 SCOUT_SETTLE_SECONDS = 1.0
+# 定位未被接受时最多再观测几轮：第 1 轮展开并回正（展开面板的道路证据是紧凑面板的数倍），
+# 之后每轮在面板内换一段视野。只用来救「配准差一点没过线」，连续失败仍按定位不可用处理。
+LOCALIZE_RETRIES = 3
+# 换视野的方向（客户区向量）、位移与停稳等待：起止点以面板中心对称，落点仍在 486×462 面板内。
+PAN_DIRECTIONS = ((1., 0.), (-1., 0.), (0., 1.))
+PAN_PIXELS = 140.
+PAN_SETTLE_SECONDS = 1.0
 
 
 class InputBudgetExceeded(RuntimeError):
@@ -52,7 +59,7 @@ class CampaignInput:
             return value
 
         def send(*args, **kwargs):
-            """发送前校验窗口、章节与预算，发送后任一次驱动失败都立即停止。"""
+            """发送前校验窗口、弹窗与预算，发送后任一次驱动失败都立即停止。"""
             self.session.before_input()
             result = value(*args, **kwargs)
             if getattr(self.handler, '_failures', 0):
@@ -149,7 +156,11 @@ class CampaignSession(NavigationSession):
         self.collectible_mode = owner.config.task.command == 'auto_main_collectible'
 
     def start(self):
-        """开始前要求已存在输入通道，取焦一次并锁定窗口；不在会话中重建驱动。时限从这里起算。"""
+        """开始前要求已存在输入通道，取焦一次并锁定窗口；不在会话中重建驱动。时限从这里起算。
+
+        章节与难度只在这里核对一次：同一段执行里逐帧重读章节号不会带来新信息，章节真的变了会先
+        表现为配准与静态层对不上（定位不可用），而逐帧核对会让每个手势都多两次 OCR 与一张截图。
+        """
         self.check_stop()
         self.deadline = time.monotonic() + CHAPTER_TIME_LIMIT
         if self.win.handler is None:
@@ -158,6 +169,7 @@ class CampaignSession(NavigationSession):
         if not self.win.focus():
             raise WindowChanged('无法取得游戏客户区原点。')
         self.check()
+        self.verify_identity(self.win.client())
 
     def check_stop(self):
         """遵守调度器的停止事件；使用 TaskEnd 保留调度器既有取消语义。"""
@@ -181,19 +193,24 @@ class CampaignSession(NavigationSession):
         self.target_inputs = 0
 
     def before_input(self):
-        """每次场景手势之前重新截屏核对身份；超时或达到单目标预算时不发送下一次输入。"""
+        """每次场景手势之前核对弹窗与收集品提示；超时或达到单目标预算时不发送下一次输入。
+
+        这里不重读章节身份：身份由 start 核对一次（见 verify_identity）。真正必须逐帧看的是
+        战斗弹窗与收集品提示——漏一帧就可能把落点点进战斗，或踩掉一次拾取机会。
+        """
         self.check()
         if not self.popup_handling:
-            field = self.win.client()
-            self.identity(field)
-            self.check_collectible(field)
+            self.identity(self.win.client())
         if self.target_inputs >= TARGET_INPUT_BUDGET:
             raise InputBudgetExceeded('主线场景输入预算已耗尽，停止并交人工复核。')
         self.inputs += 1
         self.target_inputs += 1
 
-    def identity(self, field):
-        """核对章节、难度与弹窗；普通弹窗保留，EX 只关闭一次，任何用途都立即结束任务。"""
+    def popup(self, field):
+        """战斗弹窗闸门：普通弹窗保留证据后终态，EX 弹窗只关一次后同样终态。
+
+        弹窗出现时画面已经不是主线地图，此时任何落点点击都可能点进战斗或结算，所以立即停止。
+        """
         if goto.battle_popup_score(field) > .8:
             self.preview(field)
             score = cv2.minMaxLoc(cv2.matchTemplate(field, goto.EX_STAGE_TPL, cv2.TM_CCOEFF_NORMED))[1]
@@ -210,6 +227,23 @@ class CampaignSession(NavigationSession):
                     self.popup_handling = False
                 evidence['kind'] = 'ex_stage_skipped'
             raise TargetTriggered('已出现战斗准备弹窗，主线任务停止；不自动进入战斗。', evidence)
+
+    def identity(self, field):
+        """逐帧闸门：只查战斗弹窗与收集品提示，不重读章节身份。
+
+        每个手势、每次观测以及共享移动闭环都调用它，所以必须便宜。章节与难度只在会话开始
+        （start 的 verify_identity）核对一次：逐帧重读章节号不会带来新信息，而弹窗与收集品提示
+        漏一帧就可能把落点点进战斗或踩掉一次拾取机会。
+        """
+        self.popup(field)
+        self.check_collectible(field)
+
+    def verify_identity(self, field):
+        """核对章节、难度与弹窗；普通弹窗保留，EX 只关闭一次，任何用途都立即结束任务。
+
+        只在会话开始时调用：读到别的章节／难度或读不到时抛 WindowChanged，禁止后续输入。
+        """
+        self.popup(field)
         current = chapter_identity(field, self.owner.chapter_ocr)
         if current != self.expected_identity:
             raise WindowChanged(f'主线章节或难度无法确认／已变化：预期 {self.expected_identity}，读到 {current}。')
@@ -245,21 +279,30 @@ class CampaignSession(NavigationSession):
         return snapshot
 
     def observe(self):
-        """回正并展开地图定位真实小队；计算后道路变化超过 3% 就拒绝旧结果。"""
+        """回正并展开地图定位真实小队；配准未被接受时换视野重试，计算后道路变化超过 3% 就拒绝旧结果。"""
         self.check()
         field = self.win.client()
         self.identity(field)
-        self.check_collectible(field)
         self.remember_scene(field)
         goto.map_open(self.win, reset=True)
-        panel = self.win.capture()
-        self.index += 1
-        report = self.localizer.locate(panel, f'observe_{self.index:03}')
-        self.check()
-        if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
-            raise RuntimeError('定位期间道路仍在变化，停止使用旧位置。')
-        report['enemy_markers'] = goto.normal_enemy_markers(panel, np.asarray(report['roi_to_map']))
-        return report
+        error = None
+        for attempt in range(LOCALIZE_RETRIES + 1):
+            if attempt:
+                logger.info(f'展开地图定位未接受，换一段视野重试（{attempt}/{LOCALIZE_RETRIES}）。')
+                self.pan_expanded(PAN_DIRECTIONS[(attempt - 1) % len(PAN_DIRECTIONS)])
+            panel = self.win.capture()
+            self.index += 1
+            try:
+                report = self.localizer.locate(panel, f'observe_{self.index:03}')
+            except (RuntimeError, ValueError) as exc:
+                error = exc
+                continue
+            self.check()
+            if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
+                raise RuntimeError('定位期间道路仍在变化，停止使用旧位置。')
+            report['enemy_markers'] = goto.normal_enemy_markers(panel, np.asarray(report['roi_to_map']))
+            return report
+        raise error
 
     def move(self, click):
         """只发送有限、有效的客户区地面落点，窗口代理负责最终校验与扣预算。"""
@@ -279,17 +322,58 @@ class CampaignSession(NavigationSession):
             time.sleep(min(.1, max(0, deadline - time.monotonic())))
 
     def snapshot(self, expanded=False):
-        """取得一拍业务观测；展开只补记忆，返回前恢复紧凑地图。"""
+        """取得一拍业务观测；定位未被接受时换视野重试，展开只补记忆，返回前恢复紧凑地图。"""
         self.check()
         self.identity(self.win.client())
         self.win.reset_minimap(expanded=expanded, reset=expanded)
         field = self.win.client()
         self.identity(field)
-        self.check_collectible(field)
         snapshot = self.owner.observer.observe(field, self.expected_identity, time.time())
+        if snapshot['localization'] != 'accepted':
+            snapshot = self.retry_localization(snapshot)
         self.owner.last_snapshot = snapshot
         if expanded:
             self.win.reset_minimap(expanded=False, reset=False)
+        return snapshot
+
+    def pan_expanded(self, direction):
+        """在展开面板里沿客户区方向拖一次换视野；起止点以面板中心对称，拖动经输入闸门发送。
+
+        只平移地图视图，小队本身不动：原本道路证据太少、配准差一点没过线的视野会换成另一段，
+        停稳后由调用方重新截图配准。方向向量是客户区方向（(1, 0) 表示把地图内容向右拖）。
+        """
+        left, top, right, bottom = EXPANDED_ROI
+        center = np.array([(left + right) / 2, (top + bottom) / 2])
+        half = np.asarray(direction, float) * PAN_PIXELS / 2
+        self.check()
+        base = np.asarray(self.win.client_origin(), float) + center
+        start, end = np.rint(base - half).astype(int), np.rint(base + half).astype(int)
+        self.win.handler.mouse_swipe(tuple(start.tolist()), tuple(end.tolist()))
+        self.pause(PAN_SETTLE_SECONDS)
+
+    def retry_localization(self, snapshot):
+        """紧凑帧定位未被接受时，展开并回正、再换几段视野重新观测，返回最后一次快照。
+
+        只在「配准差一点没过线」时管用：展开面板面积是紧凑面板的数倍，道路证据更多，换一段区域
+        往往就能过线。开合与拖动都走输入闸门，退出前收回紧凑地图；重试都在同一拍内完成，
+        不改运行状态也不推进决策拍，全部失败时返回最后一次未接受的快照交给调用方处置。
+        """
+        expanded = False
+        for attempt in range(LOCALIZE_RETRIES):
+            self.check()
+            if not expanded:
+                goto.map_open(self.win, reset=True)
+                expanded = True
+            else:
+                self.pan_expanded(PAN_DIRECTIONS[(attempt - 1) % len(PAN_DIRECTIONS)])
+            snapshot = self.owner.observer.observe(self.win.client(), self.expected_identity, time.time())
+            if snapshot['localization'] == 'accepted':
+                logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次换视野后重新确认小队位置：{snapshot['squad']}")
+                break
+        else:
+            logger.warning(f'换视野重试 {LOCALIZE_RETRIES} 次仍未确认底图定位，按当前观测继续。')
+        if expanded:
+            goto.map_close(self.win)
         return snapshot
 
     def scout_begin(self):
