@@ -212,7 +212,7 @@ class CampaignSession(NavigationSession):
         self.folder.mkdir(parents=True, exist_ok=True)
         write_image(self.folder / 'last_field.png', field)
         publish_preview_frame(np.ascontiguousarray(field[:, :, ::-1]), interval=0,
-                              source={'campaign': self.owner.last_snapshot})
+                              source=self.owner.campaign_source(self.owner.last_snapshot))
 
     def emit(self, **values):
         """将共享闭环的进度写入任务日志，电梯和移动结果仍由执行层回写状态。"""

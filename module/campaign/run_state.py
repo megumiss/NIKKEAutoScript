@@ -325,3 +325,17 @@ class RunState:
                 'mechanisms_tried': sum(bool(item['tried_for']) for item in self.mechanisms.values()),
                 'pending_reviews': len(self.pending_reviews), 'failed_transfers': len(self.transfers),
                 'unlocated_frames': self.unlocated}
+
+    def memory(self):
+        """推给界面的跨帧记忆：记住的敌人与仍在挡路的封锁，坐标为底图像素。
+
+        快照每帧整体替换，远处敌人往往只在补视野的展开帧里出现过一次，随后的紧凑帧里就没有了；
+        界面要靠这份记忆才能继续把它们画在章节地图上。只给展示字段，冷却与尝试记录不外露。
+        已解除的封锁不再影响路网，不推送。
+        """
+        enemies = [dict(id=record['id'], kind=record['kind'], status=record['status'],
+                        position=[round(float(value), 1) for value in record['position']])
+                   for record in self.enemies.values()]
+        blocks = [dict(id=record['id'], status=record['status'], point=record['point'], segment=record['segment'])
+                  for record in self.blocking() if record.get('segment')]
+        return dict(tick=self.tick, enemies=enemies, blocks=blocks)

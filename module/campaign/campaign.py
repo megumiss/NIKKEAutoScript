@@ -68,6 +68,7 @@ class Campaign(ModuleBase):
     target_finder = None
     target_finder_chapter = None
     last_snapshot = None
+    last_goal = None
     state = None
     cut = None
 
@@ -275,7 +276,7 @@ class Campaign(ModuleBase):
             status = snapshot['localization'] if snapshot is not None else '没有取到观测帧'
             logger.warning(f'小队底图位置最终未确认（{status}），后续推图没有可用起点。')
         if snapshot is not None:
-            publish_preview_frame(self.device.image, interval=0, source={'campaign': snapshot})
+            publish_preview_frame(self.device.image, interval=0, source=self.campaign_source(snapshot))
         if expanded:
             self.collapse_minimap()
         return snapshot
@@ -366,7 +367,7 @@ class Campaign(ModuleBase):
                 logger.info(f'当前主线章节：{identity[1].upper()} 第 {identity[0]} 章')
                 snapshot = self.observer.observe(image, identity, captured_at)
                 self.last_snapshot = snapshot
-                publish_preview_frame(self.device.image, interval=0, source={'campaign': snapshot})
+                publish_preview_frame(self.device.image, interval=0, source=self.campaign_source(snapshot))
                 return self.current_chapter
             if timeout.reached():
                 last = f'{previous[1].upper()} 第 {previous[0]} 章' if previous is not None else '未读到'
@@ -441,10 +442,27 @@ class Campaign(ModuleBase):
             logger.info(f'按 {len(self.cut.blocks)} 块封锁重算派生路网。')
         goal = choose_goal(self.state, chart, snapshot, self.cut,
                            purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
+        self.last_goal = goal
         logger.info(f'第 {self.state.tick} 拍决策：{describe(goal)}')
         if changes:
             logger.info(f'状态变更：{changes}')
+        # 每拍都推一次：远处敌人常只在补视野的展开帧里出现，等到移动反馈再推，界面就会漏掉这一拍的记忆与目标。
+        publish_preview_frame(self.device.image, interval=0, source=self.campaign_source(snapshot))
         return goal
+
+    def campaign_source(self, snapshot):
+        """预览推送的观测源：本帧快照附上运行记忆与当前目标；准备阶段还没有运行状态时原样推送。
+
+        用浅拷贝附加，不改写快照本身：记忆不是本帧观测，不能被当成这一帧看到的敌人再读回去。
+        """
+        if snapshot is None or self.state is None:
+            return {'campaign': snapshot}
+        memory = self.state.memory()
+        goal = self.last_goal
+        if goal and goal.get('kind') != 'none' and goal.get('position') is not None:
+            memory['goal'] = dict(kind=goal['kind'], id=goal['id'],
+                                  position=[round(float(value), 1) for value in goal['position']])
+        return {'campaign': dict(snapshot, memory=memory)}
 
     def dry_run(self, initial, ticks=DRY_RUN_TICKS):
         """只观测只决策不点击的空跑，返回最后一拍的目标。
