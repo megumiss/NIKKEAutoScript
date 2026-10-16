@@ -6,7 +6,7 @@ import numpy as np
 
 from module.campaign.run_state import RunState, located, panel_quad
 from module.campaign.scouting import scout_focus
-from module.campaign.session import ADVANCE_POINT, InputBudgetExceeded
+from module.campaign.session import ADVANCE_POINT, DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, InputBudgetExceeded
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.movement_feedback import TargetTriggered
@@ -48,6 +48,9 @@ class CampaignExecutor:
     def __init__(self, owner, session, purpose='story'):
         """注入会话以便离线回放；业务状态仍由 Campaign 统一持有。"""
         self.owner, self.session, self.purpose = owner, session, purpose
+        # 最近一次真正派出去执行的目标：弹窗在非移动阶段（补视野、观测）冒出来时，用它认领这次战斗，
+        # 否则打死的敌人会留在 pending，下一拍白走一趟。
+        self.last_executed = None
 
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
@@ -178,39 +181,52 @@ class CampaignExecutor:
         return True
 
     def battle(self, goal):
-        """接管一次战斗：准备弹窗→（快速）战斗→结算→回到野外；返回 'victory' / 'defeat' / None。
+        """接管一次战斗：准备弹窗→（快速）战斗→结算→回到野外。
 
-        每一步都由会话识别并按状态点一次，这里只负责节奏、上限与状态回写。整场超过
-        BATTLE_TIME_LIMIT 秒、或连续多帧认不出画面都停下交人工：不无限等，也不盲目连点。
-        战败先原地重打同一关，最多 BATTLE_DEFEAT_RETRIES 次；用尽才点返回，回到野外后抛
-        BattleFailed 直接交人工——打不过不是普通目标失败，不该换个敌人接着点。
-        战斗结束时给会话打开一次「沿用战斗前坐标」的许可，第一帧重新配准失败就用旧坐标继续推图。
+        每一步都由会话识别并按状态点一次，这里负责节奏、上限与状态回写。整段战斗超过
+        BATTLE_TIME_LIMIT 秒、或连续多帧认不出画面都停下交人工：不无限等，也不盲目连点；
+        每段战斗（进弹窗、重打后重新开打）都重新计时，所以 3 次原地重打不会被前一段的余量卡住，
+        总量仍由会话的章节时限兜住。战败先原地重打同一关，最多 BATTLE_DEFEAT_RETRIES 次；用尽才
+        点返回，回到野外后抛 BattleFailed 直接交人工——打不过不是普通目标失败，不换个敌人接着点。
+        胜利返回 'victory'，没读到结算就返回 None；战斗结束时给会话打开一次「沿用战斗前坐标」的许可，
+        第一帧重新配准失败就用旧坐标继续推图。
         """
         self.session.begin_target('battle')
         self.session.battle_mode = True
         outcome, close_entry, unknown, advances, retries = None, False, 0, 0, 0
+        previous, returning = None, False
         deadline = time.monotonic() + BATTLE_TIME_LIMIT
         try:
             while 1:
                 if time.monotonic() >= deadline:
                     raise RuntimeError(f'战斗接管超过 {BATTLE_TIME_LIMIT} 秒仍未回到野外，交人工。')
-                state = self.session.battle_step(retry_defeat=retries < BATTLE_DEFEAT_RETRIES,
-                                                 close_entry=close_entry)
+                state = self.session.battle_step(close_entry=close_entry)
                 kind = state['state']
                 if kind == 'field':
                     break
                 if kind == 'victory':
-                    outcome, close_entry, unknown = 'victory', False, 0
+                    outcome, close_entry, unknown, returning = 'victory', False, 0, False
                 elif kind == 'defeat':
                     unknown = 0
-                    if retries < BATTLE_DEFEAT_RETRIES:
-                        retries += 1
-                        logger.warning(f'战斗失败：原地重打同一关（第 {retries}/{BATTLE_DEFEAT_RETRIES} 次重试）。')
+                    # 只在「新的一次战败」上计数：结算屏停留超过一个轮询周期时沿用上一次的决定继续点，
+                    # 同一张屏不会把重打额度连刷掉；点没生效时也会重复点同一个按钮，而不是误点返回。
+                    if previous != 'defeat':
+                        if retries < BATTLE_DEFEAT_RETRIES:
+                            retries += 1
+                            logger.warning(f'战斗失败：原地重打同一关（第 {retries}/{BATTLE_DEFEAT_RETRIES} 次重试）。')
+                        else:
+                            outcome, close_entry, returning = 'defeat', True, True
+                            logger.warning('战斗失败且重试用尽：点返回，回到野外后交人工接管。')
+                    if returning:
+                        self.session.tap(DEFEAT_BACK_POINT)
+                        deadline = time.monotonic() + BATTLE_TIME_LIMIT
                     else:
-                        outcome, close_entry = 'defeat', True
-                        logger.warning('战斗失败且重试用尽：点返回，回到野外后交人工接管。')
+                        self.session.tap(DEFEAT_RETRY_POINT)
                 elif kind in ('entry', 'battle'):
                     unknown = 0
+                    # 每段战斗单独计时：准备弹窗、以及加载结束真正进入战斗时都重置。
+                    if kind == 'entry' or previous != 'battle':
+                        deadline = time.monotonic() + BATTLE_TIME_LIMIT
                 else:
                     unknown += 1
                     if unknown % BATTLE_ADVANCE_EVERY == 0 and advances < BATTLE_ADVANCE_LIMIT:
@@ -219,6 +235,7 @@ class CampaignExecutor:
                         self.session.tap(ADVANCE_POINT)
                     if unknown >= BATTLE_UNKNOWN_LIMIT:
                         raise RuntimeError(f'战斗接管连续 {unknown} 帧认不出画面，交人工。')
+                previous = kind
                 self.session.pause(BATTLE_POLL_SECONDS)
         finally:
             self.session.battle_mode = False
@@ -230,7 +247,7 @@ class CampaignExecutor:
                 self.owner.state.enemies[goal['id']]['status'] = 'cleared'
                 logger.info(f'战斗胜利：敌人 {goal["id"]} 已打掉，不再作为目标。')
             else:
-                logger.info('战斗胜利：本拍目标不是敌人，只继续推图。')
+                logger.warning(f'战斗胜利，但这次弹窗不是从移动里冒出来的（目标 {goal}），不回写敌人状态。')
         else:
             logger.warning('战斗接管回到野外，但没读到胜负结算，按未结算处理（不改状态）。')
         return outcome
@@ -245,9 +262,8 @@ class CampaignExecutor:
         try:
             self.session.start()
             for index in range(ticks):
-                # 只有移动（execute）里撞上的弹窗才认这一次的目标：补视野或观测时冒出来的弹窗
-                # 与上一拍的目标无关，拿旧目标回写「已打掉」会把敌人记错。
-                engaged = None
+                # 只有移动（execute）里撞上的弹窗才确定属于本拍目标；补视野或观测时冒出来的弹窗，
+                # 归给最近一次真正派出去的目标（见 last_executed），而不是把旧目标随手标成已处理。
                 try:
                     self.session.begin_target('collectible' if self.purpose == 'collectible' else 'position')
                     self.session.check()
@@ -266,18 +282,19 @@ class CampaignExecutor:
                     if goal is None or goal['kind'] == 'none':
                         logger.warning(f'主线本拍无可执行目标：{goal}')
                         return {'state': 'needs_review', 'goal': goal}
-                    engaged = goal
+                    self.last_executed = goal
                     self.execute(goal)
                 except TargetTriggered as exc:
                     if exc.evidence.get('kind') != 'battle_popup':
                         raise
-                    logger.info(f'遇到战斗准备弹窗，接管这次战斗；本拍目标 {engaged}')
-                    self.battle(engaged)
+                    logger.info(f'遇到战斗准备弹窗，接管这次战斗；按最近派出的目标回写 {self.last_executed}')
+                    self.battle(self.last_executed)
             logger.warning(f'主线已达到 {ticks} 拍上限，停止并交人工复核。')
             return {'state': 'needs_review', 'reason': 'tick_budget', 'goal': goal}
         except TargetTriggered as exc:
-            if goal is not None and goal['kind'] == 'enemy' and exc.evidence.get('kind') == 'battle_popup':
-                self.owner.state.enemies[goal['id']]['status'] = 'engaged'
+            if self.last_executed is not None and self.last_executed.get('kind') == 'enemy' \
+                    and exc.evidence.get('kind') == 'battle_popup':
+                self.owner.state.enemies[self.last_executed['id']]['status'] = 'engaged'
             logger.info(f'主线停止：{exc}；证据 {exc.evidence}')
             return {'state': 'triggered', 'evidence': exc.evidence}
         finally:

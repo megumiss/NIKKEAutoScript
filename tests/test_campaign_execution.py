@@ -19,6 +19,7 @@ from module.campaign.session import (ADVANCE_POINT, AUTO_POINT, DEFEAT_BACK_POIN
                                      ENTER_BATTLE_POINT, ENTRY_CLOSE_POINT, LOCALIZE_RETRIES, QUICK_BATTLE_POINT,
                                      CampaignLocalizer, CampaignSession, InputBudgetExceeded)
 from module.campaign.subgoals import available_annotations
+from module.campaign.vision.battle import classify
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.movement_feedback import TargetTriggered
@@ -431,24 +432,23 @@ class SessionTests(unittest.TestCase):
         self.handler.mouse_click.assert_not_called()
 
     def test_battle_step_taps_the_state_button(self):
-        """每一步只按识别结果点一次：快速战斗／进入战斗、AUTO 关闭时打开、胜利推进、战败重打或返回。"""
+        """每一步只按识别结果点一次：快速战斗／进入战斗、AUTO 关闭时打开、胜利推进；战败交给执行层。"""
         self.session.tap = Mock()
-        cases = [(dict(state='entry', quick=True), False, True, QUICK_BATTLE_POINT),
-                 (dict(state='entry', quick=False), False, True, ENTER_BATTLE_POINT),
-                 (dict(state='entry', quick=True), True, True, ENTRY_CLOSE_POINT),
-                 (dict(state='battle', auto=False), False, True, AUTO_POINT),
-                 (dict(state='victory'), False, True, ADVANCE_POINT),
-                 (dict(state='defeat'), False, True, DEFEAT_RETRY_POINT),
-                 (dict(state='defeat'), False, False, DEFEAT_BACK_POINT)]
-        for state, close_entry, retry_defeat, point in cases:
-            with self.subTest(state=state, retry=retry_defeat):
+        cases = [(dict(state='entry', quick=True), False, QUICK_BATTLE_POINT),
+                 (dict(state='entry', quick=False), False, ENTER_BATTLE_POINT),
+                 (dict(state='entry', quick=True), True, ENTRY_CLOSE_POINT),
+                 (dict(state='battle', auto=False), False, AUTO_POINT),
+                 (dict(state='victory'), False, ADVANCE_POINT)]
+        for state, close_entry, point in cases:
+            with self.subTest(state=state):
                 self.session.tap.reset_mock()
                 with patch('module.campaign.vision.battle.battle_state',
                            return_value=dict(state, scores={})):
-                    result = self.session.battle_step(close_entry=close_entry, retry_defeat=retry_defeat)
+                    result = self.session.battle_step(close_entry=close_entry)
                 self.assertEqual(result['state'], state['state'])
                 self.session.tap.assert_called_once_with(point)
-        for state in (dict(state='battle', auto=True), dict(state='field'), dict(state='unknown')):
+        for state in (dict(state='battle', auto=True), dict(state='defeat'), dict(state='field'),
+                      dict(state='unknown')):
             with self.subTest(state=state):
                 self.session.tap.reset_mock()
                 with patch('module.campaign.vision.battle.battle_state',
@@ -492,6 +492,27 @@ class SessionTests(unittest.TestCase):
             report = localizer.locate(panel, 'test')
             self.assertEqual(report['position_kind'], 'squad')
             self.assertEqual(report['player_roi'], [243, 231])
+
+
+class BattleStateTests(unittest.TestCase):
+    """战斗状态的优先级判定是纯函数，可以离线用假分数固定住。"""
+
+    def test_classify_priority(self):
+        """战败 > 胜利 > 准备弹窗 > 战斗中 > 野外 > 无法识别；野外判据放最后避免弹窗被当成野外。"""
+        every = {'defeat': 1., 'victory': 1., 'entry': 1., 'auto_tpl': 1., 'pause': 1.}
+        self.assertEqual(classify(every, True, True, True)['state'], 'defeat')
+        self.assertEqual(classify(dict(every, defeat=0.), True, True, True)['state'], 'victory')
+        self.assertEqual(classify(dict(every, defeat=0., victory=0.), True, True, True)['state'], 'entry')
+        self.assertEqual(classify(dict(every, defeat=0., victory=0., entry=0.), True, True, True)['state'], 'battle')
+        self.assertEqual(classify({}, True, False, False)['state'], 'field')
+        self.assertEqual(classify({}, False, False, False)['state'], 'unknown')
+
+    def test_classify_passes_colour_judgements_through(self):
+        """快速战斗与自动射击是颜色判据，只在对应状态里有意义，但要原样带出来。"""
+        entry = classify({'entry': .95}, False, True, False)
+        self.assertEqual((entry['state'], entry['quick'], entry['auto']), ('entry', True, False))
+        battle = classify({'pause': .95}, False, False, False)
+        self.assertEqual((battle['state'], battle['auto']), ('battle', False))
 
 
 class ExecutorTests(unittest.TestCase):
@@ -592,6 +613,21 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(battle.call_count, 2)
         self.session.close.assert_called_once()
 
+    def test_battle_popup_during_observation_uses_last_executed_target(self):
+        """观测阶段冒出的弹窗按最近一次派出的目标回写，打死的敌人才不会留在 pending。"""
+        goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
+        self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
+        self.owner.plan_tick.return_value = goal
+        self.session.snapshot.side_effect = [snapshot_fixture(),
+                                             TargetTriggered('popup', {'kind': 'battle_popup'}),
+                                             snapshot_fixture()]
+        with patch.object(self.executor, 'needs_expansion', return_value=False), \
+                patch.object(self.executor, 'scout', return_value=False), \
+                patch.object(self.executor, 'battle') as battle, \
+                patch.object(self.executor, 'execute'):
+            self.executor.run(snapshot_fixture(), ticks=3)
+        battle.assert_called_once_with(goal)
+
     def test_battle_victory_marks_target_cleared(self):
         """胜利把该敌人记为 cleared、不再作为目标，并打开战后沿用坐标的许可。"""
         goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
@@ -605,21 +641,34 @@ class ExecutorTests(unittest.TestCase):
         self.session.begin_target.assert_any_call('battle')
 
     def test_battle_defeat_retries_in_place_then_returns_and_fails(self):
-        """战败先原地重打同一关到上限，再点返回；回到野外后抛 BattleFailed 交人工。"""
+        """一次真实战败只计一次重打；结算屏停留不刷额度，用尽后点返回并抛 BattleFailed。"""
         goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
         self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
         self.session.battle_step.side_effect = ([dict(state='entry', quick=False)]
-                                               + [dict(state='defeat')] * (BATTLE_DEFEAT_RETRIES + 1)
+                                               # 第 1 次战败：结算屏停留三帧，只应计一次
+                                               + [dict(state='defeat')] * 3
+                                               + [dict(state='battle', auto=True), dict(state='defeat')]
+                                               + [dict(state='battle', auto=True), dict(state='defeat')]
+                                               + [dict(state='battle', auto=True), dict(state='defeat')]
                                                + [dict(state='field')])
         with self.assertRaises(BattleFailed):
             self.executor.battle(goal)
-        flags = [call.kwargs['retry_defeat'] for call in self.session.battle_step.call_args_list]
-        self.assertEqual(len(flags), BATTLE_DEFEAT_RETRIES + 3)
-        self.assertEqual(flags[:BATTLE_DEFEAT_RETRIES + 1], [True] * (BATTLE_DEFEAT_RETRIES + 1))
-        self.assertEqual(flags[-2:], [False, False])
+        taps = [item.args[0] for item in self.session.tap.call_args_list]
+        self.assertEqual(taps.count(DEFEAT_RETRY_POINT), 5)
+        self.assertEqual(taps.count(DEFEAT_BACK_POINT), 1)
+        self.assertEqual(taps[-1], DEFEAT_BACK_POINT)
         self.assertEqual(self.owner.state.enemies['enemy-1']['status'], 'pending')
         self.assertTrue(self.session.reuse_squad)
         self.assertFalse(self.session.battle_mode)
+
+    def test_battle_defeat_screen_lingering_does_not_return_early(self):
+        """同一张战败结算屏反复出现时只会重打，不会把额度刷完就返回。"""
+        goal = dict(kind='enemy', id='enemy-1', position=[112, 96])
+        self.owner.state.enemies['enemy-1'] = {'status': 'pending'}
+        self.session.battle_step.side_effect = [dict(state='defeat')] * 6 + [dict(state='field')]
+        self.assertIsNone(self.executor.battle(goal))
+        taps = [item.args[0] for item in self.session.tap.call_args_list]
+        self.assertEqual(taps, [DEFEAT_RETRY_POINT] * 6)
 
     def test_battle_victory_after_retry_marks_target_cleared(self):
         """原地重打一次后打赢仍然按胜利收尾：目标记 cleared 并继续推图。"""

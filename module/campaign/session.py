@@ -38,10 +38,12 @@ SCOUT_SETTLE_SECONDS = 1.0
 # 之后每轮在面板内换一段视野。只用来救「配准差一点没过线」，连续失败仍按定位不可用处理。
 LOCALIZE_RETRIES = 3
 # 换视野的方向（客户区向量）、位移与停稳等待：起止点以面板中心对称，落点仍在 486×462 面板内。
-PAN_DIRECTIONS = ((1., 0.), (-1., 0.), (0., 1.))
+# 四个方向都留：视野已经贴着地图某一边时，沿那条边再拖是白费一次重试。
+PAN_DIRECTIONS = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.))
 PAN_PIXELS = 140.
 PAN_SETTLE_SECONDS = 1.0
-# 战斗接管的点击落点（客户区像素）：准备弹窗的两个按钮、弹窗右上角关闭、结算页推进与战败返回。
+# 战斗接管的点击落点（客户区像素）：准备弹窗的两个按钮、弹窗右上角关闭、AUTO 开关、结算推进；
+# 战败的两个点（重新挑战／返回）由执行层按重试次数选用，常量放这里是为了所有落点在一处。
 QUICK_BATTLE_POINT = (1014, 842)
 ENTER_BATTLE_POINT = (1014, 916)
 ENTRY_CLOSE_POINT = (1147, 513)
@@ -363,11 +365,11 @@ class CampaignSession(NavigationSession):
             self.win.reset_minimap(expanded=False, reset=False)
         return snapshot
 
-    def battle_step(self, close_entry=False, retry_defeat=True):
-        """战斗接管的一步：识别当前画面并按状态点一次，返回识别结果。
+    def battle_step(self, close_entry=False):
+        """战斗接管的一步：识别当前画面并按状态点一次，返回识别结果并交给执行层决策。
 
         close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
-        retry_defeat 为真时战败点「重新挑战」原地重打同一关，为假时才点返回（重试用尽）。
+        战败结算不在这里点：重打还是返回要按重试次数决定，属于执行层的策略（见 CampaignExecutor.battle）。
         战斗中只在自动射击关闭时点一次 AUTO（开着就不再点）；野外不发输入，交给执行层收尾。
         点击都走场景输入闸门与预算，返回 battle.battle_state 的结果供执行层记录与决策。
         """
@@ -391,13 +393,6 @@ class CampaignSession(NavigationSession):
         elif kind == 'victory':
             logger.info('战斗结算：胜利，点继续。')
             self.tap(ADVANCE_POINT)
-        elif kind == 'defeat':
-            if retry_defeat:
-                logger.info('战斗结算：战败，点重新挑战原地重打。')
-                self.tap(DEFEAT_RETRY_POINT)
-            else:
-                logger.info('战斗结算：战败且重试用尽，点返回。')
-                self.tap(DEFEAT_BACK_POINT)
         return state
 
     def tap(self, point):
@@ -416,6 +411,8 @@ class CampaignSession(NavigationSession):
         战斗前后小队不会换位置，而战斗打断了视野与箭头，重新配准往往只差一点没过线；
         沿用旧坐标比再花十几秒换视野重试更贴近事实。只能沿用一帧：之后的观测仍要求重新配准，
         否则一次沿用会在整段任务里一直传下去。没有记过坐标时原样返回，交给正常重试路径。
+        结算后存在强制位移／传送的关卡（EX 等）不适用这条假设，那种帧的坐标会错一拍，
+        下一帧要求重新配准把它兜回来。
         """
         self.reuse_squad = False
         if self.last_registration is None:

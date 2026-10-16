@@ -38,15 +38,22 @@ EX_TITLE_TPL = _load('battle_ex_title.png')
 THRESHOLD = .9
 ENTRY_THRESHOLD = .8
 EX_THRESHOLD = .85
-# 快速战斗按钮在弹窗里的固定区域（客户区像素）。可用时是橙色实心、不可用时整块变灰，
-# 实测橙色像素占比 0.64 / 0.00，所以用颜色判可用性比模板更稳。
+# 橙色判据统一用同一段 HSV：准备弹窗的快速战斗按钮与战斗中的 AUTO 图标都是「橙色 = 可用／已开」。
+# 两处的占比阈值不同，是因为橙色面积不同：实心按钮实测 0.64，图标本体只有 0.171（关闭时都是 0.000）。
+ORANGE_LOW, ORANGE_HIGH = (5, 110, 110), (30, 255, 255)
 QUICK_BATTLE_ROI = (900, 830, 1130, 856)
 QUICK_BATTLE_ORANGE_RATIO = .2
-# AUTO 开关的图标区（客户区像素）。开启时图标与文字是橙色（实测橙色占比 0.171），关闭时整块灰掉
-# （0.000），所以也用颜色判；只看图标本体这一小块，比整条按钮更不容易被变化的背景影响。
-# 这块是叠在场景上的：画面左上角若恰好有大片橙色特效，可能被读成已开启。
+# AUTO 图标区（客户区像素）。只看图标本体这一小块，比整条按钮更不容易被变化的背景影响；
+# 这块是叠在场景上的：画面左上角若恰好有大片橙色特效，可能被读成已开启（后果只是不点 AUTO）。
 AUTO_ICON_ROI = (80, 18, 116, 54)
 AUTO_ORANGE_RATIO = .05
+
+
+def orange_ratio(image, roi):
+    """一块 ROI 里橙色像素的占比；两处「橙色判可用」共用同一段 HSV。"""
+    x1, y1, x2, y2 = roi
+    hsv = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
+    return float(cv2.inRange(hsv, ORANGE_LOW, ORANGE_HIGH).mean()) / 255
 # 野外判据的两块 ROI 与观察器 minimap_mode_and_panel / minimap_closed 同源。
 COMPACT_PANEL_ROI = (27, 118, 207, 273)
 MINIMAP_CONTROL_ROI = (20, 76, 64, 120)
@@ -62,18 +69,12 @@ def score(template, image):
 
 def quick_battle_available(image):
     """准备弹窗里的快速战斗按钮是否可用（橙色实心）。只在该弹窗可见时才有意义。"""
-    x1, y1, x2, y2 = QUICK_BATTLE_ROI
-    hsv = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
-    orange = cv2.inRange(hsv, (5, 120, 120), (25, 255, 255))
-    return float(orange.mean()) / 255 > QUICK_BATTLE_ORANGE_RATIO
+    return orange_ratio(image, QUICK_BATTLE_ROI) > QUICK_BATTLE_ORANGE_RATIO
 
 
 def auto_enabled(image):
     """战斗中的自动射击（左上 AUTO）是否已开启；关闭时要由接管点一下打开。"""
-    x1, y1, x2, y2 = AUTO_ICON_ROI
-    hsv = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
-    orange = cv2.inRange(hsv, (5, 110, 110), (30, 255, 255))
-    return float(orange.mean()) / 255 > AUTO_ORANGE_RATIO
+    return orange_ratio(image, AUTO_ICON_ROI) > AUTO_ORANGE_RATIO
 
 
 def ex_stage(image):
@@ -100,9 +101,10 @@ def field_visible(image):
 def classify(scores, field, quick, auto_on):
     """把一路打分与野外判据判成一个状态；纯函数，便于用假分数固定优先级。
 
-    scores 的键是 auto / pause / victory / defeat / entry。优先级从「画面唯一」到「画面常见」：
-    战败与胜利结算、准备弹窗、战斗中，最后才是野外——野外判据只看小地图，放最后可以避免
-    弹窗盖住画面时被误判成回到野外。quick / auto_on 是颜色判据的结果，只在对应状态里有意义。
+    scores 的键是 auto_tpl / pause / victory / defeat / entry（前两个是模板分，别与返回的 auto 混淆）。
+    优先级从「画面唯一」到「画面常见」：战败与胜利结算、准备弹窗、战斗中，最后才是野外——野外判据
+    只看小地图，放最后可以避免弹窗盖住画面时被误判成回到野外。quick / auto_on 是颜色判据的结果，
+    只在对应状态里有意义。
     """
     if scores.get('defeat', 0.) >= THRESHOLD:
         return {'state': 'defeat', 'quick': quick, 'auto': auto_on}
@@ -110,7 +112,7 @@ def classify(scores, field, quick, auto_on):
         return {'state': 'victory', 'quick': quick, 'auto': auto_on}
     if scores.get('entry', 0.) >= ENTRY_THRESHOLD:
         return {'state': 'entry', 'quick': quick, 'auto': auto_on}
-    if max(scores.get('auto', 0.), scores.get('pause', 0.)) >= THRESHOLD:
+    if max(scores.get('auto_tpl', 0.), scores.get('pause', 0.)) >= THRESHOLD:
         return {'state': 'battle', 'quick': quick, 'auto': auto_on}
     if field:
         return {'state': 'field', 'quick': quick, 'auto': auto_on}
@@ -121,11 +123,12 @@ def battle_state(image):
     """识别一帧 1776×999 客户区截图属于战斗接管的哪个状态。
 
     返回 dict(state, quick, auto, scores)：state 是 defeat / victory / entry / battle / field / unknown，
-    quick 只在 entry 时有意义（快速战斗是否可用），auto 是战斗中的自动射击开关状态，scores 供日志与离线核对。
+    quick 只在 entry 时有意义（快速战斗是否可用），auto 是战斗中的自动射击开关状态（不是模板分，
+    模板分在 scores['auto_tpl']），scores 供日志与离线核对。
     """
     if image is None or image.shape != (999, 1776, 3):
         raise ValueError('战斗状态识别需要 1776×999 的三通道客户区截图。')
-    scores = {'auto': score(AUTO_TPL, image), 'pause': score(PAUSE_TPL, image),
+    scores = {'auto_tpl': score(AUTO_TPL, image), 'pause': score(PAUSE_TPL, image),
               'victory': score(VICTORY_TPL, image), 'defeat': score(DEFEAT_TPL, image),
               'entry': score(ENTER_BATTLE_TPL, image)}
     quick = quick_battle_available(image) if scores['entry'] >= ENTRY_THRESHOLD else False
