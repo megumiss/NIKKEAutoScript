@@ -133,3 +133,9 @@ def battle_state(image):
               'entry': score(ENTER_BATTLE_TPL, image)}
     quick = quick_battle_available(image) if scores['entry'] >= ENTRY_THRESHOLD else False
     return dict(classify(scores, field_visible(image), quick, auto_enabled(image)), scores=scores)
+
+
+def score_text(scores, key):
+    """把一项识别分数写成日志文本；缺项显示为「—」，免得替身或旧快照被读成 0.00 的假分数。"""
+    value = (scores or {}).get(key)
+    return '—' if value is None else f'{float(value):.2f}'

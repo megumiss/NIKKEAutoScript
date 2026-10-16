@@ -7,6 +7,8 @@ import numpy as np
 from module.campaign.run_state import RunState, located, panel_quad
 from module.campaign.scouting import scout_focus
 from module.campaign.session import ADVANCE_POINT, DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, InputBudgetExceeded
+from module.campaign.timing import Stopwatch
+from module.campaign.vision.battle import score_text
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.movement_feedback import TargetTriggered
@@ -66,10 +68,16 @@ class CampaignExecutor:
         """到安全站位后只用新紧凑帧验证光幕；看不清不当成解封，也不消耗机关结果。
 
         单帧不可信时原地换帧重看，最多 REVIEW_FRAMES 帧，帧间等待照常检查停止与窗口；
-        全部不可信才记一次复核失败并保留待复核，下一拍由目标选择决定是否交人工。
+        全部不可信才记一次复核失败并保留待复核，下一拍由目标选择决定是否交下一步。
+        复核要连看几帧，每帧都做一次完整观测与决策；结论行带上用掉第几帧与总耗时。
         """
         mechanism = self.owner.state.pending_reviews.get(goal['id'])
         state = self.owner.state
+        watch = Stopwatch()
+        standoff = goal.get('position')
+        logger.info(f"开始复核封锁 {goal['id']}（机关 {mechanism or '未指定'}）：站位 "
+                    f"{[round(float(v), 1) for v in standoff] if standoff is not None else '未指定'}，"
+                    f"最多换 {REVIEW_FRAMES} 帧确认光幕是否还在。")
         for attempt in range(REVIEW_FRAMES):
             if attempt:
                 self.session.pause(1)
@@ -82,18 +90,25 @@ class CampaignExecutor:
                 break
         else:
             state.penalize(f"review-{goal['id']}")
-            logger.warning(f"封锁 {goal['id']} 连续 {REVIEW_FRAMES} 帧未进入可靠视野，保留待复核状态。")
+            logger.warning(f"封锁 {goal['id']} 连续 {REVIEW_FRAMES} 帧未进入可靠视野，保留待复核状态；"
+                           f"耗时 {watch}。")
             return
         state.pending_reviews.pop(goal['id'], None)
         if record['status'] == 'cleared':
-            logger.info(f"封锁 {goal['id']} 已解除，机关 {mechanism or '未指定'}；派生路网已刷新。")
+            logger.info(f"封锁 {goal['id']} 已解除（第 {attempt + 1} 帧确认），机关 {mechanism or '未指定'}；"
+                        f"派生路网已刷新，耗时 {watch}。")
             self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
         else:
-            logger.info(f"封锁 {goal['id']} 仍在，机关 {mechanism or '未指定'} 未解除此封锁。")
+            logger.info(f"封锁 {goal['id']} 仍在（第 {attempt + 1} 帧确认），机关 {mechanism or '未指定'} "
+                        f"未解除此封锁；耗时 {watch}。")
             state.penalize(f"review-{goal['id']}", failure=False)
 
     def execute(self, goal):
-        """执行一个目标并回写结果；普通移动失败进入冷却，安全失败直接向外传播。"""
+        """执行一个目标并回写结果；普通移动失败进入冷却，安全失败直接向外传播。
+
+        派发与结束各一行，带上落点、预计距离、移动次数、本目标消耗的输入次数与耗时：
+        同一个目标在共享闭环里会打十几行进度，这两行是把它们括起来的边界。
+        """
         kind = goal['kind']
         purpose = kind if kind in ('enemy', 'collectible') else 'position'
         self.session.begin_target(purpose)
@@ -110,6 +125,9 @@ class CampaignExecutor:
                 confirmed_transfers[:] = values['elevator_transfers']
             self.session.emit(**values)
 
+        watch = Stopwatch()
+        logger.info(f"派发目标 {kind} {goal['id']}：落点 {[round(float(v), 1) for v in target]}，"
+                    f"预计路程 {goal.get('distance')}，最多 {TARGET_MOVES} 次移动（{goal.get('reason')}）")
         try:
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
@@ -122,12 +140,14 @@ class CampaignExecutor:
             else:
                 identifier = f"review-{goal['id']}" if kind == 'review_block' else goal['id']
                 self.owner.state.penalize(identifier)
-            logger.warning(f"目标 {kind} {goal['id']} 失败，已回写冷却：{exc}")
+            logger.warning(f"目标 {kind} {goal['id']} 失败，已回写冷却：{exc}；"
+                           f"移动与观测耗时 {watch}，本目标输入 {self.session.target_inputs} 次")
             self.session.preview(self.session.win.client())
             return
         if result.get('state') != 'arrived':
             self.owner.state.penalize(goal['id'])
-            logger.warning(f"目标 {goal['id']} 没有确认触发：{result}")
+            logger.warning(f"目标 {goal['id']} 没有确认触发：{result}；"
+                           f"耗时 {watch}，本目标输入 {self.session.target_inputs} 次")
             return
         if kind == 'mechanism':
             self.owner.state.mark_tried(goal['id'], goal['block'])
@@ -146,7 +166,9 @@ class CampaignExecutor:
         elif kind == 'explore':
             # 到点不是观察成功：只记短冷却，新快照自行更新观测覆盖。
             self.owner.state.penalize(goal['id'])
-        logger.info(f"目标 {kind} {goal['id']} 结果：{result}")
+        logger.info(f"目标 {kind} {goal['id']} 结束：{result['state']}，"
+                    f"移动 {result.get('movement_clicks')} 次，本目标输入 {self.session.target_inputs} 次，"
+                    f"耗时 {watch}")
 
     def scout(self, goal, snapshot):
         """侦察：小队不动，拖展开大地图按路程由近到远看本分量，直到最近的敌人可以确定；返回是否侦察过。
@@ -165,11 +187,17 @@ class CampaignExecutor:
             return False
         self.session.begin_target('scout')
         self.session.scout_begin()
+        views = 0
+        total = Stopwatch()
         for view in range(SCOUT_VIEWS):
             known = '无' if focus['known'] is None else focus['known']
             logger.info(f"侦察第 {view + 1} 屏：{focus['id']} @ {[round(value) for value in focus['position']]}，"
                         f"路程 {focus['distance']}，已知最近敌人路程 {known}")
+            watch = Stopwatch()
             recorded = self.session.scout_view(focus['position'], f'scout_{view + 1:02}')
+            views += 1
+            logger.info(f"侦察第 {view + 1} 屏结果：{'已记下' if recorded else '未记下'}"
+                        f"（未记下说明配准没接受或落点没进视野），耗时 {watch}")
             if not recorded or not state.is_observed(focus['position']):
                 state.penalize(focus['id'])
             focus = scout_focus(state, self.owner.cut, squad)
@@ -178,6 +206,7 @@ class CampaignExecutor:
         else:
             logger.info(f'侦察已达 {SCOUT_VIEWS} 屏上限，按当前已知敌人决策。')
         self.session.scout_end()
+        logger.info(f'侦察结束：共看 {views} 屏，展开与拖动总耗时 {total}')
         return True
 
     def battle(self, goal):
@@ -194,14 +223,28 @@ class CampaignExecutor:
         self.session.begin_target('battle')
         self.session.battle_mode = True
         outcome, close_entry, unknown, advances, retries = None, False, 0, 0, 0
-        previous, returning = None, False
+        previous, returning, polls = None, False, 0
+        total = Stopwatch()
         deadline = time.monotonic() + BATTLE_TIME_LIMIT
+        segment = Stopwatch()
+        label = '无（弹窗不是从移动里冒出来的）' if goal is None else f"{goal['kind']} {goal['id']}"
+        logger.info(f'开始战斗接管：目标 {label}，轮询间隔 {BATTLE_POLL_SECONDS} 秒，单段时限 {BATTLE_TIME_LIMIT} 秒，'
+                    f'连续 {BATTLE_UNKNOWN_LIMIT} 帧认不出画面交人工，最多原地重打 {BATTLE_DEFEAT_RETRIES} 次。')
         try:
             while 1:
                 if time.monotonic() >= deadline:
                     raise RuntimeError(f'战斗接管超过 {BATTLE_TIME_LIMIT} 秒仍未回到野外，交人工。')
                 state = self.session.battle_step(close_entry=close_entry)
-                kind = state['state']
+                # scores 只用于日志：识别状态本身在 state 里，缺分数时按「—」显示而不是编成 0.00。
+                kind, scores = state['state'], state.get('scores')
+                polls += 1
+                if kind != previous:
+                    # 只在画面切换时打分数：同一状态每 2 秒轮询一次，逐次打印会把日志刷满。
+                    logger.info(f"战斗画面转为 {kind}（第 {polls} 次识别，本段耗时 {segment}，"
+                                f"接管累计 {total}）：进入战斗 {score_text(scores, 'entry')}，"
+                                f"胜利 {score_text(scores, 'victory')}，战败 {score_text(scores, 'defeat')}，"
+                                f"AUTO 模板 {score_text(scores, 'auto_tpl')}，"
+                                f"暂停键 {score_text(scores, 'pause')}")
                 if kind == 'field':
                     break
                 if kind == 'victory':
@@ -213,20 +256,21 @@ class CampaignExecutor:
                     if previous != 'defeat':
                         if retries < BATTLE_DEFEAT_RETRIES:
                             retries += 1
-                            logger.warning(f'战斗失败：原地重打同一关（第 {retries}/{BATTLE_DEFEAT_RETRIES} 次重试）。')
+                            logger.warning(f'战斗失败：原地重打同一关（第 {retries}/{BATTLE_DEFEAT_RETRIES} 次重试），'
+                                           f'本段耗时 {segment}，接管累计 {total}。')
                         else:
                             outcome, close_entry, returning = 'defeat', True, True
                             logger.warning('战斗失败且重试用尽：点返回，回到野外后交人工接管。')
                     if returning:
                         self.session.tap(DEFEAT_BACK_POINT)
-                        deadline = time.monotonic() + BATTLE_TIME_LIMIT
+                        deadline, segment = time.monotonic() + BATTLE_TIME_LIMIT, Stopwatch()
                     else:
                         self.session.tap(DEFEAT_RETRY_POINT)
                 elif kind in ('entry', 'battle'):
                     unknown = 0
                     # 每段战斗单独计时：准备弹窗、以及加载结束真正进入战斗时都重置。
                     if kind == 'entry' or previous != 'battle':
-                        deadline = time.monotonic() + BATTLE_TIME_LIMIT
+                        deadline, segment = time.monotonic() + BATTLE_TIME_LIMIT, Stopwatch()
                 else:
                     unknown += 1
                     if unknown % BATTLE_ADVANCE_EVERY == 0 and advances < BATTLE_ADVANCE_LIMIT:
@@ -240,6 +284,8 @@ class CampaignExecutor:
         finally:
             self.session.battle_mode = False
         self.session.reuse_squad = True
+        logger.info(f'战斗接管结束：{outcome}，识别 {polls} 次，原地重打 {retries} 次，兜底推进 {advances} 次，'
+                    f'输入累计 {self.session.target_inputs} 次，总耗时 {total}。')
         if outcome == 'defeat':
             raise BattleFailed(f'同一关原地重打 {BATTLE_DEFEAT_RETRIES} 次仍战败，停止并交人工。')
         if outcome == 'victory':
@@ -257,11 +303,17 @@ class CampaignExecutor:
 
         战斗接管放在拍内：胜负结算回到野外后继续下一拍，而不是终结任务。非战斗的终态（收集品提示、
         EX 弹窗）仍然直接停止；战斗接管自身的上限与连续战败会抛出安全异常，同样交人工。
+        每拍首尾各一行（拍号、已运行时长、本拍输入与耗时）：整条推图日志因此能按拍切分，
+        把等待时间落到具体的拍上；拍内的观测、侦察、移动、战斗各自另有带耗时的行。
         """
         goal, snapshot = None, initial
+        total = Stopwatch()
         try:
             self.session.start()
             for index in range(ticks):
+                watch = Stopwatch()
+                logger.info(f'第 {index + 1}/{ticks} 拍开始：任务已运行 {total}，'
+                            f'输入累计 {self.session.inputs} 次')
                 # 只有移动（execute）里撞上的弹窗才确定属于本拍目标；补视野或观测时冒出来的弹窗，
                 # 归给最近一次真正派出去的目标（见 last_executed），而不是把旧目标随手标成已处理。
                 try:
@@ -273,6 +325,7 @@ class CampaignExecutor:
                         self.session.identity(self.session.win.client())
                     goal = self.owner.plan_tick(snapshot)
                     if self.needs_expansion(goal, snapshot):
+                        logger.info(f'这一拍的视线不够（目标 {goal["kind"] if goal else "无"}），先展开大地图补视野再决策。')
                         self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
                         snapshot = self.session.snapshot()
                         goal = self.owner.plan_tick(snapshot, advance=False)
@@ -289,6 +342,8 @@ class CampaignExecutor:
                         raise
                     logger.info(f'遇到战斗准备弹窗，接管这次战斗；按最近派出的目标回写 {self.last_executed}')
                     self.battle(self.last_executed)
+                finally:
+                    logger.info(f'第 {index + 1} 拍结束：耗时 {watch}，输入累计 {self.session.inputs} 次')
             logger.warning(f'主线已达到 {ticks} 拍上限，停止并交人工复核。')
             return {'state': 'needs_review', 'reason': 'tick_budget', 'goal': goal}
         except TargetTriggered as exc:
@@ -298,4 +353,6 @@ class CampaignExecutor:
             logger.info(f'主线停止：{exc}；证据 {exc.evidence}')
             return {'state': 'triggered', 'evidence': exc.evidence}
         finally:
+            logger.info(f'主线会话收尾：任务共运行 {total}，累计输入 {self.session.inputs} 次，'
+                        f'决策 {self.owner.state.tick} 拍，定位未接受 {self.owner.state.unlocated} 帧。')
             self.session.close()

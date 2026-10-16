@@ -13,6 +13,7 @@ from module.campaign.navigation.pathfinding import NoConnectedRoad
 from module.campaign.navigation.pathfinding import RoadLocalizer as Localizer
 from module.campaign.navigation.session import NavigationSession
 from module.campaign.run_state import located
+from module.campaign.timing import Stopwatch
 from module.campaign.vision.chapter import chapter_identity
 from module.campaign.vision import battle
 from module.campaign.vision.minimap import terrain
@@ -51,6 +52,103 @@ AUTO_POINT = (105, 35)
 ADVANCE_POINT = (888, 500)
 DEFEAT_BACK_POINT = (73, 908)
 DEFEAT_RETRY_POINT = (1688, 926)
+
+
+def points_text(value):
+    """把二维点或点列压成一位小数坐标：单点写成 (x, y)，点列写成 [(x, y), …]。"""
+    points = np.asarray(value, float)
+    if points.ndim == 1:
+        return '(' + ', '.join(f'{number:.1f}' for number in points) + ')'
+    return '[' + ', '.join('(' + ', '.join(f'{number:.1f}' for number in point) + ')' for point in points) + ']'
+
+
+# 共享移动闭环的进度字段（emit 的键）与它们在日志里的写法。闭环只传英文标识与原始数值，
+# 翻译集中在这里：顺序固定让同一字段每次出现在同一位置，表外的键按 key=value 追加，
+# 新增字段因此不会在日志里悄悄丢掉，也不会让这一行整行打不出来（格式化失败同样退回 key=value）。
+MOVE_FIELDS = (
+    ('state', lambda value: f'状态 {value}'),
+    ('message', lambda value: '' if value is None else str(value)),
+    ('movement_clicks', lambda value: f'第 {value} 次移动'),
+    ('position', lambda value: f'小队 {points_text(value)}'),
+    ('distance', lambda value: f'距离 {float(value):.1f}'),
+    ('iou', lambda value: f'IoU {float(value):.3f}'),
+    ('click', lambda value: f'落点 {points_text(value)}'),
+    ('road_remaining', lambda value: f'道路剩余 {float(value):.1f}'),
+    ('target_marker', lambda value: f'目标标记 {points_text(value)}'),
+    ('navigation_method', lambda value: f'规划方式 {value}'),
+    ('planned_target', lambda value: f'规划目标 {points_text(value)}'),
+    ('plan_camera_pans', lambda value: f'本段第 {value} 次平移'),
+    ('camera_pans', lambda value: f'累计平移 {value}'),
+    ('camera_drag', lambda value: f'拖动 {points_text(value)}'),
+    ('camera_gain', lambda value: f'响应增益 {float(value):.2f}'),
+    ('camera_response', lambda value: f'实测响应 {float(value):.2f}'),
+    ('camera_tracking', lambda value: f'跟踪源 {value}'),
+    ('camera_batch_pans', lambda value: f'本批平移 {value}'),
+    ('camera_correction_reason', lambda value: f'校正原因 {value}'),
+    ('camera_view_position', lambda value: f'视野中心 {points_text(value)}'),
+    ('camera_position_kind', lambda value: f'视野坐标类型 {value}'),
+    ('camera_anchor', lambda value: f'展开锚定 {value}'),
+    ('camera_anchor_error', lambda value: f'展开锚定失败 {value}'),
+    ('camera_anchor_shift', lambda value: f'锚定位移 {points_text(value)}'),
+    ('camera_anchor_viewport', lambda value: f'锚定视野 {points_text(value)}'),
+    ('start_registration', lambda value: f'起始配准 {value}'),
+    ('start_iou', lambda value: f'起始 IoU {float(value):.3f}'),
+    ('start_offset', lambda value: f'与展开定位偏差 {float(value):.1f}'),
+    ('squad_anchor', lambda value: f'箭头锚点 {points_text(value)}'),
+    ('click_offset', lambda value: f'相对注视点 {points_text(value)}'),
+    ('fused_iou', lambda value: f'容差 IoU {float(value):.3f}'),
+    ('fused_deviation', lambda value: f'走廊偏差 {float(value):.1f}'),
+    ('anchor_method', lambda value: f'锚点方式 {value}'),
+    ('ground_anchor', lambda value: f'地面锚点 {points_text(value)}'),
+    ('arrow_attempts', lambda value: f'箭头采样 {value} 帧'),
+    ('arrow_missed_frames', lambda value: f'箭头漏检 {value} 帧'),
+    ('arrow_fallback', lambda value: f'箭头回退 {value}'),
+    ('arrow_recoveries', lambda value: f'唤醒箭头 {value} 次'),
+    ('anchor_recovery_error', lambda value: f'锚点恢复失败 {value}'),
+    ('camera_replans', lambda value: f'镜头重定位 {value} 次'),
+    ('squad_before_pan', lambda value: f'平移前小队 {points_text(value)}'),
+    ('squad_after_pan', lambda value: f'平移后小队 {points_text(value)}'),
+    ('wait_samples', lambda value: f'停稳采样 {value} 轮'),
+    ('wait_player_compact', lambda value: '小队圆环未读到' if value is None else f'小队圆环 {points_text(value)}'),
+    ('elevator_entry', lambda value: f'电梯入口 {points_text(value)}'),
+    ('elevator_exit', lambda value: f'电梯出口 {points_text(value)}'),
+    ('elevator_distance', lambda value: f'电梯距离 {float(value):.1f}'),
+    ('elevator_route', lambda value: f'电梯航段 {len(value)} 段'),
+    ('elevator_transfers', lambda value: f'已确认传送 {len(value)} 次'),
+    ('wake_target', lambda value: f'唤醒目标 {value}'),
+)
+
+
+def describe_move(values):
+    """把共享闭环的一次进度回调压成一行可读文本；表外字段按 key=value 追加在后面。"""
+    parts, used = [], set()
+    for key, render in MOVE_FIELDS:
+        if key not in values:
+            continue
+        used.add(key)
+        try:
+            text = render(values[key])
+        except (TypeError, ValueError, KeyError, IndexError):
+            text = f'{key}={values[key]}'
+        if text:
+            parts.append(text)
+    parts.extend(f'{key}={value}' for key, value in values.items() if key not in used)
+    return '，'.join(parts)
+
+
+def describe_snapshot(snapshot):
+    """把一帧业务观测压成一行：定位状态、小队坐标、小地图形态与各路识别计数。"""
+    minimap = snapshot.get('minimap') or {}
+    detail = [f"定位 {snapshot.get('localization')}"]
+    if snapshot.get('squad') is not None:
+        detail.append(f"小队 {points_text(snapshot['squad'])}")
+    detail.append(f"小地图 {minimap.get('mode') if minimap else '不可用'}")
+    detail.append(f"小地图敌人 {len(minimap.get('enemies') or [])}")
+    detail.append(f"底图敌人 {len(snapshot.get('enemies') or [])}")
+    detail.append(f"场景目标 {len(snapshot.get('objects') or [])}")
+    detail.append(f"光幕 {len(snapshot.get('barriers') or [])}")
+    detail.append(f"封锁 {len(snapshot.get('blocks') or [])}")
+    return '，'.join(detail)
 
 
 class InputBudgetExceeded(RuntimeError):
@@ -179,6 +277,7 @@ class CampaignSession(NavigationSession):
         表现为配准与静态层对不上（定位不可用），而逐帧核对会让每个手势都多两次 OCR 与一张截图。
         """
         self.check_stop()
+        watch = Stopwatch()
         self.deadline = time.monotonic() + CHAPTER_TIME_LIMIT
         if self.win.handler is None:
             raise WindowChanged('主线移动需要已初始化的鼠标输入通道。')
@@ -187,6 +286,9 @@ class CampaignSession(NavigationSession):
             raise WindowChanged('无法取得游戏客户区原点。')
         self.check()
         self.verify_identity(self.win.client())
+        logger.info(f"主线会话开始：{self.expected_identity[1].upper()} 第 {self.expected_identity[0]} 章，"
+                    f"客户区原点 {self.win.client_origin()}，截图与身份核对耗时 {watch}；"
+                    f"单次执行时限 {CHAPTER_TIME_LIMIT // 60} 分钟，单目标输入预算 {TARGET_INPUT_BUDGET} 次")
 
     def check_stop(self):
         """遵守调度器的停止事件；使用 TaskEnd 保留调度器既有取消语义。"""
@@ -287,8 +389,12 @@ class CampaignSession(NavigationSession):
                               source=self.owner.campaign_source(self.owner.last_snapshot))
 
     def emit(self, **values):
-        """将共享闭环的进度写入任务日志，电梯和移动结果仍由执行层回写状态。"""
-        logger.info(f'主线移动：{values}')
+        """将共享闭环的进度写入任务日志，电梯和移动结果仍由执行层回写状态。
+
+        一次回调一行：字段翻译见 describe_move，前面带上这个目标已经发过多少次输入，
+        好让日志能直接读出「这一步花了几次手势」。
+        """
+        logger.info(f'主线移动（本目标第 {self.target_inputs} 次输入）：{describe_move(values)}')
 
     def remember_scene(self, field):
         """移动反馈帧也累积敌人与封锁，下一步 A* 不沿用移动前的过期切开图。"""
@@ -300,8 +406,13 @@ class CampaignSession(NavigationSession):
         return snapshot
 
     def observe(self):
-        """回正并展开地图定位真实小队；配准未被接受时换视野重试，计算后道路变化超过 3% 就拒绝旧结果。"""
+        """回正并展开地图定位真实小队；配准未被接受时换视野重试，计算后道路变化超过 3% 就拒绝旧结果。
+
+        每次尝试的失败原因与量化指标由观察器的告警给出，这里只在成功时补一行：接受了哪一次尝试、
+        道路 IoU 与小队坐标是多少、整段展开与配准花了多久——这一段的耗时是移动闭环的主要开销。
+        """
         self.check()
+        watch = Stopwatch()
         field = self.win.client()
         self.identity(field)
         self.remember_scene(field)
@@ -322,7 +433,11 @@ class CampaignSession(NavigationSession):
             if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
                 raise RuntimeError('定位期间道路仍在变化，停止使用旧位置。')
             report['enemy_markers'] = goto.normal_enemy_markers(panel, np.asarray(report['roi_to_map']))
+            logger.info(f"展开定位已接受：第 {attempt + 1} 次尝试，小队 {points_text(report['position'])}，"
+                        f"道路 IoU {float(report['road_iou']):.3f}，"
+                        f"面板敌人标记 {len(report['enemy_markers'])} 个，耗时 {watch}")
             return report
+        logger.warning(f'{LOCALIZE_RETRIES + 1} 次展开定位尝试全部未被接受，耗时 {watch}，按定位失败处理。')
         raise error
 
     def move(self, click):
@@ -342,13 +457,25 @@ class CampaignSession(NavigationSession):
             self.check()
             time.sleep(min(.1, max(0, deadline - time.monotonic())))
 
+    def wait_stopped(self):
+        """等待小队标记与地图道路停稳；这是移动闭环里占比最大的等待，单独记一行耗时。
+
+        停稳判据与采样轮数沿用共享实现（见 camera_navigation.wait_for_squad），这里只补日志：
+        没有这一行时，一步移动的耗时只能从相邻两行日志的时间戳里反推。
+        """
+        watch = Stopwatch()
+        super().wait_stopped()
+        logger.info(f'停稳等待结束（小队标记与道路都已稳定），耗时 {watch}')
+
     def snapshot(self, expanded=False):
         """取得一拍业务观测；定位未被接受时换视野重试，展开只补记忆，返回前恢复紧凑地图。
 
         战斗结束后的第一帧允许沿用战斗前的小队坐标：战斗打断了视野与箭头，重新配准常只差一点
         没过线，而战斗前后小队不会换位置（见 reuse_registration）。
+        每帧都打一行观测摘要（见 describe_snapshot）与这一段耗时：推图的等待绝大部分花在这里。
         """
         self.check()
+        watch = Stopwatch()
         self.identity(self.win.client())
         self.win.reset_minimap(expanded=expanded, reset=expanded)
         field = self.win.client()
@@ -363,6 +490,7 @@ class CampaignSession(NavigationSession):
         self.owner.last_snapshot = snapshot
         if expanded:
             self.win.reset_minimap(expanded=False, reset=False)
+        logger.info(f'观测完成：{describe_snapshot(snapshot)}，耗时 {watch}')
         return snapshot
 
     def battle_step(self, close_entry=False):
@@ -371,27 +499,31 @@ class CampaignSession(NavigationSession):
         close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
         战败结算不在这里点：重打还是返回要按重试次数决定，属于执行层的策略（见 CampaignExecutor.battle）。
         战斗中只在自动射击关闭时点一次 AUTO（开着就不再点）；野外不发输入，交给执行层收尾。
-        点击都走场景输入闸门与预算，返回 battle.battle_state 的结果供执行层记录与决策。
+        点击都走场景输入闸门与预算；每次点击的日志都带上当次识别分数，便于对着现场截图复盘误判。
+        返回 battle.battle_state 的结果供执行层记录与决策。
         """
         self.check()
         state = battle.battle_state(self.win.client())
-        kind = state['state']
+        # scores 只用于日志，缺项由 battle.score_text 显示为「—」。
+        kind, scores = state['state'], state.get('scores')
         if kind == 'entry':
             if close_entry:
-                logger.info('战斗弹窗再次出现：本次不再进入，先关掉回到野外。')
+                logger.info(f"战斗弹窗再次出现（进入战斗 {battle.score_text(scores, 'entry')}）：本次不再进入，"
+                            f'先关掉回到野外。')
                 self.tap(ENTRY_CLOSE_POINT)
             elif state['quick']:
-                logger.info('快速战斗可用：点快速战斗。')
+                logger.info(f"快速战斗可用：点快速战斗（进入战斗 {battle.score_text(scores, 'entry')}）。")
                 self.tap(QUICK_BATTLE_POINT)
             else:
-                logger.info('快速战斗不可用：点进入战斗。')
+                logger.info(f"快速战斗不可用：点进入战斗（进入战斗 {battle.score_text(scores, 'entry')}）。")
                 self.tap(ENTER_BATTLE_POINT)
         elif kind == 'battle':
             if not state.get('auto', True):
-                logger.info('战斗中自动射击未开启：点 AUTO 打开。')
+                logger.info(f"战斗中自动射击未开启（AUTO {battle.score_text(scores, 'auto_tpl')}，"
+                            f"暂停键 {battle.score_text(scores, 'pause')}）：点 AUTO 打开。")
                 self.tap(AUTO_POINT)
         elif kind == 'victory':
-            logger.info('战斗结算：胜利，点继续。')
+            logger.info(f"战斗结算：胜利（STAGE CLEAR {battle.score_text(scores, 'victory')}），点继续。")
             self.tap(ADVANCE_POINT)
         return state
 
@@ -444,10 +576,13 @@ class CampaignSession(NavigationSession):
         只在「配准差一点没过线」时管用：展开面板面积是紧凑面板的数倍，道路证据更多，换一段区域
         往往就能过线。开合与拖动都走输入闸门，退出前收回紧凑地图；重试都在同一拍内完成，
         不改运行状态也不推进决策拍，全部失败时返回最后一次未接受的快照交给调用方处置。
+        每次尝试都记一行定位状态与耗时：紧凑面板的量化失败指标由观察器告警（同类只打一次），
+        这里给出的是「哪几次、各花了多久」，用来判断重试是否值得继续。
         """
         expanded = False
         for attempt in range(LOCALIZE_RETRIES):
             self.check()
+            watch = Stopwatch()
             if not expanded:
                 goto.map_open(self.win, reset=True)
                 expanded = True
@@ -455,8 +590,11 @@ class CampaignSession(NavigationSession):
                 self.pan_expanded(PAN_DIRECTIONS[(attempt - 1) % len(PAN_DIRECTIONS)])
             snapshot = self.owner.observer.observe(self.win.client(), self.expected_identity, time.time())
             if snapshot['localization'] == 'accepted':
-                logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次换视野后重新确认小队位置：{snapshot['squad']}")
+                logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次换视野后重新确认小队位置："
+                            f"{points_text(snapshot['squad'])}，耗时 {watch}")
                 break
+            logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次换视野重定位未接受"
+                        f"（定位 {snapshot['localization']}），耗时 {watch}")
         else:
             logger.warning(f'换视野重试 {LOCALIZE_RETRIES} 次仍未确认底图定位，按当前观测继续。')
         if expanded:

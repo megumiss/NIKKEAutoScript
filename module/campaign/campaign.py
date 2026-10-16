@@ -17,6 +17,7 @@ from module.campaign.navigation.targets import TargetFinder
 from module.campaign.vision.observation import EXPANDED_ROI, CampaignObserver
 from module.campaign.navigation.routing import CutRoads
 from module.campaign.run_state import RunState
+from module.campaign.timing import Stopwatch
 from module.config.config import TaskEnd
 from module.exception import RequestHumanTakeover
 from module.logger import logger
@@ -430,7 +431,9 @@ class Campaign(ModuleBase):
         不发送任何输入。返回目标描述或 None（静态层不可用）。
         派生路网必须在选目标之前刷新：封锁集合变了还用上一拍的切开图，可达性判的就是过期事实。
         advance 为假用于同一拍内的补视野、复核帧与重新决策，不推进冷却计数（见 RunState.update）。
+        决策行带上本拍耗时：候选的行走距离重算距离场是这一步的主要开销，几次决策的耗时能直接对比。
         """
+        watch = Stopwatch()
         changes = self.state.update(snapshot, advance=advance)
         chart = self.ensure_chart(self.current_chapter)
         if chart is None or chart.road is None:
@@ -443,7 +446,7 @@ class Campaign(ModuleBase):
         goal = choose_goal(self.state, chart, snapshot, self.cut,
                            purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
         self.last_goal = goal
-        logger.info(f'第 {self.state.tick} 拍决策：{describe(goal)}')
+        logger.info(f'第 {self.state.tick} 拍决策（耗时 {watch}）：{describe(goal)}')
         if changes:
             logger.info(f'状态变更：{changes}')
         # 每拍都推一次：远处敌人常只在补视野的展开帧里出现，等到移动反馈再推，界面就会漏掉这一拍的记忆与目标。
@@ -507,6 +510,7 @@ class Campaign(ModuleBase):
         接管到底（可选快速战斗、结算与回到野外），回到野外后继续下一拍，而不是结束任务。
         """
         logger.hr(self.config.task.command, level=1)
+        watch = Stopwatch()
         self.ensure_resources()
         self.prepare_client()
         self.check_main_story_page()
@@ -520,6 +524,8 @@ class Campaign(ModuleBase):
         if chart is None or not chart.supported or chart.road is None:
             logger.error('主线地图静态层不可用，不能执行移动。')
             raise RequestHumanTakeover
+        logger.info(f'准备阶段结束（资源、客户区、章节与小队定位）耗时 {watch}，'
+                    f'进入推图闭环：地图 {chart.size}，小队起点 {[round(float(v), 1) for v in snapshot["squad"]]}')
         from module.campaign.execution import CampaignExecutor
         from module.campaign.session import CampaignSession, InputBudgetExceeded
         from module.campaign.window import WindowChanged
@@ -533,9 +539,10 @@ class Campaign(ModuleBase):
         try:
             result = executor.run(snapshot)
         except (WindowChanged, InputBudgetExceeded, OSError, ValueError, RuntimeError, cv2.error) as exc:
-            logger.error(f'主线执行停止：{exc}')
+            logger.error(f'主线执行停止：{exc}（任务总耗时 {watch}）')
             raise RequestHumanTakeover from exc
-        logger.info(f'主线执行结束：{self.current_difficulty.upper()} 第 {chapter} 章；{result}')
+        logger.info(f'主线执行结束：{self.current_difficulty.upper()} 第 {chapter} 章；{result}；'
+                    f'任务总耗时 {watch}')
         logger.info(f'运行状态：{self.state.summary()}')
         if result['state'] == 'needs_review':
             raise RequestHumanTakeover
