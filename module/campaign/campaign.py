@@ -423,13 +423,14 @@ class Campaign(ModuleBase):
         if offscreen is not None:
             logger.info(f"小队离屏：画面边缘标记中心 {offscreen['center']}，朝向 {offscreen['direction']}°")
 
-    def plan_tick(self, snapshot):
+    def plan_tick(self, snapshot, advance=True):
         """一拍决策：把快照并进运行状态，按封锁刷新派生路网，选出下一个目标并打一行日志。
 
         不发送任何输入。返回目标描述或 None（静态层不可用）。
         派生路网必须在选目标之前刷新：封锁集合变了还用上一拍的切开图，可达性判的就是过期事实。
+        advance 为假用于同一拍内的补视野、复核帧与重新决策，不推进冷却计数（见 RunState.update）。
         """
-        changes = self.state.update(snapshot)
+        changes = self.state.update(snapshot, advance=advance)
         chart = self.ensure_chart(self.current_chapter)
         if chart is None or chart.road is None:
             logger.warning('静态层不可用，本拍不做决策。')

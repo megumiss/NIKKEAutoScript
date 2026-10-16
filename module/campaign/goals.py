@@ -163,18 +163,21 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
     if purpose == 'collectible':
         candidates = [item for item in chart.points if item['category'] == f'{state.difficulty}_collectible'
                       and not state.cooling(item['id'])]
+        # 先按分量过滤再截取行走距离预算，与 nearest_enemy 一致：先截再滤时，直线最近的几个若都在
+        # 光幕或墙的另一侧，同侧可达的收集品就永远轮不到。
+        home = cut.component(squad)
+        reachable = [item for item in candidates if home and cut.component(item['position']) == home]
         if goal is None:
+            nearest = sorted(reachable, key=lambda item: np.linalg.norm(np.asarray(item['position']) - squad))
             distances = [(walking_distance(cut.road, cut.regions, squad, item['position']), item)
-                         for item in sorted(candidates, key=lambda item: np.linalg.norm(
-                             np.asarray(item['position']) - squad))[:PLAN_CANDIDATES] if cut.component(squad)
-                         and cut.component(item['position']) == cut.component(squad)]
+                         for item in nearest[:PLAN_CANDIDATES]]
             distances = [item for item in distances if np.isfinite(item[0])]
             if distances:
                 distance, item = min(distances, key=lambda pair: pair[0])
                 goal = dict(kind='collectible', id=item['id'], position=item['position'],
                             distance=round(distance, 1), reason='nearest_annotated_collectible')
         rejected = [dict(id=item['id'], position=item['position'], reason='different_component')
-                    for item in candidates if cut.component(item['position']) != cut.component(squad)]
+                    for item in candidates if item not in reachable]
     else:
         candidates = [item for item in state.pending_enemies() if item['kind'] == 'normal']
         if goal is None:

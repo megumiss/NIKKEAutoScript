@@ -12,6 +12,9 @@ from module.logger import logger
 # 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。
 CAMPAIGN_TICK_BUDGET = 48
 TARGET_MOVES = 12
+# 复核站位上最多连看的紧凑帧数：箭头锚点、配准或检测偶发失手会让单帧不可信，换一帧往往就能看清；
+# 连看都不可信才算这次复核失败。
+REVIEW_FRAMES = 3
 
 
 def single_transfer_annotations(leg):
@@ -40,26 +43,34 @@ class CampaignExecutor:
         return any(not self.owner.state.is_observed(point) for point in path)
 
     def review_block(self, goal):
-        """到安全站位后只用新紧凑帧验证光幕；看不清不当成解封，也不消耗机关结果。"""
+        """到安全站位后只用新紧凑帧验证光幕；看不清不当成解封，也不消耗机关结果。
+
+        单帧不可信时原地换帧重看，最多 REVIEW_FRAMES 帧，帧间等待照常检查停止与窗口；
+        全部不可信才记一次复核失败并保留待复核，下一拍由目标选择决定是否交人工。
+        """
         mechanism = self.owner.state.pending_reviews.get(goal['id'])
-        snapshot = self.session.snapshot()
-        self.owner.plan_tick(snapshot)
         state = self.owner.state
-        record = state.blocks.get(goal['id'])
-        quad = panel_quad(snapshot)
-        trusted = (snapshot.get('localization') == 'accepted' and snapshot.get('barriers_observed', False)
-                   and record is not None and RunState._inside(quad, record['point']))
-        if not trusted:
+        for attempt in range(REVIEW_FRAMES):
+            if attempt:
+                self.session.pause(1)
+            snapshot = self.session.snapshot()
+            self.owner.plan_tick(snapshot, advance=False)
+            record = state.blocks.get(goal['id'])
+            quad = panel_quad(snapshot)
+            if (snapshot.get('localization') == 'accepted' and snapshot.get('barriers_observed', False)
+                    and record is not None and RunState._inside(quad, record['point'])):
+                break
+        else:
             state.penalize(f"review-{goal['id']}")
-            logger.warning(f"封锁 {goal['id']} 未进入可靠视野，保留待复核状态。")
+            logger.warning(f"封锁 {goal['id']} 连续 {REVIEW_FRAMES} 帧未进入可靠视野，保留待复核状态。")
             return
         state.pending_reviews.pop(goal['id'], None)
         if record['status'] == 'cleared':
             logger.info(f"封锁 {goal['id']} 已解除，机关 {mechanism or '未指定'}；派生路网已刷新。")
-            self.owner.plan_tick(self.session.snapshot(expanded=True))
+            self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
         else:
             logger.info(f"封锁 {goal['id']} 仍在，机关 {mechanism or '未指定'} 未解除此封锁。")
-            state.penalize(f"review-{goal['id']}")
+            state.penalize(f"review-{goal['id']}", failure=False)
 
     def execute(self, goal):
         """执行一个目标并回写结果；普通移动失败进入冷却，安全失败直接向外传播。"""
@@ -131,9 +142,9 @@ class CampaignExecutor:
                     self.session.identity(self.session.win.client())
                 goal = self.owner.plan_tick(snapshot)
                 if self.needs_expansion(goal, snapshot):
-                    self.owner.plan_tick(self.session.snapshot(expanded=True))
+                    self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
                     snapshot = self.session.snapshot()
-                    goal = self.owner.plan_tick(snapshot)
+                    goal = self.owner.plan_tick(snapshot, advance=False)
                 if goal is None or goal['kind'] == 'none':
                     logger.warning(f'主线本拍无可执行目标：{goal}')
                     return {'state': 'needs_review', 'goal': goal}

@@ -21,7 +21,7 @@ CURTAIN_MATCH_RADIUS = 48.
 # 判「它该出现在视野里却没检到」时要求封锁点离面板边界的余量：边界附近的检测不可靠，
 # 贴边的一帧不足以断定光幕已消失。
 BLOCK_VISIBLE_MARGIN = 24.
-# 同一目标连续失败到这个次数就判为暂时走不到，不再进入候选；冷却期按 tick 计。
+# 同一目标累计失败到这个次数，本次任务就不再选它（敌人同时标为暂时走不到）；冷却期按决策拍计。
 MAX_FAILURES = 3
 COOLDOWN_TICKS = 5
 
@@ -82,14 +82,17 @@ class RunState:
         self._sequence[kind] += 1
         return f'{kind}-{self._sequence[kind]}'
 
-    def update(self, snapshot):
+    def update(self, snapshot, advance=True):
         """把一帧快照并进状态，返回本帧的变更摘要。
 
         定位未被接受时直接返回：那种帧的底图坐标不可信，并进去会污染已记住的位置。
         屏障只在紧凑帧更新——展开面板的投影链与屏障标定不同源，展开帧的落点会整体偏，
         所以展开帧只用来补敌人与已观测区域。
+        advance 为假时只并入观测、不推进决策拍：移动闭环每走一步都要观测一次，同一拍内还有
+        补视野与复核帧，这些帧都推进的话，冷却会在下一个目标走到一半时就提前耗完。
         """
-        self.tick += 1
+        if advance:
+            self.tick += 1
         if snapshot.get('localization') != 'accepted':
             self.unlocated += 1
             return {'skipped': 'localization'}
@@ -285,10 +288,15 @@ class RunState:
         """只有共享闭环连续两次确认出口后才清掉该航段的失败记录。"""
         self.transfers.pop(self.transfer_key(leg), None)
 
-    def penalize(self, identifier):
-        """给目标记一次失败并进入冷却；失败到上限的敌人标为暂时走不到。"""
+    def penalize(self, identifier, failure=True):
+        """给目标记一次失败并进入冷却；失败到上限的敌人标为暂时走不到。
+
+        failure 为假时只冷却不计失败：用于「做成了但短期内不该再派」的情形（如复核确认光幕仍在），
+        否则它会占掉失败上限，让后续真正需要的复核被禁用。
+        """
         record = self.cooldowns.setdefault(identifier, {'failures': 0, 'until': 0})
-        record['failures'] += 1
+        if failure:
+            record['failures'] += 1
         record['until'] = self.tick + COOLDOWN_TICKS
         enemy = self.enemies.get(identifier)
         if enemy is not None:
@@ -299,9 +307,9 @@ class RunState:
         return record
 
     def cooling(self, identifier):
-        """目标是否还在冷却期内。"""
+        """目标是否暂不可选：还在冷却期内，或累计失败已到上限（本次任务不再选）。"""
         record = self.cooldowns.get(identifier)
-        return record is not None and self.tick < record['until']
+        return record is not None and (self.tick < record['until'] or record['failures'] >= MAX_FAILURES)
 
     def summary(self):
         """状态摘要，供每 tick 打一行日志与失败时留证。"""

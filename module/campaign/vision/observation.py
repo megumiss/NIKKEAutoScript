@@ -80,9 +80,11 @@ class CampaignObserver:
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
                         map=None, minimap=None, localization='unavailable', squad=None, enemies=[], objects=[],
                         barriers=[], blocks=[], mechanisms=[], barriers_observed=False, offscreen=None, viewport=None, roi_to_map=None,
-                        minimap_closed=self.minimap_closed(image))
+                        objects_observed=False, minimap_closed=self.minimap_closed(image))
         if objects:
-            snapshot['objects'] = self.observe_objects(image)
+            detected = self.observe_objects(image)
+            snapshot['objects'] = detected or []
+            snapshot['objects_observed'] = detected is not None
         snapshot['offscreen'] = self.observe_offscreen(image)
         if chapter != self.chapter:
             self.chapter, self.map_info, self.matcher = chapter, None, None
@@ -263,6 +265,9 @@ class CampaignObserver:
         """把屏障投影到地图并标记道路封锁；锚点优先小队箭头，其次视野中心。失败只告警。
 
         squad / viewport 是本帧的配准结果（见 barriers.project_barriers）。
+        barriers_observed 是运行状态层判光幕消失的唯一许可：只有本帧场景识别成功、且检到的每块光幕
+        都吸附上了道路才置真。识别失败或某块光幕没落上图时 blocks 会缺项，缺项只说明没落图，
+        不能当成「视野内该看见却没看见」。
         """
         chart = self.static_map()
         if chart is None or chart.model is not None or squad is None:
@@ -273,11 +278,12 @@ class CampaignObserver:
             projected = project_barriers(snapshot['objects'], image, squad, viewport,
                                          kinds=('barrier', 'ground_mechanism'))
             barriers = [item for item in projected if item['kind'] == 'barrier']
+            curtains = sum(item['state'] == 'curtain' for item in barriers)
             snapshot['barriers'] = barriers
             snapshot['blocks'] = mark_blocks(chart, barriers)
             snapshot['mechanisms'] = [dict(id=None, position=item['map'], source='scene_fallback')
                                       for item in projected if item['kind'] == 'ground_mechanism']
-            snapshot['barriers_observed'] = True
+            snapshot['barriers_observed'] = snapshot['objects_observed'] and len(snapshot['blocks']) == curtains
             self.last_barrier_error = None
         except (OSError, ValueError, KeyError, np.linalg.LinAlgError, cv2.error) as exc:
             message = str(exc)
@@ -287,7 +293,11 @@ class CampaignObserver:
 
 
     def observe_objects(self, image):
-        """客户区里的机关、电梯与屏障；模型缺类或推理不可用时只告警，不影响章节与定位。"""
+        """客户区里的机关、电梯与屏障；模型缺类或推理不可用时只告警并返回 None，不影响章节与定位。
+
+        失败返回 None 而不是空列表：调用方要据此区分「没识别」和「识别了但画面里没有」，
+        后者才能作为光幕消失的证据。
+        """
         try:
             return detect_objects(image)
         except (OSError, ValueError, KeyError, RuntimeError, cv2.error) as exc:
@@ -295,7 +305,7 @@ class CampaignObserver:
             if message != self.last_object_error:
                 logger.warning(f'场景目标识别不可用：{message}')
                 self.last_object_error = message
-            return []
+            return None
 
     def observe_offscreen(self, image):
         """小队离屏时画面边缘的头像标记；识别失败只告警，不影响其他字段。"""

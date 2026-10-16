@@ -222,7 +222,7 @@ class CampaignSession(NavigationSession):
         """移动反馈帧也累积敌人与封锁，下一步 A* 不沿用移动前的过期切开图。"""
         snapshot = self.owner.observer.observe(field, self.expected_identity, time.time())
         self.owner.last_snapshot = snapshot
-        self.owner.state.update(snapshot)
+        self.owner.state.update(snapshot, advance=False)
         if self.owner.cut.update(self.owner.state.blocking()):
             logger.info('移动反馈发现封锁变化，已刷新后续移动的切开路网。')
         return snapshot
