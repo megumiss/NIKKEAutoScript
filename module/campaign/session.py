@@ -175,7 +175,11 @@ class InputBudgetExceeded(RuntimeError):
 
 
 class CampaignInput:
-    """生产驱动代理：每次新手势先校验会话并扣预算，释放操作不受停止与失焦限制。"""
+    """生产驱动代理：每次新手势先校验会话并扣预算，释放操作不受停止与失焦限制。
+
+    这里也是「真正发出去过手势」的唯一记账点：小地图开合走的是 `device.click_xy`（未包装的原始驱动），
+    只经过 `before_input` 这道闸门、不开手势，所以不能算进 `session.gestures`。
+    """
 
     def __init__(self, session, handler):
         """只保存代理关系，不取得新驱动；驱动仍由任务调度器管理。"""
@@ -190,6 +194,8 @@ class CampaignInput:
         def send(*args, **kwargs):
             """发送前校验窗口、弹窗与预算，发送后任一次驱动失败都立即停止。"""
             self.session.before_input()
+            # 闸门放行之后才算一次真手势：只有它可能让小队移动或镜头平移（见 reuse_reason）。
+            self.session.gestures += 1
             result = value(*args, **kwargs)
             if getattr(self.handler, '_failures', 0):
                 raise WindowChanged(f'鼠标操作 {name} 发送失败。')
@@ -284,6 +290,9 @@ class CampaignSession(NavigationSession):
         self.win.handler = CampaignInput(self, self.raw_handler) if self.raw_handler is not None else None
         self.inputs = 0
         self.target_inputs = 0
+        # 真正发给游戏的手势数（点击／拖动／按下／移动）。inputs 把「只过闸门、不开手势」的小地图
+        # 开合也算进预算，所以判定画面有没有变过要用这一个（见 CampaignInput.send、reuse_reason）。
+        self.gestures = 0
         self.deadline = None
         self.popup_handling = False
         # 战斗接管中：准备弹窗不再是终态，允许会话自己点它上面的按钮。
@@ -297,6 +306,9 @@ class CampaignSession(NavigationSession):
         # 战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_registration）。
         self.reuse_squad = False
         self.last_registration = None
+        # 最近一次被接受的展开定位报告与当时的手势计数：navigate 每走一步都会重新观测小队，
+        # 而两次手势之间画面不会变，同一拍里的下一次观测直接复用（见 reusable_report）。
+        self.localized_report = None
         self.collectible_mode = owner.config.task.command == 'auto_main_collectible'
 
     def start(self):
@@ -485,11 +497,18 @@ class CampaignSession(NavigationSession):
         每次尝试的失败原因与量化指标由观察器的告警给出，这里只在成功时补一行：接受了哪一次尝试、
         道路重合度与小队坐标是多少、整段展开与定位花了多久——这一段的耗时是移动闭环的主要开销。
         成功那一帧上认出的敌人会一并并进运行状态（见 absorb_expanded）。
+        上一次被接受的定位之后没有再发过手势时，这一拍要的坐标与上次完全相同，直接复用而不展开面板
+        （见 reusable_report）：navigate 每走一步都会调用这里，而两步之间只有中间那次点击会改变画面。
         """
         self.check()
         watch = Stopwatch()
         field = self.await_field()
         self.remember_scene(field)
+        cached = self.reusable_report()
+        if cached is not None:
+            logger.info(f"沿用上一次被接受的展开地图定位：小队位置 {points_text(cached['position'])}，"
+                        f"上次配准之后没有再发过任何手势，不重新展开与配准，耗时 {watch}")
+            return cached
         goto.map_open(self.win, reset=True)
         error = None
         for attempt in range(LOCALIZE_RETRIES + 1):
@@ -511,6 +530,9 @@ class CampaignSession(NavigationSession):
                         f"道路重合度 {float(report['road_iou']):.3f}，"
                         f"面板上有 {len(report['enemy_markers'])} 个敌人标记，耗时 {watch}")
             self.absorb_expanded(panel, report)
+            self.localized_report = {'report': report, 'gestures': self.gestures}
+            self.remember_registration(report['position'], report.get('roi_to_map'),
+                                       list(panel.shape[1::-1]))
             return report
         logger.warning(f'展开地图定位连续 {LOCALIZE_RETRIES + 1} 次未通过，耗时 {watch}，按定位失败处理。')
         raise error
@@ -570,10 +592,11 @@ class CampaignSession(NavigationSession):
         logger.info(f'停稳等待结束（小队标记与道路都已稳定），耗时 {watch}')
 
     def snapshot(self, expanded=False):
-        """取得一拍业务观测；定位未被接受时换视野重试，展开只补记忆，返回前恢复紧凑地图。
+        """取得一拍业务观测；定位未被接受时沿用上次坐标或换视野重试，展开只补记忆，返回前恢复紧凑地图。
 
-        战斗结束后的第一帧允许沿用战斗前的小队坐标：战斗打断了视野与箭头，重新配准常只差一点
-        没过线，而战斗前后小队不会换位置（见 reuse_registration）。
+        战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_reason）；此外小队只在收到点击时才
+        移动、镜头只在收到拖动时才平移，所以上一次被接受的定位之后没有再发过手势时同样直接沿用：
+        紧凑面板配准没过线时重新展开大地图只会得到同一个坐标，白花一次开合与几秒配准。
         每帧都打一行观测摘要（见 describe_snapshot）与这一段耗时：推图的等待绝大部分花在这里。
         """
         self.check()
@@ -583,12 +606,14 @@ class CampaignSession(NavigationSession):
         field = self.win.client()
         self.identity(field)
         snapshot = self.owner.observer.observe(field, self.expected_identity, time.time())
-        if located(snapshot):
-            self.remember_registration(snapshot)
-        elif self.reuse_squad:
-            snapshot = self.reuse_registration(snapshot)
-        else:
-            snapshot = self.retry_localization(snapshot)
+        if not located(snapshot):
+            why = self.reuse_reason()
+            snapshot = (self.reuse_registration(snapshot, why) if why is not None
+                        else self.retry_localization(snapshot))
+        if snapshot.get('localization') == 'accepted':
+            # 只记刚配准成功的坐标：沿用帧的坐标本来就是这个记录，不需要再写一遍。
+            self.remember_registration(snapshot['squad'], snapshot.get('roi_to_map'),
+                                       snapshot.get('coverage_size'))
         self.owner.last_snapshot = snapshot
         if expanded:
             self.win.reset_minimap(expanded=False, reset=False)
@@ -683,20 +708,41 @@ class CampaignSession(NavigationSession):
         self.move(point)
         return True
 
-    def remember_registration(self, snapshot):
-        """记下最近一次被接受的定位，供战斗结束后沿用。"""
-        self.last_registration = dict(squad=list(snapshot['squad']),
-                                      roi_to_map=snapshot.get('roi_to_map'),
-                                      coverage_size=snapshot.get('coverage_size'))
+    def remember_registration(self, squad, roi_to_map, coverage_size):
+        """记下刚被接受的小队坐标与它的配准矩阵，供之后没再发过手势的帧直接沿用。
 
-    def reuse_registration(self, snapshot):
-        """战后第一帧定位未接受时，沿用战斗前记下的小队坐标。
+        squad / roi_to_map / coverage_size 必须来自同一帧、同一个面板的配准结果：沿用时会整组套用，
+        坐标系不配套会把「本帧看过哪里」算到别处（见 run_state.panel_quad）。
+        同时记下当时的手势计数——小队只在收到点击时才移动、镜头只在收到拖动时才平移，
+        所以「之后没再发过手势」等价于「这份坐标一定还成立」（见 reuse_reason）。
+        """
+        self.last_registration = dict(squad=list(squad), roi_to_map=roi_to_map,
+                                      coverage_size=coverage_size, gestures=self.gestures)
 
-        战斗前后小队不会换位置，而战斗打断了视野与箭头，重新配准往往只差一点没过线；
-        沿用旧坐标比再花十几秒换视野重试更贴近事实。只能沿用一帧：之后的观测仍要求重新配准，
-        否则一次沿用会在整段任务里一直传下去。没有记过坐标时原样返回，交给正常重试路径。
+    def reuse_reason(self):
+        """本帧重新配准未被接受时，返回可以沿用上一次定位的原因；不能沿用则返回 None。
+
+        两种情况可以不重新配准：一是战斗刚结束（reuse_squad）——战斗打断了视野与箭头，重新配准
+        往往只差一点没过线，而战斗前后小队不会换位置；二是上一次被接受的定位之后没有再发过任何
+        手势，那么小队与镜头都不可能动过。后一种在小地图配准常年压在门槛下的章节里是常态：
+        重新展开大地图配准只会得到同一个坐标，白花一次开合与几秒配准。
+        返回的原因是给日志看的标识（'battle' / 'unchanged'），不参与判定。
+        """
+        if self.reuse_squad:
+            return 'battle'
+        record = self.last_registration
+        if record is not None and record.get('gestures') == self.gestures:
+            return 'unchanged'
+        return None
+
+    def reuse_registration(self, snapshot, why):
+        """定位未被接受时沿用上一次记下的小队坐标，只补小队位置与配准矩阵。
+
+        沿用帧只提供小队位置（供本拍选目标），本帧的视野与标记不并进运行状态（见 RunState.update）：
+        展开面板与紧凑面板的坐标系不同源，混着用会把封锁与已观测区域算偏。
+        没有记过坐标时原样返回，交给正常重试路径。
         结算后存在强制位移／传送的关卡（EX 等）不适用这条假设，那种帧的坐标会错一拍，
-        下一帧要求重新配准把它兜回来。
+        下一次真的需要配准时由 retry_localization 把它兜回来。
         """
         self.reuse_squad = False
         if self.last_registration is None:
@@ -704,8 +750,23 @@ class CampaignSession(NavigationSession):
         snapshot = dict(snapshot, localization='reused', squad=list(self.last_registration['squad']),
                         roi_to_map=self.last_registration['roi_to_map'],
                         coverage_size=self.last_registration['coverage_size'])
-        logger.warning(f"战后沿用战斗前的小队位置 {points_text(snapshot['squad'])}（这一帧未能重新定位）。")
+        reason = '战斗刚结束，画面上还是战斗前那一帧' if why == 'battle' \
+            else '上次配准之后没有再发过任何手势'
+        logger.warning(f"沿用上一次被接受的小队位置 {points_text(snapshot['squad'])}"
+                       f"（{reason}，本帧重新配准未通过）。")
         return snapshot
+
+    def reusable_report(self):
+        """返回可以直接沿用的展开定位报告；没有成功过、或之后已经发过手势时返回 None。
+
+        展开面板的 roi_to_map 与紧凑面板不同源，所以只缓存 observe 自己在展开形态下配准成功的报告；
+        navigate 每一步都会重新观测小队，而两次手势之间画面不会变，复用不会漏掉任何新信息。
+        返回副本，避免调用方改动缓存里的报告。
+        """
+        cached = self.localized_report
+        if cached is None or cached['gestures'] != self.gestures:
+            return None
+        return dict(cached['report'])
 
     def pan_expanded(self, direction):
         """在展开面板里沿客户区方向拖一次换视野；起止点以面板中心对称，拖动经输入闸门发送。

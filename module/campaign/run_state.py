@@ -16,7 +16,7 @@ from module.logger import logger
 ENEMY_MERGE_RADIUS = 25.
 # 已观测区域的粗网格边长，只用来回答「这块地方看过没有」，不参与路径规划。
 OBSERVED_CELL = 32
-# 可用的定位状态：accepted 是本帧配准被接受；reused 是战斗结束后沿用战斗前的坐标
+# 可用的定位状态：accepted 是本帧配准被接受；reused 是沿用上一次被接受的坐标
 # （见 session.reuse_registration），两者都给了可信的小队底图坐标。
 LOCALIZED = ('accepted', 'reused')
 # 本帧检到的光幕与已记录封锁的配对距离：屏障投影实测中位约 6、p90 约 16 底图像素，
@@ -31,7 +31,7 @@ COOLDOWN_TICKS = 5
 
 
 def located(snapshot):
-    """本帧是否给出了可用的小队底图坐标：配准被接受，或战后沿用了战斗前的坐标。"""
+    """本帧是否给出了可用的小队底图坐标：配准被接受，或沿用了上一次被接受的坐标。"""
     return snapshot.get('localization') in LOCALIZED
 
 
@@ -68,7 +68,7 @@ def describe_changes(changes):
     if changes.get('skipped') == 'localization':
         return '本章地图定位不可信，未并入运行状态'
     if changes.get('reused') == 'localization':
-        return '沿用战斗前的坐标，只取小队位置，视野与敌人未并入状态'
+        return '沿用上一次被接受的定位，只取小队位置，本帧视野与敌人未并入状态'
     parts = []
     if changes.get('observed_cells'):
         parts.append(f"新覆盖 {changes['observed_cells']} 格地图")
@@ -134,8 +134,9 @@ class RunState:
             self.unlocated += 1
             return {'skipped': 'localization'}
         if snapshot.get('localization') == 'reused':
-            # 沿用战斗前坐标的帧只提供小队位置（供本拍选目标），本帧的视野与标记不并进状态：
-            # 视野四边形是战斗前那一帧的，拿它判断「这块看没看到」会误判封锁与已观测区域。
+            # 沿用帧只提供小队位置（供本拍选目标），本帧的视野与标记不并进状态：
+            # 视野四边形来自记下坐标的那一帧，而且沿用帧与它常常是两个坐标系，
+            # 拿它判断「这块看没看到」会误判封锁与已观测区域。
             return {'reused': 'localization'}
         quad = panel_quad(snapshot)
         changes = {'observed_cells': self._absorb_observed(quad)}

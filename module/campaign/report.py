@@ -30,7 +30,7 @@ GOAL_REASONS = {
 REJECT_REASONS = {'different_component': '不在同一片可达区域', 'no_road_route': '没有可走的道路',
                   'beyond_candidate_budget': '排在候选预算之外'}
 # 一帧观测的可信度。
-LOCALIZATION = {'accepted': '已确认', 'reused': '沿用战斗前的坐标', 'needs_review': '待复核',
+LOCALIZATION = {'accepted': '已确认', 'reused': '沿用上一次定位', 'needs_review': '待复核',
                 'unavailable': '不可用'}
 MINIMAP_MODES = {'compact': '紧凑', 'expanded': '展开'}
 # 光幕封锁的三态。

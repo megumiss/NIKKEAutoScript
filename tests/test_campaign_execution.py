@@ -554,7 +554,7 @@ class SessionTests(unittest.TestCase):
         self.handler.mouse_click.assert_not_called()
 
     def test_post_battle_frame_reuses_previous_squad_once(self):
-        """战斗后第一帧定位未接受时沿用战斗前坐标，只沿用一帧，之后仍走换视野重试。"""
+        """战斗后第一帧定位未接受时沿用战斗前坐标；之后发过手势就必须重新配准。"""
         self.owner.observer.observe = Mock(return_value=snapshot_fixture())
         self.session.win.reset_minimap = Mock()
         self.session.pause = Mock()
@@ -570,9 +570,70 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(snapshot['squad'], [40, 96])
         self.assertFalse(self.session.reuse_squad)
 
+        # 战后许可是给「战斗打断视野」那一下的；只要之后又发过手势，小队就可能已经移动，
+        # 必须重新配准而不是继续沿用。
+        self.session.win.handler.mouse_click(100, 200)
         reused = self.session.snapshot()
         self.assertEqual(reused['localization'], 'needs_review')
         self.assertGreaterEqual(self.handler.mouse_swipe.call_count, 1)
+
+    def test_snapshot_reuses_accepted_registration_while_no_gesture_was_sent(self):
+        """两次手势之间小队与镜头都不会动：配准没过线时沿用上次坐标，不再展开大地图与换视野重试。"""
+        self.owner.observer.observe = Mock(return_value=snapshot_fixture())
+        self.session.win.reset_minimap = Mock()
+        self.session.pause = Mock()
+        self.session.snapshot()
+
+        failed = snapshot_fixture()
+        failed.update(localization='needs_review', squad=None)
+        self.owner.observer.observe = Mock(return_value=failed)
+        snapshot = self.session.snapshot()
+        self.assertEqual(snapshot['localization'], 'reused')
+        self.assertEqual(snapshot['squad'], [40, 96])
+        self.handler.mouse_swipe.assert_not_called()
+        self.assertEqual(self.session.win.reset_minimap.call_args_list,
+                         [call(expanded=False, reset=False)] * 2)
+
+    def test_minimap_switch_gate_does_not_invalidate_reuse(self):
+        """小地图开合只过输入闸门、不开手势，不会让小队或镜头移动，不能把已接受的坐标作废。"""
+        self.owner.observer.observe = Mock(return_value=snapshot_fixture())
+        self.session.win.reset_minimap = Mock()
+        self.session.pause = Mock()
+        self.session.snapshot()
+        # 真实开合流程会用 before_input 当点击前的闸门（见 CampaignWindow.reset_minimap）：
+        # 它会推进 inputs 与 target_inputs 预算，但画面并没有被改变。
+        self.session.before_input()
+        failed = snapshot_fixture()
+        failed.update(localization='needs_review', squad=None)
+        self.owner.observer.observe = Mock(return_value=failed)
+        snapshot = self.session.snapshot()
+        self.assertEqual(snapshot['localization'], 'reused')
+        self.assertGreater(self.session.inputs, 0)
+
+    def test_move_observation_reuses_report_while_no_gesture_was_sent(self):
+        """navigate 每步都重新观测小队；两步之间没发过手势时直接复用报告，不再展开面板与配准。"""
+        self.session.remember_scene = Mock()
+        panel = np.zeros((462, 486, 3), np.uint8)
+        self.session.win.capture = Mock(return_value=panel)
+        self.session.win.reset_minimap = Mock()
+        self.session.pause = Mock()
+        self.session.absorb_expanded = Mock()
+        report = dict(status='accepted', position=[40, 96], roi_to_map=np.eye(3).tolist(),
+                      road_iou=.9, iou=.9, player_roi=[243, 231], position_kind='squad')
+        self.session.localizer.locate = Mock(return_value=dict(report))
+        with patch('module.campaign.session.goto.normal_enemy_markers', return_value=[]):
+            first = self.session.observe()
+            self.assertEqual(self.session.localizer.locate.call_count, 1)
+            self.assertEqual(first['position'], [40, 96])
+
+            second = self.session.observe()
+            self.assertEqual(self.session.localizer.locate.call_count, 1)
+            self.assertEqual(second['position'], [40, 96])
+
+            # 中间发过一次手势：小队可能已经移动，必须重新展开面板配准。
+            self.session.win.handler.mouse_click(100, 200)
+            self.session.observe()
+            self.assertEqual(self.session.localizer.locate.call_count, 2)
 
     def test_localizer_validates_geometry_and_registration(self):
         """原始展开 ROI 之外的尺寸及未接受的配准均不可用于点击换算。"""
