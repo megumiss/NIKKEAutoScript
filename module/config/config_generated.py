@@ -62,6 +62,7 @@ class GeneratedConfig:
 
     # Group `PCClientInfo`
     PCClientInfo_Client = 'intl'  # intl, hmt
+    PCClientInfo_GameWorld = 'auto'  # auto, global, jp, na, kr, sea
     PCClientInfo_AutoFillName = True
     PCClientInfo_LauncherPath = None
     PCClientInfo_LauncherTitleName = None
@@ -123,6 +124,11 @@ class GeneratedConfig:
     ArenaShop_AutoFillCodeManual = False
     ArenaShop_CodeManualBuyThreshold = 3000
     ArenaShop_priority = None  # ELECTRIC_CODE, FIRE_CODE, IRON_CODE, WATER_CODE, WIND_CODE, MANUAL_SELECTION_BOX, ORNAMENT, WEAPON
+
+    # Group `BodyLabelShop`
+    BodyLabelShop_enable = False
+    BodyLabelShop_priority = None  # ABNORMAL, ELYSION, MISSILIS, PILGRIM, TETRA, ATTACKER, DEFENDER, SUPPORTER
+    BodyLabelShop_BuyCount = 1  # 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 
     # Group `RubbishShop`
     RubbishShop_priority = 'GEM > CORE_DUST_CASE'  # GEM, CORE_DUST_CASE, CREDIT_CASE, CREDIT, BATTLE_DATA_SET_CASE, GROWTH_SET, ORNAMENT, GENERAL_TICKET, ELYSION_TICKET, MISSILIS_TICKET, TETRA_TICKET, PILGRIM_TICKET, ABNORMAL_TICKET

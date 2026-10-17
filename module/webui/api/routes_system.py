@@ -71,6 +71,28 @@ def _read_notice_ids() -> set:
     return {item.strip() for item in raw.split(',') if item.strip()}
 
 
+def _parse_notice_items(raw) -> list:
+    """History entries nested under an announcement (`items` in the yaml), used
+    by the announcement center to render the collapsible update history.  Rows
+    without content are dropped so an empty section never reaches the client."""
+    if not isinstance(raw, list):
+        return []
+    items = []
+    for row in raw:
+        if not isinstance(row, dict):
+            continue
+        content = str(row.get('content') or '')
+        if not content:
+            continue
+        items.append({
+            'id': str(row.get('id') or ''),
+            'date': str(row.get('date') or ''),
+            'title': str(row.get('title') or ''),
+            'content': content,
+        })
+    return items
+
+
 def _load_announcements():
     """Announcements ship with the repo in config/notices.yaml. Startup
     update hard-resets tracked files to upstream, and this is read from disk
@@ -104,6 +126,7 @@ def _load_announcements():
             'title': str(row.get('title') or ''),
             'type': notice_type if notice_type in ANNOUNCEMENT_TYPES else 'info',
             'content': str(row.get('content') or ''),
+            'items': _parse_notice_items(row.get('items')),
             'pinned': bool(row.get('pinned')),
             'read': notice_id in read,
         })

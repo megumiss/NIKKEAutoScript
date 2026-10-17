@@ -1,5 +1,6 @@
 # 公告列表，新的公告追加到文件顶部
 # pinned: true 的公告在客户端列表顶部置顶显示，可同时置顶多条；组内仍按文件顺序（新的在前）
+# 次要公告不再单列：移进「更新历史」条目的 items（日期倒序），正文保持原公告原文
 - id: notice_20260924
   date: 2026-09-24
   title: 求个 Star
@@ -11,24 +12,114 @@
     你的 Star 是我持续更新的动力。
     
     如果有问题或需求，欢迎到 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">Issues</a> 反馈。
-- id: notice_20260923
-  date: 2026-09-23
-  title: OCR 新增 GPU 加速支持
+- id: notice_history
+  date: 2026-10-18
+  title: 更新历史
   type: info
-  content: |
-    <b>PaddleOCR 现已支持 NVIDIA GPU 加速</b>
+  pinned: true
+  items:
+    - id: notice_20261018
+      date: 2026-10-18
+      title: 新增躯体标签商店
+      content: |
+        <b>日常 → 商店 新增「躯体标签商店」设置</b>
+        购买每日折扣通用主机，默认关闭。
 
-    <b>使用方法</b>
-    1. 进入 NKAS → 部署页面，将 OcrDevice 改为 gpu；
-    2. 完全退出并重新打开 nkas.exe，启动器会自动把 paddle 包切换为 GPU 版（约 2~3GB，请耐心等待）；
-    3. 网页内重启无效，必须完全退出程序再启动。
+        <b>购买设置</b>
+        购买类型可多选，未选择或折扣商品类型不匹配时跳过，不购买原价商品。
+    - id: notice_20261015
+      date: 2026-10-15
+      title: 新增游戏区服设置
+      content: |
+        <b>NKAS → PC客户端 → PC端设置 新增「游戏区服」选项</b>
 
-    <b>环境要求</b>
-    需要 NVIDIA 显卡且驱动支持 CUDA >= 11.8；CUDA 变体（PaddleCuda）默认 auto 自动检测，RTX 50 系列显卡请使用 cu129，也可手动指定 cu126 / cu118。
+        <b>功能说明</b>
+        在启动游戏本体前，自动把国际服客户端的所属区服切换为所选区服（全球 / 日服 / 美服 / 韩服 / 东南亚），多区服账号无需再手动选服。
 
-    <b>注意事项</b>
-    1. 没有 N 卡或不确定的用户请保持 cpu，默认 cpu 即可正常使用；
-    2. 若启用后提示 GPU 不可用，启动器会在 OCR 初始化前拦截并提示，按提示改回 cpu 或重新安装依赖即可。
+        <b>注意事项</b>
+        1. 默认为「自动」：不修改区服，沿用游戏内上次的选择；
+        2. 游戏本体已经打开时会直接跳过，本次不生效；
+        3. 港澳台客户端只有单区服，固定为「自动」。
+    - id: notice_20260923
+      date: 2026-09-23
+      title: OCR 新增 GPU 加速支持
+      content: |
+        <b>PaddleOCR 现已支持 NVIDIA GPU 加速</b>
+
+        <b>使用方法</b>
+        1. 进入 NKAS → 部署页面，将 OcrDevice 改为 gpu；
+        2. 完全退出并重新打开 nkas.exe，启动器会自动把 paddle 包切换为 GPU 版（约 2~3GB，请耐心等待）；
+        3. 网页内重启无效，必须完全退出程序再启动。
+
+        <b>环境要求</b>
+        需要 NVIDIA 显卡且驱动支持 CUDA >= 11.8；CUDA 变体（PaddleCuda）默认 auto 自动检测，RTX 50 系列显卡请使用 cu129，也可手动指定 cu126 / cu118。
+
+        <b>注意事项</b>
+        1. 没有 N 卡或不确定的用户请保持 cpu，默认 cpu 即可正常使用；
+        2. 若启用后提示 GPU 不可用，启动器会在 OCR 初始化前拦截并提示，按提示改回 cpu 或重新安装依赖即可。
+    - id: notice_20260917
+      date: 2026-09-17
+      title: 增加点击坐标随机偏移
+      content: |
+        <b>普通按钮点击现已增加坐标随机偏移</b>
+        默认开启，偏移 5 像素。
+
+        <b>设置入口</b>
+        NKAS → 优化设置 → 点击随机偏移，填写像素值即可。
+
+        <b>注意事项</b>
+        当前版本可能存在某些页面无法正常点击，将「点击随机偏移」设为 0 即可关闭偏移。
+    - id: notice_20260903
+      date: 2026-09-03
+      title: 修复后台模式滑动问题
+      content: |
+        <b>后台模式滑动问题已修复</b>
+        已修复后台模式下的滑动问题，模拟室超频、商店、珍藏品等已正常
+        联动小游戏PC端因为只能用键盘控制，所以在运行时会短暂将游戏拉起到前台
+    - id: notice_20260822
+      date: 2026-08-22
+      title: 调度设置（BETA）
+      content: |
+        <b>新增调度设置页面，集中管理所有任务的执行时间与启用状态</b>
+        入口：左侧任务栏 → 调度设置（BETA）。
+
+        <b>功能一览</b>
+        统一查看/修改每个任务的执行周期（每日/每周/每月）、执行时间和启用开关；支持勾选多个任务批量设置周期与时间；点击任务名可直接跳转到该任务的设置页。
+
+        <b>使用建议</b>
+        每日任务建议保持同一时间：到点后按优先级一次跑完。分散到不同时间会打乱执行顺序，可能导致漏领奖励；需要一天跑多次的任务再单独添加时间。
+
+        <b>注意事项</b>
+        该功能处于 BETA 阶段，有问题欢迎到 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">GitHub Issues</a> 反馈。
+    - id: notice_20260819
+      date: 2026-08-19
+      title: 妮游社自动登录获取 Cookie
+      content: |
+        <b>妮游社 Cookie 现已支持一键登录自动获取</b>
+        无需再手动复制 Cookie：妮游社 → Cookie → 点击「一键登录」，脚本会自动完成登录，并自动填写 Cookie、XCommonParams 和 Cookie 过期时间。
+
+        <b>使用前准备</b>
+        在 NKAS 设置-账号设置 中填写 LiPass 账号和密码。
+
+        <b>注意事项</b>
+        登录过程中如出现滑块验证码，在弹窗中的图片上拖动完成即可。首次使用会自动安装 playwright，本机没有 Chrome/Edge 时会自动下载 chromium，Docker 环境亦可使用。
+    - id: notice_20260816
+      date: 2026-08-16
+      title: 妮游社 Cookie 自动续期
+      content: |
+        <b>妮游社 Cookie 现已支持自动续期</b>
+        Cookie 临近过期时任务会自动续期，无需再手动更新 Cookie。
+
+        <b>开启方法</b>
+        妮游社 → Cookie → 勾选「自动续期（BETA）」，并在 NKAS 设置-账号设置 中填写 LiPass 账号（只填写账号即可）。
+
+        <b>注意事项</b>
+        Cookie 一旦过期将无法续期，请保持任务正常运行。首次续期会自动安装 playwright，Docker 用户还会下载 chromium。
+    - id: notice_20260813
+      date: 2026-08-13
+      title: 剧情活动提醒
+      content: |
+        <b>本次剧情活动启用了新的自动推图逻辑，有问题请反馈</b>
 - id: notice_20260918
   date: 2026-09-18
   title: 新增虚拟鼠标控制方式
@@ -61,8 +152,9 @@
 
     <b>使用方法（ParsecVDD，推荐）</b>
     1. 安装官方 ParsecVDD 驱动：<a href="https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe" target="_blank">ParsecVDisplay-v0.45-setup.exe</a>
-    2. 进入 NKAS → PC 客户端 → 虚拟屏幕，开启「启用VDD虚拟屏幕」（开启时会自动打开多屏幕模式），「虚拟屏幕类型」选择 ParsecVDD；
-    3. 保持「自动管理VDD屏幕」开启（默认开启）：任务启动时会自动创建虚拟屏并校正为 1080x1920 竖屏、自动定位屏幕序号，任务结束后自动关闭，无需手动设置分辨率和目标屏幕。
+    2. 安装完成后右键任务栏的 ParsecDisplay 图标，取消勾选「选项 → 开机启动」，再点击「退出」；
+    3. 进入 NKAS → PC 客户端 → 虚拟屏幕，开启「启用VDD虚拟屏幕」（开启时会自动打开多屏幕模式），「虚拟屏幕类型」选择 ParsecVDD；
+    4. 保持「自动管理VDD屏幕」开启（默认开启）：任务启动时会自动创建虚拟屏并校正为 1080x1920 竖屏、自动定位屏幕序号，任务结束后自动关闭，无需手动设置分辨率和目标屏幕。
 
     <b>MttVDD（旧方案）</b>
     1. 安装官方 MttVDD 驱动：<a href="https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe" target="_blank">Virtual.Display.Driver-v25.05.03-setup-x64.exe</a>
@@ -73,27 +165,6 @@
     - 开启「启用VDD虚拟屏幕」后，「游戏窗口目标屏幕」无需手动选择，屏幕序号在任务启动时自动定位；
     - 「手动管理VDD屏幕」下的「启动虚拟屏幕 / 禁用虚拟屏幕」按钮用于手动测试驱动是否可用，或在自动管理未生效时手动控制屏幕状态，旁边的「虚拟屏幕驱动状态」可查看驱动安装与屏幕启用情况；
     - 原来为 1080P 开启的「旋转屏幕」可以关闭了。
-- id: notice_20260917
-  date: 2026-09-17
-  title: 增加点击坐标随机偏移
-  type: info
-  content: |
-    <b>普通按钮点击现已增加坐标随机偏移</b>
-    默认开启，偏移 5 像素。
-
-    <b>设置入口</b>
-    NKAS → 优化设置 → 点击随机偏移，填写像素值即可。
-
-    <b>注意事项</b>
-    当前版本可能存在某些页面无法正常点击，将「点击随机偏移」设为 0 即可关闭偏移。
-- id: notice_20260903
-  date: 2026-09-03
-  title: 修复后台模式滑动问题
-  type: info
-  content: |
-    <b>后台模式滑动问题已修复</b>
-    已修复后台模式下的滑动问题，模拟室超频、商店、珍藏品等已正常
-    联动小游戏PC端因为只能用键盘控制，所以在运行时会短暂将游戏拉起到前台
 - id: notice_202609012
   date: 2026-09-01
   title: PC 客户端新增「控制方案」选项：支持后台控制
@@ -127,54 +198,6 @@
     感谢群友 @不会起名字 的大力支持
 
     具体使用请查看教程：<a href="https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device" target="_blank">https://nkas.megumiss.top/wiki/#/zh-cn/Usage-Guide-Physical-Device</a> 。
-- id: notice_20260822
-  date: 2026-08-22
-  title: 调度设置（BETA）
-  type: info
-  content: |
-    <b>新增调度设置页面，集中管理所有任务的执行时间与启用状态</b>
-    入口：左侧任务栏 → 调度设置（BETA）。
-
-    <b>功能一览</b>
-    统一查看/修改每个任务的执行周期（每日/每周/每月）、执行时间和启用开关；支持勾选多个任务批量设置周期与时间；点击任务名可直接跳转到该任务的设置页。
-
-    <b>使用建议</b>
-    每日任务建议保持同一时间：到点后按优先级一次跑完。分散到不同时间会打乱执行顺序，可能导致漏领奖励；需要一天跑多次的任务再单独添加时间。
-
-    <b>注意事项</b>
-    该功能处于 BETA 阶段，有问题欢迎到 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">GitHub Issues</a> 反馈。
-- id: notice_20260819
-  date: 2026-08-19
-  title: 妮游社自动登录获取 Cookie
-  type: info
-  content: |
-    <b>妮游社 Cookie 现已支持一键登录自动获取</b>
-    无需再手动复制 Cookie：妮游社 → Cookie → 点击「一键登录」，脚本会自动完成登录，并自动填写 Cookie、XCommonParams 和 Cookie 过期时间。
-
-    <b>使用前准备</b>
-    在 NKAS 设置-账号设置 中填写 LiPass 账号和密码。
-
-    <b>注意事项</b>
-    登录过程中如出现滑块验证码，在弹窗中的图片上拖动完成即可。首次使用会自动安装 playwright，本机没有 Chrome/Edge 时会自动下载 chromium，Docker 环境亦可使用。
-- id: notice_20260816
-  date: 2026-08-16
-  title: 妮游社 Cookie 自动续期
-  type: info
-  content: |
-    <b>妮游社 Cookie 现已支持自动续期</b>
-    Cookie 临近过期时任务会自动续期，无需再手动更新 Cookie。
-
-    <b>开启方法</b>
-    妮游社 → Cookie → 勾选「自动续期（BETA）」，并在 NKAS 设置-账号设置 中填写 LiPass 账号（只填写账号即可）。
-
-    <b>注意事项</b>
-    Cookie 一旦过期将无法续期，请保持任务正常运行。首次续期会自动安装 playwright，Docker 用户还会下载 chromium。
-- id: notice_20260813
-  date: 2026-08-13
-  title: 剧情活动提醒
-  type: info
-  content: |
-    <b>本次剧情活动启用了新的自动推图逻辑，有问题请反馈</b>
 - id: notice_20260806
   date: 2026-08-06
   title: 全新版本更新

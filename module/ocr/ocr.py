@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import time
@@ -45,6 +46,7 @@ class Ocr:
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
         text_color_preprocess: Optional[Tuple[float, int, float]] = None,
+        log_level: int = logging.INFO,
     ):
         """
         Args:
@@ -52,12 +54,14 @@ class Ocr:
             lang (str): 'ch' , 'en' or 'num'.
             model_type (str): 'mobile' or 'server'
             name (str):
+            log_level (int): OCR 识别结果的日志级别，默认 INFO。
             text_color (tuple/list/dict | None): 文字颜色（RGB）或 HSV 范围。
             text_color_tolerance (tuple | None): HSV 容差 (H, S, V)。
                 不传则不启用 HSV 颜色筛选。
             text_color_preprocess (tuple | None): 文本预处理参数
                 (mask_soften_sigma, mask_expand_threshold, upscale_blur_sigma)。
         """
+        self.log_level = log_level
         self.name = str(buttons) if isinstance(buttons, Button) else name
         self._buttons = buttons
         self.model_type = model_type
@@ -333,7 +337,7 @@ class Ocr:
 
         elapsed = float2str(time.time() - start_time)
         text = str(processed_result['text']).replace('\n', ' ')
-        logger.info(f'OCR {self.name} {elapsed}s: {text}')
+        logger.log(self.log_level, f'OCR {self.name} {elapsed}s: {text}')
 
         return processed_result
 
@@ -436,6 +440,7 @@ class Digit(Ocr):
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
         text_color_preprocess: Optional[Tuple[float, int, float]] = None,
+        log_level: int = logging.INFO,
     ):
         super().__init__(
             buttons,
@@ -445,6 +450,7 @@ class Digit(Ocr):
             text_color=text_color,
             text_color_tolerance=text_color_tolerance,
             text_color_preprocess=text_color_preprocess,
+            log_level=log_level,
         )
 
     def after_process(self, result):
@@ -500,6 +506,7 @@ class DigitCounter(Ocr):
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
         text_color_preprocess: Optional[Tuple[float, int, float]] = None,
+        log_level: int = logging.INFO,
     ):
         super().__init__(
             buttons,
@@ -509,6 +516,7 @@ class DigitCounter(Ocr):
             text_color=text_color,
             text_color_tolerance=text_color_tolerance,
             text_color_preprocess=text_color_preprocess,
+            log_level=log_level,
         )
 
     def after_process(self, result):
@@ -560,6 +568,7 @@ class Duration(Ocr):
         text_color: Optional[TextColorInput] = None,
         text_color_tolerance: Optional[Tuple[int, int, int]] = None,
         text_color_preprocess: Optional[Tuple[float, int, float]] = None,
+        log_level: int = logging.INFO,
     ):
         super().__init__(
             buttons,
@@ -569,6 +578,7 @@ class Duration(Ocr):
             text_color=text_color,
             text_color_tolerance=text_color_tolerance,
             text_color_preprocess=text_color_preprocess,
+            log_level=log_level,
         )
 
     def after_process(self, result):

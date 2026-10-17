@@ -486,7 +486,7 @@
     },
     "VddType": {
       "name": "Virtual Display Type",
-      "help": "ParsecVDD (recommended): just install the official ParsecVDD driver manually and it is ready to use https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe;\nMttVDD: install the official MttVDD driver manually https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe. After installing the driver, open the system display settings, select the new screen that appears, and set its resolution to 1920x1080 in portrait orientation.",
+      "help": "ParsecVDD (recommended): install the official ParsecVDD driver manually https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe . After installing, right-click the ParsecDisplay icon in the taskbar, untick \"Options -> Run on startup\" and click \"Exit\";\nMttVDD: install the official MttVDD driver manually https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe. After installing the driver, open the system display settings, select the new screen that appears, and set its resolution to 1920x1080 in portrait orientation.",
       "parsecvdd": "ParsecVDD",
       "mttvdd": "MttVDD"
     },
@@ -505,6 +505,16 @@
       "help": "Launcher and game title/process will be auto-filled based on selected client. Clear related launcher/game title/process settings before switching.",
       "intl": "International",
       "hmt": "Hong Kong/Taiwan"
+    },
+    "GameWorld": {
+      "name": "Game World",
+      "help": "Before launching the game, switch the intl client's world to the selected one, so multi-world accounts no longer need to pick a server manually.\nOnly applied while the game is not running; skipped when the game is already open. The HMT client has a single world and stays on Auto.\nAuto: keep the world's last in-game selection.",
+      "auto": "Auto",
+      "global": "Global (GLOBAL)",
+      "jp": "Japan (JAPAN)",
+      "na": "North America (NA)",
+      "kr": "Korea (KOREA)",
+      "sea": "Southeast Asia (SEA)"
     },
     "AutoFillName": {
       "name": "Auto Fill Fields",
@@ -778,6 +788,42 @@
       "MANUAL_SELECTION_BOX": "MANUAL_SELECTION_BOX",
       "ORNAMENT": "ORNAMENT",
       "WEAPON": "WEAPON"
+    }
+  },
+  "BodyLabelShop": {
+    "_info": {
+      "name": "Body Label Shop",
+      "help": "Buy only the daily discounted consoles. Currently supports the Chinese game UI only."
+    },
+    "enable": {
+      "name": "Enable",
+      "help": ""
+    },
+    "priority": {
+      "name": "Console types",
+      "help": "Select multiple types; leave empty to buy nothing. Only the random daily discount is eligible. Order is ignored; full-price items are never purchased.",
+      "ABNORMAL": "Abnormal",
+      "ELYSION": "Elysion",
+      "MISSILIS": "Missilis",
+      "PILGRIM": "Pilgrim",
+      "TETRA": "Tetra",
+      "ATTACKER": "Attacker",
+      "DEFENDER": "Defender",
+      "SUPPORTER": "Supporter"
+    },
+    "BuyCount": {
+      "name": "Purchase quantity",
+      "help": "Daily total purchase quantity, from 1 to 10. Deduct purchases already made today, including manual purchases, using the remaining shop limit. Buy only enough to reach this total; skip if already reached or recognition is uncertain.",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "10": "10"
     }
   },
   "RubbishShop": {

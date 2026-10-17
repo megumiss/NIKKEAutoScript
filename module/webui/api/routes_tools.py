@@ -193,6 +193,54 @@ async def shortcuts_update(request: Request):
     return JSONResponse({'status': 'success', 'shortcuts': shortcuts, 'enabled': enabled, 'restart_required': True})
 
 
+def _game_world_payload():
+    if os.name != 'nt':
+        return {'supported': False, 'readable': False, 'world': '', 'world_name': ''}
+    from module.device.win.world import GAME_WORLDS, get_game_world
+    try:
+        world_name = get_game_world()
+    except (OSError, ValueError) as exc:
+        logger.warning(f'Unable to read game world in tools: {exc}')
+        return {
+            'supported': True, 'readable': False, 'world': '', 'world_name': '',
+            'message': '无法读取游戏区服配置，请检查当前用户的注册表权限及配置格式。',
+        }
+    return {
+        'supported': True, 'readable': world_name is not None,
+        'world': next((key for key, value in GAME_WORLDS.items() if value == world_name), ''),
+        'world_name': world_name or '',
+        'message': '' if world_name is not None else '未找到国际服区服配置，请先用运行 NKAS 的 Windows 用户登录游戏一次。',
+    }
+
+
+async def game_world_state(_: Request):
+    return JSONResponse(_game_world_payload())
+
+
+async def game_world_update(request: Request):
+    if os.name != 'nt':
+        return JSONResponse({'status': 'error', 'message': '仅支持 Windows 国际服 PC 客户端。'}, status_code=400)
+    from module.device.win.world import GAME_WORLDS, set_game_world
+    try:
+        data = await request.json()
+    except ValueError:
+        data = None
+    world = data.get('world') if isinstance(data, dict) else None
+    if not isinstance(world, str) or world not in GAME_WORLDS:
+        return JSONResponse({'status': 'error', 'message': '请选择有效的游戏区服。'}, status_code=422)
+    state = _game_world_payload()
+    if not state['readable']:
+        return JSONResponse({'status': 'error', **state}, status_code=400)
+    if not set_game_world(world, backup=False):
+        return JSONResponse(
+            {'status': 'error', 'message': '区服写入或回读校验失败，请检查注册表权限并刷新确认。'}, status_code=500,
+        )
+    state = _game_world_payload()
+    if not state['readable'] or state['world'] != world:
+        return JSONResponse({'status': 'error', 'message': '回读区服不一致，请刷新确认。'}, status_code=500)
+    return JSONResponse({'status': 'success', **state})
+
+
 async def game_clone_info(_: Request):
     from module.tools.game_clone import clone_info, clone_status
     return JSONResponse({**clone_info(), 'job': clone_status()})

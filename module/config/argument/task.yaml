@@ -63,6 +63,7 @@ Daily:
     Shop:
       - Scheduler
       - GeneralShop
+      - BodyLabelShop
       - ArenaShop
     RubbishShop:
       - Scheduler

@@ -242,6 +242,18 @@
           "hmt"
         ]
       },
+      "GameWorld": {
+        "type": "select",
+        "value": "auto",
+        "option": [
+          "auto",
+          "global",
+          "jp",
+          "na",
+          "kr",
+          "sea"
+        ]
+      },
       "AutoFillName": {
         "type": "checkbox",
         "value": true
@@ -1196,6 +1208,42 @@
           "GRATIS",
           "CORE_DUST_CASE",
           "ORNAMENT"
+        ]
+      }
+    },
+    "BodyLabelShop": {
+      "enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "priority": {
+        "type": "priority",
+        "value": "",
+        "option": [
+          "ABNORMAL",
+          "ELYSION",
+          "MISSILIS",
+          "PILGRIM",
+          "TETRA",
+          "ATTACKER",
+          "DEFENDER",
+          "SUPPORTER"
+        ]
+      },
+      "BuyCount": {
+        "type": "select",
+        "value": 1,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
         ]
       }
     },

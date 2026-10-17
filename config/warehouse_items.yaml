@@ -15,7 +15,7 @@
 # - scan: 是否参与扫描（false 表示跳过该物品）
 # - scan_method: 识别方式
 #     - direct: 在仓库格子内直接识别数量
-#     - detail: 点击物品详情后识别数量
+#     - detail: 仅钻石（总数/免费/付费）展开识别，其他物品始终在格子内直读
 # - scan_page: 扫描页签
 #     - consumable: 消耗品
 #     - materials: 材料
@@ -96,7 +96,7 @@ groups:
         name: HIGH_QUALITY_ACCESS_RECORDS
         display_name: 高品质凭证
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
   - id: mold
     name: 铸模
@@ -105,67 +105,67 @@ groups:
         name: PILGRIM_OVER_SPEC_MOLD
         display_name: 朝圣者超规格铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: pilgrim_over_spec_perfect_mold
         name: PILGRIM_OVER_SPEC_PERFECT_MOLD
         display_name: 朝圣者超规格完美铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: tetra_mold
         name: TETRA_MOLD
         display_name: 泰特拉铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: tetra_perfect_mold
         name: TETRA_PERFECT_MOLD
         display_name: 泰特拉完美铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: missilis_mold
         name: MISSILIS_MOLD
         display_name: 米西利斯铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: missilis_perfect_mold
         name: MISSILIS_PERFECT_MOLD
         display_name: 米西利斯完美铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: elysion_mold
         name: ELYSION_MOLD
         display_name: 极乐净土铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: elysion_perfect_mold
         name: ELYSION_PERFECT_MOLD
         display_name: 极乐净土完美铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: mid_quality_mold
         name: MID_QUALITY_MOLD
         display_name: 中品质铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: high_quality_mold
         name: HIGH_QUALITY_MOLD
         display_name: 高品质铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: perfect_mold
         name: PERFECT_MOLD
         display_name: 完美铸模
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
   - id: upgrade_material
     name: 养成
@@ -222,7 +222,7 @@ groups:
         name: CUSTOM_MODULE_SHARD
         display_name: 订制模组零件
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: custom_lock
         name: CUSTOM_LOCK
@@ -372,7 +372,7 @@ groups:
         name: T9_EQUIPMENT_SELECTION_BOX
         display_name: 公司武器
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: t9_equipment_manufacturer_selection_box
         name: T9_EQUIPMENT_MANUFACTURER_SELECTION_BOX
@@ -384,7 +384,7 @@ groups:
         name: CURATED_MANUFACTURE_ARMS
         display_name: 企业精选武装
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: beginner_maintenance_kit
         name: BEGINNER_MAINTENANCE_KIT
@@ -420,7 +420,7 @@ groups:
         name: COLLECTION_ITEM_MILEAGE_BOX
         display_name: 收藏品积分箱
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable
       - id: maintenance_kit_box
         name: MAINTENANCE_KIT_BOX
@@ -444,5 +444,5 @@ groups:
         name: PROFILE_CUSTOM_PACK
         display_name: 简介个性化礼包
         scan: true
-        scan_method: detail
+        scan_method: direct
         scan_page: consumable

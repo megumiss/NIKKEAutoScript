@@ -118,7 +118,18 @@ class ManualConfig:
             "mini_game_play": True,
             "extend": False,
             "story_part": "Story_1",  # Story_1, Story_2
-            "story_difficulty": "Normal"  # Normal, Hard
+            "story_difficulty": "Hard",  # Normal, Hard
+            # pending_finder 按章节和难度配置：story_1_normal / story_1_hard / story_2_normal / story_2_hard
+            # "pending_finder": {
+            #     "story_1_normal": {
+            #         "mode": "grid",
+            #         "area": (100, 400, 600, 1050),
+            #         "rows": 6,
+            #         "columns": 1,
+            #         "vertical_direction": "bottom_to_top",
+            #         "horizontal_direction": "right_to_left",
+            #     },
+            # },
         },
         {
             "event_id": "event_20260917",
@@ -131,14 +142,15 @@ class ManualConfig:
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard",  # Normal, Hard
             "pending_click_offset": (0, 0),
-            # Story_2 Normal
             # "pending_finder": {
-            #     "mode": "grid",
-            #     "area": (230, 410, 500, 1045),
-            #     "rows": 8,
-            #     "columns": 1,
-            #     "vertical_direction": "bottom_to_top",
-            #     "horizontal_direction": "right_to_left",
+            #     "story_2_normal": {
+            #         "mode": "grid",
+            #         "area": (230, 410, 500, 1045),
+            #         "rows": 8,
+            #         "columns": 1,
+            #         "vertical_direction": "bottom_to_top",
+            #         "horizontal_direction": "right_to_left",
+            #     },
             # },
         },
         {
@@ -163,14 +175,15 @@ class ManualConfig:
             "story_part": "Story_2",  # Story_1, Story_2
             "story_difficulty": "Hard",  # Normal, Hard
             "pending_click_offset": (0, 0),
-            # Story_1
             # "pending_finder": {
-            #     "mode": "grid",
-            #     "area": (25, 350, 325, 1175),
-            #     "rows": 10,
-            #     "columns": 1,
-            #     "vertical_direction": "bottom_to_top",
-            #     "horizontal_direction": "right_to_left",
+            #     "story_1_normal": {
+            #         "mode": "grid",
+            #         "area": (25, 350, 325, 1175),
+            #         "rows": 10,
+            #         "columns": 1,
+            #         "vertical_direction": "bottom_to_top",
+            #         "horizontal_direction": "right_to_left",
+            #     },
             # },
         },
         {
@@ -196,12 +209,14 @@ class ManualConfig:
             "story_difficulty": "Hard",  # Normal, Hard
             "pending_click_offset": (0, 0),
             "pending_finder": {
-                "mode": "grid",
-                "area": (100, 300, 620, 1050),
-                "rows": 6,
-                "columns": 2,
-                "vertical_direction": "bottom_to_top",
-                "horizontal_direction": "right_to_left",
+                "story_2_hard": {
+                    "mode": "grid",
+                    "area": (100, 300, 620, 1050),
+                    "rows": 6,
+                    "columns": 2,
+                    "vertical_direction": "bottom_to_top",
+                    "horizontal_direction": "right_to_left",
+                },
             },
         },
         {

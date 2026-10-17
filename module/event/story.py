@@ -81,7 +81,10 @@ class EventStory(EventBase):
         return buttons
 
     def find_pending_stage_by_grid(self, open_story):
-        finder = self.event.pending_finder
+        finder = self.pending_finder_for(open_story)
+        if finder is None:
+            logger.warning(f'No pending finder configured for {open_story}')
+            return 'exhausted'
         x1, y1, x2, y2 = finder['area']
         rows = finder['rows']
         columns = finder['columns']
@@ -475,7 +478,8 @@ class EventStory(EventBase):
         self.back_to_event()
 
     def find_and_push_stage(self, open_story):
-        grid_mode = self.event.pending_finder is not None and self.event.pending_finder['mode'] == 'grid'
+        finder = self.pending_finder_for(open_story)
+        grid_mode = finder is not None and finder.get('mode') == 'grid'
         pending_buttons = [] if grid_mode else self.get_story_stage_pending_buttons(open_story)
         has_pending_stage = grid_mode
         if not grid_mode and pending_buttons:

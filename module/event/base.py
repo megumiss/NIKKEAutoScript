@@ -77,6 +77,18 @@ class EventBase(UI):
             pending_finder=event_config.get('pending_finder'),
         )
 
+    def pending_finder_for(self, story):
+        """
+        按章节和难度获取 pending_finder，story 形如 story_1_normal / story_2_hard。
+        兼容旧格式：配置本身带 mode 字段时，对所有章节/难度生效。
+        """
+        finder = self.event.pending_finder
+        if not finder:
+            return None
+        if finder.get('mode') == 'grid':
+            return finder
+        return finder.get(story)
+
     def back_to_event(self):
         logger.info('Back to event')
         click_timer = Timer(0.3)

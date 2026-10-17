@@ -419,7 +419,7 @@ class NikkeAutoScript:
         Shop(config=self.config, device=self.device).run()
 
     def rubbish_shop(self):
-        from module.rubbish_shop.rubbish_shop import RubbishShop
+        from module.shop.rubbish import RubbishShop
 
         RubbishShop(config=self.config, device=self.device).run()
 
