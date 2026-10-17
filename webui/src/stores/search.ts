@@ -19,6 +19,7 @@ const PAGES: SearchPage[] = [
   { key: 'about', label: '关于', group: '系统', path: '/about' },
   { key: 'tools', label: '常用工具', group: '其他', path: '/tools' },
   { key: 'tools-hosts', label: 'Hosts 修改', group: '常用工具', path: '/tools/hosts' },
+  { key: 'tools-world', label: '游戏区服', group: '常用工具', path: '/tools/world' },
   { key: 'tools-shortcuts', label: '快捷键设置', group: '常用工具', path: '/tools/shortcuts' },
   { key: 'tools-clone', label: '游戏多开', group: '常用工具', path: '/tools/clone' },
   { key: 'tools-driver', label: '虚拟鼠标驱动', group: '常用工具', path: '/tools/driver' },

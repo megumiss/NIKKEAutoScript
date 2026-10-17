@@ -74,6 +74,8 @@ def mount_api(app):
         Route('/api/tools/hosts', routes_tools.hosts_update, methods=['POST']),
         Route('/api/tools/shortcuts', routes_tools.shortcuts_state, methods=['GET']),
         Route('/api/tools/shortcuts', routes_tools.shortcuts_update, methods=['POST']),
+        Route('/api/tools/game_world', routes_tools.game_world_state, methods=['GET']),
+        Route('/api/tools/game_world', routes_tools.game_world_update, methods=['POST']),
         Route('/api/tools/game_clone', routes_tools.game_clone_info, methods=['GET']),
         Route('/api/tools/game_clone', routes_tools.game_clone_start, methods=['POST']),
         Route('/api/tools/game_clone/cancel', routes_tools.game_clone_cancel, methods=['POST']),

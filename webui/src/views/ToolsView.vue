@@ -10,6 +10,7 @@ import { t } from '../i18n'
 import { useModalStore } from '../stores/modal'
 import { useToastStore } from '../stores/toast'
 import ConsoleView from './ConsoleView.vue'
+import GameWorldTool from '../components/GameWorldTool.vue'
 
 const router = useRouter()
 const { toolsTab } = useRouteInfo()
@@ -389,6 +390,7 @@ watch(toolsTab, tab => {
     </article>
     <div class="tools-tabs">
       <button class="tools-tab" :class="{ active: toolsTab === 'hosts' }" @click="router.push('/tools/hosts')"><AppIcon name="globe" :size="16" /> {{ t('Hosts 修改') }}</button>
+      <button class="tools-tab" :class="{ active: toolsTab === 'world' }" @click="router.push('/tools/world')"><AppIcon name="gamepad" :size="16" /> {{ t('游戏区服') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'shortcuts' }" @click="router.push('/tools/shortcuts')"><AppIcon name="gear" :size="16" /> {{ t('快捷键设置') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'clone' }" @click="router.push('/tools/clone')"><AppIcon name="gamepad" :size="16" /> {{ t('游戏多开') }}</button>
       <button class="tools-tab" :class="{ active: toolsTab === 'driver' }" @click="router.push('/tools/driver')"><AppIcon name="layers" :size="16" /> {{ t('虚拟鼠标驱动') }}</button>
@@ -610,6 +612,7 @@ watch(toolsTab, tab => {
         </div>
       </div>
     </article>
+    <GameWorldTool v-else-if="toolsTab === 'world'" />
     <ConsoleView v-else embedded />
   </section>
 </template>
