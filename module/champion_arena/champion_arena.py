@@ -139,7 +139,6 @@ class ChampionArena(UI, ArenaBase):
 
     def ensure_into_champion_arena(self, skip_first_screenshot=True):
         logger.hr('CHAMPION ARENA START')
-        click_timer = Timer(0.3)
 
         # 进入竞技场
         while 1:
@@ -153,16 +152,15 @@ class ChampionArena(UI, ArenaBase):
                 or self.appear(PROGRESS_TEAM, offset=(30, 30))
                 or self.appear(PROGRESS_FIGHTING, offset=(30, 30))
                 or self.appear(PROGRESS_RESULTING, offset=(30, 30))
+                or self.appear(PROGRESS_END, offset=(30, 30))
             ):
                 logger.warning('Champion arena in preparation')
                 raise ChampionArenaIsUnavailable
 
-            if click_timer.reached() and self.appear_then_click(ARENA_GOTO_CHAMPION_ARENA, offset=30, interval=3):
-                click_timer.reset()
+            if self.appear_then_click(ARENA_GOTO_CHAMPION_ARENA, offset=30, interval=3):
                 continue
 
             if self.appear(CHAMPION_ARENA_CHECK, offset=30):
-                click_timer.reset()
                 break
 
     def run(self):
