@@ -187,24 +187,36 @@ class InfoHandler(ModuleBase):
             logger.info('Login success')
 
     def calculate_click_position(
-        self, x, y, template_type='CENTER', k=0.4, x_center=360, screen_width=720, screen_height=1280
+        self,
+        x,
+        y,
+        template_type='CENTER',
+        k=0.55,
+        x_center=360,
+        screen_width=720,
+        screen_height=1280,
+        y_k=0.565,
+        y_threshold=562,
     ):
         """
         计算瞄准补偿后的点击位置，兼容旧圆弧模板的额外偏移
         Args:
             x, y: 原始识别坐标
             template_type: 'CENTER' 为圆心，旧模板可为 'TOP', 'RIGHT', 'LEFT'
-            k: 动态偏移系数
+            k: 水平向中心收缩的比例，左右共用
             x_center: 屏幕中心 x
             screen_width: 屏幕宽度
             screen_height: 屏幕高度
+            y_k: 低位目标向上补偿的比例，0 为禁用
+            y_threshold: 纵向补偿起点，默认对应 720×1280 截图
         Returns:
-            (x_click, y_click, dx): 点击坐标和动态偏移值
+            (x_click, y_click, dx): 点击坐标和水平动态偏移值
         """
         # 动态偏移
         dx = k * (x_center - x)
         x_click = x + dx
-        y_click = y
+        # 场景上移量取决于按住位置；逆解后的补偿比例为 1.3 / (1 + 1.3)。
+        y_click = y - y_k * max(0, y - y_threshold)
 
         # 根据模板类型增加额外偏移
         if template_type == 'TOP':
@@ -234,7 +246,7 @@ class InfoHandler(ModuleBase):
         x, y = circles[0]
         logger.info(f'Red circle center: ({x}, {y})')
         x_click, y_click, dx = self.calculate_click_position(x, y)
-        logger.info('Click %s @ RED_CIRCLE (dx=%.2f)' % (point2str(x_click, y_click), dx))
+        logger.info('Click %s @ RED_CIRCLE (dx=%.2f, dy=%.2f)' % (point2str(x_click, y_click), dx, y_click - y))
         self.device.long_click_xy(x_click, y_click, 1)
         self.device.sleep(0.5)
         return True
