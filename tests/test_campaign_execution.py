@@ -24,7 +24,8 @@ from module.base.timer import Timer
 from module.campaign.vision.battle import classify
 from module.campaign.window import WindowChanged
 from module.campaign.navigation.movement import navigate
-from module.campaign.navigation.camera_navigation import center_landing, pan_endpoints
+from module.campaign.navigation.camera_navigation import landing_choice, pan_endpoints, pan_region, target_view_offset
+from module.campaign.navigation.controls import VIEWPORT_PIXEL
 from module.campaign.navigation.movement_feedback import TargetTriggered
 from module.config.config import TaskEnd
 
@@ -591,22 +592,49 @@ class SessionTests(unittest.TestCase):
 
 
 class LandingTests(unittest.TestCase):
-    """落点固定为镜头注视点像素：目标进注视点容差内才点，否则继续平移。"""
+    """落点优先点目标自己那个像素，不能用时才退回固定的注视点像素。"""
 
-    def test_landing_is_the_fixed_gaze_pixel(self):
-        """目标已在注视点容差内时返回固定的注视点像素，与目标的确切位置无关。"""
-        gaze = np.array([500.0, 400.0])
-        near = center_landing(gaze, gaze + np.array([3.0, -4.0]))          # 距离 5
-        self.assertIsNotNone(near)
-        self.assertEqual(near.tolist(), [887.7, 496.0])
-        self.assertEqual(center_landing(gaze, gaze, tolerance=0.).tolist(), [887.7, 496.0])
+    def setUp(self):
+        """地图侧用单位矩阵，方便单独验证落点选择而不牵扯配准。"""
+        self.matrix = np.eye(3)
+        self.viewport = np.array([500.0, 400.0])
+
+    def aim_of(self, target, gain=1.):
+        """目标像素应该落在哪儿：注视点像素加 target_view_offset 给出的偏移。"""
+        return (np.asarray(VIEWPORT_PIXEL, float)
+                + target_view_offset(self.matrix, 1., gain, self.viewport, target))
+
+    def test_landing_aims_at_the_target_pixel(self):
+        """目标进容差内时点目标自己的像素，而不是固定的注视点像素。"""
+        target = self.viewport + np.array([10.0, -6.0])
+        point, method = landing_choice(self.matrix, 1., 1., self.viewport, target, np.array([200.0, 100.0]))
+        self.assertEqual(method, 'direct_target')
+        self.assertEqual(point.tolist(), self.aim_of(target).tolist())
+        self.assertNotEqual(point.tolist(), list(VIEWPORT_PIXEL))
 
     def test_landing_refuses_until_the_target_is_centered(self):
         """目标还在容差外时不给落点：调用方必须先平移，不能凭换算链硬算一个方向。"""
-        gaze = np.array([500.0, 400.0])
-        self.assertIsNone(center_landing(gaze, gaze + np.array([0.0, -90.0])))
-        self.assertIsNone(center_landing(gaze, gaze + np.array([40.0, 0.0]), tolerance=28.))
-        self.assertIsNotNone(center_landing(gaze, gaze + np.array([20.0, 0.0]), tolerance=28.))
+        self.assertIsNone(landing_choice(self.matrix, 1., 1., self.viewport,
+                                         self.viewport + np.array([0.0, -90.0]), None))
+
+    def test_landing_falls_back_when_the_target_pixel_is_occupied(self):
+        """目标像素压在小队脚下时退回固定注视点像素，别把点击发成原地点击。"""
+        target = self.viewport + np.array([10.0, 0.0])
+        point, method = landing_choice(self.matrix, 1., 1., self.viewport, target, self.aim_of(target))
+        self.assertEqual(method, 'compact_gaze')
+        self.assertEqual(point.tolist(), list(VIEWPORT_PIXEL))
+
+    def test_landing_gives_nothing_when_both_candidates_are_occupied(self):
+        """目标像素与注视点都被小队占住时不给落点，交给调用方继续平移。"""
+        target = self.viewport + np.array([2.0, 0.0])
+        self.assertIsNone(landing_choice(self.matrix, 1., 1., self.viewport, target, self.aim_of(target)))
+
+    def test_gain_scales_the_target_offset(self):
+        """跟手比例小于 1 时按同比例放大偏移：画面实际动得少，目标在屏幕上离注视点更远。"""
+        target = self.viewport + np.array([10.0, -6.0])
+        raw, corrected = self.aim_of(target) - np.asarray(VIEWPORT_PIXEL, float), \
+            self.aim_of(target, gain=.5) - np.asarray(VIEWPORT_PIXEL, float)
+        np.testing.assert_allclose(corrected, raw * 2, atol=1e-9)
 
 
 class PanEndpointTests(unittest.TestCase):

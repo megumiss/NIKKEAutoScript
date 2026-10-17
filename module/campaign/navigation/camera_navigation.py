@@ -16,6 +16,10 @@ FIELD_BOUNDS = (300, 220, 1450, 820)
 ROI_BOUNDS = (12, 12, 474, 420)
 # 横向利用场景全宽，纵向利用中部全高；两个矩形均避开固定 UI。
 PAN_REGIONS = ((24, 320, 1752, 880), (250, 70, 1490, 880))
+# 落点至少离开小队脚下这么多客户区像素，否则会被游戏当成原地点击（38 章实机：连点三次注视点，
+# 小队坐标只变了 1.2 地图像素）。这里不能用拖动按下点的 120×150 椭圆：那个半径管的是另一件事——
+# 按下点压在小队身上会被读成走位指令，不能让一次镜头拖动变成移动命令。
+DIRECT_CLICK_MIN = 12.
 # 融合判据的容差 IoU 接受线：双方道路各膨胀 7px 后，正确位置实测 ~0.36、错位 ±60px 即跌到
 # ~0.07~0.11（38 章失败帧紧凑面板离线复算，判别间隔 ≥3 倍）。膨胀量取底图投影道路与实时
 # 道路的宽度差之半（底图 18px 对 live 4px），门槛 0.25 居中，既接住底图质量差的区域，又排除错位。
@@ -382,22 +386,6 @@ def window_session(win, localizer, evidence, tag, folder=None, pause=None):
                            preview=lambda field: runtime.write_image(folder / f'{tag}_field.png', field))
 
 
-def center_landing(viewport, target, tolerance=None):
-    """中心落点：目标已经落在注视点容差内时返回固定的注视点像素，否则返回 None（还要继续平移）。
-
-    先平移把目标送到镜头注视点，再点注视点，让游戏把小队的落脚点交给相机中心。落点是一个固定
-    像素，不经过任何地图→屏幕换算，所以方向不依赖标定与相机姿态；小队相对落点则要按「目标 −
-    小队」算屏幕向量，标定与当前相机姿态不符时会把小队带向错误方向（38 章实机：小队坐标取自
-    另一帧、差 148 地图像素，落点指到小队右上的水面上，游戏随后把小队带向反方向）。
-    容差取 SQUAD_REACH：点完之后小队落在注视点附近，目标仍在到达半径以内，可以继续下一拍。
-    """
-    if tolerance is None:
-        tolerance = goto.SQUAD_REACH
-    if float(np.linalg.norm(np.asarray(target, float) - np.asarray(viewport, float))) > tolerance:
-        return None
-    return np.asarray(goto.VIEWPORT_PIXEL, float)
-
-
 def panel_delta_to_client(a, delta):
     """紧凑面板位移换算为客户区位移：A_INV @ ROI_TO_PLANE 链在注视点处线性化。
 
@@ -413,6 +401,52 @@ def panel_delta_to_client(a, delta):
     linear = np.column_stack([project(chain, base + step) - project(chain, base)
                               for step in np.eye(2)])
     return linear @ (a * np.asarray(delta, float))
+
+
+def target_view_offset(matrix, scale_a, gain, viewport, target):
+    """目标相对镜头注视点的客户区像素偏移：面板局部 Jacobian 换算，再按实测跟手比例校正。
+
+    matrix 是面板→地图单应、scale_a 是紧凑配准的缩放、viewport 是注视点的地图坐标。
+    换算链与拖动幅度同源（见 panel_delta_to_client），所以拖动闭环测到的比例误差在这里同样成立：
+    gain 小于 1 说明画面实际动得比换算预测的少，目标的屏幕偏移就要按同样比例放大，
+    否则落点会停在小队与目标之间。gain 沿用闭环的接受区间下界兜底，避免除出离谱的偏移。
+    单应退化（局部 Jacobian 不可逆）时算不出偏移，返回 None 交给调用方退回固定注视点像素。
+    """
+    delta = np.asarray(target, float) - np.asarray(viewport, float)
+    try:
+        delta_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), delta)
+    except np.linalg.LinAlgError:
+        return None
+    return panel_delta_to_client(scale_a, delta_panel) / max(float(gain), .2)
+
+
+def landing_choice(matrix, scale_a, gain, viewport, target, squad_ground):
+    """目标进入注视点容差后选客户区落点，返回 (落点, 落点算法名)；两个候选都不能用时返回 None。
+
+    容差取 SQUAD_REACH：点完之后小队落在落点附近，目标仍在到达半径以内，可以继续下一拍。
+    首选目标自己那个像素。相机本来是对着小队的、小队就站在注视点上，这时继续点注视点等于叫它
+    走到自己脚下，游戏会把这一下当成原地点击（38 章实机：连点三次，小队坐标只变了 1.2 地图像素）。
+    落点偏移用 target_view_offset 换算，换算误差由「点了会走、走完重新定位」这条闭环自己收敛，
+    不会把小队送错方向——老实现怕的是「按 目标 − 小队 直接算屏幕向量」：小队坐标取自另一帧、
+    差 148 地图像素时落点指到了水面上，游戏随后把小队带向反方向。这里用同一帧的注视点做基准，
+    小队坐标不参与换算。
+    目标像素落在有效场景区域之外、离小队太近（会被当成原地点击）、或换算不可用时，退回固定注视点
+    像素：它是老落点，方向不依赖任何地图→屏幕换算。两个候选都不能用就返回 None，由调用方继续平移。
+    """
+    delta_map = np.asarray(target, float) - np.asarray(viewport, float)
+    if float(np.linalg.norm(delta_map)) > goto.SQUAD_REACH:
+        return None
+    gaze = np.asarray(goto.VIEWPORT_PIXEL, float)
+    offset = target_view_offset(matrix, scale_a, gain, viewport, target)
+    candidates = [(gaze, 'compact_gaze')] if offset is None else \
+        [(gaze + offset, 'direct_target'), (gaze, 'compact_gaze')]
+    for point, method in candidates:
+        if not inside(point, FIELD_BOUNDS):
+            continue
+        if squad_ground is not None and np.linalg.norm(point - np.asarray(squad_ground, float)) < DIRECT_CLICK_MIN:
+            continue
+        return point, method
+    return None
 
 
 def tolerance_iou(live_road, panel_valid, base_road, matrix, dilate=FUSED_DILATE):
@@ -538,23 +572,21 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
 
 
 def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3):
-    """镜头规划：先把目标平移到镜头注视点，再点固定的注视点像素把小队送过去。
+    """镜头规划：先把目标平移到镜头注视点，再点落点把小队送过去。
 
     对准在地图空间进行：视野中心由道路配准给出，远处目标不经逆单应外推（透视地平线）。
     拖动量取注视点处局部 Jacobian 换算，比例误差由实测响应闭环修正；帧间链式跟踪兜底
     空旷走廊的歧义配准，全局配准可用时立即修正漂移。箭头锚点、场景单应与两点临时标定
     都不参与镜头换算；面板位移到客户区拖动只在注视点线性化，远距离整段外推会跨过
     ROI_TO_PLANE 的地平线并反向，见 panel_delta_to_client。
-    落点由 center_landing 给出：目标进入注视点容差（SQUAD_REACH 地图像素）后点固定的
-    VIEWPORT_PIXEL。落点是固定像素、不经过地图→屏幕换算，所以标定与相机姿态与它无关；
-    小队相对落点要按「目标 − 小队」算屏幕向量，实测会因标定与相机姿态不符把小队带向错误方向
-    （38 章实机：小队坐标取自另一帧、差 148 地图像素，落点指到小队右上的水面，游戏随后把小队
-    带向反方向）。代价是走近目标要多几次平移：每点一次只能把小队送到相机中心，所以要先把目标
-    拖到注视点上。
+    目标进入注视点容差（SQUAD_REACH 地图像素）后由 landing_choice 给落点：优先点目标自己那个
+    像素，不能用时才退回固定的 VIEWPORT_PIXEL。只点注视点会漏掉一种常态——相机本来就对着小队、
+    小队正站在注视点上，这时再点注视点等于叫它走到自己脚下（38 章实机连点三次，小队坐标只变了
+    1.2 地图像素），而目标离注视点还有十几像素时这一步就走不完。
     起始帧的视野中心以与展开图小队定位一致为准（start_viewport），不要求 accepted。
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
     全局配准被接受即视为批末校正已完成。
-    实测（点固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
+    实测（退回固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     """
     from module.campaign.vision.matching import MapMatcher, register
 
@@ -588,19 +620,26 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     session.camera_pans = getattr(session, 'camera_pans', 0)
     for count in range(max_pans + 1):
         session.check()
-        # 落点固定为镜头注视点像素：先把目标平移到注视点上，再点注视点，由游戏把小队的落脚点交给
-        # 相机中心。落点方向不经过任何地图→屏幕换算，标定与相机姿态因此与它无关（见 center_landing）。
         viewport = project(matrix, goto.GAZE)
         delta_map = target - viewport
-        click = center_landing(viewport, target)
-        if click is not None:
-            session.emit(state='planning', navigation_method='compact_gaze', camera_pans=session.camera_pans,
+        squad_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), squad_position - viewport)
+        ground = np.asarray(goto.VIEWPORT_PIXEL, float) + panel_delta_to_client(scale_a, squad_panel)
+        # 本次一步平移都还没发时不拿 1 当跟手比例：落点偏移会缩水一半（见 target_view_offset），
+        # 上一次会话测到的比例比 1 更接近当前相机。
+        landing_gain = gain if responses else float(getattr(session, 'camera_gain', 1.))
+        landing = landing_choice(matrix, scale_a, landing_gain, viewport, target, ground)
+        if landing is not None:
+            click, method = landing
+            span = f'{float(np.linalg.norm(delta_map)):.1f} 地图像素'
+            session.emit(state='planning', navigation_method=method, camera_pans=session.camera_pans,
                          plan_camera_pans=count, planned_target=target.tolist(),
                          click=np.round(click, 1).tolist(),
+                         click_offset=np.round(click - np.asarray(goto.VIEWPORT_PIXEL, float), 1).tolist(),
                          camera_view_position=np.round(viewport, 1).tolist(),
                          camera_view_offset=np.round(delta_map, 1).tolist(),
-                         message=f'目标已到镜头注视点（离注视点 '
-                                 f'{float(np.linalg.norm(delta_map)):.1f} 地图像素），点注视点把小队送过去。')
+                         message=(f'目标已到镜头注视点（离注视点 {span}），'
+                                  + ('点目标自己那个像素把小队送过去' if method == 'direct_target'
+                                     else '点注视点把小队送过去')))
             return click
         if count == max_pans:
             raise ValueError(f'已平移 {max_pans} 次，目标仍未到小地图中央；未发送移动点击。')
@@ -668,6 +707,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         if .2 <= response <= 3.:
             responses.append(response)
             gain = float(np.median(responses[-3:]))
+            # 记到会话上：下一次规划一开始还没拖动就要用落点换算，那时拿不到本批的实测比例。
+            session.camera_gain = gain
             stalled = 0
         else:
             stalled += 1
