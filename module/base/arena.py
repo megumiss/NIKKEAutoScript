@@ -1,22 +1,15 @@
 import json
-import logging
 from typing import Any, Dict, List
+
+from module.base.utils import crop
 from module.logger import logger
-from module.ocr.ocr import Digit
+from module.ocr.arena import ArenaOcr
 
 
 class ArenaBase:
     def opponent_info(self, area: tuple, field_name: str) -> int:
-        # letter = self.FIELD_LETTERS[field_name]
-        model_type=self.config.Optimization_OcrModelType
-        OPPONENT_INFO = Digit(
-            [area], 
-            name='OPPONENT_INFO',
-            log_level=logging.DEBUG,
-            model_type=model_type,
-            lang='num'
-        )
-        return int(OPPONENT_INFO.ocr(self.device.image)['text'])
+        ocr = ArenaOcr(model_type=self.config.Optimization_OcrModelType)
+        return ocr.ocr(crop(self.device.image, area), field_name)
 
     def opponents_data(self) -> List[Dict[str, Any]]:
         """获取对手数据"""

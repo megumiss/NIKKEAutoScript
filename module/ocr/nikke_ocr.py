@@ -110,6 +110,11 @@ class NIKKEOcr(PaddleOCR):
         self.check_interval()
         return super().predict(img_fp)
 
+    def recognize(self, images):
+        """识别已裁好的单行文本，复用当前模型，避免检测器漏掉小尺寸数字。"""
+        self.check_interval()
+        return list(self.paddlex_pipeline.text_rec_model(images))
+
     def check_interval(self):
         delta = time.time() - self.last_time
         if delta < self.interval:
