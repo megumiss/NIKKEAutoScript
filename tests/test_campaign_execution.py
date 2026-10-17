@@ -658,9 +658,32 @@ class PanEndpointTests(unittest.TestCase):
         self.assertEqual(end.tolist(), [862, 709])
 
     def test_drag_rejects_when_no_safe_empty_start_exists(self):
-        """区域内无法同时避让并保留向量时拒绝发送，不能退化成走位点击。"""
+        """合法矩形整块都落在小队椭圆内时拒绝发送，不能退化成走位点击。"""
         with self.assertRaises(ValueError):
-            pan_endpoints((800, 400, 1000, 750), np.array([-52.2, 217.1]), np.array([884.0, 506.5]))
+            pan_endpoints((870, 496, 900, 520), np.array([-10., 20.]), np.array([884.0, 506.5]))
+
+    def test_long_vertical_drag_uses_the_roomier_region_and_clears_the_squad(self):
+        """38 章实机：-110/+477 的长拖动在 560 高的区域里只剩 41 像素余量，避让候选全被区域裁掉。
+
+        改取余量更大的那块矩形后，原按下点本来就在椭圆外，手势不必改点；即便退回原来那块，
+        也应在合法矩形里找出一个空地按下点（向量、方向、区域约束都不变），而不是放弃这次平移。
+        """
+        drag, ground = np.array([-110.1, 477.0]), np.array([890.0, 430.0])
+        region, scale = pan_region(drag)
+        self.assertEqual(region, (250, 70, 1490, 880))
+        self.assertEqual(scale, 1.)
+
+        for panel in (region, (24, 320, 1752, 880)):
+            with self.subTest(region=panel):
+                plain = pan_endpoints(panel, drag)
+                start, end = pan_endpoints(panel, drag, ground)
+                self.assertEqual((end - start).tolist(), (plain[1] - plain[0]).tolist())
+                self.assertGreaterEqual(np.sum(((start - ground) / [120., 150.]) ** 2), 1.)
+                for point in (start, end):
+                    self.assertTrue(panel[0] <= point[0] <= panel[2] and panel[1] <= point[1] <= panel[3])
+        # 余量大的那块：原按下点本来就在椭圆外，改点前后的坐标一致。
+        self.assertEqual(pan_endpoints(region, drag, ground)[0].tolist(),
+                         pan_endpoints(region, drag)[0].tolist())
 
 
 class BattleStateTests(unittest.TestCase):
