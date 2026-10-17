@@ -13,11 +13,20 @@
     
     如果有问题或需求，欢迎到 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">Issues</a> 反馈。
 - id: notice_history
-  date: 2026-10-15
+  date: 2026-10-18
   title: 更新历史
   type: info
   pinned: true
   items:
+    - id: notice_20261018
+      date: 2026-10-18
+      title: 新增躯体标签商店
+      content: |
+        <b>日常 → 商店 新增「躯体标签商店」设置</b>
+        购买每日折扣通用主机，默认关闭。
+
+        <b>购买设置</b>
+        购买类型可多选，未选择或折扣商品类型不匹配时跳过，不购买原价商品。
     - id: notice_20261015
       date: 2026-10-15
       title: 新增游戏区服设置
