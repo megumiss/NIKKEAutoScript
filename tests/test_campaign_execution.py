@@ -94,6 +94,33 @@ class GoalTests(unittest.TestCase):
         self.assertEqual(goal['kind'], 'enemy')
         self.assertEqual(goal['position'], self.enemy['position'])
 
+    def test_duplicate_projection_does_not_create_a_second_enemy(self):
+        """同一只敌人被两帧投到合并半径之外时只留一条记录，并保留更可信那一帧的坐标。"""
+        self.state.update(snapshot_fixture(enemies=[dict(kind='normal', position=[320, 96])]))
+        changes = self.state.update(snapshot_fixture(enemies=[dict(kind='normal', position=[320, 150])]))
+        self.assertEqual(list(self.state.enemies), ['enemy-1'])
+        self.assertEqual(self.state.enemies['enemy-1']['position'], [320, 96])
+        self.assertEqual(changes['enemies_held'], 1)
+        self.assertNotIn('enemies_added', changes)
+
+    def test_enemy_outside_the_frame_is_still_a_new_record(self):
+        """既有记录不在本帧视野里时照旧新建：那可能真是另一只敌人。"""
+        self.state.update(snapshot_fixture(enemies=[dict(kind='normal', position=[10, 96])]))
+        changes = self.state.update(snapshot_fixture(enemies=[dict(kind='normal', position=[60, 96])]))
+        self.assertEqual(len(self.state.enemies), 2)
+        self.assertEqual(changes['enemies_added'], ['enemy-2'])
+        self.assertNotIn('enemies_held', changes)
+
+    def test_two_enemies_in_one_frame_stay_two_records(self):
+        """一帧之内不可能把同一只敌人认成两处：帧内相距几十像素的两个标记是两只敌人。"""
+        for order in ([0, 1], [1, 0]):
+            with self.subTest(order=order):
+                self.setUp()
+                markers = [dict(kind='normal', position=[320, 96]), dict(kind='normal', position=[320, 156])]
+                changes = self.state.update(snapshot_fixture(enemies=[markers[index] for index in order]))
+                self.assertEqual(len(self.state.enemies), 2)
+                self.assertEqual(changes['enemies_added'], ['enemy-1', 'enemy-2'])
+
     def test_active_curtain_selects_annotated_mechanism(self):
         """只被光幕挡住时先去同侧机关，不走到光幕上。"""
         self.chart.points = [dict(id='switch', category='ground_mechanism', position=[80, 176])]

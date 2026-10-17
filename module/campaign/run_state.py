@@ -14,6 +14,11 @@ from module.logger import logger
 
 # 小地图标记每帧重检，同一只敌人的落点会在几像素内抖动；超过这个距离才算另一只。
 ENEMY_MERGE_RADIUS = 25.
+# 合并半径之外的第二道重复判据：比这个距离更近的既有记录，只要本帧视野盖住了它的位置、
+# 本帧却没在那里认出敌人，就认为新标记是同一只敌人被配准投偏了，不新建记录。
+# 细路配准对「沿路滑动」不敏感：38 章实机里同一只敌人在紧凑帧与展开帧相差 55 地图像素，
+# 光靠 25 像素的合并半径拦不住，多出来的一条会按更近的距离抢走目标选择。
+ENEMY_SHADOW_RADIUS = 90.
 # 已观测区域的粗网格边长，只用来回答「这块地方看过没有」，不参与路径规划。
 OBSERVED_CELL = 32
 # 可用的定位状态：accepted 是本帧配准被接受；reused 是沿用上一次被接受的坐标
@@ -76,6 +81,8 @@ def describe_changes(changes):
         parts.append('新发现敌人 ' + '、'.join(changes['enemies_added']))
     if changes.get('enemies_refreshed'):
         parts.append(f"刷新了 {changes['enemies_refreshed']} 个已知敌人的位置")
+    if changes.get('enemies_held'):
+        parts.append(f"挡下 {changes['enemies_held']} 处可疑的重复敌人标记")
     if changes.get('blocks_added'):
         parts.append('新发现挡路光幕 ' + '、'.join(changes['blocks_added']))
     if changes.get('blocks_refreshed'):
@@ -140,7 +147,7 @@ class RunState:
             return {'reused': 'localization'}
         quad = panel_quad(snapshot)
         changes = {'observed_cells': self._absorb_observed(quad)}
-        changes.update(self._absorb_enemies(snapshot.get('enemies') or []))
+        changes.update(self._absorb_enemies(snapshot.get('enemies') or [], quad))
         minimap = snapshot.get('minimap') or {}
         if minimap.get('mode') == 'compact':
             changes.update(self._absorb_blocks(snapshot.get('blocks') or [], quad,
@@ -164,24 +171,43 @@ class RunState:
         cv2.fillConvexPoly(self.observed, polygon, 1)
         return int(self.observed.sum()) - before
 
-    def _absorb_enemies(self, enemies):
+    def _absorb_enemies(self, enemies, quad):
         """把本帧的敌人标记并进状态：按距离合并到既有项，否则新建。
 
         只收普通敌人：EX 不在本期的目标范围内（也不参与选择），但仍按 kind 记下来，
         供后续判断「这条路会触发战斗」。
+        合并半径之外还有一道重复判据：既有记录的位置就在本帧视野里（quad 覆盖、且离边界有余量），
+        本帧却没在那里认出敌人，却在它附近冒出一个新标记——那更可能是同一只敌人被配准投偏了，
+        而不是多了一只。这时并入既有记录、保留它原来的坐标（来自更可信的那一帧），不新建。
+        视野没盖住既有记录时不作判断：那可能真是另一只敌人。
+        本帧已经认到或新建的记录一律不参与这条判据：同一帧不可能把同一只敌人认成两处落点，
+        所以帧内相距几十像素的两个标记就是两只敌人。先扫一遍本帧会认到哪些既有记录，
+        判定才与标记的先后顺序无关。
         """
-        added, merged = [], 0
+        added, merged, held = [], 0, 0
+        matched = set()
         for item in enemies:
             position = np.asarray(item.get('position'), float)
             if position.shape != (2,) or not np.isfinite(position).all():
                 continue
             match = self._nearest_enemy(position)
+            if match is not None:
+                matched.add(match)
+        for item in enemies:
+            position = np.asarray(item.get('position'), float)
+            if position.shape != (2,) or not np.isfinite(position).all():
+                continue
+            match = self._nearest_enemy(position)
+            if match is None and self._is_duplicate_projection(position, quad, matched):
+                held += 1
+                continue
             if match is None:
                 identifier = self._identifier('enemy')
                 self.enemies[identifier] = {'id': identifier, 'kind': item.get('kind'),
                                             'position': position.tolist(), 'status': 'pending',
                                             'first_seen': self.tick, 'last_seen': self.tick, 'failures': 0}
                 added.append(identifier)
+                matched.add(identifier)
                 continue
             record = self.enemies[match]
             # 位置取最近一次观测：小队走近后的投影比远处那次准。
@@ -189,11 +215,23 @@ class RunState:
             record['last_seen'] = self.tick
             record['kind'] = item.get('kind') or record['kind']
             merged += 1
-        return {'enemies_added': added, 'enemies_refreshed': merged}
+        return {'enemies_added': added, 'enemies_refreshed': merged, 'enemies_held': held}
 
-    def _nearest_enemy(self, position):
+    def _is_duplicate_projection(self, position, quad, matched):
+        """这个落在合并半径外的新标记，是不是既有记录的同一只敌人被投偏了。
+
+        只在既有记录仍是待清、位置确实在本帧视野里、且本帧没有别的标记认到它时才认：那种情况下
+        本帧本该在它原来的位置看到敌人，却在旁边几十像素处看到了一个——细路配准沿路滑动就是这个
+        样子。matched 是本帧已经认到或新建的记录编号，它们不能再被当成重复投影。
+        """
+        shadow = self._nearest_enemy(position, ENEMY_SHADOW_RADIUS)
+        if shadow is None or shadow in matched or self.enemies[shadow]['status'] != 'pending':
+            return False
+        return self._inside(quad, self.enemies[shadow]['position'])
+
+    def _nearest_enemy(self, position, radius=ENEMY_MERGE_RADIUS):
         """合并半径内最近的既有敌人编号；没有就返回 None。"""
-        best, distance = None, ENEMY_MERGE_RADIUS
+        best, distance = None, radius
         for identifier, record in self.enemies.items():
             span = float(np.linalg.norm(np.asarray(record['position'], float) - position))
             if span <= distance:
