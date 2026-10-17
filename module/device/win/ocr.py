@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Optional, Tuple
 
@@ -41,7 +42,12 @@ class LauncherOcr:
         current_hash = hash(self.launcher.image.tobytes())
         if current_hash != self._ocr_cache['last_hash']:
             # 重新 OCR
-            ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
+            ocr_instance = Ocr(
+                buttons=[],
+                lang=lang,
+                model_type=self.config.Optimization_OcrModelType,
+                log_level=logging.DEBUG,
+            )
             self._ocr_cache['last_result'] = ocr_instance.ocr(self.launcher.image, direct_ocr=True)
             self._ocr_cache['last_hash'] = current_hash
         res = self._ocr_cache['last_result']
@@ -86,7 +92,12 @@ class LauncherOcr:
         current_hash = hash(self.launcher.image.tobytes())
         if current_hash != self._ocr_cache['last_hash']:
             # 重新 OCR
-            ocr_instance = Ocr(buttons=[], lang=lang, model_type=self.config.Optimization_OcrModelType)
+            ocr_instance = Ocr(
+                buttons=[],
+                lang=lang,
+                model_type=self.config.Optimization_OcrModelType,
+                log_level=logging.DEBUG,
+            )
             self._ocr_cache['last_result'] = ocr_instance.ocr(self.launcher.image, direct_ocr=True)
             self._ocr_cache['last_hash'] = current_hash
 

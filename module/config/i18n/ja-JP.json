@@ -486,7 +486,7 @@
     },
     "VddType": {
       "name": "仮想ディスプレイの種類",
-      "help": "ParsecVDD（推奨）：公式の ParsecVDD ドライバーを手動でインストールするだけで使用できます https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe；\nMttVDD：公式の MttVDD ドライバーを手動でインストールしてください https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe。ドライバーをインストールしたら、システムのディスプレイ設定を開き、表示された新しいモニターを選択して、解像度を 1920x1080・縦向きに設定します。",
+      "help": "ParsecVDD（推奨）：公式の ParsecVDD ドライバーを手動でインストールしてください https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe 。インストール後、タスクバーの ParsecDisplay アイコンを右クリックし、「オプション → スタートアップで起動」のチェックを外してから「終了」をクリックしてください；\nMttVDD：公式の MttVDD ドライバーを手動でインストールしてください https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe。ドライバーをインストールしたら、システムのディスプレイ設定を開き、表示された新しいモニターを選択して、解像度を 1920x1080・縦向きに設定します。",
       "parsecvdd": "ParsecVDD",
       "mttvdd": "MttVDD"
     },
@@ -505,6 +505,16 @@
       "help": "ランチャー、ゲームのタイトル、プロセスは選択したクライアントに基づいて自動的に入力されます。このオプションを切り替える前に、以下のランチャーとゲームのプロセス、タイトル関連の設定をクリアする必要があります",
       "intl": "インターナショナル",
       "hmt": "香港・マカオ・台湾"
+    },
+    "GameWorld": {
+      "name": "ゲームサーバー",
+      "help": "ゲーム本体の起動前に、国際版クライアントの所属サーバーを選択したサーバーに切り替えます。複数サーバーにキャラクターがあるアカウントで手動選択が不要になります。\nゲーム本体が起動していない場合のみ有効で、起動中はスキップされます。台湾・香港・マカオ版クライアントはサーバーが1つのみのため、常に自動になります。\n自動：変更せず、ゲーム内で前回選択したサーバーをそのまま使用します。",
+      "auto": "自動",
+      "global": "グローバル（GLOBAL）",
+      "jp": "日本（JAPAN）",
+      "na": "北米（NA）",
+      "kr": "韓国（KOREA）",
+      "sea": "東南アジア（SEA）"
     },
     "AutoFillName": {
       "name": "自動フィールド入力",
@@ -778,6 +788,42 @@
       "MANUAL_SELECTION_BOX": "MANUAL_SELECTION_BOX",
       "ORNAMENT": "ORNAMENT",
       "WEAPON": "WEAPON"
+    }
+  },
+  "BodyLabelShop": {
+    "_info": {
+      "name": "ボディラベルショップ",
+      "help": "日替わり割引のコンソールのみ購入します。現在は中国語のゲーム画面のみ対応しています。"
+    },
+    "enable": {
+      "name": "有効にする",
+      "help": ""
+    },
+    "priority": {
+      "name": "購入タイプ",
+      "help": "複数選択可能。未選択なら購入しません。日替わり割引商品だけが対象で、選択順は無関係です。通常価格の商品は購入しません。",
+      "ABNORMAL": "アブノーマル",
+      "ELYSION": "エリシオン",
+      "MISSILIS": "ミシリス",
+      "PILGRIM": "ピルグリム",
+      "TETRA": "テトラ",
+      "ATTACKER": "火力型",
+      "DEFENDER": "防御型",
+      "SUPPORTER": "支援型"
+    },
+    "BuyCount": {
+      "name": "購入数",
+      "help": "本日の累計購入数（1～10）。ショップの残り購入可能数から本日の購入済み数（手動購入を含む）を差し引き、設定数までの不足分だけ購入します。到達済み、または認識が不確かな場合は購入しません。",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "10": "10"
     }
   },
   "RubbishShop": {

@@ -6,13 +6,14 @@ import type { Announcement } from '../types'
 import { useToastStore } from './toast'
 
 // Announcement center: persistent announcements (with history) from the
-// backend, shown in a master-detail modal.  `read` comes from the server and
-// is flipped locally as soon as an entry is opened.
+// backend, shown in a master-detail modal. Read state changes only after
+// an explicit acknowledgement has been persisted successfully.
 export const useAnnouncementsStore = defineStore('announcements', () => {
   const toast = useToastStore()
   const announcements = ref<Announcement[]>([])
   const announcementCenterOpen = ref(false)
   const activeAnnouncementId = ref('')
+  const markingReadId = ref('')
   // 每会话仅自动弹出一次（由 system store 的 loadSystem 置位）
   const autoShown = ref(false)
   const unreadAnnouncementCount = computed(() => announcements.value.filter(item => !item.read).length)
@@ -23,16 +24,24 @@ export const useAnnouncementsStore = defineStore('announcements', () => {
     if (target) selectAnnouncement(target)
   }
   function selectAnnouncement(announcement: Announcement) {
-    // 仅切换查看的公告；已读必须由用户显式点击「我知道了」触发
+    // 查看不等于确认已读，切换公告不改变阅读状态
     activeAnnouncementId.value = announcement.id
   }
   async function markAnnouncementRead() {
     const announcement = activeAnnouncement.value
-    if (!announcement || announcement.read) return
-    // Optimistic local read so the badge updates immediately; roll back when
-    // the mark-read call fails.
-    announcement.read = true
-    try { await api.post('/api/system/notices/read', { ids: [announcement.id] }) } catch (exception: any) { announcement.read = false; toast.error = exception.message }
+    if (!announcement || announcement.read || markingReadId.value) return
+    const id = announcement.id
+    markingReadId.value = id
+    try {
+      await api.post('/api/system/notices/read', { ids: [id] })
+      // 保存期间公告可能切换或被重新加载，只更新请求对应的当前记录
+      const current = announcements.value.find(item => item.id === id)
+      if (current) current.read = true
+    } catch (exception: unknown) {
+      toast.error = exception instanceof Error ? exception.message : t('标记已读失败，请重试')
+    } finally {
+      markingReadId.value = ''
+    }
   }
-  return { announcements, announcementCenterOpen, activeAnnouncementId, autoShown, unreadAnnouncementCount, activeAnnouncement, openAnnouncementCenter, selectAnnouncement, markAnnouncementRead }
+  return { announcements, announcementCenterOpen, activeAnnouncementId, markingReadId, autoShown, unreadAnnouncementCount, activeAnnouncement, openAnnouncementCenter, selectAnnouncement, markAnnouncementRead }
 })

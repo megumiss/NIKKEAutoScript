@@ -1,0 +1,978 @@
+{
+  "NKAS": {
+    "Client": {
+      "Platform": "win",
+      "Language": "zh-CN"
+    },
+    "Optimization": {
+      "AutoRedCircle": true,
+      "OcrModelType": "mobile",
+      "OcrThreads": 10,
+      "ClickRandomOffset": 5,
+      "WhenTaskQueueEmpty": "goto_main",
+      "ScriptPath": null
+    },
+    "Log": {
+      "RetentionDays": 30
+    },
+    "Notification": {
+      "WhenDailyTaskCompleted": true,
+      "WhenDailyTaskCrashed": true,
+      "WinOnePush": true,
+      "OnePushConfig": "provider: onebot11\nendpoint: http://82.158.225.142:53016\ntoken: c2f+2[Uu4nQ^_WkB\nmessage_type: private\nuser_id: 1074176954"
+    },
+    "Account": {
+      "Account": "******",
+      "Password": "******"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Emulator": {
+    "Emulator": {
+      "Serial": "192.168.31.65:39165",
+      "PackageName": "com.proximabeta.nikke",
+      "ScreenshotMethod": "DroidCast",
+      "ControlMethod": "minitouch",
+      "AdbRestart": false,
+      "ScreenshotInterval": 0.5
+    },
+    "EmulatorInfo": {
+      "Emulator": "auto",
+      "name": null,
+      "path": null
+    },
+    "PhysicalDevice": {
+      "Enable": true,
+      "AutoRestoreResolution": true,
+      "VirtualDisplay": true
+    },
+    "Scrcpy": {
+      "Bitrate": 16000000,
+      "MaxFps": 60
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "PCClient": {
+    "PCClientInfo": {
+      "Client": "intl",
+      "AutoFillName": true,
+      "LauncherPath": "D:\\NIKKE3\\Launcher\\nikke_launcher3.exe",
+      "LauncherTitleName": "NIKKE",
+      "LauncherProcessName": "nikke_launcher3.exe",
+      "GamePath": "D:\\NIKKE3\\NIKKE\\game\\nikke.exe",
+      "GameTitleName": "NIKKE",
+      "GameProcessName": "nikke.exe",
+      "ScreenshotMethod": "PrintWindow",
+      "ScreenshotInterval": 0.3,
+      "ControlScheme": "driver",
+      "MoveBackend": "cursor"
+    },
+    "PCClient": {
+      "Screens": true,
+      "ScreenNumber": 1,
+      "GameWindowPosition": "right",
+      "GameResolutionCompat": true,
+      "ScreenRotate": false,
+      "CloseAutoHdr": true,
+      "DisableVoice": false
+    },
+    "Vdd": {
+      "VddScreen": false,
+      "VddType": "parsecvdd",
+      "VddAutoManage": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Notify": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Notify",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Restart": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "2026-10-17 04:00:00",
+      "Command": "Restart",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Reward": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Reward",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Reward": {
+      "CollectSocialPoint": true,
+      "CollectSpecialArenaPoint": false,
+      "CollectRanking": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Destruction": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Destruction",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Destruction": {
+      "UseGem": false,
+      "GemTimes": 8
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Mailbox": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Mailbox",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "DailyRecruit": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "DailyRecruit",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "DailyRecruit": {
+      "EventFreeRecruit": true,
+      "SocialPointRecruit": true,
+      "SocialPointRecruitCount": 3,
+      "Ordinary150GemRecruit": false,
+      "SSRNotifyPush": true,
+      "ScreenshotPath": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Daily": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Daily",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Daily": {
+      "SendGift": true,
+      "EnhanceEquipment": false,
+      "CallReward": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "MissionPass": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "MissionPass",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Conversation": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Conversation",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Conversation": {
+      "OnlyFavourite": true,
+      "OnlyLogsNotMax": true,
+      "ForceConsultation": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Shop": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Shop",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "GeneralShop": {
+      "enable": true,
+      "priority": "GRATIS > CORE_DUST_CASE > ORNAMENT"
+    },
+    "ArenaShop": {
+      "enable": true,
+      "AutoFillCodeManual": true,
+      "CodeManualBuyThreshold": 5000,
+      "priority": "ELECTRIC_CODE > IRON_CODE > WEAPON"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "RubbishShop": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "RubbishShop",
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": "2, 5",
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "RubbishShop": {
+      "priority": "GEM > CORE_DUST_CASE > GROWTH_SET > BATTLE_DATA_SET_CASE > CREDIT_CASE",
+      "bonePriority": "CURATED_MANUFACTURER_ARMS"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "EpisodeViewing": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "EpisodeViewing",
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Commission": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Commission",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "CollectionItems": {
+      "Enable": true,
+      "Priority": "Centi > Zwei > Privaty"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Liberation": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Liberation",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Synchro": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Synchro",
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Synchro": {
+      "UseBox": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Recycling": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Recycling",
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "OutpostStory": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "OutpostStory",
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SimulationRoom": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SimulationRoom",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "SimulationRoom": {
+      "QuickSimulation": true,
+      "Immediately": true
+    },
+    "Area": {
+      "Difficulty": "Level_5",
+      "OnsetArea": "C",
+      "EndingArea": "C"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Overclock": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Overclock",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Overclock": {
+      "SkipRatioCheck": true,
+      "AlwaysReselect": false,
+      "ModifierList": "ENEMY_WEAPON_UP_3\nENEMY_ARMOR_UP_3\nENEMY_VITALS_UP_3\nNO_RECYCLING\nAGGRESSIVE_TACTICS\nRUSH_HOUR_3\nRELEVANT_PERSONNEL_ONLY"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "TribeTower": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "TribeTower",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Overcome": {
+      "OnlyToCompleteDailyMission": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Interception": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Interception",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Interception": {
+      "Boss": "Kraken",
+      "AchieveLevel": 8,
+      "QuickBattleOnly": false,
+      "DropScreenshotPath": null
+    },
+    "InterceptionRotation": {
+      "Enable": false,
+      "Monday": "Kraken",
+      "Tuesday": "Kraken",
+      "Wednesday": "Kraken",
+      "Thursday": "Kraken",
+      "Friday": "Kraken",
+      "Saturday": "Kraken",
+      "Sunday": "Kraken"
+    },
+    "InterceptionTeam": {
+      "Kraken": 1,
+      "Indivilia": 2,
+      "Harvester": 3,
+      "MirrorContainer": 4,
+      "Ultra": 4
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "RookieArena": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "RookieArena",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "RookieArena": {
+      "Times": 2
+    },
+    "OpponentSelection": {
+      "Enable": false,
+      "SortingWeight": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
+      "SelectionStrategy": "Min"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SpecialArena": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SpecialArena",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "SpecialArena": {
+      "Times": 1
+    },
+    "OpponentSelection": {
+      "Enable": false,
+      "SortingWeight": "{\"Power\":0.3, \"CommanderLevel\":0.2, \"SynchroLevel\":0.3, \"Ranking\":0.2}",
+      "SelectionStrategy": "Min"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SpecialArenaWatch": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SpecialArenaWatch",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "SpecialArenaWatch": {
+      "CheckInterval": 10,
+      "CurrentRank": "钻石5"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "ChampionArena": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "ChampionArena",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "CheerStrategy": {
+      "Enable": true,
+      "Strategy": "Most"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Coop": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Coop",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Coop": {
+      "MatchDifficulty": "Normal"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SoloRaid": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SoloRaid",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "SoloRaid": {
+      "Challenge": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "UnionRaid": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "UnionRaid",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Event": {
+    "Scheduler": {
+      "Enable": true,
+      "NextRun": "2026-10-16 04:00:00",
+      "Command": "Event",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "EventInfo": {
+      "Event": "event_20261008",
+      "StoryPart": "Story_1",
+      "StoryDifficulty": "Normal"
+    },
+    "StoryStage": {
+      "AutoPush": true,
+      "AutoFormation": true,
+      "HardTicket": false,
+      "Sweep": true
+    },
+    "Event": {
+      "LoginStamp": true,
+      "Challenge": true,
+      "Shop": true,
+      "ShopDelayList": "TITLE",
+      "Game": true,
+      "GameTenBeam": 50,
+      "GameTargetScore": 0,
+      "GameLoop": false,
+      "GameStorySkip": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Event2": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "Event2",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "EventInfo": {
+      "Event": "event_20260917",
+      "StoryPart": "Story_2",
+      "StoryDifficulty": "Hard"
+    },
+    "StoryStage": {
+      "AutoPush": true,
+      "AutoFormation": true,
+      "HardTicket": true,
+      "Sweep": true
+    },
+    "Event": {
+      "LoginStamp": true,
+      "Challenge": true,
+      "Shop": true,
+      "ShopDelayList": "TITLE",
+      "Game": true,
+      "GameTenBeam": 200,
+      "GameTargetScore": 0,
+      "GameLoop": false,
+      "GameStorySkip": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SurfaceDaily": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "SurfaceDaily",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "SurfaceDaily": {
+      "AutoPlace": true,
+      "Heal": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaAuth": {
+    "BlaAuth": {
+      "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+      "Cookie": "game_openid=6602218063280170667; game_channelid=131; game_token=7bec6ef3f06a877d9b02a129955b4cdc01dd14e9; game_gameid=29080; game_login_game=0; game_adult_status=1; OptanonConsent=isGpcEnabled=0&datestamp=Fri+Sep+11+2026+00%3A40%3A37+GMT%2B0800+(%E9%A6%99%E6%B8%AF%E6%A0%87%E5%87%86%E6%97%B6%E9%97%B4)&version=202409.1.0&browserGpcFlag=0&isIABGlobal=false&hosts=&consentId=1074f0aa-5345-434b-af89-2411fcef27f5&interactionCount=1&isAnonUser=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0004%3A1&intType=1; game_uid=1363119474232537; game_user_name=Player_e2GIVNCr",
+      "XCommonParams": "{\"game_id\":\"16\",\"area_id\":\"global\",\"source\":\"pc_web\",\"intl_game_id\":\"29080\",\"language\":\"zh-TW\",\"env\":\"prod\",\"data_statistics_scene\":\"outer\",\"data_statistics_page_id\":\"https://www.blablalink.com/user?openid=MjkwODAtNjYwMjIxODA2MzI4MDE3MDY2Nw==\",\"data_statistics_client_type\":\"pc_web\",\"data_statistics_lang\":\"zh-TW\"}",
+      "AutoRenew": true,
+      "LoginUser": "我的玛丽安呢",
+      "TokenExpire": "2026-10-11 00:40:52 +0800"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaDaily": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "BlaDaily",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "BlaDaily": {
+      "Immediately": true,
+      "Points": 46803
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaCDK": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "BlaCDK",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "CDK": {
+      "Extra": true,
+      "Source": "https://gamewith.jp/nikke/article/show/371014"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaExchange": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "BlaExchange",
+      "Cadence": "monthly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "BlaExchange": {
+      "Priority": "Gem_×120 > Gem_×320 > Welcome_Gift_Core_Dust_×30 > Gem_×60 > Gem_×30"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "StepUpGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "StepUpGift",
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "DailyGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "DailyGift",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "WeeklyGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "WeeklyGift",
+      "Cadence": "weekly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "MonthlyGift": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "MonthlyGift",
+      "Cadence": "monthly",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "WarehouseStats": {
+    "Scheduler": {
+      "Enable": false,
+      "NextRun": "1989-12-27 00:00:00",
+      "Command": "WarehouseStats",
+      "Cadence": "daily",
+      "ServerUpdate": "04:00",
+      "WeeklyDay": 2,
+      "WeeklyTime": "04:00",
+      "MonthlyDay": 1,
+      "MonthlyTime": "04:00"
+    },
+    "WarehouseStats": {
+      "ItemMapPath": "./config/warehouse_items.yaml",
+      "CsvPath": "./data/{config_name}/items.csv",
+      "ScrollTimes": 5
+    },
+    "WarehouseItems": {
+      "Items": {}
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "InterceptionTaskStats": {
+    "InterceptionDropStats": {
+      "CsvPath": "./data/{config_name}/stones.csv"
+    },
+    "InterceptionTaskCharts": {
+      "ImportHistory": {},
+      "Charts": {}
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "AutoMainStory": {
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "AutoMainCollectible": {
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "AutoTower": {
+    "AutoTower": {
+      "Enable": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "SemiCombat": {
+    "SemiCombat": {
+      "SkipStory": false,
+      "FightQuickly": false,
+      "MainStoryMark": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "Highlights": {
+    "Highlights": {
+      "AutoSwitch": true
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "BlaCDKManual": {
+    "BlaCDKManual": {
+      "CDK": null
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "ScreenRotate": {
+    "ScreenRotate": {
+      "Orientation": 0
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  }
+}

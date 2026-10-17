@@ -1,8 +1,11 @@
+import re
 from functools import cached_property
+from typing import Optional
 
+from module.base.langs import Langs
 from module.base.timer import Timer
 from module.logger import logger
-from module.ocr.ocr import Digit
+from module.ocr.ocr import Ocr
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING, PAUSE
 from module.ui.assets import MAIN_CHECK
 from module.ui.page import page_main
@@ -19,26 +22,46 @@ class UnionRaidIsUnavailable(Exception):
 
 
 class UnionRaid(UI):
+    # 读「每日游戏次数」的重试时长，读不到就每秒重拍一次
+    DAILY_PLAY_COUNT_TIMEOUT = 10
+
     @cached_property
     def teams(self):
         return [RAID_TEAM_1, RAID_TEAM_2, RAID_TEAM_3, RAID_TEAM_4, RAID_TEAM_5]
 
     @property
-    def free_remain(self) -> int:
+    def free_remain(self) -> Optional[int]:
+        """
+        读取「每日游戏次数」，只认「每日游戏次数」标签和 `x/y` 数字都读到的结果。
+
+        次数条没显示、页面不对或 OCR 失败时重试，仍读不到返回 None（不能当成 0 次）。
+        """
         model_type = self.config.Optimization_OcrModelType
-        FREE_REMAIN = Digit(
+        daily_play_count = Ocr(
             [FREE_OPPORTUNITY_CHECK.area],
             name='FREE_REMAIN',
             model_type=model_type,
             lang='ch',
         )
-        return int(FREE_REMAIN.ocr(self.device.image)['text'])
+        timer = Timer(self.DAILY_PLAY_COUNT_TIMEOUT, count=2).start()
+        while 1:
+            text = daily_play_count.ocr(self.device.image)['text']
+            # 数字里的斜杠可能被识别成竖线
+            match = re.search(r'(\d+)\s*/\s*(\d+)', text.replace('|', '/'))
+            if match and Langs.UNION_RAID_DAILY_PLAY_COUNT in text:
+                return int(match.group(1))
+            if timer.reached():
+                logger.warning(f'Daily play count not found: "{text}"')
+                return None
+            self.device.sleep(1)
+            self.device.screenshot()
 
     @property
-    def free_opportunity_remain(self) -> bool:
-        if self.free_remain:
-            logger.info(f'[Free opportunities remain] {self.free_remain}')
-        return self.free_remain
+    def free_opportunity_remain(self) -> Optional[int]:
+        remain = self.free_remain
+        if remain:
+            logger.info(f'[Free opportunities remain] {remain}')
+        return remain
 
     def ensure_into_union(self, skip_first_screenshot=True):
         """进入联盟"""

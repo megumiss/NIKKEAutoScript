@@ -486,7 +486,7 @@
     },
     "VddType": {
       "name": "虚拟屏幕类型",
-      "help": "ParsecVDD（推荐）：只需手动安装官方 ParsecVDD 驱动即可使用 https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe；\nMttVDD：需要手动安装官方 MttVDD 驱动 https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe，安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080、竖屏。",
+      "help": "ParsecVDD（推荐）：手动安装官方 ParsecVDD 驱动 https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe ，安装完成后右键任务栏的 ParsecDisplay 图标，取消勾选「选项 → 开机启动」并点击「退出」；\nMttVDD：需要手动安装官方 MttVDD 驱动 https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe，安装驱动后，打开系统显示设置，选择出现的新屏幕，将其分辨率设为 1920x1080、竖屏。",
       "parsecvdd": "ParsecVDD",
       "mttvdd": "MttVDD"
     },
@@ -505,6 +505,16 @@
       "help": "启动器、游戏的标题、进程会根据选择的客户端自动填写，切换该选项前需要先清空下方的启动器和游戏的进程、标题相关配置",
       "intl": "国际",
       "hmt": "港澳台"
+    },
+    "GameWorld": {
+      "name": "游戏区服",
+      "help": "在启动游戏本体前，将国际服客户端的所属区服切换为所选区服，多区服账号无需再手动选服。\n仅在游戏本体未运行时生效，游戏已打开时直接跳过；港澳台客户端只有单区服，固定为自动。\n自动：不修改区服，沿用游戏内上次的选择。",
+      "auto": "自动",
+      "global": "全球（GLOBAL）",
+      "jp": "日服（JAPAN）",
+      "na": "美服（NA）",
+      "kr": "韩服（KOREA）",
+      "sea": "东南亚（SEA）"
     },
     "AutoFillName": {
       "name": "自动填充字段",
@@ -778,6 +788,42 @@
       "MANUAL_SELECTION_BOX": "代码自选箱",
       "ORNAMENT": "简介装饰品",
       "WEAPON": "公司武器熔炉"
+    }
+  },
+  "BodyLabelShop": {
+    "_info": {
+      "name": "躯体标签商店",
+      "help": "购买每日折扣通用主机。"
+    },
+    "enable": {
+      "name": "启用该功能",
+      "help": ""
+    },
+    "priority": {
+      "name": "购买类型",
+      "help": "可多选；留空不购买。仅匹配每日随机折扣商品，选项顺序不影响购买，不购买原价商品。",
+      "ABNORMAL": "反常",
+      "ELYSION": "极乐净土",
+      "MISSILIS": "米西利斯",
+      "PILGRIM": "朝圣者",
+      "TETRA": "泰特拉",
+      "ATTACKER": "火力型",
+      "DEFENDER": "防御型",
+      "SUPPORTER": "辅助型"
+    },
+    "BuyCount": {
+      "name": "购买数量",
+      "help": "今日累计购买数量，范围 1～10。根据商店剩余限购次数扣除今日已购数量（含手动购买），仅补足至设置值；已达到或识别不确定时跳过。",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "10": "10"
     }
   },
   "RubbishShop": {
