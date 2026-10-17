@@ -6,6 +6,7 @@
 - `gui.py`：Web UI 启动入口（Uvicorn）
 
 配置与运行时文件在 `config/`；模板图与多语言资源在 `assets/`（如 `assets/zh-CN/event_dated/...`）；日志与错误截图在 `log/`。  
+运行地图等资源来自独立仓库 NIKKEAutoScriptResource（部署设置 `ResourceRepository`），按需同步到 `data/resources/`（不提交，`maps/` 为章节地图）；`data/chapter_maps/local/` 为本地采集、原始包与实验数据。
 桌面 Tauri 2 工程位于 `webapp/`；Vue SPA 位于 `webui/`，由 Python 后端托管。  
 SPA 源码结构：`webui/src/views/`（按页面拆分）、`webui/src/stores/`（Pinia 共享状态）、`webui/src/composables/`（Tauri 壳、文本域等复用逻辑）、`webui/src/components/`（壳与通用组件）；`App.vue` 只是布局壳，按路由切换视图。
 
@@ -54,6 +55,8 @@ Python 使用 4 空格缩进，单行不超过 120 字符，字符串优先单�
 - 资源改动要成对：模板重命名/替换时同步检查 `assets.py` 与实际图片，避免悬空引用。
 - 删除代码要可验证：删除调试或废弃逻辑后，至少执行语法检查与一次最小路径回归。
 - 注释只写 non-obvious 的原因（为什么这么做/不能这么做），不复述代码行为；禁止在注释里保留中间尝试过程的痕迹。
+- 新增的方法、函数和类必须带详细的中文 docstring：首行用一句话说明职责，需要时空行后补充调用前提、坐标/单位约定、阈值与失败路径。只是重命名或移动既有实现时沿用原注释。
+- docstring 的「详细」指交代 non-obvious 的约束与边界，不是逐行翻译代码；参数含义只在名字无法自解释时才写。
 
 ## 高频代码用法说明
 - Web UI 为 `webui/` 下的 Vue SPA（构建产物 `webui/dist` 提交入库），后端是纯 Starlette 工厂 `module/webui/app.py:app`，通过 `module/webui/api/` 暴露 REST 与 WebSocket；pywebio 已移除。
@@ -70,6 +73,8 @@ Python 使用 4 空格缩进，单行不超过 120 字符，字符串优先单�
 默认不编写或新增测试代码；只有用户明确要求，或当前任务确实必须新增测试代码时，才在最小必要范围内添加。此限制不影响运行现有测试、语法检查、构建及下述验证。
 
 按受影响的模块选择检查，跨模块改动合并对应要求；以下为唯一验证清单。
+
+非必要情况下不要新增测试代码。优先复用现有测试、临时验证脚本或手动回归；仅在现有验证方式无法覆盖关键行为或回归风险时新增测试。此规则不免除下表中的必要检查。
 
 | 改动范围 | 必要检查 |
 | --- | --- |

@@ -6,6 +6,8 @@ import AppIcon from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
 import LiveLog from '../components/LiveLog.vue'
+import CampaignPanel from '../components/CampaignPanel.vue'
+import CampaignSettingsGroup from '../components/CampaignSettingsGroup.vue'
 import FieldItemTable from '../components/config/FieldItemTable.vue'
 import FieldNotify from '../components/config/FieldNotify.vue'
 import FieldPathPicker from '../components/config/FieldPathPicker.vue'
@@ -34,6 +36,7 @@ const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flush
 const instancesStore = useInstancesStore()
 const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
+const isCampaign = computed(() => selectedPage.value === 'tool' && ['AutoMainStory', 'AutoMainCollectible'].includes(selectedTask.value))
 const { blaLoginBusy } = storeToRefs(useBlaLoginStore())
 const { startBlaLogin } = useBlaLoginStore()
 const { bindBusy } = storeToRefs(useBlaBindBotStore())
@@ -60,7 +63,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
 </script>
 
 <template>
-  <section class="view" :class="{ 'tool-view': selectedPage === 'tool' }" @scroll.passive="onViewScroll">
+  <section class="view" :class="{ 'tool-view': selectedPage === 'tool', 'campaign-view': isCampaign }" @scroll.passive="onViewScroll">
     <div class="task-layout">
       <div>
         <article v-if="taskSchema" class="card task-hero">
@@ -72,6 +75,8 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
         <article v-else class="card group-card">
           <div class="group-body special-empty" style="padding:16px 22px">{{ selectedPage === 'tool' ? t('请从列表选择工具') : t('请从任务列表选择任务') }}</div>
         </article>
+        <CampaignSettingsGroup v-if="isCampaign" />
+        <CampaignPanel v-if="isCampaign" :name="workspace.selectedName" />
         <div class="cfg-groups">
           <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
             <button class="group-head" @click="collapsed[group.key] = !collapsed[group.key]">
@@ -156,6 +161,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
       </div>
       <aside class="card anchor-nav">
         <div class="side-label">{{ t('本页分组') }}</div>
+        <button v-if="isCampaign" class="anchor-nav-item" :class="{ active: activeGroup === 'CampaignSettings' }" @click="jumpToGroup({ key: 'CampaignSettings' })">{{ t('推图设置') }}</button>
         <button v-for="group in taskSchema?.groups || []" :key="group.key" class="anchor-nav-item" :class="{ active: activeGroup === group.key }" @click="jumpToGroup(group)">{{ group.name }}</button>
       </aside>
     </div>
