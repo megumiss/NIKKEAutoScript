@@ -12,13 +12,12 @@ from module.base.utils import crop
 from module.exception import WarehouseStatsScanError
 from module.logger import logger
 from module.ocr.ocr import Digit, Ocr
+from module.ocr.warehouse import WarehouseOcr
 from module.ui import page as ui_page
 from module.ui.assets import INVENTORY_CHECK
 from module.ui.ui import UI
 from module.warehouse_stats.assets import *
 from module.warehouse_stats.data import (
-    SCAN_METHOD_DIRECT,
-    SCAN_METHOD_OPEN_DETAIL,
     flatten_groups,
     load_item_groups,
     resolve_item_asset,
@@ -33,7 +32,7 @@ class WarehouseStats(UI):
 
     流程：
     1) 打开仓库页
-    2) 按物品配置选择“固定网格直读”或“点击详情 OCR”识别
+    2) 钻石展开读取免费/付费数量，其他物品直接读取格子内数量
     3) 滚动翻页重复扫描
     4) 写入 CSV
     """
@@ -79,72 +78,10 @@ class WarehouseStats(UI):
     def inventory_item_num_direct(
         self, image, area: Tuple[int, int, int, int], item_name: Optional[str] = None
     ) -> Optional[int]:
-        # 直读识别：格子局部数字 OCR
-        self_image = self.device.image
-        try:
-            self.device.image = image
-            model_type = self.config.Optimization_OcrModelType
-            item_num = Ocr(
-                [area],
-                log_level=logging.DEBUG,
-                text_color=(248, 252, 254),
-                text_color_tolerance=(90, 10, 40),
-                text_color_preprocess=(0.7, 20, 0.6),
-                name=str(item_name or 'INVENTORY_ITEM'),
-                model_type=model_type,
-                lang='ch',
-            )
-            text = item_num.ocr(self.device.image).get('text', '')
-            has_suffix_k, has_suffix_m = self._match_num_suffix_flags(image=image, area=area)
-            value = self._parse_direct_count_text(
-                text=text,
-                has_suffix_k=has_suffix_k,
-                has_suffix_m=has_suffix_m,
-                expect_prefix=True,
-            )
-            if value is not None:
-                return value
-            return self._parse_direct_count_by_digit_templates(
-                image=image,
-                area=area,
-                has_suffix_k=has_suffix_k,
-                has_suffix_m=has_suffix_m,
-                item_name=item_name,
-            )
-        finally:
-            self.device.image = self_image
-
-    def _parse_direct_count_text(
-        self,
-        text: str,
-        has_suffix_k: bool = False,
-        has_suffix_m: bool = False,
-        expect_prefix: bool = False,
-    ) -> Optional[int]:
-        # Supports x1 / x444 / x124K / x1.2M
-        if not text:
-            return None
-        normalized = self._normalize_ocr_text_common(text).replace(' ', '').replace(',', '').strip()
-
-        match = re.search(r'[xX]\s*([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', normalized)
-        if match is None and expect_prefix:
-            # 兼容 OCR 将数量前缀 x 误识别成 4（例如 x124 -> 4124）
-            match = re.search(r'^4([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)$', normalized)
-            if match is not None:
-                logger.debug(
-                    f'WarehouseStats: [DirectOCR] corrected prefix 4->x, raw_text="{text}", normalized="{normalized}"'
-                )
-        if match is None:
-            match = re.search(r'([0-9]+(?:\.[0-9]+)?)\s*([kKmM]?)', normalized)
-        if match is None:
-            return None
-
-        unit = match.group(2)
-        if has_suffix_m:
-            unit = 'M'
-        elif has_suffix_k:
-            unit = 'K'
-        return self._parse_scaled_number(match.group(1), unit)
+        quantity = crop(image, area)
+        return WarehouseOcr(model_type=self.config.Optimization_OcrModelType).ocr(
+            quantity, name=str(item_name or 'INVENTORY_ITEM')
+        )
 
     def _parse_direct_count_by_digit_templates(
         self,
@@ -623,8 +560,8 @@ class WarehouseStats(UI):
                 page_pending_detail[page_key] = {}
                 pages.append(page_key)
 
-            scan_method = item.get('scan_method', SCAN_METHOD_DIRECT)
-            if scan_method == SCAN_METHOD_OPEN_DETAIL:
+            # 旧配置中的 detail 不再让普通物品展开；钻石仍需详情中的免费/付费明细。
+            if item_id in ('gem', 'free_gem', 'paid_gem'):
                 page_pending_detail[page_key][item_id] = button
             else:
                 page_pending_direct[page_key][item_id] = button
@@ -736,29 +673,11 @@ class WarehouseStats(UI):
                     continue
 
                 if item_id in pending_direct:
-                    prefix_xy = self._match_num_prefix_xy(masked_cell_image=cell['masked'])
                     item_name = item_name_map.get(item_id, item_id)
-                    if prefix_xy is not None:
-                        num_area = self._build_num_area(prefix_xy=prefix_xy, cell_area=cell['area'], image=image)
-                        if num_area is None:
-                            continue
-                        count = self.inventory_item_num_direct(
-                            image=image,
-                            area=num_area,
-                            item_name=item_name,
-                        )
-                    else:
-                        # 前缀未命中时，直接在当前格子区域尝试纯数字模板识别（避免直接漏掉）
-                        num_area = cell['area']
-                        logger.debug(
-                            f'WarehouseStats: [Direct] prefix not found, use digit-template fallback '
-                            f'item={item_id}({item_name}), area={num_area}'
-                        )
-                        count = self._parse_direct_count_by_digit_templates(
-                            image=image,
-                            area=num_area,
-                            item_name=item_name,
-                        )
+                    num_area = self._build_num_area(cell_area=cell['area'], image=image)
+                    if num_area is None:
+                        continue
+                    count = self.inventory_item_num_direct(image=image, area=num_area, item_name=item_name)
                     if count is None:
                         continue
 
@@ -884,14 +803,10 @@ class WarehouseStats(UI):
         self, image, origin: Tuple[int, int], page_index: int = 0, drop_anchor_row: bool = False
     ) -> List[dict]:
         """
-        将当前页按固定网格分割为多个待识别格子：
-        1) cell: 仅格子裁剪图（用于匹配物品模板）
-        2) masked: 保留该格子，其余区域全黑（用于匹配数量前缀模板）
+        将当前页按固定网格分割为多个待识别格子，用于匹配物品模板。
         """
         x0, y0 = origin
         cells: List[dict] = []
-        h, w = image.shape[:2]
-
         for row in range(self.GRID_ROWS):
             for col in range(self.GRID_COLS):
                 x1 = x0 + col * self.GRID_STEP_X
@@ -907,20 +822,12 @@ class WarehouseStats(UI):
 
                 cell_image = crop(image, area)
 
-                # 构造“只保留当前格子，其余位置涂黑”的整图
-                masked = np.zeros_like(image)
-                ix1, iy1 = max(0, x1), max(0, y1)
-                ix2, iy2 = min(w, x2), min(h, y2)
-                if ix1 < ix2 and iy1 < iy2:
-                    masked[iy1:iy2, ix1:ix2] = image[iy1:iy2, ix1:ix2]
-
                 cells.append(
                     {
                         'row': row,
                         'col': col,
                         'area': area,
                         'cell': cell_image,
-                        'masked': masked,
                     }
                 )
 
@@ -991,39 +898,17 @@ class WarehouseStats(UI):
         )
         return None
 
-    def _match_num_prefix_xy(self, masked_cell_image) -> Optional[Tuple[int, int]]:
-        self_image = self.device.image
-        self.device.image = masked_cell_image
-        # 在“当前格子整图掩码图”中匹配数量前缀模板，返回匹配左上角 (x, y)
-        if self.appear(ITEM_NUM_PREFIX, offset=10, threshold=0.6, static=False):
-            x, y = self.appear_location(ITEM_NUM_PREFIX, offset=10, threshold=0.6, static=False)
-            self.device.image = self_image
-            return x, y
-
-        self.device.image = self_image
-        return None
-
     def _build_num_area(
         self,
-        prefix_xy: Tuple[int, int],
         cell_area: Tuple[int, int, int, int],
         image,
     ) -> Optional[Tuple[int, int, int, int]]:
-        # 规则：(x-10, y-10, 格子右下角x, 格子右下角y)
-        x, y = prefix_xy
-        _, _, cell_x2, _ = cell_area
-        x1, y1 = x - 10, y - 17
-        x2, y2 = cell_x2, y + 8
-
-        # 边界保护，防止越界
+        # 同时覆盖普通 x 数量和没有前缀的分数，不能再用 x 的位置决定是否 OCR。
+        x1, cell_y1, x2, y2 = cell_area
         h, w = image.shape[:2]
-        x1 = max(0, min(w - 1, x1))
-        y1 = max(0, min(h - 1, y1))
-        x2 = max(0, min(w, x2))
-        y2 = max(0, min(h, y2))
-        if x2 <= x1 or y2 <= y1:
+        if x1 < 0 or cell_y1 < 0 or x2 > w or y2 > h or x2 <= x1 or y2 <= cell_y1:
             return None
-        return int(x1), int(y1), int(x2), int(y2)
+        return int(x1), int(max(cell_y1, y2 - 40)), int(x2), int(y2)
 
     def _log_page_item_counts(
         self,
