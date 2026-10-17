@@ -9,7 +9,7 @@ from module.config.account import load_account
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
 from module.exception import AccountError, CaptchaRequired, GameServerUnderMaintenance, GameStuckError
 from module.handler.assets import *
-from module.interception.assets import TEMPLATE_RED_CIRCLE_LEFT, TEMPLATE_RED_CIRCLE_RIGHT, TEMPLATE_RED_CIRCLE_TOP
+from module.handler.red_circle import find_red_circles
 from module.logger import logger
 from module.ui.assets import GOTO_BACK, MAIN_CHECK
 
@@ -186,12 +186,14 @@ class InfoHandler(ModuleBase):
             self.device.click(LOGIN_CHECK)
             logger.info('Login success')
 
-    def calculate_click_position(self, x, y, template_type, k=0.4, x_center=360, screen_width=720, screen_height=1280):
+    def calculate_click_position(
+        self, x, y, template_type='CENTER', k=0.4, x_center=360, screen_width=720, screen_height=1280
+    ):
         """
-        计算点击位置，支持不同类型模板的额外偏移
+        计算瞄准补偿后的点击位置，兼容旧圆弧模板的额外偏移
         Args:
             x, y: 原始识别坐标
-            template_type: 模板类型，可为 'TOP', 'RIGHT', 'LEFT'
+            template_type: 'CENTER' 为圆心，旧模板可为 'TOP', 'RIGHT', 'LEFT'
             k: 动态偏移系数
             x_center: 屏幕中心 x
             screen_width: 屏幕宽度
@@ -225,46 +227,17 @@ class InfoHandler(ModuleBase):
         return int(round(x_click)), int(round(y_click)), dx
 
     def handle_red_circles(self):
-        """
-        处理红圈（优先检测 TOP，若未检测到再检测 RIGHT / LEFT）
-        """
-        # 模型参数
-        k = 0.4
+        circles = find_red_circles(self.device.image)
+        if not circles:
+            return False
 
-        # 按优先顺序定义模板
-        templates = [
-            ('TOP', TEMPLATE_RED_CIRCLE_TOP, 0.65),
-            ('RIGHT', TEMPLATE_RED_CIRCLE_RIGHT, 0.75),
-            ('LEFT', TEMPLATE_RED_CIRCLE_LEFT, 0.65),
-        ]
-
-        for template_type, template, similarity in templates:
-            circles = template.match_multi(self.device.image, similarity=similarity, name=f'RED_CIRCLE_{template_type}')
-
-            # 若当前模板检测到红圈则立即处理，否则尝试下一个模板
-            if not circles:
-                continue
-
-            for circle in circles:
-                logger.info(f'Circle {template_type} position: {circle.location}')
-                x = circle.location[0]
-                y = circle.location[1]
-                if y < 75 or y > 850:
-                    continue
-
-                x_click, y_click, dx = self.calculate_click_position(x, y, template_type=template_type, k=k)
-                logger.info(
-                    'Click %s @ %s (dx=%.2f)' % (point2str(x_click, y_click), f'RED_CIRCLE_{template_type}', dx)
-                )
-                self.device.long_click_xy(x_click, y_click, 1)
-
-                # 画面回正
-                self.device.sleep(0.5)
-                return True
-
-            continue
-
-        return False
+        x, y = circles[0]
+        logger.info(f'Red circle center: ({x}, {y})')
+        x_click, y_click, dx = self.calculate_click_position(x, y)
+        logger.info('Click %s @ RED_CIRCLE (dx=%.2f)' % (point2str(x_click, y_click), dx))
+        self.device.long_click_xy(x_click, y_click, 1)
+        self.device.sleep(0.5)
+        return True
 
     def handle_login_lipass(self):
         if self.appear(LIPASS_CHECK, offset=(30, 30)):
