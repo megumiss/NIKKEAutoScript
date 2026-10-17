@@ -782,6 +782,42 @@
       "WEAPON": "WEAPON"
     }
   },
+  "BodyLabelShop": {
+    "_info": {
+      "name": "Body Label Shop",
+      "help": "Buy only the daily discounted consoles. Currently supports the Chinese game UI only."
+    },
+    "enable": {
+      "name": "Enable",
+      "help": ""
+    },
+    "priority": {
+      "name": "Console types",
+      "help": "Select multiple types; leave empty to buy nothing. Only the random daily discount is eligible. Order is ignored; full-price items are never purchased.",
+      "ABNORMAL": "Abnormal",
+      "ELYSION": "Elysion",
+      "MISSILIS": "Missilis",
+      "PILGRIM": "Pilgrim",
+      "TETRA": "Tetra",
+      "ATTACKER": "Attacker",
+      "DEFENDER": "Defender",
+      "SUPPORTER": "Supporter"
+    },
+    "BuyCount": {
+      "name": "Purchase quantity",
+      "help": "Daily total purchase quantity, from 1 to 10. Deduct purchases already made today, including manual purchases, using the remaining shop limit. Buy only enough to reach this total; skip if already reached or recognition is uncertain.",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "10": "10"
+    }
+  },
   "RubbishShop": {
     "_info": {
       "name": "Rubbish Shop",

@@ -1211,6 +1211,42 @@
         ]
       }
     },
+    "BodyLabelShop": {
+      "enable": {
+        "type": "checkbox",
+        "value": false
+      },
+      "priority": {
+        "type": "priority",
+        "value": "",
+        "option": [
+          "ABNORMAL",
+          "ELYSION",
+          "MISSILIS",
+          "PILGRIM",
+          "TETRA",
+          "ATTACKER",
+          "DEFENDER",
+          "SUPPORTER"
+        ]
+      },
+      "BuyCount": {
+        "type": "select",
+        "value": 1,
+        "option": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      }
+    },
     "ArenaShop": {
       "enable": {
         "type": "checkbox",

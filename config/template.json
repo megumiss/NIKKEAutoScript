@@ -277,6 +277,11 @@
       "enable": true,
       "priority": "GRATIS > CORE_DUST_CASE > ORNAMENT"
     },
+    "BodyLabelShop": {
+      "enable": false,
+      "priority": null,
+      "BuyCount": 1
+    },
     "ArenaShop": {
       "enable": false,
       "AutoFillCodeManual": false,
