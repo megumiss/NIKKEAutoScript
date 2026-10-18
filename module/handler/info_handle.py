@@ -7,7 +7,7 @@ from module.base.utils import point2str
 from module.config.account import load_account
 
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
-from module.exception import AccountError, CaptchaRequired, GameServerUnderMaintenance, GameStuckError
+from module.exception import AccountError, CaptchaRequired, GameServerUnderMaintenance, GameStuckError, GameSystemError
 from module.handler.assets import *
 from module.handler.red_circle import find_red_circles
 from module.logger import logger
@@ -166,7 +166,29 @@ class InfoHandler(ModuleBase):
 
     def handle_system_error(self):
         if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), static=False):
-            raise GameStuckError('detected system error')
+            raise GameSystemError('Detected SYSTEM_ERROR_CHECK')
+
+    def ensure_system_error_closed(self):
+        self.device.stuck_record_clear()
+        self.device.click_record_clear()
+        timeout = Timer(60, count=60).start()
+
+        while 1:
+            self.device.screenshot()
+
+            if timeout.reached():
+                raise GameStuckError('System error recovery timed out waiting for main page')
+
+            if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), static=False):
+                self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3, static=False)
+                continue
+
+            # 弹窗下的主页仍可能匹配模板，需同时检查颜色，确认遮罩已经消失。
+            if self.appear(MAIN_CHECK, offset=30) and self.appear(MAIN_CHECK, threshold=10):
+                self.device.stuck_record_clear()
+                self.device.click_record_clear()
+                logger.info('Returned to main after system error')
+                return
 
     def handle_system_maintenance(self):
         if self.appear(SYSTEM_MAINTENANCE_CHECK, offset=(30, 30), static=False):
