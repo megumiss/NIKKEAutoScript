@@ -6,17 +6,18 @@ import numpy as np
 class NavigationSession:
     """复用移动实现，只要求调用方提供 win、localizer、emit 与 preview。"""
 
-    def plan(self, observation, target):
+    def plan(self, observation, target, enemy_assist=False):
         """道路只检查连通性；平面地图走紧凑小地图闭环规划。
 
         用道路路径验证小队到 target 的连通性，并发布剩余道路长度。
         返回客户区落点；规划可能平移镜头，小队移动点击仍由 move 执行。
+        enemy_assist 只由已确认的敌人目标启用；普通到点、收集品与附近试点默认不用脚圈替换落点。
         """
         from module.campaign.navigation.camera_navigation import plan_world_move_compact
 
         _, path = self.localizer.route(np.asarray(observation['position']), np.asarray(target))
         self.emit(road_remaining=float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum()))
-        return plan_world_move_compact(self, observation, target)
+        return plan_world_move_compact(self, observation, target, enemy_assist=enemy_assist)
 
     def wait_stopped(self):
         """调用共享停稳检测，等待紧凑地图的道路和小队圆环稳定。

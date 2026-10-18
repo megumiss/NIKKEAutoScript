@@ -605,7 +605,7 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
     return translation @ matrix
 
 
-def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3):
+def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3, enemy_assist=False):
     """镜头规划：先把目标平移到镜头注视点，再点落点把小队送过去。
 
     对准在地图空间进行：视野中心由道路配准给出，远处目标不经逆单应外推（透视地平线）。
@@ -621,9 +621,13 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
     全局配准被接受即视为批末校正已完成。
     实测（退回固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
+    enemy_assist 允许敌人模式利用两次被接受的定位及同帧脚圈提前点击；不额外拖动来收集证据。
+    证据只在本次规划内保留，重新锚定或配准不可信时丢弃；辅助失败继续原落点和拖动流程。
     """
     from module.campaign.vision.matching import MapMatcher, register
+    from module.campaign.vision.enemy_ring import match_target_ring, observe_rings
 
+    session.last_plan_enemy_ring = False
     target = np.asarray(target, float)
     squad_position = np.asarray(observation['position'], float)
     if np.linalg.norm(target - squad_position) < 2:
@@ -646,6 +650,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         session.emit(message=f"起始紧凑配准为 {start['status']}（iou {start['iou']:.3f}），"
                              f"与展开图小队定位偏差 {offset:.1f}px，按一致采用。")
     matrix, scale_a, road_prev = start['matrix'], start['a'], road
+    ring_previous = None
+    ring_trusted = start['status'] == 'accepted'
     gain, responses, stalled, batch_pans = 1., [], 0, 0
     reference = None
     if matcher is not None and observation.get('roi_to_map') is not None:
@@ -658,6 +664,27 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         delta_map = target - viewport
         squad_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), squad_position - viewport)
         ground = np.asarray(goto.VIEWPORT_PIXEL, float) + panel_delta_to_client(scale_a, squad_panel)
+        current_rings = None
+        if enemy_assist and ring_trusted and ring_previous is not None:
+            try:
+                current_rings = observe_rings(field, panel, matrix, viewport)
+                result = match_target_ring(ring_previous, current_rings, target, squad_position, goto.VIEWPORT_PIXEL)
+            except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
+                result = dict(reason=f'脚圈辅助不可用：{error}')
+            session.emit(message=f'脚圈辅助：{result["reason"]}',
+                         enemy_ring_match={key: value for key, value in result.items() if key != 'reason'})
+            if result.get('click') is not None:
+                fresh = goto.capture_client(session.win)
+                session.identity(fresh)
+                session.check_collectible(fresh)
+                if not scene_unchanged(field, fresh):
+                    raise ValueError('脚圈匹配期间场景发生变化，未发送旧坐标点击；等待下一次定位。')
+                click = np.asarray(result['click'], float)
+                session.last_plan_enemy_ring = True
+                session.emit(state='planning', navigation_method='enemy_ring', camera_pans=session.camera_pans,
+                             plan_camera_pans=count, planned_target=target.tolist(), click=click.tolist(),
+                             message='两帧确认当前敌人的脚圈，直接点击，不再拖到中央。')
+                return click
         # 本次一步平移都还没发时不拿 1 当跟手比例：落点偏移会缩水一半（见 target_view_offset），
         # 上一次会话测到的比例比 1 更接近当前相机。
         landing_gain = gain if responses else float(getattr(session, 'camera_gain', 1.))
@@ -677,6 +704,13 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
             return click
         if count == max_pans:
             raise ValueError(f'已平移 {max_pans} 次，目标仍未到小地图中央；未发送移动点击。')
+        ring_previous = None
+        if enemy_assist and ring_trusted:
+            try:
+                ring_previous = (current_rings if current_rings is not None
+                                 else observe_rings(field, panel, matrix, viewport))
+            except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
+                session.emit(message=f'脚圈辅助观测不可用，继续原有镜头规划：{error}')
         delta_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), delta_map)
         drag = -panel_delta_to_client(scale_a, delta_panel) / gain
         _, scale = pan_region(drag)
@@ -728,12 +762,16 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
             use_matrix = chained
         batch_pans = 0 if source == 'accepted' else batch_pans + 1
         if source != 'accepted' and (use_matrix is None or batch_pans >= batch_limit):
+            ring_previous = None
             anchored = anchor_viewport(session, matrix if use_matrix is None else use_matrix,
                                        reference, squad_position)
             if anchored is not None:
                 use_matrix, source, batch_pans = anchored, 'expanded', 0
         if use_matrix is None:
             raise ValueError('帧间跟踪、全局对齐与展开地图重新锚定都不可用；未发送移动点击。')
+        ring_trusted = source == 'accepted'
+        if not ring_trusted or abs(use_a / scale_a - 1.) > .12:
+            ring_previous = None
         new_viewport = project(use_matrix, goto.GAZE)
         actual = new_viewport - viewport
         response = float(actual @ delta_map) / float(delta_map @ delta_map)

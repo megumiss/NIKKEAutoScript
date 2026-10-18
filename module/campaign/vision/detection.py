@@ -13,9 +13,9 @@ import numpy as np
 # 旧五类沿用各自验证过的取图方式：场景箭头与收集提示走遮罩切片，小地图标记走面板裁剪。
 LEGACY_SCENE_LABELS = ('scene_squad_arrow', 'scene_collectible_indicator')
 MINIMAP_LABELS = ('minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_squad_ring')
-# 机关、电梯、屏障在整幅客户区的网格上检测，网格与边界规则来自模型包的 scene 契约。
+# 机关、电梯、屏障和敌人脚圈走整幅客户区网格，边界规则来自模型包的 scene 契约。
 GRID_LABELS = ('scene_ground_mechanism_off', 'scene_ground_mechanism_on', 'scene_elevator_start',
-               'scene_elevator_end', 'scene_barrier_curtain', 'scene_barrier_pillar')
+               'scene_elevator_end', 'scene_barrier_curtain', 'scene_barrier_pillar', 'scene_enemy_ring')
 # 应用已知的类别集合；实际类别顺序始终由模型元数据决定，这里不假定模型包含哪些类。
 LABELS = LEGACY_SCENE_LABELS + MINIMAP_LABELS + GRID_LABELS
 MODEL_DIRECTORY = Path(__file__).parent / 'models'
@@ -287,7 +287,7 @@ def grid_tiles(image):
 
 
 def detect_grid(image, labels=GRID_LABELS):
-    """在整幅客户区上检测机关、电梯与屏障；坐标为客户区像素。
+    """在整幅客户区上检测机关、电梯、屏障与敌人脚圈；坐标为客户区像素。
 
     八片 640×640 覆盖整幅画面，逐片抑制后再全局抑制，与模型包的 scene 契约一致。
     """

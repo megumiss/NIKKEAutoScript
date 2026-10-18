@@ -43,7 +43,7 @@ MOVE_STATES = {'locating': '定位小队', 'planning': '规划落点', 'moving':
 # 落点是怎么算出来的。
 NAVIGATION_METHODS = {'squad_anchor': '按小队相对位置点击', 'compact_gaze': '先把小队送往镜头注视点',
                       'camera_pan': '平移画面后点击', 'direct_target': '目标已在画面里，直接点击',
-                      'arrow_wake': '先唤醒小队箭头'}
+                      'arrow_wake': '先唤醒小队箭头', 'enemy_ring': '两帧确认敌人脚圈后直接点击'}
 # 镜头位置是怎么跟踪的。
 CAMERA_TRACKING = {'predicted': '按预测位置', 'minimap': '小地图校正', 'chained': '帧间跟踪',
                    'accepted': '全局对齐', 'needs_review': '全局对齐（待复核）', 'fused': '容差对齐',

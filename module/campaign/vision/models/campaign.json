@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "format": "yolo11-detect-bcn-fp32",
-  "version": "v7",
+  "version": "v8",
   "labels": [
     "scene_squad_arrow",
     "scene_collectible_indicator",
@@ -13,7 +13,8 @@
     "scene_elevator_start",
     "scene_elevator_end",
     "scene_barrier_curtain",
-    "scene_barrier_pillar"
+    "scene_barrier_pillar",
+    "scene_enemy_ring"
   ],
   "input_size": 640,
   "input_shape": [
@@ -24,7 +25,7 @@
   ],
   "output_shape": [
     1,
-    15,
+    16,
     8400
   ],
   "input_name": "images",
@@ -33,7 +34,7 @@
   "normalization": "float32 / 255",
   "layout": "NCHW",
   "box_format": "cx,cy,w,h in input pixels",
-  "output_scores": "11 class probabilities; no separate objectness; NMS is external",
+  "output_scores": "12 class probabilities; no separate objectness; NMS is external",
   "thresholds": {
     "scene_squad_arrow": 0.5,
     "scene_collectible_indicator": 0.5,
@@ -45,7 +46,8 @@
     "scene_elevator_start": 0.7,
     "scene_elevator_end": 0.5,
     "scene_barrier_curtain": 0.5,
-    "scene_barrier_pillar": 0.5
+    "scene_barrier_pillar": 0.5,
+    "scene_enemy_ring": 0.7
   },
   "scene": {
     "size": [
@@ -66,9 +68,9 @@
     "internal_edge_margin": 2,
     "classwise_nms_iou": 0.45
   },
-  "sha256": "25fdfbbcd42468b87b107aaf601fa9c81d87de63183aece00177c5f0a22342bb",
-  "checkpoint_sha256": "8aa60140cd6ecd47464db4f5d77aba74b2aa2c725323d106fa31fc48024b61ba",
-  "source_checkpoint": "runs\\campaign_v7_barrier_20261011\\weights\\last.pt",
+  "sha256": "de783a17cf04628644eccc510d5bb071d3bdbaaa880da76d3436ad26d23362fd",
+  "checkpoint_sha256": "35a837db521ca608890b9e4dff99d88d3b38e0a62485f6555588c0d3ea3d9ad4",
+  "source_checkpoint": "runs\\campaign_v8_rings_20261017\\weights\\last.pt",
   "versions": {
     "ultralytics": "8.3.230",
     "torch": "2.9.1+cu128",
@@ -78,7 +80,19 @@
     "numpy": "1.26.4",
     "Pillow": "12.3.0"
   },
-  "exported_at_utc": "2026-10-11T02:05:53.531942+00:00",
+  "exported_at_utc": "2026-10-17T06:27:15.868031+00:00",
   "acceptance": "regression_only_no_independent_scoped_holdout",
-  "application_integration": "Existing application loader has a five-class contract. This eleven-class release is not deployed."
+  "application_integration": "Application supports twelve classes; enemy ring threshold overridden to 0.7. Two-frame assistance integrated; in-game click validation pending.",
+  "status": "application_integrated_pending_game_validation",
+  "release_decision": {
+    "legacy_test_map50_before": 0.9747731195744894,
+    "legacy_test_map50_after": 0.9606244850281914,
+    "default_release": "v8",
+    "decision": "user_approved_formal_release",
+    "approved_on": "2026-10-17",
+    "timezone": "Asia/Hong_Kong",
+    "user_request": "作为正式模型",
+    "known_regressions_accepted": true,
+    "application_deployed": false
+  }
 }

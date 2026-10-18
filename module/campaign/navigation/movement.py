@@ -41,6 +41,8 @@ def navigate(
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
+    敌人模式仅在原目标附近有唯一小地图标记时启用两帧脚圈辅助；一次 navigate 至多辅助直点一次，
+    附近试点始终保持原落点，不复用脚圈；辅助结果不会修改目标身份或战斗归属。
     """
     from module.campaign.navigation.controls import SQUAD_REACH
     from module.campaign.navigation.movement_feedback import (
@@ -58,6 +60,7 @@ def navigate(
     probes = None
     probe_index = 0
     arrow_recoveries = 0
+    ring_attempted = False
     legs, transfers = None, []
     exit_near, entry_waits, leg_start_clicks = 0, 0, 0
     deadline = time.monotonic() + 600
@@ -185,7 +188,12 @@ def navigate(
                     )
                 emit(state='probing', message=f'正在尝试目标附近落点（{probe_index}/{len(probes)}）…')
             else:
-                click = session.plan(observation, approach)
+                use_ring = purpose == 'enemy' and len(markers) == 1 and not ring_attempted
+                options = {'enemy_assist': True} if use_ring else {}
+                click = session.plan(observation, approach, **options)
+                # 一次导航至多试一次脚圈：未触发后继续原有移动，不能让附近试点反复吸到同一脚圈。
+                if getattr(session, 'last_plan_enemy_ring', False) is True:
+                    ring_attempted = True
         except AnchorUnresolved:
             if arrow_recoveries:
                 raise

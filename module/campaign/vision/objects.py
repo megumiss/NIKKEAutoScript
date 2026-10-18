@@ -12,12 +12,13 @@ OBJECTS = {
     'scene_elevator_end': ('elevator', 'end'),
     'scene_barrier_curtain': ('barrier', 'curtain'),
     'scene_barrier_pillar': ('barrier', 'pillar'),
+    'scene_enemy_ring': ('enemy_ring', None),
     'minimap_enemy_normal': ('enemy', 'normal'),
     'minimap_enemy_ex': ('enemy', 'ex'),
     'minimap_squad_ring': ('squad_ring', None),
 }
 # 整幅画面网格检测的语义类别，也是 detect_objects 的默认范围。
-GRID_KINDS = ('ground_mechanism', 'elevator', 'barrier')
+GRID_KINDS = ('ground_mechanism', 'elevator', 'barrier', 'enemy_ring')
 SCENE_KINDS = GRID_KINDS + ('squad_arrow', 'collectible_indicator')
 MINIMAP_KINDS = ('enemy', 'squad_ring')
 
@@ -56,8 +57,9 @@ def described(detection, space):
 def detect_objects(image, kinds=None):
     """1776×999 BGR 客户区截图里的场景目标，坐标为客户区像素。
 
-    默认只检测机关、电梯和屏障，整幅画面切八片推理。小队箭头和收集提示另有已验证的遮罩
-    切片取图方式，只有显式请求时才多跑一遍；箭头的精确中心仍应使用 perception.squad_arrow。
+    默认检测机关、电梯、屏障和敌人脚圈，整幅画面切八片推理。脚圈不直接并入敌人记忆。
+    小队箭头和收集提示另有已验证的遮罩切片取图方式，只有显式请求时才多跑一遍；
+    箭头的精确中心仍应使用 perception.squad_arrow。
     """
     selected = requested(kinds, GRID_KINDS)
     grid = kind_labels([kind for kind in selected if kind in GRID_KINDS], GRID_LABELS)

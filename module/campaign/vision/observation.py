@@ -306,7 +306,7 @@ class CampaignObserver:
         except (OSError, ValueError, KeyError, RuntimeError, cv2.error) as exc:
             message = str(exc)
             if message != self.last_object_error:
-                logger.warning(f'场景目标（机关、电梯、光幕）识别不可用：{message}')
+                logger.warning(f'场景目标（机关、电梯、光幕、敌人脚圈）识别不可用：{message}')
                 self.last_object_error = message
             return None
 
