@@ -361,10 +361,13 @@ def publish_preview_frame(image, interval=1.0, source=None, captured_at=None):
     if elapsed < PREVIEW_IDLE_INTERVAL and not _preview_is_wanted():
         return
     _preview_last_write = now
+    # 截图时刻放进 source，而不是扩展队列项：只重启实例时 Web 进程仍是旧代码，
+    # 旧版只识别 (data, source) 二元组。
+    source = dict(source or {}, captured_at=captured_at or now)
     try:
         buf = io.BytesIO()
         Image.fromarray(image).save(buf, 'JPEG', quality=70)
-        q.put_nowait((buf.getvalue(), source, captured_at or now))
+        q.put_nowait((buf.getvalue(), source))
     except Exception:
         # queue.Full（消费慢时丢帧）与编码异常都直接丢弃
         pass

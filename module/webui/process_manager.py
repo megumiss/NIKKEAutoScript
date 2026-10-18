@@ -113,13 +113,11 @@ class ProcessManager:
             except (EOFError, OSError):
                 # Worker died and the queue pipe broke; keep the last frame.
                 break
-            captured_at = None
-            if isinstance(item, tuple) and len(item) == 3:
-                item, self.preview_source, captured_at = item
-            elif isinstance(item, tuple) and len(item) == 2:
+            if isinstance(item, tuple) and len(item) == 2:
                 item, self.preview_source = item
+            source = self.preview_source if isinstance(self.preview_source, dict) else {}
             if isinstance(item, bytes):
-                self.latest_preview = (captured_at or time.time(), item)
+                self.latest_preview = (source.get('captured_at') or time.time(), item)
 
     def current_preview(self):
         """
