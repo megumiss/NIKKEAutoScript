@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import yaml
 
-from module.config.account import save_account
+from module.config.account import PASSWORD_FIELD, UNLOCK_PASSWORD_FIELD, USERNAME_FIELD, save_secret
 from module.config.deep import deep_get, deep_set
 from module.logger import logger
 from module.webui.api.models import PatchResult
@@ -14,6 +14,13 @@ from module.webui.utils import parse_pin_value, re_fullmatch
 
 
 TEXTAREA_MODES = {'text', 'path', 'url', 'yaml', 'json', 'lines'}
+# 敏感字段加密存入 config/<name>.acc，配置文件只保留掩码
+SECRET_KEYS = {
+    'NKAS.Account.Account': USERNAME_FIELD,
+    'NKAS.Account.Password': PASSWORD_FIELD,
+    'Emulator.PhysicalDevice.Password': UNLOCK_PASSWORD_FIELD,
+}
+SECRET_MASK = '******'
 
 
 def _validate_textarea_mode(argument: Dict[str, Any], value: Any):
@@ -89,16 +96,14 @@ class ConfigService:
             config = self.config_updater.read_file(config_name)
             applied = {}
             derived = {}
-            if key in ('NKAS.Account.Account', 'NKAS.Account.Password'):
-                if key.endswith('Account'):
-                    save_account(config_name, account=value)
-                else:
-                    save_account(config_name, password=value)
-                value = '******'
+            if key in SECRET_KEYS:
+                save_secret(config_name, SECRET_KEYS[key], value)
+                # 解锁逻辑以配置值是否为空判断有无密码，清空必须落盘；账号字段沿用"留空不覆盖"
+                value = SECRET_MASK if value or key != 'Emulator.PhysicalDevice.Password' else ''
 
             deep_set(config, key, value)
             applied[key] = value
-            if key not in ('NKAS.Account.Account', 'NKAS.Account.Password'):
+            if key not in SECRET_KEYS:
                 for derived_key, derived_value in self.config_updater.save_callback(key, value):
                     deep_set(config, derived_key, derived_value)
                     applied[derived_key] = derived_value

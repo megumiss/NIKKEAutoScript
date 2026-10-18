@@ -12,6 +12,7 @@ from module.base.utils import publish_preview_frame
 from module.device.adb.app_control import AppControl
 from module.device.adb.control import Control
 from module.device.adb.env import IS_WINDOWS
+from module.device.adb.screen_unlock import ScreenUnlock
 from module.device.adb.screenshot import Screenshot, ScreenshotSizeError
 from module.exception import (
     EmulatorNotRunningError,
@@ -24,7 +25,7 @@ from module.logger import logger
 from module.ocr.models import OCR_MODEL
 
 
-class Device(Screenshot, Control, AppControl):
+class Device(Screenshot, Control, AppControl, ScreenUnlock):
     get_location = OCR_MODEL.get_location
 
     # 尝试检测的 Button 集合
@@ -85,6 +86,8 @@ class Device(Screenshot, Control, AppControl):
             _ = self.emulator_instance
 
         if self.config.PhysicalDevice_Enable:
+            # 解锁需在改分辨率/建虚拟屏之前完成，锁屏界面只在原生主屏上
+            self.screen_unlock()
             if self.config.PhysicalDevice_VirtualDisplay:
                 self._virtual_display_start()
             else:
@@ -473,10 +476,19 @@ class Device(Screenshot, Control, AppControl):
         """
         self.stuck_record_check()
         super().screenshot()
-        publish_preview_frame(self.image, source={
+        source = {
             'serial': self.serial,
             'display_id': self._virtual_display_id or 0,
-        })
+        }
+        if self._virtual_display_id is not None and self._virtual_capture_port is not None:
+            # Lets the Web UI sample the bridge directly while this process is busy (e.g. long OCR).
+            source['virtual_display'] = {
+                'port': self._virtual_capture_port,
+                'rotation': self._virtual_display_rotation,
+                'width': self._virtual_display_width,
+                'height': self._virtual_display_height,
+            }
+        publish_preview_frame(self.image, source=source)
         return self.image
 
     def handle_control_check(self, button: Button):
@@ -609,6 +621,8 @@ class Device(Screenshot, Control, AppControl):
         """
             启动NIKKE
         """
+        # 调度等待期间真机可能已自动锁屏
+        self.screen_unlock()
         super().app_start()
         self.stuck_record_clear()
         self.click_record_clear()

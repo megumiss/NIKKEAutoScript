@@ -20,11 +20,14 @@ _sessions = set()
 async def screenshot(request):
     name = request.path_params['name']
     manager = ProcessManager._processes.get(name)
-    preview = manager.latest_preview if manager else None
+    preview = manager.current_preview() if manager else None
     if preview is None:
         return JSONResponse({'error': 'no preview'}, status_code=404)
-    captured_at, data = preview
-    return Response(content=data, media_type='image/jpeg', headers={'X-Captured-At': str(captured_at)})
+    captured_at, data, source = preview
+    return Response(content=data, media_type='image/jpeg', headers={
+        'X-Captured-At': str(captured_at),
+        'X-Preview-Source': source,
+    })
 
 
 def _context(name):
