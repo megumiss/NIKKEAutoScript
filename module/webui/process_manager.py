@@ -57,11 +57,18 @@ class ProcessManager:
         self.preview_source = None
         self.preview = PreviewSampler(self)
         self._process: Process = None
-        self._process_locks: Dict[str, threading.Lock] = {}
+        # stop() runs off the event loop and its cleanup (restore resolution,
+        # remove the VD server, disable VDD) continues after the worker is dead;
+        # start() must wait for it, or the new worker races that cleanup.
+        self._lifecycle_lock = threading.Lock()
         self.thd_log_queue_handler: threading.Thread = None
         self.thd_preview_handler: threading.Thread = None
 
     def start(self, func, ev: threading.Event = None) -> None:
+        with self._lifecycle_lock:
+            self._start_locked(func, ev)
+
+    def _start_locked(self, func, ev) -> None:
         if not self.alive:
             self.preview_source = None
             if func is None:
@@ -145,13 +152,7 @@ class ProcessManager:
         return max(candidates, key=lambda item: item[0])
 
     def stop(self) -> None:
-        try:
-            lock = self._process_locks[self.config_name]
-        except KeyError:
-            lock = threading.Lock()
-            self._process_locks[self.config_name] = lock
-
-        with lock:
+        with self._lifecycle_lock:
             if self.alive:
                 # Kill the worker before its helpers (ADB bridge, OCR sidecar): a
                 # worker that outlives them for the terminate grace period hits

@@ -158,6 +158,8 @@ class RemoteOcr:
         return self._call('recognize', images)
 
     def _call(self, op, images):
+        if isinstance(images, (str, bytes)):
+            raise TypeError('RemoteOcr takes image arrays, not file paths')
         images = [images] if isinstance(images, np.ndarray) else list(images)
         if self._local is None:
             for attempt in (1, 2):

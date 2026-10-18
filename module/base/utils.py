@@ -311,6 +311,7 @@ def save_image(image, file):
 _preview_queue = None
 _preview_wanted = None
 _preview_last_write = 0.0
+_preview_last_source = None
 # 无人观看时仍低频发布，打开预览时能立即显示一张带真实时间戳的近期画面。
 PREVIEW_IDLE_INTERVAL = 30.0
 
@@ -350,7 +351,7 @@ def publish_preview_frame(image, interval=1.0, source=None, captured_at=None):
         source (dict): 可选的实际 ADB Serial、display_id 与虚拟屏桥接信息，供预览定位屏幕。
         captured_at (float): 截图时刻（time.time()），缺省为调用时刻。
     """
-    global _preview_last_write
+    global _preview_last_write, _preview_last_source
     q = _preview_queue
     if q is None:
         return
@@ -359,8 +360,16 @@ def publish_preview_frame(image, interval=1.0, source=None, captured_at=None):
     if elapsed < interval:
         return
     if elapsed < PREVIEW_IDLE_INTERVAL and not _preview_is_wanted():
+        # 不编码画面，但 serial / 虚拟屏变化要立即送达：交互控制按 source 定位屏幕。
+        if source is not None and source != _preview_last_source:
+            _preview_last_source = source
+            try:
+                q.put_nowait((None, dict(source)))
+            except Exception:
+                pass
         return
     _preview_last_write = now
+    _preview_last_source = source
     # 截图时刻放进 source，而不是扩展队列项：只重启实例时 Web 进程仍是旧代码，
     # 旧版只识别 (data, source) 二元组。
     source = dict(source or {}, captured_at=captured_at or now)
