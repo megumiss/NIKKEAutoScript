@@ -34,7 +34,8 @@ class TaskService:
         Returns:
             bool: True if this call started the scheduler.
         """
-        return ProcessManager.get_manager(config_name).start(get_config_mod(config_name), ev=updater.event)
+        return ProcessManager.get_manager(config_name).start(
+            get_config_mod(config_name), ev=updater.event, config_name=config_name)
 
     def run_now(self, config_name: str, task: str):
         """Queue a normal configured task for immediate scheduler execution."""
@@ -48,6 +49,7 @@ class TaskService:
             return None
         # start() checks and starts under the lifecycle lock; a racing request
         # that loses gets False instead of a misleading "started".
-        if not ProcessManager.get_manager(config_name).start(task, ev=updater.event):
+        if not ProcessManager.get_manager(config_name).start(task, ev=updater.event, config_name=config_name):
+            # Already running, or renamed / deleted while this request waited.
             return {'task': task, 'already_running': True}
         return {'task': task, 'started': True}

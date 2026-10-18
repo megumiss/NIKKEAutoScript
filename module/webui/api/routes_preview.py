@@ -96,7 +96,10 @@ async def scrcpy_socket(websocket):
             task.result()
         if receiver in done:
             bitrate = receiver.result()
-            result = await asyncio.to_thread(ConfigService().patch, name, 'Emulator.Scrcpy.Bitrate', bitrate)
+            # Same as every other Web config writer: patch() reads, modifies and
+            # writes the whole file, so it runs on the event loop to stay
+            # serialized with them instead of racing in a worker thread.
+            result = ConfigService().patch(name, 'Emulator.Scrcpy.Bitrate', bitrate)
             if not result.ok:
                 raise ScrcpyError('settings_failed', result.message)
             # The client waits for our close frame, sent after session cleanup,

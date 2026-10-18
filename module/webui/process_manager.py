@@ -14,6 +14,7 @@ import psutil
 from rich.console import Console, ConsoleRenderable
 
 from module.base.utils import set_preview_queue
+from module.config.utils import filepath_config
 from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
     get_func_mod, list_mod_instance, load_mod
 from module.logger import logger, set_file_logger, set_func_logger
@@ -64,16 +65,36 @@ class ProcessManager:
         self.thd_log_queue_handler: threading.Thread = None
         self.thd_preview_handler: threading.Thread = None
 
-    def start(self, func, ev: threading.Event = None) -> bool:
+    @property
+    def lifecycle_lock(self) -> threading.Lock:
         """
+        Serializes start / stop / delete / rename of this instance. Web routes
+        acquire it off the event loop (asyncio.to_thread) because a stop
+        cleanup may hold it for seconds.
+        """
+        return self._lifecycle_lock
+
+    def start(self, func, ev: threading.Event = None, config_name: str = None) -> bool:
+        """
+        Args:
+            config_name: Instance the caller validated. A start that waited
+                behind a rename or delete must not start something else.
+
         Returns:
-            bool: True if this call started a worker, False if one was already running.
+            bool: True if this call started a worker; False if one is already
+                running or the instance was renamed / deleted meanwhile.
         """
         with self._lifecycle_lock:
-            return self._start_locked(func, ev)
+            return self._start_locked(func, ev, config_name)
 
-    def _start_locked(self, func, ev) -> bool:
+    def _start_locked(self, func, ev, config_name=None) -> bool:
         if self.alive:
+            return False
+        if config_name is not None and config_name != self.config_name:
+            logger.warning(f'Skip starting "{config_name}": instance was renamed to "{self.config_name}"')
+            return False
+        if not os.path.exists(filepath_config(self.config_name, get_config_mod(self.config_name))):
+            logger.warning(f'Skip starting "{self.config_name}": instance config no longer exists')
             return False
         self.preview_source = None
         if func is None:
@@ -148,7 +169,7 @@ class ProcessManager:
             tuple[float, bytes, str] | None: captured_at, JPEG, 'task' or 'sampler'
         """
         self.preview.touch(interval)
-        sampled = self.preview.latest
+        sampled = self.preview.frame()
         fresh = max(PREVIEW_SAMPLER_FRESH, interval + 1)
         if sampled is not None and time.time() - sampled[0] <= fresh:
             return (*sampled, 'sampler')

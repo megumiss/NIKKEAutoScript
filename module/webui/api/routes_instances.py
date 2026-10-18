@@ -25,6 +25,18 @@ def _response_error(message, status_code=400):
     return JSONResponse({'status': 'error', 'message': message}, status_code=status_code)
 
 
+def _instance_config_exists(name):
+    return Path(filepath_config(name, get_config_mod(name))).exists()
+
+
+async def _hold_lifecycle(manager):
+    """
+    Acquire the instance lifecycle lock without blocking the event loop; a stop
+    cleanup may hold it for seconds. The caller must release it.
+    """
+    await asyncio.to_thread(manager.lifecycle_lock.acquire)
+
+
 def _is_windows_admin():
     """
     Whether the current process holds administrator privileges.
@@ -386,8 +398,11 @@ async def start(request: Request):
                            'Driver for MttVDD) first, or turn off the VDD auto-manage option.',
             }, status_code=400)
         # start() waits for an in-progress stop cleanup; wait off the event loop.
-        if not await asyncio.to_thread(manager.start, func=get_config_mod(name), ev=updater.event):
-            # Another request started it while this one waited for a stop cleanup.
+        if not await asyncio.to_thread(manager.start, func=get_config_mod(name), ev=updater.event, config_name=name):
+            # While this request waited for the lifecycle lock, another request
+            # started, renamed or deleted the instance.
+            if not _instance_config_exists(name) or manager.config_name != name:
+                return _response_error(f'Instance "{name}" was renamed or deleted.', 404)
             return _response_error(f'Instance "{name}" is already running.', 409)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
@@ -418,8 +433,12 @@ async def start(request: Request):
                 'message': 'Virtual display (VDD) driver is not installed.',
             })
             continue
-        if not await asyncio.to_thread(manager.start, func=get_config_mod(instance), ev=updater.event):
-            results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
+        if not await asyncio.to_thread(manager.start, func=get_config_mod(instance), ev=updater.event,
+                                       config_name=instance):
+            if not _instance_config_exists(instance) or manager.config_name != instance:
+                results.append({'instance': instance, 'status': 'skipped', 'message': 'Renamed or deleted.'})
+            else:
+                results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
             continue
         _clear_serial_failed(instance)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
@@ -511,8 +530,20 @@ async def delete(request: Request):
         validate_instance(name)
     except InstanceNotFound as exc:
         return _response_error(str(exc), 404)
-    if ProcessManager.get_manager(name).alive:
-        return _response_error('Stop the instance before deleting it.', 409)
+    manager = ProcessManager.get_manager(name)
+    await _hold_lifecycle(manager)
+    try:
+        # A start that already passed its checks has either finished (alive)
+        # or is queued behind this lock and will find the config gone.
+        if manager.alive:
+            return _response_error('Stop the instance before deleting it.', 409)
+        _delete_instance(name)
+    finally:
+        manager.lifecycle_lock.release()
+    return JSONResponse({'status': 'success'})
+
+
+def _delete_instance(name):
     path = Path(filepath_config(name, get_config_mod(name)))
     if path.exists():
         path.unlink()
@@ -549,7 +580,6 @@ async def delete(request: Request):
             if s.get('current') == name:
                 s['current'] = None
         modify_state(_delete_serial_state)
-    return JSONResponse({'status': 'success'})
 
 
 def _migrate_instance_assets(name, new_name):
@@ -609,7 +639,17 @@ async def rename(request: Request):
         return _response_error('Invalid or already used instance name.')
     if new_name in nkas_instance() or re.search(r'[.\\/:*?"\'<>|]', new_name) or new_name.lower().startswith('template'):
         return _response_error('Invalid or already used instance name.')
-    if ProcessManager.get_manager(name).alive:
+    manager = ProcessManager.get_manager(name)
+    await _hold_lifecycle(manager)
+    try:
+        return _rename_instance_locked(manager, name, new_name)
+    finally:
+        manager.lifecycle_lock.release()
+
+
+def _rename_instance_locked(manager, name, new_name):
+    """Runs under the instance lifecycle lock, so no start can slip in between the check and the move."""
+    if manager.alive:
         return _response_error('Stop the instance before renaming it.', 409)
     mod = get_config_mod(name)
     old_path = Path(filepath_config(name, mod))

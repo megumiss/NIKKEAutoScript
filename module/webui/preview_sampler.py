@@ -48,10 +48,35 @@ class PreviewSampler:
         self._thread = None
         self._thumb_port = None
         self._thumb_supported = False
-        # (captured_at, jpeg bytes) or None; replaced atomically. Kept when the
-        # last viewer leaves, dropped when the bridge port changes.
-        self.latest = None
-        self._latest_port = None
+        # (owner, captured_at, jpeg bytes) or None, replaced atomically. Kept when
+        # the last viewer leaves; frame() only returns it for the same owner.
+        self._latest = None
+
+    def _owner(self, bridge):
+        """Identity of the screen a frame comes from: worker PID and bridge port."""
+        process = getattr(self._manager, '_process', None)
+        return getattr(process, 'pid', None), int(bridge['port'])
+
+    def frame(self):
+        """
+        Latest sampled frame, if it still belongs to the current worker and bridge.
+
+        Returns:
+            tuple[float, bytes] | None: captured_at, JPEG
+        """
+        latest = self._latest
+        if latest is None:
+            return None
+        owner, captured_at, data = latest
+        bridge = self._bridge()
+        if bridge is None:
+            # Stopped worker: its last frame is still the best picture, shown as stale.
+            # A worker that is running but has not reported its bridge yet must not
+            # be shown the previous worker's screen.
+            return None if self._manager.alive else (captured_at, data)
+        if owner != self._owner(bridge):
+            return None
+        return captured_at, data
 
     def touch(self, interval=SAMPLE_INTERVAL):
         """
@@ -106,7 +131,7 @@ class PreviewSampler:
             try:
                 frame = self._sample()
                 if frame is not None:
-                    self.latest = frame
+                    self._latest = frame
                     if failing:
                         logger.info('Preview sampler recovered')
                     failing = False
@@ -147,10 +172,9 @@ class PreviewSampler:
         if bridge is None:
             return None
         port = int(bridge['port'])
-        if port != self._latest_port:
-            # New worker or bridge: a frame from the previous screen must not be shown as current.
-            self.latest = None
-            self._latest_port = port
+        # Tagged before reading: if the worker or bridge switches while this
+        # sample is in flight, frame() still rejects the result.
+        owner = self._owner(bridge)
         width = int(bridge.get('width') or 720)
         height = int(bridge.get('height') or 1280)
         rotation = int(bridge.get('rotation') or 0)
@@ -183,4 +207,4 @@ class PreviewSampler:
         )
         if not ok:
             raise ValueError('JPEG encoding failed')
-        return captured_at, encoded.tobytes()
+        return owner, captured_at, encoded.tobytes()
