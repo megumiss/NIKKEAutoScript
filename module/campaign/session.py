@@ -49,13 +49,13 @@ PAN_PIXELS = 140.
 PAN_SETTLE_SECONDS = 1.0
 # 展开定位首次失败后仅补一次小幅地图平移，避免在相同视野上反复更换侦察目标。
 EXPANDED_RETRY_PIXELS = 60.
-# 战斗接管的点击落点（客户区像素）：准备弹窗的两个按钮、弹窗右上角关闭、AUTO 开关、结算推进；
+# 战斗接管的固定点击落点（客户区像素）：准备弹窗的两个按钮、弹窗右上角关闭和 AUTO 开关；
+# 结算继续落点由当前帧 END_FIGHTING 提示定位，不使用画面中心代替。
 # 战败的两个点（重新挑战／返回）由执行层按重试次数选用，常量放这里是为了所有落点在一处。
 QUICK_BATTLE_POINT = (1014, 842)
 ENTER_BATTLE_POINT = (1014, 916)
 ENTRY_CLOSE_POINT = (1147, 513)
 AUTO_POINT = (105, 35)
-ADVANCE_POINT = (888, 500)
 DEFEAT_BACK_POINT = (73, 908)
 DEFEAT_RETRY_POINT = (1688, 926)
 # 每个按钮自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：一次点击没生效时，
@@ -663,6 +663,8 @@ class CampaignSession(NavigationSession):
         一次点击没生效时后续几拍不再重复点同一个按钮。
         战败不在这里点：重打还是返回要按重试次数决定，属于执行层的策略（见 CampaignExecutor.battle）。
         close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
+        胜利与升级附加页均只点击本帧已通过门限的 END_FIGHTING 提示；标题先出现而提示
+        尚未可见时只返回胜利状态，不发送画面中央点击。
         每次点击的日志都带上当次识别分数与颜色判据的实际读数，便于对着现场截图复盘误判。
         """
         self.check()
@@ -688,12 +690,12 @@ class CampaignSession(NavigationSession):
         elif kind == 'battle':
             if not state.get('auto', True):
                 self.handle_auto(state)
-        elif kind == 'victory':
-            if self.tap(ADVANCE_POINT, SETTLE_TAP_INTERVAL):
-                logger.info(f"战斗结算：胜利（结算画面命中度 {battle.score_text(scores, 'victory')}），已点击继续。")
-        elif kind == 'continue' and state.get('continue_point') is not None:
-            if self.tap(tuple(state['continue_point']), SETTLE_TAP_INTERVAL):
-                logger.info(f"战斗结算附加页面：已点击继续（提示命中度 {battle.score_text(scores, 'continue')}）。")
+        elif (kind in ('victory', 'continue') and state.get('continue_point') is not None
+              and (scores or {}).get('continue', 0.) >= battle.CONTINUE_THRESHOLD):
+            point = tuple(state['continue_point'])
+            if self.tap(point, SETTLE_TAP_INTERVAL):
+                logger.info(f"战斗结算：{label(BATTLE_STATES, kind)}，已点击 END_FIGHTING 提示"
+                            f"（命中度 {battle.score_text(scores, 'continue')}，客户区落点 {points_text(point)}）。")
         return state
 
     def handle_auto(self, state):

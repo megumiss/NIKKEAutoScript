@@ -15,7 +15,7 @@ from module.campaign.execution import (BATTLE_DEFEAT_RETRIES, BATTLE_SETTLE_FRAM
 from module.campaign.goals import choose_goal
 from module.campaign.navigation.routing import CutRoads, component_at
 from module.campaign.run_state import COOLDOWN_TICKS, RunState, panel_quad
-from module.campaign.session import (ADVANCE_POINT, AUTO_POINT, AUTO_TAP_INTERVAL, DEFEAT_BACK_POINT,
+from module.campaign.session import (AUTO_POINT, AUTO_TAP_INTERVAL, DEFEAT_BACK_POINT,
                                      DEFEAT_RETRY_POINT, ENTER_BATTLE_POINT, ENTRY_CLOSE_POINT,
                                      ENTRY_TAP_INTERVAL, LOCALIZE_RETRIES, QUICK_BATTLE_POINT, SETTLE_TAP_INTERVAL,
                                      STUCK_CLEAR_SECONDS, CampaignLocalizer, CampaignSession, InputBudgetExceeded)
@@ -526,12 +526,15 @@ class SessionTests(unittest.TestCase):
                  (dict(state='entry', quick=True), True, ENTRY_CLOSE_POINT, SETTLE_TAP_INTERVAL),
                  # AUTO 要连续两帧都读成关闭外观才点：单帧灰色读数可能只是 HUD 淡出，点下去反而把开着的关掉。
                  (dict(state='battle', auto=False), False, AUTO_POINT, AUTO_TAP_INTERVAL),
-                 (dict(state='victory'), False, ADVANCE_POINT, SETTLE_TAP_INTERVAL)]
+                 (dict(state='victory', continue_point=[887, 870], scores={'continue': .9}),
+                  False, (887, 870), SETTLE_TAP_INTERVAL),
+                 (dict(state='continue', continue_point=[886, 869], scores={'continue': .9}),
+                  False, (886, 869), SETTLE_TAP_INTERVAL)]
         for state, close_entry, point, interval in cases:
             with self.subTest(state=state):
                 self.session.tap.reset_mock()
                 with patch('module.campaign.vision.battle.battle_state',
-                           return_value=dict(state, scores={})):
+                           return_value=dict(state, scores=state.get('scores', {}))):
                     result = self.session.battle_step(close_entry=close_entry)
                     if point == AUTO_POINT:
                         self.session.tap.assert_not_called()
@@ -539,11 +542,15 @@ class SessionTests(unittest.TestCase):
                 self.assertEqual(result['state'], state['state'])
                 self.session.tap.assert_called_once_with(point, interval)
         for state in (dict(state='battle', auto=True), dict(state='defeat'), dict(state='field'),
-                      dict(state='unknown')):
+                      dict(state='unknown'), dict(state='victory'),
+                      dict(state='victory', continue_point=None, scores={'continue': .9}),
+                      dict(state='victory', continue_point=[887, 870], scores={'continue': .84}),
+                      dict(state='continue', continue_point=None, scores={'continue': .9}),
+                      dict(state='continue', continue_point=[887, 870], scores={'continue': .84})):
             with self.subTest(state=state):
                 self.session.tap.reset_mock()
                 with patch('module.campaign.vision.battle.battle_state',
-                           return_value=dict(state, scores={})):
+                           return_value=dict(state, scores=state.get('scores', {}))):
                     self.session.battle_step()
                 self.session.tap.assert_not_called()
 

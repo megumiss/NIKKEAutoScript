@@ -96,7 +96,7 @@ def continue_prompt(image):
 
     输入为 1776×999 BGR 客户区；资源由 END_FIGHTING 按当前语言提供，以 0.75 倍缩放
     适配横屏文字尺寸。只在底部中央匹配，灰度相关允许升级遮罩使提示变暗。
-    返回位置仅在分数达到 CONTINUE_THRESHOLD 时可用；提示不证明胜利，不能据此清除敌人。
+    分数不足 CONTINUE_THRESHOLD 时位置返回 None；提示不证明胜利，不能据此清除敌人。
     """
     END_FIGHTING.ensure_template()
     template = cv2.resize(cv2.cvtColor(END_FIGHTING.image, cv2.COLOR_RGB2GRAY), None,
@@ -106,6 +106,8 @@ def continue_prompt(image):
     if region.shape[0] < template.shape[0] or region.shape[1] < template.shape[1]:
         return 0., None
     _, best, _, point = cv2.minMaxLoc(cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED))
+    if best < CONTINUE_THRESHOLD:
+        return float(best), None
     height, width = template.shape
     return float(best), [x1 + point[0] + width / 2, y1 + point[1] + height / 2]
 
@@ -184,7 +186,8 @@ def battle_state(image):
 
     返回 dict(state, quick, auto, scores, quick_ratio, auto_score, auto_ratio, auto_box)：state 是
     defeat / victory / entry / battle / continue / field / unknown，quick 只在 entry 时有意义，
-    continue_point 是附加继续页的客户区点击中心，仅在 continue 状态时可用。
+    continue_point 是本帧继续提示的客户区点击中心，仅在 victory 或 continue 状态时可用；
+    提示未通过识别门限时为 None，即使已确认胜利也不能凭标题推定点击位置。
     auto 是战斗中的自动射击开关状态（不是模板分，模板分在 scores['auto_tpl']）；quick_ratio 与
     auto_ratio 是判据实际量到的橙色占比、auto_score 是 AUTO 按钮的模板分、auto_box 是它的定位框，
     这几个数只供日志与离线核对，用于区分「按钮是灰的」与「按钮根本没被定位到」。
