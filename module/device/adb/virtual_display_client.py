@@ -50,7 +50,7 @@ def bridge_command(port, command, timeout=10, recv=recv_exact):
 
     Args:
         port (int): Local TCP port forwarded to the bridge socket.
-        command (bytes): e.g. b'FRAME\\n', b'INFO\\n'.
+        command (bytes): e.g. b'FRAME\\n', b'THUMB 2\\n', b'INFO\\n'.
 
     Returns:
         tuple[int, int, bytes] for frame commands, otherwise the raw reply bytes.
@@ -59,7 +59,7 @@ def bridge_command(port, command, timeout=10, recv=recv_exact):
         raise ScreenshotSizeError('The virtual-display bridge is not connected')
     with socket.create_connection(('127.0.0.1', port), timeout=timeout) as stream:
         stream.sendall(command)
-        if command == b'FRAME\n':
+        if command == b'FRAME\n' or command.startswith(b'THUMB '):
             return read_rgb_frame(stream, recv=recv)
         return stream.recv(256)
 
