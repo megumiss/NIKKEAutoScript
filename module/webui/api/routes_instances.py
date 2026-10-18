@@ -432,7 +432,9 @@ async def stop(request: Request):
         manager = ProcessManager.get_manager(name)
         if not manager.alive:
             return _response_error(f'Instance "{name}" is not running.', 409)
-        manager.stop()
+        # stop() kills the worker tree and joins its threads; off the event loop
+        # so preview polling and other requests keep being served meanwhile.
+        await asyncio.to_thread(manager.stop)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" stopped.'})
     results = []
     for instance in names:
@@ -440,7 +442,7 @@ async def stop(request: Request):
         if not manager.alive:
             results.append({'instance': instance, 'status': 'skipped', 'message': 'Not running.'})
             continue
-        manager.stop()
+        await asyncio.to_thread(manager.stop)
         results.append({'instance': instance, 'status': 'success', 'message': 'Stopped.'})
     return JSONResponse({'status': 'success', 'results': results})
 
