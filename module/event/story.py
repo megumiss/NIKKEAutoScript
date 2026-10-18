@@ -635,7 +635,6 @@ class EventStory(EventBase):
             logger.info('No pending stage found or Stage 12 cleared, check sweep')
 
     def find_and_sweep_stage(self, open_story):
-        click_timer = Timer(0.3)
         if self.appear(self.STORY_STAGE_11(open_story), offset=80, threshold=0.9) and self.appear(
             self.STORY_STAGE_11(f'{open_story}_clear'), offset=80, threshold=0.9
         ):
@@ -644,66 +643,49 @@ class EventStory(EventBase):
                 self.device.screenshot()
 
                 # 战斗结束
-                if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
-                    confirm_timer = Timer(1, count=3).start()
+                if self.appear(END_FIGHTING, offset=30):
                     while 1:
                         self.device.screenshot()
-                        if not self.appear(END_FIGHTING, offset=30):
-                            if confirm_timer.reached():
-                                click_timer.reset()
-                                break
-                        else:
-                            confirm_timer.reset()
+                        if not self.appear(END_FIGHTING_BONUS_CHECK, offset=30):
+                            break
                         if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
-                            click_timer.reset()
                             continue
                     break
 
                 # 关卡检查
-                if (
-                    click_timer.reached()
-                    and self.appear(self.STORY_STAGE_11(open_story), offset=80, threshold=0.9)
-                    and self.appear_then_click(self.STORY_STAGE_11(f'{open_story}'), offset=80, threshold=0.9)
+                if self.appear(self.STORY_STAGE_11(open_story), offset=80, threshold=0.9) and self.appear_then_click(
+                    self.STORY_STAGE_11(f'{open_story}'), offset=80, threshold=0.9
                 ):
                     self.device.sleep(0.5)
-                    click_timer.reset()
                     continue
 
                 # 快速战斗
-                if (
-                    click_timer.reached()
-                    and self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
-                    and self.appear_then_click(FIGHT_QUICKLY, threshold=20, interval=1)
+                if self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30) and self.appear_then_click(
+                    FIGHT_QUICKLY, threshold=20, interval=1
                 ):
-                    click_timer.reset()
                     continue
 
                 # 票max
                 if (
-                    click_timer.reached()
-                    and max_clicks < 3
+                    max_clicks < 3
                     and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
                     and self.appear_then_click(FIGHT_QUICKLY_MAX, offset=30, threshold=0.99, interval=1)
                 ):
                     max_clicks += 1
                     self.device.sleep(0.3)
-                    click_timer.reset()
                     continue
 
                 # 进行战斗
                 if (
-                    click_timer.reached()
-                    and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
+                    self.appear(FIGHT_QUICKLY_CHECK, offset=10)
                     and self.appear(FIGHT_QUICKLY_MIN, offset=30, threshold=0.99)
                     and self.appear_then_click(FIGHT_QUICKLY_FIGHT, threshold=20, interval=1)
                 ):
-                    click_timer.reset()
                     continue
 
                 # 没票
                 if (
-                    click_timer.reached()
-                    and self.appear(self.event_assets.STORY_STAGE_CHECK, offset=10)
+                    self.appear(self.event_assets.STORY_STAGE_CHECK, offset=10)
                     and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
                     and self.appear_then_click(FIGHT_CLOSE, offset=10, interval=1)
                 ):

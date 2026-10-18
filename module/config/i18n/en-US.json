@@ -805,7 +805,7 @@
     },
     "BuyCount": {
       "name": "Purchase quantity",
-      "help": "Daily total purchase quantity, from 1 to 10. Deduct purchases already made today, including manual purchases, using the remaining shop limit. Buy only enough to reach this total; skip if already reached or recognition is uncertain.",
+      "help": "Daily total purchase quantity, from 1 to 10. Skip if already reached or recognition is uncertain.",
       "1": "1",
       "2": "2",
       "3": "3",
