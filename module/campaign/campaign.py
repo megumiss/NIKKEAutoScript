@@ -459,18 +459,30 @@ class Campaign(ModuleBase):
         return goal
 
     def campaign_source(self, snapshot):
-        """预览推送的观测源：本帧快照附上运行记忆与当前目标；准备阶段还没有运行状态时原样推送。
+        """为预览快照附加章节设施标注、运行记忆与当前目标，不修改原始观测。
 
-        用浅拷贝附加，不改写快照本身：记忆不是本帧观测，不能被当成这一帧看到的敌人再读回去。
+        设施只取已校验的静态地图点与传送关系，不混入场景检测或推断触发状态。章节、底图摘要及
+        尺寸必须与快照一致；不可用时 annotations 为 None，已加载但没有设施时返回空列表。
+        准备阶段即使尚无运行记忆也可展示标注。浅拷贝避免展示数据被重新当成本帧观测读回。
         """
-        if snapshot is None or self.state is None:
-            return {'campaign': snapshot}
+        if snapshot is None:
+            return {'campaign': None}
+        source = dict(snapshot, annotations=None)
+        info = snapshot.get('map')
+        if info and snapshot['chapter'] == self.observer.chapter:
+            chart = self.observer.static_map()
+            if (chart is not None and chart.chapter == snapshot['chapter']
+                    and chart.image_sha256 == info['image_sha256'] and list(chart.size) == list(info['size'])):
+                source['annotations'] = dict(points=chart.targets('ground_mechanism', 'ground_elevator'),
+                                             transfers=chart.transfers)
+        if self.state is None:
+            return {'campaign': source}
         memory = self.state.memory()
         goal = self.last_goal
         if goal and goal.get('kind') != 'none' and goal.get('position') is not None:
             memory['goal'] = dict(kind=goal['kind'], id=goal['id'],
                                   position=[round(float(value), 1) for value in goal['position']])
-        return {'campaign': dict(snapshot, memory=memory)}
+        return {'campaign': dict(source, memory=memory)}
 
     def dry_run(self, initial, ticks=DRY_RUN_TICKS):
         """只观测只决策不点击的空跑，返回最后一轮的目标。

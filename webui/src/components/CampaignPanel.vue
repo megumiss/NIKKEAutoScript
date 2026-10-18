@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '../api/client'
 import { t, uiLanguage } from '../i18n'
 import { useInstancesStore } from '../stores/instances'
-import CampaignMap, { type Block, type Enemy, type Goal, type Point, type RememberedEnemy } from './CampaignMap.vue'
+import CampaignMap, { type Block, type Enemy, type Goal, type MapAnnotations, type Point, type RememberedEnemy } from './CampaignMap.vue'
 
 const props = defineProps<{ name: string }>()
 type Snapshot = {
@@ -12,6 +12,7 @@ type Snapshot = {
   minimap: { image: string; size: Point; squad: Point | null; enemies: Enemy[]; mode: string } | null
   localization: string; squad: Point | null; enemies: Enemy[]
   barriers?: { state: string; map: Point }[]; blocks?: Block[]
+  annotations?: MapAnnotations | null
   memory?: { tick: number; enemies: RememberedEnemy[]; blocks: Block[]; goal?: Goal }
 }
 const instances = useInstancesStore()
@@ -26,6 +27,9 @@ const updatedAt = computed(() => snapshot.value ? new Date(snapshot.value.captur
 const remembered = computed(() => snapshot.value?.memory?.enemies ?? [])
 const mapBlocks = computed(() => snapshot.value?.memory?.blocks ?? snapshot.value?.blocks ?? [])
 const goal = computed(() => snapshot.value?.memory?.goal ?? null)
+const annotations = computed(() => snapshot.value?.annotations ?? null)
+const mechanisms = computed(() => annotations.value?.points.filter(point => point.category === 'ground_mechanism') ?? [])
+const elevators = computed(() => annotations.value?.points.filter(point => point.category === 'ground_elevator') ?? [])
 function format(point?: Point | null) { return point ? point.map(value => value.toFixed(1)).join(', ') : '—' }
 watch(mapUrl, () => { mapError.value = false })
 watch(() => props.name, () => { snapshot.value = null; error.value = ''; running.value = false })
@@ -60,9 +64,10 @@ onBeforeUnmount(() => { generation++ })
     <div v-else class="campaign-content">
       <section class="chapter-map-section">
         <div class="section-heading"><b>{{ t('章节地图') }}</b><span>{{ mapBlocks.length ? `${mapBlocks.length} ${t('处道路封锁')}` : t('普通 / 困难共用底图') }}</span></div>
-        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :blocks="mapBlocks" :goal="goal" :label="t('章节地图')" @error="mapError = true" />
+        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :blocks="mapBlocks" :goal="goal" :annotations="annotations" :label="t('章节地图')" @error="mapError = true" />
         <div v-else class="campaign-empty">{{ t('章节底图不可用') }}</div>
         <div class="legend"><span class="cyan">○ {{ t('小队') }}</span><span class="red">◆ {{ t('敌人') }}</span><span class="purple">◆ EX</span><span v-if="remembered.length" class="red">◇ {{ t('记住的敌人') }} {{ remembered.length }}</span><span v-if="goal" class="gold">⊕ {{ t('当前目标') }}</span><span v-if="mapBlocks.length" class="blocked">╌ {{ t('道路封锁') }}</span></div>
+        <div v-if="annotations" class="legend annotation-legend"><span><span class="mechanism" aria-hidden="true">▣</span> {{ t('地面机关') }} {{ mechanisms.length }}</span><span><span class="elevator" aria-hidden="true">⇅</span> {{ t('电梯') }} {{ elevators.length }}</span><span v-if="annotations.transfers.length"><span class="elevator" aria-hidden="true">⇢</span> {{ t('电梯连接') }} {{ annotations.transfers.length }}</span></div>
         <p class="map-note">{{ snapshot.localization === 'accepted' ? t('位置已匹配到章节底图') : t('底图位置未确认，请查看小地图。') }}</p>
       </section>
       <section class="observations">
@@ -77,6 +82,27 @@ onBeforeUnmount(() => { generation++ })
           <div v-for="(enemy, i) in snapshot.minimap.enemies" :key="i"><span :class="enemy.kind === 'ex' ? 'purple' : 'red'">{{ enemy.kind === 'ex' ? 'EX' : t('敌人') }} {{ i + 1 }}</span><span>{{ format(enemy.position) }}</span></div>
           <small>{{ t('敌人坐标以小地图左上角为原点') }}</small>
         </div>
+        <section class="annotations-section">
+          <div class="section-heading"><b>{{ t('已标注设施') }}</b><span>{{ t('底图坐标') }}</span></div>
+          <p v-if="!annotations" class="map-note">{{ t('标注信息不可用，等待任务更新。') }}</p>
+          <template v-else>
+            <p class="map-note">{{ t('地图标注不代表机关已触发或电梯当前可用。') }}</p>
+            <p v-if="!annotations.points.length" class="map-note">{{ t('本章暂无机关或电梯点标注。') }}</p>
+            <div v-else class="annotation-list">
+              <div v-for="point in annotations.points" :key="point.id" class="annotation-row">
+                <span><b><span :class="point.category === 'ground_mechanism' ? 'mechanism' : 'elevator'" aria-hidden="true">{{ point.category === 'ground_mechanism' ? '▣' : '⇅' }}</span> {{ point.category === 'ground_mechanism' ? t('地面机关') : t('电梯') }}</b><span>{{ point.label || point.id }}</span></span>
+                <code>{{ format(point.position) }}</code>
+              </div>
+            </div>
+            <div v-if="annotations.transfers.length" class="transfer-list">
+              <div v-for="transfer in annotations.transfers" :key="transfer.id" class="transfer-row">
+                <span>{{ t('电梯连接') }} · {{ transfer.id }} · {{ transfer.directed ? t('单向') : t('双向') }}</span>
+                <code>{{ format(transfer.entry) }} {{ transfer.directed ? '→' : '↔' }} {{ format(transfer.exit) }}</code>
+              </div>
+            </div>
+            <p v-else-if="elevators.length" class="map-note">{{ t('尚未标注电梯连接，不能据此判断传送路线。') }}</p>
+          </template>
+        </section>
       </section>
     </div>
     <p v-if="error" class="connection-error" role="status">{{ error }}</p>
@@ -103,6 +129,15 @@ h3 { margin:0 0 5px; font-size:16px; }
 dl { margin:16px 0; }dl > div,.enemy-list > div { display:flex; justify-content:space-between; gap:12px; margin:9px 0; }
 dd { margin:0; font:12px var(--font-mono,monospace); }
 .enemy-list { max-height:170px; overflow:auto; border-top:1px solid var(--border); margin-top:14px; padding-top:5px; font-size:12px; }
+.mechanism { color:var(--green); }.elevator { color:var(--yellow); }
+.annotations-section { border-top:1px solid var(--border); margin-top:18px; padding-top:16px; }
+.annotations-section .section-heading { margin-bottom:6px; }.annotation-legend { gap:12px; padding-top:8px; }
+.annotation-list,.transfer-list { max-height:200px; overflow:auto; margin-top:10px; font-size:12px; }
+.annotation-row { display:flex; justify-content:space-between; gap:12px; padding:7px 0; }
+.annotation-row > span { display:flex; flex-direction:column; gap:3px; min-width:0; overflow-wrap:anywhere; }
+.annotation-row b { font-weight:500; }.annotation-row code { flex:none; align-self:center; }
+.transfer-list { border-top:1px solid var(--border); }.transfer-row { display:flex; flex-direction:column; gap:4px; padding:7px 0; overflow-wrap:anywhere; }
+.annotation-row code,.transfer-row code { font:12px var(--font-mono,monospace); color:var(--text-2); }
 .campaign-empty { min-height:250px; display:grid; place-items:center; padding:24px; color:var(--text-2); text-align:center; font-size:13px; }
 .campaign-empty.compact { min-height:150px; }.connection-error { padding:0 18px 14px; color:var(--red); font-size:12px; }
 @media(max-width:900px) { .campaign-content { grid-template-columns:1fr; }.chapter-map-section { border-right:0; border-bottom:1px solid var(--border); }.campaign-head { flex-wrap:wrap; padding:16px; }.section-heading { flex-wrap:wrap; } }
