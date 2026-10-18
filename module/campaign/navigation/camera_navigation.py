@@ -605,6 +605,50 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
     return translation @ matrix
 
 
+def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, target, squad_position, click):
+    """重新识别点击前的新帧，只返回本帧再次确认的原目标脚圈中心。
+
+    不以整片场景像素是否相同判断镜头稳定，避免河流或角色动画使有效匹配失效。
+    新帧道路必须独立配准通过，镜头偏移不超过 12 地图像素、尺度变化不超过 12%；
+    再用原参考帧重做目标身份与两帧运动匹配，中心偏移不超过 TRACK_DISTANCE 客户区像素。
+    本方法不拖动或开合地图。复核失败保留前后帧并抛 ClickUnconfirmed，禁止自动展开重定位；
+    截图、窗口、弹窗和取消异常直接传播，不在安全异常后追加操作。
+    """
+    from module.campaign.navigation.movement_feedback import ClickUnconfirmed
+    from module.campaign.vision.enemy_ring import TRACK_DISTANCE, match_target_ring, observe_rings
+
+    fresh = goto.capture_client(session.win)
+    session.identity(fresh)
+    session.check_collectible(fresh)
+    try:
+        panel, road, valid = perception.compact_road_masks(fresh)
+        current = compact_viewport(session, matcher, panel, road, valid)
+        shift = float(np.linalg.norm(np.asarray(current['viewport']) - viewport))
+        scale_change = abs(current['a'] / scale_a - 1.)
+        if current['status'] != 'accepted':
+            raise ValueError(f"最新帧道路定位未通过（重合度 {current['iou']:.3f}）")
+        if shift > 12 or scale_change > .12:
+            raise ValueError(f'最新帧镜头位置或比例变化超限（镜头偏移 {shift:.1f} 地图像素，'
+                             f'比例变化 {scale_change:.1%}）')
+        rings = observe_rings(fresh, panel, current['matrix'], current['viewport'])
+        result = match_target_ring(reference, rings, target, squad_position, goto.VIEWPORT_PIXEL)
+        if result.get('click') is None:
+            raise ValueError(result['reason'].rstrip('。'))
+        latest_click = np.asarray(result['click'], float)
+        center_shift = float(np.linalg.norm(latest_click - click))
+        if center_shift > TRACK_DISTANCE:
+            raise ValueError(f'最新帧脚圈中心偏移 {center_shift:.1f} 客户区像素，超过 {TRACK_DISTANCE:.0f}')
+    except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
+        runtime.write_image(session.folder / 'enemy_ring_before.png', field)
+        runtime.write_image(session.folder / 'enemy_ring_latest.png', fresh)
+        session.preview(fresh)
+        raise ClickUnconfirmed(f'脚圈点击复核未通过：{str(error).rstrip("。")}；停止执行，未发送移动点击。') from error
+    session.preview(fresh)
+    session.emit(message=f"脚圈点击复核通过：道路重合度 {current['iou']:.3f}，"
+                         f'镜头偏移 {shift:.1f} 地图像素，脚圈中心偏移 {center_shift:.1f} 客户区像素')
+    return latest_click
+
+
 def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3, enemy_assist=False):
     """镜头规划：先把目标平移到镜头注视点，再点落点把小队送过去。
 
@@ -627,6 +671,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     辅助失败继续原落点和拖动流程，不为等待可靠帧增加拖动。
     来自紧凑快照的小队位置没有展开 ROI 基准；只有跟踪需要批末校正时才抛 ValueError，
     由生产会话按需展开并重试，不能用紧凑矩阵冒充展开基准或无限沿用链式跟踪。
+    脚圈已匹配时，点击前的新帧由 confirm_ring_click 独立复核，不将复核失败交给展开恢复。
     """
     from module.campaign.vision.matching import MapMatcher, register
     from module.campaign.vision.enemy_ring import MAX_CAMERA_STEP, match_target_ring, observe_rings
@@ -680,12 +725,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                          enemy_ring_match={key: value for key, value in result.items() if key != 'reason'},
                          enemy_ring_pan_span=count - ring_pan)
             if result.get('click') is not None:
-                fresh = goto.capture_client(session.win)
-                session.identity(fresh)
-                session.check_collectible(fresh)
-                if not scene_unchanged(field, fresh):
-                    raise ValueError('脚圈匹配期间场景发生变化，未发送旧坐标点击；等待下一次定位。')
-                click = np.asarray(result['click'], float)
+                click = confirm_ring_click(session, matcher, ring_previous, field, viewport, scale_a,
+                                           target, squad_position, np.asarray(result['click'], float))
                 session.last_plan_enemy_ring = True
                 session.emit(state='planning', navigation_method='enemy_ring', camera_pans=session.camera_pans,
                              plan_camera_pans=count, planned_target=target.tolist(), click=click.tolist(),

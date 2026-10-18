@@ -28,6 +28,14 @@ class AnchorUnresolved(ValueError):
     """箭头和会话地面基准均无法提供落点，允许导航层尝试一次道路短移。"""
 
 
+class ClickUnconfirmed(RuntimeError):
+    """点击前的新帧未确认原目标，停止执行且不以旧坐标继续恢复。
+
+    镜头已可能远离小队，展开面板不保证能找回小队；调用层不得将此异常降为普通目标
+    失败、触发展开重定位或更换目标，也不得把未发送点击计为敌人不可达。
+    """
+
+
 class TargetTriggered(RuntimeError):
     """导航途中已经触发目标（拾取或进入战斗），属于成功结束而不是失败。
 

@@ -16,7 +16,7 @@ from module.campaign.vision.battle import score_text, value_text
 from module.campaign.window import WindowChanged
 from module.base.timer import Timer
 from module.campaign.navigation.movement import navigate
-from module.campaign.navigation.movement_feedback import TargetTriggered
+from module.campaign.navigation.movement_feedback import ClickUnconfirmed, TargetTriggered
 from module.logger import logger
 
 # 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。
@@ -177,7 +177,7 @@ class CampaignExecutor:
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
             raise
-        except (WindowChanged, InputBudgetExceeded):
+        except (WindowChanged, InputBudgetExceeded, ClickUnconfirmed):
             raise
         except (RuntimeError, ValueError) as exc:
             if kind == 'elevator':
