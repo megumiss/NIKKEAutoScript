@@ -837,16 +837,22 @@ class CampaignSession(NavigationSession):
         return panel, report
 
     def scout_view(self, point, tag):
-        """把展开地图拖到 point（底图坐标）居中后配准这一屏，敌人与已看区域并进运行状态；返回是否记下了这一屏。
+        """把展开地图拖向 point（底图坐标），沿途可信帧均记录敌人与覆盖；返回是否记录过可信帧。
 
         拖动是闭环的：每拖一次都重新配准，用实测视野换算剩余偏移，所以拖动有惯性或比例不准都能收敛；
-        地图边缘拖不动时最多拖 SCOUT_DRAGS 次，之后按当时视野记录，落点没进视野由调用方记冷却。
+        落点所在整格已经进入视野就停止，不必强求居中。地图边缘拖不动时最多拖 SCOUT_DRAGS 次，
+        落点没进视野由调用方记冷却；后续配准失败不会丢掉途中已记录的观测。
         拖动经输入代理发送，与移动输入同样先核对窗口、章节与预算。
         """
         located = self.scout_locate(tag)
-        for attempt in range(SCOUT_DRAGS):
+        recorded = False
+        for attempt in range(SCOUT_DRAGS + 1):
             if located is None:
-                return False
+                return recorded
+            self.absorb_view(*located)
+            recorded = True
+            if self.owner.state.is_observed(point) or attempt == SCOUT_DRAGS:
+                return True
             panel, report = located
             height, width = panel.shape[:2]
             center = np.array([width / 2, height / 2])
@@ -862,10 +868,7 @@ class CampaignSession(NavigationSession):
             self.win.handler.mouse_swipe(tuple(start.tolist()), tuple(end.tolist()))
             self.pause(SCOUT_SETTLE_SECONDS)
             located = self.scout_locate(f'{tag}_{attempt + 1}')
-        if located is None:
-            return False
-        self.absorb_view(*located)
-        return True
+        return recorded
 
     def absorb_view(self, panel, report):
         """侦察这一屏的敌人与已看区域并进运行状态。

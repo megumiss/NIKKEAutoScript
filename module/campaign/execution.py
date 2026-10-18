@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from module.campaign.run_state import RunState, located, panel_quad
+from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_quad
 from module.campaign.goals import describe
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, TARGET_SOURCES, label, points_text)
@@ -96,6 +96,7 @@ class CampaignExecutor:
         # 最近一次真正派出去执行的目标：弹窗在非移动阶段（补视野、观测）冒出来时，用它认领这次战斗，
         # 否则打死的敌人会留在 pending，下一拍白走一趟。
         self.last_executed = None
+        self.scout_pending = None
 
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
@@ -215,12 +216,13 @@ class CampaignExecutor:
                     f"本目标操作 {self.session.target_inputs} 次，耗时 {watch}")
 
     def scout(self, goal, snapshot):
-        """侦察：小队不动，拖展开大地图按路程由近到远看本分量，直到最近的敌人可以确定；返回是否侦察过。
+        """小队原地侦察候选路径与可能更近的支路；返回是否展开过，未完成落点留在 scout_pending。
 
         只用于剧情任务（收集品有标注，不靠看）。刚踩过机关、要先复核光幕时不侦察，复核结果会改变路网。
-        配准失败或落点拖不进视野的格记冷却，累计失败到上限后本次任务不再看它。
+        单轮屏数用尽后保留待查区域，下一轮继续；冷却格不能当作已确认，失败到上限交人工。
         侦察中遇到安全异常直接向外传播，不补发收起地图的输入。
         """
+        self.scout_pending = None
         if self.purpose != 'story' or (goal is not None and goal['kind'] == 'review_block'):
             return False
         if not located(snapshot) or snapshot.get('squad') is None:
@@ -228,6 +230,7 @@ class CampaignExecutor:
         state, squad = self.owner.state, snapshot['squad']
         focus = scout_focus(state, self.owner.cut, squad)
         if focus is None:
+            self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True)
             return False
         self.session.begin_target('scout')
         self.session.scout_begin()
@@ -235,20 +238,23 @@ class CampaignExecutor:
         total = Stopwatch()
         for view in range(SCOUT_VIEWS):
             known = '还没有' if focus['known'] is None else f"{focus['known']} 像素"
+            source = '候选目标的前置路段' if focus['source'] == 'target_route' else '可能更近的支路'
             logger.info(f"侦察第 {view + 1} 屏：目标 {focus['id']}，位置 {points_text(focus['position'])}，"
-                        f"路程 {focus['distance']} 像素，已知最近的敌人 {known}")
+                        f"{source}，路程 {focus['distance']} 像素，已知最近的敌人 {known}")
             watch = Stopwatch()
             recorded = self.session.scout_view(focus['position'], f'scout_{view + 1:02}')
             views += 1
-            logger.info(f"侦察第 {view + 1} 屏结果：{'已记录' if recorded else '未记录'}"
-                        f"（未记录说明定位未通过或目标未进入画面），耗时 {watch}")
-            if not recorded or not state.is_observed(focus['position']):
+            covered = state.is_observed(focus['position'])
+            logger.info(f"侦察第 {view + 1} 屏结果：{'已记录可信帧' if recorded else '定位未通过'}，"
+                        f"目标格{'已覆盖' if covered else '尚未完整覆盖'}，耗时 {watch}")
+            if not recorded or not covered:
                 state.penalize(focus['id'])
             focus = scout_focus(state, self.owner.cut, squad)
             if focus is None:
                 break
         else:
-            logger.info(f'侦察已达 {SCOUT_VIEWS} 屏上限，按当前已知敌人决策。')
+            logger.info(f'侦察已达单轮 {SCOUT_VIEWS} 屏上限，未确认的路段留到下一轮，不向远处敌人出发。')
+        self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True)
         self.session.scout_end()
         logger.info(f'侦察结束：共看 {views} 屏，展开与拖动总耗时 {total}')
         return True
@@ -377,6 +383,19 @@ class CampaignExecutor:
                     if self.scout(goal, snapshot):
                         snapshot = self.session.snapshot()
                         goal = self.owner.plan_tick(snapshot, advance=False)
+                        if located(snapshot) and snapshot.get('squad') is not None:
+                            # 收起后的紧凑帧也可能修正敌人位置；出发依据必须与最终选出的目标一致。
+                            self.scout_pending = scout_focus(self.owner.state, self.owner.cut, snapshot['squad'],
+                                                             include_cooling=True)
+                    if self.scout_pending is not None:
+                        pending = self.scout_pending
+                        failures = self.owner.state.cooldowns.get(pending['id'], {}).get('failures', 0)
+                        if failures >= MAX_FAILURES:
+                            logger.warning(f"前置道路 {pending['id']} 累计 {failures} 次未能确认，停止推图交人工。")
+                            return {'state': 'needs_review', 'reason': 'scouting_incomplete',
+                                    'goal': goal, 'focus': pending}
+                        logger.info(f"前置道路尚未确认（{pending['id']}），小队保持原位，下一轮继续侦察。")
+                        continue
                     if goal is None or goal['kind'] == 'none':
                         logger.warning(f'停止推图：{describe(goal) if goal else "没有拿到目标"}')
                         return {'state': 'needs_review', 'goal': goal}

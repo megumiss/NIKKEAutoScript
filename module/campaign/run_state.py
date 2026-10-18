@@ -159,16 +159,29 @@ class RunState:
         return {key: value for key, value in changes.items() if value}
 
     def _absorb_observed(self, quad):
-        """把本帧面板四边形覆盖的粗网格标成已观测，返回新增格数。
+        """仅把完整落在本帧面板四边形内的粗网格标成已观测，返回新增格数。
 
-        按四边形填充而不是按外接矩形：外接矩形会把透视下根本没看到的两侧角落也算成看过，
-        前沿探索就会跳过那些真正没看过的地方。
+        四角均位于凸四边形内才能确认整格；直接取整填多边形会把仅露出边缘的整格记为已看，
+        从而漏掉格内尚在视野外的敌人。底图最右、最下的不满格只检查实际地图范围。
         """
         if quad is None:
             return 0
         before = int(self.observed.sum())
-        polygon = np.rint(quad / OBSERVED_CELL).astype(np.int32)
-        cv2.fillConvexPoly(self.observed, polygon, 1)
+        rows, columns = np.indices(self.observed.shape)
+        left, top = columns * OBSERVED_CELL, rows * OBSERVED_CELL
+        right = np.minimum(left + OBSERVED_CELL, self.size[0])
+        bottom = np.minimum(top + OBSERVED_CELL, self.size[1])
+        edges = np.roll(quad, -1, axis=0) - quad
+        area = float(np.sum(quad[:, 0] * np.roll(quad[:, 1], -1)
+                            - quad[:, 1] * np.roll(quad[:, 0], -1)))
+        if abs(area) < 1e-6:
+            return 0
+        inside = np.ones(self.observed.shape, bool)
+        for x, y in ((left, top), (right, top), (right, bottom), (left, bottom)):
+            for origin, edge in zip(quad, edges):
+                cross = edge[0] * (y - origin[1]) - edge[1] * (x - origin[0])
+                inside &= np.sign(area) * cross >= -1e-6
+        self.observed[inside] = 1
         return int(self.observed.sum()) - before
 
     def _absorb_enemies(self, enemies, quad):

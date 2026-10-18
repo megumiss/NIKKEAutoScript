@@ -16,8 +16,7 @@ from module.campaign.report import (BLOCK_STATUS, GOAL_KINDS, GOAL_REASONS, REJE
 from module.campaign.run_state import OBSERVED_CELL, located
 from module.campaign.subgoals import elevator_goal, mechanism_goal, review_goal
 
-# 逐候选的行走距离要各自重算距离场与边表（单次 150~350ms），所以先按直线距离排序，
-# 只对最近的若干个算行走距离。直线最近不等于行走最近，这是为把一次决策压在一秒上下的取舍。
+# 收集品沿用有限候选预算；敌人必须比较全部候选，否则会漏掉直线较远、路程却更近的前置敌人。
 PLAN_CANDIDATES = 4
 # 前沿格到小队的直线距离上限：太远的未观测区先不管，等走近了自然会进候选。
 FRONTIER_LIMIT = 900.
@@ -41,6 +40,7 @@ def nearest_enemy(state, cut, squad):
 
     先按切开图的分量筛候选：跨分量的要么真走不通，要么被光幕隔开，后者由调用方按原图再判一次。
     分量判定在原始坐标上做，网格吸附会把相邻分量并到一起虚报可达。
+    同分量普通敌人全部比较 A* 路程；直线距离只决定试算顺序，不能截掉绕路前方的候选。
     """
     squad = np.asarray(squad, float)
     home = cut.component(squad)
@@ -55,7 +55,7 @@ def nearest_enemy(state, cut, squad):
         candidates.append((float(np.linalg.norm(position - squad)), record, position))
     candidates.sort(key=lambda item: item[0])
     best = None
-    for straight, record, position in candidates[:PLAN_CANDIDATES]:
+    for straight, record, position in candidates:
         distance = walking_distance(cut.road, cut.regions, squad, position)
         if not np.isfinite(distance):
             rejected.append({'id': record['id'], 'reason': 'no_road_route', 'position': position.tolist()})
@@ -64,8 +64,6 @@ def nearest_enemy(state, cut, squad):
             best = {'kind': 'enemy', 'id': record['id'], 'position': position.tolist(),
                     'distance': round(distance, 1), 'straight': round(straight, 1),
                     'enemy_kind': record['kind']}
-    for straight, record, position in candidates[PLAN_CANDIDATES:]:
-        rejected.append({'id': record['id'], 'reason': 'beyond_candidate_budget', 'position': position.tolist()})
     return best, rejected
 
 
@@ -165,7 +163,7 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
     if purpose == 'collectible':
         candidates = [item for item in chart.points if item['category'] == f'{state.difficulty}_collectible'
                       and not state.cooling(item['id'])]
-        # 先按分量过滤再截取行走距离预算，与 nearest_enemy 一致：先截再滤时，直线最近的几个若都在
+        # 先按分量过滤再截取行走距离预算：先截再滤时，直线最近的几个若都在
         # 光幕或墙的另一侧，同侧可达的收集品就永远轮不到。
         home = cut.component(squad)
         reachable = [item for item in candidates if home and cut.component(item['position']) == home]
