@@ -37,6 +37,28 @@ def get_ocr_device() -> str:
         return 'cpu'
 
 
+def paddle_options(lang, model_type, interval=0):
+    """
+    NIKKEOcr 构造参数的唯一来源；dev_tools/ocr_benchmark.py 复用它，保证基准与运行时一致。
+
+    Args:
+        lang (str): 'ch' 或 'en'（数字模型）
+    """
+    options = dict(
+        lang=lang,
+        model_type=model_type,
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+        interval=interval,
+        device=get_ocr_device(),
+        cpu_threads=get_ocr_cpu_threads(),
+    )
+    if lang == 'en':
+        options.update(text_det_thresh=0.1, text_det_unclip_ratio=6.0)
+    return options
+
+
 class OcrModel:
     def __init__(self):
         self._paddle_cache = {}
@@ -48,16 +70,7 @@ class OcrModel:
             with OcrInitProgress('Importing paddle library'):
                 from module.ocr.nikke_ocr import NIKKEOcr
 
-            self._paddle_cache[model_type] = NIKKEOcr(
-                lang='ch',
-                model_type=model_type,
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_textline_orientation=False,
-                interval=interval,
-                device=get_ocr_device(),
-                cpu_threads=get_ocr_cpu_threads(),
-            )
+            self._paddle_cache[model_type] = NIKKEOcr(**paddle_options('ch', model_type, interval))
         return self._paddle_cache[model_type]
 
     def paddle_num(self, model_type, interval):
@@ -65,18 +78,7 @@ class OcrModel:
             with OcrInitProgress('Importing paddle library'):
                 from module.ocr.nikke_ocr import NIKKEOcr
 
-            self._paddle_num_cache[model_type] = NIKKEOcr(
-                lang='en',
-                model_type=model_type,
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_textline_orientation=False,
-                text_det_thresh=0.1,
-                text_det_unclip_ratio=6.0,
-                interval=interval,
-                device=get_ocr_device(),
-                cpu_threads=get_ocr_cpu_threads(),
-            )
+            self._paddle_num_cache[model_type] = NIKKEOcr(**paddle_options('en', model_type, interval))
         return self._paddle_num_cache[model_type]
 
     def get_model_by(self, lang='ch', model_type='mobile', interval=0):
