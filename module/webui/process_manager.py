@@ -24,6 +24,11 @@ from module.webui.setting import State
 # Seconds a sampled frame keeps priority over task screenshots.
 PREVIEW_SAMPLER_FRESH = 3.0
 
+# ProcessManager.start_checked() results
+START_STARTED = 'started'
+START_RUNNING = 'running'
+START_GONE = 'gone'
+
 
 class ProcessManager:
     _processes: Dict[str, "ProcessManager"] = {}
@@ -62,6 +67,9 @@ class ProcessManager:
         # remove the VD server, disable VDD) continues after the worker is dead;
         # start() must wait for it, or the new worker races that cleanup.
         self._lifecycle_lock = threading.Lock()
+        # Bumped under the lifecycle lock whenever the instance is deleted or
+        # renamed; see is_current().
+        self.generation = 0
         self.thd_log_queue_handler: threading.Thread = None
         self.thd_preview_handler: threading.Thread = None
 
@@ -74,28 +82,51 @@ class ProcessManager:
         """
         return self._lifecycle_lock
 
+    def is_current(self, name: str, generation: int = None) -> bool:
+        """
+        Whether this manager still represents instance `name`. A request that
+        waited for the lifecycle lock may hold a manager that was renamed
+        meanwhile, while `name` now belongs to a newly created instance.
+
+        Args:
+            generation: `self.generation` seen before waiting; also detects a
+                delete + recreate under the same name, which keeps the manager.
+        """
+        with self._processes_lock:
+            registered = self._processes.get(name)
+        if generation is not None and generation != self.generation:
+            return False
+        return self.config_name == name and registered is self
+
     def start(self, func, ev: threading.Event = None, config_name: str = None) -> bool:
+        """
+        Returns:
+            bool: True if this call started a worker. See start_checked() for the reason otherwise.
+        """
+        return self.start_checked(func, ev, config_name) == START_STARTED
+
+    def start_checked(self, func, ev: threading.Event = None, config_name: str = None) -> str:
         """
         Args:
             config_name: Instance the caller validated. A start that waited
                 behind a rename or delete must not start something else.
 
         Returns:
-            bool: True if this call started a worker; False if one is already
-                running or the instance was renamed / deleted meanwhile.
+            str: START_STARTED, START_RUNNING (a worker is already running), or
+                START_GONE (the instance was renamed or deleted meanwhile).
         """
         with self._lifecycle_lock:
             return self._start_locked(func, ev, config_name)
 
-    def _start_locked(self, func, ev, config_name=None) -> bool:
+    def _start_locked(self, func, ev, config_name=None) -> str:
+        if config_name is not None and not self.is_current(config_name):
+            logger.warning(f'Skip starting "{config_name}": instance was renamed or replaced')
+            return START_GONE
         if self.alive:
-            return False
-        if config_name is not None and config_name != self.config_name:
-            logger.warning(f'Skip starting "{config_name}": instance was renamed to "{self.config_name}"')
-            return False
+            return START_RUNNING
         if not os.path.exists(filepath_config(self.config_name, get_config_mod(self.config_name))):
             logger.warning(f'Skip starting "{self.config_name}": instance config no longer exists')
-            return False
+            return START_GONE
         self.preview_source = None
         if func is None:
             func = get_config_mod(self.config_name)
@@ -113,7 +144,7 @@ class ProcessManager:
         self._process.start()
         self.start_log_queue_handler()
         self.start_preview_handler()
-        return True
+        return START_STARTED
 
     def start_log_queue_handler(self):
         if (

@@ -16,17 +16,13 @@ from module.submodule.utils import get_config_mod, load_config
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.api.models import InstanceInfo
 from module.webui.api.routes_schedule import reset_scheduler_fields
-from module.webui.process_manager import ProcessManager
+from module.webui.process_manager import START_GONE, START_RUNNING, ProcessManager
 from module.webui.setting import State
 from module.webui.updater import updater
 
 
 def _response_error(message, status_code=400):
     return JSONResponse({'status': 'error', 'message': message}, status_code=status_code)
-
-
-def _instance_config_exists(name):
-    return Path(filepath_config(name, get_config_mod(name))).exists()
 
 
 async def _hold_lifecycle(manager):
@@ -398,11 +394,13 @@ async def start(request: Request):
                            'Driver for MttVDD) first, or turn off the VDD auto-manage option.',
             }, status_code=400)
         # start() waits for an in-progress stop cleanup; wait off the event loop.
-        if not await asyncio.to_thread(manager.start, func=get_config_mod(name), ev=updater.event, config_name=name):
-            # While this request waited for the lifecycle lock, another request
-            # started, renamed or deleted the instance.
-            if not _instance_config_exists(name) or manager.config_name != name:
-                return _response_error(f'Instance "{name}" was renamed or deleted.', 404)
+        result = await asyncio.to_thread(
+            manager.start_checked, func=get_config_mod(name), ev=updater.event, config_name=name)
+        # While this request waited for the lifecycle lock, another request may
+        # have started, renamed or deleted the instance.
+        if result == START_GONE:
+            return _response_error(f'Instance "{name}" was renamed or deleted.', 404)
+        if result == START_RUNNING:
             return _response_error(f'Instance "{name}" is already running.', 409)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
@@ -433,12 +431,13 @@ async def start(request: Request):
                 'message': 'Virtual display (VDD) driver is not installed.',
             })
             continue
-        if not await asyncio.to_thread(manager.start, func=get_config_mod(instance), ev=updater.event,
-                                       config_name=instance):
-            if not _instance_config_exists(instance) or manager.config_name != instance:
-                results.append({'instance': instance, 'status': 'skipped', 'message': 'Renamed or deleted.'})
-            else:
-                results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
+        result = await asyncio.to_thread(
+            manager.start_checked, func=get_config_mod(instance), ev=updater.event, config_name=instance)
+        if result == START_GONE:
+            results.append({'instance': instance, 'status': 'skipped', 'message': 'Renamed or deleted.'})
+            continue
+        if result == START_RUNNING:
+            results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
             continue
         _clear_serial_failed(instance)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
@@ -531,13 +530,19 @@ async def delete(request: Request):
     except InstanceNotFound as exc:
         return _response_error(str(exc), 404)
     manager = ProcessManager.get_manager(name)
+    generation = manager.generation
     await _hold_lifecycle(manager)
     try:
+        # While waiting, the instance may have been renamed or deleted and
+        # `name` reused by a new instance; this request must not delete that one.
+        if not manager.is_current(name, generation):
+            return _response_error(f'Instance "{name}" was renamed or replaced; reload and retry.', 409)
         # A start that already passed its checks has either finished (alive)
         # or is queued behind this lock and will find the config gone.
         if manager.alive:
             return _response_error('Stop the instance before deleting it.', 409)
         _delete_instance(name)
+        manager.generation += 1
     finally:
         manager.lifecycle_lock.release()
     return JSONResponse({'status': 'success'})
@@ -640,15 +645,18 @@ async def rename(request: Request):
     if new_name in nkas_instance() or re.search(r'[.\\/:*?"\'<>|]', new_name) or new_name.lower().startswith('template'):
         return _response_error('Invalid or already used instance name.')
     manager = ProcessManager.get_manager(name)
+    generation = manager.generation
     await _hold_lifecycle(manager)
     try:
-        return _rename_instance_locked(manager, name, new_name)
+        return _rename_instance_locked(manager, name, new_name, generation)
     finally:
         manager.lifecycle_lock.release()
 
 
-def _rename_instance_locked(manager, name, new_name):
+def _rename_instance_locked(manager, name, new_name, generation):
     """Runs under the instance lifecycle lock, so no start can slip in between the check and the move."""
+    if not manager.is_current(name, generation):
+        return _response_error(f'Instance "{name}" was renamed or replaced; reload and retry.', 409)
     if manager.alive:
         return _response_error('Stop the instance before renaming it.', 409)
     mod = get_config_mod(name)
@@ -706,6 +714,7 @@ def _rename_instance_locked(manager, name, new_name):
                 s['current'] = new_name
         modify_state(_rename_serial_state)
     ProcessManager.rename_process(name, new_name)
+    manager.generation += 1
     logger.info(f'Instance "{name}" renamed to "{new_name}"')
     return JSONResponse({'status': 'success', 'name': new_name})
 

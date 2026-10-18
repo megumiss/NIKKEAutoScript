@@ -9,7 +9,7 @@ from datetime import datetime
 from module.config.config import Function
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.api.models import QueueInfo
-from module.webui.process_manager import ProcessManager
+from module.webui.process_manager import START_GONE, START_STARTED, ProcessManager
 from module.webui.updater import updater
 from module.webui.setting import State
 from module.webui.api.service_tasks import TaskService
@@ -72,9 +72,13 @@ async def run_task(request: Request):
     # other Web config writers; only the start may wait for a stop cleanup.
     if not service.queue_now(name, task):
         return JSONResponse({'status': 'error', 'message': f'No configured task named {task}.'}, status_code=404)
-    started = await asyncio.to_thread(service.ensure_scheduler, name)
+    result = await asyncio.to_thread(service.ensure_scheduler, name)
+    if result == START_GONE:
+        # Deleted or renamed while this request waited; the queued change went with it.
+        return JSONResponse({'status': 'error', 'message': f'Instance "{name}" was renamed or deleted.'},
+                            status_code=404)
     return JSONResponse({'status': 'success', 'message': f'{task} queued for immediate execution.',
-                         'task': task, 'started_scheduler': started})
+                         'task': task, 'started_scheduler': result == START_STARTED})
 
 
 async def start_tool(request: Request):
@@ -86,6 +90,9 @@ async def start_tool(request: Request):
     result = await asyncio.to_thread(TaskService().start_tool, name, task)
     if result is None:
         return JSONResponse({'status': 'error', 'message': f'No tool task named {task}.'}, status_code=404)
+    if result.get('gone'):
+        return JSONResponse({'status': 'error', 'message': f'Instance "{name}" was renamed or deleted.'},
+                            status_code=404)
     if result.get('already_running'):
         return JSONResponse({'status': 'error', 'message': 'Stop the current process before starting a tool task.'}, status_code=409)
     return JSONResponse({'status': 'success', 'message': f'{task} started.', **result})
