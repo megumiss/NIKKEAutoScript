@@ -363,14 +363,14 @@ class CampaignSession(NavigationSession):
         self.target_inputs += 1
 
     def popup(self, field):
-        """战斗闸门：弹窗、战斗中与结算都抛给执行层，接管之内放行让会话点这些按钮。
+        """战斗闸门：弹窗、战斗中、结算与可跳过剧情都抛给执行层，接管之内放行按钮点击。
 
         这几种画面上都不是主线地图，平时任何落点点击都可能点进战斗、点掉结算或点错按钮，所以立即
         停止并交给执行层（普通关卡由执行层接管）；battle_mode 为真说明已经进入接管（或正要接管），
         这时它们就是要被点的对象。EX 弹窗只关一次后仍然是终态：本次实现不接管 EX 关卡。
         实机里点「进入战斗」之后战斗更早就开始了：外层若只认弹窗，就会在战斗画面上继续做野外动作
         （点地图控件、点地面），所以战斗中与结算也在这里拦住。
-        认战斗画面要扫五个模板（约 350ms），而这个闸门每个手势都会走一次，所以先用 0.1ms 的野外判据
+        识别战斗与剧情需要匹配多个模板，而这个闸门每个手势都会走一次，所以先用野外判据
         挡掉正常情况：地图控件在画面上就说明不在战斗里。
         """
         score = goto.battle_popup_score(field)
@@ -378,9 +378,9 @@ class CampaignSession(NavigationSession):
             if self.battle_mode or battle.field_visible(field):
                 return
             kind = battle.battle_state(field)['state']
-            if kind in ('battle', 'victory', 'defeat', 'continue'):
+            if kind in ('battle', 'victory', 'defeat', 'continue', 'story'):
                 self.preview(field)
-                raise TargetTriggered(f'画面是{label(BATTLE_STATES, kind)}，交由执行层接管这场战斗。',
+                raise TargetTriggered(f'识别到{label(BATTLE_STATES, kind)}，转交战斗接管。',
                                       {'kind': 'battle_popup', 'chapter': self.expected_identity[0]})
             return
         self.preview(field)
@@ -461,7 +461,7 @@ class CampaignSession(NavigationSession):
 
         点「进入战斗」之后的过场、以及结算回野外前的加载，都会有短暂「不是野外」的画面；在那些帧上
         点地图控件会被动画吃掉，展开随即失败、任务按窗口异常停下。所以野外动作之前先确认画面：
-        弹窗、战斗中与结算由身份闸门交给执行层，认不出（加载、黑屏、剧情对话）就在这里等，
+        弹窗、战斗中、结算与可跳过剧情由身份闸门交给执行层，认不出（加载、黑屏等）就在这里等，
         等到超过 FIELD_WAIT_LIMIT 秒仍不是野外才按画面异常停下交人工（不再发任何输入）。
         """
         watch = Stopwatch()
@@ -657,7 +657,8 @@ class CampaignSession(NavigationSession):
         """战斗接管的一步：截一帧，按优先级最多点一个按钮，返回识别结果交给执行层决策。
 
         优先级与点法照仓库里已经跑熟的战斗循环（module/daemon/semi_combat.py、module/event/challenge.py）：
-        准备弹窗（关掉／快速战斗／进入战斗）、结算及升级附加页（点继续）、战斗中（关着才点 AUTO）；
+        准备弹窗（关掉／快速战斗／进入战斗）、结算及升级附加页（点继续）、剧情（点 SKIP）、
+        战斗中（关着才点 AUTO）；
         每一拍只点一个按钮，认不出画面就什么都不点——加载与过场本来就没有按钮，硬猜只会点错。
         每个按钮有自己的最短点击间隔（ENTRY_TAP_INTERVAL / SETTLE_TAP_INTERVAL / AUTO_TAP_INTERVAL），
         一次点击没生效时后续几拍不再重复点同一个按钮。
@@ -665,15 +666,17 @@ class CampaignSession(NavigationSession):
         close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
         胜利与升级附加页均只点击本帧已通过门限的 END_FIGHTING 提示；标题先出现而提示
         尚未可见时只返回胜利状态，不发送画面中央点击。
+        战前、战后剧情只点击本帧通过门限的 SKIP；沿用 1 秒点击间隔与输入安全闸门。
         每次点击的日志都带上当次识别分数与颜色判据的实际读数，便于对着现场截图复盘误判。
         """
         self.check()
         state = battle.battle_state(self.win.client())
-        # scores 与颜色占比都只用于日志，缺项由 battle.value_text / score_text 显示为「—」。
+        # 继续与跳过在输入前复核分数，其余判据由状态识别提供；日志缺项显示为「—」。
         kind, scores = state['state'], state.get('scores')
         quick = battle.value_text(state.get('quick_ratio'))
-        if kind not in ('battle', 'unknown'):
+        if kind not in ('battle', 'unknown', 'story'):
             # 一场战斗从准备弹窗开始；战败重打的下一场没有弹窗，所以结算与回野外也要重置额度。
+            # 剧情或加载不能证明新一场战斗开始，不能恢复 AUTO 切换额度。
             self.auto_taps, self.auto_off_frames, self.auto_skip_logged = 0, 0, False
         if kind == 'entry':
             if close_entry:
@@ -690,6 +693,12 @@ class CampaignSession(NavigationSession):
         elif kind == 'battle':
             if not state.get('auto', True):
                 self.handle_auto(state)
+        elif (kind == 'story' and state.get('skip_point') is not None
+              and (scores or {}).get('story_skip', 0.) >= battle.STORY_SKIP_THRESHOLD):
+            point = tuple(state['skip_point'])
+            if self.tap(point, SETTLE_TAP_INTERVAL):
+                logger.info(f"战斗剧情：已点击 SKIP（命中度 {battle.score_text(scores, 'story_skip')}，"
+                            f"客户区落点 {points_text(point)}）。")
         elif (kind in ('victory', 'continue') and state.get('continue_point') is not None
               and (scores or {}).get('continue', 0.) >= battle.CONTINUE_THRESHOLD):
             point = tuple(state['continue_point'])

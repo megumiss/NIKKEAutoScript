@@ -267,7 +267,8 @@ class CampaignExecutor:
         按钮可点，而「画面像不像野外」正好会在点「进入战斗」之后的过场里为真，用它判断战斗结束
         等于把战斗丢回给推图流程。所以必须先取得胜负结算，再连续确认野外才交回控制权：
         胜利与升级附加页分别点继续，战败按 BATTLE_DEFEAT_RETRIES 决定重打还是返回。
-        附加页或未识别画面清空野外确认计数，继续提示本身不作为胜利证据。
+        战前、战后剧情由会话点击 SKIP；剧情、附加页或未识别画面清空野外确认计数。
+        剧情跳过与继续提示均不作为胜利证据，剧情期间保留已确认的胜负及原有超时约束。
         一段战斗（进弹窗、重打后重新开打）单独计 BATTLE_TIME_LIMIT 秒，等不到结算就交人工：
         不无限等，也不盲目连点。战斗结束时给会话打开一次「沿用战斗前坐标」的许可，
         第一帧重新配准失败就用旧坐标继续推图。
@@ -299,6 +300,7 @@ class CampaignExecutor:
                                 f"胜利结算 {score_text(scores, 'victory')}、"
                                 f"战败结算 {score_text(scores, 'defeat')}、"
                                 f"继续提示 {score_text(scores, 'continue')}、"
+                                f"剧情 SKIP {score_text(scores, 'story_skip')}、"
                                 f"AUTO 按钮 {score_text(scores, 'auto_tpl')}、"
                                 f"暂停键 {score_text(scores, 'pause')}；"
                                 f"AUTO 橙色占比 {value_text(state.get('auto_ratio'))}")
@@ -417,7 +419,7 @@ class CampaignExecutor:
                 except TargetTriggered as exc:
                     if exc.evidence.get('kind') != 'battle_popup':
                         raise
-                    logger.info(f'检测到战斗准备弹窗，开始战斗接管；关联最近执行目标：'
+                    logger.info(f'战斗闸门已触发，开始接管；关联最近执行目标：'
                                 f'{goal_brief(self.last_executed)}')
                     self.battle(self.last_executed)
                 finally:

@@ -1,4 +1,4 @@
-"""战斗接管的状态识别：准备弹窗、战斗中、胜负结算、附加继续页与野外地图。
+"""战斗接管的状态识别：准备弹窗、战斗中、胜负结算、剧情、附加继续页与野外地图。
 
 战斗模板取自 1776×999 实机客户区截图；准备弹窗沿用 controls 的进入战斗按钮模板。
 附加页沿用半自动点击的继续提示资源，按横屏实测文字比例缩放，不将该提示作为胜利证据。
@@ -17,6 +17,7 @@ import numpy as np
 from module.campaign.navigation.controls import ENTER_BATTLE_TPL
 from module.campaign.vision.minimap import map_visible, minimap_control_visible
 from module.simulation_room.assets import END_FIGHTING
+from module.ui.assets import SKIP
 
 ASSETS = Path(__file__).resolve().parent / 'assets'
 
@@ -46,6 +47,10 @@ EX_THRESHOLD = .85
 CONTINUE_TEMPLATE_SCALE = .75
 CONTINUE_THRESHOLD = .85
 CONTINUE_ROI = (740, 810, 1040, 930)
+# 通用 SKIP 资源按横屏实测比例缩放；只搜索右上角，避免将正文或其它菜单文字作为跳过按钮。
+STORY_SKIP_TEMPLATE_SCALE = .78
+STORY_SKIP_THRESHOLD = .85
+STORY_SKIP_ROI = (1580, 0, 1776, 100)
 # 橙色判据统一用同一段 HSV：准备弹窗的快速战斗按钮与战斗中的 AUTO 按钮都是「橙色 = 可用／已开」。
 # 两处的占比阈值不同，是因为橙色面积不同：实心按钮实测 0.64，AUTO 按钮框实测 0.075~0.077（关闭态 0.000）。
 ORANGE_LOW, ORANGE_HIGH = (5, 110, 110), (30, 255, 255)
@@ -112,6 +117,27 @@ def continue_prompt(image):
     return float(best), [x1 + point[0] + width / 2, y1 + point[1] + height / 2]
 
 
+def story_skip(image):
+    """定位剧情右上角的 SKIP 按钮，返回匹配度及客户区点击中心。
+
+    输入为 1776×999 BGR 客户区；复用通用 SKIP 资源，以实测的 0.78 倍适配横屏文字。
+    只在右上角匹配，分数不足 STORY_SKIP_THRESHOLD 时位置返回 None，不提供固定坐标兜底。
+    按钮可能出现在战前或战后；其出现、消失均不能作为胜利证据。
+    """
+    SKIP.ensure_template()
+    template = cv2.resize(cv2.cvtColor(SKIP.image, cv2.COLOR_RGB2GRAY), None,
+                          fx=STORY_SKIP_TEMPLATE_SCALE, fy=STORY_SKIP_TEMPLATE_SCALE, interpolation=cv2.INTER_AREA)
+    x1, y1, x2, y2 = STORY_SKIP_ROI
+    region = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2GRAY)
+    if region.shape[0] < template.shape[0] or region.shape[1] < template.shape[1]:
+        return 0., None
+    _, best, _, point = cv2.minMaxLoc(cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED))
+    if best < STORY_SKIP_THRESHOLD:
+        return float(best), None
+    height, width = template.shape
+    return float(best), [x1 + point[0] + width / 2, y1 + point[1] + height / 2]
+
+
 def quick_battle_available(image):
     """准备弹窗里的快速战斗按钮是否可用（橙色实心）。只在该弹窗可见时才有意义。"""
     return orange_ratio(image, QUICK_BATTLE_ROI) > QUICK_BATTLE_ORANGE_RATIO
@@ -161,10 +187,11 @@ def field_visible(image):
 def classify(scores, field, quick, auto_on):
     """把一路打分与野外判据判成一个状态；纯函数，便于用假分数固定优先级。
 
-    scores 的键是 auto_tpl / pause / victory / defeat / entry / continue。
-    优先级从「画面唯一」到「画面常见」：战败与胜利结算、准备弹窗、战斗中，最后才是野外——野外判据
+    scores 的键是 auto_tpl / pause / victory / defeat / entry / story_skip / continue。
+    优先级依次为战败、胜利、准备弹窗、剧情、战斗中、附加继续页，最后才是野外——野外判据
     只看小地图，放最后可以避免弹窗盖住画面时被误判成回到野外。quick / auto_on 是颜色判据的结果，
-    只在对应状态里有意义。底部继续提示只在其它战斗状态未命中时接管，且不能作为胜利证据。
+    只在对应状态里有意义。剧情跳过优先于战斗 HUD，避免对剧情背后的战斗界面发送输入。
+    底部继续提示只在其它战斗状态未命中时接管；跳过与继续均不能作为胜利证据。
     """
     if scores.get('defeat', 0.) >= THRESHOLD:
         return {'state': 'defeat', 'quick': quick, 'auto': auto_on}
@@ -172,6 +199,8 @@ def classify(scores, field, quick, auto_on):
         return {'state': 'victory', 'quick': quick, 'auto': auto_on}
     if scores.get('entry', 0.) >= ENTRY_THRESHOLD:
         return {'state': 'entry', 'quick': quick, 'auto': auto_on}
+    if scores.get('story_skip', 0.) >= STORY_SKIP_THRESHOLD:
+        return {'state': 'story', 'quick': quick, 'auto': auto_on}
     if max(scores.get('auto_tpl', 0.), scores.get('pause', 0.)) >= THRESHOLD:
         return {'state': 'battle', 'quick': quick, 'auto': auto_on}
     if scores.get('continue', 0.) >= CONTINUE_THRESHOLD:
@@ -185,9 +214,10 @@ def battle_state(image):
     """识别一帧 1776×999 客户区截图属于战斗接管的哪个状态。
 
     返回 dict(state, quick, auto, scores, quick_ratio, auto_score, auto_ratio, auto_box)：state 是
-    defeat / victory / entry / battle / continue / field / unknown，quick 只在 entry 时有意义，
+    defeat / victory / entry / story / battle / continue / field / unknown，quick 只在 entry 时有意义，
     continue_point 是本帧继续提示的客户区点击中心，仅在 victory 或 continue 状态时可用；
     提示未通过识别门限时为 None，即使已确认胜利也不能凭标题推定点击位置。
+    skip_point 是本帧右上角 SKIP 的客户区中心，仅在 story 状态时用于点击，未通过门限时为 None。
     auto 是战斗中的自动射击开关状态（不是模板分，模板分在 scores['auto_tpl']）；quick_ratio 与
     auto_ratio 是判据实际量到的橙色占比、auto_score 是 AUTO 按钮的模板分、auto_box 是它的定位框，
     这几个数只供日志与离线核对，用于区分「按钮是灰的」与「按钮根本没被定位到」。
@@ -196,14 +226,15 @@ def battle_state(image):
         raise ValueError('战斗状态识别需要 1776×999 的三通道客户区截图。')
     auto, auto_box, auto_score, auto_ratio = auto_judgement(image)
     continue_score, continue_point = continue_prompt(image)
+    skip_score, skip_point = story_skip(image)
     scores = {'auto_tpl': auto_score, 'pause': score(PAUSE_TPL, image),
               'victory': victory_score(image), 'defeat': score(DEFEAT_TPL, image),
-              'entry': score(ENTER_BATTLE_TPL, image), 'continue': continue_score}
+              'entry': score(ENTER_BATTLE_TPL, image), 'continue': continue_score, 'story_skip': skip_score}
     quick_ratio = orange_ratio(image, QUICK_BATTLE_ROI)
     quick = bool(scores['entry'] >= ENTRY_THRESHOLD and quick_battle_available(image))
     return dict(classify(scores, field_visible(image), quick, auto), scores=scores,
                 quick_ratio=quick_ratio, auto_score=auto_score, auto_ratio=auto_ratio,
-                auto_box=list(auto_box), continue_point=continue_point)
+                auto_box=list(auto_box), continue_point=continue_point, skip_point=skip_point)
 
 
 def value_text(value):
