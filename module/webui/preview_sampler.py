@@ -9,7 +9,9 @@ the worker's `device.image` or recognition state.
 
 Sampling runs only while a viewer holds a lease (renewed by every
 `GET /api/{name}/screenshot`), shares one thread across all viewers, and keeps
-a single request in flight.
+a single request in flight. Each viewer reports its polling interval: its lease
+covers that interval, and the sampler runs at the fastest active interval, so
+slow polling neither loses the sampled frame nor pays for 1 s sampling.
 """
 import threading
 import time
@@ -19,8 +21,10 @@ import cv2
 from module.device.adb import virtual_display_client as vd_client
 from module.logger import logger
 
-LEASE_SECONDS = 3.0
+# A viewer polling every N seconds keeps its lease for N + LEASE_GRACE seconds.
+LEASE_GRACE = 2.0
 SAMPLE_INTERVAL = 1.0
+MAX_VIEWER_INTERVAL = 30.0
 MAX_BACKOFF = 5.0
 REQUEST_TIMEOUT = 2.0
 # Downscale factor for sampled frames. 1 keeps the 720x1280 task-screenshot size:
@@ -38,22 +42,42 @@ class PreviewSampler:
         """
         self._manager = manager
         self._lock = threading.Lock()
-        self._lease_until = 0.0
+        # polling interval -> last request time, one entry per cadence in use
+        self._viewers = {}
+        self._wake = threading.Event()
         self._thread = None
         self._thumb_port = None
         self._thumb_supported = False
-        # (captured_at, jpeg bytes) or None; replaced atomically.
+        # (captured_at, jpeg bytes) or None; replaced atomically. Kept when the
+        # last viewer leaves, dropped when the bridge port changes.
         self.latest = None
+        self._latest_port = None
 
-    def touch(self):
-        """Renew the viewer lease, starting the shared sampler if needed."""
+    def touch(self, interval=SAMPLE_INTERVAL):
+        """
+        Renew a viewer lease, starting the shared sampler if needed.
+
+        Args:
+            interval (float): The viewer's polling interval in seconds.
+        """
+        interval = min(max(float(interval), SAMPLE_INTERVAL), MAX_VIEWER_INTERVAL)
         with self._lock:
-            self._lease_until = time.time() + LEASE_SECONDS
+            faster = not self._viewers or interval < min(self._viewers)
+            self._viewers[interval] = time.time()
             if self._thread is not None:
+                if faster:
+                    self._wake.set()
                 return
             self._set_wanted(True)
             self._thread = threading.Thread(target=self._run, name='preview-sampler', daemon=True)
             self._thread.start()
+
+    def _active_interval(self, now):
+        """Fastest polling interval among unexpired leases, or None. Call under self._lock."""
+        for interval, last in list(self._viewers.items()):
+            if now - last > interval + LEASE_GRACE:
+                del self._viewers[interval]
+        return min(self._viewers) if self._viewers else None
 
     def _set_wanted(self, value):
         # Called under self._lock so a new lease cannot be cleared by an exiting thread.
@@ -73,10 +97,10 @@ class PreviewSampler:
         failing = False
         while True:
             with self._lock:
-                if time.time() >= self._lease_until:
+                interval = self._active_interval(time.time())
+                if interval is None:
                     self._thread = None
                     self._set_wanted(False)
-                    self.latest = None
                     return
             started = time.time()
             try:
@@ -87,15 +111,17 @@ class PreviewSampler:
                         logger.info('Preview sampler recovered')
                     failing = False
                 # No bridge (worker stopped / not on a virtual display) is not an error; keep the normal cadence.
-                delay = SAMPLE_INTERVAL
+                delay = interval
             except (OSError, ValueError, vd_client.ScreenshotSizeError) as e:
                 # Worker restart, ADB disconnect or a stale forward: keep the
                 # task-screenshot preview and retry with backoff.
                 if not failing:
                     logger.warning(f'Preview sampler unavailable: {e}')
                 failing = True
-                delay = min(delay * 2, MAX_BACKOFF)
-            time.sleep(max(0.0, started + delay - time.time()))
+                delay = max(interval, min(delay * 2, MAX_BACKOFF))
+            # A viewer polling faster than the current cadence cuts the wait short.
+            self._wake.wait(max(0.0, started + delay - time.time()))
+            self._wake.clear()
 
     def _bridge(self):
         manager = self._manager
@@ -121,6 +147,10 @@ class PreviewSampler:
         if bridge is None:
             return None
         port = int(bridge['port'])
+        if port != self._latest_port:
+            # New worker or bridge: a frame from the previous screen must not be shown as current.
+            self.latest = None
+            self._latest_port = port
         width = int(bridge.get('width') or 720)
         height = int(bridge.get('height') or 1280)
         rotation = int(bridge.get('rotation') or 0)

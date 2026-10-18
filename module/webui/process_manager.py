@@ -64,29 +64,35 @@ class ProcessManager:
         self.thd_log_queue_handler: threading.Thread = None
         self.thd_preview_handler: threading.Thread = None
 
-    def start(self, func, ev: threading.Event = None) -> None:
+    def start(self, func, ev: threading.Event = None) -> bool:
+        """
+        Returns:
+            bool: True if this call started a worker, False if one was already running.
+        """
         with self._lifecycle_lock:
-            self._start_locked(func, ev)
+            return self._start_locked(func, ev)
 
-    def _start_locked(self, func, ev) -> None:
-        if not self.alive:
-            self.preview_source = None
-            if func is None:
-                func = get_config_mod(self.config_name)
-            self._process = Process(
-                target=ProcessManager.run_process,
-                args=(
-                    self.config_name,
-                    func,
-                    self._renderable_queue,
-                    self._preview_queue,
-                    ev,
-                    self.preview_wanted,
-                ),
-            )
-            self._process.start()
-            self.start_log_queue_handler()
-            self.start_preview_handler()
+    def _start_locked(self, func, ev) -> bool:
+        if self.alive:
+            return False
+        self.preview_source = None
+        if func is None:
+            func = get_config_mod(self.config_name)
+        self._process = Process(
+            target=ProcessManager.run_process,
+            args=(
+                self.config_name,
+                func,
+                self._renderable_queue,
+                self._preview_queue,
+                ev,
+                self.preview_wanted,
+            ),
+        )
+        self._process.start()
+        self.start_log_queue_handler()
+        self.start_preview_handler()
+        return True
 
     def start_log_queue_handler(self):
         if (
@@ -126,7 +132,7 @@ class ProcessManager:
             if isinstance(item, bytes):
                 self.latest_preview = (source.get('captured_at') or time.time(), item)
 
-    def current_preview(self):
+    def current_preview(self, interval=1.0):
         """
         Renew the viewer lease and return the frame to show.
 
@@ -135,12 +141,16 @@ class ProcessManager:
         downscales); task frames cover non-virtual-display setups and sampler
         outages.
 
+        Args:
+            interval (float): The viewer's polling interval; the sampler runs at this cadence.
+
         Returns:
             tuple[float, bytes, str] | None: captured_at, JPEG, 'task' or 'sampler'
         """
-        self.preview.touch()
+        self.preview.touch(interval)
         sampled = self.preview.latest
-        if sampled is not None and time.time() - sampled[0] <= PREVIEW_SAMPLER_FRESH:
+        fresh = max(PREVIEW_SAMPLER_FRESH, interval + 1)
+        if sampled is not None and time.time() - sampled[0] <= fresh:
             return (*sampled, 'sampler')
         candidates = []
         if self.latest_preview is not None:

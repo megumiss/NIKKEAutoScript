@@ -7,31 +7,47 @@ from module.webui.updater import updater
 
 
 class TaskService:
-    def run_now(self, config_name: str, task: str):
-        """Queue a normal configured task for immediate scheduler execution."""
+    def queue_now(self, config_name: str, task: str) -> bool:
+        """
+        Mark a normal configured task for immediate scheduler execution.
+
+        Reads, modifies and writes the whole config file. Call it on the event
+        loop like the other Web config writers, so concurrent requests cannot
+        overwrite each other's changes.
+        """
         tasks = read_file(filepath_args('args', 'nkas'))
         if task not in tasks:
-            return None
+            return False
 
         config = load_config(config_name)
         config.load()
         if not config.task_call(task, force_call=True):
-            return None
+            return False
         config.save()
+        return True
 
-        manager = ProcessManager.get_manager(config_name)
-        started = False
-        if not manager.alive:
-            manager.start(get_config_mod(config_name), ev=updater.event)
-            started = True
-        return {'task': task, 'started_scheduler': started}
+    def ensure_scheduler(self, config_name: str) -> bool:
+        """
+        Start the instance scheduler if it is not running. May wait for an
+        in-progress stop cleanup, so call it off the event loop.
+
+        Returns:
+            bool: True if this call started the scheduler.
+        """
+        return ProcessManager.get_manager(config_name).start(get_config_mod(config_name), ev=updater.event)
+
+    def run_now(self, config_name: str, task: str):
+        """Queue a normal configured task for immediate scheduler execution."""
+        if not self.queue_now(config_name, task):
+            return None
+        return {'task': task, 'started_scheduler': self.ensure_scheduler(config_name)}
 
     def start_tool(self, config_name: str, task: str):
         available = set(get_available_func()) | set(get_available_mod()) | set(get_available_mod_func())
         if task not in available:
             return None
-        manager = ProcessManager.get_manager(config_name)
-        if manager.alive:
+        # start() checks and starts under the lifecycle lock; a racing request
+        # that loses gets False instead of a misleading "started".
+        if not ProcessManager.get_manager(config_name).start(task, ev=updater.event):
             return {'task': task, 'already_running': True}
-        manager.start(task, ev=updater.event)
         return {'task': task, 'started': True}

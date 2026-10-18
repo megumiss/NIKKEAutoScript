@@ -67,11 +67,14 @@ async def run_task(request: Request):
         validate_instance(name)
     except InstanceNotFound as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
-    # May start the instance, which waits for an in-progress stop cleanup.
-    result = await asyncio.to_thread(TaskService().run_now, name, task)
-    if result is None:
+    service = TaskService()
+    # The config read-modify-write stays on the event loop, serialized with the
+    # other Web config writers; only the start may wait for a stop cleanup.
+    if not service.queue_now(name, task):
         return JSONResponse({'status': 'error', 'message': f'No configured task named {task}.'}, status_code=404)
-    return JSONResponse({'status': 'success', 'message': f'{task} queued for immediate execution.', **result})
+    started = await asyncio.to_thread(service.ensure_scheduler, name)
+    return JSONResponse({'status': 'success', 'message': f'{task} queued for immediate execution.',
+                         'task': task, 'started_scheduler': started})
 
 
 async def start_tool(request: Request):

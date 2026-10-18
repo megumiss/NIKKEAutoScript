@@ -1,6 +1,7 @@
 """Screenshot previews and same-origin scrcpy video/control sessions."""
 
 import asyncio
+import math
 import subprocess
 
 from starlette.responses import JSONResponse, Response
@@ -20,7 +21,13 @@ _sessions = set()
 async def screenshot(request):
     name = request.path_params['name']
     manager = ProcessManager._processes.get(name)
-    preview = manager.current_preview() if manager else None
+    try:
+        interval = float(request.query_params.get('interval', 1))
+    except ValueError:
+        interval = 1.0
+    if not math.isfinite(interval):
+        interval = 1.0
+    preview = manager.current_preview(interval) if manager else None
     if preview is None:
         return JSONResponse({'error': 'no preview'}, status_code=404)
     captured_at, data, source = preview

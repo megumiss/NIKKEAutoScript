@@ -185,7 +185,8 @@ async function tick() {
   inflight = controller
   const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
-    const response = await fetch(`/api/${encodeURIComponent(props.name)}/screenshot?t=${Date.now()}`, {
+    // interval lets the backend sampler match this tab's polling cadence.
+    const response = await fetch(`/api/${encodeURIComponent(props.name)}/screenshot?t=${Date.now()}&interval=${pollRate.value}`, {
       signal: controller.signal,
     })
     if (name !== props.name || !expanded.value || interactive.value) return

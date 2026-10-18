@@ -386,7 +386,9 @@ async def start(request: Request):
                            'Driver for MttVDD) first, or turn off the VDD auto-manage option.',
             }, status_code=400)
         # start() waits for an in-progress stop cleanup; wait off the event loop.
-        await asyncio.to_thread(manager.start, func=get_config_mod(name), ev=updater.event)
+        if not await asyncio.to_thread(manager.start, func=get_config_mod(name), ev=updater.event):
+            # Another request started it while this one waited for a stop cleanup.
+            return _response_error(f'Instance "{name}" is already running.', 409)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
     results = []
@@ -416,7 +418,9 @@ async def start(request: Request):
                 'message': 'Virtual display (VDD) driver is not installed.',
             })
             continue
-        await asyncio.to_thread(manager.start, func=get_config_mod(instance), ev=updater.event)
+        if not await asyncio.to_thread(manager.start, func=get_config_mod(instance), ev=updater.event):
+            results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
+            continue
         _clear_serial_failed(instance)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
     return JSONResponse({'status': 'success', 'results': results})
