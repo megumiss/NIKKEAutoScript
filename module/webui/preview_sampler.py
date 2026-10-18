@@ -23,7 +23,10 @@ LEASE_SECONDS = 3.0
 SAMPLE_INTERVAL = 1.0
 MAX_BACKOFF = 5.0
 REQUEST_TIMEOUT = 2.0
-THUMB_FACTOR = 2
+# Downscale factor for sampled frames. 1 keeps the 720x1280 task-screenshot size:
+# the preview card is laid out from the image's natural size, and a half-size
+# frame would render small and soft. THUMB is used only for factors above 1.
+THUMB_FACTOR = 1
 JPEG_QUALITY = 70
 
 
@@ -123,7 +126,7 @@ class PreviewSampler:
         rotation = int(bridge.get('rotation') or 0)
 
         captured_at = time.time()
-        if self._supports_thumb(port):
+        if THUMB_FACTOR > 1 and self._supports_thumb(port):
             raw_w, raw_h, data = vd_client.bridge_command(
                 port, f'THUMB {THUMB_FACTOR}\n'.encode(), timeout=REQUEST_TIMEOUT
             )
@@ -134,15 +137,16 @@ class PreviewSampler:
                 configured_height=height // THUMB_FACTOR,
             )
         else:
-            # Older bridge JARs only serve full RGB frames.
+            # Full-size frames, also the path for older bridge JARs without THUMB.
             raw_w, raw_h, data = vd_client.bridge_command(port, b'FRAME\n', timeout=REQUEST_TIMEOUT)
             image = vd_client.normalize_frame(
                 vd_client.rgb_bytes_to_image(data, raw_w, raw_h), raw_w, raw_h,
                 rotation=rotation, configured_width=width, configured_height=height,
             )
-            image = cv2.resize(
-                image, (width // THUMB_FACTOR, height // THUMB_FACTOR), interpolation=cv2.INTER_AREA
-            )
+            if THUMB_FACTOR > 1:
+                image = cv2.resize(
+                    image, (width // THUMB_FACTOR, height // THUMB_FACTOR), interpolation=cv2.INTER_AREA
+                )
 
         ok, encoded = cv2.imencode(
             '.jpg', cv2.cvtColor(image, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]

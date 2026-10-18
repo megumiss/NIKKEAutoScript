@@ -124,8 +124,9 @@ class ProcessManager:
         Renew the viewer lease and return the frame to show.
 
         A fresh sampled frame wins even if a task screenshot is newer, so the
-        preview does not alternate between the two resolutions; task frames
-        cover non-virtual-display setups and sampler outages.
+        preview keeps one steady source (and one resolution when the sampler
+        downscales); task frames cover non-virtual-display setups and sampler
+        outages.
 
         Returns:
             tuple[float, bytes, str] | None: captured_at, JPEG, 'task' or 'sampler'
