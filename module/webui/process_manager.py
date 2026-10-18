@@ -17,7 +17,11 @@ from module.base.utils import set_preview_queue
 from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
     get_func_mod, list_mod_instance, load_mod
 from module.logger import logger, set_file_logger, set_func_logger
+from module.webui.preview_sampler import PreviewSampler
 from module.webui.setting import State
+
+# Seconds a sampled frame keeps priority over task screenshots.
+PREVIEW_SAMPLER_FRESH = 3.0
 
 
 class ProcessManager:
@@ -46,8 +50,12 @@ class ProcessManager:
         # drains this queue on a thread and keeps only the newest frame in
         # memory; nothing touches disk.
         self._preview_queue: queue.Queue = State.manager.Queue(maxsize=2)
+        # Set while a Web UI viewer polls the preview; the worker only encodes
+        # frames at full rate while it is set.
+        self.preview_wanted = State.manager.Event()
         self.latest_preview: Tuple[float, bytes] = None
         self.preview_source = None
+        self.preview = PreviewSampler(self)
         self._process: Process = None
         self._process_locks: Dict[str, threading.Lock] = {}
         self.thd_log_queue_handler: threading.Thread = None
@@ -66,6 +74,7 @@ class ProcessManager:
                     self._renderable_queue,
                     self._preview_queue,
                     ev,
+                    self.preview_wanted,
                 ),
             )
             self._process.start()
@@ -104,10 +113,37 @@ class ProcessManager:
             except (EOFError, OSError):
                 # Worker died and the queue pipe broke; keep the last frame.
                 break
-            if isinstance(item, tuple) and len(item) == 2:
+            captured_at = None
+            if isinstance(item, tuple) and len(item) == 3:
+                item, self.preview_source, captured_at = item
+            elif isinstance(item, tuple) and len(item) == 2:
                 item, self.preview_source = item
             if isinstance(item, bytes):
-                self.latest_preview = (time.time(), item)
+                self.latest_preview = (captured_at or time.time(), item)
+
+    def current_preview(self):
+        """
+        Renew the viewer lease and return the frame to show.
+
+        A fresh sampled frame wins even if a task screenshot is newer, so the
+        preview does not alternate between the two resolutions; task frames
+        cover non-virtual-display setups and sampler outages.
+
+        Returns:
+            tuple[float, bytes, str] | None: captured_at, JPEG, 'task' or 'sampler'
+        """
+        self.preview.touch()
+        sampled = self.preview.latest
+        if sampled is not None and time.time() - sampled[0] <= PREVIEW_SAMPLER_FRESH:
+            return (*sampled, 'sampler')
+        candidates = []
+        if self.latest_preview is not None:
+            candidates.append((*self.latest_preview, 'task'))
+        if sampled is not None:
+            candidates.append((*sampled, 'sampler'))
+        if not candidates:
+            return None
+        return max(candidates, key=lambda item: item[0])
 
     def stop(self) -> None:
         try:
@@ -460,7 +496,8 @@ class ProcessManager:
 
     @staticmethod
     def run_process(
-        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None
+        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None,
+        preview_wanted: threading.Event = None,
     ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -477,7 +514,7 @@ class ProcessManager:
             from module.logger import console_hdlr
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
-        set_preview_queue(pq)
+        set_preview_queue(pq, preview_wanted)
 
         from module.config.config import NikkeConfig
 

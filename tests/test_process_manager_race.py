@@ -21,6 +21,9 @@ class DummyManager:
         time.sleep(0.002)
         return queue.Queue()
 
+    def Event(self):
+        return threading.Event()
+
 
 class GetManagerRaceTests(unittest.TestCase):
     def setUp(self):

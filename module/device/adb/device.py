@@ -476,10 +476,19 @@ class Device(Screenshot, Control, AppControl, ScreenUnlock):
         """
         self.stuck_record_check()
         super().screenshot()
-        publish_preview_frame(self.image, source={
+        source = {
             'serial': self.serial,
             'display_id': self._virtual_display_id or 0,
-        })
+        }
+        if self._virtual_display_id is not None and self._virtual_capture_port is not None:
+            # Lets the Web UI sample the bridge directly while this process is busy (e.g. long OCR).
+            source['virtual_display'] = {
+                'port': self._virtual_capture_port,
+                'rotation': self._virtual_display_rotation,
+                'width': self._virtual_display_width,
+                'height': self._virtual_display_height,
+            }
+        publish_preview_frame(self.image, source=source)
         return self.image
 
     def handle_control_check(self, button: Button):
