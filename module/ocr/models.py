@@ -59,26 +59,53 @@ def paddle_options(lang, model_type, interval=0):
     return options
 
 
+def get_ocr_sidecar_command() -> str:
+    """
+    从 deploy.yaml 读取 OCR 侧车启动命令（OcrSidecarCommand），留空表示在本进程内运行 OCR。
+    """
+    from deploy.utils import DEPLOY_CONFIG, poor_yaml_read
+
+    try:
+        return str(poor_yaml_read(DEPLOY_CONFIG).get('OcrSidecarCommand', '') or '').strip()
+    except (OSError, ValueError, TypeError) as e:
+        logger.warning(f'Failed to read OcrSidecarCommand from deploy config: {e}')
+        return ''
+
+
+def create_local_model(lang, model_type, interval=0):
+    # 首次 import paddle 需数十秒，包一层心跳日志避免看起来像卡死
+    with OcrInitProgress('Importing paddle library'):
+        from module.ocr.nikke_ocr import NIKKEOcr
+
+    return NIKKEOcr(**paddle_options(lang, model_type, interval))
+
+
 class OcrModel:
-    def __init__(self):
+    def __init__(self, use_sidecar=True):
+        """
+        Args:
+            use_sidecar (bool): False 时始终在本进程加载模型（侧车自身使用，避免递归代理）。
+        """
         self._paddle_cache = {}
         self._paddle_num_cache = {}
+        self._use_sidecar = use_sidecar
+
+    def _create(self, lang, model_type, interval):
+        command = get_ocr_sidecar_command() if self._use_sidecar else ''
+        if command:
+            from module.ocr.remote import RemoteOcr
+
+            return RemoteOcr(lang, model_type, interval, command)
+        return create_local_model(lang, model_type, interval)
 
     def paddle(self, model_type, interval):
         if model_type not in self._paddle_cache:
-            # 首次 import paddle 需数十秒，包一层心跳日志避免看起来像卡死
-            with OcrInitProgress('Importing paddle library'):
-                from module.ocr.nikke_ocr import NIKKEOcr
-
-            self._paddle_cache[model_type] = NIKKEOcr(**paddle_options('ch', model_type, interval))
+            self._paddle_cache[model_type] = self._create('ch', model_type, interval)
         return self._paddle_cache[model_type]
 
     def paddle_num(self, model_type, interval):
         if model_type not in self._paddle_num_cache:
-            with OcrInitProgress('Importing paddle library'):
-                from module.ocr.nikke_ocr import NIKKEOcr
-
-            self._paddle_num_cache[model_type] = NIKKEOcr(**paddle_options('en', model_type, interval))
+            self._paddle_num_cache[model_type] = self._create('en', model_type, interval)
         return self._paddle_num_cache[model_type]
 
     def get_model_by(self, lang='ch', model_type='mobile', interval=0):

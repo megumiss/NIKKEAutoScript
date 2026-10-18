@@ -11,6 +11,7 @@ Examples (from the repository root):
     taskset -c 2,3 python -m dev_tools.ocr_benchmark --images ./frames --threads 2
     python -m dev_tools.ocr_benchmark --images ./frames --det-limit-side-len 960 \\
         --det-limit-type max --compare base.json
+    python -m dev_tools.ocr_benchmark --images ./frames --sidecar "<OcrSidecarCommand>" --compare base.json
 """
 import argparse
 import json
@@ -103,11 +104,6 @@ def effective_options(model):
 
 
 def run(args):
-    import paddle
-    import paddleocr
-    import paddlex
-    from module.ocr.nikke_ocr import NIKKEOcr
-
     options = paddle_options(args.lang, args.model_type)
     if args.threads:
         options['cpu_threads'] = args.threads
@@ -124,14 +120,31 @@ def run(args):
         raise SystemExit(f'No usable images in {args.images}')
 
     start = time.perf_counter()
-    model = NIKKEOcr(**options)
-    init_seconds = time.perf_counter() - start
+    if args.sidecar:
+        if predict_kwargs or args.threads or args.rec_batch_size:
+            raise SystemExit('--sidecar uses the runtime options; drop the model override flags')
+        from module.ocr.remote import RemoteOcr
 
-    # PaddleX wraps the real pipeline (AutoParallel...Pipeline._pipeline); the
-    # wrapper only delegates attribute reads, so patch the inner object.
-    pipeline = getattr(model.paddlex_pipeline, '_pipeline', model.paddlex_pipeline)
-    det = pipeline.text_det_model = StageTimer(pipeline.text_det_model)
-    rec = pipeline.text_rec_model = StageTimer(pipeline.text_rec_model)
+        # Same path as the worker with OcrSidecarCommand set; this process never imports paddle.
+        model = RemoteOcr(args.lang, args.model_type, 0, args.sidecar)
+        model.predict([images[0][1]])
+        det = rec = StageTimer(None)
+        versions = effective = None
+    else:
+        import paddle
+        import paddleocr
+        import paddlex
+        from module.ocr.nikke_ocr import NIKKEOcr
+
+        model = NIKKEOcr(**options)
+        # PaddleX wraps the real pipeline (AutoParallel...Pipeline._pipeline); the
+        # wrapper only delegates attribute reads, so patch the inner object.
+        pipeline = getattr(model.paddlex_pipeline, '_pipeline', model.paddlex_pipeline)
+        det = pipeline.text_det_model = StageTimer(pipeline.text_det_model)
+        rec = pipeline.text_rec_model = StageTimer(pipeline.text_rec_model)
+        versions = {'paddle': paddle.__version__, 'paddleocr': paddleocr.__version__, 'paddlex': paddlex.__version__}
+        effective = effective_options(model)
+    init_seconds = time.perf_counter() - start
     # Ocr is only used for its result post-processing, identical to appear_text.
     post = Ocr(buttons=[], lang=args.lang, model_type=args.model_type)
     targets = {name: getattr(Langs, name, None) or name for name in args.targets}
@@ -175,12 +188,11 @@ def run(args):
     summary = {
         'platform': platform.platform(),
         'affinity': sorted(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else None,
-        'versions': {
-            'paddle': paddle.__version__, 'paddleocr': paddleocr.__version__, 'paddlex': paddlex.__version__,
-        },
+        'sidecar': bool(args.sidecar),
+        'versions': versions,
         'options': {k: v for k, v in options.items() if k != 'device'},
         'predict_kwargs': predict_kwargs,
-        'effective': effective_options(model),
+        'effective': effective,
         'init_seconds': round(init_seconds, 2),
         'images': len(images),
     }
@@ -230,6 +242,7 @@ def main():
                         help='Langs attribute names or literal texts to locate')
     parser.add_argument('--repeat', type=int, default=1)
     parser.add_argument('--no-warmup', dest='warmup', action='store_false')
+    parser.add_argument('--sidecar', help='Run through the OCR sidecar started by this command (OcrSidecarCommand)')
     parser.add_argument('--out', help='Write summary and records as JSON')
     parser.add_argument('--compare', help='Baseline JSON written by --out')
     parser.add_argument('--tolerance', type=float, default=6, help='Allowed target shift in pixels')
