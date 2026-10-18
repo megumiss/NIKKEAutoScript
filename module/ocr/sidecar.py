@@ -3,8 +3,8 @@ OCR sidecar: runs PaddleOCR in a separate process for the automation worker.
 
 On Android/Termux the worker inherits the app's background cpuset (two little
 cores on some ROMs). Launched through `adb shell run-as`, this process hangs
-off adbd instead and may use every core. See deploy/termux/ocr_sidecar.sh and
-the OcrSidecarCommand deploy setting.
+off adbd instead and may use every core. Enabled by the OcrSidecar deploy
+setting; see module/ocr/sidecar_launch.py and deploy/termux/ocr_sidecar.sh.
 
 Protocol: module/ocr/remote_protocol.py. The first line on stdout is
 `NKAS_OCR_READY port=<port> token=<token>`; the process exits when stdin is

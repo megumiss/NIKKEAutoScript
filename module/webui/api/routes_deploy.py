@@ -27,7 +27,7 @@ EXCLUDED_KEYS = {'ReadNoticeIds', 'StartupNoticeDismissedId'}
 # Path/URL values that benefit from a full-row input instead of the standard
 # narrow control.
 WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy',
-             'SerialGroup', 'ConsoleAllowHosts', 'OcrSidecarCommand'}
+             'SerialGroup', 'ConsoleAllowHosts'}
 SELECT_OPTIONS = {
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
@@ -188,17 +188,15 @@ FIELD_I18N = {
                           "'cu126' は CUDA 12.6 以上、'cu118' は 11.8 以上のドライバーが必要",
                   'hints': {'In most cases': "「auto」"}},
     },
-    'OcrSidecarCommand': {
-        'zh-CN': {'desc': "启动 OCR 侧车进程（module/ocr/sidecar.py）的命令，修改后需重启实例\n"
-                          "OCR 将在该进程中运行；无法启动时自动回退到实例进程内识别\n"
-                          "设备上以 Termux + proot 运行 NKAS 时见 deploy/termux/ocr_sidecar.sh",
-                  'hints': {'In most cases': '留空（null）',
-                            'Other': "'adb -s emulator-5554 shell run-as com.termux sh {repo}/deploy/termux/ocr_sidecar.sh'"}},
-        'ja-JP': {'desc': "OCR サイドカープロセス（module/ocr/sidecar.py）を起動するコマンド。変更後はインスタンスを再起動してください\n"
-                          "OCR はそのプロセスで実行され、起動できない場合はインスタンスのプロセス内に戻ります\n"
-                          "端末上の Termux + proot で NKAS を動かす場合は deploy/termux/ocr_sidecar.sh を参照",
-                  'hints': {'In most cases': '空欄（null）',
-                            'Other': "「adb -s emulator-5554 shell run-as com.termux sh {repo}/deploy/termux/ocr_sidecar.sh」"}},
+    'OcrSidecar': {
+        'zh-CN': {'desc': "在经 ADB 启动的独立进程中运行 OCR（module/ocr/sidecar.py），修改后需重启实例\n"
+                          "仅适用于在被控 Android 设备上以 Termux + proot 运行 NKAS 的情况：Termux 在后台时可能只能用少数小核；启动命令自动识别\n"
+                          "其他环境或侧车无法启动时，照常在实例进程内识别",
+                  'hints': {'In most cases': '关闭'}},
+        'ja-JP': {'desc': "ADB 経由で起動する別プロセスで OCR を実行します（module/ocr/sidecar.py）。変更後はインスタンスを再起動してください\n"
+                          "制御対象の Android 端末上で Termux + proot により NKAS を動かす場合専用です。バックグラウンドの Termux は少数の低速コアに制限されることがあります。起動コマンドは自動検出します\n"
+                          "それ以外の環境やサイドカーを起動できない場合は、通常どおりインスタンスのプロセス内で認識します",
+                  'hints': {'In most cases': 'オフ'}},
     },
     'AdbExecutable': {
         'zh-CN': {'desc': 'ADB 可执行文件 adb.exe 的路径', 'hints': {

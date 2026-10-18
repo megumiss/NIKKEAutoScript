@@ -23,6 +23,7 @@ from module.exception import (
 )
 from module.logger import logger
 from module.ocr.models import OCR_MODEL
+from module.ocr.sidecar_launch import set_adb_target
 
 
 class Device(Screenshot, Control, AppControl, ScreenUnlock):
@@ -86,6 +87,8 @@ class Device(Screenshot, Control, AppControl, ScreenUnlock):
             _ = self.emulator_instance
 
         if self.config.PhysicalDevice_Enable:
+            # OCR 侧车（部署设置 OcrSidecar）经同一台设备的 ADB 启动
+            set_adb_target(self.adb_binary, self.serial)
             # 解锁需在改分辨率/建虚拟屏之前完成，锁屏界面只在原生主屏上
             self.screen_unlock()
             if self.config.PhysicalDevice_VirtualDisplay:

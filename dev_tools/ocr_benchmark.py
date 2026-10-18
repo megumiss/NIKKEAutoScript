@@ -11,7 +11,7 @@ Examples (from the repository root):
     taskset -c 2,3 python -m dev_tools.ocr_benchmark --images ./frames --threads 2
     python -m dev_tools.ocr_benchmark --images ./frames --det-limit-side-len 960 \\
         --det-limit-type max --compare base.json
-    python -m dev_tools.ocr_benchmark --images ./frames --sidecar "<OcrSidecarCommand>" --compare base.json
+    python -m dev_tools.ocr_benchmark --images ./frames --sidecar "<sidecar launch command>" --compare base.json
 """
 import argparse
 import json
@@ -125,7 +125,7 @@ def run(args):
             raise SystemExit('--sidecar uses the runtime options; drop the model override flags')
         from module.ocr.remote import RemoteOcr
 
-        # Same path as the worker with OcrSidecarCommand set; this process never imports paddle.
+        # Same path as the worker with OcrSidecar on; this process never imports paddle.
         model = RemoteOcr(args.lang, args.model_type, 0, args.sidecar)
         model.predict([images[0][1]])
         det = rec = StageTimer(None)
@@ -242,7 +242,8 @@ def main():
                         help='Langs attribute names or literal texts to locate')
     parser.add_argument('--repeat', type=int, default=1)
     parser.add_argument('--no-warmup', dest='warmup', action='store_false')
-    parser.add_argument('--sidecar', help='Run through the OCR sidecar started by this command (OcrSidecarCommand)')
+    parser.add_argument('--sidecar', help='Run through the OCR sidecar started by this command '
+                                          '(see module/ocr/sidecar_launch.py)')
     parser.add_argument('--out', help='Write summary and records as JSON')
     parser.add_argument('--compare', help='Baseline JSON written by --out')
     parser.add_argument('--tolerance', type=float, default=6, help='Allowed target shift in pixels')

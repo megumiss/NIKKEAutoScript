@@ -59,17 +59,17 @@ def paddle_options(lang, model_type, interval=0):
     return options
 
 
-def get_ocr_sidecar_command() -> str:
+def get_ocr_sidecar_enabled() -> bool:
     """
-    从 deploy.yaml 读取 OCR 侧车启动命令（OcrSidecarCommand），留空表示在本进程内运行 OCR。
+    从 deploy.yaml 读取 OCR 侧车开关（OcrSidecar），缺失或非法时为关闭。
     """
     from deploy.utils import DEPLOY_CONFIG, poor_yaml_read
 
     try:
-        return str(poor_yaml_read(DEPLOY_CONFIG).get('OcrSidecarCommand', '') or '').strip()
+        return poor_yaml_read(DEPLOY_CONFIG).get('OcrSidecar', False) is True
     except (OSError, ValueError, TypeError) as e:
-        logger.warning(f'Failed to read OcrSidecarCommand from deploy config: {e}')
-        return ''
+        logger.warning(f'Failed to read OcrSidecar from deploy config: {e}')
+        return False
 
 
 def create_local_model(lang, model_type, interval=0):
@@ -89,9 +89,21 @@ class OcrModel:
         self._paddle_cache = {}
         self._paddle_num_cache = {}
         self._use_sidecar = use_sidecar
+        self._sidecar_unavailable_logged = False
+
+    def _sidecar_command(self):
+        if not self._use_sidecar or not get_ocr_sidecar_enabled():
+            return None
+        from module.ocr.sidecar_launch import termux_sidecar_command
+
+        command, reason = termux_sidecar_command()
+        if command is None and not self._sidecar_unavailable_logged:
+            logger.warning(f'OcrSidecar is on but unavailable here ({reason}), OCR runs in this process')
+            self._sidecar_unavailable_logged = True
+        return command
 
     def _create(self, lang, model_type, interval):
-        command = get_ocr_sidecar_command() if self._use_sidecar else ''
+        command = self._sidecar_command()
         if command:
             from module.ocr.remote import RemoteOcr
 

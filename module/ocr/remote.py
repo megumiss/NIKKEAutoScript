@@ -34,7 +34,11 @@ class OcrSidecarError(Exception):
 
 class OcrSidecar:
     def __init__(self, command):
-        self.command = command
+        """
+        Args:
+            command (tuple[str]): argv that starts module/ocr/sidecar.py
+        """
+        self.command = tuple(command)
         self._lock = threading.Lock()
         self._process = None
         self._ready = threading.Event()
@@ -60,14 +64,14 @@ class OcrSidecar:
         self._ready.clear()
         try:
             self._process = subprocess.Popen(
-                shlex.split(self.command),
+                list(self.command),
                 # Kept open and never written: the sidecar exits when it reaches EOF.
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, encoding='utf-8', errors='replace', bufsize=1, shell=False,
                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
             )
         except (OSError, ValueError) as e:
-            raise OcrSidecarError(f'Cannot run OcrSidecarCommand: {e}') from e
+            raise OcrSidecarError(f'Cannot run OCR sidecar command: {e}') from e
         threading.Thread(target=self._read_output, args=(self._process,), name='ocr-sidecar-output',
                          daemon=True).start()
         deadline = time.time() + READY_TIMEOUT
@@ -77,7 +81,7 @@ class OcrSidecar:
                 pass
         if not self._ready.is_set() or not self.alive:
             self._stop_locked()
-            raise OcrSidecarError('OCR sidecar exited or did not become ready; check OcrSidecarCommand')
+            raise OcrSidecarError('OCR sidecar exited or did not become ready')
 
     def _read_output(self, process):
         for line in process.stdout:
@@ -120,6 +124,11 @@ _sidecars_lock = threading.Lock()
 
 
 def get_sidecar(command):
+    """
+    Args:
+        command (str | list[str]): argv, or a shell-style string (dev_tools/ocr_benchmark.py --sidecar)
+    """
+    command = tuple(shlex.split(command) if isinstance(command, str) else command)
     with _sidecars_lock:
         if command not in _sidecars:
             _sidecars[command] = OcrSidecar(command)
