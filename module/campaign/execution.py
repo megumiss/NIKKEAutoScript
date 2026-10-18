@@ -359,6 +359,11 @@ class CampaignExecutor:
         total = Stopwatch()
         try:
             self.session.start()
+            if initial.get('localization') == 'accepted' and initial.get('squad') is not None:
+                # 准备阶段与首轮之间没有移动，小队坐标可直接约束第一次展开配准。
+                self.session.remember_registration(initial['squad'], initial.get('roi_to_map'),
+                                                   initial.get('coverage_size'))
+                self.session.remember_navigation(initial)
             for index in range(ticks):
                 watch = Stopwatch()
                 logger.info(f'第 {index + 1}/{ticks} 轮开始：任务已运行 {total}，'

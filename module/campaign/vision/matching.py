@@ -24,6 +24,8 @@ MATCH_VERSION = 5
 ACCEPT_ROAD_IOU = .70
 ACCEPT_COARSE_MARGIN = .10
 ACCEPT_PARAMETER_SPREAD_PX = 20
+# 已确认小队坐标对展开面板配准的约束半径，单位为章节底图像素。
+SQUAD_ANCHOR_RADIUS = 12.
 # match_panel 粗搜索的参数网格；同一个 MapMatcher 实例反复配准时尺度基本不变，先在最近
 # 接受的 (a, b) 附近做小网格热启动，命中即跳过全网格，未命中再退回完整扫描。
 PARAMETER_GRID = sorted({(round(float(a), 2), round(float(b), 2))
@@ -189,18 +191,33 @@ class MapMatcher:
                 result['roi_to_map'] = (np.asarray(result['roi_to_map']) @ np.diag([*scale, 1.])).tolist()
         return result
 
-    def match_panel(self, panel, road, valid, player, review=None):
+    def match_panel(self, panel, road, valid, player, review=None, expected_position=None):
         """已裁剪小地图的道路搜索。
 
         粗搜索优先在最近一次 accepted 配准的 (a, b) 附近做小网格热启动：热启动候选分达标的
         参数若与缓存一致则复用当时的粗搜 margin，可继续给出 accepted；命中失败或候选分过低
         退回全网格扫描，行为与无缓存一致。同一实例在移动闭环里反复配准，尺度几乎不变，
         热启动能省九成以上的 matchTemplate。
+
+        expected_position 只接受小队未移动时已确认的底图坐标，player 必须是当前帧实测圆环，
+        不能用视口中心替代。有此约束时全扫尺度参数，仅搜索圆环投影偏差不超过 12 像素的位置；
+        道路重合度和候选离散度仍须过线，不强制把圆环钉在旧坐标，也不读写无约束热启动缓存。
         """
+        expected = None if expected_position is None else np.asarray(expected_position, float)
+        if expected is not None and (expected.shape != (2,) or not np.isfinite(expected).all()):
+            raise ValueError('小队定位约束必须是有限的二维底图坐标。')
         coarse = []
         # 候选分门槛取 0.6：粗搜网格 IoU 明显低于接受线（全分辨率细化后要求 ACCEPT_ROAD_IOU）的参数
         # 不会成为最终候选，热启动时不值得为它们做完全网格。
         warm_score_floor = .6
+
+        def restrict(surface, origin, scale):
+            """只保留小队投影处于可信坐标半径内的平移分数，其余位置设为负值以禁止命中。"""
+            if expected is None:
+                return
+            ys, xs = np.ogrid[:surface.shape[0], :surface.shape[1]]
+            center = expected * scale - origin
+            surface[np.hypot(xs - center[0], ys - center[1]) > SQUAD_ANCHOR_RADIUS * scale] = -1.
 
         def sweep(parameters):
             """对给定 (a, b) 参数做一次粗搜打分，返回粗搜候选列表。"""
@@ -213,10 +230,13 @@ class MapMatcher:
                 surface = iou_surface(self.target, road, valid, matrix, size)
                 if surface is None:
                     continue
+                p = cv2.perspectiveTransform(player[None, None], matrix)[0, 0]
+                restrict(surface, p - PAD, SCALE)
                 _, score, _, location = cv2.minMaxLoc(surface)
+                if score < 0:
+                    continue
                 cv2.circle(surface, location, round(130 * SCALE), 0, -1)
                 _, second, _, second_location = cv2.minMaxLoc(surface)
-                p = cv2.perspectiveTransform(player[None, None], matrix)[0, 0]
                 found.append({'a': a, 'b': b, 'score': score, 'second': second,
                               'position': (np.asarray(location) + p - PAD) / SCALE,
                               'second_position': (np.asarray(second_location) + p - PAD) / SCALE,
@@ -224,7 +244,7 @@ class MapMatcher:
             return found
 
         # seed_matcher 等旁路构造的实例没有热启动字段；热启动只对持有完整画布的实例有意义。
-        warm = getattr(self, 'warm_parameters', None)
+        warm = getattr(self, 'warm_parameters', None) if expected is None else None
         warm_hit = False
         if warm is not None:
             steps = sorted({b for _, b in PARAMETER_GRID})
@@ -253,7 +273,11 @@ class MapMatcher:
             surface = iou_surface(patch, road, valid, full, size)
             if surface is None:
                 continue
+            player_offset = cv2.perspectiveTransform(player[None, None], full)[0, 0]
+            restrict(surface, start - self.pad + player_offset, 1.)
             _, score, _, location = cv2.minMaxLoc(surface)
+            if score < 0:
+                continue
             offset = start + np.asarray(location) - self.pad
             matrix = np.array([[1, 0, offset[0]], [0, 1, offset[1]], [0, 0, 1.]]) @ full
             point = cv2.perspectiveTransform(player[None, None], matrix)[0, 0]
@@ -279,9 +303,11 @@ class MapMatcher:
         result.update(status='accepted' if accepted else 'needs_review', coarse_margin=float(margin),
                       parameter_spread_px=float(spread), roi=list(ROI), player_center=player.tolist(),
                       normalized_size=[1920, 1080], image_sha256=self.digest, match_version=MATCH_VERSION)
+        if expected is not None:
+            result.update(expected_position=expected.tolist(), anchor_error=float(np.linalg.norm(point - expected)))
         # 只有全网格 accepted 才更新热启动：needs_review 的定位不可信，把它的参数喂给下一帧
         # 会把漂移延续下去；accepted 复用同一参数直接命中，后续帧全部走小网格并复用 margin。
-        if accepted and not warm_hit and hasattr(self, 'warm_parameters'):
+        if expected is None and accepted and not warm_hit and hasattr(self, 'warm_parameters'):
             self.warm_parameters = (result['a'], result['b'])
             self.warm_margin = float(margin)
         if review is not None:

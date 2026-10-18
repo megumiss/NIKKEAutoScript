@@ -669,7 +669,7 @@ class SessionTests(unittest.TestCase):
             localizer.locate(np.zeros((100, 100, 3), np.uint8), 'test')
         panel = np.zeros((462, 486, 3), np.uint8)
         localizer.matcher.match_panel.return_value = {'status': 'needs_review'}
-        with patch('module.campaign.session.detect_markers', return_value=([[243, 231]], [])):
+        with patch('module.campaign.vision.perception.detect_markers', return_value=([[243, 231]], [])):
             with self.assertRaises(RuntimeError):
                 localizer.locate(panel, 'test')
             localizer.matcher.match_panel.return_value = dict(status='accepted', road_iou=.9, position=[112, 96],

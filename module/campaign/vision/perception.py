@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 
 from module.campaign.vision.detection import detect_minimap, detect_scene
+from module.campaign.vision.minimap import terrain
 
 
 def crop_candidate(image, detection, margin=4):
@@ -189,6 +190,35 @@ def detect_markers(image, matrix):
         elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex'):
             enemies.append(item.center)
     return project_centers(players, matrix), project_centers(enemies, matrix)
+
+
+def expanded_minimap_masks(panel, require_player=True):
+    """提取生产展开面板的道路、有效域和实测小队圆环，供观测与导航共用。
+
+    panel 必须是 1776×999 客户区内 486×462 的原始展开 ROI，不二次裁边或缩放。
+    返回坐标均属于此 ROI；圆环需通过拟合，多个圆环或要求小队却未识别时抛 ValueError。
+    侦察允许小队离屏，此时 player 为 None，调用方不得用视野中心套用小队坐标约束。
+    """
+    if panel is None or panel.shape != (462, 486, 3):
+        raise ValueError('展开地图定位需要 486×462 的原始画面裁图。')
+    players, _ = detect_markers(panel, np.eye(3))
+    if len(players) > 1 or (require_player and len(players) != 1):
+        raise ValueError(f'展开地图小队圆环数量无效：检测到 {len(players)} 个。')
+    player = np.asarray(players[0], float) if players else None
+    road = terrain(panel)
+    valid = np.full(road.shape, 255, np.uint8)
+    valid[:4] = valid[-4:] = 0
+    valid[:, :4] = valid[:, -4:] = 0
+    valid[-35:, -75:] = 0
+    hsv = cv2.cvtColor(panel, cv2.COLOR_BGR2HSV)
+    icons = cv2.inRange(hsv, (0, 0, 180), (179, 95, 255))
+    red = cv2.inRange(hsv, (0, 65, 160), (10, 255, 255))
+    red |= cv2.inRange(hsv, (155, 65, 160), (179, 255, 255))
+    valid[cv2.dilate(icons | red, np.ones((7, 7), np.uint8)) > 0] = 0
+    if player is not None:
+        cv2.circle(valid, tuple(np.rint(player).astype(int)), 34, 0, -1)
+    road[valid == 0] = 0
+    return road, valid, player
 
 
 def normal_enemy_markers(image, matrix):

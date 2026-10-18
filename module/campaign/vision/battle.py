@@ -1,6 +1,7 @@
 """战斗接管的状态识别：准备弹窗、战斗中、胜利结算、战败结算与野外地图。
 
 模板取自 1776×999 实机客户区截图，所以不涉及缩放；准备弹窗沿用 controls 的进入战斗按钮模板。
+胜利模板仅保留完整的 STAGE CLEAR COUNT 字样，并提取亮色细笔画，避免结算角色背景影响匹配。
 EX 关卡标题另取只含 "EX" 的窄模板：整条 "EX STAGE" 与普通关卡的 "38-20 STAGE" 共享 "STAGE"
 字样，实测假命中 0.853，足以把普通关卡当成 EX 而跳过。
 
@@ -68,6 +69,19 @@ def score(template, image):
     if template.shape[0] > image.shape[0] or template.shape[1] > image.shape[1]:
         return 0.
     return float(cv2.minMaxLoc(cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED))[1])
+
+
+def victory_score(image):
+    """匹配胜利结算的完整标题笔画，抑制随角色变化的背景颜色与明暗。
+
+    输入为 1776×999 BGR 客户区。模板和画面都转灰度后做 5×5 白顶帽，保留标题的细亮笔画，
+    不依赖角色立绘、关卡编号或通关次数；匹配仍须达到统一的 0.9 阈值，不能仅凭底部继续提示
+    判断胜利。只处理胜利模板，其余状态沿用原有彩色匹配。
+    """
+    kernel = np.ones((5, 5), np.uint8)
+    template = cv2.morphologyEx(cv2.cvtColor(VICTORY_TPL, cv2.COLOR_BGR2GRAY), cv2.MORPH_TOPHAT, kernel)
+    foreground = cv2.morphologyEx(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), cv2.MORPH_TOPHAT, kernel)
+    return score(template, foreground)
 
 
 def quick_battle_available(image):
@@ -150,7 +164,7 @@ def battle_state(image):
         raise ValueError('战斗状态识别需要 1776×999 的三通道客户区截图。')
     auto, auto_box, auto_score, auto_ratio = auto_judgement(image)
     scores = {'auto_tpl': auto_score, 'pause': score(PAUSE_TPL, image),
-              'victory': score(VICTORY_TPL, image), 'defeat': score(DEFEAT_TPL, image),
+              'victory': victory_score(image), 'defeat': score(DEFEAT_TPL, image),
               'entry': score(ENTER_BATTLE_TPL, image)}
     quick_ratio = orange_ratio(image, QUICK_BATTLE_ROI)
     quick = bool(scores['entry'] >= ENTRY_THRESHOLD and quick_battle_available(image))

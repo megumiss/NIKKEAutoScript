@@ -8,19 +8,19 @@ import numpy as np
 
 from module.campaign.vision.minimap import map_visible, minimap_control_visible
 from module.campaign.vision.matching import ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU, MapMatcher, ROI
-from module.campaign.vision.minimap import cropped_minimap
 from module.campaign.vision.barriers import mark_blocks, project_barriers, scene_anchor
 from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
 from module.campaign.report import LOCALIZATION, LOCATE_CRITERIA, label, points_text
 from module.campaign.vision.objects import detect_objects
 from module.campaign.vision.offscreen import squad_offscreen
-from module.campaign.vision.perception import compact_road_masks, marker_candidates, minimap_masks, project_centers, refine_ring
+from module.campaign.vision.perception import (compact_road_masks, expanded_minimap_masks, marker_candidates,
+                                             minimap_masks, project_centers, refine_ring)
 from module.logger import logger
 
 # 展开小地图（点击左上角控件后出现的大地图面板）在 1776×999 客户区里的固定 ROI；
 # 与采集器 args.roi、navigation.controls.MAP_MINIMIZE 同源。展开态下紧凑面板不再显示，
-# 面板四角位置会随窗口尺寸略有浮动，所以配准前还要用 cropped_minimap 自己定位面板边界。
+# 观测、导航与侦察使用同一原始裁图坐标系，圆环和敌人必须与配准矩阵来自同一面板。
 EXPANDED_ROI = (644, 280, 1130, 742)
 
 
@@ -64,16 +64,16 @@ class CampaignObserver:
             return (icon[:, :, 2] < 130).mean() > 0.5
         return False
 
-    def observe(self, image, identity, captured_at=None, objects=True):
+    def observe(self, image, identity, captured_at=None, objects=True, expected_squad=None):
         """观测一帧 1776×999 BGR 客户区截图，返回界面与导航共用的章节快照。
 
         identity 是已确认的（章节号, 难度）；章节变化会丢掉地图缓存并重新加载，加载失败只告警，
         之后的定位字段保持 unavailable。
         小地图按左上角控件与面板分三态：紧凑（控件可见且左上小面板是地图）、展开（左上小面板
         不再是地图，地图占满中部 EXPANDED_ROI）、关闭或不在田野页（两者都不是，直接返回）。
-        紧凑面板要先把画面缩放到 1920×1080 再按 ROI 裁，展开面板直接裁固定 ROI，但配准前还要用
-        cropped_minimap 重新定位面板边界——展开面板的位置会随窗口尺寸浮动，而且它给出的圆环
-        自带圆度与道路支持校验，比固定 ROI 更可靠。两种形态的配准结果走同一套接受判据与告警。
+        紧凑面板先归一化到 1920×1080 再裁 ROI；展开面板与导航共用原始 ROI、道路掩码和圆环拟合。
+        expected_squad 为小队未移动时已确认的底图坐标，只约束展开帧的实测圆环；不接受旧矩阵
+        代替本帧配准，调用方负责在移动或战斗后停用旧坐标约束。
         定位成功后敌人和小队都投影到地图坐标，落到图外视为 needs_review——这种情况多半是配准
         漂移而不是真的出界。objects=False 用于只需要小地图的场合，可以省掉整幅画面的八片推理。
         """
@@ -115,15 +115,12 @@ class CampaignObserver:
         try:
             if mode == 'compact':
                 _, road, valid, player = minimap_masks(image)
-                markers = enemies
             else:
-                # 展开面板按蓝框重新裁一次：配准用的面板与上面展示的面板尺寸不同，
-                # 敌人标记必须回到这次配准的面板坐标系里才能一起投影。
-                panel, road, valid, player, _ = cropped_minimap(image)
-                markers = self.minimap_markers(panel)[1]
-            registration = self.locate(snapshot, chapter, panel, road, valid, player, markers)
+                road, valid, player = expanded_minimap_masks(panel)
+            options = {'expected_position': expected_squad} if mode == 'expanded' and expected_squad is not None else {}
+            registration = self.locate(snapshot, chapter, panel, road, valid, player, enemies, **options)
             # 屏障投影链（barriers.scene_chart）按「紧凑面板 × a 后钉在展开 ROI 中心」标定，
-            # 而展开形态的面板是裁蓝框后缩放到 300px 的坐标系，与那套标定不同源，
+            # 而展开形态的面板是原始展开 ROI 的坐标系，与那套标定不同源，
             # 直接把这份配准喂进去会让屏障落点整体偏。展开帧不标屏障，等下一次紧凑帧再标。
             squad_registration = registration if mode == 'compact' else None
         except (OSError, ValueError, KeyError, cv2.error) as exc:
@@ -176,15 +173,17 @@ class CampaignObserver:
                                     position=item.center.round(1).tolist(), confidence=round(item.confidence, 3)))
         return players, enemies
 
-    def locate(self, snapshot, chapter, panel, road, valid, player, markers):
+    def locate(self, snapshot, chapter, panel, road, valid, player, markers, expected_position=None):
         """对一份已裁好的小地图面板做底图配准并把结果写进快照。
 
         panel/road/valid/player/markers 必须同属这一份面板的像素坐标系（紧凑与展开形态各调一次），
         否则投影出的敌人位置会整体偏移。配准被接受时写入 squad、roi_to_map、敌人底图坐标与屏障
         锚点并返回该锚点；未被接受（判据不足或小队投影越界）时按原因去重告警并返回 None，
         调用方据此决定是否换形态重试。
+        expected_position 仅约束当前实测圆环的底图位置，不改变道路接受阈值。
         """
-        result = self.matcher.match_panel(panel, road, valid, player)
+        options = {'expected_position': expected_position} if expected_position is not None else {}
+        result = self.matcher.match_panel(panel, road, valid, player, **options)
         snapshot['localization'] = result['status']
         if result['status'] != 'accepted':
             failed = [name for name, passed in
@@ -210,6 +209,8 @@ class CampaignObserver:
             return None
         snapshot['squad'] = squad
         snapshot['road_iou'] = float(result['road_iou'])
+        if expected_position is not None:
+            snapshot['anchor_error'] = float(result['anchor_error'])
         # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
         registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
                             player_center=player)
