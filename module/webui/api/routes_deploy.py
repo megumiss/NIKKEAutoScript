@@ -27,7 +27,7 @@ EXCLUDED_KEYS = {'ReadNoticeIds', 'StartupNoticeDismissedId'}
 # Path/URL values that benefit from a full-row input instead of the standard
 # narrow control.
 WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy',
-             'SerialGroup', 'ConsoleAllowHosts'}
+             'SerialGroup', 'ConsoleAllowHosts', 'OcrSidecarCommand'}
 SELECT_OPTIONS = {
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
@@ -187,6 +187,18 @@ FIELD_I18N = {
                           "'auto' は nvidia-smi から自動選択。'cu129' は CUDA 12.9 以上が必要（RTX 50 シリーズ対応）\n"
                           "'cu126' は CUDA 12.6 以上、'cu118' は 11.8 以上のドライバーが必要",
                   'hints': {'In most cases': "「auto」"}},
+    },
+    'OcrSidecarCommand': {
+        'zh-CN': {'desc': "启动 OCR 侧车进程（module/ocr/sidecar.py）的命令，修改后需重启实例\n"
+                          "OCR 将在该进程中运行；无法启动时自动回退到实例进程内识别\n"
+                          "设备上以 Termux + proot 运行 NKAS 时见 deploy/termux/ocr_sidecar.sh",
+                  'hints': {'In most cases': '留空（null）',
+                            'Other': "'adb -s emulator-5554 shell run-as com.termux sh {repo}/deploy/termux/ocr_sidecar.sh'"}},
+        'ja-JP': {'desc': "OCR サイドカープロセス（module/ocr/sidecar.py）を起動するコマンド。変更後はインスタンスを再起動してください\n"
+                          "OCR はそのプロセスで実行され、起動できない場合はインスタンスのプロセス内に戻ります\n"
+                          "端末上の Termux + proot で NKAS を動かす場合は deploy/termux/ocr_sidecar.sh を参照",
+                  'hints': {'In most cases': '空欄（null）',
+                            'Other': "「adb -s emulator-5554 shell run-as com.termux sh {repo}/deploy/termux/ocr_sidecar.sh」"}},
     },
     'AdbExecutable': {
         'zh-CN': {'desc': 'ADB 可执行文件 adb.exe 的路径', 'hints': {

@@ -54,6 +54,12 @@ Deploy:
     # 'cu126' needs driver CUDA >= 12.6, 'cu118' needs >= 11.8
     # [In most cases] Use 'auto'
     PaddleCuda: auto
+    # Command that starts the OCR sidecar (module/ocr/sidecar.py); restart the instance after changing it
+    # OCR then runs in that process; if it cannot start, OCR falls back to the instance process
+    # For NKAS in Termux + proot on the device itself, see deploy/termux/ocr_sidecar.sh
+    # [In most cases] Use null
+    # [Other] Use 'adb -s emulator-5554 shell run-as com.termux sh {repo}/deploy/termux/ocr_sidecar.sh'
+    OcrSidecarCommand: null
 
   Adb:
     # Filepath of ADB executable `adb.exe`
