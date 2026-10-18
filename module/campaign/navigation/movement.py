@@ -188,7 +188,9 @@ def navigate(
                     )
                 emit(state='probing', message=f'正在尝试目标附近落点（{probe_index}/{len(probes)}）…')
             else:
-                use_ring = purpose == 'enemy' and len(markers) == 1 and not ring_attempted
+                # 复用紧凑定位时远目标可能尚未入屏；只开放两帧验证，不拿旧记忆补造当前标记。
+                use_ring = (purpose == 'enemy' and not ring_attempted
+                            and (len(markers) == 1 or (not markers and observation.get('minimap_mode') == 'compact')))
                 options = {'enemy_assist': True} if use_ring else {}
                 click = session.plan(observation, approach, **options)
                 # 一次导航至多试一次脚圈：未触发后继续原有移动，不能让附近试点反复吸到同一脚圈。

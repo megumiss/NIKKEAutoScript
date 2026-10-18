@@ -209,6 +209,7 @@ class CampaignObserver:
                                            f'超出了章节地图 {width}×{height}')
             return None
         snapshot['squad'] = squad
+        snapshot['road_iou'] = float(result['road_iou'])
         # 屏障投影要沿用这一次配准的完整单应与面板缩放，裸的小队坐标不够。
         registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
                             player_center=player)

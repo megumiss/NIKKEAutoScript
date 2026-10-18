@@ -1008,12 +1008,14 @@ class ExecutorTests(unittest.TestCase):
         frontier = dict(kind='explore', id='cell', position=[112, 96])
         enemy = dict(kind='enemy', id='enemy', position=[136, 96])
         self.owner.plan_tick.side_effect = [frontier, frontier, enemy]
+        self.owner.cut = Mock()
         self.session.snapshot.return_value = snapshot_fixture()
         with patch.object(self.executor, 'execute') as execute, \
-                patch.object(self.executor, 'scout', return_value=False):
+                patch.object(self.executor, 'scout', return_value=False), \
+                patch('module.campaign.execution.scout_focus', return_value=None):
             result = self.executor.run(snapshot_fixture(), ticks=1)
         self.assertEqual(result['reason'], 'tick_budget')
-        self.session.snapshot.assert_any_call(expanded=True)
+        self.session.snapshot.assert_any_call(expanded=True, keep_expanded=True)
         execute.assert_called_once_with(enemy)
 
     def test_review_untrusted_frame_keeps_pending(self):

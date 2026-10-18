@@ -374,16 +374,24 @@ class CampaignExecutor:
                     else:
                         self.session.identity(self.session.win.client())
                     goal = self.owner.plan_tick(snapshot)
+                    expanded_for_scout = False
                     if self.needs_expansion(goal, snapshot):
                         logger.info(f'当前视野不足（目标：{goal_brief(goal)}），'
                                     f'先展开大地图补充视野再决策。')
-                        self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
+                        expanded_for_scout = (self.purpose == 'story'
+                                              and (goal is None or goal['kind'] != 'review_block'))
+                        if expanded_for_scout:
+                            snapshot = self.session.snapshot(expanded=True, keep_expanded=True)
+                        else:
+                            self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
+                            snapshot = self.session.snapshot()
+                        goal = self.owner.plan_tick(snapshot, advance=False)
+                    scouted = self.scout(goal, snapshot)
+                    if scouted or expanded_for_scout:
                         snapshot = self.session.snapshot()
                         goal = self.owner.plan_tick(snapshot, advance=False)
-                    if self.scout(goal, snapshot):
-                        snapshot = self.session.snapshot()
-                        goal = self.owner.plan_tick(snapshot, advance=False)
-                        if located(snapshot) and snapshot.get('squad') is not None:
+                        if (self.purpose == 'story' and (goal is None or goal['kind'] != 'review_block')
+                                and located(snapshot) and snapshot.get('squad') is not None):
                             # 收起后的紧凑帧也可能修正敌人位置；出发依据必须与最终选出的目标一致。
                             self.scout_pending = scout_focus(self.owner.state, self.owner.cut, snapshot['squad'],
                                                              include_cooling=True)

@@ -9,7 +9,7 @@ import numpy as np
 from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
 from module.campaign.navigation import controls as goto
-from module.campaign.navigation.movement_feedback import TargetTriggered, collectible_indicator
+from module.campaign.navigation.movement_feedback import SquadPositionChanged, TargetTriggered, collectible_indicator
 from module.campaign.navigation.pathfinding import NoConnectedRoad
 from module.campaign.navigation.pathfinding import RoadLocalizer as Localizer
 from module.campaign.navigation.session import NavigationSession
@@ -39,7 +39,7 @@ SCOUT_DRAGS = 3
 SCOUT_CENTER_TOLERANCE = 60.
 SCOUT_DRAG_MAX = 300.
 SCOUT_SETTLE_SECONDS = 1.0
-# 定位未被接受时最多再观测几轮：第 1 轮展开并回正（展开面板的道路证据是紧凑面板的数倍），
+# 定位未被接受时最多再观测几轮：尚未展开时先展开回正，已展开则首轮只换新帧，
 # 之后每轮在面板内换一段视野。只用来救「配准差一点没过线」，连续失败仍按定位不可用处理。
 LOCALIZE_RETRIES = 3
 # 换视野的方向（客户区向量）、位移与停稳等待：起止点以面板中心对称，落点仍在 486×462 面板内。
@@ -106,7 +106,7 @@ MOVE_FIELDS = (
     ('camera_anchor_viewport', lambda value: f'校正后的视野中心 {points_text(value)}'),
     ('start_registration', lambda value: f'起始对齐 {label(LOCALIZATION, value)}'),
     ('start_iou', lambda value: f'起始对齐的道路重合度 {float(value):.3f}'),
-    ('start_offset', lambda value: f'与展开地图定位相差 {float(value):.1f} 像素'),
+    ('start_offset', lambda value: f'与小队定位相差 {float(value):.1f} 像素'),
     ('squad_anchor', lambda value: f'小队箭头锚点 {points_text(value)}'),
     ('click_offset', lambda value: f'相对镜头注视点 {points_text(value)}'),
     ('fused_iou', lambda value: f'容差对齐的道路重合度 {float(value):.3f}'),
@@ -306,7 +306,7 @@ class CampaignSession(NavigationSession):
         # 战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_registration）。
         self.reuse_squad = False
         self.last_registration = None
-        # 最近一次被接受的展开定位报告与当时的手势计数：navigate 每走一步都会重新观测小队，
+        # 最近一次可供导航使用的定位报告与当时的手势计数：navigate 每走一步都会重新观测小队，
         # 而两次手势之间画面不会变，同一拍里的下一次观测直接复用（见 reusable_report）。
         self.localized_report = None
         self.collectible_mode = owner.config.task.command == 'auto_main_collectible'
@@ -492,7 +492,7 @@ class CampaignSession(NavigationSession):
         return bool(battle.field_visible(field) or self.owner.minimap_expanded(field))
 
     def observe(self):
-        """回正并展开地图定位真实小队；配准未被接受时换视野重试，计算后道路变化超过 3% 就拒绝旧结果。
+        """优先复用未发生手势的有效小队定位，否则回正并展开定位，失败时有限换视野重试。
 
         每次尝试的失败原因与量化指标由观察器的告警给出，这里只在成功时补一行：接受了哪一次尝试、
         道路重合度与小队坐标是多少、整段展开与定位花了多久——这一段的耗时是移动闭环的主要开销。
@@ -506,7 +506,8 @@ class CampaignSession(NavigationSession):
         self.remember_scene(field)
         cached = self.reusable_report()
         if cached is not None:
-            logger.info(f"沿用上一次被接受的展开地图定位：小队位置 {points_text(cached['position'])}，"
+            source = '紧凑小地图' if cached.get('minimap_mode') == 'compact' else '展开地图'
+            logger.info(f"沿用上一次被接受的{source}定位：小队位置 {points_text(cached['position'])}，"
                         f"上次配准之后没有再发过任何手势，不重新展开与配准，耗时 {watch}")
             return cached
         goto.map_open(self.win, reset=True)
@@ -536,6 +537,25 @@ class CampaignSession(NavigationSession):
             return report
         logger.warning(f'展开地图定位连续 {LOCALIZE_RETRIES + 1} 次未通过，耗时 {watch}，按定位失败处理。')
         raise error
+
+    def plan(self, observation, target, enemy_assist=False):
+        """用已确认的小队定位开始镜头规划，紧凑定位不足时仅重试一次完整展开定位。
+
+        紧凑快照只提供底图位置，不冒充展开 ROI 的投影基准。起始镜头不一致或跟踪需要展开
+        校正时，先回正并取得原始展开报告再规划；若小队已移动超过 12 地图像素，交回移动
+        闭环更新起点。窗口、弹窗和输入预算异常不捕获，也不补发清理输入。
+        """
+        try:
+            return super().plan(observation, target, enemy_assist=enemy_assist)
+        except ValueError as exc:
+            if observation.get('minimap_mode') != 'compact':
+                raise
+            logger.info(f'紧凑定位不足以完成镜头规划，按需展开重新定位一次：{exc}')
+        self.localized_report = None
+        updated = self.observe()
+        if np.linalg.norm(np.asarray(updated['position']) - np.asarray(observation['position'])) > 12:
+            raise SquadPositionChanged(observation['position'], updated['position'])
+        return super().plan(updated, target, enemy_assist=enemy_assist)
 
     def absorb_expanded(self, panel, report):
         """把展开面板上认出的敌人与看到的区域并进运行状态，只记一行敌人的合并结果。
@@ -591,14 +611,18 @@ class CampaignSession(NavigationSession):
         super().wait_stopped()
         logger.info(f'停稳等待结束（小队标记与道路都已稳定），耗时 {watch}')
 
-    def snapshot(self, expanded=False):
-        """取得一拍业务观测；定位未被接受时沿用上次坐标或换视野重试，展开只补记忆，返回前恢复紧凑地图。
+    def snapshot(self, expanded=False, keep_expanded=False):
+        """取得一拍业务观测；定位失败时有限重试，展开默认收起，也可留给紧接着的侦察。
 
         战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_reason）；此外小队只在收到点击时才
         移动、镜头只在收到拖动时才平移，所以上一次被接受的定位之后没有再发过手势时同样直接沿用：
         紧凑面板配准没过线时重新展开大地图只会得到同一个坐标，白花一次开合与几秒配准。
         每帧都打一行观测摘要（见 describe_snapshot）与这一段耗时：推图的等待绝大部分花在这里。
+        keep_expanded 仅用于 expanded=True 后直接衔接侦察；调用方负责正常结束时收起。
+        已经展开的定位重试保留面板，不再强制开合回正。可信紧凑帧可交给移动入口复用小队位置。
         """
+        if keep_expanded and not expanded:
+            raise ValueError('保留展开面板要求 expanded=True。')
         self.check()
         watch = Stopwatch()
         self.await_field()
@@ -609,13 +633,14 @@ class CampaignSession(NavigationSession):
         if not located(snapshot):
             why = self.reuse_reason()
             snapshot = (self.reuse_registration(snapshot, why) if why is not None
-                        else self.retry_localization(snapshot))
+                        else self.retry_localization(snapshot, expanded=expanded, keep_expanded=keep_expanded))
         if snapshot.get('localization') == 'accepted':
             # 只记刚配准成功的坐标：沿用帧的坐标本来就是这个记录，不需要再写一遍。
             self.remember_registration(snapshot['squad'], snapshot.get('roi_to_map'),
                                        snapshot.get('coverage_size'))
+            self.remember_navigation(snapshot)
         self.owner.last_snapshot = snapshot
-        if expanded:
+        if expanded and not keep_expanded:
             self.win.reset_minimap(expanded=False, reset=False)
         logger.info(f'观测完成：{describe_snapshot(snapshot)}，耗时 {watch}')
         return snapshot
@@ -756,10 +781,27 @@ class CampaignSession(NavigationSession):
                        f"（{reason}，本帧重新配准未通过）。")
         return snapshot
 
-    def reusable_report(self):
-        """返回可以直接沿用的展开定位报告；没有成功过、或之后已经发过手势时返回 None。
+    def remember_navigation(self, snapshot):
+        """将本帧可信紧凑小队定位交给移动入口，只携带底图坐标和同帧普通敌人。
 
-        展开面板的 roi_to_map 与紧凑面板不同源，所以只缓存 observe 自己在展开形态下配准成功的报告；
+        不携带 roi_to_map：紧凑矩阵和裁蓝框的展开矩阵都不能充当原始展开 ROI 的镜头基准。
+        沿用帧、侦察视口和缺少实际配准分数的快照不建立导航缓存，后续任一手势使缓存失效。
+        """
+        if snapshot.get('localization') != 'accepted' or (snapshot.get('minimap') or {}).get('mode') != 'compact':
+            return
+        position = np.asarray(snapshot.get('squad'), float)
+        iou = snapshot.get('road_iou')
+        if position.shape != (2,) or not np.isfinite(position).all() or iou is None or not np.isfinite(iou):
+            return
+        markers = [list(item['position']) for item in snapshot.get('enemies', []) if item.get('kind') == 'normal']
+        report = dict(position=position.tolist(), position_kind='squad', iou=float(iou),
+                      minimap_mode='compact', enemy_markers=markers)
+        self.localized_report = {'report': report, 'gestures': self.gestures}
+
+    def reusable_report(self):
+        """返回可以直接沿用的小队定位报告；没有成功过、或之后已经发过手势时返回 None。
+
+        展开报告来自原始 ROI，紧凑报告只携带底图位置，不混用投影矩阵。
         navigate 每一步都会重新观测小队，而两次手势之间画面不会变，复用不会漏掉任何新信息。
         返回副本，避免调用方改动缓存里的报告。
         """
@@ -783,44 +825,48 @@ class CampaignSession(NavigationSession):
         self.win.handler.mouse_swipe(tuple(start.tolist()), tuple(end.tolist()))
         self.pause(PAN_SETTLE_SECONDS)
 
-    def retry_localization(self, snapshot):
-        """紧凑帧定位未被接受时，展开并回正、再换几段视野重新观测，返回最后一次快照。
+    def retry_localization(self, snapshot, expanded=False, keep_expanded=False):
+        """定位未被接受时利用展开面板有限重试，返回最后一次快照。
 
         只在「配准差一点没过线」时管用：展开面板面积是紧凑面板的数倍，道路证据更多，换一段区域
         往往就能过线。开合与拖动都走输入闸门，退出前收回紧凑地图；重试都在同一拍内完成，
         不改运行状态也不推进决策拍，全部失败时返回最后一次未接受的快照交给调用方处置。
         每次尝试都记一行定位状态与耗时：紧凑面板的量化失败指标由观察器告警（同类只打一次），
         这里给出的是「哪几次、各花了多久」，用来判断重试是否值得继续。
+        expanded 表示调用方已经展开并回正，首轮只取新帧，不再为回正重复开合；
+        keep_expanded 让补视野直接衔接侦察，默认仍在正常返回前收起。异常时不补发输入。
         """
-        expanded = False
         for attempt in range(LOCALIZE_RETRIES):
             self.check()
             watch = Stopwatch()
             if not expanded:
                 goto.map_open(self.win, reset=True)
                 expanded = True
-            else:
+            elif attempt:
                 self.pan_expanded(PAN_DIRECTIONS[(attempt - 1) % len(PAN_DIRECTIONS)])
             snapshot = self.owner.observer.observe(self.win.client(), self.expected_identity, time.time())
             if snapshot['localization'] == 'accepted':
-                logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次挪动视野后重新定位成功："
+                logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次展开视野重试定位成功："
                             f"小队位置 {points_text(snapshot['squad'])}，耗时 {watch}")
                 break
-            logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次挪动视野后仍未定位成功"
+            logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次展开视野重试仍未定位成功"
                         f"（{label(LOCALIZATION, snapshot['localization'])}），耗时 {watch}")
         else:
             logger.warning(f'挪动视野重试 {LOCALIZE_RETRIES} 次仍未定位成功，按当前观测继续。')
-        if expanded:
+        if expanded and not keep_expanded:
             goto.map_close(self.win)
         return snapshot
 
     def scout_begin(self):
-        """侦察前展开并回正大地图，视野从小队所在处开始拖。"""
+        """侦察前确保地图已展开；沿用补视野面板，不为回正额外收起再开。
+
+        小队位置由调用方可信快照提供，侦察用每帧配准定位视口，不要求面板中心就是小队。
+        """
         self.check()
-        goto.map_open(self.win, reset=True)
+        goto.map_open(self.win, reset=False)
 
     def scout_end(self):
-        """侦察结束收回紧凑小地图；展开视野已被拖偏，之后的观测由 map_open(reset=True) 回正。"""
+        """侦察结束收回紧凑小地图；移动前由新紧凑帧确认小队，不能沿用拖偏的侦察视口。"""
         goto.map_close(self.win)
 
     def scout_locate(self, tag):

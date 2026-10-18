@@ -561,14 +561,14 @@ def compact_viewport(session, matcher, panel, road, valid):
 
 
 def start_viewport(start, squad_position, tolerance=60.):
-    """起始帧的视野中心以展开图小队定位为准：与之一致即采用，不要求配准状态为 accepted。
+    """起始帧的视野中心以已确认的小队定位为准：与之一致即采用，不要求本次配准状态为 accepted。
 
-    相机经 observe 复位在小队上，注视点定位应与小队位置接近；返回偏差像素，超出 tolerance 抛 ValueError。
+    注视点定位应与已确认的小队位置接近；返回偏差像素，超出 tolerance 抛 ValueError。
     细路视口的软重叠分会压在 match_panel 门槛附近，needs_review 只由调用者记录，不单独否决。
     """
     offset = float(np.linalg.norm(np.asarray(start['viewport'], float) - np.asarray(squad_position, float)))
     if offset > tolerance:
-        raise ValueError(f"紧凑小地图与展开地图定位不一致（{label(LOCALIZATION, start['status'])}，偏差 {offset:.0f} 像素）。")
+        raise ValueError(f"紧凑小地图与小队定位不一致（{label(LOCALIZATION, start['status'])}，偏差 {offset:.0f} 像素）。")
     return offset
 
 
@@ -617,12 +617,14 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     像素，不能用时才退回固定的 VIEWPORT_PIXEL。只点注视点会漏掉一种常态——相机本来就对着小队、
     小队正站在注视点上，这时再点注视点等于叫它走到自己脚下（38 章实机连点三次，小队坐标只变了
     1.2 地图像素），而目标离注视点还有十几像素时这一步就走不完。
-    起始帧的视野中心以与展开图小队定位一致为准（start_viewport），不要求 accepted。
+    起始帧的视野中心以与已确认的小队定位一致为准（start_viewport），不要求 accepted。
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
     全局配准被接受即视为批末校正已完成。
     实测（退回固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     enemy_assist 允许敌人模式利用两次被接受的定位及同帧脚圈提前点击；不额外拖动来收集证据。
     证据只在本次规划内保留，重新锚定或配准不可信时丢弃；辅助失败继续原落点和拖动流程。
+    来自紧凑快照的小队位置没有展开 ROI 基准；只有跟踪需要批末校正时才抛 ValueError，
+    由生产会话按需展开并重试，不能用紧凑矩阵冒充展开基准或无限沿用链式跟踪。
     """
     from module.campaign.vision.matching import MapMatcher, register
     from module.campaign.vision.enemy_ring import match_target_ring, observe_rings
@@ -763,6 +765,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         batch_pans = 0 if source == 'accepted' else batch_pans + 1
         if source != 'accepted' and (use_matrix is None or batch_pans >= batch_limit):
             ring_previous = None
+            if reference is None and observation.get('minimap_mode') == 'compact':
+                raise ValueError('镜头跟踪需要展开地图基准，不能继续沿用紧凑小队定位。')
             anchored = anchor_viewport(session, matrix if use_matrix is None else use_matrix,
                                        reference, squad_position)
             if anchored is not None:
