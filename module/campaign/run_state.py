@@ -73,16 +73,16 @@ def describe_changes(changes):
     if changes.get('skipped') == 'localization':
         return '本章地图定位不可信，未并入运行状态'
     if changes.get('reused') == 'localization':
-        return '沿用上一次被接受的定位，只取小队位置，本帧视野与敌人未并入状态'
+        return '复用已确认的小队位置；本帧视野与敌人未更新'
     parts = []
     if changes.get('observed_cells'):
         parts.append(f"新覆盖 {changes['observed_cells']} 格地图")
     if changes.get('enemies_added'):
         parts.append('新发现敌人 ' + '、'.join(changes['enemies_added']))
     if changes.get('enemies_refreshed'):
-        parts.append(f"刷新了 {changes['enemies_refreshed']} 个已知敌人的位置")
+        parts.append(f"更新已知敌人位置 {changes['enemies_refreshed']} 个")
     if changes.get('enemies_held'):
-        parts.append(f"挡下 {changes['enemies_held']} 处可疑的重复敌人标记")
+        parts.append(f"过滤疑似重复敌人标记 {changes['enemies_held']} 处")
     if changes.get('blocks_added'):
         parts.append('新发现挡路光幕 ' + '、'.join(changes['blocks_added']))
     if changes.get('blocks_refreshed'):

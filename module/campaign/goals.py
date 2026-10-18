@@ -212,39 +212,39 @@ def _describe_action(goal):
     position = points_text(goal['position'])
     if kind == 'review_block':
         detail = (f"复核光幕 {goal['id']}（记录状态：{label(BLOCK_STATUS, goal.get('block_status'))}），"
-                  f"站到 {position}，光幕本身在 {points_text(goal['block_point'])}")
+                  f"复核位置 {position}，光幕位置 {points_text(goal['block_point'])}")
         if goal.get('for_target'):
             detail += f"，后续目标 {goal['for_target']}"
     elif kind == 'mechanism':
-        detail = f"踩地面机关 {goal['id']}，位置 {position}"
+        detail = f"触发地面机关 {goal['id']}，位置 {position}"
         if goal.get('block'):
-            detail += f"，目标是解除光幕 {goal['block']}"
+            detail += f"，关联光幕 {goal['block']}"
         detail += f"（坐标来自{label(TARGET_SOURCES, goal.get('source'))}）"
     elif kind == 'elevator':
-        detail = f"电梯 {goal['id']}：先到入口 {position}，出口 {points_text(goal['leg']['exit'])}"
+        detail = f"电梯 {goal['id']}：入口 {position}，出口 {points_text(goal['leg']['exit'])}"
         if goal.get('for_target'):
             detail += f"，后续目标 {goal['for_target']}"
     elif kind == 'explore':
         detail = f"{label(GOAL_KINDS, kind)} {goal['id']}，位置 {position}"
         if goal.get('unseen_cells') is not None:
-            detail += f"，全图还有 {goal['unseen_cells']} 格未探索"
+            detail += f"，未探索区域 {goal['unseen_cells']} 格"
     else:
         detail = f"{label(GOAL_KINDS, kind)} {goal['id']}，位置 {position}"
     if goal.get('distance') is not None:
-        detail += f"，走过去约 {goal['distance']} 像素"
+        detail += f"，道路距离 {goal['distance']} 像素"
         if goal.get('straight') is not None:
             detail += f"（直线 {goal['straight']}）"
-    detail += f"；选它的依据：{label(GOAL_REASONS, goal.get('reason'))}"
+    detail += f"；选择依据：{label(GOAL_REASONS, goal.get('reason'))}"
     return detail
 
 
 def _describe_nothing(goal):
     """没有可执行目标时说明卡在哪一步；被光幕挡住时补上是谁挡的。"""
-    detail = f"没有可执行的目标（原因：{label(GOAL_REASONS, goal.get('reason'))}）"
+    detail = f"无可执行目标（原因：{label(GOAL_REASONS, goal.get('reason'))}）"
     if goal.get('for_target'):
-        detail += f"，本来想去 {goal['for_target']}"
+        detail += f"，关联目标 {goal['for_target']}"
     if goal.get('blocked_by'):
-        detail += '，挡住它的是光幕 ' + '、'.join(goal['blocked_by'][:4])
+        detail += '，阻断光幕 ' + '、'.join(goal['blocked_by'][:4])
     return detail
 
 
@@ -260,5 +260,5 @@ def describe(goal):
         detail += '；本轮排除 ' + '、'.join(
             f"{item['id']}（{label(REJECT_REASONS, item['reason'])}）" for item in rejected[:4])
     if goal.get('blocking'):
-        detail += '；当前挡路的光幕 ' + '、'.join(goal['blocking'][:4])
+        detail += '；当前阻断光幕 ' + '、'.join(goal['blocking'][:4])
     return detail

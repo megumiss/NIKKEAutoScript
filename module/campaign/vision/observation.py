@@ -197,7 +197,7 @@ class CampaignObserver:
                 f"{label(LOCALIZATION, result['status'])}：道路重合度 {result['road_iou']:.3f}，"
                 f"候选位置分差 {result['coarse_margin']:.3f}，"
                 f"参数离散度 {result['parameter_spread_px']:.1f} 像素，"
-                f"没达标的是 {'、'.join(label(LOCATE_CRITERIA, name) for name in failed) or '小队位置落在章节地图外'}")
+                f"未达标项：{'、'.join(label(LOCATE_CRITERIA, name) for name in failed) or '小队位置落在章节地图外'}")
             return None
         matrix = result['roi_to_map']
         width, height = self.map_info['size']
@@ -205,8 +205,8 @@ class CampaignObserver:
         if not (0 <= squad[0] < width and 0 <= squad[1] < height):
             snapshot['localization'] = 'needs_review'
             self.report_localization_error(chapter, 'out_of_bounds',
-                                           f'对齐成功了，但算出来的小队位置 {points_text(squad)} '
-                                           f'超出了章节地图 {width}×{height}')
+                                           f'配准后小队坐标 {points_text(squad)} '
+                                           f'超出章节地图范围 {width}×{height}')
             return None
         snapshot['squad'] = squad
         snapshot['road_iou'] = float(result['road_iou'])

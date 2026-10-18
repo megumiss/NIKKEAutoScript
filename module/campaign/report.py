@@ -13,17 +13,17 @@ GOAL_KINDS = {'enemy': '普通敌人', 'collectible': '收集品', 'explore': '�
               'review_block': '复核光幕', 'mechanism': '地面机关', 'elevator': '电梯', 'none': '无目标'}
 # 选择这个目标的依据。
 GOAL_REASONS = {
-    'nearest_pending_enemy': '目前最近的待清敌人',
-    'nearest_annotated_collectible': '目前最近的标注收集品',
-    'nearest_unobserved_cell': '目前最近的未探索区域',
+    'nearest_pending_enemy': '可达待清敌人中道路距离最短',
+    'nearest_annotated_collectible': '候选标注收集品中道路距离最短',
+    'nearest_unobserved_cell': '最近的可达未探索区域',
     'review_blocking_curtain': '复核挡路的光幕',
-    'verify_mechanism_curtain': '踩过机关后复核光幕是否解除',
+    'verify_mechanism_curtain': '机关触发后复核光幕状态',
     'try_mechanism_for_curtain': '尝试用机关解除挡路光幕',
     'transfer_to_pending_target': '经电梯前往当前不可达的目标',
     'localization_unavailable': '章节地图定位不可用，坐标不可信',
     'coordinate_model_unsupported': '本章地图的坐标模型不支持规划',
-    'curtain_review_unavailable': '找不到能看清这块光幕的站位',
-    'blocked_by_curtain': '目标被光幕挡住，且没有可用的机关或复核站位',
+    'curtain_review_unavailable': '无可用光幕复核位置',
+    'blocked_by_curtain': '光幕阻断路径，且无可用机关或复核位置',
     'no_reachable_target': '没有可达的目标',
 }
 # 本轮排除某个候选的原因。
@@ -41,19 +41,19 @@ ENEMY_STATUS = {'pending': '待清', 'cleared': '已清除', 'engaged': '交战�
 MOVE_STATES = {'locating': '定位小队', 'planning': '规划落点', 'moving': '小队移动中',
                'panning': '平移画面', 'probing': '试探附近落点', 'verifying': '复核到点'}
 # 落点是怎么算出来的。
-NAVIGATION_METHODS = {'squad_anchor': '按小队相对位置点击', 'compact_gaze': '先把小队送往镜头注视点',
-                      'camera_pan': '平移画面后点击', 'direct_target': '目标已在画面里，直接点击',
-                      'arrow_wake': '先唤醒小队箭头', 'enemy_ring': '两帧确认敌人脚圈后直接点击'}
+NAVIGATION_METHODS = {'squad_anchor': '小队相对位置投影', 'compact_gaze': '镜头注视点点击',
+                      'camera_pan': '镜头平移后点击', 'direct_target': '目标投影点点击',
+                      'arrow_wake': '小队箭头唤醒', 'enemy_ring': '两帧脚圈匹配点击'}
 # 镜头位置是怎么跟踪的。
 CAMERA_TRACKING = {'predicted': '按预测位置', 'minimap': '小地图校正', 'chained': '帧间跟踪',
                    'accepted': '全局对齐', 'needs_review': '全局对齐（待复核）', 'fused': '容差对齐',
                    'expanded': '展开地图重新锚定'}
 # 提前结束一批平移的原因。
 CORRECTION_REASONS = {'prediction_failed': '预测失效', 'no_scene_motion': '画面未产生位移',
-                      'pan_budget': '平移次数到顶', 'batch_limit': '本批平移次数到量',
-                      'relative_target_reached': '已足够接近'}
+                      'pan_budget': '达到平移次数上限', 'batch_limit': '达到单批平移次数上限',
+                      'relative_target_reached': '进入相对目标容差范围'}
 # 批末用展开地图重新校正镜头位置的结果。
-ANCHOR_RESULTS = {'accepted': '采用了', 'rejected': '校正量太大，放弃', 'failed': '失败'}
+ANCHOR_RESULTS = {'accepted': '已采用', 'rejected': '校正位移超限，未采用', 'failed': '失败'}
 # 视野坐标指的是谁。
 POSITION_KINDS = {'squad': '小队坐标', 'viewport': '视野中心', 'predicted_viewport': '预测的视野中心'}
 # 机关坐标的来源。
@@ -64,8 +64,8 @@ ANCHOR_METHODS = {'arrow_cycle': '箭头周期采样', 'minimap_ground_projectio
 RESULT_STATES = {'arrived': '已到点', 'needs_review': '已到附近但未确认触发'}
 # 战斗接管的画面状态与最终结果。
 BATTLE_STATES = {'entry': '战斗准备弹窗', 'battle': '战斗中', 'victory': '胜利结算',
-                 'defeat': '战败结算', 'field': '回到野外', 'unknown': '认不出画面'}
-BATTLE_OUTCOMES = {'victory': '胜利', 'defeat': '战败', None: '未读到结算'}
+                 'defeat': '战败结算', 'field': '野外画面', 'unknown': '未识别'}
+BATTLE_OUTCOMES = {'victory': '胜利', 'defeat': '战败', None: '未确认结算'}
 # 任务提前停止时附带的证据种类。
 EVIDENCE_KINDS = {'battle_popup': '画面出现战斗准备弹窗', 'ex_stage_skipped': '画面出现 EX 关卡弹窗（仅关闭，不接管）',
                   'collectible_indicator': '画面出现可拾取的收集品提示'}

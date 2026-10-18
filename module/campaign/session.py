@@ -85,7 +85,7 @@ MOVE_FIELDS = (
     ('distance', lambda value: f'距离 {float(value):.1f} 像素'),
     ('iou', lambda value: f'道路重合度 {float(value):.3f}'),
     ('click', lambda value: f'点击位置 {points_text(value)}'),
-    ('road_remaining', lambda value: f'沿道路还要走 {float(value):.1f} 像素'),
+    ('road_remaining', lambda value: f'剩余道路距离 {float(value):.1f} 像素'),
     ('target_marker', lambda value: f'目标标记 {points_text(value)}'),
     ('navigation_method', lambda value: f'落点算法 {label(NAVIGATION_METHODS, value)}'),
     ('planned_target', lambda value: f'规划目标 {points_text(value)}'),
@@ -99,7 +99,7 @@ MOVE_FIELDS = (
     ('camera_correction_reason', lambda value: f'提前收尾的原因：{label(CORRECTION_REASONS, value)}'),
     ('camera_view_position', lambda value: f'视野中心 {points_text(value)}'),
     ('camera_view_offset', lambda value: f'目标离注视点 {points_text(value)}'),
-    ('camera_position_kind', lambda value: f'视野坐标取的是{label(POSITION_KINDS, value)}'),
+    ('camera_position_kind', lambda value: f'视野坐标类型 {label(POSITION_KINDS, value)}'),
     ('camera_anchor', lambda value: f'展开地图校正 {label(ANCHOR_RESULTS, value)}'),
     ('camera_anchor_error', lambda value: f'展开地图校正失败：{value}'),
     ('camera_anchor_shift', lambda value: f'校正位移 {points_text(value)}'),
@@ -162,8 +162,8 @@ def describe_snapshot(snapshot):
     if snapshot.get('squad') is not None:
         detail.append(f"小队位置 {points_text(snapshot['squad'])}")
     detail.append(f"小地图 {label(MINIMAP_MODES, minimap.get('mode')) if minimap else '不可用'}")
-    detail.append(f"小地图里看到敌人 {len(minimap.get('enemies') or [])} 个")
-    detail.append(f"换算到章节地图的敌人 {len(snapshot.get('enemies') or [])} 个")
+    detail.append(f"小地图敌人标记 {len(minimap.get('enemies') or [])} 个")
+    detail.append(f"底图投影敌人 {len(snapshot.get('enemies') or [])} 个")
     detail.append(f"场景目标 {len(snapshot.get('objects') or [])} 个")
     detail.append(f"光幕 {len(snapshot.get('barriers') or [])} 处")
     detail.append(f"挡路光幕 {len(snapshot.get('blocks') or [])} 处")
@@ -463,7 +463,7 @@ class CampaignSession(NavigationSession):
         self.owner.last_snapshot = snapshot
         self.owner.state.update(snapshot, advance=False)
         if self.owner.cut.update(self.owner.state.blocking()):
-            logger.info('移动中发现光幕有变化，后面的路线按新的挡路情况重算。')
+            logger.info('移动期间光幕状态变化，已更新阻断路网。')
         return snapshot
 
     def await_field(self):
@@ -507,14 +507,14 @@ class CampaignSession(NavigationSession):
         cached = self.reusable_report()
         if cached is not None:
             source = '紧凑小地图' if cached.get('minimap_mode') == 'compact' else '展开地图'
-            logger.info(f"沿用上一次被接受的{source}定位：小队位置 {points_text(cached['position'])}，"
-                        f"上次配准之后没有再发过任何手势，不重新展开与配准，耗时 {watch}")
+            logger.info(f"复用已确认的{source}定位：小队位置 {points_text(cached['position'])}，"
+                        f"缓存后无新增手势，跳过展开与配准，耗时 {watch}")
             return cached
         goto.map_open(self.win, reset=True)
         error = None
         for attempt in range(LOCALIZE_RETRIES + 1):
             if attempt:
-                logger.info(f'展开地图定位未通过，挪动视野重试（{attempt}/{LOCALIZE_RETRIES}）。')
+                logger.info(f'展开地图定位未通过，平移视野后重试（{attempt}/{LOCALIZE_RETRIES}）。')
                 self.pan_expanded(PAN_DIRECTIONS[(attempt - 1) % len(PAN_DIRECTIONS)])
             panel = self.win.capture()
             self.index += 1
@@ -574,7 +574,7 @@ class CampaignSession(NavigationSession):
         detail = describe_changes({key: value for key, value in changes.items()
                                    if key.startswith('enemies_')})
         if detail:
-            logger.info(f'展开地图上认出的敌人并进状态：{detail}')
+            logger.info(f'展开地图敌人状态更新：{detail}')
 
     def panel_enemies(self, panel, matrix):
         """把面板上的敌人标记按本帧配准投到底图，返回可直接并进状态的记录（含类型与置信度）。"""
@@ -669,20 +669,20 @@ class CampaignSession(NavigationSession):
             if close_entry:
                 if self.tap(ENTRY_CLOSE_POINT, SETTLE_TAP_INTERVAL):
                     logger.info(f"战斗弹窗再次出现（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
-                                f"按钮橙色占比 {quick}）：本次不再进入，先关掉回到野外。")
+                                f"按钮橙色占比 {quick}）：已点击关闭，等待返回野外。")
             elif state['quick']:
                 if self.tap(QUICK_BATTLE_POINT, ENTRY_TAP_INTERVAL):
-                    logger.info(f"快速战斗可用：点快速战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
+                    logger.info(f"快速战斗可用：已点击快速战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
                                 f"按钮橙色占比 {quick}）。")
             elif self.tap(ENTER_BATTLE_POINT, ENTRY_TAP_INTERVAL):
-                logger.info(f"快速战斗不可用：点进入战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
+                logger.info(f"快速战斗不可用：已点击进入战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
                             f"按钮橙色占比 {quick}）。")
         elif kind == 'battle':
             if not state.get('auto', True):
                 self.handle_auto(state)
         elif kind == 'victory':
             if self.tap(ADVANCE_POINT, SETTLE_TAP_INTERVAL):
-                logger.info(f"战斗结算：胜利（结算画面命中度 {battle.score_text(scores, 'victory')}），点继续。")
+                logger.info(f"战斗结算：胜利（结算画面命中度 {battle.score_text(scores, 'victory')}），已点击继续。")
         return state
 
     def handle_auto(self, state):
@@ -706,17 +706,16 @@ class CampaignSession(NavigationSession):
         if self.auto_taps:
             if not self.auto_skip_logged:
                 self.auto_skip_logged = True
-                logger.warning(f'本场战斗已经点过一次 AUTO，仍读成未开启（{detail}）：不再重复点击，'
-                               f'该按钮是同一个开关，重复点击会把它拨回关闭。')
+                logger.warning(f'AUTO 状态仍为未开启（{detail}）；已达到本场单次点击上限，禁止重复切换。')
             return
         if self.auto_off_frames < AUTO_CONFIRM_FRAMES:
-            logger.info(f'AUTO 读成未开启（{detail}），再确认一帧（'
-                        f'{self.auto_off_frames}/{AUTO_CONFIRM_FRAMES}）后才点。')
+            logger.info(f'AUTO 状态待确认（{detail}），连续关闭帧数 '
+                        f'{self.auto_off_frames}/{AUTO_CONFIRM_FRAMES}，暂不点击。')
             return
         if not self.tap(AUTO_POINT, AUTO_TAP_INTERVAL):
             return
         self.auto_taps += 1
-        logger.info(f'战斗中自动射击未开启（连续 {self.auto_off_frames} 帧关闭外观，{detail}）：点 AUTO 打开。')
+        logger.info(f'AUTO 关闭状态已确认（连续 {self.auto_off_frames} 帧，{detail}），已发送开启点击。')
 
     def tap(self, point, interval=0.):
         """按客户区坐标点一次界面按钮：与移动落点共用同一套校验、闸门与预算。
@@ -775,10 +774,10 @@ class CampaignSession(NavigationSession):
         snapshot = dict(snapshot, localization='reused', squad=list(self.last_registration['squad']),
                         roi_to_map=self.last_registration['roi_to_map'],
                         coverage_size=self.last_registration['coverage_size'])
-        reason = '战斗刚结束，画面上还是战斗前那一帧' if why == 'battle' \
-            else '上次配准之后没有再发过任何手势'
-        logger.warning(f"沿用上一次被接受的小队位置 {points_text(snapshot['squad'])}"
-                       f"（{reason}，本帧重新配准未通过）。")
+        reason = '战后首次观测允许复用战前定位' if why == 'battle' \
+            else '缓存后无新增手势'
+        logger.warning(f"本帧配准未通过，复用已确认的小队位置 {points_text(snapshot['squad'])}"
+                       f"（依据：{reason}）。")
         return snapshot
 
     def remember_navigation(self, snapshot):
@@ -852,7 +851,7 @@ class CampaignSession(NavigationSession):
             logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次展开视野重试仍未定位成功"
                         f"（{label(LOCALIZATION, snapshot['localization'])}），耗时 {watch}")
         else:
-            logger.warning(f'挪动视野重试 {LOCALIZE_RETRIES} 次仍未定位成功，按当前观测继续。')
+            logger.warning(f'展开视野重试 {LOCALIZE_RETRIES} 次仍未定位成功，返回未通过定位的观测。')
         if expanded and not keep_expanded:
             goto.map_close(self.win)
         return snapshot
@@ -875,10 +874,10 @@ class CampaignSession(NavigationSession):
         try:
             report = self.localizer.locate(panel, tag, require_player=False)
         except (RuntimeError, ValueError) as exc:
-            logger.info(f'侦察这一屏定位未通过：{exc}')
+            logger.info(f'侦察帧定位未通过：{exc}')
             return None
         if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
-            logger.info('这一屏画面仍在变化，不记录。')
+            logger.info('侦察帧稳定性检查未通过，跳过本帧记录。')
             return None
         return panel, report
 
@@ -928,8 +927,8 @@ class CampaignSession(NavigationSession):
         changes = self.owner.state.update(dict(
             localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
             minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)
-        detail = describe_changes(changes) or '没有新的敌人或区域'
-        logger.info(f"侦察这一屏定位到 {points_text(report['position'])}：看到 {len(enemies)} 个敌人，{detail}")
+        detail = describe_changes(changes) or '无新增敌人或观测区域'
+        logger.info(f"侦察帧配准位置 {points_text(report['position'])}：检测敌人 {len(enemies)} 个，{detail}")
         self.preview(self.win.client())
 
     def close(self):

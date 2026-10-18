@@ -304,7 +304,7 @@ def plan_world_move(session, observation, target, max_pans=8, anchor=None):
             session.emit(state='planning', navigation_method='camera_pan' if count else 'direct_target',
                          camera_pans=session.camera_pans, plan_camera_pans=count,
                          planned_target=target.tolist(), click=click.tolist(),
-                         message='目标已进入画面，准备点击并交给游戏寻路。')
+                         message='目标已进入可点击区域，准备发送移动点击')
             return click
         if count == max_pans:
             raise ValueError(f'已平移 {max_pans} 次，目标仍不在有效画面内；未发送移动点击。')
@@ -649,8 +649,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     session.emit(start_registration=start['status'], start_iou=round(float(start['iou']), 4),
                  start_offset=round(offset, 1))
     if start['status'] != 'accepted':
-        session.emit(message=f"起始紧凑配准为 {start['status']}（iou {start['iou']:.3f}），"
-                             f"与展开图小队定位偏差 {offset:.1f}px，按一致采用。")
+            session.emit(message=f"起始紧凑配准状态 {start['status']}，道路重合度 {start['iou']:.3f}，"
+                             f"小队定位偏差 {offset:.1f} 地图像素，满足位置一致性要求")
     matrix, scale_a, road_prev = start['matrix'], start['a'], road
     ring_previous = None
     ring_trusted = start['status'] == 'accepted'
@@ -673,7 +673,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                 result = match_target_ring(ring_previous, current_rings, target, squad_position, goto.VIEWPORT_PIXEL)
             except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
                 result = dict(reason=f'脚圈辅助不可用：{error}')
-            session.emit(message=f'脚圈辅助：{result["reason"]}',
+            session.emit(message=f'脚圈辅助：{result["reason"].rstrip("。")}',
                          enemy_ring_match={key: value for key, value in result.items() if key != 'reason'})
             if result.get('click') is not None:
                 fresh = goto.capture_client(session.win)
@@ -685,7 +685,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                 session.last_plan_enemy_ring = True
                 session.emit(state='planning', navigation_method='enemy_ring', camera_pans=session.camera_pans,
                              plan_camera_pans=count, planned_target=target.tolist(), click=click.tolist(),
-                             message='两帧确认当前敌人的脚圈，直接点击，不再拖到中央。')
+                             message='目标脚圈两帧匹配通过，采用脚圈中心作为点击落点')
                 return click
         # 本次一步平移都还没发时不拿 1 当跟手比例：落点偏移会缩水一半（见 target_view_offset），
         # 上一次会话测到的比例比 1 更接近当前相机。
@@ -700,9 +700,9 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                          click_offset=np.round(click - np.asarray(goto.VIEWPORT_PIXEL, float), 1).tolist(),
                          camera_view_position=np.round(viewport, 1).tolist(),
                          camera_view_offset=np.round(delta_map, 1).tolist(),
-                         message=(f'目标已到镜头注视点（离注视点 {span}），'
-                                  + ('点目标自己那个像素把小队送过去' if method == 'direct_target'
-                                     else '点注视点把小队送过去')))
+                         message=(f'目标已进入注视点容差范围，偏差 {span}，'
+                                  + ('采用目标投影点作为点击落点' if method == 'direct_target'
+                                     else '采用镜头注视点作为点击落点')))
             return click
         if count == max_pans:
             raise ValueError(f'已平移 {max_pans} 次，目标仍未到小地图中央；未发送移动点击。')
