@@ -80,9 +80,10 @@ class PreviewSampler:
                 frame = self._sample()
                 if frame is not None:
                     self.latest = frame
-                if failing:
-                    logger.info('Preview sampler recovered')
-                failing = False
+                    if failing:
+                        logger.info('Preview sampler recovered')
+                    failing = False
+                # No bridge (worker stopped / not on a virtual display) is not an error; keep the normal cadence.
                 delay = SAMPLE_INTERVAL
             except (OSError, ValueError, vd_client.ScreenshotSizeError) as e:
                 # Worker restart, ADB disconnect or a stale forward: keep the
