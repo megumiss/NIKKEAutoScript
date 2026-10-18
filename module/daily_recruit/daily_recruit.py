@@ -318,7 +318,8 @@ class DailyRecruit(UI):
 
                 while 1:
                     self.device.screenshot()
-                    if not self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                    # 确认按钮在点击后会短暂消失，回到招募页才算本次抽卡完成。
+                    if self.appear(SOCIAL_RECRUIT_CHECK, offset=(10, 10), static=False):
                         break
                     if self.appear_then_click(RECRUIT_CONFIRM, offset=(30, 30), interval=3, static=False):
                         continue
