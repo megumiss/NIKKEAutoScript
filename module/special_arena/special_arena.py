@@ -6,12 +6,13 @@ from module.base.utils import (
     _area_offset,
     point2str,
 )
+from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.ocr.ocr import Digit
 from module.rookie_arena.assets import CONNECT_TO_SYSTEM
 from module.special_arena.assets import *
 from module.ui.assets import ARENA_GOTO_SPECIAL_ARENA, SPECIAL_ARENA_CHECK
-from module.ui.page import page_arena
+from module.ui.page import page_arena, page_main
 from module.ui.ui import UI
 
 
@@ -95,6 +96,20 @@ class SpecialArena(UI, ArenaBase):
         )
         return int(OWN_POWER.ocr(self.device.image)['text'])
 
+    def ensure_info_update_confirmed(self):
+        logger.warning('Special Arena information updated, confirm and wait for main page')
+        self.device.stuck_record_clear()
+        while 1:
+            self.device.screenshot()
+
+            if self.appear(UPDATE_POP_CHECK, offset=(30, 30)):
+                self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3, static=False)
+                continue
+
+            if self.ui_page_appear(page_main):
+                logger.info('Returned to main after Special Arena information update, retry competition')
+                return
+
     def start_competition(self, skip_first_screenshot=True):
         logger.hr('Start a competition')
 
@@ -109,6 +124,12 @@ class SpecialArena(UI, ArenaBase):
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
+
+            if self.appear(UPDATE_POP_CHECK, offset=(30, 30)):
+                self.ensure_info_update_confirmed()
+                self.ui_ensure(page_arena)
+                self.check_battle_times()
+                return self.ensure_into_special_arena()
 
             if not already_start and click_timer.reached() and click_timer_2.reached() and self.free_opportunity_remain:
                 # 根据策略选择
