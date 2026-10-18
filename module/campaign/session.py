@@ -378,7 +378,7 @@ class CampaignSession(NavigationSession):
             if self.battle_mode or battle.field_visible(field):
                 return
             kind = battle.battle_state(field)['state']
-            if kind in ('battle', 'victory', 'defeat'):
+            if kind in ('battle', 'victory', 'defeat', 'continue'):
                 self.preview(field)
                 raise TargetTriggered(f'画面是{label(BATTLE_STATES, kind)}，交由执行层接管这场战斗。',
                                       {'kind': 'battle_popup', 'chapter': self.expected_identity[0]})
@@ -657,7 +657,7 @@ class CampaignSession(NavigationSession):
         """战斗接管的一步：截一帧，按优先级最多点一个按钮，返回识别结果交给执行层决策。
 
         优先级与点法照仓库里已经跑熟的战斗循环（module/daemon/semi_combat.py、module/event/challenge.py）：
-        准备弹窗（关掉／快速战斗／进入战斗）、结算（点继续）、战斗中（自动射击关着才点 AUTO）；
+        准备弹窗（关掉／快速战斗／进入战斗）、结算及升级附加页（点继续）、战斗中（关着才点 AUTO）；
         每一拍只点一个按钮，认不出画面就什么都不点——加载与过场本来就没有按钮，硬猜只会点错。
         每个按钮有自己的最短点击间隔（ENTRY_TAP_INTERVAL / SETTLE_TAP_INTERVAL / AUTO_TAP_INTERVAL），
         一次点击没生效时后续几拍不再重复点同一个按钮。
@@ -691,6 +691,9 @@ class CampaignSession(NavigationSession):
         elif kind == 'victory':
             if self.tap(ADVANCE_POINT, SETTLE_TAP_INTERVAL):
                 logger.info(f"战斗结算：胜利（结算画面命中度 {battle.score_text(scores, 'victory')}），已点击继续。")
+        elif kind == 'continue' and state.get('continue_point') is not None:
+            if self.tap(tuple(state['continue_point']), SETTLE_TAP_INTERVAL):
+                logger.info(f"战斗结算附加页面：已点击继续（提示命中度 {battle.score_text(scores, 'continue')}）。")
         return state
 
     def handle_auto(self, state):

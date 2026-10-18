@@ -34,8 +34,8 @@ BATTLE_POLL_SECONDS = 0.5
 # 一段战斗（进弹窗、重打后重新开打）等的上限：等不到结算就交人工，不无限等。
 BATTLE_TIME_LIMIT = 300
 BATTLE_DEFEAT_RETRIES = 3
-# 结算画面消失的确认窗口：结算被点掉之后，连续 BATTLE_SETTLE_FRAMES 拍、且至少 BATTLE_SETTLE_CONFIRM 秒
-# 都看不到结算，才算这一场结束（与仓库 END_FIGHTING 的 Timer(1, count=3) 同一套写法）。
+# 战后野外确认窗口：已识别胜负、连续多帧回到野外且至少经过 BATTLE_SETTLE_CONFIRM 秒才结束。
+# 升级弹窗、加载或未识别画面不计入野外确认，Timer 的 count 语义仍为 count + 1 帧。
 BATTLE_SETTLE_CONFIRM = 1.0
 BATTLE_SETTLE_FRAMES = 3
 # 一段战斗超过这么多秒还没有结算就报一次进度：说明一直在等游戏自己推进（战斗里没有该点的按钮）。
@@ -265,8 +265,9 @@ class CampaignExecutor:
         循环照仓库里已经跑熟的战斗循环写（`module/daemon/semi_combat.py`、`module/event/challenge.py`）：
         每一拍由会话截一帧、按优先级最多点一个按钮，认不出画面就什么都不点——加载与过场本来就没有
         按钮可点，而「画面像不像野外」正好会在点「进入战斗」之后的过场里为真，用它判断战斗结束
-        等于把战斗丢回给推图流程。所以这里只在拿到结算、并且结算画面稳定消失之后才交回控制权：
-        胜利用「点继续」，战败按 BATTLE_DEFEAT_RETRIES 决定重打还是返回。
+        等于把战斗丢回给推图流程。所以必须先取得胜负结算，再连续确认野外才交回控制权：
+        胜利与升级附加页分别点继续，战败按 BATTLE_DEFEAT_RETRIES 决定重打还是返回。
+        附加页或未识别画面清空野外确认计数，继续提示本身不作为胜利证据。
         一段战斗（进弹窗、重打后重新开打）单独计 BATTLE_TIME_LIMIT 秒，等不到结算就交人工：
         不无限等，也不盲目连点。战斗结束时给会话打开一次「沿用战斗前坐标」的许可，
         第一帧重新配准失败就用旧坐标继续推图。
@@ -297,11 +298,11 @@ class CampaignExecutor:
                                 f"画面匹配度：准备弹窗 {score_text(scores, 'entry')}、"
                                 f"胜利结算 {score_text(scores, 'victory')}、"
                                 f"战败结算 {score_text(scores, 'defeat')}、"
+                                f"继续提示 {score_text(scores, 'continue')}、"
                                 f"AUTO 按钮 {score_text(scores, 'auto_tpl')}、"
                                 f"暂停键 {score_text(scores, 'pause')}；"
                                 f"AUTO 橙色占比 {value_text(state.get('auto_ratio'))}")
-                if kind in ('victory', 'defeat'):
-                    # 结算还在画面上：确认窗口重新计时。结算被点掉后连续几拍都不再出现，这一场才算完。
+                if kind != 'field':
                     settle_gone.reset()
                 elif settled is not None and settle_gone.reached():
                     break

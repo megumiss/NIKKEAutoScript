@@ -1,6 +1,7 @@
-"""战斗接管的状态识别：准备弹窗、战斗中、胜利结算、战败结算与野外地图。
+"""战斗接管的状态识别：准备弹窗、战斗中、胜负结算、附加继续页与野外地图。
 
-模板取自 1776×999 实机客户区截图，所以不涉及缩放；准备弹窗沿用 controls 的进入战斗按钮模板。
+战斗模板取自 1776×999 实机客户区截图；准备弹窗沿用 controls 的进入战斗按钮模板。
+附加页沿用半自动点击的继续提示资源，按横屏实测文字比例缩放，不将该提示作为胜利证据。
 胜利模板仅保留完整的 STAGE CLEAR COUNT 字样，并提取亮色细笔画，避免结算角色背景影响匹配。
 EX 关卡标题另取只含 "EX" 的窄模板：整条 "EX STAGE" 与普通关卡的 "38-20 STAGE" 共享 "STAGE"
 字样，实测假命中 0.853，足以把普通关卡当成 EX 而跳过。
@@ -15,6 +16,7 @@ import numpy as np
 
 from module.campaign.navigation.controls import ENTER_BATTLE_TPL
 from module.campaign.vision.minimap import map_visible, minimap_control_visible
+from module.simulation_room.assets import END_FIGHTING
 
 ASSETS = Path(__file__).resolve().parent / 'assets'
 
@@ -39,6 +41,11 @@ EX_TITLE_TPL = _load('battle_ex_title.png')
 THRESHOLD = .9
 ENTRY_THRESHOLD = .8
 EX_THRESHOLD = .85
+# 半自动点击的 END_FIGHTING 是 720×1280 资源；1776×999 实机继续提示的文字尺寸为其 0.75 倍。
+# 仅匹配底部提示区域，不把「可继续」作为胜利证据，也不放宽其它战斗状态的接受阈值。
+CONTINUE_TEMPLATE_SCALE = .75
+CONTINUE_THRESHOLD = .85
+CONTINUE_ROI = (740, 810, 1040, 930)
 # 橙色判据统一用同一段 HSV：准备弹窗的快速战斗按钮与战斗中的 AUTO 按钮都是「橙色 = 可用／已开」。
 # 两处的占比阈值不同，是因为橙色面积不同：实心按钮实测 0.64，AUTO 按钮框实测 0.075~0.077（关闭态 0.000）。
 ORANGE_LOW, ORANGE_HIGH = (5, 110, 110), (30, 255, 255)
@@ -82,6 +89,25 @@ def victory_score(image):
     template = cv2.morphologyEx(cv2.cvtColor(VICTORY_TPL, cv2.COLOR_BGR2GRAY), cv2.MORPH_TOPHAT, kernel)
     foreground = cv2.morphologyEx(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), cv2.MORPH_TOPHAT, kernel)
     return score(template, foreground)
+
+
+def continue_prompt(image):
+    """复用半自动点击的继续文字模板，返回提示匹配度及客户区点击中心。
+
+    输入为 1776×999 BGR 客户区；资源由 END_FIGHTING 按当前语言提供，以 0.75 倍缩放
+    适配横屏文字尺寸。只在底部中央匹配，灰度相关允许升级遮罩使提示变暗。
+    返回位置仅在分数达到 CONTINUE_THRESHOLD 时可用；提示不证明胜利，不能据此清除敌人。
+    """
+    END_FIGHTING.ensure_template()
+    template = cv2.resize(cv2.cvtColor(END_FIGHTING.image, cv2.COLOR_RGB2GRAY), None,
+                          fx=CONTINUE_TEMPLATE_SCALE, fy=CONTINUE_TEMPLATE_SCALE, interpolation=cv2.INTER_AREA)
+    x1, y1, x2, y2 = CONTINUE_ROI
+    region = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2GRAY)
+    if region.shape[0] < template.shape[0] or region.shape[1] < template.shape[1]:
+        return 0., None
+    _, best, _, point = cv2.minMaxLoc(cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED))
+    height, width = template.shape
+    return float(best), [x1 + point[0] + width / 2, y1 + point[1] + height / 2]
 
 
 def quick_battle_available(image):
@@ -133,10 +159,10 @@ def field_visible(image):
 def classify(scores, field, quick, auto_on):
     """把一路打分与野外判据判成一个状态；纯函数，便于用假分数固定优先级。
 
-    scores 的键是 auto_tpl / pause / victory / defeat / entry（前两个是模板分，别与返回的 auto 混淆）。
+    scores 的键是 auto_tpl / pause / victory / defeat / entry / continue。
     优先级从「画面唯一」到「画面常见」：战败与胜利结算、准备弹窗、战斗中，最后才是野外——野外判据
     只看小地图，放最后可以避免弹窗盖住画面时被误判成回到野外。quick / auto_on 是颜色判据的结果，
-    只在对应状态里有意义。
+    只在对应状态里有意义。底部继续提示只在其它战斗状态未命中时接管，且不能作为胜利证据。
     """
     if scores.get('defeat', 0.) >= THRESHOLD:
         return {'state': 'defeat', 'quick': quick, 'auto': auto_on}
@@ -146,6 +172,8 @@ def classify(scores, field, quick, auto_on):
         return {'state': 'entry', 'quick': quick, 'auto': auto_on}
     if max(scores.get('auto_tpl', 0.), scores.get('pause', 0.)) >= THRESHOLD:
         return {'state': 'battle', 'quick': quick, 'auto': auto_on}
+    if scores.get('continue', 0.) >= CONTINUE_THRESHOLD:
+        return {'state': 'continue', 'quick': quick, 'auto': auto_on}
     if field:
         return {'state': 'field', 'quick': quick, 'auto': auto_on}
     return {'state': 'unknown', 'quick': quick, 'auto': auto_on}
@@ -155,7 +183,8 @@ def battle_state(image):
     """识别一帧 1776×999 客户区截图属于战斗接管的哪个状态。
 
     返回 dict(state, quick, auto, scores, quick_ratio, auto_score, auto_ratio, auto_box)：state 是
-    defeat / victory / entry / battle / field / unknown，quick 只在 entry 时有意义（快速战斗是否可用），
+    defeat / victory / entry / battle / continue / field / unknown，quick 只在 entry 时有意义，
+    continue_point 是附加继续页的客户区点击中心，仅在 continue 状态时可用。
     auto 是战斗中的自动射击开关状态（不是模板分，模板分在 scores['auto_tpl']）；quick_ratio 与
     auto_ratio 是判据实际量到的橙色占比、auto_score 是 AUTO 按钮的模板分、auto_box 是它的定位框，
     这几个数只供日志与离线核对，用于区分「按钮是灰的」与「按钮根本没被定位到」。
@@ -163,14 +192,15 @@ def battle_state(image):
     if image is None or image.shape != (999, 1776, 3):
         raise ValueError('战斗状态识别需要 1776×999 的三通道客户区截图。')
     auto, auto_box, auto_score, auto_ratio = auto_judgement(image)
+    continue_score, continue_point = continue_prompt(image)
     scores = {'auto_tpl': auto_score, 'pause': score(PAUSE_TPL, image),
               'victory': victory_score(image), 'defeat': score(DEFEAT_TPL, image),
-              'entry': score(ENTER_BATTLE_TPL, image)}
+              'entry': score(ENTER_BATTLE_TPL, image), 'continue': continue_score}
     quick_ratio = orange_ratio(image, QUICK_BATTLE_ROI)
     quick = bool(scores['entry'] >= ENTRY_THRESHOLD and quick_battle_available(image))
     return dict(classify(scores, field_visible(image), quick, auto), scores=scores,
                 quick_ratio=quick_ratio, auto_score=auto_score, auto_ratio=auto_ratio,
-                auto_box=list(auto_box))
+                auto_box=list(auto_box), continue_point=continue_point)
 
 
 def value_text(value):
