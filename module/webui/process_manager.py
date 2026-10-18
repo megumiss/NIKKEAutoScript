@@ -153,8 +153,12 @@ class ProcessManager:
 
         with lock:
             if self.alive:
-                self._terminate_worker_children()
+                # Kill the worker before its helpers (ADB bridge, OCR sidecar): a
+                # worker that outlives them for the terminate grace period hits
+                # "bridge closed the connection" and saves a bogus error snapshot.
+                children = self._worker_children()
                 self._process.kill()
+                self._terminate_processes(children)
                 self.renderables.append(
                     (logging.INFO, f"[{self.config_name}] exited. Reason: Manual stop\n")
                 )
@@ -167,11 +171,11 @@ class ProcessManager:
                     )
         logger.info(f"[{self.config_name}] exited")
 
-    def _terminate_worker_children(self) -> None:
+    def _worker_children(self) -> list:
         try:
             children = psutil.Process(self._process.pid).children(recursive=True)
         except (psutil.Error, OSError):
-            return
+            return []
         # win 平台：游戏与启动器由实例进程 Popen 拉起，属于其子进程树，不能连带终止
         protected = self._win_protected_process_names()
         if protected:
@@ -184,6 +188,10 @@ class ProcessManager:
                     pass
                 kept.append(child)
             children = kept
+        return children
+
+    @staticmethod
+    def _terminate_processes(children) -> None:
         for child in reversed(children):
             try:
                 child.terminate()
