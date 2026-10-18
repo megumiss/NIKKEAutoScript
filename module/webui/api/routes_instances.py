@@ -385,7 +385,8 @@ async def start(request: Request):
                            'not installed. Install the Parsec VDD driver (or the Virtual Display '
                            'Driver for MttVDD) first, or turn off the VDD auto-manage option.',
             }, status_code=400)
-        manager.start(func=get_config_mod(name), ev=updater.event)
+        # start() waits for an in-progress stop cleanup; wait off the event loop.
+        await asyncio.to_thread(manager.start, func=get_config_mod(name), ev=updater.event)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
     results = []
@@ -415,7 +416,7 @@ async def start(request: Request):
                 'message': 'Virtual display (VDD) driver is not installed.',
             })
             continue
-        manager.start(func=get_config_mod(instance), ev=updater.event)
+        await asyncio.to_thread(manager.start, func=get_config_mod(instance), ev=updater.event)
         _clear_serial_failed(instance)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
     return JSONResponse({'status': 'success', 'results': results})

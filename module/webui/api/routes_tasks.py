@@ -1,3 +1,5 @@
+import asyncio
+
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -65,7 +67,8 @@ async def run_task(request: Request):
         validate_instance(name)
     except InstanceNotFound as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
-    result = TaskService().run_now(name, task)
+    # May start the instance, which waits for an in-progress stop cleanup.
+    result = await asyncio.to_thread(TaskService().run_now, name, task)
     if result is None:
         return JSONResponse({'status': 'error', 'message': f'No configured task named {task}.'}, status_code=404)
     return JSONResponse({'status': 'success', 'message': f'{task} queued for immediate execution.', **result})
@@ -77,7 +80,7 @@ async def start_tool(request: Request):
         validate_instance(name)
     except InstanceNotFound as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
-    result = TaskService().start_tool(name, task)
+    result = await asyncio.to_thread(TaskService().start_tool, name, task)
     if result is None:
         return JSONResponse({'status': 'error', 'message': f'No tool task named {task}.'}, status_code=404)
     if result.get('already_running'):

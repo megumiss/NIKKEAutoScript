@@ -361,24 +361,25 @@ def publish_preview_frame(image, interval=1.0, source=None, captured_at=None):
         return
     if elapsed < PREVIEW_IDLE_INTERVAL and not _preview_is_wanted():
         # 不编码画面，但 serial / 虚拟屏变化要立即送达：交互控制按 source 定位屏幕。
+        # 只有入队成功才记为已发送，队列满时下次再试。
         if source is not None and source != _preview_last_source:
-            _preview_last_source = source
             try:
                 q.put_nowait((None, dict(source)))
+                _preview_last_source = source
             except Exception:
                 pass
         return
     _preview_last_write = now
-    _preview_last_source = source
     # 截图时刻放进 source，而不是扩展队列项：只重启实例时 Web 进程仍是旧代码，
     # 旧版只识别 (data, source) 二元组。
-    source = dict(source or {}, captured_at=captured_at or now)
+    item_source = dict(source or {}, captured_at=captured_at or now)
     try:
         buf = io.BytesIO()
         Image.fromarray(image).save(buf, 'JPEG', quality=70)
-        q.put_nowait((buf.getvalue(), source))
+        q.put_nowait((buf.getvalue(), item_source))
+        _preview_last_source = source
     except Exception:
-        # queue.Full（消费慢时丢帧）与编码异常都直接丢弃
+        # queue.Full（消费慢时丢帧）与编码异常都直接丢弃；来源缓存不更新，以便重试
         pass
 
 
