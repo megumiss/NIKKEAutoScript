@@ -23,39 +23,40 @@ from module.ui.assets import (
 
 class EventStory(EventBase):
     def STORY_PART_CHECK(self, story):
+        # 只读取当前章节的模板，避免要求活动提供其他类型才会用到的资源。
         stages = {
-            'story_1_normal': self.event_assets.STORY_1_NORMAL,
-            'story_1_hard': self.event_assets.STORY_1_HARD,
-            'story_2_normal': self.event_assets.STORY_2_NORMAL,
-            'story_2_hard': self.event_assets.STORY_2_HARD,
+            'story_1_normal': 'STORY_1_NORMAL',
+            'story_1_hard': 'STORY_1_HARD',
+            'story_2_normal': 'STORY_2_NORMAL',
+            'story_2_hard': 'STORY_2_HARD',
         }
-        return stages[story]
+        return getattr(self.event_assets, stages[story])
 
     def STORY_STAGE_11(self, story):
         stages = {
-            'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_11,
-            'story_1_normal_clear': self.event_assets.STORY_1_NORMAL_STAGE_11_CLEAR,
-            'story_1_hard': self.event_assets.STORY_1_HARD_STAGE_11,
-            'story_1_hard_clear': self.event_assets.STORY_1_HARD_STAGE_11_CLEAR,
-            'story_2_normal': self.event_assets.STORY_2_NORMAL_STAGE_11,
-            'story_2_normal_clear': self.event_assets.STORY_2_NORMAL_STAGE_11_CLEAR,
-            'story_2_hard': self.event_assets.STORY_2_HARD_STAGE_11,
-            'story_2_hard_clear': self.event_assets.STORY_2_HARD_STAGE_11_CLEAR,
+            'story_1_normal': 'STORY_1_NORMAL_STAGE_11',
+            'story_1_normal_clear': 'STORY_1_NORMAL_STAGE_11_CLEAR',
+            'story_1_hard': 'STORY_1_HARD_STAGE_11',
+            'story_1_hard_clear': 'STORY_1_HARD_STAGE_11_CLEAR',
+            'story_2_normal': 'STORY_2_NORMAL_STAGE_11',
+            'story_2_normal_clear': 'STORY_2_NORMAL_STAGE_11_CLEAR',
+            'story_2_hard': 'STORY_2_HARD_STAGE_11',
+            'story_2_hard_clear': 'STORY_2_HARD_STAGE_11_CLEAR',
         }
-        return stages[story]
+        return getattr(self.event_assets, stages[story])
 
     def STORY_STAGE_12(self, story):
         stages = {
-            'story_1_normal': self.event_assets.STORY_1_NORMAL_STAGE_12,
-            'story_1_normal_clear': self.event_assets.STORY_1_NORMAL_STAGE_12_CLEAR,
-            'story_1_hard': self.event_assets.STORY_1_HARD_STAGE_12,
-            'story_1_hard_clear': self.event_assets.STORY_1_HARD_STAGE_12_CLEAR,
-            'story_2_normal': self.event_assets.STORY_2_NORMAL_STAGE_12,
-            'story_2_normal_clear': self.event_assets.STORY_2_NORMAL_STAGE_12_CLEAR,
-            'story_2_hard': self.event_assets.STORY_2_HARD_STAGE_12,
-            'story_2_hard_clear': self.event_assets.STORY_2_HARD_STAGE_12_CLEAR,
+            'story_1_normal': 'STORY_1_NORMAL_STAGE_12',
+            'story_1_normal_clear': 'STORY_1_NORMAL_STAGE_12_CLEAR',
+            'story_1_hard': 'STORY_1_HARD_STAGE_12',
+            'story_1_hard_clear': 'STORY_1_HARD_STAGE_12_CLEAR',
+            'story_2_normal': 'STORY_2_NORMAL_STAGE_12',
+            'story_2_normal_clear': 'STORY_2_NORMAL_STAGE_12_CLEAR',
+            'story_2_hard': 'STORY_2_HARD_STAGE_12',
+            'story_2_hard_clear': 'STORY_2_HARD_STAGE_12_CLEAR',
         }
-        return stages[story]
+        return getattr(self.event_assets, stages[story])
 
     def get_story_stage_pending_buttons(self, story: str) -> list:
         """
