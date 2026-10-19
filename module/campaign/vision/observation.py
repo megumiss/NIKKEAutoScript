@@ -13,6 +13,8 @@ from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
 from module.campaign.report import LOCALIZATION, LOCATE_CRITERIA, label, points_text
 from module.campaign.vision.objects import detect_objects
+from module.campaign.vision.mechanisms import mechanism_observations
+from module.campaign.vision.story_marker import story_markers
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import (compact_road_masks, expanded_minimap_masks, marker_candidates,
                                              minimap_masks, project_centers, refine_ring)
@@ -46,6 +48,7 @@ class CampaignObserver:
         self.last_offscreen_error = None
         self.last_barrier_error = None
         self.last_viewport_error = None
+        self.last_story_error = None
 
     @staticmethod
     def minimap_closed(image):
@@ -81,7 +84,7 @@ class CampaignObserver:
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
                         map=None, minimap=None, localization='unavailable', squad=None, enemies=[], objects=[],
                         barriers=[], blocks=[], mechanisms=[], barriers_observed=False, offscreen=None, viewport=None, roi_to_map=None,
-                        objects_observed=False, minimap_closed=self.minimap_closed(image))
+                        objects_observed=False, story_markers=[], minimap_closed=self.minimap_closed(image))
         if objects:
             detected = self.observe_objects(image)
             snapshot['objects'] = detected or []
@@ -100,6 +103,14 @@ class CampaignObserver:
         mode, panel = self.minimap_mode_and_panel(image)
         if mode is None:
             return snapshot
+        if mode == 'compact' and objects:
+            try:
+                snapshot['story_markers'] = story_markers(image)
+                self.last_story_error = None
+            except (OSError, ValueError, cv2.error) as exc:
+                if str(exc) != self.last_story_error:
+                    logger.warning(f'主线菱形模板识别不可用：{exc}')
+                    self.last_story_error = str(exc)
         players, enemies = self.minimap_markers(panel)
         if mode == 'compact' and not players and not enemies:
             return snapshot
@@ -286,8 +297,7 @@ class CampaignObserver:
             curtains = sum(item['state'] == 'curtain' for item in barriers)
             snapshot['barriers'] = barriers
             snapshot['blocks'] = mark_blocks(chart, barriers)
-            snapshot['mechanisms'] = [dict(id=None, position=item['map'], source='scene_fallback')
-                                      for item in projected if item['kind'] == 'ground_mechanism']
+            snapshot['mechanisms'] = mechanism_observations(projected, snapshot['objects'], chart.points)
             snapshot['barriers_observed'] = snapshot['objects_observed'] and len(snapshot['blocks']) == curtains
             self.last_barrier_error = None
         except (OSError, ValueError, KeyError, np.linalg.LinAlgError, cv2.error) as exc:

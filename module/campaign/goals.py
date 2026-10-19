@@ -1,10 +1,10 @@
 """推图每一拍的目标选择：从运行状态与切开后的路网里挑出下一个该去的点。
 
-纯函数层，不碰设备也不点击：输入是 `RunState`、章节 `StaticMap`、按封锁切开的 `CutRoads` 与本帧快照，
-输出一个目标描述，执行与否由调用方决定。这样同一套决策可以拿现场帧离线回放校验。
+决策层不碰设备也不点击：输入是 `RunState`、章节 `StaticMap`、按封锁切开的 `CutRoads` 与本帧快照，
+更新运行状态中的路程目的地并返回执行目标，执行与否由调用方决定。同一套决策可离线回放校验。
 可达性与行走距离一律走切开图，所以规划不会把小队送去撞光幕；原图只用来判断「这个目标是不是
 只被光幕挡住」——是的话就该去复核封锁或踩机关，而不是当成走不通换目标。
-优先级：最近的 pending 敌人 → 复核挡路的封锁 → 前沿探索 → 无进展。
+优先处理机关关联的道路复核；剧情按机关、主线目的地逐段推进，无目的地才找全分量最近敌人。
 机关解封先到点、再回封锁口复核；电梯按有向航段和失败冷却过滤。
 """
 
@@ -15,6 +15,7 @@ from module.campaign.report import (BLOCK_STATUS, GOAL_KINDS, GOAL_REASONS, REJE
                                     label, points_text)
 from module.campaign.run_state import OBSERVED_CELL, located
 from module.campaign.subgoals import elevator_goal, mechanism_goal, review_goal
+from module.campaign.route_planning import refresh_route, route_action
 
 # 收集品沿用有限候选预算；敌人必须比较全部候选，否则会漏掉直线较远、路程却更近的前置敌人。
 PLAN_CANDIDATES = 4
@@ -181,7 +182,15 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
     else:
         candidates = [item for item in state.pending_enemies() if item['kind'] == 'normal']
         if goal is None:
-            goal, rejected = nearest_enemy(state, cut, squad)
+            destination = refresh_route(state, chart, snapshot, cut)
+            if destination is None:
+                goal, rejected = nearest_enemy(state, cut, squad)
+            else:
+                goal = route_action(state, cut, squad, destination)
+                candidates = [destination]
+                if goal is None:
+                    rejected = [dict(id=destination['id'], position=destination['position'],
+                                     reason='different_component')]
     if goal is None:
         detour = blocked_candidate(state, chart, cut, squad, rejected)
         if detour is not None:
@@ -190,11 +199,16 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
                 goal = review_goal(state, cut, squad, record['id'], detour['target'])
             else:
                 goal = mechanism_goal(state, chart, cut, squad, record, detour['target'])
+                if goal is not None and purpose == 'story':
+                    state.route_goal = dict(goal)
+                    goal = route_action(state, cut, squad, goal)
             if goal is None:
                 goal = {'kind': 'none', 'reason': 'blocked_by_curtain', 'blocked_by': detour['culprits'],
                         'for_target': detour['target']}
     if goal is None:
         goal = elevator_goal(state, chart, cut, squad, candidates)
+    if goal is None and purpose == 'story' and state.route_goal is not None:
+        goal = {'kind': 'none', 'reason': 'route_unreachable', 'for_target': state.route_goal['id']}
     if goal is None:
         goal = frontier_point(state, cut, squad)
     if goal is None:

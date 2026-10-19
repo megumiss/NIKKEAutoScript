@@ -1,4 +1,4 @@
-"""侦察：小队不动，拖展开大地图按路程由近到远查看本分量，确定按路程最近的敌人。
+"""侦察：有路程目的地时仅查当前路段，无目的地时查本分量中可能更近的敌人。
 
 小地图只能看到小队周围一块直线范围，弯路上直线近的敌人路程可能很远，而路程更近的那段路
 往往在视野外。展开大地图可以拖到远处，那里的敌人标记照样显示，所以找敌人不必靠走路：
@@ -16,6 +16,7 @@ from module.campaign.goals import nearest_enemy
 from module.campaign.map.map_state import GRID
 from module.campaign.run_state import OBSERVED_CELL
 from module.campaign.subgoals import RoadView
+from module.campaign.route_planning import route_path
 
 # 一个已观测粗格每边包含的 8 像素路网格数。
 CELLS = OBSERVED_CELL // GRID
@@ -76,7 +77,7 @@ def field_at(field, point):
     return float(np.min(window + np.hypot(xs * GRID - point[0], ys * GRID - point[1])))
 
 
-def scout_focus(state, cut, squad, include_cooling=False):
+def scout_focus(state, cut, squad, include_cooling=False, goal=None):
     """挑下一屏侦察落点，优先候选敌人的实际路径，再查可能更近的未知支路。
 
     每次按最新敌人记录重新选择，新增近敌会缩短侦察范围。路径来自同一切开图的 A*，
@@ -84,7 +85,11 @@ def scout_focus(state, cut, squad, include_cooling=False):
     支路按 32px 格内的最短近似路程排序，截止距离取候选实际路径加两端吸附距离。
     默认跳过冷却格以便继续看其他区域；出发前须 include_cooling=True 复核，
     只有这时返回 None 才代表没有待查区域。所有距离与位置均为底图像素。
+    路程模式的 goal 指本段执行落点，只查该段及相邻道路；省略时查完整目的地路线。
     """
+    if state.route_goal is not None:
+        target = goal if goal and goal.get('position') is not None else state.route_goal
+        return route_scout_focus(state, cut, squad, target, include_cooling)
     target, _ = nearest_enemy(state, cut, squad)
     known = float('inf')
     if target is not None:
@@ -124,4 +129,34 @@ def scout_focus(state, cut, squad, include_cooling=False):
         position = [float((column * CELLS + dx) * GRID), float((row * CELLS + dy) * GRID)]
         return dict(id=identifier, position=position, distance=round(frontier, 1),
                     known=round(known, 1) if np.isfinite(known) else None, source='nearer_road')
+    return None
+
+
+def route_scout_focus(state, cut, squad, target, include_cooling=False):
+    """仅补查本次执行路段及相邻道路格，不再扫描全分量中更近但无关的敌人。
+
+    格子沿用运行状态的覆盖记录；切换执行目标不清空已扫描区域。冷却仅限制重试，
+    include_cooling=True 仍返回未看清的格子，保证不能凭失败冷却跳过前置道路。
+    """
+    route = route_path(cut, squad, target['position'])
+    if route is None:
+        return None
+    path, distances = route
+    home = cut.component(squad)
+    seen = set()
+    for point, distance in zip(path, distances):
+        for offset in ((0, 0), (OBSERVED_CELL, 0), (-OBSERVED_CELL, 0),
+                       (0, OBSERVED_CELL), (0, -OBSERVED_CELL)):
+            candidate = point + offset
+            if cut.component(candidate) != home or state.is_observed(candidate):
+                continue
+            column, row = (candidate // OBSERVED_CELL).astype(int)
+            identifier = f'scout-{column}-{row}'
+            if identifier in seen:
+                continue
+            seen.add(identifier)
+            if not include_cooling and state.cooling(identifier):
+                continue
+            return dict(id=identifier, position=candidate.tolist(), distance=round(float(distance), 1),
+                        known=round(float(distances[-1]), 1), source='route_road')
     return None

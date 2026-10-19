@@ -10,9 +10,18 @@ import numpy as np
 
 # 目标类型；日志里写成「普通敌人 enemy-1」这种「中文名 + 内部编号」。
 GOAL_KINDS = {'enemy': '普通敌人', 'collectible': '收集品', 'explore': '未探索区域',
-              'review_block': '复核光幕', 'mechanism': '地面机关', 'elevator': '电梯', 'none': '无目标'}
+              'review_block': '复核光幕', 'mechanism': '地面机关', 'elevator': '电梯', 'none': '无目标',
+              'story': '主线目标', 'advance': '沿路推进'}
 # 选择这个目标的依据。
 GOAL_REASONS = {
+    'nearby_unseen_mechanism': '接近已标注机关，当前未检测到开关状态',
+    'nearby_closed_mechanism': '未开启机关位于小队或敌人附近',
+    'main_story_marker': '主线菱形标记已对应到小地图敌人',
+    'enemy_on_route': '路程前方需要处理的敌人',
+    'advance_on_route': '沿路程短段推进后重新判断',
+    'route_enemy_unavailable': '沿途敌人冷却或不可执行，不能越过',
+    'route_step_unavailable': '当前路段执行失败，暂停推进',
+    'route_unreachable': '路程目标不可达且没有可用中转方案',
     'nearest_pending_enemy': '可达待清敌人中道路距离最短',
     'nearest_annotated_collectible': '候选标注收集品中道路距离最短',
     'nearest_unobserved_cell': '最近的可达未探索区域',

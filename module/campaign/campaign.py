@@ -16,7 +16,7 @@ from module.campaign.vision.minimap import map_visible
 from module.campaign.navigation.targets import TargetFinder
 from module.campaign.vision.observation import EXPANDED_ROI, CampaignObserver
 from module.campaign.navigation.routing import CutRoads
-from module.campaign.report import (LOCALIZATION, MINIMAP_MODES, direction_text, label, points_text)
+from module.campaign.report import (GOAL_REASONS, LOCALIZATION, MINIMAP_MODES, direction_text, label, points_text)
 from module.campaign.run_state import RunState, describe_changes
 from module.campaign.timing import Stopwatch
 from module.config.config import TaskEnd
@@ -450,6 +450,9 @@ class Campaign(ModuleBase):
         goal = choose_goal(self.state, chart, snapshot, self.cut,
                            purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
         self.last_goal = goal
+        if self.state.route_goal is not None:
+            destination = self.state.route_goal
+            logger.info(f"路程目标：{describe(destination)}")
         logger.info(f'第 {self.state.tick} 轮决策（耗时 {watch}）：{describe(goal)}')
         detail = describe_changes(changes)
         if detail:
@@ -478,9 +481,13 @@ class Campaign(ModuleBase):
         if self.state is None:
             return {'campaign': source}
         memory = self.state.memory()
+        if memory.get('route_goal'):
+            destination = memory['route_goal']
+            destination['reason_text'] = label(GOAL_REASONS, destination.get('reason'))
         goal = self.last_goal
         if goal and goal.get('kind') != 'none' and goal.get('position') is not None:
             memory['goal'] = dict(kind=goal['kind'], id=goal['id'],
+                                  reason_text=label(GOAL_REASONS, goal.get('reason')),
                                   position=[round(float(value), 1) for value in goal['position']])
         return {'campaign': dict(source, memory=memory)}
 

@@ -114,6 +114,8 @@ class RunState:
         self.enemies = {}
         self.blocks = {}
         self.mechanisms = {}
+        self.route_goal = None
+        self.story_target = None
         self.pending_reviews = {}
         self.transfers = {}
         self.cooldowns = {}
@@ -322,6 +324,28 @@ class RunState:
         return [record for record in self.enemies.values()
                 if record['status'] == 'pending' and not self.cooling(record['id'])]
 
+    def remember_story_target(self, position):
+        """把已通过两帧身份验证的主线敌人并入记忆，返回稳定编号；存在歧义或已清除时不覆盖。
+
+        position 为可靠小地图配准的底图坐标，不能传入场景菱形或脚圈客户区坐标。
+        普通敌人的开战与清除仍使用同一编号，不另外建立一份主线敌人状态。
+        """
+        position = np.asarray(position, float)
+        if position.shape != (2,) or not np.isfinite(position).all():
+            return None
+        if np.any(position < 0) or np.any(position >= self.size):
+            return None
+        nearby = [record for record in self.enemies.values()
+                  if np.linalg.norm(np.asarray(record['position']) - position) <= ENEMY_MERGE_RADIUS]
+        if len(nearby) > 1 or (nearby and (nearby[0]['kind'] != 'normal' or nearby[0]['status'] != 'pending')):
+            return None
+        if not nearby:
+            self._absorb_enemies([dict(kind='normal', position=position.tolist())], None)
+            nearby = [self.enemies[self._nearest_enemy(position)]]
+        self.story_target = nearby[0]['id']
+        self.cooldowns.pop('story-location', None)
+        return self.story_target
+
     def blocking(self):
         """需要当成道路封锁看待的记录：active 与 stale 都算。
 
@@ -330,24 +354,37 @@ class RunState:
         """
         return [record for record in self.blocks.values() if record['status'] in ('active', 'stale')]
 
-    def mark_tried(self, mechanism, block):
-        """记下这个机关为哪块封锁踩过，避免同一块封锁反复试同一个机关。"""
+    def mark_tried(self, mechanism, block=None):
+        """导航确认到点即记为开启，本次任务不再选择；有关联光幕时另行复核道路。
+
+        不以发送过点击或接近坐标作为调用条件。主动机关没有 block，不能产生空编号的光幕复核。
+        """
         record = self.mechanisms.setdefault(mechanism, {'id': mechanism, 'tried_for': {}})
-        record['tried_for'][block] = self.tick
-        self.pending_reviews[block] = mechanism
+        record.update(state='on', completed=True)
+        if block is not None:
+            record['tried_for'][block] = self.tick
+            self.pending_reviews[block] = mechanism
+        if self.route_goal and self.route_goal['id'] == mechanism:
+            self.route_goal = None
 
     def tried_for(self, mechanism, block):
         """这个机关是否已经为该封锁踩过。"""
         return block in self.mechanisms.get(mechanism, {}).get('tried_for', {})
 
     def _absorb_mechanisms(self, mechanisms):
-        """合并缺标注时的机关落点；位置抖动不能清掉针对各块封锁的尝试记录。"""
+        """按标注编号或兜底位置合并机关，保留开关状态、邻近敌人证据和到点记录。
+
+        开启在本次任务中不可逆，后续漏检或 off 误检不能恢复为未开启。标注编号由观测层唯一
+        关联后提供；未标注机关才按位置合并，抖动不能清掉既有的封锁关联记录。
+        """
         for item in mechanisms:
             position = np.asarray(item.get('position'), float)
             if position.shape != (2,) or not np.isfinite(position).all():
                 continue
-            nearest = None
+            nearest = item.get('id')
             for identifier, record in self.mechanisms.items():
+                if nearest is not None:
+                    break
                 if record.get('source') != 'scene_fallback' or 'position' not in record:
                     continue
                 if np.linalg.norm(position - np.asarray(record['position'])) <= ENEMY_MERGE_RADIUS:
@@ -355,7 +392,10 @@ class RunState:
                     break
             identifier = nearest or self._identifier('mechanism')
             record = self.mechanisms.setdefault(identifier, {'id': identifier, 'tried_for': {}})
-            record.update(position=position.tolist(), source='scene_fallback', last_seen=self.tick)
+            record.update(position=position.tolist(), source=item.get('source', 'scene_fallback'),
+                          last_seen=self.tick, near_enemy=bool(item.get('near_enemy')))
+            if record.get('state') != 'on' and item.get('state') in ('on', 'off'):
+                record['state'] = item['state']
 
     @staticmethod
     def transfer_key(leg):
@@ -414,9 +454,9 @@ class RunState:
         for record in self.blocks.values():
             name = label(BLOCK_STATUS, record['status'])
             blocks[name] = blocks.get(name, 0) + 1
-        tried = sum(bool(item['tried_for']) for item in self.mechanisms.values())
+        tried = sum(bool(item.get('completed')) for item in self.mechanisms.values())
         return (f"已决策 {self.tick} 轮；敌人 {counts_text(enemies)}；光幕 {counts_text(blocks)}；"
-                f"已覆盖 {int(self.observed.sum())} 格地图；试过 {tried} 个机关；"
+                f"已覆盖 {int(self.observed.sum())} 格地图；已到达机关 {tried} 处；"
                 f"待复核光幕 {len(self.pending_reviews)} 处；失败电梯 {len(self.transfers)} 段；"
                 f"定位失败 {self.unlocated} 帧")
 
@@ -432,4 +472,8 @@ class RunState:
                    for record in self.enemies.values() if record['status'] != 'cleared']
         blocks = [dict(id=record['id'], status=record['status'], point=record['point'], segment=record['segment'])
                   for record in self.blocking() if record.get('segment')]
-        return dict(tick=self.tick, enemies=enemies, blocks=blocks)
+        mechanisms = [dict(id=item['id'], state=item.get('state', 'unknown'),
+                           completed=bool(item.get('completed')))
+                      for item in self.mechanisms.values()]
+        return dict(tick=self.tick, enemies=enemies, blocks=blocks, mechanisms=mechanisms,
+                    route_goal=dict(self.route_goal) if self.route_goal else None)

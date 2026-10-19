@@ -17,6 +17,7 @@ from module.campaign.window import WindowChanged
 from module.base.timer import Timer
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.movement_feedback import ClickUnconfirmed, TargetTriggered
+from module.campaign.navigation.story_navigation import locate_story_target
 from module.logger import logger
 
 # 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。
@@ -100,6 +101,8 @@ class CampaignExecutor:
 
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
+        if goal and goal['kind'] == 'none' and goal.get('reason', '').startswith('route_'):
+            return False
         if goal is None or goal['kind'] in ('none', 'explore'):
             return True
         try:
@@ -184,20 +187,24 @@ class CampaignExecutor:
                 self.owner.state.transfer_failed(goal['leg'])
             else:
                 identifier = f"review-{goal['id']}" if kind == 'review_block' else goal['id']
+                if kind == 'advance':
+                    identifier = goal['for_target']
                 self.owner.state.penalize(identifier)
             logger.warning(f"{goal_brief(goal)} 执行失败，已记一次失败并冷却：{exc}；"
                            f"耗时 {watch}，本目标操作 {self.session.target_inputs} 次")
             self.session.preview(self.session.win.client())
             return
         if result.get('state') != 'arrived':
-            self.owner.state.penalize(goal['id'])
+            self.owner.state.penalize(goal['for_target'] if kind == 'advance' else goal['id'])
             logger.warning(f"{goal_brief(goal)} 未确认触发：{describe_result(result)}；"
                            f"耗时 {watch}，本目标操作 {self.session.target_inputs} 次")
             return
         if kind == 'mechanism':
-            self.owner.state.mark_tried(goal['id'], goal['block'])
+            self.owner.state.mark_tried(goal['id'], goal.get('block'))
             logger.info(f"已到达地面机关 {goal['id']}（坐标来自{label(TARGET_SOURCES, goal.get('source'))}），"
-                        f"下一步复核光幕 {goal['block']}。")
+                        '按开启状态记录，本次任务不再重复选择。')
+            if goal.get('block'):
+                logger.info(f"机关 {goal['id']} 对应光幕 {goal['block']} 待复核。")
         elif kind == 'review_block':
             self.review_block(goal)
         elif kind == 'elevator':
@@ -225,12 +232,14 @@ class CampaignExecutor:
         self.scout_pending = None
         if self.purpose != 'story' or (goal is not None and goal['kind'] == 'review_block'):
             return False
+        if goal and goal['kind'] == 'none' and goal.get('reason', '').startswith('route_'):
+            return False
         if not located(snapshot) or snapshot.get('squad') is None:
             return False
         state, squad = self.owner.state, snapshot['squad']
-        focus = scout_focus(state, self.owner.cut, squad)
+        focus = scout_focus(state, self.owner.cut, squad, goal=goal)
         if focus is None:
-            self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True)
+            self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
             return False
         self.session.begin_target('scout')
         self.session.scout_begin()
@@ -238,9 +247,10 @@ class CampaignExecutor:
         total = Stopwatch()
         for view in range(SCOUT_VIEWS):
             known = '无可达候选' if focus['known'] is None else f"{focus['known']} 像素"
-            source = '候选目标的前置路段' if focus['source'] == 'target_route' else '可能更近的支路'
+            source = {'target_route': '候选目标的前置路段', 'route_road': '路程前方道路与相邻岔口',
+                      'nearer_road': '可能更近的支路'}[focus['source']]
             logger.info(f"侦察第 {view + 1} 屏：目标 {focus['id']}，位置 {points_text(focus['position'])}，"
-                        f"{source}，路程 {focus['distance']} 像素，已知最近的敌人 {known}")
+                        f"{source}，路程 {focus['distance']} 像素，本段检查范围 {known}")
             watch = Stopwatch()
             recorded = self.session.scout_view(focus['position'], f'scout_{view + 1:02}')
             views += 1
@@ -249,12 +259,12 @@ class CampaignExecutor:
                         f"目标格{'已覆盖' if covered else '尚未完整覆盖'}，耗时 {watch}")
             if not recorded or not covered:
                 state.penalize(focus['id'])
-            focus = scout_focus(state, self.owner.cut, squad)
+            focus = scout_focus(state, self.owner.cut, squad, goal=goal)
             if focus is None:
                 break
         else:
             logger.info(f'侦察达到单轮 {SCOUT_VIEWS} 屏上限，剩余区域延后至下一轮检查，暂不执行移动。')
-        self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True)
+        self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
         self.session.scout_end()
         logger.info(f'侦察结束：检查 {views} 屏，展开与拖动总耗时 {total}')
         return True
@@ -381,6 +391,15 @@ class CampaignExecutor:
                     else:
                         self.session.identity(self.session.win.client())
                     goal = self.owner.plan_tick(snapshot)
+                    if (self.purpose == 'story' and self.owner.state.route_goal is None
+                            and snapshot.get('story_markers') and located(snapshot)
+                            and snapshot.get('squad') is not None
+                            and (goal is None or goal['kind'] != 'review_block')
+                            and not self.owner.state.cooling('story-location')):
+                        changed = locate_story_target(self.session, snapshot['squad'])
+                        if changed:
+                            snapshot = self.session.snapshot()
+                        goal = self.owner.plan_tick(snapshot, advance=False)
                     expanded_for_scout = False
                     if self.needs_expansion(goal, snapshot):
                         logger.info(f'当前视野不足（目标：{goal_brief(goal)}），'
@@ -401,7 +420,7 @@ class CampaignExecutor:
                                 and located(snapshot) and snapshot.get('squad') is not None):
                             # 收起后的紧凑帧也可能修正敌人位置；出发依据必须与最终选出的目标一致。
                             self.scout_pending = scout_focus(self.owner.state, self.owner.cut, snapshot['squad'],
-                                                             include_cooling=True)
+                                                             include_cooling=True, goal=goal)
                     if self.scout_pending is not None:
                         pending = self.scout_pending
                         failures = self.owner.state.cooldowns.get(pending['id'], {}).get('failures', 0)

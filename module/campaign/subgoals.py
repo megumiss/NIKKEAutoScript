@@ -73,6 +73,7 @@ def mechanism_goal(state, chart, cut, squad, block, target):
     if not home:
         return None
     candidates = [item for item in candidates if not state.tried_for(item['id'], block['id'])
+                  and state.mechanisms.get(item['id'], {}).get('state') != 'on'
                   and not state.cooling(item['id']) and cut.component(item['position']) == home]
     candidates.sort(key=lambda item: np.linalg.norm(np.asarray(item['position']) - squad))
     best = None

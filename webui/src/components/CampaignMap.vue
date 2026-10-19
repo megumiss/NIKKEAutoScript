@@ -6,7 +6,7 @@ export type Point = [number, number]
 export type Enemy = { kind: 'normal' | 'ex'; position: Point; confidence: number }
 export type RememberedEnemy = { id: string; kind: 'normal' | 'ex' | null; position: Point; status: 'pending' | 'engaged' | 'unreachable' }
 export type Block = { id: string; kind?: string; point: Point; segment: [Point, Point]; status?: 'active' | 'stale' }
-export type Goal = { kind: string; id: string; position: Point }
+export type Goal = { kind: string; id: string; position: Point; reason_text?: string }
 export type AnnotatedPoint = { id: string; label: string; category: 'ground_mechanism' | 'ground_elevator'; position: Point }
 export type ElevatorTransfer = { id: string; entry: Point; exit: Point; directed: boolean }
 export type MapAnnotations = { points: AnnotatedPoint[]; transfers: ElevatorTransfer[] }
@@ -15,9 +15,10 @@ const props = withDefaults(defineProps<{
   remembered?: RememberedEnemy[]
   blocks?: Block[]
   goal?: Goal | null
+  routeGoal?: Goal | null
   annotations?: MapAnnotations | null
   label: string
-}>(), { remembered: () => [], blocks: () => [], goal: null, annotations: null })
+}>(), { remembered: () => [], blocks: () => [], goal: null, routeGoal: null, annotations: null })
 const emit = defineEmits<{ error: [] }>()
 const blockWidth = computed(() => props.size[0] * .006)
 const marker = computed(() => props.size[0] * .012)
@@ -58,10 +59,14 @@ function transferAngle(transfer: ElevatorTransfer) {
       <path :d="diamond(marker)" vector-effect="non-scaling-stroke" />
       <title>{{ enemy.kind === 'ex' ? 'EX' : t('敌人') }} · {{ enemy.position.join(', ') }}</title>
     </g>
+    <g v-if="routeGoal" class="route-goal" :transform="`translate(${routeGoal.position.join(' ')})`">
+      <path :d="diamond(marker * 2.5)" vector-effect="non-scaling-stroke" />
+      <title>{{ t('路程目标') }} · {{ routeGoal.id }} · {{ routeGoal.position.join(', ') }}</title>
+    </g>
     <g v-if="goal" class="goal" :transform="`translate(${goal.position.join(' ')})`">
       <circle :r="size[0] * .02" vector-effect="non-scaling-stroke" />
       <path :d="`M ${-size[0] * .03} 0 H ${size[0] * .03} M 0 ${-size[0] * .03} V ${size[0] * .03}`" vector-effect="non-scaling-stroke" />
-      <title>{{ t('当前目标') }} · {{ goal.kind }} {{ goal.id }} · {{ goal.position.join(', ') }}</title>
+      <title>{{ t('执行目标') }} · {{ goal.kind }} {{ goal.id }} · {{ goal.position.join(', ') }}</title>
     </g>
     <g v-if="squad" class="squad" :transform="`translate(${squad.join(' ')})`">
       <circle :r="size[0] * .017" vector-effect="non-scaling-stroke" />
@@ -82,6 +87,7 @@ function transferAngle(transfer: ElevatorTransfer) {
 .remembered.engaged { opacity:.45; }
 .remembered.unreachable { stroke:#9aa4b2; stroke-dasharray:4 3; }
 .goal { fill:none; stroke:#ffd166; stroke-width:2.5px; }
+.route-goal { fill:none; stroke:#c998ff; stroke-width:2.5px; stroke-dasharray:5 3; }
 .block line { stroke:#ff5b5b; stroke-linecap:round; opacity:.9; }
 .block.stale line { opacity:.45; }
 .annotation { fill:var(--card); stroke-width:2px; }
