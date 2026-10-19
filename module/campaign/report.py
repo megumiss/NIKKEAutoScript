@@ -20,6 +20,7 @@ GOAL_REASONS = {
     'enemy_on_route': '路程前方需要处理的敌人',
     'advance_on_route': '沿路程短段推进后重新判断',
     'route_enemy_unavailable': '沿途敌人冷却或不可执行，不能越过',
+    'route_branch_unavailable': '岔路尚未清理完成，无法取得避开目的地的安全路线',
     'route_step_unavailable': '当前路段执行失败，暂停推进',
     'route_unreachable': '路程目标不可达且没有可用中转方案',
     'nearest_pending_enemy': '可达待清敌人中道路距离最短',

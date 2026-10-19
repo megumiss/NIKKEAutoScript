@@ -1,4 +1,4 @@
-"""侦察：有路程目的地时仅查当前路段，无目的地时查本分量中可能更近的敌人。
+"""侦察：有目的地时查当前路段和相关汇合岔路，无目的地时查本分量中可能更近的敌人。
 
 小地图只能看到小队周围一块直线范围，弯路上直线近的敌人路程可能很远，而路程更近的那段路
 往往在视野外。展开大地图可以拖到远处，那里的敌人标记照样显示，所以找敌人不必靠走路：
@@ -14,9 +14,10 @@ from scipy.sparse.csgraph import dijkstra
 
 from module.campaign.goals import nearest_enemy
 from module.campaign.map.map_state import GRID
+from module.campaign.route_branches import branch_scout_points
+from module.campaign.route_planning import route_path
 from module.campaign.run_state import OBSERVED_CELL
 from module.campaign.subgoals import RoadView
-from module.campaign.route_planning import route_path
 
 # 一个已观测粗格每边包含的 8 像素路网格数。
 CELLS = OBSERVED_CELL // GRID
@@ -85,7 +86,7 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
     支路按 32px 格内的最短近似路程排序，截止距离取候选实际路径加两端吸附距离。
     默认跳过冷却格以便继续看其他区域；出发前须 include_cooling=True 复核，
     只有这时返回 None 才代表没有待查区域。所有距离与位置均为底图像素。
-    路程模式的 goal 指本段执行落点，只查该段及相邻道路；省略时查完整目的地路线。
+    路程模式的 goal 指本段执行落点，查该段及已进入的汇合岔路两侧；省略时查完整目的地路线。
     """
     if state.route_goal is not None:
         target = goal if goal and goal.get('position') is not None else state.route_goal
@@ -133,7 +134,7 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
 
 
 def route_scout_focus(state, cut, squad, target, include_cooling=False):
-    """仅补查本次执行路段及相邻道路格，不再扫描全分量中更近但无关的敌人。
+    """补查本次执行路段及相关汇合段两侧，不扫描全分量中更近但无关的敌人。
 
     格子沿用运行状态的覆盖记录；切换执行目标不清空已扫描区域。冷却仅限制重试，
     include_cooling=True 仍返回未看清的格子，保证不能凭失败冷却跳过前置道路。
@@ -159,4 +160,13 @@ def route_scout_focus(state, cut, squad, target, include_cooling=False):
                 continue
             return dict(id=identifier, position=candidate.tolist(), distance=round(float(distance), 1),
                         known=round(float(distances[-1]), 1), source='route_road')
+    for point in branch_scout_points(state, cut, squad, path):
+        if state.is_observed(point):
+            continue
+        column, row = point // OBSERVED_CELL
+        identifier = f'scout-{column}-{row}'
+        if not include_cooling and state.cooling(identifier):
+            continue
+        return dict(id=identifier, position=point.tolist(), distance=round(float(np.linalg.norm(point - squad)), 1),
+                    known=None, source='route_branch')
     return None
