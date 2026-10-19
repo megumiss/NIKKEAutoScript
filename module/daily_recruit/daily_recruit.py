@@ -254,8 +254,6 @@ class DailyRecruit(UI):
 
     def social_point_recruit(self, skip_first_screenshot=True):
         logger.hr('Social point recruit', 2)
-        confirm_timer = Timer(5, count=3).start()
-        click_timer = Timer(0.5)
         recruit_times = self.config.DailyRecruit_SocialPointRecruitCount
         recruit_count = 0
 
@@ -270,7 +268,6 @@ class DailyRecruit(UI):
                 # 向左点击
                 logger.info('Click %s @ %s' % (point2str(30, 670), 'TO_LEFT_RECRUIT'))
                 self.device.click_xy(30, 670)
-                click_timer.reset()
                 time.sleep(1)
                 continue
             else:
@@ -289,20 +286,10 @@ class DailyRecruit(UI):
                 raise NotEnoughSocialPoint
 
             # 抽卡
-            if (
-                not recruit_end
-                and click_timer.reached()
-                and self.appear_then_click(SOCIAL_RECRUIT, offset=(30, 30), interval=3)
-            ):
-                confirm_timer.reset()
-                click_timer.reset()
+            if not recruit_end and self.appear_then_click(SOCIAL_RECRUIT, offset=(30, 30), interval=3):
                 continue
             # 跳过
-            if click_timer.reached() and self.appear_then_click(
-                RECRUIT_SKIP, offset=(30, 30), interval=1, static=False
-            ):
-                confirm_timer.reset()
-                click_timer.reset()
+            if self.appear_then_click(RECRUIT_SKIP, offset=(30, 30), interval=1, static=False):
                 continue
             # 确认
             if self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
@@ -316,26 +303,27 @@ class DailyRecruit(UI):
                         notify_image = self.get_notify_image_path(self.device.image, saved_path, 'SocialPoint')
                         self.notify_push('SocialPoint', image=notify_image)
 
+                return_timer = Timer(1, count=2).start()
                 while 1:
                     self.device.screenshot()
-                    # 确认按钮在点击后会短暂消失，回到招募页才算本次抽卡完成。
-                    if self.appear(SOCIAL_RECRUIT_CHECK, offset=(10, 10), static=False):
-                        break
-                    if self.appear_then_click(RECRUIT_CONFIRM, offset=(30, 30), interval=3, static=False):
+                    # 结果页也可能匹配到招募页图标，确认按钮仍在时不能计数。
+                    if self.appear(RECRUIT_CONFIRM, offset=(30, 30), static=False):
+                        return_timer.reset()
+                        self.appear_then_click(RECRUIT_CONFIRM, offset=(30, 30), interval=3, static=False)
                         continue
+                    # 顶部货币图标会随数量移动，使用位置固定的单抽按钮确认返回。
+                    if self.appear(SOCIAL_RECRUIT, offset=(30, 30)):
+                        if return_timer.reached():
+                            break
+                    else:
+                        return_timer.reset()
 
-                confirm_timer.reset()
-                click_timer.reset()
                 recruit_count += 1
                 logger.info(f'Social point recruit count: {recruit_count}/{recruit_times}')
                 recruit_end = recruit_count >= recruit_times
                 continue
             # 结束
-            if (
-                recruit_end
-                and self.appear(SOCIAL_RECRUIT_CHECK, offset=(10, 10), static=False)
-                and confirm_timer.reached()
-            ):
+            if recruit_end and self.appear(SOCIAL_RECRUIT_CHECK, offset=(10, 10), static=False):
                 break
 
         logger.info('Social point recruit has done')
