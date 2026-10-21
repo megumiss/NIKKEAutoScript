@@ -8,7 +8,7 @@ setting; see module/ocr/sidecar_launch.py and deploy/termux/ocr_sidecar.sh.
 
 Protocol: module/ocr/remote_protocol.py. The first line on stdout is
 `NKAS_OCR_READY port=<port> token=<token>`; the process exits when stdin is
-closed, i.e. when the worker's adb session ends.
+closed, i.e. when the owning OCR service's adb session ends.
 """
 import os
 import secrets

@@ -154,7 +154,7 @@ class ProcessManager:
         process = Process(
             target=ProcessManager.run_process,
             args=(self.config_name, func, self._renderable_queue, self._preview_queue,
-                  ev, child, stopped, self.preview_wanted),
+                  ev, child, stopped, self.preview_wanted, State.manager.ocr()),
         )
         with self._request_lock:
             if request_generation is not None and request_generation != self._request_generation:
@@ -273,7 +273,7 @@ class ProcessManager:
             if process is not self._process or name != self.config_name or generation != self.generation:
                 return False
             was_alive = self.alive
-            # Collect helpers before a cooperative exit can reparent the OCR process.
+            # Collect worker helpers before a cooperative exit can reparent them.
             children = self._worker_children() if was_alive else []
             if was_alive:
                 process.join(timeout=2)
@@ -597,7 +597,7 @@ class ProcessManager:
     @staticmethod
     def run_process(
         config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None,
-        display_pipe=None, worker_stop=None, preview_wanted: threading.Event = None,
+        display_pipe=None, worker_stop=None, preview_wanted: threading.Event = None, ocr_server=None,
     ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -615,6 +615,9 @@ class ProcessManager:
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
         set_preview_queue(pq, preview_wanted)
+
+        from module.ocr.models import set_shared_ocr_server
+        set_shared_ocr_server(ocr_server)
 
         from module.config.config import NikkeConfig
 

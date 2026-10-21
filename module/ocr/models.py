@@ -4,6 +4,7 @@ import numpy as np
 
 from module.config.utils import filepath_config
 from module.logger import logger
+from module.ocr.interval import OcrInterval
 from module.ocr.progress import OcrInitProgress
 
 
@@ -80,6 +81,45 @@ def create_local_model(lang, model_type, interval=0):
     return NIKKEOcr(**paddle_options(lang, model_type, interval))
 
 
+_shared_ocr_server = None
+
+
+def set_shared_ocr_server(server):
+    global _shared_ocr_server
+    _shared_ocr_server = server
+    OCR_MODEL._paddle_cache.clear()
+    OCR_MODEL._paddle_num_cache.clear()
+
+
+class SharedOcrClient:
+    def __init__(self, server, lang, model_type, interval, command=None):
+        self._server = server
+        self.lang = lang
+        self.model_type = model_type
+        self._command = tuple(command) if command else None
+        self._throttle = OcrInterval(interval)
+        self._warmed = False
+
+    def check_interval(self):
+        self._throttle.check_interval()
+
+    def predict(self, images):
+        return self._call('predict', images)
+
+    def recognize(self, images):
+        return self._call('recognize', images)
+
+    def _call(self, op, images):
+        self.check_interval()
+        method = getattr(self._server, op)
+        if self._warmed:
+            return method(self.lang, self.model_type, images, self._command)
+        with OcrInitProgress('Waiting for shared OCR model'):
+            result = method(self.lang, self.model_type, images, self._command)
+        self._warmed = True
+        return result
+
+
 class OcrModel:
     def __init__(self, use_sidecar=True):
         """
@@ -98,12 +138,14 @@ class OcrModel:
 
         command, reason = termux_sidecar_command()
         if command is None and not self._sidecar_unavailable_logged:
-            logger.warning(f'OcrSidecar is on but unavailable here ({reason}), OCR runs in this process')
+            logger.warning(f'OcrSidecar is on but unavailable here ({reason}), using local OCR service')
             self._sidecar_unavailable_logged = True
         return command
 
     def _create(self, lang, model_type, interval):
         command = self._sidecar_command()
+        if self._use_sidecar and _shared_ocr_server is not None:
+            return SharedOcrClient(_shared_ocr_server, lang, model_type, interval, command)
         if command:
             from module.ocr.remote import RemoteOcr
 

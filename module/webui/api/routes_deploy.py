@@ -191,11 +191,13 @@ FIELD_I18N = {
     'OcrSidecar': {
         'zh-CN': {'desc': "在经 ADB 启动的独立进程中运行 OCR（module/ocr/sidecar.py），修改后需重启实例\n"
                           "仅适用于在被控 Android 设备上以 Termux + proot 运行 NKAS 的情况：Termux 在后台时可能只能用少数小核；启动命令自动识别\n"
-                          "其他环境或侧车无法启动时，照常在实例进程内识别",
+                          "Web UI 多实例共用一个辅助进程，由后端关闭时清理；其他环境或启动失败时，共用后端 OCR 模型\n"
+                          "直接运行 main.py 时，由脚本进程持有 OCR 服务",
                   'hints': {'In most cases': '关闭'}},
         'ja-JP': {'desc': "ADB 経由で起動する別プロセスで OCR を実行します（module/ocr/sidecar.py）。変更後はインスタンスを再起動してください\n"
                           "制御対象の Android 端末上で Termux + proot により NKAS を動かす場合専用です。バックグラウンドの Termux は少数の低速コアに制限されることがあります。起動コマンドは自動検出します\n"
-                          "それ以外の環境やサイドカーを起動できない場合は、通常どおりインスタンスのプロセス内で認識します",
+                          "Web UI の複数インスタンスは補助プロセスを共有し、バックエンド終了時に解放します。それ以外の環境や起動失敗時はバックエンドの OCR モデルを共有します\n"
+                          "main.py を直接実行する場合はスクリプトのプロセスが OCR サービスを保持します",
                   'hints': {'In most cases': 'オフ'}},
     },
     'AdbExecutable': {

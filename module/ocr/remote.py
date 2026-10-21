@@ -1,10 +1,11 @@
 """
-Worker-side proxy for the OCR sidecar (module/ocr/sidecar.py).
+Proxy for the OCR sidecar (module/ocr/sidecar.py).
 
 `RemoteOcr` exposes the same `predict` / `recognize` calls as `NIKKEOcr`, so
-OCR callers are unchanged. One sidecar process per worker serves all models.
+OCR callers are unchanged. The owning process shares one sidecar per command;
+Web workers use proxies to the backend's manager, which owns the sidecar.
 If the sidecar cannot be started or keeps failing, the proxy falls back to the
-regular in-process model for the rest of the worker's life.
+regular in-process model for the rest of the proxy's life.
 """
 import atexit
 import re
@@ -135,8 +136,16 @@ def get_sidecar(command):
         return _sidecars[command]
 
 
+def stop_sidecars():
+    with _sidecars_lock:
+        sidecars = list(_sidecars.values())
+        _sidecars.clear()
+    for sidecar in sidecars:
+        sidecar.stop()
+
+
 class RemoteOcr:
-    def __init__(self, lang, model_type, interval, command):
+    def __init__(self, lang, model_type, interval, command, local_factory=None):
         self.lang = lang
         self.model_type = model_type
         self._throttle = OcrInterval(interval)
@@ -144,6 +153,7 @@ class RemoteOcr:
         self._conn = None
         self._warmed = False
         self._local = None
+        self._local_factory = local_factory
 
     def check_interval(self):
         self._throttle.check_interval()
@@ -175,7 +185,8 @@ class RemoteOcr:
             from module.ocr.models import create_local_model
 
             # Throttling already happened in this proxy.
-            self._local = create_local_model(self.lang, self.model_type, interval=0)
+            factory = self._local_factory or create_local_model
+            self._local = factory(self.lang, self.model_type, interval=0)
         return getattr(self._local, op)(images)
 
     def _connect(self):
@@ -215,3 +226,6 @@ class RemoteOcr:
                 conn.close()
             except OSError:
                 pass
+
+    def close(self):
+        self._close()
