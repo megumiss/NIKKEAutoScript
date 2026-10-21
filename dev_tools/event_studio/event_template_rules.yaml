@@ -1,0 +1,199 @@
+# 活动模板规则库：dev_tools/event_studio/event_template_studio.py 的模板清单与场景来源。
+#
+# 结构: types -> <event_type> -> phases -> <phase> -> scenes -> <scene> -> templates
+# event_type 与 module/config/manual_config.py 的 EVENTS 一致: 1=大型 2=小型 3=特殊(类似大型)
+#
+# scene 字段:
+#   label: 场景中文名
+#   state_hint: 给用户准备截图的场景说明; agent 信任用户关联, 不据此校验画面状态
+#   templates: 该场景需要产出的模板
+#
+# template 字段:
+#   name: 模板名(大写, 与资产文件名一致)
+#   mode: button(720x1280 黑底保留原坐标) | template(裁剪小图, 导出时自动补 TEMPLATE_ 前缀)
+#   desc: 用途与状态语义
+#   requires: 给用户准备截图的前置提示(可选, 如"打完 11 关后"), 不用于筛选已关联截图
+#   optional: true 表示占位/非必须(可选)
+#
+# 清单内模板均从新截图重新裁剪；历史模板仅作为参考。
+#
+# type 3 用 inherit 复用 type 1 的全部内容, 再用 extras 追加差异模板。
+#
+# 注意: 小游戏模板(event_minigame/<event_id>)不在本工具范围内, 仍用 template_capture 手工截取。
+types:
+  1:
+    label: 大型
+    phases:
+      day1:
+        label: 第一天
+        scenes:
+          main:
+            label: 游戏主界面
+            state_hint: 游戏主界面，从这里进入右下角的活动
+            templates:
+              - { name: MAIN_GOTO_EVENT, mode: button, desc: 从主界面前往活动；固定截取右下角作战出击下面的活动banner，尽量居中 }
+          event_home:
+            label: 活动主页
+            state_hint: 活动主页，进入活动后主界面，从这里打开商店、章节等界面，Story2 未开放状态有一个锁的图标
+            templates:
+              - { name: EVENT_GOTO_STORY_1, mode: button, desc: 从活动前往故事1的按钮，截取story+罗马数字再延长一点，不要把红点也截进去 }
+              - { name: EVENT_GOTO_STORY_2_LOCKED, mode: button, desc: 前往故事2的按钮，截取那个锁的图标，不要把红点也截进去 }
+              - { name: REWARD, mode: button, desc: 从活动前往奖励按钮；截取任务按钮对应的图标，不要把红点也截进去 }
+              - { name: CHALLENGE, mode: button, desc: 从活动前往挑战按钮；截取挑战按钮对应的图标，不要把红点也截进去 }
+              - { name: SHOP, mode: button, desc: 从活动前往商店按钮；截取商店按钮对应的图标，不要把红点也截进去 }
+              - { name: LOGIN_STAMP, mode: button, desc: 从活动前往签到印章按钮；截取签到印章按钮对应的图标，不要把红点也截进去 }
+          story1_home:
+            label: Story1 入口页面
+            state_hint: 故事1主页，从这里进入Story1关卡列表页
+            templates:
+              - { name: STORY_1_CHECK, mode: button, desc: 画面中会有一个enter的艺术字，截取其中一个字母，不要把红点也截进去 }
+          story1_normal:
+            label: Story1 普通
+            state_hint: Story1的关卡列表页
+            templates:
+              - { name: STORY_1_NORMAL, mode: button, desc: 故事1页面检查， 找到页面上半部分，截取剩余次数左侧的图标}
+              - { name: STORY_1_NORMAL_STAGE_11, mode: button, desc: 倒数第二关序号，只截取关卡序号后半部分 }
+              - { name: STORY_1_NORMAL_STAGE_11_CLEAR, mode: button, desc: 倒数第二关的CLEAR标记，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+              - { name: STORY_1_NORMAL_STAGE_12, mode: button, desc: 倒数第一关序号，只截取关卡序号后半部分 }
+              - { name: STORY_1_NORMAL_STAGE_12_CLEAR, mode: button, desc: 倒数第一关的CLEAR，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+          login_stamp:
+            label: 签到页面
+            state_hint: 活动签到页面，还没签到
+            templates:
+              - { name: LOGIN_STAMP_CHECK, mode: button, desc: 签到页面检查，截取页面上半部分标题的某个艺术字，单个字母即可 }
+              - { name: LOGIN_STAMP_REWARD, mode: button, desc: 签到奖励领取按钮，截取页面下方的全部领取，要求除了字以外再向外两侧横向延伸一个字的距离 }
+          login_stamp_done:
+            label: 签到完成页面
+            state_hint: 活动签到页面，签到完成
+            templates:
+              - { name: LOGIN_STAMP_DONE, mode: button, desc: 签到完成后的领取按钮，截取页面下方的全部领取，要求除了字以外再向外两侧横向延伸一个字的距离 }
+          shop:
+            label: 活动商店
+            state_hint: 商店界面
+            templates:
+              - { name: SHOP_ITEM_LOAD_CHECK, mode: button, desc: 截取商店第一页最后一个商品的货币，尽量覆盖货币全部像素、25*25像素正方形 }
+              - { name: TEMPLATE_SHOP_MONEY, mode: template, desc: 从SHOP_ITEM_LOAD_CHECK裁剪得到的货币模板 }
+          reward_mission:
+            label: 奖励-每日任务页
+            state_hint: 奖励页面的任务标签页, 奖励未领取
+            templates:
+              - { name: REWARD_CHECK, mode: button, desc: 奖励页面检查，截取一个顶部banner的醒目艺术字符或者图标即可 }
+              - { name: REWARD_MISSION_CHECK, mode: button, desc: 每日任务标签页检查，截取每日任务左侧的图标，再向右延伸一个图标的距离 }
+              - { name: REWARD_RECEIVE, mode: button, desc: 奖励领取按钮，截取下方的全部领取，要求除了字以外再向外两侧横向延伸一个字的距离 }
+              - { name: REWARD_CLOSED, mode: button, desc: 关闭奖励页面，截取右上角的 X }
+              - { name: REWARD_CHALLENGE_HIDDEN, mode: button, desc: 切换到每日任务标签页时的成就标签页状态，截取成就左侧的图标，再向右延伸一个图标的距离 }
+          reward_mission_done:
+            label: 奖励-每日任务完成页
+            state_hint: 奖励页面的任务标签页, 奖励领取完成
+            templates:
+              - { name: REWARD_RECEIVE_DONE, mode: button, desc: 奖励领取完成后的按钮，截取下方的全部领取，要求除了字以外再向外两侧横向延伸一个字的距离 }
+          reward_challenge:
+            label: 奖励-成就页
+            state_hint: 奖励页面的成就标签页
+            templates:
+              - { name: REWARD_CHALLENGE_CHECK, mode: button, desc: 成就标签页检查，截取成就左侧的图标，再向右延伸一个图标的距离 }
+      story2:
+        label: Story2 更新后
+        scenes:
+          event_home:
+            label: 活动主页
+            state_hint: 活动主页, Story2 已开放，锁的图标已消失
+            templates:
+              - { name: EVENT_GOTO_STORY_2, mode: button, desc: 从活动前往故事2按钮，截取story+罗马数字再延长一点，不要把红点也截进去 }
+          story2_home:
+            label: Story2 主页
+            state_hint: 故事2主页
+            templates:
+              - { name: STORY_2_CHECK, mode: button, desc: 故事2主页检查，画面中会有一个enter的艺术字，截取其中一个字母，不要把红点也截进去 }
+          story2_normal:
+            label: Story2 普通
+            state_hint: 普通难度选中(困难未解锁)的关卡列表页
+            templates:
+              - { name: STORY_2_NORMAL, mode: button, desc: 故事2普通检查，截取右下角第一个按钮，竖着的长方形，底部包含两个字母再向上延伸一个字母的距离 }
+              - { name: STORY_2_HARD_LOCKED, mode: button, desc: 故事2困难锁定检查，截取右下角第二个按钮上的 开始 }
+              - { name: STORY_2_NORMAL_STAGE_11, mode: button, desc: 倒数第二关序号，只截取关卡序号后半部分 }
+              - { name: STORY_2_NORMAL_STAGE_11_CLEAR, mode: button, desc: 倒数第二关的CLEAR标记，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+              - { name: STORY_2_NORMAL_STAGE_12, mode: button, desc: 倒数第一关序号，只截取关卡序号后半部分 }
+              - { name: STORY_2_NORMAL_STAGE_12_CLEAR, mode: button, desc: 倒数第一关的CLEAR，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+      story2_hard:
+        label: Story2 困难更新后
+        scenes:
+          story2_hard:
+            label: Story2 困难
+            state_hint: 困难难度选中的关卡列表页
+            templates:
+              - { name: STORY_2_HARD, mode: button, desc: 困难难度开启，截取右下角第二个按钮，竖着的长方形，底部包含两个字母再向上延伸一个字母的距离 }
+              - { name: STORY_2_HARD_STAGE_11, mode: button, desc: 倒数第二关序号，只截取关卡序号后半部分 }
+              - { name: STORY_2_HARD_STAGE_11_CLEAR, mode: button, desc: 倒数第二关的CLEAR标记，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+              - { name: STORY_2_HARD_STAGE_12, mode: button, desc: 倒数第一关序号，只截取关卡序号后半部分 }
+              - { name: STORY_2_HARD_STAGE_12_CLEAR, mode: button, desc: 倒数第一关的CLEAR，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+          story2_hard_normal:
+            label: Story2困难开启后普通难度
+            state_hint: 困难难度开启后，普通难度选中的关卡列表页面
+            templates:
+              - { name: STORY_2_HARD_HIDDEN, mode: button, desc: 当前是普通难度页面，困难按钮被遮罩遮挡，截取竖着的长方形，底部包含两个字母再向上延伸一个字母的距离 }
+  2:
+    label: 小型
+    phases:
+      day1:
+        label: 第一天
+        scenes:
+          main:
+            label: 游戏主界面
+            state_hint: 游戏主界面，从这里进入右下角的活动
+            templates:
+              - { name: MAIN_GOTO_EVENT, mode: button, desc: 从主界面前往活动；固定截取右下角作战出击下面的活动banner，尽量居中 }
+          event_home:
+            label: 活动主页
+            state_hint: 活动主页，进入活动后主界面，从这里打开商店、章节等界面
+            templates:
+              - { name: EVENT_CHECK, mode: button, desc: 是否在活动主页检查；画面中会有一个enter的艺术字，截取其中一个字母，不要把红点也截进去 }
+              - { name: STORY_1_CHECK, mode: button, desc: 是否在活动主页检查；小型活动时该模板和EVENT_CHECK相同，不要把红点也截进去 }
+              - { name: REWARD, mode: button, desc: 从活动前往奖励按钮；截取任务按钮对应的图标，不要把红点也截进去 }
+              - { name: CHALLENGE, mode: button, desc: 从活动前往挑战按钮；截取挑战按钮对应的图标，不要把红点也截进去 }
+              - { name: SHOP, mode: button, desc: 从活动前往商店按钮；截取商店按钮对应的图标，不要把红点也截进去 }
+          story1_normal:
+            label: 普通难度
+            state_hint: 普通难度选中(困难锁定)的关卡列表页，右下角有两个按钮，第一个是当前的normal，第二个被提示遮挡
+            templates:
+              - { name: STORY_1_NORMAL, mode: button, desc: 普通难度开启，截取右下角第一个按钮，竖着的长方形，底部包含两个字母再向上延伸一个字母的距离 }
+              - { name: STORY_1_HARD_LOCKED, mode: button, desc: 困难难度锁定，截取右下角第二个按钮上的 开始 }
+              - { name: STORY_1_NORMAL_STAGE_11, mode: button, desc: 倒数第二关序号，只截取关卡序号后半部分 }
+              - { name: STORY_1_NORMAL_STAGE_11_CLEAR, mode: button, desc: 倒数第二关的CLEAR标记，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+              - { name: STORY_1_NORMAL_STAGE_12, mode: button, desc: 倒数第一关序号，只截取关卡序号后半部分 }
+              - { name: STORY_1_NORMAL_STAGE_12_CLEAR, mode: button, desc: 倒数第一关的CLEAR，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+          reward:
+            label: 奖励页面
+            state_hint: 奖励页面, 没有完成的任务 无法领取奖励
+            templates:
+              - { name: REWARD_CHECK, mode: button, desc: 奖励页面检查；截取一个顶部banner的醒目艺术字符或者图标即可 }
+              - { name: REWARD_RECEIVE_DONE, mode: button, desc: 奖励领取完成；截取下方的全部领取，要求除了字以外再向外两侧横向延伸一个字的距离 }
+              - { name: REWARD_CLOSED, mode: button, desc: 关闭奖励页面；截取右上角的 X }
+          reward_done:
+            label: 奖励待领取页面
+            state_hint: 也是奖励页面, 这个可以领取奖励
+            templates:
+              - { name: REWARD_RECEIVE, mode: button, desc: 奖励领取按钮；截取下方的全部领取，要求除了字以外再向外两侧横向延伸一个字的距离 }
+          shop:
+            label: 活动商店
+            state_hint: 商店界面
+            templates:
+              - { name: SHOP_ITEM_LOAD_CHECK, mode: button, desc: 截取商店第一页最后一个商品的货币，尽量覆盖货币全部像素、25*25像素正方形 }
+              - { name: TEMPLATE_SHOP_MONEY, mode: template, desc: 从SHOP_ITEM_LOAD_CHECK裁剪得到的货币模板 }
+      hard:
+        label: 困难更新后
+        scenes:
+          story1_hard:
+            label: 困难难度
+            state_hint: 困难难度选中的关卡列表页，右下角有两个按钮，第一个是暗色normal，第二个是当前的hard
+            templates:
+              - { name: STORY_1_HARD, mode: button, desc: 困难难度开启，截取右下角第二个按钮，竖着的长方形，底部包含两个字母再向上延伸一个字母的距离 }
+              - { name: STORY_1_HARD_STAGE_11, mode: button, desc: 倒数第二关序号，只截取关卡序号后半部分 }
+              - { name: STORY_1_HARD_STAGE_11_CLEAR, mode: button, desc: 倒数第二关的CLEAR标记，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+              - { name: STORY_1_HARD_STAGE_12, mode: button, desc: 倒数第一关序号，只截取关卡序号后半部分 }
+              - { name: STORY_1_HARD_STAGE_12_CLEAR, mode: button, desc: 倒数第一关的CLEAR，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
+          story1_hard_normal:
+            label: 困难开启后普通难度
+            state_hint: 困难难度开启后，普通难度选中的关卡列表页面
+            templates:
+              - { name: STORY_1_HARD_HIDDEN, mode: button, desc: 当前是普通难度页面，困难按钮被遮罩遮挡，截取竖着的长方形，底部包含两个字母再向上延伸一个字母的距离 }
