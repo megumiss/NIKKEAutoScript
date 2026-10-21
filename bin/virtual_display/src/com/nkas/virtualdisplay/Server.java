@@ -10,6 +10,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public final class Server {
     private static final Object FRAME_LOCK = new Object();
@@ -70,7 +73,7 @@ public final class Server {
         updateDisplayGeometry(display, width, height);
 
         System.out.println("NKAS_VD_READY id=" + displayId + " identity=" + displayIdentity
-                + " pid=" + android.os.Process.myPid() + " socket=" + socketName
+                + " pid=" + Class.forName("android.os.Process").getMethod("myPid").invoke(null) + " socket=" + socketName
                 + " size=" + actualDisplayWidth + "x" + actualDisplayHeight
                 + " rotation=" + displayRotation);
         System.out.flush();
@@ -747,10 +750,44 @@ public final class Server {
         }
     }
 
+    /**
+     * Reflection handles resolved once. The capture callback runs for every
+     * rendered frame, so per-frame Class.forName/getMethod lookups are not free.
+     */
+    private static final class ImageAccess {
+        final Method acquireLatestImage;
+        final Method close;
+        final Method getWidth;
+        final Method getHeight;
+        final Method getPlanes;
+        final Method getBuffer;
+        final Method getPixelStride;
+        final Method getRowStride;
+
+        ImageAccess() throws Exception {
+            Class<?> readerClass = Class.forName("android.media.ImageReader");
+            Class<?> imageClass = Class.forName("android.media.Image");
+            Class<?> planeClass = Class.forName("android.media.Image$Plane");
+            acquireLatestImage = readerClass.getMethod("acquireLatestImage");
+            close = imageClass.getMethod("close");
+            getWidth = imageClass.getMethod("getWidth");
+            getHeight = imageClass.getMethod("getHeight");
+            getPlanes = imageClass.getMethod("getPlanes");
+            getBuffer = planeClass.getMethod("getBuffer");
+            getPixelStride = planeClass.getMethod("getPixelStride");
+            getRowStride = planeClass.getMethod("getRowStride");
+        }
+    }
+
+    private static ImageAccess imageAccess;
+
     private static void onImageAvailable(Object reader) {
         Object image = null;
         try {
-            image = reader.getClass().getMethod("acquireLatestImage").invoke(reader);
+            if (imageAccess == null) {
+                imageAccess = new ImageAccess();
+            }
+            image = imageAccess.acquireLatestImage.invoke(reader);
             if (image == null) {
                 return;
             }
@@ -762,7 +799,7 @@ public final class Server {
                     // on Samsung/One UI devices.
                     return;
                 }
-                int[] size = copyImageRgbInto(image, bufferIndex);
+                int[] size = copyImageRgbaInto(image, bufferIndex);
                 latestBuffer = bufferIndex;
                 latestWidth = size[0];
                 latestHeight = size[1];
@@ -786,31 +823,35 @@ public final class Server {
         return DISPLAY_NONE;
     }
 
-    private static int[] copyImageRgbInto(Object image, int bufferIndex) throws Exception {
-        Class<?> imageClass = Class.forName("android.media.Image");
-        int width = (Integer) imageClass.getMethod("getWidth").invoke(image);
-        int height = (Integer) imageClass.getMethod("getHeight").invoke(image);
+    /**
+     * Store the frame as tightly packed RGBA. Only a bulk copy happens per
+     * rendered frame; dropping alpha is deferred to the clients that ask for a
+     * frame, because the game renders far more often than NKAS reads.
+     */
+    private static int[] copyImageRgbaInto(Object image, int bufferIndex) throws Exception {
+        ImageAccess access = imageAccess;
+        int width = (Integer) access.getWidth.invoke(image);
+        int height = (Integer) access.getHeight.invoke(image);
         if (width <= 0 || height <= 0 || width > 8192 || height > 8192) {
             throw new IllegalArgumentException("invalid image size " + width + "x" + height);
         }
-        long byteCount = (long) width * height * 3L;
+        long byteCount = (long) width * height * 4L;
         if (byteCount > 64L * 1024L * 1024L) {
             throw new IllegalArgumentException("image is too large: " + width + "x" + height);
         }
-        byte[] rgb = frameBuffers[bufferIndex];
-        if (rgb == null || rgb.length != (int) byteCount) {
-            rgb = new byte[(int) byteCount];
-            frameBuffers[bufferIndex] = rgb;
+        byte[] rgba = frameBuffers[bufferIndex];
+        if (rgba == null || rgba.length != (int) byteCount) {
+            rgba = new byte[(int) byteCount];
+            frameBuffers[bufferIndex] = rgba;
         }
-        Object[] planes = (Object[]) imageClass.getMethod("getPlanes").invoke(image);
+        Object[] planes = (Object[]) access.getPlanes.invoke(image);
         if (planes == null || planes.length == 0 || planes[0] == null) {
             throw new IllegalStateException("ImageReader returned no planes");
         }
-        Class<?> planeClass = Class.forName("android.media.Image$Plane");
         Object plane = planes[0];
-        ByteBuffer buffer = ((ByteBuffer) planeClass.getMethod("getBuffer").invoke(plane)).duplicate();
-        int pixelStride = (Integer) planeClass.getMethod("getPixelStride").invoke(plane);
-        int rowStride = (Integer) planeClass.getMethod("getRowStride").invoke(plane);
+        ByteBuffer buffer = ((ByteBuffer) access.getBuffer.invoke(plane)).duplicate();
+        int pixelStride = (Integer) access.getPixelStride.invoke(plane);
+        int rowStride = (Integer) access.getRowStride.invoke(plane);
         int base = buffer.position();
         int limit = buffer.limit();
         if (pixelStride < 3 || rowStride < width * pixelStride) {
@@ -822,18 +863,84 @@ public final class Server {
             throw new IllegalStateException("ImageReader plane is truncated: "
                     + lastByte + ">" + limit);
         }
-        for (int y = 0; y < height; y++) {
-            int row = base + y * rowStride;
-            int dst = y * width * 3;
-            for (int x = 0; x < width; x++) {
-                int offset = row + x * pixelStride;
-                // PixelFormat.RGBA_8888 is exposed as R,G,B,A by ImageReader.
-                rgb[dst++] = buffer.get(offset);
-                rgb[dst++] = buffer.get(offset + 1);
-                rgb[dst++] = buffer.get(offset + 2);
+        int rowBytes = width * 4;
+        if (pixelStride == 4 && rowStride == rowBytes) {
+            buffer.position(base);
+            buffer.get(rgba, 0, rowBytes * height);
+        } else if (pixelStride == 4) {
+            // Rows are padded to the hardware alignment; copy each row in bulk.
+            for (int y = 0; y < height; y++) {
+                buffer.position(base + y * rowStride);
+                buffer.get(rgba, y * rowBytes, rowBytes);
+            }
+        } else {
+            for (int y = 0; y < height; y++) {
+                int row = base + y * rowStride;
+                int dst = y * rowBytes;
+                for (int x = 0; x < width; x++) {
+                    int offset = row + x * pixelStride;
+                    // PixelFormat.RGBA_8888 is exposed as R,G,B,A by ImageReader.
+                    rgba[dst++] = buffer.get(offset);
+                    rgba[dst++] = buffer.get(offset + 1);
+                    rgba[dst++] = buffer.get(offset + 2);
+                    rgba[dst++] = (byte) 0xFF;
+                }
             }
         }
         return new int[]{width, height};
+    }
+
+    private static final ThreadLocal<byte[]> OUTPUT_BUFFER = new ThreadLocal<>();
+
+    private static byte[] outputBuffer(int size) {
+        byte[] out = OUTPUT_BUFFER.get();
+        if (out == null || out.length != size) {
+            out = new byte[size];
+            OUTPUT_BUFFER.set(out);
+        }
+        return out;
+    }
+
+    /** Drop alpha; NKAS screenshots are RGB without any colour conversion. */
+    private static byte[] rgbaToRgb(byte[] rgba, int width, int height) {
+        int pixels = width * height;
+        byte[] rgb = outputBuffer(pixels * 3);
+        for (int src = 0, dst = 0, end = pixels * 4; src < end; src += 4) {
+            rgb[dst++] = rgba[src];
+            rgb[dst++] = rgba[src + 1];
+            rgb[dst++] = rgba[src + 2];
+        }
+        return rgb;
+    }
+
+    /**
+     * Box-filtered RGB thumbnail for the Web UI preview. Bitmap scaling is not
+     * used for the same premultiplied-alpha reasons documented in the README.
+     */
+    private static byte[] rgbaToRgbThumb(byte[] rgba, int width, int height, int factor,
+                                         int outWidth, int outHeight) {
+        byte[] rgb = outputBuffer(outWidth * outHeight * 3);
+        int area = factor * factor;
+        int dst = 0;
+        for (int oy = 0; oy < outHeight; oy++) {
+            for (int ox = 0; ox < outWidth; ox++) {
+                int r = 0;
+                int g = 0;
+                int b = 0;
+                for (int dy = 0; dy < factor; dy++) {
+                    int src = ((oy * factor + dy) * width + ox * factor) * 4;
+                    for (int dx = 0; dx < factor; dx++, src += 4) {
+                        r += rgba[src] & 0xFF;
+                        g += rgba[src + 1] & 0xFF;
+                        b += rgba[src + 2] & 0xFF;
+                    }
+                }
+                rgb[dst++] = (byte) (r / area);
+                rgb[dst++] = (byte) (g / area);
+                rgb[dst++] = (byte) (b / area);
+            }
+        }
+        return rgb;
     }
 
     private static FrameSnapshot acquireLatestFrame() {
@@ -859,45 +966,115 @@ public final class Server {
         }
     }
 
+    // Task screenshots and the Web UI preview connect independently; one slow
+    // client must not delay the other, so each connection gets its own worker.
+    private static final int CLIENT_THREADS = 3;
+    private static final int MAX_THUMB_FACTOR = 4;
+
     private static void serve(String socketName) throws Exception {
         Class<?> serverClass = Class.forName("android.net.LocalServerSocket");
         Object server = serverClass.getConstructor(String.class).newInstance(socketName);
-        while (running) {
-            Object socket = serverClass.getMethod("accept").invoke(server);
-            try {
-                handleClient(socket);
-            } catch (java.io.IOException e) {
-                System.err.println("NKAS_VD_CLIENT_DISCONNECTED " + e.getMessage());
-            } finally {
-                socket.getClass().getMethod("close").invoke(socket);
+        Method accept = serverClass.getMethod("accept");
+        ExecutorService clients = Executors.newFixedThreadPool(CLIENT_THREADS, runnable -> {
+            Thread thread = new Thread(runnable, "nkas-vd-client");
+            thread.setDaemon(true);
+            return thread;
+        });
+        try {
+            while (running) {
+                Object socket = accept.invoke(server);
+                if (!running) {
+                    closeSocket(socket);
+                    break;
+                }
+                clients.execute(() -> {
+                    try {
+                        handleClient(socket, socketName);
+                    } catch (Throwable e) {
+                        System.err.println("NKAS_VD_CLIENT_ERROR " + e);
+                    } finally {
+                        closeSocket(socket);
+                    }
+                });
             }
+        } finally {
+            clients.shutdown();
+            clients.awaitTermination(2, TimeUnit.SECONDS);
+            serverClass.getMethod("close").invoke(server);
         }
-        serverClass.getMethod("close").invoke(server);
     }
 
-    private static void handleClient(Object socket) throws Exception {
+    private static void closeSocket(Object socket) {
+        try {
+            socket.getClass().getMethod("close").invoke(socket);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** LocalServerSocket.accept() is not interruptible; a dummy connection unblocks it after STOP. */
+    private static void wakeAcceptLoop(String socketName) {
+        try {
+            Class<?> socketClass = Class.forName("android.net.LocalSocket");
+            Class<?> addressClass = Class.forName("android.net.LocalSocketAddress");
+            Object socket = socketClass.getConstructor().newInstance();
+            Object address = addressClass.getConstructor(String.class).newInstance(socketName);
+            socketClass.getMethod("connect", addressClass).invoke(socket, address);
+            socketClass.getMethod("close").invoke(socket);
+        } catch (Throwable e) {
+            System.err.println("NKAS_VD_WAKE_ERROR " + e);
+        }
+    }
+
+    private static void writeRgbFrame(OutputStream rawOutput, String command) throws Exception {
+        int factor = 1;
+        if (command.startsWith("THUMB ")) {
+            factor = Integer.parseInt(command.substring(6).trim());
+            if (factor < 1 || factor > MAX_THUMB_FACTOR) {
+                throw new IllegalArgumentException("invalid THUMB factor " + factor);
+            }
+        }
+        DataOutputStream output = new DataOutputStream(rawOutput);
+        FrameSnapshot frame = acquireLatestFrame();
+        if (frame == null) {
+            output.writeInt(0);
+            output.writeInt(0);
+            output.writeInt(0);
+            output.flush();
+            return;
+        }
+        int width;
+        int height;
+        byte[] rgb;
+        try {
+            if (factor == 1) {
+                width = frame.width;
+                height = frame.height;
+                rgb = rgbaToRgb(frame.data, width, height);
+            } else {
+                width = frame.width / factor;
+                height = frame.height / factor;
+                rgb = rgbaToRgbThumb(frame.data, frame.width, frame.height, factor, width, height);
+            }
+        } finally {
+            // The RGB copy is private to this thread; free the shared buffer
+            // before the socket write so the capture callback can reuse it.
+            releaseFrame(frame);
+        }
+        output.writeInt(width);
+        output.writeInt(height);
+        output.writeInt(width * height * 3);
+        output.write(rgb, 0, width * height * 3);
+        output.flush();
+    }
+
+    private static void handleClient(Object socket, String socketName) throws Exception {
         BufferedReader reader = new BufferedReader(new InputStreamReader(
                 (java.io.InputStream) socket.getClass().getMethod("getInputStream").invoke(socket),
                 "UTF-8"));
         OutputStream rawOutput = (OutputStream) socket.getClass().getMethod("getOutputStream").invoke(socket);
         String command = reader.readLine();
-        if ("FRAME".equals(command)) {
-            FrameSnapshot frame = acquireLatestFrame();
-            DataOutputStream output = new DataOutputStream(rawOutput);
-            try {
-                int width = frame == null ? 0 : frame.width;
-                int height = frame == null ? 0 : frame.height;
-                int size = frame == null ? 0 : frame.data.length;
-                output.writeInt(width);
-                output.writeInt(height);
-                output.writeInt(size);
-                if (frame != null) {
-                    output.write(frame.data);
-                }
-                output.flush();
-            } finally {
-                releaseFrame(frame);
-            }
+        if ("FRAME".equals(command) || (command != null && command.startsWith("THUMB "))) {
+            writeRgbFrame(rawOutput, command);
         } else if ("INFO".equals(command)) {
             Object display = virtualDisplay.getClass().getMethod("getDisplay").invoke(virtualDisplay);
             if (!(Boolean) display.getClass().getMethod("isValid").invoke(display)) {
@@ -914,9 +1091,9 @@ public final class Server {
                 frames = frameCount;
             }
             rawOutput.write(("OK id=" + displayId + " identity=" + displayIdentity
-                    + " pid=" + android.os.Process.myPid() + " socket=" + displaySocket + " frames=" + frames
+                    + " pid=" + Class.forName("android.os.Process").getMethod("myPid").invoke(null) + " socket=" + displaySocket + " frames=" + frames
                     + " size=" + width + "x" + height
-                    + " rotation=" + displayRotation + "\n").getBytes("UTF-8"));
+                    + " rotation=" + displayRotation + " caps=thumb\n").getBytes("UTF-8"));
             rawOutput.flush();
         } else if (command != null && command.startsWith("START ")) {
             boolean started = startPackageOnDisplay(command.substring(6).trim(), false);
@@ -930,6 +1107,7 @@ public final class Server {
             running = false;
             rawOutput.write("OK\n".getBytes("UTF-8"));
             rawOutput.flush();
+            wakeAcceptLoop(socketName);
         } else {
             rawOutput.write("ERROR\n".getBytes("UTF-8"));
             rawOutput.flush();
@@ -941,7 +1119,12 @@ public final class Server {
             return;
         }
         try {
-            image.getClass().getMethod("close").invoke(image);
+            ImageAccess access = imageAccess;
+            if (access != null) {
+                access.close.invoke(image);
+            } else {
+                image.getClass().getMethod("close").invoke(image);
+            }
         } catch (Throwable ignored) {
         }
     }

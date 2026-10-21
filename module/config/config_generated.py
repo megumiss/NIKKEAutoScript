@@ -37,6 +37,8 @@ class GeneratedConfig:
     PhysicalDevice_AutoRestoreResolution = True  # True, False
     PhysicalDevice_VirtualDisplay = False  # True, False
     PhysicalDevice_VirtualDisplayId = None
+    PhysicalDevice_AutoUnlock = False  # True, False
+    PhysicalDevice_Password = None
 
     # Group `Scrcpy`
     Scrcpy_Bitrate = 16000000

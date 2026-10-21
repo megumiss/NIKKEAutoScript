@@ -376,6 +376,16 @@
     "VirtualDisplayId": {
       "name": "Virtual display ID",
       "help": "Automatically generated and saved by NKAS to identify this instance in logs and Android display lists. It is not Android's numeric runtime displayId, which may change when the display is recreated."
+    },
+    "AutoUnlock": {
+      "name": "Auto unlock",
+      "help": "Before connecting and launching the game, wake the screen, swipe up and enter the password below via ADB",
+      "True": "True",
+      "False": "False"
+    },
+    "Password": {
+      "name": "Lock screen password",
+      "help": "Digits-only passwords are sent as PIN key events, others are typed as text. Leave empty if swiping up unlocks the device. Pattern lock is not supported.\nOnly one attempt is made per unlock to avoid system lockout; on failure, human takeover is requested.\nThe password is stored encrypted locally, not in the config file"
     }
   },
   "Scrcpy": {

@@ -47,7 +47,9 @@
       "Enable": false,
       "AutoRestoreResolution": true,
       "VirtualDisplay": false,
-      "VirtualDisplayId": null
+      "VirtualDisplayId": null,
+      "AutoUnlock": false,
+      "Password": null
     },
     "Scrcpy": {
       "Bitrate": 16000000,

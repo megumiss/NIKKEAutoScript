@@ -376,6 +376,16 @@
     "VirtualDisplayId": {
       "name": "虚拟屏幕 ID",
       "help": "由 NKAS 自动生成并保存，用于在日志和 Android 显示列表中识别这个实例。它不是 Android 运行时分配的数字 displayId，虚拟屏幕重建后数字 displayId 仍可能变化。"
+    },
+    "AutoUnlock": {
+      "name": "启用自动解锁",
+      "help": "连接设备和启动游戏前，通过 ADB 自动点亮屏幕、上滑并输入下方密码解锁",
+      "True": "True",
+      "False": "False"
+    },
+    "Password": {
+      "name": "锁屏密码",
+      "help": "纯数字按 PIN 码逐位发送数字键，其他按混合密码输入；留空表示无密码（上滑即可解锁）。不支持图案解锁。\n为避免连续输错触发系统锁定，每次解锁只尝试一次，失败后请求人工接管。\n密码加密保存在本机，不写入配置文件"
     }
   },
   "Scrcpy": {

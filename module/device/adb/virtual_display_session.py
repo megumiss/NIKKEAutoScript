@@ -24,6 +24,7 @@ class DisplaySessions:
         self.directory = Path(directory)
         self.bridge_factory = bridge_factory
         self.sessions = {}
+        self._preview_sources = {}
         self.lock = threading.RLock()
         self.owner_lock = None
         self.owner = {'pid': os.getpid(), 'created': psutil.Process().create_time()}
@@ -91,7 +92,18 @@ class DisplaySessions:
                 raise RuntimeError('Worker has not exited')
             path.unlink()
 
+    def preview_source(self, name):
+        """Read an immutable snapshot without waiting for a slow ADB operation."""
+        return self._preview_sources.get(name)
+
+    def _publish_preview(self, target):
+        source = {key: target[key] for key in ('identity', 'generation', 'port', 'rotation', 'socket')}
+        source.update(width=720, height=1280)
+        self._preview_sources = dict(self._preview_sources, **{target['config_name']: source})
+
     def _discard(self, bridge):
+        self._preview_sources = {name: source for name, source in self._preview_sources.items()
+                                 if name != bridge.record['config_name']}
         bridge.close()
         self.sessions.pop(bridge.record['identity'], None)
         (self.directory / f'display-{bridge.record["identity"]}.json').unlink(missing_ok=True)
@@ -129,6 +141,7 @@ class DisplaySessions:
                         if cancelled():
                             raise RequestHumanTakeover('Display request cancelled')
                         bridge.cancelled = lambda: False
+                        self._publish_preview(result)
                         return result
                     except (OSError, RuntimeError):
                         self._discard(bridge)
@@ -149,6 +162,7 @@ class DisplaySessions:
                 result = probe.probe()
                 probe.check_cancelled()
                 probe.cancelled = lambda: False
+                self._publish_preview(result)
                 return result
             except BaseException:
                 try:
@@ -166,7 +180,9 @@ class DisplaySessions:
             # Active resources retain their original device even after configuration edits.
             previous, bridge.cancelled = bridge.cancelled, lambda: False
             try:
-                return bridge.probe()
+                result = bridge.probe()
+                self._publish_preview(result)
+                return result
             finally:
                 bridge.cancelled = previous
 
@@ -204,6 +220,10 @@ class DisplaySessions:
                 if bridge.record['config_name'] == old_name:
                     bridge.record['config_name'] = new_name
                     self.persist(bridge.record)
+            sources = dict(self._preview_sources)
+            if old_name in sources:
+                sources[new_name] = sources.pop(old_name)
+            self._preview_sources = sources
 
     def close(self):
         if self.owner_lock is None:

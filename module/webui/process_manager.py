@@ -14,10 +14,21 @@ import psutil
 from rich.console import Console, ConsoleRenderable
 
 from module.base.utils import set_preview_queue
+from module.config.utils import filepath_config
 from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
     get_func_mod, list_mod_instance, load_mod
 from module.logger import logger, set_file_logger, set_func_logger
+from module.webui.preview_sampler import PreviewSampler
 from module.webui.setting import State
+
+# Seconds a sampled frame keeps priority over task screenshots.
+PREVIEW_SAMPLER_FRESH = 3.0
+
+# ProcessManager.start_checked() results
+START_STARTED = 'started'
+START_RUNNING = 'running'
+START_GONE = 'gone'
+START_CANCELLED = 'cancelled'
 
 
 class ProcessManager:
@@ -46,59 +57,139 @@ class ProcessManager:
         # drains this queue on a thread and keeps only the newest frame in
         # memory; nothing touches disk.
         self._preview_queue: queue.Queue = State.manager.Queue(maxsize=2)
+        # Set while a Web UI viewer polls the preview; the worker only encodes
+        # frames at full rate while it is set.
+        self.preview_wanted = State.manager.Event()
         self.latest_preview: Tuple[float, bytes] = None
         self.preview_source = None
+        self.preview = PreviewSampler(self)
         self._process: Process = None
-        self._process_locks: Dict[str, threading.Lock] = {}
+        # Keep a new worker behind any cleanup still running for its predecessor.
         self._lifecycle_lock = threading.Lock()
+        self._request_lock = threading.Lock()
         self._request_generation = 0
         self._worker_stop = None
         self._display_thread = None
+        # Bumped under the lifecycle lock whenever the instance is deleted or
+        # renamed; see is_current().
+        self.generation = 0
         self.thd_log_queue_handler: threading.Thread = None
         self.thd_preview_handler: threading.Thread = None
 
-    def start(self, func, ev: threading.Event = None) -> None:
-        from module.device.adb.virtual_display_session import sessions, serve_worker
-        generation = self._request_generation
+    @property
+    def lifecycle_lock(self) -> threading.Lock:
+        """
+        Serializes start / stop / delete / rename of this instance. Web routes
+        wait without blocking the event loop because a stop cleanup may hold
+        the lock for seconds.
+        """
+        return self._lifecycle_lock
+
+    def is_current(self, name: str, generation: int = None) -> bool:
+        """
+        Whether this manager still represents instance `name`. A request that
+        waited for the lifecycle lock may hold a manager that was renamed
+        meanwhile, while `name` now belongs to a newly created instance.
+
+        Args:
+            generation: `self.generation` seen before waiting; also detects a
+                delete + recreate under the same name, which keeps the manager.
+        """
+        with self._processes_lock:
+            registered = self._processes.get(name)
+        if generation is not None and generation != self.generation:
+            return False
+        return self.config_name == name and registered is self
+
+    def start(self, func, ev: threading.Event = None, config_name: str = None) -> bool:
+        """
+        Returns:
+            bool: True if this call started a worker. See start_checked() for the reason otherwise.
+        """
+        return self.start_checked(func, ev, config_name) == START_STARTED
+
+    def start_checked(self, func, ev: threading.Event = None, config_name: str = None) -> str:
+        """
+        Args:
+            config_name: Instance the caller validated. A start that waited
+                behind a rename or delete must not start something else.
+
+        Returns:
+            str: START_STARTED, START_RUNNING (a worker is already running), or
+                START_GONE (renamed/deleted) or START_CANCELLED (superseded by a stop).
+        """
+        generation = self.generation
+        with self._request_lock:
+            request_generation = self._request_generation
         with self._lifecycle_lock:
-            if generation != self._request_generation or self.alive:
-                return
-            if self._display_thread is not None and self._display_thread.is_alive():
-                self._worker_stop.set()
-                self._display_thread.join(timeout=45)
-                if self._display_thread.is_alive():
-                    raise RuntimeError('Previous virtual display request has not finished')
-            if generation != self._request_generation:
-                return
-            sessions().prepare()
-            self.preview_source = None
-            if func is None:
-                func = get_config_mod(self.config_name)
-            stopped = Event()
-            self._worker_stop = stopped
-            parent, child = Pipe()
-            self._process = Process(
-                target=ProcessManager.run_process,
-                args=(self.config_name, func, self._renderable_queue, self._preview_queue, ev, child, stopped),
-            )
-            try:
-                self._process.start()
-                sessions().track_worker(self.config_name, self._process.pid)
-            except BaseException:
-                stopped.set()
-                if self.alive:
-                    self._process.kill()
-                    self._process.join(timeout=3)
+            if generation != self.generation:
+                return START_GONE
+            return self._start_locked(func, ev, config_name, request_generation)
+
+    def _start_locked(self, func, ev, config_name=None, request_generation=None) -> str:
+        if config_name is not None and not self.is_current(config_name):
+            logger.warning(f'Skip starting "{config_name}": instance was renamed or replaced')
+            return START_GONE
+        if self.alive:
+            return START_RUNNING
+        if not os.path.exists(filepath_config(self.config_name, get_config_mod(self.config_name))):
+            logger.warning(f'Skip starting "{self.config_name}": instance config no longer exists')
+            return START_GONE
+        from module.device.adb.virtual_display_session import sessions, serve_worker
+        if self._display_thread is not None and self._display_thread.is_alive():
+            self._worker_stop.set()
+            self._display_thread.join(timeout=45)
+            if self._display_thread.is_alive():
+                raise RuntimeError('Previous virtual display request has not finished')
+        for handler in (self.thd_log_queue_handler, self.thd_preview_handler):
+            if handler is not None:
+                handler.join(timeout=2)
+                if handler.is_alive():
+                    raise RuntimeError('Previous worker queue handler has not finished')
+        sessions().prepare()
+        if func is None:
+            func = get_config_mod(self.config_name)
+        stopped = Event()
+        parent, child = Pipe()
+        process = Process(
+            target=ProcessManager.run_process,
+            args=(self.config_name, func, self._renderable_queue, self._preview_queue,
+                  ev, child, stopped, self.preview_wanted),
+        )
+        with self._request_lock:
+            if request_generation is not None and request_generation != self._request_generation:
                 parent.close()
-                raise
-            finally:
                 child.close()
-            self._display_thread = threading.Thread(
-                target=serve_worker, args=(parent, stopped, self._process.is_alive), daemon=True,
-            )
-            self._display_thread.start()
-            self.start_log_queue_handler()
-            self.start_preview_handler()
+                return START_CANCELLED
+            self._worker_stop = stopped
+            self._process = process
+        self.preview_source = None
+        self.latest_preview = None
+        # Queued frames belong to the previous worker even if it used the same display.
+        while True:
+            try:
+                self._preview_queue.get_nowait()
+            except queue.Empty:
+                break
+        try:
+            process.start()
+            sessions().track_worker(self.config_name, process.pid)
+        except BaseException:
+            stopped.set()
+            if self.alive:
+                process.kill()
+                process.join(timeout=3)
+            parent.close()
+            raise
+        finally:
+            child.close()
+        self._display_thread = threading.Thread(
+            target=serve_worker, args=(parent, stopped, process.is_alive), daemon=True,
+        )
+        self._display_thread.start()
+        self.start_log_queue_handler()
+        self.start_preview_handler()
+        return START_STARTED
 
     def start_log_queue_handler(self):
         if (
@@ -134,28 +225,66 @@ class ProcessManager:
                 break
             if isinstance(item, tuple) and len(item) == 2:
                 item, self.preview_source = item
+            source = self.preview_source if isinstance(self.preview_source, dict) else {}
             if isinstance(item, bytes):
-                self.latest_preview = (time.time(), item)
+                self.latest_preview = (source.get('captured_at') or time.time(), item)
 
-    def stop(self) -> None:
-        from module.device.adb.virtual_display_session import sessions
-        self._request_generation += 1
-        if self._worker_stop is not None:
-            self._worker_stop.set()
-        with self._lifecycle_lock:
+    def current_preview(self, interval=1.0):
+        """
+        Renew the viewer lease and return the frame to show.
+
+        A fresh sampled frame wins even if a task screenshot is newer, so the
+        preview keeps one steady source (and one resolution when the sampler
+        downscales); task frames cover non-virtual-display setups and sampler
+        outages.
+
+        Args:
+            interval (float): The viewer's polling interval; the sampler runs at this cadence.
+
+        Returns:
+            tuple[float, bytes, str] | None: captured_at, JPEG, 'task' or 'sampler'
+        """
+        self.preview.touch(interval)
+        sampled = self.preview.frame()
+        fresh = max(PREVIEW_SAMPLER_FRESH, interval + 1)
+        if sampled is not None and time.time() - sampled[0] <= fresh:
+            return (*sampled, 'sampler')
+        candidates = []
+        if self.latest_preview is not None:
+            candidates.append((*self.latest_preview, 'task'))
+        if sampled is not None:
+            candidates.append((*sampled, 'sampler'))
+        if not candidates:
+            return None
+        return max(candidates, key=lambda item: item[0])
+
+    def request_stop(self):
+        """Bind a stop to the worker present when the request is accepted."""
+        with self._request_lock:
+            self._request_generation += 1
             if self._worker_stop is not None:
                 self._worker_stop.set()
+            return self._process, self.config_name, self.generation
+
+    def stop(self, request=None) -> bool:
+        from module.device.adb.virtual_display_session import sessions
+        process, name, generation = self.request_stop() if request is None else request
+        with self._lifecycle_lock:
+            if process is not self._process or name != self.config_name or generation != self.generation:
+                return False
             was_alive = self.alive
+            # Collect helpers before a cooperative exit can reparent the OCR process.
+            children = self._worker_children() if was_alive else []
             if was_alive:
-                self._process.join(timeout=2)
+                process.join(timeout=2)
                 if self.alive:
-                    self._terminate_worker_children()
-                    self._process.kill()
-                    self._process.join(timeout=3)
+                    process.kill()
+                    process.join(timeout=3)
                 if self.alive:
-                    raise RuntimeError(f'[{self.config_name}] Worker stop could not be confirmed')
-                self.renderables.append((logging.INFO, f'[{self.config_name}] exited. Reason: Manual stop\n'))
-            sessions().forget_worker(self.config_name)
+                    raise RuntimeError(f'[{name}] Worker stop could not be confirmed')
+                self._terminate_processes(children)
+                self.renderables.append((logging.INFO, f'[{name}] exited. Reason: Manual stop\n'))
+            sessions().forget_worker(name)
             if self._display_thread is not None:
                 self._display_thread.join(timeout=45)
                 if self._display_thread.is_alive():
@@ -164,13 +293,16 @@ class ProcessManager:
                 self._run_stop_cleanup()
             if self.thd_log_queue_handler is not None:
                 self.thd_log_queue_handler.join(timeout=1)
-        logger.info(f'[{self.config_name}] stopped; managed virtual display retained')
+            if self.thd_preview_handler is not None:
+                self.thd_preview_handler.join(timeout=2)
+        logger.info(f'[{name}] stopped; managed virtual display retained')
+        return True
 
-    def _terminate_worker_children(self) -> None:
+    def _worker_children(self) -> list:
         try:
             children = psutil.Process(self._process.pid).children(recursive=True)
         except (psutil.Error, OSError):
-            return
+            return []
         # win 平台：游戏与启动器由实例进程 Popen 拉起，属于其子进程树，不能连带终止
         protected = self._win_protected_process_names()
         if protected:
@@ -183,6 +315,10 @@ class ProcessManager:
                     pass
                 kept.append(child)
             children = kept
+        return children
+
+    @staticmethod
+    def _terminate_processes(children) -> None:
         for child in reversed(children):
             try:
                 child.terminate()
@@ -461,7 +597,7 @@ class ProcessManager:
     @staticmethod
     def run_process(
         config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None,
-        display_pipe=None, worker_stop=None
+        display_pipe=None, worker_stop=None, preview_wanted: threading.Event = None,
     ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -478,7 +614,7 @@ class ProcessManager:
             from module.logger import console_hdlr
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
-        set_preview_queue(pq)
+        set_preview_queue(pq, preview_wanted)
 
         from module.config.config import NikkeConfig
 

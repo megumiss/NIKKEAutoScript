@@ -37,7 +37,12 @@ const LIVE_WINDOW_SECONDS = 5
 const POLL_RATES = [1, 2, 5, 10]
 const RATE_STORAGE_KEY = 'nkas-preview-rate'
 const rateIndex = ref(Math.max(0, POLL_RATES.indexOf(Number(localStorage.getItem(RATE_STORAGE_KEY)) || 1)))
+// A request slower than this is abandoned so slow responses never pile up.
+const REQUEST_TIMEOUT_MS = 3000
 let pollTimer: number | undefined
+// Bumped on every start/stop so a loop resuming after an await cannot fork a second loop.
+let pollGeneration = 0
+let inflight: AbortController | undefined
 let lastCapturedAt = 0
 let capturedAt = 0
 
@@ -191,41 +196,71 @@ function setFrame(url: string) {
 }
 
 async function tick() {
-  if (!expanded.value || !props.name || interactive.value) return
+  // Each request also renews the backend sampling lease, so a hidden tab must
+  // not poll: the backend stops sampling a few seconds after the last viewer.
+  if (!expanded.value || !props.name || interactive.value || document.hidden) return
+  if (inflight) return
   const name = props.name
+  const controller = new AbortController()
+  inflight = controller
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
-    const response = await fetch(`/api/${encodeURIComponent(props.name)}/screenshot?t=${Date.now()}`)
+    // interval lets the backend sampler match this tab's polling cadence.
+    const response = await fetch(`/api/${encodeURIComponent(props.name)}/screenshot?t=${Date.now()}&interval=${pollRate.value}`, {
+      signal: controller.signal,
+    })
     if (name !== props.name || !expanded.value || interactive.value) return
     if (response.ok) {
       const at = Number(response.headers.get('X-Captured-At') || 0)
-      // Skip the body when the frame has not changed; the stream is discarded.
       if (at && at !== lastCapturedAt) {
         lastCapturedAt = at
         capturedAt = at
         const blob = await response.blob()
         if (name !== props.name || !expanded.value || interactive.value) return
         setFrame(URL.createObjectURL(blob))
+      } else {
+        // Unchanged frame: release the connection without reading the body.
+        await response.body?.cancel()
       }
       status.value = capturedAt && Date.now() / 1000 - capturedAt <= staleAfter.value ? 'live' : 'stale'
     } else if (response.status === 404) {
       status.value = 'none'
     }
   } catch {
-    // Network hiccup: keep the current frame and retry on the next tick.
+    // Network hiccup or timeout: keep the current frame and retry on the next tick.
+  } finally {
+    window.clearTimeout(timeout)
+    if (inflight === controller) inflight = undefined
   }
+}
+
+// The next request is scheduled only after the previous one settles, so a slow
+// backend lowers the effective rate instead of stacking requests.
+async function pollLoop(generation: number) {
+  await tick()
+  if (generation !== pollGeneration) return
+  pollTimer = window.setTimeout(() => pollLoop(generation), pollRate.value * 1000)
 }
 
 function startPolling() {
   stopPolling()
-  tick()
-  pollTimer = window.setInterval(tick, pollRate.value * 1000)
+  pollLoop(pollGeneration)
 }
 
 function stopPolling() {
+  pollGeneration++
   if (pollTimer !== undefined) {
-    window.clearInterval(pollTimer)
+    window.clearTimeout(pollTimer)
     pollTimer = undefined
   }
+  inflight?.abort()
+  inflight = undefined
+}
+
+function onVisibilityChange() {
+  if (!expanded.value || interactive.value) return
+  if (document.hidden) stopPolling()
+  else startPolling()
 }
 
 function resetFrame() {
@@ -259,6 +294,7 @@ watch(expanded, value => {
 // The watcher is not immediate, so when the persisted state reopens the
 // preview right on mount the polling/layout tracking must start here.
 onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange)
   if (expanded.value) openPreview()
 })
 
@@ -302,6 +338,7 @@ watch(() => props.name, () => {
 onBeforeUnmount(() => {
   disposed = true
   if (controlCheck) clearInterval(controlCheck)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   stopPolling()
   stopObserver()
   if (frameUrl.value) URL.revokeObjectURL(frameUrl.value)

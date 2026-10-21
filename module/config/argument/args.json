@@ -217,6 +217,18 @@
         "value": "",
         "valuetype": "str",
         "display": "readonly"
+      },
+      "AutoUnlock": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "Password": {
+        "type": "input",
+        "value": ""
       }
     },
     "Scrcpy": {

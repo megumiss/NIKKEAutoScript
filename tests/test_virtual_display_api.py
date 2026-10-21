@@ -10,6 +10,8 @@ class InstanceLifecycleApiTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.request = SimpleNamespace(path_params={'name': 'test'})
         self.manager = Mock(alive=False)
+        self.manager.start_checked.return_value = 'started'
+        self.manager.stop.return_value = True
         for target, kwargs in [
             ('validate_instance', {}), ('_clear_serial_failed', {}),
             ('_pc_client_requires_admin', {'return_value': False}),
@@ -25,7 +27,8 @@ class InstanceLifecycleApiTests(unittest.IsolatedAsyncioTestCase):
     async def test_start_runs_with_real_threadpool_argument_binding(self):
         response = await routes_instances.start(self.request)
         self.assertEqual(response.status_code, 200)
-        self.manager.start.assert_called_once_with('nkas', ev=routes_instances.updater.event)
+        self.manager.start_checked.assert_called_once_with(
+            func='nkas', ev=routes_instances.updater.event, config_name='test')
 
     async def test_stopping_dead_worker_is_idempotent(self):
         for _ in range(2):
@@ -40,7 +43,7 @@ class InstanceLifecycleApiTests(unittest.IsolatedAsyncioTestCase):
                 response = await routes_instances.start(self.request)
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(json.loads(response.body)['code'], code)
-        self.manager.start.assert_not_called()
+        self.manager.start_checked.assert_not_called()
 
     async def test_copy_renews_identity_and_respects_schedule_option(self):
         from copy import deepcopy
