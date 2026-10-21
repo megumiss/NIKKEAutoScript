@@ -32,6 +32,8 @@ public final class Server {
     private static int actualDisplayHeight;
     private static int physicalDisplayRotation = DISPLAY_NONE;
     private static int displayId = -1;
+    private static String displayIdentity;
+    private static String displaySocket;
     private static int forcedDisplaySizeId = DISPLAY_NONE;
     private static final byte[][] frameBuffers = new byte[FRAME_BUFFER_COUNT][];
     private static final int[] frameReaders = new int[FRAME_BUFFER_COUNT];
@@ -45,12 +47,14 @@ public final class Server {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 4) {
-            throw new IllegalArgumentException("usage: width height dpi socketName");
+            throw new IllegalArgumentException("usage: width height dpi socketName [displayIdentity]");
         }
         int width = Integer.parseInt(args[0]);
         int height = Integer.parseInt(args[1]);
         int dpi = Integer.parseInt(args[2]);
         String socketName = args[3];
+        displaySocket = socketName;
+        displayIdentity = args.length >= 5 ? normalizeDisplayIdentity(args[4]) : randomDisplayIdentity();
         frameWidth = width;
         frameHeight = height;
 
@@ -60,12 +64,13 @@ public final class Server {
         Object handler = createCaptureHandler();
         imageReader = createImageReader(width, height, handler);
         physicalDisplayRotation = getWindowManagerRotation();
-        virtualDisplay = createVirtualDisplay(width, height, dpi, imageReader);
+        virtualDisplay = createVirtualDisplay(width, height, dpi, imageReader, displayIdentity);
         Object display = virtualDisplay.getClass().getMethod("getDisplay").invoke(virtualDisplay);
         displayId = (Integer) display.getClass().getMethod("getDisplayId").invoke(display);
         updateDisplayGeometry(display, width, height);
 
-        System.out.println("NKAS_VD_READY id=" + displayId + " socket=" + socketName
+        System.out.println("NKAS_VD_READY id=" + displayId + " identity=" + displayIdentity
+                + " pid=" + android.os.Process.myPid() + " socket=" + socketName
                 + " size=" + actualDisplayWidth + "x" + actualDisplayHeight
                 + " rotation=" + displayRotation);
         System.out.flush();
@@ -177,7 +182,7 @@ public final class Server {
     }
 
     private static Object createVirtualDisplay(
-            int width, int height, int dpi, Object reader) throws Exception {
+            int width, int height, int dpi, Object reader, String identity) throws Exception {
         Object context = Class.forName("com.genymobile.scrcpy.FakeContext")
                 .getMethod("get").invoke(null);
         Class<?> contextClass = Class.forName("android.content.Context");
@@ -221,7 +226,7 @@ public final class Server {
             }
             previous = flags;
             try {
-                Object display = create.invoke(manager, virtualDisplayName(), width, height, dpi, surface, flags);
+                Object display = create.invoke(manager, virtualDisplayName(identity), width, height, dpi, surface, flags);
                 if (display != null) {
                     System.out.println("NKAS_VD_FLAGS sdk=" + sdk + " flags=0x"
                             + Integer.toHexString(flags));
@@ -236,8 +241,23 @@ public final class Server {
         throw new RuntimeException("Could not create virtual display", lastError);
     }
 
-    private static String virtualDisplayName() {
-        return DISPLAY_NAME_PREFIX + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
+    private static String randomDisplayIdentity() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+    }
+
+    private static String normalizeDisplayIdentity(String value) {
+        String identity = value == null ? "" : value.trim().toLowerCase();
+        if (identity.startsWith("nkas-id-")) {
+            identity = identity.substring("nkas-id-".length());
+        }
+        if (!identity.matches("[a-z0-9]{12}")) {
+            throw new IllegalArgumentException("Invalid display identity");
+        }
+        return identity;
+    }
+
+    private static String virtualDisplayName(String identity) {
+        return DISPLAY_NAME_PREFIX + identity;
     }
 
     private static void updateDisplayGeometry(Object display, int fallbackWidth, int fallbackHeight) {
@@ -846,6 +866,8 @@ public final class Server {
             Object socket = serverClass.getMethod("accept").invoke(server);
             try {
                 handleClient(socket);
+            } catch (java.io.IOException e) {
+                System.err.println("NKAS_VD_CLIENT_DISCONNECTED " + e.getMessage());
             } finally {
                 socket.getClass().getMethod("close").invoke(socket);
             }
@@ -877,6 +899,12 @@ public final class Server {
                 releaseFrame(frame);
             }
         } else if ("INFO".equals(command)) {
+            Object display = virtualDisplay.getClass().getMethod("getDisplay").invoke(virtualDisplay);
+            if (!(Boolean) display.getClass().getMethod("isValid").invoke(display)) {
+                rawOutput.write("ERROR display removed\n".getBytes("UTF-8"));
+                rawOutput.flush();
+                return;
+            }
             int width;
             int height;
             long frames;
@@ -885,7 +913,8 @@ public final class Server {
                 height = latestHeight > 0 ? latestHeight : actualDisplayHeight;
                 frames = frameCount;
             }
-            rawOutput.write(("OK id=" + displayId + " frames=" + frames
+            rawOutput.write(("OK id=" + displayId + " identity=" + displayIdentity
+                    + " pid=" + android.os.Process.myPid() + " socket=" + displaySocket + " frames=" + frames
                     + " size=" + width + "x" + height
                     + " rotation=" + displayRotation + "\n").getBytes("UTF-8"));
             rawOutput.flush();
@@ -951,5 +980,6 @@ public final class Server {
         }
         captureThread = null;
         displayId = DISPLAY_NONE;
+        displayIdentity = null;
     }
 }
