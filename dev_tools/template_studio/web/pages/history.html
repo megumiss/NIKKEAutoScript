@@ -3,14 +3,13 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>历史截图索引校对 · Event Studio</title>
-  <link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/history_review.css">
-  <script src="/history_review.js" defer></script>
+  <link rel="stylesheet" href="/static/studio.css"><link rel="stylesheet" href="/static/history.css">
+  <script src="/static/history.js" defer></script>
 </head>
 <body>
-<header class="topbar">
+<header class="topbar workspace-topbar">
   <div class="brand"><h1>历史截图索引校对</h1><span>NIKKE · EVENT STUDIO</span></div>
-  <span class="badge">临时工具</span>
-  <div class="top-actions"><a href="/">返回工作台</a><button id="reload" disabled>重新读取</button><button id="download" disabled>下载 JSON</button><button id="save" class="primary" disabled>保存修改</button></div>
+  <div class="workspace-toolbar"><nav class="studio-nav" aria-label="工作台导航"><a href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>模板资源</span></a><a href="/events"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16m-11 5 2 2 4-4"/></svg><span>活动流程</span></a><a href="/history" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.5 7M3 4v7h7m2-4v5l3 2"/></svg><span>历史索引</span></a></nav><div class="page-actions"><button id="reload" disabled>重新读取</button><button id="download" disabled>下载 JSON</button><button id="save" class="primary" disabled>保存修改</button></div></div>
 </header>
 <div class="history-summary"><p>逐张核对原图，选择活动、场景和对应模板。</p><span id="summary" class="hint">正在读取索引…</span></div>
 <p id="error" class="dialog-error" role="alert" hidden></p>
