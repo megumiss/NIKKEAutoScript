@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>历史截图索引校对 · Event Studio</title>
+  <link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/history_review.css">
+  <script src="/history_review.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><h1>历史截图索引校对</h1><span>NIKKE · EVENT STUDIO</span></div>
+  <span class="badge">临时工具</span>
+  <div class="top-actions"><a href="/">返回工作台</a><button id="reload" disabled>重新读取</button><button id="download" disabled>下载 JSON</button><button id="save" class="primary" disabled>保存修改</button></div>
+</header>
+<div class="history-summary"><p>逐张核对原图，选择活动、场景和对应模板。</p><span id="summary" class="hint">正在读取索引…</span></div>
+<p id="error" class="dialog-error" role="alert" hidden></p>
+<main class="history-workspace">
+  <aside class="surface history-list-panel" aria-label="索引列表">
+    <div class="panel-heading"><h2>截图与缺项 <span id="count" class="count"></span></h2><button id="add" class="small" disabled>新增</button></div>
+    <div class="history-filters">
+      <label class="sr-only" for="search">搜索截图、场景或模板</label><input id="search" type="search" placeholder="搜索文件名、场景、模板">
+      <label class="sr-only" for="eventFilter">筛选活动</label><select id="eventFilter"><option value="">所有活动</option></select>
+      <label class="sr-only" for="phaseFilter">筛选阶段</label><select id="phaseFilter"><option value="">所有阶段</option></select>
+      <div class="filter-row"><label class="sr-only" for="sceneFilter">筛选场景</label><select id="sceneFilter"><option value="">所有场景</option></select><label class="sr-only" for="kindFilter">筛选缺项</label><select id="kindFilter"><option value="">全部条目</option><option value="missing">缺截图</option><option value="unassigned">待补模板</option></select></div>
+    </div>
+    <div id="rows" class="shot-list"><p class="empty">正在读取…</p></div>
+  </aside>
+  <section class="surface history-preview" aria-label="截图预览">
+    <div class="panel-heading"><h2>原始截图</h2><button id="enlarge" class="small" disabled>放大查看</button></div>
+    <div id="previewFrame"><img id="screenshot" alt="当前索引对应的完整截图" hidden><p id="previewEmpty" class="empty">选择一条索引</p></div>
+    <div class="history-preview-bottom"><p id="filename" class="filename hint"></p><div class="filter-row"><button id="previous" class="small" disabled>上一条</button><span id="position" class="hint"></span><button id="next" class="small" disabled>下一条</button></div></div>
+  </section>
+  <section class="surface history-editor" aria-label="编辑关联">
+    <div class="panel-heading"><h2>对应关系 <span id="rowState" class="badge"></span></h2><button id="remove" class="text-button danger" disabled>移除此条</button></div>
+    <div id="editorEmpty" class="empty">选择截图或缺项后开始校对。</div>
+    <div id="editor" hidden>
+      <div class="history-fields">
+        <label for="path">截图路径</label><div class="filter-row"><input id="path" placeholder="留空表示待补截图" spellcheck="false"><button id="browse" type="button">选图</button></div>
+        <label for="event">所属活动</label><select id="event"></select>
+        <div class="form-grid"><div><label for="phase">所属阶段</label><select id="phase"></select></div><div><label for="scene">所属场景</label><select id="scene"></select></div></div>
+        <p id="eventInfo" class="hint filename"></p><p id="sceneHint" class="hint"></p>
+      </div>
+      <div class="history-template-heading"><h3>对应模板 <span id="templateCount" class="count"></span></h3><label class="toggle"><input id="allTemplates" type="checkbox">显示当前阶段全部 YAML 模板</label><p class="hint">只关联当前阶段的 YAML 模板；切换阶段后仅保留该阶段的勾选项。</p></div>
+      <div id="templates" class="history-templates"></div>
+    </div>
+  </section>
+</main>
+<footer><span id="status" role="status" aria-live="polite">读取中…</span><span id="file" class="filename hint"></span></footer>
+<dialog id="imageDialog" class="history-image-dialog"><div class="dialog-heading"><h2>原图 · 720 × 1280</h2><button data-close="imageDialog">关闭</button></div><img id="largeImage" alt="放大后的完整截图"></dialog>
+<dialog id="browseDialog" class="import-dialog">
+  <div class="dialog-heading"><h2>选择对应截图</h2><button data-close="browseDialog">关闭</button></div>
+  <div class="import-controls"><label for="directory">截图文件夹</label><div class="filter-row"><input id="directory" value="D:/PCR/截图"><button id="browseLoad">浏览</button></div><div class="date-fields"><label>开始日期<input id="dateFrom" type="date"></label><label>结束日期<input id="dateTo" type="date"></label></div><p class="hint">仅显示 720×1280 的 PNG/JPG，每页 30 张。点击图片关联到当前条目。</p></div>
+  <p id="browseError" class="dialog-error" role="alert" hidden></p><div id="browseFiles" class="browse-grid"></div>
+  <div class="browse-pagination"><button id="browsePrev" disabled>上一页</button><span id="browsePage" class="hint"></span><button id="browseNext" disabled>下一页</button></div>
+</dialog>
+</body>
+</html>
