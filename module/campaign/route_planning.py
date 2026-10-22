@@ -5,6 +5,8 @@ from copy import copy
 import cv2
 import numpy as np
 
+from module.campaign.run_state import COMBAT_ENEMY_KINDS
+
 from module.campaign.navigation.pathfinding import NoConnectedRoad
 from module.campaign.navigation.targets import walking_distance
 from module.campaign.route_branches import branch_enemy
@@ -53,7 +55,9 @@ def refresh_route(state, chart, snapshot, cut):
         if done or state.cooling(current['id']):
             current = None
         elif current['kind'] == 'story':
-            current = dict(current, position=state.enemies[current['id']]['position'])
+            enemy = state.enemies[current['id']]
+            current = (dict(current, position=enemy['position'], enemy_kind=enemy['kind'])
+                       if enemy['kind'] in COMBAT_ENEMY_KINDS else None)
     if current is not None and current['kind'] == 'mechanism':
         state.route_goal = current
         return current
@@ -75,7 +79,7 @@ def refresh_route(state, chart, snapshot, cut):
         elif record.get('state') == 'off' and (record.get('near_enemy') or distance <= MECHANISM_NEAR_SQUAD):
             near = distance <= MECHANISM_NEAR_SQUAD or any(
                 walking_distance(cut.road, cut.regions, item['position'], enemy['position']) <= MECHANISM_NEAR_ENEMY
-                for enemy in state.pending_enemies() if enemy['kind'] == 'normal'
+                for enemy in state.pending_enemies() if enemy['kind'] in COMBAT_ENEMY_KINDS
                 and np.linalg.norm(np.asarray(enemy['position']) - item['position']) <= MECHANISM_NEAR_ENEMY)
             if near:
                 reason = 'nearby_closed_mechanism'
@@ -86,14 +90,16 @@ def refresh_route(state, chart, snapshot, cut):
         current = best
     if current is None and state.story_target:
         enemy = state.enemies.get(state.story_target)
-        if enemy and enemy['status'] == 'pending' and not state.cooling(enemy['id']):
-            current = dict(kind='story', id=enemy['id'], position=enemy['position'], reason='main_story_marker')
+        if (enemy and enemy['kind'] in COMBAT_ENEMY_KINDS and enemy['status'] == 'pending'
+                and not state.cooling(enemy['id'])):
+            current = dict(kind='story', id=enemy['id'], position=enemy['position'],
+                           enemy_kind=enemy['kind'], reason='main_story_marker')
     state.route_goal = current
     return current
 
 
 def route_enemy(state, cut, squad, target, path, distances):
-    """选路程前方的第一个普通敌人，忽略别条支路上的全局最近敌人。
+    """选路程前方的第一个普通敌人或 Boss，忽略别条支路上的全局最近敌人。
 
     候选须接近实际路径，且经该敌人的道路绕行不超过 ROUTE_DETOUR；距离与分量同时校验，
     防止把直线相邻但隔墙的敌人算在沿途。冷却中的沿途敌人不能静默越过，返回明确的暂停目标。
@@ -101,7 +107,7 @@ def route_enemy(state, cut, squad, target, path, distances):
     candidates = []
     full = float(distances[-1] + np.linalg.norm(path[-1] - np.asarray(target)))
     for enemy in state.enemies.values():
-        if enemy['kind'] != 'normal' or enemy['status'] == 'cleared':
+        if enemy['kind'] not in COMBAT_ENEMY_KINDS or enemy['status'] == 'cleared':
             continue
         point = np.asarray(enemy['position'], float)
         nearest = int(np.argmin(np.linalg.norm(path - point, axis=1)))
@@ -162,7 +168,7 @@ def route_action(state, cut, squad, destination):
                     reason='advance_on_route', for_target=destination['id'])
     goal = dict(destination, distance=round(float(distances[-1]), 1))
     if goal['kind'] == 'story':
-        goal.update(kind='enemy', enemy_kind='normal', reason='main_story_marker')
+        goal.update(kind='enemy', enemy_kind=destination.get('enemy_kind', 'normal'), reason='main_story_marker')
     return goal
 
 

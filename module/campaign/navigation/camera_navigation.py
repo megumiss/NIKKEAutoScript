@@ -605,10 +605,12 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
     return translation @ matrix
 
 
-def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, target, squad_position, click):
+def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, target, squad_position, click,
+                       enemy_kind='normal'):
     """重新识别点击前的新帧，只返回本帧再次确认的原目标脚圈中心。
 
     不以整片场景像素是否相同判断镜头稳定，避免河流或角色动画使有效匹配失效。
+    enemy_kind 必须沿用原目标的普通／Boss 类型，最终复核不能退回普通敌人默认值。
     新帧道路必须独立配准通过，镜头偏移不超过 12 地图像素、尺度变化不超过 12%；
     再用原参考帧重做目标身份与两帧运动匹配，中心偏移不超过 TRACK_DISTANCE 客户区像素。
     本方法不拖动或开合地图。复核失败保留前后帧并抛 ClickUnconfirmed，禁止自动展开重定位；
@@ -631,7 +633,8 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
             raise ValueError(f'最新帧镜头位置或比例变化超限（镜头偏移 {shift:.1f} 地图像素，'
                              f'比例变化 {scale_change:.1%}）')
         rings = observe_rings(fresh, panel, current['matrix'], current['viewport'])
-        result = match_target_ring(reference, rings, target, squad_position, goto.VIEWPORT_PIXEL)
+        result = match_target_ring(reference, rings, target, squad_position, goto.VIEWPORT_PIXEL,
+                                   enemy_kind=enemy_kind)
         if result.get('click') is None:
             raise ValueError(result['reason'].rstrip('。'))
         latest_click = np.asarray(result['click'], float)
@@ -649,7 +652,8 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
     return latest_click
 
 
-def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3, enemy_assist=False):
+def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3, enemy_assist=False,
+                            enemy_kind='normal'):
     """镜头规划：先把目标平移到镜头注视点，再点落点把小队送过去。
 
     对准在地图空间进行：视野中心由道路配准给出，远处目标不经逆单应外推（透视地平线）。
@@ -668,6 +672,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     全局配准被接受即视为批末校正已完成。
     实测（退回固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
     enemy_assist 允许敌人模式利用两次被接受的定位及同帧脚圈提前点击；不额外拖动来收集证据。
+    enemy_kind 将普通／Boss 原目标类型传到匹配和最终点击复核，不允许跨类替代。
     证据只在本次规划内保留，允许跨过一帧不可信定位，但不使用该帧参与匹配；两参考帧最多
     相隔两次平移，累计镜头路程不超过 450 地图像素。重新锚定、缩放跳变或超限时丢弃证据；
     辅助失败继续原落点和拖动流程，不为等待可靠帧增加拖动。
@@ -725,7 +730,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         if enemy_assist and ring_trusted and ring_previous is not None:
             try:
                 current_rings = observe_rings(field, panel, matrix, viewport)
-                result = match_target_ring(ring_previous, current_rings, target, squad_position, goto.VIEWPORT_PIXEL)
+                result = match_target_ring(ring_previous, current_rings, target, squad_position, goto.VIEWPORT_PIXEL,
+                                           enemy_kind=enemy_kind)
             except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
                 result = dict(reason=f'脚圈辅助不可用：{error}')
             session.emit(message=f'脚圈辅助：{result["reason"].rstrip("。")}',
@@ -733,7 +739,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                          enemy_ring_pan_span=count - ring_pan)
             if result.get('click') is not None:
                 click = confirm_ring_click(session, matcher, ring_previous, field, viewport, scale_a,
-                                           target, squad_position, np.asarray(result['click'], float))
+                                           target, squad_position, np.asarray(result['click'], float),
+                                           enemy_kind=enemy_kind)
                 session.last_plan_enemy_ring = True
                 session.emit(state='planning', navigation_method='enemy_ring', camera_pans=session.camera_pans,
                              plan_camera_pans=count, planned_target=target.tolist(), click=click.tolist(),

@@ -206,8 +206,8 @@ class CampaignObserver:
                 if observe_squad:
                     center = refine_ring(panel, item)
                     players.append((center if center is not None else item.center).round(1).tolist())
-            elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex'):
-                enemies.append(dict(kind='ex' if item.label.endswith('_ex') else 'normal',
+            elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_enemy_boss'):
+                enemies.append(dict(kind=item.label.removeprefix('minimap_enemy_'),
                                     position=item.center.round(1).tolist(), confidence=round(item.confidence, 3)))
         return players, enemies
 

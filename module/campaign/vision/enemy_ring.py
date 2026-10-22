@@ -140,15 +140,16 @@ def scene_tracks(before, after):
     return old, tracked
 
 
-def match_target_ring(before, after, target, squad, gaze):
+def match_target_ring(before, after, target, squad, gaze, enemy_kind='normal'):
     """判断两帧是否唯一支持原目标脚圈；返回带中文原因的报告，拒绝时不提供 click。
 
     target/squad 与两帧 viewport 均为章节底图像素，gaze 和返回 click 为客户区像素。
     只用观测到的沿向位移比例，不拟合完整二维换算：镜头位移限 12～450 地图像素，剩余横向
     分量不超过 16 地图像素且不超过本步的 15%，比例绝对值不超过 1。两帧均须唯一对应到原
-    普通敌人且可见小队未移动；候选残差不超过 40 客户区像素，次选至少多 80px 且至少两倍。
+    普通敌人或 Boss 且可见小队未移动；候选残差不超过 40 客户区像素，次选至少多 80px 且至少两倍。
     这些保守门限不保证泛化；无证据、残差过大或竞争候选不明确时由调用方继续原导航。
     配准接受状态和面板缩放跳变由导航调用方先行检查。
+    enemy_kind 只接受 normal 或 boss，两帧均须是该类型；不能用普通敌人或 EX 替代 Boss。
     """
     report = {'reason': '没有可比较的脚圈。'}
     if not len(before.centers) or not len(after.centers):
@@ -159,8 +160,8 @@ def match_target_ring(before, after, target, squad, gaze):
         return dict(reason='目标或镜头坐标无效。')
     for frame in (before, after):
         nearby = [label for label, point in frame.enemies if np.linalg.norm(point - target) <= 30]
-        if nearby != ['minimap_enemy_normal']:
-            return dict(reason='本帧小地图无法唯一确认原普通敌人。')
+        if enemy_kind not in ('normal', 'boss') or nearby != [f'minimap_enemy_{enemy_kind}']:
+            return dict(reason='本帧小地图无法唯一确认原目标的敌人类型。')
         if len(frame.squad) > 1 or any(np.linalg.norm(point - squad) > 12 for point in frame.squad):
             return dict(reason='可见小队位置变化，丢弃脚圈证据。')
     step = after.viewport - before.viewport

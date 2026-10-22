@@ -60,7 +60,8 @@ def goal_brief(goal):
     """目标的一行短描述，例如「普通敌人 enemy-1」；没有记录时写「没有记录」。"""
     if not goal or goal.get('kind') == 'none':
         return '没有记录'
-    return f"{label(GOAL_KINDS, goal['kind'])} {goal.get('id')}"
+    name = 'Boss' if goal.get('enemy_kind') == 'boss' else label(GOAL_KINDS, goal['kind'])
+    return f"{name} {goal.get('id')}"
 
 
 def describe_result(result):
@@ -163,6 +164,8 @@ class CampaignExecutor:
         self.session.begin_target(purpose)
         target = goal['position']
         kwargs = dict(max_moves=TARGET_MOVES, purpose=purpose)
+        if kind == 'enemy' and goal.get('enemy_kind', 'normal') != 'normal':
+            kwargs['enemy_kind'] = goal['enemy_kind']
         if kind == 'elevator':
             target = goal['leg']['exit']
             kwargs['elevators'] = single_transfer_annotations(goal['leg'])
@@ -359,6 +362,9 @@ class CampaignExecutor:
         if goal is not None and goal.get('kind') == 'enemy':
             self.owner.state.enemies[goal['id']]['status'] = 'cleared'
             logger.info(f'战斗胜利：{goal_brief(goal)} 已标记为清除，移出候选集合。')
+            if goal.get('enemy_kind') == 'boss':
+                # Boss 可能触发换章，旧地图和目标记忆不能跨章继续使用。
+                self.session.verify_identity(self.session.win.client())
         else:
             logger.warning(f'战斗胜利但无关联敌人目标（最近执行目标：{goal_brief(goal)}），不更新敌人状态。')
         return settled

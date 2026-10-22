@@ -24,6 +24,8 @@ OBSERVED_CELL = 32
 # 可用的定位状态：accepted 是本帧配准被接受；reused 是沿用上一次被接受的坐标
 # （见 session.reuse_registration），两者都给了可信的小队底图坐标。
 LOCALIZED = ('accepted', 'reused')
+# Boss 与普通敌人均可战斗；EX 只记忆和展示，禁止自动选择。
+COMBAT_ENEMY_KINDS = ('normal', 'boss')
 # 本帧检到的光幕与已记录封锁的配对距离：屏障投影实测中位约 6、p90 约 16 底图像素，
 # mark_barrier 自己还有 28 的吸附容差，取 48 兼顾投影误差与相邻封锁不混淆。
 CURTAIN_MATCH_RADIUS = 48.
@@ -192,8 +194,8 @@ class RunState:
     def _absorb_enemies(self, enemies, quad):
         """把本帧的敌人标记并进状态：按距离合并到既有项，否则新建。
 
-        只收普通敌人：EX 不在本期的目标范围内（也不参与选择），但仍按 kind 记下来，
-        供后续判断「这条路会触发战斗」。
+        普通、Boss、EX 分别保留类型，只有前两者参与战斗目标选择。
+        同帧每条旧记录最多匹配一次；不同类型不会因远距重复投影保护而相互吞并。
         合并半径之外还有一道重复判据：既有记录的位置就在本帧视野里（quad 覆盖、且离边界有余量），
         本帧却没在那里认出敌人，却在它附近冒出一个新标记——那更可能是同一只敌人被配准投偏了，
         而不是多了一只。这时并入既有记录、保留它原来的坐标（来自更可信的那一帧），不新建。
@@ -203,7 +205,7 @@ class RunState:
         判定才与标记的先后顺序无关。
         """
         added, merged, held = [], 0, 0
-        matched = set()
+        matched, assigned = set(), set()
         for item in enemies:
             position = np.asarray(item.get('position'), float)
             if position.shape != (2,) or not np.isfinite(position).all():
@@ -215,8 +217,8 @@ class RunState:
             position = np.asarray(item.get('position'), float)
             if position.shape != (2,) or not np.isfinite(position).all():
                 continue
-            match = self._nearest_enemy(position)
-            if match is None and self._is_duplicate_projection(position, quad, matched):
+            match = self._nearest_enemy(position, taken=assigned, kind=item.get('kind'))
+            if match is None and self._is_duplicate_projection(position, quad, matched, item.get('kind')):
                 held += 1
                 continue
             if match is None:
@@ -226,7 +228,9 @@ class RunState:
                                             'first_seen': self.tick, 'last_seen': self.tick, 'failures': 0}
                 added.append(identifier)
                 matched.add(identifier)
+                assigned.add(identifier)
                 continue
+            assigned.add(match)
             record = self.enemies[match]
             # 位置取最近一次观测：小队走近后的投影比远处那次准。
             record['position'] = position.tolist()
@@ -235,7 +239,7 @@ class RunState:
             merged += 1
         return {'enemies_added': added, 'enemies_refreshed': merged, 'enemies_held': held}
 
-    def _is_duplicate_projection(self, position, quad, matched):
+    def _is_duplicate_projection(self, position, quad, matched, kind=None):
         """这个落在合并半径外的新标记，是不是既有记录的同一只敌人被投偏了。
 
         只在既有记录仍是待清、位置确实在本帧视野里、且本帧没有别的标记认到它时才认：那种情况下
@@ -245,15 +249,23 @@ class RunState:
         shadow = self._nearest_enemy(position, ENEMY_SHADOW_RADIUS)
         if shadow is None or shadow in matched or self.enemies[shadow]['status'] != 'pending':
             return False
-        return self._inside(quad, self.enemies[shadow]['position'])
+        return (self.enemies[shadow]['kind'] == kind
+                and self._inside(quad, self.enemies[shadow]['position']))
 
-    def _nearest_enemy(self, position, radius=ENEMY_MERGE_RADIUS):
-        """合并半径内最近的既有敌人编号；没有就返回 None。"""
-        best, distance = None, radius
+    def _nearest_enemy(self, position, radius=ENEMY_MERGE_RADIUS, taken=(), kind=None):
+        """合并半径内优先返回同类且未分配的旧记录，避免 Boss 与旁边普通敌人交换编号。
+
+        未指定类型时保持最近邻行为；没有同类候选时允许本帧可靠分类修正旧标签。
+        taken 只包含本帧已分配记录，相邻不同目标不能覆盖同一编号。
+        """
+        best, rank = None, (2, radius)
         for identifier, record in self.enemies.items():
+            if identifier in taken:
+                continue
             span = float(np.linalg.norm(np.asarray(record['position'], float) - position))
-            if span <= distance:
-                best, distance = identifier, span
+            candidate = (int(kind is not None and record['kind'] != kind), span)
+            if span <= radius and candidate <= rank:
+                best, rank = identifier, candidate
         return best
 
     def _absorb_blocks(self, blocks, quad, can_clear=True, checked_ids=None):
@@ -329,11 +341,12 @@ class RunState:
         return [record for record in self.enemies.values()
                 if record['status'] == 'pending' and not self.cooling(record['id'])]
 
-    def remember_story_target(self, position):
+    def remember_story_target(self, position, kind='normal'):
         """把已通过两帧身份验证的主线敌人并入记忆，返回稳定编号；存在歧义或已清除时不覆盖。
 
         position 为可靠小地图配准的底图坐标，不能传入场景菱形或脚圈客户区坐标。
-        普通敌人的开战与清除仍使用同一编号，不另外建立一份主线敌人状态。
+        普通敌人和 Boss 的开战与清除仍使用同一编号，不另外建立一份主线敌人状态。
+        kind 必须来自两帧一致的小地图分类，默认 normal 保持旧调用兼容，EX 不可成为主线目标。
         """
         position = np.asarray(position, float)
         if position.shape != (2,) or not np.isfinite(position).all():
@@ -342,10 +355,12 @@ class RunState:
             return None
         nearby = [record for record in self.enemies.values()
                   if np.linalg.norm(np.asarray(record['position']) - position) <= ENEMY_MERGE_RADIUS]
-        if len(nearby) > 1 or (nearby and (nearby[0]['kind'] != 'normal' or nearby[0]['status'] != 'pending')):
+        if kind not in COMBAT_ENEMY_KINDS:
+            return None
+        if len(nearby) > 1 or (nearby and (nearby[0]['kind'] != kind or nearby[0]['status'] != 'pending')):
             return None
         if not nearby:
-            self._absorb_enemies([dict(kind='normal', position=position.tolist())], None)
+            self._absorb_enemies([dict(kind=kind, position=position.tolist())], None)
             nearby = [self.enemies[self._nearest_enemy(position)]]
         self.story_target = nearby[0]['id']
         self.cooldowns.pop('story-location', None)

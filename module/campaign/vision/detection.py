@@ -12,7 +12,7 @@ import numpy as np
 
 # 旧五类沿用各自验证过的取图方式：场景箭头与收集提示走遮罩切片，小地图标记走面板裁剪。
 LEGACY_SCENE_LABELS = ('scene_squad_arrow', 'scene_collectible_indicator')
-MINIMAP_LABELS = ('minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_squad_ring')
+MINIMAP_LABELS = ('minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_squad_ring', 'minimap_enemy_boss')
 # 机关、电梯、屏障和敌人脚圈走整幅客户区网格，边界规则来自模型包的 scene 契约。
 GRID_LABELS = ('scene_ground_mechanism_off', 'scene_ground_mechanism_on', 'scene_elevator_start',
                'scene_elevator_end', 'scene_barrier_curtain', 'scene_barrier_pillar', 'scene_enemy_ring')
@@ -167,8 +167,10 @@ class Detector:
         inputs, outputs = self.session.get_inputs(), self.session.get_outputs()
         if len(inputs) != 1 or inputs[0].shape != [1, 3, self.size, self.size] or inputs[0].type != 'tensor(float)':
             raise ValueError('Campaign YOLO input contract mismatch.')
-        if len(outputs) != 1:
-            raise ValueError('Campaign YOLO must have one raw detection output.')
+        expected_output = [1, 4 + len(self.labels), 8400]
+        if (len(outputs) != 1 or outputs[0].shape != expected_output or outputs[0].type != 'tensor(float)'
+                or self.metadata.get('output_shape', expected_output) != expected_output):
+            raise ValueError('Campaign YOLO raw output contract mismatch.')
         self.input_name, self.output_name = inputs[0].name, outputs[0].name
         self.lock = threading.Lock()
 

@@ -10,6 +10,8 @@
 
 import numpy as np
 
+from module.campaign.run_state import COMBAT_ENEMY_KINDS
+
 from module.campaign.navigation.targets import walking_distance
 from module.campaign.report import (BLOCK_STATUS, GOAL_KINDS, GOAL_REASONS, REJECT_REASONS, TARGET_SOURCES,
                                     label, points_text)
@@ -41,13 +43,13 @@ def nearest_enemy(state, cut, squad):
 
     先按切开图的分量筛候选：跨分量的要么真走不通，要么被光幕隔开，后者由调用方按原图再判一次。
     分量判定在原始坐标上做，网格吸附会把相邻分量并到一起虚报可达。
-    同分量普通敌人全部比较 A* 路程；直线距离只决定试算顺序，不能截掉绕路前方的候选。
+    同分量普通敌人与 Boss 全部比较 A* 路程；直线距离只决定试算顺序，不能截掉绕路前方的候选。
     """
     squad = np.asarray(squad, float)
     home = cut.component(squad)
     rejected, candidates = [], []
     for record in state.pending_enemies():
-        if record['kind'] != 'normal':
+        if record['kind'] not in COMBAT_ENEMY_KINDS:
             continue
         position = np.asarray(record['position'], float)
         if not home or cut.component(position) != home:
@@ -180,7 +182,7 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
         rejected = [dict(id=item['id'], position=item['position'], reason='different_component')
                     for item in candidates if item not in reachable]
     else:
-        candidates = [item for item in state.pending_enemies() if item['kind'] == 'normal']
+        candidates = [item for item in state.pending_enemies() if item['kind'] in COMBAT_ENEMY_KINDS]
         if goal is None:
             destination = refresh_route(state, chart, snapshot, cut)
             if destination is None:
@@ -243,7 +245,8 @@ def _describe_action(goal):
         if goal.get('unseen_cells') is not None:
             detail += f"，未探索区域 {goal['unseen_cells']} 格"
     else:
-        detail = f"{label(GOAL_KINDS, kind)} {goal['id']}，位置 {position}"
+        name = 'Boss' if goal.get('enemy_kind') == 'boss' else label(GOAL_KINDS, kind)
+        detail = f"{name} {goal['id']}，位置 {position}"
     if goal.get('distance') is not None:
         detail += f"，道路距离 {goal['distance']} 像素"
         if goal.get('straight') is not None:

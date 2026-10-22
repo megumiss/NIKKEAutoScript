@@ -72,7 +72,7 @@ onBeforeUnmount(() => { generation++ })
         <div class="section-heading"><b>{{ t('章节地图') }}</b><span>{{ mapBlocks.length ? `${mapBlocks.length} ${t('处道路封锁')}` : t('普通 / 困难共用底图') }}</span></div>
         <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :blocks="mapBlocks" :goal="goal" :route-goal="routeGoal" :routes="routes" :annotations="annotations" :label="t('章节地图')" @error="mapError = true" />
         <div v-else class="campaign-empty">{{ t('章节底图不可用') }}</div>
-        <div class="legend"><span class="cyan">○ {{ t('小队') }}</span><span class="red">◆ {{ t('敌人') }}</span><span class="purple">◆ EX</span><span v-if="remembered.length" class="red">◇ {{ t('记住的敌人') }} {{ remembered.length }}</span><span v-if="goal" class="gold">⊕ {{ t('执行目标') }}</span><span v-if="routeGoal" class="purple">◇ {{ t('路程目标') }}</span><span v-if="mapBlocks.length" class="blocked">╌ {{ t('道路封锁') }}</span></div>
+        <div class="legend"><span class="cyan">○ {{ t('小队') }}</span><span class="red">◆ {{ t('敌人') }}</span><span class="purple">◆ EX</span><span class="boss">✦ Boss</span><span v-if="remembered.length" class="red">◇ {{ t('记住的敌人') }} {{ remembered.length }}</span><span v-if="goal" class="gold">⊕ {{ t('执行目标') }}</span><span v-if="routeGoal" class="purple">◇ {{ t('路程目标') }}</span><span v-if="mapBlocks.length" class="blocked">╌ {{ t('道路封锁') }}</span></div>
         <div v-if="routes.execution || routes.destination" class="legend route-legend">
           <span v-if="routes.execution" class="gold">━ {{ t('本段路线') }} · {{ routes.execution.distance.toFixed(1) }} {{ t('地图像素') }}</span>
           <span v-if="routes.destination" class="purple">┄ {{ t('目的地路线') }} · {{ routes.destination.distance.toFixed(1) }} {{ t('地图像素') }}</span>
@@ -82,7 +82,7 @@ onBeforeUnmount(() => { generation++ })
         <div v-if="snapshot.memory" class="target-details">
           <div v-for="entry in [{ title: '路程目标', value: routeGoal }, { title: '执行目标', value: goal }]" :key="entry.title" class="target-row">
             <b>{{ t(entry.title) }}</b>
-            <template v-if="entry.value"><span>{{ t(goalKinds[entry.value.kind] || entry.value.kind) }} · {{ entry.value.id }} · {{ format(entry.value.position) }}</span><small v-if="entry.value.reason_text">{{ t(entry.value.reason_text) }}</small></template>
+            <template v-if="entry.value"><span>{{ entry.value.enemy_kind === 'boss' ? 'Boss' : t(goalKinds[entry.value.kind] || entry.value.kind) }} · {{ entry.value.id }} · {{ format(entry.value.position) }}</span><small v-if="entry.value.reason_text">{{ t(entry.value.reason_text) }}</small></template>
             <span v-else>—</span>
           </div>
         </div>
@@ -96,7 +96,7 @@ onBeforeUnmount(() => { generation++ })
           <div><dt>{{ t('小队位置') }} · {{ t('小地图') }}</dt><dd>{{ format(snapshot.minimap?.squad) }}</dd></div>
         </dl>
         <div v-if="snapshot.minimap?.enemies.length" class="enemy-list">
-          <div v-for="(enemy, i) in snapshot.minimap.enemies" :key="i"><span :class="enemy.kind === 'ex' ? 'purple' : 'red'">{{ enemy.kind === 'ex' ? 'EX' : t('敌人') }} {{ i + 1 }}</span><span>{{ format(enemy.position) }}</span></div>
+          <div v-for="(enemy, i) in snapshot.minimap.enemies" :key="i"><span :class="enemy.kind === 'boss' ? 'boss' : enemy.kind === 'ex' ? 'purple' : 'red'">{{ enemy.kind === 'boss' ? 'Boss' : enemy.kind === 'ex' ? 'EX' : t('敌人') }} {{ i + 1 }}</span><span>{{ format(enemy.position) }}</span></div>
           <small>{{ t('敌人坐标以小地图左上角为原点') }}</small>
         </div>
         <section class="annotations-section">
@@ -127,6 +127,7 @@ onBeforeUnmount(() => { generation++ })
 </template>
 
 <style scoped>
+.boss { color:var(--yellow); }
 .campaign-monitor { flex:none; overflow:hidden; margin-bottom:18px; }
 .campaign-head { display:flex; align-items:center; gap:14px; padding:18px 22px; border-bottom:1px solid var(--border); }
 h3 { margin:0 0 5px; font-size:16px; }

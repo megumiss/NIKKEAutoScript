@@ -404,7 +404,7 @@ class Campaign(ModuleBase):
         return self.chart
 
     def find_next_target(self, snapshot):
-        """选择下一个目标：可连通道路上最近的普通敌人，没有敌人时是附近的地面机关或电梯。
+        """选择下一个目标：可连通道路上最近的普通敌人或 Boss，没有敌人时是附近的机关或电梯。
 
         snapshot 来自 observer.observe，要求定位已被接受；模型不支持或定位不可用时返回 None。
         """
@@ -495,7 +495,7 @@ class Campaign(ModuleBase):
             destination['reason_text'] = label(GOAL_REASONS, destination.get('reason'))
         goal = self.last_goal
         if goal and goal.get('kind') != 'none' and goal.get('position') is not None:
-            memory['goal'] = dict(kind=goal['kind'], id=goal['id'],
+            memory['goal'] = dict(kind=goal['kind'], id=goal['id'], enemy_kind=goal.get('enemy_kind'),
                                   reason_text=label(GOAL_REASONS, goal.get('reason')),
                                   position=[round(float(value), 1) for value in goal['position']])
         return {'campaign': dict(source, memory=memory)}

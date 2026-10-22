@@ -3,6 +3,8 @@
 import networkx as nx
 import numpy as np
 
+from module.campaign.run_state import COMBAT_ENEMY_KINDS
+
 from module.campaign.navigation.targets import walking_distance
 from module.campaign.navigation.topology import road_topology
 from module.campaign.run_state import OBSERVED_CELL
@@ -43,14 +45,15 @@ class BranchSection:
         self._road, self._home = cut.road, home
 
     def enemies(self, state, cut, squad, destination):
-        """返回本段未清普通敌人及当前 A* 距离；最终主线敌人留到整段清理完再处理。
+        """返回本段未清普通敌人／Boss 及当前 A* 距离；最终主线敌人留到整段清理完再处理。
 
         同分量但 A* 无法给出路线的敌人也保留，交执行规划暂停，不能因寻路失败认定已清空。
         """
         result = []
         home = cut.component(squad)
         for enemy in state.enemies.values():
-            if enemy['kind'] != 'normal' or enemy['status'] == 'cleared' or enemy['id'] == destination['id']:
+            if (enemy['kind'] not in COMBAT_ENEMY_KINDS or enemy['status'] == 'cleared'
+                    or enemy['id'] == destination['id']):
                 continue
             if cut.component(enemy['position']) != home or not self.contains(enemy['position']):
                 continue

@@ -438,7 +438,7 @@ class CampaignSession(NavigationSession):
     def verify_identity(self, field):
         """核对章节、难度与弹窗；普通弹窗保留，EX 只关闭一次，任何用途都立即结束任务。
 
-        只在会话开始时调用：读到别的章节／难度或读不到时抛 WindowChanged，禁止后续输入。
+        在会话开始和 Boss 胜利后调用；读到别的章节／难度或读不到时抛 WindowChanged，禁止后续输入。
         """
         self.popup(field)
         current = chapter_identity(field, self.owner.chapter_ocr)
@@ -565,7 +565,11 @@ class CampaignSession(NavigationSession):
             self.check()
             if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
                 raise RuntimeError('定位期间道路还在变，不能用这次位置。')
-            report['enemy_markers'] = goto.normal_enemy_markers(panel, np.asarray(report['roi_to_map']))
+            matrix = np.asarray(report['roi_to_map'])
+            report['enemy_markers'] = goto.normal_enemy_markers(panel, matrix)
+            from module.campaign.vision.perception import boss_enemy_markers
+            report['enemy_markers_by_kind'] = {
+                'normal': report['enemy_markers'], 'boss': boss_enemy_markers(panel, matrix)}
             logger.info(f"展开地图定位成功：第 {attempt + 1} 次尝试，小队位置 {points_text(report['position'])}，"
                         f"道路重合度 {float(report['road_iou']):.3f}，"
                         f"面板上有 {len(report['enemy_markers'])} 个敌人标记，耗时 {watch}")
@@ -587,15 +591,17 @@ class CampaignSession(NavigationSession):
         from module.campaign.navigation.barrier_navigation import review_centered
         return review_centered(self, snapshot, identifier)
 
-    def plan(self, observation, target, enemy_assist=False):
+    def plan(self, observation, target, enemy_assist=False, enemy_kind='normal'):
         """用已确认的小队定位开始镜头规划，紧凑定位不足时仅重试一次完整展开定位。
 
         紧凑快照只提供底图位置，不冒充展开 ROI 的投影基准。起始镜头不一致或跟踪需要展开
         校正时，先回正并取得原始展开报告再规划；若小队已移动超过 12 地图像素，交回移动
         闭环更新起点。窗口、弹窗和输入预算异常不捕获，也不补发清理输入。
         纯镜头找敌人后的已知起点不进入实时小队定位回退；当前视野不足以规划时直接停止。
+        enemy_kind 传递原目标类型，Boss 脚圈辅助不得关联成普通敌人。
         """
         from module.campaign.navigation.barrier_navigation import curtains
+        options = {'enemy_kind': enemy_kind} if enemy_kind != 'normal' else {}
         field = self.win.client()
         self.identity(field)
         snapshot = self.observe_frame(field, known_squad=observation['position'])
@@ -606,7 +612,7 @@ class CampaignSession(NavigationSession):
             self.remember_navigation(snapshot)
             observation = self.reusable_report() or observation
         try:
-            return super().plan(observation, target, enemy_assist=enemy_assist)
+            return super().plan(observation, target, enemy_assist=enemy_assist, **options)
         except ValueError as exc:
             if observation.get('squad_source') == 'known':
                 raise RuntimeError('当前镜头无法完成移动规划；停止执行，不重新寻找小队圆环。') from exc
@@ -617,7 +623,7 @@ class CampaignSession(NavigationSession):
         updated = self.observe()
         if np.linalg.norm(np.asarray(updated['position']) - np.asarray(observation['position'])) > 12:
             raise SquadPositionChanged(observation['position'], updated['position'])
-        return super().plan(updated, target, enemy_assist=enemy_assist)
+        return super().plan(updated, target, enemy_assist=enemy_assist, **options)
 
     def absorb_expanded(self, panel, report):
         """把展开面板上认出的敌人与看到的区域并进运行状态，只记一行敌人的合并结果。
@@ -910,7 +916,7 @@ class CampaignSession(NavigationSession):
         return snapshot
 
     def remember_navigation(self, snapshot):
-        """将本帧可信紧凑小队定位交给移动入口，只携带底图坐标和同帧普通敌人。
+        """将本帧可信紧凑小队定位交给移动入口，只携带底图坐标和同帧分类敌人。
 
         不携带 roi_to_map：紧凑矩阵不能充当原始展开 ROI 的镜头基准。
         沿用帧和缺少实际配准分数的快照不建立导航缓存，后续任一手势使缓存失效。
@@ -925,7 +931,9 @@ class CampaignSession(NavigationSession):
             return
         markers = [list(item['position']) for item in snapshot.get('enemies', []) if item.get('kind') == 'normal']
         report = dict(position=position.tolist(), position_kind='squad', iou=float(iou),
-                      minimap_mode='compact', enemy_markers=markers)
+                      minimap_mode='compact', enemy_markers=markers,
+                      enemy_markers_by_kind={'normal': markers, 'boss': [list(item['position'])
+                          for item in snapshot.get('enemies', []) if item.get('kind') == 'boss']})
         if snapshot.get('squad_source') == 'known':
             report['squad_source'] = 'known'
         self.localized_report = {'report': report, 'gestures': self.gestures}

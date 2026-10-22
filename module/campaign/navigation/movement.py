@@ -30,7 +30,8 @@ def movement_plan(localizer, observation, target, anchor):
 
 
 def navigate(
-    session, target, emit, max_moves=24, arrival_radius=None, required_near=3, purpose='position', elevators=None
+    session, target, emit, max_moves=24, arrival_radius=None, required_near=3, purpose='position', elevators=None,
+    enemy_kind='normal'
 ):
     """有限步执行并重新定位，连续三次近点观测才算到达，无进展或预算耗尽明确失败。
 
@@ -43,6 +44,7 @@ def navigate(
     平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
     敌人模式仅在原目标附近有唯一小地图标记时启用两帧脚圈辅助；一次 navigate 至多辅助直点一次，
     附近试点始终保持原落点，不复用脚圈；辅助结果不会修改目标身份或战斗归属。
+    enemy_kind 为 normal 或 boss，实时位置只从同类标记吸附；Boss 不读取旧的普通敌人列表。
     """
     from module.campaign.navigation.controls import SQUAD_REACH
     from module.campaign.navigation.movement_feedback import (
@@ -52,6 +54,8 @@ def navigate(
         wake_arrow_click,
     )
 
+    if purpose == 'enemy' and enemy_kind not in ('normal', 'boss'):
+        raise ValueError('自动战斗目标只支持普通敌人和 Boss。')
     if arrival_radius is None:
         arrival_radius = SQUAD_REACH
     target = np.asarray(target, float)
@@ -107,9 +111,11 @@ def navigate(
         if transferring:
             approach = np.asarray(legs[0]['entry'], float)
         if purpose == 'enemy':
+            typed = observation.get('enemy_markers_by_kind', {})
+            available = typed.get(enemy_kind, observation.get('enemy_markers', []) if enemy_kind == 'normal' else [])
             markers = [
                 np.asarray(p)
-                for p in observation.get('enemy_markers', [])
+                for p in available
                 if np.linalg.norm(np.asarray(p) - target) <= 30
             ]
             if len(markers) == 1:
@@ -171,7 +177,8 @@ def navigate(
                     candidate = probes[probe_index]
                     probe_index += 1
                     try:
-                        click = session.plan(observation, candidate)
+                        options = {'enemy_kind': enemy_kind} if enemy_kind != 'normal' else {}
+                        click = session.plan(observation, candidate, **options)
                         break
                     except AnchorUnresolved:
                         raise
@@ -192,6 +199,8 @@ def navigate(
                 use_ring = (purpose == 'enemy' and not ring_attempted
                             and (len(markers) == 1 or (not markers and observation.get('minimap_mode') == 'compact')))
                 options = {'enemy_assist': True} if use_ring else {}
+                if enemy_kind != 'normal':
+                    options['enemy_kind'] = enemy_kind
                 click = session.plan(observation, approach, **options)
                 # 一次导航至多试一次脚圈：未触发后继续原有移动，不能让附近试点反复吸到同一脚圈。
                 if getattr(session, 'last_plan_enemy_ring', False) is True:

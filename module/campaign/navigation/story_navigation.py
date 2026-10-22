@@ -36,7 +36,7 @@ def story_frame(session, squad):
 
 
 def story_enemy_between(before, after, squad):
-    """反向验证主线所属小地图敌人：只返回两帧都唯一支持的底图坐标。
+    """反向验证主线所属敌人，返回两帧唯一支持的底图坐标与普通／Boss 类型。
 
     使用各自坐标系的实测帧间位移，不建立章节通用的大小地图换算。主线必须连续关联到同一
     脚圈；仅同向移动、场内邻近或单帧靠近注视点均不足以认领敌人。
@@ -52,12 +52,13 @@ def story_enemy_between(before, after, squad):
         return None
     matched = []
     for kind, position in second.enemies:
-        if kind != 'minimap_enemy_normal':
+        if kind not in ('minimap_enemy_normal', 'minimap_enemy_boss'):
             continue
-        result = match_target_ring(first, second, position, squad, goto.VIEWPORT_PIXEL)
+        enemy_kind = kind.removeprefix('minimap_enemy_')
+        result = match_target_ring(first, second, position, squad, goto.VIEWPORT_PIXEL, enemy_kind=enemy_kind)
         if result.get('click') is not None and np.linalg.norm(np.asarray(result['click']) - after['ring']) <= 15:
-            matched.append(position)
-    return np.asarray(matched[0]).tolist() if len(matched) == 1 else None
+            matched.append(dict(position=np.asarray(position).tolist(), kind=enemy_kind))
+    return matched[0] if len(matched) == 1 else None
 
 
 def reveal_story_marker(session):
@@ -133,9 +134,10 @@ def locate_story_target(session, squad):
             after = story_frame(session, squad)
             if after is None:
                 break
-            position = story_enemy_between(before, after, squad)
-            if position is not None:
-                identifier = state.remember_story_target(position)
+            enemy = story_enemy_between(before, after, squad)
+            if enemy is not None:
+                position = enemy['position']
+                identifier = state.remember_story_target(position, kind=enemy['kind'])
                 if identifier is not None:
                     logger.info(f'主线路程目标已定位：敌人 {identifier}，底图位置 {position}，'
                                 f'镜头平移 {attempt + 1} 次。')

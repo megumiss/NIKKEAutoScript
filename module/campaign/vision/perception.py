@@ -187,7 +187,7 @@ def detect_markers(image, matrix):
             center = refine_ring(image, item)
             if center is not None:
                 players.append(center)
-        elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex'):
+        elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_enemy_boss'):
             enemies.append(item.center)
     return project_centers(players, matrix), project_centers(enemies, matrix)
 
@@ -227,13 +227,13 @@ def expanded_minimap_masks(panel, require_player=True, locate_player=True):
 def normal_enemy_markers(image, matrix):
     """普通敌人标记的精确位置，已排除 EX 弹窗带出的误检。
 
-    EX 关卡的弹窗里也有一个普通敌人样式的小标记，所以与任一 EX 框有重叠的普通候选都丢掉。
+    EX 关卡弹窗可带普通敌人样式标记；与任一 EX 或 Boss 框重叠的普通候选都丢掉。
     落点取红色像素凸包的重心而不是检测框中心：标记是水滴形，框中心会偏向尖端，
     重心更贴近它在地图上的实际位置。红色跨越色相环两端，要分两段取。
     """
     candidates = marker_candidates(image)
     normals = [item for item in candidates if item.label == 'minimap_enemy_normal']
-    excluded = [item for item in candidates if item.label == 'minimap_enemy_ex']
+    excluded = [item for item in candidates if item.label in ('minimap_enemy_ex', 'minimap_enemy_boss')]
     centers = []
     for item in normals:
         box = np.asarray(item.box)
@@ -251,6 +251,24 @@ def normal_enemy_markers(image, matrix):
         if moments['m00'] <= 0:
             continue
         centers.append(offset + [moments['m10'] / moments['m00'], moments['m01'] / moments['m00']])
+    return project_centers(centers, matrix)
+
+
+def boss_enemy_markers(image, matrix):
+    """将完整、无跨类重叠的 Boss 标记框中心投到底图，不用普通三角的红色重心定位骷髅图标。
+
+    输入为当前裁好的紧凑或展开面板；坐标仅供同类型目标导航，不推断主线身份。
+    与普通或 EX 框重叠的 Boss 宁可忽略，避免把竞争类别交给移动闭环吸附。
+    """
+    candidates = marker_candidates(image)
+    bosses = [item for item in candidates if item.label == 'minimap_enemy_boss']
+    others = [item for item in candidates if item.label in ('minimap_enemy_normal', 'minimap_enemy_ex')]
+    centers = []
+    for item in bosses:
+        overlap = any(np.all(np.minimum(item.box[2:], other.box[2:])
+                             - np.maximum(item.box[:2], other.box[:2]) > 0) for other in others)
+        if not overlap:
+            centers.append(item.center)
     return project_centers(centers, matrix)
 
 

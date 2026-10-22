@@ -15,6 +15,7 @@ OBJECTS = {
     'scene_enemy_ring': ('enemy_ring', None),
     'minimap_enemy_normal': ('enemy', 'normal'),
     'minimap_enemy_ex': ('enemy', 'ex'),
+    'minimap_enemy_boss': ('enemy', 'boss'),
     'minimap_squad_ring': ('squad_ring', None),
 }
 # 整幅画面网格检测的语义类别，也是 detect_objects 的默认范围。

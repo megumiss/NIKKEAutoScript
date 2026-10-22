@@ -1,4 +1,4 @@
-"""章节地图上的下一个目标：最近的普通敌人，没有敌人时是附近的地面机关或电梯。"""
+"""章节地图上的下一个目标：最近的普通敌人或 Boss，没有敌人时是附近的地面机关或电梯。"""
 
 import types
 
@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from module.campaign.navigation.pathfinding import RoadLocalizer as FlatLocalizer, NoConnectedRoad
-from module.campaign.run_state import located
+from module.campaign.run_state import COMBAT_ENEMY_KINDS, located
 from module.logger import logger
 
 # 没有敌人时机关和电梯的搜索范围，量级按展开小地图一次能看到的道路取。
@@ -40,7 +40,7 @@ def walking_distance(road, route_labels, start, target):
 
 
 class TargetFinder:
-    """选择下一个目标：可连通道路上最近的普通敌人，没有敌人时是附近的地面机关或电梯。
+    """选择下一个目标：可连通道路上最近的普通敌人或 Boss，没有敌人时是附近的地面机关或电梯。
 
     使用整幅道路和连通分区，跨分区的目标不会被选中。只有点状标注给出唯一目标点，
     折线和多边形机关、电梯不参与选择。道路、分区与标注都来自章节的 StaticMap，这里不自行加载。
@@ -97,7 +97,7 @@ class TargetFinder:
     def find(self, snapshot, radius=NEARBY_RADIUS):
         """返回下一个目标，或 None。
 
-        snapshot 需要可用的定位、小队坐标和敌人列表；敌人只取普通标记，EX 不进入选择。
+        snapshot 需要可用的定位、小队坐标和敌人列表；敌人包含普通和 Boss，EX 不进入选择。
         radius 只约束没有敌人时的机关和电梯，敌人以观测范围为准。
         """
         if not located(snapshot) or snapshot.get('squad') is None:
@@ -107,10 +107,12 @@ class TargetFinder:
             return None
         road, route_labels = self.road, self.route_labels
         field = cv2.distanceTransform(np.asarray(road <= 0, np.uint8), cv2.DIST_L2, 5)
-        enemies = [(('enemy', None, ''), np.asarray(item['position'], float))
-                   for item in snapshot.get('enemies', []) if item.get('kind') == 'normal']
+        observed = [item for item in snapshot.get('enemies', []) if item.get('kind') in COMBAT_ENEMY_KINDS]
+        enemies = [(('enemy', None, ''), np.asarray(item['position'], float)) for item in observed]
         target = self._nearest(field, road, route_labels, squad, enemies, None)
         if target is not None:
+            target['enemy_kind'] = next(item['kind'] for item in observed
+                                        if np.array_equal(item['position'], target['position']))
             return target
         objects = [((obj['category'], obj['id'], obj.get('label', '')), np.asarray(obj['points'][0], float))
                    for obj in self.annotations.get('objects', [])
