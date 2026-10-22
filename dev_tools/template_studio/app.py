@@ -1,41 +1,42 @@
 """
-活动模板工作台 Web 校对界面（替代 tkinter GUI，避免游戏覆盖层杀掉本地窗口）。
+通用模板工作台：中文资源管理、活动会话与历史索引校对。
 
 启动：
-    python dev_tools/event_studio/event_studio_web.py [--port 12273]
-    或 python dev_tools/event_studio/event_template_studio.py gui
+    python dev_tools/template_studio.py [--port 12273]
+    或 python dev_tools/template_studio/events/cli.py gui
 
 然后在浏览器打开 http://127.0.0.1:12273
-agent 侧通过 dev_tools/event_studio/event_template_studio.py 的 CLI 写提案，本页面用于人工校对与导出。
+首页管理中文功能模板；/events 提供活动会话、agent 提案校对与导出。
 """
 import argparse
 import json
 import os
 import re
-import sys
 import webbrowser
 from datetime import datetime
 from functools import wraps
+from pathlib import Path
 
 import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
+from starlette.applications import Starlette
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from starlette.routing import Mount, Route, request_response
+from starlette.staticfiles import StaticFiles
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from module.logger import logger
 
-import event_studio_model as model  # noqa: E402
-import history_index  # noqa: E402
-from event_template_studio import current_event_id, set_current_event_id  # noqa: E402
-from starlette.applications import Starlette  # noqa: E402
-from starlette.responses import FileResponse, HTMLResponse, JSONResponse, Response  # noqa: E402
-from starlette.routing import Route, request_response  # noqa: E402
-
-from module.logger import logger  # noqa: E402
+from . import history as history_index
+from . import resources as workspace
+from .events import model
+from .events.cli import current_event_id, set_current_event_id
 
 STATUS_LABEL = {'missing': '缺失', 'draft': '草稿', 'confirmed': '已确认', 'rejected': '打回'}
 
-INDEX_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'event_studio_web.html')
+WEB_ROOT = Path(__file__).parent / 'web'
+PAGES_ROOT = WEB_ROOT / 'pages'
+STATIC_ROOT = WEB_ROOT / 'static'
 
 
 # ---------- 工具 ----------
@@ -110,20 +111,66 @@ def state_payload(event_id, session):
 
 # ---------- 路由 ----------
 
+def render_page(filename):
+    with (PAGES_ROOT / filename).open(encoding='utf-8') as f:
+        content = f.read()
+    return HTMLResponse(content)
+
+
 async def index(request):
-    with open(INDEX_HTML, 'r', encoding='utf-8') as f:
-        return HTMLResponse(f.read())
+    return render_page('templates.html')
 
 
-async def studio_asset(request):
-    filename = request.path_params['filename']
-    if filename not in ('studio.css', 'studio.js', 'manual_crop.js', 'history_review.css', 'history_review.js'):
-        return Response(status_code=404)
-    return FileResponse(os.path.join(os.path.dirname(INDEX_HTML), filename))
+async def event_page(request):
+    return render_page('events.html')
+
+
+async def api_template_features(request):
+    return JSONResponse({'features': workspace.features(), 'screenshots': workspace.uploads()})
+
+
+async def api_template_assets(request):
+    return JSONResponse(workspace.list_assets(request.query_params.get('feature')))
+
+
+async def api_template_upload(request):
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > 32 * 1024 * 1024:
+            raise ValueError('截图不能超过 32 MB')
+    return JSONResponse(workspace.upload(bytes(data), request.query_params.get('name', 'screenshot')))
+
+
+async def api_template_image(request):
+    path = workspace.asset_path(request.query_params.get('feature'), request.query_params.get('name'))
+    image = workspace.read_rgb(path)
+    if request.query_params.get('full') != '1' and not path.name.startswith('TEMPLATE_'):
+        box = model.safe_bbox_color(image)[0]
+        if box:
+            image = image[box[1]:box[3], box[0]:box[2]]
+    return image_response(image)
+
+
+async def api_template_preview(request):
+    body = await read_json(request)
+    image = workspace.crop(body)
+    if body.get('detail') and body.get('mode') == 'button':
+        x0, y0, x1, y1 = body['box']
+        image = image[y0:y1, x0:x1]
+    return image_response(image)
+
+
+async def api_template_save(request):
+    return JSONResponse(workspace.mutate(await read_json(request)))
+
+
+async def api_template_delete(request):
+    return JSONResponse(workspace.mutate(await read_json(request), deleting=True))
 
 
 async def history_review(request):
-    return FileResponse(os.path.join(os.path.dirname(INDEX_HTML), 'history_review.html'))
+    return FileResponse(PAGES_ROOT / 'history.html')
 
 
 async def api_history(request):
@@ -153,12 +200,25 @@ async def api_state(request):
 
 
 async def api_sessions(request):
-    result = []
+    result, details = [], []
     if os.path.isdir(model.SESSION_ROOT):
         for d in sorted(os.listdir(model.SESSION_ROOT), reverse=True):
-            if os.path.isfile(os.path.join(model.SESSION_ROOT, d, 'session.json')):
-                result.append(d)
-    return JSONResponse({'sessions': result, 'events': model.historical_events()})
+            path = os.path.join(model.SESSION_ROOT, d, 'session.json')
+            if not os.path.isfile(path):
+                continue
+            try:
+                session = model.load_session(d)
+                updated_at = datetime.fromtimestamp(os.path.getmtime(path)).astimezone().isoformat()
+            except (OSError, ValueError, TypeError, KeyError) as e:
+                logger.warning(f'读取活动模板会话失败: {d}: {e}')
+                continue
+            result.append(d)
+            details.append({'event_id': d, 'event_name': session.get('event_name', d),
+                            'event_type': session['event_type'], 'phase': session['phase'],
+                            'revision': session['revision'], 'screenshot_count': len(session['screenshots']),
+                            'confirmed_count': sum(t['status'] == 'confirmed' for t in session['templates']),
+                            'template_count': len(session['templates']), 'updated_at': updated_at})
+    return JSONResponse({'sessions': result, 'session_details': details, 'events': model.historical_events()})
 
 
 async def api_session_new(request):
@@ -197,6 +257,23 @@ async def api_session_phase(request):
     model.advance_phase(session, body['phase'], model.load_rules())
     model.save_session(session)
     return JSONResponse(state_payload(event_id, session))
+
+
+async def api_session_delete(request):
+    body = await read_json(request)
+    event_id = body.get('event_id')
+    if not isinstance(event_id, str) or not event_id.strip():
+        raise ValueError('请选择要删除的会话')
+    event_id = event_id.strip()
+    page_event_id = request.headers.get('X-Event-ID') or current_event_id()
+    model.delete_session(event_id, body.get('revision'))
+    if current_event_id() == event_id:
+        set_current_event_id(None)
+    if page_event_id == event_id or not page_event_id:
+        current, session = None, None
+    else:
+        current, session = load_session_or_none(page_event_id)
+    return JSONResponse(dict(state_payload(current, session), deleted_event_id=event_id))
 
 
 async def api_browse(request):
@@ -466,8 +543,16 @@ def checked_endpoint(endpoint):
 def create_app():
     routes = [
         Route('/', index),
+        Route('/events', event_page),
+        Route('/api/templates/features', api_template_features),
+        Route('/api/templates/assets', api_template_assets),
+        Route('/api/templates/upload', api_template_upload, methods=['POST']),
+        Route('/api/templates/image', api_template_image),
+        Route('/api/templates/preview', api_template_preview, methods=['POST']),
+        Route('/api/templates/save', api_template_save, methods=['POST']),
+        Route('/api/templates/delete', api_template_delete, methods=['POST']),
         Route('/history', history_review),
-        Route('/{filename}', studio_asset),
+        Mount('/static', app=StaticFiles(directory=STATIC_ROOT), name='static'),
         Route('/api/history', api_history, methods=['GET', 'POST']),
         Route('/api/history/template', api_history_template),
         Route('/api/state', api_state),
@@ -475,6 +560,7 @@ def create_app():
         Route('/api/session/new', api_session_new, methods=['POST']),
         Route('/api/session/open', api_session_open, methods=['POST']),
         Route('/api/session/phase', api_session_phase, methods=['POST']),
+        Route('/api/session/delete', api_session_delete, methods=['POST']),
         Route('/api/browse', api_browse),
         Route('/api/shots/import', api_shots_import, methods=['POST']),
         Route('/api/shots/scene', api_shot_scene, methods=['POST']),
@@ -499,7 +585,7 @@ def create_app():
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='活动模板工作台 Web 校对界面')
+    parser = argparse.ArgumentParser(description='通用模板工作台（中文资源管理与活动校对）')
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--port', type=int, default=12273)
     parser.add_argument('--no-browser', action='store_true')
@@ -507,7 +593,7 @@ def main(argv=None):
 
     import uvicorn
     url = f'http://{args.host}:{args.port}'
-    logger.info(f'Event Template Studio: {url}')
+    logger.info(f'Template Studio: {url}')
     if not args.no_browser:
         webbrowser.open(url)
     uvicorn.run(create_app(), host=args.host, port=args.port, log_level='warning')

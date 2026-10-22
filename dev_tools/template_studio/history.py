@@ -1,4 +1,4 @@
-"""历史截图索引的临时校对数据接口。"""
+"""历史截图索引校对数据接口。"""
 import hashlib
 import json
 import os
@@ -9,9 +9,9 @@ from pathlib import Path
 from filelock import FileLock
 from PIL import Image
 
-import event_studio_model as model
+from .events import model
 
-INDEX_FILE = Path(__file__).with_name('history_matches.json')
+INDEX_FILE = Path(__file__).parent / 'data' / 'history_matches.json'
 BACKUP_DIR = Path(model.SESSION_ROOT) / 'history_backups'
 
 

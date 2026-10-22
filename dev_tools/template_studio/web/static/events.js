@@ -6,9 +6,8 @@ const baseName = file => (file || '').split(/[\\/]/).pop();
 const sceneKey = item => item?.scene ? `${item.phase || state?.session?.phase}:${item.scene}` : '';
 let state = null, shotIndex = -1, templateName = '', view = 'source', selectedFiles = new Set();
 let browseFiles = [], browseOffset = 0, browseTotal = 0, toastTimer, infoSequence = 0;
-let image = null, imagePath = '', imageSequence = 0, scale = 1, offsetX = 0, offsetY = 0, fitMode = true;
 let annotationDirty = false, reviewDirty = false;
-let confirmInfo = null, historyEvents = [];
+let confirmInfo = null, historyEvents = [], sessionDetails = [], pendingDelete = null, deletingSession = false;
 
 function newEventId() {
   const value = $('eventId').value.trim();
@@ -52,7 +51,12 @@ function applyState(next) {
   const previousShot = state?.session?.screenshots[shotIndex];
   if (next.session?.revision !== state?.session?.revision || changed) confirmInfo = null;
   state = next;
-  if (changed) { shotIndex = -1; templateName = ''; annotationDirty = reviewDirty = false; imagePath = ''; }
+  if (changed) {
+    shotIndex = -1; templateName = ''; annotationDirty = reviewDirty = false; infoSequence++;
+    $('templateSearch').value = ''; $('templateStatus').value = '';
+    for (const id of ['shotFilter', 'shotScene', 'templateScene']) $(id).value = '';
+    selectedFiles.clear(); updateImportCount();
+  }
   if (previousShot && !changed) shotIndex = state.session?.screenshots.findIndex(s => s.file === previousShot.file && s.phase === previousShot.phase) ?? -1;
   if (shotIndex < 0 && state.session?.screenshots.length) shotIndex = 0;
   if (templateName && !state.session?.templates.some(t => t.name === templateName)) templateName = '';
@@ -73,7 +77,12 @@ function applyState(next) {
   $('prepareHint').textContent = session ? `已关联 ${completed} / ${session.screenshots.length} 张截图。${completed < session.screenshots.length ? '请为截图选择场景。' : '可以生成任务；缺少的场景会列为待补充项。'}` : '先导入截图并关联场景。';
   renderShots(); renderShotEditor(); renderCoverage(); renderTemplates(); updateButtons();
   if (templateName) loadTemplateInfo();
-  else { $('reviewDetails').hidden = true; $('tplInfo').innerHTML = '<div class="empty">选择模板，查看裁剪结果与历史参考。</div>'; }
+  else {
+    $('reviewDetails').hidden = true; $('tplInfo').innerHTML = '<div class="empty">选择模板，查看裁剪结果与历史参考。</div>';
+    $('templateBadge').textContent = '未选择'; $('templateBadge').className = 'badge';
+    $('reviewNote').value = '';
+    if (!session) switchView('source');
+  }
 }
 function updateButtons() {
   const session = state?.session, shot = session?.screenshots[shotIndex];
@@ -81,21 +90,28 @@ function updateButtons() {
   for (const id of ['btnRefresh','btnImportDialog']) $(id).disabled = !session;
   for (const id of ['btnPrepare','btnPrepareMain']) $(id).disabled = !session || session.screenshots.some(s => !s.scene) || !session.templates.some(t => t.status !== 'confirmed');
   for (const id of ['btnRemoveShot','btnSaveShot','shotScene']) $(id).disabled = !shot;
-  $('btnConfirm').disabled = !template || template.status === 'confirmed' || confirmInfo?.name !== template.name || !confirmInfo.valid;
-  $('btnReject').disabled = !template || !template.box;
-  $('btnClear').disabled = !template?.box;
+  const cropDirty = window.eventCrop?.dirty() || false;
+  $('btnConfirm').disabled = cropDirty || !template || template.status === 'confirmed' || confirmInfo?.name !== template.name || !confirmInfo.valid;
+  $('btnReject').disabled = cropDirty || !template || !template.box;
+  $('btnClear').disabled = cropDirty || !template?.box;
   $('btnManualStart').disabled = !session?.screenshots.length || !session?.templates.length;
   $('btnManualCrop').disabled = !template || !session?.screenshots.length;
-  $('btnManualCrop').textContent = template?.box ? '手动调整 / 重新截取' : '手动截取模板';
+  $('btnManualCrop').textContent = '定位到裁剪画布';
   $('btnNext').disabled = !session?.templates.some(t => t.status !== 'confirmed');
   $('btnSaveReview').disabled = !template;
-  $('btnExport').disabled = !session || !session.templates.length || Boolean(state.missing?.length);
-  for (const id of ['btnFit','btnActual']) $(id).disabled = !image;
+  $('btnExport').disabled = cropDirty || !session || !session.templates.length || Boolean(state.missing?.length);
+  if (cropDirty) for (const id of ['btnPrepare','btnPrepareMain','btnAdvance','btnRemoveShot']) $(id).disabled = true;
   $('btnPrevPage').disabled = browseOffset === 0;
   $('btnNextPage').disabled = browseOffset + BROWSE_PAGE_SIZE >= browseTotal;
   const eventId = newEventId();
   $('eventIdHint').textContent = eventId ? `活动 ID：${eventId}` : '自动添加 event_ 前缀，不限制日期格式或位数。';
   $('btnNew').disabled = !eventId || !$('eventName').value.trim() || !historyEvents.some(e => e.event_id === $('baseEventSel').value && e.source_dir);
+  const selected = sessionDetails.find(s => s.event_id === $('sessionSel').value);
+  for (const id of ['btnOpen', 'btnDeleteSession']) $(id).disabled = !selected || $(id).hasAttribute('aria-busy');
+  $('btnDeleteSession').textContent = selected && selected.event_id === state?.current ? '删除当前会话' : '删除会话';
+  $('btnConfirmDeleteSession').disabled = !pendingDelete || deletingSession;
+  $('btnCancelDeleteSession').disabled = deletingSession;
+  $('btnConfirmDeleteSession').textContent = deletingSession ? '正在删除…' : '确认删除';
 }
 function renderShots() {
   const shots = state?.session?.screenshots || [], filter = $('shotFilter').value;
@@ -111,7 +127,7 @@ function renderShotEditor() {
     $('shotScene').value = sceneKey(shot);
   }
   $('sceneHint').textContent = state?.scenes?.[$('shotScene').value]?.state_hint || '同一场景可以提供多张截图，agent 按你关联的场景裁剪。';
-  loadImage(shot?.file || '');
+  window.eventCrop?.sync();
 }
 function renderCoverage() {
   const coverage = state?.coverage || [];
@@ -138,17 +154,21 @@ async function saveReview(reject = false) {
   reviewDirty = false; applyState(next);
 }
 async function selectShot(index) {
-  await saveAnnotation(); shotIndex = index; annotationDirty = false; renderShots(); renderShotEditor(); updateButtons();
+  if (index !== shotIndex && !window.eventCrop?.allowDiscard()) return false;
+  await saveAnnotation(); shotIndex = index; annotationDirty = false; renderShots(); renderShotEditor(); updateButtons(); return true;
 }
 async function selectTemplate(name) {
+  if (name !== templateName && !window.eventCrop?.allowDiscard()) return;
   if (reviewDirty) await saveReview();
   templateName = name; reviewDirty = false;
   const template = state.session.templates.find(t => t.name === name);
   if (template?.source) {
     const index = state.session.screenshots.findIndex(s => s.file === template.source && s.phase === template.phase);
-    if (index >= 0) await selectShot(index);
+    if (index >= 0 && index !== shotIndex) {
+      if (await selectShot(index) === false) return;
+    }
   }
-  renderTemplates(); updateButtons(); await loadTemplateInfo(); draw();
+  renderTemplates(); window.eventCrop?.sync(); updateButtons(); await loadTemplateInfo();
 }
 async function loadTemplateInfo() {
   const seq = ++infoSequence, name = templateName;
@@ -172,7 +192,7 @@ async function loadTemplateInfo() {
     setPreview('refImg','refEmpty', info.reference ? `/api/reference?${qs}` : '');
     confirmInfo = {name,valid:Boolean(info.bbox)};
     updateButtons();
-    $('canvasTarget').textContent = box ? `${name} · 当前裁剪框` : '点击“手动截取模板”开始框选';
+
   } catch (error) { notify(error.message, true); }
 }
 function setPreview(imageId, emptyId, url) {
@@ -187,13 +207,11 @@ function switchView(mode) {
   $('btnSource').classList.toggle('active', mode === 'source'); $('btnReview').classList.toggle('active', mode === 'review');
   $('btnSource').setAttribute('aria-pressed', String(mode === 'source')); $('btnReview').setAttribute('aria-pressed', String(mode === 'review'));
   if (mode === 'review' && !templateName && state?.session?.templates.length) selectTemplate(state.session.templates.find(t => t.status === 'draft')?.name || state.session.templates[0].name).catch(e => notify(e.message, true));
-  if(mode === 'source') $('canvasTarget').textContent = '可直接手动截取，或关联场景后交给 agent';
-  else if(templateName) $('canvasTarget').textContent = `${templateName} · 当前裁剪框`;
-  draw();
+  window.eventCrop?.sync();
 }
 async function refresh() {
   applyState(await api('/api/state'));
-  notify(annotationDirty || reviewDirty ? '已读取最新结果，当前未保存的标注或意见仍保留，请保存后继续' : '已读取最新会话与 agent 结果');
+  notify(annotationDirty || reviewDirty || window.eventCrop?.dirty() ? '已读取最新结果，当前未保存的选区、标注或意见仍保留，请保存后继续' : '已读取最新会话与 agent 结果');
 }
 async function prepare() {
   await saveAnnotation(); if (reviewDirty) await saveReview();
@@ -212,17 +230,66 @@ function phaseOptions() {
   const phases = type?.phases || {};
   $('phaseSel').innerHTML = Object.entries(phases).map(([key,label]) => `<option value="${esc(key)}">${esc(label)}</option>`).join('');
 }
-async function sessionsDialog() {
-  await saveAnnotation(); if (reviewDirty) await saveReview();
+function renderSessionSelection() {
+  const selected = sessionDetails.find(s => s.event_id === $('sessionSel').value);
+  const type = state?.types[selected?.event_type];
+  $('selectedSessionInfo').textContent = selected
+    ? `${selected.event_id === state?.current ? '当前会话 · ' : ''}${type?.label || ''}活动 · ${type?.phases[selected.phase] || selected.phase} · ${selected.screenshot_count} 张截图 · 模板 ${selected.confirmed_count} / ${selected.template_count} 已确认`
+    : '暂无会话，可以在下方新建活动会话。';
+  updateButtons();
+}
+function renderSessionList(preferred = state?.current) {
+  $('sessionSel').innerHTML = sessionDetails.map(s => `<option value="${esc(s.event_id)}">${s.event_id === state?.current ? '【当前】' : ''}${esc(s.event_name || s.event_id)}${s.event_name ? ` · ${esc(s.event_id)}` : ''}</option>`).join('') || '<option value="">暂无会话</option>';
+  $('sessionSel').value = sessionDetails.some(s => s.event_id === preferred) ? preferred : sessionDetails[0]?.event_id || '';
+  $('sessionSel').disabled = !sessionDetails.length;
+  $('phaseBlock').hidden = !state?.session;
+  $('phaseSessionInfo').textContent = state?.session ? `当前会话：${state.session.event_name || state.current} · ${state.current}` : '';
+  if (state?.session) {
+    $('advancePhase').innerHTML = Object.entries(state.types[state.session.event_type].phases).map(([key,label]) => `<option value="${esc(key)}">${esc(label)}</option>`).join('');
+    $('advancePhase').value = state.session.phase;
+  }
+  renderSessionSelection();
+}
+async function loadSessionList(preferred = state?.current) {
   const data = await api('/api/sessions');
+  sessionDetails = data.session_details;
   historyEvents = data.events;
+  const baseEventId = $('baseEventSel').value;
   $('baseEventSel').innerHTML = historyEvents.map(e => `<option value="${esc(e.event_id)}" ${e.source_dir ? '' : 'disabled'}>${esc(e.event_name)} · ${esc(e.event_id)} · ${esc(state.types[e.event_type]?.label || e.event_type)}${e.source_dir ? '' : '（资源缺失）'}</option>`).join('');
-  $('baseEventSel').value = historyEvents.find(e => e.source_dir)?.event_id || '';
-  $('sessionSel').innerHTML = data.sessions.map(id => `<option>${esc(id)}</option>`).join('');
-  $('sessionSel').value = state?.current || data.sessions[0] || ''; $('btnOpen').disabled = !data.sessions.length;
-  phaseOptions(); $('phaseBlock').hidden = !state?.session;
-  if (state?.session) $('advancePhase').innerHTML = Object.entries(state.types[state.session.event_type].phases).map(([key,label]) => `<option value="${esc(key)}">${esc(label)}</option>`).join('');
-  $('sessionError').hidden = true; updateButtons(); $('sessionDialog').showModal();
+  $('baseEventSel').value = historyEvents.find(e => e.event_id === baseEventId && e.source_dir)?.event_id || historyEvents.find(e => e.source_dir)?.event_id || '';
+  const phase = $('phaseSel').value;
+  phaseOptions();
+  if ([...$('phaseSel').options].some(o => o.value === phase)) $('phaseSel').value = phase;
+  if (state?.current && !data.sessions.includes(state.current)) applyState(await api('/api/state'));
+  renderSessionList(preferred);
+}
+async function sessionsDialog() {
+  if (!window.eventCrop?.allowDiscard()) return;
+  await loadSessionList();
+  await saveAnnotation(); if (reviewDirty) await saveReview();
+  if (state?.session) {
+    const selected = sessionDetails.find(s => s.event_id === state.current);
+    if (selected && state.session.revision > selected.revision) selected.revision = state.session.revision;
+  }
+  $('sessionError').hidden = true; $('sessionDialog').showModal();
+}
+function confirmSessionDeletion() {
+  pendingDelete = sessionDetails.find(s => s.event_id === $('sessionSel').value);
+  if (!pendingDelete) return;
+  $('deleteSessionName').textContent = `${pendingDelete.event_name || pendingDelete.event_id}（${pendingDelete.event_id}）`;
+  $('deleteCurrentHint').hidden = pendingDelete.event_id !== state?.current;
+  $('deleteSessionError').hidden = true; updateButtons(); $('deleteSessionDialog').showModal();
+}
+async function deleteSession() {
+  if (!pendingDelete || deletingSession) return;
+  deletingSession = true; updateButtons();
+  try {
+    const next = await api('/api/session/delete', {event_id:pendingDelete.event_id, revision:pendingDelete.revision});
+    sessionDetails = sessionDetails.filter(s => s.event_id !== next.deleted_event_id);
+    applyState(next); renderSessionList();
+    $('deleteSessionDialog').close();
+    notify(`已删除会话 ${next.deleted_event_id}，原图和活动资源保留`);
+  } finally { deletingSession = false; updateButtons(); }
 }
 function updateImportCount() { $('importCount').textContent = `已选 ${selectedFiles.size} 张`; $('btnImport').disabled = !selectedFiles.size; }
 async function browse(offset = 0) {
@@ -233,49 +300,6 @@ async function browse(offset = 0) {
   $('pageInfo').textContent = data.total ? `${offset+1}–${Math.min(offset+BROWSE_PAGE_SIZE,data.total)} / ${data.total}` : '0 / 0';
   $('btnPrevPage').disabled = offset === 0; $('btnNextPage').disabled = offset + BROWSE_PAGE_SIZE >= data.total; updateImportCount();
 }
-function loadImage(path) {
-  if (imagePath === path) { draw(); return; }
-  imagePath = path; image = null; const seq = ++imageSequence; draw();
-  $('canvasEmpty').hidden = Boolean(path); updateButtons();
-  if (!path) return;
-  const next = new Image();
-  next.onload = () => { if (seq !== imageSequence) return; image = next; fitMode = true; fitImage(); updateButtons(); };
-  next.onerror = () => { if (seq !== imageSequence) return; $('canvasEmpty').hidden = false; notify(`原图无法读取：${baseName(path)}`, true); };
-  next.src = `/api/image?path=${encodeURIComponent(path)}`;
-}
-function fitImage() {
-  if (!image) return;
-  const rect = $('center').getBoundingClientRect(); scale = Math.min((rect.width-8)/image.width,(rect.height-8)/image.height);
-  offsetX = (rect.width-image.width*scale)/2; offsetY = (rect.height-image.height*scale)/2; draw();
-}
-function draw() {
-  const canvas = $('cv'), rect = $('center').getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(rect.width*dpr); canvas.height = Math.round(rect.height*dpr);
-  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,rect.width,rect.height);
-  if (!image) { $('zoomInfo').textContent = '—'; return; }
-  ctx.drawImage(image,offsetX,offsetY,image.width*scale,image.height*scale);
-  if ($('showBoxes').checked && view === 'review') {
-    const shot = state?.session?.screenshots[shotIndex];
-    const boxes = state?.session?.templates.filter(t => t.source === imagePath && t.phase === shot?.phase && t.box) || [];
-    for (const t of boxes) {
-      const [x0,y0,x1,y1] = t.box; ctx.strokeStyle = t.name === templateName ? '#2563eb' : '#18a97b'; ctx.lineWidth = t.name === templateName ? 2 : 1;
-      ctx.strokeRect(offsetX+x0*scale,offsetY+y0*scale,(x1-x0)*scale,(y1-y0)*scale);
-    }
-  }
-  $('zoomInfo').textContent = `${Math.round(scale*100)}%`;
-}
-function zoom(factor, x, y) {
-  if (!image) return;
-  const next = Math.min(4,Math.max(.12,scale*factor)); offsetX = x-(x-offsetX)*next/scale; offsetY = y-(y-offsetY)*next/scale; scale = next; fitMode = false; draw();
-}
-let drag = null;
-$('cv').addEventListener('pointerdown', e => { if (!image) return; drag = {x:e.clientX,y:e.clientY}; $('cv').setPointerCapture(e.pointerId); fitMode = false; });
-$('cv').addEventListener('pointermove', e => { if (!drag) return; offsetX += e.clientX-drag.x; offsetY += e.clientY-drag.y; drag = {x:e.clientX,y:e.clientY}; draw(); });
-$('cv').addEventListener('pointerup', () => drag = null); $('cv').addEventListener('pointercancel', () => drag = null);
-$('cv').addEventListener('wheel', e => { if (!image) return; e.preventDefault(); const r = $('cv').getBoundingClientRect(); zoom(e.deltaY<0 ? 1.12 : 1/1.12,e.clientX-r.left,e.clientY-r.top); }, {passive:false});
-$('cv').addEventListener('keydown', e => { const shifts = {ArrowLeft:[30,0],ArrowRight:[-30,0],ArrowUp:[0,30],ArrowDown:[0,-30]}; if (shifts[e.key]) { e.preventDefault(); fitMode=false; offsetX+=shifts[e.key][0]; offsetY+=shifts[e.key][1]; draw(); } if (['+','=','-'].includes(e.key)) { e.preventDefault(); const r=$('cv').getBoundingClientRect(); zoom(e.key==='-' ? 1/1.12 : 1.12,r.width/2,r.height/2); } });
-new ResizeObserver(() => { if (fitMode) fitImage(); else draw(); }).observe($('center'));
-
 for (const id of ['shotScene']) $(id).addEventListener('input', () => { annotationDirty = true; $('sceneHint').textContent = state?.scenes?.[$('shotScene').value]?.state_hint || '同一场景可以提供多张截图，agent 按你关联的场景裁剪。'; });
 $('reviewNote').addEventListener('input', () => reviewDirty = true);
 $('shotFilter').addEventListener('change', renderShots);
@@ -283,13 +307,18 @@ for (const id of ['templateSearch','templateScene','templateStatus']) $(id).addE
 $('shotList').addEventListener('click', e => { const row=e.target.closest('[data-index]'); if (row) selectShot(Number(row.dataset.index)).catch(e=>notify(e.message,true)); });
 $('tplList').addEventListener('click', e => { const row=e.target.closest('[data-name]'); if (row) selectTemplate(row.dataset.name).catch(e=>notify(e.message,true)); });
 $('baseEventSel').addEventListener('change', () => { phaseOptions(); updateButtons(); });
+$('sessionSel').addEventListener('change', renderSessionSelection);
+$('deleteSessionDialog').addEventListener('cancel', e => { if (deletingSession) e.preventDefault(); });
+$('deleteSessionDialog').addEventListener('close', () => { pendingDelete = null; updateButtons(); });
 for (const id of ['eventId','eventName']) $(id).addEventListener('input', updateButtons);
-$('showBoxes').addEventListener('change',draw);
 for (const el of document.querySelectorAll('[data-close]')) el.addEventListener('click',()=>$(el.dataset.close).close());
 $('browseList').addEventListener('change', e => { if (e.target.type !== 'checkbox') return; if(e.target.checked) selectedFiles.add(e.target.value); else selectedFiles.delete(e.target.value); updateImportCount(); });
 window.addEventListener('beforeunload', e => { if(annotationDirty || reviewDirty) { e.preventDefault(); e.returnValue=''; } });
 
 bind('btnSessions',sessionsDialog); bind('btnRefresh',refresh);
+bind('btnReloadSessions',()=>loadSessionList($('sessionSel').value),'sessionError');
+bind('btnDeleteSession',confirmSessionDeletion,'sessionError');
+bind('btnConfirmDeleteSession',deleteSession,'deleteSessionError');
 bind('btnSource',async()=>{ await saveAnnotation(); if(reviewDirty) await saveReview(); switchView('source'); });
 bind('btnReview',async()=>{ await saveAnnotation(); switchView('review'); });
 bind('btnPrepare',prepare); bind('btnPrepareMain',prepare);
@@ -303,7 +332,6 @@ bind('btnImportDialog',async()=>{ await saveAnnotation(); $('importError').hidde
 bind('btnBrowse',()=>browse(0),'importError'); bind('btnPrevPage',()=>browse(Math.max(0,browseOffset-BROWSE_PAGE_SIZE)),'importError'); bind('btnNextPage',()=>browse(browseOffset+BROWSE_PAGE_SIZE),'importError');
 bind('btnSelectPage',async()=>{ const all=browseFiles.every(f=>selectedFiles.has(f.file)); for(const f of browseFiles) { if(all) selectedFiles.delete(f.file); else selectedFiles.add(f.file); } await browse(browseOffset); },'importError');
 bind('btnImport',async()=>{ applyState(await api('/api/shots/import',{files:[...selectedFiles]})); selectedFiles.clear(); updateImportCount(); $('importDialog').close(); notify('已导入截图，请关联到对应场景'); },'importError');
-bind('btnFit',async()=>{ fitMode=true; fitImage(); }); bind('btnActual',async()=>{ scale=1; fitMode=false; const r=$('center').getBoundingClientRect(); offsetX=(r.width-image.width)/2; offsetY=(r.height-image.height)/2; draw(); });
 bind('btnCopyPrompt',async()=>{ await navigator.clipboard.writeText($('agentPrompt').value); notify('任务说明已复制，发给 agent 即可'); },'agentError');
 bind('btnReadResult',async()=>{ const next=await api('/api/agent/result',{}); applyState(next); $('agentDialog').close(); switchView('review'); notify(`已读入 ${next.result.proposals} 个草稿、${next.result.unresolved} 个待补充项`); },'agentError');
 bind('btnAgentRefresh',async()=>{ await refresh(); $('agentDialog').close(); switchView('review'); },'agentError');
