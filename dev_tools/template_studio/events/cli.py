@@ -1,9 +1,9 @@
 """
 活动模板工作台（CLI）：剧情活动模板的场景标注、提案收集与导出。
 
-配合 dev_tools/event_studio/event_template_rules.yaml（模板清单/场景规则库）与
+配合 dev_tools/template_studio/data/event_template_rules.yaml（模板清单/场景规则库）与
 tmp/event_studio/<event_id>/session.json（会话）使用。
-校对界面是 Web 版：python dev_tools/event_studio/event_studio_web.py
+校对界面是 Web 版：python dev_tools/template_studio.py
 
 典型流程：
     1. 用户截好各场景整屏截图（template_capture 或手动）
@@ -12,14 +12,14 @@ tmp/event_studio/<event_id>/session.json（会话）使用。
     4. export 导出 confirmed 模板到 assets/zh-CN/event_dated/<event_id>/ 并重新生成 assets.py
 
 CLI:
-    python dev_tools/event_studio/event_template_studio.py new --event-id event_20261029 \
+    python dev_tools/template_studio/events/cli.py new --event-id event_20261029 \
         --name "New Event" --base-event event_20261008 --position 1 --phase day1
-    python dev_tools/event_studio/event_template_studio.py import <截图路径> [--scene ...] [--state ...]
-    python dev_tools/event_studio/event_template_studio.py checklist
-    python dev_tools/event_studio/event_template_studio.py propose --name ... --file <截图> --box x0,y0,x1,y1
-    python dev_tools/event_studio/event_template_studio.py set-status --name STORY_1_NORMAL --value confirmed
-    python dev_tools/event_studio/event_template_studio.py export
-    python dev_tools/event_studio/event_template_studio.py gui          # 启动 Web 校对界面
+    python dev_tools/template_studio/events/cli.py import <截图路径> [--scene ...] [--state ...]
+    python dev_tools/template_studio/events/cli.py checklist
+    python dev_tools/template_studio/events/cli.py propose --name ... --file <截图> --box x0,y0,x1,y1
+    python dev_tools/template_studio/events/cli.py set-status --name STORY_1_NORMAL --value confirmed
+    python dev_tools/template_studio/events/cli.py export
+    python dev_tools/template_studio/events/cli.py gui          # 启动 Web 校对界面
 
 除 new 外，子命令默认作用于最近使用的会话（tmp/event_studio/.current），可用 --event-id 覆盖。
 """
@@ -27,10 +27,9 @@ import argparse
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
-import event_studio_model as model  # noqa: E402
+from dev_tools.template_studio.events import model  # noqa: E402
 
 STATUS_LABEL = {'missing': '缺失', 'draft': '草稿', 'confirmed': '已确认', 'rejected': '打回'}
 
@@ -45,8 +44,15 @@ def current_event_id():
 
 
 def set_current_event_id(event_id):
+    path = os.path.join(model.SESSION_ROOT, '.current')
+    if event_id is None:
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+        return
     os.makedirs(model.SESSION_ROOT, exist_ok=True)
-    with open(os.path.join(model.SESSION_ROOT, '.current'), 'w', encoding='utf-8') as f:
+    with open(path, 'w', encoding='utf-8') as f:
         f.write(event_id)
 
 
@@ -119,13 +125,13 @@ def main():
     p.add_argument('--event-id')
     p.add_argument('--file', required=True)
 
-    sub.add_parser('gui', help='启动 Web 校对界面（同 event_studio_web.py）')
+    sub.add_parser('gui', help='启动 Web 校对界面（同 template_studio.py）')
 
     args = parser.parse_args()
 
     if args.cmd in (None, 'gui'):
-        import event_studio_web
-        event_studio_web.main([])
+        from dev_tools.template_studio.app import main as run_web
+        run_web([])
         return
 
     rules = model.load_rules()
@@ -133,7 +139,8 @@ def main():
     if args.cmd == 'new':
         if os.path.isfile(model.session_path(args.event_id)):
             raise SystemExit('会话已经存在，请打开已有会话或使用 phase 追加更新阶段')
-        session = model.create_event_session(args.event_id, args.name, args.base_event, args.position, args.phase, rules)
+        session = model.create_event_session(
+            args.event_id, args.name, args.base_event, args.position, args.phase, rules)
         set_current_event_id(args.event_id)
         print(f'已创建会话: {model.session_path(args.event_id)}')
         print(f'模板清单 {len(session["templates"])} 项')
