@@ -372,6 +372,16 @@
       "help": "Create a 720x1280@240dpi display inside Android and capture it directly without changing the physical screen; recommended. The same implementation works on Windows, Linux, and ARM Linux; the host only needs ADB. When enabled, the screenshot and control method settings are ignored: frames are captured from the virtual display and control always uses ADB.",
       "True": "True",
       "False": "False"
+    },
+    "AutoUnlock": {
+      "name": "Auto unlock",
+      "help": "Before connecting and launching the game, wake the screen, swipe up and enter the password below via ADB",
+      "True": "True",
+      "False": "False"
+    },
+    "Password": {
+      "name": "Lock screen password",
+      "help": "Digits-only passwords are sent as PIN key events, others are typed as text. Leave empty if swiping up unlocks the device. Pattern lock is not supported.\nOnly one attempt is made per unlock to avoid system lockout; on failure, human takeover is requested.\nThe password is stored encrypted locally, not in the config file"
     }
   },
   "Scrcpy": {

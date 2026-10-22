@@ -1,5 +1,4 @@
 import os
-import time
 
 import numpy as np
 import paddle
@@ -10,6 +9,7 @@ from module.logger import logger
 
 from .constant import ModelsPath
 from .download import maybe_download
+from .interval import OcrInterval
 from .progress import OcrInitProgress
 
 models = {
@@ -36,12 +36,14 @@ class NIKKEOcr(PaddleOCR):
         model_type: str = 'mobile',
         device: str = 'cpu',
         cpu_threads: int = 10,
+        **paddle_kwargs,
     ):
         """
         初始化OCR
 
         Args:
             cpu_threads: PaddleOCR 推理线程数
+            paddle_kwargs: 透传给 PaddleOCR 的其他参数（如 text_recognition_batch_size）
         """
         if device.startswith('gpu') and not paddle.is_compiled_with_cuda():
             logger.critical(
@@ -81,8 +83,7 @@ class NIKKEOcr(PaddleOCR):
 
         # 检查模型文件是否存在
         self._assert_and_prepare_model_files(rec_model_dir, det_model_dir)
-        self.interval = interval
-        self.last_time = 0
+        self._throttle = OcrInterval(interval)
 
         # 调用父类 PaddleOCR 的 __init__ 完成模型加载
         logger.info(f'PaddleOCR Initializing, device: {device}')
@@ -102,6 +103,7 @@ class NIKKEOcr(PaddleOCR):
                 text_recognition_model_name='PP-OCRv5_server_rec' if model_type == 'server' else 'PP-OCRv5_mobile_rec',
                 text_recognition_model_dir=rec_model_dir,
                 cpu_threads=cpu_threads if cpu_threads > 0 else 10,
+                **paddle_kwargs,
             )
 
         logger.info('PaddleOCR prepared')
@@ -116,11 +118,7 @@ class NIKKEOcr(PaddleOCR):
         return list(self.paddlex_pipeline.text_rec_model(images))
 
     def check_interval(self):
-        delta = time.time() - self.last_time
-        if delta < self.interval:
-            logger.debug(f'OCR interval {delta:.2f}s < {self.interval}s, sleeping {self.interval - delta:.2f}s')
-            time.sleep(self.interval - delta)
-        self.last_time = time.time()
+        self._throttle.check_interval()
 
     def _assert_and_prepare_model_files(self, rec_model_dir, det_model_dir):
         required_files = ['inference.json', 'inference.pdiparams', 'inference.yml']
