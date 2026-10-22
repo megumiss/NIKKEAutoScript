@@ -1,7 +1,7 @@
 """章节道路连通数据及人工分隔；与定位使用的道路图像分开保存。
 
 生产侧的地图包连通查询（map_state、原型 map_package/probe）与标注工具的连通预览共用这里的
-分区计算与缓存判定，批处理入口见 dev_tools/map_connectivity.py。
+分区计算与缓存判定，批处理入口见 dev_tools/campaign/maps/connectivity.py。
 """
 
 import hashlib

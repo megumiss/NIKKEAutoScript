@@ -3,7 +3,7 @@
 标注坐标绑定底图，所以读到的文档必须先过 `validate_annotations`：底图摘要、尺寸或坐标约定不符
 说明标注与地图包不是同一版本，宁可报错也不要把错位的目标点喂给导航。
 这里只做读取与校验，不写盘——运行期不改资源目录，保存、备份与预览属于标注编辑器
-（`dev_tools/annotation_store.py`）。
+（`dev_tools/campaign/maps/annotation_store.py`）。
 """
 
 import hashlib
@@ -107,7 +107,7 @@ class AnnotationStore:
 
     所有路径都要经 package() 解析，确保请求里的地图标识不能越出根目录——编辑器会把浏览器
     请求的地图标识直接传进来，路径拼接必须当成不可信输入。
-    锁在这里建好：编辑器的读写子类（`dev_tools/annotation_store.py`）用它把同进程的读写串行化。
+    锁在这里建好：编辑器的读写子类（`dev_tools/campaign/maps/annotation_store.py`）用它把同进程的读写串行化。
     """
 
     def __init__(self, root):

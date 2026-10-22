@@ -15,11 +15,10 @@ import cv2
 import numpy as np
 from PIL import ImageGrab
 
-if __package__:
-    from .minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from minimap_reconstruct import DriverWindow, DriftScanner, parse_args, rebuild
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
+from dev_tools.campaign.capture.reconstruct import DriverWindow, DriftScanner, parse_args, rebuild
 
 from module.campaign.vision.chapter import chapter_number
 from module.campaign.vision.minimap import map_visible, terrain
@@ -688,7 +687,7 @@ def main(argv=None):
                              'Overrides --start/--end.')
     parser.add_argument('--output', type=Path, default=DEFAULT_CAPTURE_ROOT,
                         help='Capture directory (default: data/chapter_maps/local/captures).')
-    parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument('--retries', type=int, default=2, help='Additional attempts per failed chapter.')
     parser.add_argument('--capture-only', action='store_true',
                         help='Save scans without rebuilding or exporting; run the offline rebuild '

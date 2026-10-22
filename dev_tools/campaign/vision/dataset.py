@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 LABELS = ['scene_squad_arrow', 'scene_collectible_indicator', 'minimap_enemy_normal',
           'minimap_enemy_ex', 'minimap_squad_ring', 'scene_ground_mechanism_off',
@@ -532,7 +532,7 @@ def build(output, destination, extra_frame_reviews=(), extra_objects=()):
         raise FileExistsError(f'Use a new dataset version: {destination}')
     records = read_jsonl(output / 'proposals.jsonl')
     by_id = {r['id']: r for r in records}
-    review_path = ROOT / 'dev_tools/campaign_yolo/annotation_reviews.json'
+    review_path = Path(__file__).parent / 'reviews/annotation_reviews.json'
     if review_path.exists():
         for review in json.loads(review_path.read_text('utf-8'))['reviews']:
             record = by_id.get(review['id'])
@@ -542,7 +542,7 @@ def build(output, destination, extra_frame_reviews=(), extra_objects=()):
             if len(matches) != 1:
                 raise ValueError(f'Annotation review box changed: {review["id"]} {review["box"]}')
             matches[0].update(label=review['label'], uncertain=review['uncertain'], reviewed=True)
-    frame_review_path = ROOT / 'dev_tools/campaign_yolo/frame_reviews.json'
+    frame_review_path = Path(__file__).parent / 'reviews/frame_reviews.json'
     exclusions = {}
     if frame_review_path.exists():
         apply_frame_reviews(records, frame_review_path)

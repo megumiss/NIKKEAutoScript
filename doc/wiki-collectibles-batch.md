@@ -1,6 +1,6 @@
 # Wiki 收集物批量导入与地图补采
 
-入口：[wiki_collectibles.py](../dev_tools/wiki_collectibles.py)。它读取 GameKee 的“地图收集（主线）”和“地图收集（困难）”目录，下载文章与图片，将可靠配准的点写入已有地图包。无需启动游戏；所有图片、文章和配准结果保存在缓存目录，可以重复执行。
+入口：[wiki_collectibles.py](../dev_tools/campaign/maps/wiki_collectibles.py)。它读取 GameKee 的“地图收集（主线）”和“地图收集（困难）”目录，下载文章与图片，将可靠配准的点写入已有地图包。无需启动游戏；所有图片、文章和配准结果保存在缓存目录，可以重复执行。
 
 解析支持结构化表格、HTML 表格、无表头表格和“标题＋图片组”。同一条目的场景图和地图图不会重复计数；文章及条目总数按实际获取结果统计。
 
@@ -9,7 +9,7 @@
 在仓库根目录、项目 Python 环境中运行。标注和 Wiki 导入默认读取 `data/resources/maps/`，完整采集包存放在 `data/chapter_maps/local/`。`--maps-root` 可显式指定其他集合目录或单章包：
 
 ```powershell
-python dev_tools/wiki_collectibles.py
+python dev_tools/campaign/maps/wiki_collectibles.py
 ```
 
 默认处理 Wiki 当前公布的全部普通／困难文章，缓存位于 `data/wiki_collectibles/`。可以多次传入 `--maps-root`，按给定顺序选择本章底图；同一根目录内若有多个同章包，则报告歧义，需缩小根目录，避免混用坐标。不会自动用最新修改时间替用户挑地图。
@@ -20,16 +20,16 @@ python dev_tools/wiki_collectibles.py
 
 ```powershell
 # 只处理第 38 章两种难度
-python dev_tools/wiki_collectibles.py --chapters 38
+python dev_tools/campaign/maps/wiki_collectibles.py --chapters 38
 
 # 地图尚未采齐时，先下载 Wiki 资料
-python dev_tools/wiki_collectibles.py --download-only
+python dev_tools/campaign/maps/wiki_collectibles.py --download-only
 
 # 沿用缓存，补图后离线配准及导入
-python dev_tools/wiki_collectibles.py --offline
+python dev_tools/campaign/maps/wiki_collectibles.py --offline
 
 # 只核对配准结果，不写 annotations.json
-python dev_tools/wiki_collectibles.py --chapters 38 --dry-run
+python dev_tools/campaign/maps/wiki_collectibles.py --chapters 38 --dry-run
 ```
 
 `--difficulty normal|hard|both` 默认 `both`；`--cache` 指定可复用缓存；`--refresh` 重新获取文章和图片；`--retries` 默认每次下载额外重试 2 次。HTTP 被 CDN 拦截时，脚本用独立的无头 Edge 浏览器打开公开 Wiki 页面并读取响应。此路径需要 Python `playwright` 和已安装的 Microsoft Edge。其他设备若缺少 Python 包，可在其项目环境执行 `python -m pip install playwright`，无需下载额外浏览器。不会使用个人浏览器资料或登录状态。
@@ -47,11 +47,11 @@ python dev_tools/wiki_collectibles.py --chapters 38 --dry-run
 
 ## 批量地图补采
 
-[minimap_chapters.py](../dev_tools/minimap_chapters.py) 仍从游戏当前打开的普通章节向前倒序采集。采集一套底图即可供两种难度的 Wiki 点复用。
+[chapters.py](../dev_tools/campaign/capture/chapters.py) 仍从游戏当前打开的普通章节向前倒序采集。采集一套底图即可供两种难度的 Wiki 点复用。
 
 ```powershell
 # 先在游戏进入普通 38 章野外；按当前实际章节修改 --start
-python dev_tools/minimap_chapters.py --start 38 --end 1 --retries 2
+python dev_tools/campaign/capture/chapters.py --start 38 --end 1 --retries 2
 ```
 
 游戏以管理员身份运行时，命令也需同等权限。工具核对窗口、焦点、章节 OCR 和紧凑地图后才扫描或切章。默认复用正上方俯视比例、游戏斜向朝向、120px 连续拖动和高频采样。
@@ -61,7 +61,7 @@ python dev_tools/minimap_chapters.py --start 38 --end 1 --retries 2
 采集结束后，将单章运行所需数据导出到资源目录下尚不存在的地图包；既有地图不会被覆盖：
 
 ```powershell
-python -m dev_tools.map_runtime --source data/chapter_maps/local/captures/chapter_38 --destination data/resources/maps/chapter_38
+python -m dev_tools.campaign.maps.runtime --source data/chapter_maps/local/captures/chapter_38 --destination data/resources/maps/chapter_38
 ```
 
 若目标已存在，使用新的名称（如 `data/resources/maps/rescan_20261007/chapter_38`）并在编辑器中选择该版本。导出保留采集包中已有标注；不会把另一坐标系的旧标注自动迁移到新图。
@@ -69,7 +69,7 @@ python -m dev_tools.map_runtime --source data/chapter_maps/local/captures/chapte
 批量入口支持分别设置探索拖动和保存帧间距。例如，保持 120px 拖动并把保存帧间距减至 40px：
 
 ```powershell
-python dev_tools/minimap_chapters.py --start 34 --end 1 --stroke-px 120 --keyframe-px 40
+python dev_tools/campaign/capture/chapters.py --start 34 --end 1 --stroke-px 120 --keyframe-px 40
 ```
 
 `--stroke-px` 是探索阶段的鼠标行程，默认 120；最初两次运动标定仍各拖动 240px。`--keyframe-px` 是保存原始帧的相机位移间距，默认 80；高频截图间隔仍为 0.03 秒。缩短拖动并减小关键帧间距有助于增加重叠，但不能修复透视偏差或缺少道路约束。已有合格包会跳过，参数不会自动重采或改变它的坐标。

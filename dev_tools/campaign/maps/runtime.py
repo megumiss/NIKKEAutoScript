@@ -14,7 +14,7 @@ import numpy as np
 
 if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from module.campaign.map.paths import DEFAULT_MAPS_ROOT, LOCAL_MAPS_ROOT
 
@@ -119,10 +119,7 @@ def replace_directory(candidate, destination):
 
 def export_runtime(source, destination, lean=True):
     """先在临时目录校验复制结果，再发布到新路径；不覆盖已编辑的运行地图。默认导出即精简。"""
-    if __package__:
-        from .annotation_store import EditableAnnotationStore as AnnotationStore
-    else:
-        from annotation_store import EditableAnnotationStore as AnnotationStore
+    from dev_tools.campaign.maps.annotation_store import EditableAnnotationStore as AnnotationStore
     source, destination = Path(source).resolve(), Path(destination).resolve()
     if destination.exists() or destination.is_relative_to(source):
         raise FileExistsError('Choose a new runtime directory outside the capture package')

@@ -17,10 +17,9 @@ from bs4 import BeautifulSoup
 
 if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from annotation_store import EditableAnnotationStore as AnnotationStore
-else:
-    from .annotation_store import EditableAnnotationStore as AnnotationStore
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+
+from dev_tools.campaign.maps.annotation_store import EditableAnnotationStore as AnnotationStore
 
 from module.campaign.vision.matching import MATCH_VERSION, MapMatcher
 from module.campaign.map.paths import DEFAULT_MAPS_ROOT

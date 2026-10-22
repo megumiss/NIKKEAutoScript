@@ -2,7 +2,7 @@
 
 import signal
 
-from dev_tools.minimap_reconstruct import DriverWindow
+from dev_tools.campaign.capture.reconstruct import DriverWindow
 
 from module.campaign.tools import runtime, settings
 

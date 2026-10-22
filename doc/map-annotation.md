@@ -1,6 +1,6 @@
 # 地图标注工具
 
-入口：`python -m dev_tools.map_annotator`，原 [脚本启动路径](../dev_tools/map_annotator.py) 保持兼容。目录职责见 [编辑器说明](../dev_tools/map_annotator/README.md)。这是独立的本地浏览器工具，不启动游戏控制，不需要管理员权限。依赖 Python 3.9+ 和项目已有的 Pillow、NumPy、OpenCV，不需要额外安装前端依赖或构建 SPA。
+入口：`python -m dev_tools.campaign.editor`。目录职责见 [编辑器说明](../dev_tools/campaign/editor/README.md)。这是独立的本地浏览器工具，不启动游戏控制，不需要管理员权限。依赖 Python 3.9+ 和项目已有的 Pillow、NumPy、OpenCV，不需要额外安装前端依赖或构建 SPA。
 
 从 Wiki 批量下载普通／困难收集物并配准到共享底图，参见 [Wiki 批量导入与地图补采](wiki-collectibles-batch.md)。导入后仍可用本工具人工复核和编辑。
 
@@ -9,7 +9,7 @@
 在仓库目录、已安装项目依赖的 Python 环境中运行：
 
 ```powershell
-python dev_tools/map_annotator.py
+python -m dev_tools.campaign.editor
 ```
 
 默认递归查找 `data/resources/maps/` 下的运行地图，与 Wiki 导入共用目录，自动打开浏览器。完整采集与辅助数据存放在 `data/chapter_maps/local/`，不进入默认地图列表。网页只监听本机 `127.0.0.1:8766`。终端按 Ctrl+C 关闭服务。
@@ -17,8 +17,8 @@ python dev_tools/map_annotator.py
 指定单张地图或其他集合目录：
 
 ```powershell
-python dev_tools/map_annotator.py --map data/resources/maps/chapter_38
-python dev_tools/map_annotator.py --root data/resources/maps
+python -m dev_tools.campaign.editor --map data/resources/maps/chapter_38
+python -m dev_tools.campaign.editor --root data/resources/maps
 ```
 
 `--map` 指向包含 `map.png` 和 `map.json` 的目录；未指定 `--root` 时，同级地图包也会进入下拉列表。`--root` 和 `--map` 一起使用时，后者必须在前者目录内。`--port 0` 可自动选择可用端口，`--no-open` 可关闭自动打开浏览器。
@@ -99,7 +99,7 @@ Ctrl+S 保存时把待保存的道路修订**直接写入原始数据**：`map.p
 运行时不接受过期数据。新扫描导出与实验包导入会携带连通文件。需要重新批量生成时执行：
 
 ```powershell
-.venv/Scripts/python.exe -m dev_tools.map_connectivity --root data/resources/maps
+.venv/Scripts/python.exe -m dev_tools.campaign.maps.connectivity --root data/resources/maps
 ```
 
 ## 正式扫描
@@ -115,7 +115,7 @@ Ctrl+S 保存时把待保存的道路修订**直接写入原始数据**：`map.p
 - 「采用为本章运行地图」把扫描结果导出为 `data/resources/maps/chapter_XX`：已有运行包与它拆出的 `runtime_extras` 整体移到
   `local/history/replaced_<时间>/`，`scans/` 下的副本随即删除，完整采集仍在 `captures/`。导出即精简（见「文件与坐标」）。
   旧标注坐标属于旧底图，不自动迁移，采用后重新导入 Wiki 或手工标注。
-  命令行等价于 `python -m dev_tools.map_runtime --source <包> --destination data/resources/maps/chapter_XX --replace`。
+  命令行等价于 `python -m dev_tools.campaign.maps.runtime --source <包> --destination data/resources/maps/chapter_XX --replace`。
 - 同一编辑器中的扫描与小队移动互斥。
 
 ## Wiki 和移动测试
@@ -191,7 +191,7 @@ Wiki 缓存绑定底图与几何，收集品对象变化不会触发全部重新
 - 每次覆盖前，运行地图的原标注备份到 `local/packages/<地图相对路径>/.annotation_backups/`，再通过临时文件原子替换。显式打开其他本地地图包时，备份仍在包内。恢复备份时先保留当前副本，再将选中的备份复制为 `annotations.json` 并重新加载。
 - 未保存修改在离开网页或切换地图时会提示。若其他窗口或程序已经修改标注，保存会拒绝覆盖；先下载当前副本，再重新加载并比较。下载副本不等于保存到地图包。
 - `data/resources/maps/` 是资源仓库（NIKKEAutoScriptResource）的本地同步副本，随资源仓库更新而非主项目提交；`local/` 放完整采集、实拍参考图、重建缓存、报告和备份，不提交。`local/raw/chapter_XX` 是各章运行包对应的完整原始包，`local/runtime_extras/` 是从运行包拆出的非必要数据，`local/archive/` 是已被取代的临时实验快照；目录职责见 `local/README.md`。后续标注以 `runtime/` 内文件为准。
-- [map_runtime.py](../dev_tools/map_runtime.py) 按定位模型导出运行文件，并在导出时精简到正式推图实际读取的数据：所有章节保留 `map.png`、`map.json`、`annotations.json`、`connectivity.json`；平面章节的 `source/map_data.npz` 只留道路概率、投影与变换校验数组（去掉覆盖计数与敌我位置）。被去掉的原件搬到 `local/runtime_extras/chapter_XX/`，随 `manifest.json` 记录，不进入版本库；已有运行包可用 `python -m dev_tools.map_runtime --slim data/resources/maps` 原地精简，重复执行无改动。平面实验包再通过 `prepare_package.py` 导入，共用仓库已有的 `assets/calibration.json` 并生成 `validation.json`；移动测试入口也会创建独立运行副本。
+- [runtime.py](../dev_tools/campaign/maps/runtime.py) 按定位模型导出运行文件，并在导出时精简到正式推图实际读取的数据：所有章节保留 `map.png`、`map.json`、`annotations.json`、`connectivity.json`；平面章节的 `source/map_data.npz` 只留道路概率、投影与变换校验数组（去掉覆盖计数与敌我位置）。被去掉的原件搬到 `local/runtime_extras/chapter_XX/`，随 `manifest.json` 记录，不进入版本库；已有运行包可用 `python -m dev_tools.campaign.maps.runtime --slim data/resources/maps` 原地精简，重复执行无改动。平面实验包再通过 `prepare_package.py` 导入，共用仓库已有的 `assets/calibration.json` 并生成 `validation.json`；移动测试入口也会创建独立运行副本。
 - 运行地图的道路导出、标注备份、平面标定采样及旧局部标定写入 `local/packages/<地图相对路径>/`。完整采集包的实拍参考图可通过显式 `--map` 打开；重建与扫描回放使用 `local/` 内完整数据，不使用精简后的运行包。
 - 导出入口只写到新目录，拒绝覆盖已有运行地图；地图与标注保留原始文件字节，避免换行转换破坏哈希绑定。保存后的标注修改仍需 Git 提交。本地 `formal_manifest.json` 是历史采集快照，不能代替运行包的 `validation.json`。
 

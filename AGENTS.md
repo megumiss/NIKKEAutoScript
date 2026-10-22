@@ -7,6 +7,7 @@
 
 配置与运行时文件在 `config/`；模板图与多语言资源在 `assets/`（如 `assets/zh-CN/event_dated/...`）；日志与错误截图在 `log/`。  
 运行地图等资源来自独立仓库 NIKKEAutoScriptResource（部署设置 `ResourceRepository`），按需同步到 `data/resources/`（不提交，`maps/` 为章节地图）；`data/chapter_maps/local/` 为本地采集、原始包与实验数据。
+自动推图开发工具集中在 `dev_tools/campaign/`，按采集标定（`capture/`）、地图数据（`maps/`）、视觉数据（`vision/`）和本机编辑器（`editor/`）划分；根目录不再保留旧脚本入口，调用方统一使用分类后的模块路径。
 桌面 Tauri 2 工程位于 `webapp/`；Vue SPA 位于 `webui/`，由 Python 后端托管。  
 SPA 源码结构：`webui/src/views/`（按页面拆分）、`webui/src/stores/`（Pinia 共享状态）、`webui/src/composables/`（Tauri 壳、文本域等复用逻辑）、`webui/src/components/`（壳与通用组件）；`App.vue` 只是布局壳，按路由切换视图。
 

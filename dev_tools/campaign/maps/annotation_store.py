@@ -18,7 +18,7 @@ from pathlib import Path
 
 if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from module.campaign.map.annotations import COORDINATES, AnnotationStore, ConflictError, digest, validate_annotations
 from module.campaign.map.connectivity import ensure_data, write_data

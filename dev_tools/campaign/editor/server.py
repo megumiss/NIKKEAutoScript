@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from ..annotation_store import EditableAnnotationStore
+from ..maps.annotation_store import EditableAnnotationStore
 from .jobs.movement import MovementJobs
 from .jobs.scan import ScanJobs
 from .jobs.wiki import WikiJobs

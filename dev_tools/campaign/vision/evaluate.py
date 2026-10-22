@@ -11,9 +11,9 @@ from unittest.mock import patch
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from dev_tools.campaign_yolo_dataset import load_frame, read_jsonl
+from dev_tools.campaign.vision.dataset import load_frame, read_jsonl
 from module.campaign.vision import detection, perception
 
 

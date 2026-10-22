@@ -12,7 +12,7 @@ import threading
 from module.campaign.map.paths import DEFAULT_CAPTURE_ROOT, DEFAULT_MAPS_ROOT
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 
 
 class ScanJobs:
@@ -20,7 +20,7 @@ class ScanJobs:
 
     同一时刻只允许一个扫描，因为扫描要独占游戏窗口和鼠标；任务状态会被 HTTP 线程并发访问，
     用可重入锁保护（start/stop 内部还会再调 status）。
-    扫描本体跑在独立子进程里（dev_tools.minimap_chapters），日志进各自输出目录的 worker.log，
+    扫描本体跑在独立子进程里（dev_tools.campaign.capture.chapters），日志进各自输出目录的 worker.log，
     这样标注工具崩了也不会把扫描带走，重启后还能从目录恢复现场。
     """
 
@@ -58,7 +58,7 @@ class ScanJobs:
                     else self.store.root)
             folder = root / 'scans' / identifier
             folder.mkdir(parents=True)
-            command = [sys.executable, '-X', 'utf8', '-u', '-m', 'dev_tools.minimap_chapters',
+            command = [sys.executable, '-X', 'utf8', '-u', '-m', 'dev_tools.campaign.capture.chapters',
                        '--start', str(chapter), '--end', str(chapter), '--output', str(folder),
                        '--driver-root', str(ROOT), '--stroke-px', str(stroke), '--keyframe-px', str(keyframe),
                        '--retries', '0']
@@ -113,7 +113,7 @@ class ScanJobs:
                     try:
                         destination = self.store.root / result['map_id']
                         if package != destination and not destination.exists():
-                            from dev_tools.map_runtime import export_runtime
+                            from dev_tools.campaign.maps.runtime import export_runtime
                             export_runtime(package, destination)
                         self.store.load(result['map_id'])
                         result.update(state='complete', message='扫描与处理完成，可以打开新地图。')
@@ -139,7 +139,7 @@ class ScanJobs:
                 raise ValueError('扫描尚未结束。')
             if self.status().get('state') != 'complete':
                 raise ValueError('只有处理完成且校验通过的扫描才能采用。')
-            from dev_tools.map_runtime import adopt_runtime
+            from dev_tools.campaign.maps.runtime import adopt_runtime
             source = self.store.root / self.job['map_id']
             chapter = self.job['chapter']
             result = adopt_runtime(source, chapter, self.store.root)

@@ -17,8 +17,8 @@
 
 | 入口／模块 | 用途与边界 |
 | --- | --- |
-| [dev_tools/campaign_calibrate.py](../dev_tools/campaign_calibrate.py) | 批量采集入口；指定起止章节和输出目录，保存进度、截图、样本及通过的标定。会移动小队并切换章节。 |
-| [dev_tools/minimap_chapters.py](../dev_tools/minimap_chapters.py) | 提供章节 OCR、切章等待、进度写入；其独立命令用于地图扫描，不是点击位移标定入口。 |
+| [dev_tools/campaign/capture/calibrate.py](../dev_tools/campaign/capture/calibrate.py) | 批量采集入口；指定起止章节和输出目录，保存进度、截图、样本及通过的标定。会移动小队并切换章节。 |
+| [dev_tools/campaign/capture/chapters.py](../dev_tools/campaign/capture/chapters.py) | 提供章节 OCR、切章等待、进度写入；其独立命令用于地图扫描，不是点击位移标定入口。 |
 | [prepare_package.py](../module/campaign/tools/prepare_package.py) | 从静态地图导出独立实验包，绑定共享标定与文件哈希；只处理本地数据。 |
 | [check_controls.py](../module/campaign/tools/check_controls.py) | `--cycles 0` 截图检查；`1..10` 次展开／收回检查，不移动小队。仍会取得游戏输入控制。 |
 | [manual_move.py](../module/campaign/tools/manual_move.py) | `prepare` 和 `GameSession` 负责快照、身份检查、定位、点击及停稳；平面批量标定使用上述采集入口。 |
@@ -36,7 +36,7 @@
 ### 1. 检查入口
 
 ```powershell
-.venv\Scripts\python.exe -X utf8 dev_tools/campaign_calibrate.py --help
+.venv\Scripts\python.exe -X utf8 dev_tools/campaign/capture/calibrate.py --help
 ```
 
 ### 2. 地图包与控件预检查
@@ -57,14 +57,14 @@
 先对当前章节完整跑一遍，明确给出相同的起止章节。新批次用新输出目录：
 
 ```powershell
-.venv\Scripts\python.exe -X utf8 -u dev_tools/campaign_calibrate.py --start 48 --end 48 --output log/chapter_calibration_run_01
+.venv\Scripts\python.exe -X utf8 -u dev_tools/campaign/capture/calibrate.py --start 48 --end 48 --output log/chapter_calibration_run_01
 ```
 
 如需保存终端日志，先创建输出目录，使用新日志文件名：
 
 ```powershell
 New-Item -ItemType Directory -Path log/chapter_calibration_run_01 -Force
-.venv\Scripts\python.exe -X utf8 -u dev_tools/campaign_calibrate.py --start 48 --end 48 --output log/chapter_calibration_run_01 *> log/chapter_calibration_run_01/run_48_01.log
+.venv\Scripts\python.exe -X utf8 -u dev_tools/campaign/capture/calibrate.py --start 48 --end 48 --output log/chapter_calibration_run_01 *> log/chapter_calibration_run_01/run_48_01.log
 ```
 
 两种写法任选其一，不要同时启动。脚本按以下顺序工作：
@@ -132,7 +132,7 @@ New-Item -ItemType Directory -Path log/chapter_calibration_run_01 -Force
 单章流程可用后，手动确认当前游戏章节与 `--start` 一致，再启动：
 
 ```powershell
-.venv\Scripts\python.exe -X utf8 -u dev_tools/campaign_calibrate.py --start 48 --end 1 --output log/chapter_calibration_run_01
+.venv\Scripts\python.exe -X utf8 -u dev_tools/campaign/capture/calibrate.py --start 48 --end 1 --output log/chapter_calibration_run_01
 ```
 
 单章失败会记录 `failed`，再尝试切到上一章；切章验证失败则终止批次。

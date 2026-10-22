@@ -1,6 +1,6 @@
 """Reconstruct NIKKE's expanded minimap from driver-controlled overlapping views.
 
-Run ``python dev_tools/minimap_reconstruct.py --help`` for capture/rebuild options.
+Run ``python -m dev_tools.campaign.capture.reconstruct --help`` for capture/rebuild options.
 The scanner never treats an empty grid as a confirmed camera clamp.
 """
 
@@ -21,7 +21,7 @@ from PIL import Image
 
 if not __package__:
     # 脚本方式运行时仓库根不在默认路径上。
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from module.campaign.vision.matching import overlap, register
 from module.campaign.vision.minimap import map_visible, minimap_control_visible, terrain
@@ -2774,7 +2774,7 @@ def parse_args(argv=None):
     """解析采集、重建和预算参数，校验客户区与采样参数的基本范围。"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument('--driver-root', type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument('--roi', nargs=4, type=int, default=[644, 280, 1130, 742])
     parser.add_argument('--client', nargs=2, type=int, default=[1776, 999])
     parser.add_argument('--keep-window-position', action='store_true',

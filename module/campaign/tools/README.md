@@ -29,7 +29,7 @@
 | `check_controls.py`、`scene_pan.py`、`pan_check.py` | 地图状态切换及两类镜头行为的现场实验 |
 | `assets/` | 弹窗与箭头模板、共享移动标定 |
 
-命令行实验包默认在 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`，两者均为本机数据。需要提交的章节地图位于 `data/resources/maps/`，由 [map_runtime.py](../../../dev_tools/map_runtime.py) 从完整采集包导出；完整采集、重建与辅助数据位于 `data/chapter_maps/local/`，不提交。平面章节使用下方命令导入实验包。分层章节保留局部定位所需参考帧和深度数据，移动标定在任务内临时生成，不需要现场标定包。
+命令行实验包默认在 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`，两者均为本机数据。需要提交的章节地图位于 `data/resources/maps/`，由 [runtime.py](../../../dev_tools/campaign/maps/runtime.py) 从完整采集包导出；完整采集、重建与辅助数据位于 `data/chapter_maps/local/`，不提交。平面章节使用下方命令导入实验包。分层章节保留局部定位所需参考帧和深度数据，移动标定在任务内临时生成，不需要现场标定包。
 
 Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/wiki_references/NN.png`；没有它们仍可运行地图校验、定位回放及控制检查。
 

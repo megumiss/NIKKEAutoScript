@@ -62,7 +62,7 @@ flowchart LR
 
 ## 4. 小地图状态机
 
-所有原型 `map_open` / `map_close` 都调用 [DriverWindow.reset_minimap](../dev_tools/minimap_reconstruct.py)。识别顺序是展开面板、紧凑地图、关闭图标；无法识别时停止。
+所有原型 `map_open` / `map_close` 都调用 [DriverWindow.reset_minimap](../dev_tools/campaign/capture/reconstruct.py)。识别顺序是展开面板、紧凑地图、关闭图标；无法识别时停止。
 
 | 当前状态 | 目标 | 输入 |
 | --- | --- | --- |

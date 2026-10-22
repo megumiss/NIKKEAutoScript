@@ -20,13 +20,13 @@ flowchart TD
 
 | 脚本 | 负责的工作 | 不负责的工作 |
 | --- | --- | --- |
-| `dev_tools/minimap_reconstruct.py` | 单章地图采集、跟踪、拼接和诊断 | 战斗、章节解锁、收集物拾取 |
-| `dev_tools/minimap_chapters.py` | OCR 确认章节、倒序切章、导出与批次恢复 | 完成主线后自动解锁下一章 |
-| `dev_tools/wiki_collectibles.py` | 目录／文章解析、缓存、逐项配准调度和标注合并 | 游戏控制 |
+| `dev_tools/campaign/capture/reconstruct.py` | 单章地图采集、跟踪、拼接和诊断 | 战斗、章节解锁、收集物拾取 |
+| `dev_tools/campaign/capture/chapters.py` | OCR 确认章节、倒序切章、导出与批次恢复 | 完成主线后自动解锁下一章 |
+| `dev_tools/campaign/maps/wiki_collectibles.py` | 目录／文章解析、缓存、逐项配准调度和标注合并 | 游戏控制 |
 | `module/campaign/vision/matching.py` | 将 Wiki 小队圆环投影到本地图 | 证明游戏内已拾取 |
 | `module/campaign/map/annotations.py` | 标注格式校验与地图包定位（推图只读这一半） | 写盘、备份、版本冲突恢复 |
-| `dev_tools/annotation_store.py` | 枚举、加载、保存、备份与连通预览 | 标注格式判据（见上一行） |
-| `dev_tools/map_annotator/server.py` | 标注编辑器的本机服务与命令行入口（原脚本路径保留兼容） | 标注读写实现（见上一行） |
+| `dev_tools/campaign/maps/annotation_store.py` | 枚举、加载、保存、备份与连通预览 | 标注格式判据（见上一行） |
+| `dev_tools/campaign/editor/server.py` | 标注编辑器的本机服务与命令行入口（原脚本路径保留兼容） | 标注读写实现（见上一行） |
 
 这些脚本及原型中的每个 Python 方法、内部辅助函数都有中文 docstring。复杂算法的原有英文说明一并保留；中文说明解释输入所处坐标、拒绝条件或非显然的用途。
 

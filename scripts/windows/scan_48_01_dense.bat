@@ -7,4 +7,4 @@ rem 批次倒序采集：开始前游戏必须停在 --start 指定章的田野�
 rem 中断后把 --start 改成游戏当前所停章节重跑即可续采（扫描已完整的章节自动跳过）；
 rem 要中途停止则在输出目录建 STOP 文件，批次会在章节边界退出。
 rem 双击后会弹一次 UAC，点是即可；扫描期间不要动游戏窗口和鼠标，完成后窗口会停留在结果页。
-powershell -NoProfile -Command "Start-Process -Verb RunAs -Wait -FilePath 'cmd.exe' -ArgumentList '/c','cd /d D:\PCR\NIKKEAutoScript && .venv\Scripts\python.exe -X utf8 -m dev_tools.minimap_chapters --start 48 --end 1 --keyframe-px 25 --stroke-px 120 --retries 0 --capture-only --output data\chapter_maps\local\dense01_48 > log\dense_01_48_capture.log 2>&1 & echo. & echo === capture finished, see log\dense_01_48_capture.log === & pause'"
+powershell -NoProfile -Command "Start-Process -Verb RunAs -Wait -FilePath 'cmd.exe' -ArgumentList '/c','cd /d D:\PCR\NIKKEAutoScript && .venv\Scripts\python.exe -X utf8 -m dev_tools.campaign.capture.chapters --start 48 --end 1 --keyframe-px 25 --stroke-px 120 --retries 0 --capture-only --output data\chapter_maps\local\dense01_48 > log\dense_01_48_capture.log 2>&1 & echo. & echo === capture finished, see log\dense_01_48_capture.log === & pause'"

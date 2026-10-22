@@ -53,4 +53,4 @@
 3. 验证直点未触发后不反复吸附到同一脚圈，附近五个试点和原有操作预算不变。
 4. 覆盖普通／EX 相邻、多个脚圈密集、遮挡、刚入屏、弱纹理、换章及不同拖动方向。
 
-旧五类回放仍使用 `dev_tools/campaign_yolo_evaluate.py`；训练、导出和 PyTorch/ONNX 对照在独立训练项目完成。
+旧五类回放仍使用 `dev_tools/campaign/vision/evaluate.py`；训练、导出和 PyTorch/ONNX 对照在独立训练项目完成。

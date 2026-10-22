@@ -8,7 +8,7 @@ import sys
 import time
 import traceback
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 os.environ['PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK'] = 'True'
 
@@ -16,7 +16,7 @@ import cv2
 from filelock import FileLock
 import numpy as np
 
-from dev_tools.minimap_chapters import chapter_number, click, wait_for_chapter, write_progress
+from dev_tools.campaign.capture.chapters import chapter_number, click, wait_for_chapter, write_progress
 from module.campaign.map.paths import DEFAULT_MAPS_ROOT, local_package_dir
 from module.campaign.tools import goto, runtime, settings
 from module.campaign.navigation.camera_navigation import field_chart, inside, target_projection, FIELD_BOUNDS
