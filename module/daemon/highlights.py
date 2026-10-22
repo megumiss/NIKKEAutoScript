@@ -13,24 +13,31 @@ class Highlights(UI, DaemonBase):
     def run(self):
         logger.hr('Highlights start', 1)
         timeout = Timer(600, count=10)
-        click_timer = Timer(0.3)
 
         next_nikke = False
         while 1:
             self.device.screenshot()
 
             # 花絮红点
-            if click_timer.reached() and self.appear(HIGHLIGHTS_RED, offset=(10, 10), threshold=0.9):
+            if self.appear(HIGHLIGHTS_RED, offset=(10, 10), threshold=0.9):
                 close = False
                 while 1:
                     self.device.screenshot()
 
                     # 点击红点，进入鉴赏列表
-                    if self.appear_then_click(HIGHLIGHTS_RED, offset=(10, 10), threshold=0.9, interval=1):
-                        click_timer.reset()
+                    if not close and self.appear_then_click(
+                        HIGHLIGHTS_RED, offset=(10, 10), threshold=0.9, interval=1
+                    ):
+                        # 列表有滑入动画，等它出现后再判断，避免把咨询页误判成已关闭列表
+                        if not self.wait_highlights_list():
+                            break
                         continue
                     # 回到咨询页面
-                    if close and self.appear(DETAIL_CHECK, offset=10, threshold=0.85):
+                    if (
+                        close
+                        and not self.appear(HIGHLIGHTS_LIST, offset=10)
+                        and self.appear(DETAIL_CHECK, offset=10, threshold=0.85)
+                    ):
                         next_nikke = True
                         logger.info('Back to conversation page')
                         break
@@ -42,7 +49,6 @@ class Highlights(UI, DaemonBase):
                     ):
                         close = True
                         logger.info('Highlights allready done, close list')
-                        click_timer.reset()
                         continue
 
                     # 红点消失，播放花絮
@@ -55,13 +61,11 @@ class Highlights(UI, DaemonBase):
                             if self.appear_then_click(HIGHLIGHTS_LIST_RED, offset=(-10, -30, 10, 500), interval=1):
                                 # 鉴赏开始
                                 self.play()
-                                click_timer.reset()
                                 break
                             else:
                                 # 如果点开nikke没有发现红点，需要滑动到底部
                                 self.ensure_sroll_to_bottom()
                     else:
-                        click_timer.reset()
                         continue
 
             # 没有红点，切换nikke
@@ -78,6 +82,19 @@ class Highlights(UI, DaemonBase):
                 break
             else:
                 timeout.clear()
+
+    def wait_highlights_list(self, timeout=3):
+        """点击花絮红点后等鉴赏列表出现，列表没出现时返回 False"""
+        confirm = Timer(timeout, count=3).start()
+        while 1:
+            self.device.screenshot()
+            if self.appear(HIGHLIGHTS_LIST, offset=10):
+                # 滑入动画期间匹配位置会偏移，等它稳定再点关闭
+                self.device.sleep(0.3)
+                return True
+            if confirm.reached():
+                logger.warning('Highlights list not shown after click')
+                return False
 
     def play(self):
         logger.hr('Highlights a nikke', 2)

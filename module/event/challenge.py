@@ -1,9 +1,9 @@
-from module.base.timer import Timer
 from module.base.utils import get_button_by_location
 from module.challenge.assets import *
 from module.event.assets import *
 from module.event.base import ChallengeNotFoundError, EventBase
 from module.exception import RequestHumanTakeover
+from module.handler.assets import END_FIGHTING_CHECK
 from module.logger import logger
 from module.simulation_room.assets import AUTO_BURST, AUTO_SHOOT, END_FIGHTING
 from module.tribe_tower.assets import OPERATION_FAILED
@@ -13,7 +13,6 @@ from module.ui.assets import FIGHT_QUICKLY_CHECK
 class EventChallenge(EventBase):
     def challenge(self, skip_first_screenshot=True):
         logger.hr('START EVENT CHALLENGE', 2)
-        click_timer = Timer(0.3)
 
         # 进入挑战页面
         while 1:
@@ -22,12 +21,9 @@ class EventChallenge(EventBase):
             else:
                 self.device.screenshot()
 
-            if (
-                click_timer.reached()
-                and self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30))
-                and self.appear_then_click(self.event_assets.CHALLENGE, offset=10, interval=5)
+            if self.appear(self.event_assets.EVENT_CHECK, offset=(30, 30)) and self.appear_then_click(
+                self.event_assets.CHALLENGE, offset=10, interval=5
             ):
-                click_timer.reset()
                 continue
 
             if self.appear(CHALLENGE_CHECK, offset=10):
@@ -68,52 +64,41 @@ class EventChallenge(EventBase):
                 break
 
             # 战斗结束
-            if click_timer.reached() and self.appear(END_FIGHTING, offset=30):
+            if self.appear(END_FIGHTING, offset=30):
                 while 1:
                     self.device.screenshot()
-                    if not self.appear(END_FIGHTING, offset=30):
-                        click_timer.reset()
+                    if not self.appear(END_FIGHTING_CHECK, offset=30):
                         break
                     if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
-                        click_timer.reset()
                         continue
                 break
 
             # 快速战斗
             if (
-                click_timer.reached()
-                and self.appear(CHALLENGE_STAGE_CHECK, offset=10)
+                self.appear(CHALLENGE_STAGE_CHECK, offset=10)
                 and self.appear(CHALLENGE_BATTLE, threshold=10)
                 and self.appear_then_click(CHALLENGE_QUICKLY_ENABLE, threshold=20, interval=1)
             ):
-                click_timer.reset()
                 continue
 
             # 使用票进行战斗
-            if (
-                click_timer.reached()
-                and self.appear(FIGHT_QUICKLY_CHECK, offset=30)
-                and self.appear_then_click(CHALLENGE_QUICK_TICKET, offset=10, interval=1)
+            if self.appear(FIGHT_QUICKLY_CHECK, offset=30) and self.appear_then_click(
+                CHALLENGE_QUICK_TICKET, offset=10, interval=1
             ):
-                click_timer.reset()
                 continue
 
             # 进入战斗
             if (
-                click_timer.reached()
-                and self.appear(CHALLENGE_STAGE_CHECK, offset=10)
+                self.appear(CHALLENGE_STAGE_CHECK, offset=10)
                 and self.appear(CHALLENGE_QUICKLY_DISABLE, threshold=10)
                 and self.appear_then_click(CHALLENGE_BATTLE, threshold=10, interval=1)
             ):
-                click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_SHOOT, offset=10, threshold=0.9, interval=5):
-                click_timer.reset()
+            if self.appear_then_click(AUTO_SHOOT, offset=10, threshold=0.9, interval=5):
                 continue
 
-            if click_timer.reached() and self.appear_then_click(AUTO_BURST, offset=10, threshold=0.9, interval=5):
-                click_timer.reset()
+            if self.appear_then_click(AUTO_BURST, offset=10, threshold=0.9, interval=5):
                 continue
 
             if self.appear(OPERATION_FAILED, offset=10):

@@ -20,7 +20,8 @@ class GiftBase(UI):
     def _run(self, button, check):
         if not self.appear(CASH_SHOP_CHECK, offset=(10, 10)):
             self.ui_ensure(page_main)
-            self.ensure_into_shop()
+            if not self.ensure_into_shop():
+                return
         try:
             if button == STEPUP:
                 self.ensure_into_shop_limited_time()
@@ -34,6 +35,18 @@ class GiftBase(UI):
         except GiftNotFound:
             pass
 
+    def ensure_fetch_shop_popup_closed(self):
+        while 1:
+            self.device.screenshot()
+
+            if self.appear(FETCH_SHOP_POP_CHECK, offset=(30, 30)):
+                self.appear_then_click(FETCH_SHOP_POP_GOTO_MAIN, offset=(30, 30), interval=3)
+                continue
+
+            if self.ui_page_appear(page_main) and self.appear(MAIN_CHECK, threshold=10):
+                logger.info('Returned to main after cash shop billing information fetch failed')
+                return
+
     def ensure_into_shop(self, skip_first_screenshot=True):
         logger.info('Open cash shop')
         click_timer = Timer(0.3)
@@ -45,13 +58,18 @@ class GiftBase(UI):
             else:
                 self.device.screenshot()
 
+            if self.appear(FETCH_SHOP_POP_CHECK, offset=(30, 30)):
+                logger.error('Failed to fetch cash shop billing information, return to main and skip this gift task')
+                self.ensure_fetch_shop_popup_closed()
+                return False
+
             # 付费
             if self.appear(CASH_SHOP_CHECK, offset=10):
                 if not confirm_timer.started():
                     confirm_timer.start()
                 if confirm_timer.reached():
                     logger.info('Open cash shop done')
-                    break
+                    return True
             else:
                 confirm_timer.clear()
 

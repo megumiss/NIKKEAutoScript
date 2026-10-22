@@ -1,0 +1,252 @@
+{
+  "screenshots": [
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_181734.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "main",
+      "templates": [
+        "MAIN_GOTO_EVENT"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_185605.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "event_home",
+      "templates": [
+        "EVENT_GOTO_STORY_1",
+        "EVENT_GOTO_STORY_2_LOCKED",
+        "SHOP",
+        "CHALLENGE",
+        "REWARD",
+        "LOGIN_STAMP"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_185615.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "login_stamp",
+      "templates": [
+        "LOGIN_STAMP_CHECK",
+        "LOGIN_STAMP_REWARD"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_185630.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "login_stamp_done",
+      "templates": [
+        "LOGIN_STAMP_DONE"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_185638.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "reward_mission",
+      "templates": [
+        "REWARD_CHECK",
+        "REWARD_MISSION_CHECK",
+        "REWARD_RECEIVE",
+        "REWARD_CLOSED",
+        "REWARD_CHALLENGE_HIDDEN"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_185659.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "reward_mission_done",
+      "templates": [
+        "REWARD_RECEIVE_DONE"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_185709.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "reward_challenge",
+      "templates": [
+        "REWARD_CHALLENGE_CHECK"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_185722.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "shop",
+      "templates": [
+        "TEMPLATE_SHOP_MONEY",
+        "SHOP_ITEM_LOAD_CHECK"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260917_185741.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "story1_home",
+      "templates": [
+        "STORY_1_CHECK"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图\\capture_20260918_020919.png",
+      "event_id": "event_20260917",
+      "phase": "day1",
+      "scene": "story1_normal",
+      "templates": [
+        "STORY_1_NORMAL",
+        "STORY_1_NORMAL_STAGE_11",
+        "STORY_1_NORMAL_STAGE_11_CLEAR",
+        "STORY_1_NORMAL_STAGE_12",
+        "STORY_1_NORMAL_STAGE_12_CLEAR"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260924_123059.png",
+      "event_id": "event_20260917",
+      "phase": "story2",
+      "scene": "event_home",
+      "templates": [
+        "EVENT_GOTO_STORY_2"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260924_123116.png",
+      "event_id": "event_20260917",
+      "phase": "story2",
+      "scene": "story2_home",
+      "templates": [
+        "STORY_2_CHECK"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20260924_145628.png",
+      "event_id": "event_20260917",
+      "phase": "story2",
+      "scene": "story2_normal",
+      "templates": [
+        "STORY_2_NORMAL",
+        "STORY_2_HARD_LOCKED",
+        "STORY_2_NORMAL_STAGE_11",
+        "STORY_2_NORMAL_STAGE_11_CLEAR",
+        "STORY_2_NORMAL_STAGE_12",
+        "STORY_2_NORMAL_STAGE_12_CLEAR"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20261001_082103.png",
+      "event_id": "event_20260917",
+      "phase": "story2_hard",
+      "scene": "story2_hard_normal",
+      "templates": [
+        "STORY_2_HARD_HIDDEN"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20261001_083616.png",
+      "event_id": "event_20260917",
+      "phase": "story2_hard",
+      "scene": "story2_hard",
+      "templates": [
+        "STORY_2_HARD",
+        "STORY_2_HARD_STAGE_11",
+        "STORY_2_HARD_STAGE_11_CLEAR",
+        "STORY_2_HARD_STAGE_12",
+        "STORY_2_HARD_STAGE_12_CLEAR"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/20261008194318.png",
+      "event_id": "event_20261008",
+      "phase": "day1",
+      "scene": "main",
+      "templates": [
+        "MAIN_GOTO_EVENT"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/20261008194334.png",
+      "event_id": "event_20261008",
+      "phase": "day1",
+      "scene": "event_home",
+      "templates": [
+        "EVENT_CHECK",
+        "STORY_1_CHECK",
+        "REWARD",
+        "CHALLENGE",
+        "SHOP"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/20261008194340.png",
+      "event_id": "event_20261008",
+      "phase": "day1",
+      "scene": "shop",
+      "templates": [
+        "TEMPLATE_SHOP_MONEY",
+        "SHOP_ITEM_LOAD_CHECK"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/20261008194519.png",
+      "event_id": "event_20261008",
+      "phase": "day1",
+      "scene": "reward",
+      "templates": [
+        "REWARD_CHECK",
+        "REWARD_RECEIVE_DONE",
+        "REWARD_CLOSED"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/20261008200805.png",
+      "event_id": "event_20261008",
+      "phase": "day1",
+      "scene": "reward_done",
+      "templates": [
+        "REWARD_RECEIVE"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/20261008203046.png",
+      "event_id": "event_20261008",
+      "phase": "day1",
+      "scene": "story1_normal",
+      "templates": [
+        "STORY_1_NORMAL_STAGE_11",
+        "STORY_1_NORMAL_STAGE_11_CLEAR",
+        "STORY_1_NORMAL_STAGE_12",
+        "STORY_1_NORMAL_STAGE_12_CLEAR",
+        "STORY_1_NORMAL",
+        "STORY_1_HARD_LOCKED"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20261015_174415.png",
+      "event_id": "event_20261008",
+      "phase": "hard",
+      "scene": "story1_hard_normal",
+      "templates": [
+        "STORY_1_HARD_HIDDEN"
+      ]
+    },
+    {
+      "screenshot_file": "D:/PCR/截图/capture_20261015_175707.png",
+      "event_id": "event_20261008",
+      "phase": "hard",
+      "scene": "story1_hard",
+      "templates": [
+        "STORY_1_HARD_STAGE_11",
+        "STORY_1_HARD_STAGE_11_CLEAR",
+        "STORY_1_HARD_STAGE_12",
+        "STORY_1_HARD_STAGE_12_CLEAR",
+        "STORY_1_HARD"
+      ]
+    }
+  ],
+  "missing": []
+}

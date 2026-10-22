@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>地图标注 · NIKKE</title>
+  <title>主线地图管理 · NIKKE</title>
   <link rel="stylesheet" href="/editor.css">
   <script src="/movement.js" defer></script>
   <script src="/scan.js" defer></script>
@@ -14,14 +14,16 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true">N</span><div><h1>地图标注</h1><span>CHAPTER MAP EDITOR</span></div></div>
-    <label class="map-picker">地图包<select id="map-select" aria-label="地图包"><option>正在读取地图…</option></select></label>
+    <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Zm6-3v15m6-12v15"/></svg></div>
+    <div class="brand"><h1>主线地图管理</h1><span>NIKKE · CHAPTER MAP STUDIO</span></div>
+    <label class="map-picker"><span>当前地图包</span><select id="map-select" aria-label="地图包"><option>正在读取地图…</option></select></label>
     <button id="refresh-maps" title="重新扫描目录">刷新目录</button>
     <div class="save-actions"><span id="save-state" class="save-state">未打开地图</span><button id="save" class="primary" disabled>保存 <kbd>Ctrl S</kbd></button></div>
   </header>
 
   <main class="workspace">
-    <aside class="tools-panel" aria-label="绘制工具">
+    <aside class="tools-panel surface" aria-label="绘制工具">
+      <div class="panel-heading"><div><span class="eyebrow">EDITING TOOLS</span><h2>标注与修订</h2></div></div>
       <details class="tool-section" id="connectivity-tools" open>
         <summary>道路连通区域</summary>
         <label class="check"><input id="show-connectivity" type="checkbox">显示区域编号与连通修订</label>
@@ -78,9 +80,10 @@
       <div class="tool-help"><strong>操作提示</strong><p>滚轮缩放 · 空格拖动平移</p><p>Enter 完成 · Esc 取消</p><p>绘制时 Backspace 撤回顶点</p><p>选中后拖动顶点修正位置</p></div>
     </aside>
 
-    <section class="canvas-panel" aria-label="标注工作区">
+    <section class="canvas-panel surface" aria-label="标注工作区">
+      <div class="panel-heading"><div><span class="eyebrow">MAP WORKSPACE</span><h2>主线地图</h2></div><span class="panel-caption">拖动平移 · 滚轮缩放</span></div>
       <div class="collectible-toolbar">
-        <span>收集品</span>
+        <span class="toolbar-label">收集品</span>
         <div class="difficulty-switch" role="group" aria-label="收集品难度切换">
           <button data-difficulty="normal" aria-pressed="true">普通</button>
           <button data-difficulty="hard" aria-pressed="false">困难</button>
@@ -99,14 +102,15 @@
           <defs><clipPath id="terrain-clip"><rect id="terrain-bounds" x="0" y="0"/></clipPath></defs>
           <g id="scene"><image id="base-image" x="0" y="0"/><g id="terrain" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-regions" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-corrections" pointer-events="none"></g><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="terrain-preview" pointer-events="none"></g><g id="movement-markers" pointer-events="none"></g></g>
         </svg>
-        <div id="empty-state" class="empty-state"><h2>打开一张地图，开始标注</h2><p>从上方选择地图包。使用 --root 可指定其他地图目录。</p></div>
+        <div id="empty-state" class="empty-state"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m6 12 12-6 12 6 12-6v30l-12 6-12-6-12 6V12Zm12-6v30m12-24v30"/></svg><h2>打开一张地图，开始标注</h2><p>从上方选择地图包。使用 --root 可指定其他地图目录。</p></div>
         <div id="drawing-hint" class="drawing-hint" hidden></div>
       </div>
       <footer class="statusbar"><span id="coordinates">X — · Y —</span><span id="dimensions">原图像素坐标</span><span id="map-status"></span></footer>
       <div id="message" role="status" aria-live="polite">标注保存到地图目录中的 annotations.json。</div>
     </section>
 
-    <aside class="inspector" aria-label="标注管理">
+    <aside class="inspector surface" aria-label="地图管理">
+      <div class="panel-heading"><div><span class="eyebrow">MAP MANAGEMENT</span><h2>管理与验证</h2></div></div>
       <div class="manager-tabs" role="tablist" aria-label="地图管理">
         <button id="tab-objects" role="tab" aria-controls="panel-objects" aria-selected="true" data-panel="objects">对象</button>
         <button id="tab-wiki" role="tab" aria-controls="panel-wiki" aria-selected="false" tabindex="-1" data-panel="wiki">Wiki</button>

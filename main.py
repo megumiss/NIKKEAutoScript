@@ -19,6 +19,7 @@ from module.exception import (
     GameServerUnderMaintenance,
     GameStart,
     GameStuckError,
+    GameSystemError,
     GameTooManyClickError,
     RequestHumanTakeover,
     ScreenResolutionNotEnough,
@@ -159,14 +160,26 @@ class NikkeAutoScript:
                 if self.config.Client_Platform != 'win':
                     logger.error('自动主线任务目前仅支持 PC 客户端，请使用 PC 实例运行。')
                     raise RequestHumanTakeover
-            # 妮游社等独立任务不需要device
-            if not self.is_independent_task(command) and not skip_first_screenshot:
-                self.device.screenshot()
-            try:
-                self.__getattribute__(command)()
-            except GameStart:
-                self.start()
-            return True
+            for retry in range(4):
+                try:
+                    # 妮游社等独立任务不需要device
+                    if not self.is_independent_task(command) and not skip_first_screenshot:
+                        self.device.screenshot()
+                    try:
+                        self.__getattribute__(command)()
+                    except GameStart:
+                        self.start()
+                    return True
+                except GameSystemError as e:
+                    logger.error(f'Task `{command}`: {e}')
+                    if retry >= 3:
+                        raise GameStuckError(f'Task `{command}` still has system errors after 3 retries') from e
+
+                    from module.handler.info_handle import InfoHandler
+
+                    self.save_error_log()
+                    InfoHandler(self.config, device=self.device).ensure_system_error_closed()
+                    logger.info(f'Restart task `{command}` after system error recovery ({retry + 1}/3)')
         except TaskEnd:
             return True
         except GameNotRunningError as e:
