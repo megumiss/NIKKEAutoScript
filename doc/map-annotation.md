@@ -1,6 +1,6 @@
 # 地图标注工具
 
-入口：[dev_tools/map_annotator.py](../dev_tools/map_annotator.py)。这是独立的本地浏览器工具，不启动游戏控制，不需要管理员权限。依赖 Python 3.9+ 和项目已有的 Pillow、NumPy、OpenCV，不需要额外安装前端依赖或构建 SPA。
+入口：`python -m dev_tools.map_annotator`，原 [脚本启动路径](../dev_tools/map_annotator.py) 保持兼容。目录职责见 [编辑器说明](../dev_tools/map_annotator/README.md)。这是独立的本地浏览器工具，不启动游戏控制，不需要管理员权限。依赖 Python 3.9+ 和项目已有的 Pillow、NumPy、OpenCV，不需要额外安装前端依赖或构建 SPA。
 
 从 Wiki 批量下载普通／困难收集物并配准到共享底图，参见 [Wiki 批量导入与地图补采](wiki-collectibles-batch.md)。导入后仍可用本工具人工复核和编辑。
 

@@ -157,6 +157,7 @@ function syncState() {
   $('refresh-maps').disabled = busy || saving || movement.running;
   $('reload').disabled = !loaded || busy || saving || movement.running;
   $('properties').inert = movement.running;
+  $('delete').disabled = !selectedItem() || busy || saving || movement.running;
   $('download').disabled = !loaded;
   $('undo').disabled = !history.length || busy || movement.running;
   $('redo').disabled = !future.length || busy || movement.running;
@@ -204,13 +205,14 @@ function setTool(next) {
     message('当前类型是电梯传送关系。请先切换到收集品、地面机关或地面电梯。'); return;
   }
   tool = next; connectFrom = null;
-  if (roadTool()) { $('show-terrain').checked = true; selected = null; $('road-tools').open = true; }
+  if (roadTool()) { $('show-terrain').checked = true; selected = null; showEditorPanel('road'); }
   if (next.startsWith('connectivity-')) {
-    $('show-connectivity').checked = true; $('connectivity-tools').open = true; selected = null;
+    $('show-connectivity').checked = true; showEditorPanel('connectivity'); selected = null;
   }
+  if (['point', 'polyline', 'polygon', 'rectangle', 'connect'].includes(next)) showEditorPanel('annotation');
   if (!['select', 'pan'].includes(next)) $('show-annotations').checked = true;
   for (const button of document.querySelectorAll('[data-tool]')) button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
-  svg.dataset.tool = tool; movement.toolChanged(tool); renderGeometry(); syncState();
+  svg.dataset.tool = tool; movement.toolChanged(tool); render();
 }
 function syncCategory() {
   const settings = categories[newCategory];

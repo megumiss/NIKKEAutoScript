@@ -26,7 +26,7 @@ flowchart TD
 | `module/campaign/vision/matching.py` | 将 Wiki 小队圆环投影到本地图 | 证明游戏内已拾取 |
 | `module/campaign/map/annotations.py` | 标注格式校验与地图包定位（推图只读这一半） | 写盘、备份、版本冲突恢复 |
 | `dev_tools/annotation_store.py` | 枚举、加载、保存、备份与连通预览 | 标注格式判据（见上一行） |
-| `dev_tools/map_annotator.py` | 标注编辑器的本机服务与命令行入口 | 标注读写实现（见上一行） |
+| `dev_tools/map_annotator/server.py` | 标注编辑器的本机服务与命令行入口（原脚本路径保留兼容） | 标注读写实现（见上一行） |
 
 这些脚本及原型中的每个 Python 方法、内部辅助函数都有中文 docstring。复杂算法的原有英文说明一并保留；中文说明解释输入所处坐标、拒绝条件或非显然的用途。
 

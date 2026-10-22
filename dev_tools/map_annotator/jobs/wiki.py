@@ -9,7 +9,7 @@ import subprocess
 import sys
 import threading
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 class WikiJobs:
@@ -134,10 +134,7 @@ class WikiJobs:
         底图哈希也要没变——匹配期间有人改了道路修订，这批坐标就不再对应当前道路。
         导入是增量的：已有标注与道路修订保留，只追加通过的条目，所以重复导入会被 ready 挡住。
         """
-        if __package__:
-            from .wiki_collectibles import save_annotations
-        else:
-            from wiki_collectibles import save_annotations
+        from dev_tools.wiki_collectibles import save_annotations
         with self.lock, self.store.lock:
             state = self.status()
             if not state.get('ready') or payload.get('job') != state['id']:

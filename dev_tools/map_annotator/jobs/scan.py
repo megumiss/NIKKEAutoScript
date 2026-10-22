@@ -9,14 +9,10 @@ import subprocess
 import sys
 import threading
 
-if not __package__:
-    # 脚本方式运行时仓库根不在默认路径上。
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from module.campaign.map.paths import DEFAULT_CAPTURE_ROOT, DEFAULT_MAPS_ROOT
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 class ScanJobs:
@@ -117,10 +113,7 @@ class ScanJobs:
                     try:
                         destination = self.store.root / result['map_id']
                         if package != destination and not destination.exists():
-                            if __package__:
-                                from .map_runtime import export_runtime
-                            else:
-                                from map_runtime import export_runtime
+                            from dev_tools.map_runtime import export_runtime
                             export_runtime(package, destination)
                         self.store.load(result['map_id'])
                         result.update(state='complete', message='扫描与处理完成，可以打开新地图。')
@@ -146,10 +139,7 @@ class ScanJobs:
                 raise ValueError('扫描尚未结束。')
             if self.status().get('state') != 'complete':
                 raise ValueError('只有处理完成且校验通过的扫描才能采用。')
-            if __package__:
-                from .map_runtime import adopt_runtime
-            else:
-                from map_runtime import adopt_runtime
+            from dev_tools.map_runtime import adopt_runtime
             source = self.store.root / self.job['map_id']
             chapter = self.job['chapter']
             result = adopt_runtime(source, chapter, self.store.root)
