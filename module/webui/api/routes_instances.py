@@ -6,6 +6,7 @@ import re
 import sys
 from pathlib import Path
 
+from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 
@@ -16,13 +17,35 @@ from module.submodule.utils import get_config_mod, load_config
 from module.webui.api.deps import InstanceNotFound, validate_instance
 from module.webui.api.models import InstanceInfo
 from module.webui.api.routes_schedule import reset_scheduler_fields
-from module.webui.process_manager import ProcessManager
+from module.webui.process_manager import START_CANCELLED, START_GONE, START_RUNNING, ProcessManager
 from module.webui.setting import State
 from module.webui.updater import updater
 
 
 def _response_error(message, status_code=400):
     return JSONResponse({'status': 'error', 'message': message}, status_code=status_code)
+
+
+async def _hold_lifecycle(manager):
+    # A cancelled coroutine must not leave a thread acquiring an ownerless lock.
+    while not manager.lifecycle_lock.acquire(blocking=False):
+        await asyncio.sleep(0.05)
+
+
+async def _finish_lifecycle_work(func, *args):
+    """Keep the caller's lock until a background display operation has finished."""
+    task = asyncio.create_task(asyncio.to_thread(func, *args))
+    cancelled = False
+    while not task.done():
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            cancelled = True
+    try:
+        return task.result()
+    finally:
+        if cancelled:
+            raise asyncio.CancelledError
 
 
 def _is_windows_admin():
@@ -385,7 +408,17 @@ async def start(request: Request):
                            'not installed. Install the Parsec VDD driver (or the Virtual Display '
                            'Driver for MttVDD) first, or turn off the VDD auto-manage option.',
             }, status_code=400)
-        manager.start(func=get_config_mod(name), ev=updater.event)
+        # start() waits for an in-progress stop cleanup; wait off the event loop.
+        result = await asyncio.to_thread(
+            manager.start_checked, func=get_config_mod(name), ev=updater.event, config_name=name)
+        # While this request waited for the lifecycle lock, another request may
+        # have started, renamed or deleted the instance.
+        if result == START_CANCELLED:
+            return _response_error(f'Instance "{name}" start was cancelled by a stop request.', 409)
+        if result == START_GONE:
+            return _response_error(f'Instance "{name}" was renamed or deleted.', 404)
+        if result == START_RUNNING:
+            return _response_error(f'Instance "{name}" is already running.', 409)
         _clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
     results = []
@@ -415,7 +448,17 @@ async def start(request: Request):
                 'message': 'Virtual display (VDD) driver is not installed.',
             })
             continue
-        manager.start(func=get_config_mod(instance), ev=updater.event)
+        result = await asyncio.to_thread(
+            manager.start_checked, func=get_config_mod(instance), ev=updater.event, config_name=instance)
+        if result == START_CANCELLED:
+            results.append({'instance': instance, 'status': 'skipped', 'message': 'Start cancelled.'})
+            continue
+        if result == START_GONE:
+            results.append({'instance': instance, 'status': 'skipped', 'message': 'Renamed or deleted.'})
+            continue
+        if result == START_RUNNING:
+            results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
+            continue
         _clear_serial_failed(instance)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
     return JSONResponse({'status': 'success', 'results': results})
@@ -430,17 +473,24 @@ async def stop(request: Request):
         except InstanceNotFound as exc:
             return _response_error(str(exc), 404)
         manager = ProcessManager.get_manager(name)
-        if not manager.alive:
-            return _response_error(f'Instance "{name}" is not running.', 409)
-        manager.stop()
+        try:
+            stopped = await run_in_threadpool(manager.stop, manager.request_stop())
+            if not stopped:
+                return _response_error('The worker changed while this stop request was waiting.', 409)
+        except RuntimeError as exc:
+            return _response_error(str(exc), 503)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" stopped.'})
     results = []
     for instance in names:
         manager = ProcessManager.get_manager(instance)
-        if not manager.alive:
-            results.append({'instance': instance, 'status': 'skipped', 'message': 'Not running.'})
+        try:
+            stopped = await run_in_threadpool(manager.stop, manager.request_stop())
+            if not stopped:
+                results.append({'instance': instance, 'status': 'skipped', 'message': 'Worker changed.'})
+                continue
+        except RuntimeError as exc:
+            results.append({'instance': instance, 'status': 'error', 'message': str(exc)})
             continue
-        manager.stop()
         results.append({'instance': instance, 'status': 'success', 'message': 'Stopped.'})
     return JSONResponse({'status': 'success', 'results': results})
 
@@ -458,7 +508,9 @@ async def create(request: Request):
         return _response_error('Invalid or already used instance name.')
     if origin not in nkas_instance() + nkas_template():
         return _response_error('Source instance not found.', 404)
+    from module.config.config_updater import renew_virtual_display_id
     config = load_config(origin).read_file(origin)
+    renew_virtual_display_id(config)
     if not keep_schedule:
         _reset_schedule_to_default(config)
     State.config_updater.write_file(name, config, get_config_mod(origin))
@@ -504,8 +556,31 @@ async def delete(request: Request):
         validate_instance(name)
     except InstanceNotFound as exc:
         return _response_error(str(exc), 404)
-    if ProcessManager.get_manager(name).alive:
-        return _response_error('Stop the instance before deleting it.', 409)
+    manager = ProcessManager.get_manager(name)
+    generation = manager.generation
+    await _hold_lifecycle(manager)
+    try:
+        # While waiting, the instance may have been renamed or deleted and
+        # `name` reused by a new instance; this request must not delete that one.
+        if not manager.is_current(name, generation):
+            return _response_error(f'Instance "{name}" was renamed or replaced; reload and retry.', 409)
+        # A start that already passed its checks has either finished (alive)
+        # or is queued behind this lock and will find the config gone.
+        if manager.alive:
+            return _response_error('Stop the instance before deleting it.', 409)
+        from module.device.adb.virtual_display_session import sessions
+        try:
+            await _finish_lifecycle_work(sessions().release_instance, name)
+        except (OSError, RuntimeError) as exc:
+            return _response_error(str(exc), 503)
+        _delete_instance(name)
+        manager.generation += 1
+    finally:
+        manager.lifecycle_lock.release()
+    return JSONResponse({'status': 'success'})
+
+
+def _delete_instance(name):
     path = Path(filepath_config(name, get_config_mod(name)))
     if path.exists():
         path.unlink()
@@ -542,7 +617,6 @@ async def delete(request: Request):
             if s.get('current') == name:
                 s['current'] = None
         modify_state(_delete_serial_state)
-    return JSONResponse({'status': 'success'})
 
 
 def _migrate_instance_assets(name, new_name):
@@ -602,7 +676,29 @@ async def rename(request: Request):
         return _response_error('Invalid or already used instance name.')
     if new_name in nkas_instance() or re.search(r'[.\\/:*?"\'<>|]', new_name) or new_name.lower().startswith('template'):
         return _response_error('Invalid or already used instance name.')
-    if ProcessManager.get_manager(name).alive:
+    manager = ProcessManager.get_manager(name)
+    generation = manager.generation
+    await _hold_lifecycle(manager)
+    try:
+        from module.device.adb.virtual_display_session import sessions
+        registry = sessions()
+        await _finish_lifecycle_work(registry.prepare)
+        # Acquiring the registry lock on this thread keeps its RLock ownership valid.
+        while not registry.lock.acquire(blocking=False):
+            await asyncio.sleep(0.05)
+        try:
+            return _rename_instance_locked(manager, name, new_name, generation)
+        finally:
+            registry.lock.release()
+    finally:
+        manager.lifecycle_lock.release()
+
+
+def _rename_instance_locked(manager, name, new_name, generation):
+    """Runs under the instance lifecycle lock, so no start can slip in between the check and the move."""
+    if not manager.is_current(name, generation):
+        return _response_error(f'Instance "{name}" was renamed or replaced; reload and retry.', 409)
+    if manager.alive:
         return _response_error('Stop the instance before renaming it.', 409)
     mod = get_config_mod(name)
     old_path = Path(filepath_config(name, mod))
@@ -658,7 +754,10 @@ async def rename(request: Request):
             if s.get('current') == name:
                 s['current'] = new_name
         modify_state(_rename_serial_state)
+    from module.device.adb.virtual_display_session import sessions
+    sessions().rename(name, new_name)
     ProcessManager.rename_process(name, new_name)
+    manager.generation += 1
     logger.info(f'Instance "{name}" renamed to "{new_name}"')
     return JSONResponse({'status': 'success', 'name': new_name})
 
@@ -698,5 +797,7 @@ async def import_config(request: Request):
         return _response_error('Invalid configuration filename.')
     if not name or re.search(r'[\\/:*?"\'<>|]', name) or name.lower().startswith('template'):
         return _response_error('Invalid instance name.')
+    from module.config.config_updater import renew_virtual_display_id
+    renew_virtual_display_id(config)
     State.config_updater.write_file(name, config, mod)
     return JSONResponse({'status': 'success', 'name': name})
