@@ -153,6 +153,7 @@ class ChampionArena(UI, ArenaBase):
                 or self.appear(PROGRESS_FIGHTING, offset=(30, 30))
                 or self.appear(PROGRESS_RESULTING, offset=(30, 30))
                 or self.appear(PROGRESS_END, offset=(30, 30))
+                or self.appear(PROGRESS_COMING_SOON, offset=(30, 30))
             ):
                 logger.warning('Champion arena in preparation')
                 raise ChampionArenaIsUnavailable
