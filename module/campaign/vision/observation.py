@@ -8,7 +8,7 @@ import numpy as np
 
 from module.campaign.vision.minimap import map_visible, minimap_control_visible
 from module.campaign.vision.matching import ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU, MapMatcher, ROI
-from module.campaign.vision.barriers import mark_blocks, project_barriers, scene_anchor
+from module.campaign.vision.barriers import project_barriers, scene_anchor
 from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
 from module.campaign.report import LOCALIZATION, LOCATE_CRITERIA, label, points_text
@@ -67,7 +67,7 @@ class CampaignObserver:
             return (icon[:, :, 2] < 130).mean() > 0.5
         return False
 
-    def observe(self, image, identity, captured_at=None, objects=True, expected_squad=None):
+    def observe(self, image, identity, captured_at=None, objects=True, expected_squad=None, known_squad=None):
         """观测一帧 1776×999 BGR 客户区截图，返回界面与导航共用的章节快照。
 
         identity 是已确认的（章节号, 难度）；章节变化会丢掉地图缓存并重新加载，加载失败只告警，
@@ -77,13 +77,16 @@ class CampaignObserver:
         紧凑面板先归一化到 1920×1080 再裁 ROI；展开面板与导航共用原始 ROI、道路掩码和圆环拟合。
         expected_squad 为小队未移动时已确认的底图坐标，只约束展开帧的实测圆环；不接受旧矩阵
         代替本帧配准，调用方负责在移动或战斗后停用旧坐标约束。
+        known_squad 仅用于未移动小队的纯镜头找敌人阶段：保留调用方已确认的底图坐标，不检测、
+        拟合或校验实时小队圆环；当前面板仍独立道路配准，敌人和覆盖只使用本帧矩阵。
         定位成功后敌人和小队都投影到地图坐标，落到图外视为 needs_review——这种情况多半是配准
         漂移而不是真的出界。objects=False 用于只需要小地图的场合，可以省掉整幅画面的八片推理。
         """
         chapter, difficulty = identity
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
                         map=None, minimap=None, localization='unavailable', squad=None, enemies=[], objects=[],
-                        barriers=[], blocks=[], mechanisms=[], barriers_observed=False, offscreen=None, viewport=None, roi_to_map=None,
+                        barriers=[], blocks=[], mechanisms=[], barriers_observed=False, barrier_checks=[],
+                        offscreen=None, viewport=None, roi_to_map=None,
                         objects_observed=False, story_markers=[], minimap_closed=self.minimap_closed(image))
         if objects:
             detected = self.observe_objects(image)
@@ -111,8 +114,9 @@ class CampaignObserver:
                 if str(exc) != self.last_story_error:
                     logger.warning(f'主线菱形模板识别不可用：{exc}')
                     self.last_story_error = str(exc)
-        players, enemies = self.minimap_markers(panel)
-        if mode == 'compact' and not players and not enemies:
+        players, enemies = (self.minimap_markers(panel, observe_squad=False) if known_squad is not None
+                            else self.minimap_markers(panel))
+        if mode == 'compact' and not players and not enemies and known_squad is None:
             return snapshot
         ok, encoded = cv2.imencode('.jpg', panel, [cv2.IMWRITE_JPEG_QUALITY, 85])
         if not ok:
@@ -122,18 +126,38 @@ class CampaignObserver:
                                    enemies=enemies, mode=mode)
         if self.matcher is None:
             return snapshot
-        squad_registration = None
+        squad_registration, viewport = None, None
         try:
-            if mode == 'compact':
-                _, road, valid, player = minimap_masks(image)
+            if known_squad is not None:
+                position = np.asarray(known_squad, float)
+                width, height = self.map_info['size']
+                if (position.shape != (2,) or not np.isfinite(position).all()
+                        or not (0 <= position[0] < width and 0 <= position[1] < height)):
+                    raise ValueError('找敌人需要已确认且位于本章地图内的小队底图坐标。')
+                snapshot['squad'] = position.tolist()
+                snapshot['squad_source'] = 'known'
+                if mode == 'compact':
+                    _, road, valid = compact_road_masks(image)
+                else:
+                    road, valid, _ = expanded_minimap_masks(panel, require_player=False, locate_player=False)
+                player = np.array(panel.shape[1::-1], float) / 2
+                options = {'known_squad': position.tolist()}
             else:
-                road, valid, player = expanded_minimap_masks(panel)
-            options = {'expected_position': expected_squad} if mode == 'expanded' and expected_squad is not None else {}
+                if mode == 'compact':
+                    _, road, valid, player = minimap_masks(image)
+                else:
+                    road, valid, player = expanded_minimap_masks(panel)
+                options = ({'expected_position': expected_squad}
+                           if mode == 'expanded' and expected_squad is not None else {})
             registration = self.locate(snapshot, chapter, panel, road, valid, player, enemies, **options)
             # 屏障投影链（barriers.scene_chart）按「紧凑面板 × a 后钉在展开 ROI 中心」标定，
             # 而展开形态的面板是原始展开 ROI 的坐标系，与那套标定不同源，
             # 直接把这份配准喂进去会让屏障落点整体偏。展开帧不标屏障，等下一次紧凑帧再标。
-            squad_registration = registration if mode == 'compact' else None
+            if mode == 'compact':
+                if known_squad is not None:
+                    viewport = registration
+                else:
+                    squad_registration = registration
         except (OSError, ValueError, KeyError, cv2.error) as exc:
             snapshot['localization'] = 'needs_review'
             message = str(exc)
@@ -141,8 +165,8 @@ class CampaignObserver:
             if message != self.last_error:
                 logger.warning(f'第 {chapter} 章小地图定位不可用：{message}')
                 self.last_error = message
-        viewport = None
-        if snapshot['squad'] is None and any(item['kind'] == 'barrier' for item in snapshot['objects']):
+        if viewport is None and snapshot['squad'] is None and any(
+                item['kind'] == 'barrier' for item in snapshot['objects']):
             viewport = self.locate_viewport(image)
             if viewport is not None:
                 snapshot['viewport'] = viewport['position']
@@ -169,23 +193,26 @@ class CampaignObserver:
         return None, None
 
     @staticmethod
-    def minimap_markers(panel):
+    def minimap_markers(panel, observe_squad=True):
         """识别小地图面板里的标记，返回（小队圆环中心列表, 敌人列表），坐标都是该面板的像素。
 
+        observe_squad=False 专供纯镜头找敌人，跳过圆环拟合且不提供实时小队标记。
         圆环中心优先用圆环拟合结果，拟合不通过时退回检测框中心（只影响展示，底图定位仍要求
         圆环拟合通过校验）；敌人保留类型与置信度，投影到底图由调用方按同一份配准矩阵完成。
         """
         players, enemies = [], []
         for item in marker_candidates(panel):
             if item.label == 'minimap_squad_ring':
-                center = refine_ring(panel, item)
-                players.append((center if center is not None else item.center).round(1).tolist())
+                if observe_squad:
+                    center = refine_ring(panel, item)
+                    players.append((center if center is not None else item.center).round(1).tolist())
             elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex'):
                 enemies.append(dict(kind='ex' if item.label.endswith('_ex') else 'normal',
                                     position=item.center.round(1).tolist(), confidence=round(item.confidence, 3)))
         return players, enemies
 
-    def locate(self, snapshot, chapter, panel, road, valid, player, markers, expected_position=None):
+    def locate(self, snapshot, chapter, panel, road, valid, player, markers, expected_position=None,
+               known_squad=None):
         """对一份已裁好的小地图面板做底图配准并把结果写进快照。
 
         panel/road/valid/player/markers 必须同属这一份面板的像素坐标系（紧凑与展开形态各调一次），
@@ -193,6 +220,8 @@ class CampaignObserver:
         锚点并返回该锚点；未被接受（判据不足或小队投影越界）时按原因去重告警并返回 None，
         调用方据此决定是否换形态重试。
         expected_position 仅约束当前实测圆环的底图位置，不改变道路接受阈值。
+        known_squad 模式中的 player 是面板视口种子，不代表小队；配准不施加小队坐标约束，
+        小队坐标由调用方提供，viewport、敌人及覆盖均由当前面板的独立配准生成。
         """
         options = {'expected_position': expected_position} if expected_position is not None else {}
         result = self.matcher.match_panel(panel, road, valid, player, **options)
@@ -215,7 +244,8 @@ class CampaignObserver:
             return None
         matrix = result['roi_to_map']
         width, height = self.map_info['size']
-        squad = project_centers([player], matrix)[0]
+        view_position = project_centers([player], matrix)[0]
+        squad = view_position if known_squad is None else list(known_squad)
         if not (0 <= squad[0] < width and 0 <= squad[1] < height):
             snapshot['localization'] = 'needs_review'
             self.report_localization_error(chapter, 'out_of_bounds',
@@ -223,6 +253,8 @@ class CampaignObserver:
                                            f'超出章节地图范围 {width}×{height}')
             return None
         snapshot['squad'] = squad
+        if known_squad is not None:
+            snapshot['viewport'] = view_position
         snapshot['road_iou'] = float(result['road_iou'])
         if expected_position is not None:
             snapshot['anchor_error'] = float(result['anchor_error'])
@@ -282,27 +314,22 @@ class CampaignObserver:
         return self.chart
 
     def observe_barriers(self, image, snapshot, squad, viewport):
-        """把屏障投影到地图并标记道路封锁；锚点优先小队箭头，其次视野中心。失败只告警。
+        """读取机关状态；光幕检测不得在纯观测阶段直接投影成道路封锁。
 
-        squad / viewport 是本帧的配准结果（见 barriers.project_barriers）。
-        barriers_observed 是运行状态层判光幕消失的唯一许可：只有本帧场景识别成功、且检到的每块光幕
-        都吸附上了道路才置真。识别失败或某块光幕没落上图时 blocks 会缺项，缺项只说明没落图，
-        不能当成「视野内该看见却没看见」。
+        squad / viewport 是本帧的配准结果（见 barriers.project_barriers），仅供机关关联使用。
+        本层只保留 objects 中的光幕与立柱候选；barriers_observed 始终为假，不能把漏检当作解封。
+        封路和指定编号的消失证据由会话的居中复核流程写入。
         """
         chart = self.static_map()
-        if chart is None or chart.model is not None or squad is None:
+        if chart is None or chart.model is not None or (squad is None and viewport is None):
             return
         try:
             if scene_anchor(image, squad, viewport) is None:
                 return
-            projected = project_barriers(snapshot['objects'], image, squad, viewport,
-                                         kinds=('barrier', 'ground_mechanism'))
-            barriers = [item for item in projected if item['kind'] == 'barrier']
-            curtains = sum(item['state'] == 'curtain' for item in barriers)
-            snapshot['barriers'] = barriers
-            snapshot['blocks'] = mark_blocks(chart, barriers)
+            projected = project_barriers(snapshot['objects'], image, squad, viewport, kinds=('ground_mechanism',))
             snapshot['mechanisms'] = mechanism_observations(projected, snapshot['objects'], chart.points)
-            snapshot['barriers_observed'] = snapshot['objects_observed'] and len(snapshot['blocks']) == curtains
+            # 光幕仅保留在 objects 中，封路与消失证据由会话的居中确认流程写入。
+            snapshot['barriers_observed'] = False
             self.last_barrier_error = None
         except (OSError, ValueError, KeyError, np.linalg.LinAlgError, cv2.error) as exc:
             message = str(exc)

@@ -155,7 +155,8 @@ class RunState:
         minimap = snapshot.get('minimap') or {}
         if minimap.get('mode') == 'compact':
             changes.update(self._absorb_blocks(snapshot.get('blocks') or [], quad,
-                                              can_clear=snapshot.get('barriers_observed', True)))
+                                              can_clear=snapshot.get('barriers_observed', True),
+                                              checked_ids=snapshot.get('barrier_checks')))
             self._absorb_mechanisms(snapshot.get('mechanisms') or [])
         for identifier in list(self.pending_reviews):
             if self.blocks.get(identifier, {}).get('status') == 'cleared':
@@ -255,12 +256,13 @@ class RunState:
                 best, distance = identifier, span
         return best
 
-    def _absorb_blocks(self, blocks, quad, can_clear=True):
+    def _absorb_blocks(self, blocks, quad, can_clear=True, checked_ids=None):
         """更新光幕封锁的三态；返回新增、刷新与判定解除的编号。
 
         本帧检到的光幕按距离配对到既有封锁，配对上就刷新为 active；
         既有封锁没被配对时分两种：封锁点在本帧视野内（且离边界有余量）说明该看到却没看到，
         判 cleared；不在视野内只能判 stale，等规划要穿过它时再去复核。
+        checked_ids 存在时只允许解除经过居中复核的指定编号，不能用一处光幕的证据清除整屏封锁。
         """
         added, refreshed, cleared = [], 0, []
         matched = set()
@@ -284,7 +286,8 @@ class RunState:
         for identifier, record in self.blocks.items():
             if identifier in matched or record['status'] == 'cleared':
                 continue
-            if can_clear and self._inside(quad, record['point']):
+            if (can_clear and (checked_ids is None or identifier in checked_ids)
+                    and self._inside(quad, record['point'])):
                 record['status'] = 'cleared'
                 record['cleared_at'] = self.tick
                 cleared.append(identifier)

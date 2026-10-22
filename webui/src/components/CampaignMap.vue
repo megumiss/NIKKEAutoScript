@@ -6,6 +6,8 @@ export type Point = [number, number]
 export type Enemy = { kind: 'normal' | 'ex'; position: Point; confidence: number }
 export type RememberedEnemy = { id: string; kind: 'normal' | 'ex' | null; position: Point; status: 'pending' | 'engaged' | 'unreachable' }
 export type Block = { id: string; kind?: string; point: Point; segment: [Point, Point]; status?: 'active' | 'stale' }
+export type RoutePath = { target_id: string; points: Point[]; distance: number }
+export type PlannedRoutes = { execution?: RoutePath; destination?: RoutePath }
 export type Goal = { kind: string; id: string; position: Point; reason_text?: string }
 export type AnnotatedPoint = { id: string; label: string; category: 'ground_mechanism' | 'ground_elevator'; position: Point }
 export type ElevatorTransfer = { id: string; entry: Point; exit: Point; directed: boolean }
@@ -16,9 +18,18 @@ const props = withDefaults(defineProps<{
   blocks?: Block[]
   goal?: Goal | null
   routeGoal?: Goal | null
+  routes?: PlannedRoutes
   annotations?: MapAnnotations | null
   label: string
-}>(), { remembered: () => [], blocks: () => [], goal: null, routeGoal: null, annotations: null })
+}>(), { remembered: () => [], blocks: () => [], goal: null, routeGoal: null, routes: () => ({}), annotations: null })
+/** 仅显示与当前目标绑定且坐标有效的道路折线；换目标或无路径时不保留旧线。 */
+const routeLines = computed(() => (['destination', 'execution'] as const).flatMap(kind => {
+  const route = props.routes[kind]
+  const target = kind === 'execution' ? props.goal : props.routeGoal
+  if (!route || !target || route.target_id !== target.id || route.points.length < 2
+      || !route.points.every(point => point.length === 2 && point.every(Number.isFinite))) return []
+  return [{ kind, points: route.points.map(point => point.join(',')).join(' '), distance: route.distance }]
+}))
 const emit = defineEmits<{ error: [] }>()
 const blockWidth = computed(() => props.size[0] * .006)
 const marker = computed(() => props.size[0] * .012)
@@ -33,6 +44,11 @@ function transferAngle(transfer: ElevatorTransfer) {
 <template>
   <svg class="campaign-map" :viewBox="`0 0 ${size[0]} ${size[1]}`" :aria-label="label" role="img">
     <image :href="image" :width="size[0]" :height="size[1]" @error="emit('error')" />
+    <g v-for="route in routeLines" :key="route.kind" class="planned-route" :class="route.kind">
+      <polyline class="route-outline" :points="route.points" vector-effect="non-scaling-stroke" />
+      <polyline :points="route.points" vector-effect="non-scaling-stroke" />
+      <title>{{ t(route.kind === 'execution' ? '本段路线' : '目的地路线') }} · {{ route.distance.toFixed(1) }} {{ t('地图像素') }}</title>
+    </g>
     <g v-for="transfer in annotations?.transfers ?? []" :key="transfer.id" class="elevator-transfer">
       <line :x1="transfer.entry[0]" :y1="transfer.entry[1]" :x2="transfer.exit[0]" :y2="transfer.exit[1]" vector-effect="non-scaling-stroke" />
       <g :transform="`translate(${(transfer.entry[0] + transfer.exit[0]) / 2} ${(transfer.entry[1] + transfer.exit[1]) / 2}) rotate(${transferAngle(transfer)})`">
@@ -78,6 +94,11 @@ function transferAngle(transfer: ElevatorTransfer) {
 
 <style scoped>
 .campaign-map { display:block; width:100%; max-height:520px; background:#101b27; }
+.planned-route { fill:none; stroke-linejoin:round; stroke-linecap:round; pointer-events:none; }
+.planned-route polyline { stroke:#ffd166; stroke-width:3px; }
+.planned-route.destination polyline { stroke:#c998ff; stroke-width:2px; stroke-dasharray:6 5; }
+.planned-route polyline.route-outline { stroke:#101b27; stroke-width:6px; opacity:.85; }
+.planned-route.destination polyline.route-outline { stroke-width:5px; }
 .squad { fill:none; stroke:#64e5ff; stroke-width:2.5px; }
 .squad .center { fill:#64e5ff; stroke:none; }
 .enemy { fill:#e95e7d; stroke:#fff; stroke-width:1px; }

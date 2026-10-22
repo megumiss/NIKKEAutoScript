@@ -55,11 +55,12 @@ class RingFrame:
     squad: list
 
 
-def observe_rings(image, panel, matrix, viewport):
+def observe_rings(image, panel, matrix, viewport, observe_squad=True):
     """检测脚圈、紧凑小地图标记和场景纹理；只接受模型规定的客户区尺寸，不发输入。
 
     脚圈阈值至少 0.7，小地图旧类沿用自身阈值。SIFT 排除 HUD 与脚圈附近的角色动画；
     小地图到章节底图仅用于确认原目标和小队未移动，不把任何脚圈投影到小地图。
+    observe_squad=False 用于纯镜头找敌人，不拟合实时小队圆环；实际移动的脚圈辅助默认保留校验。
     """
     if image.shape != (999, 1776, 3):
         raise ValueError('脚圈辅助要求 1776×999 客户区截图。')
@@ -76,9 +77,10 @@ def observe_rings(image, panel, matrix, viewport):
     enemies, squad = [], []
     for item in marker_candidates(panel):
         if item.label == 'minimap_squad_ring':
-            center = refine_ring(panel, item)
-            if center is not None:
-                squad.append(project(matrix, center))
+            if observe_squad:
+                center = refine_ring(panel, item)
+                if center is not None:
+                    squad.append(project(matrix, center))
         else:
             enemies.append((item.label, project(matrix, item.center)))
     return RingFrame(centers, np.asarray([key.pt for key in keys]),

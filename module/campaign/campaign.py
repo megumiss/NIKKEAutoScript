@@ -74,6 +74,8 @@ class Campaign(ModuleBase):
     target_finder_chapter = None
     last_snapshot = None
     last_goal = None
+    last_routes = None
+    last_route_signature = None
     state = None
     cut = None
 
@@ -441,6 +443,7 @@ class Campaign(ModuleBase):
         changes = self.state.update(snapshot, advance=advance)
         chart = self.ensure_chart(self.current_chapter)
         if chart is None or chart.road is None:
+            self.last_goal, self.last_routes = None, None
             logger.warning('本章地图底图不可用，这一轮不做决策。')
             return None
         if self.cut is None or self.cut.chart is not chart:
@@ -450,6 +453,9 @@ class Campaign(ModuleBase):
         goal = choose_goal(self.state, chart, snapshot, self.cut,
                            purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
         self.last_goal = goal
+        from module.campaign.route_planning import planning_routes
+        self.last_routes = planning_routes(self.cut, snapshot, goal, self.state.route_goal)
+        self.last_route_signature = self.cut.signature
         if self.state.route_goal is not None:
             destination = self.state.route_goal
             logger.info(f"路程目标：{describe(destination)}")
@@ -481,6 +487,9 @@ class Campaign(ModuleBase):
         if self.state is None:
             return {'campaign': source}
         memory = self.state.memory()
+        route_valid = (snapshot.get('localization') == 'accepted' and self.cut is not None
+                       and self.last_route_signature == self.cut.signature)
+        memory['routes'] = (self.last_routes or {}) if route_valid else {}
         if memory.get('route_goal'):
             destination = memory['route_goal']
             destination['reason_text'] = label(GOAL_REASONS, destination.get('reason'))
@@ -555,6 +564,7 @@ class Campaign(ModuleBase):
         from module.campaign.window import WindowChanged
 
         self.state = RunState(chapter, self.current_difficulty, chart.size)
+        self.last_goal, self.last_routes = None, None
         self.cut = CutRoads(chart)
         self.cut.update([])
         session = CampaignSession(self)

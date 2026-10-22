@@ -192,16 +192,19 @@ def detect_markers(image, matrix):
     return project_centers(players, matrix), project_centers(enemies, matrix)
 
 
-def expanded_minimap_masks(panel, require_player=True):
+def expanded_minimap_masks(panel, require_player=True, locate_player=True):
     """提取生产展开面板的道路、有效域和实测小队圆环，供观测与导航共用。
 
     panel 必须是 1776×999 客户区内 486×462 的原始展开 ROI，不二次裁边或缩放。
     返回坐标均属于此 ROI；圆环需通过拟合，多个圆环或要求小队却未识别时抛 ValueError。
     侦察允许小队离屏，此时 player 为 None，调用方不得用视野中心套用小队坐标约束。
+    locate_player=False 专供只定位视野的找敌人流程，不检测或校验小队圆环；此时须关闭 require_player。
     """
     if panel is None or panel.shape != (462, 486, 3):
         raise ValueError('展开地图定位需要 486×462 的原始画面裁图。')
-    players, _ = detect_markers(panel, np.eye(3))
+    if require_player and not locate_player:
+        raise ValueError('只定位视野时不能要求小队圆环。')
+    players, _ = detect_markers(panel, np.eye(3)) if locate_player else ([], [])
     if len(players) > 1 or (require_player and len(players) != 1):
         raise ValueError(f'展开地图小队圆环数量无效：检测到 {len(players)} 个。')
     player = np.asarray(players[0], float) if players else None

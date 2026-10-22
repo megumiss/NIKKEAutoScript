@@ -201,3 +201,26 @@ def branch_detour(state, cut, squad, enemy, destination):
                         distance=round(float(actual_distances[-1]), 1), reason='advance_on_route',
                         for_target=destination['id'])
     return dict(kind='none', reason='route_branch_unavailable', for_target=destination['id'])
+
+
+def planning_routes(cut, snapshot, goal, destination=None):
+    """提供当前决策的实际道路折线，区分本段执行路线和最终目的地路线。
+
+    仅接受可信小队起点，复用规划器同一切开图和端点吸附检查；不可达时留空，绝不画直线穿过封锁。
+    电梯本段只画到入口，传送连线由设施层展示。每次决策重建，避免换目标或换章后显示旧路径。
+    """
+    from module.campaign.run_state import located
+
+    routes = {}
+    if not located(snapshot) or snapshot.get('squad') is None or not goal or goal.get('kind') == 'none':
+        return routes
+    for kind, target in (('execution', goal), ('destination', destination)):
+        if not target or target.get('position') is None:
+            continue
+        route = route_path(cut, snapshot['squad'], target['position'])
+        if route is None:
+            continue
+        path, distances = route
+        routes[kind] = dict(target_id=target['id'], points=path.round(1).tolist(),
+                            distance=round(float(distances[-1]), 1))
+    return routes

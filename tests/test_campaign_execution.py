@@ -1022,7 +1022,8 @@ class ExecutorTests(unittest.TestCase):
                 patch('module.campaign.execution.scout_focus', return_value=None):
             result = self.executor.run(snapshot_fixture(), ticks=1)
         self.assertEqual(result['reason'], 'tick_budget')
-        self.session.snapshot.assert_any_call(expanded=True, keep_expanded=True)
+        self.session.snapshot.assert_any_call(expanded=True, keep_expanded=True, known_squad=[40.0, 96.0])
+        self.session.snapshot.assert_any_call(known_squad=[40.0, 96.0])
         execute.assert_called_once_with(enemy)
 
     def test_review_untrusted_frame_keeps_pending(self):
@@ -1030,6 +1031,7 @@ class ExecutorTests(unittest.TestCase):
         self.owner.state.blocks['block'] = dict(status='stale', point=[200, 100])
         self.owner.state.mark_tried('switch', 'block')
         self.session.snapshot.return_value = snapshot_fixture(trusted=False)
+        self.session.review_barrier.return_value = snapshot_fixture(trusted=False)
         self.executor.review_block({'id': 'block'})
         self.assertEqual(self.owner.state.pending_reviews['block'], 'switch')
         self.assertTrue(self.owner.state.cooling('review-block'))

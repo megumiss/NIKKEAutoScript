@@ -18,6 +18,7 @@ from module.base.timer import Timer
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.movement_feedback import ClickUnconfirmed, TargetTriggered
 from module.campaign.navigation.story_navigation import locate_story_target
+from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
 from module.logger import logger
 
 # 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。
@@ -129,6 +130,7 @@ class CampaignExecutor:
             if attempt:
                 self.session.pause(1)
             snapshot = self.session.snapshot()
+            snapshot = self.session.review_barrier(snapshot, goal['id'])
             self.owner.plan_tick(snapshot, advance=False)
             record = state.blocks.get(goal['id'])
             quad = panel_quad(snapshot)
@@ -180,7 +182,7 @@ class CampaignExecutor:
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
             raise
-        except (WindowChanged, InputBudgetExceeded, ClickUnconfirmed):
+        except (WindowChanged, InputBudgetExceeded, ClickUnconfirmed, BarrierUnconfirmed):
             raise
         except (RuntimeError, ValueError) as exc:
             if kind == 'elevator':
@@ -366,10 +368,13 @@ class CampaignExecutor:
 
         战斗接管放在一轮内：胜负结算回到野外后继续下一轮，而不是终结任务。非战斗的终态（收集品提示、
         EX 弹窗）仍然直接停止；战斗接管自身的上限与连续战败会抛出安全异常，同样交人工。
+        找主线敌人和侦察阶段冻结已有小队底图坐标，只重新配准镜头与敌人；跨轮侦察同样不要求
+        实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：整条推图日志因此能按轮切分，
         把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
         """
         goal, snapshot = None, initial
+        camera_options = {}
         total = Stopwatch()
         try:
             self.session.start()
@@ -389,9 +394,12 @@ class CampaignExecutor:
                     self.session.begin_target('collectible' if self.purpose == 'collectible' else 'position')
                     self.session.check()
                     if index:
-                        snapshot = self.session.snapshot()
+                        snapshot = self.session.snapshot(**camera_options)
                     else:
                         self.session.identity(self.session.win.client())
+                    if curtains(snapshot):
+                        snapshot = self.session.confirm_barriers(snapshot)
+                        camera_options = {'known_squad': list(snapshot['squad'])}
                     goal = self.owner.plan_tick(snapshot)
                     if (self.purpose == 'story' and self.owner.state.route_goal is None
                             and snapshot.get('story_markers') and located(snapshot)
@@ -402,23 +410,31 @@ class CampaignExecutor:
                         self.session.record('story_location_result', camera_changed=changed,
                                             route_goal=self.owner.state.route_goal)
                         if changed:
-                            snapshot = self.session.snapshot()
+                            camera_options = {'known_squad': list(snapshot['squad'])}
+                            snapshot = self.session.snapshot(**camera_options)
+                            if curtains(snapshot):
+                                snapshot = self.session.confirm_barriers(snapshot)
                         goal = self.owner.plan_tick(snapshot, advance=False)
                     expanded_for_scout = False
+                    if (self.purpose == 'story' and located(snapshot) and snapshot.get('squad') is not None
+                            and (goal is None or goal['kind'] != 'review_block')):
+                        camera_options = {'known_squad': list(snapshot['squad'])}
                     if self.needs_expansion(goal, snapshot):
                         logger.info(f'当前视野不足（目标：{goal_brief(goal)}），'
                                     f'先展开大地图补充视野再决策。')
                         expanded_for_scout = (self.purpose == 'story'
                                               and (goal is None or goal['kind'] != 'review_block'))
                         if expanded_for_scout:
-                            snapshot = self.session.snapshot(expanded=True, keep_expanded=True)
+                            snapshot = self.session.snapshot(expanded=True, keep_expanded=True, **camera_options)
                         else:
                             self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
                             snapshot = self.session.snapshot()
                         goal = self.owner.plan_tick(snapshot, advance=False)
                     scouted = self.scout(goal, snapshot)
                     if scouted or expanded_for_scout:
-                        snapshot = self.session.snapshot()
+                        snapshot = self.session.snapshot(**camera_options)
+                        if curtains(snapshot):
+                            snapshot = self.session.confirm_barriers(snapshot)
                         goal = self.owner.plan_tick(snapshot, advance=False)
                         if (self.purpose == 'story' and (goal is None or goal['kind'] != 'review_block')
                                 and located(snapshot) and snapshot.get('squad') is not None):
@@ -441,12 +457,14 @@ class CampaignExecutor:
                         return {'state': 'needs_review', 'goal': goal}
                     self.session.record('decision', goal=goal, snapshot=snapshot)
                     self.last_executed = goal
+                    camera_options = {}
                     self.execute(goal)
                 except TargetTriggered as exc:
                     if exc.evidence.get('kind') != 'battle_popup':
                         raise
                     logger.info(f'战斗闸门已触发，开始接管；关联最近执行目标：'
                                 f'{goal_brief(self.last_executed)}')
+                    camera_options = {}
                     self.battle(self.last_executed)
                 finally:
                     logger.info(f'第 {index + 1}/{ticks} 轮结束：本轮耗时 {watch}，'

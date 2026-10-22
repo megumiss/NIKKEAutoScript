@@ -172,6 +172,7 @@ class MapMatcher:
                                        cv2.BORDER_CONSTANT, value=0)
         self.warm_parameters = None
         self.warm_margin = None
+        self.warm_shape = None
 
     def match(self, image, review=None):
         """粗搜索尺度和位移后细化最佳候选，以 IoU、远处候选分差及参数分散度联合决定是否接受。"""
@@ -192,6 +193,30 @@ class MapMatcher:
         return result
 
     def match_panel(self, panel, road, valid, player, review=None, expected_position=None):
+        """按面板尺寸隔离热启动；局部搜索最终未通过时，对同一帧最多补一次完整搜索。
+
+        紧凑和展开面板的尺度参数不可互用，切换尺寸即丢弃旧参数与候选分差。
+        完整搜索使用原接受门限，不拖动、不重取图；失败仍交给调用方的有限恢复流程。
+        """
+        shape = tuple(panel.shape[:2])
+        if getattr(self, 'warm_shape', None) != shape:
+            self.warm_parameters, self.warm_margin = None, None
+            self.warm_shape = shape
+        had_warm = expected_position is None and getattr(self, 'warm_parameters', None) is not None
+        try:
+            result = self._match_panel(panel, road, valid, player, review, expected_position)
+        except ValueError:
+            if not had_warm:
+                raise
+        else:
+            if not had_warm or result['status'] == 'accepted' or result['search_scope'] == 'full':
+                return result
+        self.warm_parameters, self.warm_margin = None, None
+        result = self._match_panel(panel, road, valid, player, review, expected_position)
+        result['full_search_retry'] = True
+        return result
+
+    def _match_panel(self, panel, road, valid, player, review=None, expected_position=None):
         """已裁剪小地图的道路搜索。
 
         粗搜索优先在最近一次 accepted 配准的 (a, b) 附近做小网格热启动：热启动候选分达标的
@@ -300,7 +325,8 @@ class MapMatcher:
             margin = self.warm_margin
         accepted = bool(inside and result['road_iou'] >= ACCEPT_ROAD_IOU and margin >= ACCEPT_COARSE_MARGIN
                         and spread <= ACCEPT_PARAMETER_SPREAD_PX)
-        result.update(status='accepted' if accepted else 'needs_review', coarse_margin=float(margin),
+        result.update(status='accepted' if accepted else 'needs_review',
+                      search_scope='warm' if warm_hit else 'full', coarse_margin=float(margin),
                       parameter_spread_px=float(spread), roi=list(ROI), player_center=player.tolist(),
                       normalized_size=[1920, 1080], image_sha256=self.digest, match_version=MATCH_VERSION)
         if expected is not None:

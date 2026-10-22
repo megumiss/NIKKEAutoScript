@@ -18,6 +18,7 @@ MAX_EDGE_CLICKS = 2
 def story_frame(session, squad):
     """获取一帧独立接受的紧凑视口配准、脚圈及主线模板，不使用旧镜头缓存替代当前证据。
 
+    小队底图位置由进入找敌人流程前的可信观测提供；本帧只定位镜头和敌人，不重新校验小队圆环。
     返回 None 表示当前帧不足以确定主线身份；窗口、输入、战斗等安全异常由调用方处理。
     """
     field = session.win.client()
@@ -29,9 +30,7 @@ def story_frame(session, squad):
     view = compact_viewport(session, session.owner.observer.matcher, panel, road, valid)
     if view['status'] != 'accepted':
         return None
-    rings = observe_rings(field, panel, view['matrix'], view['viewport'])
-    if len(rings.squad) > 1 or any(np.linalg.norm(np.asarray(point) - squad) > 12 for point in rings.squad):
-        raise ValueError('主线定位期间小队位置发生变化，停止镜头验证。')
+    rings = observe_rings(field, panel, view['matrix'], view['viewport'], observe_squad=False)
     ring = marked_ring(markers, rings.centers)
     return dict(field=field, rings=rings, ring=ring, scale=view['a'])
 

@@ -242,14 +242,15 @@ class CampaignLocalizer:
             raise NoConnectedRoad('目标不在当前能走到的区域里。')
         return Localizer.route(self, np.asarray(start, float), np.asarray(target, float))
 
-    def locate(self, panel, tag, require_player=True, expected_position=None):
+    def locate(self, panel, tag, require_player=True, expected_position=None, locate_player=True):
         """把原始展开 ROI 配准到底图；视野观测可无小队，但低质量配准一律拒绝。
 
         tag 是这次定位的画面标识，由调用方在留存证据图时使用，不拼进失败文本：
         那句话要给人看，画面标识对用户没有意义（调用方的日志里已经写清是第几次尝试）。
         expected_position 只约束当前可见的实测小队圆环；小队离屏时仍按无锚点道路配准处理。
+        locate_player=False 用于纯镜头侦察，完全跳过实时小队圆环检测与校验，只返回视口坐标。
         """
-        road, valid, player = expanded_minimap_masks(panel, require_player=require_player)
+        road, valid, player = expanded_minimap_masks(panel, require_player=require_player, locate_player=locate_player)
         has_player = player is not None
         options = {'expected_position': expected_position} if has_player and expected_position is not None else {}
         if not has_player:
@@ -314,7 +315,7 @@ class CampaignSession(NavigationSession):
         # 战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_registration）。
         self.reuse_squad = False
         self.last_registration = None
-        self.scout_squad = None
+        self.barrier_references = []
         # 最近一次可供导航使用的定位报告与当时的手势计数：navigate 每走一步都会重新观测小队，
         # 而两次手势之间画面不会变，同一拍里的下一次观测直接复用（见 reusable_report）。
         self.localized_report = None
@@ -576,16 +577,39 @@ class CampaignSession(NavigationSession):
         logger.warning(f'展开地图定位连续 {LOCALIZE_RETRIES + 1} 次未通过，耗时 {watch}，按定位失败处理。')
         raise error
 
+    def confirm_barriers(self, snapshot):
+        """只平移镜头确认当前可见光幕，返回已有小队坐标与新视口配准，不发送地面点击。"""
+        from module.campaign.navigation.barrier_navigation import confirm_visible
+        return confirm_visible(self, snapshot)
+
+    def review_barrier(self, snapshot, identifier):
+        """居中复核指定封锁，只有两帧可信结果才允许该编号的光幕被消除。"""
+        from module.campaign.navigation.barrier_navigation import review_centered
+        return review_centered(self, snapshot, identifier)
+
     def plan(self, observation, target, enemy_assist=False):
         """用已确认的小队定位开始镜头规划，紧凑定位不足时仅重试一次完整展开定位。
 
         紧凑快照只提供底图位置，不冒充展开 ROI 的投影基准。起始镜头不一致或跟踪需要展开
         校正时，先回正并取得原始展开报告再规划；若小队已移动超过 12 地图像素，交回移动
         闭环更新起点。窗口、弹窗和输入预算异常不捕获，也不补发清理输入。
+        纯镜头找敌人后的已知起点不进入实时小队定位回退；当前视野不足以规划时直接停止。
         """
+        from module.campaign.navigation.barrier_navigation import curtains
+        field = self.win.client()
+        self.identity(field)
+        snapshot = self.observe_frame(field, known_squad=observation['position'])
+        if curtains(snapshot):
+            snapshot = self.confirm_barriers(snapshot)
+            self.owner.state.update(snapshot, advance=False)
+            self.owner.cut.update(self.owner.state.blocking())
+            self.remember_navigation(snapshot)
+            observation = self.reusable_report() or observation
         try:
             return super().plan(observation, target, enemy_assist=enemy_assist)
         except ValueError as exc:
+            if observation.get('squad_source') == 'known':
+                raise RuntimeError('当前镜头无法完成移动规划；停止执行，不重新寻找小队圆环。') from exc
             if observation.get('minimap_mode') != 'compact':
                 raise
             logger.info(f'紧凑定位不足以完成镜头规划，按需展开重新定位一次：{exc}')
@@ -628,7 +652,14 @@ class CampaignSession(NavigationSession):
         if click.shape != (2,) or not np.isfinite(click).all() or not (0 <= click[0] < 1776 and 0 <= click[1] < 999):
             raise ValueError('点击位置越界或不是有效坐标。')
         self.check()
-        self.check_collectible(self.win.client())
+        field = self.win.client()
+        self.check_collectible(field)
+        from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, remembered_blocks
+        from module.campaign.vision.objects import detect_objects
+        items = detect_objects(field, kinds=('barrier',))
+        _, pending = remembered_blocks(self, field, items)
+        if pending:
+            raise BarrierUnconfirmed('点击前发现未完成居中确认的光幕；丢弃旧落点，停止移动。')
         origin = self.win.client_origin()
         self.win.handler.mouse_click(origin[0] + round(click[0]), origin[1] + round(click[1]))
 
@@ -649,7 +680,7 @@ class CampaignSession(NavigationSession):
         super().wait_stopped()
         logger.info(f'停稳等待结束（小队标记与道路都已稳定），耗时 {watch}')
 
-    def snapshot(self, expanded=False, keep_expanded=False):
+    def snapshot(self, expanded=False, keep_expanded=False, known_squad=None):
         """取得一拍业务观测；定位失败时有限重试，展开默认收起，也可留给紧接着的侦察。
 
         战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_reason）；此外小队只在收到点击时才
@@ -660,15 +691,19 @@ class CampaignSession(NavigationSession):
         已经展开的定位重试保留面板，不再强制开合回正。可信紧凑帧可交给移动入口复用小队位置。
         展开时只用无新增手势的已确认小队坐标约束本帧圆环；失败后小幅拖动再识别一次，
         仍失败则停止，不能只复用小队坐标而把尚未定位的敌人当成不存在。
+        known_squad 只供尚未发送移动的找敌人阶段使用：跳过实时小队定位和圆环重试，
+        使用已有小队底图坐标规划路线；当前视野必须独立配准，失败不套用历史矩阵。
         """
         if keep_expanded and not expanded:
             raise ValueError('保留展开面板要求 expanded=True。')
         self.check()
         watch = Stopwatch()
         self.await_field()
-        expected = self.stationary_squad() if expanded else None
+        expected = self.stationary_squad() if expanded and known_squad is None else None
         options = {'expected_squad': expected} if expected is not None else {}
-        self.win.reset_minimap(expanded=expanded, reset=expanded)
+        if known_squad is not None:
+            options['known_squad'] = known_squad
+        self.win.reset_minimap(expanded=expanded, reset=expanded and known_squad is None)
         field = self.win.client()
         self.identity(field)
         snapshot = self.observe_frame(field, **options)
@@ -683,6 +718,10 @@ class CampaignSession(NavigationSession):
                 self.owner.last_snapshot = snapshot
                 self.preview(field)
                 raise RuntimeError('展开地图小幅平移重试后仍未定位成功；停止目标选择并请求人工复核。')
+        elif known_squad is not None and not located(snapshot):
+            self.owner.last_snapshot = snapshot
+            self.preview(field)
+            raise RuntimeError('找敌人的当前视野配准未通过；停止目标选择，不重新定位小队。')
         elif not located(snapshot):
             why = self.reuse_reason()
             snapshot = (self.reuse_registration(snapshot, why) if why is not None
@@ -692,8 +731,9 @@ class CampaignSession(NavigationSession):
                 logger.info(f"展开地图小队约束定位通过：小队偏差 {snapshot['anchor_error']:.1f} 地图像素，"
                             f"道路重合度 {snapshot['road_iou']:.3f}，已定位敌人 {len(snapshot['enemies'])} 个。")
             # 只记刚配准成功的坐标：沿用帧的坐标本来就是这个记录，不需要再写一遍。
-            self.remember_registration(snapshot['squad'], snapshot.get('roi_to_map'),
-                                       snapshot.get('coverage_size'))
+            if known_squad is None:
+                self.remember_registration(snapshot['squad'], snapshot.get('roi_to_map'),
+                                           snapshot.get('coverage_size'))
             self.remember_navigation(snapshot)
         self.owner.last_snapshot = snapshot
         if expanded and not keep_expanded:
@@ -873,7 +913,9 @@ class CampaignSession(NavigationSession):
         """将本帧可信紧凑小队定位交给移动入口，只携带底图坐标和同帧普通敌人。
 
         不携带 roi_to_map：紧凑矩阵不能充当原始展开 ROI 的镜头基准。
-        沿用帧、侦察视口和缺少实际配准分数的快照不建立导航缓存，后续任一手势使缓存失效。
+        沿用帧和缺少实际配准分数的快照不建立导航缓存，后续任一手势使缓存失效。
+        纯镜头找敌人后的快照保留 squad_source=known，移动入口不得要求当前视口与小队重合；
+        首次实际移动后缓存失效，后续位置由移动闭环重新观测。
         """
         if snapshot.get('localization') != 'accepted' or (snapshot.get('minimap') or {}).get('mode') != 'compact':
             return
@@ -884,6 +926,8 @@ class CampaignSession(NavigationSession):
         markers = [list(item['position']) for item in snapshot.get('enemies', []) if item.get('kind') == 'normal']
         report = dict(position=position.tolist(), position_kind='squad', iou=float(iou),
                       minimap_mode='compact', enemy_markers=markers)
+        if snapshot.get('squad_source') == 'known':
+            report['squad_source'] = 'known'
         self.localized_report = {'report': report, 'gestures': self.gestures}
 
     def reusable_report(self):
@@ -952,29 +996,26 @@ class CampaignSession(NavigationSession):
         小队位置由调用方可信快照提供，侦察用每帧配准定位视口，不要求面板中心就是小队。
         """
         self.check()
-        self.scout_squad = self.stationary_squad()
         goto.map_open(self.win, reset=False)
 
     def scout_end(self):
-        """侦察结束收回紧凑小地图；移动前由新紧凑帧确认小队，不能沿用拖偏的侦察视口。"""
+        """侦察结束收回紧凑小地图；调用方保留侦察前小队坐标，并重新配准当前视野。"""
         goto.map_close(self.win)
-        self.scout_squad = None
 
     def scout_locate(self, tag):
-        """配准展开侦察帧；小队可见时使用冻结坐标约束，离屏时仍要求独立道路配准通过。
+        """只配准展开侦察视口，不检测或约束小队圆环，独立道路配准通过后才采用本帧敌人。
 
         初次配准或稳定性检查失败后，仅小幅拖动重试一次；仍失败即停止侦察并抛 RuntimeError，
         不继续把同一失败视野计为不同侦察屏，也不为未查看的道路格累计目标失败。
         截图、窗口、取消和输入异常不捕获；不在异常后补发地图收起动作。
         """
-        options = {'expected_position': self.scout_squad} if self.scout_squad is not None else {}
         for attempt in range(2):
             if attempt:
                 self.win.capture()
                 self.pan_expanded((1., 0.), distance=EXPANDED_RETRY_PIXELS)
             panel = self.win.capture()
             try:
-                report = self.localizer.locate(panel, tag, require_player=False, **options)
+                report = self.localizer.locate(panel, tag, require_player=False, locate_player=False)
             except (RuntimeError, ValueError) as exc:
                 reason = str(exc)
             else:

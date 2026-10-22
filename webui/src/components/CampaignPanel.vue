@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '../api/client'
 import { t, uiLanguage } from '../i18n'
 import { useInstancesStore } from '../stores/instances'
-import CampaignMap, { type Block, type Enemy, type Goal, type MapAnnotations, type Point, type RememberedEnemy } from './CampaignMap.vue'
+import CampaignMap, { type Block, type Enemy, type Goal, type MapAnnotations, type Point, type PlannedRoutes, type RememberedEnemy } from './CampaignMap.vue'
 
 const props = defineProps<{ name: string }>()
 type Snapshot = {
@@ -13,7 +13,7 @@ type Snapshot = {
   localization: string; squad: Point | null; enemies: Enemy[]
   barriers?: { state: string; map: Point }[]; blocks?: Block[]
   annotations?: MapAnnotations | null
-  memory?: { tick: number; enemies: RememberedEnemy[]; blocks: Block[]; goal?: Goal; route_goal?: Goal | null;
+  memory?: { tick: number; enemies: RememberedEnemy[]; blocks: Block[]; goal?: Goal; route_goal?: Goal | null; routes?: PlannedRoutes;
     mechanisms?: { id: string; state: string; completed: boolean }[] }
 }
 const instances = useInstancesStore()
@@ -28,6 +28,7 @@ const updatedAt = computed(() => snapshot.value ? new Date(snapshot.value.captur
 const remembered = computed(() => snapshot.value?.memory?.enemies ?? [])
 const mapBlocks = computed(() => snapshot.value?.memory?.blocks ?? snapshot.value?.blocks ?? [])
 const goal = computed(() => snapshot.value?.memory?.goal ?? null)
+const routes = computed(() => snapshot.value?.memory?.routes ?? {})
 const routeGoal = computed(() => snapshot.value?.memory?.route_goal ?? null)
 const mechanismStates = computed(() => Object.fromEntries((snapshot.value?.memory?.mechanisms ?? []).map(item => [item.id, item.state])))
 const goalKinds: Record<string, string> = { enemy: '敌人', story: '主线目标', mechanism: '地面机关',
@@ -69,9 +70,13 @@ onBeforeUnmount(() => { generation++ })
     <div v-else class="campaign-content">
       <section class="chapter-map-section">
         <div class="section-heading"><b>{{ t('章节地图') }}</b><span>{{ mapBlocks.length ? `${mapBlocks.length} ${t('处道路封锁')}` : t('普通 / 困难共用底图') }}</span></div>
-        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :blocks="mapBlocks" :goal="goal" :route-goal="routeGoal" :annotations="annotations" :label="t('章节地图')" @error="mapError = true" />
+        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :blocks="mapBlocks" :goal="goal" :route-goal="routeGoal" :routes="routes" :annotations="annotations" :label="t('章节地图')" @error="mapError = true" />
         <div v-else class="campaign-empty">{{ t('章节底图不可用') }}</div>
         <div class="legend"><span class="cyan">○ {{ t('小队') }}</span><span class="red">◆ {{ t('敌人') }}</span><span class="purple">◆ EX</span><span v-if="remembered.length" class="red">◇ {{ t('记住的敌人') }} {{ remembered.length }}</span><span v-if="goal" class="gold">⊕ {{ t('执行目标') }}</span><span v-if="routeGoal" class="purple">◇ {{ t('路程目标') }}</span><span v-if="mapBlocks.length" class="blocked">╌ {{ t('道路封锁') }}</span></div>
+        <div v-if="routes.execution || routes.destination" class="legend route-legend">
+          <span v-if="routes.execution" class="gold">━ {{ t('本段路线') }} · {{ routes.execution.distance.toFixed(1) }} {{ t('地图像素') }}</span>
+          <span v-if="routes.destination" class="purple">┄ {{ t('目的地路线') }} · {{ routes.destination.distance.toFixed(1) }} {{ t('地图像素') }}</span>
+        </div>
         <div v-if="annotations" class="legend annotation-legend"><span><span class="mechanism" aria-hidden="true">▣</span> {{ t('地面机关') }} {{ mechanisms.length }}</span><span><span class="elevator" aria-hidden="true">⇅</span> {{ t('电梯') }} {{ elevators.length }}</span><span v-if="annotations.transfers.length"><span class="elevator" aria-hidden="true">⇢</span> {{ t('电梯连接') }} {{ annotations.transfers.length }}</span></div>
         <p class="map-note">{{ snapshot.localization === 'accepted' ? t('位置已匹配到章节底图') : t('底图位置未确认，请查看小地图。') }}</p>
         <div v-if="snapshot.memory" class="target-details">

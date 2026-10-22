@@ -661,7 +661,9 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     像素，不能用时才退回固定的 VIEWPORT_PIXEL。只点注视点会漏掉一种常态——相机本来就对着小队、
     小队正站在注视点上，这时再点注视点等于叫它走到自己脚下（38 章实机连点三次，小队坐标只变了
     1.2 地图像素），而目标离注视点还有十几像素时这一步就走不完。
-    起始帧的视野中心以与已确认的小队定位一致为准（start_viewport），不要求 accepted。
+    普通起始帧的视野中心以与已确认的小队定位一致为准（start_viewport），不要求 accepted。
+    纯镜头找敌人后携带 squad_source=known 时，小队坐标取自出发前，当前视口可远离小队；
+    此时只要求当前道路配准 accepted，不因视口与小队不重合而展开重新寻找圆环。
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
     全局配准被接受即视为批末校正已完成。
     实测（退回固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
@@ -692,9 +694,14 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     session.preview(field)
     panel, road, valid = perception.compact_road_masks(field)
     start = compact_viewport(session, matcher, panel, road, valid)
-    offset = start_viewport(start, squad_position)
-    session.emit(start_registration=start['status'], start_iou=round(float(start['iou']), 4),
-                 start_offset=round(offset, 1))
+    if observation.get('squad_source') == 'known':
+        if start['status'] != 'accepted':
+            raise RuntimeError('找敌人后的当前镜头配准未通过，不能使用旧视野矩阵规划移动。')
+        session.emit(start_registration=start['status'], start_iou=round(float(start['iou']), 4))
+    else:
+        offset = start_viewport(start, squad_position)
+        session.emit(start_registration=start['status'], start_iou=round(float(start['iou']), 4),
+                     start_offset=round(offset, 1))
     if start['status'] != 'accepted':
             session.emit(message=f"起始紧凑配准状态 {start['status']}，道路重合度 {start['iou']:.3f}，"
                              f"小队定位偏差 {offset:.1f} 地图像素，满足位置一致性要求")
