@@ -4,7 +4,6 @@
 才能用当前小地图视口的地面坐标生成封路段；立柱单独可见不是光幕开启或消失的证据。
 """
 
-import cv2
 import numpy as np
 
 from module.campaign.navigation.controls import ARROW_GROUND_OFFSET, EXPANDED_CENTER, VIEWPORT_PIXEL
@@ -91,36 +90,6 @@ def curtain_foot(item):
     return np.array([(x1 + x2) / 2, y2])
 
 
-def track_curtain(reference, current, item, candidates):
-    """以局部静态地面的双向特征配准跟踪同一光幕，歧义或支持域不足时拒绝关联。
-
-    变换只在两张客户区截图间关联目标，不把屏幕坐标外推到底图。光幕动画区域被排除；
-    目标底边必须在特征支持凸包内，候选残差不超过 32px，且次选至少多 20px。
-    """
-    from module.campaign.vision.surface_motion import contains, register_surface
-
-    if not candidates:
-        raise ValueError('新帧没有可关联的光幕。')
-    point = curtain_foot(item)
-    left, top = np.maximum(point - [260, 240], [235, 122])
-    # 左侧远处目标的局部区域允许贴近画面边缘，但不包含左上小地图。
-    if point[0] < 235:
-        left, top = 4., max(295., point[1] - 240)
-    right, bottom = np.minimum(point + [260, 180], [1648, 898])
-    polygon = [[left, top], [right, top], [right, bottom], [left, bottom]]
-    x1, y1, x2, y2 = item['box']
-    exclude = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
-    fit = register_surface(reference, current, polygon, exclude=exclude)
-    if not contains(fit['support'], point):
-        raise ValueError('光幕底部不在静态特征支持域内。')
-    predicted = project(fit['matrix'], point)
-    distances = sorted((float(np.linalg.norm(curtain_foot(other) - predicted)), index)
-                       for index, other in enumerate(candidates))
-    if distances[0][0] > TRACK_TOLERANCE or (len(distances) > 1 and distances[1][0] - distances[0][0] < 20):
-        raise ValueError('光幕帧间关联不唯一。')
-    return candidates[distances[0][1]]
-
-
 def centered_curtain(item, snapshot, chart):
     """仅把注视点附近的光幕落到已接受的紧凑地图视口，再按局部道路方向生成封锁段。
 
@@ -139,6 +108,28 @@ def centered_curtain(item, snapshot, chart):
     if block is None:
         raise ValueError('居中光幕无法关联到有效道路。')
     return dict(kind='barrier', anchor='centered', **block)
+
+
+def located_curtain(item, snapshot, chart):
+    """用固定镜头仿射直接把光幕底部换算到底图并吸附道路，不要求先移到注视点。
+
+    与 centered_curtain 的差别只在地面点来源：注视点坐标改为
+    视口 + GROUND_TO_CLIENT 逆解的当前检测位置。仿射常数须由调用方在本会话用实测拖动
+    校验（barrier_navigation.confirm_visible）；配准未接受、面板非紧凑模式或检测框截边时
+    抛 ValueError。
+    """
+    from module.campaign.navigation.controls import GAZE, GROUND_TO_CLIENT
+
+    if (snapshot.get('localization') != 'accepted'
+            or (snapshot.get('minimap') or {}).get('mode') != 'compact'):
+        raise ValueError('光幕定位缺少可信紧凑地图配准。')
+    viewport = project(np.asarray(snapshot['roi_to_map'], float), GAZE)
+    offset = curtain_foot(item) - np.asarray(VIEWPORT_PIXEL, float)
+    point = viewport + np.linalg.solve(GROUND_TO_CLIENT, offset)
+    block = chart.mark_barrier(point, tolerance=SNAP_TOLERANCE)
+    if block is None:
+        raise ValueError('光幕落点无法关联到有效道路。')
+    return dict(kind='barrier', anchor='affine', **block)
 
 
 MAX_PILLAR_ONLY_FRAMES = 3
@@ -189,94 +180,108 @@ def barrier_group(curtain, objects):
                 pillars=associate_pillars(curtain, objects), source='curtain', missing_frames=0)
 
 
-def track_pillar(reference, current, pillar, candidates):
-    """以旧立柱的实际外观匹配新帧检测候选，拒绝弱纹理、尺度突变或外观竞争。
+def match_drag_target(point, candidates, drag=(0., 0.), gain=1.):
+    """按拖动方向与大致距离关联同类 YOLO 框，返回目标及客户区位移记录。
 
-    检测框只限定搜索域；位移由局部模板匹配得到，不将最近框当成同一立柱。
-    单帧位移不得超过 400px，避免原立柱离屏后错误关联到远处同样外观的立柱。
-    允许 10% 尺度变化，NCC 至少 0.78，次选差至少 0.08；回传的是客户区位移。
+    point、drag 均为客户区像素，gain 为最近一次实际跟手比例。只取预测位置附近的同类候选，
+    不比较图像外观、旋转或缩放。允许拖动响应偏差；方向明显相反、横向偏差过大或两个候选
+    同样接近时不猜测。没有新拖动时只允许 32px 检测抖动，不凭旧坐标搜索整幅画面。
     """
-    x1, y1, x2, y2 = np.rint(pillar['box']).astype(int)
-    template = cv2.cvtColor(reference[y1:y2, x1:x2], cv2.COLOR_BGR2GRAY)
-    if min(template.shape) < 8 or template.std() < 8:
-        raise ValueError('立柱外观纹理不足。')
+    point, drag = np.asarray(point, float), np.asarray(drag, float)
+    if (point.shape != (2,) or drag.shape != (2,) or not np.isfinite([point, drag]).all()
+            or not np.isfinite(gain) or not .2 <= gain <= 2.):
+        raise ValueError('屏障跟踪的拖动坐标或跟手比例无效。')
+    length = float(np.linalg.norm(drag))
+    predicted = point + drag * gain
+    tolerance = max(48., length * .65) if length >= 3 else TRACK_TOLERANCE
     matches = []
     for item in candidates:
         try:
-            if np.linalg.norm(curtain_foot(item) - curtain_foot(pillar)) > 400:
-                continue
+            foot = curtain_foot(item)
         except ValueError:
             continue
-        a, b, c, d = np.rint(item['box']).astype(int)
-        if abs((c - a) / (x2 - x1) - 1.) > .25 or abs((d - b) / (y2 - y1) - 1.) > .25:
-            continue
-        left, top = max(0, a - 16), max(0, b - 16)
-        patch = cv2.cvtColor(current[top:min(999, d + 16), left:min(1776, c + 16)], cv2.COLOR_BGR2GRAY)
-        best = None
-        for scale in (.9, 1., 1.1):
-            resized = cv2.resize(template, None, fx=scale, fy=scale)
-            if any(x > y for x, y in zip(resized.shape, patch.shape)):
+        displacement = foot - point
+        if length >= 3:
+            along = float(displacement @ drag / length)
+            across = float(np.linalg.norm(displacement - along * drag / length))
+            if not -24 <= along <= length * 2 + 32 or across > 48:
                 continue
-            _, score, _, location = cv2.minMaxLoc(cv2.matchTemplate(patch, resized, cv2.TM_CCOEFF_NORMED))
-            center = np.array([left, top]) + location + np.array(resized.shape[::-1]) / 2
-            if best is None or score > best[0]:
-                best = (score, center)
-        if best is not None:
-            matches.append((best[0], item, best[1] - [(x1 + x2) / 2, (y1 + y2) / 2]))
-    matches.sort(key=lambda match: match[0], reverse=True)
-    if (not matches or matches[0][0] < .78
-            or (len(matches) > 1 and matches[0][0] - matches[1][0] < .08)):
-        raise ValueError('关联立柱的外观匹配不足或存在歧义。')
-    _, item, displacement = matches[0]
-    return item, displacement
+        distance = float(np.linalg.norm(foot - predicted))
+        if distance <= tolerance:
+            matches.append((distance, item, foot))
+    matches.sort(key=lambda result: result[0])
+    if not matches:
+        raise ValueError('拖动预计范围内没有同类 YOLO 屏障候选。')
+    if len(matches) > 1 and matches[1][0] - matches[0][0] < 20:
+        raise ValueError('拖动预计范围内有多个相近屏障候选。')
+    distance, item, foot = matches[0]
+    return item, dict(predicted=predicted.tolist(), observed=foot.tolist(), residual=round(distance, 1),
+                      displacement=(foot - point).tolist(), drag=drag.tolist(), gain=float(gain))
 
 
-def track_barrier(reference, current, group, objects):
-    """优先用已绑定立柱传递同组地面位置，光幕变弱时允许有限帧继续跟踪，但不伪造光幕状态。
+def track_barrier(group, objects, drag=(0., 0.), gain=1.):
+    """用本次拖动与新帧 YOLO 结果跟踪同组光幕或立柱，不再进行图像配准。
 
-    双柱的位移必须一致，单柱只能作短期跟踪。重新出现的光幕还须接近组预测位置且唯一；
-    立柱和光幕都无法可靠关联时拒绝继续。仅柱可见最多三帧，最终封路仍要求实际光幕两帧确认。
+    优先取拖动预计位置附近的光幕；光幕未检出时，用事先绑定立柱的实际框位移推算光幕底部。
+    双柱位移差允许 32px，单柱可短期继续；仅柱跟踪最多三帧，不能据此判光幕开启或消失。
+    无拖动参数表示同视野重采样，调用方不能把不同镜头的历史坐标当作未移动帧使用。
     """
-    candidates = [item for item in objects if item.get('kind') == 'barrier' and item.get('state') == 'curtain']
-    pillars = [item for item in objects if item.get('kind') == 'barrier' and item.get('state') == 'pillar']
-    tracked, shifts = [], []
+    candidates, pillars = [], []
+    for item in objects:
+        if item.get('kind') != 'barrier':
+            continue
+        try:
+            curtain_foot(item)
+        except ValueError:
+            continue
+        if item.get('state') == 'curtain':
+            candidates.append(item)
+        elif item.get('state') == 'pillar':
+            pillars.append(item)
+    try:
+        item, detail = match_drag_target(group['foot'], candidates, drag, gain)
+    except ValueError:
+        pass
+    else:
+        found = barrier_group(item, objects)
+        found['tracking_evidence'] = [dict(detail, target='curtain')]
+        return found
+    tracked, shifts, evidence, failures = [], [], [], []
     for old in group['pillars']:
         try:
-            item, shift = track_pillar(reference, current, old, pillars)
-        except (ValueError, cv2.error):
+            item, detail = match_drag_target(curtain_foot(old), pillars, drag, gain)
+        except ValueError as exc:
+            failures.append(str(exc))
             continue
         if item in tracked:
             raise ValueError('多个旧立柱关联到同一新立柱。')
         tracked.append(item)
-        shifts.append(shift)
-    if shifts:
-        if len(shifts) == 2 and np.linalg.norm(shifts[0] - shifts[1]) > 12:
-            raise ValueError('同组两根立柱的位移不一致。')
-        predicted = np.asarray(group['foot']) + np.mean(shifts, axis=0)
-        if not (3 < predicted[0] < 1773 and 120 < predicted[1] < 900):
-            raise ValueError('立柱关联推算的光幕底部已离开有效画面。')
-        distances = []
-        for item in candidates:
-            try:
-                distances.append((float(np.linalg.norm(curtain_foot(item) - predicted)), item))
-            except ValueError:
-                continue
-        distances.sort(key=lambda value: value[0])
-        if distances and distances[0][0] <= TRACK_TOLERANCE:
-            if len(distances) > 1 and distances[1][0] - distances[0][0] < 20:
-                raise ValueError('立柱关联范围内有多个光幕。')
-            found = barrier_group(distances[0][1], objects)
-            found['source'] = 'pillar_pair' if len(shifts) == 2 else 'pillar'
-            return found
-        missing = group['missing_frames'] + 1
-        if missing > MAX_PILLAR_ONLY_FRAMES:
-            raise ValueError('关联立柱可见但光幕连续多帧未确认。')
-        return dict(curtain=None, foot=predicted.tolist(), pillars=tracked,
-                    source='pillar_pair' if len(shifts) == 2 else 'pillar', missing_frames=missing)
-    if group['curtain'] is None:
-        raise ValueError('光幕与已关联立柱均未能可靠跟踪。')
-    found = track_curtain(reference, current, group['curtain'], candidates)
-    return barrier_group(found, objects)
+        shifts.append(np.asarray(detail['displacement']))
+        evidence.append(dict(detail, target='pillar', reference_box=old['box'], current_box=item['box']))
+    if not shifts:
+        reason = '；'.join(failures) or '没有已关联立柱'
+        raise ValueError(f'光幕未能按拖动位置确认；立柱辅助不可用：{reason}')
+    if len(shifts) == 2 and np.linalg.norm(shifts[0] - shifts[1]) > 32:
+        raise ValueError('同组两根立柱的 YOLO 位移不一致。')
+    predicted = np.asarray(group['foot']) + np.mean(shifts, axis=0)
+    if not (3 < predicted[0] < 1773 and 120 < predicted[1] < 900):
+        raise ValueError('立柱推算的光幕底部已离开有效画面。')
+    source = 'pillar_pair' if len(shifts) == 2 else 'pillar'
+    try:
+        # 立柱给出实际移动量后，附近光幕可再关联一次，不再使用粗略的拖动比例。
+        item, detail = match_drag_target(predicted, candidates)
+    except ValueError:
+        if any(np.linalg.norm(curtain_foot(item) - predicted) <= TRACK_TOLERANCE for item in candidates):
+            raise ValueError('立柱附近光幕存在关联歧义。')
+    else:
+        found = barrier_group(item, objects)
+        found.update(source=source, tracking_evidence=evidence)
+        return found
+    missing = group['missing_frames'] + 1
+    if missing > MAX_PILLAR_ONLY_FRAMES:
+        raise ValueError('关联立柱可见但光幕连续多帧未确认。')
+    return dict(curtain=None, foot=predicted.tolist(), pillars=tracked, source=source,
+                missing_frames=missing, tracking_evidence=evidence)
 
 
 def weak_curtain_visible(image, group):
