@@ -1,5 +1,6 @@
 """生产任务的移动会话：复用原型导航闭环，设备与状态由 Campaign 持有。"""
 
+import sys
 import time
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from module.campaign.report import (ANCHOR_METHODS, ANCHOR_RESULTS, BATTLE_STATE
                                     NAVIGATION_METHODS, POSITION_KINDS, label, points_text)
 from module.campaign.run_state import describe_changes, located
 from module.campaign.timing import Stopwatch
+from module.campaign.trace import CampaignTrace
 from module.campaign.vision.chapter import chapter_identity
 from module.campaign.vision import battle
 from module.campaign.vision.minimap import terrain
@@ -198,7 +200,15 @@ class CampaignInput:
             self.session.before_input()
             # 闸门放行之后才算一次真手势：只有它可能让小队移动或镜头平移（见 reuse_reason）。
             self.session.gestures += 1
+            action = dict(method=name, args=args, kwargs=kwargs, coordinate_space='screen',
+                          client_origin=self.session.win.origin)
+            self.session.record('input_before', field=self.session.trace.last_field, force=True, action=action)
+            # 编码与写盘期间也可能失焦或收到取消；再次校验，但不重复扣操作预算。
+            self.session.check()
             result = value(*args, **kwargs)
+            self.session.trace.after_input(action=action, inputs=self.session.inputs,
+                                           target_inputs=self.session.target_inputs,
+                                           gestures=self.session.gestures)
             if getattr(self.handler, '_failures', 0):
                 raise WindowChanged(f'鼠标操作 {name} 发送失败。')
             return result
@@ -213,6 +223,7 @@ class CampaignLocalizer:
         """使用已绑定章节的 MapMatcher，避免读取原型的全局默认章节或修改全局设置。"""
         self.matcher, self.cut = matcher, cut
         self.old_matrix = goto.ROI_TO_PLANE
+        self.record = None
 
     @property
     def road(self):
@@ -244,6 +255,9 @@ class CampaignLocalizer:
         if not has_player:
             player = np.array(panel.shape[1::-1], float) / 2
         report = self.matcher.match_panel(panel, road, valid, player, **options)
+        if self.record is not None:
+            self.record('panel_registration', tag=tag, require_player=require_player,
+                        expected_position=expected_position, report=report)
         if report['status'] != 'accepted':
             raise RuntimeError(f"展开地图定位未通过（{label(LOCALIZATION, report['status'])}）。")
         position = np.asarray(report['position'], float)
@@ -271,7 +285,12 @@ class CampaignSession(NavigationSession):
         self.localizer = CampaignLocalizer(owner.observer.matcher, owner.cut)
         self.compact_matcher = owner.observer.matcher
         self.package = owner.observer.package
+        self.trace = CampaignTrace(self.folder / 'runs', dict(
+            chapter=owner.current_chapter, difficulty=owner.current_difficulty,
+            instance=getattr(owner.config, 'config_name', None), task=owner.config.task.command,
+            client_size=[1776, 999]))
         self.win = CampaignWindow(owner)
+        self.win.trace = self.trace
         self.win.stop_check = self.check_stop
         self.win.input_check = self.before_input
         self.win.pause = self.pause
@@ -300,6 +319,7 @@ class CampaignSession(NavigationSession):
         # 而两次手势之间画面不会变，同一拍里的下一次观测直接复用（见 reusable_report）。
         self.localized_report = None
         self.collectible_mode = owner.config.task.command == 'auto_main_collectible'
+        self.localizer.record = self.record
 
     def start(self):
         """开始前要求已存在输入通道，取焦一次并锁定窗口；不在会话中重建驱动。时限从这里起算。
@@ -308,6 +328,7 @@ class CampaignSession(NavigationSession):
         表现为配准与静态层对不上（定位不可用），而逐帧核对会让每个手势都多两次 OCR 与一张截图。
         """
         self.check_stop()
+        self.trace.start()
         watch = Stopwatch()
         self.deadline = time.monotonic() + CHAPTER_TIME_LIMIT
         if self.win.handler is None:
@@ -347,6 +368,7 @@ class CampaignSession(NavigationSession):
         """切换目标用途并重置单目标预算；执行时限与已验证箭头基准继续保留。"""
         self.request['purpose'] = purpose
         self.target_inputs = 0
+        self.record('target_begin')
 
     def before_input(self):
         """每次场景手势之前核对弹窗与收集品提示；超时或达到单目标预算时不发送下一次输入。
@@ -434,10 +456,32 @@ class CampaignSession(NavigationSession):
     def preview(self, field):
         """发布任务预览并保留最新证据；截图不代表战斗或拾取完成。"""
         from module.campaign.navigation.evidence import write_image
+        self.record('preview', field=field, force=True)
         self.folder.mkdir(parents=True, exist_ok=True)
         write_image(self.folder / 'last_field.png', field)
         publish_preview_frame(np.ascontiguousarray(field[:, :, ::-1]), interval=0,
                               source=self.owner.campaign_source(self.owner.last_snapshot))
+
+    def record(self, event, field=None, force=False, **details):
+        """把当前目标、预算与决策轮附在证据事件上，不重新访问窗口或运行视觉识别。
+
+        field 必须是本次业务已取得的 BGR 客户区画面；归档失败由记录器告警，不改变操作控制流。
+        """
+        state = getattr(self.owner, 'state', None)
+        self.trace.record(event, field=field, force=force, purpose=self.request['purpose'],
+                          tick=getattr(state, 'tick', None), inputs=self.inputs,
+                          target_inputs=self.target_inputs, gestures=self.gestures, **details)
+
+    def observe_frame(self, field, **options):
+        """观测既有客户区截图并保存同帧识别与定位结果，失败帧强制留证。
+
+        接受结果、圆环数量、敌人／光幕、配准指标和错误原因均保留；内嵌预览图由记录器剔除。
+        此入口只包装原观察器调用，不改变定位阈值与重试次数。
+        """
+        snapshot = self.owner.observer.observe(field, self.expected_identity, time.time(), **options)
+        self.record('observation', field=field, force=not located(snapshot), snapshot=snapshot,
+                    options=options)
+        return snapshot
 
     def emit(self, **values):
         """将共享闭环的进度写入任务日志，电梯和移动结果仍由执行层回写状态。
@@ -445,11 +489,12 @@ class CampaignSession(NavigationSession):
         一次回调一行：字段翻译见 describe_move，前面带上这个目标已经操作过多少次，
         好让日志能直接读出「这一步花了几次操作」。
         """
+        self.record('navigation', values=values)
         logger.info(f'主线移动（本目标第 {self.target_inputs} 次操作）：{describe_move(values)}')
 
     def remember_scene(self, field):
         """移动反馈帧也累积敌人与封锁，下一步 A* 不沿用移动前的过期切开图。"""
-        snapshot = self.owner.observer.observe(field, self.expected_identity, time.time())
+        snapshot = self.observe_frame(field)
         self.owner.last_snapshot = snapshot
         self.owner.state.update(snapshot, advance=False)
         if self.owner.cut.update(self.owner.state.blocking()):
@@ -512,7 +557,10 @@ class CampaignSession(NavigationSession):
                 report = self.localizer.locate(panel, f'observe_{self.index:03}')
             except (RuntimeError, ValueError) as exc:
                 error = exc
+                self.record('localization_failed', field=self.trace.last_field, force=True,
+                            attempt=attempt + 1, error=str(exc))
                 continue
+            self.record('localization_result', report=report, attempt=attempt + 1)
             self.check()
             if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
                 raise RuntimeError('定位期间道路还在变，不能用这次位置。')
@@ -623,14 +671,14 @@ class CampaignSession(NavigationSession):
         self.win.reset_minimap(expanded=expanded, reset=expanded)
         field = self.win.client()
         self.identity(field)
-        snapshot = self.owner.observer.observe(field, self.expected_identity, time.time(), **options)
+        snapshot = self.observe_frame(field, **options)
         if expanded and snapshot.get('localization') != 'accepted':
             logger.info(f'展开地图定位未通过：小幅平移 {EXPANDED_RETRY_PIXELS:.0f} 客户区像素后重试（1/1）。')
             self.win.capture()
             self.pan_expanded((1., 0.), distance=EXPANDED_RETRY_PIXELS)
             field = self.win.client()
             self.identity(field)
-            snapshot = self.owner.observer.observe(field, self.expected_identity, time.time(), **options)
+            snapshot = self.observe_frame(field, **options)
             if snapshot.get('localization') != 'accepted':
                 self.owner.last_snapshot = snapshot
                 self.preview(field)
@@ -650,6 +698,7 @@ class CampaignSession(NavigationSession):
         self.owner.last_snapshot = snapshot
         if expanded and not keep_expanded:
             self.win.reset_minimap(expanded=False, reset=False)
+        self.record('snapshot_result', snapshot=snapshot)
         logger.info(f'观测完成：{describe_snapshot(snapshot)}，耗时 {watch}')
         return snapshot
 
@@ -670,7 +719,9 @@ class CampaignSession(NavigationSession):
         每次点击的日志都带上当次识别分数与颜色判据的实际读数，便于对着现场截图复盘误判。
         """
         self.check()
-        state = battle.battle_state(self.win.client())
+        field = self.win.client()
+        state = battle.battle_state(field)
+        self.record('battle_state', state=state)
         # 继续与跳过在输入前复核分数，其余判据由状态识别提供；日志缺项显示为「—」。
         kind, scores = state['state'], state.get('scores')
         quick = battle.value_text(state.get('quick_ratio'))
@@ -882,7 +933,7 @@ class CampaignSession(NavigationSession):
                 expanded = True
             elif attempt:
                 self.pan_expanded(PAN_DIRECTIONS[(attempt - 1) % len(PAN_DIRECTIONS)])
-            snapshot = self.owner.observer.observe(self.win.client(), self.expected_identity, time.time())
+            snapshot = self.observe_frame(self.win.client())
             if snapshot['localization'] == 'accepted':
                 logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次展开视野重试定位成功："
                             f"小队位置 {points_text(snapshot['squad'])}，耗时 {watch}")
@@ -930,6 +981,8 @@ class CampaignSession(NavigationSession):
                 if np.mean(terrain(panel) != terrain(self.win.capture())) <= .03:
                     return panel, report
                 reason = '道路画面尚未稳定'
+            self.record('scout_localization_failed', field=self.trace.last_field, force=True,
+                        tag=tag, attempt=attempt + 1, reason=reason)
             if not attempt:
                 logger.info(f'侦察定位未通过：{reason}；小幅平移 '
                             f'{EXPANDED_RETRY_PIXELS:.0f} 客户区像素后重试（1/1）。')
@@ -985,8 +1038,11 @@ class CampaignSession(NavigationSession):
 
     def close(self):
         """始终释放已按下鼠标，不关闭调度器 Device，也不在失焦或取消后点控件。"""
+        error = sys.exc_info()[1]
         try:
             if self.raw_handler is not None:
                 self.raw_handler.mouse_up()
         finally:
+            self.trace.finish(error=error, inputs=self.inputs, gestures=self.gestures,
+                              snapshot=self.owner.last_snapshot, goal=getattr(self.owner, 'last_goal', None))
             self.win.close()

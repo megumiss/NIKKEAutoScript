@@ -137,6 +137,7 @@ class CampaignObserver:
         except (OSError, ValueError, KeyError, cv2.error) as exc:
             snapshot['localization'] = 'needs_review'
             message = str(exc)
+            snapshot['localization_error'] = message
             if message != self.last_error:
                 logger.warning(f'第 {chapter} 章小地图定位不可用：{message}')
                 self.last_error = message
@@ -196,6 +197,9 @@ class CampaignObserver:
         options = {'expected_position': expected_position} if expected_position is not None else {}
         result = self.matcher.match_panel(panel, road, valid, player, **options)
         snapshot['localization'] = result['status']
+        snapshot['localization_diagnostics'] = {
+            name: result[name] for name in ('road_iou', 'coarse_margin', 'parameter_spread_px', 'anchor_error')
+            if name in result}
         if result['status'] != 'accepted':
             failed = [name for name, passed in
                       (('road_iou', result['road_iou'] >= ACCEPT_ROAD_IOU),

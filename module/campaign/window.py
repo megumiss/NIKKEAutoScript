@@ -46,6 +46,7 @@ class CampaignWindow:
         self.handler = getattr(self.device, 'input_handler', None)
         self.origin = None
         self.handle = None
+        self.trace = None
 
     @property
     def hwnd(self):
@@ -109,7 +110,10 @@ class CampaignWindow:
         image = self.device.image
         if image is None or image.shape != (CLIENT_SIZE[1], CLIENT_SIZE[0], 3):
             raise WindowChanged('截图尺寸不是 1776×999，无法计算点击位置。')
-        return np.ascontiguousarray(image[:, :, ::-1])
+        field = np.ascontiguousarray(image[:, :, ::-1])
+        if self.trace is not None:
+            self.trace.capture(field)
+        return field
 
     def capture(self, require_map=True):
         """展开小地图面板的 ROI 截图（BGR）。
@@ -132,6 +136,19 @@ class CampaignWindow:
         关闭态先用左上角箭头重开，这一步由 reopen_minimap_if_closed 负责。
         """
         self.check()
+        if self.trace is not None:
+            self.trace.record('minimap_request', field=self.trace.last_field, force=True,
+                              expanded=expanded, reset=reset)
+        result = self.set_minimap_state(expanded=expanded, reset=reset)
+        if self.trace is not None:
+            image = self.device.image
+            field = (np.ascontiguousarray(image[:, :, ::-1])
+                     if isinstance(image, np.ndarray) and image.shape == (999, 1776, 3) else None)
+            self.trace.record('minimap_result', field=field, force=True, mode=result)
+        return result
+
+    def set_minimap_state(self, expanded=True, reset=True):
+        """执行既有地图三态切换，失败向上抛出；记录器只在外层复用操作前后的业务截图。"""
         callbacks = {}
         if getattr(self, 'input_check', None) is not None:
             callbacks = {'check': self.input_check, 'pause': self.pause}

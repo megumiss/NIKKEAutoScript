@@ -373,6 +373,7 @@ class CampaignExecutor:
         total = Stopwatch()
         try:
             self.session.start()
+            self.session.record('initial_snapshot', snapshot=initial)
             if initial.get('localization') == 'accepted' and initial.get('squad') is not None:
                 # 准备阶段与首轮之间没有移动，小队坐标可直接约束第一次展开配准。
                 self.session.remember_registration(initial['squad'], initial.get('roi_to_map'),
@@ -398,6 +399,8 @@ class CampaignExecutor:
                             and (goal is None or goal['kind'] != 'review_block')
                             and not self.owner.state.cooling('story-location')):
                         changed = locate_story_target(self.session, snapshot['squad'])
+                        self.session.record('story_location_result', camera_changed=changed,
+                                            route_goal=self.owner.state.route_goal)
                         if changed:
                             snapshot = self.session.snapshot()
                         goal = self.owner.plan_tick(snapshot, advance=False)
@@ -422,6 +425,8 @@ class CampaignExecutor:
                             # 收起后的紧凑帧也可能修正敌人位置；出发依据必须与最终选出的目标一致。
                             self.scout_pending = scout_focus(self.owner.state, self.owner.cut, snapshot['squad'],
                                                              include_cooling=True, goal=goal)
+                    self.session.record('planning_result', goal=goal, snapshot=snapshot,
+                                        scout_pending=self.scout_pending)
                     if self.scout_pending is not None:
                         pending = self.scout_pending
                         failures = self.owner.state.cooldowns.get(pending['id'], {}).get('failures', 0)
@@ -434,6 +439,7 @@ class CampaignExecutor:
                     if goal is None or goal['kind'] == 'none':
                         logger.warning(f'停止推图：{describe(goal) if goal else "无目标规划结果"}')
                         return {'state': 'needs_review', 'goal': goal}
+                    self.session.record('decision', goal=goal, snapshot=snapshot)
                     self.last_executed = goal
                     self.execute(goal)
                 except TargetTriggered as exc:
