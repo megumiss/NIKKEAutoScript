@@ -1,8 +1,8 @@
 """
-event_template_studio 的会话模型与导出逻辑（无 GUI 依赖，CLI 与 GUI 共用）。
+活动模板的会话模型与导出逻辑（无 GUI 依赖，CLI 与 GUI 共用）。
 
 会话文件: tmp/event_studio/<event_id>/session.json
-规则库:   dev_tools/event_studio/event_template_rules.yaml
+规则库:   dev_tools/template_studio/data/event_template_rules.yaml
 """
 import ast
 import hashlib
@@ -10,7 +10,6 @@ import json
 import os
 import re
 import shutil
-import sys
 import tempfile
 from pprint import pformat
 from textwrap import indent
@@ -20,14 +19,14 @@ import numpy as np
 import yaml
 from filelock import FileLock
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, REPO_ROOT)
+from module.base.utils import get_bbox, get_color
+from module.config.manual_config import ManualConfig
+from module.logger import logger
 
-from module.base.utils import get_bbox, get_color  # noqa: E402
-from module.config.manual_config import ManualConfig  # noqa: E402
-from module.logger import logger  # noqa: E402
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-RULES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'event_template_rules.yaml')
+RULES_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          'data', 'event_template_rules.yaml')
 EVENTS_FILE = os.path.join(REPO_ROOT, 'module', 'config', 'events.py')
 EVENT_MODULE_ROOT = os.path.join(REPO_ROOT, 'module', 'event')
 SESSION_ROOT = os.path.join(REPO_ROOT, 'tmp', 'event_studio')
@@ -303,6 +302,7 @@ def load_session(event_id):
     path = session_path(event_id)
     with open(path, 'r', encoding='utf-8') as f:
         session = json.load(f)
+    session.setdefault('revision', 0)
     for template in session['templates']:
         template.pop('reuse', None)
         if template['status'] in ('confirmed', 'draft') and not (template.get('source') and template.get('box')):
@@ -316,12 +316,16 @@ def load_session(event_id):
 def save_session(session):
     sync_session_rules(session, load_rules())
     path = session_path(session['event_id'])
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with FileLock(path + '.lock'):
+    os.makedirs(SESSION_ROOT, exist_ok=True)
+    # 锁放在会话目录外，删除目录后等待中的写入仍使用同一把锁。
+    with FileLock(os.path.join(SESSION_ROOT, f'.{session["event_id"]}.lock')):
         if os.path.isfile(path):
             current = load_session(session['event_id'])
             if current.get('revision', 0) != session.get('revision', 0):
                 raise ValueError('会话已被其它操作更新，请刷新后重试')
+        elif 'revision' in session:
+            raise ValueError('会话已被删除，请重新打开其它会话')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         revision = session.get('revision', 0) + 1
         updated = dict(session, revision=revision)
         with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=os.path.dirname(path), delete=False) as f:
@@ -334,6 +338,26 @@ def save_session(session):
                 os.unlink(temporary)
         session['revision'] = revision
     return path
+
+
+def delete_session(event_id, revision):
+    path = session_path(event_id)
+    directory = os.path.dirname(path)
+    expected = os.path.join(os.path.realpath(SESSION_ROOT), event_id)
+    if os.path.normcase(os.path.realpath(directory)) != os.path.normcase(expected):
+        raise ValueError('拒绝删除指向其它位置的会话目录')
+    if type(revision) is not int or revision < 0:
+        raise ValueError('请选择会话并确认其最新版本后再删除')
+    if not os.path.isfile(path):
+        raise ValueError('会话不存在或已被删除，请刷新会话列表')
+    with FileLock(os.path.join(SESSION_ROOT, f'.{event_id}.lock')):
+        if not os.path.isfile(path):
+            raise ValueError('会话不存在或已被删除，请刷新会话列表')
+        session = load_session(event_id)
+        if session['revision'] != revision:
+            raise ValueError('会话已被 agent 或其它页面更新，请刷新会话列表后重新确认删除')
+        shutil.rmtree(directory)
+    logger.info(f'已删除活动模板会话: {event_id}')
 
 
 def find_template(session, name):
@@ -459,7 +483,7 @@ def request_fingerprint(session):
 
 
 def write_agent_request(session, rules):
-    """生成可交给 agent 的任务文件；提案由 CLI 写回，确认仍由用户完成。"""
+    """生成 agent 任务文件；提案由 CLI 写回，模板由用户确认。"""
     sync_session_rules(session, rules)
     shots = session['screenshots']
     if any(not s.get('scene') for s in shots):
@@ -493,8 +517,8 @@ def write_agent_request(session, rules):
                'templates': targets, 'warnings': warnings, 'base_event_id': session.get('base_event_id')}
     with open(request_path, 'w', encoding='utf-8') as f:
         json.dump(request, f, ensure_ascii=False, indent=2)
-    prompt = (f'请读取 {request_path}，按照 dev_tools/event_studio/README.md 的 agent 协议，'
-              '截图阶段和场景以用户手动关联为准，只从对应阶段及场景的截图定位 YAML 模板，不再判断或校验画面状态。'
+    prompt = (f'请读取 {request_path}，按照 dev_tools/template_studio/README.md 的 agent 协议，'
+              '截图阶段和场景以用户手动关联为准，只从对应阶段及场景的截图定位 YAML 模板，不判断或校验画面状态。'
               'state_hint 和 requires 是给用户准备截图的说明，不作为筛选或否定已关联截图的条件。'
               '检查历史参考及通用逻辑；所有待处理模板都必须从新截图裁剪，旧模板仅供参考。'
               '仅在对应场景没有截图或无法定位裁剪目标时，列出具体缺项及原因。'
@@ -585,7 +609,7 @@ def safe_bbox_color(output):
 
 
 def _find_reference_source(name, event_id, event_type=None):
-    """旧会话尚未选择基底活动时，从同类型历史资源中查找参考。"""
+    """未指定来源活动时，从同类型历史资源中查找参考。"""
     _, _, events = read_events()
     event_types = {e['event_id']: e['event_type'] for e in events}
     candidates = []
@@ -613,8 +637,7 @@ def session_reference(session, name):
 
 
 def extract_event_assets(event_id):
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from button_extract import CACHE_FILE, ExtractCache, FileIndex, ModuleExtractor, process_file
+    from dev_tools.button_extract import CACHE_FILE, ExtractCache, FileIndex, ModuleExtractor, process_file
 
     from module.config.config import NikkeConfig
 

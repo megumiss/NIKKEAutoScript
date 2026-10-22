@@ -1,4 +1,4 @@
-# 活动模板规则库：dev_tools/event_studio/event_template_studio.py 的模板清单与场景来源。
+# 活动模板规则库：dev_tools/template_studio/events/cli.py 的模板清单与场景来源。
 #
 # 结构: types -> <event_type> -> phases -> <phase> -> scenes -> <scene> -> templates
 # event_type 与 module/config/manual_config.py 的 EVENTS 一致: 1=大型 2=小型 3=特殊(类似大型)

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>活动模板工作台</title><link rel="stylesheet" href="/studio.css"><script src="/studio.js" defer></script><script src="/manual_crop.js" defer></script></head>
-<body>
-<header class="topbar">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>活动模板工作台</title><link rel="stylesheet" href="/static/studio.css"><script src="/static/events.js" defer></script><script src="/static/crop_editor.js" defer></script><script src="/static/event_crop.js" defer></script></head>
+<body class="event-page">
+<header class="topbar workspace-topbar">
   <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8V4h4m8 0h4v4m0 8v4h-4M8 20H4v-4M8 8h8v8H8z"/></svg></div>
   <div class="brand"><h1>活动模板工作台</h1><span>NIKKE · EVENT STUDIO</span></div>
   <div class="session-heading"><strong id="sessionTitle">尚未打开活动</strong><span id="sessionMeta">导入截图，手动截取或交给 agent 裁剪，再校对导出</span></div>
-  <div class="top-actions"><a href="/history" style="align-self:center">历史索引校对</a><button id="btnSessions">活动会话</button><button id="btnRefresh" disabled>刷新结果</button></div>
+  <div class="workspace-toolbar"><nav class="studio-nav" aria-label="工作台导航"><a href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>模板资源</span></a><a href="/events" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16m-11 5 2 2 4-4"/></svg><span>活动流程</span></a><a href="/history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.5 7M3 4v7h7m2-4v5l3 2"/></svg><span>历史索引</span></a></nav><div class="page-actions"><button id="btnSessions">管理会话</button><button id="btnRefresh" disabled>刷新结果</button></div></div>
 </header>
 <nav class="workflow" aria-label="工作步骤"><div class="steps"><button id="btnSource" class="step active" aria-pressed="true"><span>01</span>截图场景</button><span aria-hidden="true">→</span><button id="btnPrepare" class="step" disabled><span>02</span>交给 agent</button><span aria-hidden="true">→</span><button id="btnReview" class="step" aria-pressed="false"><span>03</span>校对与导出</button></div><div class="progress-info"><progress id="progress" max="1" value="0" aria-label="必需模板确认进度"></progress><span id="missingInfo">等待打开会话</span></div></nav>
-<main class="workspace" data-mode="source">
+<main class="workspace event-workspace" data-mode="source">
   <aside class="shots-panel surface">
     <div class="panel-heading"><div><span class="eyebrow">SOURCE FILES</span><h2>场景截图 <span id="shotCount" class="count">0</span></h2></div><button id="btnImportDialog" class="small" disabled>导入</button></div>
     <div class="panel-filter"><label class="sr-only" for="shotFilter">筛选截图</label><select id="shotFilter"><option value="">所有场景</option><option value="unassigned">未关联场景</option></select></div>
@@ -19,75 +19,73 @@
       <button id="btnSaveShot" class="primary full" disabled>保存场景</button>
     </div>
   </aside>
-  <section class="canvas-panel surface" aria-label="原始竖屏截图预览">
-    <div class="panel-heading"><div><span class="eyebrow">PORTRAIT PREVIEW</span><h2>原始截图</h2></div><span id="imageSize" class="count">720 × 1280</span></div>
-    <div class="canvas-toolbar"><button id="btnFit" class="small" disabled>适应窗口</button><button id="btnActual" class="small" disabled>1:1</button><span id="zoomInfo">—</span><label class="toggle"><input id="showBoxes" type="checkbox" checked>裁剪框</label></div>
-    <div id="center"><canvas id="cv" aria-label="原图与当前裁剪框。拖动平移，滚轮缩放，方向键平移，加减键缩放。" tabindex="0"></canvas><div id="canvasEmpty" class="canvas-empty"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="12" y="5" width="24" height="38" rx="4"/><path d="m16 29 6-6 5 4 5-7M21 38h6"/></svg><strong>选择一张场景截图</strong><p>保留原图像素，支持手动或 agent 裁剪</p></div></div>
-    <div class="canvas-bottom"><span id="canvasTarget">可直接手动截取，或关联场景后交给 agent</span><span class="hint">拖动平移 · 滚轮缩放</span></div>
+  <section class="canvas-panel surface event-crop-panel" aria-label="截图与裁剪">
+    <div class="panel-heading"><div><span class="eyebrow">SCREENSHOT & CROP</span><h2>截图与裁剪</h2></div><span id="imageSize" class="count">720 × 1280</span></div>
+
+    <div class="event-crop-toolbar"><button id="btnCropFit" class="small" disabled>适应窗口</button><button id="btnCropActual" class="small" disabled>1:1</button><label class="toggle"><input id="cropPan" type="checkbox" disabled>平移</label><span id="cropZoom" class="count">—</span></div>
+    <div id="cropViewport"><canvas id="cropCanvas" tabindex="0" aria-label="在截图上拖动框选；拖动选区移动，拖动角点调整大小。右键或中键平移，滚轮缩放，方向键微调选区。"></canvas><p id="cropImageMessage" class="canvas-empty" role="status">选择场景截图后，直接在这里拖动框选。</p></div>
+    <p class="hint portrait-caption">720 × 1280 原图 · 拖动框选 · 滚轮缩放</p>
   </section>
+  <div class="event-tools-column">
+    <section class="surface event-crop-settings" aria-label="目标模板与裁剪坐标">
+    <div class="event-crop-target"><label for="cropTemplate">目标模板</label><select id="cropTemplate" disabled></select><p id="cropMode" class="hint"></p><p id="cropRule" class="hint"></p></div>
+    <div class="event-crop-controls"><div class="section-title"><h3>选区坐标 <span id="cropDimensions" class="count"></span></h3><button id="btnCropReset" class="text-button" disabled>重新框选</button></div>
+      <div class="event-crop-coordinates"><label for="cropX0">左 x0<input id="cropX0" type="number" step="1" min="0" disabled></label><label for="cropY0">上 y0<input id="cropY0" type="number" step="1" min="0" disabled></label><label for="cropX1">右 x1<input id="cropX1" type="number" step="1" min="2" disabled></label><label for="cropY1">下 y1<input id="cropY1" type="number" step="1" min="2" disabled></label></div>
+      <p id="cropValidation" class="crop-validation" role="status"></p><p id="cropConfirmed" class="notice" hidden>此模板已确认。保存修改后退回草稿，需要重新确认。</p><p id="cropError" class="dialog-error" role="alert" hidden></p>
+      <button id="btnCropSave" class="primary full" disabled>保存裁剪草稿</button>
+    </div>
+    </section>
   <section class="source-workspace surface">
     <div class="panel-heading"><div><span class="eyebrow">SCENE MAPPING</span><h2>准备与截取模板</h2></div><span id="mappingCount" class="count">0 张已关联</span></div>
     <div class="source-scroll"><div class="intro"><h3>手动截取，或交给 agent 裁剪。</h3><p>导入截图后可直接手动框选模板。也可以先关联场景，再交给 agent 裁剪；对结果不满意时，随时手动调整。</p></div><div class="section-title"><h3>场景与截图要求</h3><span id="coverageSummary" class="hint"></span></div><p class="hint">以下说明供你准备截图。场景以你的关联为准，agent 直接使用对应图片裁剪 YAML 模板。</p><div id="coverageList" class="coverage-list"><div class="empty">打开活动后，显示对应阶段的场景要求。</div></div></div>
-    <div class="handoff-actions"><p id="prepareHint" class="hint">先导入截图并关联场景。</p><button id="btnManualStart" class="full" disabled>直接手动截取模板</button><button id="btnPrepareMain" class="primary full" disabled>生成 agent 任务</button><p class="hint">任务文件保存在本地，将生成的说明发给 agent 即可开始。</p></div>
+    <div class="handoff-actions"><p id="prepareHint" class="hint">先导入截图并关联场景。</p><button id="btnManualStart" class="full" disabled>选择模板并校对</button><button id="btnPrepareMain" class="primary full" disabled>生成 agent 任务</button><p class="hint">任务文件保存在本地，将生成的说明发给 agent 即可开始。</p></div>
   </section>
   <section class="review-workspace surface" hidden>
     <aside class="template-panel"><div class="panel-heading"><div><span class="eyebrow">TEMPLATES</span><h2>模板清单 <span id="tplCount" class="count">0 / 0</span></h2></div></div><div class="template-filters"><label class="sr-only" for="templateSearch">搜索模板</label><input id="templateSearch" placeholder="搜索模板名或用途"><div class="filter-row"><label class="sr-only" for="templateScene">模板场景</label><select id="templateScene"><option value="">所有场景</option></select><label class="sr-only" for="templateStatus">模板状态</label><select id="templateStatus"><option value="">所有状态</option><option value="todo">待处理</option><option value="draft">待校对</option><option value="missing">待生成</option><option value="confirmed">已确认</option><option value="rejected">已打回</option></select></div></div><div id="tplList" class="template-list"><div class="empty">手动截取和 agent 提案都将在这里显示。</div></div></aside>
     <aside class="inspector"><div class="inspector-scroll"><div class="section-title"><h2>模板校对</h2><span id="templateBadge" class="badge">未选择</span></div><div id="tplInfo"><div class="empty">选择模板，查看裁剪结果与历史参考。</div></div>
-      <div id="reviewDetails" hidden><div class="review-section"><div class="section-title"><h3>当前裁剪结果</h3><span id="cropSize" class="count"></span></div><div class="image-frame"><img id="previewImg" alt="当前模板裁剪预览" hidden><p id="previewEmpty" class="empty">可手动截取，或等待 agent 生成提案。</p></div><p id="sourceInfo" class="hint filename"></p><p id="agentNote" class="hint"></p></div>
+      <div id="liveCropSection" class="review-section" hidden><div class="section-title"><h3>本次裁剪 · 未保存</h3></div><div class="image-frame"><canvas id="cropPreview" role="img" aria-label="本次裁剪实时预览"></canvas></div><p class="hint">保存裁剪草稿后再确认模板。</p></div><div id="reviewDetails" hidden><div class="review-section"><div class="section-title"><h3>当前裁剪结果</h3><span id="cropSize" class="count"></span></div><div class="image-frame"><img id="previewImg" alt="当前模板裁剪预览" hidden><p id="previewEmpty" class="empty">可手动截取，或等待 agent 生成提案。</p></div><p id="sourceInfo" class="hint filename"></p><p id="agentNote" class="hint"></p></div>
         <div class="review-section"><div class="section-title"><h3>历史参考</h3><span class="hint">复制来源活动</span></div><div class="image-frame reference"><img id="refImg" alt="历史同名模板参考" hidden><p id="refEmpty" class="empty">未找到历史模板。</p></div><p id="refPath" class="hint filename"></p></div>
         <div class="review-section"><label for="reviewNote">校对意见 <span class="muted">发给 agent 修正</span></label><textarea id="reviewNote" rows="3" placeholder="如：裁剪范围过大，请缩小到按钮文字，排除周围装饰"></textarea><button id="btnSaveReview" class="small">保存意见</button><p id="tplMeta" class="hint mono"></p></div>
         <details class="advanced"><summary>提案管理</summary><p class="hint">清除后可手动截取，或交给 agent 重新裁剪。</p><button id="btnClear" class="text-button danger" disabled>清除此提案</button></details>
       </div></div>
-      <div class="review-actions"><button id="btnManualCrop" class="full" disabled>手动截取模板</button><button id="btnConfirm" class="primary full" disabled>确认模板 <kbd>Enter</kbd></button><div class="filter-row"><button id="btnReject" class="danger" disabled>打回给 agent</button><button id="btnNext" disabled>下一个待处理</button></div><label class="toggle"><input id="autoNext" type="checkbox" checked>确认后自动前往下一项</label><button id="btnExport" class="full" disabled>导出已确认模板</button></div>
+      <div class="review-actions"><button id="btnManualCrop" class="full" disabled>定位到裁剪画布</button><button id="btnConfirm" class="primary full" disabled>确认模板 <kbd>Enter</kbd></button><div class="filter-row"><button id="btnReject" class="danger" disabled>打回给 agent</button><button id="btnNext" disabled>下一个待处理</button></div><label class="toggle"><input id="autoNext" type="checkbox" checked>确认后自动前往下一项</label><button id="btnExport" class="full" disabled>导出已确认模板</button></div>
     </aside>
   </section>
+  </div>
 </main>
 <footer><span id="status" role="status" aria-live="polite">正在读取会话…</span><span id="dataPath" class="filename hint"></span></footer><div id="toast" role="status" hidden></div>
-<dialog id="sessionDialog"><div class="dialog-heading"><div><span class="eyebrow">ACTIVITY</span><h2>活动会话</h2></div><button data-close="sessionDialog" class="text-button" aria-label="关闭活动会话弹窗">关闭</button></div><div class="dialog-body">
-  <div class="session-block"><h3>打开已有会话</h3><div class="filter-row"><label for="sessionSel" class="sr-only">已有会话</label><select id="sessionSel"></select><button id="btnOpen">打开</button></div></div>
-  <div id="phaseBlock" class="session-block" hidden><h3>追加更新阶段</h3><p class="hint">保留已有截图和校对结果，补入所选阶段的模板。</p><div class="filter-row"><label for="advancePhase" class="sr-only">更新阶段</label><select id="advancePhase"></select><button id="btnAdvance">追加阶段</button></div></div>
+<dialog id="sessionDialog" aria-labelledby="sessionDialogTitle"><div class="dialog-heading"><div><span class="eyebrow">ACTIVITY</span><h2 id="sessionDialogTitle">活动会话</h2></div><button data-close="sessionDialog" class="text-button" aria-label="关闭活动会话弹窗">关闭</button></div><div class="dialog-body">
+  <div class="session-block"><div class="section-title"><h3>管理已有会话</h3><button id="btnReloadSessions" class="text-button">刷新列表</button></div>
+    <label for="sessionSel">选择会话</label><select id="sessionSel" aria-describedby="selectedSessionInfo"></select>
+    <p id="selectedSessionInfo" class="hint filename" aria-live="polite"></p>
+    <div class="filter-row"><button id="btnOpen" disabled>打开会话</button><button id="btnDeleteSession" class="danger" disabled>删除会话</button></div>
+  </div>
+  <div id="phaseBlock" class="session-block" hidden><h3>追加更新阶段</h3><p id="phaseSessionInfo" class="hint filename"></p><p class="hint">保留已有截图和校对结果，补入所选阶段的模板。</p><div class="filter-row"><label for="advancePhase" class="sr-only">更新阶段</label><select id="advancePhase"></select><button id="btnAdvance">追加阶段</button></div></div>
   <div class="session-block"><h3>新建活动会话</h3>
     <label for="eventId">活动日期</label><input id="eventId" placeholder="如 20261029" autocomplete="off" aria-describedby="eventIdHint" required><p id="eventIdHint" class="hint" aria-live="polite">自动添加 event_ 前缀，不限制日期格式或位数。</p>
     <label for="eventName">活动名称</label><input id="eventName" placeholder="游戏中显示的活动名称" autocomplete="off" required>
     <label for="baseEventSel">复制哪个历史活动</label><select id="baseEventSel" aria-describedby="baseEventInfo"></select><p id="baseEventInfo" class="hint"></p>
     <div class="form-grid"><div><label for="typeLabel">活动类型</label><input id="typeLabel" readonly></div><div><label for="phaseSel">本次更新阶段</label><select id="phaseSel"></select></div></div>
     <label for="eventPosition">插入 EVENTS 的位置</label><select id="eventPosition"><option value="1">第 1 位 · Event 主活动</option><option value="2">第 2 位 · Event2 第二活动</option></select>
-    <p class="hint">原有条目依次后移，历史活动继续保留。创建时复制整套资源；YAML 清单内的模板随后全部重新裁剪。</p>
+    <p class="hint">原有条目依次后移，历史活动保留。创建时复制整套资源；YAML 清单内的模板随后全部重新裁剪。</p>
     <p class="hint">小游戏、扩展玩法与关卡布局参数由你手动配置；新活动默认关闭小游戏与扩展玩法。</p>
     <button id="btnNew" class="primary full" disabled>复制资源并创建活动</button></div></div><p class="dialog-error" id="sessionError" role="alert" hidden></p></dialog>
+<dialog id="deleteSessionDialog" aria-labelledby="deleteSessionTitle" aria-describedby="deleteSessionScope">
+  <div class="dialog-heading"><h2 id="deleteSessionTitle">删除活动会话</h2></div>
+  <div class="dialog-body"><p id="deleteSessionName" class="filename"></p>
+    <p id="deleteSessionScope">将永久删除此会话的截图关联、裁剪草稿、确认状态、校对意见和 agent 任务文件，无法撤销。</p>
+    <p class="hint">原始截图、已复制或导出的模板资源、资产定义和活动列表记录会保留。</p>
+    <p id="deleteCurrentHint" class="notice" hidden>这是当前会话，删除后工作区将清空。你可以打开其它会话或创建新活动。</p>
+  </div>
+  <p id="deleteSessionError" class="dialog-error" role="alert" hidden></p>
+  <div class="dialog-footer"><button id="btnCancelDeleteSession" data-close="deleteSessionDialog" autofocus>取消</button><button id="btnConfirmDeleteSession" class="danger">确认删除</button></div>
+</dialog>
 <dialog id="importDialog" class="import-dialog"><div class="dialog-heading"><div><span class="eyebrow">SCREENSHOTS</span><h2>选择场景截图</h2></div><button data-close="importDialog" class="text-button" aria-label="关闭截图导入弹窗">关闭</button></div>
   <div class="import-controls"><label for="browseDir">截图文件夹</label><div class="filter-row"><input id="browseDir" value="D:/PCR/截图"><button id="btnBrowse">浏览截图</button></div><div class="date-fields"><label>开始日期<input id="dateFrom" type="date"></label><label>结束日期<input id="dateTo" type="date"></label></div><p class="hint">按文件名日期筛选；没有日期时使用修改日期。仅显示 720×1280 的 PNG/JPG 图片，每页 30 张。</p></div>
   <div class="browse-heading"><span id="browseCount" class="hint">浏览目录后选择截图</span><button id="btnSelectPage" class="text-button">选择本页</button></div><div id="browseList" class="browse-grid"><div class="empty">先浏览截图目录，再勾选需要导入的截图。</div></div><div class="browse-pagination"><button id="btnPrevPage" class="small" disabled>上一页</button><span id="pageInfo" class="hint"></span><button id="btnNextPage" class="small" disabled>下一页</button></div>
   <p class="dialog-error" id="importError" role="alert" hidden></p><div class="dialog-footer"><span id="importCount" class="hint">已选 0 张</span><button id="btnImport" class="primary" disabled>导入所选截图</button></div></dialog>
 <dialog id="agentDialog"><div class="dialog-heading"><div><span class="eyebrow">AGENT HANDOFF</span><h2>交给 agent 裁剪</h2></div><button data-close="agentDialog" class="text-button">关闭</button></div><div class="dialog-body"><p id="agentSummary"></p><div id="agentWarnings" class="notice" hidden></div><label for="agentPrompt">复制下面的说明，发到 agent 聊天</label><textarea id="agentPrompt" rows="5" readonly></textarea><button id="btnCopyPrompt" class="primary full">复制任务说明</button><dl class="file-paths"><dt>截图场景与校对状态</dt><dd id="sessionPath"></dd><dt>本次任务与截图映射</dt><dd id="requestPath"></dd><dt>批量结果文件</dt><dd id="resultPath"></dd></dl><p class="hint">agent 读取原图后，通过 CLI 写回草稿，或生成批量结果文件。完成后刷新结果进行校对。</p><div class="filter-row"><button id="btnReadResult">读取批量结果文件</button><button id="btnAgentRefresh">刷新 CLI 写回结果</button></div><p id="agentError" class="dialog-error" role="alert" hidden></p></div></dialog>
-<dialog id="cropDialog" class="crop-dialog" aria-labelledby="cropTitle">
-  <div class="dialog-heading"><div><span class="eyebrow">MANUAL CROP</span><h2 id="cropTitle">手动截取模板</h2></div><button id="btnCropClose" class="text-button">取消</button></div>
-  <div class="crop-layout">
-    <section class="crop-workspace" aria-label="手动框选区域">
-      <div class="crop-toolbar"><button id="btnCropFit" class="small">适应窗口</button><button id="btnCropActual" class="small">1:1</button><label class="toggle"><input id="cropPan" type="checkbox">平移模式</label><span id="cropZoom" class="count">—</span></div>
-      <div id="cropViewport"><canvas id="cropCanvas" tabindex="0" aria-label="左键框选，拖动选区移动，拖动角点调整大小。右键或中键平移，滚轮缩放。方向键微调选区，Shift 加速。"></canvas><p id="cropImageMessage" class="canvas-empty" role="status">正在读取原图…</p></div>
-      <p class="hint">左键框选 · 拖动选区移动 / 角点缩放 · 右键或中键平移 · 滚轮缩放</p>
-    </section>
-    <aside class="crop-settings">
-      <label for="cropTemplate">目标模板</label><select id="cropTemplate"></select><p id="cropRule" class="hint"></p>
-      <label for="cropSource">来源截图</label><select id="cropSource"></select><p id="cropSourceHint" class="hint filename"></p>
-      <p id="cropMode" class="hint"></p><p id="cropConfirmed" class="notice" hidden>此模板已确认。保存修改后将退回草稿，需要重新确认。</p>
-      <div class="review-section"><div class="section-title"><h3>选区坐标</h3><button id="btnCropReset" class="text-button">重新框选</button></div>
-        <div class="crop-coordinates">
-          <label for="cropX0">左 x0<input id="cropX0" type="number" step="1" min="0" max="718"></label>
-          <label for="cropY0">上 y0<input id="cropY0" type="number" step="1" min="0" max="1278"></label>
-          <label for="cropX1">右 x1<input id="cropX1" type="number" step="1" min="2" max="720"></label>
-          <label for="cropY1">下 y1<input id="cropY1" type="number" step="1" min="2" max="1280"></label>
-        </div><p class="hint">原图像素坐标，右 / 下边界不包含。方向键移动 1 px，Shift + 方向键移动 10 px。</p>
-        <p id="cropValidation" class="crop-validation" role="status"></p>
-      </div>
-      <div class="review-section"><div class="section-title"><h3>实时预览</h3><span id="cropDimensions" class="count"></span></div><div class="image-frame"><canvas id="cropPreview" role="img" aria-label="当前选区原始像素预览" hidden></canvas><p id="cropPreviewEmpty" class="empty">框选后显示预览</p></div></div>
-      <div class="review-section"><h3>历史参考</h3><div class="image-frame"><img id="cropReference" alt="历史同名模板参考" hidden><p id="cropReferenceEmpty" class="empty">未找到历史模板。</p></div></div>
-    </aside>
-  </div>
-  <p id="cropError" class="dialog-error" role="alert" hidden></p>
-  <div class="dialog-footer"><p class="hint">保存为人工草稿，再确认并导出。</p><button id="btnCropSave" class="primary" disabled>保存裁剪草稿</button></div>
-</dialog>
+
 <dialog id="exportDialog"><div class="dialog-heading"><h2>导出完成</h2><button data-close="exportDialog" class="text-button">关闭</button></div><div class="dialog-body"><p id="exportResult"></p><p id="exportPath" class="mono filename"></p><p class="hint">已保存模板并重新生成资产定义。请在游戏内检查识别、点击及相近状态区分。</p></div></dialog>
 </body>
 </html>
