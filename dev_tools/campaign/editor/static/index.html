@@ -14,16 +14,15 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Zm6-3v15m6-12v15"/></svg></div>
     <div class="brand"><h1>主线地图管理</h1><span>NIKKE · CHAPTER MAP STUDIO</span></div>
-    <label class="map-picker"><span>当前地图包</span><select id="map-select" aria-label="地图包"><option>正在读取地图…</option></select></label>
-    <button id="refresh-maps" title="重新扫描目录">刷新目录</button>
+    <div class="session-heading"><strong>地图标注与验证</strong><span>选择地图 · 编辑修订 · 验证与保存</span></div>
     <div class="save-actions"><span id="save-state" class="save-state">未打开地图</span><button id="save" class="primary" disabled>保存 <kbd>Ctrl S</kbd></button></div>
   </header>
 
   <main class="workspace">
     <aside class="tools-panel surface" aria-label="绘制工具">
-      <div class="panel-heading"><div><span class="eyebrow">EDITING TOOLS</span><h2>地图编辑</h2></div><span class="panel-caption">原图坐标</span></div>
+      <div class="panel-heading"><h2>地图与工具</h2><button id="refresh-maps" class="small" title="重新扫描地图目录">刷新目录</button></div>
+      <div class="map-filter"><label class="map-picker" for="map-select"><span>当前地图包</span><select id="map-select"><option>正在读取地图…</option></select></label></div>
       <div class="panel-nav editor-tabs" role="tablist" aria-label="编辑任务">
         <button id="editor-tab-annotation" role="tab" aria-controls="annotation-tools" aria-selected="true" data-editor-panel="annotation">标注</button>
         <button id="editor-tab-road" role="tab" aria-controls="road-tools" aria-selected="false" tabindex="-1" data-editor-panel="road">道路</button>
@@ -109,7 +108,7 @@
           <defs><clipPath id="terrain-clip"><rect id="terrain-bounds" x="0" y="0"/></clipPath></defs>
           <g id="scene"><image id="base-image" x="0" y="0"/><g id="terrain" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-regions" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-corrections" pointer-events="none"></g><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="terrain-preview" pointer-events="none"></g><g id="movement-markers" pointer-events="none"></g></g>
         </svg>
-        <div id="empty-state" class="empty-state"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m6 12 12-6 12 6 12-6v30l-12 6-12-6-12 6V12Zm12-6v30m12-24v30"/></svg><h2>打开一张地图，开始标注</h2><p>从上方选择地图包。使用 --root 可指定其他地图目录。</p></div>
+        <div id="empty-state" class="empty-state"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m6 12 12-6 12 6 12-6v30l-12 6-12-6-12 6V12Zm12-6v30m12-24v30"/></svg><h2>打开一张地图，开始标注</h2><p>从「地图与工具」选择地图包。使用 --root 可指定其他地图目录。</p></div>
         <div id="drawing-hint" class="drawing-hint" hidden></div>
       </div>
       <footer class="statusbar"><span id="coordinates">X — · Y —</span><span id="dimensions">原图像素坐标</span><span id="map-status"></span></footer>
