@@ -13,7 +13,20 @@ python -m dev_tools.campaign.editor --map data/resources/maps/chapter_41
 python -m dev_tools.campaign.editor --root data/resources/maps --port 8766 --no-open
 ```
 
-旧入口已移除；仓库内调用统一使用 `dev_tools.campaign.editor`。
+也可直接运行 Python 文件入口；入口会以仓库根目录作为相对路径参数的基准：
+
+```powershell
+python dev_tools/campaign/editor/launch.py
+python dev_tools/campaign/editor/launch.py --map data/resources/maps/chapter_38
+python dev_tools/campaign/editor/launch.py --port 8766 --no-open
+```
+
+VS Code 的本地 `.vscode/launch.json` 已提供「NKAS: 主线地图工具」调试项，选择后按 F5 启动。
+该配置通过 `program` 直接运行 `dev_tools/campaign/editor/launch.py`，使用仓库 `.venv`；地图、
+端口和自动打开浏览器行为可通过 `args` 调整。入口直接调用服务端，不额外启动 Python 子进程，
+可在 `server.py` 中设置断点。`.vscode` 按现有规则不提交入库。
+
+文件入口与 `python -m` 共用 `dev_tools.campaign.editor.server` 实现，不复制工具逻辑。
 `--map` 必须位于 `--root` 内；不指定目录时使用项目默认运行地图目录。
 
 ## 目录职责
@@ -22,6 +35,7 @@ python -m dev_tools.campaign.editor --root data/resources/maps --port 8766 --no-
 editor/
 ├─ __init__.py             # 导出 main、make_server
 ├─ __main__.py             # python -m 启动入口
+├─ launch.py               # Python 文件入口与 VS Code 调试入口
 ├─ server.py               # 本机 HTTP、静态资源白名单、会话令牌和 API
 ├─ jobs/
 │  ├─ movement.py          # 移动任务、冻结地图版本和子进程状态
