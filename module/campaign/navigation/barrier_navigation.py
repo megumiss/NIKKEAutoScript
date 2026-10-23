@@ -1,11 +1,11 @@
-"""光幕精定位：只平移镜头，居中和两帧复核完成前不改变可通行路网。"""
+"""光幕预标注关联与无标注精定位：视觉复核完成前不改变可通行路网。"""
 
 import cv2
 import numpy as np
 
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation.camera_navigation import pan_scene, target_view_offset
-from module.campaign.vision.barriers import (CENTER_TOLERANCE, barrier_group, centered_curtain,
+from module.campaign.vision.barriers import (CENTER_TOLERANCE, annotated_curtains, barrier_group, centered_curtain,
                                              curtain_foot, located_curtain, track_barrier,
                                              weak_curtain_visible)
 from module.campaign.vision.offscreen import squad_offscreen
@@ -70,6 +70,7 @@ def remembered_blocks(session, field, objects, drag=(0., 0.), gain=1., previous_
     """按新帧 YOLO 位置复认已居中光幕，已知拖动时同步更新同组屏障的客户区坐标。
 
     未知镜头手势后的旧记录不作同视野复用；previous_gestures 仅允许追踪本次明确传入的拖动。
+    预标注封锁可用当前视口重新配准并按标注编号复认，不套用旧检测位置。
     不复认的封锁仍留在运行记忆中，不把跟踪丢失当成道路已解除。
     """
     remaining, blocks = curtains({'objects': objects}), []
@@ -78,16 +79,39 @@ def remembered_blocks(session, field, objects, drag=(0., 0.), gain=1., previous_
         expected = gestures if previous_gestures is None else previous_gestures
         if reference.get('gestures', gestures) != expected:
             continue
+        is_annotated = reference['block'].get('annotation_id') is not None
+        if is_annotated and previous_gestures is None:
+            continue
         try:
             available = [item for item in objects if item.get('state') != 'curtain' or item in remaining]
             current = track_barrier(reference['group'], available, drag, gain)
         except (ValueError, cv2.error):
+            continue
+        if is_annotated:
+            # 已知拖动只更新原立柱跟踪组，封路授权仍必须按当前视口重新关联标注身份。
+            reference.update(field=field, group=current, gestures=gestures)
             continue
         if current['curtain'] is not None:
             blocks.append(reference['block'])
         if current['curtain'] in remaining:
             remaining.remove(current['curtain'])
         reference.update(field=field, group=current, gestures=gestures)
+    annotated = {item['block'].get('annotation_id'): item for item in session.barrier_references
+                 if item['block'].get('annotation_id') is not None}
+    if remaining and annotated and getattr(session.owner.cut.chart, 'barrier_annotations', []):
+        # 镜头变过后只重新配准当前视口；标注身份不依赖旧检测框的位置或旧小队圆环。
+        viewport = session.owner.observer.locate_viewport(field)
+        if viewport is not None:
+            snapshot = dict(localization='accepted', minimap={'mode': 'compact'},
+                            roi_to_map=viewport['roi_to_map'], objects=objects)
+            for block in annotated_curtains(snapshot, session.owner.cut.chart):
+                reference = annotated.get(block['annotation_id'])
+                if reference is None or block['detection'] not in remaining:
+                    continue
+                current = barrier_group(block['detection'], objects)
+                blocks.append(reference['block'])
+                reference.update(field=field, group=current, gestures=gestures)
+                remaining.remove(block['detection'])
     return blocks, remaining
 
 
@@ -118,11 +142,51 @@ def validate_ground_model(session, viewport, previous_viewport, movement):
     return state
 
 
+def confirm_annotated(session, field, snapshot, squad):
+    """连续两帧按同一预标注编号确认可见光幕，使用标注封锁段而不拖动镜头精定位。
+
+    两帧都须通过紧凑地图配准和对象检测，全部光幕候选必须唯一关联且编号集合一致。
+    立柱仅用于建立后续复核的跟踪组，不能代替实际光幕检测；任一歧义或漏检不改写封锁状态。
+    """
+    chart = session.owner.cut.chart
+    first = annotated_curtains(snapshot, chart)
+    if not first or len(first) != len(curtains(snapshot)) or len(first) > MAX_CURTAINS:
+        raise BarrierUnconfirmed('当前光幕无法全部唯一关联到预标注位置。')
+    session.pause(.35)
+    field, snapshot = capture(session, squad)
+    if not snapshot.get('objects_observed'):
+        raise BarrierUnconfirmed('预标注光幕复核帧的对象检测不可用。')
+    second = annotated_curtains(snapshot, chart)
+    if (len(second) != len(curtains(snapshot))
+            or {item['annotation_id'] for item in first} != {item['annotation_id'] for item in second}):
+        raise BarrierUnconfirmed('连续两帧的光幕标注关联不一致，保留既有封锁状态。')
+    references = []
+    for item in second:
+        detection = item['detection']
+        block = {key: value for key, value in item.items() if key != 'detection'}
+        block['id'] = item['annotation_id']
+        references.append(dict(field=field, group=barrier_group(detection, snapshot['objects']), block=block,
+                               gestures=getattr(session, 'gestures', 0)))
+    identifiers = {item['block']['annotation_id'] for item in references}
+    session.barrier_references[:] = [item for item in session.barrier_references
+                                    if item['block'].get('annotation_id') not in identifiers]
+    session.barrier_references.extend(references)
+    snapshot['blocks'] = [item['block'] for item in references]
+    session.owner.state.update(snapshot, advance=False)
+    session.owner.cut.update(session.owner.state.blocking())
+    session.owner.last_snapshot = snapshot
+    session.remember_navigation(snapshot)
+    session.record('barriers_annotated', field=field, force=True, snapshot=snapshot)
+    logger.info(f'光幕预标注确认：{len(references)} 处，封锁位置采用标注坐标，未平移镜头。')
+    return snapshot
+
+
 def confirm_visible(session, snapshot):
     """逐个确认未确认光幕，落点证据稳定后才发布封路证据。
 
     小队保持原地；同一目标最多八次镜头拖动，每次最多确认四处光幕。
-    首选固定镜头仿射：本会话用实测拖动校验通过后，两个不同视口（≥30 底图像素）的仿射落点
+    有光幕预标注时连续两帧关联到同一编号即使用标注几何封路，不要求镜头居中或仿射校验。
+    无标注时首选固定镜头仿射：本会话用实测拖动校验通过后，两个不同视口（≥30 底图像素）的仿射落点
     偏差不超过 12 底图像素即可封路，不必把光幕拖到注视点；仿射未校验或被否决时回退为
     注视点居中加连续两帧确认。用 YOLO 框与每次拖动的大致位移关联光幕或立柱；不做外观匹配。
     窗口、取消、输入异常原样传播；定位失败抛 BarrierUnconfirmed，由调用方按既有路网降级
@@ -138,6 +202,8 @@ def confirm_visible(session, snapshot):
     if not snapshot.get('objects_observed') or not curtains(snapshot):
         raise BarrierUnconfirmed('复核帧的光幕识别不可用；不将候选消失当成道路已畅通。')
     try:
+        if getattr(session.owner.cut.chart, 'barrier_annotations', []):
+            return confirm_annotated(session, field, snapshot, squad)
         for target_index in range(MAX_CURTAINS + 1):
             blocks, pending = remembered_blocks(session, field, snapshot.get('objects', []))
             if not pending:
@@ -279,8 +345,10 @@ def review_centered(session, snapshot, identifier):
             if attempt == MAX_PANS:
                 raise ValueError('光幕复核位置未进入画面中央。')
             drag = -offset * min(1., PAN_DRAG_MAX / max(np.linalg.norm(offset), 1.))
+            previous_gestures = getattr(session, 'gestures', 0)
             pan(session, field, drag)
             field, snapshot = capture(session, squad)
+            remembered_blocks(session, field, snapshot['objects'], drag, previous_gestures=previous_gestures)
         confirmations = []
         for attempt in range(2):
             if attempt:
@@ -291,14 +359,24 @@ def review_centered(session, snapshot, identifier):
             viewport = project(snapshot['roi_to_map'], goto.GAZE)
             if np.linalg.norm(viewport - target) > 12:
                 raise ValueError('复核期间镜头偏离已确认光幕位置。')
-            nearby = [item for item in curtains(snapshot)
-                      if np.linalg.norm(curtain_foot(item) - goto.VIEWPORT_PIXEL) <= 100]
-            if len(nearby) > 1:
-                raise ValueError('复核区域内有多个光幕，不能确认身份。')
-            block = centered_curtain(nearby[0], snapshot, session.owner.cut.chart) if nearby else None
+            chart = session.owner.cut.chart
+            if record.get('annotation_id') is not None:
+                visible = annotated_curtains(snapshot, chart)
+                if len(visible) != len(curtains(snapshot)):
+                    raise ValueError('复核帧存在无法唯一关联标注的光幕，不能判断消失。')
+                matches = [item for item in visible if item['annotation_id'] == record['annotation_id']]
+                block = matches[0] if matches else None
+            else:
+                nearby = [item for item in curtains(snapshot)
+                          if np.linalg.norm(curtain_foot(item) - goto.VIEWPORT_PIXEL) <= 100]
+                if len(nearby) > 1:
+                    raise ValueError('复核区域内有多个光幕，不能确认身份。')
+                block = centered_curtain(nearby[0], snapshot, chart) if nearby else None
             if block is None:
                 references = [entry for entry in session.barrier_references
-                              if np.linalg.norm(np.asarray(entry['block']['point']) - target) <= 28]
+                              if (entry['block'].get('annotation_id') == record['annotation_id']
+                                  if record.get('annotation_id') is not None
+                                  else np.linalg.norm(np.asarray(entry['block']['point']) - target) <= 28)]
                 if len(references) != 1:
                     raise ValueError('缺少原光幕的立柱关联，不能将漏检当成消失。')
                 entry = references[0]
@@ -315,10 +393,14 @@ def review_centered(session, snapshot, identifier):
             block = confirmations[1]
             if np.linalg.norm(np.asarray(block['point']) - target) > 28:
                 raise ValueError('居中复核的光幕与原记录不一致。')
-            snapshot['blocks'] = [dict(block, id=identifier)]
+            snapshot['blocks'] = [dict({key: value for key, value in block.items() if key != 'detection'},
+                                       id=identifier)]
         else:
+            snapshot['blocks'] = []
             session.barrier_references[:] = [item for item in session.barrier_references
-                                            if np.linalg.norm(np.asarray(item['block']['point']) - target) > 28]
+                                            if (item['block'].get('annotation_id') != record['annotation_id']
+                                                if record.get('annotation_id') is not None
+                                                else np.linalg.norm(np.asarray(item['block']['point']) - target) > 28)]
         snapshot['barriers_observed'] = True
         snapshot['barrier_checks'] = [identifier]
         session.owner.last_snapshot = snapshot

@@ -66,6 +66,7 @@ class StaticMap:
             self.regions = decode_labels(connectivity['effective'], road[::GRID, ::GRID].shape)
         self._components = {}
         self.points = self._points()
+        self.barrier_annotations = self._barriers()
         self.transfers = self._transfers()
         # 每帧观测替换的动态道路封锁（如光幕），只用于展示，不改写道路与连通分区。
         self.blocks = []
@@ -150,6 +151,21 @@ class StaticMap:
             result.append(dict(id=item['id'], label=item.get('label', ''), category=category,
                                position=[float(v) for v in item['points'][0]],
                                surface_id=item.get('surface_id')))
+        return result
+
+    def _barriers(self):
+        """读取预标注光幕位置，点标注用于估计横断道路，立柱端点线段直接定义封锁几何。
+
+        标注仅提供稳定编号与位置，不代表当前光幕存在或已开启；实际封锁状态仍由视觉确认。
+        线段端点应标在两根立柱与地面的接触处，中心取两端中点，单位为底图像素。
+        """
+        result = []
+        for item in self.annotations.get('objects', []):
+            if point_category(item) != 'ground_barrier':
+                continue
+            points = np.asarray(item['points'], float)
+            result.append(dict(id=item['id'], position=points.mean(axis=0).tolist(),
+                               segment=points.tolist() if item['type'] == 'polyline' else None))
         return result
 
     def _transfers(self):

@@ -8,6 +8,7 @@ const categories = {
   normal_collectible: { name: '普通收集品', color: '#ffd166', difficulty: 'normal', help: '单击标记普通收集品；与困难收集品分开显示。' },
   hard_collectible: { name: '困难收集品', color: '#c792ea', difficulty: 'hard', help: '单击标记困难收集品；与普通收集品分开显示。' },
   ground_mechanism: { name: '地面机关', color: '#70dfa0', help: '标记地面机关的位置，也可使用区域绘制范围。' },
+  ground_barrier: { name: '光幕（立柱连线）', color: '#ff7e8b', help: '用两点折线连接两根立柱的地面端点；也可用点标记光幕中心。标注不预设开关状态。' },
   ground_elevator: { name: '地面电梯', color: '#6ccfff', help: '先标记两部电梯，再选择“电梯传送关系”连接。' },
   elevator_connection: { name: '电梯传送关系', color: '#ffb454', help: '依次点击起点电梯、目标电梯；默认双向，可勾选单向。' },
 };
@@ -198,6 +199,9 @@ function cancelDraft() {
   gesture = null; draft = []; connectFrom = null; render();
 }
 function setTool(next) {
+  if (newCategory === 'ground_barrier' && ['polygon', 'rectangle'].includes(next)) {
+    message('光幕只支持中心点或两根立柱组成的两点折线。', 'error'); return;
+  }
   if (gesture) cancelDraft();
   if (draft.length && next !== tool) { message('请先完成当前绘制，或按 Esc 取消。'); return; }
   if (next === 'connect' && newCategory !== 'elevator_connection') { setCategory('elevator_connection'); return; }
@@ -220,7 +224,8 @@ function syncCategory() {
   $('category-help').textContent = settings.help;
   $('new-direction').hidden = newCategory !== 'elevator_connection';
   for (const button of document.querySelectorAll('[data-tool]')) {
-    button.disabled = newCategory === 'elevator_connection' && ['point', 'polyline', 'polygon', 'rectangle'].includes(button.dataset.tool);
+    button.disabled = (newCategory === 'elevator_connection' && ['point', 'polyline', 'polygon', 'rectangle'].includes(button.dataset.tool))
+      || (newCategory === 'ground_barrier' && ['polygon', 'rectangle'].includes(button.dataset.tool));
   }
   for (const button of document.querySelectorAll('[data-difficulty]')) {
     button.setAttribute('aria-pressed', String(button.dataset.difficulty === difficulty));
@@ -235,7 +240,7 @@ function setCategory(next) {
   const settings = categories[next];
   $('new-label').value = settings.name; $('new-color').value = settings.color;
   if (settings.difficulty && difficulty !== 'all') difficulty = settings.difficulty;
-  syncCategory(); setTool(next === 'elevator_connection' ? 'connect' : 'point'); render();
+  syncCategory(); setTool(next === 'elevator_connection' ? 'connect' : next === 'ground_barrier' ? 'polyline' : 'point'); render();
 }
 function setDifficulty(next) {
   if (draft.length || gesture) { message('请先完成当前绘制，或按 Esc 取消，再切换难度。'); return; }
@@ -248,6 +253,9 @@ function setDifficulty(next) {
 }
 
 function addObject(type, points) {
+  if (newCategory === 'ground_barrier' && (type === 'point' ? points.length !== 1 : type !== 'polyline' || points.length !== 2)) {
+    message('光幕只支持一个中心点或两个立柱地面端点，请调整当前绘制。', 'error'); return false;
+  }
   const item = { id: uniqueId('obj'), type, category: newCategory,
     ...(categories[newCategory].difficulty ? { difficulty: categories[newCategory].difficulty } : {}),
     label: $('new-label').value.trim() || categories[newCategory].name,
@@ -273,7 +281,7 @@ function finishDraft() {
     change(() => { (doc.terrain_edits ??= []).push({ type: 'polygon', operation: roadOperation(), points: draft.map(bounded) }); draft = []; });
     message('已填充道路区域。Ctrl+Z 撤销，Ctrl+S 保存。'); return true;
   }
-  addObject(tool, draft); return true;
+  return addObject(tool, draft) !== false;
 }
 function connectTo(id) {
   if (!id || categoryOf(itemById(id)) !== 'ground_elevator') { message('传送关系只能连接两部地面电梯，请点击已标注的电梯。', 'error'); return; }
@@ -438,7 +446,7 @@ function renderProperties() {
     $('connection-endpoints').textContent = `${itemById(item.from).label || item.from} ${item.directed ? '→' : '↔'} ${itemById(item.to).label || item.to}`;
     return;
   }
-  $('add-vertex').hidden = item.type === 'point'; $('vertices').replaceChildren();
+  $('add-vertex').hidden = item.type === 'point' || category === 'ground_barrier'; $('vertices').replaceChildren();
   const minimum = { point: 1, polyline: 2, polygon: 3 }[item.type];
   item.points.forEach((point, index) => {
     const row = document.createElement('div'); row.className = 'vertex-row';
@@ -593,6 +601,9 @@ for (const button of document.querySelectorAll('[data-difficulty]')) button.addE
 $('new-category').addEventListener('change', () => setCategory($('new-category').value));
 $('edit-category').addEventListener('change', () => {
   const item = selectedItem(), category = $('edit-category').value; if (!item || !categories[category]) return;
+  if (category === 'ground_barrier' && (item.type === 'point' ? item.points.length !== 1 : item.type !== 'polyline' || item.points.length !== 2)) {
+    message('光幕标注必须是中心点或两点折线，不能将当前几何转换为光幕。', 'error'); renderProperties(); return;
+  }
   if (draft.length || gesture) {
     message('请先完成当前绘制，或按 Esc 取消，再修改类型。'); renderProperties(); return;
   }
@@ -617,7 +628,7 @@ for (const [id, field] of [['edit-label', 'label'], ['edit-note', 'note'], ['edi
 }
 $('properties').addEventListener('submit', event => event.preventDefault());
 $('add-vertex').addEventListener('click', () => {
-  const item = selectedItem(); if (!item?.points || item.type === 'point') return;
+  const item = selectedItem(); if (!item?.points || item.type === 'point' || categoryOf(item) === 'ground_barrier') return;
   change(() => { const index = item.type === 'polygon' ? item.points.length : item.points.length - 1;
     const a = item.points[index - 1], b = item.points[index % item.points.length];
     item.points.splice(index, 0, bounded([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2])); });

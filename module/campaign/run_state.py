@@ -277,7 +277,7 @@ class RunState:
     def _absorb_blocks(self, blocks, quad, can_clear=True, checked_ids=None):
         """更新光幕封锁的三态；返回新增、刷新与判定解除的编号。
 
-        本帧检到的光幕按距离配对到既有封锁，配对上就刷新为 active；
+        预标注光幕按 annotation_id 保持稳定身份；无标注光幕按距离配对到既有封锁，刷新为 active；
         既有封锁没被配对时分两种：封锁点在本帧视野内（且离边界有余量）说明该看到却没看到，
         判 cleared；不在视野内只能判 stale，等规划要穿过它时再去复核。
         checked_ids 存在时只允许解除经过居中复核的指定编号，不能用一处光幕的证据清除整屏封锁。
@@ -288,12 +288,17 @@ class RunState:
             point = np.asarray(block.get('point'), float)
             if point.shape != (2,) or not np.isfinite(point).all():
                 continue
-            identifier = self._nearest_block(point, matched)
+            identifier = block.get('annotation_id')
+            if identifier in matched:
+                continue
             if identifier is None:
-                identifier = self._identifier('block')
+                identifier = self._nearest_block(point, matched) or self._identifier('block')
+            if identifier not in self.blocks:
                 self.blocks[identifier] = {'id': identifier, 'point': point.tolist(),
                                            'segment': block.get('segment'), 'status': 'active',
                                            'first_seen': self.tick, 'last_seen': self.tick}
+                if block.get('annotation_id') is not None:
+                    self.blocks[identifier]['annotation_id'] = block['annotation_id']
                 added.append(identifier)
             else:
                 record = self.blocks[identifier]

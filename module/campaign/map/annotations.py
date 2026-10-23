@@ -19,7 +19,8 @@ from module.campaign.map.connectivity import validate_edits
 from module.campaign.map.terrain import validate_terrain_edits
 
 COORDINATES = {'unit': 'pixel', 'origin': 'top_left', 'x': 'right', 'y': 'down'}
-CATEGORIES = {'normal_collectible', 'hard_collectible', 'ground_mechanism', 'ground_elevator', 'elevator_connection'}
+CATEGORIES = {'normal_collectible', 'hard_collectible', 'ground_mechanism', 'ground_elevator',
+              'ground_barrier', 'elevator_connection'}
 
 
 class ConflictError(ValueError):
@@ -76,6 +77,10 @@ def validate_annotations(document, image_hash, size):
             if item.get('difficulty') != category.removesuffix('_collectible'):
                 raise ValueError(f'{item["id"]} 的收集品类型与难度不一致。')
         kind, points = item.get('type'), item.get('points')
+        if category == 'ground_barrier' and (kind not in ('point', 'polyline')
+                                             or not isinstance(points, list)
+                                             or len(points) != (1 if kind == 'point' else 2)):
+            raise ValueError(f'{item["id"]} 的光幕标注必须是中心点或两根立柱地面端点组成的线段。')
         minimum = {'point': 1, 'polyline': 2, 'polygon': 3}.get(kind)
         if minimum is None or not isinstance(points, list) or not minimum <= len(points) <= 10000:
             raise ValueError(f'{item["id"]} 的几何类型或顶点数量无效。')
