@@ -1,4 +1,4 @@
-"""主线路程目标与短段执行目标：机关优先，主线其次，无目的地时沿用原策略。"""
+"""主线路程目标与执行目标：机关优先，主线其次，无目的地时沿用原策略。"""
 
 from copy import copy
 
@@ -130,11 +130,12 @@ def route_enemy(state, cut, squad, target, path, distances):
 
 
 def route_action(state, cut, squad, destination):
-    """把目的地拆成沿途／汇合岔路敌人或最长 ADVANCE_DISTANCE 的步行段。
+    """优先完整执行沿途／汇合岔路敌人，无敌人时才生成最长 ADVANCE_DISTANCE 的步行段。
 
+    已选敌人不按距离拆段，交导航处理目标入屏与脚圈确认；跨越最终目标的换边绕行仍保留安全短段。
     只有最后一段机关使用 mechanism 类型，短段到达不能提前把机关记为开启。
     主线目的地始终以敌人身份执行，战斗归属不因路程层变成 story 而丢失。
-    汇合段两侧未清完不能离开，远处支路敌人的推进段沿该敌人的路径生成，不能继续向目的地走。
+    汇合段两侧未清完不能离开，远处支路敌人沿自身路径执行，不能继续向目的地走。
     不可达时交回光幕／电梯规划。
     """
     route = route_path(cut, squad, destination['position'])
@@ -155,8 +156,7 @@ def route_action(state, cut, squad, destination):
             crosses_destination = np.linalg.norm(path - destination['position'], axis=1).min() <= 32
         if crosses_destination:
             return branch_detour(state, cut, squad, branch, destination)
-    if enemy is not None and (enemy['kind'] == 'none'
-                              or enemy['distance'] <= ADVANCE_DISTANCE + ENEMY_APPROACH_MARGIN):
+    if enemy is not None:
         return enemy
     if distances[-1] > ADVANCE_DISTANCE:
         index = max(1, int(np.searchsorted(distances, ADVANCE_DISTANCE, side='right')) - 1)
