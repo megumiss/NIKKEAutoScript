@@ -1,12 +1,11 @@
-"""光幕预标注关联与无标注精定位：视觉复核完成前不改变可通行路网。"""
+"""光幕按预标注位置确认与复核：视觉证据充分前不改变可通行路网。"""
 
 import cv2
 import numpy as np
 
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation.camera_navigation import pan_scene, target_view_offset
-from module.campaign.vision.barriers import (CENTER_TOLERANCE, annotated_curtains, barrier_group, centered_curtain,
-                                             curtain_foot, located_curtain, track_barrier,
+from module.campaign.vision.barriers import (CENTER_TOLERANCE, annotated_curtains, barrier_group, track_barrier,
                                              weak_curtain_visible)
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import squad_arrow
@@ -15,18 +14,12 @@ from module.logger import logger
 
 MAX_PANS = 8
 MAX_CURTAINS = 4
-# 单次镜头拖动的客户区像素上限：跟手比例约 0.5，560px 拖动实际移动场景约 280px，
-# 两个 PAN_REGIONS 都能容纳该向量；此前 260px 需要近六次拖动才能把远处光幕带到注视点。
+# 光幕消失复核的单次拖动上限，单位为客户区像素；不用于首次确认或估算封锁位置。
 PAN_DRAG_MAX = 560.
-# 实测场景位移与镜头仿射预测一致（客户区像素）即认为仿射在本会话可信。
-# 容差取 40：仿射按地平面标定，而跟踪对象常是石台上的门框（高于地面），实测高程偏差约 29
-# 客户区像素；仿射真正不成立的章节偏差在百像素量级，该容差足够区分。落点是否采用仍由
-# 两视口一致性检查（≤12 底图像素）把关。
-GROUND_MODEL_TOLERANCE = 40.
 
 
 class BarrierUnconfirmed(RuntimeError):
-    """光幕身份或居中定位未确认；调用方按既有路网继续，真撞上未开光幕由移动停滞检测兜底。"""
+    """光幕标注关联或视觉复核未通过，调用方保留既有路网且不发送未经确认的移动点击。"""
 
 
 def curtains(snapshot):
@@ -42,24 +35,19 @@ def capture(session, squad):
     return field, session.observe_frame(field, known_squad=squad)
 
 
-def pan(session, field, drag, predicted_ground=None):
-    """通过原输入预算平移镜头，场景箭头只用于避开小队脚下的鼠标按下区域。
+def pan(session, field, drag):
+    """只为复核已标注光幕平移镜头，按本帧小队箭头或离屏标记避开鼠标按下区域。
 
-    箭头与离屏标记都不可用时（例如小队正进入画面边缘、标记被场景入口取代），才接受
-    已校验镜头仿射预测的小队地面位置：预测明显在画面外才视为无小队，其余情况一律
-    按脚下区域避让；没有任何依据时拒绝拖动。
+    不用历史光幕投影或未经校验的坐标猜测小队脚点；两种小队视觉依据均缺失时停止拖动。
+    窗口、取消、弹窗和输入预算检查仍由原会话及 pan_scene 执行。
     """
     arrow = squad_arrow(field)
     if arrow is not None:
         ground = np.asarray(arrow) + [0., goto.ARROW_GROUND_OFFSET]
     elif squad_offscreen(field) is not None:
         ground = None
-    elif predicted_ground is None:
-        raise BarrierUnconfirmed('无法确定安全拖动区域，停止光幕确认；未发送移动点击。')
     else:
-        predicted = np.asarray(predicted_ground, float)
-        bounds = np.array([1776., 999.]) + 260.
-        ground = None if np.any(predicted < -260.) or np.any(predicted > bounds) else predicted
+        raise BarrierUnconfirmed('无法确定安全拖动区域，停止光幕复核；未发送移动点击。')
     pan_scene(session, drag, squad_ground=ground)
     session.localized_report = None
     session.anchor_reference = None
@@ -67,79 +55,40 @@ def pan(session, field, drag, predicted_ground=None):
 
 
 def remembered_blocks(session, field, objects, drag=(0., 0.), gain=1., previous_gestures=None):
-    """按新帧 YOLO 位置复认已居中光幕，已知拖动时同步更新同组屏障的客户区坐标。
+    """按本帧视口关联已确认的光幕标注，返回可复认封锁与尚未确认的光幕候选。
 
-    未知镜头手势后的旧记录不作同视野复用；previous_gestures 仅允许追踪本次明确传入的拖动。
-    预标注封锁可用当前视口重新配准并按标注编号复认，不套用旧检测位置。
-    不复认的封锁仍留在运行记忆中，不把跟踪丢失当成道路已解除。
+    旧客户区坐标不能授权封路；可见光幕必须由当前独立配准再次关联到已确认的标注编号。
+    previous_gestures 只用于在明确的复核拖动后更新原立柱跟踪组，不作为光幕开关证据。
+    配准或跟踪失败保留既有路网，并将未确认光幕留给点击前的安全检查。
     """
     remaining, blocks = curtains({'objects': objects}), []
     gestures = getattr(session, 'gestures', 0)
-    for reference in session.barrier_references:
-        expected = gestures if previous_gestures is None else previous_gestures
-        if reference.get('gestures', gestures) != expected:
+    annotated = {item['block']['annotation_id']: item for item in session.barrier_references}
+    if previous_gestures is not None:
+        for reference in annotated.values():
+            if reference.get('gestures', gestures) != previous_gestures:
+                continue
+            try:
+                current = track_barrier(reference['group'], objects, drag, gain)
+            except (ValueError, cv2.error):
+                continue
+            reference.update(group=current, gestures=gestures)
+    if not remaining or not annotated:
+        return blocks, remaining
+    viewport = session.owner.observer.locate_viewport(field)
+    if viewport is None:
+        return blocks, remaining
+    snapshot = dict(localization='accepted', minimap={'mode': 'compact'},
+                    roi_to_map=viewport['roi_to_map'], objects=objects)
+    for block in annotated_curtains(snapshot, session.owner.cut.chart):
+        reference = annotated.get(block['annotation_id'])
+        if reference is None:
             continue
-        is_annotated = reference['block'].get('annotation_id') is not None
-        if is_annotated and previous_gestures is None:
-            continue
-        try:
-            available = [item for item in objects if item.get('state') != 'curtain' or item in remaining]
-            current = track_barrier(reference['group'], available, drag, gain)
-        except (ValueError, cv2.error):
-            continue
-        if is_annotated:
-            # 已知拖动只更新原立柱跟踪组，封路授权仍必须按当前视口重新关联标注身份。
-            reference.update(field=field, group=current, gestures=gestures)
-            continue
-        if current['curtain'] is not None:
-            blocks.append(reference['block'])
-        if current['curtain'] in remaining:
-            remaining.remove(current['curtain'])
-        reference.update(field=field, group=current, gestures=gestures)
-    annotated = {item['block'].get('annotation_id'): item for item in session.barrier_references
-                 if item['block'].get('annotation_id') is not None}
-    if remaining and annotated and getattr(session.owner.cut.chart, 'barrier_annotations', []):
-        # 镜头变过后只重新配准当前视口；标注身份不依赖旧检测框的位置或旧小队圆环。
-        viewport = session.owner.observer.locate_viewport(field)
-        if viewport is not None:
-            snapshot = dict(localization='accepted', minimap={'mode': 'compact'},
-                            roi_to_map=viewport['roi_to_map'], objects=objects)
-            for block in annotated_curtains(snapshot, session.owner.cut.chart):
-                reference = annotated.get(block['annotation_id'])
-                if reference is None or block['detection'] not in remaining:
-                    continue
-                current = barrier_group(block['detection'], objects)
-                blocks.append(reference['block'])
-                reference.update(field=field, group=current, gestures=gestures)
-                remaining.remove(block['detection'])
+        current = barrier_group(block['detection'], objects)
+        blocks.append(reference['block'])
+        reference.update(group=current, gestures=gestures)
+        remaining.remove(block['detection'])
     return blocks, remaining
-
-
-def snapshot_viewport(snapshot):
-    """已接受的紧凑配准给出注视点底图坐标；其它观测不提供镜头位置。"""
-    if (snapshot.get('localization') != 'accepted' or snapshot.get('roi_to_map') is None
-            or (snapshot.get('minimap') or {}).get('mode') != 'compact'):
-        return None
-    return project(np.asarray(snapshot['roi_to_map'], float), goto.GAZE)
-
-
-def validate_ground_model(session, viewport, previous_viewport, movement):
-    """用本次拖动的实测场景位移校验固定镜头仿射，结果记入会话（'ok'／'bad'）。
-
-    只在仿射尚未评判、前后视口都已知且位移足够时校验一次；'ok' 允许仿射落点确认与
-    小队位置预测，'bad' 时本章回退为注视点居中并不再尝试仿射。
-    """
-    state = getattr(session, 'ground_model_state', None)
-    if state is not None or viewport is None or previous_viewport is None:
-        return state
-    if np.linalg.norm(movement) < 12:
-        return None
-    predicted = -goto.GROUND_TO_CLIENT @ (viewport - previous_viewport)
-    state = 'ok' if np.linalg.norm(np.asarray(movement) - predicted) <= GROUND_MODEL_TOLERANCE else 'bad'
-    session.ground_model_state = state
-    if state == 'bad':
-        logger.warning('镜头仿射与本会落实测位移不一致；光幕确认回退为注视点居中。')
-    return state
 
 
 def confirm_annotated(session, field, snapshot, squad):
@@ -165,11 +114,11 @@ def confirm_annotated(session, field, snapshot, squad):
         detection = item['detection']
         block = {key: value for key, value in item.items() if key != 'detection'}
         block['id'] = item['annotation_id']
-        references.append(dict(field=field, group=barrier_group(detection, snapshot['objects']), block=block,
+        references.append(dict(group=barrier_group(detection, snapshot['objects']), block=block,
                                gestures=getattr(session, 'gestures', 0)))
     identifiers = {item['block']['annotation_id'] for item in references}
     session.barrier_references[:] = [item for item in session.barrier_references
-                                    if item['block'].get('annotation_id') not in identifiers]
+                                    if item['block']['annotation_id'] not in identifiers]
     session.barrier_references.extend(references)
     snapshot['blocks'] = [item['block'] for item in references]
     session.owner.state.update(snapshot, advance=False)
@@ -182,18 +131,16 @@ def confirm_annotated(session, field, snapshot, squad):
 
 
 def confirm_visible(session, snapshot):
-    """逐个确认未确认光幕，落点证据稳定后才发布封路证据。
+    """连续两帧确认可见光幕的预标注编号，封锁几何只取标注且不拖动镜头寻找落点。
 
-    小队保持原地；同一目标最多八次镜头拖动，每次最多确认四处光幕。
-    有光幕预标注时连续两帧关联到同一编号即使用标注几何封路，不要求镜头居中或仿射校验。
-    无标注时首选固定镜头仿射：本会话用实测拖动校验通过后，两个不同视口（≥30 底图像素）的仿射落点
-    偏差不超过 12 底图像素即可封路，不必把光幕拖到注视点；仿射未校验或被否决时回退为
-    注视点居中加连续两帧确认。用 YOLO 框与每次拖动的大致位移关联光幕或立柱；不做外观匹配。
-    窗口、取消、输入异常原样传播；定位失败抛 BarrierUnconfirmed，由调用方按既有路网降级
-    （确认失败不证明光幕不存在，也不证明已消失，路网维持不变）。
+    存在实际光幕候选时必须有本章 ground_barrier 标注和已知小队坐标；缺失即拒绝确认，
+    不回退到仿射吸附或居中定位。候选歧义、帧间关联变化和视觉失败保留既有封锁。
+    窗口、取消、弹窗和输入预算异常原样传播，不追加清理输入。
     """
     if not curtains(snapshot):
         return snapshot
+    if not session.owner.cut.chart.barrier_annotations:
+        raise BarrierUnconfirmed('本章缺少光幕预标注，无法确认封锁位置。')
     squad = snapshot.get('squad')
     if squad is None:
         raise BarrierUnconfirmed('光幕确认缺少已知小队起点。')
@@ -202,128 +149,28 @@ def confirm_visible(session, snapshot):
     if not snapshot.get('objects_observed') or not curtains(snapshot):
         raise BarrierUnconfirmed('复核帧的光幕识别不可用；不将候选消失当成道路已畅通。')
     try:
-        if getattr(session.owner.cut.chart, 'barrier_annotations', []):
-            return confirm_annotated(session, field, snapshot, squad)
-        for target_index in range(MAX_CURTAINS + 1):
-            blocks, pending = remembered_blocks(session, field, snapshot.get('objects', []))
-            if not pending:
-                snapshot['blocks'] = blocks
-                session.owner.last_snapshot = snapshot
-                session.remember_navigation(snapshot)
-                session.record('barriers_confirmed', field=field, force=True, snapshot=snapshot)
-                return snapshot
-            if target_index == MAX_CURTAINS:
-                raise ValueError('单次光幕确认数量达到上限，仍有未确认候选。')
-            item = min(pending, key=lambda candidate: np.linalg.norm(curtain_foot(candidate) - goto.VIEWPORT_PIXEL))
-            group = barrier_group(item, snapshot['objects'])
-            gain, pans = 1., 0
-            estimate = estimate_viewport = None
-            for attempt in range(MAX_PANS + 1):
-                point = np.asarray(group['foot'])
-                delta = np.asarray(goto.VIEWPORT_PIXEL) - point
-                viewport = snapshot_viewport(snapshot)
-                if np.linalg.norm(delta) <= CENTER_TOLERANCE:
-                    if group['curtain'] is None:
-                        session.pause(.35)
-                        fresh, latest = capture(session, squad)
-                        field, snapshot = fresh, latest
-                        group = track_barrier(group, snapshot['objects'])
-                        continue
-                    first = centered_curtain(group['curtain'], snapshot, session.owner.cut.chart)
-                    session.pause(.35)
-                    fresh, latest = capture(session, squad)
-                    field, snapshot = fresh, latest
-                    confirmed = track_barrier(group, snapshot['objects'])
-                    if confirmed['curtain'] is None:
-                        field, snapshot, group = fresh, latest, confirmed
-                        continue
-                    block = centered_curtain(confirmed['curtain'], latest, session.owner.cut.chart)
-                    if np.linalg.norm(np.asarray(first['point']) - block['point']) > 12:
-                        raise ValueError('居中光幕两帧底图位置不稳定。')
-                    block['id'] = f"centered-{len(session.barrier_references) + 1}"
-                    session.barrier_references.append(dict(field=fresh, group=confirmed, block=block,
-                                                           gestures=getattr(session, 'gestures', 0)))
-                    session.record('barrier_centered', field=fresh, force=True, block=block,
-                                   client_foot=confirmed['foot'], tracking=confirmed['source'], pans=pans,
-                                   tracking_evidence=confirmed.get('tracking_evidence'))
-                    # 先保存已确认的这一处；后续候选失败也不丢弃有效证据，且不消除视野外封锁。
-                    latest['blocks'] = [block]
-                    session.owner.state.update(latest, advance=False)
-                    session.owner.cut.update(session.owner.state.blocking())
-                    logger.info(f"光幕居中确认：底图位置 {block['point']}，镜头平移 {pans} 次。")
-                    field, snapshot = fresh, latest
-                    break
-                if group['curtain'] is not None and viewport is not None:
-                    located = None
-                    try:
-                        located = located_curtain(group['curtain'], snapshot, session.owner.cut.chart)
-                    except ValueError:
-                        estimate = estimate_viewport = None
-                    if located is not None:
-                        # 仿射经本会话校验后，两个独立视口的落点一致即等效于居中后的两帧确认；
-                        # 校验前的落点只留作对照，不作为接受依据。
-                        if (getattr(session, 'ground_model_state', None) == 'ok' and estimate is not None
-                                and np.linalg.norm(viewport - estimate_viewport) >= 30
-                                and np.linalg.norm(np.asarray(located['point']) - estimate['point']) <= 12):
-                            block = dict(located, id=f"centered-{len(session.barrier_references) + 1}")
-                            session.barrier_references.append(dict(field=field, group=group, block=block,
-                                                                   gestures=getattr(session, 'gestures', 0)))
-                            session.record('barrier_centered', field=field, force=True, block=block,
-                                           client_foot=group['foot'], tracking=group['source'], pans=pans,
-                                           tracking_evidence=group.get('tracking_evidence'))
-                            snapshot['blocks'] = [block]
-                            session.owner.state.update(snapshot, advance=False)
-                            session.owner.cut.update(session.owner.state.blocking())
-                            logger.info(f"光幕仿射确认：底图位置 {block['point']}，镜头平移 {pans} 次。")
-                            break
-                        estimate, estimate_viewport = located, viewport
-                if attempt == MAX_PANS:
-                    raise ValueError('镜头平移次数耗尽，光幕仍未居中。')
-                drag = delta / max(gain, .2)
-                drag *= min(1., PAN_DRAG_MAX / max(np.linalg.norm(drag), 1.))
-                session.record('barrier_tracking_reference', field=field, force=True, group=group,
-                               camera_drag=drag.tolist(), attempt=attempt + 1)
-                previous_gestures = getattr(session, 'gestures', 0)
-                predicted_ground = None
-                if (getattr(session, 'ground_model_state', None) == 'ok' and viewport is not None):
-                    predicted_ground = (np.asarray(goto.VIEWPORT_PIXEL, float)
-                                        + goto.GROUND_TO_CLIENT @ (np.asarray(squad, float) - viewport))
-                pan(session, field, drag, predicted_ground=predicted_ground)
-                pans += 1
-                fresh, latest = capture(session, squad)
-                session.owner.last_snapshot = latest
-                session.record('barrier_tracking_current', field=fresh, force=True, snapshot=latest)
-                field, snapshot = fresh, latest
-                current = track_barrier(group, snapshot['objects'], drag=drag, gain=gain)
-                remembered_blocks(session, field, snapshot['objects'], drag, gain, previous_gestures)
-                movement = np.asarray(current['foot']) - point
-                if np.linalg.norm(movement) < 3:
-                    raise ValueError('镜头到达边界或光幕未产生有效位移。')
-                validate_ground_model(session, snapshot_viewport(snapshot), viewport, movement)
-                response = float(movement @ drag / (drag @ drag))
-                if .2 <= response <= 2:
-                    gain = response
-                session.record('barrier_centering', field=fresh, client_foot=current['foot'],
-                               tracking=current['source'], tracking_evidence=current.get('tracking_evidence'),
-                               curtain_seen=current['curtain'] is not None,
-                               camera_drag=drag.tolist(), attempt=attempt + 1)
-                field, snapshot, group = fresh, latest, current
-            else:
-                raise ValueError('光幕在确认预算内未恢复可靠识别。')
+        return confirm_annotated(session, field, snapshot, squad)
     except (ValueError, cv2.error, np.linalg.LinAlgError) as exc:
-        session.record('barrier_confirmation_failed', field=field, force=True, reason=str(exc))
-        raise BarrierUnconfirmed(f'光幕居中确认失败：{exc}；停止执行，未发送移动点击。') from exc
-    raise AssertionError('光幕确认流程未收敛。')
+        raise BarrierUnconfirmed(f'光幕预标注确认失败：{exc}；未发送移动点击。') from exc
 
 
 def review_centered(session, snapshot, identifier):
     """将已确认光幕的地图位置移到注视点，仅对该编号发布两帧存在或消失证据。
 
-    复核只用旧地图坐标寻找观察位置，不直接据此移动小队。附近仍有光幕却无法居中唯一确认、
-    或任何一帧视觉不可用时保留旧封锁；其它屏障即使处于本帧地图覆盖内，也不据此消除。
+    ground_barrier 标注必须包含原编号，观察位置取当前标注而非历史检测投影；只拖镜头不移动小队。
+    可见光幕按标注编号确认，消失仍要求原双柱的可靠复认与低置信度光幕检查。
+    任何一帧视觉或关联不可用均保留原封锁，不据此消除同屏其它屏障。
     """
     record = session.owner.state.blocks[identifier]
-    squad, target = snapshot['squad'], np.asarray(record['point'], float)
+    annotation_id = record.get('annotation_id')
+    chart = session.owner.cut.chart
+    annotation = next((item for item in chart.barrier_annotations if item['id'] == annotation_id), None)
+    if annotation is None:
+        raise BarrierUnconfirmed('光幕复核缺少原编号的预标注，保留原封锁。')
+    squad = snapshot.get('squad')
+    if squad is None:
+        raise BarrierUnconfirmed('光幕复核缺少已知小队起点，保留原封锁。')
+    target = np.asarray(annotation['position'], float)
     goto.map_close(session.win)
     field, snapshot = capture(session, squad)
     try:
@@ -359,24 +206,13 @@ def review_centered(session, snapshot, identifier):
             viewport = project(snapshot['roi_to_map'], goto.GAZE)
             if np.linalg.norm(viewport - target) > 12:
                 raise ValueError('复核期间镜头偏离已确认光幕位置。')
-            chart = session.owner.cut.chart
-            if record.get('annotation_id') is not None:
-                visible = annotated_curtains(snapshot, chart)
-                if len(visible) != len(curtains(snapshot)):
-                    raise ValueError('复核帧存在无法唯一关联标注的光幕，不能判断消失。')
-                matches = [item for item in visible if item['annotation_id'] == record['annotation_id']]
-                block = matches[0] if matches else None
-            else:
-                nearby = [item for item in curtains(snapshot)
-                          if np.linalg.norm(curtain_foot(item) - goto.VIEWPORT_PIXEL) <= 100]
-                if len(nearby) > 1:
-                    raise ValueError('复核区域内有多个光幕，不能确认身份。')
-                block = centered_curtain(nearby[0], snapshot, chart) if nearby else None
+            visible = annotated_curtains(snapshot, chart)
+            if len(visible) != len(curtains(snapshot)):
+                raise ValueError('复核帧存在无法唯一关联标注的光幕，不能判断消失。')
+            block = next((item for item in visible if item['annotation_id'] == annotation_id), None)
             if block is None:
                 references = [entry for entry in session.barrier_references
-                              if (entry['block'].get('annotation_id') == record['annotation_id']
-                                  if record.get('annotation_id') is not None
-                                  else np.linalg.norm(np.asarray(entry['block']['point']) - target) <= 28)]
+                              if entry['block']['annotation_id'] == annotation_id]
                 if len(references) != 1:
                     raise ValueError('缺少原光幕的立柱关联，不能将漏检当成消失。')
                 entry = references[0]
@@ -391,16 +227,12 @@ def review_centered(session, snapshot, identifier):
             raise ValueError('两帧光幕存在状态不一致。')
         if confirmations[1] is not None:
             block = confirmations[1]
-            if np.linalg.norm(np.asarray(block['point']) - target) > 28:
-                raise ValueError('居中复核的光幕与原记录不一致。')
             snapshot['blocks'] = [dict({key: value for key, value in block.items() if key != 'detection'},
                                        id=identifier)]
         else:
             snapshot['blocks'] = []
             session.barrier_references[:] = [item for item in session.barrier_references
-                                            if (item['block'].get('annotation_id') != record['annotation_id']
-                                                if record.get('annotation_id') is not None
-                                                else np.linalg.norm(np.asarray(item['block']['point']) - target) > 28)]
+                                            if item['block']['annotation_id'] != annotation_id]
         snapshot['barriers_observed'] = True
         snapshot['barrier_checks'] = [identifier]
         session.owner.last_snapshot = snapshot

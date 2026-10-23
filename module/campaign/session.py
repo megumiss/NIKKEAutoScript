@@ -331,8 +331,6 @@ class CampaignSession(NavigationSession):
         self.reuse_squad = False
         self.last_registration = None
         self.barrier_references = []
-        # 固定镜头仿射的会话校验结果：None 未校验，'ok' 允许仿射落点与小队位置预测，'bad' 回退居中。
-        self.ground_model_state = None
         # 最近一次可供导航使用的定位报告与当时的手势计数：navigate 每走一步都会重新观测小队，
         # 而两次手势之间画面不会变，同一拍里的下一次观测直接复用（见 reusable_report）。
         self.localized_report = None

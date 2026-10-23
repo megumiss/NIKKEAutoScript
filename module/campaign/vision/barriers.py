@@ -1,6 +1,6 @@
-"""屏障的预标注关联与无标注精定位；机关仍复用既有场景单应。
+"""屏障的预标注关联与状态跟踪；机关仍复用既有场景单应。
 
-有预标注时检测投影只选择最近标注，封路使用标注几何；无标注时仍要求仿射或居中精定位。
+检测投影只选择最近光幕标注，封路使用标注几何，不从检测框估算封锁落点。
 光幕由实际检测及已关联立柱在客户区帧间跟踪；立柱单独可见不是光幕开启或消失的证据。
 """
 
@@ -53,7 +53,7 @@ def scene_anchor(image, squad, viewport):
 def project_barriers(objects, image, squad, viewport=None, kinds=('barrier',)):
     """把屏障检测框的地面落点（底边中点）换算为地图坐标；没有可用锚点时返回空列表。
 
-    光幕和立柱不在此投影：远离注视点时地面落点误差会造成错误封路，必须经过居中确认。
+    光幕和立柱不在此投影：其检测位置只用于预标注关联，不能直接外推成道路封锁。
     kinds 可包含地面机关或电梯，以同一地面锚点提供缺标注时的临时位置。
     squad / viewport 是 observation 保存的配准结果（含 roi_to_map、a、panel_size；squad 另含
     player_center），不是裸坐标。
@@ -77,9 +77,9 @@ def affine_project(objects, registration, kinds=('ground_mechanism',)):
     """箭头锚点缺失时的回退投影：固定镜头仿射把检测框底边中点换算到底图。
 
     视口底图坐标取本帧可信紧凑配准的 GAZE 投影，检测框偏移经 GROUND_TO_CLIENT 逆解，
-    与 located_curtain 同源。投影只用于将机关开关状态关联到最近的预标注机关，
+    与光幕预标注关联使用相同的坐标换算。投影只用于将机关开关状态关联到最近的预标注机关，
     不作为导航落点或封路依据；关联歧义与检测冲突由 mechanism_observations 拒绝，
-    因此不要求会话级的仿射校验先通过。registration 必须含本帧的 roi_to_map。
+    registration 必须含本帧的 roi_to_map，不从历史视口套用投影矩阵。
     """
     items = [item for item in objects if item['kind'] in kinds]
     if not items:
@@ -152,58 +152,6 @@ def annotated_curtains(snapshot, chart):
                                projected_point=position.tolist()))
     return [item for item in candidates
             if sum(other['annotation_id'] == item['annotation_id'] for other in candidates) == 1]
-
-
-def centered_curtain(item, snapshot, chart):
-    """优先关联光幕预标注；无标注时仅将注视点附近的光幕按局部道路方向生成封锁段。
-
-    有标注时投影只选择标注，封锁几何取标注；无标注时底部距注视点最多 18 客户区像素，
-    以当前紧凑地图的已标定注视点作为地面坐标，离道路过远仍拒绝吸附。
-    """
-    from module.campaign.navigation.controls import GAZE
-
-    if (snapshot.get('localization') != 'accepted'
-            or (snapshot.get('minimap') or {}).get('mode') != 'compact'):
-        raise ValueError('光幕居中后缺少可信紧凑地图配准。')
-    if getattr(chart, 'barrier_annotations', []):
-        matches = [block for block in annotated_curtains(snapshot, chart) if block['detection'] == item]
-        if len(matches) != 1:
-            raise ValueError('光幕无法唯一关联到预标注位置。')
-        return matches[0]
-    if np.linalg.norm(curtain_foot(item) - VIEWPORT_PIXEL) > CENTER_TOLERANCE:
-        raise ValueError('光幕底部尚未进入注视点范围。')
-    point = project(snapshot['roi_to_map'], GAZE)
-    block = chart.mark_barrier(point, tolerance=SNAP_TOLERANCE)
-    if block is None:
-        raise ValueError('居中光幕无法关联到有效道路。')
-    return dict(kind='barrier', anchor='centered', **block)
-
-
-def located_curtain(item, snapshot, chart):
-    """优先关联预标注；无标注时用固定镜头仿射把光幕底部换算到底图并吸附道路。
-
-    有标注时直接使用标注几何，不把投影误差带入封锁位置；无标注时注视点坐标改为
-    视口 + GROUND_TO_CLIENT 逆解的当前检测位置。仿射常数须由调用方在本会话用实测拖动
-    校验（barrier_navigation.confirm_visible）；配准未接受、面板非紧凑模式或检测框截边时
-    抛 ValueError。
-    """
-    from module.campaign.navigation.controls import GAZE, GROUND_TO_CLIENT
-
-    if (snapshot.get('localization') != 'accepted'
-            or (snapshot.get('minimap') or {}).get('mode') != 'compact'):
-        raise ValueError('光幕定位缺少可信紧凑地图配准。')
-    if getattr(chart, 'barrier_annotations', []):
-        matches = [block for block in annotated_curtains(snapshot, chart) if block['detection'] == item]
-        if len(matches) != 1:
-            raise ValueError('光幕无法唯一关联到预标注位置。')
-        return matches[0]
-    viewport = project(np.asarray(snapshot['roi_to_map'], float), GAZE)
-    offset = curtain_foot(item) - np.asarray(VIEWPORT_PIXEL, float)
-    point = viewport + np.linalg.solve(GROUND_TO_CLIENT, offset)
-    block = chart.mark_barrier(point, tolerance=SNAP_TOLERANCE)
-    if block is None:
-        raise ValueError('光幕落点无法关联到有效道路。')
-    return dict(kind='barrier', anchor='affine', **block)
 
 
 MAX_PILLAR_ONLY_FRAMES = 3
