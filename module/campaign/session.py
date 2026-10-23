@@ -211,6 +211,9 @@ class CampaignInput:
             self.session.before_input()
             # 闸门放行之后才算一次真手势：只有它可能让小队移动或镜头平移（见 reuse_reason）。
             self.session.gestures += 1
+            # 推图中的 swipe 只平移镜头或地图面板；其他鼠标输入保守地使小队坐标失效。
+            if name != 'mouse_swipe':
+                self.session.squad_inputs += 1
             action = dict(method=name, args=args, kwargs=kwargs, coordinate_space='screen',
                           client_origin=self.session.win.origin)
             self.session.record('input_before', field=self.session.trace.last_field, force=True, action=action)
@@ -313,6 +316,7 @@ class CampaignSession(NavigationSession):
         # 真正发给游戏的手势数（点击／拖动／按下／移动）。inputs 把「只过闸门、不开手势」的小地图
         # 开合也算进预算，所以判定画面有没有变过要用这一个（见 CampaignInput.send、reuse_reason）。
         self.gestures = 0
+        self.squad_inputs = 0
         self.deadline = None
         self.popup_handling = False
         # 战斗接管中：准备弹窗不再是终态，允许会话自己点它上面的按钮。
@@ -719,12 +723,19 @@ class CampaignSession(NavigationSession):
         仍失败则停止，不能只复用小队坐标而把尚未定位的敌人当成不存在。
         known_squad 只供尚未发送移动的找敌人阶段使用：跳过实时小队定位和圆环重试，
         使用已有小队底图坐标规划路线；当前视野必须独立配准，失败不套用历史矩阵。
+        定位后只有镜头拖动时自动使用已知小队坐标，即使小队已离屏也不重新寻找圆环；
+        点击、其他可能移动小队的输入或战斗会使这条自动复用路径失效。
         """
         if keep_expanded and not expanded:
             raise ValueError('保留展开面板要求 expanded=True。')
         self.check()
         watch = Stopwatch()
         self.await_field()
+        if (known_squad is None and self.last_registration is not None
+                and self.last_registration['gestures'] != self.gestures):
+            known_squad = self.stationary_squad()
+            if known_squad is not None:
+                logger.info(f'定位后仅有镜头拖动，保留小队位置 {points_text(known_squad)}，重新配准当前视野。')
         expected = self.stationary_squad() if expanded and known_squad is None else None
         options = {'expected_squad': expected} if expected is not None else {}
         if known_squad is not None:
@@ -878,20 +889,24 @@ class CampaignSession(NavigationSession):
         坐标系不配套会把「本帧看过哪里」算到别处（见 run_state.panel_quad）。
         同时记下当时的手势计数——小队只在收到点击时才移动、镜头只在收到拖动时才平移，
         所以「之后没再发过手势」等价于「这份坐标一定还成立」（见 reuse_reason）。
+        单独记录可能移动小队的输入计数：纯拖动后可继续使用小队底图坐标，
+        但旧配准矩阵仍按完整手势计数失效，必须重新配准当前视口。
         新定位同时结束战前坐标的临时复用许可，使战后重新确认的位置可用于展开约束。
         """
         self.last_registration = dict(squad=list(squad), roi_to_map=roi_to_map,
-                                      coverage_size=coverage_size, gestures=self.gestures)
+                                      coverage_size=coverage_size, gestures=self.gestures,
+                                      squad_inputs=self.squad_inputs)
         self.reuse_squad = False
 
     def stationary_squad(self):
-        """返回可用于约束展开配准的小队坐标；定位后发生过手势或战斗时不给旧坐标。
+        """返回未被移动输入或战斗失效的小队底图坐标，供纯镜头观测或展开配准约束使用。
 
-        只返回底图坐标，不传递紧凑面板矩阵。展开与收起不移动小队，专门的展开图重试和
-        侦察可在本次调用内冻结此坐标；移动前的旧位置及战后未经重新确认的位置不能作为约束。
+        只返回底图坐标，不传递旧面板矩阵；纯拖动、展开与收起均不会移动小队。
+        点击及其他可能移动小队的输入使坐标失效，战后未经重新确认的位置也不能作为约束。
         """
         record = self.last_registration
-        if self.battle_mode or self.reuse_squad or record is None or record['gestures'] != self.gestures:
+        if (self.battle_mode or self.reuse_squad or record is None
+                or record['squad_inputs'] != self.squad_inputs):
             return None
         position = np.asarray(record['squad'], float)
         if position.shape != (2,) or not np.isfinite(position).all():

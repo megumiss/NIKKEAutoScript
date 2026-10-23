@@ -2,17 +2,17 @@
 
 import numpy as np
 
-# 只接受标注附近的唯一关联；投影用于关联，导航始终使用标注的精确落点。
-ANNOTATION_RADIUS = 48.
+# 机关标注稀疏，场景投影存在视野边缘偏差；只比较候选歧义，不用固定半径丢弃检测。
 ANNOTATION_GAP = 24.
 
 
 def mechanism_observations(projected, objects, points):
     """关联同帧机关与章节标注，保留 YOLO 开关状态及画面邻近敌人的证据。
 
-    projected 必须来自可信紧凑配准。标注存在时不把无法关联的投影当作另一处机关；
-    多个标注过近、多个检测竞争同一标注或开关类别冲突均放弃该关联。near_enemy 只表示
-    画面接近，规划还须用道路距离确认。所有 position 为底图像素，box 为客户区像素。
+    projected 必须来自可信紧凑配准。标注存在时按最近标注关联，不设绝对距离上限，
+    导航始终使用标注坐标；最近与次近距离差小于 ANNOTATION_GAP、多个检测竞争同一标注
+    或开关类别冲突均放弃该关联。near_enemy 只表示画面接近，规划还须用道路距离确认。
+    所有 position 为底图像素，box 为客户区像素。
     """
     annotations = [item for item in points if item['category'] == 'ground_mechanism']
     rings = [np.asarray(item['position'], float) for item in objects
@@ -28,8 +28,6 @@ def mechanism_observations(projected, objects, points):
         if annotations:
             ordered = sorted(((float(np.linalg.norm(position - np.asarray(point['position']))), point)
                               for point in annotations), key=lambda pair: pair[0])
-            if ordered[0][0] > ANNOTATION_RADIUS:
-                continue
             if len(ordered) > 1 and ordered[1][0] - ordered[0][0] < ANNOTATION_GAP:
                 continue
             point = ordered[0][1]

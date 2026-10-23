@@ -76,8 +76,8 @@ def affine_project(objects, registration, kinds=('ground_mechanism',)):
     """箭头锚点缺失时的回退投影：固定镜头仿射把检测框底边中点换算到底图。
 
     视口底图坐标取本帧可信紧凑配准的 GAZE 投影，检测框偏移经 GROUND_TO_CLIENT 逆解，
-    与 located_curtain 同源。机关只读开关状态：标注关联半径 48 底图像素且各标注间距大，
-    仿射实测误差（约 9 底图像素）远在预算内；最坏结果只是不关联，与没有锚点时相同，
+    与 located_curtain 同源。投影只用于将机关开关状态关联到最近的预标注机关，
+    不作为导航落点或封路依据；关联歧义与检测冲突由 mechanism_observations 拒绝，
     因此不要求会话级的仿射校验先通过。registration 必须含本帧的 roi_to_map。
     """
     items = [item for item in objects if item['kind'] in kinds]

@@ -459,7 +459,8 @@ class CampaignExecutor:
                         self.session.identity(self.session.win.client())
                     if curtains(snapshot):
                         snapshot = self.confirm_barriers_safe(snapshot)
-                        camera_options = {'known_squad': list(snapshot['squad'])}
+                        camera_options = ({'known_squad': list(snapshot['squad'])}
+                                          if located(snapshot) and snapshot.get('squad') is not None else {})
                     goal = self.owner.plan_tick(snapshot)
                     if (self.purpose == 'story' and self.owner.state.route_goal is None
                             and snapshot.get('story_markers') and located(snapshot)
