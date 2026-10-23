@@ -8,7 +8,7 @@ import numpy as np
 
 from module.campaign.vision.minimap import map_visible, minimap_control_visible
 from module.campaign.vision.matching import ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU, MapMatcher, ROI
-from module.campaign.vision.barriers import project_barriers, scene_anchor
+from module.campaign.vision.barriers import affine_project, project_barriers, scene_anchor
 from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
 from module.campaign.report import LOCALIZATION, LOCATE_CRITERIA, label, points_text
@@ -317,6 +317,7 @@ class CampaignObserver:
         """读取机关状态；光幕检测不得在纯观测阶段直接投影成道路封锁。
 
         squad / viewport 是本帧的配准结果（见 barriers.project_barriers），仅供机关关联使用。
+        小队箭头锚点缺失而紧凑配准可信时，机关改用固定镜头仿射投影（见 barriers.affine_project）。
         本层只保留 objects 中的光幕与立柱候选；barriers_observed 始终为假，不能把漏检当作解封。
         封路和指定编号的消失证据由会话的居中复核流程写入。
         """
@@ -324,9 +325,13 @@ class CampaignObserver:
         if chart is None or chart.model is not None or (squad is None and viewport is None):
             return
         try:
-            if scene_anchor(image, squad, viewport) is None:
+            if scene_anchor(image, squad, viewport) is not None:
+                projected = project_barriers(snapshot['objects'], image, squad, viewport,
+                                             kinds=('ground_mechanism',))
+            elif squad is not None:
+                projected = affine_project(snapshot['objects'], squad, kinds=('ground_mechanism',))
+            else:
                 return
-            projected = project_barriers(snapshot['objects'], image, squad, viewport, kinds=('ground_mechanism',))
             snapshot['mechanisms'] = mechanism_observations(projected, snapshot['objects'], chart.points)
             # 光幕仅保留在 objects 中，封路与消失证据由会话的居中确认流程写入。
             snapshot['barriers_observed'] = False

@@ -185,7 +185,7 @@ class CampaignExecutor:
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
             raise
-        except (WindowChanged, InputBudgetExceeded, ClickUnconfirmed, BarrierUnconfirmed):
+        except (WindowChanged, InputBudgetExceeded, ClickUnconfirmed):
             raise
         except (RuntimeError, ValueError) as exc:
             if kind == 'elevator':
@@ -263,7 +263,14 @@ class CampaignExecutor:
             covered = state.is_observed(focus['position'])
             logger.info(f"侦察第 {view + 1} 屏结果：{'已记录可信帧' if recorded else '定位未通过'}，"
                         f"目标格{'已覆盖' if covered else '尚未完整覆盖'}，耗时 {watch}")
-            if not recorded or not covered:
+            failure = self.session.scout_failure
+            if not recorded and failure is not None:
+                # 配准失败说明当前距离上看不清该格（探索前沿或走廊歧义）：标记后既不占失败
+                # 冷却也不阻塞出发（scouting.py 跳过），小队走近后自动恢复侦察。
+                state.mark_unscoutable(focus['id'], squad)
+                logger.info(f"侦察目标 {focus['id']} 暂不可扫（{failure['reason']}），"
+                            f'标记后跳过；小队走近后自动恢复。')
+            elif not recorded or not covered:
                 state.penalize(focus['id'])
             focus = scout_focus(state, self.owner.cut, squad, goal=goal)
             if focus is None:
@@ -271,6 +278,8 @@ class CampaignExecutor:
         else:
             logger.info(f'侦察达到单轮 {SCOUT_VIEWS} 屏上限，剩余区域延后至下一轮检查，暂不执行移动。')
         self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
+        # 侦察是内部有界的批量阶段；收尾输入翻篇记录，不与侦察叠加触发单目标上限。
+        self.session.begin_target('position')
         self.session.scout_end()
         logger.info(f'侦察结束：检查 {views} 屏，展开与拖动总耗时 {total}')
         return True
@@ -369,6 +378,41 @@ class CampaignExecutor:
             logger.warning(f'战斗胜利但无关联敌人目标（最近执行目标：{goal_brief(goal)}），不更新敌人状态。')
         return settled
 
+    def scan_start(self):
+        """开局扫描已探索区域，把敌人一次收齐；扫描本身失败只告警，不影响后续推图。
+
+        扫描是内部有界的批量阶段（瓦片数与无收获停扫），不是「同一个目标上的原地空转」，
+        所以阶段结束即翻篇：收起地图与刷新快照的收尾输入记入新预算窗口，
+        不与扫描叠加触发单目标上限。安全异常（窗口、弹窗、取消）不捕获，
+        与侦察一致：此时不补发收起地图的输入。
+        """
+        self.session.begin_target('scout')
+        self.session.scout_begin()
+        watch = Stopwatch()
+        try:
+            scanned = self.session.scan_explored()
+        except (RuntimeError, ValueError) as exc:
+            logger.warning(f'开局扫描未能完成（{exc}），按未扫描继续。')
+        else:
+            logger.info(f'开局扫描完成：{scanned} 屏，耗时 {watch}')
+        self.session.begin_target('position')
+        self.session.scout_end()
+
+    def confirm_barriers_safe(self, snapshot):
+        """确认当前可见光幕；确认失败时保留原快照与既有路网，不终止推图。
+
+        光幕确认失败只说明这一处暂时看不清（斜视角能量网隐身、配准不稳等），
+        路网保持不变：若路线真的撞上没开的光幕，小队会在墙前停住，
+        由移动闭环的停滞检测记失败并换目标，没有安全风险。
+        """
+        if not curtains(snapshot):
+            return snapshot
+        try:
+            return self.session.confirm_barriers(snapshot)
+        except BarrierUnconfirmed as exc:
+            logger.warning(f'光幕确认未完成（{exc}）；路网保持不变，继续推图。')
+            return snapshot
+
     def run(self, initial, ticks=CAMPAIGN_TICK_BUDGET):
         """会话开始时核对一次主线身份，之后每轮查弹窗、补视野再决策；遇战斗弹窗接管战斗后继续推图。
 
@@ -385,6 +429,16 @@ class CampaignExecutor:
         try:
             self.session.start()
             self.session.record('initial_snapshot', snapshot=initial)
+            if self.purpose == 'story' and located(initial) and initial.get('squad') is not None:
+                # 开局先把已探索区域扫一遍：敌人一次收齐，首轮决策就有全局候选。
+                # 小队未动，刷新快照失败（含扫描耗尽预算）时沿用准备阶段的初始观测。
+                self.scan_start()
+                try:
+                    refreshed = self.session.snapshot()
+                except InputBudgetExceeded:
+                    refreshed = None
+                if refreshed is not None and located(refreshed):
+                    initial = refreshed
             if initial.get('localization') == 'accepted' and initial.get('squad') is not None:
                 # 准备阶段与首轮之间没有移动，小队坐标可直接约束第一次展开配准。
                 self.session.remember_registration(initial['squad'], initial.get('roi_to_map'),
@@ -404,7 +458,7 @@ class CampaignExecutor:
                     else:
                         self.session.identity(self.session.win.client())
                     if curtains(snapshot):
-                        snapshot = self.session.confirm_barriers(snapshot)
+                        snapshot = self.confirm_barriers_safe(snapshot)
                         camera_options = {'known_squad': list(snapshot['squad'])}
                     goal = self.owner.plan_tick(snapshot)
                     if (self.purpose == 'story' and self.owner.state.route_goal is None
@@ -419,7 +473,7 @@ class CampaignExecutor:
                             camera_options = {'known_squad': list(snapshot['squad'])}
                             snapshot = self.session.snapshot(**camera_options)
                             if curtains(snapshot):
-                                snapshot = self.session.confirm_barriers(snapshot)
+                                snapshot = self.confirm_barriers_safe(snapshot)
                         goal = self.owner.plan_tick(snapshot, advance=False)
                     expanded_for_scout = False
                     if (self.purpose == 'story' and located(snapshot) and snapshot.get('squad') is not None
@@ -440,7 +494,7 @@ class CampaignExecutor:
                     if scouted or expanded_for_scout:
                         snapshot = self.session.snapshot(**camera_options)
                         if curtains(snapshot):
-                            snapshot = self.session.confirm_barriers(snapshot)
+                            snapshot = self.confirm_barriers_safe(snapshot)
                         goal = self.owner.plan_tick(snapshot, advance=False)
                         if (self.purpose == 'story' and (goal is None or goal['kind'] != 'review_block')
                                 and located(snapshot) and snapshot.get('squad') is not None):

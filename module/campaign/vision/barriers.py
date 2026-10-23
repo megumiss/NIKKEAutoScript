@@ -6,7 +6,8 @@
 
 import numpy as np
 
-from module.campaign.navigation.controls import ARROW_GROUND_OFFSET, EXPANDED_CENTER, VIEWPORT_PIXEL
+from module.campaign.navigation.controls import (ARROW_GROUND_OFFSET, EXPANDED_CENTER, GAZE,
+                                                 GROUND_TO_CLIENT, VIEWPORT_PIXEL)
 from module.campaign.vision.perception import squad_arrow
 from module.campaign.vision.surface_motion import project
 
@@ -68,6 +69,27 @@ def project_barriers(objects, image, squad, viewport=None, kinds=('barrier',)):
         x1, y1, x2, y2 = item['box']
         mapped = project(chart, [(x1 + x2) / 2, y2])
         result.append(dict(item, map=[round(float(value), 1) for value in mapped], anchor=kind))
+    return result
+
+
+def affine_project(objects, registration, kinds=('ground_mechanism',)):
+    """箭头锚点缺失时的回退投影：固定镜头仿射把检测框底边中点换算到底图。
+
+    视口底图坐标取本帧可信紧凑配准的 GAZE 投影，检测框偏移经 GROUND_TO_CLIENT 逆解，
+    与 located_curtain 同源。机关只读开关状态：标注关联半径 48 底图像素且各标注间距大，
+    仿射实测误差（约 9 底图像素）远在预算内；最坏结果只是不关联，与没有锚点时相同，
+    因此不要求会话级的仿射校验先通过。registration 必须含本帧的 roi_to_map。
+    """
+    items = [item for item in objects if item['kind'] in kinds]
+    if not items:
+        return []
+    viewport = project(np.asarray(registration['roi_to_map'], float), np.asarray(GAZE, float))
+    result = []
+    for item in items:
+        x1, y1, x2, y2 = item['box']
+        offset = np.array([(x1 + x2) / 2, y2], float) - np.asarray(VIEWPORT_PIXEL, float)
+        mapped = viewport + np.linalg.solve(GROUND_TO_CLIENT, offset)
+        result.append(dict(item, map=[round(float(value), 1) for value in mapped], anchor='affine'))
     return result
 
 

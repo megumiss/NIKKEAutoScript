@@ -103,6 +103,8 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
                 continue
             column, row = (point // OBSERVED_CELL).astype(int)
             identifier = f'scout-{column}-{row}'
+            if state.is_unscoutable(identifier, squad):
+                continue
             if not include_cooling and state.cooling(identifier):
                 continue
             return dict(id=identifier, position=point.tolist(), distance=round(float(distance), 1),
@@ -120,6 +122,8 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
     for order in np.argsort(nearest[rows, columns], kind='stable'):
         row, column = int(rows[order]), int(columns[order])
         identifier = f'scout-{column}-{row}'
+        if state.is_unscoutable(identifier, squad):
+            continue
         if not include_cooling and state.cooling(identifier):
             continue
         frontier = float(nearest[row, column])
@@ -156,6 +160,8 @@ def route_scout_focus(state, cut, squad, target, include_cooling=False):
             if identifier in seen:
                 continue
             seen.add(identifier)
+            if state.is_unscoutable(identifier, squad):
+                continue
             if not include_cooling and state.cooling(identifier):
                 continue
             return dict(id=identifier, position=candidate.tolist(), distance=round(float(distance), 1),
@@ -165,6 +171,8 @@ def route_scout_focus(state, cut, squad, target, include_cooling=False):
             continue
         column, row = point // OBSERVED_CELL
         identifier = f'scout-{column}-{row}'
+        if state.is_unscoutable(identifier, squad):
+            continue
         if not include_cooling and state.cooling(identifier):
             continue
         return dict(id=identifier, position=point.tolist(), distance=round(float(np.linalg.norm(point - squad)), 1),

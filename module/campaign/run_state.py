@@ -35,6 +35,8 @@ BLOCK_VISIBLE_MARGIN = 24.
 # 同一目标累计失败到这个次数，本次任务就不再选它（敌人同时标为暂时走不到）；冷却期按决策拍计。
 MAX_FAILURES = 3
 COOLDOWN_TICKS = 5
+# 暂不可扫格的解除距离：小队走近到底图像素内，游戏渲染与配准条件可能已变化，恢复可侦察。
+UNSCOUTABLE_REARM = 150.
 
 
 def located(snapshot):
@@ -123,6 +125,10 @@ class RunState:
         self.pending_reviews = {}
         self.transfers = {}
         self.cooldowns = {}
+        # 暂不可扫的侦察格：cell_id → 标记时的小队底图坐标。配准失败说明从当前距离看不清
+        # （探索前沿无渲染内容，或走廊过细产生歧义），既不占失败冷却也不阻塞出发，
+        # 小队走近后恢复可扫。
+        self.unscoutable = {}
         shape = (int(np.ceil(self.size[1] / OBSERVED_CELL)), int(np.ceil(self.size[0] / OBSERVED_CELL)))
         self.observed = np.zeros(shape, np.uint8)
         self._sequence = {'enemy': 0, 'block': 0, 'mechanism': 0}
@@ -464,6 +470,24 @@ class RunState:
         """目标是否暂不可选：还在冷却期内，或累计失败已到上限（本次任务不再选）。"""
         record = self.cooldowns.get(identifier)
         return record is not None and (self.tick < record['until'] or record['failures'] >= MAX_FAILURES)
+
+    def mark_unscoutable(self, identifier, squad):
+        """把侦察格标为暂不可扫：当前距离上配准不出可信视野，原因多为探索前沿或走廊歧义。
+
+        只记标记时的小队位置，不计失败冷却；is_unscoutable 在小队走近后解除标记。
+        squad 为本帧可信的小队底图坐标。
+        """
+        self.unscoutable[identifier] = list(np.asarray(squad, float))
+
+    def is_unscoutable(self, identifier, squad):
+        """identifier 是否仍按暂不可扫跳过；小队移动超过 UNSCOUTABLE_REARM 后标记解除。"""
+        marked = self.unscoutable.get(identifier)
+        if marked is None:
+            return False
+        if np.linalg.norm(np.asarray(squad, float) - np.asarray(marked, float)) <= UNSCOUTABLE_REARM:
+            return True
+        del self.unscoutable[identifier]
+        return False
 
     def summary_text(self):
         """状态摘要，供日志打一行：决策轮数、敌人与光幕的各状态计数、看清了多少地图、有多少待办。"""
