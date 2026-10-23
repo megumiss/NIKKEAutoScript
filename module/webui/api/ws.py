@@ -204,7 +204,7 @@ async def state_socket(websocket: WebSocket):
                     await websocket.send_json({'type': 'state', 'name': name, 'state': value})
                 manager = ProcessManager.get_manager(name)
                 snapshot = manager.latest_campaign
-                revision = snapshot['captured_at'] if snapshot else -manager._campaign_started_at
+                revision = manager.campaign_revision if snapshot else -manager._campaign_started_at
                 if campaign_revisions.get(name) != revision:
                     await websocket.send_json({'type': 'campaign', 'name': name, 'revision': revision})
                     campaign_revisions[name] = revision

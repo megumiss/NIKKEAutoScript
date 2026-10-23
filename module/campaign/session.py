@@ -511,12 +511,14 @@ class CampaignSession(NavigationSession):
         logger.info(f'主线移动（本目标第 {self.target_inputs} 次操作）：{describe_move(values)}')
 
     def remember_scene(self, field):
-        """移动反馈帧也累积敌人与封锁，下一步 A* 不沿用移动前的过期切开图。"""
+        """移动反馈帧累积敌人与封锁并立即发布，下一步 A* 不沿用移动前的过期切开图。"""
         snapshot = self.observe_frame(field)
         self.owner.last_snapshot = snapshot
         self.owner.state.update(snapshot, advance=False)
         if self.owner.cut.update(self.owner.state.blocking()):
             logger.info('移动期间光幕状态变化，已更新阻断路网。')
+        publish_preview_frame(np.ascontiguousarray(field[:, :, ::-1]), interval=0,
+                              source=self.owner.campaign_source(snapshot))
         return snapshot
 
     def await_field(self):

@@ -460,11 +460,16 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(self.handler.mouse_swipe.call_count, LOCALIZE_RETRIES)
 
     def test_movement_feedback_refreshes_curtains_before_next_route(self):
-        """移动途中新看到的光幕写进状态，下一次路径检查不能再穿过它。"""
+        """移动反馈立即发布，新看到的光幕写进状态，下一次路径检查不能再穿过它。"""
         self.owner.state = RunState(41, 'normal', (384, 256))
+        self.owner.campaign_source = Mock(side_effect=lambda snapshot: {'campaign': snapshot})
         block = dict(point=[200, 100], segment=[[200, 60], [200, 140]])
-        self.owner.observer.observe = Mock(return_value=snapshot_fixture(blocks=[block]))
-        self.session.remember_scene(self.owner.device.image)
+        snapshot = snapshot_fixture(blocks=[block])
+        self.owner.observer.observe = Mock(return_value=snapshot)
+        with patch('module.campaign.session.publish_preview_frame') as publish:
+            self.session.remember_scene(self.owner.device.image)
+        publish.assert_called_once()
+        self.assertEqual(publish.call_args.kwargs, dict(interval=0, source={'campaign': snapshot}))
         self.assertFalse(self.cut.connected([40, 96], [320, 96]))
         with self.assertRaises(RuntimeError):
             self.session.localizer.route([40, 96], [320, 96])

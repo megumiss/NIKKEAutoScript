@@ -53,6 +53,16 @@ class GetManagerRaceTests(unittest.TestCase):
             self.assertEqual(len(ProcessManager._processes), 1)
             self.assertEqual(len({id(m) for m in results}), 1)
 
+    def test_campaign_revision_changes_for_same_observation_time(self):
+        """同一观测时间的连续推图发布仍递增版本，确保前端能收到补充后的运行记忆。"""
+        manager = ProcessManager('nkas')
+        manager._campaign_started_at = 1
+        manager._preview_queue.put((b'first', {'campaign': {'captured_at': 2, 'value': 1}}))
+        manager._preview_queue.put((b'second', {'campaign': {'captured_at': 2, 'value': 2}}))
+        manager._thread_preview_handler()
+        self.assertEqual(manager.campaign_revision, 2)
+        self.assertEqual(manager.latest_campaign['value'], 2)
+
 
 if __name__ == '__main__':
     unittest.main()

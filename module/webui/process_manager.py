@@ -49,6 +49,7 @@ class ProcessManager:
         self.latest_preview: Tuple[float, bytes] = None
         self.preview_source = None
         self.latest_campaign = None
+        self.campaign_revision = 0
         self._campaign_started_at = 0
         self._process: Process = None
         self._process_locks: Dict[str, threading.Lock] = {}
@@ -59,6 +60,7 @@ class ProcessManager:
         if not self.alive:
             self.preview_source = None
             self.latest_campaign = None
+            self.campaign_revision = 0
             self._campaign_started_at = time.time()
             if func is None:
                 func = get_config_mod(self.config_name)
@@ -116,6 +118,7 @@ class ProcessManager:
                     snapshot = source['campaign']
                     if snapshot and snapshot.get('captured_at', 0) >= self._campaign_started_at:
                         self.latest_campaign = snapshot
+                        self.campaign_revision += 1
                 else:
                     self.preview_source = source
             if isinstance(item, bytes):
