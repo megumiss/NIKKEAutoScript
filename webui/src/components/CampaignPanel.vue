@@ -3,7 +3,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '../api/client'
 import { t, uiLanguage } from '../i18n'
 import { useInstancesStore } from '../stores/instances'
-import CampaignMap, { type Block, type Enemy, type Goal, type MapAnnotations, type Point, type PlannedRoutes, type RememberedEnemy } from './CampaignMap.vue'
+import CampaignMarker from './CampaignMarker.vue'
+import CampaignMap, { type Block, type Enemy, type Goal, type MapAnnotations, type MechanismState, type Point, type PlannedRoutes, type RememberedEnemy } from './CampaignMap.vue'
 
 const props = defineProps<{ name: string }>()
 type Snapshot = {
@@ -30,7 +31,9 @@ const mapBlocks = computed(() => snapshot.value?.memory?.blocks ?? snapshot.valu
 const goal = computed(() => snapshot.value?.memory?.goal ?? null)
 const routes = computed(() => snapshot.value?.memory?.routes ?? {})
 const routeGoal = computed(() => snapshot.value?.memory?.route_goal ?? null)
-const mechanismStates = computed(() => Object.fromEntries((snapshot.value?.memory?.mechanisms ?? []).map(item => [item.id, item.state])))
+const mechanismStates = computed<Record<string, MechanismState>>(() => Object.fromEntries(
+  (snapshot.value?.memory?.mechanisms ?? []).map(item => [item.id, item.completed || item.state === 'on' ? 'on' : item.state === 'off' ? 'off' : 'unknown']),
+))
 const goalKinds: Record<string, string> = { enemy: '敌人', story: '主线目标', mechanism: '地面机关',
   advance: '沿路推进', explore: '未探索区域', elevator: '电梯', review_block: '复核光幕', collectible: '收集品' }
 const annotations = computed(() => snapshot.value?.annotations ?? null)
@@ -70,15 +73,8 @@ onBeforeUnmount(() => { generation++ })
     <div v-else class="campaign-content">
       <section class="chapter-map-section">
         <div class="section-heading"><b>{{ t('章节地图') }}</b><span>{{ mapBlocks.length ? `${mapBlocks.length} ${t('处道路封锁')}` : t('普通 / 困难共用底图') }}</span></div>
-        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :blocks="mapBlocks" :goal="goal" :route-goal="routeGoal" :routes="routes" :annotations="annotations" :label="t('章节地图')" @error="mapError = true" />
+        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :blocks="mapBlocks" :goal="goal" :route-goal="routeGoal" :routes="routes" :annotations="annotations" :mechanism-states="mechanismStates" :label="t('章节地图')" @error="mapError = true" />
         <div v-else class="campaign-empty">{{ t('章节底图不可用') }}</div>
-        <div class="legend"><span class="cyan">○ {{ t('小队') }}</span><span class="red">◆ {{ t('敌人') }}</span><span class="purple">◆ EX</span><span class="boss">✦ Boss</span><span v-if="remembered.length" class="red">◇ {{ t('记住的敌人') }} {{ remembered.length }}</span><span v-if="goal" class="gold">⊕ {{ t('执行目标') }}</span><span v-if="routeGoal" class="purple">◇ {{ t('路程目标') }}</span><span v-if="mapBlocks.length" class="blocked">╌ {{ t('道路封锁') }}</span></div>
-        <div v-if="routes.execution || routes.destination" class="legend route-legend">
-          <span v-if="routes.execution" class="gold">━ {{ t('本段路线') }} · {{ routes.execution.distance.toFixed(1) }} {{ t('地图像素') }}</span>
-          <span v-if="routes.destination" class="purple">┄ {{ t('目的地路线') }} · {{ routes.destination.distance.toFixed(1) }} {{ t('地图像素') }}</span>
-        </div>
-        <div v-if="annotations" class="legend annotation-legend"><span><span class="mechanism" aria-hidden="true">▣</span> {{ t('地面机关') }} {{ mechanisms.length }}</span><span><span class="elevator" aria-hidden="true">⇅</span> {{ t('电梯') }} {{ elevators.length }}</span><span v-if="annotations.transfers.length"><span class="elevator" aria-hidden="true">⇢</span> {{ t('电梯连接') }} {{ annotations.transfers.length }}</span></div>
-        <p class="map-note">{{ snapshot.localization === 'accepted' ? t('位置已匹配到章节底图') : t('底图位置未确认，请查看小地图。') }}</p>
         <div v-if="snapshot.memory" class="target-details">
           <div v-for="entry in [{ title: '路程目标', value: routeGoal }, { title: '执行目标', value: goal }]" :key="entry.title" class="target-row">
             <b>{{ t(entry.title) }}</b>
@@ -86,12 +82,36 @@ onBeforeUnmount(() => { generation++ })
             <span v-else>—</span>
           </div>
         </div>
+        <div class="map-legend">
+          <div class="legend marker-legend">
+            <span><CampaignMarker kind="squad" :size="16" />{{ t('小队') }}</span>
+            <span><CampaignMarker kind="enemy" :size="16" />{{ t('敌人') }}</span>
+            <span><CampaignMarker kind="ex" :size="16" />EX</span>
+            <span><CampaignMarker kind="boss" :size="16" />Boss</span>
+            <span v-if="remembered.length"><CampaignMarker kind="enemy" state="remembered" :size="16" />{{ t('记住的敌人') }} {{ remembered.length }}</span>
+            <span v-if="goal"><CampaignMarker kind="execution" :size="16" />{{ t('执行目标') }}</span>
+            <span v-if="routeGoal"><CampaignMarker kind="destination" :size="16" />{{ t('路程目标') }}</span>
+            <span v-if="mapBlocks.length"><CampaignMarker kind="barrier" :size="16" />{{ t('道路封锁') }}</span>
+          </div>
+          <div v-if="routes.execution || routes.destination" class="legend route-legend">
+            <span v-if="routes.execution" class="gold">━ {{ t('本段路线') }} · {{ routes.execution.distance.toFixed(1) }} {{ t('地图像素') }}</span>
+            <span v-if="routes.destination" class="purple">┄ {{ t('目的地路线') }} · {{ routes.destination.distance.toFixed(1) }} {{ t('地图像素') }}</span>
+          </div>
+          <div v-if="annotations" class="legend annotation-legend marker-legend">
+            <span v-if="mechanisms.length"><CampaignMarker kind="mechanism" state="off" :size="16" />{{ t('未开启') }}</span>
+            <span v-if="mechanisms.length"><CampaignMarker kind="mechanism" state="on" :size="16" />{{ t('已开启') }}</span>
+            <span v-if="mechanisms.length"><CampaignMarker kind="mechanism" state="unknown" :size="16" />{{ t('未检测到状态') }}</span>
+            <span v-if="elevators.length"><CampaignMarker kind="elevator" :size="16" />{{ t('电梯') }} {{ elevators.length }}</span>
+            <span v-if="annotations.transfers.length"><span class="elevator" aria-hidden="true">⇢</span>{{ t('电梯连接') }} {{ annotations.transfers.length }}</span>
+          </div>
+          <p class="map-note">{{ snapshot.localization === 'accepted' ? t('位置已匹配到章节底图') : t('底图位置未确认，请查看小地图。') }}</p>
+        </div>
       </section>
       <section class="observations">
         <div class="section-heading"><b>{{ t('小地图') }}</b><span>{{ snapshot.minimap?.enemies.length ?? '—' }} {{ t('个可见敌人') }}</span></div>
         <CampaignMap v-if="snapshot.minimap" class="minimap" :image="snapshot.minimap.image" :size="snapshot.minimap.size" :squad="snapshot.minimap.squad" :enemies="snapshot.minimap.enemies" :label="t('小地图')" />
         <div v-else class="campaign-empty compact">{{ t('未检测到小地图') }}</div>
-        <dl>
+        <dl class="squad-positions">
           <div><dt>{{ t('小队位置') }} · {{ t('底图') }}</dt><dd>{{ format(snapshot.squad) }}</dd></div>
           <div><dt>{{ t('小队位置') }} · {{ t('小地图') }}</dt><dd>{{ format(snapshot.minimap?.squad) }}</dd></div>
         </dl>
@@ -107,7 +127,7 @@ onBeforeUnmount(() => { generation++ })
             <p v-if="!annotations.points.length" class="map-note">{{ t('本章暂无机关或电梯点标注。') }}</p>
             <div v-else class="annotation-list">
               <div v-for="point in annotations.points" :key="point.id" class="annotation-row">
-                <span><b><span :class="point.category === 'ground_mechanism' ? 'mechanism' : 'elevator'" aria-hidden="true">{{ point.category === 'ground_mechanism' ? '▣' : '⇅' }}</span> {{ point.category === 'ground_mechanism' ? t('地面机关') : t('电梯') }}</b><span>{{ point.label || point.id }}</span></span>
+                <span><b><CampaignMarker :kind="point.category === 'ground_mechanism' ? 'mechanism' : 'elevator'" :state="mechanismStates[point.id] ?? 'unknown'" :size="18" /> {{ point.category === 'ground_mechanism' ? t('地面机关') : t('电梯') }}</b><span>{{ point.label || point.id }}</span></span>
                 <code>{{ format(point.position) }}<small v-if="point.category === 'ground_mechanism'">{{ t(mechanismStates[point.id] === 'on' ? '已开启' : mechanismStates[point.id] === 'off' ? '未开启' : '未检测到状态') }}</small></code>
               </div>
             </div>
@@ -141,19 +161,25 @@ h3 { margin:0 0 5px; font-size:16px; }
 .chapter-map-section { border-right:1px solid var(--border); }
 .section-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; font-size:13px; }
 .minimap { max-height:240px; }
-.legend { display:flex; gap:16px; flex-wrap:wrap; padding-top:12px; font-size:12px; }
+.marker-legend > span { display:inline-flex; align-items:center; gap:6px; }
+.map-legend { border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-top:12px; display:flex; flex-direction:column; gap:9px; }
+.map-legend .map-note { margin:0; }
+.legend { display:flex; gap:6px 14px; flex-wrap:wrap; font-size:12px; align-items:center; }
 .cyan { color:var(--accent); }.red { color:var(--red); }.purple { color:var(--violet); }.blocked { color:#ff5b5b; }.gold { color:#e0a800; }
 .map-note { line-height:1.65; margin:10px 0 0; }
-.target-details { border-top:1px solid var(--border); margin-top:14px; padding-top:4px; }
-.target-row { display:flex; flex-direction:column; gap:4px; margin-top:10px; font-size:12px; overflow-wrap:anywhere; }
+.target-details { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-top:12px; }
+.target-row { display:flex; flex-direction:column; gap:4px; font-size:12px; overflow-wrap:anywhere; }
+.target-row b { font-size:12px; color:var(--text-2); font-weight:500; }
 .target-row small,.annotation-row code small { color:var(--text-2); line-height:1.5; }
 .annotation-row code small { display:block; text-align:right; font-family:var(--font-sans,sans-serif); }
-dl { margin:16px 0; }dl > div,.enemy-list > div { display:flex; justify-content:space-between; gap:12px; margin:9px 0; }
+.squad-positions { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin:14px 0 0; }
+.squad-positions > div { display:flex; flex-direction:column; gap:4px; margin:0; }
+dl > div,.enemy-list > div { display:flex; justify-content:space-between; gap:12px; margin:9px 0; }
 dd { margin:0; font:12px var(--font-mono,monospace); }
 .enemy-list { max-height:170px; overflow:auto; border-top:1px solid var(--border); margin-top:14px; padding-top:5px; font-size:12px; }
 .mechanism { color:var(--green); }.elevator { color:var(--yellow); }
 .annotations-section { border-top:1px solid var(--border); margin-top:18px; padding-top:16px; }
-.annotations-section .section-heading { margin-bottom:6px; }.annotation-legend { gap:12px; padding-top:8px; }
+.annotations-section .section-heading { margin-bottom:6px; }
 .annotation-list,.transfer-list { max-height:200px; overflow:auto; margin-top:10px; font-size:12px; }
 .annotation-row { display:flex; justify-content:space-between; gap:12px; padding:7px 0; }
 .annotation-row > span { display:flex; flex-direction:column; gap:3px; min-width:0; overflow-wrap:anywhere; }
