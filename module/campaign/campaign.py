@@ -313,45 +313,20 @@ class Campaign(ModuleBase):
         self.device.verify_input_channel()
         logger.info(f'主线任务分辨率：{width}×{height}')
 
-    def check_main_story_page(self):
-        """确认当前停在主线剧情界面，不在则直接判定人工介入，并返回这一帧读到的（章节号, 难度）。
-
-        判据是右下角的章节号与难度标识：这两处只在主线地图上显示，大厅、方舟、战斗与结算页都
-        读不到，所以任一帧读到就认为在界面内，不要求连续同值——章节号的确认仍由
-        detect_current_chapter 负责。这个检查的意义是让「任务开始时不在主线地图」在一两秒内
-        失败，而不是耗完 30 秒识别超时，更不要在错误页面上继续点小地图控件、拖动视图。
-        单帧读不到不立刻报错：过场动画、技能特效和弹窗都可能盖住角标，连续
-        MAIN_STORY_PAGE_FRAMES 帧都读不到才算不在界面。
-        必须在 prepare_client 之后调用：识别区域按 1776×999 客户区固定，分辨率不符时
-        chapter_identity 会直接抛 ValueError。
-        """
-        logger.hr('检查主线剧情界面', level=2)
-        for frame in range(1, MAIN_STORY_PAGE_FRAMES + 1):
-            self.device.screenshot()
-            image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
-            identity = chapter_identity(image, self.chapter_ocr)
-            if identity is not None:
-                logger.info(f'已在主线剧情界面：右下角 {identity[1].upper()} 第 {identity[0]} 章')
-                return identity
-            logger.warning(f'第 {frame}/{MAIN_STORY_PAGE_FRAMES} 帧未读到右下角章节角标。')
-            if frame < MAIN_STORY_PAGE_FRAMES:
-                self.device.sleep(MAIN_STORY_PAGE_INTERVAL)
-        logger.error('当前不在主线剧情界面：右下角读不到章节号与难度标识。请先进入主线地图，'
-                     '并确认右下角章节角标没有被弹窗或特效遮挡，然后重新运行任务。')
-        raise RequestHumanTakeover
-
     def detect_current_chapter(self):
-        """连续识别主线地图右下角的章节号与难度，确认后发布一帧章节快照。
+        """确认主线剧情界面，并连续识别右下角章节号与难度后发布一帧章节快照。
 
-        OCR 单帧结果会受动画和特效影响，要求连续三帧得到相同身份才确认；任一帧识别失败会把
-        连续计数清零，30 秒内无法确认则判定为人工介入，通常是章节号被遮挡或不在主线地图。
-        确认的同时做一次观测并推送预览，让界面在任务刚开始时就能看到定位结果。
+        章节号与难度只在主线地图显示。首次读到有效身份前连续 MAIN_STORY_PAGE_FRAMES 帧缺失，
+        直接按不在主线地图交人工，且不会点击小地图；读到身份后要求连续三帧一致，任一帧失败清零。
+        已确认界面但身份持续不稳定时沿用 30 秒超时。小地图只在身份确认后重开，避免在错误页面输入，
+        也避免为同一帧重复章节 OCR。必须在 prepare_client 之后调用，识别区域按 1776×999 客户区固定。
         """
-        logger.hr('确认主线章节', level=2)
+        logger.hr('检查主线剧情界面并确认主线章节', level=2)
         self.current_chapter = self.current_difficulty = None
         reader = self.chapter_ocr
         timeout = Timer(30).start()
         previous, stable, missing_logged = None, 0, False
+        page_confirmed, missing_frames = False, 0
         while 1:
             if self.config.stop_event is not None and self.config.stop_event.is_set():
                 raise TaskEnd
@@ -359,16 +334,21 @@ class Campaign(ModuleBase):
             captured_at = time.time()
             # 设备截图统一为 RGB，OCR 与地图检测的 ndarray 输入使用 BGR。
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
-            # 小地图被关闭时先点箭头重开再识别，否则快照会一直缺小地图导致推图无法继续。
-            if self.reopen_minimap_if_closed(image):
-                image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
             identity = chapter_identity(image, reader)
             if identity is None:
-                # 一段连续读不到只告警一次：同一个遮挡逐帧刷同一行没有信息量，恢复后会重新告警。
-                if not missing_logged:
+                if not page_confirmed:
+                    missing_frames += 1
+                    logger.warning(f'第 {missing_frames}/{MAIN_STORY_PAGE_FRAMES} 帧未读到右下角章节角标。')
+                    if missing_frames >= MAIN_STORY_PAGE_FRAMES:
+                        logger.error('当前不在主线剧情界面：右下角读不到章节号与难度标识。请先进入主线地图，'
+                                     '并确认右下角章节角标没有被弹窗或特效遮挡，然后重新运行任务。')
+                        raise RequestHumanTakeover
+                elif not missing_logged:
+                    # 一段连续读不到只告警一次：同一个遮挡逐帧刷同一行没有信息量，恢复后会重新告警。
                     logger.warning('本帧未读到右下角章节号与难度，连续一致计数清零后继续识别。')
-                    missing_logged = True
+                missing_logged = True
             else:
+                page_confirmed = True
                 missing_logged = False
                 if identity != previous:
                     logger.info(f'读到 {identity[1].upper()} 第 {identity[0]} 章，等待连续三帧一致。')
@@ -377,6 +357,10 @@ class Campaign(ModuleBase):
             if stable >= 3:
                 self.current_chapter, self.current_difficulty = identity
                 logger.info(f'当前主线章节：{identity[1].upper()} 第 {identity[0]} 章')
+                # 小地图被关闭时先点箭头重开再观测，否则快照会一直缺小地图导致推图无法继续。
+                if self.reopen_minimap_if_closed(image):
+                    image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+                    captured_at = time.time()
                 snapshot = self.observer.observe(image, identity, captured_at)
                 self.last_snapshot = snapshot
                 publish_preview_frame(self.device.image, interval=0, source=self.campaign_source(snapshot))
@@ -386,7 +370,7 @@ class Campaign(ModuleBase):
                 logger.error(f'无法确认主线章节及难度（最后一帧：{last}，连续一致 {stable}/3 帧），'
                              f'请确保主线地图右下角章节号和难度标识可见。')
                 raise RequestHumanTakeover
-            self.device.sleep(0.5)
+            self.device.sleep(MAIN_STORY_PAGE_INTERVAL)
 
     def ensure_chart(self, chapter):
         """按章节建一次静态层与目标选择器，换章才重建；构建失败只告警并返回 None。
@@ -531,12 +515,10 @@ class Campaign(ModuleBase):
         return goal
 
     def run(self):
-        """主线任务入口：准备地图资源与客户区，确认停在主线剧情界面，再确认章节与小队位置。
+        """主线任务入口：准备资源与客户区，一次完成界面及章节确认，再确认小队位置。
 
         客户区准备（分辨率、窗口位置、自动 HDR、鼠标通道）由 prepare_client 负责，
-        必须在章节识别之前完成。
-        客户区就绪后先用右下角章节角标确认停在主线剧情界面：不在就直接要求人工接管，
-        既避免耗完章节识别的 30 秒超时，也避免在别的页面上点小地图控件、拖动视图。
+        必须在章节识别之前完成。章节识别同时确认主线剧情界面，未确认前不操作小地图。
         章节确认后立刻确认小队底图位置：这一步会按需展开大地图并在面板内平移重试，
         退出时恢复紧凑小地图，供后续推图直接使用。
         确认位置后接入有限推图闭环：逐拍补视野、选目标、移动与回写；遇到战斗准备弹窗就把这次战斗
@@ -546,7 +528,6 @@ class Campaign(ModuleBase):
         watch = Stopwatch()
         self.ensure_resources()
         self.prepare_client()
-        self.check_main_story_page()
         chapter = self.detect_current_chapter()
         snapshot = self.confirm_squad_location(self.last_snapshot)
         self.log_snapshot_summary(snapshot)
