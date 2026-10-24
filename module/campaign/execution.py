@@ -220,10 +220,14 @@ class CampaignExecutor:
             self.owner.state.transfer_succeeded(goal['leg'])
             self.session.anchor_reference = None
             self.session.anchor_reference_method = None
-            logger.info(f"电梯 {goal['id']} 已确认传送成功，重新选择目标。")
+            logger.info(f"电梯 {goal['id']} 已确认传送成功，执行一次十字扫描后重新选择目标。")
+            self.scan_start('电梯后')
         elif kind == 'explore':
             # 到点不是观察成功：只记短冷却，新快照自行更新观测覆盖。
             self.owner.state.penalize(goal['id'])
+        elif kind == 'story':
+            self.owner.state.route_goal = None
+            self.owner.state.route_branches.pop(('story', goal['id']), None)
         logger.info(f"{goal_brief(goal)} 结束：{describe_result(result)}，"
                     f"本目标操作 {self.session.target_inputs} 次，耗时 {watch}")
 
@@ -378,10 +382,10 @@ class CampaignExecutor:
             logger.warning(f'战斗胜利但无关联敌人目标（最近执行目标：{goal_brief(goal)}），不更新敌人状态。')
         return settled
 
-    def scan_start(self):
-        """开局扫描已探索区域，把敌人一次收齐；扫描本身失败只告警，不影响后续推图。
+    def scan_start(self, scene='开局'):
+        """按场景名扫描小队周围，把敌人一次收齐；扫描本身失败只告警，不影响后续推图。
 
-        扫描是内部有界的批量阶段（瓦片数与无收获停扫），不是「同一个目标上的原地空转」，
+        开局及电梯传送后共用中心与四向扫描。扫描是内部有界的批量阶段，不是同一目标上的原地空转，
         所以阶段结束即翻篇：收起地图与刷新快照的收尾输入记入新预算窗口，
         不与扫描叠加触发单目标上限。安全异常（窗口、弹窗、取消）不捕获，
         与侦察一致：此时不补发收起地图的输入。
@@ -392,9 +396,9 @@ class CampaignExecutor:
         try:
             scanned = self.session.scan_explored()
         except (RuntimeError, ValueError) as exc:
-            logger.warning(f'开局扫描未能完成（{exc}），按未扫描继续。')
+            logger.warning(f'{scene}扫描未能完成（{exc}），按未扫描继续。')
         else:
-            logger.info(f'开局扫描完成：{scanned} 屏，耗时 {watch}')
+            logger.info(f'{scene}扫描完成：{scanned} 屏，耗时 {watch}')
         self.session.begin_target('position')
         self.session.scout_end()
 

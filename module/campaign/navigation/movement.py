@@ -42,6 +42,7 @@ def navigate(
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
+    目标就是最后一段电梯出口时，确认传送即结束，不再向出口中心追加容易误差的地面移动。
     敌人模式仅在原目标附近有唯一小地图标记时启用两帧脚圈辅助；一次 navigate 至多辅助直点一次，
     附近试点始终保持原落点，不复用脚圈；辅助结果不会修改目标身份或战斗归属。
     enemy_kind 为 normal 或 boss，实时位置只从同类标记吸附；Boss 不读取旧的普通敌人列表。
@@ -93,9 +94,11 @@ def navigate(
                 if exit_near < 2:
                     session.pause(1)
                     continue
-                transfers.append(dict(legs.pop(0), position=position.tolist()))
+                completed = legs.pop(0)
+                transfers.append(dict(completed, position=position.tolist()))
+                arrived = not legs and np.allclose(target, np.asarray(completed['exit'], float))
                 emit(
-                    message='已确认电梯传送，继续前往目标。',
+                    message='已确认电梯传送，到达出口。' if arrived else '已确认电梯传送，继续前往目标。',
                     elevator_transfers=transfers.copy(),
                     elevator_entry=None,
                     elevator_exit=None,
@@ -104,6 +107,16 @@ def navigate(
                 session.anchor_reference_method = None
                 previous, probes, probe_index, stagnant, near = None, None, 0, 0, 0
                 exit_near, entry_waits, leg_start_clicks = 0, 0, clicks
+                if arrived:
+                    session.finish_view()
+                    return {
+                        'state': 'arrived',
+                        'message': '已确认电梯传送并到达出口。',
+                        'movement_clicks': clicks,
+                        'position': position.tolist(),
+                        'distance': float(np.linalg.norm(target - position)),
+                        'elevator_transfers': transfers.copy(),
+                    }
                 continue
             exit_near = 0
         transferring = bool(legs)

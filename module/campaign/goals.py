@@ -207,6 +207,8 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
             if goal is None:
                 goal = {'kind': 'none', 'reason': 'blocked_by_curtain', 'blocked_by': detour['culprits'],
                         'for_target': detour['target']}
+    if goal is None and purpose == 'story' and state.route_goal is not None:
+        goal, rejected = nearest_enemy(state, cut, squad)
     if goal is None:
         goal = elevator_goal(state, chart, cut, squad, candidates)
     if goal is None and purpose == 'story' and state.route_goal is not None:

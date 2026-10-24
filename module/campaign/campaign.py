@@ -438,7 +438,7 @@ class Campaign(ModuleBase):
                            purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
         self.last_goal = goal
         from module.campaign.route_planning import planning_routes
-        self.last_routes = planning_routes(self.cut, snapshot, goal, self.state.route_goal)
+        self.last_routes = planning_routes(self.cut, snapshot, goal, self.state.route_goal, state=self.state)
         self.last_route_signature = self.cut.signature
         if self.state.route_goal is not None:
             destination = self.state.route_goal

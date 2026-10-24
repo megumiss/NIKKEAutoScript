@@ -1,14 +1,16 @@
-"""主线标记的镜头定位与敌人身份确认；不点击地面、不触发战斗。"""
+"""主线标记的镜头定位、敌人身份确认与无敌人地面目的地回退；定位阶段不发送移动点击。"""
 
 import cv2
 import numpy as np
 
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation.camera_navigation import compact_viewport, pan_scene
+from module.campaign.vision.barriers import scene_anchor
 from module.campaign.vision.enemy_ring import match_target_ring, observe_rings, scene_tracks
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import compact_road_masks, squad_arrow
 from module.campaign.vision.story_marker import marked_ring, story_markers
+from module.campaign.vision.surface_motion import project
 from module.logger import logger
 
 MAX_PANS = 4
@@ -32,7 +34,23 @@ def story_frame(session, squad):
         return None
     rings = observe_rings(field, panel, view['matrix'], view['viewport'], observe_squad=False)
     ring = marked_ring(markers, rings.centers)
-    return dict(field=field, rings=rings, ring=ring, scale=view['a'])
+    view.update(panel_size=list(panel.shape[1::-1]), roi_to_map=view['matrix'])
+    return dict(field=field, rings=rings, ring=ring, scale=view['a'], view=view)
+
+
+def story_ground(frame):
+    """把菱形下方唯一地面环投到底图，供没有小地图敌人的主线目标使用。
+
+    只接受同帧已接受配准与视口锚点，不使用悬浮菱形中心，也不跨帧套用场景矩阵。
+    投影误差由原有道路端点吸附和到点闭环复核；缺少地面环时返回 None。
+    """
+    if frame is None or frame['ring'] is None:
+        return None
+    anchor = scene_anchor(frame['field'], None, frame['view'])
+    if anchor is None:
+        return None
+    chart, _ = anchor
+    return project(chart, frame['ring'])
 
 
 def story_enemy_between(before, after, squad):
@@ -96,16 +114,17 @@ def reveal_story_marker(session):
 
 
 def locate_story_target(session, squad):
-    """有限平移确认主线敌人，成功写入运行记忆；失败冷却后沿用普通推进，不猜测身份。
+    """有限平移优先确认主线敌人；无对应敌人时把菱形下方唯一地面环记为独立路程目的地。
 
     优先利用拖动前后两帧，最多四次平移；只向已识别的脚圈调整镜头，不按悬浮标记做地图投影。
     小队不可定位且离屏标记也未确认时禁止拖动，以免按下点落在小队上变成走位。
-    此处只找路程目的地，实际敌人点击仍使用原导航的 0.7 脚圈辅助。
+    地面回退使用最后一次可靠帧的同帧视口锚点；没有地面环或投影越界时才进入失败冷却。
     """
     state = session.owner.state
     session.begin_target('story_location')
     goto.map_close(session.win)
     changed = False
+    before = None
     try:
         changed = reveal_story_marker(session)
         before = story_frame(session, squad)
@@ -143,8 +162,18 @@ def locate_story_target(session, squad):
                                 f'镜头平移 {attempt + 1} 次。')
                     return changed
             before = after
+        position = story_ground(before)
+        if (position is not None and np.isfinite(position).all()
+                and np.all(position >= 0) and np.all(position < state.size)):
+            position = position.tolist()
+            state.route_goal = dict(kind='story', id='story-marker', position=position,
+                                    reason='main_story_location')
+            state.cooldowns.pop('story-location', None)
+            logger.info(f'主线标记没有可确认的小地图敌人，已将其下方地面环设为路程目标：'
+                        f'底图位置 {np.round(position, 1).tolist()}。')
+            return changed
     except (ValueError, cv2.error, np.linalg.LinAlgError) as exc:
         logger.info(f'主线标记对应关系未确认：{exc}。')
     state.penalize('story-location')
-    logger.info('主线标记未能唯一对应小地图敌人，已记录失败冷却，保留普通敌人推进策略。')
+    logger.info('主线标记未能确认敌人或下方地面位置，已记录失败冷却，保留普通敌人推进策略。')
     return changed

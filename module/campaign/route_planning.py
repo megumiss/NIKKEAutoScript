@@ -43,18 +43,19 @@ def refresh_route(state, chart, snapshot, cut):
 
     已知开启和导航已到点的机关均排除；未知机关仅在小队沿道路接近时补踩。
     场景发现的未开启机关还要求有邻近脚圈证据及道路邻近敌人，不能仅凭屏幕距离抢占。
-    主线只使用已通过场景与小地图身份核验的稳定敌人编号，漏一帧标记不丢弃目的地。
+    主线可使用已核验的稳定敌人编号，或菱形下方唯一地面环的投影位置；漏一帧标记不丢弃目的地。
     """
     current = state.route_goal
     if current is not None:
+        story_point = current['kind'] == 'story' and current['id'] not in state.enemies
         done = (state.mechanisms.get(current['id'], {}).get('state') == 'on'
                 if current['kind'] == 'mechanism'
-                else state.enemies.get(current['id'], {}).get('status') != 'pending')
+                else False if story_point else state.enemies.get(current['id'], {}).get('status') != 'pending')
         if done:
             state.route_branches.pop((current['kind'], current['id']), None)
         if done or state.cooling(current['id']):
             current = None
-        elif current['kind'] == 'story':
+        elif current['kind'] == 'story' and not story_point:
             enemy = state.enemies[current['id']]
             current = (dict(current, position=enemy['position'], enemy_kind=enemy['kind'])
                        if enemy['kind'] in COMBAT_ENEMY_KINDS else None)
@@ -134,7 +135,8 @@ def route_action(state, cut, squad, destination):
 
     已选敌人不按距离拆段，交导航处理目标入屏与脚圈确认；跨越最终目标的换边绕行仍保留安全短段。
     只有最后一段机关使用 mechanism 类型，短段到达不能提前把机关记为开启。
-    主线目的地始终以敌人身份执行，战斗归属不因路程层变成 story 而丢失。
+    已绑定敌人的主线目的地以敌人身份执行，战斗归属不因路程层变成 story 而丢失；
+    无敌人目的地保留 story 类型，到点后清除该段路程目标。
     汇合段两侧未清完不能离开，远处支路敌人沿自身路径执行，不能继续向目的地走。
     不可达时交回光幕／电梯规划。
     """
@@ -167,8 +169,8 @@ def route_action(state, cut, squad, destination):
         return dict(kind='advance', id=identifier, position=point.tolist(), distance=round(float(distances[index]), 1),
                     reason='advance_on_route', for_target=destination['id'])
     goal = dict(destination, distance=round(float(distances[-1]), 1))
-    if goal['kind'] == 'story':
-        goal.update(kind='enemy', enemy_kind=destination.get('enemy_kind', 'normal'), reason='main_story_marker')
+    if goal['kind'] == 'story' and destination.get('enemy_kind') in COMBAT_ENEMY_KINDS:
+        goal.update(kind='enemy', reason='main_story_marker')
     return goal
 
 
@@ -209,21 +211,28 @@ def branch_detour(state, cut, squad, enemy, destination):
     return dict(kind='none', reason='route_branch_unavailable', for_target=destination['id'])
 
 
-def planning_routes(cut, snapshot, goal, destination=None):
+def planning_routes(cut, snapshot, goal, destination=None, state=None):
     """提供当前决策的实际道路折线，区分本段执行路线和最终目的地路线。
 
     仅接受可信小队起点，复用规划器同一切开图和端点吸附检查；不可达时留空，绝不画直线穿过封锁。
-    电梯本段只画到入口，传送连线由设施层展示。每次决策重建，避免换目标或换章后显示旧路径。
+    电梯本段从当前位置画到入口，目的地路线从出口起算，传送连线由设施层展示。
+    小目标不是电梯时，state 用于只读查找目的地需要的电梯，保证最终路线不随小目标切换消失。
+    没有可执行小目标时仍保留可达的目的地路线。每次决策重建，避免换目标或换章后显示旧路径。
     """
     from module.campaign.run_state import located
+    from module.campaign.subgoals import elevator_goal
 
     routes = {}
-    if not located(snapshot) or snapshot.get('squad') is None or not goal or goal.get('kind') == 'none':
+    if not located(snapshot) or snapshot.get('squad') is None:
         return routes
+    transfer = goal if goal and goal.get('kind') == 'elevator' else None
+    if transfer is None and destination is not None and state is not None:
+        transfer = elevator_goal(state, cut.chart, cut, snapshot['squad'], [destination])
     for kind, target in (('execution', goal), ('destination', destination)):
-        if not target or target.get('position') is None:
+        if not target or target.get('position') is None or target.get('kind') == 'none':
             continue
-        route = route_path(cut, snapshot['squad'], target['position'])
+        start = transfer['leg']['exit'] if kind == 'destination' and transfer is not None else snapshot['squad']
+        route = route_path(cut, start, target['position'])
         if route is None:
             continue
         path, distances = route

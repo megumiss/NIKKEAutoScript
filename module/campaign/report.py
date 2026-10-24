@@ -17,6 +17,7 @@ GOAL_REASONS = {
     'nearby_unseen_mechanism': '接近已标注机关，当前未检测到开关状态',
     'nearby_closed_mechanism': '未开启机关位于小队或敌人附近',
     'main_story_marker': '主线菱形标记已对应到小地图敌人',
+    'main_story_location': '主线菱形下方地面位置已确认',
     'enemy_on_route': '路程前方需要处理的敌人',
     'advance_on_route': '沿路程短段推进后重新判断',
     'route_enemy_unavailable': '沿途敌人冷却或不可执行，不能越过',

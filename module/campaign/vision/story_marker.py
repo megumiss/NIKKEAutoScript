@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 # 模板来自 1776×999 现场截图；颜色只提候选，最终必须通过白底黑感叹号模板。
-MATCH_THRESHOLD = .82
+MATCH_THRESHOLD = .7
 CLIENT_SIZE = (1776, 999)
 HUD_RECTS = ((0, 0, 1776, 70), (0, 70, 245, 310), (1490, 70, 1776, 205), (0, 900, 1776, 999))
 
