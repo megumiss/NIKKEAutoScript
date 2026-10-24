@@ -230,6 +230,8 @@ Tool:
   page: 'tool'
   icon: 'designtools'
   tasks:
+    AutoMainStory: []
+    AutoMainCollectible: []
     AutoTower:
       - AutoTower
     SemiCombat:

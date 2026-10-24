@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from filelock import FileLock
 
 from deploy.utils import poor_yaml_read
+from module.logger import logger
 
 STATE_FILE = './config/serial/state.json'
 STATE_DIR = './config/serial'
@@ -85,6 +86,27 @@ def read_serial_config(file=DEPLOY_FILE):
     if idle_threshold < 1:
         idle_threshold = 1
     return SerialConfig(enable, group, on_error, idle_threshold)
+
+
+def clear_serial_failed(name):
+    """手动启动实例时清除其串行失败标记，并解除全组停止状态。
+
+    仅对已启用且属于串行组的实例生效；非串行实例不读写状态文件。
+    返回是否实际清除了失败或停止标记，未清除任何标记时不输出重复日志。
+    """
+    config = read_serial_config()
+    if not config.enable or name not in config.group:
+        return False
+
+    def _fn(s):
+        cleared = s['failed'].pop(name, None) is not None or bool(s.get('halted'))
+        s['halted'] = False
+        return cleared
+
+    if modify_state(_fn):
+        logger.info(f'Instance "{name}" manually started, cleared serial failed/halted marks')
+        return True
+    return False
 
 
 def current_cycle(now=None):

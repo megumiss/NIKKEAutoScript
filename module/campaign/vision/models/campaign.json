@@ -1,0 +1,128 @@
+{
+  "schema_version": 2,
+  "format": "yolo11-detect-bcn-fp32",
+  "version": "v9-boss",
+  "labels": [
+    "scene_squad_arrow",
+    "scene_collectible_indicator",
+    "minimap_enemy_normal",
+    "minimap_enemy_ex",
+    "minimap_squad_ring",
+    "scene_ground_mechanism_off",
+    "scene_ground_mechanism_on",
+    "scene_elevator_start",
+    "scene_elevator_end",
+    "scene_barrier_curtain",
+    "scene_barrier_pillar",
+    "scene_enemy_ring",
+    "minimap_enemy_boss"
+  ],
+  "input_size": 640,
+  "input_shape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "output_shape": [
+    1,
+    17,
+    8400
+  ],
+  "input_name": "images",
+  "output_name": "output0",
+  "color": "RGB",
+  "normalization": "float32 / 255",
+  "layout": "NCHW",
+  "box_format": "cx,cy,w,h in input pixels",
+  "output_scores": "13 class probabilities; no separate objectness; NMS is external",
+  "thresholds": {
+    "scene_squad_arrow": 0.5,
+    "scene_collectible_indicator": 0.5,
+    "minimap_enemy_normal": 0.5,
+    "minimap_enemy_ex": 0.5,
+    "minimap_squad_ring": 0.5,
+    "scene_ground_mechanism_off": 0.5,
+    "scene_ground_mechanism_on": 0.5,
+    "scene_elevator_start": 0.7,
+    "scene_elevator_end": 0.5,
+    "scene_barrier_curtain": 0.5,
+    "scene_barrier_pillar": 0.5,
+    "scene_enemy_ring": 0.7,
+    "minimap_enemy_boss": 0.5
+  },
+  "minimap": {
+    "input": "Cropped compact or expanded panel",
+    "resize": "aspect-preserving",
+    "padding": "centered RGB 114",
+    "rounding": "round size, floor left/top",
+    "classwise_nms_iou": 0.45,
+    "class_selection": "argmax across all model classes",
+    "labels": [
+      "minimap_enemy_normal",
+      "minimap_enemy_ex",
+      "minimap_squad_ring",
+      "minimap_enemy_boss"
+    ]
+  },
+  "scene": {
+    "size": [
+      1776,
+      999
+    ],
+    "tile_size": 640,
+    "x_offsets": [
+      0,
+      384,
+      768,
+      1136
+    ],
+    "y_offsets": [
+      0,
+      359
+    ],
+    "internal_edge_margin": 2,
+    "classwise_nms_iou": 0.45
+  },
+  "sha256": "a0176da8335fa22fbd3cd8cb1872bc7ec030e06d6a9ea7935c2aed76a322c3cb",
+  "checkpoint_sha256": "56499e5b5d810ae5c17659224068974db668c510e665887f6e09914ba093f293",
+  "source_checkpoint": "runs\\campaign_v9_boss_20261019\\weights\\last.pt",
+  "versions": {
+    "ultralytics": "8.3.230",
+    "torch": "2.9.1+cu128",
+    "torchvision": "0.24.1+cu128",
+    "onnx": "1.17.0",
+    "onnxruntime": "1.19.2",
+    "numpy": "1.26.4",
+    "Pillow": "12.3.0"
+  },
+  "exported_at_utc": "2026-10-19T15:42:44.960351+00:00",
+  "acceptance": "regression_only_no_independent_scoped_holdout",
+  "application_integration": "Thirteen classes integrated; Boss is a distinct combat target. Enemy ring threshold remains 0.7. In-game validation pending.",
+  "status": "application_integrated_pending_game_validation",
+  "source_release": {
+    "version": "v9-boss",
+    "status": "candidate_not_deployed",
+    "classes": 13,
+    "new_class": {
+      "index": 12,
+      "label": "minimap_enemy_boss"
+    },
+    "checkpoint_sha256": "56499e5b5d810ae5c17659224068974db668c510e665887f6e09914ba093f293",
+    "onnx_sha256": "a0176da8335fa22fbd3cd8cb1872bc7ec030e06d6a9ea7935c2aed76a322c3cb",
+    "training_epochs": 30,
+    "training_config": "configs/train-v9.json",
+    "data": "data/datasets/v9-boss",
+    "report": "reports/v9-boss-summary/README.md",
+    "comparison": "reports/v9-boss-summary/index.html",
+    "independent_boss_holdout": 0,
+    "annotation_review": "Codex visual review; not user-confirmed",
+    "default_model": "v8",
+    "known_regressions": [
+      "At default thresholds, curtain false positives 1 to 2; elevator end 0 to 1.",
+      "Historical minimap has residual misses and false positives; see report."
+    ],
+    "post_training_evaluation_corrections": "reports/v9-evaluation-review/review.json",
+    "verification": "reports/v9-boss-summary/verification.json"
+  }
+}

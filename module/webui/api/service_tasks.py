@@ -1,5 +1,6 @@
 """Task actions with the same scheduling semantics as the automation loop."""
 
+from module.config.serial_state import clear_serial_failed
 from module.config.utils import filepath_args, read_file
 from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, load_config
 from module.webui.process_manager import ProcessManager
@@ -34,4 +35,5 @@ class TaskService:
         if manager.alive:
             return {'task': task, 'already_running': True}
         manager.start(task, ev=updater.event)
+        clear_serial_failed(config_name)
         return {'task': task, 'started': True}

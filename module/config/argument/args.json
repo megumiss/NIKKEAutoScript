@@ -4059,6 +4059,26 @@
       }
     }
   },
+  "AutoMainStory": {
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "AutoMainCollectible": {
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "AutoTower": {
     "AutoTower": {
       "Enable": {
