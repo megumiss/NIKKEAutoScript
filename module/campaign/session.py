@@ -1049,6 +1049,44 @@ class CampaignSession(NavigationSession):
             goto.map_close(self.win)
         return snapshot
 
+    def reset_navigation(self):
+        """清除异常前的位置与镜头证据，保留章节资源、任务时限和累计输入计数。
+
+        回正前与重新定位前调用，防止 snapshot 自动沿用冻结小队坐标或战前定位；镜头增益、
+        箭头与光幕参考帧也不能跨异常复用。敌人清除、机关和道路记忆由执行层保留。
+        """
+        self.last_registration = None
+        self.localized_report = None
+        self.reuse_squad = False
+        self.anchor_reference = None
+        self.anchor_reference_method = None
+        self.barrier_references = []
+        self.camera_gain = 1.
+        self.last_plan_enemy_ring = False
+        self.scout_failure = None
+        self.owner.last_snapshot = None
+
+    def recover_center(self):
+        """独立回正小队并取得全新实测定位；失败时不把旧位置降级为可用。
+
+        回正与重新定位各使用一个单目标输入窗口，章节时限不重置；前者不发送小队移动。
+        新快照必须来自实际小队圆环并通过既有配准门限，定位重试后仍须居中才能进入恢复扫描。
+        """
+        from module.campaign.navigation.recovery import centered, centering_frame, recenter_squad
+
+        self.reset_navigation()
+        self.begin_target('recovery')
+        icon_clicked = recenter_squad(self)
+        self.reset_navigation()
+        self.begin_target('position')
+        snapshot = self.snapshot()
+        if (snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
+                or snapshot.get('squad_source') == 'known'):
+            raise ValueError('小队回正后的实测定位未通过，不能恢复十字扫描。')
+        if not centered(centering_frame(self), icon_clicked=icon_clicked):
+            raise ValueError('重新定位后镜头偏离小队，不能以偏移视野开始恢复扫描。')
+        return snapshot
+
     def scout_begin(self):
         """侦察前确保地图已展开；沿用补视野面板，不为回正额外收起再开。
 
@@ -1200,6 +1238,7 @@ class CampaignSession(NavigationSession):
                     logger.warning('开局扫描拖回后视野仍无法配准，提前结束扫描。')
                     break
         except InputBudgetExceeded:
+            self.check()
             # 兜底：阶段预算在执行层翻篇（见 scan_start），这里只保证异常不扩散、已扫部分有效。
             logger.info(f'开局扫描达到单目标输入预算，保留已扫描的 {scanned} 屏。')
         return scanned

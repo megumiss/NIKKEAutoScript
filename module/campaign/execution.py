@@ -24,6 +24,8 @@ from module.logger import logger
 # 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。
 CAMPAIGN_TICK_BUDGET = 48
 TARGET_MOVES = 12
+# 每章共享恢复次数，恢复后不清零，防止反复回正扫描却无实际推进。
+CAMPAIGN_RECOVERY_LIMIT = 3
 # 复核站位上最多连看的紧凑帧数：箭头锚点、配准或检测偶发失手会让单帧不可信，换一帧往往就能看清；
 # 连看都不可信才算这次复核失败。
 REVIEW_FRAMES = 3
@@ -100,6 +102,7 @@ class CampaignExecutor:
         # 否则打死的敌人会留在 pending，下一拍白走一趟。
         self.last_executed = None
         self.scout_pending = None
+        self.recoveries = 0
 
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
@@ -154,7 +157,7 @@ class CampaignExecutor:
             state.penalize(f"review-{goal['id']}", failure=False)
 
     def execute(self, goal):
-        """执行一个目标并回写结果；普通移动失败进入冷却，安全失败直接向外传播。
+        """执行一个目标并回写结果；剧情移动失败交给回正恢复，安全失败直接向外传播。
 
         派发与结束各一行，带上落点、预计距离、移动次数、本目标消耗的输入次数与耗时：
         同一个目标在共享闭环里会打十几行进度，这两行是把它们括起来的边界。
@@ -201,12 +204,16 @@ class CampaignExecutor:
             logger.warning(f"{goal_brief(goal)} 执行失败，已记一次失败并冷却：{exc}；"
                            f"耗时 {watch}，本目标操作 {self.session.target_inputs} 次")
             self.session.preview(self.session.win.client())
+            if self.purpose == 'story':
+                raise
             return
         self.owner.state.execution_target = None
         if result.get('state') != 'arrived':
             self.owner.state.penalize(goal['for_target'] if kind == 'advance' else goal['id'])
             logger.warning(f"{goal_brief(goal)} 未确认触发：{describe_result(result)}；"
                            f"耗时 {watch}，本目标操作 {self.session.target_inputs} 次")
+            if self.purpose == 'story':
+                raise RuntimeError(f'移动未完成：{describe_result(result)}')
             return
         if kind == 'mechanism':
             self.owner.state.mark_tried(goal['id'], goal.get('block'))
@@ -225,7 +232,8 @@ class CampaignExecutor:
             self.session.anchor_reference = None
             self.session.anchor_reference_method = None
             logger.info(f"电梯 {goal['id']} 已确认传送成功，执行一次十字扫描后重新选择目标。")
-            self.scan_start('电梯后')
+            if not self.scan_start('电梯后') and self.purpose == 'story':
+                raise RuntimeError('电梯后十字扫描未取得可信视野。')
         elif kind == 'explore':
             # 到点不是观察成功：只记短冷却，新快照自行更新观测覆盖。
             self.owner.state.penalize(goal['id'])
@@ -389,9 +397,9 @@ class CampaignExecutor:
         return settled
 
     def scan_start(self, scene='开局'):
-        """按场景名扫描小队周围，把敌人一次收齐；扫描本身失败只告警，不影响后续推图。
+        """按场景名十字扫描小队周围，返回可信屏数，零屏由剧情执行层触发恢复。
 
-        开局及电梯传送后共用中心与四向扫描。扫描是内部有界的批量阶段，不是同一目标上的原地空转，
+        开局、电梯传送后与异常恢复共用中心与四向扫描。扫描是内部有界的批量阶段，不是同一目标上的原地空转，
         所以阶段结束即翻篇：收起地图与刷新快照的收尾输入记入新预算窗口，
         不与扫描叠加触发单目标上限。安全异常（窗口、弹窗、取消）不捕获，
         与侦察一致：此时不补发收起地图的输入。
@@ -399,14 +407,49 @@ class CampaignExecutor:
         self.session.begin_target('scout')
         self.session.scout_begin()
         watch = Stopwatch()
+        scanned = 0
         try:
             scanned = self.session.scan_explored()
+        except (TargetTriggered, WindowChanged, InputBudgetExceeded):
+            raise
         except (RuntimeError, ValueError) as exc:
-            logger.warning(f'{scene}扫描未能完成（{exc}），按未扫描继续。')
+            logger.warning(f'{scene}扫描未能完成（{exc}），本轮不采纳扫描结果。')
         else:
             logger.info(f'{scene}扫描完成：{scanned} 屏，耗时 {watch}')
         self.session.begin_target('position')
         self.session.scout_end()
+        return scanned
+
+    def recover(self, reason):
+        """清除本轮临时决策，独立回正并从十字扫描重新开始；每章最多恢复三次。
+
+        已清除敌人、机关、电梯、光幕和道路事实保留，失败目标的冷却不重置；只解除镜头侦察的
+        临时失败与主线标记定位冷却，允许新视野重新确认。恢复过程仍受原输入及时限闸门约束，
+        任何失败交回主循环处理；回正、定位或扫描未通过时不能继续使用异常前的目标。
+        """
+        if self.recoveries >= CAMPAIGN_RECOVERY_LIMIT:
+            raise RuntimeError('主线自动恢复次数已达上限。')
+        self.recoveries += 1
+        self.session.record('recovery_start', force=True, attempt=self.recoveries, reason=reason)
+        logger.warning(f'主线自动恢复开始：第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，原因 {reason}。')
+        state = self.owner.state
+        state.execution_target = None
+        state.route_goal = None
+        state.unscoutable.clear()
+        for identifier in list(state.cooldowns):
+            if identifier.startswith('scout-') or identifier == 'story-location':
+                state.cooldowns.pop(identifier)
+        self.scout_pending = None
+        self.owner.last_goal = None
+        self.owner.last_routes = None
+        self.owner.last_route_signature = None
+        snapshot = self.session.recover_center()
+        state.update(snapshot, advance=False)
+        self.owner.cut.update(state.blocking())
+        if not self.scan_start('恢复后'):
+            raise RuntimeError('回正后的十字扫描未取得可信视野。')
+        self.session.record('recovery_complete', attempt=self.recoveries)
+        logger.info(f'主线自动恢复完成：第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，下一轮重新选择目标。')
 
     def confirm_barriers_safe(self, snapshot):
         """确认当前可见光幕；确认失败时保留原快照与既有路网，不终止推图。
@@ -430,25 +473,18 @@ class CampaignExecutor:
         EX 弹窗）仍然直接停止；战斗接管自身的上限与连续战败会抛出安全异常，同样交人工。
         找主线敌人和侦察阶段冻结已有小队底图坐标，只重新配准镜头与敌人；跨轮侦察同样不要求
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
+        剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、输入预算、取消
+        和战斗失败仍立即停止。每章恢复次数有界，不能靠不断重置阶段预算无限重试。
         每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：整条推图日志因此能按轮切分，
         把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
         """
         goal, snapshot = None, initial
         camera_options = {}
+        recovery_reason = None
         total = Stopwatch()
         try:
             self.session.start()
             self.session.record('initial_snapshot', snapshot=initial)
-            if self.purpose == 'story' and located(initial) and initial.get('squad') is not None:
-                # 开局先把已探索区域扫一遍：敌人一次收齐，首轮决策就有全局候选。
-                # 小队未动，刷新快照失败（含扫描耗尽预算）时沿用准备阶段的初始观测。
-                self.scan_start()
-                try:
-                    refreshed = self.session.snapshot()
-                except InputBudgetExceeded:
-                    refreshed = None
-                if refreshed is not None and located(refreshed):
-                    initial = refreshed
             if initial.get('localization') == 'accepted' and initial.get('squad') is not None:
                 # 准备阶段与首轮之间没有移动，小队坐标可直接约束第一次展开配准。
                 self.session.remember_registration(initial['squad'], initial.get('roi_to_map'),
@@ -463,10 +499,22 @@ class CampaignExecutor:
                 try:
                     self.session.begin_target('collectible' if self.purpose == 'collectible' else 'position')
                     self.session.check()
+                    if recovery_reason is not None:
+                        camera_options = {}
+                        self.recover(recovery_reason)
+                        recovery_reason = None
+                        goal = None
+                        continue
                     if index:
                         snapshot = self.session.snapshot(**camera_options)
                     else:
                         self.session.identity(self.session.win.client())
+                        if self.purpose == 'story' and located(initial) and initial.get('squad') is not None:
+                            if not self.scan_start():
+                                raise RuntimeError('开局十字扫描未取得可信视野。')
+                            snapshot = self.session.snapshot()
+                    if self.purpose == 'story' and (not located(snapshot) or snapshot.get('squad') is None):
+                        raise RuntimeError('当前小队定位不可用，停止本轮目标选择。')
                     if curtains(snapshot):
                         snapshot = self.confirm_barriers_safe(snapshot)
                         camera_options = ({'known_squad': list(snapshot['squad'])}
@@ -518,12 +566,16 @@ class CampaignExecutor:
                         pending = self.scout_pending
                         failures = self.owner.state.cooldowns.get(pending['id'], {}).get('failures', 0)
                         if failures >= MAX_FAILURES:
+                            if self.purpose == 'story':
+                                raise RuntimeError(f"前置道路 {pending['id']} 累计 {failures} 次未能确认。")
                             logger.warning(f"前置道路 {pending['id']} 累计 {failures} 次未能确认，停止推图并请求人工接管。")
                             return {'state': 'needs_review', 'reason': 'scouting_incomplete',
                                     'goal': goal, 'focus': pending}
                         logger.info(f"前置道路尚未确认（{pending['id']}），小队保持原位，下一轮继续侦察。")
                         continue
                     if goal is None or goal['kind'] == 'none':
+                        if self.purpose == 'story':
+                            raise RuntimeError(describe(goal) if goal else '无目标规划结果')
                         logger.warning(f'停止推图：{describe(goal) if goal else "无目标规划结果"}')
                         return {'state': 'needs_review', 'goal': goal}
                     self.session.record('decision', goal=goal, snapshot=snapshot)
@@ -537,6 +589,20 @@ class CampaignExecutor:
                                 f'{goal_brief(self.last_executed)}')
                     camera_options = {}
                     self.battle(self.last_executed)
+                except (WindowChanged, InputBudgetExceeded, BattleFailed):
+                    raise
+                except (RuntimeError, ValueError) as exc:
+                    if self.purpose != 'story':
+                        raise
+                    camera_options = {}
+                    recovery_reason = str(exc)
+                    self.session.record('recovery_required', force=True, reason=recovery_reason,
+                                        attempt=self.recoveries, goal=goal)
+                    if self.recoveries >= CAMPAIGN_RECOVERY_LIMIT:
+                        logger.warning(f'主线自动恢复已达 {CAMPAIGN_RECOVERY_LIMIT} 次上限，停止执行：{exc}')
+                        return {'state': 'needs_review', 'reason': 'recovery_limit',
+                                'error': recovery_reason, 'goal': goal}
+                    logger.warning(f'主线本轮异常，下一轮回正并重扫：{exc}')
                 finally:
                     logger.info(f'第 {index + 1}/{ticks} 轮结束：本轮耗时 {watch}，'
                                 f'累计操作 {self.session.inputs} 次')
