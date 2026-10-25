@@ -1,11 +1,13 @@
 """YOLO ONNX inference in image coordinates; this module never sends game input."""
 
+from collections import OrderedDict
 from dataclasses import dataclass
 from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
 import threading
+import weakref
 
 import cv2
 import numpy as np
@@ -21,6 +23,8 @@ LABELS = LEGACY_SCENE_LABELS + MINIMAP_LABELS + GRID_LABELS
 MODEL_DIRECTORY = Path(__file__).parent / 'models'
 EDGE_MARGIN = 2
 NMS_IOU = .45
+# 缓存原始输出而非过滤后的检测；24 片覆盖一帧场景和小地图，容量不随运行时间增长。
+INFERENCE_CACHE_SIZE = 24
 
 
 @dataclass(frozen=True)
@@ -45,6 +49,16 @@ class Detection:
         return (np.asarray(self.box[:2]) + self.box[2:]) / 2
 
 
+def image_size(image):
+    """校验推理输入并返回高宽，空图或非 uint8 BGR 图不允许进入预处理与缓存。"""
+    if image is None or image.ndim != 3 or image.shape[2] != 3 or image.dtype != np.uint8:
+        raise ValueError('YOLO expects a non-empty uint8 BGR image.')
+    height, width = image.shape[:2]
+    if min(height, width) == 0:
+        raise ValueError('YOLO received an empty image.')
+    return height, width
+
+
 def letterbox(image, size):
     """把任意尺寸的 BGR 图填成正方形输入张量，并返回还原检测框所需的缩放与偏移。
 
@@ -52,11 +66,7 @@ def letterbox(image, size):
     图像居中而非贴左上，所以还原框时必须先减 padding 再除以 scales，顺序颠倒会整体偏移。
     返回的 scales 按宽高分开给，因为 round 之后两个方向的实际比例可能差一个像素。
     """
-    if image is None or image.ndim != 3 or image.shape[2] != 3 or image.dtype != np.uint8:
-        raise ValueError('YOLO expects a non-empty uint8 BGR image.')
-    height, width = image.shape[:2]
-    if min(height, width) == 0:
-        raise ValueError('YOLO received an empty image.')
+    height, width = image_size(image)
     scale = min(size / width, size / height)
     resized = (round(width * scale), round(height * scale))
     left, top = (size - resized[0]) // 2, (size - resized[1]) // 2
@@ -173,6 +183,7 @@ class Detector:
             raise ValueError('Campaign YOLO raw output contract mismatch.')
         self.input_name, self.output_name = inputs[0].name, outputs[0].name
         self.lock = threading.Lock()
+        self.inference_cache = OrderedDict()
 
     def scene_contract(self, scene):
         """校验模型包声明的全画面网格；边界余量和 NMS 阈值必须与本模块实现一致。"""
@@ -197,17 +208,33 @@ class Detector:
             raise ValueError(f'Campaign YOLO model lacks classes: {", ".join(missing)}.')
         return {label: self.thresholds[label] for label in labels}
 
-    def predict(self, image, labels=None, guards=(True, True, True, True)):
+    def predict(self, image, labels=None, guards=(True, True, True, True), frame=None):
         """对一张图推理，返回该图像素坐标下的检测结果。
 
         labels 为 None 时用模型声明的全部类别；给出子集只是收紧阈值，类别判定仍按全类 argmax，
         不会在子集上重新取最大值。
         guards 按左、上、右、下指出哪些边是切片内部边界，整图推理时应保持默认全真。
+        frame 是切片所属的原始截图；省略时以 image 自身为边界。只在同一截图对象内复用
+        像素完全一致的输入，原地改图会使摘要改变，新截图即使像素相同也重新推理。
+        缓存只保存原始模型输出，每次仍按当前 labels、阈值与 guards 独立解码；弱引用避免
+        留住整幅截图，也防止对象销毁后 id 被复用。缓存与推理共用会话锁，淘汰只影响耗时。
         """
         thresholds = self.thresholds if labels is None else self.selected(labels)
-        tensor, scales, padding = letterbox(image, self.size)
+        height, width = image_size(image)
+        source = image if frame is None else frame
+        key = (id(source), height, width, hashlib.sha256(np.ascontiguousarray(image)).digest())
         with self.lock:
-            result = self.session.run([self.output_name], {self.input_name: tensor})[0]
+            cached = self.inference_cache.get(key)
+            if cached is not None and cached[0]() is source:
+                _, result, scales, padding = cached
+                self.inference_cache.move_to_end(key)
+            else:
+                tensor, scales, padding = letterbox(image, self.size)
+                result = self.session.run([self.output_name], {self.input_name: tensor})[0]
+                self.inference_cache[key] = (weakref.ref(source), result, scales, padding)
+                self.inference_cache.move_to_end(key)
+                while len(self.inference_cache) > INFERENCE_CACHE_SIZE:
+                    self.inference_cache.popitem(last=False)
         return decode(result, scales, padding, thresholds, image.shape, self.labels, guards)
 
 
@@ -259,7 +286,7 @@ def detect_scene(image, labels=LEGACY_SCENE_LABELS):
     """
     detections = []
     for tile, offset in scene_tiles(image):
-        for item in detector().predict(tile, labels):
+        for item in detector().predict(tile, labels, frame=image):
             box = tuple(np.asarray(item.box) + np.tile(offset, 2))
             detections.append(Detection(item.label, item.confidence, box))
     return suppress(detections)
@@ -295,7 +322,7 @@ def detect_grid(image, labels=GRID_LABELS):
     """
     detections = []
     for tile, offset, guards in grid_tiles(image):
-        for item in detector().predict(tile, labels, guards):
+        for item in detector().predict(tile, labels, guards, frame=image):
             box = tuple(np.asarray(item.box) + np.tile(offset, 2))
             detections.append(Detection(item.label, item.confidence, box))
     return suppress(detections)
