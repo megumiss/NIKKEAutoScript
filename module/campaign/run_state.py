@@ -159,7 +159,7 @@ class RunState:
         minimap = snapshot.get('minimap') or {}
         if minimap.get('mode') == 'compact':
             changes.update(self._absorb_blocks(snapshot.get('blocks') or [], quad,
-                                              can_clear=snapshot.get('barriers_observed', True),
+                                              can_clear=snapshot.get('barriers_observed', False),
                                               checked_ids=snapshot.get('barrier_checks')))
             self._absorb_mechanisms(snapshot.get('mechanisms') or [])
         for identifier in list(self.pending_reviews):
@@ -253,7 +253,7 @@ class RunState:
         新可靠视野已覆盖而未检出的旧位置在本拍暂停复核，下一拍仍可重查；保留原记录，
         不认定已清除。
         与本拍同类确认点相邻的线索仅暂时隐藏，不能据此合并两只相邻敌人。
-        冷却及暂不可扫的复核位置由侦察模块另行限制。
+        这些线索仅用于展示，不生成侦察任务，也不阻止当前目标执行。
         """
         confirmed = self.confirmed_enemies()
         identifiers = {record['id'] for record in confirmed}
@@ -284,8 +284,8 @@ class RunState:
         """更新光幕封锁的三态；返回新增、刷新与判定解除的编号。
 
         预标注光幕按 annotation_id 保持稳定身份；无标注光幕按距离配对到既有封锁，刷新为 active；
-        既有封锁没被配对时分两种：封锁点在本帧视野内（且离边界有余量）说明该看到却没看到，
-        判 cleared；不在视野内只能判 stale，等规划要穿过它时再去复核。
+        既有封锁未被配对时保持原状态、几何和时间戳；漏检、截边或关联失败都不是状态变化证据。
+        只有 can_clear 为真且封锁点在本帧视野内（离边界有余量），才允许记为 cleared。
         checked_ids 存在时只允许解除经过居中复核的指定编号，不能用一处光幕的证据清除整屏封锁。
         """
         added, refreshed, cleared = [], 0, []
@@ -320,8 +320,6 @@ class RunState:
                 record['status'] = 'cleared'
                 record['cleared_at'] = self.tick
                 cleared.append(identifier)
-            else:
-                record['status'] = 'stale'
         return {'blocks_added': added, 'blocks_refreshed': refreshed, 'blocks_cleared': cleared}
 
     def _nearest_block(self, point, taken):
@@ -356,7 +354,7 @@ class RunState:
     def pending_enemies(self):
         """可直接执行的敌人：本拍已确认或独立绑定，且待清、不在冷却中。
 
-        历史位置不进入战斗候选，只由 enemy_hints 提供给补视野侦察。
+        历史位置不进入战斗候选；enemy_hints 仅用于展示，不要求为历史位置补做侦察。
         """
         return [record for record in self.confirmed_enemies()
                 if record['status'] == 'pending' and not self.cooling(record['id'])]

@@ -19,7 +19,7 @@ PAN_DRAG_MAX = 560.
 
 
 class BarrierUnconfirmed(RuntimeError):
-    """光幕标注关联或视觉复核未通过，调用方保留既有路网且不发送未经确认的移动点击。"""
+    """光幕标注关联或视觉复核未通过，调用方保留既有光幕状态与路网。"""
 
 
 def curtains(snapshot):
@@ -59,7 +59,7 @@ def remembered_blocks(session, field, objects, drag=(0., 0.), gain=1., previous_
 
     旧客户区坐标不能授权封路；可见光幕必须由当前独立配准再次关联到已确认的标注编号。
     previous_gestures 只用于在明确的复核拖动后更新原立柱跟踪组，不作为光幕开关证据。
-    配准或跟踪失败保留既有路网，并将未确认光幕留给点击前的安全检查。
+    配准或跟踪失败保留既有状态与路网，不用未确认候选否决按既有路网规划的移动。
     """
     remaining, blocks = curtains({'objects': objects}), []
     gestures = getattr(session, 'gestures', 0)

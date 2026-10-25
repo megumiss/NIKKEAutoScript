@@ -270,14 +270,13 @@ class CampaignExecutor:
             known = '无可达候选' if focus['known'] is None else f"{focus['known']} 像素"
             source = {'target_route': '候选目标的前置路段', 'route_road': '路程前方道路与相邻岔口',
                       'route_branch': '路程汇合岔路（距离为直线参考）',
-                      'nearer_road': '可能更近的支路', 'enemy_hint': '历史敌人位置复核'}[focus['source']]
+                      'nearer_road': '可能更近的支路'}[focus['source']]
             logger.info(f"侦察第 {view + 1} 屏：目标 {focus['id']}，位置 {points_text(focus['position'])}，"
                         f"{source}，路程 {focus['distance']} 像素，本段检查范围 {known}")
             watch = Stopwatch()
             recorded = self.session.scout_view(focus['position'], f'scout_{view + 1:02}')
             views += 1
-            covered = (not any(f'scout-hint-{item["id"]}' == focus['id'] for item in state.enemy_hints())
-                       if focus['source'] == 'enemy_hint' else state.is_observed(focus['position']))
+            covered = state.is_observed(focus['position'])
             logger.info(f"侦察第 {view + 1} 屏结果：{'已记录可信帧' if recorded else '定位未通过'}，"
                         f"目标格{'已覆盖' if covered else '尚未完整覆盖'}，耗时 {watch}")
             failure = self.session.scout_failure

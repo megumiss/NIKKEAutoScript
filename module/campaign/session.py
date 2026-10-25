@@ -690,10 +690,10 @@ class CampaignSession(NavigationSession):
         self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]))
 
     def move(self, click):
-        """先复核收集提示及未确认光幕，再发送客户区地面落点，防止沿用已失效的移动指令。
+        """复核收集提示后发送客户区地面落点，沿用规划阶段最后确认的光幕路网。
 
-        光幕限制只用于野外地面移动，不约束战斗或剧情按钮；坐标、窗口与输入预算由 click_client
-        和生产驱动代理执行最终校验。发现未确认光幕时不发送点击，安全异常由执行层处理。
+        光幕确认失败不改变既有状态，也不单独否决移动；未确认障碍导致的停滞由移动闭环处理。
+        坐标、窗口、弹窗、取消与输入预算仍由当前会话和生产驱动代理校验。
         """
         click = np.asarray(click, float)
         if click.shape != (2,) or not np.isfinite(click).all() or not (0 <= click[0] < 1776 and 0 <= click[1] < 999):
@@ -701,12 +701,6 @@ class CampaignSession(NavigationSession):
         self.check()
         field = self.win.client()
         self.check_collectible(field)
-        from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, remembered_blocks
-        from module.campaign.vision.objects import detect_objects
-        items = detect_objects(field, kinds=('barrier',))
-        _, pending = remembered_blocks(self, field, items)
-        if pending:
-            raise BarrierUnconfirmed('点击前发现未完成居中确认的光幕；丢弃旧落点，停止移动。')
         self.click_client(click)
 
     def pause(self, seconds):

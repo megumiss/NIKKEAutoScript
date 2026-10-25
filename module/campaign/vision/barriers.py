@@ -8,6 +8,7 @@ import numpy as np
 
 from module.campaign.navigation.controls import (ARROW_GROUND_OFFSET, EXPANDED_CENTER, GAZE,
                                                  GROUND_TO_CLIENT, VIEWPORT_PIXEL)
+from module.campaign.vision.chapter import CLIENT_SIZE
 from module.campaign.vision.mechanisms import ANNOTATION_GAP
 from module.campaign.vision.perception import squad_arrow
 from module.campaign.vision.surface_motion import project
@@ -102,13 +103,14 @@ TRACK_TOLERANCE = 32.
 def curtain_foot(item):
     """返回有效光幕检测框的底边中点，单位为原始客户区像素。
 
-    底边中点代表需要移到注视点的地面接触位置；截边或固定 HUD 内的检测不能用于精定位。
+    底边中点代表地面接触位置；底部只按实际客户区高度判越界，不将整条底部区域视为 HUD。
+    顶部 HUD 与左右截边过滤保持不变，框贴到客户区底边时仍不采用其脚点。
     """
     box = np.asarray(item.get('box'), float)
     if box.shape != (4,) or not np.isfinite(box).all():
         raise ValueError('光幕检测框坐标无效。')
     x1, y1, x2, y2 = box
-    if not (3 < x1 < x2 < 1773 and 120 < y1 < y2 < 900):
+    if not (3 < x1 < x2 < 1773 and 120 < y1 < y2 < CLIENT_SIZE[1]):
         raise ValueError('光幕检测框被截断或位于固定界面区域。')
     return np.array([(x1 + x2) / 2, y2])
 
@@ -286,7 +288,7 @@ def track_barrier(group, objects, drag=(0., 0.), gain=1.):
     if len(shifts) == 2 and np.linalg.norm(shifts[0] - shifts[1]) > 32:
         raise ValueError('同组两根立柱的 YOLO 位移不一致。')
     predicted = np.asarray(group['foot']) + np.mean(shifts, axis=0)
-    if not (3 < predicted[0] < 1773 and 120 < predicted[1] < 900):
+    if not (3 < predicted[0] < 1773 and 120 < predicted[1] < CLIENT_SIZE[1]):
         raise ValueError('立柱推算的光幕底部已离开有效画面。')
     source = 'pillar_pair' if len(shifts) == 2 else 'pillar'
     try:
