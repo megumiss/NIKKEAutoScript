@@ -1,6 +1,9 @@
 """共享道路 A*：只计算路径，不加载地图包或取得游戏窗口。"""
 
+from collections import OrderedDict
+import hashlib
 import heapq
+import threading
 
 import cv2
 import numpy as np
@@ -9,6 +12,10 @@ from module.campaign.map.geometry import jacobian
 from module.campaign.navigation import controls as goto
 
 MIN_REGION_NODES = 4
+# 每个条目对应一版道路、分区与采样步长；只保留少量版本，避免距离场随封锁修订累积。
+ROUTE_CACHE_SIZE = 4
+_ROUTE_CACHE = OrderedDict()
+_ROUTE_CACHE_LOCK = threading.Lock()
 
 
 def traversable_grid(grid, minimum=MIN_REGION_NODES, threshold=0):
@@ -59,22 +66,21 @@ class NoConnectedRoad(RuntimeError):
     """两点各自可定位到道路，但道路网格之间不连通。"""
 
 
-def grid_route(road, labels, start, target, step):
-    """在给定采样间距上搜索一条路径；分区预检不通过抛 NoConnectedRoad，搜索失败返回 None。
+def _build_route_grid(road, labels, step):
+    """生成不依赖起终点的 A* 网格数据，保持原净空、退化分区过滤和连边规则。
 
-    road 为二值道路掩码，labels 为 8px 网格上的 effective 分区（无分区时为 None），
-    start、target 使用地图像素。返回值与 Localizer.route 一致，调用方按采样级别重试。
+    road 已归一化为 uint8；缓存数组在构建后只读，label_grid 必须复制以免外部原地修改
+    分区污染已缓存版本。这里不进行节点吸附或路径搜索，不保存特定目标的规划结果。
     """
-    clearance = cv2.distanceTransform(road.astype(np.uint8), cv2.DIST_L2, 5)
+    clearance = cv2.distanceTransform(road, cv2.DIST_L2, 5)
     grid = clearance[::step, ::step]
-    road = road.astype(np.uint8)
     label_grid = None
     blocked = np.zeros(grid.shape, bool)
     if labels is not None:
         scale = 8 // step
         label_grid = (np.repeat(np.repeat(labels, scale, axis=0), scale, axis=1) if scale > 1 else labels)[
             : grid.shape[0], : grid.shape[1]
-        ]
+        ].copy()
         blocked = (grid > 0) & (label_grid == 0)
         grid = grid.copy()
         grid[label_grid == 0] = 0
@@ -83,13 +89,49 @@ def grid_route(road, labels, start, target, step):
     nodes = np.column_stack([xs, ys])
     if not len(nodes):
         raise RuntimeError('No traversable road nodes')
+    edges = edge_tables(road, grid.shape, step)
+    for array in (clearance, grid, label_grid, blocked, nodes, *edges.values()):
+        if array is not None:
+            array.setflags(write=False)
+    return clearance, grid, label_grid, blocked, nodes, edges
+
+
+def _route_grid(road, labels, step):
+    """按道路与分区内容复用预处理，连通性或采样步长变化时重新构建。
+
+    每次按实际像素计算摘要，不以数组 id 或仅以封锁编号判版本，因此同一数组原地修改、
+    同尺寸地图替换和 8px 到 4px 的重试均不会使用旧数据。锁只保护有界缓存与构建；
+    搜索读取不可变数据，可在锁外独立进行，缓存命中不跳过任何起终点检查。
+    """
+    road = np.ascontiguousarray(road, dtype=np.uint8)
+    label_key = None if labels is None else (
+        labels.shape, labels.dtype.str, hashlib.sha256(np.ascontiguousarray(labels)).digest())
+    key = (road.shape, hashlib.sha256(road).digest(), label_key, step, MIN_REGION_NODES)
+    with _ROUTE_CACHE_LOCK:
+        cached = _ROUTE_CACHE.get(key)
+        if cached is None:
+            cached = _build_route_grid(road, labels, step)
+            _ROUTE_CACHE[key] = cached
+            while len(_ROUTE_CACHE) > ROUTE_CACHE_SIZE:
+                _ROUTE_CACHE.popitem(last=False)
+        else:
+            _ROUTE_CACHE.move_to_end(key)
+        return cached
+
+
+def grid_route(road, labels, start, target, step):
+    """在给定采样间距上搜索一条路径；分区预检不通过抛 NoConnectedRoad，搜索失败返回 None。
+
+    road 为二值道路掩码，labels 为 8px 网格上的 effective 分区（无分区时为 None），
+    start、target 使用地图像素。返回值与 Localizer.route 一致，调用方按采样级别重试。
+    """
+    clearance, grid, label_grid, blocked, nodes, edges = _route_grid(road, labels, step)
     nearest = lambda point: tuple(nodes[np.argmin(np.linalg.norm(nodes * step - point, axis=1))])
     source, goal = nearest(start), nearest(target)
     # 可达性以 effective 分区为准：v3 的分区算在全分辨率道路掩码上并已施加人工切口，
     # 比采样网格上的搜索更权威；搜索失败只说明这一级采样画不出路径。
     if label_grid is not None and label_grid[source[1], source[0]] != label_grid[goal[1], goal[0]]:
         raise NoConnectedRoad('No connected road route')
-    edges = edge_tables(road, grid.shape, step)
     queue = [(0.0, source)]
     costs, parents = {source: 0.0}, {}
     while queue:
