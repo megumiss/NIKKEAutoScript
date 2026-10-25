@@ -5,12 +5,11 @@ import numpy as np
 
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation.camera_navigation import compact_viewport, pan_scene
-from module.campaign.vision.barriers import scene_anchor
+from module.campaign.vision.barriers import CENTER_TOLERANCE
 from module.campaign.vision.enemy_ring import match_target_ring, observe_rings, scene_tracks
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import compact_road_masks, squad_arrow
 from module.campaign.vision.story_marker import marked_ring, story_markers
-from module.campaign.vision.surface_motion import project
 from module.logger import logger
 
 MAX_PANS = 4
@@ -39,18 +38,21 @@ def story_frame(session, squad):
 
 
 def story_ground(frame):
-    """把菱形下方唯一地面环投到底图，供没有小地图敌人的主线目标使用。
+    """读取已居中主线脚圈对应的底图视口中心，不外推远离注视点的场景坐标。
 
-    只接受同帧已接受配准与视口锚点，不使用悬浮菱形中心，也不跨帧套用场景矩阵。
-    投影误差由原有道路端点吸附和到点闭环复核；缺少地面环时返回 None。
+    脚圈须在注视点的 18 客户区像素内，视口中心来自同帧已接受的紧凑小地图配准。
+    未居中、坐标无效或缺少地面环时返回 None；调用方仍须复核第二帧及道路归属后才能写入目标。
     """
     if frame is None or frame['ring'] is None:
         return None
-    anchor = scene_anchor(frame['field'], None, frame['view'])
-    if anchor is None:
+    ring = np.asarray(frame['ring'], float)
+    if (ring.shape != (2,) or not np.isfinite(ring).all()
+            or np.linalg.norm(ring - goto.VIEWPORT_PIXEL) > CENTER_TOLERANCE):
         return None
-    chart, _ = anchor
-    return project(chart, frame['ring'])
+    position = np.asarray(frame['view']['viewport'], float)
+    if position.shape != (2,) or not np.isfinite(position).all():
+        return None
+    return position
 
 
 def story_enemy_between(before, after, squad):
@@ -114,22 +116,43 @@ def reveal_story_marker(session):
 
 
 def locate_story_target(session, squad):
-    """有限平移优先确认主线敌人；无对应敌人时把菱形下方唯一地面环记为独立路程目的地。
+    """有限平移定位主线脚圈，以已确认敌人或两帧居中的视口中心作为路程目的地。
 
-    优先利用拖动前后两帧，最多四次平移；只向已识别的脚圈调整镜头，不按悬浮标记做地图投影。
-    小队不可定位且离屏标记也未确认时禁止拖动，以免按下点落在小队上变成走位。
-    地面回退使用最后一次可靠帧的同帧视口锚点；没有地面环或投影越界时才进入失败冷却。
+    最多四次平移，只向已识别的脚圈调整镜头，不按悬浮标记做地图投影。小队不可定位且离屏
+    标记也未确认时禁止拖动，以免按下点落在小队上变成走位。地面目标须连续两帧居中，尺度变化
+    不超过 12%、视口偏差不超过 12 地图像素、脚圈偏差不超过 15 客户区像素，并通过道路归属校验；
+    未确认时记录失败冷却，不吸附远离道路的点，保留普通敌人推进策略。
     """
     state = session.owner.state
     session.begin_target('story_location')
     goto.map_close(session.win)
     changed = False
-    before = None
     try:
         changed = reveal_story_marker(session)
         before = story_frame(session, squad)
-        for attempt in range(MAX_PANS):
+        for attempt in range(MAX_PANS + 1):
             if before is None:
+                break
+            position = story_ground(before)
+            if position is not None:
+                session.pause(.35)
+                after = story_frame(session, squad)
+                confirmed = story_ground(after)
+                if (confirmed is None or abs(after['scale'] / before['scale'] - 1.) > .12
+                        or np.linalg.norm(confirmed - position) > 12
+                        or np.linalg.norm(after['ring'] - before['ring']) > 15):
+                    raise ValueError('主线地面位置未通过两帧居中复核')
+                if (np.any(confirmed < 0) or np.any(confirmed >= state.size)
+                        or not session.owner.cut.chart.walkable(confirmed)):
+                    raise ValueError('主线居中位置越出地图或缺少邻近道路证据')
+                position = confirmed.tolist()
+                state.route_goal = dict(kind='story', id='story-marker', position=position,
+                                        reason='main_story_location')
+                state.cooldowns.pop('story-location', None)
+                logger.info(f'主线地面路程目标已通过两帧居中与道路校验：'
+                            f'底图位置 {np.round(position, 1).tolist()}，镜头平移 {attempt} 次。')
+                return changed
+            if attempt == MAX_PANS:
                 break
             field = before['field']
             arrow = squad_arrow(field)
@@ -143,8 +166,6 @@ def locate_story_target(session, squad):
                 drag = np.asarray(goto.VIEWPORT_PIXEL) - before['ring']
                 length = float(np.linalg.norm(drag))
                 drag = drag * min(1., 320. / max(length, 1.))
-                if length < 70:
-                    drag = np.array([80., 0.])
             pan_scene(session, drag, squad_ground=ground)
             changed = True
             session.localized_report = None
@@ -162,18 +183,8 @@ def locate_story_target(session, squad):
                                 f'镜头平移 {attempt + 1} 次。')
                     return changed
             before = after
-        position = story_ground(before)
-        if (position is not None and np.isfinite(position).all()
-                and np.all(position >= 0) and np.all(position < state.size)):
-            position = position.tolist()
-            state.route_goal = dict(kind='story', id='story-marker', position=position,
-                                    reason='main_story_location')
-            state.cooldowns.pop('story-location', None)
-            logger.info(f'主线标记没有可确认的小地图敌人，已将其下方地面环设为路程目标：'
-                        f'底图位置 {np.round(position, 1).tolist()}。')
-            return changed
     except (ValueError, cv2.error, np.linalg.LinAlgError) as exc:
         logger.info(f'主线标记对应关系未确认：{exc}。')
     state.penalize('story-location')
-    logger.info('主线标记未能确认敌人或下方地面位置，已记录失败冷却，保留普通敌人推进策略。')
+    logger.info('主线标记未能确认敌人或居中地面位置，已记录失败冷却，保留普通敌人推进策略。')
     return changed

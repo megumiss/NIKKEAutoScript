@@ -676,8 +676,25 @@ class CampaignSession(NavigationSession):
         return [dict(item, position=position) for item, position in zip(markers, positions)
                 if 0 <= position[0] < size[0] and 0 <= position[1] < size[1]]
 
+    def click_client(self, point):
+        """发送有效的客户区点击，共用窗口、弹窗与预算闸门，不调用地面移动入口。
+
+        坐标按 1776×999 客户区验证并换算到屏幕；最终发送仍由 CampaignInput 校验窗口、取消、
+        时限与单目标预算。界面按钮直接使用此入口，地面落点须先由 move 复核收集提示及光幕。
+        """
+        point = np.asarray(point, float)
+        if point.shape != (2,) or not np.isfinite(point).all() or not (0 <= point[0] < 1776 and 0 <= point[1] < 999):
+            raise ValueError('点击位置越界或不是有效坐标。')
+        self.check()
+        origin = self.win.client_origin()
+        self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]))
+
     def move(self, click):
-        """只发送有限、有效的客户区地面落点，窗口代理负责最终校验与扣预算。"""
+        """先复核收集提示及未确认光幕，再发送客户区地面落点，防止沿用已失效的移动指令。
+
+        光幕限制只用于野外地面移动，不约束战斗或剧情按钮；坐标、窗口与输入预算由 click_client
+        和生产驱动代理执行最终校验。发现未确认光幕时不发送点击，安全异常由执行层处理。
+        """
         click = np.asarray(click, float)
         if click.shape != (2,) or not np.isfinite(click).all() or not (0 <= click[0] < 1776 and 0 <= click[1] < 999):
             raise ValueError('点击位置越界或不是有效坐标。')
@@ -690,8 +707,7 @@ class CampaignSession(NavigationSession):
         _, pending = remembered_blocks(self, field, items)
         if pending:
             raise BarrierUnconfirmed('点击前发现未完成居中确认的光幕；丢弃旧落点，停止移动。')
-        origin = self.win.client_origin()
-        self.win.handler.mouse_click(origin[0] + round(click[0]), origin[1] + round(click[1]))
+        self.click_client(click)
 
     def pause(self, seconds):
         """短间隔等待持续检查取消、焦点与几何，不依赖原型的全局活动窗口。"""
@@ -868,7 +884,7 @@ class CampaignSession(NavigationSession):
         logger.info(f'AUTO 关闭状态已确认（连续 {self.auto_off_frames} 帧，{detail}），已发送开启点击。')
 
     def tap(self, point, interval=0.):
-        """按客户区坐标点一次界面按钮：与移动落点共用同一套校验、闸门与预算。
+        """按客户区坐标点一次界面按钮，保留输入闸门与预算，但不执行地面移动的光幕检查。
 
         interval 是这一点自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：
         间隔内的重复点击直接丢掉并返回 False，真的点了返回 True。战斗接管的按钮都靠它防连点——
@@ -878,8 +894,8 @@ class CampaignSession(NavigationSession):
         now = time.monotonic()
         if interval and now - self.tap_times.get(key, 0.) < interval:
             return False
+        self.click_client(point)
         self.tap_times[key] = now
-        self.move(point)
         return True
 
     def remember_registration(self, squad, roi_to_map, coverage_size):
