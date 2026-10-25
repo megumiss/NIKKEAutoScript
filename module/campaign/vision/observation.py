@@ -7,7 +7,9 @@ import cv2
 import numpy as np
 
 from module.campaign.vision.minimap import map_visible, minimap_control_visible
-from module.campaign.vision.matching import ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX, ACCEPT_ROAD_IOU, MapMatcher, ROI
+from module.campaign.vision.frame import EXPANDED_ROI, frame_inputs, observation_frame
+from module.campaign.vision.matching import (ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX,
+                                             ACCEPT_ROAD_IOU, MapMatcher)
 from module.campaign.vision.barriers import affine_project, project_barriers, scene_anchor
 from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
@@ -20,10 +22,6 @@ from module.campaign.vision.perception import (compact_road_masks, expanded_mini
                                              minimap_masks, project_centers, refine_ring)
 from module.logger import logger
 
-# 展开小地图（点击左上角控件后出现的大地图面板）在 1776×999 客户区里的固定 ROI；
-# 与采集器 args.roi、navigation.controls.MAP_MINIMIZE 同源。展开态下紧凑面板不再显示，
-# 观测、导航与侦察使用同一原始裁图坐标系，圆环和敌人必须与配准矩阵来自同一面板。
-EXPANDED_ROI = (644, 280, 1130, 742)
 
 
 class CampaignObserver:
@@ -68,6 +66,15 @@ class CampaignObserver:
         return False
 
     def observe(self, image, identity, captured_at=None, objects=True, expected_squad=None, known_squad=None):
+        """在一个截图作用域内生成完整观测，所有消费者共享场景和当前小地图的原始推理。
+
+        模式由本帧确定，缩略与展开互斥；异常退出也清理作用域，不能把结果交给下一帧。
+        其余定位、对象筛选与已知小队参数保持原语义。
+        """
+        with observation_frame(image) as inputs:
+            return self._observe(inputs.image, identity, captured_at, objects, expected_squad, known_squad)
+
+    def _observe(self, image, identity, captured_at=None, objects=True, expected_squad=None, known_squad=None):
         """观测一帧 1776×999 BGR 客户区截图，返回界面与导航共用的章节快照。
 
         identity 是已确认的（章节号, 难度）；章节变化会丢掉地图缓存并重新加载，加载失败只告警，
@@ -80,7 +87,7 @@ class CampaignObserver:
         known_squad 仅用于未移动小队的纯镜头找敌人阶段：保留调用方已确认的底图坐标，不检测、
         拟合或校验实时小队圆环；当前面板仍独立道路配准，敌人和覆盖只使用本帧矩阵。
         定位成功后敌人和小队都投影到地图坐标，落到图外视为 needs_review——这种情况多半是配准
-        漂移而不是真的出界。objects=False 用于只需要小地图的场合，可以省掉整幅画面的八片推理。
+        漂移而不是真的出界。objects=False 不返回场景对象；普通定位的机关投影仍可能需要箭头，因此不能保证省掉场景推理。
         """
         chapter, difficulty = identity
         snapshot = dict(chapter=chapter, difficulty=difficulty, captured_at=captured_at or time.time(),
@@ -114,8 +121,8 @@ class CampaignObserver:
                 if str(exc) != self.last_story_error:
                     logger.warning(f'主线菱形模板识别不可用：{exc}')
                     self.last_story_error = str(exc)
-        players, enemies = (self.minimap_markers(panel, observe_squad=False) if known_squad is not None
-                            else self.minimap_markers(panel))
+        players, enemies = (self.minimap_markers(panel, mode, observe_squad=False) if known_squad is not None
+                            else self.minimap_markers(panel, mode))
         if mode == 'compact' and not players and not enemies and known_squad is None:
             return snapshot
         ok, encoded = cv2.imencode('.jpg', panel, [cv2.IMWRITE_JPEG_QUALITY, 85])
@@ -181,19 +188,11 @@ class CampaignObserver:
         EXPANDED_ROI 是否是地图，是则判为展开态；两者都不满足说明小地图被关闭或当前不在田野页。
         返回的紧凑面板是 1920×1080 归一化坐标下的裁图，展开面板是客户区 ROI 的原始裁图。
         """
-        if map_visible(image[118:273, 27:207]):
-            if not minimap_control_visible(image[76:120, 20:64]):
-                return None, None
-            x1, y1, x2, y2 = ROI
-            return 'compact', cv2.resize(image, (1920, 1080))[y1:y2, x1:x2]
-        left, top, right, bottom = EXPANDED_ROI
-        panel = image[top:bottom, left:right]
-        if map_visible(panel):
-            return 'expanded', panel
-        return None, None
+        inputs = frame_inputs(image)
+        return inputs.mode, inputs.panel
 
     @staticmethod
-    def minimap_markers(panel, observe_squad=True):
+    def minimap_markers(panel, mode, observe_squad=True):
         """识别小地图面板里的标记，返回（小队圆环中心列表, 敌人列表），坐标都是该面板的像素。
 
         observe_squad=False 专供纯镜头找敌人，跳过圆环拟合且不提供实时小队标记。
@@ -201,7 +200,7 @@ class CampaignObserver:
         圆环拟合通过校验）；敌人保留类型与置信度，投影到底图由调用方按同一份配准矩阵完成。
         """
         players, enemies = [], []
-        for item in marker_candidates(panel):
+        for item in marker_candidates(panel, mode):
             if item.label == 'minimap_squad_ring':
                 if observe_squad:
                     center = refine_ring(panel, item)

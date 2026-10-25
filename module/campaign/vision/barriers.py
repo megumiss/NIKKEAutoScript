@@ -311,26 +311,19 @@ def track_barrier(group, objects, drag=(0., 0.), gain=1.):
 def weak_curtain_visible(image, group):
     """在已关联立柱确定的中央区域以 0.2 置信度复查光幕，仅用于否决消失结论。
 
-    不修改进程共享检测器阈值，不产生正向封路坐标；原 640² 切片和全类别 argmax 保持不变。
+    不修改进程共享检测器阈值，不产生正向封路坐标；复用本帧场景原始输出，在场景全部类别中判类后使用独立低阈值。
     任何低分光幕落在目标附近都视为状态未确认，不能因为常规 0.5 阈值漏检而解除封锁。
     """
-    from module.campaign.vision.detection import decode, detector, grid_tiles, letterbox
+    from module.campaign.vision.detection import decode, detector
 
-    model = detector()
-    model.selected(('scene_barrier_curtain',))
+    model = detector('scene')
     point = np.asarray(group['foot'])
-    for tile, offset, guards in grid_tiles(image):
-        left, top = offset
-        if not (left <= point[0] + 100 and left + 640 >= point[0] - 100
-                and top <= point[1] and top + 640 >= point[1] - 150):
-            continue
-        tensor, scales, padding = letterbox(tile, model.size)
-        with model.lock:
-            output = model.session.run([model.output_name], {model.input_name: tensor})[0]
-        for item in decode(output, scales, padding, {'scene_barrier_curtain': .2},
-                           tile.shape, model.labels, guards):
-            x1, y1, x2, y2 = item.box
-            foot = np.array([(x1 + x2) / 2 + left, y2 + top])
-            if np.linalg.norm(foot - point) <= 100:
-                return True
+    output, scales, padding = model.infer(image)
+    items = decode(output, scales, padding, {'scene_barrier_curtain': .2},
+                   image.shape, model.labels, guards=(False,) * 4)
+    for item in items:
+        x1, y1, x2, y2 = item.box
+        foot = np.array([(x1 + x2) / 2, y2])
+        if np.linalg.norm(foot - point) <= 100:
+            return True
     return False

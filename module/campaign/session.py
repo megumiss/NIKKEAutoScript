@@ -585,10 +585,10 @@ class CampaignSession(NavigationSession):
             if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
                 raise RuntimeError('定位期间道路还在变，不能用这次位置。')
             matrix = np.asarray(report['roi_to_map'])
-            report['enemy_markers'] = goto.normal_enemy_markers(panel, matrix)
+            report['enemy_markers'] = goto.normal_enemy_markers(panel, matrix, mode='expanded')
             from module.campaign.vision.perception import boss_enemy_markers
             report['enemy_markers_by_kind'] = {
-                'normal': report['enemy_markers'], 'boss': boss_enemy_markers(panel, matrix)}
+                'normal': report['enemy_markers'], 'boss': boss_enemy_markers(panel, matrix, mode='expanded')}
             logger.info(f"展开地图定位成功：第 {attempt + 1} 次尝试，小队位置 {points_text(report['position'])}，"
                         f"道路重合度 {float(report['road_iou']):.3f}，"
                         f"面板上有 {len(report['enemy_markers'])} 个敌人标记，耗时 {watch}")

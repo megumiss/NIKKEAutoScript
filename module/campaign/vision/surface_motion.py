@@ -67,6 +67,7 @@ def register_surface(reference, current, polygon, minimap=False, exclude=None):
     """配准给定道路区域，以双向特征对应和留出点验证约束参考图到当前图的变换。
 
     reference/current 必须为同尺寸 BGR 图，polygon 和 exclude 均使用参考图像素。
+    minimap=True 时使用 486×462 的标准展开面板，不接受缩略面板冒充展开输入。
     场景纹理使用双向 SIFT 匹配，小地图使用道路掩码上的双向光流；合格对应点统一经留出验证返回参考→当前变换。
     """
     if (reference is None or current is None or reference.shape != current.shape
@@ -84,7 +85,7 @@ def register_surface(reference, current, polygon, minimap=False, exclude=None):
         first, second = [cv2.GaussianBlur(cv2.morphologyEx(terrain(im), cv2.MORPH_OPEN,
                                                         np.ones((3, 3), np.uint8)), (5, 5), 1)
                          for im in (reference, current)]
-        players, _ = detect_markers(reference, np.eye(3))
+        players, _ = detect_markers(reference, np.eye(3), mode='expanded')
         for player in players:
             cv2.circle(mask, tuple(np.rint(player).astype(int)), 28, 0, -1)
     else:

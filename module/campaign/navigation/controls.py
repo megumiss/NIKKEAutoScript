@@ -98,9 +98,9 @@ def battle_popup_score(image):
     return float(cv2.minMaxLoc(result)[1])
 
 
-def normal_enemy_markers(image, matrix):
+def normal_enemy_markers(image, matrix, mode):
     """检测普通敌人并排除 EX，将完整候选按本帧矩阵投影。"""
-    return perception.normal_enemy_markers(image, matrix)
+    return perception.normal_enemy_markers(image, matrix, mode=mode)
 
 
 def movement_click(anchor, offset):

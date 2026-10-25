@@ -153,8 +153,8 @@ class Localizer:
         mask = (mask > 0).astype(np.float32)
         result = cv2.matchTemplate(self.terrain, mask, cv2.TM_CCOEFF_NORMED)
         _, score, _, loc = cv2.minMaxLoc(result)
-        players, _ = perception.detect_markers(image, self.matrix)
-        enemies = normal_enemy_markers(image, self.matrix)
+        players, _ = perception.detect_markers(image, self.matrix, mode='expanded')
+        enemies = normal_enemy_markers(image, self.matrix, mode='expanded')
         self_world = None
         self.coordinate_source = 'unlocalized'
         # A tight peak cluster is a confident match; glow/edge effects cap the score near 0.45.

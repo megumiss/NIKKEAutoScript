@@ -1,6 +1,6 @@
 """客户区与小地图里的目标识别：把 YOLO 类别统一成后续推图逻辑使用的语义对象。"""
 
-from module.campaign.vision.detection import GRID_LABELS, LEGACY_SCENE_LABELS, MINIMAP_LABELS, detect_grid, detect_minimap, detect_scene
+from module.campaign.vision.detection import SCENE_LABELS, MINIMAP_LABELS, detect_minimap, detect_scene
 
 # 模型类别到语义的映射；state 区分同一类目标的状态或形态，后续逻辑按 kind 取、按 state 判断。
 OBJECTS = {
@@ -18,9 +18,9 @@ OBJECTS = {
     'minimap_enemy_boss': ('enemy', 'boss'),
     'minimap_squad_ring': ('squad_ring', None),
 }
-# 整幅画面网格检测的语义类别，也是 detect_objects 的默认范围。
-GRID_KINDS = ('ground_mechanism', 'elevator', 'barrier', 'enemy_ring')
-SCENE_KINDS = GRID_KINDS + ('squad_arrow', 'collectible_indicator')
+# 默认返回导航对象；箭头和收集提示已由同一次场景推理识别，需要时再筛选。
+DEFAULT_SCENE_KINDS = ('ground_mechanism', 'elevator', 'barrier', 'enemy_ring')
+SCENE_KINDS = DEFAULT_SCENE_KINDS + ('squad_arrow', 'collectible_indicator')
 MINIMAP_KINDS = ('enemy', 'squad_ring')
 
 
@@ -58,26 +58,23 @@ def described(detection, space):
 def detect_objects(image, kinds=None):
     """1776×999 BGR 客户区截图里的场景目标，坐标为客户区像素。
 
-    默认检测机关、电梯、屏障和敌人脚圈，整幅画面切八片推理。脚圈不直接并入敌人记忆。
-    小队箭头和收集提示另有已验证的遮罩切片取图方式，只有显式请求时才多跑一遍；
+    默认返回机关、电梯、屏障和敌人脚圈，所有场景类别共享一次整图推理。
+    显式请求箭头或收集提示只筛选同一输出，不增加模型调用；脚圈不直接并入敌人记忆。
     箭头的精确中心仍应使用 perception.squad_arrow。
     """
-    selected = requested(kinds, GRID_KINDS)
-    grid = kind_labels([kind for kind in selected if kind in GRID_KINDS], GRID_LABELS)
-    legacy = kind_labels([kind for kind in selected if kind not in GRID_KINDS], LEGACY_SCENE_LABELS)
-    detections = list(detect_grid(image, grid)) if grid else []
-    if legacy:
-        detections += detect_scene(image, legacy)
+    selected = requested(kinds, DEFAULT_SCENE_KINDS)
+    labels = kind_labels(selected, SCENE_LABELS)
+    detections = detect_scene(image, labels) if labels else []
     return sorted((described(item, 'client') for item in detections),
                   key=lambda item: item['confidence'], reverse=True)
 
 
-def detect_minimap_objects(panel, kinds=None):
+def detect_minimap_objects(panel, mode, kinds=None):
     """小地图面板里的小队圆环与敌人标记，坐标为面板像素。
 
     panel 由调用方按展开或紧凑模式裁好；圆环与普通敌人的精确中心仍应使用 perception 中
     对应的精定位，这里只给出检测框中心。
     """
     labels = kind_labels(requested(kinds, MINIMAP_KINDS), MINIMAP_LABELS)
-    return sorted((described(item, 'minimap') for item in detect_minimap(panel, labels)),
+    return sorted((described(item, 'minimap') for item in detect_minimap(panel, mode, labels)),
                   key=lambda item: item['confidence'], reverse=True)

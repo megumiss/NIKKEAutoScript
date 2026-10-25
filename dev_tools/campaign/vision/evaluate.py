@@ -33,10 +33,10 @@ def inside(point, box, margin=0):
     return bool(np.all(point >= np.asarray(box[:2]) - margin) and np.all(point <= np.asarray(box[2:]) + margin))
 
 
-def evaluate(records, model, splits):
+def evaluate(records, models, splits):
     """用复核过的采集回放整条识别链路，统计检测与运行期适配两层指标。
 
-    只回放整帧复核过的帧：部分复核的帧上有漏标，会把正确检出算成误检。
+    只回放整帧复核且明确声明 reviewed_classes 的帧；不能把旧类别范围的复核当成九类全标注。
     除了常规 tp/fp/fn，还把本帧的检测结果用 patch 注入 perception，再跑一遍运行期真正调用的
     接口（箭头、圆环、普通敌人等）——模型指标好但适配层把中心算错时，推图照样会走错，
     这一层必须单独量。
@@ -44,11 +44,11 @@ def evaluate(records, model, splits):
     unsafe：这类错误会让推图点进不该点的地方，比漏检严重。
     帧文件可能已迁走，缺失记入 missing 而不是中断整轮回放。
     """
-    counters = {label: Counter() for label in detection.LABELS}
+    counters = {label: Counter() for label in (detection.SCENE_LABELS + detection.MINIMAP_LABELS)}
     normal_navigation = Counter(expected=0, matched=0, missing=0, unsafe=0, ex_popup_required=0)
-    center_errors = {label: [] for label in detection.LABELS}
+    center_errors = {label: [] for label in (detection.SCENE_LABELS + detection.MINIMAP_LABELS)}
     latencies, detector_latencies, failures, details, missing = {}, {}, [], [], []
-    with patch.object(detection, 'detector', return_value=model):
+    with patch.object(detection, 'detector', side_effect=models.__getitem__):
         for record in records:
             if record['split'] not in splits or record.get('review_scope') != 'full_frame':
                 continue
@@ -60,11 +60,25 @@ def evaluate(records, model, splits):
                 continue
             domain = record.get('roi_kind', record['domain'])
             start = time.perf_counter()
-            predicted = detection.detect_scene(image) if record['domain'] == 'scene' else detection.detect_minimap(image)
+            mode = record.get('roi_kind')
+            if record['domain'] == 'minimap' and mode not in ('compact', 'expanded'):
+                sizes = {(211, 218): 'compact', (462, 486): 'expanded'}
+                mode = sizes.get(image.shape[:2])
+                if mode is None:
+                    raise ValueError(f'Unknown minimap input mode: {record["id"]}, {image.shape}')
+            predicted = (detection.detect_scene(image) if record['domain'] == 'scene'
+                         else detection.detect_minimap(image, mode))
+            reviewed = record.get('reviewed_classes')
+            available = detection.SCENE_LABELS if record['domain'] == 'scene' else detection.MINIMAP_LABELS
+            if not reviewed or not set(reviewed) <= set(available):
+                raise ValueError(f'Explicit reviewed_classes for this domain required: {record["id"]}')
+            predicted = [item for item in predicted if item.label in reviewed]
             detector_ms = (time.perf_counter() - start) * 1000
             detector_latencies.setdefault(domain, []).append(detector_ms)
-            complete = [obj for obj in record['objects'] if obj.get('status') == 'complete']
-            partial = [obj for obj in record['objects'] if obj.get('status') != 'complete']
+            complete = [obj for obj in record['objects']
+                        if obj['label'] in reviewed and obj.get('status') == 'complete']
+            partial = [obj for obj in record['objects']
+                       if obj['label'] in reviewed and obj.get('status') != 'complete']
             ignored = record.get('ignored', [])
             matched, found, errors = set(), set(), []
             pairs = sorted(((overlap(item.box, obj['box']), i, j)
@@ -107,8 +121,8 @@ def evaluate(records, model, splits):
             runtime_start = time.perf_counter()
             if record['domain'] == 'minimap':
                 with patch.object(perception, 'detect_minimap', return_value=predicted):
-                    players, enemies = perception.detect_markers(image, np.eye(3))
-                    normals = perception.normal_enemy_markers(image, np.eye(3))
+                    players, enemies = perception.detect_markers(image, np.eye(3), mode=mode)
+                    normals = perception.normal_enemy_markers(image, np.eye(3), mode=mode)
                 runtime = dict(players=players, enemies=enemies, normals=normals)
                 rings = [obj for obj in complete if obj['label'] == 'minimap_squad_ring']
                 for obj in rings:
@@ -196,11 +210,12 @@ def main():
     args = parser.parse_args()
     records = (read_jsonl(args.frames) if args.frames.suffix == '.jsonl'
                else json.loads(args.frames.read_text('utf-8'))['frames'])
-    model = detection.Detector(args.model)
-    result = evaluate(records, model, args.splits)
-    result.update(model_sha256=model.metadata['sha256'],
-                  thresholds=dict(model.thresholds),
-                  model_metadata_sha256=hashlib.sha256((args.model / 'campaign.json').read_bytes()).hexdigest(),
+    models = {role: detection.Detector(role, args.model) for role in detection.ROLE_LABELS}
+    result = evaluate(records, models, args.splits)
+    result.update(model_sha256={role: model.metadata['sha256'] for role, model in models.items()},
+                  thresholds={role: dict(model.thresholds) for role, model in models.items()},
+                  model_metadata_sha256={role: hashlib.sha256((args.model / f'{role}.json').read_bytes()).hexdigest()
+                                         for role in models},
                   frames_sha256=hashlib.sha256(args.frames.read_bytes()).hexdigest(), splits=args.splits,
                   note='Replay metrics only; capture independence depends on the training manifest.')
     args.output.parent.mkdir(parents=True, exist_ok=True)

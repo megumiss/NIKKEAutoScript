@@ -35,7 +35,7 @@ Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/w
 
 ## YOLO 模型
 
-`models/campaign.onnx` 与 `campaign.json` 为已分发的第七版十一类模型，适用于中文 Windows `1776×999`。运行依赖可用 `.venv\Scripts\python.exe -m pip install -r requirements-yolo.txt` 安装；训练环境无需随应用安装。类别顺序由模型元数据决定，取图方式分两路：旧五类沿用遮罩切片与小地图面板裁剪，机关／电梯／屏障在整幅客户区的八片网格上检测。模型契约、数据与已验证范围见 [模型说明](../vision/models/README.md)。
+`vision/models/bundle.json` 绑定场景、缩略小地图和展开小地图三个专用模型，适用于中文 Windows `1776×999` 客户区。场景统一整图推理一次，小地图按本帧形态互斥选择对应模型；不再使用旧场景切片。运行依赖可用 `.venv\Scripts\python.exe -m pip install -r requirements-yolo.txt` 安装，运行端不需要训练环境。类别、输入尺寸和阈值由各角色元数据声明；模型契约与离线验证边界见 [模型说明](../vision/models/README.md)。
 
 普通关卡优先使用 YOLO 识别；敌人移动模式出现普通战斗准备弹窗时保留，出现 EX 弹窗时关闭一次并返回 `ex_stage_skipped`，结束本次移动。该结果不表示普通关卡到达或战斗完成。
 

@@ -28,7 +28,7 @@ def centering_frame(session):
     session.identity(field)
     arrow = squad_arrow(field)
     panel = cv2.resize(field, (1920, 1080))[96:307, 25:243]
-    players, _ = detect_markers(panel, np.eye(3))
+    players, _ = detect_markers(panel, np.eye(3), mode='compact')
     ground = None if arrow is None else np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
     evidence = dict(ground=ground, ring=players[0] if len(players) == 1 else None,
                     offscreen=squad_offscreen(field))

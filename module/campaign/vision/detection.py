@@ -1,6 +1,7 @@
-"""YOLO ONNX inference in image coordinates; this module never sends game input."""
+"""场景、缩略地图、展开地图专用 ONNX 推理；不发送任何游戏输入。"""
 
 from collections import OrderedDict
+from concurrent.futures import Future
 from dataclasses import dataclass
 from functools import lru_cache
 import hashlib
@@ -12,19 +13,20 @@ import weakref
 import cv2
 import numpy as np
 
-# 旧五类沿用各自验证过的取图方式：场景箭头与收集提示走遮罩切片，小地图标记走面板裁剪。
-LEGACY_SCENE_LABELS = ('scene_squad_arrow', 'scene_collectible_indicator')
+from module.campaign.vision.frame import CLIENT_SHAPE, inference_frame_token
+
+SCENE_LABELS = (
+    'scene_squad_arrow', 'scene_collectible_indicator', 'scene_ground_mechanism_off',
+    'scene_ground_mechanism_on', 'scene_elevator_start', 'scene_elevator_end',
+    'scene_barrier_curtain', 'scene_barrier_pillar', 'scene_enemy_ring',
+)
 MINIMAP_LABELS = ('minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_squad_ring', 'minimap_enemy_boss')
-# 机关、电梯、屏障和敌人脚圈走整幅客户区网格，边界规则来自模型包的 scene 契约。
-GRID_LABELS = ('scene_ground_mechanism_off', 'scene_ground_mechanism_on', 'scene_elevator_start',
-               'scene_elevator_end', 'scene_barrier_curtain', 'scene_barrier_pillar', 'scene_enemy_ring')
-# 应用已知的类别集合；实际类别顺序始终由模型元数据决定，这里不假定模型包含哪些类。
-LABELS = LEGACY_SCENE_LABELS + MINIMAP_LABELS + GRID_LABELS
+ROLE_LABELS = {'scene': SCENE_LABELS, 'compact': MINIMAP_LABELS, 'expanded': MINIMAP_LABELS}
+SOURCE_SIZES = {'scene': (1776, 999), 'compact': (218, 211), 'expanded': (486, 462)}
 MODEL_DIRECTORY = Path(__file__).parent / 'models'
 EDGE_MARGIN = 2
 NMS_IOU = .45
-# 缓存原始输出而非过滤后的检测；24 片覆盖一帧场景和小地图，容量不随运行时间增长。
-INFERENCE_CACHE_SIZE = 24
+INFERENCE_CACHE_SIZE = 4
 
 
 @dataclass(frozen=True)
@@ -60,17 +62,18 @@ def image_size(image):
 
 
 def letterbox(image, size):
-    """把任意尺寸的 BGR 图填成正方形输入张量，并返回还原检测框所需的缩放与偏移。
+    """把 BGR 图等比填入指定高宽的矩形输入张量，并返回还原检测框所需的缩放与偏移。
 
     等比缩放后居中填充，填充值 114 与 YOLO 训练时一致，换成 0 会在边缘造出假边。
     图像居中而非贴左上，所以还原框时必须先减 padding 再除以 scales，顺序颠倒会整体偏移。
     返回的 scales 按宽高分开给，因为 round 之后两个方向的实际比例可能差一个像素。
     """
     height, width = image_size(image)
-    scale = min(size / width, size / height)
+    target_height, target_width = size
+    scale = min(target_width / width, target_height / height)
     resized = (round(width * scale), round(height * scale))
-    left, top = (size - resized[0]) // 2, (size - resized[1]) // 2
-    canvas = np.full((size, size, 3), 114, np.uint8)
+    left, top = (target_width - resized[0]) // 2, (target_height - resized[1]) // 2
+    canvas = np.full((target_height, target_width, 3), 114, np.uint8)
     canvas[top:top + resized[1], left:left + resized[0]] = cv2.resize(image, resized)
     tensor = np.ascontiguousarray(canvas[:, :, ::-1].transpose(2, 0, 1)[None], dtype=np.float32) / 255
     return tensor, (resized[0] / width, resized[1] / height), (left, top)
@@ -94,8 +97,8 @@ def suppress(detections, iou=NMS_IOU):
 def decode(output, scales, padding, thresholds, shape, labels, guards=(True, True, True, True)):
     """把原始输出解成图像坐标检测框；thresholds 的键同时决定参与解码的类别。
 
-    guards 按左、上、右、下指明哪些边是切片内部边界：内部边界上的框是被切断的符号，中心会偏，
-    必须丢弃；画面真实边界上的目标是完整的，只把框裁回画面。
+    guards 按左、上、右、下指明需要拒绝截断框的图像边界；小地图必须拒绝截边标记。
+    场景结果可以裁到画面边界，是否可用于点击仍由各目标的导航安全检查决定。
     """
     if output.ndim != 3 or output.shape[0] != 1 or output.shape[1] != 4 + len(labels):
         raise ValueError(f'Unsupported YOLO output {output.shape}; expected [1, {4 + len(labels)}, anchors].')
@@ -124,205 +127,169 @@ def decode(output, scales, padding, thresholds, shape, labels, guards=(True, Tru
         if min(box[2:] - box[:2]) < 3:
             continue
         box = np.clip(box, 0, (width, height, width, height))
+        # 整图矩形补边中的预测可能在裁回原图后消失，不能返回零面积目标。
+        if min(box[2:] - box[:2]) < 3:
+            continue
         result.append(Detection(labels[label], float(score), tuple(float(v) for v in box)))
     return suppress(result)
 
 
 class Detector:
-    """加载并持有战役 YOLO 的 ONNX 会话，只做图像坐标上的推理，不发送任何游戏输入。
+    """校验并持有一个专用模型，同帧消费者共享原始输出，各自独立筛选类别与阈值。"""
 
-    构造时把模型包的契约逐项校验（schema、导出格式、类别、输入尺寸、逐类阈值、模型哈希、
-    输入输出签名）：模型文件与元数据一旦不配套，宁可启动就失败，也不要在推图过程中给出
-    坐标系或类别错位的检测结果。
-    """
+    def __init__(self, role, directory=MODEL_DIRECTORY, intra_op_threads=4):
+        """只加载同一发布包声明的角色，不接受旧十三类模型或隐式回退。
 
-    def __init__(self, directory=MODEL_DIRECTORY):
-        """校验模型包并建立 ONNX 推理会话。
-
-        模型哈希要与元数据一致，防止换了模型却没换阈值和类别表。
-        onnxruntime 是可选依赖（requirements-yolo.txt），缺失时给出安装提示而不是 ImportError。
-        固定 CPU 执行、4 线程，推图过程中还要跑 OCR 和截图，不能让推理把核吃满；
-        另外配一把锁，界面与任务线程共用同一会话时串行推理，避免线程数成倍放大。
+        ONNX 算子线程数不改变输入、精度与解码规则。会话 Run 串行保护，同键并发请求
+        共用 Future；缓存只保存模型输出，不把某个调用方的阈值筛选结果交给其他调用方。
         """
+        if role not in ROLE_LABELS:
+            raise ValueError(f'Unknown campaign detector role: {role}')
+        if type(intra_op_threads) is not int or intra_op_threads < 1:
+            raise ValueError('intra_op_threads must be a positive integer')
         directory = Path(directory)
-        metadata_path = directory / 'campaign.json'
-        self.metadata = json.loads(metadata_path.read_text('utf-8'))
-        if self.metadata.get('schema_version') not in (1, 2):
-            raise ValueError('Unsupported campaign YOLO metadata schema.')
-        if self.metadata.get('format') != 'yolo11-detect-bcn-fp32':
-            raise ValueError('Unsupported campaign YOLO export format.')
-        labels = self.metadata.get('labels')
-        if (not isinstance(labels, list) or not labels or len(set(labels)) != len(labels)
-                or any(label not in LABELS for label in labels)):
-            raise ValueError('Campaign YOLO metadata declares unknown or duplicated classes.')
-        self.labels = tuple(labels)
-        self.size = self.metadata['input_size']
-        if not isinstance(self.size, int) or self.size < 320 or self.size % 32:
-            raise ValueError('Invalid YOLO input size.')
-        self.thresholds = self.metadata['thresholds']
-        if any(label not in self.thresholds or not 0 < self.thresholds[label] < 1 for label in self.labels):
-            raise ValueError('Invalid YOLO class thresholds.')
-        self.scene = self.scene_contract(self.metadata.get('scene'))
-        model = directory / 'campaign.onnx'
-        if hashlib.sha256(model.read_bytes()).hexdigest() != self.metadata['sha256']:
-            raise ValueError('Campaign YOLO model hash mismatch.')
+        bundle = json.loads((directory / 'bundle.json').read_text(encoding='utf-8'))
+        if (bundle.get('schema_version') != 3 or set(bundle.get('models', {})) != set(ROLE_LABELS)
+                or not isinstance(bundle.get('version'), str) or not bundle['version']):
+            raise ValueError('Campaign bundle must contain scene, compact and expanded models.')
+        entry = bundle['models'][role]
+        if entry != {'model': f'{role}.onnx', 'metadata': f'{role}.json'}:
+            raise ValueError('Campaign bundle uses unexpected model paths.')
+        metadata = json.loads((directory / entry['metadata']).read_text(encoding='utf-8'))
+        if (metadata.get('schema_version') != 3 or metadata.get('role') != role
+                or metadata.get('version') != bundle.get('version')
+                or metadata.get('format') != 'yolo11-detect-bcn-fp32'
+                or metadata.get('labels') != list(ROLE_LABELS[role])
+                or metadata.get('source_size') != list(SOURCE_SIZES[role])
+                or metadata.get('class_selection') != 'argmax_all_role_classes'
+                or metadata.get('color') != 'RGB' or metadata.get('normalization') != 'float32 / 255'
+                or metadata.get('layout') != 'NCHW' or metadata.get('box_format') != 'cxcywh_input_pixels'
+                or metadata.get('nms_iou') != NMS_IOU or metadata.get('edge_margin') != EDGE_MARGIN):
+            raise ValueError(f'Invalid campaign {role} model contract.')
+        shape = metadata.get('input_shape', [])
+        if (len(shape) != 4 or shape[:2] != [1, 3]
+                or any(type(value) is not int or value < 32 or value % 32 for value in shape[2:])):
+            raise ValueError(f'Invalid campaign {role} input shape: {shape}')
+        self.role, self.metadata = role, metadata
+        self.labels, self.input_size = tuple(metadata['labels']), tuple(shape[2:])
+        self.thresholds = metadata.get('thresholds', {})
+        if (not isinstance(self.thresholds, dict) or set(self.thresholds) != set(self.labels)
+                or any(type(value) not in (int, float) or not 0 < value <= 1
+                       for value in self.thresholds.values())):
+            raise ValueError(f'Invalid campaign {role} thresholds.')
+        model = directory / entry['model']
+        if hashlib.sha256(model.read_bytes()).hexdigest() != metadata.get('sha256'):
+            raise ValueError(f'Campaign {role} ONNX hash mismatch.')
         try:
             import onnxruntime as ort
-        except ImportError as error:
-            raise RuntimeError('Install requirements-yolo.txt to run campaign YOLO detection.') from error
+        except ImportError as exc:
+            raise RuntimeError('Install requirements-yolo.txt to run campaign detection.') from exc
         options = ort.SessionOptions()
-        options.intra_op_num_threads = 4
+        options.intra_op_num_threads = intra_op_threads
         options.inter_op_num_threads = 1
         self.session = ort.InferenceSession(str(model), sess_options=options, providers=['CPUExecutionProvider'])
         inputs, outputs = self.session.get_inputs(), self.session.get_outputs()
-        if len(inputs) != 1 or inputs[0].shape != [1, 3, self.size, self.size] or inputs[0].type != 'tensor(float)':
-            raise ValueError('Campaign YOLO input contract mismatch.')
-        expected_output = [1, 4 + len(self.labels), 8400]
-        if (len(outputs) != 1 or outputs[0].shape != expected_output or outputs[0].type != 'tensor(float)'
-                or self.metadata.get('output_shape', expected_output) != expected_output):
-            raise ValueError('Campaign YOLO raw output contract mismatch.')
+        anchors = sum((shape[2] // stride) * (shape[3] // stride) for stride in (8, 16, 32))
+        output_shape = [1, 4 + len(self.labels), anchors]
+        if (len(inputs) != 1 or inputs[0].shape != shape or inputs[0].type != 'tensor(float)'
+                or len(outputs) != 1 or outputs[0].shape != output_shape or outputs[0].type != 'tensor(float)'
+                or metadata.get('output_shape') != output_shape
+                or inputs[0].name != metadata.get('input_name')
+                or outputs[0].name != metadata.get('output_name')):
+            raise ValueError(f'Campaign {role} ONNX signature mismatch.')
         self.input_name, self.output_name = inputs[0].name, outputs[0].name
-        self.lock = threading.Lock()
-        self.inference_cache = OrderedDict()
-
-    def scene_contract(self, scene):
-        """校验模型包声明的全画面网格；边界余量和 NMS 阈值必须与本模块实现一致。"""
-        if scene is None:
-            return None
-        size, tile = scene.get('size'), scene.get('tile_size')
-        offsets = (scene.get('x_offsets'), scene.get('y_offsets'))
-        if (not isinstance(size, list) or len(size) != 2 or type(tile) is not int or tile != self.size
-                or any(not isinstance(values, list) or not values for values in offsets)):
-            raise ValueError('Invalid campaign YOLO scene grid.')
-        for values, bound in zip(offsets, size):
-            if any(type(value) is not int or not 0 <= value <= bound - tile for value in values):
-                raise ValueError('Campaign YOLO scene grid leaves the client frame.')
-        if scene.get('internal_edge_margin') != EDGE_MARGIN or scene.get('classwise_nms_iou') != NMS_IOU:
-            raise ValueError('Campaign YOLO scene grid expects different edge or NMS handling.')
-        return dict(size=tuple(size), tile=tile, x_offsets=tuple(offsets[0]), y_offsets=tuple(offsets[1]))
+        self.lock, self.run_lock = threading.Lock(), threading.Lock()
+        self.inference_cache, self.pending = OrderedDict(), {}
 
     def selected(self, labels):
-        """按请求类别裁剪阈值表；模型没有该类时明确失败，不静默返回空结果。"""
-        missing = [label for label in labels if label not in self.labels]
+        """校验当前角色可识别的类别，拒绝把场景目标交给小地图模型或反向使用。"""
+        missing = set(labels) - set(self.labels)
         if missing:
-            raise ValueError(f'Campaign YOLO model lacks classes: {", ".join(missing)}.')
+            raise ValueError(f'Campaign {self.role} model lacks classes: {sorted(missing)}')
         return {label: self.thresholds[label] for label in labels}
 
-    def predict(self, image, labels=None, guards=(True, True, True, True), frame=None):
-        """对一张图推理，返回该图像素坐标下的检测结果。
+    def infer(self, image):
+        """推理完整输入并缓存原始张量，同帧重复面板、不同类别和低阈值复核不重复运行。
 
-        labels 为 None 时用模型声明的全部类别；给出子集只是收紧阈值，类别判定仍按全类 argmax，
-        不会在子集上重新取最大值。
-        guards 按左、上、右、下指出哪些边是切片内部边界，整图推理时应保持默认全真。
-        frame 是切片所属的原始截图；省略时以 image 自身为边界。只在同一截图对象内复用
-        像素完全一致的输入，原地改图会使摘要改变，新截图即使像素相同也重新推理。
-        缓存只保存原始模型输出，每次仍按当前 labels、阈值与 guards 独立解码；弱引用避免
-        留住整幅截图，也防止对象销毁后 id 被复用。缓存与推理共用会话锁，淘汰只影响耗时。
+        缓存键包含像素摘要，原地改图不会误用旧输出。观测作用域内允许等像素的不同裁图
+        数组复用；作用域外只在同一数组对象内复用。异常必须通知所有同键等待者并允许重试。
         """
-        thresholds = self.thresholds if labels is None else self.selected(labels)
         height, width = image_size(image)
-        source = image if frame is None else frame
-        key = (id(source), height, width, hashlib.sha256(np.ascontiguousarray(image)).digest())
+        if (width, height) != SOURCE_SIZES[self.role]:
+            raise ValueError(f'Campaign {self.role} input expects {SOURCE_SIZES[self.role]}, got {(width, height)}.')
+        token = inference_frame_token()
+        key = (token if token is not None else id(image), hashlib.sha256(np.ascontiguousarray(image)).digest())
         with self.lock:
             cached = self.inference_cache.get(key)
-            if cached is not None and cached[0]() is source:
-                _, result, scales, padding = cached
+            if cached is not None and (token is not None or cached[0]() is image):
                 self.inference_cache.move_to_end(key)
-            else:
-                tensor, scales, padding = letterbox(image, self.size)
-                result = self.session.run([self.output_name], {self.input_name: tensor})[0]
-                self.inference_cache[key] = (weakref.ref(source), result, scales, padding)
+                return cached[1:]
+            pending = self.pending.get(key)
+            owner = pending is None
+            if owner:
+                pending = self.pending[key] = Future()
+        if not owner:
+            return pending.result()
+        try:
+            tensor, scales, padding = letterbox(image, self.input_size)
+            with self.run_lock:
+                output = self.session.run([self.output_name], {self.input_name: tensor})[0]
+            result = output, scales, padding
+            with self.lock:
+                self.inference_cache[key] = (weakref.ref(image), *result)
                 self.inference_cache.move_to_end(key)
                 while len(self.inference_cache) > INFERENCE_CACHE_SIZE:
                     self.inference_cache.popitem(last=False)
-        return decode(result, scales, padding, thresholds, image.shape, self.labels, guards)
+                self.pending.pop(key)
+            pending.set_result(result)
+            return result
+        except BaseException as exc:
+            with self.lock:
+                self.pending.pop(key, None)
+            pending.set_exception(exc)
+            raise
+
+    def predict(self, image, labels=None):
+        """在当前专用模型全部类别中判类，再按调用方类别过滤，返回输入图像坐标。"""
+        thresholds = self.thresholds if labels is None else self.selected(labels)
+        output, scales, padding = self.infer(image)
+        guards = (self.role != 'scene',) * 4
+        return decode(output, scales, padding, thresholds, image.shape, self.labels, guards)
+
+
+def package_signature():
+    """读取整包及三份元数据的指纹，不允许新增角色混入进程启动后的另一模型版本。"""
+    digest = hashlib.sha256((MODEL_DIRECTORY / 'bundle.json').read_bytes())
+    for role in ROLE_LABELS:
+        digest.update((MODEL_DIRECTORY / f'{role}.json').read_bytes())
+    return digest.digest()
 
 
 @lru_cache(maxsize=1)
-def detector():
-    """进程内共享的检测器。
-
-    建会话要读十几 MB 的模型并做一次初始化，每帧新建会把推图拖垮，所以缓存成单例；
-    Detector 内部有锁，多线程共用这一个实例是安全的。
-    """
-    return Detector()
+def loaded_package_signature():
+    """锁定本进程首次加载的模型包，磁盘更新后需重启任务而不是混用新旧角色。"""
+    return package_signature()
 
 
-def scene_mask(image):
-    """切片前遮掉界面与地图覆盖层，避免它们的符号被当成场景目标。
+@lru_cache(maxsize=3)
+def detector(role):
+    """每个角色共享一个进程内会话，只有实际用到的模型才加载。"""
+    signature = loaded_package_signature()
+    model = Detector(role, directory=MODEL_DIRECTORY)
+    if package_signature() != signature:
+        raise RuntimeError('Campaign model bundle changed; restart the task before loading another role.')
+    return model
 
-    顶栏、底栏、左上角任务区和右侧章节区是固定遮罩。展开的小地图位置固定但不一定开着，
-    所以按面板主色（偏蓝的色相且有一定饱和度）占比超过 0.85 才判定为打开并遮掉，
-    否则会把地图下面的真实场景一起挡住。
-    """
-    if image.shape != (999, 1776, 3):
+
+def detect_scene(image, labels=SCENE_LABELS):
+    """对整幅客户区只推理一次，所有场景类别共享同一输出，不再生成网格或遮罩切片。"""
+    if image is None or image.shape != CLIENT_SHAPE:
         raise ValueError('Campaign scene detection expects a 1776x999 BGR client frame.')
-    result = image.copy()
-    result[:120] = result[900:] = 0
-    result[:295, :230] = 0
-    result[:, 1650:] = 0
-    hsv = cv2.cvtColor(image[280:742, 644:1130], cv2.COLOR_BGR2HSV)
-    if np.mean((hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 115) & (hsv[:, :, 1] > 40)) >= .85:
-        result[250:790, 625:1150] = 0
-    return result
+    return detector('scene').predict(image, labels)
 
 
-def scene_tiles(image):
-    """旧五类的遮罩切片：六片 640×640，带重叠覆盖画面中部，逐片给出左上偏移。
-
-    偏移和尺寸是箭头与收集提示验证过的取图方式，和模型包声明的 scene 网格（grid_tiles）
-    不是一回事，不要互换；改这里等于让已验证的箭头检测重新标定。
-    """
-    masked = scene_mask(image)
-    for top in (120, 260):
-        for left in (0, 505, 1010):
-            yield masked[top:top + 640, left:left + 640], (left, top)
-
-
-def detect_scene(image, labels=LEGACY_SCENE_LABELS):
-    """用旧五类的遮罩切片方式检测场景目标，坐标换回客户区像素。
-
-    切片有重叠，同一目标会在相邻片里各出一次，所以补回偏移后要再做一次全局抑制。
-    """
-    detections = []
-    for tile, offset in scene_tiles(image):
-        for item in detector().predict(tile, labels, frame=image):
-            box = tuple(np.asarray(item.box) + np.tile(offset, 2))
-            detections.append(Detection(item.label, item.confidence, box))
-    return suppress(detections)
-
-
-def detect_minimap(image, labels=MINIMAP_LABELS):
-    """检测小地图面板里的标记，坐标为面板像素。
-
-    传入的必须是调用方按展开或紧凑模式裁好的面板，不是整幅客户区：模型是在面板尺度上训练的，
-    整图送进来标记会小到检不出。
-    """
-    return detector().predict(image, labels)
-
-
-def grid_tiles(image):
-    """按模型包声明的网格切分整幅客户区，并给出每片哪些边属于切片内部边界。"""
-    scene = detector().scene
-    if scene is None:
-        raise ValueError('Campaign YOLO model package declares no scene grid.')
-    if image.shape[1::-1] != scene['size']:
-        raise ValueError(f'Scene grid expects a {scene["size"][0]}x{scene["size"][1]} BGR client frame.')
-    tile, (width, height) = scene['tile'], scene['size']
-    for top in scene['y_offsets']:
-        for left in scene['x_offsets']:
-            guards = (left > 0, top > 0, left + tile < width, top + tile < height)
-            yield image[top:top + tile, left:left + tile], (left, top), guards
-
-
-def detect_grid(image, labels=GRID_LABELS):
-    """在整幅客户区上检测机关、电梯、屏障与敌人脚圈；坐标为客户区像素。
-
-    八片 640×640 覆盖整幅画面，逐片抑制后再全局抑制，与模型包的 scene 契约一致。
-    """
-    detections = []
-    for tile, offset, guards in grid_tiles(image):
-        for item in detector().predict(tile, labels, guards, frame=image):
-            box = tuple(np.asarray(item.box) + np.tile(offset, 2))
-            detections.append(Detection(item.label, item.confidence, box))
-    return suppress(detections)
+def detect_minimap(image, mode, labels=MINIMAP_LABELS):
+    """按明确的缩略/展开状态使用对应专用模型；未知状态不得猜测或同时运行两种模型。"""
+    if mode not in ('compact', 'expanded'):
+        raise ValueError(f'Explicit compact or expanded minimap mode required: {mode}')
+    return detector(mode).predict(image, labels)

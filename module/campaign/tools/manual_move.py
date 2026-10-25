@@ -219,7 +219,8 @@ class GameSession(NavigationSession):
         if np.mean(goto.terrain(observed) != goto.terrain(self.win.capture())) > .03:
             raise RuntimeError('定位期间地图发生变化，请重新开始测试。')
         if report.get('roi_to_map') is not None:
-            report['enemy_markers'] = goto.normal_enemy_markers(observed, np.asarray(report['roi_to_map']))
+            report['enemy_markers'] = goto.normal_enemy_markers(
+                observed, np.asarray(report['roi_to_map']), mode='expanded')
         return report
 
 

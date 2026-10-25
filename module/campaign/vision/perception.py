@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 
 from module.campaign.vision.detection import detect_minimap, detect_scene
+from module.campaign.vision.frame import frame_inputs
 from module.campaign.vision.minimap import terrain
 
 
@@ -153,34 +154,34 @@ def project_centers(points, matrix):
     return projected.round(1).tolist()
 
 
-def marker_candidates(image):
+def marker_candidates(image, mode):
     """小地图面板里可用的标记检测，已排掉贴边与界面控件上的误检。
 
     贴着面板边缘的框是被裁断的符号，中心会偏，一律丢弃。
     右下角是面板自带的图例、紧凑面板左上与右上是缩放与关闭控件，这些位置的「标记」都是界面元素；
-    按面板宽度区分展开与紧凑，只有紧凑面板才排顶部两角。
+    mode 必须来自本帧面板状态，只有缩略面板排除顶部两角控件。
     """
     height, width = image.shape[:2]
     result = []
-    for item in detect_minimap(image):
+    for item in detect_minimap(image, mode):
         left, top, right, bottom = item.box
         if left <= 3 or top <= 3 or right >= width - 3 or bottom >= height - 3:
             continue
         if item.center[0] >= width - 75 and item.center[1] >= height - 31:
             continue
-        if width < 300 and top < 29 and (left < 42 or right > width - 34):
+        if mode == 'compact' and top < 29 and (left < 42 or right > width - 34):
             continue
         result.append(item)
     return result
 
 
-def detect_markers(image, matrix):
+def detect_markers(image, matrix, mode):
     """小地图上的小队与敌人，按 matrix 投到地图坐标，返回（小队, 敌人）两组。
 
     小队必须通过圆环拟合，拟合失败就不计入——定位基准宁缺毋滥；敌人只取检测框中心，
     用于计数和粗略方位，精确落点另见 normal_enemy_markers。
     """
-    candidates = marker_candidates(image)
+    candidates = marker_candidates(image, mode)
     players, enemies = [], []
     for item in candidates:
         if item.label == 'minimap_squad_ring':
@@ -204,7 +205,7 @@ def expanded_minimap_masks(panel, require_player=True, locate_player=True):
         raise ValueError('展开地图定位需要 486×462 的原始画面裁图。')
     if require_player and not locate_player:
         raise ValueError('只定位视野时不能要求小队圆环。')
-    players, _ = detect_markers(panel, np.eye(3)) if locate_player else ([], [])
+    players, _ = detect_markers(panel, np.eye(3), mode='expanded') if locate_player else ([], [])
     if len(players) > 1 or (require_player and len(players) != 1):
         raise ValueError(f'展开地图小队圆环数量无效：检测到 {len(players)} 个。')
     player = np.asarray(players[0], float) if players else None
@@ -224,14 +225,14 @@ def expanded_minimap_masks(panel, require_player=True, locate_player=True):
     return road, valid, player
 
 
-def normal_enemy_markers(image, matrix):
+def normal_enemy_markers(image, matrix, mode):
     """普通敌人标记的精确位置，已排除 EX 弹窗带出的误检。
 
     EX 关卡弹窗可带普通敌人样式标记；与任一 EX 或 Boss 框重叠的普通候选都丢掉。
     落点取红色像素凸包的重心而不是检测框中心：标记是水滴形，框中心会偏向尖端，
     重心更贴近它在地图上的实际位置。红色跨越色相环两端，要分两段取。
     """
-    candidates = marker_candidates(image)
+    candidates = marker_candidates(image, mode)
     normals = [item for item in candidates if item.label == 'minimap_enemy_normal']
     excluded = [item for item in candidates if item.label in ('minimap_enemy_ex', 'minimap_enemy_boss')]
     centers = []
@@ -254,13 +255,13 @@ def normal_enemy_markers(image, matrix):
     return project_centers(centers, matrix)
 
 
-def boss_enemy_markers(image, matrix):
+def boss_enemy_markers(image, matrix, mode):
     """将完整、无跨类重叠的 Boss 标记框中心投到底图，不用普通三角的红色重心定位骷髅图标。
 
     输入为当前裁好的紧凑或展开面板；坐标仅供同类型目标导航，不推断主线身份。
     与普通或 EX 框重叠的 Boss 宁可忽略，避免把竞争类别交给移动闭环吸附。
     """
-    candidates = marker_candidates(image)
+    candidates = marker_candidates(image, mode)
     bosses = [item for item in candidates if item.label == 'minimap_enemy_boss']
     others = [item for item in candidates if item.label in ('minimap_enemy_normal', 'minimap_enemy_ex')]
     centers = []
@@ -284,8 +285,8 @@ def minimap_masks(image):
     """
     if image.shape != (999, 1776, 3):
         raise ValueError('Expected a 1776x999 client frame for compact-map observation.')
-    panel = cv2.resize(image, (1920, 1080))[96:307, 25:243]
-    players, _ = detect_markers(panel, np.eye(3))
+    panel = frame_inputs(image).compact
+    players, _ = detect_markers(panel, np.eye(3), mode='compact')
     if len(players) != 1:
         raise ValueError(f'Expected one compact-map squad ring, got {len(players)}.')
     player = np.asarray(players[0])
@@ -314,7 +315,7 @@ def compact_road_masks(image):
     """
     if image.shape != (999, 1776, 3):
         raise ValueError('Expected a 1776x999 client frame for compact-map observation.')
-    panel = cv2.resize(image, (1920, 1080))[96:307, 25:243]
+    panel = frame_inputs(image).compact
     hsv = cv2.cvtColor(panel, cv2.COLOR_BGR2HSV)
     road = cv2.inRange(hsv, (85, 65, 115), (115, 255, 255))
     road = cv2.morphologyEx(road, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))

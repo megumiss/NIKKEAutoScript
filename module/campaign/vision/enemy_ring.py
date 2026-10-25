@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from module.campaign.vision.detection import detect_grid
+from module.campaign.vision.detection import detect_scene
 from module.campaign.vision.perception import marker_candidates, refine_ring
 from module.campaign.vision.surface_motion import project
 
@@ -64,7 +64,7 @@ def observe_rings(image, panel, matrix, viewport, observe_squad=True):
     """
     if image.shape != (999, 1776, 3):
         raise ValueError('脚圈辅助要求 1776×999 客户区截图。')
-    rings = [item for item in detect_grid(image, ('scene_enemy_ring',))
+    rings = [item for item in detect_scene(image, ('scene_enemy_ring',))
              if item.confidence >= RING_CONFIDENCE and clickable_ring(item.box)]
     centers = np.asarray([item.center for item in rings], float).reshape(-1, 2)
     mask = np.full(image.shape[:2], 255, np.uint8)
@@ -75,7 +75,7 @@ def observe_rings(image, panel, matrix, viewport, observe_squad=True):
     keys, descriptors = cv2.SIFT_create(nfeatures=6000).detectAndCompute(
         cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), mask)
     enemies, squad = [], []
-    for item in marker_candidates(panel):
+    for item in marker_candidates(panel, mode='compact'):
         if item.label == 'minimap_squad_ring':
             if observe_squad:
                 center = refine_ring(panel, item)
