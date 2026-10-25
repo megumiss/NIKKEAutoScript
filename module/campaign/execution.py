@@ -24,7 +24,7 @@ from module.logger import logger
 # 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。
 CAMPAIGN_TICK_BUDGET = 48
 TARGET_MOVES = 12
-# 每章共享恢复次数，恢复后不清零，防止反复回正扫描却无实际推进。
+# 限制连续未完成的恢复尝试；回正、重新定位及十字扫描全部通过后清零。
 CAMPAIGN_RECOVERY_LIMIT = 3
 # 复核站位上最多连看的紧凑帧数：箭头锚点、配准或检测偶发失手会让单帧不可信，换一帧往往就能看清；
 # 连看都不可信才算这次复核失败。
@@ -420,17 +420,18 @@ class CampaignExecutor:
         return scanned
 
     def recover(self, reason):
-        """清除本轮临时决策，独立回正并从十字扫描重新开始；每章最多恢复三次。
+        """清除本轮临时决策，独立回正并从十字扫描重新开始；最多连续尝试三次。
 
         已清除敌人、机关、电梯、光幕和道路事实保留，失败目标的冷却不重置；只解除镜头侦察的
         临时失败与主线标记定位冷却，允许新视野重新确认。恢复过程仍受原输入及时限闸门约束，
         任何失败交回主循环处理；回正、定位或扫描未通过时不能继续使用异常前的目标。
+        完整恢复成功后清零连续计数，同章之后的独立异常重新获得三次尝试机会。
         """
         if self.recoveries >= CAMPAIGN_RECOVERY_LIMIT:
-            raise RuntimeError('主线自动恢复次数已达上限。')
+            raise RuntimeError('主线连续自动恢复次数已达上限。')
         self.recoveries += 1
         self.session.record('recovery_start', force=True, attempt=self.recoveries, reason=reason)
-        logger.warning(f'主线自动恢复开始：第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，原因 {reason}。')
+        logger.warning(f'主线自动恢复开始：连续第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，原因 {reason}。')
         state = self.owner.state
         state.execution_target = None
         state.route_goal = None
@@ -448,7 +449,9 @@ class CampaignExecutor:
         if not self.scan_start('恢复后'):
             raise RuntimeError('回正后的十字扫描未取得可信视野。')
         self.session.record('recovery_complete', attempt=self.recoveries)
-        logger.info(f'主线自动恢复完成：第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，下一轮重新选择目标。')
+        logger.info(f'主线自动恢复完成：连续第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，'
+                    '连续计数已清零，下一轮重新选择目标。')
+        self.recoveries = 0
 
     def confirm_barriers_safe(self, snapshot):
         """确认当前可见光幕；确认失败时保留原快照与既有路网，不终止推图。
@@ -473,7 +476,7 @@ class CampaignExecutor:
         找主线敌人和侦察阶段冻结已有小队底图坐标，只重新配准镜头与敌人；跨轮侦察同样不要求
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、输入预算、取消
-        和战斗失败仍立即停止。每章恢复次数有界，不能靠不断重置阶段预算无限重试。
+        和战斗失败仍立即停止。连续恢复尝试有界，完整恢复成功后清零；总轮数与章节时限不重置。
         每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：整条推图日志因此能按轮切分，
         把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
         """
@@ -598,7 +601,7 @@ class CampaignExecutor:
                     self.session.record('recovery_required', force=True, reason=recovery_reason,
                                         attempt=self.recoveries, goal=goal)
                     if self.recoveries >= CAMPAIGN_RECOVERY_LIMIT:
-                        logger.warning(f'主线自动恢复已达 {CAMPAIGN_RECOVERY_LIMIT} 次上限，停止执行：{exc}')
+                        logger.warning(f'主线连续自动恢复已达 {CAMPAIGN_RECOVERY_LIMIT} 次上限，停止执行：{exc}')
                         return {'state': 'needs_review', 'reason': 'recovery_limit',
                                 'error': recovery_reason, 'goal': goal}
                     logger.warning(f'主线本轮异常，下一轮回正并重扫：{exc}')
