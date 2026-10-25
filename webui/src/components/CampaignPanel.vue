@@ -14,7 +14,7 @@ type Snapshot = {
   localization: string; squad: Point | null; enemies: Enemy[]
   barriers?: { state: string; map: Point }[]; blocks?: Block[]
   annotations?: MapAnnotations | null
-  memory?: { tick: number; enemies: RememberedEnemy[]; blocks: Block[]; goal?: Goal; route_goal?: Goal | null; routes?: PlannedRoutes;
+  memory?: { tick: number; enemy_confirmation?: string; enemies: RememberedEnemy[]; blocks: Block[]; goal?: Goal; route_goal?: Goal | null; routes?: PlannedRoutes;
     mechanisms?: { id: string; state: string; completed: boolean }[] }
 }
 const instances = useInstancesStore()
@@ -27,6 +27,7 @@ const mapUrl = computed(() => snapshot.value?.map ? `/api/${encodeURIComponent(p
 const updatedAt = computed(() => snapshot.value ? new Date(snapshot.value.captured_at * 1000).toLocaleTimeString(uiLanguage.value) : '')
 // 本帧快照只含视野内的敌人；远处敌人与离开视野的封锁要从任务推送的运行记忆里取，没有记忆时退回本帧。
 const remembered = computed(() => snapshot.value?.memory?.enemies ?? [])
+const enemyHints = computed(() => remembered.value.filter(enemy => enemy.confirmed === false))
 const mapBlocks = computed(() => snapshot.value?.memory?.blocks ?? snapshot.value?.blocks ?? [])
 const goal = computed(() => snapshot.value?.memory?.goal ?? null)
 const routes = computed(() => snapshot.value?.memory?.routes ?? {})
@@ -73,7 +74,7 @@ onBeforeUnmount(() => { generation++ })
     <div v-else class="campaign-content">
       <section class="chapter-map-section">
         <div class="section-heading"><b>{{ t('章节地图') }}</b><span>{{ mapBlocks.length ? `${mapBlocks.length} ${t('处道路封锁')}` : t('普通 / 困难共用底图') }}</span></div>
-        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :blocks="mapBlocks" :goal="goal" :route-goal="routeGoal" :routes="routes" :annotations="annotations" :mechanism-states="mechanismStates" :label="t('章节地图')" @error="mapError = true" />
+        <CampaignMap v-if="snapshot.map && !mapError" :image="mapUrl" :size="snapshot.map.size" :squad="snapshot.squad" :enemies="snapshot.enemies" :remembered="remembered" :confirmation-aware="snapshot.memory?.enemy_confirmation === 'current_turn'" :blocks="mapBlocks" :goal="goal" :route-goal="routeGoal" :routes="routes" :annotations="annotations" :mechanism-states="mechanismStates" :label="t('章节地图')" @error="mapError = true" />
         <div v-else class="campaign-empty">{{ t('章节底图不可用') }}</div>
         <div v-if="snapshot.memory" class="target-details">
           <div v-for="entry in [{ title: '路程目标', value: routeGoal }, { title: '执行目标', value: goal }]" :key="entry.title" class="target-row">
@@ -88,7 +89,7 @@ onBeforeUnmount(() => { generation++ })
             <span><CampaignMarker kind="enemy" :size="16" />{{ t('敌人') }}</span>
             <span><CampaignMarker kind="ex" :size="16" />EX</span>
             <span><CampaignMarker kind="boss" :size="16" />Boss</span>
-            <span v-if="remembered.length"><CampaignMarker kind="enemy" state="remembered" :size="16" />{{ t('记住的敌人') }} {{ remembered.length }}</span>
+            <span v-if="enemyHints.length"><CampaignMarker kind="hint" :size="16" />{{ t('历史敌人线索') }} {{ enemyHints.length }}</span>
             <span v-if="goal"><CampaignMarker kind="execution" :size="16" />{{ t('执行目标') }}</span>
             <span v-if="routeGoal"><CampaignMarker kind="destination" :size="16" />{{ t('路程目标') }}</span>
             <span v-if="mapBlocks.length"><CampaignMarker kind="barrier" :size="16" />{{ t('道路封锁') }}</span>

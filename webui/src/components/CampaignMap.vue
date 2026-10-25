@@ -5,7 +5,7 @@ import CampaignMarker from './CampaignMarker.vue'
 
 export type Point = [number, number]
 export type Enemy = { kind: 'normal' | 'ex' | 'boss'; position: Point; confidence: number }
-export type RememberedEnemy = { id: string; kind: 'normal' | 'ex' | 'boss' | null; position: Point; status: 'pending' | 'engaged' | 'unreachable' }
+export type RememberedEnemy = { id: string; kind: 'normal' | 'ex' | 'boss' | null; position: Point; status: 'pending' | 'engaged' | 'unreachable'; confirmed?: boolean; visible?: boolean }
 export type Block = { id: string; kind?: string; point: Point; segment: [Point, Point]; status?: 'active' | 'stale' }
 export type RoutePath = { target_id: string; points: Point[]; distance: number }
 export type PlannedRoutes = { execution?: RoutePath; destination?: RoutePath }
@@ -17,6 +17,7 @@ export type MapAnnotations = { points: AnnotatedPoint[]; transfers: ElevatorTran
 const props = withDefaults(defineProps<{
   image: string; size: Point; squad?: Point | null; enemies: Enemy[]
   remembered?: RememberedEnemy[]
+  confirmationAware?: boolean
   blocks?: Block[]
   goal?: Goal | null
   routeGoal?: Goal | null
@@ -36,8 +37,13 @@ const routeLines = computed(() => (['destination', 'execution'] as const).flatMa
 const emit = defineEmits<{ error: [] }>()
 const marker = computed(() => props.size[0] * .012)
 const statusLabels: Record<RememberedEnemy['status'], string> = { pending: '待处理', engaged: '已交战', unreachable: '暂时走不到' }
-/** 当前检测与同类型记忆一对一关联，避免同一敌人的实心／空心标记重叠；不改变任务记忆。 */
+/** 新快照按后端确认字段展示，不再把历史位置与当前检测猜测关联；旧快照仍兼容原展示。 */
 const enemyMarkers = computed(() => {
+  if (props.confirmationAware || props.remembered.some(enemy => enemy.confirmed !== undefined)) {
+    return props.remembered.filter(enemy => enemy.confirmed).map(enemy => ({
+      ...enemy, visible: enemy.visible ?? false, confidence: null as number | null,
+    }))
+  }
   const markers = props.remembered.map(enemy => ({ ...enemy, visible: false, confidence: null as number | null }))
   const matched = new Set<number>()
   props.enemies.forEach((enemy, index) => {
@@ -57,6 +63,8 @@ const enemyMarkers = computed(() => {
   })
   return markers
 })
+/** 历史位置仅用线索圆点展示，不与已确认敌人共享三角形标记。 */
+const enemyHints = computed(() => props.remembered.filter(enemy => enemy.confirmed === false))
 /** 已完成的机关状态由调用方归一为 on；没有状态证据时明确显示未知，不使用绿色已开启外观。 */
 function mechanismState(point: AnnotatedPoint) { return props.mechanismStates[point.id] ?? 'unknown' }
 const mechanismLabels: Record<MechanismState, string> = { on: '已开启', off: '未开启', unknown: '未检测到状态' }
@@ -98,10 +106,14 @@ function transferAngle(transfer: ElevatorTransfer) {
     </g>
     <g v-for="enemy in enemyMarkers" :key="enemy.id" :transform="`translate(${enemy.position.join(' ')})`" :class="['enemy-marker', enemy.kind, enemy.status, { visible: enemy.visible }]">
       <CampaignMarker :kind="enemy.kind === 'boss' ? 'boss' : enemy.kind === 'ex' ? 'ex' : 'enemy'" :state="enemy.status === 'pending' ? enemy.visible ? 'visible' : 'remembered' : enemy.status" :size="marker * (enemy.kind === 'boss' ? 3.3 : 2.6)" :x="-marker * (enemy.kind === 'boss' ? 1.65 : 1.3)" :y="-marker * (enemy.kind === 'boss' ? 1.65 : 1.3)" />
-      <title>{{ enemy.visible ? t('当前可见') : t('记住的敌人') }} · {{ enemyLabel(enemy.kind) }} · {{ enemy.id }} · {{ t(statusLabels[enemy.status]) }} · {{ enemy.position.join(', ') }}</title>
+      <title>{{ enemy.visible ? t('当前可见') : t('本轮确认的敌人') }} · {{ enemyLabel(enemy.kind) }} · {{ enemy.id }} · {{ t(statusLabels[enemy.status]) }} · {{ enemy.position.join(', ') }}</title>
+    </g>
+    <g v-for="hint in enemyHints" :key="`hint-${hint.id}`" :transform="`translate(${hint.position.join(' ')})`" class="enemy-hint">
+      <CampaignMarker kind="hint" :size="marker * 1.4" :x="-marker * .7" :y="-marker * .7" />
+      <title>{{ t('历史敌人线索') }} · {{ enemyLabel(hint.kind) }} · {{ hint.position.join(', ') }} · {{ t('需重新观察，不直接执行') }}</title>
     </g>
     <g v-if="routeGoal" class="route-goal" :transform="`translate(${routeGoal.position.join(' ')})`">
-      <CampaignMarker kind="destination" :size="marker * 3.2" :x="-marker * 1.1" :y="-marker * 3.2" />
+      <CampaignMarker kind="destination" :size="marker * 4.2" :x="-marker * 2.1" :y="-marker * 2.1" />
       <title>{{ t('路程目标') }} · {{ routeGoal.id }} · {{ routeGoal.position.join(', ') }}</title>
     </g>
     <g v-if="goal" class="goal" :transform="`translate(${goal.position.join(' ')})`">

@@ -4,6 +4,9 @@ import { computed, ref } from 'vue'
 export const uiLanguage = ref('zh-CN')
 
 export const staticLabels: Record<string, Record<string, string>> = {
+  "本轮确认的敌人": { 'en-US': "Enemies confirmed this turn", 'ja-JP': "今回確認した敵" },
+  "历史敌人线索": { 'en-US': "Historical enemy hints", 'ja-JP': "過去の敵の手がかり" },
+  "需重新观察，不直接执行": { 'en-US': "Observe again before selecting a combat target", 'ja-JP': "戦闘対象にする前に再観察が必要" },
   "路程目标": { 'en-US': "Route destination", 'ja-JP': "経路の目的地" },
   "执行目标": { 'en-US': "Current action target", 'ja-JP': "実行対象" },
   "主线目标": { 'en-US': "Main story target", 'ja-JP': "メインストーリーの目標" },

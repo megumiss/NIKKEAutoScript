@@ -14,9 +14,9 @@ from scipy.sparse.csgraph import dijkstra
 
 from module.campaign.goals import nearest_enemy
 from module.campaign.map.map_state import GRID
-from module.campaign.route_branches import branch_scout_points
-from module.campaign.route_planning import route_path
-from module.campaign.run_state import OBSERVED_CELL
+from module.campaign.route_branches import branch_scout_points, route_branches
+from module.campaign.route_planning import ROUTE_CORRIDOR, ROUTE_DETOUR, route_path
+from module.campaign.run_state import COMBAT_ENEMY_KINDS, OBSERVED_CELL
 from module.campaign.subgoals import RoadView
 
 # 一个已观测粗格每边包含的 8 像素路网格数。
@@ -78,6 +78,48 @@ def field_at(field, point):
     return float(np.min(window + np.hypot(xs * GRID - point[0], ys * GRID - point[1])))
 
 
+def enemy_hint_focus(state, cut, squad, include_cooling=False, goal=None):
+    """选择需要重新观察的历史敌人位置，只返回镜头侦察落点，不执行地面移动。
+
+    无目的地时只查可能比当前已确认敌人更近的线索；有目的地时限于本次执行路线及相关汇合岔路，
+    并复查道路绕行，避免历史标注把主线路程引向无关支路。已覆盖网格不能代替敌人复核。
+    配准失败的暂不可扫位置沿用现有的小队距离解除规则；冷却只限制重试。
+    """
+    hints = [item for item in state.enemy_hints() if item['kind'] in COMBAT_ENEMY_KINDS]
+    if not hints:
+        return None
+    target = (goal if goal and goal.get('position') is not None else state.route_goal)
+    route = route_path(cut, squad, target['position']) if state.route_goal is not None else None
+    if state.route_goal is not None and route is None:
+        return None
+    sections = route_branches(state, cut, squad, state.route_goal)['sections'] if route is not None else []
+    nearest, _ = nearest_enemy(state, cut, squad)
+    limit = nearest['distance'] if nearest else float('inf')
+    candidates = []
+    for item in hints:
+        identifier = f'scout-hint-{item["id"]}'
+        if state.is_unscoutable(identifier, squad) or (not include_cooling and state.cooling(identifier)):
+            continue
+        path = route_path(cut, squad, item['position'])
+        if path is None:
+            continue
+        distance = float(path[1][-1])
+        if route is not None:
+            position = np.asarray(item['position'], float)
+            on_branch = any(section.active and section.contains(position) for section in sections)
+            if not on_branch:
+                if np.linalg.norm(route[0] - position, axis=1).min() > ROUTE_CORRIDOR:
+                    continue
+                tail = route_path(cut, position, target['position'])
+                if tail is None or distance + tail[1][-1] - route[1][-1] > ROUTE_DETOUR:
+                    continue
+        elif distance >= limit:
+            continue
+        candidates.append(dict(id=identifier, position=item['position'], distance=round(distance, 1),
+                               known=round(limit, 1) if np.isfinite(limit) else None, source='enemy_hint'))
+    return min(candidates, key=lambda item: item['distance']) if candidates else None
+
+
 def scout_focus(state, cut, squad, include_cooling=False, goal=None):
     """挑下一屏侦察落点，优先候选敌人的实际路径，再查可能更近的未知支路。
 
@@ -88,6 +130,9 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
     只有这时返回 None 才代表没有待查区域。所有距离与位置均为底图像素。
     路程模式的 goal 指本段执行落点，查该段及已进入的汇合岔路两侧；省略时查完整目的地路线。
     """
+    hint = enemy_hint_focus(state, cut, squad, include_cooling, goal)
+    if hint is not None:
+        return hint
     if state.route_goal is not None:
         target = goal if goal and goal.get('position') is not None else state.route_goal
         return route_scout_focus(state, cut, squad, target, include_cooling)

@@ -5,7 +5,6 @@ import numpy as np
 
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation.camera_navigation import compact_viewport, pan_scene
-from module.campaign.vision.barriers import CENTER_TOLERANCE
 from module.campaign.vision.enemy_ring import match_target_ring, observe_rings, scene_tracks
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import compact_road_masks, squad_arrow
@@ -14,6 +13,7 @@ from module.logger import logger
 
 MAX_PANS = 4
 MAX_EDGE_CLICKS = 2
+STORY_CENTER_TOLERANCE = 40.
 
 
 def story_frame(session, squad):
@@ -40,14 +40,14 @@ def story_frame(session, squad):
 def story_ground(frame):
     """读取已居中主线脚圈对应的底图视口中心，不外推远离注视点的场景坐标。
 
-    脚圈须在注视点的 18 客户区像素内，视口中心来自同帧已接受的紧凑小地图配准。
+    脚圈须在注视点的 40 客户区像素内，视口中心来自同帧已接受的紧凑小地图配准。
     未居中、坐标无效或缺少地面环时返回 None；调用方仍须复核第二帧及道路归属后才能写入目标。
     """
     if frame is None or frame['ring'] is None:
         return None
     ring = np.asarray(frame['ring'], float)
     if (ring.shape != (2,) or not np.isfinite(ring).all()
-            or np.linalg.norm(ring - goto.VIEWPORT_PIXEL) > CENTER_TOLERANCE):
+            or np.linalg.norm(ring - goto.VIEWPORT_PIXEL) > STORY_CENTER_TOLERANCE):
         return None
     position = np.asarray(frame['view']['viewport'], float)
     if position.shape != (2,) or not np.isfinite(position).all():
@@ -58,8 +58,9 @@ def story_ground(frame):
 def story_enemy_between(before, after, squad):
     """反向验证主线所属敌人，返回两帧唯一支持的底图坐标与普通／Boss 类型。
 
-    使用各自坐标系的实测帧间位移，不建立章节通用的大小地图换算。主线必须连续关联到同一
-    脚圈；仅同向移动、场内邻近或单帧靠近注视点均不足以认领敌人。
+    使用各自坐标系的实测帧间位移，不建立章节通用的大小地图换算。参考帧和当前帧须通过
+    场景跟踪关联到同一主线脚圈，可跨越多次纯镜头平移；仅同向移动、场内邻近或单帧靠近
+    注视点均不足以认领敌人。
     """
     if before['ring'] is None or after['ring'] is None:
         return None
@@ -118,8 +119,10 @@ def reveal_story_marker(session):
 def locate_story_target(session, squad):
     """有限平移定位主线脚圈，以已确认敌人或两帧居中的视口中心作为路程目的地。
 
-    最多四次平移，只向已识别的脚圈调整镜头，不按悬浮标记做地图投影。小队不可定位且离屏
-    标记也未确认时禁止拖动，以免按下点落在小队上变成走位。地面目标须连续两帧居中，尺度变化
+    最多四次平移，只向已识别的脚圈调整镜头，不按悬浮标记做地图投影。保留本次定位中最多
+    四个已识别主线脚圈的参考帧，优先用早期帧积累位移证据；单个参考帧匹配失败不影响其余帧，
+    每对帧仍须通过原有身份与运动校验。小队不可定位且离屏标记也未确认时禁止拖动，以免按下点
+    落在小队上变成走位。地面目标须连续两帧处于注视点 40 客户区像素内，尺度变化
     不超过 12%、视口偏差不超过 12 地图像素、脚圈偏差不超过 15 客户区像素，并通过道路归属校验；
     未确认时记录失败冷却，不吸附远离道路的点，保留普通敌人推进策略。
     """
@@ -130,6 +133,7 @@ def locate_story_target(session, squad):
     try:
         changed = reveal_story_marker(session)
         before = story_frame(session, squad)
+        references = []
         for attempt in range(MAX_PANS + 1):
             if before is None:
                 break
@@ -174,13 +178,22 @@ def locate_story_target(session, squad):
             after = story_frame(session, squad)
             if after is None:
                 break
-            enemy = story_enemy_between(before, after, squad)
-            if enemy is not None:
+            if before['ring'] is not None:
+                references.append((attempt, before))
+            for reference_pan, reference in references:
+                try:
+                    enemy = story_enemy_between(reference, after, squad)
+                except (ValueError, cv2.error, np.linalg.LinAlgError) as exc:
+                    logger.info(f'主线敌人帧间匹配不可用：参考平移序号 {reference_pan}，'
+                                f'当前平移序号 {attempt + 1}，原因 {exc}。')
+                    continue
+                if enemy is None:
+                    continue
                 position = enemy['position']
                 identifier = state.remember_story_target(position, kind=enemy['kind'])
                 if identifier is not None:
                     logger.info(f'主线路程目标已定位：敌人 {identifier}，底图位置 {position}，'
-                                f'镜头平移 {attempt + 1} 次。')
+                                f'镜头平移 {attempt + 1} 次，参考平移序号 {reference_pan}。')
                     return changed
             before = after
     except (ValueError, cv2.error, np.linalg.LinAlgError) as exc:

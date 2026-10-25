@@ -107,7 +107,7 @@ def route_enemy(state, cut, squad, target, path, distances):
     """
     candidates = []
     full = float(distances[-1] + np.linalg.norm(path[-1] - np.asarray(target)))
-    for enemy in state.enemies.values():
+    for enemy in state.confirmed_enemies():
         if enemy['kind'] not in COMBAT_ENEMY_KINDS or enemy['status'] == 'cleared':
             continue
         point = np.asarray(enemy['position'], float)

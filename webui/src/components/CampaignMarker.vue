@@ -1,11 +1,12 @@
 <script setup lang="ts">
-export type MarkerKind = 'enemy' | 'boss' | 'ex' | 'mechanism' | 'elevator' | 'execution' | 'destination' | 'squad' | 'barrier'
+export type MarkerKind = 'enemy' | 'boss' | 'ex' | 'mechanism' | 'elevator' | 'execution' | 'destination' | 'squad' | 'barrier' | 'hint'
 withDefaults(defineProps<{ kind: MarkerKind; state?: string; size?: number }>(), { state: 'visible', size: 22 })
 </script>
 
 <template>
   <svg class="campaign-marker" :class="[kind, state]" :width="size" :height="size" viewBox="-16 -16 32 32" aria-hidden="true">
-    <template v-if="kind === 'enemy' || kind === 'boss' || kind === 'ex'">
+    <circle v-if="kind === 'hint'" class="body-line" r="5" />
+    <template v-else-if="kind === 'enemy' || kind === 'boss' || kind === 'ex'">
       <path v-if="kind === 'enemy'" class="body-fill" d="M 0 11 L -11 -8 H 11 Z" />
       <path v-else class="body-line" :d="kind === 'boss' ? 'M 0 13 L -13 -9 H 13 Z' : 'M 0 12 L -12 -8 H 12 Z'" />
       <template v-if="kind === 'ex'">
@@ -32,9 +33,7 @@ withDefaults(defineProps<{ kind: MarkerKind; state?: string; size?: number }>(),
       <path class="body-line" d="M -4 7 V -7 M -8 -3 L -4 -7 L 0 -3 M 4 -7 V 7 M 0 3 L 4 7 L 8 3" />
     </template>
     <circle v-else-if="kind === 'execution'" class="target-ring" r="12" />
-    <template v-else-if="kind === 'destination'">
-      <path class="body-fill" d="M -5 12 V -12 L 12 -7 L -5 -2 Z" /><circle class="body-fill" cx="-5" cy="12" r="2" />
-    </template>
+    <circle v-else-if="kind === 'destination'" class="target-ring" r="12" />
     <path v-else-if="kind === 'squad'" class="body-fill" d="M 0 -11 L 9 9 L 0 4.5 L -9 9 Z" />
     <template v-else>
       <path class="barrier-line" d="M -11 0 H 11" />
@@ -60,5 +59,5 @@ withDefaults(defineProps<{ kind: MarkerKind; state?: string; size?: number }>(),
 .remembered .body-fill { fill:none; stroke:currentColor; stroke-width:1.6px; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
 .remembered .body-hole { visibility:hidden; }
 .engaged { opacity:.55; }
-.unreachable { color:#a6b5c4; }
+.unreachable, .hint { color:#a6b5c4; }
 </style>

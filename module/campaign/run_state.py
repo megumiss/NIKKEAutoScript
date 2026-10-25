@@ -12,13 +12,10 @@ import numpy as np
 from module.campaign.report import BLOCK_STATUS, ENEMY_STATUS, counts_text, label
 from module.logger import logger
 
-# 小地图标记每帧重检，同一只敌人的落点会在几像素内抖动；超过这个距离才算另一只。
+# 小地图标记每帧重检；此半径仅用于复用邻近记录的编号，不证明跨帧敌人身份。
 ENEMY_MERGE_RADIUS = 25.
-# 合并半径之外的第二道重复判据：比这个距离更近的既有记录，只要本帧视野盖住了它的位置、
-# 本帧却没在那里认出敌人，就认为新标记是同一只敌人被配准投偏了，不新建记录。
-# 细路配准对「沿路滑动」不敏感：38 章实机里同一只敌人在紧凑帧与展开帧相差 55 地图像素，
-# 光靠 25 像素的合并半径拦不住，多出来的一条会按更近的距离抢走目标选择。
-ENEMY_SHADOW_RADIUS = 90.
+# 历史线索靠近本轮已确认的同类敌人时不重复侦察或展示；只隐藏线索，不合并敌人或删除记忆。
+ENEMY_HINT_RADIUS = 90.
 # 已观测区域的粗网格边长，只用来回答「这块地方看过没有」，不参与路径规划。
 OBSERVED_CELL = 32
 # 可用的定位状态：accepted 是本帧配准被接受；reused 是沿用上一次被接受的坐标
@@ -82,11 +79,9 @@ def describe_changes(changes):
     if changes.get('observed_cells'):
         parts.append(f"新覆盖 {changes['observed_cells']} 格地图")
     if changes.get('enemies_added'):
-        parts.append('新发现敌人 ' + '、'.join(changes['enemies_added']))
+        parts.append('记录本帧敌人 ' + '、'.join(changes['enemies_added']))
     if changes.get('enemies_refreshed'):
         parts.append(f"更新已知敌人位置 {changes['enemies_refreshed']} 个")
-    if changes.get('enemies_held'):
-        parts.append(f"过滤疑似重复敌人标记 {changes['enemies_held']} 处")
     if changes.get('blocks_added'):
         parts.append('新发现挡路光幕 ' + '、'.join(changes['blocks_added']))
     if changes.get('blocks_refreshed'):
@@ -122,6 +117,7 @@ class RunState:
         # 按目的地保留汇合岔路；机关临时抢占主线时不丢弃已进入但尚未清完的另一侧。
         self.route_branches = {}
         self.story_target = None
+        self.execution_target = None
         self.pending_reviews = {}
         self.transfers = {}
         self.cooldowns = {}
@@ -198,65 +194,75 @@ class RunState:
         return int(self.observed.sum()) - before
 
     def _absorb_enemies(self, enemies, quad):
-        """把本帧的敌人标记并进状态：按距离合并到既有项，否则新建。
+        """以本帧检测替换覆盖区域的确认结果，历史位置仅作为待复核线索。
 
-        普通、Boss、EX 分别保留类型，只有前两者参与战斗目标选择。
-        同帧每条旧记录最多匹配一次；不同类型不会因远距重复投影保护而相互吞并。
-        合并半径之外还有一道重复判据：既有记录的位置就在本帧视野里（quad 覆盖、且离边界有余量），
-        本帧却没在那里认出敌人，却在它附近冒出一个新标记——那更可能是同一只敌人被配准投偏了，
-        而不是多了一只。这时并入既有记录、保留它原来的坐标（来自更可信的那一帧），不新建。
-        视野没盖住既有记录时不作判断：那可能真是另一只敌人。
-        本帧已经认到或新建的记录一律不参与这条判据：同一帧不可能把同一只敌人认成两处落点，
-        所以帧内相距几十像素的两个标记就是两只敌人。先扫一遍本帧会认到哪些既有记录，
-        判定才与标记的先后顺序无关。
+        纯观测和补视野不推进决策拍，因此同一拍中不同视野的可靠检测可共同参与规划；下一拍
+        未重新检出的普通敌人退为线索。覆盖区域内的漏检只撤销确认，不表示敌人已清除。
+        新检测点邻域内的旧确认也退为线索，以容忍视野边界的投影偏差；不会删掉相邻真实敌人。
+        25 像素近邻仅复用编号与失败状态，不依靠跨帧位移或远距合并来决定本帧有几只敌人。
+        主线及执行目标由独立引用保留；每条旧记录在本帧最多复用一次。
         """
-        added, merged, held = [], 0, 0
-        matched, assigned = set(), set()
+        observations = []
         for item in enemies:
             position = np.asarray(item.get('position'), float)
-            if position.shape != (2,) or not np.isfinite(position).all():
-                continue
-            match = self._nearest_enemy(position)
-            if match is not None:
-                matched.add(match)
-        for item in enemies:
-            position = np.asarray(item.get('position'), float)
-            if position.shape != (2,) or not np.isfinite(position).all():
-                continue
+            if (position.shape == (2,) and np.isfinite(position).all()
+                    and np.all(position >= 0) and np.all(position < self.size)):
+                observations.append((item, position))
+        added, merged, assigned = [], 0, set()
+        contour = np.asarray(quad, np.float32).reshape(-1, 1, 2) if quad is not None else None
+        for record in self.enemies.values():
+            record['visible'] = False
+            covered = contour is not None and cv2.pointPolygonTest(contour, tuple(record['position']), False) >= 0
+            nearby = any(record['kind'] == item.get('kind')
+                         and np.linalg.norm(position - record['position']) <= ENEMY_HINT_RADIUS
+                         for item, position in observations)
+            if covered or nearby or contour is None:
+                record['confirmed_at'] = None
+            if covered:
+                record['reviewed_at'] = self.tick
+        for item, position in observations:
             match = self._nearest_enemy(position, taken=assigned, kind=item.get('kind'))
-            if match is None and self._is_duplicate_projection(position, quad, matched, item.get('kind')):
-                held += 1
-                continue
             if match is None:
-                identifier = self._identifier('enemy')
-                self.enemies[identifier] = {'id': identifier, 'kind': item.get('kind'),
-                                            'position': position.tolist(), 'status': 'pending',
-                                            'first_seen': self.tick, 'last_seen': self.tick, 'failures': 0}
-                added.append(identifier)
-                matched.add(identifier)
-                assigned.add(identifier)
-                continue
+                match = self._identifier('enemy')
+                self.enemies[match] = {'id': match, 'kind': item.get('kind'), 'status': 'pending',
+                                       'first_seen': self.tick, 'failures': 0}
+                added.append(match)
+            else:
+                merged += 1
             assigned.add(match)
-            record = self.enemies[match]
-            # 位置取最近一次观测：小队走近后的投影比远处那次准。
-            record['position'] = position.tolist()
-            record['last_seen'] = self.tick
-            record['kind'] = item.get('kind') or record['kind']
-            merged += 1
-        return {'enemies_added': added, 'enemies_refreshed': merged, 'enemies_held': held}
+            self.enemies[match].update(position=position.tolist(), last_seen=self.tick,
+                                      kind=item.get('kind') or self.enemies[match]['kind'],
+                                      confirmed_at=self.tick, reviewed_at=None, visible=True)
+        return {'enemies_added': added, 'enemies_refreshed': merged}
 
-    def _is_duplicate_projection(self, position, quad, matched, kind=None):
-        """这个落在合并半径外的新标记，是不是既有记录的同一只敌人被投偏了。
+    def confirmed_enemies(self):
+        """返回本决策拍可靠观测的敌人，以及独立保留的主线与执行目标。
 
-        只在既有记录仍是待清、位置确实在本帧视野里、且本帧没有别的标记认到它时才认：那种情况下
-        本帧本该在它原来的位置看到敌人，却在旁边几十像素处看到了一个——细路配准沿路滑动就是这个
-        样子。matched 是本帧已经认到或新建的记录编号，它们不能再被当成重复投影。
+        包含交战及不可达状态，供沿途门禁保留失败保护；已清除记录永不因漏检或旧帧恢复。
+        补视野属于同一决策拍，其确认可在收起地图后继续使用，不要求每次镜头变动都重认身份。
         """
-        shadow = self._nearest_enemy(position, ENEMY_SHADOW_RADIUS)
-        if shadow is None or shadow in matched or self.enemies[shadow]['status'] != 'pending':
-            return False
-        return (self.enemies[shadow]['kind'] == kind
-                and self._inside(quad, self.enemies[shadow]['position']))
+        pinned = {self.story_target, self.execution_target}
+        if self.route_goal is not None and self.route_goal.get('kind') == 'story':
+            pinned.add(self.route_goal['id'])
+        return [record for record in self.enemies.values() if record['status'] != 'cleared'
+                and (record.get('confirmed_at') == self.tick or record['id'] in pinned)]
+
+    def enemy_hints(self):
+        """返回尚未复核的历史敌人位置，不作为可直接执行的战斗目标。
+
+        新可靠视野已覆盖而未检出的旧位置在本拍暂停复核，下一拍仍可重查；保留原记录，
+        不认定已清除。
+        与本拍同类确认点相邻的线索仅暂时隐藏，不能据此合并两只相邻敌人。
+        冷却及暂不可扫的复核位置由侦察模块另行限制。
+        """
+        confirmed = self.confirmed_enemies()
+        identifiers = {record['id'] for record in confirmed}
+        return [record for record in self.enemies.values()
+                if record['status'] == 'pending' and record['id'] not in identifiers
+                and record.get('reviewed_at') != self.tick
+                and not any(record['kind'] == current['kind']
+                            and np.linalg.norm(np.asarray(record['position']) - current['position'])
+                            <= ENEMY_HINT_RADIUS for current in confirmed)]
 
     def _nearest_enemy(self, position, radius=ENEMY_MERGE_RADIUS, taken=(), kind=None):
         """合并半径内优先返回同类且未分配的旧记录，避免 Boss 与旁边普通敌人交换编号。
@@ -348,8 +354,11 @@ class RunState:
         return bool(self.observed[y, x])
 
     def pending_enemies(self):
-        """仍可作为目标的敌人：状态为 pending 且不在冷却中。"""
-        return [record for record in self.enemies.values()
+        """可直接执行的敌人：本拍已确认或独立绑定，且待清、不在冷却中。
+
+        历史位置不进入战斗候选，只由 enemy_hints 提供给补视野侦察。
+        """
+        return [record for record in self.confirmed_enemies()
                 if record['status'] == 'pending' and not self.cooling(record['id'])]
 
     def remember_story_target(self, position, kind='normal'):
@@ -364,15 +373,19 @@ class RunState:
             return None
         if np.any(position < 0) or np.any(position >= self.size):
             return None
-        nearby = [record for record in self.enemies.values()
+        nearby = [record for record in self.confirmed_enemies()
                   if np.linalg.norm(np.asarray(record['position']) - position) <= ENEMY_MERGE_RADIUS]
         if kind not in COMBAT_ENEMY_KINDS:
             return None
         if len(nearby) > 1 or (nearby and (nearby[0]['kind'] != kind or nearby[0]['status'] != 'pending')):
             return None
         if not nearby:
-            self._absorb_enemies([dict(kind=kind, position=position.tolist())], None)
-            nearby = [self.enemies[self._nearest_enemy(position)]]
+            identifier = self._identifier('enemy')
+            self.enemies[identifier] = dict(id=identifier, kind=kind, position=position.tolist(), status='pending',
+                                            first_seen=self.tick, last_seen=self.tick, failures=0,
+                                            confirmed_at=self.tick, reviewed_at=None, visible=False)
+            nearby = [self.enemies[identifier]]
+        nearby[0]['position'] = position.tolist()
         self.story_target = nearby[0]['id']
         self.cooldowns.pop('story-location', None)
         return self.story_target
@@ -497,7 +510,7 @@ class RunState:
     def summary_text(self):
         """状态摘要，供日志打一行：决策轮数、敌人与光幕的各状态计数、看清了多少地图、有多少待办。"""
         enemies = {}
-        for record in self.enemies.values():
+        for record in self.confirmed_enemies():
             name = label(ENEMY_STATUS, record['status'])
             enemies[name] = enemies.get(name, 0) + 1
         blocks = {}
@@ -505,7 +518,8 @@ class RunState:
             name = label(BLOCK_STATUS, record['status'])
             blocks[name] = blocks.get(name, 0) + 1
         tried = sum(bool(item.get('completed')) for item in self.mechanisms.values())
-        return (f"已决策 {self.tick} 轮；敌人 {counts_text(enemies)}；光幕 {counts_text(blocks)}；"
+        return (f"已决策 {self.tick} 轮；确认敌人 {counts_text(enemies)}；"
+                f"历史位置线索 {len(self.enemy_hints())} 处；光幕 {counts_text(blocks)}；"
                 f"已覆盖 {int(self.observed.sum())} 格地图；已到达机关 {tried} 处；"
                 f"待复核光幕 {len(self.pending_reviews)} 处；失败电梯 {len(self.transfers)} 段；"
                 f"定位失败 {self.unlocated} 帧")
@@ -513,17 +527,21 @@ class RunState:
     def memory(self):
         """推给界面的跨帧记忆：记住的敌人与仍在挡路的封锁，坐标为底图像素。
 
-        快照每帧整体替换，远处敌人往往只在补视野的展开帧里出现过一次，随后的紧凑帧里就没有了；
-        界面要靠这份记忆才能继续把它们画在章节地图上。只给展示字段，冷却与尝试记录不外露。
+        本拍可靠观测与绑定目标显示为敌人；未确认的历史位置仅显示为线索，不叠加为确定敌人。
+        同拍补视野的远处确认点可继续展示。只给展示字段，冷却与尝试记录不外露。
         已解除的封锁不再影响路网，不推送；已打掉的敌人也不再画出来。
         """
+        confirmed = self.confirmed_enemies()
+        identifiers = {record['id'] for record in confirmed}
         enemies = [dict(id=record['id'], kind=record['kind'], status=record['status'],
+                        confirmed=record['id'] in identifiers, visible=record.get('visible', False),
                         position=[round(float(value), 1) for value in record['position']])
-                   for record in self.enemies.values() if record['status'] != 'cleared']
+                   for record in confirmed + self.enemy_hints()]
         blocks = [dict(id=record['id'], status=record['status'], point=record['point'], segment=record['segment'])
                   for record in self.blocking() if record.get('segment')]
         mechanisms = [dict(id=item['id'], state=item.get('state', 'unknown'),
                            completed=bool(item.get('completed')))
                       for item in self.mechanisms.values()]
-        return dict(tick=self.tick, enemies=enemies, blocks=blocks, mechanisms=mechanisms,
+        return dict(tick=self.tick, enemies=enemies, enemy_confirmation='current_turn',
+                    blocks=blocks, mechanisms=mechanisms,
                     route_goal=dict(self.route_goal) if self.route_goal else None)

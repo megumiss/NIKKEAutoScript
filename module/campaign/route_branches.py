@@ -51,7 +51,7 @@ class BranchSection:
         """
         result = []
         home = cut.component(squad)
-        for enemy in state.enemies.values():
+        for enemy in state.confirmed_enemies():
             if (enemy['kind'] not in COMBAT_ENEMY_KINDS or enemy['status'] == 'cleared'
                     or enemy['id'] == destination['id']):
                 continue
