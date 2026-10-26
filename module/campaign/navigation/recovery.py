@@ -9,10 +9,10 @@ from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import detect_markers, squad_arrow
 from module.logger import logger
 
-# 两次同向场景拖动累计超过客户区宽／高；每次端点仍在安全场景区域内。
-RECOVERY_DRAGS = ((1100., 0.),) * 2 + ((-1100., 0.),) * 2 + ((0., 650.),) * 2 + ((0., -650.),) * 2
+# 垂直单次行程受安全场景区域限制，同向四次补足实际镜头位移；每次端点仍在安全场景区域内。
+RECOVERY_DRAGS = ((1100., 0.),) * 2 + ((-1100., 0.),) * 2 + ((0., 650.),) * 4 + ((0., -650.),) * 4
 CENTER_TOLERANCE = 50.
-RING_TOLERANCE = 8.
+RING_TOLERANCE = 30.
 VERIFY_INTERVAL = .4
 
 
@@ -39,8 +39,8 @@ def centering_frame(session):
 def centered(evidence, icon_clicked=False):
     """按箭头地面点与圆环交叉判断居中；成功点过离屏图标后允许箭头被遮挡。
 
-    圆环必须在注视点 8 个紧凑 ROI 像素内；可见箭头地面点必须在客户区中心 50 像素内，
-    余量包含箭头动画。仅有居中圆环而无箭头、也未点击图标时不能证明已回正。
+    圆环必须在注视点 30 个紧凑 ROI 像素内，作为跨章节投影偏差的粗校验；可见箭头地面点必须在
+    客户区中心 50 像素内，余量包含箭头动画。仅有居中圆环而无箭头、也未点击图标时不能证明已回正。
     """
     ring, ground = evidence['ring'], evidence['ground']
     if evidence['offscreen'] is not None or ring is None:
