@@ -197,6 +197,7 @@ class RunState:
         纯观测和补视野不推进决策拍，因此同一拍中不同视野的可靠检测可共同参与规划；下一拍
         未重新检出的普通敌人退为线索。覆盖区域内的漏检只撤销确认，不表示敌人已清除。
         新检测点邻域内的旧确认也退为线索，以容忍视野边界的投影偏差；不会删掉相邻真实敌人。
+        战斗敌人原位置仅检出重叠 EX 时属于分类歧义，保留待复核线索，不能据此改选无关区域。
         25 像素近邻仅复用编号与失败状态，不依靠跨帧位移或远距合并来决定本帧有几只敌人。
         主线及执行目标由独立引用保留；每条旧记录在本帧最多复用一次。
         """
@@ -214,9 +215,12 @@ class RunState:
             nearby = any(record['kind'] == item.get('kind')
                          and np.linalg.norm(position - record['position']) <= ENEMY_HINT_RADIUS
                          for item, position in observations)
+            ambiguous_ex = record['kind'] in COMBAT_ENEMY_KINDS and any(
+                item.get('kind') == 'ex' and np.linalg.norm(position - record['position']) <= ENEMY_MERGE_RADIUS
+                for item, position in observations)
             if covered or nearby or contour is None:
                 record['confirmed_at'] = None
-            if covered:
+            if covered and not ambiguous_ex:
                 record['reviewed_at'] = self.tick
         for item, position in observations:
             match = self._nearest_enemy(position, taken=assigned, kind=item.get('kind'))
