@@ -269,12 +269,15 @@ class RunState:
     def _nearest_enemy(self, position, radius=ENEMY_MERGE_RADIUS, taken=(), kind=None):
         """合并半径内优先返回同类且未分配的旧记录，避免 Boss 与旁边普通敌人交换编号。
 
-        未指定类型时保持最近邻行为；没有同类候选时允许本帧可靠分类修正旧标签。
+        未指定类型时保持最近邻行为；普通与 Boss 之间允许本帧可靠分类修正旧标签。
+        EX 与战斗敌人可能是同一图标的分类歧义，也可能相邻共存，两者禁止合并或互相改型。
         taken 只包含本帧已分配记录，相邻不同目标不能覆盖同一编号。
         """
         best, rank = None, (2, radius)
         for identifier, record in self.enemies.items():
             if identifier in taken:
+                continue
+            if kind is not None and (kind == 'ex') != (record['kind'] == 'ex'):
                 continue
             span = float(np.linalg.norm(np.asarray(record['position'], float) - position))
             candidate = (int(kind is not None and record['kind'] != kind), span)
