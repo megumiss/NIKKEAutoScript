@@ -362,21 +362,21 @@ class CampaignSession(NavigationSession):
                     f"同一个目标最多操作 {TARGET_INPUT_BUDGET} 次")
 
     def check_stop(self):
-        """遵守调度器的停止事件；使用 TaskEnd 保留调度器既有取消语义。"""
+        """遵守调度器停止事件与会话时限，包括窗口失焦恢复期间。"""
         stop_event = self.owner.config.stop_event
         if stop_event is not None and stop_event.is_set():
             raise TaskEnd
+        if self.deadline is not None and time.monotonic() >= self.deadline:
+            raise InputBudgetExceeded(f'主线单次执行超过 {CHAPTER_TIME_LIMIT // 60} 分钟时限，停止并交人工复核。')
 
     def check(self):
-        """检查停止、时限与窗口状态；坐标或焦点变化属于安全失败，不允许换目标继续。
+        """检查停止、时限与窗口状态；坐标变化安全失败，失焦则等待恢复后继续。
 
-        时限放在这里而不只在发输入前：等待停稳、复核换帧等阶段也会走到这里，超时就地停下。
+        停止与时限检查由 check_stop 统一执行，窗口层等待恢复前台时也不能越过这些限制。
         这里同时给设备的卡死判据续期（见 STUCK_CLEAR_SECONDS）：这一章的每一步观测都要经过
         device.screenshot，而那个判据的前提「一直在等按钮匹配」在本会话里从头到尾都不成立。
         """
         self.check_stop()
-        if self.deadline is not None and time.monotonic() >= self.deadline:
-            raise InputBudgetExceeded(f'主线单次执行超过 {CHAPTER_TIME_LIMIT // 60} 分钟时限，停止并交人工复核。')
         stuck = getattr(self.owner.device, 'stuck_timer', None)
         if isinstance(stuck, Timer) and stuck.current() > STUCK_CLEAR_SECONDS:
             self.owner.device.stuck_record_clear()

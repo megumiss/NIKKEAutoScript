@@ -8,6 +8,8 @@
 两者差一个客户区原点，换算只在这里做一次。
 """
 
+import time
+
 import numpy as np
 import win32gui
 
@@ -18,10 +20,10 @@ from module.logger import logger
 
 
 class WindowChanged(RuntimeError):
-    """受控画面已经不可信：窗口被移动、改尺寸、失焦，或画面已不是会话预期的那一页。
+    """受控画面已经不可信：窗口被移动、改尺寸，或画面已不是会话预期的那一页。
 
-    两种情况的后果一样：固定坐标与点击换算失效，或者下一步动作根本不该落在这张画面上，
-    所以都必须停止发输入（章节核对不过、野外确认超时都走这里）。
+    这些情况会使固定坐标与点击换算失效，或者让输入落到错误页面，必须停止当前会话。
+    单纯失焦不属于此异常，由窗口层暂停输入并恢复前台后继续。
     """
 
 
@@ -59,25 +61,50 @@ class CampaignWindow:
         return None if rect is None else (rect[0], rect[1])
 
     def focus(self):
-        """把游戏窗口提到前台并记下客户区原点。
-
-        驱动方案下失焦等于输入无效，所以移动开始前要显式取焦；取焦失败只告警，
-        由随后的 check 决定要不要中断——有的第三方软件会锁前台，但窗口仍可见可点。
-        """
+        """恢复游戏窗口前台并记下客户区原点；取焦等待期间仍响应任务停止。"""
         hwnd = self.hwnd
         if not hwnd:
             raise WindowChanged('找不到游戏窗口。')
-        if not self.device.set_foreground_window_with_retry(hwnd):
-            logger.warning('未能把游戏窗口提到前台，继续按当前前台状态校验。')
+        self.ensure_foreground(hwnd)
         self.handle = hwnd
         self.origin = self.client_origin()
         return self.origin is not None
 
-    def check(self):
-        """核对窗口仍是会话开始时那个：句柄在、客户区尺寸对、原点没动、仍在前台。
+    def ensure_foreground(self, hwnd):
+        """失焦时暂停当前动作并循环恢复前台，成功后返回，不再因此终止主线。
 
-        这是每次发输入前的闸门，判据与采集器的受控窗口一致。任一条不成立就抛 WindowChanged，
-        让移动闭环停下而不是把点击发到错位的坐标上。
+        等待期间不发送场景输入，每 2 秒重试一次系统激活；停止回调每轮都会执行，
+        因此任务取消不必等前台恢复。窗口消失或句柄更换仍属于不可恢复错误。
+        """
+        if not self.require_foreground or self.gui.GetForegroundWindow() == hwnd:
+            return
+        logger.warning('游戏窗口不在前台，暂停输入并等待恢复前台。')
+        retry_at = 0.
+        while self.gui.GetForegroundWindow() != hwnd:
+            stop_check = getattr(self, 'stop_check', None)
+            if stop_check is not None:
+                stop_check()
+            current = self.hwnd
+            if not current:
+                raise WindowChanged('游戏窗口已消失。')
+            if current != hwnd:
+                raise WindowChanged('游戏窗口句柄已变化，旧会话不可复用。')
+            now = time.monotonic()
+            if now >= retry_at:
+                try:
+                    self.device.set_foreground_window_with_retry(hwnd)
+                except Exception as exc:
+                    logger.warning(f'游戏窗口前台恢复失败，2 秒后重试：{exc}')
+                retry_at = time.monotonic() + 2.
+            if self.gui.GetForegroundWindow() != hwnd:
+                time.sleep(0.2)
+        logger.info('游戏窗口已恢复前台，继续执行主线。')
+
+    def check(self):
+        """核对窗口句柄、客户区尺寸和原点，并在失焦时等待恢复后继续。
+
+        这是每次发输入前的闸门。尺寸、位置或窗口身份变化会使已算出的坐标失效，仍抛
+        WindowChanged；单纯失焦不抛出，避免可恢复的切换直接终止整个任务。
         """
         stop_check = getattr(self, 'stop_check', None)
         if stop_check is not None:
@@ -99,8 +126,7 @@ class CampaignWindow:
             self.origin = origin
         elif origin != self.origin:
             raise WindowChanged(f'窗口被移动（{self.origin} → {origin}），点击换算已失效。')
-        if self.require_foreground and self.gui.GetForegroundWindow() != hwnd:
-            raise WindowChanged('游戏窗口不在前台，鼠标操作会被系统丢弃。')
+        self.ensure_foreground(hwnd)
 
     def client(self):
         """最新一帧客户区 BGR 截图。"""
