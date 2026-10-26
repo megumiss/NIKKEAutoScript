@@ -670,7 +670,7 @@ class CampaignSession(NavigationSession):
 
     def panel_enemies(self, panel, matrix):
         """把面板上的敌人标记按本帧配准投到底图，返回可直接并进状态的记录（含类型与置信度）。"""
-        _, markers = self.owner.observer.minimap_markers(panel)
+        _, markers = self.owner.observer.minimap_markers(panel, 'expanded')
         positions = project_centers([item['position'] for item in markers], np.asarray(matrix, float))
         size = self.owner.state.size
         return [dict(item, position=position) for item, position in zip(markers, positions)
