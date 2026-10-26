@@ -552,7 +552,10 @@ class CampaignExecutor:
                             snapshot = self.session.snapshot()
                         goal = self.owner.plan_tick(snapshot, advance=False)
                     scouted = self.scout(goal, snapshot)
-                    if scouted or expanded_for_scout:
+                    if expanded_for_scout and not scouted:
+                        # 没有新侦察观测时沿用已接受的展开快照，收起面板不再做一次可能失败的紧凑配准。
+                        self.session.win.reset_minimap(expanded=False, reset=False)
+                    elif scouted:
                         snapshot = self.session.snapshot(**camera_options)
                         if curtains(snapshot):
                             snapshot = self.confirm_barriers_safe(snapshot)
