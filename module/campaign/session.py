@@ -1194,12 +1194,14 @@ class CampaignSession(NavigationSession):
     def scan_explored(self):
         """开局扫描小队周围：中心一屏加四向各 SCAN_ARM_STOPS 站，返回成功配准的屏数。
 
-        拖动用固定面板向量（面板尺寸的 SCAN_ARM_STEP 倍）：展开地图内容跟随手指平移，
-        与章节缩放和当前视口位置无关，所以不需要闭环配准来决定拖多少、拖没拖够。
-        每臂逐站拖出、配准吸收，该臂配准失败（探索前沿或歧义走廊）就不再深入；
-        结束后按反向固定向量逐步拖回，拖回后仍无法配准时停止扫描，避免在未知位置叠加盲拖。
-        定位类失败只记日志，安全异常照常传播；更远的区域由行进中的增量侦察补充。
+        向外拖动用固定面板向量（面板尺寸的 SCAN_ARM_STEP 倍），每臂逐站配准吸收，失败就不再深入。
+        拖回以未移动的小队底图坐标为目标，每帧按实测配准计算相对偏移，最多拖 SCOUT_DRAGS 次；
+        地图边缘造成斜向位移时因此仍能回到小队附近。缺少小队坐标、拖回配准失败或超过次数时
+        停止扫描，不在未知视野叠加盲拖。定位类失败只记日志，安全异常照常传播。
         """
+        squad = self.stationary_squad()
+        if squad is None:
+            raise ValueError('十字扫描缺少可信的小队位置，不能按相对位置拖回。')
         located = self.scout_locate('scan_00')
         if located is None:
             return 0
@@ -1223,13 +1225,18 @@ class CampaignSession(NavigationSession):
                         break
                     self.absorb_view(*located)
                     scanned += 1
-                for _ in range(sent):
-                    self.drag_expanded_offset(-vector)
                 if not sent:
                     continue
-                located = self.scout_locate(f'scan_{index:02}_back')
-                if located is None:
-                    logger.warning('开局扫描拖回后视野仍无法配准，提前结束扫描。')
+                returned = False
+                for attempt in range(SCOUT_DRAGS + 1):
+                    if located is not None and self.scout_drag(located[0], located[1], squad) is None:
+                        returned = True
+                        break
+                    if located is None or attempt == SCOUT_DRAGS:
+                        break
+                    located = self.scout_locate(f'scan_{index:02}_back_{attempt}')
+                if not returned:
+                    logger.warning('开局扫描未能按相对位置拖回小队附近，提前结束扫描。')
                     break
         except InputBudgetExceeded:
             self.check()

@@ -18,6 +18,7 @@ from module.base.timer import Timer
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.camera_navigation import SquadOffscreen
 from module.campaign.navigation.movement_feedback import ClickUnconfirmed, TargetTriggered
+from module.campaign.navigation.recovery import centered, centering_frame
 from module.campaign.navigation.story_navigation import locate_story_target
 from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
 from module.logger import logger
@@ -190,7 +191,7 @@ class CampaignExecutor:
         snapshot = self.session.recover_center()
         state.update(snapshot, advance=False)
         self.owner.cut.update(state.blocking())
-        if not self.scan_start('机关触发后'):
+        if not self.scan_start('机关触发后', center_checked=True):
             raise RuntimeError('地面机关触发后的十字扫描未取得可信视野。')
         self.session.record('mechanism_complete', goal=goal, cleared=cleared, snapshot=snapshot)
 
@@ -432,14 +433,18 @@ class CampaignExecutor:
             logger.warning(f'战斗胜利但无关联敌人目标（最近执行目标：{goal_brief(goal)}），不更新敌人状态。')
         return settled
 
-    def scan_start(self, scene='开局'):
+    def scan_start(self, scene='开局', center_checked=False):
         """按场景名十字扫描小队周围，返回可信屏数，零屏由剧情执行层触发恢复。
 
-        开局、电梯传送后与异常恢复共用中心与四向扫描。扫描是内部有界的批量阶段，不是同一目标上的原地空转，
-        所以阶段结束即翻篇：收起地图与刷新快照的收尾输入记入新预算窗口，
-        不与扫描叠加触发单目标上限。安全异常（窗口、弹窗、取消）不捕获，
+        开局、电梯传送后与异常恢复共用中心与四向扫描。扫描前必须确认小队居中，否则先独立回正并重新定位；
+        刚完成 recover_center 的调用方传入 center_checked，避免丢失离屏图标点击记录后重复回正。
+        扫描是内部有界的批量阶段，不是同一目标上的原地空转，所以阶段结束即翻篇：收起地图与刷新快照的
+        收尾输入记入新预算窗口，不与扫描叠加触发单目标上限。安全异常（窗口、弹窗、取消）不捕获，
         与侦察一致：此时不补发收起地图的输入。
         """
+        if not center_checked and not centered(centering_frame(self.session)):
+            logger.info(f'{scene}十字扫描前小队未居中，先执行回正与重新定位。')
+            self.session.recover_center()
         self.session.begin_target('scout')
         self.session.scout_begin()
         watch = Stopwatch()
@@ -483,7 +488,7 @@ class CampaignExecutor:
         snapshot = self.session.recover_center()
         state.update(snapshot, advance=False)
         self.owner.cut.update(state.blocking())
-        if not self.scan_start('恢复后'):
+        if not self.scan_start('恢复后', center_checked=True):
             raise RuntimeError('回正后的十字扫描未取得可信视野。')
         self.session.record('recovery_complete', attempt=self.recoveries)
         logger.info(f'主线自动恢复完成：连续第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，'
