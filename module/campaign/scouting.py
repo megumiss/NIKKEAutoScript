@@ -14,7 +14,6 @@ from scipy.sparse.csgraph import dijkstra
 
 from module.campaign.goals import nearest_enemy
 from module.campaign.map.map_state import GRID
-from module.campaign.route_branches import branch_scout_points
 from module.campaign.route_planning import route_path
 from module.campaign.run_state import OBSERVED_CELL
 from module.campaign.subgoals import RoadView
@@ -139,10 +138,11 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
 
 
 def route_scout_focus(state, cut, squad, target, include_cooling=False):
-    """补查本次执行路段及相关汇合段两侧，不扫描全分量中更近但无关的敌人。
+    """只补查本次执行路段及相邻道路，不扫描路线之外的汇合支路。
 
     格子沿用运行状态的覆盖记录；切换执行目标不清空已扫描区域。冷却仅限制重试，
     include_cooling=True 仍返回未看清的格子，保证不能凭失败冷却跳过前置道路。
+    支路敌人由实际行进视野发现后再纳入规划，不能为了确认无人而远程扫描整段支路。
     """
     route = route_path(cut, squad, target['position'])
     if route is None:
@@ -167,15 +167,4 @@ def route_scout_focus(state, cut, squad, target, include_cooling=False):
                 continue
             return dict(id=identifier, position=candidate.tolist(), distance=round(float(distance), 1),
                         known=round(float(distances[-1]), 1), source='route_road')
-    for point in branch_scout_points(state, cut, squad, path):
-        if state.is_observed(point):
-            continue
-        column, row = point // OBSERVED_CELL
-        identifier = f'scout-{column}-{row}'
-        if state.is_unscoutable(identifier, squad):
-            continue
-        if not include_cooling and state.cooling(identifier):
-            continue
-        return dict(id=identifier, position=point.tolist(), distance=round(float(np.linalg.norm(point - squad)), 1),
-                    known=None, source='route_branch')
     return None

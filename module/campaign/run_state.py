@@ -114,8 +114,6 @@ class RunState:
         self.blocks = {}
         self.mechanisms = {}
         self.route_goal = None
-        # 按目的地保留汇合岔路；机关临时抢占主线时不丢弃已进入但尚未清完的另一侧。
-        self.route_branches = {}
         self.story_target = None
         self.execution_target = None
         self.pending_reviews = {}
@@ -408,7 +406,6 @@ class RunState:
             self.pending_reviews[block] = mechanism
         if self.route_goal and self.route_goal['id'] == mechanism:
             self.route_goal = None
-        self.route_branches.pop(('mechanism', mechanism), None)
 
     def tried_for(self, mechanism, block):
         """这个机关是否已经为该封锁踩过。"""

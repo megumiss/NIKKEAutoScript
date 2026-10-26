@@ -1,15 +1,11 @@
 """主线路程目标与执行目标：机关优先，主线其次，无目的地时沿用原策略。"""
 
-from copy import copy
-
-import cv2
 import numpy as np
 
 from module.campaign.run_state import COMBAT_ENEMY_KINDS
 
 from module.campaign.navigation.pathfinding import NoConnectedRoad
 from module.campaign.navigation.targets import walking_distance
-from module.campaign.route_branches import branch_enemy
 from module.campaign.subgoals import RoadView
 
 # 以下距离均为章节底图像素；仅限制主动机关及路段长度，不放宽道路连通性。
@@ -18,8 +14,6 @@ MECHANISM_NEAR_ENEMY = 200.
 ROUTE_CORRIDOR = 48.
 ROUTE_DETOUR = 64.
 ADVANCE_DISTANCE = 200.
-# 短段末端不能落到敌人触发范围内，否则战斗会被记到 advance 而不是敌人编号。
-ENEMY_APPROACH_MARGIN = 64.
 
 
 def route_path(cut, squad, target):
@@ -51,8 +45,6 @@ def refresh_route(state, chart, snapshot, cut):
         done = (state.mechanisms.get(current['id'], {}).get('state') == 'on'
                 if current['kind'] == 'mechanism'
                 else False if story_point else state.enemies.get(current['id'], {}).get('status') != 'pending')
-        if done:
-            state.route_branches.pop((current['kind'], current['id']), None)
         if done or state.cooling(current['id']):
             current = None
         elif current['kind'] == 'story' and not story_point:
@@ -131,33 +123,19 @@ def route_enemy(state, cut, squad, target, path, distances):
 
 
 def route_action(state, cut, squad, destination):
-    """优先完整执行沿途／汇合岔路敌人，无敌人时才生成最长 ADVANCE_DISTANCE 的步行段。
+    """优先完整执行当前路线上的敌人，无敌人时才生成最长 ADVANCE_DISTANCE 的步行段。
 
-    已选敌人不按距离拆段，交导航处理目标入屏与脚圈确认；跨越最终目标的换边绕行仍保留安全短段。
+    候选必须靠近通往目的地的实际 A* 路径且绕行有限；同一汇合区域的其他道路不能抢占执行目标。
+    已选敌人不按距离拆段，交导航处理目标入屏与脚圈确认。
     只有最后一段机关使用 mechanism 类型，短段到达不能提前把机关记为开启。
     已绑定敌人的主线目的地以敌人身份执行，战斗归属不因路程层变成 story 而丢失；
-    无敌人目的地保留 story 类型，到点后清除该段路程目标。
-    汇合段两侧未清完不能离开，远处支路敌人沿自身路径执行，不能继续向目的地走。
-    不可达时交回光幕／电梯规划。
+    无敌人目的地保留 story 类型，到点后清除该段路程目标。不可达时交回光幕／电梯规划。
     """
     route = route_path(cut, squad, destination['position'])
     if route is None:
         return None
-    branch = branch_enemy(state, cut, squad, destination)
-    target = destination['position']
-    if branch is not None:
-        target = branch['position']
-        route = route_path(cut, squad, target)
-        if route is None:
-            return None
     path, distances = route
-    enemy = route_enemy(state, cut, squad, target, path, distances)
-    if branch is not None:
-        crosses_destination = (enemy is not None and enemy.get('id') == destination['id'])
-        if destination['kind'] == 'mechanism':
-            crosses_destination = np.linalg.norm(path - destination['position'], axis=1).min() <= 32
-        if crosses_destination:
-            return branch_detour(state, cut, squad, branch, destination)
+    enemy = route_enemy(state, cut, squad, destination['position'], path, distances)
     if enemy is not None:
         return enemy
     if distances[-1] > ADVANCE_DISTANCE:
@@ -172,43 +150,6 @@ def route_action(state, cut, squad, destination):
     if goal['kind'] == 'story' and destination.get('enemy_kind') in COMBAT_ENEMY_KINDS:
         goal.update(kind='enemy', reason='main_story_marker')
     return goal
-
-
-def branch_detour(state, cut, squad, enemy, destination):
-    """换边路径经过最终目标时先退回另一端，避免提前触发主线战斗或踩机关而丢失待清岔路。
-
-    临时避开目的地周围 64 底图像素，只用于寻找短段落点，不修改光幕或实际导航的道路。
-    每个落点还须在原切开图上复查路径，保证移动闭环重新寻路时也不会抄近路穿过目的地。
-    无法取得至少 32 像素的安全推进段时暂停，不能把绕行失败当作岔路已清完。
-    """
-    avoid = copy(cut)
-    avoid.road = cut.road.copy()
-    cv2.circle(avoid.road, tuple(np.rint(destination['position']).astype(int)), int(ENEMY_APPROACH_MARGIN), 0, -1)
-    avoid.labels = cv2.connectedComponents(avoid.road, connectivity=8)[1]
-    avoid.regions = avoid.labels[::8, ::8]
-    alternative = route_path(avoid, squad, enemy['position'])
-    if alternative is not None:
-        path, distances = alternative
-        indices = np.flatnonzero((distances >= 32) & (distances <= ADVANCE_DISTANCE))
-        for index in indices[::-1]:
-            point = path[index]
-            original = route_path(cut, squad, point)
-            if original is None:
-                continue
-            actual_path, actual_distances = original
-            if (actual_distances[-1] > ADVANCE_DISTANCE
-                    or np.linalg.norm(actual_path - destination['position'], axis=1).min() <= ENEMY_APPROACH_MARGIN):
-                continue
-            front = route_enemy(state, cut, squad, point, actual_path, actual_distances)
-            if front is not None:
-                return front
-            identifier = f"advance-{destination['id']}-{int(point[0])}-{int(point[1])}"
-            if state.cooling(identifier):
-                break
-            return dict(kind='advance', id=identifier, position=point.tolist(),
-                        distance=round(float(actual_distances[-1]), 1), reason='advance_on_route',
-                        for_target=destination['id'])
-    return dict(kind='none', reason='route_branch_unavailable', for_target=destination['id'])
 
 
 def planning_routes(cut, snapshot, goal, destination=None, state=None):
