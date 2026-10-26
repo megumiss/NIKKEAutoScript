@@ -670,7 +670,7 @@ class EventStory(EventBase):
                 if (
                     max_clicks < 3
                     and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
-                    and self.appear_then_click(FIGHT_QUICKLY_MAX, offset=30, threshold=0.99, interval=1)
+                    and self.appear_then_click(FIGHT_QUICKLY_MAX, offset=30, threshold=0.99, interval=0.5)
                 ):
                     max_clicks += 1
                     self.device.sleep(0.3)
@@ -678,7 +678,8 @@ class EventStory(EventBase):
 
                 # 进行战斗
                 if (
-                    self.appear(FIGHT_QUICKLY_CHECK, offset=10)
+                    max_clicks >= 3
+                    and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
                     and self.appear(FIGHT_QUICKLY_MIN, offset=30, threshold=0.99)
                     and self.appear_then_click(FIGHT_QUICKLY_FIGHT, threshold=20, interval=1)
                 ):
