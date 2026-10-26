@@ -82,7 +82,7 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
 
     每次按最新敌人记录重新选择，新增近敌会缩短侦察范围。路径来自同一切开图的 A*，
     不能用近似路程场代替：粗网格连边可能跨过细墙，实际 A* 会校验连线道路并按净空绕行。
-    只补查尚未覆盖的道路；当前可靠敌人优先，未重新确认时沿 enemy_hint_goal 给出的线索方向复核。
+    只补查尚未覆盖的道路；探索目标只查自身路线，未重新确认的敌人沿其历史位置方向复核。
     支路按 32px 格内的最短近似路程排序，截止距离取候选实际路径加两端吸附距离。
     默认跳过冷却格以便继续看其他区域；出发前须 include_cooling=True 复核，
     只有这时返回 None 才代表没有待查区域。所有距离与位置均为底图像素。
@@ -91,7 +91,7 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
     if state.route_goal is not None:
         target = goal if goal and goal.get('position') is not None else state.route_goal
         return route_scout_focus(state, cut, squad, target, include_cooling)
-    if goal is not None and goal.get('for_enemy') is not None:
+    if goal is not None and goal.get('kind') == 'explore' and goal.get('position') is not None:
         return route_scout_focus(state, cut, squad, goal, include_cooling)
     target, _ = nearest_enemy(state, cut, squad)
     known = float('inf')
