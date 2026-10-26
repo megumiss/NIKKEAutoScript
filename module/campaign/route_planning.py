@@ -94,10 +94,11 @@ def refresh_route(state, chart, snapshot, cut):
 def route_enemy(state, cut, squad, target, path, distances):
     """选路程前方的第一个普通敌人或 Boss，忽略别条支路上的全局最近敌人。
 
-    候选须接近实际路径，且经该敌人的道路绕行不超过 ROUTE_DETOUR；距离与分量同时校验，
-    防止把直线相邻但隔墙的敌人算在沿途。冷却中的沿途敌人不能静默越过，返回明确的暂停目标。
+    候选须接近实际路径，且经该敌人的道路绕行不超过 ROUTE_DETOUR；小队分量为零时以 A* 复核，
+    防止把直线相邻但隔墙的敌人算在沿途，也避免误删圆环覆盖的近敌。冷却敌人返回明确暂停目标。
     """
     candidates = []
+    home = cut.component(squad)
     full = float(distances[-1] + np.linalg.norm(path[-1] - np.asarray(target)))
     for enemy in state.confirmed_enemies():
         if enemy['kind'] not in COMBAT_ENEMY_KINDS or enemy['status'] == 'cleared':
@@ -106,7 +107,7 @@ def route_enemy(state, cut, squad, target, path, distances):
         nearest = int(np.argmin(np.linalg.norm(path - point, axis=1)))
         if np.linalg.norm(path[nearest] - point) > ROUTE_CORRIDOR:
             continue
-        if cut.component(point) != cut.component(squad):
+        if home and cut.component(point) != home:
             continue
         first = walking_distance(cut.road, cut.regions, squad, point)
         last = walking_distance(cut.road, cut.regions, point, target)

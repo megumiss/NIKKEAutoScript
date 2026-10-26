@@ -732,7 +732,7 @@ class CampaignSession(NavigationSession):
         展开时只用无新增手势的已确认小队坐标约束本帧圆环；失败后小幅拖动再识别一次，
         仍失败则停止，不能只复用小队坐标而把尚未定位的敌人当成不存在。
         known_squad 只供尚未发送移动的找敌人阶段使用：跳过实时小队定位和圆环重试，
-        使用已有小队底图坐标规划路线；当前视野必须独立配准，失败不套用历史矩阵。
+        使用已有小队底图坐标规划路线；当前视野配准失败可复用小队位置，但不并入当前观测。
         定位后只有镜头拖动时自动使用已知小队坐标，即使小队已离屏也不重新寻找圆环；
         点击、其他可能移动小队的输入或战斗会使这条自动复用路径失效。
         """
@@ -766,9 +766,12 @@ class CampaignSession(NavigationSession):
                 self.preview(field)
                 raise RuntimeError('展开地图小幅平移重试后仍未定位成功；停止目标选择并请求人工复核。')
         elif known_squad is not None and not located(snapshot):
-            self.owner.last_snapshot = snapshot
-            self.preview(field)
-            raise RuntimeError('找敌人的当前视野配准未通过；停止目标选择，不重新定位小队。')
+            if self.stationary_squad() is not None:
+                snapshot = self.reuse_registration(snapshot, 'camera')
+            else:
+                self.owner.last_snapshot = snapshot
+                self.preview(field)
+                raise RuntimeError('找敌人的当前视野配准未通过；停止目标选择，不重新定位小队。')
         elif not located(snapshot):
             why = self.reuse_reason()
             snapshot = (self.reuse_registration(snapshot, why) if why is not None
@@ -944,9 +947,8 @@ class CampaignSession(NavigationSession):
 
         沿用帧只提供小队位置（供本拍选目标），本帧的视野与标记不并进运行状态（见 RunState.update）：
         展开面板与紧凑面板的坐标系不同源，混着用会把封锁与已观测区域算偏。
-        没有记过坐标时原样返回，交给正常重试路径。
-        结算后存在强制位移／传送的关卡（EX 等）不适用这条假设，那种帧的坐标会错一拍，
-        下一次真的需要配准时由 retry_localization 把它兜回来。
+        why=camera 表示只有镜头拖动，小队坐标仍有效；why=battle 用于战后首次观测，
+        why=unchanged 表示缓存后没有任何手势。没有记过坐标时原样返回，交正常重试路径。
         """
         self.reuse_squad = False
         if self.last_registration is None:
@@ -954,8 +956,8 @@ class CampaignSession(NavigationSession):
         snapshot = dict(snapshot, localization='reused', squad=list(self.last_registration['squad']),
                         roi_to_map=self.last_registration['roi_to_map'],
                         coverage_size=self.last_registration['coverage_size'])
-        reason = '战后首次观测允许复用战前定位' if why == 'battle' \
-            else '缓存后无新增手势'
+        reason = {'battle': '战后首次观测允许复用战前定位', 'unchanged': '缓存后无新增手势',
+                  'camera': '仅镜头拖动，小队未移动'}[why]
         logger.warning(f"本帧配准未通过，复用已确认的小队位置 {points_text(snapshot['squad'])}"
                        f"（依据：{reason}）。")
         return snapshot
@@ -1196,8 +1198,8 @@ class CampaignSession(NavigationSession):
 
         向外拖动用固定面板向量（面板尺寸的 SCAN_ARM_STEP 倍），每臂逐站配准吸收，失败就不再深入。
         拖回以未移动的小队底图坐标为目标，每帧按实测配准计算相对偏移，最多拖 SCOUT_DRAGS 次；
-        地图边缘造成斜向位移时因此仍能回到小队附近。缺少小队坐标、拖回配准失败或超过次数时
-        停止扫描，不在未知视野叠加盲拖。定位类失败只记日志，安全异常照常传播。
+        地图边缘造成斜向位移时因此仍能回到小队附近。向外配准失败使用最后可信视野拖回，
+        拖回失败或超过次数只跳过当前方向，其余方向仍按序尝试。安全异常照常传播。
         """
         squad = self.stationary_squad()
         if squad is None:
@@ -1220,8 +1222,11 @@ class CampaignSession(NavigationSession):
                     if self.drag_expanded_offset(vector) is None:
                         break
                     sent += 1
+                    previous = located
                     located = self.scout_locate(f'scan_{index:02}_{stop}')
                     if located is None:
+                        logger.info('当前扫描方向配准未通过，停止深入并使用最后可信视野拖回小队。')
+                        located = previous
                         break
                     self.absorb_view(*located)
                     scanned += 1
@@ -1236,8 +1241,8 @@ class CampaignSession(NavigationSession):
                         break
                     located = self.scout_locate(f'scan_{index:02}_back_{attempt}')
                 if not returned:
-                    logger.warning('开局扫描未能按相对位置拖回小队附近，提前结束扫描。')
-                    break
+                    logger.warning('十字扫描未能按相对位置拖回小队附近，跳过当前方向并继续下一方向。')
+                    continue
         except InputBudgetExceeded:
             self.check()
             # 兜底：阶段预算在执行层翻篇（见 scan_start），这里只保证异常不扩散、已扫部分有效。

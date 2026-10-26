@@ -41,9 +41,8 @@ def cell_coverage(mask):
 def nearest_enemy(state, cut, squad):
     """切开图上行走距离最近的 pending 敌人；返回 (目标, 否决记录)。
 
-    先按切开图的分量筛候选：跨分量的要么真走不通，要么被光幕隔开，后者由调用方按原图再判一次。
-    分量判定在原始坐标上做，网格吸附会把相邻分量并到一起虚报可达。
-    同分量普通敌人与 Boss 全部比较 A* 路程；直线距离只决定试算顺序，不能截掉绕路前方的候选。
+    小队分量可信时先按分量过滤；小队定位略偏出道路、分量为零时改用逐候选 A* 判断，
+    不能把圆环覆盖范围内、实际可达的近距离敌人全部误删。直线距离只决定试算顺序。
     """
     squad = np.asarray(squad, float)
     home = cut.component(squad)
@@ -52,7 +51,7 @@ def nearest_enemy(state, cut, squad):
         if record['kind'] not in COMBAT_ENEMY_KINDS:
             continue
         position = np.asarray(record['position'], float)
-        if not home or cut.component(position) != home:
+        if home and cut.component(position) != home:
             rejected.append({'id': record['id'], 'reason': 'different_component', 'position': position.tolist()})
             continue
         candidates.append((float(np.linalg.norm(position - squad)), record, position))
@@ -61,13 +60,33 @@ def nearest_enemy(state, cut, squad):
     for straight, record, position in candidates:
         distance = walking_distance(cut.road, cut.regions, squad, position)
         if not np.isfinite(distance):
-            rejected.append({'id': record['id'], 'reason': 'no_road_route', 'position': position.tolist()})
+            reason = 'different_component' if not home and cut.component(position) else 'no_road_route'
+            rejected.append({'id': record['id'], 'reason': reason, 'position': position.tolist()})
             continue
         if best is None or distance < best['distance']:
             best = {'kind': 'enemy', 'id': record['id'], 'position': position.tolist(),
                     'distance': round(distance, 1), 'straight': round(straight, 1),
                     'enemy_kind': record['kind']}
     return best, rejected
+
+
+def enemy_hint_goal(state, cut, squad):
+    """选择道路距离最近的已知敌人线索，作为侦察目标而不是直接战斗目标。
+
+    战后当前小地图尚未重新确认其他敌人时，先沿原可靠坐标补视野，避免把无关空地
+    设为黄色执行落点。返回 explore 类型，只有重新识别到敌人后才能由 nearest_enemy 战斗。
+    """
+    best = None
+    for record in state.enemy_hints():
+        if record['kind'] not in COMBAT_ENEMY_KINDS:
+            continue
+        position = np.asarray(record['position'], float)
+        distance = walking_distance(cut.road, cut.regions, squad, position)
+        if not np.isfinite(distance) or (best is not None and distance >= best['distance']):
+            continue
+        best = dict(kind='explore', id=f"hint-{record['id']}", position=position.tolist(),
+                    distance=round(distance, 1), for_enemy=record['id'], reason='review_enemy_hint')
+    return best
 
 
 def blocked_candidate(state, chart, cut, squad, rejected):
@@ -213,6 +232,8 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
         goal = elevator_goal(state, chart, cut, squad, candidates)
     if goal is None and purpose == 'story' and state.route_goal is not None:
         goal = {'kind': 'none', 'reason': 'route_unreachable', 'for_target': state.route_goal['id']}
+    if goal is None and purpose == 'story':
+        goal = enemy_hint_goal(state, cut, squad)
     if goal is None:
         goal = frontier_point(state, cut, squad)
     if goal is None:

@@ -25,6 +25,7 @@ GOAL_REASONS = {
     'route_unreachable': '路程目标不可达且没有可用中转方案',
     'nearest_pending_enemy': '可达待清敌人中道路距离最短',
     'nearest_annotated_collectible': '候选标注收集品中道路距离最短',
+    'review_enemy_hint': '复核已知敌人方向的前置道路',
     'nearest_unobserved_cell': '最近的可达未探索区域',
     'review_blocking_curtain': '复核挡路的光幕',
     'verify_mechanism_curtain': '机关触发后复核光幕状态',

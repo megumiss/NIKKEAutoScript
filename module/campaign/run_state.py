@@ -251,7 +251,7 @@ class RunState:
         新可靠视野已覆盖而未检出的旧位置在本拍暂停复核，下一拍仍可重查；保留原记录，
         不认定已清除。
         与本拍同类确认点相邻的线索仅暂时隐藏，不能据此合并两只相邻敌人。
-        这些线索仅用于展示，不生成侦察任务，也不阻止当前目标执行。
+        这些线索用于展示和生成 explore 侦察目标，不直接生成战斗目标，也不阻止当前目标执行。
         """
         confirmed = self.confirmed_enemies()
         identifiers = {record['id'] for record in confirmed}
