@@ -6,6 +6,8 @@
 
 import hashlib
 import json
+import os
+from concurrent.futures import ThreadPoolExecutor, wait
 from pathlib import Path
 
 import cv2
@@ -15,7 +17,7 @@ import numpy as np
 ROI = (25, 96, 243, 307)
 SCALE = 0.25
 PAD = 180
-MATCH_VERSION = 5
+MATCH_VERSION = 6
 # match_panel 的接受判据：道路 IoU、粗搜首名与远处歧义候选的分差、同分候选的参数离散度。
 # 观察器要用同一组常量解释定位为何未被接受，写成常量而不是散在判据里的字面量，避免两边漂移。
 # 道路 IoU 取 0.70：小地图只露出一小块路、或该章配色与底图有固有差异时，正确位置实测落在
@@ -34,6 +36,29 @@ PARAMETER_GRID = sorted({(round(float(a), 2), round(float(b), 2))
                            for a in np.arange(1.9, 3.21, .1) for b in np.arange(.45, .851, .05)})
 # 热启动的小网格半径：a 步长 0.2、b 步长 0.15，各取 ±1 步；超出即视为尺度漂移，退回全扫。
 WARM_START_RADIUS = 1
+# 连续帧在上一视口中心附近 ±160 底图像素内搜索，留出细化的 20 像素护栏；贴边即全图复核。
+LOCAL_SEARCH_RADIUS = 160
+LOCAL_REFINE_GUARD = 20
+# 局部搜索无法复核视野外的重复道路，最多连续接受八帧后重新进行全图平移搜索。
+LOCAL_SEARCH_MAX_STEPS = 8
+# 各配准器共享候选池；按可用逻辑 CPU 的一半预算，给 OpenCV 内部并行与业务线程保留余量。
+_SEARCH_EXECUTOR = ThreadPoolExecutor(
+    max_workers=max(1, (getattr(os, 'process_cpu_count', os.cpu_count)() or 1) // 2),
+    thread_name_prefix='map-match',
+)
+
+
+def search_candidates(function, candidates):
+    """并行计算独立候选，按输入顺序收集结果，保持同分候选的选择顺序。
+
+    所有任务只读地图与本帧掩码，各自创建分数图；缓存更新仍在调用线程执行。任一任务失败时
+    先等待本批其他任务退出再传播异常，避免失败回退或输入释放后仍有上一批任务读取数组。
+    """
+    futures = [_SEARCH_EXECUTOR.submit(function, candidate) for candidate in candidates]
+    try:
+        return [future.result() for future in futures]
+    finally:
+        wait(futures)
 
 
 def minimap_masks(image):
@@ -173,9 +198,15 @@ class MapMatcher:
         self.warm_parameters = None
         self.warm_margin = None
         self.warm_shape = None
+        self.warm_center = None
+        self.local_parameters = None
+        self.local_margin = None
+        self.local_steps = 0
 
     def match(self, image, review=None):
         """粗搜索尺度和位移后细化最佳候选，以 IoU、远处候选分差及参数分散度联合决定是否接受。"""
+        # Wiki 图片之间没有时序连续性，不能把上一张图的位置当作本张的局部搜索先验。
+        self.warm_center, self.local_steps = None, 0
         cropped = None
         try:
             panel, road, valid, player = minimap_masks(image)
@@ -193,36 +224,78 @@ class MapMatcher:
         return result
 
     def match_panel(self, panel, road, valid, player, review=None, expected_position=None):
-        """按面板尺寸隔离热启动；局部搜索最终未通过时，对同一帧最多补一次完整搜索。
+        """连续帧先局部定位，失败后全图搜索平移，尺度仍不可信时最多补一次全参数搜索。
 
-        紧凑和展开面板的尺度参数不可互用，切换尺寸即丢弃旧参数与候选分差。
-        完整搜索使用原接受门限，不拖动、不重取图；失败仍交给调用方的有限恢复流程。
+        面板尺寸变化、显式小队坐标约束和定位失败都会清除位置先验。局部结果必须沿用已验证的
+        尺度参数、通过原接受门限且远离窗口边界；连续局部命中达到上限后恢复全图平移搜索。
+        局部失配不等于尺度失配，先保留已确认的尺度网格在全图找位，仍失败才丢弃尺度缓存；
+        回退不拖动、不重取图，最终失败仍交给调用方恢复。
         """
         shape = tuple(panel.shape[:2])
         if getattr(self, 'warm_shape', None) != shape:
             self.warm_parameters, self.warm_margin = None, None
+            self.warm_center, self.local_steps = None, 0
             self.warm_shape = shape
+        if expected_position is not None:
+            self.warm_center, self.local_steps = None, 0
         had_warm = expected_position is None and getattr(self, 'warm_parameters', None) is not None
+        local = (had_warm and getattr(self, 'warm_center', None) is not None
+                 and getattr(self, 'local_steps', 0) < LOCAL_SEARCH_MAX_STEPS)
+        if local:
+            try:
+                result = self._match_panel(panel, road, valid, player, review, expected_position, local=True)
+            except (ValueError, cv2.error):
+                result = None
+            if result is not None and result['status'] == 'accepted':
+                self._remember_center(panel, result)
+                return result
+            self.warm_center, self.local_steps = None, 0
         try:
             result = self._match_panel(panel, road, valid, player, review, expected_position)
-        except ValueError:
+        except (ValueError, cv2.error):
+            self.warm_center, self.local_steps = None, 0
             if not had_warm:
                 raise
         else:
-            if not had_warm or result['status'] == 'accepted' or result['search_scope'] == 'full':
+            if local:
+                result['local_search_retry'] = True
+            if result['status'] == 'accepted' or not had_warm or result['search_scope'] == 'full':
+                if expected_position is None:
+                    self._remember_center(panel, result)
                 return result
         self.warm_parameters, self.warm_margin = None, None
+        self.warm_center, self.local_steps = None, 0
         result = self._match_panel(panel, road, valid, player, review, expected_position)
         result['full_search_retry'] = True
+        if local:
+            result['local_search_retry'] = True
+        self._remember_center(panel, result)
         return result
 
-    def _match_panel(self, panel, road, valid, player, review=None, expected_position=None):
-        """已裁剪小地图的道路搜索。
+    def _remember_center(self, panel, result):
+        """只缓存已接受的面板中心底图坐标，失败立即使局部先验失效。
 
-        粗搜索优先在最近一次 accepted 配准的 (a, b) 附近做小网格热启动：热启动候选分达标的
-        参数若与缓存一致则复用当时的粗搜 margin，可继续给出 accepted；命中失败或候选分过低
-        退回全网格扫描，行为与无缓存一致。同一实例在移动闭环里反复配准，尺度几乎不变，
-        热启动能省九成以上的 matchTemplate。
+        位置种子始终使用面板几何中心，而非圆环或视口种子 player，避免普通定位和已知小队
+        侦察切换时混用锚点。局部尺度与分差取最近一次全图已接受结果，不改动原全局尺度网格
+        缓存；全图搜索重置连续局部计数，局部命中只递增计数。
+        """
+        if result['status'] != 'accepted':
+            self.warm_center, self.local_steps = None, 0
+            return
+        center = np.array(panel.shape[1::-1], float) / 2
+        matrix = np.asarray(result['roi_to_map'])
+        self.warm_center = cv2.perspectiveTransform(center[None, None], matrix)[0, 0]
+        if result['search_scope'] != 'local':
+            self.local_parameters = (result['a'], result['b'])
+            self.local_margin = result['coarse_margin']
+        self.local_steps = getattr(self, 'local_steps', 0) + 1 if result['search_scope'] == 'local' else 0
+
+    def _match_panel(self, panel, road, valid, player, review=None, expected_position=None, local=False):
+        """按尺度参数网格和道路 IoU 配准，局部模式只裁剪平移搜索范围。
+
+        局部窗口围绕上一可信面板中心构造，各候选按自己的投影保留完整模板支撑域；裁剪原点
+        加回粗搜位移后才细化。局部候选不足、尺度变化或贴边均不接受，由外层清除位置先验后全图找位。
+        局部分差最多沿用上次全图分差，不能把窗口外的候选消失当作置信度提升。
 
         expected_position 只接受小队未移动时已确认的底图坐标，player 必须是当前帧实测圆环，
         不能用视口中心替代。有此约束时全扫尺度参数，仅搜索圆环投影偏差不超过 12 像素的位置；
@@ -231,6 +304,7 @@ class MapMatcher:
         expected = None if expected_position is None else np.asarray(expected_position, float)
         if expected is not None and (expected.shape != (2,) or not np.isfinite(expected).all()):
             raise ValueError('小队定位约束必须是有限的二维底图坐标。')
+        local_center = self.warm_center.copy() if local else None
         coarse = []
         # 候选分门槛取 0.6：粗搜网格 IoU 明显低于接受线（全分辨率细化后要求 ACCEPT_ROAD_IOU）的参数
         # 不会成为最终候选，热启动时不值得为它们做完全网格。
@@ -244,32 +318,52 @@ class MapMatcher:
             center = expected * scale - origin
             surface[np.hypot(xs - center[0], ys - center[1]) > SQUAD_ANCHOR_RADIUS * scale] = -1.
 
+        def coarse_seed(parameters):
+            """独立计算一个参数组合的粗搜候选，裁剪原点只作用于本任务的分数图。"""
+            a, b = parameters
+            template = template_matrix(self.projection, a, b, road.shape)
+            if template is None:
+                return None
+            matrix, size = template
+            origin = np.zeros(2, int)
+            target = self.target
+            if local:
+                center = np.array(panel.shape[1::-1], float) / 2
+                projected = cv2.perspectiveTransform(center[None, None], matrix)[0, 0]
+                predicted = local_center * SCALE + PAD - projected
+                radius = LOCAL_SEARCH_RADIUS * SCALE
+                origin = np.maximum(0, np.ceil(predicted - radius).astype(int))
+                limit = np.minimum(np.asarray(target.shape[1::-1]) - size + 1,
+                                   np.floor(predicted + radius).astype(int) + 1)
+                if np.any(limit <= origin):
+                    return None
+                target = target[origin[1]:limit[1] + size[1] - 1,
+                                origin[0]:limit[0] + size[0] - 1]
+            surface = iou_surface(target, road, valid, matrix, size)
+            if surface is None:
+                return None
+            p = cv2.perspectiveTransform(player[None, None], matrix)[0, 0]
+            restrict(surface, p + origin - PAD, SCALE)
+            _, score, _, location = cv2.minMaxLoc(surface)
+            if score < 0:
+                return None
+            cv2.circle(surface, location, round(130 * SCALE), 0, -1)
+            _, second, _, second_location = cv2.minMaxLoc(surface)
+            location = np.asarray(location) + origin
+            second_location = np.asarray(second_location) + origin
+            return {'a': a, 'b': b, 'score': score, 'second': second,
+                    'position': (np.asarray(location) + p - PAD) / SCALE,
+                    'second_position': (np.asarray(second_location) + p - PAD) / SCALE,
+                    'location': location, 'matrix': matrix, 'size': size}
+
         def sweep(parameters):
-            """对给定 (a, b) 参数做一次粗搜打分，返回粗搜候选列表。"""
-            found = []
-            for a, b in sorted(parameters):
-                template = template_matrix(self.projection, a, b, road.shape)
-                if template is None:
-                    continue
-                matrix, size = template
-                surface = iou_surface(self.target, road, valid, matrix, size)
-                if surface is None:
-                    continue
-                p = cv2.perspectiveTransform(player[None, None], matrix)[0, 0]
-                restrict(surface, p - PAD, SCALE)
-                _, score, _, location = cv2.minMaxLoc(surface)
-                if score < 0:
-                    continue
-                cv2.circle(surface, location, round(130 * SCALE), 0, -1)
-                _, second, _, second_location = cv2.minMaxLoc(surface)
-                found.append({'a': a, 'b': b, 'score': score, 'second': second,
-                              'position': (np.asarray(location) + p - PAD) / SCALE,
-                              'second_position': (np.asarray(second_location) + p - PAD) / SCALE,
-                              'location': location, 'matrix': matrix, 'size': size})
-            return found
+            """并行遍历有序参数网格，剔除无效候选但不改变有效候选的稳定顺序。"""
+            return [item for item in search_candidates(coarse_seed, sorted(parameters)) if item is not None]
 
         # seed_matcher 等旁路构造的实例没有热启动字段；热启动只对持有完整画布的实例有意义。
-        warm = getattr(self, 'warm_parameters', None) if expected is None else None
+        warm = (self.local_parameters if local else getattr(self, 'warm_parameters', None))
+        if expected is not None:
+            warm = None
         warm_hit = False
         if warm is not None:
             steps = sorted({b for _, b in PARAMETER_GRID})
@@ -277,37 +371,41 @@ class MapMatcher:
                             if abs(steps.index(b) - steps.index(warm[1])) <= WARM_START_RADIUS
                             and abs(a - warm[0]) <= .21 * (WARM_START_RADIUS + 1) + 1e-9}
             coarse = sweep(neighborhood)
-            # 热启动候选分明显低于接受线说明尺度漂移了，退回全网格而不是拿坏候选继续。
+            # 失败交给外层统一回退，避免已全扫失败后又重复同一次全参数搜索。
             warm_hit = bool(coarse) and max(item['score'] for item in coarse) >= warm_score_floor
             if not warm_hit:
-                coarse = sweep(PARAMETER_GRID)
+                raise ValueError('局部道路搜索没有达到粗搜分数门限。' if local
+                                 else '全图道路搜索没有达到尺度热启动分数门限。')
         else:
             coarse = sweep(PARAMETER_GRID)
         if not coarse:
             raise ValueError('No usable registration candidates.')
         coarse.sort(key=lambda r: r['score'], reverse=True)
-        candidates = []
-        for seed in coarse[:8]:
+
+        def refine_seed(seed):
+            """在粗搜位移附近独立细化一个候选，输出顺序仍由粗搜排序决定。"""
             full = np.diag([1 / SCALE, 1 / SCALE, 1.]) @ seed['matrix']
             size = tuple(round(v / SCALE) for v in seed['size'])
             predicted = np.asarray(seed['location']) / SCALE - PAD / SCALE
             start = np.rint(predicted).astype(int) + self.pad - 20
             if min(start) < 0:
-                continue
+                return None
             patch = self.large[start[1]:start[1] + size[1] + 40, start[0]:start[0] + size[0] + 40]
             surface = iou_surface(patch, road, valid, full, size)
             if surface is None:
-                continue
+                return None
             player_offset = cv2.perspectiveTransform(player[None, None], full)[0, 0]
             restrict(surface, start - self.pad + player_offset, 1.)
             _, score, _, location = cv2.minMaxLoc(surface)
             if score < 0:
-                continue
+                return None
             offset = start + np.asarray(location) - self.pad
             matrix = np.array([[1, 0, offset[0]], [0, 1, offset[1]], [0, 0, 1.]]) @ full
             point = cv2.perspectiveTransform(player[None, None], matrix)[0, 0]
-            candidates.append({'road_iou': score, 'position': point.tolist(), 'roi_to_map': matrix.tolist(),
-                               'a': seed['a'], 'b': seed['b']})
+            return {'road_iou': score, 'position': point.tolist(), 'roi_to_map': matrix.tolist(),
+                    'a': seed['a'], 'b': seed['b']}
+
+        candidates = [item for item in search_candidates(refine_seed, coarse[:8]) if item is not None]
         if not candidates:
             raise ValueError('No full-resolution registration candidate fits the map.')
         result = max(candidates, key=lambda r: r['road_iou'])
@@ -318,15 +416,23 @@ class MapMatcher:
         spread = max(np.linalg.norm(np.asarray(r['position']) - point) for r in candidates
                      if r['road_iou'] >= result['road_iou'] - .03)
         inside = np.all(point >= 0) and np.all(point <= np.asarray(self.terrain.shape[::-1]) - 1)
-        # margin 是「粗搜首名与远处歧义候选的分差」，热启动只扫了参数邻域、语义不完整；
-        # 但该分差主要由尺度参数决定，与平移无关，所以热启动命中的参数若正是上次全网格
-        # accepted 的参数，可以直接复用当时的 margin 得出 accepted，避免每帧都做全网格。
-        if warm_hit and self.warm_parameters == (result['a'], result['b']) and self.warm_margin is not None:
-            margin = self.warm_margin
+        # 参数邻域没有覆盖完整网格，只能沿用同参数的已接受全图分差；局部裁剪还会排除远处
+        # 候选，所以只允许降低该分差，不能把窗口外的证据缺失算作置信度提升。
+        same_parameters = warm_hit and warm == (result['a'], result['b'])
+        reference_margin = self.local_margin if local else getattr(self, 'warm_margin', None)
+        if same_parameters and reference_margin is not None:
+            margin = min(margin, reference_margin) if local else reference_margin
         accepted = bool(inside and result['road_iou'] >= ACCEPT_ROAD_IOU and margin >= ACCEPT_COARSE_MARGIN
                         and spread <= ACCEPT_PARAMETER_SPREAD_PX)
+        if local:
+            center = np.array(panel.shape[1::-1], float) / 2
+            projected = cv2.perspectiveTransform(center[None, None], np.asarray(result['roi_to_map']))[0, 0]
+            displacement = float(np.max(np.abs(projected - local_center)))
+            accepted = bool(accepted and same_parameters and reference_margin is not None
+                            and displacement <= LOCAL_SEARCH_RADIUS - LOCAL_REFINE_GUARD)
+            result['local_displacement_px'] = displacement
         result.update(status='accepted' if accepted else 'needs_review',
-                      search_scope='warm' if warm_hit else 'full', coarse_margin=float(margin),
+                      search_scope='local' if local else ('warm' if warm_hit else 'full'), coarse_margin=float(margin),
                       parameter_spread_px=float(spread), roi=list(ROI), player_center=player.tolist(),
                       normalized_size=[1920, 1080], image_sha256=self.digest, match_version=MATCH_VERSION)
         if expected is not None:
