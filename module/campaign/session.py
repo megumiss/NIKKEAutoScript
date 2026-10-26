@@ -28,6 +28,7 @@ from module.campaign.vision.perception import expanded_minimap_masks, project_ce
 from module.campaign.vision.surface_motion import project
 from module.campaign.window import CampaignWindow, WindowChanged
 from module.config.config import TaskEnd
+from module.handler.red_circle import find_red_circles
 from module.logger import logger
 
 # 单次执行（一章）的时限：到点后不再发新输入，等待中也停下交人工。按时间而不是输入次数限，
@@ -71,6 +72,9 @@ ENTRY_CLOSE_POINT = (1147, 513)
 AUTO_POINT = (105, 35)
 DEFEAT_BACK_POINT = (73, 908)
 DEFEAT_RETRY_POINT = (1688, 926)
+# 横屏红圈的瞄准偏移尚未标定，默认使用检测圆心；不要套用竖屏的压缩与纵向补偿公式。
+RED_CIRCLE_OFFSET = (0., 0.)
+RED_CIRCLE_HOLD_SECONDS = 1.
 # 每个按钮自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：一次点击没生效时，
 # 间隔内的轮询不再重复点。数值照仓库的战斗循环取（进入战斗／快速战斗 2~5 秒、结算 1 秒、自动射击 5 秒）。
 ENTRY_TAP_INTERVAL = 2.
@@ -203,7 +207,7 @@ class CampaignInput:
     def __getattr__(self, name):
         """仅包装产生输入的方法；mouse_up 直通，保证取消后仍能释放已按下鼠标。"""
         value = getattr(self.handler, name)
-        if name not in ('mouse_click', 'mouse_swipe', 'mouse_down', 'mouse_move'):
+        if name not in ('mouse_click', 'mouse_swipe', 'mouse_down', 'mouse_move', 'press_mouse_click'):
             return value
 
         def send(*args, **kwargs):
@@ -689,6 +693,33 @@ class CampaignSession(NavigationSession):
         origin = self.win.client_origin()
         self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]))
 
+    def hold_client(self, point, duration):
+        """在有效客户区坐标按住鼠标指定秒数，窗口、弹窗、预算和留档均走 CampaignInput。"""
+        point = np.asarray(point, float)
+        if point.shape != (2,) or not np.isfinite(point).all() or not (0 <= point[0] < 1776 and 0 <= point[1] < 999):
+            raise ValueError('长按位置越界或不是有效坐标。')
+        self.check()
+        origin = self.win.client_origin()
+        self.win.handler.press_mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]), duration)
+
+    def handle_red_circles(self, field):
+        """检测战斗中的红黄同心圈，并按横屏偏移长按瞄准；未启用或未检出时返回 False。
+
+        field 为当前战斗客户区 BGR 帧，检测器复用其他战斗任务的 RGB 实现。偏移与按住时长只使用
+        主线横屏参数；每帧最多处理一个圆，由战斗轮询和长按时间共同限制频率。
+        """
+        if not self.owner.config.Optimization_AutoRedCircle:
+            return False
+        circles = find_red_circles(cv2.cvtColor(field, cv2.COLOR_BGR2RGB))
+        if not circles:
+            return False
+        center = np.asarray(circles[0], float)
+        point = center + RED_CIRCLE_OFFSET
+        self.hold_client(point, RED_CIRCLE_HOLD_SECONDS)
+        logger.info(f"战斗红圈：检测圆心 {points_text(center)}，长按落点 {points_text(point)}，"
+                    f"偏移 {points_text(RED_CIRCLE_OFFSET)}，持续 {RED_CIRCLE_HOLD_SECONDS:.1f} 秒。")
+        return True
+
     def move(self, click):
         """复核收集提示后发送客户区地面落点，沿用规划阶段最后确认的光幕路网。
 
@@ -797,7 +828,7 @@ class CampaignSession(NavigationSession):
 
         优先级与点法照仓库里已经跑熟的战斗循环（module/daemon/semi_combat.py、module/event/challenge.py）：
         准备弹窗（关掉／快速战斗／进入战斗）、结算及升级附加页（点继续）、剧情（点 SKIP）、
-        战斗中（关着才点 AUTO）；
+        战斗中（优先处理红圈，没有红圈且 AUTO 关着才点 AUTO）；
         每一拍只点一个按钮，认不出画面就什么都不点——加载与过场本来就没有按钮，硬猜只会点错。
         每个按钮有自己的最短点击间隔（ENTRY_TAP_INTERVAL / SETTLE_TAP_INTERVAL / AUTO_TAP_INTERVAL），
         一次点击没生效时后续几拍不再重复点同一个按钮。
@@ -832,7 +863,9 @@ class CampaignSession(NavigationSession):
                 logger.info(f"快速战斗不可用：已点击进入战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
                             f"按钮橙色占比 {quick}）。")
         elif kind == 'battle':
-            if not state.get('auto', True):
+            if self.handle_red_circles(field):
+                pass
+            elif not state.get('auto', True):
                 self.handle_auto(state)
         elif (kind == 'story' and state.get('skip_point') is not None
               and (scores or {}).get('story_skip', 0.) >= battle.STORY_SKIP_THRESHOLD):

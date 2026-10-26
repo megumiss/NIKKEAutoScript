@@ -16,10 +16,13 @@ NONCOMBAT_TIME_LIMIT = 300
 NONCOMBAT_POLL_SECONDS = .5
 NONCOMBAT_TAP_INTERVAL = 2.
 ARK_NOTICE_DELAY = 5.
+CHAPTER_LIST_ROI = (630, 80, 1145, 920)
+CHAPTER_LIST_BRIGHT_RATIO = .35
+CHAPTER_OCR_THRESHOLD = .7
+CHAPTER_NEXT_OFFSET = 35
 
 TEMPLATES = {
     'chapter_clear': ((680, 340, 1090, 440), .9),
-    'chapter_next': ((630, 130, 1140, 830), .9),
     'chapter_redirect': ((650, 390, 1130, 510), .85),
     'gift_check': ((740, 860, 1030, 980), .85),
     'gift_confirm': ((630, 390, 1150, 510), .85),
@@ -48,22 +51,37 @@ def locate(field, templates, name):
     region = field[y1:y2, x1:x2]
     if region.shape[0] < template.shape[0] or region.shape[1] < template.shape[1]:
         return 0., None
-    if name == 'chapter_next':
-        template = cv2.inRange(cv2.cvtColor(template, cv2.COLOR_BGR2HSV), (80, 40, 50), (130, 255, 255))
-        region = cv2.inRange(cv2.cvtColor(region, cv2.COLOR_BGR2HSV), (80, 40, 50), (130, 255, 255))
-        overlap = cv2.matchTemplate(region, template, cv2.TM_CCORR) / (255. ** 2)
-        ink = cv2.matchTemplate(region, np.ones_like(template), cv2.TM_CCORR) / 255.
-        denominator = ink + np.count_nonzero(template)
-        scores = np.divide(2 * overlap, denominator, out=np.zeros_like(overlap), where=denominator > 0)
-        _, score, _, point = cv2.minMaxLoc(scores)
-    else:
-        if name == 'ark_check':
-            template = cv2.threshold(cv2.cvtColor(template, cv2.COLOR_BGR2GRAY), 180, 255, cv2.THRESH_BINARY)[1]
-            region = cv2.threshold(cv2.cvtColor(region, cv2.COLOR_BGR2GRAY), 180, 255, cv2.THRESH_BINARY)[1]
-        _, score, _, point = cv2.minMaxLoc(cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED))
+    if name == 'ark_check':
+        template = cv2.threshold(cv2.cvtColor(template, cv2.COLOR_BGR2GRAY), 180, 255, cv2.THRESH_BINARY)[1]
+        region = cv2.threshold(cv2.cvtColor(region, cv2.COLOR_BGR2GRAY), 180, 255, cv2.THRESH_BINARY)[1]
+    _, score, _, point = cv2.minMaxLoc(cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED))
     height, width = template.shape[:2]
     center = [x1 + point[0] + width / 2, y1 + point[1] + height / 2]
     return float(score), center if score >= threshold else None
+
+
+def chapter_next(field, reader):
+    """用 OCR 定位章节列表中的 NEW CHAPTER，返回对应章节卡片的客户区点击中心。
+
+    只在中央高亮面板占比较高时调用 OCR，避免在野外和结算页逐拍空跑。文字框可位于列表左支或右支，
+    点击取其中心并向下偏移到章节名称卡片；文字缺失、框格式异常或面板不符时返回 None，不点击固定位置。
+    """
+    x1, y1, x2, y2 = CHAPTER_LIST_ROI
+    region = field[y1:y2, x1:x2]
+    gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
+    if np.mean(gray > 160) < CHAPTER_LIST_BRIGHT_RATIO:
+        return None
+    x1, y1, x2, y2 = (630, 130, 1140, 830)
+    result = reader.ocr(field[y1:y2, x1:x2], direct_ocr=True, threshold=CHAPTER_OCR_THRESHOLD)
+    for item in result['details']:
+        if ' '.join(item['text'].upper().split()) != 'NEW CHAPTER':
+            continue
+        box = np.asarray(item.get('bbox'), float)
+        if box.size not in (4, 8):
+            continue
+        center = box.reshape(-1, 2).mean(axis=0) + [x1, y1 + CHAPTER_NEXT_OFFSET]
+        return center.tolist()
+    return None
 
 
 class CampaignNoncombat:
@@ -131,7 +149,6 @@ class CampaignNoncombat:
                 ('gift_confirm', '礼包关闭确认'),
                 ('gift_check', '关闭礼包'),
                 ('chapter_clear', '开启下一章节'),
-                ('chapter_next', '新章节'),
                 ('chapter_redirect', '前往相应位置确认')):
             score, point = locate(field, self.templates, name)
             scores[name] = round(score, 3)
@@ -139,12 +156,15 @@ class CampaignNoncombat:
                 continue
             if name == 'chapter_clear':
                 point = (887, 643)
-            elif name == 'chapter_next':
-                point = (point[0], point[1] + 35)
             elif name in ('chapter_redirect', 'gift_confirm'):
                 point = (1000, 625)
             self.tap(point, label)
             return self.wait(name, scores, field)
+
+        point = chapter_next(field, self.session.owner.chapter_ocr)
+        if point is not None:
+            self.tap(point, '新章节')
+            return self.wait('chapter_next', scores, field)
 
         main_score, main_point = locate(field, self.templates, 'main_check')
         ark_score, ark_point = locate(field, self.templates, 'ark_check')
