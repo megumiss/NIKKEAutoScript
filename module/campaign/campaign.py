@@ -519,6 +519,7 @@ class Campaign(ModuleBase):
         退出时恢复紧凑小地图，供后续推图直接使用。
         确认位置后接入有限推图闭环：逐拍补视野、选目标、移动与回写；遇到战斗准备弹窗就把这次战斗
         接管到底（可选快速战斗、结算与回到野外），回到野外后继续下一拍，而不是结束任务。
+        章节结束后的非战斗页面由执行层接管；返回下一章野外后重新执行本准备流程，不复用旧章会话。
         """
         logger.hr(self.config.task.command, level=1)
         watch = Stopwatch()
@@ -557,4 +558,6 @@ class Campaign(ModuleBase):
         logger.info(f'运行状态：{self.state.summary_text()}')
         if result['state'] == 'needs_review':
             raise RequestHumanTakeover
+        if result['state'] == 'chapter_transition':
+            return self.run()
         return chapter

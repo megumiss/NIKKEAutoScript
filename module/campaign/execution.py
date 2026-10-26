@@ -21,6 +21,7 @@ from module.campaign.navigation.movement_feedback import ClickUnconfirmed, Targe
 from module.campaign.navigation.recovery import centered, centering_frame
 from module.campaign.navigation.story_navigation import locate_story_target
 from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
+from module.campaign.noncombat import CampaignNoncombat
 from module.logger import logger
 
 # 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。
@@ -105,6 +106,7 @@ class CampaignExecutor:
         self.last_executed = None
         self.scout_pending = None
         self.recoveries = 0
+        self.noncombat = CampaignNoncombat(session, owner.current_chapter) if purpose == 'story' else None
 
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
@@ -543,6 +545,12 @@ class CampaignExecutor:
                 try:
                     self.session.begin_target('collectible' if self.purpose == 'collectible' else 'position')
                     self.session.check()
+                    if self.noncombat is not None:
+                        noncombat = self.noncombat.step()
+                        if noncombat is not None:
+                            if noncombat['state'] == 'chapter_transition':
+                                return noncombat
+                            continue
                     if recovery_reason is not None:
                         camera_options = {}
                         self.recover(recovery_reason)
