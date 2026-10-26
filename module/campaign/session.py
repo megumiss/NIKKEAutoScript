@@ -1064,7 +1064,7 @@ class CampaignSession(NavigationSession):
         """独立回正小队并取得全新实测定位；失败时不把旧位置降级为可用。
 
         回正与重新定位各使用一个单目标输入窗口，章节时限不重置；前者不发送小队移动。
-        新快照必须来自实际小队圆环并通过既有配准门限，定位重试后仍须居中才能进入恢复扫描。
+        新快照必须来自实际小队圆环并通过既有配准门限；短拖回正后仍须居中，图标回正则直接信任游戏结果。
         """
         from module.campaign.navigation.recovery import centered, centering_frame, recenter_squad
 
@@ -1077,7 +1077,7 @@ class CampaignSession(NavigationSession):
         if (snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
                 or snapshot.get('squad_source') == 'known'):
             raise ValueError('小队回正后的实测定位未通过，不能恢复十字扫描。')
-        if not centered(centering_frame(self), icon_clicked=icon_clicked):
+        if not icon_clicked and not centered(centering_frame(self)):
             raise ValueError('重新定位后镜头偏离小队，不能以偏移视野开始恢复扫描。')
         return snapshot
 
