@@ -16,6 +16,7 @@ from module.campaign.vision.battle import score_text, value_text
 from module.campaign.window import WindowChanged
 from module.base.timer import Timer
 from module.campaign.navigation.movement import navigate
+from module.campaign.navigation.camera_navigation import SquadOffscreen
 from module.campaign.navigation.movement_feedback import ClickUnconfirmed, TargetTriggered
 from module.campaign.navigation.story_navigation import locate_story_target
 from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
@@ -156,6 +157,43 @@ class CampaignExecutor:
                         f"关联机关 {mechanism or '无记录'} 未解除该光幕；耗时 {watch}。")
             state.penalize(f"review-{goal['id']}", failure=False)
 
+    def complete_mechanism(self, goal):
+        """按机关已触发完成收尾：解除当前挡路光幕，回正小队并十字扫描，不再安排复核。
+
+        目标显式携带 block 时只解除该编号；未关联时解除当前 active/stale 光幕，避免附近机关
+        到点后旧封锁仍参与规划。解除只影响本次运行状态，后续回正、定位或扫描失败均向上抛出，
+        不继续使用自动转镜前的视野与路线缓存。
+        """
+        state = self.owner.state
+        identifiers = ([goal['block']] if goal.get('block')
+                       else [record['id'] for record in state.blocking()])
+        state.mark_tried(goal['id'])
+        cleared = []
+        for identifier in identifiers:
+            record = state.blocks.get(identifier)
+            if record is None:
+                continue
+            record.update(status='cleared', cleared_at=state.tick)
+            state.mechanisms[goal['id']]['tried_for'][identifier] = state.tick
+            state.pending_reviews.pop(identifier, None)
+            cleared.append(identifier)
+        if cleared:
+            session = self.session
+            session.barrier_references[:] = [item for item in session.barrier_references
+                                             if item['block']['annotation_id'] not in cleared]
+        self.owner.cut.update(state.blocking())
+        self.owner.last_goal = None
+        self.owner.last_routes = None
+        self.owner.last_route_signature = None
+        logger.info(f"地面机关 {goal['id']} 已触发，解除光幕 {cleared or '无记录'}；"
+                    '跳过复核，开始小队回正与十字扫描。')
+        snapshot = self.session.recover_center()
+        state.update(snapshot, advance=False)
+        self.owner.cut.update(state.blocking())
+        if not self.scan_start('机关触发后'):
+            raise RuntimeError('地面机关触发后的十字扫描未取得可信视野。')
+        self.session.record('mechanism_complete', goal=goal, cleared=cleared, snapshot=snapshot)
+
     def execute(self, goal):
         """执行一个目标并回写结果；剧情移动失败交给回正恢复，安全失败直接向外传播。
 
@@ -194,6 +232,9 @@ class CampaignExecutor:
             raise
         except (RuntimeError, ValueError) as exc:
             self.owner.state.execution_target = None
+            if kind == 'mechanism' and isinstance(exc, SquadOffscreen):
+                self.complete_mechanism(goal)
+                return
             if kind == 'elevator':
                 self.owner.state.transfer_failed(goal['leg'])
             else:
@@ -216,11 +257,7 @@ class CampaignExecutor:
                 raise RuntimeError(f'移动未完成：{describe_result(result)}')
             return
         if kind == 'mechanism':
-            self.owner.state.mark_tried(goal['id'], goal.get('block'))
-            logger.info(f"已到达地面机关 {goal['id']}（坐标来自{label(TARGET_SOURCES, goal.get('source'))}），"
-                        '按开启状态记录，本次任务不再重复选择。')
-            if goal.get('block'):
-                logger.info(f"机关 {goal['id']} 对应光幕 {goal['block']} 待复核。")
+            self.complete_mechanism(goal)
         elif kind == 'review_block':
             self.review_block(goal)
         elif kind == 'elevator':
