@@ -32,6 +32,15 @@ def route_path(cut, squad, target):
     return path, distances
 
 
+def boss_ready(state):
+    """当前是否允许执行 Boss：没有可处理的普通敌人才放行。
+
+    只依据小地图敌人类型和运行状态，不要求普通模式的主线菱形，因此困难模式同样适用。
+    EX 不参与限制；冷却中的普通敌人暂不阻塞 Boss，避免失败冷却后无目标可执行。
+    """
+    return not any(enemy['kind'] == 'normal' for enemy in state.pending_enemies())
+
+
 def refresh_route(state, chart, snapshot, cut):
     """保持未完成路程目标，只有完成、失败冷却或机关抢占主线时更换。
 
@@ -96,12 +105,15 @@ def route_enemy(state, cut, squad, target, path, distances):
 
     候选须接近实际路径，且经该敌人的道路绕行不超过 ROUTE_DETOUR；小队分量为零时以 A* 复核，
     防止把直线相邻但隔墙的敌人算在沿途，也避免误删圆环覆盖的近敌。冷却敌人返回明确暂停目标。
+    仍有可处理普通敌人时 Boss 被跳过，主线路径不能绕过 boss_ready 门禁。
     """
     candidates = []
     home = cut.component(squad)
     full = float(distances[-1] + np.linalg.norm(path[-1] - np.asarray(target)))
     for enemy in state.confirmed_enemies():
         if enemy['kind'] not in COMBAT_ENEMY_KINDS or enemy['status'] == 'cleared':
+            continue
+        if enemy['kind'] == 'boss' and not boss_ready(state):
             continue
         point = np.asarray(enemy['position'], float)
         nearest = int(np.argmin(np.linalg.norm(path - point, axis=1)))

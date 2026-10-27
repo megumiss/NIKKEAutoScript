@@ -17,7 +17,7 @@ from module.campaign.report import (BLOCK_STATUS, GOAL_KINDS, GOAL_REASONS, REJE
                                     label, points_text)
 from module.campaign.run_state import OBSERVED_CELL, located
 from module.campaign.subgoals import elevator_goal, mechanism_goal, review_goal
-from module.campaign.route_planning import refresh_route, route_action
+from module.campaign.route_planning import boss_ready, refresh_route, route_action
 
 # 收集品沿用有限候选预算；敌人必须比较全部候选，否则会漏掉直线较远、路程却更近的前置敌人。
 PLAN_CANDIDATES = 4
@@ -43,12 +43,15 @@ def nearest_enemy(state, cut, squad):
 
     小队分量可信时先按分量过滤；小队定位略偏出道路、分量为零时改用逐候选 A* 判断，
     不能把圆环覆盖范围内、实际可达的近距离敌人全部误删。直线距离只决定试算顺序。
+    仍有可处理普通敌人时 Boss 不进入候选，不要求主线菱形或主线路程目标。
     """
     squad = np.asarray(squad, float)
     home = cut.component(squad)
     rejected, candidates = [], []
     for record in state.pending_enemies():
         if record['kind'] not in COMBAT_ENEMY_KINDS:
+            continue
+        if record['kind'] == 'boss' and not boss_ready(state):
             continue
         position = np.asarray(record['position'], float)
         if home and cut.component(position) != home:
@@ -119,12 +122,28 @@ def blocked_candidate(state, chart, cut, squad, rejected):
     return None
 
 
-def frontier_point(state, cut, squad):
+def unobserved_component_cells(state, cut, squad):
+    """返回小队当前连通分量内尚未可信覆盖的粗网格数，坐标无效时返回 None。
+
+    该计数不考虑扫描冷却，用于 Boss 前的遗漏检查；冷却只延迟补扫，不能把未覆盖区域
+    当作已经检查完成。
+    """
+    try:
+        mask = cut.component_mask(squad)
+    except (ValueError, KeyError):
+        return None
+    coverage = cell_coverage(mask)
+    unseen = (coverage > 0) & (state.observed[:coverage.shape[0], :coverage.shape[1]] == 0)
+    return int(np.count_nonzero(unseen))
+
+
+def frontier_point(state, cut, squad, distance_limit=FRONTIER_LIMIT):
     """小队所在分量里最近的未观测落点；没有可去的前沿时返回 None。
 
     分量取切开图的：光幕另一侧的未观测区现在过不去，先不当前沿，等解封后自然会进候选。
     前沿按粗网格判断：该分量覆盖到、但小地图没覆盖过的格子即未观测。选中格后在格内取离格心
     最近的本分量道路像素作为落点——格心本身可能不在路上，直接拿去规划会被吸附到别处。
+    distance_limit 为 None 时不限制距离，供终局前的完整区域补扫使用。
     """
     try:
         mask = cut.component_mask(squad)
@@ -138,7 +157,7 @@ def frontier_point(state, cut, squad):
     centers = np.column_stack((columns, rows)).astype(float) * OBSERVED_CELL + OBSERVED_CELL / 2
     spans = np.linalg.norm(centers - np.asarray(squad, float), axis=1)
     for index in np.argsort(spans):
-        if spans[index] > FRONTIER_LIMIT:
+        if distance_limit is not None and spans[index] > distance_limit:
             break
         row, column = int(rows[index]), int(columns[index])
         top, left = row * OBSERVED_CELL, column * OBSERVED_CELL
@@ -206,6 +225,9 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
             destination = refresh_route(state, chart, snapshot, cut)
             if destination is None:
                 goal, rejected = nearest_enemy(state, cut, squad)
+            elif destination.get('enemy_kind') == 'boss' and not boss_ready(state):
+                goal, rejected = nearest_enemy(state, cut, squad)
+                candidates = [destination]
             else:
                 goal = route_action(state, cut, squad, destination)
                 candidates = [destination]

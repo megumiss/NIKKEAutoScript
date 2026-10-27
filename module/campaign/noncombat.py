@@ -1,5 +1,6 @@
 """主线章节结束后的非战斗页面识别与换章流程。"""
 
+import re
 import time
 from pathlib import Path
 
@@ -20,6 +21,8 @@ CHAPTER_LIST_ROI = (630, 80, 1145, 920)
 CHAPTER_LIST_BRIGHT_RATIO = .35
 CHAPTER_OCR_THRESHOLD = .7
 CHAPTER_NEXT_OFFSET = 35
+CHAPTER_ENTRY_POINT = (1635, 940)
+CHAPTER_CLOSE_POINT = (1098, 120)
 
 TEMPLATES = {
     'chapter_clear': ((680, 340, 1090, 440), .9),
@@ -84,6 +87,59 @@ def chapter_next(field, reader):
     return None
 
 
+def chapter_progress(field, reader):
+    """读取章节列表中当前章节的蓝色敌人计数，返回（面板是否确认，进度或 None）。
+
+    当前章节由「正在执行作战」或英文 MAIN QUEST 标识定位，不能使用固定卡片坐标：章节列表会滚动，
+    左右分支也会变化。在当前卡片下方用颜色与连通域尺寸定位蓝色菱形，再只 OCR 图标右侧的原尺寸
+    计数。这样黄色计数、红色计数和整页其他章节都不会进入识别框，也避免整页小字粘连造成的误读。
+    面板、当前标识、唯一蓝色图标或唯一合法比值未确认时返回 None。
+    """
+    x1, y1, x2, y2 = (630, 80, 1145, 830)
+    result = reader.ocr(field[y1:y2, x1:x2], direct_ocr=True, threshold=CHAPTER_OCR_THRESHOLD)
+    details = result['details']
+    visible = any(' '.join(item['text'].upper().split()) == 'CHAPTER LIST' for item in details)
+    current = next((item for item in details
+                    if '正在执行作战' in item['text'] or 'MAIN QUEST' in item['text'].upper()), None)
+    if not visible or current is None:
+        return visible, None
+    box = np.asarray(current.get('bbox'), float)
+    if box.size not in (4, 8):
+        return visible, None
+    box = box.reshape(-1, 2)
+    center_x = float(box[:, 0].mean()) + x1
+    bottom = float(box[:, 1].max()) + y1
+    left, right = int(center_x - 90), int(center_x + 90)
+    top, lower = int(bottom + 15), int(bottom + 100)
+    region = field[top:lower, left:right]
+    hsv = cv2.cvtColor(region, cv2.COLOR_BGR2HSV)
+    mask = ((hsv[:, :, 0] > 70) & (hsv[:, :, 0] < 120)
+            & (hsv[:, :, 1] > 80) & (hsv[:, :, 2] > 70)).astype(np.uint8)
+    _, _, stats, centers = cv2.connectedComponentsWithStats(mask)
+    icons = []
+    for stat, center in zip(stats[1:], centers[1:]):
+        x, y, width, height, area = map(int, stat)
+        if 4 <= width <= 18 and 4 <= height <= 18 and area >= 8:
+            icons.append((area, center))
+    if len(icons) != 1:
+        return visible, None
+    center = icons[0][1] + [left, top]
+    cx, cy = center
+    crop = field[int(cy - 10):int(cy + 10), int(cx + 5):int(cx + 53)]
+    result = reader.ocr(crop, direct_ocr=True, threshold=CHAPTER_OCR_THRESHOLD)
+    ratios = []
+    for item in result['details']:
+        match = re.fullmatch(r'\s*(\d+)\s*/\s*(\d+)\s*', item['text'])
+        if match is not None:
+            ratios.append(tuple(map(int, match.groups())))
+    if len(ratios) != 1:
+        return visible, None
+    cleared, total = ratios[0]
+    if total <= 0 or cleared > total:
+        return visible, None
+    return visible, (cleared, total)
+
+
 class CampaignNoncombat:
     """推进章节结束至下一章野外的页面状态机，每拍最多发送一次点击。
 
@@ -119,6 +175,28 @@ class CampaignNoncombat:
         if clicked:
             logger.info(f'换章流程：已点击{label}，客户区落点 ({point[0]:.0f}, {point[1]:.0f})。')
         return clicked
+
+    def enemy_progress(self):
+        """打开章节列表读取当前章节的蓝色敌人进度，确认面板后才允许点击关闭。
+
+        只在 Boss 前检查调用，不改变章节或难度。面板未确认、当前卡片不可见或计数不可靠时返回 None，
+        由调用方回退到区域补扫；关闭后等待界面返回，再由执行层重新取得野外快照。
+        """
+        self.session.begin_target('position')
+        self.tap(CHAPTER_ENTRY_POINT, '章节列表')
+        self.session.pause(1)
+        field = self.session.win.client()
+        visible, progress = chapter_progress(field, self.session.owner.chapter_ocr)
+        self.session.record('chapter_enemy_progress', field=field, force=True,
+                            visible=visible, progress=progress)
+        if visible:
+            self.tap(CHAPTER_CLOSE_POINT, '关闭章节列表')
+            self.session.pause(.5)
+        if progress is None:
+            logger.warning('当前章节敌人进度未能可靠读取，Boss 前继续使用区域补扫。')
+        else:
+            logger.info(f'当前章节敌人进度：{progress[0]}/{progress[1]}（Boss 尚未击败）。')
+        return progress
 
     def step(self):
         """识别当前客户区并推进一步；返回 None 表示普通野外，字典表示换章等待或完成。

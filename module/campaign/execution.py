@@ -5,9 +5,10 @@ import time
 import numpy as np
 
 from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_quad
-from module.campaign.goals import describe
+from module.campaign.goals import describe, frontier_point, unobserved_component_cells
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, TARGET_SOURCES, label, points_text)
+from module.campaign.route_planning import planning_routes
 from module.campaign.scouting import scout_focus
 from module.campaign.session import (DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL,
                                      InputBudgetExceeded)
@@ -105,6 +106,8 @@ class CampaignExecutor:
         # 否则打死的敌人会留在 pending，下一拍白走一趟。
         self.last_executed = None
         self.scout_pending = None
+        self.terminal_continuation = None
+        self.terminal_checked = None
         self.recoveries = 0
         self.noncombat = CampaignNoncombat(session, owner.current_chapter) if purpose == 'story' else None
 
@@ -338,6 +341,91 @@ class CampaignExecutor:
         logger.info(f'侦察结束：检查 {views} 屏，展开与拖动总耗时 {total}')
         return True
 
+    def terminal_region_enemies(self, squad):
+        """返回当前连通分量内可处理的普通敌人，Boss 与 EX 不参与遗漏清扫。"""
+        home = self.owner.cut.component(squad)
+        return [enemy for enemy in self.owner.state.pending_enemies() if enemy['kind'] == 'normal'
+                and (not home or self.owner.cut.component(enemy['position']) == home)]
+
+    def scan_terminal_region(self, snapshot):
+        """在 Boss 前补扫当前连通分量的未覆盖格，返回最新紧凑观测。
+
+        每轮最多检查 SCOUT_VIEWS 屏；发现普通敌人、扫描失败或预算用尽都会停止本批，
+        由调用方重新决策。扫描冷却不能把剩余未覆盖格视为完成，安全异常照常向上传播。
+        """
+        state, squad = self.owner.state, snapshot['squad']
+        self.session.begin_target('scout')
+        self.session.scout_begin()
+        views = 0
+        for view in range(SCOUT_VIEWS):
+            if self.terminal_region_enemies(squad):
+                break
+            focus = frontier_point(state, self.owner.cut, squad, distance_limit=None)
+            if focus is None:
+                break
+            recorded = self.session.scout_view(focus['position'], f'terminal_{view + 1:02d}')
+            views += 1
+            covered = state.is_observed(focus['position'])
+            logger.info(f"终局遗漏补扫第 {views} 屏：{focus['id']}，"
+                        f"{'已记录可信帧' if recorded else '定位未通过'}，"
+                        f"目标格{'已覆盖' if covered else '尚未完整覆盖'}。")
+            if not recorded or not covered:
+                state.penalize(focus['id'])
+                break
+        self.session.begin_target('position')
+        self.session.scout_end()
+        logger.info(f'终局遗漏补扫结束：本轮检查 {views} 屏。')
+        return self.session.snapshot(known_squad=list(squad))
+
+    def terminal_precheck(self, goal, snapshot):
+        """仅在 Boss 前检查遗漏，未就绪时保留目的地并返回 None。
+
+        已知普通敌人始终优先清理；没有已知遗漏时先读章节列表的蓝色敌人进度，Boss 未击败所以
+        已清数加一达到总数即可跳过补扫。进度不足或读取失败再检查未可信覆盖的道路格。补扫或清扫期间
+        terminal_continuation 保留 Boss 目的地，完成后从当前小队位置续走，不返回补扫前的位置。
+        相同目的地、路网与观测只需完成一次检查；新增敌人或覆盖后重新检查。
+        """
+        key = (goal['kind'], goal['id'], self.owner.cut.signature,
+               len(self.owner.state.enemies), int(self.owner.state.observed.sum()))
+        if self.terminal_checked == key:
+            return goal, snapshot
+        continuation = dict(goal)
+        self.terminal_continuation = continuation
+        squad = snapshot['squad']
+        pending = self.terminal_region_enemies(squad)
+        unseen = unobserved_component_cells(self.owner.state, self.owner.cut, squad)
+        progress = None
+        if pending or unseen is None or unseen > 0:
+            logger.info(f"{goal_brief(continuation)} 前检查区域遗漏：待清普通敌人 {len(pending)} 个，"
+                        f'未覆盖道路 {unseen if unseen is not None else "未知"} 格；暂缓目的地执行。')
+            if not pending and unseen:
+                progress = self.noncombat.enemy_progress()
+                snapshot = self.session.snapshot(known_squad=list(squad))
+                self.owner.plan_tick(snapshot, advance=False)
+                if progress is not None and progress[0] + 1 >= progress[1]:
+                    logger.info(f'章节敌人进度 {progress[0]}/{progress[1]}，除 Boss 外已清理，跳过区域补扫。')
+                    unseen = 0
+                else:
+                    snapshot = self.scan_terminal_region(snapshot)
+                    self.owner.plan_tick(snapshot, advance=False)
+            pending = self.terminal_region_enemies(squad)
+            if unseen != 0:
+                unseen = unobserved_component_cells(self.owner.state, self.owner.cut, squad)
+        ready = not pending and unseen == 0
+        self.session.record('terminal_precheck', goal=continuation, ready=ready, progress=progress,
+                            pending_enemies=[enemy['id'] for enemy in pending], unobserved_cells=unseen)
+        if not ready:
+            return None, snapshot
+        key = (goal['kind'], goal['id'], self.owner.cut.signature,
+               len(self.owner.state.enemies), int(self.owner.state.observed.sum()))
+        self.terminal_checked = key
+        self.terminal_continuation = None
+        self.owner.last_goal = continuation
+        self.owner.last_routes = planning_routes(self.owner.cut, snapshot, continuation,
+                                                 self.owner.state.route_goal, state=self.owner.state)
+        logger.info(f'{goal_brief(continuation)} 前区域遗漏检查通过，从当前位置恢复目的地。')
+        return continuation, snapshot
+
     def battle(self, goal):
         """按「按钮循环」接管一场战斗：准备弹窗→（快速）战斗→结算被点掉→回到野外。
 
@@ -519,6 +607,7 @@ class CampaignExecutor:
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、输入预算、取消
         和战斗失败仍立即停止。连续恢复尝试有界，完整恢复成功后清零；总轮数与章节时限不重置。
+        Boss 执行前先核对章节敌人进度，进度不足才补扫当前连通分量；电梯不再触发终局遗漏检查。
         每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：整条推图日志因此能按轮切分，
         把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
         """
@@ -626,6 +715,10 @@ class CampaignExecutor:
                                     'goal': goal, 'focus': pending}
                         logger.info(f"前置道路尚未确认（{pending['id']}），小队保持原位，下一轮继续侦察。")
                         continue
+                    if (goal is not None and goal['kind'] == 'enemy' and goal.get('enemy_kind') == 'boss'):
+                        goal, snapshot = self.terminal_precheck(goal, snapshot)
+                        if goal is None:
+                            continue
                     if goal is None or goal['kind'] == 'none':
                         if self.purpose == 'story':
                             raise RuntimeError(describe(goal) if goal else '无目标规划结果')
