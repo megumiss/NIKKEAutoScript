@@ -268,6 +268,86 @@ async fn save_export_file(
     .map_err(|error| format!("Export task failed: {error}"))?
 }
 
+fn preview_page(window: &WebviewWindow, config: &DesktopConfig, name: &str, language: &str) -> Result<Url, String> {
+    let current = window.url().map_err(|error| format!("Unable to read the application URL: {error}"))?;
+    if !is_local_webui_url(&current, &config.host, config.port) {
+        return Err("Screen preview is restricted to the configured backend".into());
+    }
+    if name.trim().is_empty() || name.len() > 128 {
+        return Err("Invalid instance name".into());
+    }
+    if !matches!(language, "zh-CN" | "en-US" | "ja-JP") {
+        return Err("Invalid preview language".into());
+    }
+    let mut url = current;
+    url.set_path("/app/");
+    url.query_pairs_mut().clear().append_pair("name", name).append_pair("language", language);
+    url.set_fragment(Some("/preview"));
+    Ok(url)
+}
+
+// A second WebView2 window deadlocks when built on the command's main thread.
+// Keep creation on a worker thread and isolate its browser data and arguments.
+#[tauri::command(async)]
+fn open_preview_window(
+    window: WebviewWindow,
+    config: tauri::State<'_, DesktopConfig>,
+    name: String,
+    language: String,
+) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Screen preview must be opened from the main window".into());
+    }
+    let url = preview_page(&window, &config, &name, &language)?;
+    let title = match language.as_str() {
+        "en-US" => format!("Screen preview - {name}"),
+        "ja-JP" => format!("画面プレビュー - {name}"),
+        _ => format!("画面预览 - {name}"),
+    };
+    let app = window.app_handle();
+    if let Some(preview) = app.get_webview_window("screen-preview") {
+        preview.navigate(url).map_err(|error| format!("Unable to update the preview window: {error}"))?;
+        preview.set_title(&title).map_err(|error| format!("Unable to update the preview title: {error}"))?;
+        let _ = preview.unminimize();
+        preview.show().map_err(|error| format!("Unable to show the preview window: {error}"))?;
+        preview.set_focus().map_err(|error| format!("Unable to focus the preview window: {error}"))?;
+        return Ok(());
+    }
+
+    let scale = window.scale_factor().map_err(|error| format!("Unable to read the window scale: {error}"))?;
+    let height = window.inner_size().map_err(|error| format!("Unable to read the window size: {error}"))?.height as f64 / scale;
+    let data_directory = app.path().app_data_dir().map_err(|error| format!("Unable to locate the preview data directory: {error}"))?.join("screen-preview");
+    let webview_arguments = config::webview_arguments(&config, std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").ok().as_deref()).unwrap_or_default();
+    let allowed_host = config.host.clone();
+    let allowed_port = config.port;
+    WebviewWindowBuilder::new(app, "screen-preview", WebviewUrl::External(url))
+        .title(&title)
+        .icon(window_icon()).map_err(|error| format!("Unable to load the preview icon: {error}"))?
+        .inner_size(480.0, height)
+        .min_inner_size(360.0, 640.0)
+        .decorations(true)
+        .resizable(true)
+        .visible(true)
+        .data_directory(data_directory)
+        .additional_browser_args(&webview_arguments)
+        .on_navigation(move |url| {
+            let local = is_local_webui_url(url, &allowed_host, allowed_port);
+            if !local && matches!(url.scheme(), "http" | "https") {
+                let _ = open::that_detached(url.as_str());
+            }
+            local
+        })
+        .on_new_window(|url, _features| {
+            if matches!(url.scheme(), "http" | "https") {
+                let _ = open::that_detached(url.as_str());
+            }
+            NewWindowResponse::Deny
+        })
+        .build()
+        .map_err(|error| format!("Unable to create the preview window: {error}"))?;
+    Ok(())
+}
+
 fn create_window(
     app: &AppHandle,
     config: &DesktopConfig,
@@ -578,6 +658,7 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             desktop_update::desktop_update_apply,
             save_export_file,
             refresh_security_entry,
+            open_preview_window,
         ])
         .on_window_event(|window, event| {
             if window.label() == "main"
