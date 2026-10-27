@@ -34,7 +34,13 @@ task_handler = TaskHandler()
 class HeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
-        response.headers.setdefault("Cache-Control", "no-cache")
+        path = request.url.path
+        if path in ('/', '/app', '/app/', '/app/index.html'):
+            response.headers['Cache-Control'] = 'no-store'
+        elif path.startswith('/app/assets/'):
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        else:
+            response.headers.setdefault('Cache-Control', 'no-cache')
         return response
 
 
