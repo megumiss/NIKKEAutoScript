@@ -12,7 +12,7 @@ from module.campaign.vision.chapter import CLIENT_SIZE, chapter_identity
 from module.campaign.goals import choose_goal, describe
 from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
-from module.campaign.vision.minimap import map_visible
+from module.campaign.vision.frame import minimap_state as detect_minimap_state
 from module.campaign.navigation.targets import TargetFinder
 from module.campaign.vision.observation import EXPANDED_ROI, CampaignObserver
 from module.campaign.navigation.routing import CutRoads
@@ -169,32 +169,35 @@ class Campaign(ModuleBase):
             return False
         return True
 
-    def minimap_expanded(self, image=None):
-        """当前画面是否处于展开大地图形态：中部 EXPANDED_ROI 是青蓝色的地图面板。
+    def minimap_state(self, image=None):
+        """返回当前小地图形态；image 为可选客户区 BGR 帧，缺省读取 device.image。
 
-        image 为可选的 1776×999 BGR 客户区截图；缺省时用当前 device.image 转 BGR 判定。
-        判据与观察器 minimap_mode_and_panel 的展开分支一致，只用于切换后的状态确认。
+        与观察器共用完整画面判据，关闭、过渡及其他页面均返回 None。
         """
         if image is None:
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
-        left, top, right, bottom = EXPANDED_ROI
-        return map_visible(image[top:bottom, left:right])
+        return detect_minimap_state(image)
+
+    def minimap_expanded(self, image=None):
+        """当前画面是否通过完整判据确认为展开大地图形态。"""
+        return self.minimap_state(image) == 'expanded'
 
     def expand_minimap(self, check=None, pause=None):
         """点击左上角控件把紧凑小地图展开成大地图面板，持续重试直到面板可见。
 
         check / pause 可注入生产会话闸门与可取消等待，任务时限、输入预算和窗口异常仍由这些闸门终止重试。
-        那个控件是开合开关，再点一次会把已经展开的面板收起，所以每次点击之前都重新确认面板还没展开；
-        一次点击没生效（面板动画没走完、或点击被战斗加载画面吃掉）时继续重试，不再单独限制展开点击次数。
+        每次点击前必须确认紧凑态；未知状态直接报错，禁止把场景当作未展开地图点击。
+        一次点击没生效时继续重试，不再单独限制展开点击次数。
         """
         attempt = 0
         while 1:
-            if self.minimap_expanded():
-                return True
             if check is not None:
                 check()
-                if self.minimap_expanded():
-                    return True
+            state = self.minimap_state()
+            if state == 'expanded':
+                return True
+            if state != 'compact':
+                raise RuntimeError('小地图状态未知，禁止点击展开控件。')
             if attempt:
                 logger.warning(f'展开大地图没有生效，再点一次（第 {attempt + 1} 次）。')
             else:
@@ -202,30 +205,30 @@ class Campaign(ModuleBase):
             self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
             (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
             self.device.screenshot()
-            if self.minimap_expanded():
-                return True
             attempt += 1
 
     def collapse_minimap(self, check=None, pause=None):
-        """把展开的大地图面板收起回紧凑小地图；失败只告警，不影响已经得到的定位结果。
+        """把展开的大地图面板收起回紧凑小地图；仍是展开态时告警并返回 False。
 
-        check / pause 可注入生产会话闸门与可取消等待。
-        收起前先确认面板还在：已经是紧凑态时再点一次最小化按钮，坐标会落到场景上，
-        可能被游戏当成一次移动指令。收起后必须确认面板消失，任务结束前若仍停在大地图上，
-        后续推图会在地图盖住画面的状态下点击。
+        check / pause 可注入生产会话闸门与可取消等待。紧凑态直接返回，不发送场景点击；
+        未知状态直接报错。收起后必须确认紧凑面板恢复，避免后续在错误页面上输入。
         """
         for _ in range(2):
-            if not self.minimap_expanded():
-                return True
             if check is not None:
                 check()
-                if not self.minimap_expanded():
-                    return True
+            state = self.minimap_state()
+            if state == 'compact':
+                return True
+            if state != 'expanded':
+                raise RuntimeError('小地图状态未知，禁止点击收起控件。')
             self.device.click_xy(*MINIMAP_COLLAPSE_POSITION)
             (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
             self.device.screenshot()
-        if not self.minimap_expanded():
+        state = self.minimap_state()
+        if state == 'compact':
             return True
+        if state != 'expanded':
+            raise RuntimeError('小地图收起后状态未知，禁止继续输入。')
         logger.warning('展开大地图收起失败，请检查左上角小地图状态。')
         return False
 

@@ -15,6 +15,24 @@ EXPANDED_ROI = (644, 280, 1130, 742)
 _CURRENT_FRAME = ContextVar('campaign_vision_frame', default=None)
 
 
+def minimap_state(image):
+    """识别完整客户区的小地图形态，返回 compact、expanded，关闭或未知时返回 None。
+
+    展开态必须同时具有中央地图面板及其左上控件，并且左上紧凑控件已经消失。
+    部分章节展开后仍有紧凑面板的暗色残影，因此不能先凭残影否决展开态。
+    单独的大面积青蓝色可能来自雪地等场景，不能作为展开或输入坐标可用的依据。
+    """
+    compact_control = minimap_control_visible(image[76:120, 20:64])
+    left, top, right, bottom = EXPANDED_ROI
+    x, y = left + 14, top - 11
+    if (not compact_control and map_visible(image[top:bottom, left:right])
+            and minimap_control_visible(image[y - 22:y + 22, x - 22:x + 22])):
+        return 'expanded'
+    if compact_control and map_visible(image[118:273, 27:207]):
+        return 'compact'
+    return None
+
+
 class FrameInputs:
     """在一次观测期间复用裁图，缩略与展开只会选中一个，不跨截图沿用状态。
 
@@ -49,10 +67,8 @@ class FrameInputs:
 
     @cached_property
     def mode(self):
-        """沿用控件与面板判据，过渡帧不能用上一次模式猜测当前面板。"""
-        if map_visible(self.image[118:273, 27:207]):
-            return 'compact' if minimap_control_visible(self.image[76:120, 20:64]) else None
-        return 'expanded' if map_visible(self.expanded) else None
+        """使用完整客户区的共享判据，过渡帧不能用上一次模式猜测当前面板。"""
+        return minimap_state(self.image)
 
     @property
     def panel(self):
