@@ -1171,14 +1171,27 @@ class CampaignSession(NavigationSession):
         """把展开地图向 point（底图坐标）拖一次；返回实际发送的面板像素偏移，已到位返回 None。
 
         地图内容跟随拖动：实测剩余偏移按本帧配准换算，单次拖动不超过 SCOUT_DRAG_MAX，
-        闭环调用方在拖动后重新配准。
+        闭环调用方在拖动后重新配准。逆投影的齐次分母以当前视口中心归一化；远处目标跨越
+        投影地平线时只沿中心到目标的方向分段推进，不直接除以负分母而反向拖动。
         """
         height, width = panel.shape[:2]
         center = np.array([width / 2, height / 2])
-        offset = center - project(np.linalg.inv(np.asarray(report['roi_to_map'], float)), point)
+        point = np.asarray(point, float)
+        if point.shape != (2,) or not np.isfinite(point).all():
+            raise ValueError('侦察目标必须是有限的二维地图坐标。')
+        matrix = np.asarray(report['roi_to_map'], float)
+        origin = project(matrix, center)
+        inverse = np.linalg.inv(matrix)
+        homogeneous = inverse @ np.r_[point, 1.]
+        homogeneous /= (inverse @ np.r_[origin, 1.])[2]
+        offset = center * homogeneous[2] - homogeneous[:2]
         length = float(np.linalg.norm(offset))
-        if length <= SCOUT_CENTER_TOLERANCE:
+        if length <= SCOUT_CENTER_TOLERANCE * homogeneous[2]:
             return None
+        # 先按最大拖距约束正分母，等价于投影同一直线上的近处中间点，避免跨地平线外推。
+        offset /= max(float(homogeneous[2]), length / SCOUT_DRAG_MAX)
+        if homogeneous[2] <= 0:
+            logger.info(f'侦察目标超出当前投影范围，采用分段拖动：目标 {points_text(point)}。')
         return self.drag_expanded_offset(offset)
 
     def drag_expanded_offset(self, offset):

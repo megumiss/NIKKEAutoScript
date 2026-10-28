@@ -5,7 +5,7 @@ import time
 import numpy as np
 
 from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_quad
-from module.campaign.goals import describe, frontier_point, unobserved_component_cells
+from module.campaign.goals import describe, frontier_point, nearest_enemy, unobserved_component_cells
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, TARGET_SOURCES, label, points_text)
 from module.campaign.route_planning import planning_routes
@@ -108,6 +108,7 @@ class CampaignExecutor:
         self.scout_pending = None
         self.terminal_continuation = None
         self.terminal_checked = None
+        self.terminal_scan_stalls = 0
         self.recoveries = 0
         self.noncombat = CampaignNoncombat(session, owner.current_chapter) if purpose == 'story' else None
 
@@ -351,9 +352,11 @@ class CampaignExecutor:
         """在 Boss 前补扫当前连通分量的未覆盖格，返回最新紧凑观测。
 
         每轮最多检查 SCOUT_VIEWS 屏；发现普通敌人、扫描失败或预算用尽都会停止本批，
-        由调用方重新决策。扫描冷却不能把剩余未覆盖格视为完成，安全异常照常向上传播。
+        由调用方重新决策。连续 MAX_FAILURES 轮没有新增覆盖或普通敌人时转入有界恢复，
+        扫描冷却不能把剩余未覆盖格视为完成，安全异常照常向上传播。
         """
         state, squad = self.owner.state, snapshot['squad']
+        observed_before = int(state.observed.sum())
         self.session.begin_target('scout')
         self.session.scout_begin()
         views = 0
@@ -375,6 +378,13 @@ class CampaignExecutor:
         self.session.begin_target('position')
         self.session.scout_end()
         logger.info(f'终局遗漏补扫结束：本轮检查 {views} 屏。')
+        if int(state.observed.sum()) > observed_before or self.terminal_region_enemies(squad):
+            self.terminal_scan_stalls = 0
+        else:
+            self.terminal_scan_stalls += 1
+            if self.terminal_scan_stalls >= MAX_FAILURES:
+                self.terminal_scan_stalls = 0
+                raise RuntimeError(f'终局遗漏补扫连续 {MAX_FAILURES} 轮无新增覆盖或普通敌人。')
         return self.session.snapshot(known_squad=list(squad))
 
     def terminal_precheck(self, goal, snapshot):
@@ -383,6 +393,8 @@ class CampaignExecutor:
         已知普通敌人始终优先清理；没有已知遗漏时先读章节列表的蓝色敌人进度，Boss 未击败所以
         已清数加一达到总数即可跳过补扫。进度不足或读取失败再检查未可信覆盖的道路格。补扫或清扫期间
         terminal_continuation 保留 Boss 目的地，完成后从当前小队位置续走，不返回补扫前的位置。
+        补扫确认的清怪目标通过 execution_target 保留到下一轮，仍经过原有侦察与导航门禁；
+        未实际派发前不修改 last_executed，避免把突发战斗误关联到尚未执行的目标。
         相同目的地、路网与观测只需完成一次检查；新增敌人或覆盖后重新检查。
         """
         key = (goal['kind'], goal['id'], self.owner.cut.signature,
@@ -415,6 +427,13 @@ class CampaignExecutor:
         self.session.record('terminal_precheck', goal=continuation, ready=ready, progress=progress,
                             pending_enemies=[enemy['id'] for enemy in pending], unobserved_cells=unseen)
         if not ready:
+            if pending:
+                cleanup, _ = nearest_enemy(self.owner.state, self.owner.cut, squad)
+                if cleanup is None or cleanup.get('enemy_kind') != 'normal':
+                    raise RuntimeError('终局补扫发现普通敌人，但未能生成可达清怪目标。')
+                self.owner.state.execution_target = cleanup['id']
+                self.terminal_scan_stalls = 0
+                logger.info(f'终局补扫保留清怪目标 {goal_brief(cleanup)}，下一轮完成前置侦察后执行。')
             return None, snapshot
         key = (goal['kind'], goal['id'], self.owner.cut.signature,
                len(self.owner.state.enemies), int(self.owner.state.observed.sum()))
@@ -570,6 +589,7 @@ class CampaignExecutor:
             if identifier.startswith('scout-') or identifier == 'story-location':
                 state.cooldowns.pop(identifier)
         self.scout_pending = None
+        self.terminal_scan_stalls = 0
         self.owner.last_goal = None
         self.owner.last_routes = None
         self.owner.last_route_signature = None
