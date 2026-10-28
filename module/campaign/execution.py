@@ -631,12 +631,14 @@ class CampaignExecutor:
         剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、输入预算、取消
         和战斗失败仍立即停止。连续恢复尝试有界，完整恢复成功后清零；总轮数与章节时限不重置。
         Boss 执行前先核对章节敌人进度，进度不足才补扫当前连通分量；电梯不再触发终局遗漏检查。
-        每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：整条推图日志因此能按轮切分，
-        把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
+        终局清怪战斗结束后，下一拍先做状态刷新与终局检查，再让常规规划接续清怪或恢复 Boss，
+        不先把 Boss 当成普通最近敌人直接放行。每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：
+        整条推图日志因此能按轮切分，把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
         """
         goal, snapshot = None, initial
         camera_options = {}
         recovery_reason = None
+        terminal_resume = False
         total = Stopwatch()
         try:
             self.session.start()
@@ -681,6 +683,12 @@ class CampaignExecutor:
                         snapshot = self.confirm_barriers_safe(snapshot)
                         camera_options = ({'known_squad': list(snapshot['squad'])}
                                           if located(snapshot) and snapshot.get('squad') is not None else {})
+                    if terminal_resume:
+                        terminal_resume = False
+                        logger.info('终局清怪战斗结束，立即恢复 Boss 前遗漏检查。')
+                        self.owner.state.update(snapshot, advance=False)
+                        self.owner.cut.update(self.owner.state.blocking())
+                        self.terminal_precheck(self.terminal_continuation, snapshot)
                     goal = self.owner.plan_tick(snapshot)
                     if (self.purpose == 'story' and self.owner.state.route_goal is None
                             and snapshot.get('story_markers') and located(snapshot)
@@ -758,6 +766,7 @@ class CampaignExecutor:
                                 f'{goal_brief(self.last_executed)}')
                     camera_options = {}
                     self.battle(self.last_executed)
+                    terminal_resume = self.terminal_continuation is not None
                 except (WindowChanged, InputBudgetExceeded, BattleFailed):
                     raise
                 except (RuntimeError, ValueError) as exc:
