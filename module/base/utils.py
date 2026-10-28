@@ -309,45 +309,77 @@ def save_image(image, file):
 
 
 _preview_queue = None
+_preview_wanted = None
 _preview_last_write = 0.0
+_preview_last_source = None
+# 无人观看时仍低频发布，打开预览时能立即显示一张带真实时间戳的近期画面。
+PREVIEW_IDLE_INTERVAL = 30.0
 
 
-def set_preview_queue(q):
+def set_preview_queue(q, wanted=None):
     """
     worker 进程启动时注入预览帧队列；web 进程不调用，保持 None 即全部 no-op。
 
     Args:
         q: multiprocessing.Manager().Queue()
+        wanted: multiprocessing.Manager().Event()，Web 端有观看者时置位；None 表示始终按 interval 发布。
     """
-    global _preview_queue
+    global _preview_queue, _preview_wanted
     _preview_queue = q
+    _preview_wanted = wanted
 
 
-def publish_preview_frame(image, interval=1.0, source=None):
+def _preview_is_wanted():
+    wanted = _preview_wanted
+    if wanted is None:
+        return True
+    try:
+        return wanted.is_set()
+    except (EOFError, OSError):
+        # Web 进程已退出时 Manager 代理不可用，按无人观看处理。
+        return False
+
+
+def publish_preview_frame(image, interval=1.0, source=None, captured_at=None):
     """
     节流地把最新截图编码为 JPEG 推入预览队列，供 Web UI 画面预览。
     任何失败都静默忽略，绝不影响自动化主流程。
 
     Args:
         image (np.ndarray): RGB 截图
-        interval (float): 最小发布间隔（秒）
-        source (dict): 可选的实际 ADB Serial 与 display_id，供交互预览定位屏幕。
+        interval (float): 有观看者时的最小发布间隔（秒）
+        source (dict): 可选的实际 ADB Serial、display_id 与虚拟屏桥接信息，供预览定位屏幕。
+        captured_at (float): 截图时刻（time.time()），缺省为调用时刻。
     """
-    global _preview_last_write
+    global _preview_last_write, _preview_last_source
     q = _preview_queue
     if q is None:
         return
     now = time.time()
-    if now - _preview_last_write < interval:
+    elapsed = now - _preview_last_write
+    if elapsed < interval:
+        return
+    if elapsed < PREVIEW_IDLE_INTERVAL and not _preview_is_wanted():
+        # 不编码画面，但 serial / 虚拟屏变化要立即送达：交互控制按 source 定位屏幕。
+        # 只有入队成功才记为已发送，队列满时下次再试。
+        if source is not None and source != _preview_last_source:
+            try:
+                q.put_nowait((None, dict(source)))
+                _preview_last_source = source
+            except Exception:
+                pass
         return
     _preview_last_write = now
+    # 截图时刻放进 source，而不是扩展队列项：只重启实例时 Web 进程仍是旧代码，
+    # 旧版只识别 (data, source) 二元组。
+    item_source = dict(source or {}, captured_at=captured_at or now)
     try:
         buf = io.BytesIO()
         Image.fromarray(image).save(buf, 'JPEG', quality=70)
-        data = buf.getvalue()
-        q.put_nowait((data, source) if source is not None else data)
+        q.put_nowait((buf.getvalue(), item_source))
+        _preview_last_source = source
     except Exception:
-        # queue.Full（消费慢时丢帧）与编码异常都直接丢弃
+        # queue.Full（消费慢时丢帧）与编码异常都直接丢弃；来源缓存不更新，以便重试
         pass
 
 

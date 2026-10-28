@@ -54,6 +54,12 @@ Deploy:
     # 'cu126' needs driver CUDA >= 12.6, 'cu118' needs >= 11.8
     # [In most cases] Use 'auto'
     PaddleCuda: 'auto'
+    # Run OCR in a separate process started through ADB (module/ocr/sidecar.py); restart the instance after changing it
+    # Only for NKAS in Termux + proot on the Android device it controls, where background Termux may get only a few slow cores
+    # The launch command is detected automatically; Web UI instances share the sidecar until the backend closes
+    # Elsewhere, or if it cannot start, Web UI instances share OCR models in the backend; main.py owns its OCR service
+    # [In most cases] Use false
+    OcrSidecar: false
 
   Adb:
     # Filepath of ADB executable `adb.exe`
