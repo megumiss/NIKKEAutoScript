@@ -46,9 +46,9 @@ PROCESS_START_TIME = time.time()
 # so two patterns are tried in turn; both tolerate an explicit year.
 _TZ_TOKEN = r'UTC(?:\s*[+-]\s*\d{1,2})?|JST|KST|GMT'
 _CN_PATTERN = re.compile(
-    r'(?:(?P<sy>\d{4})年)?(?P<month>\d{1,2})月(?P<day>\d{1,2})日\s+'
+    r'(?:(?P<sy>\d{4})年)?(?P<month>\d{1,2})月(?P<day>\d{1,2})日\s*'
     r'(?P<sh>\d{1,2}):(?P<sm>\d{2})\s*[~～\-–—]\s*'
-    r'(?:(?:(?P<ey>\d{4})年)?(?P<em>\d{1,2})月(?P<ed>\d{1,2})日\s+)?'
+    r'(?:(?:(?P<ey>\d{4})年)?(?P<em>\d{1,2})月(?P<ed>\d{1,2})日\s*)?'
     r'(?P<eh>\d{1,2}):(?P<mn>\d{2})\s*'
     r'(?:\(?\s*(?P<tz>' + _TZ_TOKEN + r')\s*\)?)?',
 )
