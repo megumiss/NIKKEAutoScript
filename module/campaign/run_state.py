@@ -421,8 +421,9 @@ class RunState:
     def _absorb_mechanisms(self, mechanisms):
         """按标注编号或兜底位置合并机关，保留开关状态、邻近敌人证据和到点记录。
 
-        开启在本次任务中不可逆，后续漏检或 off 误检不能恢复为未开启。标注编号由观测层唯一
-        关联后提供；未标注机关才按位置合并，抖动不能清掉既有的封锁关联记录。
+        未完成机关按本帧有效观测更新开关状态，视觉 on 不作为不可逆的完成证据；只有导航
+        确认到点的 completed 记录保持开启，避免重复执行。漏检不清除既有状态。标注编号
+        由观测层唯一关联后提供；未标注机关才按位置合并，抖动不能清掉既有的封锁关联记录。
         """
         for item in mechanisms:
             position = np.asarray(item.get('position'), float)
@@ -441,7 +442,7 @@ class RunState:
             record = self.mechanisms.setdefault(identifier, {'id': identifier, 'tried_for': {}})
             record.update(position=position.tolist(), source=item.get('source', 'scene_fallback'),
                           last_seen=self.tick, near_enemy=bool(item.get('near_enemy')))
-            if record.get('state') != 'on' and item.get('state') in ('on', 'off'):
+            if not record.get('completed') and item.get('state') in ('on', 'off'):
                 record['state'] = item['state']
 
     @staticmethod
