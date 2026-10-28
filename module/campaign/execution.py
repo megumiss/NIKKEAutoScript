@@ -204,6 +204,8 @@ class CampaignExecutor:
     def execute(self, goal):
         """执行一个目标并回写结果；剧情移动失败交给回正恢复，安全失败直接向外传播。
 
+        导航报错与战斗弹窗可能前后脚出现，记失败冷却前必须重查当前画面；确认为战斗时
+        直接交既有接管链路，保留未完成目标，避免战后把机关等位置目标误当成已失败而跳过。
         派发与结束各一行，带上落点、预计距离、移动次数、本目标消耗的输入次数与耗时：
         同一个目标在共享闭环里会打十几行进度，这两行是把它们括起来的边界。
         """
@@ -238,6 +240,7 @@ class CampaignExecutor:
             self.owner.state.execution_target = None
             raise
         except (RuntimeError, ValueError) as exc:
+            self.session.identity(self.session.win.client())
             self.owner.state.execution_target = None
             if kind == 'mechanism' and isinstance(exc, SquadOffscreen):
                 self.complete_mechanism(goal)
