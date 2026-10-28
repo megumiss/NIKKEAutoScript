@@ -8,6 +8,7 @@ import cv2
 from module.base.base import ModuleBase
 from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
+from module.campaign.dependencies import ensure_runtime
 from module.campaign.vision.chapter import CLIENT_SIZE, chapter_identity
 from module.campaign.goals import choose_goal, describe
 from module.campaign.map.map_state import StaticMap
@@ -526,6 +527,7 @@ class Campaign(ModuleBase):
         """
         logger.hr(self.config.task.command, level=1)
         watch = Stopwatch()
+        ensure_runtime(self.config.stop_event)
         self.ensure_resources()
         self.prepare_client()
         chapter = self.detect_current_chapter()
