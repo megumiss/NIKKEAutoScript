@@ -3,7 +3,7 @@
   "identifier": "default",
   "description": "Only the window controls used by the in-page custom titlebar are exposed; the backend-hosted SPA loads from a remote origin, so the capability must extend to it explicitly. The origin host comes from WebuiHost in deploy.yaml and is not known at build time, so any http origin is allowed here; the navigation guard in main.rs still restricts the webview to the configured host and port.",
   "remote": { "urls": ["http://*:*"] },
-  "windows": ["main"],
+  "windows": ["main", "screen-preview"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
@@ -16,6 +16,7 @@
     "allow-desktop-update-check",
     "allow-desktop-update-apply",
     "allow-save-export-file",
-    "allow-refresh-security-entry"
+    "allow-refresh-security-entry",
+    "allow-open-preview-window"
   ]
 }
