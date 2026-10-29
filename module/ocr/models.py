@@ -37,46 +37,87 @@ def get_ocr_device() -> str:
         return 'cpu'
 
 
+def paddle_options(lang, model_type, interval=0):
+    """
+    NIKKEOcr 构造参数的唯一来源；dev_tools/ocr_benchmark.py 复用它，保证基准与运行时一致。
+
+    Args:
+        lang (str): 'ch' 或 'en'（数字模型）
+    """
+    options = dict(
+        lang=lang,
+        model_type=model_type,
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+        interval=interval,
+        device=get_ocr_device(),
+        cpu_threads=get_ocr_cpu_threads(),
+    )
+    if lang == 'en':
+        options.update(text_det_thresh=0.1, text_det_unclip_ratio=6.0)
+    return options
+
+
+def get_ocr_sidecar_enabled() -> bool:
+    """
+    从 deploy.yaml 读取 OCR 侧车开关（OcrSidecar），缺失或非法时为关闭。
+    """
+    from deploy.utils import DEPLOY_CONFIG, poor_yaml_read
+
+    try:
+        return poor_yaml_read(DEPLOY_CONFIG).get('OcrSidecar', False) is True
+    except (OSError, ValueError, TypeError) as e:
+        logger.warning(f'Failed to read OcrSidecar from deploy config: {e}')
+        return False
+
+
+def create_local_model(lang, model_type, interval=0):
+    # 首次 import paddle 需数十秒，包一层心跳日志避免看起来像卡死
+    with OcrInitProgress('Importing paddle library'):
+        from module.ocr.nikke_ocr import NIKKEOcr
+
+    return NIKKEOcr(**paddle_options(lang, model_type, interval))
+
+
 class OcrModel:
-    def __init__(self):
+    def __init__(self, use_sidecar=True):
+        """
+        Args:
+            use_sidecar (bool): False 时始终在本进程加载模型（侧车自身使用，避免递归代理）。
+        """
         self._paddle_cache = {}
         self._paddle_num_cache = {}
+        self._use_sidecar = use_sidecar
+        self._sidecar_unavailable_logged = False
+
+    def _sidecar_command(self):
+        if not self._use_sidecar or not get_ocr_sidecar_enabled():
+            return None
+        from module.ocr.sidecar_launch import termux_sidecar_command
+
+        command, reason = termux_sidecar_command()
+        if command is None and not self._sidecar_unavailable_logged:
+            logger.warning(f'OcrSidecar is on but unavailable here ({reason}), OCR runs in this process')
+            self._sidecar_unavailable_logged = True
+        return command
+
+    def _create(self, lang, model_type, interval):
+        command = self._sidecar_command()
+        if command:
+            from module.ocr.remote import RemoteOcr
+
+            return RemoteOcr(lang, model_type, interval, command)
+        return create_local_model(lang, model_type, interval)
 
     def paddle(self, model_type, interval):
         if model_type not in self._paddle_cache:
-            # 首次 import paddle 需数十秒，包一层心跳日志避免看起来像卡死
-            with OcrInitProgress('Importing paddle library'):
-                from module.ocr.nikke_ocr import NIKKEOcr
-
-            self._paddle_cache[model_type] = NIKKEOcr(
-                lang='ch',
-                model_type=model_type,
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_textline_orientation=False,
-                interval=interval,
-                device=get_ocr_device(),
-                cpu_threads=get_ocr_cpu_threads(),
-            )
+            self._paddle_cache[model_type] = self._create('ch', model_type, interval)
         return self._paddle_cache[model_type]
 
     def paddle_num(self, model_type, interval):
         if model_type not in self._paddle_num_cache:
-            with OcrInitProgress('Importing paddle library'):
-                from module.ocr.nikke_ocr import NIKKEOcr
-
-            self._paddle_num_cache[model_type] = NIKKEOcr(
-                lang='en',
-                model_type=model_type,
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_textline_orientation=False,
-                text_det_thresh=0.1,
-                text_det_unclip_ratio=6.0,
-                interval=interval,
-                device=get_ocr_device(),
-                cpu_threads=get_ocr_cpu_threads(),
-            )
+            self._paddle_num_cache[model_type] = self._create('en', model_type, interval)
         return self._paddle_num_cache[model_type]
 
     def get_model_by(self, lang='ch', model_type='mobile', interval=0):

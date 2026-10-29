@@ -30,6 +30,7 @@ class ConfigModel:
     RequirementsFile: str = "requirements.txt"
     OcrDevice: str = "cpu"
     PaddleCuda: str = "auto"
+    OcrSidecar: bool = False
 
     AdbExecutable: str = "./toolkit/Lib/site-packages/adbutils/binaries/adb.exe"
     ReplaceAdb: bool = True

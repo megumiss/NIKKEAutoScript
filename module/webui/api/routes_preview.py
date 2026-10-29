@@ -1,6 +1,7 @@
 """Screenshot previews and same-origin scrcpy video/control sessions."""
 
 import asyncio
+import math
 import subprocess
 
 from starlette.responses import JSONResponse, Response
@@ -20,11 +21,20 @@ _sessions = set()
 async def screenshot(request):
     name = request.path_params['name']
     manager = ProcessManager._processes.get(name)
-    preview = manager.latest_preview if manager else None
+    try:
+        interval = float(request.query_params.get('interval', 1))
+    except ValueError:
+        interval = 1.0
+    if not math.isfinite(interval):
+        interval = 1.0
+    preview = manager.current_preview(interval) if manager else None
     if preview is None:
         return JSONResponse({'error': 'no preview'}, status_code=404)
-    captured_at, data = preview
-    return Response(content=data, media_type='image/jpeg', headers={'X-Captured-At': str(captured_at)})
+    captured_at, data, source = preview
+    return Response(content=data, media_type='image/jpeg', headers={
+        'X-Captured-At': str(captured_at),
+        'X-Preview-Source': source,
+    })
 
 
 def _context(name):
@@ -86,7 +96,10 @@ async def scrcpy_socket(websocket):
             task.result()
         if receiver in done:
             bitrate = receiver.result()
-            result = await asyncio.to_thread(ConfigService().patch, name, 'Emulator.Scrcpy.Bitrate', bitrate)
+            # Same as every other Web config writer: patch() reads, modifies and
+            # writes the whole file, so it runs on the event loop to stay
+            # serialized with them instead of racing in a worker thread.
+            result = ConfigService().patch(name, 'Emulator.Scrcpy.Bitrate', bitrate)
             if not result.ok:
                 raise ScrcpyError('settings_failed', result.message)
             # The client waits for our close frame, sent after session cleanup,
