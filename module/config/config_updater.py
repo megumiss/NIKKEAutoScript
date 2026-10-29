@@ -346,11 +346,18 @@ class ConfigGenerator:
         deep_set(self.argument, keys='Emulator.PackageName.option', value=option)
         deep_set(self.args, keys='Emulator.Emulator.PackageName.option', value=option)
 
+    def insert_event(self):
+        option = [event['event_id'] for event in ManualConfig.EVENTS[:2]]
+        deep_set(self.argument, keys='EventInfo.Event.option', value=option)
+        deep_set(self.args, keys='Event.EventInfo.Event.option', value=option)
+        deep_set(self.args, keys='Event2.EventInfo.Event.option', value=option)
+
     @timer
     def generate(self):
         _ = self.args
         _ = self.menu
         self.insert_package()
+        self.insert_event()
         write_file(filepath_args(), self.args)
         write_file(filepath_args('menu'), self.menu)
         self.generate_code()
