@@ -177,6 +177,7 @@ const cloneTarget = ref('')
 const cloneSuffix = ref('')
 const cloneClients = ref<CloneClient[]>([])
 const cloneJob = ref<any>({ running: false, step: '', total: 0, copied: 0, error: '', result: null })
+const cloneRepairing = ref('')
 let cloneTimer: number | undefined
 
 function formatSize(bytes: number) {
@@ -243,6 +244,18 @@ function deleteClone(client: CloneClient) {
       cloneClients.value = Array.isArray(data.clients) ? data.clients : []
       toast.notify(shared ? t('副本配置已删除，安装目录已保留') : t('副本已删除'), 'ok', 4000)
     } catch (exception: any) { toast.error = exception.message }
+  })
+}
+function repairClone(client: CloneClient) {
+  if (!client.is_clone || cloneJob.value.running || cloneRepairing.value) return
+  const message = `${t('修复副本启动器')}: ${client.name}.exe。${t('将检查更新后的原始启动器，重新重命名并覆盖旧文件。操作前请关闭该副本的游戏和启动器。')}`
+  openConfirmModal(message, async () => {
+    cloneRepairing.value = client.name
+    try {
+      const data = await api.post('/api/tools/game_clone/repair', { name: client.name })
+      cloneClients.value = Array.isArray(data.clients) ? data.clients : []
+      toast.notify(data.repair?.repaired ? t('启动器已修复，旧文件已清理') : t('未发现新的原始启动器，当前副本无需修复'), 'ok', 5000)
+    } catch (exception: any) { toast.error = exception.message } finally { cloneRepairing.value = '' }
   })
 }
 
@@ -498,7 +511,10 @@ watch(toolsTab, tab => {
               <div class="clone-instance-path"><span>{{ t('游戏路径') }}</span><code>{{ client.game_path || '—' }}</code></div>
               <div v-if="client.shared_with?.length" class="clone-instance-path"><span>{{ t('共用安装目录') }}</span><code>{{ client.shared_with.map(name => `${name}.exe`).join('、') }}</code></div>
               <div class="clone-instance-actions">
-                <button v-if="client.is_clone" class="btn danger sm" :disabled="cloneJob.running" :title="t('删除副本')" @click="deleteClone(client)"><AppIcon name="trash" :size="13" /> {{ t('删除') }}</button>
+                <template v-if="client.is_clone">
+                  <button class="btn sm" :disabled="cloneJob.running || Boolean(cloneRepairing)" :title="t('修复启动器')" @click="repairClone(client)"><AppIcon name="refresh" :size="13" /> {{ cloneRepairing === client.name ? t('修复中…') : t('修复启动器') }}</button>
+                  <button class="btn danger sm" :disabled="cloneJob.running || Boolean(cloneRepairing)" :title="t('删除副本')" @click="deleteClone(client)"><AppIcon name="trash" :size="13" /> {{ t('删除') }}</button>
+                </template>
                 <span v-else class="clone-protected">{{ t('本体不可删除') }}</span>
               </div>
             </div>

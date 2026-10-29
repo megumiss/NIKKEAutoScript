@@ -32,6 +32,14 @@ class EventStory(EventBase):
         }
         return getattr(self.event_assets, stages[story])
 
+    def appear_story_part(self, story, offset=30):
+        button = self.STORY_PART_CHECK(story)
+        if story == 'story_1_normal':
+            if self.event.type == 2:
+                return self.appear(button, threshold=20)
+            return self.appear(button, offset=offset)
+        return self.appear(button, threshold=10) and self.appear(button, offset=offset)
+
     def STORY_STAGE_11(self, story):
         stages = {
             'story_1_normal': 'STORY_1_NORMAL_STAGE_11',
@@ -111,10 +119,7 @@ class EventStory(EventBase):
             f'{finder["horizontal_direction"]}'
         )
         for index, (base_x, base_y) in enumerate(points, start=1):
-            if not (
-                self.appear(self.STORY_PART_CHECK(open_story), threshold=10)
-                and self.appear(self.STORY_PART_CHECK(open_story), offset=30)
-            ):
+            if not self.appear_story_part(open_story, offset=10):
                 logger.warning('Not in story list page, retry')
                 return 'retry'
             # 关卡推完回到了关卡列表
@@ -238,7 +243,7 @@ class EventStory(EventBase):
 
                     # story1列表页面
                     if not self.appear(self.event_assets.EVENT_GOTO_STORY_1, offset=10) and self.appear(
-                        self.event_assets.STORY_1_NORMAL, threshold=20
+                        self.event_assets.STORY_1_NORMAL, offset=(10, 10)
                     ):
                         click_timer.reset()
                         break
@@ -509,8 +514,7 @@ class EventStory(EventBase):
                 if grid_mode:
                     if (
                         grid_retry_timer.reached()
-                        and self.appear(self.STORY_PART_CHECK(open_story), threshold=10)
-                        and self.appear(self.STORY_PART_CHECK(open_story), offset=30)
+                        and self.appear_story_part(open_story)
                         and not self.appear(self.event_assets.STORY_STAGE_CHECK, offset=30)
                     ):
                         result = self.find_pending_stage_by_grid(open_story)

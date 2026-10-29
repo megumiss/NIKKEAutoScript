@@ -1,7 +1,12 @@
 from module.base.timer import Timer
 from module.coop.coop import CoopIsUnavailable
 from module.event.assets import TEMPLATE_SHOP_GEM
-from module.event.base import ChallengeNotFoundError, EventSelectError, EventUnavailableError
+from module.event.base import (
+    DEFAULT_EVENT_TASK_ORDER,
+    ChallengeNotFoundError,
+    EventSelectError,
+    EventUnavailableError,
+)
 from module.event.challenge import EventChallenge
 from module.event.coop import EventCoop
 from module.event.extend import EventExtend
@@ -100,31 +105,42 @@ class Event(
             _ = self.event
 
             self.ensure_into_event()
-            if self.config.Event_LoginStamp:
-                self.login_stamp()
-            if self.config.Event_Challenge:
-                self.challenge()
-            # 提前买票
-            if self.config.StoryStage_HardTicket and self.config.EventInfo_StoryDifficulty == 'Hard':
-                self.shop(TEMPLATE_SHOP_GEM)
-                self.back_to_event()
-            if self.config.StoryStage_AutoPush or self.config.StoryStage_Sweep:
-                self.story()
-                # 重复执行一次
-                self.back_to_event()
-                self.device.sleep(3)
-                self.story()
-            # if self.config.Event_Coop:
-            #     coop_reschedule = self.coop()
-            if self.config.Event_Game:
-                self.game()
+            configured_order = list(dict.fromkeys(self.event.task_order))
+            unknown_tasks = [task for task in configured_order if task not in DEFAULT_EVENT_TASK_ORDER]
+            if unknown_tasks:
+                logger.warning(f'Ignore unknown event tasks: {unknown_tasks}')
+            task_order = [task for task in configured_order if task in DEFAULT_EVENT_TASK_ORDER]
+            task_order.extend(task for task in DEFAULT_EVENT_TASK_ORDER if task not in task_order)
+            logger.info(f'Event task order: {task_order}')
 
-            self.reward()
-
-            self.event_extend()
-
-            if self.config.Event_Shop:
-                self.shop()
+            for task in task_order:
+                if task == 'login_stamp':
+                    if self.config.Event_LoginStamp:
+                        self.login_stamp()
+                elif task == 'challenge':
+                    if self.config.Event_Challenge:
+                        self.challenge()
+                elif task == 'hard_ticket':
+                    if self.config.StoryStage_HardTicket and self.config.EventInfo_StoryDifficulty == 'Hard':
+                        self.shop(TEMPLATE_SHOP_GEM)
+                        self.back_to_event()
+                elif task == 'story':
+                    if self.config.StoryStage_AutoPush or self.config.StoryStage_Sweep:
+                        self.story()
+                        # 重复执行一次
+                        self.back_to_event()
+                        self.device.sleep(3)
+                        self.story()
+                elif task == 'game':
+                    if self.config.Event_Game:
+                        self.game()
+                elif task == 'reward':
+                    self.reward()
+                elif task == 'event_extend':
+                    self.event_extend()
+                elif task == 'shop':
+                    if self.config.Event_Shop:
+                        self.shop()
 
         except EventSelectError:
             logger.error('The event stage/difficulty select wrong')

@@ -20,9 +20,21 @@ class ChallengeNotFoundError(Exception):
     pass
 
 
+DEFAULT_EVENT_TASK_ORDER = (
+    'login_stamp',
+    'challenge',
+    'hard_ticket',
+    'story',
+    'game',
+    'reward',
+    'event_extend',
+    'shop',
+)
+
+
 class EventInfo:
     def __init__(self, id, name, type, mini_game, mini_game_play, extend, story_part, story_difficulty,
-                 pending_click_offset=(0, 0), pending_finder=None):
+                 pending_click_offset=(0, 0), pending_finder=None, task_order=None):
         self.id: str = id
         self.name: str = name
         self.type: int = type
@@ -33,6 +45,7 @@ class EventInfo:
         self.story_difficulty: str = story_difficulty
         self.pending_click_offset = pending_click_offset
         self.pending_finder = pending_finder
+        self.task_order = list(task_order) if task_order is not None else list(DEFAULT_EVENT_TASK_ORDER)
 
 
 class EventBase(UI):
@@ -75,6 +88,7 @@ class EventBase(UI):
             story_difficulty=event_config.get('story_difficulty'),
             pending_click_offset=event_config.get('pending_click_offset', (0, 0)),
             pending_finder=event_config.get('pending_finder'),
+            task_order=event_config.get('task_order'),
         )
 
     def pending_finder_for(self, story):

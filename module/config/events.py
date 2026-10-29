@@ -2,6 +2,30 @@
 
 EVENTS = [
     {
+        "event_id": "event_20261029",
+        "event_name": "MARIAn",
+        "event_type": 1,
+        "mini_game": False,
+        "mini_game_play": True,
+        "extend": False,
+        "story_part": "Story_1",
+        "story_difficulty": "Normal",
+        "task_order": [
+            "hard_ticket", "story", "login_stamp", "challenge",
+            "game", "reward", "event_extend", "shop",
+        ],
+        "pending_finder": {
+            "story_1_normal": {
+                "mode": "grid",
+                "area": (310, 215, 450, 1200),
+                "rows": 8,
+                "columns": 1,
+                "vertical_direction": "bottom_to_top",
+                "horizontal_direction": "right_to_left",
+            },
+        }
+    },
+    {
         "event_id": "event_20261008",
         "event_name": "LITTLE WITCH TRICK",
         # 小型活动
@@ -11,6 +35,11 @@ EVENTS = [
         "extend": False,
         "story_part": "Story_1",  # Story_1, Story_2
         "story_difficulty": "Hard",  # Normal, Hard
+        # 可选：任务按列表顺序优先执行，未列出的任务按默认顺序补到末尾
+        # "task_order": [
+        #     "login_stamp", "challenge", "hard_ticket", "story",
+        #     "game", "reward", "event_extend", "shop",
+        # ],
         # pending_finder 按章节和难度配置：story_1_normal / story_1_hard / story_2_normal / story_2_hard
         # "pending_finder": {
         #     "story_1_normal": {
