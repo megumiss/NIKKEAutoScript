@@ -17,8 +17,8 @@ EVENTS = [
         "pending_finder": {
             "story_1_normal": {
                 "mode": "grid",
-                "area": (100, 400, 600, 1050),
-                "rows": 6,
+                "area": (310, 215, 450, 1200),
+                "rows": 8,
                 "columns": 1,
                 "vertical_direction": "bottom_to_top",
                 "horizontal_direction": "right_to_left",
