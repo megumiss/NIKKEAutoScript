@@ -11,6 +11,11 @@ EVENTS = [
         "extend": False,
         "story_part": "Story_1",  # Story_1, Story_2
         "story_difficulty": "Hard",  # Normal, Hard
+        # 可选：任务按列表顺序优先执行，未列出的任务按默认顺序补到末尾
+        # "task_order": [
+        #     "login_stamp", "challenge", "hard_ticket", "story",
+        #     "game", "reward", "event_extend", "shop",
+        # ],
         # pending_finder 按章节和难度配置：story_1_normal / story_1_hard / story_2_normal / story_2_hard
         # "pending_finder": {
         #     "story_1_normal": {
