@@ -129,7 +129,7 @@ page_conversation.link(button=CONVERSATION_GOTO_EPISODE_VIEWING, destination=pag
 page_episode_viewing.link(button=EPISODE_VIEWING_GOTO_CONVERSATION, destination=page_conversation)
 
 # ark
-page_ark = Page(ARK_CHECK)
+page_ark = Page(ARK_CHECK_UNDERGROUND)
 page_ark.link(button=GOTO_BACK, destination=page_main)
 # page_ark.link(button=GOTO_MAIN, destination=page_main)
 page_main.link(button=MAIN_GOTO_ARK, destination=page_ark)
