@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { api } from '../api/client'
 import { t } from '../i18n'
+import { useWorkspaceStore } from '../stores/workspace'
+import type { Field } from '../types'
 
 // 推图任务共用的设置组：与任务配置组同构，资源同步只是其中一个字段，后续推图相关的配置都加在这里。
 type Resource = {
@@ -10,6 +12,10 @@ type Resource = {
   local: { exists: boolean; version: string | null; sha: string | null; synced_at: string | null; components: Record<string, { chapters?: number; version?: string }> }
   remote: { sha?: string | null; branch?: string | null; version?: string | null; error?: string | null }
 }
+const workspace = useWorkspaceStore()
+const debugField = computed(() => workspace.taskSchema?.groups
+  .find((group: any) => group.key === 'CampaignSettings')?.fields
+  .find((field: Field) => field.key.endsWith('.DebugMode')))
 const resource = ref<Resource | null>(null)
 const error = ref('')
 const collapsed = ref(false)
@@ -75,6 +81,15 @@ onBeforeUnmount(() => window.clearTimeout(timer))
         </div>
         <div class="field-control resource-control">
           <button class="btn primary" :disabled="!resource || resource.syncing" @click="sync">{{ resource?.syncing ? t('同步中…') : t('同步资源') }}</button>
+        </div>
+      </div>
+      <div v-if="debugField" :id="`field-${debugField.key}`" class="field">
+        <div class="field-label">
+          <div class="fname">{{ debugField.title }}</div>
+          <div class="fhelp">{{ debugField.help }}</div>
+        </div>
+        <div class="field-control">
+          <label class="switch"><input type="checkbox" :checked="debugField.value" :disabled="debugField.display !== 'show'" :aria-label="debugField.title" @change="workspace.save(debugField, $event)"><span class="slider"></span></label>
         </div>
       </div>
       <p v-if="message" class="resource-error" role="status">{{ message }}</p>

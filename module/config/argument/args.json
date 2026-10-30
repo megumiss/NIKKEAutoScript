@@ -4060,6 +4060,12 @@
     }
   },
   "AutoMainStory": {
+    "CampaignSettings": {
+      "DebugMode": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",
@@ -4070,6 +4076,12 @@
     }
   },
   "AutoMainCollectible": {
+    "CampaignSettings": {
+      "DebugMode": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
     "Storage": {
       "Storage": {
         "type": "storage",

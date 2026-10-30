@@ -37,6 +37,8 @@ const instancesStore = useInstancesStore()
 const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
 const isCampaign = computed(() => selectedPage.value === 'tool' && ['AutoMainStory', 'AutoMainCollectible'].includes(selectedTask.value))
+const configGroups = computed(() => (taskSchema.value?.groups || [])
+  .filter((group: any) => !isCampaign.value || group.key !== 'CampaignSettings'))
 const { blaLoginBusy } = storeToRefs(useBlaLoginStore())
 const { startBlaLogin } = useBlaLoginStore()
 const { bindBusy } = storeToRefs(useBlaBindBotStore())
@@ -78,7 +80,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
         <CampaignSettingsGroup v-if="isCampaign" />
         <CampaignPanel v-if="isCampaign" :name="workspace.selectedName" />
         <div class="cfg-groups">
-          <article v-for="group in taskSchema?.groups || []" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
+          <article v-for="group in configGroups" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
             <button class="group-head" @click="collapsed[group.key] = !collapsed[group.key]">
               <div class="group-title">
                 <h4>{{ group.name }}</h4>
@@ -162,7 +164,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
       <aside class="card anchor-nav">
         <div class="side-label">{{ t('本页分组') }}</div>
         <button v-if="isCampaign" class="anchor-nav-item" :class="{ active: activeGroup === 'CampaignSettings' }" @click="jumpToGroup({ key: 'CampaignSettings' })">{{ t('推图设置') }}</button>
-        <button v-for="group in taskSchema?.groups || []" :key="group.key" class="anchor-nav-item" :class="{ active: activeGroup === group.key }" @click="jumpToGroup(group)">{{ group.name }}</button>
+        <button v-for="group in configGroups" :key="group.key" class="anchor-nav-item" :class="{ active: activeGroup === group.key }" @click="jumpToGroup(group)">{{ group.name }}</button>
       </aside>
     </div>
   </section>

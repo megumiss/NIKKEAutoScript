@@ -970,5 +970,21 @@
     "Storage": {
       "Storage": {}
     }
+  },
+  "AutoMainStory": {
+    "CampaignSettings": {
+      "DebugMode": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "AutoMainCollectible": {
+    "CampaignSettings": {
+      "DebugMode": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
   }
 }

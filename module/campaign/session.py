@@ -299,6 +299,7 @@ class CampaignSession(NavigationSession):
         self.request = {'chapter': owner.current_chapter, 'difficulty': owner.current_difficulty,
                         'purpose': 'position'}
         self.index = 0
+        self.debug_mode = getattr(owner.config, 'CampaignSettings_DebugMode', False)
         self.folder = Path(__file__).resolve().parents[2] / 'log/campaign' / (
             f'{owner.current_difficulty}_{owner.current_chapter}')
         self.localizer = CampaignLocalizer(owner.observer.matcher, owner.cut)
@@ -350,12 +351,12 @@ class CampaignSession(NavigationSession):
         表现为配准与静态层对不上（定位不可用），而逐帧核对会让每个手势都多两次 OCR 与一张截图。
         """
         self.check_stop()
-        self.trace.start()
+        if self.debug_mode:
+            self.trace.start()
         watch = Stopwatch()
         self.deadline = time.monotonic() + CHAPTER_TIME_LIMIT
         if self.win.handler is None:
             raise WindowChanged('主线移动需要已连接的鼠标操作通道。')
-        self.folder.mkdir(parents=True, exist_ok=True)
         if not self.win.focus():
             raise WindowChanged('无法读取游戏窗口位置。')
         self.check()
@@ -476,11 +477,12 @@ class CampaignSession(NavigationSession):
             raise TargetTriggered('已发现收集品提示，停止并交人工拾取。', indicator)
 
     def preview(self, field):
-        """发布任务预览并保留最新证据；截图不代表战斗或拾取完成。"""
+        """发布任务预览，仅在调试模式下保存最新截图；截图不代表战斗或拾取完成。"""
         from module.campaign.navigation.evidence import write_image
         self.record('preview', field=field, force=True)
-        self.folder.mkdir(parents=True, exist_ok=True)
-        write_image(self.folder / 'last_field.png', field)
+        if self.debug_mode:
+            self.folder.mkdir(parents=True, exist_ok=True)
+            write_image(self.folder / 'last_field.png', field)
         publish_preview_frame(np.ascontiguousarray(field[:, :, ::-1]), interval=0,
                               source=self.owner.campaign_source(self.owner.last_snapshot))
 
