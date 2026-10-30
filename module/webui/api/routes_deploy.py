@@ -104,11 +104,13 @@ FIELD_I18N = {
     },
     'ResourceRepository': {
         'zh-CN': {'desc': '资源仓库地址（章节地图等运行数据）。在推图页面按需同步到 ./data/resources，不随 NKAS 更新', 'hints': {
-            'In most cases': "使用 'https://github.com/megumiss/NIKKEAutoScriptResource.git'",
-            'Other': '使用同一仓库的镜像地址'}},
+            'CN user': "使用 'https://git.megumiss.top/megumiss/NIKKEAutoScriptResource'，下载更快更稳定",
+            'Gitee': "使用 'https://gitee.com/megumiss/NIKKEAutoScriptResource'，可能需要登录",
+            'Other': "使用 'https://github.com/megumiss/NIKKEAutoScriptResource.git'"}},
         'ja-JP': {'desc': 'リソースリポジトリの URL（チャプターマップなど）。キャンペーン画面から ./data/resources に同期し、NKAS の更新には追従しません', 'hints': {
-            'In most cases': "「https://github.com/megumiss/NIKKEAutoScriptResource.git」を使用",
-            'Other': '同じリポジトリのミラーを使用'}},
+            'CN user': "「https://git.megumiss.top/megumiss/NIKKEAutoScriptResource」を使うと高速で安定",
+            'Gitee': "「https://gitee.com/megumiss/NIKKEAutoScriptResource」（ログインが必要な場合あり）",
+            'Other': "「https://github.com/megumiss/NIKKEAutoScriptResource.git」を使用"}},
     },
     'Branch': {
         'zh-CN': {'desc': 'NKAS 分支', 'hints': {
