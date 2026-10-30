@@ -319,13 +319,12 @@ class Campaign(ModuleBase):
 
         章节号与难度只在主线地图显示。首次读到有效身份前连续 MAIN_STORY_PAGE_FRAMES 帧缺失，
         直接按不在主线地图交人工，且不会点击小地图；读到身份后要求连续三帧一致，任一帧失败清零。
-        已确认界面但身份持续不稳定时沿用 30 秒超时。小地图只在身份确认后重开，避免在错误页面输入，
+        不设章节确认总时限，持续识别直到连续一致或收到停止请求。小地图只在身份确认后重开，避免在错误页面输入，
         也避免为同一帧重复章节 OCR。必须在 prepare_client 之后调用，识别区域按 1776×999 客户区固定。
         """
         logger.hr('检查主线剧情界面并确认主线章节', level=2)
         self.current_chapter = self.current_difficulty = None
         reader = self.chapter_ocr
-        timeout = Timer(30).start()
         previous, stable, missing_logged = None, 0, False
         page_confirmed, missing_frames = False, 0
         while 1:
@@ -366,11 +365,6 @@ class Campaign(ModuleBase):
                 self.last_snapshot = snapshot
                 publish_preview_frame(self.device.image, interval=0, source=self.campaign_source(snapshot))
                 return self.current_chapter
-            if timeout.reached():
-                last = f'{previous[1].upper()} 第 {previous[0]} 章' if previous is not None else '未读到'
-                logger.error(f'无法确认主线章节及难度（最后一帧：{last}，连续一致 {stable}/3 帧），'
-                             f'请确保主线地图右下角章节号和难度标识可见。')
-                raise RequestHumanTakeover
             self.device.sleep(MAIN_STORY_PAGE_INTERVAL)
 
     def ensure_chart(self, chapter):
