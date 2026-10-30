@@ -10,7 +10,7 @@ Deploy:
     # [Other] Use 'master', the stable branch
     Branch: master
     # Filepath of git executable `git.exe`
-    # [Easy installer] Use './toolkit/Git/mingw64/bin/git.exe'
+    # [Easy installer] Use './toolkit/Git/cmd/git.exe'
     # [Other] Use you own git
     GitExecutable: /usr/bin/git
     # Set git proxy

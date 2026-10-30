@@ -112,10 +112,10 @@ FIELD_I18N = {
     },
     'GitExecutable': {
         'zh-CN': {'desc': 'git 可执行文件 git.exe 的路径', 'hints': {
-            'Easy installer': "使用 './toolkit/Git/mingw64/bin/git.exe'",
+            'Easy installer': "使用 './toolkit/Git/cmd/git.exe'",
             'Other': '使用你自己的 git'}},
         'ja-JP': {'desc': 'git 実行ファイル git.exe のパス', 'hints': {
-            'Easy installer': "「./toolkit/Git/mingw64/bin/git.exe」を使用",
+            'Easy installer': "「./toolkit/Git/cmd/git.exe」を使用",
             'Other': '自分の git を使用'}},
     },
     'GitProxy': {

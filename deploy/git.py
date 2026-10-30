@@ -231,6 +231,14 @@ class GitManager(DeployConfig):
             logger.info('Starting extraction of PortableGit...')
             self.extract_with_7za(exe_path, target_dir)
 
+            # PortableGit 的内部目录会变（2.56 起 mingw64 改为 ucrt64），不检查的话 git_update 会重复下载
+            if not os.path.exists(self.git):
+                logger.error(
+                    f'Git installed to {target_dir}, but GitExecutable not found: {self.git}. '
+                    f"Set GitExecutable in config/deploy.yaml to './toolkit/Git/cmd/git.exe'"
+                )
+                raise ExecutionError(f'Git executable not found after install: {self.git}')
+
             logger.info(f'Git installed successfully to {target_dir}')
         finally:
             # 删除临时文件
