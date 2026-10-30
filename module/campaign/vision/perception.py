@@ -74,7 +74,7 @@ def squad_arrow(image):
     要求精定位后只剩一个结果：出现多个说明画面里有别的相似符号，这时无法确定哪个是小队，
     继续用会把移动指令发到错误位置。
     """
-    candidates = [item for item in detect_scene(image) if item.label == 'scene_squad_arrow']
+    candidates = [item for item in detect_scene(image, ('scene_squad_arrow',))]
     centers = [refine_arrow(image, item) for item in candidates]
     centers = [center for center in centers if center is not None]
     if len(centers) != 1:
@@ -88,7 +88,7 @@ def collectible_indicator(image):
     提示同时出现多个时只取置信度最高的那个：它只用来判断「附近有收集品」，不需要全部列出。
     返回的 position 是检测框中心，没有做精定位，不能直接当点击落点用。
     """
-    candidates = [item for item in detect_scene(image) if item.label == 'scene_collectible_indicator']
+    candidates = [item for item in detect_scene(image, ('scene_collectible_indicator',))]
     if not candidates:
         return None
     item = max(candidates, key=lambda candidate: candidate.confidence)

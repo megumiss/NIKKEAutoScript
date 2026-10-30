@@ -18,7 +18,7 @@ OBJECTS = {
     'minimap_enemy_boss': ('enemy', 'boss'),
     'minimap_squad_ring': ('squad_ring', None),
 }
-# 默认返回导航对象；箭头和收集提示已由同一次场景推理识别，需要时再筛选。
+# 默认返回导航对象；箭头和收集提示复用原图的场景推理，需要时再筛选。
 DEFAULT_SCENE_KINDS = ('ground_mechanism', 'elevator', 'barrier', 'enemy_ring')
 SCENE_KINDS = DEFAULT_SCENE_KINDS + ('squad_arrow', 'collectible_indicator')
 MINIMAP_KINDS = ('enemy', 'squad_ring')
@@ -58,8 +58,8 @@ def described(detection, space):
 def detect_objects(image, kinds=None):
     """1776×999 BGR 客户区截图里的场景目标，坐标为客户区像素。
 
-    默认返回机关、电梯、屏障和敌人脚圈，所有场景类别共享一次整图推理。
-    显式请求箭头或收集提示只筛选同一输出，不增加模型调用；脚圈不直接并入敌人记忆。
+    默认返回机关、电梯、屏障和敌人脚圈；光幕使用灰度增强输入，其余类别共享原图推理。
+    显式请求箭头或收集提示只需原图输出；脚圈不直接并入敌人记忆。
     箭头的精确中心仍应使用 perception.squad_arrow。
     """
     selected = requested(kinds, DEFAULT_SCENE_KINDS)

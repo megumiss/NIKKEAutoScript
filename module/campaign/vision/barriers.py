@@ -320,14 +320,15 @@ def track_barrier(group, objects, drag=(0., 0.), gain=1.):
 def weak_curtain_visible(image, group):
     """在已关联立柱确定的中央区域以 0.2 置信度复查光幕，仅用于否决消失结论。
 
-    不修改进程共享检测器阈值，不产生正向封路坐标；复用本帧场景原始输出，在场景全部类别中判类后使用独立低阈值。
-    任何低分光幕落在目标附近都视为状态未确认，不能因为常规 0.5 阈值漏检而解除封锁。
+    不修改进程共享检测器阈值，不产生正向封路坐标；复用本帧光幕增强输入的场景输出，
+    在场景全部类别中判类后使用独立低阈值。任何低分光幕落在目标附近都视为状态未确认，
+    不能因为常规 0.5 阈值漏检而解除封锁。
     """
     from module.campaign.vision.detection import decode, detector
 
     model = detector('scene')
     point = np.asarray(group['foot'])
-    output, scales, padding = model.infer(image)
+    output, scales, padding = model.infer(image, enhance_curtain=True)
     items = decode(output, scales, padding, {'scene_barrier_curtain': .2},
                    image.shape, model.labels, guards=(False,) * 4)
     for item in items:

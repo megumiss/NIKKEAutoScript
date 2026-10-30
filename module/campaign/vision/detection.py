@@ -208,17 +208,22 @@ class Detector:
             raise ValueError(f'Campaign {self.role} model lacks classes: {sorted(missing)}')
         return {label: self.thresholds[label] for label in labels}
 
-    def infer(self, image):
-        """推理完整输入并缓存原始张量，同帧重复面板、不同类别和低阈值复核不重复运行。
+    def infer(self, image, *, enhance_curtain=False):
+        """推理完整输入并缓存原始张量，同帧同一路输入的类别筛选与低阈值复核共享输出。
 
-        缓存键包含像素摘要，原地改图不会误用旧输出。观测作用域内允许等像素的不同裁图
-        数组复用；作用域外只在同一数组对象内复用。异常必须通知所有同键等待者并允许重试。
+        enhance_curtain 仅用于场景光幕：原尺寸灰度图经 CLAHE（clipLimit=2、8×8 网格）后
+        转回三通道，不改变业务原图或坐标。缓存键区分原图与增强图，并包含原始像素摘要，
+        原地改图不会误用旧输出。观测作用域内允许等像素的不同数组复用，作用域外只在同一
+        数组对象内复用。异常必须通知所有同键等待者并允许重试。
         """
         height, width = image_size(image)
         if (width, height) != SOURCE_SIZES[self.role]:
             raise ValueError(f'Campaign {self.role} input expects {SOURCE_SIZES[self.role]}, got {(width, height)}.')
+        if enhance_curtain and self.role != 'scene':
+            raise ValueError('Curtain enhancement requires the campaign scene model.')
         token = inference_frame_token()
-        key = (token if token is not None else id(image), hashlib.sha256(np.ascontiguousarray(image)).digest())
+        key = (token if token is not None else id(image),
+               hashlib.sha256(np.ascontiguousarray(image)).digest(), enhance_curtain)
         with self.lock:
             cached = self.inference_cache.get(key)
             if cached is not None and (token is not None or cached[0]() is image):
@@ -231,7 +236,12 @@ class Detector:
         if not owner:
             return pending.result()
         try:
-            tensor, scales, padding = letterbox(image, self.input_size)
+            prepared = image
+            if enhance_curtain:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                enhanced = cv2.createCLAHE(clipLimit=2., tileGridSize=(8, 8)).apply(gray)
+                prepared = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
+            tensor, scales, padding = letterbox(prepared, self.input_size)
             with self.run_lock:
                 output = self.session.run([self.output_name], {self.input_name: tensor})[0]
             result = output, scales, padding
@@ -250,11 +260,23 @@ class Detector:
             raise
 
     def predict(self, image, labels=None):
-        """在当前专用模型全部类别中判类，再按调用方类别过滤，返回输入图像坐标。"""
-        thresholds = self.thresholds if labels is None else self.selected(labels)
-        output, scales, padding = self.infer(image)
+        """在专用模型全部类别中判类，再按请求筛选，所有框仍为原图像素坐标。
+
+        光幕只采用灰度增强输入，其余场景类别及小地图保持原图；只推理请求涉及的输入路。
+        每路独立沿用模型阈值和分类 NMS，不把增强后的立柱、箭头或机关并入原图结果。
+        """
+        thresholds = self.thresholds.copy() if labels is None else self.selected(labels)
+        curtain_threshold = thresholds.pop('scene_barrier_curtain', None)
         guards = (self.role != 'scene',) * 4
-        return decode(output, scales, padding, thresholds, image.shape, self.labels, guards)
+        detections = []
+        if thresholds:
+            output, scales, padding = self.infer(image)
+            detections.extend(decode(output, scales, padding, thresholds, image.shape, self.labels, guards))
+        if curtain_threshold is not None:
+            output, scales, padding = self.infer(image, enhance_curtain=True)
+            detections.extend(decode(output, scales, padding, {'scene_barrier_curtain': curtain_threshold},
+                                     image.shape, self.labels, guards))
+        return sorted(detections, key=lambda item: item.confidence, reverse=True)
 
 
 def package_signature():
@@ -282,7 +304,7 @@ def detector(role):
 
 
 def detect_scene(image, labels=SCENE_LABELS):
-    """对整幅客户区只推理一次，所有场景类别共享同一输出，不再生成网格或遮罩切片。"""
+    """对整幅客户区识别场景，光幕使用灰度增强图，其余类别使用原图；同帧每路复用输出。"""
     if image is None or image.shape != CLIENT_SHAPE:
         raise ValueError('Campaign scene detection expects a 1776x999 BGR client frame.')
     return detector('scene').predict(image, labels)
