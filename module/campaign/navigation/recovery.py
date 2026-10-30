@@ -55,11 +55,14 @@ def recenter_squad(session):
     初始箭头可见时持续按地面点短拖，双帧均以箭头居中且位移不超过 20 像素为准。需要定向
     搜索时在场景安全区域按右、左、下、上长拖，途中不再按箭头微调；离屏图标出现后立即点击
     并直接视为回正成功，不再复核。全程不展开地图，定向搜索用尽后抛 ValueError。
+    回正前先确认野外并收起大地图，待背景遮罩消退后用新帧核对章节，避免暗化角标造成 OCR 空结果。
     全部输入经过原会话闸门，窗口、预算、取消及战斗异常不在此捕获。
     """
     session.check()
-    session.verify_identity(session.await_field())
+    session.await_field()
     goto.map_close(session.win)
+    session.pause(VERIFY_INTERVAL)
+    session.verify_identity(session.await_field())
     evidence = centering_frame(session)
     clicks, adjustments, drags = 0, 0, 0
     searching = False

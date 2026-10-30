@@ -54,6 +54,9 @@ SCAN_ARM_STOPS = 2
 # 定位未被接受时最多再观测几轮：尚未展开时先展开回正，已展开则首轮只换新帧，
 # 之后每轮在面板内换一段视野。只用来救「配准差一点没过线」，连续失败仍按定位不可用处理。
 LOCALIZE_RETRIES = 3
+# 会话身份复核只在读不到时换帧，明确读到其他章节或难度时立即停止。
+IDENTITY_CHECK_ATTEMPTS = 3
+IDENTITY_CHECK_INTERVAL = 0.5
 # 换视野的方向（客户区向量）、位移与停稳等待：起止点以面板中心对称，落点仍在 486×462 面板内。
 # 四个方向都留：视野已经贴着地图某一边时，沿那条边再拖是白费一次重试。
 PAN_DIRECTIONS = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.))
@@ -480,14 +483,27 @@ class CampaignSession(NavigationSession):
         self.check_collectible(field)
 
     def verify_identity(self, field):
-        """核对章节、难度与弹窗；普通弹窗转战斗接管，EX 关闭后转交绕行。
+        """在会话开始、战后和恢复时复核身份；读不到时最多重看三帧，不把单帧漏读当成换章。
 
-        在会话开始和 Boss 胜利后调用；读到别的章节／难度或读不到时抛 WindowChanged，禁止后续输入。
+        调用前由流程保证角标可见，镜头回正须先收起展开地图。每帧检查窗口与停止请求，普通弹窗
+        转战斗接管，EX 关闭后转绕行；重试只等待并截图，不发送地面输入。读到其他章节或难度时
+        立即抛 WindowChanged，连续读不到也停止，不使用旧身份兜底。
         """
-        self.popup(field)
-        current = chapter_identity(field, self.owner.chapter_ocr)
-        if current != self.expected_identity:
-            raise WindowChanged(f'主线章节或难度无法确认／已变化：预期 {self.expected_identity}，读到 {current}。')
+        for attempt in range(IDENTITY_CHECK_ATTEMPTS):
+            self.check()
+            self.popup(field)
+            current = chapter_identity(field, self.owner.chapter_ocr)
+            self.check()
+            if current == self.expected_identity:
+                return
+            if current is not None:
+                raise WindowChanged(f'主线章节或难度已变化：预期 {self.expected_identity}，读到 {current}。')
+            if attempt + 1 < IDENTITY_CHECK_ATTEMPTS:
+                logger.warning(f'主线章节或难度暂未读到：预期 {self.expected_identity}，'
+                               f'等待新帧复验（{attempt + 1}/{IDENTITY_CHECK_ATTEMPTS - 1}）。')
+                self.pause(IDENTITY_CHECK_INTERVAL)
+                field = self.await_field()
+        raise WindowChanged(f'主线章节或难度连续 {IDENTITY_CHECK_ATTEMPTS} 帧无法确认：预期 {self.expected_identity}。')
 
     def check_collectible(self, field):
         """收集品任务见到橙色倒三角即停；不追加拾取或微调点击。"""
