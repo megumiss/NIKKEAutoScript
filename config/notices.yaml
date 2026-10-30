@@ -13,11 +13,17 @@
     
     如果有问题或需求，欢迎到 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">Issues</a> 反馈。
 - id: notice_history
-  date: 2026-10-18
+  date: 2026-10-30
   title: 更新历史
   type: info
   pinned: true
   items:
+    - id: notice_20261030
+      date: 2026-10-30
+      title: 支持伏特骰子领取
+      content: |
+        <b>支持伏特骰子自动领取</b>
+        仅自动领取，不会自动投掷骰子。
     - id: notice_20261018
       date: 2026-10-18
       title: 新增躯体标签商店

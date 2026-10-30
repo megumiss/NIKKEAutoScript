@@ -128,6 +128,11 @@ class InfoHandler(ModuleBase):
 
         return False
 
+    def handle_volt_dice_just_reward(self):
+        if self.appear(VOLT_DICE_CHECK, offset=30) and self.appear_then_click(VOLT_DICE_CLOSE, offset=30, interval=1):
+            return True
+        return False
+
     def handle_reward(self, interval=5):
         if self.appear_then_click(REWARD, offset=(30, 30), interval=interval, static=False):
             return True
