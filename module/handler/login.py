@@ -103,6 +103,11 @@ class LoginHandler(UI):
                 click_timer.reset()
                 continue
 
+            # 伏特骰子
+            if click_timer.reached() and self.handle_volt_dice():
+                click_timer.reset()
+                continue
+
             # 登录奖励
             if click_timer.reached() and self.handle_login_reward():
                 click_timer.reset()

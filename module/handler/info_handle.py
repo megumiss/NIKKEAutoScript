@@ -30,61 +30,46 @@ class InfoHandler(ModuleBase):
         return False
 
     def handle_login_reward(self):
-        # 添加限速机制 - 检查是否在冷却时间内
+        # 完成提示不是页面标识，只在本次领取后的短确认窗口内用于关闭。
+        confirm_timer = getattr(self, '_login_reward_confirm_timer', None)
+        if confirm_timer is not None and not confirm_timer.reached():
+            if not self.appear_any([NO_REWARD, CANNOT_REWARD], offset=30):
+                return False
+
+            close_timer = self.interval_timer.setdefault('LOGIN_REWARD_CLOSE', Timer(1))
+            if not close_timer.reached():
+                return False
+
+            if self.appear(GOTO_BACK, offset=30):
+                if not self.appear_then_click(GOTO_BACK, offset=30, interval=1):
+                    return False
+                logger.info('Close login reward via back button')
+            else:
+                self.device.click_xy(5, 420)
+                logger.info(f'Click {point2str(5, 420)} @ LOGIN_REWARD_CLOSE')
+
+            close_timer.reset()
+            self._login_reward_confirm_timer = None
+            return True
+
+        self._login_reward_confirm_timer = None
+
+        # 仅限制领取文字的 OCR 频率，不阻挡领取后的完成提示检测。
         current_time = time.time()
-        # 5秒冷却时间
         if hasattr(self, '_last_login_reward_check') and current_time - self._last_login_reward_check < 5:
             return False
-
-        # 更新最后检查时间
         self._last_login_reward_check = current_time
 
-        # Daily Login, Memories Spring, Monthly Card, etc.
         reward = self.appear_text(Langs.CLAIM_ALL) or self.appear_text(Langs.CLAIM_REWARD)
-        if reward:
-            # 重置限速机制，因为有奖励可领取
-            self._last_login_reward_check = 0
-
-            x, y = reward[0], reward[1]
-            logger.info(f'Click {point2str(x, y)} @ {Langs.CLAIM_ALL}/{Langs.CLAIM_REWARD}')
-            self.device.click_xy(x, y)
-
-            reward_done = False
-            confirm_timer = Timer(2, count=3)
-            while 1:
-                self.device.screenshot()
-
-                # 领取完奖励，返回主界面
-                if reward_done:
-                    if self.appear(MAIN_CHECK, offset=30) and self.appear(MAIN_CHECK, threshold=10):
-                        logger.info('Page arrive: main')
-                        return True
-
-                    if self.appear(GOTO_BACK, offset=30):
-                        if self.appear_then_click(GOTO_BACK, offset=30, interval=1):
-                            logger.info('Back to main page')
-                            continue
-                    else:
-                        # 点击空白页
-                        self.device.click_xy(5, 420)
-                        self.device.sleep(1)
-                        logger.info('Click %s @ CLOSE' % point2str(5, 420))
-                        continue
-
-                # 无奖励可领
-                if self.appear(NO_REWARD, offset=30) or self.appear(CANNOT_REWARD, offset=30):
-                    logger.info('Reward done')
-                    reward_done = True
-                    confirm_timer.clear()
-                    continue
-                else:
-                    if not confirm_timer.started():
-                        confirm_timer.start()
-                    # 超过2秒没有出现无奖励可领，返回点击Reward
-                    if confirm_timer.reached():
-                        return True
-        else:
+        if not reward:
             return False
+
+        self._last_login_reward_check = 0
+        x, y = reward[0], reward[1]
+        logger.info(f'Click {point2str(x, y)} @ {Langs.CLAIM_ALL}/{Langs.CLAIM_REWARD}')
+        self.device.click_xy(x, y)
+        self._login_reward_confirm_timer = Timer(2).start()
+        return True
 
     # 阿尼斯的补给品，仅关闭窗口，不抽取
     def handle_anis_supplies(self):
@@ -113,6 +98,33 @@ class InfoHandler(ModuleBase):
                 return True
             if self.appear_then_click(RUPEE_EGG_PUSH, offset=30, interval=3):
                 return True
+
+        return False
+
+    # 伏特骰子
+    def handle_volt_dice(self):
+        dice_cooldown = Timer(3)
+        if self.appear(VOLT_DICE_CHECK, offset=30):
+            while 1:
+                self.device.screenshot()
+                # 结束
+                if self.appear(VOLT_DICE_DONE, offset=30):
+                    while 1:
+                        self.device.screenshot()
+                        if not self.appear(VOLT_DICE_CHECK, offset=30):
+                            break
+                        if self.appear_then_click(VOLT_DICE_CLOSE, offset=30, interval=1):
+                            continue
+                    return True
+                # 收获
+                if self.appear_then_click(REWARD, offset=30, interval=1, static=False):
+                    continue
+                # 点骰子
+                if self.appear(VOLT_DICE_CHECK, offset=30):
+                    if dice_cooldown.reached():
+                        self.device.click_xy(360, 1050)
+                        dice_cooldown.reset()
+                    continue
 
         return False
 
