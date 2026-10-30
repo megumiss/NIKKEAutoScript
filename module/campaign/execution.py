@@ -26,8 +26,6 @@ from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, cu
 from module.campaign.noncombat import CampaignNoncombat
 from module.logger import logger
 
-# 每次调度只执行有限拍数，避免无进展的状态机长期占住输入通道。
-CAMPAIGN_TICK_BUDGET = 48
 TARGET_MOVES = 12
 # 限制连续未完成的恢复尝试；回正、重新定位及十字扫描全部通过后清零。
 CAMPAIGN_RECOVERY_LIMIT = 3
@@ -41,7 +39,7 @@ SCOUT_VIEWS = 8
 # 见 session.ENTRY_TAP_INTERVAL / SETTLE_TAP_INTERVAL / AUTO_TAP_INTERVAL）。
 BATTLE_POLL_SECONDS = 0.5
 # 一段战斗（进弹窗、重打后重新开打）等的上限：等不到结算就交人工，不无限等。
-BATTLE_TIME_LIMIT = 300
+BATTLE_TIME_LIMIT = 10 * 60
 BATTLE_DEFEAT_RETRIES = 3
 # 战后野外确认窗口：已识别胜负、连续多帧回到野外且至少经过 BATTLE_SETTLE_CONFIRM 秒才结束。
 # 升级弹窗、加载或未识别画面不计入野外确认，Timer 的 count 语义仍为 count + 1 帧。
@@ -662,7 +660,7 @@ class CampaignExecutor:
             logger.warning(f'光幕确认未完成（{exc}）；路网保持不变，继续推图。')
             return snapshot
 
-    def run(self, initial, ticks=CAMPAIGN_TICK_BUDGET):
+    def run(self, initial):
         """会话开始时核对一次主线身份，之后每轮查弹窗、补视野再决策；遇战斗弹窗接管战斗后继续推图。
 
         战斗接管放在一轮内：胜负结算回到野外后继续下一轮，而不是终结任务。收集品提示仍然直接停止；
@@ -670,13 +668,14 @@ class CampaignExecutor:
         找主线敌人和侦察阶段冻结已有小队底图坐标，只重新配准镜头与敌人；跨轮侦察同样不要求
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、输入预算、取消
-        和战斗失败仍立即停止。连续恢复尝试有界，完整恢复成功后清零；总轮数与章节时限不重置。
+        和战斗失败仍立即停止。连续恢复尝试有界，完整恢复成功后清零；不设单章总时限或主循环轮数上限。
         Boss 执行前先核对章节敌人进度，进度不足才补扫当前连通分量；电梯不再触发终局遗漏检查。
         终局清怪战斗结束后，下一拍先做状态刷新与终局检查；通过后持续保留 Boss 目标直到战斗确认完成，
         不先把 Boss 当成普通最近敌人直接放行。每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：
         整条推图日志因此能按轮切分，把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
         """
         goal, snapshot = None, initial
+        index = -1
         camera_options = {}
         recovery_reason = None
         total = Stopwatch()
@@ -693,9 +692,10 @@ class CampaignExecutor:
                 self.session.remember_registration(initial['squad'], initial.get('roi_to_map'),
                                                    initial.get('coverage_size'))
                 self.session.remember_navigation(initial)
-            for index in range(ticks):
+            while 1:
+                index += 1
                 watch = Stopwatch()
-                logger.info(f'第 {index + 1}/{ticks} 轮开始：任务已运行 {total}，'
+                logger.info(f'第 {index + 1} 轮开始：任务已运行 {total}，'
                             f'累计操作 {self.session.inputs} 次')
                 # 只有移动（execute）里撞上的弹窗才确定属于本轮目标；补视野或观测时冒出来的弹窗，
                 # 归给最近一次真正派出去的目标（见 last_executed），而不是把旧目标随手标成已处理。
@@ -844,10 +844,8 @@ class CampaignExecutor:
                                 'error': recovery_reason, 'goal': goal}
                     logger.warning(f'主线本轮异常，下一轮回正并重扫：{exc}')
                 finally:
-                    logger.info(f'第 {index + 1}/{ticks} 轮结束：本轮耗时 {watch}，'
+                    logger.info(f'第 {index + 1} 轮结束：本轮耗时 {watch}，'
                                 f'累计操作 {self.session.inputs} 次')
-            logger.warning(f'已达到 {ticks} 轮上限，停止执行并请求人工复核。')
-            return {'state': 'needs_review', 'reason': 'tick_budget', 'goal': goal}
         except ExBypassUnavailable as exc:
             logger.warning(f'EX 绕行不可用：{exc}；停止移动并请求人工复核。')
             return {'state': 'needs_review', 'reason': 'ex_bypass_unavailable', 'error': str(exc), 'goal': goal}

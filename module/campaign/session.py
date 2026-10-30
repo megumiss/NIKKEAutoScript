@@ -32,9 +32,6 @@ from module.config.config import TaskEnd
 from module.handler.red_circle import find_red_circles
 from module.logger import logger
 
-# 单次执行（一章）的时限：到点后不再发新输入，等待中也停下交人工。按时间而不是输入次数限，
-# 是因为镜头拖动、小地图开合与侦察拖动的次数随地形差别很大，次数上限要么误停要么形同虚设。
-CHAPTER_TIME_LIMIT = 20 * 60
 # 单个目标的输入次数上限（含场景手势与小地图开合），挡住单个目标上的原地空转。
 TARGET_INPUT_BUDGET = 32
 # 侦察拖动：每屏最多拖几次把落点拖到面板中心、落点离中心多近就不再拖、单次拖动的最长距离
@@ -90,7 +87,7 @@ FIELD_WAIT_LIMIT = 30.
 AUTO_CONFIRM_FRAMES = 2
 # 设备卡死判据的续期阈值（秒）：它判的是「一直在等某个按钮匹配成功」，而推图全程不做按钮匹配，
 # 计时到 6 分钟就会在 device.screenshot 里抛 GameStuckError('Wait too long')；
-# 调度器只在每个任务开始时清一次计时，而一章可能跑满 20 分钟，所以这里提前续期。
+# 调度器只在每个任务开始时清一次计时，推图会话可能长时间持续，因此这里提前续期。
 STUCK_CLEAR_SECONDS = 300
 
 
@@ -191,7 +188,7 @@ def describe_snapshot(snapshot):
 
 
 class InputBudgetExceeded(RuntimeError):
-    """单次执行超过时限或同一个目标的操作次数用尽；不可降级为普通目标失败后继续点击。"""
+    """同一个目标的操作次数用尽；不可降级为普通目标失败后继续点击。"""
 
 
 class CampaignInput:
@@ -325,7 +322,6 @@ class CampaignSession(NavigationSession):
         # 开合也算进预算，所以判定画面有没有变过要用这一个（见 CampaignInput.send、reuse_reason）。
         self.gestures = 0
         self.squad_inputs = 0
-        self.deadline = None
         self.popup_handling = False
         # 战斗接管中：准备弹窗不再是终态，允许会话自己点它上面的按钮。
         self.battle_mode = False
@@ -348,7 +344,7 @@ class CampaignSession(NavigationSession):
         self.localizer.record = self.record
 
     def start(self):
-        """开始前要求已存在输入通道，取焦一次并锁定窗口；不在会话中重建驱动。时限从这里起算。
+        """开始前要求已存在输入通道，取焦一次并锁定窗口；不在会话中重建驱动。
 
         章节与难度只在这里核对一次：同一段执行里逐帧重读章节号不会带来新信息，章节真的变了会先
         表现为配准与静态层对不上（定位不可用），而逐帧核对会让每个手势都多两次 OCR 与一张截图。
@@ -357,7 +353,6 @@ class CampaignSession(NavigationSession):
         if self.debug_mode:
             self.trace.start()
         watch = Stopwatch()
-        self.deadline = time.monotonic() + CHAPTER_TIME_LIMIT
         if self.win.handler is None:
             raise WindowChanged('主线移动需要已连接的鼠标操作通道。')
         if not self.win.focus():
@@ -366,21 +361,18 @@ class CampaignSession(NavigationSession):
         self.verify_identity(self.win.client())
         logger.info(f"主线会话开始：{self.expected_identity[1].upper()} 第 {self.expected_identity[0]} 章，"
                     f"游戏窗口左上角 {self.win.client_origin()}，截图与身份核对耗时 {watch}；"
-                    f"单次执行最多 {CHAPTER_TIME_LIMIT // 60} 分钟，"
                     f"同一个目标最多操作 {TARGET_INPUT_BUDGET} 次")
 
     def check_stop(self):
-        """遵守调度器停止事件与会话时限，包括窗口失焦恢复期间。"""
+        """响应调度器停止事件，包括窗口失焦恢复期间；不按单章累计时长停止。"""
         stop_event = self.owner.config.stop_event
         if stop_event is not None and stop_event.is_set():
             raise TaskEnd
-        if self.deadline is not None and time.monotonic() >= self.deadline:
-            raise InputBudgetExceeded(f'主线单次执行超过 {CHAPTER_TIME_LIMIT // 60} 分钟时限，停止并交人工复核。')
 
     def check(self):
-        """检查停止、时限与窗口状态；坐标变化安全失败，失焦则等待恢复后继续。
+        """检查停止与窗口状态；坐标变化安全失败，失焦则等待恢复后继续。
 
-        停止与时限检查由 check_stop 统一执行，窗口层等待恢复前台时也不能越过这些限制。
+        停止检查由 check_stop 统一执行，窗口层等待恢复前台时也必须响应停止。
         这里同时给设备的卡死判据续期（见 STUCK_CLEAR_SECONDS）：这一章的每一步观测都要经过
         device.screenshot，而那个判据的前提「一直在等按钮匹配」在本会话里从头到尾都不成立。
         """
@@ -391,13 +383,13 @@ class CampaignSession(NavigationSession):
         self.win.check()
 
     def begin_target(self, purpose):
-        """切换目标用途并重置单目标预算；执行时限与已验证箭头基准继续保留。"""
+        """切换目标用途并重置单目标预算；已验证箭头基准继续保留。"""
         self.request['purpose'] = purpose
         self.target_inputs = 0
         self.record('target_begin')
 
     def before_input(self):
-        """每次场景手势之前核对弹窗与收集品提示；超时或达到单目标预算时不发送下一次输入。
+        """每次场景手势之前核对弹窗与收集品提示；达到单目标预算时不发送下一次输入。
 
         这里不重读章节身份：身份由 start 核对一次（见 verify_identity）。真正必须逐帧看的是
         战斗弹窗与收集品提示——漏一帧就可能把落点点进战斗，或踩掉一次拾取机会。
@@ -727,7 +719,7 @@ class CampaignSession(NavigationSession):
         """发送有效的客户区点击，共用窗口、弹窗与预算闸门，不调用地面移动入口。
 
         坐标按 1776×999 客户区验证并换算到屏幕；最终发送仍由 CampaignInput 校验窗口、取消、
-        时限与单目标预算。界面按钮直接使用此入口，地面落点须先由 move 复核收集提示及光幕。
+        停止请求与单目标预算。界面按钮直接使用此入口，地面落点须先由 move 复核收集提示及光幕。
         """
         point = np.asarray(point, float)
         if point.shape != (2,) or not np.isfinite(point).all() or not (0 <= point[0] < 1776 and 0 <= point[1] < 999):
@@ -1124,7 +1116,7 @@ class CampaignSession(NavigationSession):
         return snapshot
 
     def reset_navigation(self):
-        """清除异常前的位置与镜头证据，保留章节资源、任务时限和累计输入计数。
+        """清除异常前的位置与镜头证据，保留章节资源和累计输入计数。
 
         回正前与重新定位前调用，防止 snapshot 自动沿用冻结小队坐标或战前定位；镜头增益、
         箭头与光幕参考帧也不能跨异常复用。敌人清除、机关和道路记忆由执行层保留。
@@ -1143,7 +1135,7 @@ class CampaignSession(NavigationSession):
     def recover_center(self):
         """独立回正小队并取得全新实测定位；失败时不把旧位置降级为可用。
 
-        回正与重新定位各使用一个单目标输入窗口，章节时限不重置；前者不发送小队移动。
+        回正与重新定位各使用一个单目标输入窗口；前者不发送小队移动。
         新快照必须来自实际小队圆环并通过既有配准门限；短拖回正后仍须居中，图标回正则直接信任游戏结果。
         """
         from module.campaign.navigation.recovery import centered, centering_frame, recenter_squad
