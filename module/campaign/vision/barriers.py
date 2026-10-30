@@ -15,6 +15,8 @@ from module.campaign.vision.surface_motion import project
 
 # 场景投影的落点误差（视野锚点中位约 6、p90 约 16 地图像素）大于标注偏移，吸附容差单独放宽。
 SNAP_TOLERANCE = 28.
+# 沿用客户区顶部栏、小地图与任务栏的标定区域；光幕只提供观测，不套用点击用的整条底部禁区。
+BARRIER_HUD_RECTS = ((0, 0, 1776, 75), (0, 75, 245, 310), (1490, 75, 1776, 205))
 
 
 def scene_chart(registration, pixel, panel_point):
@@ -103,15 +105,19 @@ TRACK_TOLERANCE = 32.
 def curtain_foot(item):
     """返回有效光幕检测框的底边中点，单位为原始客户区像素。
 
-    底边中点代表地面接触位置；底部只按实际客户区高度判越界，不将整条底部区域视为 HUD。
-    顶部 HUD 与左右截边过滤保持不变，框贴到客户区底边时仍不采用其脚点。
+    底边中点代表地面接触位置；光幕及立柱框必须完整位于客户区，且不与标定 HUD 矩形相交。
+    顶部栏下方的中央场景可以参与识别，不把整条顶部 120px 当成 HUD；底部仍只检查实际边界，
+    不套用点击区域的整条底部禁区。坐标无效、截边或被 HUD 遮挡时抛 ValueError。
     """
     box = np.asarray(item.get('box'), float)
     if box.shape != (4,) or not np.isfinite(box).all():
         raise ValueError('光幕检测框坐标无效。')
     x1, y1, x2, y2 = box
-    if not (3 < x1 < x2 < 1773 and 120 < y1 < y2 < CLIENT_SIZE[1]):
+    if not (3 < x1 < x2 < CLIENT_SIZE[0] - 3 and 3 < y1 < y2 < CLIENT_SIZE[1]):
         raise ValueError('光幕检测框被截断或位于固定界面区域。')
+    if any(x1 < right and x2 > left and y1 < bottom and y2 > top
+           for left, top, right, bottom in BARRIER_HUD_RECTS):
+        raise ValueError('光幕检测框被固定界面遮挡。')
     return np.array([(x1 + x2) / 2, y2])
 
 
@@ -288,8 +294,11 @@ def track_barrier(group, objects, drag=(0., 0.), gain=1.):
     if len(shifts) == 2 and np.linalg.norm(shifts[0] - shifts[1]) > 32:
         raise ValueError('同组两根立柱的 YOLO 位移不一致。')
     predicted = np.asarray(group['foot']) + np.mean(shifts, axis=0)
-    if not (3 < predicted[0] < 1773 and 120 < predicted[1] < CLIENT_SIZE[1]):
+    if not (3 < predicted[0] < CLIENT_SIZE[0] - 3 and 3 < predicted[1] < CLIENT_SIZE[1]):
         raise ValueError('立柱推算的光幕底部已离开有效画面。')
+    if any(left <= predicted[0] < right and top <= predicted[1] < bottom
+           for left, top, right, bottom in BARRIER_HUD_RECTS):
+        raise ValueError('立柱推算的光幕底部已进入固定界面区域。')
     source = 'pillar_pair' if len(shifts) == 2 else 'pillar'
     try:
         # 立柱给出实际移动量后，附近光幕可再关联一次，不再使用粗略的拖动比例。
