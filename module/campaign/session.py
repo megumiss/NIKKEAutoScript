@@ -20,6 +20,7 @@ from module.campaign.report import (ANCHOR_METHODS, ANCHOR_RESULTS, BATTLE_STATE
 from module.campaign.run_state import describe_changes, located
 from module.campaign.timing import Stopwatch
 from module.campaign.trace import CampaignTrace
+from module.campaign.navigation.ex_bypass import ExBypass, ExBypassUnavailable
 from module.campaign.vision.chapter import chapter_identity
 from module.campaign.vision import battle
 from module.campaign.vision.minimap import terrain
@@ -300,6 +301,8 @@ class CampaignSession(NavigationSession):
                         'purpose': 'position'}
         self.index = 0
         self.debug_mode = getattr(owner.config, 'CampaignSettings_DebugMode', False)
+        self.ex_bypass = ExBypass()
+        self.ex_popup_count = 0
         self.folder = Path(__file__).resolve().parents[2] / 'log/campaign' / (
             f'{owner.current_difficulty}_{owner.current_chapter}')
         self.localizer = CampaignLocalizer(owner.observer.matcher, owner.cut)
@@ -412,7 +415,7 @@ class CampaignSession(NavigationSession):
 
         这几种画面上都不是主线地图，平时任何落点点击都可能点进战斗、点掉结算或点错按钮，所以立即
         停止并交给执行层（普通关卡由执行层接管）；battle_mode 为真说明已经进入接管（或正要接管），
-        这时它们就是要被点的对象。EX 弹窗只关一次后仍然是终态：本次实现不接管 EX 关卡。
+        这时它们就是要被点的对象。EX 弹窗关闭后交执行层重新定位并绕行，不进入 EX 战斗。
         实机里点「进入战斗」之后战斗更早就开始了：外层若只认弹窗，就会在战斗画面上继续做野外动作
         （点地图控件、点地面），所以战斗中与结算也在这里拦住。
         识别战斗与剧情需要匹配多个模板，而这个闸门每个手势都会走一次，所以先用野外判据
@@ -429,11 +432,12 @@ class CampaignSession(NavigationSession):
                                       {'kind': 'battle_popup', 'chapter': self.expected_identity[0]})
             return
         self.preview(field)
-        if self.battle_mode:
+        is_ex = battle.ex_stage(field)
+        if self.battle_mode and not is_ex:
             return
         evidence = {'kind': 'battle_popup', 'chapter': self.expected_identity[0]}
         message = '画面出现战斗准备弹窗，交由执行层接管这场战斗。'
-        if battle.ex_stage(field):
+        if is_ex:
             self.popup_handling = True
             try:
                 origin = self.win.client_origin()
@@ -443,9 +447,35 @@ class CampaignSession(NavigationSession):
                     raise RuntimeError('EX 关卡弹窗未能关闭，不再重试。')
             finally:
                 self.popup_handling = False
-            evidence['kind'] = 'ex_stage_skipped'
-            message = '画面出现 EX 关卡弹窗：仅关闭，不接管该关卡。'
+            self.ex_popup_count += 1
+            if self.ex_popup_count > 6:
+                raise ExBypassUnavailable('本章累计关闭 EX 弹窗超过 6 次，停止重复尝试。')
+            self.localized_report = None
+            self.last_registration = None
+            self.reuse_squad = False
+            evidence['kind'] = 'ex_stage_closed'
+            message = 'EX 关卡弹窗已关闭，重新定位后绕行并继续原目标。'
+            self.record('ex_popup_closed', force=True, count=self.ex_popup_count)
         raise TargetTriggered(message, evidence)
+
+    def prepare_ex_bypass(self, goal=None):
+        """关闭 EX 后重新定位小队，关联附近 EX 并保存临时避让区，不沿用移动前的冻结坐标。
+
+        本方法不点击地面；下一次 plan 根据实时小队位置计算安全路点。EX 标记可能被小队遮挡，
+        可使用运行状态中的近距离历史 EX，但缺失或歧义时不拿原目标代替 EX 坐标。
+        """
+        self.localized_report = None
+        self.last_registration = None
+        self.reuse_squad = False
+        self.verify_identity(self.await_field())
+        observation = self.observe()
+        squad = observation['position']
+        obstacle = self.ex_bypass.encounter(squad, self.owner.state.enemies.values())
+        target = goal.get('position') if goal else None
+        self.record('ex_bypass_begin', squad=squad, goal=goal, obstacle=obstacle)
+        logger.info(f'EX 绕行定位：小队 {points_text(squad)}，EX {points_text(obstacle["position"])}，'
+                    f'原目标 {points_text(target) if target is not None else "尚未确定"}，'
+                    f'避让半径 {obstacle["radius"]:.1f} 像素，触发 {obstacle["encounters"]} 次。')
 
     def identity(self, field):
         """逐帧闸门：只查战斗弹窗与收集品提示，不重读章节身份。
@@ -458,7 +488,7 @@ class CampaignSession(NavigationSession):
         self.check_collectible(field)
 
     def verify_identity(self, field):
-        """核对章节、难度与弹窗；普通弹窗保留，EX 只关闭一次，任何用途都立即结束任务。
+        """核对章节、难度与弹窗；普通弹窗转战斗接管，EX 关闭后转交绕行。
 
         在会话开始和 Boss 胜利后调用；读到别的章节／难度或读不到时抛 WindowChanged，禁止后续输入。
         """
@@ -641,6 +671,15 @@ class CampaignSession(NavigationSession):
                 self.owner.cut.update(self.owner.state.blocking())
                 self.remember_navigation(snapshot)
                 observation = self.reusable_report() or observation
+        original_target = target
+        if self.ex_bypass.obstacles:
+            waypoint = self.ex_bypass.waypoint(self.owner.cut.road, observation['position'], target)
+            self.record('ex_bypass_waypoint', squad=observation['position'], target=target,
+                        waypoint=waypoint.tolist(), obstacles=self.ex_bypass.obstacles)
+            logger.info(f'EX 避让路点：小队 {points_text(observation["position"])}，'
+                        f'原目标 {points_text(target)}，本次落点 {points_text(waypoint)}。')
+            target = waypoint
+            enemy_assist = False
         try:
             return super().plan(observation, target, enemy_assist=enemy_assist, **options)
         except ValueError as exc:
@@ -653,6 +692,8 @@ class CampaignSession(NavigationSession):
         updated = self.observe()
         if np.linalg.norm(np.asarray(updated['position']) - np.asarray(observation['position'])) > 12:
             raise SquadPositionChanged(observation['position'], updated['position'])
+        if self.ex_bypass.obstacles:
+            target = self.ex_bypass.waypoint(self.owner.cut.road, updated['position'], original_target)
         return super().plan(updated, target, enemy_assist=enemy_assist, **options)
 
     def absorb_expanded(self, panel, report):
@@ -853,6 +894,8 @@ class CampaignSession(NavigationSession):
             # 剧情或加载不能证明新一场战斗开始，不能恢复 AUTO 切换额度。
             self.auto_taps, self.auto_off_frames, self.auto_skip_logged = 0, 0, False
         if kind == 'entry':
+            if battle.ex_stage(field):
+                self.popup(field)
             if close_entry:
                 if self.tap(ENTRY_CLOSE_POINT, SETTLE_TAP_INTERVAL):
                     logger.info(f"战斗弹窗再次出现（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"

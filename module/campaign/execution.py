@@ -17,6 +17,7 @@ from module.campaign.vision.battle import score_text, value_text
 from module.campaign.window import WindowChanged
 from module.base.timer import Timer
 from module.campaign.navigation.movement import navigate
+from module.campaign.navigation.ex_bypass import ExBypassUnavailable
 from module.campaign.navigation.camera_navigation import SquadOffscreen
 from module.campaign.navigation.movement_feedback import ClickUnconfirmed, TargetTriggered
 from module.campaign.navigation.recovery import centered, centering_frame
@@ -107,10 +108,40 @@ class CampaignExecutor:
         self.last_executed = None
         self.scout_pending = None
         self.terminal_continuation = None
+        self.terminal_destination = None
+        self.interrupted_goal = None
+        self.interrupted_inputs = 0
+        self.ex_pending = False
         self.terminal_checked = None
         self.terminal_scan_stalls = 0
         self.recoveries = 0
         self.noncombat = CampaignNoncombat(session, owner.current_chapter) if purpose == 'story' else None
+
+    def plan_tick(self, snapshot, advance=True):
+        """更新观测后优先恢复未完成目标，不让补视野和战后重规划覆盖已通过检查的 Boss。
+
+        EX 中断目标优先于 Boss 续行，以保留临时清怪或机关的执行语义；实际执行前仍经过道路、侦察、
+        光幕及 Boss 遗漏门禁。仅从目标成功、确认战斗结束或检查发现遗漏的分支释放对应引用。
+        """
+        preferred = self.interrupted_goal or self.terminal_destination
+        return self.owner.plan_tick(snapshot, advance=advance, preferred_goal=preferred)
+
+    def defer_ex(self, goal=None):
+        """保存被 EX 中断且尚未完成的目标，将重新定位和绕行延迟到下一轮统一异常门禁内。
+
+        启动、侦察、移动和战斗接管都可触发；已清除敌人不可恢复，不能把上轮完成目标误认成续行目标。
+        原目标已消耗的输入额度继续累计，不能借 EX 中断重置单目标上限。
+        """
+        self.interrupted_goal = next((dict(candidate) for candidate in
+                                      (goal, self.interrupted_goal, self.terminal_destination, self.last_executed)
+                                      if candidate and candidate.get('kind') != 'none'
+                                      and self.owner.state.enemies.get(candidate.get('id'), {}).get('status')
+                                      != 'cleared'), None)
+        if self.interrupted_goal is not None:
+            self.interrupted_inputs = max(self.interrupted_inputs, self.session.target_inputs)
+        self.ex_pending = True
+        logger.info(f'EX 弹窗已关闭，保留目标 {goal_brief(self.interrupted_goal)}；'
+                    '下一轮重新定位并规划绕行。')
 
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
@@ -213,6 +244,8 @@ class CampaignExecutor:
         self.owner.state.execution_target = goal['id'] if kind == 'enemy' else None
         purpose = kind if kind in ('enemy', 'collectible') else 'position'
         self.session.begin_target(purpose)
+        if self.interrupted_goal and self.interrupted_goal['id'] == goal['id']:
+            self.session.target_inputs = self.interrupted_inputs
         target = goal['position']
         kwargs = dict(max_moves=TARGET_MOVES, purpose=purpose)
         if kind == 'enemy' and goal.get('enemy_kind', 'normal') != 'normal':
@@ -233,10 +266,12 @@ class CampaignExecutor:
                     f"预计道路距离 {goal.get('distance')} 像素，移动点击上限 {TARGET_MOVES} 次"
                     f"（依据：{label(GOAL_REASONS, goal.get('reason'))}）")
         try:
+            if self.session.ex_bypass.obstacles:
+                self.session.ex_bypass.check_target(target)
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
             raise
-        except (WindowChanged, InputBudgetExceeded, ClickUnconfirmed):
+        except (WindowChanged, InputBudgetExceeded, ClickUnconfirmed, ExBypassUnavailable):
             self.owner.state.execution_target = None
             raise
         except (RuntimeError, ValueError) as exc:
@@ -402,12 +437,12 @@ class CampaignExecutor:
         """
         key = (goal['kind'], goal['id'], self.owner.cut.signature,
                len(self.owner.state.enemies), int(self.owner.state.observed.sum()))
-        if self.terminal_checked == key:
+        pending = self.terminal_region_enemies(snapshot['squad'])
+        if self.terminal_checked == key and not pending:
             return goal, snapshot
         continuation = dict(goal)
         self.terminal_continuation = continuation
         squad = snapshot['squad']
-        pending = self.terminal_region_enemies(squad)
         unseen = unobserved_component_cells(self.owner.state, self.owner.cut, squad)
         progress = None
         if pending or unseen is None or unseen > 0:
@@ -430,6 +465,10 @@ class CampaignExecutor:
         self.session.record('terminal_precheck', goal=continuation, ready=ready, progress=progress,
                             pending_enemies=[enemy['id'] for enemy in pending], unobserved_cells=unseen)
         if not ready:
+            self.terminal_destination = None
+            if self.interrupted_goal and self.interrupted_goal['id'] == goal['id']:
+                self.interrupted_goal = None
+                self.interrupted_inputs = 0
             if pending:
                 cleanup, _ = nearest_enemy(self.owner.state, self.owner.cut, squad)
                 if cleanup is None or cleanup.get('enemy_kind') != 'normal':
@@ -442,6 +481,7 @@ class CampaignExecutor:
                len(self.owner.state.enemies), int(self.owner.state.observed.sum()))
         self.terminal_checked = key
         self.terminal_continuation = None
+        self.terminal_destination = continuation
         self.owner.last_goal = continuation
         self.owner.last_routes = planning_routes(self.owner.cut, snapshot, continuation,
                                                  self.owner.state.route_goal, state=self.owner.state)
@@ -537,6 +577,7 @@ class CampaignExecutor:
             self.owner.state.enemies[goal['id']]['status'] = 'cleared'
             logger.info(f'战斗胜利：{goal_brief(goal)} 已标记为清除，移出候选集合。')
             if goal.get('enemy_kind') == 'boss':
+                self.terminal_destination = None
                 # Boss 可能触发换章，旧地图和目标记忆不能跨章继续使用。
                 self.session.verify_identity(self.session.win.client())
         else:
@@ -624,26 +665,30 @@ class CampaignExecutor:
     def run(self, initial, ticks=CAMPAIGN_TICK_BUDGET):
         """会话开始时核对一次主线身份，之后每轮查弹窗、补视野再决策；遇战斗弹窗接管战斗后继续推图。
 
-        战斗接管放在一轮内：胜负结算回到野外后继续下一轮，而不是终结任务。非战斗的终态（收集品提示、
-        EX 弹窗）仍然直接停止；战斗接管自身的上限与连续战败会抛出安全异常，同样交人工。
+        战斗接管放在一轮内：胜负结算回到野外后继续下一轮，而不是终结任务。收集品提示仍然直接停止；
+        EX 关闭后重新定位并绕行，绕行不可用或战斗失败时交人工。
         找主线敌人和侦察阶段冻结已有小队底图坐标，只重新配准镜头与敌人；跨轮侦察同样不要求
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、输入预算、取消
         和战斗失败仍立即停止。连续恢复尝试有界，完整恢复成功后清零；总轮数与章节时限不重置。
         Boss 执行前先核对章节敌人进度，进度不足才补扫当前连通分量；电梯不再触发终局遗漏检查。
-        终局清怪战斗结束后，下一拍先做状态刷新与终局检查，再让常规规划接续清怪或恢复 Boss，
+        终局清怪战斗结束后，下一拍先做状态刷新与终局检查；通过后持续保留 Boss 目标直到战斗确认完成，
         不先把 Boss 当成普通最近敌人直接放行。每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：
         整条推图日志因此能按轮切分，把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
         """
         goal, snapshot = None, initial
         camera_options = {}
         recovery_reason = None
-        terminal_resume = False
         total = Stopwatch()
         try:
-            self.session.start()
+            try:
+                self.session.start()
+            except TargetTriggered as exc:
+                if exc.evidence.get('kind') != 'ex_stage_closed':
+                    raise
+                self.defer_ex()
             self.session.record('initial_snapshot', snapshot=initial)
-            if initial.get('localization') == 'accepted' and initial.get('squad') is not None:
+            if not self.ex_pending and initial.get('localization') == 'accepted' and initial.get('squad') is not None:
                 # 准备阶段与首轮之间没有移动，小队坐标可直接约束第一次展开配准。
                 self.session.remember_registration(initial['squad'], initial.get('roi_to_map'),
                                                    initial.get('coverage_size'))
@@ -669,7 +714,12 @@ class CampaignExecutor:
                         recovery_reason = None
                         goal = None
                         continue
-                    if index:
+                    resumed_ex = self.ex_pending
+                    if resumed_ex:
+                        camera_options = {}
+                        self.session.prepare_ex_bypass(self.interrupted_goal or self.terminal_destination)
+                        self.ex_pending = False
+                    if index or resumed_ex:
                         snapshot = self.session.snapshot(**camera_options)
                     else:
                         self.session.identity(self.session.win.client())
@@ -683,13 +733,12 @@ class CampaignExecutor:
                         snapshot = self.confirm_barriers_safe(snapshot)
                         camera_options = ({'known_squad': list(snapshot['squad'])}
                                           if located(snapshot) and snapshot.get('squad') is not None else {})
-                    if terminal_resume:
-                        terminal_resume = False
-                        logger.info('终局清怪战斗结束，立即恢复 Boss 前遗漏检查。')
+                    if self.terminal_continuation is not None:
+                        logger.info('恢复已保留 Boss 的遗漏检查。')
                         self.owner.state.update(snapshot, advance=False)
                         self.owner.cut.update(self.owner.state.blocking())
-                        self.terminal_precheck(self.terminal_continuation, snapshot)
-                    goal = self.owner.plan_tick(snapshot)
+                        goal, snapshot = self.terminal_precheck(self.terminal_continuation, snapshot)
+                    goal = self.plan_tick(snapshot)
                     if (self.purpose == 'story' and self.owner.state.route_goal is None
                             and snapshot.get('story_markers') and located(snapshot)
                             and snapshot.get('squad') is not None
@@ -703,7 +752,7 @@ class CampaignExecutor:
                             snapshot = self.session.snapshot(**camera_options)
                             if curtains(snapshot):
                                 snapshot = self.confirm_barriers_safe(snapshot)
-                        goal = self.owner.plan_tick(snapshot, advance=False)
+                        goal = self.plan_tick(snapshot, advance=False)
                     expanded_for_scout = False
                     if (self.purpose == 'story' and located(snapshot) and snapshot.get('squad') is not None
                             and (goal is None or goal['kind'] != 'review_block')):
@@ -716,9 +765,9 @@ class CampaignExecutor:
                         if expanded_for_scout:
                             snapshot = self.session.snapshot(expanded=True, keep_expanded=True, **camera_options)
                         else:
-                            self.owner.plan_tick(self.session.snapshot(expanded=True), advance=False)
+                            self.plan_tick(self.session.snapshot(expanded=True), advance=False)
                             snapshot = self.session.snapshot()
-                        goal = self.owner.plan_tick(snapshot, advance=False)
+                        goal = self.plan_tick(snapshot, advance=False)
                     scouted = self.scout(goal, snapshot)
                     if expanded_for_scout and not scouted:
                         # 没有新侦察观测时沿用已接受的展开快照，收起面板不再做一次可能失败的紧凑配准。
@@ -727,7 +776,7 @@ class CampaignExecutor:
                         snapshot = self.session.snapshot(**camera_options)
                         if curtains(snapshot):
                             snapshot = self.confirm_barriers_safe(snapshot)
-                        goal = self.owner.plan_tick(snapshot, advance=False)
+                        goal = self.plan_tick(snapshot, advance=False)
                         if (self.purpose == 'story' and (goal is None or goal['kind'] != 'review_block')
                                 and located(snapshot) and snapshot.get('squad') is not None):
                             # 收起后的紧凑帧也可能修正敌人位置；出发依据必须与最终选出的目标一致。
@@ -759,15 +808,28 @@ class CampaignExecutor:
                     self.last_executed = goal
                     camera_options = {}
                     self.execute(goal)
+                    self.interrupted_goal = None
+                    self.interrupted_inputs = 0
                 except TargetTriggered as exc:
+                    if exc.evidence.get('kind') == 'ex_stage_closed':
+                        self.defer_ex(goal)
+                        camera_options = {}
+                        continue
                     if exc.evidence.get('kind') != 'battle_popup':
                         raise
                     logger.info(f'战斗闸门已触发，开始接管；关联最近执行目标：'
                                 f'{goal_brief(self.last_executed)}')
                     camera_options = {}
-                    self.battle(self.last_executed)
-                    terminal_resume = self.terminal_continuation is not None
-                except (WindowChanged, InputBudgetExceeded, BattleFailed):
+                    try:
+                        self.battle(self.last_executed)
+                    except TargetTriggered as battle_exc:
+                        if battle_exc.evidence.get('kind') != 'ex_stage_closed':
+                            raise
+                        self.defer_ex(self.last_executed)
+                        continue
+                    self.interrupted_goal = None
+                    self.interrupted_inputs = 0
+                except (WindowChanged, InputBudgetExceeded, BattleFailed, ExBypassUnavailable):
                     raise
                 except (RuntimeError, ValueError) as exc:
                     if self.purpose != 'story':
@@ -786,6 +848,9 @@ class CampaignExecutor:
                                 f'累计操作 {self.session.inputs} 次')
             logger.warning(f'已达到 {ticks} 轮上限，停止执行并请求人工复核。')
             return {'state': 'needs_review', 'reason': 'tick_budget', 'goal': goal}
+        except ExBypassUnavailable as exc:
+            logger.warning(f'EX 绕行不可用：{exc}；停止移动并请求人工复核。')
+            return {'state': 'needs_review', 'reason': 'ex_bypass_unavailable', 'error': str(exc), 'goal': goal}
         except TargetTriggered as exc:
             if self.last_executed is not None and self.last_executed.get('kind') == 'enemy' \
                     and exc.evidence.get('kind') == 'battle_popup':

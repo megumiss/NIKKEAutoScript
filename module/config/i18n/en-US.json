@@ -1397,7 +1397,7 @@
     },
     "DebugMode": {
       "name": "Debug mode",
-      "help": "Off by default. Save screenshots, events and offline replays for each campaign run to help diagnose issues. Changes apply the next time the task starts."
+      "help": "Off by default. Save screenshots, events and offline replays for each campaign run to help diagnose issues. Changes apply the next time the task starts.\nSave location (relative to the NKAS folder): log/campaign/<difficulty>_<chapter>/runs/<timestamp>_<random-suffix>/\nAfter the task ends, open index.html in that folder to view the replay."
     }
   },
   "AutoTower": {

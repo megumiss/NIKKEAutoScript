@@ -80,6 +80,7 @@ BATTLE_STATES = {'entry': '战斗准备弹窗', 'battle': '战斗中', 'victory'
 BATTLE_OUTCOMES = {'victory': '胜利', 'defeat': '战败', None: '未确认结算'}
 # 任务提前停止时附带的证据种类。
 EVIDENCE_KINDS = {'battle_popup': '画面触发战斗接管', 'ex_stage_skipped': '画面出现 EX 关卡弹窗（仅关闭，不接管）',
+                  'ex_stage_closed': 'EX 弹窗已关闭，转入绕行',
                   'collectible_indicator': '画面出现可拾取的收集品提示'}
 # 章节地图定位未通过时，观察器给出的未达标项。
 LOCATE_CRITERIA = {'road_iou': '道路重合度', 'coarse_margin': '候选位置分差',

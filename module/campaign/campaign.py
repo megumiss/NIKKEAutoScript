@@ -2,6 +2,7 @@
 
 import time
 from functools import cached_property
+from math import dist
 
 import cv2
 
@@ -18,7 +19,7 @@ from module.campaign.navigation.targets import TargetFinder
 from module.campaign.vision.observation import EXPANDED_ROI, CampaignObserver
 from module.campaign.navigation.routing import CutRoads
 from module.campaign.report import (GOAL_REASONS, LOCALIZATION, MINIMAP_MODES, direction_text, label, points_text)
-from module.campaign.run_state import RunState, describe_changes
+from module.campaign.run_state import RunState, describe_changes, located
 from module.campaign.timing import Stopwatch
 from module.config.config import TaskEnd
 from module.exception import RequestHumanTakeover
@@ -415,12 +416,13 @@ class Campaign(ModuleBase):
         if offscreen is not None:
             logger.info(f"小队已离开画面：画面边缘标记中心 {offscreen['center']}，朝向 {offscreen['direction']}°")
 
-    def plan_tick(self, snapshot, advance=True):
+    def plan_tick(self, snapshot, advance=True, preferred_goal=None):
         """一轮决策：把观测并进运行状态，按光幕刷新可行路网，选出下一个目标并打一行日志。
 
         不发送任何输入。返回目标描述或 None（章节地图底图不可用）。
         可行路网必须在选目标之前刷新：光幕集合变了还用上一轮的切开图，可达性判的就是过期事实。
         advance 为假用于同一轮内的补视野、复核帧与重新决策，不推进冷却计数（见 RunState.update）。
+        preferred_goal 仅由执行层传入已确认的续行目标；仍刷新观测与路网，执行前照常经过侦察和 Boss 检查。
         决策行带上本轮耗时：候选的行走距离要各自重算距离场，是这一步的主要开销，几次决策的耗时能直接对比。
         """
         watch = Stopwatch()
@@ -434,11 +436,17 @@ class Campaign(ModuleBase):
             self.cut = CutRoads(chart)
         if self.cut.update(self.state.blocking()):
             logger.info(f'有 {len(self.cut.blocks)} 处光幕挡路，可行路网已按它重算。')
-        goal = choose_goal(self.state, chart, snapshot, self.cut,
-                           purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
+        resume = preferred_goal is not None and located(snapshot) and snapshot.get('squad') is not None
+        goal = dict(preferred_goal) if resume else choose_goal(
+            self.state, chart, snapshot, self.cut,
+            purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
         self.last_goal = goal
         from module.campaign.route_planning import planning_routes
         self.last_routes = planning_routes(self.cut, snapshot, goal, self.state.route_goal, state=self.state)
+        if resume and self.last_routes.get('execution') is not None:
+            goal['distance'] = round(self.last_routes['execution']['distance'], 1)
+            if 'straight' in goal:
+                goal['straight'] = round(dist(snapshot['squad'], goal['position']), 1)
         self.last_route_signature = self.cut.signature
         if self.state.route_goal is not None:
             destination = self.state.route_goal
