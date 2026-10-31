@@ -1,10 +1,6 @@
-"""侦察：有目的地时查当前路段和相关汇合岔路，无目的地时查本分量中可能更近的敌人。
+"""选定目标后检查小队到目标的实际道路；没有目标时才搜索未知道路。
 
-小地图只能看到小队周围一块直线范围，弯路上直线近的敌人路程可能很远，而路程更近的那段路
-往往在视野外。展开大地图可以拖到远处，那里的敌人标记照样显示，所以找敌人不必靠走路：
-先检查当前候选敌人的实际 A* 路径，再用本分量的近似路程场补查可能更近的支路。
-路径仍有未观测格时不能仅凭粗网格估计停止；冷却只限制重试，不是已经看清的证据。
-
+敌人复核使用排除面板边缘的安全覆盖，沿途历史敌人必须重新确认，不能凭道路扫描记录跳过。
 本模块只做纯计算，不产生输入；拖动与配准由会话完成。
 """
 
@@ -14,9 +10,8 @@ from scipy.sparse.csgraph import dijkstra
 
 from module.campaign.goals import nearest_enemy
 from module.campaign.map.map_state import GRID
-from module.campaign.route_planning import route_path
+from module.campaign.route_planning import route_enemy, route_enemy_candidates, route_path
 from module.campaign.run_state import OBSERVED_CELL
-from module.campaign.subgoals import RoadView
 
 # 一个已观测粗格每边包含的 8 像素路网格数。
 CELLS = OBSERVED_CELL // GRID
@@ -78,39 +73,17 @@ def field_at(field, point):
 
 
 def scout_focus(state, cut, squad, include_cooling=False, goal=None):
-    """挑下一屏侦察落点，优先候选敌人的实际路径，再查可能更近的未知支路。
+    """选定目标后只复核其前置道路，没有目标时才搜索本分量的未知区域。
 
-    每次按最新敌人记录重新选择，新增近敌会缩短侦察范围。路径来自同一切开图的 A*，
-    不能用近似路程场代替：粗网格连边可能跨过细墙，实际 A* 会校验连线道路并按净空绕行。
-    只补查尚未覆盖的道路；探索目标只查自身路线，未重新确认的敌人沿其历史位置方向复核。
-    支路按 32px 格内的最短近似路程排序，截止距离取候选实际路径加两端吸附距离。
-    默认跳过冷却格以便继续看其他区域；出发前须 include_cooling=True 复核，
-    只有这时返回 None 才代表没有待查区域。所有距离与位置均为底图像素。
-    路程模式的 goal 指本段执行落点，省略时查完整目的地路线。
+    检查范围以传入的执行目标为准，不在侦察中另选全局近敌或扫描无关支路。
+    沿途重新检出近敌后缩短本次检查路径；冷却只延迟重试，include_cooling=True 供出发门禁复核。
+    所有位置与路程均使用底图像素。
     """
-    if state.route_goal is not None:
-        target = goal if goal and goal.get('position') is not None else state.route_goal
-        return route_scout_focus(state, cut, squad, target, include_cooling)
-    if goal is not None and goal.get('kind') == 'explore' and goal.get('position') is not None:
-        return route_scout_focus(state, cut, squad, goal, include_cooling)
-    target, _ = nearest_enemy(state, cut, squad)
-    known = float('inf')
+    target = goal if goal and goal.get('position') is not None else state.route_goal
+    if target is None:
+        target, _ = nearest_enemy(state, cut, squad)
     if target is not None:
-        _, path = RoadView(cut).route(squad, target['position'])
-        distances = np.r_[0., np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
-        distances += np.linalg.norm(path[0] - np.asarray(squad, float))
-        known = float(distances[-1] + np.linalg.norm(path[-1] - np.asarray(target['position'], float)))
-        for point, distance in zip(path, distances):
-            if state.is_observed(point):
-                continue
-            column, row = (point // OBSERVED_CELL).astype(int)
-            identifier = f'scout-{column}-{row}'
-            if state.is_unscoutable(identifier, squad):
-                continue
-            if not include_cooling and state.cooling(identifier):
-                continue
-            return dict(id=identifier, position=point.tolist(), distance=round(float(distance), 1),
-                        known=round(known, 1), source='target_route')
+        return route_scout_focus(state, cut, squad, target, include_cooling)
     field = walking_field(cut, squad)
     if field is None:
         return None
@@ -129,34 +102,53 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
         if not include_cooling and state.cooling(identifier):
             continue
         frontier = float(nearest[row, column])
-        if known <= frontier:
-            return None
         block = blocks[row, :, column, :]
         dy, dx = np.unravel_index(int(np.argmin(block)), block.shape)
         position = [float((column * CELLS + dx) * GRID), float((row * CELLS + dy) * GRID)]
         return dict(id=identifier, position=position, distance=round(frontier, 1),
-                    known=round(known, 1) if np.isfinite(known) else None, source='nearer_road')
+                    known=None, source='nearer_road')
     return None
 
 
 def route_scout_focus(state, cut, squad, target, include_cooling=False):
-    """只补查本次执行路段及相邻道路，不扫描路线之外的汇合支路。
+    """沿已选目标的实际道路检查遗漏，先处理前置敌人，不扩大到无关支路。
 
-    格子沿用运行状态的覆盖记录；切换执行目标不清空已扫描区域。冷却仅限制重试，
-    include_cooling=True 仍返回未看清的格子，保证不能凭失败冷却跳过前置道路。
-    支路敌人由实际行进视野发现后再纳入规划，不能为了确认无人而远程扫描整段支路。
+    未重新确认的沿途普通敌人独立生成复核落点，即使所在道路已经扫描也不能跳过。
+    未知道路使用安全敌人覆盖而非面板全部覆盖；已确认近敌会缩短路径，避免先扫越过它的远端。
+    include_cooling=True 保留冷却中的疑点供执行门禁阻止出发，历史线索不直接转为战斗目标。
     """
     route = route_path(cut, squad, target['position'])
     if route is None:
         return None
     path, distances = route
+    enemy = route_enemy(state, cut, squad, target['position'], path, distances)
+    if (enemy is not None and enemy['kind'] == 'enemy' and enemy['id'] != target['id']
+            and enemy['distance'] < distances[-1]):
+        target = enemy
+        route = route_path(cut, squad, target['position'])
+        if route is None:
+            return None
+        path, distances = route
+    hints = [record for record in state.enemy_hints()
+             if record['kind'] == 'normal' and record['id'] != target['id']]
+    hint_focus = None
+    for distance, record in route_enemy_candidates(cut, squad, target['position'], path, distances, hints):
+        identifier = f"scout-{record['id']}"
+        if distance >= distances[-1] or (not include_cooling and state.cooling(identifier)):
+            continue
+        hint_focus = dict(id=identifier, enemy_id=record['id'], position=list(record['position']),
+                          distance=round(distance, 1), known=round(float(distances[-1]), 1),
+                          source='route_enemy', check_enemies=True)
+        break
     home = cut.component(squad)
     seen = set()
     for point, distance in zip(path, distances):
+        if hint_focus is not None and distance >= hint_focus['distance']:
+            return hint_focus
         for offset in ((0, 0), (OBSERVED_CELL, 0), (-OBSERVED_CELL, 0),
                        (0, OBSERVED_CELL), (0, -OBSERVED_CELL)):
             candidate = point + offset
-            if cut.component(candidate) != home or state.is_observed(candidate):
+            if cut.component(candidate) != home or state.is_enemy_observed(candidate):
                 continue
             column, row = (candidate // OBSERVED_CELL).astype(int)
             identifier = f'scout-{column}-{row}'
@@ -168,5 +160,5 @@ def route_scout_focus(state, cut, squad, target, include_cooling=False):
             if not include_cooling and state.cooling(identifier):
                 continue
             return dict(id=identifier, position=candidate.tolist(), distance=round(float(distance), 1),
-                        known=round(float(distances[-1]), 1), source='route_road')
-    return None
+                        known=round(float(distances[-1]), 1), source='route_road', check_enemies=True)
+    return hint_focus

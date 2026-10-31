@@ -108,21 +108,16 @@ def refresh_route(state, chart, snapshot, cut):
     return current
 
 
-def route_enemy(state, cut, squad, target, path, distances):
-    """选路程前方的第一个普通敌人或 Boss，忽略别条支路上的全局最近敌人。
+def route_enemy_candidates(cut, squad, target, path, distances, enemies):
+    """按道路距离排列实际路径上的敌人记录，不赋予历史记录可战斗状态。
 
-    候选须接近实际路径，且经该敌人的道路绕行不超过 ROUTE_DETOUR；小队分量为零时以 A* 复核，
-    防止把直线相邻但隔墙的敌人算在沿途，也避免误删圆环覆盖的近敌。冷却敌人返回明确暂停目标。
-    仍有可处理普通敌人时 Boss 被跳过，主线路径不能绕过 boss_ready 门禁。
+    仅接受贴近 A* 路径、位于可达分量且绕行不超过 ROUTE_DETOUR 的记录，距离单位为底图像素。
+    执行目标和历史线索复核共用此几何条件；调用方负责类型、确认状态与冷却检查。
     """
     candidates = []
     home = cut.component(squad)
     full = float(distances[-1] + np.linalg.norm(path[-1] - np.asarray(target)))
-    for enemy in state.confirmed_enemies():
-        if enemy['kind'] not in COMBAT_ENEMY_KINDS or enemy['status'] == 'cleared':
-            continue
-        if enemy['kind'] == 'boss' and not boss_ready(state):
-            continue
+    for enemy in enemies:
         point = np.asarray(enemy['position'], float)
         nearest = int(np.argmin(np.linalg.norm(path - point, axis=1)))
         if np.linalg.norm(path[nearest] - point) > ROUTE_CORRIDOR:
@@ -134,6 +129,20 @@ def route_enemy(state, cut, squad, target, path, distances):
         if not np.isfinite(first + last) or first + last - full > ROUTE_DETOUR:
             continue
         candidates.append((first, enemy))
+    return sorted(candidates, key=lambda pair: pair[0])
+
+
+def route_enemy(state, cut, squad, target, path, distances):
+    """选路程前方的第一个普通敌人或 Boss，忽略别条支路上的全局最近敌人。
+
+    候选须接近实际路径，且经该敌人的道路绕行不超过 ROUTE_DETOUR；小队分量为零时以 A* 复核，
+    防止把直线相邻但隔墙的敌人算在沿途，也避免误删圆环覆盖的近敌。冷却敌人返回明确暂停目标。
+    仍有可处理普通敌人时 Boss 被跳过，主线路径不能绕过 boss_ready 门禁。
+    """
+    enemies = [enemy for enemy in state.confirmed_enemies()
+               if enemy['kind'] in COMBAT_ENEMY_KINDS and enemy['status'] != 'cleared'
+               and (enemy['kind'] != 'boss' or boss_ready(state))]
+    candidates = route_enemy_candidates(cut, squad, target, path, distances, enemies)
     if not candidates:
         return None
     distance, enemy = min(candidates, key=lambda pair: pair[0])

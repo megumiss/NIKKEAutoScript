@@ -18,6 +18,8 @@ ENEMY_MERGE_RADIUS = 25.
 ENEMY_HINT_RADIUS = 90.
 # 已观测区域的粗网格边长，只用来回答「这块地方看过没有」，不参与路径规划。
 OBSERVED_CELL = 32
+# 面板边缘的截断标记与控件不能提供可靠的阴性证据；单位为小地图面板像素。
+ENEMY_VIEW_MARGIN = 32
 # 可用的定位状态：accepted 是本帧配准被接受；reused 是沿用上一次被接受的坐标
 # （见 session.reuse_registration），两者都给了可信的小队底图坐标。
 LOCALIZED = ('accepted', 'reused')
@@ -41,19 +43,23 @@ def located(snapshot):
     return snapshot.get('localization') in LOCALIZED
 
 
-def panel_quad(snapshot):
+def panel_quad(snapshot, margin=0):
     """把本帧小地图面板的四角投影到底图，给出这一帧实际看到的四边形；无法投影时返回 None。
 
     面板是透视渲染的，四角投到底图后是个凸四边形而不是矩形（实测 38 章紧凑面板
     上沿约 700、下沿约 280 底图像素宽），所以「看过哪里」只能按这个四边形算，不能按半径。
     需要 accepted 定位给出的 roi_to_map 与面板尺寸，两者缺一不可。
+    margin 是投影前向内收缩的面板像素，用于排除敌人标记的截边与控件区域；收缩后为空则返回 None。
     """
     matrix = snapshot.get('roi_to_map')
     minimap = snapshot.get('minimap')
     if matrix is None or minimap is None:
         return None
     width, height = snapshot.get('coverage_size', minimap['size'])
-    corners = np.array([[0, 0], [width, 0], [width, height], [0, height]], float)
+    if margin < 0 or min(width, height) <= 2 * margin:
+        return None
+    corners = np.array([[margin, margin], [width - margin, margin],
+                        [width - margin, height - margin], [margin, height - margin]], float)
     matrix = np.asarray(matrix, float)
     points = np.column_stack((corners, np.ones(len(corners)))) @ matrix.T
     divisor = points[:, 2]
@@ -125,6 +131,7 @@ class RunState:
         self.unscoutable = {}
         shape = (int(np.ceil(self.size[1] / OBSERVED_CELL)), int(np.ceil(self.size[0] / OBSERVED_CELL)))
         self.observed = np.zeros(shape, np.uint8)
+        self.enemy_observed = np.zeros(shape, np.uint8)
         self._sequence = {'enemy': 0, 'block': 0, 'mechanism': 0}
 
     def _identifier(self, kind):
@@ -153,7 +160,9 @@ class RunState:
             return {'reused': 'localization'}
         quad = panel_quad(snapshot)
         changes = {'observed_cells': self._absorb_observed(quad)}
-        changes.update(self._absorb_enemies(snapshot.get('enemies') or [], quad))
+        enemy_quad = panel_quad(snapshot, margin=ENEMY_VIEW_MARGIN)
+        self._absorb_observed(enemy_quad, self.enemy_observed)
+        changes.update(self._absorb_enemies(snapshot.get('enemies') or [], enemy_quad))
         minimap = snapshot.get('minimap') or {}
         if minimap.get('mode') == 'compact':
             changes.update(self._absorb_blocks(snapshot.get('blocks') or [], quad,
@@ -165,16 +174,18 @@ class RunState:
                 self.pending_reviews.pop(identifier, None)
         return {key: value for key, value in changes.items() if value}
 
-    def _absorb_observed(self, quad):
+    def _absorb_observed(self, quad, observed=None):
         """仅把完整落在本帧面板四边形内的粗网格标成已观测，返回新增格数。
 
         四角均位于凸四边形内才能确认整格；直接取整填多边形会把仅露出边缘的整格记为已看，
         从而漏掉格内尚在视野外的敌人。底图最右、最下的不满格只检查实际地图范围。
+        observed 默认是道路覆盖；传入敌人覆盖网格时，quad 必须已排除面板边缘和控件。
         """
         if quad is None:
             return 0
-        before = int(self.observed.sum())
-        rows, columns = np.indices(self.observed.shape)
+        observed = self.observed if observed is None else observed
+        before = int(observed.sum())
+        rows, columns = np.indices(observed.shape)
         left, top = columns * OBSERVED_CELL, rows * OBSERVED_CELL
         right = np.minimum(left + OBSERVED_CELL, self.size[0])
         bottom = np.minimum(top + OBSERVED_CELL, self.size[1])
@@ -183,19 +194,20 @@ class RunState:
                             - quad[:, 1] * np.roll(quad[:, 0], -1)))
         if abs(area) < 1e-6:
             return 0
-        inside = np.ones(self.observed.shape, bool)
+        inside = np.ones(observed.shape, bool)
         for x, y in ((left, top), (right, top), (right, bottom), (left, bottom)):
             for origin, edge in zip(quad, edges):
                 cross = edge[0] * (y - origin[1]) - edge[1] * (x - origin[0])
                 inside &= np.sign(area) * cross >= -1e-6
-        self.observed[inside] = 1
-        return int(self.observed.sum()) - before
+        observed[inside] = 1
+        return int(observed.sum()) - before
 
     def _absorb_enemies(self, enemies, quad):
         """以本帧检测替换覆盖区域的确认结果，历史位置仅作为待复核线索。
 
         纯观测和补视野不推进决策拍，因此同一拍中不同视野的可靠检测可共同参与规划；下一拍
-        未重新检出的普通敌人退为线索。覆盖区域内的漏检只撤销确认，不表示敌人已清除。
+        未重新检出的普通敌人退为线索。quad 只包含排除边缘与控件后的可靠区域；
+        区域内的漏检只撤销确认，不表示敌人已清除，贴边未检出不能记为已复核。
         新检测点邻域内的旧确认也退为线索，以容忍视野边界的投影偏差；不会删掉相邻真实敌人。
         战斗敌人原位置仅检出重叠 EX 时属于分类歧义，保留待复核线索，不能据此改选无关区域。
         25 像素近邻仅复用编号与失败状态，不依靠跨帧位移或远距合并来决定本帧有几只敌人。
@@ -255,7 +267,7 @@ class RunState:
         新可靠视野已覆盖而未检出的旧位置在本拍暂停复核，下一拍仍可重查；保留原记录，
         不认定已清除。
         与本拍同类确认点相邻的线索仅暂时隐藏，不能据此合并两只相邻敌人。
-        这些线索用于展示和生成 explore 侦察目标，不直接生成战斗目标，也不阻止当前目标执行。
+        这些线索不直接生成战斗目标；位于已选目标前置道路的线索须补视野复核，不能被远目标跳过。
         """
         confirmed = self.confirmed_enemies()
         identifiers = {record['id'] for record in confirmed}
@@ -356,10 +368,29 @@ class RunState:
             return False
         return bool(self.observed[y, x])
 
+    def is_enemy_observed(self, point, enemy_id=None):
+        """判断道路格是否可靠检查过敌人，或指定历史敌人是否已在本拍完成复核。
+
+        普通道路复用安全视野的覆盖记录；指定敌人则必须本拍重新检出、在安全视野中复核缺席，
+        或已经战斗清除。仅道路被扫描过、邻近敌人被检出和独立绑定目标均不能代替复核。
+        point 使用底图像素，缺失记录或越界位置返回 False。
+        """
+        if enemy_id is not None:
+            record = self.enemies.get(enemy_id)
+            return record is not None and (record['status'] == 'cleared'
+                                           or record.get('confirmed_at') == self.tick
+                                           or record.get('reviewed_at') == self.tick)
+        point = np.asarray(point, float)
+        if point.shape != (2,) or not np.isfinite(point).all() or np.any(point < 0):
+            return False
+        column, row = (point // OBSERVED_CELL).astype(int)
+        return (0 <= row < self.enemy_observed.shape[0] and 0 <= column < self.enemy_observed.shape[1]
+                and bool(self.enemy_observed[row, column]))
+
     def pending_enemies(self):
         """可直接执行的敌人：本拍已确认或独立绑定，且待清、不在冷却中。
 
-        历史位置不进入战斗候选；enemy_hints 仅用于展示，不要求为历史位置补做侦察。
+        历史位置不进入战斗候选；沿途 enemy_hints 由侦察复核，只有重新检出后才能参与战斗选择。
         """
         return [record for record in self.confirmed_enemies()
                 if record['status'] == 'pending' and not self.cooling(record['id'])]

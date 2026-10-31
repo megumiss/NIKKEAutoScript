@@ -326,7 +326,7 @@ class CampaignExecutor:
                     f"本目标操作 {self.session.target_inputs} 次，耗时 {watch}")
 
     def scout(self, goal, snapshot):
-        """小队原地侦察候选路径与可能更近的支路；返回是否展开过，未完成落点留在 scout_pending。
+        """小队原地复核已选目标的前置道路；返回是否展开过，未完成落点留在 scout_pending。
 
         只用于剧情任务（收集品有标注，不靠看）。刚踩过机关、要先复核光幕时不侦察，复核结果会改变路网。
         单轮屏数用尽后保留待查区域，下一轮继续；冷却格不能当作已确认，失败到上限交人工。
@@ -350,18 +350,22 @@ class CampaignExecutor:
         total = Stopwatch()
         for view in range(SCOUT_VIEWS):
             known = '无可达候选' if focus['known'] is None else f"{focus['known']} 像素"
-            source = {'target_route': '候选目标的前置路段', 'route_road': '路程前方道路与相邻岔口',
-                      'nearer_road': '可能更近的支路'}[focus['source']]
+            source = {'route_road': '目标前置道路的敌人检查', 'route_enemy': '目标前置道路的敌人线索复核',
+                      'nearer_road': '无目标时的未知道路搜索'}[focus['source']]
             logger.info(f"侦察第 {view + 1} 屏：目标 {focus['id']}，位置 {points_text(focus['position'])}，"
                         f"{source}，路程 {focus['distance']} 像素，本段检查范围 {known}")
             watch = Stopwatch()
-            recorded = self.session.scout_view(focus['position'], f'scout_{view + 1:02}')
+            check_enemies = focus.get('check_enemies', False)
+            recorded = self.session.scout_view(focus['position'], f'scout_{view + 1:02}',
+                                               check_enemies=check_enemies, enemy_id=focus.get('enemy_id'))
             views += 1
-            covered = state.is_observed(focus['position'])
+            covered = (state.is_enemy_observed(focus['position'], focus.get('enemy_id')) if check_enemies
+                       else state.is_observed(focus['position']))
             logger.info(f"侦察第 {view + 1} 屏结果：{'已记录可信帧' if recorded else '定位未通过'}，"
-                        f"目标格{'已覆盖' if covered else '尚未完整覆盖'}，耗时 {watch}")
+                        f"{'敌人检查' if check_enemies else '道路覆盖'}"
+                        f"{'已确认' if covered else '未确认'}，耗时 {watch}")
             failure = self.session.scout_failure
-            if not recorded and failure is not None:
+            if not recorded and failure is not None and focus.get('enemy_id') is None:
                 # 配准失败说明当前距离上看不清该格（探索前沿或走廊歧义）：标记后既不占失败
                 # 冷却也不阻塞出发（scouting.py 跳过），小队走近后自动恢复侦察。
                 state.mark_unscoutable(focus['id'], squad)

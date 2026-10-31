@@ -1346,11 +1346,12 @@ class CampaignSession(NavigationSession):
         self.pause(SCOUT_SETTLE_SECONDS + min(length, SCOUT_DRAG_MAX) / SCOUT_DRAG_MAX)
         return offset
 
-    def scout_view(self, point, tag):
+    def scout_view(self, point, tag, check_enemies=False, enemy_id=None):
         """把展开地图拖向 point（底图坐标），沿途可信帧均记录敌人与覆盖；返回是否记录过可信帧。
 
         拖动是闭环的：每拖一次都重新配准，用实测视野换算剩余偏移，所以拖动有惯性或比例不准都能收敛；
-        落点所在整格已经进入视野就停止，不必强求居中。地图边缘拖不动时最多拖 SCOUT_DRAGS 次，
+        默认按道路整格覆盖停止；check_enemies 要求安全敌人覆盖，enemy_id 还要求该历史敌人本拍已复核，
+        不能因过去看过道路就停止。地图边缘拖不动时最多拖 SCOUT_DRAGS 次，
         落点没进视野由调用方记冷却；配准失败只放弃本屏（见 scout_locate），不丢掉途中已记录的观测。
         拖动经输入代理发送，与移动输入同样先核对窗口、章节与预算。
         """
@@ -1361,7 +1362,9 @@ class CampaignSession(NavigationSession):
         for attempt in range(SCOUT_DRAGS + 1):
             self.absorb_view(*located)
             recorded = True
-            if self.owner.state.is_observed(point) or attempt == SCOUT_DRAGS:
+            covered = (self.owner.state.is_enemy_observed(point, enemy_id) if check_enemies
+                       else self.owner.state.is_observed(point))
+            if covered or attempt == SCOUT_DRAGS:
                 return True
             if self.scout_drag(located[0], located[1], point) is None:
                 break
