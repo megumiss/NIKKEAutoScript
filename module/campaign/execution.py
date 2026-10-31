@@ -266,6 +266,9 @@ class CampaignExecutor:
         try:
             if self.session.ex_bypass.obstacles:
                 self.session.ex_bypass.check_target(target)
+            if kind == 'mechanism' and self.session.trigger_visible_mechanism(goal):
+                self.complete_mechanism(goal)
+                return
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
             raise

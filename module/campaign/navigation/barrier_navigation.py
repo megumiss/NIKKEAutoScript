@@ -41,13 +41,9 @@ def pan(session, field, drag):
     窗口、取消、弹窗和输入预算检查仍由原会话及 pan_scene 执行。
     """
     arrow = squad_arrow(field)
-    if arrow is not None:
-        ground = np.asarray(arrow) + [0., goto.ARROW_GROUND_OFFSET]
-    elif squad_offscreen(field) is not None:
-        ground = None
-    else:
+    if arrow is None and squad_offscreen(field) is None:
         raise BarrierUnconfirmed('无法确定安全拖动区域，停止光幕复核；未发送移动点击。')
-    pan_scene(session, drag, squad_ground=ground)
+    pan_scene(session, drag)
     session.localized_report = None
     session.anchor_reference = None
     session.anchor_reference_method = None

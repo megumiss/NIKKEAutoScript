@@ -10,9 +10,9 @@ def mechanism_observations(projected, objects, points):
     """关联同帧机关与章节标注，保留 YOLO 开关状态及画面邻近敌人的证据。
 
     projected 必须来自可信紧凑配准。标注存在时按最近标注关联，不设绝对距离上限，
-    导航始终使用标注坐标；最近与次近距离差小于 ANNOTATION_GAP、多个检测竞争同一标注
+    路线规划使用标注坐标，可见直点使用 click；最近与次近距离差小于 ANNOTATION_GAP、多个检测竞争同一标注
     或开关类别冲突均放弃该关联。near_enemy 只表示画面接近，规划还须用道路距离确认。
-    所有 position 为底图像素，box 为客户区像素。
+    所有 position 为底图像素，click 与 box 为客户区像素。
     """
     annotations = [item for item in points if item['category'] == 'ground_mechanism']
     rings = [np.asarray(item['position'], float) for item in objects
@@ -35,7 +35,7 @@ def mechanism_observations(projected, objects, points):
         left, top, right, bottom = item['box']
         center = np.array([(left + right) / 2, (top + bottom) / 2])
         near = any(np.linalg.norm(ring - center) <= 3 * max(right - left, bottom - top) for ring in rings)
-        candidates.append(dict(id=identifier, position=position.tolist(), source=source,
+        candidates.append(dict(id=identifier, position=position.tolist(), source=source, click=center.tolist(),
                                state=item['state'], near_enemy=near))
     return [item for item in candidates
             if (item['id'] is not None and sum(other['id'] == item['id'] for other in candidates) == 1)

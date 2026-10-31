@@ -97,7 +97,7 @@ def recenter_squad(session):
                 offset = np.asarray(goto.VIEWPORT_PIXEL) - ground
                 distance = float(np.linalg.norm(offset))
                 if distance > CENTER_TOLERANCE:
-                    pan_scene(session, offset * min(1., 560. / distance), squad_ground=ground)
+                    pan_scene(session, offset * min(1., 560. / distance))
                     adjustments += 1
                     evidence = centering_frame(session)
                     continue
@@ -107,7 +107,7 @@ def recenter_squad(session):
         drag = np.asarray(RECOVERY_DRAGS[drags])
         drags += 1
         searching = True
-        pan_scene(session, drag, squad_ground=ground)
+        pan_scene(session, drag)
         logger.info(f'小队回正定向拖动：第 {drags}/{len(RECOVERY_DRAGS)} 次，位移 {drag.tolist()} 客户区像素。')
         evidence = centering_frame(session)
     raise ValueError('小队回正未确认：定向拖动及图标点击已达上限，禁止沿用异常前的定位。')

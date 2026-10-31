@@ -696,6 +696,42 @@ class CampaignSession(NavigationSession):
         from module.campaign.navigation.barrier_navigation import review_centered
         return review_centered(self, snapshot, identifier)
 
+    def trigger_visible_mechanism(self, goal):
+        """直接点击当前画面中唯一关联到目标的未开启机关，确认成功后返回 True。
+
+        只接受紧凑帧里已经关联到 goal 编号的 off 检测，点击框中心且必须位于地面安全区；
+        点击并等待停稳后，以同编号 on 或小队进入到达半径确认成功。未识别、关联歧义、
+        落点越界或点击后未确认均返回 False，由调用方继续原有地图标注导航，不把发送点击当成触发。
+        """
+        from module.campaign.navigation.camera_navigation import FIELD_BOUNDS, inside
+        from module.campaign.navigation.controls import SQUAD_REACH
+
+        snapshot = self.snapshot()
+        matches = [item for item in snapshot.get('mechanisms', [])
+                   if item.get('id') == goal['id'] and item.get('state') == 'off' and item.get('click') is not None]
+        if len(matches) != 1:
+            return False
+        click = np.asarray(matches[0]['click'], float)
+        if click.shape != (2,) or not np.isfinite(click).all() or not inside(click, FIELD_BOUNDS):
+            logger.info(f'地面机关 {goal["id"]} 的可见落点不在安全点击区，沿用地图标注导航。')
+            return False
+        self.record('mechanism_direct_click', goal=goal, click=click.tolist(), snapshot=snapshot)
+        logger.info(f'地面机关 {goal["id"]} 已在画面中唯一关联，直接点击检测框中心 {points_text(click)}。')
+        self.move(click)
+        self.wait_stopped()
+        after = self.snapshot()
+        current = next((item for item in after.get('mechanisms', []) if item.get('id') == goal['id']), None)
+        if current is not None and current.get('state') == 'on':
+            logger.info(f'地面机关 {goal["id"]} 直点后已识别为开启。')
+            return True
+        squad = after.get('squad')
+        if (after.get('localization') == 'accepted' and squad is not None
+                and np.linalg.norm(np.asarray(squad, float) - np.asarray(goal['position'], float)) <= SQUAD_REACH):
+            logger.info(f'地面机关 {goal["id"]} 直点后小队已进入到达范围。')
+            return True
+        logger.info(f'地面机关 {goal["id"]} 直点后尚未确认触发，继续地图标注导航。')
+        return False
+
     def plan(self, observation, target, enemy_assist=False, enemy_kind='normal'):
         """用已确认的小队定位开始镜头规划，紧凑定位不足时仅重试一次完整展开定位。
 

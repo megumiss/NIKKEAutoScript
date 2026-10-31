@@ -162,7 +162,6 @@ def locate_story_target(session, squad):
             arrow = squad_arrow(field)
             if arrow is None and squad_offscreen(field) is None:
                 break
-            ground = None if arrow is None else np.asarray(arrow) + [0., goto.ARROW_GROUND_OFFSET]
             if before['ring'] is None:
                 # 候选重叠时只换小视角，不把图标中心当作机关或敌人的地面落点。
                 drag = np.array([80., 0.])
@@ -170,7 +169,7 @@ def locate_story_target(session, squad):
                 drag = np.asarray(goto.VIEWPORT_PIXEL) - before['ring']
                 length = float(np.linalg.norm(drag))
                 drag = drag * min(1., 320. / max(length, 1.))
-            pan_scene(session, drag, squad_ground=ground)
+            pan_scene(session, drag)
             changed = True
             session.localized_report = None
             session.anchor_reference = None

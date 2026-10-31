@@ -16,12 +16,13 @@ FIELD_BOUNDS = (300, 220, 1450, 820)
 ROI_BOUNDS = (12, 12, 474, 420)
 # 横向利用场景全宽，纵向利用中部全高；两个矩形均避开固定 UI。
 PAN_REGIONS = ((24, 320, 1752, 880), (250, 70, 1490, 880))
-# 避让小队时的取样步长（客户区像素）与椭圆安全余量。步长决定能多贴近原按下点；
-# 余量是给「候选点取整后又落回圆环上」留的：正好压在椭圆边界上的点不能算安全。
+# 避让小队时的取样步长（客户区像素）。排除矩形覆盖原 120×150 椭圆的外接范围，
+# 并额外留出箭头定位与角色动画余量；边界上的点也算危险，避免取整后重新压到小队。
 SQUAD_AVOID_STEP = 20.
-SQUAD_CLEARANCE = 1.05
+SQUAD_EXCLUDE_HALF_WIDTH = 150.
+SQUAD_EXCLUDE_HALF_HEIGHT = 180.
 # 落点至少离开小队脚下这么多客户区像素，否则会被游戏当成原地点击（38 章实机：连点三次注视点，
-# 小队坐标只变了 1.2 地图像素）。这里不能用拖动按下点的 120×150 椭圆：那个半径管的是另一件事——
+# 小队坐标只变了 1.2 地图像素）。这里不能用拖动按下点的排除矩形：那个区域管的是另一件事——
 # 按下点压在小队身上会被读成走位指令，不能让一次镜头拖动变成移动命令。
 DIRECT_CLICK_MIN = 12.
 # 融合判据的容差 IoU 接受线：双方道路各膨胀 7px 后，正确位置实测 ~0.36、错位 ±60px 即跌到
@@ -43,9 +44,9 @@ def pan_region(drag):
     """选择能容纳指定客户区拖动向量的场景矩形。
 
     返回区域边界与不超过 1 的等比例缩放系数；两轴一起缩放，避免避让 UI 时改变方向。
-    两块矩形都装得下时取余量更大的那块：按下点还要能沿拖动反方向躲开小队，而余量比椭圆半轴
-    还窄时避让候选会被区域边界裁掉（38 章实测：478 像素的纵向拖动在 560 高的矩形里只剩 41 像素
-    上下余量，够不到 150 像素的纵向避让），所以「装得下」不足以作为选择依据。
+    两块矩形都装得下时取余量更大的那块：按下点还要能沿拖动反方向躲开小队，余量不足时
+    避让候选会被区域边界裁掉（38 章实测：478 像素的纵向拖动在 560 高的矩形里只剩 41 像素
+    上下余量），所以「装得下」不足以作为选择依据。
     """
     drag = np.asarray(drag, float)
 
@@ -77,12 +78,11 @@ def inside(point, bounds):
 
 
 def pan_endpoints(region, drag, squad_ground=None):
-    """生成场景拖动端点，并在按下点落在小队脚下时整体平移手势到空地。
+    """生成场景拖动端点，并在按下点落在小队排除矩形内时整体平移手势到空地。
 
-    region 是允许起终点出现的客户区矩形，drag 保持调用者计算的向量不变。squad_ground 为 None
-    表示小队不在画面内，可直接使用区域中心。脚下安全椭圆取 120×150 像素半轴，覆盖实测圆环
-    旋转后的外接范围并留识别余量；只在按下点进入椭圆时改点（见 pan_start_beside_squad）。
-    没有可行空地时抛 ValueError，禁止把手势发成走位点击。
+    region 是允许起终点出现的客户区矩形，drag 保持调用者计算的向量不变。squad_ground 必须是
+    当前场景箭头向下换算的脚下点；None 只用于离屏标记确认小队不在画面内。排除矩形以脚下点
+    为中心，半宽 150、半高 180，边界也算占用；没有可行空地时抛 ValueError，禁止发成走位点击。
     """
     drag = np.asarray(drag, float)
     left, top, right, bottom = region
@@ -91,11 +91,10 @@ def pan_endpoints(region, drag, squad_ground=None):
     end = np.rint(center + drag / 2).astype(int)
     if squad_ground is not None:
         ground = np.asarray(squad_ground, float)
-        # 判据带安全余量：贴着椭圆边界的候选点取整后可能又落回圆环上，不能算安全。
-        radii = np.array([120., 150.]) * SQUAD_CLEARANCE
+        exclusion = np.array([SQUAD_EXCLUDE_HALF_WIDTH, SQUAD_EXCLUDE_HALF_HEIGHT])
 
         def on_squad(point):
-            return bool(np.sum(((np.asarray(point, float) - ground) / radii) ** 2) < 1.)
+            return bool(np.all(np.abs(np.asarray(point, float) - ground) <= exclusion))
 
         if on_squad(start):
             start, end = pan_start_beside_squad(region, drag, start, end, ground, on_squad)
@@ -105,14 +104,14 @@ def pan_endpoints(region, drag, squad_ground=None):
 
 
 def pan_start_beside_squad(region, drag, start, end, ground, on_squad):
-    """按下点压在小队脚下时，在「起点与终点都合法」的矩形里找离原按下点最近的空地按下点。
+    """按下点压在小队排除区时，在「起点与终点都合法」的矩形里找离原按下点最近的空地按下点。
 
     region 是允许起终点出现的矩形，drag 是必须原样保留的拖动向量，start/end 是原本算出的端点。
     返回 (新起点, 新终点)：终点由新起点加同一个向量得到，所以位移方向与长度不变。
-    只在合法矩形里按 SQUAD_AVOID_STEP 取样（四个角一定在样本里），取椭圆外离原按下点最近的那个。
-    取样而不是解析投影：椭圆可能被区域边界裁掉一角，解析「最近可行点」要分类讨论多种情况，
+    只在合法矩形里按 SQUAD_AVOID_STEP 取样（四个角一定在样本里），取排除区外离原按下点最近的那个。
+    取样而不是解析投影：排除区可能被区域边界裁掉一角，解析「最近可行点」要分类讨论多种情况，
     而这里每帧只调用一次，几千个候选的代价可以忽略。
-    矩形装不下向量、或整块矩形都落在小队椭圆内时抛 ValueError，宁可失败也不把按下点放在小队身上。
+    矩形装不下向量、或整块矩形都落在小队排除区内时抛 ValueError，宁可失败也不把按下点放在小队身上。
     """
     low = np.maximum([region[0], region[1]], [region[0], region[1]] - np.asarray(drag, float))
     high = np.minimum([region[2], region[3]], [region[2], region[3]] - np.asarray(drag, float))
@@ -204,18 +203,30 @@ def camera_response(chart, before, after, drag):
     return gain
 
 
-def pan_scene(session, drag, squad_ground=None):
-    """收起小地图并核对身份后，把客户区拖动端点换算为屏幕坐标发送一次手势。
+def pan_scene(session, drag):
+    """用当前场景箭头避让后发送一次镜头拖动，不发送小队移动点击。
 
-    端点越界或驱动失败立即抛错；成功后等待场景稳定，本方法不发送小队移动点击。
-    squad_ground 由调用方根据已定位的小队与当前镜头配准估算；按下点落在其上时整体平移
-    手势到空地，拖动向量保持不变。小队不在画面时传 None。
+    每次拖动都在最新帧重新识别唯一箭头，并向下换算脚下点；只有离屏标记确认小队不在
+    画面内时才允许无避让拖动。箭头缺失且没有离屏标记时直接失败，不再使用地图坐标估算
+    小队画面位置。端点越界或驱动失败立即抛错，成功后等待场景稳定。
     """
+    from module.campaign.vision.offscreen import squad_offscreen
+    from module.campaign.vision.perception import squad_arrow
+
     goto.map_close(session.win)
     field = goto.capture_client(session.win)
     session.identity(field)
+    arrow = squad_arrow(field)
+    if arrow is not None:
+        ground = np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
+        session.emit(squad_avoidance='arrow', squad_avoid_ground=ground.tolist())
+    elif squad_offscreen(field) is not None:
+        ground = None
+        session.emit(squad_avoidance='offscreen')
+    else:
+        raise ValueError('当前画面没有唯一小队箭头或离屏标记，无法确定安全拖动起点；未发送镜头拖动。')
     region, _ = pan_region(drag)
-    start, end = pan_endpoints(region, drag, squad_ground)
+    start, end = pan_endpoints(region, drag, ground)
     session.check()
     origin = np.array(session.win.gui.ClientToScreen(session.win.hwnd, (0, 0)))
     session.win.handler.mouse_swipe(tuple(origin + start), tuple(origin + end))
@@ -326,8 +337,7 @@ def plan_world_move(session, observation, target, max_pans=8, anchor=None):
                      camera_drag=drag.tolist(), camera_gain=gain,
                      message=f'正在平移画面寻找目标（{count + 1}/{max_pans}）…')
         before = goto.capture_client(session.win)
-        ground = np.asarray(goto.VIEWPORT_PIXEL, float) + camera_offset(chart, view, squad_position)
-        pan_scene(session, drag, squad_ground=ground)
+        pan_scene(session, drag)
         session.camera_pans += 1
         current = goto.capture_client(session.win)
         session.identity(current)
@@ -806,7 +816,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         # 拖动指令换算的预期视野落点：融合判据的位置先验。响应未知（首拖 gain=1）时先验
         # 半径按残差自适应放宽，见 fusion_acceptable。
         predicted = viewport + delta_map * min(1. / gain, 1.5)
-        pan_scene(session, drag, squad_ground=ground)
+        pan_scene(session, drag)
         field = goto.capture_client(session.win)
         session.identity(field)
         session.check_collectible(field)
