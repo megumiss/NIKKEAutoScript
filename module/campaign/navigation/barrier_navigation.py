@@ -6,7 +6,7 @@ import numpy as np
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation.camera_navigation import pan_scene, target_view_offset
 from module.campaign.vision.barriers import (CENTER_TOLERANCE, annotated_curtains, barrier_group, track_barrier,
-                                             weak_curtain_visible)
+                                             unique_curtains, weak_curtain_visible)
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import squad_arrow
 from module.campaign.vision.surface_motion import project
@@ -23,9 +23,8 @@ class BarrierUnconfirmed(RuntimeError):
 
 
 def curtains(snapshot):
-    """取当前帧的光幕候选，不包含立柱；截边候选仍保留，不能当作已确认不存在。"""
-    return [item for item in snapshot.get('objects', [])
-            if item.get('kind') == 'barrier' and item.get('state') == 'curtain']
+    """取当前帧去重后的光幕候选；截边候选仍保留，不能当作已确认不存在。"""
+    return unique_curtains(snapshot.get('objects', []))
 
 
 def capture(session, squad):

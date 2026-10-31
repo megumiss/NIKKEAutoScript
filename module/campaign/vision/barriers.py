@@ -121,12 +121,46 @@ def curtain_foot(item):
     return np.array([(x1 + x2) / 2, y2])
 
 
+def unique_curtains(objects):
+    """合并高度重叠的重复光幕检测框，按置信度保留同一实体的候选。
+
+    两个框的交集占较小组面积至少 80% 时视为重复检测，优先处理高置信度框可保留较高分候选。
+    空间上分离的框不因竞争同一预标注而合并，后续唯一关联检查仍会拒绝这种真实歧义。
+    坐标无效的候选原样保留，交由 curtain_foot 按既有规则排除。
+    """
+    ordered = sorted((item for item in objects
+                      if item.get('kind') == 'barrier' and item.get('state') == 'curtain'),
+                     key=lambda item: float(item.get('confidence') or 0), reverse=True)
+    unique = []
+    for item in ordered:
+        box = np.asarray(item.get('box'), float)
+        if box.shape != (4,) or not np.isfinite(box).all():
+            unique.append(item)
+            continue
+        duplicate = False
+        for other in unique:
+            other_box = np.asarray(other.get('box'), float)
+            if other_box.shape != (4,) or not np.isfinite(other_box).all():
+                continue
+            width = max(0., min(box[2], other_box[2]) - max(box[0], other_box[0]))
+            height = max(0., min(box[3], other_box[3]) - max(box[1], other_box[1]))
+            smaller = min(max(0., box[2] - box[0]) * max(0., box[3] - box[1]),
+                          max(0., other_box[2] - other_box[0]) * max(0., other_box[3] - other_box[1]))
+            if smaller > 0 and width * height / smaller >= .8:
+                duplicate = True
+                break
+        if not duplicate:
+            unique.append(item)
+    return unique
+
+
 def annotated_curtains(snapshot, chart):
     """把实际检测到的光幕按最近预标注位置关联，返回标注封锁几何与同帧检测证据。
 
     必须有本帧已接受的紧凑配准，投影只用于选择标注，不作为最终封路位置；不设绝对距离上限。
-    最近与次近距离差小于 ANNOTATION_GAP、同帧多个光幕竞争同一标注时不返回该关联。
-    立柱单独可见不构成光幕存在证据；两点标注直接作为封锁段，中心点标注按当地道路估计切口。
+    高度重叠的重复检测先合并；最近与次近距离差小于 ANNOTATION_GAP、空间上分离的多个光幕
+    竞争同一标注时仍不返回该关联。立柱单独可见不构成光幕存在证据；两点标注直接作为封锁段，
+    中心点标注按当地道路估计切口。
     """
     annotations = getattr(chart, 'barrier_annotations', [])
     if (not annotations or snapshot.get('localization') != 'accepted' or snapshot.get('roi_to_map') is None
@@ -134,9 +168,7 @@ def annotated_curtains(snapshot, chart):
         return []
     viewport = project(np.asarray(snapshot['roi_to_map'], float), np.asarray(GAZE, float))
     candidates = []
-    for item in snapshot.get('objects', []):
-        if item.get('kind') != 'barrier' or item.get('state') != 'curtain':
-            continue
+    for item in unique_curtains(snapshot.get('objects', [])):
         try:
             offset = curtain_foot(item) - np.asarray(VIEWPORT_PIXEL, float)
         except ValueError:
