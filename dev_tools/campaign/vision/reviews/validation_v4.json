@@ -1,0 +1,227 @@
+{
+  "model_sha256": "7ebbcd59a9221b38bd7dd5a62a9c96e29d56c3a3999a55ca5f5cf0219126f0ac",
+  "model_metadata_sha256": "e2ebac368742466b354b196fd9b3b87d9fa8a1ddf4d886de4b3fd2593ebb97c7",
+  "normal_validation": {
+    "frames": 15,
+    "metrics": {
+      "scene_squad_arrow": {
+        "precision": null,
+        "recall": null,
+        "center_error_p95": null,
+        "center_samples": 0
+      },
+      "scene_collectible_indicator": {
+        "precision": null,
+        "recall": null,
+        "center_error_p95": null,
+        "center_samples": 0
+      },
+      "minimap_enemy_normal": {
+        "tp": 37,
+        "precision": 1.0,
+        "recall": 1.0,
+        "center_error_p95": null,
+        "center_samples": 0
+      },
+      "minimap_enemy_ex": {
+        "partial_or_unknown_detection": 9,
+        "tp": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "center_error_p95": null,
+        "center_samples": 0
+      },
+      "minimap_squad_ring": {
+        "tp": 7,
+        "precision": 1.0,
+        "recall": 1.0,
+        "center_error_p95": null,
+        "center_samples": 0
+      }
+    },
+    "normal_navigation": {
+      "expected": 37,
+      "matched": 36,
+      "missing": 1,
+      "unsafe": 0,
+      "ex_popup_required": 0
+    },
+    "latency": {
+      "expanded": {
+        "frames": 14,
+        "median_ms": 25.145650000000018,
+        "p95_ms": 30.589949999999963
+      },
+      "compact": {
+        "frames": 1,
+        "median_ms": 26.98659999999986,
+        "p95_ms": 26.98659999999986
+      }
+    },
+    "detector_latency": {
+      "expanded": {
+        "median_ms": 24.606000000000016,
+        "p95_ms": 29.493695000000024
+      },
+      "compact": {
+        "median_ms": 26.038399999999797,
+        "p95_ms": 26.038399999999797
+      }
+    },
+    "failing_frames": 9,
+    "unsafe_normal_click_frames": 0,
+    "model_sha256": "7ebbcd59a9221b38bd7dd5a62a9c96e29d56c3a3999a55ca5f5cf0219126f0ac",
+    "thresholds": {
+      "scene_squad_arrow": 0.5,
+      "scene_collectible_indicator": 0.5,
+      "minimap_enemy_normal": 0.5,
+      "minimap_enemy_ex": 0.5,
+      "minimap_squad_ring": 0.5
+    },
+    "model_metadata_sha256": "5b61eefb9dda8ffb768dd5fe310390528ce74a338efddac73766dacb5ffd8dd5",
+    "frames_sha256": "726c74e6397f4121061f939cc50b1ba3ac6dd93f850042be5579d310ca6e700a",
+    "splits": [
+      "val",
+      "test"
+    ],
+    "note": "Replay metrics only; capture independence depends on the training manifest."
+  },
+  "parity": {
+    "passed": true,
+    "domains": {
+      "scene": 3,
+      "minimap": 3,
+      "compact": 3
+    },
+    "model_sha256": "7ebbcd59a9221b38bd7dd5a62a9c96e29d56c3a3999a55ca5f5cf0219126f0ac"
+  },
+  "integration_log_sha256": "7e8655db3c90a9376c3835967247e121da41d959efb3e1b5a74e422f877e00ed",
+  "live": {
+    "scope": "camera drags, map controls and arrow cycle; no squad movement clicks",
+    "model_sha256": "7ebbcd59a9221b38bd7dd5a62a9c96e29d56c3a3999a55ca5f5cf0219126f0ac",
+    "pans": [
+      [
+        -499.99999999999994,
+        53.57142857142857
+      ],
+      [
+        -478.0,
+        52.5
+      ]
+    ],
+    "compact_ring": [
+      168.6,
+      92.3
+    ],
+    "collectible_indicator": null,
+    "anchor_evidence": {
+      "anchor_method": "arrow_cycle",
+      "arrow_samples": [
+        [
+          1127.0,
+          369.5
+        ],
+        [
+          1127.0,
+          375.5
+        ],
+        [
+          1127.0,
+          372.5
+        ],
+        [
+          1127.0,
+          372.5
+        ],
+        [
+          1127.0,
+          375.5
+        ],
+        [
+          1127.0,
+          369.5
+        ],
+        [
+          1127.0,
+          381.5
+        ],
+        [
+          1127.0,
+          369.5
+        ],
+        [
+          1127.0,
+          377.5
+        ],
+        [
+          1127.0,
+          370.5
+        ],
+        [
+          1127.0,
+          373.5
+        ],
+        [
+          1127.0,
+          374.5
+        ],
+        [
+          1127.0,
+          371.5
+        ],
+        [
+          1127.0,
+          377.5
+        ],
+        [
+          1127.0,
+          369.5
+        ],
+        [
+          1127.0,
+          382.5
+        ]
+      ],
+      "arrow_attempts": 17,
+      "arrow_missed_frames": 0,
+      "ground_anchor": [
+        1127.0,
+        466.0
+      ]
+    },
+    "anchor": [
+      1127.0,
+      466.0
+    ],
+    "expanded_markers": [
+      [
+        [
+          347.7,
+          268.6
+        ]
+      ],
+      []
+    ],
+    "status": "completed"
+  },
+  "popup_replay": {
+    "source": "log\\chapter_maps\\goal_01_48_20261001\\movement\\recovery_25\\battle_popup_0_recovery.png",
+    "source_sha256": "d4e3b14ec8b505fd278d3d5b0efd289c072e19bcd38351bcba641ed58dec7698",
+    "status": "ex_stage_skipped",
+    "events": [
+      {
+        "status": "ex_stage_skipped",
+        "iteration": 0,
+        "phase": "recorded_ex",
+        "popup_score": 0.9956,
+        "ex_score": 1.0,
+        "screenshot": "E:\\CodexData\\NIKKEAutoScript\\yolo\\reports\\v4-validation\\battle_popup_0_recorded_ex.png"
+      }
+    ],
+    "click": [
+      1155,
+      521
+    ],
+    "scope": "recorded real EX frame; input and post-close capture mocked"
+  }
+}

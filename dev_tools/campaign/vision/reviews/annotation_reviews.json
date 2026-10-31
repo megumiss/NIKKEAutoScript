@@ -1,0 +1,5375 @@
+{
+  "schema_version": 1,
+  "scope": "Object class review only; not complete frame ground truth.",
+  "reviews": [
+    {
+      "id": "1c7e9dd5ad6b6b16ea55",
+      "box": [
+        33.0,
+        228.0,
+        54.0,
+        255.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1c7e9dd5ad6b6b16ea55b44ca1c097c8ec53a6bd17566e73719f656de65c602a"
+    },
+    {
+      "id": "1e94bb7a881aa6d82224",
+      "box": [
+        104.0,
+        367.0,
+        122.0,
+        395.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1e94bb7a881aa6d82224786a51f37bf83bc2060285e71e4a71ab9ace71880e00"
+    },
+    {
+      "id": "f25f5f8ad75339bfd4f6",
+      "box": [
+        42.0,
+        75.0,
+        57.0,
+        91.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f25f5f8ad75339bfd4f6017f605b7b0637ff3d7a344c2a988cb9bcfe8dac1a86"
+    },
+    {
+      "id": "37dae3d4c8322846baf7",
+      "box": [
+        302.0,
+        146.0,
+        320.0,
+        167.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "37dae3d4c8322846baf73eef0cd796718739d5900bd90c10d46204c2ef59552a"
+    },
+    {
+      "id": "c1045e5d4a5c6fb1efc6",
+      "box": [
+        200.0,
+        113.0,
+        212.0,
+        129.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c1045e5d4a5c6fb1efc6ebece9c312c95a1615915d12734a5f6c68f958f2ff40"
+    },
+    {
+      "id": "49fe12c0b669991d28d0",
+      "box": [
+        450.0,
+        88.0,
+        468.0,
+        103.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "49fe12c0b669991d28d0a920d1f1349ad142af95d5b8c818c46fafbd389675b5"
+    },
+    {
+      "id": "34459b05154a5afce1b0",
+      "box": [
+        108.0,
+        105.0,
+        121.0,
+        120.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "34459b05154a5afce1b09afb48759bfd45f8c24e3b996609a6bbfaf92723f6ae"
+    },
+    {
+      "id": "45e3c24e56cd61a156c9",
+      "box": [
+        148.0,
+        17.0,
+        158.0,
+        27.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "45e3c24e56cd61a156c99d703bce237ab43af1490c58ac90382353b902f5884c"
+    },
+    {
+      "id": "06af2e1218bac0f0b4a7",
+      "box": [
+        329.0,
+        64.0,
+        347.0,
+        76.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "06af2e1218bac0f0b4a7098cbed37ce7a1926972ad3b5c0f0badfc9f1b228e8f"
+    },
+    {
+      "id": "dc0c093753a24fb47ef4",
+      "box": [
+        291.0,
+        32.0,
+        307.0,
+        43.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "dc0c093753a24fb47ef41a5f8e61b7222109a32d92bc92f28e9307c04fe72987"
+    },
+    {
+      "id": "fa54da80ac57b731ca3e",
+      "box": [
+        390.0,
+        54.0,
+        409.0,
+        67.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "fa54da80ac57b731ca3e91540cf072f0722ee858d8eb12a053bd350843d5595c"
+    },
+    {
+      "id": "1085b6e5c0678ef1803d",
+      "box": [
+        236.0,
+        9.0,
+        251.0,
+        19.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1085b6e5c0678ef1803de9fc442971eedea93f8105e96905817c3be4e7f3da13"
+    },
+    {
+      "id": "b00f5d6925514fe467de",
+      "box": [
+        304.0,
+        261.0,
+        329.0,
+        287.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b00f5d6925514fe467de4823e8cda1f2b4de94dfa6aa7fd2f98256aed66c0c53"
+    },
+    {
+      "id": "d92493904122be852225",
+      "box": [
+        77.0,
+        95.0,
+        89.0,
+        109.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "d92493904122be8522256aa9ddb43d2eb28e7b264a1cab875d2f34fa1700086b"
+    },
+    {
+      "id": "ab33a19b2674a3e65706",
+      "box": [
+        348.0,
+        68.0,
+        365.0,
+        79.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ab33a19b2674a3e65706fc771aa0ddafa71533b31488875885195c4cbde18103"
+    },
+    {
+      "id": "2d5608fe1e4c21c82af2",
+      "box": [
+        371.0,
+        140.0,
+        392.0,
+        156.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2d5608fe1e4c21c82af200649ec8a447d680d8f429e9a7a563f46dfd6aba754b"
+    },
+    {
+      "id": "d2d17336cded9f6193d0",
+      "box": [
+        214.0,
+        280.0,
+        238.0,
+        307.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "d2d17336cded9f6193d055c7dceee73c0e01887d1356f31822724a7a8fbac730"
+    },
+    {
+      "id": "5606f73ce634607fcb4a",
+      "box": [
+        304.0,
+        81.0,
+        321.0,
+        93.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5606f73ce634607fcb4a0a446809ad0b517df798435b04ca9b2175c5a32775e6"
+    },
+    {
+      "id": "b3b9a520374e979a1514",
+      "box": [
+        168.0,
+        387.0,
+        187.0,
+        415.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b3b9a520374e979a15141c6ab8b8af8e885adaa07e999f5cfc2298a569375744"
+    },
+    {
+      "id": "751879f18476ef784d08",
+      "box": [
+        303.0,
+        184.0,
+        324.0,
+        203.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "751879f18476ef784d08822a194a2aa4f4e74541debac2deb1b850d46aca971a"
+    },
+    {
+      "id": "4c9750167b3ffc2c0b48",
+      "box": [
+        423.0,
+        92.0,
+        442.0,
+        106.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "4c9750167b3ffc2c0b4854597b60b23862df44e2a1b09a813fd553febc3b1d9c"
+    },
+    {
+      "id": "e45bd6d67c11409eefb3",
+      "box": [
+        228.0,
+        8.0,
+        238.0,
+        16.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e45bd6d67c11409eefb345dd7dbca439206d0e07d71c2f888a12792355738c90"
+    },
+    {
+      "id": "0d647f8f19b0b2d7296e",
+      "box": [
+        275.0,
+        112.0,
+        289.0,
+        124.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0d647f8f19b0b2d7296edf34c63eb458ead9af7847463f5611bead420f9a020a"
+    },
+    {
+      "id": "c0edbe23b7d29dfc9160",
+      "box": [
+        30.0,
+        337.0,
+        44.0,
+        363.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c0edbe23b7d29dfc91605f76cc7854dee2b4b4f86049a8329521eec0d67dabce"
+    },
+    {
+      "id": "b285d68315ea04af25de",
+      "box": [
+        244.0,
+        283.0,
+        263.0,
+        305.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b285d68315ea04af25de785cb9e4f685ae967aec66a308381a765a50dd3c3f70"
+    },
+    {
+      "id": "ef16d7bfeef11b6f3504",
+      "box": [
+        323.0,
+        239.0,
+        342.0,
+        258.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ef16d7bfeef11b6f3504d7b30885cf700698ae5cde3f925e81d74b3ee1f56511"
+    },
+    {
+      "id": "3e4a92e3fd6bb2343a29",
+      "box": [
+        404.0,
+        163.0,
+        423.0,
+        178.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3e4a92e3fd6bb2343a29fe48ea8bac1f08763f8dff9331f0e43c4bb0877cd578"
+    },
+    {
+      "id": "e7bac8c73f430343d498",
+      "box": [
+        266.0,
+        170.0,
+        279.0,
+        189.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e7bac8c73f430343d49892ce3006445da753b2867fa4ead12cfc57e515fc9061"
+    },
+    {
+      "id": "64c7a8d6e38a6d8ebf19",
+      "box": [
+        349.0,
+        345.0,
+        370.0,
+        377.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "64c7a8d6e38a6d8ebf197a1ae3216260a6195a81ab140ff6cb2a671ba12379b5"
+    },
+    {
+      "id": "64c7a8d6e38a6d8ebf19",
+      "box": [
+        325.0,
+        91.0,
+        340.0,
+        106.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "64c7a8d6e38a6d8ebf197a1ae3216260a6195a81ab140ff6cb2a671ba12379b5"
+    },
+    {
+      "id": "b9cf2b50092b4940e3f8",
+      "box": [
+        417.0,
+        273.0,
+        441.0,
+        302.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b9cf2b50092b4940e3f8314891e95494d082f75a7242b8357afc29fe17c9fbde"
+    },
+    {
+      "id": "cb91a97c6c0ec3de1b84",
+      "box": [
+        31.0,
+        314.0,
+        57.0,
+        336.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cb91a97c6c0ec3de1b84e4dc231a6fbc5a9eb07b096076e0eaf68df0f9f5b01b"
+    },
+    {
+      "id": "2afd938979aa02fae3b7",
+      "box": [
+        363.0,
+        48.0,
+        379.0,
+        58.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2afd938979aa02fae3b7d8fe64ee937eae3ccb212a2bf391e1cc6be835e87c1b"
+    },
+    {
+      "id": "336bebe1a5dba6802617",
+      "box": [
+        98.0,
+        52.0,
+        117.0,
+        63.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "336bebe1a5dba6802617158c380dd50e611172f16ca33fd1621732c32d1b5479"
+    },
+    {
+      "id": "baf4655452fc485ff489",
+      "box": [
+        305.0,
+        40.0,
+        319.0,
+        50.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "baf4655452fc485ff489ba6dd9e0e03c4e9fa77f5c0a43f6e3a7b0165819a555"
+    },
+    {
+      "id": "bc663c4048ee291b9519",
+      "box": [
+        88.0,
+        88.0,
+        109.0,
+        100.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bc663c4048ee291b9519d2d56fc90fc623cf870cb3a12d13d0c23f6b565ba9a0"
+    },
+    {
+      "id": "511a16fa91d5d0bacbfa",
+      "box": [
+        321.0,
+        97.0,
+        340.0,
+        111.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "511a16fa91d5d0bacbfa128a002126081daa22056935dc7811fd4d67961ceb76"
+    },
+    {
+      "id": "6d2b887a32f9a42c8349",
+      "box": [
+        148.0,
+        284.0,
+        172.0,
+        314.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6d2b887a32f9a42c8349758932192b5e516840b9d8f0f4de52c259882e293b84"
+    },
+    {
+      "id": "f43e7b16f04c99861928",
+      "box": [
+        403.0,
+        284.0,
+        419.0,
+        314.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f43e7b16f04c99861928d0826b0b02a7eea291cc8b8bebea170bb6ffa96a63c6"
+    },
+    {
+      "id": "40e3ea68f0f5ec5a554f",
+      "box": [
+        112.0,
+        113.0,
+        130.0,
+        129.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "40e3ea68f0f5ec5a554f3c349a0582dfd2572686375ce8b9c593e27614e7370d"
+    },
+    {
+      "id": "708ec2e7e7e420c1400b",
+      "box": [
+        144.0,
+        140.0,
+        162.0,
+        158.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "708ec2e7e7e420c1400b00064723f971bca1ba62212bb05002ef5413f7f5e113"
+    },
+    {
+      "id": "cffb3ec8d6b2e39e6e6f",
+      "box": [
+        360.0,
+        58.0,
+        371.0,
+        71.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cffb3ec8d6b2e39e6e6f67f808772b1fb1ff4c48de3607b02d7e351259334ccd"
+    },
+    {
+      "id": "bedc4210e413a8435312",
+      "box": [
+        433.0,
+        28.0,
+        450.0,
+        40.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bedc4210e413a8435312c00640425bfbedc74ba711fb473309a015cf770860ad"
+    },
+    {
+      "id": "eea24228a63c42e327fa",
+      "box": [
+        253.0,
+        100.0,
+        268.0,
+        115.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "eea24228a63c42e327fa4332f169d9b0efb949e2d988ec145e531e50ea5ed5c0"
+    },
+    {
+      "id": "f63093393bf967547f8c",
+      "box": [
+        239.0,
+        264.0,
+        261.0,
+        292.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f63093393bf967547f8c44d914a1e53c5b4daa3ef745b07e281e1d788cc67511"
+    },
+    {
+      "id": "0ec7933eebf96766fe7c",
+      "box": [
+        395.0,
+        181.0,
+        418.0,
+        202.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0ec7933eebf96766fe7c639888a6c4308488b3ff562ef6b7239cafabc9523b57"
+    },
+    {
+      "id": "fa779de67a73b93a73d7",
+      "box": [
+        315.0,
+        308.0,
+        340.0,
+        340.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "fa779de67a73b93a73d70b12c66e44c594cbdba73ad317c4ecf95844180f1edd"
+    },
+    {
+      "id": "543e7eb3c85b1e595176",
+      "box": [
+        420.0,
+        416.0,
+        439.0,
+        427.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "543e7eb3c85b1e5951766d8f5bfbf865051e108db7869c8d8e5b659a64b677ec"
+    },
+    {
+      "id": "8914049fff0f89c4af57",
+      "box": [
+        49.0,
+        243.0,
+        71.0,
+        261.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8914049fff0f89c4af5786b20bf51ea66f623e95dfc5968d15c713bca79b8262"
+    },
+    {
+      "id": "c38d1e5e941ccc27aa92",
+      "box": [
+        204.0,
+        132.0,
+        225.0,
+        147.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c38d1e5e941ccc27aa92587844a8750d65c3c8372eed8e6df1e3c076e19d66a7"
+    },
+    {
+      "id": "c3d6e7cacf7269ff536c",
+      "box": [
+        247.0,
+        201.0,
+        270.0,
+        221.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c3d6e7cacf7269ff536cccf499f99f95639a28cec0b3fd9305bb38b8c0491151"
+    },
+    {
+      "id": "bbadf13a65e59961bc05",
+      "box": [
+        316.0,
+        58.0,
+        332.0,
+        70.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bbadf13a65e59961bc05b78320b1d11982ce67f4e799eb63d1e229f41eae377e"
+    },
+    {
+      "id": "7c5cce5404f44c049c9b",
+      "box": [
+        88.0,
+        112.0,
+        106.0,
+        129.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7c5cce5404f44c049c9b7b51710abe6015843ad7ffffda0c67661f179447a74f"
+    },
+    {
+      "id": "c0fd9b6e6a717d7a0c32",
+      "box": [
+        105.0,
+        199.0,
+        127.0,
+        223.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c0fd9b6e6a717d7a0c323987751c3423ba6f1718ac8d8a2bec792b3c3e7258b7"
+    },
+    {
+      "id": "c395eba43d9b00fd5775",
+      "box": [
+        81.0,
+        195.0,
+        104.0,
+        218.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c395eba43d9b00fd5775f3dee8816323db54b60682b3c5b5b064edf70c801222"
+    },
+    {
+      "id": "e863d9c18d0f755540b6",
+      "box": [
+        53.0,
+        134.0,
+        72.0,
+        152.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e863d9c18d0f755540b6601eb05ed3f57efcbb5f83799c6ec4732489b8b9f74b"
+    },
+    {
+      "id": "c8e07e2534353a5a6243",
+      "box": [
+        141.0,
+        201.0,
+        161.0,
+        224.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c8e07e2534353a5a624324bce42449dde26697a469d48e51c1f78599fb9d437f"
+    },
+    {
+      "id": "545e8b2a26b067a9b5f7",
+      "box": [
+        288.0,
+        344.0,
+        307.0,
+        379.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "545e8b2a26b067a9b5f737ceab3579e96513ccd53728897a814c4c9bfbaea550"
+    },
+    {
+      "id": "3944738bdc3e999cf48c",
+      "box": [
+        45.0,
+        6.0,
+        61.0,
+        17.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3944738bdc3e999cf48c21f2de252fdd78b8753a3b00c7a5bbd74c1cc02c5bc2"
+    },
+    {
+      "id": "fe44acdeedab29ece847",
+      "box": [
+        146.0,
+        150.0,
+        164.0,
+        168.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "fe44acdeedab29ece847eba060575a4213ce7283e5f57bd7b21d71f30762cbac"
+    },
+    {
+      "id": "238f36e93f7f2c1f2b6b",
+      "box": [
+        250.0,
+        218.0,
+        267.0,
+        241.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "238f36e93f7f2c1f2b6bac4ccc209d79c2f2ebcff5fd485095fc9486a2691aa0"
+    },
+    {
+      "id": "55897a6e1708a3b9b3ea",
+      "box": [
+        165.0,
+        99.0,
+        180.0,
+        114.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "55897a6e1708a3b9b3eae467c96aa73537b5095a18cf378f77c1f7f4295365c1"
+    },
+    {
+      "id": "46e0bf303831b5890002",
+      "box": [
+        190.0,
+        32.0,
+        203.0,
+        43.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "46e0bf303831b5890002cd605da076d9182b521e94bab18a03631f77de4886a4"
+    },
+    {
+      "id": "2e8ebe4579d11741a338",
+      "box": [
+        64.0,
+        35.0,
+        81.0,
+        47.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2e8ebe4579d11741a338532340d15417ec4ecf242c7ac580d9e25cf34a6f0494"
+    },
+    {
+      "id": "01818e525452f26a7958",
+      "box": [
+        447.0,
+        83.0,
+        468.0,
+        97.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "01818e525452f26a79580aa3cf44366c1d5eba1e3b3b81ebcf00efd7e611ffce"
+    },
+    {
+      "id": "bc853acb7401a6212b8f",
+      "box": [
+        295.0,
+        137.0,
+        313.0,
+        155.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bc853acb7401a6212b8f01cf96f0f68527d3fb0372e0f6ab5f6aa7b5f940cfe8"
+    },
+    {
+      "id": "0aa17cef70b5bd97727f",
+      "box": [
+        56.0,
+        29.0,
+        65.0,
+        40.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0aa17cef70b5bd97727f6d510c95ebf9cfc593f181cac172804f6f919c5c269b"
+    },
+    {
+      "id": "7ed64df2a71a00c4920d",
+      "box": [
+        413.0,
+        271.0,
+        434.0,
+        292.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7ed64df2a71a00c4920d4c62d2040c7c5e17517e2aee9ae34314e35bf5a3dab4"
+    },
+    {
+      "id": "510530ca4b9828756892",
+      "box": [
+        179.0,
+        32.0,
+        190.0,
+        41.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "510530ca4b98287568922e94a1e465c6ee10c832e5eddd308a8ce422e63c9b9d"
+    },
+    {
+      "id": "54ae79dd07429d5e8529",
+      "box": [
+        451.0,
+        187.0,
+        472.0,
+        203.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "54ae79dd07429d5e85299bd6edb2578c1d6a6ef6c44c94f7fc87a0a3370c4589"
+    },
+    {
+      "id": "3c3ff4e2332e8d25dfc1",
+      "box": [
+        435.0,
+        412.0,
+        455.0,
+        427.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3c3ff4e2332e8d25dfc12e5146d9fe10aa05260f7a6fe99511e919ed06a93393"
+    },
+    {
+      "id": "0839512383278a631f16",
+      "box": [
+        303.0,
+        235.0,
+        324.0,
+        264.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0839512383278a631f16a002c043db57617eafe87f1d1a8c6f6c14568727ad3f"
+    },
+    {
+      "id": "b7e8c79df164e7ec9a21",
+      "box": [
+        320.0,
+        236.0,
+        340.0,
+        262.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b7e8c79df164e7ec9a21d648101e86ba9da22eb918de09d6449bc674a15ba22c"
+    },
+    {
+      "id": "149ce9e7649b92cb427e",
+      "box": [
+        39.0,
+        297.0,
+        72.0,
+        326.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "149ce9e7649b92cb427eecab7b9f20410f42df4711e61e71869d70dc8caa2a4d"
+    },
+    {
+      "id": "149ce9e7649b92cb427e",
+      "box": [
+        9.0,
+        268.0,
+        41.0,
+        295.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "149ce9e7649b92cb427eecab7b9f20410f42df4711e61e71869d70dc8caa2a4d"
+    },
+    {
+      "id": "6c2c50b8f5e323b2f32d",
+      "box": [
+        108.0,
+        229.0,
+        134.0,
+        252.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6c2c50b8f5e323b2f32d81ff476b312306b47e3ec33351de37c017d5b330d3dd"
+    },
+    {
+      "id": "6c2c50b8f5e323b2f32d",
+      "box": [
+        81.0,
+        205.0,
+        105.0,
+        226.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6c2c50b8f5e323b2f32d81ff476b312306b47e3ec33351de37c017d5b330d3dd"
+    },
+    {
+      "id": "11e21bc9cb8f5b42a1d4",
+      "box": [
+        203.0,
+        185.0,
+        225.0,
+        204.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "11e21bc9cb8f5b42a1d41d91201a2deb7d10e4ffdaee410ec7054d91d1f7dabe"
+    },
+    {
+      "id": "11e21bc9cb8f5b42a1d4",
+      "box": [
+        173.0,
+        165.0,
+        194.0,
+        182.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "11e21bc9cb8f5b42a1d41d91201a2deb7d10e4ffdaee410ec7054d91d1f7dabe"
+    },
+    {
+      "id": "1233677cc9b9874a290b",
+      "box": [
+        372.0,
+        164.0,
+        396.0,
+        183.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1233677cc9b9874a290b1eb5f4c073db894111090f0fdb068d60ae9b0106f58f"
+    },
+    {
+      "id": "1233677cc9b9874a290b",
+      "box": [
+        337.0,
+        146.0,
+        360.0,
+        163.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1233677cc9b9874a290b1eb5f4c073db894111090f0fdb068d60ae9b0106f58f"
+    },
+    {
+      "id": "2a83f68463c603561738",
+      "box": [
+        420.0,
+        153.0,
+        443.0,
+        170.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2a83f68463c603561738898d106a558ec86af1356c1f17e775e09f8a1164d4dc"
+    },
+    {
+      "id": "ff62af22e5fc7ad3fd15",
+      "box": [
+        450.0,
+        89.0,
+        472.0,
+        103.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ff62af22e5fc7ad3fd158253b8ae1378e7c82caee237674c32d2dad835f713c1"
+    },
+    {
+      "id": "3996ef31777123f6b603",
+      "box": [
+        445.0,
+        33.0,
+        461.0,
+        43.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3996ef31777123f6b603c83cac33421c0b2c524f7f0abb02448bd23959ecf812"
+    },
+    {
+      "id": "550125b58a0b71cedd27",
+      "box": [
+        19.0,
+        85.0,
+        41.0,
+        98.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "550125b58a0b71cedd2731e82954754efa67f15147734f80e50c4e3a7cf3e7be"
+    },
+    {
+      "id": "078f49e62bfcbdaf1929",
+      "box": [
+        18.0,
+        71.0,
+        40.0,
+        84.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "078f49e62bfcbdaf1929e37d0c71e8e35a375c5a7f8f68274bbebc7eef72abe2"
+    },
+    {
+      "id": "078f49e62bfcbdaf1929",
+      "box": [
+        55.0,
+        64.0,
+        76.0,
+        76.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "078f49e62bfcbdaf1929e37d0c71e8e35a375c5a7f8f68274bbebc7eef72abe2"
+    },
+    {
+      "id": "eb5c10b464993d9531c9",
+      "box": [
+        101.0,
+        42.0,
+        117.0,
+        51.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "eb5c10b464993d9531c9ee8a1b33a70dc0067089ad1d3ccecb84aa5354552824"
+    },
+    {
+      "id": "261112745096be119cad",
+      "box": [
+        105.0,
+        38.0,
+        122.0,
+        48.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261112745096be119cad2297d9b657cf9b74574907023b2f05542e25efa900af"
+    },
+    {
+      "id": "261112745096be119cad",
+      "box": [
+        135.0,
+        17.0,
+        151.0,
+        26.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261112745096be119cad2297d9b657cf9b74574907023b2f05542e25efa900af"
+    },
+    {
+      "id": "261112745096be119cad",
+      "box": [
+        166.0,
+        11.0,
+        182.0,
+        20.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261112745096be119cad2297d9b657cf9b74574907023b2f05542e25efa900af"
+    },
+    {
+      "id": "3b85d920c8ec5358addc",
+      "box": [
+        98.0,
+        6.0,
+        110.0,
+        14.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3b85d920c8ec5358addcecff8adc479e719ee486db5702129d8caf8550737020"
+    },
+    {
+      "id": "0a3b0ffde0601d93fb85",
+      "box": [
+        84.0,
+        3.0,
+        97.0,
+        9.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0a3b0ffde0601d93fb85ed1aa2b648ecbb0243ceafe8ddccb0db06590436d2f8"
+    },
+    {
+      "id": "b3041301c330d0ff1d97",
+      "box": [
+        199.0,
+        34.0,
+        216.0,
+        44.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b3041301c330d0ff1d976b3d61877b4796676dd4c3a7608a6e17d497c3d71ea7"
+    },
+    {
+      "id": "7265ec7e2c2b67fdb6c3",
+      "box": [
+        300.0,
+        87.0,
+        319.0,
+        99.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7265ec7e2c2b67fdb6c37eacba7bbe9d48bbafd5740b040607131515b5ae2c04"
+    },
+    {
+      "id": "19007c7ca4274f9dfe25",
+      "box": [
+        261.0,
+        94.0,
+        283.0,
+        109.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "19007c7ca4274f9dfe2568c6fa752ccaa40719585011e4d48fbade004c59fd9e"
+    },
+    {
+      "id": "19007c7ca4274f9dfe25",
+      "box": [
+        235.0,
+        80.0,
+        255.0,
+        93.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "19007c7ca4274f9dfe2568c6fa752ccaa40719585011e4d48fbade004c59fd9e"
+    },
+    {
+      "id": "aa551596839c6cc89259",
+      "box": [
+        112.0,
+        100.0,
+        129.0,
+        112.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "aa551596839c6cc892596f324bbff6d7a965d1101a19f266e6dc1eb6d0b6a264"
+    },
+    {
+      "id": "aa551596839c6cc89259",
+      "box": [
+        89.0,
+        86.0,
+        106.0,
+        96.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "aa551596839c6cc892596f324bbff6d7a965d1101a19f266e6dc1eb6d0b6a264"
+    },
+    {
+      "id": "ae54b6045ffe696116e8",
+      "box": [
+        39.0,
+        104.0,
+        60.0,
+        116.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ae54b6045ffe696116e8eaac64a1af2a61fa56764fd2b0f466e8da69147bde4a"
+    },
+    {
+      "id": "ae54b6045ffe696116e8",
+      "box": [
+        19.0,
+        89.0,
+        39.0,
+        101.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ae54b6045ffe696116e8eaac64a1af2a61fa56764fd2b0f466e8da69147bde4a"
+    },
+    {
+      "id": "f628afaa9c1d72a1d35e",
+      "box": [
+        154.0,
+        407.0,
+        185.0,
+        436.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f628afaa9c1d72a1d35e36adbb4a38dd38fd92d410d1efd252fbc0ac6a64d8eb"
+    },
+    {
+      "id": "9e3dec810f347668fbc2",
+      "box": [
+        265.0,
+        390.0,
+        296.0,
+        424.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9e3dec810f347668fbc2614f472e2d49c6bf17618db5c36c95ff870c89cf3e7e"
+    },
+    {
+      "id": "50c7326ef97b221ea8a6",
+      "box": [
+        280.0,
+        383.0,
+        310.0,
+        418.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "50c7326ef97b221ea8a60867e818ce0a3827b1ff4c394f993836783fb4b5b2d5"
+    },
+    {
+      "id": "7536d937a396504519ec",
+      "box": [
+        58.0,
+        310.0,
+        91.0,
+        340.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7536d937a396504519ecd03ab4a7ccbf14a475e66bff16f0b0e81322b397d421"
+    },
+    {
+      "id": "ae557a842916a60c279c",
+      "box": [
+        125.0,
+        193.0,
+        151.0,
+        211.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ae557a842916a60c279c4318a9f5d9cf8078c6545cdde1be71a496c90b7a9e45"
+    },
+    {
+      "id": "ae557a842916a60c279c",
+      "box": [
+        166.0,
+        154.0,
+        190.0,
+        170.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ae557a842916a60c279c4318a9f5d9cf8078c6545cdde1be71a496c90b7a9e45"
+    },
+    {
+      "id": "ae557a842916a60c279c",
+      "box": [
+        206.0,
+        143.0,
+        230.0,
+        159.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ae557a842916a60c279c4318a9f5d9cf8078c6545cdde1be71a496c90b7a9e45"
+    },
+    {
+      "id": "ae557a842916a60c279c",
+      "box": [
+        9.0,
+        35.0,
+        28.0,
+        45.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ae557a842916a60c279c4318a9f5d9cf8078c6545cdde1be71a496c90b7a9e45"
+    },
+    {
+      "id": "ae557a842916a60c279c",
+      "box": [
+        60.0,
+        9.0,
+        77.0,
+        18.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ae557a842916a60c279c4318a9f5d9cf8078c6545cdde1be71a496c90b7a9e45"
+    },
+    {
+      "id": "32225459971e2e201807",
+      "box": [
+        191.0,
+        146.0,
+        214.0,
+        164.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "32225459971e2e2018078c49f44da7b587e56910de6da406ea740493261704c5"
+    },
+    {
+      "id": "32225459971e2e201807",
+      "box": [
+        223.0,
+        113.0,
+        245.0,
+        129.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "32225459971e2e2018078c49f44da7b587e56910de6da406ea740493261704c5"
+    },
+    {
+      "id": "32225459971e2e201807",
+      "box": [
+        260.0,
+        104.0,
+        280.0,
+        119.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "32225459971e2e2018078c49f44da7b587e56910de6da406ea740493261704c5"
+    },
+    {
+      "id": "32225459971e2e201807",
+      "box": [
+        66.0,
+        10.0,
+        84.0,
+        20.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "32225459971e2e2018078c49f44da7b587e56910de6da406ea740493261704c5"
+    },
+    {
+      "id": "2dda1663cb753ce63def",
+      "box": [
+        278.0,
+        147.0,
+        297.0,
+        161.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2dda1663cb753ce63def3eed88481ea01b8219e84da6717814956a14d174c14f"
+    },
+    {
+      "id": "18651d062763bc6272b6",
+      "box": [
+        107.0,
+        163.0,
+        127.0,
+        178.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18651d062763bc6272b6e444e848bd7e2151552a40a1594c2326e54cd9cd059b"
+    },
+    {
+      "id": "18651d062763bc6272b6",
+      "box": [
+        113.0,
+        136.0,
+        132.0,
+        150.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18651d062763bc6272b6e444e848bd7e2151552a40a1594c2326e54cd9cd059b"
+    },
+    {
+      "id": "18651d062763bc6272b6",
+      "box": [
+        352.0,
+        132.0,
+        369.0,
+        145.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18651d062763bc6272b6e444e848bd7e2151552a40a1594c2326e54cd9cd059b"
+    },
+    {
+      "id": "18651d062763bc6272b6",
+      "box": [
+        387.0,
+        122.0,
+        404.0,
+        134.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18651d062763bc6272b6e444e848bd7e2151552a40a1594c2326e54cd9cd059b"
+    },
+    {
+      "id": "18651d062763bc6272b6",
+      "box": [
+        78.0,
+        122.0,
+        97.0,
+        135.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18651d062763bc6272b6e444e848bd7e2151552a40a1594c2326e54cd9cd059b"
+    },
+    {
+      "id": "18651d062763bc6272b6",
+      "box": [
+        7.0,
+        72.0,
+        24.0,
+        83.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18651d062763bc6272b6e444e848bd7e2151552a40a1594c2326e54cd9cd059b"
+    },
+    {
+      "id": "18651d062763bc6272b6",
+      "box": [
+        6.0,
+        55.0,
+        23.0,
+        65.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18651d062763bc6272b6e444e848bd7e2151552a40a1594c2326e54cd9cd059b"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        383.0,
+        218.0,
+        409.0,
+        239.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        138.0,
+        213.0,
+        166.0,
+        234.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        144.0,
+        181.0,
+        169.0,
+        199.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        405.0,
+        176.0,
+        430.0,
+        194.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        444.0,
+        165.0,
+        468.0,
+        182.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        104.0,
+        165.0,
+        129.0,
+        182.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        25.0,
+        107.0,
+        48.0,
+        120.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        23.0,
+        87.0,
+        45.0,
+        99.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        189.0,
+        49.0,
+        209.0,
+        59.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        199.0,
+        31.0,
+        218.0,
+        41.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        230.0,
+        22.0,
+        245.0,
+        30.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        66.0,
+        8.0,
+        84.0,
+        17.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "8699f796a28be15b7566",
+      "box": [
+        41.0,
+        8.0,
+        59.0,
+        17.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8699f796a28be15b756675bf8d1b7576728140cc44a6dad637b87455b2379f50"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        421.0,
+        277.0,
+        451.0,
+        303.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        161.0,
+        271.0,
+        191.0,
+        297.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        165.0,
+        233.0,
+        193.0,
+        256.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        444.0,
+        226.0,
+        470.0,
+        248.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        123.0,
+        213.0,
+        150.0,
+        234.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        37.0,
+        145.0,
+        63.0,
+        162.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        35.0,
+        122.0,
+        59.0,
+        137.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        9.0,
+        110.0,
+        32.0,
+        124.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        207.0,
+        78.0,
+        228.0,
+        91.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        217.0,
+        58.0,
+        237.0,
+        70.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        249.0,
+        48.0,
+        267.0,
+        58.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        77.0,
+        32.0,
+        97.0,
+        43.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        51.0,
+        32.0,
+        71.0,
+        43.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "f75c8a8695886f58100a",
+      "box": [
+        90.0,
+        17.0,
+        109.0,
+        27.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f75c8a8695886f58100a592aaab1a733e990f01a92064877bdabf9c3fca43f93"
+    },
+    {
+      "id": "e1d4158030f02d39e632",
+      "box": [
+        171.0,
+        272.0,
+        200.0,
+        300.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e1d4158030f02d39e6328e7c2493a08105c8104b61d7d8e0bc78738b638b0fca"
+    },
+    {
+      "id": "e1d4158030f02d39e632",
+      "box": [
+        70.0,
+        191.0,
+        97.0,
+        212.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e1d4158030f02d39e6328e7c2493a08105c8104b61d7d8e0bc78738b638b0fca"
+    },
+    {
+      "id": "e1d4158030f02d39e632",
+      "box": [
+        252.0,
+        113.0,
+        273.0,
+        129.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e1d4158030f02d39e6328e7c2493a08105c8104b61d7d8e0bc78738b638b0fca"
+    },
+    {
+      "id": "e1d4158030f02d39e632",
+      "box": [
+        106.0,
+        61.0,
+        125.0,
+        73.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e1d4158030f02d39e6328e7c2493a08105c8104b61d7d8e0bc78738b638b0fca"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        319.0,
+        390.0,
+        349.0,
+        420.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        258.0,
+        361.0,
+        287.0,
+        388.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        132.0,
+        258.0,
+        157.0,
+        277.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        90.0,
+        206.0,
+        112.0,
+        223.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        322.0,
+        162.0,
+        343.0,
+        176.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        329.0,
+        134.0,
+        349.0,
+        147.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        156.0,
+        99.0,
+        174.0,
+        111.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        125.0,
+        99.0,
+        144.0,
+        111.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        169.0,
+        79.0,
+        187.0,
+        89.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        348.0,
+        51.0,
+        363.0,
+        60.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "261b9ab1ab097a866f4d",
+      "box": [
+        319.0,
+        51.0,
+        335.0,
+        60.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "261b9ab1ab097a866f4d9b2e2ad21b43b8256b0d462d44b439891c2c9fb5bff8"
+    },
+    {
+      "id": "db3e20628acb59cdc5cb",
+      "box": [
+        143.0,
+        258.0,
+        169.0,
+        283.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "db3e20628acb59cdc5cbbcabb4d5c577848c3490a974e72c69123d076a5d46b8"
+    },
+    {
+      "id": "b483af4e8b1e854e9aff",
+      "box": [
+        274.0,
+        364.0,
+        308.0,
+        397.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b483af4e8b1e854e9affa19891142eeefeff4ef07e14e8f61bd2be709a18bf7e"
+    },
+    {
+      "id": "b483af4e8b1e854e9aff",
+      "box": [
+        227.0,
+        337.0,
+        260.0,
+        369.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b483af4e8b1e854e9affa19891142eeefeff4ef07e14e8f61bd2be709a18bf7e"
+    },
+    {
+      "id": "b483af4e8b1e854e9aff",
+      "box": [
+        275.0,
+        184.0,
+        300.0,
+        203.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b483af4e8b1e854e9affa19891142eeefeff4ef07e14e8f61bd2be709a18bf7e"
+    },
+    {
+      "id": "b483af4e8b1e854e9aff",
+      "box": [
+        238.0,
+        184.0,
+        265.0,
+        203.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b483af4e8b1e854e9affa19891142eeefeff4ef07e14e8f61bd2be709a18bf7e"
+    },
+    {
+      "id": "b483af4e8b1e854e9aff",
+      "box": [
+        446.0,
+        118.0,
+        468.0,
+        133.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b483af4e8b1e854e9affa19891142eeefeff4ef07e14e8f61bd2be709a18bf7e"
+    },
+    {
+      "id": "dd0f53dd018d15d498a9",
+      "box": [
+        87.0,
+        303.0,
+        109.0,
+        326.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "dd0f53dd018d15d498a9fbb85dcc8738df760f2baad3df31972b4b237f85042d"
+    },
+    {
+      "id": "ce23dfb6c14e6b12a019",
+      "box": [
+        133.0,
+        178.0,
+        152.0,
+        195.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ce23dfb6c14e6b12a01944965ed87dd81e5f633877d7ec66e26e12c4be95ace8"
+    },
+    {
+      "id": "ce23dfb6c14e6b12a019",
+      "box": [
+        175.0,
+        161.0,
+        193.0,
+        177.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ce23dfb6c14e6b12a01944965ed87dd81e5f633877d7ec66e26e12c4be95ace8"
+    },
+    {
+      "id": "ce23dfb6c14e6b12a019",
+      "box": [
+        188.0,
+        83.0,
+        203.0,
+        93.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ce23dfb6c14e6b12a01944965ed87dd81e5f633877d7ec66e26e12c4be95ace8"
+    },
+    {
+      "id": "6d42ae0eb57ddc7c16e2",
+      "box": [
+        425.0,
+        343.0,
+        461.0,
+        375.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6d42ae0eb57ddc7c16e2c414f17d160d009803b27adfee34768d4ade4a556598"
+    },
+    {
+      "id": "85c3a2625a37e0882c56",
+      "box": [
+        276.0,
+        189.0,
+        298.0,
+        206.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "85c3a2625a37e0882c56c2f5f88dbdb9b548a7e3eeeb019ecfd2c616691f1159"
+    },
+    {
+      "id": "85c3a2625a37e0882c56",
+      "box": [
+        244.0,
+        168.0,
+        266.0,
+        184.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "85c3a2625a37e0882c56c2f5f88dbdb9b548a7e3eeeb019ecfd2c616691f1159"
+    },
+    {
+      "id": "014748a7b30208d79d9b",
+      "box": [
+        109.0,
+        311.0,
+        133.0,
+        332.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "014748a7b30208d79d9bec4a1f99b075d3608b979923ec1a2695c22bf495159c"
+    },
+    {
+      "id": "2af24602d104b4e4e584",
+      "box": [
+        167.0,
+        75.0,
+        189.0,
+        89.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2af24602d104b4e4e584e4eb14a4a34a9c6c14055f505b58850d3571978e06b6"
+    },
+    {
+      "id": "33e7149752df953d1891",
+      "box": [
+        130.0,
+        22.0,
+        147.0,
+        30.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "33e7149752df953d1891f15795a7a807ca456b4258b87141f7afcc2a94480596"
+    },
+    {
+      "id": "33e7149752df953d1891",
+      "box": [
+        111.0,
+        11.0,
+        127.0,
+        19.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "33e7149752df953d1891f15795a7a807ca456b4258b87141f7afcc2a94480596"
+    },
+    {
+      "id": "b0a534ba454072131177",
+      "box": [
+        41.0,
+        185.0,
+        62.0,
+        201.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b0a534ba454072131177f043c0c633335e29884343bd57f08fd46644c8886857"
+    },
+    {
+      "id": "b0a534ba454072131177",
+      "box": [
+        17.0,
+        164.0,
+        37.0,
+        179.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b0a534ba454072131177f043c0c633335e29884343bd57f08fd46644c8886857"
+    },
+    {
+      "id": "a0a68100d167042a1ecc",
+      "box": [
+        88.0,
+        337.0,
+        123.0,
+        371.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a0a68100d167042a1eccfb7ec0e9e8f95d2067ac73e343819725eb64a33d6677"
+    },
+    {
+      "id": "a0a68100d167042a1ecc",
+      "box": [
+        56.0,
+        305.0,
+        89.0,
+        336.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a0a68100d167042a1eccfb7ec0e9e8f95d2067ac73e343819725eb64a33d6677"
+    },
+    {
+      "id": "edcfec38763df6c1a4f5",
+      "box": [
+        337.0,
+        131.0,
+        353.0,
+        149.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "edcfec38763df6c1a4f519829e85f1c4831954c619499e542cc0b633a30a3c8b"
+    },
+    {
+      "id": "914ed1ce34533bcc6499",
+      "box": [
+        3.0,
+        23.0,
+        17.0,
+        32.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "914ed1ce34533bcc6499061332b932b2603e7fcd11df5027c6ba3fd483c66462"
+    },
+    {
+      "id": "26d3b0f6f92a1b12c0ff",
+      "box": [
+        71.0,
+        34.0,
+        85.0,
+        45.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "26d3b0f6f92a1b12c0ffd81e3d96e4ec7e3bed3496bd22ead427f936dcdb4f24"
+    },
+    {
+      "id": "de577cefa220eef3b687",
+      "box": [
+        82.0,
+        397.0,
+        103.0,
+        426.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "de577cefa220eef3b6874333ce5bfe761125a20113fe7df1716b73e7645d8b41"
+    },
+    {
+      "id": "7e1e05cfab5030a1eb8c",
+      "box": [
+        462.0,
+        413.0,
+        479.0,
+        427.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7e1e05cfab5030a1eb8c182f393872ac2716e2b7bbe93c41c99ad63222cf249f"
+    },
+    {
+      "id": "ba0f3e0488f46708ce1c",
+      "box": [
+        244.0,
+        365.0,
+        262.0,
+        398.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ba0f3e0488f46708ce1c3debb483e28cff4471a7765dc483401cb1b5cf0193f7"
+    },
+    {
+      "id": "9cc428835d07a6868561",
+      "box": [
+        248.0,
+        247.0,
+        264.0,
+        273.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9cc428835d07a6868561c4aa2f2b6eb91dcb4b354e25e345146163089ed04fe7"
+    },
+    {
+      "id": "774a31a1deb63fe18a44",
+      "box": [
+        398.0,
+        294.0,
+        421.0,
+        317.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "774a31a1deb63fe18a44d0905bc548358387dcb460bbc7c316a41bc182af7337"
+    },
+    {
+      "id": "774a31a1deb63fe18a44",
+      "box": [
+        355.0,
+        265.0,
+        376.0,
+        286.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "774a31a1deb63fe18a44d0905bc548358387dcb460bbc7c316a41bc182af7337"
+    },
+    {
+      "id": "74f769eb220e99f7c24f",
+      "box": [
+        364.0,
+        150.0,
+        384.0,
+        162.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "74f769eb220e99f7c24f91fb0368c65a2cc98a7e0637ff58529386e4f3875b9c"
+    },
+    {
+      "id": "74f769eb220e99f7c24f",
+      "box": [
+        331.0,
+        132.0,
+        350.0,
+        144.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "74f769eb220e99f7c24f91fb0368c65a2cc98a7e0637ff58529386e4f3875b9c"
+    },
+    {
+      "id": "a5a2bf62c957b26f5e81",
+      "box": [
+        67.0,
+        107.0,
+        90.0,
+        122.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a5a2bf62c957b26f5e8135c446e2467700f974f30b43b3453b0418a9c807376e"
+    },
+    {
+      "id": "af5d14d06eeb8c52d134",
+      "box": [
+        424.0,
+        348.0,
+        455.0,
+        379.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "af5d14d06eeb8c52d134607dfdc3abc605d021c7c92e6bd8a2d6ee20497cf437"
+    },
+    {
+      "id": "af5d14d06eeb8c52d134",
+      "box": [
+        375.0,
+        347.0,
+        406.0,
+        378.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "af5d14d06eeb8c52d134607dfdc3abc605d021c7c92e6bd8a2d6ee20497cf437"
+    },
+    {
+      "id": "378d663a9e79c8dd918e",
+      "box": [
+        265.0,
+        302.0,
+        292.0,
+        328.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "378d663a9e79c8dd918e60f0333221846fe481694990c237a81dd17e5c33094c"
+    },
+    {
+      "id": "378d663a9e79c8dd918e",
+      "box": [
+        222.0,
+        301.0,
+        249.0,
+        327.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "378d663a9e79c8dd918e60f0333221846fe481694990c237a81dd17e5c33094c"
+    },
+    {
+      "id": "378d663a9e79c8dd918e",
+      "box": [
+        276.0,
+        261.0,
+        301.0,
+        284.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "378d663a9e79c8dd918e60f0333221846fe481694990c237a81dd17e5c33094c"
+    },
+    {
+      "id": "ebab3e3c05ae7464a5c5",
+      "box": [
+        450.0,
+        370.0,
+        477.0,
+        399.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ebab3e3c05ae7464a5c5ba1b97d934b9a97f75b2e38aecc6e6fa5960599f8c13"
+    },
+    {
+      "id": "ebab3e3c05ae7464a5c5",
+      "box": [
+        422.0,
+        325.0,
+        447.0,
+        350.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ebab3e3c05ae7464a5c5ba1b97d934b9a97f75b2e38aecc6e6fa5960599f8c13"
+    },
+    {
+      "id": "ebab3e3c05ae7464a5c5",
+      "box": [
+        372.0,
+        301.0,
+        396.0,
+        325.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ebab3e3c05ae7464a5c5ba1b97d934b9a97f75b2e38aecc6e6fa5960599f8c13"
+    },
+    {
+      "id": "ebab3e3c05ae7464a5c5",
+      "box": [
+        388.0,
+        161.0,
+        406.0,
+        177.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ebab3e3c05ae7464a5c5ba1b97d934b9a97f75b2e38aecc6e6fa5960599f8c13"
+    },
+    {
+      "id": "ebab3e3c05ae7464a5c5",
+      "box": [
+        390.0,
+        135.0,
+        408.0,
+        149.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ebab3e3c05ae7464a5c5ba1b97d934b9a97f75b2e38aecc6e6fa5960599f8c13"
+    },
+    {
+      "id": "56eff5ee4bb7367df4d5",
+      "box": [
+        453.0,
+        355.0,
+        480.0,
+        381.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "56eff5ee4bb7367df4d50296aa390057f4fba5b97887655dac8b8cdaa1a43490"
+    },
+    {
+      "id": "56eff5ee4bb7367df4d5",
+      "box": [
+        425.0,
+        311.0,
+        449.0,
+        334.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "56eff5ee4bb7367df4d50296aa390057f4fba5b97887655dac8b8cdaa1a43490"
+    },
+    {
+      "id": "56eff5ee4bb7367df4d5",
+      "box": [
+        374.0,
+        288.0,
+        399.0,
+        309.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "56eff5ee4bb7367df4d50296aa390057f4fba5b97887655dac8b8cdaa1a43490"
+    },
+    {
+      "id": "56eff5ee4bb7367df4d5",
+      "box": [
+        389.0,
+        154.0,
+        409.0,
+        167.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "56eff5ee4bb7367df4d50296aa390057f4fba5b97887655dac8b8cdaa1a43490"
+    },
+    {
+      "id": "56eff5ee4bb7367df4d5",
+      "box": [
+        355.0,
+        153.0,
+        375.0,
+        167.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "56eff5ee4bb7367df4d50296aa390057f4fba5b97887655dac8b8cdaa1a43490"
+    },
+    {
+      "id": "56eff5ee4bb7367df4d5",
+      "box": [
+        392.0,
+        128.0,
+        410.0,
+        140.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "56eff5ee4bb7367df4d50296aa390057f4fba5b97887655dac8b8cdaa1a43490"
+    },
+    {
+      "id": "cea903bd0cd3ff0af0a6",
+      "box": [
+        448.0,
+        108.0,
+        468.0,
+        121.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cea903bd0cd3ff0af0a64209b7acb38b457cad47a962a1873d991a28eae68d11"
+    },
+    {
+      "id": "cea903bd0cd3ff0af0a6",
+      "box": [
+        245.0,
+        90.0,
+        262.0,
+        102.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cea903bd0cd3ff0af0a64209b7acb38b457cad47a962a1873d991a28eae68d11"
+    },
+    {
+      "id": "cea903bd0cd3ff0af0a6",
+      "box": [
+        214.0,
+        90.0,
+        233.0,
+        102.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cea903bd0cd3ff0af0a64209b7acb38b457cad47a962a1873d991a28eae68d11"
+    },
+    {
+      "id": "cea903bd0cd3ff0af0a6",
+      "box": [
+        253.0,
+        70.0,
+        270.0,
+        81.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cea903bd0cd3ff0af0a64209b7acb38b457cad47a962a1873d991a28eae68d11"
+    },
+    {
+      "id": "cea903bd0cd3ff0af0a6",
+      "box": [
+        425.0,
+        43.0,
+        440.0,
+        53.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cea903bd0cd3ff0af0a64209b7acb38b457cad47a962a1873d991a28eae68d11"
+    },
+    {
+      "id": "cea903bd0cd3ff0af0a6",
+      "box": [
+        397.0,
+        43.0,
+        412.0,
+        53.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cea903bd0cd3ff0af0a64209b7acb38b457cad47a962a1873d991a28eae68d11"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        53.0,
+        326.0,
+        84.0,
+        355.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        48.0,
+        285.0,
+        79.0,
+        311.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        14.0,
+        263.0,
+        43.0,
+        288.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        270.0,
+        210.0,
+        295.0,
+        231.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        279.0,
+        177.0,
+        303.0,
+        196.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        316.0,
+        160.0,
+        339.0,
+        177.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        99.0,
+        137.0,
+        122.0,
+        154.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        66.0,
+        137.0,
+        89.0,
+        153.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        115.0,
+        113.0,
+        137.0,
+        127.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        308.0,
+        82.0,
+        326.0,
+        94.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "29b194dba0ec91034fe0",
+      "box": [
+        277.0,
+        81.0,
+        297.0,
+        94.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "29b194dba0ec91034fe036a38b06019627646fa392ad6a015a3064d90849fd60"
+    },
+    {
+      "id": "e79fd638bc68692b6a7c",
+      "box": [
+        153.0,
+        91.0,
+        175.0,
+        105.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e79fd638bc68692b6a7cd933d3f9d6849b6785bc22e7fcba3ec018ced6acfecf"
+    },
+    {
+      "id": "30ad4fd3c685ca643a00",
+      "box": [
+        13.0,
+        208.0,
+        42.0,
+        229.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "30ad4fd3c685ca643a00bade4f6a5031e06741986ceaeceb72b2618d6e885dad"
+    },
+    {
+      "id": "30ad4fd3c685ca643a00",
+      "box": [
+        38.0,
+        176.0,
+        64.0,
+        195.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "30ad4fd3c685ca643a00bade4f6a5031e06741986ceaeceb72b2618d6e885dad"
+    },
+    {
+      "id": "30ad4fd3c685ca643a00",
+      "box": [
+        83.0,
+        158.0,
+        109.0,
+        177.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "30ad4fd3c685ca643a00bade4f6a5031e06741986ceaeceb72b2618d6e885dad"
+    },
+    {
+      "id": "30ad4fd3c685ca643a00",
+      "box": [
+        108.0,
+        81.0,
+        129.0,
+        93.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "30ad4fd3c685ca643a00bade4f6a5031e06741986ceaeceb72b2618d6e885dad"
+    },
+    {
+      "id": "30ad4fd3c685ca643a00",
+      "box": [
+        81.0,
+        80.0,
+        100.0,
+        92.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "30ad4fd3c685ca643a00bade4f6a5031e06741986ceaeceb72b2618d6e885dad"
+    },
+    {
+      "id": "9b7c3fe2da3f77ba524c",
+      "box": [
+        205.0,
+        307.0,
+        235.0,
+        339.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9b7c3fe2da3f77ba524c0831096c292cb0e73a38932e3832293f3b8ab0b69b35"
+    },
+    {
+      "id": "9b7c3fe2da3f77ba524c",
+      "box": [
+        246.0,
+        252.0,
+        274.0,
+        279.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9b7c3fe2da3f77ba524c0831096c292cb0e73a38932e3832293f3b8ab0b69b35"
+    },
+    {
+      "id": "9b7c3fe2da3f77ba524c",
+      "box": [
+        293.0,
+        239.0,
+        319.0,
+        263.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9b7c3fe2da3f77ba524c0831096c292cb0e73a38932e3832293f3b8ab0b69b35"
+    },
+    {
+      "id": "9b7c3fe2da3f77ba524c",
+      "box": [
+        50.0,
+        92.0,
+        72.0,
+        108.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9b7c3fe2da3f77ba524c0831096c292cb0e73a38932e3832293f3b8ab0b69b35"
+    },
+    {
+      "id": "9b7c3fe2da3f77ba524c",
+      "box": [
+        67.0,
+        71.0,
+        88.0,
+        86.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9b7c3fe2da3f77ba524c0831096c292cb0e73a38932e3832293f3b8ab0b69b35"
+    },
+    {
+      "id": "9b7c3fe2da3f77ba524c",
+      "box": [
+        103.0,
+        60.0,
+        123.0,
+        73.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9b7c3fe2da3f77ba524c0831096c292cb0e73a38932e3832293f3b8ab0b69b35"
+    },
+    {
+      "id": "9b7c3fe2da3f77ba524c",
+      "box": [
+        122.0,
+        6.0,
+        139.0,
+        16.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9b7c3fe2da3f77ba524c0831096c292cb0e73a38932e3832293f3b8ab0b69b35"
+    },
+    {
+      "id": "c85f15ef677ea91a2f78",
+      "box": [
+        8.0,
+        144.0,
+        33.0,
+        160.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c85f15ef677ea91a2f788ec37ee25de0d6e1af7b6d1e3e9075a80a74bf573c2f"
+    },
+    {
+      "id": "c85f15ef677ea91a2f78",
+      "box": [
+        20.0,
+        118.0,
+        43.0,
+        134.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c85f15ef677ea91a2f788ec37ee25de0d6e1af7b6d1e3e9075a80a74bf573c2f"
+    },
+    {
+      "id": "c85f15ef677ea91a2f78",
+      "box": [
+        248.0,
+        114.0,
+        270.0,
+        129.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c85f15ef677ea91a2f788ec37ee25de0d6e1af7b6d1e3e9075a80a74bf573c2f"
+    },
+    {
+      "id": "c85f15ef677ea91a2f78",
+      "box": [
+        283.0,
+        106.0,
+        305.0,
+        119.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c85f15ef677ea91a2f788ec37ee25de0d6e1af7b6d1e3e9075a80a74bf573c2f"
+    },
+    {
+      "id": "c85f15ef677ea91a2f78",
+      "box": [
+        86.0,
+        10.0,
+        105.0,
+        20.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c85f15ef677ea91a2f788ec37ee25de0d6e1af7b6d1e3e9075a80a74bf573c2f"
+    },
+    {
+      "id": "aca330a003db5ecc5ffc",
+      "box": [
+        71.0,
+        44.0,
+        90.0,
+        54.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "aca330a003db5ecc5ffce8d44748a3c1718679b850a9421546cfcf8ac3d97eba"
+    },
+    {
+      "id": "aca330a003db5ecc5ffc",
+      "box": [
+        105.0,
+        22.0,
+        122.0,
+        31.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "aca330a003db5ecc5ffce8d44748a3c1718679b850a9421546cfcf8ac3d97eba"
+    },
+    {
+      "id": "aca330a003db5ecc5ffc",
+      "box": [
+        136.0,
+        16.0,
+        153.0,
+        26.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "aca330a003db5ecc5ffce8d44748a3c1718679b850a9421546cfcf8ac3d97eba"
+    },
+    {
+      "id": "f50f535388158be12c3d",
+      "box": [
+        218.0,
+        46.0,
+        233.0,
+        55.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f50f535388158be12c3d0126b4259fd508bcb575aeb5d8d5e1002acaab9e2e12"
+    },
+    {
+      "id": "f50f535388158be12c3d",
+      "box": [
+        195.0,
+        34.0,
+        210.0,
+        43.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "f50f535388158be12c3d0126b4259fd508bcb575aeb5d8d5e1002acaab9e2e12"
+    },
+    {
+      "id": "5262d2676837811d5843",
+      "box": [
+        32.0,
+        157.0,
+        56.0,
+        176.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5262d2676837811d584386fe9428239d8411d2e392daf7e4d16419b23110ca33"
+    },
+    {
+      "id": "5262d2676837811d5843",
+      "box": [
+        10.0,
+        139.0,
+        33.0,
+        155.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5262d2676837811d584386fe9428239d8411d2e392daf7e4d16419b23110ca33"
+    },
+    {
+      "id": "1f61c5919b1559561ecb",
+      "box": [
+        104.0,
+        55.0,
+        123.0,
+        66.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1f61c5919b1559561ecb5736dbf36c25a84ca75836612638c38d090f5aadb0eb"
+    },
+    {
+      "id": "1f61c5919b1559561ecb",
+      "box": [
+        84.0,
+        44.0,
+        101.0,
+        53.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1f61c5919b1559561ecb5736dbf36c25a84ca75836612638c38d090f5aadb0eb"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        280.0,
+        188.0,
+        303.0,
+        207.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        54.0,
+        184.0,
+        79.0,
+        203.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        63.0,
+        155.0,
+        86.0,
+        172.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        310.0,
+        150.0,
+        330.0,
+        166.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        347.0,
+        139.0,
+        367.0,
+        156.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        29.0,
+        139.0,
+        52.0,
+        156.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        125.0,
+        32.0,
+        142.0,
+        43.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        137.0,
+        16.0,
+        154.0,
+        26.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "a005895bff478e4e06dd",
+      "box": [
+        167.0,
+        7.0,
+        183.0,
+        16.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a005895bff478e4e06dd3e3bad11aba86c6c2a7e93e472599a4b2efba4f458d8"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        396.0,
+        202.0,
+        422.0,
+        224.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        159.0,
+        198.0,
+        186.0,
+        219.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        163.0,
+        167.0,
+        188.0,
+        187.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        417.0,
+        162.0,
+        441.0,
+        181.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        453.0,
+        152.0,
+        477.0,
+        170.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        124.0,
+        152.0,
+        148.0,
+        171.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        43.0,
+        96.0,
+        67.0,
+        112.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        41.0,
+        77.0,
+        63.0,
+        91.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        17.0,
+        67.0,
+        39.0,
+        80.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        203.0,
+        41.0,
+        221.0,
+        51.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        212.0,
+        24.0,
+        231.0,
+        34.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "0dec5937c9c983694ac2",
+      "box": [
+        241.0,
+        14.0,
+        259.0,
+        25.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "0dec5937c9c983694ac2835e1d789c601736f4d14cb879100b998cf612f8db1c"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        147.0,
+        391.0,
+        185.0,
+        431.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        153.0,
+        338.0,
+        188.0,
+        371.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        102.0,
+        312.0,
+        136.0,
+        343.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        3.0,
+        222.0,
+        34.0,
+        244.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        205.0,
+        135.0,
+        229.0,
+        152.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        216.0,
+        110.0,
+        239.0,
+        126.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        252.0,
+        96.0,
+        274.0,
+        111.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        59.0,
+        79.0,
+        80.0,
+        91.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        29.0,
+        78.0,
+        51.0,
+        91.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        73.0,
+        60.0,
+        95.0,
+        72.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        253.0,
+        34.0,
+        271.0,
+        45.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "2c4087360357d14f5f64",
+      "box": [
+        225.0,
+        34.0,
+        243.0,
+        45.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2c4087360357d14f5f64541ab6bd34ab0b492d19d04afab6db21c80cb7011b41"
+    },
+    {
+      "id": "8a2f2b22bf93c9ef404e",
+      "box": [
+        380.0,
+        400.0,
+        414.0,
+        439.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8a2f2b22bf93c9ef404e1b6af00a62b937c4077b3f62ebc71e67df9e607bdade"
+    },
+    {
+      "id": "8a2f2b22bf93c9ef404e",
+      "box": [
+        330.0,
+        400.0,
+        365.0,
+        439.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8a2f2b22bf93c9ef404e1b6af00a62b937c4077b3f62ebc71e67df9e607bdade"
+    },
+    {
+      "id": "8a2f2b22bf93c9ef404e",
+      "box": [
+        383.0,
+        348.0,
+        416.0,
+        381.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "8a2f2b22bf93c9ef404e1b6af00a62b937c4077b3f62ebc71e67df9e607bdade"
+    },
+    {
+      "id": "a10f87de7a08d46bd707",
+      "box": [
+        83.0,
+        309.0,
+        117.0,
+        341.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a10f87de7a08d46bd707ed11c57d5e034e3bb5eb33199cee88680b3034fc17ec"
+    },
+    {
+      "id": "a10f87de7a08d46bd707",
+      "box": [
+        51.0,
+        280.0,
+        84.0,
+        308.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "a10f87de7a08d46bd707ed11c57d5e034e3bb5eb33199cee88680b3034fc17ec"
+    },
+    {
+      "id": "cdbec4009d029ef27778",
+      "box": [
+        162.0,
+        248.0,
+        187.0,
+        272.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cdbec4009d029ef2777809efe9fcf688d74227c8a9db144c33d3765206b73d87"
+    },
+    {
+      "id": "cdbec4009d029ef27778",
+      "box": [
+        130.0,
+        223.0,
+        155.0,
+        245.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "cdbec4009d029ef2777809efe9fcf688d74227c8a9db144c33d3765206b73d87"
+    },
+    {
+      "id": "7c29f936788db126587f",
+      "box": [
+        256.0,
+        209.0,
+        280.0,
+        230.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7c29f936788db126587f8d46275fe25b6928d53ce668c3e1bd4b16daaf8399e4"
+    },
+    {
+      "id": "7c29f936788db126587f",
+      "box": [
+        224.0,
+        187.0,
+        247.0,
+        206.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7c29f936788db126587f8d46275fe25b6928d53ce668c3e1bd4b16daaf8399e4"
+    },
+    {
+      "id": "9cae81040500d137286d",
+      "box": [
+        450.0,
+        206.0,
+        477.0,
+        229.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9cae81040500d137286dbb84c45fe7cc6e811e9e4ad6f73b8490d8abda2656b5"
+    },
+    {
+      "id": "9cae81040500d137286d",
+      "box": [
+        411.0,
+        184.0,
+        436.0,
+        205.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9cae81040500d137286dbb84c45fe7cc6e811e9e4ad6f73b8490d8abda2656b5"
+    },
+    {
+      "id": "13a71e637e3dc065681b",
+      "box": [
+        339.0,
+        367.0,
+        376.0,
+        401.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "13a71e637e3dc065681b4651c766528597efdcedbfd4227b0e29c17fbb3f1fbd"
+    },
+    {
+      "id": "9609bc8d302eda377f61",
+      "box": [
+        344.0,
+        411.0,
+        380.0,
+        452.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9609bc8d302eda377f61df38dd39a3d90ff459b37d1a05a0bdd7a6937ba3541a"
+    },
+    {
+      "id": "9609bc8d302eda377f61",
+      "box": [
+        292.0,
+        411.0,
+        328.0,
+        452.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9609bc8d302eda377f61df38dd39a3d90ff459b37d1a05a0bdd7a6937ba3541a"
+    },
+    {
+      "id": "9609bc8d302eda377f61",
+      "box": [
+        351.0,
+        357.0,
+        384.0,
+        392.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "9609bc8d302eda377f61df38dd39a3d90ff459b37d1a05a0bdd7a6937ba3541a"
+    },
+    {
+      "id": "d59922f34f6bc0c6d0e2",
+      "box": [
+        448.0,
+        262.0,
+        473.0,
+        285.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "d59922f34f6bc0c6d0e219f00182ce9b2edc7a7bdc213ac55397e0da7a9cb507"
+    },
+    {
+      "id": "d59922f34f6bc0c6d0e2",
+      "box": [
+        408.0,
+        262.0,
+        432.0,
+        285.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "d59922f34f6bc0c6d0e219f00182ce9b2edc7a7bdc213ac55397e0da7a9cb507"
+    },
+    {
+      "id": "d59922f34f6bc0c6d0e2",
+      "box": [
+        448.0,
+        226.0,
+        471.0,
+        246.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "d59922f34f6bc0c6d0e219f00182ce9b2edc7a7bdc213ac55397e0da7a9cb507"
+    },
+    {
+      "id": "1644e8036281b8b0160e",
+      "box": [
+        444.0,
+        208.0,
+        470.0,
+        231.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1644e8036281b8b0160e373c0a273d940c4ce82037679863caef0453a3249a96"
+    },
+    {
+      "id": "3cf78cb092ddec09ef91",
+      "box": [
+        436.0,
+        383.0,
+        464.0,
+        411.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3cf78cb092ddec09ef91099d0af2bdb769475fbceda08d8e9df3c3e9fb5d693d"
+    },
+    {
+      "id": "3cf78cb092ddec09ef91",
+      "box": [
+        407.0,
+        335.0,
+        433.0,
+        360.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3cf78cb092ddec09ef91099d0af2bdb769475fbceda08d8e9df3c3e9fb5d693d"
+    },
+    {
+      "id": "3cf78cb092ddec09ef91",
+      "box": [
+        357.0,
+        310.0,
+        382.0,
+        333.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3cf78cb092ddec09ef91099d0af2bdb769475fbceda08d8e9df3c3e9fb5d693d"
+    },
+    {
+      "id": "3cf78cb092ddec09ef91",
+      "box": [
+        340.0,
+        167.0,
+        360.0,
+        181.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3cf78cb092ddec09ef91099d0af2bdb769475fbceda08d8e9df3c3e9fb5d693d"
+    },
+    {
+      "id": "3cf78cb092ddec09ef91",
+      "box": [
+        379.0,
+        141.0,
+        398.0,
+        154.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "3cf78cb092ddec09ef91099d0af2bdb769475fbceda08d8e9df3c3e9fb5d693d"
+    },
+    {
+      "id": "6b5abdb6e1d52b812403",
+      "box": [
+        400.0,
+        160.0,
+        425.0,
+        180.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6b5abdb6e1d52b81240306ae16d7676d4a290787c61ec4d72627c50f5eb7a44c"
+    },
+    {
+      "id": "6b5abdb6e1d52b812403",
+      "box": [
+        146.0,
+        139.0,
+        169.0,
+        155.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6b5abdb6e1d52b81240306ae16d7676d4a290787c61ec4d72627c50f5eb7a44c"
+    },
+    {
+      "id": "bf12f4b5e6e2b6f33abf",
+      "box": [
+        240.0,
+        301.0,
+        268.0,
+        326.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bf12f4b5e6e2b6f33abf9cdee9a4fb3fc952f07b010a6c27c57fc460f1220835"
+    },
+    {
+      "id": "bf12f4b5e6e2b6f33abf",
+      "box": [
+        255.0,
+        259.0,
+        278.0,
+        280.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bf12f4b5e6e2b6f33abf9cdee9a4fb3fc952f07b010a6c27c57fc460f1220835"
+    },
+    {
+      "id": "bf12f4b5e6e2b6f33abf",
+      "box": [
+        296.0,
+        236.0,
+        320.0,
+        256.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bf12f4b5e6e2b6f33abf9cdee9a4fb3fc952f07b010a6c27c57fc460f1220835"
+    },
+    {
+      "id": "bf12f4b5e6e2b6f33abf",
+      "box": [
+        52.0,
+        206.0,
+        76.0,
+        224.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bf12f4b5e6e2b6f33abf9cdee9a4fb3fc952f07b010a6c27c57fc460f1220835"
+    },
+    {
+      "id": "bf12f4b5e6e2b6f33abf",
+      "box": [
+        15.0,
+        206.0,
+        39.0,
+        224.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bf12f4b5e6e2b6f33abf9cdee9a4fb3fc952f07b010a6c27c57fc460f1220835"
+    },
+    {
+      "id": "bf12f4b5e6e2b6f33abf",
+      "box": [
+        72.0,
+        176.0,
+        95.0,
+        193.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bf12f4b5e6e2b6f33abf9cdee9a4fb3fc952f07b010a6c27c57fc460f1220835"
+    },
+    {
+      "id": "bf12f4b5e6e2b6f33abf",
+      "box": [
+        290.0,
+        135.0,
+        310.0,
+        150.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bf12f4b5e6e2b6f33abf9cdee9a4fb3fc952f07b010a6c27c57fc460f1220835"
+    },
+    {
+      "id": "bf12f4b5e6e2b6f33abf",
+      "box": [
+        256.0,
+        135.0,
+        276.0,
+        150.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "bf12f4b5e6e2b6f33abf9cdee9a4fb3fc952f07b010a6c27c57fc460f1220835"
+    },
+    {
+      "id": "62ca9a6baa2d74763506",
+      "box": [
+        149.0,
+        346.0,
+        183.0,
+        379.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "62ca9a6baa2d747635066673d4e1e50378a50af07dc7d2061e1210cb8bd43138"
+    },
+    {
+      "id": "62ca9a6baa2d74763506",
+      "box": [
+        170.0,
+        297.0,
+        200.0,
+        326.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "62ca9a6baa2d747635066673d4e1e50378a50af07dc7d2061e1210cb8bd43138"
+    },
+    {
+      "id": "62ca9a6baa2d74763506",
+      "box": [
+        220.0,
+        271.0,
+        249.0,
+        299.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "62ca9a6baa2d747635066673d4e1e50378a50af07dc7d2061e1210cb8bd43138"
+    },
+    {
+      "id": "62ca9a6baa2d74763506",
+      "box": [
+        227.0,
+        161.0,
+        250.0,
+        179.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "62ca9a6baa2d747635066673d4e1e50378a50af07dc7d2061e1210cb8bd43138"
+    },
+    {
+      "id": "62ca9a6baa2d74763506",
+      "box": [
+        191.0,
+        160.0,
+        213.0,
+        179.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "62ca9a6baa2d747635066673d4e1e50378a50af07dc7d2061e1210cb8bd43138"
+    },
+    {
+      "id": "220b6d10c668e20a4846",
+      "box": [
+        216.0,
+        281.0,
+        242.0,
+        307.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "220b6d10c668e20a48467047c0c3a09e96555e7cc587e4b52387861ba2997ced"
+    },
+    {
+      "id": "220b6d10c668e20a4846",
+      "box": [
+        173.0,
+        281.0,
+        199.0,
+        306.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "220b6d10c668e20a48467047c0c3a09e96555e7cc587e4b52387861ba2997ced"
+    },
+    {
+      "id": "79c782fd089708fca6e8",
+      "box": [
+        99.0,
+        412.0,
+        137.0,
+        450.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "79c782fd089708fca6e81f9d4d346d86e2d15cc82d129d4cb3a353c890f5a787"
+    },
+    {
+      "id": "79c782fd089708fca6e8",
+      "box": [
+        161.0,
+        377.0,
+        196.0,
+        412.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "79c782fd089708fca6e81f9d4d346d86e2d15cc82d129d4cb3a353c890f5a787"
+    },
+    {
+      "id": "79c782fd089708fca6e8",
+      "box": [
+        179.0,
+        232.0,
+        208.0,
+        255.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "79c782fd089708fca6e81f9d4d346d86e2d15cc82d129d4cb3a353c890f5a787"
+    },
+    {
+      "id": "79c782fd089708fca6e8",
+      "box": [
+        139.0,
+        231.0,
+        168.0,
+        254.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "79c782fd089708fca6e81f9d4d346d86e2d15cc82d129d4cb3a353c890f5a787"
+    },
+    {
+      "id": "6f89e46aaf8d3888a7e8",
+      "box": [
+        4.0,
+        290.0,
+        35.0,
+        316.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6f89e46aaf8d3888a7e815998f5ea9f49de89a463f49ed6812cc8594ef31dfd8"
+    },
+    {
+      "id": "6f89e46aaf8d3888a7e8",
+      "box": [
+        32.0,
+        249.0,
+        61.0,
+        272.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6f89e46aaf8d3888a7e815998f5ea9f49de89a463f49ed6812cc8594ef31dfd8"
+    },
+    {
+      "id": "6f89e46aaf8d3888a7e8",
+      "box": [
+        82.0,
+        227.0,
+        108.0,
+        248.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6f89e46aaf8d3888a7e815998f5ea9f49de89a463f49ed6812cc8594ef31dfd8"
+    },
+    {
+      "id": "6f89e46aaf8d3888a7e8",
+      "box": [
+        109.0,
+        130.0,
+        132.0,
+        145.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6f89e46aaf8d3888a7e815998f5ea9f49de89a463f49ed6812cc8594ef31dfd8"
+    },
+    {
+      "id": "6f89e46aaf8d3888a7e8",
+      "box": [
+        77.0,
+        129.0,
+        100.0,
+        144.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "6f89e46aaf8d3888a7e815998f5ea9f49de89a463f49ed6812cc8594ef31dfd8"
+    },
+    {
+      "id": "c32da599066d4df2d376",
+      "box": [
+        239.0,
+        412.0,
+        276.0,
+        450.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c32da599066d4df2d376b8fdb15e4da190b759e7f4b05c1f0a195cfe7d88ff05"
+    },
+    {
+      "id": "c32da599066d4df2d376",
+      "box": [
+        283.0,
+        339.0,
+        316.0,
+        370.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c32da599066d4df2d376b8fdb15e4da190b759e7f4b05c1f0a195cfe7d88ff05"
+    },
+    {
+      "id": "c32da599066d4df2d376",
+      "box": [
+        336.0,
+        322.0,
+        367.0,
+        351.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c32da599066d4df2d376b8fdb15e4da190b759e7f4b05c1f0a195cfe7d88ff05"
+    },
+    {
+      "id": "c32da599066d4df2d376",
+      "box": [
+        54.0,
+        140.0,
+        78.0,
+        156.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c32da599066d4df2d376b8fdb15e4da190b759e7f4b05c1f0a195cfe7d88ff05"
+    },
+    {
+      "id": "c32da599066d4df2d376",
+      "box": [
+        73.0,
+        115.0,
+        96.0,
+        130.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c32da599066d4df2d376b8fdb15e4da190b759e7f4b05c1f0a195cfe7d88ff05"
+    },
+    {
+      "id": "c32da599066d4df2d376",
+      "box": [
+        112.0,
+        101.0,
+        134.0,
+        115.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c32da599066d4df2d376b8fdb15e4da190b759e7f4b05c1f0a195cfe7d88ff05"
+    },
+    {
+      "id": "c32da599066d4df2d376",
+      "box": [
+        131.0,
+        38.0,
+        150.0,
+        49.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c32da599066d4df2d376b8fdb15e4da190b759e7f4b05c1f0a195cfe7d88ff05"
+    },
+    {
+      "id": "c32da599066d4df2d376",
+      "box": [
+        105.0,
+        37.0,
+        123.0,
+        48.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c32da599066d4df2d376b8fdb15e4da190b759e7f4b05c1f0a195cfe7d88ff05"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        313.0,
+        325.0,
+        345.0,
+        357.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        24.0,
+        318.0,
+        59.0,
+        349.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        38.0,
+        274.0,
+        70.0,
+        302.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        346.0,
+        266.0,
+        376.0,
+        293.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        392.0,
+        252.0,
+        421.0,
+        278.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        117.0,
+        102.0,
+        140.0,
+        115.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        132.0,
+        79.0,
+        154.0,
+        92.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        168.0,
+        68.0,
+        188.0,
+        80.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        6.0,
+        34.0,
+        26.0,
+        46.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        178.0,
+        12.0,
+        196.0,
+        22.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "7b0b6aa41329958c3616",
+      "box": [
+        152.0,
+        11.0,
+        171.0,
+        22.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7b0b6aa41329958c36160c2f11f863da2f4dfbe8ddafe704e7d7a04c7153f7e0"
+    },
+    {
+      "id": "d30b8de59e70d5b7c257",
+      "box": [
+        194.0,
+        54.0,
+        210.0,
+        64.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "d30b8de59e70d5b7c257af435743cac07ff319e02f6c3ba233d2697dc2fd9f53"
+    },
+    {
+      "id": "d30b8de59e70d5b7c257",
+      "box": [
+        67.0,
+        14.0,
+        83.0,
+        22.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "d30b8de59e70d5b7c257af435743cac07ff319e02f6c3ba233d2697dc2fd9f53"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        274.0,
+        258.0,
+        302.0,
+        283.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        271.0,
+        220.0,
+        298.0,
+        243.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        225.0,
+        202.0,
+        252.0,
+        222.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        129.0,
+        136.0,
+        153.0,
+        153.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        123.0,
+        114.0,
+        147.0,
+        129.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        95.0,
+        102.0,
+        118.0,
+        116.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        286.0,
+        71.0,
+        306.0,
+        84.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        292.0,
+        52.0,
+        312.0,
+        63.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        320.0,
+        42.0,
+        340.0,
+        52.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        149.0,
+        27.0,
+        169.0,
+        37.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        124.0,
+        27.0,
+        143.0,
+        37.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "94a9efa050639bdcfdd9",
+      "box": [
+        160.0,
+        12.0,
+        179.0,
+        22.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "94a9efa050639bdcfdd9086587c6abd04cbfaa82f9a36122edaa3158b24c0ab9"
+    },
+    {
+      "id": "5705617bce29aad9a298",
+      "box": [
+        184.0,
+        198.0,
+        209.0,
+        219.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5705617bce29aad9a298fe5fad3fccc818d483d71ee469a89e30c27732878374"
+    },
+    {
+      "id": "5705617bce29aad9a298",
+      "box": [
+        221.0,
+        40.0,
+        238.0,
+        51.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5705617bce29aad9a298fe5fad3fccc818d483d71ee469a89e30c27732878374"
+    },
+    {
+      "id": "b4cb1ebe3ca16b737cb6",
+      "box": [
+        192.0,
+        8.0,
+        209.0,
+        19.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b4cb1ebe3ca16b737cb60a8bda11dc7537699ed8df0cc6f720ab049382e0c0e9"
+    },
+    {
+      "id": "5f84805ea8ad429011af",
+      "box": [
+        282.0,
+        137.0,
+        304.0,
+        154.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5f84805ea8ad429011af6959b6a425a2543420b136b6e8f74720b0a12b9d6460"
+    },
+    {
+      "id": "5f84805ea8ad429011af",
+      "box": [
+        77.0,
+        134.0,
+        99.0,
+        150.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5f84805ea8ad429011af6959b6a425a2543420b136b6e8f74720b0a12b9d6460"
+    },
+    {
+      "id": "5f84805ea8ad429011af",
+      "box": [
+        84.0,
+        110.0,
+        105.0,
+        124.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5f84805ea8ad429011af6959b6a425a2543420b136b6e8f74720b0a12b9d6460"
+    },
+    {
+      "id": "5f84805ea8ad429011af",
+      "box": [
+        308.0,
+        105.0,
+        329.0,
+        119.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5f84805ea8ad429011af6959b6a425a2543420b136b6e8f74720b0a12b9d6460"
+    },
+    {
+      "id": "5f84805ea8ad429011af",
+      "box": [
+        342.0,
+        97.0,
+        362.0,
+        111.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5f84805ea8ad429011af6959b6a425a2543420b136b6e8f74720b0a12b9d6460"
+    },
+    {
+      "id": "5f84805ea8ad429011af",
+      "box": [
+        51.0,
+        97.0,
+        73.0,
+        111.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5f84805ea8ad429011af6959b6a425a2543420b136b6e8f74720b0a12b9d6460"
+    },
+    {
+      "id": "5f84805ea8ad429011af",
+      "box": [
+        136.0,
+        6.0,
+        152.0,
+        13.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5f84805ea8ad429011af6959b6a425a2543420b136b6e8f74720b0a12b9d6460"
+    },
+    {
+      "id": "7fdb1b89339dfc3e2e77",
+      "box": [
+        229.0,
+        108.0,
+        245.0,
+        119.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7fdb1b89339dfc3e2e777148030905862a0599cb002eb4d7b7a617baae190f60"
+    },
+    {
+      "id": "7fdb1b89339dfc3e2e77",
+      "box": [
+        32.0,
+        105.0,
+        49.0,
+        115.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7fdb1b89339dfc3e2e777148030905862a0599cb002eb4d7b7a617baae190f60"
+    },
+    {
+      "id": "7fdb1b89339dfc3e2e77",
+      "box": [
+        41.0,
+        83.0,
+        58.0,
+        92.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7fdb1b89339dfc3e2e777148030905862a0599cb002eb4d7b7a617baae190f60"
+    },
+    {
+      "id": "7fdb1b89339dfc3e2e77",
+      "box": [
+        256.0,
+        79.0,
+        273.0,
+        89.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7fdb1b89339dfc3e2e777148030905862a0599cb002eb4d7b7a617baae190f60"
+    },
+    {
+      "id": "7fdb1b89339dfc3e2e77",
+      "box": [
+        291.0,
+        71.0,
+        305.0,
+        81.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7fdb1b89339dfc3e2e777148030905862a0599cb002eb4d7b7a617baae190f60"
+    },
+    {
+      "id": "7fdb1b89339dfc3e2e77",
+      "box": [
+        11.0,
+        71.0,
+        27.0,
+        81.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "7fdb1b89339dfc3e2e777148030905862a0599cb002eb4d7b7a617baae190f60"
+    },
+    {
+      "id": "2a0ecc5f69f2100d8ddb",
+      "box": [
+        175.0,
+        90.0,
+        194.0,
+        103.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2a0ecc5f69f2100d8ddbbe5f5533d03ec7141a08ae68f19e0e559a76e958d536"
+    },
+    {
+      "id": "2a0ecc5f69f2100d8ddb",
+      "box": [
+        212.0,
+        82.0,
+        231.0,
+        94.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2a0ecc5f69f2100d8ddbbe5f5533d03ec7141a08ae68f19e0e559a76e958d536"
+    },
+    {
+      "id": "18a70b71613e88b23732",
+      "box": [
+        132.0,
+        122.0,
+        156.0,
+        138.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18a70b71613e88b23732272ffd305123cb55115ebbe462ef5f77eb8652bbe270"
+    },
+    {
+      "id": "18a70b71613e88b23732",
+      "box": [
+        167.0,
+        91.0,
+        189.0,
+        106.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18a70b71613e88b23732272ffd305123cb55115ebbe462ef5f77eb8652bbe270"
+    },
+    {
+      "id": "18a70b71613e88b23732",
+      "box": [
+        203.0,
+        84.0,
+        224.0,
+        97.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "18a70b71613e88b23732272ffd305123cb55115ebbe462ef5f77eb8652bbe270"
+    },
+    {
+      "id": "2d1fa5aa8385255a0384",
+      "box": [
+        104.0,
+        84.0,
+        122.0,
+        94.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2d1fa5aa8385255a0384611c713ddfa839d07e5d3e7f00a3e8541b0b0b20773f"
+    },
+    {
+      "id": "2d1fa5aa8385255a0384",
+      "box": [
+        171.0,
+        51.0,
+        188.0,
+        60.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "2d1fa5aa8385255a0384611c713ddfa839d07e5d3e7f00a3e8541b0b0b20773f"
+    },
+    {
+      "id": "b19db9fb824a86c5b143",
+      "box": [
+        79.0,
+        8.0,
+        97.0,
+        17.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b19db9fb824a86c5b143ababf0980cc45583bbf900b0396a565bdcefd0cf4a2c"
+    },
+    {
+      "id": "fc85174291a122527022",
+      "box": [
+        148.0,
+        142.0,
+        164.0,
+        159.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "fc85174291a122527022cbfd24a0f220c477402f93b9fa05c2e11b9234aea5f4"
+    },
+    {
+      "id": "5cd9fdfee4f05e1a12dc",
+      "box": [
+        439.0,
+        412.0,
+        457.0,
+        427.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5cd9fdfee4f05e1a12dc61bc566cb39179acbf75251939fbb2d104813029dd50"
+    },
+    {
+      "id": "b30f9a8c7d58f3ad2d42",
+      "box": [
+        318.0,
+        11.0,
+        325.0,
+        22.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "b30f9a8c7d58f3ad2d422a69a1d318803bd9764d0f9a4cd2f8d0b27cf3fca160"
+    },
+    {
+      "id": "5db0300c9856d8e94398",
+      "box": [
+        106.0,
+        4.0,
+        119.0,
+        13.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5db0300c9856d8e943981f19712df600a7192c8ee0dfefb36c94726c4e6e094d"
+    },
+    {
+      "id": "1180f99a88b16c1581fd",
+      "box": [
+        171.0,
+        153.0,
+        188.0,
+        173.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "1180f99a88b16c1581fdd404a945e772d2c3f4037d5ad2190c16ab1345455f73"
+    },
+    {
+      "id": "c0fbecc3ed314fd85f5f",
+      "box": [
+        147.0,
+        333.0,
+        165.0,
+        359.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c0fbecc3ed314fd85f5ff74efbc6771f9ff19fdc41fa0da14a255b9ab9cf29ab"
+    },
+    {
+      "id": "5e84b7eadfe30945ff9c",
+      "box": [
+        82.0,
+        181.0,
+        106.0,
+        206.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5e84b7eadfe30945ff9cf51b38a1a72f2227612434446904f916671312972814"
+    },
+    {
+      "id": "5e84b7eadfe30945ff9c",
+      "box": [
+        56.0,
+        157.0,
+        79.0,
+        179.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "5e84b7eadfe30945ff9cf51b38a1a72f2227612434446904f916671312972814"
+    },
+    {
+      "id": "ea9c803bbad5e4ef171f",
+      "box": [
+        75.0,
+        69.0,
+        82.0,
+        82.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ea9c803bbad5e4ef171f4e8d625df796f544dd984affd7052cbe5fa437dce25e"
+    },
+    {
+      "id": "ad2baadad7c3bd9d749e",
+      "box": [
+        211.0,
+        69.0,
+        215.0,
+        75.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "ad2baadad7c3bd9d749eb246ff38beb0e17cc90b6b5de059bdc6dde3d55a2af9"
+    },
+    {
+      "id": "259fbe99ccfa3e653928",
+      "box": [
+        45.0,
+        87.0,
+        54.0,
+        101.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "259fbe99ccfa3e653928ac7c6929885ed51f2e34ec34a4dc7fdb199bb67e2982"
+    },
+    {
+      "id": "c4cf7c8ea9d2762e01a9",
+      "box": [
+        114.0,
+        90.0,
+        126.0,
+        103.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "c4cf7c8ea9d2762e01a925d6403dde32b3b4d944cbfdd3451122710ef5e06287"
+    },
+    {
+      "id": "560745b93038532b6328",
+      "box": [
+        188.0,
+        87.0,
+        198.0,
+        96.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "560745b93038532b632847ca8f17ce27eed441576512c672cf7fcc2a15f13f46"
+    },
+    {
+      "id": "e654bf5d3f3745592018",
+      "box": [
+        117.0,
+        87.0,
+        126.0,
+        96.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "e654bf5d3f37455920183c27e0f61044e7243c42628990c437f79a737f0090b8"
+    },
+    {
+      "id": "af2ebc38b6e8389ba8ac",
+      "box": [
+        140.0,
+        3.0,
+        145.0,
+        9.0
+      ],
+      "label": "minimap_enemy_ex",
+      "uncertain": false,
+      "review": "visual_crop_classification",
+      "source_sha256": "af2ebc38b6e8389ba8aca6aa96bb8841ecb51362bddb55daf3cae3a38fdfbeb9"
+    },
+    {
+      "id": "200b2dda1669ecf519aa",
+      "box": [
+        143.0,
+        20.0,
+        153.0,
+        27.0
+      ],
+      "label": "minimap_enemy_normal",
+      "uncertain": true,
+      "review": "visual_crop_classification",
+      "source_sha256": "200b2dda1669ecf519aa9fd0d9abd0a4428fda281a58ea239b310120e6e80386"
+    }
+  ]
+}

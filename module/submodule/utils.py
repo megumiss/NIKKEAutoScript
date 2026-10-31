@@ -14,6 +14,8 @@ MOD_CONFIG_DICT = {}
 
 def get_available_func():
     return (
+        'AutoMainStory',
+        'AutoMainCollectible',
         'AutoTower',
         'SemiCombat',
         'Highlights',
