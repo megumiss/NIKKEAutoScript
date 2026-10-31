@@ -5,6 +5,9 @@ import time
 import numpy as np
 
 
+LOCALIZATION_FAILURE_LIMIT = 3
+
+
 def movement_plan(localizer, observation, target, anchor):
     """验证道路连通性并生成画面内完整目标的落点与路线长度。
 
@@ -40,6 +43,7 @@ def navigate(
     arrival_radius 缺省取 goto.SQUAD_REACH（圆环覆盖半径）：点击放行残差与到点判定必须同源，
     否则镜头认为已到而到点循环不认，会空转触发停滞。
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
+    展开地图定位连续三轮未通过才报错；首轮失败后最多追加一次开阔道路短移，成功定位即清零失败计数。
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
     目标就是最后一段电梯出口时，确认传送即结束，不再向出口中心追加容易误差的地面移动。
@@ -66,13 +70,38 @@ def navigate(
     probe_index = 0
     arrow_recoveries = 0
     ring_attempted = False
+    localization_failures = 0
+    localization_short_move = False
     legs, transfers = None, []
     exit_near, entry_waits, leg_start_clicks = 0, 0, 0
     deadline = time.monotonic() + 600
     while time.monotonic() < deadline:
         session.check()
         emit(state='locating', message='正在定位小队…', movement_clicks=clicks)
-        observation = session.observe()
+        try:
+            observation = session.observe()
+        except RuntimeError as exc:
+            if not str(exc).startswith('展开地图定位未通过'):
+                raise
+            localization_failures += 1
+            emit(state='locating', message=f'展开地图定位连续未通过 {localization_failures}/'
+                                           f'{LOCALIZATION_FAILURE_LIMIT} 轮。',
+                 localization_failures=localization_failures)
+            if localization_failures >= LOCALIZATION_FAILURE_LIMIT:
+                raise
+            if not localization_short_move:
+                localization_short_move = True
+                try:
+                    recovery_target = session.short_move_for_localization()
+                except ValueError as recovery_error:
+                    emit(message=f'定位恢复短移不可用：{recovery_error}；继续重新定位。')
+                else:
+                    clicks += 1
+                    emit(state='moving', message='已完成定位恢复短移，停稳后再次尝试展开地图定位。',
+                         movement_clicks=clicks, localization_recovery_target=recovery_target.tolist())
+            previous, probes, probe_index, stagnant, near = None, None, 0, 0, 0
+            continue
+        localization_failures = 0
         position = np.asarray(observation['position'], float)
         if observation.get('position_kind') != 'squad' or position.shape != (2,) or not np.isfinite(position).all():
             raise RuntimeError('小队定位无效，停止移动。')

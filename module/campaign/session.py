@@ -644,6 +644,48 @@ class CampaignSession(NavigationSession):
         logger.warning(f'展开地图定位连续 {LOCALIZE_RETRIES + 1} 次未通过，耗时 {watch}，按定位失败处理。')
         raise error
 
+    def short_move_for_localization(self):
+        """展开地图定位失败后向附近开阔道路短移一次，改变下一轮的地图道路特征。
+
+        先用新的紧凑小地图定位确认小队位置，再从 80～160 地图像素外选择净空至少 40 的道路点；
+        候选不得靠近当前已确认的敌人 60 地图像素以内。每个候选都经过道路连通与既有镜头规划、
+        EX 避让、弹窗和输入闸门检查，只有取得有效落点才发送一次点击并等待停稳。
+        没有安全候选、紧凑定位未通过或规划失败时抛出异常，不使用固定屏幕方向盲移。
+        """
+        goto.map_close(self.win)
+        snapshot = self.snapshot()
+        observation = self.reusable_report()
+        if snapshot.get('localization') != 'accepted' or observation is None:
+            raise ValueError('短移前的紧凑小地图定位未通过。')
+        position = np.asarray(observation['position'], float)
+        clearance = cv2.distanceTransform(self.localizer.road.astype(np.uint8), cv2.DIST_L2, 5)
+        ys, xs = np.where(clearance >= 40)
+        distances = np.hypot(xs - position[0], ys - position[1])
+        nearby = np.where((distances >= 80) & (distances <= 160))[0]
+        enemies = np.asarray(observation.get('enemy_markers', []), float)
+        if enemies.size and nearby.size:
+            points = np.column_stack([xs[nearby], ys[nearby]])
+            keep = np.min(np.linalg.norm(points[:, None, :] - enemies[None, :, :], axis=-1), axis=1) >= 60
+            nearby = nearby[keep]
+        if not nearby.size:
+            raise ValueError('附近没有满足距离、净空和敌人间距要求的短移道路。')
+        scores = np.abs(distances[nearby] - 120) - 1.5 * clearance[ys[nearby], xs[nearby]]
+        failure = None
+        for candidate in nearby[np.argsort(scores)]:
+            target = np.array([xs[candidate], ys[candidate]], float)
+            try:
+                self.localizer.route(position, target)
+                click = self.plan(observation, target)
+            except (NoConnectedRoad, ValueError) as exc:
+                failure = exc
+                continue
+            logger.info(f'定位恢复短移：目标 {points_text(target)}，距小队 {distances[candidate]:.1f} 地图像素，'
+                        '停稳后重新展开地图定位。')
+            self.move(click)
+            self.wait_stopped()
+            return target
+        raise ValueError(f'附近道路均无法生成短移落点：{failure}')
+
     def confirm_barriers(self, snapshot):
         """只平移镜头确认当前可见光幕，返回已有小队坐标与新视口配准，不发送地面点击。"""
         from module.campaign.navigation.barrier_navigation import confirm_visible

@@ -25,7 +25,7 @@ MATCH_VERSION = 6
 # margin 与 parameter_spread 两道判据拦截，IoU 只作为「确实压在道路上」的下限。
 ACCEPT_ROAD_IOU = .70
 ACCEPT_COARSE_MARGIN = .10
-ACCEPT_PARAMETER_SPREAD_PX = 20
+ACCEPT_PARAMETER_SPREAD_PX = 40
 # 已确认小队坐标对展开面板配准的约束半径，单位为章节底图像素。
 SQUAD_ANCHOR_RADIUS = 12.
 # match_panel 粗搜索的参数网格；同一个 MapMatcher 实例反复配准时尺度基本不变，先在最近
