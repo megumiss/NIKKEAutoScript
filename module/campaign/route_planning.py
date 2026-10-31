@@ -8,9 +8,7 @@ from module.campaign.navigation.pathfinding import NoConnectedRoad
 from module.campaign.navigation.targets import walking_distance
 from module.campaign.subgoals import RoadView
 
-# 以下距离均为章节底图像素；仅限制主动机关及路段长度，不放宽道路连通性。
-MECHANISM_NEAR_SQUAD = 160.
-MECHANISM_NEAR_ENEMY = 200.
+# 以下距离均为章节底图像素；只限制沿途敌人与路段，不给可见机关设距离门槛。
 ROUTE_CORRIDOR = 48.
 ROUTE_DETOUR = 64.
 ADVANCE_DISTANCE = 200.
@@ -44,8 +42,8 @@ def boss_ready(state):
 def refresh_route(state, chart, snapshot, cut):
     """保持未完成路程目标，只有完成、失败冷却或机关抢占主线时更换。
 
-    已知开启和导航已到点的机关均排除；未知机关仅在小队沿道路接近时补踩。
-    场景发现的未开启机关还要求有邻近脚圈证据及道路邻近敌人，不能仅凭屏幕距离抢占。
+    已知开启和导航已到点的机关均排除；新机关路程只从当前帧可见的 off 检测发起，
+    不设小队或敌人距离门槛，但必须在切开封锁后的道路上可达。已发起的路程跨屏继续。
     主线可使用已核验的稳定敌人编号，或菱形下方唯一地面环的投影位置；漏一帧标记不丢弃目的地。
     """
     current = state.route_goal
@@ -66,28 +64,24 @@ def refresh_route(state, chart, snapshot, cut):
     squad = snapshot['squad']
     annotated = [item for item in chart.points if item['category'] == 'ground_mechanism']
     candidates = annotated or [item for item in state.mechanisms.values() if item.get('position') is not None]
+    visible = snapshot.get('mechanisms') or []
     best = None
     for item in candidates:
         record = state.mechanisms.get(item['id'], {})
-        if record.get('state') == 'on' or state.cooling(item['id']):
+        same_screen = any(
+            observed.get('state') == 'off'
+            and (observed.get('id') == item['id'] or (observed.get('id') is None
+                 and np.linalg.norm(np.asarray(observed['position']) - np.asarray(item['position'])) <= 25))
+            for observed in visible)
+        if record.get('state') == 'on' or state.cooling(item['id']) or not same_screen:
             continue
         route = route_path(cut, squad, item['position'])
         if route is None:
             continue
         distance = float(route[1][-1])
-        reason = None
-        if record.get('state') is None and distance <= MECHANISM_NEAR_SQUAD:
-            reason = 'nearby_unseen_mechanism'
-        elif record.get('state') == 'off' and (record.get('near_enemy') or distance <= MECHANISM_NEAR_SQUAD):
-            near = distance <= MECHANISM_NEAR_SQUAD or any(
-                walking_distance(cut.road, cut.regions, item['position'], enemy['position']) <= MECHANISM_NEAR_ENEMY
-                for enemy in state.pending_enemies() if enemy['kind'] in COMBAT_ENEMY_KINDS
-                and np.linalg.norm(np.asarray(enemy['position']) - item['position']) <= MECHANISM_NEAR_ENEMY)
-            if near:
-                reason = 'nearby_closed_mechanism'
-        if reason is not None and (best is None or distance < best['distance']):
+        if best is None or distance < best['distance']:
             best = dict(kind='mechanism', id=item['id'], position=item['position'], distance=round(distance, 1),
-                        source=item.get('source', 'annotation'), reason=reason)
+                        source=item.get('source', 'annotation'), reason='visible_reachable_mechanism')
     if best is not None:
         current = best
     if current is None and state.story_target:

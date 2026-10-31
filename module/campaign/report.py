@@ -14,8 +14,7 @@ GOAL_KINDS = {'enemy': '普通敌人', 'collectible': '收集品', 'explore': '�
               'story': '主线目标', 'advance': '沿路推进'}
 # 选择这个目标的依据。
 GOAL_REASONS = {
-    'nearby_unseen_mechanism': '接近已标注机关，当前未检测到开关状态',
-    'nearby_closed_mechanism': '未开启机关位于小队或敌人附近',
+    'visible_reachable_mechanism': '同屏未开启机关沿道路可达',
     'main_story_marker': '主线菱形标记已对应到小地图敌人',
     'main_story_location': '主线菱形下方地面位置已确认',
     'enemy_on_route': '路程前方需要处理的敌人',
