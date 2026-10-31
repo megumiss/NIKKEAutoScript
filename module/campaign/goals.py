@@ -17,7 +17,7 @@ from module.campaign.report import (BLOCK_STATUS, GOAL_KINDS, GOAL_REASONS, REJE
                                     label, points_text)
 from module.campaign.run_state import OBSERVED_CELL, located
 from module.campaign.subgoals import elevator_goal, mechanism_goal, review_goal
-from module.campaign.route_planning import boss_ready, refresh_route, route_action
+from module.campaign.route_planning import boss_ready, refresh_route, route_action, same_screen_mechanism
 
 # 收集品沿用有限候选预算；敌人必须比较全部候选，否则会漏掉直线较远、路程却更近的前置敌人。
 PLAN_CANDIDATES = 4
@@ -229,7 +229,8 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
                 goal, rejected = nearest_enemy(state, cut, squad)
                 candidates = [destination]
             else:
-                goal = route_action(state, cut, squad, destination)
+                goal = route_action(state, cut, squad, destination,
+                                    visible=same_screen_mechanism(snapshot, destination))
                 candidates = [destination]
                 if goal is None:
                     rejected = [dict(id=destination['id'], position=destination['position'],
@@ -244,7 +245,8 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
                 goal = mechanism_goal(state, chart, cut, squad, record, detour['target'])
                 if goal is not None and purpose == 'story':
                     state.route_goal = dict(goal)
-                    goal = route_action(state, cut, squad, goal)
+                    goal = route_action(state, cut, squad, goal,
+                                        visible=same_screen_mechanism(snapshot, goal))
             if goal is None:
                 goal = {'kind': 'none', 'reason': 'blocked_by_curtain', 'blocked_by': detour['culprits'],
                         'for_target': detour['target']}

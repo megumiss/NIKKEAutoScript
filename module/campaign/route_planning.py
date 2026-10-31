@@ -39,6 +39,26 @@ def boss_ready(state):
     return not any(enemy['kind'] == 'normal' for enemy in state.pending_enemies())
 
 
+def same_screen_mechanism(snapshot, item):
+    """判断指定机关是否在当前帧以 off 状态可见，供新路线选择与直点共用。
+
+    有标注时按编号匹配；场景兜底的未标注机关按 25 底图像素内的位置匹配。
+    该容差只用于身份关联，不是选择机关的距离门槛。无 kind 的地图标注按机关处理，
+    其他目标类型不参与可见直点判断。
+    """
+    if item.get('kind', 'mechanism') != 'mechanism':
+        return False
+    for observed in snapshot.get('mechanisms') or []:
+        if observed.get('state') != 'off':
+            continue
+        if observed.get('id') == item['id']:
+            return True
+        if (observed.get('id') is None
+                and np.linalg.norm(np.asarray(observed['position']) - np.asarray(item['position'])) <= 25):
+            return True
+    return False
+
+
 def refresh_route(state, chart, snapshot, cut):
     """保持未完成路程目标，只有完成、失败冷却或机关抢占主线时更换。
 
@@ -64,16 +84,10 @@ def refresh_route(state, chart, snapshot, cut):
     squad = snapshot['squad']
     annotated = [item for item in chart.points if item['category'] == 'ground_mechanism']
     candidates = annotated or [item for item in state.mechanisms.values() if item.get('position') is not None]
-    visible = snapshot.get('mechanisms') or []
     best = None
     for item in candidates:
         record = state.mechanisms.get(item['id'], {})
-        same_screen = any(
-            observed.get('state') == 'off'
-            and (observed.get('id') == item['id'] or (observed.get('id') is None
-                 and np.linalg.norm(np.asarray(observed['position']) - np.asarray(item['position'])) <= 25))
-            for observed in visible)
-        if record.get('state') == 'on' or state.cooling(item['id']) or not same_screen:
+        if record.get('state') == 'on' or state.cooling(item['id']) or not same_screen_mechanism(snapshot, item):
             continue
         route = route_path(cut, squad, item['position'])
         if route is None:
@@ -129,12 +143,12 @@ def route_enemy(state, cut, squad, target, path, distances):
                 distance=round(distance, 1), reason='enemy_on_route')
 
 
-def route_action(state, cut, squad, destination):
-    """优先完整执行当前路线上的敌人，无敌人时才生成最长 ADVANCE_DISTANCE 的步行段。
+def route_action(state, cut, squad, destination, visible=False):
+    """优先完整执行当前路线上的敌人，可见机关直接执行，其余远目标按距离拆段。
 
     候选必须靠近通往目的地的实际 A* 路径且绕行有限；同一汇合区域的其他道路不能抢占执行目标。
-    已选敌人不按距离拆段，交导航处理目标入屏与脚圈确认。
-    只有最后一段机关使用 mechanism 类型，短段到达不能提前把机关记为开启。
+    已选敌人不按距离拆段，交导航处理目标入屏与脚圈确认。visible 仅表示目的地是当前帧
+    可见的 off 机关，此时不生成 advance，直接交执行层尝试检测框直点；不可见机关跨屏继续拆段。
     已绑定敌人的主线目的地以敌人身份执行，战斗归属不因路程层变成 story 而丢失；
     无敌人目的地保留 story 类型，到点后清除该段路程目标。不可达时交回光幕／电梯规划。
     """
@@ -145,7 +159,7 @@ def route_action(state, cut, squad, destination):
     enemy = route_enemy(state, cut, squad, destination['position'], path, distances)
     if enemy is not None:
         return enemy
-    if distances[-1] > ADVANCE_DISTANCE:
+    if distances[-1] > ADVANCE_DISTANCE and not visible:
         index = max(1, int(np.searchsorted(distances, ADVANCE_DISTANCE, side='right')) - 1)
         point = path[min(index, len(path) - 1)]
         identifier = f"advance-{destination['id']}-{int(point[0])}-{int(point[1])}"
