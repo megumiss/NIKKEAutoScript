@@ -93,7 +93,8 @@ def create_event_session(event_id, event_name, base_event_id, position, phase, r
         event = {'event_id': event_id, 'event_name': event_name.strip(), 'event_type': base['event_type'],
                  'mini_game': False, 'mini_game_play': True, 'extend': False,
                  'story_part': 'Story_2' if phase.startswith('story2') else 'Story_1',
-                 'story_difficulty': 'Hard' if phase in ('hard', 'story2_hard') else 'Normal'}
+                 'story_difficulty': 'Hard' if phase in ('hard', 'story2_hard') else 'Normal',
+                 'story_schedule': None}
         lines = source.splitlines(keepends=True)
         insertion = node.elts[position - 1].lineno - 1 if len(node.elts) >= position else node.end_lineno - 1
         lines.insert(insertion, indent(pformat(event, width=100, sort_dicts=False), '    ') + ',\n')

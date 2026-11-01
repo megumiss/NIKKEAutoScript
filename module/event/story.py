@@ -190,6 +190,22 @@ class EventStory(EventBase):
         logger.info('Grid pending finder exhausted all points')
         return 'exhausted'
 
+    def ensure_manual_normal(self, story):
+        normal = self.STORY_PART_CHECK(story)
+        hard_story = story.replace('_normal', '_hard')
+        timeout = Timer(15).start()
+        click_timer = Timer(1)
+        while not timeout.reached():
+            if self.appear_story_part(story):
+                return True
+            # The inactive Normal tab is darker, so confirm Hard before clicking its known position.
+            if self.appear_story_part(hard_story) and click_timer.reached():
+                self.device.click(normal)
+                click_timer.reset()
+            self.device.screenshot()
+        logger.warning(f'Unable to select manual event stage: {story}')
+        return False
+
     @cached_property
     def team_nikke_locations(self):
         """
@@ -198,12 +214,13 @@ class EventStory(EventBase):
         return [(610, 360), (485, 360), (360, 360), (235, 360), (115, 360)]
 
     @Config.when(EVENT_TYPE=(1, 3))
-    def story(self, skip_first_screenshot=True):
+    def story(self, skip_first_screenshot=True, select_only=False):
         logger.hr('START EVENT STORY', 2)
         click_timer = Timer(0.3)
 
         logger.info('Finding opened event story')
         open_story = 'story_1_normal'
+        manual_story_1 = self.config.EventInfo_ManualStage and self.config.EventInfo_StoryPart == 'Story_1'
         # 判断并进入最新的关卡列表
         while 1:
             if skip_first_screenshot:
@@ -212,8 +229,8 @@ class EventStory(EventBase):
                 self.device.screenshot()
 
             # 检查story2是否开启，未开启则进入1
-            if self.appear(self.event_assets.EVENT_GOTO_STORY_1, offset=10) and self.appear(
-                self.event_assets.EVENT_GOTO_STORY_2_LOCKED, offset=10
+            if self.appear(self.event_assets.EVENT_GOTO_STORY_1, offset=10) and (
+                manual_story_1 or self.appear(self.event_assets.EVENT_GOTO_STORY_2_LOCKED, offset=10)
             ):
                 logger.info('Find opened event story 1')
                 if self.config.EventInfo_StoryPart == 'Story_2':
@@ -306,6 +323,12 @@ class EventStory(EventBase):
                 logger.info('Open event story 2')
 
                 self.device.screenshot()
+                if self.config.EventInfo_ManualStage and self.config.EventInfo_StoryDifficulty == 'Normal':
+                    if not self.ensure_manual_normal('story_2_normal'):
+                        self.back_to_event()
+                        return
+                    open_story = 'story_2_normal'
+                    break
                 # 困难难度关闭
                 if self.appear(self.event_assets.STORY_2_NORMAL, threshold=10) and self.appear(
                     self.event_assets.STORY_2_HARD_LOCKED, offset=10
@@ -358,6 +381,8 @@ class EventStory(EventBase):
                     break
 
         # 关卡处理
+        if select_only:
+            return open_story
         self.device.sleep(2)
         self.device.screenshot()
         # 推图
@@ -375,7 +400,7 @@ class EventStory(EventBase):
         self.back_to_event()
 
     @Config.when(EVENT_TYPE=2)
-    def story(self, skip_first_screenshot=True):
+    def story(self, skip_first_screenshot=True, select_only=False):
         logger.hr('START EVENT STORY', 2)
 
         open_story = 'story_1_normal'
@@ -420,6 +445,12 @@ class EventStory(EventBase):
 
             self.device.sleep(1)
             self.device.screenshot()
+            if self.config.EventInfo_ManualStage and self.config.EventInfo_StoryDifficulty == 'Normal':
+                if not self.ensure_manual_normal('story_1_normal'):
+                    self.back_to_event()
+                    return
+                open_story = 'story_1_normal'
+                break
             # 困难难度关闭
             if self.appear(self.event_assets.STORY_1_NORMAL, threshold=20) and self.appear(
                 self.event_assets.STORY_1_HARD_LOCKED, offset=10
@@ -467,6 +498,8 @@ class EventStory(EventBase):
                 logger.info('Open event story hard')
                 break
 
+        if select_only:
+            return open_story
         self.device.sleep(2)
         self.device.screenshot()
         # 推图

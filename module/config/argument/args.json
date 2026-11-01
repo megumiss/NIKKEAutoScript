@@ -3032,6 +3032,14 @@
         ],
         "display": "disabled"
       },
+      "ManualStage": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
       "StoryPart": {
         "type": "select",
         "value": "Story_1",
@@ -3187,6 +3195,14 @@
           "event_20261008"
         ],
         "display": "disabled"
+      },
+      "ManualStage": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "StoryPart": {
         "type": "select",

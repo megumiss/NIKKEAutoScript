@@ -1110,6 +1110,12 @@
       "event_20261029": "MARIAn",
       "event_20261008": "LITTLE WITCH TRICK"
     },
+    "ManualStage": {
+      "name": "手动设置阶段",
+      "help": "开启后可修改下方活动章节和章节难度；关闭后恢复时间表或活动默认配置。切换活动时自动关闭，不会强制解锁游戏内阶段。",
+      "True": "True",
+      "False": "False"
+    },
     "StoryPart": {
       "name": "活动章节",
       "help": "",

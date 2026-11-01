@@ -2,6 +2,7 @@ import importlib
 from functools import cached_property
 
 from module.base.timer import Timer
+from module.config.event_stage import resolve_event_stage
 from module.event.assets import *
 from module.logger import logger
 from module.ui.assets import GOTO_BACK
@@ -72,6 +73,13 @@ class EventBase(UI):
         event_config = next(
             (e for e in self.config.EVENTS if e.get('event_id') == target_event_id), self.config.EVENTS[0]
         )
+        stage = resolve_event_stage(event_config, manual={
+            'Event': target_event_id,
+            'ManualStage': getattr(self.config, 'EventInfo_ManualStage', False),
+            'StoryPart': getattr(self.config, 'EventInfo_StoryPart', None),
+            'StoryDifficulty': getattr(self.config, 'EventInfo_StoryDifficulty', None),
+        })
+        event_config = dict(event_config, story_part=stage.story_part, story_difficulty=stage.story_difficulty)
         event_config.setdefault('pending_click_offset', (0, 0))
 
         for k, v in event_config.items():
