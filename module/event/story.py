@@ -399,7 +399,7 @@ class EventStory(EventBase):
         self.device.sleep(2)
         self.device.screenshot()
         sweep_from_first_screen = False
-        if open_story == 'story_2_normal':
+        if open_story == 'story_2_normal' and self.event.story_2_normal_sweep_scroll:
             first_screen_end = getattr(self.event_assets, 'STORY_2_NORMAL_STAGE_LIST_1_END', None)
             if first_screen_end is not None and self.appear(first_screen_end, offset=30):
                 logger.info('STORY_2_NORMAL_STAGE_LIST_1_END matched, skip pushing and scroll for sweep check')

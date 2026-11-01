@@ -16,6 +16,8 @@ EVENTS = [
         "extend": False,
         "story_part": "Story_1",
         "story_difficulty": "Normal",
+        # 本活动全通后停在普通列表首屏，命中结尾标记时滚动定位扫荡关卡。
+        "story_2_normal_sweep_scroll": True,
         "story_schedule": {
             "start_at": "2026-10-29T04:00:00+08:00",
             "stages": [
