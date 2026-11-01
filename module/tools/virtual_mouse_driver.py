@@ -308,7 +308,7 @@ def sub_device_present():
         bool: True 表示子设备存在，报告能被投递；
         False 表示总线有该设备的记录但全部未呈现（幽灵设备，代码 45），此时接口和
             IOCTL 都正常却没有任何输入，需要重建设备节点；
-        None 表示系统中没有该枚举器（未安装这套驱动体系），此处不构成判据。
+        None 表示系统中没有虚拟鼠标子设备记录，或当前不是 Windows；不能据此判定通道可用。
     """
     if os.name != 'nt':
         return None
@@ -702,9 +702,9 @@ def install_driver(skip_copy=False):
     paths = enum_interface_paths()
     device = next((path for path in paths if open_device(path)), None)
     # 接口能打开不代表通道可用：报告由 xlcore 转发给 HID 子设备，子设备是幽灵设备
-    # （代码 45）时报告被丢弃、光标不动。子设备判不出来（None）时不改既有行为。
-    sub_device_missing = sub_device_present() is False
-    if device is not None and not sub_device_missing:
+    # （代码 45）或完全没有子设备记录时都无法投递报告，只有确认子设备存在才算成功。
+    sub_device = sub_device_present()
+    if device is not None and sub_device is True:
         if reboot_required:
             logger.warning(f'Virtual mouse driver install: device present ({device}), '
                            'but the driver swap is pending a reboot')
@@ -715,7 +715,7 @@ def install_driver(skip_copy=False):
             }
         logger.info(f'Virtual mouse driver install: device detected ({device})')
         return {'reboot_required': False}
-    if sub_device_missing:
+    if sub_device is False:
         # 安装器刚跑完子设备仍是幽灵设备，说明它重建设备节点没能生效（常见于驱动文件被
         # 运行中的驱动占用、Windows 把替换推迟到下次启动），只剩重启这一条路。
         raise VirtualMouseDriverError(
@@ -731,6 +731,12 @@ def install_driver(skip_copy=False):
             'so the virtual mouse device has not appeared yet. Restart the bus device '
             '(pnputil /restart-device) or reboot Windows, then retry. Reinstalling without rebooting '
             'leaves it in the same state.')
+    if device is not None and sub_device is None:
+        raise VirtualMouseDriverError(
+            'The virtual mouse interface is present but no virtual mouse HID sub-device '
+            'records were found after installation. Button and wheel reports cannot be '
+            'delivered. Repair or reinstall the virtual mouse driver with administrator '
+            'privileges, then retry.')
     if paths:
         raise VirtualMouseDriverError(
             f'Virtual mouse interfaces exist ({len(paths)}) but none can be opened: {paths[0]}. '
