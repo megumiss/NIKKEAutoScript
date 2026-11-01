@@ -18,6 +18,12 @@ class LangMeta(type):
         "COOP_TIMELINE_HOUR": {"en-US": "H", "zh-CN": "小时", "ja-JP": ""},
         "COOP_TIMELINE_LEFT": {"en-US": "Left", "zh-CN": "剩余", "ja-JP": ""},
         "COOP_TIMELINE_TIMEOUT": {"en-US": "Times Up", "zh-CN": "时间到", "ja-JP": ""},
+        # 活动困难开放倒计时提示
+        "EVENT_HARD_LOCKED_HINTS": {
+            "en-US": ("start", "remaining", "left"),
+            "zh-CN": ("开始", "还剩", "剩下", "剩余"),
+            "ja-JP": ("開始", "残り"),
+        },
         # 派遣
         "FAVORITE_ITEM_NUM": {"en-US": "Owned", "zh-CN": "持有数", "ja-JP": ""},
         # mission pass

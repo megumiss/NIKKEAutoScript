@@ -2,6 +2,7 @@ from functools import cached_property
 
 from module.base.button import Button, filter_buttons_in_area, merge_buttons
 from module.base.decorator import Config
+from module.base.langs import Langs
 from module.base.timer import Timer
 from module.base.utils import crop, sort_buttons_by_location
 from module.conversation.assets import ANSWER_CHECK
@@ -9,6 +10,7 @@ from module.event.assets import *
 from module.event.base import EventBase
 from module.event.challenge import CHALLENGE_QUICKLY_DISABLE
 from module.logger import logger
+from module.ocr.ocr import Ocr
 from module.simulation_room.assets import END_FIGHTING, FIGHT, FIGHT_QUICKLY
 from module.tribe_tower.assets import NEXT_STAGE
 from module.ui.assets import (
@@ -22,6 +24,19 @@ from module.ui.assets import (
 
 
 class EventStory(EventBase):
+    def appear_hard_locked(self):
+        result = Ocr(
+            buttons=(530, 1110, 700, 1210),
+            lang='ch',
+            model_type=self.config.Optimization_OcrModelType,
+            name='EVENT_HARD_LOCKED',
+        ).ocr(self.device.image)
+        text = ''.join(result['text'].split()).casefold()
+        # 倒计时提示可能被拆行或漏字，命中片段即可，不依赖数字和时间单位。
+        locked = any(hint.casefold() in text for hint in Langs.EVENT_HARD_LOCKED_HINTS)
+        logger.info(f'Event hard locked: {locked}, OCR: {text!r}')
+        return locked
+
     def STORY_PART_CHECK(self, story):
         # 只读取当前章节的模板，避免要求活动提供其他类型才会用到的资源。
         stages = {
@@ -329,10 +344,10 @@ class EventStory(EventBase):
                         return
                     open_story = 'story_2_normal'
                     break
+                normal_selected = self.appear(self.event_assets.STORY_2_NORMAL, threshold=10)
+                hard_locked = normal_selected and self.appear_hard_locked()
                 # 困难难度关闭
-                if self.appear(self.event_assets.STORY_2_NORMAL, threshold=10) and self.appear(
-                    self.event_assets.STORY_2_HARD_LOCKED, offset=10
-                ):
+                if hard_locked:
                     logger.info('Find difficulty normal opened')
                     if self.config.EventInfo_StoryDifficulty == 'Hard':
                         logger.error('The event stage/difficulty select wrong')
@@ -343,9 +358,7 @@ class EventStory(EventBase):
                     break
 
                 # 困难难度开启，当前页面是普通
-                if self.appear(self.event_assets.STORY_2_NORMAL, threshold=10) and not self.appear(
-                    self.event_assets.STORY_2_HARD_LOCKED, offset=10
-                ):
+                if normal_selected and not hard_locked:
                     open_story = 'story_2_hard'
 
                 # 困难难度开启，当前页面是困难
@@ -451,10 +464,10 @@ class EventStory(EventBase):
                     return
                 open_story = 'story_1_normal'
                 break
+            normal_selected = self.appear(self.event_assets.STORY_1_NORMAL, threshold=20)
+            hard_locked = normal_selected and self.appear_hard_locked()
             # 困难难度关闭
-            if self.appear(self.event_assets.STORY_1_NORMAL, threshold=20) and self.appear(
-                self.event_assets.STORY_1_HARD_LOCKED, offset=10
-            ):
+            if hard_locked:
                 logger.info('Find difficulty normal opened')
                 if self.config.EventInfo_StoryDifficulty == 'Hard':
                     logger.error('The event stage/difficulty select wrong')
@@ -465,9 +478,7 @@ class EventStory(EventBase):
                 break
 
             # 困难难度开启，当前页面是普通
-            if self.appear(self.event_assets.STORY_1_NORMAL, threshold=20) and not self.appear(
-                self.event_assets.STORY_1_HARD_LOCKED, offset=10
-            ):
+            if normal_selected and not hard_locked:
                 open_story = 'story_1_hard'
 
             # 困难难度开启，当前页面是困难
