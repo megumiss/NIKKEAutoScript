@@ -122,6 +122,13 @@ class Event(
                         self.challenge()
                 elif task == 'hard_ticket':
                     if self.config.StoryStage_HardTicket and self.config.EventInfo_StoryDifficulty == 'Hard':
+                        if self.config.EventInfo_ManualStage:
+                            selected = self.story(select_only=True)
+                            self.back_to_event()
+                            expected = f'{self.config.EventInfo_StoryPart.lower()}_hard'
+                            if selected != expected:
+                                logger.warning('Skip hard tickets: manual event stage is not accessible')
+                                continue
                         self.shop(TEMPLATE_SHOP_GEM)
                         self.back_to_event()
                 elif task == 'story':

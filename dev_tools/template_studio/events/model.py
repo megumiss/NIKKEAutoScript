@@ -93,7 +93,8 @@ def create_event_session(event_id, event_name, base_event_id, position, phase, r
         event = {'event_id': event_id, 'event_name': event_name.strip(), 'event_type': base['event_type'],
                  'mini_game': False, 'mini_game_play': True, 'extend': False,
                  'story_part': 'Story_2' if phase.startswith('story2') else 'Story_1',
-                 'story_difficulty': 'Hard' if phase in ('hard', 'story2_hard') else 'Normal'}
+                 'story_difficulty': 'Hard' if phase in ('hard', 'story2_hard') else 'Normal',
+                 'story_schedule': None}
         lines = source.splitlines(keepends=True)
         insertion = node.elts[position - 1].lineno - 1 if len(node.elts) >= position else node.end_lineno - 1
         lines.insert(insertion, indent(pformat(event, width=100, sort_dicts=False), '    ') + ',\n')
@@ -102,7 +103,9 @@ def create_event_session(event_id, event_name, base_event_id, position, phase, r
         created = []
         with tempfile.TemporaryDirectory(prefix='create-', dir=SESSION_ROOT) as staging:
             staged_assets = os.path.join(staging, 'assets')
-            shutil.copytree(base_dir, staged_assets)
+            # 困难锁定已由区域 OCR 判断，不能从历史存档重新引入废弃模板。
+            shutil.copytree(base_dir, staged_assets, ignore=shutil.ignore_patterns(
+                'STORY_1_HARD_LOCKED.png', 'STORY_2_HARD_LOCKED.png'))
             try:
                 os.makedirs(EVENT_ASSETS_ROOT, exist_ok=True)
                 os.rename(staged_assets, targets[0])

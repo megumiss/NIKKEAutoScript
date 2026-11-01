@@ -10,6 +10,7 @@ from deploy.utils import DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
 from module.base.timer import timer
 from module.config.deep import deep_default, deep_get, deep_iter, deep_pop, deep_set
 from module.config.env import IS_ON_PHONE_CLOUD
+from module.config.event_stage import resolve_event_stage
 from module.config.manual_config import ManualConfig
 from module.config.server import VALID_CHANNEL_PACKAGE, VALID_PACKAGE
 from module.config.utils import *
@@ -397,9 +398,14 @@ class ConfigUpdater:
         # Update to latest event
         if not is_template:
             for task, event in zip(['Event', 'Event2'], ManualConfig.EVENTS):
+                info = deep_get(new, f'{task}.EventInfo')
+                if deep_get(old, f'{task}.EventInfo.Event') != event.get('event_id'):
+                    info['ManualStage'] = False
+                info['Event'] = event.get('event_id')
+                stage = resolve_event_stage(event, manual=info)
                 deep_set(new, keys=f'{task}.EventInfo.Event', value=event.get('event_id'))
-                deep_set(new, keys=f'{task}.EventInfo.StoryPart', value=event.get('story_part'))
-                deep_set(new, keys=f'{task}.EventInfo.StoryDifficulty', value=event.get('story_difficulty'))
+                deep_set(new, keys=f'{task}.EventInfo.StoryPart', value=stage.story_part)
+                deep_set(new, keys=f'{task}.EventInfo.StoryDifficulty', value=stage.story_difficulty)
             new = self.config_redirect(old, new)
         new = self._override(new)
 
@@ -548,7 +554,7 @@ class ConfigUpdater:
             # up to date without waiting for the scheduler to run
             dirty = False
             for task in ['Event', 'Event2']:
-                for arg in ['Event', 'StoryPart', 'StoryDifficulty']:
+                for arg in ['Event', 'ManualStage', 'StoryPart', 'StoryDifficulty']:
                     key = f'{task}.EventInfo.{arg}'
                     value = deep_get(new, key)
                     if value is not None and deep_get(old, key) != value:

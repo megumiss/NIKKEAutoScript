@@ -135,6 +135,28 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       toast.notify(t('操作成功'), 'ok')
     } catch (exception: any) { toast.error = exception.message } finally { vddBusy.value = false }
   }
+  let eventInfoRequest = 0
+  let eventInfoSaves = 0
+  const eventInfoVersion = ref(0)
+  async function refreshEventInfo() {
+    const name = selectedName.value
+    if (!schemaReady.value || workspaceName.value !== name || eventInfoSaves) return null
+    const request = ++eventInfoRequest
+    const result = await api.get(`/api/${name}/event-info`)
+    if (request !== eventInfoRequest || selectedName.value !== name || workspaceName.value !== name || !schemaReady.value || eventInfoSaves) return null
+    // Refresh only the event group, leaving unrelated in-progress edits untouched.
+    for (const task of ['Event', 'Event2']) {
+      const update = result.events[task]
+      const fields = schema.value.tasks[task]?.groups?.find((group: any) => group.key === 'EventInfo')?.fields || []
+      for (const field of fields) {
+        if (!['Event', 'ManualStage', 'StoryPart', 'StoryDifficulty'].includes(field.arg)) continue
+        const remote = update?.fields?.find((item: any) => item.arg === field.arg)
+        if (remote) Object.assign(field, { value: remote.value, display: remote.display, readonly: remote.readonly, options: remote.options })
+      }
+    }
+    return result as { events: Record<string, { next_change_at: string | null }>; server_time: string }
+  }
+
   async function loadWorkspace() {
     if (!selectedName.value) return
     schemaReady.value = false
@@ -189,14 +211,23 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function saveValue(field: Field, value: any, silent = false) {
+    const eventField = /^(Event|Event2)\.EventInfo\./.test(field.key)
+    if (eventField) { eventInfoRequest++; eventInfoSaves++ }
     try {
       const result = await api.patch(`/api/${selectedName.value}/config`, { key: field.key, value })
       if (!result.ok) throw new Error(result.message)
       field.value = result.applied[field.key]
+      if (eventField) {
+        for (const item of allFields()) {
+          if (Object.prototype.hasOwnProperty.call(result.applied, item.key)) item.value = result.applied[item.key]
+        }
+      }
       if (!silent) toast.notify(t('已保存'))
     } catch (exception: any) {
       toast.error = exception.message
       throw exception
+    } finally {
+      if (eventField && --eventInfoSaves === 0) eventInfoVersion.value++
     }
   }
   function save(field: Field, event: Event) {
@@ -390,7 +421,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     clientOptions, selectedClientName, clientPlaceholder, loadClientProfiles, applyClientProfile,
     selectedName, selectedTask, taskSchema, workspaceName, socketsName,
     logs, logTick, autoScroll, logLevel, pushLogs, visibleLogs, visibleMenus,
-    taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddTypeValue, vddSet, loadWorkspace,
+    taskEnabled, allFields, isWideField, refreshSpecial, refreshMonitors, vddBusy, vddTypeValue, vddSet, loadWorkspace, refreshEventInfo, eventInfoVersion,
     startStateSocket, startSockets, closeSockets, openQueueItem,
     saveValue, save, datetimeValue, cancelDatetimeSave, scheduleDatetimeSave, flushDatetimeSave, clearField, clearDatetimeSaveTimers,
     normalizePath, autofillGamePathFromLauncher, pickedPath, importInterception, testNotify, saveNotifyConfig, saveNotifyRaw, startTool, physicalResolution, loadSerialDevices,

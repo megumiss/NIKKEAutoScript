@@ -1110,6 +1110,12 @@
       "event_20261029": "MARIAn",
       "event_20261008": "LITTLE WITCH TRICK"
     },
+    "ManualStage": {
+      "name": "Manual stage selection",
+      "help": "Enable to edit the chapter and difficulty below. Disable to restore the schedule or event defaults. Resets when the event changes; does not unlock in-game stages.",
+      "True": "True",
+      "False": "False"
+    },
     "StoryPart": {
       "name": "Story Part",
       "help": "",

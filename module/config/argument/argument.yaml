@@ -366,6 +366,10 @@ EventInfo:
       'event_20260917'
     ]
     display: disabled
+  ManualStage:
+    type: checkbox
+    value: false
+    option: [ true, false ]
   StoryPart:
     value: 'Story_1'
     option: [
