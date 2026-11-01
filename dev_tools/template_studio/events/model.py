@@ -103,7 +103,9 @@ def create_event_session(event_id, event_name, base_event_id, position, phase, r
         created = []
         with tempfile.TemporaryDirectory(prefix='create-', dir=SESSION_ROOT) as staging:
             staged_assets = os.path.join(staging, 'assets')
-            shutil.copytree(base_dir, staged_assets)
+            # 困难锁定已由区域 OCR 判断，不能从历史存档重新引入废弃模板。
+            shutil.copytree(base_dir, staged_assets, ignore=shutil.ignore_patterns(
+                'STORY_1_HARD_LOCKED.png', 'STORY_2_HARD_LOCKED.png'))
             try:
                 os.makedirs(EVENT_ASSETS_ROOT, exist_ok=True)
                 os.rename(staged_assets, targets[0])
