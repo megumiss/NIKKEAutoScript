@@ -398,8 +398,16 @@ class EventStory(EventBase):
             return open_story
         self.device.sleep(2)
         self.device.screenshot()
+        sweep_from_first_screen = False
+        if open_story == 'story_2_normal':
+            first_screen_end = getattr(self.event_assets, 'STORY_2_NORMAL_STAGE_LIST_1_END', None)
+            if first_screen_end is not None and self.appear(first_screen_end, offset=30):
+                logger.info('STORY_2_NORMAL_STAGE_LIST_1_END matched, skip pushing and scroll for sweep check')
+                sweep_from_first_screen = True
+                self.ensure_sroll((360, 1000), (360, 400), method='swipe', count=3)
+                self.device.screenshot()
         # 推图
-        if self.config.StoryStage_AutoPush:
+        if self.config.StoryStage_AutoPush and not sweep_from_first_screen:
             logger.info(f'Start checking push stage for {open_story}')
             self.find_and_push_stage(open_story)
 
