@@ -211,6 +211,18 @@
           true,
           false
         ]
+      },
+      "AutoUnlock": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
+      },
+      "Password": {
+        "type": "input",
+        "value": ""
       }
     },
     "Scrcpy": {

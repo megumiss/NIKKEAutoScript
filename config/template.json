@@ -46,7 +46,9 @@
     "PhysicalDevice": {
       "Enable": false,
       "AutoRestoreResolution": true,
-      "VirtualDisplay": false
+      "VirtualDisplay": false,
+      "AutoUnlock": false,
+      "Password": null
     },
     "Scrcpy": {
       "Bitrate": 16000000,

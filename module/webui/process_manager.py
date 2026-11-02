@@ -14,10 +14,20 @@ import psutil
 from rich.console import Console, ConsoleRenderable
 
 from module.base.utils import set_preview_queue
+from module.config.utils import filepath_config
 from module.submodule.utils import get_available_func, get_available_mod, get_available_mod_func, get_config_mod, \
     get_func_mod, list_mod_instance, load_mod
 from module.logger import logger, set_file_logger, set_func_logger
+from module.webui.preview_sampler import PreviewSampler
 from module.webui.setting import State
+
+# Seconds a sampled frame keeps priority over task screenshots.
+PREVIEW_SAMPLER_FRESH = 3.0
+
+# ProcessManager.start_checked() results
+START_STARTED = 'started'
+START_RUNNING = 'running'
+START_GONE = 'gone'
 
 
 class ProcessManager:
@@ -46,31 +56,95 @@ class ProcessManager:
         # drains this queue on a thread and keeps only the newest frame in
         # memory; nothing touches disk.
         self._preview_queue: queue.Queue = State.manager.Queue(maxsize=2)
+        # Set while a Web UI viewer polls the preview; the worker only encodes
+        # frames at full rate while it is set.
+        self.preview_wanted = State.manager.Event()
         self.latest_preview: Tuple[float, bytes] = None
         self.preview_source = None
+        self.preview = PreviewSampler(self)
         self._process: Process = None
-        self._process_locks: Dict[str, threading.Lock] = {}
+        # stop() runs off the event loop and its cleanup (restore resolution,
+        # remove the VD server, disable VDD) continues after the worker is dead;
+        # start() must wait for it, or the new worker races that cleanup.
+        self._lifecycle_lock = threading.Lock()
+        # Bumped under the lifecycle lock whenever the instance is deleted or
+        # renamed; see is_current().
+        self.generation = 0
         self.thd_log_queue_handler: threading.Thread = None
         self.thd_preview_handler: threading.Thread = None
 
-    def start(self, func, ev: threading.Event = None) -> None:
-        if not self.alive:
-            self.preview_source = None
-            if func is None:
-                func = get_config_mod(self.config_name)
-            self._process = Process(
-                target=ProcessManager.run_process,
-                args=(
-                    self.config_name,
-                    func,
-                    self._renderable_queue,
-                    self._preview_queue,
-                    ev,
-                ),
-            )
-            self._process.start()
-            self.start_log_queue_handler()
-            self.start_preview_handler()
+    @property
+    def lifecycle_lock(self) -> threading.Lock:
+        """
+        Serializes start / stop / delete / rename of this instance. Web routes
+        acquire it off the event loop (asyncio.to_thread) because a stop
+        cleanup may hold it for seconds.
+        """
+        return self._lifecycle_lock
+
+    def is_current(self, name: str, generation: int = None) -> bool:
+        """
+        Whether this manager still represents instance `name`. A request that
+        waited for the lifecycle lock may hold a manager that was renamed
+        meanwhile, while `name` now belongs to a newly created instance.
+
+        Args:
+            generation: `self.generation` seen before waiting; also detects a
+                delete + recreate under the same name, which keeps the manager.
+        """
+        with self._processes_lock:
+            registered = self._processes.get(name)
+        if generation is not None and generation != self.generation:
+            return False
+        return self.config_name == name and registered is self
+
+    def start(self, func, ev: threading.Event = None, config_name: str = None) -> bool:
+        """
+        Returns:
+            bool: True if this call started a worker. See start_checked() for the reason otherwise.
+        """
+        return self.start_checked(func, ev, config_name) == START_STARTED
+
+    def start_checked(self, func, ev: threading.Event = None, config_name: str = None) -> str:
+        """
+        Args:
+            config_name: Instance the caller validated. A start that waited
+                behind a rename or delete must not start something else.
+
+        Returns:
+            str: START_STARTED, START_RUNNING (a worker is already running), or
+                START_GONE (the instance was renamed or deleted meanwhile).
+        """
+        with self._lifecycle_lock:
+            return self._start_locked(func, ev, config_name)
+
+    def _start_locked(self, func, ev, config_name=None) -> str:
+        if config_name is not None and not self.is_current(config_name):
+            logger.warning(f'Skip starting "{config_name}": instance was renamed or replaced')
+            return START_GONE
+        if self.alive:
+            return START_RUNNING
+        if not os.path.exists(filepath_config(self.config_name, get_config_mod(self.config_name))):
+            logger.warning(f'Skip starting "{self.config_name}": instance config no longer exists')
+            return START_GONE
+        self.preview_source = None
+        if func is None:
+            func = get_config_mod(self.config_name)
+        self._process = Process(
+            target=ProcessManager.run_process,
+            args=(
+                self.config_name,
+                func,
+                self._renderable_queue,
+                self._preview_queue,
+                ev,
+                self.preview_wanted,
+            ),
+        )
+        self._process.start()
+        self.start_log_queue_handler()
+        self.start_preview_handler()
+        return START_STARTED
 
     def start_log_queue_handler(self):
         if (
@@ -106,20 +180,48 @@ class ProcessManager:
                 break
             if isinstance(item, tuple) and len(item) == 2:
                 item, self.preview_source = item
+            source = self.preview_source if isinstance(self.preview_source, dict) else {}
             if isinstance(item, bytes):
-                self.latest_preview = (time.time(), item)
+                self.latest_preview = (source.get('captured_at') or time.time(), item)
+
+    def current_preview(self, interval=1.0):
+        """
+        Renew the viewer lease and return the frame to show.
+
+        A fresh sampled frame wins even if a task screenshot is newer, so the
+        preview keeps one steady source (and one resolution when the sampler
+        downscales); task frames cover non-virtual-display setups and sampler
+        outages.
+
+        Args:
+            interval (float): The viewer's polling interval; the sampler runs at this cadence.
+
+        Returns:
+            tuple[float, bytes, str] | None: captured_at, JPEG, 'task' or 'sampler'
+        """
+        self.preview.touch(interval)
+        sampled = self.preview.frame()
+        fresh = max(PREVIEW_SAMPLER_FRESH, interval + 1)
+        if sampled is not None and time.time() - sampled[0] <= fresh:
+            return (*sampled, 'sampler')
+        candidates = []
+        if self.latest_preview is not None:
+            candidates.append((*self.latest_preview, 'task'))
+        if sampled is not None:
+            candidates.append((*sampled, 'sampler'))
+        if not candidates:
+            return None
+        return max(candidates, key=lambda item: item[0])
 
     def stop(self) -> None:
-        try:
-            lock = self._process_locks[self.config_name]
-        except KeyError:
-            lock = threading.Lock()
-            self._process_locks[self.config_name] = lock
-
-        with lock:
+        with self._lifecycle_lock:
             if self.alive:
-                self._terminate_worker_children()
+                # Kill the worker before its helpers (ADB bridge, OCR sidecar): a
+                # worker that outlives them for the terminate grace period hits
+                # "bridge closed the connection" and saves a bogus error snapshot.
+                children = self._worker_children()
                 self._process.kill()
+                self._terminate_processes(children)
                 self.renderables.append(
                     (logging.INFO, f"[{self.config_name}] exited. Reason: Manual stop\n")
                 )
@@ -132,11 +234,11 @@ class ProcessManager:
                     )
         logger.info(f"[{self.config_name}] exited")
 
-    def _terminate_worker_children(self) -> None:
+    def _worker_children(self) -> list:
         try:
             children = psutil.Process(self._process.pid).children(recursive=True)
         except (psutil.Error, OSError):
-            return
+            return []
         # win 平台：游戏与启动器由实例进程 Popen 拉起，属于其子进程树，不能连带终止
         protected = self._win_protected_process_names()
         if protected:
@@ -149,6 +251,10 @@ class ProcessManager:
                     pass
                 kept.append(child)
             children = kept
+        return children
+
+    @staticmethod
+    def _terminate_processes(children) -> None:
         for child in reversed(children):
             try:
                 child.terminate()
@@ -460,7 +566,8 @@ class ProcessManager:
 
     @staticmethod
     def run_process(
-        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None
+        config_name, func: str, q: queue.Queue, pq: queue.Queue, e: threading.Event = None,
+        preview_wanted: threading.Event = None,
     ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -477,7 +584,7 @@ class ProcessManager:
             from module.logger import console_hdlr
             logger.removeHandler(console_hdlr)
         set_func_logger(func=q.put)
-        set_preview_queue(pq)
+        set_preview_queue(pq, preview_wanted)
 
         from module.config.config import NikkeConfig
 
