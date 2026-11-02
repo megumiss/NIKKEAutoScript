@@ -175,6 +175,32 @@ def marker_candidates(image, mode):
     return result
 
 
+def enemy_marker_conflicts(candidates):
+    """给同帧重叠的互斥敌人分类分配冲突编号，不合并相邻敌人的地图位置。
+
+    输入框使用当前小地图面板像素；沿用普通／Boss 落点的框交叠判据，不增加距离或置信度阈值。
+    仅普通、EX、Boss 之间的交叠属于冲突，小队圆环与敌人重叠不受影响。
+    返回候选下标到冲突编号的映射；编号仅在当前帧有效，不能用于跨帧敌人身份关联。
+    """
+    labels = {'minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_enemy_boss'}
+    roots = list(range(len(candidates)))
+    conflicted = set()
+    for index, item in enumerate(candidates):
+        if item.label not in labels:
+            continue
+        for other_index in range(index):
+            other = candidates[other_index]
+            if other.label not in labels or item.label == other.label:
+                continue
+            if not np.all(np.minimum(item.box[2:], other.box[2:])
+                          > np.maximum(item.box[:2], other.box[:2])):
+                continue
+            first, second = roots[index], roots[other_index]
+            roots = [first if root == second else root for root in roots]
+            conflicted.update((index, other_index))
+    return {index: roots[index] for index in conflicted}
+
+
 def detect_markers(image, matrix, mode):
     """小地图上的小队与敌人，按 matrix 投到地图坐标，返回（小队, 敌人）两组。
 

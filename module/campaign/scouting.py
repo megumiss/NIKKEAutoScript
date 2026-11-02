@@ -113,7 +113,8 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
 def route_scout_focus(state, cut, squad, target, include_cooling=False):
     """沿已选目标的实际道路检查遗漏，先处理前置敌人，不扩大到无关支路。
 
-    未重新确认的沿途普通敌人独立生成复核落点，即使所在道路已经扫描也不能跳过。
+    未重新确认的沿途普通敌人和分类冲突线索独立生成复核落点，即使所在道路已经扫描也不能跳过。
+    目标本身就是敌人线索时也检查终点，不因该位置的道路已覆盖而放行。
     未知道路使用安全敌人覆盖而非面板全部覆盖；已确认近敌会缩短路径，避免先扫越过它的远端。
     include_cooling=True 保留冷却中的疑点供执行门禁阻止出发，历史线索不直接转为战斗目标。
     """
@@ -130,11 +131,13 @@ def route_scout_focus(state, cut, squad, target, include_cooling=False):
             return None
         path, distances = route
     hints = [record for record in state.enemy_hints()
-             if record['kind'] == 'normal' and record['id'] != target['id']]
+             if (record['kind'] == 'normal' or record.get('classification_ambiguous', False))
+             and record['id'] != target['id']]
     hint_focus = None
     for distance, record in route_enemy_candidates(cut, squad, target['position'], path, distances, hints):
         identifier = f"scout-{record['id']}"
-        if distance >= distances[-1] or (not include_cooling and state.cooling(identifier)):
+        if ((distance >= distances[-1] and record['id'] != target.get('for_enemy'))
+                or (not include_cooling and state.cooling(identifier))):
             continue
         hint_focus = dict(id=identifier, enemy_id=record['id'], position=list(record['position']),
                           distance=round(distance, 1), known=round(float(distances[-1]), 1),

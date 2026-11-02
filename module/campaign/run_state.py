@@ -88,6 +88,8 @@ def describe_changes(changes):
         parts.append('记录本帧敌人 ' + '、'.join(changes['enemies_added']))
     if changes.get('enemies_refreshed'):
         parts.append(f"更新已知敌人位置 {changes['enemies_refreshed']} 个")
+    if changes.get('enemies_ambiguous'):
+        parts.append(f"保留敌人分类冲突线索 {changes['enemies_ambiguous']} 处，未确认为战斗目标")
     if changes.get('blocks_added'):
         parts.append('新发现挡路光幕 ' + '、'.join(changes['blocks_added']))
     if changes.get('blocks_refreshed'):
@@ -211,26 +213,45 @@ class RunState:
         区域内的漏检只撤销确认，不表示敌人已清除，贴边未检出不能记为已复核。
         新检测点邻域内的旧确认也退为线索，以容忍视野边界的投影偏差；不会删掉相邻真实敌人。
         战斗敌人原位置仅检出重叠 EX 时属于分类歧义，保留待复核线索，不能据此改选无关区域。
-        已由目标直点触发 EX 弹窗确认的位置可覆盖后续同位置的单帧战斗分类。
+        弹窗实际关联的 EX 位置可覆盖后续同位置的单帧战斗分类，不要求 EX 是移动目的地。
+        同帧互斥分类框交叠时只保留一条待复核线索，不能生成确认战斗目标；真实 EX 证据可解歧义。
         主线两帧已验证的 Boss 记录可纠正后续同位置 EX 漏分类；真实 EX 弹窗证据优先。
         25 像素近邻仅复用编号与失败状态，不依靠跨帧位移或远距合并来决定本帧有几只敌人。
         主线及执行目标由独立引用保留；每条旧记录在本帧最多复用一次。
         """
-        observations = []
-        for item in enemies:
+        groups = {}
+        for index, item in enumerate(enemies):
             position = np.asarray(item.get('position'), float)
-            if (position.shape == (2,) and np.isfinite(position).all()
-                    and np.all(position >= 0) and np.all(position < self.size)):
-                if (item.get('kind') in COMBAT_ENEMY_KINDS and any(
-                        np.linalg.norm(position - point) <= ENEMY_MERGE_RADIUS
-                        for point in self.confirmed_ex_positions)):
-                    item = dict(item, kind='ex')
-                elif item.get('kind') == 'ex' and any(
+            if (position.shape != (2,) or not np.isfinite(position).all()
+                    or np.any(position < 0) or np.any(position >= self.size)
+                    or item.get('kind') not in (*COMBAT_ENEMY_KINDS, 'ex')):
+                continue
+            conflict = item.get('conflict_group')
+            key = ('conflict', conflict) if isinstance(conflict, int) else ('single', index)
+            groups.setdefault(key, []).append((item, position))
+        observations, ambiguous_positions = [], []
+        ambiguous_count = 0
+        for key, group in groups.items():
+            confirmed_ex = [(item, position) for item, position in group if any(
+                np.linalg.norm(position - point) <= ENEMY_MERGE_RADIUS for point in self.confirmed_ex_positions)]
+            if confirmed_ex:
+                item, position = max(confirmed_ex, key=lambda candidate: candidate[0].get('confidence', 0.))
+                item = dict(item, kind='ex')
+            elif key[0] == 'conflict':
+                item, position = max(group, key=lambda candidate: candidate[0].get('confidence', 0.))
+                previous = self._nearest_enemy(position)
+                kind = self.enemies[previous]['kind'] if previous is not None else item['kind']
+                item = dict(item, kind=kind, classification_ambiguous=True)
+                ambiguous_positions.extend(point for _, point in group)
+                ambiguous_count += 1
+            else:
+                item, position = group[0]
+                if item.get('kind') == 'ex' and any(
                         record.get('story_boss_verified') and record['kind'] == 'boss'
                         and np.linalg.norm(position - record['position']) <= ENEMY_MERGE_RADIUS
                         for record in self.enemies.values()):
                     item = dict(item, kind='boss')
-                observations.append((item, position))
+            observations.append((item, position))
         added, merged, assigned = [], 0, set()
         contour = np.asarray(quad, np.float32).reshape(-1, 1, 2) if quad is not None else None
         for record in self.enemies.values():
@@ -239,9 +260,12 @@ class RunState:
             nearby = any(record['kind'] == item.get('kind')
                          and np.linalg.norm(position - record['position']) <= ENEMY_HINT_RADIUS
                          for item, position in observations)
-            ambiguous_ex = record['kind'] in COMBAT_ENEMY_KINDS and any(
-                item.get('kind') == 'ex' and np.linalg.norm(position - record['position']) <= ENEMY_MERGE_RADIUS
-                for item, position in observations)
+            ambiguous_ex = any(np.linalg.norm(position - record['position']) <= ENEMY_MERGE_RADIUS
+                               for position in ambiguous_positions)
+            if record['kind'] in COMBAT_ENEMY_KINDS:
+                ambiguous_ex |= any(item.get('kind') == 'ex'
+                                    and np.linalg.norm(position - record['position']) <= ENEMY_MERGE_RADIUS
+                                    for item, position in observations)
             if covered or nearby or contour is None:
                 record['confirmed_at'] = None
             if covered and not ambiguous_ex:
@@ -256,21 +280,25 @@ class RunState:
             else:
                 merged += 1
             assigned.add(match)
+            ambiguous = item.get('classification_ambiguous', False)
             self.enemies[match].update(position=position.tolist(), last_seen=self.tick,
                                       kind=item.get('kind') or self.enemies[match]['kind'],
-                                      confirmed_at=self.tick, reviewed_at=None, visible=True)
-        return {'enemies_added': added, 'enemies_refreshed': merged}
+                                      confirmed_at=None if ambiguous else self.tick,
+                                      classification_ambiguous=ambiguous, reviewed_at=None, visible=True)
+        return {'enemies_added': added, 'enemies_refreshed': merged, 'enemies_ambiguous': ambiguous_count}
 
     def confirmed_enemies(self):
         """返回本决策拍可靠观测的敌人，以及独立保留的主线与执行目标。
 
         包含交战及不可达状态，供沿途门禁保留失败保护；已清除记录永不因漏检或旧帧恢复。
         补视野属于同一决策拍，其确认可在收起地图后继续使用，不要求每次镜头变动都重认身份。
+        分类冲突记录只供侦察复核，独立绑定也不能把它重新放入确认集合。
         """
         pinned = {self.story_target, self.execution_target}
         if self.route_goal is not None and self.route_goal.get('kind') == 'story':
             pinned.add(self.route_goal['id'])
         return [record for record in self.enemies.values() if record['status'] != 'cleared'
+                and not record.get('classification_ambiguous', False)
                 and (record.get('confirmed_at') == self.tick or record['id'] in pinned)]
 
     def enemy_hints(self):
@@ -295,13 +323,15 @@ class RunState:
 
         未指定类型时保持最近邻行为；普通与 Boss 之间允许本帧可靠分类修正旧标签。
         EX 与战斗敌人可能是同一图标的分类歧义，也可能相邻共存，两者禁止合并或互相改型。
+        已标为分类冲突的线索可由后续无冲突检测解歧义并复用编号，不将可靠 EX 与战斗敌人互相改型。
         taken 只包含本帧已分配记录，相邻不同目标不能覆盖同一编号。
         """
         best, rank = None, (2, radius)
         for identifier, record in self.enemies.items():
             if identifier in taken:
                 continue
-            if kind is not None and (kind == 'ex') != (record['kind'] == 'ex'):
+            if (kind is not None and (kind == 'ex') != (record['kind'] == 'ex')
+                    and not record.get('classification_ambiguous', False)):
                 continue
             span = float(np.linalg.norm(np.asarray(record['position'], float) - position))
             candidate = (int(kind is not None and record['kind'] != kind), span)
@@ -448,22 +478,29 @@ class RunState:
         return self.story_target
 
     def confirm_ex_target(self, identifier):
-        """按目标直点触发的 EX 弹窗纠正原编号，不重新用位置距离决定类型。
+        """兼容既有目标确认入口，按已由弹窗实际关联的编号登记 EX。
 
-        调用前由执行层校验实际触发 EX 的编号与弹窗携带的移动目标编号一致；仅发送点击不够。
-        沿用该目标已记录的位置，将类型改为 EX，
-        不宣告胜利、不改写相邻敌人，解除同编号主线、路程和执行引用。已清除记录不再改型。
-        保存此位置防止后续单帧误分类重建战斗目标；既有近邻半径仅用于后续观测去重，不参与
-        本次改型许可。换章会重建状态，旧位置不会跨章节保留。
+        不再要求记录原类型是战斗敌人；重复确认已知 EX 也须保留弹窗证据。
+        调用方必须先关联实际触发编号，不能仅凭移动目标点击调用。
+        """
+        return self.confirm_ex_encounter(identifier)
+
+    def confirm_ex_encounter(self, identifier):
+        """登记关闭弹窗后实际关联的 EX 编号与位置，不要求它是移动目的地。
+
+        编号必须来自重新定位小队后对实际 EX 的唯一关联；仅发送目标点击不能调用。
+        原类型已是 EX 时同样保存证据；类型冲突解除后只更新该编号，不改写相邻敌人。
+        仅解除同编号主线、路程和执行引用，不宣告战斗胜利；已清除、无效或缺失编号返回 False。
+        既有近邻半径仅用于后续观测去重，换章重建状态，不跨章节复用位置。
         """
         record = self.enemies.get(identifier)
-        if record is None or record['kind'] not in COMBAT_ENEMY_KINDS or record['status'] == 'cleared':
+        if record is None or record['kind'] not in (*COMBAT_ENEMY_KINDS, 'ex') or record['status'] == 'cleared':
             return False
         position = np.asarray(record['position'], float)
         if (position.shape != (2,) or not np.isfinite(position).all()
                 or np.any(position < 0) or np.any(position >= self.size)):
             return False
-        record.update(kind='ex', confirmed_at=self.tick, reviewed_at=None)
+        record.update(kind='ex', confirmed_at=self.tick, reviewed_at=None, classification_ambiguous=False)
         record.pop('story_boss_verified', None)
         if not any(np.linalg.norm(position - point) <= ENEMY_MERGE_RADIUS for point in self.confirmed_ex_positions):
             self.confirmed_ex_positions.append(position.tolist())

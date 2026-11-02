@@ -155,21 +155,29 @@ class CampaignExecutor:
 
         encountered_enemy_id 必须来自关闭弹窗后重新定位小队并关联实际 EX 的结果，不得从
         点击目的地推断。主线两帧绑定过 EX 的 Boss 保留原 EX 编号，因此无需另设位置改型容差。
+        实际关联成功就登记该 EX 的弹窗证据，即使没有直点记录或它不是移动目标。
         缺少实际编号、附近试点或途中触发其他 EX 时保留原目标及路线历史，继续原绕行流程。
-        明确关联时改型并解除同编号续行，不将 EX 误记为战斗清除。
+        只有直点编号一致时才解除原目标续行，不将 EX 误记为战斗清除。
         """
-        target_click = (evidence or {}).get('target_click')
-        if not evidence or evidence.get('kind') != 'ex_stage_closed' or not target_click:
+        if not evidence or evidence.get('kind') != 'ex_stage_closed':
+            return False
+        encountered = evidence.get('encountered_enemy_id')
+        confirmed = self.owner.state.confirm_ex_encounter(encountered)
+        if confirmed:
+            position = self.owner.state.enemies[encountered]['position']
+            self.session.record('ex_encounter_confirmed', enemy_id=encountered, position=position)
+            logger.info(f'EX 弹窗实际关联已确认：敌人 {encountered}，位置 {points_text(position)}。')
+        target_click = evidence.get('target_click')
+        if not target_click:
             return False
         identifier = target_click.get('id')
-        encountered = evidence.get('encountered_enemy_id')
         if not identifier or identifier != encountered:
             self.session.record('ex_target_preserved', target_click=target_click,
                                 encountered_enemy_id=encountered, reason='encounter_not_target')
             logger.info(f'EX 实际关联编号 {encountered} 与移动目标 {identifier} 不一致；'
                         '保留原目标及路线历史，继续绕行。')
             return False
-        if not self.owner.state.confirm_ex_target(identifier):
+        if not confirmed:
             return False
         for name in ('interrupted_goal', 'terminal_destination', 'terminal_continuation', 'last_executed'):
             current = getattr(self, name)

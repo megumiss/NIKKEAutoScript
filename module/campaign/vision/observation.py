@@ -19,7 +19,7 @@ from module.campaign.vision.mechanisms import mechanism_observations
 from module.campaign.vision.story_marker import story_markers
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import (compact_road_masks, expanded_minimap_masks, marker_candidates,
-                                             minimap_masks, project_centers, refine_ring)
+                                             minimap_masks, project_centers, refine_ring, enemy_marker_conflicts)
 from module.logger import logger
 
 
@@ -198,16 +198,22 @@ class CampaignObserver:
         observe_squad=False 专供纯镜头找敌人，跳过圆环拟合且不提供实时小队标记。
         圆环中心优先用圆环拟合结果，拟合不通过时退回检测框中心（只影响展示，底图定位仍要求
         圆环拟合通过校验）；敌人保留类型与置信度，投影到底图由调用方按同一份配准矩阵完成。
+        互斥敌人框交叠时附上当前帧冲突编号，状态层只保留待复核线索或使用已确认 EX 证据解歧义。
         """
         players, enemies = [], []
-        for item in marker_candidates(panel, mode):
+        candidates = marker_candidates(panel, mode)
+        conflicts = enemy_marker_conflicts(candidates)
+        for index, item in enumerate(candidates):
             if item.label == 'minimap_squad_ring':
                 if observe_squad:
                     center = refine_ring(panel, item)
                     players.append((center if center is not None else item.center).round(1).tolist())
             elif item.label in ('minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_enemy_boss'):
-                enemies.append(dict(kind=item.label.removeprefix('minimap_enemy_'),
-                                    position=item.center.round(1).tolist(), confidence=round(item.confidence, 3)))
+                enemy = dict(kind=item.label.removeprefix('minimap_enemy_'),
+                             position=item.center.round(1).tolist(), confidence=round(item.confidence, 3))
+                if index in conflicts:
+                    enemy['conflict_group'] = conflicts[index]
+                enemies.append(enemy)
         return players, enemies
 
     def locate(self, snapshot, chapter, panel, road, valid, player, markers, expected_position=None,

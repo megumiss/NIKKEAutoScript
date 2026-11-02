@@ -443,6 +443,8 @@ class Campaign(ModuleBase):
         if self.cut.update(self.state.blocking()):
             logger.info(f'有 {len(self.cut.blocks)} 处光幕挡路，可行路网已按它重算。')
         resume = preferred_goal is not None and located(snapshot) and snapshot.get('squad') is not None
+        if resume and self.state.enemies.get(preferred_goal['id'], {}).get('classification_ambiguous', False):
+            resume = False
         goal = dict(preferred_goal) if resume else choose_goal(
             self.state, chart, snapshot, self.cut,
             purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')

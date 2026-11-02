@@ -77,11 +77,12 @@ def enemy_hint_goal(state, cut, squad):
     """选择道路距离最近的已知敌人线索，作为侦察目标而不是直接战斗目标。
 
     战后当前小地图尚未重新确认其他敌人时，先沿原可靠坐标补视野，避免把无关空地
-    设为黄色执行落点。返回 explore 类型，只有重新识别到敌人后才能由 nearest_enemy 战斗。
+    设为黄色执行落点。分类冲突线索也须复核，即使当前保留的标签是 EX。
+    返回 explore 类型，只有重新识别到无冲突敌人后才能由 nearest_enemy 战斗。
     """
     best = None
     for record in state.enemy_hints():
-        if record['kind'] not in COMBAT_ENEMY_KINDS:
+        if record['kind'] not in COMBAT_ENEMY_KINDS and not record.get('classification_ambiguous', False):
             continue
         position = np.asarray(record['position'], float)
         distance = walking_distance(cut.road, cut.regions, squad, position)

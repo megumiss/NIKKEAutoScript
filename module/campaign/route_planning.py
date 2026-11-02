@@ -64,6 +64,7 @@ def refresh_route(state, chart, snapshot, cut):
     已知开启和导航已到点的机关均排除；新机关路程只从当前帧可见的 off 检测发起，
     不设小队或敌人距离门槛，但必须在切开封锁后的道路上可达。已发起的路程跨屏继续。
     主线可使用已核验的稳定敌人编号，或菱形下方唯一地面环的投影位置；漏一帧标记不丢弃目的地。
+    敌人分类冲突时暂停该目的地，保留编号供侦察解歧义，不能从独立引用恢复战斗候选。
     """
     current = state.route_goal
     if current is not None:
@@ -76,7 +77,8 @@ def refresh_route(state, chart, snapshot, cut):
         elif current['kind'] == 'story' and not story_point:
             enemy = state.enemies[current['id']]
             current = (dict(current, position=enemy['position'], enemy_kind=enemy['kind'])
-                       if enemy['kind'] in COMBAT_ENEMY_KINDS else None)
+                       if enemy['kind'] in COMBAT_ENEMY_KINDS
+                       and not enemy.get('classification_ambiguous', False) else None)
     if current is not None and current['kind'] == 'mechanism':
         state.route_goal = current
         return current
@@ -100,7 +102,7 @@ def refresh_route(state, chart, snapshot, cut):
     if current is None and state.story_target:
         enemy = state.enemies.get(state.story_target)
         if (enemy and enemy['kind'] in COMBAT_ENEMY_KINDS and enemy['status'] == 'pending'
-                and not state.cooling(enemy['id'])):
+                and not enemy.get('classification_ambiguous', False) and not state.cooling(enemy['id'])):
             current = dict(kind='story', id=enemy['id'], position=enemy['position'],
                            enemy_kind=enemy['kind'], reason='main_story_marker')
     state.route_goal = current
