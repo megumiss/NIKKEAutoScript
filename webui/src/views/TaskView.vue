@@ -13,6 +13,7 @@ import FieldPriority from '../components/config/FieldPriority.vue'
 import FieldVddStatus from '../components/config/FieldVddStatus.vue'
 import { highlightTextarea, isStructuredTextarea, onTextareaInput, vAutosize } from '../composables/useTextarea'
 import { useRouteInfo } from '../composables/useRouteInfo'
+import { useEventStageRefresh } from '../composables/useEventStageRefresh'
 import { t } from '../i18n'
 import { onTextInput } from '../utils'
 import { useBlaBindBotStore } from '../stores/blaBindBot'
@@ -28,6 +29,7 @@ const FieldInterception = defineAsyncComponent(() => import('../components/confi
 
 const { selectedPage, selectedTask } = useRouteInfo()
 const workspace = useWorkspaceStore()
+useEventStageRefresh()
 const { schemaReady, collapsed, activeGroup, taskSchema, importBusy, notifyTestBusy, physicalBusy, serialDevices, serialDevicesBusy, vddBusy } = storeToRefs(workspace)
 const { clientOptions, selectedClientName, clientPlaceholder } = storeToRefs(workspace)
 const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flushDatetimeSave, clearField, pickedPath, importInterception, testNotify, saveNotifyConfig, saveNotifyRaw, startTool, physicalResolution, loadSerialDevices, refreshMonitors, vddSet, loadClientProfiles, applyClientProfile } = workspace

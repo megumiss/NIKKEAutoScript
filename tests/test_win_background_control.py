@@ -838,8 +838,7 @@ class DriverSchemeTests(unittest.TestCase):
         ):
             self.assertEqual(virtual_mouse_driver.install_driver(), {'reboot_required': False})
 
-    def test_install_driver_keeps_legacy_result_when_the_sub_device_is_unknown(self):
-        # 系统中没有该枚举器时判不出来（None），此时不做判据，行为与改动前一致
+    def test_install_driver_fails_when_no_sub_device_records_exist(self):
         with (
             patch.object(virtual_mouse_driver, '_run_manager', return_value=[{'status': 'success'}]),
             patch.object(virtual_mouse_driver, 'enum_interface_paths', return_value=[_DEVICE_PATH]),
@@ -847,7 +846,9 @@ class DriverSchemeTests(unittest.TestCase):
             patch.object(virtual_mouse_driver, 'sub_device_present', return_value=None),
             patch.object(virtual_mouse_driver.logger, 'info'),
         ):
-            self.assertEqual(virtual_mouse_driver.install_driver(), {'reboot_required': False})
+            with self.assertRaises(virtual_mouse_driver.VirtualMouseDriverError) as raised:
+                virtual_mouse_driver.install_driver()
+        self.assertIn('no virtual mouse HID sub-device records', str(raised.exception))
 
     def test_uninstall_driver_reports_a_pending_reboot(self):
         # 「接口消失 + 待重启」不是完成态：挂起的 PNP 操作重启后才生效，必须透传

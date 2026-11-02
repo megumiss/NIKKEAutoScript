@@ -677,6 +677,7 @@
     },
     "EventInfo": {
       "Event": "",
+      "ManualStage": false,
       "StoryPart": "Story_1",
       "StoryDifficulty": "Normal"
     },
@@ -715,6 +716,7 @@
     },
     "EventInfo": {
       "Event": "",
+      "ManualStage": false,
       "StoryPart": "Story_1",
       "StoryDifficulty": "Normal"
     },
@@ -945,6 +947,11 @@
       "FightQuickly": false,
       "MainStoryMark": false
     },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "InterceptionTest": {
     "Storage": {
       "Storage": {}
     }

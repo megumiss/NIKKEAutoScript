@@ -8,6 +8,7 @@ import yaml
 
 from module.config.account import PASSWORD_FIELD, UNLOCK_PASSWORD_FIELD, USERNAME_FIELD, save_secret
 from module.config.deep import deep_get, deep_set
+from module.config.manual_config import ManualConfig
 from module.logger import logger
 from module.webui.api.models import PatchResult
 from module.webui.utils import parse_pin_value, re_fullmatch
@@ -96,6 +97,29 @@ class ConfigService:
             config = self.config_updater.read_file(config_name)
             applied = {}
             derived = {}
+            parts = key.split('.')
+            event_field = len(parts) == 3 and parts[0] in ('Event', 'Event2') and parts[1] == 'EventInfo'
+            if event_field:
+                task, _, arg = parts
+                event = ManualConfig.EVENTS[0 if task == 'Event' else 1]
+                if arg == 'Event':
+                    return PatchResult(False, {}, {}, True, 'The current event is read-only.')
+                if arg in ('StoryPart', 'StoryDifficulty'):
+                    if deep_get(config, f'{task}.EventInfo.ManualStage') is not True:
+                        return PatchResult(False, {}, {}, True, 'Enable manual stage selection first.')
+                    if value not in argument.get('option', []):
+                        return PatchResult(False, {}, {}, True, 'Unknown chapter or difficulty.')
+                    part = value if arg == 'StoryPart' else deep_get(config, f'{task}.EventInfo.StoryPart')
+                    if event.get('event_type') == 2 and part != 'Story_1':
+                        return PatchResult(False, {}, {}, True, 'Small events only support Story1.')
+                    if event.get('event_type') in (1, 3) and part == 'Story_1':
+                        if arg == 'StoryDifficulty' and value == 'Hard':
+                            return PatchResult(False, {}, {}, True, 'Story1 only supports Normal in this event.')
+                        difficulty_key = f'{task}.EventInfo.StoryDifficulty'
+                        deep_set(config, difficulty_key, 'Normal')
+                        derived[difficulty_key] = 'Normal'
+                elif arg == 'ManualStage' and type(value) is not bool:
+                    return PatchResult(False, {}, {}, True, 'Manual stage selection must be a boolean.')
             if key in SECRET_KEYS:
                 save_secret(config_name, SECRET_KEYS[key], value)
                 # 解锁逻辑以配置值是否为空判断有无密码，清空必须落盘；账号字段沿用"留空不覆盖"
@@ -108,6 +132,14 @@ class ConfigService:
                     deep_set(config, derived_key, derived_value)
                     applied[derived_key] = derived_value
                     derived[derived_key] = derived_value
+            if event_field:
+                config = self.config_updater.config_update(config)
+                for arg in ('ManualStage', 'StoryPart', 'StoryDifficulty'):
+                    derived_key = f'{task}.EventInfo.{arg}'
+                    derived_value = deep_get(config, derived_key)
+                    applied[derived_key] = derived_value
+                    if derived_key != key:
+                        derived[derived_key] = derived_value
             self.config_updater.write_file(config_name, config)
             logger.info(f'Save config {config_name}, {key}')
             return PatchResult(True, applied, derived)

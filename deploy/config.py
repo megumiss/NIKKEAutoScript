@@ -19,7 +19,7 @@ class ExecutionError(Exception):
 class ConfigModel:
     Repository: str = "https://github.com/megumiss/NIKKEAutoScript"
     Branch: str = "master"
-    GitExecutable: str = "./toolkit/Git/mingw64/bin/git.exe"
+    GitExecutable: str = "./toolkit/Git/cmd/git.exe"
     GitProxy: Optional[str] = None
     SSLVerify: bool = True
     AutoUpdate: bool = True

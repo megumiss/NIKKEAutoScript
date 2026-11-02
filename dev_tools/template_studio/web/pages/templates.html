@@ -4,7 +4,7 @@
 <body class="template-page">
 <header class="topbar workspace-topbar"><div class="brand"><h1>模板工作台</h1><span>NIKKE · TEMPLATE STUDIO</span></div><div class="session-heading"><strong>资源管理</strong><span>导入截图 · 裁剪对比 · 保存到功能目录</span></div><div class="workspace-toolbar"><nav class="studio-nav" aria-label="工作台导航"><a href="/" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>模板资源</span></a><a href="/events"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4M8 3v4M4 11h16m-11 5 2 2 4-4"/></svg><span>活动流程</span></a><a href="/history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.5 7M3 4v7h7m2-4v5l3 2"/></svg><span>历史索引</span></a></nav></div></header>
 <main class="template-workspace">
-  <aside class="surface resource-panel"><div class="panel-heading"><h2>功能与资源</h2><button id="btnReload" class="small">刷新</button></div>
+  <aside class="surface resource-panel"><div class="panel-heading"><h2>功能与资源</h2><button id="btnReload" class="small">刷新列表</button></div>
     <div class="resource-filters"><label for="featureSearch">查找功能</label><input id="featureSearch" type="search" placeholder="名称或目录，如商店 / shop"><label for="featureSelect">功能目录</label><select id="featureSelect"></select><p id="featurePath" class="hint filename"></p><label for="assetSearch">搜索模板</label><input id="assetSearch" type="search" placeholder="模板名称"><div class="filter-row"><label for="assetType" class="sr-only">资源类型</label><select id="assetType"><option value="">全部类型</option><option value="button">Button 整屏按钮</option><option value="template">Template 局部小图</option></select><span id="assetCount" class="count"></span></div></div>
     <div id="dropZone" tabindex="0" aria-label="可拖放或粘贴截图，也可点击导入截图"><p class="hint">拖入 / 粘贴 PNG、JPG，保留原始像素。</p><label for="sourceSelect">当前截图</label><select id="sourceSelect"></select><p id="sourceInfo" class="hint filename"></p></div>
     <div id="assetList" class="resource-list" aria-label="当前功能模板"></div>
@@ -27,7 +27,7 @@
       <div class="compare-grid"><div><h3>当前资源</h3><div class="compare-image"><img id="existingImage" alt="当前模板" hidden><p id="existingEmpty" class="empty">新增模板暂无现有资源</p></div><p id="existingMeta" class="hint filename"></p></div><div><h3>本次裁剪</h3><div class="compare-image"><canvas id="draftPreview" role="img" aria-label="本次裁剪实时预览" hidden></canvas><p id="draftEmpty" class="empty">框选截图后显示预览</p></div><p id="draftMeta" class="hint filename"></p></div></div>
       <p id="assetWarning" class="notice" hidden></p><p id="backupInfo" class="hint filename"></p>
     </div>
-    <div class="edit-actions"><button id="btnSaveAsset" class="primary full" disabled>保存新模板</button><button id="btnDeleteAsset" class="danger full" disabled>删除当前资源</button><p class="hint">保存自动更新此功能的资产定义。覆盖和删除前保留备份。</p></div>
+    <div class="edit-actions"><button id="btnSaveAsset" class="primary full" disabled>保存新模板</button><button id="btnRefreshAssets" class="full" disabled>刷新 assets</button><button id="btnDeleteAsset" class="danger full" disabled>删除当前资源</button><p class="hint">保存仅写入图片，完成后点击“刷新 assets”更新当前功能的资产定义。删除仍自动更新定义；操作前保留备份。</p></div>
   </section>
 </main>
 <footer><span id="status" role="status" aria-live="polite">正在读取功能目录…</span></footer><div id="toast" role="status" hidden></div>

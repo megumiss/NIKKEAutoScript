@@ -166,12 +166,19 @@ class VirtualMouseInput(Input):
         # 但接口没注册或 HID 子设备未呈现，重跑一次安装即可重建，修复成功则重试
         if driver_package_present() and repair_driver() and self._channel_ready():
             return
-        if sub_device_present() is False:
+        sub_device = sub_device_present()
+        if sub_device is False:
             logger.error(
                 'Control scheme driver: the virtual mouse interface exists but its HID '
                 'sub-device is not present (Windows problem code 45), so injected button and '
                 'wheel reports are discarded and clicks never reach the game. Restart the '
                 'G HUB bus device (pnputil /restart-device) or reboot Windows, then retry.'
+            )
+        elif sub_device is None:
+            logger.error(
+                'Control scheme driver: no virtual mouse HID sub-device records were found '
+                'so button and wheel reports cannot be delivered. Install or '
+                'repair the virtual mouse driver with administrator privileges, then retry.'
             )
         else:
             logger.error(
@@ -185,9 +192,9 @@ class VirtualMouseInput(Input):
         """接口能打开且 HID 子设备实际呈现。
 
         幽灵设备（代码 45）下接口照样能打开、IOCTL 也返回成功，只测 open() 会把它误判成
-        可用；子设备判不出来（None）时按可用处理，不改变既有行为。
+        可用；完全没有鼠标子设备记录（None）时同样无法投递报告，必须先修复。
         """
-        return self.mouse_driver.open() and sub_device_present() is not False
+        return self.mouse_driver.open() and sub_device_present() is True
 
     # ------------------------------------------------------------------
     # 失败处理：显式报错，绝不静默降级
