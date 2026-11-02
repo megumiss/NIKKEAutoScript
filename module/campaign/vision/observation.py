@@ -123,10 +123,6 @@ class CampaignObserver:
                     self.last_story_error = str(exc)
         players, enemies = (self.minimap_markers(panel, mode, observe_squad=False) if known_squad is not None
                             else self.minimap_markers(panel, mode))
-        scenes = [item for item in snapshot['story_markers'] if item['kind'] == 'scene']
-        if len(scenes) == 1 and len(enemies) == 1 and enemies[0]['kind'] == 'ex':
-            enemies[0] = dict(enemies[0], kind='boss')
-            logger.info('场景存在场内主线菱形，唯一 EX 候选按 Boss 分类。')
         if mode == 'compact' and not players and not enemies and known_squad is None:
             return snapshot
         ok, encoded = cv2.imencode('.jpg', panel, [cv2.IMWRITE_JPEG_QUALITY, 85])
