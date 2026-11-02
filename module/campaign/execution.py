@@ -141,6 +141,33 @@ class CampaignExecutor:
         logger.info(f'EX 弹窗已关闭，保留目标 {goal_brief(self.interrupted_goal)}；'
                     '下一轮重新定位并规划绕行。')
 
+    def correct_ex_target(self, goal, obstacle):
+        """释放与刚确认 EX 同位置的错误 Boss 目标，不放弃避让区内仍独立存在的其他目标。
+
+        调用前必须已关闭 EX 弹窗并重新定位唯一 EX。只纠正原 Boss 编号与 EX 在既有
+        25 地图像素身份容差内一致的记录，不按整个避让圆推断身份。失配保留原目标和输入额度，
+        仍由绕行安全检查决定能否继续；匹配成功后清除同编号续行引用，再按新观测正常规划。
+        """
+        if (not goal or not obstacle or goal.get('kind') != 'enemy' or goal.get('enemy_kind') != 'boss'
+                or not self.owner.state.confirm_ex_target(goal['id'], obstacle.get('position'))):
+            return False
+        identifier = goal['id']
+        for name in ('interrupted_goal', 'terminal_destination', 'terminal_continuation', 'last_executed'):
+            current = getattr(self, name)
+            if current is not None and current['id'] == identifier:
+                setattr(self, name, None)
+        if self.interrupted_goal is None:
+            self.interrupted_inputs = 0
+        self.terminal_checked = None
+        self.terminal_scan_stalls = 0
+        if self.owner.last_goal is not None and self.owner.last_goal['id'] == identifier:
+            self.owner.last_goal = None
+            self.owner.last_routes = None
+            self.owner.last_route_signature = None
+        self.session.record('ex_target_corrected', goal=goal, obstacle=obstacle)
+        logger.warning(f'目标 {identifier} 与已确认 EX 位置一致，已纠正类型并解除 Boss 续行；重新规划。')
+        return True
+
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
         if goal and goal['kind'] == 'none' and goal.get('reason', '').startswith('route_'):
@@ -724,7 +751,10 @@ class CampaignExecutor:
                     resumed_ex = self.ex_pending
                     if resumed_ex:
                         camera_options = {}
-                        self.session.prepare_ex_bypass(self.interrupted_goal or self.terminal_destination)
+                        interrupted = self.interrupted_goal or self.terminal_destination
+                        obstacle = self.session.prepare_ex_bypass(interrupted)
+                        if self.correct_ex_target(interrupted, obstacle):
+                            goal = None
                         self.ex_pending = False
                     if index or resumed_ex:
                         snapshot = self.session.snapshot(**camera_options)

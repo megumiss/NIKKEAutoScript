@@ -458,6 +458,7 @@ class CampaignSession(NavigationSession):
 
         本方法不点击地面；下一次 plan 根据实时小队位置计算安全路点。EX 标记可能被小队遮挡，
         可使用运行状态中的近距离历史 EX，但缺失或歧义时不拿原目标代替 EX 坐标。
+        返回本次已关联的 EX 避让信息，供执行层复核原目标是否实际属于该 EX。
         """
         self.localized_report = None
         self.last_registration = None
@@ -471,6 +472,7 @@ class CampaignSession(NavigationSession):
         logger.info(f'EX 绕行定位：小队 {points_text(squad)}，EX {points_text(obstacle["position"])}，'
                     f'原目标 {points_text(target) if target is not None else "尚未确定"}，'
                     f'避让半径 {obstacle["radius"]:.1f} 像素，触发 {obstacle["encounters"]} 次。')
+        return obstacle
 
     def identity(self, field):
         """逐帧闸门：只查战斗弹窗与收集品提示，不重读章节身份。

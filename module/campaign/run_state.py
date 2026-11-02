@@ -122,6 +122,7 @@ class RunState:
         self.route_goal = None
         self.story_target = None
         self.execution_target = None
+        self.confirmed_ex_positions = []
         self.pending_reviews = {}
         self.transfers = {}
         self.cooldowns = {}
@@ -210,6 +211,7 @@ class RunState:
         区域内的漏检只撤销确认，不表示敌人已清除，贴边未检出不能记为已复核。
         新检测点邻域内的旧确认也退为线索，以容忍视野边界的投影偏差；不会删掉相邻真实敌人。
         战斗敌人原位置仅检出重叠 EX 时属于分类歧义，保留待复核线索，不能据此改选无关区域。
+        只有弹窗与重新定位共同确认的 EX 位置可覆盖后续同位置的单帧战斗分类。
         25 像素近邻仅复用编号与失败状态，不依靠跨帧位移或远距合并来决定本帧有几只敌人。
         主线及执行目标由独立引用保留；每条旧记录在本帧最多复用一次。
         """
@@ -218,6 +220,10 @@ class RunState:
             position = np.asarray(item.get('position'), float)
             if (position.shape == (2,) and np.isfinite(position).all()
                     and np.all(position >= 0) and np.all(position < self.size)):
+                if (item.get('kind') in COMBAT_ENEMY_KINDS and any(
+                        np.linalg.norm(position - point) <= ENEMY_MERGE_RADIUS
+                        for point in self.confirmed_ex_positions)):
+                    item = dict(item, kind='ex')
                 observations.append((item, position))
         added, merged, assigned = [], 0, set()
         contour = np.asarray(quad, np.float32).reshape(-1, 1, 2) if quad is not None else None
@@ -409,7 +415,8 @@ class RunState:
             return None
         nearby = [record for record in self.confirmed_enemies()
                   if np.linalg.norm(np.asarray(record['position']) - position) <= ENEMY_MERGE_RADIUS]
-        if kind not in COMBAT_ENEMY_KINDS:
+        if kind not in COMBAT_ENEMY_KINDS or any(
+                np.linalg.norm(position - point) <= ENEMY_MERGE_RADIUS for point in self.confirmed_ex_positions):
             return None
         if len(nearby) > 1 or (nearby and (nearby[0]['kind'] != kind or nearby[0]['status'] != 'pending')):
             return None
@@ -423,6 +430,35 @@ class RunState:
         self.story_target = nearby[0]['id']
         self.cooldowns.pop('story-location', None)
         return self.story_target
+
+    def confirm_ex_target(self, identifier, position):
+        """用已关闭的 EX 弹窗及重新定位位置纠正同位置的错误战斗目标，返回是否完成纠正。
+
+        仅由 EX 处理流程调用。position 是当前唯一关联 EX 的章节底图坐标，必须与原目标
+        相距不超过既有 ENEMY_MERGE_RADIUS（25 地图像素）；避让圆半径不能当身份关联半径。
+        不改变相邻其他敌人或已清除记录；匹配成功后解除同编号的主线、路程与执行引用，并记下
+        已确认 EX 位置，防止之后单帧误分类在同处重新生成战斗目标。换章会重建此状态。
+        """
+        position = np.asarray(position, float)
+        record = self.enemies.get(identifier)
+        if (record is None or record['kind'] not in COMBAT_ENEMY_KINDS or record['status'] == 'cleared'
+                or position.shape != (2,) or not np.isfinite(position).all()
+                or np.any(position < 0) or np.any(position >= self.size)):
+            return False
+        original = np.asarray(record['position'], float)
+        if (original.shape != (2,) or not np.isfinite(original).all()
+                or np.linalg.norm(position - original) > ENEMY_MERGE_RADIUS):
+            return False
+        record.update(kind='ex', position=position.tolist(), confirmed_at=self.tick, reviewed_at=None)
+        if not any(np.linalg.norm(position - point) <= ENEMY_MERGE_RADIUS for point in self.confirmed_ex_positions):
+            self.confirmed_ex_positions.append(position.tolist())
+        if self.story_target == identifier:
+            self.story_target = None
+        if self.execution_target == identifier:
+            self.execution_target = None
+        if self.route_goal is not None and self.route_goal['id'] == identifier:
+            self.route_goal = None
+        return True
 
     def blocking(self):
         """需要当成道路封锁看待的记录：active 与 stale 都算。
