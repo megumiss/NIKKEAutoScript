@@ -23,7 +23,7 @@ from module.campaign.navigation.movement_feedback import ClickUnconfirmed, Targe
 from module.campaign.navigation.recovery import centered, centering_frame
 from module.campaign.navigation.story_navigation import locate_story_target
 from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
-from module.campaign.noncombat import CampaignNoncombat
+from module.campaign.noncombat import CampaignNoncombat, ChapterTransitionTimeout
 from module.logger import logger
 
 TARGET_MOVES = 12
@@ -596,7 +596,8 @@ class CampaignExecutor:
         剧情跳过与继续提示均不作为胜利证据，剧情期间保留已确认的胜负及原有超时约束。
         一段战斗（进弹窗、重打后重新开打）单独计 BATTLE_TIME_LIMIT 秒，等不到结算就交人工：
         不无限等，也不盲目连点。战斗结束时给会话打开一次「沿用战斗前坐标」的许可，
-        第一帧重新配准失败就用旧坐标继续推图。
+        第一帧重新配准失败就用旧坐标继续推图。Boss 战后先识别章节结束弹窗，命中时交由换章状态机接管，
+        不在角标被遮挡时复核旧身份；未命中仍严格复核章节与难度，不以胜利本身放行换章。
         """
         self.session.begin_target('battle')
         self.session.battle_mode = True
@@ -675,8 +676,9 @@ class CampaignExecutor:
             logger.info(f'战斗胜利：{goal_brief(goal)} 已标记为清除，移出候选集合。')
             if goal.get('enemy_kind') == 'boss':
                 self.terminal_destination = None
-                # Boss 可能触发换章，旧地图和目标记忆不能跨章继续使用。
-                self.session.verify_identity(self.session.win.client())
+                field = self.session.win.client()
+                if self.noncombat is None or not self.noncombat.start_if_complete(field):
+                    self.session.verify_identity(field)
         else:
             logger.warning(f'战斗胜利但无关联敌人目标（最近执行目标：{goal_brief(goal)}），不更新敌人状态。')
         return settled
@@ -944,7 +946,7 @@ class CampaignExecutor:
                     self.session.record('navigation_stalled', force=True, error=str(exc), goal=goal)
                     logger.warning(f'移动路线无进展，停止并请求人工复核：{exc}')
                     return {'state': 'needs_review', 'reason': 'navigation_stalled', 'error': str(exc), 'goal': goal}
-                except (WindowChanged, BattleFailed, ExBypassUnavailable):
+                except (WindowChanged, BattleFailed, ExBypassUnavailable, ChapterTransitionTimeout):
                     raise
                 except (RuntimeError, ValueError) as exc:
                     if self.purpose != 'story':

@@ -140,6 +140,10 @@ def chapter_progress(field, reader):
     return visible, (cleared, total)
 
 
+class ChapterTransitionTimeout(RuntimeError):
+    """章节间页面超过换章时限仍未确认新章野外，必须停止而不能按旧章节恢复导航。"""
+
+
 class CampaignNoncombat:
     """推进章节结束至下一章野外的页面状态机，每拍最多发送一次点击。
 
@@ -164,6 +168,23 @@ class CampaignNoncombat:
         self.deadline = time.monotonic() + NONCOMBAT_TIME_LIMIT
         self.ark_arrow_at = None
         logger.info(f'第 {self.chapter} 章已结束，开始处理换章及非战斗页面。')
+
+    def start_if_complete(self, field):
+        """在已取得的客户区截图上确认章节结束并接管，不发送点击或复用旧章节坐标。
+
+        只接受现有 MISSION CLEAR 模板的阈值与搜索区域；Boss 胜利本身不能代替页面证据。
+        弹窗覆盖旧章节难度角标时，先激活有界换章流程，再由 step 处理下一章入口与身份确认。
+        未命中返回 False，调用方仍须执行原身份检查；重复确认不会重置换章时限。
+        """
+        score, point = locate(field, self.templates, 'chapter_clear')
+        if point is None:
+            return False
+        if not self.active:
+            self.activate()
+            self.session.reuse_squad = False
+            self.session.record('noncombat_begin', field=field, force=True, chapter=self.chapter,
+                                scores={'chapter_clear': round(score, 3)})
+        return True
 
     def tap(self, point, label):
         """通过现有会话发送非战斗点击，关闭只适用于野外移动的弹窗与收集品输入闸门。"""
@@ -201,20 +222,16 @@ class CampaignNoncombat:
     def step(self):
         """识别当前客户区并推进一步；返回 None 表示普通野外，字典表示换章等待或完成。
 
-        未知画面不补固定坐标点击；等待超过五分钟由会话时限异常交给上层安全停止。
+        未知画面不补固定坐标点击；等待超过五分钟抛出专用换章超时异常，绕过旧章节自动恢复并安全停止。
         """
+        self.session.check()
+        field = self.session.win.client()
         if not self.active:
-            field = self.session.win.client()
-            score, point = locate(field, self.templates, 'chapter_clear')
-            if point is None:
+            if not self.start_if_complete(field):
                 return None
-            self.activate()
-        else:
-            self.session.check()
-            field = self.session.win.client()
-            if time.monotonic() >= self.deadline:
-                raise RuntimeError('换章非战斗流程超过 5 分钟仍未返回新章节野外。')
-            score, point = locate(field, self.templates, 'chapter_clear')
+        elif time.monotonic() >= self.deadline:
+            raise ChapterTransitionTimeout('换章非战斗流程超过 5 分钟仍未返回新章节野外。')
+        score, point = locate(field, self.templates, 'chapter_clear')
         scores = {'chapter_clear': round(score, 3)}
 
         skip_score, skip_point = battle.story_skip(field)
