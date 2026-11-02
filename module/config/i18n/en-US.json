@@ -234,6 +234,10 @@
       "name": "Semi-Auto Click",
       "help": ""
     },
+    "InterceptionTest": {
+      "name": "Anomaly Interception Test",
+      "help": "Start a mock battle from the anomaly interception battle preparation screen and stop at settlement."
+    },
     "Highlights": {
       "name": "Highlights",
       "help": ""

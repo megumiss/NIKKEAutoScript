@@ -234,6 +234,10 @@
       "name": "半自动点击",
       "help": ""
     },
+    "InterceptionTest": {
+      "name": "异常拦截战测试",
+      "help": "从异常拦截战的战前界面点击模拟战，到结算界面后结束。"
+    },
     "Highlights": {
       "name": "花絮鉴赏",
       "help": ""

@@ -949,6 +949,11 @@
       "Storage": {}
     }
   },
+  "InterceptionTest": {
+    "Storage": {
+      "Storage": {}
+    }
+  },
   "Highlights": {
     "Highlights": {
       "AutoSwitch": true
