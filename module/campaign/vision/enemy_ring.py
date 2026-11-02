@@ -55,25 +55,28 @@ class RingFrame:
     squad: list
 
 
-def observe_rings(image, panel, matrix, viewport, observe_squad=True):
+def observe_rings(image, panel, matrix, viewport, observe_squad=True, track_scene=True):
     """检测脚圈、紧凑小地图标记和场景纹理；只接受模型规定的客户区尺寸，不发输入。
 
     脚圈阈值至少 0.7，小地图旧类沿用自身阈值。SIFT 排除 HUD 与脚圈附近的角色动画；
     小地图到章节底图仅用于确认原目标和小队未移动，不把任何脚圈投影到小地图。
     observe_squad=False 用于纯镜头找敌人，不拟合实时小队圆环；实际移动的脚圈辅助默认保留校验。
+    track_scene=False 仅供已确认目标的点击前近邻跟踪，不提取场景特征，不能用于初次两帧身份推断。
     """
     if image.shape != (999, 1776, 3):
         raise ValueError('脚圈辅助要求 1776×999 客户区截图。')
     rings = [item for item in detect_scene(image, ('scene_enemy_ring',))
              if item.confidence >= RING_CONFIDENCE and clickable_ring(item.box)]
     centers = np.asarray([item.center for item in rings], float).reshape(-1, 2)
-    mask = np.full(image.shape[:2], 255, np.uint8)
-    for left, top, right, bottom in HUD_RECTS:
-        mask[top:bottom, left:right] = 0
-    for x, y in np.rint(centers).astype(int):
-        cv2.rectangle(mask, (x - 65, max(0, y - 140)), (x + 65, y + 35), 0, -1)
-    keys, descriptors = cv2.SIFT_create(nfeatures=6000).detectAndCompute(
-        cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), mask)
+    keys, descriptors = [], None
+    if track_scene:
+        mask = np.full(image.shape[:2], 255, np.uint8)
+        for left, top, right, bottom in HUD_RECTS:
+            mask[top:bottom, left:right] = 0
+        for x, y in np.rint(centers).astype(int):
+            cv2.rectangle(mask, (x - 65, max(0, y - 140)), (x + 65, y + 35), 0, -1)
+        keys, descriptors = cv2.SIFT_create(nfeatures=6000).detectAndCompute(
+            cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), mask)
     enemies, squad = [], []
     for item in marker_candidates(panel, mode='compact'):
         if item.label == 'minimap_squad_ring':
@@ -189,3 +192,50 @@ def match_target_ring(before, after, target, squad, gaze, enemy_kind='normal'):
     if error > MAX_RESIDUAL or (runner is not None and (runner - error < MIN_RESIDUAL_GAP or runner < 2 * error)):
         return dict(report, reason='脚圈残差过大或候选无法区分。')
     return dict(report, reason='两帧运动唯一对应当前目标。', click=after.centers[best].tolist())
+
+
+def track_confirmed_ring(before, after, target, squad, click, enemy_kind='normal'):
+    """将已由两帧运动确认的目标脚圈唯一关联到点击前新帧，不重新推断目标身份。
+
+    before 必须是初次匹配成功的拖动后帧，click 必须是该帧返回的脚圈中心；调用方已确认
+    新帧道路配准、镜头偏移与尺度变化，期间不得发送手势。target/squad 为章节底图像素，
+    click/centers 为客户区像素。两帧仍须唯一对应原敌人类型，可见小队不得偏移超过 12 地图像素。
+    新中心偏移不超过 TRACK_DISTANCE，并通过双向最近邻与 TRACK_GAP 次选间隔检查；
+    不要求新的镜头或脚圈位移，不使用场景纹理。漏检、坐标无效或关联歧义时不给点击许可。
+    """
+    target, squad, click = [np.asarray(value, float) for value in (target, squad, click)]
+    if any(value.shape != (2,) or not np.isfinite(value).all() for value in (target, squad, click)):
+        return dict(reason='已确认目标或点击坐标无效。')
+    for frame in (before, after):
+        centers = np.asarray(frame.centers, float)
+        if centers.ndim != 2 or centers.shape[1] != 2 or not np.isfinite(centers).all():
+            return dict(reason='脚圈中心坐标无效。')
+        if not len(centers):
+            return dict(reason='已确认目标脚圈在复核帧中不可见。')
+        points = [np.asarray(point, float) for _, point in frame.enemies] + [
+            np.asarray(point, float) for point in frame.squad]
+        if any(point.shape != (2,) or not np.isfinite(point).all() for point in points):
+            return dict(reason='小地图敌人或小队坐标无效。')
+        nearby = [label for label, point in frame.enemies if np.linalg.norm(point - target) <= 30]
+        if enemy_kind not in ('normal', 'boss') or nearby != [f'minimap_enemy_{enemy_kind}']:
+            return dict(reason='本帧小地图无法唯一确认原目标的敌人类型。')
+        if len(frame.squad) > 1 or any(np.linalg.norm(point - squad) > 12 for point in frame.squad):
+            return dict(reason='可见小队位置变化，丢弃脚圈证据。')
+    reference = int(np.argmin(np.linalg.norm(before.centers - click, axis=1)))
+    if not np.allclose(before.centers[reference], click, atol=1e-6, rtol=0):
+        return dict(reason='已确认点击坐标不属于参考帧脚圈。')
+    costs = np.linalg.norm(before.centers[:, None] - after.centers[None, :], axis=2)
+    best = int(np.argmin(costs[reference]))
+    shift = float(costs[reference, best])
+    report = dict(center_shift=round(shift, 3))
+    if shift > TRACK_DISTANCE:
+        return dict(report, reason=f'最新帧脚圈中心偏移超过 {TRACK_DISTANCE:.0f} 客户区像素。')
+    if int(np.argmin(costs[:, best])) != reference:
+        return dict(report, reason='最新帧脚圈与已确认目标不满足双向唯一关联。')
+    alternatives = np.r_[np.delete(costs[reference], best), np.delete(costs[:, best], reference)]
+    if len(alternatives):
+        gap = float(alternatives.min() - shift)
+        report['runner_gap'] = round(gap, 3)
+        if gap < TRACK_GAP:
+            return dict(report, reason=f'脚圈关联次选间隔不足 {TRACK_GAP:.0f} 客户区像素。')
+    return dict(report, reason='已确认目标脚圈在最新帧中唯一对应。', click=after.centers[best].tolist())

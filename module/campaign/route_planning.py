@@ -4,13 +4,12 @@ import numpy as np
 
 from module.campaign.run_state import COMBAT_ENEMY_KINDS
 
+from module.campaign.navigation.ex_bypass import segment_clear
 from module.campaign.navigation.pathfinding import NoConnectedRoad
-from module.campaign.navigation.targets import walking_distance
+from module.campaign.navigation.targets import ROAD_TOLERANCE, walking_distance
 from module.campaign.subgoals import RoadView
 
-# 以下距离均为章节底图像素；只限制沿途敌人与路段，不给可见机关设距离门槛。
-ROUTE_CORRIDOR = 48.
-ROUTE_DETOUR = 64.
+# 路段推进距离使用章节底图像素；沿途敌人范围由当前道路截面决定，不设固定半径。
 ADVANCE_DISTANCE = 200.
 
 
@@ -108,25 +107,70 @@ def refresh_route(state, chart, snapshot, cut):
     return current
 
 
+def route_road_section(cut, point, path):
+    """判断敌人所在连续道路截面是否与执行路径相交，返回截面端点及长度，不相交返回 None。
+
+    point/path 均为章节底图像素。先在导航既有 ROAD_TOLERANCE 内将标记中心吸附到真实
+    道路，再求该道路点在 A* 折线上的最近投影，不只比较离散路径节点。投影位于路段内部时
+    截面垂直该段，落在路径端点时沿道路点到端点扫描，也覆盖小队身后仍处于同片路面的敌人。
+    截面逐像素检查，遇到背景、墙、光幕或地图边缘立即截断，不跨越空隙连接另一条路。
+    道路宽度自然决定候选范围，不设敌人距离或绕行门限；同一连通分量并不能替代此判据。
+    吸附仅容忍标记的道路边缘误差，不膨胀道路；越界、非有限坐标和无可行截面都拒绝。
+    """
+    point, path = np.asarray(point, float), np.asarray(path, float)
+    road = cut.road
+    if (road is None or road.ndim != 2 or point.shape != (2,) or not np.isfinite(point).all()
+            or path.ndim != 2 or path.shape[1] != 2 or not len(path) or not np.isfinite(path).all()):
+        return None
+    height, width = road.shape
+    if np.any(point < 0) or np.any(point >= [width, height]):
+        return None
+    x, y = np.floor(point).astype(int)
+    radius = int(np.ceil(ROAD_TOLERANCE))
+    left, top = max(0, x - radius), max(0, y - radius)
+    right, bottom = min(width, x + radius + 1), min(height, y + radius + 1)
+    rows, columns = np.nonzero(road[top:bottom, left:right])
+    if not len(rows):
+        return None
+    points = np.column_stack((columns + left, rows + top))
+    spans = np.linalg.norm(points - point, axis=1)
+    nearest = int(np.argmin(spans))
+    if spans[nearest] > ROAD_TOLERANCE:
+        return None
+    road_point = points[nearest].astype(float)
+    if len(path) == 1:
+        route_point = path[0]
+    else:
+        segments = np.diff(path, axis=0)
+        squared = np.sum(segments * segments, axis=1)
+        ratios = np.divide(np.sum((road_point - path[:-1]) * segments, axis=1), squared,
+                           out=np.zeros(len(segments)), where=squared > 0)
+        projected = path[:-1] + np.clip(ratios, 0, 1)[:, None] * segments
+        route_point = projected[int(np.argmin(np.linalg.norm(projected - road_point, axis=1)))]
+    if not segment_clear(road, road_point, route_point):
+        return None
+    return dict(road_point=road_point.tolist(), route_point=route_point.tolist(),
+                length=round(float(np.linalg.norm(route_point - road_point)), 1))
+
+
 def route_enemy_candidates(cut, squad, target, path, distances, enemies):
     """按道路距离排列实际路径上的敌人记录，不赋予历史记录可战斗状态。
 
-    仅接受贴近 A* 路径、位于可达分量且绕行不超过 ROUTE_DETOUR 的记录，距离单位为底图像素。
+    仅接受敌人所在道路截面与 A* 路径相交、且到敌人与目的地都有可行道路的记录。
+    道路边界决定截面范围，实际路程只排序，不使用固定走廊半径或额外绕行门限。
     执行目标和历史线索复核共用此几何条件；调用方负责类型、确认状态与冷却检查。
     """
     candidates = []
     home = cut.component(squad)
-    full = float(distances[-1] + np.linalg.norm(path[-1] - np.asarray(target)))
     for enemy in enemies:
         point = np.asarray(enemy['position'], float)
-        nearest = int(np.argmin(np.linalg.norm(path - point, axis=1)))
-        if np.linalg.norm(path[nearest] - point) > ROUTE_CORRIDOR:
+        if route_road_section(cut, point, path) is None:
             continue
         if home and cut.component(point) != home:
             continue
         first = walking_distance(cut.road, cut.regions, squad, point)
         last = walking_distance(cut.road, cut.regions, point, target)
-        if not np.isfinite(first + last) or first + last - full > ROUTE_DETOUR:
+        if not np.isfinite(first + last):
             continue
         candidates.append((first, enemy))
     return sorted(candidates, key=lambda pair: pair[0])
@@ -135,8 +179,8 @@ def route_enemy_candidates(cut, squad, target, path, distances, enemies):
 def route_enemy(state, cut, squad, target, path, distances):
     """选路程前方的第一个普通敌人或 Boss，忽略别条支路上的全局最近敌人。
 
-    候选须接近实际路径，且经该敌人的道路绕行不超过 ROUTE_DETOUR；小队分量为零时以 A* 复核，
-    防止把直线相邻但隔墙的敌人算在沿途，也避免误删圆环覆盖的近敌。冷却敌人返回明确暂停目标。
+    候选所在连续道路截面必须与实际路径相交；不因道路较宽或敌人在路径起点后方就按距离排除。
+    截面遇到背景、墙或光幕立即停止，小队分量为零时仍以 A* 复核。冷却敌人返回明确暂停目标。
     仍有可处理普通敌人时 Boss 被跳过，主线路径不能绕过 boss_ready 门禁。
     """
     enemies = [enemy for enemy in state.confirmed_enemies()
@@ -149,7 +193,8 @@ def route_enemy(state, cut, squad, target, path, distances):
     if enemy['status'] != 'pending' or state.cooling(enemy['id']):
         return dict(kind='none', reason='route_enemy_unavailable', for_target=enemy['id'])
     return dict(kind='enemy', id=enemy['id'], position=enemy['position'], enemy_kind=enemy['kind'],
-                distance=round(distance, 1), reason='enemy_on_route')
+                distance=round(distance, 1), reason='enemy_on_route',
+                road_section=route_road_section(cut, enemy['position'], path))
 
 
 def route_action(state, cut, squad, destination, visible=False):

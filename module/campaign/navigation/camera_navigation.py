@@ -641,12 +641,13 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
     不以整片场景像素是否相同判断镜头稳定，避免河流或角色动画使有效匹配失效。
     enemy_kind 必须沿用原目标的普通／Boss 类型，最终复核不能退回普通敌人默认值。
     新帧道路必须独立配准通过，镜头偏移不超过 12 地图像素、尺度变化不超过 12%；
-    再用原参考帧重做目标身份与两帧运动匹配，中心偏移不超过 TRACK_DISTANCE 客户区像素。
+    reference 必须是初次两帧匹配成功的拖动后观测，期间不发新手势；最新帧只跟踪已确认脚圈，
+    不重复拖动前参考帧的身份推断，中心偏移不超过 TRACK_DISTANCE 且双向关联无歧义。
     本方法不拖动或开合地图。复核失败保留前后帧并抛 ClickUnconfirmed，禁止自动展开重定位；
     截图、窗口、弹窗和取消异常直接传播，不在安全异常后追加操作。
     """
     from module.campaign.navigation.movement_feedback import ClickUnconfirmed
-    from module.campaign.vision.enemy_ring import TRACK_DISTANCE, match_target_ring, observe_rings
+    from module.campaign.vision.enemy_ring import observe_rings, track_confirmed_ring
 
     fresh = goto.capture_client(session.win)
     session.identity(fresh)
@@ -661,15 +662,13 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
         if shift > 12 or scale_change > .12:
             raise ValueError(f'最新帧镜头位置或比例变化超限（镜头偏移 {shift:.1f} 地图像素，'
                              f'比例变化 {scale_change:.1%}）')
-        rings = observe_rings(fresh, panel, current['matrix'], current['viewport'])
-        result = match_target_ring(reference, rings, target, squad_position, goto.VIEWPORT_PIXEL,
-                                   enemy_kind=enemy_kind)
+        rings = observe_rings(fresh, panel, current['matrix'], current['viewport'], track_scene=False)
+        result = track_confirmed_ring(reference, rings, target, squad_position, click, enemy_kind=enemy_kind)
         if result.get('click') is None:
+            session.emit(message=f'脚圈目标跟踪未通过：{result["reason"]}', enemy_ring_recheck=result)
             raise ValueError(result['reason'].rstrip('。'))
         latest_click = np.asarray(result['click'], float)
         center_shift = float(np.linalg.norm(latest_click - click))
-        if center_shift > TRACK_DISTANCE:
-            raise ValueError(f'最新帧脚圈中心偏移 {center_shift:.1f} 客户区像素，超过 {TRACK_DISTANCE:.0f}')
     except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
         runtime.write_image(session.folder / 'enemy_ring_before.png', field)
         runtime.write_image(session.folder / 'enemy_ring_latest.png', fresh)
@@ -677,7 +676,8 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
         raise ClickUnconfirmed(f'脚圈点击复核未通过：{str(error).rstrip("。")}；停止执行，未发送移动点击。') from error
     session.preview(fresh)
     session.emit(message=f"脚圈点击复核通过：道路重合度 {current['iou']:.3f}，"
-                         f'镜头偏移 {shift:.1f} 地图像素，脚圈中心偏移 {center_shift:.1f} 客户区像素')
+                         f'镜头偏移 {shift:.1f} 地图像素，脚圈中心偏移 {center_shift:.1f} 客户区像素',
+                 enemy_ring_recheck=result)
     return latest_click
 
 
@@ -767,7 +767,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                          enemy_ring_match={key: value for key, value in result.items() if key != 'reason'},
                          enemy_ring_pan_span=count - ring_pan)
             if result.get('click') is not None:
-                click = confirm_ring_click(session, matcher, ring_previous, field, viewport, scale_a,
+                click = confirm_ring_click(session, matcher, current_rings, field, viewport, scale_a,
                                            target, squad_position, np.asarray(result['click'], float),
                                            enemy_kind=enemy_kind)
                 session.last_plan_enemy_ring = True

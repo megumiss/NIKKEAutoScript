@@ -1379,7 +1379,8 @@ class CampaignSession(NavigationSession):
         向外拖动用固定面板向量（面板尺寸的 SCAN_ARM_STEP 倍），每臂逐站配准吸收，失败就不再深入。
         拖回以未移动的小队底图坐标为目标，每帧按实测配准计算相对偏移，最多拖 SCOUT_DRAGS 次；
         地图边缘造成斜向位移时因此仍能回到小队附近。向外配准失败使用最后可信视野拖回，
-        拖回失败或超过次数只跳过当前方向，其余方向仍按序尝试。安全异常照常传播。
+        拖回失败或超过次数只跳过当前方向，其余方向仍按序尝试。最后一个方向结束后不再拖回，
+        由调用方直接收起展开地图；纯地图拖动不改变扫描前的小队坐标。安全异常照常传播。
         """
         squad = self.stationary_squad()
         if squad is None:
@@ -1390,8 +1391,9 @@ class CampaignSession(NavigationSession):
         panel = located[0]
         step = np.array([panel.shape[1], panel.shape[0]], float) * SCAN_ARM_STEP
         scanned = 0
+        directions = ((0., 0.), (1., 0.), (-1., 0.), (0., 1.), (0., -1.))
         try:
-            for index, direction in enumerate(((0., 0.), (1., 0.), (-1., 0.), (0., 1.), (0., -1.))):
+            for index, direction in enumerate(directions):
                 if index == 0:
                     self.absorb_view(*located)
                     scanned += 1
@@ -1410,7 +1412,7 @@ class CampaignSession(NavigationSession):
                         break
                     self.absorb_view(*located)
                     scanned += 1
-                if not sent:
+                if not sent or index == len(directions) - 1:
                     continue
                 returned = False
                 for attempt in range(SCOUT_DRAGS + 1):
