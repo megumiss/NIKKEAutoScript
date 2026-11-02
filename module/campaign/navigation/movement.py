@@ -36,12 +36,13 @@ def navigate(
     session, target, emit, max_moves=24, arrival_radius=None, required_near=3, purpose='position', elevators=None,
     enemy_kind='normal'
 ):
-    """有限步执行并重新定位，连续三次近点观测才算到达，无进展或预算耗尽明确失败。
+    """有限步执行并重新定位，连续三次近点观测才算到达，无进展或移动次数耗尽明确失败。
 
     session 提供观测、规划、输入及停稳接口，target、到达半径和位置差都使用原图像素。
     到点模式按 required_near 次连续近点观测确认；收集品和敌人模式在附近进行有限试点，耗尽后返回 needs_review。
     arrival_radius 缺省取 goto.SQUAD_REACH（圆环覆盖半径）：点击放行残差与到点判定必须同源，
     否则镜头认为已到而到点循环不认，会空转触发停滞。
+    生产会话可提供 review_move_progress，在真实点击后的可信定位检查同道路历史最优路程。
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
     展开地图定位连续三轮未通过才报错；首轮失败后最多追加一次开阔道路短移，成功定位即清零失败计数。
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
@@ -105,6 +106,9 @@ def navigate(
         position = np.asarray(observation['position'], float)
         if observation.get('position_kind') != 'squad' or position.shape != (2,) or not np.isfinite(position).all():
             raise RuntimeError('小队定位无效，停止移动。')
+        review_progress = getattr(session, 'review_move_progress', None)
+        if review_progress is not None:
+            review_progress(observation)
         if elevators is not None and purpose == 'position':
             from module.campaign.navigation.elevator_navigation import at_elevator_exit, plan_elevators
 

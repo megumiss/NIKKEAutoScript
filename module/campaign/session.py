@@ -17,10 +17,11 @@ from module.campaign.navigation.session import NavigationSession
 from module.campaign.report import (ANCHOR_METHODS, ANCHOR_RESULTS, BATTLE_STATES, CAMERA_TRACKING,
                                     CORRECTION_REASONS, LOCALIZATION, MINIMAP_MODES, MOVE_STATES,
                                     NAVIGATION_METHODS, POSITION_KINDS, label, points_text)
-from module.campaign.run_state import describe_changes, located
+from module.campaign.run_state import MAX_FAILURES, describe_changes, located
 from module.campaign.timing import Stopwatch
 from module.campaign.trace import CampaignTrace
 from module.campaign.navigation.ex_bypass import ExBypass, ExBypassUnavailable
+from module.campaign.navigation.progress import MovementProgress, NavigationStalled
 from module.campaign.vision.chapter import chapter_identity
 from module.campaign.vision import battle
 from module.campaign.vision.minimap import terrain
@@ -32,8 +33,6 @@ from module.config.config import TaskEnd
 from module.handler.red_circle import find_red_circles
 from module.logger import logger
 
-# 单个目标的输入次数上限（含场景手势与小地图开合），挡住单个目标上的原地空转。
-TARGET_INPUT_BUDGET = 32
 # 侦察拖动：每屏最多拖几次把落点拖到面板中心、落点离中心多近就不再拖、单次拖动的最长距离
 # （客户区像素，起止点以面板中心对称，保证都落在 486×462 面板内）与拖完后的停稳等待。
 SCOUT_DRAGS = 3
@@ -189,15 +188,11 @@ def describe_snapshot(snapshot):
     return '，'.join(detail)
 
 
-class InputBudgetExceeded(RuntimeError):
-    """同一个目标的操作次数用尽；不可降级为普通目标失败后继续点击。"""
-
-
 class CampaignInput:
-    """生产驱动代理：每次新手势先校验会话并扣预算，释放操作不受停止与失焦限制。
+    """生产驱动代理：每次新手势先校验安全条件，成功发送后统计，释放操作不受停止限制。
 
-    这里也是「真正发出去过手势」的唯一记账点：小地图开合走的是 `device.click_xy`（未包装的原始驱动），
-    只经过 `before_input` 这道闸门、不开手势，所以不能算进 `session.gestures`。
+    场景手势与可能移动小队的输入序号在此统计；地图控件经独立成功回调统计实际操作，
+    不冒充场景手势。驱动失败、编码后取消或失焦均不能增加成功操作次数。
     """
 
     def __init__(self, session, handler):
@@ -211,24 +206,20 @@ class CampaignInput:
             return value
 
         def send(*args, **kwargs):
-            """发送前校验窗口、弹窗与预算，发送后任一次驱动失败都立即停止。"""
+            """发送前校验窗口与弹窗，成功后统计；驱动失败立即停止，不算作成功输入。"""
             self.session.before_input()
-            # 闸门放行之后才算一次真手势：只有它可能让小队移动或镜头平移（见 reuse_reason）。
-            self.session.gestures += 1
-            # 推图中的 swipe 只平移镜头或地图面板；其他鼠标输入保守地使小队坐标失效。
-            if name != 'mouse_swipe':
-                self.session.squad_inputs += 1
             action = dict(method=name, args=args, kwargs=kwargs, coordinate_space='screen',
                           client_origin=self.session.win.origin)
             self.session.record('input_before', field=self.session.trace.last_field, force=True, action=action)
-            # 编码与写盘期间也可能失焦或收到取消；再次校验，但不重复扣操作预算。
+            # 编码与写盘期间也可能失焦或收到取消；发给驱动前再次校验。
             self.session.check()
             result = value(*args, **kwargs)
+            if getattr(self.handler, '_failures', 0):
+                raise WindowChanged(f'鼠标操作 {name} 发送失败。')
+            self.session.count_input(scene=True, moves_squad=name != 'mouse_swipe')
             self.session.trace.after_input(action=action, inputs=self.session.inputs,
                                            target_inputs=self.session.target_inputs,
                                            gestures=self.session.gestures)
-            if getattr(self.handler, '_failures', 0):
-                raise WindowChanged(f'鼠标操作 {name} 发送失败。')
             return result
 
         return send
@@ -315,13 +306,13 @@ class CampaignSession(NavigationSession):
         self.win.trace = self.trace
         self.win.stop_check = self.check_stop
         self.win.input_check = self.before_input
+        self.win.input_sent = self.map_input_sent
         self.win.pause = self.pause
         self.raw_handler = self.win.handler
         self.win.handler = CampaignInput(self, self.raw_handler) if self.raw_handler is not None else None
         self.inputs = 0
         self.target_inputs = 0
-        # 真正发给游戏的手势数（点击／拖动／按下／移动）。inputs 把「只过闸门、不开手势」的小地图
-        # 开合也算进预算，所以判定画面有没有变过要用这一个（见 CampaignInput.send、reuse_reason）。
+        # 场景手势序号只使镜头/小队定位缓存失效，地图控件点击另计实际 inputs。
         self.gestures = 0
         self.squad_inputs = 0
         self.popup_handling = False
@@ -345,6 +336,9 @@ class CampaignSession(NavigationSession):
         self.scout_failure = None
         self.planned_enemy_click = None
         self.last_enemy_click = None
+        self.planned_movement_click = None
+        self.movement_progress = {}
+        self.active_movement_progress = None
         self.collectible_mode = owner.config.task.command == 'auto_main_collectible'
         self.localizer.record = self.record
 
@@ -366,7 +360,7 @@ class CampaignSession(NavigationSession):
         self.verify_identity(self.win.client())
         logger.info(f"主线会话开始：{self.expected_identity[1].upper()} 第 {self.expected_identity[0]} 章，"
                     f"游戏窗口左上角 {self.win.client_origin()}，截图与身份核对耗时 {watch}；"
-                    f"同一个目标最多操作 {TARGET_INPUT_BUDGET} 次")
+                    '移动按路线进展与各阶段重试上限保护')
 
     def check_stop(self):
         """响应调度器停止事件，包括窗口失焦恢复期间；不按单章累计时长停止。"""
@@ -388,15 +382,17 @@ class CampaignSession(NavigationSession):
         self.win.check()
 
     def begin_target(self, purpose):
-        """切换目标用途并重置单目标预算；已验证箭头基准继续保留。"""
+        """切换用途并重置该阶段成功操作统计；稳定目标的路线进展历史不清空。"""
         self.request['purpose'] = purpose
         self.planned_enemy_click = None
+        self.planned_movement_click = None
         self.last_enemy_click = None
+        self.active_movement_progress = None
         self.target_inputs = 0
         self.record('target_begin')
 
     def before_input(self):
-        """每次场景手势之前核对弹窗与收集品提示；达到单目标预算时不发送下一次输入。
+        """输入及地图状态检查前核对窗口、停止、弹窗与收集提示，不增加操作统计。
 
         这里不重读章节身份：身份由 start 核对一次（见 verify_identity）。真正必须逐帧看的是
         战斗弹窗与收集品提示——漏一帧就可能把落点点进战斗，或踩掉一次拾取机会。
@@ -404,10 +400,73 @@ class CampaignSession(NavigationSession):
         self.check()
         if not self.popup_handling:
             self.identity(self.win.client())
-        if self.target_inputs >= TARGET_INPUT_BUDGET:
-            raise InputBudgetExceeded(f'同一个目标已操作 {TARGET_INPUT_BUDGET} 次仍未完成，停止并交人工复核。')
+
+    def count_input(self, scene=False, moves_squad=False):
+        """成功发送输入后统计实际操作，场景序号与小队输入序号继续服务于缓存失效。
+
+        纯截图、状态检查或驱动失败不能调用；地图控件不改变小队或场景位置，只统计实际点击。
+        scene 标识场景手势，moves_squad 标识可能移动小队的场景输入，不用于推断操作成功结果。
+        """
         self.inputs += 1
         self.target_inputs += 1
+        if scene:
+            self.gestures += 1
+        if moves_squad:
+            self.squad_inputs += 1
+
+    def map_input_sent(self, point):
+        """地图控件实际点击成功后统计并留档；已有目标状态直接返回时不会调用。
+
+        地图控件不纳入场景手势或小队移动序号，不能让一次纯面板开合使已知小队位置失效。
+        """
+        self.count_input()
+        self.record('map_input_sent', point=list(point), coordinate_space='client')
+
+    def begin_move_target(self, goal, target):
+        """按稳定执行编号选择路线进展历史，EX 续行或同目标恢复不重新取得失败额度。
+
+        target 使用地图坐标，在首次派发时冻结；后来标记位置微调不能刷新剩余路程基准。
+        这里只选择纯计算对象，不发送输入；用途切换只暂停监控，不删除同编号历史。
+        """
+        key = (goal['kind'], goal['id'])
+        if key not in self.movement_progress:
+            self.movement_progress[key] = MovementProgress(target)
+        self.active_movement_progress = self.movement_progress[key]
+
+    def complete_move_target(self, goal):
+        """真实到点或战斗胜利后释放该目标的路线快照，不把失败、冷却或切换用途当作完成。
+
+        完成记录由执行层的既有成功分支确认；未完成目标仍保留失败次数与历史最优值供续行。
+        及时释放道路数组，避免同章清理大量敌人后为已完成目标继续保存多份道路快照。
+        """
+        progress = self.movement_progress.pop((goal['kind'], goal['id']), None)
+        if self.active_movement_progress is progress:
+            self.active_movement_progress = None
+        self.planned_movement_click = None
+
+    def review_move_progress(self, observation):
+        """真实移动后用可靠停稳定位复核路线进展，沿用坐标或只有镜头变化时不消费证据。
+
+        冻结道路与目标由移动规划建立；敌人标记、视野或用途切换不能提供进展。
+        连续无进展到上限向执行层抛 NavigationStalled，不经过回正重扫清空失败记录。
+        """
+        progress = self.active_movement_progress
+        if (progress is None or observation.get('squad_source') == 'known'
+                or observation.get('position_kind') != 'squad'
+                or observation.get('status') not in ('accepted', None)):
+            return
+        score = observation.get('iou')
+        if score is None or not np.isfinite(score):
+            return
+        try:
+            result = progress.observe(observation['position'])
+        except NavigationStalled:
+            self.record('movement_progress', **progress.last_result)
+            raise
+        if result is not None:
+            self.record('movement_progress', **result)
+            logger.info(f"移动路线进展：阶段 {result['stage']}，剩余路程 {result['remaining']} 地图像素，"
+                        f"有效推进 {result['progressed']}，连续无进展 {result['failures']} 次。")
 
     def popup(self, field):
         """战斗闸门：弹窗、战斗中、结算与可跳过剧情都抛给执行层，接管之内放行按钮点击。
@@ -437,6 +496,7 @@ class CampaignSession(NavigationSession):
         evidence = {'kind': 'battle_popup', 'chapter': self.expected_identity[0]}
         message = '画面出现战斗准备弹窗，交由执行层接管这场战斗。'
         if is_ex:
+            # 该记录只证明发出了移动目的地，弹窗可能来自途中 EX；实际归属由重新定位确认。
             target_click = self.last_enemy_click
             if (target_click is not None and target_click['squad_inputs'] == self.squad_inputs
                     and target_click['id'] == self.owner.state.execution_target):
@@ -468,6 +528,7 @@ class CampaignSession(NavigationSession):
 
         本方法不点击地面；下一次 plan 根据实时小队位置计算安全路点。EX 标记可能被小队遮挡，
         可使用运行状态中的近距离历史 EX，但缺失或歧义时不拿原目标代替 EX 坐标。
+        返回实际关联的避让记录及敌人编号，供执行层区分目标本身与途中触发；不在此处改型。
         """
         self.localized_report = None
         self.last_registration = None
@@ -476,11 +537,14 @@ class CampaignSession(NavigationSession):
         observation = self.observe()
         squad = observation['position']
         obstacle = self.ex_bypass.encounter(squad, self.owner.state.enemies.values())
+        for progress in self.movement_progress.values():
+            progress.interrupt()
         target = goal.get('position') if goal else None
         self.record('ex_bypass_begin', squad=squad, goal=goal, obstacle=obstacle)
         logger.info(f'EX 绕行定位：小队 {points_text(squad)}，EX {points_text(obstacle["position"])}，'
                     f'原目标 {points_text(target) if target is not None else "尚未确定"}，'
                     f'避让半径 {obstacle["radius"]:.1f} 像素，触发 {obstacle["encounters"]} 次。')
+        return obstacle
 
     def identity(self, field):
         """逐帧闸门：只查战斗弹窗与收集品提示，不重读章节身份。
@@ -535,7 +599,7 @@ class CampaignSession(NavigationSession):
                               source=self.owner.campaign_source(self.owner.last_snapshot))
 
     def record(self, event, field=None, force=False, **details):
-        """把当前目标、预算与决策轮附在证据事件上，不重新访问窗口或运行视觉识别。
+        """把当前目标、实际操作统计与决策轮附在证据事件上，不重新访问窗口或运行视觉识别。
 
         field 必须是本次业务已取得的 BGR 客户区画面；归档失败由记录器告警，不改变操作控制流。
         """
@@ -747,12 +811,13 @@ class CampaignSession(NavigationSession):
 
         紧凑快照只提供底图位置，不冒充展开 ROI 的投影基准。起始镜头不一致或跟踪需要展开
         校正时，先回正并取得原始展开报告再规划；若小队已移动超过 12 地图像素，交回移动
-        闭环更新起点。窗口、弹窗和输入预算异常不捕获，也不补发清理输入。
+        闭环更新起点。窗口、弹窗和路线停滞异常不捕获，也不补发清理输入。
         纯镜头找敌人后的已知起点不进入实时小队定位回退；当前视野不足以规划时直接停止。
         enemy_kind 传递原目标类型，Boss 脚圈辅助不得关联成普通敌人。
         """
         from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
         self.planned_enemy_click = None
+        self.planned_movement_click = None
         options = {'enemy_kind': enemy_kind} if enemy_kind != 'normal' else {}
         field = self.win.client()
         self.identity(field)
@@ -769,6 +834,9 @@ class CampaignSession(NavigationSession):
                 self.remember_navigation(snapshot)
                 observation = self.reusable_report() or observation
         original_target = target
+        if (self.active_movement_progress is not None
+                and self.active_movement_progress.failures >= MAX_FAILURES):
+            raise NavigationStalled('同一目标连续移动未取得可靠路线进展，禁止继续镜头规划。')
         if self.ex_bypass.obstacles:
             waypoint = self.ex_bypass.waypoint(self.owner.cut.road, observation['position'], target)
             self.record('ex_bypass_waypoint', squad=observation['position'], target=target,
@@ -786,6 +854,7 @@ class CampaignSession(NavigationSession):
                 raise
             logger.info(f'紧凑定位不足以完成镜头规划，按需展开重新定位一次：{exc}')
         else:
+            self.prepare_move_progress(observation, target, click)
             self.planned_enemy_click = dict(click=np.asarray(click).tolist(),
                                            target=np.asarray(target).tolist(),
                                            direct=np.array_equal(target, original_target))
@@ -797,9 +866,22 @@ class CampaignSession(NavigationSession):
         if self.ex_bypass.obstacles:
             target = self.ex_bypass.waypoint(self.owner.cut.road, updated['position'], original_target)
         click = super().plan(updated, target, enemy_assist=enemy_assist, **options)
+        self.prepare_move_progress(updated, target, click)
         self.planned_enemy_click = dict(click=np.asarray(click).tolist(), target=np.asarray(target).tolist(),
                                        direct=np.array_equal(target, original_target))
         return click
+
+    def prepare_move_progress(self, observation, waypoint, click):
+        """成功规划后冻结路线进展基准，只有实际发送该点击才允许后续定位评估。
+
+        EX 退出路点与安全绕行道路由同一份有效路网生成；原目标坐标在首次派发时冻结，
+        不能用本帧重新识别或新的计划坐标替代历史最优值。未发送的计划不计一次失败或进展。
+        """
+        if self.active_movement_progress is None:
+            return
+        self.active_movement_progress.prepare(self.owner.cut.road, observation['position'], waypoint,
+                                              self.ex_bypass.obstacles)
+        self.planned_movement_click = np.asarray(click, float).copy()
 
     def absorb_expanded(self, panel, report):
         """把展开面板上认出的敌人与看到的区域并进运行状态，只记一行敌人的合并结果。
@@ -829,10 +911,10 @@ class CampaignSession(NavigationSession):
                 if 0 <= position[0] < size[0] and 0 <= position[1] < size[1]]
 
     def click_client(self, point):
-        """发送有效的客户区点击，共用窗口、弹窗与预算闸门，不调用地面移动入口。
+        """发送有效的客户区点击，共用窗口、弹窗与停止闸门，不调用地面移动入口。
 
         坐标按 1776×999 客户区验证并换算到屏幕；最终发送仍由 CampaignInput 校验窗口、取消、
-        停止请求与单目标预算。界面按钮直接使用此入口，地面落点须先由 move 复核收集提示及光幕。
+        停止请求。界面按钮直接使用此入口，地面落点须先由 move 复核收集提示及光幕。
         """
         point = np.asarray(point, float)
         if point.shape != (2,) or not np.isfinite(point).all() or not (0 <= point[0] < 1776 and 0 <= point[1] < 999):
@@ -842,7 +924,7 @@ class CampaignSession(NavigationSession):
         self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]))
 
     def hold_client(self, point, duration):
-        """在有效客户区坐标按住鼠标指定秒数，窗口、弹窗、预算和留档均走 CampaignInput。"""
+        """在有效客户区坐标按住鼠标指定秒数，窗口、弹窗、停止和留档均走 CampaignInput。"""
         point = np.asarray(point, float)
         if point.shape != (2,) or not np.isfinite(point).all() or not (0 <= point[0] < 1776 and 0 <= point[1] < 999):
             raise ValueError('长按位置越界或不是有效坐标。')
@@ -872,7 +954,7 @@ class CampaignSession(NavigationSession):
         """复核收集提示后发送客户区地面落点，沿用规划阶段最后确认的光幕路网。
 
         光幕确认失败不改变既有状态，也不单独否决移动；未确认障碍导致的停滞由移动闭环处理。
-        坐标、窗口、弹窗、取消与输入预算仍由当前会话和生产驱动代理校验。
+        坐标、窗口、弹窗与取消仍由当前会话和生产驱动代理校验。
         """
         click = np.asarray(click, float)
         if click.shape != (2,) or not np.isfinite(click).all() or not (0 <= click[0] < 1776 and 0 <= click[1] < 999):
@@ -881,13 +963,18 @@ class CampaignSession(NavigationSession):
         field = self.win.client()
         self.check_collectible(field)
         self.click_client(click)
+        planned, self.planned_movement_click = self.planned_movement_click, None
+        if (self.active_movement_progress is not None and planned is not None
+                and np.array_equal(planned, click)):
+            self.active_movement_progress.sent()
 
     def remember_enemy_click(self, click, target, is_final):
-        """记录实际成功发送的敌人目标直点，将后续 EX 弹窗关联到原执行编号而非位置近邻。
+        """记录实际成功发送的敌人目标直点，供重新定位后核对实际 EX 与原执行编号。
 
         仅由导航在 move 成功后调用；target 是本次选定的敌人落点，click 为客户区落点。
-        附近试点、箭头恢复短移和 EX 绕行路点不能认领原敌人身份。只消费匹配本次规划结果的
-        直点，记录发送后的移动输入计数；后续其他移动输入或切换目标会使弹窗关联失效。
+        附近试点、箭头恢复短移和 EX 绕行路点不记录为原目标直点。只消费匹配本次规划结果的
+        直点，记录发送后的移动输入计数；后续其他移动输入或切换目标会使该记录失效。
+        本记录不证明已经到达或选中敌人，弹窗可能由途中 EX 触发，须另取得实际触发编号。
         此处坐标相等仅核对同一规划与输入，不用于重新推断 EX 与 Boss 的空间身份。
         """
         self.last_enemy_click = None
@@ -1059,7 +1146,7 @@ class CampaignSession(NavigationSession):
 
         沿用半自动战斗的关闭模板与 5 秒防抖，同一场每个开关最多点击一次、每帧最多一个。
         未定位、颜色未知、已开启或按钮中心变化超过 15 客户区像素都会中断连续关闭计数。
-        未知不等于关闭，不能以默认 AUTO 坐标点击；窗口、停止与输入预算仍由 tap 校验。
+        未知不等于关闭，不能以默认 AUTO 坐标点击；窗口与停止仍由 tap 校验。
         """
         controls = state.get('auto_controls') or {}
         for key in battle.AUTO_CONTROLS:
@@ -1096,7 +1183,7 @@ class CampaignSession(NavigationSession):
             return
 
     def tap(self, point, interval=0.):
-        """按客户区坐标点一次界面按钮，保留输入闸门与预算，但不执行地面移动的光幕检查。
+        """按客户区坐标点一次界面按钮，保留输入安全闸门，但不执行地面移动的光幕检查。
 
         interval 是这一点自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：
         间隔内的重复点击直接丢掉并返回 False，真的点了返回 True。战斗接管的按钮都靠它防连点——
@@ -1380,7 +1467,7 @@ class CampaignSession(NavigationSession):
         """按面板像素向量发送一次展开地图拖动，返回实际发送的偏移；过短不拖动返回 None。
 
         停稳等待随拖动长度伸缩：实测 300 像素长拖后地图惯性可超过 2 秒，固定等待不够。
-        拖动前检查停止、窗口与预算。
+        拖动前检查停止与窗口。
         """
         offset = np.asarray(offset, float)
         length = float(np.linalg.norm(offset))
@@ -1404,7 +1491,7 @@ class CampaignSession(NavigationSession):
         默认按道路整格覆盖停止；check_enemies 要求安全敌人覆盖，enemy_id 还要求该历史敌人本拍已复核，
         不能因过去看过道路就停止。地图边缘拖不动时最多拖 SCOUT_DRAGS 次，
         落点没进视野由调用方记冷却；配准失败只放弃本屏（见 scout_locate），不丢掉途中已记录的观测。
-        拖动经输入代理发送，与移动输入同样先核对窗口、章节与预算。
+        拖动经输入代理发送，与移动输入同样先核对窗口、章节与停止。
         """
         located = self.scout_locate(tag)
         if located is None:
@@ -1443,43 +1530,38 @@ class CampaignSession(NavigationSession):
         step = np.array([panel.shape[1], panel.shape[0]], float) * SCAN_ARM_STEP
         scanned = 0
         directions = ((0., 0.), (1., 0.), (-1., 0.), (0., 1.), (0., -1.))
-        try:
-            for index, direction in enumerate(directions):
-                if index == 0:
-                    self.absorb_view(*located)
-                    scanned += 1
-                    continue
-                vector = step * np.asarray(direction, float)
-                sent = 0
-                for stop in range(SCAN_ARM_STOPS):
-                    if self.drag_expanded_offset(vector) is None:
-                        break
-                    sent += 1
-                    previous = located
-                    located = self.scout_locate(f'scan_{index:02}_{stop}')
-                    if located is None:
-                        logger.info('当前扫描方向配准未通过，停止深入并使用最后可信视野拖回小队。')
-                        located = previous
-                        break
-                    self.absorb_view(*located)
-                    scanned += 1
-                if not sent or index == len(directions) - 1:
-                    continue
-                returned = False
-                for attempt in range(SCOUT_DRAGS + 1):
-                    if located is not None and self.scout_drag(located[0], located[1], squad) is None:
-                        returned = True
-                        break
-                    if located is None or attempt == SCOUT_DRAGS:
-                        break
-                    located = self.scout_locate(f'scan_{index:02}_back_{attempt}')
-                if not returned:
-                    logger.warning('十字扫描未能按相对位置拖回小队附近，跳过当前方向并继续下一方向。')
-                    continue
-        except InputBudgetExceeded:
-            self.check()
-            # 兜底：阶段预算在执行层翻篇（见 scan_start），这里只保证异常不扩散、已扫部分有效。
-            logger.info(f'开局扫描达到单目标输入预算，保留已扫描的 {scanned} 屏。')
+        for index, direction in enumerate(directions):
+            if index == 0:
+                self.absorb_view(*located)
+                scanned += 1
+                continue
+            vector = step * np.asarray(direction, float)
+            sent = 0
+            for stop in range(SCAN_ARM_STOPS):
+                if self.drag_expanded_offset(vector) is None:
+                    break
+                sent += 1
+                previous = located
+                located = self.scout_locate(f'scan_{index:02}_{stop}')
+                if located is None:
+                    logger.info('当前扫描方向配准未通过，停止深入并使用最后可信视野拖回小队。')
+                    located = previous
+                    break
+                self.absorb_view(*located)
+                scanned += 1
+            if not sent or index == len(directions) - 1:
+                continue
+            returned = False
+            for attempt in range(SCOUT_DRAGS + 1):
+                if located is not None and self.scout_drag(located[0], located[1], squad) is None:
+                    returned = True
+                    break
+                if located is None or attempt == SCOUT_DRAGS:
+                    break
+                located = self.scout_locate(f'scan_{index:02}_back_{attempt}')
+            if not returned:
+                logger.warning('十字扫描未能按相对位置拖回小队附近，跳过当前方向并继续下一方向。')
+                continue
         return scanned
 
 

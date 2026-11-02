@@ -10,8 +10,8 @@ from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KIN
                                     RESULT_STATES, TARGET_SOURCES, label, points_text)
 from module.campaign.route_planning import planning_routes
 from module.campaign.scouting import scout_focus
-from module.campaign.session import (DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL,
-                                     InputBudgetExceeded)
+from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL
+from module.campaign.navigation.progress import NavigationStalled
 from module.campaign.timing import Stopwatch
 from module.campaign.vision.battle import score_text, value_text
 from module.campaign.window import WindowChanged
@@ -32,7 +32,7 @@ CAMPAIGN_RECOVERY_LIMIT = 3
 # 复核站位上最多连看的紧凑帧数：箭头锚点、配准或检测偶发失手会让单帧不可信，换一帧往往就能看清；
 # 连看都不可信才算这次复核失败。
 REVIEW_FRAMES = 3
-# 一次侦察最多看几屏：每屏最多 3 次拖动，连同展开、收起不超过单目标 32 次输入。
+# 一次侦察最多看八屏，每屏最多三次拖动；单轮扫描有界，不与正常移动共享累计操作上限。
 SCOUT_VIEWS = 8
 # 战斗接管的节奏与上限，照仓库里已经跑熟的战斗循环取（module/daemon/semi_combat.py、
 # module/event/challenge.py）：循环本身跑得快，每个按钮各自有最短点击间隔（间隔在会话里，
@@ -95,8 +95,12 @@ def describe_evidence(evidence):
     return detail
 
 
+class ScoutingIncomplete(RuntimeError):
+    """前置道路复核达到失败上限，直接交人工处理，不由自动恢复清空冷却后重新扫描。"""
+
+
 class CampaignExecutor:
-    """连接纯决策与设备会话；任何身份、焦点或预算异常都不转成普通目标失败。"""
+    """连接纯决策与设备会话；任何身份、焦点或路线停滞异常都不转成普通目标失败。"""
 
     def __init__(self, owner, session, purpose='story'):
         """注入会话以便离线回放；业务状态仍由 Campaign 统一持有。"""
@@ -110,6 +114,8 @@ class CampaignExecutor:
         self.interrupted_goal = None
         self.interrupted_inputs = 0
         self.ex_pending = False
+        self.ex_evidence = None
+        self.scout_wait_key = None
         self.terminal_checked = None
         self.terminal_scan_stalls = 0
         self.recoveries = 0
@@ -128,12 +134,11 @@ class CampaignExecutor:
         """保存被 EX 中断且尚未完成的目标，将重新定位和绕行延迟到下一轮统一异常门禁内。
 
         启动、侦察、移动和战斗接管都可触发；已清除敌人不可恢复，不能把上轮完成目标误认成续行目标。
-        弹窗携带实际敌人直点编号时直接纠正该目标；只有沿途触发或缺少点击关联才保留原目标绕行。
-        原目标已消耗的输入额度继续累计，不能借 EX 中断重置单目标上限。
+        直点编号只表示移动目的地，不能证明弹窗属于该敌人。保留原目标、操作统计与点击证据，
+        下一轮重新定位实际触发 EX，再按实际编号决定改型或绕行；不在此处比较位置或直接改型。
+        原目标实际操作统计与路线无进展历史继续累计，不能借 EX 中断清空失败记录。
         """
-        if self.correct_ex_target(evidence):
-            self.ex_pending = True
-            return
+        self.ex_evidence = dict(evidence or {})
         self.interrupted_goal = next((dict(candidate) for candidate in
                                       (goal, self.interrupted_goal, self.terminal_destination, self.last_executed)
                                       if candidate and candidate.get('kind') != 'none'
@@ -146,17 +151,25 @@ class CampaignExecutor:
                     '下一轮重新定位并规划绕行。')
 
     def correct_ex_target(self, evidence):
-        """用已关闭 EX 弹窗携带的实际目标直点编号纠正类型，无需重新定位后比较坐标距离。
+        """实际触发 EX 的稳定编号与成功发送的目标编号一致时，按原编号纠正类型。
 
-        只接受生产导航在成功发送敌人目标直点后记录的编号。没有直点关联的弹窗、附近试点和
-        绕行途中触发不能把原 Boss 改成 EX；这些情况仍保留原目标及预算，由原绕行流程处理。
-        明确关联时立即改型并解除同编号续行，再重新观测规划，不将 EX 误记为战斗清除。
+        encountered_enemy_id 必须来自关闭弹窗后重新定位小队并关联实际 EX 的结果，不得从
+        点击目的地推断。主线两帧绑定过 EX 的 Boss 保留原 EX 编号，因此无需另设位置改型容差。
+        缺少实际编号、附近试点或途中触发其他 EX 时保留原目标及路线历史，继续原绕行流程。
+        明确关联时改型并解除同编号续行，不将 EX 误记为战斗清除。
         """
         target_click = (evidence or {}).get('target_click')
         if not evidence or evidence.get('kind') != 'ex_stage_closed' or not target_click:
             return False
         identifier = target_click.get('id')
-        if not identifier or not self.owner.state.confirm_ex_target(identifier):
+        encountered = evidence.get('encountered_enemy_id')
+        if not identifier or identifier != encountered:
+            self.session.record('ex_target_preserved', target_click=target_click,
+                                encountered_enemy_id=encountered, reason='encounter_not_target')
+            logger.info(f'EX 实际关联编号 {encountered} 与移动目标 {identifier} 不一致；'
+                        '保留原目标及路线历史，继续绕行。')
+            return False
+        if not self.owner.state.confirm_ex_target(identifier):
             return False
         for name in ('interrupted_goal', 'terminal_destination', 'terminal_continuation', 'last_executed'):
             current = getattr(self, name)
@@ -171,7 +184,8 @@ class CampaignExecutor:
             self.owner.last_routes = None
             self.owner.last_route_signature = None
         self.session.record('ex_target_corrected', target_click=target_click, evidence=evidence)
-        logger.warning(f'目标 {identifier} 直点触发 EX 弹窗，已按原编号纠正类型并解除续行；重新规划。')
+        logger.warning(f'实际触发 EX 编号 {identifier} 与移动目标一致，已按原编号纠正类型并解除续行；'
+                       '重新规划。')
         return True
 
     def needs_expansion(self, goal, snapshot):
@@ -284,6 +298,7 @@ class CampaignExecutor:
         if kind == 'elevator':
             target = goal['leg']['exit']
             kwargs['elevators'] = single_transfer_annotations(goal['leg'])
+        self.session.begin_move_target(goal, target)
         confirmed_transfers = []
 
         def progress(**values):
@@ -300,12 +315,13 @@ class CampaignExecutor:
             if self.session.ex_bypass.obstacles:
                 self.session.ex_bypass.check_target(target)
             if kind == 'mechanism' and self.session.trigger_visible_mechanism(goal):
+                self.session.complete_move_target(goal)
                 self.complete_mechanism(goal)
                 return
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
             raise
-        except (WindowChanged, InputBudgetExceeded, ClickUnconfirmed, ExBypassUnavailable):
+        except (WindowChanged, NavigationStalled, ClickUnconfirmed, ExBypassUnavailable):
             self.owner.state.execution_target = None
             raise
         except (RuntimeError, ValueError) as exc:
@@ -355,8 +371,42 @@ class CampaignExecutor:
             self.owner.state.penalize(goal['id'])
         elif kind == 'story':
             self.owner.state.route_goal = None
+        self.session.complete_move_target(goal)
         logger.info(f"{goal_brief(goal)} 结束：{describe_result(result)}，"
                     f"本目标操作 {self.session.target_inputs} 次，耗时 {watch}")
+
+    def wait_scout_cooldown(self, goal, snapshot):
+        """只有待复核落点仍在冷却且没有可立即检查的道路时等待，避免重复开合地图。
+
+        在主线定位与视野展开之前检查本轮目标的前置道路；新帧解除疑点或存在其他可扫描落点时
+        立即放行，不跳过必要复核。冷却按既有决策拍推进，等待仍响应停止和窗口检查。
+        失败达到上限直接抛 ScoutingIncomplete，禁止自动恢复清空同一疑点的失败次数。
+        """
+        if (self.purpose != 'story' or not located(snapshot) or snapshot.get('squad') is None
+                or (goal and goal['kind'] == 'review_block')
+                or (goal and goal['kind'] == 'none' and goal.get('reason', '').startswith('route_'))):
+            self.scout_wait_key = None
+            return False
+        state, squad = self.owner.state, snapshot['squad']
+        pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
+        if (pending is None or not state.cooling(pending['id'])
+                or scout_focus(state, self.owner.cut, squad, goal=goal) is not None):
+            self.scout_wait_key = None
+            return False
+        self.scout_pending = pending
+        cooldown = state.cooldowns[pending['id']]
+        failures = cooldown.get('failures', 0)
+        if failures >= MAX_FAILURES:
+            raise ScoutingIncomplete(f"前置道路 {pending['id']} 累计 {failures} 次未能确认。")
+        key = (pending['id'], cooldown['until'])
+        if self.scout_wait_key != key:
+            self.scout_wait_key = key
+            self.session.record('scout_cooldown_wait', focus=pending, failures=failures,
+                                remaining_ticks=max(0, cooldown['until'] - state.tick))
+            logger.info(f"前置道路 {pending['id']} 复核冷却中，累计失败 {failures} 次；"
+                        '等待重试，不展开地图或拖动镜头。')
+        self.session.pause(1.)
+        return True
 
     def scout(self, goal, snapshot):
         """小队原地复核已选目标的前置道路；返回是否展开过，未完成落点留在 scout_pending。
@@ -412,7 +462,7 @@ class CampaignExecutor:
         else:
             logger.info(f'侦察达到单轮 {SCOUT_VIEWS} 屏上限，剩余区域延后至下一轮检查，暂不执行移动。')
         self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
-        # 侦察是内部有界的批量阶段；收尾输入翻篇记录，不与侦察叠加触发单目标上限。
+        # 侦察是内部有界的批量阶段；收尾单独统计实际操作，不修改稳定目标的路线进展历史。
         self.session.begin_target('position')
         self.session.scout_end()
         logger.info(f'侦察结束：检查 {views} 屏，展开与拖动总耗时 {total}')
@@ -427,7 +477,7 @@ class CampaignExecutor:
     def scan_terminal_region(self, snapshot):
         """在 Boss 前补扫当前连通分量的未覆盖格，返回最新紧凑观测。
 
-        每轮最多检查 SCOUT_VIEWS 屏；发现普通敌人、扫描失败或预算用尽都会停止本批，
+        每轮最多检查 SCOUT_VIEWS 屏；发现普通敌人、扫描失败或单轮屏数用尽都会停止本批，
         由调用方重新决策。连续 MAX_FAILURES 轮没有新增覆盖或普通敌人时转入有界恢复，
         扫描冷却不能把剩余未覆盖格视为完成，安全异常照常向上传播。
         """
@@ -613,6 +663,7 @@ class CampaignExecutor:
             raise BattleFailed(f'当前关卡重试 {BATTLE_DEFEAT_RETRIES} 次仍战败，停止执行并请求人工接管。')
         if goal is not None and goal.get('kind') == 'enemy':
             self.owner.state.enemies[goal['id']]['status'] = 'cleared'
+            self.session.complete_move_target(goal)
             logger.info(f'战斗胜利：{goal_brief(goal)} 已标记为清除，移出候选集合。')
             if goal.get('enemy_kind') == 'boss':
                 self.terminal_destination = None
@@ -628,7 +679,7 @@ class CampaignExecutor:
         开局、电梯传送后与异常恢复共用中心与四向扫描。扫描前必须确认小队居中，否则先独立回正并重新定位；
         刚完成 recover_center 的调用方传入 center_checked，避免丢失离屏图标点击记录后重复回正。
         扫描是内部有界的批量阶段，不是同一目标上的原地空转，所以阶段结束即翻篇：收起地图与刷新快照的
-        收尾输入记入新预算窗口，不与扫描叠加触发单目标上限。安全异常（窗口、弹窗、取消）不捕获，
+        收尾输入独立统计，单轮扫描次数由各方向站数与拖回上限约束。安全异常（窗口、弹窗、取消）不捕获，
         与侦察一致：此时不补发收起地图的输入。
         """
         if not center_checked and not centered(centering_frame(self.session)):
@@ -640,7 +691,7 @@ class CampaignExecutor:
         scanned = 0
         try:
             scanned = self.session.scan_explored()
-        except (TargetTriggered, WindowChanged, InputBudgetExceeded):
+        except (TargetTriggered, WindowChanged, NavigationStalled):
             raise
         except (RuntimeError, ValueError) as exc:
             logger.warning(f'{scene}扫描未能完成（{exc}），本轮不采纳扫描结果。')
@@ -671,6 +722,7 @@ class CampaignExecutor:
             if identifier.startswith('scout-') or identifier == 'story-location':
                 state.cooldowns.pop(identifier)
         self.scout_pending = None
+        self.scout_wait_key = None
         self.terminal_scan_stalls = 0
         self.owner.last_goal = None
         self.owner.last_routes = None
@@ -707,7 +759,7 @@ class CampaignExecutor:
         EX 关闭后重新定位并绕行，绕行不可用或战斗失败时交人工。
         找主线敌人和侦察阶段冻结已有小队底图坐标，只重新配准镜头与敌人；跨轮侦察同样不要求
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
-        剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、输入预算、取消
+        剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、路线停滞、取消
         和战斗失败仍立即停止。连续恢复尝试有界，完整恢复成功后清零；不设单章总时限或主循环轮数上限。
         Boss 执行前先核对章节敌人进度，进度不足才补扫当前连通分量；电梯不再触发终局遗漏检查。
         终局清怪战斗结束后，下一拍先做状态刷新与终局检查；通过后持续保留 Boss 目标直到战斗确认完成，
@@ -757,7 +809,10 @@ class CampaignExecutor:
                     resumed_ex = self.ex_pending
                     if resumed_ex:
                         camera_options = {}
-                        self.session.prepare_ex_bypass(self.interrupted_goal or self.terminal_destination)
+                        obstacle = self.session.prepare_ex_bypass(self.interrupted_goal or self.terminal_destination)
+                        evidence = dict(self.ex_evidence or {}, encountered_enemy_id=obstacle.get('enemy_id'))
+                        self.correct_ex_target(evidence)
+                        self.ex_evidence = None
                         self.ex_pending = False
                     if index or resumed_ex:
                         snapshot = self.session.snapshot(**camera_options)
@@ -779,6 +834,8 @@ class CampaignExecutor:
                         self.owner.cut.update(self.owner.state.blocking())
                         goal, snapshot = self.terminal_precheck(self.terminal_continuation, snapshot)
                     goal = self.plan_tick(snapshot)
+                    if self.wait_scout_cooldown(goal, snapshot):
+                        continue
                     if (self.purpose == 'story' and self.owner.state.route_goal is None
                             and snapshot.get('story_markers') and located(snapshot)
                             and snapshot.get('squad') is not None
@@ -829,7 +886,7 @@ class CampaignExecutor:
                         failures = self.owner.state.cooldowns.get(pending['id'], {}).get('failures', 0)
                         if failures >= MAX_FAILURES:
                             if self.purpose == 'story':
-                                raise RuntimeError(f"前置道路 {pending['id']} 累计 {failures} 次未能确认。")
+                                raise ScoutingIncomplete(f"前置道路 {pending['id']} 累计 {failures} 次未能确认。")
                             logger.warning(f"前置道路 {pending['id']} 累计 {failures} 次未能确认，停止推图并请求人工接管。")
                             return {'state': 'needs_review', 'reason': 'scouting_incomplete',
                                     'goal': goal, 'focus': pending}
@@ -869,7 +926,17 @@ class CampaignExecutor:
                         continue
                     self.interrupted_goal = None
                     self.interrupted_inputs = 0
-                except (WindowChanged, InputBudgetExceeded, BattleFailed, ExBypassUnavailable):
+                except ScoutingIncomplete as exc:
+                    self.session.record('scouting_incomplete', force=True, reason=str(exc),
+                                        goal=goal, focus=self.scout_pending)
+                    logger.warning(f'前置道路复核停止：{exc}；请求人工复核，不清除失败记录或重新扫描。')
+                    return {'state': 'needs_review', 'reason': 'scouting_incomplete', 'error': str(exc),
+                            'goal': goal, 'focus': self.scout_pending}
+                except NavigationStalled as exc:
+                    self.session.record('navigation_stalled', force=True, error=str(exc), goal=goal)
+                    logger.warning(f'移动路线无进展，停止并请求人工复核：{exc}')
+                    return {'state': 'needs_review', 'reason': 'navigation_stalled', 'error': str(exc), 'goal': goal}
+                except (WindowChanged, BattleFailed, ExBypassUnavailable):
                     raise
                 except (RuntimeError, ValueError) as exc:
                     if self.purpose != 'story':

@@ -49,31 +49,39 @@ class ExBypass:
         """从已重新定位的小队附近关联 EX，多个等距候选或缺失候选不凭原目标猜测。
 
         优先本帧 EX；被小队圆环遮挡时允许历史 EX 位置，但关联距离不得超过 100 像素；
-        相距超过 25 像素且距离差不足 8 像素的两个候选视为歧义。
+        距离差不足 8 像素且位置相距超过 25 像素、或稳定编号不同的两个候选视为歧义。
+        主线两帧关联过 EX 的 Boss
+        保留原 EX 编号参与关联；弹窗确认其真实类型后，由执行层按该编号纠正，不拿移动目的地代替。
+        返回避让记录中的 enemy_id 是本次实际关联编号，缺少编号时不沿用上次记录。
         """
         squad = np.asarray(squad, float)
         candidates = []
         for enemy in enemies:
             point = np.asarray(enemy.get('position'), float)
-            if enemy.get('kind') != 'ex' or point.shape != (2,) or not np.isfinite(point).all():
+            ex_marker = (enemy.get('kind') == 'ex'
+                         or (enemy.get('kind') == 'boss' and enemy.get('story_boss_verified', False)))
+            if not ex_marker or point.shape != (2,) or not np.isfinite(point).all():
                 continue
             distance = float(np.linalg.norm(point - squad))
             if distance <= EX_ASSOCIATION_LIMIT:
-                candidates.append((distance, point, enemy.get('visible', False)))
+                candidates.append((distance, point, enemy.get('visible', False), enemy.get('id')))
         current = [item for item in candidates if item[2]]
-        candidates = [(distance, point) for distance, point, _ in (current or candidates)]
+        candidates = [(distance, point, identifier) for distance, point, _, identifier in (current or candidates)]
         candidates.sort(key=lambda item: item[0])
         if not candidates:
             raise ExBypassUnavailable('重新定位后，小队附近没有可关联的 EX 位置。')
-        distance, point = candidates[0]
-        if any(other - distance < 8 and np.linalg.norm(position - point) > 25
-               for other, position in candidates[1:]):
+        distance, point, identifier = candidates[0]
+        if any(other - distance < 8 and (np.linalg.norm(position - point) > 25
+                                        or (identifier is not None and other_id is not None
+                                            and identifier != other_id))
+               for other, position, other_id in candidates[1:]):
             raise ExBypassUnavailable('小队附近有多个距离相近的 EX，无法确认刚关闭的关卡位置。')
         obstacle = next((item for item in self.obstacles
                          if np.linalg.norm(np.asarray(item['position']) - point) <= 50), None)
         if obstacle is None:
             obstacle = dict(position=point.tolist(), radius=0., encounters=0)
             self.obstacles.append(obstacle)
+        obstacle['enemy_id'] = identifier
         obstacle['encounters'] += 1
         if obstacle['encounters'] > EX_RETRY_LIMIT:
             raise ExBypassUnavailable(f'同一 EX 绕行已达 {EX_RETRY_LIMIT} 次，仍重复触发。')

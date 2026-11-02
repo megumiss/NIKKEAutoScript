@@ -144,11 +144,12 @@ class Campaign(ModuleBase):
         logger.error(f"地图资源同步失败，且本地没有地图资源：{status['error'] or '超时'}")
         raise RequestHumanTakeover
 
-    def reopen_minimap_if_closed(self, image=None, check=None, pause=None):
+    def reopen_minimap_if_closed(self, image=None, check=None, pause=None, input_sent=None):
         """小地图被关闭（左上角只剩水滴形箭头）时点击箭头重新打开，恢复后返回 True。
 
         image 为可选的 1776×999 BGR 客户区截图；缺省时用当前 device.image 转 BGR 判定。
         check / pause 可注入生产会话的输入闸门与可取消等待，默认保持既有准备流程。
+        input_sent 仅在成功发送重开点击后调用，纯状态检查不统计操作。
         关闭判据与采集器 reset_minimap 的 closed 态一致：控件外框可见、控件区域偏暗且紧凑面板
         不可见。确认关闭后点击左上角箭头坐标（与采集器 map_open 同源），等待面板动画后复核；
         重开失败或状态仍不确定只告警并返回 False，由调用方决定是否放弃本帧观测。
@@ -163,6 +164,8 @@ class Campaign(ModuleBase):
                 return False
         logger.warning('检测到小地图已被关闭，点击左上角箭头重新打开。')
         self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
+        if input_sent is not None:
+            input_sent(MINIMAP_TOGGLE_POSITION)
         (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
         self.device.screenshot()
         image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
@@ -184,15 +187,13 @@ class Campaign(ModuleBase):
         """当前画面是否通过完整判据确认为展开大地图形态。"""
         return self.minimap_state(image) == 'expanded'
 
-    def expand_minimap(self, check=None, pause=None):
-        """点击左上角控件把紧凑小地图展开成大地图面板，持续重试直到面板可见。
+    def expand_minimap(self, check=None, pause=None, input_sent=None):
+        """最多点击三次展开小地图，已有展开态直接返回，未知状态禁止点击。
 
-        check / pause 可注入生产会话闸门与可取消等待，任务时限、输入预算和窗口异常仍由这些闸门终止重试。
-        每次点击前必须确认紧凑态；未知状态直接报错，禁止把场景当作未展开地图点击。
-        一次点击没生效时继续重试，不再单独限制展开点击次数。
+        check / pause 提供停止、弹窗与窗口闸门；input_sent 仅在实际成功点击后统计操作。
+        第三次点击后的截图仍需确认成功，否则返回 False，不依赖单目标累计输入限制终止重试。
         """
-        attempt = 0
-        while 1:
+        for attempt in range(3):
             if check is not None:
                 check()
             state = self.minimap_state()
@@ -205,14 +206,23 @@ class Campaign(ModuleBase):
             else:
                 logger.info('展开大地图补充视野或重新定位。')
             self.device.click_xy(*MINIMAP_TOGGLE_POSITION)
+            if input_sent is not None:
+                input_sent(MINIMAP_TOGGLE_POSITION)
             (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
             self.device.screenshot()
-            attempt += 1
+        state = self.minimap_state()
+        if state == 'expanded':
+            return True
+        if state != 'compact':
+            raise RuntimeError('小地图展开后状态未知，禁止继续输入。')
+        logger.warning('展开小地图连续三次未生效，停止本次切换。')
+        return False
 
-    def collapse_minimap(self, check=None, pause=None):
+    def collapse_minimap(self, check=None, pause=None, input_sent=None):
         """把展开的大地图面板收起回紧凑小地图；仍是展开态时告警并返回 False。
 
-        check / pause 可注入生产会话闸门与可取消等待。紧凑态直接返回，不发送场景点击；
+        check / pause 提供生产安全闸门与可取消等待，input_sent 仅统计实际成功点击。
+        紧凑态直接返回，不发送场景点击；
         未知状态直接报错。收起后必须确认紧凑面板恢复，避免后续在错误页面上输入。
         """
         for _ in range(2):
@@ -224,6 +234,8 @@ class Campaign(ModuleBase):
             if state != 'expanded':
                 raise RuntimeError('小地图状态未知，禁止点击收起控件。')
             self.device.click_xy(*MINIMAP_COLLAPSE_POSITION)
+            if input_sent is not None:
+                input_sent(MINIMAP_COLLAPSE_POSITION)
             (pause or self.device.sleep)(MINIMAP_REOPEN_WAIT_SECONDS)
             self.device.screenshot()
         state = self.minimap_state()
@@ -545,7 +557,7 @@ class Campaign(ModuleBase):
         logger.info(f'准备阶段结束（地图资源、游戏窗口、章节与小队定位）耗时 {watch}，'
                     f'进入推图闭环：地图 {chart.size}，小队起点 {points_text(snapshot["squad"])}')
         from module.campaign.execution import CampaignExecutor
-        from module.campaign.session import CampaignSession, InputBudgetExceeded
+        from module.campaign.session import CampaignSession
         from module.campaign.window import WindowChanged
 
         self.state = RunState(chapter, self.current_difficulty, chart.size)
@@ -554,10 +566,11 @@ class Campaign(ModuleBase):
         self.cut.update([])
         session = CampaignSession(self)
         executor = CampaignExecutor(self, session,
-                                    purpose='collectible' if self.config.task.command == 'auto_main_collectible' else 'story')
+                                    purpose=('collectible' if self.config.task.command == 'auto_main_collectible'
+                                             else 'story'))
         try:
             result = executor.run(snapshot)
-        except (WindowChanged, InputBudgetExceeded, OSError, ValueError, RuntimeError, cv2.error) as exc:
+        except (WindowChanged, OSError, ValueError, RuntimeError, cv2.error) as exc:
             logger.error(f'主线执行停止：{exc}（任务总耗时 {watch}）')
             raise RequestHumanTakeover from exc
         logger.info(f'主线执行结束：{self.current_difficulty.upper()} 第 {chapter} 章；{result}；'

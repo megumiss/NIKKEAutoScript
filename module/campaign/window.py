@@ -177,7 +177,8 @@ class CampaignWindow:
         """执行既有地图三态切换，失败向上抛出；记录器只在外层复用操作前后的业务截图。"""
         callbacks = {}
         if getattr(self, 'input_check', None) is not None:
-            callbacks = {'check': self.input_check, 'pause': self.pause}
+            callbacks = {'check': self.input_check, 'pause': self.pause,
+                         'input_sent': getattr(self, 'input_sent', None)}
         self.owner.reopen_minimap_if_closed(**callbacks)
         if expanded:
             if reset and self.owner.minimap_expanded():
