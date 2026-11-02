@@ -70,7 +70,6 @@ EXPANDED_RETRY_PIXELS = 60.
 QUICK_BATTLE_POINT = (1014, 842)
 ENTER_BATTLE_POINT = (1014, 916)
 ENTRY_CLOSE_POINT = (1147, 513)
-AUTO_POINT = (105, 35)
 DEFEAT_BACK_POINT = (73, 908)
 DEFEAT_RETRY_POINT = (1688, 926)
 # 横屏红圈的瞄准偏移尚未标定，默认使用检测圆心；不要套用竖屏的压缩与纵向补偿公式。
@@ -84,7 +83,7 @@ AUTO_TAP_INTERVAL = 5.
 # 野外动作前的等待：画面不是野外（加载、过场、黑屏）时按这个间隔重看，最多等这么多秒。
 FIELD_POLL_SECONDS = 0.5
 FIELD_WAIT_LIMIT = 30.
-# AUTO 的点按策略：连续这么多帧都读成关闭外观才点，且同一场战斗最多点一次。实机里 AUTO 按钮
+# 自动射击与爆发各自连续这么多帧可靠关闭才点，同一场每个开关最多点一次。实机里 AUTO 按钮
 # 叠在场景上、HUD 会淡出或整体挪动，单帧判据偶尔会把开着的读成关着；照单帧就点，那一下正好
 # 把自动射击关掉（开与关是同一个按钮），战斗会被拖长甚至打输。
 AUTO_CONFIRM_FRAMES = 2
@@ -329,9 +328,10 @@ class CampaignSession(NavigationSession):
         # 战斗接管中：准备弹窗不再是终态，允许会话自己点它上面的按钮。
         self.battle_mode = False
         # 本场战斗给 AUTO 点过几次、连续几帧读成关闭外观，以及「不再重复点击」的告警是否已经打过。
-        self.auto_taps = 0
-        self.auto_off_frames = 0
-        self.auto_skip_logged = False
+        self.auto_taps = {key: 0 for key in battle.AUTO_CONTROLS}
+        self.auto_off_frames = {key: 0 for key in battle.AUTO_CONTROLS}
+        self.auto_skip_logged = set()
+        self.auto_last_points = {}
         # 每个按钮上一次点击的时刻：战斗接管的按钮各自有最短点击间隔（见 tap 的 interval）。
         self.tap_times = {}
         # 战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_registration）。
@@ -975,10 +975,14 @@ class CampaignSession(NavigationSession):
         # 继续与跳过在输入前复核分数，其余判据由状态识别提供；日志缺项显示为「—」。
         kind, scores = state['state'], state.get('scores')
         quick = battle.value_text(state.get('quick_ratio'))
+        if kind != 'battle':
+            self.auto_off_frames = {key: 0 for key in battle.AUTO_CONTROLS}
+            self.auto_last_points.clear()
         if kind not in ('battle', 'unknown', 'story'):
             # 一场战斗从准备弹窗开始；战败重打的下一场没有弹窗，所以结算与回野外也要重置额度。
             # 剧情或加载不能证明新一场战斗开始，不能恢复 AUTO 切换额度。
-            self.auto_taps, self.auto_off_frames, self.auto_skip_logged = 0, 0, False
+            self.auto_taps = {key: 0 for key in battle.AUTO_CONTROLS}
+            self.auto_skip_logged.clear()
         if kind == 'entry':
             if battle.ex_stage(field):
                 self.popup(field)
@@ -995,8 +999,9 @@ class CampaignSession(NavigationSession):
                             f"按钮橙色占比 {quick}）。")
         elif kind == 'battle':
             if self.handle_red_circles(field):
-                pass
-            elif not state.get('auto', True):
+                self.auto_off_frames = {key: 0 for key in battle.AUTO_CONTROLS}
+                self.auto_last_points.clear()
+            else:
                 self.handle_auto(state)
         elif (kind == 'story' and state.get('skip_point') is not None
               and (scores or {}).get('story_skip', 0.) >= battle.STORY_SKIP_THRESHOLD):
@@ -1013,36 +1018,45 @@ class CampaignSession(NavigationSession):
         return state
 
     def handle_auto(self, state):
-        """战斗中把自动射击打开：连续多帧都读成关闭外观才点，且同一场战斗最多点一次。
+        """分别开启自动射击与爆发，只点击连续两帧可靠关闭且落点稳定的当前按钮中心。
 
-        AUTO 的开与关是同一个按钮，误判一次就等于把开着的自动射击关掉。实机日志里出现过相反方向的
-        问题：一整场战斗提示了四次「自动射击未开启」、也就连点了四次 AUTO，而现场观察这个开关一直开着。
-        所以判据读数不够硬时宁可不动它：先要求连续 AUTO_CONFIRM_FRAMES 帧都是关闭外观，点过一次之后
-        即使再读成关闭也只告警；点击还要过 AUTO_TAP_INTERVAL，避免同一秒里补第二下。
-        按钮没被可靠定位（auto_score 低于阈值）时 battle_state 已按未开启返回，这里的告警会把定位框、
-        模板分与橙色占比一起打出来，便于判断是「按钮是灰的」还是「根本没定位到」。
+        沿用半自动战斗的关闭模板与 5 秒防抖，同一场每个开关最多点击一次、每帧最多一个。
+        未定位、颜色未知、已开启或按钮中心变化超过 15 客户区像素都会中断连续关闭计数。
+        未知不等于关闭，不能以默认 AUTO 坐标点击；窗口、停止与输入预算仍由 tap 校验。
         """
-        ratio = battle.value_text(state.get('auto_ratio'))
-        if state.get('auto', True):
-            self.auto_off_frames = 0
+        controls = state.get('auto_controls') or {}
+        for key in battle.AUTO_CONTROLS:
+            control = controls.get(key) or {}
+            point = control.get('point')
+            if control.get('status') != 'off' or point is None:
+                self.auto_off_frames[key] = 0
+                self.auto_last_points.pop(key, None)
+                continue
+            previous = self.auto_last_points.get(key)
+            if previous is None or np.linalg.norm(np.asarray(point) - previous) > 15:
+                self.auto_off_frames[key] = 0
+            self.auto_off_frames[key] += 1
+            self.auto_last_points[key] = point
+        for key in battle.AUTO_CONTROLS:
+            count = self.auto_off_frames[key]
+            if not count:
+                continue
+            control = controls[key]
+            name = '自动射击' if key == 'shoot' else '自动爆发'
+            if self.auto_taps[key]:
+                if key not in self.auto_skip_logged:
+                    self.auto_skip_logged.add(key)
+                    logger.warning(f'{name}仍为关闭状态；已达到本场单次点击上限，不重复切换。')
+                continue
+            if count < AUTO_CONFIRM_FRAMES:
+                continue
+            point = tuple(control['point'])
+            if not self.tap(point, AUTO_TAP_INTERVAL):
+                continue
+            self.auto_taps[key] += 1
+            logger.info(f'{name}关闭状态已确认（连续 {count} 帧，模板 {control["score"]:.3f}，'
+                        f'图标橙色占比 {control["orange_ratio"]:.3f}），已点击开启，客户区落点 {point}。')
             return
-        self.auto_off_frames += 1
-        box = state.get('auto_box')
-        detail = (f"AUTO 按钮模板 {battle.value_text(state.get('auto_score'))}，"
-                  f"框内橙色占比 {ratio}" + (f"，定位框 {box}" if box else ''))
-        if self.auto_taps:
-            if not self.auto_skip_logged:
-                self.auto_skip_logged = True
-                logger.warning(f'AUTO 状态仍为未开启（{detail}）；已达到本场单次点击上限，禁止重复切换。')
-            return
-        if self.auto_off_frames < AUTO_CONFIRM_FRAMES:
-            logger.info(f'AUTO 状态待确认（{detail}），连续关闭帧数 '
-                        f'{self.auto_off_frames}/{AUTO_CONFIRM_FRAMES}，暂不点击。')
-            return
-        if not self.tap(AUTO_POINT, AUTO_TAP_INTERVAL):
-            return
-        self.auto_taps += 1
-        logger.info(f'AUTO 关闭状态已确认（连续 {self.auto_off_frames} 帧，{detail}），已发送开启点击。')
 
     def tap(self, point, interval=0.):
         """按客户区坐标点一次界面按钮，保留输入闸门与预算，但不执行地面移动的光幕检查。

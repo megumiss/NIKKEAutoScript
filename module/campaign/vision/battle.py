@@ -31,6 +31,7 @@ def _load(name):
 
 
 AUTO_TPL = _load('battle_auto.png')
+AUTO_SHOOT_TPL = _load('battle_auto_shoot.png')
 PAUSE_TPL = _load('battle_pause.png')
 VICTORY_TPL = _load('battle_victory.png')
 DEFEAT_TPL = _load('battle_defeat.png')
@@ -56,13 +57,13 @@ STORY_SKIP_ROI = (1580, 0, 1776, 100)
 ORANGE_LOW, ORANGE_HIGH = (5, 110, 110), (30, 255, 255)
 QUICK_BATTLE_ROI = (900, 830, 1130, 856)
 QUICK_BATTLE_ORANGE_RATIO = .2
-# AUTO 按钮的位置不写死：用模板在整幅画面里定位，再量匹配框内的橙色占比。
-# 实机里 HUD 会随战斗形态整体挪动，写死 ROI 会在挪动后量到按钮旁边的背景，把开着读成关着。
-# AUTO_TPL 自身是按钮右半部分（圆环右缘 + AUTO 字样 + 右侧圆角），开启态框内橙色实测
-# 0.075~0.077、关闭态 0.000；AUTO_PRESENT_SCORE 是「按钮确实被定位到」的下限，关闭态模板分实测 0.755、
-# 开启态 0.909~1.000，低于下限只说明按钮不在画面里，此时不给开关结论（按未开启返回，宁可不点也不乱点）。
-AUTO_PRESENT_SCORE = .7
-AUTO_ORANGE_RATIO = .03
+# 复用半自动战斗的灰色关闭图标思路，但按 1776×999 客户区重裁准星与 AUTO 字样。
+# 灰度形状用于定位，原模板亮笔画上的灰色／橙色用于区分关闭／开启，避免量整框的沙漠背景。
+AUTO_PRESENT_SCORE = .9
+AUTO_ORANGE_RATIO = .5
+AUTO_NEUTRAL_RATIO = .9
+AUTO_HUD_ROI = (0, 0, 360, 180)
+AUTO_CONTROLS = ('shoot', 'burst')
 # 野外判据的两块 ROI 与观察器 minimap_mode_and_panel / minimap_closed 同源。
 COMPACT_PANEL_ROI = (27, 118, 207, 273)
 MINIMAP_CONTROL_ROI = (20, 76, 64, 120)
@@ -143,24 +144,53 @@ def quick_battle_available(image):
     return orange_ratio(image, QUICK_BATTLE_ROI) > QUICK_BATTLE_ORANGE_RATIO
 
 
-def auto_judgement(image):
-    """定位画面里的 AUTO 按钮，判断它是否处于开启外观，返回 (是否开启, 定位框, 模板分, 橙色占比)。
+def auto_control(image, template):
+    """定位一个自动战斗按钮并区分开启、关闭和未知，不为未定位或中间颜色提供点击许可。
 
-    位置由模板匹配给出而不是写死坐标：实机里 HUD 会随战斗形态整体挪动，写死 ROI 会在挪动后
-    量到按钮旁边的背景。模板分低于 AUTO_PRESENT_SCORE 说明按钮不在画面里（或 HUD 淡出到认不出），
-    此时按「未开启」返回——调用方据此只会记录与限量重试，不会盲目点击把开着的自动射击关掉。
-    与 quick_battle_available 一样，只有画面确实在战斗中时结果才有意义。
+    只搜索客户区左上战斗 HUD，灰度形状匹配须达 0.9。颜色只取模板灰色图标的亮笔画：
+    至少 50% 橙色为开启，至少 90% 低饱和亮笔画为关闭，其余为未知；模板外背景不参与。
+    返回的 point 为当次检测框中心，按钮随 HUD 小幅移动时不使用旧固定坐标。
     """
-    _, best, _, point = cv2.minMaxLoc(cv2.matchTemplate(image, AUTO_TPL, cv2.TM_CCOEFF_NORMED))
-    height, width = AUTO_TPL.shape[:2]
-    box = (point[0], point[1], point[0] + width, point[1] + height)
-    ratio = orange_ratio(image, box)
-    return bool(best >= AUTO_PRESENT_SCORE and ratio > AUTO_ORANGE_RATIO), box, float(best), ratio
+    left, top, right, bottom = AUTO_HUD_ROI
+    region = image[top:bottom, left:right]
+    gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    _, best, _, location = cv2.minMaxLoc(cv2.matchTemplate(
+        cv2.cvtColor(region, cv2.COLOR_BGR2GRAY), gray, cv2.TM_CCOEFF_NORMED))
+    x, y = location
+    height, width = gray.shape
+    box = [left + x, top + y, left + x + width, top + y + height]
+    result = dict(status='unknown', score=float(best), box=box, point=None, orange_ratio=None)
+    if best < AUTO_PRESENT_SCORE:
+        return result
+    glyph = gray > 90
+    hsv = cv2.cvtColor(region[y:y + height, x:x + width], cv2.COLOR_BGR2HSV)
+    orange = cv2.inRange(hsv, ORANGE_LOW, ORANGE_HIGH) > 0
+    ratio = float(orange[glyph].mean())
+    neutral = float(((hsv[:, :, 1] < 90) & (hsv[:, :, 2] > 70))[glyph].mean())
+    result.update(orange_ratio=ratio, neutral_ratio=neutral)
+    if ratio >= AUTO_ORANGE_RATIO:
+        result['status'] = 'on'
+    elif neutral >= AUTO_NEUTRAL_RATIO:
+        result['status'] = 'off'
+    if result['status'] != 'unknown':
+        result['point'] = [box[0] + width / 2, box[1] + height / 2]
+    return result
+
+
+def auto_controls(image):
+    """分别读取自动射击准星和自动爆发 AUTO，不把两个独立开关当成同一个按钮。"""
+    return dict(shoot=auto_control(image, AUTO_SHOOT_TPL), burst=auto_control(image, AUTO_TPL))
+
+
+def auto_judgement(image):
+    """保持原返回格式读取 AUTO 爆发按钮，未可靠定位或中间颜色不视为开启。"""
+    result = auto_control(image, AUTO_TPL)
+    return result['status'] == 'on', tuple(result['box']), result['score'], result['orange_ratio']
 
 
 def auto_enabled(image):
-    """战斗中的自动射击（左上 AUTO）是否处于开启外观；判据见 auto_judgement。"""
-    return auto_judgement(image)[0]
+    """自动射击与自动爆发是否都已可靠开启，未知状态不能当作已开启。"""
+    return all(item['status'] == 'on' for item in auto_controls(image).values())
 
 
 def ex_stage(image):
@@ -218,23 +248,28 @@ def battle_state(image):
     continue_point 是本帧继续提示的客户区点击中心，仅在 victory 或 continue 状态时可用；
     提示未通过识别门限时为 None，即使已确认胜利也不能凭标题推定点击位置。
     skip_point 是本帧右上角 SKIP 的客户区中心，仅在 story 状态时用于点击，未通过门限时为 None。
-    auto 是战斗中的自动射击开关状态（不是模板分，模板分在 scores['auto_tpl']）；quick_ratio 与
+    auto 表示自动射击与爆发都可靠开启；auto_controls 分别提供两个按钮的状态、分数与落点。
+    scores['auto_tpl'] 为两按钮形状分的最大值；quick_ratio 与
     auto_ratio 是判据实际量到的橙色占比、auto_score 是 AUTO 按钮的模板分、auto_box 是它的定位框，
     这几个数只供日志与离线核对，用于区分「按钮是灰的」与「按钮根本没被定位到」。
     """
     if image is None or image.shape != (999, 1776, 3):
         raise ValueError('战斗状态识别需要 1776×999 的三通道客户区截图。')
-    auto, auto_box, auto_score, auto_ratio = auto_judgement(image)
+    controls = auto_controls(image)
+    auto = all(item['status'] == 'on' for item in controls.values())
+    burst = controls['burst']
+    auto_box, auto_score, auto_ratio = burst['box'], burst['score'], burst['orange_ratio']
     continue_score, continue_point = continue_prompt(image)
     skip_score, skip_point = story_skip(image)
-    scores = {'auto_tpl': auto_score, 'pause': score(PAUSE_TPL, image),
+    scores = {'auto_tpl': max(item['score'] for item in controls.values()), 'pause': score(PAUSE_TPL, image),
               'victory': victory_score(image), 'defeat': score(DEFEAT_TPL, image),
               'entry': score(ENTER_BATTLE_TPL, image), 'continue': continue_score, 'story_skip': skip_score}
     quick_ratio = orange_ratio(image, QUICK_BATTLE_ROI)
     quick = bool(scores['entry'] >= ENTRY_THRESHOLD and quick_battle_available(image))
     return dict(classify(scores, field_visible(image), quick, auto), scores=scores,
                 quick_ratio=quick_ratio, auto_score=auto_score, auto_ratio=auto_ratio,
-                auto_box=list(auto_box), continue_point=continue_point, skip_point=skip_point)
+                auto_box=list(auto_box), auto_controls=controls,
+                continue_point=continue_point, skip_point=skip_point)
 
 
 def value_text(value):
