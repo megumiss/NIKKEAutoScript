@@ -124,12 +124,16 @@ class CampaignExecutor:
         preferred = self.interrupted_goal or self.terminal_destination
         return self.owner.plan_tick(snapshot, advance=advance, preferred_goal=preferred)
 
-    def defer_ex(self, goal=None):
+    def defer_ex(self, goal=None, evidence=None):
         """保存被 EX 中断且尚未完成的目标，将重新定位和绕行延迟到下一轮统一异常门禁内。
 
         启动、侦察、移动和战斗接管都可触发；已清除敌人不可恢复，不能把上轮完成目标误认成续行目标。
+        弹窗携带实际敌人直点编号时直接纠正该目标；只有沿途触发或缺少点击关联才保留原目标绕行。
         原目标已消耗的输入额度继续累计，不能借 EX 中断重置单目标上限。
         """
+        if self.correct_ex_target(evidence):
+            self.ex_pending = True
+            return
         self.interrupted_goal = next((dict(candidate) for candidate in
                                       (goal, self.interrupted_goal, self.terminal_destination, self.last_executed)
                                       if candidate and candidate.get('kind') != 'none'
@@ -141,17 +145,19 @@ class CampaignExecutor:
         logger.info(f'EX 弹窗已关闭，保留目标 {goal_brief(self.interrupted_goal)}；'
                     '下一轮重新定位并规划绕行。')
 
-    def correct_ex_target(self, goal, obstacle):
-        """释放与刚确认 EX 同位置的错误 Boss 目标，不放弃避让区内仍独立存在的其他目标。
+    def correct_ex_target(self, evidence):
+        """用已关闭 EX 弹窗携带的实际目标直点编号纠正类型，无需重新定位后比较坐标距离。
 
-        调用前必须已关闭 EX 弹窗并重新定位唯一 EX。只纠正原 Boss 编号与 EX 在既有
-        25 地图像素身份容差内一致的记录，不按整个避让圆推断身份。失配保留原目标和输入额度，
-        仍由绕行安全检查决定能否继续；匹配成功后清除同编号续行引用，再按新观测正常规划。
+        只接受生产导航在成功发送敌人目标直点后记录的编号。没有直点关联的弹窗、附近试点和
+        绕行途中触发不能把原 Boss 改成 EX；这些情况仍保留原目标及预算，由原绕行流程处理。
+        明确关联时立即改型并解除同编号续行，再重新观测规划，不将 EX 误记为战斗清除。
         """
-        if (not goal or not obstacle or goal.get('kind') != 'enemy' or goal.get('enemy_kind') != 'boss'
-                or not self.owner.state.confirm_ex_target(goal['id'], obstacle.get('position'))):
+        target_click = (evidence or {}).get('target_click')
+        if not evidence or evidence.get('kind') != 'ex_stage_closed' or not target_click:
             return False
-        identifier = goal['id']
+        identifier = target_click.get('id')
+        if not identifier or not self.owner.state.confirm_ex_target(identifier):
+            return False
         for name in ('interrupted_goal', 'terminal_destination', 'terminal_continuation', 'last_executed'):
             current = getattr(self, name)
             if current is not None and current['id'] == identifier:
@@ -164,8 +170,8 @@ class CampaignExecutor:
             self.owner.last_goal = None
             self.owner.last_routes = None
             self.owner.last_route_signature = None
-        self.session.record('ex_target_corrected', goal=goal, obstacle=obstacle)
-        logger.warning(f'目标 {identifier} 与已确认 EX 位置一致，已纠正类型并解除 Boss 续行；重新规划。')
+        self.session.record('ex_target_corrected', target_click=target_click, evidence=evidence)
+        logger.warning(f'目标 {identifier} 直点触发 EX 弹窗，已按原编号纠正类型并解除续行；重新规划。')
         return True
 
     def needs_expansion(self, goal, snapshot):
@@ -719,7 +725,7 @@ class CampaignExecutor:
             except TargetTriggered as exc:
                 if exc.evidence.get('kind') != 'ex_stage_closed':
                     raise
-                self.defer_ex()
+                self.defer_ex(evidence=exc.evidence)
             self.session.record('initial_snapshot', snapshot=initial)
             if not self.ex_pending and initial.get('localization') == 'accepted' and initial.get('squad') is not None:
                 # 准备阶段与首轮之间没有移动，小队坐标可直接约束第一次展开配准。
@@ -751,10 +757,7 @@ class CampaignExecutor:
                     resumed_ex = self.ex_pending
                     if resumed_ex:
                         camera_options = {}
-                        interrupted = self.interrupted_goal or self.terminal_destination
-                        obstacle = self.session.prepare_ex_bypass(interrupted)
-                        if self.correct_ex_target(interrupted, obstacle):
-                            goal = None
+                        self.session.prepare_ex_bypass(self.interrupted_goal or self.terminal_destination)
                         self.ex_pending = False
                     if index or resumed_ex:
                         snapshot = self.session.snapshot(**camera_options)
@@ -849,7 +852,7 @@ class CampaignExecutor:
                     self.interrupted_inputs = 0
                 except TargetTriggered as exc:
                     if exc.evidence.get('kind') == 'ex_stage_closed':
-                        self.defer_ex(goal)
+                        self.defer_ex(goal, evidence=exc.evidence)
                         camera_options = {}
                         continue
                     if exc.evidence.get('kind') != 'battle_popup':
@@ -862,7 +865,7 @@ class CampaignExecutor:
                     except TargetTriggered as battle_exc:
                         if battle_exc.evidence.get('kind') != 'ex_stage_closed':
                             raise
-                        self.defer_ex(self.last_executed)
+                        self.defer_ex(self.last_executed, evidence=battle_exc.evidence)
                         continue
                     self.interrupted_goal = None
                     self.interrupted_inputs = 0

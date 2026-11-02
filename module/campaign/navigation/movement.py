@@ -292,6 +292,9 @@ def navigate(
             continue
         session.check()
         session.move(click)
+        remember_click = getattr(session, 'remember_enemy_click', None)
+        if callable(remember_click):
+            remember_click(click, approach, is_final=purpose == 'enemy' and not transferring and probes is None)
         clicks += 1
         previous = position
         emit(state='moving', message='小队正在移动，等待停稳后重新定位…', movement_clicks=clicks, click=click.tolist())

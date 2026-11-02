@@ -1,5 +1,7 @@
 """主线标记的镜头定位、敌人身份确认与无敌人地面目的地回退；定位阶段不发送移动点击。"""
 
+from dataclasses import replace
+
 import cv2
 import numpy as np
 
@@ -60,7 +62,8 @@ def story_enemy_between(before, after, squad):
 
     使用各自坐标系的实测帧间位移，不建立章节通用的大小地图换算。参考帧和当前帧须通过
     场景跟踪关联到同一主线脚圈，可跨越多次纯镜头平移；仅同向移动、场内邻近或单帧靠近
-    注视点均不足以认领敌人。
+    注视点均不足以认领敌人。EX 候选只有在两帧都唯一出现于同一底图位置、运动匹配落到
+    菱形下同一脚圈时才作为 Boss 返回；原始观测类型不原地改写。
     """
     if before['ring'] is None or after['ring'] is None:
         return None
@@ -73,13 +76,74 @@ def story_enemy_between(before, after, squad):
         return None
     matched = []
     for kind, position in second.enemies:
-        if kind not in ('minimap_enemy_normal', 'minimap_enemy_boss'):
+        if kind not in ('minimap_enemy_normal', 'minimap_enemy_boss', 'minimap_enemy_ex'):
             continue
         enemy_kind = kind.removeprefix('minimap_enemy_')
-        result = match_target_ring(first, second, position, squad, goto.VIEWPORT_PIXEL, enemy_kind=enemy_kind)
+        candidate_frames = (first, second)
+        if enemy_kind == 'ex':
+            candidate_frames = story_ex_frames(first, second, position)
+            if candidate_frames is None:
+                continue
+            enemy_kind = 'boss'
+        result = match_target_ring(*candidate_frames, position, squad, goto.VIEWPORT_PIXEL, enemy_kind=enemy_kind)
         if result.get('click') is not None and np.linalg.norm(np.asarray(result['click']) - after['ring']) <= 15:
-            matched.append(dict(position=np.asarray(position).tolist(), kind=enemy_kind))
+            matched.append(dict(position=np.asarray(position).tolist(), kind=enemy_kind,
+                                ex_matched=kind == 'minimap_enemy_ex'))
     return matched[0] if len(matched) == 1 else None
+
+
+def story_ex_frames(before, after, position):
+    """仅为指定 EX 候选创建两帧匹配副本，不将同屏其他 EX 或原始观测改成 Boss。
+
+    两帧目标位置附近必须各有且仅有一个 EX，不得混入普通或 Boss 竞争标记；30 地图像素
+    范围沿用初次脚圈匹配的目标关联规则。副本只供运动匹配试算，必须最终对应到主线脚圈
+    才能产生纠正证据，不能因为同屏各有一个标记就直接改型。
+    """
+    frames = []
+    for frame in (before, after):
+        indices = [index for index, (_, point) in enumerate(frame.enemies)
+                   if np.linalg.norm(np.asarray(point) - position) <= 30]
+        if len(indices) != 1 or frame.enemies[indices[0]][0] != 'minimap_enemy_ex':
+            return None
+        enemies = list(frame.enemies)
+        index = indices[0]
+        enemies[index] = ('minimap_enemy_boss', enemies[index][1])
+        frames.append(replace(frame, enemies=enemies))
+    return tuple(frames)
+
+
+def story_enemy_centered(before, after):
+    """用两帧居中的主线脚圈与视口附近唯一小地图敌人建立位置对应，不外推远处菱形坐标。
+
+    调用前须通过两帧主线脚圈居中、镜头尺度与位置稳定检查。小地图候选使用既有 30 地图
+    像素目标范围，两帧必须各唯一且类型一致，敌人位置漂移不超过既有 12 地图像素。
+    返回 None 表示没有此范围内敌人，调用方才可使用地面位置兜底；竞争或冲突直接报错。
+    EX 返回 Boss 候选及独立纠正证据，由状态层拒绝已通过真实 EX 弹窗确认的位置。
+    """
+    if (story_ground(before) is None or story_ground(after) is None
+            or abs(after['scale'] / before['scale'] - 1.) > .12
+            or np.linalg.norm(np.asarray(after['view']['viewport']) - before['view']['viewport']) > 12
+            or np.linalg.norm(np.asarray(after['ring']) - before['ring']) > 15):
+        raise ValueError('主线脚圈未通过两帧居中与镜头稳定检查')
+    candidates = []
+    for frame in (before, after):
+        position = story_ground(frame)
+        if position is None:
+            raise ValueError('主线脚圈未居中，不能关联小地图敌人')
+        candidates.append([(kind, np.asarray(point, float)) for kind, point in frame['rings'].enemies
+                           if np.linalg.norm(np.asarray(point) - position) <= 30])
+    if not any(candidates):
+        return None
+    if any(len(items) != 1 for items in candidates):
+        raise ValueError('居中主线附近的小地图敌人缺失或存在竞争候选')
+    first, second = candidates[0][0], candidates[1][0]
+    if first[0] != second[0] or np.linalg.norm(first[1] - second[1]) > 12:
+        raise ValueError('居中主线附近的小地图敌人类型或位置不一致')
+    if second[0] not in ('minimap_enemy_normal', 'minimap_enemy_boss', 'minimap_enemy_ex'):
+        raise ValueError('居中主线附近的标记不属于可验证的敌人类型')
+    is_ex = second[0] == 'minimap_enemy_ex'
+    return dict(position=second[1].tolist(), kind='boss' if is_ex else second[0].removeprefix('minimap_enemy_'),
+                ex_matched=is_ex)
 
 
 def reveal_story_marker(session):
@@ -124,6 +188,8 @@ def locate_story_target(session, squad):
     每对帧仍须通过原有身份与运动校验。小队不可定位且离屏标记也未确认时禁止拖动，以免按下点
     落在小队上变成走位。地面目标须连续两帧处于注视点 40 客户区像素内，尺度变化
     不超过 12%、视口偏差不超过 12 地图像素、脚圈偏差不超过 15 客户区像素，并通过道路归属校验；
+    居中后优先关联两帧同位置唯一小地图敌人；运动匹配和居中匹配均可提供 EX 误分类纠正证据。
+    无小地图敌人才用地面位置兜底，类型冲突或已确认 EX 不能降级为无类型地面目的地。
     未确认时记录失败冷却，不吸附远离道路的点，保留普通敌人推进策略。
     """
     state = session.owner.state
@@ -149,7 +215,19 @@ def locate_story_target(session, squad):
                 if (np.any(confirmed < 0) or np.any(confirmed >= state.size)
                         or not session.owner.cut.chart.walkable(confirmed)):
                     raise ValueError('主线居中位置越出地图或缺少邻近道路证据')
+                enemy = story_enemy_centered(before, after)
+                if enemy is not None:
+                    identifier = state.remember_story_target(enemy['position'], kind=enemy['kind'],
+                                                            ex_matched=enemy['ex_matched'])
+                    if identifier is None:
+                        raise ValueError('主线敌人位置存在已确认 EX、类型冲突或已清除记录')
+                    session.record('story_enemy_confirmed', enemy=enemy, identifier=identifier, method='centered')
+                    logger.info(f"主线脚圈与小地图敌人两帧居中对应：目标 {identifier}，类型 {enemy['kind']}，"
+                                f"底图位置 {enemy['position']}。")
+                    return changed
                 position = confirmed.tolist()
+                if any(np.linalg.norm(confirmed - point) <= 30 for point in state.confirmed_ex_positions):
+                    raise ValueError('主线居中位置位于已确认 EX，禁止作为地面目的地')
                 state.route_goal = dict(kind='story', id='story-marker', position=position,
                                         reason='main_story_location')
                 state.cooldowns.pop('story-location', None)
@@ -189,8 +267,10 @@ def locate_story_target(session, squad):
                 if enemy is None:
                     continue
                 position = enemy['position']
-                identifier = state.remember_story_target(position, kind=enemy['kind'])
+                identifier = state.remember_story_target(position, kind=enemy['kind'],
+                                                        ex_matched=enemy.get('ex_matched', False))
                 if identifier is not None:
+                    session.record('story_enemy_confirmed', enemy=enemy, identifier=identifier, method='motion')
                     logger.info(f'主线路程目标已定位：敌人 {identifier}，底图位置 {position}，'
                                 f'镜头平移 {attempt + 1} 次，参考平移序号 {reference_pan}。')
                     return changed

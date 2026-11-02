@@ -343,6 +343,8 @@ class CampaignSession(NavigationSession):
         self.localized_report = None
         # 最近一次侦察/扫描配准的失败原因与面板道路占比：供调用方区分普通失败与探索前沿。
         self.scout_failure = None
+        self.planned_enemy_click = None
+        self.last_enemy_click = None
         self.collectible_mode = owner.config.task.command == 'auto_main_collectible'
         self.localizer.record = self.record
 
@@ -388,6 +390,8 @@ class CampaignSession(NavigationSession):
     def begin_target(self, purpose):
         """切换目标用途并重置单目标预算；已验证箭头基准继续保留。"""
         self.request['purpose'] = purpose
+        self.planned_enemy_click = None
+        self.last_enemy_click = None
         self.target_inputs = 0
         self.record('target_begin')
 
@@ -433,6 +437,11 @@ class CampaignSession(NavigationSession):
         evidence = {'kind': 'battle_popup', 'chapter': self.expected_identity[0]}
         message = '画面出现战斗准备弹窗，交由执行层接管这场战斗。'
         if is_ex:
+            target_click = self.last_enemy_click
+            if (target_click is not None and target_click['squad_inputs'] == self.squad_inputs
+                    and target_click['id'] == self.owner.state.execution_target):
+                evidence['target_click'] = dict(target_click)
+            self.last_enemy_click = None
             self.popup_handling = True
             try:
                 origin = self.win.client_origin()
@@ -450,7 +459,8 @@ class CampaignSession(NavigationSession):
             self.reuse_squad = False
             evidence['kind'] = 'ex_stage_closed'
             message = 'EX 关卡弹窗已关闭，重新定位后绕行并继续原目标。'
-            self.record('ex_popup_closed', force=True, count=self.ex_popup_count)
+            self.record('ex_popup_closed', force=True, count=self.ex_popup_count,
+                        target_click=evidence.get('target_click'))
         raise TargetTriggered(message, evidence)
 
     def prepare_ex_bypass(self, goal=None):
@@ -458,7 +468,6 @@ class CampaignSession(NavigationSession):
 
         本方法不点击地面；下一次 plan 根据实时小队位置计算安全路点。EX 标记可能被小队遮挡，
         可使用运行状态中的近距离历史 EX，但缺失或歧义时不拿原目标代替 EX 坐标。
-        返回本次已关联的 EX 避让信息，供执行层复核原目标是否实际属于该 EX。
         """
         self.localized_report = None
         self.last_registration = None
@@ -472,7 +481,6 @@ class CampaignSession(NavigationSession):
         logger.info(f'EX 绕行定位：小队 {points_text(squad)}，EX {points_text(obstacle["position"])}，'
                     f'原目标 {points_text(target) if target is not None else "尚未确定"}，'
                     f'避让半径 {obstacle["radius"]:.1f} 像素，触发 {obstacle["encounters"]} 次。')
-        return obstacle
 
     def identity(self, field):
         """逐帧闸门：只查战斗弹窗与收集品提示，不重读章节身份。
@@ -744,6 +752,7 @@ class CampaignSession(NavigationSession):
         enemy_kind 传递原目标类型，Boss 脚圈辅助不得关联成普通敌人。
         """
         from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
+        self.planned_enemy_click = None
         options = {'enemy_kind': enemy_kind} if enemy_kind != 'normal' else {}
         field = self.win.client()
         self.identity(field)
@@ -769,20 +778,28 @@ class CampaignSession(NavigationSession):
             target = waypoint
             enemy_assist = False
         try:
-            return super().plan(observation, target, enemy_assist=enemy_assist, **options)
+            click = super().plan(observation, target, enemy_assist=enemy_assist, **options)
         except ValueError as exc:
             if observation.get('squad_source') == 'known':
                 raise RuntimeError('当前镜头无法完成移动规划；停止执行，不重新寻找小队圆环。') from exc
             if observation.get('minimap_mode') != 'compact':
                 raise
             logger.info(f'紧凑定位不足以完成镜头规划，按需展开重新定位一次：{exc}')
+        else:
+            self.planned_enemy_click = dict(click=np.asarray(click).tolist(),
+                                           target=np.asarray(target).tolist(),
+                                           direct=np.array_equal(target, original_target))
+            return click
         self.localized_report = None
         updated = self.observe()
         if np.linalg.norm(np.asarray(updated['position']) - np.asarray(observation['position'])) > 12:
             raise SquadPositionChanged(observation['position'], updated['position'])
         if self.ex_bypass.obstacles:
             target = self.ex_bypass.waypoint(self.owner.cut.road, updated['position'], original_target)
-        return super().plan(updated, target, enemy_assist=enemy_assist, **options)
+        click = super().plan(updated, target, enemy_assist=enemy_assist, **options)
+        self.planned_enemy_click = dict(click=np.asarray(click).tolist(), target=np.asarray(target).tolist(),
+                                       direct=np.array_equal(target, original_target))
+        return click
 
     def absorb_expanded(self, panel, report):
         """把展开面板上认出的敌人与看到的区域并进运行状态，只记一行敌人的合并结果。
@@ -864,6 +881,24 @@ class CampaignSession(NavigationSession):
         field = self.win.client()
         self.check_collectible(field)
         self.click_client(click)
+
+    def remember_enemy_click(self, click, target, is_final):
+        """记录实际成功发送的敌人目标直点，将后续 EX 弹窗关联到原执行编号而非位置近邻。
+
+        仅由导航在 move 成功后调用；target 是本次选定的敌人落点，click 为客户区落点。
+        附近试点、箭头恢复短移和 EX 绕行路点不能认领原敌人身份。只消费匹配本次规划结果的
+        直点，记录发送后的移动输入计数；后续其他移动输入或切换目标会使弹窗关联失效。
+        此处坐标相等仅核对同一规划与输入，不用于重新推断 EX 与 Boss 的空间身份。
+        """
+        self.last_enemy_click = None
+        planned, self.planned_enemy_click = self.planned_enemy_click, None
+        identifier = self.owner.state.execution_target
+        if (not is_final or planned is None or not planned['direct'] or identifier is None
+                or not np.array_equal(click, planned['click']) or not np.array_equal(target, planned['target'])):
+            return
+        self.last_enemy_click = dict(id=identifier, target=np.asarray(target).tolist(),
+                                    click=np.asarray(click).tolist(), squad_inputs=self.squad_inputs)
+        self.record('enemy_target_click', **self.last_enemy_click)
 
     def pause(self, seconds):
         """短间隔等待持续检查取消、焦点与几何，不依赖原型的全局活动窗口。"""
