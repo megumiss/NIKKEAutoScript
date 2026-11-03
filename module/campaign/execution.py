@@ -109,6 +109,7 @@ class CampaignExecutor:
         # 否则打死的敌人会留在 pending，下一拍白走一趟。
         self.last_executed = None
         self.scout_pending = None
+        self.last_scout_views = 0
         self.terminal_continuation = None
         self.terminal_destination = None
         self.interrupted_goal = None
@@ -457,14 +458,16 @@ class CampaignExecutor:
         self.session.pause(1.)
         return True
 
-    def scout(self, goal, snapshot):
+    def scout(self, goal, snapshot, max_views=SCOUT_VIEWS):
         """小队原地复核已选目标的前置道路；返回是否展开过，未完成落点留在 scout_pending。
 
         只用于剧情任务（收集品有标注，不靠看）。刚踩过机关、要先复核光幕时不侦察，复核结果会改变路网。
+        max_views 是本决策轮剩余屏数，last_scout_views 记录本次实际检查量；改选目标不重置额度。
         单轮屏数用尽后保留待查区域，下一轮继续；冷却格不能当作已确认，失败到上限交人工。
         侦察中遇到安全异常直接向外传播，不补发收起地图的输入。
         """
         self.scout_pending = None
+        self.last_scout_views = 0
         if self.purpose != 'story' or (goal is not None and goal['kind'] == 'review_block'):
             return False
         if goal and goal['kind'] == 'none' and goal.get('reason', '').startswith('route_'):
@@ -480,7 +483,7 @@ class CampaignExecutor:
         self.session.scout_begin()
         views = 0
         total = Stopwatch()
-        for view in range(SCOUT_VIEWS):
+        for view in range(max_views):
             known = '无可达候选' if focus['known'] is None else f"{focus['known']} 像素"
             source = {'route_road': '目标前置道路的敌人检查', 'route_enemy': '目标前置道路的敌人线索复核',
                       'nearer_road': '无目标时的未知道路搜索'}[focus['source']]
@@ -491,6 +494,7 @@ class CampaignExecutor:
             recorded = self.session.scout_view(focus['position'], f'scout_{view + 1:02}',
                                                check_enemies=check_enemies, enemy_id=focus.get('enemy_id'))
             views += 1
+            self.last_scout_views = views
             covered = (state.is_enemy_observed(focus['position'], focus.get('enemy_id')) if check_enemies
                        else state.is_observed(focus['position']))
             logger.info(f"侦察第 {view + 1} 屏结果：{'已记录可信帧' if recorded else '定位未通过'}，"
@@ -509,13 +513,52 @@ class CampaignExecutor:
             if focus is None:
                 break
         else:
-            logger.info(f'侦察达到单轮 {SCOUT_VIEWS} 屏上限，剩余区域延后至下一轮检查，暂不执行移动。')
+            logger.info(f'侦察已用完本批 {max_views} 屏额度，剩余区域延后检查，暂不执行移动。')
         self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
         # 侦察是内部有界的批量阶段；收尾单独统计实际操作，不修改稳定目标的路线进展历史。
         self.session.begin_target('position')
         self.session.scout_end()
         logger.info(f'侦察结束：检查 {views} 屏，展开与拖动总耗时 {total}')
         return True
+
+    def scout_until_ready(self, goal, snapshot, camera_options=None, expanded_for_scout=False):
+        """在同一决策拍的八屏总额度内复核改选目标的前置道路，返回最新目标与观测。
+
+        侦察后新观测可能暂时排除旧敌人线索并改选另一条道路；此时不能直接结束本拍，
+        否则下一拍旧线索再次待查，会一直检查前一条道路。每批收图取得新观测并重新决策，
+        新目标仍有可检查道路时用剩余额度继续；不推进决策拍，不把阴性复核当作战斗清除。
+        已确认、额度用尽、无可检查焦点或本批未检查任何一屏时返回，原冷却及失败门禁不变。
+        取消、窗口、弹窗及配准异常照常向上传播；不在此发送地面移动或放行未确认道路。
+        """
+        remaining = SCOUT_VIEWS
+        options = camera_options or {}
+        while remaining > 0:
+            scouted = self.scout(goal, snapshot, max_views=remaining)
+            remaining -= self.last_scout_views
+            if not scouted:
+                if expanded_for_scout:
+                    self.session.win.reset_minimap(expanded=False, reset=False)
+                return goal, snapshot
+            expanded_for_scout = False
+            snapshot = self.session.snapshot(**options)
+            if curtains(snapshot):
+                snapshot = self.confirm_barriers_safe(snapshot)
+            previous = goal
+            goal = self.plan_tick(snapshot, advance=False)
+            self.scout_pending = None
+            if (self.purpose == 'story' and (goal is None or goal['kind'] != 'review_block')
+                    and located(snapshot) and snapshot.get('squad') is not None):
+                self.scout_pending = scout_focus(self.owner.state, self.owner.cut, snapshot['squad'],
+                                                 include_cooling=True, goal=goal)
+            if self.scout_pending is None or remaining <= 0 or self.last_scout_views == 0:
+                return goal, snapshot
+            if scout_focus(self.owner.state, self.owner.cut, snapshot['squad'], goal=goal) is None:
+                return goal, snapshot
+            self.session.record('scout_replan', previous_goal=previous, goal=goal,
+                                focus=self.scout_pending, remaining_views=remaining)
+            logger.info(f"侦察后目标 {goal_brief(goal)} 的前置道路仍待检查，"
+                        f"继续同轮侦察：焦点 {self.scout_pending['id']}，剩余 {remaining} 屏。")
+        return goal, snapshot
 
     def terminal_region_enemies(self, squad):
         """返回当前连通分量内可处理的普通敌人，Boss 与 EX 不参与遗漏清扫。"""
@@ -917,20 +960,8 @@ class CampaignExecutor:
                             self.plan_tick(self.session.snapshot(expanded=True), advance=False)
                             snapshot = self.session.snapshot()
                         goal = self.plan_tick(snapshot, advance=False)
-                    scouted = self.scout(goal, snapshot)
-                    if expanded_for_scout and not scouted:
-                        # 没有新侦察观测时沿用已接受的展开快照，收起面板不再做一次可能失败的紧凑配准。
-                        self.session.win.reset_minimap(expanded=False, reset=False)
-                    elif scouted:
-                        snapshot = self.session.snapshot(**camera_options)
-                        if curtains(snapshot):
-                            snapshot = self.confirm_barriers_safe(snapshot)
-                        goal = self.plan_tick(snapshot, advance=False)
-                        if (self.purpose == 'story' and (goal is None or goal['kind'] != 'review_block')
-                                and located(snapshot) and snapshot.get('squad') is not None):
-                            # 收起后的紧凑帧也可能修正敌人位置；出发依据必须与最终选出的目标一致。
-                            self.scout_pending = scout_focus(self.owner.state, self.owner.cut, snapshot['squad'],
-                                                             include_cooling=True, goal=goal)
+                    goal, snapshot = self.scout_until_ready(goal, snapshot, camera_options,
+                                                           expanded_for_scout=expanded_for_scout)
                     self.session.record('planning_result', goal=goal, snapshot=snapshot,
                                         scout_pending=self.scout_pending)
                     if self.scout_pending is not None:
