@@ -81,7 +81,7 @@ def pan_endpoints(region, drag, squad_ground=None):
     """生成场景拖动端点，并在按下点落在小队排除矩形内时整体平移手势到空地。
 
     region 是允许起终点出现的客户区矩形，drag 保持调用者计算的向量不变。squad_ground 必须是
-    当前场景箭头向下换算的脚下点；None 只用于离屏标记确认小队不在画面内。排除矩形以脚下点
+    当前场景箭头向下换算的脚下点；None 表示跳过小队避让，但仍检查端点边界。排除矩形以脚下点
     为中心，半宽 150、半高 180，边界也算占用；没有可行空地时抛 ValueError，禁止发成走位点击。
     """
     drag = np.asarray(drag, float)
@@ -206,9 +206,9 @@ def camera_response(chart, before, after, drag):
 def pan_scene(session, drag):
     """用当前场景箭头避让后发送一次镜头拖动，不发送小队移动点击。
 
-    每次拖动都在最新帧重新识别唯一箭头，并向下换算脚下点；只有离屏标记确认小队不在
-    画面内时才允许无避让拖动。箭头缺失且没有离屏标记时直接失败，不再使用地图坐标估算
-    小队画面位置。端点越界或驱动失败立即抛错，成功后等待场景稳定。
+    每次拖动都在最新帧重新识别唯一箭头，并向下换算脚下点；箭头缺失时跳过小队避让，
+    离屏标记仅记录跳过原因，不再作为拖动前提。不用历史地图坐标估算小队画面位置，
+    不修改已知小队底图坐标。端点越界、窗口异常或驱动失败仍立即抛错，成功后等待场景稳定。
     """
     from module.campaign.vision.offscreen import squad_offscreen
     from module.campaign.vision.perception import squad_arrow
@@ -224,7 +224,8 @@ def pan_scene(session, drag):
         ground = None
         session.emit(squad_avoidance='offscreen')
     else:
-        raise ValueError('当前画面没有唯一小队箭头或离屏标记，无法确定安全拖动起点；未发送镜头拖动。')
+        ground = None
+        session.emit(squad_avoidance='skipped', message='未检测到小队画面标记，跳过拖动起点的小队避让')
     region, _ = pan_region(drag)
     start, end = pan_endpoints(region, drag, ground)
     session.check()

@@ -900,7 +900,7 @@ class CampaignSession(NavigationSession):
             click = super().plan(observation, target, enemy_assist=enemy_assist, **options)
         except ValueError as exc:
             if observation.get('squad_source') == 'known':
-                raise RuntimeError('当前镜头无法完成移动规划；停止执行，不重新寻找小队圆环。') from exc
+                raise RuntimeError(f'当前镜头无法完成移动规划：{exc}；停止执行，不重新寻找小队圆环。') from exc
             if observation.get('minimap_mode') != 'compact':
                 raise
             logger.info(f'紧凑定位不足以完成镜头规划，按需展开重新定位一次：{exc}')
@@ -1421,7 +1421,7 @@ class CampaignSession(NavigationSession):
         回正与重新定位各使用一个单目标输入窗口；前者不发送小队移动。
         新快照必须来自实际小队圆环并通过既有配准门限；短拖回正后仍须居中，图标回正则直接信任游戏结果。
         mechanism_position 仅供已确定中央解锁光幕的机关触发后回正，允许一次有界边缘小队镜头短拖；
-        普通恢复不提供此参数，不改变缺少箭头及离屏图标时的输入保护。
+        普通恢复不提供此参数；缺少画面标记时按既有定向搜索拖动，跳过小队避让但保留端点检查。
         """
         from module.campaign.navigation.recovery import centered, centering_frame, recenter_squad
 
