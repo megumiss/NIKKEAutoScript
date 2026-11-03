@@ -3,10 +3,8 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
 import ScreenPreviewContent from './ScreenPreviewContent.vue'
 import { t } from '../i18n'
-import { useToastStore } from '../stores/toast'
 
 const props = withDefaults(defineProps<{ name: string; language: string; floating?: boolean }>(), { floating: false })
-const toast = useToastStore()
 const expanded = ref(false)
 const opening = ref(false)
 const triggerEl = ref<HTMLButtonElement>()
@@ -22,8 +20,8 @@ async function openPreview() {
   opening.value = true
   try {
     await (window as any).__TAURI__.core.invoke('open_preview_window', { name: props.name, language: props.language })
-  } catch (exception: any) {
-    toast.error = exception?.message || String(exception)
+  } catch {
+    expanded.value = true
   } finally {
     opening.value = false
   }
