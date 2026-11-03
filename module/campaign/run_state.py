@@ -381,6 +381,59 @@ class RunState:
                 cleared.append(identifier)
         return {'blocks_added': added, 'blocks_refreshed': refreshed, 'blocks_cleared': cleared}
 
+    def assume_nearby_barrier(self, position, chart):
+        """按可靠停滞位置把唯一邻近光幕标注记为封锁，不要求能量幕视觉证据。
+
+        调用方须先确认同一目标连续真实移动无进展。距离采用底图坐标及既有 48 像素
+        光幕配对容差，线段取最近接触点而非中点；点标注沿用地图层的道路横断估计。
+        只允许一处有效标注落入容差，重叠候选不猜测。已封锁或本章曾推定过的编号不重复
+        推定，防止机关解封后再次停滞造成无限续期；不添加视觉复核任务或改写地图资源。
+        返回新封锁记录，无有效位置、唯一候选或可用封锁几何时返回 None。
+        """
+        position = np.asarray(position, float)
+        if (position.shape != (2,) or not np.isfinite(position).all()
+                or np.any(position < 0) or np.any(position >= self.size)):
+            return None
+        candidates = {}
+        for annotation in chart.barrier_annotations:
+            point = np.asarray(annotation.get('position'), float)
+            identifier = annotation.get('id')
+            if (not identifier or point.shape != (2,) or not np.isfinite(point).all()
+                    or np.any(point < 0) or np.any(point >= self.size)):
+                continue
+            segment = annotation.get('segment')
+            if segment is None:
+                inferred = chart.mark_barrier(point)
+                if inferred is None:
+                    continue
+                segment = inferred['segment']
+            segment = np.asarray(segment, float)
+            if (segment.ndim != 2 or segment.shape[1] != 2 or len(segment) < 2
+                    or not np.isfinite(segment).all()):
+                continue
+            axes = np.diff(segment, axis=0)
+            lengths = np.sum(axes * axes, axis=1)
+            if np.any(lengths <= 0):
+                continue
+            ratios = np.clip(np.sum((position - segment[:-1]) * axes, axis=1) / lengths, 0., 1.)
+            nearest = segment[:-1] + ratios[:, None] * axes
+            distance = float(np.min(np.linalg.norm(nearest - position, axis=1)))
+            if distance <= CURTAIN_MATCH_RADIUS:
+                candidates[identifier] = (point, segment, distance)
+        if len(candidates) != 1:
+            return None
+        identifier, (point, segment, distance) = next(iter(candidates.items()))
+        record = self.blocks.get(identifier)
+        if record is not None and (record['status'] != 'cleared' or 'assumed_at' in record):
+            return None
+        if record is None:
+            record = {'id': identifier, 'first_seen': self.tick}
+            self.blocks[identifier] = record
+        record.update(annotation_id=identifier, point=point.tolist(), segment=segment.tolist(),
+                      status='active', last_seen=self.tick, assumed_at=self.tick,
+                      assumed_position=position.tolist(), assumed_distance=round(distance, 1))
+        return record
+
     def _nearest_block(self, point, taken):
         """配对半径内最近且未被本帧其它光幕占用的封锁编号。"""
         best, distance = None, CURTAIN_MATCH_RADIUS

@@ -10,15 +10,16 @@ from module.campaign.run_state import MAX_FAILURES
 
 
 class NavigationStalled(RuntimeError):
-    """同一目标连续真实移动未取得可靠路线进展，直接停止，不以回正重扫清空失败记录。"""
+    """同一目标连续真实移动未取得可靠路线进展，交执行层停止或按邻近光幕标注推定封锁。"""
 
 
 class MovementProgress:
-    """按稳定目标保留路线历史最优值与连续无进展次数，EX 中断及重新规划均不清空。
+    """按稳定目标保留路线历史最优值与连续无进展次数，普通重规划及 EX 中断不清空。
 
     坐标和路程使用底图像素。普通与绕行阶段比较冻结目标在同一道路上的剩余路程；
     从 EX 圆内退出时比较冻结退出路点，并允许确认离开避让区且接上安全道路作为阶段完成。
     有效缩短使用现有 SQUAD_REACH 到点容差，不以任意位移或单帧目标标记漂移续期。
+    执行层新增推定光幕且路网实际变化时，可显式为当前目标重建基准；同一光幕的续期仅一次。
     """
 
     def __init__(self, target):
@@ -70,6 +71,20 @@ class MovementProgress:
             self.circles = circles
             self.checkpoint = np.asarray(waypoint if inside else self.target, float).copy()
             self.best_remaining = self.remaining(self.road, position, self.checkpoint)
+
+    def replan_after_barrier(self, road):
+        """新增推定光幕实际改变路网后允许当前目标重新规划，不把目标记为完成。
+
+        仅由执行层成功登记新封锁后调用；道路与冻结基准相同或尚无基准时返回 False。
+        保留目标坐标和上次失败证据，仅清除本目标的连续失败计数并令下次 prepare 重建
+        路程基准；其他目标历史不变。同一光幕每章只允许推定一次，由状态层限制续期。
+        """
+        if self.road is None or np.array_equal(self.road, road):
+            return False
+        self.road = None
+        self.pending = False
+        self.failures = 0
+        return True
 
     def sent(self):
         """成功发送与当前规划匹配的地面点击后，允许下一次可靠停稳定位检查一次进展。"""

@@ -196,6 +196,50 @@ class CampaignExecutor:
                        '重新规划。')
         return True
 
+    def assume_stalled_barrier(self, goal):
+        """主线真实移动停滞时推定唯一邻近标注光幕封锁，返回下一拍使用的停稳小队坐标。
+
+        仅接受路线阶段连续三次无进展的可靠定位证据；EX 退出、普通导航异常或收集品任务
+        不触发。新增封锁须实际改变路网，才为当前目标重建进展基准并清除强制续行引用。
+        不发送输入、不调用视觉复核、不清空其他目标失败记录；后续按新路网选路或找机关。
+        下一拍沿用刚取得的停稳坐标重新观测，避免切口附近的紧凑定位抖动把小队换到另一侧。
+        没有唯一新标注或路网未变化时返回 None，仍由原停滞分支停止。
+        """
+        progress = self.session.active_movement_progress
+        result = progress.last_result if progress is not None else None
+        if (self.purpose != 'story' or goal is None or goal['kind'] in ('elevator', 'review_block')
+                or not result or result['stage'] != 'route' or result['progressed']
+                or result['failures'] < MAX_FAILURES):
+            return None
+        self.session.check()
+        state = self.owner.state
+        position = result['position']
+        block = state.assume_nearby_barrier(position, self.owner.cut.chart)
+        if block is None:
+            return None
+        changed = self.owner.cut.update(state.blocking())
+        self.session.record('barrier_assumed', force=True, goal=goal, block=block,
+                            movement_progress=result, road_changed=changed)
+        if not changed or not progress.replan_after_barrier(self.owner.cut.road):
+            return None
+        self.interrupted_goal = None
+        self.interrupted_inputs = 0
+        self.terminal_destination = None
+        self.terminal_continuation = None
+        self.terminal_checked = None
+        self.terminal_scan_stalls = 0
+        self.scout_pending = None
+        state.execution_target = None
+        self.owner.last_goal = None
+        self.owner.last_routes = None
+        self.owner.last_route_signature = None
+        self.session.planned_movement_click = None
+        self.session.planned_enemy_click = None
+        logger.warning(f"移动停滞推定光幕封锁：标注 {block['annotation_id']}，小队 {points_text(position)}，"
+                       f"距封锁段 {block['assumed_distance']:.1f} 地图像素，"
+                       f"连续无进展 {result['failures']} 次；路网已更新，重新选择目标。")
+        return position
+
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
         if goal and goal['kind'] == 'none' and goal.get('reason', '').startswith('route_'):
@@ -765,7 +809,8 @@ class CampaignExecutor:
         找主线敌人和侦察阶段冻结已有小队底图坐标，只重新配准镜头与敌人；跨轮侦察同样不要求
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、路线停滞、取消
-        和战斗失败仍立即停止。连续恢复尝试有界，完整恢复成功后清零；不设单章总时限或主循环轮数上限。
+        和战斗失败仍立即停止；路线停滞仅允许按唯一邻近光幕标注新增封锁后重新决策。
+        连续恢复尝试有界，完整恢复成功后清零；不设单章总时限或主循环轮数上限。
         Boss 执行前先核对章节敌人进度，进度不足才补扫当前连通分量；电梯不再触发终局遗漏检查。
         终局清怪战斗结束后，下一拍先做状态刷新与终局检查；通过后持续保留 Boss 目标直到战斗确认完成，
         不先把 Boss 当成普通最近敌人直接放行。每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：
@@ -938,6 +983,10 @@ class CampaignExecutor:
                     return {'state': 'needs_review', 'reason': 'scouting_incomplete', 'error': str(exc),
                             'goal': goal, 'focus': self.scout_pending}
                 except NavigationStalled as exc:
+                    position = self.assume_stalled_barrier(goal)
+                    if position is not None:
+                        camera_options = {'known_squad': list(position)}
+                        continue
                     self.session.record('navigation_stalled', force=True, error=str(exc), goal=goal)
                     logger.warning(f'移动路线无进展，停止并请求人工复核：{exc}')
                     return {'state': 'needs_review', 'reason': 'navigation_stalled', 'error': str(exc), 'goal': goal}
