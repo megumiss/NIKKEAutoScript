@@ -296,8 +296,9 @@ class CampaignExecutor:
     def complete_mechanism(self, goal):
         """按机关触发后的中央视野定位光幕，只解除对应标注，再回正小队并扫描。
 
-        中央光幕通过展开地图的两帧道路配准关联，不要求小队箭头或圆环可见；关联失败不记
-        机关完成也不清除封锁。只解除该编号，不使用历史 active/stale 集合或目标 block 批量
+        中央光幕通过展开地图的两帧道路配准按距离排序，邻近候选再用 YOLO 双柱方向校验；
+        不要求小队箭头或圆环可见，关联失败不记机关完成也不清除封锁。只解除该编号，
+        不使用历史 active/stale 集合或目标 block 批量
         解锁。已确认的机关标注仅用于此阶段小队边缘回正，完成后必须取得新的实测小队定位。
         """
         annotation = self.session.centered_mechanism_barrier(goal)

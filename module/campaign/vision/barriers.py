@@ -1,7 +1,7 @@
 """屏障的预标注关联与状态跟踪；机关仍复用既有场景单应。
 
 检测投影只选择最近光幕标注，封路使用标注几何，不从检测框估算封锁落点。
-光幕由实际检测及已关联立柱在客户区帧间跟踪；立柱单独可见不是光幕开启或消失的证据。
+光幕由实际检测及已关联立柱在客户区帧间跟踪；仅在已触发机关的切镜阶段用双柱方向校验解锁对象。
 """
 
 import numpy as np
@@ -234,6 +234,120 @@ def associate_pillars(curtain, objects):
         if matches and (len(matches) == 1 or matches[1][1] - matches[0][1] >= 15):
             associated.append(matches[0][2])
     return associated
+
+
+def centered_pillar_axis(objects):
+    """从本帧 YOLO 立柱检测中选择靠近镜头中央的相邻双柱，返回柱脚连线证据。
+
+    柱脚取客户区检测框底边中点，沿用模型门限与 HUD／截边检查；不手工选点或降低置信度。
+    先排除绑定到仍可见能量幕的立柱，再按相邻关系配对：另一柱同时更靠近两端时不跨柱连线。
+    双柱中点离注视点最近者优先，不设置距离或长度门限。缺柱、重合或中央配对歧义时抛 ValueError。
+    本方法只校验已触发机关的解锁对象，不能凭孤立立柱发布光幕消失证据。
+    """
+    occupied = {id(pillar) for curtain in unique_curtains(objects)
+                for pillar in associate_pillars(curtain, objects)}
+    pillars, feet = [], []
+    for item in objects:
+        if item.get('kind') != 'barrier' or item.get('state') != 'pillar' or id(item) in occupied:
+            continue
+        try:
+            foot = curtain_foot(item)
+        except ValueError:
+            continue
+        if any(np.linalg.norm(foot - point) < 1e-6 for point in feet):
+            continue
+        pillars.append(item)
+        feet.append(foot)
+    pairs = []
+    for first in range(len(feet)):
+        for second in range(first + 1, len(feet)):
+            span = np.linalg.norm(feet[second] - feet[first])
+            if any(np.linalg.norm(point - feet[first]) < span and np.linalg.norm(point - feet[second]) < span
+                   for index, point in enumerate(feet) if index not in (first, second)):
+                continue
+            midpoint = (feet[first] + feet[second]) / 2
+            pairs.append((float(np.linalg.norm(midpoint - VIEWPORT_PIXEL)), first, second, midpoint))
+    pairs.sort(key=lambda item: item[0])
+    if not pairs:
+        raise ValueError('机关切镜中央缺少可用于方向校验的 YOLO 双柱。')
+    if len(pairs) > 1 and abs(pairs[1][0] - pairs[0][0]) < 1e-6:
+        raise ValueError('机关切镜中央存在等距双柱配对，无法唯一校验光幕方向。')
+    distance, first, second, midpoint = pairs[0]
+    return dict(pillars=[pillars[first], pillars[second]], feet=[feet[first].tolist(), feet[second].tolist()],
+                midpoint=midpoint.tolist(), center_distance=distance,
+                vector=(feet[second] - feet[first]).tolist())
+
+
+def mechanism_barrier_candidates(annotations, viewport):
+    """按切镜视野距离排列光幕标注，返回最近两候选及是否需要双柱方向校验。
+
+    距离只排序，不设置接受半径或最小分差。单标注直接匹配；两点标注的中心间距不超过
+    两者标注长度之和时视为邻近竞争，否则最近光幕独立匹配，远处对象不参与方向否决。
+    邻近判断随标注尺寸变化，不新增固定像素阈值。多标注缺两点几何时不能证明相互独立，
+    交给后续方向校验拒绝；视野或标注中心非法、没有标注时抛 ValueError。
+    """
+    position = np.asarray(viewport, float)
+    if position.shape != (2,) or not np.isfinite(position).all():
+        raise ValueError('机关切镜视野中心坐标无效。')
+    ordered = []
+    for item in annotations:
+        point = np.asarray(item.get('position'), float)
+        if point.shape != (2,) or not np.isfinite(point).all():
+            raise ValueError('机关解锁光幕标注中心坐标无效。')
+        ordered.append((float(np.linalg.norm(point - position)), item))
+    ordered.sort(key=lambda pair: pair[0])
+    if not ordered:
+        raise ValueError('本章缺少光幕标注，保留原封锁状态。')
+    nearest = ordered[:2]
+    if len(nearest) == 1:
+        return nearest, False
+    spans = []
+    for _, item in nearest:
+        segment = np.asarray(item.get('segment'), float)
+        if segment.shape != (2, 2) or not np.isfinite(segment).all():
+            return nearest, True
+        length = float(np.linalg.norm(segment[1] - segment[0]))
+        if length < 1e-6:
+            return nearest, True
+        spans.append(length)
+    spacing = np.linalg.norm(np.asarray(nearest[0][1]['position']) - nearest[1][1]['position'])
+    return nearest, bool(spacing <= sum(spans))
+
+
+def match_mechanism_barrier(annotations, viewport, objects=()):
+    """按距离匹配切镜后的最近光幕标注，仅邻近竞争候选使用 YOLO 双柱方向校验。
+
+    距离只排序，不设接受半径或最小分差；单标注及远离其他光幕的最近标注直接匹配。
+    邻近竞争候选先选最近者，再将两点标注经 GROUND_TO_CLIENT 换算到客户区，比较无向夹角；
+    不混用画面与底图斜率，也不设置角度门限。最近者方向误差不得大于次近者，同向时仍由距离决定。
+    不按斜率改选远处对象；缺双柱、缺两点标注或方向冲突均抛 ValueError，调用方保留机关与
+    封锁状态。本方法只读取标注和检测对象，不以孤立立柱证明光幕消失。
+    """
+    ordered, competing = mechanism_barrier_candidates(annotations, viewport)
+    candidates = [dict(id=item['id'], distance=distance) for distance, item in ordered]
+    evidence = dict(method='single_annotation' if len(ordered) == 1 else 'nearest_annotation', candidates=candidates)
+    if not competing:
+        return ordered[0][1], evidence
+    axis = centered_pillar_axis(objects)
+    observed = np.asarray(axis['vector'], float)
+    observed /= np.linalg.norm(observed)
+    for candidate, (_, item) in zip(candidates, ordered):
+        segment = np.asarray(item.get('segment'), float)
+        if segment.shape != (2, 2) or not np.isfinite(segment).all():
+            raise ValueError(f"光幕 {item['id']} 缺少两点标注，无法校验双柱方向。")
+        expected = GROUND_TO_CLIENT @ (segment[1] - segment[0])
+        length = np.linalg.norm(expected)
+        if length < 1e-6:
+            raise ValueError(f"光幕 {item['id']} 的标注端点重合，无法校验双柱方向。")
+        cosine = abs(float(observed @ (expected / length)))
+        candidate['angle_error'] = float(np.degrees(np.arccos(np.clip(cosine, 0., 1.))))
+    if candidates[0]['angle_error'] > candidates[1]['angle_error'] + 1e-6:
+        raise ValueError(f"最近光幕 {candidates[0]['id']} 与立柱方向冲突："
+                         f"夹角 {candidates[0]['angle_error']:.1f}°，"
+                         f"次近光幕 {candidates[1]['id']} 夹角 {candidates[1]['angle_error']:.1f}°；"
+                         '保留原封锁状态。')
+    evidence.update(method='distance_pillar_axis', pillar_axis=axis)
+    return ordered[0][1], evidence
 
 
 def barrier_group(curtain, objects):

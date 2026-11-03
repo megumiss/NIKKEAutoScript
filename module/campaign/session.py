@@ -798,27 +798,37 @@ class CampaignSession(NavigationSession):
             reports.append(report)
         if np.linalg.norm(np.asarray(reports[0]['position']) - reports[1]['position']) > 12:
             raise ValueError('机关触发后的镜头尚未停稳，保留原封锁状态。')
-        self.record('mechanism_viewport', force=True, reports=reports)
+        self.record('mechanism_viewport', field=field, force=True, reports=reports)
         return reports[-1]
 
     def centered_mechanism_barrier(self, goal):
-        """按机关触发后位于镜头中央的唯一光幕标注确定解锁对象，不依赖小队定位。
+        """按机关切镜后的距离排序与 YOLO 双柱方向匹配解锁光幕，不依赖小队定位。
 
-        在完整章节标注中匹配视野中心，使用既有 48 地图像素光幕关联容差。
-        只接受范围内唯一标注，不能凭目标携带的 block 或同屏历史封锁批量解锁。
-        无候选或多候选均抛 ValueError，调用方不得修改机关及封锁状态；无需能量幕检测。
+        先保留镜头展开地图，通过既有两帧道路配准取得视野中心。距离不设置接受半径；
+        仅一个或与其他光幕独立的标注直接匹配，邻近两候选才校验双柱方向。YOLO 前收起展开面板，
+        避免遮住中央立柱，但不回正镜头、不降低模型门限、不追加确认帧或移动点击。
+        无标注、缺双柱或距离／方向冲突均抛 ValueError，调用方不得修改机关及封锁状态。
         """
-        from module.campaign.run_state import CURTAIN_MATCH_RADIUS
+        from module.campaign.vision.barriers import match_mechanism_barrier, mechanism_barrier_candidates
+        from module.campaign.vision.objects import detect_objects
 
         report = self.mechanism_viewport()
-        position = np.asarray(report['position'], float)
-        matches = [item for item in self.owner.cut.chart.barrier_annotations
-                   if np.linalg.norm(np.asarray(item['position'], float) - position) <= CURTAIN_MATCH_RADIUS]
-        if len(matches) != 1:
-            raise ValueError(f'机关触发后中央光幕标注无法唯一确定：候选 {len(matches)} 处；保留原封锁状态。')
-        annotation = matches[0]
-        self.record('mechanism_barrier_located', force=True, goal=goal, annotation=annotation,
-                    viewport=position.tolist())
+        annotations = self.owner.cut.chart.barrier_annotations
+        candidates, competing = mechanism_barrier_candidates(annotations, report['position'])
+        objects, field = [], None
+        if competing:
+            goto.map_close(self.win)
+            field = self.win.client()
+            self.identity(field)
+            objects = detect_objects(field, kinds=('barrier',))
+        self.record('mechanism_barrier_candidates', field=field, force=True, goal=goal,
+                    viewport=report['position'], candidates=candidates, objects=objects, competing=competing)
+        annotation, evidence = match_mechanism_barrier(annotations, report['position'], objects)
+        self.record('mechanism_barrier_located', field=field, force=True, goal=goal, annotation=annotation,
+                    viewport=report['position'], evidence=evidence)
+        logger.info(f"机关解锁光幕关联：标注 {annotation['id']}，"
+                    f"距离 {evidence['candidates'][0]['distance']:.1f} 地图像素，"
+                    f"依据 {'最近标注与 YOLO 双柱方向' if competing else '独立最近标注'}。")
         return annotation
 
     def trigger_visible_mechanism(self, goal):
