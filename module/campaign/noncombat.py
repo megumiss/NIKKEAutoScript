@@ -90,19 +90,24 @@ def chapter_next(field, reader):
 def chapter_progress(field, reader):
     """读取章节列表中当前章节的蓝色敌人计数，返回（面板是否确认，进度或 None）。
 
-    当前章节由「正在执行作战」或英文 MAIN QUEST 标识定位，不能使用固定卡片坐标：章节列表会滚动，
-    左右分支也会变化。在当前卡片下方用颜色与连通域尺寸定位蓝色菱形，再只 OCR 图标右侧的原尺寸
-    计数。这样黄色计数、红色计数和整页其他章节都不会进入识别框，也避免整页小字粘连造成的误读。
+    优先用「正在执行作战」定位当前卡片，仅缺少该文本时用英文 MAIN QUEST；章节列表会滚动，
+    左右分支也会变化，不能使用固定卡片坐标。图标搜索从卡片标题下方开始，排除蓝色章节名文字；
+    中文执行标识下移 45、英文标题下移 70 客户区像素，两者均覆盖卡片下方的计数行。
+    按颜色与连通域尺寸定位唯一蓝色菱形，再只 OCR 图标右侧原尺寸计数，不读取黄色、红色或其他章节。
     面板、当前标识、唯一蓝色图标或唯一合法比值未确认时返回 None。
     """
     x1, y1, x2, y2 = (630, 80, 1145, 830)
     result = reader.ocr(field[y1:y2, x1:x2], direct_ocr=True, threshold=CHAPTER_OCR_THRESHOLD)
     details = result['details']
     visible = any(' '.join(item['text'].upper().split()) == 'CHAPTER LIST' for item in details)
-    current = next((item for item in details
-                    if '正在执行作战' in item['text'] or 'MAIN QUEST' in item['text'].upper()), None)
-    if not visible or current is None:
+    current = [item for item in details if '正在执行作战' in item['text']]
+    progress_offset = 45
+    if not current:
+        current = [item for item in details if 'MAIN QUEST' in item['text'].upper()]
+        progress_offset = 70
+    if not visible or len(current) != 1:
         return visible, None
+    current = current[0]
     box = np.asarray(current.get('bbox'), float)
     if box.size not in (4, 8):
         return visible, None
@@ -110,7 +115,9 @@ def chapter_progress(field, reader):
     center_x = float(box[:, 0].mean()) + x1
     bottom = float(box[:, 1].max()) + y1
     left, right = int(center_x - 90), int(center_x + 90)
-    top, lower = int(bottom + 15), int(bottom + 100)
+    top, lower = int(bottom + progress_offset), int(bottom + 100)
+    if not (0 <= left < right <= field.shape[1] and 0 <= top < lower <= field.shape[0]):
+        return visible, None
     region = field[top:lower, left:right]
     hsv = cv2.cvtColor(region, cv2.COLOR_BGR2HSV)
     mask = ((hsv[:, :, 0] > 70) & (hsv[:, :, 0] < 120)
