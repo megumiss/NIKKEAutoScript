@@ -1,6 +1,20 @@
 # 公告列表，新的公告追加到文件顶部
 # pinned: true 的公告在客户端列表顶部置顶显示，可同时置顶多条；组内仍按文件顺序（新的在前）
 # 次要公告不再单列：移进「更新历史」条目的 items（日期倒序），正文保持原公告原文
+- id: notice_20261104_security
+  date: 2026-11-04
+  title: 【紧急】NIKKE 国际服 PC 客户端安全事件
+  type: important
+  pinned: true
+  content: |
+    <b style="color:var(--red)">NIKKE 国际服 PC 客户端发现供应链投毒，可能窃取浏览器凭据、开发令牌及钱包数据。近期使用过国际服 PC 启动器的用户，请立即停止运行游戏和启动器并自查。</b>
+
+    <b>自查与处理</b>
+    1. 运行 NKAS 目录下的 scripts/windows/Run_NIKKE_Interactive.bat，选择「1. 快速 IOC 扫描」；需要全盘检查时选择「2. 全盘 IOC 扫描」。
+    2. 如确认感染，先选择「3. 查看处理计划（只读）」并核对。
+    3. 选择「5. 处理 DLL、CLSID 并封锁恶意域名」并输入 CLEAN+BLOCK。DLL 会直接删除且不保留副本，CLSID 和 hosts 会先备份。
+
+    <b style="color:var(--red)">清理不能撤销已经发生的数据泄露。</b>请在可信设备上修改浏览器保存过的密码、注销登录会话并轮换开发令牌；钱包需新建助记词并转移资产。
 - id: notice_20260924
   date: 2026-09-24
   title: 求个 Star
