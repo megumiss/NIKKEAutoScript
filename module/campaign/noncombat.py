@@ -187,6 +187,7 @@ class CampaignSceneController:
         self.entry_route_sent = False
         self.last_page = None
         self.ui_templates = {}
+        self.returning_home = False
 
     def bind_field(self, identity):
         """绑定已连续确认的野外身份并结束页面接管，不保存小队坐标或旧章节配准。"""
@@ -222,6 +223,38 @@ class CampaignSceneController:
                 return identity
             if identity is not None:
                 self.session.pause(NONCOMBAT_POLL_SECONDS)
+
+    def return_home(self, reason):
+        """业务异常后按现有页面按钮循环返回主界面，成功前不得重新进入推图。
+
+        本阶段单独使用五分钟时限，不延长原换章阶段，也不取消已确认的下一章约束。
+        返回模式关闭已识别弹窗／章节列表并点击返回主页，不点击作战入口或进入战斗；
+        正在战斗时沿用结算处理，未知页没有返回按钮就等待，不猜固定坐标。
+        必须确认主界面才返回；窗口、取消、驱动异常或超时直接传播，调用方不再次重启。
+        """
+        self.session.check()
+        if getattr(self.session.raw_handler, '_failures', 0):
+            from module.campaign.window import WindowChanged
+            raise WindowChanged('鼠标驱动已报告失败，禁止异常后的返回主页输入。')
+        self.active = False
+        self.activate()
+        self.returning_home = True
+        self.session.target_inputs = 0
+        self.session.record('campaign_return_home_begin', force=True, reason=reason)
+        try:
+            while True:
+                result = self.step()
+                if result is None or result.get('state') != 'scene_home':
+                    continue
+                self.active = False
+                self.deadline = None
+                self.ark_arrow_at = None
+                self.last_page = None
+                self.session.record('campaign_return_home_complete', field=result['field'], force=True, reason=reason)
+                logger.info('异常恢复已确认主界面，重新开始主线入口流程。')
+                return
+        finally:
+            self.returning_home = False
 
     def handle_story(self, field):
         """在启动、野外插入或战斗剧情中共用 SKIP 判据，每次只点击当前帧的可靠按钮。"""
@@ -363,7 +396,8 @@ class CampaignSceneController:
             if not self.start_if_complete(field):
                 return None
         if time.monotonic() >= self.deadline:
-            raise ChapterTransitionTimeout('上层场景流程超过 5 分钟仍未确认可进入的主线野外。')
+            destination = '主界面' if self.returning_home else '可进入的主线野外'
+            raise ChapterTransitionTimeout(f'上层场景流程超过 5 分钟仍未确认{destination}。')
         score, point = locate(field, self.templates, 'chapter_clear')
         scores = {'chapter_clear': round(score, 3)}
         if point is not None:
@@ -398,7 +432,7 @@ class CampaignSceneController:
         scores.update(main=round(main_score, 3), ark=round(ark_score, 3), guide_arrow=round(arrow_score, 3))
         outpost_score, outpost_point = locate(field, self.templates, 'outpost_check')
         scores['outpost'] = round(outpost_score, 3)
-        if outpost_point is not None:
+        if outpost_point is not None and not self.returning_home:
             notice_score, notice_point = locate(field, self.templates, 'outpost_notice')
             scores['outpost_notice'] = round(notice_score, 3)
             if notice_point is not None:
@@ -409,13 +443,15 @@ class CampaignSceneController:
                 self.tap(arrow_point, '前哨基地右上角引导箭头')
             return self.wait('outpost', scores, field)
 
-        if main_point is not None and ark_point is None:
+        if main_point is not None and ark_point is None and outpost_point is None:
+            if self.returning_home:
+                return {'state': 'scene_home', 'field': field}
             self.ark_arrow_at = None
             point = arrow_point or self.ui_point(field, MAIN_GOTO_CAMPAIGN_SELECT, (700, 730, 1200, 999))
             if point is not None:
                 self.tap(point, '主页右上角引导箭头' if arrow_point is not None else '主页作战入口')
             return self.wait('main', scores, field)
-        if ark_point is not None:
+        if ark_point is not None and not self.returning_home:
             if self.ark_arrow_at is None and arrow_point is None:
                 self.ark_arrow_at = time.monotonic()
             if arrow_point is not None and self.ark_arrow_at is None:
@@ -440,6 +476,9 @@ class CampaignSceneController:
         list_score, list_point = locate(field, self.templates, 'chapter_list')
         scores['chapter_list'] = round(list_score, 3)
         if list_point is not None:
+            if self.returning_home:
+                self.tap(CHAPTER_CLOSE_POINT, '异常恢复关闭章节列表')
+                return self.wait('chapter_list_close', scores, field)
             point = chapter_next(field, self.session.owner.chapter_ocr)
             if point is not None:
                 if self.tap(point, '新章节'):
@@ -450,23 +489,26 @@ class CampaignSceneController:
         state = battle.battle_state(field)
         kind = state['state']
         if kind in ('entry', 'battle', 'victory', 'continue', 'defeat'):
-            if kind == 'entry' and battle.ex_stage(field):
+            if kind == 'entry' and (self.returning_home or battle.ex_stage(field)):
                 from module.campaign.scene_session import ENTRY_CLOSE_POINT
-                self.tap(ENTRY_CLOSE_POINT, '启动 EX 弹窗关闭')
+                self.tap(ENTRY_CLOSE_POINT, '异常恢复关闭战斗准备' if self.returning_home else '启动 EX 弹窗关闭')
             elif kind == 'defeat':
                 from module.campaign.scene_session import DEFEAT_BACK_POINT
                 self.tap(DEFEAT_BACK_POINT, '启动战败返回')
             else:
-                self.session.battle_step()
+                if self.returning_home:
+                    self.session.battle_step(close_entry=True)
+                else:
+                    self.session.battle_step()
             return self.wait(kind, scores, field)
-        if battle.field_visible(field) or self.session.owner.minimap_expanded(field):
+        if not self.returning_home and (battle.field_visible(field) or self.session.owner.minimap_expanded(field)):
             identity = chapter_identity(field, self.session.owner.chapter_ocr)
             pending_unknown_clear = self.clear_seen and self.chapter is None and not self.entry_route_sent
             if (identity is not None and not pending_unknown_clear
                     and (self.transition_expected is None or identity == self.transition_expected)):
                 return {'state': 'scene_field', 'identity': identity, 'field': field}
             return self.wait('field_identity', scores, field)
-        if self.ui_point(field, CAMPAIGN_SELECT_CHECK) is not None:
+        if not self.returning_home and self.ui_point(field, CAMPAIGN_SELECT_CHECK) is not None:
             point = self.ui_point(field, CAMPAIGN_SELECT_GOTO_SURFACE)
             if point is not None:
                 self.tap(point, '作战选择前往地面')

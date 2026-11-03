@@ -53,6 +53,8 @@ MAIN_STORY_PAGE_INTERVAL = 0.5
 # （同一只敌人要合并、封锁状态要按视野迁移），所以几拍就够。
 DRY_RUN_TICKS = 3
 DRY_RUN_INTERVAL = 1.0
+# 业务异常终止后，每次任务只允许一次返回主页并重新进入，不给无限重启机会。
+CAMPAIGN_HOME_RESTART_LIMIT = 1
 
 
 class Campaign(ModuleBase):
@@ -541,7 +543,9 @@ class Campaign(ModuleBase):
         不需要预先取得章节角标或小队位置。只有野外身份连续三帧一致后才加载本章定位和道路。
         场景切换中断章节会话时停止旧坐标输入；同章返回保留事实、EX 避让与路线失败历史，
         真正换章或地图版本变化才新建运行状态。各章通过循环接续，不递归调用任务入口。
-        页面未知、定位失败或输入异常仍安全停止；任意场景启动不表示允许盲点未知按钮。
+        业务异常最终终止时每次任务最多返回主页并重新进入一次，同章仍保留事实与失败历史。
+        用户取消、窗口及驱动安全异常不追加输入；返回主页失败或重启后再次异常交人工。
+        页面未知不盲点，资源与设备准备不重复，正常结束及收集品提示不会触发异常重启。
         """
         from module.campaign.execution import CampaignExecutor
         from module.campaign.noncombat import CampaignSceneController, SceneRequired
@@ -560,66 +564,93 @@ class Campaign(ModuleBase):
         page_session = CampaignSceneSession(self)
         self.scene_controller = CampaignSceneController(page_session)
         suspended = None
+        home_restarts = 0
         try:
             page_session.start()
             while True:
-                self.scene_controller.ensure_field()
+                session = executor = None
+                identity = None
                 try:
-                    chapter = self.detect_current_chapter()
-                    identity = (chapter, self.current_difficulty)
-                    self.scene_controller.bind_field(identity)
-                    snapshot = self.confirm_squad_location(self.last_snapshot)
-                    self.log_snapshot_summary(snapshot)
-                    if snapshot is None or snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None:
-                        raise ValueError('主线没有可信小队起点，停止并交人工定位。')
-                    chart = self.ensure_chart(chapter)
-                    if chart is None or not chart.supported or chart.road is None:
-                        raise ValueError('本章地图底图不可用，不能规划移动。')
-                    same_chapter = (suspended is not None and suspended['identity'] == identity
-                                    and suspended['digest'] == chart.image_sha256)
-                    if not same_chapter:
-                        self.state = RunState(chapter, self.current_difficulty, chart.size)
-                        suspended = None
-                    self.last_goal = self.last_routes = self.last_route_signature = None
-                    self.cut = CutRoads(chart)
-                    self.cut.update(self.state.blocking())
-                    session = CampaignSession(self)
-                    if suspended is not None:
-                        session.movement_progress = suspended['movement_progress']
-                        session.ex_bypass = suspended['ex_bypass']
-                        session.ex_popup_count = suspended['ex_popup_count']
-                        for progress in session.movement_progress.values():
-                            progress.interrupt()
-                    executor = CampaignExecutor(self, session, purpose=(
-                        'collectible' if self.config.task.command == 'auto_main_collectible' else 'story'))
-                    if suspended is not None:
-                        executor.interrupted_goal = suspended['interrupted_goal']
-                        executor.interrupted_inputs = suspended['interrupted_inputs']
-                        executor.terminal_destination = suspended['terminal_destination']
-                    logger.info(f'场景与章节准备结束：{identity[1].upper()} 第 {chapter} 章，'
-                                f'小队起点 {points_text(snapshot["squad"])}，任务累计耗时 {watch}。')
+                    self.scene_controller.ensure_field()
                     try:
-                        result = executor.run(snapshot)
+                        chapter = self.detect_current_chapter()
+                        identity = (chapter, self.current_difficulty)
+                        self.scene_controller.bind_field(identity)
+                        snapshot = self.confirm_squad_location(self.last_snapshot)
+                        self.log_snapshot_summary(snapshot)
+                        if (snapshot is None or snapshot.get('localization') != 'accepted'
+                                or snapshot.get('squad') is None):
+                            raise ValueError('主线没有可信小队起点，停止并交人工定位。')
+                        chart = self.ensure_chart(chapter)
+                        if chart is None or not chart.supported or chart.road is None:
+                            raise ValueError('本章地图底图不可用，不能规划移动。')
+                        same_chapter = (suspended is not None and suspended['identity'] == identity
+                                        and suspended['digest'] == chart.image_sha256)
+                        if not same_chapter:
+                            self.state = RunState(chapter, self.current_difficulty, chart.size)
+                            suspended = None
+                        self.last_goal = self.last_routes = self.last_route_signature = None
+                        self.cut = CutRoads(chart)
+                        self.cut.update(self.state.blocking())
+                        session = CampaignSession(self)
+                        if suspended is not None:
+                            session.movement_progress = suspended['movement_progress']
+                            session.ex_bypass = suspended['ex_bypass']
+                            session.ex_popup_count = suspended['ex_popup_count']
+                            for progress in session.movement_progress.values():
+                                progress.interrupt()
+                        executor = CampaignExecutor(self, session, purpose=(
+                            'collectible' if self.config.task.command == 'auto_main_collectible' else 'story'))
+                        if suspended is not None:
+                            executor.interrupted_goal = suspended['interrupted_goal']
+                            executor.interrupted_inputs = suspended['interrupted_inputs']
+                            executor.terminal_destination = suspended['terminal_destination']
+                        logger.info(f'场景与章节准备结束：{identity[1].upper()} 第 {chapter} 章，'
+                                    f'小队起点 {points_text(snapshot["squad"])}，任务累计耗时 {watch}。')
+                        try:
+                            result = executor.run(snapshot)
+                        except SceneRequired as exc:
+                            suspended = dict(identity=identity, digest=chart.image_sha256,
+                                             movement_progress=session.movement_progress, ex_bypass=session.ex_bypass,
+                                             ex_popup_count=session.ex_popup_count,
+                                             interrupted_goal=executor.interrupted_goal,
+                                             interrupted_inputs=executor.interrupted_inputs,
+                                             terminal_destination=executor.terminal_destination)
+                            self.last_snapshot = None
+                            page_session.record('scene_handoff', force=True, identity=identity, reason=str(exc))
+                            logger.info(f'章节导航交还上层场景流程：{exc}')
+                            continue
+                        logger.info(f'主线执行结束：{identity[1].upper()} 第 {chapter} 章；{result}；'
+                                    f'任务总耗时 {watch}')
+                        logger.info(f'运行状态：{self.state.summary_text()}')
+                        if result['state'] == 'needs_review':
+                            reason = result.get('error') or result.get('reason') or '推图结果需要人工复核'
+                            raise RuntimeError(f'自动推图异常终止：{reason}')
+                        return chapter
                     except SceneRequired as exc:
-                        suspended = dict(identity=identity, digest=chart.image_sha256,
+                        self.last_snapshot = None
+                        logger.info(f'章节准备期间页面已变化，交还上层场景流程：{exc}')
+                except (WindowChanged, OSError, cv2.error):
+                    raise
+                except (RequestHumanTakeover, RuntimeError, ValueError) as exc:
+                    if home_restarts >= CAMPAIGN_HOME_RESTART_LIMIT:
+                        raise
+                    home_restarts += 1
+                    reason = str(exc) or type(exc).__name__
+                    if session is not None and executor is not None:
+                        suspended = dict(identity=identity, digest=self.cut.chart.image_sha256,
                                          movement_progress=session.movement_progress, ex_bypass=session.ex_bypass,
                                          ex_popup_count=session.ex_popup_count,
                                          interrupted_goal=executor.interrupted_goal,
                                          interrupted_inputs=executor.interrupted_inputs,
                                          terminal_destination=executor.terminal_destination)
-                        self.last_snapshot = None
-                        page_session.record('scene_handoff', force=True, identity=identity, reason=str(exc))
-                        logger.info(f'章节导航交还上层场景流程：{exc}')
-                        continue
-                    logger.info(f'主线执行结束：{identity[1].upper()} 第 {chapter} 章；{result}；'
-                                f'任务总耗时 {watch}')
-                    logger.info(f'运行状态：{self.state.summary_text()}')
-                    if result['state'] == 'needs_review':
-                        raise RequestHumanTakeover
-                    return chapter
-                except SceneRequired as exc:
                     self.last_snapshot = None
-                    logger.info(f'章节准备期间页面已变化，交还上层场景流程：{exc}')
+                    self.last_goal = self.last_routes = self.last_route_signature = None
+                    page_session.record('campaign_home_restart', force=True, reason=reason, attempt=home_restarts,
+                                        limit=CAMPAIGN_HOME_RESTART_LIMIT)
+                    logger.warning(f'自动推图异常终止，执行返回主页重启 '
+                                   f'{home_restarts}/{CAMPAIGN_HOME_RESTART_LIMIT}：{reason}')
+                    self.scene_controller.return_home(reason)
         except (WindowChanged, OSError, ValueError, RuntimeError, cv2.error) as exc:
             logger.error(f'主线执行停止：{exc}（任务总耗时 {watch}）')
             raise RequestHumanTakeover from exc
