@@ -49,8 +49,8 @@ const selectedInstance = computed(() => instancesStore.instances.find(item => it
       </div>
       <div class="ov-right">
         <LiveLog />
-        <ScreenPreview :name="selectedName" :language="systemStatus.language" />
       </div>
     </div>
+    <ScreenPreview floating :name="selectedName" :language="systemStatus.language" />
   </section>
 </template>
