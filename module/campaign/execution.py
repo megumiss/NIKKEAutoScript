@@ -329,6 +329,7 @@ class CampaignExecutor:
 
         导航报错与战斗弹窗可能前后脚出现，记失败冷却前必须重查当前画面；确认为战斗时
         直接交既有接管链路，保留未完成目标，避免战后把机关等位置目标误当成已失败而跳过。
+        电梯只以入口建立步行进展基准，跨区域出口由共享闭环独立确认，不作为步行路程目标。
         派发与结束各一行，带上落点、预计距离、移动次数、本目标消耗的输入次数与耗时：
         同一个目标在共享闭环里会打十几行进度，这两行是把它们括起来的边界。
         """
@@ -345,7 +346,8 @@ class CampaignExecutor:
         if kind == 'elevator':
             target = goal['leg']['exit']
             kwargs['elevators'] = single_transfer_annotations(goal['leg'])
-        self.session.begin_move_target(goal, target)
+        progress_target = goal['leg']['entry'] if kind == 'elevator' else target
+        self.session.begin_move_target(goal, progress_target)
         confirmed_transfers = []
 
         def progress(**values):

@@ -48,6 +48,7 @@ def navigate(
     镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
     平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
     目标就是最后一段电梯出口时，确认传送即结束，不再向出口中心追加容易误差的地面移动。
+    出口区域判定优先于普通步行进展检查，传送后的坐标不与入口道路的剩余路程作比较。
     敌人模式仅在原目标附近有唯一小地图标记时启用两帧脚圈辅助；一次 navigate 至多辅助直点一次，
     附近试点始终保持原落点，不复用脚圈；辅助结果不会修改目标身份或战斗归属。
     enemy_kind 为 normal 或 boss，实时位置只从同类标记吸附；Boss 不读取旧的普通敌人列表。
@@ -106,9 +107,6 @@ def navigate(
         position = np.asarray(observation['position'], float)
         if observation.get('position_kind') != 'squad' or position.shape != (2,) or not np.isfinite(position).all():
             raise RuntimeError('小队定位无效，停止移动。')
-        review_progress = getattr(session, 'review_move_progress', None)
-        if review_progress is not None:
-            review_progress(observation)
         if elevators is not None and purpose == 'position':
             from module.campaign.navigation.elevator_navigation import at_elevator_exit, plan_elevators
 
@@ -152,6 +150,9 @@ def navigate(
                     }
                 continue
             exit_near = 0
+        review_progress = getattr(session, 'review_move_progress', None)
+        if review_progress is not None:
+            review_progress(observation)
         transferring = bool(legs)
         approach = target
         if transferring:

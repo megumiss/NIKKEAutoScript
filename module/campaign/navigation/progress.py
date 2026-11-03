@@ -50,6 +50,7 @@ class MovementProgress:
 
         EX 避让道路排除所有避让圆；小队在圆内时仅退出路段使用原道路，后续必须接上安全路网。
         仅路网或退出阶段真实变化时重建基准，不清空失败次数。纯规划不会产生一次进展判定。
+        新基准路程计算成功后才写入道路及检查点；寻路失败保留原基准，不能留下缺少路程的半初始化状态。
         """
         if self.failures >= MAX_FAILURES:
             raise NavigationStalled(f'同一目标连续 {self.failures} 次移动未取得可靠路线进展。')
@@ -61,16 +62,18 @@ class MovementProgress:
         for point, radius in circles:
             cv2.circle(safe, tuple(np.rint(point).astype(int)), int(np.ceil(radius)), 0, -1)
         metric_road = np.asarray(road, np.uint8) if inside else safe
-        changed = (self.road is None or bool(inside) != bool(self.exit_circles)
+        changed = (self.road is None or self.best_remaining is None or bool(inside) != bool(self.exit_circles)
                    or not np.array_equal(metric_road, self.road)
                    or not np.array_equal(safe, self.safe_road))
         if changed:
+            checkpoint = np.asarray(waypoint if inside else self.target, float).copy()
+            remaining = self.remaining(metric_road, position, checkpoint)
             self.road = metric_road.copy() if inside else safe
             self.safe_road = safe
             self.exit_circles = inside
             self.circles = circles
-            self.checkpoint = np.asarray(waypoint if inside else self.target, float).copy()
-            self.best_remaining = self.remaining(self.road, position, self.checkpoint)
+            self.checkpoint = checkpoint
+            self.best_remaining = remaining
 
     def replan_after_barrier(self, road):
         """新增推定光幕实际改变路网后允许当前目标重新规划，不把目标记为完成。
@@ -100,9 +103,12 @@ class MovementProgress:
         缩短必须优于历史最优值超过到点容差，来回走和小幅定位抖动不能反复刷新。
         已在目标到点范围内的有限触发试点交给原试点上限管理，不假装取得路线推进。
         达到既有 MAX_FAILURES 上限抛 NavigationStalled，拒绝下一次移动。
+        尚未建立有效基准时明确报错，不把缺少历史路程当作一次推进或执行空值运算。
         """
         if not self.pending:
             return None
+        if self.best_remaining is None or not np.isfinite(self.best_remaining) or self.checkpoint is None:
+            raise ValueError('移动路线进展缺少有效基准，不能检查停稳位置。')
         self.pending = False
         position = np.asarray(position, float)
         previous = self.best_remaining
