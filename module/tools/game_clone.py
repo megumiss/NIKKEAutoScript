@@ -210,6 +210,55 @@ def delete_clone(name, mode='full'):
     return {'name': name, 'install_path': install_path}
 
 
+def repair_clone(name):
+    with _state_lock:
+        if _state['running']:
+            raise GameCloneError('复制任务正在进行，无法修复副本')
+
+    name = str(name or '').strip()
+    match = CLIENT_PATTERN.fullmatch(name)
+    if not match or not match.group(2):
+        raise GameCloneError('只能修复带编号的游戏副本')
+
+    appdata_dir = _appdata_dir()
+    client = _scan_client(appdata_dir, name, match)
+    install_path = client['install_path']
+    if not install_path or not os.path.isdir(install_path):
+        raise GameCloneError(f'副本安装目录不存在: {install_path or name}')
+    launcher_dir = os.path.join(install_path, 'Launcher')
+    if not os.path.isdir(launcher_dir):
+        raise GameCloneError(f'未找到启动器目录: {launcher_dir}')
+
+    normalized_install = os.path.normcase(os.path.normpath(install_path))
+    sharers = sorted(
+        other['name'] for other in clone_info()['clients']
+        if other['name'] != name and other['install_path'] and os.path.normcase(
+            os.path.normpath(other['install_path'])
+        ) == normalized_install
+    )
+    if sharers:
+        raise GameCloneError(f'安装目录被其他配置共用，无法修复: {install_path} ({"、".join(sharers)})')
+
+    _check_no_running(install_path)
+    updated_launcher = os.path.join(launcher_dir, f'{match.group(1)}.exe')
+    clone_launcher = os.path.join(launcher_dir, f'{name}.exe')
+    if not os.path.isfile(updated_launcher):
+        if os.path.isfile(clone_launcher):
+            return {'name': name, 'repaired': False, 'launcher_path': clone_launcher}
+        raise GameCloneError(f'未找到原始启动器，无法修复: {updated_launcher}')
+
+    replaced_old = os.path.isfile(clone_launcher)
+    try:
+        os.replace(updated_launcher, clone_launcher)
+    except OSError as exc:
+        raise GameCloneError(f'重命名启动器失败: {exc}') from exc
+    logger.info(f'Game clone launcher repaired: {clone_launcher}, replaced_old={replaced_old}')
+    return {
+        'name': name, 'repaired': True, 'replaced_old': replaced_old,
+        'launcher_path': clone_launcher,
+    }
+
+
 def cancel_clone():
     with _state_lock:
         if not _state['running']:

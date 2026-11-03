@@ -110,7 +110,6 @@ types:
             state_hint: 普通难度选中(困难未解锁)的关卡列表页
             templates:
               - { name: STORY_2_NORMAL, mode: button, desc: 故事2普通检查，截取右下角第一个按钮，竖着的长方形，底部包含两个字母再向上延伸一个字母的距离 }
-              - { name: STORY_2_HARD_LOCKED, mode: button, desc: 故事2困难锁定检查，截取右下角第二个按钮上的 开始 }
               - { name: STORY_2_NORMAL_STAGE_11, mode: button, desc: 倒数第二关序号，只截取关卡序号后半部分 }
               - { name: STORY_2_NORMAL_STAGE_11_CLEAR, mode: button, desc: 倒数第二关的CLEAR标记，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
               - { name: STORY_2_NORMAL_STAGE_12, mode: button, desc: 倒数第一关序号，只截取关卡序号后半部分 }
@@ -157,7 +156,6 @@ types:
             state_hint: 普通难度选中(困难锁定)的关卡列表页，右下角有两个按钮，第一个是当前的normal，第二个被提示遮挡
             templates:
               - { name: STORY_1_NORMAL, mode: button, desc: 普通难度开启，截取右下角第一个按钮，竖着的长方形，底部包含两个字母再向上延伸一个字母的距离 }
-              - { name: STORY_1_HARD_LOCKED, mode: button, desc: 困难难度锁定，截取右下角第二个按钮上的 开始 }
               - { name: STORY_1_NORMAL_STAGE_11, mode: button, desc: 倒数第二关序号，只截取关卡序号后半部分 }
               - { name: STORY_1_NORMAL_STAGE_11_CLEAR, mode: button, desc: 倒数第二关的CLEAR标记，一般是clear艺术字，可能无法分辨，可以交由人工处理 }
               - { name: STORY_1_NORMAL_STAGE_12, mode: button, desc: 倒数第一关序号，只截取关卡序号后半部分 }

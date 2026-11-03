@@ -127,6 +127,7 @@
     "tasks": [
       "AutoTower",
       "SemiCombat",
+      "InterceptionTest",
       "Highlights",
       "BlaCDKManual",
       "ScreenRotate"

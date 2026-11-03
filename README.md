@@ -49,6 +49,7 @@ GODDESS OF VICTORY: NIKKE automatic daily script, supporting PC / Android phones
 
 ## 快速开始
 
+- 快速安装 [Wiki 快速安装教程](https://github.com/megumiss/NIKKEAutoScript/wiki/Quick-Installation-Guide.zh-CN)
 - 安装 [Wiki 安装指南](https://github.com/megumiss/NIKKEAutoScript/wiki/Installation-Guide.zh-CN)
 - 使用 [Wiki PC端使用指南](https://github.com/megumiss/NIKKEAutoScript/wiki/Usage-Guide-PC-Client.zh-CN)
 - 远程访问可在“部署 → Webui → SecurityEntryEnabled”手动开启保护，默认关闭；浏览器、exe 与移动端的用法见 [安全入口说明](doc/security-entry.md)。

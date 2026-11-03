@@ -53,6 +53,7 @@ function updateButtons() {
   cropEditor.setDisabled(busy || Boolean(pendingAction));
   $('btnSaveAsset').disabled = busy || !library || !draft || !validName || !selectionDirty || selection?.editing || Boolean(selected && !selected.editable);
   $('btnDeleteAsset').disabled = busy || !selected;
+  $('btnRefreshAssets').disabled = busy || !library || Boolean(pendingAction);
   for (const id of ['btnNewAsset','btnReload','featureSelect','featureSearch','sourceSelect','btnUpload','assetSearch','assetType']) $(id).disabled = busy;
   $('outputMode').disabled = busy || Boolean(selected);
   $('outputName').disabled = busy || Boolean(selected);
@@ -116,7 +117,7 @@ function renderEditor() {
   $('modeHint').textContent = $('outputMode').value === 'template' ? 'Template 只保存选区原始像素，文件名自动添加 TEMPLATE_ 前缀。' : 'Button 保留 720 × 1280 尺寸与选区坐标，其余区域填黑。';
   $('outputPath').textContent = library ? `assets/zh-CN/${library.feature}/${outputName() || '模板名称'}.png` : '先选择功能目录';
   $('assetWarning').hidden = !selected || Boolean(selected.editable && !selected.override && !selected.companions?.length);
-  $('assetWarning').textContent = selected && !selected.editable ? 'GIF 可对比或删除。新增裁剪请使用不同名称，保存为 PNG。' : selected?.override ? '这是 Button 的属性覆盖图，保存会更新对应的区域、颜色或点击位置。' : '此 Button 有属性覆盖图。覆盖基础图片会保留这些设置；删除会同时删除对应的属性覆盖图。';
+  $('assetWarning').textContent = selected && !selected.editable ? 'GIF 可对比或删除。新增裁剪请使用不同名称，保存为 PNG。' : selected?.override ? '这是 Button 的属性覆盖图，保存后需点击“刷新 assets”更新对应的区域、颜色或点击位置。' : '此 Button 有属性覆盖图。覆盖基础图片会保留这些设置；删除会同时删除对应的属性覆盖图。';
   updateButtons();
 }
 function chooseAsset(name) {
@@ -159,7 +160,7 @@ function confirmAction(deleting) {
   pendingAction = {deleting, body:{...draft,feature:library.feature,name:deleting ? name : outputName(),revision:library.revision,action:selected ? 'overwrite' : 'add'}};
   $('confirmTitle').textContent = deleting ? '删除模板资源' : selected ? '覆盖模板资源' : '新增模板资源';
   $('confirmMessage').textContent = `assets/zh-CN/${library.feature}/${name}`;
-  $('confirmDetail').textContent = deleting ? `将删除此资源${selected.companions?.length ? `以及 ${selected.companions.join('、')}` : ''}并更新资产定义。引用此模板的功能代码需要同步检查。操作前自动备份。` : `${draft.mode === 'template' ? 'Template 局部小图' : 'Button 整屏黑底'}，保存后更新此功能的资产定义${selected ? '，旧资源自动备份' : ''}。`;
+  $('confirmDetail').textContent = deleting ? `将删除此资源${selected.companions?.length ? `以及 ${selected.companions.join('、')}` : ''}并更新资产定义。引用此模板的功能代码需要同步检查。操作前自动备份。` : `${draft.mode === 'template' ? 'Template 局部小图' : 'Button 整屏黑底'}，仅保存图片，不更新资产定义；完成后点击“刷新 assets”${selected ? '，旧资源自动备份' : ''}。`;
   $('confirmError').hidden = true; $('btnCommitAsset').className = deleting ? 'danger' : 'primary';
   updateButtons(); $('assetConfirm').showModal();
 }
@@ -178,7 +179,7 @@ async function commitAction() {
     $('outputName').value = selected ? selected.name.replace(/\.png$/, '') : '';
     $('backupInfo').textContent = `上次操作备份：${result.backup}`;
     renderAssets(); renderEditor(); await renderComparison(); $('assetConfirm').close();
-    notify(result.saved_name ? `已保存 ${result.saved_name}，资产定义已更新` : '已删除资源，资产定义已更新');
+    notify(result.saved_name ? `已保存 ${result.saved_name}，尚未刷新 assets；请点击“刷新 assets”更新定义` : '已删除资源，资产定义已更新');
   } catch (error) { $('confirmError').textContent = error.message; $('confirmError').hidden = false; }
   finally { busy = false; updateButtons(); }
 }
@@ -189,6 +190,17 @@ bind('btnReload', async () => {
   busy = true; updateButtons();
   try { await loadFeature(library.feature, true); notify('已读取最新资源，本次裁剪保留，请重新对比后保存'); }
   finally { busy = false; updateButtons(); }
+});
+bind('btnRefreshAssets', async () => {
+  if (!library || busy || pendingAction) return;
+  busy = true; updateButtons(); notify('正在刷新当前功能的 assets…');
+  try {
+    const result = await api('/api/templates/refresh', {feature:library.feature,revision:library.revision});
+    library = result;
+    $('backupInfo').textContent = `上次操作备份：${result.backup}`;
+    renderAssets(); renderEditor(); await renderComparison();
+    notify(`已刷新 ${result.definition}，本次裁剪保留`);
+  } finally { busy = false; updateButtons(); }
 });
 bind('btnSaveAsset', () => confirmAction(false)); bind('btnDeleteAsset', () => confirmAction(true));
 bind('btnCommitAsset', commitAction); bind('btnCancelAsset', () => { if (!busy) $('assetConfirm').close(); });

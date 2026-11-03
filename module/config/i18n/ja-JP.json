@@ -234,6 +234,10 @@
       "name": "セミオートクリック",
       "help": ""
     },
+    "InterceptionTest": {
+      "name": "異常個体迎撃戦テスト",
+      "help": "異常個体迎撃戦の戦闘準備画面から模擬戦を開始し、リザルト画面で終了します。"
+    },
     "Highlights": {
       "name": "ハイライト鑑賞",
       "help": ""
@@ -478,7 +482,7 @@
     },
     "VddType": {
       "name": "仮想ディスプレイの種類",
-      "help": "ParsecVDD（推奨）：公式の ParsecVDD ドライバーを手動でインストールしてください https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe 。インストール後、タスクバーの ParsecDisplay アイコンを右クリックし、「オプション → スタートアップで起動」のチェックを外してから「終了」をクリックしてください；\nMttVDD：公式の MttVDD ドライバーを手動でインストールしてください https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe。ドライバーをインストールしたら、システムのディスプレイ設定を開き、表示された新しいモニターを選択して、解像度を 1920x1080・縦向きに設定します。",
+      "help": "ParsecVDD（推奨）：公式の ParsecVDD ドライバーを手動でインストールしてください https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe 。インストール後、タスクバーの ParsecDisplay アイコンを右クリックし、**「オプション → スタートアップで起動」のチェックを外してから「終了」をクリックしてください**；\nMttVDD：公式の MttVDD ドライバーを手動でインストールしてください https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe。ドライバーをインストールしたら、システムのディスプレイ設定を開き、表示された新しいモニターを選択して、解像度を 1920x1080・縦向きに設定します。",
       "parsecvdd": "ParsecVDD",
       "mttvdd": "MttVDD"
     },
@@ -1107,8 +1111,14 @@
     "Event": {
       "name": "開催中のイベント",
       "help": "",
-      "event_20261008": "LITTLE WITCH TRICK",
-      "event_20260917": "COINRUSH SHOWDOWN"
+      "event_20261029": "MARIAn",
+      "event_20261008": "LITTLE WITCH TRICK"
+    },
+    "ManualStage": {
+      "name": "ステージを手動設定",
+      "help": "有効にすると下の章と難易度を変更できます。無効にするとスケジュールまたはイベント設定に戻ります。イベント変更時は自動で無効になり、ゲーム内の未開放ステージは解放しません。",
+      "True": "True",
+      "False": "False"
     },
     "StoryPart": {
       "name": "ストーリーパート",

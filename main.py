@@ -501,6 +501,11 @@ class NikkeAutoScript:
 
         Highlights(config=self.config, device=self.device, task='Highlights').run()
 
+    def interception_test(self):
+        from module.daemon.interception_test import InterceptionTest
+
+        InterceptionTest(config=self.config, device=self.device, task='InterceptionTest').run()
+
     def semi_combat(self):
         from module.daemon.semi_combat import SemiCombat
 

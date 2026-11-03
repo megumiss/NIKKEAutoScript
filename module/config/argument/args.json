@@ -3027,10 +3027,18 @@
         "type": "select",
         "value": "",
         "option": [
-          "event_20261008",
-          "event_20260917"
+          "event_20261029",
+          "event_20261008"
         ],
         "display": "disabled"
+      },
+      "ManualStage": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "StoryPart": {
         "type": "select",
@@ -3183,10 +3191,18 @@
         "type": "select",
         "value": "",
         "option": [
-          "event_20261008",
-          "event_20260917"
+          "event_20261029",
+          "event_20261008"
         ],
         "display": "disabled"
+      },
+      "ManualStage": {
+        "type": "checkbox",
+        "value": false,
+        "option": [
+          true,
+          false
+        ]
       },
       "StoryPart": {
         "type": "select",
@@ -4091,6 +4107,16 @@
         "value": false
       }
     },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "InterceptionTest": {
     "Storage": {
       "Storage": {
         "type": "storage",

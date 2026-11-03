@@ -1,3 +1,4 @@
+困难难度是否开放由 `module/event/story.py` 的 `appear_hard_locked()` 在右下角区域执行 OCR 判断，只匹配倒计时提示文字，不依赖时长或图片模板。无需为困难锁定状态裁剪模板；困难切换、解锁弹窗模板仍需维护。
 
 # 大型活动
 ## 不需要重新截图
@@ -71,7 +72,6 @@
 | **EVENT_GOTO_STORY_2** | 从活动前往故事2按钮 | ✅ | <img src="..\..\assets\event\event_20250612\EVENT_GOTO_STORY_2.png" width="200"> |
 | **STORY_2_CHECK** | 故事2主页检查 | ✅ | <img src="..\..\assets\event\event_20250612\STORY_2_CHECK.png" width="200"> |
 | **STORY_2_NORMAL** | 故事2普通检查 | ✅ | <img src="..\..\assets\event\event_20250612\STORY_2_NORMAL.png" width="200"> |
-| **STORY_2_HARD_LOCKED** | 故事2困难未开启检查 | ✅ | <img src="..\..\assets\event\event_20250612\STORY_2_HARD_LOCKED.png" width="200"> |
 | **STORY_2_NORMAL_STAGE_11** | 故事2普通11关，需要打完11以后再截图 | ✅ | <img src="..\..\assets\event\event_20250612\STORY_2_NORMAL_STAGE_11.png" width="200"> |
 
 ## Story2困难更新后需要截图
@@ -94,7 +94,6 @@
 | **RECEIVE** | 点击领取奖励 | ✅ | <img src="..\..\assets\event\event_20250703s\RECEIVE.png" width="200"> |
 | **STORY_1_CHECK** | 活动关卡入口 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_CHECK.png" width="200"> |
 | **STORY_1_NORMAL** | 普通难度开启 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_NORMAL.png" width="200"> |
-| **STORY_1_HARD_LOCKED** | 困难难度锁定 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_HARD_LOCKED.png" width="200"> |
 | **STORY_1_NORMAL_STAGE_11** | 普通11关序号，需要打完11以后再截图 | ✅ | <img src="..\..\assets\event\event_20250703s\STORY_1_NORMAL_STAGE_11.png" width="200"> |
 | **STORY_1_NORMAL_STAGE_11_CLEAR** | 普通11关clear，需要打完11以后再截图 | ✅ | <img src="..\..\assets\event\event_20251120\STORY_1_NORMAL_STAGE_11_CLEAR.png" width="200"> |
 | **REWARD** | 从活动前往奖励按钮 | ✅ | <img src="..\..\assets\event\event_20250703s\REWARD.png" width="200"> |

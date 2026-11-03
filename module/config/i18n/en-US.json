@@ -234,6 +234,10 @@
       "name": "Semi-Auto Click",
       "help": ""
     },
+    "InterceptionTest": {
+      "name": "Anomaly Interception Test",
+      "help": "Start a mock battle from the anomaly interception battle preparation screen and stop at settlement."
+    },
     "Highlights": {
       "name": "Highlights",
       "help": ""
@@ -478,7 +482,7 @@
     },
     "VddType": {
       "name": "Virtual Display Type",
-      "help": "ParsecVDD (recommended): install the official ParsecVDD driver manually https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe . After installing, right-click the ParsecDisplay icon in the taskbar, untick \"Options -> Run on startup\" and click \"Exit\";\nMttVDD: install the official MttVDD driver manually https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe. After installing the driver, open the system display settings, select the new screen that appears, and set its resolution to 1920x1080 in portrait orientation.",
+      "help": "ParsecVDD (recommended): install the official ParsecVDD driver manually https://github.com/nomi-san/parsec-vdd/releases/download/v0.45.1/ParsecVDisplay-v0.45-setup.exe . After installing, right-click the ParsecDisplay icon in the taskbar, **untick \"Options -> Run on startup\" and click \"Exit\"**;\nMttVDD: install the official MttVDD driver manually https://github.com/VirtualDrivers/Virtual-Display-Driver/releases/download/25.5.2/Virtual.Display.Driver-v25.05.03-setup-x64.exe. After installing the driver, open the system display settings, select the new screen that appears, and set its resolution to 1920x1080 in portrait orientation.",
       "parsecvdd": "ParsecVDD",
       "mttvdd": "MttVDD"
     },
@@ -1107,8 +1111,14 @@
     "Event": {
       "name": "Current Event",
       "help": "",
-      "event_20261008": "LITTLE WITCH TRICK",
-      "event_20260917": "COINRUSH SHOWDOWN"
+      "event_20261029": "MARIAn",
+      "event_20261008": "LITTLE WITCH TRICK"
+    },
+    "ManualStage": {
+      "name": "Manual stage selection",
+      "help": "Enable to edit the chapter and difficulty below. Disable to restore the schedule or event defaults. Resets when the event changes; does not unlock in-game stages.",
+      "True": "True",
+      "False": "False"
     },
     "StoryPart": {
       "name": "Story Part",

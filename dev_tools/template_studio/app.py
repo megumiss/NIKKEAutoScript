@@ -165,6 +165,10 @@ async def api_template_save(request):
     return JSONResponse(workspace.mutate(await read_json(request)))
 
 
+async def api_template_refresh(request):
+    return JSONResponse(workspace.refresh_assets(await read_json(request)))
+
+
 async def api_template_delete(request):
     return JSONResponse(workspace.mutate(await read_json(request), deleting=True))
 
@@ -550,6 +554,7 @@ def create_app():
         Route('/api/templates/image', api_template_image),
         Route('/api/templates/preview', api_template_preview, methods=['POST']),
         Route('/api/templates/save', api_template_save, methods=['POST']),
+        Route('/api/templates/refresh', api_template_refresh, methods=['POST']),
         Route('/api/templates/delete', api_template_delete, methods=['POST']),
         Route('/history', history_review),
         Mount('/static', app=StaticFiles(directory=STATIC_ROOT), name='static'),
