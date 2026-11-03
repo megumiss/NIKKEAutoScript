@@ -13,7 +13,6 @@ from module.campaign.vision.surface_motion import project
 from module.logger import logger
 
 MAX_PANS = 8
-MAX_CURTAINS = 4
 # 光幕消失复核的单次拖动上限，单位为客户区像素；不用于首次确认或估算封锁位置。
 PAN_DRAG_MAX = 560.
 
@@ -87,30 +86,38 @@ def remembered_blocks(session, field, objects, drag=(0., 0.), gain=1., previous_
 
 
 def confirm_annotated(session, field, snapshot, squad):
-    """连续两帧按同一预标注编号确认可见光幕，使用标注封锁段而不拖动镜头精定位。
+    """逐对象确认两帧稳定关联的光幕，使用标注封锁段而不拖动镜头精定位。
 
-    两帧都须通过紧凑地图配准和对象检测，全部光幕候选必须唯一关联且编号集合一致。
-    立柱仅用于建立后续复核的跟踪组，不能代替实际光幕检测；任一歧义或漏检不改写封锁状态。
+    两帧均须通过紧凑地图配准和对象检测，但只对各自唯一关联到同一编号的光幕发布存在证据。
+    同屏其他对象截边、遮挡、漏检、编号变化或跟踪组失败不否决已确认对象，也不修改失败对象
+    的原状态、几何与时间戳。立柱只建立后续复核跟踪组，不能代替能量幕检测或授权解除封锁。
     """
     chart = session.owner.cut.chart
-    first = annotated_curtains(snapshot, chart)
-    if not first or len(first) != len(curtains(snapshot)) or len(first) > MAX_CURTAINS:
-        raise BarrierUnconfirmed('当前光幕无法全部唯一关联到预标注位置。')
+    first = {item['annotation_id']: item for item in annotated_curtains(snapshot, chart)}
+    if not first:
+        raise BarrierUnconfirmed('当前帧没有可唯一关联标注的光幕，保留既有封锁。')
+    first_count = len(curtains(snapshot))
     session.pause(.35)
     field, snapshot = capture(session, squad)
     if not snapshot.get('objects_observed'):
         raise BarrierUnconfirmed('预标注光幕复核帧的对象检测不可用。')
     second = annotated_curtains(snapshot, chart)
-    if (len(second) != len(curtains(snapshot))
-            or {item['annotation_id'] for item in first} != {item['annotation_id'] for item in second}):
-        raise BarrierUnconfirmed('连续两帧的光幕标注关联不一致，保留既有封锁状态。')
     references = []
     for item in second:
+        if item['annotation_id'] not in first:
+            continue
         detection = item['detection']
+        try:
+            group = barrier_group(detection, snapshot['objects'])
+        except (ValueError, cv2.error, np.linalg.LinAlgError) as exc:
+            logger.warning(f"光幕 {item['annotation_id']} 跟踪组建立失败，保留原封锁状态：{exc}。")
+            continue
         block = {key: value for key, value in item.items() if key != 'detection'}
         block['id'] = item['annotation_id']
-        references.append(dict(group=barrier_group(detection, snapshot['objects']), block=block,
-                               gestures=getattr(session, 'gestures', 0)))
+        references.append(dict(group=group, block=block, gestures=getattr(session, 'gestures', 0)))
+    if not references:
+        raise BarrierUnconfirmed('连续两帧没有稳定关联同一标注的光幕，保留既有封锁状态。')
+    unconfirmed = max(first_count, len(curtains(snapshot))) - len(references)
     identifiers = {item['block']['annotation_id'] for item in references}
     session.barrier_references[:] = [item for item in session.barrier_references
                                     if item['block']['annotation_id'] not in identifiers]
@@ -120,8 +127,9 @@ def confirm_annotated(session, field, snapshot, squad):
     session.owner.cut.update(session.owner.state.blocking())
     session.owner.last_snapshot = snapshot
     session.remember_navigation(snapshot)
-    session.record('barriers_annotated', field=field, force=True, snapshot=snapshot)
-    logger.info(f'光幕预标注确认：{len(references)} 处，封锁位置采用标注坐标，未平移镜头。')
+    session.record('barriers_annotated', field=field, force=True, snapshot=snapshot, unconfirmed=unconfirmed)
+    logger.info(f'光幕预标注确认：{len(references)} 处，未确认 {unconfirmed} 处；'
+                '确认对象按标注封锁，其他对象保留原状态，未平移镜头。')
     return snapshot
 
 
@@ -153,8 +161,8 @@ def review_centered(session, snapshot, identifier):
     """将已确认光幕的地图位置移到注视点，仅对该编号发布两帧存在或消失证据。
 
     ground_barrier 标注必须包含原编号，观察位置取当前标注而非历史检测投影；只拖镜头不移动小队。
-    可见光幕按标注编号确认，消失仍要求原双柱的可靠复认与低置信度光幕检查。
-    任何一帧视觉或关联不可用均保留原封锁，不据此消除同屏其它屏障。
+    目标存在证据按对象确认，同屏其他关联失败不否决目标；目标未检出而仍有未关联光幕时，
+    不能证明目标消失。消失仍要求原双柱可靠复认与低置信度检查，不能据此消除同屏其他封锁。
     """
     record = session.owner.state.blocks[identifier]
     annotation_id = record.get('annotation_id')
@@ -202,10 +210,10 @@ def review_centered(session, snapshot, identifier):
             if np.linalg.norm(viewport - target) > 12:
                 raise ValueError('复核期间镜头偏离已确认光幕位置。')
             visible = annotated_curtains(snapshot, chart)
-            if len(visible) != len(curtains(snapshot)):
-                raise ValueError('复核帧存在无法唯一关联标注的光幕，不能判断消失。')
             block = next((item for item in visible if item['annotation_id'] == annotation_id), None)
             if block is None:
+                if len(visible) != len(curtains(snapshot)):
+                    raise ValueError('复核帧存在未关联光幕，不能将目标漏检判断为消失。')
                 references = [entry for entry in session.barrier_references
                               if entry['block']['annotation_id'] == annotation_id]
                 if len(references) != 1:
