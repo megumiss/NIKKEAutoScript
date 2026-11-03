@@ -228,11 +228,11 @@
     },
     "AutoMainStory": {
       "name": "Auto Main Story",
-      "help": "Open the campaign field first. PC client only, at 1776×999 resolution."
+      "help": "Start from story, Home, Ark, or the campaign field; supported pages are handled before navigation. PC client only, at 1776×999 resolution."
     },
     "AutoMainCollectible": {
       "name": "Auto Main Story Collectibles",
-      "help": "Open the campaign field first. PC client only, at 1776×999 resolution."
+      "help": "Start from story, Home, Ark, or the campaign field; supported pages are handled before navigation. PC client only, at 1776×999 resolution."
     },
     "AutoTower": {
       "name": "Auto Tower",

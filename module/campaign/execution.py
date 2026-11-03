@@ -23,7 +23,7 @@ from module.campaign.navigation.movement_feedback import ClickUnconfirmed, Targe
 from module.campaign.navigation.recovery import centered, centering_frame
 from module.campaign.navigation.story_navigation import locate_story_target
 from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
-from module.campaign.noncombat import CampaignNoncombat, ChapterTransitionTimeout
+from module.campaign.noncombat import SceneRequired, ChapterTransitionTimeout
 from module.logger import logger
 
 TARGET_MOVES = 12
@@ -120,7 +120,7 @@ class CampaignExecutor:
         self.terminal_checked = None
         self.terminal_scan_stalls = 0
         self.recoveries = 0
-        self.noncombat = CampaignNoncombat(session, owner.current_chapter) if purpose == 'story' else None
+        self.scene_controller = owner.scene_controller
 
     def plan_tick(self, snapshot, advance=True):
         """更新观测后优先恢复未完成目标，不让补视野和战后重规划覆盖已通过检查的 Boss。
@@ -372,7 +372,7 @@ class CampaignExecutor:
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
             raise
-        except (WindowChanged, NavigationStalled, ClickUnconfirmed, ExBypassUnavailable):
+        except (SceneRequired, WindowChanged, NavigationStalled, ClickUnconfirmed, ExBypassUnavailable):
             self.owner.state.execution_target = None
             raise
         except (RuntimeError, ValueError) as exc:
@@ -630,7 +630,7 @@ class CampaignExecutor:
             logger.info(f"{goal_brief(continuation)} 前检查区域遗漏：待清普通敌人 {len(pending)} 个，"
                         f'未覆盖道路 {unseen if unseen is not None else "未知"} 格；暂缓目的地执行。')
             if not pending and unseen:
-                progress = self.noncombat.enemy_progress()
+                progress = self.scene_controller.enemy_progress()
                 snapshot = self.session.snapshot(known_squad=list(squad))
                 self.owner.plan_tick(snapshot, advance=False)
                 if progress is not None and progress[0] + 1 >= progress[1]:
@@ -762,8 +762,10 @@ class CampaignExecutor:
             if goal.get('enemy_kind') == 'boss':
                 self.terminal_destination = None
                 field = self.session.win.client()
-                if self.noncombat is None or not self.noncombat.start_if_complete(field):
-                    self.session.verify_identity(field)
+                if self.scene_controller.start_if_complete(field):
+                    self.session.reuse_squad = False
+                    raise SceneRequired('Boss 战后已确认章节结束，交上层处理换章。')
+                self.session.verify_identity(field)
         else:
             logger.warning(f'战斗胜利但无关联敌人目标（最近执行目标：{goal_brief(goal)}），不更新敌人状态。')
         return settled
@@ -890,12 +892,6 @@ class CampaignExecutor:
                 try:
                     self.session.begin_target('collectible' if self.purpose == 'collectible' else 'position')
                     self.session.check()
-                    if self.noncombat is not None:
-                        noncombat = self.noncombat.step()
-                        if noncombat is not None:
-                            if noncombat['state'] == 'chapter_transition':
-                                return noncombat
-                            continue
                     if recovery_reason is not None:
                         camera_options = {}
                         self.recover(recovery_reason)
@@ -1024,7 +1020,7 @@ class CampaignExecutor:
                     self.session.record('navigation_stalled', force=True, error=str(exc), goal=goal)
                     logger.warning(f'移动路线无进展，停止并请求人工复核：{exc}')
                     return {'state': 'needs_review', 'reason': 'navigation_stalled', 'error': str(exc), 'goal': goal}
-                except (WindowChanged, BattleFailed, ExBypassUnavailable, ChapterTransitionTimeout):
+                except (SceneRequired, WindowChanged, BattleFailed, ExBypassUnavailable, ChapterTransitionTimeout):
                     raise
                 except (RuntimeError, ValueError) as exc:
                     if self.purpose != 'story':

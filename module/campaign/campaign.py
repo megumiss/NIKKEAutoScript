@@ -346,6 +346,9 @@ class Campaign(ModuleBase):
             captured_at = time.time()
             # 设备截图统一为 RGB，OCR 与地图检测的 ndarray 输入使用 BGR。
             image = cv2.cvtColor(self.device.image, cv2.COLOR_RGB2BGR)
+            controller = getattr(self, 'scene_controller', None)
+            if controller is not None:
+                controller.raise_if_needed(image)
             identity = chapter_identity(image, reader)
             if identity is None:
                 if not page_confirmed:
@@ -484,7 +487,8 @@ class Campaign(ModuleBase):
                     and chart.image_sha256 == info['image_sha256'] and list(chart.size) == list(info['size'])):
                 source['annotations'] = dict(points=chart.targets('ground_mechanism', 'ground_elevator'),
                                              transfers=chart.transfers)
-        if self.state is None:
+        if (self.state is None or self.state.chapter != snapshot.get('chapter')
+                or self.state.difficulty != snapshot.get('difficulty')):
             return {'campaign': source}
         memory = self.state.memory()
         route_valid = (snapshot.get('localization') == 'accepted' and self.cut is not None
@@ -531,55 +535,93 @@ class Campaign(ModuleBase):
         return goal
 
     def run(self):
-        """主线任务入口：准备资源与客户区，一次完成界面及章节确认，再确认小队位置。
+        """从当前游戏场景启动，上层先回到可靠野外，再按章节建立有限推图会话。
 
-        客户区准备（分辨率、窗口位置、自动 HDR、鼠标通道）由 prepare_client 负责，
-        必须在章节识别之前完成。章节识别同时确认主线剧情界面，未确认前不操作小地图。
-        章节确认后立刻确认小队底图位置：这一步会按需展开大地图并在面板内平移重试，
-        退出时恢复紧凑小地图，供后续推图直接使用。
-        确认位置后接入有限推图闭环：逐拍补视野、选目标、移动与回写；遇到战斗准备弹窗就把这次战斗
-        接管到底（可选快速战斗、结算与回到野外），回到野外后继续下一拍，而不是结束任务。
-        章节结束后的非战斗页面由执行层接管；返回下一章野外后重新执行本准备流程，不复用旧章会话。
+        客户区与资源仅准备一次；剧情、换章、主页、方舟和未绑定战斗由章节无关场景控制器处理，
+        不需要预先取得章节角标或小队位置。只有野外身份连续三帧一致后才加载本章定位和道路。
+        场景切换中断章节会话时停止旧坐标输入；同章返回保留事实、EX 避让与路线失败历史，
+        真正换章或地图版本变化才新建运行状态。各章通过循环接续，不递归调用任务入口。
+        页面未知、定位失败或输入异常仍安全停止；任意场景启动不表示允许盲点未知按钮。
         """
+        from module.campaign.execution import CampaignExecutor
+        from module.campaign.noncombat import CampaignSceneController, SceneRequired
+        from module.campaign.scene_session import CampaignSceneSession
+        from module.campaign.session import CampaignSession
+        from module.campaign.window import WindowChanged
+
         logger.hr(self.config.task.command, level=1)
         watch = Stopwatch()
         ensure_runtime(self.config.stop_event)
         self.ensure_resources()
         self.prepare_client()
-        chapter = self.detect_current_chapter()
-        snapshot = self.confirm_squad_location(self.last_snapshot)
-        self.log_snapshot_summary(snapshot)
-        if snapshot is None or snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None:
-            logger.error('主线没有可信小队起点，停止并交人工定位。')
-            raise RequestHumanTakeover
-        chart = self.ensure_chart(chapter)
-        if chart is None or not chart.supported or chart.road is None:
-            logger.error('本章地图底图不可用，不能规划移动。')
-            raise RequestHumanTakeover
-        logger.info(f'准备阶段结束（地图资源、游戏窗口、章节与小队定位）耗时 {watch}，'
-                    f'进入推图闭环：地图 {chart.size}，小队起点 {points_text(snapshot["squad"])}')
-        from module.campaign.execution import CampaignExecutor
-        from module.campaign.session import CampaignSession
-        from module.campaign.window import WindowChanged
-
-        self.state = RunState(chapter, self.current_difficulty, chart.size)
-        self.last_goal, self.last_routes = None, None
-        self.cut = CutRoads(chart)
-        self.cut.update([])
-        session = CampaignSession(self)
-        executor = CampaignExecutor(self, session,
-                                    purpose=('collectible' if self.config.task.command == 'auto_main_collectible'
-                                             else 'story'))
+        self.current_chapter = self.current_difficulty = None
+        self.last_snapshot = self.state = self.cut = None
+        self.last_goal = self.last_routes = self.last_route_signature = None
+        page_session = CampaignSceneSession(self)
+        self.scene_controller = CampaignSceneController(page_session)
+        suspended = None
         try:
-            result = executor.run(snapshot)
+            page_session.start()
+            while True:
+                self.scene_controller.ensure_field()
+                try:
+                    chapter = self.detect_current_chapter()
+                    identity = (chapter, self.current_difficulty)
+                    self.scene_controller.bind_field(identity)
+                    snapshot = self.confirm_squad_location(self.last_snapshot)
+                    self.log_snapshot_summary(snapshot)
+                    if snapshot is None or snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None:
+                        raise ValueError('主线没有可信小队起点，停止并交人工定位。')
+                    chart = self.ensure_chart(chapter)
+                    if chart is None or not chart.supported or chart.road is None:
+                        raise ValueError('本章地图底图不可用，不能规划移动。')
+                    same_chapter = (suspended is not None and suspended['identity'] == identity
+                                    and suspended['digest'] == chart.image_sha256)
+                    if not same_chapter:
+                        self.state = RunState(chapter, self.current_difficulty, chart.size)
+                        suspended = None
+                    self.last_goal = self.last_routes = self.last_route_signature = None
+                    self.cut = CutRoads(chart)
+                    self.cut.update(self.state.blocking())
+                    session = CampaignSession(self)
+                    if suspended is not None:
+                        session.movement_progress = suspended['movement_progress']
+                        session.ex_bypass = suspended['ex_bypass']
+                        session.ex_popup_count = suspended['ex_popup_count']
+                        for progress in session.movement_progress.values():
+                            progress.interrupt()
+                    executor = CampaignExecutor(self, session, purpose=(
+                        'collectible' if self.config.task.command == 'auto_main_collectible' else 'story'))
+                    if suspended is not None:
+                        executor.interrupted_goal = suspended['interrupted_goal']
+                        executor.interrupted_inputs = suspended['interrupted_inputs']
+                        executor.terminal_destination = suspended['terminal_destination']
+                    logger.info(f'场景与章节准备结束：{identity[1].upper()} 第 {chapter} 章，'
+                                f'小队起点 {points_text(snapshot["squad"])}，任务累计耗时 {watch}。')
+                    try:
+                        result = executor.run(snapshot)
+                    except SceneRequired as exc:
+                        suspended = dict(identity=identity, digest=chart.image_sha256,
+                                         movement_progress=session.movement_progress, ex_bypass=session.ex_bypass,
+                                         ex_popup_count=session.ex_popup_count,
+                                         interrupted_goal=executor.interrupted_goal,
+                                         interrupted_inputs=executor.interrupted_inputs,
+                                         terminal_destination=executor.terminal_destination)
+                        self.last_snapshot = None
+                        page_session.record('scene_handoff', force=True, identity=identity, reason=str(exc))
+                        logger.info(f'章节导航交还上层场景流程：{exc}')
+                        continue
+                    logger.info(f'主线执行结束：{identity[1].upper()} 第 {chapter} 章；{result}；'
+                                f'任务总耗时 {watch}')
+                    logger.info(f'运行状态：{self.state.summary_text()}')
+                    if result['state'] == 'needs_review':
+                        raise RequestHumanTakeover
+                    return chapter
+                except SceneRequired as exc:
+                    self.last_snapshot = None
+                    logger.info(f'章节准备期间页面已变化，交还上层场景流程：{exc}')
         except (WindowChanged, OSError, ValueError, RuntimeError, cv2.error) as exc:
             logger.error(f'主线执行停止：{exc}（任务总耗时 {watch}）')
             raise RequestHumanTakeover from exc
-        logger.info(f'主线执行结束：{self.current_difficulty.upper()} 第 {chapter} 章；{result}；'
-                    f'任务总耗时 {watch}')
-        logger.info(f'运行状态：{self.state.summary_text()}')
-        if result['state'] == 'needs_review':
-            raise RequestHumanTakeover
-        if result['state'] == 'chapter_transition':
-            return self.run()
-        return chapter
+        finally:
+            page_session.close()

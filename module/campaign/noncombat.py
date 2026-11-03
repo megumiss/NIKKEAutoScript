@@ -10,6 +10,8 @@ import numpy as np
 from module.campaign.vision import battle
 from module.campaign.vision.chapter import chapter_identity
 from module.logger import logger
+from module.ui.assets import (CAMPAIGN_SELECT_CHECK, CAMPAIGN_SELECT_GOTO_SURFACE, GOTO_MAIN,
+                              MAIN_GOTO_CAMPAIGN_SELECT)
 
 
 ASSETS = Path(__file__).resolve().parent / 'assets'
@@ -17,6 +19,10 @@ NONCOMBAT_TIME_LIMIT = 300
 NONCOMBAT_POLL_SECONDS = .5
 NONCOMBAT_TAP_INTERVAL = 2.
 ARK_NOTICE_DELAY = 5.
+# 相对中央卡片感叹号锚点的客户区偏移，不改变模板识别位置或主界面引导落点。
+ARK_NOTICE_CLICK_OFFSET = (-40., 65.)
+# 指挥中心蓝色感叹号位于底部卡片右上角，偏移只用于点击卡片内部。
+OUTPOST_NOTICE_CLICK_OFFSET = (-65., 40.)
 CHAPTER_LIST_ROI = (630, 80, 1145, 920)
 CHAPTER_LIST_BRIGHT_RATIO = .35
 CHAPTER_OCR_THRESHOLD = .7
@@ -27,12 +33,15 @@ CHAPTER_CLOSE_POINT = (1098, 120)
 TEMPLATES = {
     'chapter_clear': ((680, 340, 1090, 440), .9),
     'chapter_redirect': ((650, 390, 1130, 510), .85),
+    'chapter_list': ((630, 80, 860, 150), .9),
     'gift_check': ((740, 860, 1030, 980), .85),
     'gift_confirm': ((630, 390, 1150, 510), .85),
     'main_check': ((0, 130, 100, 240), .9),
     'ark_check': ((0, 0, 150, 90), .9),
     'guide_arrow': ((1680, 60, 1776, 150), .9),
-    'ark_notice': ((800, 300, 1040, 550), .9),
+    'ark_notice': ((800, 300, 1040, 550), .7),
+    'outpost_check': ((0, 0, 150, 90), .9),
+    'outpost_notice': ((850, 755, 1000, 855), .7),
 }
 
 
@@ -40,9 +49,10 @@ def load_templates():
     """读取全部非战斗模板；缺文件时直接失败，避免静默退化为固定坐标点击。"""
     templates = {}
     for name in TEMPLATES:
-        image = cv2.imread(str(ASSETS / f'{name}.png'))
+        filename = 'ark_notice' if name == 'outpost_notice' else name
+        image = cv2.imread(str(ASSETS / f'{filename}.png'))
         if image is None:
-            raise FileNotFoundError(ASSETS / f'{name}.png')
+            raise FileNotFoundError(ASSETS / f'{filename}.png')
         templates[name] = image
     return templates
 
@@ -151,30 +161,110 @@ class ChapterTransitionTimeout(RuntimeError):
     """章节间页面超过换章时限仍未确认新章野外，必须停止而不能按旧章节恢复导航。"""
 
 
-class CampaignNoncombat:
-    """推进章节结束至下一章野外的页面状态机，每拍最多发送一次点击。
+class SceneRequired(RuntimeError):
+    """章节导航已离开野外，交任务上层处理页面，不进入旧章节自动回正恢复。"""
 
-    只有识别到 MISSION CLEAR 才进入换章流程，避免把普通主页或方舟上的引导当作本任务目标。
-    剧情和礼包可插入任意页面，因此每拍优先识别，不按固定页面顺序等待。返回新章节野外时必须
-    读到预期章节号，不能只凭小地图出现就复用旧章节的运行状态。
+
+class CampaignSceneController:
+    """任务上层的场景入口与换章状态机，不依赖已确认章节或小队位置。
+
+    启动允许剧情、主页、方舟、章节列表、战斗和结算；确认野外身份后三帧一致才建立章节会话。
+    有旧章节时仍以 MISSION CLEAR 触发严格的下一章约束。未知页面只匹配现有返回主页控件，
+    没有可靠按钮则有界等待；不靠猜测坐标点击，不把主页引导直接视为章节结束。
     """
 
-    def __init__(self, session, chapter):
-        """绑定当前推图会话与旧章节号；构造时不访问游戏画面。"""
+    def __init__(self, session, chapter=None):
+        """绑定章节无关场景会话；chapter 可缺省，首次野外身份确认后再绑定。"""
         self.session = session
         self.chapter = chapter
-        self.next_chapter = chapter + 1
+        self.next_chapter = None if chapter is None else chapter + 1
         self.templates = load_templates()
         self.active = False
         self.deadline = None
         self.ark_arrow_at = None
+        self.transition_expected = None
+        self.clear_seen = False
+        self.entry_route_sent = False
+        self.last_page = None
+        self.ui_templates = {}
+
+    def bind_field(self, identity):
+        """绑定已连续确认的野外身份并结束页面接管，不保存小队坐标或旧章节配准。"""
+        self.chapter = identity[0]
+        self.next_chapter = self.chapter + 1
+        self.session.expected_identity = identity
+        self.active = False
+        self.deadline = None
+        self.transition_expected = None
+        self.clear_seen = False
+        self.entry_route_sent = False
+        self.ark_arrow_at = None
+        self.last_page = None
+
+    def ensure_field(self):
+        """从当前任意已支持页面返回可靠野外，连续三帧章节与难度一致后才交导航。
+
+        启动没有旧身份时接受当前野外章节；MISSION CLEAR 已确认时必须满足下一章及原难度。
+        页面处理中不加载地图包或点击小地图，最多等待五分钟，取消、窗口与驱动异常直接传播。
+        """
+        if not self.active:
+            self.activate()
+        previous, stable = None, 0
+        while True:
+            result = self.step()
+            identity = result.get('identity') if result is not None else None
+            stable = stable + 1 if identity is not None and identity == previous else int(identity is not None)
+            previous = identity
+            if stable >= 3:
+                self.bind_field(identity)
+                self.session.record('scene_field_ready', field=result['field'], force=True, identity=identity)
+                logger.info(f'场景接管完成：已连续三帧确认 {identity[1].upper()} 第 {identity[0]} 章野外。')
+                return identity
+            if identity is not None:
+                self.session.pause(NONCOMBAT_POLL_SECONDS)
+
+    def handle_story(self, field):
+        """在启动、野外插入或战斗剧情中共用 SKIP 判据，每次只点击当前帧的可靠按钮。"""
+        score, point = battle.story_skip(field)
+        if point is None:
+            return False
+        self.tap(point, '剧情 SKIP', interval=1.)
+        self.session.record('scene_story', field=field, score=score, point=point)
+        return True
+
+    def raise_if_needed(self, field, known_only=False):
+        """仅检测章节会话是否应交还上层，不在导航输入闸门中执行页面点击。
+
+        MISSION CLEAR 优先于旧身份 OCR，普通剧情、主页、方舟或未知非战斗页面也交上层；
+        战斗及准备弹窗仍由章节执行层接管以保留敌人归属。展开小地图属于野外，不触发场景切换。
+        known_only 供战斗轮询使用：未识别的加载帧保留在原战斗接管中，只有可靠页面证据才交上层。
+        """
+        if self.active or self.start_if_complete(field):
+            raise SceneRequired('章节页面已进入上层场景接管。')
+        if battle.story_skip(field)[1] is not None:
+            self.activate()
+            raise SceneRequired('剧情页面交由上层场景接管。')
+        if battle.field_visible(field) or self.session.owner.minimap_expanded(field):
+            return
+        kind = battle.battle_state(field)['state']
+        if kind in ('entry', 'battle', 'victory', 'defeat', 'continue'):
+            return
+        if known_only and not any(locate(field, self.templates, name)[1] is not None for name in (
+                'main_check', 'ark_check', 'outpost_check', 'gift_check', 'gift_confirm',
+                'chapter_redirect', 'chapter_list')):
+            return
+        self.activate()
+        raise SceneRequired('当前非野外页面交由上层场景接管。')
 
     def activate(self):
-        """开始换章并初始化等待时限，由章节结束画面的可靠模板触发。"""
+        """开始章节无关页面接管；重复接管不得延长同一段五分钟等待时限。"""
+        if self.active:
+            return
         self.active = True
         self.deadline = time.monotonic() + NONCOMBAT_TIME_LIMIT
         self.ark_arrow_at = None
-        logger.info(f'第 {self.chapter} 章已结束，开始处理换章及非战斗页面。')
+        self.last_page = None
+        logger.info('开始处理主线入口及非野外场景。')
 
     def start_if_complete(self, field):
         """在已取得的客户区截图上确认章节结束并接管，不发送点击或复用旧章节坐标。
@@ -186,22 +276,25 @@ class CampaignNoncombat:
         score, point = locate(field, self.templates, 'chapter_clear')
         if point is None:
             return False
-        if not self.active:
+        if not self.clear_seen:
+            self.clear_seen = True
+            if self.next_chapter is not None and self.session.expected_identity is not None:
+                self.transition_expected = (self.next_chapter, self.session.expected_identity[1])
             self.activate()
             self.session.reuse_squad = False
             self.session.record('noncombat_begin', field=field, force=True, chapter=self.chapter,
                                 scores={'chapter_clear': round(score, 3)})
         return True
 
-    def tap(self, point, label):
-        """通过现有会话发送非战斗点击，关闭只适用于野外移动的弹窗与收集品输入闸门。"""
+    def tap(self, point, label, interval=NONCOMBAT_TAP_INTERVAL):
+        """通过场景会话发送页面点击；各按钮间隔默认两秒，剧情沿用一秒，停止及窗口闸门不关闭。"""
         self.session.popup_handling = True
         try:
-            clicked = self.session.tap(point, NONCOMBAT_TAP_INTERVAL)
+            clicked = self.session.tap(point, interval)
         finally:
             self.session.popup_handling = False
         if clicked:
-            logger.info(f'换章流程：已点击{label}，客户区落点 ({point[0]:.0f}, {point[1]:.0f})。')
+            logger.info(f'场景流程：已点击{label}，客户区落点 ({point[0]:.0f}, {point[1]:.0f})。')
         return clicked
 
     def enemy_progress(self):
@@ -210,7 +303,7 @@ class CampaignNoncombat:
         只在 Boss 前检查调用，不改变章节或难度。面板未确认、当前卡片不可见或计数不可靠时返回 None，
         由调用方回退到区域补扫；关闭后等待界面返回，再由执行层重新取得野外快照。
         """
-        self.session.begin_target('position')
+        self.session.target_inputs = 0
         self.tap(CHAPTER_ENTRY_POINT, '章节列表')
         self.session.pause(1)
         field = self.session.win.client()
@@ -226,10 +319,42 @@ class CampaignNoncombat:
             logger.info(f'当前章节敌人进度：{progress[0]}/{progress[1]}（Boss 尚未击败）。')
         return progress
 
+    def ui_point(self, field, button, bounds=(630, 250, 1145, 850)):
+        """只在按钮所在的客户区范围匹配现有 UI 资源，不搜索全屏或遍历无关菜单。
+
+        横屏按钮尝试已有的 0.78 缩放及原尺寸，接受门限保持 0.9；调用方必须给出当前页面
+        按钮所在范围，默认只用于中央作战选择面板。多个相隔八像素的候选时拒绝点击。
+        返回本帧实际模板中心；未匹配时返回 None，交主循环重新截图，不识别加载动画。
+        """
+        button.ensure_template()
+        key = str(button)
+        if key not in self.ui_templates:
+            image = cv2.cvtColor(button.image, cv2.COLOR_RGB2BGR)
+            self.ui_templates[key] = [cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+                                      for scale in (.78, 1.)]
+        x1, y1, x2, y2 = bounds
+        region = field[y1:y2, x1:x2]
+        points = []
+        for template in self.ui_templates[key]:
+            height, width = template.shape[:2]
+            if height > region.shape[0] or width > region.shape[1]:
+                continue
+            response = cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED)
+            local = cv2.dilate(response, np.ones((3, 3), np.uint8))
+            ys, xs = np.nonzero((response >= .9) & (response >= local))
+            if len(xs) and (int(xs.max() - xs.min()) > 8 or int(ys.max() - ys.min()) > 8):
+                return None
+            points.extend(([x1 + x + width / 2, y1 + y + height / 2]) for x, y in zip(xs, ys))
+        if not points or any(np.linalg.norm(np.asarray(point) - points[0]) > 8 for point in points[1:]):
+            return None
+        return points[0]
+
     def step(self):
-        """识别当前客户区并推进一步；返回 None 表示普通野外，字典表示换章等待或完成。
+        """识别当前客户区并推进一步；返回未接管、页面等待或待连续确认的野外身份。
 
         方舟右上引导点击后等待五秒，仅在中央卡片范围匹配小型感叹号模板，避免点到顶部任务提示。
+        前哨基地只以底部指挥中心的感叹号为锚点点击卡片内部；未命中页面或按钮时重新截图。
+        不识别加载动画或遍历所有菜单；章节 OCR 只在章节列表或野外已确认时调用。
         未知画面不补固定坐标点击；等待超过五分钟抛出专用换章超时异常，绕过旧章节自动恢复并安全停止。
         """
         self.session.check()
@@ -237,15 +362,17 @@ class CampaignNoncombat:
         if not self.active:
             if not self.start_if_complete(field):
                 return None
-        elif time.monotonic() >= self.deadline:
-            raise ChapterTransitionTimeout('换章非战斗流程超过 5 分钟仍未返回新章节野外。')
+        if time.monotonic() >= self.deadline:
+            raise ChapterTransitionTimeout('上层场景流程超过 5 分钟仍未确认可进入的主线野外。')
         score, point = locate(field, self.templates, 'chapter_clear')
         scores = {'chapter_clear': round(score, 3)}
+        if point is not None:
+            self.start_if_complete(field)
 
         skip_score, skip_point = battle.story_skip(field)
         scores['story_skip'] = round(skip_score, 3)
         if skip_point is not None:
-            self.tap(skip_point, '剧情 SKIP')
+            self.handle_story(field)
             return self.wait('story', scores, field)
 
         for name, label in (
@@ -261,23 +388,36 @@ class CampaignNoncombat:
                 point = (887, 643)
             elif name in ('chapter_redirect', 'gift_confirm'):
                 point = (1000, 625)
-            self.tap(point, label)
+            if self.tap(point, label) and name == 'chapter_redirect':
+                self.entry_route_sent = True
             return self.wait(name, scores, field)
-
-        point = chapter_next(field, self.session.owner.chapter_ocr)
-        if point is not None:
-            self.tap(point, '新章节')
-            return self.wait('chapter_next', scores, field)
 
         main_score, main_point = locate(field, self.templates, 'main_check')
         ark_score, ark_point = locate(field, self.templates, 'ark_check')
         arrow_score, arrow_point = locate(field, self.templates, 'guide_arrow')
         scores.update(main=round(main_score, 3), ark=round(ark_score, 3), guide_arrow=round(arrow_score, 3))
-        if main_point is not None and ark_point is None and arrow_point is not None:
+        outpost_score, outpost_point = locate(field, self.templates, 'outpost_check')
+        scores['outpost'] = round(outpost_score, 3)
+        if outpost_point is not None:
+            notice_score, notice_point = locate(field, self.templates, 'outpost_notice')
+            scores['outpost_notice'] = round(notice_score, 3)
+            if notice_point is not None:
+                click = (np.asarray(notice_point, float) + OUTPOST_NOTICE_CLICK_OFFSET).tolist()
+                self.tap(click, '前哨基地指挥中心卡片')
+                return self.wait('outpost_notice', scores, field)
+            if arrow_point is not None:
+                self.tap(arrow_point, '前哨基地右上角引导箭头')
+            return self.wait('outpost', scores, field)
+
+        if main_point is not None and ark_point is None:
             self.ark_arrow_at = None
-            self.tap(arrow_point, '主页右上角引导箭头')
+            point = arrow_point or self.ui_point(field, MAIN_GOTO_CAMPAIGN_SELECT, (700, 730, 1200, 999))
+            if point is not None:
+                self.tap(point, '主页右上角引导箭头' if arrow_point is not None else '主页作战入口')
             return self.wait('main', scores, field)
         if ark_point is not None:
+            if self.ark_arrow_at is None and arrow_point is None:
+                self.ark_arrow_at = time.monotonic()
             if arrow_point is not None and self.ark_arrow_at is None:
                 if self.tap(arrow_point, '方舟右上角引导箭头'):
                     self.ark_arrow_at = time.monotonic()
@@ -287,19 +427,65 @@ class CampaignNoncombat:
                 scores['ark_notice'] = round(notice_score, 3)
                 if notice_point is not None:
                     self.ark_arrow_at = None
-                    self.tap(notice_point, '方舟中央感叹号')
+                    click = (np.asarray(notice_point, float) + ARK_NOTICE_CLICK_OFFSET).tolist()
+                    self.tap(click, '方舟中央政府司令部卡片')
                     return self.wait('ark_notice', scores, field)
+                if arrow_point is None:
+                    home = self.ui_point(field, GOTO_MAIN, (0, 850, 450, 999))
+                    if home is not None:
+                        self.tap(home, '方舟返回主页')
+                        return self.wait('ark_home', scores, field)
             return self.wait('ark', scores, field)
 
-        identity = chapter_identity(field, self.session.owner.chapter_ocr)
-        if battle.field_visible(field) and identity == (self.next_chapter, self.session.expected_identity[1]):
-            logger.info(f'换章流程完成：已进入第 {self.next_chapter} 章野外，重新建立章节会话。')
-            self.session.record('noncombat_complete', field=field, force=True, chapter=self.next_chapter)
-            return {'state': 'chapter_transition', 'chapter': self.next_chapter}
+        list_score, list_point = locate(field, self.templates, 'chapter_list')
+        scores['chapter_list'] = round(list_score, 3)
+        if list_point is not None:
+            point = chapter_next(field, self.session.owner.chapter_ocr)
+            if point is not None:
+                if self.tap(point, '新章节'):
+                    self.entry_route_sent = True
+                return self.wait('chapter_next', scores, field)
+            return self.wait('chapter_list', scores, field)
+
+        state = battle.battle_state(field)
+        kind = state['state']
+        if kind in ('entry', 'battle', 'victory', 'continue', 'defeat'):
+            if kind == 'entry' and battle.ex_stage(field):
+                from module.campaign.scene_session import ENTRY_CLOSE_POINT
+                self.tap(ENTRY_CLOSE_POINT, '启动 EX 弹窗关闭')
+            elif kind == 'defeat':
+                from module.campaign.scene_session import DEFEAT_BACK_POINT
+                self.tap(DEFEAT_BACK_POINT, '启动战败返回')
+            else:
+                self.session.battle_step()
+            return self.wait(kind, scores, field)
+        if battle.field_visible(field) or self.session.owner.minimap_expanded(field):
+            identity = chapter_identity(field, self.session.owner.chapter_ocr)
+            pending_unknown_clear = self.clear_seen and self.chapter is None and not self.entry_route_sent
+            if (identity is not None and not pending_unknown_clear
+                    and (self.transition_expected is None or identity == self.transition_expected)):
+                return {'state': 'scene_field', 'identity': identity, 'field': field}
+            return self.wait('field_identity', scores, field)
+        if self.ui_point(field, CAMPAIGN_SELECT_CHECK) is not None:
+            point = self.ui_point(field, CAMPAIGN_SELECT_GOTO_SURFACE)
+            if point is not None:
+                self.tap(point, '作战选择前往地面')
+            return self.wait('campaign_select', scores, field)
+        home = self.ui_point(field, GOTO_MAIN, (0, 850, 450, 999))
+        if home is not None:
+            self.tap(home, '当前页面返回主页')
+            return self.wait('home', scores, field)
         return self.wait('transition', scores, field)
 
     def wait(self, state, scores, field):
         """记录本拍页面证据并限速等待，不改变状态或假定下一帧页面。"""
+        if state != self.last_page:
+            logger.info(f'场景接管页面：{state}。')
+            self.last_page = state
         self.session.record('noncombat_state', field=field, state=state, scores=scores)
         self.session.pause(NONCOMBAT_POLL_SECONDS)
         return {'state': 'noncombat', 'page': state}
+
+
+# 保留既有导入名称；实例的持有者改为 Campaign 任务上层。
+CampaignNoncombat = CampaignSceneController

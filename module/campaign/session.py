@@ -29,8 +29,11 @@ from module.campaign.vision.observation import EXPANDED_ROI
 from module.campaign.vision.perception import expanded_minimap_masks, project_centers
 from module.campaign.vision.surface_motion import project
 from module.campaign.window import CampaignWindow, WindowChanged
+from module.campaign.scene_session import CampaignBattleActions, CampaignInput
+from module.campaign.scene_session import DEFEAT_BACK_POINT as DEFEAT_BACK_POINT
+from module.campaign.scene_session import DEFEAT_RETRY_POINT as DEFEAT_RETRY_POINT
+from module.campaign.scene_session import SETTLE_TAP_INTERVAL as SETTLE_TAP_INTERVAL
 from module.config.config import TaskEnd
-from module.campaign.vision.red_circle import find_red_circles
 from module.logger import logger
 
 # 侦察拖动：每屏最多拖几次把落点拖到面板中心、落点离中心多近就不再拖、单次拖动的最长距离
@@ -66,26 +69,9 @@ EXPANDED_RETRY_PIXELS = 60.
 # 战斗接管的固定点击落点（客户区像素）：准备弹窗的两个按钮、弹窗右上角关闭和 AUTO 开关；
 # 结算继续落点由当前帧 END_FIGHTING 提示定位，不使用画面中心代替。
 # 战败的两个点（重新挑战／返回）由执行层按重试次数选用，常量放这里是为了所有落点在一处。
-QUICK_BATTLE_POINT = (1014, 842)
-ENTER_BATTLE_POINT = (1014, 916)
-ENTRY_CLOSE_POINT = (1147, 513)
-DEFEAT_BACK_POINT = (73, 908)
-DEFEAT_RETRY_POINT = (1688, 926)
-# 横屏红圈的瞄准偏移尚未标定，默认使用检测圆心；不要套用竖屏的压缩与纵向补偿公式。
-RED_CIRCLE_OFFSET = (0., 0.)
-RED_CIRCLE_HOLD_SECONDS = 1.
-# 每个按钮自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：一次点击没生效时，
-# 间隔内的轮询不再重复点。数值照仓库的战斗循环取（进入战斗／快速战斗 2~5 秒、结算 1 秒、自动射击 5 秒）。
-ENTRY_TAP_INTERVAL = 2.
-SETTLE_TAP_INTERVAL = 1.
-AUTO_TAP_INTERVAL = 5.
 # 野外动作前的等待：画面不是野外（加载、过场、黑屏）时按这个间隔重看，最多等这么多秒。
 FIELD_POLL_SECONDS = 0.5
 FIELD_WAIT_LIMIT = 30.
-# 自动射击与爆发各自连续这么多帧可靠关闭才点，同一场每个开关最多点一次。实机里 AUTO 按钮
-# 叠在场景上、HUD 会淡出或整体挪动，单帧判据偶尔会把开着的读成关着；照单帧就点，那一下正好
-# 把自动射击关掉（开与关是同一个按钮），战斗会被拖长甚至打输。
-AUTO_CONFIRM_FRAMES = 2
 # 设备卡死判据的续期阈值（秒）：它判的是「一直在等某个按钮匹配成功」，而推图全程不做按钮匹配，
 # 计时到 6 分钟就会在 device.screenshot 里抛 GameStuckError('Wait too long')；
 # 调度器只在每个任务开始时清一次计时，推图会话可能长时间持续，因此这里提前续期。
@@ -188,43 +174,6 @@ def describe_snapshot(snapshot):
     return '，'.join(detail)
 
 
-class CampaignInput:
-    """生产驱动代理：每次新手势先校验安全条件，成功发送后统计，释放操作不受停止限制。
-
-    场景手势与可能移动小队的输入序号在此统计；地图控件经独立成功回调统计实际操作，
-    不冒充场景手势。驱动失败、编码后取消或失焦均不能增加成功操作次数。
-    """
-
-    def __init__(self, session, handler):
-        """只保存代理关系，不取得新驱动；驱动仍由任务调度器管理。"""
-        self.session, self.handler = session, handler
-
-    def __getattr__(self, name):
-        """仅包装产生输入的方法；mouse_up 直通，保证取消后仍能释放已按下鼠标。"""
-        value = getattr(self.handler, name)
-        if name not in ('mouse_click', 'mouse_swipe', 'mouse_down', 'mouse_move', 'press_mouse_click'):
-            return value
-
-        def send(*args, **kwargs):
-            """发送前校验窗口与弹窗，成功后统计；驱动失败立即停止，不算作成功输入。"""
-            self.session.before_input()
-            action = dict(method=name, args=args, kwargs=kwargs, coordinate_space='screen',
-                          client_origin=self.session.win.origin)
-            self.session.record('input_before', field=self.session.trace.last_field, force=True, action=action)
-            # 编码与写盘期间也可能失焦或收到取消；发给驱动前再次校验。
-            self.session.check()
-            result = value(*args, **kwargs)
-            if getattr(self.handler, '_failures', 0):
-                raise WindowChanged(f'鼠标操作 {name} 发送失败。')
-            self.session.count_input(scene=True, moves_squad=name != 'mouse_swipe')
-            self.session.trace.after_input(action=action, inputs=self.session.inputs,
-                                           target_inputs=self.session.target_inputs,
-                                           gestures=self.session.gestures)
-            return result
-
-        return send
-
-
 class CampaignLocalizer:
     """给共享闭环提供定位与道路接口；配准看原图，寻路只看最新切开图。"""
 
@@ -280,7 +229,7 @@ class CampaignLocalizer:
                     position_kind='squad' if has_player else 'viewport')
 
 
-class CampaignSession(NavigationSession):
+class CampaignSession(CampaignBattleActions, NavigationSession):
     """任务 Device 上的会话，复用 NavigationSession 的 plan、停稳与收尾，不创建采集器窗口。"""
 
     def __init__(self, owner):
@@ -547,12 +496,14 @@ class CampaignSession(NavigationSession):
         return obstacle
 
     def identity(self, field):
-        """逐帧闸门：只查战斗弹窗与收集品提示，不重读章节身份。
+        """逐帧闸门：非野外交上层场景控制器，战斗与收集提示保留原接管，不重读章节身份。
 
         每个手势、每次观测以及共享移动闭环都调用它，所以必须便宜。章节与难度只在会话开始
         （start 的 verify_identity）核对一次：逐帧重读章节号不会带来新信息，而弹窗与收集品提示
         漏一帧就可能把落点点进战斗或踩掉一次拾取机会。
         """
+        if not self.battle_mode:
+            self.owner.scene_controller.raise_if_needed(field, known_only=True)
         self.popup(field)
         self.check_collectible(field)
 
@@ -561,17 +512,19 @@ class CampaignSession(NavigationSession):
 
         调用前由流程保证角标可见，镜头回正须先收起展开地图。每帧检查窗口与停止请求，普通弹窗
         转战斗接管，EX 关闭后转绕行；重试只等待并截图，不发送地面输入。读到其他章节或难度时
-        立即抛 WindowChanged，连续读不到也停止，不使用旧身份兜底。
+        立即交上层重新确认场景，连续读不到也停止，不使用旧身份兜底。
         """
         for attempt in range(IDENTITY_CHECK_ATTEMPTS):
             self.check()
+            self.owner.scene_controller.raise_if_needed(field, known_only=True)
             self.popup(field)
             current = chapter_identity(field, self.owner.chapter_ocr)
             self.check()
             if current == self.expected_identity:
                 return
             if current is not None:
-                raise WindowChanged(f'主线章节或难度已变化：预期 {self.expected_identity}，读到 {current}。')
+                from module.campaign.noncombat import SceneRequired
+                raise SceneRequired(f'主线身份已变化：预期 {self.expected_identity}，读到 {current}，交上层重建会话。')
             if attempt + 1 < IDENTITY_CHECK_ATTEMPTS:
                 logger.warning(f'主线章节或难度暂未读到：预期 {self.expected_identity}，'
                                f'等待新帧复验（{attempt + 1}/{IDENTITY_CHECK_ATTEMPTS - 1}）。')
@@ -984,33 +937,6 @@ class CampaignSession(NavigationSession):
         origin = self.win.client_origin()
         self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]))
 
-    def hold_client(self, point, duration):
-        """在有效客户区坐标按住鼠标指定秒数，窗口、弹窗、停止和留档均走 CampaignInput。"""
-        point = np.asarray(point, float)
-        if point.shape != (2,) or not np.isfinite(point).all() or not (0 <= point[0] < 1776 and 0 <= point[1] < 999):
-            raise ValueError('长按位置越界或不是有效坐标。')
-        self.check()
-        origin = self.win.client_origin()
-        self.win.handler.press_mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]), duration)
-
-    def handle_red_circles(self, field):
-        """检测战斗中的红黄同心圈，并按横屏偏移长按瞄准；未启用或未检出时返回 False。
-
-        field 为当前战斗客户区 BGR 帧，检测器复用其他战斗任务的 RGB 实现。偏移与按住时长只使用
-        主线横屏参数；每帧最多处理一个圆，由战斗轮询和长按时间共同限制频率。
-        """
-        if not self.owner.config.Optimization_AutoRedCircle:
-            return False
-        circles = find_red_circles(cv2.cvtColor(field, cv2.COLOR_BGR2RGB))
-        if not circles:
-            return False
-        center = np.asarray(circles[0], float)
-        point = center + RED_CIRCLE_OFFSET
-        self.hold_client(point, RED_CIRCLE_HOLD_SECONDS)
-        logger.info(f"战斗红圈：检测圆心 {points_text(center)}，长按落点 {points_text(point)}，"
-                    f"偏移 {points_text(RED_CIRCLE_OFFSET)}，持续 {RED_CIRCLE_HOLD_SECONDS:.1f} 秒。")
-        return True
-
     def move(self, click):
         """复核收集提示后发送客户区地面落点，沿用规划阶段最后确认的光幕路网。
 
@@ -1136,127 +1062,6 @@ class CampaignSession(NavigationSession):
         self.record('snapshot_result', snapshot=snapshot)
         logger.info(f'观测完成：{describe_snapshot(snapshot)}，耗时 {watch}')
         return snapshot
-
-    def battle_step(self, close_entry=False):
-        """战斗接管的一步：截一帧，按优先级最多点一个按钮，返回识别结果交给执行层决策。
-
-        优先级与点法照仓库里已经跑熟的战斗循环（module/daemon/semi_combat.py、module/event/challenge.py）：
-        准备弹窗（关掉／快速战斗／进入战斗）、结算及升级附加页（点继续）、剧情（点 SKIP）、
-        战斗中（优先处理红圈，没有红圈且 AUTO 关着才点 AUTO）；
-        每一拍只点一个按钮，认不出画面就什么都不点——加载与过场本来就没有按钮，硬猜只会点错。
-        每个按钮有自己的最短点击间隔（ENTRY_TAP_INTERVAL / SETTLE_TAP_INTERVAL / AUTO_TAP_INTERVAL），
-        一次点击没生效时后续几拍不再重复点同一个按钮。
-        战败不在这里点：重打还是返回要按重试次数决定，属于执行层的策略（见 CampaignExecutor.battle）。
-        close_entry 用于战败返回之后：再看到准备弹窗只能关掉，不能又进一次战斗。
-        胜利与升级附加页均只点击本帧已通过门限的 END_FIGHTING 提示；标题先出现而提示
-        尚未可见时只返回胜利状态，不发送画面中央点击。
-        战前、战后剧情只点击本帧通过门限的 SKIP；沿用 1 秒点击间隔与输入安全闸门。
-        每次点击的日志都带上当次识别分数与颜色判据的实际读数，便于对着现场截图复盘误判。
-        """
-        self.check()
-        field = self.win.client()
-        state = battle.battle_state(field)
-        self.record('battle_state', state=state)
-        # 继续与跳过在输入前复核分数，其余判据由状态识别提供；日志缺项显示为「—」。
-        kind, scores = state['state'], state.get('scores')
-        quick = battle.value_text(state.get('quick_ratio'))
-        if kind != 'battle':
-            self.auto_off_frames = {key: 0 for key in battle.AUTO_CONTROLS}
-            self.auto_last_points.clear()
-        if kind not in ('battle', 'unknown', 'story'):
-            # 一场战斗从准备弹窗开始；战败重打的下一场没有弹窗，所以结算与回野外也要重置额度。
-            # 剧情或加载不能证明新一场战斗开始，不能恢复 AUTO 切换额度。
-            self.auto_taps = {key: 0 for key in battle.AUTO_CONTROLS}
-            self.auto_skip_logged.clear()
-        if kind == 'entry':
-            if battle.ex_stage(field):
-                self.popup(field)
-            if close_entry:
-                if self.tap(ENTRY_CLOSE_POINT, SETTLE_TAP_INTERVAL):
-                    logger.info(f"战斗弹窗再次出现（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
-                                f"按钮橙色占比 {quick}）：已点击关闭，等待返回野外。")
-            elif state['quick']:
-                if self.tap(QUICK_BATTLE_POINT, ENTRY_TAP_INTERVAL):
-                    logger.info(f"快速战斗可用：已点击快速战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
-                                f"按钮橙色占比 {quick}）。")
-            elif self.tap(ENTER_BATTLE_POINT, ENTRY_TAP_INTERVAL):
-                logger.info(f"快速战斗不可用：已点击进入战斗（弹窗按钮命中度 {battle.score_text(scores, 'entry')}，"
-                            f"按钮橙色占比 {quick}）。")
-        elif kind == 'battle':
-            if self.handle_red_circles(field):
-                self.auto_off_frames = {key: 0 for key in battle.AUTO_CONTROLS}
-                self.auto_last_points.clear()
-            else:
-                self.handle_auto(state)
-        elif (kind == 'story' and state.get('skip_point') is not None
-              and (scores or {}).get('story_skip', 0.) >= battle.STORY_SKIP_THRESHOLD):
-            point = tuple(state['skip_point'])
-            if self.tap(point, SETTLE_TAP_INTERVAL):
-                logger.info(f"战斗剧情：已点击 SKIP（命中度 {battle.score_text(scores, 'story_skip')}，"
-                            f"客户区落点 {points_text(point)}）。")
-        elif (kind in ('victory', 'continue') and state.get('continue_point') is not None
-              and (scores or {}).get('continue', 0.) >= battle.CONTINUE_THRESHOLD):
-            point = tuple(state['continue_point'])
-            if self.tap(point, SETTLE_TAP_INTERVAL):
-                logger.info(f"战斗结算：{label(BATTLE_STATES, kind)}，已点击 END_FIGHTING 提示"
-                            f"（命中度 {battle.score_text(scores, 'continue')}，客户区落点 {points_text(point)}）。")
-        return state
-
-    def handle_auto(self, state):
-        """分别开启自动射击与爆发，只点击连续两帧可靠关闭且落点稳定的当前按钮中心。
-
-        沿用半自动战斗的关闭模板与 5 秒防抖，同一场每个开关最多点击一次、每帧最多一个。
-        未定位、颜色未知、已开启或按钮中心变化超过 15 客户区像素都会中断连续关闭计数。
-        未知不等于关闭，不能以默认 AUTO 坐标点击；窗口与停止仍由 tap 校验。
-        """
-        controls = state.get('auto_controls') or {}
-        for key in battle.AUTO_CONTROLS:
-            control = controls.get(key) or {}
-            point = control.get('point')
-            if control.get('status') != 'off' or point is None:
-                self.auto_off_frames[key] = 0
-                self.auto_last_points.pop(key, None)
-                continue
-            previous = self.auto_last_points.get(key)
-            if previous is None or np.linalg.norm(np.asarray(point) - previous) > 15:
-                self.auto_off_frames[key] = 0
-            self.auto_off_frames[key] += 1
-            self.auto_last_points[key] = point
-        for key in battle.AUTO_CONTROLS:
-            count = self.auto_off_frames[key]
-            if not count:
-                continue
-            control = controls[key]
-            name = '自动射击' if key == 'shoot' else '自动爆发'
-            if self.auto_taps[key]:
-                if key not in self.auto_skip_logged:
-                    self.auto_skip_logged.add(key)
-                    logger.warning(f'{name}仍为关闭状态；已达到本场单次点击上限，不重复切换。')
-                continue
-            if count < AUTO_CONFIRM_FRAMES:
-                continue
-            point = tuple(control['point'])
-            if not self.tap(point, AUTO_TAP_INTERVAL):
-                continue
-            self.auto_taps[key] += 1
-            logger.info(f'{name}关闭状态已确认（连续 {count} 帧，模板 {control["score"]:.3f}，'
-                        f'图标橙色占比 {control["orange_ratio"]:.3f}），已点击开启，客户区落点 {point}。')
-            return
-
-    def tap(self, point, interval=0.):
-        """按客户区坐标点一次界面按钮，保留输入安全闸门，但不执行地面移动的光幕检查。
-
-        interval 是这一点自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：
-        间隔内的重复点击直接丢掉并返回 False，真的点了返回 True。战斗接管的按钮都靠它防连点——
-        点击没生效时（面板动画中、被过场吃掉）下一轮只是再点一次，而不是每拍补一下。
-        """
-        key = tuple(point)
-        now = time.monotonic()
-        if interval and now - self.tap_times.get(key, 0.) < interval:
-            return False
-        self.click_client(point)
-        self.tap_times[key] = now
-        return True
 
     def remember_registration(self, squad, roi_to_map, coverage_size):
         """记下刚被接受的小队坐标与它的配准矩阵，供之后没再发过手势的帧直接沿用。
