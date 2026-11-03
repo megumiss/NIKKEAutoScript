@@ -67,8 +67,8 @@ def _driver_scheme_missing_driver(name):
         repair_driver,
         sub_device_present,
     )
-    # 接口能打开不等于通道可用：幽灵设备（代码 45）下同样能打开却没有输入
-    if probe_device() is not None and sub_device_present() is not False:
+    # 接口能打开不等于通道可用：幽灵设备或完全没有鼠标子设备记录时都无法投递输入
+    if probe_device() is not None and sub_device_present() is True:
         return False
     # 重启后设备可能变隐藏（接口没注册或 HID 子设备变幽灵）：驱动包还在时重跑一次安装即可重建
     if driver_package_present() and repair_driver():

@@ -17,7 +17,7 @@ class ManualConfig:
        BlaDaily > BlaCDK > BlaExchange >
        WarehouseStats > SpecialArenaWatch >
        Notify >
-       AutoTower > SemiCombat > Highlights > BlaCDKManual > ScreenRotate > UpdateHosts
+       AutoTower > SemiCombat > InterceptionTest > Highlights > BlaCDKManual > ScreenRotate > UpdateHosts
        """
 
     GENERAL_SHOP_PRIORITY = """GRATIS"""

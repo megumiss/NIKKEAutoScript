@@ -209,6 +209,41 @@ def atomic_write(path, data):
         temp_path.unlink(missing_ok=True)
 
 
+def backup_files(original):
+    backup = WORK_ROOT / 'backups' / uuid.uuid4().hex
+    backup.mkdir(parents=True)
+    manifest = []
+    for i, (path, data) in enumerate(original.items()):
+        if data is not None:
+            (backup / str(i)).write_bytes(data)
+        manifest.append({'path': str(path), 'backup': str(i) if data is not None else None})
+    (backup / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+    return backup
+
+
+def refresh_assets(body):
+    feature = body.get('feature')
+    feature_dir(feature)
+    definition = definition_path(feature)
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    with FileLock(str(WORK_ROOT / '.assets.lock')):
+        if body.get('revision') != revision(feature):
+            raise ValueError('资源或资产定义已更新，请刷新资源列表后重新核对')
+        original = definition.read_bytes() if definition.is_file() else None
+        backup = backup_files({definition: original})
+        try:
+            atomic_write(definition, regenerate(feature))
+        except Exception:
+            model.logger.exception(f'模板工作台刷新资产定义失败，恢复定义: {feature}')
+            if original is None:
+                definition.unlink(missing_ok=True)
+            else:
+                atomic_write(definition, original)
+            raise
+    model.logger.info(f'模板工作台刷新资产定义: {feature}')
+    return dict(list_assets(feature), backup=str(backup))
+
+
 def mutate(body, deleting=False):
     feature = body.get('feature')
     feature_dir(feature)
@@ -247,16 +282,10 @@ def mutate(body, deleting=False):
         if deleting and '.' not in target.stem:
             affected.extend(asset_path(feature, p.name) for p in sorted(target.parent.glob(target.stem + '.*.*'))
                             if re.fullmatch(NAME_PATTERN + r'\.(?:png|gif)', p.name))
-        affected.append(definition)
+        if deleting:
+            affected.append(definition)
         original = {path: path.read_bytes() if path.is_file() else None for path in affected}
-        backup = WORK_ROOT / 'backups' / uuid.uuid4().hex
-        backup.mkdir(parents=True)
-        manifest = []
-        for i, (path, data) in enumerate(original.items()):
-            if data is not None:
-                (backup / str(i)).write_bytes(data)
-            manifest.append({'path': str(path), 'backup': str(i) if data is not None else None})
-        (backup / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+        backup = backup_files(original)
         try:
             if deleting:
                 for path in affected[:-1]:
@@ -266,7 +295,8 @@ def mutate(body, deleting=False):
                 if not ok:
                     raise ValueError('PNG 编码失败')
                 atomic_write(target, encoded.tobytes())
-            atomic_write(definition, regenerate(feature))
+            if deleting:
+                atomic_write(definition, regenerate(feature))
         except Exception:
             model.logger.exception(f'模板工作台写入失败，恢复资源与定义: {feature}/{name}')
             for path, data in original.items():

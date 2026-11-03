@@ -130,7 +130,6 @@
       "scene": "story2_normal",
       "templates": [
         "STORY_2_NORMAL",
-        "STORY_2_HARD_LOCKED",
         "STORY_2_NORMAL_STAGE_11",
         "STORY_2_NORMAL_STAGE_11_CLEAR",
         "STORY_2_NORMAL_STAGE_12",
@@ -221,8 +220,7 @@
         "STORY_1_NORMAL_STAGE_11_CLEAR",
         "STORY_1_NORMAL_STAGE_12",
         "STORY_1_NORMAL_STAGE_12_CLEAR",
-        "STORY_1_NORMAL",
-        "STORY_1_HARD_LOCKED"
+        "STORY_1_NORMAL"
       ]
     },
     {

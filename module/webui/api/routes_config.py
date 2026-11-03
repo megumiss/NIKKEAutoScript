@@ -1,10 +1,12 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 import module.webui.lang as lang
 from module.config.deep import deep_get
+from module.config.event_stage import STORY_STAGES, available_story_stages, resolve_event_stage
+from module.config.manual_config import ManualConfig
 from module.config.utils import filepath_args, read_file
 from module.webui.setting import State
 from module.webui.api.deps import InstanceNotFound, validate_instance
@@ -63,6 +65,22 @@ def _field(instance_name, task, group, arg, spec, value):
     }
 
 
+def _event_field(name, task, arg, spec, config):
+    info = deep_get(config, f'{task}.EventInfo', default={})
+    spec = dict(spec)
+    if arg in ('StoryPart', 'StoryDifficulty'):
+        spec['display'] = 'show' if info.get('ManualStage') is True else 'disabled'
+        event = next((event for event in ManualConfig.EVENTS if event.get('event_id') == info.get('Event')), None)
+        if event:
+            choices = [STORY_STAGES[stage] for stage in available_story_stages(event)]
+            if arg == 'StoryPart':
+                spec['option'] = list(dict.fromkeys(part for part, _ in choices))
+            else:
+                spec['option'] = list(dict.fromkeys(difficulty for part, difficulty in choices
+                                                  if part == info.get('StoryPart')))
+    return _field(name, task, 'EventInfo', arg, spec, info.get(arg))
+
+
 async def schema(request: Request):
     name = request.path_params['name']
     try:
@@ -85,7 +103,10 @@ async def schema(request: Request):
                 # it must not show up as a 任务状态 group on the task page.
                 if spec.get('type') == 'storage':
                     continue
-                output_fields.append(_field(name, task, group, arg, spec, deep_get(config, f'{task}.{group}.{arg}')))
+                if task in ('Event', 'Event2') and group == 'EventInfo':
+                    output_fields.append(_event_field(name, task, arg, spec, config))
+                else:
+                    output_fields.append(_field(name, task, group, arg, spec, deep_get(config, f'{task}.{group}.{arg}')))
             if output_fields:
                 output_groups.append({
                     'key': group, 'name': _label(f'{group}._info.name', group),
@@ -116,6 +137,35 @@ async def config(request: Request):
     except InstanceNotFound as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
     return JSONResponse(_json_value(State.config_updater.read_file(name)))
+
+
+async def event_info(request: Request):
+    name = request.path_params['name']
+    try:
+        validate_instance(name)
+    except InstanceNotFound as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
+    config = State.config_updater.read_file(name)
+    args = read_file(filepath_args('args', 'nkas'))
+    now = datetime.now(timezone.utc)
+    events = {}
+    for task, event in zip(['Event', 'Event2'], ManualConfig.EVENTS):
+        info = deep_get(config, f'{task}.EventInfo')
+        stage = resolve_event_stage(event, now, manual=info)
+        info['StoryPart'] = stage.story_part
+        info['StoryDifficulty'] = stage.story_difficulty
+        events[task] = {
+            'values': {
+                'Event': event.get('event_id'),
+                'ManualStage': info.get('ManualStage', False),
+                'StoryPart': stage.story_part,
+                'StoryDifficulty': stage.story_difficulty,
+            },
+            'fields': [_event_field(name, task, arg, spec, config)
+                       for arg, spec in args.get(task, {}).get('EventInfo', {}).items()],
+            'next_change_at': _json_value(stage.next_change_at),
+        }
+    return JSONResponse({'events': events, 'server_time': now.isoformat()})
 
 
 async def patch_config(request: Request):

@@ -18,6 +18,7 @@ def get_available_func():
         'AutoMainCollectible',
         'AutoTower',
         'SemiCombat',
+        'InterceptionTest',
         'Highlights',
         'BlaCDKManual',
         'ScreenRotate',

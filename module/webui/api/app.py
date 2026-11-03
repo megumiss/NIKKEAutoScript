@@ -93,6 +93,7 @@ def mount_api(app):
         Route('/api/{name:str}/avatar', routes_instances.set_avatar, methods=['POST']),
         Route('/api/{name:str}/export', routes_instances.export, methods=['GET']),
         Route('/api/{name:str}/schema', routes_config.schema, methods=['GET']),
+        Route('/api/{name:str}/event-info', routes_config.event_info, methods=['GET']),
         Route('/api/{name:str}/config', routes_config.config, methods=['GET']),
         Route('/api/{name:str}/config', routes_config.patch_config, methods=['PATCH', 'POST']),
         Route('/api/{name:str}/queue', routes_tasks.queue, methods=['GET']),

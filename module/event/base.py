@@ -2,6 +2,7 @@ import importlib
 from functools import cached_property
 
 from module.base.timer import Timer
+from module.config.event_stage import resolve_event_stage
 from module.event.assets import *
 from module.logger import logger
 from module.ui.assets import GOTO_BACK
@@ -34,7 +35,7 @@ DEFAULT_EVENT_TASK_ORDER = (
 
 class EventInfo:
     def __init__(self, id, name, type, mini_game, mini_game_play, extend, story_part, story_difficulty,
-                 pending_click_offset=(0, 0), pending_finder=None, task_order=None):
+                 pending_click_offset=(0, 0), pending_finder=None, task_order=None, story_2_normal_sweep_scroll=False):
         self.id: str = id
         self.name: str = name
         self.type: int = type
@@ -45,6 +46,7 @@ class EventInfo:
         self.story_difficulty: str = story_difficulty
         self.pending_click_offset = pending_click_offset
         self.pending_finder = pending_finder
+        self.story_2_normal_sweep_scroll: bool = story_2_normal_sweep_scroll
         self.task_order = list(task_order) if task_order is not None else list(DEFAULT_EVENT_TASK_ORDER)
 
 
@@ -72,6 +74,13 @@ class EventBase(UI):
         event_config = next(
             (e for e in self.config.EVENTS if e.get('event_id') == target_event_id), self.config.EVENTS[0]
         )
+        stage = resolve_event_stage(event_config, manual={
+            'Event': target_event_id,
+            'ManualStage': getattr(self.config, 'EventInfo_ManualStage', False),
+            'StoryPart': getattr(self.config, 'EventInfo_StoryPart', None),
+            'StoryDifficulty': getattr(self.config, 'EventInfo_StoryDifficulty', None),
+        })
+        event_config = dict(event_config, story_part=stage.story_part, story_difficulty=stage.story_difficulty)
         event_config.setdefault('pending_click_offset', (0, 0))
 
         for k, v in event_config.items():
@@ -89,6 +98,7 @@ class EventBase(UI):
             pending_click_offset=event_config.get('pending_click_offset', (0, 0)),
             pending_finder=event_config.get('pending_finder'),
             task_order=event_config.get('task_order'),
+            story_2_normal_sweep_scroll=event_config.get('story_2_normal_sweep_scroll', False),
         )
 
     def pending_finder_for(self, story):

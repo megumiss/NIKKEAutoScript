@@ -7,6 +7,7 @@ import time
 from module.base.filter import Filter
 from module.base.utils import ensure_time
 from module.config.config_generated import GeneratedConfig
+from module.config.event_stage import resolve_event_stage
 from module.config.config_updater import ConfigUpdater
 from module.config.delay import next_month_day, next_weekday
 from module.config.manual_config import ManualConfig
@@ -222,10 +223,15 @@ class NikkeConfig(ConfigUpdater, ManualConfig, GeneratedConfig, ConfigWatcher):
         # 实例化 NikkeConfig，无条件标记会导致每次实例化都重写配置文件，
         # 触发调度端 ConfigWatcher 反复重载。
         for task, event in zip(["Event", "Event2"], self.EVENTS):
+            info = dict(deep_get(self.data, f'{task}.EventInfo', default={}))
+            if info.get('Event') != event.get('event_id'):
+                info['ManualStage'] = False
+            stage = resolve_event_stage(event, manual=info)
             for key, value in {
                 'Event': event.get('event_id'),
-                'StoryPart': event.get('story_part'),
-                'StoryDifficulty': event.get('story_difficulty'),
+                'ManualStage': info.get('ManualStage', False),
+                'StoryPart': stage.story_part,
+                'StoryDifficulty': stage.story_difficulty,
             }.items():
                 path = f"{task}.EventInfo.{key}"
                 if deep_get(self.data, keys=path, default=None) != value:

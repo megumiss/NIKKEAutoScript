@@ -9,7 +9,7 @@ from module.config.account import load_account
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
 from module.exception import AccountError, CaptchaRequired, GameServerUnderMaintenance, GameStuckError, GameSystemError
 from module.handler.assets import *
-from module.handler.red_circle import find_red_circles
+from module.interception.assets import TEMPLATE_RED_CIRCLE_LEFT, TEMPLATE_RED_CIRCLE_RIGHT, TEMPLATE_RED_CIRCLE_TOP
 from module.logger import logger
 from module.ui.assets import GOTO_BACK, MAIN_CHECK
 
@@ -30,61 +30,46 @@ class InfoHandler(ModuleBase):
         return False
 
     def handle_login_reward(self):
-        # 添加限速机制 - 检查是否在冷却时间内
+        # 完成提示不是页面标识，只在本次领取后的短确认窗口内用于关闭。
+        confirm_timer = getattr(self, '_login_reward_confirm_timer', None)
+        if confirm_timer is not None and not confirm_timer.reached():
+            if not self.appear_any([NO_REWARD, CANNOT_REWARD], offset=30):
+                return False
+
+            close_timer = self.interval_timer.setdefault('LOGIN_REWARD_CLOSE', Timer(1))
+            if not close_timer.reached():
+                return False
+
+            if self.appear(GOTO_BACK, offset=30):
+                if not self.appear_then_click(GOTO_BACK, offset=30, interval=1):
+                    return False
+                logger.info('Close login reward via back button')
+            else:
+                self.device.click_xy(5, 420)
+                logger.info(f'Click {point2str(5, 420)} @ LOGIN_REWARD_CLOSE')
+
+            close_timer.reset()
+            self._login_reward_confirm_timer = None
+            return True
+
+        self._login_reward_confirm_timer = None
+
+        # 仅限制领取文字的 OCR 频率，不阻挡领取后的完成提示检测。
         current_time = time.time()
-        # 5秒冷却时间
         if hasattr(self, '_last_login_reward_check') and current_time - self._last_login_reward_check < 5:
             return False
-
-        # 更新最后检查时间
         self._last_login_reward_check = current_time
 
-        # Daily Login, Memories Spring, Monthly Card, etc.
         reward = self.appear_text(Langs.CLAIM_ALL) or self.appear_text(Langs.CLAIM_REWARD)
-        if reward:
-            # 重置限速机制，因为有奖励可领取
-            self._last_login_reward_check = 0
-
-            x, y = reward[0], reward[1]
-            logger.info(f'Click {point2str(x, y)} @ {Langs.CLAIM_ALL}/{Langs.CLAIM_REWARD}')
-            self.device.click_xy(x, y)
-
-            reward_done = False
-            confirm_timer = Timer(2, count=3)
-            while 1:
-                self.device.screenshot()
-
-                # 领取完奖励，返回主界面
-                if reward_done:
-                    if self.appear(MAIN_CHECK, offset=30) and self.appear(MAIN_CHECK, threshold=10):
-                        logger.info('Page arrive: main')
-                        return True
-
-                    if self.appear(GOTO_BACK, offset=30):
-                        if self.appear_then_click(GOTO_BACK, offset=30, interval=1):
-                            logger.info('Back to main page')
-                            continue
-                    else:
-                        # 点击空白页
-                        self.device.click_xy(5, 420)
-                        self.device.sleep(1)
-                        logger.info('Click %s @ CLOSE' % point2str(5, 420))
-                        continue
-
-                # 无奖励可领
-                if self.appear(NO_REWARD, offset=30) or self.appear(CANNOT_REWARD, offset=30):
-                    logger.info('Reward done')
-                    reward_done = True
-                    confirm_timer.clear()
-                    continue
-                else:
-                    if not confirm_timer.started():
-                        confirm_timer.start()
-                    # 超过2秒没有出现无奖励可领，返回点击Reward
-                    if confirm_timer.reached():
-                        return True
-        else:
+        if not reward:
             return False
+
+        self._last_login_reward_check = 0
+        x, y = reward[0], reward[1]
+        logger.info(f'Click {point2str(x, y)} @ {Langs.CLAIM_ALL}/{Langs.CLAIM_REWARD}')
+        self.device.click_xy(x, y)
+        self._login_reward_confirm_timer = Timer(2).start()
+        return True
 
     # 阿尼斯的补给品，仅关闭窗口，不抽取
     def handle_anis_supplies(self):
@@ -114,6 +99,38 @@ class InfoHandler(ModuleBase):
             if self.appear_then_click(RUPEE_EGG_PUSH, offset=30, interval=3):
                 return True
 
+        return False
+
+    # 伏特骰子
+    def handle_volt_dice(self):
+        dice_cooldown = Timer(3)
+        if self.appear(VOLT_DICE_CHECK, offset=30):
+            while 1:
+                self.device.screenshot()
+                # 结束
+                if self.appear(VOLT_DICE_DONE, offset=30):
+                    while 1:
+                        self.device.screenshot()
+                        if not self.appear(VOLT_DICE_CHECK, offset=30):
+                            break
+                        if self.appear_then_click(VOLT_DICE_CLOSE, offset=30, interval=1):
+                            continue
+                    return True
+                # 收获
+                if self.appear_then_click(REWARD, offset=30, interval=1, static=False):
+                    continue
+                # 点骰子
+                if self.appear(VOLT_DICE_CHECK, offset=30):
+                    if dice_cooldown.reached():
+                        self.device.click_xy(360, 1050)
+                        dice_cooldown.reset()
+                    continue
+
+        return False
+
+    def handle_volt_dice_just_reward(self):
+        if self.appear(VOLT_DICE_CHECK, offset=30) and self.appear_then_click(VOLT_DICE_CLOSE, offset=30, interval=1):
+            return True
         return False
 
     def handle_reward(self, interval=5):
@@ -208,37 +225,23 @@ class InfoHandler(ModuleBase):
             self.device.click(LOGIN_CHECK)
             logger.info('Login success')
 
-    def calculate_click_position(
-        self,
-        x,
-        y,
-        template_type='CENTER',
-        k=0.55,
-        x_center=360,
-        screen_width=720,
-        screen_height=1280,
-        y_k=0.565,
-        y_threshold=562,
-    ):
+    def calculate_click_position(self, x, y, template_type, k=0.4, x_center=360, screen_width=720, screen_height=1280):
         """
-        计算瞄准补偿后的点击位置，兼容旧圆弧模板的额外偏移
+        计算点击位置，支持不同类型模板的额外偏移
         Args:
             x, y: 原始识别坐标
-            template_type: 'CENTER' 为圆心，旧模板可为 'TOP', 'RIGHT', 'LEFT'
-            k: 水平向中心收缩的比例，左右共用
+            template_type: 模板类型，可为 'TOP', 'RIGHT', 'LEFT'
+            k: 动态偏移系数
             x_center: 屏幕中心 x
             screen_width: 屏幕宽度
             screen_height: 屏幕高度
-            y_k: 低位目标向上补偿的比例，0 为禁用
-            y_threshold: 纵向补偿起点，默认对应 720×1280 截图
         Returns:
-            (x_click, y_click, dx): 点击坐标和水平动态偏移值
+            (x_click, y_click, dx): 点击坐标和动态偏移值
         """
         # 动态偏移
         dx = k * (x_center - x)
         x_click = x + dx
-        # 场景上移量取决于按住位置；逆解后的补偿比例为 1.3 / (1 + 1.3)。
-        y_click = y - y_k * max(0, y - y_threshold)
+        y_click = y
 
         # 根据模板类型增加额外偏移
         if template_type == 'TOP':
@@ -261,17 +264,46 @@ class InfoHandler(ModuleBase):
         return int(round(x_click)), int(round(y_click)), dx
 
     def handle_red_circles(self):
-        circles = find_red_circles(self.device.image)
-        if not circles:
-            return False
+        """
+        处理红圈（优先检测 TOP，若未检测到再检测 RIGHT / LEFT）
+        """
+        # 模型参数
+        k = 0.4
 
-        x, y = circles[0]
-        logger.info(f'Red circle center: ({x}, {y})')
-        x_click, y_click, dx = self.calculate_click_position(x, y)
-        logger.info('Click %s @ RED_CIRCLE (dx=%.2f, dy=%.2f)' % (point2str(x_click, y_click), dx, y_click - y))
-        self.device.long_click_xy(x_click, y_click, 1)
-        self.device.sleep(0.5)
-        return True
+        # 按优先顺序定义模板
+        templates = [
+            ('TOP', TEMPLATE_RED_CIRCLE_TOP, 0.65),
+            ('RIGHT', TEMPLATE_RED_CIRCLE_RIGHT, 0.75),
+            ('LEFT', TEMPLATE_RED_CIRCLE_LEFT, 0.65),
+        ]
+
+        for template_type, template, similarity in templates:
+            circles = template.match_multi(self.device.image, similarity=similarity, name=f'RED_CIRCLE_{template_type}')
+
+            # 若当前模板检测到红圈则立即处理，否则尝试下一个模板
+            if not circles:
+                continue
+
+            for circle in circles:
+                logger.info(f'Circle {template_type} position: {circle.location}')
+                x = circle.location[0]
+                y = circle.location[1]
+                if y < 75 or y > 850:
+                    continue
+
+                x_click, y_click, dx = self.calculate_click_position(x, y, template_type=template_type, k=k)
+                logger.info(
+                    'Click %s @ %s (dx=%.2f)' % (point2str(x_click, y_click), f'RED_CIRCLE_{template_type}', dx)
+                )
+                self.device.long_click_xy(x_click, y_click, 1)
+
+                # 画面回正
+                self.device.sleep(0.5)
+                return True
+
+            continue
+
+        return False
 
     def handle_login_lipass(self):
         if self.appear(LIPASS_CHECK, offset=(30, 30)):

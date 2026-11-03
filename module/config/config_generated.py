@@ -193,6 +193,7 @@ class GeneratedConfig:
 
     # Group `EventInfo`
     EventInfo_Event = ''  # event_20261029, event_20261008
+    EventInfo_ManualStage = False  # True, False
     EventInfo_StoryPart = 'Story_1'  # Story_1, Story_2
     EventInfo_StoryDifficulty = 'Normal'  # Normal, Hard
 

@@ -41,7 +41,7 @@ class RubbishShop(ShopBase):
             priority = self.config.RubbishShop_bonePriority
         priority = re.sub(r'\s+', '', priority).split('>')
         return SelectedGrids(
-            [Product(i, self.config.RUBBISH_SHOP_BONE_PRODUCT.get(i), self.assets.get(i)) for i in priority]
+            [Product(i, self.config.RUBBISH_SHOP_BONE_PRODUCT.get(i), self.assets.get(i)) for i in priority if i]
         )
 
     @cached_property

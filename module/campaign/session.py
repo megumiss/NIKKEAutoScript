@@ -30,7 +30,7 @@ from module.campaign.vision.perception import expanded_minimap_masks, project_ce
 from module.campaign.vision.surface_motion import project
 from module.campaign.window import CampaignWindow, WindowChanged
 from module.config.config import TaskEnd
-from module.handler.red_circle import find_red_circles
+from module.campaign.vision.red_circle import find_red_circles
 from module.logger import logger
 
 # 侦察拖动：每屏最多拖几次把落点拖到面板中心、落点离中心多近就不再拖、单次拖动的最长距离
