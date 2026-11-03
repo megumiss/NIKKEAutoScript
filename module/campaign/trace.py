@@ -1,4 +1,4 @@
-"""自动推图的有界运行证据归档；复用业务截图，不增加游戏输入或截图轮询。"""
+"""自动推图的运行证据归档；复用业务截图，不增加游戏输入或截图轮询。"""
 
 import json
 import shutil
@@ -16,7 +16,6 @@ from module.campaign.vision.matching import ROI
 from module.logger import logger
 
 FRAME_INTERVAL = 1.0
-RUN_BYTES_LIMIT = 256 * 1024 * 1024
 COMPLETED_RUNS_LIMIT = 10
 
 REPLAY_HTML = '''<!doctype html>
@@ -89,7 +88,7 @@ class CampaignTrace:
     """每次执行独立保存采样画面、原始小地图和 JSONL 时间线，记录失败不影响安全闸门。
 
     全画面为高质量 JPEG，小地图为无损 PNG；普通帧最多每秒一张，关键事件不受限频影响。
-    每次运行图片上限 256 MiB，达到上限仍写事件；正常收尾另存最后一张无损客户区画面。
+    每次运行不限制图片总容量；正常收尾另存最后一张无损客户区画面。
     只清理本目录内已完成的旧归档，保留最近十次及全部未完成归档，不删除 last_field.png。
     """
 
@@ -107,7 +106,6 @@ class CampaignTrace:
         self.sequence = 0
         self.bytes = 0
         self.frames = 0
-        self.limited = False
         self.disabled = False
         self.finished = False
 
@@ -157,9 +155,9 @@ class CampaignTrace:
         self.record('input_after' if pending else 'sample', field=field, force=bool(pending), details=pending)
 
     def record(self, event, field=None, force=False, **details):
-        """追加即刻落盘的事件，按限频与容量保存图片；事件引用最近帧并注明采集时间。
+        """追加即刻落盘的事件，按限频保存图片；事件引用最近帧并注明采集时间。
 
-        force 仅绕过普通帧限频，不绕过图片容量上限。元数据过滤预览图与未知对象，写盘失败只告警。
+        force 绕过普通帧限频。元数据过滤预览图与未知对象，写盘失败只告警并停用归档。
         """
         if field is not None and field is not self.last_field:
             self.last_field = field
@@ -171,7 +169,7 @@ class CampaignTrace:
             now = time.monotonic()
             row = dict(sequence=self.sequence, time=datetime.now().isoformat(timespec='milliseconds'),
                        elapsed=round(now - self.started, 3), event=event, **trace_value(details))
-            if field is not None and (force or now - self.last_sample >= FRAME_INTERVAL) and not self.limited:
+            if field is not None and (force or now - self.last_sample >= FRAME_INTERVAL):
                 mode, panel = CampaignObserver.minimap_mode_and_panel(field)
                 if mode == 'compact':
                     x1, y1, x2, y2 = np.rint(np.asarray(ROI) * (1776 / 1920)).astype(int)
@@ -187,20 +185,16 @@ class CampaignTrace:
                         raise OSError('小地图截图编码失败。')
                     encoded.append(('minimap', f'frames/{self.sequence:06d}_minimap.png', image))
                 size = sum(image.nbytes for _, _, image in encoded)
-                if self.bytes + size > RUN_BYTES_LIMIT:
-                    self.limited = True
-                    logger.warning('自动推图回放图片达到 256 MiB 上限；继续记录事件，停止新增采样图片。')
-                else:
-                    for key, path, image in encoded:
-                        (self.folder / path).write_bytes(image.tobytes())
-                        row[key] = path
-                    row['minimap_mode'] = mode
-                    row['captured_elapsed'] = round((self.last_captured or now) - self.started, 3)
-                    self.last_sample = now
-                    self.bytes += size
-                    self.frames += 1
-                    self.last_frame = dict(sequence=self.sequence, elapsed=row['captured_elapsed'],
-                                           path=row['frame'])
+                for key, path, image in encoded:
+                    (self.folder / path).write_bytes(image.tobytes())
+                    row[key] = path
+                row['minimap_mode'] = mode
+                row['captured_elapsed'] = round((self.last_captured or now) - self.started, 3)
+                self.last_sample = now
+                self.bytes += size
+                self.frames += 1
+                self.last_frame = dict(sequence=self.sequence, elapsed=row['captured_elapsed'],
+                                       path=row['frame'])
             row['frame_ref'] = self.last_frame
             with (self.folder / 'events.jsonl').open('a', encoding='utf-8') as stream:
                 stream.write(json.dumps(row, ensure_ascii=False, allow_nan=False) + '\n')
@@ -238,7 +232,7 @@ class CampaignTrace:
             data = json.dumps(events, ensure_ascii=False, allow_nan=False).replace('<', '\\u003c')
             (self.folder / 'events.js').write_text(f'const events = {data};\n', encoding='utf-8')
             summary = dict(metadata=self.metadata, frames=self.frames, image_bytes=self.bytes,
-                           image_limit_reached=self.limited, elapsed=round(time.monotonic() - self.started, 3),
+                           image_limit_reached=False, elapsed=round(time.monotonic() - self.started, 3),
                            error=failure, **trace_value(details))
             (self.folder / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2),
                                                     encoding='utf-8')
