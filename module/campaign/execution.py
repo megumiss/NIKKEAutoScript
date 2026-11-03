@@ -249,41 +249,36 @@ class CampaignExecutor:
             state.penalize(f"review-{goal['id']}", failure=False)
 
     def complete_mechanism(self, goal):
-        """按机关已触发完成收尾：解除当前挡路光幕，回正小队并十字扫描，不再安排复核。
+        """按机关触发后的中央视野定位光幕，只解除对应标注，再回正小队并扫描。
 
-        目标显式携带 block 时只解除该编号；未关联时解除当前 active/stale 光幕，避免附近机关
-        到点后旧封锁仍参与规划。解除只影响本次运行状态，后续回正、定位或扫描失败均向上抛出，
-        不继续使用自动转镜前的视野与路线缓存。
+        中央光幕通过展开地图的两帧道路配准关联，不要求小队箭头或圆环可见；关联失败不记
+        机关完成也不清除封锁。只解除该编号，不使用历史 active/stale 集合或目标 block 批量
+        解锁。已确认的机关标注仅用于此阶段小队边缘回正，完成后必须取得新的实测小队定位。
         """
+        annotation = self.session.centered_mechanism_barrier(goal)
         state = self.owner.state
-        identifiers = ([goal['block']] if goal.get('block')
-                       else [record['id'] for record in state.blocking()])
+        identifier = annotation['id']
         state.mark_tried(goal['id'])
-        cleared = []
-        for identifier in identifiers:
-            record = state.blocks.get(identifier)
-            if record is None:
-                continue
-            record.update(status='cleared', cleared_at=state.tick)
-            state.mechanisms[goal['id']]['tried_for'][identifier] = state.tick
-            state.pending_reviews.pop(identifier, None)
-            cleared.append(identifier)
-        if cleared:
-            session = self.session
-            session.barrier_references[:] = [item for item in session.barrier_references
-                                             if item['block']['annotation_id'] not in cleared]
+        record = state.blocks.setdefault(identifier, {'id': identifier, 'annotation_id': identifier,
+                                                     'point': list(annotation['position']),
+                                                     'segment': annotation['segment'],
+                                                     'first_seen': state.tick, 'last_seen': state.tick})
+        record.update(status='cleared', cleared_at=state.tick)
+        state.mechanisms[goal['id']]['tried_for'][identifier] = state.tick
+        state.pending_reviews.pop(identifier, None)
+        self.session.barrier_references[:] = [item for item in self.session.barrier_references
+                                             if item['block']['annotation_id'] != identifier]
         self.owner.cut.update(state.blocking())
         self.owner.last_goal = None
         self.owner.last_routes = None
         self.owner.last_route_signature = None
-        logger.info(f"地面机关 {goal['id']} 已触发，解除光幕 {cleared or '无记录'}；"
-                    '跳过复核，开始小队回正与十字扫描。')
-        snapshot = self.session.recover_center()
+        logger.info(f"地面机关 {goal['id']} 已触发，中央光幕 {identifier} 已解除；"
+                    '开始小队回正与十字扫描。')
+        snapshot = self.session.recover_center(mechanism_position=goal['position'])
         state.update(snapshot, advance=False)
         self.owner.cut.update(state.blocking())
         if not self.scan_start('机关触发后', center_checked=True):
             raise RuntimeError('地面机关触发后的十字扫描未取得可信视野。')
-        self.session.record('mechanism_complete', goal=goal, cleared=cleared, snapshot=snapshot)
 
     def execute(self, goal):
         """执行一个目标并回写结果；剧情移动失败交给回正恢复，安全失败直接向外传播。

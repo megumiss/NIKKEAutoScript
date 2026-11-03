@@ -770,6 +770,57 @@ class CampaignSession(NavigationSession):
         from module.campaign.navigation.barrier_navigation import review_centered
         return review_centered(self, snapshot, identifier)
 
+    def mechanism_viewport(self):
+        """机关触发后保留当前镜头并展开地图，独立定位视野中心，不读取小队圆环。
+
+        连续两帧道路配准均须通过原门限，视野中心漂移不超过 12 地图像素且位于本章范围内。
+        展开不复位地图，不把面板中心当作小队，也不把此报告写入小队定位缓存；窗口、剧情、
+        战斗和取消仍经过原闸门。配准失败或镜头未停稳时抛 ValueError，不发送地面输入。
+        """
+        self.check()
+        self.await_field()
+        goto.map_open(self.win, reset=False)
+        reports = []
+        for index in range(2):
+            if index:
+                self.pause(.4)
+            field = self.win.client()
+            self.identity(field)
+            panel = self.win.capture()
+            try:
+                report = self.localizer.locate(panel, f'mechanism_view_{index}',
+                                               require_player=False, locate_player=False)
+            except RuntimeError as exc:
+                raise ValueError(f'机关触发后的视野道路配准未通过：{exc}') from exc
+            point = np.asarray(report['position'], float)
+            if np.any(point < 0) or np.any(point >= self.owner.state.size):
+                raise ValueError('机关触发后的视野中心超出章节地图范围。')
+            reports.append(report)
+        if np.linalg.norm(np.asarray(reports[0]['position']) - reports[1]['position']) > 12:
+            raise ValueError('机关触发后的镜头尚未停稳，保留原封锁状态。')
+        self.record('mechanism_viewport', force=True, reports=reports)
+        return reports[-1]
+
+    def centered_mechanism_barrier(self, goal):
+        """按机关触发后位于镜头中央的唯一光幕标注确定解锁对象，不依赖小队定位。
+
+        在完整章节标注中匹配视野中心，使用既有 48 地图像素光幕关联容差。
+        只接受范围内唯一标注，不能凭目标携带的 block 或同屏历史封锁批量解锁。
+        无候选或多候选均抛 ValueError，调用方不得修改机关及封锁状态；无需能量幕检测。
+        """
+        from module.campaign.run_state import CURTAIN_MATCH_RADIUS
+
+        report = self.mechanism_viewport()
+        position = np.asarray(report['position'], float)
+        matches = [item for item in self.owner.cut.chart.barrier_annotations
+                   if np.linalg.norm(np.asarray(item['position'], float) - position) <= CURTAIN_MATCH_RADIUS]
+        if len(matches) != 1:
+            raise ValueError(f'机关触发后中央光幕标注无法唯一确定：候选 {len(matches)} 处；保留原封锁状态。')
+        annotation = matches[0]
+        self.record('mechanism_barrier_located', force=True, goal=goal, annotation=annotation,
+                    viewport=position.tolist())
+        return annotation
+
     def trigger_visible_mechanism(self, goal):
         """直接点击当前画面中唯一关联到目标的未开启机关，确认成功后返回 True。
 
@@ -1364,17 +1415,19 @@ class CampaignSession(NavigationSession):
         self.scout_failure = None
         self.owner.last_snapshot = None
 
-    def recover_center(self):
+    def recover_center(self, mechanism_position=None):
         """独立回正小队并取得全新实测定位；失败时不把旧位置降级为可用。
 
         回正与重新定位各使用一个单目标输入窗口；前者不发送小队移动。
         新快照必须来自实际小队圆环并通过既有配准门限；短拖回正后仍须居中，图标回正则直接信任游戏结果。
+        mechanism_position 仅供已确定中央解锁光幕的机关触发后回正，允许一次有界边缘小队镜头短拖；
+        普通恢复不提供此参数，不改变缺少箭头及离屏图标时的输入保护。
         """
         from module.campaign.navigation.recovery import centered, centering_frame, recenter_squad
 
         self.reset_navigation()
         self.begin_target('recovery')
-        icon_clicked = recenter_squad(self)
+        icon_clicked = recenter_squad(self, mechanism_position=mechanism_position)
         self.reset_navigation()
         self.begin_target('position')
         snapshot = self.snapshot()
