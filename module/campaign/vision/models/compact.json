@@ -1,0 +1,47 @@
+{
+  "schema_version": 3,
+  "version": "v10-specialists",
+  "role": "compact",
+  "format": "yolo11-detect-bcn-fp32",
+  "labels": [
+    "minimap_enemy_normal",
+    "minimap_enemy_ex",
+    "minimap_squad_ring",
+    "minimap_enemy_boss"
+  ],
+  "thresholds": {
+    "minimap_enemy_normal": 0.5,
+    "minimap_enemy_ex": 0.5,
+    "minimap_squad_ring": 0.5,
+    "minimap_enemy_boss": 0.5
+  },
+  "input_shape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "output_shape": [
+    1,
+    8,
+    8400
+  ],
+  "input_name": "images",
+  "output_name": "output0",
+  "source_size": [
+    218,
+    211
+  ],
+  "color": "RGB",
+  "normalization": "float32 / 255",
+  "layout": "NCHW",
+  "class_selection": "argmax_all_role_classes",
+  "box_format": "cxcywh_input_pixels",
+  "nms_iou": 0.45,
+  "edge_margin": 2,
+  "sha256": "ddc0438dde3fa75a8b11e432c5c22e36d8039fd9524738711ab61986e11ef48c",
+  "checkpoint_sha256": "4033553a1787b0061e279cf44f86955460d6de976441c452b82d6abde2ea3a19",
+  "dataset_manifest_sha256": "be5d9efaed348cf5c35054f491938484f976842afd66692272cce5c119e37df2",
+  "acceptance": "offline_scoped_regression_and_runtime_verified",
+  "independent_test": false
+}

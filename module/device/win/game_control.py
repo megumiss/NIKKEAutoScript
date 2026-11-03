@@ -576,6 +576,105 @@ class WinClient:
 
         return x, y
 
+    @staticmethod
+    def work_area(screen_n):
+        """目标屏幕的工作区 (left, top, right, bottom)，已排除任务栏与停靠栏。
+
+        屏幕序号越界抛 ValueError（与调用方原先的检查一致），由上层转成设置分辨率失败。
+        """
+        monitors = win32api.EnumDisplayMonitors()
+        if not 0 <= screen_n < len(monitors):
+            raise ValueError(f'screen_n {screen_n} out of range, {len(monitors)} monitors detected')
+        return tuple(win32api.GetMonitorInfo(monitors[screen_n][0])['Work'])
+
+    def place_window(self, screen_n, window_width, window_height, client_height, frame_top, position='center'):
+        """算出窗口左上角坐标：整窗优先，装不下时保证客户区完整落在工作区内。
+
+        window_width/window_height 是含边框的窗口尺寸，client_height 是客户区高度，
+        frame_top 是客户区顶边相对窗口顶边的偏移（标题栏 + 上边框）。
+        工作区装得下整个窗口时与 calculate_window_position 的结果一致；装不下时允许底部边框
+        压到任务栏、标题栏顶出工作区上沿，但客户区必须完整可见：1776×999 的客户区在 1080p 上
+        只剩十几像素余量，按整窗夹取会把客户区底边推到任务栏下面，那时截图最后几行是任务栏，
+        点击也会落在任务栏上。客户区本身就高于工作区时无解，只贴工作区上沿并告警。
+        """
+        work_left, work_top, work_right, work_bottom = self.work_area(screen_n)
+        x, y = self.calculate_window_position(screen_n, window_width, window_height, position)
+        x = max(work_left, min(x, work_right - window_width))
+        work_height = work_bottom - work_top
+        if window_height <= work_height:
+            return x, max(work_top, min(y, work_bottom - window_height))
+        highest = work_top - frame_top
+        lowest = work_bottom - frame_top - client_height
+        if lowest < highest:
+            logger.warning(
+                f'客户区 {client_height}px 高于工作区 {work_height}px，无法完整显示，'
+                '窗口贴工作区上沿摆放，底部内容会被任务栏遮挡'
+            )
+            return x, highest
+        y = max(highest, min(y, lowest))
+        logger.info(
+            f'工作区装不下整个窗口，按客户区摆放窗口：y={y}（客户区底边距工作区下沿 '
+            f'{work_bottom - (y + frame_top + client_height)}px，底部边框可能压在任务栏下）'
+        )
+        return x, y
+
+    def client_screen_rect(self):
+        """当前客户区在虚拟屏幕坐标下的矩形 (left, top, right, bottom)，找不到窗口返回 None。"""
+        hwnd = self.get_current_window_hwnd()
+        if not hwnd:
+            return None
+        left, top = win32gui.ClientToScreen(hwnd, (0, 0))
+        _, _, width, height = win32gui.GetClientRect(hwnd)
+        return left, top, left + width, top + height
+
+    def client_occlusion(self, screen_n):
+        """量出客户区被工作区切掉的最大像素数，返回遮挡状态字典。
+
+        返回 {'covered': int, 'client': (l, t, r, b), 'work': (l, t, r, b)}；covered 为 0
+        表示客户区完整落在工作区内，找不到窗口返回 None。只看客户区不看窗口边框：边框压在
+        任务栏下不影响游戏内容，客户区被切掉才会让截图内容与点击换算整体偏移。
+        """
+        client = self.client_screen_rect()
+        if client is None:
+            return None
+        work = self.work_area(screen_n)
+        covered = max(work[0] - client[0], work[1] - client[1],
+                      client[2] - work[2], client[3] - work[3], 0)
+        return {'covered': covered, 'client': client, 'work': work}
+
+    def ensure_client_visible(self, screen_n, position='center'):
+        """客户区被工作区切掉时只移动窗口把它挪回可见区域，返回客户区是否完整可见。
+
+        尺寸由 ensure_resolution 负责，这里不改尺寸：1080p 这类工作区偏矮的屏幕上含标题栏的
+        窗口装不进去，旧逻辑把窗口顶在工作区上沿，客户区底边会落到任务栏下面。窗口找不到、
+        重摆后仍被切掉或 SetWindowPos 失败都返回 False，由调用方决定是否继续。
+        """
+        status = self.client_occlusion(screen_n)
+        if status is None:
+            logger.warning('找不到游戏窗口，无法检查客户区遮挡')
+            return False
+        if not status['covered']:
+            return True
+        hwnd = self.get_current_window_hwnd()
+        left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+        width, height = right - left, bottom - top
+        client_height = win32gui.GetClientRect(hwnd)[3]
+        frame_top = win32gui.ClientToScreen(hwnd, (0, 0))[1] - top
+        x, y = self.place_window(screen_n, width, height, client_height, frame_top, position)
+        logger.warning(
+            f"客户区 {status['client']} 被工作区 {status['work']} 切掉 {status['covered']}px，"
+            f'重新摆放窗口到 ({x}, {y})'
+        )
+        try:
+            if win32gui.SetWindowPos(hwnd, 0, x, y, width, height, self._set_window_pos_flags()) == 0:
+                logger.error('重新摆放窗口失败')
+                return False
+        except Exception as e:
+            logger.error(f'重新摆放窗口失败：{e}')
+            return False
+        status = self.client_occlusion(screen_n)
+        return bool(status and not status['covered'])
+
     @property
     def _background_control(self) -> bool:
         """postmessage 仅控制游戏窗口；启动器仍依赖前台输入。"""
@@ -627,39 +726,12 @@ class WinClient:
             window_height = client_height + 2 * border_height
             logger.debug(f'Required window size: {window_width}x{window_height}')
 
-            # 获取指定屏幕的工作区
-            monitors = win32api.EnumDisplayMonitors()
-            if screen_n >= len(monitors):
-                raise ValueError(f'screen_n {screen_n} out of range, {len(monitors)} monitors detected')
-            monitor_handle = monitors[screen_n][0]
-            monitor_info = win32api.GetMonitorInfo(monitor_handle)
-            work_area = monitor_info['Work']  # (left, top, right, bottom)
-            logger.debug(f'Work area of screen {screen_n} (excluding taskbar): {work_area}')
+            # 获取指定屏幕的工作区，并按客户区优先的规则摆放窗口
+            logger.debug(f'Work area of screen {screen_n} (excluding taskbar): {self.work_area(screen_n)}')
 
-            # 计算窗口位置
-            x, y = self.calculate_window_position(screen_n, window_width, window_height, position)
-
-            # 如果窗口底部超出工作区，则上移 delta
-            if y + window_height > work_area[3]:
-                delta = (y + window_height) - work_area[3]
-                y = max(work_area[1], y - delta)
-                logger.debug(f'Adjusted Y position upward by {delta}px to avoid taskbar overlap')
-
-            # 如果窗口顶部超出工作区，则下移
-            if y < work_area[1]:
-                delta = work_area[1] - y
-                y += delta
-                logger.debug(f'Adjusted Y position downward by {delta}px to fit work area')
-
-            # 横向边界检查
-            if x + window_width > work_area[2]:
-                delta = (x + window_width) - work_area[2]
-                x = max(work_area[0], x - delta)
-                logger.debug(f'Adjusted X position leftward by {delta}px to fit work area')
-            if x < work_area[0]:
-                delta = work_area[0] - x
-                x += delta
-                logger.debug(f'Adjusted X position rightward by {delta}px to fit work area')
+            # 窗口位置：客户区必须完整可见，底部边框压在任务栏下不算遮挡
+            frame_top = win32gui.ClientToScreen(hwnd, (0, 0))[1] - window_rect[1]
+            x, y = self.place_window(screen_n, window_width, window_height, client_height, frame_top, position)
 
             result = win32gui.SetWindowPos(hwnd, 0, x, y, window_width, window_height, self._set_window_pos_flags())
             if result == 0:
@@ -735,37 +807,12 @@ class WinClient:
             window_height = rect.bottom - rect.top
             logger.debug(f'Required window rect (with border): {window_width}x{window_height}')
 
-            # 获取指定屏幕的工作区
-            monitors = win32api.EnumDisplayMonitors()
-            if screen_n >= len(monitors):
-                raise ValueError(f'screen_n {screen_n} out of range, {len(monitors)} monitors detected')
-            monitor_handle = monitors[screen_n][0]
-            monitor_info = win32api.GetMonitorInfo(monitor_handle)
-            work_area = monitor_info['Work']
-            logger.debug(f'Work area of screen {screen_n} (excluding taskbar): {work_area}')
+            # 获取指定屏幕的工作区，并按客户区优先的规则摆放窗口
+            logger.debug(f'Work area of screen {screen_n} (excluding taskbar): {self.work_area(screen_n)}')
 
-            # 计算窗口位置（基于工作区中心）
-            x, y = self.calculate_window_position(screen_n, window_width, window_height, position)
-            # 如果窗口底部超出工作区，则自动上移
-            if y + window_height > work_area[3]:
-                delta = (y + window_height) - work_area[3]
-                y = max(work_area[1], y - delta)
-                logger.debug(f'Adjusted Y position upward by {delta}px to avoid taskbar overlap')
-            # 如果窗口顶部超出工作区，则下移
-            if y < work_area[1]:
-                delta = work_area[1] - y
-                y += delta
-                logger.debug(f'Adjusted Y position downward by {delta}px to fit work area')
-
-            # 横向边界
-            if x + window_width > work_area[2]:
-                delta = (x + window_width) - work_area[2]
-                x = max(work_area[0], x - delta)
-                logger.debug(f'Adjusted X position leftward by {delta}px to fit work area')
-            if x < work_area[0]:
-                delta = work_area[0] - x
-                x += delta
-                logger.debug(f'Adjusted X position rightward by {delta}px to fit work area')
+            # 窗口位置（基于工作区中心）：高 DPI 下客户区顶边偏移比实测边框大，按它算客户区下沿
+            frame_top = -rect.top
+            x, y = self.place_window(screen_n, window_width, window_height, client_height, frame_top, position)
 
             result = win32gui.SetWindowPos(hwnd, 0, x, y, window_width, window_height, self._set_window_pos_flags())
             if result == 0:
@@ -871,6 +918,17 @@ class WinClient:
             logger.info(f'Changing Game Auto HDR: {status_map.get(game_auto_hdr)} --> {status_map.get(status)}')
         except Exception as e:
             logger.warning(f'Error changing Game Auto HDR settings: {e}')
+
+    def apply_auto_hdr_setting(self):
+        """按配置应用游戏的自动 HDR：PCClient_CloseAutoHdr 为真时关闭，否则恢复系统默认。
+
+        自动 HDR 会改变截图的亮度与色彩，影响依赖颜色判定的识别，所以任务开始时要按配置重新
+        应用一次（注册表值被外部改动过时 change_auto_hdr 会写回）。
+        """
+        if self.config.PCClient_CloseAutoHdr:
+            self.change_auto_hdr('disable')
+        else:
+            self.change_auto_hdr('unset')
 
     def restore_auto_hdr(self):
         """通过注册表恢复游戏自动 HDR 设置"""

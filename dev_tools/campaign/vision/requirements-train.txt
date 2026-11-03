@@ -1,0 +1,8 @@
+# Install in an isolated Python 3.11 environment. For RTX 50-series, use PyTorch CUDA 12.8 wheels.
+torch==2.9.1
+torchvision==0.24.1
+ultralytics==8.3.230
+onnx==1.17.0
+onnxruntime==1.19.2
+numpy==1.26.4
+opencv-python==4.10.0.84

@@ -1,0 +1,19 @@
+{
+  "schema_version": 3,
+  "version": "v10-specialists",
+  "status": "offline_verified",
+  "models": {
+    "scene": {
+      "model": "scene.onnx",
+      "metadata": "scene.json"
+    },
+    "compact": {
+      "model": "compact.onnx",
+      "metadata": "compact.json"
+    },
+    "expanded": {
+      "model": "expanded.onnx",
+      "metadata": "expanded.json"
+    }
+  }
+}
