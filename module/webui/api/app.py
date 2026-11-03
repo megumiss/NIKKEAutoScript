@@ -29,6 +29,7 @@ def mount_api(app):
     routes = [
         Route('/api/security/entry', entry_info, methods=['GET']),
         Route('/api/security/entry/regenerate', regenerate_entry, methods=['POST']),
+        Route('/api/campaign/notice', routes_campaign.notice, methods=['GET']),
         Route('/api/resource', routes_resource.status, methods=['GET']),
         Route('/api/resource/sync', routes_resource.sync, methods=['POST']),
         Route('/api/instances', routes_instances.instances, methods=['GET']),

@@ -8,6 +8,7 @@ import LinkifiedText from '../components/LinkifiedText.vue'
 import LiveLog from '../components/LiveLog.vue'
 import CampaignPanel from '../components/CampaignPanel.vue'
 import CampaignSettingsGroup from '../components/CampaignSettingsGroup.vue'
+import CampaignNotice from '../components/CampaignNotice.vue'
 import FieldItemTable from '../components/config/FieldItemTable.vue'
 import FieldNotify from '../components/config/FieldNotify.vue'
 import FieldPathPicker from '../components/config/FieldPathPicker.vue'
@@ -79,6 +80,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
         <article v-else class="card group-card">
           <div class="group-body special-empty" style="padding:16px 22px">{{ selectedPage === 'tool' ? t('请从列表选择工具') : t('请从任务列表选择任务') }}</div>
         </article>
+        <CampaignNotice v-if="isCampaign && selectedTask === 'AutoMainStory'" />
         <CampaignSettingsGroup v-if="isCampaign" />
         <CampaignPanel v-if="isCampaign" :name="workspace.selectedName" />
         <div class="cfg-groups">
