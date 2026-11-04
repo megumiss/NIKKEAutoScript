@@ -164,6 +164,14 @@ function Test-BinaryContains {
     }
 }
 
+function Test-IsScannerArtifact {
+    param([System.IO.FileInfo]$File)
+    $selfPath = $script:PSCommandPath
+    if ($selfPath -and [string]::Equals($File.FullName, $selfPath, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    if ($File.Name -like 'nikke_ioc_scan_*.txt') { return $true }
+    return $File.FullName -match '[\\/](?:scan-reports|quarantine-[^\\/]+)[\\/]'
+}
+
 function Get-TextFileHits {
     param([string]$Dir, [string[]]$Extensions, [string]$Pattern, [int]$MaxSizeMB = 8, [int]$Depth = 4)
     $out = New-Object System.Collections.Generic.List[object]
@@ -172,7 +180,10 @@ function Get-TextFileHits {
     $files = @()
     try {
         $files = Get-ChildItem -LiteralPath $Dir -Recurse -File -Depth $Depth -ErrorAction SilentlyContinue |
-                 Where-Object { $Extensions -contains $_.Extension.ToLower() -and $_.Length -gt 0 -and $_.Length -lt $maxBytes }
+                 Where-Object {
+                     $Extensions -contains $_.Extension.ToLower() -and $_.Length -gt 0 -and $_.Length -lt $maxBytes -and
+                     $_.Name -ne 'debug.log' -and -not (Test-IsScannerArtifact -File $_)
+                 }
     } catch {}
     foreach ($f in $files) {
         if (Test-BinaryContains -Path $f.FullName -Needle $Pattern -MaxBytes $maxBytes) {
@@ -979,6 +990,25 @@ if (-not $script:IsAdmin) {
     Write-Host '  提示：当前非管理员，注册表 HKLM / 部分进程模块检查可能不完整' -ForegroundColor Yellow
 }
 Write-Host ('=' * 70) -ForegroundColor DarkCyan
+
+$important = @($hits + $warns)
+if ($important.Count -gt 0) {
+    Write-Host '  需处理/核对内容（HIT / WARN）' -ForegroundColor Cyan
+    Write-Host ('-' * 70) -ForegroundColor DarkCyan
+    foreach ($f in $important) {
+        $color = 'Yellow'; if ($f.Level -eq 'HIT') { $color = 'Red' }
+        Write-Host ('[' + $f.Level + '] [' + $f.Category + '] ' + $f.Title) -ForegroundColor $color
+        if ($f.Evidence) {
+            foreach ($line in ($f.Evidence -split "`r?`n")) {
+                if ($line.Trim().Length -gt 0) { Write-Host ('    ' + $line) -ForegroundColor DarkGray }
+            }
+        }
+        Write-Host ''
+    }
+} else {
+    Write-Host '  无需处理或人工核对：未发现 HIT / WARN 项。' -ForegroundColor Green
+}
+Write-Host ('=' * 70) -ForegroundColor DarkCyan
 Write-Host ''
 
 }
@@ -1209,7 +1239,7 @@ $manifest = Join-Path $QuarantineRoot 'manifest.json'
     Failures = $failures
 } | ConvertTo-Json -Depth 5 | Out-File -LiteralPath $manifest -Encoding UTF8
 
-if ((Test-Path -LiteralPath $targetPath)) { $failures.Add("原 DLL 仍存在：$targetPath") }
+if ($targetExists -and (Test-Path -LiteralPath $targetPath)) { $failures.Add("原 DLL 仍存在：$targetPath") }
 if ($comExists -and (Test-Path -LiteralPath $clsidPath)) { $failures.Add("CLSID 仍存在：$clsidPath") }
 
 Write-Host "`n=== 处理结果 ===" -ForegroundColor Cyan
