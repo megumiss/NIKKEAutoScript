@@ -44,6 +44,8 @@ kbd { font: 11px/1.5 var(--font-mono); color: var(--muted); padding: 1px 4px; bo
 .map-filter { flex: none; padding: 0 14px 14px; }
 .map-picker { min-width: 0; gap: 5px; }
 .map-picker select { min-height: 36px; padding: 6px 8px; text-overflow: ellipsis; }
+.chapter-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.chapter-navigation button { min-height: 36px; padding: 6px 8px; font-size: 12px; }
 .save-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; flex: none; }
 .save-state { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .save-state.dirty { color: var(--amber); }
@@ -89,6 +91,11 @@ kbd { font: 11px/1.5 var(--font-mono); color: var(--muted); padding: 1px 4px; bo
 .layer-settings select { font-size: 12px; padding: 6px 8px; }
 .toggle-row { display: flex; gap: 14px; flex-wrap: wrap; }
 .toggle-row .check { font-size: 12px; }
+.annotation-filters { border: 0; border-top: 1px solid var(--border); margin: 10px 0 6px; padding: 6px 0 0; min-width: 0; }
+.annotation-filters legend { padding-right: 8px; font-size: 12px; font-weight: 600; }
+.annotation-filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 8px; }
+.annotation-filter-grid .check { min-width: 0; font-size: 12px; }
+.annotation-filter-grid .check:last-child { grid-column: 1 / -1; }
 .shortcut-hint { font-size: 10px; margin-top: 8px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .canvas-panel { display: flex; flex-direction: column; }
@@ -233,7 +240,8 @@ button.small { min-height: 30px; padding: 4px 8px; font-size: 12px; }
   .panel-heading { padding: 14px; }
   .collectible-toolbar, .canvas-toolbar { padding: 0 12px 10px; }
   .zoom-tools { margin-left: 0; flex-wrap: wrap; }
-  .panel-nav button, .tools button, .movement-actions button { min-height: 44px; }
+  .panel-nav button, .tools button, .movement-actions button, .chapter-navigation button,
+  .annotation-filter-grid .check { min-height: 44px; }
   .property-actions { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
