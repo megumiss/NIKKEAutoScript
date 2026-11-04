@@ -22,7 +22,12 @@
   <main class="workspace">
     <aside class="tools-panel surface" aria-label="绘制工具">
       <div class="panel-heading"><h2>地图与工具</h2><button id="refresh-maps" class="small" title="重新扫描地图目录">刷新目录</button></div>
-      <div class="map-filter"><label class="map-picker" for="map-select"><span>当前地图包</span><select id="map-select"><option>正在读取地图…</option></select></label></div>
+      <div class="map-filter">
+        <label class="map-picker" for="map-select"><span>当前地图包</span><select id="map-select"><option>正在读取地图…</option></select></label>
+        <div class="chapter-navigation" role="group" aria-label="快速切换章节">
+          <button id="previous-chapter" disabled>← 上一章</button><button id="next-chapter" disabled>下一章 →</button>
+        </div>
+      </div>
       <div class="panel-nav editor-tabs" role="tablist" aria-label="编辑任务">
         <button id="editor-tab-annotation" role="tab" aria-controls="annotation-tools" aria-selected="true" data-editor-panel="annotation">标注</button>
         <button id="editor-tab-road" role="tab" aria-controls="road-tools" aria-selected="false" tabindex="-1" data-editor-panel="road">道路</button>
@@ -81,6 +86,11 @@
         <details class="layer-settings" open><summary>图层与显示</summary>
           <label>底图<select id="layer"><option value="map.png">道路底图</option><option value="reference.png">实拍参考图</option></select></label>
           <div class="toggle-row"><label class="check"><input id="show-annotations" type="checkbox" checked>显示标注</label><label class="check"><input id="show-labels" type="checkbox" checked>显示标签</label></div>
+          <fieldset class="annotation-filters">
+            <legend>标注类型</legend>
+            <div id="annotation-filters" class="annotation-filter-grid"></div>
+          </fieldset>
+          <p class="hint">类型筛选同时作用于画布和对象列表，并与收集品难度叠加。</p>
         </details>
         <p class="hint shortcut-hint">滚轮缩放 · 空格拖动平移 · Ctrl S 保存</p>
       </div>

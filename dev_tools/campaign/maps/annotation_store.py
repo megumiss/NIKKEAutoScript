@@ -43,7 +43,7 @@ class EditableAnnotationStore(AnnotationStore):
                     continue
                 identifier = path.parent.relative_to(self.root).as_posix()
                 chapter = metadata.get('chapter', '?')
-                maps.append({'id': identifier, 'title': f'第 {chapter} 章 · {identifier}'})
+                maps.append({'id': identifier, 'chapter': chapter, 'title': f'第 {chapter} 章 · {identifier}'})
             except (OSError, ValueError, AttributeError):
                 continue
         return maps

@@ -12,6 +12,8 @@ const categories = {
   ground_elevator: { name: '地面电梯', color: '#6ccfff', help: '先标记两部电梯，再选择“电梯传送关系”连接。' },
   elevator_connection: { name: '电梯传送关系', color: '#ffb454', help: '依次点击起点电梯、目标电梯；默认双向，可勾选单向。' },
 };
+const hiddenCategories = new Set();
+let maps = [];
 let current = null, doc = null, token = '', saved = '', selected = null, tool = 'select';
 let newCategory = 'normal_collectible', difficulty = 'normal';
 let history = [], future = [], draft = [], connectFrom = null, gesture = null, cursor = null;
@@ -63,6 +65,8 @@ function colorOf(item) {
 }
 function visible(item) {
   if (!item) return false;
+  const category = categoryOf(item) || 'legacy';
+  if (hiddenCategories.has(category)) return false;
   if (!item.points) return visible(itemById(item.from)) && visible(itemById(item.to));
   const mode = categories[categoryOf(item)]?.difficulty;
   return !mode || difficulty === 'all' || mode === difficulty;
@@ -104,6 +108,7 @@ function loadImage(url) {
 async function refreshMaps(first = false) {
   try {
     const data = await api('/api/maps'); token = data.token;
+    maps = data.maps;
     const picker = $('map-select'); picker.replaceChildren();
     for (const entry of data.maps) picker.add(new Option(entry.title, entry.id));
     picker.title = data.root;
@@ -115,6 +120,20 @@ async function refreshMaps(first = false) {
     if (data.maps.some(entry => entry.id === id)) picker.value = id;
     if (first) await openMap(picker.value);
   } catch (error) { message(`读取目录失败：${error.message}`, 'error'); }
+  finally { syncState(); }
+}
+
+/**
+ * 按章节编号查找上一章或下一章的现有地图包，跳过缺失章节及同章副本。
+ * offset 仅取 -1 或 1；同章有多个包时沿用目录的最近修改优先顺序，未知章节不参与跳转。
+ */
+function adjacentChapter(offset) {
+  const chapter = Number(current?.chapter);
+  if (!Number.isInteger(chapter) || chapter <= 0) return null;
+  return maps.filter(entry => {
+    const target = Number(entry.chapter);
+    return Number.isInteger(target) && target > 0 && offset * (target - chapter) > 0;
+  }).sort((a, b) => offset * (Number(a.chapter) - Number(b.chapter)))[0] || null;
 }
 
 async function openMap(id) {
@@ -156,6 +175,11 @@ function syncState() {
   $('road-count').textContent = roadCount ? `${roadCount} 笔道路修订（保存时写入原图）` : '无待保存的道路修订';
   $('map-select').disabled = busy || saving || movement.running;
   $('refresh-maps').disabled = busy || saving || movement.running;
+  for (const [id, offset] of [['previous-chapter', -1], ['next-chapter', 1]]) {
+    const target = adjacentChapter(offset), button = $(id);
+    button.disabled = !target || busy || saving || movement.running;
+    button.title = target ? `打开${target.title}` : '没有可切换的章节';
+  }
   $('reload').disabled = !loaded || busy || saving || movement.running;
   $('properties').inert = movement.running;
   $('delete').disabled = !selectedItem() || busy || saving || movement.running;
@@ -215,6 +239,11 @@ function setTool(next) {
   }
   if (['point', 'polyline', 'polygon', 'rectangle', 'connect'].includes(next)) showEditorPanel('annotation');
   if (!['select', 'pan'].includes(next)) $('show-annotations').checked = true;
+  if (['point', 'polyline', 'polygon', 'rectangle', 'connect'].includes(next)) {
+    hiddenCategories.delete(newCategory);
+    if (next === 'connect') hiddenCategories.delete('ground_elevator');
+    syncAnnotationFilters();
+  }
   for (const button of document.querySelectorAll('[data-tool]')) button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
   svg.dataset.tool = tool; movement.toolChanged(tool); render();
 }
@@ -252,6 +281,29 @@ function setDifficulty(next) {
   syncCategory(); render();
 }
 
+/** 同步类型开关；筛选仅保存在当前页面，不写入标注文件，并跨章节保留。 */
+function syncAnnotationFilters() {
+  for (const input of $('annotation-filters').querySelectorAll('input')) {
+    input.checked = !hiddenCategories.has(input.dataset.category);
+  }
+}
+
+/**
+ * 更新类型筛选并清除隐藏对象的选择及电梯连线起点，避免残留可拖动顶点。
+ * 绘制或拖动期间拒绝切换；筛选不更改文档，也不进入撤销历史。
+ */
+function setCategoryVisibility(category, shown) {
+  if (draft.length || gesture) {
+    syncAnnotationFilters();
+    message('请先完成当前绘制，或按 Esc 取消，再切换标注显示。'); return;
+  }
+  if (shown) hiddenCategories.delete(category);
+  else hiddenCategories.add(category);
+  if (!visible(selectedItem())) selected = null;
+  if (!visible(itemById(connectFrom))) connectFrom = null;
+  syncAnnotationFilters(); render();
+}
+
 function addObject(type, points) {
   if (newCategory === 'ground_barrier' && (type === 'point' ? points.length !== 1 : type !== 'polyline' || points.length !== 2)) {
     message('光幕只支持一个中心点或两个立柱地面端点，请调整当前绘制。', 'error'); return false;
@@ -260,6 +312,7 @@ function addObject(type, points) {
     ...(categories[newCategory].difficulty ? { difficulty: categories[newCategory].difficulty } : {}),
     label: $('new-label').value.trim() || categories[newCategory].name,
     points: points.map(bounded), color: $('new-color').value, note: '' };
+  hiddenCategories.delete(newCategory); syncAnnotationFilters();
   change(() => { doc.objects.push(item); selected = item.id; draft = []; });
   message(`已添加${typeNames[type]}「${item.label}」。Ctrl+S 保存。`);
 }
@@ -292,6 +345,7 @@ function connectTo(id) {
     || (!directed && item.to === connectFrom && item.from === id)))) {
     message('这两个对象之间已有相同方向的连接。', 'error'); return;
   }
+  hiddenCategories.delete('elevator_connection'); syncAnnotationFilters();
   change(() => {
     const item = { id: uniqueId('edge'), category: 'elevator_connection', from: connectFrom, to: id, directed,
       label: $('new-label').value.trim() || categories.elevator_connection.name, color: $('new-color').value, note: '' };
@@ -384,7 +438,7 @@ function renderGeometry() {
     drawLabel(group, item, item.type === 'point' ? item.points[0] : center(item)); $('objects').append(group);
   }
   const selectedObject = selectedItem();
-  if (tool === 'select' && selectedObject?.points) selectedObject.points.forEach((point, index) => {
+  if (tool === 'select' && selectedObject?.points && visible(selectedObject)) selectedObject.points.forEach((point, index) => {
     $('handles').append(element('circle', { cx: point[0], cy: point[1], r: 6 / z, fill: '#ffffff',
       stroke: colorOf(selectedObject), 'stroke-width': 2 / z, 'data-vertex': index, 'data-object': selectedObject.id }));
   });
@@ -425,7 +479,7 @@ function renderList() {
     button.addEventListener('click', () => { selected = item.id; render(); }); list.append(button);
   }
   if (!list.children.length) { const empty = document.createElement('p'); empty.className = 'muted empty-list';
-    empty.textContent = query ? '没有匹配的标注。' : '当前难度暂无标注。可切换难度，或选择左侧类型开始标注。'; list.append(empty); }
+    empty.textContent = query ? '没有匹配的标注。' : '当前筛选下暂无标注。可调整难度或类型开关，或选择左侧类型开始标注。'; list.append(empty); }
 }
 function renderProperties() {
   const item = selectedItem();
@@ -633,6 +687,12 @@ $('add-vertex').addEventListener('click', () => {
     const a = item.points[index - 1], b = item.points[index % item.points.length];
     item.points.splice(index, 0, bounded([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2])); });
 });
+for (const [id, offset] of [['previous-chapter', -1], ['next-chapter', 1]]) {
+  $(id).addEventListener('click', () => {
+    const target = adjacentChapter(offset);
+    if (target) openMap(target.id);
+  });
+}
 $('map-select').addEventListener('change', () => openMap($('map-select').value));
 $('refresh-maps').addEventListener('click', () => refreshMaps());
 $('reload').addEventListener('click', () => current && openMap(current.id));
@@ -724,4 +784,12 @@ window.addEventListener('blur', () => { space = false; if (gesture) cancelDraft(
 window.addEventListener('beforeunload', event => { if (dirty() || draft.length) { event.preventDefault(); event.returnValue = ''; } });
 new ResizeObserver(() => { if (current) renderGeometry(); }).observe($('stage'));
 for (const [key, settings] of Object.entries(categories)) $('new-category').add(new Option(settings.name, key));
+for (const [category, name] of [...Object.entries(categories).map(([key, settings]) => [key, settings.name]),
+  ['legacy', '旧标注（未分类）']]) {
+  const label = document.createElement('label'); label.className = 'check';
+  const input = document.createElement('input'); input.type = 'checkbox'; input.checked = true;
+  input.dataset.category = category;
+  input.addEventListener('change', () => setCategoryVisibility(category, input.checked));
+  label.append(input, document.createTextNode(name)); $('annotation-filters').append(label);
+}
 syncCategory(); setTool('select'); refreshMaps(true);
