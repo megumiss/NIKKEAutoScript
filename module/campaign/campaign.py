@@ -544,10 +544,11 @@ class Campaign(ModuleBase):
         场景切换中断章节会话时停止旧坐标输入；同章返回保留事实、EX 避让与路线失败历史，
         真正换章或地图版本变化才新建运行状态。各章通过循环接续，不递归调用任务入口。
         业务异常最终终止时每次任务最多返回主页并重新进入一次，同章仍保留事实与失败历史。
-        用户取消、窗口及驱动安全异常不追加输入；返回主页失败或重启后再次异常交人工。
+        战败重试耗尽的 BattleFailed 直接交人工，不返回主页重启；用户取消、窗口及驱动安全异常不追加输入。
+        返回主页失败或重启后再次业务异常交人工。
         页面未知不盲点，资源与设备准备不重复，正常结束及收集品提示不会触发异常重启。
         """
-        from module.campaign.execution import CampaignExecutor
+        from module.campaign.execution import BattleFailed, CampaignExecutor
         from module.campaign.noncombat import CampaignSceneController, SceneRequired
         from module.campaign.scene_session import CampaignSceneSession
         from module.campaign.session import CampaignSession
@@ -630,7 +631,7 @@ class Campaign(ModuleBase):
                     except SceneRequired as exc:
                         self.last_snapshot = None
                         logger.info(f'章节准备期间页面已变化，交还上层场景流程：{exc}')
-                except (WindowChanged, OSError, cv2.error):
+                except (BattleFailed, WindowChanged, OSError, cv2.error):
                     raise
                 except (RequestHumanTakeover, RuntimeError, ValueError) as exc:
                     if home_restarts >= CAMPAIGN_HOME_RESTART_LIMIT:
