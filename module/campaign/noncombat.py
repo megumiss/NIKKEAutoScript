@@ -23,6 +23,13 @@ ARK_NOTICE_DELAY = 5.
 ARK_NOTICE_CLICK_OFFSET = (-40., 65.)
 # 指挥中心蓝色感叹号位于底部卡片右上角，偏移只用于点击卡片内部。
 OUTPOST_NOTICE_CLICK_OFFSET = (-65., 40.)
+# 弹窗感叹号位于进入按钮右上角，偏移使落点避开图标并保持在按钮中央。
+OUTPOST_ENTRY_CLICK_OFFSET = (-100., 35.)
+# 电梯感叹号位于入口图标右上角，落点偏移到两扇门的中央。
+OUTPOST_ELEVATOR_CLICK_OFFSET = (-35., 30.)
+DISABLED_BATTLE_MAX_SATURATION = 30
+DISABLED_BATTLE_MAX_VALUE = 180
+DISABLED_BATTLE_NEUTRAL_RATIO = .9
 CHAPTER_LIST_ROI = (630, 80, 1145, 920)
 CHAPTER_LIST_BRIGHT_RATIO = .35
 CHAPTER_OCR_THRESHOLD = .7
@@ -33,6 +40,9 @@ CHAPTER_CLOSE_POINT = (1098, 120)
 TEMPLATES = {
     'chapter_clear': ((680, 340, 1090, 440), .9),
     'chapter_redirect': ((650, 390, 1130, 510), .85),
+    'battle_disabled': ((910, 870, 1160, 970), .9),
+    'story_redirect': ((800, 530, 950, 595), .9),
+    'story_redirect_close': ((1045, 385, 1110, 445), .9),
     'chapter_list': ((630, 80, 860, 150), .9),
     'gift_check': ((740, 860, 1030, 980), .85),
     'gift_confirm': ((630, 390, 1150, 510), .85),
@@ -40,8 +50,11 @@ TEMPLATES = {
     'ark_check': ((0, 0, 150, 90), .9),
     'guide_arrow': ((1680, 60, 1776, 150), .9),
     'ark_notice': ((800, 300, 1040, 550), .7),
+    'command_center_check': ((0, 0, 150, 90), .9),
     'outpost_check': ((0, 0, 150, 90), .9),
     'outpost_notice': ((850, 755, 1000, 855), .7),
+    'outpost_entry_notice': ((1030, 870, 1140, 940), .7),
+    'outpost_elevator_notice': ((830, 870, 925, 945), .7),
 }
 
 
@@ -49,7 +62,8 @@ def load_templates():
     """读取全部非战斗模板；缺文件时直接失败，避免静默退化为固定坐标点击。"""
     templates = {}
     for name in TEMPLATES:
-        filename = 'ark_notice' if name == 'outpost_notice' else name
+        filename = 'ark_notice' if name in (
+            'outpost_notice', 'outpost_entry_notice', 'outpost_elevator_notice') else name
         image = cv2.imread(str(ASSETS / f'{filename}.png'))
         if image is None:
             raise FileNotFoundError(ASSETS / f'{filename}.png')
@@ -58,7 +72,10 @@ def load_templates():
 
 
 def locate(field, templates, name):
-    """在指定客户区 ROI 中定位模板，返回匹配分数及模板中心；输入为 1776×999 BGR 图像。"""
+    """在指定客户区 ROI 中定位模板，返回匹配分数及模板中心；输入为 1776×999 BGR 图像。
+
+    灰色锁定战斗按钮还要求匹配区域至少 90% 为低饱和暗色，防止蓝色可用按钮的同形文字通过模板门限。
+    """
     template = templates[name]
     (x1, y1, x2, y2), threshold = TEMPLATES[name]
     region = field[y1:y2, x1:x2]
@@ -70,6 +87,12 @@ def locate(field, templates, name):
     _, score, _, point = cv2.minMaxLoc(cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED))
     height, width = template.shape[:2]
     center = [x1 + point[0] + width / 2, y1 + point[1] + height / 2]
+    if name == 'battle_disabled' and score >= threshold:
+        matched = region[point[1]:point[1] + height, point[0]:point[0] + width]
+        hsv = cv2.cvtColor(matched, cv2.COLOR_BGR2HSV)
+        neutral = (hsv[:, :, 1] <= DISABLED_BATTLE_MAX_SATURATION) & (hsv[:, :, 2] <= DISABLED_BATTLE_MAX_VALUE)
+        if neutral.mean() < DISABLED_BATTLE_NEUTRAL_RATIO:
+            return float(score), None
     return float(score), center if score >= threshold else None
 
 
@@ -168,9 +191,11 @@ class SceneRequired(RuntimeError):
 class CampaignSceneController:
     """任务上层的场景入口与换章状态机，不依赖已确认章节或小队位置。
 
-    启动允许剧情、主页、方舟、章节列表、战斗和结算；确认野外身份后三帧一致才建立章节会话。
-    有旧章节时仍以 MISSION CLEAR 触发严格的下一章约束。未知页面只匹配现有返回主页控件，
-    没有可靠按钮则有界等待；不靠猜测坐标点击，不把主页引导直接视为章节结束。
+    启动允许剧情、主页、方舟、前哨基地、指挥中心、章节列表、战斗和结算；
+    确认野外身份后三帧一致才建立章节会话，指挥中心确认后按现有主页按钮返回主界面。
+    有旧章节时仍以 MISSION CLEAR 触发严格的下一章约束。正常入口与换章遇到未知页面时有界等待，
+    仅异常恢复模式匹配未知页面的返回主页控件，避免页面标题尚未显示时中断引导。
+    不靠猜测坐标点击，不把主页引导直接视为章节结束。
     """
 
     def __init__(self, session, chapter=None):
@@ -269,7 +294,8 @@ class CampaignSceneController:
         """仅检测章节会话是否应交还上层，不在导航输入闸门中执行页面点击。
 
         MISSION CLEAR 优先于旧身份 OCR，普通剧情、主页、方舟或未知非战斗页面也交上层；
-        战斗及准备弹窗仍由章节执行层接管以保留敌人归属。展开小地图属于野外，不触发场景切换。
+        可进入的战斗准备弹窗仍由章节执行层接管以保留敌人归属；灰色锁定按钮及主线直接前往弹窗
+        在野外判据之前交上层处理，避免背景小地图可见时放行导航输入。展开小地图本身不触发场景切换。
         known_only 供战斗轮询使用：未识别的加载帧保留在原战斗接管中，只有可靠页面证据才交上层。
         """
         if self.active or self.start_if_complete(field):
@@ -277,13 +303,16 @@ class CampaignSceneController:
         if battle.story_skip(field)[1] is not None:
             self.activate()
             raise SceneRequired('剧情页面交由上层场景接管。')
+        if any(locate(field, self.templates, name)[1] is not None for name in ('battle_disabled', 'story_redirect')):
+            self.activate()
+            raise SceneRequired('锁定战斗或主线引导弹窗交由上层场景接管。')
         if battle.field_visible(field) or self.session.owner.minimap_expanded(field):
             return
         kind = battle.battle_state(field)['state']
         if kind in ('entry', 'battle', 'victory', 'defeat', 'continue'):
             return
         if known_only and not any(locate(field, self.templates, name)[1] is not None for name in (
-                'main_check', 'ark_check', 'outpost_check', 'gift_check', 'gift_confirm',
+                'main_check', 'ark_check', 'outpost_check', 'command_center_check', 'gift_check', 'gift_confirm',
                 'chapter_redirect', 'chapter_list')):
             return
         self.activate()
@@ -386,9 +415,14 @@ class CampaignSceneController:
         """识别当前客户区并推进一步；返回未接管、页面等待或待连续确认的野外身份。
 
         方舟右上引导点击后等待五秒，仅在中央卡片范围匹配小型感叹号模板，避免点到顶部任务提示。
-        前哨基地只以底部指挥中心的感叹号为锚点点击卡片内部；未命中页面或按钮时重新截图。
+        灰色锁定战斗按钮确认后，仅在关闭控件也通过门限时关闭弹窗；主线弹窗点击已定位的直接前往箭头。
+        异常恢复模式只关闭主线弹窗，不点击直接前往；两类弹窗均优先于背景页面判定。
+        指挥中心标题确认后匹配主页按钮返回主界面，按钮未命中则等待，不点击咨询或回忆入口。
+        前哨基地优先处理指挥中心弹窗进入，再按电梯、指挥中心卡片、右上引导的顺序处理。
+        电梯及进入按钮只在各自范围匹配感叹号并偏移点击中央；异常恢复模式不进入建筑或电梯。
         不识别加载动画或遍历所有菜单；章节 OCR 只在章节列表或野外已确认时调用。
-        未知画面不补固定坐标点击；等待超过五分钟抛出专用换章超时异常，绕过旧章节自动恢复并安全停止。
+        未知画面正常等待，仅异常恢复模式尝试返回主页；不补固定坐标点击。
+        等待超过五分钟抛出专用换章超时异常，绕过旧章节自动恢复并安全停止。
         """
         self.session.check()
         field = self.session.win.client()
@@ -409,6 +443,29 @@ class CampaignSceneController:
             self.handle_story(field)
             return self.wait('story', scores, field)
 
+        disabled_score, disabled_point = locate(field, self.templates, 'battle_disabled')
+        scores['battle_disabled'] = round(disabled_score, 3)
+        if disabled_point is not None:
+            close_score = battle.score(battle.ENTRY_CLOSE_TPL, field[490:560, 1100:1185])
+            scores['battle_disabled_close'] = round(close_score, 3)
+            if close_score >= battle.THRESHOLD:
+                from module.campaign.scene_session import ENTRY_CLOSE_POINT
+                self.tap(ENTRY_CLOSE_POINT, '关闭不可进入的战斗弹窗')
+            return self.wait('battle_disabled', scores, field)
+
+        redirect_score, redirect_point = locate(field, self.templates, 'story_redirect')
+        scores['story_redirect'] = round(redirect_score, 3)
+        if redirect_point is not None:
+            if self.returning_home:
+                close_score, close_point = locate(field, self.templates, 'story_redirect_close')
+                scores['story_redirect_close'] = round(close_score, 3)
+                if close_point is not None:
+                    self.tap(close_point, '异常恢复关闭主线引导弹窗')
+                return self.wait('story_redirect_close', scores, field)
+            if self.tap(redirect_point, '主线引导弹窗直接前往箭头'):
+                self.entry_route_sent = True
+            return self.wait('story_redirect', scores, field)
+
         for name, label in (
                 ('gift_confirm', '礼包关闭确认'),
                 ('gift_check', '关闭礼包'),
@@ -426,6 +483,14 @@ class CampaignSceneController:
                 self.entry_route_sent = True
             return self.wait(name, scores, field)
 
+        center_score, center_point = locate(field, self.templates, 'command_center_check')
+        scores['command_center'] = round(center_score, 3)
+        if center_point is not None:
+            home = self.ui_point(field, GOTO_MAIN, (0, 850, 450, 999))
+            if home is not None:
+                self.tap(home, '指挥中心返回主页')
+            return self.wait('command_center', scores, field)
+
         main_score, main_point = locate(field, self.templates, 'main_check')
         ark_score, ark_point = locate(field, self.templates, 'ark_check')
         arrow_score, arrow_point = locate(field, self.templates, 'guide_arrow')
@@ -433,6 +498,18 @@ class CampaignSceneController:
         outpost_score, outpost_point = locate(field, self.templates, 'outpost_check')
         scores['outpost'] = round(outpost_score, 3)
         if outpost_point is not None and not self.returning_home:
+            entry_score, entry_point = locate(field, self.templates, 'outpost_entry_notice')
+            scores['outpost_entry_notice'] = round(entry_score, 3)
+            if entry_point is not None:
+                click = (np.asarray(entry_point, float) + OUTPOST_ENTRY_CLICK_OFFSET).tolist()
+                self.tap(click, '前哨基地指挥中心弹窗进入按钮')
+                return self.wait('outpost_entry', scores, field)
+            elevator_score, elevator_point = locate(field, self.templates, 'outpost_elevator_notice')
+            scores['outpost_elevator_notice'] = round(elevator_score, 3)
+            if elevator_point is not None:
+                click = (np.asarray(elevator_point, float) + OUTPOST_ELEVATOR_CLICK_OFFSET).tolist()
+                self.tap(click, '前哨基地电梯入口')
+                return self.wait('outpost_elevator', scores, field)
             notice_score, notice_point = locate(field, self.templates, 'outpost_notice')
             scores['outpost_notice'] = round(notice_score, 3)
             if notice_point is not None:
@@ -513,10 +590,11 @@ class CampaignSceneController:
             if point is not None:
                 self.tap(point, '作战选择前往地面')
             return self.wait('campaign_select', scores, field)
-        home = self.ui_point(field, GOTO_MAIN, (0, 850, 450, 999))
-        if home is not None:
-            self.tap(home, '当前页面返回主页')
-            return self.wait('home', scores, field)
+        if self.returning_home:
+            home = self.ui_point(field, GOTO_MAIN, (0, 850, 450, 999))
+            if home is not None:
+                self.tap(home, '当前页面返回主页')
+                return self.wait('home', scores, field)
         return self.wait('transition', scores, field)
 
     def wait(self, state, scores, field):

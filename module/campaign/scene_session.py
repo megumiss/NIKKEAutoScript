@@ -90,6 +90,7 @@ class CampaignBattleActions:
         胜利与升级附加页均只点击本帧已通过门限的 END_FIGHTING 提示；标题先出现而提示
         尚未可见时只返回胜利状态，不发送画面中央点击。
         战前、战后剧情只点击本帧通过门限的 SKIP；沿用 1 秒点击间隔与输入安全闸门。
+        导航会话在准备弹窗与野外／未知帧先检查上层弹窗接管，灰色锁定按钮不得按可进入弹窗输入。
         每次点击的日志都带上当次识别分数与颜色判据的实际读数，便于对着现场截图复盘误判。
         """
         self.check()
@@ -98,7 +99,7 @@ class CampaignBattleActions:
         self.record('battle_state', state=state)
         # 继续与跳过在输入前复核分数，其余判据由状态识别提供；日志缺项显示为「—」。
         kind, scores = state['state'], state.get('scores')
-        if kind in ('unknown', 'field') and hasattr(self, 'reset_navigation'):
+        if kind in ('unknown', 'field', 'entry') and hasattr(self, 'reset_navigation'):
             self.owner.scene_controller.raise_if_needed(field, known_only=True)
         quick = battle.value_text(state.get('quick_ratio'))
         if kind != 'battle':
