@@ -1408,6 +1408,10 @@
     "DebugMode": {
       "name": "Debug mode",
       "help": "Off by default. Save screenshots, events and offline replays for each campaign run to help diagnose issues. Changes apply the next time the task starts.\nSave location (relative to the NKAS folder): log/campaign/<difficulty>_<chapter>/runs/<timestamp>_<random-suffix>/\nAfter the task ends, open index.html in that folder to view the replay."
+    },
+    "MissedEnemyScan": {
+      "name": "Missed-enemy scan before Boss",
+      "help": "Off by default. Check chapter enemy progress and scan unexplored roads in the current area for missed enemies before fighting the Boss. Disabling this extra scan keeps localization, known-enemy priority, route scouting and safety checks. Changes apply the next time the task starts."
     }
   },
   "AutoTower": {

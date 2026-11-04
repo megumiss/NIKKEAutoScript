@@ -4080,6 +4080,10 @@
       "DebugMode": {
         "type": "checkbox",
         "value": false
+      },
+      "MissedEnemyScan": {
+        "type": "checkbox",
+        "value": false
       }
     },
     "Storage": {
@@ -4094,6 +4098,10 @@
   "AutoMainCollectible": {
     "CampaignSettings": {
       "DebugMode": {
+        "type": "checkbox",
+        "value": false
+      },
+      "MissedEnemyScan": {
         "type": "checkbox",
         "value": false
       }

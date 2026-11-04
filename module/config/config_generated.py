@@ -248,6 +248,7 @@ class GeneratedConfig:
 
     # Group `CampaignSettings`
     CampaignSettings_DebugMode = False
+    CampaignSettings_MissedEnemyScan = False
 
     # Group `AutoTower`
     AutoTower_Enable = True

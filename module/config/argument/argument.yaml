@@ -473,6 +473,7 @@ Overclock:
     mode: lines
 CampaignSettings:
   DebugMode: false
+  MissedEnemyScan: false
 AutoTower:
   Enable:
     value: true

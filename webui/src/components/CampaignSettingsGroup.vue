@@ -13,9 +13,9 @@ type Resource = {
   remote: { sha?: string | null; branch?: string | null; version?: string | null; error?: string | null }
 }
 const workspace = useWorkspaceStore()
-const debugField = computed(() => workspace.taskSchema?.groups
+const checkboxFields = computed<Field[]>(() => workspace.taskSchema?.groups
   .find((group: any) => group.key === 'CampaignSettings')?.fields
-  .find((field: Field) => field.key.endsWith('.DebugMode')))
+  .filter((field: Field) => field.widget === 'checkbox') ?? [])
 const resource = ref<Resource | null>(null)
 const error = ref('')
 const collapsed = ref(false)
@@ -83,13 +83,13 @@ onBeforeUnmount(() => window.clearTimeout(timer))
           <button class="btn primary" :disabled="!resource || resource.syncing" @click="sync">{{ resource?.syncing ? t('同步中…') : t('同步资源') }}</button>
         </div>
       </div>
-      <div v-if="debugField" :id="`field-${debugField.key}`" class="field">
+      <div v-for="field in checkboxFields" :id="`field-${field.key}`" :key="field.key" class="field">
         <div class="field-label">
-          <div class="fname">{{ debugField.title }}</div>
-          <div class="fhelp">{{ debugField.help }}</div>
+          <div class="fname">{{ field.title }}</div>
+          <div class="fhelp">{{ field.help }}</div>
         </div>
         <div class="field-control">
-          <label class="switch"><input type="checkbox" :checked="debugField.value" :disabled="debugField.display !== 'show'" :aria-label="debugField.title" @change="workspace.save(debugField, $event)"><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" :checked="field.value" :disabled="field.display !== 'show'" :aria-label="field.title" @change="workspace.save(field, $event)"><span class="slider"></span></label>
         </div>
       </div>
       <p v-if="message" class="resource-error" role="status">{{ message }}</p>

@@ -980,7 +980,8 @@
   },
   "AutoMainStory": {
     "CampaignSettings": {
-      "DebugMode": false
+      "DebugMode": false,
+      "MissedEnemyScan": false
     },
     "Storage": {
       "Storage": {}
@@ -988,7 +989,8 @@
   },
   "AutoMainCollectible": {
     "CampaignSettings": {
-      "DebugMode": false
+      "DebugMode": false,
+      "MissedEnemyScan": false
     },
     "Storage": {
       "Storage": {}

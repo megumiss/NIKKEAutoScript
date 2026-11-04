@@ -605,7 +605,8 @@ class CampaignExecutor:
     def terminal_precheck(self, goal, snapshot):
         """仅在 Boss 前检查遗漏，未就绪时保留目的地并返回 None。
 
-        已知普通敌人始终优先清理；没有已知遗漏时先读章节列表的蓝色敌人进度，Boss 未击败所以
+        遗漏补扫默认关闭；关闭时不读取章节敌人进度或扫描未覆盖区域，但保留已知普通敌人的优先清理。
+        开启后，没有已知遗漏时先读章节列表的蓝色敌人进度，Boss 未击败所以
         已清数加一达到总数即可跳过补扫。进度不足或读取失败再检查未可信覆盖的道路格。补扫或清扫期间
         terminal_continuation 保留 Boss 目的地，完成后从当前小队位置续走，不返回补扫前的位置。
         补扫确认的清怪目标通过 execution_target 保留到下一轮，仍经过原有侦察与导航门禁；
@@ -620,7 +621,8 @@ class CampaignExecutor:
         continuation = dict(goal)
         self.terminal_continuation = continuation
         squad = snapshot['squad']
-        unseen = unobserved_component_cells(self.owner.state, self.owner.cut, squad)
+        scan_enabled = getattr(self.owner.config, 'CampaignSettings_MissedEnemyScan', False)
+        unseen = unobserved_component_cells(self.owner.state, self.owner.cut, squad) if scan_enabled else 0
         progress = None
         if pending or unseen is None or unseen > 0:
             logger.info(f"{goal_brief(continuation)} 前检查区域遗漏：待清普通敌人 {len(pending)} 个，"
@@ -640,7 +642,9 @@ class CampaignExecutor:
                 unseen = unobserved_component_cells(self.owner.state, self.owner.cut, squad)
         ready = not pending and unseen == 0
         self.session.record('terminal_precheck', goal=continuation, ready=ready, progress=progress,
-                            pending_enemies=[enemy['id'] for enemy in pending], unobserved_cells=unseen)
+                            missed_enemy_scan=scan_enabled,
+                            pending_enemies=[enemy['id'] for enemy in pending],
+                            unobserved_cells=unseen if scan_enabled else None)
         if not ready:
             self.terminal_destination = None
             if self.interrupted_goal and self.interrupted_goal['id'] == goal['id']:
@@ -854,7 +858,8 @@ class CampaignExecutor:
         剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、路线停滞、取消
         和战斗失败仍立即停止；路线停滞仅允许按唯一邻近光幕标注新增封锁后重新决策。
         连续恢复尝试有界，完整恢复成功后清零；不设单章总时限或主循环轮数上限。
-        Boss 执行前先核对章节敌人进度，进度不足才补扫当前连通分量；电梯不再触发终局遗漏检查。
+        开启遗漏补扫时，Boss 执行前核对章节敌人进度，进度不足才补扫当前连通分量；默认不执行额外补扫。
+        已知普通敌人及沿途侦察仍保留，电梯不触发终局遗漏检查。
         终局清怪战斗结束后，下一拍先做状态刷新与终局检查；通过后持续保留 Boss 目标直到战斗确认完成，
         不先把 Boss 当成普通最近敌人直接放行。每轮首尾各一行（轮号、已运行时长、累计操作与耗时）：
         整条推图日志因此能按轮切分，把等待时间落到具体的轮上；轮内的观测、侦察、移动、战斗各自另有带耗时的行。
