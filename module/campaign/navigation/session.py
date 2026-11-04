@@ -22,13 +22,13 @@ class NavigationSession:
         return plan_world_move_compact(self, observation, target, enemy_assist=enemy_assist, **options)
 
     def wait_stopped(self):
-        """调用共享停稳检测，等待紧凑地图的道路和小队圆环稳定。
+        """等待紧凑小地图道路连续四帧稳定，返回最后一帧客户区图像。
 
-        无返回值；超时和身份异常向 navigate 传播，阻止在上一段运动未结束时叠加输入。
+        停稳不依赖小队圆环，返回帧供调用方独立定位；超时和身份异常阻止追加移动输入。
         """
         from module.campaign.navigation.camera_navigation import wait_for_squad
 
-        wait_for_squad(self)
+        return wait_for_squad(self)
 
     def finish_view(self):
         """返回紧凑小地图并保存终点，保留人工复核的画面。

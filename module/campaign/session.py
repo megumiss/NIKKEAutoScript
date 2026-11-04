@@ -982,14 +982,23 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             time.sleep(min(.1, max(0, deadline - time.monotonic())))
 
     def wait_stopped(self):
-        """等待小队标记与地图道路停稳；这是移动闭环里占比最大的等待，单独记一行耗时。
+        """按统一道路判据结束等待，再单独检查停稳帧中的小队定位是否可用。
 
-        停稳判据与采样轮数沿用共享实现（见 camera_navigation.wait_for_squad），这里只补日志：
-        没有这一行时，一步移动的耗时只能从相邻两行日志的时间戳里反推。
+        普通移动和机关切镜共用道路停稳检测，不要求圆环连续出现或位置稳定。
+        停稳后只识别一次圆环；不是唯一圆环时抛 SquadOffscreen，不重启等待、不追加移动，
+        机关目标交已有中央光幕确认分支，其余目标交既有失败处理，不能据道路停稳推断到达。
         """
+        from module.campaign.navigation.camera_navigation import SquadOffscreen
+        from module.campaign.vision.frame import frame_inputs
+        from module.campaign.vision.perception import detect_markers
+
         watch = Stopwatch()
-        super().wait_stopped()
-        logger.info(f'停稳等待结束（小队标记与道路都已稳定），耗时 {watch}')
+        field = super().wait_stopped()
+        logger.info(f'停稳等待结束（小地图道路已稳定），耗时 {watch}')
+        players, _ = detect_markers(frame_inputs(field).compact, np.eye(3), mode='compact')
+        if len(players) != 1:
+            raise SquadOffscreen(f'道路已停稳，后续小队定位不可用：本帧圆环数量为 {len(players)}；'
+                                 '不继续等待，交由目标确认或定位恢复。')
 
     def snapshot(self, expanded=False, keep_expanded=False, known_squad=None):
         """取得一拍业务观测；定位失败时有限重试，展开默认收起，也可留给紧接着的侦察。

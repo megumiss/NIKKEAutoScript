@@ -32,12 +32,10 @@ FUSED_IOU = .25
 # 容差 IoU 的膨胀半径（面板像素）：紧凑面板底图投影道路 ~18px、实时道路 ~4px，各膨胀 7px 后
 # 宽度对齐；展开帧场景（宽度基本一致）用同值偏保守但不改变判别方向。
 FUSED_DILATE = 7
-# 机关演出可能把镜头留在小队外；道路停稳后连续 8 秒无有效圆环才交上层回正。
-SQUAD_MISSING_LIMIT = 8
 
 
 class SquadOffscreen(RuntimeError):
-    """小地图道路已经停稳但小队持续离屏，交由当前目标决定回正重扫或普通异常恢复。"""
+    """道路停稳后的单帧小队定位不可用，交由当前目标确认机关或执行既有失败处理。"""
 
 
 def pan_region(drag):
@@ -376,15 +374,17 @@ def plan_world_move(session, observation, target, max_pans=8, anchor=None):
 
 
 def wait_for_squad(session):
-    """直接采样实时紧凑地图，四帧道路与小队圆环都稳定后返回。
+    """采样紧凑小地图，连续四帧道路稳定后返回最后一帧客户区图像。
 
-    道路连续四帧稳定后，圆环仍连续缺失 SQUAD_MISSING_LIMIT 帧才抛错，由上层回正并重新定位；
-    道路变化或圆环重新可见都会清零缺失计数，移动和镜头演出期间不会触发。最多采样 120 轮。
+    普通移动与机关切镜使用同一判据，不读取小队圆环，也不将停稳视为到达或机关触发证据。
+    四帧共同有效区域内至少保留 200 个道路像素，后续帧相对首帧的道路差异比例均小于 0.005。
+    道路提取失败清空连续采样，最多采样 120 轮；取消、身份和收集提示仍经过原有闸门。
+    返回后由调用方独立定位小队或确认光幕，超时不追加移动点击。
     """
-    from module.campaign.vision.perception import compact_road_masks, minimap_masks
+    from module.campaign.vision.perception import compact_road_masks
 
     goto.map_close(session.win)
-    samples, roads, missing = [], [], 0
+    roads = []
     for index in range(120):
         session.pause(1)
         session.check()
@@ -392,37 +392,22 @@ def wait_for_squad(session):
         session.identity(field)
         session.check_collectible(field)
         if index % 10 == 0:
-            session.emit(state='moving', message='正在等待小队标记与地图道路停稳…', wait_samples=index + 1)
+            session.emit(state='moving', message='正在等待小地图道路停稳…', wait_samples=index + 1)
         try:
             _, road, valid = compact_road_masks(field)
         except ValueError:
-            samples, roads, missing = [], [], 0
-            session.emit(wait_player_compact=None)
+            roads = []
             continue
         roads = [*roads, (road, valid)][-4:]
-        road_stable = False
-        if len(roads) == 4:
-            common = np.logical_and.reduce([s[1] > 0 for s in roads])
-            road_stable = (np.count_nonzero((roads[0][0] > 0) & common) >= 200
-                           and all(np.mean((s[0] != roads[0][0])[common]) < .005 for s in roads[1:]))
-        try:
-            _, road, valid, player = minimap_masks(field)
-        except ValueError:
-            samples = []
-            missing = missing + 1 if road_stable else 0
-            session.emit(wait_player_compact=None)
-            if missing >= SQUAD_MISSING_LIMIT:
-                raise SquadOffscreen(f'小地图道路已停稳，但连续 {missing} 帧未读到小队圆环；'
-                                     '停止等待并请求回正重新定位。') from None
+        if len(roads) < 4:
             continue
-        missing = 0
-        samples = [*samples, (road, valid, player)][-4:]
-        session.emit(wait_player_compact=player.tolist())
-        if len(samples) < 4 or np.max(np.ptp([s[2] for s in samples], axis=0)) > 6 or not road_stable:
+        common = np.logical_and.reduce([sample[1] > 0 for sample in roads])
+        if (np.count_nonzero((roads[0][0] > 0) & common) < 200
+                or any(np.mean((sample[0] != roads[0][0])[common]) >= .005 for sample in roads[1:])):
             continue
         session.preview(field)
-        return
-    raise RuntimeError('等待小队停稳超时，未追加移动点击。')
+        return field
+    raise RuntimeError('等待小地图道路停稳超时，未追加移动点击。')
 
 
 def window_session(win, localizer, evidence, tag, folder=None, pause=None):
