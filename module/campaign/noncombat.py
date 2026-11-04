@@ -74,7 +74,7 @@ def load_templates():
 def locate(field, templates, name):
     """在指定客户区 ROI 中定位模板，返回匹配分数及模板中心；输入为 1776×999 BGR 图像。
 
-    灰色锁定战斗按钮还要求匹配区域至少 90% 为低饱和暗色，防止蓝色可用按钮的同形文字通过模板门限。
+    灰色战斗按钮还要求匹配区域至少 90% 为低饱和暗色，避免蓝色按钮被交给此场景分支。
     """
     template = templates[name]
     (x1, y1, x2, y2), threshold = TEMPLATES[name]
@@ -294,7 +294,7 @@ class CampaignSceneController:
         """仅检测章节会话是否应交还上层，不在导航输入闸门中执行页面点击。
 
         MISSION CLEAR 优先于旧身份 OCR，普通剧情、主页、方舟或未知非战斗页面也交上层；
-        可进入的战斗准备弹窗仍由章节执行层接管以保留敌人归属；灰色锁定按钮及主线直接前往弹窗
+        普通蓝色战斗准备弹窗仍由章节执行层接管以保留敌人归属；灰色战斗按钮及主线直接前往弹窗
         在野外判据之前交上层处理，避免背景小地图可见时放行导航输入。展开小地图本身不触发场景切换。
         known_only 供战斗轮询使用：未识别的加载帧保留在原战斗接管中，只有可靠页面证据才交上层。
         """
@@ -305,7 +305,7 @@ class CampaignSceneController:
             raise SceneRequired('剧情页面交由上层场景接管。')
         if any(locate(field, self.templates, name)[1] is not None for name in ('battle_disabled', 'story_redirect')):
             self.activate()
-            raise SceneRequired('锁定战斗或主线引导弹窗交由上层场景接管。')
+            raise SceneRequired('灰色战斗按钮或主线引导弹窗交由上层场景接管。')
         if battle.field_visible(field) or self.session.owner.minimap_expanded(field):
             return
         kind = battle.battle_state(field)['state']
@@ -415,8 +415,8 @@ class CampaignSceneController:
         """识别当前客户区并推进一步；返回未接管、页面等待或待连续确认的野外身份。
 
         方舟右上引导点击后等待五秒，仅在中央卡片范围匹配小型感叹号模板，避免点到顶部任务提示。
-        灰色锁定战斗按钮确认后，仅在关闭控件也通过门限时关闭弹窗；主线弹窗点击已定位的直接前往箭头。
-        异常恢复模式只关闭主线弹窗，不点击直接前往；两类弹窗均优先于背景页面判定。
+        灰色战斗按钮确认后点击本帧按钮匹配中心；主线弹窗点击已定位的直接前往箭头。
+        异常恢复模式只关闭这两类弹窗，不点击进入战斗或直接前往；弹窗均优先于背景页面判定。
         指挥中心标题确认后匹配主页按钮返回主界面，按钮未命中则等待，不点击咨询或回忆入口。
         前哨基地优先处理指挥中心弹窗进入，再按电梯、指挥中心卡片、右上引导的顺序处理。
         电梯及进入按钮只在各自范围匹配感叹号并偏移点击中央；异常恢复模式不进入建筑或电梯。
@@ -446,11 +446,14 @@ class CampaignSceneController:
         disabled_score, disabled_point = locate(field, self.templates, 'battle_disabled')
         scores['battle_disabled'] = round(disabled_score, 3)
         if disabled_point is not None:
-            close_score = battle.score(battle.ENTRY_CLOSE_TPL, field[490:560, 1100:1185])
-            scores['battle_disabled_close'] = round(close_score, 3)
-            if close_score >= battle.THRESHOLD:
-                from module.campaign.scene_session import ENTRY_CLOSE_POINT
-                self.tap(ENTRY_CLOSE_POINT, '关闭不可进入的战斗弹窗')
+            if self.returning_home:
+                close_score = battle.score(battle.ENTRY_CLOSE_TPL, field[490:560, 1100:1185])
+                scores['battle_disabled_close'] = round(close_score, 3)
+                if close_score >= battle.THRESHOLD:
+                    from module.campaign.scene_session import ENTRY_CLOSE_POINT
+                    self.tap(ENTRY_CLOSE_POINT, '异常恢复关闭灰色战斗按钮弹窗')
+            else:
+                self.tap(disabled_point, '灰色进入战斗按钮')
             return self.wait('battle_disabled', scores, field)
 
         redirect_score, redirect_point = locate(field, self.templates, 'story_redirect')
