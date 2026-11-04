@@ -190,7 +190,7 @@ def locate_story_target(session, squad):
     不超过 12%、视口偏差不超过 12 地图像素、脚圈偏差不超过 15 客户区像素，并通过道路归属校验；
     居中后优先关联两帧同位置唯一小地图敌人；运动匹配和居中匹配均可提供 EX 误分类纠正证据。
     无小地图敌人才用地面位置兜底，类型冲突或已确认 EX 不能降级为无类型地面目的地。
-    未确认时记录失败冷却，不吸附远离道路的点，保留普通敌人推进策略。
+    未确认时记录失败次数，不吸附远离道路的点，保留普通敌人推进策略。
     """
     state = session.owner.state
     session.begin_target('story_location')
@@ -230,7 +230,7 @@ def locate_story_target(session, squad):
                     raise ValueError('主线居中位置位于已确认 EX，禁止作为地面目的地')
                 state.route_goal = dict(kind='story', id='story-marker', position=position,
                                         reason='main_story_location')
-                state.cooldowns.pop('story-location', None)
+                state.target_failures.pop('story-location', None)
                 logger.info(f'主线地面路程目标已通过两帧居中与道路校验：'
                             f'底图位置 {np.round(position, 1).tolist()}，镜头平移 {attempt} 次。')
                 return changed
@@ -277,6 +277,6 @@ def locate_story_target(session, squad):
             before = after
     except (ValueError, cv2.error, np.linalg.LinAlgError) as exc:
         logger.info(f'主线标记对应关系未确认：{exc}。')
-    state.penalize('story-location')
-    logger.info('主线标记未能确认敌人或居中地面位置，已记录失败冷却，保留普通敌人推进策略。')
+    state.record_failure('story-location')
+    logger.info('主线标记未能确认敌人或居中地面位置，已记录一次失败，保留普通敌人推进策略。')
     return changed

@@ -383,7 +383,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.active_movement_progress = self.movement_progress[key]
 
     def complete_move_target(self, goal):
-        """真实到点或战斗胜利后释放该目标的路线快照，不把失败、冷却或切换用途当作完成。
+        """真实到点或战斗胜利后释放该目标的路线快照，不把失败或切换用途当作完成。
 
         完成记录由执行层的既有成功分支确认；未完成目标仍保留失败次数与历史最优值供续行。
         及时释放道路数组，避免同章清理大量敌人后为已完成目标继续保存多份道路快照。
@@ -1269,7 +1269,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """只配准展开侦察视口，不检测或约束小队圆环，独立道路配准通过后才采用本帧敌人。
 
         成功返回 (panel, report)；失败返回 None，原因与面板道路占比存 self.scout_failure，
-        由调用方按类型降级（冷却或前沿标记），不再直接终止侦察与目标选择。
+        由调用方按类型降级（记录失败或前沿标记），不再直接终止侦察与目标选择。
         稳定性检查失败先原地换帧复验（最多 STABLE_RESAMPLES 次），仍不稳才小幅平移重试：
         长拖后的惯性滚动往往换一帧就稳，直接平移会丢掉本来可用的视野。
         面板道路占比低于 FRONTIER_BLUE_MAX 说明视口已出已探索区域，平移重试无益，立即返回。
@@ -1358,7 +1358,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         拖动是闭环的：每拖一次都重新配准，用实测视野换算剩余偏移，所以拖动有惯性或比例不准都能收敛；
         默认按道路整格覆盖停止；check_enemies 要求安全敌人覆盖，enemy_id 还要求该历史敌人本拍已复核，
         不能因过去看过道路就停止。地图边缘拖不动时最多拖 SCOUT_DRAGS 次，
-        落点没进视野由调用方记冷却；配准失败只放弃本屏（见 scout_locate），不丢掉途中已记录的观测。
+        落点没进视野由调用方记录失败；配准失败只放弃本屏（见 scout_locate），不丢掉途中已记录的观测。
         拖动经输入代理发送，与移动输入同样先核对窗口、章节与停止。
         """
         located = self.scout_locate(tag)

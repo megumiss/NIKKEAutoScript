@@ -33,7 +33,7 @@ def boss_ready(state):
     """当前是否允许执行 Boss：没有可处理的普通敌人才放行。
 
     只依据小地图敌人类型和运行状态，不要求普通模式的主线菱形，因此困难模式同样适用。
-    EX 不参与限制；冷却中的普通敌人暂不阻塞 Boss，避免失败冷却后无目标可执行。
+    EX 不参与限制；累计失败到上限的普通敌人不进入可处理候选。
     """
     return not any(enemy['kind'] == 'normal' for enemy in state.pending_enemies())
 
@@ -59,7 +59,7 @@ def same_screen_mechanism(snapshot, item):
 
 
 def refresh_route(state, chart, snapshot, cut):
-    """保持未完成路程目标，只有完成、失败冷却或机关抢占主线时更换。
+    """保持未完成路程目标，只有完成、失败到上限或机关抢占主线时更换。
 
     已知开启和导航已到点的机关均排除；新机关路程只从当前帧可见的 off 检测发起，
     不设小队或敌人距离门槛，但必须在切开封锁后的道路上可达。已发起的路程跨屏继续。
@@ -72,7 +72,7 @@ def refresh_route(state, chart, snapshot, cut):
         done = (state.mechanisms.get(current['id'], {}).get('state') == 'on'
                 if current['kind'] == 'mechanism'
                 else False if story_point else state.enemies.get(current['id'], {}).get('status') != 'pending')
-        if done or state.cooling(current['id']):
+        if done or state.is_unavailable(current['id']):
             current = None
         elif current['kind'] == 'story' and not story_point:
             enemy = state.enemies[current['id']]
@@ -88,7 +88,7 @@ def refresh_route(state, chart, snapshot, cut):
     best = None
     for item in candidates:
         record = state.mechanisms.get(item['id'], {})
-        if record.get('state') == 'on' or state.cooling(item['id']) or not same_screen_mechanism(snapshot, item):
+        if record.get('state') == 'on' or state.is_unavailable(item['id']) or not same_screen_mechanism(snapshot, item):
             continue
         route = route_path(cut, squad, item['position'])
         if route is None:
@@ -102,7 +102,7 @@ def refresh_route(state, chart, snapshot, cut):
     if current is None and state.story_target:
         enemy = state.enemies.get(state.story_target)
         if (enemy and enemy['kind'] in COMBAT_ENEMY_KINDS and enemy['status'] == 'pending'
-                and not enemy.get('classification_ambiguous', False) and not state.cooling(enemy['id'])):
+                and not enemy.get('classification_ambiguous', False) and not state.is_unavailable(enemy['id'])):
             current = dict(kind='story', id=enemy['id'], position=enemy['position'],
                            enemy_kind=enemy['kind'], reason='main_story_marker')
     state.route_goal = current
@@ -160,7 +160,7 @@ def route_enemy_candidates(cut, squad, target, path, distances, enemies):
 
     仅接受敌人所在道路截面与 A* 路径相交、且到敌人与目的地都有可行道路的记录。
     道路边界决定截面范围，实际路程只排序，不使用固定走廊半径或额外绕行门限。
-    执行目标和历史线索复核共用此几何条件；调用方负责类型、确认状态与冷却检查。
+    执行目标和历史线索复核共用此几何条件；调用方负责类型、确认状态与失败上限检查。
     """
     candidates = []
     home = cut.component(squad)
@@ -182,7 +182,7 @@ def route_enemy(state, cut, squad, target, path, distances):
     """选路程前方的第一个普通敌人或 Boss，忽略别条支路上的全局最近敌人。
 
     候选所在连续道路截面必须与实际路径相交；不因道路较宽或敌人在路径起点后方就按距离排除。
-    截面遇到背景、墙或光幕立即停止，小队分量为零时仍以 A* 复核。冷却敌人返回明确暂停目标。
+    截面遇到背景、墙或光幕立即停止，小队分量为零时仍以 A* 复核。失败到上限的敌人返回明确暂停目标。
     仍有可处理普通敌人时 Boss 被跳过，主线路径不能绕过 boss_ready 门禁。
     """
     enemies = [enemy for enemy in state.confirmed_enemies()
@@ -192,7 +192,7 @@ def route_enemy(state, cut, squad, target, path, distances):
     if not candidates:
         return None
     distance, enemy = min(candidates, key=lambda pair: pair[0])
-    if enemy['status'] != 'pending' or state.cooling(enemy['id']):
+    if enemy['status'] != 'pending' or state.is_unavailable(enemy['id']):
         return dict(kind='none', reason='route_enemy_unavailable', for_target=enemy['id'])
     return dict(kind='enemy', id=enemy['id'], position=enemy['position'], enemy_kind=enemy['kind'],
                 distance=round(distance, 1), reason='enemy_on_route',
@@ -219,7 +219,7 @@ def route_action(state, cut, squad, destination, visible=False):
         index = max(1, int(np.searchsorted(distances, ADVANCE_DISTANCE, side='right')) - 1)
         point = path[min(index, len(path) - 1)]
         identifier = f"advance-{destination['id']}-{int(point[0])}-{int(point[1])}"
-        if state.cooling(identifier):
+        if state.is_unavailable(identifier):
             return dict(kind='none', reason='route_step_unavailable', for_target=destination['id'])
         return dict(kind='advance', id=identifier, position=point.tolist(), distance=round(float(distances[index]), 1),
                     reason='advance_on_route', for_target=destination['id'])

@@ -74,7 +74,7 @@ def mechanism_goal(state, chart, cut, squad, block, target):
         return None
     candidates = [item for item in candidates if not state.tried_for(item['id'], block['id'])
                   and state.mechanisms.get(item['id'], {}).get('state') != 'on'
-                  and not state.cooling(item['id']) and cut.component(item['position']) == home]
+                  and not state.is_unavailable(item['id']) and cut.component(item['position']) == home]
     candidates.sort(key=lambda item: np.linalg.norm(np.asarray(item['position']) - squad))
     best = None
     for item in candidates[:8]:
@@ -88,9 +88,9 @@ def mechanism_goal(state, chart, cut, squad, block, target):
 
 
 def review_goal(state, cut, squad, identifier, target=None):
-    """为待验证封锁给出同侧安全站位；冷却中的复核不再次派出。"""
+    """为待验证封锁给出同侧安全站位；累计失败到上限的复核不再次派出。"""
     record = state.blocks.get(identifier)
-    if record is None or record['status'] == 'cleared' or state.cooling(f'review-{identifier}'):
+    if record is None or record['status'] == 'cleared' or state.is_unavailable(f'review-{identifier}'):
         return None
     point = cut.standoff(record, squad)
     if point is None:

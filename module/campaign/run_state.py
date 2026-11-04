@@ -31,9 +31,8 @@ CURTAIN_MATCH_RADIUS = 48.
 # 判「它该出现在视野里却没检到」时要求封锁点离面板边界的余量：边界附近的检测不可靠，
 # 贴边的一帧不足以断定光幕已消失。
 BLOCK_VISIBLE_MARGIN = 24.
-# 同一目标累计失败到这个次数，本次任务就不再选它（敌人同时标为暂时走不到）；冷却期按决策拍计。
+# 同一目标累计失败到这个次数，本次任务就不再选它；未到上限时下一次有效观测可立即重试。
 MAX_FAILURES = 3
-COOLDOWN_TICKS = 5
 # 暂不可扫格的解除距离：小队走近到底图像素内，游戏渲染与配准条件可能已变化，恢复可侦察。
 UNSCOUTABLE_REARM = 150.
 
@@ -127,9 +126,9 @@ class RunState:
         self.confirmed_ex_positions = []
         self.pending_reviews = {}
         self.transfers = {}
-        self.cooldowns = {}
+        self.target_failures = {}
         # 暂不可扫的侦察格：cell_id → 标记时的小队底图坐标。配准失败说明从当前距离看不清
-        # （探索前沿无渲染内容，或走廊过细产生歧义），既不占失败冷却也不阻塞出发，
+        # （探索前沿无渲染内容，或走廊过细产生歧义），既不占失败次数也不阻塞出发，
         # 小队走近后恢复可扫。
         self.unscoutable = {}
         shape = (int(np.ceil(self.size[1] / OBSERVED_CELL)), int(np.ceil(self.size[0] / OBSERVED_CELL)))
@@ -149,7 +148,7 @@ class RunState:
         屏障只在紧凑帧更新——展开面板的投影链与屏障标定不同源，展开帧的落点会整体偏，
         所以展开帧只用来补敌人与已观测区域。
         advance 为假时只并入观测、不推进决策拍：移动闭环每走一步都要观测一次，同一拍内还有
-        补视野与复核帧，这些帧都推进的话，冷却会在下一个目标走到一半时就提前耗完。
+        补视野与复核帧，这些帧不代表新一轮决策，不能使敌人记忆提前过期。
         """
         if advance:
             self.tick += 1
@@ -483,12 +482,12 @@ class RunState:
                 and bool(self.enemy_observed[row, column]))
 
     def pending_enemies(self):
-        """可直接执行的敌人：本拍已确认或独立绑定，且待清、不在冷却中。
+        """可直接执行的敌人：本拍已确认或独立绑定，且待清、未达失败上限。
 
         历史位置不进入战斗候选；沿途 enemy_hints 由侦察复核，只有重新检出后才能参与战斗选择。
         """
         return [record for record in self.confirmed_enemies()
-                if record['status'] == 'pending' and not self.cooling(record['id'])]
+                if record['status'] == 'pending' and not self.is_unavailable(record['id'])]
 
     def remember_story_target(self, position, kind='normal', ex_matched=False):
         """把已通过两帧身份验证的主线敌人并入记忆，返回稳定编号；存在歧义或已清除时不覆盖。
@@ -527,7 +526,7 @@ class RunState:
             nearby[0].update(kind='boss', story_boss_verified=True, confirmed_at=self.tick, reviewed_at=None)
         nearby[0]['position'] = position.tolist()
         self.story_target = nearby[0]['id']
-        self.cooldowns.pop('story-location', None)
+        self.target_failures.pop('story-location', None)
         return self.story_target
 
     def confirm_ex_target(self, identifier):
@@ -624,33 +623,30 @@ class RunState:
         return (leg['connection'], *ends)
 
     def transfer_available(self, leg):
-        """失败航段冷却后可重试，累计三次失败后本次任务不再使用该方向。"""
+        """累计三次失败后本次任务禁用该方向，未到上限时不延迟重试。"""
         record = self.transfers.get(self.transfer_key(leg))
-        return record is None or (record['failures'] < MAX_FAILURES and self.tick >= record['until'])
+        return record is None or record['failures'] < MAX_FAILURES
 
     def transfer_failed(self, leg):
-        """回写电梯航段失败与冷却；调用方随后重新规划，不把传送边当普通道路。"""
+        """记录有向电梯航段失败，只在累计失败达到上限后禁用，不影响反向航段。"""
         key = self.transfer_key(leg)
-        record = self.transfers.setdefault(key, {'failures': 0, 'until': 0, 'status': 'available'})
+        record = self.transfers.setdefault(key, {'failures': 0, 'status': 'available'})
         record['failures'] += 1
-        record['until'] = self.tick + COOLDOWN_TICKS
-        record['status'] = 'unavailable'
+        record['status'] = 'unavailable' if record['failures'] >= MAX_FAILURES else 'available'
         return record
 
     def transfer_succeeded(self, leg):
         """只有共享闭环连续两次确认出口后才清掉该航段的失败记录。"""
         self.transfers.pop(self.transfer_key(leg), None)
 
-    def penalize(self, identifier, failure=True):
-        """给目标记一次失败并进入冷却；失败到上限的敌人标为暂时走不到。
+    def record_failure(self, identifier):
+        """给目标记录一次失败，未到上限时可立即重试，达到上限的敌人标为暂时不可达。
 
-        failure 为假时只冷却不计失败：用于「做成了但短期内不该再派」的情形（如复核确认光幕仍在），
-        否则它会占掉失败上限，让后续真正需要的复核被禁用。
+        只累计失败次数，不以决策轮数或时间延迟目标选择；成功观测及到点不调用本方法。
+        非敌人目标由 is_unavailable 统一检查累计失败上限，保留原有无限重试保护。
         """
-        record = self.cooldowns.setdefault(identifier, {'failures': 0, 'until': 0})
-        if failure:
-            record['failures'] += 1
-        record['until'] = self.tick + COOLDOWN_TICKS
+        record = self.target_failures.setdefault(identifier, {'failures': 0})
+        record['failures'] += 1
         enemy = self.enemies.get(identifier)
         if enemy is not None:
             enemy['failures'] = record['failures']
@@ -659,15 +655,15 @@ class RunState:
                 logger.warning(f"目标 {identifier} 连续 {record['failures']} 次未能到达，标为暂时不可达。")
         return record
 
-    def cooling(self, identifier):
-        """目标是否暂不可选：还在冷却期内，或累计失败已到上限（本次任务不再选）。"""
-        record = self.cooldowns.get(identifier)
-        return record is not None and (self.tick < record['until'] or record['failures'] >= MAX_FAILURES)
+    def is_unavailable(self, identifier):
+        """仅当累计失败达到上限时禁止目标参与选择，决策轮数和等待时间不影响结果。"""
+        record = self.target_failures.get(identifier)
+        return record is not None and record['failures'] >= MAX_FAILURES
 
     def mark_unscoutable(self, identifier, squad):
         """把侦察格标为暂不可扫：当前距离上配准不出可信视野，原因多为探索前沿或走廊歧义。
 
-        只记标记时的小队位置，不计失败冷却；is_unscoutable 在小队走近后解除标记。
+        只记标记时的小队位置，不计失败次数；is_unscoutable 在小队走近后解除标记。
         squad 为本帧可信的小队底图坐标。
         """
         self.unscoutable[identifier] = list(np.asarray(squad, float))
@@ -703,7 +699,7 @@ class RunState:
         """推给界面的跨帧记忆：记住的敌人与仍在挡路的封锁，坐标为底图像素。
 
         本拍可靠观测与绑定目标显示为敌人；未确认的历史位置仅显示为线索，不叠加为确定敌人。
-        同拍补视野的远处确认点可继续展示。只给展示字段，冷却与尝试记录不外露。
+        同拍补视野的远处确认点可继续展示。只给展示字段，失败次数与尝试记录不外露。
         已解除的封锁不再影响路网，不推送；已打掉的敌人也不再画出来。
         """
         confirmed = self.confirmed_enemies()

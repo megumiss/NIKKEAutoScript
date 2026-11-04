@@ -5,7 +5,7 @@
 可达性与行走距离一律走切开图，所以规划不会把小队送去撞光幕；原图只用来判断「这个目标是不是
 只被光幕挡住」——是的话就该去复核封锁或踩机关，而不是当成走不通换目标。
 优先处理机关关联的道路复核；剧情按机关、主线目的地逐段推进，无目的地才找全分量最近敌人。
-机关解封先到点、再回封锁口复核；电梯按有向航段和失败冷却过滤。
+机关解封先到点、再回封锁口复核；电梯按有向航段和累计失败上限过滤。
 """
 
 import numpy as np
@@ -126,8 +126,7 @@ def blocked_candidate(state, chart, cut, squad, rejected):
 def unobserved_component_cells(state, cut, squad):
     """返回小队当前连通分量内尚未可信覆盖的粗网格数，坐标无效时返回 None。
 
-    该计数不考虑扫描冷却，用于 Boss 前的遗漏检查；冷却只延迟补扫，不能把未覆盖区域
-    当作已经检查完成。
+    该计数不排除失败到上限的区域，用于 Boss 前的遗漏检查；不可检查不代表已覆盖。
     """
     try:
         mask = cut.component_mask(squad)
@@ -169,7 +168,7 @@ def frontier_point(state, cut, squad, distance_limit=FRONTIER_LIMIT):
         points = np.column_stack((xs + left, ys + top)).astype(float)
         nearest = points[np.argmin(np.linalg.norm(points - centers[index], axis=1))]
         identifier = f'cell-{column}-{row}'
-        if state.cooling(identifier):
+        if state.is_unavailable(identifier):
             continue
         distance = walking_distance(cut.road, cut.regions, squad, nearest)
         if not np.isfinite(distance):
@@ -204,7 +203,7 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
         return {'kind': 'none', 'reason': 'curtain_review_unavailable', 'blocking': blocked}
     if purpose == 'collectible':
         candidates = [item for item in chart.points if item['category'] == f'{state.difficulty}_collectible'
-                      and not state.cooling(item['id'])]
+                      and not state.is_unavailable(item['id'])]
         # 先按分量过滤再截取行走距离预算：先截再滤时，直线最近的几个若都在
         # 光幕或墙的另一侧，同侧可达的收集品就永远轮不到。
         home = cut.component(squad)

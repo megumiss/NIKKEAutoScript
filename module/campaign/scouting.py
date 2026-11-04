@@ -72,18 +72,18 @@ def field_at(field, point):
     return float(np.min(window + np.hypot(xs * GRID - point[0], ys * GRID - point[1])))
 
 
-def scout_focus(state, cut, squad, include_cooling=False, goal=None):
+def scout_focus(state, cut, squad, include_unavailable=False, goal=None):
     """选定目标后只复核其前置道路，没有目标时才搜索本分量的未知区域。
 
     检查范围以传入的执行目标为准，不在侦察中另选全局近敌或扫描无关支路。
-    沿途重新检出近敌后缩短本次检查路径；冷却只延迟重试，include_cooling=True 供出发门禁复核。
+    沿途重新检出近敌后缩短本次检查路径；include_unavailable=True 保留失败到上限的疑点供出发门禁复核。
     所有位置与路程均使用底图像素。
     """
     target = goal if goal and goal.get('position') is not None else state.route_goal
     if target is None:
         target, _ = nearest_enemy(state, cut, squad)
     if target is not None:
-        return route_scout_focus(state, cut, squad, target, include_cooling)
+        return route_scout_focus(state, cut, squad, target, include_unavailable)
     field = walking_field(cut, squad)
     if field is None:
         return None
@@ -99,7 +99,7 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
         identifier = f'scout-{column}-{row}'
         if state.is_unscoutable(identifier, squad):
             continue
-        if not include_cooling and state.cooling(identifier):
+        if not include_unavailable and state.is_unavailable(identifier):
             continue
         frontier = float(nearest[row, column])
         block = blocks[row, :, column, :]
@@ -110,13 +110,13 @@ def scout_focus(state, cut, squad, include_cooling=False, goal=None):
     return None
 
 
-def route_scout_focus(state, cut, squad, target, include_cooling=False):
+def route_scout_focus(state, cut, squad, target, include_unavailable=False):
     """沿已选目标的实际道路检查遗漏，先处理前置敌人，不扩大到无关支路。
 
     未重新确认的沿途普通敌人和分类冲突线索独立生成复核落点，即使所在道路已经扫描也不能跳过。
     目标本身就是敌人线索时也检查终点，不因该位置的道路已覆盖而放行。
     未知道路使用安全敌人覆盖而非面板全部覆盖；已确认近敌会缩短路径，避免先扫越过它的远端。
-    include_cooling=True 保留冷却中的疑点供执行门禁阻止出发，历史线索不直接转为战斗目标。
+    include_unavailable=True 保留失败到上限的疑点供执行门禁阻止出发，历史线索不直接转为战斗目标。
     """
     route = route_path(cut, squad, target['position'])
     if route is None:
@@ -137,7 +137,7 @@ def route_scout_focus(state, cut, squad, target, include_cooling=False):
     for distance, record in route_enemy_candidates(cut, squad, target['position'], path, distances, hints):
         identifier = f"scout-{record['id']}"
         if ((distance >= distances[-1] and record['id'] != target.get('for_enemy'))
-                or (not include_cooling and state.cooling(identifier))):
+                or (not include_unavailable and state.is_unavailable(identifier))):
             continue
         hint_focus = dict(id=identifier, enemy_id=record['id'], position=list(record['position']),
                           distance=round(distance, 1), known=round(float(distances[-1]), 1),
@@ -160,7 +160,7 @@ def route_scout_focus(state, cut, squad, target, include_cooling=False):
             seen.add(identifier)
             if state.is_unscoutable(identifier, squad):
                 continue
-            if not include_cooling and state.cooling(identifier):
+            if not include_unavailable and state.is_unavailable(identifier):
                 continue
             return dict(id=identifier, position=candidate.tolist(), distance=round(float(distance), 1),
                         known=round(float(distances[-1]), 1), source='route_road', check_enemies=True)

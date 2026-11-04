@@ -96,7 +96,7 @@ def describe_evidence(evidence):
 
 
 class ScoutingIncomplete(RuntimeError):
-    """前置道路复核达到失败上限，直接交人工处理，不由自动恢复清空冷却后重新扫描。"""
+    """前置道路复核达到失败上限，直接交人工处理，不由自动恢复清空失败次数后重新扫描。"""
 
 
 class CampaignExecutor:
@@ -116,7 +116,6 @@ class CampaignExecutor:
         self.interrupted_inputs = 0
         self.ex_pending = False
         self.ex_evidence = None
-        self.scout_wait_key = None
         self.terminal_checked = None
         self.terminal_scan_stalls = 0
         self.recoveries = 0
@@ -279,7 +278,7 @@ class CampaignExecutor:
                     and record is not None and RunState._inside(quad, record['point'])):
                 break
         else:
-            state.penalize(f"review-{goal['id']}")
+            state.record_failure(f"review-{goal['id']}")
             logger.warning(f"光幕 {goal['id']} 连续 {REVIEW_FRAMES} 帧未取得有效观测，保留待复核状态；"
                            f"耗时 {watch}。")
             return
@@ -291,7 +290,6 @@ class CampaignExecutor:
         else:
             logger.info(f"光幕 {goal['id']} 仍然存在（第 {attempt + 1} 帧确认），"
                         f"关联机关 {mechanism or '无记录'} 未解除该光幕；耗时 {watch}。")
-            state.penalize(f"review-{goal['id']}", failure=False)
 
     def complete_mechanism(self, goal):
         """按机关触发后的中央视野定位光幕，只解除对应标注，再回正小队并扫描。
@@ -329,7 +327,7 @@ class CampaignExecutor:
     def execute(self, goal):
         """执行一个目标并回写结果；剧情移动失败交给回正恢复，安全失败直接向外传播。
 
-        导航报错与战斗弹窗可能前后脚出现，记失败冷却前必须重查当前画面；确认为战斗时
+        导航报错与战斗弹窗可能前后脚出现，记目标失败前必须重查当前画面；确认为战斗时
         直接交既有接管链路，保留未完成目标，避免战后把机关等位置目标误当成已失败而跳过。
         电梯只以入口建立步行进展基准，跨区域出口由共享闭环独立确认，不作为步行路程目标。
         派发与结束各一行，带上落点、预计距离、移动次数、本目标消耗的输入次数与耗时：
@@ -387,8 +385,8 @@ class CampaignExecutor:
                 identifier = f"review-{goal['id']}" if kind == 'review_block' else goal['id']
                 if kind == 'advance':
                     identifier = goal['for_target']
-                self.owner.state.penalize(identifier)
-            logger.warning(f"{goal_brief(goal)} 执行失败，已记一次失败并冷却：{exc}；"
+                self.owner.state.record_failure(identifier)
+            logger.warning(f"{goal_brief(goal)} 执行失败，已记录一次失败：{exc}；"
                            f"耗时 {watch}，本目标操作 {self.session.target_inputs} 次")
             self.session.preview(self.session.win.client())
             if self.purpose == 'story':
@@ -396,7 +394,7 @@ class CampaignExecutor:
             return
         self.owner.state.execution_target = None
         if result.get('state') != 'arrived':
-            self.owner.state.penalize(goal['for_target'] if kind == 'advance' else goal['id'])
+            self.owner.state.record_failure(goal['for_target'] if kind == 'advance' else goal['id'])
             logger.warning(f"{goal_brief(goal)} 未确认触发：{describe_result(result)}；"
                            f"耗时 {watch}，本目标操作 {self.session.target_inputs} 次")
             if self.purpose == 'story':
@@ -417,54 +415,37 @@ class CampaignExecutor:
             logger.info(f"电梯 {goal['id']} 已确认传送成功，执行一次十字扫描后重新选择目标。")
             if not self.scan_start('电梯后') and self.purpose == 'story':
                 raise RuntimeError('电梯后十字扫描未取得可信视野。')
-        elif kind == 'explore':
-            # 到点不是观察成功：只记短冷却，新快照自行更新观测覆盖。
-            self.owner.state.penalize(goal['id'])
         elif kind == 'story':
             self.owner.state.route_goal = None
         self.session.complete_move_target(goal)
         logger.info(f"{goal_brief(goal)} 结束：{describe_result(result)}，"
                     f"本目标操作 {self.session.target_inputs} 次，耗时 {watch}")
 
-    def wait_scout_cooldown(self, goal, snapshot):
-        """只有待复核落点仍在冷却且没有可立即检查的道路时等待，避免重复开合地图。
+    def check_scout_failures(self, goal, snapshot):
+        """前置道路无可检查焦点且累计失败达到上限时停止，不通过等待放行未确认道路。
 
-        在主线定位与视野展开之前检查本轮目标的前置道路；新帧解除疑点或存在其他可扫描落点时
-        立即放行，不跳过必要复核。冷却按既有决策拍推进，等待仍响应停止和窗口检查。
-        失败达到上限直接抛 ScoutingIncomplete，禁止自动恢复清空同一疑点的失败次数。
+        未达上限的焦点直接进入原有侦察；门禁保留失败到上限的疑点，不能把它们当作已覆盖。
+        本方法不发送输入、不等待，也不清除同一疑点的失败次数。
         """
         if (self.purpose != 'story' or not located(snapshot) or snapshot.get('squad') is None
                 or (goal and goal['kind'] == 'review_block')
                 or (goal and goal['kind'] == 'none' and goal.get('reason', '').startswith('route_'))):
-            self.scout_wait_key = None
-            return False
+            return
         state, squad = self.owner.state, snapshot['squad']
-        pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
-        if (pending is None or not state.cooling(pending['id'])
+        pending = scout_focus(state, self.owner.cut, squad, include_unavailable=True, goal=goal)
+        if (pending is None or not state.is_unavailable(pending['id'])
                 or scout_focus(state, self.owner.cut, squad, goal=goal) is not None):
-            self.scout_wait_key = None
-            return False
+            return
         self.scout_pending = pending
-        cooldown = state.cooldowns[pending['id']]
-        failures = cooldown.get('failures', 0)
-        if failures >= MAX_FAILURES:
-            raise ScoutingIncomplete(f"前置道路 {pending['id']} 累计 {failures} 次未能确认。")
-        key = (pending['id'], cooldown['until'])
-        if self.scout_wait_key != key:
-            self.scout_wait_key = key
-            self.session.record('scout_cooldown_wait', focus=pending, failures=failures,
-                                remaining_ticks=max(0, cooldown['until'] - state.tick))
-            logger.info(f"前置道路 {pending['id']} 复核冷却中，累计失败 {failures} 次；"
-                        '等待重试，不展开地图或拖动镜头。')
-        self.session.pause(1.)
-        return True
+        failures = state.target_failures[pending['id']]['failures']
+        raise ScoutingIncomplete(f"前置道路 {pending['id']} 累计 {failures} 次未能确认。")
 
     def scout(self, goal, snapshot, max_views=SCOUT_VIEWS):
         """小队原地复核已选目标的前置道路；返回是否展开过，未完成落点留在 scout_pending。
 
         只用于剧情任务（收集品有标注，不靠看）。刚踩过机关、要先复核光幕时不侦察，复核结果会改变路网。
         max_views 是本决策轮剩余屏数，last_scout_views 记录本次实际检查量；改选目标不重置额度。
-        单轮屏数用尽后保留待查区域，下一轮继续；冷却格不能当作已确认，失败到上限交人工。
+        单轮屏数用尽后保留待查区域，下一轮继续；失败到上限的格仍阻止出发，不能当作已确认。
         侦察中遇到安全异常直接向外传播，不补发收起地图的输入。
         """
         self.scout_pending = None
@@ -478,7 +459,7 @@ class CampaignExecutor:
         state, squad = self.owner.state, snapshot['squad']
         focus = scout_focus(state, self.owner.cut, squad, goal=goal)
         if focus is None:
-            self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
+            self.scout_pending = scout_focus(state, self.owner.cut, squad, include_unavailable=True, goal=goal)
             return False
         self.session.begin_target('scout')
         self.session.scout_begin()
@@ -503,19 +484,18 @@ class CampaignExecutor:
                         f"{'已确认' if covered else '未确认'}，耗时 {watch}")
             failure = self.session.scout_failure
             if not recorded and failure is not None and focus.get('enemy_id') is None:
-                # 配准失败说明当前距离上看不清该格（探索前沿或走廊歧义）：标记后既不占失败
-                # 冷却也不阻塞出发（scouting.py 跳过），小队走近后自动恢复侦察。
+                # 当前距离上配准不出可信视野时，暂不可扫标记不占失败次数，也不阻塞出发；小队走近后复核。
                 state.mark_unscoutable(focus['id'], squad)
                 logger.info(f"侦察目标 {focus['id']} 暂不可扫（{failure['reason']}），"
                             f'标记后跳过；小队走近后自动恢复。')
             elif not recorded or not covered:
-                state.penalize(focus['id'])
+                state.record_failure(focus['id'])
             focus = scout_focus(state, self.owner.cut, squad, goal=goal)
             if focus is None:
                 break
         else:
             logger.info(f'侦察已用完本批 {max_views} 屏额度，剩余区域延后检查，暂不执行移动。')
-        self.scout_pending = scout_focus(state, self.owner.cut, squad, include_cooling=True, goal=goal)
+        self.scout_pending = scout_focus(state, self.owner.cut, squad, include_unavailable=True, goal=goal)
         # 侦察是内部有界的批量阶段；收尾单独统计实际操作，不修改稳定目标的路线进展历史。
         self.session.begin_target('position')
         self.session.scout_end()
@@ -528,7 +508,7 @@ class CampaignExecutor:
         侦察后新观测可能暂时排除旧敌人线索并改选另一条道路；此时不能直接结束本拍，
         否则下一拍旧线索再次待查，会一直检查前一条道路。每批收图取得新观测并重新决策，
         新目标仍有可检查道路时用剩余额度继续；不推进决策拍，不把阴性复核当作战斗清除。
-        已确认、额度用尽、无可检查焦点或本批未检查任何一屏时返回，原冷却及失败门禁不变。
+        已确认、额度用尽、无可检查焦点或本批未检查任何一屏时返回，失败上限及出发门禁不变。
         取消、窗口、弹窗及配准异常照常向上传播；不在此发送地面移动或放行未确认道路。
         """
         remaining = SCOUT_VIEWS
@@ -550,7 +530,7 @@ class CampaignExecutor:
             if (self.purpose == 'story' and (goal is None or goal['kind'] != 'review_block')
                     and located(snapshot) and snapshot.get('squad') is not None):
                 self.scout_pending = scout_focus(self.owner.state, self.owner.cut, snapshot['squad'],
-                                                 include_cooling=True, goal=goal)
+                                                 include_unavailable=True, goal=goal)
             if self.scout_pending is None or remaining <= 0 or self.last_scout_views == 0:
                 return goal, snapshot
             if scout_focus(self.owner.state, self.owner.cut, snapshot['squad'], goal=goal) is None:
@@ -572,7 +552,7 @@ class CampaignExecutor:
 
         每轮最多检查 SCOUT_VIEWS 屏；发现普通敌人、扫描失败或单轮屏数用尽都会停止本批，
         由调用方重新决策。连续 MAX_FAILURES 轮没有新增覆盖或普通敌人时转入有界恢复，
-        扫描冷却不能把剩余未覆盖格视为完成，安全异常照常向上传播。
+        失败记录不能把剩余未覆盖格视为完成，安全异常照常向上传播。
         """
         state, squad = self.owner.state, snapshot['squad']
         observed_before = int(state.observed.sum())
@@ -592,7 +572,7 @@ class CampaignExecutor:
                         f"{'已记录可信帧' if recorded else '定位未通过'}，"
                         f"目标格{'已覆盖' if covered else '尚未完整覆盖'}。")
             if not recorded or not covered:
-                state.penalize(focus['id'])
+                state.record_failure(focus['id'])
                 break
         self.session.begin_target('position')
         self.session.scout_end()
@@ -801,8 +781,8 @@ class CampaignExecutor:
     def recover(self, reason):
         """清除本轮临时决策，独立回正并从十字扫描重新开始；最多连续尝试三次。
 
-        已清除敌人、机关、电梯、光幕和道路事实保留，失败目标的冷却不重置；只解除镜头侦察的
-        临时失败与主线标记定位冷却，允许新视野重新确认。恢复过程仍受原输入及时限闸门约束，
+        已清除敌人、机关、电梯、光幕和道路事实保留，目标累计失败次数不重置；只解除镜头侦察的
+        临时失败与主线标记定位失败记录，允许新视野重新确认。恢复过程仍受原输入及时限闸门约束，
         任何失败交回主循环处理；回正、定位或扫描未通过时不能继续使用异常前的目标。
         完整恢复成功后清零连续计数，同章之后的独立异常重新获得三次尝试机会。
         """
@@ -815,11 +795,10 @@ class CampaignExecutor:
         state.execution_target = None
         state.route_goal = None
         state.unscoutable.clear()
-        for identifier in list(state.cooldowns):
+        for identifier in list(state.target_failures):
             if identifier.startswith('scout-') or identifier == 'story-location':
-                state.cooldowns.pop(identifier)
+                state.target_failures.pop(identifier)
         self.scout_pending = None
-        self.scout_wait_key = None
         self.terminal_scan_stalls = 0
         self.owner.last_goal = None
         self.owner.last_routes = None
@@ -926,13 +905,12 @@ class CampaignExecutor:
                         self.owner.cut.update(self.owner.state.blocking())
                         goal, snapshot = self.terminal_precheck(self.terminal_continuation, snapshot)
                     goal = self.plan_tick(snapshot)
-                    if self.wait_scout_cooldown(goal, snapshot):
-                        continue
+                    self.check_scout_failures(goal, snapshot)
                     if (self.purpose == 'story' and self.owner.state.route_goal is None
                             and snapshot.get('story_markers') and located(snapshot)
                             and snapshot.get('squad') is not None
                             and (goal is None or goal['kind'] != 'review_block')
-                            and not self.owner.state.cooling('story-location')):
+                            and not self.owner.state.is_unavailable('story-location')):
                         changed = locate_story_target(self.session, snapshot['squad'])
                         self.session.record('story_location_result', camera_changed=changed,
                                             route_goal=self.owner.state.route_goal)
@@ -963,7 +941,7 @@ class CampaignExecutor:
                                         scout_pending=self.scout_pending)
                     if self.scout_pending is not None:
                         pending = self.scout_pending
-                        failures = self.owner.state.cooldowns.get(pending['id'], {}).get('failures', 0)
+                        failures = self.owner.state.target_failures.get(pending['id'], {}).get('failures', 0)
                         if failures >= MAX_FAILURES:
                             if self.purpose == 'story':
                                 raise ScoutingIncomplete(f"前置道路 {pending['id']} 累计 {failures} 次未能确认。")
