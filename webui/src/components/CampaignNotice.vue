@@ -24,8 +24,8 @@ watch(uiLanguage, async (language, _, onCleanup) => {
   <details v-if="notice" :key="uiLanguage" class="campaign-notice">
     <summary class="campaign-notice-summary">
       <AppIcon name="alert-triangle" :size="17" color="currentColor" class="campaign-notice-icon" />
-      <strong class="campaign-notice-title">{{ notice.title }}</strong>
-      <span class="campaign-notice-message">{{ notice.summary }}</span>
+      <strong v-if="notice.title" class="campaign-notice-title">{{ notice.title }}</strong>
+      <span v-if="notice.summary" class="campaign-notice-message">{{ notice.summary }}</span>
       <span class="campaign-notice-toggle">
         <span class="when-closed">{{ t('展开详情') }}</span>
         <span class="when-open">{{ t('收起详情') }}</span>
@@ -62,7 +62,7 @@ watch(uiLanguage, async (language, _, onCleanup) => {
 .campaign-notice-icon { flex: none; color: var(--yellow); }
 .campaign-notice-title { flex: none; color: var(--text); }
 .campaign-notice-message { flex: 1; min-width: 0; color: var(--text); }
-.campaign-notice-toggle { display: flex; flex: none; gap: 5px; align-items: center; color: var(--text-2); font-size: 12px; }
+.campaign-notice-toggle { margin-left: auto; display: flex; flex: none; gap: 5px; align-items: center; color: var(--text-2); font-size: 12px; }
 .campaign-notice-summary:hover .campaign-notice-toggle { color: var(--text); }
 .when-open { display: none; }
 .campaign-notice[open] .when-open { display: inline; }

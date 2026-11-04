@@ -228,11 +228,11 @@
     },
     "AutoMainStory": {
       "name": "Auto Main Story",
-      "help": "Start from story, Home, Ark, or the campaign field; supported pages are handled before navigation. PC client only, at 1776×999 resolution."
+      "help": "Fully automatic main story progression."
     },
     "AutoMainCollectible": {
       "name": "Auto Main Story Collectibles",
-      "help": "Start from story, Home, Ark, or the campaign field; supported pages are handled before navigation. PC client only, at 1776×999 resolution."
+      "help": "Fully automatic collection of scattered items on campaign maps."
     },
     "AutoTower": {
       "name": "Auto Tower",
@@ -1407,11 +1407,11 @@
     },
     "DebugMode": {
       "name": "Debug mode",
-      "help": "Off by default. Save screenshots, events and offline replays for each campaign run to help diagnose issues. Changes apply the next time the task starts.\nSave location (relative to the NKAS folder): log/campaign/<difficulty>_<chapter>/runs/<timestamp>_<random-suffix>/\nAfter the task ends, open index.html in that folder to view the replay."
+      "help": "Off by default. Save screenshots, events and offline replays for each campaign run to help diagnose issues.\nSave location: log/campaign/<difficulty>_<chapter>/runs/<timestamp>_<random-suffix>/\nAfter the task ends, open index.html in that folder to view the replay."
     },
     "MissedEnemyScan": {
       "name": "Missed-enemy scan before Boss",
-      "help": "Off by default. Check chapter enemy progress and scan unexplored roads in the current area for missed enemies before fighting the Boss. Disabling this extra scan keeps localization, known-enemy priority, route scouting and safety checks. Changes apply the next time the task starts."
+      "help": "Off by default. Check chapter enemy progress and scan unobserved roads in the current area for missed enemies before fighting the Boss. This feature is not very stable; enabling it is not recommended."
     }
   },
   "AutoTower": {

@@ -1,7 +1,8 @@
-# Before you start
+# Usage notes
 
-Do not move or resize the game window while running. Stop the task before interacting manually.
+Click to view usage notes
 
-- PC client only. The game client area must be 1776×999.
-- Sync map resources before first use. Avoid clicking or dragging the game while the task is running.
-- After an automation error, it may return home and restart once. Further errors require manual intervention.
+- Automatically progress through the main story, including regular enemies, bosses, mechanisms, elevators and story sequences.
+- PC client only. The minimum supported display resolution is 1080p at 100% scaling.
+- Only the second half of the Chapter 28 map is supported. Chapters 31, 39 and 40 may not work correctly due to map issues.
+- The task stops automatically after more than three consecutive battle defeats. It generally does not stop automatically in other situations.

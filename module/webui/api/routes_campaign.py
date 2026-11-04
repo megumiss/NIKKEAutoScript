@@ -20,10 +20,11 @@ NOTICE_LANGUAGES = ('zh-CN', 'en-US', 'ja-JP')
 def read_notice(language='zh-CN'):
     """读取独立的主线注意事项 Markdown，并拆分标题、摘要和安全渲染的详细正文。
 
-    只允许固定语言文件，未知语言及缺失翻译回退中文，不接受任意路径。文档以一级标题和
-    一个摘要段落开头，余下 Markdown 作为展开正文；每次请求重新读盘，不缓存文案。
+    只允许固定语言文件，未知语言及缺失翻译回退中文，不接受任意路径。开头的一级标题和
+    首个摘要段落均可省略，余下 Markdown 作为展开正文；缺项返回空字符串，不丢弃正文。
+    无标题时开头段落作为摘要，列表等其他块直接作为正文；每次请求重新读盘，不缓存文案。
     使用现有 markdown-it 依赖，禁用原始 HTML 和图片，避免执行脚本或自动加载远端图片。
-    文件错误、格式错误向路由传播，由路由隐藏提示而不影响推图配置或任务控制。
+    文件错误及完全空白的内容向路由报错，由路由隐藏提示而不影响推图配置或任务控制。
     """
     language = language if language in NOTICE_LANGUAGES else 'zh-CN'
     path = NOTICE_DIRECTORY / f'{language}.md'
@@ -32,24 +33,25 @@ def read_notice(language='zh-CN'):
     content = path.read_text(encoding='utf-8-sig')
     renderer = MarkdownIt('commonmark', {'html': False}).disable('image')
     tokens = renderer.parse(content)
-    if (len(tokens) < 6 or tokens[0].type != 'heading_open' or tokens[0].tag != 'h1'
-            or tokens[1].type != 'inline' or tokens[3].type != 'paragraph_open'
-            or tokens[4].type != 'inline' or tokens[5].type != 'paragraph_close'):
-        raise ValueError('注意事项必须以一级标题和摘要段落开头。')
-    title = tokens[1].content.strip()
-    summary = ''.join(' ' if token.type in ('softbreak', 'hardbreak') else token.content
-                      for token in tokens[4].children
-                      if token.type in ('text', 'code_inline', 'softbreak', 'hardbreak'))
-    if not title or not summary.strip():
-        raise ValueError('注意事项标题或摘要为空。')
-    return dict(title=title, summary=summary.strip(), details_html=renderer.renderer.render(tokens[6:],
-                renderer.options, {}))
+    title, summary = '', ''
+    if len(tokens) >= 3 and tokens[0].type == 'heading_open' and tokens[0].tag == 'h1':
+        title = tokens[1].content.strip()
+        tokens = tokens[3:]
+    if len(tokens) >= 3 and tokens[0].type == 'paragraph_open':
+        summary = ''.join(' ' if token.type in ('softbreak', 'hardbreak') else token.content
+                          for token in tokens[1].children
+                          if token.type in ('text', 'code_inline', 'softbreak', 'hardbreak')).strip()
+        tokens = tokens[3:]
+    details_html = renderer.renderer.render(tokens, renderer.options, {})
+    if not title and not summary and not details_html.strip():
+        raise ValueError('注意事项内容为空。')
+    return dict(title=title, summary=summary, details_html=details_html)
 
 
 async def notice(request):
     """下发按界面语言读取的主线注意事项，编辑 Markdown 后刷新页面即可生效。
 
-    文件读取与 Markdown 渲染放在线程中，响应禁止缓存；缺失或畸形文案只关闭提示栏，
+    文件读取与 Markdown 渲染放在线程中，响应禁止缓存；缺失或空白文案只关闭提示栏，
     不影响同页设置和启动按钮。语言严格映射至仓库自带文件，不暴露任意文件读取。
     """
     try:
