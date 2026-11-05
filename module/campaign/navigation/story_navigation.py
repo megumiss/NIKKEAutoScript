@@ -7,7 +7,9 @@ import numpy as np
 
 from module.campaign.navigation import controls as goto
 from module.campaign.navigation.camera_navigation import compact_viewport, pan_scene
-from module.campaign.vision.enemy_ring import match_target_ring, observe_rings, scene_tracks
+from module.campaign.vision.enemy_ring import (RING_CONFIDENCE, clickable_ring, match_target_ring,
+                                                observe_rings, scene_tracks)
+from module.campaign.vision.detection import detect_scene
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import compact_road_masks, squad_arrow
 from module.campaign.vision.story_marker import marked_ring, story_markers
@@ -16,6 +18,15 @@ from module.logger import logger
 MAX_PANS = 4
 MAX_EDGE_CLICKS = 2
 STORY_CENTER_TOLERANCE = 40.
+
+
+class VisibleEnemyFound(Exception):
+    """镜头导航发现两帧确认的近敌；只交回客户区落点，不表示底图目标到达或规划失败。"""
+
+    def __init__(self, target):
+        """保存当前两帧确认的落点证据，仅供同次导航返回后立即执行，禁止跨恢复复用。"""
+        super().__init__('镜头导航发现可见近敌，转交实景执行。')
+        self.target = target
 
 
 def story_frame(session, squad):
@@ -37,6 +48,50 @@ def story_frame(session, squad):
     ring = marked_ring(markers, rings.centers)
     view.update(panel_size=list(panel.shape[1::-1]), roi_to_map=view['matrix'])
     return dict(field=field, rings=rings, ring=ring, scale=view['a'], view=view)
+
+
+def visible_enemy_target(session, recenter=True, field=None):
+    """两帧选择距离小队地面位置最近的可见敌人脚圈，不依赖主线标记或底图配准。
+
+    距离为客户区像素直线距离，不代表道路可达；小队位置用现有箭头下移 90 像素的地面估计，
+    只用于排序。脚圈仍须通过置信度和 HUD 检查；两帧最近候选一致且位移不超过 15 像素，
+    小队地面估计偏差不超过 20 像素才许可一次直点。可见未开启机关时让位给原机关流程。
+    小队离屏或箭头缺失时最多先回正一次，之后仍缺可靠位置则拒绝，绝不按屏幕中心猜最近。
+    不从红圈推断普通／Boss／EX 身份，不写入底图坐标，战斗及 EX 交现有接管处理。
+    导航换屏传入当前 field 并令 recenter=False，只观测新视野，不在规划中途拖回小队。
+    """
+    from module.campaign.navigation.recovery import recenter_squad
+
+    previous = None
+    for attempt in range(3):
+        field = field if attempt == 0 and field is not None else session.win.client()
+        session.identity(field)
+        objects = detect_scene(field, ('scene_enemy_ring', 'scene_ground_mechanism_off'))
+        if any(item.label == 'scene_ground_mechanism_off' for item in objects):
+            return None
+        rings = [item.center for item in objects if item.label == 'scene_enemy_ring'
+                 and item.confidence >= RING_CONFIDENCE and clickable_ring(item.box)]
+        if not rings:
+            return None
+        arrow = squad_arrow(field)
+        if arrow is None or squad_offscreen(field) is not None:
+            if attempt or not recenter:
+                return None
+            recenter_squad(session)
+            continue
+        ground = np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
+        click = min(rings, key=lambda point: np.linalg.norm(point - ground))
+        current = dict(click=click.tolist(), ground=ground.tolist(),
+                       distance=round(float(np.linalg.norm(click - ground)), 1))
+        if previous is not None:
+            if (np.linalg.norm(click - previous['click']) > 15
+                    or np.linalg.norm(ground - previous['ground']) > 20):
+                return None
+            session.record('enemy_visual_confirmed', field=field, force=True, target=current)
+            return current
+        previous = current
+        session.pause(.35)
+    return None
 
 
 def story_ground(frame):

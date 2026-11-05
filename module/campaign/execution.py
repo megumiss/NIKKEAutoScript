@@ -18,10 +18,10 @@ from module.campaign.window import WindowChanged
 from module.base.timer import Timer
 from module.campaign.navigation.movement import navigate
 from module.campaign.navigation.ex_bypass import ExBypassUnavailable
-from module.campaign.navigation.camera_navigation import SquadOffscreen
+from module.campaign.navigation.camera_navigation import SquadOffscreen, wait_for_squad
 from module.campaign.navigation.movement_feedback import ClickUnconfirmed, TargetTriggered
 from module.campaign.navigation.recovery import centered, centering_frame
-from module.campaign.navigation.story_navigation import locate_story_target
+from module.campaign.navigation.story_navigation import VisibleEnemyFound, locate_story_target, visible_enemy_target
 from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
 from module.campaign.noncombat import SceneRequired, ChapterTransitionTimeout
 from module.logger import logger
@@ -370,7 +370,20 @@ class CampaignExecutor:
                 self.recoveries = 0
                 self.owner.state.target_failures.pop('story-location', None)
                 return
-            result = navigate(self.session, target, progress, **kwargs)
+            def check_camera_enemy(field):
+                """仅在本次导航的新视野复核近敌，确认后中断配准，不执行点击或镜头回正。"""
+                if not self.visible_enemy_allowed(goal, self.owner.last_snapshot or {}):
+                    return
+                visible = visible_enemy_target(self.session, recenter=False, field=field)
+                if visible is not None:
+                    raise VisibleEnemyFound(visible)
+
+            previous_check = getattr(self.session, 'camera_enemy_check', None)
+            self.session.camera_enemy_check = check_camera_enemy
+            try:
+                result = navigate(self.session, target, progress, **kwargs)
+            finally:
+                self.session.camera_enemy_check = previous_check
         except TargetTriggered:
             raise
         except (SceneRequired, WindowChanged, NavigationStalled, ClickUnconfirmed, ExBypassUnavailable):
@@ -674,6 +687,76 @@ class CampaignExecutor:
         logger.info(f'{goal_brief(continuation)} 前区域遗漏检查通过，从当前位置恢复目的地。')
         return continuation, snapshot
 
+    def visible_enemy_allowed(self, goal, snapshot):
+        """共用主循环和镜头导航的近敌门禁，不抢占机关、电梯、光幕复核及 Boss 收尾。
+
+        目标与路程目标同时检查，避免机关前置推进被误当普通探索；已观测的未开启机关和待复核
+        光幕也阻止该分支。已有 EX 避让区域时沿用原导航，不能再次直点穿过已知 EX。
+        本方法只检查执行状态，换屏后出现的未开启机关由实时选敌检测再次拦截。
+        """
+        state = self.owner.state
+        if (self.purpose != 'story' or state.pending_reviews or self.session.ex_bypass.obstacles
+                or (state.route_goal or {}).get('kind') == 'mechanism'
+                or self.terminal_continuation is not None
+                or any(item.get('state') == 'off' for item in snapshot.get('mechanisms', []))
+                or any(item.get('kind') == 'ground_mechanism' and item.get('state') == 'off'
+                       for item in snapshot.get('objects', []))):
+            return False
+        if goal is not None:
+            if goal['kind'] not in ('enemy', 'explore', 'advance', 'story', 'none'):
+                return False
+            if goal.get('enemy_kind') == 'boss':
+                return False
+            if goal['kind'] == 'none' and goal.get('reason') != 'no_reachable_target':
+                return False
+        return True
+
+    def execute_visible_enemy(self, goal, snapshot, target=None):
+        """执行本轮或镜头换屏后两帧确认的近敌落点，不认领原底图目标、不清除无关敌人。
+
+        仍通过共用机关／电梯门禁。target 仅允许来自刚中断的同次镜头导航，不跨恢复使用；
+        未提供时重新检测并允许一次回正。点击后的战斗、EX 与停稳失败均交原有流程。
+        没有可靠近敌返回 False，调用方如发现选敌期间镜头改变，须重新观测后继续规划。
+        """
+        if not self.visible_enemy_allowed(goal, snapshot):
+            return False
+        if target is None:
+            target = visible_enemy_target(self.session)
+        if target is None:
+            return False
+        state = self.owner.state
+        identifier = 'enemy-visual'
+        if state.is_unavailable(identifier):
+            raise NavigationStalled(f'实景近敌策略 {identifier} 已达失败上限。')
+        self.session.begin_target('enemy_visual')
+        self.last_executed = None
+        state.execution_target = None
+        succeeded = False
+        try:
+            try:
+                self.session.move(target['click'])
+                self.session.record('enemy_visual_click', target=target)
+                logger.info(f'可见近敌已点击：客户区位置 {points_text(target["click"])}，'
+                            f'距小队地面估计 {target["distance"]:.1f} 客户区像素。')
+                wait_for_squad(self.session)
+            except TargetTriggered as exc:
+                if exc.evidence.get('kind') == 'ex_stage_closed':
+                    self.defer_ex(evidence=exc.evidence)
+                    return True
+                if exc.evidence.get('kind') != 'battle_popup':
+                    raise
+                self.battle(None)
+                succeeded = True
+                state.target_failures.pop(identifier, None)
+                state.target_failures.pop('story-location', None)
+                logger.info('实景近敌战斗完成，下一轮重新观测并选择目标。')
+                return True
+            raise RuntimeError('实景近敌点击后道路已停稳但未触发战斗，重新定位后继续规划。')
+        finally:
+            if not succeeded:
+                state.record_failure(identifier)
+            self.session.reset_navigation()
+
     def battle(self, goal):
         """按「按钮循环」接管一场战斗：准备弹窗→（快速）战斗→结算被点掉→回到野外。
 
@@ -923,10 +1006,21 @@ class CampaignExecutor:
                         goal, snapshot = self.terminal_precheck(self.terminal_continuation, snapshot)
                     goal = self.plan_tick(snapshot)
                     self.check_scout_failures(goal, snapshot)
+                    gestures = self.session.gestures
+                    if self.execute_visible_enemy(goal, snapshot):
+                        camera_options = {}
+                        self.interrupted_goal = None
+                        self.interrupted_inputs = 0
+                        continue
+                    if self.session.gestures != gestures:
+                        camera_options = {}
+                        snapshot = self.session.snapshot()
+                        goal = self.plan_tick(snapshot, advance=False)
+                        self.check_scout_failures(goal, snapshot)
                     if (self.purpose == 'story' and self.owner.state.route_goal is None
                             and snapshot.get('story_markers') and located(snapshot)
                             and snapshot.get('squad') is not None
-                            and (goal is None or goal['kind'] != 'review_block')
+                            and (goal is None or goal['kind'] in ('none', 'story'))
                             and not self.owner.state.is_unavailable('story-location')):
                         changed = locate_story_target(self.session, snapshot['squad'])
                         self.session.record('story_location_result', camera_changed=changed,
@@ -979,7 +1073,14 @@ class CampaignExecutor:
                     self.session.record('decision', goal=goal, snapshot=snapshot)
                     self.last_executed = goal
                     camera_options = {}
-                    self.execute(goal)
+                    try:
+                        self.execute(goal)
+                    except VisibleEnemyFound as found:
+                        self.last_executed = None
+                        self.owner.state.execution_target = None
+                        self.session.record('camera_enemy_handoff', target=found.target, previous_goal=goal)
+                        if not self.execute_visible_enemy(goal, snapshot, target=found.target):
+                            raise RuntimeError('镜头近敌接管条件已变化，重新观测后再规划。')
                     self.interrupted_goal = None
                     self.interrupted_inputs = 0
                 except TargetTriggered as exc:

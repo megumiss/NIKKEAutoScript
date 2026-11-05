@@ -694,6 +694,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     来自紧凑快照的小队位置没有展开 ROI 基准；只有跟踪需要批末校正时才抛 ValueError，
     由生产会话按需展开并重试，不能用紧凑矩阵冒充展开基准或无限沿用链式跟踪。
     脚圈已匹配时，点击前的新帧由 confirm_ring_click 独立复核，不将复核失败交给展开恢复。
+    生产执行器可提供 camera_enemy_check，在初始和拖后视野配准前交回已确认的可见近敌；
+    回调不发输入或修改投影，未发现近敌时原导航照常执行，其它调用方默认不启用。
     """
     from module.campaign.vision.matching import MapMatcher, register
     from module.campaign.vision.enemy_ring import MAX_CAMERA_STEP, match_target_ring, observe_rings
@@ -712,6 +714,9 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     session.identity(field)
     session.check_collectible(field)
     session.preview(field)
+    camera_enemy_check = getattr(session, 'camera_enemy_check', None)
+    if callable(camera_enemy_check):
+        camera_enemy_check(field)
     panel, road, valid = perception.compact_road_masks(field)
     start = compact_viewport(session, matcher, panel, road, valid)
     if observation.get('squad_source') == 'known':
@@ -807,6 +812,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         session.identity(field)
         session.check_collectible(field)
         session.preview(field)
+        if callable(camera_enemy_check):
+            camera_enemy_check(field)
         panel, road, valid = perception.compact_road_masks(field)
         chained = None
         match = register(road_prev, road, valid)
