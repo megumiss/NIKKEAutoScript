@@ -169,7 +169,7 @@ def reveal_story_marker(session):
         if len(confirmed) != 1:
             break
         point = tuple(int(round(value)) for value in confirmed[0]['position'])
-        if not session.tap(point, interval=2.):
+        if not session.tap(point, interval=2., camera_only=True):
             break
         changed = True
         session.localized_report = None

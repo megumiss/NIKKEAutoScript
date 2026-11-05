@@ -924,18 +924,20 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         return [dict(item, position=position) for item, position in zip(markers, positions)
                 if 0 <= position[0] < size[0] and 0 <= position[1] < size[1]]
 
-    def click_client(self, point):
+    def click_client(self, point, *, camera_only=False):
         """发送有效的客户区点击，共用窗口、弹窗与停止闸门，不调用地面移动入口。
 
         坐标按 1776×999 客户区验证并换算到屏幕；最终发送仍由 CampaignInput 校验窗口、取消、
         停止请求。界面按钮直接使用此入口，地面落点须先由 move 复核收集提示及光幕。
+        camera_only 仅供已复核的镜头控件点击，不得用于地面或身份未知的点击。
         """
         point = np.asarray(point, float)
         if point.shape != (2,) or not np.isfinite(point).all() or not (0 <= point[0] < 1776 and 0 <= point[1] < 999):
             raise ValueError('点击位置越界或不是有效坐标。')
         self.check()
         origin = self.win.client_origin()
-        self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]))
+        options = {'_campaign_camera_only': True} if camera_only else {}
+        self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]), **options)
 
     def move(self, click):
         """复核收集提示后发送客户区地面落点，沿用规划阶段最后确认的光幕路网。
@@ -1046,8 +1048,9 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                 self.preview(field)
                 raise RuntimeError('展开地图小幅平移重试后仍未定位成功；停止目标选择并请求人工复核。')
         elif known_squad is not None and not located(snapshot):
-            if self.stationary_squad() is not None:
-                snapshot = self.reuse_registration(snapshot, 'camera')
+            if (self.stationary_squad() is not None
+                    and self.last_registration['gestures'] == self.gestures):
+                snapshot = self.reuse_registration(snapshot, 'unchanged')
             else:
                 self.owner.last_snapshot = snapshot
                 self.preview(field)

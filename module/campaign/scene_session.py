@@ -55,16 +55,19 @@ class CampaignInput:
 
         def send(*args, **kwargs):
             """发送前校验窗口与弹窗，成功后统计；驱动失败立即停止，不算作成功输入。"""
+            camera_only = kwargs.pop('_campaign_camera_only', False)
+            if camera_only and name != 'mouse_click':
+                raise ValueError('仅已复核的镜头控件点击可以声明不移动小队。')
             self.session.before_input()
             action = dict(method=name, args=args, kwargs=kwargs, coordinate_space='screen',
-                          client_origin=self.session.win.origin)
+                          client_origin=self.session.win.origin, camera_only=camera_only)
             self.session.record('input_before', field=self.session.trace.last_field, force=True, action=action)
             # 编码与写盘期间也可能失焦或收到取消；发给驱动前再次校验。
             self.session.check()
             result = value(*args, **kwargs)
             if getattr(self.handler, '_failures', 0):
                 raise WindowChanged(f'鼠标操作 {name} 发送失败。')
-            self.session.count_input(scene=True, moves_squad=name != 'mouse_swipe')
+            self.session.count_input(scene=True, moves_squad=name != 'mouse_swipe' and not camera_only)
             self.session.trace.after_input(action=action, inputs=self.session.inputs,
                                            target_inputs=self.session.target_inputs,
                                            gestures=self.session.gestures)
@@ -185,18 +188,20 @@ class CampaignBattleActions:
                         f'图标橙色占比 {control["orange_ratio"]:.3f}），已点击开启，客户区落点 {point}。')
             return
 
-    def tap(self, point, interval=0.):
+    def tap(self, point, interval=0., *, camera_only=False):
         """按客户区坐标点一次界面按钮，保留输入安全闸门，但不执行地面移动的光幕检查。
 
         interval 是这一点自己的最短点击间隔（秒），与仓库 appear_then_click 的 interval 同义：
         间隔内的重复点击直接丢掉并返回 False，真的点了返回 True。战斗接管的按钮都靠它防连点——
         点击没生效时（面板动画中、被过场吃掉）下一轮只是再点一次，而不是每拍补一下。
+        camera_only 只供已复核的镜头控件使用：失效镜头缓存，但不失效未移动的小队坐标。
         """
         key = tuple(point)
         now = time.monotonic()
         if interval and now - self.tap_times.get(key, 0.) < interval:
             return False
-        self.click_client(point)
+        options = {'camera_only': True} if camera_only else {}
+        self.click_client(point, **options)
         self.tap_times[key] = now
         return True
 
@@ -290,14 +295,15 @@ class CampaignSceneSession(CampaignBattleActions):
         self.gestures += int(scene)
         self.squad_inputs += int(moves_squad)
 
-    def click_client(self, point):
+    def click_client(self, point, *, camera_only=False):
         """将有限客户区点换算成屏幕坐标发送，越界或非有限位置直接拒绝。"""
         point = np.asarray(point, float)
         if point.shape != (2,) or not np.isfinite(point).all() or not (0 <= point[0] < 1776 and 0 <= point[1] < 999):
             raise ValueError('场景按钮位置越界或不是有效客户区坐标。')
         self.check()
         origin = self.win.client_origin()
-        self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]))
+        options = {'_campaign_camera_only': True} if camera_only else {}
+        self.win.handler.mouse_click(origin[0] + round(point[0]), origin[1] + round(point[1]), **options)
 
     def pause(self, seconds):
         """按短间隔检查窗口与停止，场景等待不依赖章节导航的身份闸门。"""
