@@ -27,7 +27,7 @@ from module.campaign.noncombat import SceneRequired, ChapterTransitionTimeout
 from module.logger import logger
 
 TARGET_MOVES = 12
-# 限制连续未完成的恢复尝试；回正、重新定位及十字扫描全部通过后清零。
+# 恢复过程不算实际推进；仅目标完成或战斗胜利后重新取得恢复额度。
 CAMPAIGN_RECOVERY_LIMIT = 3
 # 复核站位上最多连看的紧凑帧数：箭头锚点、配准或检测偶发失手会让单帧不可信，换一帧往往就能看清；
 # 连看都不可信才算这次复核失败。
@@ -367,6 +367,8 @@ class CampaignExecutor:
             if kind == 'mechanism' and self.session.trigger_visible_mechanism(goal):
                 self.session.complete_move_target(goal)
                 self.complete_mechanism(goal)
+                self.recoveries = 0
+                self.owner.state.target_failures.pop('story-location', None)
                 return
             result = navigate(self.session, target, progress, **kwargs)
         except TargetTriggered:
@@ -419,6 +421,9 @@ class CampaignExecutor:
         elif kind == 'story':
             self.owner.state.route_goal = None
         self.session.complete_move_target(goal)
+        if kind != 'review_block' and result.get('movement_clicks', 0) > 0:
+            self.recoveries = 0
+            self.owner.state.target_failures.pop('story-location', None)
         logger.info(f"{goal_brief(goal)} 结束：{describe_result(result)}，"
                     f"本目标操作 {self.session.target_inputs} 次，耗时 {watch}")
 
@@ -768,12 +773,15 @@ class CampaignExecutor:
                 self.session.verify_identity(field)
         else:
             logger.warning(f'战斗胜利但无关联敌人目标（最近执行目标：{goal_brief(goal)}），不更新敌人状态。')
+        if settled == 'victory':
+            self.recoveries = 0
+            self.owner.state.target_failures.pop('story-location', None)
         return settled
 
     def scan_start(self, scene='开局', center_checked=False):
         """按场景名十字扫描小队周围，返回可信屏数，零屏由剧情执行层触发恢复。
 
-        开局、电梯传送后与异常恢复共用中心与四向扫描。扫描前必须确认小队居中，否则先独立回正并重新定位；
+        机关触发后与电梯传送后共用中心与四向扫描。扫描前须确认小队居中，否则先回正并重新定位；
         刚完成 recover_center 的调用方传入 center_checked，避免丢失离屏图标点击记录后重复回正。
         扫描是内部有界的批量阶段，不是同一目标上的原地空转，所以阶段结束即翻篇：收起地图与刷新快照的
         收尾输入独立统计，单轮扫描次数由各方向站数与拖回上限约束。安全异常（窗口、弹窗、取消）不捕获，
@@ -799,12 +807,12 @@ class CampaignExecutor:
         return scanned
 
     def recover(self, reason):
-        """清除本轮临时决策，独立回正并从十字扫描重新开始；最多连续尝试三次。
+        """清除本轮临时决策，独立回正并重新定位；最多连续尝试三次。
 
-        已清除敌人、机关、电梯、光幕和道路事实保留，目标累计失败次数不重置；只解除镜头侦察的
-        临时失败与主线标记定位失败记录，允许新视野重新确认。恢复过程仍受原输入及时限闸门约束，
-        任何失败交回主循环处理；回正、定位或扫描未通过时不能继续使用异常前的目标。
-        完整恢复成功后清零连续计数，同章之后的独立异常重新获得三次尝试机会。
+        已清除敌人、机关、电梯、光幕和道路事实保留，所有目标累计失败次数不重置；只解除
+        临时不可侦察视野，允许重新观测。回正或实测定位未通过时不能使用异常前的目标。
+        恢复后先按当前有效快照决策，缺失视野由正常侦察补充，不以展开十字扫描成功作为前提。
+        完整恢复也不清零计数，只有实际完成移动目标或战斗胜利才重新获得恢复额度。
         """
         if self.recoveries >= CAMPAIGN_RECOVERY_LIMIT:
             raise RuntimeError('主线连续自动恢复次数已达上限。')
@@ -815,9 +823,6 @@ class CampaignExecutor:
         state.execution_target = None
         state.route_goal = None
         state.unscoutable.clear()
-        for identifier in list(state.target_failures):
-            if identifier.startswith('scout-') or identifier == 'story-location':
-                state.target_failures.pop(identifier)
         self.scout_pending = None
         self.terminal_scan_stalls = 0
         self.owner.last_goal = None
@@ -826,12 +831,9 @@ class CampaignExecutor:
         snapshot = self.session.recover_center()
         state.update(snapshot, advance=False)
         self.owner.cut.update(state.blocking())
-        if not self.scan_start('恢复后', center_checked=True):
-            raise RuntimeError('回正后的十字扫描未取得可信视野。')
         self.session.record('recovery_complete', attempt=self.recoveries)
         logger.info(f'主线自动恢复完成：连续第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，'
-                    '连续计数已清零，下一轮重新选择目标。')
-        self.recoveries = 0
+                    '保留恢复计数与目标失败记录，下一轮重新选择目标。')
 
     def confirm_barriers_safe(self, snapshot):
         """确认当前可见光幕；确认失败时保留原快照与既有路网，不终止推图。
@@ -855,9 +857,10 @@ class CampaignExecutor:
         EX 关闭后重新定位并绕行，绕行不可用或战斗失败时交人工。
         找主线敌人和侦察阶段冻结已有小队底图坐标，只重新配准镜头与敌人；跨轮侦察同样不要求
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
-        剧情定位、规划或侦察异常在下一轮独立回正并重扫，丢弃冻结坐标；窗口、路线停滞、取消
+        剧情定位、规划或侦察异常在下一轮独立回正并重新定位，丢弃冻结坐标；窗口、路线停滞、取消
         和战斗失败仍立即停止；路线停滞仅允许按唯一邻近光幕标注新增封锁后重新决策。
-        连续恢复尝试有界，完整恢复成功后清零；不设单章总时限或主循环轮数上限。
+        开局与普通恢复取得有效快照后即可选目标，缺视野才按需侦察，不强制先通过展开十字扫描。
+        连续恢复尝试有界，只在实际目标完成或战斗胜利后清零；不设单章总时限或主循环轮数上限。
         开启遗漏补扫时，Boss 执行前核对章节敌人进度，进度不足才补扫当前连通分量；默认不执行额外补扫。
         已知普通敌人及沿途侦察仍保留，电梯不触发终局遗漏检查。
         终局清怪战斗结束后，下一拍先做状态刷新与终局检查；通过后持续保留 Boss 目标直到战斗确认完成，
@@ -878,7 +881,7 @@ class CampaignExecutor:
                 self.defer_ex(evidence=exc.evidence)
             self.session.record('initial_snapshot', snapshot=initial)
             if not self.ex_pending and initial.get('localization') == 'accepted' and initial.get('squad') is not None:
-                # 准备阶段与首轮之间没有移动，小队坐标可直接约束第一次展开配准。
+                # 准备阶段与首轮之间没有移动，小队坐标可用于后续观测及按需展开约束。
                 self.session.remember_registration(initial['squad'], initial.get('roi_to_map'),
                                                    initial.get('coverage_size'))
                 self.session.remember_navigation(initial)
@@ -906,14 +909,7 @@ class CampaignExecutor:
                         self.correct_ex_target(evidence)
                         self.ex_evidence = None
                         self.ex_pending = False
-                    if index or resumed_ex:
-                        snapshot = self.session.snapshot(**camera_options)
-                    else:
-                        self.session.identity(self.session.win.client())
-                        if self.purpose == 'story' and located(initial) and initial.get('squad') is not None:
-                            if not self.scan_start():
-                                raise RuntimeError('开局十字扫描未取得可信视野。')
-                            snapshot = self.session.snapshot()
+                    snapshot = self.session.snapshot(**camera_options)
                     if self.purpose == 'story' and (not located(snapshot) or snapshot.get('squad') is None):
                         raise RuntimeError('当前小队定位不可用，停止本轮目标选择。')
                     if curtains(snapshot):
@@ -1032,7 +1028,7 @@ class CampaignExecutor:
                         logger.warning(f'主线连续自动恢复已达 {CAMPAIGN_RECOVERY_LIMIT} 次上限，停止执行：{exc}')
                         return {'state': 'needs_review', 'reason': 'recovery_limit',
                                 'error': recovery_reason, 'goal': goal}
-                    logger.warning(f'主线本轮异常，下一轮回正并重扫：{exc}')
+                    logger.warning(f'主线本轮异常，下一轮回正并重新定位：{exc}')
                 finally:
                     logger.info(f'第 {index + 1} 轮结束：本轮耗时 {watch}，'
                                 f'累计操作 {self.session.inputs} 次')
