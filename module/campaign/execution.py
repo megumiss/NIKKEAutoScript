@@ -693,6 +693,7 @@ class CampaignExecutor:
         目标与路程目标同时检查，避免机关前置推进被误当普通探索；已观测的未开启机关和待复核
         光幕也阻止该分支。已有 EX 避让区域时沿用原导航，不能再次直点穿过已知 EX。
         本方法只检查执行状态，换屏后出现的未开启机关由实时选敌检测再次拦截。
+        底图定位失败时仍检查未完成的设施目标和当前未开启机关，不从失败坐标推断设施归属。
         """
         state = self.owner.state
         if (self.purpose != 'story' or state.pending_reviews or self.session.ex_bypass.obstacles
@@ -942,7 +943,8 @@ class CampaignExecutor:
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重新定位，丢弃冻结坐标；窗口、路线停滞、取消
         和战斗失败仍立即停止；路线停滞仅允许按唯一邻近光幕标注新增封锁后重新决策。
-        开局与普通恢复取得有效快照后即可选目标，缺视野才按需侦察，不强制先通过展开十字扫描。
+        启动与战后先读取不重试的当前快照；底图定位失败只尝试纯画面近敌，不进入地图决策。
+        近敌不可执行时再按原流程重试定位；缺视野才按需侦察，不强制先通过展开十字扫描。
         连续恢复尝试有界，只在实际目标完成或战斗胜利后清零；不设单章总时限或主循环轮数上限。
         开启遗漏补扫时，Boss 执行前核对章节敌人进度，进度不足才补扫当前连通分量；默认不执行额外补扫。
         已知普通敌人及沿途侦察仍保留，电梯不触发终局遗漏检查。
@@ -992,9 +994,25 @@ class CampaignExecutor:
                         self.correct_ex_target(evidence)
                         self.ex_evidence = None
                         self.ex_pending = False
-                    snapshot = self.session.snapshot(**camera_options)
-                    if self.purpose == 'story' and (not located(snapshot) or snapshot.get('squad') is None):
-                        raise RuntimeError('当前小队定位不可用，停止本轮目标选择。')
+                    if self.purpose == 'story':
+                        snapshot = self.session.snapshot(retry_localization=False, **camera_options)
+                        if not located(snapshot) or snapshot.get('squad') is None:
+                            preferred = (self.interrupted_goal or self.terminal_destination
+                                         or self.owner.state.route_goal)
+                            self.session.record('unlocalized_visual_attempt', snapshot=snapshot,
+                                                preferred_goal=preferred)
+                            logger.info('底图定位未通过，先检查可见近敌；地图路线与设施标注暂不执行。')
+                            if self.execute_visible_enemy(preferred, snapshot):
+                                camera_options = {}
+                                self.interrupted_goal = None
+                                self.interrupted_inputs = 0
+                                continue
+                            camera_options = {}
+                            snapshot = self.session.snapshot()
+                        if not located(snapshot) or snapshot.get('squad') is None:
+                            raise RuntimeError('底图定位未通过且无可执行的实景近敌，停止地图目标选择。')
+                    else:
+                        snapshot = self.session.snapshot(**camera_options)
                     if curtains(snapshot):
                         snapshot = self.confirm_barriers_safe(snapshot)
                         camera_options = ({'known_squad': list(snapshot['squad'])}

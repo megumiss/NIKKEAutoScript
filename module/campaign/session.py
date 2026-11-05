@@ -1002,7 +1002,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             raise SquadOffscreen(f'道路已停稳，后续小队定位不可用：本帧圆环数量为 {len(players)}；'
                                  '不继续等待，交由目标确认或定位恢复。')
 
-    def snapshot(self, expanded=False, keep_expanded=False, known_squad=None):
+    def snapshot(self, expanded=False, keep_expanded=False, known_squad=None, *, retry_localization=True):
         """取得一拍业务观测；定位失败时有限重试，展开默认收起，也可留给紧接着的侦察。
 
         战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_reason）；此外小队只在收到点击时才
@@ -1017,6 +1017,8 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         使用已有小队底图坐标规划路线；当前视野配准失败可复用小队位置，但不并入当前观测。
         定位后只有镜头拖动时自动使用已知小队坐标，即使小队已离屏也不重新寻找圆环；
         点击、其他可能移动小队的输入或战斗会使这条自动复用路径失效。
+        retry_localization=False 只返回本帧结果，不展开重试或复用旧定位；供主循环先尝试
+        无底图坐标的可见近敌。失败仍标为未定位，不允许写入路网、覆盖或用于机关／电梯规划。
         """
         if keep_expanded and not expanded:
             raise ValueError('保留展开面板要求 expanded=True。')
@@ -1036,7 +1038,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         field = self.win.client()
         self.identity(field)
         snapshot = self.observe_frame(field, **options)
-        if expanded and snapshot.get('localization') != 'accepted':
+        if retry_localization and expanded and snapshot.get('localization') != 'accepted':
             logger.info(f'展开地图定位未通过：小幅平移 {EXPANDED_RETRY_PIXELS:.0f} 客户区像素后重试（1/1）。')
             self.win.capture()
             self.pan_expanded((1., 0.), distance=EXPANDED_RETRY_PIXELS)
@@ -1047,7 +1049,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                 self.owner.last_snapshot = snapshot
                 self.preview(field)
                 raise RuntimeError('展开地图小幅平移重试后仍未定位成功；停止目标选择并请求人工复核。')
-        elif known_squad is not None and not located(snapshot):
+        elif retry_localization and known_squad is not None and not located(snapshot):
             if (self.stationary_squad() is not None
                     and self.last_registration['gestures'] == self.gestures):
                 snapshot = self.reuse_registration(snapshot, 'unchanged')
@@ -1055,7 +1057,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                 self.owner.last_snapshot = snapshot
                 self.preview(field)
                 raise RuntimeError('找敌人的当前视野配准未通过；停止目标选择，不重新定位小队。')
-        elif not located(snapshot):
+        elif retry_localization and not located(snapshot):
             why = self.reuse_reason()
             snapshot = (self.reuse_registration(snapshot, why) if why is not None
                         else self.retry_localization(snapshot, expanded=expanded, keep_expanded=keep_expanded))

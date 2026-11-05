@@ -541,6 +541,8 @@ class Campaign(ModuleBase):
 
         客户区与资源仅准备一次；剧情、换章、主页、方舟和未绑定战斗由章节无关场景控制器处理，
         不需要预先取得章节角标或小队位置。只有野外身份连续三帧一致后才加载本章定位和道路。
+        主线允许未取得底图小队坐标时进入执行器做纯画面近敌检查，地图规划仍须定位成功；
+        收集品任务没有纯画面替代路径，启动时继续要求可信底图起点。
         场景切换中断章节会话时停止旧坐标输入；同章返回保留事实、EX 避让与路线失败历史，
         真正换章或地图版本变化才新建运行状态。各章通过循环接续，不递归调用任务入口。
         业务异常最终终止时每次任务最多返回主页并重新进入一次，同章仍保留事实与失败历史。
@@ -577,11 +579,15 @@ class Campaign(ModuleBase):
                         chapter = self.detect_current_chapter()
                         identity = (chapter, self.current_difficulty)
                         self.scene_controller.bind_field(identity)
-                        snapshot = self.confirm_squad_location(self.last_snapshot)
+                        collectible = self.config.task.command == 'auto_main_collectible'
+                        snapshot = (self.confirm_squad_location(self.last_snapshot) if collectible
+                                    else self.last_snapshot)
                         self.log_snapshot_summary(snapshot)
-                        if (snapshot is None or snapshot.get('localization') != 'accepted'
-                                or snapshot.get('squad') is None):
-                            raise ValueError('主线没有可信小队起点，停止并交人工定位。')
+                        if snapshot is None:
+                            raise ValueError('主线没有可用的野外观测，停止执行。')
+                        if (collectible and (snapshot.get('localization') != 'accepted'
+                                             or snapshot.get('squad') is None)):
+                            raise ValueError('收集品任务没有可信小队起点，停止并交人工定位。')
                         chart = self.ensure_chart(chapter)
                         if chart is None or not chart.supported or chart.road is None:
                             raise ValueError('本章地图底图不可用，不能规划移动。')
@@ -601,13 +607,15 @@ class Campaign(ModuleBase):
                             for progress in session.movement_progress.values():
                                 progress.interrupt()
                         executor = CampaignExecutor(self, session, purpose=(
-                            'collectible' if self.config.task.command == 'auto_main_collectible' else 'story'))
+                            'collectible' if collectible else 'story'))
                         if suspended is not None:
                             executor.interrupted_goal = suspended['interrupted_goal']
                             executor.interrupted_inputs = suspended['interrupted_inputs']
                             executor.terminal_destination = suspended['terminal_destination']
+                        position = (points_text(snapshot['squad']) if located(snapshot)
+                                    and snapshot.get('squad') is not None else '底图未定位，仅允许实景检查')
                         logger.info(f'场景与章节准备结束：{identity[1].upper()} 第 {chapter} 章，'
-                                    f'小队起点 {points_text(snapshot["squad"])}，任务累计耗时 {watch}。')
+                                    f'小队起点 {position}，任务累计耗时 {watch}。')
                         try:
                             result = executor.run(snapshot)
                         except SceneRequired as exc:
