@@ -379,6 +379,16 @@ class Device(Screenshot, Control, AppControl):
         match = re.search(rf'Override {key}: (\S+)', output)
         return match.group(1) if match else None
 
+    @staticmethod
+    def _wm_current_value(output: str, key: str):
+        # 当前值等于原生值时 wm 不输出 Override；存在 Override 时不能回退到 Physical。
+        values = {}
+        for line in output.splitlines():
+            name, separator, value = line.partition(':')
+            if separator:
+                values[name.strip()] = value.strip()
+        return values.get(f'Override {key}', values.get(f'Physical {key}'))
+
     def _physical_device_debug_state(self, stage: str):
         """分辨率/方向改动前后的设备显示状态快照，仅 debug 级输出，用于排查厂商 ROM 差异。"""
         try:
@@ -419,14 +429,17 @@ class Device(Screenshot, Control, AppControl):
         # 记录用户已有的 override，退出时还原具体值；直接 reset 会丢掉用户自己的分辨率/DPI 覆盖
         self._physical_size_override = self._wm_override_value(size_out, 'size')
         self._physical_density_override = self._wm_override_value(density_out, 'density')
-        self.adb_shell(['wm', 'size', '720x1280'])
-        self.adb_shell(['wm', 'density', '240'])
-        # 锁定竖屏：关闭自动旋转并固定 user_rotation=0（自然方向，手机即竖屏），
-        # 否则设备平放/旋转时画面会横过来，截图与坐标全部错位
         self._physical_rotation_backup = {
             key: self.adb_shell(['settings', 'get', 'system', key]).strip()
             for key in ('accelerometer_rotation', 'user_rotation')
         }
+        # 首次修改前完成备份并注册恢复，确保初始化失败退出时也能还原设备。
+        if self.config.PhysicalDevice_AutoRestoreResolution:
+            atexit.register(self._physical_device_resolution_reset)
+        self.adb_shell(['wm', 'size', '720x1280'])
+        self.adb_shell(['wm', 'density', '240'])
+        # 锁定竖屏：关闭自动旋转并固定 user_rotation=0（自然方向，手机即竖屏），
+        # 否则设备平放/旋转时画面会横过来，截图与坐标全部错位
         self.adb_shell(['settings', 'put', 'system', 'accelerometer_rotation', '0'])
         self.adb_shell(['settings', 'put', 'system', 'user_rotation', '0'])
         # wm size 立即写入但显示管线生效有延迟，等它真正切换完成，避免首帧截图拿到旧分辨率
@@ -434,15 +447,15 @@ class Device(Screenshot, Control, AppControl):
         # 读回校验：设备拒绝 wm 命令时 adb_shell 不抛异常，静默继续只会让后续截图/坐标全错
         size_now = self.adb_shell(['wm', 'size'])
         density_now = self.adb_shell(['wm', 'density'])
-        if 'Override size: 720x1280' not in size_now or 'Override density: 240' not in density_now:
+        size_ok = self._wm_current_value(size_now, 'size') == '720x1280'
+        density_ok = self._wm_current_value(density_now, 'density') == '240'
+        if not size_ok or not density_ok:
             logger.critical(
                 f'Failed to set physical device resolution to 720x1280@240: '
                 f'size={size_now!r}, density={density_now!r}'
             )
             raise RequestHumanTakeover
         self._physical_device_debug_state('after set')
-        if self.config.PhysicalDevice_AutoRestoreResolution:
-            atexit.register(self._physical_device_resolution_reset)
 
     def _physical_device_resolution_reset(self):
         logger.info('Restore physical device resolution')
