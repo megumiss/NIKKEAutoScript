@@ -1244,13 +1244,16 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.scout_failure = None
         self.owner.last_snapshot = None
 
-    def recover_center(self, mechanism_position=None):
+    def recover_center(self, mechanism_position=None, allow_unlocalized=False):
         """独立回正小队并取得全新实测定位；失败时不把旧位置降级为可用。
 
         回正与重新定位各使用一个单目标输入窗口；前者不发送小队移动。
-        新快照必须来自实际小队圆环并通过既有配准门限；短拖回正后仍须居中，图标回正则直接信任游戏结果。
+        默认要求新快照来自实际小队圆环并通过既有配准门限；短拖回正后仍须居中，图标回正信任游戏结果。
         mechanism_position 仅供已确定中央解锁光幕的机关触发后回正，允许一次有界边缘小队镜头短拖；
         普通恢复不提供此参数；缺少画面标记时按既有定向搜索拖动，跳过小队避让但保留端点检查。
+        allow_unlocalized 仅供执行层已通过近敌门禁的普通恢复使用：回正后只取单帧、不展开重试，
+        可返回未定位快照供纯画面近敌检查，但不能据此恢复地图规划。回正失败与安全异常仍直接传播。
+        机关与扫描调用方默认保持严格定位要求，不能降级使用已知或失败坐标。
         """
         from module.campaign.navigation.recovery import centered, centering_frame, recenter_squad
 
@@ -1259,12 +1262,12 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         icon_clicked = recenter_squad(self, mechanism_position=mechanism_position)
         self.reset_navigation()
         self.begin_target('position')
-        snapshot = self.snapshot()
-        if (snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
-                or snapshot.get('squad_source') == 'known'):
-            raise ValueError('小队回正后的实测定位未通过，不能恢复十字扫描。')
+        snapshot = self.snapshot(retry_localization=not allow_unlocalized)
+        if not allow_unlocalized and (snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
+                                      or snapshot.get('squad_source') == 'known'):
+            raise ValueError('小队回正后的实测定位未通过，不能恢复地图规划。')
         if not icon_clicked and not centered(centering_frame(self)):
-            raise ValueError('重新定位后镜头偏离小队，不能以偏移视野开始恢复扫描。')
+            raise ValueError('重新定位后镜头偏离小队，不能恢复地图规划或实景近敌检查。')
         return snapshot
 
     def scout_begin(self):

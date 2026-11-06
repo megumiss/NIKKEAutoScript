@@ -890,12 +890,16 @@ class CampaignExecutor:
         self.session.scout_end()
         return scanned
 
-    def recover(self, reason):
+    def recover(self, reason, goal=None):
         """清除本轮临时决策，独立回正并重新定位；最多连续尝试三次。
 
         已清除敌人、机关、电梯、光幕和道路事实保留，所有目标累计失败次数不重置；只解除
         临时不可侦察视野，允许重新观测。回正或实测定位未通过时不能使用异常前的目标。
         恢复后先按当前有效快照决策，缺失视野由正常侦察补充，不以展开十字扫描成功作为前提。
+        goal 仅保留失败任务的类型门禁，不沿用其坐标；普通敌人旧目标已失效，允许重选实景近敌，
+        但机关、电梯、Boss 及 EX 限制仍检查所有续行目标。路程目标在恢复成功前只用于门禁，
+        不提前清除，避免下一次恢复丢失设施限制。允许近敌时只取单帧，未定位快照不写入地图状态；
+        两帧实景执行失败或没有可执行近敌仍消耗本次恢复额度，不进入地图决策。
         完整恢复也不清零计数，只有实际完成移动目标或战斗胜利才重新获得恢复额度。
         """
         if self.recoveries >= CAMPAIGN_RECOVERY_LIMIT:
@@ -904,15 +908,32 @@ class CampaignExecutor:
         self.session.record('recovery_start', force=True, attempt=self.recoveries, reason=reason)
         logger.warning(f'主线自动恢复开始：连续第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，原因 {reason}。')
         state = self.owner.state
+        candidates = (goal, state.route_goal, self.interrupted_goal, self.terminal_destination)
+        guards = [None if candidate is not None and candidate.get('kind') == 'enemy'
+                  and candidate.get('enemy_kind') == 'normal' else candidate for candidate in candidates]
+        allow_visual = not self.ex_pending and all(self.visible_enemy_allowed(candidate, {}) for candidate in guards)
         state.execution_target = None
-        state.route_goal = None
         state.unscoutable.clear()
         self.scout_pending = None
         self.terminal_scan_stalls = 0
         self.owner.last_goal = None
         self.owner.last_routes = None
         self.owner.last_route_signature = None
-        snapshot = self.session.recover_center()
+        snapshot = self.session.recover_center(allow_unlocalized=allow_visual)
+        if (snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
+                or snapshot.get('squad_source') == 'known'):
+            attempt = self.recoveries
+            self.session.record('recovery_visual_attempt', snapshot=snapshot, attempt=attempt)
+            logger.info('小队回正后底图定位未通过，检查实景近敌；不使用旧目标坐标或更新地图状态。')
+            if not allow_visual or not self.execute_visible_enemy(None, snapshot):
+                raise RuntimeError('小队回正后底图定位未通过且无可执行的实景近敌。')
+            state.route_goal = None
+            if not self.ex_pending:
+                self.interrupted_goal = None
+                self.interrupted_inputs = 0
+            self.session.record('recovery_visual_handled', attempt=attempt, ex_pending=self.ex_pending)
+            return
+        state.route_goal = None
         state.update(snapshot, advance=False)
         self.owner.cut.update(state.blocking())
         self.session.record('recovery_complete', attempt=self.recoveries)
@@ -945,6 +966,7 @@ class CampaignExecutor:
         和战斗失败仍立即停止；路线停滞仅允许按唯一邻近光幕标注新增封锁后重新决策。
         启动与战后先读取不重试的当前快照；底图定位失败只尝试纯画面近敌，不进入地图决策。
         近敌不可执行时再按原流程重试定位；缺视野才按需侦察，不强制先通过展开十字扫描。
+        异常恢复回正后也允许单帧未定位结果进入同一实景近敌门禁，不能在强制配准分支绕过兜底。
         连续恢复尝试有界，只在实际目标完成或战斗胜利后清零；不设单章总时限或主循环轮数上限。
         开启遗漏补扫时，Boss 执行前核对章节敌人进度，进度不足才补扫当前连通分量；默认不执行额外补扫。
         已知普通敌人及沿途侦察仍保留，电梯不触发终局遗漏检查。
@@ -982,7 +1004,7 @@ class CampaignExecutor:
                     self.session.check()
                     if recovery_reason is not None:
                         camera_options = {}
-                        self.recover(recovery_reason)
+                        self.recover(recovery_reason, goal=goal)
                         recovery_reason = None
                         goal = None
                         continue
