@@ -621,14 +621,15 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
 
 
 def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, target, squad_position, click,
-                       enemy_kind='normal'):
+                       enemy_kind='normal', direction_assist=False):
     """重新识别点击前的新帧，只返回本帧再次确认的原目标脚圈中心。
 
     不以整片场景像素是否相同判断镜头稳定，避免河流或角色动画使有效匹配失效。
     enemy_kind 必须沿用原目标的普通／Boss 类型，最终复核不能退回普通敌人默认值。
     新帧道路必须独立配准通过，镜头偏移不超过 12 地图像素、尺度变化不超过 12%；
-    reference 必须是初次两帧匹配成功的拖动后观测，期间不发新手势；最新帧只跟踪已确认脚圈，
+    reference 必须是运动或方向匹配成功的观测，期间不发新手势；最新帧只跟踪已确认脚圈，
     不重复拖动前参考帧的身份推断，中心偏移不超过 TRACK_DISTANCE 且双向关联无歧义。
+    direction_assist 要求最新帧再次满足原目标的粗方向对应，不能在复核时改选其他敌人。
     本方法不拖动或开合地图。复核失败保留前后帧并抛 ClickUnconfirmed，禁止自动展开重定位；
     截图、窗口、弹窗和取消异常直接传播，不在安全异常后追加操作。
     """
@@ -653,6 +654,13 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
         if result.get('click') is None:
             session.emit(message=f'脚圈目标跟踪未通过：{result["reason"]}', enemy_ring_recheck=result)
             raise ValueError(result['reason'].rstrip('。'))
+        if direction_assist:
+            from module.campaign.vision.enemy_direction import match_target_direction
+
+            direction = match_target_direction(fresh, rings, current['matrix'], target, squad_position,
+                                               enemy_kind=enemy_kind)
+            if direction.get('click') is None or not np.allclose(direction['click'], result['click']):
+                raise ValueError(f'原目标方向复核未通过：{direction["reason"]}')
         latest_click = np.asarray(result['click'], float)
         center_shift = float(np.linalg.norm(latest_click - click))
     except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
@@ -686,7 +694,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
     全局配准被接受即视为批末校正已完成。
     实测（退回固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
-    enemy_assist 允许敌人模式利用两次被接受的定位及同帧脚圈提前点击；不额外拖动来收集证据。
+    enemy_assist 先以原目标相对小队的粗方向匹配点击脚圈，不比较两视图敌我距离；
+    同向落点或标记存在竞争时不替换目标，再尝试既有两帧运动辅助，不额外拖动来收集证据。
     enemy_kind 将普通／Boss 原目标类型传到匹配和最终点击复核，不允许跨类替代。
     证据只在本次规划内保留，允许跨过一帧不可信定位，但不使用该帧参与匹配；两参考帧最多
     相隔两次平移，累计镜头路程不超过 450 地图像素。重新锚定、缩放跳变或超限时丢弃证据；
@@ -699,6 +708,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     """
     from module.campaign.vision.matching import MapMatcher, register
     from module.campaign.vision.enemy_ring import MAX_CAMERA_STEP, match_target_ring, observe_rings
+    from module.campaign.vision.enemy_direction import match_target_direction
 
     session.last_plan_enemy_ring = False
     target = np.asarray(target, float)
@@ -747,9 +757,28 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         squad_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), squad_position - viewport)
         ground = np.asarray(goto.VIEWPORT_PIXEL, float) + panel_delta_to_client(scale_a, squad_panel)
         current_rings = None
-        if enemy_assist and ring_trusted and ring_previous is not None:
+        if enemy_assist and ring_trusted:
             try:
                 current_rings = observe_rings(field, panel, matrix, viewport)
+                result = match_target_direction(field, current_rings, matrix, target, squad_position,
+                                                enemy_kind=enemy_kind)
+            except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
+                result = dict(reason=f'目标方向辅助不可用：{error}')
+            session.emit(message=f'目标方向辅助：{result["reason"].rstrip("。")}',
+                         enemy_direction_match=result)
+            if result.get('click') is not None:
+                click = confirm_ring_click(session, matcher, current_rings, field, viewport, scale_a,
+                                           target, squad_position, np.asarray(result['click'], float),
+                                           enemy_kind=enemy_kind, direction_assist=True)
+                session.last_plan_enemy_ring = True
+                session.emit(state='planning', navigation_method='enemy_direction', camera_pans=session.camera_pans,
+                             plan_camera_pans=count, planned_target=target.tolist(), click=click.tolist(),
+                             message='原目标方向及新帧复核通过，直接采用脚圈点击落点')
+                return click
+        if enemy_assist and ring_trusted and ring_previous is not None:
+            try:
+                current_rings = (current_rings if current_rings is not None
+                                 else observe_rings(field, panel, matrix, viewport))
                 result = match_target_ring(ring_previous, current_rings, target, squad_position, goto.VIEWPORT_PIXEL,
                                            enemy_kind=enemy_kind)
             except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:

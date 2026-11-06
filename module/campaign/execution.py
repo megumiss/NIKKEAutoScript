@@ -692,6 +692,7 @@ class CampaignExecutor:
 
         目标与路程目标同时检查，避免机关前置推进被误当普通探索；已观测的未开启机关和待复核
         光幕也阻止该分支。已有 EX 避让区域时沿用原导航，不能再次直点穿过已知 EX。
+        已选敌人目标交原目标导航与点击辅助，不能被最近可见敌人替换；探索等未指定敌人的流程仍可选近敌。
         本方法只检查执行状态，换屏后出现的未开启机关由实时选敌检测再次拦截。
         底图定位失败时仍检查未完成的设施目标和当前未开启机关，不从失败坐标推断设施归属。
         """
@@ -704,7 +705,7 @@ class CampaignExecutor:
                        for item in snapshot.get('objects', []))):
             return False
         if goal is not None:
-            if goal['kind'] not in ('enemy', 'explore', 'advance', 'story', 'none'):
+            if goal['kind'] not in ('explore', 'advance', 'story', 'none'):
                 return False
             if goal.get('enemy_kind') == 'boss':
                 return False

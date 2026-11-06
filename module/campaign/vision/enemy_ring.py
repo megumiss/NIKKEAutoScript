@@ -195,9 +195,9 @@ def match_target_ring(before, after, target, squad, gaze, enemy_kind='normal'):
 
 
 def track_confirmed_ring(before, after, target, squad, click, enemy_kind='normal'):
-    """将已由两帧运动确认的目标脚圈唯一关联到点击前新帧，不重新推断目标身份。
+    """将已由运动或方向匹配的目标脚圈唯一关联到点击前新帧，不重新推断目标身份。
 
-    before 必须是初次匹配成功的拖动后帧，click 必须是该帧返回的脚圈中心；调用方已确认
+    before 必须是初次运动或方向匹配成功的帧，click 必须是该帧返回的脚圈中心；调用方已确认
     新帧道路配准、镜头偏移与尺度变化，期间不得发送手势。target/squad 为章节底图像素，
     click/centers 为客户区像素。两帧仍须唯一对应原敌人类型，可见小队不得偏移超过 12 地图像素。
     新中心偏移不超过 TRACK_DISTANCE，并通过双向最近邻与 TRACK_GAP 次选间隔检查；
