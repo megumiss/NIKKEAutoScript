@@ -3,8 +3,7 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 
 const ScrcpyPlayer = defineAsyncComponent(() => import('./ScrcpyPlayer.vue'))
 
-const props = withDefaults(defineProps<{ name: string; language: string; closable?: boolean }>(), { closable: false })
-const emit = defineEmits<{ (e: 'close'): void }>()
+const props = withDefaults(defineProps<{ name: string; language: string; embedded?: boolean }>(), { embedded: false })
 
 const labels: Record<string, Record<string, string>> = {
   '画面预览': { 'en-US': 'Screen preview', 'ja-JP': '画面プレビュー' },
@@ -16,7 +15,6 @@ const labels: Record<string, Record<string, string>> = {
   '控制': { 'en-US': 'Control', 'ja-JP': '操作' },
   '操作栏': { 'en-US': 'Control bar', 'ja-JP': '操作バー' },
   '退出控制': { 'en-US': 'Exit control', 'ja-JP': '操作を終了' },
-  '关闭': { 'en-US': 'Close', 'ja-JP': '閉じる' },
 }
 
 function t(source: string) {
@@ -32,6 +30,7 @@ const POLL_RATES = [1, 2, 5, 10]
 const RATE_STORAGE_KEY = 'nkas-preview-rate'
 const rateIndex = ref(Math.max(0, POLL_RATES.indexOf(Number(localStorage.getItem(RATE_STORAGE_KEY)) || 1)))
 let pollTimer: number | undefined
+let frameRequest: AbortController | undefined
 let lastCapturedAt = 0
 let capturedAt = 0
 
@@ -50,13 +49,15 @@ const rawH = ref(1280)
 const showControlBar = ref(false)
 const wrapW = ref(0)
 const wrapH = ref(0)
-const frameWrapStyle = computed(() => ({ width: `${wrapW.value}px`, height: `${wrapH.value}px` }))
+const frameWrapStyle = computed(() => props.embedded
+  ? { width: '100%', height: '100%' }
+  : { width: `${wrapW.value}px`, height: `${wrapH.value}px` })
 const BODY_PADDING = 24
 let resizeObserver: ResizeObserver | undefined
 
 function measure() {
   const body = bodyEl.value
-  if (!body || !interactive.value) return
+  if (!body || !interactive.value || props.embedded) return
   const aspect = rawW.value / rawH.value
   const extraW = showControlBar.value ? 44 : 0
   const availableW = Math.max(extraW, body.clientWidth - BODY_PADDING)
@@ -119,18 +120,20 @@ function setFrame(url: string) {
 }
 
 async function tick() {
-  if (!props.name || interactive.value) return
+  if (!props.name || interactive.value || frameRequest) return
   const name = props.name
+  const request = new AbortController()
+  frameRequest = request
   try {
-    const response = await fetch(`/api/${encodeURIComponent(props.name)}/screenshot?t=${Date.now()}`)
-    if (name !== props.name || interactive.value) return
+    const response = await fetch(`/api/${encodeURIComponent(name)}/screenshot?t=${Date.now()}`, { signal: request.signal })
+    if (frameRequest !== request || name !== props.name || interactive.value) return
     if (response.ok) {
       const at = Number(response.headers.get('X-Captured-At') || 0)
       if (at && at !== lastCapturedAt) {
+        const blob = await response.blob()
+        if (frameRequest !== request || name !== props.name || interactive.value) return
         lastCapturedAt = at
         capturedAt = at
-        const blob = await response.blob()
-        if (name !== props.name || interactive.value) return
         setFrame(URL.createObjectURL(blob))
       }
       status.value = capturedAt && Date.now() / 1000 - capturedAt <= staleAfter.value ? 'live' : 'stale'
@@ -139,6 +142,8 @@ async function tick() {
     }
   } catch {
     // Network hiccup: keep the current frame and retry on the next tick.
+  } finally {
+    if (frameRequest === request) frameRequest = undefined
   }
 }
 
@@ -149,6 +154,8 @@ function startPolling() {
 }
 
 function stopPolling() {
+  frameRequest?.abort()
+  frameRequest = undefined
   if (pollTimer !== undefined) {
     window.clearInterval(pollTimer)
     pollTimer = undefined
@@ -184,10 +191,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <article class="card preview-card">
+  <article class="card preview-card" :class="{ embedded }">
     <div class="preview-head">
-      <b>{{ t('画面预览') }}</b>
-      <span v-if="frameUrl && !interactive" class="preview-badge" :class="status">{{ statusText }}</span>
+      <slot name="title"><b>{{ t('画面预览') }}</b></slot>
+      <span v-if="frameUrl && !interactive" class="preview-badge" :class="status" :title="statusText" :aria-label="statusText">{{ statusText }}</span>
       <span class="preview-icons">
         <button class="preview-icon" :class="{ 'control-active': interactive }" type="button" :aria-pressed="interactive" :aria-label="controlTitle" :title="controlTitle" @click="toggleInteractive">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
@@ -201,9 +208,7 @@ onBeforeUnmount(() => {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           </button>
         </template>
-        <button v-if="closable" class="preview-icon preview-modal-close" type="button" :aria-label="t('关闭')" :title="t('关闭')" @click="emit('close')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
+        <slot name="window-actions" />
       </span>
     </div>
     <div ref="bodyEl" class="preview-body">
@@ -219,6 +224,18 @@ onBeforeUnmount(() => {
 <style scoped>
 .preview-card { display:flex; flex-direction:column; width:100%; height:100%; min-height:0; overflow:hidden; }
 .preview-head { display:flex; flex:none; gap:10px; align-items:center; min-height:54px; padding:13px 18px; border-bottom:1px solid var(--border); }
+.preview-card.embedded { flex:1; height:auto; border:0; border-radius:0; box-shadow:none; }
+.embedded .preview-head { height:var(--preview-header-height); min-height:var(--preview-header-height); gap:6px; padding:4px 8px; overflow-x:auto; scrollbar-width:none; background:var(--card-2); cursor:grab; touch-action:pan-x; user-select:none; }
+.embedded .preview-head::-webkit-scrollbar { display:none; }
+.embedded .preview-head:active { cursor:grabbing; }
+.embedded .preview-icons { gap:4px; }
+.embedded .preview-badge { flex:none; width:6px; height:6px; padding:0; border-radius:50%; background:var(--text-3); font-size:0; }
+.embedded .preview-badge.live { background:var(--green); }
+.embedded .preview-body { padding:0; }
+.embedded .preview-body img { width:100%; height:100%; border-radius:0; }
+.embedded .preview-frame-wrap { border-radius:0; }
+/* Overlay Android controls so opening them cannot squeeze the fixed portrait picture. */
+.embedded :deep(.scrcpy-controls) { position:absolute; top:0; right:0; bottom:0; width:44px; background:var(--card); }
 .preview-head > b { white-space:nowrap; }
 .preview-badge { padding:2px 9px; border-radius:7px; font-size:11px; font-weight:700; }
 .preview-badge.live { color:var(--green); background:var(--green-soft); }
