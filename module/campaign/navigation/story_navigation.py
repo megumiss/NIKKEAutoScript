@@ -11,6 +11,8 @@ from module.campaign.vision.enemy_ring import (RING_CONFIDENCE, clickable_ring, 
                                                 observe_rings, scene_tracks)
 from module.campaign.vision.detection import detect_scene
 from module.campaign.vision.offscreen import squad_offscreen
+from module.campaign.vision.enemy_direction import match_target_direction
+from module.campaign.route_planning import route_path
 from module.campaign.vision.perception import compact_road_masks, squad_arrow
 from module.campaign.vision.story_marker import marked_ring, story_markers
 from module.logger import logger
@@ -40,9 +42,12 @@ def story_frame(session, squad):
     markers = story_markers(field)
     if not any(item['kind'] == 'scene' for item in markers):
         return None
+    if detect_scene(field, ('scene_ground_mechanism_off',)):
+        return None
     panel, road, valid = compact_road_masks(field)
     view = compact_viewport(session, session.owner.observer.matcher, panel, road, valid)
     if view['status'] != 'accepted':
+        logger.info(f'主线目标视野配准未通过：道路重合度 {view["iou"]:.3f}；不采用目标坐标或发送移动点击。')
         return None
     rings = observe_rings(field, panel, view['matrix'], view['viewport'], observe_squad=False)
     ring = marked_ring(markers, rings.centers)
@@ -50,15 +55,46 @@ def story_frame(session, squad):
     return dict(field=field, rings=rings, ring=ring, scale=view['a'], view=view)
 
 
-def visible_enemy_target(session, recenter=True, field=None):
-    """两帧选择距离小队地面位置最近的可见敌人脚圈，不依赖主线标记或底图配准。
+def visible_enemy_route(session, field, click):
+    """为近敌脚圈匹配当前小地图的唯一普通敌人，并验证小队到目标的步行道路。
 
-    距离为客户区像素直线距离，不代表道路可达；小队位置用现有箭头下移 90 像素的地面估计，
-    只用于排序。脚圈仍须通过置信度和 HUD 检查；两帧最近候选一致且位移不超过 15 像素，
-    小队地面估计偏差不超过 20 像素才许可一次直点。可见未开启机关时让位给原机关流程。
-    小队离屏或箭头缺失时最多先回正一次，之后仍缺可靠位置则拒绝，绝不按屏幕中心猜最近。
-    不从红圈推断普通／Boss／EX 身份，不写入底图坐标，战斗及 EX 交现有接管处理。
-    导航换屏传入当前 field 并令 recenter=False，只观测新视野，不在规划中途拖回小队。
+    必须独立接受当前紧凑配准和唯一小队圆环；沿用原目标方向匹配的竞争候选规则，不凭屏幕
+    距离推算底图坐标。仅有唯一普通敌人与指定脚圈对应，且同属一个非零连通分区、A* 可达时
+    返回底图证据。跨区、EX／Boss、配准失败或方向歧义均返回 None，不借可见脚圈放行移动。
+    """
+    if session.owner.cut is None or session.owner.observer.matcher is None:
+        return None
+    panel, road, valid = compact_road_masks(field)
+    view = compact_viewport(session, session.owner.observer.matcher, panel, road, valid)
+    if view['status'] != 'accepted':
+        return None
+    rings = observe_rings(field, panel, view['matrix'], view['viewport'], track_scene=False)
+    if len(rings.squad) != 1:
+        return None
+    squad = np.asarray(rings.squad[0], float)
+    cut = session.owner.cut
+    home = cut.component(squad)
+    if not home:
+        return None
+    candidates = []
+    for kind, position in rings.enemies:
+        if kind != 'minimap_enemy_normal' or cut.component(position) != home:
+            continue
+        matched = match_target_direction(field, rings, view['matrix'], position, squad)
+        if (matched.get('click') is None or np.linalg.norm(np.asarray(matched['click']) - click) > 1
+                or route_path(cut, squad, position) is None):
+            continue
+        candidates.append(dict(position=np.asarray(position).tolist(), squad=squad.tolist(), component=home))
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def visible_enemy_target(session, recenter=True, field=None):
+    """两帧选择最近的可见普通敌人脚圈，并用本帧小地图确认其步行可达性。
+
+    两帧脚圈位移不超过 15、小队地面估计偏差不超过 20 客户区像素；敌人和小队底图坐标
+    各自漂移不超过 12 地图像素，且均通过同分区道路检查才可直点。实际距离仍由路网判定，
+    屏幕最近只用于候选排序。未开启机关、EX／Boss、跨区或无法定位时不以视觉匹配替代路线。
+    小队离屏时最多先回正一次；导航换屏传 recenter=False，仅复核当前视野，不中途回正。
     """
     from module.campaign.navigation.recovery import recenter_squad
 
@@ -81,11 +117,21 @@ def visible_enemy_target(session, recenter=True, field=None):
             continue
         ground = np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
         click = min(rings, key=lambda point: np.linalg.norm(point - ground))
-        current = dict(click=click.tolist(), ground=ground.tolist(),
+        try:
+            route = visible_enemy_route(session, field, click)
+        except (ValueError, cv2.error, np.linalg.LinAlgError) as exc:
+            logger.info(f'实景近敌道路未确认：{exc}；不发送移动点击。')
+            return None
+        if route is None:
+            return None
+        current = dict(click=click.tolist(), ground=ground.tolist(), **route,
                        distance=round(float(np.linalg.norm(click - ground)), 1))
         if previous is not None:
             if (np.linalg.norm(click - previous['click']) > 15
-                    or np.linalg.norm(ground - previous['ground']) > 20):
+                    or np.linalg.norm(ground - previous['ground']) > 20
+                    or np.linalg.norm(np.asarray(route['position']) - previous['position']) > 12
+                    or np.linalg.norm(np.asarray(route['squad']) - previous['squad']) > 12
+                    or route['component'] != previous['component']):
                 return None
             session.record('enemy_visual_confirmed', field=field, force=True, target=current)
             return current
@@ -219,9 +265,9 @@ def reveal_story_marker(session):
         session.pause(.25)
         fresh = session.win.client()
         session.identity(fresh)
-        confirmed = [item for item in story_markers(fresh) if item['kind'] == 'edge'
-                     and np.linalg.norm(np.asarray(item['position']) - edges[0]['position']) <= 10]
-        if len(confirmed) != 1:
+        confirmed = story_markers(fresh)
+        if (len(confirmed) != 1 or confirmed[0]['kind'] != 'edge'
+                or np.linalg.norm(np.asarray(confirmed[0]['position']) - edges[0]['position']) > 10):
             break
         point = tuple(int(round(value)) for value in confirmed[0]['position'])
         if not session.tap(point, interval=2., camera_only=True):
@@ -230,6 +276,7 @@ def reveal_story_marker(session):
         session.localized_report = None
         session.anchor_reference = None
         session.anchor_reference_method = None
+        session.record('story_camera_click', field=fresh, force=True, click=list(point))
         logger.info(f'主线离屏标记已点击：客户区位置 {point}；等待镜头切换，不发送小队移动。')
         session.pause(1.5)
     return changed
@@ -245,6 +292,8 @@ def locate_story_target(session, squad):
     不超过 12%、视口偏差不超过 12 地图像素、脚圈偏差不超过 15 客户区像素，并通过道路归属校验；
     居中后优先关联两帧同位置唯一小地图敌人；运动匹配和居中匹配均可提供 EX 误分类纠正证据。
     无小地图敌人才用地面位置兜底，类型冲突或已确认 EX 不能降级为无类型地面目的地。
+    当前紧凑视野配准失败时，只有场内主线脚圈可见才在同一四次平移额度内换小视角重试，
+    不接受失败坐标。主线目标只写入路程规划，绝不直接点击脚圈；跨区域由电梯规划衔接。
     未确认时记录失败次数，不吸附远离道路的点，保留普通敌人推进策略。
     """
     state = session.owner.state
@@ -257,7 +306,24 @@ def locate_story_target(session, squad):
         references = []
         for attempt in range(MAX_PANS + 1):
             if before is None:
-                break
+                if attempt == MAX_PANS:
+                    break
+                field = session.win.client()
+                session.identity(field)
+                objects = detect_scene(field, ('scene_enemy_ring', 'scene_ground_mechanism_off'))
+                if any(item.label == 'scene_ground_mechanism_off' for item in objects):
+                    break
+                centers = [item.center for item in objects if item.label == 'scene_enemy_ring'
+                           and item.confidence >= RING_CONFIDENCE and clickable_ring(item.box)]
+                if marked_ring(story_markers(field), centers) is None:
+                    break
+                pan_scene(session, np.array([80., 0.]))
+                changed = True
+                session.localized_report = None
+                session.anchor_reference = None
+                session.anchor_reference_method = None
+                before = story_frame(session, squad)
+                continue
             position = story_ground(before)
             if position is not None:
                 session.pause(.35)

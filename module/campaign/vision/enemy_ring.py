@@ -61,7 +61,8 @@ def observe_rings(image, panel, matrix, viewport, observe_squad=True, track_scen
     脚圈阈值至少 0.7，小地图旧类沿用自身阈值。SIFT 排除 HUD 与脚圈附近的角色动画；
     小地图到章节底图仅用于确认原目标和小队未移动，不把任何脚圈投影到小地图。
     observe_squad=False 用于纯镜头找敌人，不拟合实时小队圆环；实际移动的脚圈辅助默认保留校验。
-    track_scene=False 仅供已确认目标的点击前近邻跟踪，不提取场景特征，不能用于初次两帧身份推断。
+    track_scene=False 供方向匹配和已确认目标的点击前近邻跟踪使用，不提取场景特征；
+    不能用于 scene_tracks 或两帧运动匹配，方向匹配调用方仍须独立验证地图目标和道路。
     """
     if image.shape != (999, 1776, 3):
         raise ValueError('脚圈辅助要求 1776×999 客户区截图。')

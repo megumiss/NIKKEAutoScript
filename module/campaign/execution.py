@@ -8,7 +8,7 @@ from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_qua
 from module.campaign.goals import describe, frontier_point, nearest_enemy, unobserved_component_cells
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, TARGET_SOURCES, label, points_text)
-from module.campaign.route_planning import planning_routes
+from module.campaign.route_planning import planning_routes, route_path
 from module.campaign.scouting import scout_focus
 from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL
 from module.campaign.navigation.progress import NavigationStalled
@@ -21,7 +21,9 @@ from module.campaign.navigation.ex_bypass import ExBypassUnavailable
 from module.campaign.navigation.camera_navigation import SquadOffscreen, wait_for_squad
 from module.campaign.navigation.movement_feedback import ClickUnconfirmed, TargetTriggered
 from module.campaign.navigation.recovery import centered, centering_frame
-from module.campaign.navigation.story_navigation import VisibleEnemyFound, locate_story_target, visible_enemy_target
+from module.campaign.navigation.story_navigation import (
+    VisibleEnemyFound, locate_story_target, visible_enemy_target,
+)
 from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
 from module.campaign.noncombat import SceneRequired, ChapterTransitionTimeout
 from module.logger import logger
@@ -41,7 +43,7 @@ BATTLE_POLL_SECONDS = 0.5
 # 一段战斗（进弹窗、重打后重新开打）等的上限：等不到结算就交人工，不无限等。
 BATTLE_TIME_LIMIT = 10 * 60
 BATTLE_DEFEAT_RETRIES = 3
-# 战后野外确认窗口：已识别胜负、连续多帧回到野外且至少经过 BATTLE_SETTLE_CONFIRM 秒才结束。
+# 战后野外确认窗口：已识别胜负或继续提示，连续多帧回到野外且至少经过指定秒数才结束。
 # 升级弹窗、加载或未识别画面不计入野外确认，Timer 的 count 语义仍为 count + 1 帧。
 BATTLE_SETTLE_CONFIRM = 1.0
 BATTLE_SETTLE_FRAMES = 3
@@ -690,15 +692,16 @@ class CampaignExecutor:
     def visible_enemy_allowed(self, goal, snapshot):
         """共用主循环和镜头导航的近敌门禁，不抢占机关、电梯、光幕复核及 Boss 收尾。
 
-        目标与路程目标同时检查，避免机关前置推进被误当普通探索；已观测的未开启机关和待复核
-        光幕也阻止该分支。已有 EX 避让区域时沿用原导航，不能再次直点穿过已知 EX。
+        目标与所有路程／续行目标同时检查，避免跨区电梯、机关前置推进被误当普通探索；
+        已观测的未开启机关和待复核光幕也阻止该分支。已有 EX 避让区域时沿用原导航。
         已选敌人目标交原目标导航与点击辅助，不能被最近可见敌人替换；探索等未指定敌人的流程仍可选近敌。
         本方法只检查执行状态，换屏后出现的未开启机关由实时选敌检测再次拦截。
         底图定位失败时仍检查未完成的设施目标和当前未开启机关，不从失败坐标推断设施归属。
         """
         state = self.owner.state
         if (self.purpose != 'story' or state.pending_reviews or self.session.ex_bypass.obstacles
-                or (state.route_goal or {}).get('kind') == 'mechanism'
+                or state.route_goal is not None
+                or self.interrupted_goal is not None or self.terminal_destination is not None
                 or self.terminal_continuation is not None
                 or any(item.get('state') == 'off' for item in snapshot.get('mechanisms', []))
                 or any(item.get('kind') == 'ground_mechanism' and item.get('state') == 'off'
@@ -714,22 +717,33 @@ class CampaignExecutor:
         return True
 
     def execute_visible_enemy(self, goal, snapshot, target=None):
-        """执行本轮或镜头换屏后两帧确认的近敌落点，不认领原底图目标、不清除无关敌人。
+        """执行两帧确认且已验证步行道路的普通近敌，不将视觉可见视为跨区可达。
 
-        仍通过共用机关／电梯门禁。target 仅允许来自刚中断的同次镜头导航，不跨恢复使用；
-        未提供时重新检测并允许一次回正。点击后的战斗、EX 与停稳失败均交原有流程。
-        没有可靠近敌返回 False，调用方如发现选敌期间镜头改变，须重新观测后继续规划。
+        镜头回调提供的 target 必须携带本次实测敌人和小队底图坐标；输入前再检查当前切开路网，
+        同分区且 A* 可达才允许直点。缺少坐标、路网变化或已有路程目标时返回 False，继续地图规划。
+        主线菱形只由 locate_story_target 定位为路程目标，不进入此处。胜负和 EX 沿用既有接管。
         """
         if not self.visible_enemy_allowed(goal, snapshot):
             return False
+        state = self.owner.state
         if target is None:
             target = visible_enemy_target(self.session)
         if target is None:
             return False
-        state = self.owner.state
+        squad = np.asarray(target.get('squad'), float)
+        position = np.asarray(target.get('position'), float)
+        if (target.get('source') == 'story' or squad.shape != (2,) or position.shape != (2,)
+                or not np.isfinite(squad).all() or not np.isfinite(position).all()):
+            return False
+        home = self.owner.cut.component(squad)
+        if (not home or self.owner.cut.component(position) != home
+                or route_path(self.owner.cut, squad, position) is None):
+            self.session.record('enemy_visual_route_rejected', target=target)
+            logger.info('实景近敌不具备同分区可行道路，保留地图规划，未发送移动点击。')
+            return False
         identifier = 'enemy-visual'
         if state.is_unavailable(identifier):
-            raise NavigationStalled(f'实景近敌策略 {identifier} 已达失败上限。')
+            raise NavigationStalled(f'实景目标策略 {identifier} 已达失败上限。')
         self.session.begin_target('enemy_visual')
         self.last_executed = None
         state.execution_target = None
@@ -747,13 +761,14 @@ class CampaignExecutor:
                     return True
                 if exc.evidence.get('kind') != 'battle_popup':
                     raise
-                self.battle(None)
+                outcome = self.battle(None)
                 succeeded = True
-                state.target_failures.pop(identifier, None)
-                state.target_failures.pop('story-location', None)
-                logger.info('实景近敌战斗完成，下一轮重新观测并选择目标。')
+                if outcome == 'victory':
+                    state.target_failures.pop('enemy-visual', None)
+                    state.target_failures.pop('story-location', None)
+                logger.info(f'实景目标战斗接管结束：{label(BATTLE_OUTCOMES, outcome)}，下一轮重新观测并选择目标。')
                 return True
-            raise RuntimeError('实景近敌点击后道路已停稳但未触发战斗，重新定位后继续规划。')
+            raise RuntimeError('实景目标点击后道路已停稳但未触发战斗，重新定位后继续规划。')
         finally:
             if not succeeded:
                 state.record_failure(identifier)
@@ -765,18 +780,21 @@ class CampaignExecutor:
         循环照仓库里已经跑熟的战斗循环写（`module/daemon/semi_combat.py`、`module/event/challenge.py`）：
         每一拍由会话截一帧、按优先级最多点一个按钮，认不出画面就什么都不点——加载与过场本来就没有
         按钮可点，而「画面像不像野外」正好会在点「进入战斗」之后的过场里为真，用它判断战斗结束
-        等于把战斗丢回给推图流程。所以必须先取得胜负结算，再连续确认野外才交回控制权：
-        胜利与升级附加页分别点继续，战败按 BATTLE_DEFEAT_RETRIES 决定重打还是返回。
-        战前、战后剧情由会话点击 SKIP；剧情、附加页或未识别画面清空野外确认计数。
-        剧情跳过与继续提示均不作为胜利证据，剧情期间保留已确认的胜负及原有超时约束。
+        等于把战斗丢回给推图流程。识别到胜负结算或继续提示后，连续确认野外即可交回控制权；
+        继续提示由会话照常点击，只提供结束证据，不决定胜负，也不按关卡名或页面类别另设门禁。
+        战败按 BATTLE_DEFEAT_RETRIES 决定重打还是返回，重打或重新进入战斗清除上一段的结束证据。
+        剧情由会话点击 SKIP，其余按钮按当前识别结果处理；非野外帧只重置野外连续确认计数。
+        返回 victory 表示已确认胜利；只有继续提示而未见胜负时返回 unknown，不清除敌人、
+        不完成地图目标或重置失败次数，丢弃旧导航证据后重新观测；已确认且耗尽重试的战败仍抛异常。
         一段战斗（进弹窗、重打后重新开打）单独计 BATTLE_TIME_LIMIT 秒，等不到结算就交人工：
-        不无限等，也不盲目连点。战斗结束时给会话打开一次「沿用战斗前坐标」的许可，
+        不无限等，也不盲目连点。已确认胜利时给会话打开一次「沿用战斗前坐标」的许可，
         第一帧重新配准失败就用旧坐标继续推图。Boss 战后先识别章节结束弹窗，命中时交由换章状态机接管，
         不在角标被遮挡时复核旧身份；未命中仍严格复核章节与难度，不以胜利本身放行换章。
         """
         self.session.begin_target('battle')
         self.session.battle_mode = True
         settled, close_entry, retries, polls = None, False, 0, 0
+        continue_seen = False
         previous = None
         total, segment = Stopwatch(), Stopwatch()
         deadline = time.monotonic() + BATTLE_TIME_LIMIT
@@ -807,12 +825,14 @@ class CampaignExecutor:
                                 f"AUTO 橙色占比 {value_text(state.get('auto_ratio'))}")
                 if kind != 'field':
                     settle_gone.reset()
-                elif settled is not None and settle_gone.reached():
+                elif (settled is not None or continue_seen) and settle_gone.reached():
                     break
                 if kind == 'victory':
                     if settled != 'victory':
                         settled = 'victory'
                         logger.info('战斗结果：胜利，等待结算关闭及野外画面确认。')
+                elif kind == 'continue':
+                    continue_seen = True
                 elif kind == 'defeat':
                     # 只在「新的一次战败」上决定重打还是返回：同一张结算屏停留时沿用上一次的决定，
                     # 不会把额度连刷掉，点击没生效时也只是继续点同一个按钮。
@@ -820,6 +840,7 @@ class CampaignExecutor:
                         if retries < BATTLE_DEFEAT_RETRIES:
                             retries += 1
                             settled = None
+                            continue_seen = False
                             logger.warning(f'战斗失败：重试当前关卡（第 {retries}/{BATTLE_DEFEAT_RETRIES} 次），'
                                            f'当前阶段耗时 {segment}，接管累计 {total}。')
                         else:
@@ -829,6 +850,9 @@ class CampaignExecutor:
                     self.session.tap(DEFEAT_BACK_POINT if settled == 'defeat' else DEFEAT_RETRY_POINT,
                                      SETTLE_TAP_INTERVAL)
                 elif kind in ('entry', 'battle'):
+                    if not close_entry:
+                        settled = None
+                        continue_seen = False
                     # 每段战斗单独计时：准备弹窗、以及加载结束真正进入战斗时都重新计时。
                     if kind == 'entry' or previous != 'battle':
                         deadline, segment, reported = time.monotonic() + BATTLE_TIME_LIMIT, Stopwatch(), False
@@ -840,11 +864,17 @@ class CampaignExecutor:
         finally:
             self.session.battle_mode = False
             self.owner.state.execution_target = None
-        self.session.reuse_squad = True
+        if settled is None:
+            settled = 'unknown'
+        self.session.reuse_squad = settled == 'victory'
         logger.info(f'战斗接管结束：{label(BATTLE_OUTCOMES, settled)}，采样 {polls} 次，'
                     f'重试 {retries} 次，累计操作 {self.session.target_inputs} 次，总耗时 {total}。')
         if settled == 'defeat':
             raise BattleFailed(f'当前关卡重试 {BATTLE_DEFEAT_RETRIES} 次仍战败，停止执行并请求人工接管。')
+        if settled == 'unknown':
+            self.session.reset_navigation()
+            logger.info('继续提示后已确认返回野外，胜负未确认；保留敌人与失败记录，重新观测。')
+            return settled
         if goal is not None and goal.get('kind') == 'enemy':
             self.owner.state.enemies[goal['id']]['status'] = 'cleared'
             self.session.complete_move_target(goal)
@@ -897,10 +927,11 @@ class CampaignExecutor:
         已清除敌人、机关、电梯、光幕和道路事实保留，所有目标累计失败次数不重置；只解除
         临时不可侦察视野，允许重新观测。回正或实测定位未通过时不能使用异常前的目标。
         恢复后先按当前有效快照决策，缺失视野由正常侦察补充，不以展开十字扫描成功作为前提。
-        goal 仅保留失败任务的类型门禁，不沿用其坐标；普通敌人旧目标已失效，允许重选实景近敌，
-        但机关、电梯、Boss 及 EX 限制仍检查所有续行目标。路程目标在恢复成功前只用于门禁，
+        goal 仅保留失败任务的类型门禁，不沿用其坐标；已有路程或续行目标时不重选实景近敌，
+        机关、电梯、Boss 及 EX 限制仍检查所有续行目标。路程目标在恢复成功前只用于门禁，
         不提前清除，避免下一次恢复丢失设施限制。允许近敌时只取单帧，未定位快照不写入地图状态；
-        两帧实景执行失败或没有可执行近敌仍消耗本次恢复额度，不进入地图决策。
+        未定位帧只有在近敌检查独立取得两帧可靠坐标及同分区道路后才允许直点；否则消耗本次
+        恢复额度，不按主线屏幕坐标移动。定位恢复成功后由正常循环定位主线路程并选择电梯。
         完整恢复也不清零计数，只有实际完成移动目标或战斗胜利才重新获得恢复额度。
         """
         if self.recoveries >= CAMPAIGN_RECOVERY_LIMIT:
@@ -927,7 +958,7 @@ class CampaignExecutor:
             self.session.record('recovery_visual_attempt', snapshot=snapshot, attempt=attempt)
             logger.info('小队回正后底图定位未通过，检查实景近敌；不使用旧目标坐标或更新地图状态。')
             if not allow_visual or not self.execute_visible_enemy(None, snapshot):
-                raise RuntimeError('小队回正后底图定位未通过且无可执行的实景近敌。')
+                raise RuntimeError('小队回正后底图定位未通过，且未确认同分区可达近敌。')
             state.route_goal = None
             if not self.ex_pending:
                 self.interrupted_goal = None
@@ -965,9 +996,11 @@ class CampaignExecutor:
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重新定位，丢弃冻结坐标；窗口、路线停滞、取消
         和战斗失败仍立即停止；路线停滞仅允许按唯一邻近光幕标注新增封锁后重新决策。
-        启动与战后先读取不重试的当前快照；底图定位失败只尝试纯画面近敌，不进入地图决策。
-        近敌不可执行时再按原流程重试定位；缺视野才按需侦察，不强制先通过展开十字扫描。
-        异常恢复回正后也允许单帧未定位结果进入同一实景近敌门禁，不能在强制配准分支绕过兜底。
+        启动与战后先读取不重试的当前快照；近敌必须独立确认底图位置与同分区步行道路，
+        无法确认则按原流程重试定位，不以屏幕坐标绕过电梯。恢复与普通循环使用相同门禁。
+        定位成功但没有已绑定目的地时，蓝色主线标记优先于历史线索与未知区域；先确认主线
+        底图位置并重新规划，同区走道路、跨区选电梯，再验证新目标的前置侦察。缺视野才按需
+        侦察，不强制展开十字扫描；当前敌人、机关和已绑定路线不被近敌或主线新目标替换。
         连续恢复尝试有界，只在实际目标完成或战斗胜利后清零；不设单章总时限或主循环轮数上限。
         开启遗漏补扫时，Boss 执行前核对章节敌人进度，进度不足才补扫当前连通分量；默认不执行额外补扫。
         已知普通敌人及沿途侦察仍保留，电梯不触发终局遗漏检查。
@@ -1033,7 +1066,7 @@ class CampaignExecutor:
                             camera_options = {}
                             snapshot = self.session.snapshot()
                         if not located(snapshot) or snapshot.get('squad') is None:
-                            raise RuntimeError('底图定位未通过且无可执行的实景近敌，停止地图目标选择。')
+                            raise RuntimeError('底图定位未通过，且未确认同分区可达近敌，停止地图目标选择。')
                     else:
                         snapshot = self.session.snapshot(**camera_options)
                     if curtains(snapshot):
@@ -1046,7 +1079,6 @@ class CampaignExecutor:
                         self.owner.cut.update(self.owner.state.blocking())
                         goal, snapshot = self.terminal_precheck(self.terminal_continuation, snapshot)
                     goal = self.plan_tick(snapshot)
-                    self.check_scout_failures(goal, snapshot)
                     gestures = self.session.gestures
                     if self.execute_visible_enemy(goal, snapshot):
                         camera_options = {}
@@ -1057,21 +1089,27 @@ class CampaignExecutor:
                         camera_options = {}
                         snapshot = self.session.snapshot()
                         goal = self.plan_tick(snapshot, advance=False)
-                        self.check_scout_failures(goal, snapshot)
-                    if (self.purpose == 'story' and self.owner.state.route_goal is None
+                    if (self.visible_enemy_allowed(goal, snapshot) and not self.ex_pending
+                            and self.owner.state.route_goal is None
                             and snapshot.get('story_markers') and located(snapshot)
                             and snapshot.get('squad') is not None
-                            and (goal is None or goal['kind'] in ('none', 'story'))
+                            and (goal is None or goal['kind'] in ('none', 'story', 'explore'))
                             and not self.owner.state.is_unavailable('story-location')):
                         changed = locate_story_target(self.session, snapshot['squad'])
                         self.session.record('story_location_result', camera_changed=changed,
                                             route_goal=self.owner.state.route_goal)
-                        if changed:
+                        if (changed or self.owner.state.story_target is not None
+                                or self.owner.state.route_goal is not None):
                             camera_options = {'known_squad': list(snapshot['squad'])}
                             snapshot = self.session.snapshot(**camera_options)
                             if curtains(snapshot):
                                 snapshot = self.confirm_barriers_safe(snapshot)
                         goal = self.plan_tick(snapshot, advance=False)
+                        self.session.record('story_route_planned', goal=goal,
+                                            destination=self.owner.state.route_goal, squad=snapshot['squad'])
+                        if goal is not None and goal['kind'] == 'elevator':
+                            logger.info(f'主线目标需要跨区移动，先执行电梯 {goal["id"]}。')
+                    self.check_scout_failures(goal, snapshot)
                     expanded_for_scout = False
                     if (self.purpose == 'story' and located(snapshot) and snapshot.get('squad') is not None
                             and (goal is None or goal['kind'] != 'review_block')):

@@ -17,7 +17,7 @@ import numpy as np
 ROI = (25, 96, 243, 307)
 SCALE = 0.25
 PAD = 180
-MATCH_VERSION = 6
+MATCH_VERSION = 7
 # match_panel 的接受判据：道路 IoU、粗搜首名与远处歧义候选的分差、同分候选的参数离散度。
 # 观察器要用同一组常量解释定位为何未被接受，写成常量而不是散在判据里的字面量，避免两边漂移。
 # 道路 IoU 取 0.70：小地图只露出一小块路、或该章配色与底图有固有差异时，正确位置实测落在
@@ -131,14 +131,30 @@ def player_center(panel):
 
 
 def template_matrix(projection, a, b, shape):
-    """枚举尺度与透视组合，将紧凑地图映射到地图投影平面并返回有效模板边界。"""
+    """组合候选尺度与透视投影，只有整块面板保持有限连续时才返回模板矩阵和边界。
+
+    输入 shape 为面板高宽，返回矩阵已缩放至粗搜索分辨率并平移到非负画布。
+    单应分母在面板内是线性函数，因此四角严格同号才能保证内部不跨越无穷远线；
+    仅检查透视变换后的四角是否有限，会漏掉内部断裂，并把残留小块误当高分道路模板。
+    分母以四角最大绝对值的 1e-9 为零容差，避免依赖单应矩阵的整体缩放。触零、异号、
+    非有限值或画布超出既有 8～600 像素范围时返回 None，禁止进入候选排序。
+    """
     height, width = shape
     transform = np.array([[a, 0, 243 - a * width / 2], [0, a, 231 - a * height / 2], [0, 0, 1.]])
     matrix = np.diag([b * SCALE, b * SCALE, 1.]) @ projection @ transform
-    corners = cv2.perspectiveTransform(np.array([[[0., 0], [width, 0], [width, height], [0, height]]]), matrix)[0]
+    if not np.isfinite(matrix).all():
+        return None
+    source = np.array([[0., 0], [width, 0], [width, height], [0, height]])
+    denominator = np.column_stack((source, np.ones(4))) @ matrix[2]
+    tolerance = float(np.max(np.abs(denominator))) * 1e-9
+    if not (np.all(denominator > tolerance) or np.all(denominator < -tolerance)):
+        return None
+    corners = cv2.perspectiveTransform(source[None], matrix)[0]
+    if not np.isfinite(corners).all():
+        return None
     lower = np.floor(corners.min(axis=0))
-    size = np.ceil(corners.max(axis=0) - lower).astype(int)
-    if not np.isfinite(corners).all() or min(size) < 8 or max(size) > 600:
+    size = np.ceil(corners.max(axis=0) - lower)
+    if min(size) < 8 or max(size) > 600:
         return None
     matrix = np.array([[1, 0, -lower[0]], [0, 1, -lower[1]], [0, 0, 1.]]) @ matrix
     return matrix, tuple(int(v) for v in size)

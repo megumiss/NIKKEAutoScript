@@ -29,7 +29,8 @@ def outward_arrow(image, box):
     """检查菱形旁是否存在指向画外的三角箭头；没有明确的外向三角时返回 False。
 
     只检查边缘标记附近，不把菱形顶角当箭头。三角必须在图标框外、接近图标、指向邻近画边；
-    蓝色或白色三角均可，但 HUD 被排除的区域不会用于点击。
+    蓝色或白色三角均可，但 HUD 被排除的区域不会用于点击。菱形按斜边排除，保留紧贴斜边的
+    对角箭头；箭头允许内凹尾部，但凸包必须是朝外三角，不能把菱形残边当作方向证据。
     """
     x1, y1, x2, y2 = box
     center = np.array([(x1 + x2) / 2, (y1 + y2) / 2])
@@ -44,13 +45,18 @@ def outward_arrow(image, box):
     hsv = cv2.cvtColor(image[top:bottom, left:right], cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, (85, 100, 140), (118, 255, 255))
     mask |= cv2.inRange(hsv, (0, 0, 215), (179, 70, 255))
-    mask[max(0, y1 - top - 3):y2 - top + 3, max(0, x1 - left - 3):x2 - left + 3] = 0
+    yy, xx = np.indices(mask.shape)
+    diamond = np.abs(xx + left - center[0]) + np.abs(yy + top - center[1])
+    mask[diamond <= side / 2 + 5] = 0
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for contour in contours:
         area = cv2.contourArea(contour)
         if not .012 * side ** 2 <= area <= .2 * side ** 2:
             continue
-        polygon = cv2.approxPolyDP(contour, .07 * cv2.arcLength(contour, True), True).reshape(-1, 2)
+        hull = cv2.convexHull(contour)
+        if area < .35 * cv2.contourArea(hull):
+            continue
+        polygon = cv2.approxPolyDP(hull, .07 * cv2.arcLength(hull, True), True).reshape(-1, 2)
         if len(polygon) != 3:
             continue
         polygon = polygon.astype(float) + [left, top]

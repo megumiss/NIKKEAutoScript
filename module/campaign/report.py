@@ -74,9 +74,9 @@ ANCHOR_METHODS = {'arrow_cycle': '箭头周期采样', 'minimap_ground_projectio
 RESULT_STATES = {'arrived': '已到点', 'needs_review': '已到附近但未确认触发'}
 # 战斗接管的画面状态与最终结果。
 BATTLE_STATES = {'entry': '战斗准备弹窗', 'battle': '战斗中', 'victory': '胜利结算',
-                 'defeat': '战败结算', 'continue': '结算附加继续页', 'story': '剧情页面',
+                 'defeat': '战败结算', 'continue': '继续提示', 'story': '剧情页面',
                  'field': '野外画面', 'unknown': '未识别'}
-BATTLE_OUTCOMES = {'victory': '胜利', 'defeat': '战败', None: '未确认结算'}
+BATTLE_OUTCOMES = {'victory': '胜利', 'defeat': '战败', 'unknown': '已结束，胜负未确认', None: '未确认结算'}
 # 任务提前停止时附带的证据种类。
 EVIDENCE_KINDS = {'battle_popup': '画面触发战斗接管', 'ex_stage_skipped': '画面出现 EX 关卡弹窗（仅关闭，不接管）',
                   'ex_stage_closed': 'EX 弹窗已关闭，转入绕行',
