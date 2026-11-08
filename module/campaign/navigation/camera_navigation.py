@@ -34,6 +34,10 @@ FUSED_IOU = .25
 FUSED_DILATE = 7
 
 
+class CameraRegistrationError(ValueError):
+    """展开道路配准未通过；仅用于区分可报告的视觉失败与不能捕获的窗口、取消及输入异常。"""
+
+
 class SquadOffscreen(RuntimeError):
     """道路停稳后的单帧小队定位不可用，交由当前目标确认机关或执行既有失败处理。"""
 
@@ -234,11 +238,13 @@ def pan_scene(session, drag):
     session.pause(1.2)
 
 
-def observe_camera(session, squad_position):
+def observe_camera(session, squad_position, *, known_squad=False):
     """允许小队离屏；接受的视野坐标只用于镜头，不更新冻结的小队位置。
 
     平移后重新配准展开地图。返回的视野参考只更新镜头位置；
     若可见小队偏离冻结坐标超过 12 地图像素，或定位未通过，则拒绝继续。
+    known_squad 供未移动小队的纯镜头规划使用：不检测圆环，仅独立配准视野，不更新小队坐标。
+    定位器用 CameraRegistrationError 报告道路配准失败，窗口、取消和输入异常原样传播。
     """
     session.check()
     session.identity(goto.capture_client(session.win))
@@ -246,9 +252,10 @@ def observe_camera(session, squad_position):
     image = session.win.capture()
     session.index += 1
     tag = f'{getattr(session, "tag", "camera")}_{session.index:03}'
-    report = session.localizer.locate(image, tag, require_player=False)
+    options = {'locate_player': False} if known_squad else {}
+    report = session.localizer.locate(image, tag, require_player=False, **options)
     if np.mean(goto.terrain(image) != goto.terrain(session.win.capture())) > .03:
-        raise ValueError('镜头定位期间画面仍在变化。')
+        raise CameraRegistrationError('镜头定位期间画面仍在变化。')
     if (report.get('position_kind') == 'squad'
             and np.linalg.norm(np.asarray(report['position']) - squad_position) > 12):
         from module.campaign.navigation.movement_feedback import SquadPositionChanged
@@ -587,7 +594,7 @@ def start_viewport(start, squad_position, tolerance=60.):
     return offset
 
 
-def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
+def anchor_viewport(session, matrix, reference, squad_position, limit=900., *, known_squad=False):
     """批末展开小地图重新配准，只修正紧凑矩阵的平移项；不可用时返回 None。
 
     reference 是「展开 ROI 中心 → 注视点」的地图偏移，由起始帧同时测得的两种定位建立；
@@ -595,16 +602,14 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
     展开面板的道路证据远多于紧凑面板，用它清掉链式跟踪的累积漂移；只改平移项是因为
     局部比例与透视来自紧凑配准，本次校正不重新估计镜头缩放。
     修正量超过 limit 视为配准可疑并放弃；定位失败先收起面板，避免随后的落点点在展开面板上。
+    known_squad 保持纯视野定位模式；只处理 CameraRegistrationError，不吞掉窗口或输入异常。
     """
-    from module.campaign.navigation.movement_feedback import SquadPositionChanged
-
     if reference is None:
         return None
     try:
-        report = observe_camera(session, squad_position)
-    except SquadPositionChanged:
-        raise
-    except (RuntimeError, ValueError) as error:
+        options = {'known_squad': True} if known_squad else {}
+        report = observe_camera(session, squad_position, **options)
+    except CameraRegistrationError as error:
         session.emit(camera_anchor='failed', camera_anchor_error=str(error))
         goto.map_close(session.win)
         return None
@@ -618,6 +623,30 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900.):
     session.emit(camera_anchor='accepted', camera_anchor_shift=np.round(shift, 1).tolist(),
                  camera_anchor_viewport=np.round(gaze, 1).tolist())
     return translation @ matrix
+
+
+def prepare_compact_reference(session, matcher, start, squad_position, *, known_squad=False):
+    """首次镜头拖动前建立同一视野的展开中心与紧凑注视点偏移，不用小队坐标代替镜头基准。
+
+    只开合地图，不回正或拖动；展开配准必须通过原门限。收图后重新检查身份、收集提示和
+    紧凑道路，沿用点击复核的 12 地图像素、12% 尺度稳定界限。失败时不发送镜头或小队移动。
+    返回新紧凑帧及其配准，调用方不得继续使用开图前的道路或脚圈证据。
+    """
+    options = {'known_squad': True} if known_squad else {}
+    report = observe_camera(session, squad_position, **options)
+    field = goto.capture_client(session.win)
+    session.identity(field)
+    session.check_collectible(field)
+    session.preview(field)
+    panel, road, valid = perception.compact_road_masks(field)
+    current = compact_viewport(session, matcher, panel, road, valid)
+    if (current['status'] != 'accepted'
+            or np.linalg.norm(current['viewport'] - start['viewport']) > 12
+            or abs(current['a'] / start['a'] - 1.) > .12):
+        raise CameraRegistrationError('地图开合后紧凑视野或尺度未通过复核，不能建立镜头校正基准。')
+    reference = current['viewport'] - project(np.asarray(report['roi_to_map']), goto.EXPANDED_CENTER)
+    session.emit(camera_reference='accepted', camera_reference_offset=np.round(reference, 1).tolist())
+    return field, panel, road, valid, current, reference
 
 
 def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, target, squad_position, click,
@@ -691,6 +720,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     普通起始帧的视野中心以与已确认的小队定位一致为准（start_viewport），不要求 accepted。
     纯镜头找敌人后携带 squad_source=known 时，小队坐标取自出发前，当前视口可远离小队；
     此时只要求当前道路配准 accepted，不因视口与小队不重合而展开重新寻找圆环。
+    紧凑报告的起点即使来自本帧实测，展开校正也只定位视野；不能把两种面板的小队配准
+    差异当成实际位移。普通展开起点仍保留同源小队位置变化检查，真正移动后由外层重新观测。
     平面地图每批最多 batch_limit 次平移，批末或两种跟踪都不可用时展开小地图重新锚定平移项；
     全局配准被接受即视为批末校正已完成。
     实测（退回固定注视点时）：近 80 地图像素落点误差 4.7，远 990 像素（小队完全离屏）误差 11.0。
@@ -700,8 +731,9 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     证据只在本次规划内保留，允许跨过一帧不可信定位，但不使用该帧参与匹配；两参考帧最多
     相隔两次平移，累计镜头路程不超过 450 地图像素。重新锚定、缩放跳变或超限时丢弃证据；
     辅助失败继续原落点和拖动流程，不为等待可靠帧增加拖动。
-    来自紧凑快照的小队位置没有展开 ROI 基准；只有跟踪需要批末校正时才抛 ValueError，
-    由生产会话按需展开并重试，不能用紧凑矩阵冒充展开基准或无限沿用链式跟踪。
+    来自紧凑快照的小队位置没有展开 ROI 基准；需要拖动时先开合地图建立同视野校正基准。
+    已知小队模式只定位视野，不回正或重找圆环；基准失败在拖动前停止，不留到跟踪丢失后处理。
+    单次预计面板位移不超过短边四分之一，为帧间道路保留重叠；总平移次数不增加。
     脚圈已匹配时，点击前的新帧由 confirm_ring_click 独立复核，不将复核失败交给展开恢复。
     生产执行器可提供 camera_enemy_check，在初始和拖后视野配准前交回已确认的可见近敌；
     回调不发输入或修改投影，未发现近敌时原导航照常执行，其它调用方默认不启用。
@@ -713,6 +745,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     session.last_plan_enemy_ring = False
     target = np.asarray(target, float)
     squad_position = np.asarray(observation['position'], float)
+    viewport_only = observation.get('minimap_mode') == 'compact' or observation.get('squad_source') == 'known'
     if np.linalg.norm(target - squad_position) < 2:
         raise ValueError('当前落点与小队过近。')
     matcher = getattr(session, 'compact_matcher', None)
@@ -740,15 +773,21 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     if start['status'] != 'accepted':
             session.emit(message=f"起始紧凑配准状态 {start['status']}，道路重合度 {start['iou']:.3f}，"
                              f"小队定位偏差 {offset:.1f} 地图像素，满足位置一致性要求")
+    reference = None
+    if observation.get('roi_to_map') is not None:
+        reference = (np.asarray(start['viewport'], float)
+                     - project(np.asarray(observation['roi_to_map'], float), goto.EXPANDED_CENTER))
+    elif (observation.get('minimap_mode') == 'compact'
+          and np.linalg.norm(target - start['viewport']) > goto.SQUAD_REACH):
+        field, panel, road, valid, start, reference = prepare_compact_reference(
+            session, matcher, start, squad_position, known_squad=viewport_only)
+        if callable(camera_enemy_check):
+            camera_enemy_check(field)
     matrix, scale_a, road_prev = start['matrix'], start['a'], road
     ring_previous = None
     ring_pan, ring_scale, ring_path = 0, scale_a, 0.
     ring_trusted = start['status'] == 'accepted'
     gain, responses, stalled, batch_pans = 1., [], 0, 0
-    reference = None
-    if matcher is not None and observation.get('roi_to_map') is not None:
-        reference = (np.asarray(start['viewport'], float)
-                     - project(np.asarray(observation['roi_to_map'], float), goto.EXPANDED_CENTER))
     session.camera_pans = getattr(session, 'camera_pans', 0)
     for count in range(max_pans + 1):
         session.check()
@@ -826,16 +865,19 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
                 session.emit(message=f'脚圈辅助观测不可用，继续原有镜头规划：{error}')
         delta_panel = np.linalg.solve(jacobian(matrix, goto.GAZE), delta_map)
         drag = -panel_delta_to_client(scale_a, delta_panel) / gain
-        _, scale = pan_region(drag)
+        _, region_scale = pan_region(drag)
+        overlap_scale = min(1., min(road.shape) * .25 / max(np.linalg.norm(delta_panel) / gain, 1e-9))
+        scale = min(region_scale, overlap_scale)
         drag = drag * scale
+        commanded_delta = delta_map * scale
         if np.linalg.norm(drag) < 6:
             raise ValueError('剩余位移落入镜头拖动死区；未发送移动点击。')
         session.emit(state='panning', camera_pans=session.camera_pans + 1, plan_camera_pans=count + 1,
-                     camera_drag=drag.tolist(), camera_gain=gain,
+                     camera_drag=drag.tolist(), camera_gain=gain, camera_pan_scale=round(scale, 3),
                      message=f'正在平移画面寻找目标（{count + 1}/{max_pans}）…')
         # 拖动指令换算的预期视野落点：融合判据的位置先验。响应未知（首拖 gain=1）时先验
         # 半径按残差自适应放宽，见 fusion_acceptable。
-        predicted = viewport + delta_map * min(1. / gain, 1.5)
+        predicted = viewport + commanded_delta * min(1. / gain, 1.5)
         pan_scene(session, drag)
         field = goto.capture_client(session.win)
         session.identity(field)
@@ -882,8 +924,9 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
             ring_previous = None
             if reference is None and observation.get('minimap_mode') == 'compact':
                 raise ValueError('镜头跟踪需要展开地图基准，不能继续沿用紧凑小队定位。')
+            anchor_options = {'known_squad': True} if viewport_only else {}
             anchored = anchor_viewport(session, matrix if use_matrix is None else use_matrix,
-                                       reference, squad_position)
+                                       reference, squad_position, **anchor_options)
             if anchored is not None:
                 use_matrix, source, batch_pans = anchored, 'expanded', 0
         if use_matrix is None:
@@ -908,7 +951,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         if enemy_assist and not ring_trusted:
             retained = '保留参考帧，等待下一可靠帧' if ring_previous is not None else '无可用参考帧'
             session.emit(message=f'脚圈辅助跳过本帧：镜头定位 {label(CAMERA_TRACKING, source)}；{retained}')
-        response = float(actual @ delta_map) / float(delta_map @ delta_map)
+        response = float(actual @ commanded_delta) / float(commanded_delta @ commanded_delta)
         session.emit(camera_tracking=source, camera_response=response, camera_batch_pans=batch_pans)
         if .2 <= response <= 3.:
             responses.append(response)

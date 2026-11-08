@@ -218,7 +218,11 @@ class CampaignLocalizer:
             self.record('panel_registration', tag=tag, require_player=require_player,
                         expected_position=expected_position, report=report)
         if report['status'] != 'accepted':
-            raise RuntimeError(f"展开地图定位未通过（{label(LOCALIZATION, report['status'])}）。")
+            from module.campaign.navigation.camera_navigation import CameraRegistrationError
+            raise CameraRegistrationError(
+                f"展开地图定位未通过（{label(LOCALIZATION, report['status'])}，"
+                f"道路重合度 {report['road_iou']:.3f}，候选位置分差 {report['coarse_margin']:.3f}，"
+                f"参数离散度 {report['parameter_spread_px']:.1f} 像素）。")
         position = np.asarray(report['position'], float)
         matrix = np.asarray(report['roi_to_map'], float)
         if position.shape != (2,) or matrix.shape != (3, 3) or not np.isfinite(matrix).all():
@@ -825,7 +829,8 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         紧凑快照只提供底图位置，不冒充展开 ROI 的投影基准。起始镜头不一致或跟踪需要展开
         校正时，先回正并取得原始展开报告再规划；若小队已移动超过 12 地图像素，交回移动
         闭环更新起点。窗口、弹窗和路线停滞异常不捕获，也不补发清理输入。
-        纯镜头找敌人后的已知起点不进入实时小队定位回退；当前视野不足以规划时直接停止。
+        纯镜头找敌人后的已知起点不进入实时小队定位回退；规划器在首拖前独立建立视野校正基准，
+        仍不足以规划时直接停止，不以旧小队坐标替代镜头位置。
         enemy_kind 传递原目标类型，Boss 脚圈辅助不得关联成普通敌人。
         """
         from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains

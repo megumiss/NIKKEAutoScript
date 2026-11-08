@@ -45,7 +45,9 @@ def navigate(
     生产会话可提供 review_move_progress，在真实点击后的可信定位检查同道路历史最优路程。
     每次点击后等待停稳再定位；无进展、max_moves 用尽或十分钟超时抛错，实际触发由会话异常传给入口处理。
     展开地图定位连续三轮未通过才报错；首轮失败后最多追加一次开阔道路短移，成功定位即清零失败计数。
-    镜头平移导致小队观测变化时丢弃旧基准，最多两次等待停稳并重新定位，不使用旧计划点击。
+    镜头观测提示小队位置变化时先清除旧导航缓存，再最多两次等待停稳并重新定位；
+    清除不发送输入、不改变目标失败次数，不能仅清空箭头后再次复用冲突前的坐标。
+    没有导航缓存的实验会话只清除箭头基准，仍保留相同重试上限和输入门禁。
     平面到点模式可传入已校验的电梯标注；入口仅作为中转，连续两次确认出口区域后继续最终目标。
     目标就是最后一段电梯出口时，确认传送即结束，不再向出口中心追加容易误差的地面移动。
     出口区域判定优先于普通步行进展检查，传送后的坐标不与入口道路的剩余路程作比较。
@@ -280,18 +282,21 @@ def navigate(
             previous, probes, probe_index, stagnant, near = None, None, 0, 0, 0
             continue
         except SquadPositionChanged as error:
+            reset_navigation = getattr(session, 'reset_navigation', None)
+            if callable(reset_navigation):
+                reset_navigation()
+            session.anchor_reference = None
+            session.anchor_reference_method = None
             replans += 1
             emit(
                 state='locating',
-                message='镜头平移后小队位置变化，正在停稳并重新定位…',
+                message='小队位置观测不一致，已清除旧导航证据，等待停稳后重新定位…',
                 camera_replans=replans,
                 squad_before_pan=error.before,
                 squad_after_pan=error.after,
             )
             if replans > 2:
                 raise RuntimeError('镜头平移后小队位置反复变化，已用尽两次重新定位机会；未追加移动点击。') from error
-            session.anchor_reference = None
-            session.anchor_reference_method = None
             previous, probes, probe_index, stagnant, near = None, None, 0, 0, 0
             session.wait_stopped()
             continue
