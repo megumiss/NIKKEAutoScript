@@ -526,7 +526,8 @@ class CampaignSceneController:
         """识别当前客户区并推进一步；返回未接管、页面等待或待连续确认的野外身份。
 
         方舟右上引导点击后等待五秒，仅在中央卡片范围匹配小型感叹号模板，避免点到顶部任务提示。
-        灰色战斗按钮确认后点击本帧按钮匹配中心；主线弹窗点击已定位的直接前往箭头。
+        灰色战斗按钮确认后优先点击可用的快速战斗，否则点击本帧按钮匹配中心。
+        主线弹窗点击已定位的直接前往箭头。
         异常恢复模式只关闭这两类弹窗，不点击进入战斗或直接前往；弹窗均优先于背景页面判定。
         指挥中心标题确认后匹配主页按钮返回主界面，按钮未命中则等待，不点击咨询或回忆入口。
         前哨基地优先处理指挥中心弹窗进入，再按电梯、指挥中心卡片、右上引导的顺序处理。
@@ -563,6 +564,10 @@ class CampaignSceneController:
                 if close_score >= battle.THRESHOLD:
                     from module.campaign.scene_session import ENTRY_CLOSE_POINT
                     self.tap(ENTRY_CLOSE_POINT, '异常恢复关闭灰色战斗按钮弹窗')
+            elif battle.quick_battle_available(field):
+                from module.campaign.scene_session import ENTRY_TAP_INTERVAL, QUICK_BATTLE_POINT
+                scores['quick_ratio'] = round(battle.orange_ratio(field, battle.QUICK_BATTLE_ROI), 3)
+                self.tap(QUICK_BATTLE_POINT, '快速战斗', interval=ENTRY_TAP_INTERVAL)
             else:
                 self.tap(disabled_point, '灰色进入战斗按钮')
             return self.wait('battle_disabled', scores, field)
