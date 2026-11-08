@@ -1005,16 +1005,20 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
     def snapshot(self, expanded=False, keep_expanded=False, known_squad=None, *, retry_localization=True):
         """取得一拍业务观测；定位失败时有限重试，展开默认收起，也可留给紧接着的侦察。
 
-        战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_reason）；此外小队只在收到点击时才
-        移动、镜头只在收到拖动时才平移，所以上一次被接受的定位之后没有再发过手势时同样直接沿用：
+        战斗结束后必须重新实测小队位置，不沿用移动或战斗前的坐标。未发生战斗且上一次
+        被接受的定位之后没有再发过手势时，可以直接沿用：
         紧凑面板配准没过线时重新展开大地图只会得到同一个坐标，白花一次开合与几秒配准。
         每帧都打一行观测摘要（见 describe_snapshot）与这一段耗时：推图的等待绝大部分花在这里。
         keep_expanded 仅用于 expanded=True 后直接衔接侦察；调用方负责正常结束时收起。
+        展开帧收起后重新识别紧凑画面，不能把暗化场景里缺失的主线指引和机关传给规划器。
+        收起前将可信展开帧并入历史观测，保留本次补充视野；紧凑配准仍失败时只保留未移动的
+        小队坐标，标为 reused，不把旧展开矩阵、敌人或覆盖附到新紧凑快照。
         已经展开的定位重试保留面板，不再强制开合回正。可信紧凑帧可交给移动入口复用小队位置。
         展开时只用无新增手势的已确认小队坐标约束本帧圆环；失败后小幅拖动再识别一次，
         仍失败则停止，不能只复用小队坐标而把尚未定位的敌人当成不存在。
         known_squad 只供尚未发送移动的找敌人阶段使用：跳过实时小队定位和圆环重试，
-        使用已有小队底图坐标规划路线；当前视野配准失败可复用小队位置，但不并入当前观测。
+        使用已有小队底图坐标规划路线；镜头变化后紧凑视野配准失败时，不回正地展开复核当前
+        视野，最多再小幅平移一次。展开仍失败则停止；成功后按统一收图流程刷新场景，不能沿用旧矩阵。
         定位后只有镜头拖动时自动使用已知小队坐标，即使小队已离屏也不重新寻找圆环；
         点击、其他可能移动小队的输入或战斗会使这条自动复用路径失效。
         retry_localization=False 只返回本帧结果，不展开重试或复用旧定位；供主循环先尝试
@@ -1054,13 +1058,13 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                     and self.last_registration['gestures'] == self.gestures):
                 snapshot = self.reuse_registration(snapshot, 'unchanged')
             else:
-                self.owner.last_snapshot = snapshot
-                self.preview(field)
-                raise RuntimeError('找敌人的当前视野配准未通过；停止目标选择，不重新定位小队。')
+                logger.info('紧凑地图视野配准未通过，展开地图复核当前视野；保留未移动的小队坐标。')
+                self.record('viewport_expanded_retry', snapshot=snapshot, known_squad=known_squad)
+                return self.snapshot(expanded=True, known_squad=known_squad)
         elif retry_localization and not located(snapshot):
             why = self.reuse_reason()
             snapshot = (self.reuse_registration(snapshot, why) if why is not None
-                        else self.retry_localization(snapshot, expanded=expanded, keep_expanded=keep_expanded))
+                        else self.retry_localization(snapshot, expanded=expanded, keep_expanded=True))
         if snapshot.get('localization') == 'accepted':
             if snapshot.get('anchor_error') is not None:
                 logger.info(f"展开地图小队约束定位通过：小队偏差 {snapshot['anchor_error']:.1f} 地图像素，"
@@ -1070,9 +1074,32 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                 self.remember_registration(snapshot['squad'], snapshot.get('roi_to_map'),
                                            snapshot.get('coverage_size'))
             self.remember_navigation(snapshot)
-        self.owner.last_snapshot = snapshot
-        if expanded and not keep_expanded:
+        if not keep_expanded and (snapshot.get('minimap') or {}).get('mode') == 'expanded':
+            if snapshot.get('localization') == 'accepted':
+                changes = self.owner.state.update(snapshot, advance=False)
+                self.record('expanded_view_retained', snapshot=snapshot, changes=changes)
             self.win.reset_minimap(expanded=False, reset=False)
+            field = self.win.client()
+            self.identity(field)
+            position = self.stationary_squad()
+            current = self.observe_frame(field, **({'known_squad': position} if position is not None else {}))
+            if (position is not None and not located(current) and current.get('squad') is not None
+                    and current.get('squad_source') == 'known'
+                    and (current.get('minimap') or {}).get('mode') == 'compact'):
+                current['localization'] = 'reused'
+                current['squad'] = position
+                current['squad_source'] = 'known'
+                current['roi_to_map'] = None
+                current.pop('coverage_size', None)
+                current['enemies'] = []
+                logger.info('展开地图已收起，刷新当前场景；仅保留未移动的小队坐标，不沿用展开视野。')
+            snapshot = current
+            if snapshot.get('localization') == 'accepted':
+                if position is None:
+                    self.remember_registration(snapshot['squad'], snapshot.get('roi_to_map'),
+                                               snapshot.get('coverage_size'))
+                self.remember_navigation(snapshot)
+        self.owner.last_snapshot = snapshot
         self.record('snapshot_result', snapshot=snapshot)
         logger.info(f'观测完成：{describe_snapshot(snapshot)}，耗时 {watch}')
         return snapshot

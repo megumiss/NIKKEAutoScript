@@ -86,6 +86,7 @@ class CampaignObserver:
         代替本帧配准，调用方负责在移动或战斗后停用旧坐标约束。
         known_squad 仅用于未移动小队的纯镜头找敌人阶段：保留调用方已确认的底图坐标，不检测、
         拟合或校验实时小队圆环；当前面板仍独立道路配准，敌人和覆盖只使用本帧矩阵。
+        小队坐标还必须落在静态路网的既有容差内；已知小队模式校验小队而非视野中心。
         定位成功后敌人和小队都投影到地图坐标，落到图外视为 needs_review——这种情况多半是配准
         漂移而不是真的出界。objects=False 不返回场景对象；普通定位的机关投影仍可能需要箭头，因此不能保证省掉场景推理。
         """
@@ -141,6 +142,9 @@ class CampaignObserver:
                 if (position.shape != (2,) or not np.isfinite(position).all()
                         or not (0 <= position[0] < width and 0 <= position[1] < height)):
                     raise ValueError('找敌人需要已确认且位于本章地图内的小队底图坐标。')
+                chart = self.static_map()
+                if chart is None or not chart.walkable(position):
+                    raise ValueError('已知小队坐标无法归属当前章节道路，不能用于镜头观测。')
                 snapshot['squad'] = position.tolist()
                 snapshot['squad_source'] = 'known'
                 if mode == 'compact':
@@ -226,7 +230,8 @@ class CampaignObserver:
         调用方据此决定是否换形态重试。
         expected_position 仅约束当前实测圆环的底图位置，不改变道路接受阈值。
         known_squad 模式中的 player 是面板视口种子，不代表小队；配准不施加小队坐标约束，
-        小队坐标由调用方提供，viewport、敌人及覆盖均由当前面板的独立配准生成。
+        小队坐标由调用方提供，viewport、敌人及覆盖均由当前面板的独立配准生成。两种模式都
+        验证实际小队属于静态路网，不能将图内但道路外的坐标标为 accepted；视口中心可在道路外。
         """
         options = {'expected_position': expected_position} if expected_position is not None else {}
         result = self.matcher.match_panel(panel, road, valid, player, **options)
@@ -256,6 +261,15 @@ class CampaignObserver:
             self.report_localization_error(chapter, 'out_of_bounds',
                                            f'配准后小队坐标 {points_text(squad)} '
                                            f'超出章节地图范围 {width}×{height}')
+            return None
+        chart = self.static_map()
+        if chart is None or not chart.walkable(squad):
+            snapshot['localization'] = 'needs_review'
+            snapshot['squad'] = None
+            snapshot['localization_diagnostics']['squad_on_road'] = False
+            self.report_localization_error(
+                chapter, 'squad_off_road',
+                f'小队坐标 {points_text(squad)} 无法归属章节道路；拒绝作为导航起点')
             return None
         snapshot['squad'] = squad
         if known_squad is not None:
