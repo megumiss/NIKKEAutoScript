@@ -726,7 +726,7 @@ class EventStory(EventBase):
                 if (
                     max_clicks < 3
                     and self.appear(FIGHT_QUICKLY_CHECK, offset=10)
-                    and self.appear_then_click(FIGHT_QUICKLY_MAX, offset=30, threshold=0.99, interval=0.5)
+                    and self.appear_then_click(FIGHT_QUICKLY_MAX, offset=30, threshold=0.9, interval=0.5)
                 ):
                     max_clicks += 1
                     self.device.sleep(0.3)
