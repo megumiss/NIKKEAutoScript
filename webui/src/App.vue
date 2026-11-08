@@ -22,6 +22,7 @@ import LinksView from './views/LinksView.vue'
 import LogsView from './views/LogsView.vue'
 import ManageView from './views/ManageView.vue'
 import OverviewView from './views/OverviewView.vue'
+import ScreenPreviewHost from './components/ScreenPreviewHost.vue'
 import ScheduleView from './views/ScheduleView.vue'
 import SettingsView from './views/SettingsView.vue'
 import TaskView from './views/TaskView.vue'
@@ -163,6 +164,7 @@ onBeforeUnmount(() => {
     </button>
     <div v-if="mobileNav" class="mobile-scrim" @click="mobileNav = ''"></div>
     <div v-if="backendDown" class="backend-down"><div class="backend-down-card">{{ t('后端连接中断，正在等待恢复…') }}</div></div>
+    <ScreenPreviewHost />
     <AnnouncementCenter />
     <AppModal />
     <BlaLoginModal />

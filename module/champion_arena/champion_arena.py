@@ -59,12 +59,12 @@ class ChampionArena(UI, ArenaBase):
                 self.device.screenshot()
 
             # 晋级赛
-            if click_timer.reached() and self.appear_then_click(PROMOTION, offset=10, interval=3):
+            if click_timer.reached() and self.appear_then_click(PROMOTION, offset=60, interval=3):
                 click_timer.reset()
                 continue
 
             # 冠军争霸赛
-            if click_timer.reached() and self.appear_then_click(CHAMPION, offset=10, interval=3):
+            if click_timer.reached() and self.appear_then_click(CHAMPION, offset=60, interval=3):
                 click_timer.reset()
                 continue
 

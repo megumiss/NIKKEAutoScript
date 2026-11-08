@@ -164,6 +164,8 @@ class DailyRecruit(UI):
                 and self.appear(SPECIAL_RECRUIT_CHECK, offset=(10, 10), static=False)
                 and confirm_timer.reached()
             ):
+                # 每抽成功返回后重置记录，避免正常招募累计触发防卡死保护。
+                self.device.click_record_clear()
                 self.event_free_recruit()
 
         logger.info('Event free recruit has done')
@@ -318,6 +320,7 @@ class DailyRecruit(UI):
                     else:
                         return_timer.reset()
 
+                self.device.click_record_clear()
                 recruit_count += 1
                 logger.info(f'Social point recruit count: {recruit_count}/{recruit_times}')
                 recruit_end = recruit_count >= recruit_times

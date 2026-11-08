@@ -9,6 +9,7 @@ fn main() {
             "desktop_update_apply",
             "save_export_file",
             "refresh_security_entry",
+            "open_preview_window",
         ])),
     )
     .expect("failed to run tauri-build");
