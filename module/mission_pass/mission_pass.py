@@ -128,6 +128,22 @@ class MissionPass(UI):
                 logger.warning('Mission pass banner not changed, wait timeout')
                 return 'timeout'
 
+    def wait_pass_popup(self, timeout=5):
+        """
+        被识别为点击的滑动约3秒后才打开pass弹窗，期间主页面不变
+
+        Returns:
+            bool: 是否出现弹窗，已领取或关闭
+        """
+        timer = Timer(timeout, count=8).start()
+        while not timer.reached():
+            self.device.screenshot()
+            if self.pass_popup_appear():
+                logger.info('Swipe opened mission pass popup')
+                self.receive()
+                return True
+        return False
+
     def run(self):
         self.ui_ensure(page_main)
         # 等待右下角loading消失
@@ -253,4 +269,7 @@ class MissionPass(UI):
                 logger.info('ALL MISSION PASS DONE')
                 break
 
+        # 扫描时滑动过，结束前确认没有迟到的弹窗
+        if not find_dot and passs > 1:
+            self.wait_pass_popup()
         self.config.task_delay(schedule=True)
