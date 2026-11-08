@@ -43,6 +43,8 @@ TEMPLATES = {
     'chapter_clear': ((680, 340, 1090, 440), .9),
     'chapter_redirect': ((650, 390, 1130, 510), .85),
     'battle_disabled': ((910, 870, 1160, 970), .9),
+    'unlock': ((780, 370, 1000, 460), .9),
+    'unlock_continue': ((780, 590, 1000, 680), .9),
     'story_redirect': ((800, 530, 950, 595), .9),
     'story_redirect_close': ((1045, 385, 1110, 445), .9),
     'chapter_list': ((630, 80, 860, 150), .9),
@@ -78,13 +80,14 @@ def locate(field, templates, name):
 
     章节列表标题同时接受正反色相关匹配，兼容普通浅底黑字与困难深底白字，保持原阈值。
     灰色战斗按钮还要求匹配区域至少 90% 为低饱和暗色，避免蓝色按钮被交给此场景分支。
+    UNLOCK 标题与继续提示只匹配亮色笔画，避免遮罩后的地图背景变化影响相关分数。
     """
     template = templates[name]
     (x1, y1, x2, y2), threshold = TEMPLATES[name]
     region = field[y1:y2, x1:x2]
     if region.shape[0] < template.shape[0] or region.shape[1] < template.shape[1]:
         return 0., None
-    if name == 'ark_check':
+    if name in ('ark_check', 'unlock', 'unlock_continue'):
         template = cv2.threshold(cv2.cvtColor(template, cv2.COLOR_BGR2GRAY), 180, 255, cv2.THRESH_BINARY)[1]
         region = cv2.threshold(cv2.cvtColor(region, cv2.COLOR_BGR2GRAY), 180, 255, cv2.THRESH_BINARY)[1]
     response = cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED)
@@ -405,7 +408,7 @@ class CampaignSceneController:
         """仅检测章节会话是否应交还上层，不在导航输入闸门中执行页面点击。
 
         MISSION CLEAR 优先于旧身份 OCR，普通剧情、主页、方舟或未知非战斗页面也交上层；
-        普通蓝色战斗准备弹窗仍由章节执行层接管以保留敌人归属；灰色战斗按钮及主线直接前往弹窗
+        普通蓝色战斗准备弹窗仍由章节执行层接管以保留敌人归属；UNLOCK、灰色战斗按钮及主线直接前往弹窗
         在野外判据之前交上层处理，避免背景小地图可见时放行导航输入。展开小地图本身不触发场景切换。
         known_only 供战斗轮询使用：未识别的加载帧保留在原战斗接管中，只有可靠页面证据才交上层。
         """
@@ -414,9 +417,10 @@ class CampaignSceneController:
         if battle.story_skip(field)[1] is not None:
             self.activate()
             raise SceneRequired('剧情页面交由上层场景接管。')
-        if any(locate(field, self.templates, name)[1] is not None for name in ('battle_disabled', 'story_redirect')):
+        if any(locate(field, self.templates, name)[1] is not None
+               for name in ('unlock', 'battle_disabled', 'story_redirect')):
             self.activate()
-            raise SceneRequired('灰色战斗按钮或主线引导弹窗交由上层场景接管。')
+            raise SceneRequired('解锁提示、灰色战斗按钮或主线引导弹窗交由上层场景接管。')
         if battle.field_visible(field) or self.session.owner.minimap_expanded(field):
             return
         kind = battle.battle_state(field)['state']
@@ -526,9 +530,10 @@ class CampaignSceneController:
         """识别当前客户区并推进一步；返回未接管、页面等待或待连续确认的野外身份。
 
         方舟右上引导点击后等待五秒，仅在中央卡片范围匹配小型感叹号模板，避免点到顶部任务提示。
-        灰色战斗按钮确认后优先点击可用的快速战斗，否则点击本帧按钮匹配中心。
-        主线弹窗点击已定位的直接前往箭头。
-        异常恢复模式只关闭这两类弹窗，不点击进入战斗或直接前往；弹窗均优先于背景页面判定。
+        灰色战斗按钮确认后优先点击可用的快速战斗，否则点击本帧灰色按钮匹配中心。
+        UNLOCK 标题确认后只点击本帧已识别的继续提示，提示未出现时等待；主线弹窗点击直接前往箭头。
+        异常恢复模式仅关闭战斗准备与主线引导弹窗，不点击快速战斗、进入战斗或直接前往。
+        解锁提示也可在异常恢复中关闭；以上弹窗均优先于背景页面判定。
         指挥中心标题确认后匹配主页按钮返回主界面，按钮未命中则等待，不点击咨询或回忆入口。
         前哨基地优先处理指挥中心弹窗进入，再按电梯、指挥中心卡片、右上引导的顺序处理。
         电梯及进入按钮只在各自范围匹配感叹号并偏移点击中央；异常恢复模式不进入建筑或电梯。
@@ -548,6 +553,15 @@ class CampaignSceneController:
         scores = {'chapter_clear': round(score, 3)}
         if point is not None:
             self.start_if_complete(field)
+
+        unlock_score, unlock_point = locate(field, self.templates, 'unlock')
+        scores['unlock'] = round(unlock_score, 3)
+        if unlock_point is not None:
+            continue_score, continue_point = locate(field, self.templates, 'unlock_continue')
+            scores['unlock_continue'] = round(continue_score, 3)
+            if continue_point is not None:
+                self.tap(continue_point, 'UNLOCK 点击继续', interval=1.)
+            return self.wait('unlock', scores, field)
 
         skip_score, skip_point = battle.story_skip(field)
         scores['story_skip'] = round(skip_score, 3)
