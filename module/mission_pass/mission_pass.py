@@ -92,6 +92,35 @@ class MissionPass(UI):
                 self.ui_wait_loading()
                 break
 
+    def pass_popup_appear(self):
+        """
+        滑动被识别为点击时会打开pass弹窗
+        """
+        if self.appear(MAIN_CHECK, offset=30):
+            return False
+        return self.appear_text(Langs.PASS_CHECK, threshold=0.9) or self.appear_text(Langs.PASS_CHECK_2, threshold=0.9)
+
+    def wait_banner_change(self, image, area, timeout=20):
+        """
+        等待banner相对image发生变化
+
+        Returns:
+            bool: banner是否变化，超时返回False
+        """
+        banner = Button(area, None, button=area)
+        banner._match_init = True
+        banner.image = crop(image, area)
+        # 正常滑动约8秒内变化
+        timer = Timer(timeout, count=timeout * 2).start()
+        while 1:
+            self.device.screenshot()
+
+            if not self.appear(banner, offset=10, threshold=0.8):
+                return True
+            if timer.reached():
+                logger.warning('Mission pass banner not changed, wait timeout')
+                return False
+
     def run(self):
         self.ui_ensure(page_main)
         # 等待右下角loading消失
@@ -122,9 +151,12 @@ class MissionPass(UI):
 
         # 获取当前pass数量
         self.config.PASS_LIMIT = 1
+        # 只有EXPAND时数量是估算的
+        pass_count_exact = True
         if self.appear(CHANGE, offset=70):
             self.config.PASS_LIMIT = 2
         elif self.appear(EXPAND, offset=70):
+            pass_count_exact = False
             # 第一个banner
             self.ensure_sroll((650, pass_scrol_y), (500, pass_scrol_y), method='swipe', speed=40, count=1, delay=0.5)
             self.device.screenshot()
@@ -142,19 +174,11 @@ class MissionPass(UI):
                 self.ensure_sroll(
                     (650, pass_scrol_y), (500, pass_scrol_y), method='swipe', speed=40, count=1, delay=0.5
                 )
-                # 比较banner是否变化
-                while 1:
-                    self.device.screenshot()
-
-                    banner = Button(PASS_BANNER_DYNAMIC.area, None, button=PASS_BANNER_DYNAMIC.area)
-                    banner._match_init = True
-                    banner.image = crop(tmp_image, PASS_BANNER_DYNAMIC.area)
-                    if not self.appear(banner, offset=10, threshold=0.8):
-                        logger.info(f'Find mission pass {self.config.PASS_LIMIT}')
-                        self.config.PASS_LIMIT += 1
-                        break
-                    else:
-                        continue
+                # 比较banner是否变化，超时视为已数完
+                if not self.wait_banner_change(tmp_image, PASS_BANNER_DYNAMIC.area):
+                    break
+                logger.info(f'Find mission pass {self.config.PASS_LIMIT}')
+                self.config.PASS_LIMIT += 1
                 # 回到第一个banner
                 if self.appear(banner_first, offset=10, threshold=0.6):
                     self.config.PASS_LIMIT -= 1
@@ -165,6 +189,10 @@ class MissionPass(UI):
         logger.attr('PENDING MISSION PASS', self.config.PASS_LIMIT)
         passs = self.config.PASS_LIMIT
         while 1:
+            # 数量准确时，全部领取后不再滑动检查
+            if pass_count_exact and self.config.PASS_LIMIT <= 0:
+                logger.info('ALL MISSION PASS DONE')
+                break
             find_dot = False
             # 每次都检查所有的pass
             if not passs == 1:
@@ -202,21 +230,16 @@ class MissionPass(UI):
                 else:
                     if passs == 1:
                         break
+                    # 上一次滑动打开了pass弹窗，领取或关闭后再比较banner
+                    if self.pass_popup_appear():
+                        self.receive()
+                        continue
                     tmp_image = self.device.image
                     self.ensure_sroll(
                         (650, pass_scrol_y), (500, pass_scrol_y), method='swipe', speed=40, count=1, delay=0.5
                     )
-                    # 比较banner是否变化
-                    while 1:
-                        self.device.screenshot()
-
-                        banner = Button(PASS_BANNER_DYNAMIC.area, None, button=PASS_BANNER_DYNAMIC.area)
-                        banner._match_init = True
-                        banner.image = crop(tmp_image, PASS_BANNER_DYNAMIC.area)
-                        if not self.appear(banner, offset=10, threshold=0.8):
-                            break
-                        else:
-                            continue
+                    # 比较banner是否变化，超时由下一轮检查弹窗
+                    self.wait_banner_change(tmp_image, PASS_BANNER_DYNAMIC.area)
 
             # 没有红点
             if not find_dot:
