@@ -55,11 +55,6 @@
   type: info
   pinned: true
   items:
-    - id: notice_20261107_story2_normal_sweep
-      date: 2026-11-07
-      title: Story2 Normal 关卡扫荡可能无法正常执行
-      content: |
-        <b>本次活动的 Story2 Normal 关卡扫荡可能无法正常执行</b>
     - id: notice_20261030
       date: 2026-10-30
       title: 支持伏特骰子领取
