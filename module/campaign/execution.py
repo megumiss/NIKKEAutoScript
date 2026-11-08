@@ -122,6 +122,7 @@ class CampaignExecutor:
         self.terminal_checked = None
         self.terminal_scan_stalls = 0
         self.recoveries = 0
+        self.required_scan = '开局' if purpose == 'story' else None
         self.scene_controller = owner.scene_controller
 
     def plan_tick(self, snapshot, advance=True):
@@ -787,9 +788,10 @@ class CampaignExecutor:
         返回 victory 表示已确认胜利；只有继续提示而未见胜负时返回 unknown，不清除敌人、
         不完成地图目标或重置失败次数，丢弃旧导航证据后重新观测；已确认且耗尽重试的战败仍抛异常。
         一段战斗（进弹窗、重打后重新开打）单独计 BATTLE_TIME_LIMIT 秒，等不到结算就交人工：
-        不无限等，也不盲目连点。已确认胜利时给会话打开一次「沿用战斗前坐标」的许可，
-        第一帧重新配准失败就用旧坐标继续推图。Boss 战后先识别章节结束弹窗，命中时交由换章状态机接管，
-        不在角标被遮挡时复核旧身份；未命中仍严格复核章节与难度，不以胜利本身放行换章。
+        不无限等，也不盲目连点。任何战斗退出路径都清除旧导航证据；进入战斗前的小队可能已经
+        移动，胜利不能证明旧坐标仍有效，下一轮必须重新实测。Boss 战后先识别章节结束弹窗，
+        命中时交由换章状态机接管，不在角标被遮挡时复核旧身份；未命中仍严格复核章节与难度，
+        不以胜利本身放行换章。
         """
         self.session.begin_target('battle')
         self.session.battle_mode = True
@@ -863,16 +865,15 @@ class CampaignExecutor:
                 self.session.pause(BATTLE_POLL_SECONDS)
         finally:
             self.session.battle_mode = False
+            self.session.reset_navigation()
             self.owner.state.execution_target = None
         if settled is None:
             settled = 'unknown'
-        self.session.reuse_squad = settled == 'victory'
         logger.info(f'战斗接管结束：{label(BATTLE_OUTCOMES, settled)}，采样 {polls} 次，'
                     f'重试 {retries} 次，累计操作 {self.session.target_inputs} 次，总耗时 {total}。')
         if settled == 'defeat':
             raise BattleFailed(f'当前关卡重试 {BATTLE_DEFEAT_RETRIES} 次仍战败，停止执行并请求人工接管。')
         if settled == 'unknown':
-            self.session.reset_navigation()
             logger.info('继续提示后已确认返回野外，胜负未确认；保留敌人与失败记录，重新观测。')
             return settled
         if goal is not None and goal.get('kind') == 'enemy':
@@ -896,14 +897,16 @@ class CampaignExecutor:
     def scan_start(self, scene='开局', center_checked=False):
         """按场景名十字扫描小队周围，返回可信屏数，零屏由剧情执行层触发恢复。
 
-        机关触发后与电梯传送后共用中心与四向扫描。扫描前须确认小队居中，否则先回正并重新定位；
+        开局、异常恢复、机关触发后与电梯传送后共用中心与四向扫描。扫描前须确认小队坐标
+        仍有效且镜头居中，否则先回正并重新定位；初始定位失败不能凭镜头居中跳过实测。
         刚完成 recover_center 的调用方传入 center_checked，避免丢失离屏图标点击记录后重复回正。
         扫描是内部有界的批量阶段，不是同一目标上的原地空转，所以阶段结束即翻篇：收起地图与刷新快照的
         收尾输入独立统计，单轮扫描次数由各方向站数与拖回上限约束。安全异常（窗口、弹窗、取消）不捕获，
         与侦察一致：此时不补发收起地图的输入。
         """
-        if not center_checked and not centered(centering_frame(self.session)):
-            logger.info(f'{scene}十字扫描前小队未居中，先执行回正与重新定位。')
+        if not center_checked and (self.session.stationary_squad() is None
+                                   or not centered(centering_frame(self.session))):
+            logger.info(f'{scene}十字扫描缺少有效小队位置或镜头未居中，先执行回正与重新定位。')
             self.session.recover_center()
         self.session.begin_target('scout')
         self.session.scout_begin()
@@ -926,17 +929,22 @@ class CampaignExecutor:
 
         已清除敌人、机关、电梯、光幕和道路事实保留，所有目标累计失败次数不重置；只解除
         临时不可侦察视野，允许重新观测。回正或实测定位未通过时不能使用异常前的目标。
-        恢复后先按当前有效快照决策，缺失视野由正常侦察补充，不以展开十字扫描成功作为前提。
+        恢复取得有效位置后必须执行十字扫描；至少取得一屏可信观测才允许完成恢复并重新决策。
+        扫描失败、战斗或 EX 中断不清除待扫描标记；处理完中断后，下一次规划前仍须完成扫描。
         goal 仅保留失败任务的类型门禁，不沿用其坐标；已有路程或续行目标时不重选实景近敌，
         机关、电梯、Boss 及 EX 限制仍检查所有续行目标。路程目标在恢复成功前只用于门禁，
         不提前清除，避免下一次恢复丢失设施限制。允许近敌时只取单帧，未定位快照不写入地图状态；
-        未定位帧只有在近敌检查独立取得两帧可靠坐标及同分区道路后才允许直点；否则消耗本次
-        恢复额度，不按主线屏幕坐标移动。定位恢复成功后由正常循环定位主线路程并选择电梯。
+        未定位帧只有在近敌检查独立取得两帧可靠坐标及同分区道路后才允许直点；未确认近敌时，
+        在本次恢复额度内继续严格回正和展开实测，不能连续多轮只重复紧凑失败帧。
+        不按主线屏幕坐标移动。定位恢复成功后由正常循环定位主线路程并选择电梯。
+        恢复成功以 recover_center 的本轮实测确认结果为准；收图后紧凑视野仍为 reused 不否定
+        刚取得的小队坐标，但该紧凑帧仍不更新视野与敌人。旧坐标或只定位视口不能构成实测确认。
         完整恢复也不清零计数，只有实际完成移动目标或战斗胜利才重新获得恢复额度。
         """
         if self.recoveries >= CAMPAIGN_RECOVERY_LIMIT:
             raise RuntimeError('主线连续自动恢复次数已达上限。')
         self.recoveries += 1
+        self.required_scan = '恢复后'
         self.session.record('recovery_start', force=True, attempt=self.recoveries, reason=reason)
         logger.warning(f'主线自动恢复开始：连续第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，原因 {reason}。')
         state = self.owner.state
@@ -952,22 +960,28 @@ class CampaignExecutor:
         self.owner.last_routes = None
         self.owner.last_route_signature = None
         snapshot = self.session.recover_center(allow_unlocalized=allow_visual)
-        if (snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
-                or snapshot.get('squad_source') == 'known'):
+        if not snapshot.get('recovery_position_confirmed'):
             attempt = self.recoveries
             self.session.record('recovery_visual_attempt', snapshot=snapshot, attempt=attempt)
             logger.info('小队回正后底图定位未通过，检查实景近敌；不使用旧目标坐标或更新地图状态。')
-            if not allow_visual or not self.execute_visible_enemy(None, snapshot):
-                raise RuntimeError('小队回正后底图定位未通过，且未确认同分区可达近敌。')
-            state.route_goal = None
-            if not self.ex_pending:
-                self.interrupted_goal = None
-                self.interrupted_inputs = 0
-            self.session.record('recovery_visual_handled', attempt=attempt, ex_pending=self.ex_pending)
-            return
+            if allow_visual and self.execute_visible_enemy(None, snapshot):
+                state.route_goal = None
+                if not self.ex_pending:
+                    self.interrupted_goal = None
+                    self.interrupted_inputs = 0
+                self.session.record('recovery_visual_handled', attempt=attempt, ex_pending=self.ex_pending)
+                return
+            logger.info('恢复近敌检查未通过，本次恢复继续执行展开实测定位；不沿用旧目标坐标。')
+            self.session.record('recovery_localization_fallback', attempt=attempt)
+            snapshot = self.session.recover_center()
+            if not snapshot.get('recovery_position_confirmed'):
+                raise RuntimeError('恢复阶段展开实测未通过，停止地图规划。')
         state.route_goal = None
         state.update(snapshot, advance=False)
         self.owner.cut.update(state.blocking())
+        if not self.scan_start('恢复后', center_checked=True):
+            raise RuntimeError('回正后的十字扫描未取得可信视野。')
+        self.required_scan = None
         self.session.record('recovery_complete', attempt=self.recoveries)
         logger.info(f'主线自动恢复完成：连续第 {self.recoveries}/{CAMPAIGN_RECOVERY_LIMIT} 次，'
                     '保留恢复计数与目标失败记录，下一轮重新选择目标。')
@@ -996,11 +1010,13 @@ class CampaignExecutor:
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重新定位，丢弃冻结坐标；窗口、路线停滞、取消
         和战斗失败仍立即停止；路线停滞仅允许按唯一邻近光幕标注新增封锁后重新决策。
-        启动与战后先读取不重试的当前快照；近敌必须独立确认底图位置与同分区步行道路，
+        主线会话开局必须先取得有效小队位置并完成十字扫描；普通战后不额外强制扫描。
+        开局或恢复扫描中断后保留待扫描标记，战斗／EX 处理结束后、重新选目标前补完扫描。
+        扫描结束及普通战后先读取不重试的当前快照；近敌必须独立确认底图位置与同分区步行道路，
         无法确认则按原流程重试定位，不以屏幕坐标绕过电梯。恢复与普通循环使用相同门禁。
         定位成功但没有已绑定目的地时，蓝色主线标记优先于历史线索与未知区域；先确认主线
-        底图位置并重新规划，同区走道路、跨区选电梯，再验证新目标的前置侦察。缺视野才按需
-        侦察，不强制展开十字扫描；当前敌人、机关和已绑定路线不被近敌或主线新目标替换。
+        底图位置并重新规划，同区走道路、跨区选电梯，再验证新目标的前置侦察。开局与恢复
+        扫描之外仍按需侦察；当前敌人、机关和已绑定路线不被近敌或主线新目标替换。
         连续恢复尝试有界，只在实际目标完成或战斗胜利后清零；不设单章总时限或主循环轮数上限。
         开启遗漏补扫时，Boss 执行前核对章节敌人进度，进度不足才补扫当前连通分量；默认不执行额外补扫。
         已知普通敌人及沿途侦察仍保留，电梯不触发终局遗漏检查。
@@ -1050,6 +1066,11 @@ class CampaignExecutor:
                         self.correct_ex_target(evidence)
                         self.ex_evidence = None
                         self.ex_pending = False
+                    if self.required_scan is not None:
+                        if not self.scan_start(self.required_scan):
+                            raise RuntimeError(f'{self.required_scan}十字扫描未取得可信视野。')
+                        self.required_scan = None
+                        camera_options = {}
                     if self.purpose == 'story':
                         snapshot = self.session.snapshot(retry_localization=False, **camera_options)
                         if not located(snapshot) or snapshot.get('squad') is None:

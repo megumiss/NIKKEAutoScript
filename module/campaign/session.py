@@ -274,7 +274,6 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.auto_last_points = {}
         # 每个按钮上一次点击的时刻：战斗接管的按钮各自有最短点击间隔（见 tap 的 interval）。
         self.tap_times = {}
-        # 战斗结束后的第一帧允许沿用战斗前的小队坐标（见 reuse_registration）。
         self.reuse_squad = False
         self.last_registration = None
         self.barrier_references = []
@@ -1113,7 +1112,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         所以「之后没再发过手势」等价于「这份坐标一定还成立」（见 reuse_reason）。
         单独记录可能移动小队的输入计数：纯拖动后可继续使用小队底图坐标，
         但旧配准矩阵仍按完整手势计数失效，必须重新配准当前视口。
-        新定位同时结束战前坐标的临时复用许可，使战后重新确认的位置可用于展开约束。
+        新实测清除位置失效状态，只有重新确认的小队坐标才可用于后续展开约束。
         """
         self.last_registration = dict(squad=list(squad), roi_to_map=roi_to_map,
                                       coverage_size=coverage_size, gestures=self.gestures,
@@ -1138,16 +1137,13 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
     def reuse_reason(self):
         """本帧重新配准未被接受时，返回可以沿用上一次定位的原因；不能沿用则返回 None。
 
-        两种情况可以不重新配准：一是战斗刚结束（reuse_squad）——战斗打断了视野与箭头，重新配准
-        往往只差一点没过线，而战斗前后小队不会换位置；二是上一次被接受的定位之后没有再发过任何
-        手势，那么小队与镜头都不可能动过。后一种在小地图配准常年压在门槛下的章节里是常态：
-        重新展开大地图配准只会得到同一个坐标，白花一次开合与几秒配准。
-        返回的原因是给日志看的标识（'battle' / 'unchanged'），不参与判定。
+        只有小队位置仍有效且没有新增镜头手势时允许复用。战斗退出会清空导航证据，
+        可能移动小队的输入也使旧坐标失效；不能仅凭胜利或道路分数接近门限跳过实测。
+        返回 unchanged 只用于日志，不能用此标识替代输入序号和有效期检查。
         """
-        if self.reuse_squad:
-            return 'battle'
-        record = self.last_registration
-        if record is not None and record.get('gestures') == self.gestures:
+        if self.stationary_squad() is None:
+            return None
+        if self.last_registration['gestures'] == self.gestures:
             return 'unchanged'
         return None
 
@@ -1156,8 +1152,8 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
 
         沿用帧只提供小队位置（供本拍选目标），本帧的视野与标记不并进运行状态（见 RunState.update）：
         展开面板与紧凑面板的坐标系不同源，混着用会把封锁与已观测区域算偏。
-        why=camera 表示只有镜头拖动，小队坐标仍有效；why=battle 用于战后首次观测，
-        why=unchanged 表示缓存后没有任何手势。没有记过坐标时原样返回，交正常重试路径。
+        why 只描述已由调用方验证的缓存依据，不提供战后复用许可。
+        没有记过坐标时原样返回，交正常重试路径。
         """
         self.reuse_squad = False
         if self.last_registration is None:
@@ -1165,8 +1161,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         snapshot = dict(snapshot, localization='reused', squad=list(self.last_registration['squad']),
                         roi_to_map=self.last_registration['roi_to_map'],
                         coverage_size=self.last_registration['coverage_size'])
-        reason = {'battle': '战后首次观测允许复用战前定位', 'unchanged': '缓存后无新增手势',
-                  'camera': '仅镜头拖动，小队未移动'}[why]
+        reason = {'unchanged': '缓存后无新增手势', 'camera': '仅镜头拖动，小队未移动'}[why]
         logger.warning(f"本帧配准未通过，复用已确认的小队位置 {points_text(snapshot['squad'])}"
                        f"（依据：{reason}）。")
         return snapshot
@@ -1281,6 +1276,9 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         allow_unlocalized 仅供执行层已通过近敌门禁的普通恢复使用：回正后只取单帧、不展开重试，
         可返回未定位快照供纯画面近敌检查，但不能据此恢复地图规划。回正失败与安全异常仍直接传播。
         机关与扫描调用方默认保持严格定位要求，不能降级使用已知或失败坐标。
+        本次调用已清除旧缓存；展开实测通过、收图后只复用该次坐标时仍算恢复成功。
+        recovery_position_confirmed 仅在本次新实测坐标与返回快照一致且回正检查通过后设置；
+        localization 继续描述当前紧凑视野，不把 reused 改成 accepted，也不附带旧展开投影。
         """
         from module.campaign.navigation.recovery import centered, centering_frame, recenter_squad
 
@@ -1290,11 +1288,15 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.reset_navigation()
         self.begin_target('position')
         snapshot = self.snapshot(retry_localization=not allow_unlocalized)
-        if not allow_unlocalized and (snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
-                                      or snapshot.get('squad_source') == 'known'):
+        position = self.stationary_squad()
+        confirmed = (position is not None and located(snapshot)
+                     and np.array_equal(np.asarray(snapshot.get('squad')), np.asarray(position)))
+        if not allow_unlocalized and not confirmed:
             raise ValueError('小队回正后的实测定位未通过，不能恢复地图规划。')
         if not icon_clicked and not centered(centering_frame(self)):
             raise ValueError('重新定位后镜头偏离小队，不能恢复地图规划或实景近敌检查。')
+        snapshot['recovery_position_confirmed'] = confirmed
+        self.record('recovery_position_result', snapshot=snapshot, confirmed=confirmed)
         return snapshot
 
     def scout_begin(self):

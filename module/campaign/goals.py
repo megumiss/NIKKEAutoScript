@@ -181,7 +181,7 @@ def frontier_point(state, cut, squad, distance_limit=FRONTIER_LIMIT):
 def choose_goal(state, chart, snapshot, cut, purpose='story'):
     """挑下一个目标，返回目标描述；没有可做的事情时 kind 为 none。
 
-    要求本帧定位可用（配准被接受，或战后沿用战斗前的坐标）且静态层支持当前坐标模型，否则不给目标——
+    要求本帧定位可用（配准被接受，或复用未移动小队的已确认坐标）且静态层支持当前坐标模型，否则不给目标——
     坐标不可信时规划出来的落点也不可信。cut 必须已按 `state.blocking()` 刷新过，否则可达性判的是过期的封锁集合。
     """
     blocked = [record['id'] for record in state.blocking()]
