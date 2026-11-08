@@ -105,21 +105,28 @@ class MissionPass(UI):
         等待banner相对image发生变化
 
         Returns:
-            bool: banner是否变化，超时返回False
+            str: 'changed' banner变化,
+                 'popup' 滑动打开了pass弹窗，已领取或关闭,
+                 'timeout' 超时未变化
         """
         banner = Button(area, None, button=area)
         banner._match_init = True
         banner.image = crop(image, area)
         # 正常滑动约8秒内变化
-        timer = Timer(timeout, count=timeout * 2).start()
+        timer = Timer(timeout, count=10).start()
         while 1:
             self.device.screenshot()
 
+            # 弹窗会盖住banner，先于banner比较检查
+            if self.pass_popup_appear():
+                logger.info('Swipe opened mission pass popup')
+                self.receive()
+                return 'popup'
             if not self.appear(banner, offset=10, threshold=0.8):
-                return True
+                return 'changed'
             if timer.reached():
                 logger.warning('Mission pass banner not changed, wait timeout')
-                return False
+                return 'timeout'
 
     def run(self):
         self.ui_ensure(page_main)
@@ -174,8 +181,8 @@ class MissionPass(UI):
                 self.ensure_sroll(
                     (650, pass_scrol_y), (500, pass_scrol_y), method='swipe', speed=40, count=1, delay=0.5
                 )
-                # 比较banner是否变化，超时视为已数完
-                if not self.wait_banner_change(tmp_image, PASS_BANNER_DYNAMIC.area):
+                # 比较banner是否变化，弹窗或超时视为已数完
+                if self.wait_banner_change(tmp_image, PASS_BANNER_DYNAMIC.area) != 'changed':
                     break
                 logger.info(f'Find mission pass {self.config.PASS_LIMIT}')
                 self.config.PASS_LIMIT += 1
@@ -189,17 +196,13 @@ class MissionPass(UI):
         logger.attr('PENDING MISSION PASS', self.config.PASS_LIMIT)
         passs = self.config.PASS_LIMIT
         while 1:
-            # 数量准确时，全部领取后不再滑动检查
-            if pass_count_exact and self.config.PASS_LIMIT <= 0:
-                logger.info('ALL MISSION PASS DONE')
-                break
             find_dot = False
             # 每次都检查所有的pass
             if not passs == 1:
                 self.ensure_sroll(
                     (650, pass_scrol_y), (500, pass_scrol_y), method='swipe', speed=40, count=1, delay=0.5
                 )
-            for _ in range(passs * 2):
+            for i in range(passs * 2):
                 self.device.screenshot()
                 if self.appear(DOT, offset=dot_offset):
                     find_dot = True
@@ -234,15 +237,19 @@ class MissionPass(UI):
                     if self.pass_popup_appear():
                         self.receive()
                         continue
+                    # 最后一次不需要滑动
+                    if i == passs * 2 - 1:
+                        break
                     tmp_image = self.device.image
                     self.ensure_sroll(
                         (650, pass_scrol_y), (500, pass_scrol_y), method='swipe', speed=40, count=1, delay=0.5
                     )
-                    # 比较banner是否变化，超时由下一轮检查弹窗
-                    self.wait_banner_change(tmp_image, PASS_BANNER_DYNAMIC.area)
+                    # 比较banner是否变化，超时说明无法滑动，结束本轮
+                    if self.wait_banner_change(tmp_image, PASS_BANNER_DYNAMIC.area) == 'timeout':
+                        break
 
-            # 没有红点
-            if not find_dot:
+            # 没有红点，或数量准确时已全部领取
+            if not find_dot or (pass_count_exact and self.config.PASS_LIMIT <= 0):
                 logger.info('ALL MISSION PASS DONE')
                 break
 
