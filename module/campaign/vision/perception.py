@@ -305,7 +305,7 @@ def minimap_masks(image):
     小队完全由 YOLO 加圆环拟合给出，同时沿用原有的紧凑道路停止判据；圆环不是恰好一个就报错，
     定位基准不允许歧义。
     面板要先把客户区缩放到 1920×1080 再裁，固定 ROI 是按该尺寸标定的。
-    有效域排掉边框和三处界面控件；高亮区域会被膨胀后剔除（光效会被当成道路），但剔除前先在
+    有效域排掉边框和三处界面控件；非道路色的高亮区域会被膨胀后剔除，但剔除前先在
     亮度图上把圆环周围挖掉，否则环自身的白色会连带把身边的道路一起排掉。
     最后再把圆环本体从有效域里扣掉，并要求剩余道路至少 200 像素，低于此量配准必然不可靠。
     """
@@ -317,14 +317,15 @@ def minimap_masks(image):
         raise ValueError(f'Expected one compact-map squad ring, got {len(players)}.')
     player = np.asarray(players[0])
     hsv = cv2.cvtColor(panel, cv2.COLOR_BGR2HSV)
-    road = cv2.inRange(hsv, (85, 65, 115), (115, 255, 255))
-    road = cv2.morphologyEx(road, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    blue = cv2.inRange(hsv, (85, 65, 115), (115, 255, 255))
+    road = cv2.morphologyEx(blue, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     road = cv2.morphologyEx(road, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
     valid = np.full(road.shape, 255, np.uint8)
     valid[:3] = valid[-3:] = 0
     valid[:, :3] = valid[:, -3:] = 0
     valid[:29, :42] = valid[:29, -34:] = valid[-31:, -76:] = 0
-    bright = (hsv[:, :, 2] > 225).astype(np.uint8) * 255
+    # 高亮青蓝网格仍属于道路色域，不能膨胀成图标遮罩而抹掉周围道路。
+    bright = ((hsv[:, :, 2] > 225) & (blue == 0)).astype(np.uint8) * 255
     cv2.circle(bright, tuple(np.rint(player).astype(int)), 29, 0, -1)
     valid[cv2.dilate(bright, np.ones((15, 15), np.uint8)) > 0] = 0
     cv2.circle(valid, tuple(np.rint(player).astype(int)), 21, 0, -1)
@@ -337,20 +338,22 @@ def minimap_masks(image):
 def compact_road_masks(image):
     """紧凑小地图的道路与有效域，不要求小队圆环；供视野中心定位使用。
 
-    提取规则与 minimap_masks 一致，只去掉圆环周边的遮罩；圆环存在时靠亮度过滤吸收。
+    提取规则与 minimap_masks 一致，只去掉圆环周边的遮罩；圆环存在时靠非道路色的亮度
+    过滤吸收。青蓝色道路及其高亮网格不得加入图标遮罩，防止膨胀后丢失主要道路证据。
     """
     if image.shape != (999, 1776, 3):
         raise ValueError('Expected a 1776x999 client frame for compact-map observation.')
     panel = frame_inputs(image).compact
     hsv = cv2.cvtColor(panel, cv2.COLOR_BGR2HSV)
-    road = cv2.inRange(hsv, (85, 65, 115), (115, 255, 255))
-    road = cv2.morphologyEx(road, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    blue = cv2.inRange(hsv, (85, 65, 115), (115, 255, 255))
+    road = cv2.morphologyEx(blue, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     road = cv2.morphologyEx(road, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
     valid = np.full(road.shape, 255, np.uint8)
     valid[:3] = valid[-3:] = 0
     valid[:, :3] = valid[:, -3:] = 0
     valid[:29, :42] = valid[:29, -34:] = valid[-31:, -76:] = 0
-    bright = (hsv[:, :, 2] > 225).astype(np.uint8) * 255
+    # 高亮青蓝网格仍属于道路色域，不能膨胀成图标遮罩而抹掉周围道路。
+    bright = ((hsv[:, :, 2] > 225) & (blue == 0)).astype(np.uint8) * 255
     valid[cv2.dilate(bright, np.ones((15, 15), np.uint8)) > 0] = 0
     road[valid == 0] = 0
     if np.count_nonzero(road) < 200:

@@ -17,7 +17,7 @@ import numpy as np
 ROI = (25, 96, 243, 307)
 SCALE = 0.25
 PAD = 180
-MATCH_VERSION = 7
+MATCH_VERSION = 8
 # match_panel 的接受判据：道路 IoU、粗搜首名与远处歧义候选的分差、同分候选的参数离散度。
 # 观察器要用同一组常量解释定位为何未被接受，写成常量而不是散在判据里的字面量，避免两边漂移。
 # 道路 IoU 取 0.70：小地图只露出一小块路、或该章配色与底图有固有差异时，正确位置实测落在
@@ -70,15 +70,16 @@ def minimap_masks(image):
     x, y, right, bottom = ROI
     panel = normalized[y:bottom, x:right]
     hsv = cv2.cvtColor(panel, cv2.COLOR_BGR2HSV)
-    road = cv2.inRange(hsv, (85, 65, 115), (115, 255, 255))
+    blue = cv2.inRange(hsv, (85, 65, 115), (115, 255, 255))
     # Original PNGs retain thin bright grid lines that CDN-compressed previews blur away.
-    road = cv2.morphologyEx(road, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    road = cv2.morphologyEx(blue, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     road = cv2.morphologyEx(road, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
     valid = np.full(road.shape, 255, np.uint8)
     valid[:3] = valid[-3:] = 0
     valid[:, :3] = valid[:, -3:] = 0
     valid[:29, :42] = valid[:29, -34:] = valid[-31:, -76:] = 0
-    bright = (hsv[:, :, 2] > 225).astype(np.uint8) * 255
+    # 高亮青蓝网格仍属于道路色域，不能膨胀成图标遮罩而抹掉周围道路。
+    bright = ((hsv[:, :, 2] > 225) & (blue == 0)).astype(np.uint8) * 255
     bright[72:130, 78:138] = 0
     valid[cv2.dilate(bright, np.ones((15, 15), np.uint8)) > 0] = 0
     player = player_center(panel)
