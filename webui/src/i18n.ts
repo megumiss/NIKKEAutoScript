@@ -254,7 +254,7 @@ export const staticLabels: Record<string, Record<string, string>> = {
   '手动': { 'en-US': 'Manual', 'ja-JP': '手動' }, '已禁用': { 'en-US': 'Disabled', 'ja-JP': '無効' }, '引导': { 'en-US': 'Boot', 'ja-JP': 'ブート' },
   '运行环境': { 'en-US': 'Environment', 'ja-JP': '実行環境' },
   '操作系统': { 'en-US': 'OS version', 'ja-JP': 'OS バージョン' }, '系统架构': { 'en-US': 'Architecture', 'ja-JP': 'アーキテクチャ' },
-  '驱动已安装，但 HID 子设备未呈现（Windows 代码 45），注入的报告会被丢弃、光标不会移动。请重启虚拟鼠标总线设备或重启系统后重试。': { 'en-US': 'The driver is installed, but its HID sub-device is not present (Windows code 45). Injected reports are discarded and the cursor will not move. Restart the virtual mouse bus device or reboot the system, then retry.', 'ja-JP': 'ドライバーはインストール済みですが、HID サブデバイスが認識されていません（Windows コード 45）。注入されたレポートは破棄され、カーソルは移動しません。仮想マウスバスデバイスを再起動するか、システムを再起動してから再試行してください。' },
+  '驱动已安装，但 HID 子设备未呈现（Windows 代码 45），请尝试直接启动或者重启系统后重试。': { 'en-US': 'The driver is installed, but its HID sub-device is not present (Windows code 45). Try starting the instance directly, or reboot the system and try again.', 'ja-JP': 'ドライバーはインストール済みですが、HID サブデバイスが認識されていません（Windows コード 45）。そのままインスタンスを起動するか、システムを再起動してから再試行してください。' },
   '刷新状态': { 'en-US': 'Refresh status', 'ja-JP': '状態を更新' },
   '安装驱动': { 'en-US': 'Install driver', 'ja-JP': 'ドライバーをインストール' }, '安装中…': { 'en-US': 'Installing…', 'ja-JP': 'インストール中…' },
   '将把驱动文件复制到系统目录并安装虚拟鼠标驱动，确定继续？': { 'en-US': 'This copies the driver files to a system directory and installs the virtual mouse driver. Continue?', 'ja-JP': 'ドライバーファイルをシステムフォルダにコピーし、仮想マウスドライバーをインストールします。続行しますか？' },
