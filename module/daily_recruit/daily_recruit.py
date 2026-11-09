@@ -276,19 +276,29 @@ class DailyRecruit(UI):
                 break
 
         recruit_end = False
+        # 点击单抽即扣点，剩余不足一次时数字变红，而招募页还会停留约 3 秒才进入抽卡动画，
+        # 这段时间的红字不代表本次抽卡失败，再点也会多抽一次。超时仍在招募页说明没点中。
+        pull_timer = Timer(10)
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
 
+            # 结束
+            if recruit_end and self.appear(SOCIAL_RECRUIT_CHECK, offset=(10, 10), static=False):
+                break
+
+            pulling = pull_timer.started() and not pull_timer.reached()
+
             # 友情点不足
-            if self.appear(SOCIAL_POINT_NOT_ENOUGH, static=False):
+            if not pulling and self.appear(SOCIAL_POINT_NOT_ENOUGH, static=False):
                 logger.info('There are not enough social point')
                 raise NotEnoughSocialPoint
 
             # 抽卡
-            if not recruit_end and self.appear_then_click(SOCIAL_RECRUIT, offset=(30, 30), interval=3):
+            if not recruit_end and not pulling and self.appear_then_click(SOCIAL_RECRUIT, offset=(30, 30), interval=3):
+                pull_timer.reset()
                 continue
             # 跳过
             if self.appear_then_click(RECRUIT_SKIP, offset=(30, 30), interval=1, static=False):
@@ -321,13 +331,11 @@ class DailyRecruit(UI):
                         return_timer.reset()
 
                 self.device.click_record_clear()
+                pull_timer.clear()
                 recruit_count += 1
                 logger.info(f'Social point recruit count: {recruit_count}/{recruit_times}')
                 recruit_end = recruit_count >= recruit_times
                 continue
-            # 结束
-            if recruit_end and self.appear(SOCIAL_RECRUIT_CHECK, offset=(10, 10), static=False):
-                break
 
         logger.info('Social point recruit has done')
         return True
