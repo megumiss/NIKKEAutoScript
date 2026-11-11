@@ -154,7 +154,7 @@ class ProcessManager:
         process = Process(
             target=ProcessManager.run_process,
             args=(self.config_name, func, self._renderable_queue, self._preview_queue,
-                  ev, child, stopped, self.preview_wanted, State.manager.ocr()),
+                  ev, child, stopped, self.preview_wanted, State.ocr_server),
         )
         with self._request_lock:
             if request_generation is not None and request_generation != self._request_generation:

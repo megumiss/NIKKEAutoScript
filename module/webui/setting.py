@@ -69,6 +69,7 @@ class State:
 
     restart_event: threading.Event = None
     manager: SyncManager = None
+    ocr_server = None
     electron: bool = False
     theme: str = "light"
 
@@ -76,6 +77,12 @@ class State:
     def init(cls):
         cls.manager = NkasManager()
         cls.manager.start()
+        try:
+            # 共享模型单例不会保住 Manager 注册；父进程需在各实例启停期间持有代理。
+            cls.ocr_server = cls.manager.ocr()
+        except BaseException:
+            cls.manager.shutdown()
+            raise
         cls._init = True
         cls._clearup = False
 
@@ -84,10 +91,14 @@ class State:
         if cls.manager is None or cls._clearup:
             return
         try:
-            cls.manager.ocr().shutdown()
+            if cls.ocr_server is not None:
+                cls.ocr_server.shutdown()
         finally:
-            cls.manager.shutdown()
-            cls._clearup = True
+            try:
+                cls.manager.shutdown()
+            finally:
+                cls.ocr_server = None
+                cls._clearup = True
 
     @cached_class_property
     def deploy_config(self) -> "DeployConfig":
