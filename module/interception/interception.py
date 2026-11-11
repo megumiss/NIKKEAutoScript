@@ -164,6 +164,8 @@ class Interception(UI):
                 )
                 and self.appear_then_click(BATTLE_QUICKLY, threshold=10)
             ):
+                if end_fighting:
+                    self.device.stuck_record_clear()
                 end_fighting = False
                 self.device.sleep(1)
                 continue
@@ -178,6 +180,8 @@ class Interception(UI):
                 return
 
             if self.appear_then_click(BATTLE, threshold=25, interval=1):
+                if end_fighting:
+                    self.device.stuck_record_clear()
                 end_fighting = False
                 continue
 
@@ -195,6 +199,8 @@ class Interception(UI):
             if self.appear(END_FIGHTING, offset=30):
                 # 结算按钮可能短暂漏检，直到发起下一场战斗前只记录一次掉落。
                 if not end_fighting:
+                    # PC 点击不刷新卡死计时；每场首次结算才重置，避免累计耗时或卡在结算页时误刷新。
+                    self.device.stuck_record_clear()
                     saved_path = self.save_drop_image(self.device.image, self.config.Interception_DropScreenshotPath)
                     if saved_path:
                         logger.info(f'Save drop image to: {saved_path}')

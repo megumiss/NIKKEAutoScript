@@ -10,18 +10,18 @@ Protocol: module/ocr/remote_protocol.py. The first line on stdout is
 `NKAS_OCR_READY port=<port> token=<token>`; the process exits when stdin is
 closed, i.e. when the owning OCR service's adb session ends.
 """
+import importlib
 import os
 import secrets
 import socket
 import sys
 import threading
 
-from module.ocr.models import OcrModel
-from module.ocr.remote_protocol import OcrProtocolError, recv_message, send_message, slim_lines, slim_pages
+from module.ocr.progress import OcrInitProgress
+from module.ocr.remote_protocol import OcrProtocolError, recv_message, send_message
+from module.ocr.server import SharedOcrServer
 
-# OCR is CPU bound; parallel requests from a reconnecting worker would only compete.
-_model_lock = threading.Lock()
-_models = OcrModel(use_sidecar=False)
+_models = SharedOcrServer()
 
 
 def _exit_on_stdin_eof():
@@ -40,11 +40,8 @@ def _handle(header, arrays):
     if op not in ('predict', 'recognize'):
         return {'ok': False, 'error': f'unknown op {op!r}'}
     images = [a.copy() for a in arrays]
-    with _model_lock:
-        model = _models.get_model_by(lang=header.get('lang', 'ch'), model_type=header.get('model_type', 'mobile'))
-        if op == 'predict':
-            return {'ok': True, 'result': slim_pages(model.predict(images))}
-        return {'ok': True, 'result': slim_lines(model.recognize(images))}
+    result = getattr(_models, op)(header.get('lang', 'ch'), header.get('model_type', 'mobile'), images)
+    return {'ok': True, 'result': result}
 
 
 def _serve(conn, token):
@@ -72,6 +69,10 @@ def _serve_quietly(conn, token):
 
 
 def main():
+    if os.name == 'nt':
+        # Windows 原生数值库与阻塞 stdin 监听并行初始化时可能卡住，先加载依赖。
+        with OcrInitProgress('Importing paddle library'):
+            importlib.import_module('module.ocr.nikke_ocr')
     token = secrets.token_hex(16)
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(('127.0.0.1', 0))

@@ -234,6 +234,7 @@ Tool:
       - AutoTower
     SemiCombat:
       - SemiCombat
+    InterceptionTest: []
     Highlights:
       - Highlights
     BlaCDKManual:

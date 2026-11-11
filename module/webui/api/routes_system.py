@@ -74,12 +74,12 @@ def _read_notice_ids() -> set:
 def _parse_notice_items(raw) -> list:
     """History entries nested under an announcement (`items` in the yaml), used
     by the announcement center to render the collapsible update history.  Rows
-    without content are dropped so an empty section never reaches the client."""
+    without an id or content are dropped so every displayed entry can be acknowledged."""
     if not isinstance(raw, list):
         return []
     items = []
     for row in raw:
-        if not isinstance(row, dict):
+        if not isinstance(row, dict) or not row.get('id'):
             continue
         content = str(row.get('content') or '')
         if not content:
@@ -120,15 +120,18 @@ def _load_announcements():
             continue
         notice_id = str(row['id'])
         notice_type = str(row.get('type') or 'info')
+        items = _parse_notice_items(row.get('items'))
+        # 旧的整组已读标记不能覆盖新增条目；历史按子条目判断，普通公告仍按自身 ID 判断。
+        is_read = all(item['id'] in read for item in items) if items else notice_id in read
         result.append({
             'id': notice_id,
             'date': str(row.get('date') or ''),
             'title': str(row.get('title') or ''),
             'type': notice_type if notice_type in ANNOUNCEMENT_TYPES else 'info',
             'content': str(row.get('content') or ''),
-            'items': _parse_notice_items(row.get('items')),
+            'items': items,
             'pinned': bool(row.get('pinned')),
-            'read': notice_id in read,
+            'read': is_read,
         })
     result.sort(key=lambda item: not item['pinned'])
     return result
@@ -176,9 +179,14 @@ async def read_announcements(request: Request):
     ids = data.get('ids')
     if not isinstance(ids, list):
         return _json_error('Expected an ids list in request body.')
-    known = {item['id'] for item in _load_announcements()}
+    known = {item['id']: item for item in _load_announcements()}
     read = _read_notice_ids()
-    read.update(str(item) for item in ids if str(item) in known)
+    for notice_id in {str(item) for item in ids}:
+        announcement = known.get(notice_id)
+        if announcement is None:
+            continue
+        read.add(notice_id)
+        read.update(item['id'] for item in announcement['items'])
     State.deploy_config.ReadNoticeIds = ','.join(sorted(read))
     return JSONResponse({'status': 'success', 'read': sorted(read)})
 

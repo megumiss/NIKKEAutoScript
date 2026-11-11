@@ -1,6 +1,46 @@
-"""剧情活动列表：前两项分别供 Event、Event2 使用，其余保留为历史活动。"""
+"""剧情活动列表：前两项分别供 Event、Event2 使用，其余保留为历史活动。
+
+story_part / story_difficulty 是无时间表时的当前阶段，不代表模板维护进度。
+可选 story_schedule: {"start_at": 带时区的 ISO 8601 时间, "stages": 阶段列表}，每阶段间隔 7 天。
+用户可在 UI 打开“手动设置阶段”后修改现有章节/难度；关闭开关恢复自动计算。
+完整示例见 dev_tools/template_studio/README.md 的“剧情阶段配置”。
+"""
 
 EVENTS = [
+    {
+        "event_id": "event_20261029",
+        "event_name": "MARIAn",
+        "event_type": 1,
+        "mini_game": False,
+        "mini_game_play": True,
+        "extend": False,
+        "story_part": "Story_1",
+        "story_difficulty": "Normal",
+        # 本活动全通后停在普通列表首屏，命中结尾标记时滚动定位扫荡关卡。
+        "story_2_normal_sweep_scroll": True,
+        "story_schedule": {
+            "start_at": "2026-10-29T04:00:00+08:00",
+            "stages": [
+                "story_1_normal",
+                "story_2_normal",
+                "story_2_hard",
+            ],
+        },
+        "task_order": [
+            "hard_ticket", "story", "login_stamp", "challenge",
+            "game", "reward", "event_extend", "shop",
+        ],
+        "pending_finder": {
+            "story_1_normal": {
+                "mode": "grid",
+                "area": (310, 215, 450, 1200),
+                "rows": 8,
+                "columns": 1,
+                "vertical_direction": "bottom_to_top",
+                "horizontal_direction": "right_to_left",
+            },
+        }
+    },
     {
         "event_id": "event_20261008",
         "event_name": "LITTLE WITCH TRICK",
@@ -11,6 +51,11 @@ EVENTS = [
         "extend": False,
         "story_part": "Story_1",  # Story_1, Story_2
         "story_difficulty": "Hard",  # Normal, Hard
+        # 可选：任务按列表顺序优先执行，未列出的任务按默认顺序补到末尾
+        # "task_order": [
+        #     "login_stamp", "challenge", "hard_ticket", "story",
+        #     "game", "reward", "event_extend", "shop",
+        # ],
         # pending_finder 按章节和难度配置：story_1_normal / story_1_hard / story_2_normal / story_2_hard
         # "pending_finder": {
         #     "story_1_normal": {

@@ -283,6 +283,21 @@ async def game_clone_delete(request: Request):
     return JSONResponse({'status': 'success', 'deleted': result, **clone_info()})
 
 
+async def game_clone_repair(request: Request):
+    from module.tools.game_clone import GameCloneError, clone_info, repair_clone
+    try:
+        data = await request.json()
+    except ValueError:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    try:
+        result = repair_clone(data.get('name'))
+    except GameCloneError as exc:
+        return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=400)
+    return JSONResponse({'status': 'success', 'repair': result, **clone_info()})
+
+
 async def virtual_mouse_driver_state(_: Request):
     from module.tools.virtual_mouse_driver import driver_status
     return JSONResponse(driver_status())

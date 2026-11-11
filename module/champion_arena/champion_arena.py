@@ -59,12 +59,12 @@ class ChampionArena(UI, ArenaBase):
                 self.device.screenshot()
 
             # 晋级赛
-            if click_timer.reached() and self.appear_then_click(PROMOTION, offset=10, interval=3):
+            if click_timer.reached() and self.appear_then_click(PROMOTION, offset=60, interval=3):
                 click_timer.reset()
                 continue
 
             # 冠军争霸赛
-            if click_timer.reached() and self.appear_then_click(CHAMPION, offset=10, interval=3):
+            if click_timer.reached() and self.appear_then_click(CHAMPION, offset=60, interval=3):
                 click_timer.reset()
                 continue
 
@@ -153,6 +153,7 @@ class ChampionArena(UI, ArenaBase):
                 or self.appear(PROGRESS_FIGHTING, offset=(30, 30))
                 or self.appear(PROGRESS_RESULTING, offset=(30, 30))
                 or self.appear(PROGRESS_END, offset=(30, 30))
+                or self.appear(PROGRESS_COMING_SOON, offset=(30, 30))
             ):
                 logger.warning('Champion arena in preparation')
                 raise ChampionArenaIsUnavailable

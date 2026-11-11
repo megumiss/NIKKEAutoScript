@@ -35,8 +35,8 @@ class ScreenUnlock(Connection):
     """
     真机锁屏时通过 ADB 虚拟按键唤醒并解锁。
 
-    锁屏界面只存在于主屏，所以按键一律直接走 `adb shell input`，
-    不能用 adb_shell_input_keyevent / adb_shell_input_text：开启虚拟屏后它们会把输入转发到虚拟屏。
+    锁屏界面只存在于主屏；不指定 -d 时按键可能发往仍持有焦点的虚拟屏。
+    直接使用 `adb shell input -d 0`，不能用会转发到虚拟屏的 adb_shell_input_keyevent / adb_shell_input_text。
     """
 
     @staticmethod
@@ -74,7 +74,7 @@ class ScreenUnlock(Connection):
                 return False
 
     def _unlock_keyevent(self, *keycodes):
-        self.adb_shell(['input', 'keyevent', *keycodes])
+        self.adb_shell(['input', '-d', '0', 'keyevent', *keycodes])
 
     @staticmethod
     def parse_display_size(output: str):
@@ -94,13 +94,13 @@ class ScreenUnlock(Connection):
         size = self.parse_display_size(self.adb_shell(['wm', 'size'])) or (720, 1280)
         width, height = size
         x = width // 2
-        self.adb_shell(['input', 'swipe', x, int(height * 0.9), x, int(height * 0.3), 300])
+        self.adb_shell(['input', '-d', '0', 'swipe', x, int(height * 0.9), x, int(height * 0.3), 300])
 
     def _input_password(self, password: str):
         if password.isdigit() and password.isascii():
             self._unlock_keyevent(*(DIGIT_KEYCODES[c] for c in password))
         else:
-            self.adb_shell(f'input text {self.adb_shell_text_escape(password)}')
+            self.adb_shell(f'input -d 0 text {self.adb_shell_text_escape(password)}')
         self._unlock_keyevent('KEYCODE_ENTER')
         logger.info(f'Screen unlock: entered {len(password)}-character password')
 

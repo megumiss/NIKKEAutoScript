@@ -1,4 +1,5 @@
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from module.ocr.models import OcrModel
 from module.ocr.remote_protocol import slim_lines, slim_pages
@@ -10,7 +11,8 @@ class SharedOcrServer:
     def __init__(self):
         self._models = OcrModel(use_sidecar=False)
         self._remote_models = {}
-        # Paddle 推理和远程连接都不支持并发使用；生成器也必须在锁内消费。
+        # Paddle/oneDNN 模型跨线程串行调用也可能失败，创建、推理和释放必须固定在同一线程。
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix='shared-ocr')
         self._lock = threading.Lock()
         self._closed = False
 
@@ -30,31 +32,42 @@ class SharedOcrServer:
             )
         return self._remote_models[key]
 
-    def predict(self, lang, model_type, images, command=None):
+    def _infer(self, op, lang, model_type, images, command):
+        result = getattr(self._get_model(lang, model_type, command), op)(images)
+        # Paddle 返回的生成器也要在模型所属线程消费。
+        return slim_pages(result) if op == 'predict' else slim_lines(result)
+
+    def _call(self, op, lang, model_type, images, command):
         with self._lock:
             if self._closed:
                 raise RuntimeError('Shared OCR service has shut down')
-            return slim_pages(self._get_model(lang, model_type, command).predict(images))
+            return self._executor.submit(self._infer, op, lang, model_type, images, command).result()
+
+    def predict(self, lang, model_type, images, command=None):
+        return self._call('predict', lang, model_type, images, command)
 
     def recognize(self, lang, model_type, images, command=None):
-        with self._lock:
-            if self._closed:
-                raise RuntimeError('Shared OCR service has shut down')
-            return slim_lines(self._get_model(lang, model_type, command).recognize(images))
+        return self._call('recognize', lang, model_type, images, command)
+
+    def _close_models(self):
+        from module.ocr.remote import stop_sidecars
+
+        for model in self._remote_models.values():
+            model.close()
+        stop_sidecars()
+        self._remote_models.clear()
+        self._models._paddle_cache.clear()
+        self._models._paddle_num_cache.clear()
 
     def shutdown(self):
         with self._lock:
             if self._closed:
                 return
             self._closed = True
-            from module.ocr.remote import stop_sidecars
-
-            for model in self._remote_models.values():
-                model.close()
-            stop_sidecars()
-            self._remote_models.clear()
-            self._models._paddle_cache.clear()
-            self._models._paddle_num_cache.clear()
+            try:
+                self._executor.submit(self._close_models).result()
+            finally:
+                self._executor.shutdown(wait=True)
 
 
 _shared_ocr_server = None

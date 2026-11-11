@@ -197,9 +197,12 @@ class DisplaySessions:
         self.prepare()
         with self.lock:
             active = next((b for b in self.sessions.values() if b.record['config_name'] == name), None)
-            if active is None and not enabled:
-                return None
-            return self.resolve({'identity': active.record['identity'] if active else identity})
+            if active is None:
+                if not enabled:
+                    return None
+                # A copied config ID must not grant control over another instance's display.
+                raise RuntimeError('Virtual display has not been created; start a task first')
+            return self.resolve({'identity': active.record['identity']})
 
     def prepare_primary(self, target):
         self.prepare()

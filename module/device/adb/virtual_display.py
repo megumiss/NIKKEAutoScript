@@ -413,4 +413,3 @@ class VirtualDisplayBridge(Screenshot):
             f'raw={self._virtual_display_raw_width}x{self._virtual_display_raw_height}, '
             f'rotation={self._virtual_display_rotation}'
         )
-
