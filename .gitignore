@@ -8,6 +8,7 @@
 **/node_modules
 config/deploy.yaml
 config/.security/
+config/.virtual_display/
 config/nkas.json
 config/nkas2.json
 config/serial/state.json

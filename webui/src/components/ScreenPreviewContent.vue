@@ -29,7 +29,10 @@ const LIVE_WINDOW_SECONDS = 5
 const POLL_RATES = [1, 2, 5, 10]
 const RATE_STORAGE_KEY = 'nkas-preview-rate'
 const rateIndex = ref(Math.max(0, POLL_RATES.indexOf(Number(localStorage.getItem(RATE_STORAGE_KEY)) || 1)))
+const REQUEST_TIMEOUT_MS = 3000
 let pollTimer: number | undefined
+let pollGeneration = 0
+let disposed = false
 let frameRequest: AbortController | undefined
 let lastCapturedAt = 0
 let capturedAt = 0
@@ -120,12 +123,13 @@ function setFrame(url: string) {
 }
 
 async function tick() {
-  if (!props.name || interactive.value || frameRequest) return
+  if (disposed || !props.name || interactive.value || document.hidden || frameRequest) return
   const name = props.name
   const request = new AbortController()
   frameRequest = request
+  const timeout = window.setTimeout(() => request.abort(), REQUEST_TIMEOUT_MS)
   try {
-    const response = await fetch(`/api/${encodeURIComponent(name)}/screenshot?t=${Date.now()}`, { signal: request.signal })
+    const response = await fetch(`/api/${encodeURIComponent(name)}/screenshot?t=${Date.now()}&interval=${pollRate.value}`, { signal: request.signal })
     if (frameRequest !== request || name !== props.name || interactive.value) return
     if (response.ok) {
       const at = Number(response.headers.get('X-Captured-At') || 0)
@@ -135,31 +139,48 @@ async function tick() {
         lastCapturedAt = at
         capturedAt = at
         setFrame(URL.createObjectURL(blob))
+      } else {
+        await response.body?.cancel()
       }
       status.value = capturedAt && Date.now() / 1000 - capturedAt <= staleAfter.value ? 'live' : 'stale'
     } else if (response.status === 404) {
       status.value = 'none'
     }
   } catch {
-    // Network hiccup: keep the current frame and retry on the next tick.
+    // Network hiccup or timeout: keep the current frame and retry on the next tick.
   } finally {
+    window.clearTimeout(timeout)
     if (frameRequest === request) frameRequest = undefined
   }
 }
 
+// Wait for each response before scheduling another request, including slow bridges.
+async function pollLoop(generation: number) {
+  await tick()
+  if (generation !== pollGeneration) return
+  pollTimer = window.setTimeout(() => pollLoop(generation), pollRate.value * 1000)
+}
+
 function startPolling() {
   stopPolling()
-  tick()
-  pollTimer = window.setInterval(tick, pollRate.value * 1000)
+  if (disposed || !props.name || interactive.value || document.hidden) return
+  pollLoop(pollGeneration)
 }
 
 function stopPolling() {
+  pollGeneration++
   frameRequest?.abort()
   frameRequest = undefined
   if (pollTimer !== undefined) {
-    window.clearInterval(pollTimer)
+    window.clearTimeout(pollTimer)
     pollTimer = undefined
   }
+}
+
+function onVisibilityChange() {
+  // Screenshot requests renew the backend's sampling lease even without a task.
+  if (document.hidden) stopPolling()
+  else startPolling()
 }
 
 function resetFrame() {
@@ -179,11 +200,14 @@ watch(() => props.name, () => {
 })
 
 onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange)
   startPolling()
   startObserver()
 })
 
 onBeforeUnmount(() => {
+  disposed = true
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   stopPolling()
   resizeObserver?.disconnect()
   if (frameUrl.value) URL.revokeObjectURL(frameUrl.value)

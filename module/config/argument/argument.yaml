@@ -67,6 +67,16 @@ PhysicalDevice:
     type: checkbox
     value: false
     option: [ true, false ]
+  VirtualDisplayId:
+    value: ''
+    valuetype: str
+    display: readonly
+  AutoUnlock:
+    type: checkbox
+    value: false
+    option: [ true, false ]
+  Password:
+    value: ''
 Scrcpy:
   Bitrate: 16000000
   MaxFps: 60
