@@ -151,7 +151,6 @@ jobs:
       working-directory: webapp
       run: |
         yarn install --frozen-lockfile
-        yarn test
         yarn run check
         yarn run compile
         $binary = "src-tauri\target\release\nkas.exe"

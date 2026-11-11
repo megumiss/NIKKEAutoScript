@@ -48,26 +48,3 @@ App 将完整地址拆为“后端根地址＋密钥”，HTTP 请求和原生 W
 不根据 `localhost`、来源 IP 或转发头豁免鉴权，避免 SSH/反代回环绕过。反向代理应保留实际客户端使用的 Host，正确配置 HTTPS 转发，并支持 WebSocket；跨站写请求及开启保护后的跨站 WS 会被拒绝。
 
 独立 ADB、ws-scrcpy 端口和其他服务不受这层 NKAS HTTP/WS 中间件保护。Web 控制台的启用开关和 Host 限制仍然保留；它们不替代入口鉴权。首次开启前仍属于无鉴权部署，应先在受控网络内完成设置。
-
-## 本次验证（2026-09-14）
-
-- Python：8 项安全入口回归通过，包含真实生产路由工厂、HTTPS Cookie 属性，以及实际 TCP HTTP/WS 的开启、轮换、关闭、重新开启与四类连接撤销；相关 Python 文件语法检查通过。
-- Vue：`yarn run build` 与 `yarn run typecheck` 通过；构建保留已有大 chunk / 动静态混用提示。
-- 桌面壳：`yarn test` 36 项通过，`yarn run compile` 成功生成 exe。没有启动真实安装目录的 exe，避免触发实际后端或更新流程。
-- Flutter：`flutter analyze` 无问题，`flutter test` 56 项通过；包含真实 Dart WebSocket Bearer 握手、手填地址隔离、凭据轮换竞态和 375px 深色动态部署字段。确认安全入口只随 schema 出现，并在原分组内展开操作；取消关闭或保存失败均保留原开关状态。
-- 实际浏览器：在临时配置的 `127.0.0.1:18771` / `localhost:18771` 两个 Cookie 隔离站点验证默认关闭、启用、匿名拦截、错误入口、正确入口跳转、显示/隐藏、复制成功提示、关闭/轮换确认的取消、外部轮换后两个旧页面失效、旧入口不可用、关闭恢复普通访问、重新开启及新入口恢复访问。
-
-- 动态部署页浏览器复测：在隔离的 `127.0.0.1:18772` 验证开关位于 `Webui` 原分组，顺序与样式遵循部署 schema；开启后内联展开操作。浅色/深色显示、取消关闭后保留开启状态、复制成功提示均正常。
-
-浏览器测试的轮换和关闭由隔离后端 HTTP 请求驱动，再观察真实页面状态；没有修改真实部署。实际 Uvicorn 入口访问日志仅显示 `/entry/[redacted]`。复制按钮的成功提示已验证，系统剪贴板内容未独立核验。浏览器测试未使用真实游戏任务，不能代替真机/生产链路验收。
-
-Android 环境缺少 SDK，`flutter build apk --debug --config-only` 报 `No Android SDK found`，未完成 Kotlin JVM 回归、APK 构建及真机 Termux 读取验证；Windows 环境也未运行 iOS 构建/Keychain 真机验证。
-
-可复现的后端回归（项目根目录，Python 环境需具备 httpx、websockets 及项目依赖）：
-
-```powershell
-python -m unittest discover -s tests -p 'test_security_entry*.py' -v
-python tests/security_entry_fixture.py --port 18771
-```
-
-第二条用于手动浏览器测试，使用临时配置和构建后的真实 Vue 页面，业务数据为只读 fixture，不启动游戏任务或更新；正常退出时清理临时配置，强制终止进程可能留下需要手动清理的临时目录。
