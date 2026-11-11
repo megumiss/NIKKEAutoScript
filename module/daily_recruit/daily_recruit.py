@@ -280,7 +280,7 @@ class DailyRecruit(UI):
 
             # 领取结果并稳定返回招募页后，才能判断是否有足够的友情点继续抽取。
             if self.appear(SOCIAL_POINT_NOT_ENOUGH, static=False):
-                logger.info('There are not enough social point')
+                logger.warning('There are not enough social point')
                 raise NotEnoughSocialPoint
 
             if self.appear_then_click(SOCIAL_RECRUIT, offset=(30, 30), interval=3):
