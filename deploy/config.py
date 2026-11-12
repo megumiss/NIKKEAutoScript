@@ -1,5 +1,7 @@
 import copy
 import os
+import subprocess
+import sys
 from functools import cached_property
 from typing import Optional, Union
 
@@ -144,12 +146,13 @@ class DeployConfig(ConfigModel):
     def root_filepath(self):
         return os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
-    def execute(self, command, allow_failure=False, output=True):
+    def execute(self, command, allow_failure=False, output=True, capture_error=False):
         """
         Args:
             command (str):
             allow_failure (bool):
             output(bool):
+            capture_error (bool): Include stderr in the raised ExecutionError.
 
         Returns:
             bool: If success.
@@ -158,7 +161,21 @@ class DeployConfig(ConfigModel):
         if not output:
             command = command + ' >nul 2>nul'
         logger.info(command)
-        error_code = os.system(command)
+        error_detail = ''
+        if capture_error:
+            result = subprocess.run(
+                command,
+                shell=True,
+                stderr=subprocess.PIPE,
+                encoding='utf-8',
+                errors='replace',
+            )
+            error_code = result.returncode
+            error_detail = result.stderr.strip()
+            if result.stderr:
+                sys.stderr.write(result.stderr)
+        else:
+            error_code = os.system(command)
         if error_code:
             if allow_failure:
                 logger.info(f"[ allowed failure ], error_code: {error_code}")
@@ -166,7 +183,10 @@ class DeployConfig(ConfigModel):
             else:
                 logger.info(f"[ failure ], error_code: {error_code}")
                 self.show_error(command)
-                raise ExecutionError(command=command, error_code=error_code)
+                message = None
+                if error_detail:
+                    message = f'{command} failed with exit code {error_code}\n{error_detail}'
+                raise ExecutionError(message=message, command=command, error_code=error_code)
         else:
             logger.info(f"[ success ]")
             return True

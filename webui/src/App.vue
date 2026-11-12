@@ -134,7 +134,7 @@ onBeforeUnmount(() => {
                  user's language, keep the raw git error as detail. -->
             <template v-else-if="notice.key === 'auto_update_failed'">
               <p>{{ t('启动时的自动更新未成功，已跳过更新并继续使用当前版本。') }}</p>
-              <p v-if="notice.data.error" class="notice-error-detail">{{ notice.data.error }}</p>
+              <pre v-if="notice.data.error" class="notice-error-detail">{{ notice.data.error }}</pre>
             </template>
             <p v-else>{{ notice.data.content || notice.data.error || t('有新的系统通知。') }}</p>
           </div>

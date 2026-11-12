@@ -97,7 +97,7 @@ class GitManager(DeployConfig):
         if self._is_up_to_date(source, branch):
             logger.info('Local HEAD matches remote branch, skip fetch and reset')
             return
-        self.execute(f'"{self.git}" fetch --depth=20 {source} {branch}')
+        self.execute(f'"{self.git}" fetch --depth=20 {source} {branch}', capture_error=True)
 
         # Remove git lock
         lock_file = './.git/index.lock'
