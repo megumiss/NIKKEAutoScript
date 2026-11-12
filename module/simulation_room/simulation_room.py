@@ -446,11 +446,13 @@ class SimulationRoom(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(GOTO_NEXT_REGION, offset=(30, 30), interval=2):
+            if click_timer.reached() and self.appear_then_click(
+                GOTO_NEXT_REGION, offset=(30, 30), interval=2, static=False
+            ):
                 click_timer.reset()
                 continue
 
-            if not self.appear(END_SIMULATION, offset=(100, 30)) and confirm_timer.reached():
+            if not self.appear(END_SIMULATION, offset=(100, 30), static=False) and confirm_timer.reached():
                 break
 
     def end_simulation(self, skip_first_screenshot=True):
