@@ -130,14 +130,13 @@ class Login(LauncherOcr, Automation):
                     logger.error('Incorrect password')
                     raise AccountError
 
-                if self.appear_text(Langs.LANUCHER_GAME_SETTING, threshold=0.9):
-                    if self.appear_text_then_click(Langs.LANUCHER_LAUNCH, threshold=0.9):
-                        logger.info('Clicked Start')
-                        check_game = True
-                        continue
-                    if self.appear_text_then_click(Langs.LANUCHER_UPDATE, threshold=0.9):
-                        logger.info('Clicked Update')
-                        continue
+                if self.appear_text_then_click(Langs.LANUCHER_LAUNCH, threshold=0.9):
+                    logger.info('Clicked Start')
+                    check_game = True
+                    continue
+                if self.appear_text_then_click(Langs.LANUCHER_UPDATE, threshold=0.9):
+                    logger.info('Clicked Update')
+                    continue
             finally:
                 if not confirm_timer.started():
                     confirm_timer.start()
