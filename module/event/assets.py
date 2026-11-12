@@ -37,4 +37,5 @@ TEMPLATE_BOUNS_PER = Template(file={'zh-CN': './assets/zh-CN/event/TEMPLATE_BOUN
 TEMPLATE_COOP_COMING_SOON = Template(file={'zh-CN': './assets/zh-CN/event/TEMPLATE_COOP_COMING_SOON.png', 'en-US': './assets/zh-CN/event/TEMPLATE_COOP_COMING_SOON.png'})
 TEMPLATE_COOP_ICON = Template(file={'zh-CN': './assets/zh-CN/event/TEMPLATE_COOP_ICON.png', 'en-US': './assets/zh-CN/event/TEMPLATE_COOP_ICON.png'})
 TEMPLATE_SHOP_GEM = Template(file={'zh-CN': './assets/zh-CN/event/TEMPLATE_SHOP_GEM.png', 'en-US': './assets/zh-CN/event/TEMPLATE_SHOP_GEM.png'})
+TEMPLATE_SHOP_ITEM_LIMITED_TIME_BADGE = Template(file={'zh-CN': './assets/zh-CN/event/TEMPLATE_SHOP_ITEM_LIMITED_TIME_BADGE.png', 'en-US': './assets/zh-CN/event/TEMPLATE_SHOP_ITEM_LIMITED_TIME_BADGE.png'})
 TEMPLATE_SOLD_OUT = Template(file={'zh-CN': './assets/zh-CN/event/TEMPLATE_SOLD_OUT.png', 'en-US': './assets/zh-CN/event/TEMPLATE_SOLD_OUT.png'})

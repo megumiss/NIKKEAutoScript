@@ -2,7 +2,7 @@ from functools import cached_property
 
 from module.base.button import filter_buttons_in_area, merge_buttons
 from module.base.timer import Timer
-from module.base.utils import sort_buttons_by_location
+from module.base.utils import area_offset, crop, sort_buttons_by_location
 from module.event.assets import *
 from module.event.base import EventBase
 from module.exception import GameStuckError
@@ -107,6 +107,9 @@ class EventShop(EventBase):
 
                     # 购买第一个商品
                     if click_timer.reached() and self.appear(EVENT_SHOP_CHECK, offset=(30, 30)):
+                        if is_gem_mode and not self.shop_item_has_limited_time_badge(items[0]):
+                            logger.info(f'Stop Gem shop: item at {items[0].location} has no limited-time badge')
+                            return
                         self.device.click(items[0])
                         click_timer.reset()
                         continue
@@ -222,6 +225,11 @@ class EventShop(EventBase):
                 if swipe_count > 30:
                     logger.warning('Too many swipes, may game stuck here')
                     raise GameStuckError
+
+    def shop_item_has_limited_time_badge(self, item):
+        # 相对价格钻石图标定位同一商品左上角，避免把相邻商品的限时角标算进来。
+        area = area_offset((-80, -245, -20, -185), item.location)
+        return TEMPLATE_SHOP_ITEM_LIMITED_TIME_BADGE.match(crop(self.device.image, area), similarity=0.85)
 
     def filter_sold_out_items(self, items, sold_outs):
         """
