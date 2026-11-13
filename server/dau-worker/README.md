@@ -22,6 +22,10 @@ npx wrangler d1 create nkas-dau
 # 4. 建表
 npx wrangler d1 execute nkas-dau --remote --file=schema.sql
 
+# 已有 reports 表则只需补充时间戳字段：
+npx wrangler d1 execute nkas-dau --remote --command \
+  "ALTER TABLE reports ADD COLUMN reported_at TEXT"
+
 # 5. 部署
 npx wrangler deploy
 ```
@@ -47,6 +51,7 @@ curl -X POST https://nkas-dau.<你的子域>.workers.dev/report \
 - `os`：可选，仅接受 `Windows 10` / `Windows 11` / `Linux` / `macOS` / `Android`，其它值归 `other`，缺省归 `unknown`。Android 客户端应上报 `Android`。
 - `res`：可选，分辨率如 `1920x1080`（分隔符 `x` `*` `×` 均可，存储统一为 `x`），不合法归 `other`，缺省归 `unknown`。
 - 地区无需客户端上报，由服务端从 `request.cf.country` 取两位国家码。
+- `reported_at` 由服务端记录每天首次上报的 UTC 时间，用于小时活跃趋势；重复上报不改变该时间。
 
 ### 查询（仅作者自用，需要口令）
 

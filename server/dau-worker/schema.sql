@@ -7,5 +7,6 @@ CREATE TABLE IF NOT EXISTS reports (
   os  TEXT NOT NULL,   -- 系统
   res TEXT NOT NULL,   -- 分辨率
   geo TEXT NOT NULL,   -- 地区（CF 边缘节点两位国家码）
+  reported_at TEXT NOT NULL, -- 每天首次上报时间（ISO 8601，UTC）
   PRIMARY KEY (day, id)
 );
