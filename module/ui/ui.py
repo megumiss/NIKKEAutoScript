@@ -4,7 +4,22 @@ from module.exception import GameNotRunningError, GamePageUnknownError, GameStar
 from module.handler.assets import *
 from module.handler.info_handle import InfoHandler
 from module.logger import logger
-from module.ui.assets import ARK_CHECK_ABOVEGROUND, GOTO_MAIN, UI_LOADING_1, UI_LOADING_2, UI_LOADING_3, UI_LOADING_4
+from module.ui.assets import (
+    ARK_CHECK_ABOVEGROUND,
+    GOTO_MAIN,
+    UI_LOADING_1,
+    UI_LOADING_2,
+    UI_LOADING_3,
+    UI_LOADING_4,
+    UI_LOADING_ELYSION_DARK,
+    UI_LOADING_ELYSION_LIGHT,
+    UI_LOADING_MISSILIS_DARK,
+    UI_LOADING_MISSILIS_DARK_ALT,
+    UI_LOADING_MISSILIS_LIGHT,
+    UI_LOADING_PILGRIM_DARK,
+    UI_LOADING_PILGRIM_LIGHT,
+    UI_LOADING_TETRA_LIGHT,
+)
 from module.ui.page import (
     Page,
     page_arena,
@@ -46,6 +61,21 @@ from module.ui.page import (
     page_tribe_tower,
     page_unknown,
 )
+
+UI_LOADING_BUTTONS = [
+    UI_LOADING_1,
+    UI_LOADING_2,
+    UI_LOADING_3,
+    UI_LOADING_4,
+    UI_LOADING_ELYSION_DARK,
+    UI_LOADING_ELYSION_LIGHT,
+    UI_LOADING_MISSILIS_DARK,
+    UI_LOADING_MISSILIS_DARK_ALT,
+    UI_LOADING_MISSILIS_LIGHT,
+    UI_LOADING_PILGRIM_DARK,
+    UI_LOADING_PILGRIM_LIGHT,
+    UI_LOADING_TETRA_LIGHT,
+]
 
 
 class UI(InfoHandler):
@@ -99,6 +129,9 @@ class UI(InfoHandler):
             return self.appear_any([page.check_button, ARK_CHECK_ABOVEGROUND], offset=offset, interval=interval)
         return self.appear(page.check_button, offset=offset, interval=interval)
 
+    def ui_is_loading(self):
+        return self.appear_any(UI_LOADING_BUTTONS, offset=(30, 30))
+
     def ui_get_current_page(self, skip_first_screenshot=True):
         logger.info('UI get current page')
 
@@ -133,6 +166,10 @@ class UI(InfoHandler):
                     logger.attr('UI', page.name)
                     self.ui_current = page
                     return page
+
+            if self.ui_is_loading():
+                timeout.reset()
+                continue
 
             # Unknown page but able to handle
             logger.info('Unknown ui page')
@@ -226,6 +263,10 @@ class UI(InfoHandler):
                     break
             else:
                 confirm_timer.reset()
+
+            if self.ui_is_loading():
+                confirm_timer.reset()
+                continue
 
             if self.ui_additional():
                 confirm_timer.reset()
@@ -330,12 +371,7 @@ class UI(InfoHandler):
         while 1:
             self.device.screenshot()
 
-            if (
-                self.appear(UI_LOADING_1, offset=(30, 30))
-                or self.appear(UI_LOADING_2, offset=(30, 30))
-                or self.appear(UI_LOADING_3, offset=(30, 30))
-                or self.appear(UI_LOADING_4, offset=(30, 30))
-            ):
+            if self.ui_is_loading():
                 # 停止未出现检查时间计时
                 overall_timer.clear()
 
