@@ -40,7 +40,7 @@ class Reward(UI):
                 logger.info('Reward done after check NO_REWARDS_1')
                 break
             # 点击获得奖励
-            if self.appear_then_click(RECEIVE, offset=(30, 30), interval=10):
+            if self.appear_then_click(RECEIVE, offset=(30, 30), interval=2):
                 confirm_timer.reset()
                 continue
 

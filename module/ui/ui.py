@@ -279,7 +279,7 @@ class UI(InfoHandler):
                 if not page.parent or not page.check_button:
                     continue
 
-                if self.ui_page_appear(page, offset=offset, interval=4):
+                if self.ui_page_appear(page, offset=offset, interval=2):
                     logger.info(f'Page switch: {page} -> {page.parent}')
                     button = page.links[page.parent]
                     self.device.click(button)

@@ -73,7 +73,7 @@ class TribeTower(UI):
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear(TRIBE_TOWER_CHECK, offset=(30, 30), interval=5):
+            if click_timer.reached() and self.appear(TRIBE_TOWER_CHECK, offset=(30, 30), interval=2):
                 button = self.available_company[0].get('button')
                 self.device.click_xy(*button)
                 logger.info('Click %s @ %s' % (point2str(*button), 'TOWER'))
