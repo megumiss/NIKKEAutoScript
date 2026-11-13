@@ -118,6 +118,11 @@ class LoginHandler(UI):
                 click_timer.reset()
                 continue
 
+            # 商品资讯读取失败等通用通知弹窗
+            if click_timer.reached() and self.handle_unknown_popup():
+                click_timer.reset()
+                continue
+
     def handle_app_login(self) -> bool:
         """
         Returns:

@@ -227,8 +227,9 @@ class UI(InfoHandler):
             else:
                 confirm_timer.reset()
 
-            # if self.handle_event():
-            #     continue
+            if self.ui_additional():
+                confirm_timer.reset()
+                continue
 
             # Other pages
             clicked = False
@@ -313,20 +314,8 @@ class UI(InfoHandler):
         if self.handle_login():
             return True
 
-        """
-           CONFIRM_A 按钮为平面或立体，'确认'没有阴影
-           CONFIRM_B 按钮为立体，'确认'有阴影
-           CONFIRM_B 和 CONFIRM_C 相似
-        """
-
         # 未知弹窗的确认
-        if self.appear_then_click(CONFIRM_A, offset=(30, 30), interval=3, static=False):
-            return True
-
-        if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3, static=False):
-            return True
-
-        if self.appear_then_click(CONFIRM_C, offset=(30, 30), interval=3, static=False):
+        if self.handle_unknown_popup():
             return True
 
     def ui_goto_main(self):

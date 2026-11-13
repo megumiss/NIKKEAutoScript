@@ -162,6 +162,12 @@ class InfoHandler(ModuleBase):
         ):
             return True
 
+    def handle_unknown_popup(self):
+        # POPUP_CONFIRM 使用勾选图标，兼容通知弹窗的无阴影文字样式。
+        return self.appear_then_click_any(
+            [POPUP_CONFIRM, CONFIRM_A, CONFIRM_B, CONFIRM_C], offset=(30, 30), interval=3, static=False
+        )
+
     def handle_event_popup(self):
         if self.appear(EVENT_POPUP_CHECK, offset=(30, 30), static=False) and self.appear_then_click(
             EVENT_POPUP_CLOSE, offset=(30, 30), interval=3, static=False
@@ -194,17 +200,21 @@ class InfoHandler(ModuleBase):
             self.device.screenshot()
 
             if timeout.reached():
-                raise GameStuckError('System error recovery timed out waiting for main page')
+                raise GameStuckError('System error recovery timed out waiting for main or login page')
 
             if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), static=False):
-                self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3, static=False)
+                self.handle_unknown_popup()
                 continue
 
             # 弹窗下的主页仍可能匹配模板，需同时检查颜色，确认遮罩已经消失。
-            if self.appear(MAIN_CHECK, offset=30) and self.appear(MAIN_CHECK, threshold=10):
+            returned_to_main = self.appear(MAIN_CHECK, offset=30) and self.appear(MAIN_CHECK, threshold=10)
+            returned_to_login = self.appear_any(
+                [LOGIN_PAGE_CHECK, LOGO_PAGE_CHECK, LOGIN_CHECK, LOGIN_CHECK_B], offset=(30, 30)
+            )
+            if returned_to_main or returned_to_login:
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
-                logger.info('Returned to main after system error')
+                logger.info('System error recovery completed')
                 return
 
     def handle_system_maintenance(self):
