@@ -359,10 +359,8 @@ class Device(Screenshot, Control, AppControl, ScreenUnlock):
         logger.warning(f'Waiting for {self.detect_record}')
         self.stuck_record_clear()
 
-        # from module.ui.ui import UI
-        # ui = UI(self.config, device=self)
-        # if ui.ui_additional():
-        #     return False
+        from module.handler.info_handle import InfoHandler
+        InfoHandler(self.config, device=self).handle_system_error()
 
         if self.app_is_running():
             raise GameStuckError('Wait too long')

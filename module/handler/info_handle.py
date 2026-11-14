@@ -187,9 +187,15 @@ class InfoHandler(ModuleBase):
             self.device.sleep(10)
             return True
 
+    def detect_system_error(self):
+        for check in [SYSTEM_ERROR_CHECK, PRODUCT_INFO_ERROR_CHECK, SERVER_DISCONNECTED_CHECK]:
+            if self.appear(check, offset=(30, 30), static=False):
+                return check
+
     def handle_system_error(self):
-        if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), static=False):
-            raise GameSystemError('Detected SYSTEM_ERROR_CHECK')
+        check = self.detect_system_error()
+        if check:
+            raise GameSystemError(f'Detected {check.name}')
 
     def ensure_system_error_closed(self):
         self.device.stuck_record_clear()
@@ -202,7 +208,7 @@ class InfoHandler(ModuleBase):
             if timeout.reached():
                 raise GameStuckError('System error recovery timed out waiting for main or login page')
 
-            if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), static=False):
+            if self.detect_system_error():
                 self.handle_unknown_popup()
                 continue
 
