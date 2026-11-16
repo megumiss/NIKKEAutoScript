@@ -5,6 +5,7 @@ import { t } from '../i18n'
 import { useToastStore } from './toast'
 import { useSystemStore } from './system'
 import { useModalStore } from './modal'
+import { useUpdateStore } from './update'
 
 // Deploy page: schema-driven editor over config/deploy.yaml.  The backend
 // parses groups and per-field comments from deploy/template; edits save per
@@ -19,6 +20,11 @@ export const useDeployStore = defineStore('deploy', () => {
     try {
       const result = await api.patch('/api/system/deploy', { key: field.key, value })
       field.value = result.value
+      if (field.key === 'MirrorChyanCDK') field.configured = result.configured
+      if (['UpdateSource', 'MirrorChyanCDK'].includes(field.key)) {
+        await useUpdateStore().refreshUpdateInfo()
+        await useUpdateStore().refreshDesktopUpdate()
+      }
       toast.notify(t('已保存'))
       const system = useSystemStore()
       if (field.key === 'Theme') { document.documentElement.dataset.theme = result.value; localStorage.setItem('nkas-theme', result.value); system.systemStatus.theme = result.value }

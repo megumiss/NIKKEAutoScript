@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import urllib.request
 from functools import cached_property
+from pathlib import Path
 
 from deploy.config import DeployConfig, ExecutionError
 from module.logger import logger
@@ -115,7 +116,21 @@ class GitManager(DeployConfig):
         logger.hr('Show Version', 1)
         self.execute(f'"{self.git}" --no-pager log --no-merges -1')
 
+    @cached_property
+    def _mirror_source_updater(self):
+        from deploy.git_pack import GitPackUpdater
+        return GitPackUpdater(self)
+
+    def mirror_updater(self):
+        return self._mirror_source_updater
+
     def git_update(self):
+        self.read()
+        if (Path(self.root_filepath) / 'tmp/mirror-source/transaction.json').exists():
+            raise ExecutionError('上次 Mirror源码更新尚未确认，需要先恢复或重启。')
+        if self.UpdateSource == 'mirrorchyan' and (Path(self.root_filepath) / '.git').exists():
+            logger.hr('Update Source via MirrorChyan', 0)
+            return self.mirror_updater().apply()
         logger.hr('Update Repository', 0)
 
         # Check if git executable exists, if not, download and install

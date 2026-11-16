@@ -3,6 +3,7 @@
 mod backend;
 mod config;
 mod desktop_update;
+mod mirrorchyan;
 mod security_entry;
 
 use anyhow::{Context, Result};

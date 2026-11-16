@@ -7,6 +7,7 @@ from typing import Generator, List, Tuple
 import requests
 from deploy.config import ExecutionError
 from deploy.git import GitManager
+from deploy.mirrorchyan import MirrorError
 from deploy.pip import PipManager
 from deploy.utils import DEPLOY_CONFIG
 from module.base.retry import retry
@@ -45,6 +46,9 @@ class Updater(DeployConfig, GitManager, PipManager):
         # the SPA via /api/system/update so a failure is not silently shown
         # as "up to date".
         self.check_error = ''
+        self.update_error = ''
+        self.source_info = {}
+        self._operation_lock = threading.Lock()
 
     @property
     def delay(self):
@@ -129,13 +133,33 @@ class Updater(DeployConfig, GitManager, PipManager):
         try:
             return self._do_check_update()
         except Exception as e:
-            logger.exception(e)
-            logger.warning("Check update failed")
+            if isinstance(e, MirrorError):
+                self.check_error = str(e)
+                logger.warning(self.check_error)
+            elif self.UpdateSource == 'mirrorchyan':
+                # The project formatter captures frame locals. Mirror HTTP
+                # frames contain the CDK and signed URL, so never log them.
+                self.check_error = f'Mirror源码检查异常（{type(e).__name__}），请检查配置或稍后重试。'
+                logger.warning(self.check_error)
+            else:
+                logger.exception(e)
+                logger.warning("Check update failed")
+                self.check_error = str(e) or e.__class__.__name__
             self.state = "failed"
-            self.check_error = str(e) or e.__class__.__name__
             return False
 
     def _do_check_update(self) -> bool:
+        self.read()
+        self.source_info = {}
+        if self.UpdateSource == 'mirrorchyan':
+            local, data = self.mirror_updater().check()
+            self.source_info = {
+                'source': 'mirrorchyan', 'local_version': local, 'remote_version': data['version_name'],
+                'release_note': str(data.get('release_note') or ''), 'needs_cdk': not bool(data.get('url')),
+            }
+            available = local != data['version_name']
+            logger.info(f"Mirror source: {local} -> {data['version_name']}, update available: {available}")
+            return available
         if State.deploy_config.GitOverCdn:
             status = self.goc_client.get_status()
             if status == "uptodate":
@@ -249,6 +273,14 @@ class Updater(DeployConfig, GitManager, PipManager):
         return 1
 
     def check_update(self):
+        if not self._operation_lock.acquire(blocking=False):
+            return
+        try:
+            self._check_update_locked()
+        finally:
+            self._operation_lock.release()
+
+    def _check_update_locked(self):
         if self.state == "checking":
             # Escape hatch for a wedged check (e.g. the thread was killed
             # mid-fetch): allow a retry after 10 minutes instead of blocking
@@ -265,8 +297,14 @@ class Updater(DeployConfig, GitManager, PipManager):
         if self.state != "failed":
             self.state = result
 
-    @retry(ExecutionError, tries=3, delay=5, logger=None)
     def git_update(self):
+        self.read()
+        if self.UpdateSource == 'mirrorchyan':
+            return super().git_update()
+        return self._git_update_with_retry()
+
+    @retry(ExecutionError, tries=3, delay=5, logger=None)
+    def _git_update_with_retry(self):
         return super().git_update()
 
     @retry(ExecutionError, tries=3, delay=5, logger=None)
@@ -275,19 +313,47 @@ class Updater(DeployConfig, GitManager, PipManager):
 
     def update(self):
         logger.hr("Run update")
+        self.update_error = ''
+        self.check_error = ''
+        self.recovery_failed = False
         try:
             self.git_update()
+            self.invalidate_dependency_cache()
             self.pip_install()
-        except ExecutionError:
+            self.mirror_updater().ready()
+            if State.restart_event is not None:
+                self.mirror_updater().prepare_launch()
+        except (ExecutionError, OSError, ValueError) as error:
+            self.update_error = str(error)
+            logger.warning(self.update_error)
+            try:
+                self.mirror_updater().rollback()
+                self.invalidate_dependency_cache()
+            except (ExecutionError, OSError, ValueError) as recovery_error:
+                self.recovery_failed = True
+                self.update_error += f' 恢复失败：{recovery_error}'
+                logger.error(self.update_error)
+                self.mirror_updater().release()
             return False
         return True
 
     def run_update(self):
         if self.state not in ("failed", 0, 1):
             return
-        self._start_update()
+        if not self._operation_lock.acquire(blocking=False):
+            return
+        try:
+            self._start_update()
+        finally:
+            self._operation_lock.release()
 
     def _start_update(self):
+        try:
+            self.mirror_updater().acquire()
+        except ExecutionError as error:
+            self.state = 'failed'
+            self.update_error = str(error)
+            return
         self.state = "start"
         instances = ProcessManager.running_instances()
         names = []
@@ -313,6 +379,7 @@ class Updater(DeployConfig, GitManager, PipManager):
             if self.state == "cancel":
                 self.state = 1
                 self.event.clear()
+                self.mirror_updater().release()
                 ProcessManager.restart_processes(instances, self.event)
                 return
             time.sleep(0.25)
@@ -341,8 +408,11 @@ class Updater(DeployConfig, GitManager, PipManager):
         else:
             self.state = "failed"
             logger.warning("Update failed")
-            self.event.clear()
-            ProcessManager.restart_processes(instances, self.event)
+            if not self.recovery_failed:
+                self.event.clear()
+                ProcessManager.restart_processes(instances, self.event)
+            else:
+                logger.error('Instance restart blocked because source recovery failed')
             return False
 
     @staticmethod
@@ -366,7 +436,7 @@ class Updater(DeployConfig, GitManager, PipManager):
         yield
         while True:
             self.check_update()
-            if self.state != 1:
+            if self.state != 1 or self.UpdateSource == 'mirrorchyan' and self.source_info.get('needs_cdk'):
                 th._task.delay = get_next_time(self.schedule_time)
                 yield
                 continue

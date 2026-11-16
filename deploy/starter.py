@@ -60,7 +60,7 @@ class Starter(GitManager, PipManager, NKASManager):
             'from_sha': before_sha[:8],
             'to_sha': after_sha[:8],
             'commit_count': self._get_commit_count(rev_range),
-            'messages': self._get_commit_messages(rev_range),
+            'messages': self._get_commit_messages(rev_range) or self._get_commit_messages(after_sha, limit=1),
         }
         os.makedirs(os.path.dirname(self.AUTO_UPDATE_NOTICE_PATH), exist_ok=True)
         with open(self.AUTO_UPDATE_NOTICE_PATH, 'w', encoding='utf-8') as f:
@@ -90,19 +90,34 @@ class Starter(GitManager, PipManager, NKASManager):
         from deploy.atomic import atomic_failure_cleanup
 
         atomic_failure_cleanup('./config')
+        pending_mirror_update = self.mirror_updater().journal.exists()
+        self.mirror_updater().prepare_launch()
         excluded_pids = {int(desktop_pid)} if desktop_pid else set()
-        if self.AutoUpdate:
+        if self.AutoUpdate and not pending_mirror_update:
             before_sha, _ = self._get_head_commit()
             try:
                 self.git_update()
             except ExecutionError as e:
+                self.mirror_updater().rollback()
                 error = str(e).strip() or 'Git update failed'
                 print(f'Auto update failed, skip update and continue startup: {error}')
                 self._save_auto_update_failed_notice(error)
             else:
-                self.pip_install()
-                after_sha, _ = self._get_head_commit()
-                self._save_auto_update_notice(before_sha, after_sha)
+                try:
+                    self.invalidate_dependency_cache()
+                    self.pip_install()
+                    self.mirror_updater().ready()
+                except ExecutionError as e:
+                    if self.UpdateSource != 'mirrorchyan':
+                        raise
+                    self.mirror_updater().rollback()
+                    self.invalidate_dependency_cache()
+                    self._save_auto_update_failed_notice(str(e))
+                    print('Mirror dependency update failed; previous version restored.')
+                else:
+                    after_sha, _ = self._get_head_commit()
+                    self._save_auto_update_notice(before_sha, after_sha)
+                    self.mirror_updater().prepare_launch()
         self.nkas_kill(excluded_pids=excluded_pids)
 
     def start(self, desktop_pid=None, interactive=True):

@@ -1,4 +1,5 @@
-use crate::config::DesktopConfig;
+use crate::config::{self, DesktopConfig};
+use crate::mirrorchyan;
 use anyhow::{Context, Result};
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -15,6 +16,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+#[cfg(windows)]
+use std::os::windows::fs::OpenOptionsExt;
 #[cfg(windows)]
 use windows::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
 #[cfg(windows)]
@@ -145,6 +148,9 @@ pub struct ReplaceArgs {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DesktopUpdateStatus {
+    pub source: String,
+    pub release_note: String,
+    pub needs_cdk: bool,
     pub current_version: String,
     pub remote_version: Option<String>,
     pub checked: bool,
@@ -162,8 +168,10 @@ pub struct DesktopUpdateManager {
 impl DesktopUpdateManager {
     pub fn new(config: DesktopConfig) -> Self {
         Self {
-            config,
             status: Mutex::new(DesktopUpdateStatus {
+                source: config.update_source.clone(),
+                release_note: String::new(),
+                needs_cdk: false,
                 current_version: CURRENT_VERSION.to_string(),
                 remote_version: None,
                 checked: false,
@@ -172,24 +180,40 @@ impl DesktopUpdateManager {
                 applying: false,
                 error: None,
             }),
+            config,
         }
     }
 
     pub fn status(&self) -> DesktopUpdateStatus {
-        self.lock_status().clone()
+        let mut status = self.lock_status();
+        if let Ok(settings) = config::load(self.config.root.clone()) {
+            if settings.update_source != status.source && !status.checking && !status.applying {
+                status.source = settings.update_source;
+                status.remote_version = None;
+                status.checked = false;
+                status.update_available = false;
+                status.error = None;
+                status.release_note.clear();
+                status.needs_cdk = false;
+            }
+        }
+        status.clone()
     }
 
     // Runs a single manifest check on a background thread; repeated calls
     // while a check is running are ignored.
     pub fn start_check(self: &Arc<Self>) {
-        if self.config.desktop_update_manifest.trim().is_empty() {
-            return;
-        }
         {
             let mut status = self.lock_status();
-            if status.checking {
+            if status.checking || status.applying {
                 return;
             }
+            if let Ok(settings) = config::load(self.config.root.clone()) {
+                status.source = settings.update_source;
+            }
+            status.release_note.clear();
+            status.needs_cdk = false;
+            status.error = None;
             status.checking = true;
         }
         let manager = Arc::clone(self);
@@ -197,21 +221,18 @@ impl DesktopUpdateManager {
     }
 
     fn check(&self) {
-        update_log(
-            &self.config.root,
-            format!(
-                "checking for desktop updates: {}",
-                self.config.desktop_update_manifest
-            ),
-        );
-        let result = fetch_manifest(&self.config.desktop_update_manifest)
-            .and_then(|manifest| validate_manifest(&manifest));
+        update_log(&self.config.root, "checking for desktop updates");
+        let result = fetch_release(&self.config.root);
         let current = Version::parse(CURRENT_VERSION);
         let mut status = self.lock_status();
         status.checking = false;
         status.checked = true;
         match (result, current) {
-            (Ok(remote), Ok(current)) => {
+            (Ok(release), Ok(current)) => {
+                let remote = release.version;
+                status.source = release.config.update_source;
+                status.release_note = release.release_note;
+                status.needs_cdk = release.needs_cdk;
                 let available = is_newer_version(&remote, &current);
                 update_log(
                     &self.config.root,
@@ -221,7 +242,8 @@ impl DesktopUpdateManager {
                 status.update_available = available;
                 status.error = None;
             }
-            (Ok(remote), Err(error)) => {
+            (Ok(release), Err(error)) => {
+                let remote = release.version;
                 update_log_levelled(
                     &self.config.root,
                     "ERROR",
@@ -259,16 +281,24 @@ impl DesktopUpdateManager {
         }
         // Fetch the manifest again instead of trusting the cached check.
         update_log(&self.config.root, "applying desktop update");
-        let result = fetch_manifest(&self.config.desktop_update_manifest)
-            .and_then(|manifest| {
-                let remote = validate_manifest(&manifest)?;
-                let current =
-                    Version::parse(CURRENT_VERSION).context("Invalid current desktop version")?;
-                if !is_newer_version(&remote, &current) {
-                    anyhow::bail!("The desktop shell is already up to date");
-                }
-                stage_and_launch(&self.config, &manifest)
-            });
+        let result = (|| {
+            let lease = acquire_update_lock(&self.config.root)?;
+            let release = fetch_release(&self.config.root)?;
+            let current = Version::parse(CURRENT_VERSION).context("Invalid current desktop version")?;
+            if !is_newer_version(&release.version, &current) {
+                anyhow::bail!("The desktop shell is already up to date");
+            }
+            let manifest = release.manifest.context(
+                "下载需要有效的 Mirror酱 CDK，请在部署页填写，或切换原更新源。",
+            )?;
+            validate_manifest(&manifest)?;
+            update_log(&self.config.root, format!("desktop update source: {}", release.config.update_source));
+            stage_and_launch(&release.config, &manifest)?;
+            // Keep the cross-process lease until exit; the helper waits for
+            // this process before replacing the EXE and starting a new one.
+            std::mem::forget(lease);
+            Ok(())
+        })();
         let mut status = self.lock_status();
         match result {
             Ok(()) => {
@@ -371,6 +401,65 @@ fn is_newer_version(remote: &Version, current: &Version) -> bool {
     remote > current
 }
 
+fn acquire_update_lock(root: &Path) -> Result<fs::File> {
+    let directory = root.join("tmp");
+    fs::create_dir_all(&directory)?;
+    let mut options = fs::OpenOptions::new();
+    options.read(true).write(true).create(true);
+    #[cfg(windows)]
+    options.share_mode(0);
+    let mut lease = options.open(directory.join("update.lock"))
+        .context("另一个源码或启动器更新正在运行，或更新锁不可写。")?;
+    lease.set_len(0)?;
+    write!(lease, "{}", std::process::id())?;
+    lease.sync_all()?;
+    Ok(lease)
+}
+
+struct RemoteRelease {
+    config: DesktopConfig,
+    version: Version,
+    manifest: Option<DesktopManifest>,
+    release_note: String,
+    needs_cdk: bool,
+}
+
+fn fetch_release(root: &Path) -> Result<RemoteRelease> {
+    let config = config::load(root.to_path_buf())?;
+    match config.update_source.as_str() {
+        "git" => {
+            let manifest = fetch_manifest(&config.desktop_update_manifest)?;
+            let version = validate_manifest(&manifest)?;
+            Ok(RemoteRelease { config, version, manifest: Some(manifest), release_note: String::new(), needs_cdk: false })
+        }
+        "mirrorchyan" => {
+            let release = mirrorchyan::latest(root)?;
+            let version = Version::parse(release.version_name.strip_prefix('v').unwrap_or(&release.version_name))
+                .context("Invalid MirrorChyan desktop version")?;
+            let needs_cdk = release.url.as_ref().is_none_or(|url| url.is_empty());
+            let manifest = if needs_cdk {
+                None
+            } else {
+                Some(DesktopManifest {
+                    schema: 1,
+                    _project_version: release.version_name,
+                    desktop_version: version.to_string(),
+                    target: TARGET.to_string(),
+                    url: release.url.unwrap(),
+                    sha256: release.sha256.context("MirrorChyan response is missing SHA-256")?.to_ascii_lowercase(),
+                    size: release.filesize.context("MirrorChyan response is missing filesize")?,
+                })
+            };
+            if let Some(manifest) = manifest.as_ref() {
+                anyhow::ensure!(reqwest::Url::parse(&manifest.url)?.scheme() == "https", "MirrorChyan download must use HTTPS");
+                validate_manifest(manifest)?;
+            }
+            Ok(RemoteRelease { config, version, manifest, release_note: release.release_note, needs_cdk })
+        }
+        _ => anyhow::bail!("Unknown desktop update source"),
+    }
+}
+
 fn fetch_manifest(url: &str) -> Result<DesktopManifest> {
     let client = reqwest::blocking::Client::builder()
         .user_agent(format!("NKAS/{CURRENT_VERSION}"))
@@ -386,9 +475,9 @@ fn fetch_manifest(url: &str) -> Result<DesktopManifest> {
     client
         .get(url)
         .timeout(Duration::from_secs(15))
-        .send()?
-        .error_for_status()?
-        .json()
+        .send().map_err(|error| error.without_url())?
+        .error_for_status().map_err(|error| error.without_url())?
+        .json().map_err(|error| error.without_url())
         .context("Invalid desktop update manifest")
 }
 
@@ -430,8 +519,13 @@ fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Resul
     let mut response = client
         .get(&manifest.url)
         .timeout(Duration::from_secs(120))
-        .send()?
-        .error_for_status()?;
+        .send().map_err(|error| error.without_url())?;
+    if !response.status().is_success() {
+        if config.update_source == "mirrorchyan" {
+            return Err(mirrorchyan::download_error(response));
+        }
+        anyhow::bail!("Desktop update download failed: HTTP {}", response.status());
+    }
     if response
         .content_length()
         .is_some_and(|size| size != manifest.size)
@@ -442,7 +536,7 @@ fn stage_and_launch(config: &DesktopConfig, manifest: &DesktopManifest) -> Resul
     let mut file = fs::File::create(&part)?;
     update_log(
         &config.root,
-        format!("downloading {} ({} bytes)", manifest.url, manifest.size),
+        format!("downloading desktop update ({} bytes)", manifest.size),
     );
     write_verified_download(&mut response, &mut file, manifest.size, &manifest.sha256)?;
     file.sync_all()?;

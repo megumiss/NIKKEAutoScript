@@ -17,6 +17,9 @@ fn default_dpi_scaling() -> bool {
 fn default_theme() -> String {
     "light".into()
 }
+fn default_update_source() -> String {
+    "git".into()
+}
 fn default_desktop_update_manifest() -> String {
     // Desktop updates are fetched from the official VPS by default.
     // Override Deploy.Update.DesktopUpdateManifest in config/deploy.yaml to use another source.
@@ -41,6 +44,8 @@ struct DeployConfig {
 
 #[derive(Debug, Deserialize)]
 struct UpdateConfig {
+    #[serde(rename = "UpdateSource", default = "default_update_source")]
+    update_source: String,
     #[serde(
         rename = "DesktopUpdateManifest",
         default = "default_desktop_update_manifest"
@@ -51,6 +56,7 @@ struct UpdateConfig {
 impl Default for UpdateConfig {
     fn default() -> Self {
         Self {
+            update_source: default_update_source(),
             desktop_update_manifest: default_desktop_update_manifest(),
         }
     }
@@ -84,6 +90,7 @@ pub struct DesktopConfig {
     /// Stored without IPv6 brackets; backend::url adds them when needed.
     pub host: String,
     pub port: u16,
+    pub update_source: String,
     pub desktop_update_manifest: String,
     pub dpi_scaling: bool,
     pub hardware_acceleration: bool,
@@ -142,6 +149,7 @@ pub fn load(root: PathBuf) -> Result<DesktopConfig> {
         python,
         host: resolve_connect_host(&raw.deploy.webui.host),
         port: raw.deploy.webui.port,
+        update_source: raw.deploy.update.update_source,
         desktop_update_manifest: raw.deploy.update.desktop_update_manifest,
         dpi_scaling: raw.deploy.webui.dpi_scaling,
         hardware_acceleration: raw.deploy.webui.hardware_acceleration,

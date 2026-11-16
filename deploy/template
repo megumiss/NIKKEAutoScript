@@ -1,4 +1,30 @@
 Deploy:
+  Update:
+    # Choose where to download source and launcher updates.
+    # Git uses the configured repository and launcher download URL.
+    # MirrorChyan provides accelerated downloads; requires a valid CDK and the official master branch for source updates.
+    UpdateSource: git
+    # Update source at startup using UpdateSource
+    # [In most cases] Use true
+    AutoUpdate: true
+    # Use auto update and builtin updater feature
+    # This may cause problem https://github.com/LmeSzinc/AzurLaneAutoScript/issues/876
+    EnableReload: true
+    # Check update every X minute
+    # [Disable] 0
+    # [Default] 5
+    CheckUpdateInterval: 5
+    # Scheduled restart time
+    # If there are updates, NKAS will automatically restart and update at this time every day
+    # and run all nkas instances that running before restarted
+    # [Disable] null
+    # [Default] 03:50
+    AutoRestartTime: 03:50
+    # Desktop shell update manifest. The desktop version is independent from the project release tag.
+    # [Default] Use 'https://nkas.megumiss.top/releases/latest/nkas-desktop.json', hosted on the official VPS (faster for CN users)
+    # [Other] Use 'https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json' to update from GitHub Release
+    DesktopUpdateManifest: https://nkas.megumiss.top/releases/latest/nkas-desktop.json
+
   Git:
     # URL of NikkeAutoScript repository
     # [CN user] Use 'https://git.megumiss.top/megumiss/NIKKEAutoScript' for faster and more stable download
@@ -21,9 +47,11 @@ Deploy:
     # [In most cases] Use true
     # [Other] Use false to when connected to an untrusted network
     SSLVerify: true
-    # Update NKAS at startup
-    # [In most cases] Use true
-    AutoUpdate: true
+
+  MirrorChyan:
+    # MirrorChyan CDK (optional). Used when UpdateSource is mirrorchyan; stored privately, never in this YAML.
+    # Clear the CDK on the Deploy page. Get a CDK at https://mirrorchyan.com
+    MirrorChyanCDK: null
 
   Python:
     # Filepath of python executable `python.exe`
@@ -83,25 +111,6 @@ Deploy:
     # Re-install uiautomator2
     # [In most cases] Use true
     InstallUiautomator2: true
-
-  Update:
-    # Use auto update and builtin updater feature
-    # This may cause problem https://github.com/LmeSzinc/AzurLaneAutoScript/issues/876
-    EnableReload: true
-    # Check update every X minute
-    # [Disable] 0
-    # [Default] 5
-    CheckUpdateInterval: 5
-    # Scheduled restart time
-    # If there are updates, NKAS will automatically restart and update at this time every day
-    # and run all nkas instances that running before restarted
-    # [Disable] null
-    # [Default] 03:50
-    AutoRestartTime: 03:50
-    # Desktop shell update manifest. The desktop version is independent from the project release tag.
-    # [Default] Use 'https://nkas.megumiss.top/releases/latest/nkas-desktop.json', hosted on the official VPS (faster for CN users)
-    # [Other] Use 'https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json' to update from GitHub Release
-    DesktopUpdateManifest: https://nkas.megumiss.top/releases/latest/nkas-desktop.json
 
   Webui:
     # --host. Host to listen

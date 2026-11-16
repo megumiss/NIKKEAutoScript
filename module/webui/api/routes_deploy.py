@@ -17,6 +17,7 @@ from starlette.responses import JSONResponse
 
 import module.webui.lang as lang
 from deploy.utils import DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
+from deploy.mirrorchyan import MirrorError, SECRET_MASK, read_cdk, save_cdk
 from module.config.utils import nkas_instance
 from module.logger import logger
 from module.webui.setting import State
@@ -29,6 +30,7 @@ EXCLUDED_KEYS = {'ReadNoticeIds', 'StartupNoticeDismissedId'}
 WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy',
              'SerialGroup', 'ConsoleAllowHosts'}
 SELECT_OPTIONS = {
+    'UpdateSource': ['git', 'mirrorchyan'],
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
     'Theme': ['dark', 'light'],
     'HomePage': ['overview', 'instance'],
@@ -39,6 +41,11 @@ SELECT_OPTIONS = {
 # Language options are self-named in every UI language; theme labels follow
 # the UI language.
 OPTION_LABELS = {
+    'UpdateSource': {
+        'zh-CN': {'git': 'Git源', 'mirrorchyan': 'Mirror酱'},
+        'en-US': {'git': 'Git', 'mirrorchyan': 'MirrorChyan'},
+        'ja-JP': {'git': 'Git', 'mirrorchyan': 'MirrorChyan'},
+    },
     'Language': {'zh-CN': '简体中文', 'en-US': 'English', 'ja-JP': '日本語'},
     'OcrDevice': {'cpu': 'CPU', 'gpu': 'GPU'},
     'PaddleCuda': {'auto': 'auto', 'cu129': 'CUDA 12.9', 'cu126': 'CUDA 12.6', 'cu118': 'CUDA 11.8'},
@@ -88,6 +95,18 @@ TAG_I18N = {
 # lines, `hints` replaces `[Tag] advice` lines matched by tag; anything
 # missing falls back to the English template text.
 FIELD_I18N = {
+    'UpdateSource': {
+        'zh-CN': {'desc': 'Git源：使用配置的仓库和启动器下载地址。\n'
+                          'Mirror酱：加速下载，需有效 CDK；源码仅支持官方 master 分支。'},
+        'ja-JP': {'desc': 'Git：設定したリポジトリと起動プログラムのダウンロード先を使用。\n'
+                          'MirrorChyan：高速ダウンロード。有効な CDK が必要。ソースは公式 master のみ対応。'},
+    },
+    'MirrorChyanCDK': {
+        'zh-CN': {'desc': 'Mirror酱 CDK（可选，即时生效）。仅保存于本机私有文件，不写入部署 YAML。'
+                          '留空仍可检查版本；清空输入框可删除 CDK。获取：https://mirrorchyan.com'},
+        'ja-JP': {'desc': 'MirrorChyan CDK（任意、即時反映）。ローカルの非公開ファイルに保存。'
+                          '空欄でも確認可能。入力を消すと CDK を削除。https://mirrorchyan.com'},
+    },
     'SecurityEntryEnabled': {
         'zh-CN': {'desc': '安全入口（即时生效）。默认关闭；开启后浏览器和远程 App 必须使用完整入口地址。不会更改监听地址或开放端口。'},
         'ja-JP': {'desc': 'セキュリティ入口（即時反映）。初期状態では無効。待受アドレスやポートは変更しません。'},
@@ -426,7 +445,7 @@ def _widget(key, default):
 
 def _select_options(key):
     labels = OPTION_LABELS[key]
-    if key in ('Theme', 'HomePage', 'SerialOnError'):
+    if key in ('UpdateSource', 'Theme', 'HomePage', 'SerialOnError'):
         labels = labels.get(lang.LANG) or labels['en-US']
     return [{'value': value, 'label': labels.get(value, value)} for value in SELECT_OPTIONS[key]]
 
@@ -480,7 +499,14 @@ async def deploy_schema(_: Request):
         for field in group['fields']:
             key = field['key']
             default = config.config_template.get(key)
-            if key == 'Run':
+            if key == 'MirrorChyanCDK':
+                try:
+                    configured = bool(read_cdk(config.file))
+                except MirrorError:
+                    configured = False
+                field.update(widget='password', value=SECRET_MASK if configured else '',
+                             default='', configured=configured)
+            elif key == 'Run':
                 field['widget'] = 'multiselect'
                 field['options'] = [{'value': name, 'label': name} for name in nkas_instance()]
                 field['value'] = _run_value(config.config.get(key))
@@ -499,7 +525,7 @@ async def deploy_schema(_: Request):
                 if field['widget'] == 'select':
                     field['options'] = _select_options(key)
             _localize(field)
-    return JSONResponse({'groups': groups})
+    return JSONResponse({'groups': groups}, headers={'Cache-Control': 'no-store'})
 
 
 async def deploy_patch(request: Request):
@@ -512,6 +538,25 @@ async def deploy_patch(request: Request):
     config = State.deploy_config
     if key in EXCLUDED_KEYS or key not in config.config_template:
         return _json_error(f'Unknown deploy key: {key}', 404)
+    if key in ('UpdateSource', 'MirrorChyanCDK'):
+        from module.webui.updater import updater
+        from deploy.update_lock import UpdateLock
+        if (updater.state in ('checking', 'start', 'wait', 'run update', 'reload')
+                or UpdateLock.busy(updater.root_filepath)):
+            return _json_error('更新期间不能修改更新源或 CDK。', 409)
+        if key == 'MirrorChyanCDK':
+            try:
+                configured = save_cdk(config.file, value)
+            except ValueError as exc:
+                return _json_error(str(exc), 422)
+            except (OSError, MirrorError):
+                return _json_error('无法保存 Mirror酱 CDK，请检查配置目录权限。', 500)
+            updater.state = 0
+            updater.check_error = ''
+            updater.update_error = ''
+            updater.source_info = {}
+            return JSONResponse({'status': 'success', 'value': SECRET_MASK if configured else '',
+                                 'configured': configured}, headers={'Cache-Control': 'no-store'})
     if key == 'SecurityEntryEnabled':
         if not isinstance(value, bool):
             return _json_error('Expected a boolean value.', 422)
@@ -571,6 +616,12 @@ async def deploy_patch(request: Request):
     # Theme, language and the console switch take effect immediately;
     # everything else applies on the next restart, which the page warning
     # calls out.
+    if key == 'UpdateSource':
+        updater.read()
+        updater.state = 0
+        updater.check_error = ''
+        updater.update_error = ''
+        updater.source_info = {}
     if key == 'Theme':
         State.theme = value
     elif key == 'Language':
@@ -584,6 +635,11 @@ async def deploy_patch(request: Request):
 
 
 async def deploy_reset(request: Request):
+    from deploy.update_lock import UpdateLock
+    from module.webui.updater import updater
+    if (updater.state in ('checking', 'start', 'wait', 'run update', 'reload')
+            or UpdateLock.busy(updater.root_filepath)):
+        return _json_error('更新期间不能重置部署配置。', 409)
     try:
         data = await request.json()
     except ValueError:
@@ -601,4 +657,9 @@ async def deploy_reset(request: Request):
     config = State.deploy_config
     State.theme = config.Theme
     lang.set_language(config.Language)
+    updater.read()
+    updater.state = 0
+    updater.check_error = ''
+    updater.update_error = ''
+    updater.source_info = {}
     return JSONResponse({'status': 'success', 'theme': config.Theme, 'language': config.Language})
