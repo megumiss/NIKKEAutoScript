@@ -1,0 +1,39 @@
+name: mirrorchyan_source
+
+# secrets: MirrorChyanUploadToken
+
+on:
+  push:
+    branches: [master]
+  workflow_run:
+    workflows: [Update NIKKE Dialogue Data]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: mirrorchyan-source
+  cancel-in-progress: false
+
+jobs:
+  mirrorchyan:
+    if: ${{ github.repository_owner == 'megumiss' }}
+    runs-on: ubuntu-latest
+    env:
+      UPLOAD_TOKEN: ${{ secrets.MirrorChyanUploadToken }}
+    steps:
+      - name: Skip without upload token
+        if: env.UPLOAD_TOKEN == ''
+        run: echo "MirrorChyanUploadToken is not set, skip uploading"
+
+      - uses: actions/checkout@v4
+        if: env.UPLOAD_TOKEN != ''
+        with:
+          repository: megumiss/NIKKEAutoScript
+          ref: master
+
+      - uses: MirrorChyan/git-pack-uploading-action@v1
+        if: env.UPLOAD_TOKEN != ''
+        with:
+          mirrorchyan_rid: NIKKEAutoScript-Source
+          upload_token: ${{ env.UPLOAD_TOKEN }}
+          branch: master
