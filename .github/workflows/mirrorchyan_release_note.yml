@@ -1,0 +1,38 @@
+name: mirrorchyan_release_note
+
+# secrets: MirrorChyanUploadToken
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        default: ''
+        required: false
+  release:
+    types: [published, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  mirrorchyan:
+    if: ${{ github.repository_owner == 'megumiss' }}
+    runs-on: macos-latest
+    env:
+      UPLOAD_TOKEN: ${{ secrets.MirrorChyanUploadToken }}
+
+    steps:
+      - name: Skip without upload token
+        if: env.UPLOAD_TOKEN == ''
+        run: echo "MirrorChyanUploadToken is not set, skip syncing"
+
+      - uses: MirrorChyan/release-note-action@v1
+        if: env.UPLOAD_TOKEN != ''
+        with:
+          mirrorchyan_rid: NIKKEAutoScript
+          version_name: ${{ inputs.tag || github.event.release.tag_name }}
+
+          owner: megumiss
+          repo: NIKKEAutoScript
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          upload_token: ${{ env.UPLOAD_TOKEN }}
