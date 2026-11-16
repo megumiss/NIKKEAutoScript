@@ -29,7 +29,11 @@ class InfoHandler(ModuleBase):
 
         return False
 
-    def handle_login_reward(self):
+    def handle_login_reward(self, in_login=False):
+        # 收获页也有“获得奖励”，普通导航不能按这段文字领取。
+        if not in_login:
+            return False
+
         # 完成提示不是页面标识，只在本次领取后的短确认窗口内用于关闭。
         confirm_timer = getattr(self, '_login_reward_confirm_timer', None)
         if confirm_timer is not None and not confirm_timer.reached():

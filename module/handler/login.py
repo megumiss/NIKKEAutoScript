@@ -109,7 +109,7 @@ class LoginHandler(UI):
                 continue
 
             # 登录奖励
-            if click_timer.reached() and self.handle_login_reward():
+            if click_timer.reached() and self.handle_login_reward(in_login=True):
                 click_timer.reset()
                 continue
 
