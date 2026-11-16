@@ -17,6 +17,7 @@ class Reward(UI):
     def receive_reward(self, skip_first_screenshot=True):
         logger.hr('Receive reward')
         confirm_timer = Timer(5, count=3).start()
+        reward_done = False
         # Set click interval to 0.3, because game can't respond that fast.
         while 1:
             if skip_first_screenshot:
@@ -35,10 +36,25 @@ class Reward(UI):
             if self.handle_paid_gift():
                 confirm_timer.reset()
                 continue
-            # 判断是否有奖励可领
-            if self.appear(NO_REWARDS_1, offset=(10, 10), interval=1) and confirm_timer.reached():
-                logger.info('Reward done after check NO_REWARDS_1')
+
+            if self.appear(MAIN_CHECK, offset=(10, 10)) and confirm_timer.reached():
+                logger.info('Reward done after check MAIN_CHECK')
                 break
+
+            # 在任务内关闭收获页，避免后续导航将“获得奖励”识别为登录奖励。
+            if reward_done:
+                if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=1, static=False):
+                    continue
+                if self.appear(REWARD_CHECK, offset=(30, 30), interval=2):
+                    self.device.click(REWARD_GOTO_MAIN)
+                continue
+
+            # 无奖励时收获按钮仍可匹配，逐帧检查并阻止空点重置完成确认计时。
+            if self.appear(NO_REWARDS_1, offset=(10, 10)):
+                if confirm_timer.reached():
+                    logger.info('Reward done after check NO_REWARDS_1')
+                    reward_done = True
+                continue
             # 点击获得奖励
             if self.appear_then_click(RECEIVE, offset=(30, 30), interval=2):
                 confirm_timer.reset()
@@ -46,11 +62,8 @@ class Reward(UI):
 
             if confirm_timer.reached() and self.appear(EMPTY_CHECK, threshold=1.00):
                 logger.info('Reward done after check EMPTY_CHECK')
-                break
-
-            if self.appear(MAIN_CHECK, offset=(10, 10)) and confirm_timer.reached():
-                logger.info('Reward done after check MAIN_CHECK')
-                break
+                reward_done = True
+                continue
 
         logger.info('Defence Reward have been received')
         return True
