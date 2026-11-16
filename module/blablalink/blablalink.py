@@ -106,7 +106,7 @@ class Blablalink(UI):
     def _request_with_retry(self, method: str, url: str, max_retries: int = 3, **kwargs) -> Dict:
         """带重试机制的请求封装"""
         for attempt in range(max_retries):
-            delay = random.uniform(3.0, 10.0)
+            delay = random.uniform(2.0, 5.0)
             time.sleep(delay)
 
             try:
