@@ -17,7 +17,7 @@ permissions:
 jobs:
   mirrorchyan:
     if: ${{ github.repository_owner == 'megumiss' }}
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     env:
       UPLOAD_TOKEN: ${{ secrets.MirrorChyanUploadToken }}
 
