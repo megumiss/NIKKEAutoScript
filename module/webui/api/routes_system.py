@@ -40,7 +40,13 @@ async def update_status(_: Request):
     local = updater.get_commit(short_sha1=True)
     if updater.UpdateSource == 'mirrorchyan':
         upstream = (None, None, None, None)
-        history = updater.get_commit('HEAD', n=20, short_sha1=True)
+        history = updater.get_commit(f'origin/{updater.Branch}', n=20, short_sha1=True,
+                                     cwd=updater.history_directory) if updater.history_directory.is_dir() else []
+        history = [commit for commit in history if isinstance(commit, (list, tuple)) and commit[0]]
+        if not history:
+            history = updater.get_commit('HEAD', n=20, short_sha1=True)
+        elif local[0] and not any(commit[0] == local[0] for commit in history):
+            history.append(local)
     else:
         upstream = updater.get_commit(f'origin/{updater.Branch}', short_sha1=True)
         history = updater.get_commit(f'origin/{updater.Branch}', n=20, short_sha1=True)

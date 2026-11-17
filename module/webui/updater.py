@@ -1,7 +1,10 @@
 import datetime
+import os
+import signal
 import subprocess
 import threading
 import time
+from pathlib import Path
 from typing import Generator, List, Tuple
 
 import requests
@@ -77,12 +80,12 @@ class Updater(DeployConfig, GitManager, PipManager):
                 logger.warning(f'Invalid AutoRestartTime: {t!r}, scheduled restart disabled')
                 return None
 
-    def execute_output(self, command) -> str:
+    def execute_output(self, command, cwd=None) -> str:
         command = command.replace(r"\\", "/").replace("\\", "/").replace('"', '"')
-        result = subprocess.run(command, capture_output=True, shell=True)
+        result = subprocess.run(command, capture_output=True, shell=True, cwd=cwd)
         return _decode_output(result.stdout)
 
-    def get_commit(self, revision="", n=1, short_sha1=False) -> Tuple:
+    def get_commit(self, revision="", n=1, short_sha1=False, cwd=None) -> Tuple:
         """
         Return:
             (sha1, author, isotime, message,)
@@ -90,7 +93,7 @@ class Updater(DeployConfig, GitManager, PipManager):
         ph = "h" if short_sha1 else "H"
 
         log = self.execute_output(
-            f'"{self.git}" log {revision} --pretty=format:"%{ph}---%an---%ad---%s" --date=iso -{n}'
+            f'"{self.git}" log {revision} --pretty=format:"%{ph}---%an---%ad---%s" --date=iso -{n}', cwd=cwd
         )
 
         if not log:
@@ -104,22 +107,58 @@ class Updater(DeployConfig, GitManager, PipManager):
         else:
             return logs
 
-    def _git_fetch(self, source) -> bool:
-        # Same command as execute() but with a hard timeout: os.system can
-        # hang for many minutes on unreachable networks, leaving the updater
-        # stuck in the "checking" state.
-        command = f'"{self.git}" fetch {source} {self.Branch}'
-        command = command.replace(r"\\", "/").replace("\\", "/").replace('"', '"')
-        logger.info(command)
+    @property
+    def history_directory(self):
+        return Path(self.root_filepath) / 'tmp' / 'git-history'
+
+    def refresh_git_history(self):
+        directory = self.history_directory
+        directory.mkdir(parents=True, exist_ok=True)
+        remote = self.execute_output(f'"{self.git}" remote get-url origin', cwd=self.root_filepath).strip()
+        if not remote:
+            return False
+        if not (directory / 'HEAD').is_file():
+            subprocess.run([self.git, 'init', '--bare', str(directory)],
+                           capture_output=True, check=True, timeout=10)
+        subprocess.run([self.git, '-C', str(directory), 'config', 'remote.origin.url', remote],
+                       capture_output=True, check=True, timeout=10)
+        # Keep partial Git objects separate so Mirror updates never lazily download source files from Git.
+        return self._git_fetch('origin', depth=20, timeout=20, cwd=directory, filter_spec='tree:0')
+
+    def _git_fetch(self, source, depth=None, timeout=120, cwd=None, filter_spec=None) -> bool:
+        command = [self.git, 'fetch']
+        if depth:
+            command.append(f'--depth={depth}')
+        if filter_spec:
+            command.append(f'--filter={filter_spec}')
+        command.extend([source, f'+refs/heads/{self.Branch}:refs/remotes/{source}/{self.Branch}'])
+        logger.info(subprocess.list2cmdline(command))
         try:
-            result = subprocess.run(command, shell=True, capture_output=True, timeout=120)
-        except subprocess.TimeoutExpired:
-            logger.warning("Git fetch timed out after 120s")
+            with subprocess.Popen(command, cwd=cwd or self.root_filepath, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, start_new_session=os.name != 'nt') as process:
+                try:
+                    process.communicate(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    # Killing only the launcher leaves Git children holding the captured pipes open on Windows.
+                    if os.name == 'nt':
+                        subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+                                       capture_output=True, timeout=10)
+                    else:
+                        try:
+                            os.killpg(process.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                    process.kill()
+                    process.communicate(timeout=5)
+                    logger.warning(f'Git fetch timed out after {timeout}s')
+                    return False
+                if process.returncode:
+                    logger.info(f'[ allowed failure ], error_code: {process.returncode}')
+                    return False
+        except OSError as error:
+            logger.warning(f'Unable to fetch Git history ({type(error).__name__})')
             return False
-        if result.returncode:
-            logger.info(f"[ allowed failure ], error_code: {result.returncode}")
-            return False
-        logger.info("[ success ]")
+        logger.info('[ success ]')
         return True
 
     def _check_update(self) -> bool:
@@ -159,6 +198,13 @@ class Updater(DeployConfig, GitManager, PipManager):
             }
             available = local != data['version_name']
             logger.info(f"Mirror source: {local} -> {data['version_name']}, update available: {available}")
+            try:
+                fetched = self.refresh_git_history()
+            except (OSError, subprocess.SubprocessError) as error:
+                logger.warning(f'Unable to refresh Git history ({type(error).__name__})')
+                fetched = False
+            if not fetched:
+                logger.warning('Git history refresh failed; keep cached history and the Mirror update result')
             return available
         if State.deploy_config.GitOverCdn:
             status = self.goc_client.get_status()
