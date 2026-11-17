@@ -251,6 +251,8 @@ def startup():
     ):
         task_handler.add(RemoteAccess.keep_ssh_alive(), 60)
 
+    updater.mirror_updater().acknowledge()
+
 
 def clearup():
     """

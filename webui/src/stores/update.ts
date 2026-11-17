@@ -145,7 +145,7 @@ export const useUpdateStore = defineStore('update', () => {
         if (!['checking', 'start', 'wait', 'run update'].includes(state)) break
       }
       if (state === 'failed') {
-        toast.error = t('更新失败')
+        toast.error = t('更新失败') + (system.updateInfo.update_error ? `：${system.updateInfo.update_error}` : '')
         return
       }
       if (round >= 300) {

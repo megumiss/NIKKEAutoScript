@@ -155,6 +155,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> 
     while started.elapsed() < Duration::from_secs(60) {
         if health(&config.host, config.port) {
             log("Backend health check passed.".into());
+            confirm_source_update(config);
             return Ok(backend);
         }
         if let Some(status) = backend
@@ -178,6 +179,41 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> 
         "Timed out waiting 60 seconds for {}",
         url(&config.host, config.port, "/api/system/status")
     )
+}
+
+// Older source snapshots may not have the Python-side startup acknowledgement.
+// Confirm only a backend started by this shell, never an already-running one.
+fn confirm_source_update(config: &DesktopConfig) {
+    let journal = config.root.join("tmp/mirror-source/transaction.json");
+    let confirmed = (|| -> Result<bool> {
+        if !journal.is_file() {
+            return Ok(false);
+        }
+        let record: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&journal)?)?;
+        if record["schema"] != 1 || record["phase"] != "ready" {
+            return Ok(false);
+        }
+        let Some(target) = record["target"].as_str() else { return Ok(false); };
+        if !matches!(target.len(), 40 | 64) || !target.bytes().all(|value| value.is_ascii_hexdigit()) {
+            return Ok(false);
+        }
+        let settings: serde_yaml::Value = serde_yaml::from_str(
+            &std::fs::read_to_string(config.root.join("config/deploy.yaml"))?,
+        )?;
+        let git = settings["Deploy"]["Git"]["GitExecutable"].as_str().unwrap_or("toolkit/Git/cmd/git.exe");
+        let git = config.root.join(git);
+        let mut command = Command::new(git);
+        command.current_dir(&config.root).args(["rev-parse", "HEAD"]);
+        #[cfg(windows)]
+        command.creation_flags(0x08000000);
+        let result = command.output()?;
+        if result.status.success() && String::from_utf8_lossy(&result.stdout).trim() == target {
+            std::fs::remove_file(&journal)?;
+            return Ok(true);
+        }
+        Ok(false)
+    })();
+    let _ = confirmed;
 }
 
 fn run_prepare(config: &DesktopConfig, output: LogSink) -> Result<()> {

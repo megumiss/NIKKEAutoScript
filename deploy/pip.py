@@ -238,6 +238,11 @@ class PipManager(DeployConfig):
         self.__dict__.pop('set_installed_dependency', None)
         self.__dict__.pop('set_dependency_to_install', None)
 
+    def invalidate_dependency_cache(self):
+        for key in ('requirements_file', 'requirements_file_effective', 'set_required_dependency',
+                    'set_installed_dependency', 'set_dependency_to_install'):
+            self.__dict__.pop(key, None)
+
     def pip_install(self):
         logger.hr('Update Dependencies', 0)
 

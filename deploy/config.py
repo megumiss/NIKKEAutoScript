@@ -42,6 +42,8 @@ class ConfigModel:
     EnableReload: bool = True
     CheckUpdateInterval: int = 5
     AutoRestartTime: str = "03:50"
+    UpdateSource: str = 'git'
+    MirrorChyanCDK: Optional[str] = None
     DesktopUpdateManifest: str = (
         "https://nkas.megumiss.top/releases/latest/nkas-desktop.json"
     )

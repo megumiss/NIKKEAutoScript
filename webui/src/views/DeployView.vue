@@ -32,11 +32,12 @@ const { openResetDeployModal } = useModalStore()
               <div class="field-label"><label class="fname" :for="`deploy-${field.key}`">{{ field.title }}</label><div v-if="field.help" class="fhelp"><LinkifiedText :text="field.help" /></div><div v-for="hint in field.hints || []" :key="hint.tag" class="deploy-hint"><span class="deploy-hint-tag">{{ hint.tag }}</span><span>{{ hint.text }}</span></div></div>
               <div class="field-control">
                 <label v-if="field.widget === 'checkbox'" class="switch"><input :id="`deploy-${field.key}`" type="checkbox" :checked="field.value" :disabled="field.saving || field.entryBusy" @change="saveDeployField(field, $event)"><span class="slider"></span></label>
-                <AppSelect v-else-if="field.widget === 'select'" :model-value="field.value" :options="field.options" @change="(value: any) => saveDeployValue(field, value)"/>
+                <AppSelect v-else-if="field.widget === 'select'" :disabled="field.saving" :model-value="field.value" :options="field.options" @change="(value: any) => saveDeployValue(field, value)"/>
                 <div v-else-if="field.widget === 'multiselect'" class="deploy-multisel">
                   <label v-for="opt in field.options" :key="opt.value" class="deploy-multi-opt" :class="{ on: (field.value || []).includes(opt.value) }"><input type="checkbox" hidden :checked="(field.value || []).includes(opt.value)" @change="toggleDeployMulti(field, opt.value)">{{ opt.label }}</label>
                 </div>
                 <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value || ''" :options="field.options" :placeholder="t('添加')" @change="(value: string) => saveDeployValue(field, value)"/>
+                <input v-else-if="field.widget === 'password'" :id="`deploy-${field.key}`" type="password" autocomplete="new-password" spellcheck="false" :value="field.value" :disabled="field.saving" @input="onTextInput(field, $event)" @change="saveDeployField(field, $event)">
                 <input v-else :id="`deploy-${field.key}`" :type="field.widget === 'number' ? 'number' : 'text'" :value="field.value ?? ''" @input="onTextInput(field, $event)" @change="saveDeployField(field, $event)">
               </div>
             </div>

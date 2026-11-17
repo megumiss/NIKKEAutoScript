@@ -4,6 +4,10 @@ import { computed, ref } from 'vue'
 export const uiLanguage = ref('zh-CN')
 
 export const staticLabels: Record<string, Record<string, string>> = {
+  '暂无可显示的更新记录': { 'en-US': 'No update history to display', 'ja-JP': '表示できる更新履歴がありません' },
+  'Git源': { 'en-US': 'Git', 'ja-JP': 'Git' },
+  'Mirror酱': { 'en-US': 'MirrorChyan', 'ja-JP': 'MirrorChyan' },
+  '下载需要有效 CDK，请前往部署页填写，或切换原更新源。': { 'en-US': 'Downloads require a valid CDK. Enter it on the Deploy page or switch back to the original source.', 'ja-JP': 'ダウンロードには有効な CDK が必要です。配置ページで入力するか、元の更新元に切り替えてください。' },
   '总览': { 'en-US': 'Dashboard', 'ja-JP': 'ダッシュボード' }, '实例': { 'en-US': 'Instances', 'ja-JP': 'インスタンス' },
   '新建实例': { 'en-US': 'New instance', 'ja-JP': '新しいインスタンス' }, '系统': { 'en-US': 'System', 'ja-JP': 'システム' },
   '多开': { 'en-US': 'Multi-instance', 'ja-JP': 'マルチインスタンス' },
