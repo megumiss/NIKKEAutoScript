@@ -109,12 +109,17 @@ class LoginHandler(UI):
                 continue
 
             # 登录奖励
-            if click_timer.reached() and self.handle_login_reward():
+            if click_timer.reached() and self.handle_login_reward(in_login=True):
                 click_timer.reset()
                 continue
 
             # 活动剧情
             if click_timer.reached() and self.handle_event_popup():
+                click_timer.reset()
+                continue
+
+            # 商品资讯读取失败等通用通知弹窗
+            if click_timer.reached() and self.handle_unknown_popup():
                 click_timer.reset()
                 continue
 

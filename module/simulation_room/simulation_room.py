@@ -323,7 +323,7 @@ class SimulationRoom(UI):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached() and self.appear_then_click(ARK_GOTO_SIMULATION_ROOM, offset=(30, 30), interval=5):
+            if click_timer.reached() and self.appear_then_click(ARK_GOTO_SIMULATION_ROOM, offset=(30, 30), interval=2):
                 click_timer.reset()
                 continue
 

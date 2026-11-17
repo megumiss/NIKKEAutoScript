@@ -12,6 +12,7 @@
  *   GET  /        展示页面（HTML），输入口令后查看趋势与各维度占比。
  *
  * 存储：D1（reports 表，见 schema.sql），保留最近 92 天数据。
+ * reported_at 记录每天首次上报的 UTC 时间，用于小时活跃趋势。
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -234,9 +235,9 @@ export default {
       const day = today();
       // 主键 (day, id) 去重：已存在则 INSERT OR IGNORE 不生效，changes 为 0
       const r = await env.STATS.prepare(
-        'INSERT OR IGNORE INTO reports (day, id, v, os, res, geo) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT OR IGNORE INTO reports (day, id, v, os, res, geo, reported_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
       )
-        .bind(day, body.id, dims.v, dims.os, dims.res, dims.geo)
+        .bind(day, body.id, dims.v, dims.os, dims.res, dims.geo, new Date().toISOString())
         .run();
       // 顺带清理过期数据，不阻塞响应
       ctx.waitUntil(
