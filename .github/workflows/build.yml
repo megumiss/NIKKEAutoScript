@@ -240,7 +240,8 @@ jobs:
         $fileName = "NKAS_${{ env.TAG_NAME }}.7z"
 
         Write-Host "Packing Standard Version using 7-Zip..."
-        & 7z.exe a -t7z -mx=9 $fileName .
+        # 禁用可执行文件过滤器，避免旧解压器不支持 ARM/BCJ 压缩方法
+        & 7z.exe a -t7z -mx=9 -mf=off $fileName .
         if ($LASTEXITCODE -ne 0) { throw "7-Zip failed with exit code $LASTEXITCODE" }
 
         echo "ASSET_STD=$fileName" >> $env:GITHUB_ENV
@@ -284,7 +285,8 @@ jobs:
 
         Write-Host "Packing Full CN Version using 7-Zip..."
         # 排除上一步生成的 Standard 包
-        & 7z.exe a -t7z -mx=9 $fileName . "-xr!${env:ASSET_STD}"
+        # 禁用可执行文件过滤器，避免旧解压器不支持 ARM/BCJ 压缩方法
+        & 7z.exe a -t7z -mx=9 -mf=off $fileName . "-xr!${env:ASSET_STD}"
         if ($LASTEXITCODE -ne 0) { throw "7-Zip failed with exit code $LASTEXITCODE" }
 
         echo "ASSET_CN=$fileName" >> $env:GITHUB_ENV
