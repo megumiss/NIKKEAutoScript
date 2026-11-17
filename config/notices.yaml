@@ -1,11 +1,28 @@
 # 公告列表，新的公告追加到文件顶部
 # pinned: true 的公告在客户端列表顶部置顶显示，可同时置顶多条；组内仍按文件顺序（新的在前）
 # 次要公告不再单列：移进「更新历史」条目的 items（日期倒序），正文保持原公告原文
+- id: notice_20261117_mirrorchyan
+  date: 2026-11-17
+  title: Mirror酱接入公告
+  type: info
+  content: |
+    <b>NKAS 已接入 Mirror酱，支持源码与启动器（nkas.exe）更新加速</b>
+    Mirror酱为可选更新源，默认仍使用 Git源，不影响现有更新方式。
+
+    <b>使用方法</b>
+    1. 进入 NKAS → 部署，将 UpdateSource 设为「Mirror酱」；
+    2. 在 MirrorChyan 分组的 MirrorChyanCDK 中填写有效 CDK；
+    3. 进入「设置」页面，检查并更新源码或启动器。
+    CDK 获取：<a href="https://mirrorchyan.com" target="_blank">Mirror酱官网</a>
+
+    <b>注意事项</b>
+    1. 启动器仅 1.2.0 以上版本支持Mirror酱更新；
+    2. Mirror酱源码更新仅支持官方 master 分支；
+    4. 不使用 Mirror酱时，将 UpdateSource 切回「Git源」即可。
 - id: notice_20261105_security_official
   date: 2026-11-05
   title: 【PC端安全事件官方处理公告】
   type: important
-  pinned: true
   content: |
     <a href="https://nikke-en.com/newsdetail_m.html?content_id=b4f23938a63a0a4e68aa577af395b1edb172" target="_blank">官方公告原文</a>
 
@@ -41,7 +58,7 @@
 - id: notice_20260924
   date: 2026-09-24
   title: 求个 Star
-  type: info
+  type: important
   pinned: true
   content: |
     <b>如果 NKAS 帮到了你，欢迎到 GitHub 点个 Star</b>
