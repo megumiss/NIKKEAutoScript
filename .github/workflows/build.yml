@@ -71,15 +71,8 @@ jobs:
     # 3. 环境准备
     # ==========================
     
-    - name: Install Bandizip
-      run: |
-        Write-Host "Installing Bandizip via Chocolatey..."
-        choco install bandizip --no-progress -y
-        if (-not (Test-Path "C:\Program Files\Bandizip\bz.exe")) {
-            Write-Error "Bandizip executable not found!"
-            exit 1
-        }
-        Write-Host "Bandizip installed successfully."
+    - name: Verify 7-Zip
+      run: Get-Command 7z.exe
 
     - name: Setup Node.js
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
@@ -242,18 +235,14 @@ jobs:
     - name: Remove .git (Pre-Standard)
       run: Remove-Item ".git" -Recurse -Force -ErrorAction SilentlyContinue
 
-    - name: Pack Standard Version (Bandizip)
+    - name: Pack Standard Version (7-Zip)
       run: |
         $fileName = "NKAS_${{ env.TAG_NAME }}.7z"
-        $bz = "C:\Program Files\Bandizip\bz.exe"
-        
-        Write-Host "Packing Standard Version using Bandizip..."
-        # bz c: 压缩命令
-        # -l:5: 压缩等级 5 (标准)
-        # -fmt:7z: 格式 7z
-        # -ex:排除路径
-        & $bz c -l:9 -fmt:7z $fileName .
-        
+
+        Write-Host "Packing Standard Version using 7-Zip..."
+        & 7z.exe a -t7z -mx=9 $fileName .
+        if ($LASTEXITCODE -ne 0) { throw "7-Zip failed with exit code $LASTEXITCODE" }
+
         echo "ASSET_STD=$fileName" >> $env:GITHUB_ENV
 
     # ==========================
@@ -289,15 +278,15 @@ jobs:
         git fetch origin master --depth=1
         git reset --soft FETCH_HEAD
 
-    - name: Pack Full CN Version (Bandizip)
+    - name: Pack Full CN Version (7-Zip)
       run: |
         $fileName = "NKAS_${{ env.TAG_NAME }}_full-cn.7z"
-        $bz = "C:\Program Files\Bandizip\bz.exe"
-        
-        Write-Host "Packing Full CN Version using Bandizip..."
-        # 排除资源库以及上一步生成的 Standard 包
-        & $bz c -l:9 -fmt:7z -ex:"${{ env.ASSET_STD }}" $fileName .
-        
+
+        Write-Host "Packing Full CN Version using 7-Zip..."
+        # 排除上一步生成的 Standard 包
+        & 7z.exe a -t7z -mx=9 $fileName . "-xr!${env:ASSET_STD}"
+        if ($LASTEXITCODE -ne 0) { throw "7-Zip failed with exit code $LASTEXITCODE" }
+
         echo "ASSET_CN=$fileName" >> $env:GITHUB_ENV
 
     # ==========================
