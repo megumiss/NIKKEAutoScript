@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { api } from '../api/client'
+import { api, expectBackendRestart } from '../api/client'
 import { t } from '../i18n'
 import router from '../router'
 import { useToastStore } from './toast'
@@ -60,11 +60,13 @@ export const useUpdateStore = defineStore('update', () => {
     if (desktopApplying.value || !isDesktopShell.value) return
     useModalStore().openConfirmModal(t('更新启动器将中断正在运行的任务并自动重启程序，确定继续？'), async () => {
       desktopApplying.value = true
+      expectBackendRestart(true)
       // A successful apply exits and relaunches the shell, so the invoke may
       // never resolve; a rejection carries the failure reason as a string.
       let failed = false
       desktopInvoke()('desktop_update_apply').catch((exception: any) => {
         failed = true
+        expectBackendRestart(false)
         desktopApplying.value = false
         toast.error = String(exception?.message || exception)
       })
@@ -78,6 +80,7 @@ export const useUpdateStore = defineStore('update', () => {
       }
       if (failed) return
       if (!shellExited) {
+        expectBackendRestart(false)
         desktopApplying.value = false
         toast.error = t('更新超时，请手动刷新页面')
         return
@@ -90,6 +93,7 @@ export const useUpdateStore = defineStore('update', () => {
         try { await api.get('/api/system/status'); window.location.reload(); return } catch { }
       }
       sessionStorage.removeItem('nkas-desktop-updated')
+      expectBackendRestart(false)
       desktopApplying.value = false
       toast.error = t('重启超时，请手动刷新页面')
     })
@@ -133,6 +137,7 @@ export const useUpdateStore = defineStore('update', () => {
     const system = useSystemStore()
     try {
       await api.post('/api/update')
+      expectBackendRestart(true)
       // The updater first waits for running instances to stop, then pulls and
       // reloads the backend; poll until it leaves the in-progress states.
       let state = ''
@@ -142,7 +147,8 @@ export const useUpdateStore = defineStore('update', () => {
         // A failed request just means the backend is mid-reload; keep polling.
         try { system.updateInfo = await api.get('/api/system/update') } catch { continue }
         state = String(system.updateInfo.state)
-        if (!['checking', 'start', 'wait', 'run update'].includes(state)) break
+        // The old process can still answer with reload; wait for the new backend instead of refreshing early.
+        if (!['checking', 'start', 'wait', 'run update', 'reload'].includes(state)) break
       }
       if (state === 'failed') {
         toast.error = t('更新失败') + (system.updateInfo.update_error ? `：${system.updateInfo.update_error}` : '')
@@ -159,10 +165,10 @@ export const useUpdateStore = defineStore('update', () => {
       // treating only those as success would silently skip the page reload.
       toast.notify(t('更新完成，正在刷新页面…'))
       for (let waitRound = 0; waitRound < 60; waitRound++) {
-        try { await api.get('/api/system/status'); break } catch { await new Promise(resolve => setTimeout(resolve, 2000)) }
+        try { await api.get('/api/system/status'); window.location.reload(); return } catch { await new Promise(resolve => setTimeout(resolve, 2000)) }
       }
-      window.location.reload()
-    } catch (exception: any) { toast.error = exception.message } finally { updating.value = false }
+      toast.error = t('重启超时，请手动刷新页面')
+    } catch (exception: any) { toast.error = exception.message } finally { expectBackendRestart(false); updating.value = false }
   }
   const restarting = ref(false)
   function forceRestart() {
@@ -172,6 +178,7 @@ export const useUpdateStore = defineStore('update', () => {
   async function executeForceRestart() {
     restarting.value = true
     try { await api.post('/api/restart') } catch (exception: any) { toast.error = exception.message; restarting.value = false; return }
+    expectBackendRestart(true)
     // The backend tears itself down right after answering; give it a moment to
     // go down, then poll until it is back and reload for a fresh state.
     toast.notify(t('后端正在重启，页面将自动刷新…'), 'ok', 4000)
@@ -179,6 +186,7 @@ export const useUpdateStore = defineStore('update', () => {
     for (let round = 0; round < 60; round++) {
       try { await api.get('/api/system/status'); window.location.reload(); return } catch { await new Promise(resolve => setTimeout(resolve, 2000)) }
     }
+    expectBackendRestart(false)
     toast.error = t('重启超时，请手动刷新页面')
     restarting.value = false
   }

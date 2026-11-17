@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { api } from '../api/client'
+import { api, isExpectedDisconnect } from '../api/client'
 import { t, uiLanguage } from '../i18n'
 import router from '../router'
 import { useToastStore } from './toast'
@@ -42,7 +42,9 @@ export const useSystemStore = defineStore('system', () => {
         document.documentElement.dataset.theme = theme
         localStorage.setItem('nkas-theme', theme)
       }
-    } catch (exception: any) { toast.error = exception.message }
+    } catch (exception: any) {
+      if (!isExpectedDisconnect(exception)) toast.error = exception.message
+    }
   }
 
   function toggleTheme() { const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; localStorage.setItem('nkas-theme', theme); api.post('/api/system/theme', { theme }).then(() => systemStatus.value.theme = theme).catch(exception => toast.error = exception.message) }

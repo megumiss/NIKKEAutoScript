@@ -1,5 +1,13 @@
 import { beginEntryChange, checkEntry, entryRequired, requireEntry } from './security'
 
+class NetworkRequestError extends Error {}
+let expectedBackendRestart = false
+
+export function expectBackendRestart(expected: boolean) { expectedBackendRestart = expected }
+export function isExpectedDisconnect(exception: unknown) {
+  return expectedBackendRestart && exception instanceof NetworkRequestError
+}
+
 export async function request(path: string, init: RequestInit = {}) {
   if (entryRequired.value && path !== '/api/system/status') throw new Error('请使用最新的完整安全入口重新连接。')
   const changing = path === '/api/security/entry/regenerate' || (path === '/api/system/deploy' && init.method === 'PATCH' && String(init.body).includes('"SecurityEntryEnabled"'))
@@ -8,6 +16,8 @@ export async function request(path: string, init: RequestInit = {}) {
     const response = await fetch(path, {
       ...init,
       headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
+    }).catch((exception: unknown) => {
+      throw new NetworkRequestError(exception instanceof Error ? exception.message : String(exception))
     })
     const body = await response.json().catch(() => ({}))
     if (response.status === 401 || body.security_entry?.authorized === false) {
