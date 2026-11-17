@@ -277,7 +277,7 @@ jobs:
         git init
         git remote add origin https://github.com/megumiss/NIKKEAutoScript.git
         git fetch origin master --depth=1
-        git reset --soft FETCH_HEAD
+        git reset --mixed FETCH_HEAD
 
     - name: Pack Full CN Version (7-Zip)
       run: |

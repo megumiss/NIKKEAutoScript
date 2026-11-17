@@ -168,7 +168,8 @@ class GitPackUpdater:
             Path(temporary).unlink(missing_ok=True)
 
     def preflight(self, commit, directory):
-        old = set(self.git('ls-files', '-z').stdout.decode('utf-8').rstrip('\0').split('\0'))
+        tracked = self.git('ls-tree', '-rz', '--name-only', '--full-tree', 'HEAD').stdout
+        old = set(tracked.decode('utf-8').rstrip('\0').split('\0'))
         tree = self.git('ls-tree', '-rz', '--full-tree', commit).stdout
         new_files = {}
         for row in tree.split(b'\0'):
