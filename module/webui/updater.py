@@ -183,19 +183,11 @@ class Updater(DeployConfig, GitManager, PipManager):
                 "Check the network connection or the repository address."
             )
 
-        log = self.execute_output(
-            f'"{self.git}" log --not --remotes={source}/* -1 --oneline'
-        )
-        if log:
-            logger.info(
-                f"Cannot find local commit {log.split()[0]} in upstream, skip update"
-            )
-            return False
+        local_sha, _, _, _ = self.get_commit()
+        sha1, _, _, message = self.get_commit(f"{source}/{self.Branch}")
 
-        sha1, _, _, message = self.get_commit(f"..{source}/{self.Branch}")
-
-        if sha1:
-            logger.info(f"New update available")
+        if sha1 and local_sha != sha1:
+            logger.info(f"Update available")
             logger.info(f"{sha1[:8]} - {message}")
             return True
         else:

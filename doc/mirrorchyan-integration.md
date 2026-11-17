@@ -35,7 +35,7 @@ Mirror 失败不静默切到其他来源；用户可以修正 CDK 或显式切�
 普通浏览器可更新源码；启动器更新仅在 Tauri 桌面壳中可用。
 
 Mirror源码分发的是官方 master 分支，不限制配置中的 Repository 地址或本地分支名称。
-检查更新读取当前 HEAD；实际应用时保护未提交修改、未跟踪文件冲突，并核对更新基准。
+检查更新读取当前 HEAD；实际应用与 Git 更新一致，直接重置已跟踪修改和本地提交，未跟踪文件冲突仍会中止。
 请使用干净的官方安装验证源码更新，不在本分支的开发工作区点击实际覆盖更新。
 
 ## 实现
@@ -46,7 +46,7 @@ Mirror源码分发的是官方 master 分支，不限制配置中的 Repository 
 [Mirror 客户端](../deploy/mirrorchyan.py) 负责版本 API、私有 CDK、下载 SHA-256 / 大小校验和业务错误映射。
 [Git pack 更新器](../deploy/git_pack.py) 执行：
 
-1. 校验安装、分支和工作区，读取完整旧 HEAD，用 cat-file 计算 UTC committer 版本。
+1. 校验安装和分支，读取完整旧 HEAD，用 cat-file 计算 UTC committer 版本。
 2. 下载并校验 ZIP；只接受 pack、idx、meta.json，拒绝路径越界、符号链接、重复条目与超大展开量。
 3. 核对 meta.base 与 HEAD，基准失配时不带 current_version 重取完整快照；下载后再次核对 HEAD。
 4. 使用 index-pack --fsck-objects --stdin 导入并重建索引，验证目标对象和提交时间；不要求完整父历史。

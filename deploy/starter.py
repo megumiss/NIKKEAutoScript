@@ -97,7 +97,7 @@ class Starter(GitManager, PipManager, NKASManager):
             before_sha, _ = self._get_head_commit()
             try:
                 self.git_update()
-            except ExecutionError as e:
+            except (ExecutionError, OSError) as e:
                 self.mirror_updater().rollback()
                 error = str(e).strip() or 'Git update failed'
                 print(f'Auto update failed, skip update and continue startup: {error}')
@@ -107,7 +107,7 @@ class Starter(GitManager, PipManager, NKASManager):
                     self.invalidate_dependency_cache()
                     self.pip_install()
                     self.mirror_updater().ready()
-                except ExecutionError as e:
+                except (ExecutionError, OSError) as e:
                     if self.UpdateSource != 'mirrorchyan':
                         raise
                     self.mirror_updater().rollback()

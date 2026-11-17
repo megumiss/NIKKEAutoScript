@@ -16,6 +16,13 @@ class UpdateLock:
             raise UpdateBusyError('更新锁目录越界。')
         self.stream = None
 
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.release()
+
     def acquire(self):
         if self.stream is not None:
             return

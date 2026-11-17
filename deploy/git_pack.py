@@ -259,8 +259,6 @@ class GitPackUpdater:
         self.eligible()
         if self.journal.exists():
             raise MirrorError('上次 Mirror源码更新尚未确认，请先重启程序完成恢复。')
-        if self.text('status', '--porcelain', '-uno'):
-            raise MirrorError('源码存在本地修改，Mirror更新已取消；请先提交或备份修改。')
         before = self.text('rev-parse', 'HEAD')
         version, data = self.check()
         if version == data['version_name']:
@@ -296,8 +294,8 @@ class GitPackUpdater:
                     continue
                 break
             new_files = self.preflight(meta['commit'], staging)
-            if self.text('rev-parse', 'HEAD') != before or self.text('status', '--porcelain', '-uno'):
-                raise MirrorError('应用前源码已改变，Mirror更新已取消。')
+            if self.text('rev-parse', 'HEAD') != before:
+                raise MirrorError('应用前 HEAD 已改变，Mirror更新已取消。')
             shallow = self.shallow_path()
             old_ref = self.git('rev-parse', '--verify', 'refs/remotes/origin/master', check=False)
             record = {

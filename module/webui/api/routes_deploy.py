@@ -528,6 +528,49 @@ async def deploy_schema(_: Request):
     return JSONResponse({'groups': groups}, headers={'Cache-Control': 'no-store'})
 
 
+def _save_update_config(config, key, value):
+    from deploy.update_lock import UpdateBusyError, UpdateLock
+    from module.webui.updater import updater
+
+    if updater.state in ('checking', 'start', 'wait', 'run update', 'reload'):
+        return _json_error('更新期间不能修改更新源或 CDK。', 409)
+    try:
+        with UpdateLock(updater.root_filepath):
+            if updater.state in ('checking', 'start', 'wait', 'run update', 'reload'):
+                return _json_error('更新期间不能修改更新源或 CDK。', 409)
+            if key == 'MirrorChyanCDK':
+                try:
+                    configured = save_cdk(config.file, value)
+                except ValueError as exc:
+                    return _json_error(str(exc), 422)
+                except (OSError, MirrorError):
+                    return _json_error('无法保存 Mirror酱 CDK，请检查配置目录权限。', 500)
+                updater.state = 0
+                updater.check_error = ''
+                updater.update_error = ''
+                updater.source_info = {}
+                return JSONResponse({'status': 'success', 'value': SECRET_MASK if configured else '',
+                                     'configured': configured}, headers={'Cache-Control': 'no-store'})
+            if value not in SELECT_OPTIONS[key]:
+                return _json_error(f'{key} must be one of {SELECT_OPTIONS[key]}.', 422)
+            try:
+                value = _coerce(key, value, config.config_template[key])
+                setattr(config, key, value)
+            except ValueError as exc:
+                return _json_error(str(exc), 422)
+            except OSError as exc:
+                logger.exception(exc)
+                return _json_error(str(exc), 500)
+            updater.read()
+            updater.state = 0
+            updater.check_error = ''
+            updater.update_error = ''
+            updater.source_info = {}
+            return JSONResponse({'status': 'success', 'value': value})
+    except UpdateBusyError:
+        return _json_error('更新期间不能修改更新源或 CDK。', 409)
+
+
 async def deploy_patch(request: Request):
     try:
         data = await request.json()
@@ -539,24 +582,7 @@ async def deploy_patch(request: Request):
     if key in EXCLUDED_KEYS or key not in config.config_template:
         return _json_error(f'Unknown deploy key: {key}', 404)
     if key in ('UpdateSource', 'MirrorChyanCDK'):
-        from module.webui.updater import updater
-        from deploy.update_lock import UpdateLock
-        if (updater.state in ('checking', 'start', 'wait', 'run update', 'reload')
-                or UpdateLock.busy(updater.root_filepath)):
-            return _json_error('更新期间不能修改更新源或 CDK。', 409)
-        if key == 'MirrorChyanCDK':
-            try:
-                configured = save_cdk(config.file, value)
-            except ValueError as exc:
-                return _json_error(str(exc), 422)
-            except (OSError, MirrorError):
-                return _json_error('无法保存 Mirror酱 CDK，请检查配置目录权限。', 500)
-            updater.state = 0
-            updater.check_error = ''
-            updater.update_error = ''
-            updater.source_info = {}
-            return JSONResponse({'status': 'success', 'value': SECRET_MASK if configured else '',
-                                 'configured': configured}, headers={'Cache-Control': 'no-store'})
+        return _save_update_config(config, key, value)
     if key == 'SecurityEntryEnabled':
         if not isinstance(value, bool):
             return _json_error('Expected a boolean value.', 422)
@@ -616,12 +642,6 @@ async def deploy_patch(request: Request):
     # Theme, language and the console switch take effect immediately;
     # everything else applies on the next restart, which the page warning
     # calls out.
-    if key == 'UpdateSource':
-        updater.read()
-        updater.state = 0
-        updater.check_error = ''
-        updater.update_error = ''
-        updater.source_info = {}
     if key == 'Theme':
         State.theme = value
     elif key == 'Language':
@@ -635,10 +655,10 @@ async def deploy_patch(request: Request):
 
 
 async def deploy_reset(request: Request):
-    from deploy.update_lock import UpdateLock
+    from deploy.update_lock import UpdateBusyError, UpdateLock
     from module.webui.updater import updater
-    if (updater.state in ('checking', 'start', 'wait', 'run update', 'reload')
-            or UpdateLock.busy(updater.root_filepath)):
+
+    if updater.state in ('checking', 'start', 'wait', 'run update', 'reload'):
         return _json_error('更新期间不能重置部署配置。', 409)
     try:
         data = await request.json()
@@ -646,20 +666,26 @@ async def deploy_reset(request: Request):
         data = {}
     template = RESET_TEMPLATES.get(data.get('template'), RESET_TEMPLATES['intl'])
     try:
-        replacement = poor_yaml_read(template)
-        # A general deploy reset must never silently remove access protection.
-        replacement['SecurityEntryEnabled'] = State.deploy_config.SecurityEntryEnabled
-        poor_yaml_write(replacement, State.deploy_config.file)
-        State.deploy_config.read()
-    except OSError as exc:
-        logger.exception(exc)
-        return _json_error(str(exc), 500)
-    config = State.deploy_config
-    State.theme = config.Theme
-    lang.set_language(config.Language)
-    updater.read()
-    updater.state = 0
-    updater.check_error = ''
-    updater.update_error = ''
-    updater.source_info = {}
-    return JSONResponse({'status': 'success', 'theme': config.Theme, 'language': config.Language})
+        with UpdateLock(updater.root_filepath):
+            if updater.state in ('checking', 'start', 'wait', 'run update', 'reload'):
+                return _json_error('更新期间不能重置部署配置。', 409)
+            try:
+                replacement = poor_yaml_read(template)
+                # A general deploy reset must never silently remove access protection.
+                replacement['SecurityEntryEnabled'] = State.deploy_config.SecurityEntryEnabled
+                poor_yaml_write(replacement, State.deploy_config.file)
+                State.deploy_config.read()
+            except OSError as exc:
+                logger.exception(exc)
+                return _json_error(str(exc), 500)
+            config = State.deploy_config
+            State.theme = config.Theme
+            lang.set_language(config.Language)
+            updater.read()
+            updater.state = 0
+            updater.check_error = ''
+            updater.update_error = ''
+            updater.source_info = {}
+            return JSONResponse({'status': 'success', 'theme': config.Theme, 'language': config.Language})
+    except UpdateBusyError:
+        return _json_error('更新期间不能重置部署配置。', 409)
