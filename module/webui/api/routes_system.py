@@ -31,6 +31,7 @@ async def status(request: Request):
         'version': _git_version(), 'updater_state': updater.state,
         'theme': State.deploy_config.Theme, 'language': lang.LANG,
         'home_page': State.deploy_config.HomePage,
+        'config_migration_pending': State.config_migration_pending,
         'console_enabled': bool(State.deploy_config.ConsoleEnabled),
     })
     return JSONResponse(result, headers={'Cache-Control': 'no-store'})

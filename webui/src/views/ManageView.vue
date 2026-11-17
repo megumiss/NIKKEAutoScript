@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import ConfigMigrationModal from '../components/ConfigMigrationModal.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { exportTextFile } from '../composables/useFileExport'
 import { t } from '../i18n'
@@ -9,6 +11,7 @@ import { useToastStore } from '../stores/toast'
 
 const instancesStore = useInstancesStore()
 const toast = useToastStore()
+const migrationOpen = ref(false)
 const { instances, dragIndex, dragOverIndex } = storeToRefs(instancesStore)
 const { displayStatus, displayStatusClass, initials, avatarUrl, onDragStart, onDragOver, onDragEnd, onDrop, saveRemark, importInstance } = instancesStore
 const { openCreateModal, openRenameModal, openDeleteModal, openAvatarModal } = useModalStore()
@@ -31,7 +34,9 @@ async function exportInstance(name: string, mod: string) {
       <div style="flex:1"><h2>{{ t('多开') }}</h2><div class="sub">{{ t('实例总数') }}: {{ instances.length }}</div></div>
       <button class="btn primary" @click="openCreateModal"><AppIcon name="plus" :size="15" color="currentColor" /> {{ t('新建实例') }}</button>
       <label class="btn"><AppIcon name="import" :size="14" color="currentColor" /> {{ t('导入配置') }}<input type="file" accept=".json" hidden @change="importInstance"></label>
+      <button class="btn" @click="migrationOpen = true"><AppIcon name="import" :size="14" color="currentColor" /> {{ t('迁移配置') }}</button>
     </article>
+    <ConfigMigrationModal v-if="migrationOpen" @close="migrationOpen = false" />
     <article class="card manage-table" style="overflow:hidden">
       <table>
         <colgroup><col style="width:22%"><col style="width:10%"><col style="width:15%"><col><col style="width:260px"></colgroup>

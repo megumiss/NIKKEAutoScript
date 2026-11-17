@@ -127,6 +127,9 @@ class ProcessManager:
             return self._start_locked(func, ev, config_name, request_generation)
 
     def _start_locked(self, func, ev, config_name=None, request_generation=None) -> str:
+        if State.config_migration_pending:
+            logger.warning(f'Skip starting "{self.config_name}": configuration migration requires a restart')
+            return START_CANCELLED
         if config_name is not None and not self.is_current(config_name):
             logger.warning(f'Skip starting "{config_name}": instance was renamed or replaced')
             return START_GONE

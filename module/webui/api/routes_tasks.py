@@ -16,6 +16,8 @@ from module.webui.api.service_tasks import TaskService
 
 
 def queue_data(name):
+    if State.config_migration_pending:
+        return QueueInfo([], [], []).dict()
     data = State.config_updater.read_file(name)
     now = datetime.now()
     pending, waiting, invalid = [], [], []

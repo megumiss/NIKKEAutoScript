@@ -8,6 +8,7 @@ from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
 from module.webui.security_entry import entry_info, regenerate_entry
+from . import routes_migration
 from . import (routes_bla, routes_calendar, routes_config, routes_console, routes_cookie_sync, routes_deploy, routes_device,
                routes_instances, routes_logs, routes_maintenance, routes_notify, routes_preview, routes_proxy,
                routes_schedule, routes_search, routes_serial, routes_stats, routes_system, routes_tasks, routes_tools, ws)
@@ -24,12 +25,14 @@ def create_spa_mount():
 
 
 def mount_api(app):
+    app.add_middleware(routes_migration.MigrationMiddleware)
     routes = [
         Route('/api/security/entry', entry_info, methods=['GET']),
         Route('/api/security/entry/regenerate', regenerate_entry, methods=['POST']),
         Route('/api/instances', routes_instances.instances, methods=['GET']),
         Route('/api/instances', routes_instances.create, methods=['POST']),
         Route('/api/avatars', routes_instances.avatar_list, methods=['GET']),
+        Route('/api/instances/migrate', routes_migration.migrate, methods=['POST']),
         Route('/api/instances/import', routes_instances.import_config, methods=['POST']),
         Route('/api/instances/order', routes_instances.reorder, methods=['POST']),
         Route('/api/instances/{name:str}/rename', routes_instances.rename, methods=['POST']),

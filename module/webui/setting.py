@@ -72,6 +72,7 @@ class State:
     ocr_server = None
     electron: bool = False
     theme: str = "light"
+    config_migration_pending: bool = False
 
     @classmethod
     def init(cls):

@@ -76,6 +76,7 @@ export const useSystemStore = defineStore('system', () => {
     try {
       const status = await api.get('/api/system/status')
       watchUpdaterState(status.updater_state)
+      if (status.config_migration_pending) return
       // loadInstances 内含 loadSerial；周期刷新让状态展示（运行中/空闲）拿到
       // 最新的 current_task
       const instancesStore = useInstancesStore()
