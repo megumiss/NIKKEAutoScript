@@ -293,6 +293,7 @@ jobs:
     # 9. 发布
     # ==========================
     - name: Create Release and Upload
+      id: release
       uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844  # v1
       with:
         tag_name: ${{ env.TAG_NAME }}
@@ -307,6 +308,16 @@ jobs:
           ${{ env.DESKTOP_MANIFEST }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Append MirrorChyan Download Link
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_ID: ${{ steps.release.outputs.id }}
+      run: |
+        $release = gh api "repos/${{ github.repository }}/releases/$env:RELEASE_ID" | ConvertFrom-Json
+        $link = '<a href="https://mirrorchyan.com/zh/projects?rid=NIKKEAutoScript" rel="nofollow">已有 Mirror酱 CDK？前往 Mirror酱 高速下载</a>'
+        $body = $release.body + "`n`n" + $link
+        gh api --method PATCH "repos/${{ github.repository }}/releases/$env:RELEASE_ID" --raw-field body="$body"
 
   # ==========================
   # deploy-desktop: 发布桌面 exe 到 VPS
