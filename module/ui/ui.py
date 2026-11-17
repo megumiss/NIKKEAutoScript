@@ -4,7 +4,22 @@ from module.exception import GameNotRunningError, GamePageUnknownError, GameStar
 from module.handler.assets import *
 from module.handler.info_handle import InfoHandler
 from module.logger import logger
-from module.ui.assets import ARK_CHECK_ABOVEGROUND, GOTO_MAIN, UI_LOADING_1, UI_LOADING_2, UI_LOADING_3, UI_LOADING_4
+from module.ui.assets import (
+    ARK_CHECK_ABOVEGROUND,
+    GOTO_MAIN,
+    UI_LOADING_1,
+    UI_LOADING_2,
+    UI_LOADING_3,
+    UI_LOADING_4,
+    UI_LOADING_ELYSION_DARK,
+    UI_LOADING_ELYSION_LIGHT,
+    UI_LOADING_MISSILIS_DARK,
+    UI_LOADING_MISSILIS_DARK_ALT,
+    UI_LOADING_MISSILIS_LIGHT,
+    UI_LOADING_PILGRIM_DARK,
+    UI_LOADING_PILGRIM_LIGHT,
+    UI_LOADING_TETRA_LIGHT,
+)
 from module.ui.page import (
     Page,
     page_arena,
@@ -46,6 +61,21 @@ from module.ui.page import (
     page_tribe_tower,
     page_unknown,
 )
+
+UI_LOADING_BUTTONS = [
+    UI_LOADING_1,
+    UI_LOADING_2,
+    UI_LOADING_3,
+    UI_LOADING_4,
+    UI_LOADING_ELYSION_DARK,
+    UI_LOADING_ELYSION_LIGHT,
+    UI_LOADING_MISSILIS_DARK,
+    UI_LOADING_MISSILIS_DARK_ALT,
+    UI_LOADING_MISSILIS_LIGHT,
+    UI_LOADING_PILGRIM_DARK,
+    UI_LOADING_PILGRIM_LIGHT,
+    UI_LOADING_TETRA_LIGHT,
+]
 
 
 class UI(InfoHandler):
@@ -99,6 +129,9 @@ class UI(InfoHandler):
             return self.appear_any([page.check_button, ARK_CHECK_ABOVEGROUND], offset=offset, interval=interval)
         return self.appear(page.check_button, offset=offset, interval=interval)
 
+    def ui_is_loading(self):
+        return self.appear_any(UI_LOADING_BUTTONS, offset=(30, 30))
+
     def ui_get_current_page(self, skip_first_screenshot=True):
         logger.info('UI get current page')
 
@@ -133,6 +166,10 @@ class UI(InfoHandler):
                     logger.attr('UI', page.name)
                     self.ui_current = page
                     return page
+
+            if self.ui_is_loading():
+                timeout.reset()
+                continue
 
             # Unknown page but able to handle
             logger.info('Unknown ui page')
@@ -227,8 +264,13 @@ class UI(InfoHandler):
             else:
                 confirm_timer.reset()
 
-            # if self.handle_event():
-            #     continue
+            if self.ui_is_loading():
+                confirm_timer.reset()
+                continue
+
+            if self.ui_additional():
+                confirm_timer.reset()
+                continue
 
             # Other pages
             clicked = False
@@ -237,7 +279,7 @@ class UI(InfoHandler):
                 if not page.parent or not page.check_button:
                     continue
 
-                if self.ui_page_appear(page, offset=offset, interval=4):
+                if self.ui_page_appear(page, offset=offset, interval=2):
                     logger.info(f'Page switch: {page} -> {page.parent}')
                     button = page.links[page.parent]
                     self.device.click(button)
@@ -313,20 +355,8 @@ class UI(InfoHandler):
         if self.handle_login():
             return True
 
-        """
-           CONFIRM_A 按钮为平面或立体，'确认'没有阴影
-           CONFIRM_B 按钮为立体，'确认'有阴影
-           CONFIRM_B 和 CONFIRM_C 相似
-        """
-
         # 未知弹窗的确认
-        if self.appear_then_click(CONFIRM_A, offset=(30, 30), interval=3, static=False):
-            return True
-
-        if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3, static=False):
-            return True
-
-        if self.appear_then_click(CONFIRM_C, offset=(30, 30), interval=3, static=False):
+        if self.handle_unknown_popup():
             return True
 
     def ui_goto_main(self):
@@ -341,12 +371,7 @@ class UI(InfoHandler):
         while 1:
             self.device.screenshot()
 
-            if (
-                self.appear(UI_LOADING_1, offset=(30, 30))
-                or self.appear(UI_LOADING_2, offset=(30, 30))
-                or self.appear(UI_LOADING_3, offset=(30, 30))
-                or self.appear(UI_LOADING_4, offset=(30, 30))
-            ):
+            if self.ui_is_loading():
                 # 停止未出现检查时间计时
                 overall_timer.clear()
 

@@ -74,7 +74,7 @@ class GiftBase(UI):
                 confirm_timer.clear()
 
             # 打开商店
-            if click_timer.reached() and self.appear_then_click(MAIN_GOTO_CASH_SHOP, offset=30, interval=3):
+            if click_timer.reached() and self.appear_then_click(MAIN_GOTO_CASH_SHOP, offset=30, interval=2):
                 click_timer.reset()
                 continue
 

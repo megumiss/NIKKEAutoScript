@@ -35,12 +35,14 @@ class Reward(UI):
             if self.handle_paid_gift():
                 confirm_timer.reset()
                 continue
-            # 判断是否有奖励可领
-            if self.appear(NO_REWARDS_1, offset=(10, 10), interval=1) and confirm_timer.reached():
-                logger.info('Reward done after check NO_REWARDS_1')
-                break
+            # 无奖励时收获按钮仍可匹配，逐帧检查并阻止空点重置完成确认计时。
+            if self.appear(NO_REWARDS_1, offset=(10, 10)):
+                if confirm_timer.reached():
+                    logger.info('Reward done after check NO_REWARDS_1')
+                    break
+                continue
             # 点击获得奖励
-            if self.appear_then_click(RECEIVE, offset=(30, 30), interval=10):
+            if self.appear_then_click(RECEIVE, offset=(30, 30), interval=2):
                 confirm_timer.reset()
                 continue
 
