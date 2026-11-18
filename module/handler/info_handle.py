@@ -7,11 +7,21 @@ from module.base.utils import point2str
 from module.config.account import load_account
 
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
-from module.exception import AccountError, CaptchaRequired, GameServerUnderMaintenance, GameStuckError, GameSystemError
+from module.exception import (
+    AccountError,
+    CaptchaRequired,
+    GameServerUnderMaintenance,
+    GameStart,
+    GameStuckError,
+    GameSystemError,
+)
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE_LEFT, TEMPLATE_RED_CIRCLE_RIGHT, TEMPLATE_RED_CIRCLE_TOP
 from module.logger import logger
 from module.ui.assets import GOTO_BACK, MAIN_CHECK
+
+
+STUCK_RECOVERY_MINUTES = 3
 
 
 class InfoHandler(ModuleBase):
@@ -201,15 +211,89 @@ class InfoHandler(ModuleBase):
         if check:
             raise GameSystemError(f'Detected {check.name}')
 
+    @staticmethod
+    def handle_stuck(device):
+        """卡死计时前三分钟，每分钟尝试恢复一次并返回原任务。"""
+        minute = int(device.stuck_timer.current() // 60)
+        if minute <= device.stuck_check_minute or minute > STUCK_RECOVERY_MINUTES:
+            return False
+
+        device.stuck_check_minute = minute
+        device.stuck_recovery_active = True
+        try:
+            handler = InfoHandler(device.config, device=device)
+            check = handler.detect_system_error()
+            if check:
+                logger.warning(f'Recovering {check.name} at stuck minute {minute}')
+                handler.ensure_system_error_closed()
+                device.stuck_recovery_handled = True
+                return True
+
+            handled = bool(handler.ui_additional(check_system_error=False))
+            if handled:
+                device.stuck_recovery_handled = True
+                logger.info(f'Stuck recovery handled current screen at minute {minute}')
+            return handled
+        finally:
+            device.stuck_recovery_active = False
+
+    def ui_additional(self, check_system_error=True):
+        """处理任务等待期间出现的奖励、公告和登录等界面。"""
+        if self.handle_level_up():
+            return True
+
+        if self.handle_reward():
+            return True
+
+        if self.handle_paid_gift():
+            return True
+
+        if self.handle_announcement():
+            return True
+
+        if self.handle_login_reward():
+            return True
+
+        if self.handle_server():
+            raise GameStart
+
+        if self.handle_download():
+            raise GameStart
+
+        if check_system_error and self.handle_system_error():
+            return True
+
+        if self.handle_system_maintenance():
+            return True
+
+        if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30)):
+            raise GameStart
+
+        if self.appear(LOGO_PAGE_CHECK, offset=(30, 30)):
+            raise GameStart
+
+        if self.handle_login():
+            return True
+
+        if self.handle_unknown_popup():
+            return True
+
+        return False
+
     def ensure_system_error_closed(self):
-        self.device.stuck_record_clear()
+        """立即关闭错误弹窗，最多等待 60 秒返回主页或登录页。"""
+        if not self.device.stuck_recovery_active:
+            self.device.stuck_record_clear()
         self.device.click_record_clear()
-        timeout = Timer(60, count=60).start()
+        recovery_timeout = Timer(60, count=60).start()
 
         while 1:
+            # 恢复过程有独立超时，恢复中的截图不再触发嵌套卡死检查。
+            if not self.device.stuck_recovery_active:
+                self.device.stuck_record_clear()
             self.device.screenshot()
 
-            if timeout.reached():
+            if recovery_timeout.reached():
                 raise GameStuckError('System error recovery timed out waiting for main or login page')
 
             if self.detect_system_error():
@@ -222,7 +306,8 @@ class InfoHandler(ModuleBase):
                 [LOGIN_PAGE_CHECK, LOGO_PAGE_CHECK, LOGIN_CHECK, LOGIN_CHECK_B], offset=(30, 30)
             )
             if returned_to_main or returned_to_login:
-                self.device.stuck_record_clear()
+                if not self.device.stuck_recovery_active:
+                    self.device.stuck_record_clear()
                 self.device.click_record_clear()
                 logger.info('System error recovery completed')
                 return

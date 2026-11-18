@@ -20,6 +20,7 @@ from module.exception import (
     GameStart,
     GameStuckError,
     GameSystemError,
+    GameTaskRestart,
     GameTooManyClickError,
     RequestHumanTakeover,
     ScreenResolutionNotEnough,
@@ -170,6 +171,14 @@ class NikkeAutoScript:
                     self.save_error_log()
                     InfoHandler(self.config, device=self.device).ensure_system_error_closed()
                     logger.info(f'Restart task `{command}` after system error recovery ({retry + 1}/3)')
+                except GameTaskRestart as e:
+                    logger.warning(f'Task `{command}` cannot continue after stuck recovery: {e}')
+                    if retry >= 1:
+                        raise GameStuckError(f'Task `{command}` still cannot continue after 1 task restart') from e
+
+                    self.device.stuck_record_clear()
+                    self.device.click_record_clear()
+                    logger.info(f'Restart current task `{command}` (1/1)')
         except TaskEnd:
             return True
         except GameNotRunningError as e:

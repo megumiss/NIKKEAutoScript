@@ -1,6 +1,6 @@
 from module.base.decorator import run_once
 from module.base.timer import Timer
-from module.exception import GameNotRunningError, GamePageUnknownError, GameStart
+from module.exception import GameNotRunningError, GamePageUnknownError
 from module.handler.assets import *
 from module.handler.info_handle import InfoHandler
 from module.logger import logger
@@ -268,10 +268,6 @@ class UI(InfoHandler):
                 confirm_timer.reset()
                 continue
 
-            if self.ui_additional():
-                confirm_timer.reset()
-                continue
-
             # Other pages
             clicked = False
             for page in visited:
@@ -300,63 +296,6 @@ class UI(InfoHandler):
         else:
             logger.info('Goto %s' % destination)
             self.ui_goto(destination, confirm_wait=confirm_wait, skip_first_screenshot=True)
-            return True
-
-    def ui_additional(self):
-        """
-        Handle all annoying popups during UI switching.
-
-        Args:
-            get_ship:
-        """
-        # TODO SKIP, 战斗, 公告, etc.
-
-        # 指挥官等级升级
-        if self.handle_level_up():
-            return True
-
-        # ----- REWARD -----
-        if self.handle_reward():
-            return True
-
-        # 礼包
-        if self.handle_paid_gift():
-            return True
-
-        if self.handle_announcement():
-            return True
-
-        # Daily Login, Memories Spring, Monthly Card, etc.
-        if self.handle_login_reward():
-            return True
-
-        if self.handle_server():
-            raise GameStart
-
-        if self.handle_download():
-            raise GameStart
-
-        # 系统错误
-        if self.handle_system_error():
-            return True
-
-        if self.handle_system_maintenance():
-            return True
-
-        if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30)):
-            raise GameStart
-
-        if self.appear(LOGO_PAGE_CHECK, offset=(30, 30)):
-            raise GameStart
-
-        # if self.handle_event():
-        #     return True
-
-        if self.handle_login():
-            return True
-
-        # 未知弹窗的确认
-        if self.handle_unknown_popup():
             return True
 
     def ui_goto_main(self):

@@ -26,6 +26,10 @@ class GameStuckError(Exception):
     pass
 
 
+class GameTaskRestart(Exception):
+    pass
+
+
 class GameSystemError(Exception):
     pass
 
