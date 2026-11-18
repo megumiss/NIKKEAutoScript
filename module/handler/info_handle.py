@@ -161,8 +161,8 @@ class InfoHandler(ModuleBase):
             return True
 
     def handle_announcement(self):
-        if self.appear(ANNOUNCEMENT_CHECK, offset=(30, 30), threshold=0.74, static=False) and self.appear_then_click(
-            ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
+        if self.appear(ANNOUNCEMENT_CHECK, offset=(30, 30), threshold=0.85, static=False) and self.appear_then_click(
+            ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.85, static=False
         ):
             return True
 
