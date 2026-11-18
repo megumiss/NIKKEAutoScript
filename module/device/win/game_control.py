@@ -625,6 +625,38 @@ class WinClient:
             flags |= win32con.SWP_NOACTIVATE
         return flags
 
+    def _correct_client_resolution(self, hwnd, screen_n, client_width, client_height, position):
+        """按实测客户区修正窗口大小，兼容 Unity 边框与系统预估不一致的情况。"""
+        rect = win32gui.GetClientRect(hwnd)
+        for attempt in range(3):
+            actual_width = rect[2] - rect[0]
+            actual_height = rect[3] - rect[1]
+            if (actual_width, actual_height) == (client_width, client_height):
+                return rect
+            if actual_width <= 0 or actual_height <= 0:
+                logger.warning('Cannot correct resolution while the window client area is empty')
+                return rect
+
+            # 实测非客户区尺寸可覆盖 DPI、主题及游戏自定义边框造成的偏差。
+            window_rect = win32gui.GetWindowRect(hwnd)
+            window_width = window_rect[2] - window_rect[0] + client_width - actual_width
+            window_height = window_rect[3] - window_rect[1] + client_height - actual_height
+            monitor = win32api.EnumDisplayMonitors()[screen_n][0]
+            work_area = win32api.GetMonitorInfo(monitor)['Work']
+            x, y = self.calculate_window_position(screen_n, window_width, window_height, position)
+            x = max(work_area[0], min(x, work_area[2] - window_width))
+            y = max(work_area[1], min(y, work_area[3] - window_height))
+            logger.info(
+                f'Correcting client resolution ({attempt + 1}/3): {actual_width}x{actual_height} '
+                f'-> {client_width}x{client_height}, window={window_width}x{window_height}'
+            )
+            result = win32gui.SetWindowPos(hwnd, 0, x, y, window_width, window_height, self._set_window_pos_flags())
+            if result == 0:
+                raise RuntimeError('Failed to correct window size')
+            time.sleep(0.1)
+            rect = win32gui.GetClientRect(hwnd)
+        return rect
+
     def change_resolution(self, screen_n, client_width, client_height, position='center'):
         """
         设置窗口客户区大小为指定分辨率，并调整位置
@@ -698,7 +730,7 @@ class WinClient:
                 raise Exception('Failed to set window size')
 
             # 验证设置是否成功
-            new_rect = win32gui.GetClientRect(hwnd)
+            new_rect = self._correct_client_resolution(hwnd, screen_n, client_width, client_height, position)
             logger.debug(f'Client size after setting: {new_rect[2]}x{new_rect[3]}')
 
             if new_rect[2] != client_width or new_rect[3] != client_height:
@@ -804,7 +836,7 @@ class WinClient:
                 raise Exception('Failed to set window size')
 
             # 验证客户区大小
-            new_rect = win32gui.GetClientRect(hwnd)
+            new_rect = self._correct_client_resolution(hwnd, screen_n, client_width, client_height, position)
             logger.debug(f'Client size after setting: {new_rect[2]}x{new_rect[3]}')
 
             if new_rect[2] != client_width or new_rect[3] != client_height:
