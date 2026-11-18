@@ -647,15 +647,15 @@ class WinClient:
             rect = win32gui.GetClientRect(hwnd)
             window_rect = win32gui.GetWindowRect(hwnd)
             logger.debug(f'Original window rect: {window_rect}, Client rect: {rect}')
-            # 计算边框宽度和高度
-            border_width = (window_rect[2] - window_rect[0] - rect[2]) // 2
-            border_height = (window_rect[3] - window_rect[1] - rect[3]) // 2
+            # 保留非客户区总尺寸；标题栏加边框可能为奇数，平分取整会丢失 1 像素。
+            border_width = window_rect[2] - window_rect[0] - (rect[2] - rect[0])
+            border_height = window_rect[3] - window_rect[1] - (rect[3] - rect[1])
 
-            logger.debug(f'Calculated border width: {border_width}, border height: {border_height}')
+            logger.debug(f'Total non-client width: {border_width}, height: {border_height}')
 
             # 计算需要的窗口大小（包括边框）
-            window_width = client_width + 2 * border_width
-            window_height = client_height + 2 * border_height
+            window_width = client_width + border_width
+            window_height = client_height + border_height
             logger.debug(f'Required window size: {window_width}x{window_height}')
 
             # 获取指定屏幕的工作区
