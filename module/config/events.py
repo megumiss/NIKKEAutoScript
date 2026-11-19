@@ -8,6 +8,17 @@ story_part / story_difficulty 是无时间表时的当前阶段，不代表模�
 
 EVENTS = [
     {
+        "event_id": "event_20261119",
+        "event_name": "SKY ON THE ROCK",
+        "event_type": 2,
+        "mini_game": False,
+        "mini_game_play": True,
+        "extend": False,
+        "story_part": "Story_1",
+        "story_difficulty": "Normal",
+        "story_schedule": None,
+    },
+    {
         "event_id": "event_20261029",
         "event_name": "MARIAn",
         "event_type": 1,
