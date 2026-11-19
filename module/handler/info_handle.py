@@ -171,9 +171,9 @@ class InfoHandler(ModuleBase):
             return True
 
     def handle_announcement(self):
-        if self.appear(ANNOUNCEMENT_CHECK, offset=(30, 30), threshold=0.85, static=False) and self.appear_then_click(
-            ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.85, static=False
-        ):
+        if ANNOUNCEMENT_CHECK.match_with_scale(
+            self.device.image, threshold=0.85, scale_range=(0.75, 1.05)
+        ) and self.appear_then_click(ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.85, static=False):
             return True
 
     def handle_unknown_popup(self):
