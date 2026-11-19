@@ -275,8 +275,7 @@ class Conversation(UI):
 
                     # 获取正确答案
                     dialogue = Dialogue(f'./module/conversation/{Langs.DIALOGUE_JSON}')
-                    right_answer = dialogue.get_answer(nikke, answer_list)
-                    index = answer_list.index(right_answer)
+                    index = dialogue.get_answer_index(nikke, answer_list)
 
                     # 点击对应选项
                     logger.info(
