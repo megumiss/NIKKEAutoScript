@@ -663,6 +663,7 @@ def export_session(session, rules, out_root=None, run_extract=None, allow_partia
     Args:
         out_root: 覆盖输出目录（默认 assets/zh-CN/event_dated/<event_id>，测试用）
         run_extract: 是否跑 button_extract 重新生成 assets.py（默认仅在 out_root 为 None 时）
+        allow_partial: 是否允许仍有必需模板未确认时导出
 
     Returns:
         dict: exported(名单), missing(未确认清单), out_dir

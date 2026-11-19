@@ -112,7 +112,7 @@ def main():
     p.add_argument('--event-id')
     p.add_argument('--out-root', default=None, help='覆盖输出目录（默认 assets/zh-CN/event_dated/<event_id>）')
     p.add_argument('--no-extract', action='store_true', help='不重新生成 assets.py')
-    p.add_argument('--allow-partial', action='store_true', help='显式导出尚未完成的阶段（仅 CLI）')
+    p.add_argument('--allow-partial', action='store_true', help='显式导出尚未完成的阶段')
 
     p = sub.add_parser('phase', help='追加更新阶段，保留已有截图和校对结果')
     p.add_argument('--event-id')

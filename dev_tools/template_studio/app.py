@@ -498,7 +498,7 @@ async def api_export(request):
     if session is None:
         return JSONResponse({'error': '请先新建/打开会话'}, status_code=400)
     try:
-        result = model.export_session(session, model.load_rules())
+        result = model.export_session(session, model.load_rules(), allow_partial=True)
     except (ValueError, OSError) as e:
         logger.error(f'Export failed: {e}')
         return JSONResponse({'error': str(e)}, status_code=400 if isinstance(e, ValueError) else 500)

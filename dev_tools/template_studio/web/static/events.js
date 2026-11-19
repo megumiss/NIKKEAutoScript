@@ -99,7 +99,7 @@ function updateButtons() {
   $('btnManualCrop').textContent = '定位到裁剪画布';
   $('btnNext').disabled = !session?.templates.some(t => t.status !== 'confirmed');
   $('btnSaveReview').disabled = !template;
-  $('btnExport').disabled = cropDirty || !session || !session.templates.length || Boolean(state.missing?.length);
+  $('btnExport').disabled = cropDirty || !session || !session.templates.some(t => t.status === 'confirmed');
   if (cropDirty) for (const id of ['btnPrepare','btnPrepareMain','btnAdvance','btnRemoveShot']) $(id).disabled = true;
   $('btnPrevPage').disabled = browseOffset === 0;
   $('btnNextPage').disabled = browseOffset + BROWSE_PAGE_SIZE >= browseTotal;
