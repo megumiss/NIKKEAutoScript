@@ -3109,9 +3109,34 @@
         "value": false
       },
       "ShopDelayList": {
-        "type": "textarea",
+        "type": "priority",
         "value": "TITLE",
-        "mode": "lines"
+        "allow_empty": true,
+        "option": [
+          "TITLE"
+        ]
+      },
+      "ShopDelayExcludeList": {
+        "type": "priority",
+        "value": "",
+        "option": [
+          "GEM",
+          "CORE_DUST_CASE",
+          "CREDIT_CASE",
+          "CREDIT",
+          "BATTLE_DATA_SET_CASE",
+          "GROWTH_SET",
+          "ORNAMENT",
+          "GENERAL_TICKET",
+          "ELYSION_TICKET",
+          "MISSILIS_TICKET",
+          "TETRA_TICKET",
+          "PILGRIM_TICKET",
+          "ABNORMAL_TICKET",
+          "GOOD_TEAMWORK_BOX",
+          "MAINTENANCE_KIT_BOX_2",
+          "CURATED_MANUFACTURER_ARMS"
+        ]
       },
       "Game": {
         "type": "checkbox",
@@ -3273,9 +3298,34 @@
         "value": false
       },
       "ShopDelayList": {
-        "type": "textarea",
+        "type": "priority",
         "value": "TITLE",
-        "mode": "lines"
+        "allow_empty": true,
+        "option": [
+          "TITLE"
+        ]
+      },
+      "ShopDelayExcludeList": {
+        "type": "priority",
+        "value": "",
+        "option": [
+          "GEM",
+          "CORE_DUST_CASE",
+          "CREDIT_CASE",
+          "CREDIT",
+          "BATTLE_DATA_SET_CASE",
+          "GROWTH_SET",
+          "ORNAMENT",
+          "GENERAL_TICKET",
+          "ELYSION_TICKET",
+          "MISSILIS_TICKET",
+          "TETRA_TICKET",
+          "PILGRIM_TICKET",
+          "ABNORMAL_TICKET",
+          "GOOD_TEAMWORK_BOX",
+          "MAINTENANCE_KIT_BOX_2",
+          "CURATED_MANUFACTURER_ARMS"
+        ]
       },
       "Game": {
         "type": "checkbox",

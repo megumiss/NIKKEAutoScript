@@ -10,6 +10,7 @@ from module.config.utils import read_file, filepath_config, deep_get, parse_valu
 from deploy.utils import DEPLOY_TEMPLATE, poor_yaml_read, poor_yaml_write
 from module.base.timer import timer
 from module.config.deep import deep_default, deep_get, deep_iter, deep_pop, deep_set
+from module.config.deep import deep_get as deep_get_raw
 from module.config.env import IS_ON_PHONE_CLOUD
 from module.config.event_stage import resolve_event_stage
 from module.config.manual_config import ManualConfig
@@ -409,12 +410,14 @@ class ConfigUpdater:
         new = {}
 
         for keys, data in deep_iter(self.args, depth=3):
-            value = deep_get(old, keys=keys, default=data['value'])
+            value = deep_get_raw(old, keys=keys, default=data['value'])
             typ = data['type']
             display = data.get('display')
-            if is_template or value is None or value == '' \
+            if is_template or ((value is None or value == '') and not data.get('allow_empty')) \
                     or typ in ['lock', 'state'] or (display == 'hide' and typ != 'stored'):
                 value = data['value']
+            if keys[1:] == ['Event', 'ShopDelayList'] and isinstance(value, str):
+                value = value.replace('\n', '>')
             value = parse_value(value, data=data)
             deep_set(new, keys=keys, value=value)
 

@@ -405,8 +405,13 @@ Event:
   Shop: false
   ShopDelayList:
     value: 'TITLE'
-    type: textarea
-    mode: lines
+    type: priority
+    allow_empty: true
+    option: [ TITLE ]
+  ShopDelayExcludeList:
+    value: ''
+    type: priority
+    option: [ GEM, CORE_DUST_CASE, CREDIT_CASE, CREDIT, BATTLE_DATA_SET_CASE, GROWTH_SET, ORNAMENT, GENERAL_TICKET, ELYSION_TICKET, MISSILIS_TICKET, TETRA_TICKET, PILGRIM_TICKET, ABNORMAL_TICKET, GOOD_TEAMWORK_BOX, MAINTENANCE_KIT_BOX_2, CURATED_MANUFACTURER_ARMS ]
   Game: false
   GameTenBeam:
     value: 200

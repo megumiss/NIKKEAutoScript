@@ -1187,8 +1187,29 @@
       "help": "Attempt to buy all event currency items except titles in order (may not always work)"
     },
     "ShopDelayList": {
-      "name": "Shop Delay Purchase List",
-      "help": "Items in this list will be purchased only after obtaining red orbs. One per line. Currently only supports delaying TITLE purchases"
+      "name": "Shop Purchase Delay List",
+      "help": "Selected items are delayed until red orbs are reached. Titles are delayed by default; clear the list to disable the delay. Currently only titles are supported.",
+      "TITLE": "Title"
+    },
+    "ShopDelayExcludeList": {
+      "name": "Shop Purchase Exclusion List",
+      "help": "Match selected item images and exclude the corresponding purchase coordinates, even after reaching red orbs. Leave empty to exclude nothing; selection order does not matter. Currently reuses Recycling Shop item templates.",
+      "GEM": "Gems",
+      "CORE_DUST_CASE": "Core Dust Case",
+      "CREDIT_CASE": "Credit Case",
+      "CREDIT": "Credits",
+      "BATTLE_DATA_SET_CASE": "Battle Data Set Case",
+      "GROWTH_SET": "Growth Set",
+      "ORNAMENT": "Profile Decoration",
+      "GENERAL_TICKET": "Commander Voucher",
+      "ELYSION_TICKET": "Elysion VIP Voucher",
+      "MISSILIS_TICKET": "Missilis VIP Card",
+      "TETRA_TICKET": "Tetra VIP Care Voucher",
+      "PILGRIM_TICKET": "Pilgrim Supply Voucher",
+      "ABNORMAL_TICKET": "Abnormal Annual Voucher",
+      "GOOD_TEAMWORK_BOX": "Good Teamwork Box",
+      "MAINTENANCE_KIT_BOX_2": "Maintenance Kit Box II",
+      "CURATED_MANUFACTURER_ARMS": "Curated Manufacturer Arms"
     },
     "Game": {
       "name": "Mini Game",

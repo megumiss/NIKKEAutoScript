@@ -1187,8 +1187,29 @@
       "help": "依次（有时候不会）购买除称号外的所有活动货币商品"
     },
     "ShopDelayList": {
-      "name": "商店延迟购买列表",
-      "help": "列表中的物品会在购买到红球时才开始购买，每行一个，默认推迟称号的购买，当前只支持延迟称号的购买：TITLE"
+      "name": "商店购买延迟列表",
+      "help": "列表中的物品会在购买到红球时才开始购买，默认延迟购买称号；清空列表则不延迟购买。当前仅支持称号。",
+      "TITLE": "称号"
+    },
+    "ShopDelayExcludeList": {
+      "name": "商店购买排除列表",
+      "help": "匹配所选商品的图像并按坐标从待购买商品中排除，遇到红球后也不会购买。留空则不排除；选择顺序不影响排除。暂时复用废铁商店的商品模板。",
+      "GEM": "珠宝",
+      "CORE_DUST_CASE": "芯尘盒",
+      "CREDIT_CASE": "信用点盒",
+      "CREDIT": "信用点",
+      "BATTLE_DATA_SET_CASE": "战斗数据辑盒",
+      "GROWTH_SET": "成长套组",
+      "ORNAMENT": "简介装饰品",
+      "GENERAL_TICKET": "指挥官通用券",
+      "ELYSION_TICKET": "极乐净土VIP券",
+      "MISSILIS_TICKET": "米西利斯VIP卡",
+      "TETRA_TICKET": "泰特拉VIP护理券",
+      "PILGRIM_TICKET": "朝圣者补给套组交换券",
+      "ABNORMAL_TICKET": "反常年券",
+      "GOOD_TEAMWORK_BOX": "优秀团队合作宝箱",
+      "MAINTENANCE_KIT_BOX_2": "保养工具箱II",
+      "CURATED_MANUFACTURER_ARMS": "企业精选武装"
     },
     "Game": {
       "name": "小游戏",

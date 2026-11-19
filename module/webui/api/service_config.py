@@ -82,7 +82,7 @@ class ConfigService:
             return PatchResult(False, {}, {}, True, f'Invalid value: {exc}')
 
         default = argument.get('value')
-        if value is None or value == '':
+        if (value is None or value == '') and not argument.get('allow_empty'):
             value = default
         validate = argument.get('validate')
         if validate and not re_fullmatch(validate, str(value)):

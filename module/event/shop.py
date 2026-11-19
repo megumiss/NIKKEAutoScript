@@ -1,6 +1,7 @@
-from functools import cached_property
+import module.rubbish_shop.assets as rubbish_shop_assets
 
 from module.base.button import filter_buttons_in_area, merge_buttons
+from module.base.template import Template
 from module.base.timer import Timer
 from module.base.utils import area_offset, crop, sort_buttons_by_location
 from module.event.assets import *
@@ -10,12 +11,17 @@ from module.logger import logger
 
 
 class EventShop(EventBase):
-    @cached_property
+    @property
     def shop_delay_list(self) -> list[str]:
         """
         商店延迟购买列表
         """
-        return [line.strip() for line in self.config.Event_ShopDelayList.split('\n') if line.strip()]
+        value = self.config.Event_ShopDelayList or ''
+        return [item.strip() for item in value.replace('\n', '>').split('>') if item.strip()]
+
+    def get_shop_exclude_buttons(self):
+        value = self.config.Event_ShopDelayExcludeList or ''
+        return [getattr(rubbish_shop_assets, item.strip()) for item in value.split('>') if item.strip()]
 
     def get_shop_item_button(self, item: str):
         """
@@ -45,6 +51,8 @@ class EventShop(EventBase):
         delay_list = self.shop_delay_list
         # 钻石
         is_gem_mode = 'TEMPLATE_SHOP_GEM' == target_button.name
+        exclude_buttons = self.get_shop_exclude_buttons()
+        scroll_check = Template(target_button.file) if exclude_buttons else None
 
         # 进入商店页面
         while 1:
@@ -95,6 +103,7 @@ class EventShop(EventBase):
             logger.info(f'Find slod out items: {len(sold_outs)}')
             # 过滤掉所有SOLD_OUT的商品
             items = self.filter_sold_out_items(items, sold_outs)
+            items = self.filter_excluded_items(items, exclude_buttons)
             # 如果第一个物品为要推迟购买的物品，在购买列表中删除
             if skip_item_first and items:
                 items = items[1:]
@@ -218,9 +227,16 @@ class EventShop(EventBase):
 
                 # 滚动到下一页
                 logger.info('Scroll to next page')
+                if scroll_check is not None:
+                    scroll_check.image = crop(self.device.image, (60, 600, 660, 1260)).copy()
                 self.device.stuck_record_clear()
                 self.device.click_record_clear()
                 self.ensure_sroll((360, 1100), (360, 480), speed=5, count=1, delay=3, method='scroll')
+                if scroll_check is not None:
+                    self.device.screenshot()
+                    if scroll_check.match(crop(self.device.image, (60, 600, 660, 1260)), similarity=0.99):
+                        logger.info('Event shop finished: no purchasable items and scroll reached bottom')
+                        break
                 swipe_count += 1
                 if swipe_count > 30:
                     logger.warning('Too many swipes, may game stuck here')
@@ -230,6 +246,30 @@ class EventShop(EventBase):
         # 相对价格钻石图标定位同一商品左上角，避免把相邻商品的限时角标算进来。
         area = area_offset((-80, -245, -20, -185), item.location)
         return TEMPLATE_SHOP_ITEM_LIMITED_TIME_BADGE.match(crop(self.device.image, area), similarity=0.85)
+
+    def filter_excluded_items(self, items, buttons):
+        if not items or not buttons:
+            return items
+
+        excluded_locations = []
+        for button in buttons:
+            location = self.appear_location(button, offset=10, threshold=0.85, static=False)
+            if location is not None:
+                logger.info(f'Exclude shop item {button.name}: {location}')
+                excluded_locations.append(location)
+
+        filtered_items = []
+        for item in items:
+            item_x, item_y = item.location
+            # 商品图标位于价格上方，只关联同一商品卡片，避免排除相邻行列或价格货币图标。
+            if any(
+                item_x - 90 <= x <= item_x + 110 and item_y - 245 <= y <= item_y - 35
+                for x, y in excluded_locations
+            ):
+                logger.info(f'Skip excluded shop item at {item.location}')
+                continue
+            filtered_items.append(item)
+        return filtered_items
 
     def filter_sold_out_items(self, items, sold_outs):
         """

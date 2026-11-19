@@ -210,7 +210,8 @@ class GeneratedConfig:
     Event_LoginStamp = True
     Event_Challenge = True
     Event_Shop = False
-    Event_ShopDelayList = 'TITLE'
+    Event_ShopDelayList = 'TITLE'  # TITLE
+    Event_ShopDelayExcludeList = None  # GEM, CORE_DUST_CASE, CREDIT_CASE, CREDIT, BATTLE_DATA_SET_CASE, GROWTH_SET, ORNAMENT, GENERAL_TICKET, ELYSION_TICKET, MISSILIS_TICKET, TETRA_TICKET, PILGRIM_TICKET, ABNORMAL_TICKET, GOOD_TEAMWORK_BOX, MAINTENANCE_KIT_BOX_2, CURATED_MANUFACTURER_ARMS
     Event_Game = False
     Event_GameTenBeam = 200
     Event_GameTargetScore = 0
