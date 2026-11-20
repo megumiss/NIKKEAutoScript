@@ -22,30 +22,31 @@
   function updateControls() {
     $('liveCropSection').hidden = !selection?.valid || !dirty();
     const target = state?.session?.templates.find(t => t.name === activeName);
-    $('cropTemplate').disabled = saving || !target;
+    $('cropTemplate').disabled = saving || !state?.session?.templates.length;
     $('cropMode').textContent = target ? target.mode === 'template' ? 'Template · 保存局部小图' : 'Button · 保留 720 × 1280 原坐标，选区外填黑' : '';
     const rule = state?.rules?.[activeName];
     $('cropRule').textContent = target ? [rule?.desc,state.scenes[sceneKey(target)]?.label].filter(Boolean).join(' · ') : '';
     $('cropConfirmed').hidden = target?.status !== 'confirmed' || !dirty();
-    $('cropValidation').textContent = selection?.error || (!target ? '打开会话并选择截图后直接框选。' : !selection?.image ? '选择场景截图。' : selection?.valid ? dirty() ? '右侧实时显示本次裁剪，保存后再确认模板。' : '直接拖动选区调整，或在原图上重新框选。' : '直接在原图上拖动框选，或输入选区坐标。');
+    $('cropValidation').textContent = selection?.error || (!target ? '可先框选，再选择对应的目标模板。' : !selection?.image ? '选择场景截图。' : selection?.valid ? dirty() ? '选区已保留，点击“保存并确认模板”完成本次裁剪。' : '直接拖动选区调整，或在原图上重新框选。' : '直接在原图上拖动框选，或输入选区坐标。');
     $('cropValidation').classList.toggle('invalid', Boolean(selection?.error));
-    $('btnCropSave').disabled = saving || !target || !selection?.valid || !dirty() || selection.editing;
-    $('btnCropSave').textContent = saving ? '正在保存…' : '保存裁剪草稿';
-    $('btnCropSave').setAttribute('aria-busy',String(saving));
-    editor.setDisabled(saving || !target);
+    $('btnConfirm').textContent = saving ? '正在保存并确认…' : '保存并确认模板';
+    editor.setDisabled(saving || !state?.session);
+  }
+  function canConfirm() {
+    const target = state?.session?.templates.find(t => t.name === activeName);
+    if (saving || !target) return false;
+    if (dirty()) return Boolean(selection?.valid && !selection.editing);
+    return target.status !== 'confirmed' && confirmInfo?.name === target.name && confirmInfo.valid;
   }
   function sync() {
     const session = state?.session, shot = session?.screenshots[shotIndex];
     if (sessionId !== state?.current) {
       sessionId = state?.current; activeName = ''; sourceKey = ''; savedBoxKey = ''; editor.load('');
     }
-    const target = session?.templates.find(t => t.name === templateName)
-      || session?.templates.find(t => t.status !== 'confirmed' && sceneKey(t) === sceneKey(shot))
-      || session?.templates.find(t => t.status !== 'confirmed') || session?.templates[0];
-    if (target && !templateName) templateName = target.name;
-    $('cropTemplate').innerHTML = (session?.templates || []).map(t => `<option value="${esc(t.name)}">${[t.name,t.mode === 'template' ? 'Template' : 'Button',state.status_label[t.status]].map(esc).join(' · ')}</option>`).join('') || '<option>尚未打开模板</option>';
+    const target = session?.templates.find(t => t.name === templateName);
+    $('cropTemplate').innerHTML = '<option value="">先框选或选择模板</option>' + (session?.templates || []).map(t => `<option value="${esc(t.name)}">${[t.name,t.mode === 'template' ? 'Template' : 'Button',state.status_label[t.status]].map(esc).join(' · ')}</option>`).join('');
     $('cropTemplate').value = target?.name || '';
-    const key = shot ? `${shot.phase}:${shot.file}` : '';
+    const key = shot?.file || '';
     const initialBox = target?.source === shot?.file && target?.phase === shot?.phase ? target?.box : null;
     const boxKey = JSON.stringify(initialBox || null);
     const targetChanged = activeName !== (target?.name || '');
@@ -53,12 +54,12 @@
     if (sourceKey !== key) {
       sourceKey = key; savedBoxKey = boxKey; $('cropError').hidden = true;
       editor.load(shot?.file || '',initialBox,[720,1280]);
-    } else if (targetChanged || !dirty() && savedBoxKey !== boxKey) {
+    } else if (!dirty() && (targetChanged || savedBoxKey !== boxKey)) {
       savedBoxKey = boxKey; $('cropError').hidden = true; editor.setBox(initialBox);
     }
     updateControls();
   }
-  window.eventCrop = {sync,dirty,allowDiscard};
+  window.eventCrop = {sync,dirty,allowDiscard,canConfirm,confirm,busy:() => saving};
   function focusCanvas() {
     $('cropCanvas').scrollIntoView({behavior:'smooth',block:'center'}); $('cropCanvas').focus({preventScroll:true});
   }
@@ -74,19 +75,24 @@
     sync();
   });
   window.addEventListener('beforeunload',e => { if (dirty() || saving) { e.preventDefault(); e.returnValue = ''; } });
-  $('btnCropSave').addEventListener('click',async () => {
-    if (saving || !selection?.valid || selection.editing || !dirty()) return;
-    saving = true; updateControls(); $('cropError').hidden = true;
+  async function confirm() {
+    if (!canConfirm()) return false;
+    const name = activeName, crop = dirty() ? {source:selection.source,box:[...selection.box]} : null;
+    saving = true; updateControls(); updateButtons(); $('cropError').hidden = true;
     try {
       await saveAnnotation(); if (reviewDirty) await saveReview();
-      const name = activeName, shot = state.session.screenshots[shotIndex];
-      const next = await api('/api/propose',{name,source:shot.file,box:[...selection.box],proposer:'user'});
+      const next = crop
+        ? await api('/api/propose',{name,...crop,proposer:'user',confirm:true})
+        : await api('/api/status',{name,value:'confirmed'});
       editor.markSaved(); if (selection) selection.changed = false;
       applyState(next); switchView('review');
       $('templateSearch').value = ''; $('templateScene').value = ''; $('templateStatus').value = ''; renderTemplates();
-      notify('手动裁剪已保存为草稿，请校对后确认模板');
-    } catch (error) { $('cropError').textContent = error.message; $('cropError').hidden = false; }
-    finally { saving = false; updateControls(); updateButtons(); }
-  });
+      notify(crop ? '裁剪已保存并确认，可直接导出模板' : '模板已确认');
+      return true;
+    } catch (error) {
+      $('cropError').textContent = error.message; $('cropError').hidden = false;
+      return false;
+    } finally { saving = false; updateControls(); updateButtons(); }
+  }
   sync();
 })();

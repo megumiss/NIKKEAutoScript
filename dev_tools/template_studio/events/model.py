@@ -163,6 +163,25 @@ def create_event_session(event_id, event_name, base_event_id, position, phase, r
         return session
 
 
+def open_event_session(event_id, phase, rules):
+    """已有会话直接打开；否则只为已登记的活动创建裁剪会话。"""
+    path = session_path(event_id)
+    os.makedirs(SESSION_ROOT, exist_ok=True)
+    with FileLock(os.path.join(SESSION_ROOT, '.events.lock')):
+        if os.path.isfile(path):
+            return load_session(event_id), False
+        _, _, events = read_events()
+        event = next((e for e in events if e['event_id'] == event_id), None)
+        if event is None:
+            raise ValueError('活动不在 EVENTS 中，请刷新列表或创建全新活动')
+        session = new_session(event_id, event['event_type'], phase, rules)
+        session.update(event_name=event['event_name'], base_event_id=event_id,
+                       base_assets_dir=event_assets_source(event_id))
+        save_session(session)
+        logger.info(f'已为已有活动创建模板会话: {event_id}, phase={phase}')
+        return session, True
+
+
 def load_rules():
     with open(RULES_FILE, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)

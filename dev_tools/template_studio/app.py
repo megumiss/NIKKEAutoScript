@@ -9,6 +9,7 @@
 首页管理中文功能模板；/events 提供活动会话、agent 提案校对与导出。
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -114,7 +115,18 @@ def state_payload(event_id, session):
 def render_page(filename):
     with (PAGES_ROOT / filename).open(encoding='utf-8') as f:
         content = f.read()
-    return HTMLResponse(content)
+
+    def versioned_asset(match):
+        asset = STATIC_ROOT / match['name']
+        if not asset.is_file():
+            return match[0]
+        version = hashlib.sha256(asset.read_bytes()).hexdigest()[:12]
+        return f'{match["prefix"]}{match["name"]}?v={version}"'
+
+    # HTML 和脚本独立更新时，固定资源地址会让页面继续执行旧缓存。
+    content = re.sub(r'(?P<prefix>(?:src|href)="/static/)(?P<name>[A-Za-z0-9_-]+\.(?:js|css))"',
+                     versioned_asset, content)
+    return HTMLResponse(content, headers={'Cache-Control': 'no-cache'})
 
 
 async def index(request):
@@ -174,7 +186,7 @@ async def api_template_delete(request):
 
 
 async def history_review(request):
-    return FileResponse(PAGES_ROOT / 'history.html')
+    return render_page('history.html')
 
 
 async def api_history(request):
@@ -239,6 +251,16 @@ async def api_session_new(request):
                                          body.get('position'), phase, model.load_rules())
     set_current_event_id(event_id)
     return JSONResponse(state_payload(event_id, session))
+
+
+async def api_session_from_event(request):
+    body = await read_json(request)
+    if body is None:
+        return JSONResponse({'error': '请求体不是合法 JSON (需 UTF-8)'}, status_code=400)
+    event_id = str(body.get('event_id', '')).strip()
+    session, created = model.open_event_session(event_id, body.get('phase', 'day1'), model.load_rules())
+    set_current_event_id(event_id)
+    return JSONResponse(dict(state_payload(event_id, session), created_session=created))
 
 
 async def api_session_open(request):
@@ -399,8 +421,10 @@ async def api_propose(request):
     if session is None:
         return JSONResponse({'error': '请先新建/打开会话'}, status_code=400)
     try:
-        model.propose(session, body['name'], body['source'], body['box'],
-                      mode=body.get('mode'), proposer=body.get('proposer', 'user'))
+        template = model.propose(session, body['name'], body['source'], body['box'],
+                                 mode=body.get('mode'), proposer=body.get('proposer', 'user'))
+        if body.get('confirm') is True:
+            model.set_status(session, template['name'], 'confirmed')
     except (ValueError, FileNotFoundError, KeyError) as e:
         return JSONResponse({'error': str(e)}, status_code=400)
     model.save_session(session)
@@ -564,6 +588,7 @@ def create_app():
         Route('/api/sessions', api_sessions),
         Route('/api/session/new', api_session_new, methods=['POST']),
         Route('/api/session/open', api_session_open, methods=['POST']),
+        Route('/api/session/from-event', api_session_from_event, methods=['POST']),
         Route('/api/session/phase', api_session_phase, methods=['POST']),
         Route('/api/session/delete', api_session_delete, methods=['POST']),
         Route('/api/browse', api_browse),
