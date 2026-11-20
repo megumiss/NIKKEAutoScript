@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import tempfile
+from datetime import datetime, timedelta, timezone
 
 import cv2
 import numpy as np
@@ -18,6 +19,7 @@ import yaml
 from filelock import FileLock
 
 from module.base.utils import get_bbox, get_color
+from module.config.event_stage import available_story_stages
 from module.config.manual_config import ManualConfig
 from module.logger import logger
 
@@ -62,6 +64,17 @@ def historical_events():
     return [dict(event, source_dir=event_assets_source(event['event_id'])) for event in events]
 
 
+def new_story_schedule(event_id, event_type):
+    date = re.fullmatch(r'event_([0-9]{8})', event_id)
+    if date is None:
+        return None
+    try:
+        start = datetime.strptime(date[1], '%Y%m%d').replace(hour=4, tzinfo=timezone(timedelta(hours=8)))
+    except ValueError:
+        return None
+    return {'start_at': start.isoformat(), 'stages': list(available_story_stages({'event_type': event_type}))}
+
+
 def create_event_session(event_id, event_name, base_event_id, position, phase, rules):
     """发布新资源与会话后再注册活动，失败时仅回滚本次创建的目录。"""
     session_path(event_id)
@@ -92,12 +105,15 @@ def create_event_session(event_id, event_name, base_event_id, position, phase, r
                  'mini_game': False, 'mini_game_play': True, 'extend': False,
                  'story_part': 'Story_2' if phase.startswith('story2') else 'Story_1',
                  'story_difficulty': 'Hard' if phase in ('hard', 'story2_hard') else 'Normal',
-                 'story_schedule': None}
+                 'story_schedule': new_story_schedule(event_id, base['event_type'])}
         lines = source.splitlines(keepends=True)
         insertion = node.elts[position - 1].lineno - 1 if len(node.elts) >= position else node.end_lineno - 1
         event_lines = ['    {\n']
         for key, value in event.items():
-            literal = json.dumps(value, ensure_ascii=False) if isinstance(value, str) else repr(value)
+            if isinstance(value, dict):
+                literal = json.dumps(value, ensure_ascii=False, indent=4).replace('\n', '\n        ')
+            else:
+                literal = json.dumps(value, ensure_ascii=False) if isinstance(value, str) else repr(value)
             event_lines.append(f'        "{key}": {literal},\n')
         event_lines.append('    },\n')
         lines.insert(insertion, ''.join(event_lines))

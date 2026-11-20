@@ -16,7 +16,13 @@ EVENTS = [
         "extend": False,
         "story_part": "Story_1",
         "story_difficulty": "Normal",
-        "story_schedule": None,
+        "story_schedule": {
+            "start_at": "2026-11-19T04:00:00+08:00",
+            "stages": [
+                "story_1_normal",
+                "story_1_hard",
+            ],
+        },
     },
     {
         "event_id": "event_20261029",

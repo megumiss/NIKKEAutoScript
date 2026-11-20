@@ -68,6 +68,7 @@
     <div class="form-grid"><div><label for="typeLabel">活动类型</label><input id="typeLabel" readonly></div><div><label for="phaseSel">本次更新阶段</label><select id="phaseSel"></select></div></div>
     <label for="eventPosition">插入 EVENTS 的位置</label><select id="eventPosition"><option value="1">第 1 位 · Event 主活动</option><option value="2">第 2 位 · Event2 第二活动</option></select>
     <p class="hint">原有条目依次后移，历史活动保留。创建时复制整套资源；YAML 清单内的模板随后全部重新裁剪。</p>
+    <p class="hint">有效的 YYYYMMDD 日期自动按当天 04:00（UTC+8）及大小活动类型生成每周剧情时间表；其它 ID 需手动补充。本次更新阶段不影响时间表。</p>
     <p class="hint">小游戏、扩展玩法与关卡布局参数由你手动配置；新活动默认关闭小游戏与扩展玩法。</p>
     <button id="btnNew" class="primary full" disabled>复制资源并创建活动</button></div></div><p class="dialog-error" id="sessionError" role="alert" hidden></p></dialog>
 <dialog id="deleteSessionDialog" aria-labelledby="deleteSessionTitle" aria-describedby="deleteSessionScope">
