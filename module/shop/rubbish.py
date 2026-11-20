@@ -122,15 +122,14 @@ class RubbishShop(ShopBase):
         return cost
 
     def swipe_and_purchase(self, products: SelectedGrids):
-        """
-        滑动屏幕查找并购买商品，逐个处理每个商品。
-        """
+        """每轮仅购买固定目标，同时记录其他待购商品是否存在。"""
         click_timer = Timer(0.6)
         logger.attr('PENDING PRODUCT LIST', [i.name for i in products])
+        pending_products = list(products)
 
-        # 遍历商品列表，每个商品单独处理
-        for product in list(products):
-            # 每次购买某个物品前先滚动到顶部
+        while pending_products:
+            product = pending_products[0]
+            found_products = []
             self.ensure_sroll_to_top(x1=(505, 700), x2=(505, 1000), count=3, delay=1)
             logger.info(f'[Purchase Start] {product.name}')
             swipe_count = 0
@@ -147,32 +146,38 @@ class RubbishShop(ShopBase):
                     click_timer.reset()
                     continue
 
-                # 检查当前商品是否可见
-                if (
-                    click_timer.reached()
-                    and self.appear(BUY_ALL, offset=10)
-                    and self.appear_then_click(product.button, offset=10, threshold=0.85, interval=1, static=False)
-                ):
-                    click_timer.reset()
-                    continue
+                if self.appear(BUY_ALL, offset=10):
+                    visible_products = [
+                        pending_product
+                        for pending_product in pending_products
+                        if self.appear(pending_product.button, offset=10, threshold=0.85, static=False)
+                    ]
+                    for visible_product in visible_products:
+                        if visible_product not in found_products:
+                            found_products.append(visible_product)
 
-                # 结束当前商品的扫描，进入下一个商品
+                    # 其他商品只记录是否存在，本轮只购买固定目标。
+                    if click_timer.reached() and product in visible_products:
+                        self.device.click(product.button)
+                        click_timer.reset()
+                        continue
+
                 if self.appear(END_LIST_CHECK, threshold=5):
                     logger.info(f'[Purchase done or not found] {product.name}')
+                    pending_products = [
+                        pending_product
+                        for pending_product in pending_products
+                        if pending_product is not product and pending_product in found_products
+                    ]
+                    logger.attr('PENDING PRODUCT LIST', [i.name for i in pending_products])
                     break
 
-                # 滑动屏幕继续查找
                 self.ensure_sroll((505, 1000), (505, 700), speed=5, count=1, delay=0.5, method='scroll')
                 swipe_count += 1
                 if swipe_count > 20:
                     logger.warning('Too many swipes, may game stuck here')
                     raise GameStuckError
 
-            # 单个商品完成后，从待购买列表中移除
-            # products = products.delete([product])
-            # logger.attr('PENDING PRODUCT LIST', [i.name for i in products])
-
-        # 全部完成
         logger.info('[All Products Processed]')
 
     def run(self):
