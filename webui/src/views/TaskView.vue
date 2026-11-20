@@ -39,7 +39,8 @@ const { isWideField, save, saveValue, datetimeValue, scheduleDatetimeSave, flush
 const instancesStore = useInstancesStore()
 const { lifecycle } = instancesStore
 const selectedInstance = computed(() => instancesStore.instances.find(item => item.name === workspace.selectedName))
-const isCampaign = computed(() => selectedPage.value === 'tool' && ['AutoMainStory', 'AutoMainCollectible'].includes(selectedTask.value))
+const isCollectibleDeveloping = computed(() => selectedPage.value === 'tool' && selectedTask.value === 'AutoMainCollectible')
+const isCampaign = computed(() => selectedPage.value === 'tool' && selectedTask.value === 'AutoMainStory')
 const configGroups = computed(() => (taskSchema.value?.groups || [])
   .filter((group: any) => !isCampaign.value || group.key !== 'CampaignSettings'))
 const { blaLoginBusy } = storeToRefs(useBlaLoginStore())
@@ -69,21 +70,26 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
 
 <template>
   <section class="view" :class="{ 'tool-view': selectedPage === 'tool', 'campaign-view': isCampaign }" @scroll.passive="onViewScroll">
-    <div class="task-layout">
+    <div class="task-layout" :class="{ 'developing-layout': isCollectibleDeveloping }">
       <div>
         <article v-if="taskSchema" class="card task-hero">
           <div class="task-icon"><AppIcon :name="selectedPage === 'tool' ? 'designtools' : 'gear'" :size="22" /></div>
-          <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}{{ selectedTask === 'PhysicalDevice' ? '(BETA)' : '' }}</h2><div class="sub">{{ taskSchema?.help || '' }}</div></div>
-          <button v-if="selectedPage === 'tool'" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()"><template v-if="selectedInstance?.state === 1"><AppIcon name="stop" :size="14" /> {{ t('停止') }}</template><template v-else><AppIcon name="play" :size="14" /> {{ t('启动') }}</template></button>
+          <div style="flex:1"><h2>{{ taskSchema?.name || selectedTask }}{{ selectedTask === 'PhysicalDevice' ? '(BETA)' : '' }}</h2><div class="sub">{{ isCollectibleDeveloping ? t('开发中') : taskSchema?.help || '' }}</div></div>
+          <button v-if="selectedPage === 'tool' && (!isCollectibleDeveloping || selectedInstance?.state === 1)" class="btn" :class="selectedInstance?.state === 1 ? 'danger' : 'primary'" @click="selectedInstance?.state === 1 ? lifecycle('stop') : startTool()"><template v-if="selectedInstance?.state === 1"><AppIcon name="stop" :size="14" /> {{ t('停止') }}</template><template v-else><AppIcon name="play" :size="14" /> {{ t('启动') }}</template></button>
         </article>
         <!-- 未选中任务时原空白 hero 没有信息量，换成引导提示（移动端任务列表收在右侧抽屉里） -->
         <article v-else class="card group-card">
           <div class="group-body special-empty" style="padding:16px 22px">{{ selectedPage === 'tool' ? t('请从列表选择工具') : t('请从任务列表选择任务') }}</div>
         </article>
-        <CampaignNotice v-if="isCampaign && selectedTask === 'AutoMainStory'" />
+        <article v-if="isCollectibleDeveloping" class="card development-placeholder" role="status">
+          <AppIcon name="designtools" :size="40" />
+          <h3>{{ t('开发中') }}</h3>
+          <p>{{ t('自动主线收集品功能正在开发中，暂不开放使用。') }}</p>
+        </article>
+        <CampaignNotice v-if="isCampaign" />
         <CampaignSettingsGroup v-if="isCampaign" />
         <CampaignPanel v-if="isCampaign" :name="workspace.selectedName" />
-        <div class="cfg-groups">
+        <div v-if="!isCollectibleDeveloping" class="cfg-groups">
           <article v-for="group in configGroups" :id="groupId(group)" :key="group.key" class="card group-card" :class="{ collapsed: collapsed[group.key] }">
             <button class="group-head" @click="collapsed[group.key] = !collapsed[group.key]">
               <div class="group-title">
@@ -163,9 +169,9 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
         <article v-if="selectedTask && schemaReady && !taskSchema" class="card group-card">
           <div class="group-body special-empty" style="padding:16px 22px">{{ t('未知任务') }}: {{ selectedTask }}</div>
         </article>
-        <LiveLog v-if="selectedPage === 'tool'" class="tool-log" />
+        <LiveLog v-if="selectedPage === 'tool' && !isCollectibleDeveloping" class="tool-log" />
       </div>
-      <aside class="card anchor-nav">
+      <aside v-if="!isCollectibleDeveloping" class="card anchor-nav">
         <div class="side-label">{{ t('本页分组') }}</div>
         <button v-if="isCampaign" class="anchor-nav-item" :class="{ active: activeGroup === 'CampaignSettings' }" @click="jumpToGroup({ key: 'CampaignSettings' })">{{ t('推图设置') }}</button>
         <button v-for="group in configGroups" :key="group.key" class="anchor-nav-item" :class="{ active: activeGroup === group.key }" @click="jumpToGroup(group)">{{ group.name }}</button>
@@ -173,3 +179,20 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
     </div>
   </section>
 </template>
+
+<style scoped>
+.task-layout.developing-layout { grid-template-columns: minmax(0, 1100px); }
+.development-placeholder {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 240px;
+  padding: 32px 24px;
+  text-align: center;
+}
+.development-placeholder h3 { color: var(--text); font-size: 20px; }
+.development-placeholder p { color: var(--text-2); font-size: 13px; line-height: 1.8; }
+</style>

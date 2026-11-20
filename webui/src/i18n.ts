@@ -4,6 +4,8 @@ import { computed, ref } from 'vue'
 export const uiLanguage = ref('zh-CN')
 
 export const staticLabels: Record<string, Record<string, string>> = {
+  '开发中': { 'en-US': 'Under development', 'ja-JP': '開発中' },
+  '自动主线收集品功能正在开发中，暂不开放使用。': { 'en-US': 'Automatic main story collectible collection is under development and is not available yet.', 'ja-JP': 'メインストーリー収集品の自動回収機能は開発中のため、現在は利用できません。' },
   '展开详情': { 'en-US': 'Show details', 'ja-JP': '詳細を表示' },
   '收起详情': { 'en-US': 'Hide details', 'ja-JP': '詳細を閉じる' },
   "本轮确认的敌人": { 'en-US': "Enemies confirmed this turn", 'ja-JP': "今回確認した敵" },
