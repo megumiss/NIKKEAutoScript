@@ -35,6 +35,7 @@ import queue
 import threading
 import time
 from typing import Optional
+from urllib.parse import urlsplit
 
 from module.blablalink.renew import (
     BLA_HOME,
@@ -50,6 +51,8 @@ from module.blablalink.renew import (
 from module.logger import logger
 
 CHECK_LOGIN_URL = 'https://api.blablalink.com/api/user/CheckLogin'
+# 腾讯滑块验证码 iframe 的域名特征（如 global.captcha.gtimg.com / turing.captcha.qcloud.com）
+CAPTCHA_URL_KEYWORD = 'captcha'
 # 登录成功后 localStorage 中的凭证缓存（base64 JSON，含 openid/token/token_expire_time）
 LOGIN_CACHE_KEY = 'logined_account_cache_key'
 # 验证码截图刷新间隔（秒）
@@ -224,7 +227,8 @@ class BlaLoginSession:
         """找到视口内可见的验证码 iframe 区域，无则返回 None"""
         for frame in page.frames:
             url = frame.url
-            if url in ('about:blank', '') or url.startswith(BLA_HOME):
+            # 首页还嵌有 YouTube 等第三方 iframe，只认腾讯验证码域名，否则会误把它们当作验证码
+            if CAPTCHA_URL_KEYWORD not in urlsplit(url).netloc:
                 continue
             try:
                 box = frame.frame_element().bounding_box()
