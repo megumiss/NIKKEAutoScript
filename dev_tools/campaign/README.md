@@ -20,7 +20,7 @@
 
 编辑器结构见 [地图编辑器说明](editor/README.md)。现行三模型训练由独立训练工程负责，
 `dataset.py` 只整理待复核材料，不导出训练数据集；模型与验证边界见
-[模型说明](../../module/campaign/vision/models/README.md)。
+[模型说明](../../module/campaign/vision/models.md)。
 
 ## 常用入口
 

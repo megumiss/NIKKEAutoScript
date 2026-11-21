@@ -48,7 +48,7 @@ MISSION CLEAR 后要求预期下一章和原难度，不将弹窗消失后的旧
 - 普通／Boss／EX 框交集覆盖较小框至少 50% 才视作竞争分类。仅边角相交的独立标记不互相屏蔽。
   实际 EX 弹窗证据优先纠正同编号；主线两帧空间对应可确认 Boss，不能只凭菱形与 EX 各自唯一改型。
 
-模型版本、类别与阈值以当前模型包及[模型说明](../module/campaign/vision/models/README.md)为准。
+模型版本、类别与阈值以当前模型包及[模型说明](../module/campaign/vision/models.md)为准。
 
 ## 3. 运行状态层 RunState
 

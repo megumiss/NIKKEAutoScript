@@ -20,8 +20,8 @@
 | `tools/` | 命令行实验、校验与回放、实验设置及采集器窗口；生产入口不导入此子包 |
 
 正式会话和实验会话都复用 `navigation.movement.navigate` 与
-`navigation.session.NavigationSession`。模板与 ONNX 模型在 `vision/assets/`、`vision/models/`，
-资源常量从新位置读取。
+`navigation.session.NavigationSession`。模板在 `vision/assets/`；ONNX 与模型元数据由资源仓库同步到
+`data/resources/models/campaign/`，不随主仓库分发。
 
 ## 启动与场景接管
 
@@ -130,7 +130,7 @@ log/campaign/<难度>_<章节>/runs/<运行目录>/           章节会话
 - [地图标注与游戏内验收](../../doc/map-annotation.md)
 - [采集与地图维护工具](../../dev_tools/campaign/README.md)
 - [独立实验命令](tools/README.md)
-- [模型契约与验证范围](vision/models/README.md)
+- [模型契约与验证范围](vision/models.md)
 
 变更按仓库指南选择语法、构建和对应路径检查。离线回放只能验证识别、规划和接线，
 不能代替实际移动、战斗、换章与各语言客户端的游戏内验收。

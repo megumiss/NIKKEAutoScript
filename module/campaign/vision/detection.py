@@ -13,6 +13,7 @@ import weakref
 import cv2
 import numpy as np
 
+from module.campaign.map.paths import DEFAULT_MODELS_ROOT
 from module.campaign.vision.frame import CLIENT_SHAPE, inference_frame_token
 
 SCENE_LABELS = (
@@ -23,7 +24,7 @@ SCENE_LABELS = (
 MINIMAP_LABELS = ('minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_squad_ring', 'minimap_enemy_boss')
 ROLE_LABELS = {'scene': SCENE_LABELS, 'compact': MINIMAP_LABELS, 'expanded': MINIMAP_LABELS}
 SOURCE_SIZES = {'scene': (1776, 999), 'compact': (218, 211), 'expanded': (486, 462)}
-MODEL_DIRECTORY = Path(__file__).parent / 'models'
+MODEL_DIRECTORY = DEFAULT_MODELS_ROOT
 EDGE_MARGIN = 2
 NMS_IOU = .45
 INFERENCE_CACHE_SIZE = 4

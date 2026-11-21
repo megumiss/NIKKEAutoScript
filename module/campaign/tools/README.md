@@ -50,4 +50,4 @@
 - [坐标、地图包与导航原理](../../../doc/campaign-prototype-principles.md)
 - [编辑器移动操作与游戏内验收](../../../doc/map-annotation.md)
 - [位移标定与控制检查](../../../doc/campaign-calibration.md)
-- [模型契约与验证边界](../vision/models/README.md)
+- [模型契约与验证边界](../vision/models.md)
