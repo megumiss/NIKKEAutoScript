@@ -175,11 +175,31 @@ def marker_candidates(image, mode):
     return result
 
 
+def enemy_markers_overlap(first, second):
+    """判断两个小地图检测框是否足以视为同一标记的竞争分类。
+
+    框坐标均为当前面板像素；交集须覆盖较小框至少一半，才能阻止该标记参与导航。
+    使用较小框面积而非 IoU，保留同一符号被不同类别检测为大小悬殊框时的冲突保护；
+    仅边角相交的相邻普通敌人与 Boss 不互相屏蔽。无效或零面积框不构成竞争证据。
+    本判据只判断框的几何重合，不按置信度选择敌人类别，也不合并跨帧敌人编号。
+    """
+    boxes = [np.asarray(item.box, float) for item in (first, second)]
+    if any(box.shape != (4,) or not np.isfinite(box).all() for box in boxes):
+        return False
+    sizes = [box[2:] - box[:2] for box in boxes]
+    if any(np.any(size <= 0) for size in sizes):
+        return False
+    intersection = np.minimum(boxes[0][2:], boxes[1][2:]) - np.maximum(boxes[0][:2], boxes[1][:2])
+    if np.any(intersection <= 0):
+        return False
+    return bool(np.prod(intersection) >= .5 * min(np.prod(size) for size in sizes))
+
+
 def enemy_marker_conflicts(candidates):
     """给同帧重叠的互斥敌人分类分配冲突编号，不合并相邻敌人的地图位置。
 
-    输入框使用当前小地图面板像素；沿用普通／Boss 落点的框交叠判据，不增加距离或置信度阈值。
-    仅普通、EX、Boss 之间的交叠属于冲突，小队圆环与敌人重叠不受影响。
+    输入框使用当前小地图面板像素；与普通／Boss 落点共用较小框至少半面积交叠的判据。
+    仅普通、EX、Boss 之间的显著交叠属于冲突，相邻框的边角相交及小队圆环不参与冲突。
     返回候选下标到冲突编号的映射；编号仅在当前帧有效，不能用于跨帧敌人身份关联。
     """
     labels = {'minimap_enemy_normal', 'minimap_enemy_ex', 'minimap_enemy_boss'}
@@ -192,8 +212,7 @@ def enemy_marker_conflicts(candidates):
             other = candidates[other_index]
             if other.label not in labels or item.label == other.label:
                 continue
-            if not np.all(np.minimum(item.box[2:], other.box[2:])
-                          > np.maximum(item.box[:2], other.box[:2])):
+            if not enemy_markers_overlap(item, other):
                 continue
             first, second = roots[index], roots[other_index]
             roots = [first if root == second else root for root in roots]
@@ -254,7 +273,7 @@ def expanded_minimap_masks(panel, require_player=True, locate_player=True):
 def normal_enemy_markers(image, matrix, mode):
     """普通敌人标记的精确位置，已排除 EX 弹窗带出的误检。
 
-    EX 关卡弹窗可带普通敌人样式标记；与任一 EX 或 Boss 框重叠的普通候选都丢掉。
+    EX 关卡弹窗可带普通敌人样式标记；与 EX 或 Boss 显著重合的普通候选丢弃，相邻框不互相屏蔽。
     落点取红色像素凸包的重心而不是检测框中心：标记是水滴形，框中心会偏向尖端，
     重心更贴近它在地图上的实际位置。红色跨越色相环两端，要分两段取。
     """
@@ -263,9 +282,7 @@ def normal_enemy_markers(image, matrix, mode):
     excluded = [item for item in candidates if item.label in ('minimap_enemy_ex', 'minimap_enemy_boss')]
     centers = []
     for item in normals:
-        box = np.asarray(item.box)
-        if any(np.all(np.minimum(box[2:], other.box[2:]) > np.maximum(box[:2], other.box[:2]))
-               for other in excluded):
+        if any(enemy_markers_overlap(item, other) for other in excluded):
             continue
         patch, offset = crop_candidate(image, item, margin=0)
         hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
@@ -285,15 +302,14 @@ def boss_enemy_markers(image, matrix, mode):
     """将完整、无跨类重叠的 Boss 标记框中心投到底图，不用普通三角的红色重心定位骷髅图标。
 
     输入为当前裁好的紧凑或展开面板；坐标仅供同类型目标导航，不推断主线身份。
-    与普通或 EX 框重叠的 Boss 宁可忽略，避免把竞争类别交给移动闭环吸附。
+    与普通或 EX 显著重合的 Boss 宁可忽略；仅边角相交的独立标记保留，不把竞争类别交给移动闭环。
     """
     candidates = marker_candidates(image, mode)
     bosses = [item for item in candidates if item.label == 'minimap_enemy_boss']
     others = [item for item in candidates if item.label in ('minimap_enemy_normal', 'minimap_enemy_ex')]
     centers = []
     for item in bosses:
-        overlap = any(np.all(np.minimum(item.box[2:], other.box[2:])
-                             - np.maximum(item.box[:2], other.box[:2]) > 0) for other in others)
+        overlap = any(enemy_markers_overlap(item, other) for other in others)
         if not overlap:
             centers.append(item.center)
     return project_centers(centers, matrix)

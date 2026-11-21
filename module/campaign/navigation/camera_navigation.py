@@ -245,6 +245,7 @@ def observe_camera(session, squad_position, *, known_squad=False):
     若可见小队偏离冻结坐标超过 12 地图像素，或定位未通过，则拒绝继续。
     known_squad 供未移动小队的纯镜头规划使用：不检测圆环，仅独立配准视野，不更新小队坐标。
     定位器用 CameraRegistrationError 报告道路配准失败，窗口、取消和输入异常原样传播。
+    正式任务仅在调试模式下保存配准后截图；未提供调试开关的实验会话保持留证。
     """
     session.check()
     session.identity(goto.capture_client(session.win))
@@ -263,7 +264,8 @@ def observe_camera(session, squad_position, *, known_squad=False):
     goto.map_close(session.win)
     field = goto.capture_client(session.win)
     session.identity(field)
-    runtime.write_image(session.folder / f'{tag}_field.jpg', field)
+    if getattr(session, 'debug_mode', True):
+        runtime.write_image(session.folder / f'{tag}_field.jpg', field)
     return report
 
 
@@ -659,7 +661,8 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
     reference 必须是运动或方向匹配成功的观测，期间不发新手势；最新帧只跟踪已确认脚圈，
     不重复拖动前参考帧的身份推断，中心偏移不超过 TRACK_DISTANCE 且双向关联无歧义。
     direction_assist 要求最新帧再次满足原目标的粗方向对应，不能在复核时改选其他敌人。
-    本方法不拖动或开合地图。复核失败保留前后帧并抛 ClickUnconfirmed，禁止自动展开重定位；
+    本方法不拖动或开合地图。复核失败抛 ClickUnconfirmed，禁止自动展开重定位；
+    前后帧仅在正式任务调试模式或未提供调试开关的实验会话中保存，关闭留证不改变停止条件。
     截图、窗口、弹窗和取消异常直接传播，不在安全异常后追加操作。
     """
     from module.campaign.navigation.movement_feedback import ClickUnconfirmed
@@ -693,8 +696,9 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
         latest_click = np.asarray(result['click'], float)
         center_shift = float(np.linalg.norm(latest_click - click))
     except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
-        runtime.write_image(session.folder / 'enemy_ring_before.png', field)
-        runtime.write_image(session.folder / 'enemy_ring_latest.png', fresh)
+        if getattr(session, 'debug_mode', True):
+            runtime.write_image(session.folder / 'enemy_ring_before.png', field)
+            runtime.write_image(session.folder / 'enemy_ring_latest.png', fresh)
         session.preview(fresh)
         raise ClickUnconfirmed(f'脚圈点击复核未通过：{str(error).rstrip("。")}；停止执行，未发送移动点击。') from error
     session.preview(fresh)
