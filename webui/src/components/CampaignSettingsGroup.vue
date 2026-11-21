@@ -20,9 +20,8 @@ const resource = ref<Resource | null>(null)
 const error = ref('')
 const collapsed = ref(false)
 let timer: number | undefined
-let autoSyncTried = false
 
-// 打开页面时先检查资源目录与版本；缺失或过期自动同步一次，之后只响应手动同步。
+// 打开页面时只检查资源目录与版本；下载仅由同步按钮触发。
 async function load(check = true) {
   window.clearTimeout(timer)
   try {
@@ -31,7 +30,6 @@ async function load(check = true) {
     error.value = ''
     if (result.syncing) { timer = window.setTimeout(() => load(false), 2000); return }
     if (!check) { timer = window.setTimeout(() => load(true), 300); return }
-    if (!autoSyncTried && (result.condition === 'missing' || result.condition === 'outdated')) { autoSyncTried = true; await sync() }
   } catch (reason) { error.value = String(reason) }
 }
 async function sync() {
